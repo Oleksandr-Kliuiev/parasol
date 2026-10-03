@@ -25,7 +25,18 @@ dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --no-build -c Rel
 dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj --no-build -c Release
 ```
 
-Используется Microsoft Testing Platform, не предполагать совместимость VSTest-флагов. DEV-15 добавляет и проверяет поддерживаемый механизм coverage; до этого нельзя сообщать достигнутое покрытие. Ориентир карточки — line coverage ≥90% домена Billing/Contracts/TimeTracking и ≥70% остального backend по NFR-10; дополнительно проверять критические ветви авторизации и отдельно фиксировать branch coverage, исключения generated code и denominator. Не сравнивать разные метрики как одну. Документировать реальные команды только после их проверки на pinned SDK.
+Используется Microsoft Testing Platform, не предполагать совместимость VSTest-флагов. Покрытие (с DEV-15) собирает `Microsoft.Testing.Extensions.CodeCoverage` 18.11.x (совместим с MTP 2.4), отчёты Cobertura объединяет и проверяет `tools/coverage/coverage-gate.py`. Проверено на SDK 10.0.401:
+
+```sh
+dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --no-build -c Release \
+  --coverage --coverage-output-format cobertura --coverage-output "$PWD/coverage/unit.cobertura.xml"
+dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --no-build -c Release \
+  --coverage --coverage-output-format cobertura --coverage-output "$PWD/coverage/integration.cobertura.xml"
+python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker \
+  coverage/unit.cobertura.xml coverage/integration.cobertura.xml
+```
+
+Gate: line coverage ≥90% для `src/Modules/{Billing,Contracts,TimeTracking}/*/Domain/` и ≥70% для остального `src/` (NFR-10); печатает covered/coverable строки, исключения (EF migrations и snapshots, *.Designer.cs, сгенерированное в obj/, Aspire AppHost) и проекты, которые не загружает ни один тест (вне denominator; каждое такое исключение явно разрешается флагом с причиной в CI). Branch coverage выводится справочно и не гейтится: построчные условия Cobertura нельзя точно объединить между отчётами. Архитектурные тесты запускать **без** `--coverage`: инструментирование добавляет типы в каждую сборку, и правила зависимостей видят их как нарушения. Не сравнивать разные метрики как одну; критические ветви авторизации проверяются поведенческими тестами (матрица прав `AccessAndConcurrencyTests`), а не процентом.
 
 ## Q2 — SQL, API, конкуренция и миграции
 
@@ -53,16 +64,16 @@ npm run build
 
 Production build пишет в `src/Hosts/Crm.Web/wwwroot`; учитывать это при review и коммитах. Проверить sync ключей nb/en/ru, единицы/валюты, серверное скрытие полей, состояния ошибки/пустого списка/загрузки/412/429. Нельзя скрыть утечку данных только UI-проверкой роли.
 
-E2E требует **выделенную временную БД** и свободные порты 5181, 5191, 5299. [playwright.config.ts](../../web/playwright.config.ts) запускает web/worker/mock; по умолчанию использует общую crm_e2e и умеет переиспользовать локальные hosts. До запуска задать `E2E_SQL` для собственной БД через безопасное окружение, не копировать production connection string; `DOTNET` при необходимости указывает путь executable. Убедиться, что existing hosts не используют другую БД. Тестовые журналы не публиковать с паролями.
+E2E требует **выделенную временную БД** и свободные порты 5181, 5191, 5299. [playwright.config.ts](../../web/playwright.config.ts) запускает web/worker/mock; по умолчанию использует общую crm_e2e локального контейнера. До запуска задать `E2E_SQL` для собственной БД через безопасное окружение, не копировать production connection string; конфигурация отказывается работать с нелокальным сервером и с базой, имя которой не начинается с `crm_e2e`. `DOTNET` при необходимости указывает путь executable. Уже запущенные hosts переиспользуются только при `E2E_REUSE_SERVERS=1` — тогда самому убедиться, что они смотрят в ту же БД. crm-web в E2E работает по HTTPS на development-сертификате (доверие не нужно, `ignoreHTTPSErrors`): Secure-cookie сессии WebKit на http не хранит. Тестовые журналы не публиковать с паролями.
 
 После подготовки окружения, из web:
 
 ```sh
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm run e2e
 ```
 
-В CI Linux при необходимости `npx playwright install --with-deps chromium`. DEV-15 должен устранить гонку выделения периода и проверить параллельные запуски. Один успешный retry не закрывает race. После исправления прогнать полный набор с исходной параллельностью; дополнительные повторения оправданы проверкой гонки, не бесконечным поиском зелёного прогона.
+В CI Linux: `npx playwright install --with-deps chromium firefox webkit` и `dotnet dev-certs https`. Месяцы биллинга тесты занимают созданием прогона (уникальный индекс открытого периода, BR-BIL-01), поэтому workers и прогоны на одной БД не конфликтуют; тест с диалогом создаёт прогон сам и при занятом месяце переходит к следующему. Тест, прошедший только на retry, роняет прогон (`failOnFlakyTests`). Один успешный retry не закрывает race; дополнительные повторения оправданы проверкой гонки, не поиском зелёного прогона. Сценарии `@critical` идут также в Firefox и WebKit; WebKit Playwright — не Safari на macOS/iOS и не заменяет проверку на реальных устройствах (DEV-18, EXT-10).
 
 ## Q4 — инфраструктура и эксплуатация
 

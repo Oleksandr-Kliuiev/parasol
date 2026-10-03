@@ -23,17 +23,41 @@ jobs:
       - name: Restore
         run: dotnet restore Vardahei.Crm.slnx
       - name: Build
+        id: build
         run: dotnet build Vardahei.Crm.slnx --no-restore -c Release
       - name: Vulnerable packages
         run: |
           dotnet list Vardahei.Crm.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
           ! grep -E "Critical|High" vulnerable.txt
-      - name: Unit and architecture tests
-        run: |
+      # Every test step runs once the build succeeded, so one red suite does not hide the result of the others.
+      - name: Unit tests (with coverage)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
           dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --no-build -c Release
-          dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj --no-build -c Release
-      - name: Integration tests (SQL Server in Testcontainers)
-        run: dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --no-build -c Release
+          --coverage --coverage-output-format cobertura --coverage-output "$RUNNER_TEMP/coverage/unit.cobertura.xml"
+      # Without coverage: instrumentation adds types to every assembly, which the dependency rules would report.
+      - name: Architecture tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj --no-build -c Release
+      - name: Integration tests (SQL Server in Testcontainers, with coverage)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --no-build -c Release
+          --coverage --coverage-output-format cobertura --coverage-output "$RUNNER_TEMP/coverage/integration.cobertura.xml"
+      # NFR-10: domain of billing, tariffs and contracts >= 90 %, rest of the backend >= 70 %, line coverage with the
+      # denominator printed. Crm.Worker is a composition root (host wiring only) that no test loads; its jobs live in module
+      # and integration assemblies and are measured there.
+      - name: Coverage gate (NFR-10)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker --summary "$GITHUB_STEP_SUMMARY"
+          "$RUNNER_TEMP/coverage/unit.cobertura.xml" "$RUNNER_TEMP/coverage/integration.cobertura.xml"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        with:
+          name: coverage
+          path: ${{ runner.temp }}/coverage
+          retention-days: 14
 
   frontend:
     runs-on: ubuntu-latest
@@ -81,7 +105,10 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # The critical scenarios also run in Firefox and WebKit (playwright.config.ts).
+      - run: npx playwright install --with-deps chromium firefox webkit
+      # crm-web serves the e2e suite over HTTPS on the development certificate, which needs no trust here.
+      - run: dotnet dev-certs https
       - name: End-to-end tests (crm-web + crm-worker + SQL Server + external API mocks)
         run: npm run e2e
       - uses: actions/upload-artifact@v4

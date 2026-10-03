@@ -1,0 +1,31 @@
+# Steps of job 'backend' from .github/workflows/ci.yml executed locally in order (ci-local.rb; uses: steps reported, not run)
+# 2026-10-03 22:51:22Z .. 22:52:00Z; unit 282 (5 known DEV-00 regressions), integration 88 (5 known DEV-00 regressions), architecture 67/67
+SKIP  uses: actions/checkout@v4
+SKIP  uses: actions/setup-dotnet@v4
+SUCCESS Restore                                                         0.7s
+SUCCESS Build                                                           1.3s
+SUCCESS Vulnerable packages                                            10.8s
+FAILURE Unit tests (with coverage)                                      3.5s
+SUCCESS Architecture tests                                              1.6s
+FAILURE Integration tests (SQL Server in Testcontainers, with coverage)   19.8s
+SUCCESS Coverage gate (NFR-10)                                          0.4s
+SKIP  uses: actions/upload-artifact@v4 (files: unit.cobertura.xml, integration.cobertura.xml)
+JOB backend: FAILED
+
+# Step summary written by the coverage gate
+## Coverage (NFR-10)
+
+Reports: unit.cobertura.xml, integration.cobertura.xml
+
+| Scope | Covered lines | Coverable lines | Line coverage | Threshold | Result | Branch coverage (info) |
+|---|---:|---:|---:|---:|---|---:|
+| Domain of Billing, Contracts, TimeTracking | 843 | 882 | 95.58 % | 90 % | pass | 86.60 % of 470 |
+| Rest of the backend (src/) | 14399 | 16942 | 84.99 % | 70 % | pass | 68.17 % of 8340 |
+
+Excluded from the denominator:
+
+- EF Core migrations and model snapshots (generated): 18799 lines
+- sources generated at build time: 256 lines
+- Crm.Worker: no test loads it, so its lines are not measured (allowed by --allow-unmeasured)
+
+### Critical domain by file

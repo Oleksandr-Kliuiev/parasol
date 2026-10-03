@@ -64,7 +64,8 @@ flowchart LR
   PR[Pull request] --> B[Build .NET + web]
   B --> UT[Unit + architecture tests]
   UT --> IT[Integration tests<br/>Testcontainers SQL, WireMock]
-  IT --> SEC[CodeQL, dependency audit,<br/>secret scan, container scan]
+  IT --> COV[Coverage gate NFR-10<br/>домен ≥ 90 %, backend ≥ 70 %]
+  COV --> SEC[CodeQL, dependency audit,<br/>secret scan, container scan]
   SEC --> REV[Code review ≥ 1]
   REV --> M[Merge в main]
   M --> IMG[Сборка образов → ACR<br/>тег = git SHA, SBOM]
@@ -76,6 +77,7 @@ flowchart LR
 ```
 
 - **Git-процесс:** trunk-based, короткие ветки, Conventional Commits, обязательный PR; релизные теги `vYYYY.MM.N`.
+- **Покрытие (NFR-10):** unit- и integration-тесты собирают Cobertura через `Microsoft.Testing.Extensions.CodeCoverage`; `tools/coverage/coverage-gate.py` объединяет отчёты, печатает denominator и исключения (миграции, сгенерированный код, AppHost) и роняет CI ниже порога. Архитектурные тесты обнаруживают модули по `src/` и падают, если проект не входит в solution или в хосты.
 - **Миграции БД:** EF Core migration bundle, выполняются отдельным шагом до переключения трафика; только обратно совместимые изменения (expand → deploy → contract в следующем релизе).
 - **Инфраструктура:** Bicep-модули в `infra/`, параметры окружений `*.bicepparam`, `what-if` в PR-комментарии.
 - **Аутентификация CI в Azure:** федеративные учётные данные GitHub OIDC → отдельные managed identities для `test` и `prod`.

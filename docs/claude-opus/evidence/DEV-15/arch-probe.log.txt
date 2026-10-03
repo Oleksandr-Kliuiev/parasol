@@ -1,0 +1,62 @@
+# AC02 probe, scratch worktree of codex/readiness + DEV-15 architecture tests (removed afterwards)
+# A) src/Modules/Probe/Crm.Probe added, not in Vardahei.Crm.slnx, not referenced by crm-web
+failed Crm.ArchitectureTests.CompletenessTests.Every_module_keeps_its_domain_in_a_domain_namespace_unless_it_is_listed_as_having_none (37ms)
+failed Crm.ArchitectureTests.CompletenessTests.Every_project_is_part_of_the_solution (27ms)
+      should be empty but had
+      Projects missing from Vardahei.Crm.slnx: src/Modules/Probe/Crm.Probe/Crm.Probe.csproj
+failed Crm.ArchitectureTests.CompletenessTests.Every_production_project_is_loaded_by_the_rules (7ms)
+      should be empty but had
+      These projects are not referenced by crm-web or crm-worker, so no architecture rule checks them: Crm.Probe
+failed Crm.ArchitectureTests.CompletenessTests.Every_module_db_context_declares_its_own_schema (27ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Core_modules_do_not_know_about_integrations(moduleName: "Crm.Probe") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Integrations_use_only_module_contracts(integration: "Crm.Integrations.Brreg") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Integrations_use_only_module_contracts(integration: "Crm.Integrations.PowerOffice") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Integrations_use_only_module_contracts(integration: "Crm.Integrations.PartnerCenter") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Integrations_use_only_module_contracts(integration: "Crm.Integrations.Core") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Integrations_use_only_module_contracts(integration: "Crm.Integrations.MicrosoftGraph") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Integrations_use_only_module_contracts(integration: "Crm.Integrations.Atera") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Domain_types_do_not_depend_on_persistence(moduleName: "Crm.Probe") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Customers") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.CustomFields") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Licensing") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Billing") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Projects") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Catalog") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Activities") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.TimeTracking") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Sales") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Identity") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Service") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Contracts") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Notifications") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Probe") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Audit") (0ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Reports") (0ms)
+Test run summary: Failed!
+  total: 70
+  failed: 28
+  succeeded: 42
+
+# B) Crm.Probe added to the solution and referenced by crm-web; it uses Crm.Billing.BillingOptions (an implementation type)
+failed Crm.ArchitectureTests.CompletenessTests.Every_module_keeps_its_domain_in_a_domain_namespace_unless_it_is_listed_as_having_none (62ms)
+failed Crm.ArchitectureTests.CompletenessTests.Every_module_db_context_declares_its_own_schema (18ms)
+failed Crm.ArchitectureTests.ModuleBoundaryTests.Modules_do_not_reference_other_module_implementations(moduleName: "Crm.Probe") (4ms)
+      Violations: Crm.Probe.ProbeModule
+Test run summary: Failed!
+  total: 70
+  failed: 3
+  succeeded: 67
+      should be
+  ["Crm.Audit", "Crm.Reports"]
+      but was (case sensitive comparison)
+  ["Crm.Audit", "Crm.Probe", "Crm.Reports"]
+      difference
+--
+      should be
+  ["Crm.Reports"]
+      but was (case sensitive comparison)
+  ["Crm.Probe", "Crm.Reports"]
+      difference
+--
+      should be
+  True

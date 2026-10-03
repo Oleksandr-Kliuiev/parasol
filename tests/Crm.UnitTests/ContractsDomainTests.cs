@@ -234,3 +234,242 @@ public class ContractIndexationTests
         contract.Index(3m, new DateOnly(2027, 1, 1)).Error!.Code.ShouldBe("CON_INVALID_STATUS");
     }
 }
+
+/// <summary>Rules of a contract's life that the scenario tests above do not reach (BR-CON-01…04).</summary>
+public class ContractRulesTests
+{
+    private static readonly DateOnly Start = new(2026, 1, 1);
+    private static readonly DateOnly End = new(2026, 12, 31);
+
+    private static ContractTerms Terms(DateOnly? end = null, Guid? slaPolicyId = null) => new(
+        "Managed services", ContractType.Msp, Start, end ?? End, false, 0, 90, slaPolicyId, InvoiceFrequency.Monthly, InvoiceTiming.InAdvance,
+        null, false, null, null, null, null);
+
+    private static Contract Draft(ContractTerms? terms = null) => Contract.Create("K-2026-0002", Guid.NewGuid(), terms ?? Terms()).Value;
+
+    private static Contract Active(ContractTerms? terms = null)
+    {
+        var contract = Draft(terms);
+        contract.Activate().IsSuccess.ShouldBeTrue();
+        contract.ClearDomainEvents();
+        return contract;
+    }
+
+    private static LineTerms Line(DateOnly from, DateOnly? to = null) =>
+        new(Guid.NewGuid(), null, QuantityModel.Fixed, DeviceFilter.All, 1, 1_000m, 0, from, to);
+
+    [Fact]
+    public void A_contract_that_ends_before_it_starts_is_refused()
+    {
+        Contract.Create("K-2026-0003", Guid.NewGuid(), Terms(end: Start.AddDays(-1))).Error!.Code.ShouldBe("CON_INVALID_PERIOD");
+        Active().Update(Guid.NewGuid(), Terms(end: Start.AddDays(-1))).Error!.Code.ShouldBe("CON_INVALID_PERIOD");
+    }
+
+    [Fact]
+    public void Only_a_draft_can_be_moved_to_another_customer()
+    {
+        var draft = Draft();
+        var newCustomer = Guid.NewGuid();
+        draft.Update(newCustomer, Terms()).IsSuccess.ShouldBeTrue();
+        draft.OrganizationId.ShouldBe(newCustomer);
+
+        var running = Active();
+        var customer = running.OrganizationId;
+        running.Update(Guid.NewGuid(), Terms()).IsSuccess.ShouldBeTrue();
+        running.OrganizationId.ShouldBe(customer);
+    }
+
+    [Fact]
+    public void An_ended_contract_cannot_be_edited_and_a_notice_freezes_the_end_date()
+    {
+        var underNotice = Active();
+        underNotice.GiveNotice(new DateOnly(2026, 6, 1), End).IsSuccess.ShouldBeTrue();
+        underNotice.Update(underNotice.OrganizationId, Terms(end: End.AddMonths(6))).Error!.Code.ShouldBe("CON_NOTICE_GIVEN");
+        underNotice.Update(underNotice.OrganizationId, Terms() with { Title = "Drift" }).IsSuccess.ShouldBeTrue();
+
+        var ended = Active();
+        ended.End(new DateOnly(2026, 3, 31)).IsSuccess.ShouldBeTrue();
+        ended.Update(ended.OrganizationId, Terms()).Error!.Code.ShouldBe("CON_INVALID_STATUS");
+    }
+
+    [Fact]
+    public void Changing_the_sla_of_a_running_contract_tells_the_service_desk()
+    {
+        var draft = Draft();
+        draft.Update(draft.OrganizationId, Terms(slaPolicyId: Guid.NewGuid())).IsSuccess.ShouldBeTrue();
+        draft.DomainEvents.OfType<OrganizationSlaChanged>().ShouldBeEmpty();
+
+        var running = Active();
+        running.Update(running.OrganizationId, Terms(slaPolicyId: Guid.NewGuid())).IsSuccess.ShouldBeTrue();
+        running.DomainEvents.OfType<OrganizationSlaChanged>().ShouldHaveSingleItem().OrganizationId.ShouldBe(running.OrganizationId);
+
+        // The same SLA again is no change.
+        running.ClearDomainEvents();
+        running.Update(running.OrganizationId, Terms(slaPolicyId: running.SlaPolicyId)).IsSuccess.ShouldBeTrue();
+        running.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Notice_is_given_only_on_a_running_contract_and_never_ends_it_before_its_start()
+    {
+        Draft().GiveNotice(new DateOnly(2026, 6, 1), End).Error!.Code.ShouldBe("CON_INVALID_STATUS");
+
+        // Notice given before the start: the earliest end is still before the contract begins.
+        Active().GiveNotice(new DateOnly(2025, 6, 1), new DateOnly(2025, 9, 30)).Error!.Code.ShouldBe("CON_INVALID_PERIOD");
+
+        Active().WithdrawNotice().Error!.Code.ShouldBe("CON_INVALID_STATUS");
+    }
+
+    [Fact]
+    public void A_contract_ends_only_while_running_and_not_before_its_start()
+    {
+        Draft().End(new DateOnly(2026, 3, 31)).Error!.Code.ShouldBe("CON_INVALID_STATUS");
+        Active().End(Start.AddDays(-1)).Error!.Code.ShouldBe("CON_INVALID_PERIOD");
+
+        var contract = Active();
+        contract.End(new DateOnly(2026, 3, 31)).IsSuccess.ShouldBeTrue();
+        contract.EndedOn.ShouldBe(new DateOnly(2026, 3, 31));
+    }
+
+    [Fact]
+    public void A_line_lies_within_the_contract_and_is_ended_rather_than_removed_once_it_runs()
+    {
+        var contract = Active();
+        contract.AddLine(Line(Start.AddMonths(1), Start)).Error!.Code.ShouldBe("CON_INVALID_PERIOD");
+        contract.AddLine(Line(Start.AddDays(-1))).Error!.Code.ShouldBe("CON_LINE_OUTSIDE_CONTRACT");
+        contract.AddLine(Line(End.AddDays(1))).Error!.Code.ShouldBe("CON_LINE_OUTSIDE_CONTRACT");
+
+        var line = contract.AddLine(Line(Start)).Value;
+        contract.RemoveLine(line.Id).Error!.Code.ShouldBe("CON_NOT_DRAFT");
+        contract.EndLine(line.Id, Start.AddDays(-1)).Error!.Code.ShouldBe("CON_REVISION_DATE");
+        contract.EndLine(Guid.NewGuid(), End).Error!.Code.ShouldBe("CON_LINE_NOT_FOUND");
+        contract.EndLine(line.Id, new DateOnly(2026, 6, 30)).IsSuccess.ShouldBeTrue();
+        contract.LinesOn(new DateOnly(2026, 7, 1)).ShouldBeEmpty();
+        contract.LinesOn(new DateOnly(2026, 6, 30)).ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void A_draft_line_is_removed_and_deleting_a_contract_deletes_its_lines()
+    {
+        var draft = Draft();
+        var first = draft.AddLine(Line(Start)).Value;
+        var second = draft.AddLine(Line(Start)).Value;
+
+        draft.RemoveLine(Guid.NewGuid()).Error!.Code.ShouldBe("CON_LINE_NOT_FOUND");
+        draft.RemoveLine(first.Id).IsSuccess.ShouldBeTrue();
+        first.IsDeleted.ShouldBeTrue();
+        second.IsDeleted.ShouldBeFalse();
+
+        draft.MarkDeleted();
+        draft.IsDeleted.ShouldBeTrue();
+        second.IsDeleted.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void A_merge_moves_the_contract_and_undoing_it_moves_it_back()
+    {
+        var contract = Active();
+        var original = contract.OrganizationId;
+        var target = Guid.NewGuid();
+        var mergeId = Guid.NewGuid();
+
+        contract.MoveToOrganization(target, mergeId);
+        contract.OrganizationId.ShouldBe(target);
+        contract.PreviousOrganizationId.ShouldBe(original);
+        contract.MovedByMergeId.ShouldBe(mergeId);
+
+        contract.UndoMove();
+        contract.OrganizationId.ShouldBe(original);
+        contract.PreviousOrganizationId.ShouldBeNull();
+        contract.MovedByMergeId.ShouldBeNull();
+    }
+}
+
+/// <summary>The prepaid hours ledger (BR-CON-05): what the scenario test in ContractsDomainTests leaves out.</summary>
+public class HourBankRulesTests
+{
+    private static readonly DateOnly From = new(2026, 1, 1);
+    private static readonly DateTimeOffset Now = new(2026, 3, 1, 9, 0, 0, TimeSpan.Zero);
+
+    private static HourBank Bank(decimal hours = 10m) =>
+        HourBank.Create(Guid.NewGuid(), null, " Klippekort ", hours, From, null, 1_250m, null).Value.Bank;
+
+    [Fact]
+    public void A_bank_cannot_end_before_it_starts()
+    {
+        HourBank.Create(Guid.NewGuid(), null, "Klippekort", 10m, From, From.AddDays(-1), null, null).Error!.Code.ShouldBe("CON_INVALID_PERIOD");
+    }
+
+    [Fact]
+    public void The_terms_change_without_touching_the_balance()
+    {
+        var bank = Bank();
+        bank.Consume(4m, From, null, null, null, Now).IsSuccess.ShouldBeTrue();
+
+        bank.UpdateTerms(" Klippekort 2026 ", new DateOnly(2026, 12, 31), 1_400m, 10m);
+
+        bank.Name.ShouldBe("Klippekort 2026");
+        bank.ValidTo.ShouldBe(new DateOnly(2026, 12, 31));
+        bank.OverageRate.ShouldBe(1_400m);
+        bank.LowBalancePct.ShouldBe(10m);
+        bank.RemainingHours.ShouldBe(6m);
+    }
+
+    [Fact]
+    public void A_closed_bank_takes_no_more_hours()
+    {
+        var bank = Bank();
+        bank.Close();
+
+        bank.Consume(1m, From, null, null, null, Now).Error!.Code.ShouldBe("CON_HOUR_BANK_CLOSED");
+        bank.UsedHours.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Giving_back_more_hours_than_were_used_adds_them_to_the_purchase()
+    {
+        var bank = Bank();
+        bank.Consume(2m, From, null, null, null, Now);
+
+        var entry = bank.Adjust(3m, From, "Goodwill", Now);
+
+        bank.UsedHours.ShouldBe(0);
+        bank.PurchasedHours.ShouldBe(11m);
+        bank.RemainingHours.ShouldBe(11m);
+        entry.Kind.ShouldBe(HourBankEntryKind.Adjustment);
+        entry.Hours.ShouldBe(3m);
+    }
+
+    [Fact]
+    public void A_correction_that_leaves_the_bank_low_warns_once_and_a_top_up_rearms_the_warning()
+    {
+        var bank = Bank();
+
+        bank.Adjust(-9m, From, "Booked twice in Atera", Now);
+        bank.DomainEvents.OfType<HourBankLow>().ShouldHaveSingleItem().RemainingHours.ShouldBe(1m);
+        bank.Adjust(-0.5m, From, "Again", Now);
+        bank.DomainEvents.OfType<HourBankLow>().ShouldHaveSingleItem();
+
+        bank.Purchase(20m, From, "Top-up");
+        bank.LowBalanceNotifiedAt.ShouldBeNull();
+        bank.Adjust(1m, From, "Correction", Now);
+        bank.LowBalanceNotifiedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public void A_merge_moves_the_bank_and_undoing_it_moves_it_back()
+    {
+        var bank = Bank();
+        var original = bank.OrganizationId;
+        var target = Guid.NewGuid();
+
+        bank.MoveToOrganization(target, Guid.NewGuid());
+        bank.OrganizationId.ShouldBe(target);
+        bank.PreviousOrganizationId.ShouldBe(original);
+
+        bank.UndoMove();
+        bank.OrganizationId.ShouldBe(original);
+        bank.PreviousOrganizationId.ShouldBeNull();
+        bank.MovedByMergeId.ShouldBeNull();
+    }
+}

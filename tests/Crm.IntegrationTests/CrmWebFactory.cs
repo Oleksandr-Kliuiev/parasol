@@ -24,6 +24,7 @@ namespace Crm.IntegrationTests;
 public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly MsSqlContainer _sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
+    private readonly Lock _clientsLock = new();
 
     public WireMockServer Brreg { get; } = WireMockServer.Start();
 
@@ -144,7 +145,7 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
     /// <summary>Client authenticated with the given App Roles; sends the CSRF header like the SPA does.</summary>
     public HttpClient ClientAs(string role, string? userKey = null, bool csrf = true)
     {
-        var client = CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var client = NewClient();
         client.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, role);
         client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, userKey ?? role.ToLowerInvariant());
         if (csrf)
@@ -156,7 +157,20 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
         return client;
     }
 
-    public HttpClient AnonymousClient() => CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+    public HttpClient AnonymousClient() => NewClient();
+
+    /// <summary>
+    /// WebApplicationFactory keeps every client in a plain List to dispose it later. Test classes run in parallel, so
+    /// unsynchronised adds can leave a null slot that makes DisposeAsync throw for the whole assembly; clients are therefore
+    /// created one at a time.
+    /// </summary>
+    private HttpClient NewClient()
+    {
+        lock (_clientsLock)
+        {
+            return CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        }
+    }
 }
 
 /// <summary>Authenticates requests from test headers and provisions the CRM user exactly like the real sign-in.</summary>

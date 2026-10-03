@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { api, createContact, createOrganization, marker, signIn, toast } from './support';
 
-test('a quote with an extra discount is approved, downloaded and accepted', async ({ page }) => {
+test('a quote with an extra discount is approved, downloaded and accepted', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(120_000);
   const m = marker('Quo');
   await signIn(page, 'Crm.Sales');

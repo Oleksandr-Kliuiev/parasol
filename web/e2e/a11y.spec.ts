@@ -3,7 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { api, collectedBillingRun, createContact, createOrganization, marker, signIn } from './support';
 
 async function expectNoSeriousViolations(page: Page, name: string) {
-  await expect(page.getByRole('main')).toBeVisible();
+  // The element, not the role: an open modal dialog hides the rest of the page from assistive technology, and when that
+  // happens depends on timing — looking the landmark up by role made the dialog checks fail on a busy machine.
+  await expect(page.locator('main')).toBeVisible();
   await page.waitForLoadState('networkidle');
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

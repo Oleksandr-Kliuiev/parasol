@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createOrganization, formatOrgNumber, marker, orgNumber, signIn, toast } from './support';
 
-test('sales creates an organization from the registry, adds a contact, edits it and sees the history', async ({ page }) => {
+test('sales creates an organization from the registry, adds a contact, edits it and sees the history', { tag: '@critical' }, async ({ page }) => {
   const number = orgNumber();
   const name = `TESTFIRMA ${number} AS`;
   await signIn(page, 'Crm.Sales', '/organizations');

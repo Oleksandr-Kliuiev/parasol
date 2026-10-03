@@ -52,31 +52,59 @@ export async function createContact(page: Page, organizationId: string, body: Re
   return api.post<{ contactId: string }>(page, `/api/v1/customers/organizations/${organizationId}/contacts`, { roles: [], isPrimary: false, ...body });
 }
 
+/** API-created runs claim months from here on; later months belong to the test that creates its run through the dialog. */
+export const API_RUNS_FROM_YEAR = 2040;
+export const DIALOG_RUNS_FROM_YEAR = 2080;
+/** The run request accepts years up to 2100 (CreateRunRequestValidator). */
+const LAST_RUN_YEAR = 2100;
+
+export type BillingPeriod = { year: number; month: number; start: string };
+
+const periodOf = (year: number, month: number): BillingPeriod => ({ year, month, start: `${year}-${String(month).padStart(2, '0')}-01` });
+
+/** The last day of the period's month, so a test contract covers that month only and no other test's run bills it. */
+export const periodEnd = (period: BillingPeriod) => new Date(Date.UTC(period.year, period.month, 0)).toISOString().slice(0, 10);
+
 /**
- * A billing period no run uses yet. The e2e database is shared between runs and only one run per period may be open
- * (BR-BIL-01), so every test bills a period of its own, far enough ahead that no other test's contract ends first.
+ * Months from {@link fromYear} on that have no run in the database yet, earliest first. Only a hint: another worker or
+ * another test run on the same database can still take a month before this one creates its run.
  */
-export async function freeBillingPeriod(page: Page): Promise<{ year: number; month: number; start: string }> {
-  const runs = await api.get<Array<{ periodStart: string }>>(page, '/api/v1/billing/runs?limit=120');
-  const used = new Set(runs.map((run) => run.periodStart.slice(0, 7)));
-  for (let year = 2040; year < 2100; year++) {
+export async function* candidatePeriods(page: Page, fromYear: number, toYear = LAST_RUN_YEAR): AsyncGenerator<BillingPeriod> {
+  for (let year = fromYear; year <= toYear; year++) {
+    const runs = await api.get<Array<{ periodStart: string }>>(page, `/api/v1/billing/runs?year=${year}&limit=120`);
+    const taken = new Set(runs.map((run) => run.periodStart.slice(0, 7)));
     for (let month = 1; month <= 12; month++) {
-      const key = `${year}-${String(month).padStart(2, '0')}`;
-      if (!used.has(key)) return { year, month, start: `${key}-01` };
+      const period = periodOf(year, month);
+      if (!taken.has(period.start.slice(0, 7))) yield period;
     }
+  }
+}
+
+/**
+ * Claims a billing period by creating a draft run in it. Only one open run may exist per period (BR-BIL-01, a unique
+ * index), so creating the run is the reservation itself: a month that a parallel worker or another run on the same
+ * database claimed first answers BIL_PERIOD_BUSY, and the next month is tried. No month is read and then used later.
+ */
+export async function reserveBillingRun(page: Page, notes: string, fromYear = API_RUNS_FROM_YEAR): Promise<BillingPeriod & { id: string }> {
+  for await (const period of candidatePeriods(page, fromYear, DIALOG_RUNS_FROM_YEAR - 1)) {
+    const response = await page.request.post('/api/v1/billing/runs', {
+      data: { year: period.year, month: period.month, notes },
+      headers: { 'X-CSRF': '1' },
+    });
+    const text = await response.text();
+    if (response.status() === 201) return { ...period, id: (JSON.parse(text) as { id: string }).id };
+    // Taken: BIL_PERIOD_BUSY when the other run already existed; DUPLICATE when both requests passed the service's check at
+    // the same moment and the unique index rejected this insert (the only unique index of a run is its open period).
+    if (response.status() === 409 && /"code":"(BIL_PERIOD_BUSY|DUPLICATE)"/.test(text)) continue;
+    throw new Error(`Creating a billing run for ${period.start} failed: ${response.status()} ${text}`);
   }
 
   throw new Error('No free billing period left in the test database.');
 }
 
-/** A collected run to look at; an existing one is reused, so parallel projects do not fight over a period. */
+/** A collected run of this test's own; runs of other tests are never reused, as they may change state meanwhile. */
 export async function collectedBillingRun(page: Page, notes: string): Promise<{ id: string }> {
-  const runs = await api.get<Array<{ id: string; status: string }>>(page, '/api/v1/billing/runs?limit=60');
-  const existing = runs.find((run) => run.status !== 'Draft');
-  if (existing) return existing;
-
-  const period = await freeBillingPeriod(page);
-  const run = await api.post<{ id: string }>(page, '/api/v1/billing/runs', { year: period.year, month: period.month, notes });
+  const run = await reserveBillingRun(page, notes);
   await api.post(page, `/api/v1/billing/runs/${run.id}/collect`);
   return run;
 }

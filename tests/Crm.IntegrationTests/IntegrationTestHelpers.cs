@@ -107,6 +107,27 @@ internal static class IntegrationTestHelpers
         await factory.ProcessEventsAsync();
     }
 
+    /// <summary>
+    /// Drains events and outbound operations until the billing run has no basis waiting for export and returns its status.
+    /// A run also carries bases of other tests' open-ended contracts, and those are sent whenever a parallel test drains
+    /// the queue, so the test's own basis being sent says nothing about the run being done.
+    /// </summary>
+    public static async Task<string> WaitForRunExportAsync(this CrmWebFactory factory, HttpClient client, Guid runId)
+    {
+        var status = string.Empty;
+        for (var attempt = 0; attempt < 15; attempt++)
+        {
+            await factory.ProcessEventsAndOutboundAsync();
+            status = (await client.GetFromJsonAsync<JsonElement>($"/api/v1/billing/runs/{runId}")).GetProperty("status").GetString()!;
+            if (status is "Exported" or "ExportedWithErrors")
+            {
+                break;
+            }
+        }
+
+        return status;
+    }
+
     public static async Task<Guid> CreateOrganizationAsync(this HttpClient client, object body)
     {
         var response = await client.PostAsJsonAsync("/api/v1/customers/organizations", body);

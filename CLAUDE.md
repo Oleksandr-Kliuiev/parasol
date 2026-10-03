@@ -12,6 +12,7 @@ CRM for an IT company (Microsoft / Atera / PowerOffice partner). Specs live in `
 - .NET SDK is pinned in `global.json` (10.0.401). Locally installed in `~/.dotnet`: `export PATH="$HOME/.dotnet:$PATH" DOTNET_ROOT="$HOME/.dotnet"`.
 - Build: `dotnet build Vardahei.Crm.slnx` (warnings are errors).
 - Tests use Microsoft Testing Platform: `dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj` (also `Crm.ArchitectureTests`, `Crm.IntegrationTests` — the latter needs Docker).
+- Coverage (NFR-10): add `--coverage --coverage-output-format cobertura --coverage-output <file>` to the unit and integration runs, then `python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker <files>`. Never run the architecture tests with coverage: instrumentation adds types that the dependency rules report.
 - Migrations (per module context): `dotnet ef migrations add <Name> --project src/Modules/<Module>/Crm.<Module>/Crm.<Module>.csproj --context <Module>DbContext --output-dir Persistence/Migrations`.
 - Frontend (`web/`): `npm run dev | lint | typecheck | test | build` (build writes to `src/Hosts/Crm.Web/wwwroot`).
 - Bicep: `az bicep build --file infra/main.bicep --stdout > /dev/null`.
@@ -20,6 +21,7 @@ CRM for an IT company (Microsoft / Atera / PowerOffice partner). Specs live in `
 ## UI rules
 - Fluent badges with `appearance="tint"` or a brand/`warning` colour fail the dark-theme contrast check in `web/e2e/a11y.spec.ts`; for emphasis use plain `Text` with a palette foreground token (e.g. `colorPaletteDarkOrangeForeground1`) or an outline badge with a neutral colour.
 - The e2e database is shared between runs, so assertions narrow the list first (search box, marker in the row) instead of relying on `.first()` or on totals.
+- E2E tests claim a billing month by creating the run (`reserveBillingRun` in `web/e2e/support.ts`; the open-period unique index makes it atomic) and give test contracts an end date in that month, so no other test's run bills them. crm-web runs over HTTPS in e2e because WebKit drops Secure cookies on http.
 
 ## Architecture rules (enforced by tests/Crm.ArchitectureTests)
 - Modular monolith. A module references another module only via its `*.Contracts` project or domain events; no cross-schema foreign keys. The Contracts module's public project is `Crm.Contracts.Contracts` (namespace clash is expected).

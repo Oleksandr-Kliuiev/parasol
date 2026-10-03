@@ -66,13 +66,24 @@ public class CustomersApiTests(CrmWebFactory factory)
         var response = await factory.ClientAs(CrmRoles.Sales).PostAsJsonAsync(Organizations, TestData.Organization("Outbox Test AS"));
         var id = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
 
+        // Test classes run in parallel and drain the same outbox: when another processor has claimed the message, this one
+        // skips it until that dispatch is done, so a single pass proves nothing either way.
         var processor = ActivatorUtilities.CreateInstance<OutboxProcessor>(factory.Services);
-        await processor.ProcessContextAsync(typeof(CustomersDbContext), TestContext.Current.CancellationToken);
+        async Task<DateTimeOffset?> ProcessedAtAsync()
+        {
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<CustomersDbContext>();
+            return (await db.OutboxMessages.SingleAsync(m => m.Payload.Contains(id.ToString()), TestContext.Current.CancellationToken)).ProcessedAt;
+        }
 
+        for (var attempt = 0; attempt < 20 && await ProcessedAtAsync() is null; attempt++)
+        {
+            await processor.ProcessContextAsync(typeof(CustomersDbContext), TestContext.Current.CancellationToken);
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+
+        (await ProcessedAtAsync()).ShouldNotBeNull();
         factory.Events.Received.ShouldContain(e => e.OrganizationId == id);
-        using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CustomersDbContext>();
-        (await db.OutboxMessages.SingleAsync(m => m.Payload.Contains(id.ToString()))).ProcessedAt.ShouldNotBeNull();
     }
 
     [Fact]

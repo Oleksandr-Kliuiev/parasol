@@ -505,7 +505,7 @@
         "Q5"
       ],
       "external_gates": [],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-15.md",
       "evidence_file": "evidence/DEV-15.md",
       "acceptance_ids": [

@@ -190,3 +190,115 @@ public class TimeEntryTests
         entry.Amount.ShouldBe(0);
     }
 }
+
+/// <summary>What may change on a time entry, and when (BR-TIM-01…03): the parts the approval scenario does not reach.</summary>
+public class TimeEntryRulesTests
+{
+    private static ManualTimeEntry Manual(decimal hours = 2m, string? workType = "Remote") => new(
+        Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 9, 16), hours, workType, true, false, false, " Oppsett ", null, null, null, null);
+
+    private static TimeEntry Approved(TimeEntry entry)
+    {
+        entry.Approve(Guid.NewGuid(), DateTimeOffset.UtcNow, null, [new TimeAllocation(entry.Id, TimeClassification.Rate, entry.Hours, entry.Hours, 1_000m, null)]);
+        return entry;
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(24.01)]
+    public void Hours_are_above_zero_and_at_most_a_day(decimal hours)
+    {
+        TimeEntry.CreateManual(Manual(hours)).Error!.Code.ShouldBe("TIM_INVALID_HOURS");
+        TimeEntry.CreateManual(Manual()).Value.Update(Manual(hours)).Error!.Code.ShouldBe("TIM_INVALID_HOURS");
+    }
+
+    [Fact]
+    public void A_new_manual_entry_takes_every_change()
+    {
+        var entry = TimeEntry.CreateManual(Manual()).Value;
+        var changed = Manual(3.456m, " Onsite ") with { Onsite = true, AfterHours = true, Description = "  ", ProjectId = Guid.NewGuid() };
+
+        entry.Update(changed).IsSuccess.ShouldBeTrue();
+
+        entry.Hours.ShouldBe(3.46m);
+        entry.WorkType.ShouldBe("Onsite");
+        entry.Onsite.ShouldBeTrue();
+        entry.AfterHours.ShouldBeTrue();
+        entry.Description.ShouldBeNull();
+        entry.ProjectId.ShouldBe(changed.ProjectId);
+        entry.OrganizationId.ShouldBe(changed.OrganizationId);
+    }
+
+    [Fact]
+    public void An_approved_entry_is_changed_only_after_the_approval_is_withdrawn()
+    {
+        var entry = Approved(TimeEntry.CreateManual(Manual()).Value);
+
+        entry.Update(Manual(4m)).Error!.Code.ShouldBe("TIM_NOT_EDITABLE");
+        entry.Adjust(false, "Remote", false).Error!.Code.ShouldBe("TIM_NOT_EDITABLE");
+
+        entry.Withdraw().IsSuccess.ShouldBeTrue();
+        entry.Adjust(false, " Onsite ", true).IsSuccess.ShouldBeTrue();
+        entry.Billable.ShouldBeFalse();
+        entry.WorkType.ShouldBe("Onsite");
+        entry.AfterHours.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void An_invoiced_entry_stays_as_it_was_billed()
+    {
+        var entry = Approved(TimeEntry.CreateManual(Manual()).Value);
+        entry.MarkInvoiced();
+
+        entry.Status.ShouldBe(TimeEntryStatus.Invoiced);
+        entry.Withdraw().Error!.Code.ShouldBe("TIM_INVOICED");
+        entry.Adjust(false, null, false).Error!.Code.ShouldBe("TIM_NOT_EDITABLE");
+        entry.CurrentAllocations.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void Marking_an_unapproved_entry_invoiced_changes_nothing()
+    {
+        var entry = TimeEntry.CreateManual(Manual()).Value;
+
+        entry.MarkInvoiced();
+
+        entry.Status.ShouldBe(TimeEntryStatus.New);
+    }
+
+    [Fact]
+    public void A_review_note_is_kept_short_and_can_be_cleared()
+    {
+        var entry = TimeEntry.CreateManual(Manual()).Value;
+
+        entry.FlagForReview(new string('x', 600));
+        entry.ReviewNote!.Length.ShouldBe(512);
+
+        entry.ClearReview();
+        entry.ReviewNote.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Deleting_an_entry_deletes_its_allocations()
+    {
+        var entry = Approved(TimeEntry.CreateManual(Manual()).Value);
+
+        entry.MarkDeleted();
+
+        entry.IsDeleted.ShouldBeTrue();
+        entry.Allocations.ShouldAllBe(a => a.IsDeleted);
+    }
+
+    [Fact]
+    public void A_mapped_technician_is_assigned_to_an_imported_entry()
+    {
+        var entry = TimeEntry.FromSource(new ExternalTimeEntry(
+            "Atera", "wh-9", Guid.NewGuid(), null, null, null, null, "17", "Kari", new DateOnly(2026, 9, 16), null, null, 1m, "Remote", true, false, null));
+        var userId = Guid.NewGuid();
+
+        entry.AssignTechnician(userId);
+
+        entry.TechnicianId.ShouldBe(userId);
+    }
+}

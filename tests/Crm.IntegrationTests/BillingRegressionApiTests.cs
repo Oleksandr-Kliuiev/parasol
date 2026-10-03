@@ -206,22 +206,10 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
             .GetProperty("status").GetString().ShouldBe("Approved");
 
         // Other tests' open-ended contracts land in the run as well; the run is exported once none of its bases waits any more.
-        JsonElement exported = default;
-        var runStatus = string.Empty;
-        for (var attempt = 0; attempt < 15; attempt++)
-        {
-            await factory.ProcessEventsAndOutboundAsync();
-            exported = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/bases/{basisId}");
-            runStatus = (await RunAsync(finance, firstRunId)).GetProperty("status").GetString()!;
-            if (exported.GetProperty("status").GetString() != "Approved" && runStatus is "Exported" or "ExportedWithErrors")
-            {
-                break;
-            }
-        }
-
+        (await factory.WaitForRunExportAsync(finance, firstRunId)).ShouldBeOneOf("Exported", "ExportedWithErrors");
+        var exported = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/bases/{basisId}");
         exported.GetProperty("status").GetString().ShouldBe("Exported");
         exported.GetProperty("orderNo").GetString().ShouldBe("9401");
-        runStatus.ShouldBeOneOf("Exported", "ExportedWithErrors");
         (await finance.PostAsync($"{Billing}/runs/{firstRunId}/close", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         // 2. Another run for the same month, with a new run id and therefore a new export key.

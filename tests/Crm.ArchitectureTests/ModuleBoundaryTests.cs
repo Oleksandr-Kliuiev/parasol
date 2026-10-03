@@ -3,65 +3,41 @@ using NetArchTest.Rules;
 
 namespace Crm.ArchitectureTests;
 
-/// <summary>Enforces the module rules from docs/03-architecture.md §5.2.</summary>
+/// <summary>
+/// Enforces the module rules from docs/03-architecture.md §5.2. Modules, contracts and integrations are discovered from src/
+/// (<see cref="Production"/>), so every rule covers a new project as soon as it exists.
+/// </summary>
 public class ModuleBoundaryTests
 {
     private static readonly Assembly SharedKernel = typeof(Crm.SharedKernel.Domain.Entity).Assembly;
-    private static readonly Assembly Customers = typeof(Crm.Customers.CustomersModule).Assembly;
-    private static readonly Assembly CustomersContracts = typeof(Crm.Customers.Contracts.ICustomersApi).Assembly;
-    private static readonly Assembly Identity = typeof(Crm.Identity.IdentityModule).Assembly;
-    private static readonly Assembly IdentityContracts = typeof(Crm.Identity.Contracts.IUserDirectory).Assembly;
-    private static readonly Assembly Audit = typeof(Crm.Audit.AuditModule).Assembly;
-    private static readonly Assembly Catalog = typeof(Crm.Catalog.CatalogModule).Assembly;
-    private static readonly Assembly CatalogContracts = typeof(Crm.Catalog.Contracts.ICatalogApi).Assembly;
-    private static readonly Assembly Contracts = typeof(Crm.Contracts.ContractsModule).Assembly;
-    private static readonly Assembly ContractsContracts = typeof(Crm.Contracts.Contracts.IContractsApi).Assembly;
-    private static readonly Assembly Service = typeof(Crm.Service.ServiceModule).Assembly;
-    private static readonly Assembly ServiceContracts = typeof(Crm.Service.Contracts.IServiceApi).Assembly;
-    private static readonly Assembly TimeTracking = typeof(Crm.TimeTracking.TimeTrackingModule).Assembly;
-    private static readonly Assembly TimeTrackingContracts = typeof(Crm.TimeTracking.Contracts.ITimeTrackingApi).Assembly;
-    private static readonly Assembly Sales = typeof(Crm.Sales.SalesModule).Assembly;
-    private static readonly Assembly SalesContracts = typeof(Crm.Sales.Contracts.ISalesApi).Assembly;
-    private static readonly Assembly Activities = typeof(Crm.Activities.ActivitiesModule).Assembly;
-    private static readonly Assembly ActivitiesContracts = typeof(Crm.Activities.Contracts.ActivityLogged).Assembly;
-    private static readonly Assembly Licensing = typeof(Crm.Licensing.LicensingModule).Assembly;
-    private static readonly Assembly LicensingContracts = typeof(Crm.Licensing.Contracts.ILicensingApi).Assembly;
-    private static readonly Assembly Billing = typeof(Crm.Billing.BillingModule).Assembly;
-    private static readonly Assembly BillingContracts = typeof(Crm.Billing.Contracts.IBillingApi).Assembly;
-    private static readonly Assembly Notifications = typeof(Crm.Notifications.NotificationsModule).Assembly;
-    private static readonly Assembly NotificationsContracts = typeof(Crm.Notifications.Contracts.INotificationsApi).Assembly;
-    private static readonly Assembly Reports = typeof(Crm.Reports.ReportsModule).Assembly;
-    private static readonly Assembly Brreg = typeof(Crm.Integrations.Brreg.BrregModule).Assembly;
 
-    private static readonly Dictionary<string, Assembly> ModuleImplementations = new()
+    /// <summary>Modules that keep no domain model of their own; any other module must have a Domain namespace.</summary>
+    internal static readonly IReadOnlySet<string> ModulesWithoutDomain = new HashSet<string>(StringComparer.Ordinal)
     {
-        ["Crm.Customers"] = Customers,
-        ["Crm.Identity"] = Identity,
-        ["Crm.Audit"] = Audit,
-        ["Crm.Catalog"] = Catalog,
-        ["Crm.Contracts"] = Contracts,
-        ["Crm.Service"] = Service,
-        ["Crm.TimeTracking"] = TimeTracking,
-        ["Crm.Sales"] = Sales,
-        ["Crm.Activities"] = Activities,
-        ["Crm.Licensing"] = Licensing,
-        ["Crm.Billing"] = Billing,
-        ["Crm.Notifications"] = Notifications,
-        ["Crm.Reports"] = Reports,
+        // Audit rows are written by the shared interceptor; the module only holds the context and the audit query.
+        "Crm.Audit",
+        // Composes other modules' contracts and owns no schema (CLAUDE.md, DEV-14).
+        "Crm.Reports",
     };
 
-    public static TheoryData<string> ModuleNames => new(ModuleImplementations.Keys);
+    public static TheoryData<string> ModuleNames => new(Production.ModuleNames);
+
+    public static TheoryData<string> ModulesWithDomain => new(Production.ModuleNames.Where(m => !ModulesWithoutDomain.Contains(m)));
+
+    public static TheoryData<string> ContractsNames => new(Production.ContractsNames);
+
+    public static TheoryData<string> IntegrationNames => new(Production.IntegrationNames);
 
     [Theory]
     [MemberData(nameof(ModuleNames))]
     public void Modules_do_not_reference_other_module_implementations(string moduleName)
     {
-        var others = ModuleImplementations.Keys
+        var others = Production.ModuleNames
             .Where(name => name != moduleName)
-            .SelectMany(name => ImplementationNamespaces(name))
+            .SelectMany(ImplementationTypes)
             .ToArray();
 
-        var result = Types.InAssembly(ModuleImplementations[moduleName]).ShouldNot().HaveDependencyOnAny(others).GetResult();
+        var result = Types.InAssembly(Production.Load(moduleName)).ShouldNot().HaveDependencyOnAny(others).GetResult();
 
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
@@ -70,27 +46,16 @@ public class ModuleBoundaryTests
     [MemberData(nameof(ModuleNames))]
     public void Core_modules_do_not_know_about_integrations(string moduleName)
     {
-        var result = Types.InAssembly(ModuleImplementations[moduleName]).ShouldNot().HaveDependencyOn("Crm.Integrations").GetResult();
+        var result = Types.InAssembly(Production.Load(moduleName)).ShouldNot().HaveDependencyOn("Crm.Integrations").GetResult();
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
-
-    public static TheoryData<string> IntegrationNames => new(["Brreg", "MicrosoftGraph", "Core", "PowerOffice", "Atera", "PartnerCenter"]);
 
     [Theory]
     [MemberData(nameof(IntegrationNames))]
     public void Integrations_use_only_module_contracts(string integration)
     {
-        var assembly = integration switch
-        {
-            "Brreg" => Brreg,
-            "MicrosoftGraph" => typeof(Crm.Integrations.MicrosoftGraph.MicrosoftGraphModule).Assembly,
-            "PowerOffice" => typeof(Crm.Integrations.PowerOffice.PowerOfficeModule).Assembly,
-            "Atera" => typeof(Crm.Integrations.Atera.AteraModule).Assembly,
-            "PartnerCenter" => typeof(Crm.Integrations.PartnerCenter.PartnerCenterModule).Assembly,
-            _ => typeof(Crm.Integrations.Core.SyncRunner).Assembly,
-        };
-        var implementations = ModuleImplementations.Keys.SelectMany(ImplementationNamespaces).ToArray();
-        var result = Types.InAssembly(assembly).ShouldNot().HaveDependencyOnAny(implementations).GetResult();
+        var implementations = Production.ModuleNames.SelectMany(ImplementationTypes).ToArray();
+        var result = Types.InAssembly(Production.Load(integration)).ShouldNot().HaveDependencyOnAny(implementations).GetResult();
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
 
@@ -104,63 +69,30 @@ public class ModuleBoundaryTests
     }
 
     [Theory]
-    [InlineData("customers")]
-    [InlineData("identity")]
-    [InlineData("catalog")]
-    [InlineData("contracts")]
-    [InlineData("service")]
-    [InlineData("timetracking")]
-    [InlineData("sales")]
-    [InlineData("activities")]
-    [InlineData("licensing")]
-    [InlineData("billing")]
-    [InlineData("notifications")]
-    public void Contracts_do_not_depend_on_infrastructure(string module)
+    [MemberData(nameof(ContractsNames))]
+    public void Contracts_do_not_depend_on_infrastructure(string contracts)
     {
-        var assembly = module switch
-        {
-            "customers" => CustomersContracts,
-            "identity" => IdentityContracts,
-            "catalog" => CatalogContracts,
-            "service" => ServiceContracts,
-            "timetracking" => TimeTrackingContracts,
-            "sales" => SalesContracts,
-            "activities" => ActivitiesContracts,
-            "licensing" => LicensingContracts,
-            "billing" => BillingContracts,
-            "notifications" => NotificationsContracts,
-            _ => ContractsContracts,
-        };
-        var result = Types.InAssembly(assembly)
+        var result = Types.InAssembly(Production.Load(contracts))
             .ShouldNot().HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Crm.Infrastructure")
             .GetResult();
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
 
     [Theory]
-    [InlineData("Customers")]
-    [InlineData("Catalog")]
-    [InlineData("Contracts")]
-    [InlineData("Service")]
-    [InlineData("TimeTracking")]
-    [InlineData("Sales")]
-    [InlineData("Activities")]
-    [InlineData("Licensing")]
-    [InlineData("Billing")]
-    [InlineData("Notifications")]
-    public void Domain_types_do_not_depend_on_persistence(string module)
+    [MemberData(nameof(ModulesWithDomain))]
+    public void Domain_types_do_not_depend_on_persistence(string moduleName)
     {
-        var result = Types.InAssembly(ModuleImplementations["Crm." + module])
-            .That().ResideInNamespace($"Crm.{module}.Domain")
-            .ShouldNot().HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", $"Crm.{module}.Persistence")
+        var result = Types.InAssembly(Production.Load(moduleName))
+            .That().ResideInNamespace($"{moduleName}.Domain")
+            .ShouldNot().HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", $"{moduleName}.Persistence")
             .GetResult();
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
 
     // NetArchTest matches by name prefix and "Crm.Customers" also prefixes "Crm.Customers.Contracts",
     // so implementation types are listed by full name instead of by namespace.
-    private static IEnumerable<string> ImplementationNamespaces(string moduleName) =>
-        ModuleImplementations[moduleName].GetTypes()
+    private static IEnumerable<string> ImplementationTypes(string moduleName) =>
+        Production.Load(moduleName).GetTypes()
             .Where(t => t.FullName is not null && !t.FullName.Contains('<', StringComparison.Ordinal) && t.DeclaringType is null)
             .Select(t => t.FullName!)
             .Distinct();

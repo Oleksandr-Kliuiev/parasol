@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { api, createOrganization, marker, signIn, toast } from './support';
 
-test('a technician books hours and the service lead approves them', async ({ page }) => {
+test('a technician books hours and the service lead approves them', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(120_000);
   const m = marker('Tid');
   await signIn(page, 'Crm.Finance');

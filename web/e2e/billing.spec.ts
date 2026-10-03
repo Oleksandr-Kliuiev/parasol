@@ -1,20 +1,46 @@
-import { expect, test } from '@playwright/test';
-import { api, createOrganization, freeBillingPeriod, marker, orgNumber, signIn, toast } from './support';
+import { expect, test, type Page } from '@playwright/test';
+import { api, candidatePeriods, createOrganization, DIALOG_RUNS_FROM_YEAR, marker, orgNumber, periodEnd, reserveBillingRun, signIn, toast, type BillingPeriod } from './support';
 
 const monthName = (month: number) =>
   new Intl.DateTimeFormat('en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, month - 1, 1)));
+
+/**
+ * Creates a run from the dialog. The dialog's create is what claims the month (BR-BIL-01 allows one open run per period),
+ * so when a parallel browser project or another run on the same database took the month first, the dialog reports it
+ * and the next free month is tried. Nothing about the month is set up before the claim succeeds.
+ */
+async function createRunInDialog(page: Page, notes: string, candidates: AsyncGenerator<BillingPeriod>) {
+  for await (const period of candidates) {
+    await page.goto('/billing');
+    await page.getByRole('button', { name: 'New run' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('spinbutton', { name: 'Year' }).fill(String(period.year));
+    await dialog.getByRole('combobox', { name: 'Month' }).click();
+    await page.getByRole('option', { name: new RegExp(`^${monthName(period.month)}`, 'i') }).click();
+    await dialog.getByRole('textbox', { name: 'Note' }).fill(notes);
+    await dialog.getByRole('button', { name: 'Create' }).click();
+    const created = toast(page, /Run for .* created/);
+    // BIL_PERIOD_BUSY, or the unique index when the other run was created in the same instant.
+    const busy = dialog.getByText(/is already open|already exists/);
+    await expect(created.or(busy)).toBeVisible();
+    if (await created.isVisible()) {
+      await expect(page).toHaveURL(/\/billing\/runs\//);
+      return period;
+    }
+  }
+
+  throw new Error('No free month left for a run created from the dialog.');
+}
 
 /** Triggers a recurring job in crm-worker; the effect shows up in the UI a moment later. */
 async function trigger(page: import('@playwright/test').Page, jobId: string) {
   await api.post(page, `/api/v1/integrations/jobs/${jobId}/trigger`);
 }
 
-test('a monthly run is collected, approved and sent to PowerOffice', async ({ page }) => {
+test('a monthly run is collected, approved and sent to PowerOffice', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(180_000);
   const m = marker('Fak');
   await signIn(page, 'Crm.Admin');
-  const period = await freeBillingPeriod(page);
-  const start = period.start;
 
   const organization = await createOrganization(page, { name: `${m} Faktura AS`, status: 'Customer', orgNumber: orgNumber() });
   // The customer and the product must exist in PowerOffice before an order can be sent (docs/05 §4.3).
@@ -28,29 +54,25 @@ test('a monthly run is collected, approved and sent to PowerOffice', async ({ pa
   await api.post(page, '/api/v1/integrations/links', {
     system: 'poweroffice', externalType: 'Product', externalId: `${Math.floor(Math.random() * 90_000) + 10_000}`, entityId: product.id, entityType: 'Product',
   });
+
+  // Finance starts the run; the dialog offers the period just gone, which this test overrides.
+  await signIn(page, 'Crm.Finance');
+  const period = await createRunInDialog(page, m, candidatePeriods(page, DIALOG_RUNS_FROM_YEAR));
+  const runUrl = page.url();
+
+  // The contract covers exactly the claimed month, so the run bills it and no other test's run bills this customer too.
+  await signIn(page, 'Crm.Admin');
   const contract = await api.post<{ id: string }>(page, '/api/v1/contracts', {
-    organizationId: organization.id, title: `${m} Drift`, type: 'Msp', startDate: start, endDate: null, autoRenew: false,
+    organizationId: organization.id, title: `${m} Drift`, type: 'Msp', startDate: period.start, endDate: periodEnd(period), autoRenew: false,
     renewalTermMonths: 0, noticePeriodDays: 30, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance', indexation: false,
     customerReference: 'PO-9001',
   });
   await api.post(page, `/api/v1/contracts/${contract.id}/lines`, {
-    productId: product.id, quantityModel: 'Fixed', quantity: 2, unitPrice: 5000, validFrom: start,
+    productId: product.id, quantityModel: 'Fixed', quantity: 2, unitPrice: 5000, validFrom: period.start,
   });
   await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
-
-  // Finance starts the run; the dialog offers the period just gone, which this test overrides.
   await signIn(page, 'Crm.Finance');
-  await page.goto('/billing');
-  await page.getByRole('button', { name: 'New run' }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('spinbutton', { name: 'Year' }).fill(String(period.year));
-  await dialog.getByRole('combobox', { name: 'Month' }).click();
-  await page.getByRole('option', { name: new RegExp(`^${monthName(period.month)}`, 'i') }).click();
-  await dialog.getByRole('textbox', { name: 'Note' }).fill(m);
-  await dialog.getByRole('button', { name: 'Create' }).click();
-  await expect(toast(page, /Run for .* created/)).toBeVisible();
-  await expect(page).toHaveURL(/\/billing\/runs\//);
-  const runUrl = page.url();
+  await page.goto(runUrl);
 
   await page.getByRole('button', { name: 'Collect', exact: true }).click();
   await expect(toast(page, 'The run was collected')).toBeVisible();
@@ -120,8 +142,9 @@ test('a run without a PowerOffice customer reports the anomaly and can be cancel
   test.setTimeout(120_000);
   const m = marker('Avv');
   await signIn(page, 'Crm.Admin');
-  const period = await freeBillingPeriod(page);
-  const start = period.start;
+  // The run is created first: that claims its month before anything else depends on it.
+  const run = await reserveBillingRun(page, m);
+  const start = run.start;
 
   const organization = await createOrganization(page, { name: `${m} Uten kobling AS`, status: 'Customer' });
   const product = await api.post<{ id: string }>(page, '/api/v1/catalog/products', {
@@ -129,7 +152,7 @@ test('a run without a PowerOffice customer reports the anomaly and can be cancel
     billingPeriod: 'Monthly', vatRate: 25, listPrice: 1500, unitCost: 500,
   });
   const contract = await api.post<{ id: string }>(page, '/api/v1/contracts', {
-    organizationId: organization.id, title: `${m} Avtale`, type: 'Msp', startDate: start, endDate: null, autoRenew: false,
+    organizationId: organization.id, title: `${m} Avtale`, type: 'Msp', startDate: start, endDate: periodEnd(run), autoRenew: false,
     renewalTermMonths: 0, noticePeriodDays: 30, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance', indexation: false,
   });
   await api.post(page, `/api/v1/contracts/${contract.id}/lines`, {
@@ -138,7 +161,6 @@ test('a run without a PowerOffice customer reports the anomaly and can be cancel
   await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
 
   await signIn(page, 'Crm.Finance');
-  const run = await api.post<{ id: string }>(page, '/api/v1/billing/runs', { year: period.year, month: period.month, notes: m });
   await api.post(page, `/api/v1/billing/runs/${run.id}/collect`);
 
   await page.goto(`/billing/runs/${run.id}?anomalies=true`);

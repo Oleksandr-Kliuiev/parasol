@@ -80,13 +80,29 @@ dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj
 ```bash
 dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj
 ```
+Покрытие (NFR-10: домен Billing/Contracts/TimeTracking ≥ 90 %, остальной backend ≥ 70 %) — тесты с `--coverage`, затем gate по отчётам Cobertura; CI делает то же и падает ниже порога:
+```bash
+dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --coverage --coverage-output-format cobertura --coverage-output "$PWD/coverage/unit.cobertura.xml"
+```
+```bash
+dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --coverage --coverage-output-format cobertura --coverage-output "$PWD/coverage/integration.cobertura.xml"
+```
+```bash
+python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker coverage/unit.cobertura.xml coverage/integration.cobertura.xml
+```
+Архитектурные тесты запускаются без `--coverage`: инструментирование добавляет типы в каждую сборку.
 ```bash
 npm --prefix web run lint && npm --prefix web run typecheck && npm --prefix web test
 ```
-Сквозные тесты (Playwright): поднимают crm-web, crm-worker и заглушки внешних API, нужен запущенный SQL-контейнер из раздела выше. Проверяют ключевые сценарии, доступность (axe, WCAG 2.1 AA) в светлой и тёмной теме, работу с клавиатуры и ширину телефона:
+Сквозные тесты (Playwright): поднимают crm-web (по HTTPS на development-сертификате, как в production: Secure-cookie сессии WebKit на http не хранит), crm-worker и заглушки внешних API; нужен запущенный SQL-контейнер из раздела выше. Проверяют ключевые сценарии, доступность (axe, WCAG 2.1 AA) в светлой и тёмной теме, работу с клавиатуры и ширину телефона; сценарии с тегом `@critical` — также в Firefox и WebKit:
+```bash
+npm --prefix web exec -- playwright install chromium firefox webkit
+```
 ```bash
 npm --prefix web run e2e
 ```
+`E2E_SQL` задаёт свою базу: только локальный SQL Server и имя `crm_e2e…`, иначе запуск отказывается. Уже запущенные crm-web/crm-worker переиспользуются только при `E2E_REUSE_SERVERS=1` (они могут смотреть в другую базу). Месяцы биллинга тесты занимают созданием прогона, поэтому параллельные workers и прогоны на одной базе не конфликтуют. Тест, прошедший только при повторе, роняет прогон (`failOnFlakyTests`).
+
 `npm run build` также проверяет бюджет первой загрузки (≤ 300 КБ gzip).
 
 Нагрузочный тест (k6, сценарий «рабочий день» — NFR-01): нужна среда с режимом входа `Development`, никогда не production.

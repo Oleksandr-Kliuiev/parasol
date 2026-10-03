@@ -217,13 +217,13 @@ public class BillingApiTests(CrmWebFactory factory)
         (await EntryAsync()).GetProperty("status").GetString().ShouldBe("Invoiced");
 
         // BR-BIL-05/06: exactly one order for this basis, carrying the customer reference and the mapped product codes.
-        var orders = factory.PowerOffice.LogEntries
+        var posted = factory.PowerOffice.LogEntries
             .Select(e => e.RequestMessage)
-            .Where(r => r is { Path: "/v2/SalesOrders", Method: "POST" })
-            .Select(r => r!.Body ?? string.Empty)
-            .Where(body => body.Contains(organizationId.ToString("N"), StringComparison.Ordinal))
+            .Where(r => r is { Path: "/v2/SalesOrders", Method: "POST" } && r.Body?.Contains(organizationId.ToString("N"), StringComparison.Ordinal) == true)
             .ToList();
-        var order = orders.ShouldHaveSingleItem();
+        // The times say whether a second order came from a retry or from two executors at once (DEV-07).
+        posted.Count.ShouldBe(1, "Orders sent: " + string.Join(", ", posted.Select(r => r!.DateTime.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture))));
+        var order = posted.Single()!.Body!;
         order.ShouldContain("PO-4711");
         order.ShouldContain(serviceSku);
         order.ShouldContain("Onboarding, fast pris");
@@ -272,7 +272,8 @@ public class BillingApiTests(CrmWebFactory factory)
         paid.GetProperty("status").GetString().ShouldBe("Paid");
         paid.GetProperty("outstanding").GetDecimal().ShouldBe(0m);
 
-        // 5. The run is closed and stays closed.
+        // 5. The run is closed and stays closed, once no basis of it waits for export any more.
+        (await factory.WaitForRunExportAsync(finance, runId)).ShouldBeOneOf("Exported", "ExportedWithErrors");
         (await finance.PostAsync($"{Billing}/runs/{runId}/close", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{runId}")).GetProperty("status").GetString().ShouldBe("Closed");
         (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.Conflict);

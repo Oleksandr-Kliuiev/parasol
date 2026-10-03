@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createContact, createOrganization, marker, signIn } from './support';
 
-test('global search finds a contact and opens it with the keyboard', async ({ page }) => {
+test('global search finds a contact and opens it with the keyboard', { tag: '@critical' }, async ({ page }) => {
   const m = marker('Srch');
   await signIn(page, 'Crm.Sales');
   const organization = await createOrganization(page, { name: `${m} Kystlys AS` });
