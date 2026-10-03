@@ -1,0 +1,48 @@
+# Integration tests with the DEV-00 regressions: failure blocks and summary (2026-10-03T21:43:03Z–21:43:19Z)
+failed Crm.IntegrationTests.BillingRegressionApiTests.A02_a_manual_line_that_lifts_a_basis_over_the_threshold_cannot_pass_with_one_approval (2s 113ms)
+  Shouldly.ShouldAssertException : await RunAsync(finance, runId)).GetProperty("status").GetString(
+      should not be
+  "Approved"
+      but was
+    at Crm.IntegrationTests.BillingRegressionApiTests.A02_a_manual_line_that_lifts_a_basis_over_the_threshold_cannot_pass_with_one_approval() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/BillingRegressionApiTests.cs:160
+failed Crm.IntegrationTests.BillingRegressionApiTests.A01_a_corrected_line_stays_one_position_at_the_corrected_amount_after_the_run_is_collected_again (527ms)
+  Shouldly.ShouldAssertException : recollected.GetProperty("totalExVat").GetDecimal()
+      should be
+  900m
+      but was
+  1900,00m
+    at Crm.IntegrationTests.BillingRegressionApiTests.A01_a_corrected_line_stays_one_position_at_the_corrected_amount_after_the_run_is_collected_again() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/BillingRegressionApiTests.cs:89
+failed Crm.IntegrationTests.BillingRegressionApiTests.A02_a_user_with_both_approval_rights_cannot_release_a_run_alone_by_signing_the_second_approval_first (374ms)
+  Shouldly.ShouldAssertException : await RunAsync(finance, runId)).GetProperty("status").GetString(
+      should not be
+  "Approved"
+      but was
+    at Crm.IntegrationTests.BillingRegressionApiTests.A02_a_user_with_both_approval_rights_cannot_release_a_run_alone_by_signing_the_second_approval_first() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/BillingRegressionApiTests.cs:109
+failed Crm.IntegrationTests.BillingRegressionApiTests.A02_a_first_approval_does_not_carry_over_to_a_recollected_run_with_other_content (768ms)
+  Shouldly.ShouldAssertException : await RunAsync(finance, runId)).GetProperty("status").GetString(
+      should not be
+  "Approved"
+      but was
+    at Crm.IntegrationTests.BillingRegressionApiTests.A02_a_first_approval_does_not_carry_over_to_a_recollected_run_with_other_content() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/BillingRegressionApiTests.cs:136
+failed Crm.IntegrationTests.BillingRegressionApiTests.A03_a_second_run_for_an_exported_and_closed_month_does_not_bill_the_contract_month_or_the_hour_purchase_again (1s 191ms)
+  Shouldly.ShouldAssertException : (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{secondRunId}/bases?search={customer.Marker}"))
+              .EnumerateArray()
+              .Where(b => b.GetProperty("organization").GetProperty("id").GetGuid() == customer.OrganizationId)
+              .Sum(b => b.GetProperty("totalExVat").GetDecimal());
+  
+          // The contract month and the package left for PowerOffice with the first run; the second run id must not bill them again.
+          billedAgain
+      should be
+  0m
+      but was
+  15000,00m
+    at Crm.IntegrationTests.BillingRegressionApiTests.A03_a_second_run_for_an_exported_and_closed_month_does_not_bill_the_contract_month_or_the_hour_purchase_again() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/BillingRegressionApiTests.cs:238
+/Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/bin/Release/net10.0/Crm.IntegrationTests.dll (net10.0|arm64) failed with 5 error(s) (15s 300ms)
+
+Test run summary: Failed!
+  total: 85
+  failed: 5
+  succeeded: 80
+  skipped: 0
+  duration: 15s 665ms
+Test run completed with non-success exit code: 2 (see: https://aka.ms/testingplatform/exitcodes)

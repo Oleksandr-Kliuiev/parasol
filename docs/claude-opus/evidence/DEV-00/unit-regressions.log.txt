@@ -1,0 +1,58 @@
+# Unit tests with the DEV-00 regressions, commit 2bed19e + working tree (see DEV-00.md)
+Running tests from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64)
+failed Crm.UnitTests.BillingRegressionTests.A02_one_person_cannot_give_both_approvals_by_signing_the_second_one_first (25ms)
+  from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64)
+  Shouldly.ShouldAssertException : run.Approve(approver, Now);
+  
+          // Two approvals are two people, whichever order they sign in (BR-BIL-04).
+          run.Status
+      should not be
+  BillingRunStatus.Approved
+      but was
+    at Crm.UnitTests.BillingRegressionTests.A02_one_person_cannot_give_both_approvals_by_signing_the_second_one_first() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/BillingRegressionTests.cs:70
+failed Crm.UnitTests.BillingRegressionTests.A02_an_approval_given_before_a_recollect_does_not_count_for_the_recollected_content (0ms)
+  from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64)
+  Shouldly.ShouldAssertException : run.SecondApprove(Guid.NewGuid(), Now.AddMinutes(10));
+  
+          // Only one signature belongs to the recollected content; it must not be released.
+          run.Status
+      should not be
+  BillingRunStatus.Approved
+      but was
+    at Crm.UnitTests.BillingRegressionTests.A02_an_approval_given_before_a_recollect_does_not_count_for_the_recollected_content() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/BillingRegressionTests.cs:86
+failed Crm.UnitTests.BillingRegressionTests.A01_a_corrected_line_stays_one_position_at_the_corrected_amount_when_its_source_is_collected_again(recollects: 1) (2ms)
+  from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64)
+  Shouldly.ShouldAssertException : basis.TotalExVat
+      should be
+  900m
+      but was
+  1900m
+    at Crm.UnitTests.BillingRegressionTests.A01_a_corrected_line_stays_one_position_at_the_corrected_amount_when_its_source_is_collected_again(Int32 recollects) in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/BillingRegressionTests.cs:58
+failed Crm.UnitTests.BillingRegressionTests.A01_a_corrected_line_stays_one_position_at_the_corrected_amount_when_its_source_is_collected_again(recollects: 10) (0ms)
+  from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64)
+  Shouldly.ShouldAssertException : basis.TotalExVat
+      should be
+  900m
+      but was
+  1900m
+    at Crm.UnitTests.BillingRegressionTests.A01_a_corrected_line_stays_one_position_at_the_corrected_amount_when_its_source_is_collected_again(Int32 recollects) in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/BillingRegressionTests.cs:58
+failed Crm.UnitTests.BillingRegressionTests.A02_a_manual_line_that_lifts_a_basis_over_the_threshold_needs_a_second_approval (0ms)
+  from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64)
+  Shouldly.ShouldAssertException : run.Approve(Guid.NewGuid(), Now);
+  
+          // A basis above the threshold is never released by one person, however its amount got there (BR-BIL-04).
+          run.Status
+      should not be
+  BillingRunStatus.Approved
+      but was
+    at Crm.UnitTests.BillingRegressionTests.A02_a_manual_line_that_lifts_a_basis_over_the_threshold_needs_a_second_approval() in /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/BillingRegressionTests.cs:104
+/Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64) failed with 5 error(s) (477ms)
+Exit code: 2
+
+Test run summary: Failed!
+  total: 257
+  failed: 5
+  succeeded: 252
+  skipped: 0
+  duration: 933ms
+Test run completed with non-success exit code: 2 (see: https://aka.ms/testingplatform/exitcodes)

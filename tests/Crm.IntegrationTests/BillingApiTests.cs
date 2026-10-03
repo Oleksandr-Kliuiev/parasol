@@ -20,7 +20,7 @@ public class BillingApiTests(CrmWebFactory factory)
     private const string Billing = "/api/v1/billing";
     private const string Contracts = "/api/v1/contracts";
 
-    private static async Task LinkAsync(HttpClient admin, string entityType, Guid entityId, string externalType, string externalId) =>
+    internal static async Task LinkAsync(HttpClient admin, string entityType, Guid entityId, string externalType, string externalId) =>
         (await admin.PostAsJsonAsync("/api/v1/integrations/links", new
         {
             system = "poweroffice", externalType, externalId, entityId, entityType,
@@ -46,7 +46,7 @@ public class BillingApiTests(CrmWebFactory factory)
         return basis;
     }
 
-    private static void StubToken(CrmWebFactory factory)
+    internal static void StubToken(CrmWebFactory factory)
     {
         var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes("test-application-key:test-client-key"));
         factory.PowerOffice.Given(Request.Create().WithPath("/OAuth/Token").UsingPost().WithHeader("Authorization", $"Basic {basic}"))
