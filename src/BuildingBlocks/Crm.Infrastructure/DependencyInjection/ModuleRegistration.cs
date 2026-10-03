@@ -1,0 +1,98 @@
+using System.Reflection;
+using Crm.Infrastructure.Outbox;
+using Crm.Infrastructure.Persistence;
+using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Domain;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace Crm.Infrastructure.DependencyInjection;
+
+/// <summary>All module DbContext types, in migration order (Audit first).</summary>
+public sealed class ModuleDbContextRegistry
+{
+    private readonly List<Type> _contexts = [];
+
+    public IReadOnlyList<Type> Contexts => _contexts;
+
+    internal void Add(Type type)
+    {
+        if (!_contexts.Contains(type))
+        {
+            _contexts.Add(type);
+        }
+    }
+}
+
+public static class ModuleRegistration
+{
+    public const string ConnectionStringName = "crm";
+
+    public static IServiceCollection AddCrmInfrastructure(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddScoped<IRequestContext, NullRequestContext>();
+        services.TryAddScoped<AuditingInterceptor>();
+        services.TryAddSingleton(new ModuleDbContextRegistry());
+        services.TryAddSingleton<OutboxEventTypeResolver>();
+        return services;
+    }
+
+    public static IServiceCollection AddModuleDbContext<TContext>(this IServiceCollection services, IConfiguration configuration)
+        where TContext : ModuleDbContext
+    {
+        services.AddCrmInfrastructure();
+        var registry = (ModuleDbContextRegistry)services.First(d => d.ServiceType == typeof(ModuleDbContextRegistry)).ImplementationInstance!;
+        registry.Add(typeof(TContext));
+
+        var schema = SchemaOf<TContext>();
+
+        services.AddDbContext<TContext>((sp, options) =>
+        {
+            // Resolved lazily so hosts and tests can supply configuration after registration.
+            var connectionString = sp.GetRequiredService<IConfiguration>().GetConnectionString(ConnectionStringName)
+                                   ?? throw new InvalidOperationException($"Connection string '{ConnectionStringName}' is not configured.");
+            options.UseSqlServer(connectionString, sql =>
+            {
+                sql.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+                sql.EnableRetryOnFailure(maxRetryCount: 5);
+            });
+            options.AddInterceptors(sp.GetRequiredService<AuditingInterceptor>());
+        });
+        return services;
+    }
+
+    /// <summary>Registers command/query handlers, validators and domain event handlers found in a module assembly.</summary>
+    public static IServiceCollection AddModuleServices(this IServiceCollection services, Assembly assembly)
+    {
+        Type[] handlerInterfaces = [typeof(ICommandHandler<,>), typeof(IQueryHandler<,>), typeof(IDomainEventHandler<>)];
+        foreach (var type in assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false }))
+        {
+            foreach (var implemented in type.GetInterfaces().Where(i => i.IsGenericType))
+            {
+                var definition = implemented.GetGenericTypeDefinition();
+                if (handlerInterfaces.Contains(definition))
+                {
+                    services.AddScoped(implemented, type);
+                    if (definition != typeof(IDomainEventHandler<>))
+                    {
+                        services.TryAddScoped(type);
+                    }
+                }
+            }
+        }
+
+        services.AddValidatorsFromAssembly(assembly, ServiceLifetime.Scoped, includeInternalTypes: true);
+        return services;
+    }
+
+    private static string SchemaOf<TContext>() where TContext : ModuleDbContext
+    {
+        var field = typeof(TContext).GetField("SchemaName", BindingFlags.Public | BindingFlags.Static)
+                    ?? throw new InvalidOperationException($"{typeof(TContext).Name} must declare 'public const string SchemaName'.");
+        return (string)field.GetValue(null)!;
+    }
+}

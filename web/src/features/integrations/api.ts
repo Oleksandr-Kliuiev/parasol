@@ -1,0 +1,113 @@
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, query } from '../../api/client';
+import type {
+  BillingDetailsMaster,
+  BulkResult,
+  EntityLink,
+  IntegrationCapability,
+  IntegrationStatus,
+  OutboundOperation,
+  RecordPage,
+} from '../../api/types';
+
+const BASE = '/api/v1/integrations';
+
+export function useIntegrationStatus(enabled = true) {
+  return useQuery({
+    queryKey: ['integrations', 'status'],
+    enabled,
+    queryFn: async ({ signal }) => (await api.get<IntegrationStatus[]>(`${BASE}/status`, signal)).data,
+  });
+}
+
+export function useCapabilities() {
+  return useQuery({
+    queryKey: ['integrations', 'capabilities'],
+    staleTime: 5 * 60_000,
+    queryFn: async ({ signal }) => (await api.get<IntegrationCapability[]>(`${BASE}/capabilities`, signal)).data,
+  });
+}
+
+export function useCustomerSettings() {
+  return useQuery({
+    queryKey: ['customers', 'settings'],
+    staleTime: 10 * 60_000,
+    queryFn: async ({ signal }) => (await api.get<{ billingDetailsMaster: BillingDetailsMaster }>('/api/v1/customers/settings', signal)).data,
+  });
+}
+
+export interface RecordFilters {
+  system: string;
+  type: string;
+  state: 'All' | 'Unlinked' | 'Linked';
+  search: string;
+}
+
+export function useRecords(filters: RecordFilters) {
+  return useInfiniteQuery({
+    queryKey: ['integrations', 'records', filters],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam, signal }) =>
+      (await api.get<RecordPage>(`${BASE}/records${query({ ...filters, search: filters.search || undefined, cursor: pageParam, limit: 50 })}`, signal)).data,
+    getNextPageParam: (last) => last.nextCursor,
+  });
+}
+
+export function useEntityLinks(entityType: string, entityId: string) {
+  return useQuery({
+    queryKey: ['integrations', 'links', entityType, entityId],
+    queryFn: async ({ signal }) => (await api.get<EntityLink[]>(`${BASE}/links${query({ entityType, entityId })}`, signal)).data,
+  });
+}
+
+export function useOutbound(enabled = true) {
+  return useQuery({
+    queryKey: ['integrations', 'outbound'],
+    enabled,
+    refetchInterval: 15_000,
+    queryFn: async ({ signal }) => (await api.get<OutboundOperation[]>(`${BASE}/outbound`, signal)).data,
+  });
+}
+
+export function useIntegrationActions() {
+  const client = useQueryClient();
+  const refresh = () => client.invalidateQueries({ queryKey: ['integrations'] });
+  const onSuccess = () => void refresh();
+  return {
+    link: useMutation({
+      mutationFn: (body: { system: string; externalType: string; externalId: string; entityId: string }) => api.post(`${BASE}/links`, body),
+      onSuccess,
+    }),
+    unlink: useMutation({ mutationFn: (linkId: string) => api.delete(`${BASE}/links/${linkId}`), onSuccess }),
+    pause: useMutation({
+      mutationFn: (r: { system: string; paused: boolean; reason?: string }) =>
+        api.post(`${BASE}/${r.system}/pause`, { paused: r.paused, reason: r.reason ?? null }),
+      onSuccess,
+    }),
+    importOne: useMutation({
+      mutationFn: async (r: { system: string; type: string; externalId: string }) =>
+        (await api.post<{ entityId: string }>(`${BASE}/records/${r.system}/${r.type}/${encodeURIComponent(r.externalId)}/import`)).data,
+      onSuccess,
+    }),
+    autoLink: useMutation({
+      mutationFn: async (r: { system: string; type: string }) => (await api.post<BulkResult>(`${BASE}/records/${r.system}/${r.type}/auto-link`)).data,
+      onSuccess,
+    }),
+    importUnlinked: useMutation({
+      mutationFn: async (r: { system: string; type: string; dryRun: boolean }) =>
+        (await api.post<BulkResult>(`${BASE}/records/${r.system}/${r.type}/import-unlinked${query({ dryRun: r.dryRun })}`)).data,
+      onSuccess: (_, variables) => {
+        if (!variables.dryRun) void refresh();
+      },
+    }),
+    exportOrganization: useMutation({
+      mutationFn: (r: { system: string; organizationId: string }) => api.post(`${BASE}/${r.system}/organizations/${r.organizationId}/export`),
+      onSuccess,
+    }),
+    test: useMutation({
+      mutationFn: async (system: string) => (await api.post<{ success: boolean; message: string }>(`${BASE}/${system}/test`)).data,
+    }),
+    retry: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/retry`), onSuccess }),
+    cancel: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/cancel`), onSuccess }),
+  };
+}

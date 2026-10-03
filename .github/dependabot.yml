@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      microsoft:
+        patterns: ["Microsoft.*", "Azure.*", "Aspire.*"]
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly }
+    groups:
+      fluentui:
+        patterns: ["@fluentui/*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

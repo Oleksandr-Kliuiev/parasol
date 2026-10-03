@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="ClosedXML" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Crm.Customers.Contracts\Crm.Customers.Contracts.csproj" />
+    <ProjectReference Include="..\..\Identity\Crm.Identity.Contracts\Crm.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Crm.Infrastructure\Crm.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Crm.UnitTests" />
+    <InternalsVisibleTo Include="Crm.IntegrationTests" />
+  </ItemGroup>
+</Project>

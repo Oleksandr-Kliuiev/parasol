@@ -1,0 +1,58 @@
+Vardahei CRM v2 — audit validation
+Audit date: 2026-10-03 (Europe/Oslo)
+Scope: local working copy, no Git commit exists in this checkout.
+No production deployment or live supplier API checks were performed.
+
+Checks performed
+- .NET solution build, Debug, no restore: passed, 0 warnings, 0 errors.
+- .NET unit tests: 252 passed, 0 failed, 0 skipped.
+- Architecture tests: 54 passed, 0 failed, 0 skipped.
+- Integration tests: 80 passed, 0 failed, 0 skipped. Isolated SQL Testcontainer and WireMock APIs.
+- Frontend ESLint: passed.
+- Frontend TypeScript: passed.
+- Vitest: 29 passed in 9 files.
+- Frontend production build: passed, initial total 282.7 KB gzip, budget 300 KB.
+- Playwright full run: 37 passed, 1 failed, 3 workers, isolated temporary SQL database.
+  Failed: monthly run is collected, approved and sent to PowerOffice.
+  UI error: a run for 2040-01 is already open; BIL_PERIOD_BUSY.
+  Helper freeBillingPeriod reads available periods without reserving one.
+- Isolated repeat of failed Playwright case: 1 passed, 1 worker, 48.8 seconds.
+- Bicep local compiler: main.bicep, test.bicepparam and prod.bicepparam compiled successfully.
+- NuGet package vulnerability check including transitive: no known vulnerable packages reported.
+- npm audit including dev packages: 0 known vulnerabilities. User explicitly authorized metadata submission.
+
+Supplemental domain reproductions (not added to the product test suite)
+Used freshly built Crm.Billing / Crm.Billing.Contracts / Crm.SharedKernel assemblies.
+No database or external API was used by these four probes.
+
+1. REVERSE_APPROVAL
+   Create run; MarkCollected(requiresSecondApproval=true); SecondApprove(user A); Approve(user A).
+   Actual: second=True; first=True; status=Approved; samePerson=True.
+   Required: the same person must not satisfy both approvals, regardless of order.
+
+2. RECOLLECT_APPROVAL
+   Create run; MarkCollected(true); Approve(user A); MarkCollected(true); SecondApprove(user B).
+   Actual: previousFirstApprovalRetained=True; second=True; status=Approved.
+   Required: a recollected revision needs fresh approvals.
+
+3. MANUAL_THRESHOLD
+   Create run; MarkCollected(false); create basis; add manual line for 300000 NOK; Approve(user A).
+   Actual: total=300000; requiresSecond=False; approve=True; status=Approved.
+   Service inspection: basis mutations save the basis without recomputing the run approval threshold.
+   Required: recompute the need for second approval using current amounts at approval time.
+
+4. ADJUST_THEN_RECOLLECT
+   Collect one recurring line for 1000 NOK; adjust it to 900 NOK; collect the same source again.
+   Actual: lineCount=2; total=1900; expectedPreservedAdjustment=900.
+   Required: preserve the correction without adding the source charge twice.
+
+Limits
+- No end-to-end reproduction of a second billing run after a closed period was performed;
+  this finding is based on code inspection and is labeled accordingly in the report.
+- No target-scale load test, cloud disaster-recovery drill, production security assessment,
+  real Entra role-revocation test, Power BI Service refresh or supplier acceptance testing.
+- Built assets and temporary test output were generated. Product source files were not edited.
+- Temporary E2E SQL container crm-audit-e2e-20261003 was stopped and removed after testing.
+
+Snapshot manifest: source-snapshot.sha256
+Manifest SHA256: f279ab5855e464e8ce86b280edf826eb7be35b93708f555fc388764c32e81b64

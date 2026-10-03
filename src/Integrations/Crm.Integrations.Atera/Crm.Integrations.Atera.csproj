@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Crm.Integrations.Core\Crm.Integrations.Core.csproj" />
+    <ProjectReference Include="..\..\Modules\Customers\Crm.Customers.Contracts\Crm.Customers.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Contracts\Crm.Contracts.Contracts\Crm.Contracts.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\Crm.Identity.Contracts\Crm.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Service\Crm.Service.Contracts\Crm.Service.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\TimeTracking\Crm.TimeTracking.Contracts\Crm.TimeTracking.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Crm.UnitTests" />
+    <InternalsVisibleTo Include="Crm.IntegrationTests" />
+  </ItemGroup>
+</Project>

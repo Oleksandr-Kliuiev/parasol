@@ -1,0 +1,396 @@
+using Crm.Authorization;
+using Crm.Catalog.Contracts;
+using Crm.Customers.Contracts;
+using Crm.Identity.Contracts;
+using Crm.Infrastructure.Persistence;
+using Crm.Projects.Contracts;
+using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Results;
+using Crm.TimeTracking.Contracts;
+using Crm.TimeTracking.Domain;
+using Crm.TimeTracking.Persistence;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace Crm.TimeTracking.Features;
+
+public sealed record TimeEntryRequest(
+    Guid OrganizationId,
+    Guid? TechnicianId,
+    DateOnly WorkDate,
+    decimal Hours,
+    string? WorkType,
+    bool Billable,
+    bool Onsite,
+    bool AfterHours,
+    string? Description,
+    long? ExternalTicketId,
+    string? TicketTitle,
+    Guid? ProjectId);
+
+internal sealed class TimeEntryRequestValidator : AbstractValidator<TimeEntryRequest>
+{
+    public TimeEntryRequestValidator()
+    {
+        RuleFor(x => x.OrganizationId).NotEmpty();
+        RuleFor(x => x.Hours).GreaterThan(0).LessThanOrEqualTo(24);
+        RuleFor(x => x.WorkType).MaximumLength(128);
+        RuleFor(x => x.Description).MaximumLength(2000);
+        RuleFor(x => x.TicketTitle).MaximumLength(512);
+    }
+}
+
+public sealed record AdjustTimeEntryRequest(bool Billable, string? WorkType, bool AfterHours);
+
+public sealed record ApproveRequest(IReadOnlyList<Guid> EntryIds);
+
+public sealed record ReopenPeriodRequest(string Reason);
+
+public sealed record AllocationDto(
+    TimeClassification Classification,
+    decimal Hours,
+    decimal BilledHours,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? Rate,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? Amount,
+    Guid? HourBankId);
+
+public sealed record TimeEntryDto(
+    Guid Id,
+    TimeSource Source,
+    Guid OrganizationId,
+    string? OrganizationName,
+    Guid? TechnicianId,
+    string? TechnicianName,
+    long? ExternalTicketId,
+    string? TicketTitle,
+    DateOnly WorkDate,
+    DateTimeOffset? StartedAt,
+    decimal Hours,
+    string? WorkType,
+    bool Billable,
+    bool Onsite,
+    bool AfterHours,
+    string? Description,
+    Guid? ProjectId,
+    string? ProjectName,
+    TimeEntryStatus Status,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? Amount,
+    string? ReviewNote,
+    bool IsLocked,
+    IReadOnlyList<AllocationDto> Allocations,
+    string Etag);
+
+public sealed record TimeSummaryDto(decimal Hours, decimal BillableHours, decimal ApprovedHours, decimal NewHours, [property: SensitiveData(Permissions.FinanceRead)] decimal Amount);
+
+public sealed record TimeEntryPage(IReadOnlyList<TimeEntryDto> Items, TimeSummaryDto Summary, bool PeriodClosed);
+
+public sealed record PeriodDto(int Year, int Month, bool IsClosed, DateTimeOffset? ClosedAt, string? ClosedByName, string? ReopenReason, int NewEntries, decimal Hours);
+
+public sealed record TimeQuery(int? Year, int? Month, DateOnly? From, DateOnly? To, Guid? OrganizationId, Guid? TechnicianId, TimeEntryStatus? Status, TimeSource? Source, bool MineOnly);
+
+internal static class TimeErrors
+{
+    public static Error NotFound(Guid id) => Error.NotFound("TIM_ENTRY_NOT_FOUND", $"Time entry {id} was not found.");
+
+    public static Error PeriodClosed => Error.Conflict("TIM_PERIOD_CLOSED", "The period is closed; Finance must reopen it first (BR-TIM-05).");
+
+    public static Error Forbidden => new("TIM_NOT_OWNER", "You can only change your own time entries.", ErrorType.Forbidden);
+
+    public static Error InvalidETag => Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
+}
+
+internal sealed class TimeEntryService(
+    TimeTrackingDbContext db,
+    ICustomersApi customers,
+    ICatalogApi catalog,
+    IProjectsApi projects,
+    IUserDirectory users,
+    ICurrentUser currentUser,
+    TimeProvider time,
+    IOptions<TimeTrackingOptions> options)
+{
+    public async Task<TimeEntryPage> ListAsync(TimeQuery query, CancellationToken ct)
+    {
+        // Tracked on purpose: each row carries its ETag, so the timesheet can edit an entry without fetching it again.
+        var entries = db.TimeEntries.Include(e => e.Allocations).AsQueryable();
+        if (query.MineOnly || !currentUser.HasPermission(Permissions.TimeRead))
+        {
+            var userId = currentUser.UserId;
+            entries = entries.Where(e => e.TechnicianId == userId);
+        }
+
+        if (query.Year is { } year)
+        {
+            var from = query.Month is { } month ? new DateOnly(year, month, 1) : new DateOnly(year, 1, 1);
+            var to = query.Month is not null ? from.AddMonths(1) : from.AddYears(1);
+            entries = entries.Where(e => e.WorkDate >= from && e.WorkDate < to);
+        }
+
+        if (query.From is { } fromDate)
+        {
+            entries = entries.Where(e => e.WorkDate >= fromDate);
+        }
+
+        if (query.To is { } toDate)
+        {
+            entries = entries.Where(e => e.WorkDate <= toDate);
+        }
+
+        if (query.OrganizationId is { } organizationId)
+        {
+            entries = entries.Where(e => e.OrganizationId == organizationId);
+        }
+
+        if (query.TechnicianId is { } technicianId)
+        {
+            entries = entries.Where(e => e.TechnicianId == technicianId);
+        }
+
+        if (query.Status is { } status)
+        {
+            entries = entries.Where(e => e.Status == status);
+        }
+
+        if (query.Source is { } source)
+        {
+            entries = entries.Where(e => e.Source == source);
+        }
+
+        var rows = await entries.OrderByDescending(e => e.WorkDate).ThenBy(e => e.Id).Take(500).ToListAsync(ct);
+        var closed = await ClosedPeriodsAsync(ct);
+        var dtos = await ToDtosAsync(rows, closed, ct);
+        var summary = new TimeSummaryDto(
+            rows.Sum(e => e.Hours),
+            rows.Where(e => e.Billable).Sum(e => e.Hours),
+            rows.Where(e => e.Status is TimeEntryStatus.Approved or TimeEntryStatus.Invoiced).Sum(e => e.Hours),
+            rows.Where(e => e.Status == TimeEntryStatus.New).Sum(e => e.Hours),
+            rows.Sum(e => e.Amount ?? 0));
+        var periodClosed = query is { Year: { } y, Month: { } m } && closed.Contains((y, m));
+        return new TimeEntryPage(dtos, summary, periodClosed);
+    }
+
+    public async Task<Result<TimeEntryDto>> CreateAsync(TimeEntryRequest request, CancellationToken ct)
+    {
+        var technicianId = await ResolveTechnicianAsync(request.TechnicianId);
+        if (technicianId is null)
+        {
+            return TimeErrors.Forbidden;
+        }
+
+        if (await customers.GetOrganizationAsync(request.OrganizationId, ct) is null)
+        {
+            return Error.Validation("TIM_UNKNOWN_ORGANIZATION", "The organization does not exist.");
+        }
+
+        if ((await ClosedPeriodsAsync(ct)).Contains((request.WorkDate.Year, request.WorkDate.Month)))
+        {
+            return TimeErrors.PeriodClosed;
+        }
+
+        var created = TimeEntry.CreateManual(new ManualTimeEntry(
+            request.OrganizationId, technicianId.Value, request.WorkDate, request.Hours, request.WorkType, request.Billable, request.Onsite,
+            request.AfterHours, request.Description, null, request.ExternalTicketId, request.TicketTitle, request.ProjectId));
+        if (!created.IsSuccess)
+        {
+            return created.Error!;
+        }
+
+        db.TimeEntries.Add(created.Value);
+        await db.SaveChangesAsync(ct);
+        return (await ToDtosAsync([created.Value], await ClosedPeriodsAsync(ct), ct))[0];
+    }
+
+    public async Task<Result<TimeEntryDto>> UpdateAsync(Guid id, TimeEntryRequest request, string ifMatch, CancellationToken ct)
+    {
+        if (await db.TimeEntries.Include(e => e.Allocations).SingleOrDefaultAsync(e => e.Id == id, ct) is not { } entry)
+        {
+            return TimeErrors.NotFound(id);
+        }
+
+        if (!CanEdit(entry))
+        {
+            return TimeErrors.Forbidden;
+        }
+
+        if (!db.ApplyIfMatch(entry, ifMatch))
+        {
+            return TimeErrors.InvalidETag;
+        }
+
+        var closed = await ClosedPeriodsAsync(ct);
+        if (closed.Contains((entry.Year, entry.Month)) || closed.Contains((request.WorkDate.Year, request.WorkDate.Month)))
+        {
+            return TimeErrors.PeriodClosed;
+        }
+
+        var technicianId = await ResolveTechnicianAsync(request.TechnicianId ?? entry.TechnicianId);
+        if (technicianId is null)
+        {
+            return TimeErrors.Forbidden;
+        }
+
+        var updated = entry.Update(new ManualTimeEntry(
+            request.OrganizationId, technicianId.Value, request.WorkDate, request.Hours, request.WorkType, request.Billable, request.Onsite,
+            request.AfterHours, request.Description, entry.TicketId, request.ExternalTicketId, request.TicketTitle, request.ProjectId));
+        if (!updated.IsSuccess)
+        {
+            return updated.Error!;
+        }
+
+        await db.SaveChangesAsync(ct);
+        return (await ToDtosAsync([entry], closed, ct))[0];
+    }
+
+    public async Task<Result> AdjustAsync(Guid id, AdjustTimeEntryRequest request, CancellationToken ct)
+    {
+        if (await db.TimeEntries.SingleOrDefaultAsync(e => e.Id == id, ct) is not { } entry)
+        {
+            return TimeErrors.NotFound(id);
+        }
+
+        if ((await ClosedPeriodsAsync(ct)).Contains((entry.Year, entry.Month)))
+        {
+            return TimeErrors.PeriodClosed;
+        }
+
+        var result = entry.Adjust(request.Billable, request.WorkType, request.AfterHours);
+        if (!result.IsSuccess)
+        {
+            return result;
+        }
+
+        await db.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+
+    public async Task<Result> DeleteAsync(Guid id, CancellationToken ct)
+    {
+        if (await db.TimeEntries.Include(e => e.Allocations).SingleOrDefaultAsync(e => e.Id == id, ct) is not { } entry)
+        {
+            return TimeErrors.NotFound(id);
+        }
+
+        if (!CanEdit(entry))
+        {
+            return TimeErrors.Forbidden;
+        }
+
+        if (entry.Source != TimeSource.Crm || entry.Status != TimeEntryStatus.New)
+        {
+            return Error.Conflict("TIM_NOT_DELETABLE", "Only new entries made in the CRM can be deleted.");
+        }
+
+        if ((await ClosedPeriodsAsync(ct)).Contains((entry.Year, entry.Month)))
+        {
+            return TimeErrors.PeriodClosed;
+        }
+
+        entry.MarkDeleted();
+        await db.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+
+    public async Task<IReadOnlyList<PeriodDto>> ListPeriodsAsync(int year, CancellationToken ct)
+    {
+        var periods = await db.TimePeriods.AsNoTracking().Where(p => p.Year == year).ToListAsync(ct);
+        var from = new DateOnly(year, 1, 1);
+        var to = from.AddYears(1);
+        var stats = await db.TimeEntries.AsNoTracking()
+            .Where(e => e.WorkDate >= from && e.WorkDate < to)
+            .GroupBy(e => e.WorkDate.Month)
+            .Select(g => new { Month = g.Key, New = g.Count(e => e.Status == TimeEntryStatus.New), Hours = g.Sum(e => e.Hours) })
+            .ToListAsync(ct);
+        var closedBy = await users.GetUsersAsync(periods.Where(p => p.ClosedBy != null).Select(p => p.ClosedBy!.Value).Distinct().ToList(), ct);
+
+        return Enumerable.Range(1, 12).Select(month =>
+        {
+            var period = periods.FirstOrDefault(p => p.Month == month);
+            var stat = stats.FirstOrDefault(s => s.Month == month);
+            return new PeriodDto(
+                year, month, period?.IsClosed ?? false, period?.ClosedAt,
+                period?.ClosedBy is { } by && closedBy.TryGetValue(by, out var user) ? user.DisplayName : null,
+                period?.ReopenReason, stat?.New ?? 0, stat?.Hours ?? 0);
+        }).ToList();
+    }
+
+    public async Task<Result<PeriodDto>> ClosePeriodAsync(int year, int month, CancellationToken ct)
+    {
+        var from = new DateOnly(year, month, 1);
+        var to = from.AddMonths(1);
+        var newEntries = await db.TimeEntries.CountAsync(e => e.WorkDate >= from && e.WorkDate < to && e.Status == TimeEntryStatus.New, ct);
+        if (newEntries > 0)
+        {
+            return Error.Conflict("TIM_UNAPPROVED_ENTRIES", $"{newEntries} entries are still waiting for approval.",
+                new Dictionary<string, object?> { ["newEntries"] = newEntries });
+        }
+
+        var period = await db.TimePeriods.SingleOrDefaultAsync(p => p.Year == year && p.Month == month, ct);
+        if (period is null)
+        {
+            period = new TimePeriod(year, month);
+            db.TimePeriods.Add(period);
+        }
+
+        period.Close(currentUser.UserId, time.GetUtcNow());
+        await db.SaveChangesAsync(ct);
+        return (await ListPeriodsAsync(year, ct)).First(p => p.Month == month);
+    }
+
+    public async Task<Result<PeriodDto>> ReopenPeriodAsync(int year, int month, string reason, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Error.Validation("TIM_REASON_REQUIRED", "Give a reason for reopening the period; it is written to the audit log.");
+        }
+
+        if (await db.TimePeriods.SingleOrDefaultAsync(p => p.Year == year && p.Month == month, ct) is not { } period || !period.IsClosed)
+        {
+            return Error.NotFound("TIM_PERIOD_NOT_CLOSED", "The period is not closed.");
+        }
+
+        period.Reopen(reason, time.GetUtcNow());
+        await db.SaveChangesAsync(ct);
+        return (await ListPeriodsAsync(year, ct)).First(p => p.Month == month);
+    }
+
+    public async Task<IReadOnlyList<string>> WorkTypesAsync(CancellationToken ct)
+    {
+        var fromCatalog = await catalog.GetWorkTypesAsync(ct);
+        return fromCatalog.Concat(options.Value.WorkTypes).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private bool CanEdit(TimeEntry entry) =>
+        currentUser.HasPermission(Permissions.TimeManage) || (entry.TechnicianId == currentUser.UserId && currentUser.HasPermission(Permissions.TimeOwn));
+
+    private Task<Guid?> ResolveTechnicianAsync(Guid? requested)
+    {
+        if (requested is null || requested == currentUser.UserId)
+        {
+            return Task.FromResult(currentUser.UserId);
+        }
+
+        return Task.FromResult(currentUser.HasPermission(Permissions.TimeManage) ? requested : null);
+    }
+
+    private async Task<HashSet<(int Year, int Month)>> ClosedPeriodsAsync(CancellationToken ct) =>
+        (await db.TimePeriods.AsNoTracking().Where(p => p.IsClosed).Select(p => new { p.Year, p.Month }).ToListAsync(ct))
+        .Select(p => (p.Year, p.Month)).ToHashSet();
+
+    private async Task<IReadOnlyList<TimeEntryDto>> ToDtosAsync(IReadOnlyList<TimeEntry> entries, HashSet<(int, int)> closed, CancellationToken ct)
+    {
+        var organizations = await customers.GetOrganizationNamesAsync(entries.Select(e => e.OrganizationId).Distinct().ToList(), ct);
+        var projectNames = await projects.GetProjectNamesAsync(
+            entries.Where(e => e.ProjectId != null).Select(e => e.ProjectId!.Value).Distinct().ToList(), ct);
+        var technicians = await users.GetUsersAsync(entries.Where(e => e.TechnicianId != null).Select(e => e.TechnicianId!.Value).Distinct().ToList(), ct);
+        return entries.Select(e => new TimeEntryDto(
+            e.Id, e.Source, e.OrganizationId, organizations.GetValueOrDefault(e.OrganizationId),
+            e.TechnicianId, e.TechnicianId is { } t && technicians.TryGetValue(t, out var user) ? user.DisplayName : e.TechnicianName,
+            e.ExternalTicketId, e.TicketTitle, e.WorkDate, e.StartedAt, e.Hours, e.WorkType, e.Billable, e.Onsite, e.AfterHours, e.Description,
+            e.ProjectId, e.ProjectId is { } p && projectNames.TryGetValue(p, out var projectName) ? projectName : null,
+            e.Status, e.Amount, e.ReviewNote, closed.Contains((e.Year, e.Month)),
+            e.CurrentAllocations
+                .Select(a => new AllocationDto(a.Classification, a.Hours, a.BilledHours, a.Rate, a.Amount, a.HourBankId)).ToList(),
+            db.Entry(e).State == EntityState.Detached ? string.Empty : db.GetETag(e))).ToList();
+    }
+}

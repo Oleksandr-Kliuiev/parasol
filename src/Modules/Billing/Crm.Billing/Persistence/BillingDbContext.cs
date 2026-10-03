@@ -1,0 +1,134 @@
+using Crm.Billing.Domain;
+using Crm.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace Crm.Billing.Persistence;
+
+public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options) : ModuleDbContext(options)
+{
+    public const string SchemaName = "billing";
+
+    public override string Schema => SchemaName;
+
+    public DbSet<BillingRun> BillingRuns => Set<BillingRun>();
+
+    public DbSet<BillingBasis> BillingBases => Set<BillingBasis>();
+
+    public DbSet<BillingLine> BillingLines => Set<BillingLine>();
+
+    public DbSet<BillingExportAttempt> ExportAttempts => Set<BillingExportAttempt>();
+
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+
+    public DbSet<InvoicePayment> InvoicePayments => Set<InvoicePayment>();
+
+    public DbSet<PendingCharge> PendingCharges => Set<PendingCharge>();
+
+    protected override void ConfigureModule(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<PendingCharge>(b =>
+        {
+            b.ToTable("PendingCharges");
+            b.ConfigureAuditable();
+            b.Property(x => x.Description).HasMaxLength(512);
+            b.Property(x => x.SourceType).HasMaxLength(32);
+            b.Property(x => x.Quantity).HasPrecision(18, 2);
+            b.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            b.Property(x => x.DiscountPct).HasPrecision(5, 2);
+            b.Property(x => x.VatRate).HasPrecision(5, 2);
+            b.HasIndex(x => new { x.SourceType, x.SourceId, x.SourceLineId }).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.InvoicedBasisId });
+        });
+
+        modelBuilder.Entity<BillingRun>(b =>
+        {
+            b.ToTable("BillingRuns");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+            b.Property(x => x.Notes).HasMaxLength(1024);
+            // BR-BIL-01: only one run per period may be open.
+            b.HasIndex(x => x.PeriodStart).IsUnique().HasFilter("[Status] <> 'Closed' AND [IsDeleted] = 0");
+            b.HasIndex(x => x.Status);
+        });
+
+        modelBuilder.Entity<BillingBasis>(b =>
+        {
+            b.ToTable("BillingBases");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.IdempotencyKey).HasMaxLength(128);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.ExportSystem).HasMaxLength(32);
+            b.Property(x => x.OrderNo).HasMaxLength(64);
+            b.Property(x => x.CustomerReference).HasMaxLength(128);
+            b.Property(x => x.TotalExVat).HasPrecision(18, 2);
+            b.Property(x => x.PreviousPeriodTotal).HasPrecision(18, 2);
+            b.HasIndex(x => x.IdempotencyKey).IsUnique();
+            b.HasIndex(x => new { x.RunId, x.OrganizationId });
+            b.HasIndex(x => x.Status);
+            b.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.BasisId).OnDelete(DeleteBehavior.Cascade);
+            b.HasMany(x => x.Attempts).WithOne().HasForeignKey(a => a.BasisId).OnDelete(DeleteBehavior.Cascade);
+            b.Ignore(x => x.CurrentLines);
+            b.Ignore(x => x.Anomalies);
+        });
+
+        modelBuilder.Entity<BillingLine>(b =>
+        {
+            b.ToTable("BillingLines");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Group).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.ProductCode).HasMaxLength(64);
+            b.Property(x => x.Description).HasMaxLength(512);
+            b.Property(x => x.Quantity).HasPrecision(18, 2);
+            b.Property(x => x.UnitPrice).HasPrecision(18, 4);
+            b.Property(x => x.DiscountPct).HasPrecision(5, 2);
+            b.Property(x => x.VatRate).HasPrecision(5, 2);
+            b.Property(x => x.LineTotal).HasPrecision(18, 2);
+            b.HasIndex(x => x.BasisId);
+            b.HasIndex(x => x.ProductId);
+        });
+
+        modelBuilder.Entity<BillingExportAttempt>(b =>
+        {
+            b.ToTable("BillingExportAttempts");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Result).HasMaxLength(16);
+            b.Property(x => x.Message).HasMaxLength(1024);
+            b.Property(x => x.CorrelationId).HasMaxLength(64);
+            b.HasIndex(x => x.BasisId);
+        });
+
+        modelBuilder.Entity<Invoice>(b =>
+        {
+            b.ToTable("Invoices");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.System).HasMaxLength(32);
+            b.Property(x => x.InvoiceNo).HasMaxLength(64);
+            b.Property(x => x.OrderNo).HasMaxLength(64);
+            b.Property(x => x.ExternalReference).HasMaxLength(128);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Url).HasMaxLength(512);
+            b.Property(x => x.TotalIncVat).HasPrecision(18, 2);
+            b.Property(x => x.Outstanding).HasPrecision(18, 2);
+            b.HasIndex(x => new { x.System, x.InvoiceNo }).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.InvoiceDate });
+            b.HasIndex(x => x.BasisId);
+            b.HasMany(x => x.Payments).WithOne().HasForeignKey(p => p.InvoiceId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InvoicePayment>(b =>
+        {
+            b.ToTable("InvoicePayments");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+            b.HasIndex(x => x.InvoiceId);
+        });
+    }
+}
+
+internal sealed class BillingDesignTimeFactory() : ModuleDesignTimeFactory<BillingDbContext>(BillingDbContext.SchemaName);

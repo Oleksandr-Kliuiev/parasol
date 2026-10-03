@@ -1,0 +1,125 @@
+using Crm.Audit;
+using Crm.Catalog;
+using Crm.Activities;
+using Crm.Contracts;
+using Crm.Billing;
+using Crm.Notifications;
+using Crm.Notifications.Features;
+using Crm.Reports;
+using Crm.Licensing;
+using Crm.Projects;
+using Crm.Sales;
+using Crm.Service;
+using Crm.TimeTracking;
+using Crm.Contracts.Features;
+using Crm.Sales.Features;
+using Crm.CustomFields;
+using Crm.Customers;
+using Crm.Identity;
+using Crm.Infrastructure.DependencyInjection;
+using Crm.Infrastructure.Outbox;
+using Crm.Integrations.Brreg;
+using Crm.Integrations.Core;
+using Crm.Integrations.MicrosoftGraph;
+using Crm.Integrations.PartnerCenter;
+using Crm.Integrations.PowerOffice;
+using Crm.Integrations.Atera;
+using Microsoft.Extensions.Options;
+using Crm.SharedKernel.Application;
+using Crm.Worker;
+using Hangfire;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+builder.Services.AddScoped<ICurrentUser, SystemCurrentUser>();
+builder.Services
+    .AddAuditModule(builder.Configuration)
+    .AddIdentityModule(builder.Configuration)
+    .AddCustomersModule(builder.Configuration)
+    .AddCustomFieldsModule(builder.Configuration)
+    .AddCatalogModule(builder.Configuration)
+    .AddContractsModule(builder.Configuration)
+    .AddServiceModule(builder.Configuration)
+    .AddTimeTrackingModule(builder.Configuration)
+    .AddSalesModule(builder.Configuration)
+    .AddProjectsModule(builder.Configuration)
+    .AddActivitiesModule(builder.Configuration)
+    .AddLicensingModule(builder.Configuration)
+    .AddBillingModule(builder.Configuration)
+    .AddNotificationsModule(builder.Configuration)
+    .AddReportsModule(builder.Configuration)
+    .AddBrregIntegration(builder.Configuration)
+    .AddIntegrationsCore(builder.Configuration)
+    .AddMicrosoftGraphIntegration(builder.Configuration)
+    .AddPowerOfficeIntegration(builder.Configuration)
+    .AddAteraIntegration(builder.Configuration)
+    .AddPartnerCenterIntegration(builder.Configuration);
+
+builder.Services.AddHostedService<OutboxProcessor>();
+
+builder.Services.AddHangfire(config => config
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString(ModuleRegistration.ConnectionStringName),
+        new Hangfire.SqlServer.SqlServerStorageOptions
+        {
+            SchemaName = "hangfire",
+            // The schema is installed by the migrator; locally the web host migrates on startup.
+            PrepareSchemaIfNecessary = builder.Configuration.GetValue("Hangfire:PrepareSchema", false),
+        }));
+builder.Services.AddHangfireServer(options =>
+{
+    options.ServerName = $"crm-worker:{Environment.MachineName}";
+    options.Queues = ["default"];
+});
+
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+var oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+var jobs = app.Services.GetRequiredService<IRecurringJobManager>();
+jobs.AddOrUpdate<BrregRegistryCheckJob>(
+    BrregRegistryCheckJob.JobId,
+    job => job.RunAsync(CancellationToken.None),
+    "0 2 * * *",
+    new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<EntraUserSyncJob>(
+    EntraUserSyncJob.JobId,
+    job => job.RunAsync(CancellationToken.None),
+    app.Services.GetRequiredService<IOptions<GraphOptions>>().Value.UserSyncCron,
+    new RecurringJobOptions { TimeZone = oslo });
+
+jobs.AddOrUpdate<ContractLifecycleJob>(ContractLifecycleJob.JobId, job => job.RunAsync(CancellationToken.None), "30 5 * * *", new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<QuoteExpiryJob>(QuoteExpiryJob.JobId, job => job.RunAsync(CancellationToken.None), "0 6 * * *", new RecurringJobOptions { TimeZone = oslo });
+
+jobs.AddOrUpdate<OutboundProcessorJob>(OutboundProcessorJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
+
+var powerOffice = app.Services.GetRequiredService<IOptions<PowerOfficeOptions>>().Value;
+var billing = app.Services.GetRequiredService<IOptions<BillingOptions>>().Value;
+var notifications = app.Services.GetRequiredService<IOptions<NotificationsOptions>>().Value;
+jobs.AddOrUpdate<NotificationScanJob>(NotificationScanJob.JobId, job => job.RunAsync(CancellationToken.None), notifications.ScanCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<NotificationDigestJob>(NotificationDigestJob.JobId, job => job.RunAsync(CancellationToken.None), notifications.DigestCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<PowerOfficeCustomerSyncJob>(PowerOfficeCustomerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.CustomerSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<PowerOfficeContactPersonSyncJob>(PowerOfficeContactPersonSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.ContactPersonSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<PowerOfficeProductSyncJob>(PowerOfficeProductSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.ProductSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<PowerOfficeInvoiceSyncJob>(PowerOfficeInvoiceSyncJob.JobId, job => job.RunAsync(CancellationToken.None), billing.InvoiceSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
+var partnerCenter = app.Services.GetRequiredService<IOptions<PartnerCenterOptions>>().Value;
+jobs.AddOrUpdate<PartnerCenterCustomerSyncJob>(PartnerCenterCustomerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), partnerCenter.CustomerSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<PartnerCenterSubscriptionSyncJob>(PartnerCenterSubscriptionSyncJob.JobId, job => job.RunAsync(CancellationToken.None), partnerCenter.SubscriptionSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<PartnerCenterLicenseSyncJob>(PartnerCenterLicenseSyncJob.JobId, job => job.RunAsync(CancellationToken.None), partnerCenter.LicenseSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<PartnerBillingSyncJob>(PartnerBillingSyncJob.JobId, job => job.RunAsync(CancellationToken.None), partnerCenter.BillingSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
+var atera = app.Services.GetRequiredService<IOptions<AteraOptions>>().Value;
+jobs.AddOrUpdate<AteraCustomerSyncJob>(AteraCustomerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.CustomerSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraContactSyncJob>(AteraContactSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.ContactSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraTicketSyncJob>(AteraTicketSyncJob.OpenJobId, job => job.RunAsync(false, CancellationToken.None), atera.TicketSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraTicketSyncJob>(AteraTicketSyncJob.RecentJobId, job => job.RunAsync(true, CancellationToken.None), atera.RecentTicketSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraWorkHoursSyncJob>(AteraWorkHoursSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.WorkHoursSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraAgentSyncJob>(AteraAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraAlertSyncJob>(AteraAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
+await app.RunAsync();

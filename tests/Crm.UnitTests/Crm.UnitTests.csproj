@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Customers\Crm.Customers\Crm.Customers.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CustomFields\Crm.CustomFields\Crm.CustomFields.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Catalog\Crm.Catalog\Crm.Catalog.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Contracts\Crm.Contracts\Crm.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Service\Crm.Service\Crm.Service.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sales\Crm.Sales\Crm.Sales.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Projects\Crm.Projects\Crm.Projects.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Activities\Crm.Activities\Crm.Activities.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Licensing\Crm.Licensing\Crm.Licensing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Billing\Crm.Billing\Crm.Billing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\Crm.Notifications\Crm.Notifications.csproj" />
+    <ProjectReference Include="..\..\src\Modules\TimeTracking\Crm.TimeTracking\Crm.TimeTracking.csproj" />
+    <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.Brreg\Crm.Integrations.Brreg.csproj" />
+    <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.PowerOffice\Crm.Integrations.PowerOffice.csproj" />
+    <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.Atera\Crm.Integrations.Atera.csproj" />
+    <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.MicrosoftGraph\Crm.Integrations.MicrosoftGraph.csproj" />
+    <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.PartnerCenter\Crm.Integrations.PartnerCenter.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\Crm.Infrastructure\Crm.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Customers\Crm.Customers.Contracts\Crm.Customers.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Catalog\Crm.Catalog.Contracts\Crm.Catalog.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Crm.UnitTests" />
+    <InternalsVisibleTo Include="Crm.IntegrationTests" />
+  </ItemGroup>
+</Project>
