@@ -4,12 +4,12 @@ DEV-00-AC02,DEV-00,Тест 1000 → 900 → recollect обнаруживает 
 DEV-00-AC03,DEV-00,"Три теста A02 различают одинакового согласующего, устаревшее согласование и пересечение порога после ручной правки.","Q0,Q1,Q2,Q3",pass,"evidence/DEV-00.md; three A02 tests in BillingRegressionTests and three in BillingRegressionApiTests, all red on 2bed19e",2026-10-03
 DEV-00-AC04,DEV-00,"Тест A03 проверяет экономический дубль через второй runId, а не только повтор одного outbound-запроса.","Q0,Q1,Q2,Q3",pass,evidence/DEV-00.md; BillingRegressionApiTests.A03_*: second run id billed 15000 again,2026-10-03
 DEV-00-AC05,DEV-00,Записан новый фактический результат базовых проверок; старые 252/54/80/29 не выданы за результат новой версии.,"Q0,Q1,Q2,Q3",pass,evidence/DEV-00.md#запуски; new runs 2026-10-03 21:30-21:45 UTC on 2bed19e,2026-10-03
-DEV-01-AC01,DEV-01,1000 → ручные 900 → один или десять повторных сборов дают одну экономическую позицию 900.,"Q1,Q2,Q3",not_run,,
-DEV-01-AC02,DEV-01,Отдельная ручная строка 2500 сохраняется однократно; одинаковые описания разных источников не сливаются.,"Q1,Q2,Q3",not_run,,
-DEV-01-AC03,DEV-01,Изменение количества или цены в источнике после правки требует явного разрешения конфликта; старое решение не исчезает.,"Q1,Q2,Q3",not_run,,
-DEV-01-AC04,DEV-01,Удалённое Finance начисление не возвращается незаметно при повторном сборе; действие и причина доступны в истории.,"Q1,Q2,Q3",not_run,,
-DEV-01-AC05,DEV-01,Перемещение оплаты на материнскую компанию сохраняет источник; повторный сбор и параллельные запросы не дублируют его.,"Q1,Q2,Q3",not_run,,
-DEV-01-AC06,DEV-01,Утверждённое основание невозможно пересобрать или поправить; изменения возвращают согласованный код конфликта.,"Q1,Q2,Q3",not_run,,
+DEV-01-AC01,DEV-01,1000 → ручные 900 → один или десять повторных сборов дают одну экономическую позицию 900.,"Q1,Q2,Q3",pass,evidence/DEV-01.md; BillingChargeIdentityTests.An_override_and_a_manual_line_each_stay_once_*; ChargeIdentityApiTests (10 collects); DEV-00 A01 regressions green,2026-10-04
+DEV-01-AC02,DEV-01,Отдельная ручная строка 2500 сохраняется однократно; одинаковые описания разных источников не сливаются.,"Q1,Q2,Q3",pass,evidence/DEV-01.md; manual 2500 once; Lines_with_the_same_text_from_different_sources_stay_apart,2026-10-04
+DEV-01-AC03,DEV-01,Изменение количества или цены в источнике после правки требует явного разрешения конфликта; старое решение не исчезает.,"Q1,Q2,Q3",pass,evidence/DEV-01.md; SourceChanged/SourceRemoved conflicts block approval until keep/revert (domain and API),2026-10-04
+DEV-01-AC04,DEV-01,Удалённое Finance начисление не возвращается незаметно при повторном сборе; действие и причина доступны в истории.,"Q1,Q2,Q3",pass,"evidence/DEV-01.md; exclusion survives collects, reason/author/time in DTO and audit history",2026-10-04
+DEV-01-AC05,DEV-01,Перемещение оплаты на материнскую компанию сохраняет источник; повторный сбор и параллельные запросы не дублируют его.,"Q1,Q2,Q3",pass,evidence/DEV-01.md; subsidiary line keeps sourceOrganization; parallel collects give no duplicate basis or line,2026-10-04
+DEV-01-AC06,DEV-01,Утверждённое основание невозможно пересобрать или поправить; изменения возвращают согласованный код конфликта.,"Q1,Q2,Q3",pass,"evidence/DEV-01.md; approved basis: 5 commands -> 409 BIL_BASIS_LOCKED, collect -> BIL_INVALID_STATUS",2026-10-04
 DEV-02-AC01,DEV-02,"Все три регрессии A02 проходят и имеют проверки API, не только домена.","Q1,Q2,Q3",not_run,,
 DEV-02-AC02,DEV-02,При настроенном пороге 200000 суммы 199999.99 и 200000 следуют существующему правилу; 200000.01 требует второго человека.,"Q1,Q2,Q3",not_run,,
 DEV-02-AC03,DEV-02,Ручная строка 300000 после сбора с RequiresSecondApproval=false не может пройти одно согласование.,"Q1,Q2,Q3",not_run,,

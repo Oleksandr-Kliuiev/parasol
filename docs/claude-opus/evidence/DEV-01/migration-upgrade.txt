@@ -1,0 +1,89 @@
+# ChargeIdentity on a copy of the previous schema with synthetic data in the previous shape (throwaway container crm-mig-dev01, removed)
+# Commands: dotnet ef database update <target> --project src/Modules/Billing/Crm.Billing --context BillingDbContext --connection <local test db>
+# Scripts: mig-legacy-data.sql, mig-check.sql, mig-old-app-insert.sql (copied next to this file)
+### 1. previous schema (migrations up to PendingCharges)
+Applying migration '20260916082954_Initial'.
+Applying migration '20260916183504_PendingCharges'.
+Done.
+### 2. synthetic data in the previous shape (sqlcmd -I: QUOTED_IDENTIFIER ON like ADO.NET)
+== lines by basis (count, sum of LineTotal, current only)
+basis|lines|total
+-----|-----|-----
+Approved|2|1500.00
+Draft|3|3400.00
+== basis totals
+Status|TotalExVat
+------|----------
+Approved|1500.00
+Draft|3400.00
+== new columns: absent
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+### 3. apply ChargeIdentity
+23:17:52
+Applying migration '20261003230254_ChargeIdentity'.
+Done.
+23:17:53
+== lines by basis (count, sum of LineTotal, current only)
+basis|lines|total
+-----|-----|-----
+Approved|2|1500.00
+Draft|3|3400.00
+== basis totals
+Status|TotalExVat
+------|----------
+Approved|1500.00
+Draft|3400.00
+== new columns per line
+Description|ManuallyAdjusted|Origin|Decision|Conflict|SourceKey
+-----------|----------------|------|--------|--------|---------
+Added by hand|1|Manual|None|None|null
+Approved collected|0|Collected|None|None|null
+Approved manual|1|Manual|None|None|null
+Collected and corrected|1|Collected|None|None|null
+Deleted earlier|0|Collected|None|None|null
+Plain collected|0|Collected|None|None|null
+== revision of bases
+Status|Revision
+------|--------
+Approved|0
+Draft|0
+== filtered unique index
+name|is_unique|filter_definition
+----|---------|-----------------
+IX_BillingLines_BasisId_SourceKey|1|([SourceKey] IS NOT NULL AND [IsDeleted]=(0))
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+### 4. insert with the previous model's column list
+Description|Origin|Decision|Conflict|ManuallyAdjusted
+-----------|------|--------|--------|----------------
+Inserted by the old model|Collected|None|None|1
+### 5. apply again (must be a no-op)
+No migrations were applied. The database is already up to date.
+Done.
+### 6. roll the schema back to PendingCharges
+Reverting migration '20261003230254_ChargeIdentity'.
+Done.
+== lines by basis (count, sum of LineTotal, current only)
+basis|lines|total
+-----|-----|-----
+Approved|2|1500.00
+Draft|4|3410.00
+== basis totals
+Status|TotalExVat
+------|----------
+Approved|1500.00
+Draft|3400.00
+== new columns: absent
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges

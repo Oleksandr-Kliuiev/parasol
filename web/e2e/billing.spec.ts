@@ -179,3 +179,60 @@ test('a run without a PowerOffice customer reports the anomaly and can be cancel
   await expect(toast(page, 'The basis is cancelled')).toBeVisible();
   await expect(page.getByText('Cancelled', { exact: true }).first()).toBeVisible();
 });
+
+test('a correction survives a new collect and a line left out stays out', async ({ page }) => {
+  test.setTimeout(120_000);
+  const m = marker('Kor');
+  await signIn(page, 'Crm.Admin');
+  const run = await reserveBillingRun(page, m);
+  const organization = await createOrganization(page, { name: `${m} Korrigert AS`, status: 'Customer' });
+  const product = (name: string, price: number) =>
+    api.post<{ id: string }>(page, '/api/v1/catalog/products', {
+      sku: `${m}-${name}`, name: `${m} ${name}`, type: 'ManagedService', businessLine: 'Atera', unit: 'Piece',
+      billingPeriod: 'Monthly', vatRate: 25, listPrice: price, unitCost: price / 2,
+    });
+  const drift = await product('Drift', 1000);
+  const backup = await product('Backup', 500);
+  const contract = await api.post<{ id: string }>(page, '/api/v1/contracts', {
+    organizationId: organization.id, title: `${m} Avtale`, type: 'Msp', startDate: run.start, endDate: periodEnd(run), autoRenew: false,
+    renewalTermMonths: 0, noticePeriodDays: 30, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance', indexation: false,
+  });
+  for (const [productId, unitPrice] of [[drift.id, 1000], [backup.id, 500]] as const) {
+    await api.post(page, `/api/v1/contracts/${contract.id}/lines`, { productId, quantityModel: 'Fixed', quantity: 1, unitPrice, validFrom: run.start });
+  }
+  await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
+
+  await signIn(page, 'Crm.Finance');
+  await api.post(page, `/api/v1/billing/runs/${run.id}/collect`);
+  const bases = await api.get<Array<{ id: string; organization: { id: string } }>>(page, `/api/v1/billing/runs/${run.id}/bases?search=${m}`);
+  const basisId = bases.find((b) => b.organization.id === organization.id)!.id;
+  await page.goto(`/billing/bases/${basisId}`);
+
+  // A collected line is corrected only with a reason, and the reason stays on the line.
+  const driftRow = page.getByRole('row').filter({ hasText: `${m} Drift` });
+  await driftRow.getByRole('button', { name: /^Edit / }).click();
+  const edit = page.getByRole('dialog');
+  await expect(edit.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await edit.getByRole('textbox', { name: 'Unit price' }).fill('900');
+  await edit.getByRole('textbox', { name: 'Reason' }).fill('Price agreed for the year');
+  await edit.getByRole('button', { name: 'Save' }).click();
+  await expect(toast(page, 'Line saved')).toBeVisible();
+  await expect(driftRow.getByText('Corrected: Price agreed for the year', { exact: false })).toBeVisible();
+
+  // A collected line is left out instead of deleted, so the next collect cannot bring it back.
+  const backupRow = page.getByRole('row').filter({ hasText: `${m} Backup` });
+  await backupRow.getByRole('button', { name: /^Leave out / }).click();
+  const exclude = page.getByRole('dialog');
+  await exclude.getByRole('textbox', { name: 'Reason' }).fill('Included in the bundle this month');
+  await exclude.getByRole('button', { name: 'Leave out' }).click();
+  await expect(toast(page, 'The line is left out')).toBeVisible();
+
+  await page.goto(`/billing/runs/${run.id}`);
+  await page.getByRole('button', { name: 'Collect again', exact: true }).click();
+  await expect(toast(page, 'The run was collected')).toBeVisible();
+  await page.goto(`/billing/bases/${basisId}`);
+  await expect(page.getByText('NOK 900.00').first()).toBeVisible();
+  await expect(driftRow.getByText('Source: NOK 1,000.00')).toBeVisible();
+  await expect(backupRow.getByText('Left out: Included in the bundle this month', { exact: false })).toBeVisible();
+  await expect(backupRow.getByRole('button', { name: /^Include .* again$/ })).toBeVisible();
+});

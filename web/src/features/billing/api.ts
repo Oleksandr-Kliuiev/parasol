@@ -116,6 +116,23 @@ export function useBasisActions(basisId: string) {
       mutationFn: ({ lineId, etag }: { lineId: string; etag: string }) => api.delete<Basis>(`${BASE}/bases/${basisId}/lines/${lineId}`, etag),
       onSuccess,
     }),
+    /** A collected line is left out with a reason instead of being deleted, so the next collect cannot bring it back. */
+    excludeLine: useMutation({
+      mutationFn: ({ lineId, reason, etag }: { lineId: string; reason: string; etag: string }) =>
+        api.post<Basis>(`${BASE}/bases/${basisId}/lines/${lineId}/exclude`, { reason }, etag),
+      onSuccess,
+    }),
+    /** Undoes Finance's decision: the line follows its source again. */
+    revertLine: useMutation({
+      mutationFn: ({ lineId, etag }: { lineId: string; etag: string }) => api.post<Basis>(`${BASE}/bases/${basisId}/lines/${lineId}/revert`, {}, etag),
+      onSuccess,
+    }),
+    /** Confirms Finance's decision against what the source says now. */
+    keepLine: useMutation({
+      mutationFn: ({ lineId, reason, etag }: { lineId: string; reason: string; etag: string }) =>
+        api.post<Basis>(`${BASE}/bases/${basisId}/lines/${lineId}/keep`, { reason }, etag),
+      onSuccess,
+    }),
     retry: useMutation({ mutationFn: () => api.post<Basis>(`${BASE}/bases/${basisId}/retry`), onSuccess }),
     cancel: useMutation({
       mutationFn: (reason: string) => api.post<Basis>(`${BASE}/bases/${basisId}/cancel`, { reason }),

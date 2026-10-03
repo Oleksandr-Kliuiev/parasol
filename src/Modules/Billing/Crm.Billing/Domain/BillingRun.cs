@@ -17,6 +17,27 @@ internal static class BillingErrors
 
     public static Error BasisLocked => Error.Conflict("BIL_BASIS_LOCKED", "The basis is approved; corrections belong in the next period (BR-BIL-10).");
 
+    public static Error ReasonRequired => Error.Validation(
+        "BIL_REASON_REQUIRED", "Say why: a collected line is corrected or left out only with a reason (BR-BIL-02).");
+
+    public static Error LineExcluded => Error.Conflict("BIL_LINE_EXCLUDED", "The line is excluded from the basis; include it again first.");
+
+    public static Error NotCollected => Error.Conflict("BIL_NOT_COLLECTED", "A line added by hand has no source to go back to; edit or remove it.");
+
+    public static Error NothingToRevert => Error.Conflict("BIL_NOTHING_TO_REVERT", "The line already shows what its source says.");
+
+    public static Error NoConflict => Error.Conflict("BIL_NO_CONFLICT", "The line has no conflict to resolve.");
+
+    public static Error UnresolvedConflicts(int count) => Error.Conflict(
+        "BIL_UNRESOLVED_CONFLICTS", $"{count} lines changed at their source after Finance decided about them; resolve them before approval.",
+        new Dictionary<string, object?> { ["count"] = count });
+
+    public static Error MissingSourceKey(string description) => Error.Conflict(
+        "BIL_MISSING_SOURCE_KEY", $"The collected line “{description}” has no charge key.");
+
+    public static Error DuplicateSourceKey(string key) => Error.Conflict(
+        "BIL_DUPLICATE_SOURCE_KEY", $"Two collected lines claim the same charge {key}.", new Dictionary<string, object?> { ["sourceKey"] = key });
+
     public static Error PeriodBusy(DateOnly periodStart) => Error.Conflict(
         "BIL_PERIOD_BUSY", $"A run for {periodStart:yyyy-MM} is already open; close it first (BR-BIL-01).",
         new Dictionary<string, object?> { ["periodStart"] = periodStart.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) });

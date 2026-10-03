@@ -115,6 +115,14 @@ internal sealed class BillingService(
             return BillingErrors.RunNotFound(id);
         }
 
+        // A line whose source changed after Finance decided about it is not approved by accident (BR-BIL-02).
+        var bases = await db.BillingBases.Include(b => b.Lines).Where(b => b.RunId == run.Id).ToListAsync(ct);
+        var conflicts = bases.Sum(b => b.ConflictCount);
+        if (conflicts > 0)
+        {
+            return BillingErrors.UnresolvedConflicts(conflicts);
+        }
+
         var now = time.GetUtcNow();
         var approved = second ? run.SecondApprove(currentUser.UserId, now) : run.Approve(currentUser.UserId, now);
         if (!approved.IsSuccess)
@@ -125,7 +133,6 @@ internal sealed class BillingService(
         if (run.Status == BillingRunStatus.Approved)
         {
             // Approving the run approves every basis: from here on they are immutable (BR-BIL-10).
-            var bases = await db.BillingBases.Include(b => b.Lines).Where(b => b.RunId == run.Id).ToListAsync(ct);
             foreach (var basis in bases)
             {
                 basis.Approve();
@@ -223,7 +230,8 @@ internal sealed class BillingService(
                 b.Anomalies,
                 b.CurrentLines.Count(),
                 b.OrderNo,
-                b.ExportedAt))
+                b.ExportedAt,
+                b.ConflictCount))
             .Where(b => string.IsNullOrWhiteSpace(query.Search) || b.Organization.Name.Contains(query.Search!, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(b => b.Anomalies.Count > 0)
             .ThenByDescending(b => b.TotalExVat)
@@ -247,16 +255,50 @@ internal sealed class BillingService(
             var vatRate = request.VatRate ?? await VatRateOfAsync(request.ProductId, ct);
             var added = basis.AddManualLine(new LineDraft(
                 BillingGroup.OneOff, request.ProductId, request.Description, request.Quantity, request.UnitPrice,
-                request.DiscountPct ?? 0, vatRate, null));
+                request.DiscountPct ?? 0, vatRate, null), currentUser.UserId, time.GetUtcNow(), request.Reason);
             return added.IsSuccess ? Result.Success() : added.Error!;
         }, ct);
 
+    /// <summary>Edits a manual line, or overrides a collected one; an override needs a reason and keeps the source values.</summary>
     public Task<Result<BasisResponse>> AdjustLineAsync(Guid basisId, Guid lineId, AdjustLineRequest request, string ifMatch, CancellationToken ct) =>
-        MutateBasisAsync(basisId, ifMatch,
-            basis => Task.FromResult(basis.UpdateLine(lineId, request.Quantity, request.UnitPrice, request.DiscountPct, request.Description)), ct);
+        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.UpdateLine(
+            lineId, request.Quantity, request.UnitPrice, request.DiscountPct, request.Description, request.Reason, currentUser.UserId, time.GetUtcNow())), ct);
 
+    /// <summary>Deletes a manual line. A collected line is excluded instead (<see cref="ExcludeLineAsync"/>), which needs a reason.</summary>
     public Task<Result<BasisResponse>> RemoveLineAsync(Guid basisId, Guid lineId, string ifMatch, CancellationToken ct) =>
-        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.RemoveLine(lineId)), ct);
+        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.RemoveLine(lineId, null, currentUser.UserId, time.GetUtcNow())), ct);
+
+    public Task<Result<BasisResponse>> ExcludeLineAsync(Guid basisId, Guid lineId, LineDecisionRequest request, string ifMatch, CancellationToken ct) =>
+        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.RemoveLine(lineId, request.Reason, currentUser.UserId, time.GetUtcNow())), ct);
+
+    public Task<Result<BasisResponse>> RevertLineAsync(Guid basisId, Guid lineId, string ifMatch, CancellationToken ct) =>
+        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.RevertLine(lineId, currentUser.UserId, time.GetUtcNow())), ct);
+
+    public Task<Result<BasisResponse>> KeepLineAsync(Guid basisId, Guid lineId, LineDecisionRequest request, string ifMatch, CancellationToken ct) =>
+        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.KeepLine(lineId, request.Reason, currentUser.UserId, time.GetUtcNow())), ct);
+
+    /// <summary>
+    /// Dry run of the charge-key migration (DEV-01): how the lines of open bases will be treated by their next collect. Lines of
+    /// approved or exported bases keep their legacy shape and are reconciled by the charge register (DEV-03).
+    /// </summary>
+    public async Task<LegacyLinesReport> LegacyLinesAsync(CancellationToken ct)
+    {
+        var rows = await (
+                from line in db.BillingLines.AsNoTracking()
+                join basis in db.BillingBases.AsNoTracking() on line.BasisId equals basis.Id
+                where line.Origin == BillingLineOrigin.Collected && line.SourceKey == null
+                group line by new { basis.Status, line.ManuallyAdjusted } into g
+                select new { g.Key.Status, g.Key.ManuallyAdjusted, Lines = g.Count(), Amount = g.Sum(l => l.LineTotal) })
+            .ToListAsync(ct);
+        var open = rows.Where(r => r.Status == BillingBasisStatus.Draft).ToList();
+        var closed = rows.Where(r => r.Status != BillingBasisStatus.Draft).ToList();
+        return new LegacyLinesReport(
+            open.Where(r => !r.ManuallyAdjusted).Sum(r => r.Lines),
+            open.Where(r => r.ManuallyAdjusted).Sum(r => r.Lines),
+            decimal.Round(open.Where(r => r.ManuallyAdjusted).Sum(r => r.Amount), 2),
+            closed.Sum(r => r.Lines),
+            decimal.Round(closed.Sum(r => r.Amount), 2));
+    }
 
     public Task<Result<BasisResponse>> RetryAsync(Guid basisId, CancellationToken ct) =>
         MutateBasisAsync(basisId, null, basis => Task.FromResult(basis.Retry()), ct);
@@ -375,6 +417,7 @@ internal sealed class BillingService(
             run.ExportedAt,
             run.ClosedAt,
             run.Notes,
+            bases.Sum(b => b.ConflictCount),
             db.GetETag(run));
     }
 
@@ -386,6 +429,14 @@ internal sealed class BillingService(
         var products = await catalog.GetProductsAsync(productIds, ct);
         var invoices = await db.Invoices.AsNoTracking().Where(i => i.BasisId == basis.Id).ToListAsync(ct);
         var today = Today;
+        var sourceCustomers = basis.CurrentLines
+            .Where(l => l.SourceOrganizationId is { } source && source != basis.OrganizationId)
+            .Select(l => l.SourceOrganizationId!.Value)
+            .Distinct()
+            .ToList();
+        var customerNames = sourceCustomers.Count == 0 ? names : await customers.GetOrganizationNamesAsync([basis.OrganizationId, .. sourceCustomers], ct);
+        var editors = await users.GetUsersAsync(
+            basis.CurrentLines.Where(l => l.ChangedBy is not null).Select(l => l.ChangedBy!.Value).Distinct().ToList(), ct);
 
         return new BasisResponse(
             basis.Id,
@@ -406,10 +457,27 @@ internal sealed class BillingService(
                 .ThenBy(l => l.Description, StringComparer.Ordinal)
                 .Select(l => new BasisLineDto(
                     l.Id, l.Group, l.ProductId, l.ProductId is { } pid ? products.GetValueOrDefault(pid)?.Name : null, l.ProductCode,
-                    l.Description, l.Quantity, l.UnitPrice, l.DiscountPct, l.VatRate, l.LineTotal, l.ManuallyAdjusted, l.SourceRefs))
+                    l.Description, l.Quantity, l.UnitPrice, l.DiscountPct, l.VatRate, l.LineTotal, l.ManuallyAdjusted, l.SourceRefs,
+                    l.Origin,
+                    l.SourceKey,
+                    l.SourceOrganizationId is { } source && source != basis.OrganizationId
+                        ? new RefDto(source, customerNames.GetValueOrDefault(source, "—"))
+                        : null,
+                    l.Decision,
+                    l.Conflict,
+                    l.SourceDescription,
+                    l.SourceQuantity,
+                    l.SourceUnitPrice,
+                    l.SourceDiscountPct,
+                    l.SourceLineTotal,
+                    l.ChangeReason,
+                    l.ChangedBy is { } editor && editors.TryGetValue(editor, out var editorUser) ? new RefDto(editorUser.Id, editorUser.DisplayName) : null,
+                    l.ChangedAt))
                 .ToList(),
             basis.Attempts.OrderByDescending(a => a.At).Select(a => new ExportAttemptDto(a.At, a.Result, a.Message, a.CorrelationId)).ToList(),
             invoices.Select(i => ToDto(i, names, today)).ToList(),
+            basis.Revision,
+            basis.ConflictCount,
             db.GetETag(basis));
     }
 

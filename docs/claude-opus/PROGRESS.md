@@ -2,31 +2,32 @@
 
 Дата состояния: 04.10.2026.
 
-Текущая задача реализации: **DEV-01** (следующая по execution_order). Завершено локально: DEV-00 (`4bcf3a1`), DEV-15 (коммит «DEV-15: …» на `codex/readiness`), оба code_verified.
+Текущая задача реализации: **DEV-02** (следующая по execution_order). Завершено локально (code_verified): DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 (коммит «DEV-01: …»).
 
 ## Ветки и коммиты
 
 - `main` — baseline `2bed19e5520ac4061cbf1ad2e680a8a2b6e79320`: рабочая копия на дату аудита плюс этот пакет (670 файлов явного списка, см. [evidence/DEV-00.md](evidence/DEV-00.md)).
-- `codex/readiness` — рабочая ветка доработок от `2bed19e`: DEV-00 `4bcf3a1`, затем DEV-15 (SHA — `git log codex/readiness`). Push не выполнялся, remote отсутствует.
+- `codex/readiness` — рабочая ветка доработок от `2bed19e`: DEV-00 `4bcf3a1`, DEV-15 `041d4df`, затем DEV-01 (SHA — `git log codex/readiness`). Push не выполнялся, remote отсутствует.
 - Оставлены вне Git на диске без изменений: `.claude/launch.json`, `docs/claude-opus-development-pack-2026-10-03.zip` и распакованная копия `docs/claude-opus-development-pack-2026-10-03/` (их SHA-256 в manifest DEV-00). Если копия появилась случайно при открытии архива, удалить её может только владелец.
 
 ## Выполнено
 
 - **DEV-00** — baseline-коммит, сверка 597/597 со снимком аудита, проверка секретов, сборка чистой копии коммита, новые базовые прогоны, регрессии A01/A02/A03 (домен и API), агрегатная инвентаризация локальных баз. Статус code_verified; accepted оставлено владельцу/независимому review.
 - **DEV-15** — E2E без гонки периода (атомарный захват месяца созданием прогона, договоры в пределах месяца, HTTPS для WebKit, `failOnFlakyTests`, защита `E2E_SQL`), браузерная матрица Chromium/Firefox/WebKit для @critical, обнаружение модулей и тесты полноты архитектуры (67 тестов), coverage MTP + gate NFR-10 в CI (домен 95.58 %, backend 84.98 % после 25 доменных тестов; baseline был 85.60 % — красный), матрица прав 609 запросов/210 endpoints, тесты конкурентности, исправлен нестабильный teardown fixture. Статус code_verified ([evidence](evidence/DEV-15.md)).
+- **DEV-01** — ключ начисления у каждой собранной строки (ADR-011), решения Finance (исправление/исключение) с причиной, автором и сигнатурой источника, конфликты SourceChanged/SourceRemoved/LegacyUnmatched блокируют утверждение, команды exclude/revert/keep, миграция `ChargeIdentity` (expand, проверена на копии прежней схемы), UI и nb/en/ru. Попутно: устаревшие строки клиентов без источников, восстановление основания вернувшегося клиента, исключённые строки не закрывают источники. Регрессии A01 зелёные. Статус code_verified ([evidence](evidence/DEV-01.md)).
 
 ## Известные красные проверки (не маскировать)
 
-- unit `Crm.UnitTests.BillingRegressionTests`: A01 ×2 (→ DEV-01), A02 ×3 (→ DEV-02);
-- integration `Crm.IntegrationTests.BillingRegressionApiTests`: A01 (→ DEV-01), A02 ×3 (→ DEV-02), A03 (→ DEV-03);
+- unit `Crm.UnitTests.BillingRegressionTests`: A02 ×3 (→ DEV-02); A01 ×2 зелёные с DEV-01;
+- integration `Crm.IntegrationTests.BillingRegressionApiTests`: A02 ×3 (→ DEV-02), A03 (→ DEV-03); A01 зелёный с DEV-01;
 - интермиттентно (≈1 из 25): `BillingApiTests.A_monthly_run_…` — дефекты продукта, найденные в DEV-15: конфликт `UpdateRunStatusAsync` при параллельном экспорте оснований одного прогона (операция падает после внешнего эффекта, прогон остаётся `Exporting`) и однажды двойная отправка одного заказа (→ DEV-07, DEV-03, DEV-19);
 - гонка двух `CreateRun` отвечает `409 DUPLICATE` вместо `BIL_PERIOD_BUSY` (→ DEV-03, шаг 1).
 
-Последние результаты (04.10.2026, после DEV-15): build 0/0; unit 282 (5 известных red); architecture 67/67; integration 88 (5 известных red); E2E 50/50 дважды; vitest 29/29; coverage gate passed.
+Последние результаты (04.10.2026, после DEV-01): build 0/0; unit 292 (3 известных red); architecture 67/67; integration 95 (4 известных red); E2E 51/51; vitest 29/29; coverage: домен 96.55 %, backend 85.10 %.
 
 ## Следующий конкретный шаг
 
-DEV-01: стабильная идентичность начисления (источник + покрываемый интервал), разделение исходной строки, override с причиной/автором и самостоятельной ручной строки, tombstone исключения источника, конфликт при изменении источника; расширяющая миграция и разбор legacy SourceRefs в dry-run; API/DTO/UI nb/en/ru. Условие завершения: регрессии A01 (unit и API) зелёные, все AC DEV-01 с evidence. Затем DEV-02 → DEV-03.
+DEV-02: ревизия содержания прогона и канонический digest, согласования привязаны к ревизии (любая пересборка/правка сбрасывает), разные активные люди в любом порядке (включая Admin), порог второго согласования по текущему основанию в транзакции утверждения (> 200 000 строго), If-Match на командах согласования, событие экспорта только при фиксации approved-снимка, UI версии и причин сброса. Условие завершения: регрессии A02 (unit ×3, API ×3) зелёные, AC DEV-02 с evidence. Затем DEV-03.
 
 ## Открытые решения и блокеры
 

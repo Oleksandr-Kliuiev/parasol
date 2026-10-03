@@ -398,8 +398,20 @@ erDiagram
     decimal DiscountPct
     decimal VatRate
     money LineTotal
-    string SourceRefs "JSON: contractLineId, subscriptionId, timeEntryIds"
-    bool ManuallyAdjusted
+    string SourceRefs "JSON: contractLineId, subscriptionId, timeEntryIds, allocationIds, hourBankEntryId"
+    bool ManuallyAdjusted "совместимость: ручная или исправленная"
+    string Origin "Collected|Manual"
+    string SourceKey "ключ начисления, ADR-011; unique (BasisId, SourceKey) среди текущих"
+    uuid SourceOrganizationId "кому оказана услуга; плательщик — организация основания"
+    string SourceSignature "экономические значения источника при последнем сборе"
+    money SourceUnitPrice
+    decimal SourceQuantity
+    string Decision "None|Override|Exclusion"
+    string DecisionSignature "источник, против которого принято решение"
+    string Conflict "None|SourceChanged|SourceRemoved|LegacyUnmatched"
+    uuid ChangedBy
+    datetime ChangedAt
+    string ChangeReason
   }
   EXPORT_ATTEMPT {
     datetime At

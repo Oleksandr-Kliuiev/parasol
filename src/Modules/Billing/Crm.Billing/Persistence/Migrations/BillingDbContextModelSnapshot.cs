@@ -73,6 +73,9 @@ namespace Crm.Billing.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("Revision")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -161,11 +164,39 @@ namespace Crm.Billing.Persistence.Migrations
                     b.Property<Guid>("BasisId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ChangeReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset?>("ChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Conflict")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)")
+                        .HasDefaultValue("None");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("None");
+
+                    b.Property<string>("DecisionSignature")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -197,6 +228,13 @@ namespace Crm.Billing.Persistence.Migrations
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("Collected");
+
                     b.Property<string>("ProductCode")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -213,8 +251,35 @@ namespace Crm.Billing.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("SourceDescription")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<decimal?>("SourceDiscountPct")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid?>("SourceOrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("SourceQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("SourceRefs")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceSignature")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal?>("SourceUnitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 4)
@@ -229,6 +294,10 @@ namespace Crm.Billing.Persistence.Migrations
                     b.HasIndex("BasisId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("BasisId", "SourceKey")
+                        .IsUnique()
+                        .HasFilter("[SourceKey] IS NOT NULL AND [IsDeleted] = 0");
 
                     b.ToTable("BillingLines", "billing");
                 });

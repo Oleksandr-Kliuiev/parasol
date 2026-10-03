@@ -84,7 +84,7 @@
         "Q3"
       ],
       "external_gates": [],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-01.md",
       "evidence_file": "evidence/DEV-01.md",
       "acceptance_ids": [

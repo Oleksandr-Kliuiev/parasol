@@ -71,12 +71,12 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         var runId = await CollectedRunAsync(finance, period, customer.Marker);
         var basisId = (await BasisOfAsync(finance, runId, customer)).GetProperty("id").GetGuid();
 
-        // Finance corrects the collected 1 000 to 900.
+        // Finance corrects the collected 1 000 to 900; since DEV-01 a correction of a collected line carries its reason.
         var read = await finance.GetAsync($"{Billing}/bases/{basisId}");
         var line = (await read.ReadJsonAsync()).GetProperty("lines").EnumerateArray().Single();
         var adjusted = await finance.PutWithETagAsync($"{Billing}/bases/{basisId}/lines/{line.GetProperty("id").GetGuid()}", new
         {
-            quantity = 1m, unitPrice = 900m, discountPct = 0m, description = line.GetProperty("description").GetString(),
+            quantity = 1m, unitPrice = 900m, discountPct = 0m, description = line.GetProperty("description").GetString(), reason = "Agreed discount",
         }, read.Headers.ETag!.Tag);
         adjusted.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await adjusted.ReadJsonAsync()).GetProperty("totalExVat").GetDecimal().ShouldBe(900m);

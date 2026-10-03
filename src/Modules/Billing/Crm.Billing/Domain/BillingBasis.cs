@@ -9,6 +9,12 @@ namespace Crm.Billing.Domain;
 /// <summary>One reason a basis needs a look before approval (BR-BIL-03).</summary>
 public sealed record BillingAnomaly(string Code, string Message);
 
+/// <summary>
+/// A line as a source produced it. <paramref name="SourceKey"/> is the charge identity of a collected line: the same
+/// service, source and covered interval always give the same key, whatever the run or the collect (docs/adr/ADR-011).
+/// <paramref name="SourceOrganizationId"/> is the customer the service was delivered to, which differs from the payer
+/// when a subsidiary is billed through its group parent.
+/// </summary>
 public sealed record LineDraft(
     BillingGroup Group,
     Guid? ProductId,
@@ -17,11 +23,54 @@ public sealed record LineDraft(
     decimal UnitPrice,
     decimal DiscountPct,
     decimal VatRate,
-    string? SourceRefs);
+    string? SourceRefs,
+    string? SourceKey = null,
+    Guid? SourceOrganizationId = null);
+
+/// <summary>What one collect changed on a basis.</summary>
+public sealed record CollectChanges(int Added, int Updated, int Removed, int Conflicts)
+{
+    public bool Changed => Added + Updated + Removed > 0;
+}
+
+/// <summary>A collected line comes from a source; a manual line was added by Finance and has none.</summary>
+public enum BillingLineOrigin
+{
+    Collected,
+    Manual,
+}
+
+/// <summary>What Finance decided about a collected line; the decision outlives every later collect.</summary>
+public enum BillingLineDecision
+{
+    None,
+
+    /// <summary>Quantity, price, discount or text replaced; the source values are kept next to it.</summary>
+    Override,
+
+    /// <summary>Not billed in this basis, on purpose; the line stays as a record so a collect cannot bring it back.</summary>
+    Exclusion,
+}
+
+/// <summary>Why a line needs Finance before the basis can be approved.</summary>
+public enum BillingLineConflict
+{
+    None,
+
+    /// <summary>The source changed after Finance decided about the line.</summary>
+    SourceChanged,
+
+    /// <summary>The source of an overridden line no longer exists.</summary>
+    SourceRemoved,
+
+    /// <summary>A line corrected before charge keys existed: it cannot be matched to its source safely.</summary>
+    LegacyUnmatched,
+}
 
 /// <summary>
-/// What one customer is invoiced for one period (docs/04 §5). Collected lines are replaced on every re-collect; manual lines
-/// survive it (BR-BIL-02). After approval the basis and its lines never change again (BR-BIL-10).
+/// What one customer is invoiced for one period (docs/04 §5). A collect matches source lines by charge key: it updates
+/// them, keeps Finance's decisions once and flags those whose source has changed or gone (BR-BIL-02, ADR-011). Manual
+/// lines are never touched by a collect. After approval the basis and its lines never change again (BR-BIL-10).
 /// </summary>
 public sealed class BillingBasis : AuditableEntity
 {
@@ -45,11 +94,19 @@ public sealed class BillingBasis : AuditableEntity
     public string? CustomerReference { get; private set; }
     public DateTimeOffset? ExportedAt { get; private set; }
 
+    /// <summary>Goes up with every change to the lines, so a decision is always about a known version of the basis.</summary>
+    public int Revision { get; private set; }
+
     public IReadOnlyList<BillingLine> Lines => _lines;
 
     public IReadOnlyList<BillingExportAttempt> Attempts => _attempts;
 
     public IEnumerable<BillingLine> CurrentLines => _lines.Where(l => !l.IsDeleted);
+
+    /// <summary>The lines that are invoiced: current and not excluded.</summary>
+    public IEnumerable<BillingLine> BilledLines => CurrentLines.Where(l => l.Decision != BillingLineDecision.Exclusion);
+
+    public int ConflictCount => CurrentLines.Count(l => l.Conflict != BillingLineConflict.None);
 
     public bool IsLocked => Status is not BillingBasisStatus.Draft;
 
@@ -68,73 +125,206 @@ public sealed class BillingBasis : AuditableEntity
         CustomerReference = Clean(customerReference),
     };
 
-    /// <summary>Replaces the collected lines and keeps the manual ones (BR-BIL-02).</summary>
-    public Result ReplaceCollectedLines(IReadOnlyCollection<LineDraft> drafts, string? customerReference)
+    /// <summary>
+    /// Applies what the sources say now. Lines are matched by charge key: a line without a decision takes the source
+    /// values, a decided line keeps Finance's values and is flagged when its source changed or went away, and a line whose
+    /// source is gone disappears unless Finance decided about it (BR-BIL-02).
+    /// </summary>
+    public Result<CollectChanges> ApplyCollected(IReadOnlyCollection<LineDraft> drafts, string? customerReference)
     {
         if (IsLocked)
         {
             return BillingErrors.BasisLocked;
         }
 
-        foreach (var line in _lines.Where(l => !l.IsDeleted && !l.ManuallyAdjusted))
+        if (drafts.FirstOrDefault(d => string.IsNullOrWhiteSpace(d.SourceKey)) is { } unkeyed)
         {
-            line.MarkDeleted();
+            return BillingErrors.MissingSourceKey(unkeyed.Description);
         }
 
-        foreach (var draft in drafts)
+        if (drafts.GroupBy(d => d.SourceKey!, StringComparer.Ordinal).FirstOrDefault(g => g.Count() > 1) is { } duplicate)
         {
-            _lines.Add(BillingLine.Create(Id, draft, manual: false));
+            return BillingErrors.DuplicateSourceKey(duplicate.Key);
         }
 
-        CustomerReference = Clean(customerReference) ?? CustomerReference;
-        Recalculate();
-        return Result.Success();
+        var sources = drafts.ToDictionary(d => d.SourceKey!, StringComparer.Ordinal);
+        int added = 0, updated = 0, removed = 0;
+        foreach (var line in CurrentLines.Where(l => l.Origin == BillingLineOrigin.Collected).ToList())
+        {
+            if (line.SourceKey is null)
+            {
+                // Collected before charge keys existed: a plain line is replaced by its keyed successor, a corrected one
+                // cannot be matched safely and waits for Finance instead of being dropped or billed twice. A line without
+                // source references never came from a source: the previous version wrote manual lines that way.
+                if (line.SourceRefs is null && line.ManuallyAdjusted)
+                {
+                    line.AdoptAsManual();
+                    updated++;
+                }
+                else if (line.ManuallyAdjusted)
+                {
+                    updated += line.FlagLegacy() ? 1 : 0;
+                }
+                else
+                {
+                    line.MarkDeleted();
+                    removed++;
+                }
+
+                continue;
+            }
+
+            if (sources.Remove(line.SourceKey, out var source))
+            {
+                updated += line.ApplySource(source) ? 1 : 0;
+            }
+            else
+            {
+                var before = line.Conflict;
+                if (line.SourceGone())
+                {
+                    removed++;
+                }
+                else if (line.Conflict != before)
+                {
+                    updated++;
+                }
+            }
+        }
+
+        foreach (var draft in drafts.Where(d => sources.ContainsKey(d.SourceKey!)))
+        {
+            _lines.Add(BillingLine.Collected(Id, draft));
+            added++;
+        }
+
+        var reference = Clean(customerReference) ?? CustomerReference;
+        var changes = new CollectChanges(added, updated, removed, ConflictCount);
+        if (changes.Changed || reference != CustomerReference)
+        {
+            CustomerReference = reference;
+            Changed();
+        }
+
+        return changes;
     }
 
-    public Result<BillingLine> AddManualLine(LineDraft draft)
+    public Result<BillingLine> AddManualLine(LineDraft draft, Guid? userId, DateTimeOffset at, string? reason = null)
     {
         if (IsLocked)
         {
             return BillingErrors.BasisLocked;
         }
 
-        var line = BillingLine.Create(Id, draft, manual: true);
+        var line = BillingLine.Manual(Id, OrganizationId, draft, userId, at, reason);
         _lines.Add(line);
-        Recalculate();
+        Changed();
         return line;
     }
 
-    public Result UpdateLine(Guid lineId, decimal quantity, decimal unitPrice, decimal discountPct, string description)
+    /// <summary>A manual line is edited; a collected line gets Finance's values over its source values, with a reason.</summary>
+    public Result UpdateLine(Guid lineId, decimal quantity, decimal unitPrice, decimal discountPct, string description, string? reason, Guid? userId, DateTimeOffset at)
     {
-        if (IsLocked)
+        var found = Find(lineId);
+        if (!found.IsSuccess)
         {
-            return BillingErrors.BasisLocked;
+            return found.Error!;
         }
 
-        if (CurrentLines.SingleOrDefault(l => l.Id == lineId) is not { } line)
+        var line = found.Value;
+        if (line.Decision == BillingLineDecision.Exclusion)
         {
-            return BillingErrors.LineNotFound(lineId);
+            return BillingErrors.LineExcluded;
         }
 
-        line.Adjust(quantity, unitPrice, discountPct, description);
-        Recalculate();
+        if (line.Origin == BillingLineOrigin.Collected && string.IsNullOrWhiteSpace(reason))
+        {
+            return BillingErrors.ReasonRequired;
+        }
+
+        line.Change(quantity, unitPrice, discountPct, description, reason, userId, at);
+        Changed();
         return Result.Success();
     }
 
-    public Result RemoveLine(Guid lineId)
+    /// <summary>A manual line is deleted; a collected line is excluded with a reason, so the next collect cannot bring it back.</summary>
+    public Result RemoveLine(Guid lineId, string? reason, Guid? userId, DateTimeOffset at)
     {
-        if (IsLocked)
+        var found = Find(lineId);
+        if (!found.IsSuccess)
         {
-            return BillingErrors.BasisLocked;
+            return found.Error!;
         }
 
-        if (CurrentLines.SingleOrDefault(l => l.Id == lineId) is not { } line)
+        var line = found.Value;
+        if (line.Origin == BillingLineOrigin.Manual)
         {
-            return BillingErrors.LineNotFound(lineId);
+            line.MarkDeleted();
+        }
+        else if (string.IsNullOrWhiteSpace(reason))
+        {
+            return BillingErrors.ReasonRequired;
+        }
+        else if (line.Decision == BillingLineDecision.Exclusion)
+        {
+            return BillingErrors.LineExcluded;
+        }
+        else
+        {
+            line.Exclude(reason, userId, at);
         }
 
-        line.MarkDeleted();
-        Recalculate();
+        Changed();
+        return Result.Success();
+    }
+
+    /// <summary>Undoes Finance's decision about a collected line: it takes the current source values again, or goes if the source is gone.</summary>
+    public Result RevertLine(Guid lineId, Guid? userId, DateTimeOffset at)
+    {
+        var found = Find(lineId);
+        if (!found.IsSuccess)
+        {
+            return found.Error!;
+        }
+
+        var line = found.Value;
+        if (line.Origin == BillingLineOrigin.Manual)
+        {
+            return BillingErrors.NotCollected;
+        }
+
+        if (line.Decision == BillingLineDecision.None && line.Conflict == BillingLineConflict.None)
+        {
+            return BillingErrors.NothingToRevert;
+        }
+
+        line.Revert(userId, at);
+        Changed();
+        return Result.Success();
+    }
+
+    /// <summary>Confirms Finance's decision against what the source says now, which clears the conflict.</summary>
+    public Result KeepLine(Guid lineId, string? reason, Guid? userId, DateTimeOffset at)
+    {
+        var found = Find(lineId);
+        if (!found.IsSuccess)
+        {
+            return found.Error!;
+        }
+
+        var line = found.Value;
+        if (line.Conflict == BillingLineConflict.None)
+        {
+            return BillingErrors.NoConflict;
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return BillingErrors.ReasonRequired;
+        }
+
+        line.Keep(reason, userId, at);
+        Changed();
         return Result.Success();
     }
 
@@ -150,7 +340,12 @@ public sealed class BillingBasis : AuditableEntity
             return Result.Success();
         }
 
-        if (CurrentLines.All(l => l.Group == BillingGroup.Info))
+        if (ConflictCount > 0)
+        {
+            return BillingErrors.UnresolvedConflicts(ConflictCount);
+        }
+
+        if (BilledLines.All(l => l.Group == BillingGroup.Info))
         {
             // Nothing to invoice: information-only bases are cancelled instead of exported.
             Status = BillingBasisStatus.Cancelled;
@@ -218,7 +413,21 @@ public sealed class BillingBasis : AuditableEntity
         }
     }
 
-    private void Recalculate() => TotalExVat = decimal.Round(CurrentLines.Sum(l => l.LineTotal), 2);
+    private Result<BillingLine> Find(Guid lineId)
+    {
+        if (IsLocked)
+        {
+            return BillingErrors.BasisLocked;
+        }
+
+        return CurrentLines.SingleOrDefault(l => l.Id == lineId) is { } line ? line : BillingErrors.LineNotFound(lineId);
+    }
+
+    private void Changed()
+    {
+        TotalExVat = decimal.Round(BilledLines.Sum(l => l.LineTotal), 2);
+        Revision++;
+    }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
@@ -244,41 +453,219 @@ public sealed class BillingLine : AuditableEntity
     /// <summary>JSON with the contract line, subscription or time entry ids behind the line.</summary>
     public string? SourceRefs { get; private set; }
 
+    /// <summary>Kept for readers of the old schema: a manual line or a collected line Finance overrode.</summary>
     public bool ManuallyAdjusted { get; private set; }
 
-    internal static BillingLine Create(Guid basisId, LineDraft draft, bool manual)
+    public BillingLineOrigin Origin { get; private set; }
+
+    /// <summary>Charge identity of a collected line (ADR-011); null for manual lines and for lines collected before keys existed.</summary>
+    public string? SourceKey { get; private set; }
+
+    /// <summary>The customer the service was delivered to; the payer is the basis organization.</summary>
+    public Guid? SourceOrganizationId { get; private set; }
+
+    /// <summary>The economic values of the source at the last collect, see <see cref="Signature"/>; null once the source is gone.</summary>
+    public string? SourceSignature { get; private set; }
+
+    public string? SourceDescription { get; private set; }
+    public decimal? SourceQuantity { get; private set; }
+    public decimal? SourceUnitPrice { get; private set; }
+    public decimal? SourceDiscountPct { get; private set; }
+
+    public BillingLineDecision Decision { get; private set; }
+
+    /// <summary>The source signature Finance's decision was made against; a collect that finds another one flags a conflict.</summary>
+    public string? DecisionSignature { get; private set; }
+
+    public BillingLineConflict Conflict { get; private set; }
+
+    /// <summary>Who added, overrode, excluded or confirmed the line last, when and why.</summary>
+    public Guid? ChangedBy { get; private set; }
+
+    public DateTimeOffset? ChangedAt { get; private set; }
+    public string? ChangeReason { get; private set; }
+
+    public decimal? SourceLineTotal => SourceQuantity is { } quantity && SourceUnitPrice is { } price
+        ? Amount(quantity, price, SourceDiscountPct ?? 0)
+        : null;
+
+    internal static BillingLine Collected(Guid basisId, LineDraft draft)
     {
         var line = new BillingLine
         {
             BasisId = basisId,
-            Group = draft.Group,
-            ProductId = draft.ProductId,
-            Description = Trim(draft.Description),
-            Quantity = decimal.Round(draft.Quantity, 2),
-            UnitPrice = decimal.Round(draft.UnitPrice, 4),
-            DiscountPct = draft.DiscountPct,
-            VatRate = draft.VatRate,
-            SourceRefs = draft.SourceRefs,
-            ManuallyAdjusted = manual,
+            Origin = BillingLineOrigin.Collected,
+            SourceKey = draft.SourceKey,
         };
-        line.LineTotal = Amount(line.Quantity, line.UnitPrice, line.DiscountPct);
+        line.ApplySource(draft);
         return line;
     }
 
-    internal void Adjust(decimal quantity, decimal unitPrice, decimal discountPct, string description)
+    internal static BillingLine Manual(Guid basisId, Guid organizationId, LineDraft draft, Guid? userId, DateTimeOffset at, string? reason)
     {
-        Quantity = decimal.Round(quantity, 2);
-        UnitPrice = decimal.Round(unitPrice, 4);
-        DiscountPct = discountPct;
-        Description = Trim(description);
-        LineTotal = Amount(Quantity, UnitPrice, DiscountPct);
+        var line = new BillingLine
+        {
+            BasisId = basisId,
+            Origin = BillingLineOrigin.Manual,
+            Group = draft.Group,
+            ProductId = draft.ProductId,
+            VatRate = draft.VatRate,
+            SourceRefs = draft.SourceRefs,
+            SourceOrganizationId = organizationId,
+            ManuallyAdjusted = true,
+        };
+        line.SetValues(draft.Quantity, draft.UnitPrice, draft.DiscountPct, draft.Description);
+        line.Stamp(reason, userId, at);
+        return line;
+    }
+
+    /// <summary>The economic values that decide what a line costs; text is not part of it (CLAUDE.md "Signature()").</summary>
+    public static string Signature(BillingGroup group, Guid? productId, decimal quantity, decimal unitPrice, decimal discountPct, decimal vatRate) =>
+        string.Join('|',
+            group.ToString(),
+            productId?.ToString("N") ?? "-",
+            decimal.Round(quantity, 2).ToString("0.####", CultureInfo.InvariantCulture),
+            decimal.Round(unitPrice, 4).ToString("0.####", CultureInfo.InvariantCulture),
+            discountPct.ToString("0.####", CultureInfo.InvariantCulture),
+            vatRate.ToString("0.####", CultureInfo.InvariantCulture));
+
+    /// <summary>Returns true when anything about the line changed.</summary>
+    internal bool ApplySource(LineDraft draft)
+    {
+        var before = State();
+        Group = draft.Group;
+        ProductId = draft.ProductId;
+        VatRate = draft.VatRate;
+        SourceRefs = draft.SourceRefs;
+        SourceOrganizationId = draft.SourceOrganizationId;
+        SourceDescription = Trim(draft.Description);
+        SourceQuantity = decimal.Round(draft.Quantity, 2);
+        SourceUnitPrice = decimal.Round(draft.UnitPrice, 4);
+        SourceDiscountPct = draft.DiscountPct;
+        SourceSignature = Signature(draft.Group, draft.ProductId, draft.Quantity, draft.UnitPrice, draft.DiscountPct, draft.VatRate);
+        if (Decision == BillingLineDecision.None)
+        {
+            SetValues(draft.Quantity, draft.UnitPrice, draft.DiscountPct, draft.Description);
+            Conflict = BillingLineConflict.None;
+        }
+        else
+        {
+            Conflict = SourceSignature == DecisionSignature ? BillingLineConflict.None : BillingLineConflict.SourceChanged;
+        }
+
+        return State() != before;
+    }
+
+    /// <summary>The source produced nothing for this key any more. Returns true when the line is gone with it.</summary>
+    internal bool SourceGone()
+    {
+        SourceSignature = null;
+        switch (Decision)
+        {
+            case BillingLineDecision.None:
+                MarkDeleted();
+                return true;
+            case BillingLineDecision.Exclusion:
+                // Excluded and gone agree: nothing is billed. The record stays so the source cannot come back unnoticed.
+                Conflict = BillingLineConflict.None;
+                return false;
+            default:
+                Conflict = DecisionSignature is null ? BillingLineConflict.None : BillingLineConflict.SourceRemoved;
+                return false;
+        }
+    }
+
+    internal void AdoptAsManual() => Origin = BillingLineOrigin.Manual;
+
+    internal bool FlagLegacy()
+    {
+        if (Conflict == BillingLineConflict.LegacyUnmatched)
+        {
+            return false;
+        }
+
+        Conflict = BillingLineConflict.LegacyUnmatched;
+        return true;
+    }
+
+    internal void Change(decimal quantity, decimal unitPrice, decimal discountPct, string description, string? reason, Guid? userId, DateTimeOffset at)
+    {
+        SetValues(quantity, unitPrice, discountPct, description);
+        if (Origin == BillingLineOrigin.Collected && SourceKey is not null)
+        {
+            Decision = BillingLineDecision.Override;
+            DecisionSignature = SourceSignature;
+            Conflict = BillingLineConflict.None;
+        }
+
         ManuallyAdjusted = true;
+        Stamp(reason, userId, at);
+    }
+
+    internal void Exclude(string reason, Guid? userId, DateTimeOffset at)
+    {
+        Decision = BillingLineDecision.Exclusion;
+        DecisionSignature = SourceSignature;
+        Conflict = BillingLineConflict.None;
+        Stamp(reason, userId, at);
+    }
+
+    internal void Revert(Guid? userId, DateTimeOffset at)
+    {
+        Decision = BillingLineDecision.None;
+        DecisionSignature = null;
+        Conflict = BillingLineConflict.None;
+        ManuallyAdjusted = false;
+        Stamp(null, userId, at);
+        if (SourceKey is null || SourceSignature is null)
+        {
+            // A legacy correction, or a source that is gone: nothing is left to bill on this line.
+            MarkDeleted();
+            return;
+        }
+
+        SetValues(SourceQuantity ?? 0, SourceUnitPrice ?? 0, SourceDiscountPct ?? 0, SourceDescription ?? Description);
+    }
+
+    internal void Keep(string reason, Guid? userId, DateTimeOffset at)
+    {
+        if (Conflict == BillingLineConflict.LegacyUnmatched)
+        {
+            // Finance keeps an old correction as a line of its own; the keyed source line bills the source.
+            Origin = BillingLineOrigin.Manual;
+        }
+        else
+        {
+            DecisionSignature = SourceSignature;
+        }
+
+        Conflict = BillingLineConflict.None;
+        Stamp(reason, userId, at);
     }
 
     internal void SetProductCode(string? code) => ProductCode = code;
 
     public static decimal Amount(decimal quantity, decimal unitPrice, decimal discountPct) =>
         decimal.Round(quantity * unitPrice * (1 - (discountPct / 100m)), 2, MidpointRounding.AwayFromZero);
+
+    private void SetValues(decimal quantity, decimal unitPrice, decimal discountPct, string description)
+    {
+        Quantity = decimal.Round(quantity, 2);
+        UnitPrice = decimal.Round(unitPrice, 4);
+        DiscountPct = discountPct;
+        Description = Trim(description);
+        LineTotal = Amount(Quantity, UnitPrice, DiscountPct);
+    }
+
+    private void Stamp(string? reason, Guid? userId, DateTimeOffset at)
+    {
+        ChangeReason = string.IsNullOrWhiteSpace(reason) ? null : Trim(reason);
+        ChangedBy = userId;
+        ChangedAt = at;
+    }
+
+    private (BillingGroup, Guid?, decimal, string, decimal, decimal, decimal, string?, Guid?, string?, BillingLineConflict) State() =>
+        (Group, ProductId, VatRate, Description, Quantity, UnitPrice, DiscountPct, SourceRefs, SourceOrganizationId, SourceSignature, Conflict);
 
     private static string Trim(string value) => value.Length > 512 ? value[..509] + "…" : value.Trim();
 }

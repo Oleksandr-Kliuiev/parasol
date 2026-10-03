@@ -41,6 +41,8 @@ export interface Run extends RunListItem {
   approvedBy: Ref | null;
   secondApprovedBy: Ref | null;
   notes: string | null;
+  /** Lines whose source changed after Finance decided about them; the run cannot be approved while any is left. */
+  conflicts: number;
   etag: string;
 }
 
@@ -52,10 +54,19 @@ export interface BasisListItem {
   previousPeriodTotal?: number;
   anomalies: Anomaly[];
   lines: number;
+  conflicts: number;
   orderNo: string | null;
   exportedAt: string | null;
 }
 
+export type LineOrigin = 'Collected' | 'Manual';
+export type LineDecision = 'None' | 'Override' | 'Exclusion';
+export type LineConflict = 'None' | 'SourceChanged' | 'SourceRemoved' | 'LegacyUnmatched';
+
+/**
+ * A line of a basis. Quantity, prices and text are what is invoiced; the `source*` fields are what the source said at the
+ * last collect, so a correction or a conflict can be read next to it (ADR-011). Money fields are absent without finance.read.
+ */
 export interface BasisLine {
   id: string;
   group: BillingGroup;
@@ -70,6 +81,20 @@ export interface BasisLine {
   lineTotal?: number;
   manuallyAdjusted: boolean;
   sourceRefs: string | null;
+  origin: LineOrigin;
+  sourceKey: string | null;
+  /** The customer the service was delivered to, when another company in the group pays for it. */
+  sourceOrganization: Ref | null;
+  decision: LineDecision;
+  conflict: LineConflict;
+  sourceDescription: string | null;
+  sourceQuantity: number | null;
+  sourceUnitPrice?: number | null;
+  sourceDiscountPct?: number | null;
+  sourceLineTotal?: number | null;
+  changeReason: string | null;
+  changedBy: Ref | null;
+  changedAt: string | null;
 }
 
 export interface ExportAttempt {
@@ -113,6 +138,8 @@ export interface Basis {
   lines: BasisLine[];
   attempts: ExportAttempt[];
   invoices: Invoice[];
+  revision: number;
+  conflicts: number;
   etag: string;
 }
 
@@ -136,11 +163,14 @@ export interface ManualLineRequest {
   unitPrice: number;
   discountPct: number | null;
   vatRate: number | null;
+  reason?: string | null;
 }
 
+/** `reason` is required when the line came from a source. */
 export interface AdjustLineRequest {
   quantity: number;
   unitPrice: number;
   discountPct: number;
   description: string;
+  reason: string | null;
 }

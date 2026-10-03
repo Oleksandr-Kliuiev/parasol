@@ -363,7 +363,7 @@ internal sealed class ContractsApi(ContractsDbContext db, HourBankService hourBa
         return rows
             .OrderBy(r => r.ValidFrom).ThenBy(r => r.Version)
             .Select(r => new BillableContractLine(
-                r.Id, r.Number, r.OrganizationId, r.LineId, r.ProductId, r.Description, r.QuantityModel, r.DeviceFilter, r.Quantity,
+                r.Id, r.Number, r.OrganizationId, r.LineId, r.SeriesId, r.ProductId, r.Description, r.QuantityModel, r.DeviceFilter, r.Quantity,
                 r.UnitPrice, r.DiscountPct, r.PriceCategory, r.InvoiceFrequency, r.InvoiceTiming, r.StartDate, r.ValidFrom, r.ValidTo,
                 r.CustomerReference))
             .ToList();
@@ -498,11 +498,11 @@ internal sealed class ContractsApi(ContractsDbContext db, HourBankService hourBa
                 from entry in db.HourBankEntries.AsNoTracking()
                 join bank in db.HourBanks.AsNoTracking() on entry.HourBankId equals bank.Id
                 where entry.Kind == HourBankEntryKind.Purchase && entry.Date >= periodStart && entry.Date <= periodEnd && entry.Hours > 0
-                select new { bank.Id, bank.OrganizationId, bank.ContractId, bank.Name, bank.OverageRate, entry.Date, entry.Hours, entry.Description })
+                select new { EntryId = entry.Id, bank.Id, bank.OrganizationId, bank.ContractId, bank.Name, bank.OverageRate, entry.Date, entry.Hours, entry.Description })
             .ToListAsync(cancellationToken);
 
         return rows
-            .Select(r => new HourBankPurchase(r.Id, r.OrganizationId, r.ContractId, r.Name, r.Date, r.Hours, r.OverageRate, r.Description))
+            .Select(r => new HourBankPurchase(r.EntryId, r.Id, r.OrganizationId, r.ContractId, r.Name, r.Date, r.Hours, r.OverageRate, r.Description))
             .ToList();
     }
 }

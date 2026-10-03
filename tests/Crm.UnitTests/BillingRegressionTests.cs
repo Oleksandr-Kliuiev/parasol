@@ -24,7 +24,8 @@ public class BillingRegressionTests
         unitPrice,
         0,
         25m,
-        JsonSerializer.Serialize(new { contractId, contractLineId, subscriptionIds = (string[]?)null, prorationFactor = (decimal?)null }));
+        JsonSerializer.Serialize(new { contractId, contractLineId, subscriptionIds = (string[]?)null, prorationFactor = (decimal?)null }),
+        $"contract:{contractLineId:N}:2026-09-01:2026-09-30");
 
     private static BillingRun CollectedRun(bool requiresSecondApproval)
     {
@@ -41,17 +42,17 @@ public class BillingRegressionTests
     {
         var basis = BillingBasis.Create(BillingRun.Create(2026, 9, null), Guid.NewGuid(), null);
         var source = ContractLine(1_000m, Guid.NewGuid(), Guid.NewGuid());
-        basis.ReplaceCollectedLines([source], null).IsSuccess.ShouldBeTrue();
+        basis.ApplyCollected([source], null).IsSuccess.ShouldBeTrue();
         var collected = basis.CurrentLines.Single();
 
         // Finance corrects the collected 1 000 to 900.
-        basis.UpdateLine(collected.Id, 1, 900m, 0, collected.Description).IsSuccess.ShouldBeTrue();
+        basis.UpdateLine(collected.Id, 1, 900m, 0, collected.Description, "Agreed discount", Guid.NewGuid(), Now).IsSuccess.ShouldBeTrue();
         basis.TotalExVat.ShouldBe(900m);
 
         // The same, unchanged contract line is collected again.
         for (var i = 0; i < recollects; i++)
         {
-            basis.ReplaceCollectedLines([source], null).IsSuccess.ShouldBeTrue();
+            basis.ApplyCollected([source], null).IsSuccess.ShouldBeTrue();
         }
 
         // One economic position keeps the correction; the audited code keeps it and bills the source a second time (1 900).
@@ -97,8 +98,8 @@ public class BillingRegressionTests
         // Collected below the 200 000 threshold (BillingOptions.SecondApprovalThreshold).
         var run = CollectedRun(requiresSecondApproval: false);
         var basis = BillingBasis.Create(run, Guid.NewGuid(), null);
-        basis.ReplaceCollectedLines([ContractLine(10_000m, Guid.NewGuid(), Guid.NewGuid())], null).IsSuccess.ShouldBeTrue();
-        basis.AddManualLine(new LineDraft(BillingGroup.OneOff, null, "Prosjektleveranse", 1, 300_000m, 0, 25m, null)).IsSuccess.ShouldBeTrue();
+        basis.ApplyCollected([ContractLine(10_000m, Guid.NewGuid(), Guid.NewGuid())], null).IsSuccess.ShouldBeTrue();
+        basis.AddManualLine(new LineDraft(BillingGroup.OneOff, null, "Prosjektleveranse", 1, 300_000m, 0, 25m, null), Guid.NewGuid(), Now).IsSuccess.ShouldBeTrue();
         basis.TotalExVat.ShouldBe(310_000m);
 
         run.Approve(Guid.NewGuid(), Now);

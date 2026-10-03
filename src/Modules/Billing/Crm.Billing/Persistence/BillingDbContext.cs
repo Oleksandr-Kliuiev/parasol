@@ -70,6 +70,8 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.BasisId).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(x => x.Attempts).WithOne().HasForeignKey(a => a.BasisId).OnDelete(DeleteBehavior.Cascade);
             b.Ignore(x => x.CurrentLines);
+            b.Ignore(x => x.BilledLines);
+            b.Ignore(x => x.ConflictCount);
             b.Ignore(x => x.Anomalies);
         });
 
@@ -86,8 +88,22 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.Property(x => x.DiscountPct).HasPrecision(5, 2);
             b.Property(x => x.VatRate).HasPrecision(5, 2);
             b.Property(x => x.LineTotal).HasPrecision(18, 2);
+            b.Property(x => x.Origin).HasConversion<string>().HasMaxLength(16).HasDefaultValue(BillingLineOrigin.Collected).HasSentinel(BillingLineOrigin.Collected);
+            b.Property(x => x.SourceKey).HasMaxLength(128);
+            b.Property(x => x.SourceSignature).HasMaxLength(256);
+            b.Property(x => x.SourceDescription).HasMaxLength(512);
+            b.Property(x => x.SourceQuantity).HasPrecision(18, 2);
+            b.Property(x => x.SourceUnitPrice).HasPrecision(18, 4);
+            b.Property(x => x.SourceDiscountPct).HasPrecision(5, 2);
+            b.Property(x => x.Decision).HasConversion<string>().HasMaxLength(16).HasDefaultValue(BillingLineDecision.None).HasSentinel(BillingLineDecision.None);
+            b.Property(x => x.DecisionSignature).HasMaxLength(256);
+            b.Property(x => x.Conflict).HasConversion<string>().HasMaxLength(24).HasDefaultValue(BillingLineConflict.None).HasSentinel(BillingLineConflict.None);
+            b.Property(x => x.ChangeReason).HasMaxLength(512);
+            b.Ignore(x => x.SourceLineTotal);
             b.HasIndex(x => x.BasisId);
             b.HasIndex(x => x.ProductId);
+            // ADR-011: one current line per charge key in a basis, whatever two parallel collects do.
+            b.HasIndex(x => new { x.BasisId, x.SourceKey }).IsUnique().HasFilter("[SourceKey] IS NOT NULL AND [IsDeleted] = 0");
         });
 
         modelBuilder.Entity<BillingExportAttempt>(b =>

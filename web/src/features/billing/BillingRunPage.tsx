@@ -104,6 +104,8 @@ export function BillingRunPage() {
   const canCollect = canManage && ['Draft', 'Collected', 'InReview'].includes(run.status);
   const needsFirstApproval = canApprove && ['Collected', 'InReview'].includes(run.status) && !run.approvedBy;
   const needsSecondApproval = canApproveSecond && run.requiresSecondApproval && ['Collected', 'InReview'].includes(run.status) && !run.secondApprovedBy;
+  // The server refuses approval while a line waits for a decision; the button says so instead of failing.
+  const blockedByConflicts = run.conflicts > 0;
   const canExport = canManage && ['Approved', 'ExportedWithErrors'].includes(run.status);
   const canClose = canManage && ['Exported', 'ExportedWithErrors'].includes(run.status);
 
@@ -133,7 +135,7 @@ export function BillingRunPage() {
               <Button
                 appearance="primary"
                 icon={<CheckmarkCircle20Regular />}
-                disabled={actions.approve.isPending}
+                disabled={actions.approve.isPending || blockedByConflicts}
                 onClick={() => void act(() => actions.approve.mutateAsync(), t('billing.approved'))}
               >
                 {t('billing.approve')}
@@ -143,7 +145,7 @@ export function BillingRunPage() {
               <Button
                 appearance="primary"
                 icon={<CheckmarkCircle20Regular />}
-                disabled={actions.secondApprove.isPending}
+                disabled={actions.secondApprove.isPending || blockedByConflicts}
                 onClick={() => void act(() => actions.secondApprove.mutateAsync(), t('billing.approved'))}
               >
                 {t('billing.secondApprove')}
@@ -167,6 +169,11 @@ export function BillingRunPage() {
         }
       />
 
+      {blockedByConflicts && (
+        <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
+          <MessageBarBody>{t('billing.conflictsBanner', { count: run.conflicts })}</MessageBarBody>
+        </MessageBar>
+      )}
       {run.requiresSecondApproval && run.status === 'InReview' && (
         <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
           <MessageBarBody>
@@ -260,8 +267,9 @@ export function BillingRunPage() {
                     </TableCell>
                   )}
                   <TableCell>
+                    {basis.conflicts > 0 && <div className={styles.anomaly}>{t('billing.conflictsCount', { count: basis.conflicts })}</div>}
                     {basis.anomalies.length === 0 ? (
-                      '—'
+                      basis.conflicts > 0 ? null : '—'
                     ) : (
                       <span className={styles.anomaly}>
                         {basis.anomalies

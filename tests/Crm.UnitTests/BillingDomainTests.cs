@@ -76,15 +76,17 @@ public class BillingBasisTests
 {
     private static BillingRun Run() => BillingRun.Create(2026, 9, null);
 
-    private static LineDraft Draft(BillingGroup group = BillingGroup.Subscription, decimal quantity = 25, decimal price = 250, decimal discount = 0) =>
-        new(group, Guid.NewGuid(), "Microsoft 365 Business Premium (01.09.2026–30.09.2026)", quantity, price, discount, 25m, null);
+    private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-10-01T08:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static LineDraft Draft(BillingGroup group = BillingGroup.Subscription, decimal quantity = 25, decimal price = 250, decimal discount = 0, string? key = null) =>
+        new(group, Guid.NewGuid(), "Microsoft 365 Business Premium (01.09.2026–30.09.2026)", quantity, price, discount, 25m, null, key ?? $"contract:{Guid.NewGuid():N}");
 
     [Fact]
     public void The_total_is_the_sum_of_the_lines_after_discount()
     {
         var basis = BillingBasis.Create(Run(), Guid.NewGuid(), null);
 
-        basis.ReplaceCollectedLines([Draft(), Draft(BillingGroup.HourlyWork, 3, 1_250), Draft(BillingGroup.Subscription, 1, 5_000)], null).IsSuccess.ShouldBeTrue();
+        basis.ApplyCollected([Draft(), Draft(BillingGroup.HourlyWork, 3, 1_250), Draft(BillingGroup.Subscription, 1, 5_000)], null).IsSuccess.ShouldBeTrue();
 
         // 25 × 250 + 3 × 1 250 + 5 000 = 15 000 (docs/02 §4.9 acceptance criterion).
         basis.TotalExVat.ShouldBe(15_000m);
@@ -99,17 +101,19 @@ public class BillingBasisTests
     }
 
     [Fact]
-    public void Re_collecting_replaces_collected_lines_and_keeps_manual_ones()
+    public void Re_collecting_updates_the_same_collected_line_and_keeps_manual_ones()
     {
         var basis = BillingBasis.Create(Run(), Guid.NewGuid(), null);
-        basis.ReplaceCollectedLines([Draft()], null);
-        basis.AddManualLine(Draft(BillingGroup.OneOff, 1, 2_000)).IsSuccess.ShouldBeTrue();
+        basis.ApplyCollected([Draft(key: "contract:a")], null);
+        var collected = basis.CurrentLines.Single();
+        basis.AddManualLine(Draft(BillingGroup.OneOff, 1, 2_000), Guid.NewGuid(), Now).IsSuccess.ShouldBeTrue();
 
-        basis.ReplaceCollectedLines([Draft(quantity: 30)], null);
+        basis.ApplyCollected([Draft(quantity: 30, key: "contract:a")], null);
 
         basis.CurrentLines.Count().ShouldBe(2);
-        basis.CurrentLines.Single(l => l.Group == BillingGroup.OneOff).LineTotal.ShouldBe(2_000m);
-        basis.CurrentLines.Single(l => l.Group == BillingGroup.Subscription).Quantity.ShouldBe(30m);
+        basis.CurrentLines.Single(l => l.Origin == BillingLineOrigin.Manual).LineTotal.ShouldBe(2_000m);
+        basis.CurrentLines.Single(l => l.Origin == BillingLineOrigin.Collected).ShouldBeSameAs(collected);
+        collected.Quantity.ShouldBe(30m);
         basis.TotalExVat.ShouldBe(9_500m);
     }
 
@@ -117,20 +121,24 @@ public class BillingBasisTests
     public void An_approved_basis_cannot_be_changed_any_more()
     {
         var basis = BillingBasis.Create(Run(), Guid.NewGuid(), null);
-        basis.ReplaceCollectedLines([Draft()], null);
+        basis.ApplyCollected([Draft()], null);
         basis.Approve();
+        var line = basis.CurrentLines.First();
 
         basis.Status.ShouldBe(BillingBasisStatus.Approved);
-        basis.AddManualLine(Draft()).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
-        basis.ReplaceCollectedLines([Draft()], null).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
-        basis.RemoveLine(basis.CurrentLines.First().Id).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
+        basis.AddManualLine(Draft(), null, Now).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
+        basis.ApplyCollected([Draft()], null).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
+        basis.RemoveLine(line.Id, "Wrong period", null, Now).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
+        basis.UpdateLine(line.Id, 1, 1, 0, "x", "Price", null, Now).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
+        basis.RevertLine(line.Id, null, Now).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
+        basis.KeepLine(line.Id, "Fine", null, Now).Error!.Code.ShouldBe("BIL_BASIS_LOCKED");
     }
 
     [Fact]
     public void A_basis_with_nothing_but_information_lines_is_cancelled_instead_of_exported()
     {
         var basis = BillingBasis.Create(Run(), Guid.NewGuid(), null);
-        basis.ReplaceCollectedLines([new LineDraft(BillingGroup.Info, null, "Included in the contract", 4, 0, 0, 0, null)], null);
+        basis.ApplyCollected([new LineDraft(BillingGroup.Info, null, "Included in the contract", 4, 0, 0, 0, null, "info:Covered")], null);
 
         basis.Approve();
 
@@ -142,7 +150,7 @@ public class BillingBasisTests
     public void Exporting_twice_with_the_same_order_number_changes_nothing()
     {
         var basis = BillingBasis.Create(Run(), Guid.NewGuid(), null);
-        basis.ReplaceCollectedLines([Draft()], null);
+        basis.ApplyCollected([Draft()], null);
         basis.Approve();
         var now = DateTimeOffset.UtcNow;
 
@@ -158,7 +166,7 @@ public class BillingBasisTests
     public void A_failed_basis_can_be_sent_again_but_an_exported_one_cannot_be_cancelled()
     {
         var basis = BillingBasis.Create(Run(), Guid.NewGuid(), null);
-        basis.ReplaceCollectedLines([Draft()], null);
+        basis.ApplyCollected([Draft()], null);
         basis.Approve();
         basis.MarkFailed("poweroffice", "Customer is archived", DateTimeOffset.UtcNow, null);
 

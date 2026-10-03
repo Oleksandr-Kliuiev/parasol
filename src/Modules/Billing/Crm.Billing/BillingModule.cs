@@ -107,6 +107,32 @@ public static class BillingModule
                     : (await service.RemoveLineAsync(id, lineId, ifMatch, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.BillingManage);
 
+        // A collected line is never deleted outright: it is excluded with a reason, so the next collect cannot bring it back (BR-BIL-02).
+        group.MapPost("/bases/{id:guid}/lines/{lineId:guid}/exclude", async (
+                    Guid id, Guid lineId, LineDecisionRequest request, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.ExcludeLineAsync(id, lineId, request, ifMatch, ct)).ToHttpResult(Results.Ok))
+            .Validate<LineDecisionRequest>()
+            .RequirePermission(Permissions.BillingManage);
+
+        group.MapPost("/bases/{id:guid}/lines/{lineId:guid}/revert", async (Guid id, Guid lineId, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.RevertLineAsync(id, lineId, ifMatch, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.BillingManage);
+
+        group.MapPost("/bases/{id:guid}/lines/{lineId:guid}/keep", async (
+                    Guid id, Guid lineId, LineDecisionRequest request, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.KeepLineAsync(id, lineId, request, ifMatch, ct)).ToHttpResult(Results.Ok))
+            .Validate<LineDecisionRequest>()
+            .RequirePermission(Permissions.BillingManage);
+
+        group.MapGet("/legacy-lines", async (BillingService service, CancellationToken ct) => Results.Ok(await service.LegacyLinesAsync(ct)))
+            .RequirePermission(Permissions.BillingManage);
+
         group.MapPost("/bases/{id:guid}/retry", async (Guid id, BillingService service, CancellationToken ct) =>
                 (await service.RetryAsync(id, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.BillingManage);

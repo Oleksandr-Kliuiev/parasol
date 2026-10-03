@@ -19,7 +19,8 @@ internal sealed class CreateRunRequestValidator : AbstractValidator<CreateRunReq
     }
 }
 
-public sealed record ManualLineRequest(Guid? ProductId, string Description, decimal Quantity, decimal UnitPrice, decimal? DiscountPct, decimal? VatRate);
+public sealed record ManualLineRequest(
+    Guid? ProductId, string Description, decimal Quantity, decimal UnitPrice, decimal? DiscountPct, decimal? VatRate, string? Reason = null);
 
 internal sealed class ManualLineRequestValidator : AbstractValidator<ManualLineRequest>
 {
@@ -30,10 +31,12 @@ internal sealed class ManualLineRequestValidator : AbstractValidator<ManualLineR
         RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DiscountPct).InclusiveBetween(0, 100).When(x => x.DiscountPct is not null);
         RuleFor(x => x.VatRate).InclusiveBetween(0, 100).When(x => x.VatRate is not null);
+        RuleFor(x => x.Reason).MaximumLength(512);
     }
 }
 
-public sealed record AdjustLineRequest(decimal Quantity, decimal UnitPrice, decimal DiscountPct, string Description);
+/// <summary>Quantity, price, discount and text of a line; <see cref="Reason"/> is required when the line came from a source.</summary>
+public sealed record AdjustLineRequest(decimal Quantity, decimal UnitPrice, decimal DiscountPct, string Description, string? Reason = null);
 
 internal sealed class AdjustLineRequestValidator : AbstractValidator<AdjustLineRequest>
 {
@@ -43,7 +46,16 @@ internal sealed class AdjustLineRequestValidator : AbstractValidator<AdjustLineR
         RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DiscountPct).InclusiveBetween(0, 100);
         RuleFor(x => x.Description).NotEmpty().MaximumLength(512);
+        RuleFor(x => x.Reason).MaximumLength(512);
     }
+}
+
+/// <summary>Excluding a collected line or confirming a decision against a changed source; both need a reason.</summary>
+public sealed record LineDecisionRequest(string Reason);
+
+internal sealed class LineDecisionRequestValidator : AbstractValidator<LineDecisionRequest>
+{
+    public LineDecisionRequestValidator() => RuleFor(x => x.Reason).NotEmpty().MaximumLength(512);
 }
 
 public sealed record CancelBasisRequest(string Reason);
@@ -85,6 +97,7 @@ public sealed record RunResponse(
     DateTimeOffset? ExportedAt,
     DateTimeOffset? ClosedAt,
     string? Notes,
+    int Conflicts,
     string Etag);
 
 public sealed record BasisListItem(
@@ -96,8 +109,13 @@ public sealed record BasisListItem(
     IReadOnlyList<BillingAnomaly> Anomalies,
     int Lines,
     string? OrderNo,
-    DateTimeOffset? ExportedAt);
+    DateTimeOffset? ExportedAt,
+    int Conflicts);
 
+/// <summary>
+/// A line of a basis. Quantity, prices and text are what is invoiced; the <c>Source*</c> fields are what the source said at
+/// the last collect, so an override or a conflict can be read next to it (ADR-011).
+/// </summary>
 public sealed record BasisLineDto(
     Guid Id,
     BillingGroup Group,
@@ -111,7 +129,20 @@ public sealed record BasisLineDto(
     decimal VatRate,
     [property: SensitiveData(Permissions.FinanceRead)] decimal? LineTotal,
     bool ManuallyAdjusted,
-    string? SourceRefs);
+    string? SourceRefs,
+    BillingLineOrigin Origin,
+    string? SourceKey,
+    RefDto? SourceOrganization,
+    BillingLineDecision Decision,
+    BillingLineConflict Conflict,
+    string? SourceDescription,
+    decimal? SourceQuantity,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? SourceUnitPrice,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? SourceDiscountPct,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? SourceLineTotal,
+    string? ChangeReason,
+    RefDto? ChangedBy,
+    DateTimeOffset? ChangedAt);
 
 public sealed record ExportAttemptDto(DateTimeOffset At, string Result, string? Message, string? CorrelationId);
 
@@ -148,7 +179,20 @@ public sealed record BasisResponse(
     IReadOnlyList<BasisLineDto> Lines,
     IReadOnlyList<ExportAttemptDto> Attempts,
     IReadOnlyList<InvoiceDto> Invoices,
+    int Revision,
+    int Conflicts,
     string Etag);
+
+/// <summary>
+/// How lines collected before charge keys existed will be treated (DEV-01 dry run): plain lines of open bases are replaced by
+/// keyed lines on the next collect, corrected ones are flagged for Finance, and lines of approved bases stay as they are.
+/// </summary>
+public sealed record LegacyLinesReport(
+    int OpenPlainLines,
+    int OpenCorrectedLines,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? OpenCorrectedAmount,
+    int ClosedLines,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? ClosedAmount);
 
 public sealed record InvoiceSummary(
     int Count,

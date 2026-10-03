@@ -137,7 +137,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
                 join basis in db.BillingBases.AsNoTracking() on line.BasisId equals basis.Id
                 join run in db.BillingRuns.AsNoTracking() on basis.RunId equals run.Id
                 where run.PeriodStart >= first && run.PeriodStart <= last &&
-                      basis.Status != BillingBasisStatus.Cancelled && line.Group == BillingGroup.License
+                      basis.Status != BillingBasisStatus.Cancelled && line.Group == BillingGroup.License && line.Decision != BillingLineDecision.Exclusion
                 select new { basis.OrganizationId, line.ProductId, line.Quantity, line.LineTotal })
             .ToListAsync(cancellationToken);
 
@@ -155,7 +155,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
                 join basis in db.BillingBases.AsNoTracking() on line.BasisId equals basis.Id
                 join run in db.BillingRuns.AsNoTracking() on basis.RunId equals run.Id
                 where run.PeriodStart >= periodStart && run.PeriodStart <= periodEnd &&
-                      basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info
+                      basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
                 select new { basis.OrganizationId, line.Group, line.LineTotal })
             .ToListAsync(cancellationToken);
 
@@ -183,7 +183,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
                 join basis in db.BillingBases.AsNoTracking() on line.BasisId equals basis.Id
                 join run in db.BillingRuns.AsNoTracking() on basis.RunId equals run.Id
                 where run.PeriodStart >= firstPeriod && run.PeriodStart <= lastPeriod &&
-                      basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info
+                      basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
                 select new { run.PeriodStart.Year, run.PeriodStart.Month, line.ProductId, line.LineTotal })
             .ToListAsync(cancellationToken);
 
@@ -262,7 +262,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
 
     private async Task<IReadOnlyDictionary<Guid, ProductRef>> ProductCodesAsync(IReadOnlyCollection<BillingBasis> bases, CancellationToken ct)
     {
-        var productIds = bases.SelectMany(b => b.CurrentLines).Where(l => l.ProductId is not null).Select(l => l.ProductId!.Value).Distinct().ToList();
+        var productIds = bases.SelectMany(b => b.BilledLines).Where(l => l.ProductId is not null).Select(l => l.ProductId!.Value).Distinct().ToList();
         return await catalog.GetProductsAsync(productIds, ct);
     }
 
@@ -275,7 +275,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
         run.PeriodEnd,
         basis.CustomerReference,
         basis.TotalExVat,
-        basis.CurrentLines
+        basis.BilledLines
             .Where(l => l.Group != BillingGroup.Info || l.LineTotal != 0)
             .OrderBy(l => l.Group)
             .Select(l => new ExportLine(
@@ -296,8 +296,9 @@ internal sealed class BasisExportedHandler(
 {
     public async Task HandleAsync(BillingBasisExported domainEvent, CancellationToken cancellationToken)
     {
+        // Only what was invoiced closes its source: an excluded line leaves its hours and one-time items for a later run.
         var lines = await db.BillingLines.AsNoTracking()
-            .Where(l => l.BasisId == domainEvent.BasisId && l.SourceRefs != null)
+            .Where(l => l.BasisId == domainEvent.BasisId && l.SourceRefs != null && l.Decision != BillingLineDecision.Exclusion)
             .Select(l => l.SourceRefs!)
             .ToListAsync(cancellationToken);
         var chargeIds = lines.SelectMany(json => SourceRefs.Ids(json, "pendingChargeIds")).Distinct().ToList();

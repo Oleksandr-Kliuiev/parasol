@@ -14,11 +14,12 @@ using Microsoft.Extensions.Options;
 
 namespace Crm.Billing.Features;
 
-public sealed record CollectResult(int Organizations, int Lines, decimal Total, int WithAnomalies, bool RequiresSecondApproval);
+public sealed record CollectResult(int Organizations, int Lines, decimal Total, int WithAnomalies, bool RequiresSecondApproval, int Conflicts);
 
 /// <summary>
 /// Builds the bases of a run from contracts, CSP subscriptions, approved hours, hour-bank purchases and manual lines
-/// (docs/02 §4.9). Re-collecting replaces the collected lines and keeps manual corrections (BR-BIL-02).
+/// (docs/02 §4.9). Every collected line carries a charge key, so re-collecting updates the same lines and keeps Finance's
+/// decisions once instead of adding the source again (BR-BIL-02, docs/adr/ADR-011).
 /// </summary>
 internal sealed class BillingCollector(
     BillingDbContext db,
@@ -81,6 +82,11 @@ internal sealed class BillingCollector(
             .Include(b => b.Lines)
             .Where(b => b.RunId == run.Id)
             .ToDictionaryAsync(b => b.OrganizationId, ct);
+        // A customer can drop out of a run and come back on a later collect. The basis key ({period}-{customer}-{run}) is
+        // unique, so the earlier basis is brought back instead of a second one being created.
+        var dropped = await db.BillingBases.IgnoreQueryFilters()
+            .Where(b => b.RunId == run.Id && b.IsDeleted)
+            .ToDictionaryAsync(b => b.OrganizationId, ct);
 
         var hourlyProducts = await ResolveHourlyProductsAsync(billableTime, settings.FallbackHourlySku, ct);
         var subscriptionsByOrganization = subscriptions.GroupBy(s => s.OrganizationId).ToDictionary(g => g.Key, g => g.ToList());
@@ -139,6 +145,8 @@ internal sealed class BillingCollector(
                     ? subscriptionsByOrganization.GetValueOrDefault(organizationId)?.FirstOrDefault(s => s.ProductId == line.ProductId)?.SubscriptionIds
                     : null;
 
+                // The service across its versions and the days it is billed for: two versions of a mid-period change are two
+                // charges, a repeated collect of the same days is the same one.
                 lines.Add(new LineDraft(
                     product?.Type == ProductType.MicrosoftLicense ? BillingGroup.License : BillingGroup.Subscription,
                     line.ProductId,
@@ -153,12 +161,16 @@ internal sealed class BillingCollector(
                         contractLineId = line.LineId,
                         subscriptionIds,
                         prorationFactor = prorated.IsPartial ? prorated.Factor : (decimal?)null,
-                    })));
+                    }),
+                    string.Create(CultureInfo.InvariantCulture, $"contract:{line.SeriesId:N}:{prorated.From:yyyy-MM-dd}:{prorated.To:yyyy-MM-dd}"),
+                    organizationId));
             }
 
             AddHourlyLines(lines, billableTime.Where(t => t.OrganizationId == organizationId).ToList(), hourlyProducts, periodStart, periodEnd, settings, anomalies);
             await AddHourBankLinesAsync(lines, purchases.Where(p => p.OrganizationId == organizationId).ToList(), organizationLines, products, pricesByCategory, defaultCategory, anomalies, ct);
             AddPendingChargeLines(lines, pendingCharges.Where(c => c.OrganizationId == organizationId).ToList());
+            // The customer the work was done for travels with each line, also when a group parent pays for it (FR-CUS-07).
+            lines = lines.ConvertAll(l => l with { SourceOrganizationId = organizationId });
 
             if (invoiceTargets.TryGetValue(organizationId, out var invoicedTo))
             {
@@ -203,10 +215,18 @@ internal sealed class BillingCollector(
         decimal total = 0;
         var withAnomalies = 0;
         var requiresSecondApproval = false;
+        var conflicts = 0;
 
         foreach (var (organizationId, lines, anomalies, customerReference) in drafts)
         {
             var basis = existing.GetValueOrDefault(organizationId);
+            if (basis is null && dropped.Remove(organizationId, out var earlier))
+            {
+                earlier.Restore();
+                basis = earlier;
+                existing[organizationId] = basis;
+            }
+
             if (basis is null)
             {
                 basis = BillingBasis.Create(run, organizationId, customerReference);
@@ -214,11 +234,19 @@ internal sealed class BillingCollector(
                 existing[organizationId] = basis;
             }
 
-            var replaced = basis.ReplaceCollectedLines(lines, customerReference);
-            if (!replaced.IsSuccess)
+            var applied = basis.ApplyCollected(lines, customerReference);
+            if (!applied.IsSuccess)
             {
-                continue;
+                if (applied.Error!.Code == "BIL_BASIS_LOCKED")
+                {
+                    continue;
+                }
+
+                // A duplicate or missing charge key is a defect of a source, never something to bill around.
+                throw new InvalidOperationException(applied.Error.Message);
             }
+
+            conflicts += applied.Value.Conflicts;
 
             basis.SetPreviousTotal(previousTotals.GetValueOrDefault(organizationId));
             await AddPortfolioAnomaliesAsync(anomalies, basis, organizationId, periodEnd, readiness, allProducts, settings, ct);
@@ -245,10 +273,16 @@ internal sealed class BillingCollector(
                 continue;
             }
 
-            // A subsidiary that has since joined its parent's invoice drops the basis it had from an earlier collect.
+            // A subsidiary that has since joined its parent's invoice drops the basis it had from an earlier collect; lines
+            // Finance decided about stay, flagged, until somebody resolves them.
             if (invoiceTargets.ContainsKey(organizationId) && basis.CurrentLines.Any())
             {
-                basis.ReplaceCollectedLines([], null);
+                conflicts += basis.ApplyCollected([], null).Value.Conflicts;
+            }
+            else if (!organizationIds.Contains(organizationId) && basis.CurrentLines.Any())
+            {
+                // Nothing to bill for this customer any more: collected lines go, decided ones wait for Finance.
+                conflicts += basis.ApplyCollected([], null).Value.Conflicts;
             }
 
             if ((!organizationIds.Contains(organizationId) || invoiceTargets.ContainsKey(organizationId)) && !basis.CurrentLines.Any())
@@ -257,7 +291,7 @@ internal sealed class BillingCollector(
             }
         }
 
-        return new CollectResult(existing.Values.Count(b => !b.IsDeleted), totalLines, decimal.Round(total, 2), withAnomalies, requiresSecondApproval);
+        return new CollectResult(existing.Values.Count(b => !b.IsDeleted), totalLines, decimal.Round(total, 2), withAnomalies, requiresSecondApproval, conflicts);
     }
 
     /// <summary>One-time items from accepted quotes (BR-SAL-07); they carry their id so the export can close them.</summary>
@@ -273,7 +307,8 @@ internal sealed class BillingCollector(
                 charge.UnitPrice,
                 charge.DiscountPct,
                 charge.VatRate,
-                JsonSerializer.Serialize(new { pendingChargeIds = new[] { charge.Id } })));
+                JsonSerializer.Serialize(new { pendingChargeIds = new[] { charge.Id } }),
+                string.Create(CultureInfo.InvariantCulture, $"pending:{charge.Id:N}")));
         }
     }
 
@@ -366,7 +401,9 @@ internal sealed class BillingCollector(
                         rate,
                         0,
                         product.VatRate,
-                        JsonSerializer.Serialize(new { timeEntryIds = new[] { entry.EntryId } })));
+                        JsonSerializer.Serialize(new { timeEntryIds = new[] { entry.EntryId }, allocationIds = new[] { entry.AllocationId } }),
+                        // The approved allocation: a re-approval creates new allocations and therefore a new charge.
+                        string.Create(CultureInfo.InvariantCulture, $"time:{entry.AllocationId:N}")));
                 }
             }
             else
@@ -379,7 +416,12 @@ internal sealed class BillingCollector(
                     rate,
                     0,
                     product.VatRate,
-                    JsonSerializer.Serialize(new { timeEntryIds = group.Select(e => e.EntryId).Distinct().ToList() })));
+                    JsonSerializer.Serialize(new
+                    {
+                        timeEntryIds = group.Select(e => e.EntryId).Distinct().ToList(),
+                        allocationIds = group.Select(e => e.AllocationId).ToList(),
+                    }),
+                    string.Create(CultureInfo.InvariantCulture, $"time:{group.Key.Key}:{rate:0.####}")));
             }
         }
 
@@ -401,7 +443,8 @@ internal sealed class BillingCollector(
                 0,
                 0,
                 0,
-                JsonSerializer.Serialize(new { timeEntryIds = group.Select(e => e.EntryId).Distinct().ToList() })));
+                JsonSerializer.Serialize(new { timeEntryIds = group.Select(e => e.EntryId).Distinct().ToList() }),
+                $"info:{group.Key}"));
         }
     }
 
@@ -470,7 +513,9 @@ internal sealed class BillingCollector(
                 unitPrice,
                 line.DiscountPct,
                 product.VatRate,
-                JsonSerializer.Serialize(new { hourBankId = purchase.HourBankId, contractId = line.ContractId })));
+                JsonSerializer.Serialize(new { hourBankId = purchase.HourBankId, hourBankEntryId = purchase.EntryId, contractId = line.ContractId }),
+                // The purchase movement itself: re-reading it is the same charge, a second purchase of the same bank is another.
+                string.Create(CultureInfo.InvariantCulture, $"hourbank:{purchase.EntryId:N}")));
         }
     }
 
@@ -502,7 +547,7 @@ internal sealed class BillingCollector(
                 anomalies.Add(new BillingAnomaly("BIL_CUSTOMER_NOT_LINKED", "The customer is not linked to the accounting system; the order cannot be exported."));
             }
 
-            foreach (var productId in basis.CurrentLines.Where(l => l.ProductId is not null).Select(l => l.ProductId!.Value).Distinct())
+            foreach (var productId in basis.BilledLines.Where(l => l.ProductId is not null).Select(l => l.ProductId!.Value).Distinct())
             {
                 if (!readiness.ProductCodes.ContainsKey(productId))
                 {

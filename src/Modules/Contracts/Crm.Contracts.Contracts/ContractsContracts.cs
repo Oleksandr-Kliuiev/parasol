@@ -122,12 +122,16 @@ public sealed record RecurringRevenue(decimal MonthlyTotal, IReadOnlyDictionary<
 public sealed record RenewalDue(
     Guid ContractId, string Number, string Title, Guid OrganizationId, DateOnly EndDate, int DaysLeft, bool AutoRenew, DateOnly? NoticeDeadline, Guid? OwnerId);
 
-/// <summary>A live contract line as billing sees it; prices are resolved by the caller when <see cref="UnitPrice"/> is null.</summary>
+/// <summary>
+/// A live contract line as billing sees it; prices are resolved by the caller when <see cref="UnitPrice"/> is null.
+/// <see cref="LineId"/> is the version, <see cref="SeriesId"/> the service across its versions (BR-CON-03).
+/// </summary>
 public sealed record BillableContractLine(
     Guid ContractId,
     string ContractNumber,
     Guid OrganizationId,
     Guid LineId,
+    Guid SeriesId,
     Guid ProductId,
     string? Description,
     QuantityModel QuantityModel,
@@ -143,9 +147,12 @@ public sealed record BillableContractLine(
     DateOnly? LineValidTo,
     string? CustomerReference);
 
-/// <summary>Hours a customer bought in a period; billed once, through the hour-bank product of the contract.</summary>
+/// <summary>
+/// Hours a customer bought in a period; billed once, through the hour-bank product of the contract. <see cref="EntryId"/> is
+/// the purchase movement, so two purchases of the same bank are two charges.
+/// </summary>
 public sealed record HourBankPurchase(
-    Guid HourBankId, Guid OrganizationId, Guid? ContractId, string Name, DateOnly Date, decimal Hours, decimal? OverageRate, string? Description);
+    Guid EntryId, Guid HourBankId, Guid OrganizationId, Guid? ContractId, string Name, DateOnly Date, decimal Hours, decimal? OverageRate, string? Description);
 
 /// <summary>Public API of the Contracts module for other modules and integrations.</summary>
 public interface IContractsApi
