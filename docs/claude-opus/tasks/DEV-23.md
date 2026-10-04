@@ -20,7 +20,7 @@
 - [docs/08-roadmap.md](../../08-roadmap.md)
 - [docs/runbooks/01-first-deployment.md](../../runbooks/01-first-deployment.md)
 - [docs/runbooks/06-security-incident.md](../../runbooks/06-security-incident.md)
-- [.github/workflows/deploy.yml](../../../.github/workflows/deploy.yml)
+- [.github/workflows/release.yml](../../../.github/workflows/release.yml) и [.github/workflows/promote.yml](../../../.github/workflows/promote.yml) (заменили `deploy.yml` в DEV-05)
 
 Также применяются [правила исполнения](../EXECUTION.md), [финансовые инварианты](../FINANCIAL_DESIGN.md), [решения](../DECISIONS.md) и [проверки](../VALIDATION.md). Пути указывают исходные точки, а не исчерпывающий список разрешённых файлов; следовать изменениям структуры проекта.
 

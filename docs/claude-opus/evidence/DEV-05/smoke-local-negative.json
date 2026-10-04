@@ -1,0 +1,7 @@
+{
+  "result": "fail",
+  "baseUrl": "https://localhost:5185/nothing-here",
+  "checkedAt": "2026-10-04T02:27:19Z",
+  "passed": ["live", "ready", "spa"],
+  "failed": ["ready-body: /health/ready did not report Healthy", "spa-asset: GET /assets/index-DJf3htqL.js answered 302, expected 200", "api-anonymous: GET /api/v1/customers/organizations answered 200, expected 401", "api-write-without-csrf: POST /api/v1/customers/organizations answered 302, expected 403", "api-write-anonymous: anonymous POST with the CSRF header answered 302, expected 401", "bff-user-anonymous: GET /bff/user answered 200, expected 401", "anonymous-health-integrations: GET /health/integrations answered 200 , expected 401/403 or the sign-in", "anonymous-admin-jobs: GET /admin/jobs answered 200 , expected 401/403 or the sign-in"]
+}

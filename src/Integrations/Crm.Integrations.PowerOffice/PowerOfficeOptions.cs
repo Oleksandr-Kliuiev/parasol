@@ -50,6 +50,20 @@ public sealed class PowerOfficeOptions
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApplicationKey) && !string.IsNullOrWhiteSpace(ClientKey) && !string.IsNullOrWhiteSpace(SubscriptionKey);
 
+    /// <summary>
+    /// An environment never talks to the other one's PowerOffice (DEV-05): prod only to Production, test only to Demo. The
+    /// deployment names itself in <c>Deployment:Environment</c> (Bicep); a name the rule does not know is refused, and without
+    /// one (a developer machine, the tests) both are possible.
+    /// </summary>
+    public static bool FitsDeployment(PowerOfficeOptions options, string? deployment) => deployment switch
+    {
+        null or "" => true,
+        _ when !options.Enabled => true,
+        "prod" => options.Environment == PowerOfficeEnvironment.Production,
+        "test" => options.Environment == PowerOfficeEnvironment.Demo,
+        _ => false,
+    };
+
     public Uri EffectiveBaseUrl => BaseUrl ?? new Uri(Environment == PowerOfficeEnvironment.Demo
         ? "https://goapi.poweroffice.net/Demo/v2/"
         : "https://goapi.poweroffice.net/v2/");

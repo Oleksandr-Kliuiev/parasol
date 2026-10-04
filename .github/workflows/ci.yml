@@ -1,5 +1,8 @@
 name: CI
 
+# Every pull request and every commit on main. A commit on main whose required jobs all passed becomes a release: the
+# `release` job at the end builds the images once and deploys them to test (release.yml). Production only ever gets such a
+# release, by digest, through promote.yml (DEV-05, docs/adr/ADR-015-release-pipeline.md).
 on:
   pull_request:
   push:
@@ -10,14 +13,15 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push cancels a pull request's run, but never a run on main: it may be deploying to test.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
       - name: Restore
@@ -25,10 +29,13 @@ jobs:
       - name: Build
         id: build
         run: dotnet build Vardahei.Crm.slnx --no-restore -c Release
+      # Fails on a High/Critical package and on a scan that could not run or covered too little (no clean result by default).
       - name: Vulnerable packages
+        shell: bash
         run: |
-          dotnet list Vardahei.Crm.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
-          ! grep -E "Critical|High" vulnerable.txt
+          dotnet list Vardahei.Crm.slnx package --vulnerable --include-transitive --format json > "$RUNNER_TEMP/vulnerable.json"
+          python3 tools/release/release.py vulnerable-dotnet "$RUNNER_TEMP/vulnerable.json" \
+            --min-projects "$(grep -c '<Project ' Vardahei.Crm.slnx)"
       # Every test step runs once the build succeeded, so one red suite does not hide the result of the others.
       - name: Unit tests (with coverage)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -52,7 +59,7 @@ jobs:
         run: >-
           python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker --summary "$GITHUB_STEP_SUMMARY"
           "$RUNNER_TEMP/coverage/unit.cobertura.xml" "$RUNNER_TEMP/coverage/integration.cobertura.xml"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         with:
           name: coverage
@@ -65,8 +72,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -76,7 +83,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm audit --audit-level=high --omit=dev
+      # Build-time (dev) dependencies are audited too; an audit that failed is not a clean result.
+      - name: npm audit
+        shell: bash
+        run: |
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
+          python3 ../tools/release/release.py npm-audit "$RUNNER_TEMP/npm-audit.json"
 
   e2e:
     runs-on: ubuntu-latest
@@ -95,11 +107,11 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -111,7 +123,7 @@ jobs:
       - run: dotnet dev-certs https
       - name: End-to-end tests (crm-web + crm-worker + SQL Server + external API mocks)
         run: npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: playwright-report
@@ -123,7 +135,9 @@ jobs:
   infrastructure:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Release tooling tests
+        run: python3 -m unittest discover -s tools/release
       - name: Bicep build and lint
         run: |
           az bicep build --file infra/main.bicep --stdout > /dev/null
@@ -139,15 +153,33 @@ jobs:
       matrix:
         language: [csharp, javascript-typescript]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         if: matrix.language == 'csharp'
         with:
           global-json-file: global.json
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.language == 'csharp' && 'manual' || 'none' }}
       - if: matrix.language == 'csharp'
         run: dotnet build Vardahei.Crm.slnx -c Release
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+
+  # Only a commit pushed to main of this repository, and only when every required job above succeeded: `needs` skips this
+  # job otherwise, so a red job never publishes or deploys anything. Pull requests (also from forks) never get here and
+  # never see a credential.
+  release:
+    needs: [backend, frontend, e2e, infrastructure, codeql]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/release.yml
+    # The ceiling for the called workflow: OIDC for Azure, provenance attestations, and reading the running release's
+    # artifacts for the schema guard.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      actions: read
+    with:
+      checks: >-
+        backend=${{ needs.backend.result }},frontend=${{ needs.frontend.result }},e2e=${{ needs.e2e.result }},infrastructure=${{ needs.infrastructure.result }},codeql=${{ needs.codeql.result }}

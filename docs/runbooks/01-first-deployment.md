@@ -26,7 +26,15 @@ az identity federated-credential create -g rg-crm-test --identity-name id-crm-gi
   --issuer https://token.actions.githubusercontent.com \
   --subject "repo:<org>/<repo>:environment:test" --audiences api://AzureADTokenExchange
 ```
-> Для строгого варианта ограничьте «Role Based Access Control Administrator» условием на назначаемые роли (Key Vault Secrets/Certificate/Crypto User, Storage Blob Data Contributor, AcrPull).
+> Для строгого варианта ограничьте «Role Based Access Control Administrator» условием на назначаемые роли (Key Vault Secrets User, Key Vault Reader, Key Vault Crypto User, Storage Blob Data Contributor, AcrPull).
+
+Для `prod` то же с `-prod`, и дополнительно идентичности `id-crm-github-prod` право **AcrPull на реестр test**: продвижение копирует проверенные образы из реестра test по digest, ничего не собирая заново (ADR-015):
+```bash
+TEST_ACR_ID=$(az acr list -g rg-crm-test --query "[0].id" -o tsv)
+az role assignment create --assignee-object-id $(az identity show -g rg-crm-prod -n id-crm-github-prod --query principalId -o tsv) \
+  --assignee-principal-type ServicePrincipal --role AcrPull --scope $TEST_ACR_ID
+```
+Federated credential prod — только `repo:<org>/<repo>:environment:prod`: токен получает лишь job, привязанный к окружению `prod`, т.е. прошедший его reviewers.
 
 ## 3. Регистрация приложения в Entra ID
 ```bash
@@ -62,17 +70,28 @@ rm crm-web-auth.cer
 ```
 Сертификат продлевается Key Vault автоматически; после продления новый публичный ключ нужно загрузить в регистрацию (алерт «сертификат истекает через 30 дней» — [07 § 4.2](../07-nfr-devops.md#42-алерты)).
 
-## 6. Переменные GitHub и первый деплой
+## 6. Настройки GitHub и первый выпуск
+Переменные (значения — идентификаторы, не секреты; у каждого окружения своя `AZURE_CLIENT_ID`):
 ```bash
-gh variable set AZURE_CLIENT_ID --env test --body <clientId из шага 2>
 gh variable set AZURE_SUBSCRIPTION_ID --body <subscription-id>
 gh variable set CRM_ENTRA_TENANT_ID --body <tenant-id>
-gh variable set CRM_ENTRA_CLIENT_ID_TEST --body <app-id>
-gh workflow run deploy.yml -f environment=test
+gh variable set AZURE_CLIENT_ID --env test --body <clientId id-crm-github-test>
+gh variable set CRM_ENTRA_CLIENT_ID_TEST --env test --body <app-id test>
+gh variable set AZURE_CLIENT_ID --env prod --body <clientId id-crm-github-prod>
+gh variable set CRM_ENTRA_CLIENT_ID_PROD --env prod --body <app-id prod>
 ```
-Пайплайн: SPA → образы в ACR → идентичность `id-crm-worker-test` (создаётся, если её нет) → задача миграций `caj-crm-migrate-test` (схемы, роли `crm_web`/`crm_worker`, права; `id-crm-app-test` становится членом `crm_web`, `id-crm-worker-test` — `crm_worker`, без `db_datawriter`) → Bicep с новым тегом → smoke-проверка `/health/ready`. Матрица прав — [runbook 08](08-database-permissions.md).
+Защита (выполняет владелец репозитория; это и есть EXT-11, YAML её не заменяет):
+- Environment `prod`: **Required reviewers** (не автор выпуска), **Deployment branches**: только `main`; environment `test`: только `main`.
+- Ветка `main`: PR обязателен, ≥ 1 approve, **required status checks**: `backend`, `frontend`, `e2e`, `infrastructure`, `codeql (csharp)`, `codeql (javascript-typescript)`; без force push; правила и для администраторов.
+- Actions: default workflow permissions — read; разрешены только actions, закреплённые SHA (или выбранные).
+- Сбор фактических настроек для приёмки: `tools/release/release-settings.sh <org>/<repo> release-settings.json` (только чтение, без секретов).
 
-Для `prod` в настройках GitHub Environment `prod` включите **Required reviewers**.
+Выпуск (ADR-015): merge в `main` → CI → job `release`: образы собираются один раз, manifest с digests, SBOM, сканирование, provenance → `deploy-test`: проверка схемы, миграции (задача `caj-crm-migrate-test`, identity мигратора внутри VNet; сбой — без изменений ревизий и трафика), новая ревизия под меткой `candidate` с 0 % трафика, smoke, сверка digests, переключение трафика, smoke, запись развёртывания. Роли БД: `id-crm-app-test` → `crm_web`, `id-crm-worker-test` → `crm_worker` ([runbook 08](08-database-permissions.md)).
+
+В prod — только проверенный релиз: Actions → **Promote** → полный SHA коммита, окружение `prod`. Workflow проверяет прогон CI, manifest и запись test, ждёт reviewers окружения `prod`, импортирует те же digests в реестр prod и разворачивает их тем же скриптом.
+
+### 6a. Релиз с разрывом схемы
+Если проверка схемы отвечает, что работающий релиз не переживёт разрыв (`tools/release/schema-breaks.json`, например первое развёртывание DEV-04 поверх более старой версии): договориться об окне, приостановить интеграции и биллинг ([runbook 05](05-pause-integration.md)), остановить worker (`az containerapp update -n ca-crm-worker-prod -g rg-crm-prod --min-replicas 0 --max-replicas 0`), запустить Promote с `accept_schema_break`, после проверки вернуть worker (`--min-replicas 1 --max-replicas 1`) и снять паузу.
 
 ## 7. Домен и вход
 1. Container Apps → `ca-crm-web-test` → Custom domains: добавить `crm-test.<домен>`, управляемый сертификат.
@@ -85,3 +104,9 @@ gh workflow run deploy.yml -f environment=test
 - Создать организацию через поиск в Brreg → запись в журнале аудита.
 - Application Insights: запросы видны, ошибок 5xx нет.
 - Hangfire (`/admin/jobs`, роль Admin): задача `brreg-registry-check` запланирована на 02:00 Europe/Oslo.
+
+## 9. Откат
+1. **Быстро (≤ 5 мин)**, пока предыдущая ревизия crm-web активна: `az containerapp ingress traffic set -g rg-crm-prod -n ca-crm-web-prod --revision-weight <предыдущая ревизия>=100`. Worker в режиме одной ревизии — его откатывают п. 2.
+2. **Штатно**: Actions → **Promote** → SHA релиза, который уже работал в окружении, `rollback: true`. Миграции не выполняются (схема остаётся новой, expand/contract), разворачиваются digests того релиза с той же проверкой smoke. Отклоняется, если релиз ниже разрыва схемы, уже применённого в окружении (`tools/release/schema-breaks.json`), или его manifest и запись развёртывания недоступны.
+3. **Ниже разрыва схемы** автоматически нельзя: администратор БД откатывает конкретную миграцию (например, `ProtectApprovedBilling` снимает триггеры, данные не трогает) и разворачивает вручную по решению владельца; разрушающий откат схемы с потерей данных запрещён.
+4. Совместимость предыдущего релиза со схемой нового проверяется заранее: `tools/release/rollback-compat.sh <SHA предыдущего релиза>` (временная БД, E2E предыдущего релиза на схеме текущего).

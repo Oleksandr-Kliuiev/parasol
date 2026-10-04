@@ -1,0 +1,22 @@
+== current 1721a1521dd37268468460fcdac75c6305e8f673 (uncommitted changes count as current), previous 1721a15
+== 1. the current sources migrate the database (schema, roles, grants)
+Schema|Newest
+------|------
+activities|20260921212126_OutlookActivities
+audit|20261004011342_AppendOnlyAudit
+billing|20261004011343_ProtectApprovedBilling
+catalog|20260915191718_Initial
+contracts|20260916183501_ContractSourceQuote
+customers|20260922073130_OrganizationGroup
+customfields|20260922105418_Initial
+identity|20260915205432_TechnicianMappings
+integration|20260922112327_IntegrationSwitches
+licensing|20260922054410_LicenseUsageAndBilling
+notifications|20260916150925_Initial
+projects|20260922073201_Initial
+sales|20260916184621_Quotes
+service|20260915231817_Initial
+time|20260922073132_TimeEntryProject
+== 2. the previous release runs its own end-to-end suite on that schema
+  54 passed (2.2m)
+EXIT 0

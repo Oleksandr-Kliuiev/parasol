@@ -1,0 +1,4 @@
+ Test Files  12 passed (12)
+      Tests  39 passed (39)
+   283.0 KB  initial total (budget 300 KB)
+npm (with build-time dependencies): no High/Critical vulnerability

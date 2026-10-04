@@ -17,7 +17,7 @@ Deploy и CI запускаются независимо. Образы соби�
 ## Прочитать перед изменением
 
 - [.github/workflows/ci.yml](../../../.github/workflows/ci.yml)
-- [.github/workflows/deploy.yml](../../../.github/workflows/deploy.yml)
+- [.github/workflows/release.yml](../../../.github/workflows/release.yml) и [.github/workflows/promote.yml](../../../.github/workflows/promote.yml) (заменили `deploy.yml` в DEV-05)
 - [.github/dependabot.yml](../../../.github/dependabot.yml)
 - [infra/env/test.bicepparam](../../../infra/env/test.bicepparam)
 - [infra/env/prod.bicepparam](../../../infra/env/prod.bicepparam)

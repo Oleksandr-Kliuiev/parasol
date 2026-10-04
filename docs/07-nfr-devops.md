@@ -59,29 +59,27 @@
 
 ## 3. CI/CD
 
+Реализация — DEV-05, [ADR-015](adr/ADR-015-release-pipeline.md); процедуры — [runbook 01](runbooks/01-first-deployment.md) §6 и §9.
+
 ```mermaid
 flowchart LR
-  PR[Pull request] --> B[Build .NET + web]
-  B --> UT[Unit + architecture tests]
-  UT --> IT[Integration tests<br/>Testcontainers SQL, WireMock]
-  IT --> COV[Coverage gate NFR-10<br/>домен ≥ 90 %, backend ≥ 70 %]
-  COV --> SEC[CodeQL, dependency audit,<br/>secret scan, container scan]
-  SEC --> REV[Code review ≥ 1]
-  REV --> M[Merge в main]
-  M --> IMG[Сборка образов → ACR<br/>тег = git SHA, SBOM]
-  IMG --> DT[Deploy test:<br/>Bicep what-if → apply,<br/>EF migration bundle, rolling update]
-  DT --> E2E[Playwright E2E + ZAP baseline + smoke интеграций]
-  E2E --> AP{Approve prod}
-  AP --> DP[Deploy prod:<br/>миграции → новая ревизия 0% трафика → smoke → 100%]
-  DP --> MON[Мониторинг 30 мин,<br/>автооткат по алерту 5xx]
+  PR[Pull request / push в main] --> CI[CI: backend, frontend,<br/>e2e, infrastructure, codeql]
+  CI -->|все обязательные job успешны,<br/>только push в main| PUB[release / publish:<br/>образы один раз → digest,<br/>SBOM, grype, provenance, manifest]
+  PUB --> DT[release / deploy-test:<br/>проверка схемы → миграции →<br/>ревизия candidate 0 % → smoke →<br/>сверка digests → трафик → smoke]
+  DT --> REC[(manifest + запись test)]
+  REC --> PRM[promote: проверка CI, manifest,<br/>записи test, provenance]
+  PRM --> AP{Reviewers<br/>окружения prod}
+  AP --> DP[deploy prod: импорт тех же digests →<br/>тот же порядок, что в test]
 ```
 
-- **Git-процесс:** trunk-based, короткие ветки, Conventional Commits, обязательный PR; релизные теги `vYYYY.MM.N`.
+- **Git-процесс:** trunk-based, короткие ветки, обязательный PR и required status checks — настройки репозитория, проверяются в EXT-11 (`tools/release/release-settings.sh`).
 - **Покрытие (NFR-10):** unit- и integration-тесты собирают Cobertura через `Microsoft.Testing.Extensions.CodeCoverage`; `tools/coverage/coverage-gate.py` объединяет отчёты, печатает denominator и исключения (миграции, сгенерированный код, AppHost) и роняет CI ниже порога. Архитектурные тесты обнаруживают модули по `src/` и падают, если проект не входит в solution или в хосты.
-- **Миграции БД:** EF Core migration bundle, выполняются отдельным шагом до переключения трафика; только обратно совместимые изменения (expand → deploy → contract в следующем релизе).
-- **Инфраструктура:** Bicep-модули в `infra/`, параметры окружений `*.bicepparam`, `what-if` в PR-комментарии.
-- **Аутентификация CI в Azure:** федеративные учётные данные GitHub OIDC → отдельные managed identities для `test` и `prod`.
-- **Откат:** переключение трафика на предыдущую ревизию Container Apps (≤ 5 мин); миграции не откатываются (благодаря expand/contract).
+- **Сканеры fail-closed:** пакеты .NET (`release.py vulnerable-dotnet`: High/Critical, ошибки источника, неполный охват — отказ), npm со сборочными зависимостями (`release.py npm-audit`), образ релиза (grype, High/Critical), CodeQL.
+- **Артефакт:** crm-web и crm-worker собираются один раз; test и prod работают с одними digests; migrator — образ crm-web того же digest. Release manifest — commit, digests, версии схемы, разрывы схемы, SBOM, результаты job'ов, ссылка на прогон.
+- **Миграции БД:** задача Container Apps под identity мигратора внутри VNet, до любых изменений ревизий и трафика; сбой останавливает выпуск. Только expand (архитектурный тест); contract — отдельным релизом с ADR. Миграции, ломающие прежний релиз без смены колонок (триггеры), регистрируются в `tools/release/schema-breaks.json`; проверка схемы не пускает откат ниже разрыва и требует maintenance window для разрыва поверх старого релиза.
+- **Инфраструктура:** Bicep-модули в `infra/`, параметры окружений `*.bicepparam` (PowerOffice зафиксирован: test — Demo, prod — Production; приложение проверяет соответствие при старте). Автоматический what-if в PR не реализован.
+- **Аутентификация CI в Azure:** федеративные учётные данные GitHub OIDC → отдельные identities для `test` и `prod`, subject `environment:<env>`; actions закреплены SHA.
+- **Откат:** трафик на предыдущую ревизию Container Apps (≤ 5 мин) или Promote с `rollback` (digests прежнего релиза без миграций). Совместимость прежнего релиза со схемой проверяется `tools/release/rollback-compat.sh`. Автооткат по алерту 5xx, ZAP baseline и релизные теги не реализованы.
 
 ## 4. Мониторинг и эксплуатация
 

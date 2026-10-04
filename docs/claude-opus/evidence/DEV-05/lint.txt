@@ -1,0 +1,4 @@
+actionlint 1.7.12 on .github/workflows/*.yml:
+  no findings
+shellcheck version: 0.11.0 on tools/release/*.sh:
+  no findings

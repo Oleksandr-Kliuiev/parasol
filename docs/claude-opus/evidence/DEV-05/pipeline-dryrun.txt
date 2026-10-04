@@ -1,0 +1,32 @@
+### 1. a red required job: no manifest (AC01)
+REFUSED: required CI jobs not successful: e2e
+exit 1
+### 2. all green: manifest
+release manifest for 1721a1521dd37268468460fcdac75c6305e8f673: web sha256:4b5e57f6eb2f42b9039b3d1e13929295f231749c510cbe341cd68036d9af97e2, worker sha256:87eba76e7f3164534045ba922e7770fb58bbd14ad732bbf5ba6f11cc56989e6e
+exit 0
+manifest verified for 1721a1521dd37268468460fcdac75c6305e8f673
+no secret patterns in release-manifest.json, sbom-crm-web.spdx.json
+### 3. test deployment record (smoke of the local crm-web)
+test runs the release 1721a1521dd37268468460fcdac75c6305e8f673
+exit 0
+### 4. promotion check of the tested release (AC02 positive)
+1721a1521dd37268468460fcdac75c6305e8f673 may be promoted: CI, manifest and the recorded deployment agree
+exit 0
+### 5. unverified SHA / digest / failed job (AC02 negative)
+REFUSED: the manifest is for commit 1721a1521dd37268468460fcdac75c6305e8f673, not 0123456789abcdef0123456789abcdef01234567
+exit 1
+REFUSED: web: deployed sha256:d9298a10d1b0735837dc4bd85dac641b0f3cef27a47e5d53a54f2f3f5b2fcffa, manifest sha256:4b5e57f6eb2f42b9039b3d1e13929295f231749c510cbe341cd68036d9af97e2
+exit 1
+REFUSED: the CI run of 1721a1521dd37268468460fcdac75c6305e8f673 has unsuccessful or missing required jobs: e2e
+exit 1
+### 6. prod record after import: same digests (AC03)
+prod runs the release 1721a1521dd37268468460fcdac75c6305e8f673
+exit 0
+digests identical: True | registries: crcrmtestabc12345.azurecr.io -> crcrmprodxyz98765.azurecr.io
+### 7. schema guard
+REFUSED: 646a565000000000000000000000000000000000 does not survive Crm.Billing/20261004011343_ProtectApprovedBilling between the migrations and the traffic switch: deploy in an accepted maintenance window (pause the worker and billing, accept_schema_break)
+exit 1
+schema compatible (maintenance window accepted for Crm.Billing/20261004011343_ProtectApprovedBilling)
+exit 0
+REFUSED: 646a565000000000000000000000000000000000 cannot run on the schema of 1721a1521dd37268468460fcdac75c6305e8f673: it predates Crm.Billing/20261004011343_ProtectApprovedBilling (tools/release/schema-breaks.json). Going below a break needs the database administrator to revert that migration first and a manual deployment (docs/runbooks/01-first-deployment.md).
+exit 1

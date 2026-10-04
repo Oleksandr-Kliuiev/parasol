@@ -15,7 +15,12 @@ public static class PowerOfficeModule
 {
     public static IServiceCollection AddPowerOfficeIntegration(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptions<PowerOfficeOptions>().Bind(configuration.GetSection(PowerOfficeOptions.SectionName));
+        services.AddOptions<PowerOfficeOptions>()
+            .Bind(configuration.GetSection(PowerOfficeOptions.SectionName))
+            .Validate(
+                options => PowerOfficeOptions.FitsDeployment(options, configuration["Deployment:Environment"]),
+                "Integrations:PowerOffice:Environment does not fit Deployment:Environment: prod uses Production, test uses Demo.")
+            .ValidateOnStart();
         services.AddSingleton<PowerOfficeTokenProvider>();
         services.AddTransient<PowerOfficeAuthHandler>();
         services.AddHttpClient(PowerOfficeTokenProvider.HttpClientName)

@@ -19,8 +19,17 @@ param entraClientId string
 @description('Name of the certificate in Key Vault used as the app registration credential.')
 param entraCertificateName string = 'crm-web-auth'
 
-@description('Container image tag (git SHA) for crm-web and crm-worker.')
-param imageTag string = 'latest'
+@description('Digest (sha256:…) of the crm-web image of the release manifest; the migrations run from the same image (DEV-05).')
+param webImageDigest string = ''
+
+@description('Digest (sha256:…) of the crm-worker image of the release manifest.')
+param workerImageDigest string = ''
+
+@description('crm-web revision that keeps the traffic while the new one is smoke-tested under the label "candidate"; empty on the first deployment.')
+param webStableRevision string = ''
+
+@description('Commit of the release being deployed; kept as tag crmRelease on the container apps so the pipeline knows what runs (schema guard).')
+param releaseCommit string = ''
 
 @description('Use a placeholder image until the registry contains CRM images (first deployment).')
 param bootstrapImages bool = false
@@ -31,9 +40,9 @@ param webMinReplicas int = environmentName == 'prod' ? 2 : 1
 @description('Connect PowerOffice Go. Requires secrets poweroffice-application-key, poweroffice-client-key and poweroffice-subscription-key in Key Vault.')
 param enablePowerOffice bool = false
 
-@description('PowerOffice Go environment: Demo or Production.')
+@description('PowerOffice Go environment, fixed per environment in infra/env/*.bicepparam: test Demo, prod Production. No default: the apps refuse to start with the PowerOffice of the other environment (DEV-05).')
 @allowed(['Demo', 'Production'])
-param powerOfficeEnvironment string = 'Demo'
+param powerOfficeEnvironment string
 
 @description('Connect Atera. Requires secret atera-api-key in Key Vault.')
 param enableAtera bool = false
@@ -135,7 +144,10 @@ module apps 'modules/apps.bicep' = {
     entraTenantId: entraTenantId
     entraClientId: entraClientId
     entraCertificateName: entraCertificateName
-    imageTag: imageTag
+    webImageDigest: webImageDigest
+    workerImageDigest: workerImageDigest
+    webStableRevision: webStableRevision
+    releaseCommit: releaseCommit
     bootstrapImages: bootstrapImages
     webMinReplicas: webMinReplicas
     enablePowerOffice: enablePowerOffice
@@ -145,6 +157,7 @@ module apps 'modules/apps.bicep' = {
 }
 
 output webUrl string = apps.outputs.webUrl
+output webCandidateUrl string = apps.outputs.webCandidateUrl
 output registryLoginServer string = apps.outputs.registryLoginServer
 output migrationJobName string = apps.outputs.migrationJobName
 output keyVaultName string = data.outputs.keyVaultName

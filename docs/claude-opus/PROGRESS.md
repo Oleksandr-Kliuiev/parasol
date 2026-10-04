@@ -2,12 +2,12 @@
 
 Дата состояния: 04.10.2026.
 
-Текущая задача реализации: **DEV-05** (следующая по execution_order). Завершено локально (code_verified): DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565` (AC07 ждёт EXT-01), DEV-04 (коммит «DEV-04: …»; внешний gate EXT-07).
+Текущая задача реализации: **DEV-06** (следующая по execution_order). Завершено локально (code_verified): DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565` (AC07 ждёт EXT-01), DEV-04 `1721a15` (внешний gate EXT-07), DEV-05 (коммит «DEV-05: …»; AC06 ждёт EXT-11).
 
 ## Ветки и коммиты
 
 - `main` — baseline `2bed19e5520ac4061cbf1ad2e680a8a2b6e79320`: рабочая копия на дату аудита плюс этот пакет (670 файлов явного списка, см. [evidence/DEV-00.md](evidence/DEV-00.md)).
-- `codex/readiness` — рабочая ветка доработок от `2bed19e`: DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565`, затем DEV-04 (SHA — `git log codex/readiness`). Push не выполнялся, remote отсутствует.
+- `codex/readiness` — рабочая ветка доработок от `2bed19e`: DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565`, DEV-04 `1721a15`, затем DEV-05 (SHA — `git log codex/readiness`). Push не выполнялся, remote отсутствует.
 - Оставлены вне Git на диске без изменений: `.claude/launch.json`, `docs/claude-opus-development-pack-2026-10-03.zip` и распакованная копия `docs/claude-opus-development-pack-2026-10-03/` (их SHA-256 в manifest DEV-00). Если копия появилась случайно при открытии архива, удалить её может только владелец.
 
 ## Выполнено
@@ -22,26 +22,28 @@
 
 - **DEV-04** — права БД вместо `db_datawriter` (ADR-014, runbook 08): роли `crm_runtime`/`crm_web`/`crm_worker`/`crm_privacy`, права по схемам, аудит только INSERT, запреты модулей (`IDatabasePermissionRules`), проверка прав мигратором до переключения идентичностей, DDL-триггер против возврата широких ролей при откате; SQL-триггеры утверждённых прогонов, оснований, строк, актов, начислений и журнала отправок (`HasTrigger`, SQL в миграциях дословно); аудит только дополняется, retention — процедура под `crm_privacy` (пробная до утверждения DEC-03, финансовые модули недоступны); цепочка целостности аудита с якорями в Log Analytics; отдельная идентичность worker, секреты поставщиков только у worker (Bicep, конвейер), проверка подключения через worker, выключатели интеграций для web. Все интеграционные тесты — под логином `crm_worker`. Статус code_verified, **внешний gate EXT-07** (политика retention) и Azure-шаги (Graph-разрешения идентичности worker) не выполнялись ([evidence](evidence/DEV-04.md)).
 
+- **DEV-05** — выпуск одним проверенным артефактом (ADR-015, runbook 01 §6/§9): job `release` в CI зависит от всех обязательных job'ов и работает только для push в `main`; `release.yml` собирает образы один раз, дальше только digest, SBOM, сканирование образа, provenance, release manifest (digests, версии и разрывы схемы, результаты job'ов); test — миграции до изменений, кандидатная ревизия с 0 % трафика, smoke, сверка digest всех контейнеров, переключение, запись; prod — только `promote.yml` (проверка CI/manifest/записи test до учётных данных, reviewers окружения, импорт тех же digests); откат без миграций; реестр разрывов схемы и schema guard; fail-closed сканеры; PowerOffice зафиксирован по окружениям и проверяется приложением при старте; actions закреплены SHA. Проверка отката нашла разрыв: релизы до DEV-04 не работают на схеме с триггерами биллинга (зарегистрирован, guard). Статус code_verified, **AC06 blocked до EXT-11** (нет remote, настроек GitHub и Azure; workflow в GitHub не выполнялись) ([evidence](evidence/DEV-05.md)).
+
 ## Известные красные проверки (не маскировать)
 
 - Регрессий аудита в красном нет: A01 (DEV-01), A02 (DEV-02), A03 (DEV-03) зелёные; job `backend` локально проходит целиком.
 - Остаётся записанный дефект продукта из DEV-15 (за 5 + 5 повторов после DEV-02/03 не проявился): конфликт `UpdateRunStatusAsync` при параллельном экспорте оснований одного прогона может уронить операцию после внешнего эффекта (→ DEV-07; повторная попытка теперь ищет заказ и при неудаче ставит сверку, а не отправляет второй раз).
 
-Последние результаты (04.10.2026, после DEV-04): build 0/0; unit 346/346; architecture 70/70; integration 127/127 (под ролью `crm_worker`, Debug и Release); E2E 54/54; vitest 39/39; bundle 283.0 KB; coverage: домен 96.41 %, backend 85.43 %; CI job backend PASSED.
+Последние результаты (04.10.2026, после DEV-05): build 0/0; unit 354/354; architecture 82/82; integration 127/127 (под ролью `crm_worker`); E2E 54/54; vitest 39/39; тесты инструментов выпуска 26/26; actionlint и ShellCheck без находок; bundle 283.0 KB; coverage: домен 96.41 %, backend 85.44 %; CI jobs backend и infrastructure PASSED.
 
 Находка процесса (DEV-04): локальный скрипт E2E запускал Playwright без сборки SPA, поэтому веб отдавал бандл из прошлой сборки (в CI `npm run e2e` собирает). Исправлено; итоговый E2E DEV-04 на свежей сборке проходит и сценарии DEV-03, но E2E-прогоны DEV-03 в его evidence могли идти на старом бандле.
 
 ## Следующий конкретный шаг
 
-DEV-05 по карточке `tasks/DEV-05.md` (execution_order: DEV-05, DEV-06, DEV-07 …). Новые таблицы, которые нельзя удалять или переписывать (inbox DEV-07, приватность DEV-11), подключать к запретам через `IDatabasePermissionRules` (runbook 08 §3); тесты, играющие администратора БД, — в `DatabaseAdministrationCollection`; E2E запускать со сборкой SPA.
+DEV-06 по карточке `tasks/DEV-06.md` (execution_order: DEV-06, DEV-07, DEV-08 …). Новые миграции — только expand (архитектурный тест); миграция с триггером регистрируется в `tools/release/schema-breaks.json`; новый job CI добавляется в `needs` job'а `release`; таблицы, которые нельзя удалять или переписывать, — запреты через `IDatabasePermissionRules`; тесты-«администраторы БД» — в `DatabaseAdministrationCollection`; E2E — со сборкой SPA.
 
 ## Открытые решения и блокеры
 
-Внешние решения DEC-01…10 и gates EXT-01…11 не подтверждены. DEV-03-AC07 ждёт EXT-01: Finance принимает спорные исторические начисления (отчёт `GET /api/v1/billing/charges/legacy`, решения на странице прогонов) и правила корректировок/кредитования (DEC-02). DEV-04 ждёт EXT-07: политика хранения по категориям и legal holds (DEC-03) — до неё retention только пробный; перед развёртыванием DEV-04 владелец тенанта выдаёт новой идентичности `id-crm-worker-<env>` Graph `User.Read.All`, `Mail.Send` (ящик `crm@`), `Sites.Selected` (runbook 08 §2); получатели алерта `AUDIT_INTEGRITY_MISMATCH` — DEC-09.
+Внешние решения DEC-01…10 и gates EXT-01…11 не подтверждены. DEV-03-AC07 ждёт EXT-01: Finance принимает спорные исторические начисления (отчёт `GET /api/v1/billing/charges/legacy`, решения на странице прогонов) и правила корректировок/кредитования (DEC-02). DEV-04 ждёт EXT-07: политика хранения по категориям и legal holds (DEC-03) — до неё retention только пробный; перед развёртыванием DEV-04 владелец тенанта выдаёт новой идентичности `id-crm-worker-<env>` Graph `User.Read.All`, `Mail.Send` (ящик `crm@`), `Sites.Selected` (runbook 08 §2); получатели алерта `AUDIT_INTEGRITY_MISMATCH` — DEC-09. DEV-05 ждёт EXT-11: remote-репозиторий, окружения `test`/`prod` с reviewers и политикой веток, защита `main` с required checks, федерация OIDC и AcrPull идентичности prod на реестр test (runbook 01 §2, §6), первый прогон конвейера и `tools/release/release-settings.sh`; первое развёртывание DEV-04+ поверх более старого релиза — разрыв схемы, в prod только в maintenance window (runbook 01 §6a).
 
 ## Временные ресурсы
 
-Нет активных. Временные контейнеры `crm-e2e-*`, `crm-mig-dev02`, `crm-mig-dev03`, `crm-mig-dev04` удаляются скриптами прогона (проверено `docker ps -a`); worktree удалены. Установлены браузеры Playwright Firefox 155 и WebKit 26.6 в `~/Library/Caches/ms-playwright` (обычный кэш инструментов). Чужие контейнеры не затрагивались; `vardahei-crm-sql` использовался только для агрегатных SELECT в DEV-00.
+Нет активных. Временные контейнеры `crm-e2e-*`, `crm-mig-dev02`, `crm-mig-dev03`, `crm-mig-dev04`, `crm-smoke-dev05`, `crm-rollback-*` удаляются скриптами прогона (проверено `docker ps -a`); git worktree проверок отката удалены (`git worktree list` — только основной). Установлены локальные линтеры actionlint и ShellCheck (Homebrew). Установлены браузеры Playwright Firefox 155 и WebKit 26.6 в `~/Library/Caches/ms-playwright` (обычный кэш инструментов). Чужие контейнеры не затрагивались; `vardahei-crm-sql` использовался только для агрегатных SELECT в DEV-00.
 
 ## Шаблон записи после сессии
 

@@ -17,6 +17,7 @@ CRM for an IT company (Microsoft / Atera / PowerOffice partner). Specs live in `
 - Frontend (`web/`): `npm run dev | lint | typecheck | test | build` (build writes to `src/Hosts/Crm.Web/wwwroot`).
 - Bicep: `az bicep build --file infra/main.bicep --stdout > /dev/null`.
 - Load test: `k6 run -e BASE_URL=http://localhost:5180 tools/load-test/workday.js` (needs the development sign-in, never production).
+- Release tooling (DEV-05): `python3 -m unittest discover -s tools/release`; workflows `actionlint`, scripts `shellcheck tools/release/*.sh`; previous release on the current schema: `tools/release/rollback-compat.sh <sha>` (throwaway SQL container + git worktree). The e2e suite needs a fresh SPA build (`npm run e2e` does it).
 
 ## UI rules
 - Fluent badges with `appearance="tint"` or a brand/`warning` colour fail the dark-theme contrast check in `web/e2e/a11y.spec.ts`; for emphasis use plain `Text` with a palette foreground token (e.g. `colorPaletteDarkOrangeForeground1`) or an outline badge with a neutral colour.
@@ -43,6 +44,8 @@ CRM for an IT company (Microsoft / Atera / PowerOffice partner). Specs live in `
 - No MediatR/AutoMapper (commercial licences): plain handler classes registered by `AddModuleServices`.
 - Global search: modules contribute `ISearchProvider` (SharedKernel); the host filters providers by the caller's permission.
 - Integrations record runs and incremental cursors through `SyncRunner` (`integration` schema); recurring jobs are registered in `Crm.Worker/Program.cs`. External calls in tests go to WireMock (`CrmWebFactory.Brreg`, `.Graph`).
+- Releases (DEV-05, ADR-015): CI on main → `release.yml` builds the images once and deploys their digests to test; prod only through `promote.yml`, which imports the same digests (never rebuilds). A new CI job must join the `release` job's `needs` (an architecture test enforces it); actions are pinned by commit SHA; dispatch inputs reach scripts only through `env`. Migrations are expand-only (architecture test); a migration that creates a trigger is registered in `tools/release/schema-breaks.json` (DEV-04's billing triggers are a break: older releases cannot write with them).
+- Environment-bound settings are fixed per environment in `infra/env/*.bicepparam` and checked by the app against `Deployment:Environment` at startup (PowerOffice: test → Demo, prod → Production).
 - Users are deactivated by the Entra sync; `ActiveUserMiddleware` rejects their API calls (`401 USER_INACTIVE`).
 - A notification stores its kind and parameters, never a finished sentence: the interface renders it through i18n and the e-mail digest renders the same notice in the reader's language (`NotificationTexts`). Enqueueing is idempotent through a dedupe key that carries the date, so a repeated scan adds nothing.
 - Domain events may carry enums: both sides of the outbox (the interceptor and `OutboxProcessor`) serialize with `JsonStringEnumConverter`.

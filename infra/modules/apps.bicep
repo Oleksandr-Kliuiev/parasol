@@ -25,7 +25,10 @@ param dataProtectionKeyUri string
 param entraTenantId string
 param entraClientId string
 param entraCertificateName string
-param imageTag string
+param webImageDigest string
+param workerImageDigest string
+param webStableRevision string
+param releaseCommit string
 param bootstrapImages bool
 param webMinReplicas int
 param enablePowerOffice bool
@@ -88,6 +91,8 @@ var migratorConnectionString = '${sqlConnectionPrefix};User Id=${migratorIdentit
 
 var commonEnv = [
   { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
+  // Which deployment this is: the apps check environment-bound settings against it (PowerOffice Demo/Production, DEV-05).
+  { name: 'Deployment__Environment', value: environmentName }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
   { name: 'OTEL_SERVICE_NAME', value: 'crm' }
 ]
@@ -143,15 +148,18 @@ var integrationKeys = concat(
     { name: 'Integrations__Atera__ApiKey', secretRef: 'atera-api-key' }
   ] : [])
 
-var webImage = bootstrapImages ? placeholderImage : '${registry.properties.loginServer}/crm-web:${imageTag}'
-var workerImage = bootstrapImages ? placeholderImage : '${registry.properties.loginServer}/crm-worker:${imageTag}'
+// Images are referenced by digest from the release manifest, never by a tag that could move (DEV-05).
+// The release that runs, for the schema guard of the next deployment or rollback (tools/release/schema-breaks.json).
+var appTags = empty(releaseCommit) ? tags : union(tags, { crmRelease: releaseCommit })
+var webImage = bootstrapImages ? placeholderImage : '${registry.properties.loginServer}/crm-web@${webImageDigest}'
+var workerImage = bootstrapImages ? placeholderImage : '${registry.properties.loginServer}/crm-worker@${workerImageDigest}'
 var webRegistries = bootstrapImages ? [] : [{ server: registry.properties.loginServer, identity: appIdentityId }]
 var workerRegistries = bootstrapImages ? [] : [{ server: registry.properties.loginServer, identity: workerIdentityId }]
 
 resource web 'Microsoft.App/containerApps@2024-10-02-preview' = {
   name: 'ca-crm-web-${environmentName}'
   location: location
-  tags: tags
+  tags: appTags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: { '${appIdentityId}': {} }
@@ -167,7 +175,12 @@ resource web 'Microsoft.App/containerApps@2024-10-02-preview' = {
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false
-        traffic: [{ latestRevision: true, weight: 100 }]
+        // A new revision first takes no traffic: the pipeline smoke-tests it under the label "candidate" and only then moves
+        // the traffic (tools/release/deploy.sh). The first deployment has nothing to keep.
+        traffic: empty(webStableRevision) ? [{ latestRevision: true, weight: 100 }] : [
+          { revisionName: webStableRevision, weight: 100 }
+          { latestRevision: true, weight: 0, label: 'candidate' }
+        ]
       }
       registries: webRegistries
     }
@@ -197,7 +210,7 @@ resource web 'Microsoft.App/containerApps@2024-10-02-preview' = {
 resource worker 'Microsoft.App/containerApps@2024-10-02-preview' = {
   name: 'ca-crm-worker-${environmentName}'
   location: location
-  tags: tags
+  tags: appTags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: { '${workerIdentityId}': {} }
@@ -271,5 +284,6 @@ resource migrate 'Microsoft.App/jobs@2024-10-02-preview' = {
 }
 
 output webUrl string = 'https://${web.properties.configuration.ingress.fqdn}'
+output webCandidateUrl string = 'https://${web.name}---candidate.${environment.properties.defaultDomain}'
 output registryLoginServer string = registry.properties.loginServer
 output migrationJobName string = migrate.name

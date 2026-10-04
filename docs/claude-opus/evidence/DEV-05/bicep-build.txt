@@ -1,0 +1,6 @@
+az bicep build (bicep 0.47.16), 04.10.2026:
+main.bicep: OK
+test.bicepparam: OK
+prod.bicepparam: OK (powerOfficeEnvironment fixed to Production)
+prod with release parameters: webImageDigest sha256:aaaaaaaa… | webStableRevision ca-crm-web-prod--r1 | powerOfficeEnvironment Production
+Not deployed: no Azure resource, GitHub setting or role assignment was created or changed.
