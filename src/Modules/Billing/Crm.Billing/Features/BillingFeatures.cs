@@ -98,7 +98,20 @@ public sealed record RunResponse(
     DateTimeOffset? ClosedAt,
     string? Notes,
     int Conflicts,
+    int ContentRevision,
+    int? ApprovedRevision,
+    IReadOnlyList<ApprovalDto> Approvals,
     string Etag);
+
+/// <summary>One approval act; <see cref="Valid"/> is false once a later revision set it aside, with the reason (ADR-012).</summary>
+public sealed record ApprovalDto(
+    BillingApprovalKind Kind,
+    RefDto ApprovedBy,
+    DateTimeOffset ApprovedAt,
+    int ContentRevision,
+    bool Valid,
+    DateTimeOffset? InvalidatedAt,
+    string? InvalidationReason);
 
 public sealed record BasisListItem(
     Guid Id,

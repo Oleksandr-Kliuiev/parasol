@@ -47,4 +47,14 @@ public static class ConcurrencyExtensions
         context.Entry(entity).Property(ModuleDbContext.RowVersionProperty).OriginalValue = version;
         return true;
     }
+
+    /// <summary>
+    /// After <see cref="ApplyIfMatch"/>: true when the client's version is not the row just read, so a command can be refused
+    /// before it does any work. The row version check of SaveChanges still guards a change that comes in between.
+    /// </summary>
+    public static bool IsStale(this DbContext context, object entity)
+    {
+        var property = context.Entry(entity).Property(ModuleDbContext.RowVersionProperty);
+        return !((byte[]?)property.OriginalValue ?? []).AsSpan().SequenceEqual((byte[]?)property.CurrentValue ?? []);
+    }
 }

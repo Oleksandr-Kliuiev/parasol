@@ -72,6 +72,20 @@ internal static class IntegrationTestHelpers
         return await client.SendAsync(request);
     }
 
+    /// <summary>
+    /// Sends a command to a billing run with the run's current ETag, as the run page does: collect and both approvals are
+    /// about the revision the caller saw, so they need If-Match (ADR-012).
+    /// </summary>
+    public static async Task<HttpResponseMessage> RunCommandAsync(this HttpClient client, Guid runId, string command) =>
+        await client.PostWithETagAsync($"/api/v1/billing/runs/{runId}/{command}", new { }, await client.RunETagAsync(runId));
+
+    public static async Task<string> RunETagAsync(this HttpClient client, Guid runId)
+    {
+        var read = await client.GetAsync($"/api/v1/billing/runs/{runId}");
+        read.EnsureSuccessStatusCode();
+        return read.Headers.ETag!.Tag;
+    }
+
     public static async Task<JsonElement> ReadJsonAsync(this HttpResponseMessage response) =>
         await response.Content.ReadFromJsonAsync<JsonElement>();
 

@@ -362,6 +362,7 @@ erDiagram
 ```mermaid
 erDiagram
   BILLING_RUN ||--o{ BILLING_BASIS : "per customer"
+  BILLING_RUN ||--o{ BILLING_APPROVAL : "approved as"
   BILLING_BASIS ||--o{ BILLING_LINE : contains
   BILLING_BASIS ||--o| EXPORT_ATTEMPT : "exported via"
   BILLING_BASIS ||--o{ INVOICE : "resulted in"
@@ -373,9 +374,26 @@ erDiagram
     date PeriodStart
     date PeriodEnd
     string Status "Draft|Collected|InReview|Approved|Exporting|Exported|ExportedWithErrors|Closed"
-    uuid ApprovedBy
-    uuid SecondApprovedBy
+    uuid ApprovedBy "зеркало действующего первого акта текущей ревизии"
+    uuid SecondApprovedBy "зеркало действующего второго акта"
     datetime ApprovedAt
+    bool RequiresSecondApproval
+    int ContentRevision "растёт при сборе и изменении содержания, ADR-012"
+    int ApprovedRevision "ревизия выпуска; 0 — legacy"
+    string ApprovedDigest "SHA-256 канонического содержания выпуска; legacy"
+  }
+  BILLING_APPROVAL {
+    uuid Id
+    uuid RunId
+    string Kind "First|Second"
+    uuid ApprovedBy
+    datetime ApprovedAt
+    int ContentRevision
+    string ContentDigest "SHA-256; legacy для подписей до DEV-02"
+    string Policy "basis-total-ex-vat>200000"
+    bool RequiredSecond
+    datetime InvalidatedAt
+    string InvalidationReason "Recollected|LinesChanged|BasisCancelled|ContentChanged|RuleChanged|Migrated"
   }
   BILLING_BASIS {
     uuid Id

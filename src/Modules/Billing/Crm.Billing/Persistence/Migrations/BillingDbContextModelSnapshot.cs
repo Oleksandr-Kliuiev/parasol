@@ -23,6 +23,75 @@ namespace Crm.Billing.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Crm.Billing.Domain.BillingApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ApprovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ApprovedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("ContentRevision")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("InvalidatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("InvalidationReason")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Policy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("RequiredSecond")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId", "ContentRevision");
+
+                    b.ToTable("BillingApprovals", "billing");
+                });
+
             modelBuilder.Entity("Crm.Billing.Domain.BillingBasis", b =>
                 {
                     b.Property<Guid>("Id")
@@ -313,11 +382,21 @@ namespace Crm.Billing.Persistence.Migrations
                     b.Property<Guid?>("ApprovedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ApprovedDigest")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("ApprovedRevision")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset?>("ClosedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset?>("CollectedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ContentRevision")
+                        .HasColumnType("int");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -687,6 +766,15 @@ namespace Crm.Billing.Persistence.Migrations
                     b.ToTable("OutboxMessages", "billing");
                 });
 
+            modelBuilder.Entity("Crm.Billing.Domain.BillingApproval", b =>
+                {
+                    b.HasOne("Crm.Billing.Domain.BillingRun", null)
+                        .WithMany("Approvals")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Crm.Billing.Domain.BillingExportAttempt", b =>
                 {
                     b.HasOne("Crm.Billing.Domain.BillingBasis", null)
@@ -719,6 +807,11 @@ namespace Crm.Billing.Persistence.Migrations
                     b.Navigation("Attempts");
 
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.BillingRun", b =>
+                {
+                    b.Navigation("Approvals");
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.Invoice", b =>

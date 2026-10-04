@@ -47,21 +47,28 @@ public static class BillingModule
             .Validate<CreateRunRequest>()
             .RequirePermission(Permissions.BillingManage);
 
-        group.MapPost("/runs/{id:guid}/collect", async (Guid id, BillingService service, CancellationToken ct) =>
-                (await service.CollectAsync(id, ct)).ToHttpResult(Results.Ok))
+        // Collect and both approvals carry the run's ETag (If-Match): an approval is about the revision the user saw (ADR-012).
+        group.MapPost("/runs/{id:guid}/collect", async (Guid id, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.CollectAsync(id, ifMatch, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.BillingManage);
 
         group.MapPost("/runs/{id:guid}/review", async (Guid id, BillingService service, CancellationToken ct) =>
                 (await service.ReviewAsync(id, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.BillingManage);
 
-        group.MapPost("/runs/{id:guid}/approve", async (Guid id, BillingService service, CancellationToken ct) =>
-                (await service.ApproveAsync(id, second: false, ct)).ToHttpResult(Results.Ok))
+        group.MapPost("/runs/{id:guid}/approve", async (Guid id, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.ApproveAsync(id, second: false, ifMatch, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.BillingApprove);
 
         // BR-BIL-04: a run with a basis above the threshold also needs Management.
-        group.MapPost("/runs/{id:guid}/second-approve", async (Guid id, BillingService service, CancellationToken ct) =>
-                (await service.ApproveAsync(id, second: true, ct)).ToHttpResult(Results.Ok))
+        group.MapPost("/runs/{id:guid}/second-approve", async (Guid id, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.ApproveAsync(id, second: true, ifMatch, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.BillingApproveSecond);
 
         group.MapPost("/runs/{id:guid}/export", async (Guid id, BillingService service, CancellationToken ct) =>
@@ -137,8 +144,11 @@ public static class BillingModule
                 (await service.RetryAsync(id, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.BillingManage);
 
-        group.MapPost("/bases/{id:guid}/cancel", async (Guid id, CancelBasisRequest request, BillingService service, CancellationToken ct) =>
-                (await service.CancelAsync(id, request, ct)).ToHttpResult(Results.Ok))
+        // Cancelling a basis of an open run changes what the run invoices, so it needs the basis the user saw (ADR-012).
+        group.MapPost("/bases/{id:guid}/cancel", async (Guid id, CancelBasisRequest request, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.CancelAsync(id, request, ifMatch, ct)).ToHttpResult(Results.Ok))
             .Validate<CancelBasisRequest>()
             .RequirePermission(Permissions.BillingManage);
 

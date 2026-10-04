@@ -141,7 +141,7 @@ public class BillingApiTests(CrmWebFactory factory)
         duplicate.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await duplicate.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("BIL_PERIOD_BUSY");
 
-        (await (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).ReadJsonAsync())
+        (await (await finance.RunCommandAsync(runId, "collect")).ReadJsonAsync())
             .GetProperty("status").GetString().ShouldBe("Collected");
 
         var bases = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{runId}/bases?search={marker}");
@@ -180,7 +180,7 @@ public class BillingApiTests(CrmWebFactory factory)
         withManual.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await withManual.ReadJsonAsync()).GetProperty("totalExVat").GetDecimal().ShouldBe(19_000m);
 
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         var recollected = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/bases/{basisId}");
         recollected.GetProperty("totalExVat").GetDecimal().ShouldBe(19_000m);
         recollected.GetProperty("lines").EnumerateArray().Count(l => l.GetProperty("manuallyAdjusted").GetBoolean()).ShouldBe(1);
@@ -192,7 +192,7 @@ public class BillingApiTests(CrmWebFactory factory)
             .RespondWith(JsonReply(new { Id = 8_001, OrderNo = 5_042, CustomerId = long.Parse(customerId, CultureInfo.InvariantCulture), Status = "Draft" }));
 
         (await lead.PostAsync($"{Billing}/runs/{runId}/approve", null)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        var approved = await (await finance.PostAsync($"{Billing}/runs/{runId}/approve", null)).ReadJsonAsync();
+        var approved = await (await finance.RunCommandAsync(runId, "approve")).ReadJsonAsync();
         approved.GetProperty("status").GetString().ShouldBe("Approved");
         approved.GetProperty("approvedBy").GetProperty("name").GetString().ShouldBe("Test billing-finance");
 
@@ -276,7 +276,7 @@ public class BillingApiTests(CrmWebFactory factory)
         (await factory.WaitForRunExportAsync(finance, runId)).ShouldBeOneOf("Exported", "ExportedWithErrors");
         (await finance.PostAsync($"{Billing}/runs/{runId}/close", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{runId}")).GetProperty("status").GetString().ShouldBe("Closed");
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -306,7 +306,7 @@ public class BillingApiTests(CrmWebFactory factory)
 
         var runId = (await (await finance.PostAsJsonAsync($"{Billing}/runs", new { year = period.Year, month = period.Month })).ReadJsonAsync())
             .GetProperty("id").GetGuid();
-        var collected = await (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).ReadJsonAsync();
+        var collected = await (await finance.RunCommandAsync(runId, "collect")).ReadJsonAsync();
         collected.GetProperty("requiresSecondApproval").GetBoolean().ShouldBeTrue();
         collected.GetProperty("withAnomalies").GetInt32().ShouldBeGreaterThan(0);
 
@@ -318,10 +318,10 @@ public class BillingApiTests(CrmWebFactory factory)
         var basisId = basis.GetProperty("id").GetGuid();
 
         // BR-BIL-04: Finance alone cannot release a run above the threshold.
-        var afterFirst = await (await finance.PostAsync($"{Billing}/runs/{runId}/approve", null)).ReadJsonAsync();
+        var afterFirst = await (await finance.RunCommandAsync(runId, "approve")).ReadJsonAsync();
         afterFirst.GetProperty("status").GetString().ShouldBe("InReview");
         (await finance.PostAsync($"{Billing}/runs/{runId}/second-approve", null)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        var afterSecond = await (await management.PostAsync($"{Billing}/runs/{runId}/second-approve", null)).ReadJsonAsync();
+        var afterSecond = await (await management.RunCommandAsync(runId, "second-approve")).ReadJsonAsync();
         afterSecond.GetProperty("status").GetString().ShouldBe("Approved");
         afterSecond.GetProperty("secondApprovedBy").GetProperty("name").GetString().ShouldBe("Test billing-management");
 
@@ -331,7 +331,12 @@ public class BillingApiTests(CrmWebFactory factory)
         failed.GetProperty("attempts").EnumerateArray().First().GetProperty("message").GetString()
             .ShouldBe("The customer is not linked to a PowerOffice customer.");
 
-        (await finance.PostAsJsonAsync($"{Billing}/bases/{basisId}/cancel", new { reason = "Kunden mangler i PowerOffice" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        // Cancelling needs the basis the user saw, like every other change of a basis (ADR-012).
+        (await finance.PostAsJsonAsync($"{Billing}/bases/{basisId}/cancel", new { reason = "Kunden mangler i PowerOffice" })).StatusCode
+            .ShouldBe(HttpStatusCode.PreconditionRequired);
+        var failedEtag = (await finance.GetAsync($"{Billing}/bases/{basisId}")).Headers.ETag!.Tag;
+        (await finance.PostWithETagAsync($"{Billing}/bases/{basisId}/cancel", new { reason = "Kunden mangler i PowerOffice" }, failedEtag)).StatusCode
+            .ShouldBe(HttpStatusCode.OK);
         (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/bases/{basisId}")).GetProperty("status").GetString().ShouldBe("Cancelled");
     }
 }

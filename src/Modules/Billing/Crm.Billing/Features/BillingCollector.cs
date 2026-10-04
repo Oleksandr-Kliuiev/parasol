@@ -214,7 +214,6 @@ internal sealed class BillingCollector(
         var totalLines = 0;
         decimal total = 0;
         var withAnomalies = 0;
-        var requiresSecondApproval = false;
         var conflicts = 0;
 
         foreach (var (organizationId, lines, anomalies, customerReference) in drafts)
@@ -258,11 +257,6 @@ internal sealed class BillingCollector(
             {
                 withAnomalies++;
             }
-
-            if (basis.TotalExVat > settings.SecondApprovalThreshold)
-            {
-                requiresSecondApproval = true;
-            }
         }
 
         // A customer who no longer has anything to bill keeps no empty basis around.
@@ -291,6 +285,8 @@ internal sealed class BillingCollector(
             }
         }
 
+        // The same rule the approval applies again to the content it approves (BR-BIL-04, ADR-012).
+        var requiresSecondApproval = BillingRun.NeedsSecondApproval(existing.Values, settings.SecondApprovalThreshold);
         return new CollectResult(existing.Values.Count(b => !b.IsDeleted), totalLines, decimal.Round(total, 2), withAnomalies, requiresSecondApproval, conflicts);
     }
 

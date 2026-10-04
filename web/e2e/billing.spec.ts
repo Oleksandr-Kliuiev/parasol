@@ -161,7 +161,7 @@ test('a run without a PowerOffice customer reports the anomaly and can be cancel
   await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
 
   await signIn(page, 'Crm.Finance');
-  await api.post(page, `/api/v1/billing/runs/${run.id}/collect`);
+  await api.runCommand(page, run.id, 'collect');
 
   await page.goto(`/billing/runs/${run.id}?anomalies=true`);
   const row = page.getByRole('row').filter({ hasText: `${m} Uten kobling AS` });
@@ -203,7 +203,7 @@ test('a correction survives a new collect and a line left out stays out', async 
   await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
 
   await signIn(page, 'Crm.Finance');
-  await api.post(page, `/api/v1/billing/runs/${run.id}/collect`);
+  await api.runCommand(page, run.id, 'collect');
   const bases = await api.get<Array<{ id: string; organization: { id: string } }>>(page, `/api/v1/billing/runs/${run.id}/bases?search=${m}`);
   const basisId = bases.find((b) => b.organization.id === organization.id)!.id;
   await page.goto(`/billing/bases/${basisId}`);
@@ -235,4 +235,53 @@ test('a correction survives a new collect and a line left out stays out', async 
   await expect(driftRow.getByText('Source: NOK 1,000.00')).toBeVisible();
   await expect(backupRow.getByText('Left out: Included in the bundle this month', { exact: false })).toBeVisible();
   await expect(backupRow.getByRole('button', { name: /^Include .* again$/ })).toBeVisible();
+});
+
+test('an approval belongs to the revision on screen and a change sets it aside with the reason', async ({ page }) => {
+  test.setTimeout(120_000);
+  const m = marker('God');
+  await signIn(page, 'Crm.Admin');
+  const run = await reserveBillingRun(page, m);
+  const organization = await createOrganization(page, { name: `${m} Godkjenning AS`, status: 'Customer' });
+  // Above the 200 000 threshold, so the run needs Finance and management (BR-BIL-04).
+  const product = await api.post<{ id: string }>(page, '/api/v1/catalog/products', {
+    sku: `${m}-PRJ`, name: `${m} Prosjekt`, type: 'ManagedService', businessLine: 'Atera', unit: 'Piece',
+    billingPeriod: 'Monthly', vatRate: 25, listPrice: 250000, unitCost: 100000,
+  });
+  const contract = await api.post<{ id: string }>(page, '/api/v1/contracts', {
+    organizationId: organization.id, title: `${m} Avtale`, type: 'Msp', startDate: run.start, endDate: periodEnd(run), autoRenew: false,
+    renewalTermMonths: 0, noticePeriodDays: 30, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance', indexation: false,
+  });
+  await api.post(page, `/api/v1/contracts/${contract.id}/lines`, { productId: product.id, quantityModel: 'Fixed', quantity: 1, unitPrice: 250000, validFrom: run.start });
+  await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
+
+  await signIn(page, 'Crm.Finance');
+  await api.runCommand(page, run.id, 'collect');
+  await page.goto(`/billing/runs/${run.id}`);
+  const approvals = page.getByRole('region', { name: 'Approvals' });
+  await expect(approvals).toContainText('is waiting for approval');
+  await expect(approvals).toContainText('two different people');
+
+  // Finance approves; the run waits for somebody else, and Finance is not offered the other approval.
+  await page.getByRole('button', { name: 'Approve', exact: true }).click();
+  await expect(toast(page, 'Your approval is recorded')).toBeVisible();
+  await expect(page.getByText('The other approval has to come from someone else.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
+  await expect(approvals.getByRole('listitem').filter({ hasText: 'Finance:' })).toBeVisible();
+
+  // A line changes on the basis: the approval no longer counts, and the run page says why.
+  const bases = await api.get<Array<{ id: string; organization: { id: string } }>>(page, `/api/v1/billing/runs/${run.id}/bases?search=${m}`);
+  await page.goto(`/billing/bases/${bases.find((b) => b.organization.id === organization.id)!.id}`);
+  await page.getByRole('button', { name: 'Add line' }).click();
+  const lineDialog = page.getByRole('dialog');
+  await lineDialog.getByRole('textbox', { name: 'Description' }).fill(`${m} Tillegg`);
+  await lineDialog.getByRole('textbox', { name: 'Unit price' }).fill('1 000');
+  await lineDialog.getByRole('button', { name: 'Create' }).click();
+  await expect(toast(page, 'Line added')).toBeVisible();
+
+  await page.goto(`/billing/runs/${run.id}`);
+  await expect(page.getByText('Earlier approvals no longer count', { exact: false })).toBeVisible();
+  await expect(approvals.getByRole('heading', { name: 'Set aside' })).toBeVisible();
+  await expect(approvals.getByRole('listitem').filter({ hasText: 'Lines were changed afterwards.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve', exact: true })).toBeEnabled();
 });

@@ -42,6 +42,14 @@ export const api = {
   /** The CSV imports take the file as the request body. */
   postCsv: async <T>(page: Page, url: string, csv: string) =>
     json<T>(await page.request.post(url, { data: csv, headers: { 'X-CSRF': '1', 'Content-Type': 'text/csv' } })),
+  /** Collect and both approvals carry the ETag of the run they are about, as the run page sends it (ADR-012). */
+  runCommand: async <T>(page: Page, runId: string, command: 'collect' | 'approve' | 'second-approve') => {
+    const read = await page.request.get(`/api/v1/billing/runs/${runId}`);
+    expect(read.ok(), `${read.url()} → ${read.status()}`).toBeTruthy();
+    const etag = read.headers()['etag'];
+    expect(etag, 'the run answers with its ETag').toBeTruthy();
+    return json<T>(await page.request.post(`/api/v1/billing/runs/${runId}/${command}`, { data: {}, headers: { 'X-CSRF': '1', 'If-Match': etag! } }));
+  },
 };
 
 export async function createOrganization(page: Page, body: Record<string, unknown>) {
@@ -105,6 +113,6 @@ export async function reserveBillingRun(page: Page, notes: string, fromYear = AP
 /** A collected run of this test's own; runs of other tests are never reused, as they may change state meanwhile. */
 export async function collectedBillingRun(page: Page, notes: string): Promise<{ id: string }> {
   const run = await reserveBillingRun(page, notes);
-  await api.post(page, `/api/v1/billing/runs/${run.id}/collect`);
+  await api.runCommand(page, run.id, 'collect');
   return run;
 }

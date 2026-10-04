@@ -2,6 +2,7 @@ using Crm.Billing.Contracts;
 using Crm.Billing.Domain;
 using Crm.Contracts.Contracts;
 using Crm.Integrations.PowerOffice;
+using Crm.SharedKernel.Results;
 
 namespace Crm.UnitTests;
 
@@ -193,6 +194,31 @@ public class BillingBasisTests
 
 public class BillingRunTests
 {
+    private const decimal Threshold = 200_000m;
+    private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-10-04T08:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>A collected run with one basis per amount, each a single collected contract line.</summary>
+    internal static (BillingRun Run, List<BillingBasis> Bases) Collected(params decimal[] amounts)
+    {
+        var run = BillingRun.Create(2026, 9, null);
+        var bases = amounts.Select(amount => BasisOf(run, amount)).ToList();
+        run.MarkCollected(Now, BillingRun.NeedsSecondApproval(bases, Threshold)).IsSuccess.ShouldBeTrue();
+        return (run, bases);
+    }
+
+    internal static BillingBasis BasisOf(BillingRun run, decimal amount)
+    {
+        var basis = BillingBasis.Create(run, Guid.NewGuid(), null);
+        var lineId = Guid.NewGuid();
+        basis.ApplyCollected(
+            [new LineDraft(BillingGroup.Subscription, Guid.NewGuid(), "Drift", 1, amount, 0, 25m, $"{{\"contractLineId\":\"{lineId}\"}}", $"contract:{lineId:N}:2026-09-01:2026-09-30")],
+            null).IsSuccess.ShouldBeTrue();
+        return basis;
+    }
+
+    private static Result Approve(BillingRun run, List<BillingBasis> bases, BillingApprovalKind kind, Guid? user, decimal threshold = Threshold) =>
+        run.Approve(kind, user, Now, bases, threshold);
+
     [Fact]
     public void A_run_covers_the_whole_month()
     {
@@ -205,43 +231,270 @@ public class BillingRunTests
     }
 
     [Fact]
-    public void Approval_needs_a_collected_run_and_raises_an_event()
+    public void Approval_needs_a_collected_run_and_raises_one_event()
     {
         var run = BillingRun.Create(2026, 9, null);
+        var bases = new List<BillingBasis> { BasisOf(run, 1_000m) };
         var user = Guid.NewGuid();
 
-        run.Approve(user, DateTimeOffset.UtcNow).Error!.Code.ShouldBe("BIL_INVALID_STATUS");
-        run.MarkCollected(DateTimeOffset.UtcNow, requiresSecondApproval: false);
-        run.Approve(user, DateTimeOffset.UtcNow).IsSuccess.ShouldBeTrue();
+        Approve(run, bases, BillingApprovalKind.First, user).Error!.Code.ShouldBe("BIL_INVALID_STATUS");
+        run.MarkCollected(Now, requiresSecondApproval: false);
+        Approve(run, bases, BillingApprovalKind.First, user).IsSuccess.ShouldBeTrue();
 
         run.Status.ShouldBe(BillingRunStatus.Approved);
+        run.ApprovedBy.ShouldBe(user);
+        run.ApprovedRevision.ShouldBe(run.ContentRevision);
+        run.ApprovedDigest.ShouldBe(BillingContentDigest.Compute(bases));
+        run.DomainEvents.OfType<BillingRunApproved>().ShouldHaveSingleItem();
+
+        // Approving again is refused and raises nothing more.
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).Error!.Code.ShouldBe("BIL_INVALID_STATUS");
         run.DomainEvents.OfType<BillingRunApproved>().ShouldHaveSingleItem();
     }
 
     [Fact]
     public void Above_the_threshold_the_run_waits_for_a_second_approver()
     {
-        var run = BillingRun.Create(2026, 9, null);
-        run.MarkCollected(DateTimeOffset.UtcNow, requiresSecondApproval: true);
+        var (run, bases) = Collected(250_000m);
         var finance = Guid.NewGuid();
 
-        run.Approve(finance, DateTimeOffset.UtcNow).IsSuccess.ShouldBeTrue();
+        Approve(run, bases, BillingApprovalKind.First, finance).IsSuccess.ShouldBeTrue();
         run.Status.ShouldBe(BillingRunStatus.InReview);
         run.DomainEvents.ShouldBeEmpty();
 
-        run.SecondApprove(finance, DateTimeOffset.UtcNow).Error!.Code.ShouldBe("BIL_SAME_APPROVER");
-        run.SecondApprove(Guid.NewGuid(), DateTimeOffset.UtcNow).IsSuccess.ShouldBeTrue();
+        Approve(run, bases, BillingApprovalKind.Second, finance).Error!.Code.ShouldBe("BIL_SAME_APPROVER");
+        Approve(run, bases, BillingApprovalKind.Second, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
 
         run.Status.ShouldBe(BillingRunStatus.Approved);
         run.DomainEvents.OfType<BillingRunApproved>().ShouldHaveSingleItem();
     }
 
     [Fact]
-    public void A_run_is_closed_only_after_it_was_exported()
+    public void The_two_approvals_come_from_two_people_in_either_order()
+    {
+        var (run, bases) = Collected(250_000m);
+        var admin = Guid.NewGuid();
+
+        // Management may sign first; the first approval then still has to come from somebody else.
+        Approve(run, bases, BillingApprovalKind.Second, admin).IsSuccess.ShouldBeTrue();
+        run.Status.ShouldBe(BillingRunStatus.InReview);
+        Approve(run, bases, BillingApprovalKind.First, admin).Error!.Code.ShouldBe("BIL_SAME_APPROVER");
+        run.Status.ShouldBe(BillingRunStatus.InReview);
+
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+        run.Status.ShouldBe(BillingRunStatus.Approved);
+    }
+
+    [Theory]
+    [InlineData("199999.99", false)]
+    [InlineData("200000", false)]
+    [InlineData("200000.01", true)]
+    public void The_second_approval_is_needed_when_one_basis_is_strictly_above_the_threshold_excluding_VAT(string amount, bool needed)
+    {
+        var (run, bases) = Collected(decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture));
+
+        BillingRun.NeedsSecondApproval(bases, Threshold).ShouldBe(needed);
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+        run.Status.ShouldBe(needed ? BillingRunStatus.InReview : BillingRunStatus.Approved);
+    }
+
+    [Fact]
+    public void The_threshold_applies_to_each_basis_and_not_to_the_run_total()
+    {
+        var (run, bases) = Collected(150_000m, 150_000m);
+
+        BillingRun.NeedsSecondApproval(bases, Threshold).ShouldBeFalse();
+        Approve(run, bases, BillingApprovalKind.Second, Guid.NewGuid()).Error!.Code.ShouldBe("BIL_NO_SECOND_APPROVAL");
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+        run.Status.ShouldBe(BillingRunStatus.Approved);
+    }
+
+    [Fact]
+    public void A_cancelled_basis_does_not_count_for_the_threshold()
+    {
+        var (_, bases) = Collected(250_000m, 1_000m);
+
+        bases[0].Cancel(Now, "Fakturert manuelt").IsSuccess.ShouldBeTrue();
+
+        BillingRun.NeedsSecondApproval(bases, Threshold).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void The_threshold_is_evaluated_from_the_content_at_approval_not_at_collect()
+    {
+        var (run, bases) = Collected(10_000m);
+        run.RequiresSecondApproval.ShouldBeFalse();
+
+        // A manual line lifts the basis over the threshold after the collect.
+        bases[0].AddManualLine(new LineDraft(BillingGroup.OneOff, null, "Prosjekt", 1, 300_000m, 0, 25m, null), Guid.NewGuid(), Now, "Prosjektleveranse")
+            .IsSuccess.ShouldBeTrue();
+        run.ContentChanged(ApprovalResetReasons.LinesChanged, Now).IsSuccess.ShouldBeTrue();
+
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+
+        run.Status.ShouldBe(BillingRunStatus.InReview);
+        run.RequiresSecondApproval.ShouldBeTrue();
+        run.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_collect_sets_earlier_approvals_aside_and_keeps_them_with_the_reason()
+    {
+        var (run, bases) = Collected(250_000m);
+        var finance = Guid.NewGuid();
+        Approve(run, bases, BillingApprovalKind.First, finance).IsSuccess.ShouldBeTrue();
+        var revision = run.ContentRevision;
+
+        run.MarkCollected(Now.AddMinutes(5), requiresSecondApproval: true).IsSuccess.ShouldBeTrue();
+
+        run.ContentRevision.ShouldBe(revision + 1);
+        run.Status.ShouldBe(BillingRunStatus.Collected);
+        run.ApprovedBy.ShouldBeNull();
+        run.CurrentApprovals.ShouldBeEmpty();
+        var old = run.Approvals.ShouldHaveSingleItem();
+        old.ApprovedBy.ShouldBe(finance);
+        old.ContentRevision.ShouldBe(revision);
+        old.InvalidationReason.ShouldBe(ApprovalResetReasons.Recollected);
+        old.InvalidatedAt.ShouldBe(Now.AddMinutes(5));
+
+        // The same person may approve the new revision; the second approval must still come from someone else.
+        Approve(run, bases, BillingApprovalKind.First, finance).IsSuccess.ShouldBeTrue();
+        Approve(run, bases, BillingApprovalKind.Second, finance).Error!.Code.ShouldBe("BIL_SAME_APPROVER");
+    }
+
+    [Fact]
+    public void A_change_of_the_lines_sets_approvals_aside_and_sends_the_run_back_for_approval()
+    {
+        var (run, bases) = Collected(250_000m);
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+        run.Status.ShouldBe(BillingRunStatus.InReview);
+
+        run.ContentChanged(ApprovalResetReasons.LinesChanged, Now).IsSuccess.ShouldBeTrue();
+
+        run.Status.ShouldBe(BillingRunStatus.Collected);
+        run.CurrentApprovals.ShouldBeEmpty();
+        run.Approvals.ShouldHaveSingleItem().InvalidationReason.ShouldBe(ApprovalResetReasons.LinesChanged);
+    }
+
+    [Fact]
+    public void An_approved_run_does_not_change_any_more()
+    {
+        var (run, bases) = Collected(1_000m);
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+
+        run.ContentChanged(ApprovalResetReasons.LinesChanged, Now).Error!.Code.ShouldBe("BIL_INVALID_STATUS");
+        run.MarkCollected(Now, false).Error!.Code.ShouldBe("BIL_INVALID_STATUS");
+        run.CurrentApprovals.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void An_approval_records_the_revision_the_content_digest_and_the_rule()
+    {
+        var (run, bases) = Collected(250_000m);
+        var user = Guid.NewGuid();
+
+        Approve(run, bases, BillingApprovalKind.First, user).IsSuccess.ShouldBeTrue();
+
+        var approval = run.Approvals.ShouldHaveSingleItem();
+        approval.Kind.ShouldBe(BillingApprovalKind.First);
+        approval.ApprovedBy.ShouldBe(user);
+        approval.ApprovedAt.ShouldBe(Now);
+        approval.ContentRevision.ShouldBe(run.ContentRevision);
+        approval.ContentDigest.ShouldBe(BillingContentDigest.Compute(bases));
+        approval.ContentDigest.Length.ShouldBe(64);
+        approval.Policy.ShouldBe("basis-total-ex-vat>200000");
+        approval.RequiredSecond.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void An_approval_of_other_content_within_the_revision_does_not_count()
+    {
+        var (run, bases) = Collected(250_000m);
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+
+        // Defence in depth: a line changes without a new revision (a path that forgot to say so).
+        bases[0].AddManualLine(new LineDraft(BillingGroup.OneOff, null, "Tillegg", 1, 5_000m, 0, 25m, null), Guid.NewGuid(), Now, "Tillegg")
+            .IsSuccess.ShouldBeTrue();
+        Approve(run, bases, BillingApprovalKind.Second, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+
+        // The first approval was about other content: it is set aside, and one approval of this content is not enough.
+        run.Status.ShouldBe(BillingRunStatus.InReview);
+        run.Approvals.Single(a => a.Kind == BillingApprovalKind.First).InvalidationReason.ShouldBe(ApprovalResetReasons.ContentChanged);
+        run.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_changed_rule_sets_an_earlier_approval_aside()
+    {
+        var (run, bases) = Collected(250_000m);
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+
+        Approve(run, bases, BillingApprovalKind.Second, Guid.NewGuid(), threshold: 100_000m).IsSuccess.ShouldBeTrue();
+
+        run.Status.ShouldBe(BillingRunStatus.InReview);
+        run.Approvals.Single(a => a.Kind == BillingApprovalKind.First).InvalidationReason.ShouldBe(ApprovalResetReasons.RuleChanged);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("00000000-0000-0000-0000-000000000000")]
+    public void An_approval_needs_a_person(string? user)
+    {
+        var (run, bases) = Collected(1_000m);
+
+        Approve(run, bases, BillingApprovalKind.First, user is null ? null : Guid.Parse(user)).Error!.Code.ShouldBe("BIL_APPROVER_REQUIRED");
+
+        run.Status.ShouldBe(BillingRunStatus.Collected);
+        run.Approvals.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void The_same_approval_is_given_once_per_revision()
+    {
+        var (run, bases) = Collected(250_000m);
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).Error!.Code.ShouldBe("BIL_ALREADY_APPROVED");
+        run.Approvals.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void A_refused_approval_leaves_signatures_status_and_events_as_they_were()
+    {
+        var (run, bases) = Collected(250_000m);
+        var admin = Guid.NewGuid();
+        Approve(run, bases, BillingApprovalKind.Second, admin).IsSuccess.ShouldBeTrue();
+        var before = (run.Status, run.ApprovedBy, run.SecondApprovedBy, run.Approvals.Count, run.ContentRevision, Events: run.DomainEvents.Count);
+
+        Approve(run, bases, BillingApprovalKind.First, admin).Error!.Code.ShouldBe("BIL_SAME_APPROVER");
+        Approve(run, bases, BillingApprovalKind.Second, Guid.NewGuid()).Error!.Code.ShouldBe("BIL_ALREADY_APPROVED");
+        Approve(run, bases, BillingApprovalKind.First, null).Error!.Code.ShouldBe("BIL_APPROVER_REQUIRED");
+
+        (run.Status, run.ApprovedBy, run.SecondApprovedBy, run.Approvals.Count, run.ContentRevision, Events: run.DomainEvents.Count).ShouldBe(before);
+        run.CurrentApprovals.ShouldHaveSingleItem().InvalidatedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public void A_line_waiting_for_a_decision_blocks_the_approval()
     {
         var run = BillingRun.Create(2026, 9, null);
-        run.MarkCollected(DateTimeOffset.UtcNow, false);
-        run.Approve(Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var basis = BillingBasis.Create(run, Guid.NewGuid(), null);
+        var lineId = Guid.NewGuid();
+        LineDraft Source(decimal price) => new(BillingGroup.Subscription, null, "Drift", 1, price, 0, 25m, "{}", $"contract:{lineId:N}:2026-09-01:2026-09-30");
+        basis.ApplyCollected([Source(1_000m)], null).IsSuccess.ShouldBeTrue();
+        basis.UpdateLine(basis.CurrentLines.Single().Id, 1, 900m, 0, "Drift", "Rabatt", Guid.NewGuid(), Now).IsSuccess.ShouldBeTrue();
+        basis.ApplyCollected([Source(1_100m)], null).IsSuccess.ShouldBeTrue();
+        run.MarkCollected(Now, false);
+
+        run.Approve(BillingApprovalKind.First, Guid.NewGuid(), Now, [basis], Threshold).Error!.Code.ShouldBe("BIL_UNRESOLVED_CONFLICTS");
+        run.Approvals.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_run_is_closed_only_after_it_was_exported()
+    {
+        var (run, bases) = Collected(1_000m);
+        Approve(run, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
 
         run.Close(DateTimeOffset.UtcNow).Error!.Code.ShouldBe("BIL_INVALID_STATUS");
         run.StartExport().IsSuccess.ShouldBeTrue();
@@ -257,10 +510,55 @@ public class BillingRunTests
         var run = BillingRun.Create(2026, 9, null);
         run.Discard().IsSuccess.ShouldBeTrue();
 
-        var approved = BillingRun.Create(2026, 10, null);
-        approved.MarkCollected(DateTimeOffset.UtcNow, false);
-        approved.Approve(Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var (approved, bases) = Collected(1_000m);
+        Approve(approved, bases, BillingApprovalKind.First, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
         approved.Discard().Error!.Code.ShouldBe("BIL_INVALID_STATUS");
+    }
+}
+
+public class BillingContentDigestTests
+{
+    private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-10-04T08:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+
+    [Fact]
+    public void The_digest_does_not_depend_on_the_order_of_bases_or_lines()
+    {
+        var (_, bases) = BillingRunTests.Collected(1_000m, 2_000m, 3_000m);
+
+        var reversed = Enumerable.Reverse(bases).ToList();
+
+        BillingContentDigest.Compute(reversed).ShouldBe(BillingContentDigest.Compute(bases));
+        BillingContentDigest.Compute(bases).ShouldMatch("^[0-9a-f]{64}$");
+    }
+
+    [Fact]
+    public void An_amount_a_payer_or_a_cancelled_invoice_changes_the_digest()
+    {
+        var (run, bases) = BillingRunTests.Collected(1_000m, 2_000m);
+        var digest = BillingContentDigest.Compute(bases);
+
+        var otherPayer = new List<BillingBasis> { bases[0], BillingRunTests.BasisOf(run, 2_000m) };
+        BillingContentDigest.Compute(otherPayer).ShouldNotBe(digest);
+
+        var line = bases[1].CurrentLines.Single();
+        bases[1].UpdateLine(line.Id, 1, 2_000.01m, 0, line.Description, "Øreavrunding", Guid.NewGuid(), Now).IsSuccess.ShouldBeTrue();
+        var changedAmount = BillingContentDigest.Compute(bases);
+        changedAmount.ShouldNotBe(digest);
+
+        bases[1].Cancel(Now, "Fakturert manuelt").IsSuccess.ShouldBeTrue();
+        BillingContentDigest.Compute(bases).ShouldNotBe(changedAmount);
+    }
+
+    [Fact]
+    public void The_delivery_status_of_a_released_basis_is_not_content()
+    {
+        var (_, bases) = BillingRunTests.Collected(1_000m);
+        var digest = BillingContentDigest.Compute(bases);
+
+        bases[0].Approve().IsSuccess.ShouldBeTrue();
+        BillingContentDigest.Compute(bases).ShouldBe(digest);
+        bases[0].MarkExported("poweroffice", "5042", Now, null);
+        BillingContentDigest.Compute(bases).ShouldBe(digest);
     }
 }
 

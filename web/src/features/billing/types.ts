@@ -35,14 +35,35 @@ export interface RunListItem {
   closedAt: string | null;
 }
 
+export type ApprovalKind = 'First' | 'Second';
+export type ApprovalResetReason = 'Recollected' | 'LinesChanged' | 'BasisCancelled' | 'ContentChanged' | 'RuleChanged' | 'Migrated';
+
+/** One approval act about one content revision of the run; `valid` is false once a later revision set it aside (ADR-012). */
+export interface Approval {
+  kind: ApprovalKind;
+  approvedBy: Ref;
+  approvedAt: string;
+  contentRevision: number;
+  valid: boolean;
+  invalidatedAt: string | null;
+  invalidationReason: ApprovalResetReason | null;
+}
+
 export interface Run extends RunListItem {
   exported: number;
   failed: number;
+  /** The valid first and second approvals of the current revision. */
   approvedBy: Ref | null;
   secondApprovedBy: Ref | null;
   notes: string | null;
   /** Lines whose source changed after Finance decided about them; the run cannot be approved while any is left. */
   conflicts: number;
+  /** Goes up with every collect and every change of the lines; approvals are about one revision. */
+  contentRevision: number;
+  /** The revision the run was released with. */
+  approvedRevision: number | null;
+  /** Every approval ever given, including those set aside, oldest first. */
+  approvals: Approval[];
   etag: string;
 }
 

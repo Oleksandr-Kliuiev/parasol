@@ -27,11 +27,16 @@ public class BillingRegressionTests
         JsonSerializer.Serialize(new { contractId, contractLineId, subscriptionIds = (string[]?)null, prorationFactor = (decimal?)null }),
         $"contract:{contractLineId:N}:2026-09-01:2026-09-30");
 
-    private static BillingRun CollectedRun(bool requiresSecondApproval)
+    private const decimal Threshold = 200_000m;
+
+    /// <summary>A collected run with one customer basis of <paramref name="amount"/> (BillingOptions.SecondApprovalThreshold is 200 000).</summary>
+    private static (BillingRun Run, BillingBasis Basis) CollectedRun(decimal amount)
     {
         var run = BillingRun.Create(2026, 9, null);
-        run.MarkCollected(Now, requiresSecondApproval).IsSuccess.ShouldBeTrue();
-        return run;
+        var basis = BillingBasis.Create(run, Guid.NewGuid(), null);
+        basis.ApplyCollected([ContractLine(amount, Guid.NewGuid(), Guid.NewGuid())], null).IsSuccess.ShouldBeTrue();
+        run.MarkCollected(Now, BillingRun.NeedsSecondApproval([basis], Threshold)).IsSuccess.ShouldBeTrue();
+        return (run, basis);
     }
 
     [Theory]
@@ -64,11 +69,11 @@ public class BillingRegressionTests
     [Trait("Regression", "A02")]
     public void A02_one_person_cannot_give_both_approvals_by_signing_the_second_one_first()
     {
-        var run = CollectedRun(requiresSecondApproval: true);
+        var (run, basis) = CollectedRun(300_000m);
         var approver = Guid.NewGuid();
 
-        run.SecondApprove(approver, Now);
-        run.Approve(approver, Now);
+        run.Approve(BillingApprovalKind.Second, approver, Now, [basis], Threshold);
+        run.Approve(BillingApprovalKind.First, approver, Now, [basis], Threshold);
 
         // Two approvals are two people, whichever order they sign in (BR-BIL-04).
         run.Status.ShouldNotBe(BillingRunStatus.Approved);
@@ -79,12 +84,12 @@ public class BillingRegressionTests
     [Trait("Regression", "A02")]
     public void A02_an_approval_given_before_a_recollect_does_not_count_for_the_recollected_content()
     {
-        var run = CollectedRun(requiresSecondApproval: true);
-        run.Approve(Guid.NewGuid(), Now).IsSuccess.ShouldBeTrue();
+        var (run, basis) = CollectedRun(300_000m);
+        run.Approve(BillingApprovalKind.First, Guid.NewGuid(), Now, [basis], Threshold).IsSuccess.ShouldBeTrue();
 
         // The run is collected again after the first signature, so its content may have changed.
         run.MarkCollected(Now.AddMinutes(5), requiresSecondApproval: true);
-        run.SecondApprove(Guid.NewGuid(), Now.AddMinutes(10));
+        run.Approve(BillingApprovalKind.Second, Guid.NewGuid(), Now.AddMinutes(10), [basis], Threshold);
 
         // Only one signature belongs to the recollected content; it must not be released.
         run.Status.ShouldNotBe(BillingRunStatus.Approved);
@@ -96,13 +101,12 @@ public class BillingRegressionTests
     public void A02_a_manual_line_that_lifts_a_basis_over_the_threshold_needs_a_second_approval()
     {
         // Collected below the 200 000 threshold (BillingOptions.SecondApprovalThreshold).
-        var run = CollectedRun(requiresSecondApproval: false);
-        var basis = BillingBasis.Create(run, Guid.NewGuid(), null);
-        basis.ApplyCollected([ContractLine(10_000m, Guid.NewGuid(), Guid.NewGuid())], null).IsSuccess.ShouldBeTrue();
+        var (run, basis) = CollectedRun(10_000m);
+        run.RequiresSecondApproval.ShouldBeFalse();
         basis.AddManualLine(new LineDraft(BillingGroup.OneOff, null, "Prosjektleveranse", 1, 300_000m, 0, 25m, null), Guid.NewGuid(), Now).IsSuccess.ShouldBeTrue();
         basis.TotalExVat.ShouldBe(310_000m);
 
-        run.Approve(Guid.NewGuid(), Now);
+        run.Approve(BillingApprovalKind.First, Guid.NewGuid(), Now, [basis], Threshold);
 
         // A basis above the threshold is never released by one person, however its amount got there (BR-BIL-04).
         run.Status.ShouldNotBe(BillingRunStatus.Approved);

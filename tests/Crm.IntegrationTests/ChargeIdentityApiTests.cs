@@ -49,7 +49,7 @@ public class ChargeIdentityApiTests(CrmWebFactory factory)
     }
 
     private static async Task CollectAsync(HttpClient finance, Guid runId) =>
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
 
     private static async Task<Guid> BasisIdAsync(HttpClient finance, Guid runId, Guid organizationId, string marker) =>
         (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{runId}/bases?search={marker}"))
@@ -145,7 +145,7 @@ public class ChargeIdentityApiTests(CrmWebFactory factory)
         conflicted.GetProperty("sourceLineTotal").GetDecimal().ShouldBe(1_100m);
         (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{runId}")).GetProperty("conflicts").GetInt32().ShouldBe(1);
 
-        var blocked = await finance.PostAsync($"{Billing}/runs/{runId}/approve", null);
+        var blocked = await finance.RunCommandAsync(runId, "approve");
         blocked.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await blocked.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("BIL_UNRESOLVED_CONFLICTS");
         (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{runId}")).GetProperty("status").GetString().ShouldBe("Collected");
@@ -158,7 +158,7 @@ public class ChargeIdentityApiTests(CrmWebFactory factory)
         var resolved = await kept.ReadJsonAsync();
         resolved.GetProperty("conflicts").GetInt32().ShouldBe(0);
         resolved.GetProperty("totalExVat").GetDecimal().ShouldBe(900m);
-        (await (await finance.PostAsync($"{Billing}/runs/{runId}/approve", null)).ReadJsonAsync()).GetProperty("status").GetString().ShouldBe("Approved");
+        (await (await finance.RunCommandAsync(runId, "approve")).ReadJsonAsync()).GetProperty("status").GetString().ShouldBe("Approved");
     }
 
     [Fact]
@@ -218,7 +218,9 @@ public class ChargeIdentityApiTests(CrmWebFactory factory)
 
         var runId = await RunAsync(finance, period, marker);
         await CollectAsync(finance, runId);
-        var responses = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => finance.PostAsync($"{Billing}/runs/{runId}/collect", null)));
+        // Three tabs collect the revision they all saw.
+        var seen = await finance.RunETagAsync(runId);
+        var responses = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => finance.PostWithETagAsync($"{Billing}/runs/{runId}/collect", new { }, seen)));
 
         // Parallel collects never fail with a server error and never leave a second basis or line behind.
         responses.ShouldAllBe(r => r.StatusCode == HttpStatusCode.OK || r.StatusCode == HttpStatusCode.PreconditionFailed || r.StatusCode == HttpStatusCode.Conflict);
@@ -246,7 +248,7 @@ public class ChargeIdentityApiTests(CrmWebFactory factory)
         var customer = await CustomerAsync(admin, finance, "L", period, period.AddMonths(1).AddDays(-1), 1_000m);
         var runId = await RunAsync(finance, period, customer.Marker);
         var basisId = await BasisIdAsync(finance, runId, customer.OrganizationId, customer.Marker);
-        (await (await finance.PostAsync($"{Billing}/runs/{runId}/approve", null)).ReadJsonAsync()).GetProperty("status").GetString().ShouldBe("Approved");
+        (await (await finance.RunCommandAsync(runId, "approve")).ReadJsonAsync()).GetProperty("status").GetString().ShouldBe("Approved");
         var (basis, etag) = await BasisAsync(finance, basisId);
         var lineId = CollectedLine(basis).GetProperty("id").GetGuid();
         var url = $"{Billing}/bases/{basisId}/lines";
@@ -266,7 +268,7 @@ public class ChargeIdentityApiTests(CrmWebFactory factory)
             (await attempt.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("BIL_BASIS_LOCKED");
         }
 
-        var collect = await finance.PostAsync($"{Billing}/runs/{runId}/collect", null);
+        var collect = await finance.RunCommandAsync(runId, "collect");
         collect.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await collect.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("BIL_INVALID_STATUS");
         (await BasisAsync(finance, basisId)).Basis.GetProperty("totalExVat").GetDecimal().ShouldBe(1_000m);
@@ -319,7 +321,7 @@ public class ChargeIdentityApiTests(CrmWebFactory factory)
         var legacy = held.GetProperty("lines").EnumerateArray().Single(l => l.GetProperty("conflict").GetString() == "LegacyUnmatched");
         legacy.GetProperty("lineTotal").GetDecimal().ShouldBe(900m);
         held.GetProperty("conflicts").GetInt32().ShouldBe(1);
-        (await finance.PostAsync($"{Billing}/runs/{runId}/approve", null)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await finance.RunCommandAsync(runId, "approve")).StatusCode.ShouldBe(HttpStatusCode.Conflict);
 
         // Finance drops the old correction: the source is billed once, at its current price.
         var reverted = await finance.PostWithETagAsync($"{Billing}/bases/{correctedBasis}/lines/{legacy.GetProperty("id").GetGuid()}/revert", new { }, heldEtag);

@@ -401,7 +401,7 @@ export function BillingBasisPage() {
           {dialog?.kind === 'edit' && <LineForm basisId={id} etag={basis.etag} line={dialog.line} onClose={() => setDialog(null)} />}
           {dialog?.kind === 'exclude' && <DecisionForm basisId={id} etag={basis.etag} line={dialog.line} kind="exclude" onClose={() => setDialog(null)} />}
           {dialog?.kind === 'keep' && <DecisionForm basisId={id} etag={basis.etag} line={dialog.line} kind="keep" onClose={() => setDialog(null)} />}
-          {dialog?.kind === 'cancel' && <CancelForm basisId={id} onClose={() => setDialog(null)} />}
+          {dialog?.kind === 'cancel' && <CancelForm basisId={id} etag={basis.etag} onClose={() => setDialog(null)} />}
         </DialogSurface>
       </Dialog>
     </>
@@ -591,7 +591,7 @@ function DecisionForm({
   );
 }
 
-function CancelForm({ basisId, onClose }: { basisId: string; onClose: () => void }) {
+function CancelForm({ basisId, etag, onClose }: { basisId: string; etag: string; onClose: () => void }) {
   const { t } = useTranslation();
   const notify = useNotify();
   const actions = useBasisActions(basisId);
@@ -599,7 +599,7 @@ function CancelForm({ basisId, onClose }: { basisId: string; onClose: () => void
 
   const submit = async () => {
     try {
-      await actions.cancel.mutateAsync(reason.trim());
+      await actions.cancel.mutateAsync({ reason: reason.trim(), etag });
       notify(t('billing.basisCancelled'));
       onClose();
     } catch {

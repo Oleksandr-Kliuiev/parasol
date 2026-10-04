@@ -80,7 +80,13 @@
       "BIL_NOTHING_TO_REVERT": "Linjen følger allerede kilden.",
       "BIL_NO_CONFLICT": "Linjen har ingen konflikt å løse.",
       "BIL_UNRESOLVED_CONFLICTS": "Noen linjer er endret i kilden etter at økonomi tok stilling til dem. Løs dem før godkjenning.",
-      "BIL_BASIS_LOCKED": "Grunnlaget er godkjent og kan ikke lenger endres; korrigeringer hører hjemme i neste periode."
+      "BIL_BASIS_LOCKED": "Grunnlaget er godkjent og kan ikke lenger endres; korrigeringer hører hjemme i neste periode.",
+      "BIL_SAME_APPROVER": "Én person kan ikke gi begge godkjenningene for en kjøring. Den andre godkjenningen må komme fra en annen person.",
+      "BIL_ALREADY_APPROVED": "Denne godkjenningen er allerede gitt for gjeldende versjon.",
+      "BIL_NO_SECOND_APPROVAL": "Ingen kunde er over terskelen, så kjøringen trenger ikke godkjenning fra ledelsen.",
+      "BIL_APPROVER_REQUIRED": "Bare en innlogget CRM-bruker kan godkjenne.",
+      "BIL_APPROVER_INACTIVE": "CRM-kontoen din er ikke aktiv, så du kan ikke godkjenne.",
+      "BIL_INVALID_STATUS": "Kjøringen er ikke lenger i en tilstand som tillater dette. Last inn siden på nytt for å se hvor den står."
     }
   },
   "status": {
@@ -1586,7 +1592,32 @@
     "approve": "Godkjenn",
     "secondApprove": "Godkjenn som ledelse",
     "approved": "Kjøringen er godkjent",
-    "approvedByNames": "Godkjent av {{names}}",
+    "approvalGiven": "Godkjenningen din er registrert",
+    "approvals": {
+      "title": "Godkjenninger",
+      "waiting": "Versjon {{revision}} av kjøringen venter på godkjenning.",
+      "released": "Versjon {{revision}} ble godkjent og frigitt for sending.",
+      "releasedLegacy": "Godkjent før godkjenninger ble knyttet til en versjon av kjøringen.",
+      "needsOne": "Én godkjenning fra økonomi trengs.",
+      "needsTwo": "En kunde er over terskelen: økonomi og ledelsen må godkjenne, to forskjellige personer, i valgfri rekkefølge.",
+      "entry": "{{kind}}: {{name}}, {{date}}",
+      "setAsideTitle": "Satt til side",
+      "setAsideEntry": "{{entry}} (versjon {{revision}}).",
+      "resetBanner": "Tidligere godkjenninger gjelder ikke lenger; versjon {{revision}} må godkjennes på nytt.",
+      "otherPerson": "Du har godkjent denne versjonen. Den andre godkjenningen må komme fra en annen person.",
+      "kind": {
+        "First": "Økonomi",
+        "Second": "Ledelsen"
+      },
+      "reasons": {
+        "Recollected": "Kjøringen ble samlet inn på nytt etterpå.",
+        "LinesChanged": "Linjer ble endret etterpå.",
+        "BasisCancelled": "Et kundegrunnlag ble avbrutt etterpå.",
+        "ContentChanged": "Innholdet stemte ikke lenger med det som ble godkjent.",
+        "RuleChanged": "Godkjenningsregelen ble endret etterpå.",
+        "Migrated": "Gitt før godkjenninger ble knyttet til en versjon av kjøringen."
+      }
+    },
     "awaitingSecondApproval": "Venter på andre godkjenning",
     "secondApprovalNeeded": "En kunde er over {{amount}}, så ledelsen må godkjenne i tillegg.",
     "export": "Send til PowerOffice",

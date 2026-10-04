@@ -21,6 +21,8 @@ public sealed record Error(string Code, string Message, ErrorType Type, IReadOnl
     public static Error Conflict(string code, string message, IReadOnlyDictionary<string, object?>? metadata = null) =>
         new(code, message, ErrorType.Conflict, metadata);
 
+    public static Error Forbidden(string code, string message) => new(code, message, ErrorType.Forbidden);
+
     public static Error PreconditionFailed(string code, string message) => new(code, message, ErrorType.PreconditionFailed);
 }
 

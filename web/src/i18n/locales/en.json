@@ -80,7 +80,13 @@
       "BIL_NOTHING_TO_REVERT": "The line already follows its source.",
       "BIL_NO_CONFLICT": "The line has no conflict to resolve.",
       "BIL_UNRESOLVED_CONFLICTS": "Some lines changed at their source after Finance decided about them. Resolve them before approving.",
-      "BIL_BASIS_LOCKED": "The basis is approved and can no longer be changed; corrections belong in the next period."
+      "BIL_BASIS_LOCKED": "The basis is approved and can no longer be changed; corrections belong in the next period.",
+      "BIL_SAME_APPROVER": "One person cannot give both approvals of a run. The other approval has to come from someone else.",
+      "BIL_ALREADY_APPROVED": "This approval has already been given for the current revision.",
+      "BIL_NO_SECOND_APPROVAL": "No customer is above the threshold, so the run needs no management approval.",
+      "BIL_APPROVER_REQUIRED": "Only a signed-in CRM user can approve.",
+      "BIL_APPROVER_INACTIVE": "Your CRM account is not active, so you cannot approve.",
+      "BIL_INVALID_STATUS": "The run is no longer in a state that allows this. Reload the page to see where it stands."
     }
   },
   "status": {
@@ -1586,7 +1592,32 @@
     "approve": "Approve",
     "secondApprove": "Approve as management",
     "approved": "The run is approved",
-    "approvedByNames": "Approved by {{names}}",
+    "approvalGiven": "Your approval is recorded",
+    "approvals": {
+      "title": "Approvals",
+      "waiting": "Revision {{revision}} of the run is waiting for approval.",
+      "released": "Revision {{revision}} was approved and released for sending.",
+      "releasedLegacy": "Approved before approvals were tied to a revision of the run.",
+      "needsOne": "One approval by Finance is needed.",
+      "needsTwo": "A customer is above the threshold: Finance and management have to approve, two different people, in either order.",
+      "entry": "{{kind}}: {{name}}, {{date}}",
+      "setAsideTitle": "Set aside",
+      "setAsideEntry": "{{entry}} (revision {{revision}}).",
+      "resetBanner": "Earlier approvals no longer count; revision {{revision}} has to be approved again.",
+      "otherPerson": "You have approved this revision. The other approval has to come from someone else.",
+      "kind": {
+        "First": "Finance",
+        "Second": "Management"
+      },
+      "reasons": {
+        "Recollected": "The run was collected again afterwards.",
+        "LinesChanged": "Lines were changed afterwards.",
+        "BasisCancelled": "A customer basis was cancelled afterwards.",
+        "ContentChanged": "The content no longer matched what was approved.",
+        "RuleChanged": "The approval rule changed afterwards.",
+        "Migrated": "Given before approvals were tied to a revision of the run."
+      }
+    },
     "awaitingSecondApproval": "Waiting for a second approval",
     "secondApprovalNeeded": "A customer is above {{amount}}, so management has to approve as well.",
     "export": "Send to PowerOffice",

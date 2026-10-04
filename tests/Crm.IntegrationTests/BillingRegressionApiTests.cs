@@ -48,7 +48,7 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         var created = await finance.PostAsJsonAsync($"{Billing}/runs", new { year = period.Year, month = period.Month, notes = marker });
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
         var runId = (await created.ReadJsonAsync()).GetProperty("id").GetGuid();
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         return runId;
     }
 
@@ -82,7 +82,7 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         (await adjusted.ReadJsonAsync()).GetProperty("totalExVat").GetDecimal().ShouldBe(900m);
 
         // The contract has not changed when the run is collected again.
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         // One economic position keeps the correction; the audited code keeps it and bills the contract line again (1 900).
         var recollected = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/bases/{basisId}");
@@ -102,8 +102,8 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         (await RunAsync(finance, runId)).GetProperty("requiresSecondApproval").GetBoolean().ShouldBeTrue();
 
         // Admin holds billing.approve and billing.approve.second and signs both, the second one first.
-        await admin.PostAsync($"{Billing}/runs/{runId}/second-approve", null);
-        await admin.PostAsync($"{Billing}/runs/{runId}/approve", null);
+        await admin.RunCommandAsync(runId, "second-approve");
+        await admin.RunCommandAsync(runId, "approve");
 
         // BR-BIL-04: the two signatures belong to two people, in either order.
         (await RunAsync(finance, runId)).GetProperty("status").GetString().ShouldNotBe("Approved");
@@ -119,7 +119,7 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         var period = new DateOnly(2029, 2, 1);
         var customer = await CustomerAsync(admin, finance, "S", period, 300_000m);
         var runId = await CollectedRunAsync(finance, period, customer.Marker);
-        (await (await finance.PostAsync($"{Billing}/runs/{runId}/approve", null)).ReadJsonAsync())
+        (await (await finance.RunCommandAsync(runId, "approve")).ReadJsonAsync())
             .GetProperty("status").GetString().ShouldBe("InReview");
 
         // After the first signature the contract gets another line and the run is collected again: 350 000 instead of 300 000.
@@ -127,10 +127,10 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         {
             productId = customer.ProductId, description = "Tillegg", quantityModel = "Fixed", quantity = 1m, unitPrice = 50_000m, validFrom = period,
         })).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await BasisOfAsync(finance, runId, customer)).GetProperty("totalExVat").GetDecimal().ShouldBe(350_000m);
 
-        await management.PostAsync($"{Billing}/runs/{runId}/second-approve", null);
+        await management.RunCommandAsync(runId, "second-approve");
 
         // Finance never approved the content that would now be exported.
         (await RunAsync(finance, runId)).GetProperty("status").GetString().ShouldNotBe("Approved");
@@ -154,7 +154,7 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         added.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await added.ReadJsonAsync()).GetProperty("totalExVat").GetDecimal().ShouldBe(310_000m);
 
-        await finance.PostAsync($"{Billing}/runs/{runId}/approve", null);
+        await finance.RunCommandAsync(runId, "approve");
 
         // BR-BIL-04 looks at the basis as it is approved, not as it was collected.
         (await RunAsync(finance, runId)).GetProperty("status").GetString().ShouldNotBe("Approved");
@@ -202,7 +202,7 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         // 5 000 for the month + 10 h × 1 000 for the package.
         firstBasis.GetProperty("totalExVat").GetDecimal().ShouldBe(15_000m);
         var basisId = firstBasis.GetProperty("id").GetGuid();
-        (await (await finance.PostAsync($"{Billing}/runs/{firstRunId}/approve", null)).ReadJsonAsync())
+        (await (await finance.RunCommandAsync(firstRunId, "approve")).ReadJsonAsync())
             .GetProperty("status").GetString().ShouldBe("Approved");
 
         // Other tests' open-ended contracts land in the run as well; the run is exported once none of its bases waits any more.
@@ -222,7 +222,7 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         }
 
         var secondRunId = (await second.ReadJsonAsync()).GetProperty("id").GetGuid();
-        (await finance.PostAsync($"{Billing}/runs/{secondRunId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(secondRunId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         var billedAgain = (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{secondRunId}/bases?search={customer.Marker}"))
             .EnumerateArray()
             .Where(b => b.GetProperty("organization").GetProperty("id").GetGuid() == customer.OrganizationId)

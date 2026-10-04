@@ -154,7 +154,7 @@ public class QuotesApiTests(CrmWebFactory factory)
         var period = new DateOnly(2027, 11, 1);
         var runId = (await (await finance.PostAsJsonAsync("/api/v1/billing/runs", new { year = period.Year, month = period.Month, notes = marker })).ReadJsonAsync())
             .GetProperty("id").GetGuid();
-        (await finance.PostAsync($"/api/v1/billing/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         var basis = (await finance.GetFromJsonAsync<JsonElement>($"/api/v1/billing/runs/{runId}/bases?search={marker}")).EnumerateArray()
             .Single(b => b.GetProperty("organization").GetProperty("id").GetGuid() == organizationId);
         var detail = await finance.GetFromJsonAsync<JsonElement>($"/api/v1/billing/bases/{basis.GetProperty("id").GetGuid()}");

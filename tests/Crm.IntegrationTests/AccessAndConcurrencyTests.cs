@@ -121,7 +121,7 @@ public partial class AccessAndConcurrencyTests(CrmWebFactory factory)
         (await admin.PostAsync($"/api/v1/contracts/{contractId}/activate", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
         var runId = (await (await finance.PostAsJsonAsync($"{Billing}/runs", new { year = period.Year, month = period.Month })).ReadJsonAsync())
             .GetProperty("id").GetGuid();
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         var basisId = (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs/{runId}/bases?search={marker}"))
             .EnumerateArray().Single(b => b.GetProperty("organization").GetProperty("id").GetGuid() == organizationId)
             .GetProperty("id").GetGuid();

@@ -129,7 +129,7 @@ public class AnalyticsApiTests(CrmWebFactory factory)
 
         var runId = (await (await finance.PostAsJsonAsync("/api/v1/billing/runs", new { year = period.Year, month = period.Month, notes = marker })).ReadJsonAsync())
             .GetProperty("id").GetGuid();
-        (await finance.PostAsync($"/api/v1/billing/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var report = await finance.GetFromJsonAsync<JsonElement>($"{Reports}/margins?year={period.Year}&month={period.Month}");
         var row = report.GetProperty("rows").EnumerateArray().Single(r => r.GetProperty("organizationId").GetGuid() == organizationId);

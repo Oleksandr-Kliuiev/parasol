@@ -52,9 +52,11 @@ internal sealed class BillingService(
         return rows.Select(r =>
         {
             var totalsOfRun = totals.GetValueOrDefault(r.Id);
+            // Like the run itself: an open run says what its content needs now (BR-BIL-04), a released one what it was released with.
+            var requiresSecond = r.IsLocked ? r.RequiresSecondApproval : totalsOfRun.LargestBasis > options.Value.SecondApprovalThreshold;
             return new RunListItem(
                 r.Id, r.PeriodStart, r.PeriodEnd, r.Status, totalsOfRun.Organizations, totalsOfRun.WithAnomalies, totalsOfRun.Total,
-                r.RequiresSecondApproval, r.CollectedAt, r.ApprovedAt, r.ExportedAt, r.ClosedAt);
+                requiresSecond, r.CollectedAt, r.ApprovedAt, r.ExportedAt, r.ClosedAt);
         }).ToList();
     }
 
@@ -82,12 +84,22 @@ internal sealed class BillingService(
         return await ToResponseAsync(run, ct);
     }
 
-    /// <summary>Collects or re-collects the bases of a run (BR-BIL-02).</summary>
-    public async Task<Result<RunResponse>> CollectAsync(Guid id, CancellationToken ct)
+    /// <summary>Collects or re-collects the bases of a run (BR-BIL-02). Every collect is a new revision: earlier approvals no longer count.</summary>
+    public async Task<Result<RunResponse>> CollectAsync(Guid id, string ifMatch, CancellationToken ct)
     {
-        if (await db.BillingRuns.SingleOrDefaultAsync(r => r.Id == id, ct) is not { } run)
+        if (await LoadRunAsync(id, ct) is not { } run)
         {
             return BillingErrors.RunNotFound(id);
+        }
+
+        if (!db.ApplyIfMatch(run, ifMatch))
+        {
+            return Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
+        }
+
+        if (db.IsStale(run))
+        {
+            return BillingErrors.RunChanged;
         }
 
         if (run.IsLocked)
@@ -108,23 +120,42 @@ internal sealed class BillingService(
 
     public Task<Result<RunResponse>> ReviewAsync(Guid id, CancellationToken ct) => MutateAsync(id, run => run.StartReview(), ct);
 
-    public async Task<Result<RunResponse>> ApproveAsync(Guid id, bool second, CancellationToken ct)
+    /// <summary>
+    /// Approves the revision the caller saw: <paramref name="ifMatch"/> is the run's ETag, which changes with every collect and
+    /// every change of the lines, so an approval of an older screen fails with 412 and writes nothing. The run computes the
+    /// threshold and the content digest from the bases as they are in this transaction (BR-BIL-04, ADR-012).
+    /// </summary>
+    public async Task<Result<RunResponse>> ApproveAsync(Guid id, bool second, string ifMatch, CancellationToken ct)
     {
-        if (await db.BillingRuns.SingleOrDefaultAsync(r => r.Id == id, ct) is not { } run)
+        if (await LoadRunAsync(id, ct) is not { } run)
         {
             return BillingErrors.RunNotFound(id);
         }
 
-        // A line whose source changed after Finance decided about it is not approved by accident (BR-BIL-02).
-        var bases = await db.BillingBases.Include(b => b.Lines).Where(b => b.RunId == run.Id).ToListAsync(ct);
-        var conflicts = bases.Sum(b => b.ConflictCount);
-        if (conflicts > 0)
+        if (!db.ApplyIfMatch(run, ifMatch))
         {
-            return BillingErrors.UnresolvedConflicts(conflicts);
+            return Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
         }
 
+        if (db.IsStale(run))
+        {
+            return BillingErrors.RunChanged;
+        }
+
+        if (currentUser.UserId is not { } approver)
+        {
+            return BillingErrors.ApproverRequired;
+        }
+
+        // The sign-in cache may lag behind a deactivation; an approval always reads the account as it is now.
+        if (await users.GetProfileAsync(approver, ct) is not { IsActive: true })
+        {
+            return BillingErrors.ApproverInactive;
+        }
+
+        var bases = await db.BillingBases.Include(b => b.Lines).Where(b => b.RunId == run.Id).ToListAsync(ct);
         var now = time.GetUtcNow();
-        var approved = second ? run.SecondApprove(currentUser.UserId, now) : run.Approve(currentUser.UserId, now);
+        var approved = run.Approve(second ? BillingApprovalKind.Second : BillingApprovalKind.First, approver, now, bases, options.Value.SecondApprovalThreshold);
         if (!approved.IsSuccess)
         {
             return approved.Error!;
@@ -301,10 +332,10 @@ internal sealed class BillingService(
     }
 
     public Task<Result<BasisResponse>> RetryAsync(Guid basisId, CancellationToken ct) =>
-        MutateBasisAsync(basisId, null, basis => Task.FromResult(basis.Retry()), ct);
+        MutateBasisAsync(basisId, null, basis => Task.FromResult(basis.Retry()), ct, resetReason: null);
 
-    public Task<Result<BasisResponse>> CancelAsync(Guid basisId, CancelBasisRequest request, CancellationToken ct) =>
-        MutateBasisAsync(basisId, null, basis => Task.FromResult(basis.Cancel(time.GetUtcNow(), request.Reason)), ct);
+    public Task<Result<BasisResponse>> CancelAsync(Guid basisId, CancelBasisRequest request, string ifMatch, CancellationToken ct) =>
+        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.Cancel(time.GetUtcNow(), request.Reason)), ct, ApprovalResetReasons.BasisCancelled);
 
     // ---------- Invoices ----------
 
@@ -371,8 +402,12 @@ internal sealed class BillingService(
         return await ToResponseAsync(run, ct);
     }
 
+    /// <summary>
+    /// Changes one basis. A change of an open run's content is a new revision of the run in the same transaction, so a
+    /// parallel approval of the old revision fails on the run's row version instead of approving content nobody saw.
+    /// </summary>
     private async Task<Result<BasisResponse>> MutateBasisAsync(
-        Guid id, string? ifMatch, Func<BillingBasis, Task<Result>> mutate, CancellationToken ct)
+        Guid id, string? ifMatch, Func<BillingBasis, Task<Result>> mutate, CancellationToken ct, string? resetReason = ApprovalResetReasons.LinesChanged)
     {
         if (await LoadBasisAsync(id, ct) is not { } basis)
         {
@@ -390,15 +425,27 @@ internal sealed class BillingService(
             return result.Error!;
         }
 
+        if (resetReason is not null && await db.BillingRuns.Include(r => r.Approvals).SingleOrDefaultAsync(r => r.Id == basis.RunId, ct) is { IsLocked: false } run)
+        {
+            run.ContentChanged(resetReason, time.GetUtcNow());
+        }
+
         await db.SaveChangesAsync(ct);
         return await ToResponseAsync(basis, ct);
     }
 
+    private async Task<BillingRun?> LoadRunAsync(Guid id, CancellationToken ct) =>
+        await db.BillingRuns.Include(r => r.Approvals).SingleOrDefaultAsync(r => r.Id == id, ct);
+
     private async Task<RunResponse> ToResponseAsync(BillingRun run, CancellationToken ct)
     {
         var bases = await db.BillingBases.AsNoTracking().Include(b => b.Lines).Where(b => b.RunId == run.Id).ToListAsync(ct);
+        var approvals = await db.BillingApprovals.AsNoTracking().Where(a => a.RunId == run.Id).OrderBy(a => a.ApprovedAt).ToListAsync(ct);
         var approvers = await users.GetUsersAsync(
-            new[] { run.ApprovedBy, run.SecondApprovedBy }.Where(id => id is not null).Select(id => id!.Value).Distinct().ToList(), ct);
+            new[] { run.ApprovedBy, run.SecondApprovedBy }.Concat(approvals.Select(a => (Guid?)a.ApprovedBy))
+                .Where(id => id is not null).Select(id => id!.Value).Distinct().ToList(), ct);
+        RefDto Person(Guid id) => approvers.TryGetValue(id, out var user) ? new RefDto(user.Id, user.DisplayName) : new RefDto(id, "—");
+        var threshold = options.Value.SecondApprovalThreshold;
         return new RunResponse(
             run.Id,
             run.PeriodStart,
@@ -409,15 +456,21 @@ internal sealed class BillingService(
             bases.Count(b => b.Status == BillingBasisStatus.Exported),
             bases.Count(b => b.Status == BillingBasisStatus.Failed),
             decimal.Round(bases.Sum(b => b.TotalExVat), 2),
-            run.RequiresSecondApproval,
-            run.ApprovedBy is { } first && approvers.TryGetValue(first, out var firstUser) ? new RefDto(firstUser.Id, firstUser.DisplayName) : null,
-            run.SecondApprovedBy is { } secondId && approvers.TryGetValue(secondId, out var secondUser) ? new RefDto(secondUser.Id, secondUser.DisplayName) : null,
+            // An open run says what its content needs now; an approved one keeps what it was released with.
+            run.IsLocked ? run.RequiresSecondApproval : BillingRun.NeedsSecondApproval(bases, threshold),
+            run.ApprovedBy is { } first ? Person(first) : null,
+            run.SecondApprovedBy is { } secondId ? Person(secondId) : null,
             run.CollectedAt,
             run.ApprovedAt,
             run.ExportedAt,
             run.ClosedAt,
             run.Notes,
             bases.Sum(b => b.ConflictCount),
+            run.ContentRevision,
+            run.ApprovedRevision,
+            approvals
+                .Select(a => new ApprovalDto(a.Kind, Person(a.ApprovedBy), a.ApprovedAt, a.ContentRevision, a.InvalidatedAt is null && a.ContentRevision == run.ContentRevision, a.InvalidatedAt, a.InvalidationReason))
+                .ToList(),
             db.GetETag(run));
     }
 
@@ -497,7 +550,7 @@ internal sealed class BillingService(
         invoice.Url,
         invoice.SyncedAt);
 
-    private async Task<Dictionary<Guid, (int Organizations, int WithAnomalies, decimal Total)>> TotalsAsync(
+    private async Task<Dictionary<Guid, (int Organizations, int WithAnomalies, decimal Total, decimal LargestBasis)>> TotalsAsync(
         IReadOnlyCollection<Guid> runIds, CancellationToken ct)
     {
         var rows = await db.BillingBases.AsNoTracking()
@@ -509,9 +562,10 @@ internal sealed class BillingService(
                 Organizations = g.Count(),
                 WithAnomalies = g.Count(b => b.AnomaliesJson != null),
                 Total = g.Sum(b => b.TotalExVat),
+                LargestBasis = g.Where(b => b.Status != BillingBasisStatus.Cancelled).Max(b => (decimal?)b.TotalExVat) ?? 0m,
             })
             .ToListAsync(ct);
-        return rows.ToDictionary(r => r.Key, r => (r.Organizations, r.WithAnomalies, decimal.Round(r.Total, 2)));
+        return rows.ToDictionary(r => r.Key, r => (r.Organizations, r.WithAnomalies, decimal.Round(r.Total, 2), r.LargestBasis));
     }
 
     public decimal SecondApprovalThreshold => options.Value.SecondApprovalThreshold;

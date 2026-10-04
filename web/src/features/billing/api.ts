@@ -72,20 +72,23 @@ export function useBasis(id: string | undefined) {
   });
 }
 
-/** Every run action returns the whole run, so one invalidation keeps the page in step. */
+/**
+ * Every run action returns the whole run, so one invalidation keeps the page in step. Collect and both approvals carry the
+ * ETag of the run on screen: an approval is about the revision the user saw, and a run that changed meanwhile answers 412.
+ */
 export function useRunActions(id?: string) {
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: billingKeys.all });
-  const post = (path: string) => api.post<Run>(`${BASE}/runs/${id}/${path}`);
+  const post = (path: string, etag?: string) => api.post<Run>(`${BASE}/runs/${id}/${path}`, etag ? {} : undefined, etag);
   return {
     create: useMutation({
       mutationFn: (request: { year: number; month: number; notes: string | null }) => api.post<Run>(`${BASE}/runs`, request),
       onSuccess: refresh,
     }),
-    collect: useMutation({ mutationFn: () => post('collect'), onSuccess: refresh }),
+    collect: useMutation({ mutationFn: (etag: string) => post('collect', etag), onSuccess: refresh, onError: refresh }),
     review: useMutation({ mutationFn: () => post('review'), onSuccess: refresh }),
-    approve: useMutation({ mutationFn: () => post('approve'), onSuccess: refresh }),
-    secondApprove: useMutation({ mutationFn: () => post('second-approve'), onSuccess: refresh }),
+    approve: useMutation({ mutationFn: (etag: string) => post('approve', etag), onSuccess: refresh, onError: refresh }),
+    secondApprove: useMutation({ mutationFn: (etag: string) => post('second-approve', etag), onSuccess: refresh, onError: refresh }),
     exportRun: useMutation({ mutationFn: () => post('export'), onSuccess: refresh }),
     close: useMutation({ mutationFn: () => post('close'), onSuccess: refresh }),
     discard: useMutation({
@@ -134,8 +137,9 @@ export function useBasisActions(basisId: string) {
       onSuccess,
     }),
     retry: useMutation({ mutationFn: () => api.post<Basis>(`${BASE}/bases/${basisId}/retry`), onSuccess }),
+    /** Cancelling a basis of an open run changes what the run invoices, so it needs the basis on screen. */
     cancel: useMutation({
-      mutationFn: (reason: string) => api.post<Basis>(`${BASE}/bases/${basisId}/cancel`, { reason }),
+      mutationFn: ({ reason, etag }: { reason: string; etag: string }) => api.post<Basis>(`${BASE}/bases/${basisId}/cancel`, { reason }, etag),
       onSuccess,
     }),
   };

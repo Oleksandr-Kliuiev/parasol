@@ -24,6 +24,8 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
     public DbSet<PendingCharge> PendingCharges => Set<PendingCharge>();
 
+    public DbSet<BillingApproval> BillingApprovals => Set<BillingApproval>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<PendingCharge>(b =>
@@ -50,6 +52,20 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             // BR-BIL-01: only one run per period may be open.
             b.HasIndex(x => x.PeriodStart).IsUnique().HasFilter("[Status] <> 'Closed' AND [IsDeleted] = 0");
             b.HasIndex(x => x.Status);
+            b.Property(x => x.ApprovedDigest).HasMaxLength(64);
+            b.HasMany(x => x.Approvals).WithOne().HasForeignKey(a => a.RunId).OnDelete(DeleteBehavior.Restrict);
+            b.Ignore(x => x.CurrentApprovals);
+        });
+
+        modelBuilder.Entity<BillingApproval>(b =>
+        {
+            b.ToTable("BillingApprovals");
+            b.ConfigureAuditable();
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.ContentDigest).HasMaxLength(64);
+            b.Property(x => x.Policy).HasMaxLength(128);
+            b.Property(x => x.InvalidationReason).HasMaxLength(64);
+            b.HasIndex(x => new { x.RunId, x.ContentRevision });
         });
 
         modelBuilder.Entity<BillingBasis>(b =>

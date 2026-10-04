@@ -28,7 +28,10 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
 
     public async Task<ExportBasis?> GetBasisForExportAsync(Guid basisId, CancellationToken cancellationToken)
     {
-        var basis = await db.BillingBases.AsNoTracking().Include(b => b.Lines).SingleOrDefaultAsync(b => b.Id == basisId, cancellationToken);
+        // Only a basis that waits to be sent: an approval event delivered again after the order was created (or after the
+        // basis was cancelled) finds nothing to send (DEV-02).
+        var basis = await db.BillingBases.AsNoTracking().Include(b => b.Lines)
+            .SingleOrDefaultAsync(b => b.Id == basisId && b.Status == BillingBasisStatus.Approved, cancellationToken);
         if (basis is null)
         {
             return null;

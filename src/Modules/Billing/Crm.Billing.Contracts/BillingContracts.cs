@@ -104,6 +104,10 @@ public interface IBillingApi
     /// <summary>Bases of an approved run that still need exporting, oldest run first.</summary>
     Task<IReadOnlyList<ExportBasis>> GetBasesToExportAsync(Guid? runId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The basis if it is approved and waiting to be sent; null once it is exported or cancelled, so a repeated delivery of
+    /// <see cref="BillingBasisApproved"/> sends nothing a second time.
+    /// </summary>
     Task<ExportBasis?> GetBasisForExportAsync(Guid basisId, CancellationToken cancellationToken);
 
     /// <summary>Records a successful export; repeated calls with the same order number are ignored (BR-BIL-05).</summary>

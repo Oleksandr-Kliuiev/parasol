@@ -85,7 +85,7 @@ public class GroupAndIndexationTests(CrmWebFactory factory)
         (await loop.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("CUS_PARENT_CYCLE");
 
         // Re-collecting the same run moves the subsidiary's lines onto the parent's basis, marked with its name.
-        (await finance.PostAsync($"{Billing}/runs/{firstRun}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(firstRun, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         var bases = await BasesAsync(finance, firstRun, marker);
         var basis = bases.ShouldHaveSingleItem();
         basis.GetProperty("organization").GetProperty("id").GetGuid().ShouldBe(parentId);
@@ -179,7 +179,7 @@ public class GroupAndIndexationTests(CrmWebFactory factory)
     {
         var run = await (await finance.PostAsJsonAsync($"{Billing}/runs", new { year = period.Year, month = period.Month, notes = marker })).ReadJsonAsync();
         var runId = run.GetProperty("id").GetGuid();
-        (await finance.PostAsync($"{Billing}/runs/{runId}/collect", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
         return runId;
     }
 
