@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using Crm.Billing.Contracts;
 using Crm.Catalog.Contracts;
 using Crm.Integrations.Core;
@@ -63,7 +64,9 @@ internal sealed class PowerOfficeBasisApprovedHandler(
 
 /// <summary>
 /// Sends one customer's basis to PowerOffice as a sales order (docs/05 §4.3). The basis key travels as the order's external
-/// import reference, so a repeated attempt finds the existing order instead of creating a second one (BR-BIL-05).
+/// import reference, so a repeated attempt finds the existing order instead of creating a second one (BR-BIL-05). The send is
+/// recorded before the request goes out; when an attempt ended without an answer and the lookup does not find the order, the
+/// basis waits for reconciliation by a person instead of being sent again (ADR-013).
 /// </summary>
 internal sealed class PowerOfficeCreateSalesOrderHandler(
     IPowerOfficeClient client,
@@ -109,6 +112,14 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
             return new OutboundResult($"Order {existing.Number} already existed.");
         }
 
+        if (basis.SendStarted)
+        {
+            // An earlier attempt may have created the order and the lookup does not show it: sending again could invoice twice.
+            var message = $"An earlier send got no answer and no order with reference {basis.IdempotencyKey} was found; check PowerOffice and reconcile the basis.";
+            await billing.MarkReconciliationRequiredAsync(basis.BasisId, System, message, operation.Id.ToString(), cancellationToken);
+            throw new PermanentOutboundException(message);
+        }
+
         var codes = await ProductCodesAsync(basis, cancellationToken);
         var missing = basis.Lines.Where(l => l.ProductId is { } id && !codes.ContainsKey(id)).Select(l => l.Description).Distinct().ToList();
         if (missing.Count > 0)
@@ -118,22 +129,46 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
             throw new PermanentOutboundException(message);
         }
 
-        var order = await client.CreateSalesOrderAsync(new PoSalesOrderPost(
-            long.Parse(customerLink.ExternalId, CultureInfo.InvariantCulture),
-            new DateTimeOffset(basis.PeriodEnd.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
-            basis.IdempotencyKey,
-            basis.CustomerReference,
-            basis.Lines.Select((line, index) => new PoSalesOrderLinePost(
-                line.ProductId is { } productId ? codes[productId] : line.ProductCode,
-                line.Description,
-                line.Quantity,
-                line.UnitPrice,
-                line.DiscountPct == 0 ? null : line.DiscountPct,
-                index + 1)).ToList()), cancellationToken);
+        // From here on an unknown outcome means the order may exist; a basis cancelled meanwhile is not sent at all.
+        if (!await billing.MarkExportSendingAsync(basis.BasisId, System, operation.Id.ToString(), cancellationToken))
+        {
+            return OutboundResult.NothingToDo;
+        }
+
+        PoSalesOrder order;
+        try
+        {
+            order = await client.CreateSalesOrderAsync(new PoSalesOrderPost(
+                long.Parse(customerLink.ExternalId, CultureInfo.InvariantCulture),
+                new DateTimeOffset(basis.PeriodEnd.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
+                basis.IdempotencyKey,
+                basis.CustomerReference,
+                basis.Lines.Select((line, index) => new PoSalesOrderLinePost(
+                    line.ProductId is { } productId ? codes[productId] : line.ProductCode,
+                    line.Description,
+                    line.Quantity,
+                    line.UnitPrice,
+                    line.DiscountPct == 0 ? null : line.DiscountPct,
+                    index + 1)).ToList()), cancellationToken);
+        }
+        catch (PowerOfficeApiException rejected) when (IsRejection(rejected.Status))
+        {
+            // PowerOffice answered and refused the order: nothing was created, the basis can be fixed and sent again.
+            var message = $"PowerOffice rejected the order: {rejected.Message}";
+            await billing.MarkExportFailedAsync(basis.BasisId, System, message, operation.Id.ToString(), cancellationToken);
+            throw new PermanentOutboundException(message);
+        }
 
         await billing.MarkExportedAsync(basis.BasisId, System, order.Number, operation.Id.ToString(), cancellationToken);
         return new OutboundResult($"Created sales order {order.Number} for {basis.Lines.Count} lines.");
     }
+
+    /// <summary>
+    /// A refusal PowerOffice answered with, so no order exists. Timeouts, conflicts, throttling and server errors are not:
+    /// the order may have been created, and the next attempt looks it up before anything else (ADR-013).
+    /// </summary>
+    internal static bool IsRejection(HttpStatusCode status) =>
+        (int)status is >= 400 and < 500 && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.Conflict or HttpStatusCode.TooManyRequests);
 
     private async Task<Dictionary<Guid, string>> ProductCodesAsync(ExportBasis basis, CancellationToken cancellationToken)
     {

@@ -91,9 +91,9 @@ public class ProjectsApiTests(CrmWebFactory factory)
         var runId = (await (await finance.PostAsJsonAsync("/api/v1/billing/runs", new { year = period.Year, month = period.Month, notes = marker })).ReadJsonAsync())
             .GetProperty("id").GetGuid();
         (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
-        var basis = (await finance.GetFromJsonAsync<JsonElement>($"/api/v1/billing/runs/{runId}/bases?search={marker}")).EnumerateArray()
-            .Single(b => b.GetProperty("organization").GetProperty("id").GetGuid() == organizationId);
-        var detail = await finance.GetFromJsonAsync<JsonElement>($"/api/v1/billing/bases/{basis.GetProperty("id").GetGuid()}");
+        // The first open run that collects the fee holds it; in the shared database that may be another test's run (ADR-013).
+        var detail = await factory.QueuedChargeBasisAsync(finance, runId, c => c.SourceType == "project-phase" && c.SourceLineId == phaseId);
+        detail.GetProperty("organization").GetProperty("id").GetGuid().ShouldBe(organizationId);
         var line = detail.GetProperty("lines").EnumerateArray().Single(l => l.GetProperty("group").GetString() == "OneOff");
         line.GetProperty("description").GetString()!.ShouldContain("Pilot");
         line.GetProperty("lineTotal").GetDecimal().ShouldBe(40_000m);

@@ -1,0 +1,49 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+
+The following sources were used:
+   https://api.nuget.org/v3/index.json
+
+The given project `Crm.Authorization` has no vulnerable packages given the current sources.
+The given project `Crm.Infrastructure` has no vulnerable packages given the current sources.
+The given project `Crm.SharedKernel` has no vulnerable packages given the current sources.
+The given project `Crm.AppHost` has no vulnerable packages given the current sources.
+The given project `Crm.ServiceDefaults` has no vulnerable packages given the current sources.
+The given project `Crm.Web` has no vulnerable packages given the current sources.
+The given project `Crm.Worker` has no vulnerable packages given the current sources.
+The given project `Crm.Integrations.Atera` has no vulnerable packages given the current sources.
+The given project `Crm.Integrations.Brreg` has no vulnerable packages given the current sources.
+The given project `Crm.Integrations.Core` has no vulnerable packages given the current sources.
+The given project `Crm.Integrations.MicrosoftGraph` has no vulnerable packages given the current sources.
+The given project `Crm.Integrations.PartnerCenter` has no vulnerable packages given the current sources.
+The given project `Crm.Integrations.PowerOffice` has no vulnerable packages given the current sources.
+The given project `Crm.Activities.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Activities` has no vulnerable packages given the current sources.
+The given project `Crm.Audit` has no vulnerable packages given the current sources.
+The given project `Crm.Billing.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Billing` has no vulnerable packages given the current sources.
+The given project `Crm.Catalog.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Catalog` has no vulnerable packages given the current sources.
+The given project `Crm.Contracts.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Customers.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Customers` has no vulnerable packages given the current sources.
+The given project `Crm.CustomFields` has no vulnerable packages given the current sources.
+The given project `Crm.Identity.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Identity` has no vulnerable packages given the current sources.
+The given project `Crm.Licensing.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Licensing` has no vulnerable packages given the current sources.
+The given project `Crm.Notifications.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Notifications` has no vulnerable packages given the current sources.
+The given project `Crm.Projects.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Projects` has no vulnerable packages given the current sources.
+The given project `Crm.Reports` has no vulnerable packages given the current sources.
+The given project `Crm.Sales.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Sales` has no vulnerable packages given the current sources.
+The given project `Crm.Service.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.Service` has no vulnerable packages given the current sources.
+The given project `Crm.TimeTracking.Contracts` has no vulnerable packages given the current sources.
+The given project `Crm.TimeTracking` has no vulnerable packages given the current sources.
+The given project `Crm.ArchitectureTests` has no vulnerable packages given the current sources.
+The given project `Crm.IntegrationTests` has no vulnerable packages given the current sources.
+The given project `Crm.UnitTests` has no vulnerable packages given the current sources.

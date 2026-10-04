@@ -1,7 +1,7 @@
 export const runStatuses = ['Draft', 'Collected', 'InReview', 'Approved', 'Exporting', 'Exported', 'ExportedWithErrors', 'Closed'] as const;
 export type RunStatus = (typeof runStatuses)[number];
 
-export const basisStatuses = ['Draft', 'Approved', 'Exported', 'Failed', 'Cancelled'] as const;
+export const basisStatuses = ['Draft', 'Approved', 'Exported', 'Failed', 'Cancelled', 'ReconciliationRequired'] as const;
 export type BasisStatus = (typeof basisStatuses)[number];
 
 export const billingGroups = ['Subscription', 'License', 'HourlyWork', 'HourBank', 'OneOff', 'Info'] as const;
@@ -19,10 +19,14 @@ export interface Anomaly {
   message: string;
 }
 
+/** A supplementary run bills, for a closed period, only what no earlier run billed (ADR-013). */
+export type RunKind = 'Regular' | 'Supplementary';
+
 export interface RunListItem {
   id: string;
   periodStart: string;
   periodEnd: string;
+  kind: RunKind;
   status: RunStatus;
   organizations: number;
   withAnomalies: number;
@@ -156,12 +160,44 @@ export interface Basis {
   customerReference: string | null;
   orderNo: string | null;
   exportedAt: string | null;
+  /** A send got under way and its order may exist: the basis is reconciled before it is cancelled or sent again (ADR-013). */
+  sendStarted: boolean;
   lines: BasisLine[];
   attempts: ExportAttempt[];
   invoices: Invoice[];
   revision: number;
   conflicts: number;
   etag: string;
+}
+
+export interface ReconcileRequest {
+  created: boolean;
+  orderNo: string | null;
+  reason: string;
+}
+
+export interface CorrectionRequest {
+  amount: number;
+  reason: string;
+  description: string | null;
+}
+
+/** A line billed before the charge register whose source the backfill could not prove; Finance decides (EXT-01). */
+export interface LegacyCharge {
+  id: string;
+  organization: Ref;
+  periodStart: string | null;
+  description: string | null;
+  amount?: number;
+  reason: string | null;
+  etag: string;
+}
+
+export interface LegacyChargeReport {
+  count: number;
+  amount?: number;
+  byReason: Array<{ reason: string; count: number; amount?: number }>;
+  items: LegacyCharge[];
 }
 
 export interface InvoiceSummary {

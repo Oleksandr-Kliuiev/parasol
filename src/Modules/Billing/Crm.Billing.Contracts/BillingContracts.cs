@@ -22,6 +22,9 @@ public enum BillingBasisStatus
     Exported,
     Failed,
     Cancelled,
+
+    /// <summary>A send may have created the order, but nobody can prove it either way; a person checks the accounting system (ADR-013).</summary>
+    ReconciliationRequired,
 }
 
 /// <summary>Where a line came from; "Info" lines carry hours already covered by a contract or an hour bank and cost nothing.</summary>
@@ -57,6 +60,10 @@ public sealed record ExportLine(
     decimal LineTotal);
 
 /// <summary>One customer's billing basis, ready to be sent to the accounting system (BR-BIL-05/06).</summary>
+/// <summary>
+/// One approved basis as the accounting system receives it. <paramref name="SendStarted"/>: an earlier attempt reached the
+/// point of sending, so the order may exist even when a lookup by <paramref name="IdempotencyKey"/> finds nothing (ADR-013).
+/// </summary>
 public sealed record ExportBasis(
     Guid BasisId,
     Guid RunId,
@@ -66,6 +73,7 @@ public sealed record ExportBasis(
     DateOnly PeriodEnd,
     string? CustomerReference,
     decimal TotalExVat,
+    bool SendStarted,
     IReadOnlyList<ExportLine> Lines);
 
 /// <summary>An invoice as the accounting system reports it.</summary>
@@ -113,7 +121,20 @@ public interface IBillingApi
     /// <summary>Records a successful export; repeated calls with the same order number are ignored (BR-BIL-05).</summary>
     Task MarkExportedAsync(Guid basisId, string system, string orderNo, string? correlationId, CancellationToken cancellationToken);
 
+    /// <summary>The order was not created: a check before sending failed, or the accounting system rejected it.</summary>
     Task MarkExportFailedAsync(Guid basisId, string system, string message, string? correlationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Recorded, and committed, right before the order is sent; false when the basis no longer waits to be sent (cancelled,
+    /// say), in which case nothing is sent (ADR-013).
+    /// </summary>
+    Task<bool> MarkExportSendingAsync(Guid basisId, string system, string? correlationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// An earlier send may have created the order and a lookup does not find it: the basis and its charges wait for a person
+    /// to check the accounting system instead of being sent again (ADR-013).
+    /// </summary>
+    Task MarkReconciliationRequiredAsync(Guid basisId, string system, string message, string? correlationId, CancellationToken cancellationToken);
 
     /// <summary>Inserts or updates invoices and their outstanding amounts (BR-BIL-08).</summary>
     Task<InvoiceSyncResult> UpsertInvoicesAsync(IReadOnlyCollection<ExternalInvoice> invoices, CancellationToken cancellationToken);

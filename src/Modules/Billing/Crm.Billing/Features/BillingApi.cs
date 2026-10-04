@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Crm.Billing.Features;
 
 /// <summary>What integrations may do with billing: read approved bases, report the result and mirror invoices back.</summary>
-internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeProvider time) : IBillingApi
+internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time) : IBillingApi
 {
     public async Task<IReadOnlyList<ExportBasis>> GetBasesToExportAsync(Guid? runId, CancellationToken cancellationToken)
     {
@@ -49,7 +49,44 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
             return;
         }
 
-        basis.MarkExported(system, orderNo, time.GetUtcNow(), correlationId);
+        var now = time.GetUtcNow();
+        basis.MarkExported(system, orderNo, now, correlationId);
+        // The order exists: the basis's charges are billed for good, in the same transaction (ADR-013).
+        await ledger.ConfirmExportAsync(basis.Id, now, null, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await UpdateRunStatusAsync(basis.RunId, cancellationToken);
+    }
+
+    public async Task<bool> MarkExportSendingAsync(Guid basisId, string system, string? correlationId, CancellationToken cancellationToken)
+    {
+        if (await db.BillingBases.Include(b => b.Attempts).SingleOrDefaultAsync(b => b.Id == basisId, cancellationToken) is not { } basis)
+        {
+            return false;
+        }
+
+        if (!basis.MarkSending(system, time.GetUtcNow(), correlationId).IsSuccess)
+        {
+            return false;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task MarkReconciliationRequiredAsync(Guid basisId, string system, string message, string? correlationId, CancellationToken cancellationToken)
+    {
+        if (await db.BillingBases.Include(b => b.Attempts).SingleOrDefaultAsync(b => b.Id == basisId, cancellationToken) is not { } basis)
+        {
+            return;
+        }
+
+        var now = time.GetUtcNow();
+        if (!basis.RequireReconciliation(system, message, now, correlationId).IsSuccess)
+        {
+            return;
+        }
+
+        await ledger.RequireReconciliationAsync(basis.Id, now, message, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await UpdateRunStatusAsync(basis.RunId, cancellationToken);
     }
@@ -233,8 +270,13 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
             .ToList();
     }
 
-    /// <summary>The run follows its bases: exporting while any is waiting, then exported or exported with errors.</summary>
-    private async Task UpdateRunStatusAsync(Guid runId, CancellationToken ct)
+    private Task UpdateRunStatusAsync(Guid runId, CancellationToken ct) => UpdateRunStatusAsync(db, runId, time.GetUtcNow(), ct);
+
+    /// <summary>
+    /// The run follows its bases: exporting while any is waiting, then exported, or exported with errors while a basis failed
+    /// or waits for reconciliation (ADR-013).
+    /// </summary>
+    internal static async Task UpdateRunStatusAsync(BillingDbContext db, Guid runId, DateTimeOffset now, CancellationToken ct)
     {
         if (await db.BillingRuns.SingleOrDefaultAsync(r => r.Id == runId, ct) is not { } run || run.Status == BillingRunStatus.Closed)
         {
@@ -249,9 +291,9 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
                 run.StartExport();
             }
         }
-        else
+        else if (run.Status is BillingRunStatus.Approved or BillingRunStatus.Exporting or BillingRunStatus.Exported or BillingRunStatus.ExportedWithErrors)
         {
-            run.FinishExport(statuses.Contains(BillingBasisStatus.Failed), time.GetUtcNow());
+            run.FinishExport(statuses.Contains(BillingBasisStatus.Failed) || statuses.Contains(BillingBasisStatus.ReconciliationRequired), now);
         }
 
         await db.SaveChangesAsync(ct);
@@ -278,6 +320,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, TimeP
         run.PeriodEnd,
         basis.CustomerReference,
         basis.TotalExVat,
+        basis.SendStartedAt is not null,
         basis.BilledLines
             .Where(l => l.Group != BillingGroup.Info || l.LineTotal != 0)
             .OrderBy(l => l.Group)
@@ -307,8 +350,9 @@ internal sealed class BasisExportedHandler(
         var chargeIds = lines.SelectMany(json => SourceRefs.Ids(json, "pendingChargeIds")).Distinct().ToList();
         if (chargeIds.Count > 0)
         {
-            // The one-time items on this basis are now invoiced and must not be collected into another run (BR-SAL-07).
-            foreach (var charge in await db.PendingCharges.Where(c => chargeIds.Contains(c.Id)).ToListAsync(cancellationToken))
+            // The one-time items on this basis are now invoiced and must not be collected into another run (BR-SAL-07) — also
+            // one withdrawn meanwhile (a project phase reopened), so that completing it again does not queue it a second time.
+            foreach (var charge in await db.PendingCharges.IgnoreQueryFilters().Where(c => chargeIds.Contains(c.Id)).ToListAsync(cancellationToken))
             {
                 charge.MarkInvoiced(domainEvent.BasisId, time.GetUtcNow());
             }

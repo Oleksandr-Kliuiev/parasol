@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Infrastructure.Persistence;
@@ -47,6 +48,9 @@ public static class ConcurrencyExtensions
         context.Entry(entity).Property(ModuleDbContext.RowVersionProperty).OriginalValue = version;
         return true;
     }
+
+    /// <summary>A unique index refused the row: somebody else inserted the same value at the same moment.</summary>
+    public static bool IsUniqueViolation(this DbUpdateException exception) => exception.InnerException is SqlException { Number: 2601 or 2627 };
 
     /// <summary>
     /// After <see cref="ApplyIfMatch"/>: true when the client's version is not the row just read, so a command can be refused

@@ -363,6 +363,7 @@ erDiagram
 erDiagram
   BILLING_RUN ||--o{ BILLING_BASIS : "per customer"
   BILLING_RUN ||--o{ BILLING_APPROVAL : "approved as"
+  BILLING_LINE ||--o{ CHARGE : "bills"
   BILLING_BASIS ||--o{ BILLING_LINE : contains
   BILLING_BASIS ||--o| EXPORT_ATTEMPT : "exported via"
   BILLING_BASIS ||--o{ INVOICE : "resulted in"
@@ -373,6 +374,7 @@ erDiagram
     uuid Id
     date PeriodStart
     date PeriodEnd
+    string Kind "Regular|Supplementary (ADR-013)"
     string Status "Draft|Collected|InReview|Approved|Exporting|Exported|ExportedWithErrors|Closed"
     uuid ApprovedBy "зеркало действующего первого акта текущей ревизии"
     uuid SecondApprovedBy "зеркало действующего второго акта"
@@ -402,8 +404,28 @@ erDiagram
     money TotalExVat
     money PreviousPeriodTotal
     string Anomalies "JSON"
-    string Status "Draft|Approved|Exported|Failed|Cancelled"
+    string Status "Draft|Approved|Exported|Failed|Cancelled|ReconciliationRequired"
     string PowerOfficeOrderNo
+    datetime SendStartedAt "отправка начата; пока не выгружено — заказ может существовать"
+  }
+  CHARGE {
+    uuid Id
+    string Key "обязанность: contract:{серия}:{с}:{по} | time:{allocation} | hourbank:{покупка} | pending:{позиция} | legacy:{строка}"
+    string Kind "Contract|Time|TimeInfo|HourBankPurchase|OneOff|Legacy"
+    uuid SeriesId
+    date ServiceFrom
+    date ServiceTo
+    uuid ContractLineId
+    uuid CorrectsLineId "корректировка выгруженной строки"
+    uuid SourceOrganizationId
+    uuid PayerOrganizationId
+    string Currency "NOK"
+    money Amount
+    string Status "Reserved|Committed|ExportConfirmed|ReconciliationRequired|Released|LegacyUnresolved; unique Key среди не Released"
+    uuid RunId
+    uuid BasisId
+    uuid LineId
+    string Reason
   }
   BILLING_LINE {
     uuid Id
@@ -453,6 +475,8 @@ erDiagram
 ```
 
 **Неизменяемость:** после утверждения `BILLING_BASIS` и `BILLING_LINE` защищены на уровне домена (исключение при попытке изменения) и триггером БД; корректировки — только новыми позициями в следующем прогоне.
+
+**Реестр начислений** (`billing.Charges`, [ADR-013](adr/ADR-013-charge-register.md)): одна действующая обязанность на ключ между всеми прогонами; сбор под блокировкой реестра вычитает уже занятые дни серии договора, утверждение фиксирует, выгрузка подтверждает, неизвестный исход отправки требует сверки, отмена до отправки освобождает.
 
 **Разовые позиции из принятых предложений и завершённых этапов проектов** (`billing.PendingCharges`): организация, продукт, описание, количество, цена, скидка, ставка МВА, источник (`SourceType` = `quote` или `project-phase`, `SourceId`, `SourceLineId` — уникальны вместе) и дата, с которой позицию можно выставлять. Прогон включает все незакрытые позиции, а закрывает их (`InvoicedBasisId`) только когда основание действительно выгружено, поэтому отменённый или пересобранный прогон ничего не теряет и не выставляет дважды (BR-SAL-07).
 

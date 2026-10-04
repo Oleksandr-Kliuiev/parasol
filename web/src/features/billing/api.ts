@@ -1,6 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
-import type { AdjustLineRequest, BasisListItem, BasisStatus, Basis, BillingSettings, Invoice, InvoiceSummary, ManualLineRequest, Run, RunListItem, RunStatus } from './types';
+import type {
+  AdjustLineRequest,
+  BasisListItem,
+  BasisStatus,
+  Basis,
+  BillingSettings,
+  CorrectionRequest,
+  Invoice,
+  InvoiceSummary,
+  LegacyChargeReport,
+  ManualLineRequest,
+  ReconcileRequest,
+  Run,
+  RunListItem,
+  RunStatus,
+} from './types';
 
 const BASE = '/api/v1/billing';
 
@@ -12,6 +27,7 @@ export const billingKeys = {
   basis: (id: string) => ['billing', 'basis', id] as const,
   invoices: (filters: object) => ['billing', 'invoices', filters] as const,
   settings: ['billing', 'settings'] as const,
+  legacy: ['billing', 'legacy'] as const,
 };
 
 export interface RunFilters {
@@ -82,7 +98,7 @@ export function useRunActions(id?: string) {
   const post = (path: string, etag?: string) => api.post<Run>(`${BASE}/runs/${id}/${path}`, etag ? {} : undefined, etag);
   return {
     create: useMutation({
-      mutationFn: (request: { year: number; month: number; notes: string | null }) => api.post<Run>(`${BASE}/runs`, request),
+      mutationFn: (request: { year: number; month: number; notes: string | null; supplementary: boolean }) => api.post<Run>(`${BASE}/runs`, request),
       onSuccess: refresh,
     }),
     collect: useMutation({ mutationFn: (etag: string) => post('collect', etag), onSuccess: refresh, onError: refresh }),
@@ -142,6 +158,17 @@ export function useBasisActions(basisId: string) {
       mutationFn: ({ reason, etag }: { reason: string; etag: string }) => api.post<Basis>(`${BASE}/bases/${basisId}/cancel`, { reason }, etag),
       onSuccess,
     }),
+    /** What Finance found in PowerOffice for a send that got no answer (ADR-013). */
+    reconcile: useMutation({
+      mutationFn: ({ request, etag }: { request: ReconcileRequest; etag: string }) => api.post<Basis>(`${BASE}/bases/${basisId}/reconcile`, request, etag),
+      onSuccess,
+    }),
+    /** An addition to an exported line, billed by the next run; the exported order itself never changes. */
+    addCorrection: useMutation({
+      mutationFn: ({ lineId, request }: { lineId: string; request: CorrectionRequest }) =>
+        api.post<{ id: string }>(`${BASE}/bases/${basisId}/lines/${lineId}/corrections`, request),
+      onSuccess: () => client.invalidateQueries({ queryKey: billingKeys.all, refetchType: 'none' }),
+    }),
   };
 }
 
@@ -162,3 +189,21 @@ export function useInvoices(filters: InvoiceFilters, enabled = true) {
 }
 
 export type { Invoice };
+
+/** Lines billed before the charge register that hold what they cover until Finance decides (ADR-013, EXT-01). */
+export function useLegacyCharges(enabled: boolean) {
+  return useQuery({
+    queryKey: billingKeys.legacy,
+    enabled,
+    queryFn: async ({ signal }) => (await api.get<LegacyChargeReport>(`${BASE}/charges/legacy`, signal)).data,
+  });
+}
+
+export function useLegacyDecision() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, billed, reason, etag }: { id: string; billed: boolean; reason: string; etag: string }) =>
+      api.post(`${BASE}/charges/${id}/legacy-decision`, { billed, reason }, etag),
+    onSuccess: () => client.invalidateQueries({ queryKey: billingKeys.all }),
+  });
+}

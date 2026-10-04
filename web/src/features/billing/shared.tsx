@@ -20,6 +20,7 @@ const basisColor: Record<BasisStatus, BadgeProps['color']> = {
   Exported: 'success',
   Failed: 'danger',
   Cancelled: 'subtle',
+  ReconciliationRequired: 'danger',
 };
 
 const invoiceColor: Record<InvoiceStatus, BadgeProps['color']> = {

@@ -285,3 +285,58 @@ test('an approval belongs to the revision on screen and a change sets it aside w
   await expect(approvals.getByRole('listitem').filter({ hasText: 'Lines were changed afterwards.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve', exact: true })).toBeEnabled();
 });
+
+test('a billed and closed month gets a supplementary run that bills nothing twice', async ({ page }) => {
+  test.setTimeout(180_000);
+  const m = marker('Til');
+  await signIn(page, 'Crm.Admin');
+  const run = await reserveBillingRun(page, m);
+  // Not linked to PowerOffice: the export fails at once, which is enough to close the run.
+  const organization = await createOrganization(page, { name: `${m} Tillegg AS`, status: 'Customer' });
+  const product = await api.post<{ id: string }>(page, '/api/v1/catalog/products', {
+    sku: `${m}-SRV`, name: `${m} Drift`, type: 'ManagedService', businessLine: 'Atera', unit: 'Piece',
+    billingPeriod: 'Monthly', vatRate: 25, listPrice: 1200, unitCost: 600,
+  });
+  const contract = await api.post<{ id: string }>(page, '/api/v1/contracts', {
+    organizationId: organization.id, title: `${m} Avtale`, type: 'Msp', startDate: run.start, endDate: periodEnd(run), autoRenew: false,
+    renewalTermMonths: 0, noticePeriodDays: 30, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance', indexation: false,
+  });
+  await api.post(page, `/api/v1/contracts/${contract.id}/lines`, { productId: product.id, quantityModel: 'Fixed', quantity: 1, unitPrice: 1200, validFrom: run.start });
+  await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
+
+  await signIn(page, 'Crm.Finance');
+  await api.runCommand(page, run.id, 'collect');
+  await api.runCommand(page, run.id, 'approve');
+  await expect
+    .poll(
+      async () => {
+        await signIn(page, 'Crm.Admin');
+        await trigger(page, 'outbound-operations');
+        return (await api.get<{ status: string }>(page, `/api/v1/billing/runs/${run.id}`)).status;
+      },
+      { timeout: 120_000, intervals: [2_000, 5_000, 10_000] },
+    )
+    .toMatch(/^Exported(WithErrors)?$/);
+  await signIn(page, 'Crm.Finance');
+  await api.post(page, `/api/v1/billing/runs/${run.id}/close`);
+
+  // A second regular run of the closed month is refused with the way out; a supplementary run is created.
+  await page.goto('/billing');
+  await page.getByRole('button', { name: 'New run' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('spinbutton', { name: 'Year' }).fill(String(run.year));
+  await dialog.getByRole('combobox', { name: 'Month' }).click();
+  await page.getByRole('option', { name: new RegExp(`^${monthName(run.month)}`, 'i') }).click();
+  await dialog.getByRole('button', { name: 'Create' }).click();
+  await expect(dialog.getByText('This month is already billed and closed. Create a supplementary run', { exact: false })).toBeVisible();
+  await dialog.getByRole('switch', { name: 'Supplementary run' }).click();
+  await dialog.getByRole('button', { name: 'Create' }).click();
+  await expect(toast(page, /Run for .* created/)).toBeVisible();
+  await expect(page.getByText('Supplementary', { exact: true }).first()).toBeVisible();
+
+  // The month left with the first run; collecting the supplementary run does not bring it back.
+  await page.getByRole('button', { name: 'Collect', exact: true }).click();
+  await expect(toast(page, 'The run was collected')).toBeVisible();
+  await page.getByRole('searchbox', { name: 'Search customer' }).fill(m);
+  await expect(page.getByRole('row').filter({ hasText: `${m} Tillegg AS` })).toHaveCount(0);
+});

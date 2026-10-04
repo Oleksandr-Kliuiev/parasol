@@ -146,6 +146,11 @@ export function BillingRunPage() {
         meta={
           <>
             <RunStatusBadge status={run.status} requiresSecondApproval={run.requiresSecondApproval} />
+            {run.kind === 'Supplementary' && (
+              <Badge appearance="outline" color="informative">
+                {t('billing.supplementary.badge')}
+              </Badge>
+            )}
             {run.notes && <Text className={styles.label}>{run.notes}</Text>}
           </>
         }

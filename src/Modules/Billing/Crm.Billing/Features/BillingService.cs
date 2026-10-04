@@ -6,6 +6,7 @@ using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Domain;
 using Crm.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,7 @@ public sealed record InvoiceQuery(Guid? OrganizationId, bool OpenOnly, bool Over
 internal sealed class BillingService(
     BillingDbContext db,
     BillingCollector collector,
+    ChargeLedger ledger,
     ICustomersApi customers,
     ICatalogApi catalog,
     IUserDirectory users,
@@ -55,7 +57,7 @@ internal sealed class BillingService(
             // Like the run itself: an open run says what its content needs now (BR-BIL-04), a released one what it was released with.
             var requiresSecond = r.IsLocked ? r.RequiresSecondApproval : totalsOfRun.LargestBasis > options.Value.SecondApprovalThreshold;
             return new RunListItem(
-                r.Id, r.PeriodStart, r.PeriodEnd, r.Status, totalsOfRun.Organizations, totalsOfRun.WithAnomalies, totalsOfRun.Total,
+                r.Id, r.PeriodStart, r.PeriodEnd, r.Kind, r.Status, totalsOfRun.Organizations, totalsOfRun.WithAnomalies, totalsOfRun.Total,
                 requiresSecond, r.CollectedAt, r.ApprovedAt, r.ExportedAt, r.ClosedAt);
         }).ToList();
     }
@@ -70,23 +72,69 @@ internal sealed class BillingService(
         return await ToResponseAsync(run, ct);
     }
 
+    /// <summary>
+    /// One open run per period (BR-BIL-01). A period that is billed and closed gets no second regular run: a further run is
+    /// a supplementary one, and like every run it bills only what the charge register does not hold yet (ADR-013).
+    /// </summary>
     public async Task<Result<RunResponse>> CreateRunAsync(CreateRunRequest request, CancellationToken ct)
     {
         var periodStart = new DateOnly(request.Year, request.Month, 1);
-        if (await db.BillingRuns.AnyAsync(r => r.PeriodStart == periodStart && r.Status != BillingRunStatus.Closed, ct))
+        var statuses = await db.BillingRuns.Where(r => r.PeriodStart == periodStart).Select(r => r.Status).ToListAsync(ct);
+        if (statuses.Any(s => s != BillingRunStatus.Closed))
         {
             return BillingErrors.PeriodBusy(periodStart);
         }
 
-        var run = BillingRun.Create(request.Year, request.Month, request.Notes);
+        var billed = statuses.Contains(BillingRunStatus.Closed);
+        if (billed && !request.Supplementary)
+        {
+            return BillingErrors.PeriodAlreadyBilled(periodStart);
+        }
+
+        if (!billed && request.Supplementary)
+        {
+            return BillingErrors.NothingToSupplement(periodStart);
+        }
+
+        var run = BillingRun.Create(request.Year, request.Month, request.Notes, request.Supplementary ? BillingRunKind.Supplementary : BillingRunKind.Regular);
         db.BillingRuns.Add(run);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException exception) when (exception.IsUniqueViolation())
+        {
+            // Two runs for the period were created at the same moment: the unique index of open periods kept the other one.
+            return BillingErrors.PeriodBusy(periodStart);
+        }
+
         return await ToResponseAsync(run, ct);
     }
 
-    /// <summary>Collects or re-collects the bases of a run (BR-BIL-02). Every collect is a new revision: earlier approvals no longer count.</summary>
+    /// <summary>
+    /// Collects or re-collects the bases of a run (BR-BIL-02). Every collect is a new revision: earlier approvals no longer
+    /// count. The collect is one transaction under the charge register's lock, so two collects never reserve one obligation
+    /// twice (ADR-013); a transient failure repeats the whole transaction from a clean state.
+    /// </summary>
     public async Task<Result<RunResponse>> CollectAsync(Guid id, string ifMatch, CancellationToken ct)
     {
+        Result<BillingRun> collected;
+        try
+        {
+            collected = await db.Database.CreateExecutionStrategy().ExecuteAsync(c => CollectInTransactionAsync(id, ifMatch, c), ct);
+        }
+        catch (Microsoft.Data.SqlClient.SqlException exception) when (exception.Number == 51000)
+        {
+            return BillingErrors.CollectBusy;
+        }
+
+        return collected.IsSuccess ? await ToResponseAsync(collected.Value, ct) : collected.Error!;
+    }
+
+    private async Task<Result<BillingRun>> CollectInTransactionAsync(Guid id, string ifMatch, CancellationToken ct)
+    {
+        db.ChangeTracker.Clear();
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
         if (await LoadRunAsync(id, ct) is not { } run)
         {
             return BillingErrors.RunNotFound(id);
@@ -107,6 +155,7 @@ internal sealed class BillingService(
             return BillingErrors.InvalidStatus(run.Status, "collected again");
         }
 
+        await ledger.LockAsync(ct);
         var result = await collector.CollectAsync(run, ct);
         var marked = run.MarkCollected(time.GetUtcNow(), result.RequiresSecondApproval);
         if (!marked.IsSuccess)
@@ -115,7 +164,8 @@ internal sealed class BillingService(
         }
 
         await db.SaveChangesAsync(ct);
-        return await ToResponseAsync(run, ct);
+        await transaction.CommitAsync(ct);
+        return run;
     }
 
     public Task<Result<RunResponse>> ReviewAsync(Guid id, CancellationToken ct) => MutateAsync(id, run => run.StartReview(), ct);
@@ -163,11 +213,14 @@ internal sealed class BillingService(
 
         if (run.Status == BillingRunStatus.Approved)
         {
-            // Approving the run approves every basis: from here on they are immutable (BR-BIL-10).
+            // Approving the run approves every basis: from here on they are immutable (BR-BIL-10), and the obligations they
+            // bill are committed in the same transaction (ADR-013).
             foreach (var basis in bases)
             {
                 basis.Approve();
             }
+
+            await ledger.CommitAsync(run.Id, bases, now, ct);
         }
 
         await db.SaveChangesAsync(ct);
@@ -223,6 +276,7 @@ internal sealed class BillingService(
         foreach (var basis in await db.BillingBases.Include(b => b.Lines).Where(b => b.RunId == run.Id).ToListAsync(ct))
         {
             basis.MarkDeleted();
+            await ledger.ReleaseAsync(basis.Id, "The run was discarded.", time.GetUtcNow(), ct);
         }
 
         await db.SaveChangesAsync(ct);
@@ -334,8 +388,154 @@ internal sealed class BillingService(
     public Task<Result<BasisResponse>> RetryAsync(Guid basisId, CancellationToken ct) =>
         MutateBasisAsync(basisId, null, basis => Task.FromResult(basis.Retry()), ct, resetReason: null);
 
+    /// <summary>
+    /// Cancels a basis that was never sent and frees its obligations for a later run. A basis whose order may exist is
+    /// reconciled first (ADR-013); an exported one is credited in the accounting system (BR-BIL-09).
+    /// </summary>
     public Task<Result<BasisResponse>> CancelAsync(Guid basisId, CancelBasisRequest request, string ifMatch, CancellationToken ct) =>
-        MutateBasisAsync(basisId, ifMatch, basis => Task.FromResult(basis.Cancel(time.GetUtcNow(), request.Reason)), ct, ApprovalResetReasons.BasisCancelled);
+        MutateBasisAsync(basisId, ifMatch, async basis =>
+        {
+            var now = time.GetUtcNow();
+            var cancelled = basis.Cancel(now, request.Reason);
+            if (cancelled.IsSuccess)
+            {
+                await ledger.ReleaseAsync(basis.Id, $"The basis was cancelled before anything was sent: {request.Reason}", now, ct);
+            }
+
+            return cancelled;
+        }, ct, ApprovalResetReasons.BasisCancelled);
+
+    /// <summary>
+    /// Finance checked the accounting system for a basis whose send got no answer: the order exists (its number is recorded
+    /// and the charges are billed) or it does not (the basis can be sent again or cancelled). Audited with the reason.
+    /// </summary>
+    public async Task<Result<BasisResponse>> ReconcileAsync(Guid basisId, ReconcileRequest request, string ifMatch, CancellationToken ct)
+    {
+        var reconciled = await MutateBasisAsync(basisId, ifMatch, async basis =>
+        {
+            var now = time.GetUtcNow();
+            var result = basis.Reconcile(request.Created, request.OrderNo, request.Reason, basis.ExportSystem ?? "poweroffice", now, currentUser.UserId?.ToString());
+            if (!result.IsSuccess)
+            {
+                return result;
+            }
+
+            if (request.Created)
+            {
+                await ledger.ConfirmExportAsync(basis.Id, now, $"Reconciled: {request.Reason}", ct);
+            }
+            else
+            {
+                await ledger.ReconciledNotCreatedAsync(basis.Id, now, $"Reconciled, no order: {request.Reason}", ct);
+            }
+
+            return Result.Success();
+        }, ct, resetReason: null);
+
+        if (reconciled.IsSuccess)
+        {
+            await BillingApi.UpdateRunStatusAsync(db, reconciled.Value.RunId, time.GetUtcNow(), ct);
+        }
+
+        return reconciled;
+    }
+
+    /// <summary>
+    /// Adds to an exported line: a new one-time charge that refers to the line, with the amount and the reason, billed by the
+    /// next run (BR-BIL-10, ADR-013). The exported order itself never changes; crediting stays in the accounting system.
+    /// </summary>
+    public async Task<Result<CorrectionResponse>> AddCorrectionAsync(Guid basisId, Guid lineId, CorrectionRequest request, CancellationToken ct)
+    {
+        if (await LoadBasisAsync(basisId, ct) is not { } basis)
+        {
+            return BillingErrors.BasisNotFound(basisId);
+        }
+
+        if (basis.Status != BillingBasisStatus.Exported)
+        {
+            return BillingErrors.NotExported;
+        }
+
+        if (basis.CurrentLines.FirstOrDefault(l => l.Id == lineId) is not { } line)
+        {
+            return BillingErrors.LineNotFound(lineId);
+        }
+
+        if (line.Decision == BillingLineDecision.Exclusion)
+        {
+            return BillingErrors.LineExcluded;
+        }
+
+        if (request.Amount < 0)
+        {
+            return BillingErrors.CreditNotEnabled;
+        }
+
+        var correction = PendingCharge.Correction(
+            line.SourceOrganizationId ?? basis.OrganizationId,
+            line.ProductId,
+            string.IsNullOrWhiteSpace(request.Description) ? line.Description : request.Description.Trim(),
+            request.Amount,
+            line.VatRate,
+            line.Id,
+            SequentialId.New(time.GetUtcNow()),
+            request.Reason.Trim(),
+            Today);
+        db.PendingCharges.Add(correction);
+        await db.SaveChangesAsync(ct);
+        return new CorrectionResponse(correction.Id, correction.Description, correction.UnitPrice, correction.ChargeableFrom, line.Id);
+    }
+
+    /// <summary>
+    /// The lines billed before the register existed that the backfill could not prove (ADR-013): what they are, for which
+    /// customer, period and amount, and why. They hold what they may cover until Finance decides (EXT-01).
+    /// </summary>
+    public async Task<LegacyChargeReport> LegacyChargesAsync(CancellationToken ct)
+    {
+        var charges = await db.Charges.Where(c => c.Status == ChargeStatus.LegacyUnresolved).OrderBy(c => c.ServiceFrom).ToListAsync(ct);
+        var lineIds = charges.Where(c => c.LineId is not null).Select(c => c.LineId!.Value).ToList();
+        var descriptions = await db.BillingLines.IgnoreQueryFilters().AsNoTracking().Where(l => lineIds.Contains(l.Id))
+            .ToDictionaryAsync(l => l.Id, l => l.Description, ct);
+        var names = await customers.GetOrganizationNamesAsync(charges.Select(c => c.PayerOrganizationId).Distinct().ToList(), ct);
+        var items = charges
+            .Select(c => new LegacyChargeItem(
+                c.Id,
+                new RefDto(c.PayerOrganizationId, names.GetValueOrDefault(c.PayerOrganizationId, "—")),
+                c.ServiceFrom,
+                c.LineId is { } id ? descriptions.GetValueOrDefault(id) : null,
+                c.Amount,
+                c.Reason,
+                db.GetETag(c)))
+            .ToList();
+        return new LegacyChargeReport(
+            items.Count,
+            decimal.Round(charges.Sum(c => c.Amount), 2),
+            charges.GroupBy(c => c.Reason ?? "—").Select(g => new LegacyChargeGroup(g.Key, g.Count(), decimal.Round(g.Sum(c => c.Amount), 2))).ToList(),
+            items);
+    }
+
+    /// <summary>Finance's decision about a legacy line: billed back then (it keeps holding what it covers) or not (released).</summary>
+    public async Task<Result> DecideLegacyAsync(Guid chargeId, LegacyDecisionRequest request, string ifMatch, CancellationToken ct)
+    {
+        if (await db.Charges.SingleOrDefaultAsync(c => c.Id == chargeId, ct) is not { } charge)
+        {
+            return BillingErrors.ChargeNotFound(chargeId);
+        }
+
+        if (!db.ApplyIfMatch(charge, ifMatch))
+        {
+            return Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
+        }
+
+        var decided = charge.DecideLegacy(request.Billed, request.Reason.Trim(), time.GetUtcNow());
+        if (!decided.IsSuccess)
+        {
+            return decided;
+        }
+
+        await db.SaveChangesAsync(ct);
+        return Result.Success();
+    }
 
     // ---------- Invoices ----------
 
@@ -450,6 +650,7 @@ internal sealed class BillingService(
             run.Id,
             run.PeriodStart,
             run.PeriodEnd,
+            run.Kind,
             run.Status,
             bases.Count,
             bases.Count(b => b.AnomaliesJson != null),
@@ -505,6 +706,7 @@ internal sealed class BillingService(
             basis.CustomerReference,
             basis.OrderNo,
             basis.ExportedAt,
+            basis.SendStartedAt is not null,
             basis.CurrentLines
                 .OrderBy(l => l.Group)
                 .ThenBy(l => l.Description, StringComparer.Ordinal)

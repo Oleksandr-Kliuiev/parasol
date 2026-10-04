@@ -7,7 +7,8 @@ namespace Crm.Billing.Features;
 
 public sealed record RefDto(Guid Id, string Name);
 
-public sealed record CreateRunRequest(int Year, int Month, string? Notes);
+/// <summary><paramref name="Supplementary"/>: a further run for a period already billed and closed; it bills only what no run billed yet (ADR-013).</summary>
+public sealed record CreateRunRequest(int Year, int Month, string? Notes, bool Supplementary = false);
 
 internal sealed class CreateRunRequestValidator : AbstractValidator<CreateRunRequest>
 {
@@ -65,10 +66,68 @@ internal sealed class CancelBasisRequestValidator : AbstractValidator<CancelBasi
     public CancelBasisRequestValidator() => RuleFor(x => x.Reason).NotEmpty().MaximumLength(512);
 }
 
+/// <summary>What Finance found in the accounting system for a basis whose send got no answer (ADR-013).</summary>
+public sealed record ReconcileRequest(bool Created, string? OrderNo, string Reason);
+
+internal sealed class ReconcileRequestValidator : AbstractValidator<ReconcileRequest>
+{
+    public ReconcileRequestValidator()
+    {
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(512);
+        RuleFor(x => x.OrderNo).NotEmpty().MaximumLength(64).When(x => x.Created);
+    }
+}
+
+/// <summary>An addition to an exported line, billed by the next run; a negative amount is a credit note in the accounting system.</summary>
+public sealed record CorrectionRequest(decimal Amount, string Reason, string? Description = null);
+
+internal sealed class CorrectionRequestValidator : AbstractValidator<CorrectionRequest>
+{
+    public CorrectionRequestValidator()
+    {
+        RuleFor(x => x.Amount).NotEqual(0m);
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(512);
+        RuleFor(x => x.Description).MaximumLength(512);
+    }
+}
+
+public sealed record CorrectionResponse(
+    Guid Id,
+    string Description,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? Amount,
+    DateOnly ChargeableFrom,
+    Guid CorrectsLineId);
+
+/// <summary>A line billed before the charge register existed that the backfill could not prove (ADR-013, EXT-01).</summary>
+public sealed record LegacyChargeItem(
+    Guid Id,
+    RefDto Organization,
+    DateOnly? PeriodStart,
+    string? Description,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? Amount,
+    string? Reason,
+    string Etag);
+
+public sealed record LegacyChargeGroup(string Reason, int Count, [property: SensitiveData(Permissions.FinanceRead)] decimal? Amount);
+
+public sealed record LegacyChargeReport(
+    int Count,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? Amount,
+    IReadOnlyList<LegacyChargeGroup> ByReason,
+    IReadOnlyList<LegacyChargeItem> Items);
+
+public sealed record LegacyDecisionRequest(bool Billed, string Reason);
+
+internal sealed class LegacyDecisionRequestValidator : AbstractValidator<LegacyDecisionRequest>
+{
+    public LegacyDecisionRequestValidator() => RuleFor(x => x.Reason).NotEmpty().MaximumLength(512);
+}
+
 public sealed record RunListItem(
     Guid Id,
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
+    BillingRunKind Kind,
     BillingRunStatus Status,
     int Organizations,
     int WithAnomalies,
@@ -83,6 +142,7 @@ public sealed record RunResponse(
     Guid Id,
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
+    BillingRunKind Kind,
     BillingRunStatus Status,
     int Organizations,
     int WithAnomalies,
@@ -189,6 +249,7 @@ public sealed record BasisResponse(
     string? CustomerReference,
     string? OrderNo,
     DateTimeOffset? ExportedAt,
+    bool SendStarted,
     IReadOnlyList<BasisLineDto> Lines,
     IReadOnlyList<ExportAttemptDto> Attempts,
     IReadOnlyList<InvoiceDto> Invoices,

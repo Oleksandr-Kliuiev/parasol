@@ -1,8 +1,13 @@
+using System.Linq.Expressions;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Crm.Billing.Domain;
+using Crm.Billing.Persistence;
 using Crm.Infrastructure.DependencyInjection;
 using Crm.Infrastructure.Outbox;
 using Crm.Integrations.Core;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WireMock.ResponseBuilders;
 
@@ -84,6 +89,35 @@ internal static class IntegrationTestHelpers
         var read = await client.GetAsync($"/api/v1/billing/runs/{runId}");
         read.EnsureSuccessStatusCode();
         return read.Headers.ETag!.Tag;
+    }
+
+    /// <summary>
+    /// The basis that bills a queued one-time item. Every open run collects queued items and the first to collect one holds
+    /// it (ADR-013), which in the shared test database may be another test's run; the charge register says which. When no
+    /// run holds it (a run that held it was discarded meanwhile), <paramref name="runId"/> is collected again.
+    /// </summary>
+    public static async Task<JsonElement> QueuedChargeBasisAsync(
+        this CrmWebFactory factory, HttpClient finance, Guid runId, Expression<Func<PendingCharge, bool>> queued)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
+                var pendingId = await db.PendingCharges.Where(queued).Select(c => c.Id).SingleAsync();
+                var key = $"pending:{pendingId:N}";
+                var holders = await db.Charges.Where(c => c.Key == key && c.Status != ChargeStatus.Released).Select(c => c.BasisId).ToListAsync();
+                holders.Count.ShouldBeLessThanOrEqualTo(1, "one queued item is one obligation, held by one basis");
+                if (holders.SingleOrDefault() is { } basisId)
+                {
+                    return await finance.GetFromJsonAsync<JsonElement>($"/api/v1/billing/bases/{basisId}");
+                }
+            }
+
+            (await finance.RunCommandAsync(runId, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        throw new ShouldAssertException("No basis holds the queued item.");
     }
 
     public static async Task<JsonElement> ReadJsonAsync(this HttpResponseMessage response) =>

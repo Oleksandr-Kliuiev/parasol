@@ -115,7 +115,8 @@ internal sealed class TimeImportService(TimeTrackingDbContext db, TimeApprovalSe
         return rows
             .Select(r => new BillableTime(
                 r.Id, r.AllocationId, r.OrganizationId, r.Classification, r.WorkDate, r.Hours, r.BilledHours, r.Rate, r.Amount,
-                r.HourBankId, r.WorkType, r.AfterHours, r.Onsite, r.Description, r.ExternalTicketId, r.TicketTitle, r.TechnicianName))
+                r.HourBankId, r.WorkType, r.AfterHours, r.Onsite, r.Description, r.ExternalTicketId, r.TicketTitle, r.TechnicianName,
+                r.Status == TimeEntryStatus.Invoiced))
             .ToList();
     }
 

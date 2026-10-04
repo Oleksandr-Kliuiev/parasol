@@ -13,6 +13,8 @@ import {
   Link,
   MessageBar,
   MessageBarBody,
+  Radio,
+  RadioGroup,
   Spinner,
   Table,
   TableBody,
@@ -32,8 +34,10 @@ import {
   ArrowUndo20Regular,
   Checkmark20Regular,
   Delete20Regular,
+  DocumentSearch20Regular,
   Edit20Regular,
   Prohibited20Regular,
+  ReceiptAdd20Regular,
   Warning20Filled,
 } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
@@ -76,6 +80,8 @@ type LineDialog =
   | { kind: 'edit'; line: BasisLine }
   | { kind: 'exclude'; line: BasisLine }
   | { kind: 'keep'; line: BasisLine }
+  | { kind: 'correct'; line: BasisLine }
+  | { kind: 'reconcile'; manual: boolean }
   | { kind: 'cancel' };
 
 /** One customer's basis for one period: the lines that become an invoice, and what happened on export. */
@@ -97,6 +103,12 @@ export function BillingBasisPage() {
   if (error || !basis) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
   const editable = canManage && basis.status === 'Draft';
+  // An exported line is never changed; Finance adds to it with a correction billed by the next run (ADR-013).
+  const correctable = canManage && basis.status === 'Exported';
+  const withActions = editable || correctable;
+  // While an order may exist in PowerOffice the basis is reconciled before it can be cancelled.
+  const mayExist = basis.status === 'ReconciliationRequired' || (basis.status === 'Approved' && basis.sendStarted);
+  const cancellable = canManage && !mayExist && !['Exported', 'Cancelled'].includes(basis.status);
   const groups = [...new Set(basis.lines.map((line) => line.group))];
 
   const remove = async (line: BasisLine) => {
@@ -155,7 +167,17 @@ export function BillingBasisPage() {
                 {t('billing.retry')}
               </Button>
             )}
-            {canManage && basis.status !== 'Exported' && basis.status !== 'Cancelled' && (
+            {canManage && basis.status === 'ReconciliationRequired' && (
+              <Button {...restoreFocusTarget} appearance="primary" icon={<DocumentSearch20Regular />} onClick={() => setDialog({ kind: 'reconcile', manual: false })}>
+                {t('billing.reconcile.action')}
+              </Button>
+            )}
+            {canManage && (basis.status === 'Failed' || (basis.status === 'Approved' && !basis.sendStarted)) && (
+              <Button {...restoreFocusTarget} appearance="subtle" icon={<DocumentSearch20Regular />} onClick={() => setDialog({ kind: 'reconcile', manual: true })}>
+                {t('billing.reconcile.manualAction')}
+              </Button>
+            )}
+            {cancellable && (
               <Button {...restoreFocusTarget} appearance="subtle" onClick={() => setDialog({ kind: 'cancel' })}>
                 {t('billing.cancelBasis')}
               </Button>
@@ -167,6 +189,17 @@ export function BillingBasisPage() {
       {basis.conflicts > 0 && (
         <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
           <MessageBarBody>{t('billing.conflictsBanner', { count: basis.conflicts })}</MessageBarBody>
+        </MessageBar>
+      )}
+
+      {basis.status === 'ReconciliationRequired' && (
+        <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
+          <MessageBarBody>{t('billing.reconcile.banner')}</MessageBarBody>
+        </MessageBar>
+      )}
+      {basis.status === 'Approved' && basis.sendStarted && (
+        <MessageBar intent="info" style={{ marginBottom: tokens.spacingVerticalM }}>
+          <MessageBarBody>{t('billing.reconcile.sending')}</MessageBarBody>
         </MessageBar>
       )}
 
@@ -261,14 +294,14 @@ export function BillingBasisPage() {
                 {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('billing.fields.unitPrice')}</TableHeaderCell>}
                 {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('billing.fields.lineTotal')}</TableHeaderCell>}
                 <TableHeaderCell className={catalog.number}>{t('billing.fields.vat')}</TableHeaderCell>
-                {editable && <TableHeaderCell />}
+                {withActions && <TableHeaderCell />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {groups.map((group) => (
                 <>
                   <TableRow key={group} className={styles.group}>
-                    <TableCell colSpan={canSeeMoney ? (editable ? 6 : 5) : editable ? 4 : 3}>{t(`billing.groups.${group}`)}</TableCell>
+                    <TableCell colSpan={canSeeMoney ? (withActions ? 6 : 5) : withActions ? 4 : 3}>{t(`billing.groups.${group}`)}</TableCell>
                   </TableRow>
                   {basis.lines
                     .filter((line) => line.group === group)
@@ -322,6 +355,21 @@ export function BillingBasisPage() {
                             </TableCell>
                           )}
                           <TableCell className={catalog.number}>{line.vatRate} %</TableCell>
+                          {correctable && (
+                            <TableCell>
+                              {!excluded && (
+                                <Button
+                                  {...restoreFocusTarget}
+                                  size="small"
+                                  appearance="subtle"
+                                  icon={<ReceiptAdd20Regular />}
+                                  aria-label={t('billing.correction.actionNamed', { description: line.description })}
+                                  title={t('billing.correction.action')}
+                                  onClick={() => setDialog({ kind: 'correct', line })}
+                                />
+                              )}
+                            </TableCell>
+                          )}
                           {editable && (
                             <TableCell>
                               <span className={styles.actions}>
@@ -402,6 +450,8 @@ export function BillingBasisPage() {
           {dialog?.kind === 'exclude' && <DecisionForm basisId={id} etag={basis.etag} line={dialog.line} kind="exclude" onClose={() => setDialog(null)} />}
           {dialog?.kind === 'keep' && <DecisionForm basisId={id} etag={basis.etag} line={dialog.line} kind="keep" onClose={() => setDialog(null)} />}
           {dialog?.kind === 'cancel' && <CancelForm basisId={id} etag={basis.etag} onClose={() => setDialog(null)} />}
+          {dialog?.kind === 'reconcile' && <ReconcileForm basisId={id} etag={basis.etag} manual={dialog.manual} onClose={() => setDialog(null)} />}
+          {dialog?.kind === 'correct' && <CorrectionForm basisId={id} line={dialog.line} onClose={() => setDialog(null)} />}
         </DialogSurface>
       </Dialog>
     </>
@@ -631,6 +681,135 @@ function CancelForm({ basisId, etag, onClose }: { basisId: string; etag: string;
           <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button appearance="primary" type="submit" disabled={!reason.trim() || actions.cancel.isPending}>
             {t('billing.cancelBasis')}
+          </Button>
+        </DialogActions>
+      </DialogBody>
+    </form>
+  );
+}
+
+/**
+ * A send got no answer and the order is not found by its reference: Finance checks PowerOffice and records what is there —
+ * the order with its number, or no order (the basis can then be sent again or cancelled). With <c>manual</c> it records an
+ * order made by hand outside the CRM, so no later run bills the basis again (runbook 07). ADR-013.
+ */
+function ReconcileForm({ basisId, etag, manual, onClose }: { basisId: string; etag: string; manual: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const notify = useNotify();
+  const actions = useBasisActions(basisId);
+  const [created, setCreated] = useState<'yes' | 'no'>('yes');
+  const [orderNo, setOrderNo] = useState('');
+  const [reason, setReason] = useState('');
+  const valid = reason.trim() && (created === 'no' || orderNo.trim());
+
+  const submit = async () => {
+    try {
+      await actions.reconcile.mutateAsync({ request: { created: created === 'yes', orderNo: created === 'yes' ? orderNo.trim() : null, reason: reason.trim() }, etag });
+      notify(t('billing.reconcile.done'));
+      onClose();
+    } catch {
+      // Shown in the dialog.
+    }
+  };
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <DialogBody>
+        <DialogTitle>{manual ? t('billing.reconcile.manualTitle') : t('billing.reconcile.title')}</DialogTitle>
+        <DialogContent>
+          {actions.reconcile.error && (
+            <MessageBar intent="error" style={{ marginBottom: 12 }}>
+              <MessageBarBody>{errorMessage(actions.reconcile.error, t)}</MessageBarBody>
+            </MessageBar>
+          )}
+          <p style={{ marginTop: 0 }}>{manual ? t('billing.reconcile.manualBody') : t('billing.reconcile.body')}</p>
+          {!manual && (
+            <Field label={t('billing.reconcile.found')} required>
+              <RadioGroup value={created} onChange={(_, d) => setCreated(d.value as 'yes' | 'no')}>
+                <Radio value="yes" label={t('billing.reconcile.created')} />
+                <Radio value="no" label={t('billing.reconcile.notCreated')} />
+              </RadioGroup>
+            </Field>
+          )}
+          {created === 'yes' && (
+            <Field label={t('billing.fields.order')} required>
+              <Input value={orderNo} onChange={(_, d) => setOrderNo(d.value)} />
+            </Field>
+          )}
+          <Field label={t('billing.fields.reason')} required>
+            <Input value={reason} onChange={(_, d) => setReason(d.value)} />
+          </Field>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button appearance="primary" type="submit" disabled={!valid || actions.reconcile.isPending}>
+            {t('common.save')}
+          </Button>
+        </DialogActions>
+      </DialogBody>
+    </form>
+  );
+}
+
+/** Adds to an exported line: a new charge the next run bills, with the reason; a credit is made in PowerOffice. */
+function CorrectionForm({ basisId, line, onClose }: { basisId: string; line: BasisLine; onClose: () => void }) {
+  const { t } = useTranslation();
+  const notify = useNotify();
+  const actions = useBasisActions(basisId);
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [description, setDescription] = useState(line.description);
+  const parsed = parseDecimal(amount);
+  const valid = parsed !== null && parsed > 0 && reason.trim().length > 0;
+
+  const submit = async () => {
+    try {
+      await actions.addCorrection.mutateAsync({
+        lineId: line.id,
+        request: { amount: parsed!, reason: reason.trim(), description: description.trim() === line.description ? null : description.trim() || null },
+      });
+      notify(t('billing.correction.queued'));
+      onClose();
+    } catch {
+      // Shown in the dialog.
+    }
+  };
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <DialogBody>
+        <DialogTitle>{t('billing.correction.title')}</DialogTitle>
+        <DialogContent>
+          {actions.addCorrection.error && (
+            <MessageBar intent="error" style={{ marginBottom: 12 }}>
+              <MessageBarBody>{errorMessage(actions.addCorrection.error, t)}</MessageBarBody>
+            </MessageBar>
+          )}
+          <p style={{ marginTop: 0 }}>{t('billing.correction.body', { description: line.description })}</p>
+          <Field label={t('billing.correction.amount')} required hint={t('billing.exVat')}>
+            <Input inputMode="decimal" value={amount} onChange={(_, d) => setAmount(d.value)} />
+          </Field>
+          <Field label={t('billing.fields.description')}>
+            <Input value={description} onChange={(_, d) => setDescription(d.value)} />
+          </Field>
+          <Field label={t('billing.fields.reason')} required>
+            <Input value={reason} onChange={(_, d) => setReason(d.value)} />
+          </Field>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button appearance="primary" type="submit" disabled={!valid || actions.addCorrection.isPending}>
+            {t('billing.correction.submit')}
           </Button>
         </DialogActions>
       </DialogBody>

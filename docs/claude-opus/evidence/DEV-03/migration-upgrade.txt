@@ -1,0 +1,209 @@
+# ChargeRegister on the previous schema (DEV-02) with synthetic billing data in the previous shape; throwaway container crm-mig-dev03, removed at the end
+# Driver: mig-run.sh; scripts: mig-legacy-billing.sql, mig-check.sql, mig-old-app.sql (copied next to this file); run 2026-10-04T00:43Z
+### 1. previous schema (migrations up to RevisionBoundApprovals, i.e. DEV-02)
+Applying migration '20260916082954_Initial'.
+Applying migration '20260916183504_PendingCharges'.
+Applying migration '20261003230254_ChargeIdentity'.
+Applying migration '20261003233005_RevisionBoundApprovals'.
+Done.
+### 2. synthetic runs, bases and lines in the previous shape
+== charges: table absent
+== column sizes and run kinds
+Column|Chars
+------|-----
+Result|16
+Status|16
+== archives
+ArchiveTable
+------------
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+20261003233005_RevisionBoundApprovals
+### 3. apply ChargeRegister
+Applying migration '20261004002311_ChargeRegister'.
+Done.
+== charges per line (description of the line, kind, status, amount, key or reason)
+Line|Kind|Status|Amount|KeyOrReason|Series|From|To
+----|----|------|------|-----------|------|----|--
+a contract Jan|Contract|ExportConfirmed|1000.00|contract:51000000000000000000000000000001:2026-01-01:2026-01|51|2026-01-01|2026-01-31
+b hours detailed|Time|ExportConfirmed|500.00|time:a1000000000000000000000000000001|-|-|-
+c hours summarised|Time|ExportConfirmed|1000.00|time:a2000000000000000000000000000002|-|-|-
+c hours summarised|Time|ExportConfirmed|1000.00|time:a3000000000000000000000000000003|-|-|-
+e package|HourBankPurchase|ExportConfirmed|3000.00|hourbank:b1000000000000000000000000000001|-|-|-
+f quote item|OneOff|ExportConfirmed|4000.00|pending:c1000000000000000000000000000001|-|-|-
+a2 contract Jan again|Legacy|LegacyUnresolved|1000.00|Duplicate: another basis billed the same obligation (contrac|-|2026-01-01|2026-01-31
+e2 package again|Legacy|LegacyUnresolved|3000.00|Duplicate: another basis billed the same obligation (hourban|-|2026-01-01|2026-01-31
+k contract Feb, no key|Legacy|LegacyUnresolved|1000.00|Unprovable: billed before charge keys and its references pro|-|2026-02-01|2026-02-28
+m hours without allocations|Legacy|LegacyUnresolved|900.00|Unprovable: billed before charge keys and its references pro|-|2026-02-01|2026-02-28
+n package, no key|HourBankPurchase|ExportConfirmed|2000.00|hourbank:b2000000000000000000000000000002|-|-|-
+o two quote items, no key|OneOff|ExportConfirmed|1500.00|pending:c2000000000000000000000000000002|-|-|-
+o two quote items, no key|OneOff|ExportConfirmed|1500.00|pending:c3000000000000000000000000000003|-|-|-
+q quarter Mar-May|Contract|Committed|3000.00|contract:53000000000000000000000000000003:2026-03-01:2026-05|53|2026-03-01|2026-05-31
+s new pending|OneOff|Reserved|800.00|pending:c4000000000000000000000000000004|-|-|-
+u failed basis|Contract|Committed|600.00|contract:54000000000000000000000000000004:2026-05-01:2026-05|54|2026-05-01|2026-05-31
+v quarter Jun-Aug|Contract|ExportConfirmed|3000.00|contract:55000000000000000000000000000005:2026-06-01:2026-08|55|2026-06-01|2026-08-31
+w July again|Legacy|LegacyUnresolved|1000.00|Overlap: another basis billed days of the same contract serv|-|2026-07-01|2026-07-31
+== lines without a charge
+Line|Origin|Decision|BasisStatus|IsDeleted
+----|------|--------|-----------|---------
+d covered hours|Collected|None|Exported|0
+g manual|Manual|None|Exported|0
+h excluded|Collected|Exclusion|Exported|0
+r April overlapping|Collected|None|Draft|0
+t quote item billed in January|Collected|None|Draft|0
+x cancelled basis|Collected|None|Cancelled|0
+y deleted|Collected|None|Exported|1
+== legacy report (what GET /api/v1/billing/charges/legacy sums)
+Reason|Lines|Amount
+------|-----|------
+Duplicate|2|4000.00
+Overlap|1|1000.00
+Unprovable|2|1900.00
+== active keys are unique
+DuplicateActiveKeys
+-------------------
+0
+== unique filtered index
+name|is_unique|filter_definition
+----|---------|-----------------
+IX_Charges_Key|1|([Status]<>'Released' AND [IsDeleted]=(0))
+== column sizes and run kinds
+Column|Chars
+------|-----
+Result|32
+Status|32
+Kind|Runs
+----|----
+Regular|8
+== archives
+ArchiveTable
+------------
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+20261003233005_RevisionBoundApprovals
+20261004002311_ChargeRegister
+### 4. the previous version writes during the rollback window (its column list)
+Notes|Kind|Status
+-----|----|------
+inserted by the previous version|Regular|Draft
+### 5. apply again (must be a no-op)
+No migrations were applied. The database is already up to date.
+Done.
+### 6. roll the schema back to RevisionBoundApprovals
+Reverting migration '20261004002311_ChargeRegister'.
+Done.
+== charges: table absent
+== column sizes and run kinds
+Column|Chars
+------|-----
+Result|16
+Status|16
+== archives
+ArchiveTable
+------------
+Charges_rollback_20261004004339500
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+20261003233005_RevisionBoundApprovals
+== archived charges and statuses the previous version reads
+Charges|Legacy
+-------|------
+18|5
+
+(1 rows affected)
+Status|Bases
+------|-----
+Approved|1
+Cancelled|1
+Draft|2
+Exported|5
+Failed|1
+
+(5 rows affected)
+Result|Attempts
+------|--------
+Exported|1
+Failed|1
+
+(2 rows affected)
+### 7. forward again after the rollback
+Applying migration '20261004002311_ChargeRegister'.
+Done.
+== charges per line (description of the line, kind, status, amount, key or reason)
+Line|Kind|Status|Amount|KeyOrReason|Series|From|To
+----|----|------|------|-----------|------|----|--
+a contract Jan|Contract|ExportConfirmed|1000.00|contract:51000000000000000000000000000001:2026-01-01:2026-01|51|2026-01-01|2026-01-31
+b hours detailed|Time|ExportConfirmed|500.00|time:a1000000000000000000000000000001|-|-|-
+c hours summarised|Time|ExportConfirmed|1000.00|time:a2000000000000000000000000000002|-|-|-
+c hours summarised|Time|ExportConfirmed|1000.00|time:a3000000000000000000000000000003|-|-|-
+e package|HourBankPurchase|ExportConfirmed|3000.00|hourbank:b1000000000000000000000000000001|-|-|-
+f quote item|OneOff|ExportConfirmed|4000.00|pending:c1000000000000000000000000000001|-|-|-
+a2 contract Jan again|Legacy|LegacyUnresolved|1000.00|Duplicate: another basis billed the same obligation (contrac|-|2026-01-01|2026-01-31
+e2 package again|Legacy|LegacyUnresolved|3000.00|Duplicate: another basis billed the same obligation (hourban|-|2026-01-01|2026-01-31
+k contract Feb, no key|Legacy|LegacyUnresolved|1000.00|Unprovable: billed before charge keys and its references pro|-|2026-02-01|2026-02-28
+m hours without allocations|Legacy|LegacyUnresolved|900.00|Unprovable: billed before charge keys and its references pro|-|2026-02-01|2026-02-28
+n package, no key|HourBankPurchase|ExportConfirmed|2000.00|hourbank:b2000000000000000000000000000002|-|-|-
+o two quote items, no key|OneOff|ExportConfirmed|1500.00|pending:c2000000000000000000000000000002|-|-|-
+o two quote items, no key|OneOff|ExportConfirmed|1500.00|pending:c3000000000000000000000000000003|-|-|-
+q quarter Mar-May|Contract|Committed|3000.00|contract:53000000000000000000000000000003:2026-03-01:2026-05|53|2026-03-01|2026-05-31
+s new pending|OneOff|Reserved|800.00|pending:c4000000000000000000000000000004|-|-|-
+u failed basis|Contract|Committed|600.00|contract:54000000000000000000000000000004:2026-05-01:2026-05|54|2026-05-01|2026-05-31
+v quarter Jun-Aug|Contract|ExportConfirmed|3000.00|contract:55000000000000000000000000000005:2026-06-01:2026-08|55|2026-06-01|2026-08-31
+w July again|Legacy|LegacyUnresolved|1000.00|Overlap: another basis billed days of the same contract serv|-|2026-07-01|2026-07-31
+== lines without a charge
+Line|Origin|Decision|BasisStatus|IsDeleted
+----|------|--------|-----------|---------
+d covered hours|Collected|None|Exported|0
+g manual|Manual|None|Exported|0
+h excluded|Collected|Exclusion|Exported|0
+r April overlapping|Collected|None|Draft|0
+t quote item billed in January|Collected|None|Draft|0
+x cancelled basis|Collected|None|Cancelled|0
+y deleted|Collected|None|Exported|1
+== legacy report (what GET /api/v1/billing/charges/legacy sums)
+Reason|Lines|Amount
+------|-----|------
+Duplicate|2|4000.00
+Overlap|1|1000.00
+Unprovable|2|1900.00
+== active keys are unique
+DuplicateActiveKeys
+-------------------
+0
+== unique filtered index
+name|is_unique|filter_definition
+----|---------|-----------------
+IX_Charges_Key|1|([Status]<>'Released' AND [IsDeleted]=(0))
+== column sizes and run kinds
+Column|Chars
+------|-----
+Result|32
+Status|32
+Kind|Runs
+----|----
+Regular|9
+== archives
+ArchiveTable
+------------
+Charges_rollback_20261004004339500
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+20261003233005_RevisionBoundApprovals
+20261004002311_ChargeRegister
+### container crm-mig-dev03 removed

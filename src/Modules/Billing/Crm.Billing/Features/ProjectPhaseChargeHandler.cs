@@ -18,9 +18,20 @@ internal sealed class ProjectPhaseChargeHandler(
 
     public async Task HandleAsync(ProjectPhaseBillable domainEvent, CancellationToken cancellationToken)
     {
-        if (await db.PendingCharges.AnyAsync(
-                c => c.SourceType == SourceType && c.SourceLineId == domainEvent.PhaseId, cancellationToken))
+        var existing = await db.PendingCharges.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(c => c.SourceType == SourceType && c.SourceLineId == domainEvent.PhaseId, cancellationToken);
+        if (existing is { IsDeleted: false })
         {
+            return;
+        }
+
+        if (existing is not null)
+        {
+            // Completed again after a reopen: the withdrawn item comes back with its id, so the charge register still sees
+            // whatever an earlier basis billed with it instead of a new obligation (ADR-013).
+            existing.Requeue(domainEvent.ProductId, domainEvent.Description, domainEvent.Amount, domainEvent.CompletedOn);
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Project phase {Phase} completed again: its charge is queued again.", domainEvent.PhaseId);
             return;
         }
 

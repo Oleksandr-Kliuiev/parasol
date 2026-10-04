@@ -15,6 +15,9 @@ internal static class BillingErrors
     public static Error InvalidStatus(BillingRunStatus status, string action) => Error.Conflict(
         "BIL_INVALID_STATUS", $"A run in status {status} cannot be {action}.", new Dictionary<string, object?> { ["status"] = status.ToString() });
 
+    public static Error InvalidBasisStatus(BillingBasisStatus status, string action) => Error.Conflict(
+        "BIL_INVALID_BASIS_STATUS", $"A basis in status {status} cannot be {action}.", new Dictionary<string, object?> { ["status"] = status.ToString() });
+
     public static Error BasisLocked => Error.Conflict("BIL_BASIS_LOCKED", "The basis is approved; corrections belong in the next period (BR-BIL-10).");
 
     public static Error ReasonRequired => Error.Validation(
@@ -42,6 +45,17 @@ internal static class BillingErrors
     public static Error RunChanged => Error.PreconditionFailed(
         "CONCURRENCY_CONFLICT", "The run changed since you looked at it (a collect, a change of lines or an approval). Reload it and look again.");
 
+    public static Error CollectBusy => Error.Conflict(
+        "BIL_COLLECT_BUSY", "Another run is being collected right now; try again in a moment (ADR-013).");
+
+    public static Error NotExported => Error.Conflict(
+        "BIL_NOT_EXPORTED", "Only an exported basis is corrected with a new charge; an open basis is changed directly.");
+
+    public static Error CreditNotEnabled => Error.Conflict(
+        "BIL_CREDIT_NOT_ENABLED", "A negative correction is a credit note: it is made in the accounting system until Finance decides otherwise (DEC-02).");
+
+    public static Error ChargeNotFound(Guid id) => Error.NotFound("BIL_CHARGE_NOT_FOUND", $"Charge {id} was not found.");
+
     public static Error ApproverRequired => Error.Forbidden("BIL_APPROVER_REQUIRED", "An approval needs a signed-in CRM user.");
 
     public static Error ApproverInactive => Error.Forbidden("BIL_APPROVER_INACTIVE", "The approver's CRM account is not active.");
@@ -55,9 +69,24 @@ internal static class BillingErrors
 
     public static Error NoSecondApproval => Error.Conflict("BIL_NO_SECOND_APPROVAL", "This run does not need a second approval.");
 
+    public static Error PeriodAlreadyBilled(DateOnly periodStart) => Error.Conflict(
+        "BIL_PERIOD_ALREADY_BILLED", $"{periodStart:yyyy-MM} is already billed and closed; a further run for it is a supplementary run, which bills only what was not billed yet.",
+        new Dictionary<string, object?> { ["periodStart"] = periodStart.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) });
+
+    public static Error NothingToSupplement(DateOnly periodStart) => Error.Conflict(
+        "BIL_NOTHING_TO_SUPPLEMENT", $"{periodStart:yyyy-MM} has no closed run yet; bill it with a regular run first.",
+        new Dictionary<string, object?> { ["periodStart"] = periodStart.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) });
+
     public static Error PeriodBusy(DateOnly periodStart) => Error.Conflict(
         "BIL_PERIOD_BUSY", $"A run for {periodStart:yyyy-MM} is already open; close it first (BR-BIL-01).",
         new Dictionary<string, object?> { ["periodStart"] = periodStart.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) });
+}
+
+/// <summary>A regular run bills a period; a supplementary run bills what no earlier run of the closed period billed (ADR-013).</summary>
+public enum BillingRunKind
+{
+    Regular,
+    Supplementary,
 }
 
 /// <summary>The first approval is Finance's (billing.approve), the second Management's (billing.approve.second).</summary>
@@ -91,6 +120,7 @@ public sealed class BillingRun : AuditableEntity
 
     public DateOnly PeriodStart { get; private set; }
     public DateOnly PeriodEnd { get; private set; }
+    public BillingRunKind Kind { get; private set; }
     public BillingRunStatus Status { get; private set; }
     public DateTimeOffset? CollectedAt { get; private set; }
 
@@ -129,13 +159,14 @@ public sealed class BillingRun : AuditableEntity
     public bool IsLocked => Status is BillingRunStatus.Approved or BillingRunStatus.Exporting or BillingRunStatus.Exported
         or BillingRunStatus.ExportedWithErrors or BillingRunStatus.Closed;
 
-    public static BillingRun Create(int year, int month, string? notes)
+    public static BillingRun Create(int year, int month, string? notes, BillingRunKind kind = BillingRunKind.Regular)
     {
         var start = new DateOnly(year, month, 1);
         return new BillingRun
         {
             PeriodStart = start,
             PeriodEnd = start.AddMonths(1).AddDays(-1),
+            Kind = kind,
             Status = BillingRunStatus.Draft,
             Notes = Clean(notes),
         };

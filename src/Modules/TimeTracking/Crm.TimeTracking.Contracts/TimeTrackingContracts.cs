@@ -50,7 +50,10 @@ public sealed record ExternalTimeEntry(
 
 public sealed record TimeImportResult(int Created, int Updated, int Unchanged, int NeedsReview);
 
-/// <summary>One approved allocation of an entry, as billing reads it (BR-TIM-03).</summary>
+/// <summary>
+/// One approved allocation of an entry, as billing reads it (BR-TIM-03). <paramref name="Invoiced"/>: the entry already left
+/// with an exported order; billing never collects it again, also where its charge predates the charge register (ADR-013).
+/// </summary>
 public sealed record BillableTime(
     Guid EntryId,
     Guid AllocationId,
@@ -68,7 +71,8 @@ public sealed record BillableTime(
     string? Description,
     long? ExternalTicketId,
     string? TicketTitle,
-    string? TechnicianName);
+    string? TechnicianName,
+    bool Invoiced = false);
 
 /// <summary>Hours of one technician in a month, split the way approval classified them (FR-RPT-01).</summary>
 public sealed record TechnicianUtilization(

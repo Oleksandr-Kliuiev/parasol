@@ -23,6 +23,7 @@ public static class BillingModule
         services.AddModuleDbContext<BillingDbContext>(configuration);
         services.AddOptions<BillingOptions>().Bind(configuration.GetSection(BillingOptions.SectionName));
         services.AddModuleServices(typeof(BillingModule).Assembly);
+        services.AddScoped<ChargeLedger>();
         services.AddScoped<BillingCollector>();
         services.AddScoped<BillingService>();
         services.AddScoped<IBillingApi, BillingApi>();
@@ -150,6 +151,31 @@ public static class BillingModule
                     ? HeaderExtensions.PreconditionRequired()
                     : (await service.CancelAsync(id, request, ifMatch, ct)).ToHttpResult(Results.Ok))
             .Validate<CancelBasisRequest>()
+            .RequirePermission(Permissions.BillingManage);
+
+        // ADR-013: a basis whose send got no answer is reconciled by a person who checked the accounting system.
+        group.MapPost("/bases/{id:guid}/reconcile", async (Guid id, ReconcileRequest request, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.ReconcileAsync(id, request, ifMatch, ct)).ToHttpResult(Results.Ok))
+            .Validate<ReconcileRequest>()
+            .RequirePermission(Permissions.BillingManage);
+
+        // An exported line is corrected with a new charge for the next run, never by changing the exported order (BR-BIL-10).
+        group.MapPost("/bases/{id:guid}/lines/{lineId:guid}/corrections", async (
+                    Guid id, Guid lineId, CorrectionRequest request, BillingService service, CancellationToken ct) =>
+                (await service.AddCorrectionAsync(id, lineId, request, ct)).ToHttpResult(c => Results.Created($"/api/v1/billing/bases/{id}", c)))
+            .Validate<CorrectionRequest>()
+            .RequirePermission(Permissions.BillingManage);
+
+        group.MapGet("/charges/legacy", async (BillingService service, CancellationToken ct) => Results.Ok(await service.LegacyChargesAsync(ct)))
+            .RequirePermission(Permissions.BillingManage);
+
+        group.MapPost("/charges/{id:guid}/legacy-decision", async (Guid id, LegacyDecisionRequest request, BillingService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.DecideLegacyAsync(id, request, ifMatch, ct)).ToHttpResult(Results.NoContent))
+            .Validate<LegacyDecisionRequest>()
             .RequirePermission(Permissions.BillingManage);
 
         group.MapGet("/invoices", async ([AsParameters] InvoiceParameters p, BillingService service, CancellationToken ct) =>

@@ -13,7 +13,8 @@ public sealed record BillingAnomaly(string Code, string Message);
 /// A line as a source produced it. <paramref name="SourceKey"/> is the charge identity of a collected line: the same
 /// service, source and covered interval always give the same key, whatever the run or the collect (docs/adr/ADR-011).
 /// <paramref name="SourceOrganizationId"/> is the customer the service was delivered to, which differs from the payer
-/// when a subsidiary is billed through its group parent.
+/// when a subsidiary is billed through its group parent. <paramref name="Claims"/> are the economic obligations the line
+/// bills, as registered across runs (docs/adr/ADR-013); a summarised line claims one per approved time allocation.
 /// </summary>
 public sealed record LineDraft(
     BillingGroup Group,
@@ -25,7 +26,8 @@ public sealed record LineDraft(
     decimal VatRate,
     string? SourceRefs,
     string? SourceKey = null,
-    Guid? SourceOrganizationId = null);
+    Guid? SourceOrganizationId = null,
+    IReadOnlyList<ChargeClaim>? Claims = null);
 
 /// <summary>What one collect changed on a basis.</summary>
 public sealed record CollectChanges(int Added, int Updated, int Removed, int Conflicts)
@@ -93,6 +95,12 @@ public sealed class BillingBasis : AuditableEntity
     public string? OrderNo { get; private set; }
     public string? CustomerReference { get; private set; }
     public DateTimeOffset? ExportedAt { get; private set; }
+
+    /// <summary>
+    /// Set just before an order is sent and cleared when the accounting system rejected it: while it is set and the basis is
+    /// not exported, the order may exist, so the basis is neither sent blindly again nor cancelled (ADR-013).
+    /// </summary>
+    public DateTimeOffset? SendStartedAt { get; private set; }
 
     /// <summary>Goes up with every change to the lines, so a decision is always about a known version of the basis.</summary>
     public int Revision { get; private set; }
@@ -372,11 +380,88 @@ public sealed class BillingBasis : AuditableEntity
         Raise(new BillingBasisExported(Id, OrganizationId, system, orderNo));
     }
 
+    /// <summary>
+    /// Recorded before the order is sent, in its own transaction: from here on an unknown outcome means the order may
+    /// exist (ADR-013). Refused unless the basis waits to be sent, so a cancelled basis is never sent.
+    /// </summary>
+    public Result MarkSending(string system, DateTimeOffset at, string? correlationId)
+    {
+        if (Status != BillingBasisStatus.Approved)
+        {
+            return Error.Conflict("BIL_NOT_WAITING", "Only an approved basis that waits to be sent can be sent.");
+        }
+
+        ExportSystem = system;
+        SendStartedAt = at;
+        _attempts.Add(BillingExportAttempt.Create(Id, at, "Sending", null, correlationId));
+        return Result.Success();
+    }
+
+    /// <summary>The order was not created: a check before sending failed, or the accounting system rejected the order.</summary>
     public void MarkFailed(string system, string message, DateTimeOffset at, string? correlationId)
     {
         ExportSystem = system;
         Status = BillingBasisStatus.Failed;
+        SendStartedAt = null;
         _attempts.Add(BillingExportAttempt.Create(Id, at, "Failed", message, correlationId));
+    }
+
+    /// <summary>A send may have created the order and a lookup by the basis key does not find it: a person checks (ADR-013).</summary>
+    public Result RequireReconciliation(string system, string message, DateTimeOffset at, string? correlationId)
+    {
+        if (Status == BillingBasisStatus.ReconciliationRequired)
+        {
+            return Result.Success();
+        }
+
+        if (Status != BillingBasisStatus.Approved)
+        {
+            return BillingErrors.InvalidBasisStatus(Status, "held for reconciliation");
+        }
+
+        ExportSystem = system;
+        Status = BillingBasisStatus.ReconciliationRequired;
+        _attempts.Add(BillingExportAttempt.Create(Id, at, "ReconciliationRequired", message, correlationId));
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Finance checked the accounting system: the order exists (its number is recorded as if the send had reported it) or it
+    /// does not (the basis can be sent again or cancelled). An order made by hand outside the CRM — during an incident, say —
+    /// is recorded the same way on a basis that is not being sent, so its charges count as billed (runbook 07). The reason
+    /// is kept with the attempt.
+    /// </summary>
+    public Result Reconcile(bool created, string? orderNo, string reason, string system, DateTimeOffset at, string? correlationId)
+    {
+        var allowed = created
+            ? Status is BillingBasisStatus.ReconciliationRequired or BillingBasisStatus.Failed || (Status == BillingBasisStatus.Approved && SendStartedAt is null)
+            : Status == BillingBasisStatus.ReconciliationRequired;
+        if (!allowed)
+        {
+            return BillingErrors.InvalidBasisStatus(Status, "reconciled");
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return BillingErrors.ReasonRequired;
+        }
+
+        if (created)
+        {
+            if (string.IsNullOrWhiteSpace(orderNo))
+            {
+                return Error.Validation("BIL_ORDER_NO_REQUIRED", "Give the number of the order found in the accounting system.");
+            }
+
+            _attempts.Add(BillingExportAttempt.Create(Id, at, "Reconciled", $"Order {orderNo.Trim()} exists: {reason.Trim()}", correlationId));
+            MarkExported(system, orderNo.Trim(), at, correlationId);
+            return Result.Success();
+        }
+
+        Status = BillingBasisStatus.Failed;
+        SendStartedAt = null;
+        _attempts.Add(BillingExportAttempt.Create(Id, at, "Reconciled", $"No order: {reason.Trim()}", correlationId));
+        return Result.Success();
     }
 
     /// <summary>Puts a failed basis back in the export queue.</summary>
@@ -397,6 +482,13 @@ public sealed class BillingBasis : AuditableEntity
         if (Status == BillingBasisStatus.Exported)
         {
             return Error.Conflict("BIL_ALREADY_EXPORTED", "The order is already in the accounting system; credit it there (BR-BIL-09).");
+        }
+
+        // An order may exist: cancelling would free its charges for another run and bill them twice (ADR-013).
+        if (Status == BillingBasisStatus.ReconciliationRequired || (Status == BillingBasisStatus.Approved && SendStartedAt is not null))
+        {
+            return Error.Conflict(
+                "BIL_RECONCILE_FIRST", "An order may already exist in the accounting system; check it and reconcile the basis before cancelling it.");
         }
 
         Status = BillingBasisStatus.Cancelled;

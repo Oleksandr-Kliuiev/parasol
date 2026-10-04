@@ -86,7 +86,16 @@
       "BIL_NO_SECOND_APPROVAL": "Ingen kunde er over terskelen, så kjøringen trenger ikke godkjenning fra ledelsen.",
       "BIL_APPROVER_REQUIRED": "Bare en innlogget CRM-bruker kan godkjenne.",
       "BIL_APPROVER_INACTIVE": "CRM-kontoen din er ikke aktiv, så du kan ikke godkjenne.",
-      "BIL_INVALID_STATUS": "Kjøringen er ikke lenger i en tilstand som tillater dette. Last inn siden på nytt for å se hvor den står."
+      "BIL_INVALID_STATUS": "Kjøringen er ikke lenger i en tilstand som tillater dette. Last inn siden på nytt for å se hvor den står.",
+      "BIL_PERIOD_ALREADY_BILLED": "Denne måneden er allerede fakturert og lukket. Opprett en tilleggskjøring: den fakturerer bare det som ikke er fakturert ennå.",
+      "BIL_NOTHING_TO_SUPPLEMENT": "Denne måneden har ingen lukket kjøring ennå; fakturer den med en vanlig kjøring først.",
+      "BIL_COLLECT_BUSY": "En annen kjøring samles inn akkurat nå. Prøv igjen om et øyeblikk.",
+      "BIL_RECONCILE_FIRST": "Det kan allerede finnes en ordre i PowerOffice. Sjekk den og avstem grunnlaget før du avbryter det.",
+      "BIL_NOT_EXPORTED": "Bare et overført grunnlag korrigeres med en ny linje; et åpent grunnlag endres direkte.",
+      "BIL_CREDIT_NOT_ENABLED": "En negativ korreksjon er en kreditnota og lages i PowerOffice.",
+      "BIL_INVALID_BASIS_STATUS": "Grunnlaget er ikke lenger i en tilstand som tillater dette. Last inn siden på nytt for å se hvor det står.",
+      "BIL_ORDER_NO_REQUIRED": "Oppgi nummeret på ordren som ble funnet i PowerOffice.",
+      "BIL_CHARGE_INVALID_STATUS": "Belastningen er endret i mellomtiden. Last inn siden på nytt og prøv igjen."
     }
   },
   "status": {
@@ -1618,6 +1627,49 @@
         "Migrated": "Gitt før godkjenninger ble knyttet til en versjon av kjøringen."
       }
     },
+    "supplementary": {
+      "label": "Tilleggskjøring",
+      "hint": "For en måned som allerede er fakturert og lukket: kjøringen fakturerer bare det ingen tidligere kjøring har fakturert, for eksempel timer som ble godkjent sent.",
+      "badge": "Tillegg"
+    },
+    "reconcile": {
+      "action": "Avstem",
+      "banner": "En sending til PowerOffice fikk ikke svar, og ingen ordre med dette grunnlaget som referanse ble funnet. Sjekk PowerOffice og registrer hva som finnes der; grunnlaget sendes ikke på nytt før det.",
+      "sending": "Ordren sendes til PowerOffice. Får sendingen ikke svar, venter grunnlaget på avstemming i stedet for å bli sendt to ganger.",
+      "title": "Avstem mot PowerOffice",
+      "body": "Slå opp ordren i PowerOffice etter kunde og periode.",
+      "found": "Hva finnes i PowerOffice?",
+      "created": "Ordren finnes",
+      "notCreated": "Det finnes ingen ordre",
+      "done": "Grunnlaget er avstemt",
+      "manualAction": "Registrer manuell ordre",
+      "manualTitle": "Registrer en ordre laget utenfor CRM",
+      "manualBody": "Bruk dette når grunnlaget ble fakturert manuelt i PowerOffice, for eksempel under en hendelse. Ordrenummeret registreres som om CRM hadde sendt det, så ingen senere kjøring fakturerer linjene på nytt."
+    },
+    "correction": {
+      "action": "Legg til korreksjon",
+      "actionNamed": "Legg til korreksjon for {{description}}",
+      "title": "Legg til korreksjon",
+      "body": "Ordren som allerede er i PowerOffice blir som den er. Beløpet faktureres av neste kjøring som en ny linje som viser til «{{description}}». En kreditnota lages i PowerOffice.",
+      "amount": "Beløp som legges til",
+      "submit": "Legg i kø til neste kjøring",
+      "queued": "Korreksjonen ligger i kø til neste kjøring"
+    },
+    "legacy": {
+      "title": "Linjer fakturert før belastningsregisteret",
+      "summary_one": "{{count}} linje fra før belastningsregisteret kan ikke kobles til kilden. Til du avgjør, faktureres ikke dagene den kan dekke på nytt.",
+      "summary_other": "{{count}} linjer fra før belastningsregisteret kan ikke kobles til kilden. Til du avgjør, faktureres ikke dagene de kan dekke på nytt.",
+      "summaryAmount_one": "{{count}} linje ({{amount}}) fra før belastningsregisteret kan ikke kobles til kilden. Til du avgjør, faktureres ikke dagene den kan dekke på nytt.",
+      "summaryAmount_other": "{{count}} linjer ({{amount}}) fra før belastningsregisteret kan ikke kobles til kilden. Til du avgjør, faktureres ikke dagene de kan dekke på nytt.",
+      "why": "Hvorfor",
+      "billed": "Ble fakturert",
+      "notBilled": "Ble ikke fakturert",
+      "billedTitle": "Linjen ble fakturert",
+      "notBilledTitle": "Linjen ble ikke fakturert",
+      "billedBody": "Kunden fikk denne linjen den gangen; den hindrer at dagene den dekker faktureres på nytt.",
+      "notBilledBody": "Linjen nådde aldri kunden; en tilleggskjøring kan fakturere dagene på nytt.",
+      "decided": "Avgjørelsen er lagret"
+    },
     "awaitingSecondApproval": "Venter på andre godkjenning",
     "secondApprovalNeeded": "En kunde er over {{amount}}, så ledelsen må godkjenne i tillegg.",
     "export": "Send til PowerOffice",
@@ -1734,7 +1786,8 @@
       "Approved": "Godkjent",
       "Exported": "Sendt",
       "Failed": "Feilet",
-      "Cancelled": "Avbrutt"
+      "Cancelled": "Avbrutt",
+      "ReconciliationRequired": "Må avstemmes"
     },
     "invoiceStatus": {
       "Draft": "Utkast",

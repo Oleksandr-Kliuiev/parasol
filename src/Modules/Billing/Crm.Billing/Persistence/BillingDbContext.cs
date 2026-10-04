@@ -26,6 +26,8 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
     public DbSet<BillingApproval> BillingApprovals => Set<BillingApproval>();
 
+    public DbSet<Charge> Charges => Set<Charge>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<PendingCharge>(b =>
@@ -38,8 +40,28 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.Property(x => x.UnitPrice).HasPrecision(18, 2);
             b.Property(x => x.DiscountPct).HasPrecision(5, 2);
             b.Property(x => x.VatRate).HasPrecision(5, 2);
+            b.Property(x => x.Reason).HasMaxLength(512);
             b.HasIndex(x => new { x.SourceType, x.SourceId, x.SourceLineId }).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.InvoicedBasisId });
+        });
+
+        modelBuilder.Entity<Charge>(b =>
+        {
+            b.ToTable("Charges");
+            b.ConfigureAuditable();
+            b.Property(x => x.Key).HasMaxLength(200);
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(24);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+            b.Property(x => x.Currency).HasMaxLength(3);
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+            b.Property(x => x.Reason).HasMaxLength(512);
+            b.Ignore(x => x.IsActive);
+            // ADR-013: one active charge per obligation; released ones stay as the record of what happened.
+            b.HasIndex(x => x.Key).IsUnique().HasFilter("[Status] <> 'Released' AND [IsDeleted] = 0");
+            b.HasIndex(x => new { x.SeriesId, x.ServiceFrom });
+            b.HasIndex(x => x.ContractLineId);
+            b.HasIndex(x => x.BasisId);
+            b.HasIndex(x => new { x.RunId, x.Status });
         });
 
         modelBuilder.Entity<BillingRun>(b =>
@@ -48,6 +70,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.Notes).HasMaxLength(1024);
             // BR-BIL-01: only one run per period may be open.
             b.HasIndex(x => x.PeriodStart).IsUnique().HasFilter("[Status] <> 'Closed' AND [IsDeleted] = 0");
@@ -74,7 +97,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.IdempotencyKey).HasMaxLength(128);
-            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
             b.Property(x => x.ExportSystem).HasMaxLength(32);
             b.Property(x => x.OrderNo).HasMaxLength(64);
             b.Property(x => x.CustomerReference).HasMaxLength(128);
@@ -127,7 +150,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.ToTable("BillingExportAttempts");
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
-            b.Property(x => x.Result).HasMaxLength(16);
+            b.Property(x => x.Result).HasMaxLength(32);
             b.Property(x => x.Message).HasMaxLength(1024);
             b.Property(x => x.CorrelationId).HasMaxLength(64);
             b.HasIndex(x => x.BasisId);

@@ -19,4 +19,12 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// jsdom has no layout: Fluent's MessageBar watches its own size to reflow, which needs a ResizeObserver to exist.
+class NoLayoutResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, 'ResizeObserver', { writable: true, value: NoLayoutResizeObserver });
+
 afterEach(() => cleanup());

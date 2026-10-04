@@ -19,7 +19,9 @@ public sealed record CollectResult(int Organizations, int Lines, decimal Total, 
 /// <summary>
 /// Builds the bases of a run from contracts, CSP subscriptions, approved hours, hour-bank purchases and manual lines
 /// (docs/02 §4.9). Every collected line carries a charge key, so re-collecting updates the same lines and keeps Finance's
-/// decisions once instead of adding the source again (BR-BIL-02, docs/adr/ADR-011).
+/// decisions once instead of adding the source again (BR-BIL-02, docs/adr/ADR-011). Across runs the charge register
+/// decides: an obligation another run holds — billed, or reserved by another open run — is left out, and of a contract
+/// service only the days no other run billed are collected (docs/adr/ADR-013). Runs inside the register's lock.
 /// </summary>
 internal sealed class BillingCollector(
     BillingDbContext db,
@@ -30,6 +32,8 @@ internal sealed class BillingCollector(
     ITimeTrackingApi timeTracking,
     IServiceApi service,
     IEnumerable<IBillingTargetSystem> targets,
+    ChargeLedger ledger,
+    TimeProvider time,
     IOptions<BillingOptions> options)
 {
     public async Task<CollectResult> CollectAsync(BillingRun run, CancellationToken ct)
@@ -37,14 +41,25 @@ internal sealed class BillingCollector(
         var settings = options.Value;
         var periodStart = run.PeriodStart;
         var periodEnd = run.PeriodEnd;
+        var now = time.GetUtcNow();
 
         var contractLines = await contracts.GetBillableLinesAsync(periodStart, periodEnd, ct);
         var purchases = await contracts.GetHourBankPurchasesAsync(periodStart, periodEnd, ct);
-        var billableTime = await timeTracking.GetBillableTimeAsync(periodStart, periodEnd, ct);
+        // Hours that left with an exported order are never collected again, also where their charge predates the register.
+        var billableTime = (await timeTracking.GetBillableTimeAsync(periodStart, periodEnd, ct)).Where(t => !t.Invoiced).ToList();
         // One-time items that are waiting for a run (an accepted quote today); they stay queued until a basis is exported.
         var pendingCharges = await db.PendingCharges
             .Where(c => c.InvoicedBasisId == null && c.ChargeableFrom <= periodEnd)
             .ToListAsync(ct);
+        var snapshot = await ledger.LoadAsync(
+            run.Id,
+            billableTime.Select(t => ChargeLedger.TimeKey(t.AllocationId))
+                .Concat(purchases.Select(p => ChargeLedger.HourBankKey(p.EntryId)))
+                .Concat(pendingCharges.Select(c => ChargeLedger.PendingKey(c.Id)))
+                .ToList(),
+            contractLines.Select(l => l.SeriesId).Distinct().ToList(),
+            contractLines.Select(l => l.LineId).Distinct().ToList(),
+            ct);
         var subscriptions = await licensing.GetSubscriptionQuantitiesAsync(periodEnd, ct);
         // Assigned Microsoft 365 licences from the tenant reading (FR-LIC-03); without it the contract estimate is used.
         var assigned = (await licensing.GetAssignedLicensesAsync(periodEnd, ct))
@@ -124,6 +139,22 @@ internal sealed class BillingCollector(
                     continue;
                 }
 
+                // ADR-013: a line billed before the register existed holds its days until Finance decides about it.
+                if (snapshot.LegacyFor(line.LineId, prorated.From, prorated.To) is { } legacy)
+                {
+                    anomalies.Add(new BillingAnomaly(
+                        "BIL_LEGACY_CHARGE",
+                        $"{product?.Name ?? "Product"} was billed for {snapshot.PeriodOf(legacy):yyyy-MM} before charges were registered; it is not billed again until Finance decides about that line."));
+                    continue;
+                }
+
+                // Only the days no other run holds: a quarter billed in advance and a later month of the same series never overlap.
+                var pieces = ChargeCoverage.Uncovered(prorated.From, prorated.To, snapshot.TakenIntervals(line.SeriesId));
+                if (pieces.Count == 0)
+                {
+                    continue;
+                }
+
                 var quantity = QuantityOf(
                     line, subscriptionsByOrganization.GetValueOrDefault(organizationId), deviceCounts, anomalies, product,
                     assigned.GetValueOrDefault((organizationId, line.ProductId)));
@@ -134,41 +165,69 @@ internal sealed class BillingCollector(
 
                 var prices = pricesByCategory[line.PriceCategory ?? defaultCategory];
                 var fullPrice = line.UnitPrice ?? (prices.TryGetValue(line.ProductId, out var resolved) ? resolved.UnitPrice : 0m);
-                // The quantity stays what the customer has; the price carries the part of the period that is billed.
-                var unitPrice = prorated.IsPartial ? decimal.Round(fullPrice * prorated.Factor, 2) : fullPrice;
-                if (unitPrice <= 0)
-                {
-                    anomalies.Add(new BillingAnomaly("BIL_LINE_WITHOUT_PRICE", $"{product?.Name ?? "Product"} has no price for this period."));
-                }
-
                 var subscriptionIds = line.QuantityModel == QuantityModel.PerSubscription
                     ? subscriptionsByOrganization.GetValueOrDefault(organizationId)?.FirstOrDefault(s => s.ProductId == line.ProductId)?.SubscriptionIds
                     : null;
 
-                // The service across its versions and the days it is billed for: two versions of a mid-period change are two
-                // charges, a repeated collect of the same days is the same one.
-                lines.Add(new LineDraft(
-                    product?.Type == ProductType.MicrosoftLicense ? BillingGroup.License : BillingGroup.Subscription,
-                    line.ProductId,
-                    Describe(product?.Name ?? "Product", line.Description, covered, prorated),
-                    quantity,
-                    unitPrice,
-                    line.DiscountPct,
-                    product?.VatRate ?? 25m,
-                    JsonSerializer.Serialize(new
+                foreach (var (from, to) in pieces)
+                {
+                    var days = to.DayNumber - from.DayNumber + 1;
+                    var piece = days >= covered.Days ? new Proration(covered.From, covered.To, 1m) : new Proration(from, to, decimal.Round((decimal)days / covered.Days, 4));
+
+                    // The quantity stays what the customer has; the price carries the part of the period that is billed.
+                    var unitPrice = piece.IsPartial ? decimal.Round(fullPrice * piece.Factor, 2) : fullPrice;
+                    if (unitPrice <= 0)
                     {
-                        contractId = line.ContractId,
-                        contractLineId = line.LineId,
-                        subscriptionIds,
-                        prorationFactor = prorated.IsPartial ? prorated.Factor : (decimal?)null,
-                    }),
-                    string.Create(CultureInfo.InvariantCulture, $"contract:{line.SeriesId:N}:{prorated.From:yyyy-MM-dd}:{prorated.To:yyyy-MM-dd}"),
-                    organizationId));
+                        anomalies.Add(new BillingAnomaly("BIL_LINE_WITHOUT_PRICE", $"{product?.Name ?? "Product"} has no price for this period."));
+                    }
+
+                    // The service across its versions and the days it is billed for: two versions of a mid-period change are two
+                    // charges, a repeated collect of the same days is the same one.
+                    var key = ChargeLedger.ContractKey(line.SeriesId, piece.From, piece.To);
+                    lines.Add(new LineDraft(
+                        product?.Type == ProductType.MicrosoftLicense ? BillingGroup.License : BillingGroup.Subscription,
+                        line.ProductId,
+                        Describe(product?.Name ?? "Product", line.Description, covered, piece),
+                        quantity,
+                        unitPrice,
+                        line.DiscountPct,
+                        product?.VatRate ?? 25m,
+                        JsonSerializer.Serialize(new
+                        {
+                            contractId = line.ContractId,
+                            contractLineId = line.LineId,
+                            subscriptionIds,
+                            prorationFactor = piece.IsPartial ? piece.Factor : (decimal?)null,
+                        }),
+                        key,
+                        organizationId,
+                        [new ChargeClaim(key, ChargeKind.Contract, BillingLine.Amount(quantity, unitPrice, line.DiscountPct), line.SeriesId, piece.From, piece.To, line.LineId)]));
+                }
             }
 
-            AddHourlyLines(lines, billableTime.Where(t => t.OrganizationId == organizationId).ToList(), hourlyProducts, periodStart, periodEnd, settings, anomalies);
-            await AddHourBankLinesAsync(lines, purchases.Where(p => p.OrganizationId == organizationId).ToList(), organizationLines, products, pricesByCategory, defaultCategory, anomalies, ct);
-            AddPendingChargeLines(lines, pendingCharges.Where(c => c.OrganizationId == organizationId).ToList());
+            var hours = billableTime.Where(t => t.OrganizationId == organizationId).ToList();
+            var heldHours = hours.Where(t => snapshot.HeldElsewhere(ChargeLedger.TimeKey(t.AllocationId)) is not null).ToList();
+            ReportHeldElsewhere(anomalies, heldHours.Select(t => snapshot.HeldElsewhere(ChargeLedger.TimeKey(t.AllocationId))!), snapshot,
+                charge => string.Create(CultureInfo.InvariantCulture, $"{heldHours.Count} approved time entries"));
+            AddHourlyLines(lines, hours.Except(heldHours).ToList(), hourlyProducts, periodStart, periodEnd, settings, anomalies);
+
+            var organizationPurchases = purchases.Where(p => p.OrganizationId == organizationId).ToList();
+            var heldPurchases = organizationPurchases.Where(p => snapshot.HeldElsewhere(ChargeLedger.HourBankKey(p.EntryId)) is not null).ToList();
+            foreach (var purchase in heldPurchases)
+            {
+                ReportHeldElsewhere(anomalies, [snapshot.HeldElsewhere(ChargeLedger.HourBankKey(purchase.EntryId))!], snapshot, _ => $"The prepaid package “{purchase.Name}”");
+            }
+
+            await AddHourBankLinesAsync(lines, organizationPurchases.Except(heldPurchases).ToList(), organizationLines, products, pricesByCategory, defaultCategory, anomalies, ct);
+
+            var organizationCharges = pendingCharges.Where(c => c.OrganizationId == organizationId).ToList();
+            var heldCharges = organizationCharges.Where(c => snapshot.HeldElsewhere(ChargeLedger.PendingKey(c.Id)) is not null).ToList();
+            foreach (var pending in heldCharges)
+            {
+                ReportHeldElsewhere(anomalies, [snapshot.HeldElsewhere(ChargeLedger.PendingKey(pending.Id))!], snapshot, _ => $"“{pending.Description}”");
+            }
+
+            AddPendingChargeLines(lines, organizationCharges.Except(heldCharges).ToList());
             // The customer the work was done for travels with each line, also when a group parent pays for it (FR-CUS-07).
             lines = lines.ConvertAll(l => l with { SourceOrganizationId = organizationId });
 
@@ -219,6 +278,13 @@ internal sealed class BillingCollector(
         foreach (var (organizationId, lines, anomalies, customerReference) in drafts)
         {
             var basis = existing.GetValueOrDefault(organizationId);
+
+            // Everything of this customer is billed or held by another run (a supplementary run, typically): no empty basis.
+            if (basis is null && lines.Count == 0)
+            {
+                continue;
+            }
+
             if (basis is null && dropped.Remove(organizationId, out var earlier))
             {
                 earlier.Restore();
@@ -245,6 +311,17 @@ internal sealed class BillingCollector(
                 throw new InvalidOperationException(applied.Error.Message);
             }
 
+            if (!basis.CurrentLines.Any())
+            {
+                basis.MarkDeleted();
+            }
+
+            ledger.Sync(basis, lines, snapshot, now);
+            if (basis.IsDeleted)
+            {
+                continue;
+            }
+
             conflicts += applied.Value.Conflicts;
 
             basis.SetPreviousTotal(previousTotals.GetValueOrDefault(organizationId));
@@ -269,20 +346,24 @@ internal sealed class BillingCollector(
 
             // A subsidiary that has since joined its parent's invoice drops the basis it had from an earlier collect; lines
             // Finance decided about stay, flagged, until somebody resolves them.
-            if (invoiceTargets.ContainsKey(organizationId) && basis.CurrentLines.Any())
+            var gone = !organizationIds.Contains(organizationId) || invoiceTargets.ContainsKey(organizationId);
+            if (!gone)
             {
-                conflicts += basis.ApplyCollected([], null).Value.Conflicts;
+                continue;
             }
-            else if (!organizationIds.Contains(organizationId) && basis.CurrentLines.Any())
+
+            if (basis.CurrentLines.Any())
             {
                 // Nothing to bill for this customer any more: collected lines go, decided ones wait for Finance.
                 conflicts += basis.ApplyCollected([], null).Value.Conflicts;
             }
 
-            if ((!organizationIds.Contains(organizationId) || invoiceTargets.ContainsKey(organizationId)) && !basis.CurrentLines.Any())
+            if (!basis.CurrentLines.Any())
             {
                 basis.MarkDeleted();
             }
+
+            ledger.Sync(basis, [], snapshot, now);
         }
 
         // The same rule the approval applies again to the content it approves (BR-BIL-04, ADR-012).
@@ -290,11 +371,15 @@ internal sealed class BillingCollector(
         return new CollectResult(existing.Values.Count(b => !b.IsDeleted), totalLines, decimal.Round(total, 2), withAnomalies, requiresSecondApproval, conflicts);
     }
 
-    /// <summary>One-time items from accepted quotes (BR-SAL-07); they carry their id so the export can close them.</summary>
+    /// <summary>
+    /// One-time items from accepted quotes (BR-SAL-07), completed project phases and Finance's corrections; they carry their id
+    /// so the export can close them, and a correction refers to the exported line it adds to (ADR-013).
+    /// </summary>
     private static void AddPendingChargeLines(List<LineDraft> lines, IReadOnlyList<PendingCharge> charges)
     {
         foreach (var charge in charges)
         {
+            var key = ChargeLedger.PendingKey(charge.Id);
             lines.Add(new LineDraft(
                 BillingGroup.OneOff,
                 charge.ProductId,
@@ -304,7 +389,10 @@ internal sealed class BillingCollector(
                 charge.DiscountPct,
                 charge.VatRate,
                 JsonSerializer.Serialize(new { pendingChargeIds = new[] { charge.Id } }),
-                string.Create(CultureInfo.InvariantCulture, $"pending:{charge.Id:N}")));
+                key,
+                Claims: [new ChargeClaim(
+                    key, ChargeKind.OneOff, BillingLine.Amount(charge.Quantity, charge.UnitPrice, charge.DiscountPct),
+                    CorrectsLineId: charge.SourceType == PendingCharge.CorrectionSource ? charge.SourceId : null)]));
         }
     }
 
@@ -399,7 +487,8 @@ internal sealed class BillingCollector(
                         product.VatRate,
                         JsonSerializer.Serialize(new { timeEntryIds = new[] { entry.EntryId }, allocationIds = new[] { entry.AllocationId } }),
                         // The approved allocation: a re-approval creates new allocations and therefore a new charge.
-                        string.Create(CultureInfo.InvariantCulture, $"time:{entry.AllocationId:N}")));
+                        ChargeLedger.TimeKey(entry.AllocationId),
+                        Claims: [TimeClaim(entry, rate)]));
                 }
             }
             else
@@ -417,7 +506,8 @@ internal sealed class BillingCollector(
                         timeEntryIds = group.Select(e => e.EntryId).Distinct().ToList(),
                         allocationIds = group.Select(e => e.AllocationId).ToList(),
                     }),
-                    string.Create(CultureInfo.InvariantCulture, $"time:{group.Key.Key}:{rate:0.####}")));
+                    string.Create(CultureInfo.InvariantCulture, $"time:{group.Key.Key}:{rate:0.####}"),
+                    Claims: group.Select(e => TimeClaim(e, rate)).ToList()));
             }
         }
 
@@ -439,8 +529,26 @@ internal sealed class BillingCollector(
                 0,
                 0,
                 0,
-                JsonSerializer.Serialize(new { timeEntryIds = group.Select(e => e.EntryId).Distinct().ToList() }),
-                $"info:{group.Key}"));
+                JsonSerializer.Serialize(new { timeEntryIds = group.Select(e => e.EntryId).Distinct().ToList(), allocationIds = group.Select(e => e.AllocationId).ToList() }),
+                $"info:{group.Key}",
+                Claims: group.Select(e => new ChargeClaim(ChargeLedger.TimeKey(e.AllocationId), ChargeKind.TimeInfo, 0m, ServiceFrom: e.WorkDate, ServiceTo: e.WorkDate)).ToList()));
+        }
+    }
+
+    private static ChargeClaim TimeClaim(BillableTime entry, decimal rate) =>
+        new(ChargeLedger.TimeKey(entry.AllocationId), ChargeKind.Time, BillingLine.Amount(entry.BilledHours, rate, 0), ServiceFrom: entry.WorkDate, ServiceTo: entry.WorkDate);
+
+    /// <summary>
+    /// An obligation another open run reserved is billed there; the basis says so. Obligations that are already billed are
+    /// left out without a word — that is what a supplementary run is for.
+    /// </summary>
+    private static void ReportHeldElsewhere(List<BillingAnomaly> anomalies, IEnumerable<Charge> held, ChargeSnapshot snapshot, Func<Charge, string> what)
+    {
+        if (held.FirstOrDefault(c => c.Status == ChargeStatus.Reserved) is { } reserved)
+        {
+            anomalies.Add(new BillingAnomaly(
+                "BIL_CHARGE_RESERVED_ELSEWHERE",
+                $"{what(reserved)}: on a basis of the open run for {snapshot.PeriodOf(reserved):yyyy-MM}, billed there."));
         }
     }
 
@@ -511,7 +619,8 @@ internal sealed class BillingCollector(
                 product.VatRate,
                 JsonSerializer.Serialize(new { hourBankId = purchase.HourBankId, hourBankEntryId = purchase.EntryId, contractId = line.ContractId }),
                 // The purchase movement itself: re-reading it is the same charge, a second purchase of the same bank is another.
-                string.Create(CultureInfo.InvariantCulture, $"hourbank:{purchase.EntryId:N}")));
+                ChargeLedger.HourBankKey(purchase.EntryId),
+                Claims: [new ChargeClaim(ChargeLedger.HourBankKey(purchase.EntryId), ChargeKind.HourBankPurchase, BillingLine.Amount(purchase.Hours, unitPrice, line.DiscountPct), ServiceFrom: purchase.Date, ServiceTo: purchase.Date)]));
         }
     }
 
