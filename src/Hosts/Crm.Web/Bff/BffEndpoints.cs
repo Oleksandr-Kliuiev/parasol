@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using Crm.Authorization;
 using Crm.Identity.Contracts;
+using Crm.Infrastructure.Http;
 using Crm.SharedKernel.Application;
 using Crm.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
@@ -59,7 +60,15 @@ public static class BffEndpoints
                     new Claim(ClaimTypes.Role, role),
                 ], CookieAuthenticationDefaults.AuthenticationScheme, "name", ClaimTypes.Role);
                 var principal = new ClaimsPrincipal(identity);
-                await AuthenticationSetup.ProvisionUserAsync(principal, context.RequestServices, context.RequestAborted);
+                try
+                {
+                    await AuthenticationSetup.ProvisionUserAsync(principal, context.RequestServices, context.RequestAborted);
+                }
+                catch (Crm.SharedKernel.Operations.MaintenanceReadOnlyException)
+                {
+                    return Results.LocalRedirect(AuthenticationSetup.MaintenanceSignInPath);
+                }
+
                 await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
                 return Results.LocalRedirect(SafeReturnUrl(returnUrl));
             })
@@ -69,9 +78,11 @@ public static class BffEndpoints
         group.MapPost("/logout", async (
                 HttpContext context, CrmAuthOptions options, ISessionDirectory sessions, SessionStateCache cache, TimeProvider time) =>
             {
-                // DEV-10: the session ends on the server, so this cookie — and any copy of it — is refused on every replica.
+                // DEV-10: the session ends on the server, so this cookie — and any copy of it — is refused on every replica. Signing
+                // out stays possible during read-only maintenance (DEV-13): ending a session reduces access, it changes no data.
                 if (Guid.TryParse(context.User.FindFirstValue(CrmClaimTypes.SessionId), out var sessionId))
                 {
+                    using var signOut = Crm.SharedKernel.Operations.MaintenanceScope.AllowWrites("sign-out");
                     await sessions.EndAsync(sessionId, "SignOut", time.GetUtcNow(), context.RequestAborted);
                     if (Guid.TryParse(context.User.FindFirstValue(CrmClaimTypes.UserId), out var userId))
                     {
@@ -87,7 +98,8 @@ public static class BffEndpoints
                 }
 
                 return Results.Ok(new { signOutUrl = "/" });
-            });
+            })
+            .AllowedInMaintenance();
 
         group.MapGet("/signout-entra", (CrmAuthOptions options) =>
                 options.Mode == AuthMode.Entra

@@ -1,0 +1,11 @@
+SKIP  uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+SKIP  uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+SUCCESS Restore                                                         0.8s
+SUCCESS Build                                                           2.2s
+SUCCESS Vulnerable packages                                            11.7s
+SUCCESS Unit tests (with coverage)                                      6.7s
+SUCCESS Architecture tests                                              2.2s
+SUCCESS Integration tests (SQL Server in Testcontainers, with coverage)   80.4s
+SUCCESS Coverage gate (NFR-10)                                          0.7s
+SKIP  uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 (files: unit.cobertura.xml, integration.cobertura.xml)
+JOB backend: PASSED

@@ -46,6 +46,7 @@ public static class AuditModule
         services.AddModuleDbContext<AuditDbContext>(configuration);
         services.AddOptions<Features.AuditIntegrityOptions>().Bind(configuration.GetSection(Features.AuditIntegrityOptions.SectionName));
         services.AddScoped<Features.AuditIntegrityJob>();
+        services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, Features.AuditRestoreParticipant>();
         services.AddSingleton<Infrastructure.Persistence.IDatabasePermissionRules, AuditDatabasePermissions>();
         services.AddScoped<IPersonalDataContributor, Features.AuditPersonalData>();
         return services;

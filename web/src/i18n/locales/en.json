@@ -34,7 +34,8 @@
     "customFields": "Custom fields",
     "migration": "Migration",
     "recordAccess": "Record access",
-    "privacy": "Personal data"
+    "privacy": "Personal data",
+    "maintenance": "Maintenance"
   },
   "header": {
     "search": "Search organizations",
@@ -131,7 +132,12 @@
       "PRV_SUPPRESSION_LIFTED": "The suppression was already lifted.",
       "PRV_SUPPRESSION_NOT_FOUND": "This suppression does not exist.",
       "SAL_DOCUMENT_ERASED": "This quote document was erased at the request of the person on it; it is no longer shown or sent.",
-      "PRIVACY_REPLAY_PENDING": "The database was restored from a backup and erasures made after it are being applied again. Try again in a minute."
+      "PRIVACY_REPLAY_PENDING": "The database was restored from a backup and erasures made after it are being applied again. Try again in a minute.",
+      "MAINTENANCE_READ_ONLY": "The CRM is read-only for maintenance. Nothing was saved; try again when the maintenance ends.",
+      "MAINTENANCE_STATE_UNAVAILABLE": "Nothing was sent: whether the CRM is in maintenance cannot be read right now. Try again in a minute.",
+      "MAINTENANCE_CHANGED": "Another maintenance decision was taken meanwhile. Look at the current state before changing it.",
+      "MAINTENANCE_REQUIRED": "Switch the CRM to read-only maintenance before reconciling a restore.",
+      "REPORT_NOT_FOUND": "The reconciliation report was not found."
     }
   },
   "status": {
@@ -2558,6 +2564,116 @@
           "sessions": "Ended sign-in sessions"
         }
       }
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance and restore",
+    "subtitle": "Read-only mode for a database restore or an incident, and the reconciliation before sending resumes (runbook 03).",
+    "banner": {
+      "title": "Read-only maintenance",
+      "body": "The CRM is read-only for maintenance. You can read everything; changes are not saved until it ends.",
+      "bodySince": "The CRM has been read-only for maintenance since {{since}}. You can read everything; changes are not saved until it ends.",
+      "reason": "Reason: {{reason}}"
+    },
+    "signIn": {
+      "title": "Signing in is paused",
+      "body": "The CRM is in maintenance, and signing in waits until it ends.",
+      "bodySince": "The CRM has been in maintenance since {{since}}, and signing in waits until it ends.",
+      "check": "Check again",
+      "overTitle": "The maintenance is over",
+      "overBody": "You can sign in again.",
+      "signIn": "Sign in",
+      "operator": "Operators: sign in"
+    },
+    "state": {
+      "title": "Current state",
+      "mode": "Mode",
+      "modes": {
+        "Normal": "Normal operation",
+        "ReadOnly": "Read-only"
+      },
+      "since": "Since",
+      "setBy": "Set by",
+      "reason": "Reason",
+      "reference": "Reference",
+      "forced": "This deployment is read-only by configuration (Maintenance:ForceReadOnly). Only a new revision without it ends the maintenance."
+    },
+    "inFlight": {
+      "title": "Under way",
+      "hint": "Before the restore point is taken, every count must be 0 and stay 0 for a few more seconds (runbook 03).",
+      "clear": "Nothing is under way.",
+      "area": "Area",
+      "count": "Count"
+    },
+    "areas": {
+      "outbox": "Domain events",
+      "activities": "Activities",
+      "audit": "Audit",
+      "billing": "Billing",
+      "integrations": "Integrations",
+      "notifications": "Notifications",
+      "privacy": "Personal data",
+      "sales": "Sales",
+      "database": "Database",
+      "keys": "Keys"
+    },
+    "switch": {
+      "title": "Switch",
+      "toReadOnly": "Switch to read-only",
+      "toNormal": "Return to normal operation",
+      "reason": "Reason",
+      "reasonHint": "{{min}}–{{max}} characters; everyone signed in sees it in the banner.",
+      "reference": "Reference",
+      "referenceHint": "Change or incident number, if there is one.",
+      "confirmReadOnlyTitle": "Switch the CRM to read-only?",
+      "confirmReadOnlyBody": "Every change is refused for everyone, the worker stops sending, and signing in waits until normal operation returns.",
+      "confirmNormalTitle": "Return to normal operation?",
+      "confirmNormalBody": "Changes are accepted again and the worker resumes sending. After a restore, apply the reconciliation first.",
+      "confirm": "Confirm",
+      "done": "The decision is recorded."
+    },
+    "reconcile": {
+      "title": "Restore reconciliation",
+      "intro": "After a restore, compares what left the CRM after the restore point with the restored copy, before sending resumes.",
+      "needsReadOnly": "Switch to read-only first: reconciling while the worker sends would race with it.",
+      "restorePoint": "Restore point (UTC)",
+      "restorePointHint": "The moment the database was restored to, in UTC.",
+      "invalidPoint": "Give a restore point in the past.",
+      "dryRun": "Dry run",
+      "apply": "Apply",
+      "applyHint": "Apply is available after a dry run for the same restore point.",
+      "confirmTitle": "Apply the reconciliation?",
+      "confirmBody": "What the journal shows sent after the restore point is held for a person: bases wait for Finance, outbound operations are held, posts and e-mails that left are marked as sent."
+    },
+    "report": {
+      "title": "Report of {{at}}",
+      "kind": "Kind",
+      "dryRun": "Dry run",
+      "applied": "Applied",
+      "restorePoint": "Restore point",
+      "by": "By",
+      "effects": "Journal entries after the restore point",
+      "needsPerson": "Findings for a person",
+      "needsPersonMark": "Needs a person:",
+      "reconciliation": "Reconciliation",
+      "checks": "Checks",
+      "nothing": "Nothing to reconcile.",
+      "area": "Area",
+      "subject": "Subject",
+      "finding": "Finding",
+      "action": "Action"
+    },
+    "reports": {
+      "title": "Earlier reconciliations",
+      "empty": "No reconciliation has run yet.",
+      "at": "Run at",
+      "restorePoint": "Restore point",
+      "kind": "Kind",
+      "by": "By",
+      "effects": "Journal entries",
+      "needsPerson": "For a person",
+      "open": "Show",
+      "hide": "Hide"
     }
   }
 }

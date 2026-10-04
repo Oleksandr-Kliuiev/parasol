@@ -1,13 +1,18 @@
 using Crm.Infrastructure.Outbox;
 using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Crm.Integrations.Core;
 
-public sealed record OutboundResult(string? Message)
+/// <summary>
+/// What a handler did. <paramref name="Reference"/> is the external system's identifier of what exists now (an order number),
+/// kept in the external effect journal (DEV-13).
+/// </summary>
+public sealed record OutboundResult(string? Message, string? Reference = null)
 {
     public static readonly OutboundResult NothingToDo = new("No changes to push.");
 }
@@ -72,6 +77,8 @@ public sealed class OutboundQueue(IntegrationDbContext db, TimeProvider timeProv
 public sealed class OutboundProcessorJob(
     IServiceScopeFactory scopeFactory,
     TimeProvider timeProvider,
+    IMaintenanceGate maintenance,
+    IExternalEffectJournal journal,
     ILogger<OutboundProcessorJob> logger)
 {
     public const string JobId = "outbound-operations";
@@ -95,6 +102,12 @@ public sealed class OutboundProcessorJob(
         int processed = 0;
         foreach (var id in due)
         {
+            // DEV-13: asked before every operation, never from a cache — maintenance that began a moment ago stops this run here.
+            if (!await MaySendAsync(cancellationToken))
+            {
+                break;
+            }
+
             if (await ClaimAsync(db, id, cancellationToken) is not { } token)
             {
                 continue;
@@ -110,6 +123,11 @@ public sealed class OutboundProcessorJob(
     /// <summary>Runs one pending operation now, whatever its next attempt time; false when another run holds it.</summary>
     public async Task<bool> ExecuteOneAsync(Guid operationId, CancellationToken cancellationToken)
     {
+        if (!await MaySendAsync(cancellationToken))
+        {
+            return false;
+        }
+
         await using var scope = scopeFactory.CreateAsyncScope();
         if (await ClaimAsync(scope.ServiceProvider.GetRequiredService<IntegrationDbContext>(), operationId, cancellationToken) is not { } token)
         {
@@ -133,12 +151,42 @@ public sealed class OutboundProcessorJob(
 
     private async Task ExecuteClaimedAsync(Guid operationId, Guid token, CancellationToken cancellationToken)
     {
+        // DEV-13: claimed after a fresh look at the switch, the operation is under way. Should maintenance begin meanwhile, what
+        // the handler writes and the outcome are still recorded — an order that left must not be forgotten and sent again — while
+        // a send that has not started yet is stopped by the journal, which reads the switch again.
+        using var inFlight = MaintenanceScope.AllowWrites("outbound-in-flight");
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
         var operation = await db.OutboundOperations.AsNoTracking().SingleAsync(o => o.Id == operationId, cancellationToken);
         var handler = scope.ServiceProvider.GetServices<IOutboundHandler>()
             .SingleOrDefault(h => h.System == operation.System && h.Operation == operation.Operation);
         var attempts = operation.Attempts + 1;
+
+        // DEV-13: the attempt is journaled outside the database before the handler may reach the external system, so a restore
+        // to an earlier point still knows it happened. Without that entry nothing is sent: the lease is given back uncounted.
+        ExternalEffectEntry? attempt = null;
+        if (handler is not null)
+        {
+            try
+            {
+                attempt = await journal.BeginAsync(
+                    new ExternalEffect(operation.System, operation.Operation, operation.EntityType, operation.EntityId, operation.Id), cancellationToken);
+            }
+            catch (Exception ex) when (ex is MaintenanceReadOnlyException or MaintenanceStateUnavailableException)
+            {
+                logger.LogInformation("Outbound {System}/{Operation} {OperationId} waits: maintenance began, or its state cannot be read",
+                    operation.System, operation.Operation, operationId);
+                await SettleAsync(db, operationId, token, _ => { });
+                return;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning("Outbound {System}/{Operation} {OperationId} waits: the external effect journal is unavailable ({Error})",
+                    operation.System, operation.Operation, operationId, ex.GetType().Name);
+                await SettleAsync(db, operationId, token, _ => { });
+                return;
+            }
+        }
 
         await using var lease = new LeaseRenewal(Lease, timeProvider, ct => RenewAsync(operationId, token, ct), logger, cancellationToken);
         try
@@ -149,6 +197,8 @@ public sealed class OutboundProcessorJob(
             }
 
             var result = await handler.ExecuteAsync(operation, lease.Token);
+            await journal.CompleteAsync(
+                attempt!, ReferenceEquals(result, OutboundResult.NothingToDo) ? EffectPhase.Skipped : EffectPhase.Sent, result.Reference, cancellationToken);
             await SettleAsync(db, operationId, token, s => s
                 .SetProperty(o => o.Status, OutboundStatus.Succeeded)
                 .SetProperty(o => o.Attempts, attempts)
@@ -161,6 +211,15 @@ public sealed class OutboundProcessorJob(
             logger.LogWarning("Outbound {System}/{Operation} {OperationId}: another run took the operation over; its outcome counts",
                 operation.System, operation.Operation, operationId);
         }
+        catch (Exception ex) when (ex is MaintenanceReadOnlyException or MaintenanceStateUnavailableException)
+        {
+            // A handler that journals its own effect asks the switch before sending it (the PowerOffice sales order), and
+            // maintenance began in between: the operation waits, uncounted. Its attempt stays open in the journal — a restore
+            // reconciliation then asks a person rather than assume nothing left.
+            logger.LogInformation("Outbound {System}/{Operation} {OperationId} waits: maintenance began while it was being prepared",
+                operation.System, operation.Operation, operationId);
+            await SettleAsync(db, operationId, token, _ => { });
+        }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // An HttpClient timeout arrives as a cancellation that nobody asked for: a failed attempt like any other.
@@ -168,6 +227,13 @@ public sealed class OutboundProcessorJob(
                 operation.System, operation.Operation, operation.EntityId, attempts);
             var error = Truncate(ex.GetBaseException().Message);
             var now = timeProvider.GetUtcNow();
+            if (ex is PermanentOutboundException && attempt is not null)
+            {
+                // A refusal the handler is sure of: nothing was created. Anything else stays "sending" in the journal — the
+                // effect may exist, and a restore reconciliation holds the operation for a person.
+                await journal.CompleteAsync(attempt, EffectPhase.Failed, null, cancellationToken);
+            }
+
             if (ex is PermanentOutboundException || attempts >= OutboundOperation.MaxAttempts)
             {
                 var status = ex is PermanentOutboundException ? OutboundStatus.Failed : OutboundStatus.DeadLetter;
@@ -208,6 +274,7 @@ public sealed class OutboundProcessorJob(
 
     private async Task<bool> RenewAsync(Guid id, Guid token, CancellationToken cancellationToken)
     {
+        using var inFlight = MaintenanceScope.AllowWrites("outbound-in-flight");
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
         var lease = timeProvider.GetUtcNow().Add(Lease);
@@ -217,4 +284,24 @@ public sealed class OutboundProcessorJob(
     }
 
     private static string Truncate(string value) => value.Length > 4000 ? value[..4000] : value;
+
+    /// <summary>Normal operation, read from the store now; an unreadable state sends nothing (DEV-13: fail closed for effects).</summary>
+    private async Task<bool> MaySendAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!(await maintenance.FreshAsync(cancellationToken)).IsReadOnly)
+            {
+                return true;
+            }
+
+            logger.LogInformation("Outbound operations wait: the CRM is read-only for maintenance");
+            return false;
+        }
+        catch (MaintenanceStateUnavailableException ex)
+        {
+            logger.LogWarning("Outbound operations wait: the maintenance state cannot be read ({Error})", ex.InnerException?.GetType().Name);
+            return false;
+        }
+    }
 }

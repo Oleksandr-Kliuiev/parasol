@@ -34,7 +34,8 @@
     "customFields": "Egne felt",
     "migration": "Migrering",
     "recordAccess": "Tilgang til poster",
-    "privacy": "Personopplysninger"
+    "privacy": "Personopplysninger",
+    "maintenance": "Vedlikehold"
   },
   "header": {
     "search": "Søk i organisasjoner",
@@ -131,7 +132,12 @@
       "PRV_SUPPRESSION_LIFTED": "Sperren er allerede opphevet.",
       "PRV_SUPPRESSION_NOT_FOUND": "Sperren finnes ikke.",
       "SAL_DOCUMENT_ERASED": "Tilbudsdokumentet er slettet etter krav fra personen i det; det vises og sendes ikke lenger.",
-      "PRIVACY_REPLAY_PENDING": "Databasen er gjenopprettet fra en sikkerhetskopi, og slettinger gjort etter den legges inn på nytt. Prøv igjen om et minutt."
+      "PRIVACY_REPLAY_PENDING": "Databasen er gjenopprettet fra en sikkerhetskopi, og slettinger gjort etter den legges inn på nytt. Prøv igjen om et minutt.",
+      "MAINTENANCE_READ_ONLY": "CRM-et er skrivebeskyttet på grunn av vedlikehold. Ingenting ble lagret; prøv igjen når vedlikeholdet er over.",
+      "MAINTENANCE_STATE_UNAVAILABLE": "Ingenting ble sendt: det kan ikke leses akkurat nå om CRM-et er i vedlikehold. Prøv igjen om et minutt.",
+      "MAINTENANCE_CHANGED": "En annen vedlikeholdsbeslutning ble tatt i mellomtiden. Se på gjeldende tilstand før du endrer den.",
+      "MAINTENANCE_REQUIRED": "Sett CRM-et i skrivebeskyttet vedlikehold før du avstemmer en gjenoppretting.",
+      "REPORT_NOT_FOUND": "Avstemmingsrapporten ble ikke funnet."
     }
   },
   "status": {
@@ -2558,6 +2564,116 @@
           "sessions": "Avsluttede innloggingsøkter"
         }
       }
+    }
+  },
+  "maintenance": {
+    "title": "Vedlikehold og gjenoppretting",
+    "subtitle": "Skrivebeskyttet modus for gjenoppretting av databasen eller en hendelse, og avstemmingen før sending fortsetter (runbook 03).",
+    "banner": {
+      "title": "Skrivebeskyttet vedlikehold",
+      "body": "CRM-et er skrivebeskyttet på grunn av vedlikehold. Du kan lese alt; endringer lagres ikke før det er over.",
+      "bodySince": "CRM-et har vært skrivebeskyttet på grunn av vedlikehold siden {{since}}. Du kan lese alt; endringer lagres ikke før det er over.",
+      "reason": "Årsak: {{reason}}"
+    },
+    "signIn": {
+      "title": "Innlogging er satt på pause",
+      "body": "CRM-et er i vedlikehold, og innlogging venter til det er over.",
+      "bodySince": "CRM-et har vært i vedlikehold siden {{since}}, og innlogging venter til det er over.",
+      "check": "Sjekk igjen",
+      "overTitle": "Vedlikeholdet er over",
+      "overBody": "Du kan logge inn igjen.",
+      "signIn": "Logg inn",
+      "operator": "Operatører: logg inn"
+    },
+    "state": {
+      "title": "Gjeldende tilstand",
+      "mode": "Modus",
+      "modes": {
+        "Normal": "Normal drift",
+        "ReadOnly": "Skrivebeskyttet"
+      },
+      "since": "Siden",
+      "setBy": "Satt av",
+      "reason": "Årsak",
+      "reference": "Referanse",
+      "forced": "Denne utrullingen er skrivebeskyttet via konfigurasjon (Maintenance:ForceReadOnly). Bare en ny revisjon uten den avslutter vedlikeholdet."
+    },
+    "inFlight": {
+      "title": "Under arbeid",
+      "hint": "Før gjenopprettingspunktet tas, må alle tall være 0 og bli værende 0 i noen sekunder til (runbook 03).",
+      "clear": "Ingenting er under arbeid.",
+      "area": "Område",
+      "count": "Antall"
+    },
+    "areas": {
+      "outbox": "Domenehendelser",
+      "activities": "Aktiviteter",
+      "audit": "Revisjon",
+      "billing": "Fakturering",
+      "integrations": "Integrasjoner",
+      "notifications": "Varsler",
+      "privacy": "Personopplysninger",
+      "sales": "Salg",
+      "database": "Database",
+      "keys": "Nøkler"
+    },
+    "switch": {
+      "title": "Bryter",
+      "toReadOnly": "Sett til skrivebeskyttet",
+      "toNormal": "Tilbake til normal drift",
+      "reason": "Årsak",
+      "reasonHint": "{{min}}–{{max}} tegn; alle innloggede ser den i banneret.",
+      "reference": "Referanse",
+      "referenceHint": "Endrings- eller hendelsesnummer, hvis det finnes.",
+      "confirmReadOnlyTitle": "Sette CRM-et til skrivebeskyttet?",
+      "confirmReadOnlyBody": "Alle endringer avvises for alle, workeren slutter å sende, og innlogging venter til normal drift er tilbake.",
+      "confirmNormalTitle": "Tilbake til normal drift?",
+      "confirmNormalBody": "Endringer godtas igjen og workeren fortsetter å sende. Etter en gjenoppretting må avstemmingen brukes først.",
+      "confirm": "Bekreft",
+      "done": "Beslutningen er registrert."
+    },
+    "reconcile": {
+      "title": "Avstemming etter gjenoppretting",
+      "intro": "Etter en gjenoppretting sammenlignes det som forlot CRM-et etter gjenopprettingspunktet med den gjenopprettede kopien, før sending fortsetter.",
+      "needsReadOnly": "Sett CRM-et til skrivebeskyttet først: å avstemme mens workeren sender, ville kappes med den.",
+      "restorePoint": "Gjenopprettingspunkt (UTC)",
+      "restorePointHint": "Tidspunktet databasen ble gjenopprettet til, i UTC.",
+      "invalidPoint": "Oppgi et gjenopprettingspunkt i fortiden.",
+      "dryRun": "Prøvekjøring",
+      "apply": "Bruk",
+      "applyHint": "«Bruk» blir tilgjengelig etter en prøvekjøring for samme gjenopprettingspunkt.",
+      "confirmTitle": "Bruke avstemmingen?",
+      "confirmBody": "Det journalen viser som sendt etter gjenopprettingspunktet, holdes for en person: grunnlag venter på økonomi, utgående operasjoner holdes, innlegg og e-poster som er sendt, merkes som sendt."
+    },
+    "report": {
+      "title": "Rapport fra {{at}}",
+      "kind": "Type",
+      "dryRun": "Prøvekjøring",
+      "applied": "Brukt",
+      "restorePoint": "Gjenopprettingspunkt",
+      "by": "Av",
+      "effects": "Journaloppføringer etter gjenopprettingspunktet",
+      "needsPerson": "Funn for en person",
+      "needsPersonMark": "Trenger en person:",
+      "reconciliation": "Avstemming",
+      "checks": "Kontroller",
+      "nothing": "Ingenting å avstemme.",
+      "area": "Område",
+      "subject": "Gjelder",
+      "finding": "Funn",
+      "action": "Tiltak"
+    },
+    "reports": {
+      "title": "Tidligere avstemminger",
+      "empty": "Ingen avstemming er kjørt ennå.",
+      "at": "Kjørt",
+      "restorePoint": "Gjenopprettingspunkt",
+      "kind": "Type",
+      "by": "Av",
+      "effects": "Journaloppføringer",
+      "needsPerson": "For en person",
+      "open": "Vis",
+      "hide": "Skjul"
     }
   }
 }

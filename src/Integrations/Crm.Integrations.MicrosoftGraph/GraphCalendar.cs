@@ -157,7 +157,7 @@ internal sealed class GraphCalendar(HttpClient http, IOptions<GraphOptions> opti
         }
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        throw new HttpRequestException($"Graph calendar returned {(int)response.StatusCode}: {(body.Length > 300 ? body[..300] : body)}");
+        throw new HttpRequestException($"Graph calendar returned {(int)response.StatusCode}: {(body.Length > 300 ? body[..300] : body)}", null, response.StatusCode);
     }
 }
 

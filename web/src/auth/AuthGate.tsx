@@ -7,6 +7,8 @@ import type { CurrentUser } from '../api/types';
 import i18n, { changeLanguage, detectLanguage } from '../i18n';
 import { CurrentUserContext, currentUserQueryKey } from './CurrentUserContext';
 import { NoAccessPage } from '../features/errors/NoAccessPage';
+import { fetchPublicMaintenance, publicMaintenanceKey } from '../features/operations/api';
+import { SignInPausedPage } from '../features/operations/SignInPausedPage';
 import { ErrorState } from '../shared/components/ErrorState';
 
 const useStyles = makeStyles({
@@ -39,15 +41,31 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }, [data, queryClient]);
 
   const unauthenticated = error instanceof ApiError && error.status === 401;
+  // DEV-13: signing in waits while the CRM is read-only. The sign-in endpoints then send the browser back with
+  // ?maintenance=signin, and sending it to sign in again would go round in circles: the page says why instead.
+  const signInPaused = new URLSearchParams(window.location.search).get('maintenance') === 'signin';
+  const maintenance = useQuery({
+    queryKey: publicMaintenanceKey,
+    queryFn: ({ signal }) => fetchPublicMaintenance(signal),
+    enabled: unauthenticated,
+    retry: false,
+    refetchInterval: 30_000,
+  });
+  const paused = unauthenticated && (signInPaused || maintenance.data?.mode === 'ReadOnly');
+  const redirect = unauthenticated && !paused && (maintenance.data !== undefined || maintenance.isError);
 
   useEffect(() => {
-    if (unauthenticated) window.location.assign(loginUrl());
-  }, [unauthenticated]);
+    if (redirect) window.location.assign(loginUrl());
+  }, [redirect]);
 
   useEffect(() => {
     const language = data ? detectLanguage(data.preferredLanguage) : null;
     if (language && language !== i18n.language) void changeLanguage(language);
   }, [data]);
+
+  if (paused) {
+    return <SignInPausedPage state={maintenance.data} onCheck={() => void maintenance.refetch()} />;
+  }
 
   if (isPending || unauthenticated) {
     return (

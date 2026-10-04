@@ -1,0 +1,255 @@
+{
+  "outcome": "passed",
+  "error": null,
+  "rpoSeconds": 55.9,
+  "rtoSeconds": 17.4,
+  "restoreSeconds": 0.7,
+  "switchSeconds": 3.9,
+  "readOnlySeconds": 17.2,
+  "steps": [
+    {
+      "mark": "setup",
+      "at": "2026-10-04T15:55:19.867Z",
+      "note": "container crm-drill-dev13b, web https://localhost:5281, worker http://localhost:5291, mocks http://localhost:5399"
+    },
+    {
+      "mark": "R",
+      "at": "2026-10-04T15:56:08.539Z",
+      "note": "restore point: full backup (local stand-in for point-in-time restore)"
+    },
+    {
+      "mark": "R-backed-up",
+      "at": "2026-10-04T15:56:08.770Z",
+      "note": ""
+    },
+    {
+      "mark": "damage",
+      "at": "2026-10-04T15:57:04.446Z",
+      "note": "harmful operation: 3 customers deleted"
+    },
+    {
+      "mark": "T0",
+      "at": "2026-10-04T15:57:04.446Z",
+      "note": "decision to restore"
+    },
+    {
+      "mark": "T1",
+      "at": "2026-10-04T15:57:04.648Z",
+      "note": "read-only maintenance switched on"
+    },
+    {
+      "mark": "T2",
+      "at": "2026-10-04T15:57:14.842Z",
+      "note": "nothing under way for 10 s"
+    },
+    {
+      "mark": "T3",
+      "at": "2026-10-04T15:57:14.843Z",
+      "note": "restore point chosen: 2026-10-04T15:56:08.539Z"
+    },
+    {
+      "mark": "T4",
+      "at": "2026-10-04T15:57:14.843Z",
+      "note": "restore into crm_drill_restore_202610041557"
+    },
+    {
+      "mark": "T4done",
+      "at": "2026-10-04T15:57:15.537Z",
+      "note": "restored beside the live database"
+    },
+    {
+      "mark": "T5",
+      "at": "2026-10-04T15:57:15.537Z",
+      "note": "checks of the copy"
+    },
+    {
+      "mark": "T6",
+      "at": "2026-10-04T15:57:16.296Z",
+      "note": "switch: crm_drill \u2192 crm_drill_before_202610041557, crm_drill_restore_202610041557 \u2192 crm_drill; restart; migrations"
+    },
+    {
+      "mark": "T6done",
+      "at": "2026-10-04T15:57:20.240Z",
+      "note": "the copy is live, both apps restarted, migrations applied"
+    },
+    {
+      "mark": "T7",
+      "at": "2026-10-04T15:57:20.367Z",
+      "note": "reconciliation: dry run"
+    },
+    {
+      "mark": "T7done",
+      "at": "2026-10-04T15:57:21.378Z",
+      "note": "reconciliation applied: report 20261004T155721Z-23a55e91015146b392738684e69efc44"
+    },
+    {
+      "mark": "T8",
+      "at": "2026-10-04T15:57:21.570Z",
+      "note": "checks before normal operation"
+    },
+    {
+      "mark": "T9",
+      "at": "2026-10-04T15:57:21.859Z",
+      "note": "normal operation"
+    },
+    {
+      "mark": "T9a",
+      "at": "2026-10-04T15:57:21.903Z",
+      "note": "PowerOffice resumed in the restored copy"
+    },
+    {
+      "mark": "done",
+      "at": "2026-10-04T15:59:32.364Z",
+      "note": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "order 1 sent before the restore point",
+      "ok": true,
+      "detail": "5338",
+      "at": "2026-10-04T15:56:03.339Z"
+    },
+    {
+      "check": "order 2 sent after the restore point",
+      "ok": true,
+      "detail": "5339",
+      "at": "2026-10-04T15:57:04.176Z"
+    },
+    {
+      "check": "PowerOffice has received two orders",
+      "ok": true,
+      "detail": 2,
+      "at": "2026-10-04T15:57:04.176Z"
+    },
+    {
+      "check": "a change is refused",
+      "ok": true,
+      "detail": 503,
+      "at": "2026-10-04T15:57:04.672Z"
+    },
+    {
+      "check": "reads go on",
+      "ok": true,
+      "detail": 200,
+      "at": "2026-10-04T15:57:04.737Z"
+    },
+    {
+      "check": "a non-operator sign-in waits",
+      "ok": true,
+      "detail": "/?maintenance=signin",
+      "at": "2026-10-04T15:57:04.761Z"
+    },
+    {
+      "check": "Finance waits too (no operations.maintenance)",
+      "ok": true,
+      "detail": "/?maintenance=signin",
+      "at": "2026-10-04T15:57:04.777Z"
+    },
+    {
+      "check": "an operator signs in during maintenance",
+      "ok": true,
+      "detail": "/",
+      "at": "2026-10-04T15:57:04.804Z"
+    },
+    {
+      "check": "the deleted customers are in the copy",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:15.700Z"
+    },
+    {
+      "check": "the copy has the second basis waiting",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:15.855Z"
+    },
+    {
+      "check": "the copy has its order queued",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:16.000Z"
+    },
+    {
+      "check": "the record entered after the point is not in the copy",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:16.148Z"
+    },
+    {
+      "check": "the copy's protection triggers are enabled",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:16.295Z"
+    },
+    {
+      "check": "still read-only after the restart",
+      "ok": true,
+      "detail": 503,
+      "at": "2026-10-04T15:57:20.367Z"
+    },
+    {
+      "check": "the dry run names the second order",
+      "ok": true,
+      "detail": [
+        "PowerOffice created order 5339 for this basis at 2026-10-04 15:57 UTC; the restored copy still has it waiting to be sent",
+        "The journal shows operation 6f501439-6c5a-30e9-0000-01a107a133ca sent at 2026-10-04 15:57 UTC (reference 5339)."
+      ],
+      "at": "2026-10-04T15:57:20.865Z"
+    },
+    {
+      "check": "the dry run names the queued operation",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:20.865Z"
+    },
+    {
+      "check": "the copy's pause of PowerOffice is reported",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:20.865Z"
+    },
+    {
+      "check": "the dry run changed nothing",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:21.070Z"
+    },
+    {
+      "check": "the second basis waits for Finance",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:21.411Z"
+    },
+    {
+      "check": "its operation is held",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:21.570Z"
+    },
+    {
+      "check": "the restored CRM is ready",
+      "ok": true,
+      "detail": 200,
+      "at": "2026-10-04T15:57:21.606Z"
+    },
+    {
+      "check": "changes are accepted again",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:57:22.038Z"
+    },
+    {
+      "check": "no second order for the restored basis",
+      "ok": true,
+      "detail": 2,
+      "at": "2026-10-04T15:59:32.046Z"
+    },
+    {
+      "check": "Finance confirms the order the journal named",
+      "ok": true,
+      "detail": "",
+      "at": "2026-10-04T15:59:32.363Z"
+    }
+  ]
+}

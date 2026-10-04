@@ -36,6 +36,7 @@ param enablePowerOffice bool
 param powerOfficeEnvironment string
 param enableAtera bool
 param recordScope string
+param maintenanceForceReadOnly bool
 
 var acrPullRole = '7f951dda-4ed3-4680-a7ca-43fe172d538f'
 var placeholderImage = 'mcr.microsoft.com/k8se/quickstart:latest'
@@ -100,6 +101,8 @@ var commonEnv = [
   { name: 'Deployment__Environment', value: environmentName }
   // Record scope (DEV-09): set per environment in infra/env/*.bicepparam; crm-web logs a warning on every start when Open.
   { name: 'Authorization__RecordScope', value: recordScope }
+  // Read-only maintenance by configuration (DEV-13): normally false; the operator's switch lives in the document store.
+  { name: 'Maintenance__ForceReadOnly', value: string(maintenanceForceReadOnly) }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
   { name: 'OTEL_SERVICE_NAME', value: 'crm' }
 ]
@@ -305,3 +308,5 @@ output webUrl string = 'https://${web.properties.configuration.ingress.fqdn}'
 output webCandidateUrl string = 'https://${web.name}---candidate.${environment.properties.defaultDomain}'
 output registryLoginServer string = registry.properties.loginServer
 output migrationJobName string = migrate.name
+output webAppName string = web.name
+output workerAppName string = worker.name

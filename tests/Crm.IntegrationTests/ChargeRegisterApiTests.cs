@@ -22,7 +22,7 @@ namespace Crm.IntegrationTests;
 /// own (2032–2034) and looks only at its own customers, as the database is shared with the rest of the suite.
 /// </summary>
 [Collection(DatabaseAdministrationCollection.Name)]
-public class ChargeRegisterApiTests(CrmWebFactory factory)
+public partial class ChargeRegisterApiTests(CrmWebFactory factory)
 {
     private const string Billing = "/api/v1/billing";
     private const string Contracts = "/api/v1/contracts";

@@ -5,6 +5,7 @@ using Crm.Catalog.Contracts;
 using Crm.Integrations.Core;
 using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Operations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -75,8 +76,12 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
     IBillingApi billing,
     ExternalLinkService links,
     ICatalogApi catalog,
+    IExternalEffectJournal journal,
     IOptions<PowerOfficeOptions> options) : IOutboundHandler
 {
+    /// <summary>The journal kind of the order request itself, written right before the POST (DEV-13).</summary>
+    public const string SalesOrderEffect = "sales-order";
+
     public string System => PowerOfficeTypes.System;
 
     public string Operation => PowerOfficeTypes.CreateSalesOrder;
@@ -111,13 +116,31 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
         if (existing is not null)
         {
             await billing.MarkExportedAsync(basis.BasisId, System, existing.Number, operation.Id.ToString(), cancellationToken);
-            return new OutboundResult($"Order {existing.Number} already existed.");
+            return new OutboundResult($"Order {existing.Number} already existed.", existing.Number);
         }
 
         if (basis.SendStarted)
         {
             // An earlier attempt may have created the order and the lookup does not show it: sending again could invoice twice.
             var message = $"An earlier send got no answer and no order with reference {basis.IdempotencyKey} was found; check PowerOffice and reconcile the basis.";
+            await billing.MarkReconciliationRequiredAsync(basis.BasisId, System, message, operation.Id.ToString(), cancellationToken);
+            throw new PermanentOutboundException(message);
+        }
+
+        // DEV-13: the database may have been restored to a point before an earlier send, which forgets the send marker above.
+        // The external effect journal lies outside the database and still knows: an order request that was sent — or got no
+        // answer — sends nothing more; the basis waits for Finance with the order number when PowerOffice reported one.
+        // Attempts Finance settled since, by checking PowerOffice and reconciling the basis, count no more.
+        var earlier = (await journal.ForEntityAsync(PowerOfficeTypes.BillingBasis, basis.BasisId, cancellationToken))
+            .Where(e => e.System == System && e.Kind == SalesOrderEffect && (basis.CheckedAt is not { } checkedAt || e.At > checkedAt))
+            .ToList();
+        if (ExternalEffects.MayExist(earlier))
+        {
+            var reference = ExternalEffects.LatestReference(earlier);
+            var at = earlier.Max(e => e.At).ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
+            var message = reference is null
+                ? $"An order request for this basis was sent at {at} and got no answer (external effect journal); check PowerOffice for reference {basis.IdempotencyKey} and reconcile the basis."
+                : $"PowerOffice created order {reference} for this basis at {at} (external effect journal), which this database does not know; check it and reconcile the basis.";
             await billing.MarkReconciliationRequiredAsync(basis.BasisId, System, message, operation.Id.ToString(), cancellationToken);
             throw new PermanentOutboundException(message);
         }
@@ -131,9 +154,15 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
             throw new PermanentOutboundException(message);
         }
 
+        // Journaled before the send is marked: when the journal cannot take the entry, nothing is marked and nothing is sent.
+        // Alone, the entry tells a restore that this order may exist (DEV-13).
+        var effect = await journal.BeginAsync(
+            new ExternalEffect(System, SalesOrderEffect, PowerOfficeTypes.BillingBasis, basis.BasisId, operation.Id), cancellationToken);
+
         // From here on an unknown outcome means the order may exist; a basis cancelled meanwhile is not sent at all.
         if (!await billing.MarkExportSendingAsync(basis.BasisId, System, operation.Id.ToString(), cancellationToken))
         {
+            await journal.CompleteAsync(effect, EffectPhase.Skipped, null, cancellationToken);
             return OutboundResult.NothingToDo;
         }
 
@@ -156,13 +185,15 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
         catch (PowerOfficeApiException rejected) when (IsRejection(rejected.Status))
         {
             // PowerOffice answered and refused the order: nothing was created, the basis can be fixed and sent again.
+            await journal.CompleteAsync(effect, EffectPhase.Failed, null, cancellationToken);
             var message = $"PowerOffice rejected the order: {rejected.Message}";
             await billing.MarkExportFailedAsync(basis.BasisId, System, message, operation.Id.ToString(), cancellationToken);
             throw new PermanentOutboundException(message);
         }
 
+        await journal.CompleteAsync(effect, EffectPhase.Sent, order.Number, cancellationToken);
         await billing.MarkExportedAsync(basis.BasisId, System, order.Number, operation.Id.ToString(), cancellationToken);
-        return new OutboundResult($"Created sales order {order.Number} for {basis.Lines.Count} lines.");
+        return new OutboundResult($"Created sales order {order.Number} for {basis.Lines.Count} lines.", order.Number);
     }
 
     /// <summary>

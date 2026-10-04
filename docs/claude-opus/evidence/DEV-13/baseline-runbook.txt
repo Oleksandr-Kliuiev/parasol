@@ -1,0 +1,27 @@
+# A12 on 65b74c6: runbook 03 against the Bicep templates
+
+## docs/runbooks/03-database-restore.md at 65b74c6 (commands that stop the worker and name resources)
+9:az containerapp revision set-mode -g rg-crm-prod -n crm-worker --mode single
+10:az containerapp update -g rg-crm-prod -n crm-worker --min-replicas 0 --max-replicas 0
+22:az sql db show -g rg-crm-prod -s sql-crm-prod -n crm --query "{earliest:earliestRestoreDate}"
+28:az sql db restore -g rg-crm-prod -s sql-crm-prod -n crm \
+36:Копия приносит с собой роли, права и триггеры защиты (ADR-014): пользователи `id-crm-app-<env>` и `id-crm-worker-<env>` в ней те же. Проверьте, что их членство не шире своей роли, а триггеры включены ([runbook 08 §1–2](08-database-permissions.md)):
+45:   az sql db rename -g rg-crm-prod -s sql-crm-prod -n crm --new-name crm-broken-$(date +%Y%m%d)
+46:   az sql db rename -g rg-crm-prod -s sql-crm-prod -n crm-restore-<метка> --new-name crm
+48:2. Перезапустите приложения: `az containerapp revision restart …` для `crm-web`, затем верните worker (`--min-replicas 1`).
+
+## Names the templates give at 65b74c6
+169:  name: 'ca-crm-web-${environmentName}'
+222:  name: 'ca-crm-worker-${environmentName}'
+261:  name: 'caj-crm-migrate-${environmentName}'
+22:  name: 'sql-crm-${environmentName}-${shortSuffix}'
+41:  name: 'crm'
+
+## Outputs of main.bicep at 65b74c6 (what a script could discover)
+166:output webUrl string = apps.outputs.webUrl
+167:output webCandidateUrl string = apps.outputs.webCandidateUrl
+168:output registryLoginServer string = apps.outputs.registryLoginServer
+169:output migrationJobName string = apps.outputs.migrationJobName
+170:output keyVaultName string = data.outputs.keyVaultName
+171:output sqlServerName string = data.outputs.sqlServerName
+172:output natPublicIp string = network.outputs.natPublicIp

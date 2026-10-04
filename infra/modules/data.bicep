@@ -266,4 +266,5 @@ output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output dataProtectionBlobUri string = '${storage.properties.primaryEndpoints.blob}${dataProtectionContainer.name}/keys.xml'
 output documentsContainerUri string = '${storage.properties.primaryEndpoints.blob}${documentsContainer.name}'
+output storageAccountName string = storage.name
 output dataProtectionKeyUri string = dataProtectionKey.properties.keyUri

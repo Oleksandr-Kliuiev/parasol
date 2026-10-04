@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Crm.Infrastructure.DependencyInjection;
+using Crm.SharedKernel.Operations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -53,7 +54,16 @@ public static class AuthenticationSetup
                             await previous(context);
                         }
 
-                        await ProvisionUserAsync(context.Principal!, context.HttpContext.RequestServices, context.HttpContext.RequestAborted);
+                        try
+                        {
+                            await ProvisionUserAsync(context.Principal!, context.HttpContext.RequestServices, context.HttpContext.RequestAborted);
+                        }
+                        catch (MaintenanceReadOnlyException)
+                        {
+                            // DEV-13: signing in waits for the end of read-only maintenance; the app says so on its start page.
+                            context.HandleResponse();
+                            context.Response.Redirect(MaintenanceSignInPath);
+                        }
                     };
                 },
                 cookie => ConfigureCookie(cookie, options, revalidate: true),
@@ -75,12 +85,24 @@ public static class AuthenticationSetup
         return builder;
     }
 
+    /// <summary>Where a sign-in refused for maintenance lands: the app's start page says why (DEV-13).</summary>
+    public const string MaintenanceSignInPath = "/?maintenance=signin";
+
     /// <summary>
     /// Creates/refreshes the CRM user with the roles the sign-in token carries, opens a server-side session and stamps the
     /// session claims (DEV-10). Shared by Entra and development sign-in.
     /// </summary>
     public static async Task ProvisionUserAsync(ClaimsPrincipal principal, IServiceProvider services, CancellationToken cancellationToken)
     {
+        // DEV-13: signing in writes (the user, a session), so during read-only maintenance only the operators who run it sign in
+        // — their privileged actions need a fresh confirmation of the roles, and a sign-in is one. Everyone else waits:
+        // MaintenanceReadOnlyException, which the sign-in paths turn into the app's "signing in is paused" page.
+        var maintenance = await services.GetRequiredService<IMaintenanceGate>().CurrentAsync(cancellationToken);
+        using var operatorSignIn = !maintenance.IsReadOnly
+            ? null
+            : Permissions.ForRoles(principal.GetCrmRoles()).Contains(Permissions.OperationsMaintenance)
+                ? MaintenanceScope.AllowWrites("operator-sign-in")
+                : throw new MaintenanceReadOnlyException(maintenance);
         var identity = (ClaimsIdentity)principal.Identity!;
         var tenantId = principal.FindFirstValue(CrmClaimTypes.TenantId) ?? principal.FindFirstValue("tid")
                        ?? throw new InvalidOperationException("Token has no tenant id.");
@@ -184,6 +206,13 @@ public static class AuthenticationSetup
         SetClaim(identity, PermissionAuthorization.RolesVerifiedClaim, verified.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
 
         if (!revalidate || ReadUnixClaim(principal, CrmClaimTypes.LastValidated) is { } last && now - last < options.RevalidationInterval)
+        {
+            return;
+        }
+
+        // DEV-13: redeeming the refresh token writes the token cache, so during read-only maintenance the check waits — the
+        // session reads on within the role grace, and the next request after the maintenance revalidates.
+        if ((await services.GetRequiredService<Crm.SharedKernel.Operations.IMaintenanceGate>().CurrentAsync(context.HttpContext.RequestAborted)).IsReadOnly)
         {
             return;
         }

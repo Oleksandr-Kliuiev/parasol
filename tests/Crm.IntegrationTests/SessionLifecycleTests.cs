@@ -479,7 +479,7 @@ internal sealed class SessionHost : IAsyncDisposable
 
     public SessionHost(
         CrmWebFactory factory, ManualTimeProvider time, string keyRing, string crmAppId, string tenant, CapturingLoggerProvider? logs,
-        ScriptedTokenAcquisition? entra = null)
+        ScriptedTokenAcquisition? entra = null, Action<IServiceCollection>? services = null)
     {
         Time = time;
         Tenant = tenant;
@@ -501,12 +501,12 @@ internal sealed class SessionHost : IAsyncDisposable
                 builder.ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Trace).AddProvider(logs).AddFilter<CapturingLoggerProvider>(null, LogLevel.Trace));
             }
 
-            builder.ConfigureTestServices(services =>
+            builder.ConfigureTestServices(collection =>
             {
-                services.AddSingleton<TimeProvider>(time);
+                collection.AddSingleton<TimeProvider>(time);
                 // Replicas share one key ring, as in Azure (Blob Storage + Key Vault).
-                services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRing));
-                services.PostConfigure<AuthenticationOptions>(options =>
+                collection.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRing));
+                collection.PostConfigure<AuthenticationOptions>(options =>
                 {
                     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -514,12 +514,14 @@ internal sealed class SessionHost : IAsyncDisposable
                     options.DefaultForbidScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 });
-                services.AddTransient<IStartupFilter>(_ => new TestSignInStartupFilter(tenant));
+                collection.AddTransient<IStartupFilter>(_ => new TestSignInStartupFilter(tenant));
                 if (entra is not null)
                 {
-                    services.RemoveAll<ITokenAcquisition>();
-                    services.AddSingleton<ITokenAcquisition>(entra);
+                    collection.RemoveAll<ITokenAcquisition>();
+                    collection.AddSingleton<ITokenAcquisition>(entra);
                 }
+
+                services?.Invoke(collection);
             });
         });
     }
@@ -600,7 +602,18 @@ internal sealed class TestSignInStartupFilter(string tenant) : IStartupFilter
         claims.AddRange(context.Request.Headers["X-Test-Sign-In-Roles"].ToString()
             .Split(',', StringSplitOptions.RemoveEmptyEntries).Select(role => new Claim("roles", role)));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "AuthenticationTypes.Federation", "name", "roles"));
-        await AuthenticationSetup.ProvisionUserAsync(principal, context.RequestServices, context.RequestAborted);
+        try
+        {
+            await AuthenticationSetup.ProvisionUserAsync(principal, context.RequestServices, context.RequestAborted);
+        }
+        catch (Crm.SharedKernel.Operations.MaintenanceReadOnlyException)
+        {
+            // As the Entra callback answers (OnTokenValidated): signing in waits for the end of maintenance (DEV-13).
+            context.Response.StatusCode = StatusCodes.Status303SeeOther;
+            context.Response.Headers.Location = AuthenticationSetup.MaintenanceSignInPath;
+            return;
+        }
+
         if (legacy)
         {
             var identity = (ClaimsIdentity)principal.Identity!;

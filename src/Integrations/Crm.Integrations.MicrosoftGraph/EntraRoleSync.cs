@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Crm.Identity.Contracts;
 using Crm.Integrations.Core;
+using Crm.SharedKernel.Operations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -151,6 +152,9 @@ public sealed class EntraRoleSyncJob(
             return;
         }
 
+        // DEV-13: it keeps running during read-only maintenance. A role taken away still ends within minutes, and the operators'
+        // privileged actions (lifting the maintenance, applying a reconciliation) keep their fresh confirmation.
+        using var directorySync = MaintenanceScope.AllowWrites("directory-sync");
         await runner.RunAsync(EntraUserSyncJob.System, JobId, async (progress, ct) =>
         {
             // Confirmed as of the moment the reading began: a sign-in after that keeps its own, later confirmation.

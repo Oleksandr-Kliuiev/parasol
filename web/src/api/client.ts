@@ -49,6 +49,9 @@ interface RequestOptions {
 
 export const CSRF_HEADER = 'X-CSRF';
 
+/** Fired when the server refused a change because the CRM is read-only for maintenance (DEV-13): the banner asks again. */
+export const MAINTENANCE_EVENT = 'crm:maintenance';
+
 export function loginUrl(returnUrl = window.location.pathname + window.location.search): string {
   return `/bff/login?returnUrl=${encodeURIComponent(returnUrl)}`;
 }
@@ -77,6 +80,7 @@ async function request<T>(method: string, url: string, options: RequestOptions =
     // DEV-10: the session ended on the server (signed out elsewhere, account deactivated, roles not confirmed for too long):
     // the user signs in again and comes back to this page.
     if (response.status === 401 && url.startsWith('/api/')) window.location.assign(loginUrl());
+    if (problem.code === 'MAINTENANCE_READ_ONLY') window.dispatchEvent(new Event(MAINTENANCE_EVENT));
     throw new ApiError(response.status, problem);
   }
 

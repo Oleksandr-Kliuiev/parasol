@@ -63,6 +63,8 @@ public sealed record ExportLine(
 /// <summary>
 /// One approved basis as the accounting system receives it. <paramref name="SendStarted"/>: an earlier attempt reached the
 /// point of sending, so the order may exist even when a lookup by <paramref name="IdempotencyKey"/> finds nothing (ADR-013).
+/// <paramref name="CheckedAt"/>: when Finance last reconciled the basis against the accounting system — earlier attempts are
+/// settled by that decision (DEV-13).
 /// </summary>
 public sealed record ExportBasis(
     Guid BasisId,
@@ -74,7 +76,8 @@ public sealed record ExportBasis(
     string? CustomerReference,
     decimal TotalExVat,
     bool SendStarted,
-    IReadOnlyList<ExportLine> Lines);
+    IReadOnlyList<ExportLine> Lines,
+    DateTimeOffset? CheckedAt = null);
 
 /// <summary>An invoice as the accounting system reports it.</summary>
 public sealed record ExternalInvoice(

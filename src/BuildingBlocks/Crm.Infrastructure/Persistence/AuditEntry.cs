@@ -24,6 +24,12 @@ public static class AuditActions
     /// their values — erasing a person must not copy them into the trail once more.
     /// </summary>
     public const string Erase = "Erase";
+
+    /// <summary>A maintenance decision (DEV-13): read-only on or off, with its reason. The decision itself lives in the document store.</summary>
+    public const string Maintenance = "Maintenance";
+
+    /// <summary>An operator applied the restore reconciliation (DEV-13): what it held back is in the stored report it names.</summary>
+    public const string Reconcile = "Reconcile";
 }
 
 /// <summary>

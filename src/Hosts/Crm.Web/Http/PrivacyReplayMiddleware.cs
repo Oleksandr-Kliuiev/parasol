@@ -11,7 +11,9 @@ internal sealed class PrivacyReplayMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, IPrivacyReplayGate gate)
     {
-        if (context.Request.Path.StartsWithSegments("/api") && await gate.IsReplayPendingAsync(context.RequestAborted))
+        if (context.Request.Path.StartsWithSegments("/api") &&
+            context.GetEndpoint()?.Metadata.GetMetadata<Crm.Infrastructure.Http.AllowedInMaintenanceMetadata>() is null &&
+            await gate.IsReplayPendingAsync(context.RequestAborted))
         {
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             context.Response.Headers.RetryAfter = "60";

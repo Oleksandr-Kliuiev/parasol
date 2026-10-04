@@ -91,7 +91,7 @@ gh variable set CRM_ENTRA_CLIENT_ID_PROD --env prod --body <app-id prod>
 В prod — только проверенный релиз: Actions → **Promote** → полный SHA коммита, окружение `prod`. Workflow проверяет прогон CI, manifest и запись test, ждёт reviewers окружения `prod`, импортирует те же digests в реестр prod и разворачивает их тем же скриптом.
 
 ### 6a. Релиз с разрывом схемы
-Если проверка схемы отвечает, что работающий релиз не переживёт разрыв (`tools/release/schema-breaks.json`, например первое развёртывание DEV-04 поверх более старой версии): договориться об окне, приостановить интеграции и биллинг ([runbook 05](05-pause-integration.md)), остановить worker (`az containerapp update -n ca-crm-worker-prod -g rg-crm-prod --min-replicas 0 --max-replicas 0`), запустить Promote с `accept_schema_break`, после проверки вернуть worker (`--min-replicas 1 --max-replicas 1`) и снять паузу.
+Если проверка схемы отвечает, что работающий релиз не переживёт разрыв (`tools/release/schema-breaks.json`, например первое развёртывание DEV-04 поверх более старой версии): договориться об окне, приостановить интеграции и биллинг ([runbook 05](05-pause-integration.md)), включить режим обслуживания (только чтение, [runbook 03 § 2](03-database-restore.md#2-режим-обслуживания-t1)) — он останавливает и записи, и отправки worker, запустить Promote с `accept_schema_break`, после проверки вернуть обычную работу и снять паузу. `--max-replicas 0` Container Apps не принимает; если worker нужно именно выключить — `python3 tools/ops/restore.py --env prod worker-off` (затем `worker-on`).
 
 ## 7. Домен и вход
 1. Container Apps → `ca-crm-web-test` → Custom domains: добавить `crm-test.<домен>`, управляемый сертификат.

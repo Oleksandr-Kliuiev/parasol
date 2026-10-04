@@ -52,6 +52,7 @@ import {
   ArrowSwap20Regular,
   SignOut20Regular,
   Timer20Regular,
+  Wrench20Regular,
 } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -59,6 +60,7 @@ import { api } from '../api/client';
 import { Permissions, currentUserQueryKey, useCan, useCurrentUser } from '../auth/CurrentUserContext';
 import i18n, { changeLanguage as applyLanguage, languages, type LanguageCode } from '../i18n';
 import { NotificationsBell } from '../features/notifications/NotificationsBell';
+import { MaintenanceBanner } from '../features/operations/MaintenanceBanner';
 import { GlobalSearch } from './GlobalSearch';
 import { TOASTER_ID } from './toaster';
 
@@ -139,6 +141,7 @@ export function AppShell() {
   const canCustomFields = useCan(Permissions.customFieldsManage);
   const canDeleteCustomers = useCan(Permissions.customersDelete);
   const canPrivacy = useCan(Permissions.privacyManage);
+  const canMaintenance = useCan(Permissions.operationsMaintenance);
   const canTime = canOwnTime || canReadTime;
   const canTimeAll = canReadTime || canManageTime;
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -205,6 +208,8 @@ export function AppShell() {
               ? 'custom-fields'
               : location.pathname.startsWith('/admin/privacy')
               ? 'privacy'
+              : location.pathname.startsWith('/admin/maintenance')
+              ? 'maintenance'
               : location.pathname.startsWith('/reports/margins')
                 ? 'margins'
                 : location.pathname.startsWith('/service/sla')
@@ -330,7 +335,7 @@ export function AppShell() {
               {t('nav.catalog')}
             </NavItem>
           )}
-          {(canAudit || canUsers || canJobs || canSalesWrite || canPrivacy) && (
+          {(canAudit || canUsers || canJobs || canSalesWrite || canPrivacy || canMaintenance) && (
             <>
               <NavSectionHeader>{t('nav.admin')}</NavSectionHeader>
               {canAudit && (
@@ -391,6 +396,11 @@ export function AppShell() {
               {canJobs && (
                 <NavItem href="/admin/jobs" value="jobs" icon={<Timer20Regular />} target="_blank" rel="noopener">
                   {t('nav.jobs')}
+                </NavItem>
+              )}
+              {canMaintenance && (
+                <NavItem href="/admin/maintenance" value="maintenance" icon={<Wrench20Regular />} onClick={go('/admin/maintenance')}>
+                  {t('nav.maintenance')}
                 </NavItem>
               )}
             </>
@@ -455,6 +465,7 @@ export function AppShell() {
           </Menu>
         </header>
         <main id="main" className={styles.content} tabIndex={-1}>
+          <MaintenanceBanner />
           <Outlet />
         </main>
       </div>

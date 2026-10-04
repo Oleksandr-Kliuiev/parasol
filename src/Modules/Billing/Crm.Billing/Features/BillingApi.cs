@@ -40,8 +40,15 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
 
         var runs = await RunsOfAsync([basis], cancellationToken);
         var codes = await ProductCodesAsync([basis], cancellationToken);
-        return ToExport(basis, runs[basis.RunId], codes);
+        var checkedAt = await LastReconciledAsync(basis.Id, cancellationToken);
+        return ToExport(basis, runs[basis.RunId], codes) with { CheckedAt = checkedAt };
     }
+
+    /// <summary>When Finance last reconciled the basis with the accounting system; attempts before it are settled (DEV-13).</summary>
+    internal Task<DateTimeOffset?> LastReconciledAsync(Guid basisId, CancellationToken cancellationToken) =>
+        db.ExportAttempts.AsNoTracking()
+            .Where(a => a.BasisId == basisId && a.Result == BillingExportAttempt.Reconciled)
+            .MaxAsync(a => (DateTimeOffset?)a.At, cancellationToken);
 
     public async Task MarkExportedAsync(Guid basisId, string system, string orderNo, string? correlationId, CancellationToken cancellationToken)
     {

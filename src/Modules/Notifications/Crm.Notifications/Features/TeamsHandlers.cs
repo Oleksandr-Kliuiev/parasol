@@ -6,6 +6,7 @@ using Crm.Notifications.Domain;
 using Crm.Notifications.Persistence;
 using Crm.Sales.Contracts;
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -105,8 +106,14 @@ internal sealed class BillingRunTeamsHandler(
 /// <see cref="ChannelPost.MaxAttempts"/> attempts. A webhook has no idempotency key, so a send that timed out after Teams
 /// had taken it can still appear twice — the one duplicate left, and only for a notice; the event itself is never sent twice.
 /// </summary>
-public sealed class ChannelPostJob(NotificationsDbContext db, ITeamsChannelSender teams, TimeProvider time, ILogger<ChannelPostJob> logger)
+public sealed class ChannelPostJob(
+    NotificationsDbContext db, ITeamsChannelSender teams, TimeProvider time, IMaintenanceGate maintenance, IExternalEffectJournal journal,
+    ILogger<ChannelPostJob> logger)
 {
+    /// <summary>Journal kind and record type of a channel post (DEV-13).</summary>
+    public const string EffectKind = "channel-post";
+    public const string EffectEntity = "ChannelPost";
+
     public const string JobId = "channel-posts";
     private static readonly TimeSpan Lease = TimeSpan.FromMinutes(2);
 
@@ -123,6 +130,12 @@ public sealed class ChannelPostJob(NotificationsDbContext db, ITeamsChannelSende
         var sent = 0;
         foreach (var id in due)
         {
+            // DEV-13: read now, not from a cache — a post must not leave after read-only maintenance began, nor when unknown.
+            if (!await MaySendAsync(cancellationToken))
+            {
+                break;
+            }
+
             var token = Guid.NewGuid();
             var lease = time.GetUtcNow() + Lease;
             var claimed = await db.ChannelPosts
@@ -133,6 +146,9 @@ public sealed class ChannelPostJob(NotificationsDbContext db, ITeamsChannelSende
                 continue;
             }
 
+            // Claimed after a fresh look at the switch, the post is under way: its outcome is recorded even if maintenance begins
+            // meanwhile, while the journal — which reads the switch again — stops a send that has not started.
+            using var inFlight = MaintenanceScope.AllowWrites("channel-post-in-flight");
             var post = await db.ChannelPosts.AsNoTracking().SingleAsync(p => p.Id == id, cancellationToken);
             var attempts = post.Attempts + 1;
             if (!teams.IsConfigured(post.Channel))
@@ -141,9 +157,23 @@ public sealed class ChannelPostJob(NotificationsDbContext db, ITeamsChannelSende
                 continue;
             }
 
+            ExternalEffectEntry effect;
+            try
+            {
+                effect = await journal.BeginAsync(new ExternalEffect("teams", EffectKind, EffectEntity, id), cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning("Channel posts wait: the external effect journal did not take the post ({Error})", ex.GetType().Name);
+                await db.ChannelPosts.Where(p => p.Id == id && p.LeaseOwner == token)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.LockedUntil, (DateTimeOffset?)null).SetProperty(p => p.LeaseOwner, (Guid?)null), cancellationToken);
+                break;
+            }
+
             try
             {
                 await teams.SendAsync(post.Channel, post.Card, cancellationToken);
+                await journal.CompleteAsync(effect, EffectPhase.Sent, null, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
@@ -161,6 +191,19 @@ public sealed class ChannelPostJob(NotificationsDbContext db, ITeamsChannelSende
         }
 
         return sent;
+    }
+
+    private async Task<bool> MaySendAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return !(await maintenance.FreshAsync(cancellationToken)).IsReadOnly;
+        }
+        catch (MaintenanceStateUnavailableException)
+        {
+            logger.LogWarning("Channel posts wait: the maintenance state cannot be read");
+            return false;
+        }
     }
 
     private async Task<bool> SettleAsync(Guid id, Guid token, ChannelPostStatus status, int attempts, DateTimeOffset? next, string? error)

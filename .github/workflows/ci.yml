@@ -138,6 +138,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Release tooling tests
         run: python3 -m unittest discover -s tools/release
+      - name: Restore tooling tests
+        run: python3 -m unittest discover -s tools/ops
       - name: Bicep build and lint
         run: |
           az bicep build --file infra/main.bicep --stdout > /dev/null

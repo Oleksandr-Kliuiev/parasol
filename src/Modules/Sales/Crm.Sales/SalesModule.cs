@@ -24,6 +24,7 @@ public static class SalesModule
         services.AddOptions<SalesOptions>().Bind(configuration.GetSection(SalesOptions.SectionName));
         services.AddScoped<SalesService>();
         services.AddScoped<QuoteService>();
+        services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, SalesRestoreParticipant>();
         services.AddScoped<QuoteExpiryJob>();
         services.AddScoped<QuoteDocuments>();
         services.AddScoped(sp => new QuoteDocumentJob(

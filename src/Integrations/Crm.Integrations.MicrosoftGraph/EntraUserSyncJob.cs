@@ -1,5 +1,6 @@
 using Crm.Identity.Contracts;
 using Crm.Integrations.Core;
+using Crm.SharedKernel.Operations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -29,6 +30,8 @@ public sealed class EntraUserSyncJob(
             return;
         }
 
+        // DEV-13: it keeps running during read-only maintenance — an account disabled in Entra loses the CRM then too.
+        using var directorySync = MaintenanceScope.AllowWrites("directory-sync");
         await runner.RunAsync(System, JobId, async (progress, ct) =>
         {
             var deltaLink = await runner.GetCursorAsync(System, Stream, ct);

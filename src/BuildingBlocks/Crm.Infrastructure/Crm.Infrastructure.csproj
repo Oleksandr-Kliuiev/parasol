@@ -15,4 +15,7 @@
     <ProjectReference Include="..\Crm.SharedKernel\Crm.SharedKernel.csproj" />
     <ProjectReference Include="..\Crm.Authorization\Crm.Authorization.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Crm.UnitTests" />
+  </ItemGroup>
 </Project>

@@ -83,6 +83,11 @@ var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
+// DEV-13: during read-only maintenance the worker performs only the jobs maintenance needs (privacy replay, heartbeat, audit check,
+// Entra user and role syncs).
+GlobalJobFilters.Filters.Add(new MaintenanceJobFilter(
+    app.Services.GetRequiredService<Crm.SharedKernel.Operations.IMaintenanceGate>(), app.Services.GetRequiredService<ILogger<MaintenanceJobFilter>>()));
+
 var oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
 var jobs = app.Services.GetRequiredService<IRecurringJobManager>();
 jobs.AddOrUpdate<BrregRegistryCheckJob>(

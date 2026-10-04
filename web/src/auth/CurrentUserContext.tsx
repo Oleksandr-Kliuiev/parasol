@@ -40,6 +40,7 @@ export const Permissions = {
   reportsMart: 'reports.mart',
   customFieldsManage: 'customfields.manage',
   privacyManage: 'privacy.manage',
+  operationsMaintenance: 'operations.maintenance',
 } as const;
 
 export type Permission = (typeof Permissions)[keyof typeof Permissions];

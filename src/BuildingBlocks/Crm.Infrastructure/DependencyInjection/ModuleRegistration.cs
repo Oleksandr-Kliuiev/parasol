@@ -1,12 +1,14 @@
 using System.Reflection;
 using Crm.Infrastructure.Documents;
 using Crm.Infrastructure.Health;
+using Crm.Infrastructure.Operations;
 using Crm.Infrastructure.Outbox;
 using Crm.Infrastructure.Persistence;
 using Crm.Infrastructure.Security;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Documents;
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Operations;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -74,6 +76,14 @@ public static class ModuleRegistration
                     : Path.Combine(sp.GetRequiredService<IHostEnvironment>().ContentRootPath, options.RootPath);
                 return new FileSystemDocumentStore(root);
             });
+
+            // DEV-13: the maintenance switch and the external effect journal live in the document store, outside the business
+            // database; the interceptors refuse database writes — saves and statements that bypass them — while the CRM is read-only.
+            services.AddOptions<MaintenanceOptions>().BindConfiguration(MaintenanceOptions.SectionName);
+            services.TryAddSingleton<IMaintenanceGate, DocumentStoreMaintenanceGate>();
+            services.TryAddSingleton<IExternalEffectJournal, DocumentStoreEffectJournal>();
+            services.TryAddSingleton<MaintenanceWriteInterceptor>();
+            services.TryAddSingleton<MaintenanceCommandInterceptor>();
         }
 
         return services;
@@ -98,7 +108,10 @@ public static class ModuleRegistration
                 sql.MigrationsHistoryTable("__EFMigrationsHistory", schema);
                 sql.EnableRetryOnFailure(maxRetryCount: 5);
             });
-            options.AddInterceptors(sp.GetRequiredService<AuditingInterceptor>());
+            options.AddInterceptors(
+                sp.GetRequiredService<MaintenanceWriteInterceptor>(),
+                sp.GetRequiredService<MaintenanceCommandInterceptor>(),
+                sp.GetRequiredService<AuditingInterceptor>());
         });
         return services;
     }

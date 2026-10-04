@@ -54,6 +54,9 @@ param sqlMaxVCores int = environmentName == 'prod' ? 4 : 2
 @allowed(['Restricted', 'Open'])
 param recordScope string = 'Restricted'
 
+@description('Read-only maintenance by configuration (DEV-13, runbook 03): for an outage of the document store that holds the operator switch. Only a new deployment without it lifts it.')
+param maintenanceForceReadOnly bool = false
+
 param tags object = {
   application: 'vardahei-crm'
   environment: environmentName
@@ -160,6 +163,7 @@ module apps 'modules/apps.bicep' = {
     powerOfficeEnvironment: powerOfficeEnvironment
     enableAtera: enableAtera
     recordScope: recordScope
+    maintenanceForceReadOnly: maintenanceForceReadOnly
   }
 }
 
@@ -170,3 +174,9 @@ output migrationJobName string = apps.outputs.migrationJobName
 output keyVaultName string = data.outputs.keyVaultName
 output sqlServerName string = data.outputs.sqlServerName
 output natPublicIp string = network.outputs.natPublicIp
+// The real names the restore tooling reads from the latest deployment (DEV-13, tools/ops/restore.py): never typed by hand.
+output sqlDatabaseName string = data.outputs.sqlDatabaseName
+output webAppName string = apps.outputs.webAppName
+output workerAppName string = apps.outputs.workerAppName
+output storageAccountName string = data.outputs.storageAccountName
+output documentsContainerUri string = data.outputs.documentsContainerUri

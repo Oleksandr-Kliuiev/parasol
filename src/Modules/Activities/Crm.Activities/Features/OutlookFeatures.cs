@@ -5,6 +5,7 @@ using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Operations;
 using Crm.SharedKernel.Results;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -65,6 +66,10 @@ internal sealed class SaveMailRequestValidator : AbstractValidator<SaveMailReque
 
 internal static class OutlookErrors
 {
+    public static Error NotRecorded => Error.Conflict(
+        "ACT_CALENDAR_NOT_RECORDED",
+        "The meeting could not be recorded in the external effect journal, so it was not put into Outlook. Try again in a moment.");
+
     public static Error CalendarUnavailable => Error.Conflict(
         "ACT_CALENDAR_UNAVAILABLE",
         "Outlook calendar is not connected for this session (Microsoft Graph or the calendar feature is off, or you signed in with the development sign-in).");
@@ -89,8 +94,13 @@ internal sealed class OutlookService(
     IUserDirectory users,
     ICurrentUser currentUser,
     TimeProvider time,
+    IExternalEffectJournal journal,
+    IMaintenanceGate maintenance,
     ILogger<OutlookService> logger)
 {
+    /// <summary>Journal kind of a meeting pushed to Outlook; the record is the activity, the reference the event id (DEV-13).</summary>
+    public const string CalendarEffect = "calendar-event";
+
     /// <summary>Search terms one mail view sends to Exchange (each is one request per mailbox).</summary>
     public const int MaxMailTerms = 6;
 
@@ -110,16 +120,44 @@ internal sealed class OutlookService(
         }
 
         var draft = await DraftAsync(activity, ct);
+        ExternalEffectEntry effect;
+        string? eventId;
         try
         {
-            var state = activity.GraphEventId is { } eventId
-                ? await calendar.UpdateAsync(eventId, draft, ct)
-                : await calendar.CreateAsync(draft, ct);
+            // DEV-13: a database restored to before the push forgets the event; the journal outside it still names the event,
+            // so the meeting is updated there instead of being put into the calendar a second time.
+            eventId = activity.GraphEventId ?? ExternalEffects.LatestReference(
+                (await journal.ForEntityAsync(nameof(Activity), activity.Id, ct)).Where(e => e.Kind == CalendarEffect));
+            effect = await journal.BeginAsync(new ExternalEffect("graph", CalendarEffect, nameof(Activity), activity.Id), ct);
+        }
+        catch (Exception ex) when (ex is not (OperationCanceledException or MaintenanceReadOnlyException or MaintenanceStateUnavailableException))
+        {
+            logger.LogWarning("The meeting {Activity} is not pushed: the external effect journal is unavailable ({Error}).", activity.Id, ex.GetType().Name);
+            return OutlookErrors.NotRecorded;
+        }
+
+        try
+        {
+            CalendarEventState state;
+            try
+            {
+                state = eventId is not null
+                    ? await calendar.UpdateAsync(eventId, draft, ct)
+                    : await calendar.CreateAsync(draft, ct);
+            }
+            catch (HttpRequestException gone) when (activity.GraphEventId is null && gone.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.Gone)
+            {
+                // The journaled event was deleted in Outlook meanwhile: the meeting goes in as a new event.
+                state = await calendar.CreateAsync(draft, ct);
+            }
+
+            await journal.CompleteAsync(effect, EffectPhase.Sent, state.EventId, ct);
             activity.LinkCalendarEvent(state.EventId, state.WebLink, time.GetUtcNow());
             return Result.Success();
         }
         catch (UserNotConnectedException)
         {
+            await journal.CompleteAsync(effect, EffectPhase.Failed, null, ct);
             return OutlookErrors.NotConnected;
         }
     }
@@ -136,6 +174,8 @@ internal sealed class OutlookService(
         {
             if (calendar.IsAvailable)
             {
+                // DEV-13: taking the event out of the calendar is an external effect as well — none once maintenance began.
+                await maintenance.EnsureMaySendAsync(ct);
                 await calendar.CancelAsync(eventId, ct);
             }
         }

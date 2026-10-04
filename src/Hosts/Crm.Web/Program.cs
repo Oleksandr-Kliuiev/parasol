@@ -185,6 +185,9 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<PrivacyReplayMiddleware>();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+// DEV-13: read-only maintenance answers before authentication, so a refused change never reaches a handler; sign-in passes and
+// provisioning admits only the operators (AuthenticationSetup.ProvisionUserAsync).
+app.UseMiddleware<MaintenanceMiddleware>();
 app.UseAuthentication();
 app.UseMiddleware<ActiveUserMiddleware>();
 app.UseAuthorization();
@@ -217,16 +220,20 @@ app.MapIntegrationMappingEndpoints();
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
 app.MapRecordScopeEndpoints();
+app.MapOperationsEndpoints();
 app.MapHealthDetails();
 
 if (hangfireEnabled)
 {
+    var maintenance = app.Services.GetRequiredService<Crm.SharedKernel.Operations.IMaintenanceGate>();
     app.MapHangfireDashboard("/admin/jobs", new DashboardOptions
         {
             Authorization = [],
             AsyncAuthorization = [],
             DashboardTitle = "Vardahei CRM jobs",
             AppPath = "/admin",
+            // DEV-13: no trigger, requeue or delete buttons while the CRM is read-only (the middleware refuses the POSTs anyway).
+            IsReadOnlyFunc = _ => maintenance.Last.IsReadOnly,
         })
         .RequirePermission(Permissions.IntegrationsManage);
 }

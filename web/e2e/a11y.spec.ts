@@ -137,12 +137,27 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     ['Personal data', '/admin/privacy'],
     ['New personal data request', `/admin/privacy/new?subjectKind=Contact&subjectId=${contact.contactId}`],
     ['Personal data request', `/admin/privacy/cases/${privacyCase.id}`],
+    ['Maintenance', '/admin/maintenance'],
   ];
 
   for (const [name, path] of pages) {
     await page.goto(path);
     await expectNoSeriousViolations(page, name);
   }
+
+  // DEV-13: the maintenance banner and the paused sign-in, with the public state faked for this page only — switching the
+  // shared application to read-only would stop the specs running beside this one.
+  await page.route('**/bff/maintenance', (route) =>
+    route.fulfill({ json: { mode: 'ReadOnly', since: new Date().toISOString(), reason: 'e2e: restore drill' } }));
+  await page.goto('/organizations');
+  await expect(page.getByText('Read-only maintenance')).toBeVisible();
+  await expectNoSeriousViolations(page, 'Maintenance banner');
+  await page.route('**/bff/user', (route) => route.fulfill({ status: 401, json: { status: 401 } }));
+  await page.goto('/?maintenance=signin');
+  await expect(page.getByRole('heading', { name: 'Signing in is paused' })).toBeVisible();
+  await expectNoSeriousViolations(page, 'Sign-in paused');
+  await page.unroute('**/bff/user');
+  await page.unroute('**/bff/maintenance');
 
   await page.goto(`/organizations/${organization.id}?tab=contacts`);
   await page.getByRole('button', { name: 'Add contact' }).click();

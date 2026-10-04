@@ -10,6 +10,7 @@ using Crm.Notifications.Contracts;
 using Crm.Notifications.Domain;
 using Crm.Notifications.Persistence;
 using Crm.Sales.Contracts;
+using Crm.SharedKernel.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -173,9 +174,15 @@ public sealed class NotificationDigestJob(
     IEnumerable<INotificationEmailSender> senders,
     IOptions<NotificationsOptions> options,
     TimeProvider time,
+    IMaintenanceGate maintenance,
+    IExternalEffectJournal journal,
     ILogger<NotificationDigestJob> logger)
 {
     public const string JobId = "notification-digest";
+
+    /// <summary>Journal kind of a digest e-mail; the record is its reader (an employee's user id, DEV-13).</summary>
+    public const string EffectKind = "notification-digest";
+    public const string EffectEntity = "User";
 
     public async Task<DigestResult> RunAsync(CancellationToken cancellationToken)
     {
@@ -240,10 +247,29 @@ public sealed class NotificationDigestJob(
                 continue;
             }
 
+            // DEV-13: read now — no e-mail leaves once read-only maintenance began, or while the state cannot be read; the notices
+            // stay pending for the next digest.
+            if (!await MaySendAsync(cancellationToken))
+            {
+                break;
+            }
+
             var email = Compose(profile, items, settings);
+            ExternalEffectEntry effect;
+            try
+            {
+                effect = await journal.BeginAsync(new ExternalEffect("graph", EffectKind, EffectEntity, group.Key), cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning("Digest e-mails wait: the external effect journal did not take the e-mail ({Error})", ex.GetType().Name);
+                break;
+            }
+
             try
             {
                 await sender.SendAsync(email, cancellationToken);
+                await journal.CompleteAsync(effect, EffectPhase.Sent, null, cancellationToken);
                 foreach (var item in items)
                 {
                     item.MarkEmailSent(now);
@@ -262,10 +288,29 @@ public sealed class NotificationDigestJob(
             }
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        // Recording what was sent is allowed even if maintenance began meanwhile: those e-mails left, and a later digest must not
+        // send them again.
+        using (MaintenanceScope.AllowWrites("record-sent-effects"))
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         logger.LogInformation("Notification digest at {Hour}:00 Oslo: {Recipients} recipients, {Notices} notices, {Suppressed} suppressed.",
             hour, recipients, notices, suppressed);
         return new DigestResult(recipients, notices, suppressed);
+    }
+
+    private async Task<bool> MaySendAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return !(await maintenance.FreshAsync(cancellationToken)).IsReadOnly;
+        }
+        catch (MaintenanceStateUnavailableException)
+        {
+            logger.LogWarning("Digest e-mails wait: the maintenance state cannot be read");
+            return false;
+        }
     }
 
     internal static NotificationEmail Compose(UserProfile profile, IReadOnlyList<Notification> items, NotificationsOptions settings)

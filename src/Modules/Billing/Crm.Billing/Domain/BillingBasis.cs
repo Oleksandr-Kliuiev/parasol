@@ -453,14 +453,14 @@ public sealed class BillingBasis : AuditableEntity
                 return Error.Validation("BIL_ORDER_NO_REQUIRED", "Give the number of the order found in the accounting system.");
             }
 
-            _attempts.Add(BillingExportAttempt.Create(Id, at, "Reconciled", $"Order {orderNo.Trim()} exists: {reason.Trim()}", correlationId));
+            _attempts.Add(BillingExportAttempt.Create(Id, at, BillingExportAttempt.Reconciled, $"Order {orderNo.Trim()} exists: {reason.Trim()}", correlationId));
             MarkExported(system, orderNo.Trim(), at, correlationId);
             return Result.Success();
         }
 
         Status = BillingBasisStatus.Failed;
         SendStartedAt = null;
-        _attempts.Add(BillingExportAttempt.Create(Id, at, "Reconciled", $"No order: {reason.Trim()}", correlationId));
+        _attempts.Add(BillingExportAttempt.Create(Id, at, BillingExportAttempt.Reconciled, $"No order: {reason.Trim()}", correlationId));
         return Result.Success();
     }
 
@@ -765,6 +765,9 @@ public sealed class BillingLine : AuditableEntity
 /// <summary>One attempt to send a basis to the accounting system, kept for the export log.</summary>
 public sealed class BillingExportAttempt : AuditableEntity
 {
+    /// <summary>The result of Finance's decision after checking the accounting system (<see cref="BillingBasis.Reconcile"/>).</summary>
+    public const string Reconciled = "Reconciled";
+
     private BillingExportAttempt() { }
 
     public Guid BasisId { get; private set; }

@@ -62,6 +62,7 @@ export const routes: RouteObject[] = [
       { path: 'admin/privacy', lazy: async () => ({ Component: (await import('../features/privacy/PrivacyPage')).PrivacyPage }) },
       { path: 'admin/privacy/new', lazy: async () => ({ Component: (await import('../features/privacy/NewPrivacyCasePage')).NewPrivacyCasePage }) },
       { path: 'admin/privacy/cases/:id', lazy: async () => ({ Component: (await import('../features/privacy/PrivacyCasePage')).PrivacyCasePage }) },
+      { path: 'admin/maintenance', lazy: async () => ({ Component: (await import('../features/operations/MaintenancePage')).MaintenancePage }) },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

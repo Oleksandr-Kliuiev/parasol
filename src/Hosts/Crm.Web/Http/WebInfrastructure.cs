@@ -112,6 +112,14 @@ internal sealed class PersistenceExceptionHandler(IProblemDetailsService problem
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        // DEV-13: a write the request barrier let through (a hidden write in a read) is refused by the database interceptor;
+        // the caller gets the same coded answer as any change during maintenance.
+        if (exception is Crm.SharedKernel.Operations.MaintenanceReadOnlyException readOnly)
+        {
+            await Crm.Infrastructure.Http.MaintenanceHttp.WriteReadOnlyAsync(httpContext, readOnly.State);
+            return true;
+        }
+
         (int status, string code, string detail)? mapped = exception switch
         {
             DbUpdateConcurrencyException => (StatusCodes.Status412PreconditionFailed, "CONCURRENCY_CONFLICT",
@@ -120,6 +128,9 @@ internal sealed class PersistenceExceptionHandler(IProblemDetailsService problem
                 "A record with the same unique value already exists."),
             BadHttpRequestException bad => (bad.StatusCode, "BAD_REQUEST", bad.Message),
             JsonException => (StatusCodes.Status400BadRequest, "BAD_REQUEST", "The request body is not valid JSON."),
+            // A send could not learn whether maintenance began (the document store is unreachable): nothing left (DEV-13).
+            Crm.SharedKernel.Operations.MaintenanceStateUnavailableException => (StatusCodes.Status503ServiceUnavailable, "MAINTENANCE_STATE_UNAVAILABLE",
+                "Nothing was sent: whether the CRM is in maintenance cannot be read right now. Try again in a minute."),
             _ => null,
         };
 

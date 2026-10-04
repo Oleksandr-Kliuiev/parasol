@@ -444,7 +444,7 @@
       "external_gates": [
         "EXT-04"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-13.md",
       "evidence_file": "evidence/DEV-13.md",
       "acceptance_ids": [

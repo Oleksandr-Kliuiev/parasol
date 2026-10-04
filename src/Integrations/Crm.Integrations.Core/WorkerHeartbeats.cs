@@ -1,5 +1,6 @@
 using Crm.Infrastructure.Health;
 using Crm.Integrations.Core.Persistence;
+using Crm.SharedKernel.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -24,6 +25,8 @@ internal sealed class WorkerHeartbeatStore(IntegrationDbContext db, TimeProvider
 {
     public async Task BeatAsync(string component, string? detail, CancellationToken cancellationToken)
     {
+        // Operational, not business data: monitoring keeps seeing a live worker during read-only maintenance (DEV-13).
+        using var allowed = MaintenanceScope.AllowWrites("heartbeat");
         var instance = Environment.MachineName;
         var beat = await db.WorkerHeartbeats.SingleOrDefaultAsync(h => h.Component == component && h.Instance == instance, cancellationToken);
         if (beat is null)

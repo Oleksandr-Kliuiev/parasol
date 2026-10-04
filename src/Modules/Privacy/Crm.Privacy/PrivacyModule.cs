@@ -27,6 +27,7 @@ public static class PrivacyModule
         services.AddModuleServices(typeof(PrivacyModule).Assembly);
         services.AddScoped<PrivacyCaseService>();
         services.AddScoped<LegalHoldService>();
+        services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, PrivacyRestoreParticipant>();
         services.AddScoped<SuppressionHasher>();
         services.AddScoped<ISuppressionList, SuppressionList>();
         services.AddScoped<IErasedRecords, ErasedRecords>();

@@ -109,6 +109,12 @@ public static class Permissions
     /// </summary>
     public const string PrivacyManage = "privacy.manage";
 
+    /// <summary>
+    /// Read-only maintenance, the restore reconciliation and its checks (DEV-13): stopping every write and deciding what may be
+    /// sent again after a restore. Admin only until EXT-04 names the operator role.
+    /// </summary>
+    public const string OperationsMaintenance = "operations.maintenance";
+
     private static readonly string[] Everything =
     [
         CustomersRead, CustomersWrite, CustomersDelete, ContactsWrite,
@@ -116,7 +122,7 @@ public static class Permissions
         SalesRead, SalesWrite, SalesDiscountApprove, QuotesAll, LicensingRead, LicensingManage, ActivitiesRead, ActivitiesWrite,
         ServiceRead, ServiceWrite, TimeOwn, TimeRead, TimeManage, TimeUnlock,
         BillingRead, BillingManage, BillingApprove, BillingApproveSecond, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite, ProjectsAll,
-        FinanceRead, FinanceCostRead, AuditRead, UsersRead, IntegrationsManage, CustomFieldsManage, PrivacyManage,
+        FinanceRead, FinanceCostRead, AuditRead, UsersRead, IntegrationsManage, CustomFieldsManage, PrivacyManage, OperationsMaintenance,
     ];
 
     // Record scope (DEV-09) follows docs/02 §2 and SEC-AZ-03 until EXT-01 confirms the matrix (ADR-018): quotes — Sales its own,
@@ -168,7 +174,7 @@ public static class Permissions
     public static readonly FrozenSet<string> Privileged = new[]
     {
         BillingManage, BillingApprove, BillingApproveSecond, TimeUnlock, SalesDiscountApprove,
-        IntegrationsManage, CustomFieldsManage, CustomersDelete, PrivacyManage,
+        IntegrationsManage, CustomFieldsManage, CustomersDelete, PrivacyManage, OperationsMaintenance,
     }.ToFrozenSet(StringComparer.Ordinal);
 
     public static IReadOnlySet<string> ForRoles(IEnumerable<string> roles)

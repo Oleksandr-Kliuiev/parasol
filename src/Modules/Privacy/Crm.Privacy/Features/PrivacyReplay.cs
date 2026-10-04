@@ -115,6 +115,8 @@ public sealed class PrivacyReplayJob
 
     public async Task<ReplayResult> RunAsync(CancellationToken cancellationToken)
     {
+        // DEV-13: after a restore this runs while the CRM is still read-only — erasures are applied again before anyone reads on.
+        using var allowed = Crm.SharedKernel.Operations.MaintenanceScope.AllowWrites("privacy-replay");
         var stored = 0;
         foreach (var unstored in await db.ErasureManifests.Where(m => m.StoredAt == null).ToListAsync(cancellationToken))
         {

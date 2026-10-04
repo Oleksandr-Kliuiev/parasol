@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, query } from './client';
+import { api, ApiError, MAINTENANCE_EVENT, query } from './client';
 
 function mockFetch(response: Response) {
   const fn = vi.fn().mockResolvedValue(response);
@@ -87,5 +87,19 @@ describe('api client', () => {
   it('builds query strings without empty values', () => {
     expect(query({ search: 'fjord it', status: null, limit: 20, cursor: undefined, flag: false })).toBe('?search=fjord+it&limit=20&flag=false');
     expect(query({ search: '' })).toBe('');
+  });
+
+  it('announces a change refused for maintenance, so the banner appears at once (DEV-13)', async () => {
+    mockFetch(problem(503, { title: 'MAINTENANCE_READ_ONLY', status: 503, code: 'MAINTENANCE_READ_ONLY', since: '2026-10-04T08:00:00Z' }));
+    const heard = vi.fn();
+    window.addEventListener(MAINTENANCE_EVENT, heard);
+    try {
+      const error = await api.post('/api/v1/customers/organizations', { name: 'x' }).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).code).toBe('MAINTENANCE_READ_ONLY');
+      expect(heard).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener(MAINTENANCE_EVENT, heard);
+    }
   });
 });

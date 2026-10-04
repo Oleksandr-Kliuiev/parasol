@@ -5,6 +5,7 @@ using Crm.Infrastructure.DependencyInjection;
 using Crm.Infrastructure.Health;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Operations;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
@@ -55,6 +56,7 @@ public sealed class OutboxProcessor(
     ProcessingLoopMonitor monitor,
     IOptions<ProcessingHealthOptions> healthOptions,
     IOptions<OutboxOptions> options,
+    IMaintenanceGate maintenance,
     ILogger<OutboxProcessor> logger) : BackgroundService
 {
     public const string HeartbeatComponent = "outbox";
@@ -123,6 +125,13 @@ public sealed class OutboxProcessor(
     /// <summary>Applies the module's waiting replay requests, then delivers its due messages. Returns how many were delivered.</summary>
     public async Task<int> ProcessContextAsync(Type contextType, CancellationToken cancellationToken)
     {
+        // DEV-13: during read-only maintenance nothing is delivered — handlers write and enqueue sends, and a refused attempt
+        // would count towards the dead letter. The messages wait; the round still finishes (liveness).
+        if ((await maintenance.CurrentAsync(cancellationToken)).IsReadOnly)
+        {
+            return 0;
+        }
+
         await using var scope = scopeFactory.CreateAsyncScope();
         var context = (ModuleDbContext)scope.ServiceProvider.GetRequiredService(contextType);
         await ApplyReplayRequestsAsync(context, cancellationToken);
@@ -138,6 +147,11 @@ public sealed class OutboxProcessor(
         var delivered = 0;
         foreach (var id in candidates)
         {
+            if ((await maintenance.CurrentAsync(cancellationToken)).IsReadOnly)
+            {
+                break;
+            }
+
             if (await TryClaimAsync(context, id, cancellationToken) is { } token && await DeliverAsync(contextType, id, token, cancellationToken))
             {
                 delivered++;
@@ -242,6 +256,15 @@ public sealed class OutboxProcessor(
                     await TryReleaseAsync(context, id, token);
                     throw;
                 }
+                catch (Exception ex) when (ex is MaintenanceReadOnlyException or MaintenanceStateUnavailableException)
+                {
+                    // DEV-13: maintenance began while the message was being delivered (or a send could not learn the state).
+                    // The handler's transaction was rolled back; the message goes back to pending without an attempt and is
+                    // delivered once the CRM is writable again.
+                    logger.LogInformation("Outbox message {MessageId}: {Handler} waits for the end of maintenance", id, handler.Name);
+                    await TryReleaseAsync(context, id, token);
+                    return false;
+                }
                 catch (Exception ex)
                 {
                     // The text goes to the operators' list; the logged exception keeps the detail for diagnosis.
@@ -327,6 +350,8 @@ public sealed class OutboxProcessor(
     private async Task<bool> SettleAsync(
         ModuleDbContext context, Guid id, Guid token, Action<UpdateSettersBuilder<OutboxMessage>> change, bool release = true)
     {
+        // The bookkeeping of a delivery that is under way stays possible during maintenance (DEV-13): it records work that is done.
+        using var bookkeeping = MaintenanceScope.AllowWrites("outbox-bookkeeping");
         var updated = await context.OutboxMessages
             .Where(m => m.Id == id && m.LeaseOwner == token && m.Status == OutboxStatus.Processing)
             .ExecuteUpdateAsync(s =>
@@ -349,6 +374,7 @@ public sealed class OutboxProcessor(
     /// <summary>Gives a claimed message back without counting an attempt; without a database the lease simply runs out.</summary>
     private async Task TryReleaseAsync(ModuleDbContext context, Guid id, Guid token)
     {
+        using var bookkeeping = MaintenanceScope.AllowWrites("outbox-bookkeeping");
         try
         {
             await context.OutboxMessages
@@ -367,6 +393,7 @@ public sealed class OutboxProcessor(
     /// <summary>Extends the lease while the handlers run; false once the token no longer holds the message.</summary>
     private async Task<bool> RenewAsync(Type contextType, Guid id, Guid token, CancellationToken cancellationToken)
     {
+        using var bookkeeping = MaintenanceScope.AllowWrites("outbox-bookkeeping");
         await using var scope = scopeFactory.CreateAsyncScope();
         var context = (ModuleDbContext)scope.ServiceProvider.GetRequiredService(contextType);
         var lease = timeProvider.GetUtcNow() + options.Value.Lease;
@@ -532,7 +559,10 @@ public sealed class OutboxProcessor(
             await using var scope = scopeFactory.CreateAsyncScope();
             if (scope.ServiceProvider.GetService<IWorkerHeartbeat>() is { } heartbeat)
             {
-                await heartbeat.BeatAsync(HeartbeatComponent, $"{processed} processed in the last round", cancellationToken);
+                // The heartbeat is operational, not business data: it keeps telling monitoring the worker lives during maintenance.
+                using var allowed = MaintenanceScope.AllowWrites("heartbeat");
+                var detail = maintenance.Last.IsReadOnly ? "paused: read-only maintenance" : $"{processed} processed in the last round";
+                await heartbeat.BeatAsync(HeartbeatComponent, detail, cancellationToken);
                 _lastHeartbeat = now;
             }
         }

@@ -9,6 +9,7 @@ using Crm.Sales.Contracts;
 using Crm.Sales.Domain;
 using Crm.Sales.Persistence;
 using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Operations;
 using Crm.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -30,8 +31,12 @@ internal sealed class QuoteService(
     QuoteDocuments documents,
     IRecordScope scope,
     IOptions<SalesOptions> options,
-    TimeProvider time)
+    TimeProvider time,
+    IExternalEffectJournal journal)
 {
+    /// <summary>Journal kind of a quote e-mail; the record is the quote version (DEV-13).</summary>
+    public const string MailEffect = "quote-mail";
+
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
 
     private DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), Oslo).DateTime);
@@ -433,6 +438,22 @@ internal sealed class QuoteService(
 
         var texts = QuoteTexts.For(quote.Language);
         var subject = string.IsNullOrWhiteSpace(request.Subject) ? $"{texts.Quote} {quote.Number} – {quote.Title}" : request.Subject.Trim();
+
+        // DEV-13: journaled outside the database before the e-mail leaves, so a restore to an earlier point still knows the
+        // customer has it. Without the entry nothing is sent; during maintenance the journal refuses, and the caller gets the
+        // maintenance answer.
+        ExternalEffectEntry effect;
+        try
+        {
+            effect = await journal.BeginAsync(new ExternalEffect("graph", MailEffect, "Quote", quote.Id), ct);
+        }
+        catch (Exception ex) when (ex is not (OperationCanceledException or MaintenanceReadOnlyException or MaintenanceStateUnavailableException))
+        {
+            return Error.Conflict(
+                "SAL_MAIL_NOT_RECORDED",
+                $"The e-mail could not be recorded in the external effect journal ({ex.GetType().Name}), so it was not sent. Try again in a moment.");
+        }
+
         await sender.SendAsync(
             new QuoteMail(
                 senderAddress,
@@ -444,6 +465,7 @@ internal sealed class QuoteService(
                 delivery.Value.Document.FileName,
                 delivery.Value.Content),
             ct);
+        await journal.CompleteAsync(effect, EffectPhase.Sent, null, ct);
 
         var sent = quote.MarkSent(currentUser.UserId, request.ToAddress.Trim(), time.GetUtcNow());
         if (!sent.IsSuccess)
@@ -458,7 +480,12 @@ internal sealed class QuoteService(
             opportunity.RecordActivity(time.GetUtcNow());
         }
 
-        await db.SaveChangesAsync(ct);
+        // The e-mail has left: that it was sent is recorded even if maintenance began a moment ago (DEV-13).
+        using (MaintenanceScope.AllowWrites("record-sent-effects"))
+        {
+            await db.SaveChangesAsync(ct);
+        }
+
         return await ToDtoAsync(quote, ct);
     }
 

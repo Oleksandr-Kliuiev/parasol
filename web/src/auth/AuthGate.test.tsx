@@ -59,4 +59,49 @@ describe('AuthGate (DEV-09)', () => {
     expect(reload).not.toHaveBeenCalled();
     expect(client.getQueryData(['sales', 'quotes', 'list'])).toEqual([{ id: 'q-of-u1' }]);
   });
+
+  it('says signing in waits during maintenance instead of sending the browser to sign in again (DEV-13)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      url === '/bff/maintenance'
+        ? new Response(JSON.stringify({ mode: 'ReadOnly', since: '2026-10-04T08:00:00Z', reason: null }), { status: 200 })
+        : new Response(JSON.stringify({ status: 401 }), { status: 401 })));
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, search: '?maintenance=signin', assign, reload: vi.fn() });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <AuthGate>
+          <p>The app</p>
+        </AuthGate>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText('Signing in is paused')).toBeInTheDocument();
+    expect(screen.queryByText('The app')).not.toBeInTheDocument();
+    expect(assign).not.toHaveBeenCalled();
+    // The operators who run the maintenance may sign in; they land on its page.
+    screen.getByRole('button', { name: 'Operators: sign in' }).click();
+    expect(assign).toHaveBeenCalledWith('/bff/login?returnUrl=%2Fadmin%2Fmaintenance');
+  });
+
+  it('sends a signed-out person to sign in when there is no maintenance', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      url === '/bff/maintenance'
+        ? new Response(JSON.stringify({ mode: 'Normal', since: null, reason: null }), { status: 200 })
+        : new Response(JSON.stringify({ status: 401 }), { status: 401 })));
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, pathname: '/quotes', search: '', assign, reload: vi.fn() });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <AuthGate>
+          <p>The app</p>
+        </AuthGate>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/bff/login?returnUrl=%2Fquotes'));
+  });
 });

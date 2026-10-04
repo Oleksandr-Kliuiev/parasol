@@ -14,3 +14,6 @@ param powerOfficeEnvironment = 'Production'
 param enableAtera = bool(readEnvironmentVariable('CRM_ENABLE_ATERA', 'false'))
 // Record scope (DEV-09, runbook 11): Open only as a dated, reviewed exception while owners and teams are reconciled.
 param recordScope = 'Restricted'
+// Read-only maintenance by configuration (DEV-13, runbook 03): only for an outage of the document store; the operator's
+// switch is the normal way. Set for one deployment, then deployed again without it.
+param maintenanceForceReadOnly = bool(readEnvironmentVariable('CRM_MAINTENANCE_FORCE_READ_ONLY', 'false'))

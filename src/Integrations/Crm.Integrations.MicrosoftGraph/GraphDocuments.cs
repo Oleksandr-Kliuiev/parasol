@@ -5,6 +5,7 @@ using Crm.Customers.Contracts;
 using Crm.Integrations.Core;
 using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Operations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -13,13 +14,16 @@ namespace Crm.Integrations.MicrosoftGraph;
 /// <summary>
 /// One SharePoint folder per customer in the library "Dokumenter" (FR-DOC-01). The folder is created when the
 /// organization becomes a customer, renamed when the organization is renamed, and linked through
-/// <c>integration.ExternalLink</c> so the name in SharePoint may be changed by hand without losing the connection.
+/// <c>integration.ExternalLink</c> so the name in SharePoint may be changed by hand without losing the connection. Creating
+/// and renaming ask the maintenance switch first (DEV-13); they are not journaled, because both are idempotent by name — a
+/// database restored to before the folder adopts the folder that is there instead of making a second one.
 /// </summary>
 internal sealed class GraphDocuments(
     HttpClient http,
     ICustomersApi customers,
     ExternalLinkService links,
     ICurrentUser currentUser,
+    IMaintenanceGate maintenance,
     IOptions<GraphOptions> options,
     ILogger<GraphDocuments> logger) : IDocumentLibrary
 {
@@ -70,6 +74,7 @@ internal sealed class GraphDocuments(
                            ?? throw new InvalidOperationException($"Organization {organizationId} was not found.");
         var driveId = await DriveIdAsync(cancellationToken);
         var name = FolderName(organization.Name, organization.OrgNumber);
+        await maintenance.EnsureMaySendAsync(cancellationToken);
 
         // "replace" would overwrite a folder somebody made by hand; the existing one is adopted instead.
         using var created = await http.PostAsJsonAsync(
@@ -138,6 +143,7 @@ internal sealed class GraphDocuments(
         }
 
         var driveId = await DriveIdAsync(cancellationToken);
+        await maintenance.EnsureMaySendAsync(cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"drives/{driveId}/items/{folder.FolderId}")
         {
             Content = JsonContent.Create(new { name }),
