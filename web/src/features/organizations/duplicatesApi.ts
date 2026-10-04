@@ -1,21 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
-import type { DuplicatePair, MergeListItem, MergeResult } from '../../api/types';
+import { usePagedList } from '../../api/paging';
+import type { DuplicatePair, MergeListItem, MergeResult, PagedResult } from '../../api/types';
 
 const BASE = '/api/v1/customers/organizations';
 
+/** The strongest pairs first, up to 200, with the number of all pairs (DEV-12). */
 export function useDuplicates(organizationId?: string) {
   return useQuery({
     queryKey: ['organizations', 'duplicates', organizationId ?? 'all'],
-    queryFn: async ({ signal }) => (await api.get<DuplicatePair[]>(`${BASE}/duplicates${query({ organizationId })}`, signal)).data,
+    queryFn: async ({ signal }) => (await api.get<PagedResult<DuplicatePair>>(`${BASE}/duplicates${query({ organizationId })}`, signal)).data,
   });
 }
 
+/** Newest first, a page at a time with the count of all: every merge that can still be undone is reachable. */
 export function useMerges() {
-  return useQuery({
-    queryKey: ['organizations', 'merges'],
-    queryFn: async ({ signal }) => (await api.get<MergeListItem[]>(`${BASE}/merges`, signal)).data,
-  });
+  return usePagedList<MergeListItem>(['organizations', 'merges'], `${BASE}/merges`, {}, { limit: 25 });
 }
 
 export function useDuplicateActions() {

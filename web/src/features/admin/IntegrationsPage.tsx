@@ -18,10 +18,12 @@ import {
 import { Play20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type { RecurringJob, SyncRun } from '../../api/types';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
@@ -60,12 +62,7 @@ export function IntegrationsPage() {
     enabled: allowed,
     queryFn: async ({ signal }) => (await api.get<RecurringJob[]>('/api/v1/integrations/jobs', signal)).data,
   });
-  const runs = useQuery({
-    queryKey: ['integrations', 'runs'],
-    enabled: allowed,
-    refetchInterval: 15_000,
-    queryFn: async ({ signal }) => (await api.get<SyncRun[]>('/api/v1/integrations/runs?limit=50', signal)).data,
-  });
+  const runs = usePagedList<SyncRun>(['integrations', 'runs'], '/api/v1/integrations/runs', {}, { enabled: allowed, refetchInterval: 15_000 });
   const trigger = useMutation({
     mutationFn: (jobId: string) => api.post(`/api/v1/integrations/jobs/${encodeURIComponent(jobId)}/trigger`),
     onSuccess: (_, jobId) => {
@@ -138,7 +135,7 @@ export function IntegrationsPage() {
         <Panel title={t('integrations.runs')}>
           {runs.error ? (
             <ErrorState error={runs.error} onRetry={() => void runs.refetch()} />
-          ) : runs.data?.length === 0 ? (
+          ) : runs.isSuccess && runs.items.length === 0 ? (
             <EmptyState message={t('integrations.noRuns')} />
           ) : (
             <div className={styles.tableWrap}>
@@ -154,7 +151,7 @@ export function IntegrationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {runs.data?.map((run) => (
+                  {runs.items.map((run) => (
                     <TableRow key={run.id}>
                       <TableCell>{jobName(run.job)}</TableCell>
                       <TableCell className={styles.nowrap}>{formatDateTime(run.startedAt)}</TableCell>
@@ -172,6 +169,7 @@ export function IntegrationsPage() {
                   ))}
                 </TableBody>
               </Table>
+              <ListFooter shown={runs.items.length} total={runs.total} hasMore={runs.hasNextPage} loading={runs.isFetchingNextPage} onMore={() => void runs.fetchNextPage()} />
             </div>
           )}
         </Panel>

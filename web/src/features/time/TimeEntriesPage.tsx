@@ -33,6 +33,7 @@ import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
@@ -97,10 +98,13 @@ export function TimeEntriesPage() {
   const [reopening, setReopening] = useState<Period | null>(null);
   const restoreFocusTarget = useRestoreFocusTarget();
 
-  const { data, error, isPending, refetch } = useTimeEntries({ year, month, status });
+  const pages = useTimeEntries({ year, month, status });
+  // The summary of the newest answer covers every entry the filter matches, not only the rows loaded so far.
+  const data = pages.latest;
+  const { error, isPending, refetch } = pages;
   const periods = usePeriods(year);
   const period = periods.data?.find((p) => p.month === month);
-  const entries = data?.items ?? [];
+  const entries = pages.items;
   const selectable = entries.filter((e) => e.status === 'New' && !e.isLocked).map((e) => e.id);
 
   const setParam = (key: string, value: string | null) => {
@@ -300,6 +304,7 @@ export function TimeEntriesPage() {
             </TableBody>
           </Table>
           {!isPending && entries.length === 0 && <EmptyState message={t('time.empty')} />}
+          <ListFooter shown={entries.length} total={data?.totalCount} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
         </div>
       )}
 

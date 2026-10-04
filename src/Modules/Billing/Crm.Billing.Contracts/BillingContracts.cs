@@ -109,9 +109,6 @@ public sealed record OverdueInvoice(Guid InvoiceId, string InvoiceNo, Guid? Orga
 /// <summary>Public API of the Billing module for integrations.</summary>
 public interface IBillingApi
 {
-    /// <summary>Bases of an approved run that still need exporting, oldest run first.</summary>
-    Task<IReadOnlyList<ExportBasis>> GetBasesToExportAsync(Guid? runId, CancellationToken cancellationToken);
-
     /// <summary>
     /// The basis if it is approved and waiting to be sent; null once it is exported or cancelled, so a repeated delivery of
     /// <see cref="BillingBasisApproved"/> sends nothing a second time.

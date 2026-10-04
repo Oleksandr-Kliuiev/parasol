@@ -678,6 +678,8 @@ namespace Crm.Billing.Persistence.Migrations
                     b.HasIndex("System", "InvoiceNo")
                         .IsUnique();
 
+                    b.HasIndex("InvoiceDate", "InvoiceNo", "Id");
+
                     b.ToTable("Invoices", "billing");
                 });
 

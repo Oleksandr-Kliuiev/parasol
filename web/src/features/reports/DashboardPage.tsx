@@ -168,6 +168,9 @@ export function DashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
+                {data.renewalsTotal > data.renewals.length && (
+                  <Text className={styles.label}>{t('common.shownOf', { shown: data.renewals.length, total: data.renewalsTotal })}</Text>
+                )}
               </div>
             )}
           </Panel>
@@ -205,6 +208,9 @@ export function DashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
+                {data.techniciansTotal > data.utilization.length && (
+                  <Text className={styles.label}>{t('common.shownOf', { shown: data.utilization.length, total: data.techniciansTotal })}</Text>
+                )}
               </div>
             )}
           </Panel>

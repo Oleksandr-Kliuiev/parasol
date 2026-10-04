@@ -20,7 +20,7 @@ internal sealed class IndexationRequestValidator : AbstractValidator<IndexationR
     {
         // A yearly KPI adjustment; anything outside this is a mistake, not an index.
         RuleFor(x => x.Percent).InclusiveBetween(-20m, 20m).NotEqual(0m);
-        RuleFor(x => x.ContractIds).NotEmpty();
+        RuleFor(x => x.ContractIds).NotEmpty().Must(ids => ids.Count <= 5000).WithMessage("At most 5000 contracts are indexed at a time.");
     }
 }
 
@@ -44,10 +44,20 @@ public sealed record IndexationCandidate(
     int PriceListLines,
     IReadOnlyList<IndexationLine> Lines);
 
-public sealed record IndexationPreview(decimal Percent, DateOnly EffectiveFrom, IReadOnlyList<IndexationCandidate> Contracts);
+/// <summary>The monthly amount of a set of contracts before and after the index, summed on the server (DEV-12).</summary>
+public sealed record IndexationTotals(
+    int Contracts,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal MonthlyBefore,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal MonthlyAfter);
 
-/// <summary>What was changed, and who has to be told about it (BR-CON-06).</summary>
-public sealed record IndexationResult(int Contracts, int Lines, IReadOnlyList<IndexationCandidate> Changed);
+/// <summary>Every contract due for indexation on the date — none left out — and their totals (DEV-12).</summary>
+public sealed record IndexationPreview(decimal Percent, DateOnly EffectiveFrom, IReadOnlyList<IndexationCandidate> Contracts, IndexationTotals Totals);
+
+/// <summary>
+/// What was changed, and who has to be told about it (BR-CON-06). <paramref name="Skipped"/> are requested contracts the preview
+/// would not offer on that date (no indexation clause, not yet due, not in force): they are left alone, never indexed.
+/// </summary>
+public sealed record IndexationResult(int Contracts, int Lines, IReadOnlyList<IndexationCandidate> Changed, IndexationTotals Totals, IReadOnlyList<Guid> Skipped);
 
 /// <summary>
 /// Yearly price indexation of contracts (FR-CON-05). The preview and the real thing walk the same contracts and compute the
@@ -73,12 +83,17 @@ internal sealed class IndexationService(
             .Where(candidate => candidate.Lines.Count > 0 || candidate.PriceListLines > 0)
             .OrderBy(candidate => candidate.Organization.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
-        return new IndexationPreview(percent, effectiveFrom, candidates);
+        return new IndexationPreview(percent, effectiveFrom, candidates, TotalsOf(candidates));
     }
+
+    private static IndexationTotals TotalsOf(List<IndexationCandidate> candidates) =>
+        new(candidates.Count, candidates.Sum(c => c.MonthlyBefore), candidates.Sum(c => c.MonthlyAfter));
 
     public async Task<Result<IndexationResult>> ApplyAsync(IndexationRequest request, CancellationToken ct)
     {
+        // The preview's rules apply to the request too: a contract the preview would not offer is never indexed (DEV-12).
         var contracts = await LoadCandidatesAsync(request.EffectiveFrom, null, request.ContractIds, ct);
+        var skipped = request.ContractIds.Distinct().Except(contracts.Select(c => c.Id)).ToList();
         if (contracts.Count == 0)
         {
             return Error.Validation("CON_NOTHING_TO_INDEX", "None of the selected contracts can be indexed on that date.");
@@ -114,7 +129,7 @@ internal sealed class IndexationService(
         }
 
         await db.SaveChangesAsync(ct);
-        return new IndexationResult(changed.Count, lines, changed);
+        return new IndexationResult(changed.Count, lines, changed, TotalsOf(changed), skipped);
     }
 
     private async Task<List<Contract>> LoadCandidatesAsync(
@@ -123,14 +138,11 @@ internal sealed class IndexationService(
         var query = db.Contracts.Include(c => c.Lines).AsQueryable()
             .Where(c => c.Status == ContractStatus.Active || c.Status == ContractStatus.NoticeGiven || c.Status == ContractStatus.Suspended)
             .Where(c => c.StartDate <= effectiveFrom && (c.EndDate == null || c.EndDate >= effectiveFrom));
+        // Only contracts that agreed to indexation and are due — for the preview and for an explicit selection alike.
+        query = query.Where(c => c.Indexation && (c.NextIndexationDate == null || c.NextIndexationDate <= effectiveFrom));
         if (ids is { Count: > 0 })
         {
             query = query.Where(c => ids.Contains(c.Id));
-        }
-        else
-        {
-            // Without an explicit selection only contracts that agreed to indexation and are due are offered.
-            query = query.Where(c => c.Indexation && (c.NextIndexationDate == null || c.NextIndexationDate <= effectiveFrom));
         }
 
         if (organizationId is { } organization)
@@ -138,7 +150,8 @@ internal sealed class IndexationService(
             query = query.Where(c => c.OrganizationId == organization);
         }
 
-        return await query.OrderBy(c => c.Number).Take(500).ToListAsync(ct);
+        // Every due contract: the preview leaves none out, so its totals and its selection cover them all (DEV-12).
+        return await query.OrderBy(c => c.Number).ToListAsync(ct);
     }
 
     private static IndexationCandidate Describe(

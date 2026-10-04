@@ -31,7 +31,7 @@ public static class ProjectsModule
         var group = app.MapGroup("/api/v1/projects").WithTags("Projects");
 
         group.MapGet("/", async ([AsParameters] ProjectListParameters p, ProjectService service, CancellationToken ct) =>
-                Results.Ok(await service.ListAsync(new ProjectQuery(p.Search, p.OrganizationId, p.Status, p.ManagerId, p.OpenOnly ?? false), ct)))
+                Results.Ok(await service.ListAsync(new ProjectQuery(p.Search, p.OrganizationId, p.Status, p.ManagerId, p.OpenOnly ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.ProjectsRead);
 
         group.MapGet("/{id:guid}", async (Guid id, ProjectService service, HttpResponse response, CancellationToken ct) =>
@@ -131,4 +131,6 @@ public sealed record ProjectListParameters(
     [FromQuery] Guid? OrganizationId,
     [FromQuery] ProjectStatus? Status,
     [FromQuery] Guid? ManagerId,
-    [FromQuery] bool? OpenOnly);
+    [FromQuery] bool? OpenOnly,
+    [FromQuery] int? Limit,
+    [FromQuery] string? Cursor);

@@ -33,6 +33,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { useNotify } from '../../shared/components/useNotify';
@@ -93,7 +94,8 @@ export function LicensesPage() {
     withoutOrganization: params.get('unlinked') === 'true',
   };
   const onSubscriptions = view === 'subscriptions';
-  const { data = [], error, isPending, refetch } = useSubscriptions(filters, onSubscriptions);
+  const subscriptions = useSubscriptions(filters, onSubscriptions);
+  const { items: data, error, isPending, refetch } = subscriptions;
   const attention = useLicensingAttention(onSubscriptions);
   const [importing, setImporting] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -257,6 +259,7 @@ export function LicensesPage() {
                 </TableBody>
               </Table>
               {!isPending && data.length === 0 && <EmptyState message={t('licenses.empty')} />}
+              <ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />
             </div>
           )}
         </>
@@ -363,7 +366,8 @@ export function OrganizationLicensesTab({ organizationId }: { organizationId: st
   const catalog = useCatalogStyles();
   const { t } = useTranslation();
   const canSeeCost = useCan(Permissions.financeCostRead);
-  const { data = [], error, isPending, refetch } = useSubscriptions({ organizationId });
+  const subscriptions = useSubscriptions({ organizationId });
+  const { items: data, error, isPending, refetch } = subscriptions;
 
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
@@ -416,6 +420,7 @@ export function OrganizationLicensesTab({ organizationId }: { organizationId: st
         </TableBody>
       </Table>
       {!isPending && data.length === 0 && <EmptyState message={t('licenses.emptyForOrganization')} />}
+      <ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />
     </div>
   );
 }

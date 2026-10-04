@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { formatDate, formatNumber } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
@@ -19,7 +20,8 @@ export function OrganizationProjectsTab({ organizationId, organizationName }: { 
   const canWrite = useCan(Permissions.projectsWrite);
   const restoreFocusTarget = useRestoreFocusTarget();
   const [creating, setCreating] = useState(false);
-  const { data = [], error, isPending, refetch } = useProjects({ organizationId });
+  const projects = useProjects({ organizationId });
+  const { items: data, error, isPending, refetch } = projects;
 
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
@@ -74,6 +76,7 @@ export function OrganizationProjectsTab({ organizationId, organizationName }: { 
           </TableBody>
         </Table>
         {!isPending && data.length === 0 && <EmptyState message={t('projects.emptyForOrganization')} />}
+        <ListFooter shown={data.length} total={projects.total} hasMore={projects.hasNextPage} loading={projects.isFetchingNextPage} onMore={() => void projects.fetchNextPage()} />
       </div>
 
       <Dialog open={creating} onOpenChange={(_, d) => !d.open && setCreating(false)}>

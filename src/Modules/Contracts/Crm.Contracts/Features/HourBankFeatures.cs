@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Authorization;
 using Crm.Contracts.Contracts;
 using Crm.Contracts.Domain;
@@ -5,6 +6,7 @@ using Crm.Contracts.Persistence;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Infrastructure.Persistence;
+using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -66,7 +68,7 @@ public sealed record HourBankResponse(
 
 internal sealed class HourBankService(ContractsDbContext db, ICustomersApi customers, IUserDirectory users, TimeProvider time)
 {
-    public async Task<IReadOnlyList<HourBankResponse>> ListAsync(Guid? organizationId, Guid? contractId, bool includeClosed, CancellationToken ct)
+    public async Task<PagedResult<HourBankResponse>> ListAsync(Guid? organizationId, Guid? contractId, bool includeClosed, int? limit, string? cursor, CancellationToken ct)
     {
         var banks = db.HourBanks.AsNoTracking();
         if (organizationId is { } org)
@@ -84,8 +86,19 @@ internal sealed class HourBankService(ContractsDbContext db, ICustomersApi custo
             banks = banks.Where(b => b.Status == HourBankStatus.Active);
         }
 
-        var rows = await banks.OrderByDescending(b => b.ValidFrom).Take(200).ToListAsync(ct);
-        return await ToResponsesAsync(rows, withEntries: false, ct);
+        // Newest first, then id (DEV-12): a page per request and the count of all, never a silent cut.
+        var total = await banks.CountAsync(ct);
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateOnly.TryParseExact(after.SortKey, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
+        {
+            banks = banks.Where(b => b.ValidFrom < from || (b.ValidFrom == from && b.Id.CompareTo(after.Id) < 0));
+        }
+
+        var take = KeysetCursor.ClampLimit(limit);
+        var page = await banks.OrderByDescending(b => b.ValidFrom).ThenByDescending(b => b.Id).Take(take + 1).ToListAsync(ct);
+        var rows = page.Take(take).ToList();
+        var next = page.Count > take ? new KeysetCursor(rows[^1].ValidFrom.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null;
+        return new PagedResult<HourBankResponse>(await ToResponsesAsync(rows, withEntries: false, ct), next, total);
     }
 
     public async Task<Result<HourBankResponse>> GetAsync(Guid id, CancellationToken ct)

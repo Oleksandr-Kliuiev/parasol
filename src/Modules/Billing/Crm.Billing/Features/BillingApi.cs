@@ -27,19 +27,6 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
         return refs.SelectMany(SourceRefs.TimeEntryIds).Distinct().ToList();
     }
 
-    public async Task<IReadOnlyList<ExportBasis>> GetBasesToExportAsync(Guid? runId, CancellationToken cancellationToken)
-    {
-        var bases = await db.BillingBases.AsNoTracking()
-            .Include(b => b.Lines)
-            .Where(b => b.Status == BillingBasisStatus.Approved && (runId == null || b.RunId == runId))
-            .OrderBy(b => b.RunId)
-            .Take(500)
-            .ToListAsync(cancellationToken);
-        var runs = await RunsOfAsync(bases, cancellationToken);
-        var codes = await ProductCodesAsync(bases, cancellationToken);
-        return bases.Select(b => ToExport(b, runs[b.RunId], codes)).ToList();
-    }
-
     public async Task<ExportBasis?> GetBasisForExportAsync(Guid basisId, CancellationToken cancellationToken)
     {
         // Only a basis that waits to be sent: an approval event delivered again after the order was created (or after the
@@ -269,12 +256,12 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
             overdue.Count);
     }
 
+    /// <summary>Every overdue invoice (DEV-12): the daily scan notices all of them, not the oldest few hundred.</summary>
     public async Task<IReadOnlyList<OverdueInvoice>> GetOverdueInvoicesAsync(DateOnly today, CancellationToken cancellationToken)
     {
         var rows = await db.Invoices.AsNoTracking()
             .Where(i => i.Outstanding > 0 && i.Status != InvoiceStatus.Credited && i.DueDate != null && i.DueDate < today)
-            .OrderBy(i => i.DueDate)
-            .Take(200)
+            .OrderBy(i => i.DueDate).ThenBy(i => i.Id)
             .Select(i => new { i.Id, i.InvoiceNo, i.OrganizationId, i.Outstanding, i.DueDate })
             .ToListAsync(cancellationToken);
 

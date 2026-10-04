@@ -67,6 +67,8 @@ export function DeliveryPanel() {
   const chosen = replayable.filter((m) => selected.has(key(m)));
   const waiting = (outbox.data?.counts ?? []).filter((c) => c.deadLetter + c.quarantined + c.pending + c.processing > 0);
   const allSelected = replayable.length > 0 && chosen.length === Math.min(replayable.length, MAX_REPLAY);
+  // The list holds the newest messages only (DEV-12); the module counts above count every one, so say how many are listed.
+  const stuck = (outbox.data?.counts ?? []).reduce((sum, c) => sum + c.deadLetter + c.quarantined, 0);
 
   const toggle = (message: OutboxMessageItem, on: boolean) =>
     setSelected((current) => {
@@ -161,6 +163,7 @@ export function DeliveryPanel() {
                 </TableBody>
               </Table>
             </div>
+            {stuck > items.length && <Text className={styles.muted}>{t('delivery.newestShown', { shown: items.length, total: stuck })}</Text>}
           </>
         )}
       </div>

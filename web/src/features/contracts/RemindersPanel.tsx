@@ -2,6 +2,7 @@ import { Button, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { AlertUrgent20Regular, CalendarClock20Regular, Timer20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { AppLink } from '../../shared/components/AppLink';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
@@ -30,7 +31,8 @@ export function RemindersPanel() {
   const styles = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
-  const { data = [], isPending } = useReminders({ mine: true });
+  const reminders = useReminders({ mine: true });
+  const data = reminders.items;
   const acknowledge = useAcknowledgeReminder();
 
   const done = async (reminder: Reminder) => {
@@ -43,7 +45,7 @@ export function RemindersPanel() {
 
   return (
     <Panel title={t('myDay.reminders')}>
-      {!isPending && data.length === 0 && <Text className={styles.muted}>{t('myDay.remindersEmpty')}</Text>}
+      {!reminders.isPending && data.length === 0 && <Text className={styles.muted}>{t('myDay.remindersEmpty')}</Text>}
       <ul className={styles.list}>
         {data.map((r) => (
           <li key={r.id} className={styles.row}>
@@ -80,6 +82,7 @@ export function RemindersPanel() {
           </li>
         ))}
       </ul>
+      <ListFooter shown={data.length} total={reminders.total} hasMore={reminders.hasNextPage} loading={reminders.isFetchingNextPage} onMore={() => void reminders.fetchNextPage()} />
     </Panel>
   );
 }

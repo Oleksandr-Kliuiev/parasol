@@ -7,6 +7,8 @@ using Crm.Integrations.Core;
 using Crm.Integrations.Core.Persistence;
 using Crm.Service.Contracts;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -170,9 +172,73 @@ internal static class PrivacyTestData
                 .Where(t => t.ExternalId == ateraTicketId).Select(t => t.Id).SingleAsyncEf(Ct);
         }
 
+        // A host with a database of its own (the restore test) shares it with no parallel class, so there is nothing to race with.
+        var database = new SqlConnectionStringBuilder(host.Services.GetRequiredService<IConfiguration>().GetConnectionString("crm")).InitialCatalog;
+        if (database == CrmWebFactory.Database)
+        {
+            await SettleAsync(factory, contactId);
+        }
+
         return new PrivacyPerson(
             marker, organizationId, contactId, colleagueId, firstName, lastName, email, phone, colleagueEmail, dealId, sentQuoteId, acceptedQuoteId,
             callId, mailId, ticketId, ateraTicketId, ticketRequestId, ateraContactId, recordId, outboundId);
+    }
+
+    /// <summary>
+    /// Settles the person before a plan is previewed. The test factory writes to PowerOffice, so every change of a contact queues a
+    /// contact person sync when its event is delivered — possibly by a parallel class, possibly after the preview — and that sync,
+    /// once sent, links the contact. Either would change the plan between preview and execution, and the case would rightly answer
+    /// PRV_PLAN_CHANGED. So every event that names the person is delivered first, and their queued operations are then held back as
+    /// if leased for an hour; the erasure cancels them all the same, as it does every operation not yet sent.
+    /// </summary>
+    public static async Task SettleAsync(CrmWebFactory factory, Guid contactId)
+    {
+        var holder = Guid.NewGuid();
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            await factory.ProcessEventsAsync();
+            if (await ScalarAsync(factory, UndeliveredSql, contactId, holder) == 0 && await ScalarAsync(factory, HoldBackSql, contactId, holder) == 0)
+            {
+                return;
+            }
+
+            await Task.Delay(100, Ct);
+        }
+
+        throw new Shouldly.ShouldAssertException($"The events and operations of contact {contactId} did not settle.");
+    }
+
+    /// <summary>Events in any module's outbox that name the contact and are not delivered yet.</summary>
+    private const string UndeliveredSql = """
+        DECLARE @pattern nvarchar(64) = N'%' + LOWER(CONVERT(nvarchar(36), @id)) + N'%';
+        DECLARE @sql nvarchar(max) = N'';
+        SELECT @sql = @sql + CASE WHEN @sql = N'' THEN N'' ELSE N' UNION ALL ' END
+            + N'SELECT COUNT(*) AS n FROM ' + QUOTENAME(s.name) + N'.OutboxMessages WHERE ProcessedAt IS NULL AND Status IN (N''Pending'', N''Processing'') AND Payload LIKE @pattern'
+        FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE t.name = N'OutboxMessages';
+        SET @sql = N'SELECT COALESCE(SUM(n), 0) FROM (' + @sql + N') AS x';
+        EXEC sp_executesql @sql, N'@pattern nvarchar(64)', @pattern = @pattern;
+        """;
+
+    /// <summary>
+    /// Holds back the contact's queued operations that nobody is sending, then counts those a parallel class is sending right now
+    /// (leased by someone else): the caller waits for them to finish.
+    /// </summary>
+    private const string HoldBackSql = """
+        UPDATE integration.OutboundOperations
+        SET NextAttemptAt = DATEADD(hour, 1, SYSDATETIMEOFFSET()), LockedUntil = DATEADD(hour, 1, SYSDATETIMEOFFSET()), LeaseOwner = @holder
+        WHERE EntityType = N'Contact' AND EntityId = @id AND Status = N'Pending' AND (LockedUntil IS NULL OR LockedUntil < SYSDATETIMEOFFSET());
+        SELECT COUNT(*) FROM integration.OutboundOperations
+        WHERE EntityType = N'Contact' AND EntityId = @id AND Status = N'Pending' AND LockedUntil >= SYSDATETIMEOFFSET() AND (LeaseOwner IS NULL OR LeaseOwner <> @holder);
+        """;
+
+    private static async Task<int> ScalarAsync(CrmWebFactory factory, string sql, Guid contactId, Guid holder)
+    {
+        await using var connection = new SqlConnection(factory.AdminConnectionString);
+        await connection.OpenAsync(Ct);
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@id", contactId);
+        command.Parameters.AddWithValue("@holder", holder);
+        return Convert.ToInt32(await command.ExecuteScalarAsync(Ct), CultureInfo.InvariantCulture);
     }
 
     public static HttpClient Client(WebApplicationFactory<Program> host, string role, string userKey) =>

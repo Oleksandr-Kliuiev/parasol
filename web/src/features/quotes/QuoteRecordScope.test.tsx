@@ -23,7 +23,7 @@ function stub(data: Quote) {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST') return new Response(null, { status: 204 });
     if (url.startsWith('/api/v1/identity/users')) {
-      return new Response(JSON.stringify([{ id: 'u2', displayName: 'Per Hansen', email: 'per@example.no', isActive: true }]), { status: 200 });
+      return new Response(JSON.stringify({ items: [{ id: 'u2', displayName: 'Per Hansen', email: 'per@example.no', isActive: true }], nextCursor: null, totalCount: 1 }), { status: 200 });
     }
     return new Response(JSON.stringify(url === '/api/v1/sales/quotes/q1' ? data : []), { status: 200 });
   });

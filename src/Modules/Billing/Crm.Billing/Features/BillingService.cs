@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Billing.Contracts;
 using Crm.Billing.Domain;
 using Crm.Billing.Persistence;
@@ -13,11 +14,11 @@ using Microsoft.Extensions.Options;
 
 namespace Crm.Billing.Features;
 
-public sealed record RunQuery(BillingRunStatus? Status, int? Year, int? Limit);
+public sealed record RunQuery(BillingRunStatus? Status, int? Year, int? Limit, string? Cursor = null, bool OpenOnly = false);
 
 public sealed record BasisQuery(Guid RunId, bool AnomaliesOnly, BillingBasisStatus? Status, string? Search);
 
-public sealed record InvoiceQuery(Guid? OrganizationId, bool OpenOnly, bool OverdueOnly, int? Limit);
+public sealed record InvoiceQuery(Guid? OrganizationId, bool OpenOnly, bool OverdueOnly, int? Limit, string? Cursor = null);
 
 internal sealed class BillingService(
     BillingDbContext db,
@@ -36,7 +37,7 @@ internal sealed class BillingService(
 
     // ---------- Runs ----------
 
-    public async Task<IReadOnlyList<RunListItem>> ListRunsAsync(RunQuery query, CancellationToken ct)
+    public async Task<PagedResult<RunListItem>> ListRunsAsync(RunQuery query, CancellationToken ct)
     {
         var runs = db.BillingRuns.AsNoTracking();
         if (query.Status is { } status)
@@ -44,14 +45,30 @@ internal sealed class BillingService(
             runs = runs.Where(r => r.Status == status);
         }
 
+        if (query.OpenOnly)
+        {
+            runs = runs.Where(r => r.Status != BillingRunStatus.Closed);
+        }
+
         if (query.Year is { } year)
         {
             runs = runs.Where(r => r.PeriodStart.Year == year);
         }
 
-        var rows = await runs.OrderByDescending(r => r.PeriodStart).Take(Math.Clamp(query.Limit ?? 24, 1, 120)).ToListAsync(ct);
+        // Newest period first, then id — a supplementary run after the regular one (DEV-12): a page per request and the count of all.
+        var total = await runs.CountAsync(ct);
+        if (KeysetCursor.Decode(query.Cursor) is { } after &&
+            DateOnly.TryParseExact(after.SortKey, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var period))
+        {
+            runs = runs.Where(r => r.PeriodStart < period || (r.PeriodStart == period && r.Id.CompareTo(after.Id) < 0));
+        }
+
+        var take = Math.Clamp(query.Limit ?? 24, 1, KeysetCursor.MaxLimit);
+        var page = await runs.OrderByDescending(r => r.PeriodStart).ThenByDescending(r => r.Id).Take(take + 1).ToListAsync(ct);
+        var rows = page.Take(take).ToList();
+        var next = page.Count > take ? new KeysetCursor(rows[^1].PeriodStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null;
         var totals = await TotalsAsync(rows.Select(r => r.Id).ToList(), ct);
-        return rows.Select(r =>
+        return new PagedResult<RunListItem>(rows.Select(r =>
         {
             var totalsOfRun = totals.GetValueOrDefault(r.Id);
             // Like the run itself: an open run says what its content needs now (BR-BIL-04), a released one what it was released with.
@@ -59,7 +76,7 @@ internal sealed class BillingService(
             return new RunListItem(
                 r.Id, r.PeriodStart, r.PeriodEnd, r.Kind, r.Status, totalsOfRun.Organizations, totalsOfRun.WithAnomalies, totalsOfRun.Total,
                 requiresSecond, r.CollectedAt, r.ApprovedAt, r.ExportedAt, r.ClosedAt);
-        }).ToList();
+        }).ToList(), next, total);
     }
 
     public async Task<Result<RunResponse>> GetRunAsync(Guid id, CancellationToken ct)
@@ -539,6 +556,10 @@ internal sealed class BillingService(
 
     // ---------- Invoices ----------
 
+    /// <summary>
+    /// One page of invoices, newest first, and the totals of every invoice the filter matches (DEV-12, A11): the count and the
+    /// amounts are one SQL aggregate over the whole filter, never a sum of the rows that happen to be on the page.
+    /// </summary>
     public async Task<InvoiceSummary> ListInvoicesAsync(InvoiceQuery query, CancellationToken ct)
     {
         var invoices = db.Invoices.AsNoTracking();
@@ -558,15 +579,42 @@ internal sealed class BillingService(
             invoices = invoices.Where(i => i.Outstanding > 0 && i.DueDate != null && i.DueDate < today);
         }
 
-        var rows = await invoices.OrderByDescending(i => i.InvoiceDate).ThenByDescending(i => i.InvoiceNo)
-            .Take(Math.Clamp(query.Limit ?? 100, 1, 500)).ToListAsync(ct);
+        var totals = await invoices
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Outstanding = g.Sum(i => i.Outstanding),
+                Overdue = g.Sum(i => i.Outstanding > 0 && i.DueDate != null && i.DueDate < today ? i.Outstanding : 0m),
+            })
+            .SingleOrDefaultAsync(ct);
+
+        // Newest first: date, then number, then id — the id makes the order total, so a cursor neither repeats nor skips an
+        // invoice that shares its date and number with another (two systems may number alike).
+        if (KeysetCursor.Decode(query.Cursor) is { } cursor &&
+            DateOnly.TryParseExact(cursor.SortKey, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            var number = cursor.Then ?? string.Empty;
+            invoices = invoices.Where(i => i.InvoiceDate < date ||
+                                           (i.InvoiceDate == date && (i.InvoiceNo.CompareTo(number) < 0 ||
+                                                                      (i.InvoiceNo == number && i.Id.CompareTo(cursor.Id) < 0))));
+        }
+
+        var limit = KeysetCursor.ClampLimit(query.Limit);
+        var page = await invoices.OrderByDescending(i => i.InvoiceDate).ThenByDescending(i => i.InvoiceNo).ThenByDescending(i => i.Id)
+            .Take(limit + 1).ToListAsync(ct);
+        var rows = page.Take(limit).ToList();
         var names = await customers.GetOrganizationNamesAsync(rows.Where(i => i.OrganizationId != null).Select(i => i.OrganizationId!.Value).Distinct().ToList(), ct);
-        var items = rows.Select(i => ToDto(i, names, today)).ToList();
+        var last = rows.LastOrDefault();
         return new InvoiceSummary(
-            items.Count,
-            decimal.Round(rows.Sum(i => i.Outstanding), 2),
-            decimal.Round(rows.Where(i => i.IsOverdue(today)).Sum(i => i.Outstanding), 2),
-            items);
+            totals?.Count ?? 0,
+            decimal.Round(totals?.Outstanding ?? 0m, 2),
+            decimal.Round(totals?.Overdue ?? 0m, 2),
+            rows.Select(i => ToDto(i, names, today)).ToList(),
+            page.Count > limit && last is not null
+                ? new KeysetCursor(last.InvoiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), last.Id, last.InvoiceNo).Encode()
+                : null,
+            today);
     }
 
     // ---------- Helpers ----------

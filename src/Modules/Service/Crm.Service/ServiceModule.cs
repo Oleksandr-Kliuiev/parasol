@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Authorization;
 using Crm.Customers.Contracts;
 using Crm.Infrastructure.DependencyInjection;
@@ -88,7 +89,7 @@ public static class ServiceModule
         var group = app.MapGroup("/api/v1/service").WithTags("Service");
 
         group.MapGet("/tickets", async (
-                Guid? organizationId, Guid? contactId, bool? openOnly, int? days, string? search, int? limit,
+                Guid? organizationId, Guid? contactId, bool? openOnly, int? days, string? search, int? limit, string? cursor,
                 ServiceDbContext db, ICustomersApi customers, TimeProvider time, CancellationToken ct) =>
             {
                 var tickets = db.Tickets.AsNoTracking();
@@ -113,16 +114,32 @@ public static class ServiceModule
                         : tickets.Where(t => t.Title.Contains(term));
                 }
 
-                var rows = await tickets.OrderByDescending(t => t.IsOpen).ThenByDescending(t => t.CreatedAtSource)
-                    .Take(Math.Clamp(limit ?? 100, 1, 500)).ToListAsync(ct);
+                // Open first, newest first, then id (DEV-12): a page per request and the count of all, never a silent cut.
+                var total = await tickets.CountAsync(ct);
+                if (KeysetCursor.Decode(cursor) is { } after &&
+                    DateTimeOffset.TryParseExact(after.Then, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+                {
+                    var rank = after.SortKey == "0" ? 0 : 1;
+                    tickets = tickets.Where(t => (t.IsOpen ? 0 : 1) > rank ||
+                        ((t.IsOpen ? 0 : 1) == rank && (t.CreatedAtSource < created || (t.CreatedAtSource == created && t.Id.CompareTo(after.Id) < 0))));
+                }
+
+                var take = KeysetCursor.ClampLimit(limit);
+                var page = await tickets.OrderBy(t => t.IsOpen ? 0 : 1).ThenByDescending(t => t.CreatedAtSource).ThenByDescending(t => t.Id)
+                    .Take(take + 1).ToListAsync(ct);
+                var rows = page.Take(take).ToList();
+                var last = rows.LastOrDefault();
+                var next = page.Count > take && last is not null
+                    ? new KeysetCursor(last.IsOpen ? "0" : "1", last.Id, last.CreatedAtSource.ToString("O", CultureInfo.InvariantCulture)).Encode()
+                    : null;
                 var contacts = await customers.GetContactNamesAsync(rows.Where(r => r.ContactId != null).Select(r => r.ContactId!.Value).Distinct().ToList(), ct);
                 var organizations = organizationId is null
                     ? await customers.GetOrganizationNamesAsync(rows.Select(r => r.OrganizationId).Distinct().ToList(), ct)
                     : new Dictionary<Guid, string>();
-                return Results.Ok(rows.Select(t => new TicketItem(
+                return Results.Ok(new PagedResult<TicketItem>(rows.Select(t => new TicketItem(
                     t.Id, t.ExternalId, t.OrganizationId, organizations.GetValueOrDefault(t.OrganizationId), t.ContactId,
                     t.ContactId is { } c ? contacts.GetValueOrDefault(c) ?? t.EndUserName : t.EndUserName, t.Title, t.Status, t.IsOpen, t.Priority, t.Type,
-                    t.TechnicianName, t.CreatedAtSource, t.ResolvedAt, t.LastActivityAt, t.Url)).ToList());
+                    t.TechnicianName, t.CreatedAtSource, t.ResolvedAt, t.LastActivityAt, t.Url)).ToList(), next, total));
             })
             .RequirePermission(Permissions.ServiceRead);
 
@@ -145,7 +162,7 @@ public static class ServiceModule
             })
             .RequirePermission(Permissions.ServiceRead);
 
-        group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, ServiceDbContext db, CancellationToken ct) =>
+        group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, int? limit, string? cursor, ServiceDbContext db, CancellationToken ct) =>
             {
                 var devices = db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId);
                 if (includeRemoved != true)
@@ -158,25 +175,68 @@ public static class ServiceModule
                     devices = devices.Where(d => d.Type == t);
                 }
 
-                return Results.Ok(await devices.OrderBy(d => d.Type).ThenBy(d => d.MachineName)
-                    .Select(d => new DeviceItem(d.Id, d.MachineName, d.Type, d.Os, d.Online, d.LastSeenAt, d.Url, d.RemovedAt)).Take(1000).ToListAsync(ct));
+                // By machine name, then id (DEV-12); the counts per type come from the summary, which counts every device.
+                var total = await devices.CountAsync(ct);
+                if (KeysetCursor.Decode(cursor) is { } after)
+                {
+                    devices = devices.Where(d => d.MachineName.CompareTo(after.SortKey) > 0 || (d.MachineName == after.SortKey && d.Id.CompareTo(after.Id) > 0));
+                }
+
+                var take = KeysetCursor.ClampLimit(limit);
+                var page = await devices.OrderBy(d => d.MachineName).ThenBy(d => d.Id)
+                    .Select(d => new DeviceItem(d.Id, d.MachineName, d.Type, d.Os, d.Online, d.LastSeenAt, d.Url, d.RemovedAt)).Take(take + 1).ToListAsync(ct);
+                var rows = page.Take(take).ToList();
+                return Results.Ok(new PagedResult<DeviceItem>(
+                    rows, page.Count > take ? new KeysetCursor(rows[^1].MachineName, rows[^1].Id).Encode() : null, total));
             })
             .RequirePermission(Permissions.ServiceRead);
 
-        group.MapGet("/alerts", async (Guid organizationId, ServiceDbContext db, CancellationToken ct) =>
-                Results.Ok(await db.Alerts.AsNoTracking().Where(a => a.OrganizationId == organizationId)
-                    .OrderBy(a => a.Severity).ThenByDescending(a => a.CreatedAtSource)
-                    .Select(a => new AlertItem(a.Id, a.Severity, a.Title, a.DeviceName, a.CreatedAtSource)).Take(200).ToListAsync(ct)))
+        group.MapGet("/alerts", async (Guid organizationId, int? limit, string? cursor, ServiceDbContext db, CancellationToken ct) =>
+            {
+                // Critical first, newest first, then id (DEV-12).
+                var alerts = db.Alerts.AsNoTracking().Where(a => a.OrganizationId == organizationId);
+                var total = await alerts.CountAsync(ct);
+                if (KeysetCursor.Decode(cursor) is { } after &&
+                    DateTimeOffset.TryParseExact(after.Then, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+                {
+                    var rank = after.SortKey == "0" ? 0 : 1;
+                    alerts = alerts.Where(a => (a.Severity == AlertSeverity.Critical ? 0 : 1) > rank ||
+                        ((a.Severity == AlertSeverity.Critical ? 0 : 1) == rank && (a.CreatedAtSource < created || (a.CreatedAtSource == created && a.Id.CompareTo(after.Id) < 0))));
+                }
+
+                var take = KeysetCursor.ClampLimit(limit);
+                var page = await alerts.OrderBy(a => a.Severity == AlertSeverity.Critical ? 0 : 1).ThenByDescending(a => a.CreatedAtSource).ThenByDescending(a => a.Id)
+                    .Select(a => new AlertItem(a.Id, a.Severity, a.Title, a.DeviceName, a.CreatedAtSource)).Take(take + 1).ToListAsync(ct);
+                var rows = page.Take(take).ToList();
+                return Results.Ok(new PagedResult<AlertItem>(
+                    rows,
+                    page.Count > take
+                        ? new KeysetCursor(rows[^1].Severity == AlertSeverity.Critical ? "0" : "1", rows[^1].Id, rows[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture)).Encode()
+                        : null,
+                    total));
+            })
             .RequirePermission(Permissions.ServiceRead);
 
-        group.MapGet("/ticket-requests", async (Guid organizationId, ServiceDbContext db, TimeProvider time, CancellationToken ct) =>
+        group.MapGet("/ticket-requests", async (Guid organizationId, bool? attentionOnly, int? limit, string? cursor, ServiceDbContext db, TimeProvider time, CancellationToken ct) =>
             {
-                var since = time.GetUtcNow().AddDays(-14);
-                return Results.Ok(await db.TicketRequests.AsNoTracking()
-                    .Where(r => r.OrganizationId == organizationId && (r.Status != TicketRequestStatus.Created || r.CreatedAt >= since))
-                    .OrderByDescending(r => r.CreatedAt)
+                // The organization's banner asks only for what still needs attention (pending or failed), so its count is honest.
+                var since = attentionOnly == true ? DateTimeOffset.MaxValue : time.GetUtcNow().AddDays(-14);
+                var requests = db.TicketRequests.AsNoTracking()
+                    .Where(r => r.OrganizationId == organizationId && (r.Status != TicketRequestStatus.Created || r.CreatedAt >= since));
+                var total = await requests.CountAsync(ct);
+                if (KeysetCursor.Decode(cursor) is { } after &&
+                    DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+                {
+                    requests = requests.Where(r => r.CreatedAt < created || (r.CreatedAt == created && r.Id.CompareTo(after.Id) < 0));
+                }
+
+                var take = Math.Clamp(limit ?? 20, 1, KeysetCursor.MaxLimit);
+                var page = await requests.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
                     .Select(r => new TicketRequestItem(r.Id, r.Title, r.Status, r.ExternalTicketId, r.Url, r.Error, r.CreatedAt))
-                    .Take(20).ToListAsync(ct));
+                    .Take(take + 1).ToListAsync(ct);
+                var rows = page.Take(take).ToList();
+                return Results.Ok(new PagedResult<TicketRequestItem>(
+                    rows, page.Count > take ? new KeysetCursor(rows[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null, total));
             })
             .RequirePermission(Permissions.ServiceRead);
 

@@ -30,28 +30,35 @@ public class LaunchReadinessTests(CrmWebFactory factory)
 
         var paused = await admin.PostAsJsonAsync($"{Integrations}/atera/pause", new { paused = true, reason = "Incident 2026-09-24" });
         paused.StatusCode.ShouldBe(HttpStatusCode.OK);
+        HttpResponseMessage resumed;
+        try
+        {
+            var status = await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/status");
+            var atera = status.EnumerateArray().Single(s => s.GetProperty("system").GetString() == "atera");
+            atera.GetProperty("paused").GetBoolean().ShouldBeTrue();
+            atera.GetProperty("pauseReason").GetString().ShouldBe("Incident 2026-09-24");
+            atera.GetProperty("pausedBy").GetString().ShouldNotBeNullOrEmpty();
 
-        var status = await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/status");
-        var atera = status.EnumerateArray().Single(s => s.GetProperty("system").GetString() == "atera");
-        atera.GetProperty("paused").GetBoolean().ShouldBeTrue();
-        atera.GetProperty("pauseReason").GetString().ShouldBe("Incident 2026-09-24");
-        atera.GetProperty("pausedBy").GetString().ShouldNotBeNullOrEmpty();
+            // The job still records that it fell due, but reads nothing.
+            await factory.RunJobAsync<AteraCustomerSyncJob>(job => job.RunAsync(CancellationToken.None));
+            var runs = await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/runs?system=atera&limit=1");
+            var run = runs.GetProperty("items").EnumerateArray().First();
+            run.GetProperty("status").GetString().ShouldBe("Skipped");
+            run.GetProperty("message").GetString()!.ShouldContain("Incident 2026-09-24");
 
-        // The job still records that it fell due, but reads nothing.
-        await factory.RunJobAsync<AteraCustomerSyncJob>(job => job.RunAsync(CancellationToken.None));
-        var runs = await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/runs?system=atera&limit=1");
-        var run = runs.EnumerateArray().First();
-        run.GetProperty("status").GetString().ShouldBe("Skipped");
-        run.GetProperty("message").GetString()!.ShouldContain("Incident 2026-09-24");
+            var health = await admin.GetFromJsonAsync<JsonElement>("/health/integrations");
+            var healthAtera = health.GetProperty("systems").EnumerateArray().Single(s => s.GetProperty("system").GetString() == "atera");
+            healthAtera.GetProperty("paused").GetBoolean().ShouldBeTrue();
+            // A paused system is a decision, not a fault: it must not make the health report degraded on its own.
+            healthAtera.GetProperty("healthy").GetBoolean().ShouldBeTrue();
+        }
+        finally
+        {
+            // Resumed even when an assertion above fails: a pause left behind would fail every Atera test that runs after this one.
+            resumed = await admin.PostAsJsonAsync($"{Integrations}/atera/pause", new { paused = false, reason = (string?)null });
+        }
 
-        var health = await admin.GetFromJsonAsync<JsonElement>("/health/integrations");
-        var healthAtera = health.GetProperty("systems").EnumerateArray().Single(s => s.GetProperty("system").GetString() == "atera");
-        healthAtera.GetProperty("paused").GetBoolean().ShouldBeTrue();
-        // A paused system is a decision, not a fault: it must not make the health report degraded on its own.
-        healthAtera.GetProperty("healthy").GetBoolean().ShouldBeTrue();
-
-        (await admin.PostAsJsonAsync($"{Integrations}/atera/pause", new { paused = false, reason = (string?)null }))
-            .StatusCode.ShouldBe(HttpStatusCode.OK);
+        resumed.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/status")).EnumerateArray()
             .Single(s => s.GetProperty("system").GetString() == "atera")
             .GetProperty("paused").GetBoolean().ShouldBeFalse();

@@ -32,7 +32,7 @@ public static class TimeTrackingModule
 
         group.MapGet("/entries", async ([AsParameters] TimeQueryParameters p, TimeEntryService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(
-                    new TimeQuery(p.Year, p.Month, p.From, p.To, p.OrganizationId, p.TechnicianId, p.Status, p.Source, p.Mine ?? false), ct)))
+                    new TimeQuery(p.Year, p.Month, p.From, p.To, p.OrganizationId, p.TechnicianId, p.Status, p.Source, p.Mine ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.TimeOwn, Permissions.TimeRead);
 
         group.MapPost("/entries", async (TimeEntryRequest request, TimeEntryService service, CancellationToken ct) =>
@@ -91,4 +91,6 @@ public sealed record TimeQueryParameters(
     [FromQuery] Guid? TechnicianId,
     [FromQuery] TimeEntryStatus? Status,
     [FromQuery] TimeSource? Source,
-    [FromQuery] bool? Mine);
+    [FromQuery] bool? Mine,
+    [FromQuery] int? Limit,
+    [FromQuery] string? Cursor);

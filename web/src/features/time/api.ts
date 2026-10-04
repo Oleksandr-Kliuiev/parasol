@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type { ApprovalSummary, Period, TechnicianMapping, TimeEntryPage, TimeEntryRequest, TimeEntryStatus, TimeSource } from './types';
 
 const BASE = '/api/v1/time';
@@ -24,11 +25,33 @@ export const timeKeys = {
   technicians: ['identity', 'technicians'] as const,
 };
 
+/** Entries page by page; every answer carries the summary of the whole filter at that moment (DEV-12). */
 export function useTimeEntries(filters: TimeFilters, enabled = true) {
-  return useQuery({
+  const result = useInfiniteQuery({
     queryKey: timeKeys.entries(filters),
     enabled,
-    queryFn: async ({ signal }) => (await api.get<TimeEntryPage>(`${BASE}/entries${query({ ...filters })}`, signal)).data,
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam, signal }) => (await api.get<TimeEntryPage>(`${BASE}/entries${query({ ...filters, cursor: pageParam })}`, signal)).data,
+    getNextPageParam: (last) => last.nextCursor,
+  });
+  const latest = result.data?.pages.at(-1);
+  return { ...result, latest, items: result.data?.pages.flatMap((page) => page.items) ?? [] };
+}
+
+/** Every entry of a short range — a timesheet week — page after page, with the summary of the range. */
+export function useAllTimeEntries(filters: TimeFilters, enabled = true) {
+  return useQuery({
+    queryKey: [...timeKeys.entries(filters), 'all'],
+    enabled,
+    queryFn: async ({ signal }) => {
+      let page = (await api.get<TimeEntryPage>(`${BASE}/entries${query({ ...filters, limit: 200 })}`, signal)).data;
+      const items = [...page.items];
+      for (let guard = 0; page.nextCursor && guard < 20; guard++) {
+        page = (await api.get<TimeEntryPage>(`${BASE}/entries${query({ ...filters, limit: 200, cursor: page.nextCursor })}`, signal)).data;
+        items.push(...page.items);
+      }
+      return { ...page, items };
+    },
   });
 }
 
@@ -92,11 +115,9 @@ export function usePeriodActions() {
   };
 }
 
+/** Unmapped first, a page at a time with the count of all (DEV-12). */
 export function useTechnicianMappings(unmappedOnly = false) {
-  return useQuery({
-    queryKey: [...timeKeys.technicians, unmappedOnly],
-    queryFn: async ({ signal }) => (await api.get<TechnicianMapping[]>(`/api/v1/identity/technicians${query({ unmappedOnly })}`, signal)).data,
-  });
+  return usePagedList<TechnicianMapping>([...timeKeys.technicians, unmappedOnly], '/api/v1/identity/technicians', { unmappedOnly });
 }
 
 export function useMapTechnician() {

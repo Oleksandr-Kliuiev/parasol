@@ -51,9 +51,9 @@ export function IndexationPage() {
   const preview = useIndexationPreview(percent, effectiveFrom, asked);
   const apply = useApplyIndexation();
   const contracts = preview.data?.contracts ?? [];
+  // Only contracts of the preview on screen count as chosen: a selection from an earlier percentage or date is not sent (DEV-12).
   const chosen = contracts.filter((c) => selected.has(c.contractId));
-  const monthlyBefore = chosen.reduce((sum, c) => sum + (c.monthlyBefore ?? 0), 0);
-  const monthlyAfter = chosen.reduce((sum, c) => sum + (c.monthlyAfter ?? 0), 0);
+  const totals = preview.data?.totals;
 
   const runPreview = () => {
     setAsked(true);
@@ -69,8 +69,12 @@ export function IndexationPage() {
 
   const run = async () => {
     try {
-      const result = await apply.mutateAsync({ percent, effectiveFrom, contractIds: [...selected] });
-      notify(t('contracts.indexation.applied', { contracts: result.contracts, lines: result.lines }));
+      const result = await apply.mutateAsync({ percent, effectiveFrom, contractIds: chosen.map((c) => c.contractId) });
+      notify(
+        t('contracts.indexation.applied', { contracts: result.contracts, lines: result.lines }),
+        result.skipped.length > 0 ? 'warning' : 'success',
+        result.skipped.length > 0 ? t('contracts.indexation.skipped', { count: result.skipped.length }) : undefined,
+      );
       setSelected(new Set());
       await preview.refetch();
     } catch (e) {
@@ -110,9 +114,9 @@ export function IndexationPage() {
               <Text>
                 {t('contracts.indexation.selected', { selected: chosen.length, total: contracts.length })}
               </Text>
-              <Text>
-                {t('contracts.indexation.monthlyChange', { before: formatMoney(monthlyBefore), after: formatMoney(monthlyAfter) })}
-              </Text>
+              {totals?.monthlyBefore != null && (
+                <Text>{t('contracts.indexation.monthlyChange', { before: formatMoney(totals.monthlyBefore), after: formatMoney(totals.monthlyAfter) })}</Text>
+              )}
             </div>
 
             <div className={catalog.tableWrap}>
@@ -121,7 +125,7 @@ export function IndexationPage() {
                   <TableRow>
                     <TableHeaderCell>
                       <Checkbox
-                        checked={selected.size > 0 && selected.size === contracts.length}
+                        checked={chosen.length > 0 && chosen.length === contracts.length}
                         onChange={(_, d) => setSelected(d.checked ? new Set(contracts.map((c) => c.contractId)) : new Set())}
                         aria-label={t('contracts.indexation.selectAll')}
                       />
@@ -173,8 +177,8 @@ export function IndexationPage() {
             </MessageBar>
 
             <div style={{ marginTop: 12 }}>
-              <Button appearance="primary" disabled={selected.size === 0 || apply.isPending} onClick={() => void run()}>
-                {t('contracts.indexation.apply', { count: selected.size })}
+              <Button appearance="primary" disabled={chosen.length === 0 || apply.isPending} onClick={() => void run()}>
+                {t('contracts.indexation.apply', { count: chosen.length })}
               </Button>
             </div>
           </>

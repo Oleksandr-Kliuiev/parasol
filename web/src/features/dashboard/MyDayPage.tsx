@@ -142,14 +142,16 @@ function StaleDealsPanel() {
   const styles = useStyles();
   const { t } = useTranslation();
   const canSeeMoney = useCan(Permissions.financeRead);
-  const { data = [], isPending } = useOpportunities({ mine: true, stale: true });
+  // The eight that have waited longest to close first; the count says how many there are in all (DEV-12).
+  const deals = useOpportunities({ mine: true, stale: true }, true, 8);
+  const { items: data, isPending } = deals;
 
   if (!isPending && data.length === 0) return null;
 
   return (
     <Panel title={t('myDay.staleDeals')}>
       <ul className={styles.list}>
-        {data.slice(0, 8).map((opportunity) => (
+        {data.map((opportunity) => (
           <li key={opportunity.id} className={styles.row}>
             <div className={styles.rowText}>
               <AppLink to={`/sales/opportunities/${opportunity.id}`}>
@@ -163,6 +165,9 @@ function StaleDealsPanel() {
           </li>
         ))}
       </ul>
+      {(deals.total ?? 0) > data.length && (
+        <AppLink to="/pipeline?mine=true&stale=true">{t('myDay.allStaleDeals', { count: deals.total ?? 0 })}</AppLink>
+      )}
     </Panel>
   );
 }
@@ -173,9 +178,10 @@ function LicensingAttentionPanel() {
   const { t } = useTranslation();
   const { data } = useLicensingAttention();
   const closing = data?.cancellationWindow ?? [];
-  const notBilled = data?.notBilled ?? [];
+  // The summary counts every subscription; the lists only hold the first twenty of each kind (DEV-12).
+  const notBilledCount = data?.summary.notBilled ?? 0;
 
-  if (closing.length === 0 && notBilled.length === 0) return null;
+  if (closing.length === 0 && notBilledCount === 0) return null;
 
   return (
     <Panel title={t('myDay.licensingAttention')}>
@@ -196,9 +202,14 @@ function LicensingAttentionPanel() {
             </span>
           </li>
         ))}
-        {notBilled.length > 0 && (
+        {(data?.summary.cancellationWindowOpen ?? 0) > Math.min(closing.length, 5) && (
           <li className={styles.row}>
-            <AppLink to="/licenses?notBilled=true">{t('myDay.licensesNotBilled', { count: notBilled.length })}</AppLink>
+            <AppLink to="/licenses?window=true">{t('myDay.allCancellationWindows', { count: data?.summary.cancellationWindowOpen ?? 0 })}</AppLink>
+          </li>
+        )}
+        {notBilledCount > 0 && (
+          <li className={styles.row}>
+            <AppLink to="/licenses?notBilled=true">{t('myDay.licensesNotBilled', { count: notBilledCount })}</AppLink>
           </li>
         )}
       </ul>
@@ -211,12 +222,15 @@ function BillingPanel() {
   const styles = useStyles();
   const { t, i18n } = useTranslation();
   const canSeeMoney = useCan(Permissions.financeRead);
-  const runs = useRuns({ limit: 6 });
-  const invoices = useInvoices({ overdueOnly: true, limit: 5 });
-  const open = (runs.data ?? []).find((run) => run.status !== 'Closed');
-  const overdue = invoices.data?.invoices ?? [];
+  // The newest open run, whatever its period, and how many more are open (DEV-12) — not whatever the last six runs hold.
+  const runs = useRuns({ openOnly: true, limit: 1 });
+  // Only the totals are shown: they cover every overdue invoice, so one row is enough to ask for (DEV-12).
+  const invoices = useInvoices({ overdueOnly: true, limit: 1 });
+  const open = runs.items.at(0);
+  const moreOpen = Math.max((runs.total ?? 0) - 1, 0);
+  const overdueCount = invoices.data?.count ?? 0;
 
-  if (!open && overdue.length === 0) return null;
+  if (!open && overdueCount === 0) return null;
 
   return (
     <Panel title={t('myDay.billing')}>
@@ -235,12 +249,17 @@ function BillingPanel() {
             <RunStatusBadge status={open.status} requiresSecondApproval={open.requiresSecondApproval} />
           </li>
         )}
-        {overdue.length > 0 && (
+        {moreOpen > 0 && (
+          <li className={styles.row}>
+            <AppLink to="/billing">{t('myDay.moreOpenRuns', { count: moreOpen })}</AppLink>
+          </li>
+        )}
+        {overdueCount > 0 && (
           <li className={styles.row}>
             <span className={styles.warning}>
               <Warning20Filled aria-hidden />
               <span>
-                <AppLink to="/billing/invoices?overdue=true">{t('myDay.overdueInvoices', { count: invoices.data?.count ?? overdue.length })}</AppLink>
+                <AppLink to="/billing/invoices?overdue=true">{t('myDay.overdueInvoices', { count: overdueCount })}</AppLink>
                 {canSeeMoney && (
                   <Text block size={200}>
                     {formatMoney(invoices.data?.overdue)}

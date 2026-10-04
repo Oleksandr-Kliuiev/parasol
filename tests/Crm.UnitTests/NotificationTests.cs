@@ -112,6 +112,25 @@ public class NotificationTests
     }
 
     [Fact]
+    public void The_digest_shows_an_overdue_amount_only_to_a_recipient_who_may_see_money()
+    {
+        // DEV-12-AC04: the notice keeps its parameters; the digest leaves the amount out for a reader without finance.read.
+        var notification = Notification.Create(new NotificationRequest(
+            NotificationKind.InvoiceOverdue,
+            Guid.NewGuid(),
+            "overdue",
+            new Dictionary<string, string> { ["number"] = "10042", ["organization"] = "Havbris", ["date"] = "01.09.2026", ["amount"] = "12 500 NOK", ["days"] = "33" }));
+
+        var technician = new UserProfile(Guid.NewGuid(), "Ola", "ola@vardahei.no", "en", true, [Crm.Authorization.CrmRoles.Technician]);
+        var finance = new UserProfile(Guid.NewGuid(), "Kari", "kari@vardahei.no", "en", true, [Crm.Authorization.CrmRoles.Finance]);
+
+        var withoutMoney = NotificationDigestJob.Compose(technician, [notification], new NotificationsOptions());
+        withoutMoney.TextBody.ShouldNotContain("12 500");
+        withoutMoney.TextBody.ShouldContain("Invoice 10042 to Havbris was due 01.09.2026 and is unpaid.");
+        NotificationDigestJob.Compose(finance, [notification], new NotificationsOptions()).TextBody.ShouldContain("12 500 NOK outstanding");
+    }
+
+    [Fact]
     public void The_digest_escapes_what_users_typed()
     {
         var profile = new UserProfile(Guid.NewGuid(), "Kari", "kari@vardahei.no", "en", true);

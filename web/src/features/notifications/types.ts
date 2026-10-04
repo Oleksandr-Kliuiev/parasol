@@ -28,6 +28,9 @@ export interface Notification {
 export interface NotificationList {
   unread: number;
   items: Notification[];
+  /** Continues the list (DEV-12); the bell reads only the first page. */
+  nextCursor: string | null;
+  totalCount: number;
 }
 
 export interface NotificationPreferences {

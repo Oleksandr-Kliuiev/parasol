@@ -3,6 +3,7 @@ import { CheckmarkCircle20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { AppLink } from '../../shared/components/AppLink';
 import { Panel } from '../../shared/components/Panel';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
@@ -30,7 +31,9 @@ export function MyTasksPanel() {
   const { t } = useTranslation();
   const notify = useNotify();
   const actions = useActivityActions();
-  const { data = [], isPending } = useActivities({ mine: true, open: true });
+  // The ten due first, and the rest on request: the panel says how many open tasks there are (DEV-12).
+  const tasks = useActivities({ mine: true, open: true }, true, 10);
+  const { items: data, isPending } = tasks;
 
   const complete = async (id: string, subject: string) => {
     try {
@@ -45,7 +48,7 @@ export function MyTasksPanel() {
     <Panel title={t('myDay.myTasks')}>
       {!isPending && data.length === 0 && <Text className={styles.muted}>{t('myDay.myTasksEmpty')}</Text>}
       <ul className={styles.list}>
-        {data.slice(0, 10).map((activity) => (
+        {data.map((activity) => (
           <li key={activity.id} className={styles.row}>
             <span className={styles.text}>
               <Text weight="semibold">{activity.subject}</Text>
@@ -64,6 +67,7 @@ export function MyTasksPanel() {
           </li>
         ))}
       </ul>
+      <ListFooter shown={data.length} total={tasks.total} hasMore={tasks.hasNextPage} loading={tasks.isFetchingNextPage} onMore={() => void tasks.fetchNextPage()} />
     </Panel>
   );
 }

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
 import type { NotificationList, NotificationPreferences } from './types';
 
@@ -17,6 +17,17 @@ export function useNotifications(unreadOnly = false, limit = 50) {
     // The bell should not go stale while the user works; the worker adds notices in the background.
     refetchInterval: 120_000,
   });
+}
+
+/** The notices page by page, with how many there are in all (DEV-12). */
+export function useNotificationPages(unreadOnly: boolean) {
+  const result = useInfiniteQuery({
+    queryKey: [...notificationKeys.list({ unreadOnly }), 'pages'],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam, signal }) => (await api.get<NotificationList>(`${BASE}${query({ unreadOnly, limit: 50, cursor: pageParam })}`, signal)).data,
+    getNextPageParam: (last) => last.nextCursor,
+  });
+  return { ...result, latest: result.data?.pages.at(-1), items: result.data?.pages.flatMap((page) => page.items) ?? [] };
 }
 
 export function useNotificationActions() {

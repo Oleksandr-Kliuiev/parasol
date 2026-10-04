@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type { ImportResult, LicenseUsageRow, LicensingAttention, ReconciliationReport, Subscription, SubscriptionSource } from './types';
 
 const BASE = '/api/v1/licensing';
@@ -24,12 +25,9 @@ export const licensingKeys = {
   periods: ['licensing', 'reconciliation', 'periods'] as const,
 };
 
+/** Subscriptions page by page, with how many the filter matches (DEV-12). */
 export function useSubscriptions(filters: SubscriptionFilters, enabled = true) {
-  return useQuery({
-    queryKey: licensingKeys.subscriptions(filters),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<Subscription[]>(`${BASE}/subscriptions${query(filters)}`, signal)).data,
-  });
+  return usePagedList<Subscription>(licensingKeys.subscriptions(filters), `${BASE}/subscriptions`, filters, { enabled });
 }
 
 export function useLicensingAttention(enabled = true) {

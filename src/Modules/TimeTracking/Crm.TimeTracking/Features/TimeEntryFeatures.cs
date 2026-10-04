@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Authorization;
 using Crm.Catalog.Contracts;
 using Crm.Customers.Contracts;
@@ -83,11 +84,17 @@ public sealed record TimeEntryDto(
 
 public sealed record TimeSummaryDto(decimal Hours, decimal BillableHours, decimal ApprovedHours, decimal NewHours, [property: SensitiveData(Permissions.FinanceRead)] decimal Amount);
 
-public sealed record TimeEntryPage(IReadOnlyList<TimeEntryDto> Items, TimeSummaryDto Summary, bool PeriodClosed);
+/// <summary>
+/// One page of time entries and the summary of every entry the filter matches (DEV-12): <paramref name="TotalCount"/> and
+/// <paramref name="Summary"/> never depend on the page size.
+/// </summary>
+public sealed record TimeEntryPage(IReadOnlyList<TimeEntryDto> Items, TimeSummaryDto Summary, bool PeriodClosed, string? NextCursor, int TotalCount);
 
 public sealed record PeriodDto(int Year, int Month, bool IsClosed, DateTimeOffset? ClosedAt, string? ClosedByName, string? ReopenReason, int NewEntries, decimal Hours);
 
-public sealed record TimeQuery(int? Year, int? Month, DateOnly? From, DateOnly? To, Guid? OrganizationId, Guid? TechnicianId, TimeEntryStatus? Status, TimeSource? Source, bool MineOnly);
+public sealed record TimeQuery(
+    int? Year, int? Month, DateOnly? From, DateOnly? To, Guid? OrganizationId, Guid? TechnicianId, TimeEntryStatus? Status, TimeSource? Source, bool MineOnly,
+    int? Limit = null, string? Cursor = null);
 
 internal static class TimeErrors
 {
@@ -120,8 +127,7 @@ internal sealed class TimeEntryService(
 {
     public async Task<TimeEntryPage> ListAsync(TimeQuery query, CancellationToken ct)
     {
-        // Tracked on purpose: each row carries its ETag, so the timesheet can edit an entry without fetching it again.
-        var entries = db.TimeEntries.Include(e => e.Allocations).AsQueryable();
+        var entries = db.TimeEntries.AsQueryable();
         if (query.MineOnly || !currentUser.HasPermission(Permissions.TimeRead))
         {
             var userId = currentUser.UserId;
@@ -165,17 +171,40 @@ internal sealed class TimeEntryService(
             entries = entries.Where(e => e.Source == source);
         }
 
-        var rows = await entries.OrderByDescending(e => e.WorkDate).ThenBy(e => e.Id).Take(500).ToListAsync(ct);
+        // The summary is one SQL aggregate over the whole filter, never a sum of the rows on the page (DEV-12).
+        var totals = await entries
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Hours = g.Sum(e => e.Hours),
+                Billable = g.Sum(e => e.Billable ? e.Hours : 0m),
+                Approved = g.Sum(e => e.Status == TimeEntryStatus.Approved || e.Status == TimeEntryStatus.Invoiced ? e.Hours : 0m),
+                New = g.Sum(e => e.Status == TimeEntryStatus.New ? e.Hours : 0m),
+                Amount = g.Sum(e => e.Amount ?? 0m),
+            })
+            .SingleOrDefaultAsync(ct);
+
+        // Newest work date first, then id: the order the cursor continues.
+        if (KeysetCursor.Decode(query.Cursor) is { } cursor &&
+            DateOnly.TryParseExact(cursor.SortKey, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            entries = entries.Where(e => e.WorkDate < date || (e.WorkDate == date && e.Id.CompareTo(cursor.Id) > 0));
+        }
+
+        var limit = KeysetCursor.ClampLimit(query.Limit);
+        // Tracked on purpose: each row carries its ETag, so the timesheet can edit an entry without fetching it again.
+        var page = await entries.Include(e => e.Allocations).OrderByDescending(e => e.WorkDate).ThenBy(e => e.Id).Take(limit + 1).ToListAsync(ct);
+        var rows = page.Take(limit).ToList();
         var closed = await ClosedPeriodsAsync(ct);
         var dtos = await ToDtosAsync(rows, closed, ct);
-        var summary = new TimeSummaryDto(
-            rows.Sum(e => e.Hours),
-            rows.Where(e => e.Billable).Sum(e => e.Hours),
-            rows.Where(e => e.Status is TimeEntryStatus.Approved or TimeEntryStatus.Invoiced).Sum(e => e.Hours),
-            rows.Where(e => e.Status == TimeEntryStatus.New).Sum(e => e.Hours),
-            rows.Sum(e => e.Amount ?? 0));
+        var summary = new TimeSummaryDto(totals?.Hours ?? 0m, totals?.Billable ?? 0m, totals?.Approved ?? 0m, totals?.New ?? 0m, totals?.Amount ?? 0m);
         var periodClosed = query is { Year: { } y, Month: { } m } && closed.Contains((y, m));
-        return new TimeEntryPage(dtos, summary, periodClosed);
+        var last = rows.LastOrDefault();
+        return new TimeEntryPage(
+            dtos, summary, periodClosed,
+            page.Count > limit && last is not null ? new KeysetCursor(last.WorkDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), last.Id).Encode() : null,
+            totals?.Count ?? 0);
     }
 
     public async Task<Result<TimeEntryDto>> CreateAsync(TimeEntryRequest request, CancellationToken ct)

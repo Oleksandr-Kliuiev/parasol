@@ -54,6 +54,9 @@ internal static class NotificationTexts
             NotificationKind.StaleOpportunity => nb
                 ? $"Salget «{Value("name")}» hos {Value("organization")} har ikke hatt aktivitet i {Value("days")} dager."
                 : $"The deal “{Value("name")}” at {Value("organization")} has had no activity for {Value("days")} days.",
+            NotificationKind.InvoiceOverdue when !p.ContainsKey("amount") => nb
+                ? $"Faktura {Value("number")} til {Value("organization")} forfalt {Value("date")} og er ikke betalt."
+                : $"Invoice {Value("number")} to {Value("organization")} was due {Value("date")} and is unpaid.",
             NotificationKind.InvoiceOverdue => nb
                 ? $"Faktura {Value("number")} til {Value("organization")} forfalt {Value("date")}: {Value("amount")} utestående."
                 : $"Invoice {Value("number")} to {Value("organization")} was due {Value("date")}: {Value("amount")} outstanding.",
@@ -62,6 +65,15 @@ internal static class NotificationTexts
     }
 
     public static string Money(decimal amount) => amount.ToString("N0", CultureInfo.GetCultureInfo("nb-NO")) + " NOK";
+
+    /// <summary>Parameters that carry money: shown only to readers with finance.read (DEV-12-AC04), in the app and in the digest.</summary>
+    public static readonly IReadOnlySet<string> MoneyParameters = new HashSet<string>(StringComparer.Ordinal) { "amount" };
+
+    /// <summary>The parameters as a reader without finance.read may see them.</summary>
+    public static IReadOnlyDictionary<string, string> WithoutMoney(IReadOnlyDictionary<string, string> parameters) =>
+        parameters.Keys.Any(MoneyParameters.Contains)
+            ? parameters.Where(p => !MoneyParameters.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal)
+            : parameters;
 
     public static string Hours(decimal hours) => hours.ToString("0.##", CultureInfo.InvariantCulture);
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Infrastructure.Persistence;
 using Crm.Privacy.Domain;
 using Crm.Privacy.Persistence;
@@ -42,12 +43,23 @@ internal sealed class LegalHoldService(PrivacyDbContext db, ICurrentUser current
 {
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
 
-    public async Task<IReadOnlyList<LegalHoldResponse>> ListAsync(bool includeEnded, CancellationToken ct)
+    public async Task<PagedResult<LegalHoldResponse>> ListAsync(bool includeEnded, int? limit, string? cursor, CancellationToken ct)
     {
         var today = Today();
-        var holds = await db.LegalHolds.Where(h => includeEnded || (h.ReleasedAt == null && h.Until >= today))
-            .OrderByDescending(h => h.CreatedAt).Take(500).ToListAsync(ct);
-        return holds.Select(ToResponse).ToList();
+        var query = db.LegalHolds.Where(h => includeEnded || (h.ReleasedAt == null && h.Until >= today));
+        // Newest first, then id (DEV-12). Tracked: the answer carries each hold's ETag for its release.
+        var total = await query.CountAsync(ct);
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+        {
+            query = query.Where(h => h.CreatedAt < created || (h.CreatedAt == created && h.Id.CompareTo(after.Id) < 0));
+        }
+
+        var take = KeysetCursor.ClampLimit(limit);
+        var page = await query.OrderByDescending(h => h.CreatedAt).ThenByDescending(h => h.Id).Take(take + 1).ToListAsync(ct);
+        var holds = page.Take(take).ToList();
+        var next = page.Count > take ? new KeysetCursor(holds[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture), holds[^1].Id).Encode() : null;
+        return new PagedResult<LegalHoldResponse>(holds.Select(ToResponse).ToList(), next, total);
     }
 
     public async Task<Result<LegalHoldResponse>> PlaceAsync(PlaceHoldRequest request, CancellationToken ct)
@@ -85,13 +97,26 @@ internal sealed class LegalHoldService(PrivacyDbContext db, ICurrentUser current
         return ToResponse(hold);
     }
 
-    public async Task<IReadOnlyList<SuppressionResponse>> SuppressionsAsync(CancellationToken ct)
+    public async Task<PagedResult<SuppressionResponse>> SuppressionsAsync(int? limit, string? cursor, CancellationToken ct)
     {
-        var suppressions = await db.Suppressions.OrderByDescending(s => s.CreatedAt).Take(500).ToListAsync(ct);
+        IQueryable<Suppression> query = db.Suppressions;
+        var total = await query.CountAsync(ct);
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+        {
+            query = query.Where(s => s.CreatedAt < created || (s.CreatedAt == created && s.Id.CompareTo(after.Id) < 0));
+        }
+
+        var take = KeysetCursor.ClampLimit(limit);
+        var page = await query.OrderByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id).Take(take + 1).ToListAsync(ct);
+        var suppressions = page.Take(take).ToList();
+        var next = page.Count > take
+            ? new KeysetCursor(suppressions[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture), suppressions[^1].Id).Encode()
+            : null;
         var caseIds = suppressions.Select(s => s.CaseId).Distinct().ToList();
         var numbers = await db.Cases.AsNoTracking().Where(c => caseIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Number, ct);
-        return suppressions.Select(s => new SuppressionResponse(
-            s.Id, s.Kind, s.CaseId, numbers.GetValueOrDefault(s.CaseId), s.CreatedAt, s.LiftedAt, s.LiftReason, db.GetETag(s))).ToList();
+        return new PagedResult<SuppressionResponse>(suppressions.Select(s => new SuppressionResponse(
+            s.Id, s.Kind, s.CaseId, numbers.GetValueOrDefault(s.CaseId), s.CreatedAt, s.LiftedAt, s.LiftReason, db.GetETag(s))).ToList(), next, total);
     }
 
     /// <summary>A new lawful basis (the person became a customer again, gave consent): the external systems may bring them back.</summary>

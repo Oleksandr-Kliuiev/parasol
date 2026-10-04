@@ -62,7 +62,8 @@
     "open": "Open",
     "status": "Status",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "shownOf": "Showing {{shown}} of {{total}}"
   },
   "errors": {
     "generic": "Something went wrong",
@@ -182,7 +183,11 @@
     "billing": "Billing",
     "runCustomers": "{{count}} customers",
     "runAnomalies": "{{count}} need a look",
-    "overdueInvoices": "{{count}} overdue invoices"
+    "moreOpenRuns_one": "{{count}} more open run",
+    "moreOpenRuns_other": "{{count}} more open runs",
+    "overdueInvoices": "{{count}} overdue invoices",
+    "allStaleDeals": "All {{count}} on the board",
+    "allCancellationWindows": "All {{count}} with an open cancellation window"
   },
   "organizations": {
     "title": "Organizations",
@@ -381,6 +386,8 @@
     "search": "Search users"
   },
   "userPicker": {
+    "narrow_one": "and {{count}} more — type to narrow",
+    "narrow_other": "and {{count}} more — type to narrow",
     "placeholder": "Search people",
     "clear": "Clear"
   },
@@ -393,6 +400,7 @@
     "enterHint": "↑↓ to move · Enter to open · Enter without selection searches organizations"
   },
   "duplicates": {
+    "strongestShown": "The {{shown}} strongest of {{total}} possible duplicates are listed; merging or dismissing brings up the next.",
     "title": "Possible duplicates",
     "subtitle": "Organizations that look like the same company. Merge them or mark them as different.",
     "link": "Possible duplicates",
@@ -591,6 +599,7 @@
     "description": "Events one module could not deliver to another: after ten failed attempts (dead letter) or because the stored message cannot be read (quarantine). Fix the cause first, then replay: the stored message is delivered unchanged, and handlers that already finished are skipped.",
     "backlog": "Undelivered events per module",
     "counts": "{{module}}: {{deadLetter}} dead letters, {{quarantined}} quarantined, {{pending}} waiting for delivery",
+    "newestShown": "The newest {{shown}} of {{total}} undelivered events are listed; once they are replayed, the next ones appear.",
     "empty": "Nothing waits for a person: no dead letters and no quarantined events.",
     "replaySelected": "Replay selected ({{count}})",
     "limit": "At most {{max}} messages per replay: the first {{max}} are taken.",
@@ -1085,7 +1094,7 @@
       "empty": "No contracts are due for indexation on that date.",
       "selected": "{{selected}} of {{total}} contracts selected",
       "selectAll": "Select all",
-      "monthlyChange": "Per month: {{before}} → {{after}}",
+      "monthlyChange": "All due contracts per month: {{before}} → {{after}}",
       "due": "Due",
       "before": "Today, per month",
       "after": "After, per month",
@@ -1094,7 +1103,8 @@
       "notifyHint": "Customers have to be told about the new prices; the notice period of each contract still applies.",
       "apply": "Index {{count}} contracts",
       "applied": "Indexed {{contracts}} contracts and {{lines}} lines",
-      "failed": "The indexation could not be applied."
+      "failed": "The indexation could not be applied.",
+      "skipped": "{{count}} selected contracts were left out: not due on that date or without an indexation clause."
     }
   },
   "service": {
@@ -1113,7 +1123,6 @@
     "noOpenTickets": "No open tickets.",
     "devices": "Devices",
     "noDevices": "No devices from Atera yet.",
-    "moreDevices": "and {{count}} more",
     "online": "online",
     "offline": "offline",
     "alerts": "Open alerts",
@@ -1587,6 +1596,8 @@
     "removeFromCalendarNamed": "Remove {{subject}} from the calendar"
   },
   "mail": {
+    "partialSearch_one": "Searched for {{searched}}; {{count}} more address was not searched. Add the customer's e-mail domain to find all of them.",
+    "partialSearch_other": "Searched for {{searched}}; {{count}} more addresses were not searched. Add the customer's e-mail domain to find all of them.",
     "title": "Mail with the customer",
     "explainer": "Read straight from your mailbox. The CRM stores nothing until you press “Save to CRM”, and then only the subject, sender, time and a link — never the body.",
     "notConnected": "Outlook mail is not connected for this sign-in.",
@@ -1939,7 +1950,8 @@
       "dates": "Dates",
       "total": "Total including VAT",
       "outstanding": "Outstanding"
-    }
+    },
+    "totalsScope": "Totals of all invoices matching the filter ({{count}}), overdue as of {{date}}."
   },
   "notifications": {
     "title": "Notifications",
@@ -1979,7 +1991,8 @@
       "SubscriptionCancellationWindow": "{{offer}} at {{organization}}: the cancellation window closes {{date}}.",
       "SubscriptionRenewal": "{{offer}} at {{organization}} renews {{date}} ({{quantity}} licences).",
       "StaleOpportunity": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} days.",
-      "InvoiceOverdue": "Invoice {{number}} to {{organization}} was due {{date}}: {{amount}} outstanding."
+      "InvoiceOverdue": "Invoice {{number}} to {{organization}} was due {{date}}: {{amount}} outstanding.",
+      "InvoiceOverdueWithoutAmount": "Invoice {{number}} to {{organization}} was due {{date}} and is unpaid."
     }
   },
   "dashboard": {
@@ -2245,6 +2258,7 @@
     }
   },
   "migration": {
+    "rowsShown": "{{shown}} of {{total}} rows that change something or need attention are listed, conflicts and failures first; the counts above cover the whole file.",
     "title": "Migration",
     "subtitle": "Customers and their main contact from the old systems, previewed before anything is written.",
     "file": "File",

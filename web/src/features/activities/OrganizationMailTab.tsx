@@ -50,7 +50,9 @@ export function OrganizationMailTab({ organizationId }: { organizationId: string
   const canWrite = useCan(Permissions.activitiesWrite);
   const outlook = useOutlookStatus();
   const connected = outlook.data?.mail ?? false;
-  const { data = [], error, isPending, refetch } = useCustomerMail(organizationId, connected);
+  const mail = useCustomerMail(organizationId, connected);
+  const { error, isPending, refetch } = mail;
+  const data = mail.data?.messages ?? [];
   const actions = useActivityActions();
 
   if (outlook.isPending) return <Spinner label={t('common.loading')} />;
@@ -85,6 +87,11 @@ export function OrganizationMailTab({ organizationId }: { organizationId: string
       <Text block className={`${styles.muted} ${styles.note}`}>
         {t('mail.explainer')}
       </Text>
+      {mail.data && mail.data.notSearched > 0 && (
+        <Text block className={`${styles.muted} ${styles.note}`}>
+          {t('mail.partialSearch', { searched: mail.data.searched.join(', '), count: mail.data.notSearched })}
+        </Text>
+      )}
       {data.length === 0 ? (
         <EmptyState message={t('mail.empty')} />
       ) : (

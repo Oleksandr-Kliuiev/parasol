@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Customers.Contracts;
 using Crm.Customers.Domain;
 using Crm.Customers.Persistence;
@@ -41,6 +42,8 @@ public sealed record MergeListItem(
 
 public sealed record FindDuplicates(Guid? OrganizationId);
 
+public sealed record ListMerges(int? Limit, string? Cursor);
+
 public sealed record MergeOrganizations(Guid TargetId, Guid SourceId);
 
 public sealed record UndoMerge(Guid MergeId);
@@ -61,11 +64,15 @@ internal static class MergeErrors
         "The organization was changed or deleted after the merge. Undoing would overwrite those changes; correct the records manually.");
 }
 
-internal sealed class FindDuplicatesHandler(CustomersDbContext db) : IQueryHandler<FindDuplicates, IReadOnlyList<DuplicatePairResponse>>
+internal sealed class FindDuplicatesHandler(CustomersDbContext db) : IQueryHandler<FindDuplicates, PagedResult<DuplicatePairResponse>>
 {
-    private const int MaxPairs = 200;
+    public const int MaxPairs = 200;
 
-    public async Task<IReadOnlyList<DuplicatePairResponse>> HandleAsync(FindDuplicates query, CancellationToken cancellationToken)
+    /// <summary>
+    /// The strongest pairs first, at most <see cref="MaxPairs"/>, with the number of all of them (DEV-12): merging or dismissing
+    /// brings up the next, and the page says how many are left.
+    /// </summary>
+    public async Task<PagedResult<DuplicatePairResponse>> HandleAsync(FindDuplicates query, CancellationToken cancellationToken)
     {
         // Loads a narrow projection of all organizations; fine for the planned volume (NFR-04: 5 000).
         var candidates = await db.Organizations.AsNoTracking()
@@ -77,13 +84,13 @@ internal sealed class FindDuplicatesHandler(CustomersDbContext db) : IQueryHandl
             .Select(d => (d.FirstOrganizationId, d.SecondOrganizationId))
             .ToHashSet();
 
-        var pairs = DuplicateDetector.Find(candidates, dismissed)
+        var found = DuplicateDetector.Find(candidates, dismissed)
             .Where(p => query.OrganizationId is not { } id || p.FirstId == id || p.SecondId == id)
-            .Take(MaxPairs)
             .ToList();
+        var pairs = found.Take(MaxPairs).ToList();
         if (pairs.Count == 0)
         {
-            return [];
+            return new PagedResult<DuplicatePairResponse>([], null, 0);
         }
 
         var ids = pairs.SelectMany(p => new[] { p.FirstId, p.SecondId }).Distinct().ToList();
@@ -94,7 +101,8 @@ internal sealed class FindDuplicatesHandler(CustomersDbContext db) : IQueryHandl
                 db.OrganizationContacts.Count(a => a.OrganizationId == o.Id && a.IsActive), o.CreatedAt))
             .ToDictionaryAsync(o => o.Id, cancellationToken);
 
-        return pairs.Select(p => new DuplicatePairResponse(sides[p.FirstId], sides[p.SecondId], p.Reasons)).ToList();
+        return new PagedResult<DuplicatePairResponse>(
+            pairs.Select(p => new DuplicatePairResponse(sides[p.FirstId], sides[p.SecondId], p.Reasons)).ToList(), null, found.Count);
     }
 }
 
@@ -245,16 +253,24 @@ internal sealed class UndoMergeHandler(CustomersDbContext db, TimeProvider timeP
 }
 
 internal sealed class ListMergesHandler(CustomersDbContext db, IUserDirectory users, TimeProvider timeProvider)
-    : IQueryHandler<Unit, IReadOnlyList<MergeListItem>>
+    : IQueryHandler<ListMerges, PagedResult<MergeListItem>>
 {
-    public async Task<IReadOnlyList<MergeListItem>> HandleAsync(Unit query, CancellationToken cancellationToken)
+    public async Task<PagedResult<MergeListItem>> HandleAsync(ListMerges query, CancellationToken cancellationToken)
     {
         var since = timeProvider.GetUtcNow() - OrganizationMerge.UndoWindow - TimeSpan.FromDays(30);
-        var merges = await db.OrganizationMerges.AsNoTracking()
-            .Where(m => m.CreatedAt >= since)
-            .OrderByDescending(m => m.CreatedAt)
-            .Take(50)
-            .ToListAsync(cancellationToken);
+        var recent = db.OrganizationMerges.AsNoTracking().Where(m => m.CreatedAt >= since);
+        // Newest first, then id (DEV-12): every merge that can still be undone is reachable, a page at a time.
+        var total = await recent.CountAsync(cancellationToken);
+        if (KeysetCursor.Decode(query.Cursor) is { } after &&
+            DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+        {
+            recent = recent.Where(m => m.CreatedAt < created || (m.CreatedAt == created && m.Id.CompareTo(after.Id) < 0));
+        }
+
+        var take = KeysetCursor.ClampLimit(query.Limit);
+        var page = await recent.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).Take(take + 1).ToListAsync(cancellationToken);
+        var merges = page.Take(take).ToList();
+        var next = page.Count > take ? new KeysetCursor(merges[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture), merges[^1].Id).Encode() : null;
         var orgIds = merges.SelectMany(m => new[] { m.TargetId, m.SourceId }).Distinct().ToList();
         var names = await db.Organizations.AsNoTracking().IgnoreQueryFilters()
             .Where(o => orgIds.Contains(o.Id))
@@ -262,7 +278,7 @@ internal sealed class ListMergesHandler(CustomersDbContext db, IUserDirectory us
         var people = await users.GetUsersAsync(merges.Where(m => m.CreatedBy.HasValue).Select(m => m.CreatedBy!.Value).Distinct().ToList(), cancellationToken);
         var now = timeProvider.GetUtcNow();
 
-        return merges.Select(m => new MergeListItem(
+        return new PagedResult<MergeListItem>(merges.Select(m => new MergeListItem(
                 m.Id,
                 m.TargetId,
                 names.GetValueOrDefault(m.TargetId, m.TargetBefore.Details.Name),
@@ -272,9 +288,6 @@ internal sealed class ListMergesHandler(CustomersDbContext db, IUserDirectory us
                 m.CreatedBy is { } by && people.TryGetValue(by, out var u) ? new UserRefDto(u.Id, u.DisplayName) : null,
                 m.UndoneAt,
                 m.CanUndo(now)))
-            .ToList();
+            .ToList(), next, total);
     }
 }
-
-/// <summary>Marker for queries without parameters.</summary>
-public readonly record struct Unit;

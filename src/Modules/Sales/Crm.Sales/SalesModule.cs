@@ -63,8 +63,8 @@ public static class SalesModule
             .Validate<StageRequest>()
             .RequirePermission(Permissions.SalesWrite);
 
-        group.MapGet("/leads", async (LeadStatus? status, bool? mine, string? search, SalesService service, CancellationToken ct) =>
-                Results.Ok(await service.ListLeadsAsync(status, mine ?? false, search, ct)))
+        group.MapGet("/leads", async (LeadStatus? status, bool? mine, string? search, int? limit, string? cursor, SalesService service, CancellationToken ct) =>
+                Results.Ok(await service.ListLeadsAsync(status, mine ?? false, search, limit, cursor, ct)))
             .RequirePermission(Permissions.SalesRead);
 
         group.MapPost("/leads", async (LeadRequest request, SalesService service, CancellationToken ct) =>
@@ -93,7 +93,7 @@ public static class SalesModule
 
         group.MapGet("/opportunities", async ([AsParameters] OpportunityParameters p, SalesService service, CancellationToken ct) =>
                 Results.Ok(await service.ListOpportunitiesAsync(
-                    new OpportunityQuery(p.Search, p.OrganizationId, p.OwnerId, p.StageId, p.Status, p.Mine ?? false, p.Stale ?? false), ct)))
+                    new OpportunityQuery(p.Search, p.OrganizationId, p.OwnerId, p.StageId, p.Status, p.Mine ?? false, p.Stale ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.SalesRead);
 
         group.MapGet("/pipeline", async ([AsParameters] OpportunityParameters p, SalesService service, CancellationToken ct) =>
@@ -145,7 +145,7 @@ public static class SalesModule
 
         group.MapGet("/quotes", async ([AsParameters] QuoteParameters p, QuoteService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(
-                    new QuoteQuery(p.Search, p.OrganizationId, p.OpportunityId, p.Status, p.Mine ?? false, p.AwaitingApproval ?? false), ct)))
+                    new QuoteQuery(p.Search, p.OrganizationId, p.OpportunityId, p.Status, p.Mine ?? false, p.AwaitingApproval ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.SalesRead);
 
         group.MapGet("/quotes/{id:guid}", async (Guid id, QuoteService service, CancellationToken ct) =>
@@ -233,7 +233,9 @@ public sealed record QuoteParameters(
     [FromQuery] Guid? OpportunityId,
     [FromQuery] QuoteStatus? Status,
     [FromQuery] bool? Mine,
-    [FromQuery] bool? AwaitingApproval);
+    [FromQuery] bool? AwaitingApproval,
+    [FromQuery] int? Limit,
+    [FromQuery] string? Cursor);
 
 public sealed record OpportunityParameters(
     [FromQuery] string? Search,
@@ -242,4 +244,6 @@ public sealed record OpportunityParameters(
     [FromQuery] Guid? StageId,
     [FromQuery] OpportunityStatus? Status,
     [FromQuery] bool? Mine,
-    [FromQuery] bool? Stale);
+    [FromQuery] bool? Stale,
+    [FromQuery] int? Limit,
+    [FromQuery] string? Cursor);

@@ -74,6 +74,14 @@ export interface MailMessage {
   isSaved: boolean;
 }
 
+/** The messages and what was searched for them: the customer's domains first, then addresses outside them (DEV-12). */
+export interface MailList {
+  messages: MailMessage[];
+  searched: string[];
+  /** Domains and addresses left out of the search to keep one view to a bounded number of Exchange requests. */
+  notSearched: number;
+}
+
 export interface SaveMailRequest {
   organizationId: string;
   opportunityId: string | null;

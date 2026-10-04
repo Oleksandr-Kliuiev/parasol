@@ -175,6 +175,43 @@ public class GroupAndIndexationTests(CrmWebFactory factory)
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Indexation_applies_only_what_the_preview_offers_and_sums_on_the_server()
+    {
+        // DEV-12: the preview leaves no due contract out and sums them itself; the apply step follows the preview's rules, so a
+        // contract without an indexation clause is reported as skipped instead of indexed.
+        var admin = factory.ClientAs(CrmRoles.Admin, userKey: "indexation-admin");
+        var finance = factory.ClientAs(CrmRoles.Finance, userKey: "indexation-finance");
+        var marker = $"J{Guid.NewGuid():N}"[..10];
+        var product = await CatalogApiTests.CreateProductAsync(finance, CatalogApiTests.Product(CatalogApiTests.Sku("IDY")));
+        var organizationId = await admin.CreateOrganizationAsync(new { name = $"{marker} Indeks AS", status = "Customer" });
+        var start = Today.AddMonths(-6);
+        var due = await ActiveContractAsync(admin, organizationId, product, start, 1_000m, start, indexation: true);
+        var withoutClause = await ActiveContractAsync(admin, organizationId, product, start, 2_000m, start, indexation: false);
+        var effectiveFrom = Today.AddMonths(1);
+
+        var preview = await admin.GetFromJsonAsync<JsonElement>(
+            $"{Contracts}/indexation/preview?percent=3.5&effectiveFrom={Iso(effectiveFrom)}&organizationId={organizationId}");
+        preview.GetProperty("contracts").EnumerateArray().Select(c => c.GetProperty("contractId").GetGuid()).ShouldBe([due]);
+        var totals = preview.GetProperty("totals");
+        (totals.GetProperty("contracts").GetInt32(), totals.GetProperty("monthlyBefore").GetDecimal(), totals.GetProperty("monthlyAfter").GetDecimal())
+            .ShouldBe((1, 1_000m, 1_035m));
+
+        var applied = await admin.PostAsJsonAsync($"{Contracts}/indexation", new { percent = 3.5m, effectiveFrom = Iso(effectiveFrom), contractIds = new[] { due, withoutClause } });
+        applied.StatusCode.ShouldBe(HttpStatusCode.OK, await applied.Content.ReadAsStringAsync());
+        var result = await applied.ReadJsonAsync();
+        result.GetProperty("contracts").GetInt32().ShouldBe(1);
+        result.GetProperty("skipped").EnumerateArray().Select(s => s.GetGuid()).ShouldBe([withoutClause]);
+        result.GetProperty("totals").GetProperty("monthlyAfter").GetDecimal().ShouldBe(1_035m);
+        (await admin.GetFromJsonAsync<JsonElement>($"{Contracts}/{withoutClause}")).GetProperty("lines").EnumerateArray()
+            .ShouldHaveSingleItem().GetProperty("unitPrice").GetDecimal().ShouldBe(2_000m, "a contract the preview never offered is left alone");
+
+        // A request of only such contracts changes nothing and says so.
+        var nothing = await admin.PostAsJsonAsync($"{Contracts}/indexation", new { percent = 3.5m, effectiveFrom = Iso(effectiveFrom), contractIds = new[] { withoutClause } });
+        nothing.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await nothing.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("CON_NOTHING_TO_INDEX");
+    }
+
     private static async Task<Guid> CollectAsync(HttpClient finance, DateOnly period, string marker)
     {
         var run = await (await finance.PostAsJsonAsync($"{Billing}/runs", new { year = period.Year, month = period.Month, notes = marker })).ReadJsonAsync();

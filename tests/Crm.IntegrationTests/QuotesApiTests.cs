@@ -182,7 +182,7 @@ public class QuotesApiTests(CrmWebFactory factory)
 
         (await sales.PostAsync($"{Sales}/quotes/{quoteId}/submit", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
         var queue = await management.GetFromJsonAsync<JsonElement>($"{Sales}/quotes?awaitingApproval=true&search={marker}");
-        queue.EnumerateArray().Single().GetProperty("maxDiscountPct").GetDecimal().ShouldBe(30m);
+        queue.GetProperty("items").EnumerateArray().Single().GetProperty("maxDiscountPct").GetDecimal().ShouldBe(30m);
 
         var rejected = await (await management.PostAsJsonAsync($"{Sales}/quotes/{quoteId}/reject", new { reason = "For lav margin på drift." })).ReadJsonAsync();
         rejected.GetProperty("status").GetString().ShouldBe("Draft");
@@ -209,7 +209,7 @@ public class QuotesApiTests(CrmWebFactory factory)
         (await sales.GetFromJsonAsync<JsonElement>($"{Sales}/quotes/{quoteId}")).GetProperty("status").GetString().ShouldBe("Superseded");
 
         var list = await sales.GetFromJsonAsync<JsonElement>($"{Sales}/quotes?search={marker}");
-        list.EnumerateArray().Count(q => q.GetProperty("isLatestVersion").GetBoolean()).ShouldBe(1);
+        list.GetProperty("items").EnumerateArray().Count(q => q.GetProperty("isLatestVersion").GetBoolean()).ShouldBe(1);
     }
 
     [Fact]

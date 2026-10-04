@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Activities.Contracts;
 using Crm.Activities.Domain;
 using Crm.Activities.Persistence;
@@ -72,7 +73,8 @@ public sealed record ActivityDto(
     RefDto? CreatedBy,
     string Etag);
 
-public sealed record ActivityQuery(Guid? OrganizationId, Guid? OpportunityId, Guid? ContractId, ActivityType? Type, bool MineOnly, bool OpenOnly);
+public sealed record ActivityQuery(
+    Guid? OrganizationId, Guid? OpportunityId, Guid? ContractId, ActivityType? Type, bool MineOnly, bool OpenOnly, int? Limit = null, string? Cursor = null);
 
 internal sealed class ActivityService(
     ActivitiesDbContext db,
@@ -82,7 +84,11 @@ internal sealed class ActivityService(
     OutlookService outlook,
     TimeProvider time)
 {
-    public async Task<IReadOnlyList<ActivityDto>> ListAsync(ActivityQuery query, CancellationToken ct)
+    /// <summary>
+    /// One page of the timeline — open items first by due date, then everything newest first — and how many the filter matches
+    /// (DEV-12). The cursor carries the whole sort key, so a page continues exactly where the previous one ended.
+    /// </summary>
+    public async Task<PagedResult<ActivityDto>> ListAsync(ActivityQuery query, CancellationToken ct)
     {
         // Tracked: rows carry their ETag so the timeline can edit an item straight away.
         var activities = db.Activities.AsQueryable();
@@ -117,13 +123,48 @@ internal sealed class ActivityService(
             activities = activities.Where(a => a.Status == ActivityStatus.Open);
         }
 
-        var rows = await activities
+        var total = await activities.CountAsync(ct);
+        if (KeysetCursor.Decode(query.Cursor) is { Then: { } then } after && then.Split('|') is [var dueText, var createdText] &&
+            DateTimeOffset.TryParseExact(createdText, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+        {
+            var rank = after.SortKey == "0" ? 0 : 1;
+            var open = ActivityStatus.Open;
+            if (dueText.Length == 0)
+            {
+                // The cursor's row has no due date (sorted first in its rank): later come rows with one, then older rows without.
+                activities = activities.Where(a => (a.Status == open ? 0 : 1) > rank ||
+                    ((a.Status == open ? 0 : 1) == rank &&
+                     ((a.Status == open ? a.DueAt : null) != null ||
+                      a.CreatedAt < created || (a.CreatedAt == created && a.Id.CompareTo(after.Id) < 0))));
+            }
+            else if (DateTimeOffset.TryParseExact(dueText, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var due))
+            {
+                activities = activities.Where(a => (a.Status == open ? 0 : 1) > rank ||
+                    ((a.Status == open ? 0 : 1) == rank &&
+                     ((a.Status == open ? a.DueAt : null) > due ||
+                      ((a.Status == open ? a.DueAt : null) == due && (a.CreatedAt < created || (a.CreatedAt == created && a.Id.CompareTo(after.Id) < 0))))));
+            }
+        }
+
+        var limit = KeysetCursor.ClampLimit(query.Limit);
+        var page = await activities
             .OrderBy(a => a.Status == ActivityStatus.Open ? 0 : 1)
             .ThenBy(a => a.Status == ActivityStatus.Open ? a.DueAt : null)
             .ThenByDescending(a => a.CreatedAt)
-            .Take(300)
+            .ThenByDescending(a => a.Id)
+            .Take(limit + 1)
             .ToListAsync(ct);
-        return await ToDtosAsync(rows, ct);
+        var rows = page.Take(limit).ToList();
+        var last = rows.LastOrDefault();
+        string? next = null;
+        if (page.Count > limit && last is not null)
+        {
+            var isOpen = last.Status == ActivityStatus.Open;
+            var due = isOpen && last.DueAt is { } d ? d.ToString("O", CultureInfo.InvariantCulture) : string.Empty;
+            next = new KeysetCursor(isOpen ? "0" : "1", last.Id, $"{due}|{last.CreatedAt.ToString("O", CultureInfo.InvariantCulture)}").Encode();
+        }
+
+        return new PagedResult<ActivityDto>(await ToDtosAsync(rows, ct), next, total);
     }
 
     public async Task<Result<ActivityDto>> CreateAsync(ActivityRequest request, CancellationToken ct)

@@ -135,7 +135,15 @@ test('a monthly run is collected, approved and sent to PowerOffice', { tag: '@cr
   await expect(page.getByText('Sent', { exact: true }).first()).toBeVisible();
 
   await page.goto('/billing/invoices');
-  await expect(page.getByRole('row').filter({ hasText: `${m} Faktura AS` })).toBeVisible();
+  // Newest first, page by page (DEV-12): the shared e2e database may hold newer invoices than this one.
+  await expect(page.getByText(/^Showing \d+ of \d+$/)).toBeVisible();
+  const more = page.getByRole('button', { name: 'Load more' });
+  for (let i = 0; i < 40 && !(await row.isVisible()) && (await more.isVisible()); i++) {
+    const before = await page.getByRole('row').count();
+    await more.click();
+    await expect.poll(() => page.getByRole('row').count()).toBeGreaterThan(before);
+  }
+  await expect(row).toBeVisible();
 });
 
 test('a run without a PowerOffice customer reports the anomaly and can be cancelled', async ({ page }) => {

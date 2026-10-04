@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { Panel } from '../../shared/components/Panel';
 import { formatDate, formatMoney } from '../../shared/utils/format';
@@ -22,7 +23,8 @@ export function OrganizationDealsTab({ organizationId, organizationName }: { org
   const { t } = useTranslation();
   const canWrite = useCan(Permissions.salesWrite);
   const canSeeMoney = useCan(Permissions.financeRead);
-  const { data = [], error, isPending, refetch } = useOpportunities({ organizationId });
+  const deals = useOpportunities({ organizationId });
+  const { items: data, error, isPending, refetch } = deals;
   const [creating, setCreating] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
 
@@ -80,6 +82,7 @@ export function OrganizationDealsTab({ organizationId, organizationName }: { org
           </div>
         )}
         {!isPending && data.length === 0 && <EmptyState message={t('opportunities.emptyForOrganization')} />}
+        <ListFooter shown={data.length} total={deals.total} hasMore={deals.hasNextPage} loading={deals.isFetchingNextPage} onMore={() => void deals.fetchNextPage()} />
       </Panel>
 
       <QuotesPanel organizationId={organizationId} organizationName={organizationName} />

@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type { PagedResult } from '../../api/types';
 import type {
   Contract,
@@ -113,11 +114,9 @@ export function useSaveSlaPolicy() {
   });
 }
 
+/** Newest first, a page at a time with the count of all (DEV-12). */
 export function useHourBanks(filters: { organizationId?: string; contractId?: string; includeClosed?: boolean }) {
-  return useQuery({
-    queryKey: contractKeys.hourBanks(filters),
-    queryFn: async ({ signal }) => (await api.get<HourBank[]>(`${BASE}/hour-banks${query(filters)}`, signal)).data,
-  });
+  return usePagedList<HourBank>(contractKeys.hourBanks(filters), `${BASE}/hour-banks`, filters, { limit: 25 });
 }
 
 export function useHourBank(id: string) {
@@ -145,12 +144,9 @@ export function useHourBankActions() {
   };
 }
 
+/** Soonest first, a page at a time with the count of all (DEV-12). */
 export function useReminders(filters: { mine?: boolean; organizationId?: string }, enabled = true) {
-  return useQuery({
-    queryKey: contractKeys.reminders(filters),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<Reminder[]>(`${BASE}/reminders${query(filters)}`, signal)).data,
-  });
+  return usePagedList<Reminder>(contractKeys.reminders(filters), `${BASE}/reminders`, filters, { enabled, limit: 20 });
 }
 
 export function useAcknowledgeReminder() {

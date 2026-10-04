@@ -117,18 +117,19 @@ public class SalesAndLicensingApiTests(CrmWebFactory factory)
         var note = await sales.PostAsJsonAsync(Activities + "/", new { type = "Note", organizationId, subject = $"{marker} notat", body = "Kunden vurderer" });
         (await note.ReadJsonAsync()).GetProperty("status").GetString().ShouldBe("Done");
 
-        var mine = await sales.GetFromJsonAsync<JsonElement>($"{Activities}?mine=true&open=true");
-        mine.EnumerateArray().ShouldContain(a => a.GetProperty("id").GetGuid() == taskId);
+        var mine = await sales.GetFromJsonAsync<JsonElement>($"{Activities}?mine=true&open=true&limit=200");
+        mine.GetProperty("items").EnumerateArray().ShouldContain(a => a.GetProperty("id").GetGuid() == taskId);
 
         var timeline = await sales.GetFromJsonAsync<JsonElement>($"{Activities}?organizationId={organizationId}");
-        timeline.EnumerateArray().Count().ShouldBe(2);
+        timeline.GetProperty("items").EnumerateArray().Count().ShouldBe(2);
+        timeline.GetProperty("totalCount").GetInt32().ShouldBe(2);
 
         // The deal's "last activity" follows the activity, so the stale warning is based on real contact (BR-SAL-03).
         await factory.ProcessEventsAsync();
         (await sales.GetFromJsonAsync<JsonElement>($"{Sales}/opportunities/{opportunityId}")).GetProperty("isStale").GetBoolean().ShouldBeFalse();
 
         (await sales.PostAsync($"{Activities}/{taskId}/complete", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await sales.GetFromJsonAsync<JsonElement>($"{Activities}?mine=true&open=true")).EnumerateArray()
+        (await sales.GetFromJsonAsync<JsonElement>($"{Activities}?mine=true&open=true&limit=200")).GetProperty("items").EnumerateArray()
             .ShouldNotContain(a => a.GetProperty("id").GetGuid() == taskId);
         (await factory.ClientAs(CrmRoles.ReadOnly).PostAsJsonAsync(Activities + "/", new { type = "Note", organizationId, subject = "Nei" }))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
@@ -157,7 +158,7 @@ public class SalesAndLicensingApiTests(CrmWebFactory factory)
         preview.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await preview.ReadJsonAsync()).GetProperty("created").GetInt32().ShouldBe(1);
         // A preview writes nothing.
-        (await admin.GetFromJsonAsync<JsonElement>($"{Licensing}/subscriptions?organizationId={organizationId}")).EnumerateArray().ShouldBeEmpty();
+        (await admin.GetFromJsonAsync<JsonElement>($"{Licensing}/subscriptions?organizationId={organizationId}")).GetProperty("items").EnumerateArray().ShouldBeEmpty();
 
         var imported = await admin.PostAsync($"{Licensing}/import", new StringContent(csv, Encoding.UTF8, "text/csv"));
         imported.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -171,7 +172,7 @@ public class SalesAndLicensingApiTests(CrmWebFactory factory)
         secondPreview.GetProperty("unchanged").GetInt32().ShouldBe(1);
 
         var subscriptions = await finance.GetFromJsonAsync<JsonElement>($"{Licensing}/subscriptions?organizationId={organizationId}");
-        var subscription = subscriptions.EnumerateArray().ShouldHaveSingleItem();
+        var subscription = subscriptions.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         subscription.GetProperty("source").GetString().ShouldBe("Distributor");
         // BR-LIC-01: matched to the organization by its organization number.
         subscription.GetProperty("organizationId").GetGuid().ShouldBe(organizationId);
@@ -185,7 +186,7 @@ public class SalesAndLicensingApiTests(CrmWebFactory factory)
 
         // Cost prices stay with Finance and Admin.
         var asSales = await factory.ClientAs(CrmRoles.Sales).GetFromJsonAsync<JsonElement>($"{Licensing}/subscriptions?organizationId={organizationId}");
-        asSales.EnumerateArray().ShouldHaveSingleItem().TryGetProperty("partnerUnitPrice", out _).ShouldBeFalse();
+        asSales.GetProperty("items").EnumerateArray().ShouldHaveSingleItem().TryGetProperty("partnerUnitPrice", out _).ShouldBeFalse();
 
         // Put the product on an active contract: the subscription is billed from then on.
         var contract = await (await admin.PostAsJsonAsync("/api/v1/contracts", new
@@ -201,7 +202,7 @@ public class SalesAndLicensingApiTests(CrmWebFactory factory)
         (await admin.PostAsync($"/api/v1/contracts/{contractId}/activate", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var billed = await finance.GetFromJsonAsync<JsonElement>($"{Licensing}/subscriptions?organizationId={organizationId}");
-        billed.EnumerateArray().ShouldHaveSingleItem().GetProperty("isBilled").GetBoolean().ShouldBeTrue();
+        billed.GetProperty("items").EnumerateArray().ShouldHaveSingleItem().GetProperty("isBilled").GetBoolean().ShouldBeTrue();
 
         // Importing the same file again changes nothing.
         var again = await admin.PostAsync($"{Licensing}/import", new StringContent(csv, Encoding.UTF8, "text/csv"));
@@ -274,7 +275,7 @@ public class SalesAndLicensingApiTests(CrmWebFactory factory)
         await factory.RunJobAsync<PartnerCenterSubscriptionSyncJob>(j => j.RunAsync(CancellationToken.None));
 
         var subscriptions = await admin.GetFromJsonAsync<JsonElement>($"{Licensing}/subscriptions?organizationId={organizationId}");
-        var subscription = subscriptions.EnumerateArray().ShouldHaveSingleItem();
+        var subscription = subscriptions.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         subscription.GetProperty("source").GetString().ShouldBe("PartnerCenter");
         subscription.GetProperty("quantity").GetInt32().ShouldBe(12);
         subscription.GetProperty("term").GetString().ShouldBe("P1Y");

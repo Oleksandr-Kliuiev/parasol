@@ -45,7 +45,8 @@ function mockApi() {
     }
     if (init?.method === 'POST') return new Response(null, { status: 204 });
     if (url.startsWith('/api/v1/billing/charges/legacy')) return new Response(JSON.stringify(legacy), { status: 200 });
-    return new Response(JSON.stringify([supplementaryRun]), { status: 200 });
+    if (url.startsWith('/api/v1/billing/runs')) return new Response(JSON.stringify({ items: [supplementaryRun], nextCursor: null, totalCount: 1 }), { status: 200 });
+    return new Response(JSON.stringify([]), { status: 200 });
   });
   vi.stubGlobal('fetch', fetch);
   return fetch;

@@ -9,6 +9,7 @@ using Crm.Licensing.Persistence;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Domain;
 using Crm.SharedKernel.Results;
+using Crm.SharedKernel.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -50,7 +51,9 @@ public sealed record LicensingSummary(
 
 public sealed record LicensingAttention(LicensingSummary Summary, IReadOnlyList<SubscriptionDto> CancellationWindow, IReadOnlyList<SubscriptionDto> Renewing, IReadOnlyList<SubscriptionDto> NotBilled);
 
-public sealed record SubscriptionQuery(string? Search, Guid? OrganizationId, SubscriptionSource? Source, bool RenewingSoon, bool CancellationWindowOpen, bool NotBilled, bool WithoutOrganization);
+public sealed record SubscriptionQuery(
+    string? Search, Guid? OrganizationId, SubscriptionSource? Source, bool RenewingSoon, bool CancellationWindowOpen, bool NotBilled, bool WithoutOrganization,
+    int? Limit = null, string? Cursor = null);
 
 internal sealed class LicensingService(
     LicensingDbContext db,
@@ -144,10 +147,14 @@ internal sealed class LicensingService(
 
         await db.SaveChangesAsync(cancellationToken);
         var withoutOrganization = await db.CspSubscriptions.CountAsync(s => s.OrganizationId == null && s.Status != SubscriptionStatus.Deleted, cancellationToken);
-        return new SubscriptionImportResult(created, updated, unchanged, withoutOrganization, warnings.Distinct().Take(20).ToList());
+        return new SubscriptionImportResult(created, updated, unchanged, withoutOrganization, WarningList.Capped(warnings.Distinct()));
     }
 
-    public async Task<IReadOnlyList<SubscriptionDto>> ListAsync(SubscriptionQuery query, CancellationToken ct)
+    /// <summary>
+    /// One page of subscriptions by customer and offer name, and how many the filter matches (DEV-12). "Not billed" depends on the
+    /// customers' contracts, which live in another module: it is decided for every matching subscription before the page is cut.
+    /// </summary>
+    public async Task<PagedResult<SubscriptionDto>> ListAsync(SubscriptionQuery query, CancellationToken ct)
     {
         var subscriptions = db.CspSubscriptions.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -185,36 +192,142 @@ internal sealed class LicensingService(
             subscriptions = subscriptions.Where(s => (s.RenewalDate ?? s.CommitmentEndDate) >= Today && (s.RenewalDate ?? s.CommitmentEndDate) <= until);
         }
 
-        var rows = await subscriptions.OrderBy(s => s.CspCustomerName).ThenBy(s => s.OfferName).Take(1000).ToListAsync(ct);
-        var dtos = await ToDtosAsync(rows, ct);
-        return query.NotBilled ? dtos.Where(d => !d.IsBilled).ToList() : dtos;
+        var limit = KeysetCursor.ClampLimit(query.Limit);
+        var cursor = KeysetCursor.Decode(query.Cursor);
+        if (query.NotBilled)
+        {
+            return await NotBilledPageAsync(subscriptions, cursor, limit, ct);
+        }
+
+        var total = await subscriptions.CountAsync(ct);
+        if (cursor is not null)
+        {
+            var then = cursor.Then ?? string.Empty;
+            subscriptions = subscriptions.Where(s =>
+                (s.CspCustomerName ?? "").CompareTo(cursor.SortKey) > 0 ||
+                ((s.CspCustomerName ?? "") == cursor.SortKey && ((s.OfferName ?? s.OfferId).CompareTo(then) > 0 ||
+                                                               ((s.OfferName ?? s.OfferId) == then && s.Id.CompareTo(cursor.Id) > 0))));
+        }
+
+        var page = await subscriptions.OrderBy(s => s.CspCustomerName ?? "").ThenBy(s => s.OfferName ?? s.OfferId).ThenBy(s => s.Id)
+            .Take(limit + 1).ToListAsync(ct);
+        var rows = page.Take(limit).ToList();
+        var last = rows.LastOrDefault();
+        return new PagedResult<SubscriptionDto>(
+            await ToDtosAsync(rows, ct),
+            page.Count > limit && last is not null ? new KeysetCursor(last.CspCustomerName ?? "", last.Id, last.OfferName ?? last.OfferId).Encode() : null,
+            total);
     }
 
+    /// <summary>The not-billed filter: decided for every matching subscription from one contract query, then paged in the same order.</summary>
+    private async Task<PagedResult<SubscriptionDto>> NotBilledPageAsync(IQueryable<CspSubscription> subscriptions, KeysetCursor? cursor, int limit, CancellationToken ct)
+    {
+        var candidates = await subscriptions
+            .Select(s => new { s.Id, s.OrganizationId, s.ProductId, Customer = s.CspCustomerName ?? "", Offer = s.OfferName ?? s.OfferId })
+            .ToListAsync(ct);
+        var contracted = await contracts.GetContractedProductsAsync(
+            candidates.Where(c => c.OrganizationId != null).Select(c => c.OrganizationId!.Value).Distinct().ToList(), Today, ct);
+        var notBilled = candidates
+            .Where(c => !(c.OrganizationId is { } org && c.ProductId is { } product && contracted.TryGetValue(org, out var set) && set.Contains(product)))
+            .OrderBy(c => c.Customer, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.Offer, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.Id)
+            .ToList();
+        // Keyset in memory, with the comparer of the sort: a row that changed meanwhile neither restarts nor repeats the pages.
+        var start = cursor is null
+            ? 0
+            : notBilled.FindIndex(c => CompareKeys(c.Customer, c.Offer, c.Id, cursor.SortKey, cursor.Then ?? string.Empty, cursor.Id) > 0);
+        if (start < 0)
+        {
+            start = notBilled.Count;
+        }
+
+        var page = notBilled.Skip(start).Take(limit + 1).ToList();
+        var ids = page.Take(limit).Select(c => c.Id).ToList();
+        var rows = await db.CspSubscriptions.AsNoTracking().Where(s => ids.Contains(s.Id)).ToListAsync(ct);
+        var dtos = (await ToDtosAsync(rows, ct)).ToDictionary(d => d.Id);
+        var last = page.Count > limit ? page[limit - 1] : null;
+        return new PagedResult<SubscriptionDto>(
+            ids.Where(dtos.ContainsKey).Select(id => dtos[id]).ToList(),
+            last is not null ? new KeysetCursor(last.Customer, last.Id, last.Offer).Encode() : null,
+            notBilled.Count);
+    }
+
+    private static int CompareKeys(string customer, string offer, Guid id, string otherCustomer, string otherOffer, Guid otherId)
+    {
+        var byCustomer = StringComparer.OrdinalIgnoreCase.Compare(customer, otherCustomer);
+        if (byCustomer != 0)
+        {
+            return byCustomer;
+        }
+
+        var byOffer = StringComparer.OrdinalIgnoreCase.Compare(offer, otherOffer);
+        return byOffer != 0 ? byOffer : id.CompareTo(otherId);
+    }
+
+    /// <summary>What every licensing summary counts, for every subscription that is not deleted — never a subset (DEV-12).</summary>
+    private sealed record SubscriptionFacts(
+        Guid Id, Guid? OrganizationId, Guid? ProductId, SubscriptionStatus Status, int Quantity, DateTimeOffset? CancellationWindowEndsAt,
+        DateOnly? RenewalDate, DateOnly? CommitmentEndDate, bool IsBilled);
+
+    private async Task<List<SubscriptionFacts>> FactsAsync(DateOnly today, CancellationToken ct)
+    {
+        var rows = await db.CspSubscriptions.AsNoTracking().Where(s => s.Status != SubscriptionStatus.Deleted)
+            .Select(s => new { s.Id, s.OrganizationId, s.ProductId, s.Status, s.Quantity, s.CancellationWindowEndsAt, s.RenewalDate, s.CommitmentEndDate })
+            .ToListAsync(ct);
+        // BR-LIC-03: billed only when the product is on a live contract line of that organization — asked once for all of them.
+        var contracted = await contracts.GetContractedProductsAsync(
+            rows.Where(r => r.OrganizationId != null).Select(r => r.OrganizationId!.Value).Distinct().ToList(), today, ct);
+        return rows.ConvertAll(r => new SubscriptionFacts(
+            r.Id, r.OrganizationId, r.ProductId, r.Status, r.Quantity, r.CancellationWindowEndsAt, r.RenewalDate, r.CommitmentEndDate,
+            r.OrganizationId is { } org && r.ProductId is { } product && contracted.TryGetValue(org, out var set) && set.Contains(product)));
+    }
+
+    /// <summary>
+    /// The licensing screen's tiles and its three short lists (DEV-12): the counts cover every subscription, with the definitions the
+    /// dashboard uses; each list holds the first twenty of its kind, which the screen labels as such.
+    /// </summary>
     public async Task<LicensingAttention> GetAttentionAsync(CancellationToken ct)
     {
-        var rows = await db.CspSubscriptions.AsNoTracking().Where(s => s.Status != SubscriptionStatus.Deleted).Take(2000).ToListAsync(ct);
-        var dtos = await ToDtosAsync(rows, ct);
+        var today = Today;
+        var now = time.GetUtcNow();
+        var days = options.Value.RenewalNoticeDays;
+        var facts = await FactsAsync(today, ct);
+        var window = facts.Where(f => CspSubscription.IsCancellationWindowOpen(f.CancellationWindowEndsAt, now)).ToList();
+        var renewing = facts.Where(f => CspSubscription.IsRenewingWithin(f.RenewalDate, f.CommitmentEndDate, today, days)).ToList();
+        var notBilled = facts.Where(f => !f.IsBilled).ToList();
         var summary = new LicensingSummary(
-            dtos.Count,
-            dtos.Where(d => d.Status == SubscriptionStatus.Active).Sum(d => d.Quantity),
-            dtos.Count(d => d.RenewalDate is not null && d.RenewalDate >= Today && d.RenewalDate.Value.DayNumber - Today.DayNumber <= options.Value.RenewalNoticeDays),
-            dtos.Count(d => d.CancellationWindowOpen),
-            dtos.Count(d => !d.IsBilled),
-            dtos.Count(d => d.OrganizationId is null));
-        return new LicensingAttention(
-            summary,
-            dtos.Where(d => d.CancellationWindowOpen).OrderBy(d => d.CancellationWindowEndsAt).Take(20).ToList(),
-            dtos.Where(d => d.RenewalDate is not null && d.RenewalDate >= Today && d.RenewalDate.Value.DayNumber - Today.DayNumber <= options.Value.RenewalNoticeDays)
-                .OrderBy(d => d.RenewalDate).Take(20).ToList(),
-            dtos.Where(d => !d.IsBilled).OrderBy(d => d.OrganizationName).Take(20).ToList());
+            facts.Count,
+            facts.Where(f => f.Status == SubscriptionStatus.Active).Sum(f => f.Quantity),
+            renewing.Count,
+            window.Count,
+            notBilled.Count,
+            facts.Count(f => f.OrganizationId is null));
+
+        var names = await customers.GetOrganizationNamesAsync(notBilled.Where(f => f.OrganizationId != null).Select(f => f.OrganizationId!.Value).Distinct().ToList(), ct);
+        var windowIds = window.OrderBy(f => f.CancellationWindowEndsAt).ThenBy(f => f.Id).Take(20).Select(f => f.Id).ToList();
+        var renewingIds = renewing.OrderBy(f => f.RenewalDate ?? f.CommitmentEndDate).ThenBy(f => f.Id).Take(20).Select(f => f.Id).ToList();
+        var notBilledIds = notBilled
+            .OrderBy(f => f.OrganizationId is { } org ? names.GetValueOrDefault(org) : null, StringComparer.CurrentCultureIgnoreCase).ThenBy(f => f.Id)
+            .Take(20).Select(f => f.Id).ToList();
+        var shown = windowIds.Concat(renewingIds).Concat(notBilledIds).Distinct().ToList();
+        var rows = await db.CspSubscriptions.AsNoTracking().Where(s => shown.Contains(s.Id)).ToListAsync(ct);
+        var dtos = (await ToDtosAsync(rows, ct)).ToDictionary(d => d.Id);
+        List<SubscriptionDto> Of(List<Guid> ids) => ids.Where(dtos.ContainsKey).Select(id => dtos[id]).ToList();
+        return new LicensingAttention(summary, Of(windowIds), Of(renewingIds), Of(notBilledIds));
     }
 
+    /// <summary>
+    /// Every active subscription whose cancellation window is open or that renews soon (DEV-12): the database picks them, so none is
+    /// missed because it fell outside an arbitrary first few thousand rows.
+    /// </summary>
     public async Task<IReadOnlyList<SubscriptionAttention>> GetAttentionAsync(DateOnly today, CancellationToken ct)
     {
         var now = time.GetUtcNow();
+        var until = today.AddDays(options.Value.RenewalNoticeDays);
         var rows = await db.CspSubscriptions.AsNoTracking()
-            .Where(s => s.Status == SubscriptionStatus.Active)
-            .Take(2000)
+            .Where(s => s.Status == SubscriptionStatus.Active &&
+                        (s.CancellationWindowEndsAt > now ||
+                         ((s.RenewalDate ?? s.CommitmentEndDate) >= today && (s.RenewalDate ?? s.CommitmentEndDate) <= until)))
+            .OrderBy(s => s.Id)
             .ToListAsync(ct);
 
         var attention = new List<SubscriptionAttention>();
@@ -399,26 +512,18 @@ internal sealed class LicensingService(
         return new MsBillingImportResult(created, updated, unchanged, withoutOrganization, warnings);
     }
 
+    /// <summary>The dashboard's licence tiles, counted over every subscription with the licensing screen's definitions (DEV-12).</summary>
     public async Task<LicenseSummary> GetSummaryAsync(DateOnly today, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        var rows = await db.CspSubscriptions.AsNoTracking().Where(s => s.Status != SubscriptionStatus.Deleted).Take(5000).ToListAsync(ct);
-        var contracted = new Dictionary<Guid, IReadOnlySet<Guid>>();
-        foreach (var organizationId in rows.Where(s => s.OrganizationId is not null).Select(s => s.OrganizationId!.Value).Distinct())
-        {
-            contracted[organizationId] = await contracts.GetContractedProductsAsync(organizationId, today, ct);
-        }
-
-        bool IsBilled(Domain.CspSubscription s) =>
-            s.OrganizationId is { } org && s.ProductId is { } product && contracted.GetValueOrDefault(org)?.Contains(product) == true;
-
+        var facts = await FactsAsync(today, ct);
         return new LicenseSummary(
-            rows.Count,
-            rows.Where(s => s.Status == SubscriptionStatus.Active).Sum(s => s.Quantity),
-            rows.Count(s => s.IsCancellationWindowOpen(now)),
-            rows.Count(s => s.IsRenewingWithin(today, options.Value.RenewalNoticeDays)),
-            rows.Count(s => !IsBilled(s)),
-            rows.Count(s => s.OrganizationId is null));
+            facts.Count,
+            facts.Where(f => f.Status == SubscriptionStatus.Active).Sum(f => f.Quantity),
+            facts.Count(f => CspSubscription.IsCancellationWindowOpen(f.CancellationWindowEndsAt, now)),
+            facts.Count(f => CspSubscription.IsRenewingWithin(f.RenewalDate, f.CommitmentEndDate, today, options.Value.RenewalNoticeDays)),
+            facts.Count(f => !f.IsBilled),
+            facts.Count(f => f.OrganizationId is null));
     }
 
     public async Task<Result<SubscriptionImportResult>> ImportAsync(string csv, bool dryRun, CancellationToken ct)
@@ -462,7 +567,7 @@ internal sealed class LicensingService(
                 wouldUpdate,
                 wouldStay,
                 0,
-                parsed.Errors.Concat(parsed.UnknownColumns.Select(c => $"Column '{c}' was ignored.")).Take(20).ToList());
+                WarningList.Capped(parsed.Errors.Concat(parsed.UnknownColumns.Select(c => $"Column '{c}' was ignored."))));
         }
 
         var result = await UpsertAsync(parsed.Subscriptions, ct);
@@ -474,7 +579,7 @@ internal sealed class LicensingService(
             result.Updated,
         });
         await db.SaveChangesAsync(ct);
-        return result with { Warnings = result.Warnings.Concat(parsed.Errors).Take(20).ToList() };
+        return result with { Warnings = WarningList.Capped(result.Warnings.Concat(parsed.Errors)) };
     }
 
     /// <summary>The distributor's invoice file (FR-LIC-04); ?dryRun=true counts the same way the real import does.</summary>
@@ -504,11 +609,9 @@ internal sealed class LicensingService(
 
         return result with
         {
-            Warnings = result.Warnings
+            Warnings = WarningList.Capped(result.Warnings
                 .Concat(parsed.Errors)
-                .Concat(parsed.UnknownColumns.Select(c => $"Column '{c}' was ignored."))
-                .Take(20)
-                .ToList(),
+                .Concat(parsed.UnknownColumns.Select(c => $"Column '{c}' was ignored."))),
         };
     }
 
@@ -533,13 +636,14 @@ internal sealed class LicensingService(
             .ToList();
     }
 
+    /// <summary>Every unmapped offer of the customer (DEV-12): each becomes an anomaly of its basis, none is left out of the review.</summary>
     public async Task<IReadOnlyList<string>> GetUnmappedOfferNamesAsync(Guid organizationId, DateOnly date, CancellationToken ct) =>
         await db.CspSubscriptions.AsNoTracking()
             .Where(s => s.OrganizationId == organizationId && s.ProductId == null && s.Status == SubscriptionStatus.Active &&
                         (s.CommitmentEndDate == null || s.CommitmentEndDate >= date))
             .Select(s => s.OfferName ?? s.OfferId)
             .Distinct()
-            .Take(20)
+            .OrderBy(name => name)
             .ToListAsync(ct);
 
     private async Task<IReadOnlyList<SubscriptionDto>> ToDtosAsync(IReadOnlyList<CspSubscription> subscriptions, CancellationToken ct)
@@ -552,11 +656,7 @@ internal sealed class LicensingService(
         var today = Today;
 
         // BR-LIC-03: a subscription is only billed when its product is on a live contract line of that organization.
-        var contracted = new Dictionary<Guid, IReadOnlySet<Guid>>();
-        foreach (var organizationId in organizationIds)
-        {
-            contracted[organizationId] = await contracts.GetContractedProductsAsync(organizationId, today, ct);
-        }
+        var contracted = await contracts.GetContractedProductsAsync(organizationIds, today, ct);
 
         return subscriptions.Select(s => new SubscriptionDto(
             s.Id, s.Source, s.SubscriptionId, s.CspCustomerName, s.OrganizationId,

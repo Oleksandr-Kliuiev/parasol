@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type {
   AdjustLineRequest,
   BasisListItem,
@@ -34,14 +35,14 @@ export interface RunFilters {
   [key: string]: string | number | boolean | null | undefined;
   status?: RunStatus | null;
   year?: number | null;
+  /** Every run that is not closed yet, whatever its period. */
+  openOnly?: boolean;
   limit?: number;
 }
 
-export function useRuns(filters: RunFilters = {}) {
-  return useQuery({
-    queryKey: billingKeys.runs(filters),
-    queryFn: async ({ signal }) => (await api.get<RunListItem[]>(`${BASE}/runs${query(filters)}`, signal)).data,
-  });
+/** Newest period first, a page at a time with the count of all (DEV-12). */
+export function useRuns({ limit, ...filters }: RunFilters = {}) {
+  return usePagedList<RunListItem>(billingKeys.runs({ ...filters, limit }), `${BASE}/runs`, filters, { limit });
 }
 
 /** While the export is in flight the worker changes the run behind our back, so the page follows it. */
@@ -180,11 +181,23 @@ export interface InvoiceFilters {
   limit?: number;
 }
 
+/** The totals of a filter (and its first page): for summaries such as My day. */
 export function useInvoices(filters: InvoiceFilters, enabled = true) {
   return useQuery({
     queryKey: billingKeys.invoices(filters),
     enabled,
     queryFn: async ({ signal }) => (await api.get<InvoiceSummary>(`${BASE}/invoices${query(filters)}`, signal)).data,
+  });
+}
+
+/** Invoices page by page; each answer carries the totals of the whole filter at that moment (DEV-12). */
+export function useInvoicePages(filters: Omit<InvoiceFilters, 'limit'>) {
+  return useInfiniteQuery({
+    queryKey: [...billingKeys.invoices(filters), 'pages'],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam, signal }) =>
+      (await api.get<InvoiceSummary>(`${BASE}/invoices${query({ ...filters, limit: 50, cursor: pageParam })}`, signal)).data,
+    getNextPageParam: (last) => last.nextCursor,
   });
 }
 

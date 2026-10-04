@@ -128,7 +128,7 @@ export function SlaReportPage() {
                         <AppLink to={`/organizations/${row.organizationId}?tab=service`}>{row.organizationName}</AppLink>
                         {row.breaches.length > 0 && (
                           <div className={styles.breach}>
-                            {t('sla.breachList', { count: row.breaches.length })}: {row.breaches.slice(0, 3).map((b) => `#${b.externalId}`).join(', ')}
+                            {t('sla.breachList', { count: row.breachCount })}: {row.breaches.slice(0, 3).map((b) => `#${b.externalId}`).join(', ')}
                           </div>
                         )}
                       </TableCell>

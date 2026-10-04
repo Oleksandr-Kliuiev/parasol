@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type { OrganizationContact, Quote, QuoteListItem, QuoteRequest, QuoteStatus, QuoteTemplate, SendQuoteRequest } from './types';
 
 const BASE = '/api/v1/sales';
@@ -21,12 +22,9 @@ export interface QuoteFilters {
   awaitingApproval?: boolean;
 }
 
+/** Quote versions page by page, with how many the filter matches (DEV-12). */
 export function useQuotes(filters: QuoteFilters, enabled = true) {
-  return useQuery({
-    queryKey: quoteKeys.list(filters),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<QuoteListItem[]>(`${BASE}/quotes${query(filters)}`, signal)).data,
-  });
+  return usePagedList<QuoteListItem>(quoteKeys.list(filters), `${BASE}/quotes`, filters, { enabled });
 }
 
 export function useQuote(id: string | undefined) {

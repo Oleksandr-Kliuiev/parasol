@@ -39,7 +39,8 @@ public sealed record SlaOrganizationRow(
     decimal ResponseMetPct,
     decimal ResolutionMetPct,
     int? MedianResponseMinutes,
-    IReadOnlyList<SlaTicketRow> Breaches);
+    IReadOnlyList<SlaTicketRow> Breaches,
+    int BreachCount);
 
 public sealed record SlaReport(
     DateOnly PeriodStart,
@@ -56,8 +57,11 @@ public sealed record SlaReport(
 /// </summary>
 internal sealed class SlaReportService(ServiceDbContext db, IContractsApi contracts, ICustomersApi customers)
 {
-    /// <summary>At most this many breaching tickets per customer are listed; the rest are counted, not printed.</summary>
+    /// <summary>At most this many breaching tickets per customer are listed; the rest are counted (BreachCount), not printed.</summary>
     private const int BreachesShown = 10;
+
+    /// <summary>What the report needs of every ticket of the month: the clock and the urgency, nothing to display.</summary>
+    private sealed record TicketTimes(Guid Id, Guid OrganizationId, string? Priority, DateTimeOffset CreatedAt, DateTimeOffset? FirstResponseAt, DateTimeOffset? ResolvedAt);
 
     public async Task<Result<SlaReport>> GetAsync(int year, int month, Guid? organizationId, CancellationToken ct)
     {
@@ -71,10 +75,12 @@ internal sealed class SlaReportService(ServiceDbContext db, IContractsApi contra
         var from = new DateTimeOffset(periodStart.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         var to = new DateTimeOffset(periodEnd.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
 
+        // Every ticket of the month (DEV-12): the figures are never those of an arbitrary subset. Only the clock is read for all of
+        // them; the few breaches listed are fetched with their titles afterwards.
         var tickets = await db.Tickets.AsNoTracking()
             .Where(t => t.CreatedAtSource >= from && t.CreatedAtSource <= to &&
                         (organizationId == null || t.OrganizationId == organizationId))
-            .Take(5000)
+            .Select(t => new TicketTimes(t.Id, t.OrganizationId, t.Priority, t.CreatedAtSource, t.FirstResponseAt, t.ResolvedAt))
             .ToListAsync(ct);
         if (tickets.Count == 0)
         {
@@ -93,12 +99,14 @@ internal sealed class SlaReportService(ServiceDbContext db, IContractsApi contra
                 withoutSla += group.Count();
                 rows.Add(new SlaOrganizationRow(
                     group.Key, names.GetValueOrDefault(group.Key, "—"), null, null, null,
-                    group.Count(), group.Count(t => t.ResolvedAt != null), 0, 0, 0, 0, 0m, 0m, null, []));
+                    group.Count(), group.Count(t => t.ResolvedAt != null), 0, 0, 0, 0, 0m, 0m, null, [], 0));
                 continue;
             }
 
             rows.Add(Measure(group.Key, names.GetValueOrDefault(group.Key, "—"), [.. group], sla));
         }
+
+        rows = await WithBreachDetailsAsync(rows, ct);
 
         var measuredResponse = rows.Sum(r => r.ResponseMeasured);
         var metResponse = rows.Sum(r => r.ResponseMet);
@@ -115,7 +123,25 @@ internal sealed class SlaReportService(ServiceDbContext db, IContractsApi contra
             rows.OrderBy(r => r.ResponseMetPct).ThenByDescending(r => r.Tickets).ToList());
     }
 
-    private static SlaOrganizationRow Measure(Guid organizationId, string name, List<Domain.Ticket> tickets, SlaTargets sla)
+    /// <summary>The listed breaches get their ticket number, title and link — one query for all customers' few rows.</summary>
+    private async Task<List<SlaOrganizationRow>> WithBreachDetailsAsync(List<SlaOrganizationRow> rows, CancellationToken ct)
+    {
+        var ids = rows.SelectMany(r => r.Breaches).Select(b => b.TicketId).ToList();
+        if (ids.Count == 0)
+        {
+            return rows;
+        }
+
+        var details = await db.Tickets.AsNoTracking().Where(t => ids.Contains(t.Id))
+            .Select(t => new { t.Id, t.ExternalId, t.Title, t.Url })
+            .ToDictionaryAsync(t => t.Id, ct);
+        return rows.ConvertAll(r => r with
+        {
+            Breaches = r.Breaches.Select(b => details.TryGetValue(b.TicketId, out var d) ? b with { ExternalId = d.ExternalId, Title = d.Title, Url = d.Url } : b).ToList(),
+        });
+    }
+
+    private static SlaOrganizationRow Measure(Guid organizationId, string name, List<TicketTimes> tickets, SlaTargets sla)
     {
         var window = WindowOf(sla.Coverage);
         var measured = new List<SlaTicketRow>();
@@ -123,18 +149,18 @@ internal sealed class SlaReportService(ServiceDbContext db, IContractsApi contra
         {
             var target = sla.For(PriorityOf(ticket.Priority));
             var response = ticket.FirstResponseAt is { } responded
-                ? BusinessTime.MinutesBetween(ticket.CreatedAtSource, responded, window)
+                ? BusinessTime.MinutesBetween(ticket.CreatedAt, responded, window)
                 : (int?)null;
             var resolution = ticket.ResolvedAt is { } resolved
-                ? BusinessTime.MinutesBetween(ticket.CreatedAtSource, resolved, window)
+                ? BusinessTime.MinutesBetween(ticket.CreatedAt, resolved, window)
                 : (int?)null;
 
             measured.Add(new SlaTicketRow(
                 ticket.Id,
-                ticket.ExternalId,
-                ticket.Title,
+                0,
+                string.Empty,
                 ticket.Priority ?? "—",
-                ticket.CreatedAtSource,
+                ticket.CreatedAt,
                 response,
                 resolution,
                 target.ResponseMinutes,
@@ -142,7 +168,7 @@ internal sealed class SlaReportService(ServiceDbContext db, IContractsApi contra
                 response is { } r && target.ResponseMinutes > 0 && r > target.ResponseMinutes,
                 resolution is { } s && target.ResolutionMinutes > 0 && s > target.ResolutionMinutes,
                 ticket.ResolvedAt is null,
-                ticket.Url));
+                null));
         }
 
         var responseMeasured = measured.Count(m => m.ResponseMinutes is not null && m.ResponseTarget > 0);
@@ -166,8 +192,10 @@ internal sealed class SlaReportService(ServiceDbContext db, IContractsApi contra
             responseTimes.Count > 0 ? responseTimes[responseTimes.Count / 2] : null,
             measured.Where(m => m.ResponseBreached || m.ResolutionBreached)
                 .OrderByDescending(m => (m.ResponseMinutes ?? 0) - m.ResponseTarget)
+                .ThenBy(m => m.TicketId)
                 .Take(BreachesShown)
-                .ToList());
+                .ToList(),
+            measured.Count(m => m.ResponseBreached || m.ResolutionBreached));
     }
 
     private static SupportWindow WindowOf(SupportHours coverage) => coverage switch

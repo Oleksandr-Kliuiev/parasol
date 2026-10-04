@@ -48,10 +48,13 @@ export interface TimeSummary {
   amount?: number;
 }
 
+/** One page of entries and the summary of every entry the filter matches (DEV-12). */
 export interface TimeEntryPage {
   items: TimeEntry[];
   summary: TimeSummary;
   periodClosed: boolean;
+  nextCursor: string | null;
+  totalCount: number;
 }
 
 export interface TimeEntryRequest {

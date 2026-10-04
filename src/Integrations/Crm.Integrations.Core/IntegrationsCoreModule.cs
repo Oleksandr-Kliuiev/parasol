@@ -1,6 +1,8 @@
+using System.Globalization;
 using Crm.Authorization;
 using Crm.Infrastructure.DependencyInjection;
 using Crm.Integrations.Core.Persistence;
+using Crm.SharedKernel.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -36,7 +38,7 @@ public static class IntegrationsCoreModule
 
     public static IEndpointRouteBuilder MapIntegrationRunEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/v1/integrations/runs", async (string? system, int? limit, IntegrationDbContext db, CancellationToken ct) =>
+        app.MapGet("/api/v1/integrations/runs", async (string? system, int? limit, string? cursor, IntegrationDbContext db, CancellationToken ct) =>
             {
                 var runs = db.SyncRuns.AsNoTracking();
                 if (!string.IsNullOrWhiteSpace(system))
@@ -44,7 +46,19 @@ public static class IntegrationsCoreModule
                     runs = runs.Where(r => r.System == system);
                 }
 
-                return Results.Ok(await runs.OrderByDescending(r => r.StartedAt).Take(Math.Clamp(limit ?? 50, 1, 200)).ToListAsync(ct));
+                // Newest first, then id (DEV-12): a page per request and the count of all.
+                var total = await runs.CountAsync(ct);
+                if (KeysetCursor.Decode(cursor) is { } after &&
+                    DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var started))
+                {
+                    runs = runs.Where(r => r.StartedAt < started || (r.StartedAt == started && r.Id.CompareTo(after.Id) < 0));
+                }
+
+                var take = KeysetCursor.ClampLimit(limit);
+                var page = await runs.OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).Take(take + 1).ToListAsync(ct);
+                var rows = page.Take(take).ToList();
+                return Results.Ok(new PagedResult<SyncRun>(
+                    rows, page.Count > take ? new KeysetCursor(rows[^1].StartedAt.ToString("O", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null, total));
             })
             .WithTags("Integrations")
             .RequirePermission(Permissions.IntegrationsManage);

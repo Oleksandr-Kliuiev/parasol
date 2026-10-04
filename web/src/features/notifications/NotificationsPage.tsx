@@ -17,13 +17,14 @@ import {
 import { CheckmarkCircle20Regular, Warning20Filled } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
-import { useNotificationActions, useNotificationPreferences, useNotifications, useSaveNotificationPreferences } from './api';
+import { useNotificationActions, useNotificationPages, useNotificationPreferences, useSaveNotificationPreferences } from './api';
 import { notificationText } from './text';
 import { notificationKinds, type NotificationKind } from './types';
 
@@ -61,7 +62,9 @@ export function NotificationsPage() {
   const navigate = useNavigate();
   const notify = useNotify();
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const { data, error, isPending, refetch } = useNotifications(unreadOnly, 100);
+  const pages = useNotificationPages(unreadOnly);
+  const { error, isPending, refetch } = pages;
+  const data = pages.latest ? { ...pages.latest, items: pages.items } : undefined;
   const actions = useNotificationActions();
 
   return (
@@ -130,6 +133,7 @@ export function NotificationsPage() {
               </li>
             ))}
           </ul>
+          <ListFooter shown={pages.items.length} total={pages.latest?.totalCount} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
         </Panel>
 
         <PreferencesPanel />

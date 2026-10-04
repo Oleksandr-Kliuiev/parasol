@@ -79,8 +79,16 @@ export const periodEnd = (period: BillingPeriod) => new Date(Date.UTC(period.yea
  */
 export async function* candidatePeriods(page: Page, fromYear: number, toYear = LAST_RUN_YEAR): AsyncGenerator<BillingPeriod> {
   for (let year = fromYear; year <= toYear; year++) {
-    const runs = await api.get<Array<{ periodStart: string }>>(page, `/api/v1/billing/runs?year=${year}&limit=120`);
-    const taken = new Set(runs.map((run) => run.periodStart.slice(0, 7)));
+    const taken = new Set<string>();
+    let cursor: string | null = null;
+    do {
+      const runs: { items: Array<{ periodStart: string }>; nextCursor: string | null } = await api.get(
+        page,
+        `/api/v1/billing/runs?year=${year}&limit=200${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+      );
+      for (const run of runs.items) taken.add(run.periodStart.slice(0, 7));
+      cursor = runs.nextCursor;
+    } while (cursor);
     for (let month = 1; month <= 12; month++) {
       const period = periodOf(year, month);
       if (!taken.has(period.start.slice(0, 7))) yield period;

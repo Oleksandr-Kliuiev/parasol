@@ -171,6 +171,8 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.Property(x => x.Outstanding).HasPrecision(18, 2);
             b.HasIndex(x => new { x.System, x.InvoiceNo }).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.InvoiceDate });
+            // The invoice list's order (DEV-12): date, number, id.
+            b.HasIndex(x => new { x.InvoiceDate, x.InvoiceNo, x.Id });
             b.HasIndex(x => x.BasisId);
             b.HasMany(x => x.Payments).WithOne().HasForeignKey(p => p.InvoiceId).OnDelete(DeleteBehavior.Cascade);
         });

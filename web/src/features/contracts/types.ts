@@ -217,14 +217,25 @@ export interface IndexationCandidate {
   lines: IndexationLine[];
 }
 
+/** Monthly amounts of a set of contracts, summed on the server (DEV-12); hidden from roles without finance. */
+export interface IndexationTotals {
+  contracts: number;
+  monthlyBefore?: number;
+  monthlyAfter?: number;
+}
+
 export interface IndexationPreview {
   percent: number;
   effectiveFrom: string;
   contracts: IndexationCandidate[];
+  totals: IndexationTotals;
 }
 
 export interface IndexationResult {
   contracts: number;
   lines: number;
   changed: IndexationCandidate[];
+  totals: IndexationTotals;
+  /** Requested contracts the preview would not offer on that date; never indexed. */
+  skipped: string[];
 }

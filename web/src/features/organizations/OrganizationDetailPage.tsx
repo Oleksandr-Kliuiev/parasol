@@ -149,11 +149,11 @@ export function OrganizationDetailPage() {
         }
       />
 
-      {duplicates.data && duplicates.data.length > 0 && (
+      {duplicates.data && duplicates.data.items.length > 0 && (
         <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
           <MessageBarBody>
             {t('duplicates.banner', {
-              name: duplicates.data.map((p) => (p.first.id === organization.id ? p.second.name : p.first.name)).join(', '),
+              name: duplicates.data.items.map((p) => (p.first.id === organization.id ? p.second.name : p.first.name)).join(', '),
             })}
           </MessageBarBody>
           <MessageBarActions>

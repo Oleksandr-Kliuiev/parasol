@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import type { OutboundStatus } from '../../api/types';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
@@ -157,7 +158,7 @@ export function OutboundPanel() {
     <Panel title={t('outbound.title')}>
       {outbound.error ? (
         <ErrorState error={outbound.error} onRetry={() => void outbound.refetch()} />
-      ) : outbound.data?.length === 0 ? (
+      ) : outbound.isSuccess && outbound.items.length === 0 ? (
         <EmptyState message={t('outbound.empty')} />
       ) : (
         <div className={styles.tableWrap}>
@@ -173,7 +174,7 @@ export function OutboundPanel() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {outbound.data?.map((o) => (
+              {outbound.items.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="tabular">{formatDateTime(o.createdAt)}</TableCell>
                   <TableCell>
@@ -202,6 +203,7 @@ export function OutboundPanel() {
               ))}
             </TableBody>
           </Table>
+          <ListFooter shown={outbound.items.length} total={outbound.total} hasMore={outbound.hasNextPage} loading={outbound.isFetchingNextPage} onMore={() => void outbound.fetchNextPage()} />
         </div>
       )}
     </Panel>

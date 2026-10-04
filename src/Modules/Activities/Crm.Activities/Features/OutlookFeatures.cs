@@ -29,6 +29,12 @@ public sealed record MailMessageDto(
     string Mailbox,
     bool IsSaved);
 
+/// <summary>
+/// The messages, and what was searched for them (DEV-12): the customer's domains first — one search covers every address there —
+/// then addresses outside those domains, up to <see cref="OutlookService.MaxMailTerms"/>. <c>NotSearched</c> counts the rest.
+/// </summary>
+public sealed record MailListResponse(IReadOnlyList<MailMessageDto> Messages, IReadOnlyList<string> Searched, int NotSearched);
+
 public sealed record SaveMailRequest(
     Guid OrganizationId,
     Guid? OpportunityId,
@@ -85,6 +91,9 @@ internal sealed class OutlookService(
     TimeProvider time,
     ILogger<OutlookService> logger)
 {
+    /// <summary>Search terms one mail view sends to Exchange (each is one request per mailbox).</summary>
+    public const int MaxMailTerms = 6;
+
     public OutlookStatusDto Status => new(calendar.IsAvailable, mailbox.IsAvailable);
 
     /// <summary>Pushes a meeting to the organizer's calendar, or updates the event that is already there.</summary>
@@ -180,7 +189,7 @@ internal sealed class OutlookService(
     }
 
     /// <summary>Messages exchanged with the customer's contacts and e-mail domains, newest first (FR-ACT-03).</summary>
-    public async Task<Result<IReadOnlyList<MailMessageDto>>> ListMailAsync(Guid organizationId, int take, CancellationToken ct)
+    public async Task<Result<MailListResponse>> ListMailAsync(Guid organizationId, int take, CancellationToken ct)
     {
         if (!mailbox.IsAvailable)
         {
@@ -197,16 +206,23 @@ internal sealed class OutlookService(
             .Concat(organization.Email is { Length: > 0 } email ? [email] : Array.Empty<string>())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var domains = organization.Domains.Where(d => !string.IsNullOrWhiteSpace(d)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var domains = organization.Domains.Where(d => !string.IsNullOrWhiteSpace(d)).Select(d => d.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (addresses.Count == 0 && domains.Count == 0)
         {
-            return Result<IReadOnlyList<MailMessageDto>>.Success([]);
+            return new MailListResponse([], [], 0);
         }
+
+        // Each term is one request per mailbox, so a page view asks Exchange for a bounded number of them. Domains go first: they
+        // find every address there, so only addresses outside them need a term of their own (DEV-12: what is left out is counted).
+        var outside = addresses.Where(a => !domains.Exists(d => a.EndsWith("@" + d, StringComparison.OrdinalIgnoreCase))).ToList();
+        var searchedDomains = domains.Take(MaxMailTerms).ToList();
+        var searchedAddresses = outside.Take(MaxMailTerms - searchedDomains.Count).ToList();
+        var notSearched = domains.Count - searchedDomains.Count + outside.Count - searchedAddresses.Count;
 
         IReadOnlyList<MailMessage> messages;
         try
         {
-            messages = await mailbox.SearchAsync(new MailSearch(addresses, domains, Math.Clamp(take, 1, 50)), ct);
+            messages = await mailbox.SearchAsync(new MailSearch(searchedAddresses, searchedDomains, Math.Clamp(take, 1, 50)), ct);
         }
         catch (UserNotConnectedException)
         {
@@ -219,9 +235,12 @@ internal sealed class OutlookService(
             .Select(a => a.ExternalMessageId!)
             .ToListAsync(ct);
 
-        return messages.Select(m => new MailMessageDto(
-            m.Id, m.InternetMessageId, m.Subject, m.Preview, m.FromAddress, m.FromName, m.ToAddresses, m.ReceivedAt,
-            m.HasAttachments, m.WebLink, m.Mailbox, saved.Contains(m.InternetMessageId, StringComparer.OrdinalIgnoreCase))).ToList();
+        return new MailListResponse(
+            messages.Select(m => new MailMessageDto(
+                m.Id, m.InternetMessageId, m.Subject, m.Preview, m.FromAddress, m.FromName, m.ToAddresses, m.ReceivedAt,
+                m.HasAttachments, m.WebLink, m.Mailbox, saved.Contains(m.InternetMessageId, StringComparer.OrdinalIgnoreCase))).ToList(),
+            [.. searchedDomains, .. searchedAddresses],
+            notSearched);
     }
 
     /// <summary>Saves a message against the customer: metadata and a link only (SEC-GDPR-06).</summary>
@@ -271,10 +290,10 @@ internal sealed class OutlookService(
 
     private async Task<IReadOnlyList<string>> ContactAddressesAsync(Guid organizationId, CancellationToken ct) =>
         (await customers.GetOrganizationContactsAsync(organizationId, ct))
+        .Where(contact => !contact.IsDeleted)
         .Select(contact => contact.Email)
         .OfType<string>()
         .Where(email => email.Length > 0)
         .Distinct(StringComparer.OrdinalIgnoreCase)
-        .Take(5)
         .ToList();
 }

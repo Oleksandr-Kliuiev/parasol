@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, query } from '../../api/client';
+import { api } from '../../api/client';
+import { fetchAllPages, usePagedList } from '../../api/paging';
 import type { PhaseRequest, Project, ProjectListItem, ProjectPhaseStatus, ProjectRequest, ProjectStatus, TaskRequest } from './types';
 
 const BASE = '/api/v1/projects';
@@ -19,11 +20,17 @@ export const projectKeys = {
   detail: (id: string) => ['projects', 'detail', id] as const,
 };
 
+/** Projects page by page, with how many the filter matches (DEV-12). */
 export function useProjects(filters: ProjectFilters, enabled = true) {
+  return usePagedList<ProjectListItem>(projectKeys.list(filters), BASE, filters, { enabled });
+}
+
+/** Every project of a filter, for a picker that must offer all of them (an organization's open projects). */
+export function useAllProjects(filters: ProjectFilters, enabled = true) {
   return useQuery({
-    queryKey: projectKeys.list(filters),
+    queryKey: [...projectKeys.list(filters), 'all'],
     enabled,
-    queryFn: async ({ signal }) => (await api.get<ProjectListItem[]>(`${BASE}${query(filters)}`, signal)).data,
+    queryFn: ({ signal }) => fetchAllPages<ProjectListItem>(BASE, filters, signal),
   });
 }
 

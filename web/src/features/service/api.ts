@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type { Alert, Device, ServiceSummary, SlaReport, Ticket, TicketOptions, TicketRequest } from './types';
 
 const BASE = '/api/v1/service';
@@ -33,38 +34,28 @@ export function useServiceSummary(organizationId: string, enabled = true) {
   });
 }
 
+/** Open first, newest first; a page at a time with the count of all (DEV-12). */
 export function useTickets(filters: { organizationId?: string; contactId?: string; openOnly?: boolean; days?: number }, enabled = true) {
-  return useQuery({
-    queryKey: serviceKeys.tickets(filters),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<Ticket[]>(`${BASE}/tickets${query(filters)}`, signal)).data,
-  });
+  return usePagedList<Ticket>(serviceKeys.tickets(filters), `${BASE}/tickets`, filters, { enabled, limit: 25 });
 }
 
+/** By machine name; the counts per type come from the summary, which counts every device. */
 export function useDevices(organizationId: string, enabled = true) {
-  return useQuery({
-    queryKey: serviceKeys.devices(organizationId),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<Device[]>(`${BASE}/devices${query({ organizationId })}`, signal)).data,
-  });
+  return usePagedList<Device>(serviceKeys.devices(organizationId), `${BASE}/devices`, { organizationId }, { enabled, limit: 25 });
 }
 
 export function useAlerts(organizationId: string, enabled = true) {
-  return useQuery({
-    queryKey: serviceKeys.alerts(organizationId),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<Alert[]>(`${BASE}/alerts${query({ organizationId })}`, signal)).data,
-  });
+  return usePagedList<Alert>(serviceKeys.alerts(organizationId), `${BASE}/alerts`, { organizationId }, { enabled, limit: 25 });
 }
 
+/** Requests that still need attention: pending (the worker picks them up within a minute) or failed. */
 export function useTicketRequests(organizationId: string, enabled = true) {
-  return useQuery<TicketRequest[]>({
-    queryKey: serviceKeys.requests(organizationId),
-    enabled,
-    // A queued request is picked up by the worker within a minute.
-    refetchInterval: ({ state }) => (state.data?.some((r) => r.status === 'Pending') ? 5_000 : false),
-    queryFn: async ({ signal }) => (await api.get<TicketRequest[]>(`${BASE}/ticket-requests${query({ organizationId })}`, signal)).data,
-  });
+  return usePagedList<TicketRequest>(
+    serviceKeys.requests(organizationId),
+    `${BASE}/ticket-requests`,
+    { organizationId, attentionOnly: true },
+    { enabled, limit: 20, refetchWhile: (r) => r.status === 'Pending' },
+  );
 }
 
 export function useTicketOptions(enabled = true) {

@@ -622,6 +622,7 @@ erDiagram
 | `licensing.MsBilledLine` | UNIQUE (`LineKey`); INDEX (`PeriodStart`, `OrganizationId`) |
 | `billing.BillingBasis` | UNIQUE (`IdempotencyKey`) |
 | `billing.BillingRun` | UNIQUE (`PeriodStart`) WHERE `Status <> 'Closed'` |
+| `billing.Invoice` | INDEX (`InvoiceDate`, `InvoiceNo`, `Id`) — порядок списка счетов и его курсор (DEV-12) |
 | `audit.AuditEntry` | Кластерный по `At`; INDEX (`EntityType`, `EntityId`); секционирование по году |
 | `identity.User` | UNIQUE (`TenantId`, `ObjectId`); подтверждённые роли `Roles`, `RolesVersion`, `RolesVerifiedAt` (DEV-10) |
 | `identity.UserSession` | INDEX (`UserId`); открыта, пока `EndedAt IS NULL` (DEV-10) |

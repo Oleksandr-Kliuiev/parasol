@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type {
   BillingDetailsMaster,
   BulkResult,
@@ -88,13 +89,9 @@ export function useEntityLinks(entityType: string, entityId: string) {
   });
 }
 
+/** Newest first, a page at a time with the count of all (DEV-12). */
 export function useOutbound(enabled = true) {
-  return useQuery({
-    queryKey: ['integrations', 'outbound'],
-    enabled,
-    refetchInterval: 15_000,
-    queryFn: async ({ signal }) => (await api.get<OutboundOperation[]>(`${BASE}/outbound`, signal)).data,
-  });
+  return usePagedList<OutboundOperation>(['integrations', 'outbound'], `${BASE}/outbound`, {}, { enabled, limit: 25, refetchInterval: 15_000 });
 }
 
 /** Dead and quarantined domain events of every module, for the delivery panel (DEV-07). */

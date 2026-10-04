@@ -30,8 +30,8 @@ test('a person gets their data, then is erased and stays erased (DEV-11)', { tag
   // so it is previewed once the entry exists (its status is not part of the plan) — a plan that changes under the preview is
   // refused, as it should be.
   await expect
-    .poll(async () => (await api.get<Array<{ entityId: string; status: string }>>(page, '/api/v1/integrations/outbound?system=poweroffice'))
-      .find((o) => o.entityId === contactId)?.status, { timeout: 30_000 })
+    .poll(async () => (await api.get<{ items: Array<{ entityId: string; status: string }> }>(page, '/api/v1/integrations/outbound?system=poweroffice&limit=200'))
+      .items.find((o) => o.entityId === contactId)?.status, { timeout: 30_000 })
     .toBeDefined();
 
   // Access: the export holds what the CRM keeps on her, and answering it completes the request.

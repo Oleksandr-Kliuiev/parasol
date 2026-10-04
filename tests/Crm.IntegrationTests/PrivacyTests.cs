@@ -351,7 +351,7 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         (await admin.GetAsync($"/api/v1/customers/contacts/{person.ContactId}", Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
 
         // Released, the hold protects nothing: the next erasure takes the record too.
-        var holdEtag = (await admin.GetFromJsonAsync<JsonElement>($"{Privacy}/holds?includeEnded=true", Ct)).EnumerateArray()
+        var holdEtag = (await admin.GetFromJsonAsync<JsonElement>($"{Privacy}/holds?includeEnded=true&limit=200", Ct)).GetProperty("items").EnumerateArray()
             .Single(h => h.GetProperty("id").GetGuid() == hold.GetProperty("id").GetGuid()).GetProperty("etag").GetString()!;
         (await admin.PostWithETagAsync($"{Privacy}/holds/{hold.GetProperty("id").GetGuid()}/release", new { reason = "Dispute settled (test)." }, holdEtag))
             .StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -360,7 +360,8 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         var nextPlan = await PreviewAsync(admin, nextCase, nextEtag);
         Action(nextPlan, "activities", "Activity", person.CallId).ShouldBe("Delete");
         var nextNumber = (await admin.GetFromJsonAsync<JsonElement>($"{Privacy}/cases/{nextCase}", Ct)).GetProperty("number").GetString()!;
-        (await ExecuteRawAsync(admin, nextCase, nextPlan.Etag, nextPlan.Digest, nextNumber)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var nextExecuted = await ExecuteRawAsync(admin, nextCase, nextPlan.Etag, nextPlan.Digest, nextNumber);
+        nextExecuted.StatusCode.ShouldBe(HttpStatusCode.OK, await nextExecuted.Content.ReadAsStringAsync(Ct));
         (await ActivityIdsAsync(admin, person.OrganizationId)).ShouldNotContain(person.CallId);
     }
 

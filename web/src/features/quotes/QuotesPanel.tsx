@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { Panel } from '../../shared/components/Panel';
 import { formatDate, formatMoney } from '../../shared/utils/format';
@@ -30,7 +31,8 @@ export function QuotesPanel({
   const navigate = useNavigate();
   const canWrite = useCan(Permissions.salesWrite);
   const canSeeMoney = useCan(Permissions.financeRead);
-  const { data = [], error, isPending, refetch } = useQuotes(opportunityId ? { opportunityId } : { organizationId });
+  const quotes = useQuotes(opportunityId ? { opportunityId } : { organizationId });
+  const { items: data, error, isPending, refetch } = quotes;
 
   const create = () => {
     const params = new URLSearchParams({ organizationId, organizationName });
@@ -83,6 +85,7 @@ export function QuotesPanel({
               ))}
             </TableBody>
           </Table>
+          <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />
         </div>
       )}
     </Panel>

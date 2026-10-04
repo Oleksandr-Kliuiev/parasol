@@ -58,7 +58,9 @@ public sealed record DashboardResponse(
     IReadOnlyList<RenewalItem> Renewals,
     IReadOnlyList<UtilizationItem> Utilization,
     LicensePanel Licenses,
-    ServicePanel Service);
+    ServicePanel Service,
+    int RenewalsTotal,
+    int TechniciansTotal);
 
 /// <summary>
 /// The dashboard (FR-RPT-01) is composed from what each module already knows through its contracts: nothing is copied into a
@@ -75,6 +77,11 @@ internal sealed class DashboardService(
     ITimeTrackingApi timeTracking,
     TimeProvider time)
 {
+    /// <summary>The panels show the soonest renewals and the busiest technicians; the totals say how many there are (DEV-12).</summary>
+    public const int RenewalsShown = 20;
+
+    public const int TechniciansShown = 15;
+
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
 
     public async Task<DashboardResponse> GetAsync(int months, CancellationToken ct)
@@ -112,10 +119,10 @@ internal sealed class DashboardService(
             renewals
                 .Select(r => new RenewalItem(
                     r.ContractId, r.Number, r.Title, organizations.GetValueOrDefault(r.OrganizationId, "—"), r.EndDate, r.DaysLeft, r.AutoRenew, r.NoticeDeadline))
-                .Take(20)
+                .Take(RenewalsShown)
                 .ToList(),
             utilization
-                .Take(15)
+                .Take(TechniciansShown)
                 .Select(u => new UtilizationItem(
                     u.TechnicianName, u.BilledHours, u.CoveredHours, u.HourBankHours, u.NonBillableHours, u.TotalHours,
                     u.TotalHours == 0 ? 0 : decimal.Round(u.BilledHours / u.TotalHours * 100m, 1)))
@@ -123,7 +130,9 @@ internal sealed class DashboardService(
             new LicensePanel(
                 licenses.Subscriptions, licenses.Licenses, licenses.CancellationWindowOpen, licenses.RenewingSoon,
                 licenses.NotBilled, licenses.WithoutOrganization),
-            new ServicePanel(load.OpenTickets, load.UnassignedTickets, load.CriticalAlerts, load.WarningAlerts, load.Devices, load.DevicesOffline));
+            new ServicePanel(load.OpenTickets, load.UnassignedTickets, load.CriticalAlerts, load.WarningAlerts, load.Devices, load.DevicesOffline),
+            renewals.Count,
+            utilization.Count);
     }
 
     /// <summary>Every month of the window is present, so a chart shows the gaps instead of skipping them.</summary>

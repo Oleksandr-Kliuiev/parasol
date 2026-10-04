@@ -82,7 +82,7 @@ public class OutlookApiTests(CrmWebFactory factory)
         var synced = await (await sales.PostAsync($"{Activities}/calendar/sync?days=400", null)).ReadJsonAsync();
         synced.GetProperty("updated").GetInt32().ShouldBeGreaterThanOrEqualTo(1);
 
-        var after = (await sales.GetFromJsonAsync<JsonElement>($"{Activities}/?organizationId={organizationId}")).EnumerateArray()
+        var after = (await sales.GetFromJsonAsync<JsonElement>($"{Activities}/?organizationId={organizationId}")).GetProperty("items").EnumerateArray()
             .Single(a => a.GetProperty("id").GetGuid() == activityId);
         after.GetProperty("subject").GetString().ShouldBe($"{marker} Oppstart, flyttet");
         after.GetProperty("dueAt").GetDateTimeOffset().ShouldBe(new DateTimeOffset(2027, 4, 12, 10, 0, 0, TimeSpan.Zero));
@@ -127,7 +127,9 @@ public class OutlookApiTests(CrmWebFactory factory)
             }));
 
         var mail = await sales.GetFromJsonAsync<JsonElement>($"{Activities}/mail?organizationId={organizationId}");
-        var message = mail.EnumerateArray().Single(m => m.GetProperty("messageId").GetString() == $"<{marker}@kunde.no>");
+        mail.GetProperty("searched").EnumerateArray().Select(s => s.GetString()).ShouldBe([email]);
+        mail.GetProperty("notSearched").GetInt32().ShouldBe(0);
+        var message = mail.GetProperty("messages").EnumerateArray().Single(m => m.GetProperty("messageId").GetString() == $"<{marker}@kunde.no>");
         message.GetProperty("fromAddress").GetString().ShouldBe(email);
         message.GetProperty("hasAttachments").GetBoolean().ShouldBeTrue();
         message.GetProperty("isSaved").GetBoolean().ShouldBeFalse();
@@ -155,9 +157,43 @@ public class OutlookApiTests(CrmWebFactory factory)
             organizationId, messageId = $"<{marker}@kunde.no>", subject = "Duplikat", fromAddress = email,
             receivedAt = "2027-02-01T08:15:00Z",
         })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await sales.GetFromJsonAsync<JsonElement>($"{Activities}/mail?organizationId={organizationId}")).EnumerateArray()
+        (await sales.GetFromJsonAsync<JsonElement>($"{Activities}/mail?organizationId={organizationId}")).GetProperty("messages").EnumerateArray()
             .Single(m => m.GetProperty("messageId").GetString() == $"<{marker}@kunde.no>")
             .GetProperty("isSaved").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task The_mail_search_asks_for_the_domain_first_and_says_which_addresses_it_left_out()
+    {
+        var sales = factory.ClientAs(CrmRoles.Sales, userKey: "outlook-mail-terms");
+        var marker = $"T{Guid.NewGuid():N}"[..10].ToLowerInvariant();
+        var domain = $"{marker}.no";
+        var organizationId = await sales.CreateOrganizationAsync(new { name = $"{marker} Domene AS", status = "Customer", domains = new[] { domain } });
+        // One contact at the customer's domain (the domain search finds them) and seven elsewhere — more than the five
+        // address terms left once the domain has one.
+        var addresses = new[] { $"kari@{domain}" }.Concat(Enumerable.Range(0, 7).Select(i => $"person{i}@{marker}-privat{i}.no")).ToList();
+        foreach (var (address, index) in addresses.Select((a, i) => (a, i)))
+        {
+            (await sales.PostAsJsonAsync($"/api/v1/customers/organizations/{organizationId}/contacts", new
+            {
+                firstName = "Kontakt", lastName = $"{marker}{index}", email = address, roles = Array.Empty<string>(), isPrimary = index == 0,
+            })).StatusCode.ShouldBe(HttpStatusCode.Created);
+        }
+
+        factory.Graph.Given(Request.Create().WithPath(Graph("me/messages")).UsingGet()).RespondWith(JsonReply(new { value = Array.Empty<object>() }));
+        var mail = await sales.GetFromJsonAsync<JsonElement>($"{Activities}/mail?organizationId={organizationId}");
+
+        var searched = mail.GetProperty("searched").EnumerateArray().Select(s => s.GetString()!).ToList();
+        searched[0].ShouldBe(domain);
+        searched.Count.ShouldBe(6);
+        searched.ShouldNotContain($"kari@{domain}", "the domain already covers her");
+        mail.GetProperty("notSearched").GetInt32().ShouldBe(2);
+        var asked = factory.Graph.LogEntries
+            .Select(e => e.RequestMessage!)
+            .Where(r => r.Path == Graph("me/messages") && r.Query is not null && r.Query.TryGetValue("$search", out var terms) && terms.ToString().Contains(marker, StringComparison.Ordinal))
+            .Select(r => r.Query!["$search"].ToString())
+            .ToList();
+        asked.Count.ShouldBe(6, "one request per searched term, no more");
     }
 
     [Fact]

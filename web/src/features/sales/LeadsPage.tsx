@@ -34,6 +34,7 @@ import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { UserPicker } from '../../shared/components/UserPicker';
@@ -64,7 +65,8 @@ export function LeadsPage() {
   const [mine, setMine] = useState(false);
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim());
-  const { data = [], error, isPending, refetch } = useLeads({ status, mine, search: debounced });
+  const leads = useLeads({ status, mine, search: debounced });
+  const { items: data, error, isPending, refetch } = leads;
   const [dialog, setDialog] = useState<{ kind: 'edit' | 'convert' | 'disqualify'; lead?: Lead } | null>(null);
   const restoreFocusTarget = useRestoreFocusTarget();
 
@@ -182,6 +184,7 @@ export function LeadsPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('leads.empty')} />}
+          <ListFooter shown={data.length} total={leads.total} hasMore={leads.hasNextPage} loading={leads.isFetchingNextPage} onMore={() => void leads.fetchNextPage()} />
         </div>
       )}
 

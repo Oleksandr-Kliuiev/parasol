@@ -268,8 +268,15 @@ public sealed record LegacyLinesReport(
     int ClosedLines,
     [property: SensitiveData(Permissions.FinanceRead)] decimal? ClosedAmount);
 
+/// <summary>
+/// Invoices of a filter (DEV-12): <paramref name="Count"/>, <paramref name="Outstanding"/> and <paramref name="Overdue"/> cover
+/// every invoice the filter matches — overdue as of <paramref name="AsOf"/> (Oslo) — while <paramref name="Invoices"/> is one
+/// page, continued with <paramref name="NextCursor"/>.
+/// </summary>
 public sealed record InvoiceSummary(
     int Count,
     [property: SensitiveData(Permissions.FinanceRead)] decimal? Outstanding,
     [property: SensitiveData(Permissions.FinanceRead)] decimal? Overdue,
-    IReadOnlyList<InvoiceDto> Invoices);
+    IReadOnlyList<InvoiceDto> Invoices,
+    string? NextCursor,
+    DateOnly AsOf);

@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { formatDate, formatMoney } from '../../shared/utils/format';
@@ -59,7 +60,8 @@ export function QuotesPage() {
     mine: mine || undefined,
     awaitingApproval: awaitingApproval || undefined,
   };
-  const { data = [], error, isPending, refetch } = useQuotes(filters);
+  const quotes = useQuotes(filters);
+  const { items: data, error, isPending, refetch } = quotes;
 
   return (
     <>
@@ -108,21 +110,24 @@ export function QuotesPage() {
       ) : data.length === 0 ? (
         <EmptyState message={t('quotes.empty')} />
       ) : isPhone ? (
-        <ul className={catalog.cards}>
-          {data.map((quote) => (
-            <li key={quote.id} className={catalog.card}>
-              <AppLink to={`/quotes/${quote.id}`} className={catalog.name}>
-                {quote.number}
-                {quote.versionNo > 1 ? ` · v${quote.versionNo}` : ''} — {quote.title}
-              </AppLink>
-              <span className={catalog.cardMeta}>
-                <QuoteStatusBadge status={quote.status} />
-                <span>{quote.organization.name}</span>
-                {canSeeMoney && <span>{formatMoney(quote.contractValue)}</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className={catalog.cards}>
+            {data.map((quote) => (
+              <li key={quote.id} className={catalog.card}>
+                <AppLink to={`/quotes/${quote.id}`} className={catalog.name}>
+                  {quote.number}
+                  {quote.versionNo > 1 ? ` · v${quote.versionNo}` : ''} — {quote.title}
+                </AppLink>
+                <span className={catalog.cardMeta}>
+                  <QuoteStatusBadge status={quote.status} />
+                  <span>{quote.organization.name}</span>
+                  {canSeeMoney && <span>{formatMoney(quote.contractValue)}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />
+        </>
       ) : (
         <div className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('quotes.title')}>
@@ -169,6 +174,7 @@ export function QuotesPage() {
               ))}
             </TableBody>
           </Table>
+          <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />
         </div>
       )}
     </>

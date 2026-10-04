@@ -184,7 +184,7 @@ public class BillingApprovalApiTests(CrmWebFactory factory)
         var changed = await RunAsync(finance, runId);
         changed.GetProperty("requiresSecondApproval").GetBoolean().ShouldBeTrue();
         changed.GetProperty("contentRevision").GetInt32().ShouldBe(revision + 1);
-        (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs?year={period.Year}&limit=120")).EnumerateArray()
+        (await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs?year={period.Year}&limit=200")).GetProperty("items").EnumerateArray()
             .Single(r => r.GetProperty("id").GetGuid() == runId).GetProperty("requiresSecondApproval").GetBoolean().ShouldBeTrue();
 
         var first = await finance.RunCommandAsync(runId, "approve");

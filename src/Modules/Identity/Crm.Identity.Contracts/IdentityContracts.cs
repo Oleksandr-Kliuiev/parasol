@@ -16,7 +16,8 @@ public sealed record ExternalIdentity(
 
 public sealed record UserSummary(Guid Id, string DisplayName, string? Email, bool IsActive);
 
-public sealed record UserProfile(Guid Id, string DisplayName, string? Email, string? PreferredLanguage, bool IsActive);
+/// <summary>A CRM user; <paramref name="Roles"/> are the roles the directory last confirmed (DEV-10), for decisions made on their behalf.</summary>
+public sealed record UserProfile(Guid Id, string DisplayName, string? Email, string? PreferredLanguage, bool IsActive, IReadOnlyList<string>? Roles = null);
 
 public interface IUserProvisioning
 {

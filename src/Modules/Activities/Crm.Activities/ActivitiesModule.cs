@@ -32,7 +32,7 @@ public static class ActivitiesModule
 
         group.MapGet("/", async ([AsParameters] ActivityParameters p, ActivityService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(
-                    new ActivityQuery(p.OrganizationId, p.OpportunityId, p.ContractId, p.Type, p.Mine ?? false, p.Open ?? false), ct)))
+                    new ActivityQuery(p.OrganizationId, p.OpportunityId, p.ContractId, p.Type, p.Mine ?? false, p.Open ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.ActivitiesRead);
 
         group.MapPost("/", async (ActivityRequest request, ActivityService service, CancellationToken ct) =>
@@ -95,4 +95,6 @@ public sealed record ActivityParameters(
     [FromQuery] Guid? ContractId,
     [FromQuery] ActivityType? Type,
     [FromQuery] bool? Mine,
-    [FromQuery] bool? Open);
+    [FromQuery] bool? Open,
+    [FromQuery] int? Limit,
+    [FromQuery] string? Cursor);

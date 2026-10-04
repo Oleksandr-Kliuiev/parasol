@@ -99,10 +99,16 @@ public sealed class CspSubscription : Entity
 
     public void LinkProduct(Guid? productId) => ProductId = productId;
 
-    public bool IsCancellationWindowOpen(DateTimeOffset now) => CancellationWindowEndsAt is { } ends && ends > now;
+    public bool IsCancellationWindowOpen(DateTimeOffset now) => IsCancellationWindowOpen(CancellationWindowEndsAt, now);
 
-    public bool IsRenewingWithin(DateOnly today, int days) =>
-        (RenewalDate ?? CommitmentEndDate) is { } date && date >= today && date.DayNumber - today.DayNumber <= days;
+    public bool IsRenewingWithin(DateOnly today, int days) => IsRenewingWithin(RenewalDate, CommitmentEndDate, today, days);
+
+    /// <summary>The same rule for a row read without its entity (a summary over every subscription, DEV-12).</summary>
+    public static bool IsCancellationWindowOpen(DateTimeOffset? windowEndsAt, DateTimeOffset now) => windowEndsAt is { } ends && ends > now;
+
+    /// <summary>Renewal, or the end of the commitment when no renewal date is known, within <paramref name="days"/> from today.</summary>
+    public static bool IsRenewingWithin(DateOnly? renewalDate, DateOnly? commitmentEndDate, DateOnly today, int days) =>
+        (renewalDate ?? commitmentEndDate) is { } date && date >= today && date.DayNumber - today.DayNumber <= days;
 
     // Values are formatted invariantly, and decimals without trailing zeros: the database returns them at column scale
     // (225.5000 for 225.50), which would otherwise look like a change on every sync.

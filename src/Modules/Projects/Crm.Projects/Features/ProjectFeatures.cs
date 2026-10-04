@@ -154,7 +154,7 @@ public sealed record ProjectListItem(
     int PhasesDone,
     int Phases);
 
-public sealed record ProjectQuery(string? Search, Guid? OrganizationId, ProjectStatus? Status, Guid? ManagerId, bool OpenOnly);
+public sealed record ProjectQuery(string? Search, Guid? OrganizationId, ProjectStatus? Status, Guid? ManagerId, bool OpenOnly, int? Limit = null, string? Cursor = null);
 
 internal static class ProjectApiErrors
 {
@@ -184,7 +184,8 @@ internal sealed class ProjectService(
 
     private DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), Oslo).DateTime);
 
-    public async Task<IReadOnlyList<ProjectListItem>> ListAsync(ProjectQuery query, CancellationToken ct)
+    /// <summary>One page of the projects in the caller's scope, newest number first, and how many the filter matches (DEV-12).</summary>
+    public async Task<PagedResult<ProjectListItem>> ListAsync(ProjectQuery query, CancellationToken ct)
     {
         // The scope comes first; the manager filter and the rest only narrow what the caller may see (DEV-09).
         var projects = db.Projects.AsNoTracking().Include(p => p.Phases).InScope(db, scope);
@@ -214,12 +215,20 @@ internal sealed class ProjectService(
             projects = projects.Where(p => p.Status != ProjectStatus.Completed && p.Status != ProjectStatus.Cancelled);
         }
 
-        var rows = await projects.OrderByDescending(p => p.Number).Take(200).ToListAsync(ct);
+        var total = await projects.CountAsync(ct);
+        if (KeysetCursor.Decode(query.Cursor) is { } cursor)
+        {
+            projects = projects.Where(p => p.Number.CompareTo(cursor.SortKey) < 0 || (p.Number == cursor.SortKey && p.Id.CompareTo(cursor.Id) < 0));
+        }
+
+        var limit = KeysetCursor.ClampLimit(query.Limit);
+        var page = await projects.OrderByDescending(p => p.Number).ThenByDescending(p => p.Id).Take(limit + 1).ToListAsync(ct);
+        var rows = page.Take(limit).ToList();
         var organizations = await customers.GetOrganizationNamesAsync(rows.Select(p => p.OrganizationId).Distinct().ToList(), ct);
         var managers = await users.GetUsersAsync(rows.Where(p => p.ManagerId != null).Select(p => p.ManagerId!.Value).Distinct().ToList(), ct);
         var hours = (await timeTracking.GetProjectHoursAsync(rows.ConvertAll(p => p.Id), ct)).ToDictionary(h => h.ProjectId);
 
-        return rows.ConvertAll(p => new ProjectListItem(
+        var items = rows.ConvertAll(p => new ProjectListItem(
             p.Id,
             p.Number,
             p.Name,
@@ -233,6 +242,8 @@ internal sealed class ProjectService(
             hours.GetValueOrDefault(p.Id)?.Hours ?? 0m,
             p.Phases.Count(f => f.Status == ProjectPhaseStatus.Completed),
             p.Phases.Count));
+        var last = rows.LastOrDefault();
+        return new PagedResult<ProjectListItem>(items, page.Count > limit && last is not null ? new KeysetCursor(last.Number, last.Id).Encode() : null, total);
     }
 
     public async Task<Result<ProjectResponse>> GetAsync(Guid id, CancellationToken ct)

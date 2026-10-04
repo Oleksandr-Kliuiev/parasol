@@ -18,7 +18,7 @@ function stub() {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST' || init?.method === 'DELETE') return new Response(JSON.stringify(project), { status: 200 });
     if (url.startsWith('/api/v1/identity/users')) {
-      return new Response(JSON.stringify([{ id: 'u4', displayName: 'Ola Olsen', email: null, isActive: true }]), { status: 200 });
+      return new Response(JSON.stringify({ items: [{ id: 'u4', displayName: 'Ola Olsen', email: null, isActive: true }], nextCursor: null, totalCount: 1 }), { status: 200 });
     }
     return new Response(JSON.stringify(url === '/api/v1/projects/p1' ? project : []), { status: 200 });
   });

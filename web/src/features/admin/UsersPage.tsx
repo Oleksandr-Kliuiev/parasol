@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Avatar,
   Badge,
@@ -15,10 +14,11 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
-import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type { UserSummary } from '../../api/types';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { NotFoundPage } from '../errors/NotFoundPage';
@@ -34,11 +34,8 @@ export function UsersPage() {
   const allowed = useCan(Permissions.usersRead);
   const [search, setSearch] = useState('');
   const term = useDebouncedValue(search);
-  const { data, error, refetch } = useQuery({
-    queryKey: ['identity', 'users', 'admin', term],
-    enabled: allowed,
-    queryFn: async ({ signal }) => (await api.get<UserSummary[]>(`/api/v1/identity/users${query({ search: term, includeInactive: true })}`, signal)).data,
-  });
+  const users = usePagedList<UserSummary>(['identity', 'users', 'admin', term], '/api/v1/identity/users', { search: term, includeInactive: true }, { enabled: allowed });
+  const { items: data, error, refetch } = users;
   if (!allowed) return <NotFoundPage />;
 
   return (
@@ -58,7 +55,7 @@ export function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.map((user) => (
+              {data.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <TableCellLayout media={<Avatar name={user.displayName} size={24} color="colorful" />}>{user.displayName}</TableCellLayout>
@@ -73,6 +70,7 @@ export function UsersPage() {
               ))}
             </TableBody>
           </Table>
+          <ListFooter shown={data.length} total={users.total} hasMore={users.hasNextPage} loading={users.isFetchingNextPage} onMore={() => void users.fetchNextPage()} />
         </div>
       )}
     </>

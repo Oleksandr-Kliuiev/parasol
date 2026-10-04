@@ -80,8 +80,12 @@ export interface Dashboard {
   revenue: RevenueMonth[];
   invoices: InvoicePanel;
   pipeline: PipelinePanel;
+  /** The soonest renewals of the next 90 days; `renewalsTotal` counts all of them (DEV-12). */
   renewals: RenewalItem[];
+  /** The technicians with most hours this month; `techniciansTotal` counts all of them. */
   utilization: UtilizationItem[];
+  renewalsTotal: number;
+  techniciansTotal: number;
   licenses: LicensePanel;
   service: ServicePanel;
 }

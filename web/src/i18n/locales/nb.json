@@ -62,7 +62,8 @@
     "open": "Åpne",
     "status": "Status",
     "active": "Aktiv",
-    "inactive": "Inaktiv"
+    "inactive": "Inaktiv",
+    "shownOf": "Viser {{shown}} av {{total}}"
   },
   "errors": {
     "generic": "Noe gikk galt",
@@ -182,7 +183,11 @@
     "billing": "Fakturering",
     "runCustomers": "{{count}} kunder",
     "runAnomalies": "{{count}} må ses på",
-    "overdueInvoices": "{{count}} forfalte fakturaer"
+    "moreOpenRuns_one": "{{count}} kjøring til er åpen",
+    "moreOpenRuns_other": "{{count}} kjøringer til er åpne",
+    "overdueInvoices": "{{count}} forfalte fakturaer",
+    "allStaleDeals": "Alle {{count}} i salgstrakten",
+    "allCancellationWindows": "Alle {{count}} med åpent oppsigelsesvindu"
   },
   "organizations": {
     "title": "Organisasjoner",
@@ -381,6 +386,8 @@
     "search": "Søk etter brukere"
   },
   "userPicker": {
+    "narrow_one": "og {{count}} til – skriv for å snevre inn",
+    "narrow_other": "og {{count}} til – skriv for å snevre inn",
     "placeholder": "Søk etter personer",
     "clear": "Fjern"
   },
@@ -393,6 +400,7 @@
     "enterHint": "↑↓ for å flytte · Enter for å åpne · Enter uten valg søker i organisasjoner"
   },
   "duplicates": {
+    "strongestShown": "De {{shown}} sterkeste av {{total}} mulige duplikater vises; når du slår sammen eller avviser, kommer de neste.",
     "title": "Mulige duplikater",
     "subtitle": "Organisasjoner som ser ut til å være samme selskap. Slå dem sammen eller merk dem som forskjellige.",
     "link": "Mulige duplikater",
@@ -591,6 +599,7 @@
     "description": "Hendelser én modul ikke fikk levert til en annen: etter ti mislykkede forsøk (død melding) eller fordi den lagrede meldingen ikke kan leses (karantene). Rett årsaken først, send så på nytt: den lagrede meldingen leveres uendret, og mottakere som allerede er ferdige, hoppes over.",
     "backlog": "Ikke leverte hendelser per modul",
     "counts": "{{module}}: {{deadLetter}} døde meldinger, {{quarantined}} i karantene, {{pending}} venter på levering",
+    "newestShown": "De {{shown}} nyeste av {{total}} ikke leverte hendelser vises; når de er sendt på nytt, kommer de neste.",
     "empty": "Ingenting venter på en person: ingen døde meldinger og ingen hendelser i karantene.",
     "replaySelected": "Send valgte på nytt ({{count}})",
     "limit": "Høyst {{max}} meldinger per gang: de første {{max}} tas med.",
@@ -1085,7 +1094,7 @@
       "empty": "Ingen kontrakter skal indekseres på den datoen.",
       "selected": "{{selected}} av {{total}} kontrakter valgt",
       "selectAll": "Velg alle",
-      "monthlyChange": "Per måned: {{before}} → {{after}}",
+      "monthlyChange": "Alle avtaler som skal indeksreguleres, per måned: {{before}} → {{after}}",
       "due": "Forfaller",
       "before": "I dag, per måned",
       "after": "Etter, per måned",
@@ -1094,7 +1103,8 @@
       "notifyHint": "Kundene må varsles om de nye prisene; varslingsfristen i hver kontrakt gjelder fortsatt.",
       "apply": "Indekser {{count}} kontrakter",
       "applied": "Indekserte {{contracts}} kontrakter og {{lines}} linjer",
-      "failed": "Indekseringen kunne ikke gjennomføres."
+      "failed": "Indekseringen kunne ikke gjennomføres.",
+      "skipped": "{{count}} valgte avtaler ble utelatt: ikke til regulering på datoen eller uten indeksklausul."
     }
   },
   "service": {
@@ -1113,7 +1123,6 @@
     "noOpenTickets": "Ingen åpne saker.",
     "devices": "Enheter",
     "noDevices": "Ingen enheter fra Atera ennå.",
-    "moreDevices": "og {{count}} til",
     "online": "på nett",
     "offline": "av nett",
     "alerts": "Åpne varsler",
@@ -1587,6 +1596,8 @@
     "removeFromCalendarNamed": "Fjern {{subject}} fra kalenderen"
   },
   "mail": {
+    "partialSearch_one": "Søkte etter {{searched}}; {{count}} adresse til ble ikke søkt. Legg til kundens e-postdomene for å finne alle.",
+    "partialSearch_other": "Søkte etter {{searched}}; {{count}} adresser til ble ikke søkt. Legg til kundens e-postdomene for å finne alle.",
     "title": "E-post med kunden",
     "explainer": "Leses direkte fra din postkasse. CRM lagrer ingenting før du trykker «Lagre i CRM», og da bare emne, avsender, tidspunkt og lenke — aldri innholdet.",
     "notConnected": "Outlook-post er ikke tilkoblet for denne pålogingen.",
@@ -1939,7 +1950,8 @@
       "dates": "Datoer",
       "total": "Sum inkl. mva",
       "outstanding": "Utestående"
-    }
+    },
+    "totalsScope": "Summer for alle fakturaer som passer filteret ({{count}}), forfalt per {{date}}."
   },
   "notifications": {
     "title": "Varsler",
@@ -1979,7 +1991,8 @@
       "SubscriptionCancellationWindow": "{{offer}} hos {{organization}}: angrefristen går ut {{date}}.",
       "SubscriptionRenewal": "{{offer}} hos {{organization}} fornyes {{date}} ({{quantity}} lisenser).",
       "StaleOpportunity": "Salget «{{name}}» hos {{organization}} har ikke hatt aktivitet i {{days}} dager.",
-      "InvoiceOverdue": "Faktura {{number}} til {{organization}} forfalt {{date}}: {{amount}} utestående."
+      "InvoiceOverdue": "Faktura {{number}} til {{organization}} forfalt {{date}}: {{amount}} utestående.",
+      "InvoiceOverdueWithoutAmount": "Faktura {{number}} til {{organization}} forfalt {{date}} og er ikke betalt."
     }
   },
   "dashboard": {
@@ -2245,6 +2258,7 @@
     }
   },
   "migration": {
+    "rowsShown": "{{shown}} av {{total}} rader som endrer noe eller trenger oppfølging vises, konflikter og feil først; tallene over gjelder hele filen.",
     "title": "Migrering",
     "subtitle": "Kunder og hovedkontakten deres fra de gamle systemene, med forhåndsvisning før noe skrives.",
     "file": "Fil",

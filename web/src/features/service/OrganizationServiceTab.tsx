@@ -34,6 +34,7 @@ import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
@@ -108,13 +109,14 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
         </div>
       </div>
 
-      {requests.data?.filter((r) => r.status !== 'Created').map((request) => (
+      {requests.items.map((request) => (
         <MessageBar key={request.id} intent={request.status === 'Failed' ? 'error' : 'info'}>
           <MessageBarBody>
             {request.status === 'Failed' ? t('service.ticketFailed', { title: request.title, error: request.error }) : t('service.ticketPending', { title: request.title })}
           </MessageBarBody>
         </MessageBar>
       ))}
+      <ListFooter shown={requests.items.length} total={requests.hasNextPage ? requests.total : null} hasMore={requests.hasNextPage} loading={requests.isFetchingNextPage} onMore={() => void requests.fetchNextPage()} />
 
       <Panel
         title={t('service.tickets')}
@@ -141,7 +143,7 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(tickets.data ?? []).map((ticket) => (
+              {tickets.items.map((ticket) => (
                 <TableRow key={ticket.id}>
                   <TableCell>
                     {ticket.url ? (
@@ -169,7 +171,8 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
             </TableBody>
           </Table>
         </div>
-        {tickets.data?.length === 0 && <EmptyState message={openOnly ? t('service.noOpenTickets') : t('service.noTickets')} />}
+        {tickets.isSuccess && tickets.items.length === 0 && <EmptyState message={openOnly ? t('service.noOpenTickets') : t('service.noTickets')} />}
+        <ListFooter shown={tickets.items.length} total={tickets.total} hasMore={tickets.hasNextPage} loading={tickets.isFetchingNextPage} onMore={() => void tickets.fetchNextPage()} />
       </Panel>
 
       <div className={styles.grid}>
@@ -182,7 +185,7 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
             ))}
           </div>
           <ul className={styles.list}>
-            {(devices.data ?? []).slice(0, 25).map((device) => (
+            {devices.items.map((device) => (
               <li key={device.id} className={styles.row}>
                 {device.url ? (
                   <Link href={device.url} target="_blank" rel="noopener noreferrer">
@@ -198,13 +201,13 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
               </li>
             ))}
           </ul>
-          {devices.data?.length === 0 && <Text className={catalog.muted}>{t('service.noDevices')}</Text>}
-          {(devices.data?.length ?? 0) > 25 && <Text className={catalog.muted}>{t('service.moreDevices', { count: (devices.data?.length ?? 0) - 25 })}</Text>}
+          {devices.isSuccess && devices.items.length === 0 && <Text className={catalog.muted}>{t('service.noDevices')}</Text>}
+          <ListFooter shown={devices.items.length} total={devices.total} hasMore={devices.hasNextPage} loading={devices.isFetchingNextPage} onMore={() => void devices.fetchNextPage()} />
         </Panel>
 
         <Panel title={t('service.alerts')}>
           <ul className={styles.list}>
-            {(alerts.data ?? []).map((alert) => (
+            {alerts.items.map((alert) => (
               <li key={alert.id} className={styles.row}>
                 <Badge appearance="tint" color={alert.severity === 'Critical' ? 'danger' : 'warning'}>
                   {t(`service.severities.${alert.severity}`)}
@@ -216,7 +219,8 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
               </li>
             ))}
           </ul>
-          {alerts.data?.length === 0 && <Text className={catalog.muted}>{t('service.noAlerts')}</Text>}
+          {alerts.isSuccess && alerts.items.length === 0 && <Text className={catalog.muted}>{t('service.noAlerts')}</Text>}
+          <ListFooter shown={alerts.items.length} total={alerts.total} hasMore={alerts.hasNextPage} loading={alerts.isFetchingNextPage} onMore={() => void alerts.fetchNextPage()} />
           {summary.data?.lastSyncedAt && <Text className={catalog.muted}>{t('service.lastSynced', { at: formatDateTime(summary.data.lastSyncedAt) })}</Text>}
         </Panel>
       </div>

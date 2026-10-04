@@ -151,6 +151,6 @@ public class ProjectsApiTests(CrmWebFactory factory)
         project.GetProperty("progress").GetProperty("budgetHours").GetDecimal().ShouldBe(10m);
 
         var list = await lead.GetFromJsonAsync<JsonElement>($"{Projects}?search={marker}");
-        list.EnumerateArray().Single().GetProperty("hours").GetDecimal().ShouldBe(6m);
+        list.GetProperty("items").EnumerateArray().Single().GetProperty("hours").GetDecimal().ShouldBe(6m);
     }
 }

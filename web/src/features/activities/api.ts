@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 import type {
   Activity,
   ActivityRequest,
   ActivityType,
   CalendarSyncResult,
-  MailMessage,
+  MailList,
   OutlookStatus,
   SaveMailRequest,
 } from './types';
@@ -44,16 +45,13 @@ export function useCustomerMail(organizationId: string, enabled: boolean) {
     enabled,
     // Mail is read live from Exchange and never stored, so it is not cached for long either.
     staleTime: 30_000,
-    queryFn: async ({ signal }) => (await api.get<MailMessage[]>(`${BASE}/mail${query({ organizationId })}`, signal)).data,
+    queryFn: async ({ signal }) => (await api.get<MailList>(`${BASE}/mail${query({ organizationId })}`, signal)).data,
   });
 }
 
-export function useActivities(filters: ActivityFilters, enabled = true) {
-  return useQuery({
-    queryKey: activityKeys.list(filters),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<Activity[]>(`${BASE}/${query(filters)}`, signal)).data,
-  });
+/** The timeline page by page — open items first by due date — with how many the filter matches (DEV-12). */
+export function useActivities(filters: ActivityFilters, enabled = true, limit?: number) {
+  return usePagedList<Activity>([...activityKeys.list(filters), limit], `${BASE}/`, filters, { enabled, limit });
 }
 
 export function useActivityActions() {

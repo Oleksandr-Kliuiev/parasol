@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Catalog.Contracts;
 using Crm.Contracts.Contracts;
 using Crm.Contracts.Domain;
@@ -29,7 +30,7 @@ public sealed record ReminderItem(
 
 internal sealed class ReminderService(ContractsDbContext db, ICustomersApi customers, IUserDirectory users, ICurrentUser currentUser, TimeProvider time)
 {
-    public async Task<IReadOnlyList<ReminderItem>> ListAsync(bool mine, bool includeAcknowledged, Guid? organizationId, CancellationToken ct)
+    public async Task<PagedResult<ReminderItem>> ListAsync(bool mine, bool includeAcknowledged, Guid? organizationId, int? limit, string? cursor, CancellationToken ct)
     {
         var reminders = db.Reminders.AsNoTracking();
         if (mine)
@@ -48,7 +49,18 @@ internal sealed class ReminderService(ContractsDbContext db, ICustomersApi custo
             reminders = reminders.Where(r => r.AcknowledgedAt == null);
         }
 
-        var rows = await reminders.OrderBy(r => r.DueDate).Take(200).ToListAsync(ct);
+        // Soonest first, then id (DEV-12).
+        var total = await reminders.CountAsync(ct);
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateOnly.TryParseExact(after.SortKey, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var due))
+        {
+            reminders = reminders.Where(r => r.DueDate > due || (r.DueDate == due && r.Id.CompareTo(after.Id) > 0));
+        }
+
+        var take = KeysetCursor.ClampLimit(limit);
+        var page = await reminders.OrderBy(r => r.DueDate).ThenBy(r => r.Id).Take(take + 1).ToListAsync(ct);
+        var rows = page.Take(take).ToList();
+        var next = page.Count > take ? new KeysetCursor(rows[^1].DueDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null;
         var contractIds = rows.Where(r => r.ContractId != null).Select(r => r.ContractId!.Value).Distinct().ToList();
         var bankIds = rows.Where(r => r.HourBankId != null).Select(r => r.HourBankId!.Value).Distinct().ToList();
         var contracts = await db.Contracts.AsNoTracking().IgnoreQueryFilters().Where(c => contractIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, ct);
@@ -56,7 +68,7 @@ internal sealed class ReminderService(ContractsDbContext db, ICustomersApi custo
         var organizations = await customers.GetOrganizationNamesAsync(rows.Select(r => r.OrganizationId).Distinct().ToList(), ct);
         var assignees = await users.GetUsersAsync(rows.Where(r => r.AssigneeId != null).Select(r => r.AssigneeId!.Value).Distinct().ToList(), ct);
 
-        return rows.Select(r => new ReminderItem(
+        return new PagedResult<ReminderItem>(rows.Select(r => new ReminderItem(
             r.Id,
             r.Kind,
             new RefDto(r.OrganizationId, organizations.GetValueOrDefault(r.OrganizationId, "—")),
@@ -67,7 +79,7 @@ internal sealed class ReminderService(ContractsDbContext db, ICustomersApi custo
             r.DueDate,
             r.DaysBefore,
             r.AssigneeId is { } aid && assignees.TryGetValue(aid, out var u) ? new RefDto(u.Id, u.DisplayName) : null,
-            r.AcknowledgedAt)).ToList();
+            r.AcknowledgedAt)).ToList(), next, total);
     }
 
     public async Task<Result> AcknowledgeAsync(Guid id, CancellationToken ct)
@@ -289,6 +301,27 @@ internal sealed class ContractsApi(ContractsDbContext db, HourBankService hourBa
         return products.ToHashSet();
     }
 
+    public async Task<IReadOnlyDictionary<Guid, IReadOnlySet<Guid>>> GetContractedProductsAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken)
+    {
+        if (organizationIds.Count == 0)
+        {
+            return new Dictionary<Guid, IReadOnlySet<Guid>>();
+        }
+
+        var pairs = await (
+                from line in db.ContractLines.AsNoTracking()
+                join contract in db.Contracts.AsNoTracking() on line.ContractId equals contract.Id
+                where organizationIds.Contains(contract.OrganizationId) &&
+                      (contract.Status == ContractStatus.Active || contract.Status == ContractStatus.NoticeGiven || contract.Status == ContractStatus.Suspended) &&
+                      line.ValidFrom <= date && (line.ValidTo == null || line.ValidTo >= date)
+                select new { contract.OrganizationId, line.ProductId })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        return pairs.GroupBy(p => p.OrganizationId)
+            .ToDictionary(g => g.Key, g => (IReadOnlySet<Guid>)g.Select(p => p.ProductId).ToHashSet());
+    }
+
     public async Task<OrganizationBillingTerms> GetBillingTermsAsync(Guid organizationId, DateOnly date, CancellationToken cancellationToken)
     {
         // The contract that decides how time is billed: the running one with an SLA, otherwise the latest running one.
@@ -487,8 +520,8 @@ internal sealed class ContractsApi(ContractsDbContext db, HourBankService hourBa
         var contracts = await db.Contracts.AsNoTracking()
             .Where(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.NoticeGiven || c.Status == ContractStatus.Suspended) &&
                         c.EndDate != null && c.EndDate >= from && c.EndDate <= horizon)
-            .OrderBy(c => c.EndDate)
-            .Take(200)
+            // Every contract of the window (DEV-12): the dashboard shows the soonest and counts the rest, the mart exports them all.
+            .OrderBy(c => c.EndDate).ThenBy(c => c.Id)
             .Select(c => new { c.Id, c.Number, c.Title, c.OrganizationId, c.EndDate, c.AutoRenew, c.NoticePeriodDays, c.OwnerId })
             .ToListAsync(cancellationToken);
 

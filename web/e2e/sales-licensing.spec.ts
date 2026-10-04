@@ -49,8 +49,8 @@ test('a lead becomes a customer with a deal, and the deal is won', { tag: '@crit
   // The pipeline no longer shows it, and the customer's Deals tab does.
   await page.goto('/pipeline');
   await expect(page.getByText(`${m} Driftsavtale`)).toBeHidden();
-  const leads = await api.get<Array<{ organizationId: string | null }>>(page, `/api/v1/sales/leads?search=${m}`);
-  await page.goto(`/organizations/${leads[0]!.organizationId}?tab=deals`);
+  const leads = await api.get<{ items: Array<{ organizationId: string | null }> }>(page, `/api/v1/sales/leads?search=${m}`);
+  await page.goto(`/organizations/${leads.items[0]!.organizationId}?tab=deals`);
   await expect(page.getByRole('row').filter({ hasText: `${m} Driftsavtale` }).getByText('Won')).toBeVisible();
 });
 
@@ -123,8 +123,9 @@ test('a distributor file is previewed before the subscriptions are imported', as
   // The preview writes nothing.
   await dialog.getByRole('button', { name: 'Preview' }).click();
   await expect(dialog.getByText('Would create 2, update 0 and leave 0 subscriptions unchanged.')).toBeVisible();
-  const before = await api.get<unknown[]>(page, `/api/v1/licensing/subscriptions?search=${m}`);
-  expect(before).toHaveLength(0);
+  const before = await api.get<{ items: unknown[]; totalCount: number }>(page, `/api/v1/licensing/subscriptions?search=${m}`);
+  expect(before.items).toHaveLength(0);
+  expect(before.totalCount).toBe(0);
 
   await dialog.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(toast(page, 'Created 2 and updated 0 subscriptions')).toBeVisible();

@@ -10,7 +10,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatNumber, todayIso } from '../../shared/utils/format';
 import { AppLink } from '../../shared/components/AppLink';
-import { useTimeActions, useTimeEntries } from './api';
+import { useAllTimeEntries, useTimeActions } from './api';
 import { TimeEntryDialog } from './TimeEntryDialog';
 import type { TimeEntry } from './types';
 
@@ -58,7 +58,8 @@ export function TimesheetPage() {
   const [dialog, setDialog] = useState<{ entry?: TimeEntry; date?: string } | null>(null);
   const restoreFocusTarget = useRestoreFocusTarget();
   const sunday = addDays(monday, 6);
-  const { data, error, isPending, refetch } = useTimeEntries({ from: monday, to: sunday, mine: true });
+  // A week is short: all of it is loaded, page after page, so no day misses an entry (DEV-12).
+  const { data, error, isPending, refetch } = useAllTimeEntries({ from: monday, to: sunday, mine: true });
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
   const remove = async (entry: TimeEntry) => {

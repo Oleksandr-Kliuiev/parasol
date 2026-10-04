@@ -38,6 +38,9 @@ internal sealed class MigrationImportService(
     /// <summary>A migration file is a one-off job, not a sync: a few thousand rows at a time keeps the report readable.</summary>
     private const int MaxRows = 5000;
 
+    /// <summary>Rows an answer lists — conflicts and failures first, as they need a person; the counts cover the whole file (DEV-12).</summary>
+    public const int MaxRowsListed = 200;
+
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["name"] = "name",
@@ -99,7 +102,7 @@ internal sealed class MigrationImportService(
         }
 
         var rows = new List<MigrationRow>();
-        var warnings = table.UnknownColumns.Select(c => $"Column '{c}' was ignored.").Take(10).ToList();
+        var warnings = table.UnknownColumns.Select(c => $"Column '{c}' was ignored.").ToList();
         int created = 0, updated = 0, unchanged = 0, contacts = 0, conflicts = 0, failed = 0;
         // DEV-11: people erased at their request do not come back with an old system's file.
         var suppressed = await suppressions.SnapshotAsync(ct);
@@ -196,8 +199,8 @@ internal sealed class MigrationImportService(
             contacts,
             conflicts,
             failed,
-            rows.Where(r => r.Action != "Unchanged").Take(200).ToList(),
-            warnings.Take(20).ToList());
+            rows.Where(r => r.Action != "Unchanged").OrderBy(r => r.Action is "Failed" or "Conflict" ? 0 : 1).ThenBy(r => r.Line).Take(MaxRowsListed).ToList(),
+            WarningList.Capped(warnings));
     }
 
     private sealed record Match(Organization? Organization, bool Ambiguous, string? Detail);

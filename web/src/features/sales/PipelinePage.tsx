@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { useNotify } from '../../shared/components/useNotify';
@@ -27,9 +28,10 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatMoney, formatNumber } from '../../shared/utils/format';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { NARROW_SCREEN, useMediaQuery } from '../../shared/utils/useMediaQuery';
-import { useOpportunityActions, usePipeline, useStages } from './api';
+import { type OpportunityFilters, fetchOpportunityPage, useOpportunityActions, usePipeline, useStages } from './api';
 import { LoseDialog, OpportunityDialog } from './OpportunityDialog';
 import type { Opportunity } from './types';
+import type { ReactNode } from 'react';
 
 const useStyles = makeStyles({
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -86,7 +88,8 @@ export function PipelinePage() {
   const stale = params.get('stale') === 'true';
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim());
-  const { data, error, isPending, refetch } = usePipeline({ mine, stale, search: debounced });
+  const filters: OpportunityFilters = { mine, stale, search: debounced };
+  const { data, error, isPending, refetch, dataUpdatedAt } = usePipeline(filters);
   const stages = useStages();
   const actions = useOpportunityActions();
   const [dialog, setDialog] = useState<{ stageId?: string; opportunity?: Opportunity } | null>(null);
@@ -94,6 +97,56 @@ export function PipelinePage() {
   const restoreFocusTarget = useRestoreFocusTarget();
   const wonStage = stages.data?.find((s) => s.isWon);
   const lostStage = stages.data?.find((s) => s.isLost);
+
+  const card = (opportunity: Opportunity) => (
+    <div key={opportunity.id} className={styles.card}>
+      <div className={styles.cardHead}>
+        <AppLink to={`/sales/opportunities/${opportunity.id}`}>{opportunity.name}</AppLink>
+        {canWrite && (
+          <Menu>
+            <MenuTrigger disableButtonEnhancement>
+              <Button
+                {...restoreFocusTarget}
+                size="small"
+                appearance="subtle"
+                icon={<MoreHorizontal20Regular />}
+                aria-label={t('opportunities.actionsFor', { name: opportunity.name })}
+              />
+            </MenuTrigger>
+            <MenuPopover>
+              <MenuList>
+                {(stages.data ?? []).filter((s) => !s.isWon && !s.isLost && s.id !== opportunity.stageId).map((stage) => (
+                  <MenuItem key={stage.id} onClick={() => void move(opportunity, stage.id, t('opportunities.moved', { stage: stage.name }))}>
+                    {t('opportunities.moveTo', { stage: stage.name })}
+                  </MenuItem>
+                ))}
+                {wonStage && <MenuItem onClick={() => void move(opportunity, wonStage.id, t('opportunities.won'))}>{t('opportunities.markWon')}</MenuItem>}
+                {lostStage && <MenuItem onClick={() => setLosing(opportunity)}>{t('opportunities.markLost')}</MenuItem>}
+                <MenuItem onClick={() => setDialog({ opportunity })}>{t('common.edit')}</MenuItem>
+              </MenuList>
+            </MenuPopover>
+          </Menu>
+        )}
+      </div>
+      <AppLink to={`/organizations/${opportunity.organization.id}`} className={styles.muted}>
+        {opportunity.organization.name}
+      </AppLink>
+      {canSeeMoney && (
+        <Text className={styles.amount}>
+          {formatMoney(opportunity.forecastAmount ?? 0)} <span className={styles.muted}>({opportunity.probability} %)</span>
+        </Text>
+      )}
+      <Text className={styles.muted}>
+        {t('opportunities.closesOn', { date: formatDate(opportunity.expectedCloseDate) })}
+        {opportunity.mrr ? ` · ${t('opportunities.mrrShort', { amount: formatNumber(opportunity.mrr, 0) })}` : ''}
+      </Text>
+      {opportunity.isStale && (
+        <Badge appearance="tint" color="warning">
+          {t('opportunities.stale')}
+        </Badge>
+      )}
+    </div>
+  );
 
   const setFlag = (key: string, value: boolean) => {
     const next = new URLSearchParams(params);
@@ -173,55 +226,15 @@ export function PipelinePage() {
                   {canSeeMoney ? ` · ${formatMoney(column.forecast ?? 0)}` : ''}
                 </Text>
               </div>
-              {column.opportunities.map((opportunity) => (
-                <div key={opportunity.id} className={styles.card}>
-                  <div className={styles.cardHead}>
-                    <AppLink to={`/sales/opportunities/${opportunity.id}`}>{opportunity.name}</AppLink>
-                    {canWrite && (
-                      <Menu>
-                        <MenuTrigger disableButtonEnhancement>
-                          <Button
-                            {...restoreFocusTarget}
-                            size="small"
-                            appearance="subtle"
-                            icon={<MoreHorizontal20Regular />}
-                            aria-label={t('opportunities.actionsFor', { name: opportunity.name })}
-                          />
-                        </MenuTrigger>
-                        <MenuPopover>
-                          <MenuList>
-                            {(stages.data ?? []).filter((s) => !s.isWon && !s.isLost && s.id !== opportunity.stageId).map((stage) => (
-                              <MenuItem key={stage.id} onClick={() => void move(opportunity, stage.id, t('opportunities.moved', { stage: stage.name }))}>
-                                {t('opportunities.moveTo', { stage: stage.name })}
-                              </MenuItem>
-                            ))}
-                            {wonStage && <MenuItem onClick={() => void move(opportunity, wonStage.id, t('opportunities.won'))}>{t('opportunities.markWon')}</MenuItem>}
-                            {lostStage && <MenuItem onClick={() => setLosing(opportunity)}>{t('opportunities.markLost')}</MenuItem>}
-                            <MenuItem onClick={() => setDialog({ opportunity })}>{t('common.edit')}</MenuItem>
-                          </MenuList>
-                        </MenuPopover>
-                      </Menu>
-                    )}
-                  </div>
-                  <AppLink to={`/organizations/${opportunity.organization.id}`} className={styles.muted}>
-                    {opportunity.organization.name}
-                  </AppLink>
-                  {canSeeMoney && (
-                    <Text className={styles.amount}>
-                      {formatMoney(opportunity.forecastAmount ?? 0)} <span className={styles.muted}>({opportunity.probability} %)</span>
-                    </Text>
-                  )}
-                  <Text className={styles.muted}>
-                    {t('opportunities.closesOn', { date: formatDate(opportunity.expectedCloseDate) })}
-                    {opportunity.mrr ? ` · ${t('opportunities.mrrShort', { amount: formatNumber(opportunity.mrr, 0) })}` : ''}
-                  </Text>
-                  {opportunity.isStale && (
-                    <Badge appearance="tint" color="warning">
-                      {t('opportunities.stale')}
-                    </Badge>
-                  )}
-                </div>
-              ))}
+              {column.opportunities.map(card)}
+              <MoreCards
+                key={`${column.stageId}-${dataUpdatedAt}`}
+                filters={{ ...filters, stageId: column.stageId, status: 'Open' }}
+                cursor={column.nextCursor}
+                shown={column.opportunities.length}
+                total={column.count}
+                card={card}
+              />
             </section>
           ))}
         </div>
@@ -230,6 +243,37 @@ export function PipelinePage() {
 
       <OpportunityDialog open={dialog !== null} onClose={() => setDialog(null)} opportunity={dialog?.opportunity} stageId={dialog?.stageId} />
       <LoseDialog open={losing !== null} opportunity={losing} stageId={lostStage?.id ?? ''} onClose={() => setLosing(null)} />
+    </>
+  );
+}
+
+/**
+ * The rest of one board column (DEV-12): the column arrives with its first cards and the count of all of them; the next cards
+ * come from the deals list with the board's filters and the column's cursor. A reload of the board starts over (new key).
+ */
+function MoreCards({ filters, cursor, shown, total, card }: { filters: OpportunityFilters; cursor: string | null; shown: number; total: number; card: (opportunity: Opportunity) => ReactNode }) {
+  const { t } = useTranslation();
+  const notify = useNotify();
+  const [extra, setExtra] = useState<Opportunity[]>([]);
+  const [next, setNext] = useState(cursor);
+  const [loading, setLoading] = useState(false);
+  const more = async () => {
+    if (!next) return;
+    setLoading(true);
+    try {
+      const page = await fetchOpportunityPage(filters, next);
+      setExtra((current) => [...current, ...page.items]);
+      setNext(page.nextCursor);
+    } catch (e) {
+      notify(t('errors.generic'), 'error', errorMessage(e, t));
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <>
+      {extra.map(card)}
+      {total > shown && <ListFooter shown={shown + extra.length} total={total} hasMore={Boolean(next)} loading={loading} onMore={() => void more()} />}
     </>
   );
 }

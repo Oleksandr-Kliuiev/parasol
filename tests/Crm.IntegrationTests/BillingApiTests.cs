@@ -117,7 +117,7 @@ public class BillingApiTests(CrmWebFactory factory)
             "Kundeid;Kundenavn;Organisasjonsnummer;AbonnementsID;OfferId;Produktnavn;Antall;Status;Bindingstid;Startdato;Fornyelsesdato;Autofornyelse;Partnerpris",
             $"csp-{marker};{marker} Faktura AS;{orgNumber};sub-{marker};{offerId};Microsoft 365 Business Premium;25;Active;P1Y;{contractStart:yyyy-MM-dd};2028-01-01;ja;225,50");
         (await admin.PostAsync("/api/v1/licensing/import", new StringContent(csv, Encoding.UTF8, "text/csv"))).StatusCode.ShouldBe(HttpStatusCode.OK);
-        var subscription = (await admin.GetFromJsonAsync<JsonElement>($"/api/v1/licensing/subscriptions?search={marker}")).EnumerateArray().ShouldHaveSingleItem();
+        var subscription = (await admin.GetFromJsonAsync<JsonElement>($"/api/v1/licensing/subscriptions?search={marker}")).GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         subscription.GetProperty("organizationId").GetGuid().ShouldBe(organizationId);
         subscription.GetProperty("productId").GetGuid().ShouldBe(licenceProduct);
 

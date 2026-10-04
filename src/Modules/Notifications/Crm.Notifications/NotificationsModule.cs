@@ -37,8 +37,8 @@ public static class NotificationsModule
     {
         var group = app.MapGroup("/api/v1/notifications").WithTags("Notifications");
 
-        group.MapGet("/", async (bool? unreadOnly, int? limit, NotificationService service, CancellationToken ct) =>
-            Results.Ok(await service.ListAsync(unreadOnly ?? false, limit, ct)));
+        group.MapGet("/", async (bool? unreadOnly, int? limit, string? cursor, NotificationService service, CancellationToken ct) =>
+            Results.Ok(await service.ListAsync(unreadOnly ?? false, limit, cursor, ct)));
 
         group.MapPost("/{id:guid}/read", async (Guid id, NotificationService service, CancellationToken ct) =>
             (await service.MarkReadAsync(id, ct)).ToHttpResult(Results.NoContent));

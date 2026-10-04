@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Authorization;
 using Crm.Catalog.Contracts;
 using Crm.Customers.Contracts;
@@ -318,7 +319,7 @@ public static class MappingEndpoints
             })
             .RequirePermission(Permissions.CustomersWrite);
 
-        group.MapGet("/outbound", async (OutboundStatus? status, string? system, IntegrationDbContext db, CancellationToken ct) =>
+        group.MapGet("/outbound", async (OutboundStatus? status, string? system, int? limit, string? cursor, IntegrationDbContext db, CancellationToken ct) =>
             {
                 var query = db.OutboundOperations.AsNoTracking();
                 if (status is { } s)
@@ -331,7 +332,19 @@ public static class MappingEndpoints
                     query = query.Where(o => o.System == system);
                 }
 
-                return Results.Ok(await query.OrderByDescending(o => o.CreatedAt).Take(200).ToListAsync(ct));
+                // Newest first, then id (DEV-12): a page per request and the count of all.
+                var total = await query.CountAsync(ct);
+                if (KeysetCursor.Decode(cursor) is { } after &&
+                    DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+                {
+                    query = query.Where(o => o.CreatedAt < created || (o.CreatedAt == created && o.Id.CompareTo(after.Id) < 0));
+                }
+
+                var take = KeysetCursor.ClampLimit(limit);
+                var page = await query.OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id).Take(take + 1).ToListAsync(ct);
+                var rows = page.Take(take).ToList();
+                return Results.Ok(new PagedResult<OutboundOperation>(
+                    rows, page.Count > take ? new KeysetCursor(rows[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null, total));
             })
             .RequirePermission(Permissions.IntegrationsManage);
 

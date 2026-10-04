@@ -85,13 +85,21 @@ public sealed record OpportunityDto(
     bool IsStale,
     string Etag);
 
-public sealed record PipelineColumn(Guid StageId, string StageName, int Probability, int Count, [property: SensitiveData(Permissions.FinanceRead)] decimal Forecast, IReadOnlyList<OpportunityDto> Opportunities);
+/// <summary>
+/// One stage of the board (DEV-12): <paramref name="Count"/> and <paramref name="Forecast"/> cover every open deal of the filter in
+/// the stage; <paramref name="Opportunities"/> are the first cards by expected close date, continued through the deals list with
+/// <paramref name="NextCursor"/>.
+/// </summary>
+public sealed record PipelineColumn(
+    Guid StageId, string StageName, int Probability, int Count, [property: SensitiveData(Permissions.FinanceRead)] decimal Forecast,
+    IReadOnlyList<OpportunityDto> Opportunities, string? NextCursor);
 
 public sealed record ForecastMonth(int Year, int Month, int Count, [property: SensitiveData(Permissions.FinanceRead)] decimal Weighted, [property: SensitiveData(Permissions.FinanceRead)] decimal Total);
 
 public sealed record PipelineView(IReadOnlyList<PipelineColumn> Columns, IReadOnlyList<ForecastMonth> Forecast, int Stale);
 
-public sealed record OpportunityQuery(string? Search, Guid? OrganizationId, Guid? OwnerId, Guid? StageId, OpportunityStatus? Status, bool MineOnly, bool StaleOnly);
+public sealed record OpportunityQuery(
+    string? Search, Guid? OrganizationId, Guid? OwnerId, Guid? StageId, OpportunityStatus? Status, bool MineOnly, bool StaleOnly, int? Limit = null, string? Cursor = null);
 
 internal sealed class LeadRequestValidator : AbstractValidator<LeadRequest>
 {

@@ -32,6 +32,7 @@ import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
@@ -59,7 +60,8 @@ export function BillingRunsPage() {
   const { t, i18n } = useTranslation();
   const canManage = useCan(Permissions.billingManage);
   const canSeeMoney = useCan(Permissions.financeRead);
-  const { data = [], error, isPending, refetch } = useRuns();
+  const runs = useRuns();
+  const { items: data, error, isPending, refetch } = runs;
   const [creating, setCreating] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
 
@@ -136,6 +138,7 @@ export function BillingRunsPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('billing.empty')} />}
+          <ListFooter shown={data.length} total={runs.total} hasMore={runs.hasNextPage} loading={runs.isFetchingNextPage} onMore={() => void runs.fetchNextPage()} />
         </div>
       )}
 

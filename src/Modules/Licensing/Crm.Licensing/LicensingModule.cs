@@ -33,7 +33,8 @@ public static class LicensingModule
 
         group.MapGet("/subscriptions", async ([AsParameters] SubscriptionParameters p, LicensingService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(new SubscriptionQuery(
-                    p.Search, p.OrganizationId, p.Source, p.RenewingSoon ?? false, p.CancellationWindowOpen ?? false, p.NotBilled ?? false, p.WithoutOrganization ?? false), ct)))
+                    p.Search, p.OrganizationId, p.Source, p.RenewingSoon ?? false, p.CancellationWindowOpen ?? false, p.NotBilled ?? false, p.WithoutOrganization ?? false,
+                    p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.LicensingRead);
 
         group.MapGet("/attention", async (LicensingService service, CancellationToken ct) => Results.Ok(await service.GetAttentionAsync(ct)))
@@ -86,4 +87,6 @@ public sealed record SubscriptionParameters(
     [FromQuery] bool? RenewingSoon,
     [FromQuery] bool? CancellationWindowOpen,
     [FromQuery] bool? NotBilled,
-    [FromQuery] bool? WithoutOrganization);
+    [FromQuery] bool? WithoutOrganization,
+    [FromQuery] int? Limit,
+    [FromQuery] string? Cursor);

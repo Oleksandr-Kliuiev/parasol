@@ -4,6 +4,7 @@ import { Add20Regular, ArrowSync20Regular, CalendarLtr16Regular, CheckmarkCircle
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
@@ -52,7 +53,8 @@ export function ActivityTimeline({
   const actions = useActivityActions();
   const [dialog, setDialog] = useState<{ activity?: Activity } | null>(null);
   const restoreFocusTarget = useRestoreFocusTarget();
-  const { data = [], error, isPending, refetch } = useActivities({ organizationId, opportunityId, contractId });
+  const activities = useActivities({ organizationId, opportunityId, contractId });
+  const { items: data, error, isPending, refetch } = activities;
   const outlook = useOutlookStatus();
 
   const syncCalendar = async () => {
@@ -176,6 +178,7 @@ export function ActivityTimeline({
             ))}
           </ul>
           {!isPending && data.length === 0 && <EmptyState message={t('activities.empty')} />}
+          <ListFooter shown={data.length} total={activities.total} hasMore={activities.hasNextPage} loading={activities.isFetchingNextPage} onMore={() => void activities.fetchNextPage()} />
         </>
       )}
       <ActivityDialog

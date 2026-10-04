@@ -151,34 +151,28 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
     {
         var c = await db.Contacts.AsNoTracking().IgnoreQueryFilters().Include(x => x.Affiliations)
             .SingleOrDefaultAsync(x => x.Id == contactId, cancellationToken);
-        return c is null
-            ? null
-            : new ContactSyncView(c.Id, c.FirstName, c.LastName, c.Email, c.Phone, c.MobilePhone, c.IsDeleted,
-                c.Affiliations.Where(a => !a.IsDeleted)
-                    .OrderByDescending(a => a.IsPrimary).ThenBy(a => a.CreatedAt)
-                    .Select(a => new ContactAffiliationView(a.OrganizationId, a.Title, a.Roles.HasFlag(ContactRoles.Billing), a.IsPrimary, a.IsActive))
-                    .ToList());
+        return c is null ? null : ToSyncView(c);
     }
 
     public async Task<IReadOnlyList<ContactSyncView>> GetOrganizationContactsAsync(Guid organizationId, CancellationToken cancellationToken)
     {
-        var contactIds = await db.OrganizationContacts.AsNoTracking()
-            .Where(a => a.OrganizationId == organizationId && a.IsActive)
-            .OrderByDescending(a => a.IsPrimary)
-            .Select(a => a.ContactId)
-            .Take(50)
+        // Every active contact of the organization in one query, primary first (DEV-12: no cut at 50, no query per contact).
+        var contacts = await db.Contacts.AsNoTracking().IgnoreQueryFilters().Include(c => c.Affiliations)
+            .Where(c => c.Affiliations.Any(a => a.OrganizationId == organizationId && a.IsActive && !a.IsDeleted))
             .ToListAsync(cancellationToken);
-        var views = new List<ContactSyncView>(contactIds.Count);
-        foreach (var contactId in contactIds)
-        {
-            if (await GetContactForSyncAsync(contactId, cancellationToken) is { } view)
-            {
-                views.Add(view);
-            }
-        }
-
-        return views;
+        return contacts
+            .OrderByDescending(c => c.Affiliations.Any(a => a.OrganizationId == organizationId && a.IsActive && !a.IsDeleted && a.IsPrimary))
+            .ThenBy(c => c.Id)
+            .Select(ToSyncView)
+            .ToList();
     }
+
+    private static ContactSyncView ToSyncView(Contact c) =>
+        new(c.Id, c.FirstName, c.LastName, c.Email, c.Phone, c.MobilePhone, c.IsDeleted,
+            c.Affiliations.Where(a => !a.IsDeleted)
+                .OrderByDescending(a => a.IsPrimary).ThenBy(a => a.CreatedAt)
+                .Select(a => new ContactAffiliationView(a.OrganizationId, a.Title, a.Roles.HasFlag(ContactRoles.Billing), a.IsPrimary, a.IsActive))
+                .ToList());
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetContactNamesAsync(IReadOnlyCollection<Guid> contactIds, CancellationToken cancellationToken) =>
         await db.Contacts.AsNoTracking()

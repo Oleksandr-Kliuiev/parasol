@@ -1,3 +1,4 @@
+using System.Globalization;
 using Crm.Authorization;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
@@ -78,7 +79,8 @@ internal sealed class SalesService(
 
     // ---------- Leads ----------
 
-    public async Task<IReadOnlyList<LeadDto>> ListLeadsAsync(LeadStatus? status, bool mineOnly, string? search, CancellationToken ct)
+    /// <summary>One page of leads, newest first, and how many the filter matches (DEV-12).</summary>
+    public async Task<PagedResult<LeadDto>> ListLeadsAsync(LeadStatus? status, bool mineOnly, string? search, int? limit, string? cursor, CancellationToken ct)
     {
         var leads = db.Leads.AsQueryable();
         if (status is { } value)
@@ -98,9 +100,22 @@ internal sealed class SalesService(
             leads = leads.Where(l => l.CompanyName.Contains(term) || (l.Email != null && l.Email.Contains(term)) || (l.ContactName != null && l.ContactName.Contains(term)));
         }
 
-        var rows = await leads.OrderByDescending(l => l.CreatedAt).Take(300).ToListAsync(ct);
+        var total = await leads.CountAsync(ct);
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdAt))
+        {
+            leads = leads.Where(l => l.CreatedAt < createdAt || (l.CreatedAt == createdAt && l.Id.CompareTo(after.Id) < 0));
+        }
+
+        var take = KeysetCursor.ClampLimit(limit);
+        var page = await leads.OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id).Take(take + 1).ToListAsync(ct);
+        var rows = page.Take(take).ToList();
         var owners = await users.GetUsersAsync(rows.Where(l => l.OwnerId != null).Select(l => l.OwnerId!.Value).Distinct().ToList(), ct);
-        return rows.Select(l => ToDto(l, owners)).ToList();
+        var last = rows.LastOrDefault();
+        return new PagedResult<LeadDto>(
+            rows.Select(l => ToDto(l, owners)).ToList(),
+            page.Count > take && last is not null ? new KeysetCursor(last.CreatedAt.ToString("O", CultureInfo.InvariantCulture), last.Id).Encode() : null,
+            total);
     }
 
     public async Task<Result<LeadDto>> CreateLeadAsync(LeadRequest request, CancellationToken ct)
@@ -189,10 +204,30 @@ internal sealed class SalesService(
 
     // ---------- Opportunities ----------
 
-    public async Task<IReadOnlyList<OpportunityDto>> ListOpportunitiesAsync(OpportunityQuery query, CancellationToken ct)
+    /// <summary>One page of deals, soonest expected close first, and how many the filter matches (DEV-12).</summary>
+    public async Task<PagedResult<OpportunityDto>> ListOpportunitiesAsync(OpportunityQuery query, CancellationToken ct)
     {
-        var rows = await FilterOpportunities(query).OrderBy(o => o.ExpectedCloseDate).ThenBy(o => o.Id).Take(500).ToListAsync(ct);
-        return await ToDtosAsync(rows, ct);
+        var opportunities = FilterOpportunities(query);
+        var total = await opportunities.CountAsync(ct);
+        var (rows, next) = await PageAsync(opportunities, query.Cursor, KeysetCursor.ClampLimit(query.Limit), ct);
+        return new PagedResult<OpportunityDto>(await ToDtosAsync(rows, ct), next, total);
+    }
+
+    /// <summary>Soonest expected close date first, then id — the order of the deals list and of every board column.</summary>
+    private static async Task<(List<Opportunity> Rows, string? NextCursor)> PageAsync(IQueryable<Opportunity> opportunities, string? cursor, int limit, CancellationToken ct)
+    {
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateOnly.TryParseExact(after.SortKey, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            opportunities = opportunities.Where(o => o.ExpectedCloseDate > date || (o.ExpectedCloseDate == date && o.Id.CompareTo(after.Id) > 0));
+        }
+
+        var page = await opportunities.OrderBy(o => o.ExpectedCloseDate).ThenBy(o => o.Id).Take(limit + 1).ToListAsync(ct);
+        var rows = page.Take(limit).ToList();
+        var last = rows.LastOrDefault();
+        return (rows, page.Count > limit && last is not null
+            ? new KeysetCursor(last.ExpectedCloseDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), last.Id).Encode()
+            : null);
     }
 
     public async Task<Result<OpportunityDto>> GetOpportunityAsync(Guid id, CancellationToken ct)
@@ -201,27 +236,43 @@ internal sealed class SalesService(
         return opportunity is null ? SalesErrors.OpportunityNotFound(id) : (await ToDtosAsync([opportunity], ct))[0];
     }
 
+    /// <summary>
+    /// The board (DEV-12): counts, forecasts and the stale number cover every open deal of the filter — a narrow projection of all
+    /// of them, aggregated with the same rules a card uses — while each column carries its first cards and a cursor for the rest.
+    /// </summary>
     public async Task<PipelineView> GetPipelineAsync(OpportunityQuery query, CancellationToken ct)
     {
+        const int CardsPerColumn = 50;
         var stages = await db.PipelineStages.AsNoTracking().Where(s => s.IsActive).OrderBy(s => s.Order).ToListAsync(ct);
-        var open = await FilterOpportunities(query with { Status = OpportunityStatus.Open })
-            .OrderBy(o => o.ExpectedCloseDate).Take(500).ToListAsync(ct);
-        var dtos = await ToDtosAsync(open, ct);
-        var columns = stages.Select(stage => new PipelineColumn(
-            stage.Id,
-            stage.Name,
-            stage.Probability,
-            dtos.Count(o => o.StageId == stage.Id),
-            dtos.Where(o => o.StageId == stage.Id).Sum(o => o.ForecastAmount),
-            dtos.Where(o => o.StageId == stage.Id).ToList())).ToList();
+        var open = FilterOpportunities(query with { Status = OpportunityStatus.Open });
+        var all = await open.AsNoTracking()
+            .Select(o => new { o.StageId, o.ExpectedCloseDate, o.OneOffAmount, o.Mrr, o.TermMonths, o.Probability, o.LastActivityAt })
+            .ToListAsync(ct);
+        var now = time.GetUtcNow();
+        var staleBefore = now.AddDays(-Opportunity.StaleAfterDays);
 
-        var forecast = dtos
+        var columns = new List<PipelineColumn>();
+        foreach (var stage in stages)
+        {
+            var inStage = all.Where(o => o.StageId == stage.Id).ToList();
+            var (cards, next) = await PageAsync(open.Where(o => o.StageId == stage.Id), null, CardsPerColumn, ct);
+            columns.Add(new PipelineColumn(
+                stage.Id, stage.Name, stage.Probability, inStage.Count,
+                inStage.Sum(o => Opportunity.Forecast(o.OneOffAmount, o.Mrr, o.TermMonths, o.Probability)),
+                await ToDtosAsync(cards, ct), next));
+        }
+
+        // The first twelve months that have expected deals — a horizon the board names, not a cut of the deals.
+        var forecast = all
             .GroupBy(o => new { o.ExpectedCloseDate.Year, o.ExpectedCloseDate.Month })
             .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
-            .Select(g => new ForecastMonth(g.Key.Year, g.Key.Month, g.Count(), g.Sum(o => o.ForecastAmount), g.Sum(o => o.OneOffAmount + (o.Mrr * Math.Min(o.TermMonths, 12)))))
+            .Select(g => new ForecastMonth(
+                g.Key.Year, g.Key.Month, g.Count(),
+                g.Sum(o => Opportunity.Forecast(o.OneOffAmount, o.Mrr, o.TermMonths, o.Probability)),
+                g.Sum(o => o.OneOffAmount + (o.Mrr * Math.Min(o.TermMonths, 12)))))
             .Take(12)
             .ToList();
-        return new PipelineView(columns, forecast, dtos.Count(o => o.IsStale));
+        return new PipelineView(columns, forecast, all.Count(o => o.LastActivityAt < staleBefore));
     }
 
     public async Task<Result<OpportunityDto>> CreateOpportunityAsync(OpportunityRequest request, CancellationToken ct)
@@ -503,10 +554,10 @@ internal sealed class SalesApi(SalesDbContext db) : ISalesApi
     public async Task<IReadOnlyList<StaleOpportunity>> GetStaleOpportunitiesAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         var cutoff = now.AddDays(-Opportunity.StaleAfterDays);
+        // Every stale deal (DEV-12): the weekly notice reaches all of them, not the quietest two hundred.
         var rows = await db.Opportunities.AsNoTracking()
             .Where(o => o.Status == OpportunityStatus.Open && o.LastActivityAt < cutoff)
-            .OrderBy(o => o.LastActivityAt)
-            .Take(200)
+            .OrderBy(o => o.LastActivityAt).ThenBy(o => o.Id)
             .Select(o => new { o.Id, o.Name, o.OrganizationId, o.OwnerId, o.LastActivityAt })
             .ToListAsync(cancellationToken);
 

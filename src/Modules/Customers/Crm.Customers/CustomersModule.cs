@@ -89,8 +89,8 @@ public static class CustomersModule
                 (await handler.HandleAsync(new MergeOrganizations(id, request.SourceOrganizationId), ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.CustomersDelete);
 
-        group.MapGet("/organizations/merges", async (ListMergesHandler handler, CancellationToken ct) =>
-                Results.Ok(await handler.HandleAsync(default, ct)))
+        group.MapGet("/organizations/merges", async (int? limit, string? cursor, ListMergesHandler handler, CancellationToken ct) =>
+                Results.Ok(await handler.HandleAsync(new ListMerges(limit, cursor), ct)))
             .RequirePermission(Permissions.CustomersRead);
 
         group.MapPost("/organizations/merges/{mergeId:guid}/undo", async (Guid mergeId, UndoMergeHandler handler, CancellationToken ct) =>

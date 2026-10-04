@@ -20,6 +20,7 @@ import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
@@ -65,7 +66,8 @@ function CasesPanel() {
   const styles = useStyles();
   const { t } = useTranslation();
   const [includeClosed, setIncludeClosed] = useState(false);
-  const { data, error, isPending, refetch } = usePrivacyCases(includeClosed);
+  const cases = usePrivacyCases(includeClosed);
+  const { items: data, error, isPending, refetch } = cases;
   return (
     <Panel title={t('privacy.cases.title')}>
       <div className={styles.toolbar}>
@@ -108,6 +110,7 @@ function CasesPanel() {
               ))}
             </TableBody>
           </Table>
+          <ListFooter shown={data.length} total={cases.total} hasMore={cases.hasNextPage} loading={cases.isFetchingNextPage} onMore={() => void cases.fetchNextPage()} />
         </div>
       )}
     </Panel>
@@ -120,7 +123,8 @@ function HoldsPanel() {
   const notify = useNotify();
   const [includeEnded, setIncludeEnded] = useState(false);
   const [releasing, setReleasing] = useState<LegalHold | null>(null);
-  const { data, error, isPending, refetch } = useLegalHolds(includeEnded);
+  const holds = useLegalHolds(includeEnded);
+  const { items: data, error, isPending, refetch } = holds;
   const actions = useHoldActions();
   return (
     <Panel title={t('privacy.holds.title')}>
@@ -166,6 +170,7 @@ function HoldsPanel() {
               ))}
             </TableBody>
           </Table>
+          <ListFooter shown={data.length} total={holds.total} hasMore={holds.hasNextPage} loading={holds.isFetchingNextPage} onMore={() => void holds.fetchNextPage()} />
         </div>
       )}
       <ReasonDialog
@@ -194,7 +199,8 @@ function SuppressionsPanel() {
   const { t } = useTranslation();
   const notify = useNotify();
   const [lifting, setLifting] = useState<Suppression | null>(null);
-  const { data, error, isPending, refetch } = useSuppressions();
+  const suppressions = useSuppressions();
+  const { items: data, error, isPending, refetch } = suppressions;
   const actions = useHoldActions();
   return (
     <Panel title={t('privacy.suppressions.title')}>
@@ -235,6 +241,7 @@ function SuppressionsPanel() {
               ))}
             </TableBody>
           </Table>
+          <ListFooter shown={data.length} total={suppressions.total} hasMore={suppressions.hasNextPage} loading={suppressions.isFetchingNextPage} onMore={() => void suppressions.fetchNextPage()} />
         </div>
       )}
       <ReasonDialog

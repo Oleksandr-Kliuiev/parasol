@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Crm.Infrastructure.Persistence;
@@ -142,7 +143,7 @@ internal sealed class PrivacyCaseService(
         "Database backups keep earlier states until they expire; they are not searched.",
     ];
 
-    public async Task<IReadOnlyList<PrivacyCaseSummary>> ListAsync(bool includeClosed, CancellationToken ct)
+    public async Task<PagedResult<PrivacyCaseSummary>> ListAsync(bool includeClosed, int? limit, string? cursor, CancellationToken ct)
     {
         var today = Today();
         var query = db.Cases.AsNoTracking();
@@ -151,9 +152,20 @@ internal sealed class PrivacyCaseService(
             query = query.Where(c => c.Status != PrivacyCaseStatus.Completed && c.Status != PrivacyCaseStatus.Rejected);
         }
 
-        var cases = await query.OrderByDescending(c => c.ReceivedAt).Take(200).ToListAsync(ct);
-        return cases.Select(c => new PrivacyCaseSummary(
-            c.Id, c.Number, c.Kind, c.SubjectKind, c.SubjectId, c.Status, c.ReceivedAt, c.DueOn, !c.IsClosed && c.DueOn < today)).ToList();
+        // Newest first, then id (DEV-12): a page per request and the count of all.
+        var total = await query.CountAsync(ct);
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateTimeOffset.TryParseExact(after.SortKey, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var received))
+        {
+            query = query.Where(c => c.ReceivedAt < received || (c.ReceivedAt == received && c.Id.CompareTo(after.Id) < 0));
+        }
+
+        var take = KeysetCursor.ClampLimit(limit);
+        var page = await query.OrderByDescending(c => c.ReceivedAt).ThenByDescending(c => c.Id).Take(take + 1).ToListAsync(ct);
+        var cases = page.Take(take).ToList();
+        var next = page.Count > take ? new KeysetCursor(cases[^1].ReceivedAt.ToString("O", CultureInfo.InvariantCulture), cases[^1].Id).Encode() : null;
+        return new PagedResult<PrivacyCaseSummary>(cases.Select(c => new PrivacyCaseSummary(
+            c.Id, c.Number, c.Kind, c.SubjectKind, c.SubjectId, c.Status, c.ReceivedAt, c.DueOn, !c.IsClosed && c.DueOn < today)).ToList(), next, total);
     }
 
     public async Task<Result<PrivacyCaseResponse>> GetAsync(Guid id, CancellationToken ct) =>

@@ -149,8 +149,8 @@ public static class ContractsModule
 
     private static void MapHourBanks(RouteGroupBuilder group)
     {
-        group.MapGet("/hour-banks", async (Guid? organizationId, Guid? contractId, bool? includeClosed, HourBankService service, CancellationToken ct) =>
-                Results.Ok(await service.ListAsync(organizationId, contractId, includeClosed ?? false, ct)))
+        group.MapGet("/hour-banks", async (Guid? organizationId, Guid? contractId, bool? includeClosed, int? limit, string? cursor, HourBankService service, CancellationToken ct) =>
+                Results.Ok(await service.ListAsync(organizationId, contractId, includeClosed ?? false, limit, cursor, ct)))
             .RequirePermission(Permissions.ContractsRead);
 
         group.MapGet("/hour-banks/{id:guid}", async (Guid id, HourBankService service, CancellationToken ct) =>
@@ -174,8 +174,8 @@ public static class ContractsModule
 
     private static void MapReminders(RouteGroupBuilder group)
     {
-        group.MapGet("/reminders", async (bool? mine, bool? includeAcknowledged, Guid? organizationId, ReminderService service, CancellationToken ct) =>
-                Results.Ok(await service.ListAsync(mine ?? true, includeAcknowledged ?? false, organizationId, ct)))
+        group.MapGet("/reminders", async (bool? mine, bool? includeAcknowledged, Guid? organizationId, int? limit, string? cursor, ReminderService service, CancellationToken ct) =>
+                Results.Ok(await service.ListAsync(mine ?? true, includeAcknowledged ?? false, organizationId, limit, cursor, ct)))
             .RequirePermission(Permissions.ContractsRead);
 
         group.MapPost("/reminders/{id:guid}/acknowledge", async (Guid id, ReminderService service, CancellationToken ct) =>

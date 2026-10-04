@@ -16,11 +16,12 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { formatDate, formatMoney } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
-import { useInvoices } from './api';
+import { useInvoicePages } from './api';
 import { InvoiceStatusBadge } from './shared';
 
 const useStyles = makeStyles({
@@ -35,6 +36,7 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusLarge,
   },
   value: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
+  scope: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, marginTop: `-${tokens.spacingVerticalM}`, marginBottom: tokens.spacingVerticalL },
   label: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   warn: { color: tokens.colorPaletteRedForeground1 },
 });
@@ -48,7 +50,11 @@ export function InvoicesPage() {
   const [params, setParams] = useSearchParams();
   const openOnly = params.get('open') === 'true';
   const overdueOnly = params.get('overdue') === 'true';
-  const { data, error, isPending, refetch } = useInvoices({ openOnly, overdueOnly, limit: 200 });
+  const pages = useInvoicePages({ openOnly, overdueOnly });
+  // The totals of the newest answer: they cover every invoice the filter matches, not the rows loaded so far.
+  const data = pages.data?.pages.at(-1);
+  const invoices = pages.data?.pages.flatMap((p) => p.invoices) ?? [];
+  const { error, isPending, refetch } = pages;
 
   const setFlag = (key: string, value: boolean) => {
     const next = new URLSearchParams(params);
@@ -77,6 +83,7 @@ export function InvoicesPage() {
           </div>
         </div>
       )}
+      {canSeeMoney && data && <Text block className={styles.scope}>{t('invoices.totalsScope', { count: data.count, date: formatDate(data.asOf) })}</Text>}
 
       <div className={catalog.filters}>
         <Switch label={t('invoices.openOnly')} checked={openOnly} onChange={(_, d) => setFlag('open', d.checked)} />
@@ -99,7 +106,7 @@ export function InvoicesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(data?.invoices ?? []).map((invoice) => (
+              {invoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell>
                     {invoice.url ? (
@@ -139,7 +146,8 @@ export function InvoicesPage() {
               ))}
             </TableBody>
           </Table>
-          {!isPending && (data?.invoices ?? []).length === 0 && <EmptyState message={t('invoices.empty')} />}
+          {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.empty')} />}
+          <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
         </div>
       )}
     </>
@@ -152,7 +160,10 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
   const catalog = useCatalogStyles();
   const { t } = useTranslation();
   const canSeeMoney = useCan(Permissions.financeRead);
-  const { data, error, isPending, refetch } = useInvoices({ organizationId, limit: 100 });
+  const pages = useInvoicePages({ organizationId });
+  const data = pages.data?.pages.at(-1);
+  const invoices = pages.data?.pages.flatMap((p) => p.invoices) ?? [];
+  const { error, isPending, refetch } = pages;
 
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
@@ -170,6 +181,7 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
           </div>
         </div>
       )}
+      {canSeeMoney && data && data.count > 0 && <Text block className={styles.scope}>{t('invoices.totalsScope', { count: data.count, date: formatDate(data.asOf) })}</Text>}
       <div className={catalog.tableWrap}>
         <Table className={catalog.table} aria-label={t('invoices.title')}>
           <TableHeader>
@@ -182,7 +194,7 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(data?.invoices ?? []).map((invoice) => (
+            {invoices.map((invoice) => (
               <TableRow key={invoice.id}>
                 <TableCell>
                   {invoice.url ? (
@@ -210,7 +222,8 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
             ))}
           </TableBody>
         </Table>
-        {!isPending && (data?.invoices ?? []).length === 0 && <EmptyState message={t('invoices.emptyForOrganization')} />}
+        {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.emptyForOrganization')} />}
+        <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
       </div>
     </>
   );

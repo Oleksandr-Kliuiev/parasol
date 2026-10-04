@@ -98,9 +98,12 @@ export interface PipelineColumn {
   stageId: string;
   stageName: string;
   probability: number;
+  /** Every open deal of the filter in the stage (DEV-12). */
   count: number;
   forecast?: number;
+  /** The first cards; the rest continue through the deals list with `nextCursor`. */
   opportunities: Opportunity[];
+  nextCursor: string | null;
 }
 
 export interface ForecastMonth {

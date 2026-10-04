@@ -41,7 +41,7 @@ public class MergeApiTests(CrmWebFactory factory)
 
         // Found from both sides, with the reasons
         var duplicates = await management.GetFromJsonAsync<JsonElement>($"{Organizations}/duplicates?organizationId={targetId}");
-        var pair = duplicates.EnumerateArray().ShouldHaveSingleItem();
+        var pair = duplicates.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         pair.GetProperty("reasons").EnumerateArray().Select(r => r.GetString()).ShouldBe(["SameName", "SharedDomain", "SameEmailDomain"]);
 
         // Sales may not merge
@@ -64,12 +64,12 @@ public class MergeApiTests(CrmWebFactory factory)
         problem.GetProperty("code").GetString().ShouldBe("CUS_ORGANIZATION_MERGED");
         problem.GetProperty("mergedIntoId").GetGuid().ShouldBe(targetId);
 
-        (await management.GetFromJsonAsync<JsonElement>($"{Organizations}/duplicates?organizationId={targetId}")).GetArrayLength().ShouldBe(0);
+        (await management.GetFromJsonAsync<JsonElement>($"{Organizations}/duplicates?organizationId={targetId}")).GetProperty("items").GetArrayLength().ShouldBe(0);
 
         // Undo restores both organizations and moves the contact back
         var mergeId = merge.GetProperty("mergeId").GetGuid();
-        var merges = await management.GetFromJsonAsync<JsonElement>($"{Organizations}/merges");
-        merges.EnumerateArray().Single(m => m.GetProperty("id").GetGuid() == mergeId).GetProperty("canUndo").GetBoolean().ShouldBeTrue();
+        var merges = await management.GetFromJsonAsync<JsonElement>($"{Organizations}/merges?limit=200");
+        merges.GetProperty("items").EnumerateArray().Single(m => m.GetProperty("id").GetGuid() == mergeId).GetProperty("canUndo").GetBoolean().ShouldBeTrue();
 
         (await management.PostAsync($"{Organizations}/merges/{mergeId}/undo", null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
@@ -113,12 +113,14 @@ public class MergeApiTests(CrmWebFactory factory)
         var sales = factory.ClientAs(CrmRoles.Sales);
         var a = await CreateAsync(sales, Org($"{marker} Kystlys AS", null, $"{marker}.no"));
         var b = await CreateAsync(sales, Org($"{marker} Kystlys", null, $"{marker}-other.no"));
-        (await sales.GetFromJsonAsync<JsonElement>($"{Organizations}/duplicates?organizationId={a}")).GetArrayLength().ShouldBe(1);
+        var pairs = await sales.GetFromJsonAsync<JsonElement>($"{Organizations}/duplicates?organizationId={a}");
+        pairs.GetProperty("items").GetArrayLength().ShouldBe(1);
+        pairs.GetProperty("totalCount").GetInt32().ShouldBe(1);
 
         (await sales.PostAsJsonAsync($"{Organizations}/duplicates/dismissals", new { organizationId = b, otherOrganizationId = a }))
             .StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
-        (await sales.GetFromJsonAsync<JsonElement>($"{Organizations}/duplicates?organizationId={a}")).GetArrayLength().ShouldBe(0);
+        (await sales.GetFromJsonAsync<JsonElement>($"{Organizations}/duplicates?organizationId={a}")).GetProperty("items").GetArrayLength().ShouldBe(0);
     }
 
     [Fact]

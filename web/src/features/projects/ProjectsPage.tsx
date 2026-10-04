@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { formatDate, formatNumber } from '../../shared/utils/format';
@@ -53,7 +54,8 @@ export function ProjectsPage() {
   const debounced = useDebouncedValue(search.trim());
   const restoreFocusTarget = useRestoreFocusTarget();
   const openOnly = params.get('all') !== 'true';
-  const { data = [], error, isPending, refetch } = useProjects({ search: debounced, openOnly });
+  const projects = useProjects({ search: debounced, openOnly });
+  const { items: data, error, isPending, refetch } = projects;
 
   return (
     <>
@@ -150,6 +152,7 @@ export function ProjectsPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('projects.empty')} />}
+          <ListFooter shown={data.length} total={projects.total} hasMore={projects.hasNextPage} loading={projects.isFetchingNextPage} onMore={() => void projects.fetchNextPage()} />
         </div>
       )}
 

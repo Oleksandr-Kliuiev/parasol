@@ -162,8 +162,8 @@ public class ContractsApiTests(CrmWebFactory factory)
         for (var attempt = 0; attempt < 40 && found is null; attempt++)
         {
             await factory.ProcessEventsAsync();
-            var reminders = await sales.GetFromJsonAsync<JsonElement>($"{Contracts}/reminders?mine=true");
-            found = reminders.EnumerateArray()
+            var reminders = await sales.GetFromJsonAsync<JsonElement>($"{Contracts}/reminders?mine=true&limit=200");
+            found = reminders.GetProperty("items").EnumerateArray()
                 .Where(r => r.TryGetProperty("hourBank", out var b) && b.ValueKind == JsonValueKind.Object && b.GetProperty("id").GetGuid() == bankId)
                 .Select(r => (JsonElement?)r)
                 .FirstOrDefault();
@@ -178,7 +178,7 @@ public class ContractsApiTests(CrmWebFactory factory)
         reminder.GetProperty("hourBank").GetProperty("remainingHours").GetDecimal().ShouldBe(3.5m);
 
         (await sales.PostAsync($"{Contracts}/reminders/{reminder.GetProperty("id").GetGuid()}/acknowledge", null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        (await sales.GetFromJsonAsync<JsonElement>($"{Contracts}/reminders?mine=true")).EnumerateArray()
+        (await sales.GetFromJsonAsync<JsonElement>($"{Contracts}/reminders?mine=true&limit=200")).GetProperty("items").EnumerateArray()
             .ShouldNotContain(r => r.GetProperty("id").GetGuid() == reminder.GetProperty("id").GetGuid());
 
         // Adjustments need a reason.
@@ -216,8 +216,8 @@ public class ContractsApiTests(CrmWebFactory factory)
         reminder.DaysBefore.ShouldBe(30);
         reminder.AssigneeId.ShouldBe(ownerId);
 
-        var mine = await sales.GetFromJsonAsync<JsonElement>($"{Contracts}/reminders?mine=true");
-        mine.EnumerateArray().ShouldContain(r => r.GetProperty("contract").GetProperty("id").GetGuid() == soon);
+        var mine = await sales.GetFromJsonAsync<JsonElement>($"{Contracts}/reminders?mine=true&limit=200");
+        mine.GetProperty("items").EnumerateArray().ShouldContain(r => r.GetProperty("contract").GetProperty("id").GetGuid() == soon);
         (await sales.GetFromJsonAsync<JsonElement>($"{Contracts}?organizationId={organizationId}&endingWithinDays=60"))
             .GetProperty("items").EnumerateArray().Select(c => c.GetProperty("id").GetGuid()).ShouldBe([soon]);
     }

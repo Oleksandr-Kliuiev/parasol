@@ -132,6 +132,10 @@ public class PowerOfficeSyncTests(CrmWebFactory factory)
         var survivorId = await admin.CreateOrganizationAsync(new { name = $"{marker} Survivor AS", status = "Customer" });
         (await admin.PostAsJsonAsync($"/api/v1/customers/organizations/{survivorId}/merge", new { sourceOrganizationId = existingId })).EnsureSuccessStatusCode();
         await factory.ProcessEventsAndOutboundAsync();
+        // A parallel class's outbox run may hold the merge event a moment longer than this drain.
+        await factory.EventuallyAsync(async () =>
+            (await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/links?entityType=Organization&entityId={survivorId}"))
+                .EnumerateArray().Any(l => l.GetProperty("externalId").GetString() == "101"));
         (await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/links?entityType=Organization&entityId={survivorId}"))
             .EnumerateArray().ShouldContain(l => l.GetProperty("externalId").GetString() == "101");
     }

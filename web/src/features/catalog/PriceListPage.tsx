@@ -482,7 +482,10 @@ function PriceSheetForm({ list, onClose }: { list: PriceList; onClose: () => voi
                 ))}
               </TableBody>
             </Table>
-            {preview.rows.length > 10 && <Text className={catalog.muted}>{t('catalog.priceSheet.more', { rest: preview.rows.length - 10 })}</Text>}
+            {/* The answer carries a sample of the rows (changed first); `matched` counts every product the sheet prices (DEV-12). */}
+            {preview.matched > Math.min(preview.rows.length, 10) && (
+              <Text className={catalog.muted}>{t('catalog.priceSheet.more', { rest: preview.matched - Math.min(preview.rows.length, 10) })}</Text>
+            )}
           </>
         )}
       </DialogContent>

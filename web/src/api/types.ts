@@ -25,6 +25,8 @@ export interface UserSummary extends UserRef {
 export interface PagedResult<T> {
   items: T[];
   nextCursor: string | null;
+  /** Every item the filter matches, for lists that count (DEV-12). */
+  totalCount?: number | null;
 }
 
 export interface OrganizationListItem {

@@ -174,6 +174,12 @@ public interface IContractsApi
     Task<IReadOnlySet<Guid>> GetContractedProductsAsync(Guid organizationId, DateOnly date, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The contracted products of many organizations in one query (DEV-12): a summary over every subscription asks once instead
+    /// of once per customer. Organizations without a live contract line are absent from the answer.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, IReadOnlySet<Guid>>> GetContractedProductsAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Billing terms on a date: the organization's active contract with an SLA (latest started) or, without SLA, the latest active contract,
     /// plus active hour banks with hours left, earliest expiry first.
     /// </summary>

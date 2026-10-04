@@ -90,7 +90,8 @@ public class ServiceAndTimeTests(CrmWebFactory factory)
         await factory.RunJobAsync<AteraWorkHoursSyncJob>(j => j.RunAsync(CancellationToken.None));
 
         var tickets = await admin.GetFromJsonAsync<JsonElement>($"{Service}/tickets?organizationId={organizationId}");
-        var ticket = tickets.EnumerateArray().ShouldHaveSingleItem();
+        tickets.GetProperty("totalCount").GetInt32().ShouldBe(1);
+        var ticket = tickets.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         ticket.GetProperty("title").GetString().ShouldBe("Printer down");
         ticket.GetProperty("isOpen").GetBoolean().ShouldBeTrue();
         ticket.GetProperty("url").GetString().ShouldBe($"https://app.atera.com/new/ticket/{ticketId}");
@@ -113,8 +114,8 @@ public class ServiceAndTimeTests(CrmWebFactory factory)
         entry.GetProperty("technicianName").GetString().ShouldBe("Tor Tekniker");
 
         // The technician is unknown until an administrator maps them; then earlier entries get the CRM user.
-        var technicians = await admin.GetFromJsonAsync<JsonElement>("/api/v1/identity/technicians?unmappedOnly=true");
-        var mapping = technicians.EnumerateArray().Single(t => t.GetProperty("externalId").GetString() == technicianId.ToString(CultureInfo.InvariantCulture));
+        var technicians = await admin.GetFromJsonAsync<JsonElement>("/api/v1/identity/technicians?unmappedOnly=true&limit=200");
+        var mapping = technicians.GetProperty("items").EnumerateArray().Single(t => t.GetProperty("externalId").GetString() == technicianId.ToString(CultureInfo.InvariantCulture));
         var serviceLead = factory.ClientAs(CrmRoles.ServiceLead, userKey: "atera-mirror-lead");
         var leadId = (await serviceLead.GetFromJsonAsync<JsonElement>("/bff/user")).GetProperty("id").GetGuid();
         (await admin.PutAsJsonAsync($"/api/v1/identity/technicians/{mapping.GetProperty("id").GetGuid()}", new { userId = leadId })).StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -254,8 +255,9 @@ public class ServiceAndTimeTests(CrmWebFactory factory)
         requested.StatusCode.ShouldBe(HttpStatusCode.Accepted);
         await factory.ProcessEventsAsync();
 
-        var requests = await admin.GetFromJsonAsync<JsonElement>($"{Service}/ticket-requests?organizationId={organizationId}");
-        var request = requests.EnumerateArray().ShouldHaveSingleItem();
+        // The organization's banner asks only for requests that need attention; a failed one does.
+        var requests = await admin.GetFromJsonAsync<JsonElement>($"{Service}/ticket-requests?organizationId={organizationId}&attentionOnly=true");
+        var request = requests.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         request.GetProperty("status").GetString().ShouldBe("Failed");
         request.GetProperty("error").GetString()!.ShouldContain("switched off");
 

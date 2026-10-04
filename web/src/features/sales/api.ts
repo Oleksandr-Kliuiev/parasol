@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { usePagedList } from '../../api/paging';
+import type { PagedResult } from '../../api/types';
 import type { Lead, LeadRequest, LeadStatus, Opportunity, OpportunityRequest, PipelineView, Stage } from './types';
 
 const BASE = '/api/v1/sales';
@@ -30,11 +32,9 @@ export function useSaveStage() {
   });
 }
 
+/** Leads page by page, newest first, with how many the filter matches (DEV-12). */
 export function useLeads(filters: { status?: LeadStatus | null; mine?: boolean; search?: string }) {
-  return useQuery({
-    queryKey: salesKeys.leads(filters),
-    queryFn: async ({ signal }) => (await api.get<Lead[]>(`${BASE}/leads${query(filters)}`, signal)).data,
-  });
+  return usePagedList<Lead>(salesKeys.leads(filters), `${BASE}/leads`, filters);
 }
 
 export function useLeadActions() {
@@ -73,12 +73,14 @@ export interface OpportunityFilters {
   stale?: boolean;
 }
 
-export function useOpportunities(filters: OpportunityFilters, enabled = true) {
-  return useQuery({
-    queryKey: salesKeys.opportunities(filters),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<Opportunity[]>(`${BASE}/opportunities${query(filters)}`, signal)).data,
-  });
+/** Deals page by page, soonest expected close first, with how many the filter matches (DEV-12). */
+export function useOpportunities(filters: OpportunityFilters, enabled = true, limit?: number) {
+  return usePagedList<Opportunity>([...salesKeys.opportunities(filters), limit], `${BASE}/opportunities`, filters, { enabled, limit });
+}
+
+/** The next cards of one board column: the deals list with the board's filters, the stage and the column's cursor. */
+export async function fetchOpportunityPage(filters: OpportunityFilters, cursor: string) {
+  return (await api.get<PagedResult<Opportunity>>(`${BASE}/opportunities${query({ ...filters, limit: 50, cursor })}`)).data;
 }
 
 export function usePipeline(filters: OpportunityFilters) {

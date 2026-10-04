@@ -5,6 +5,7 @@ using Crm.Catalog.Features.Products;
 using Crm.Catalog.Persistence;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Results;
+using Crm.SharedKernel.Text;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -150,6 +151,9 @@ internal static class PriceListErrors
 /// <summary>Customer categories, price lists and their items. One service keeps the overlap rule (BR-CAT-01) in one place.</summary>
 internal sealed class PriceListService(CatalogDbContext db, IOptions<CatalogOptions> options, TimeProvider time)
 {
+    /// <summary>Rows a price sheet answer lists; the counts always cover the whole sheet.</summary>
+    public const int MaxPreviewRows = 500;
+
     public async Task<IReadOnlyList<CategoryResponse>> ListCategoriesAsync(CancellationToken ct)
     {
         // Tracked: each row carries its ETag.
@@ -424,7 +428,7 @@ internal sealed class PriceListService(CatalogDbContext db, IOptions<CatalogOpti
         var existing = await db.PriceListItems.Where(i => i.PriceListId == id).ToListAsync(ct);
         var itemsByProduct = existing.ToDictionary(i => i.ProductId);
 
-        var warnings = new List<string>(parsed.Errors.Take(10));
+        var warnings = new List<string>(parsed.Errors);
         var rows = new List<PriceSheetImportRow>();
         var matchedOffers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var product in products)
@@ -476,8 +480,9 @@ internal sealed class PriceListService(CatalogDbContext db, IOptions<CatalogOpti
             withoutProduct,
             request.ExchangeRate,
             markup,
-            rows.OrderByDescending(r => r.Changed).ThenBy(r => r.ProductName, StringComparer.CurrentCultureIgnoreCase).Take(500).ToList(),
-            warnings.Take(20).ToList());
+            // A sample for the screen, changed first; the counts above cover every row (DEV-12).
+            rows.OrderByDescending(r => r.Changed).ThenBy(r => r.ProductName, StringComparer.CurrentCultureIgnoreCase).Take(MaxPreviewRows).ToList(),
+            WarningList.Capped(warnings));
     }
 
     public async Task<Result> RemoveItemAsync(Guid id, Guid productId, CancellationToken ct)

@@ -3,7 +3,7 @@ import { Combobox, Option, type ComboboxProps } from '@fluentui/react-components
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, query } from '../../api/client';
-import type { UserRef, UserSummary } from '../../api/types';
+import type { PagedResult, UserRef, UserSummary } from '../../api/types';
 import { useDebouncedValue } from '../utils/useDebouncedValue';
 
 interface UserPickerProps {
@@ -17,12 +17,15 @@ export function UserPicker({ value, onChange, ...rest }: UserPickerProps) {
   const { t } = useTranslation();
   const [text, setText] = useState(value?.displayName ?? '');
   const search = useDebouncedValue(text);
-  const { data = [] } = useQuery({
+  const { data: page } = useQuery({
     queryKey: ['identity', 'users', search],
     queryFn: async ({ signal }) =>
-      (await api.get<UserSummary[]>(`/api/v1/identity/users${query({ search: search === value?.displayName ? '' : search })}`, signal)).data,
+      (await api.get<PagedResult<UserSummary>>(`/api/v1/identity/users${query({ search: search === value?.displayName ? '' : search, limit: 20 })}`, signal)).data,
     staleTime: 60_000,
   });
+  const data = page?.items ?? [];
+  // The first matches only (DEV-12): say so, so a person further down the list is found by typing, not given up on.
+  const more = Math.max((page?.totalCount ?? 0) - data.length, 0);
 
   const options = value && !data.some((u) => u.id === value.id) ? [{ ...value, email: null, isActive: true }, ...data] : data;
 
@@ -47,6 +50,11 @@ export function UserPicker({ value, onChange, ...rest }: UserPickerProps) {
           {user.email ? ` · ${user.email}` : ''}
         </Option>
       ))}
+      {more > 0 && (
+        <Option key="more" value="" text="" disabled>
+          {t('userPicker.narrow', { count: more })}
+        </Option>
+      )}
     </Combobox>
   );
 }

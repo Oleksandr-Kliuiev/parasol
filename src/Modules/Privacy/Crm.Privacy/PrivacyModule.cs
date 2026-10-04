@@ -50,8 +50,8 @@ public static class PrivacyModule
     {
         var group = app.MapGroup("/api/v1/privacy").WithTags("Privacy");
 
-        group.MapGet("/cases", async (bool? includeClosed, PrivacyCaseService service, CancellationToken ct) =>
-                Results.Ok(await service.ListAsync(includeClosed ?? false, ct)))
+        group.MapGet("/cases", async (bool? includeClosed, int? limit, string? cursor, PrivacyCaseService service, CancellationToken ct) =>
+                Results.Ok(await service.ListAsync(includeClosed ?? false, limit, cursor, ct)))
             .RequirePermission(Permissions.PrivacyManage);
 
         group.MapPost("/cases", async (OpenCaseRequest request, PrivacyCaseService service, HttpResponse response, CancellationToken ct) =>
@@ -108,8 +108,8 @@ public static class PrivacyModule
             .Validate<ExecuteCaseRequest>()
             .RequirePermission(Permissions.PrivacyManage);
 
-        group.MapGet("/holds", async (bool? includeEnded, LegalHoldService service, CancellationToken ct) =>
-                Results.Ok(await service.ListAsync(includeEnded ?? false, ct)))
+        group.MapGet("/holds", async (bool? includeEnded, int? limit, string? cursor, LegalHoldService service, CancellationToken ct) =>
+                Results.Ok(await service.ListAsync(includeEnded ?? false, limit, cursor, ct)))
             .RequirePermission(Permissions.PrivacyManage);
 
         group.MapPost("/holds", async (PlaceHoldRequest request, LegalHoldService service, CancellationToken ct) =>
@@ -124,7 +124,8 @@ public static class PrivacyModule
             .Validate<ReleaseRequest>()
             .RequirePermission(Permissions.PrivacyManage);
 
-        group.MapGet("/suppressions", async (LegalHoldService service, CancellationToken ct) => Results.Ok(await service.SuppressionsAsync(ct)))
+        group.MapGet("/suppressions", async (int? limit, string? cursor, LegalHoldService service, CancellationToken ct) =>
+                Results.Ok(await service.SuppressionsAsync(limit, cursor, ct)))
             .RequirePermission(Permissions.PrivacyManage);
 
         group.MapPost("/suppressions/{id:guid}/lift", async (Guid id, ReleaseRequest request, LegalHoldService service, HttpRequest http, CancellationToken ct) =>

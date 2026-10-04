@@ -54,11 +54,12 @@ public class EntraUserSyncTests(CrmWebFactory factory)
 
         var admin = factory.ClientAs(CrmRoles.Admin);
         var users = await admin.GetFromJsonAsync<JsonElement>("/api/v1/identity/users?search=Synced%20Technician");
-        users.EnumerateArray().ShouldHaveSingleItem();
+        users.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
+        users.GetProperty("totalCount").GetInt32().ShouldBe(1);
         graph.LogEntries.ShouldContain(e => e.RequestMessage!.Headers!["Authorization"].Contains("Bearer test-graph-token"));
 
         var runs = await admin.GetFromJsonAsync<JsonElement>("/api/v1/integrations/runs?system=microsoft-graph");
-        var first = runs.EnumerateArray().First();
+        var first = runs.GetProperty("items").EnumerateArray().First();
         first.GetProperty("status").GetString().ShouldBe("Succeeded");
         first.GetProperty("read").GetInt32().ShouldBe(2);
         first.GetProperty("message").GetString()!.ShouldContain("matched 1");

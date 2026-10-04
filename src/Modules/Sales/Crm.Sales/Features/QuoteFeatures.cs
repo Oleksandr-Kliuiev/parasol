@@ -134,7 +134,8 @@ public sealed record QuoteListItem(
     bool IsLatestVersion,
     string Etag);
 
-public sealed record QuoteQuery(string? Search, Guid? OrganizationId, Guid? OpportunityId, QuoteStatus? Status, bool MineOnly, bool AwaitingApproval);
+public sealed record QuoteQuery(
+    string? Search, Guid? OrganizationId, Guid? OpportunityId, QuoteStatus? Status, bool MineOnly, bool AwaitingApproval, int? Limit = null, string? Cursor = null);
 
 /// <summary>A stored quote document as it is downloaded (DEV-08).</summary>
 public sealed record QuoteFile(byte[] Content, string FileName, int Revision, QuoteDocumentOrigin Origin, string Sha256)

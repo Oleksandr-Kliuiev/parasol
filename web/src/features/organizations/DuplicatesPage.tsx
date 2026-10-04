@@ -28,6 +28,7 @@ import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { OrganizationStatusBadge } from '../../shared/components/StatusBadges';
@@ -38,6 +39,7 @@ import { formatOrgNumber } from '../../shared/utils/orgNumber';
 import { useDuplicateActions, useDuplicates, useMerges } from './duplicatesApi';
 
 const useStyles = makeStyles({
+  muted: { color: tokens.colorNeutralForeground3 },
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
   pair: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -176,12 +178,15 @@ export function DuplicatesPage() {
           </Skeleton>
         )}
         {duplicates.error && <ErrorState error={duplicates.error} onRetry={() => void duplicates.refetch()} />}
-        {duplicates.data?.length === 0 && (
+        {duplicates.data?.items.length === 0 && (
           <Panel>
             <EmptyState message={t('duplicates.empty')} />
           </Panel>
         )}
-        {duplicates.data?.map((pair) => (
+        {duplicates.data && duplicates.data.totalCount != null && duplicates.data.totalCount > duplicates.data.items.length && (
+          <Text className={styles.muted}>{t('duplicates.strongestShown', { shown: duplicates.data.items.length, total: duplicates.data.totalCount })}</Text>
+        )}
+        {duplicates.data?.items.map((pair) => (
           <section key={`${pair.first.id}-${pair.second.id}`} className={styles.pair} aria-label={`${pair.first.name} / ${pair.second.name}`}>
             <div className={styles.reasons}>
               <span className={styles.badges}>
@@ -204,7 +209,7 @@ export function DuplicatesPage() {
           </section>
         ))}
 
-        {merges.data && merges.data.length > 0 && (
+        {merges.items.length > 0 && (
           <Panel title={t('duplicates.recent')}>
             <div className={styles.tableWrap}>
               <Table size="small">
@@ -218,7 +223,7 @@ export function DuplicatesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {merges.data.map((m) => (
+                  {merges.items.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell className="tabular">{formatDateTime(m.mergedAt)}</TableCell>
                       <TableCell>
@@ -241,6 +246,7 @@ export function DuplicatesPage() {
                   ))}
                 </TableBody>
               </Table>
+              <ListFooter shown={merges.items.length} total={merges.total} hasMore={merges.hasNextPage} loading={merges.isFetchingNextPage} onMore={() => void merges.fetchNextPage()} />
             </div>
           </Panel>
         )}

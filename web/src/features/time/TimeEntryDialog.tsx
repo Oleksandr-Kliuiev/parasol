@@ -23,7 +23,7 @@ import { blankToNull, parseDecimal, todayIso } from '../../shared/utils/format';
 import { useDialogStyles } from '../contracts/dialogStyles';
 import { OrganizationPicker } from '../contracts/OrganizationPicker';
 import type { Ref } from '../contracts/types';
-import { useProjects } from '../projects/api';
+import { useAllProjects } from '../projects/api';
 import { useTimeActions, useWorkTypes } from './api';
 import type { TimeEntry } from './types';
 
@@ -47,7 +47,7 @@ export function TimeEntryDialog({ entry, defaultDate, onClose }: { entry?: TimeE
   const [ticket, setTicket] = useState(entry?.externalTicketId ? String(entry.externalTicketId) : '');
   const [projectId, setProjectId] = useState(entry?.projectId ?? '');
   // Only the customer's own open projects can take hours; the list is empty until a customer is picked.
-  const projectOptions = useProjects({ organizationId: organization?.id, openOnly: true }, Boolean(organization));
+  const projectOptions = useAllProjects({ organizationId: organization?.id, openOnly: true }, Boolean(organization));
   const projects = projectOptions.data ?? [];
 
   const [errors, setErrors] = useState<Record<string, string>>({});

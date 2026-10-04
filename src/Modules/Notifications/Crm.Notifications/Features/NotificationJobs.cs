@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using Crm.Authorization;
 using Crm.Billing.Contracts;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
@@ -183,10 +184,14 @@ public sealed class NotificationDigestJob(
         var settings = options.Value;
 
         var sender = senders.FirstOrDefault(s => s.IsConfigured);
+        // Only readers whose digest hour this is, decided in SQL (DEV-12): the oldest notices of readers due at another hour can no
+        // longer crowd out the ones due now, as a fixed batch of the oldest pending notices did. Every notice read here leaves
+        // Pending below (sent, failed or suppressed), so the set is what this hour owes and no more.
         var pending = await db.Notifications
-            .Where(n => n.EmailStatus == EmailStatus.Pending && n.ReadAt == null)
+            .Where(n => n.EmailStatus == EmailStatus.Pending && n.ReadAt == null &&
+                        (db.Preferences.Where(p => p.UserId == n.RecipientId).Select(p => (int?)p.DigestHour).FirstOrDefault()
+                         ?? NotificationPreference.DefaultDigestHour) == hour)
             .OrderBy(n => n.CreatedAt)
-            .Take(2000)
             .ToListAsync(cancellationToken);
         if (pending.Count == 0)
         {
@@ -267,6 +272,8 @@ public sealed class NotificationDigestJob(
     {
         var language = profile.PreferredLanguage;
         var shown = items.Take(Math.Clamp(settings.MaxItemsPerEmail, 1, 100)).ToList();
+        // The digest shows money only to a recipient whose confirmed roles include finance.read (DEV-12-AC04).
+        var seesMoney = Permissions.ForRoles(profile.Roles ?? []).Contains(Permissions.FinanceRead);
         var baseUrl = settings.AppBaseUrl?.TrimEnd('/');
 
         var text = new StringBuilder();
@@ -275,7 +282,7 @@ public sealed class NotificationDigestJob(
         html.Append("<p>").Append(WebUtility.HtmlEncode(NotificationTexts.Greeting(language, profile.DisplayName))).Append("</p><ul>");
         foreach (var item in shown)
         {
-            var line = NotificationTexts.Line(item.Kind, item.Parameters, language);
+            var line = NotificationTexts.Line(item.Kind, seesMoney ? item.Parameters : NotificationTexts.WithoutMoney(item.Parameters), language);
             var link = baseUrl is not null && item.Link is not null ? baseUrl + item.Link : null;
             text.Append("- ").Append(line);
             if (link is not null)

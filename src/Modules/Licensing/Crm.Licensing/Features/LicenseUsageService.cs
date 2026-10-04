@@ -139,7 +139,7 @@ internal sealed class LicenseUsageService(
             var billed = group.Key is { } id ? revenueByOrganization.GetValueOrDefault(id) : 0m;
             var offersWithoutRevenue = billed > 0
                 ? []
-                : group.Select(l => l.OfferName ?? l.OfferId).Distinct(StringComparer.OrdinalIgnoreCase).Take(5).ToList();
+                : group.Select(l => l.OfferName ?? l.OfferId).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
             rows.Add(new ReconciliationRow(
                 group.Key,
                 group.Key is { } organizationId
@@ -179,7 +179,7 @@ internal sealed class LicenseUsageService(
             rows.OrderBy(r => r.NotBilled ? 0 : 1).ThenByDescending(r => r.MicrosoftCost).ToList());
     }
 
-    /// <summary>The periods that have Microsoft cost lines, newest first — what the report's month picker offers.</summary>
+    /// <summary>Every period that has Microsoft cost lines, newest first — what the report's month picker offers (DEV-12: no cut).</summary>
     public async Task<IReadOnlyList<string>> GetReconciliationPeriodsAsync(CancellationToken ct)
     {
         var periods = await db.MsBilledLines.AsNoTracking().Select(l => l.PeriodStart).Distinct().ToListAsync(ct);
@@ -187,7 +187,6 @@ internal sealed class LicenseUsageService(
             .OrderByDescending(p => p)
             .Select(p => p.ToString("yyyy-MM", CultureInfo.InvariantCulture))
             .Distinct(StringComparer.Ordinal)
-            .Take(24)
             .ToList();
     }
 

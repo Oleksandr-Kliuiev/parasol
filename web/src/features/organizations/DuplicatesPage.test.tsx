@@ -14,8 +14,8 @@ const pair: DuplicatePair = {
 function mockApi(merges: MergeListItem[] = []) {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST') return new Response(JSON.stringify({ mergeId: 'm1', targetOrganizationId: 'b', sourceOrganizationId: 'a', movedContacts: 0 }), { status: 200 });
-    if (url.includes('/merges')) return new Response(JSON.stringify(merges), { status: 200 });
-    return new Response(JSON.stringify([pair]), { status: 200 });
+    if (url.includes('/merges')) return new Response(JSON.stringify({ items: merges, nextCursor: null, totalCount: merges.length }), { status: 200 });
+    return new Response(JSON.stringify({ items: [pair], nextCursor: null, totalCount: 1 }), { status: 200 });
   });
   vi.stubGlobal('fetch', fetch);
   return fetch;

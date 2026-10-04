@@ -47,7 +47,7 @@ public class RecordScopeTests(CrmWebFactory factory)
         // No filter widens the list: not mine=false, not the organization, not the search.
         foreach (var query in new[] { $"search={marker}", $"search={marker}&mine=false", $"organizationId={organizationId}", $"organizationId={organizationId}&status=Ready" })
         {
-            (await b.GetFromJsonAsync<JsonElement>($"{Sales}/quotes?{query}", Ct)).GetArrayLength().ShouldBe(0, query);
+            (await b.GetFromJsonAsync<JsonElement>($"{Sales}/quotes?{query}", Ct)).GetProperty("totalCount").GetInt32().ShouldBe(0, query);
         }
 
         // Every action on it: not found, and nothing changes.
@@ -164,8 +164,8 @@ public class RecordScopeTests(CrmWebFactory factory)
         }
 
         // Counts and sums: lists and their totals hold only what is in scope; the dashboard carries no quote or project figures.
-        (await b.GetFromJsonAsync<JsonElement>($"{Sales}/quotes?organizationId={organizationId}", Ct)).GetArrayLength().ShouldBe(0);
-        (await technician.GetFromJsonAsync<JsonElement>($"{Projects}?organizationId={organizationId}", Ct)).GetArrayLength().ShouldBe(0);
+        (await b.GetFromJsonAsync<JsonElement>($"{Sales}/quotes?organizationId={organizationId}", Ct)).GetProperty("totalCount").GetInt32().ShouldBe(0);
+        (await technician.GetFromJsonAsync<JsonElement>($"{Projects}?organizationId={organizationId}", Ct)).GetProperty("totalCount").GetInt32().ShouldBe(0);
         (await b.GetStringAsync("/api/v1/reports/dashboard", Ct)).ShouldNotContain(number);
 
         // History of quotes and projects needs audit.read — roles that see every record — even for the owner.
@@ -337,7 +337,7 @@ public class RecordScopeTests(CrmWebFactory factory)
         (await client.GetFromJsonAsync<JsonElement>(url, Ct)).GetProperty("etag").GetString()!;
 
     private static async Task<List<Guid>> IdsAsync(HttpClient client, string url) =>
-        (await client.GetFromJsonAsync<JsonElement>(url, Ct)).EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).ToList();
+        (await client.GetFromJsonAsync<JsonElement>(url, Ct)).GetProperty("items").EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).ToList();
 
     private static async Task<Guid> ProjectAsync(HttpClient client, Guid organizationId, string name, Guid? managerId)
     {

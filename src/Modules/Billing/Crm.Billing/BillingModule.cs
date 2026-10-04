@@ -37,7 +37,7 @@ public static class BillingModule
         var group = app.MapGroup("/api/v1/billing").WithTags("Billing");
 
         group.MapGet("/runs", async ([AsParameters] RunParameters p, BillingService service, CancellationToken ct) =>
-                Results.Ok(await service.ListRunsAsync(new RunQuery(p.Status, p.Year, p.Limit), ct)))
+                Results.Ok(await service.ListRunsAsync(new RunQuery(p.Status, p.Year, p.Limit, p.Cursor, p.OpenOnly ?? false), ct)))
             .RequirePermission(Permissions.BillingRead);
 
         group.MapGet("/runs/{id:guid}", async (Guid id, BillingService service, HttpResponse response, CancellationToken ct) =>
@@ -180,7 +180,7 @@ public static class BillingModule
             .RequirePermission(Permissions.BillingManage);
 
         group.MapGet("/invoices", async ([AsParameters] InvoiceParameters p, BillingService service, CancellationToken ct) =>
-                Results.Ok(await service.ListInvoicesAsync(new InvoiceQuery(p.OrganizationId, p.OpenOnly ?? false, p.OverdueOnly ?? false, p.Limit), ct)))
+                Results.Ok(await service.ListInvoicesAsync(new InvoiceQuery(p.OrganizationId, p.OpenOnly ?? false, p.OverdueOnly ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.BillingRead);
 
         group.MapGet("/settings", (IOptions<BillingOptions> options) => Results.Ok(new
@@ -201,10 +201,11 @@ public static class BillingModule
     }
 }
 
-public sealed record RunParameters([FromQuery] BillingRunStatus? Status, [FromQuery] int? Year, [FromQuery] int? Limit);
+public sealed record RunParameters(
+    [FromQuery] BillingRunStatus? Status, [FromQuery] int? Year, [FromQuery] int? Limit, [FromQuery] string? Cursor, [FromQuery] bool? OpenOnly);
 
 public sealed record InvoiceParameters(
-    [FromQuery] Guid? OrganizationId, [FromQuery] bool? OpenOnly, [FromQuery] bool? OverdueOnly, [FromQuery] int? Limit);
+    [FromQuery] Guid? OrganizationId, [FromQuery] bool? OpenOnly, [FromQuery] bool? OverdueOnly, [FromQuery] int? Limit, [FromQuery] string? Cursor);
 
 /// <summary>A product that has ever been billed stays in the catalog (BR-CAT-03).</summary>
 internal sealed class BillingProductUsage(BillingDbContext db) : IProductUsage

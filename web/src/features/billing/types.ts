@@ -200,11 +200,14 @@ export interface LegacyChargeReport {
   items: LegacyCharge[];
 }
 
+/** Totals of every invoice the filter matches (overdue as of `asOf`), and one page of them (DEV-12). */
 export interface InvoiceSummary {
   count: number;
   outstanding?: number;
   overdue?: number;
   invoices: Invoice[];
+  nextCursor: string | null;
+  asOf: string;
 }
 
 export interface BillingSettings {

@@ -164,6 +164,11 @@ export function MigrationPage() {
               </TableBody>
             </Table>
           </div>
+          {preview.created + preview.updated + preview.conflicts + preview.failed > preview.rows.length && (
+            <Text className={styles.muted}>
+              {t('migration.rowsShown', { shown: preview.rows.length, total: preview.created + preview.updated + preview.conflicts + preview.failed })}
+            </Text>
+          )}
         </>
       )}
     </>

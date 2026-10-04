@@ -95,8 +95,8 @@ public partial class AccessAndConcurrencyTests(CrmWebFactory factory)
         responses.Count(r => r.StatusCode == HttpStatusCode.Created).ShouldBe(1);
         responses.Where(r => r.StatusCode != HttpStatusCode.Created).Select(r => r.StatusCode).Distinct()
             .ShouldBe([HttpStatusCode.Conflict]);
-        var runs = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs?year={period.Year}&limit=120");
-        runs.EnumerateArray().Count(r => r.GetProperty("periodStart").GetString() == "2029-06-01").ShouldBe(1);
+        var runs = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/runs?year={period.Year}&limit=200");
+        runs.GetProperty("items").EnumerateArray().Count(r => r.GetProperty("periodStart").GetString() == "2029-06-01").ShouldBe(1);
     }
 
     [Fact]

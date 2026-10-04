@@ -106,7 +106,11 @@ internal sealed class QuoteService(
 
     // ---------- Quotes ----------
 
-    public async Task<IReadOnlyList<QuoteListItem>> ListAsync(QuoteQuery query, CancellationToken ct)
+    /// <summary>
+    /// One page of quote versions in the caller's scope, newest number first (DEV-12): the count covers every version the filter
+    /// matches, and whether a version is the latest is asked of all its siblings, not of the page.
+    /// </summary>
+    public async Task<PagedResult<QuoteListItem>> ListAsync(QuoteQuery query, CancellationToken ct)
     {
         var quotes = InScope(db.Quotes.Include(q => q.Lines));
         if (query.OrganizationId is { } organizationId)
@@ -141,11 +145,23 @@ internal sealed class QuoteService(
             quotes = quotes.Where(q => q.Number.Contains(term) || q.Title.Contains(term));
         }
 
-        var rows = await quotes.OrderByDescending(q => q.Number).ThenByDescending(q => q.VersionNo).Take(300).ToListAsync(ct);
-        var latest = rows.GroupBy(q => q.RootId).ToDictionary(g => g.Key, g => g.Max(q => q.VersionNo));
+        var total = await quotes.CountAsync(ct);
+        if (KeysetCursor.Decode(query.Cursor) is { } cursor && int.TryParse(cursor.Then, NumberStyles.None, CultureInfo.InvariantCulture, out var version))
+        {
+            quotes = quotes.Where(q => q.Number.CompareTo(cursor.SortKey) < 0 ||
+                                       (q.Number == cursor.SortKey && (q.VersionNo < version || (q.VersionNo == version && q.Id.CompareTo(cursor.Id) < 0))));
+        }
+
+        var limit = KeysetCursor.ClampLimit(query.Limit);
+        var page = await quotes.OrderByDescending(q => q.Number).ThenByDescending(q => q.VersionNo).ThenByDescending(q => q.Id).Take(limit + 1).ToListAsync(ct);
+        var rows = page.Take(limit).ToList();
+        var roots = rows.Select(q => q.RootId).Distinct().ToList();
+        var latest = await db.Quotes.AsNoTracking().Where(q => roots.Contains(q.RootId))
+            .GroupBy(q => q.RootId).Select(g => new { g.Key, Latest = g.Max(q => q.VersionNo) })
+            .ToDictionaryAsync(g => g.Key, g => g.Latest, ct);
         var organizations = await customers.GetOrganizationNamesAsync(rows.Select(q => q.OrganizationId).Distinct().ToList(), ct);
         var owners = await users.GetUsersAsync(rows.Where(q => q.OwnerId is not null).Select(q => q.OwnerId!.Value).Distinct().ToList(), ct);
-        return rows.Select(q => new QuoteListItem(
+        var items = rows.Select(q => new QuoteListItem(
             q.Id,
             q.Number,
             q.VersionNo,
@@ -161,6 +177,13 @@ internal sealed class QuoteService(
             q.ContractValue,
             latest.GetValueOrDefault(q.RootId) == q.VersionNo,
             db.GetETag(q))).ToList();
+        var last = rows.LastOrDefault();
+        return new PagedResult<QuoteListItem>(
+            items,
+            page.Count > limit && last is not null
+                ? new KeysetCursor(last.Number, last.Id, last.VersionNo.ToString(CultureInfo.InvariantCulture)).Encode()
+                : null,
+            total);
     }
 
     public async Task<Result<QuoteDto>> GetAsync(Guid id, CancellationToken ct)

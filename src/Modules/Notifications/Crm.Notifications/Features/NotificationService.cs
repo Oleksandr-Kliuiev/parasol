@@ -1,3 +1,4 @@
+using Crm.Authorization;
 using Crm.Notifications.Contracts;
 using Crm.Notifications.Domain;
 using Crm.Notifications.Persistence;
@@ -19,7 +20,8 @@ public sealed record NotificationDto(
     DateTimeOffset CreatedAt,
     string EmailStatus);
 
-public sealed record NotificationListResponse(int Unread, IReadOnlyList<NotificationDto> Items);
+/// <summary>One page of the reader's notices (warnings first, newest first), how many unread and how many in all (DEV-12).</summary>
+public sealed record NotificationListResponse(int Unread, IReadOnlyList<NotificationDto> Items, string? NextCursor = null, int TotalCount = 0);
 
 public sealed record PreferencesResponse(bool EmailEnabled, int DigestHour, IReadOnlyList<NotificationKind> MutedKinds, bool EmailAvailable);
 
@@ -66,7 +68,7 @@ internal sealed class NotificationService(
         }
     }
 
-    public async Task<NotificationListResponse> ListAsync(bool unreadOnly, int? limit, CancellationToken ct)
+    public async Task<NotificationListResponse> ListAsync(bool unreadOnly, int? limit, string? cursor, CancellationToken ct)
     {
         var userId = currentUser.UserId;
         var query = db.Notifications.AsNoTracking().Where(n => n.RecipientId == userId);
@@ -75,13 +77,31 @@ internal sealed class NotificationService(
             query = query.Where(n => n.ReadAt == null);
         }
 
-        var items = await query
+        var total = await query.CountAsync(ct);
+        if (KeysetCursor.Decode(cursor) is { } after &&
+            DateTimeOffset.TryParseExact(after.Then, "O", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var createdAt))
+        {
+            var warning = after.SortKey == "1";
+            query = query.Where(n => (warning && !n.Warning) ||
+                                     (n.Warning == warning && (n.CreatedAt < createdAt || (n.CreatedAt == createdAt && n.Id.CompareTo(after.Id) < 0))));
+        }
+
+        var take = Math.Clamp(limit ?? 50, 1, 200);
+        var page = await query
             .OrderByDescending(n => n.Warning)
             .ThenByDescending(n => n.CreatedAt)
-            .Take(Math.Clamp(limit ?? 50, 1, 200))
+            .ThenByDescending(n => n.Id)
+            .Take(take + 1)
             .ToListAsync(ct);
+        var items = page.Take(take).ToList();
+        var last = items.LastOrDefault();
+        var next = page.Count > take && last is not null
+            ? new KeysetCursor(last.Warning ? "1" : "0", last.Id, last.CreatedAt.ToString("O", System.Globalization.CultureInfo.InvariantCulture)).Encode()
+            : null;
         var unread = await db.Notifications.AsNoTracking().CountAsync(n => n.RecipientId == userId && n.ReadAt == null, ct);
-        return new NotificationListResponse(unread, items.Select(ToDto).ToList());
+        // A notice keeps its parameters; the money among them is shown only to a reader who may see money now (DEV-12-AC04).
+        var seesMoney = currentUser.HasPermission(Permissions.FinanceRead);
+        return new NotificationListResponse(unread, items.Select(n => ToDto(n, seesMoney)).ToList(), next, total);
     }
 
     public async Task<Result> MarkReadAsync(Guid id, CancellationToken ct)
@@ -134,6 +154,7 @@ internal sealed class NotificationService(
         preference?.MutedKinds ?? [],
         options.Value.EmailEnabled && emailSenders.Any(sender => sender.IsConfigured));
 
-    private static NotificationDto ToDto(Notification n) => new(
-        n.Id, n.Kind, n.Parameters, n.OrganizationId, n.Link, n.DueDate, n.Warning, n.IsUnread, n.CreatedAt, n.EmailStatus.ToString());
+    private static NotificationDto ToDto(Notification n, bool seesMoney) => new(
+        n.Id, n.Kind, seesMoney ? n.Parameters : NotificationTexts.WithoutMoney(n.Parameters), n.OrganizationId, n.Link, n.DueDate, n.Warning, n.IsUnread,
+        n.CreatedAt, n.EmailStatus.ToString());
 }

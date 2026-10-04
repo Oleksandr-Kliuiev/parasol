@@ -98,7 +98,9 @@ export interface SlaOrganizationRow {
   responseMetPct: number;
   resolutionMetPct: number;
   medianResponseMinutes: number | null;
+  /** The worst breaches, at most ten; `breachCount` counts all of them (DEV-12). */
   breaches: SlaTicketRow[];
+  breachCount: number;
 }
 
 export interface SlaReport {

@@ -1,0 +1,103 @@
+=== M1-AC01-total-of-page  src/Modules/Billing/Crm.Billing/Features/BillingService.cs
+    -             totals?.Count ?? 0,
+    +             rows.Count,
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,589s
+          Shouldly.ShouldAssertException : first.GetProperty("count").GetInt32()
+              should be
+    restored (cmp identical)
+=== M2-AC02-no-tiebreaker  src/Modules/Billing/Crm.Billing/Features/BillingService.cs
+    - (i.InvoiceNo == number && i.Id.CompareTo(cursor.Id) < 0)
+    + (i.InvoiceNo == number && false)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,524s
+          Shouldly.ShouldAssertException : ids.Count
+              should be
+    restored (cmp identical)
+=== M3-AC03-totals-ignore-filter  src/Modules/Billing/Crm.Billing/Features/BillingService.cs
+    -         var totals = await invoices ⏎             .GroupBy(_ => 1)
+    +         var totals = await db.Invoices.AsNoTracking().Where(i => i.OrganizationId == query.OrganizationId) ⏎             .GroupBy(_ => 1)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,346s
+          Shouldly.ShouldAssertException : open.GetProperty("count").GetInt32()
+              should be
+    restored (cmp identical)
+=== M4-AC04-amount-to-everyone  src/Modules/Notifications/Crm.Notifications/Features/NotificationService.cs
+    - n.Id, n.Kind, seesMoney ? n.Parameters : NotificationTexts.WithoutMoney(n.Parameters),
+    + n.Id, n.Kind, n.Parameters,
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,402s
+          Shouldly.ShouldAssertException : forTechnician.GetProperty("parameters").TryGetProperty("amount", out _)
+              should be
+    restored (cmp identical)
+=== M5-AC05-quotes-stop-after-one-page  src/Modules/Sales/Crm.Sales/Features/QuoteService.cs
+    - ? new KeysetCursor(last.Number, last.Id, last.VersionNo.ToString(CultureInfo.InvariantCulture)).Encode()
+    + ? (string?)null
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,538s
+          Shouldly.ShouldAssertException : ids.Count
+              should be
+    restored (cmp identical)
+=== M6-AC01-board-counts-cards  src/Modules/Sales/Crm.Sales/Features/SalesService.cs
+    - stage.Id, stage.Name, stage.Probability, inStage.Count,
+    + stage.Id, stage.Name, stage.Probability, cards.Count,
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,083s
+          Shouldly.ShouldAssertException : column.GetProperty("count").GetInt32()
+              should be
+    restored (cmp identical)
+=== M7-AC01-sla-counts-listed  src/Modules/Service/Crm.Service/Features/SlaReport.cs
+    - measured.Count(m => m.ResponseBreached || m.ResolutionBreached));
+    + Math.Min(measured.Count(m => m.ResponseBreached || m.ResolutionBreached), BreachesShown));
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,563s
+          Shouldly.ShouldAssertException : row.GetProperty("breachCount").GetInt32()
+              should be
+    restored (cmp identical)
+=== M8-AC05-tickets-no-tiebreaker  src/Modules/Service/Crm.Service/ServiceModule.cs
+    - (t.CreatedAtSource == created && t.Id.CompareTo(after.Id) < 0)
+    + (t.CreatedAtSource == created && false)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,909s
+          Shouldly.ShouldAssertException : listedTickets.Select(t => t.Item.GetProperty("id").GetGuid()).Distinct().Count()
+              should be
+    restored (cmp identical)
+=== M9-AC05-dashboard-total-capped  src/Modules/Reports/Crm.Reports/DashboardService.cs
+    -             renewals.Count, ⏎             utilization.Count);
+    +             Math.Min(renewals.Count, RenewalsShown), ⏎             utilization.Count);
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,334s
+          Shouldly.ShouldAssertException : dashboard.GetProperty("renewalsTotal").GetInt32()
+              should be greater than or equal to
+    restored (cmp identical)
+=== M10-AC05-renewals-take-200  src/Modules/Contracts/Crm.Contracts/Features/ReminderFeatures.cs
+    -             .OrderBy(c => c.EndDate).ThenBy(c => c.Id)
+    +             .OrderBy(c => c.EndDate).ThenBy(c => c.Id).Take(200)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,390s
+          Shouldly.ShouldAssertException : dashboard.GetProperty("renewalsTotal").GetInt32()
+              should be greater than or equal to
+    restored (cmp identical)
+=== M11-digest-oldest-2000  src/Modules/Notifications/Crm.Notifications/Features/NotificationJobs.cs
+    -             .Where(n => n.EmailStatus == EmailStatus.Pending && n.ReadAt == null && ⏎                         (db.Preferences.Where(p => p.UserId == n.RecipientId).Select(p => (int?)p.DigestHour).FirstOrDefault() ⏎                          ?? NotificationPreference.DefaultDigestHour) == hour) ⏎             .OrderBy(n => n.CreatedAt) ⏎             .ToListAsync(cancellationToken);
+    +             .Where(n => n.EmailStatus == EmailStatus.Pending && n.ReadAt == null) ⏎             .OrderBy(n => n.CreatedAt) ⏎             .Take(2000) ⏎             .ToListAsync(cancellationToken);
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,082s
+          Shouldly.ShouldAssertException : mine.GetProperty("items").EnumerateArray()
+              should be
+          Expected Value | S    e    n    t                   
+    restored (cmp identical)
+=== M12-mail-addresses-before-domain  src/Modules/Activities/Crm.Activities/Features/OutlookFeatures.cs
+    - var searchedDomains = domains.Take(MaxMailTerms).ToList();
+    + var searchedDomains = domains.Take(0).ToList();
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,628s
+          Shouldly.ShouldAssertException : searched[0]
+              should be
+          Expected Value | t    9    c    2    a    8    2    f    2    e    .    n    o                                            ...  
+    restored (cmp identical)
+=== M13-migration-file-order  src/Modules/Customers/Crm.Customers/Features/Organizations/MigrationImport.cs
+    - .OrderBy(r => r.Action is "Failed" or "Conflict" ? 0 : 1).ThenBy(r => r.Line)
+    + .OrderBy(r => r.Line)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,105s
+          Shouldly.ShouldAssertException : rows[0].GetProperty("action").GetString()
+              should be
+          Expected Value | F    a    i    l    e    d         
+    restored (cmp identical)
+=== M14-AC05-licence-summary-first-2000  src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs
+    - .Select(s => new { s.Id, s.OrganizationId, s.ProductId, s.Status, s.Quantity, s.CancellationWindowEndsAt, s.RenewalDate, s.CommitmentEndDate })
+    + .Select(s => new { s.Id, s.OrganizationId, s.ProductId, s.Status, s.Quantity, s.CancellationWindowEndsAt, s.RenewalDate, s.CommitmentEndDate }).Take(2000)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,546s
+          Shouldly.ShouldAssertException : attention.GetProperty("summary").GetProperty("subscriptions").GetInt32()
+              should be greater than or equal to
+    restored (cmp identical)
+=== final build
+Build succeeded.

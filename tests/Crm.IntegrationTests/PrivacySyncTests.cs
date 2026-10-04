@@ -79,7 +79,7 @@ public sealed class PrivacySyncTests(CrmWebFactory factory)
         }
 
         // A new lawful basis — the person became a contact again with consent: the suppressions are lifted, with a reason.
-        var suppressions = (await admin.GetFromJsonAsync<JsonElement>("/api/v1/privacy/suppressions", Ct)).EnumerateArray()
+        var suppressions = (await admin.GetFromJsonAsync<JsonElement>("/api/v1/privacy/suppressions?limit=200", Ct)).GetProperty("items").EnumerateArray()
             .Where(s => s.GetProperty("caseId").GetGuid() == caseId).ToList();
         suppressions.Select(s => s.GetProperty("kind").GetString()).ShouldBe(["Email", "ExternalReference"], ignoreOrder: true);
         foreach (var suppression in suppressions)

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { UserPicker } from '../../shared/components/UserPicker';
 import { useNotify } from '../../shared/components/useNotify';
@@ -17,7 +18,8 @@ export function TechniciansPage() {
   const { t } = useTranslation();
   const notify = useNotify();
   const canMap = useCan(Permissions.integrationsManage);
-  const { data = [], error, isPending, refetch } = useTechnicianMappings();
+  const mappings = useTechnicianMappings();
+  const { items: data, error, isPending, refetch } = mappings;
   const map = useMapTechnician();
 
   const assign = async (id: string, userId: string | null) => {
@@ -75,6 +77,7 @@ export function TechniciansPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('technicians.empty')} />}
+          <ListFooter shown={data.length} total={mappings.total} hasMore={mappings.hasNextPage} loading={mappings.isFetchingNextPage} onMore={() => void mappings.fetchNextPage()} />
         </div>
       )}
     </>

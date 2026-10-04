@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, download, query } from '../../api/client';
+import { api, download } from '../../api/client';
+import { usePagedList } from '../../api/paging';
 
 export type PrivacyCaseKind = 'Access' | 'Erasure';
 export type DataSubjectKind = 'Contact' | 'Lead';
@@ -125,11 +126,9 @@ const keys = {
   retention: ['privacy', 'retention'] as const,
 };
 
+/** Newest first, a page at a time with the count of all (DEV-12). */
 export function usePrivacyCases(includeClosed: boolean) {
-  return useQuery({
-    queryKey: keys.cases(includeClosed),
-    queryFn: async ({ signal }) => (await api.get<PrivacyCaseSummary[]>(`${base}/cases${query({ includeClosed: includeClosed || undefined })}`, signal)).data,
-  });
+  return usePagedList<PrivacyCaseSummary>(keys.cases(includeClosed), `${base}/cases`, { includeClosed: includeClosed || undefined }, { limit: 25 });
 }
 
 export function usePrivacyCase(id: string) {
@@ -150,17 +149,11 @@ export function usePrivacyPlan(id: string, enabled: boolean) {
 }
 
 export function useLegalHolds(includeEnded: boolean) {
-  return useQuery({
-    queryKey: keys.holds(includeEnded),
-    queryFn: async ({ signal }) => (await api.get<LegalHold[]>(`${base}/holds${query({ includeEnded: includeEnded || undefined })}`, signal)).data,
-  });
+  return usePagedList<LegalHold>(keys.holds(includeEnded), `${base}/holds`, { includeEnded: includeEnded || undefined }, { limit: 25 });
 }
 
 export function useSuppressions() {
-  return useQuery({
-    queryKey: keys.suppressions,
-    queryFn: async ({ signal }) => (await api.get<Suppression[]>(`${base}/suppressions`, signal)).data,
-  });
+  return usePagedList<Suppression>(keys.suppressions, `${base}/suppressions`, {}, { limit: 25 });
 }
 
 export function useRetention() {
