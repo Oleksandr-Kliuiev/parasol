@@ -1,0 +1,12 @@
+# Checks, 04.10.2026 (UTC)
+06:40  dotnet build Vardahei.Crm.slnx                         -> Build succeeded, 0 warnings, 0 errors
+06:41  Crm.UnitTests                                         -> Total: 378, Failed: 0 (QuoteDocumentLayoutTests 6, DocumentStoreOptionsTests 3, FileSystemDocumentStoreTests 6, PdfBuilderTests 8)
+06:41  Crm.ArchitectureTests                                 -> Total: 84, Failed: 0
+06:41  Crm.IntegrationTests                                  -> Total: 164, Failed: 0 (see integration.txt)
+06:42  python3 -m unittest discover -s tools/release         -> Ran 27 tests, OK
+06:42  web: npm run lint / typecheck                        -> clean / clean
+06:42  web: npx vitest run                                  -> 14 files, 43 tests passed (QuoteDocuments.test.tsx 2)
+06:42  web: npm run build                                   -> initial total 283.3 KB (budget 300 KB)
+06:37  ci.yml job infrastructure (local emulation)          -> PASSED (release tooling tests, Bicep build and lint)
+06:31  ci.yml job backend (local emulation)                 -> PASSED (coverage: domain 96.43 %, backend 86.64 %)
+06:46  after replacing the sample fixture with clearly fictional details: build 0/0, Crm.UnitTests 378/378, validate-package VALID

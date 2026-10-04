@@ -1,0 +1,24 @@
+# Full integration suite, 04.10.2026 06:41 UTC (SQL Server 2022 and Azurite 3.35.0 in Testcontainers; the app runs as crm_worker)
+# command: tests/Crm.IntegrationTests/bin/Debug/net10.0/Crm.IntegrationTests
+Crm.IntegrationTests  Total: 164, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 47,381s
+
+# DEV-08 tests in it:
+## QuoteDocumentsTests
+- AC01_changes_to_the_customer_contact_company_settings_and_template_after_release_leave_the_document_as_it_was
+- AC02_the_e_mail_attachment_is_exactly_the_document_a_download_returns
+- AC03_storage_that_fails_at_release_holds_the_quote_back_until_the_document_is_stored
+- AC03_a_pdf_stored_without_an_answer_is_adopted_and_never_stored_twice
+- AC03_a_stored_document_that_is_altered_or_missing_is_neither_shown_nor_sent
+- AC04_finance_read_and_read_access_decide_who_gets_the_document_no_write_right_needed
+- AC05_a_new_version_gets_its_own_object_and_orphan_cleanup_keeps_every_referenced_document
+- Versions_released_before_documents_were_stored_get_an_issued_document_or_a_labelled_reconstruction
+- A_version_from_before_that_is_sent_while_it_is_downloaded_is_marked_sent_with_its_one_document
+- The_database_refuses_to_change_or_delete_a_ready_document_for_every_identity
+## AzureBlobDocumentStoreTests
+- A_key_is_written_once_and_a_later_writer_keeps_the_first_bytes_whatever_the_metadata_says
+- Writers_racing_for_one_key_all_end_with_the_bytes_that_were_stored
+- Listing_reading_and_deleting_work_by_prefix_and_key
+- The_private_container_gives_an_anonymous_blob_url_nothing
+- Release_download_and_e_mail_use_the_one_blob_and_a_new_version_gets_its_own
+## InfrastructureTests (architecture)
+- Quote_documents_live_in_a_private_container_reached_only_through_the_application

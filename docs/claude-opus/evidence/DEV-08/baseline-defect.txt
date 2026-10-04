@@ -1,0 +1,37 @@
+# DEV-08 baseline: audit finding A08 on the release before DEV-08 (commit 51c5ea6)
+
+## Code (git show 51c5ea6:src/Modules/Sales/Crm.Sales/Features/QuoteService.cs)
+# Download (GET /quotes/{id}/pdf) and e-mail (SendAsync) both call this; every call reads today's data.
+        var file = await RenderAsync(quote, ct);
+        return await RenderAsync(quote, ct);
+...
+    private async Task<QuoteFile> RenderAsync(Quote quote, CancellationToken ct)
+    {
+        var organization = await customers.GetOrganizationForSyncAsync(quote.OrganizationId, ct);
+        var contact = quote.ContactId is { } contactId ? await customers.GetContactForSyncAsync(contactId, ct) : null;
+        var owner = quote.OwnerId is { } ownerId ? await users.GetProfileAsync(ownerId, ct) : null;
+        var template = await db.QuoteTemplates.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Language == quote.Language && t.IsDefault && t.IsActive, ct);
+        var address = organization?.Billing.Address ?? organization?.PostalAddress;
+
+            Settings.Company);
+
+        var name = quote.VersionNo > 1
+            ? string.Create(CultureInfo.InvariantCulture, $"{quote.Number}-v{quote.VersionNo}.pdf")
+            : $"{quote.Number}.pdf";
+        return new QuoteFile(QuotePdf.Render(document), name);
+
+## Long fields (git show 51c5ea6:src/Modules/Sales/Crm.Sales/Features/QuotePdf.cs)
+line 80:        pdf.DrawText(document.Title, PdfBuilder.Left, pdf.Y, 11.5f, PdfFontStyle.Regular, PdfColor.Grey);
+line 90:            pdf.DrawText(part, PdfBuilder.Left, customerY, BodySize);
+line 226:            pdf.DrawText(PdfBuilder.Ellipsize(line.Name, textWidth, BodySize), PdfBuilder.Left, pdf.Y, BodySize);
+
+## Reproduction, 04.10.2026 ~06:41 UTC
+# Throwaway worktree of 51c5ea6 (removed afterwards) with one temporary test (not committed): release and send a quote
+# (Graph = WireMock), download right away, rename and move the customer, download again.
+# command: Crm.IntegrationTests -class Crm.IntegrationTests.Dev08BaselineTests  ->  Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 11,548s
+attachment sent        sha256=c6d055d98b3ea8cec5705e5791d08d5057d76b8f0291dfe18315329ab997e5e1 customer in PDF: old name
+download right after   sha256=c6d055d98b3ea8cec5705e5791d08d5057d76b8f0291dfe18315329ab997e5e1 equal to attachment: True
+download after change  sha256=9fa6696bf558048b4c7a3358f7ff5876e42cbc342fa34c33ddf0803002b5d50b equal to attachment: False; customer in PDF: NEW name
+# The test asserts the defect (later download != attachment, new name in it) and passed: what can be downloaded after
+# sending is not what was sent. The same scenario on DEV-08 is QuoteDocumentsTests.AC01/AC02 (bytes equal).

@@ -33,6 +33,19 @@ export interface QuoteVersion {
   sentAt: string | null;
 }
 
+/** A stored document of a released version (DEV-08): issued at release, or reconstructed later for an older version. */
+export interface QuoteDocument {
+  revision: number;
+  origin: 'Issued' | 'Reconstructed';
+  status: 'Preparing' | 'Ready';
+  fileName: string;
+  length: number | null;
+  sha256: string | null;
+  rendererVersion: string | null;
+  createdAt: string;
+  readyAt: string | null;
+}
+
 export interface Quote {
   id: string;
   number: string;
@@ -75,6 +88,7 @@ export interface Quote {
   contractValue?: number;
   lines: QuoteLine[];
   versions: QuoteVersion[];
+  documents: QuoteDocument[];
   etag: string;
 }
 

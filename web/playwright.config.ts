@@ -38,6 +38,9 @@ const hostArgs = [
   '--Integrations:PowerOffice:WriteEnabled=true',
   '--RateLimits:ApiPerMinute=100000',
   '--Auth:ActiveUserCacheSeconds=0',
+  // Issued quote documents belong to the database that references them (DEV-08): the e2e database gets its own folder,
+  // otherwise the orphan cleanup of either worker would remove the other database's documents.
+  '--Documents:RootPath=../../../.local/documents-e2e',
 ].join(' ');
 // As in production (DEV-04-AC05), only crm-worker gets the provider keys; crm-web works from the switches and stored data.
 const providerKeys = [

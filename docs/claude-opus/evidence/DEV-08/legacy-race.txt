@@ -1,0 +1,23 @@
+# Legacy race: a version released before DEV-08 is sent and downloaded at the same moment, 6 rounds per run
+# test: QuoteDocumentsTests.A_version_from_before_that_is_sent_while_it_is_downloaded_is_marked_sent_with_its_one_document
+
+## Before the fixes, 04.10.2026 ~06:27 UTC
+# 500: the losing request cleared the whole change tracker, so the send went on with a detached quote (not marked sent, no ETag).
+# 409: the folder store let the loser read a file the winner was still writing (sharing violation), so the document looked Preparing.
+run 1: Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,388s
+    Shouldly.ShouldAssertException : (await send).StatusCode
+    HttpStatusCode.InternalServerError
+    response: "title":"An error occurred while processing your request.","status":500
+run 2: Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,143s
+    Shouldly.ShouldAssertException : (await download).StatusCode
+    HttpStatusCode.Conflict
+    response: "title":"SAL_DOCUMENT_PREPARING","status":409
+run 3: Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,141s
+    Shouldly.ShouldAssertException : (await send).StatusCode
+    HttpStatusCode.InternalServerError
+    response: "title":"An error occurred while processing your request.","status":500
+
+## After the fixes (only the losing insert is detached; the folder store publishes whole files under a free name), ~06:29 UTC
+run 1: Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 12,731s; unique-index collisions logged: 6 of 6 rounds
+run 2: Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 11,475s; unique-index collisions logged: 6 of 6 rounds
+run 3: Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 11,558s; unique-index collisions logged: 6 of 6 rounds

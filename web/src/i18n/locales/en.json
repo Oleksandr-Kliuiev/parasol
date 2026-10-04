@@ -100,7 +100,10 @@
       "OUTBOX_REPLAY_LIMIT": "At most 100 messages can be replayed at a time.",
       "OUTBOX_REPLAY_REASON": "Say why the messages are replayed (at least 10 characters).",
       "OUTBOX_UNKNOWN_MODULE": "The message belongs to a module that does not exist.",
-      "INT_OUTBOUND_RUNNING": "The change is being sent right now; try again in a moment."
+      "INT_OUTBOUND_RUNNING": "The change is being sent right now; try again in a moment.",
+      "SAL_DOCUMENT_PREPARING": "The document is being stored; it can be downloaded or sent in a moment.",
+      "SAL_DOCUMENT_UNAVAILABLE": "The stored document cannot be read, so nothing was sent. Contact the administrator.",
+      "SAL_DOCUMENT_NOT_FOUND": "This document revision does not exist."
     }
   },
   "status": {
@@ -430,7 +433,9 @@
       "audit-integrity": "Audit trail integrity check",
       "audit-integrity-full": "Audit trail integrity check (all checkpoints)",
       "channel-posts": "Teams channel cards",
-      "outbox-retention": "Clean up delivered events"
+      "outbox-retention": "Clean up delivered events",
+      "quote-documents": "Store quote documents",
+      "quote-document-orphans": "Clean up unreferenced documents"
     },
     "status": {
       "Running": "Running",
@@ -1457,6 +1462,21 @@
       "cc": "Cc",
       "subject": "Subject",
       "message": "Message"
+    },
+    "document": {
+      "title": "Document",
+      "line": "Revision {{revision}} · {{origin}} · {{status}} · {{at}}",
+      "origin": {
+        "Issued": "issued at release",
+        "Reconstructed": "reconstructed"
+      },
+      "status": {
+        "Preparing": "being stored",
+        "Ready": "stored"
+      },
+      "download": "Download revision {{revision}}",
+      "preparingBody": "The document of this version is being stored. It can be downloaded and sent as soon as it is; the page updates by itself.",
+      "reconstructedNote": "This version was released before documents were stored: the copy was made later from the data of that day and is not the document that was sent."
     }
   },
   "quoteTemplates": {

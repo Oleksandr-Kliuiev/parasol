@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { api, createContact, createOrganization, marker, signIn, toast } from './support';
 
@@ -22,6 +23,8 @@ test('a quote with an extra discount is approved, downloaded and accepted', { ta
 
   await page.getByRole('button', { name: 'Create quote' }).click();
   await expect(toast(page, 'The quote is created')).toBeVisible();
+  // The toast can come before the page has moved on to the new quote: take its address only once it is there.
+  await expect(page).toHaveURL(/\/quotes\/[0-9a-f-]{36}$/);
   const quoteUrl = page.url();
   await expect(page.getByRole('heading', { level: 1, name: /^T-\d{4}-\d{4}$/ })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Total' }).getByText('NOK 5,000.00')).toBeVisible();
@@ -41,7 +44,13 @@ test('a quote with an extra discount is approved, downloaded and accepted', { ta
   await expect(pdfLink).toBeVisible();
   const pdf = await page.request.get((await pdfLink.getAttribute('href'))!);
   expect(pdf.headers()['content-type']).toContain('application/pdf');
-  expect((await pdf.body()).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  const body = await pdf.body();
+  expect(body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  // DEV-08: the document was stored at approval; the page names its revision and hash, and the download is those bytes.
+  const sha256 = createHash('sha256').update(body).digest('hex');
+  expect(pdf.headers()['x-document-sha256']).toBe(sha256);
+  await expect(page.getByText('Revision 1 · issued at release · stored')).toBeVisible();
+  await expect(page.getByText(`SHA-256 ${sha256.slice(0, 16)}…`)).toBeVisible();
 
   await page.getByRole('button', { name: 'Mark as accepted' }).click();
   await expect(toast(page, 'The quote is accepted')).toBeVisible();

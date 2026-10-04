@@ -25,6 +25,14 @@ public static class SalesModule
         services.AddScoped<SalesService>();
         services.AddScoped<QuoteService>();
         services.AddScoped<QuoteExpiryJob>();
+        services.AddScoped<QuoteDocuments>();
+        services.AddScoped(sp => new QuoteDocumentJob(
+            sp.GetRequiredService<SalesDbContext>(),
+            sp.GetRequiredService<QuoteDocuments>(),
+            sp.GetRequiredService<Crm.SharedKernel.Documents.IDocumentStore>(),
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<QuoteDocumentJob>>()));
+        services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, SalesDatabasePermissions>();
         services.AddScoped<ISalesApi, SalesApi>();
         services.AddScoped<IProductUsage, QuoteProductUsage>();
         return services;
@@ -139,8 +147,17 @@ public static class SalesModule
                 (await service.GetAsync(id, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.SalesRead);
 
-        group.MapGet("/quotes/{id:guid}/pdf", async (Guid id, QuoteService service, CancellationToken ct) =>
-                (await service.RenderAsync(id, ct)).ToHttpResult(file => Results.File(file.Content, QuoteFile.ContentType, file.FileName)))
+        // DEV-08: the stored document, the same bytes the e-mail carried; read right and finance.read, no write right needed.
+        group.MapGet("/quotes/{id:guid}/pdf", async (Guid id, int? revision, QuoteService service, HttpResponse response, CancellationToken ct) =>
+                (await service.RenderAsync(id, revision, ct)).ToHttpResult(file =>
+                {
+                    // Cache-Control: no-store comes with every /api response (SecurityHeadersMiddleware).
+                    response.Headers.ETag = $"\"{file.Sha256}\"";
+                    response.Headers["X-Document-Revision"] = file.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    response.Headers["X-Document-Origin"] = file.Origin.ToString();
+                    response.Headers["X-Document-Sha256"] = file.Sha256;
+                    return Results.File(file.Content, QuoteFile.ContentType, file.FileName);
+                }))
             .RequirePermission(Permissions.SalesRead);
 
         group.MapPost("/quotes", async (QuoteRequest request, QuoteService service, CancellationToken ct) =>

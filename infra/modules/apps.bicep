@@ -21,6 +21,7 @@ param sqlServerFqdn string
 param sqlDatabaseName string
 param keyVaultUri string
 param dataProtectionBlobUri string
+param documentsContainerUri string
 param dataProtectionKeyUri string
 param entraTenantId string
 param entraClientId string
@@ -91,6 +92,9 @@ var migratorConnectionString = '${sqlConnectionPrefix};User Id=${migratorIdentit
 
 var commonEnv = [
   { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
+  // Issued quote documents (DEV-08); each host reaches the container with its own identity (AZURE_CLIENT_ID).
+  { name: 'Documents__Provider', value: 'AzureBlob' }
+  { name: 'Documents__BlobContainerUri', value: documentsContainerUri }
   // Which deployment this is: the apps check environment-bound settings against it (PowerOffice Demo/Production, DEV-05).
   { name: 'Deployment__Environment', value: environmentName }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }

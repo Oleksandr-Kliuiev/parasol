@@ -91,6 +91,7 @@ module data 'modules/data.bicep' = {
     privateEndpointSubnetId: network.outputs.privateEndpointSubnetId
     privateDnsZoneIds: network.outputs.privateDnsZoneIds
     appIdentityPrincipalId: identities.outputs.appPrincipalId
+    workerIdentityPrincipalId: identities.outputs.workerPrincipalId
     migratorIdentityName: identities.outputs.migratorName
     migratorIdentityClientId: identities.outputs.migratorClientId
     sqlMaxVCores: sqlMaxVCores
@@ -141,6 +142,7 @@ module apps 'modules/apps.bicep' = {
     keyVaultUri: data.outputs.keyVaultUri
     dataProtectionBlobUri: data.outputs.dataProtectionBlobUri
     dataProtectionKeyUri: data.outputs.dataProtectionKeyUri
+    documentsContainerUri: data.outputs.documentsContainerUri
     entraTenantId: entraTenantId
     entraClientId: entraClientId
     entraCertificateName: entraCertificateName

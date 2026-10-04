@@ -27,6 +27,7 @@ internal sealed class QuoteService(
     IUserDirectory users,
     ICurrentUser currentUser,
     IEnumerable<IQuoteMailSender> mailSenders,
+    QuoteDocuments documents,
     IOptions<SalesOptions> options,
     TimeProvider time)
 {
@@ -264,11 +265,11 @@ internal sealed class QuoteService(
 
     /// <summary>Releases the quote, or asks management for the discount first (BR-SAL-05).</summary>
     public Task<Result<QuoteDto>> SubmitAsync(Guid id, CancellationToken ct) =>
-        MutateAsync(id, quote => quote.Submit(
+        ReleaseAsync(id, quote => quote.Submit(
             Settings.DiscountLimitPercent, currentUser.HasPermission(Permissions.SalesDiscountApprove), currentUser.UserId, time.GetUtcNow()), ct);
 
     public Task<Result<QuoteDto>> ApproveAsync(Guid id, CancellationToken ct) =>
-        MutateAsync(id, quote => quote.Approve(currentUser.UserId, time.GetUtcNow()), ct);
+        ReleaseAsync(id, quote => quote.Approve(currentUser.UserId, time.GetUtcNow()), ct);
 
     public Task<Result<QuoteDto>> RejectAsync(Guid id, string reason, CancellationToken ct) =>
         MutateAsync(id, quote => quote.Reject(reason), ct);
@@ -354,7 +355,14 @@ internal sealed class QuoteService(
             return Error.Conflict("SAL_SENDER_WITHOUT_MAILBOX", "Your CRM profile has no e-mail address to send from.");
         }
 
-        var file = await RenderAsync(quote, ct);
+        // DEV-08: the attachment is the stored document — the same bytes a download returns — and nothing goes out before it
+        // is stored.
+        var delivery = await documents.ForDeliveryAsync(quote, null, ct);
+        if (!delivery.IsSuccess)
+        {
+            return delivery.Error!;
+        }
+
         var texts = QuoteTexts.For(quote.Language);
         var subject = string.IsNullOrWhiteSpace(request.Subject) ? $"{texts.Quote} {quote.Number} – {quote.Title}" : request.Subject.Trim();
         await sender.SendAsync(
@@ -365,8 +373,8 @@ internal sealed class QuoteService(
                 request.Cc ?? [],
                 subject,
                 Body(request.Message, quote, senderProfile.DisplayName, texts),
-                file.FileName,
-                file.Content),
+                delivery.Value.Document.FileName,
+                delivery.Value.Content),
             ct);
 
         var sent = quote.MarkSent(currentUser.UserId, request.ToAddress.Trim(), time.GetUtcNow());
@@ -386,7 +394,7 @@ internal sealed class QuoteService(
         return await ToDtoAsync(quote, ct);
     }
 
-    public async Task<Result<QuoteFile>> RenderAsync(Guid id, CancellationToken ct)
+    public async Task<Result<QuoteFile>> RenderAsync(Guid id, int? revision, CancellationToken ct)
     {
         if (await LoadAsync(id, ct) is not { } quote)
         {
@@ -408,54 +416,39 @@ internal sealed class QuoteService(
                 new Dictionary<string, object?> { ["status"] = quote.Status.ToString() });
         }
 
-        return await RenderAsync(quote, ct);
+        var delivery = await documents.ForDeliveryAsync(quote, revision, ct);
+        return delivery.IsSuccess
+            ? new QuoteFile(delivery.Value.Content, delivery.Value.Document.FileName, delivery.Value.Document.Revision, delivery.Value.Document.Origin, delivery.Value.Document.ContentSha256!)
+            : delivery.Error!;
     }
 
     // ---------- Internals ----------
 
-    private async Task<QuoteFile> RenderAsync(Quote quote, CancellationToken ct)
+    /// <summary>
+    /// A transition that may release the version (BR-SAL-05). Released, its document is frozen in the same transaction and
+    /// then stored; if storage is away the document stays Preparing and the quote cannot be sent until it is stored (DEV-08).
+    /// </summary>
+    private async Task<Result<QuoteDto>> ReleaseAsync(Guid id, Func<Quote, Result> change, CancellationToken ct)
     {
-        var organization = await customers.GetOrganizationForSyncAsync(quote.OrganizationId, ct);
-        var contact = quote.ContactId is { } contactId ? await customers.GetContactForSyncAsync(contactId, ct) : null;
-        var owner = quote.OwnerId is { } ownerId ? await users.GetProfileAsync(ownerId, ct) : null;
-        var template = await db.QuoteTemplates.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Language == quote.Language && t.IsDefault && t.IsActive, ct);
-        var address = organization?.Billing.Address ?? organization?.PostalAddress;
+        if (await LoadAsync(id, ct) is not { } quote)
+        {
+            return QuoteErrors.NotFound(id);
+        }
 
-        var document = new QuoteDocument(
-            quote.Number,
-            quote.VersionNo,
-            quote.Title,
-            quote.Language,
-            quote.IssuedOn,
-            quote.ValidUntil,
-            quote.TermMonths,
-            quote.IntroText,
-            quote.TermsText,
-            template?.FooterText,
-            quote.CustomerReference,
-            owner?.DisplayName,
-            owner?.Email,
-            new QuoteDocumentCustomer(
-                organization?.Name ?? "—",
-                organization?.OrgNumber,
-                address?.Street,
-                address?.PostalCode,
-                address?.City,
-                contact is null ? null : $"{contact.FirstName} {contact.LastName}".Trim(),
-                contact?.Email),
-            quote.Lines.OrderBy(l => l.Sort).Select(l => new QuoteDocumentLine(
-                l.Name, l.Description, l.Sku, l.Quantity, l.UnitPrice, l.DiscountPct, l.NetAmount, l.Recurrence == QuoteLineRecurrence.Monthly)).ToList(),
-            quote.OneTimeExVat,
-            quote.OneTimeVat,
-            quote.MonthlyExVat,
-            quote.MonthlyVat,
-            Settings.Company);
+        var result = change(quote);
+        if (!result.IsSuccess)
+        {
+            return result.Error!;
+        }
 
-        var name = quote.VersionNo > 1
-            ? string.Create(CultureInfo.InvariantCulture, $"{quote.Number}-v{quote.VersionNo}.pdf")
-            : $"{quote.Number}.pdf";
-        return new QuoteFile(QuotePdf.Render(document), name);
+        var document = quote.Status == QuoteStatus.Ready ? await documents.PrepareAsync(quote, QuoteDocumentOrigin.Issued, ct) : null;
+        await db.SaveChangesAsync(ct);
+        if (document is not null)
+        {
+            await documents.TryCompleteAsync(document.Id, ct);
+        }
+
+        return await ToDtoAsync(quote, ct);
     }
 
     private static string Body(string? message, Quote quote, string senderName, QuoteTexts texts)
@@ -612,6 +605,8 @@ internal sealed class QuoteService(
             quote.Lines.OrderBy(l => l.Sort).Select(l => new QuoteLineDto(
                 l.Id, l.ProductId, l.Sku, l.Name, l.Description, l.Quantity, l.UnitPrice, l.DiscountPct, l.Recurrence, l.VatRate, l.NetAmount, l.Sort)).ToList(),
             versions,
+            (await documents.ListAsync(quote.Id, ct)).Select(d => new QuoteDocumentDto(
+                d.Revision, d.Origin, d.Status, d.FileName, d.Length, d.ContentSha256, d.RendererVersion, d.CreatedAt, d.ReadyAt)).ToList(),
             db.GetETag(quote));
     }
 

@@ -99,6 +99,9 @@ jobs.AddOrUpdate<ContractLifecycleJob>(ContractLifecycleJob.JobId, job => job.Ru
 jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditIntegrityJob.JobId, job => job.RunAsync(CancellationToken.None), "40 4 * * *", new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditIntegrityJob.FullJobId, job => job.VerifyAllAsync(CancellationToken.None), Cron.Never(), new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<QuoteExpiryJob>(QuoteExpiryJob.JobId, job => job.RunAsync(CancellationToken.None), "0 6 * * *", new RecurringJobOptions { TimeZone = oslo });
+// DEV-08: quote documents that storage could not take at release are stored as soon as it can; orphaned objects expire.
+jobs.AddOrUpdate<QuoteDocumentJob>(QuoteDocumentJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
+jobs.AddOrUpdate<QuoteDocumentJob>(QuoteDocumentJob.OrphanJobId, job => job.CleanOrphansAsync(CancellationToken.None), "45 3 * * *", new RecurringJobOptions { TimeZone = oslo });
 
 jobs.AddOrUpdate<OutboundProcessorJob>(OutboundProcessorJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
 // DEV-07: queued channel cards are sent apart from the events that queued them; delivered outbox rows and old receipts expire.

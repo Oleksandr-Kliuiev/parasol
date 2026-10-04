@@ -14,6 +14,12 @@
       "migration": "20261004011342_AppendOnlyAudit",
       "reason": "Its trigger fires on UPDATE and DELETE of audit.AuditEntries only, and every release only inserts audit entries; the new tables are not mapped by older releases.",
       "verifiedBy": "tools/release/rollback-compat.sh 646a565: the previous release writes audit entries on this schema in every passing scenario"
+    },
+    {
+      "context": "Crm.Sales",
+      "migration": "20261004052355_QuoteDocuments",
+      "reason": "Its trigger guards the new table sales.QuoteDocuments only, which no earlier release maps; the tables earlier releases write are untouched.",
+      "verifiedBy": "tools/release/rollback-compat.sh 51c5ea6 (DEV-07 on this schema), see docs/claude-opus/evidence/DEV-08.md"
     }
   ]
 }

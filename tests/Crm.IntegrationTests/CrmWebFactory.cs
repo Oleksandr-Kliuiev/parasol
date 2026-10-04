@@ -71,6 +71,8 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
     public DeliveryProbes Probes { get; } = new();
 
+    public TestDocumentStore Documents { get; } = new();
+
     public async ValueTask InitializeAsync()
     {
         await _sql.StartAsync();
@@ -145,6 +147,11 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
         PartnerCenter.Stop();
         await base.DisposeAsync();
         await _sql.DisposeAsync();
+        // The test run's own document folder; nothing else is ever stored there.
+        if (Directory.Exists(Documents.Root))
+        {
+            Directory.Delete(Documents.Root, recursive: true);
+        }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder) => Configure(builder, RuntimeConnectionString, migrate: false);
@@ -209,6 +216,9 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
             ["Audit:Integrity:SettleTime"] = "00:00:00",
             // A failed delivery is due again at once, so a test's next drain retries it; the delays have their own test.
             ["Outbox:RetryBaseDelay"] = "00:00:00",
+            // Quote documents (DEV-08) go to a folder of this run; the store below wraps it with switchable failures.
+            ["Documents:Provider"] = "FileSystem",
+            ["Documents:RootPath"] = Documents.Root,
         };
         foreach (var (key, value) in settings)
         {
@@ -238,6 +248,7 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
             services.AddScoped<IDomainEventHandler<DeliveryProbe>, DeliveryProbeHandlerA>();
             services.AddScoped<IDomainEventHandler<DeliveryProbe>, DeliveryProbeHandlerB>();
             services.AddScoped<IDomainEventHandler<CrossModuleProbe>, CrossModuleProbeHandler>();
+            services.AddSingleton<Crm.SharedKernel.Documents.IDocumentStore>(Documents);
         });
     }
 

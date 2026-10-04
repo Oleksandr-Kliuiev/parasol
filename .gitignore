@@ -495,3 +495,6 @@ src/Hosts/Crm.Web/wwwroot/
 appsettings.Local.json
 *.local.json
 .env.local
+
+# Quote documents stored by the development hosts (DEV-08, Documents:RootPath)
+/.local/

@@ -100,7 +100,10 @@
       "OUTBOX_REPLAY_LIMIT": "Høyst 100 meldinger kan sendes på nytt om gangen.",
       "OUTBOX_REPLAY_REASON": "Oppgi hvorfor meldingene sendes på nytt (minst 10 tegn).",
       "OUTBOX_UNKNOWN_MODULE": "Meldingen hører til en modul som ikke finnes.",
-      "INT_OUTBOUND_RUNNING": "Endringen sendes akkurat nå; prøv igjen om et øyeblikk."
+      "INT_OUTBOUND_RUNNING": "Endringen sendes akkurat nå; prøv igjen om et øyeblikk.",
+      "SAL_DOCUMENT_PREPARING": "Dokumentet lagres; det kan lastes ned eller sendes om et øyeblikk.",
+      "SAL_DOCUMENT_UNAVAILABLE": "Det lagrede dokumentet kan ikke leses, så ingenting ble sendt. Kontakt administratoren.",
+      "SAL_DOCUMENT_NOT_FOUND": "Denne dokumentrevisjonen finnes ikke."
     }
   },
   "status": {
@@ -430,7 +433,9 @@
       "audit-integrity": "Integritetskontroll av revisjonsloggen",
       "audit-integrity-full": "Integritetskontroll av revisjonsloggen (alle kontrollpunkter)",
       "channel-posts": "Kort til Teams-kanaler",
-      "outbox-retention": "Rydding av leverte hendelser"
+      "outbox-retention": "Rydding av leverte hendelser",
+      "quote-documents": "Lagre tilbudsdokumenter",
+      "quote-document-orphans": "Rydd dokumenter uten tilknytning"
     },
     "status": {
       "Running": "Kjører",
@@ -1457,6 +1462,21 @@
       "cc": "Kopi",
       "subject": "Emne",
       "message": "Melding"
+    },
+    "document": {
+      "title": "Dokument",
+      "line": "Revisjon {{revision}} · {{origin}} · {{status}} · {{at}}",
+      "origin": {
+        "Issued": "utstedt ved frigivelse",
+        "Reconstructed": "gjenskapt"
+      },
+      "status": {
+        "Preparing": "lagres",
+        "Ready": "lagret"
+      },
+      "download": "Last ned revisjon {{revision}}",
+      "preparingBody": "Dokumentet for denne versjonen lagres nå. Det kan lastes ned og sendes så snart det er lagret; siden oppdateres av seg selv.",
+      "reconstructedNote": "Denne versjonen ble frigitt før dokumenter ble lagret: kopien er laget senere med opplysningene fra den dagen og er ikke dokumentet som ble sendt."
     }
   },
   "quoteTemplates": {

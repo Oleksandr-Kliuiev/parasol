@@ -265,6 +265,22 @@ public class PdfBuilderTests
         lines.ShouldAllBe(line => PdfBuilder.Measure(line, 9.5f) <= 180f);
     }
 
+    [Fact]
+    public void A_word_wider_than_the_line_is_broken_at_the_edge_and_nothing_is_lost()
+    {
+        var link = $"https://vardahei.no/{new string('x', 120)}/vilkar.pdf";
+
+        var lines = PdfBuilder.Wrap($"Se {link} for vilkårene.\nNeste avsnitt", 180f, 9.5f);
+
+        lines.ShouldAllBe(line => PdfBuilder.Measure(line, 9.5f) <= 180f);
+        lines[0].ShouldBe("Se");
+        lines.Count.ShouldBeGreaterThan(4);
+        string.Concat(lines.Skip(1).SkipLast(1)).Replace(" ", string.Empty, StringComparison.Ordinal).ShouldBe($"{link}forvilkårene.");
+        lines[^1].ShouldBe("Neste avsnitt");
+        // Text that fits is wrapped as before: at spaces only.
+        PdfBuilder.Wrap("kort tekst", 180f, 9.5f).ShouldBe(["kort tekst"]);
+    }
+
     private static bool OffsetsPointAtObjects(string text)
     {
         // "startxref" also ends in "xref", so the table is found by its own line.

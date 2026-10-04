@@ -11,6 +11,7 @@ import {
   Dropdown,
   Field,
   Input,
+  Link,
   MessageBar,
   MessageBarActions,
   MessageBarBody,
@@ -171,6 +172,8 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
   const restoreFocusTarget = useRestoreFocusTarget();
 
   const editable = canWrite && (isNew || Boolean(quote?.isEditable));
+  // DEV-08: a released version cannot be downloaded or sent until its document is stored.
+  const documentPreparing = quote?.documents.at(-1)?.status === 'Preparing';
   const monthly = form.lines.filter((line) => line.recurrence === 'Monthly').reduce((sum, line) => sum + lineAmount(line), 0);
   const oneTime = form.lines.filter((line) => line.recurrence === 'OneTime').reduce((sum, line) => sum + lineAmount(line), 0);
   const term = Number(form.termMonths) || 0;
@@ -261,14 +264,14 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
                 {t('quotes.withdraw')}
               </Button>
             )}
-            {!isNew && quote!.hasDocument && canSeeMoney && (
+            {!isNew && quote!.hasDocument && canSeeMoney && !documentPreparing && (
               <Button icon={<ArrowDownload20Regular />} as="a" href={quotePdfUrl(quote!.id)} target="_blank" rel="noopener noreferrer">
                 {t('quotes.downloadPdf')}
               </Button>
             )}
             {!isNew && canWrite && (quote!.status === 'Ready' || quote!.status === 'Sent') && (
               <>
-                <Button {...restoreFocusTarget} icon={<Send20Regular />} onClick={() => setDialog('send')}>
+                <Button {...restoreFocusTarget} icon={<Send20Regular />} disabled={documentPreparing} onClick={() => setDialog('send')}>
                   {t('quotes.send')}
                 </Button>
                 <Button appearance="primary" onClick={() => void run(t('quotes.accepted'), () => actions.accept.mutateAsync())}>
@@ -288,6 +291,11 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
         }
       />
 
+      {!isNew && documentPreparing && (
+        <MessageBar intent="info" style={{ marginBottom: tokens.spacingVerticalM }}>
+          <MessageBarBody>{t('quotes.document.preparingBody')}</MessageBarBody>
+        </MessageBar>
+      )}
       {!isNew && quote!.status === 'PendingApproval' && (
         <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
           <MessageBarBody>
@@ -452,6 +460,43 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
                   { label: t('quotes.fields.declineReason'), value: quote!.declineReason },
                 ]}
               />
+              {quote!.documents.length > 0 && (
+                <section aria-label={t('quotes.document.title')} style={{ marginTop: tokens.spacingVerticalS }}>
+                  <Text weight="semibold">{t('quotes.document.title')}</Text>
+                  <ul className={styles.versions}>
+                    {quote!.documents.map((document) => (
+                      <li key={document.revision}>
+                        <Text block>
+                          {t('quotes.document.line', {
+                            revision: document.revision,
+                            origin: t(`quotes.document.origin.${document.origin}`),
+                            status: t(`quotes.document.status.${document.status}`),
+                            at: formatDateTime(document.readyAt ?? document.createdAt),
+                          })}
+                          {document.status === 'Ready' && canSeeMoney && (
+                            <>
+                              {' · '}
+                              <Link href={quotePdfUrl(quote!.id, document.revision)} target="_blank" rel="noopener noreferrer">
+                                {t('quotes.document.download', { revision: document.revision })}
+                              </Link>
+                            </>
+                          )}
+                        </Text>
+                        {document.sha256 && (
+                          <Text block className={styles.muted} style={{ fontFamily: tokens.fontFamilyMonospace }}>
+                            SHA-256 {document.sha256.slice(0, 16)}…
+                          </Text>
+                        )}
+                        {document.origin === 'Reconstructed' && (
+                          <Text block style={{ color: tokens.colorPaletteDarkOrangeForeground1 }}>
+                            {t('quotes.document.reconstructedNote')}
+                          </Text>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               <ul className={styles.versions} style={{ marginTop: tokens.spacingVerticalS }}>
                 {quote!.versions.map((version) => (
                   <li key={version.id}>

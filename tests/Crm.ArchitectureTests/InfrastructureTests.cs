@@ -76,4 +76,28 @@ public partial class InfrastructureTests
         migrate.ShouldContain("Database__WorkerIdentityName");
         migrate.ShouldNotContain("Database__AppIdentityName");
     }
+
+    /// <summary>
+    /// Quote documents (DEV-08-AC04) are reached only through the application: the storage account allows no public blob
+    /// access, no public network and no shared keys (so no SAS from the account key), the document container is private, the
+    /// worker gets that container only, and both hosts use the blob store in Azure — never the file-system one.
+    /// </summary>
+    [Fact]
+    public void Quote_documents_live_in_a_private_container_reached_only_through_the_application()
+    {
+        var data = Bicep("data.bicep");
+        var storage = Block(data, "resource storage ");
+        storage.ShouldContain("allowBlobPublicAccess: false");
+        storage.ShouldContain("allowSharedKeyAccess: false");
+        storage.ShouldContain("publicNetworkAccess: 'Disabled'");
+        Block(data, "resource blobService ").ShouldContain("isVersioningEnabled: true");
+        Block(data, "resource documentsContainer ").ShouldContain("publicAccess: 'None'");
+        var worker = Block(data, "resource workerDocumentsContributor ");
+        worker.ShouldContain("scope: documentsContainer");
+        worker.ShouldContain("principalId: workerIdentityPrincipalId");
+
+        var common = Block(Bicep("apps.bicep"), "var commonEnv ");
+        common.ShouldContain("{ name: 'Documents__Provider', value: 'AzureBlob' }");
+        common.ShouldContain("{ name: 'Documents__BlobContainerUri', value: documentsContainerUri }");
+    }
 }

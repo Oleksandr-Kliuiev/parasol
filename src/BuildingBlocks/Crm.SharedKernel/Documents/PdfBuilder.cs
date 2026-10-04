@@ -119,7 +119,10 @@ public sealed class PdfBuilder
 
     public void MoveDown(float points) => Y += points;
 
-    /// <summary>Splits text into lines that fit, honouring the line breaks it already contains.</summary>
+    /// <summary>
+    /// Splits text into lines that fit, honouring the line breaks it already contains. A word wider than the line (a long
+    /// code, address or link) is broken where it reaches the edge: text is never drawn past the width, and never cut off.
+    /// </summary>
     public static IReadOnlyList<string> Wrap(string text, float width, float size, PdfFontStyle style = PdfFontStyle.Regular)
     {
         var lines = new List<string>();
@@ -129,15 +132,32 @@ public sealed class PdfBuilder
             foreach (var word in paragraph.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 var candidate = current.Length == 0 ? word : $"{current} {word}";
-                if (Measure(candidate, size, style) <= width || current.Length == 0)
+                if (Measure(candidate, size, style) <= width)
                 {
                     current.Clear().Append(candidate);
+                    continue;
                 }
-                else
+
+                if (current.Length > 0)
                 {
                     lines.Add(current.ToString());
-                    current.Clear().Append(word);
+                    current.Clear();
                 }
+
+                var rest = word;
+                while (rest.Length > 1 && Measure(rest, size, style) > width)
+                {
+                    var fit = rest.Length - 1;
+                    while (fit > 1 && Measure(rest[..fit], size, style) > width)
+                    {
+                        fit--;
+                    }
+
+                    lines.Add(rest[..fit]);
+                    rest = rest[fit..];
+                }
+
+                current.Append(rest);
             }
 
             lines.Add(current.ToString());
@@ -170,7 +190,16 @@ public sealed class PdfBuilder
         var total = 0;
         foreach (var character in text ?? string.Empty)
         {
-            total += character < widths.Length ? widths[character] : 556;
+            // Measured as written: the characters WinAnsi lacks are replaced on the way out (see Escape).
+            total += character switch
+            {
+                '…' => 3 * widths['.'],
+                '–' or '—' => widths['-'],
+                '‘' or '’' => widths['\''],
+                '“' or '”' => widths['"'],
+                '\u00A0' => widths[' '],
+                _ => character < widths.Length ? widths[character] : 556,
+            };
         }
 
         return total * size / 1000f;

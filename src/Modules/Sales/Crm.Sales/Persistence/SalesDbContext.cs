@@ -35,6 +35,8 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : M
 
     public DbSet<QuoteTemplate> QuoteTemplates => Set<QuoteTemplate>();
 
+    public DbSet<QuoteDocument> QuoteDocuments => Set<QuoteDocument>();
+
     /// <summary>Next quote number, e.g. T-2026-0042 ("tilbud"). All versions of a quote keep the number they were given.</summary>
     public async Task<string> NextQuoteNumberAsync(int year, CancellationToken cancellationToken)
     {
@@ -104,6 +106,24 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : M
             b.Property(x => x.TermsText).HasMaxLength(8000);
             b.Property(x => x.FooterText).HasMaxLength(512);
             b.HasIndex(x => new { x.Language, x.IsActive });
+        });
+
+        modelBuilder.Entity<QuoteDocument>(b =>
+        {
+            b.ToTable("QuoteDocuments", t => t.HasTrigger(SalesTriggers.QuoteDocuments));
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Origin).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.ObjectKey).HasMaxLength(400);
+            b.Property(x => x.FileName).HasMaxLength(128);
+            b.Property(x => x.MediaType).HasMaxLength(64);
+            b.Property(x => x.SnapshotSha256).HasMaxLength(64);
+            b.Property(x => x.ContentSha256).HasMaxLength(64);
+            b.Property(x => x.RendererVersion).HasMaxLength(32);
+            b.HasIndex(x => x.ObjectKey).IsUnique();
+            b.HasIndex(x => new { x.QuoteId, x.Revision }).IsUnique();
+            b.HasIndex(x => x.Status);
         });
 
         modelBuilder.Entity<Quote>(b =>

@@ -102,6 +102,7 @@ public sealed record QuoteDto(
     [property: SensitiveData(Permissions.FinanceRead)] decimal ContractValue,
     IReadOnlyList<QuoteLineDto> Lines,
     IReadOnlyList<QuoteVersionDto> Versions,
+    IReadOnlyList<QuoteDocumentDto> Documents,
     string Etag);
 
 public sealed record QuoteListItem(
@@ -123,10 +124,26 @@ public sealed record QuoteListItem(
 
 public sealed record QuoteQuery(string? Search, Guid? OrganizationId, Guid? OpportunityId, QuoteStatus? Status, bool MineOnly, bool AwaitingApproval);
 
-public sealed record QuoteFile(byte[] Content, string FileName)
+/// <summary>A stored quote document as it is downloaded (DEV-08).</summary>
+public sealed record QuoteFile(byte[] Content, string FileName, int Revision, QuoteDocumentOrigin Origin, string Sha256)
 {
-    public const string ContentType = "application/pdf";
+    public const string ContentType = QuoteDocument.PdfMediaType;
 }
+
+/// <summary>
+/// One document of a quote version (DEV-08): its revision, whether it was issued at release or reconstructed later, whether
+/// it is stored yet, and the SHA-256 of the stored PDF.
+/// </summary>
+public sealed record QuoteDocumentDto(
+    int Revision,
+    QuoteDocumentOrigin Origin,
+    QuoteDocumentStatus Status,
+    string FileName,
+    long? Length,
+    string? Sha256,
+    string? RendererVersion,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ReadyAt);
 
 internal sealed class QuoteRequestValidator : AbstractValidator<QuoteRequest>
 {

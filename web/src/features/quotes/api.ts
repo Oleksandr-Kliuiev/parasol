@@ -34,6 +34,8 @@ export function useQuote(id: string | undefined) {
     queryKey: quoteKeys.one(id ?? ''),
     enabled: Boolean(id),
     queryFn: async ({ signal }) => (await api.get<Quote>(`${BASE}/quotes/${id}`, signal)).data,
+    // While the worker stores the document (DEV-08), the page asks again until it is ready.
+    refetchInterval: (q) => (q.state.data?.documents.at(-1)?.status === 'Preparing' ? 3_000 : false),
   });
 }
 
@@ -54,9 +56,9 @@ export function useOrganizationContacts(organizationId: string | undefined) {
   });
 }
 
-/** The PDF is rendered from the stored version, so the link can simply be opened in a new tab. */
-export function quotePdfUrl(id: string): string {
-  return `${BASE}/quotes/${id}/pdf`;
+/** The stored document (DEV-08); a revision picks an earlier one of the same version. Opened in a new tab. */
+export function quotePdfUrl(id: string, revision?: number): string {
+  return `${BASE}/quotes/${id}/pdf${revision ? `?revision=${revision}` : ''}`;
 }
 
 export function useQuoteActions(id?: string) {

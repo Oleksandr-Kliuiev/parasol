@@ -290,7 +290,7 @@
         "Q4"
       ],
       "external_gates": [],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-08.md",
       "evidence_file": "evidence/DEV-08.md",
       "acceptance_ids": [

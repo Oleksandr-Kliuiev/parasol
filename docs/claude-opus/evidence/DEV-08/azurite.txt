@@ -1,0 +1,14 @@
+# AzureBlobDocumentStoreTests against Azurite 3.35.0 (Testcontainers), five consecutive runs, 04.10.2026 ~05:58 UTC
+# command: tests/Crm.IntegrationTests/bin/Debug/net10.0/Crm.IntegrationTests -class Crm.IntegrationTests.AzureBlobDocumentStoreTests -showLiveOutput -noColor
+run 1: Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 13,359s | Anonymous GET of the blob URL: 403 Forbidden
+run 2: Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 12,897s | Anonymous GET of the blob URL: 403 Forbidden
+run 3: Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 12,874s | Anonymous GET of the blob URL: 403 Forbidden
+run 4: Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 12,938s | Anonymous GET of the blob URL: 403 Forbidden
+run 5: Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 13,025s | Anonymous GET of the blob URL: 403 Forbidden
+
+# tests in the class:
+- A_key_is_written_once_and_a_later_writer_keeps_the_first_bytes_whatever_the_metadata_says
+- Writers_racing_for_one_key_all_end_with_the_bytes_that_were_stored
+- Listing_reading_and_deleting_work_by_prefix_and_key
+- The_private_container_gives_an_anonymous_blob_url_nothing
+- Release_download_and_e_mail_use_the_one_blob_and_a_new_version_gets_its_own

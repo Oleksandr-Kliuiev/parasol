@@ -1,14 +1,18 @@
 using System.Reflection;
+using Crm.Infrastructure.Documents;
 using Crm.Infrastructure.Health;
 using Crm.Infrastructure.Outbox;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Documents;
 using Crm.SharedKernel.Domain;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Crm.Infrastructure.DependencyInjection;
 
@@ -47,6 +51,24 @@ public static class ModuleRegistration
             services.AddSingleton<ProcessingLoopMonitor>();
             services.AddOptions<ProcessingHealthOptions>().BindConfiguration(ProcessingHealthOptions.SectionName);
             services.AddOptions<OutboxOptions>().BindConfiguration(OutboxOptions.SectionName);
+
+            // DEV-08: issued documents (quote PDFs) live in a document store, never re-rendered from changing data.
+            services.AddOptions<DocumentStoreOptions>().BindConfiguration(DocumentStoreOptions.SectionName).ValidateOnStart();
+            services.AddSingleton<IValidateOptions<DocumentStoreOptions>, DocumentStoreOptionsValidation>();
+            services.TryAddSingleton<IDocumentStore>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<DocumentStoreOptions>>().Value;
+                if (options.Provider == DocumentStoreProvider.AzureBlob)
+                {
+                    options.ManagedIdentityClientId ??= sp.GetRequiredService<IConfiguration>()["AZURE_CLIENT_ID"];
+                    return AzureBlobDocumentStore.Create(options);
+                }
+
+                var root = Path.IsPathRooted(options.RootPath)
+                    ? options.RootPath
+                    : Path.Combine(sp.GetRequiredService<IHostEnvironment>().ContentRootPath, options.RootPath);
+                return new FileSystemDocumentStore(root);
+            });
         }
 
         return services;

@@ -5,6 +5,7 @@ param tags object
 param privateEndpointSubnetId string
 param privateDnsZoneIds object
 param appIdentityPrincipalId string
+param workerIdentityPrincipalId string
 param migratorIdentityName string
 param migratorIdentityClientId string
 param sqlMaxVCores int
@@ -193,6 +194,28 @@ resource attachmentsContainer 'Microsoft.Storage/storageAccounts/blobServices/co
   name: 'attachments'
 }
 
+// Issued quote documents (DEV-08): private, reached only through the application with its managed identity. Keys are never
+// reused and uploads are create-only; blob versioning and soft delete above keep an overwritten or deleted object recoverable.
+resource documentsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = {
+  parent: blobService
+  name: 'documents'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// crm-worker stores documents that could not be stored at release and removes unreferenced objects; it gets this container
+// only. crm-web keeps its account-wide role (Data Protection keys and documents).
+resource workerDocumentsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: documentsContainer
+  name: guid(documentsContainer.id, workerIdentityPrincipalId, roles.storageBlobDataContributor)
+  properties: {
+    principalId: workerIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageBlobDataContributor)
+  }
+}
+
 resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storage
   name: guid(storage.id, appIdentityPrincipalId, roles.storageBlobDataContributor)
@@ -242,4 +265,5 @@ output sqlDatabaseName string = sqlDatabase.name
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output dataProtectionBlobUri string = '${storage.properties.primaryEndpoints.blob}${dataProtectionContainer.name}/keys.xml'
+output documentsContainerUri string = '${storage.properties.primaryEndpoints.blob}${documentsContainer.name}'
 output dataProtectionKeyUri string = dataProtectionKey.properties.keyUri

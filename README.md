@@ -38,7 +38,7 @@ src/Modules          Audit, Identity, Customers, Catalog, Contracts, Service, Ti
 src/Integrations     Brreg (реестр компаний), PowerOffice, Atera, PartnerCenter (CSP, только чтение)
 src/Hosts            Crm.Web (BFF + API + SPA), Crm.Worker (Hangfire, outbox), Crm.AppHost (.NET Aspire)
 web/                 SPA на React 19 + Fluent UI v9
-tests/               Unit, Architecture (границы модулей), Integration (SQL Server в Testcontainers)
+tests/               Unit, Architecture (границы модулей), Integration (SQL Server и Azurite для хранилища документов в Testcontainers)
 infra/               Bicep (Azure Norway East), скрипт регистрации приложения в Entra ID
 .github/workflows    CI и деплой (OIDC в Azure)
 docs/runbooks        Эксплуатационные инструкции
