@@ -76,7 +76,8 @@ public sealed class AuditingInterceptor(
                 StampAuditColumns(entry, now);
             }
 
-            var action = ResolveAction(entry);
+            var erasure = entry is { State: EntityState.Modified, Entity: IErasable { ErasureReference: { } reference } } ? reference : null;
+            var action = erasure is not null ? AuditActions.Erase : ResolveAction(entry);
             if (action is not null && entry.Entity is IAuditable)
             {
                 audits.Add(new AuditEntry
@@ -88,7 +89,7 @@ public sealed class AuditingInterceptor(
                     Module = module,
                     EntityType = entry.Metadata.ClrType.Name,
                     EntityId = entry.Entity.Id,
-                    Changes = SerializeChanges(entry),
+                    Changes = erasure is not null ? SerializeErasure(entry, erasure) : SerializeChanges(entry),
                     CorrelationId = requestContext.CorrelationId,
                     IpAddress = requestContext.IpAddress,
                 });
@@ -138,6 +139,19 @@ public sealed class AuditingInterceptor(
     private static bool HasAuditableChanges(ComplexPropertyEntry complex) =>
         complex.Properties.Any(p => p.IsModified && !Equals(p.OriginalValue, p.CurrentValue)) ||
         complex.ComplexProperties.Any(HasAuditableChanges);
+
+    /// <summary>DEV-11: which fields a privacy case replaced, under which case — the values stay out of the trail.</summary>
+    private static string SerializeErasure(EntityEntry entry, string reference) =>
+        JsonSerializer.Serialize(new
+        {
+            @case = reference,
+            deleted = entry.Entity is ISoftDeletable && entry.Property(nameof(ISoftDeletable.IsDeleted)) is { IsModified: true, CurrentValue: true },
+            fields = entry.Properties
+                .Where(p => p.IsModified && !IgnoredProperties.Contains(p.Metadata.Name) && !Equals(p.OriginalValue, p.CurrentValue))
+                .Select(p => p.Metadata.Name)
+                .Order(StringComparer.Ordinal)
+                .ToList(),
+        }, JsonOptions);
 
     private static string? SerializeChanges(EntityEntry entry)
     {

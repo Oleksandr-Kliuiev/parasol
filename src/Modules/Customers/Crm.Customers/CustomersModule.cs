@@ -2,10 +2,12 @@ using Crm.Authorization;
 using Crm.Customers.Contracts;
 using Crm.Customers.Features.Contacts;
 using Crm.Customers.Features.Organizations;
+using Crm.Customers.Features.Privacy;
 using Crm.Customers.Features.Search;
 using Crm.Customers.Persistence;
 using Crm.Infrastructure.DependencyInjection;
 using Crm.Infrastructure.Http;
+using Crm.Privacy.Contracts;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using Microsoft.AspNetCore.Builder;
@@ -29,6 +31,10 @@ public static class CustomersModule
         services.AddScoped<ICustomersApi, CustomersApi>();
         services.AddScoped<ISearchProvider, OrganizationSearchProvider>();
         services.AddScoped<ISearchProvider, ContactSearchProvider>();
+        // DEV-11: the contact person in subject requests and the retention of former customers' contacts.
+        services.AddScoped<IDataSubjectResolver, ContactSubjectResolver>();
+        services.AddScoped<IPersonalDataContributor, CustomersPersonalData>();
+        services.AddScoped<IRetentionContributor, FormerContactsRetention>();
         return services;
     }
 

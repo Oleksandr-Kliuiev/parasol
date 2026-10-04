@@ -199,13 +199,15 @@ export interface AuditEntry {
   at: string;
   userId: string | null;
   userName: string | null;
-  action: 'Create' | 'Update' | 'Delete' | string;
+  action: 'Create' | 'Update' | 'Delete' | 'Erase' | string;
   module: string;
   entityType: string;
   entityId: string;
   /** Field diffs ({ old, new }) for edits; arbitrary details for other actions (export, trigger…). */
   changes: Record<string, unknown> | null;
   correlationId: string | null;
+  /** DEV-11: the record was erased on a privacy request, so the entry keeps only the fact (changes are withheld). */
+  erased?: boolean;
 }
 
 export interface AuditPage {

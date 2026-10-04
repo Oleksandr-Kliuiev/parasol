@@ -15,7 +15,7 @@ public sealed record LeadDetails(
     string? Notes);
 
 /// <summary>An unqualified enquiry. Converting it creates the organization, its first contact and, optionally, an opportunity (FR-SAL-01).</summary>
-public sealed class Lead : AuditableEntity
+public sealed class Lead : AuditableEntity, IErasable
 {
     private Lead() { }
 
@@ -32,6 +32,30 @@ public sealed class Lead : AuditableEntity
     public Guid? OrganizationId { get; private set; }
     public Guid? OpportunityId { get; private set; }
     public DateTimeOffset? ClosedAt { get; private set; }
+
+    /// <inheritdoc />
+    public string? ErasureReference { get; private set; }
+
+    /// <summary>
+    /// Erases the prospect's details under a privacy case or a retention policy (DEV-11): name, address, phone and the free
+    /// text about them go, the company and the lead's history stay, and the lead leaves every list. Converted or not.
+    /// </summary>
+    public bool Pseudonymize(string reference)
+    {
+        if (ContactName is null && Email is null && Phone is null && Notes is null && DisqualifyReason is null && IsDeleted)
+        {
+            return false;
+        }
+
+        ErasureReference = reference;
+        ContactName = null;
+        Email = null;
+        Phone = null;
+        Notes = null;
+        DisqualifyReason = null;
+        MarkDeleted();
+        return true;
+    }
 
     public static Result<Lead> Create(LeadDetails details)
     {

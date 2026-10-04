@@ -32,6 +32,15 @@ public interface ISoftDeletable
     void MarkDeleted();
 }
 
+/// <summary>
+/// A record a privacy case can erase (DEV-11). While <see cref="ErasureReference"/> is set, saving it writes an audit entry
+/// that names the case and the changed fields without their old or new values. Not stored.
+/// </summary>
+public interface IErasable
+{
+    string? ErasureReference { get; }
+}
+
 public abstract class AuditableEntity : Entity, IAuditable, ISoftDeletable
 {
     protected AuditableEntity() { }

@@ -18,5 +18,7 @@ internal sealed class AuditDatabasePermissions : IDatabasePermissionRules
         DatabasePermissions.IfTable(AuditDbContext.SchemaName, "IntegrityCheckpoints",
             $"DENY INSERT ON OBJECT::[audit].[IntegrityCheckpoints] TO [{DatabaseRoles.Web}];"),
         $"IF OBJECT_ID(N'[audit].[ApplyRetention]', N'P') IS NOT NULL GRANT EXECUTE ON OBJECT::[audit].[ApplyRetention] TO [{DatabaseRoles.Privacy}];",
+        // DEV-11: clearing what privacy cases erased is the privacy operator's step too.
+        $"IF OBJECT_ID(N'[audit].[ClearErasedPayloads]', N'P') IS NOT NULL GRANT EXECUTE ON OBJECT::[audit].[ClearErasedPayloads] TO [{DatabaseRoles.Privacy}];",
     ];
 }

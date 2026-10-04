@@ -121,6 +121,8 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : M
             b.Property(x => x.SnapshotSha256).HasMaxLength(64);
             b.Property(x => x.ContentSha256).HasMaxLength(64);
             b.Property(x => x.RendererVersion).HasMaxLength(32);
+            b.Property(x => x.ErasureReference).HasMaxLength(32);
+            b.Ignore(x => x.IsErased);
             b.HasIndex(x => x.ObjectKey).IsUnique();
             b.HasIndex(x => new { x.QuoteId, x.Revision }).IsUnique();
             b.HasIndex(x => x.Status);

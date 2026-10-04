@@ -1,4 +1,5 @@
 using Crm.Integrations.Core.Persistence;
+using Crm.Privacy.Contracts;
 using Crm.SharedKernel.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ public sealed class SyncProgress
 }
 
 /// <summary>Records every synchronization run with its outcome, and stores incremental cursors.</summary>
-public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvider, ILogger<SyncRunner> logger)
+public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvider, ILogger<SyncRunner> logger, IPrivacyReplayGate? privacy = null)
 {
     /// <summary>
     /// Runs <paramref name="work"/> and records the run. <paramref name="quietFor"/> is for a job that runs every few minutes
@@ -30,8 +31,12 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
                           await LastRecordedAsync(system, job, cancellationToken) is not { } last ||
                           timeProvider.GetUtcNow() - last >= interval;
 
-        // A paused integration still records the run, so the log shows that the job fell due and was held (runbook 05).
-        if (await IsPausedAsync(system, cancellationToken) is { } pause)
+        // A paused integration still records the run, so the log shows that the job fell due and was held (runbook 05). After a
+        // database restore no synchronization runs until the erasures it lost are applied again (DEV-11-AC06).
+        var held = privacy is not null && await privacy.IsReplayPendingAsync(cancellationToken)
+            ? "erasures from before a database restore are being applied again (DEV-11)"
+            : await IsPausedAsync(system, cancellationToken);
+        if (held is { } pause)
         {
             var skipped = new SyncRun
             {
@@ -49,7 +54,7 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
                 await db.SaveChangesAsync(cancellationToken);
             }
 
-            logger.LogInformation("Synchronization {System}/{Job} skipped: the integration is paused.", system, job);
+            logger.LogInformation("Synchronization {System}/{Job} skipped: {Reason}.", system, job, pause);
             return skipped;
         }
 

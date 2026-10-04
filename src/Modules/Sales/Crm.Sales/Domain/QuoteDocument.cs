@@ -67,6 +67,18 @@ public sealed class QuoteDocument : Entity
     public Guid? CreatedBy { get; private set; }
     public DateTimeOffset? ReadyAt { get; private set; }
 
+    /// <summary>
+    /// When the privacy operator's procedure erased the document, and under which case (DEV-11): the snapshot is emptied and
+    /// the stored PDF let go (the object key changes, the orphan cleanup removes the object); the status stays as it was, so a
+    /// release from before DEV-11 still reads the row. Only that procedure sets it (database trigger); the hashes stay as
+    /// evidence that a document existed.
+    /// </summary>
+    public DateTimeOffset? ErasedAt { get; private set; }
+
+    public string? ErasureReference { get; private set; }
+
+    public bool IsErased => ErasedAt is not null;
+
     public static QuoteDocument Prepare(
         Quote quote, int revision, QuoteDocumentOrigin origin, string snapshotJson, string snapshotSha256, DateTimeOffset now, Guid? userId)
     {

@@ -28,6 +28,7 @@
     <ProjectReference Include="..\..\Modules\Notifications\Crm.Notifications\Crm.Notifications.csproj" />
     <ProjectReference Include="..\..\Modules\Reports\Crm.Reports\Crm.Reports.csproj" />
     <ProjectReference Include="..\..\Modules\Licensing\Crm.Licensing\Crm.Licensing.csproj" />
+    <ProjectReference Include="..\..\Modules\Privacy\Crm.Privacy\Crm.Privacy.csproj" />
     <ProjectReference Include="..\..\Integrations\Crm.Integrations.Brreg\Crm.Integrations.Brreg.csproj" />
     <ProjectReference Include="..\..\Integrations\Crm.Integrations.MicrosoftGraph\Crm.Integrations.MicrosoftGraph.csproj" />
     <ProjectReference Include="..\..\Integrations\Crm.Integrations.PowerOffice\Crm.Integrations.PowerOffice.csproj" />

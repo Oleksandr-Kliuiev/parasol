@@ -6,6 +6,7 @@ using Crm.Billing;
 using Crm.Notifications;
 using Crm.Reports;
 using Crm.Licensing;
+using Crm.Privacy;
 using Crm.Projects;
 using Crm.Sales;
 using Crm.Service;
@@ -67,6 +68,7 @@ builder.Services
     .AddBillingModule(builder.Configuration)
     .AddNotificationsModule(builder.Configuration)
     .AddReportsModule(builder.Configuration)
+    .AddPrivacyModule(builder.Configuration)
     .AddBrregIntegration(builder.Configuration)
     .AddIntegrationsCore(builder.Configuration)
     .AddMicrosoftGraphIntegration(builder.Configuration)
@@ -180,6 +182,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<PrivacyReplayMiddleware>();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
@@ -206,6 +209,7 @@ app.MapLicensingEndpoints();
 app.MapBillingEndpoints();
 app.MapNotificationEndpoints();
 app.MapReportsEndpoints();
+app.MapPrivacyEndpoints();
 app.MapBrregEndpoints();
 app.MapSearchEndpoints();
 app.MapIntegrationRunEndpoints();

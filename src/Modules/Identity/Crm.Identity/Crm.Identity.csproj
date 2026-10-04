@@ -7,6 +7,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Crm.Identity.Contracts\Crm.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Privacy\Crm.Privacy.Contracts\Crm.Privacy.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Crm.Infrastructure\Crm.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

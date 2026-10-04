@@ -1,0 +1,111 @@
+# DEV-11 mutations, 04.10.2026 (UTC ~10:33–11:00). Each disables one guard, rebuilds, runs the test that must catch it,
+# restores the file and checks it byte for byte (cmp). Scripts: mutations-dev11.sh (M1–M7), mutations-dev11-b.sh (M3 against
+# the unit tests), mutations-dev11-c.sh (M3b); M8–M12 were run by hand the same way while the fixes were made.
+
+=== M1-AC01  src/Modules/Activities/Crm.Activities/Features/Privacy/ActivitiesPrivacy.cs
+    - var activities = await Of(subject).AsNoTracking().OrderBy(a => a.CreatedAt).ToListAsync(cancellationToken);
+    + var activities = new List<Activity>();
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,925s
+          Shouldly.ShouldAssertException : Items(sections["activities"], "activity").Select(a => a.GetProperty("recordId").GetGuid())
+              should be (ignoring order)
+    restored (cmp identical)
+=== M2-AC02  src/Modules/Audit/Crm.Audit/AuditModule.cs
+    - var erasedEntry = e.Action != Infrastructure.Persistence.AuditActions.Erase && hidden.Contains((e.Module, e.EntityType, e.EntityId));
+    + var erasedEntry = false && hidden.Contains((e.Module, e.EntityType, e.EntityId));
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,286s
+          Shouldly.ShouldAssertException : entries.Where(e => e.GetProperty("action").GetString() != "Erase")
+              should satisfy the condition
+    restored (cmp identical)
+=== M3-AC03  src/Modules/Customers/Crm.Customers/Domain/Contact.cs
+    - if (!IsPseudonymized || !IsDeleted)
+    + if (true)
+    test exit=0 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 13,423s
+    SURVIVES here: re-erasing writes the same values, EF Core sends no UPDATE for unchanged properties, so no second row
+    and no second audit entry exist for the integration test to see. Its effect is the reported "changed" — caught by the
+    unit test below (M3 unit). The partial-failure guard of AC03 is mutated separately (M3b).
+    restored (cmp identical)
+=== M4-AC04  src/Modules/Privacy/Crm.Privacy/Features/PrivacyCaseService.cs
+    - p.Action != ErasureAction.Retain && held.TryGetValue(
+    + false && held.TryGetValue(
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,061s
+          Shouldly.ShouldAssertException : held.GetProperty("action").GetString(), held.GetProperty("basis").GetString(), held.GetProperty("note").GetString()
+              should be
+    restored (cmp identical)
+=== M5-AC05  src/Modules/Privacy/Crm.Privacy/Features/Suppressions.cs
+    - (reference is not null && references.Contains(reference.ToString())) ||
+    + false && (reference is not null && references.Contains(reference.ToString())) || false &&
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,220s
+          Shouldly.ShouldAssertException : erased.DisplayName
+              should be
+          Expected Value | —                                                                                                        ...  
+    restored (cmp identical)
+=== M6-AC06  src/Hosts/Crm.Web/Http/PrivacyReplayMiddleware.cs
+    - if (context.Request.Path.StartsWithSegments("/api") && await gate.IsReplayPendingAsync(context.RequestAborted))
+    + if (false && await gate.IsReplayPendingAsync(context.RequestAborted))
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 16,715s
+          Shouldly.ShouldAssertException : refused.StatusCode
+              should be
+    restored (cmp identical)
+=== M7-AC07  src/Modules/Privacy/Crm.Privacy/Features/PrivacyRetention.cs
+    - if (settings.Mode == RetentionMode.Apply && policy is not null)
+    + if (settings.Mode == RetentionMode.Apply)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,151s
+          Shouldly.ShouldAssertException : unapproved.Classes.Single(c => c.DataClass == "sales.unconverted-leads").Removed
+              should be
+    restored (cmp identical)
+=== final build
+Build succeeded.
+
+=== M3-AC03 (unit)  src/Modules/Customers/Crm.Customers/Domain/Contact.cs
+    - if (!IsPseudonymized || !IsDeleted)
+    + if (true)
+    test exit=1 Crm.UnitTests Total: 6, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 0,120s
+              should be
+              nothing left to erase
+    restored (cmp identical)
+=== M3b-AC03, first attempt — INVALID, discarded
+    - if (failed.Count > 0)  [return PRV_EXECUTION_INCOMPLETE]
+    + if (false)
+    build failed (CS0162 unreachable code is an error in this solution), so the test ran on the unmutated build:
+    test exit=0 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 14,503s
+    restored (cmp identical)
+=== final build
+Build succeeded.
+    Repeated with a condition false only at run time:
+=== M3b-AC03  src/Modules/Privacy/Crm.Privacy/Features/PrivacyCaseService.cs
+    - if (failed.Count > 0)  [return PRV_EXECUTION_INCOMPLETE]
+    + if (failed.Count < 0)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,282s
+          Shouldly.ShouldAssertException : first.StatusCode
+              should be
+    restored (cmp identical)
+=== final build
+Build succeeded.
+
+=== M8-AC02  src/Modules/Customers/Crm.Customers.Contracts/CustomersContracts.cs, Domain/Contact.cs
+    - public sealed record ContactCreated(Guid ContactId) ...  contact.Raise(new ContactCreated(contact.Id));
+    + public sealed record ContactCreated(Guid ContactId, string? Email) ...  contact.Raise(new ContactCreated(contact.Id, contact.Email));
+    test exit=1 PrivacyTests.AC02_… Total: 1, Failed: 1
+          an outbox payload carries solveig.<marker>@example.no
+    restored, rebuilt (Build succeeded)
+=== M9-AC06  src/Modules/Privacy/Crm.Privacy/Persistence/PrivacyDbContext.cs (NextCaseNumberAsync)
+    - if (!await Cases.IgnoreQueryFilters().AnyAsync(c => c.Number == number, cancellationToken))
+    + if (true || !await Cases.IgnoreQueryFilters().AnyAsync(c => c.Number == number, cancellationToken))
+    test exit=1 PrivacyRestoreTests.AC06_… Total: 1, Failed: 1
+          next.StatusCode should be Created … {"title":"DUPLICATE","status":409,…} (the e2e failure, reproduced)
+    restored (cmp identical)
+=== M10-AC06  src/Modules/Privacy/Crm.Privacy/Features/PrivacyReplay.cs (UnknownManifestsAsync)
+    - await foreach (var item in store.ListAsync(PrivacyCaseService.ManifestFolder(installation), ct))
+    + await foreach (var item in store.ListAsync(PrivacyCaseService.ManifestPrefix, ct))
+    test exit=1 PrivacyRestoreTests.AC06_… Total: 1, Failed: 1 (the other installation's manifest is picked up)
+    restored (cmp identical), rebuilt (Build succeeded)
+=== M11 (SPA)  web/src/features/privacy/PrivacyCasePage.tsx (ExecuteDialog)
+    - const matches = confirmation.trim().toUpperCase() === privacyCase.number.toUpperCase();
+    + const matches = confirmation.trim().length > 0;
+    vitest: × carries out the previewed plan only after the case number is typed, with the version and digest it showed
+    restored (copy), vitest 6/6
+=== M12 (SPA)  web/src/features/audit/HistoryList.tsx
+    - {entry.erased ? (
+    + {false ? (
+    vitest: × keeps the fact of each change and shows none of the erased details
+    restored (copy), vitest 6/6

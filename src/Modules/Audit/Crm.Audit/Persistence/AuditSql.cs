@@ -51,6 +51,48 @@ internal static class AuditSql
             [Reference] nvarchar(256) NULL);
         """;
 
+    /// <summary>
+    /// DEV-11: the privacy operator clears the personal payload (Changes) of entries about records an executed privacy case
+    /// erased (privacy.ErasedRecords — the privacy module's SQL contract for operator procedures). The fact of each action,
+    /// who made it and the erasures' own entries stay; the audit of financial records is evidence and is never cleared (DEC-03).
+    /// A dry run, the default, only counts.
+    /// </summary>
+    public static string CreateClearErasedPayloads => $$"""
+        CREATE OR ALTER PROCEDURE [audit].[ClearErasedPayloads] @DryRun bit = 1 AS
+        BEGIN
+            SET NOCOUNT ON;
+            SET XACT_ABORT ON;
+            DECLARE @Due TABLE ([Id] bigint PRIMARY KEY);
+            INSERT INTO @Due ([Id])
+            SELECT e.[Id] FROM [audit].[AuditEntries] e
+            WHERE e.[Changes] IS NOT NULL AND e.[Action] <> N'Erase' AND LOWER(e.[Module]) NOT IN ({{ProtectedList}})
+              AND EXISTS (SELECT 1 FROM [privacy].[ErasedRecords] r
+                          WHERE r.[Module] = e.[Module] AND r.[EntityType] = e.[EntityType] AND r.[EntityId] = e.[EntityId]);
+            DECLARE @Entries int = (SELECT COUNT(*) FROM @Due);
+
+            IF @DryRun = 0 AND @Entries > 0
+            BEGIN
+                BEGIN TRY
+                    BEGIN TRANSACTION;
+                    EXEC sp_set_session_context @key = N'crm.audit-retention', @value = 1;
+                    UPDATE e SET [Changes] = NULL FROM [audit].[AuditEntries] e JOIN @Due d ON d.[Id] = e.[Id];
+                    EXEC sp_set_session_context @key = N'crm.audit-retention', @value = NULL;
+                    INSERT INTO [audit].[AuditEntries] ([At], [UserId], [UserName], [Action], [Module], [EntityType], [EntityId], [Changes], [CorrelationId], [IpAddress])
+                    VALUES (SYSDATETIMEOFFSET(), NULL, ORIGINAL_LOGIN(), N'Erase', N'audit', N'AuditEntry', '00000000-0000-0000-0000-000000000000',
+                            CONCAT(N'{"erasedRecords":true,"entries":', @Entries, N'}'), NULL, NULL);
+                    COMMIT;
+                END TRY
+                BEGIN CATCH
+                    IF @@TRANCOUNT > 0 ROLLBACK;
+                    EXEC sp_set_session_context @key = N'crm.audit-retention', @value = NULL;
+                    THROW;
+                END CATCH
+            END
+
+            SELECT @Entries AS [Entries], @DryRun AS [DryRun];
+        END
+        """;
+
     public static string CreateProcedure => $$"""
         CREATE OR ALTER PROCEDURE [audit].[ApplyRetention] @Module nvarchar(64), @Before datetimeoffset, @DryRun bit = 1 AS
         BEGIN

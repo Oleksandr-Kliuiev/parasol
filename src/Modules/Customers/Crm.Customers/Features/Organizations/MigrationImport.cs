@@ -2,6 +2,7 @@ using Crm.Customers.Contracts;
 using Crm.Customers.Domain;
 using Crm.Customers.Persistence;
 using Crm.Infrastructure.Persistence;
+using Crm.Privacy.Contracts;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using Crm.SharedKernel.Text;
@@ -31,7 +32,8 @@ internal sealed class MigrationImportService(
     CustomersDbContext db,
     ICurrentUser currentUser,
     IRequestContext requestContext,
-    TimeProvider time)
+    TimeProvider time,
+    ISuppressionList suppressions)
 {
     /// <summary>A migration file is a one-off job, not a sync: a few thousand rows at a time keeps the report readable.</summary>
     private const int MaxRows = 5000;
@@ -99,6 +101,8 @@ internal sealed class MigrationImportService(
         var rows = new List<MigrationRow>();
         var warnings = table.UnknownColumns.Select(c => $"Column '{c}' was ignored.").Take(10).ToList();
         int created = 0, updated = 0, unchanged = 0, contacts = 0, conflicts = 0, failed = 0;
+        // DEV-11: people erased at their request do not come back with an old system's file.
+        var suppressed = await suppressions.SnapshotAsync(ct);
 
         for (var row = 0; row < table.RowCount; row++)
         {
@@ -149,11 +153,7 @@ internal sealed class MigrationImportService(
                 }
 
                 rows.Add(new MigrationRow(line, name, orgNumber, changed ? "Updated" : "Unchanged", match.Detail, existing.Id));
-                if (await UpsertContactAsync(table, row, existing.Id, ct))
-                {
-                    contacts++;
-                }
-
+                contacts += await UpsertContactAsync(table, row, line, existing.Id, suppressed, warnings, ct) ? 1 : 0;
                 continue;
             }
 
@@ -168,10 +168,7 @@ internal sealed class MigrationImportService(
             db.Organizations.Add(createdOrganization.Value);
             created++;
             rows.Add(new MigrationRow(line, name, orgNumber, "Created", null, createdOrganization.Value.Id));
-            if (await UpsertContactAsync(table, row, createdOrganization.Value.Id, ct))
-            {
-                contacts++;
-            }
+            contacts += await UpsertContactAsync(table, row, line, createdOrganization.Value.Id, suppressed, warnings, ct) ? 1 : 0;
         }
 
         if (dryRun)
@@ -273,13 +270,20 @@ internal sealed class MigrationImportService(
     }
 
     /// <summary>Creates or affiliates the row's contact person; returns true when something was written.</summary>
-    private async Task<bool> UpsertContactAsync(CsvTable table, int row, Guid organizationId, CancellationToken ct)
+    private async Task<bool> UpsertContactAsync(
+        CsvTable table, int row, int line, Guid organizationId, ISuppressionCheck suppressed, List<string> warnings, CancellationToken ct)
     {
         var first = table.Value(row, "contactfirstname");
         var last = table.Value(row, "contactlastname");
         var email = table.Value(row, "contactemail");
         if (first is null && last is null && email is null)
         {
+            return false;
+        }
+
+        if (suppressed.IsSuppressed(email, null))
+        {
+            warnings.Add($"Row {line}: the contact person was erased at their request and is not imported again (DEV-11).");
             return false;
         }
 

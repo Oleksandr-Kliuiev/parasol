@@ -33,7 +33,8 @@
     "margins": "Margins",
     "customFields": "Custom fields",
     "migration": "Migration",
-    "recordAccess": "Record access"
+    "recordAccess": "Record access",
+    "privacy": "Personal data"
   },
   "header": {
     "search": "Search organizations",
@@ -112,7 +113,24 @@
       "TIM_PROJECT_NOT_AVAILABLE": "The project does not exist or you are not on it.",
       "TIM_PROJECT_OTHER_ORGANIZATION": "The project belongs to another customer than the time entry.",
       "TIM_PROJECT_CLOSED": "The project is completed or cancelled and takes no more hours.",
-      "AUTH_REVERIFY_REQUIRED": "This action needs your permissions confirmed by Microsoft in the last few minutes. Sign out, sign in again and repeat it."
+      "AUTH_REVERIFY_REQUIRED": "This action needs your permissions confirmed by Microsoft in the last few minutes. Sign out, sign in again and repeat it.",
+      "PRV_CASE_CLOSED": "The request is closed.",
+      "PRV_CASE_NOT_FOUND": "This request does not exist.",
+      "PRV_CASE_NOT_PREVIEWED": "Preview the erasure plan before carrying it out.",
+      "PRV_CASE_NOT_VERIFIED": "The requester's identity has not been verified yet.",
+      "PRV_CASE_WRONG_KIND": "This step does not belong to this kind of request.",
+      "PRV_CONFIRMATION_MISMATCH": "Type the request number to confirm the erasure.",
+      "PRV_EXECUTION_INCOMPLETE": "Not every module could finish; what was done stays done. Carry the erasure out again to continue.",
+      "PRV_HOLD_IN_PAST": "A legal hold must end today or later.",
+      "PRV_HOLD_NOT_FOUND": "This legal hold does not exist.",
+      "PRV_HOLD_RELEASED": "The legal hold was already released.",
+      "PRV_PLAN_CHANGED": "The person's data changed since the plan was previewed. Preview the plan again and check it.",
+      "PRV_SUBJECT_NOT_FOUND": "The person this request is about does not exist.",
+      "PRV_SUPPRESSED": "This person was erased at their request and is not imported again without a new lawful basis.",
+      "PRV_SUPPRESSION_LIFTED": "The suppression was already lifted.",
+      "PRV_SUPPRESSION_NOT_FOUND": "This suppression does not exist.",
+      "SAL_DOCUMENT_ERASED": "This quote document was erased at the request of the person on it; it is no longer shown or sent.",
+      "PRIVACY_REPLAY_PENDING": "The database was restored from a backup and erasures made after it are being applied again. Try again in a minute."
     }
   },
   "status": {
@@ -325,9 +343,11 @@
     "actions": {
       "Create": "created",
       "Update": "changed",
-      "Delete": "deleted"
+      "Delete": "deleted",
+      "Erase": "erased on request"
     },
-    "fieldsChanged": "{{count}} fields"
+    "fieldsChanged": "{{count}} fields",
+    "erased": "Erased on a personal data request; the details are no longer shown."
   },
   "audit": {
     "title": "Audit log",
@@ -2282,5 +2302,248 @@
     "records": "Records",
     "inactive": "inactive",
     "unknownUser": "Unknown user"
+  },
+  "privacy": {
+    "title": "Personal data",
+    "subtitle": "Requests from the people the CRM keeps data on, legal holds, suppressed people and retention.",
+    "reason": "Reason",
+    "kinds": {
+      "Access": "Access request",
+      "Erasure": "Erasure request"
+    },
+    "subjects": {
+      "Contact": "Contact person",
+      "Lead": "Lead"
+    },
+    "statuses": {
+      "Received": "Received",
+      "Verified": "Identity verified",
+      "Previewed": "Plan previewed",
+      "Executing": "Erasure unfinished",
+      "Completed": "Completed",
+      "Rejected": "Rejected"
+    },
+    "channels": {
+      "Email": "E-mail",
+      "Letter": "Letter",
+      "Phone": "Phone",
+      "InPerson": "In person",
+      "Other": "Other"
+    },
+    "methods": {
+      "KnownEmail": "Reply from the e-mail address on record",
+      "InPerson": "In person with ID",
+      "SignedLetter": "Signed letter",
+      "Other": "Other"
+    },
+    "modules": {
+      "customers": "Customers",
+      "sales": "Sales",
+      "activities": "Activities",
+      "service": "Service",
+      "integration": "Integrations",
+      "audit": "Change history"
+    },
+    "records": {
+      "Contact": "Contact person",
+      "OrganizationContact": "Role at a customer",
+      "Lead": "Lead",
+      "Quote": "Quote",
+      "QuoteDocument": "Quote document",
+      "Activity": "Activity",
+      "Ticket": "Ticket",
+      "TicketRequest": "Ticket request",
+      "ExternalRecord": "External record",
+      "ExternalLink": "Link to an external system",
+      "OutboundOperation": "Change queued for an external system"
+    },
+    "cases": {
+      "title": "Requests",
+      "showClosed": "Show closed",
+      "empty": "No open requests.",
+      "tableLabel": "Personal data requests",
+      "overdue": "overdue",
+      "columns": {
+        "number": "Number",
+        "kind": "Request",
+        "subject": "Person",
+        "status": "Status",
+        "received": "Received",
+        "due": "Answer by"
+      }
+    },
+    "case": {
+      "details": "Request",
+      "subject": "Person",
+      "openSubject": "Open the card",
+      "channel": "Received by",
+      "received": "Received",
+      "due": "Answer by",
+      "note": "Note",
+      "verify": {
+        "title": "Verify the requester",
+        "label": "Identity",
+        "method": "How the identity was verified",
+        "note": "Note",
+        "hint": "Describe how, not the document itself: no ID numbers or copies.",
+        "submit": "Identity verified",
+        "done": "{{method}}, {{date}}"
+      },
+      "reject": {
+        "button": "Reject",
+        "title": "Reject the request",
+        "label": "Rejected",
+        "submit": "Reject"
+      },
+      "export": {
+        "title": "Answer the access request",
+        "hint": "The file holds what every module keeps on the person and is recorded on the request with its checksum. Send it to the person through a secure channel.",
+        "download": "Download the export",
+        "delivered": "Exported {{date}}, SHA-256:"
+      },
+      "plan": {
+        "title": "Erasure plan",
+        "hint": "The preview lists what each module would pseudonymize, delete or keep, and why. Nothing changes until you carry the plan out.",
+        "preview": "Preview the plan",
+        "previewAgain": "Preview again",
+        "unfinished": "An earlier attempt did not finish in every module. What was done stays done; carry the plan out again to continue.",
+        "stale": "A legal hold was placed. Preview the plan again before carrying it out.",
+        "counts": "Plan per module",
+        "recordsLabel": "Records in the plan",
+        "module": "Module",
+        "action": "Action",
+        "records": "Records",
+        "record": "Record",
+        "basis": "Basis",
+        "until": "until {{date}}",
+        "hold": "Legal hold",
+        "holdNamed": "Place a legal hold on {{record}}"
+      },
+      "actions": {
+        "Pseudonymize": "Pseudonymize",
+        "Delete": "Delete",
+        "Retain": "Keep",
+        "OperatorErasure": "Erased by the database operator"
+      },
+      "bases": {
+        "Bookkeeping": "Bookkeeping Act",
+        "LegalHold": "Legal hold"
+      },
+      "execute": {
+        "button": "Carry out the erasure",
+        "title": "Carry out erasure {{number}}",
+        "warning": "Personal data is pseudonymized or deleted in every module as the previewed plan says. This cannot be undone.",
+        "confirmation": "Type the request number to confirm",
+        "submit": "Erase",
+        "done": "The erasure was carried out."
+      },
+      "receipt": {
+        "title": "Receipt",
+        "completed": "Carried out {{date}}",
+        "modules": "Done per module",
+        "done": "Done",
+        "retained": "Kept",
+        "suppressions_one": "{{count}} suppression keeps the person from being imported again.",
+        "suppressions_other": "{{count}} suppressions keep the person from being imported again.",
+        "operator": "Stored quote documents are erased by the database operator (runbook 13); until then they can be neither downloaded nor sent.",
+        "external": "The person may still exist in {{systems}}. Erase them there by that system's own procedure; the CRM does not import them again.",
+        "held": "A legal hold keeps some records until it ends. Once it has been released or has expired, a new erasure request for the same person erases what it kept.",
+        "eraseAgain": "New erasure request"
+      }
+    },
+    "new": {
+      "title": "New personal data request",
+      "button": "Personal data request",
+      "leadButton": "Personal data",
+      "leadButtonNamed": "Personal data request for {{name}}",
+      "subjectUnnamed": "The person on the card you came from",
+      "kind": "Request",
+      "kinds": {
+        "Access": "Access: a copy of what the CRM keeps on the person (GDPR art. 15)",
+        "Erasure": "Erasure: remove what the CRM has no reason to keep (GDPR art. 17)"
+      },
+      "receivedHint": "The answer is due one month after this date.",
+      "noteHint": "Short and factual; no copies of ID documents.",
+      "submit": "Open the request",
+      "samePerson": "The person of request {{number}}"
+    },
+    "holds": {
+      "title": "Legal holds",
+      "showEnded": "Show ended",
+      "empty": "No active legal holds.",
+      "tableLabel": "Legal holds",
+      "record": "Record",
+      "reason": "Reason",
+      "explanation": "Explanation",
+      "explanationHint": "What the hold protects and on whose instruction.",
+      "until": "Until",
+      "untilHint": "A hold always ends; place a new one if it has to last longer.",
+      "reasons": {
+        "Bookkeeping": "Bookkeeping",
+        "LegalClaim": "Legal claim",
+        "AuthorityRequest": "Request from an authority",
+        "Other": "Other"
+      },
+      "place": "Place the hold",
+      "placeTitle": "Place a legal hold",
+      "release": "Release",
+      "releaseNamed": "Release the hold on {{record}}",
+      "releaseTitle": "Release the legal hold",
+      "released": "released",
+      "ended": "ended"
+    },
+    "suppressions": {
+      "title": "Suppressed people",
+      "empty": "No one is suppressed.",
+      "tableLabel": "Suppressions",
+      "kind": "Kind",
+      "case": "Request",
+      "created": "Since",
+      "kinds": {
+        "Email": "E-mail address (keyed hash)",
+        "ExternalReference": "Record in an external system"
+      },
+      "lift": "Lift",
+      "liftTitle": "Lift the suppression",
+      "liftHint": "Only with a new lawful basis, for example when the person became a customer contact again and agreed. Synchronizations and imports may then bring the person back.",
+      "lifted": "lifted {{date}}"
+    },
+    "retention": {
+      "title": "Retention",
+      "mode": {
+        "DryRun": "Retention only counts: nothing is removed until the database administrator approves the periods and the mode is set to Apply.",
+        "Apply": "Every night, retention removes the records whose approved period has passed."
+      },
+      "never": "Retention has not run yet.",
+      "lastRun": "Last run {{at}}",
+      "tableLabel": "Retention per data class",
+      "class": "Data",
+      "period": "Period",
+      "due": "Due",
+      "removed": "Removed",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "approved": "Approved ({{reference}})",
+      "proposal": "Proposal, not approved",
+      "error": "Failed: {{error}}",
+      "classes": {
+        "customers": {
+          "former-contacts": "Former contact persons"
+        },
+        "sales": {
+          "unconverted-leads": "Leads that never became customers"
+        },
+        "service": {
+          "tickets": "Closed tickets"
+        },
+        "integration": {
+          "external-payloads": "Copies of external records",
+          "sync-runs": "Synchronization log"
+        },
+        "identity": {
+          "sessions": "Ended sign-in sessions"
+        }
+      }
+    }
   }
 }

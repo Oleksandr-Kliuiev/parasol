@@ -36,7 +36,7 @@ public sealed record SavedMailDetails(
 /// A task, call, meeting, note or saved e-mail about a customer (FR-ACT-01). A meeting can live in the organizer's Outlook
 /// calendar as well (FR-ACT-02), and a saved message keeps only metadata and a link (FR-ACT-03).
 /// </summary>
-public sealed class Activity : AuditableEntity
+public sealed class Activity : AuditableEntity, IErasable
 {
     private Activity() { }
 
@@ -74,6 +74,34 @@ public sealed class Activity : AuditableEntity
     public ActivityStatus Status { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
     public Guid? CompletedBy { get; private set; }
+
+    /// <inheritdoc />
+    public string? ErasureReference { get; private set; }
+
+    /// <summary>
+    /// Removes an activity about an erased person (DEV-11, SEC-GDPR-04: activities have no financial meaning): its text, place,
+    /// sender and links are cleared and it leaves every list. A calendar event in someone's Outlook is that person's and stays.
+    /// </summary>
+    public bool Erase(string reference)
+    {
+        const string erased = "—";
+        if (IsDeleted && Subject == erased && Body is null && Location is null && WebLink is null && ExternalMessageId is null &&
+            FromAddress is null && ContactId is null)
+        {
+            return false;
+        }
+
+        ErasureReference = reference;
+        Subject = erased;
+        Body = null;
+        Location = null;
+        WebLink = null;
+        ExternalMessageId = null;
+        FromAddress = null;
+        ContactId = null;
+        MarkDeleted();
+        return true;
+    }
 
     public static Result<Activity> Create(ActivityDetails details, DateTimeOffset now)
     {

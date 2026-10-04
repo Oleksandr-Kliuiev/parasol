@@ -37,7 +37,7 @@ internal static class AteraMapping
         AteraTypes.System, AteraTypes.Contact, c.ContactId.ToString(CultureInfo.InvariantCulture),
         string.Join(' ', new[] { c.FirstName, c.LastName }.Where(s => !string.IsNullOrWhiteSpace(s))) is { Length: > 0 } name ? name : c.Email ?? $"#{c.ContactId}",
         c, c.LastModified, Email: c.Email, Phone: c.Phone ?? c.MobilePhone,
-        ParentExternalId: c.CustomerId.ToString(CultureInfo.InvariantCulture), IsGone: c.InIgnoreMode);
+        ParentExternalId: c.CustomerId.ToString(CultureInfo.InvariantCulture), IsGone: c.InIgnoreMode, IsPerson: true);
 
     public static ExternalOrganizationData ToOrganizationData(AteraCustomer c) => new(
         c.Name,

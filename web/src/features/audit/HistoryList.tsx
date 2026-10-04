@@ -71,7 +71,13 @@ export function HistoryList({ module, entityType, entityId, compact = false }: H
                     {formatDateTime(entry.at)}
                   </Text>
                 </div>
-                {entry.action !== 'Create' || !compact ? <ChangeList changes={entry.changes} /> : null}
+                {entry.erased ? (
+                  <Text size={200} className={styles.time}>
+                    {t('history.erased')}
+                  </Text>
+                ) : entry.action !== 'Create' || !compact ? (
+                  <ChangeList changes={entry.changes} />
+                ) : null}
               </div>
             </li>
           ))}

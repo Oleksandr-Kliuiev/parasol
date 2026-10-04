@@ -124,6 +124,12 @@ public static class EntityTypeBuilderExtensions
         builder.Property(x => x.ModifiedAt);
         builder.Property(x => x.ModifiedBy);
         builder.Property(x => x.IsDeleted);
+        if (typeof(IErasable).IsAssignableFrom(typeof(T)))
+        {
+            // DEV-11: the case reference of a pending erasure only steers the audit entry; it is never a column.
+            builder.Ignore(nameof(IErasable.ErasureReference));
+        }
+
         return builder;
     }
 }

@@ -7,6 +7,7 @@ using Crm.Notifications;
 using Crm.Notifications.Features;
 using Crm.Reports;
 using Crm.Licensing;
+using Crm.Privacy;
 using Crm.Projects;
 using Crm.Sales;
 using Crm.Service;
@@ -50,6 +51,7 @@ builder.Services
     .AddBillingModule(builder.Configuration)
     .AddNotificationsModule(builder.Configuration)
     .AddReportsModule(builder.Configuration)
+    .AddPrivacyModule(builder.Configuration)
     .AddBrregIntegration(builder.Configuration)
     .AddIntegrationsCore(builder.Configuration)
     .AddMicrosoftGraphIntegration(builder.Configuration)
@@ -98,6 +100,16 @@ jobs.AddOrUpdate<EntraRoleSyncJob>(
     EntraRoleSyncJob.JobId,
     job => job.RunAsync(CancellationToken.None),
     app.Services.GetRequiredService<IOptions<GraphOptions>>().Value.RoleSyncCron,
+    new RecurringJobOptions { TimeZone = oslo });
+
+// DEV-11: erasures lost by a database restore are applied again (and checked every few minutes, so a restore is caught even
+// without a worker restart); the nightly retention job counts — and only with approved policies and Apply mode removes.
+jobs.AddOrUpdate<Crm.Privacy.Features.PrivacyReplayJob>(
+    Crm.Privacy.Features.PrivacyReplayJob.JobId, job => job.RunAsync(CancellationToken.None), "*/5 * * * *");
+app.Services.GetRequiredService<IBackgroundJobClient>().Enqueue<Crm.Privacy.Features.PrivacyReplayJob>(job => job.RunAsync(CancellationToken.None));
+jobs.AddOrUpdate<Crm.Privacy.Features.PrivacyRetentionJob>(
+    Crm.Privacy.Features.PrivacyRetentionJob.JobId, job => job.RunAsync(CancellationToken.None),
+    app.Services.GetRequiredService<IOptions<Crm.Privacy.Features.PrivacyOptions>>().Value.Retention.Cron,
     new RecurringJobOptions { TimeZone = oslo });
 
 jobs.AddOrUpdate<ContractLifecycleJob>(ContractLifecycleJob.JobId, job => job.RunAsync(CancellationToken.None), "30 5 * * *", new RecurringJobOptions { TimeZone = oslo });

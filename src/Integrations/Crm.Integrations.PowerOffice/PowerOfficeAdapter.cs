@@ -34,7 +34,7 @@ internal static class PowerOfficeMapping
         PowerOfficeTypes.System, PowerOfficeTypes.ContactPerson, ContactPersonId(p.ContactId, p.Id),
         string.Join(' ', new[] { p.FirstName, p.LastName }.Where(s => !string.IsNullOrWhiteSpace(s))) is { Length: > 0 } name ? name : p.EmailAddress ?? $"#{p.Id}",
         p, p.LastChangedDateTimeOffset, Email: p.EmailAddress, Phone: p.PhoneNumber,
-        ParentExternalId: p.ContactId.ToString(System.Globalization.CultureInfo.InvariantCulture), IsGone: p.IsActive == false);
+        ParentExternalId: p.ContactId.ToString(System.Globalization.CultureInfo.InvariantCulture), IsGone: p.IsActive == false, IsPerson: true);
 
     public static ExternalRecordInput ToRecord(PoProduct p) => new(
         PowerOfficeTypes.System, PowerOfficeTypes.Product, p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),

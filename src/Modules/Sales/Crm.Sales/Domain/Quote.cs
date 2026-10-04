@@ -70,7 +70,7 @@ internal static class QuoteErrors
 /// only a draft can be edited and a sent version never changes again (BR-SAL-04), which is also what makes the PDF
 /// reproducible — it is rendered from the version, not stored.
 /// </summary>
-public sealed class Quote : AuditableEntity
+public sealed class Quote : AuditableEntity, IErasable
 {
     private readonly List<QuoteLine> _lines = [];
 
@@ -116,6 +116,26 @@ public sealed class Quote : AuditableEntity
     public string? SentTo { get; private set; }
     public DateOnly? DecidedOn { get; private set; }
     public string? DeclineReason { get; private set; }
+
+    /// <inheritdoc />
+    public string? ErasureReference { get; private set; }
+
+    /// <summary>
+    /// Forgets who a quote that was not accepted went to (DEV-11): the address it was sent to and the "your reference" line
+    /// that usually names the person. An accepted quote is bookkeeping documentation and is kept as it is.
+    /// </summary>
+    public bool ForgetRecipient(string reference)
+    {
+        if (SentTo is null && CustomerReference is null)
+        {
+            return false;
+        }
+
+        ErasureReference = reference;
+        SentTo = null;
+        CustomerReference = null;
+        return true;
+    }
 
     public IReadOnlyList<QuoteLine> Lines => _lines;
 

@@ -605,6 +605,13 @@ namespace Crm.Sales.Persistence.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("ErasedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ErasureReference")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(128)

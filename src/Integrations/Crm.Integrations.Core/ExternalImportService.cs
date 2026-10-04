@@ -1,6 +1,7 @@
 using Crm.Catalog.Contracts;
 using Crm.Customers.Contracts;
 using Crm.Integrations.Core.Persistence;
+using Crm.Privacy.Contracts;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,8 @@ public sealed class ExternalImportService(
     ExternalLinkService links,
     ICustomersApi customers,
     ICatalogApi catalog,
-    ICurrentUser user)
+    ICurrentUser user,
+    ISuppressionList suppressions)
 {
     public async Task<Result<Guid>> ImportOneAsync(string system, string type, string externalId, CancellationToken cancellationToken)
     {
@@ -217,6 +219,13 @@ public sealed class ExternalImportService(
             }
             else if (descriptor.EntityType == EntityTypes.Contact)
             {
+                // DEV-11-AC05: a person erased at their request comes back only with a new lawful basis — their suppression
+                // lifted on the privacy page — never with an import.
+                if (await suppressions.IsSuppressedAsync(record.Email, new ExternalReference(record.System, record.ExternalType, record.ExternalId), cancellationToken))
+                {
+                    return Error.Conflict("PRV_SUPPRESSED", "This person was erased at their request and is not imported again without a new lawful basis.");
+                }
+
                 var parentType = descriptor.ParentExternalType
                                  ?? throw new InvalidOperationException("Contact record type has no parent type.");
                 if (record.ParentExternalId is null ||

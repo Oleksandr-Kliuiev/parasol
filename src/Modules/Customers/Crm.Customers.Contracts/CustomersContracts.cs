@@ -173,7 +173,11 @@ public sealed record OrganizationsMerged(Guid MergeId, Guid TargetOrganizationId
 /// <summary>A merge was undone; references moved by <see cref="OrganizationsMerged"/> handlers should be moved back where possible.</summary>
 public sealed record OrganizationMergeUndone(Guid MergeId, Guid TargetOrganizationId, Guid SourceOrganizationId) : DomainEvent;
 
-public sealed record ContactCreated(Guid ContactId, string? Email) : DomainEvent;
+/// <summary>
+/// A person was added. Ids only, like every event about a person: a delivered outbox row is kept for 30 days and would otherwise
+/// be a copy of the person's data that an erasure cannot reach (DEV-11).
+/// </summary>
+public sealed record ContactCreated(Guid ContactId) : DomainEvent;
 
 /// <summary>Name, e-mail or phone of a person changed.</summary>
 public sealed record ContactUpdated(Guid ContactId) : DomainEvent;

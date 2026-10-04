@@ -77,6 +77,9 @@ public static class ServiceModule
         services.AddModuleServices(typeof(ServiceModule).Assembly);
         services.AddScoped<IServiceApi, ServiceApi>();
         services.AddScoped<SlaReportService>();
+        // DEV-11: tickets and ticket requests of a person in subject requests, and the retention of the ticket mirror.
+        services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ServicePersonalData>();
+        services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, Features.Privacy.TicketMirrorRetention>();
         return services;
     }
 

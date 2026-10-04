@@ -20,6 +20,12 @@ public static class IntegrationsCoreModule
         services.AddScoped<ExternalLinkService>();
         services.AddScoped<OutboundQueue>();
         services.AddScoped<ExternalImportService>();
+        // DEV-11: links, mirrored person records and queued changes in subject requests; retention of payloads and the run log.
+        services.AddScoped<IntegrationPersonalData>();
+        services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor>(sp => sp.GetRequiredService<IntegrationPersonalData>());
+        services.AddScoped<Crm.Privacy.Contracts.IExternalReferenceSource>(sp => sp.GetRequiredService<IntegrationPersonalData>());
+        services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, ExternalPayloadRetention>();
+        services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, SyncRunRetention>();
         services.AddScoped<Crm.Infrastructure.Health.IWorkerHeartbeat, WorkerHeartbeatStore>();
         services.AddScoped<WorkerHeartbeatReader>();
         services.AddScoped<WorkerHeartbeatJob>();

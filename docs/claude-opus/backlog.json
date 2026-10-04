@@ -381,7 +381,7 @@
       "external_gates": [
         "EXT-07"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-11.md",
       "evidence_file": "evidence/DEV-11.md",
       "acceptance_ids": [

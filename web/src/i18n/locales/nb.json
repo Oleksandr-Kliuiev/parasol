@@ -33,7 +33,8 @@
     "margins": "Marginer",
     "customFields": "Egne felt",
     "migration": "Migrering",
-    "recordAccess": "Tilgang til poster"
+    "recordAccess": "Tilgang til poster",
+    "privacy": "Personopplysninger"
   },
   "header": {
     "search": "Søk i organisasjoner",
@@ -112,7 +113,24 @@
       "TIM_PROJECT_NOT_AVAILABLE": "Prosjektet finnes ikke, eller du er ikke med i det.",
       "TIM_PROJECT_OTHER_ORGANIZATION": "Prosjektet hører til en annen kunde enn timeføringen.",
       "TIM_PROJECT_CLOSED": "Prosjektet er fullført eller avlyst og tar ikke imot flere timer.",
-      "AUTH_REVERIFY_REQUIRED": "Denne handlingen krever at tilgangene dine er bekreftet av Microsoft de siste minuttene. Logg ut, logg inn igjen og gjenta den."
+      "AUTH_REVERIFY_REQUIRED": "Denne handlingen krever at tilgangene dine er bekreftet av Microsoft de siste minuttene. Logg ut, logg inn igjen og gjenta den.",
+      "PRV_CASE_CLOSED": "Henvendelsen er lukket.",
+      "PRV_CASE_NOT_FOUND": "Henvendelsen finnes ikke.",
+      "PRV_CASE_NOT_PREVIEWED": "Forhåndsvis sletteplanen før den gjennomføres.",
+      "PRV_CASE_NOT_VERIFIED": "Identiteten til den som spør, er ikke bekreftet ennå.",
+      "PRV_CASE_WRONG_KIND": "Dette steget hører ikke til denne typen henvendelse.",
+      "PRV_CONFIRMATION_MISMATCH": "Skriv inn saksnummeret for å bekrefte slettingen.",
+      "PRV_EXECUTION_INCOMPLETE": "Ikke alle moduler ble ferdige; det som er gjort, forblir gjort. Gjennomfør slettingen på nytt for å fortsette.",
+      "PRV_HOLD_IN_PAST": "Et rettslig hold må vare til i dag eller lenger.",
+      "PRV_HOLD_NOT_FOUND": "Det rettslige holdet finnes ikke.",
+      "PRV_HOLD_RELEASED": "Det rettslige holdet er allerede opphevet.",
+      "PRV_PLAN_CHANGED": "Personens opplysninger er endret siden planen ble forhåndsvist. Forhåndsvis planen på nytt og kontroller den.",
+      "PRV_SUBJECT_NOT_FOUND": "Personen henvendelsen gjelder, finnes ikke.",
+      "PRV_SUPPRESSED": "Personen er slettet etter eget krav og importeres ikke igjen uten nytt rettslig grunnlag.",
+      "PRV_SUPPRESSION_LIFTED": "Sperren er allerede opphevet.",
+      "PRV_SUPPRESSION_NOT_FOUND": "Sperren finnes ikke.",
+      "SAL_DOCUMENT_ERASED": "Tilbudsdokumentet er slettet etter krav fra personen i det; det vises og sendes ikke lenger.",
+      "PRIVACY_REPLAY_PENDING": "Databasen er gjenopprettet fra en sikkerhetskopi, og slettinger gjort etter den legges inn på nytt. Prøv igjen om et minutt."
     }
   },
   "status": {
@@ -325,9 +343,11 @@
     "actions": {
       "Create": "opprettet",
       "Update": "endret",
-      "Delete": "slettet"
+      "Delete": "slettet",
+      "Erase": "slettet etter krav"
     },
-    "fieldsChanged": "{{count}} felt"
+    "fieldsChanged": "{{count}} felt",
+    "erased": "Slettet etter krav fra personen; detaljene vises ikke lenger."
   },
   "audit": {
     "title": "Revisjonslogg",
@@ -2282,5 +2302,248 @@
     "records": "Poster",
     "inactive": "inaktiv",
     "unknownUser": "Ukjent bruker"
+  },
+  "privacy": {
+    "title": "Personopplysninger",
+    "subtitle": "Henvendelser fra personer CRM-et har opplysninger om, rettslige hold, sperrede personer og lagringstid.",
+    "reason": "Begrunnelse",
+    "kinds": {
+      "Access": "Innsynsbegjæring",
+      "Erasure": "Krav om sletting"
+    },
+    "subjects": {
+      "Contact": "Kontaktperson",
+      "Lead": "Lead"
+    },
+    "statuses": {
+      "Received": "Mottatt",
+      "Verified": "Identitet bekreftet",
+      "Previewed": "Plan forhåndsvist",
+      "Executing": "Sletting ikke fullført",
+      "Completed": "Fullført",
+      "Rejected": "Avvist"
+    },
+    "channels": {
+      "Email": "E-post",
+      "Letter": "Brev",
+      "Phone": "Telefon",
+      "InPerson": "Personlig oppmøte",
+      "Other": "Annet"
+    },
+    "methods": {
+      "KnownEmail": "Svar fra registrert e-postadresse",
+      "InPerson": "Personlig oppmøte med legitimasjon",
+      "SignedLetter": "Signert brev",
+      "Other": "Annet"
+    },
+    "modules": {
+      "customers": "Kunder",
+      "sales": "Salg",
+      "activities": "Aktiviteter",
+      "service": "Service",
+      "integration": "Integrasjoner",
+      "audit": "Endringshistorikk"
+    },
+    "records": {
+      "Contact": "Kontaktperson",
+      "OrganizationContact": "Rolle hos kunde",
+      "Lead": "Lead",
+      "Quote": "Tilbud",
+      "QuoteDocument": "Tilbudsdokument",
+      "Activity": "Aktivitet",
+      "Ticket": "Sak",
+      "TicketRequest": "Saksforespørsel",
+      "ExternalRecord": "Ekstern post",
+      "ExternalLink": "Kobling til eksternt system",
+      "OutboundOperation": "Endring i kø til eksternt system"
+    },
+    "cases": {
+      "title": "Henvendelser",
+      "showClosed": "Vis lukkede",
+      "empty": "Ingen åpne henvendelser.",
+      "tableLabel": "Henvendelser om personopplysninger",
+      "overdue": "over fristen",
+      "columns": {
+        "number": "Nummer",
+        "kind": "Henvendelse",
+        "subject": "Person",
+        "status": "Status",
+        "received": "Mottatt",
+        "due": "Svarfrist"
+      }
+    },
+    "case": {
+      "details": "Henvendelse",
+      "subject": "Person",
+      "openSubject": "Åpne kortet",
+      "channel": "Mottatt via",
+      "received": "Mottatt",
+      "due": "Svarfrist",
+      "note": "Notat",
+      "verify": {
+        "title": "Bekreft identiteten",
+        "label": "Identitet",
+        "method": "Hvordan identiteten ble bekreftet",
+        "note": "Notat",
+        "hint": "Beskriv hvordan, ikke selve dokumentet: ingen ID-numre eller kopier.",
+        "submit": "Identitet bekreftet",
+        "done": "{{method}}, {{date}}"
+      },
+      "reject": {
+        "button": "Avvis",
+        "title": "Avvis henvendelsen",
+        "label": "Avvist",
+        "submit": "Avvis"
+      },
+      "export": {
+        "title": "Svar på innsynsbegjæringen",
+        "hint": "Filen inneholder det hver modul har om personen og registreres på henvendelsen med sjekksum. Send den til personen på en sikker måte.",
+        "download": "Last ned utskriften",
+        "delivered": "Eksportert {{date}}, SHA-256:"
+      },
+      "plan": {
+        "title": "Sletteplan",
+        "hint": "Forhåndsvisningen viser hva hver modul vil pseudonymisere, slette eller beholde, og hvorfor. Ingenting endres før du gjennomfører planen.",
+        "preview": "Forhåndsvis planen",
+        "previewAgain": "Forhåndsvis på nytt",
+        "unfinished": "Et tidligere forsøk ble ikke fullført i alle moduler. Det som er gjort, forblir gjort; gjennomfør planen på nytt for å fortsette.",
+        "stale": "Et rettslig hold er lagt inn. Forhåndsvis planen på nytt før den gjennomføres.",
+        "counts": "Plan per modul",
+        "recordsLabel": "Poster i planen",
+        "module": "Modul",
+        "action": "Handling",
+        "records": "Poster",
+        "record": "Post",
+        "basis": "Grunnlag",
+        "until": "til {{date}}",
+        "hold": "Rettslig hold",
+        "holdNamed": "Legg rettslig hold på {{record}}"
+      },
+      "actions": {
+        "Pseudonymize": "Pseudonymiseres",
+        "Delete": "Slettes",
+        "Retain": "Beholdes",
+        "OperatorErasure": "Slettes av databaseoperatøren"
+      },
+      "bases": {
+        "Bookkeeping": "Bokføringsloven",
+        "LegalHold": "Rettslig hold"
+      },
+      "execute": {
+        "button": "Gjennomfør slettingen",
+        "title": "Gjennomfør sletting {{number}}",
+        "warning": "Personopplysningene pseudonymiseres eller slettes i alle moduler slik den forhåndsviste planen sier. Dette kan ikke angres.",
+        "confirmation": "Skriv inn saksnummeret for å bekrefte",
+        "submit": "Slett",
+        "done": "Slettingen er gjennomført."
+      },
+      "receipt": {
+        "title": "Kvittering",
+        "completed": "Gjennomført {{date}}",
+        "modules": "Utført per modul",
+        "done": "Utført",
+        "retained": "Beholdt",
+        "suppressions_one": "{{count}} sperre hindrer at personen importeres igjen.",
+        "suppressions_other": "{{count}} sperrer hindrer at personen importeres igjen.",
+        "operator": "Lagrede tilbudsdokumenter slettes av databaseoperatøren (driftsrutine 13); til da kan de verken lastes ned eller sendes.",
+        "external": "Personen kan fortsatt finnes i {{systems}}. Slett vedkommende der etter systemets egen rutine; CRM-et importerer personen ikke igjen.",
+        "held": "Et rettslig hold beholder noen poster til det opphører. Når det er opphevet eller utløpt, sletter en ny slettebegjæring for samme person det som ble beholdt.",
+        "eraseAgain": "Ny slettebegjæring"
+      }
+    },
+    "new": {
+      "title": "Ny henvendelse om personopplysninger",
+      "button": "Henvendelse om personopplysninger",
+      "leadButton": "Personopplysninger",
+      "leadButtonNamed": "Henvendelse om personopplysninger for {{name}}",
+      "subjectUnnamed": "Personen på kortet du kom fra",
+      "kind": "Henvendelse",
+      "kinds": {
+        "Access": "Innsyn: en kopi av det CRM-et har om personen (GDPR art. 15)",
+        "Erasure": "Sletting: fjern det CRM-et ikke har grunn til å beholde (GDPR art. 17)"
+      },
+      "receivedHint": "Svarfristen er én måned etter denne datoen.",
+      "noteHint": "Kort og saklig; ingen kopier av legitimasjon.",
+      "submit": "Opprett henvendelsen",
+      "samePerson": "Personen i henvendelse {{number}}"
+    },
+    "holds": {
+      "title": "Rettslige hold",
+      "showEnded": "Vis avsluttede",
+      "empty": "Ingen aktive rettslige hold.",
+      "tableLabel": "Rettslige hold",
+      "record": "Post",
+      "reason": "Årsak",
+      "explanation": "Forklaring",
+      "explanationHint": "Hva holdet beskytter, og etter hvems instruks.",
+      "until": "Til",
+      "untilHint": "Et hold har alltid en sluttdato; legg inn et nytt hvis det må vare lenger.",
+      "reasons": {
+        "Bookkeeping": "Bokføring",
+        "LegalClaim": "Rettslig krav",
+        "AuthorityRequest": "Pålegg fra myndighet",
+        "Other": "Annet"
+      },
+      "place": "Legg inn holdet",
+      "placeTitle": "Legg inn rettslig hold",
+      "release": "Opphev",
+      "releaseNamed": "Opphev holdet på {{record}}",
+      "releaseTitle": "Opphev det rettslige holdet",
+      "released": "opphevet",
+      "ended": "utløpt"
+    },
+    "suppressions": {
+      "title": "Sperrede personer",
+      "empty": "Ingen er sperret.",
+      "tableLabel": "Sperrer",
+      "kind": "Type",
+      "case": "Henvendelse",
+      "created": "Siden",
+      "kinds": {
+        "Email": "E-postadresse (nøkkelhash)",
+        "ExternalReference": "Post i eksternt system"
+      },
+      "lift": "Opphev",
+      "liftTitle": "Opphev sperren",
+      "liftHint": "Bare med nytt rettslig grunnlag, for eksempel når personen er blitt kontaktperson hos en kunde igjen og har samtykket. Synkroniseringer og importer kan da hente personen tilbake.",
+      "lifted": "opphevet {{date}}"
+    },
+    "retention": {
+      "title": "Lagringstid",
+      "mode": {
+        "DryRun": "Lagringstiden bare telles: ingenting fjernes før databaseadministratoren har godkjent periodene og modusen er satt til Apply.",
+        "Apply": "Hver natt fjernes postene der den godkjente lagringstiden er utløpt."
+      },
+      "never": "Lagringstiden er ikke kjørt ennå.",
+      "lastRun": "Sist kjørt {{at}}",
+      "tableLabel": "Lagringstid per dataklasse",
+      "class": "Data",
+      "period": "Periode",
+      "due": "Til sletting",
+      "removed": "Fjernet",
+      "days_one": "{{count}} dag",
+      "days_other": "{{count}} dager",
+      "approved": "Godkjent ({{reference}})",
+      "proposal": "Forslag, ikke godkjent",
+      "error": "Feilet: {{error}}",
+      "classes": {
+        "customers": {
+          "former-contacts": "Tidligere kontaktpersoner"
+        },
+        "sales": {
+          "unconverted-leads": "Leads som aldri ble kunder"
+        },
+        "service": {
+          "tickets": "Lukkede saker"
+        },
+        "integration": {
+          "external-payloads": "Kopier av eksterne poster",
+          "sync-runs": "Synkroniseringslogg"
+        },
+        "identity": {
+          "sessions": "Avsluttede innloggingsøkter"
+        }
+      }
+    }
   }
 }

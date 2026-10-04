@@ -58,6 +58,8 @@ export function LeadsPage() {
   const catalog = useCatalogStyles();
   const { t } = useTranslation();
   const canWrite = useCan(Permissions.salesWrite);
+  const canPrivacy = useCan(Permissions.privacyManage);
+  const navigate = useNavigate();
   const [status, setStatus] = useState<LeadStatus | null>('New');
   const [mine, setMine] = useState(false);
   const [search, setSearch] = useState('');
@@ -118,7 +120,7 @@ export function LeadsPage() {
                 <TableHeaderCell>{t('leads.fields.status')}</TableHeaderCell>
                 <TableHeaderCell>{t('leads.fields.owner')}</TableHeaderCell>
                 <TableHeaderCell>{t('leads.fields.created')}</TableHeaderCell>
-                {canWrite && <TableHeaderCell />}
+                {(canWrite || canPrivacy) && <TableHeaderCell />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -146,10 +148,10 @@ export function LeadsPage() {
                   </TableCell>
                   <TableCell>{lead.owner?.name}</TableCell>
                   <TableCell className="tabular">{formatDate(lead.createdAt)}</TableCell>
-                  {canWrite && (
+                  {(canWrite || canPrivacy) && (
                     <TableCell>
                       <span className={styles.actions}>
-                        {lead.status !== 'Converted' && (
+                        {canWrite && lead.status !== 'Converted' && (
                           <>
                             <Button {...restoreFocusTarget} size="small" onClick={() => setDialog({ kind: 'convert', lead })}>
                               {t('leads.convert')}
@@ -163,6 +165,14 @@ export function LeadsPage() {
                               {t('leads.disqualify')}
                             </Button>
                           </>
+                        )}
+                        {canPrivacy && (lead.contactName || lead.email) && (
+                          // DEV-11: the person's name goes along in the navigation state, not in the address.
+                          <Button size="small" appearance="subtle"
+                            onClick={() => navigate(`/admin/privacy/new?subjectKind=Lead&subjectId=${lead.id}`, { state: { subjectName: lead.contactName ?? lead.companyName } })}
+                            aria-label={t('privacy.new.leadButtonNamed', { name: lead.contactName ?? lead.companyName })}>
+                            {t('privacy.new.leadButton')}
+                          </Button>
                         )}
                       </span>
                     </TableCell>

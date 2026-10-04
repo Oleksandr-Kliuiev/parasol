@@ -1,0 +1,16 @@
+# A10 reproduced on 7b4c90c (DEV-10 release, before DEV-11) in a throwaway git worktree, 04.10.2026 11:08 UTC
+# Test: Dev11BaselineTests.cs.txt (copied into the worktree only; never committed). Synthetic person, Testcontainers SQL Server, WireMock Atera/Graph.
+# The only tool the release offers is overwriting the contact card by hand; what is left afterwards:
+
+Subject requests: GET /api/v1/privacy/cases                                   -> 404 (no such process)
+Card overwritten by hand (PUT contact)                                         -> 200
+Change history of the contact still shows the e-mail                           -> True
+Sent quote still names the recipient's address                                 -> True
+Its stored PDF is still served                                                 -> 200
+Activities still carry the name                                                -> True
+Frozen quote document snapshots still holding the name                         -> 1
+Outbox rows (customers) still holding the e-mail                               -> 1
+Ticket mirror still holds the end user's address                               -> True
+Next Atera sync stores the person again (record e-mail)                         -> True
+Importing that record into the CRM                                             -> 200
+CRM contacts carrying the erased address again                                 -> 1

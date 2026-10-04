@@ -61,6 +61,10 @@
     <Project Path="src/Modules/Licensing/Crm.Licensing.Contracts/Crm.Licensing.Contracts.csproj" />
     <Project Path="src/Modules/Licensing/Crm.Licensing/Crm.Licensing.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Privacy/">
+    <Project Path="src/Modules/Privacy/Crm.Privacy.Contracts/Crm.Privacy.Contracts.csproj" />
+    <Project Path="src/Modules/Privacy/Crm.Privacy/Crm.Privacy.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Projects/">
     <Project Path="src/Modules/Projects/Crm.Projects.Contracts/Crm.Projects.Contracts.csproj" />
     <Project Path="src/Modules/Projects/Crm.Projects/Crm.Projects.csproj" />

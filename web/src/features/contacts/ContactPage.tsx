@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import {
   Badge,
   Button,
@@ -55,6 +55,8 @@ export function ContactPage() {
   const styles = useStyles();
   const { t } = useTranslation();
   const { id = '' } = useParams();
+  const navigate = useNavigate();
+  const canPrivacy = useCan(Permissions.privacyManage);
   const { data, error, isPending, refetch } = useContact(id);
 
   if (isPending) return <Spinner label={t('common.loading')} />;
@@ -70,6 +72,14 @@ export function ContactPage() {
       <PageHeader
         title={fullName}
         back={firstOrganization ? { to: `/organizations/${firstOrganization.organizationId}?tab=contacts`, label: firstOrganization.organizationName } : undefined}
+        actions={
+          canPrivacy ? (
+            // DEV-11: the person's name goes along in the navigation state, not in the address.
+            <Button onClick={() => navigate(`/admin/privacy/new?subjectKind=Contact&subjectId=${contact.id}`, { state: { subjectName: fullName } })}>
+              {t('privacy.new.button')}
+            </Button>
+          ) : undefined
+        }
       />
       <div className={styles.layout}>
         {/* Remounts with fresh values whenever a save or reload produces a new version. */}

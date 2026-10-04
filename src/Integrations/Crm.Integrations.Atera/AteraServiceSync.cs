@@ -3,6 +3,7 @@ using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Integrations.Core;
 using Crm.Integrations.Core.Persistence;
+using Crm.Privacy.Contracts;
 using Crm.Service.Contracts;
 using Crm.SharedKernel.Domain;
 using Crm.TimeTracking.Contracts;
@@ -90,7 +91,8 @@ public sealed class AteraTicketSyncJob(
     SyncRunner runner,
     TimeProvider time,
     IOptions<AteraOptions> options,
-    ILogger<AteraTicketSyncJob> logger)
+    ILogger<AteraTicketSyncJob> logger,
+    ISuppressionList suppressions)
 {
     public const string OpenJobId = "atera-tickets";
     public const string RecentJobId = "atera-tickets-recent";
@@ -107,6 +109,8 @@ public sealed class AteraTicketSyncJob(
         {
             var customers = await links.CustomersAsync(ct);
             var contacts = await links.ContactsAsync(ct);
+            // DEV-11: a ticket's end user who was erased at their request is mirrored without name, address or contact.
+            var suppressed = await suppressions.SnapshotAsync(ct);
             var since = time.GetUtcNow().AddDays(-options.Value.RecentTicketDays);
             var statuses = recent ? [null] : options.Value.OpenTicketStatuses.Cast<string?>().ToList();
             var collected = new List<AteraTicket>();
@@ -149,12 +153,16 @@ public sealed class AteraTicketSyncJob(
                 }
 
                 var technicianKey = ticket.TechnicianId?.ToString(CultureInfo.InvariantCulture) ?? ticket.TechnicianEmail;
+                var endUserSuppressed = suppressed.IsSuppressed(
+                    ticket.EndUserEmail,
+                    ticket.EndUserId is { } suppressedId ? new ExternalReference(AteraTypes.System, AteraTypes.Contact, suppressedId.ToString(CultureInfo.InvariantCulture)) : null);
                 tickets.Add(new ExternalTicket(
                     AteraTypes.System, ticket.TicketId, organizationId,
-                    ticket.EndUserId is { } endUserId && contacts.TryGetValue(endUserId, out var contactId) ? contactId : null,
+                    !endUserSuppressed && ticket.EndUserId is { } endUserId && contacts.TryGetValue(endUserId, out var contactId) ? contactId : null,
                     ticket.Title, ticket.Status, ticket.Priority, ticket.Impact, ticket.Type, ticket.Source,
                     technicianKey is not null && technicianMap.TryGetValue(technicianKey, out var userId) ? userId : null,
-                    ticket.TechnicianName, ticket.EndUserName, ticket.EndUserEmail, ticket.CreatedAt, ticket.FirstResponseAt, ticket.ResolvedAt,
+                    ticket.TechnicianName, endUserSuppressed ? null : ticket.EndUserName, endUserSuppressed ? null : ticket.EndUserEmail,
+                    ticket.CreatedAt, ticket.FirstResponseAt, ticket.ResolvedAt,
                     ticket.LastActivityAt, AteraServiceMapping.Url(options.Value.TicketUrlTemplate, ticket.TicketId)));
             }
 

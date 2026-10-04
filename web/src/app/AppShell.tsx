@@ -43,6 +43,7 @@ import {
   DocumentText20Regular,
   Clock20Regular,
   PersonSettings20Regular,
+  PersonLock20Regular,
   DocumentSearch20Regular,
   LockClosed20Regular,
   Navigation20Regular,
@@ -137,6 +138,7 @@ export function AppShell() {
   const canService = useCan(Permissions.serviceRead);
   const canCustomFields = useCan(Permissions.customFieldsManage);
   const canDeleteCustomers = useCan(Permissions.customersDelete);
+  const canPrivacy = useCan(Permissions.privacyManage);
   const canTime = canOwnTime || canReadTime;
   const canTimeAll = canReadTime || canManageTime;
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -201,6 +203,8 @@ export function AppShell() {
               ? 'migration'
               : location.pathname.startsWith('/admin/custom-fields')
               ? 'custom-fields'
+              : location.pathname.startsWith('/admin/privacy')
+              ? 'privacy'
               : location.pathname.startsWith('/reports/margins')
                 ? 'margins'
                 : location.pathname.startsWith('/service/sla')
@@ -326,7 +330,7 @@ export function AppShell() {
               {t('nav.catalog')}
             </NavItem>
           )}
-          {(canAudit || canUsers || canJobs || canSalesWrite) && (
+          {(canAudit || canUsers || canJobs || canSalesWrite || canPrivacy) && (
             <>
               <NavSectionHeader>{t('nav.admin')}</NavSectionHeader>
               {canAudit && (
@@ -367,6 +371,11 @@ export function AppShell() {
               {canDeleteCustomers && (
                 <NavItem href="/admin/migration" value="migration" icon={<ArrowImport20Regular />} onClick={go('/admin/migration')}>
                   {t('nav.migration')}
+                </NavItem>
+              )}
+              {canPrivacy && (
+                <NavItem href="/admin/privacy" value="privacy" icon={<PersonLock20Regular />} onClick={go('/admin/privacy')}>
+                  {t('nav.privacy')}
                 </NavItem>
               )}
               {canCustomFields && (

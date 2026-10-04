@@ -6,7 +6,11 @@ public static class SalesTriggers
     /// <summary>
     /// Migration QuoteDocuments: a quote document is never deleted, a Ready document never changes, and a Preparing one
     /// changes only by becoming Ready with the hash and length of what was stored — for every identity, a database
-    /// administrator's included (the trigger has to be dropped deliberately first).
+    /// administrator's included (the trigger has to be dropped deliberately first). Migration QuoteDocumentErasure (DEV-11)
+    /// adds one more change: the privacy operator's procedure <see cref="ClearErasedDocuments"/> empties the snapshot of a
+    /// document a privacy case covered and lets go of its stored object, once, and only for a caller in crm_privacy.
     /// </summary>
     public const string QuoteDocuments = "trg_QuoteDocuments_Protect";
+
+    public const string ClearErasedDocuments = "ClearErasedDocuments";
 }

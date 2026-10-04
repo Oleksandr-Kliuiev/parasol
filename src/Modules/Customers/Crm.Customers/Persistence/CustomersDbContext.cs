@@ -85,6 +85,7 @@ public sealed class CustomersDbContext(DbContextOptions<CustomersDbContext> opti
             b.Property(x => x.MobilePhone).HasMaxLength(32);
             b.Property(x => x.PreferredLanguage).HasMaxLength(8);
             b.Ignore(x => x.FullName);
+            b.Ignore(x => x.IsPseudonymized);
             b.HasMany(x => x.Affiliations).WithOne().HasForeignKey(x => x.ContactId).OnDelete(DeleteBehavior.Cascade);
             b.Navigation(x => x.Affiliations).HasField("_affiliations").UsePropertyAccessMode(PropertyAccessMode.Field);
             b.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL AND [IsDeleted] = 0");

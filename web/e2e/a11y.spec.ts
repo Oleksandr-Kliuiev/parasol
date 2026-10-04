@@ -60,6 +60,18 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
   });
   const me = await api.get<{ id: string }>(page, '/bff/user');
   await api.post(page, `/api/v1/projects/${project.id}/members`, { userId: me.id });
+  // DEV-11: an erasure request with its plan previewed (never carried out), for the request page.
+  const privacyCase = await api.post<{ id: string; etag: string }>(page, '/api/v1/privacy/cases', {
+    kind: 'Erasure', subjectKind: 'Contact', subjectId: contact.contactId, channel: 'Email', receivedAt: null, note: null,
+  });
+  const verified = await page.request.post(`/api/v1/privacy/cases/${privacyCase.id}/verify`, {
+    data: { method: 'KnownEmail', note: null }, headers: { 'X-CSRF': '1', 'If-Match': privacyCase.etag },
+  });
+  expect(verified.ok(), await verified.text()).toBeTruthy();
+  const previewed = await page.request.post(`/api/v1/privacy/cases/${privacyCase.id}/preview`, {
+    data: {}, headers: { 'X-CSRF': '1', 'If-Match': ((await verified.json()) as { etag: string }).etag },
+  });
+  expect(previewed.ok(), await previewed.text()).toBeTruthy();
 
   const pages: Array<[string, string]> = [
     ['My day', '/'],
@@ -122,6 +134,9 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     ['Quote templates', '/admin/quote-templates'],
     ['Dashboard', '/dashboard'],
     ['Notifications', '/notifications'],
+    ['Personal data', '/admin/privacy'],
+    ['New personal data request', `/admin/privacy/new?subjectKind=Contact&subjectId=${contact.contactId}`],
+    ['Personal data request', `/admin/privacy/cases/${privacyCase.id}`],
   ];
 
   for (const [name, path] of pages) {
@@ -158,6 +173,13 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expectNoSeriousViolations(page, 'Send quote dialog');
+
+  await page.goto(`/admin/privacy/cases/${privacyCase.id}`);
+  await page.getByRole('button', { name: 'Carry out the erasure' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expectNoSeriousViolations(page, 'Carry out erasure dialog');
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
 
   await page.goto('/');
   await page.getByRole('button', { name: /^Notifications/ }).click();

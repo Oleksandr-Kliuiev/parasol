@@ -208,3 +208,24 @@ internal sealed class UserRoleDirectory(IdentityDbContext db) : IUserRoleDirecto
         return new RoleSyncResult(users.Count, changed);
     }
 }
+
+/// <summary>
+/// Server-side sessions (DEV-10; docs/04 §8 proposes 90 days): a session that ended — signed out, or past its absolute
+/// lifetime, counted from its start — and is older than the approved period is removed.
+/// </summary>
+internal sealed class SessionRetention(IdentityDbContext db) : Crm.Privacy.Contracts.IRetentionContributor
+{
+    public const string Class = "identity.sessions";
+
+    public string DataClass => Class;
+
+    public Task<int> CountAsync(DateTimeOffset olderThan, CancellationToken cancellationToken) =>
+        db.UserSessions.CountAsync(s => (s.EndedAt ?? s.StartedAt) < olderThan, cancellationToken);
+
+    public async Task<int> ApplyAsync(DateTimeOffset olderThan, int batchSize, CancellationToken cancellationToken)
+    {
+        var ids = await db.UserSessions.Where(s => (s.EndedAt ?? s.StartedAt) < olderThan)
+            .OrderBy(s => s.StartedAt).Select(s => s.Id).Take(batchSize).ToListAsync(cancellationToken);
+        return ids.Count == 0 ? 0 : await db.UserSessions.Where(s => ids.Contains(s.Id)).ExecuteDeleteAsync(cancellationToken);
+    }
+}

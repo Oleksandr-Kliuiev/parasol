@@ -36,6 +36,10 @@ public static class SalesModule
         services.AddScoped<Crm.SharedKernel.Application.IRecordScopeReporter, QuoteScopeReporter>();
         services.AddScoped<ISalesApi, SalesApi>();
         services.AddScoped<IProductUsage, QuoteProductUsage>();
+        // DEV-11: leads and quote recipients in subject requests, and the retention of leads never converted.
+        services.AddScoped<Crm.Privacy.Contracts.IDataSubjectResolver, Features.Privacy.LeadSubjectResolver>();
+        services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.SalesPersonalData>();
+        services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, Features.Privacy.UnconvertedLeadsRetention>();
         return services;
     }
 

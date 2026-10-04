@@ -2,6 +2,7 @@ using System.Text.Json;
 using Crm.Audit.Persistence;
 using Crm.Authorization;
 using Crm.Infrastructure.DependencyInjection;
+using Crm.Privacy.Contracts;
 using Crm.SharedKernel.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -23,7 +24,8 @@ public sealed record AuditEntryDto(
     string EntityType,
     Guid EntityId,
     JsonElement? Changes,
-    string? CorrelationId);
+    string? CorrelationId,
+    bool Erased = false);
 
 public sealed record AuditPage(IReadOnlyList<AuditEntryDto> Items, long? NextCursor);
 
@@ -45,6 +47,7 @@ public static class AuditModule
         services.AddOptions<Features.AuditIntegrityOptions>().Bind(configuration.GetSection(Features.AuditIntegrityOptions.SectionName));
         services.AddScoped<Features.AuditIntegrityJob>();
         services.AddSingleton<Infrastructure.Persistence.IDatabasePermissionRules, AuditDatabasePermissions>();
+        services.AddScoped<IPersonalDataContributor, Features.AuditPersonalData>();
         return services;
     }
 
@@ -52,7 +55,7 @@ public static class AuditModule
     {
         var group = app.MapGroup("/api/v1/audit").WithTags("Audit");
 
-        group.MapGet("/", async ([AsParameters] AuditQuery q, AuditDbContext db, CancellationToken ct) =>
+        group.MapGet("/", async ([AsParameters] AuditQuery q, AuditDbContext db, IErasedRecords erased, CancellationToken ct) =>
             {
                 var entries = db.AuditEntries.AsNoTracking();
                 if (!string.IsNullOrWhiteSpace(q.Module))
@@ -90,13 +93,13 @@ public static class AuditModule
                     entries = entries.Where(e => e.At < to);
                 }
 
-                return Results.Ok(await PageAsync(entries, q.Cursor, q.Limit, ct));
+                return Results.Ok(await PageAsync(entries, q.Cursor, q.Limit, erased, ct));
             })
             .RequirePermission(Permissions.AuditRead);
 
         group.MapGet("/entities/{module}/{entityType}/{entityId:guid}", async (
                 string module, string entityType, Guid entityId, long? cursor, int? limit,
-                AuditDbContext db, ICurrentUser user, CancellationToken ct) =>
+                AuditDbContext db, ICurrentUser user, IErasedRecords erased, CancellationToken ct) =>
             {
                 if (!user.HasPermission(Permissions.AuditRead) &&
                     !(EntityHistoryPermissions.TryGetValue(module, out var permission) && user.HasPermission(permission)))
@@ -106,13 +109,14 @@ public static class AuditModule
 
                 var entries = db.AuditEntries.AsNoTracking()
                     .Where(e => e.Module == module && e.EntityType == entityType && e.EntityId == entityId);
-                return Results.Ok(await PageAsync(entries, cursor, limit, ct));
+                return Results.Ok(await PageAsync(entries, cursor, limit, erased, ct));
             });
 
         return app;
     }
 
-    private static async Task<AuditPage> PageAsync(IQueryable<Infrastructure.Persistence.AuditEntry> entries, long? cursor, int? limit, CancellationToken ct)
+    private static async Task<AuditPage> PageAsync(
+        IQueryable<Infrastructure.Persistence.AuditEntry> entries, long? cursor, int? limit, IErasedRecords erased, CancellationToken ct)
     {
         var take = KeysetCursor.ClampLimit(limit);
         if (cursor is { } c)
@@ -121,10 +125,28 @@ public static class AuditModule
         }
 
         var rows = await entries.OrderByDescending(e => e.Id).Take(take + 1).ToListAsync(ct);
-        var items = rows.Take(take).Select(e => new AuditEntryDto(
-            e.Id, e.At, e.UserId, e.UserName, e.Action, e.Module, e.EntityType, e.EntityId,
-            e.Changes is null ? null : JsonDocument.Parse(e.Changes).RootElement.Clone(),
-            e.CorrelationId)).ToList();
+        var page = rows.Take(take).ToList();
+
+        // DEV-11-AC02: what a privacy case erased is not shown again by its history, whether or not the operator's procedure
+        // has cleared it yet — the fact of each action stays; an erasure's own entry names only the case and the fields.
+        var hidden = new HashSet<(string, string, Guid)>();
+        foreach (var group in page.Where(e => e.Action != Infrastructure.Persistence.AuditActions.Erase).GroupBy(e => (e.Module, e.EntityType)))
+        {
+            foreach (var id in await erased.ErasedAsync(group.Key.Module, group.Key.EntityType, group.Select(e => e.EntityId).Distinct().ToList(), ct))
+            {
+                hidden.Add((group.Key.Module, group.Key.EntityType, id));
+            }
+        }
+
+        var items = page.Select(e =>
+        {
+            var erasedEntry = e.Action != Infrastructure.Persistence.AuditActions.Erase && hidden.Contains((e.Module, e.EntityType, e.EntityId));
+            return new AuditEntryDto(
+                e.Id, e.At, e.UserId, e.UserName, e.Action, e.Module, e.EntityType, e.EntityId,
+                e.Changes is null || erasedEntry ? null : JsonDocument.Parse(e.Changes).RootElement.Clone(),
+                e.CorrelationId,
+                erasedEntry);
+        }).ToList();
         return new AuditPage(items, rows.Count > take ? items[^1].Id : null);
     }
 }

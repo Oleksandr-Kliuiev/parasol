@@ -2,6 +2,7 @@ using System.Text;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Infrastructure.Persistence;
+using Crm.Privacy.Contracts;
 using Crm.Sales.Contracts;
 using Crm.Sales.Domain;
 using Crm.Sales.Persistence;
@@ -32,9 +33,13 @@ internal sealed class QuoteDocuments(
     IOptions<SalesOptions> options,
     ICurrentUser currentUser,
     TimeProvider time,
+    IErasedRecords erasedRecords,
     ILogger<QuoteDocuments> logger)
 {
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+
+    public static readonly Error Erased = Error.NotFound(
+        "SAL_DOCUMENT_ERASED", "This quote document was erased at the request of the person on it (privacy case); it is no longer shown or sent.");
 
     public static readonly Error Preparing = Error.Conflict(
         "SAL_DOCUMENT_PREPARING", "The quote document is being stored; it can be downloaded or sent in a moment.");
@@ -61,8 +66,9 @@ internal sealed class QuoteDocuments(
     public async Task<QuoteDocument> CompleteAsync(Guid documentId, CancellationToken cancellationToken)
     {
         var document = await db.QuoteDocuments.AsNoTracking().SingleAsync(d => d.Id == documentId, cancellationToken);
-        if (document.Status == QuoteDocumentStatus.Ready)
+        if (document.Status == QuoteDocumentStatus.Ready || await IsErasedAsync(document, cancellationToken))
         {
+            // DEV-11: a document a privacy case covered is never drawn from its snapshot again, even if it was still Preparing.
             return document;
         }
 
@@ -107,6 +113,10 @@ internal sealed class QuoteDocuments(
         }
     }
 
+    /// <summary>Erased by the privacy operator's procedure, or covered by an executed privacy case that still waits for it.</summary>
+    private async Task<bool> IsErasedAsync(QuoteDocument document, CancellationToken cancellationToken) =>
+        document.IsErased || (await erasedRecords.ErasedAsync(SalesDbContext.SchemaName, nameof(QuoteDocument), [document.Id], cancellationToken)).Count > 0;
+
     public Task<QuoteDocument?> CurrentAsync(Guid quoteId, CancellationToken cancellationToken) =>
         db.QuoteDocuments.AsNoTracking().Where(d => d.QuoteId == quoteId).OrderByDescending(d => d.Revision).FirstOrDefaultAsync(cancellationToken);
 
@@ -129,6 +139,13 @@ internal sealed class QuoteDocuments(
         }
 
         document ??= await PrepareLegacyAsync(quote, cancellationToken);
+        // DEV-11: a document erased at a person's request is never shown or sent again — from the moment the case was carried
+        // out, before the privacy operator's procedure clears it for good.
+        if (await IsErasedAsync(document, cancellationToken))
+        {
+            return Erased;
+        }
+
         if (document.Status == QuoteDocumentStatus.Preparing)
         {
             if (await TryCompleteAsync(document.Id, cancellationToken) is not { Status: QuoteDocumentStatus.Ready } completed)
@@ -250,7 +267,7 @@ public sealed class QuoteDocumentJob
     public async Task<int> RunAsync(CancellationToken cancellationToken)
     {
         var waiting = await _db.QuoteDocuments.AsNoTracking()
-            .Where(d => d.Status == QuoteDocumentStatus.Preparing)
+            .Where(d => d.Status == QuoteDocumentStatus.Preparing && d.ErasedAt == null)
             .OrderBy(d => d.CreatedAt)
             .Select(d => d.Id)
             .Take(50)

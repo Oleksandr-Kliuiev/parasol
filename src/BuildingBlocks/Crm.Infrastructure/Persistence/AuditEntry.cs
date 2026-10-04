@@ -18,6 +18,12 @@ public static class AuditActions
 
     /// <summary>The retention procedure removed the personal part of older entries (DEV-04, written by audit.ApplyRetention).</summary>
     public const string Retention = "Retention";
+
+    /// <summary>
+    /// A privacy case replaced or removed a record's personal data (DEV-11): the entry names the case and the fields, never
+    /// their values — erasing a person must not copy them into the trail once more.
+    /// </summary>
+    public const string Erase = "Erase";
 }
 
 /// <summary>

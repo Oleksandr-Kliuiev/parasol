@@ -81,3 +81,9 @@ CRM for an IT company (Microsoft / Atera / PowerOffice partner). Specs live in `
 - Health (DEV-06): `/health/live` is the process (plus, in crm-worker, the in-memory outbox loop rounds — never the database); `/health/ready` is `DatabaseReadinessCheck` (`SELECT 1` with a short connect timeout, pending migrations rechecked every 5 min); probes answer with the status word only. Worker components store heartbeats (`IWorkerHeartbeat` → `integration.WorkerHeartbeats`) read by `/health/details` (admins). The outbox loop is registered with `AddOutboxProcessing()`, not `AddHostedService<OutboxProcessor>()`.
 - Migration from the old systems is an ordinary import endpoint with `?dryRun=true` (`POST /api/v1/customers/organizations/import`, permission `customers.delete`), not a script with database access: same permissions, same duplicate rules (BR-CUS-06), same audit trail. It fills empty fields and never overwrites what someone typed in the CRM.
 - Integration tests share one assembly fixture and run classes in parallel, so anything global (a paused integration) needs its classes in one `[Collection]` with `DisableParallelization`.
+- Personal data of customers' people goes through the Privacy module (DEV-11, ADR-020):
+  - a module that stores data about a contact or a lead implements `IPersonalDataContributor` (export, plan, erase, reapply) and is listed in docs/04 §9;
+  - erasure pseudonymizes rows so references stay, it never cascades; audit history and stored quote documents are hidden at once and cleared only by the `crm_privacy` operator procedures;
+  - domain events about people carry ids only;
+  - retention is DryRun until EXT-07: periods come only from `privacy.RetentionPolicies`, which the DBA writes;
+  - deletion manifests live in the document store under the installation's folder and are replayed after a restore, with the API answering 503 meanwhile.

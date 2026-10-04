@@ -20,6 +20,12 @@
       "migration": "20261004052355_QuoteDocuments",
       "reason": "Its trigger guards the new table sales.QuoteDocuments only, which no earlier release maps; the tables earlier releases write are untouched.",
       "verifiedBy": "tools/release/rollback-compat.sh 51c5ea6 (DEV-07 on this schema), see docs/claude-opus/evidence/DEV-08.md"
+    },
+    {
+      "context": "Crm.Sales",
+      "migration": "20261004095840_QuoteDocumentErasure",
+      "reason": "It replaces the DEV-08 trigger on sales.QuoteDocuments with one that accepts every write earlier releases make (Preparing to Ready with hash and length) and adds only the privacy operator's erasure path; the two new columns are nullable and unmapped by earlier releases, and an erased document keeps its status, so an earlier release still reads it (a download then finds no stored object and answers that the document cannot be read).",
+      "verifiedBy": "tools/release/rollback-compat.sh 7b4c90c (DEV-10 on this schema), see docs/claude-opus/evidence/DEV-11.md"
     }
   ]
 }

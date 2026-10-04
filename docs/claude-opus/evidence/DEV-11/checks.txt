@@ -1,0 +1,33 @@
+# DEV-11 final checks, 04.10.2026 (UTC). Local, synthetic data only.
+
+build (dotnet build Vardahei.Crm.slnx, SDK 10.0.401)        11:12  Build succeeded, 0 warnings, 0 errors
+unit tests (Crm.UnitTests)                                  11:13  410/410
+architecture tests (Crm.ArchitectureTests)                  11:13  89/89
+integration tests, run 1 (SQL Server + Azurite, crm_worker) 10:56  201/201
+integration tests, run 2 (includes the AC07 CHECK assertion added after run 1)
+                                                            11:13  201/201
+CI job backend (ci-local.rb, steps of .github/workflows/ci.yml)
+                                                            11:01  PASSED — coverage: domain 96.50 % (1269/1315), backend 87.49 % (18 635/21 299)
+CI job infrastructure                                       11:03  PASSED — release tooling tests, Bicep build and lint
+release tooling tests (python3 -m unittest discover -s tools/release)
+                                                            11:15  27/27
+web: eslint / tsc -b / vitest / vite build                  11:16  clean / clean / 64/64 (19 files) / initial bundle 285.0 KB (budget 300 KB)
+e2e, fresh SQL Server, SPA built (e2e-run.sh dev11final)    11:09  58/58 (Chromium desktop + dark a11y, Firefox and WebKit for @critical)
+rollback-compat 7b4c90c (DEV-10 release e2e on the DEV-11 schema)
+                                                            11:04  55/55; applied audit 20261004095841_PrivacyErasure,
+                                                                   sales 20261004095840_QuoteDocumentErasure, privacy 20261004095906_PrivacyCases
+EF Core pending model changes (has-pending-model-changes, 16 contexts)
+                                                            11:12  none
+docs/claude-opus/validate-package.py                        11:15  VALID: 24 tasks, 145 criteria, 11 external gates; code_verified=13, todo=11
+
+Migration files (unchanged since before the rollback check; mtime ~10:00 UTC), SHA-256:
+47ac9163348f08899b36c1745ab757f299f3b319c5efe7258f5f322a97056b42  src/Modules/Privacy/Crm.Privacy/Persistence/Migrations/20261004095906_PrivacyCases.cs
+3db842d12fa42086424d87f8a30487ee93e8fd55d1075815d928889287be1fd8  src/Modules/Sales/Crm.Sales/Persistence/Migrations/20261004095840_QuoteDocumentErasure.cs
+bfb09a6f0e4aec52470a5615941df82883ee61d184719dca493ed7fac7fa4499  src/Modules/Audit/Crm.Audit/Persistence/Migrations/20261004095841_PrivacyErasure.cs
+2e582fa0afc1d407c8e49ec902b3a4f170b268f1d1be49bf13bbcdc984b8869e  src/Modules/Privacy/Crm.Privacy/Persistence/Migrations/PrivacyDbContextModelSnapshot.cs
+1d4666fff44c059e99c59d988e1eae73c3fe0ba244ad2cc2990ba1253dfe8196  src/Modules/Sales/Crm.Sales/Persistence/Migrations/SalesDbContextModelSnapshot.cs
+
+Secret scan (11:20): tools/release/release.py scan-secrets over the 127 files of the commit — 1 finding, a false positive:
+tests/Crm.IntegrationTests/PrivacyRestoreTests.cs:173 `Password = password` assigns a variable (the test generates a random password
+at run time), the same pattern as the known CrmWebFactory.cs:57. The scanner gates release artifacts, not sources. A further grep over
+every added line for storage keys, SAS, PEM blocks, JWTs, cloud/API tokens and literal connection-string passwords found nothing.

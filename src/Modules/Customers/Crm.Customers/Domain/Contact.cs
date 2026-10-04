@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Crm.Customers.Contracts;
 using Crm.SharedKernel.Domain;
 using Crm.SharedKernel.Results;
@@ -25,7 +26,7 @@ public sealed record ContactDetails(
 public sealed record AffiliationDetails(string? Title, ContactRoles Roles, bool IsPrimary, bool IsActive = true);
 
 /// <summary>A person. One person can work with several organizations, each through its own affiliation (BR-CUS-05).</summary>
-public sealed class Contact : AuditableEntity
+public sealed class Contact : AuditableEntity, IErasable
 {
     private readonly List<OrganizationContact> _affiliations = [];
 
@@ -42,6 +43,44 @@ public sealed class Contact : AuditableEntity
 
     public string FullName => $"{FirstName} {LastName}".Trim();
 
+    /// <inheritdoc />
+    public string? ErasureReference { get; private set; }
+
+    /// <summary>The name an erased person is shown under (SEC-GDPR-04): derived from the record's id, not from the person.</summary>
+    public static string PseudonymFor(Guid id) => $"Anonymized-{Convert.ToHexStringLower(SHA256.HashData(id.ToByteArray()))[..8]}";
+
+    public bool IsPseudonymized =>
+        FirstName == PseudonymFor(Id) && LastName.Length == 0 && Email is null && Phone is null && MobilePhone is null && PreferredLanguage is null;
+
+    /// <summary>
+    /// Erases the person under a privacy case or a retention policy (DEV-11): the row stays — quotes, deals, activities and
+    /// tickets refer to it — with a pseudonym instead of a name, no contact details, out of every list; each affiliation is
+    /// ended the same way, except those a legal hold keeps (<paramref name="keepAffiliations"/>). Raises nothing: an erasure
+    /// is not a change to send to PowerOffice or anywhere else. Returns false when there was nothing left to erase.
+    /// </summary>
+    public bool Pseudonymize(string reference, IReadOnlySet<Guid>? keepAffiliations = null)
+    {
+        var changed = false;
+        if (!IsPseudonymized || !IsDeleted)
+        {
+            ErasureReference = reference;
+            FirstName = PseudonymFor(Id);
+            LastName = string.Empty;
+            Email = null;
+            Phone = null;
+            MobilePhone = null;
+            PreferredLanguage = null;
+            MarkDeleted();
+            changed = true;
+        }
+
+        foreach (var affiliation in _affiliations.Where(a => keepAffiliations?.Contains(a.Id) != true))
+        {
+            changed |= affiliation.Erase(reference);
+        }
+
+        return changed;
+    }
     public static Result<Contact> Create(ContactDetails details)
     {
         var contact = new Contact();
@@ -51,7 +90,7 @@ public sealed class Contact : AuditableEntity
             return applied.Error!;
         }
 
-        contact.Raise(new ContactCreated(contact.Id, contact.Email));
+        contact.Raise(new ContactCreated(contact.Id));
         return contact;
     }
 
@@ -124,7 +163,7 @@ public sealed class Contact : AuditableEntity
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
-public sealed class OrganizationContact : AuditableEntity
+public sealed class OrganizationContact : AuditableEntity, IErasable
 {
     private OrganizationContact() { }
 
@@ -141,6 +180,25 @@ public sealed class OrganizationContact : AuditableEntity
     public ContactRoles Roles { get; private set; }
     public bool IsPrimary { get; private set; }
     public bool IsActive { get; private set; }
+
+    /// <inheritdoc />
+    public string? ErasureReference { get; private set; }
+
+    /// <summary>Ends an erased person's affiliation: no title, inactive, out of the organization's list (DEV-11).</summary>
+    internal bool Erase(string reference)
+    {
+        if (Title is null && !IsActive && !IsPrimary && IsDeleted)
+        {
+            return false;
+        }
+
+        ErasureReference = reference;
+        Title = null;
+        IsActive = false;
+        IsPrimary = false;
+        MarkDeleted();
+        return true;
+    }
 
     internal void Update(AffiliationDetails details)
     {

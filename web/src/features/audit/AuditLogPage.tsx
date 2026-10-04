@@ -36,7 +36,7 @@ const useStyles = makeStyles({
 
 const modules = ['customers', 'identity'];
 const entityTypes = ['Organization', 'Contact', 'OrganizationContact', 'User'];
-const actions = ['Create', 'Update', 'Delete'];
+const actions = ['Create', 'Update', 'Delete', 'Erase'];
 
 function recordLink(entry: AuditEntry): string | null {
   if (entry.entityType === 'Organization') return `/organizations/${entry.entityId}`;
@@ -111,10 +111,8 @@ export function AuditLogPage() {
                     <TableCell className={styles.time}>{formatDateTime(entry.at)}</TableCell>
                     <TableCell>{entry.userName ?? t('history.system')}</TableCell>
                     <TableCell>{entry.action}</TableCell>
-                    <TableCell>{link && entry.action !== 'Delete' ? <AppLink to={link}>{entry.entityType}</AppLink> : entry.entityType}</TableCell>
-                    <TableCell>
-                      <ChangeList changes={entry.changes} />
-                    </TableCell>
+                    <TableCell>{link && entry.action !== 'Delete' && !entry.erased ? <AppLink to={link}>{entry.entityType}</AppLink> : entry.entityType}</TableCell>
+                    <TableCell>{entry.erased ? t('history.erased') : <ChangeList changes={entry.changes} />}</TableCell>
                   </TableRow>
                 );
               })}
