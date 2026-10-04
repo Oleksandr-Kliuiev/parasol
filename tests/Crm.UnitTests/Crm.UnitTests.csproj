@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\src\Modules\Notifications\Crm.Notifications\Crm.Notifications.csproj" />
     <ProjectReference Include="..\..\src\Modules\TimeTracking\Crm.TimeTracking\Crm.TimeTracking.csproj" />
     <ProjectReference Include="..\..\src\Modules\Privacy\Crm.Privacy\Crm.Privacy.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Reports\Crm.Reports\Crm.Reports.csproj" />
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.Brreg\Crm.Integrations.Brreg.csproj" />
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.PowerOffice\Crm.Integrations.PowerOffice.csproj" />
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.Atera\Crm.Integrations.Atera.csproj" />

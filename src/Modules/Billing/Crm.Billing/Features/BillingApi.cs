@@ -196,14 +196,15 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
     }
 
     public async Task<IReadOnlyList<RevenueByOrganization>> GetRevenueByOrganizationAsync(
-        DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
+        DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken, bool approvedOnly = false)
     {
         var rows = await (
                 from line in db.BillingLines.AsNoTracking()
                 join basis in db.BillingBases.AsNoTracking() on line.BasisId equals basis.Id
                 join run in db.BillingRuns.AsNoTracking() on basis.RunId equals run.Id
                 where run.PeriodStart >= periodStart && run.PeriodStart <= periodEnd &&
-                      basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
+                      basis.Status != BillingBasisStatus.Cancelled && (!approvedOnly || basis.Status != BillingBasisStatus.Draft) &&
+                      line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
                 select new { basis.OrganizationId, line.Group, line.LineTotal })
             .ToListAsync(cancellationToken);
 
@@ -247,6 +248,39 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
             .OrderBy(r => r.Year)
             .ThenBy(r => r.Month)
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<RevenueSplit>> GetRevenueSplitAsync(DateOnly periodFrom, DateOnly periodTo, CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from line in db.BillingLines.AsNoTracking()
+                join basis in db.BillingBases.AsNoTracking() on line.BasisId equals basis.Id
+                join run in db.BillingRuns.AsNoTracking() on basis.RunId equals run.Id
+                where run.PeriodStart >= periodFrom && run.PeriodStart <= periodTo &&
+                      basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
+                select new { run.PeriodStart.Year, run.PeriodStart.Month, Approved = basis.Status != BillingBasisStatus.Draft, line.LineTotal })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(r => new { r.Year, r.Month })
+            .Select(g => new RevenueSplit(
+                g.Key.Year,
+                g.Key.Month,
+                decimal.Round(g.Where(r => r.Approved).Sum(r => r.LineTotal), 2),
+                decimal.Round(g.Where(r => !r.Approved).Sum(r => r.LineTotal), 2)))
+            .OrderBy(r => r.Year)
+            .ThenBy(r => r.Month)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<InvoiceRow>> GetInvoiceRowsAsync(DateOnly periodFrom, DateOnly periodTo, CancellationToken cancellationToken)
+    {
+        var rows = await db.Invoices.AsNoTracking()
+            .Where(i => i.InvoiceDate >= periodFrom && i.InvoiceDate <= periodTo)
+            .OrderBy(i => i.InvoiceDate).ThenBy(i => i.InvoiceNo).ThenBy(i => i.Id)
+            .Select(i => new InvoiceRow(i.System, i.InvoiceNo, i.OrganizationId, i.InvoiceDate, i.DueDate, i.TotalIncVat, i.Outstanding, i.Status))
+            .ToListAsync(cancellationToken);
+        return rows;
     }
 
     public async Task<InvoiceTotals> GetInvoiceTotalsAsync(DateOnly today, CancellationToken cancellationToken)

@@ -37,6 +37,9 @@ param powerOfficeEnvironment string
 param enableAtera bool
 param recordScope string
 param maintenanceForceReadOnly bool
+param biEnabled bool
+param biAudience string
+param biAllowedClients array
 
 var acrPullRole = '7f951dda-4ed3-4680-a7ca-43fe172d538f'
 var placeholderImage = 'mcr.microsoft.com/k8se/quickstart:latest'
@@ -107,7 +110,15 @@ var commonEnv = [
   { name: 'OTEL_SERVICE_NAME', value: 'crm' }
 ]
 
-var webEnv = concat(commonEnv, [
+// DEV-14: the BI read API takes bearer tokens on crm-web only; the worker has no use for it.
+var biClientEnv = [for (client, i) in biAllowedClients: { name: 'Bi__AllowedClients__${i}', value: client }]
+var biEnv = concat([
+  { name: 'Bi__Enabled', value: string(biEnabled) }
+  { name: 'Bi__TenantId', value: entraTenantId }
+  { name: 'Bi__Audience', value: biAudience }
+], biClientEnv)
+
+var webEnv = concat(commonEnv, biEnv, [
   { name: 'AZURE_CLIENT_ID', value: appIdentityClientId }
   { name: 'ConnectionStrings__crm', value: webConnectionString }
   { name: 'AzureAd__TenantId', value: entraTenantId }

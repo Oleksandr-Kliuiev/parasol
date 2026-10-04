@@ -16,10 +16,10 @@ GRAPH_APP_ID="00000003-0000-0000-c000-000000000000"
 USER_READ_DELEGATED="e1fe6dd8-ba31-4d61-89e7-88639da4683d"   # User.Read
 APP_IDENTITY_PRINCIPAL_ID="${3:-}"
 
-role_json() { # value displayName description
+role_json() { # value displayName description [member type: User (default) or Application]
   local id
   id=$(python3 -c "import uuid,sys; print(uuid.uuid5(uuid.NAMESPACE_URL, 'vardahei-crm/' + sys.argv[1]))" "$1")
-  printf '{"allowedMemberTypes":["User"],"description":"%s","displayName":"%s","id":"%s","isEnabled":true,"value":"%s"}' "$3" "$2" "$id" "$1"
+  printf '{"allowedMemberTypes":["%s"],"description":"%s","displayName":"%s","id":"%s","isEnabled":true,"value":"%s"}' "${4:-User}" "$3" "$2" "$id" "$1"
 }
 
 ROLES="[$(role_json Crm.Admin 'CRM Administrator' 'Configures the CRM, integrations and reference data'),\
@@ -28,7 +28,9 @@ $(role_json Crm.Sales 'CRM Sales' 'Leads, opportunities, quotes, customers and c
 $(role_json Crm.Technician 'CRM Technician' 'Customer overview without finance, tickets, devices, time'),\
 $(role_json Crm.ServiceLead 'CRM Service lead' 'Technician rights plus time approval and SLA reports'),\
 $(role_json Crm.Finance 'CRM Finance' 'Billing runs, price lists, cost prices, PowerOffice export'),\
-$(role_json Crm.ReadOnly 'CRM Read-only' 'Read access without finance fields')]"
+$(role_json Crm.ReadOnly 'CRM Read-only' 'Read access without finance fields'),\
+$(role_json Crm.Bi.Read 'CRM BI read' 'Application permission: reads the BI datasets without cost data (DEV-14, runbook 14)' Application),\
+$(role_json Crm.Bi.Cost 'CRM BI cost' 'Application permission: reads the BI cost datasets, Microsoft cost and margins (DEV-14, runbook 14)' Application)]"
 
 APP_ID=$(az ad app list --display-name "$APP_NAME" --query "[0].appId" -o tsv)
 if [[ -z "$APP_ID" ]]; then

@@ -476,7 +476,7 @@
       "external_gates": [
         "EXT-08"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-14.md",
       "evidence_file": "evidence/DEV-14.md",
       "acceptance_ids": [

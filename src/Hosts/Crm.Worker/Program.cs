@@ -121,6 +121,8 @@ jobs.AddOrUpdate<ContractLifecycleJob>(ContractLifecycleJob.JobId, job => job.Ru
 // DEV-04: the audit hash chain is extended and rechecked every night; checkpoints go to the log workspace as anchors.
 jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditIntegrityJob.JobId, job => job.RunAsync(CancellationToken.None), "40 4 * * *", new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditIntegrityJob.FullJobId, job => job.VerifyAllAsync(CancellationToken.None), Cron.Never(), new RecurringJobOptions { TimeZone = oslo });
+// DEV-14: the closed month's figures are kept once the month is over (daily; takes only what is missing).
+jobs.AddOrUpdate<Crm.Reports.BiSnapshotJob>(Crm.Reports.BiSnapshotJob.JobId, job => job.RunAsync(CancellationToken.None), "10 5 * * *", new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<QuoteExpiryJob>(QuoteExpiryJob.JobId, job => job.RunAsync(CancellationToken.None), "0 6 * * *", new RecurringJobOptions { TimeZone = oslo });
 // DEV-08: quote documents that storage could not take at release are stored as soon as it can; orphaned objects expire.
 jobs.AddOrUpdate<QuoteDocumentJob>(QuoteDocumentJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");

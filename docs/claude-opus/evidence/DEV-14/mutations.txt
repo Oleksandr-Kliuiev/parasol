@@ -1,0 +1,82 @@
+# DEV-14 mutations: each brings back one defect; the final version of each test caught it, the file was restored (cmp identical).
+# M5, M6, M10 are from the run after the last test edits (loop guard, rate-limit test); M9 from the run with the hash test; the rest from the first run.
+
+=== M1-AC01-any-client-admitted  src/Modules/Reports/Crm.Reports/BiAccess.cs
+    - client is not null && settings.AllowedClients.Contains(client, StringComparer.OrdinalIgnoreCase) &&
+    + client is not null &&
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,765s
+          Shouldly.ShouldAssertException : (await As(host, Token(client: Guid.NewGuid().ToString())).GetAsync(url, Ct)).StatusCode
+              should be
+    restored (cmp identical)
+
+=== M2-AC01-tenant-claim-ignored  src/Modules/Reports/Crm.Reports/BiAccess.cs
+    - string.Equals(tenant, settings.TenantId, StringComparison.OrdinalIgnoreCase) &&
+    + tenant is not null &&
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,891s
+          Shouldly.ShouldAssertException : (await As(host, Token(tidClaim: Guid.NewGuid().ToString())).GetAsync(url, Ct)).StatusCode
+              should be
+    restored (cmp identical)
+
+=== M3-AC02-cost-with-read-grant  src/Modules/Reports/Crm.Reports/BiAccess.cs
+    - dataset.RequiresCost ? HoldsCost(user) : HoldsRead(user);
+    + HoldsRead(user) || HoldsCost(user);
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,805s
+          Shouldly.ShouldAssertException : names
+              should not contain
+    restored (cmp identical)
+
+=== M4-AC06-drafts-in-customer-revenue  src/Modules/Reports/Crm.Reports/BiService.cs
+    - GetRevenueByOrganizationAsync(from, to, ct, approvedOnly: true)
+    + GetRevenueByOrganizationAsync(from, to, ct, approvedOnly: false)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,075s
+          Shouldly.ShouldAssertException : april2.GetProperty("rows").EnumerateArray()
+              should not contain an element satisfying the condition
+    restored (cmp identical)
+
+=== M5-AC03-cursor-repeats-the-last-row  src/Modules/Reports/Crm.Reports/BiService.cs
+    - string.CompareOrdinal(KeyOf(dataset, r), after) > 0
+    + string.CompareOrdinal(KeyOf(dataset, r), after) >= 0
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,088s
+          Shouldly.ShouldAssertException : pages
+              should be less than
+    restored (cmp identical)
+
+=== M6-AC03-watermark-on-every-page  src/Modules/Reports/Crm.Reports/BiService.cs
+    -             more ? null : watermarkAsOf);
+    +             watermarkAsOf);
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,507s
+          Shouldly.ShouldAssertException : cursor is null
+              should be
+    restored (cmp identical)
+
+=== M7-AC04-revision-overwrites  src/Modules/Reports/Crm.Reports/BiSnapshots.cs
+    - var revision = (existing.Count == 0 ? 0 : existing.Max()) + 1;
+    + var revision = 1;
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,257s
+          Shouldly.ShouldAssertException : revised.StatusCode
+              should be
+    restored (cmp identical)
+
+=== M8-AC04-late-snapshot-called-captured  src/Modules/Reports/Crm.Reports/BiSnapshots.cs
+    - today <= lastDayOfMonth.AddDays(timelyDays) ? "Captured" : "Reconstructed";
+    + "Captured";
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,958s
+          Shouldly.ShouldAssertException : revenue.GetProperty("provenance").GetString()
+              should be
+    restored (cmp identical)
+
+=== M9-AC04-snapshot-ignores-its-hash  src/Modules/Reports/Crm.Reports/BiSnapshots.cs
+    -         return sha == document.Sha256
+    +         return sha is not null
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,270s
+          Shouldly.ShouldAssertException : refused.StatusCode
+              should be
+    restored (cmp identical)
+
+=== M10-AC03-no-request-budget  src/Modules/Reports/Crm.Reports/ReportsModule.cs
+    - RequireAuthorization(BiAccess.Policy).RequireRateLimiting(RateLimitPolicies.BiRefresh);
+    + RequireAuthorization(BiAccess.Policy);
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,897s
+          Shouldly.ShouldAssertException : limited.StatusCode
+              should be
+    restored (cmp identical)

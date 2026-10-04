@@ -122,6 +122,7 @@ flowchart LR
 6. Инцидент безопасности / утечка персональных данных — [runbook 06](runbooks/06-security-incident.md).
 7. Ручной биллинг при недоступности CRM — [runbook 07](runbooks/07-manual-billing.md).
 8. Права БД, retention и целостность аудита, секреты поставщиков — [runbook 08](runbooks/08-database-permissions.md).
+9. Power BI: чтение CRM, плановое обновление, снимки закрытых месяцев — [runbook 14](runbooks/14-power-bi-refresh.md).
 
 ### 4.5 Поддержка
 - L1 — Admin CRM внутри Компании (доступы, сопоставления, повтор синхронизаций).

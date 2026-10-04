@@ -1,0 +1,4 @@
+revenue-by-month April 2024 with only a draft basis: totalExVat = 2500.00
+GET mart with a bearer token -> 401; GET /api/v1/bi/v1/ -> 404
+closed month read before the rename: 'B20fac359c Bi AS', after: 'B20fac359c Bi AS omdøpt' (no history)
+POST /api/v1/reports/snapshots/2024-04 -> 404 (no snapshots exist)

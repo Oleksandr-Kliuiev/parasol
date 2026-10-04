@@ -54,6 +54,14 @@ param sqlMaxVCores int = environmentName == 'prod' ? 4 : 2
 @allowed(['Restricted', 'Open'])
 param recordScope string = 'Restricted'
 
+@description('The BI read API for Power BI Service (DEV-14, ADR-022): off until a BI client application is named. Set per environment; the audience is the CRM app registration identifier URI.')
+param biEnabled bool = false
+
+param biAudience string = ''
+
+@description('Application (client) ids of the BI identities allowed to read; an empty list admits nobody.')
+param biAllowedClients array = []
+
 @description('Read-only maintenance by configuration (DEV-13, runbook 03): for an outage of the document store that holds the operator switch. Only a new deployment without it lifts it.')
 param maintenanceForceReadOnly bool = false
 
@@ -164,6 +172,9 @@ module apps 'modules/apps.bicep' = {
     enableAtera: enableAtera
     recordScope: recordScope
     maintenanceForceReadOnly: maintenanceForceReadOnly
+    biEnabled: biEnabled
+    biAudience: biAudience
+    biAllowedClients: biAllowedClients
   }
 }
 

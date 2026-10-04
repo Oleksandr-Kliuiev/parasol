@@ -78,6 +78,7 @@ builder.Services
 
 builder.Services.AddMemoryCache();
 builder.AddCrmAuthentication();
+builder.AddBiAuthentication();
 
 // Delegated Graph (calendar, mailbox) only exists behind a real Entra session; the development sign-in has no token.
 if (builder.Configuration.GetValue<string>("Auth:Mode") != "Development")
@@ -121,6 +122,15 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
             })
             : RateLimitPartition.GetNoLimiter("static"));
+
+    // DEV-14: a refresh reads every page of every dataset, so the BI API has a budget of its own, per client application.
+    options.AddPolicy(RateLimitPolicies.BiRefresh, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("azp")?.Value ?? context.User.FindFirst("appid")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("Bi:RequestsPerMinute", 120),
+            Window = TimeSpan.FromMinutes(1),
+        }));
 
     options.AddPolicy(RateLimitPolicies.Export, context => RateLimitPartition.GetFixedWindowLimiter(Partition(context), _ => new FixedWindowRateLimiterOptions
     {

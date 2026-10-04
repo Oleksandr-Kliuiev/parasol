@@ -46,7 +46,7 @@ internal sealed class MarginService(
     ICustomersApi customers,
     IOptions<ReportsOptions> options)
 {
-    public async Task<Result<MarginReport>> GetAsync(int year, int month, int months, CancellationToken ct)
+    public async Task<Result<MarginReport>> GetAsync(int year, int month, int months, CancellationToken ct, bool approvedOnly = false)
     {
         if (year is < 2020 or > 2100 || month is < 1 or > 12 || months is < 1 or > 12)
         {
@@ -56,7 +56,7 @@ internal sealed class MarginService(
         var periodStart = new DateOnly(year, month, 1).AddMonths(1 - months);
         var periodEnd = new DateOnly(year, month, 1).AddMonths(1).AddDays(-1);
 
-        var revenue = await billing.GetRevenueByOrganizationAsync(periodStart, periodEnd, ct);
+        var revenue = await billing.GetRevenueByOrganizationAsync(periodStart, periodEnd, ct, approvedOnly);
         var licenseCosts = (await licensing.GetMsCostsAsync(periodStart, periodEnd, ct)).ToDictionary(c => c.OrganizationId);
         var hours = (await timeTracking.GetHoursByOrganizationAsync(periodStart, periodEnd, ct)).ToDictionary(h => h.OrganizationId);
         var hourlyCost = Math.Max(0m, options.Value.InternalHourlyCost);

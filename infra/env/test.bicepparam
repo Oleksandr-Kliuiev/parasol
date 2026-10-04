@@ -17,3 +17,8 @@ param recordScope = 'Restricted'
 // Read-only maintenance by configuration (DEV-13, runbook 03): only for an outage of the document store; the operator's
 // switch is the normal way. Set for one deployment, then deployed again without it.
 param maintenanceForceReadOnly = bool(readEnvironmentVariable('CRM_MAINTENANCE_FORCE_READ_ONLY', 'false'))
+// BI read API for Power BI Service (DEV-14, ADR-022, runbook 14): off until the BI client application is named. The ids are
+// identifiers, not secrets; the identity holds no key in this repository.
+param biEnabled = bool(readEnvironmentVariable('CRM_BI_ENABLED', 'false'))
+param biAudience = readEnvironmentVariable('CRM_BI_AUDIENCE', '')
+param biAllowedClients = empty(readEnvironmentVariable('CRM_BI_CLIENTS', '')) ? [] : split(readEnvironmentVariable('CRM_BI_CLIENTS', ''), ',')

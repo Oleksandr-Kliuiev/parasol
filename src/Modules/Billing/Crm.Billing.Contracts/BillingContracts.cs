@@ -104,6 +104,17 @@ public sealed record RevenueByOrganization(
 
 public sealed record InvoiceTotals(int Open, decimal Outstanding, decimal Overdue, int OverdueCount);
 
+/// <summary>
+/// One month's billing, split by how final it is (DEV-14): <paramref name="ApprovedExVat"/> is the content of bases that were
+/// approved (frozen, DEV-02; whatever became of their export), <paramref name="PendingExVat"/> what collected but still draft
+/// bases would bill. Cancelled bases and information lines count nowhere.
+/// </summary>
+public sealed record RevenueSplit(int Year, int Month, decimal ApprovedExVat, decimal PendingExVat);
+
+/// <summary>An invoice as the accounting system reports it, for the BI mart: what was invoiced and what is still unpaid — never "paid".</summary>
+public sealed record InvoiceRow(
+    string System, string InvoiceNo, Guid? OrganizationId, DateOnly InvoiceDate, DateOnly? DueDate, decimal TotalIncVat, decimal Outstanding, InvoiceStatus Status);
+
 /// <summary>Licence revenue of one organization and product in a billing period (FR-LIC-04).</summary>
 public sealed record BilledLicenseLine(Guid OrganizationId, Guid? ProductId, decimal Quantity, decimal Amount);
 
@@ -157,7 +168,13 @@ public interface IBillingApi
 
     /// <summary>What each customer was billed for the runs covering the period, by line group (FR-RPT-02).</summary>
     Task<IReadOnlyList<RevenueByOrganization>> GetRevenueByOrganizationAsync(
-        DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);
+        DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken, bool approvedOnly = false);
+
+    /// <summary>What was billed per month, split into approved and still-draft content (DEV-14).</summary>
+    Task<IReadOnlyList<RevenueSplit>> GetRevenueSplitAsync(DateOnly periodFrom, DateOnly periodTo, CancellationToken cancellationToken);
+
+    /// <summary>Every invoice dated in the window, oldest first with the invoice number and id as tie-breakers (DEV-14).</summary>
+    Task<IReadOnlyList<InvoiceRow>> GetInvoiceRowsAsync(DateOnly periodFrom, DateOnly periodTo, CancellationToken cancellationToken);
 
     Task<InvoiceTotals> GetInvoiceTotalsAsync(DateOnly today, CancellationToken cancellationToken);
 
