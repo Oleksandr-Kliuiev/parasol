@@ -65,6 +65,12 @@ public static class DatabasePermissions
                 $"DENY INSERT, UPDATE, DELETE ON OBJECT::[{schema}].[__EFMigrationsHistory] TO [{DatabaseRoles.Runtime}];"));
             statements.Add(IfTable(schema, "OutboxMessages",
                 $"DENY UPDATE, DELETE ON OBJECT::[{schema}].[OutboxMessages] TO [{DatabaseRoles.Web}];"));
+            // DEV-07: handlers run only in the worker, so the web host writes no receipts; it files replay requests and the
+            // worker applies them — the web host can neither mark a request applied nor take one back.
+            statements.Add(IfTable(schema, "InboxReceipts",
+                $"DENY INSERT, UPDATE, DELETE ON OBJECT::[{schema}].[InboxReceipts] TO [{DatabaseRoles.Web}];"));
+            statements.Add(IfTable(schema, "OutboxReplayRequests",
+                $"DENY UPDATE, DELETE ON OBJECT::[{schema}].[OutboxReplayRequests] TO [{DatabaseRoles.Web}];"));
         }
 
         statements.Add(IfTable("audit", "AuditEntries", $"DENY UPDATE, DELETE ON OBJECT::[audit].[AuditEntries] TO [{DatabaseRoles.Runtime}];"));
@@ -187,7 +193,7 @@ public static class DatabasePermissions
         $"ALTER ROLE [{role}] ADD MEMBER [{member}];";
 
     /// <summary>Names end up in T-SQL: only letters, digits, '-' and '_' are accepted.</summary>
-    private static void Guard(string name)
+    internal static void Guard(string name)
     {
         if (name.Length is 0 or > 128 || !name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
         {

@@ -84,6 +84,25 @@ namespace Crm.Service.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Crm.Infrastructure.Persistence.InboxReceipt", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Handler")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("MessageId", "Handler");
+
+                    b.HasIndex("ProcessedAt");
+
+                    b.ToTable("InboxReceipts", "service");
+                });
+
             modelBuilder.Entity("Crm.Infrastructure.Persistence.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -97,10 +116,23 @@ namespace Crm.Service.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<DateTimeOffset?>("DeadLetteredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeliveredHandlers")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("LastError")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("LeaseOwner")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("OccurredAt")
@@ -113,6 +145,18 @@ namespace Crm.Service.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ProcessedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<int>("Replays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("Pending");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -122,7 +166,51 @@ namespace Crm.Service.Persistence.Migrations
 
                     b.HasIndex("ProcessedAt", "OccurredAt");
 
+                    b.HasIndex("Status", "NextAttemptAt");
+
                     b.ToTable("OutboxMessages", "service");
+                });
+
+            modelBuilder.Entity("Crm.Infrastructure.Persistence.OutboxReplayRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("Applied")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("AppliedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Expected")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MessageIds")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("RequestedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestedByName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppliedAt");
+
+                    b.ToTable("OutboxReplayRequests", "service");
                 });
 
             modelBuilder.Entity("Crm.Service.Domain.Alert", b =>

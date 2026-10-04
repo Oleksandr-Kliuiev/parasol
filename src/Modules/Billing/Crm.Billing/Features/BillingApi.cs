@@ -13,6 +13,20 @@ namespace Crm.Billing.Features;
 /// <summary>What integrations may do with billing: read approved bases, report the result and mirror invoices back.</summary>
 internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time) : IBillingApi
 {
+    public async Task<IReadOnlyList<Guid>> GetInvoicedTimeEntryIdsAsync(Guid basisId, CancellationToken cancellationToken)
+    {
+        if (!await db.BillingBases.AsNoTracking().AnyAsync(b => b.Id == basisId && b.Status == BillingBasisStatus.Exported, cancellationToken))
+        {
+            return [];
+        }
+
+        var refs = await db.BillingLines.AsNoTracking()
+            .Where(l => l.BasisId == basisId && l.SourceRefs != null && l.Decision != BillingLineDecision.Exclusion)
+            .Select(l => l.SourceRefs!)
+            .ToListAsync(cancellationToken);
+        return refs.SelectMany(SourceRefs.TimeEntryIds).Distinct().ToList();
+    }
+
     public async Task<IReadOnlyList<ExportBasis>> GetBasesToExportAsync(Guid? runId, CancellationToken cancellationToken)
     {
         var bases = await db.BillingBases.AsNoTracking()
@@ -274,9 +288,31 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
 
     /// <summary>
     /// The run follows its bases: exporting while any is waiting, then exported, or exported with errors while a basis failed
-    /// or waits for reconciliation (ADR-013).
+    /// or waits for reconciliation (ADR-013). Two bases of one run finishing at the same moment both update the run: the
+    /// loser of that race reads the run again and derives its status again, which is always right because the status is
+    /// derived from the bases (DEV-07; found in DEV-15). Without this the export of the second basis — already done in the
+    /// accounting system — failed afterwards and could leave the run "exporting".
     /// </summary>
     internal static async Task UpdateRunStatusAsync(BillingDbContext db, Guid runId, DateTimeOffset now, CancellationToken ct)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await DeriveRunStatusAsync(db, runId, now, ct);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < 4)
+            {
+                foreach (var entry in db.ChangeTracker.Entries<BillingRun>().Where(e => e.Entity.Id == runId).ToList())
+                {
+                    entry.State = EntityState.Detached;
+                }
+            }
+        }
+    }
+
+    private static async Task DeriveRunStatusAsync(BillingDbContext db, Guid runId, DateTimeOffset now, CancellationToken ct)
     {
         if (await db.BillingRuns.SingleOrDefaultAsync(r => r.Id == runId, ct) is not { } run || run.Status == BillingRunStatus.Closed)
         {
@@ -336,44 +372,39 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
             .ToList());
 }
 
-/// <summary>Approved hours become invoiced once their basis left the CRM (BR-BIL-08).</summary>
+/// <summary>
+/// One-time items become invoiced once their basis left the CRM (BR-BIL-08, BR-SAL-07). Its hours are marked by time
+/// tracking, which hears the same event (DEV-07: a handler changes one module only).
+/// </summary>
 internal sealed class BasisExportedHandler(
-    BillingDbContext db, ITimeTrackingApi timeTracking, TimeProvider time, ILogger<BasisExportedHandler> logger) : IDomainEventHandler<BillingBasisExported>
+    BillingDbContext db, TimeProvider time, ILogger<BasisExportedHandler> logger) : IDomainEventHandler<BillingBasisExported>
 {
     public async Task HandleAsync(BillingBasisExported domainEvent, CancellationToken cancellationToken)
     {
-        // Only what was invoiced closes its source: an excluded line leaves its hours and one-time items for a later run.
+        // Only what was invoiced closes its source: an excluded line leaves its one-time items for a later run.
         var lines = await db.BillingLines.AsNoTracking()
             .Where(l => l.BasisId == domainEvent.BasisId && l.SourceRefs != null && l.Decision != BillingLineDecision.Exclusion)
             .Select(l => l.SourceRefs!)
             .ToListAsync(cancellationToken);
         var chargeIds = lines.SelectMany(json => SourceRefs.Ids(json, "pendingChargeIds")).Distinct().ToList();
-        if (chargeIds.Count > 0)
-        {
-            // The one-time items on this basis are now invoiced and must not be collected into another run (BR-SAL-07) — also
-            // one withdrawn meanwhile (a project phase reopened), so that completing it again does not queue it a second time.
-            foreach (var charge in await db.PendingCharges.IgnoreQueryFilters().Where(c => chargeIds.Contains(c.Id)).ToListAsync(cancellationToken))
-            {
-                charge.MarkInvoiced(domainEvent.BasisId, time.GetUtcNow());
-            }
-
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        var entryIds = lines.SelectMany(SourceRefs.TimeEntryIds).Distinct().ToList();
-        if (entryIds.Count == 0)
+        if (chargeIds.Count == 0)
         {
             return;
         }
 
-        var marked = await timeTracking.MarkInvoicedAsync(entryIds, cancellationToken);
-        logger.LogInformation(
-            "Basis {BasisId} exported as {OrderNo}: {Count} time entries and {Charges} one-time items marked invoiced.",
-            domainEvent.BasisId, domainEvent.OrderNo, marked, chargeIds.Count);
+        // The one-time items on this basis are now invoiced and must not be collected into another run (BR-SAL-07) — also
+        // one withdrawn meanwhile (a project phase reopened), so that completing it again does not queue it a second time.
+        foreach (var charge in await db.PendingCharges.IgnoreQueryFilters().Where(c => chargeIds.Contains(c.Id)).ToListAsync(cancellationToken))
+        {
+            charge.MarkInvoiced(domainEvent.BasisId, time.GetUtcNow());
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Basis {BasisId} exported as {OrderNo}: {Charges} one-time items marked invoiced.",
+            domainEvent.BasisId, domainEvent.OrderNo, chargeIds.Count);
     }
 }
 
-/// <summary>Reads the ids a collected line kept about where it came from.</summary>
 internal static class SourceRefs
 {
     public static IEnumerable<Guid> TimeEntryIds(string json) => Ids(json, "timeEntryIds");

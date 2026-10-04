@@ -33,6 +33,8 @@ internal sealed class TeamsChannelSender(HttpClient http, IOptions<GraphOptions>
             logger.LogWarning(
                 "Teams channel {Channel} rejected the message with {Status}: {Body}",
                 channel, (int)response.StatusCode, body.Length > 200 ? body[..200] : body);
+            // The queue tries again later and gives up after its attempts (DEV-07); a swallowed rejection was simply lost.
+            throw new HttpRequestException($"Teams channel {channel} answered {(int)response.StatusCode}.", null, response.StatusCode);
         }
     }
 

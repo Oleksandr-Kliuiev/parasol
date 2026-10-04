@@ -23,6 +23,7 @@ public static class NotificationsModule
         services.AddScoped<INotificationsApi>(sp => sp.GetRequiredService<NotificationService>());
         services.AddScoped<NotificationScanJob>();
         services.AddScoped<NotificationDigestJob>();
+        services.AddScoped<ChannelPostJob>();
         // A mail sender comes from an integration (Microsoft Graph). Without one the digest has nowhere to go and notices
         // stay in the CRM, marked as suppressed.
         return services;

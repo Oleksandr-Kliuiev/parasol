@@ -34,6 +34,15 @@ public sealed class PendingCharge : AuditableEntity
     /// <summary>Why Finance added a correction; kept with the charge it becomes.</summary>
     public string? Reason { get; private set; }
 
+    /// <summary>
+    /// When the source event that last decided this charge happened (a project phase completed or reopened). An event that
+    /// is older — delivered late after a retry, or replayed by a person — is stale and changes nothing (DEV-07).
+    /// </summary>
+    public DateTimeOffset? SourceChangedAt { get; private set; }
+
+    /// <summary>Whether an event that happened at <paramref name="occurredAt"/> is older than what last decided the charge.</summary>
+    public bool DecidedSince(DateTimeOffset occurredAt) => SourceChangedAt is { } changed && changed >= occurredAt;
+
     public static PendingCharge Create(
         Guid organizationId,
         Guid? productId,
@@ -45,7 +54,8 @@ public sealed class PendingCharge : AuditableEntity
         string sourceType,
         Guid sourceId,
         Guid sourceLineId,
-        DateOnly chargeableFrom) => new()
+        DateOnly chargeableFrom,
+        DateTimeOffset? sourceChangedAt = null) => new()
     {
         OrganizationId = organizationId,
         ProductId = productId,
@@ -58,6 +68,7 @@ public sealed class PendingCharge : AuditableEntity
         SourceId = sourceId,
         SourceLineId = sourceLineId,
         ChargeableFrom = chargeableFrom,
+        SourceChangedAt = sourceChangedAt,
     };
 
     /// <summary>
@@ -77,13 +88,21 @@ public sealed class PendingCharge : AuditableEntity
     /// The source billable again after it was withdrawn (a project phase completed again): the same item comes back, so its
     /// charge key stays the same and the register still knows what was billed with it (ADR-013).
     /// </summary>
-    public void Requeue(Guid? productId, string description, decimal unitPrice, DateOnly chargeableFrom)
+    public void Requeue(Guid? productId, string description, decimal unitPrice, DateOnly chargeableFrom, DateTimeOffset sourceChangedAt)
     {
         Restore();
         ProductId = productId;
         Description = description;
         UnitPrice = decimal.Round(unitPrice, 2);
         ChargeableFrom = chargeableFrom;
+        SourceChangedAt = sourceChangedAt;
+    }
+
+    /// <summary>The source is no longer billable (a project phase reopened) while nothing was exported with the charge.</summary>
+    public void Withdraw(DateTimeOffset sourceChangedAt)
+    {
+        MarkDeleted();
+        SourceChangedAt = sourceChangedAt;
     }
 
     /// <summary>Called when the basis that carried the charge left for the accounting system. Idempotent.</summary>

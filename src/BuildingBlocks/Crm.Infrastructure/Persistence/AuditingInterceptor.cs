@@ -9,9 +9,11 @@ namespace Crm.Infrastructure.Persistence;
 
 /// <summary>
 /// On save: stamps audit columns, writes <see cref="AuditEntry"/> rows with a field-level diff and moves raised
-/// domain events into the module outbox — all inside the same SaveChanges transaction.
+/// domain events into the module outbox — all inside the same SaveChanges transaction. While an outbox handler runs, the
+/// first save that changes something opens the handler's transaction and adds its <see cref="InboxReceipt"/> (DEV-07).
 /// </summary>
-public sealed class AuditingInterceptor(ICurrentUser currentUser, IRequestContext requestContext, TimeProvider timeProvider)
+public sealed class AuditingInterceptor(
+    ICurrentUser currentUser, IRequestContext requestContext, TimeProvider timeProvider, MessageHandlingContext handling)
     : SaveChangesInterceptor
 {
     private static readonly HashSet<string> IgnoredProperties =
@@ -26,26 +28,39 @@ public sealed class AuditingInterceptor(ICurrentUser currentUser, IRequestContex
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
     };
 
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
         if (eventData.Context is ModuleDbContext context)
         {
+            if (handling.Handles(context) && HasChanges(context))
+            {
+                await handling.EnlistAsync(context, timeProvider.GetUtcNow(), cancellationToken);
+            }
+
             Process(context);
         }
 
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
+        return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
         if (eventData.Context is ModuleDbContext context)
         {
+            if (handling.Handles(context) && HasChanges(context))
+            {
+                handling.Enlist(context, timeProvider.GetUtcNow());
+            }
+
             Process(context);
         }
 
         return base.SavingChanges(eventData, result);
     }
+
+    private static bool HasChanges(ModuleDbContext context) =>
+        context.ChangeTracker.Entries().Any(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted);
 
     private void Process(ModuleDbContext context)
     {

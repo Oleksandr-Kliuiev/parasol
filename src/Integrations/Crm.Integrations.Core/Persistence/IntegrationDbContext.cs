@@ -144,6 +144,10 @@ public sealed class OutboundOperation
     public Guid? RequestedBy { get; init; }
     public DateTimeOffset NextAttemptAt { get; set; }
     public DateTimeOffset? LockedUntil { get; set; }
+
+    /// <summary>The token of the run holding the lease; only that run records the outcome (DEV-07).</summary>
+    public Guid? LeaseOwner { get; set; }
+
     public DateTimeOffset? CompletedAt { get; set; }
     public string? LastError { get; set; }
     public string? Result { get; set; }

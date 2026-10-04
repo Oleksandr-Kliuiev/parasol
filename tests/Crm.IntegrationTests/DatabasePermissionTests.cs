@@ -162,6 +162,18 @@ public class DatabasePermissionTests(CrmWebFactory factory)
         const string checkpoint = "INSERT INTO audit.IntegrityCheckpoints (FromId, ToId, Entries, ChainHash, CreatedAt) VALUES (-2, -1, 0, REPLICATE(N'0', 64), SYSDATETIMEOFFSET());";
         (await ErrorOfAsync(web, checkpoint)).ShouldBe(229);
         (await ErrorOfAsync(worker, "UPDATE audit.IntegrityCheckpoints SET Entries = Entries WHERE 1 = 0;")).ShouldBe(229);
+
+        // DEV-07: only the worker handles messages, so only it writes receipts; the web host files replay requests and the
+        // worker alone marks them applied — the web host can neither fake that nor take a request back.
+        const string receipt = "INSERT INTO billing.InboxReceipts (MessageId, Handler, ProcessedAt) VALUES (NEWID(), N'PermissionProbe', SYSDATETIMEOFFSET());";
+        (await ErrorOfAsync(web, receipt)).ShouldBe(229);
+        (await ErrorOfAsync(worker, receipt)).ShouldBeNull();
+        (await ErrorOfAsync(web, "DELETE FROM billing.InboxReceipts WHERE 1 = 0;")).ShouldBe(229);
+        const string request = "INSERT INTO billing.OutboxReplayRequests (Id, MessageIds, Expected, Reason, RequestedAt) VALUES (NEWID(), N'', 0, N'permission probe', SYSDATETIMEOFFSET());";
+        (await ErrorOfAsync(web, request)).ShouldBeNull();
+        (await ErrorOfAsync(web, "UPDATE billing.OutboxReplayRequests SET AppliedAt = SYSDATETIMEOFFSET() WHERE 1 = 0;")).ShouldBe(229);
+        (await ErrorOfAsync(web, "DELETE FROM billing.OutboxReplayRequests WHERE 1 = 0;")).ShouldBe(229);
+        (await ErrorOfAsync(worker, "UPDATE billing.OutboxReplayRequests SET AppliedAt = AppliedAt WHERE 1 = 0;")).ShouldBeNull();
     }
 
     [Fact]

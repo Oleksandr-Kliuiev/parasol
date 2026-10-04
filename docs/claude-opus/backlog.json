@@ -260,7 +260,7 @@
         "Q3"
       ],
       "external_gates": [],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-07.md",
       "evidence_file": "evidence/DEV-07.md",
       "acceptance_ids": [

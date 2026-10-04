@@ -87,7 +87,7 @@ flowchart LR
 - Запросы, ошибки, латентность по эндпоинтам (p50/p95/p99).
 - Состояние синхронизаций: последняя успешная, длительность, ошибки по системам.
 - Квоты: Atera (запросов/мин), Partner Center 429, PowerOffice 429.
-- Очереди: outbox, OutboundOperation (pending, dead letter), Hangfire failed jobs.
+- Очереди: outbox, OutboundOperation (pending, dead letter), Hangfire failed jobs. Outbox (DEV-07) публикует meter `Crm.Outbox`: `crm.outbox.delivered`, `crm.outbox.failed_attempts`, `crm.outbox.dead_lettered`, `crm.outbox.quarantined`, `crm.outbox.replayed` (тег `module`) и gauge `crm.outbox.backlog` (теги `module`, `status`; пересчёт раз в минуту). Алерт на dead letter/карантин > 0 и на возраст ожидающих — DEV-17; разбор — runbook 09.
 - Активные пользователи, входы, ошибки аутентификации.
 - Стоимость ресурсов (Cost Management бюджет с алертом).
 

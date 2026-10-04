@@ -570,9 +570,17 @@ internal sealed class LicensingService(
 }
 
 /// <summary>Subscriptions follow their organization into a merge.</summary>
-internal sealed class LicensingMergeHandler(LicensingDbContext db) : IDomainEventHandler<OrganizationsMerged>
+internal sealed class LicensingMergeHandler(LicensingDbContext db, ICustomersApi customers) : IDomainEventHandler<OrganizationsMerged>
 {
-    public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken) =>
+    public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken)
+    {
+        // Delivered late (retried or replayed) after the merge was undone: the organizations are apart again (DEV-07).
+        if (await customers.IsMergeUndoneAsync(domainEvent.MergeId, cancellationToken))
+        {
+            return;
+        }
+
         await db.CspSubscriptions.Where(s => s.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(s => s.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
+    }
 }

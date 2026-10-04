@@ -261,9 +261,17 @@ internal sealed class ActivityService(
 }
 
 /// <summary>Activities follow their organization into a merge.</summary>
-internal sealed class ActivitiesMergeHandler(ActivitiesDbContext db) : IDomainEventHandler<OrganizationsMerged>
+internal sealed class ActivitiesMergeHandler(ActivitiesDbContext db, ICustomersApi customers) : IDomainEventHandler<OrganizationsMerged>
 {
-    public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken) =>
+    public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken)
+    {
+        // Delivered late (retried or replayed) after the merge was undone: the organizations are apart again (DEV-07).
+        if (await customers.IsMergeUndoneAsync(domainEvent.MergeId, cancellationToken))
+        {
+            return;
+        }
+
         await db.Activities.Where(a => a.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(a => a.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
+    }
 }

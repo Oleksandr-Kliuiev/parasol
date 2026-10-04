@@ -12,7 +12,8 @@ namespace Crm.Contracts.Features;
 /// <summary>
 /// BR-SAL-07: an accepted quote becomes a draft contract with its monthly lines, at the prices the customer accepted. It
 /// stays a draft on purpose — somebody reads it, fills in what a quote does not say (notice period, SLA) and activates it.
-/// The handler is keyed by the quote, so a repeated event adds nothing.
+/// A quote drafts at most one contract, ever (DEV-07): a delivery that already happened leaves a receipt, a draft somebody
+/// deleted still counts, and a unique index on the source quote stops two workers that race.
 /// </summary>
 internal sealed class QuoteAcceptedHandler(
     ContractsDbContext db, ILogger<QuoteAcceptedHandler> logger) : IDomainEventHandler<QuoteAccepted>
@@ -28,7 +29,7 @@ internal sealed class QuoteAcceptedHandler(
             return;
         }
 
-        if (await db.Contracts.AnyAsync(c => c.SourceQuoteId == domainEvent.QuoteId, cancellationToken))
+        if (await db.Contracts.IgnoreQueryFilters().AnyAsync(c => c.SourceQuoteId == domainEvent.QuoteId, cancellationToken))
         {
             return;
         }

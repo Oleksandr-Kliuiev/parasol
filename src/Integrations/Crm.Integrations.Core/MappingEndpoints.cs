@@ -335,22 +335,64 @@ public static class MappingEndpoints
             })
             .RequirePermission(Permissions.IntegrationsManage);
 
-        group.MapPost("/outbound/{id:guid}/retry", async (Guid id, IntegrationDbContext db, TimeProvider time, CancellationToken ct) =>
+        // DEV-07: who sent an operation back or withdrew it is recorded with the change, in one transaction.
+        group.MapPost("/outbound/{id:guid}/retry", async (
+                Guid id, IntegrationDbContext db, ICurrentUser user, IRequestContext request, TimeProvider time, CancellationToken ct) =>
             {
-                var updated = await db.OutboundOperations
-                    .Where(o => o.Id == id && (o.Status == OutboundStatus.Failed || o.Status == OutboundStatus.DeadLetter))
-                    .ExecuteUpdateAsync(u => u.SetProperty(o => o.Status, OutboundStatus.Pending).SetProperty(o => o.Attempts, 0)
-                        .SetProperty(o => o.NextAttemptAt, time.GetUtcNow()).SetProperty(o => o.CompletedAt, (DateTimeOffset?)null), ct);
-                return updated > 0 ? Results.NoContent() : NotFound(id.ToString());
+                var operation = await db.OutboundOperations.SingleOrDefaultAsync(
+                    o => o.Id == id && (o.Status == OutboundStatus.Failed || o.Status == OutboundStatus.DeadLetter), ct);
+                if (operation is null)
+                {
+                    return NotFound(id.ToString());
+                }
+
+                db.RecordAudit(user, request, time, AuditActions.Replay, nameof(OutboundOperation), id, new
+                {
+                    operation.System, operation.Operation, operation.EntityId, Previous = operation.Status.ToString(), operation.Attempts, operation.LastError,
+                });
+                operation.Status = OutboundStatus.Pending;
+                operation.Attempts = 0;
+                operation.NextAttemptAt = time.GetUtcNow();
+                operation.CompletedAt = null;
+                operation.LockedUntil = null;
+                operation.LeaseOwner = null;
+                await db.SaveChangesAsync(ct);
+                return Results.NoContent();
             })
             .RequirePermission(Permissions.IntegrationsManage);
 
-        group.MapPost("/outbound/{id:guid}/cancel", async (Guid id, IntegrationDbContext db, TimeProvider time, CancellationToken ct) =>
+        group.MapPost("/outbound/{id:guid}/cancel", async (
+                Guid id, IntegrationDbContext db, ICurrentUser user, IRequestContext request, TimeProvider time, CancellationToken ct) =>
             {
-                var updated = await db.OutboundOperations
-                    .Where(o => o.Id == id && o.Status != OutboundStatus.Succeeded && o.Status != OutboundStatus.Cancelled)
-                    .ExecuteUpdateAsync(u => u.SetProperty(o => o.Status, OutboundStatus.Cancelled).SetProperty(o => o.CompletedAt, time.GetUtcNow()), ct);
-                return updated > 0 ? Results.NoContent() : NotFound(id.ToString());
+                // A run that holds the operation finishes first: withdrawing it under that run would race the send, and the
+                // run would record its own outcome over the withdrawal. The condition is part of the update itself.
+                var now = time.GetUtcNow();
+                var operation = await db.OutboundOperations.AsNoTracking().SingleOrDefaultAsync(
+                    o => o.Id == id && o.Status != OutboundStatus.Succeeded && o.Status != OutboundStatus.Cancelled, ct);
+                if (operation is null)
+                {
+                    return NotFound(id.ToString());
+                }
+
+                return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+                {
+                    await using var transaction = await db.Database.BeginTransactionAsync(ct);
+                    var cancelled = await db.OutboundOperations
+                        .Where(o => o.Id == id && o.Status == operation.Status && (o.LockedUntil == null || o.LockedUntil < now))
+                        .ExecuteUpdateAsync(u => u.SetProperty(o => o.Status, OutboundStatus.Cancelled).SetProperty(o => o.CompletedAt, now), ct);
+                    if (cancelled == 0)
+                    {
+                        return Error.Conflict("INT_OUTBOUND_RUNNING", "The operation is being sent or changed right now; reload and try again.").ToProblem();
+                    }
+
+                    db.RecordAudit(user, request, time, AuditActions.Cancel, nameof(OutboundOperation), id, new
+                    {
+                        operation.System, operation.Operation, operation.EntityId, Previous = operation.Status.ToString(), operation.Attempts,
+                    });
+                    await db.SaveChangesAsync(ct);
+                    await transaction.CommitAsync(ct);
+                    return Results.NoContent();
+                });
             })
             .RequirePermission(Permissions.IntegrationsManage);
 

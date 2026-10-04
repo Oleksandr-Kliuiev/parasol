@@ -95,7 +95,12 @@
       "BIL_CREDIT_NOT_ENABLED": "En negativ korreksjon er en kreditnota og lages i PowerOffice.",
       "BIL_INVALID_BASIS_STATUS": "Grunnlaget er ikke lenger i en tilstand som tillater dette. Last inn siden på nytt for å se hvor det står.",
       "BIL_ORDER_NO_REQUIRED": "Oppgi nummeret på ordren som ble funnet i PowerOffice.",
-      "BIL_CHARGE_INVALID_STATUS": "Belastningen er endret i mellomtiden. Last inn siden på nytt og prøv igjen."
+      "BIL_CHARGE_INVALID_STATUS": "Belastningen er endret i mellomtiden. Last inn siden på nytt og prøv igjen.",
+      "OUTBOX_REPLAY_STALE": "Listen er endret i mellomtiden: noen meldinger er allerede sendt på nytt eller levert. Se over listen og bekreft igjen.",
+      "OUTBOX_REPLAY_LIMIT": "Høyst 100 meldinger kan sendes på nytt om gangen.",
+      "OUTBOX_REPLAY_REASON": "Oppgi hvorfor meldingene sendes på nytt (minst 10 tegn).",
+      "OUTBOX_UNKNOWN_MODULE": "Meldingen hører til en modul som ikke finnes.",
+      "INT_OUTBOUND_RUNNING": "Endringen sendes akkurat nå; prøv igjen om et øyeblikk."
     }
   },
   "status": {
@@ -423,7 +428,9 @@
       "poweroffice-products": "Produkter (PowerOffice)",
       "outbound-operations": "Send endringer til andre systemer",
       "audit-integrity": "Integritetskontroll av revisjonsloggen",
-      "audit-integrity-full": "Integritetskontroll av revisjonsloggen (alle kontrollpunkter)"
+      "audit-integrity-full": "Integritetskontroll av revisjonsloggen (alle kontrollpunkter)",
+      "channel-posts": "Kort til Teams-kanaler",
+      "outbox-retention": "Rydding av leverte hendelser"
     },
     "status": {
       "Running": "Kjører",
@@ -543,6 +550,48 @@
       "create-customer": "Opprett kunde",
       "update-customer": "Oppdater kunde"
     }
+  },
+  "delivery": {
+    "title": "Levering av hendelser",
+    "description": "Hendelser én modul ikke fikk levert til en annen: etter ti mislykkede forsøk (død melding) eller fordi den lagrede meldingen ikke kan leses (karantene). Rett årsaken først, send så på nytt: den lagrede meldingen leveres uendret, og mottakere som allerede er ferdige, hoppes over.",
+    "backlog": "Ikke leverte hendelser per modul",
+    "counts": "{{module}}: {{deadLetter}} døde meldinger, {{quarantined}} i karantene, {{pending}} venter på levering",
+    "empty": "Ingenting venter på en person: ingen døde meldinger og ingen hendelser i karantene.",
+    "replaySelected": "Send valgte på nytt ({{count}})",
+    "limit": "Høyst {{max}} meldinger per gang: de første {{max}} tas med.",
+    "selectAll": "Velg alle",
+    "selectRow": "Velg {{event}} fra {{time}}",
+    "columns": {
+      "occurred": "Tidspunkt",
+      "event": "Hendelse",
+      "status": "Status",
+      "attempts": "Forsøk",
+      "handlers": "Ferdige mottakere",
+      "error": "Siste feil"
+    },
+    "fields": "felter: {{fields}}",
+    "status": {
+      "Pending": "Venter",
+      "Processing": "Leveres nå",
+      "Processed": "Levert",
+      "DeadLetter": "Død melding",
+      "Quarantined": "Karantene"
+    },
+    "replayed_one": "Sendt på nytt én gang",
+    "replayed_other": "Sendt på nytt {{count}} ganger",
+    "replay": "Send på nytt",
+    "requested": "Sending på nytt bestilt",
+    "requestedNotice_one": "{{count}} melding sendes på nytt; crm-worker leverer den i løpet av sekunder.",
+    "requestedNotice_other": "{{count}} meldinger sendes på nytt; crm-worker leverer dem i løpet av sekunder.",
+    "confirmTitle_one": "Sende {{count}} melding på nytt?",
+    "confirmTitle_other": "Sende {{count}} meldinger på nytt?",
+    "confirmBody": "Hver melding leveres slik den ble lagret. Mottakere som allerede er ferdige, hoppes over; de andre kjøres én gang. Hvem som ba om det og hvorfor, føres i revisjonsloggen.",
+    "confirmList": "Meldinger som sendes på nytt",
+    "confirmLine": "{{type}}: {{count}}",
+    "reason": "Begrunnelse",
+    "reasonHint": "Hva som ble rettet — minst {{min}} tegn. Føres i revisjonsloggen.",
+    "confirm_one": "Send {{count}} melding på nytt",
+    "confirm_other": "Send {{count}} meldinger på nytt"
   },
   "linkedSystems": {
     "title": "Koblede systemer",

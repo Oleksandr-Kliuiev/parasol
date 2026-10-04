@@ -45,6 +45,12 @@ public interface IProjectsApi
     Task<IReadOnlyList<ProjectRef>> GetProjectsAsync(Guid organizationId, bool openOnly, CancellationToken cancellationToken);
 
     Task<IReadOnlyDictionary<Guid, string>> GetProjectNamesAsync(IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether a phase is completed now; null when it no longer exists. Billing asks before acting on a phase event that may
+    /// have arrived late (a retry, a replay), so it follows the phase as it is, not as it was (DEV-07).
+    /// </summary>
+    Task<bool?> IsPhaseCompletedAsync(Guid phaseId, CancellationToken cancellationToken);
 }
 
 /// <summary>

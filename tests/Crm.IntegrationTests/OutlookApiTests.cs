@@ -2,6 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Crm.Authorization;
+using Crm.Infrastructure.Persistence;
+using Crm.Notifications.Features;
+using Crm.Sales.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using static Crm.IntegrationTests.IntegrationTestHelpers;
@@ -219,19 +224,38 @@ public class OutlookApiTests(CrmWebFactory factory)
             return id;
         }
 
-        await WinAsync($"{marker} Stor avtale", 50_000m, 10_000m);
+        var big = await WinAsync($"{marker} Stor avtale", 50_000m, 10_000m);
         await WinAsync($"{marker} Liten avtale", 5_000m, 0m);
         await factory.ProcessEventsAsync();
+        // The handler queues the card; crm-worker sends the queue every minute (DEV-07).
+        await factory.RunJobAsync<ChannelPostJob>(job => job.RunAsync(CancellationToken.None));
 
-        var cards = factory.Graph.LogEntries
+        List<string> Cards() => factory.Graph.LogEntries
             .Select(e => e.RequestMessage)
             .Where(r => r!.Path == "/teams/sales" && r.Method == "POST")
             .Select(r => r!.Body ?? string.Empty)
             .Where(body => body.Contains(marker, StringComparison.Ordinal))
             .ToList();
 
+        var cards = Cards();
         cards.Count.ShouldBe(1, "only the deal worth 170 000 NOK passes the 100 000 threshold");
         cards[0].ShouldContain("Salg vunnet");
         cards[0].ShouldContain($"{marker} Teams AS");
+
+        // The event arrives again (the worker stopped before acknowledging it): the handler's receipt keeps the card single.
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<SalesDbContext>().OutboxMessages
+                .Where(m => m.Type.Contains("OpportunityWon") && m.Payload.Contains(big.ToString()))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(m => m.Status, OutboxStatus.Processing)
+                    .SetProperty(m => m.ProcessedAt, (DateTimeOffset?)null)
+                    .SetProperty(m => m.DeliveredHandlers, (string?)null)
+                    .SetProperty(m => m.LockedUntil, DateTimeOffset.UtcNow.AddMinutes(-1)));
+        }
+
+        await factory.ProcessEventsAsync();
+        await factory.RunJobAsync<ChannelPostJob>(job => job.RunAsync(CancellationToken.None));
+        Cards().Count.ShouldBe(1);
     }
 }

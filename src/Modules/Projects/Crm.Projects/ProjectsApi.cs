@@ -1,4 +1,5 @@
 using Crm.Projects.Contracts;
+using Crm.Projects.Domain;
 using Crm.Projects.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,4 +29,13 @@ internal sealed class ProjectsApi(ProjectsDbContext db) : IProjectsApi
             : await db.Projects.AsNoTracking()
                 .Where(p => projectIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
+
+    public async Task<bool?> IsPhaseCompletedAsync(Guid phaseId, CancellationToken cancellationToken)
+    {
+        var status = await db.ProjectPhases.AsNoTracking()
+            .Where(p => p.Id == phaseId)
+            .Select(p => (ProjectPhaseStatus?)p.Status)
+            .SingleOrDefaultAsync(cancellationToken);
+        return status is null ? null : status == ProjectPhaseStatus.Completed;
+    }
 }

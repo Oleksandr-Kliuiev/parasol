@@ -1,0 +1,85 @@
+== schema from 51fbe5e8b578c6ebc6307736fb9fbdfc2af6fc3a (current sources, uncommitted changes included), previous 51fbe5e
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+== 1. the newer release migrates the database
+      Migrated NotificationsDbContext
+      Migrated IntegrationDbContext
+      Applied and verified database roles and grants for 15 schemas
+Schema|Newest
+------|------
+activities|20261004040649_OutboxDelivery
+audit|20261004040638_OutboxDelivery
+billing|20261004040651_OutboxDelivery
+catalog|20261004040643_OutboxDelivery
+contracts|20261004040644_OutboxDelivery
+customers|20261004040640_OutboxDelivery
+customfields|20261004040641_OutboxDelivery
+identity|20261004040639_OutboxDelivery
+integration|20261004040653_OutboxDelivery
+licensing|20261004040650_OutboxDelivery
+notifications|20261004040652_OutboxDelivery
+projects|20261004040648_OutboxDelivery
+sales|20261004040647_OutboxDelivery
+service|20261004040645_OutboxDelivery
+time|20261004040646_OutboxDelivery
+== 2. the previous release runs its own end-to-end suite on that schema
+Preparing worktree (detached HEAD 51fbe5e)
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+Running 54 tests using 3 workers
+  ✓   2 [desktop] › e2e/analytics.spec.ts:4:1 › a custom field is defined once and answered on the customer card (3.0s)
+  ✓   4 [desktop] › e2e/analytics.spec.ts:32:1 › the sla report measures tickets against the contract and finance sees the margins (701ms)
+  ✓   5 [desktop] › e2e/catalog-contracts.spec.ts:4:1 › finance adds a product and prices it in a price list (2.5s)
+  ✓   6 [desktop] › e2e/catalog-contracts.spec.ts:48:1 › sales sets up a contract, gives notice and warns on a low hour bank (13.8s)
+  ✓   7 [desktop] › e2e/catalog-contracts.spec.ts:126:1 › the microsoft price sheet prices a draft price list after a preview (1.6s)
+  ✓   8 [desktop] › e2e/dashboard-notifications.spec.ts:11:1 › the dashboard adds up contracts, renewals and hours (879ms)
+  ✓   9 [desktop] › e2e/dashboard-notifications.spec.ts:50:1 › a contract reminder reaches the bell and can be muted (5.1s)
+  ✓  10 [desktop] › e2e/duplicates.spec.ts:4:1 › management merges duplicates and undoes the merge (2.2s)
+  ✓  11 [desktop] › e2e/language.spec.ts:4:1 › the chosen language is saved to the profile (2.3s)
+  ✓  12 [desktop] › e2e/mappings.spec.ts:4:1 › an administrator imports a PowerOffice customer from the mapping screen (2.2s)
+  ✓  13 [desktop] › e2e/mappings.spec.ts:39:1 › the connection test is queued by crm-web and answered by crm-worker, which alone holds the PowerOffice keys (4.7s)
+  ✓  14 [desktop] › e2e/microsoft365.spec.ts:7:1 › the Microsoft 365 surfaces explain themselves when Graph is not connected (1.0s)
+  ✓  15 [desktop] › e2e/migration.spec.ts:4:1 › a migration file is previewed before the customers are created (931ms)
+  ✓  16 [desktop] › e2e/migration.spec.ts:36:1 › an integration can be paused from the admin screen during an incident (502ms)
+  ✓  17 [desktop] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (3.0s)
+  ✓  18 [desktop] › e2e/organizations.spec.ts:42:1 › the registry warns about a bankrupt company (1.1s)
+  ✓  19 [desktop] › e2e/organizations.spec.ts:49:1 › a technician can read organizations and manage contacts but not edit the organization (413ms)
+  ✓  20 [desktop] › e2e/projects.spec.ts:4:1 › a project is planned in phases and a completed phase queues its fee (5.2s)
+  ✓  21 [desktop] › e2e/projects.spec.ts:61:1 › a subsidiary can be put on the parent company invoice (956ms)
+  ✓  22 [desktop] › e2e/projects.spec.ts:83:1 › finance previews the yearly indexation before the prices change (877ms)
+  ✓   3 [desktop] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations (58.5s)
+  ✓  23 [desktop] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted @critical (6.1s)
+  ✓  24 [desktop] › e2e/a11y.spec.ts:160:1 › the app can be used with the keyboard (770ms)
+  ✓  25 [desktop] › e2e/quotes.spec.ts:62:1 › a new version starts from the old one and the old one becomes history (714ms)
+  ✓  27 [desktop] › e2e/quotes.spec.ts:89:1 › a quote template is edited by an administrator (812ms)
+  ✓  28 [desktop] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (1.1s)
+  ✓  29 [desktop] › e2e/search-and-export.spec.ts:21:1 › the organization list exports the filtered rows to Excel (777ms)
+  ✓  26 [desktop] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (3.8s)
+  ✓   1 [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (1.1m)
+  ✓  30 [desktop] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (2.3s)
+  ✓  31 [desktop] › e2e/sales-licensing.spec.ts:57:1 › a pipeline stage is renamed from the admin screen (2.1s)
+  ✓  32 [desktop] › e2e/billing.spec.ts:141:1 › a run without a PowerOffice customer reports the anomaly and can be cancelled (1.5s)
+  ✓  35 [desktop] › e2e/billing.spec.ts:183:1 › a correction survives a new collect and a line left out stays out (2.1s)
+  ✓  34 [desktop] › e2e/sales-licensing.spec.ts:80:1 › a lost deal keeps its reason and can be reopened (2.8s)
+  ✓  36 [desktop] › e2e/billing.spec.ts:240:1 › an approval belongs to the revision on screen and a change sets it aside with the reason (1.2s)
+  ✓  37 [desktop] › e2e/sales-licensing.spec.ts:106:1 › a distributor file is previewed before the subscriptions are imported (2.5s)
+  ✓  33 [desktop] › e2e/service-time.spec.ts:50:1 › the service tab offers a ticket and reports that writing to Atera is off (6.3s)
+  ✓  39 [desktop] › e2e/sales-licensing.spec.ts:160:1 › microsoft cost lines are reconciled against what the customer was billed (2.0s)
+  ✓  38 [desktop] › e2e/billing.spec.ts:289:1 › a billed and closed month gets a supplementary run that bills nothing twice (18.9s)
+  ✓  41 [mobile] › e2e/mobile.spec.ts:14:1 › pages fit a phone screen and navigation works (16.9s)
+  ✓  43 [firefox] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (3.9s)
+  ✓  44 [firefox] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted @critical (4.6s)
+  ✓  45 [firefox] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (4.2s)
+  ✓  46 [firefox] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (728ms)
+  ✓  47 [firefox] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (2.6s)
+  ✓  42 [firefox] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (25.6s)
+  ✓  49 [webkit] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (3.3s)
+  ✓  50 [webkit] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted @critical (6.4s)
+  ✓  51 [webkit] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (3.9s)
+  ✓  40 [desktop-dark] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations (56.8s)
+  ✓  52 [webkit] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (815ms)
+  ✓  53 [desktop-dark] › e2e/a11y.spec.ts:160:1 › the app can be used with the keyboard (815ms)
+  ✓  54 [webkit] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (2.3s)
+  ✓  48 [webkit] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (1.3m)
+  54 passed (3.3m)

@@ -378,6 +378,40 @@ export interface BulkResult {
   dryRun: boolean;
 }
 
+/** Where a domain event stands in its module's outbox (DEV-07). */
+export type OutboxStatus = 'Pending' | 'Processing' | 'Processed' | 'DeadLetter' | 'Quarantined';
+
+/** An undelivered domain event, without its payload: only the names of its fields (it may carry personal data). */
+export interface OutboxMessageItem {
+  id: string;
+  module: string;
+  eventType: string;
+  status: OutboxStatus;
+  occurredAt: string;
+  attempts: number;
+  replays: number;
+  nextAttemptAt: string | null;
+  deadLetteredAt: string | null;
+  lastError: string | null;
+  deliveredHandlers: string[];
+  payloadBytes: number;
+  payloadFields: string[];
+  replayRequested: boolean;
+}
+
+export interface OutboxModuleCount {
+  module: string;
+  pending: number;
+  processing: number;
+  deadLetter: number;
+  quarantined: number;
+}
+
+export interface OutboxOverview {
+  counts: OutboxModuleCount[];
+  items: OutboxMessageItem[];
+}
+
 export type OutboundStatus = 'Pending' | 'Succeeded' | 'Failed' | 'DeadLetter' | 'Cancelled';
 
 export interface OutboundOperation {

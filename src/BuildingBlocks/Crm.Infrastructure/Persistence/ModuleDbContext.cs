@@ -15,10 +15,17 @@ public abstract class ModuleDbContext(DbContextOptions options) : DbContext(opti
 
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
+    public DbSet<InboxReceipt> InboxReceipts => Set<InboxReceipt>();
+
+    public DbSet<OutboxReplayRequest> OutboxReplayRequests => Set<OutboxReplayRequest>();
+
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     /// <summary>Whether this context owns the audit table migration (only the Audit module).</summary>
     protected virtual bool OwnsAuditTable => false;
+
+    /// <summary>The audit module: its schema is insert-only for the application (DEV-04), and it raises no events of its own.</summary>
+    public bool IsAuditModule => OwnsAuditTable;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,7 +38,30 @@ public abstract class ModuleDbContext(DbContextOptions options) : DbContext(opti
             b.HasKey(x => x.Id);
             b.Property(x => x.Type).HasMaxLength(500);
             b.Property(x => x.CorrelationId).HasMaxLength(64);
+            // DEV-07: an explicit state; the default lets an older image keep inserting during a deployment.
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).HasDefaultValue(OutboxStatus.Pending).HasSentinel(OutboxStatus.Pending);
+            b.Property(x => x.DeliveredHandlers).HasMaxLength(4000);
+            b.Property(x => x.Replays).HasDefaultValue(0);
             b.HasIndex(x => new { x.ProcessedAt, x.OccurredAt });
+            b.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        });
+
+        modelBuilder.Entity<InboxReceipt>(b =>
+        {
+            b.ToTable("InboxReceipts");
+            b.HasKey(x => new { x.MessageId, x.Handler });
+            b.Property(x => x.Handler).HasMaxLength(256);
+            b.HasIndex(x => x.ProcessedAt);
+        });
+
+        modelBuilder.Entity<OutboxReplayRequest>(b =>
+        {
+            b.ToTable("OutboxReplayRequests");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.MessageIds).HasMaxLength(4000);
+            b.Property(x => x.Reason).HasMaxLength(512);
+            b.Property(x => x.RequestedByName).HasMaxLength(256);
+            b.HasIndex(x => x.AppliedAt);
         });
 
         modelBuilder.Entity<AuditEntry>(b =>

@@ -10,6 +10,9 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
 {
     public BillingDetailsMaster BillingDetailsMaster => options.Value.BillingDetailsMaster;
 
+    public Task<bool> IsMergeUndoneAsync(Guid mergeId, CancellationToken cancellationToken) =>
+        db.OrganizationMerges.AsNoTracking().AnyAsync(m => m.Id == mergeId && m.UndoneAt != null, cancellationToken);
+
     public Task<OrganizationRef?> GetOrganizationAsync(Guid organizationId, CancellationToken cancellationToken) =>
         db.Organizations.AsNoTracking()
             .Where(o => o.Id == organizationId)

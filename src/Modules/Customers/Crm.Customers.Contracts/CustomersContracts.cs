@@ -148,6 +148,12 @@ public interface ICustomersApi
 
     /// <summary>Links an existing person by e-mail or creates one, and makes them a contact of the organization.</summary>
     Task<ImportContactResult> ImportContactAsync(Guid organizationId, ExternalContactData data, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether a merge was undone. A handler of <see cref="OrganizationsMerged"/> that runs late — retried, or replayed by a
+    /// person — asks first, so a merge that is no longer in force is not applied again (DEV-07).
+    /// </summary>
+    Task<bool> IsMergeUndoneAsync(Guid mergeId, CancellationToken cancellationToken);
 }
 
 public sealed record OrganizationCreated(Guid OrganizationId, string Name, string? OrgNumber) : DomainEvent;

@@ -8,6 +8,7 @@ using Crm.Billing.Domain;
 using Crm.Billing.Features;
 using Crm.Billing.Persistence;
 using Crm.Identity.Persistence;
+using Crm.Infrastructure.Persistence;
 using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
@@ -381,41 +382,78 @@ public class BillingApprovalApiTests(CrmWebFactory factory)
         (await BasisAsync(finance, basisId)).Basis.GetProperty("status").GetString().ShouldBe("Exported");
         OrdersPosted().ShouldBe(1);
 
-        // The worker dies after dispatching but before acknowledging: the approval events are delivered a second time.
-        await using (var scope = factory.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
-            var run = runId.ToString();
-            var basis = basisId.ToString();
-            (await db.OutboxMessages
-                .Where(m => (m.Type.Contains("BillingBasisApproved") && m.Payload.Contains(basis)) || (m.Type.Contains("BillingRunApproved") && m.Payload.Contains(run)))
-                .ExecuteUpdateAsync(s => s.SetProperty(m => m.ProcessedAt, (DateTimeOffset?)null).SetProperty(m => m.LockedUntil, (DateTimeOffset?)null)))
-                .ShouldBe(2);
-        }
-
-        // The second delivery queues a second operation (the first one is done), and that operation finds nothing to send.
-        async Task<List<OutboundOperation>> OperationsAsync()
+        // The worker dies after the handlers committed but before it acknowledged: what it leaves is a message still in
+        // processing, a lease that runs out and nothing noted (DEV-07). The approval events are delivered a second time.
+        async Task<List<OutboxMessage>> ApprovalMessagesAsync()
         {
             await using var scope = factory.Services.CreateAsyncScope();
-            return await scope.ServiceProvider.GetRequiredService<IntegrationDbContext>().OutboundOperations.AsNoTracking()
-                .Where(o => o.EntityId == basisId).OrderBy(o => o.CreatedAt).ToListAsync();
+            var run = runId.ToString();
+            var basis = basisId.ToString();
+            return await scope.ServiceProvider.GetRequiredService<BillingDbContext>().OutboxMessages.AsNoTracking()
+                .Where(m => (m.Type.Contains("BillingBasisApproved") && m.Payload.Contains(basis)) || (m.Type.Contains("BillingRunApproved") && m.Payload.Contains(run)))
+                .ToListAsync();
         }
 
-        for (var attempt = 0; attempt < 10 && (await OperationsAsync()) is var current && (current.Count < 2 || current.Any(o => o.Status == OutboundStatus.Pending)); attempt++)
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var ids = (await ApprovalMessagesAsync()).Select(m => m.Id).ToList();
+            ids.Count.ShouldBe(2);
+            await scope.ServiceProvider.GetRequiredService<BillingDbContext>().OutboxMessages.Where(m => ids.Contains(m.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(m => m.Status, OutboxStatus.Processing)
+                    .SetProperty(m => m.ProcessedAt, (DateTimeOffset?)null)
+                    .SetProperty(m => m.DeliveredHandlers, (string?)null)
+                    .SetProperty(m => m.LeaseOwner, Guid.NewGuid())
+                    .SetProperty(m => m.LockedUntil, DateTimeOffset.UtcNow.AddMinutes(-1)));
+        }
+
+        for (var attempt = 0; attempt < 10 && (await ApprovalMessagesAsync()).Any(m => m.Status != OutboxStatus.Processed); attempt++)
         {
             await factory.ProcessEventsAndOutboundAsync();
             await Task.Delay(100);
         }
 
-        var operations = await OperationsAsync();
-        operations.Count.ShouldBe(2);
-        operations.ShouldAllBe(o => o.Status == OutboundStatus.Succeeded);
-        operations[1].Result.ShouldBe("No changes to push.");
+        // Each handler finds its receipt: the second delivery queues no second operation, and no second order goes out.
+        (await ApprovalMessagesAsync()).ShouldAllBe(m => m.Status == OutboxStatus.Processed);
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            (await scope.ServiceProvider.GetRequiredService<IntegrationDbContext>().OutboundOperations.AsNoTracking()
+                    .Where(o => o.EntityId == basisId).ToListAsync())
+                .ShouldHaveSingleItem().Status.ShouldBe(OutboundStatus.Succeeded);
+        }
 
         OrdersPosted().ShouldBe(1);
         var exported = (await BasisAsync(finance, basisId)).Basis;
         exported.GetProperty("orderNo").GetString().ShouldBe("9801");
         exported.GetProperty("attempts").EnumerateArray().Count(a => a.GetProperty("result").GetString() == "Exported").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Two_bases_finishing_at_once_both_get_the_run_status_right_although_their_updates_collide()
+    {
+        var admin = factory.ClientAs(CrmRoles.Admin, userKey: "approval-admin");
+        var finance = factory.ClientAs(CrmRoles.Finance, userKey: "approval-finance");
+        var period = new DateOnly(2031, 12, 1);
+        var customer = await CustomerAsync(admin, finance, "R", period, 4_000m);
+        var runId = await CollectedRunAsync(finance, period, customer.Marker);
+        (await finance.RunCommandAsync(runId, "approve")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // This worker read the run; another basis of the same run updated it in between (DEV-07, found in DEV-15). The later
+        // writer reads the run again instead of failing after its export already happened.
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
+        (await db.BillingRuns.SingleAsync(r => r.Id == runId)).Status.ShouldBe(BillingRunStatus.Approved);
+        await using (var other = factory.Services.CreateAsyncScope())
+        {
+            (await other.ServiceProvider.GetRequiredService<BillingDbContext>().BillingRuns.Where(r => r.Id == runId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.ModifiedAt, DateTimeOffset.UtcNow))).ShouldBe(1);
+        }
+
+        await BillingApi.UpdateRunStatusAsync(db, runId, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        await using var check = factory.Services.CreateAsyncScope();
+        (await check.ServiceProvider.GetRequiredService<BillingDbContext>().BillingRuns.AsNoTracking().SingleAsync(r => r.Id == runId))
+            .Status.ShouldBe(BillingRunStatus.Exporting);
     }
 
     [Fact]

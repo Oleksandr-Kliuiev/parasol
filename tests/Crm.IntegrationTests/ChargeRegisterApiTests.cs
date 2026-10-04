@@ -461,14 +461,18 @@ public class ChargeRegisterApiTests(CrmWebFactory factory)
         OrdersPosted(customer).ShouldBe(1);
 
         // The database comes back from a backup taken before the send was recorded: the basis waits to be sent, its charge is
-        // committed, the approval event was never delivered and no outbound operation exists. PowerOffice has the order. The
-        // application cannot write that state (DEV-04); the restore is the administrator's.
+        // committed, the approval event was never delivered (no receipt of its handler either, DEV-07) and no outbound
+        // operation exists. PowerOffice has the order. The application cannot write that state (DEV-04); the restore is the
+        // administrator's.
         var reference = await ReferenceAsync(basisId);
         await factory.AdminSqlWithoutBillingTriggersAsync($"""
             UPDATE billing.BillingBases SET Status = N'Approved', OrderNo = NULL, ExportedAt = NULL, SendStartedAt = NULL WHERE Id = {basisId};
             DELETE FROM billing.BillingExportAttempts WHERE BasisId = {basisId};
             UPDATE billing.Charges SET Status = N'Committed' WHERE BasisId = {basisId};
-            UPDATE billing.OutboxMessages SET ProcessedAt = NULL, LockedUntil = NULL
+            DELETE r FROM integration.InboxReceipts r JOIN billing.OutboxMessages m ON m.Id = r.MessageId
+            WHERE m.Type LIKE N'%BillingBasisApproved%' AND m.Payload LIKE {"%" + basisId + "%"};
+            UPDATE billing.OutboxMessages SET Status = N'Pending', ProcessedAt = NULL, LockedUntil = NULL, LeaseOwner = NULL,
+                DeliveredHandlers = NULL, Attempts = 0, NextAttemptAt = NULL
             WHERE Type LIKE N'%BillingBasisApproved%' AND Payload LIKE {"%" + basisId + "%"};
             DELETE FROM integration.OutboundOperations WHERE EntityId = {basisId};
             """);

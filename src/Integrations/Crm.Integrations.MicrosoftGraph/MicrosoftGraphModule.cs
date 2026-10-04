@@ -8,6 +8,7 @@ using Crm.Sales.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
 namespace Crm.Integrations.MicrosoftGraph;
@@ -80,8 +81,10 @@ public static class MicrosoftGraphModule
         services.AddScoped<IDocumentLibrary>(sp => sp.GetRequiredService<GraphDocuments>());
         services.AddScoped<IDomainEventHandler<Crm.Customers.Contracts.OrganizationCreated>, OrganizationFolderHandler>();
         services.AddScoped<IDomainEventHandler<Crm.Customers.Contracts.OrganizationUpdated>, OrganizationFolderHandler>();
+        // One attempt of the channel queue is one POST: a webhook has no idempotency key, and an automatic retry of a POST
+        // that timed out after Teams took it would post the card twice (DEV-07). The queue retries later instead.
         services.AddHttpClient<ITeamsChannelSender, TeamsChannelSender>(client => client.Timeout = TimeSpan.FromSeconds(15))
-            .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
 
         services.AddScoped<EntraUserSyncJob>();
         return services;

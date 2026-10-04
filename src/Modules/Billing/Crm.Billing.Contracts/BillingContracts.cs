@@ -136,6 +136,13 @@ public interface IBillingApi
     /// </summary>
     Task MarkReconciliationRequiredAsync(Guid basisId, string system, string message, string? correlationId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The time entries an exported basis invoiced: those on its lines that were not excluded (BR-BIL-08). Empty while the
+    /// basis is not exported. Time tracking marks them when it hears <see cref="BillingBasisExported"/>, in its own module
+    /// (DEV-07: a handler changes one module only).
+    /// </summary>
+    Task<IReadOnlyList<Guid>> GetInvoicedTimeEntryIdsAsync(Guid basisId, CancellationToken cancellationToken);
+
     /// <summary>Inserts or updates invoices and their outstanding amounts (BR-BIL-08).</summary>
     Task<InvoiceSyncResult> UpsertInvoicesAsync(IReadOnlyCollection<ExternalInvoice> invoices, CancellationToken cancellationToken);
 

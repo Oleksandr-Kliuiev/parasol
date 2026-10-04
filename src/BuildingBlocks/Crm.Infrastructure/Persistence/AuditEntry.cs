@@ -10,6 +10,12 @@ public static class AuditActions
     public const string Merge = "Merge";
     public const string TriggerJob = "TriggerJob";
 
+    /// <summary>A person sent dead or quarantined outbox messages (or a failed outbound operation) back for delivery (DEV-07).</summary>
+    public const string Replay = "Replay";
+
+    /// <summary>A person withdrew a queued outbound operation (DEV-07).</summary>
+    public const string Cancel = "Cancel";
+
     /// <summary>The retention procedure removed the personal part of older entries (DEV-04, written by audit.ApplyRetention).</summary>
     public const string Retention = "Retention";
 }

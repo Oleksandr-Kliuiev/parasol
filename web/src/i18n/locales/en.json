@@ -95,7 +95,12 @@
       "BIL_CREDIT_NOT_ENABLED": "A negative correction is a credit note and is made in PowerOffice.",
       "BIL_INVALID_BASIS_STATUS": "The basis is no longer in a state that allows this. Reload the page to see where it stands.",
       "BIL_ORDER_NO_REQUIRED": "Give the number of the order found in PowerOffice.",
-      "BIL_CHARGE_INVALID_STATUS": "The charge has changed meanwhile. Reload the page and try again."
+      "BIL_CHARGE_INVALID_STATUS": "The charge has changed meanwhile. Reload the page and try again.",
+      "OUTBOX_REPLAY_STALE": "The list changed meanwhile: some messages were replayed or delivered already. Check the list and confirm again.",
+      "OUTBOX_REPLAY_LIMIT": "At most 100 messages can be replayed at a time.",
+      "OUTBOX_REPLAY_REASON": "Say why the messages are replayed (at least 10 characters).",
+      "OUTBOX_UNKNOWN_MODULE": "The message belongs to a module that does not exist.",
+      "INT_OUTBOUND_RUNNING": "The change is being sent right now; try again in a moment."
     }
   },
   "status": {
@@ -423,7 +428,9 @@
       "poweroffice-products": "Products (PowerOffice)",
       "outbound-operations": "Send changes to other systems",
       "audit-integrity": "Audit trail integrity check",
-      "audit-integrity-full": "Audit trail integrity check (all checkpoints)"
+      "audit-integrity-full": "Audit trail integrity check (all checkpoints)",
+      "channel-posts": "Teams channel cards",
+      "outbox-retention": "Clean up delivered events"
     },
     "status": {
       "Running": "Running",
@@ -543,6 +550,48 @@
       "create-customer": "Create customer",
       "update-customer": "Update customer"
     }
+  },
+  "delivery": {
+    "title": "Event delivery",
+    "description": "Events one module could not deliver to another: after ten failed attempts (dead letter) or because the stored message cannot be read (quarantine). Fix the cause first, then replay: the stored message is delivered unchanged, and handlers that already finished are skipped.",
+    "backlog": "Undelivered events per module",
+    "counts": "{{module}}: {{deadLetter}} dead letters, {{quarantined}} quarantined, {{pending}} waiting for delivery",
+    "empty": "Nothing waits for a person: no dead letters and no quarantined events.",
+    "replaySelected": "Replay selected ({{count}})",
+    "limit": "At most {{max}} messages per replay: the first {{max}} are taken.",
+    "selectAll": "Select all",
+    "selectRow": "Select {{event}} from {{time}}",
+    "columns": {
+      "occurred": "Occurred",
+      "event": "Event",
+      "status": "Status",
+      "attempts": "Attempts",
+      "handlers": "Handlers done",
+      "error": "Last error"
+    },
+    "fields": "fields: {{fields}}",
+    "status": {
+      "Pending": "Waiting",
+      "Processing": "Being delivered",
+      "Processed": "Delivered",
+      "DeadLetter": "Dead letter",
+      "Quarantined": "Quarantined"
+    },
+    "replayed_one": "Replayed once",
+    "replayed_other": "Replayed {{count}} times",
+    "replay": "Replay",
+    "requested": "Replay requested",
+    "requestedNotice_one": "Replay of {{count}} message requested; crm-worker delivers it within seconds.",
+    "requestedNotice_other": "Replay of {{count}} messages requested; crm-worker delivers them within seconds.",
+    "confirmTitle_one": "Replay {{count}} message?",
+    "confirmTitle_other": "Replay {{count}} messages?",
+    "confirmBody": "Each message is delivered as it was stored. Handlers that already finished are skipped; the others run once. Who asked and why is recorded in the audit log.",
+    "confirmList": "Messages to replay",
+    "confirmLine": "{{type}}: {{count}}",
+    "reason": "Reason",
+    "reasonHint": "What was fixed — at least {{min}} characters. Recorded in the audit log.",
+    "confirm_one": "Replay {{count}} message",
+    "confirm_other": "Replay {{count}} messages"
   },
   "linkedSystems": {
     "title": "Linked systems",

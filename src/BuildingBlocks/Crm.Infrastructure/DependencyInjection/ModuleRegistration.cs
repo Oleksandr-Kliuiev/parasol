@@ -36,14 +36,17 @@ public static class ModuleRegistration
     {
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddScoped<IRequestContext, NullRequestContext>();
+        services.TryAddScoped<MessageHandlingContext>();
         services.TryAddScoped<AuditingInterceptor>();
         services.TryAddSingleton(new ModuleDbContextRegistry());
         services.TryAddSingleton<OutboxEventTypeResolver>();
+        services.TryAddScoped<OutboxRetentionJob>();
         // The loop monitor and its settings exist in every host, so the outbox can be worked anywhere (tests, tools).
         if (services.All(d => d.ServiceType != typeof(ProcessingLoopMonitor)))
         {
             services.AddSingleton<ProcessingLoopMonitor>();
             services.AddOptions<ProcessingHealthOptions>().BindConfiguration(ProcessingHealthOptions.SectionName);
+            services.AddOptions<OutboxOptions>().BindConfiguration(OutboxOptions.SectionName);
         }
 
         return services;

@@ -9,6 +9,7 @@ import type {
   IntegrationCapability,
   IntegrationStatus,
   OutboundOperation,
+  OutboxOverview,
   RecordPage,
 } from '../../api/types';
 
@@ -96,6 +97,23 @@ export function useOutbound(enabled = true) {
   });
 }
 
+/** Dead and quarantined domain events of every module, for the delivery panel (DEV-07). */
+export function useOutbox(enabled = true) {
+  return useQuery({
+    queryKey: ['integrations', 'outbox'],
+    enabled,
+    refetchInterval: 15_000,
+    queryFn: async ({ signal }) => (await api.get<OutboxOverview>(`${BASE}/outbox`, signal)).data,
+  });
+}
+
+export interface ReplayRequest {
+  messages: { module: string; id: string }[];
+  reason: string;
+  /** How many messages the person confirmed; the server refuses when that is no longer what can be replayed. */
+  expected: number;
+}
+
 export function useIntegrationActions() {
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: ['integrations'] });
@@ -136,5 +154,11 @@ export function useIntegrationActions() {
     }),
     retry: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/retry`), onSuccess }),
     cancel: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/cancel`), onSuccess }),
+    replay: useMutation({
+      mutationFn: async (request: ReplayRequest) =>
+        (await api.post<{ requested: number; modules: string[] }>(`${BASE}/outbox/replay`, request)).data,
+      // A refused replay (the list changed meanwhile) also reloads the list, so the person confirms what is there now.
+      onSettled: () => void refresh(),
+    }),
   };
 }

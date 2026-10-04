@@ -193,12 +193,19 @@ internal sealed class HourBankLowHandler(ContractsDbContext db, ICustomersApi cu
 }
 
 /// <summary>Contracts, hour banks and reminders follow an organization into a merge and back on undo.</summary>
-internal sealed class OrganizationMergeHandler(ContractsDbContext db) :
+internal sealed class OrganizationMergeHandler(ContractsDbContext db, ICustomersApi customers) :
     IDomainEventHandler<OrganizationsMerged>,
     IDomainEventHandler<OrganizationMergeUndone>
 {
     public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken)
     {
+        // A merge delivered after its undo (retried, or replayed by a person) would move everything again and stay moved:
+        // the undo already ran and found nothing to move back (DEV-07).
+        if (await customers.IsMergeUndoneAsync(domainEvent.MergeId, cancellationToken))
+        {
+            return;
+        }
+
         foreach (var contract in await db.Contracts.Where(c => c.OrganizationId == domainEvent.SourceOrganizationId).ToListAsync(cancellationToken))
         {
             contract.MoveToOrganization(domainEvent.TargetOrganizationId, domainEvent.MergeId);

@@ -28,6 +28,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { NotFoundPage } from '../errors/NotFoundPage';
+import { DeliveryPanel } from '../integrations/DeliveryPanel';
 import { OutboundPanel, SystemsPanel } from '../integrations/SystemsPanels';
 
 const useStyles = makeStyles({
@@ -132,6 +133,7 @@ export function IntegrationsPage() {
           )}
         </Panel>
 
+        <DeliveryPanel />
         <OutboundPanel />
         <Panel title={t('integrations.runs')}>
           {runs.error ? (

@@ -101,6 +101,10 @@ jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditI
 jobs.AddOrUpdate<QuoteExpiryJob>(QuoteExpiryJob.JobId, job => job.RunAsync(CancellationToken.None), "0 6 * * *", new RecurringJobOptions { TimeZone = oslo });
 
 jobs.AddOrUpdate<OutboundProcessorJob>(OutboundProcessorJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
+// DEV-07: queued channel cards are sent apart from the events that queued them; delivered outbox rows and old receipts expire.
+jobs.AddOrUpdate<ChannelPostJob>(ChannelPostJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
+jobs.AddOrUpdate<Crm.Infrastructure.Outbox.OutboxRetentionJob>(
+    Crm.Infrastructure.Outbox.OutboxRetentionJob.JobId, job => job.RunAsync(CancellationToken.None), "15 3 * * *", new RecurringJobOptions { TimeZone = oslo });
 // The job server's heartbeat: if jobs stop being executed, this ages (DEV-06).
 jobs.AddOrUpdate<WorkerHeartbeatJob>(WorkerHeartbeatJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
 

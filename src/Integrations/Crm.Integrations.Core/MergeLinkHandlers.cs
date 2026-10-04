@@ -9,12 +9,18 @@ namespace Crm.Integrations.Core;
 /// Keeps external links pointing at the surviving organization after a merge. If the target already has a link for the
 /// same system and type, the source's link stays on the (now hidden) source and shows up for manual review.
 /// </summary>
-internal sealed class OrganizationsMergedLinkHandler(IntegrationDbContext db) :
+internal sealed class OrganizationsMergedLinkHandler(IntegrationDbContext db, ICustomersApi customers) :
     IDomainEventHandler<OrganizationsMerged>,
     IDomainEventHandler<OrganizationMergeUndone>
 {
     public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken)
     {
+        // Delivered after the undo (retried or replayed): the links stay where the undo left them (DEV-07).
+        if (await customers.IsMergeUndoneAsync(domainEvent.MergeId, cancellationToken))
+        {
+            return;
+        }
+
         var sourceLinks = await db.ExternalLinks
             .Where(l => l.EntityType == EntityTypes.Organization && l.EntityId == domainEvent.SourceOrganizationId)
             .ToListAsync(cancellationToken);

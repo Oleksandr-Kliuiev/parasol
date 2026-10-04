@@ -189,10 +189,17 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
 }
 
 /// <summary>Tickets, devices and alerts follow an organization into a merge. The mirror is rebuilt by the next sync, so an undo needs nothing.</summary>
-internal sealed class ServiceMergeHandler(ServiceDbContext db) : IDomainEventHandler<OrganizationsMerged>
+internal sealed class ServiceMergeHandler(ServiceDbContext db, ICustomersApi customers) : IDomainEventHandler<OrganizationsMerged>
 {
     public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken)
     {
+        // Delivered late (retried or replayed) after the merge was undone: the organizations are apart again (DEV-07). The
+        // four updates commit together with the handler's receipt (DEV-07).
+        if (await customers.IsMergeUndoneAsync(domainEvent.MergeId, cancellationToken))
+        {
+            return;
+        }
+
         await db.Tickets.Where(t => t.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(t => t.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
         await db.Devices.Where(d => d.OrganizationId == domainEvent.SourceOrganizationId)

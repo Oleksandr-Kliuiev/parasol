@@ -14,6 +14,8 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
 
     public DbSet<NotificationPreference> Preferences => Set<NotificationPreference>();
 
+    public DbSet<ChannelPost> ChannelPosts => Set<ChannelPost>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Notification>(b =>
@@ -30,6 +32,19 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
             b.HasIndex(x => new { x.RecipientId, x.ReadAt });
             b.HasIndex(x => x.EmailStatus);
             b.Ignore(x => x.Parameters);
+        });
+
+        modelBuilder.Entity<ChannelPost>(b =>
+        {
+            b.ToTable("ChannelPosts");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Channel).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.CardJson).HasMaxLength(8000);
+            b.Property(x => x.LastError).HasMaxLength(512);
+            b.Ignore(x => x.Card);
+            b.HasIndex(x => new { x.Status, x.NextAttemptAt });
         });
 
         modelBuilder.Entity<NotificationPreference>(b =>

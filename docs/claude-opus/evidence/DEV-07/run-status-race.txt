@@ -1,0 +1,9 @@
+Run status race (found in DEV-15, closed in DEV-07): BillingApprovalApiTests.Two_bases_finishing_at_once_both_get_the_run_status_right_although_their_updates_collide
+A worker holds a tracked BillingRun; another basis of the same run updates the run meanwhile (RowVersion changes); then the first worker derives the run status.
+
+== Without the retry (catch disabled temporarily, 2026-10-04):
+      Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException : The database operation was expected to affect 1 row(s), but actually affected 0 row(s); data may have been modified or deleted since entities were loaded. See https://go.microsoft.com/fwlink/?LinkId=527962 for information on understanding and handling optimistic concurrency exceptions.
+   Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,461s
+
+== With the retry (BillingApi.UpdateRunStatusAsync re-reads and derives again):
+   Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 11,730s

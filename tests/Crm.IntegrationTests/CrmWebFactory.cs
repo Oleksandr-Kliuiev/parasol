@@ -69,6 +69,8 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
     public RecordingEventHandler Events { get; } = new();
 
+    public DeliveryProbes Probes { get; } = new();
+
     public async ValueTask InitializeAsync()
     {
         await _sql.StartAsync();
@@ -205,6 +207,8 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
             ["Notifications:AppBaseUrl"] = "https://crm.test.local",
             // The integrity tests chain what they just wrote; the settle time has its own test.
             ["Audit:Integrity:SettleTime"] = "00:00:00",
+            // A failed delivery is due again at once, so a test's next drain retries it; the delays have their own test.
+            ["Outbox:RetryBaseDelay"] = "00:00:00",
         };
         foreach (var (key, value) in settings)
         {
@@ -229,6 +233,11 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
             services.AddScoped<Crm.Integrations.MicrosoftGraph.IDelegatedTokenSource, FakeDelegatedTokenSource>();
             services.AddSingleton(Events);
             services.AddScoped<IDomainEventHandler<OrganizationCreated>>(sp => sp.GetRequiredService<RecordingEventHandler>());
+            // DEV-07: an event with two handlers whose failures and pauses the delivery tests switch on.
+            services.AddSingleton(Probes);
+            services.AddScoped<IDomainEventHandler<DeliveryProbe>, DeliveryProbeHandlerA>();
+            services.AddScoped<IDomainEventHandler<DeliveryProbe>, DeliveryProbeHandlerB>();
+            services.AddScoped<IDomainEventHandler<CrossModuleProbe>, CrossModuleProbeHandler>();
         });
     }
 

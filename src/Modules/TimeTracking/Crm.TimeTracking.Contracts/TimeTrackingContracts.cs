@@ -86,9 +86,6 @@ public interface ITimeTrackingApi
     /// <summary>Approved allocations with a work date in the period, including the covered and hour-bank ones billing shows for information.</summary>
     Task<IReadOnlyList<BillableTime>> GetBillableTimeAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);
 
-    /// <summary>Marks the entries invoiced once their basis is exported (BR-BIL-08). Entries already invoiced are left alone.</summary>
-    Task<int> MarkInvoicedAsync(IReadOnlyCollection<Guid> entryIds, CancellationToken cancellationToken);
-
     /// <summary>Hours per technician for a month, busiest first; entries still waiting for approval count as non-billable.</summary>
     Task<IReadOnlyList<TechnicianUtilization>> GetUtilizationAsync(int year, int month, CancellationToken cancellationToken);
 

@@ -446,10 +446,16 @@ internal sealed class SalesService(
 }
 
 /// <summary>Deals follow their organization into a merge.</summary>
-internal sealed class SalesMergeHandler(SalesDbContext db) : IDomainEventHandler<OrganizationsMerged>
+internal sealed class SalesMergeHandler(SalesDbContext db, ICustomersApi customers) : IDomainEventHandler<OrganizationsMerged>
 {
     public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken)
     {
+        // Delivered late (retried or replayed) after the merge was undone: the organizations are apart again (DEV-07).
+        if (await customers.IsMergeUndoneAsync(domainEvent.MergeId, cancellationToken))
+        {
+            return;
+        }
+
         await db.Opportunities.Where(o => o.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(o => o.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
         await db.Leads.Where(l => l.OrganizationId == domainEvent.SourceOrganizationId)

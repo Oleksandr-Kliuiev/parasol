@@ -1,8 +1,10 @@
+using Crm.Billing.Contracts;
 using Crm.Identity.Contracts;
 using Crm.TimeTracking.Contracts;
 using Crm.TimeTracking.Domain;
 using Crm.TimeTracking.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Crm.TimeTracking.Features;
 
@@ -205,14 +207,23 @@ internal sealed class TimeImportService(TimeTrackingDbContext db, TimeApprovalSe
             .ToList();
     }
 
-    public async Task<int> MarkInvoicedAsync(IReadOnlyCollection<Guid> entryIds, CancellationToken cancellationToken)
+}
+
+/// <summary>
+/// Approved hours become invoiced once their basis left the CRM (BR-BIL-08); from then on corrections go into a later
+/// period. Billing names the entries; this module changes them, in its own transaction with its receipt (DEV-07).
+/// </summary>
+internal sealed class BasisExportedHandler(TimeTrackingDbContext db, IBillingApi billing, ILogger<BasisExportedHandler> logger)
+    : Crm.SharedKernel.Domain.IDomainEventHandler<BillingBasisExported>
+{
+    public async Task HandleAsync(BillingBasisExported domainEvent, CancellationToken cancellationToken)
     {
-        if (entryIds.Count == 0)
+        var ids = await billing.GetInvoicedTimeEntryIdsAsync(domainEvent.BasisId, cancellationToken);
+        if (ids.Count == 0)
         {
-            return 0;
+            return;
         }
 
-        var ids = entryIds.Distinct().ToList();
         var entries = await db.TimeEntries.Where(e => ids.Contains(e.Id) && e.Status == TimeEntryStatus.Approved).ToListAsync(cancellationToken);
         foreach (var entry in entries)
         {
@@ -220,7 +231,7 @@ internal sealed class TimeImportService(TimeTrackingDbContext db, TimeApprovalSe
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return entries.Count;
+        logger.LogInformation("Basis {BasisId} exported as {OrderNo}: {Count} time entries marked invoiced.", domainEvent.BasisId, domainEvent.OrderNo, entries.Count);
     }
 }
 

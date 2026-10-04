@@ -58,7 +58,8 @@ public sealed class ContractsDbContext(DbContextOptions<ContractsDbContext> opti
             b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
             b.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
             b.HasIndex(x => x.Number).IsUnique();
-            b.HasIndex(x => x.SourceQuoteId);
+            // DEV-07: one contract per accepted quote, deleted drafts included.
+            b.HasIndex(x => x.SourceQuoteId).IsUnique().HasFilter("[SourceQuoteId] IS NOT NULL");
             b.HasIndex(x => new { x.OrganizationId, x.Status });
             b.HasIndex(x => new { x.Status, x.EndDate });
             b.HasIndex(x => x.OwnerId);
