@@ -191,10 +191,12 @@ resource web 'Microsoft.App/containerApps@2024-10-02-preview' = {
           image: webImage
           resources: { cpu: json('0.5'), memory: '1Gi' }
           env: concat(webEnv, integrationSwitches)
+          // DEV-06: live is the process alone (a database outage must not restart every replica); ready is the database and
+          // its schema, answered within 4 s, so the probe gets 5 s.
           probes: bootstrapImages ? [] : [
-            { type: 'Liveness', httpGet: { path: '/health/live', port: 8080 }, periodSeconds: 30 }
-            { type: 'Readiness', httpGet: { path: '/health/ready', port: 8080 }, periodSeconds: 10 }
-            { type: 'Startup', httpGet: { path: '/health/live', port: 8080 }, failureThreshold: 30, periodSeconds: 5 }
+            { type: 'Liveness', httpGet: { path: '/health/live', port: 8080 }, periodSeconds: 30, timeoutSeconds: 2 }
+            { type: 'Readiness', httpGet: { path: '/health/ready', port: 8080 }, periodSeconds: 10, timeoutSeconds: 5 }
+            { type: 'Startup', httpGet: { path: '/health/live', port: 8080 }, failureThreshold: 30, periodSeconds: 5, timeoutSeconds: 2 }
           ]
         }
       ]
@@ -231,6 +233,13 @@ resource worker 'Microsoft.App/containerApps@2024-10-02-preview' = {
           image: workerImage
           resources: { cpu: json('1'), memory: '2Gi' }
           env: concat(workerEnv, integrationSwitches, integrationKeys)
+          // DEV-06: live fails when the outbox loop stops finishing rounds (the platform restarts the worker); ready is the
+          // database, so a new revision that cannot reach it never replaces a working one.
+          probes: bootstrapImages ? [] : [
+            { type: 'Liveness', httpGet: { path: '/health/live', port: 8080 }, periodSeconds: 30, timeoutSeconds: 2, failureThreshold: 3 }
+            { type: 'Readiness', httpGet: { path: '/health/ready', port: 8080 }, periodSeconds: 30, timeoutSeconds: 5 }
+            { type: 'Startup', httpGet: { path: '/health/live', port: 8080 }, failureThreshold: 30, periodSeconds: 5, timeoutSeconds: 2 }
+          ]
         }
       ]
       scale: { minReplicas: 1, maxReplicas: 1 }

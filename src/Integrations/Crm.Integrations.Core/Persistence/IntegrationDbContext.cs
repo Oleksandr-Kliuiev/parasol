@@ -167,6 +167,8 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
 
     public DbSet<OutboundOperation> OutboundOperations => Set<OutboundOperation>();
 
+    public DbSet<WorkerHeartbeat> WorkerHeartbeats => Set<WorkerHeartbeat>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SyncRun>(b =>
@@ -178,6 +180,15 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.Message).HasMaxLength(4000);
             b.HasIndex(x => new { x.System, x.Job, x.StartedAt });
+        });
+
+        modelBuilder.Entity<WorkerHeartbeat>(b =>
+        {
+            b.ToTable("WorkerHeartbeats");
+            b.HasKey(x => new { x.Component, x.Instance });
+            b.Property(x => x.Component).HasMaxLength(32);
+            b.Property(x => x.Instance).HasMaxLength(128);
+            b.Property(x => x.Detail).HasMaxLength(256);
         });
 
         modelBuilder.Entity<IntegrationSwitch>(b =>

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Crm.Infrastructure.Health;
 using Crm.Infrastructure.Outbox;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Application;
@@ -38,6 +39,13 @@ public static class ModuleRegistration
         services.TryAddScoped<AuditingInterceptor>();
         services.TryAddSingleton(new ModuleDbContextRegistry());
         services.TryAddSingleton<OutboxEventTypeResolver>();
+        // The loop monitor and its settings exist in every host, so the outbox can be worked anywhere (tests, tools).
+        if (services.All(d => d.ServiceType != typeof(ProcessingLoopMonitor)))
+        {
+            services.AddSingleton<ProcessingLoopMonitor>();
+            services.AddOptions<ProcessingHealthOptions>().BindConfiguration(ProcessingHealthOptions.SectionName);
+        }
+
         return services;
     }
 

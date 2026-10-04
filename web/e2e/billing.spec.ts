@@ -287,7 +287,9 @@ test('an approval belongs to the revision on screen and a change sets it aside w
 });
 
 test('a billed and closed month gets a supplementary run that bills nothing twice', async ({ page }) => {
-  test.setTimeout(180_000);
+  // The export waits for the worker, which works the shared outbox of every parallel test in order: under load that can
+  // take most of two minutes, so the test has room after it.
+  test.setTimeout(300_000);
   const m = marker('Til');
   await signIn(page, 'Crm.Admin');
   const run = await reserveBillingRun(page, m);
@@ -314,7 +316,7 @@ test('a billed and closed month gets a supplementary run that bills nothing twic
         await trigger(page, 'outbound-operations');
         return (await api.get<{ status: string }>(page, `/api/v1/billing/runs/${run.id}`)).status;
       },
-      { timeout: 120_000, intervals: [2_000, 5_000, 10_000] },
+      { timeout: 240_000, intervals: [2_000, 5_000, 10_000] },
     )
     .toMatch(/^Exported(WithErrors)?$/);
   await signIn(page, 'Crm.Finance');

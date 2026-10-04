@@ -1,0 +1,28 @@
+== schema from 500546d54106012ed1759481dca392c25a6df44c (current sources, uncommitted changes included), previous 500546d
+== 1. the newer release migrates the database
+Schema|Newest
+------|------
+activities|20260921212126_OutlookActivities
+audit|20261004011342_AppendOnlyAudit
+billing|20261004011343_ProtectApprovedBilling
+catalog|20260915191718_Initial
+contracts|20260916183501_ContractSourceQuote
+customers|20260922073130_OrganizationGroup
+customfields|20260922105418_Initial
+identity|20260915205432_TechnicianMappings
+integration|20261004030441_WorkerHeartbeats
+licensing|20260922054410_LicenseUsageAndBilling
+notifications|20260916150925_Initial
+projects|20260922073201_Initial
+sales|20260916184621_Quotes
+service|20260915231817_Initial
+time|20260922073132_TimeEntryProject
+== 2. the previous release runs its own end-to-end suite on that schema
+  ✘  10 [desktop] › e2e/billing.spec.ts:289:1 › a billed and closed month gets a supplementary run that bills nothing twice (3.0m)
+    Test timeout of 180000ms exceeded.
+    Error: locator.click: Test timeout of 180000ms exceeded.
+    test-results/billing-a-billed-and-close-874d8-un-that-bills-nothing-twice-desktop/test-failed-1.png
+  1 failed
+    [desktop] › e2e/billing.spec.ts:289:1 › a billed and closed month gets a supplementary run that bills nothing twice 
+  53 passed (4.0m)
+EXIT 1

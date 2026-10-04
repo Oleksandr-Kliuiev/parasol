@@ -51,6 +51,7 @@ if args[:2] == ["containerapp", "show"]:
 if args[:3] == ["containerapp", "revision", "show"]:
     app = args[args.index("-n") + 1]
     if "runningState" in line: answer("Running")
+    if "healthState" in line: answer(scenario.get("workerHealth", "Healthy"))
     answer(scenario["running"][app])
 if args[:4] == ["containerapp", "ingress", "traffic", "set"]: answer("")
 print("unexpected az call: " + line, file=sys.stderr)
@@ -143,7 +144,7 @@ class DeployScript(unittest.TestCase):
         }
         (folder / "manifest.json").write_text(json.dumps(manifest))
         env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}", AZ_SCENARIO=str(folder / "scenario.json"),
-                   AZ_LOG=str(folder / "az.log"))
+                   AZ_LOG=str(folder / "az.log"), DEPLOY_POLL_SECONDS="0")
         env.pop("CRM_ENTRA_CLIENT_ID_TEST", None)
         command = ["bash", str(HERE / "deploy.sh"), "test", str(folder / "manifest.json"), str(folder / "out")]
         if rollback:
@@ -202,6 +203,13 @@ class DeployScript(unittest.TestCase):
         self.assertEqual(len(switches), 2)
         self.assertIn("ca-crm-web-test--new=100", switches[0])
         self.assertIn("ca-crm-web-test--old=100", switches[1])
+
+    def test_a_worker_revision_that_never_gets_ready_stops_the_deployment_before_traffic(self):
+        # DEV-06: the worker's readiness is the database; a revision that cannot reach it is not taken into service.
+        result, log, _ = self.run_deploy(workerHealth="Unhealthy")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("health Unhealthy", result.stderr)
+        self.assertNotIn("ingress traffic set", log)
 
     def test_a_rollback_runs_no_migrations_and_says_so_in_the_record(self):
         newer = f"{REGISTRY}/crm-web@sha256:" + "d" * 64

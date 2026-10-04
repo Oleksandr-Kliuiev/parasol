@@ -17,7 +17,7 @@ using Crm.CustomFields;
 using Crm.Customers;
 using Crm.Identity;
 using Crm.Infrastructure.DependencyInjection;
-using Crm.Infrastructure.Outbox;
+using Crm.Infrastructure.Health;
 using Crm.Integrations.Brreg;
 using Crm.Integrations.Core;
 using Crm.Integrations.MicrosoftGraph;
@@ -57,7 +57,9 @@ builder.Services
     .AddAteraIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
-builder.Services.AddHostedService<OutboxProcessor>();
+// DEV-06: the outbox loop with its liveness (rounds finish) and heartbeat; ready means the database answers.
+builder.Services.AddOutboxProcessing();
+builder.Services.AddDatabaseReadiness();
 
 builder.Services.AddHangfire(config => config
     .UseSimpleAssemblyNameTypeSerializer()
@@ -99,6 +101,8 @@ jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditI
 jobs.AddOrUpdate<QuoteExpiryJob>(QuoteExpiryJob.JobId, job => job.RunAsync(CancellationToken.None), "0 6 * * *", new RecurringJobOptions { TimeZone = oslo });
 
 jobs.AddOrUpdate<OutboundProcessorJob>(OutboundProcessorJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
+// The job server's heartbeat: if jobs stop being executed, this ages (DEV-06).
+jobs.AddOrUpdate<WorkerHeartbeatJob>(WorkerHeartbeatJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
 
 var powerOffice = app.Services.GetRequiredService<IOptions<PowerOfficeOptions>>().Value;
 var billing = app.Services.GetRequiredService<IOptions<BillingOptions>>().Value;

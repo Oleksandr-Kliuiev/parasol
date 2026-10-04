@@ -36,6 +36,16 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
     /// <summary>The server administrator on the test database: what the migrator and a DBA have.</summary>
     public string AdminConnectionString => new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_sql.GetConnectionString()) { InitialCatalog = Database }.ConnectionString;
 
+    /// <summary>Host and port of the SQL Server container, for a proxy in front of it (DEV-06).</summary>
+    public (string Host, int Port) SqlEndpoint
+    {
+        get
+        {
+            var source = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_sql.GetConnectionString()).DataSource.Split(',');
+            return (source[0], source.Length > 1 ? int.Parse(source[1], System.Globalization.CultureInfo.InvariantCulture) : 1433);
+        }
+    }
+
     /// <summary>The login the application runs as: a member of crm_worker and nothing else.</summary>
     public string RuntimeConnectionString => LoginConnectionString("crm_worker_test", _runtimePassword);
 

@@ -94,6 +94,7 @@ class SecretScan(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             clean = pathlib.Path(folder, "release-manifest.json")
             clean.write_text(json.dumps({"images": {"web": {"reference": WEB}}, "commit": SHA}))
+            pathlib.Path(folder, "run.sh").write_text('conn="Server=x;Password=$pw;"\nsed -E "s/Password=[^;]*/Password=***/g"\n')
             self.assertEqual(release.scan_secrets([folder]), [])
             samples = {
                 "conn.txt": "Server=tcp:sql;Database=crm;User Id=sa;Password=Hunter2Hunter2;",
@@ -112,6 +113,7 @@ class SecretScan(unittest.TestCase):
                 with self.subTest(name):
                     self.assertTrue(any(name in finding for finding in findings), findings)
             self.assertFalse(any("release-manifest.json" in finding for finding in findings))
+            self.assertFalse(any("run.sh" in finding for finding in findings), "references and masked values are not secrets")
 
     def test_a_missing_artifact_cannot_be_cleared(self):
         with self.assertRaises(release.GateError):

@@ -39,7 +39,8 @@ BLOCKING_SEVERITIES = {"high", "critical"}
 # Files in an artifact must never look like credentials. The patterns are deliberately broad; a false alarm is cheaper
 # than a published secret.
 SECRET_PATTERNS = [
-    ("connection string password", re.compile(r"(?i)\b(password|pwd)\s*=\s*[^;\s\"']{3,}")),
+    # A reference ($pw, {password}, %PW%) or a masked value (***) is not a secret.
+    ("connection string password", re.compile(r"(?i)\b(password|pwd)\s*=\s*(?![$%{*])[^;\s\"']{3,}")),
     ("storage account key", re.compile(r"(?i)AccountKey\s*=\s*[A-Za-z0-9+/=]{20,}")),
     ("shared access signature", re.compile(r"(?i)[?&]sig=[A-Za-z0-9%+/=]{20,}")),
     ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),

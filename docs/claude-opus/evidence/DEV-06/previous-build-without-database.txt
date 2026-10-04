@@ -1,0 +1,6 @@
+== previous build, no database:
+/health/live -> 200 Healthy
+/health/ready -> 200 Healthy
+== current build, no database:
+/health/live -> 200 Healthy
+/health/ready -> 503 Unhealthy

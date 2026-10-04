@@ -2,12 +2,16 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using Crm.Infrastructure.DependencyInjection;
+using Crm.Infrastructure.Health;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Domain;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Crm.Infrastructure.Outbox;
 
@@ -28,8 +32,14 @@ public sealed class OutboxProcessor(
     ModuleDbContextRegistry registry,
     OutboxEventTypeResolver typeResolver,
     TimeProvider timeProvider,
+    ProcessingLoopMonitor monitor,
+    IOptions<ProcessingHealthOptions> healthOptions,
     ILogger<OutboxProcessor> logger) : BackgroundService
 {
+    public const string HeartbeatComponent = "outbox";
+    private DateTimeOffset _lastHeartbeat = DateTimeOffset.MinValue;
+    private Task? _pendingBeat;
+
     private const int BatchSize = 50;
     private const int MaxAttempts = 10;
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
@@ -48,19 +58,80 @@ public sealed class OutboxProcessor(
         using var timer = new PeriodicTimer(PollInterval, timeProvider);
         do
         {
+            var processed = 0;
             foreach (var contextType in registry.Contexts)
             {
                 try
                 {
-                    await ProcessContextAsync(contextType, stoppingToken);
+                    processed += await ProcessContextAsync(contextType, stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "Outbox processing failed for {Context}", contextType.Name);
+                    // Without the database every other context would wait for its own timeouts too: the round ends here, so
+                    // rounds keep finishing and liveness does not turn into a restart loop during an outage (DEV-06).
+                    if (DatabaseUnavailable(ex))
+                    {
+                        break;
+                    }
                 }
             }
+
+            // DEV-06: a finished round is the worker's liveness; the stored heartbeat lets monitoring see a stalled worker.
+            monitor.RoundFinished();
+            await BeatAsync(processed, stoppingToken);
         }
         while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    private async Task BeatAsync(int processed, CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+        if (now - _lastHeartbeat < healthOptions.Value.HeartbeatInterval || _pendingBeat is { IsCompleted: false })
+        {
+            return;
+        }
+
+        // At most ten seconds of the loop's time; a beat that hangs on an absent database finishes (or fails) on its own and
+        // the next one waits for it, so beats never pile up.
+        _pendingBeat = StoreBeatAsync(processed, now, cancellationToken);
+        await Task.WhenAny(_pendingBeat, Task.Delay(TimeSpan.FromSeconds(10), timeProvider, cancellationToken));
+    }
+
+    private async Task StoreBeatAsync(int processed, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            if (scope.ServiceProvider.GetService<IWorkerHeartbeat>() is { } heartbeat)
+            {
+                await heartbeat.BeatAsync(HeartbeatComponent, $"{processed} processed in the last round", cancellationToken);
+                _lastHeartbeat = now;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The database may be away; the loop goes on and the heartbeat simply ages.
+            logger.LogWarning(ex, "The outbox heartbeat could not be stored");
+        }
+    }
+
+    /// <summary>An error that says the database cannot be reached, as opposed to a problem of one context's data.</summary>
+    public static bool DatabaseUnavailable(Exception exception)
+    {
+        for (var ex = exception; ex is not null; ex = ex.InnerException)
+        {
+            switch (ex)
+            {
+                case RetryLimitExceededException or TimeoutException:
+                    return true;
+                case SqlException sql when sql.Number is -2 or -1 or 2 or 53 or 121 or 258 or 4060 or 10053 or 10054 or 10060 or 10061 or 11001
+                    or 40197 or 40501 or 40613 or 49918 or 49919 or 49920:
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task<int> ProcessContextAsync(Type contextType, CancellationToken cancellationToken)

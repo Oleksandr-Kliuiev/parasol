@@ -430,6 +430,28 @@ namespace Crm.Integrations.Core.Persistence.Migrations
 
                     b.ToTable("SyncRuns", "integration");
                 });
+
+            modelBuilder.Entity("Crm.Integrations.Core.WorkerHeartbeat", b =>
+                {
+                    b.Property<string>("Component")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Instance")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("BeatAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Component", "Instance");
+
+                    b.ToTable("WorkerHeartbeats", "integration");
+                });
 #pragma warning restore 612, 618
         }
     }

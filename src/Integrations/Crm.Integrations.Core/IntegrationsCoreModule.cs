@@ -20,6 +20,9 @@ public static class IntegrationsCoreModule
         services.AddScoped<ExternalLinkService>();
         services.AddScoped<OutboundQueue>();
         services.AddScoped<ExternalImportService>();
+        services.AddScoped<Crm.Infrastructure.Health.IWorkerHeartbeat, WorkerHeartbeatStore>();
+        services.AddScoped<WorkerHeartbeatReader>();
+        services.AddScoped<WorkerHeartbeatJob>();
         services.AddSingleton<OutboundProcessorJob>();
         services.AddModuleServices(typeof(IntegrationsCoreModule).Assembly);
         return services;

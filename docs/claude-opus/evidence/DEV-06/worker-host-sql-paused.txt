@@ -1,0 +1,19 @@
+== 1. migrate the empty database (crm-web --migrate-only)
+      Applied and verified database roles and grants for 15 schemas
+== 2. start crm-worker
+/health/live -> 200 Healthy (23 ms)
+/health/ready -> 200 Healthy (157 ms)
+heartbeats stored:
+Component|AgeSeconds|Detail
+---------|----------|------
+outbox|7|0 processed in the last round
+== 3. SQL paused (unreachable, connections hang)
+/health/live -> 200 Healthy (25 ms)
+/health/ready -> 503 Unhealthy (3044 ms)
+/health/ready -> 503 Unhealthy (3032 ms)
+/health/live -> 200 Healthy (22 ms)
+== 4. SQL resumed
+/health/ready -> 200 Healthy (22 ms)
+/health/live -> 200 Healthy (10 ms)
+heartbeat store failures logged while SQL was away: 0
+== container crm-health-dev06 removed

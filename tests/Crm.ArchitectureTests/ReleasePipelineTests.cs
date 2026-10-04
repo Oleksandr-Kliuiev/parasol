@@ -174,6 +174,29 @@ public partial class ReleasePipelineTests
     }
 
     [Fact]
+    public void Probes_follow_readiness_and_liveness_and_migrations_only_run_no_processing()
+    {
+        // DEV-06: --migrate-only returns before the host runs, so no hosted processing starts in the migration job.
+        var web = File.ReadAllText(Path.Combine(Production.Root, "src", "Hosts", "Crm.Web", "Program.cs"));
+        var migrateOnly = web.IndexOf("args.Contains(DatabaseMigrator.MigrateOnlyArgument)", StringComparison.Ordinal);
+        migrateOnly.ShouldBeGreaterThan(0);
+        web.IndexOf("return;", migrateOnly, StringComparison.Ordinal).ShouldBeLessThan(web.IndexOf("app.Run", StringComparison.Ordinal));
+        web.ShouldContain("AddDatabaseReadiness()");
+
+        var worker = File.ReadAllText(Path.Combine(Production.Root, "src", "Hosts", "Crm.Worker", "Program.cs"));
+        worker.ShouldContain("AddOutboxProcessing()");
+        worker.ShouldContain("AddDatabaseReadiness()");
+        worker.ShouldNotContain("AddHostedService<OutboxProcessor>");
+        worker.ShouldContain("WorkerHeartbeatJob.JobId");
+
+        var apps = File.ReadAllText(Path.Combine(Production.Root, "infra", "modules", "apps.bicep"));
+        var workerApp = apps[apps.IndexOf("resource worker ", StringComparison.Ordinal)..apps.IndexOf("resource migrate ", StringComparison.Ordinal)];
+        workerApp.ShouldContain("type: 'Liveness', httpGet: { path: '/health/live'");
+        workerApp.ShouldContain("type: 'Readiness', httpGet: { path: '/health/ready'");
+        apps.ShouldContain("type: 'Readiness', httpGet: { path: '/health/ready', port: 8080 }, periodSeconds: 10, timeoutSeconds: 5");
+    }
+
+    [Fact]
     public void Every_action_is_pinned_to_a_commit()
     {
         foreach (var file in Directory.GetFiles(Workflows, "*.yml"))

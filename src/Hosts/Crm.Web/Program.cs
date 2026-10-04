@@ -14,6 +14,7 @@ using Crm.CustomFields;
 using Crm.Customers;
 using Crm.Identity;
 using Crm.Infrastructure.DependencyInjection;
+using Crm.Infrastructure.Health;
 using Crm.Infrastructure.Persistence;
 using Crm.Integrations.Brreg;
 using Crm.Integrations.Core;
@@ -38,6 +39,8 @@ using Crm.Infrastructure.Http;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+// DEV-06: ready means the database answers and has this build's schema; external systems never decide readiness.
+builder.Services.AddDatabaseReadiness();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
@@ -197,6 +200,7 @@ app.MapSearchEndpoints();
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 app.MapJobEndpoints();
+app.MapHealthDetails();
 
 if (hangfireEnabled)
 {

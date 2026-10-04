@@ -2,12 +2,12 @@
 
 Дата состояния: 04.10.2026.
 
-Текущая задача реализации: **DEV-06** (следующая по execution_order). Завершено локально (code_verified): DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565` (AC07 ждёт EXT-01), DEV-04 `1721a15` (внешний gate EXT-07), DEV-05 (коммит «DEV-05: …»; AC06 ждёт EXT-11).
+Текущая задача реализации: **DEV-07** (следующая по execution_order). Завершено локально (code_verified): DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565` (AC07 ждёт EXT-01), DEV-04 `1721a15` (внешний gate EXT-07), DEV-05 `500546d` (AC06 ждёт EXT-11), DEV-06 (коммит «DEV-06: …»).
 
 ## Ветки и коммиты
 
 - `main` — baseline `2bed19e5520ac4061cbf1ad2e680a8a2b6e79320`: рабочая копия на дату аудита плюс этот пакет (670 файлов явного списка, см. [evidence/DEV-00.md](evidence/DEV-00.md)).
-- `codex/readiness` — рабочая ветка доработок от `2bed19e`: DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565`, DEV-04 `1721a15`, затем DEV-05 (SHA — `git log codex/readiness`). Push не выполнялся, remote отсутствует.
+- `codex/readiness` — рабочая ветка доработок от `2bed19e`: DEV-00 `4bcf3a1`, DEV-15 `041d4df`, DEV-01 `8b8e6f8`, DEV-02 `bf0eda5`, DEV-03 `646a565`, DEV-04 `1721a15`, DEV-05 `500546d`, затем DEV-06 (SHA — `git log codex/readiness`). Push не выполнялся, remote отсутствует.
 - Оставлены вне Git на диске без изменений: `.claude/launch.json`, `docs/claude-opus-development-pack-2026-10-03.zip` и распакованная копия `docs/claude-opus-development-pack-2026-10-03/` (их SHA-256 в manifest DEV-00). Если копия появилась случайно при открытии архива, удалить её может только владелец.
 
 ## Выполнено
@@ -24,18 +24,20 @@
 
 - **DEV-05** — выпуск одним проверенным артефактом (ADR-015, runbook 01 §6/§9): job `release` в CI зависит от всех обязательных job'ов и работает только для push в `main`; `release.yml` собирает образы один раз, дальше только digest, SBOM, сканирование образа, provenance, release manifest (digests, версии и разрывы схемы, результаты job'ов); test — миграции до изменений, кандидатная ревизия с 0 % трафика, smoke, сверка digest всех контейнеров, переключение, запись; prod — только `promote.yml` (проверка CI/manifest/записи test до учётных данных, reviewers окружения, импорт тех же digests); откат без миграций; реестр разрывов схемы и schema guard; fail-closed сканеры; PowerOffice зафиксирован по окружениям и проверяется приложением при старте; actions закреплены SHA. Проверка отката нашла разрыв: релизы до DEV-04 не работают на схеме с триггерами биллинга (зарегистрирован, guard). Статус code_verified, **AC06 blocked до EXT-11** (нет remote, настроек GitHub и Azure; workflow в GitHub не выполнялись) ([evidence](evidence/DEV-05.md)).
 
+- **DEV-06** — readiness обоих хостов: БД отвечает (соединение вне пула, ответ ≤ 3,5 с) и схема не отстаёт от сборки (раз в 5 мин); liveness без БД (в worker — раунды цикла outbox в памяти, раунд прерывается при недоступной базе); heartbeat компонентов worker (`integration.WorkerHeartbeats`, задача `worker-heartbeat`), диагностика `/health/details` для администраторов; пробы worker в Bicep, развёртывание ждёт готовности новой ревизии worker. Дефект воспроизведён на предыдущей сборке (ready 200 без БД). Статус code_verified ([evidence](evidence/DEV-06.md)).
+
 ## Известные красные проверки (не маскировать)
 
 - Регрессий аудита в красном нет: A01 (DEV-01), A02 (DEV-02), A03 (DEV-03) зелёные; job `backend` локально проходит целиком.
 - Остаётся записанный дефект продукта из DEV-15 (за 5 + 5 повторов после DEV-02/03 не проявился): конфликт `UpdateRunStatusAsync` при параллельном экспорте оснований одного прогона может уронить операцию после внешнего эффекта (→ DEV-07; повторная попытка теперь ищет заказ и при неудаче ставит сверку, а не отправляет второй раз).
 
-Последние результаты (04.10.2026, после DEV-05): build 0/0; unit 354/354; architecture 82/82; integration 127/127 (под ролью `crm_worker`); E2E 54/54; vitest 39/39; тесты инструментов выпуска 26/26; actionlint и ShellCheck без находок; bundle 283.0 KB; coverage: домен 96.41 %, backend 85.44 %; CI jobs backend и infrastructure PASSED.
+Последние результаты (04.10.2026, после DEV-06): build 0/0; unit 357/357; architecture 83/83; integration 132/132 (под ролью `crm_worker`); E2E 54/54; vitest 39/39; тесты инструментов выпуска 27/27; actionlint и ShellCheck без находок; bundle 283.0 KB; coverage: домен 96.41 %, backend 85.50 %; CI jobs backend и infrastructure PASSED. Сценарий E2E дополнительного прогона под параллельной нагрузкой однажды упёрся в таймаут 180 с при ожидании экспорта — запас увеличен (DEV-06); при повторных прогонах — зелёный.
 
 Находка процесса (DEV-04): локальный скрипт E2E запускал Playwright без сборки SPA, поэтому веб отдавал бандл из прошлой сборки (в CI `npm run e2e` собирает). Исправлено; итоговый E2E DEV-04 на свежей сборке проходит и сценарии DEV-03, но E2E-прогоны DEV-03 в его evidence могли идти на старом бандле.
 
 ## Следующий конкретный шаг
 
-DEV-06 по карточке `tasks/DEV-06.md` (execution_order: DEV-06, DEV-07, DEV-08 …). Новые миграции — только expand (архитектурный тест); миграция с триггером регистрируется в `tools/release/schema-breaks.json`; новый job CI добавляется в `needs` job'а `release`; таблицы, которые нельзя удалять или переписывать, — запреты через `IDatabasePermissionRules`; тесты-«администраторы БД» — в `DatabaseAdministrationCollection`; E2E — со сборкой SPA.
+DEV-07 по карточке `tasks/DEV-07.md` (outbox: явные состояния, backoff, dead-letter, lease с владельцем, inbox потребителей, replay с UI). Учесть: цикл outbox теперь бьёт heartbeat и прерывает раунд при недоступной базе (DEV-06), регистрируется через `AddOutboxProcessing()`; новые таблицы — запреты через `IDatabasePermissionRules`, миграции — expand-only, триггеры — в `schema-breaks.json`; новый job CI — в `needs` job'а `release`.
 
 ## Открытые решения и блокеры
 
@@ -43,7 +45,7 @@ DEV-06 по карточке `tasks/DEV-06.md` (execution_order: DEV-06, DEV-07,
 
 ## Временные ресурсы
 
-Нет активных. Временные контейнеры `crm-e2e-*`, `crm-mig-dev02`, `crm-mig-dev03`, `crm-mig-dev04`, `crm-smoke-dev05`, `crm-rollback-*` удаляются скриптами прогона (проверено `docker ps -a`); git worktree проверок отката удалены (`git worktree list` — только основной). Установлены локальные линтеры actionlint и ShellCheck (Homebrew). Установлены браузеры Playwright Firefox 155 и WebKit 26.6 в `~/Library/Caches/ms-playwright` (обычный кэш инструментов). Чужие контейнеры не затрагивались; `vardahei-crm-sql` использовался только для агрегатных SELECT в DEV-00.
+Нет активных. Временные контейнеры `crm-e2e-*`, `crm-mig-dev02`, `crm-mig-dev03`, `crm-mig-dev04`, `crm-smoke-dev05`, `crm-rollback-*`, `crm-health-dev06` удаляются скриптами прогона (проверено `docker ps -a`); git worktree проверок отката удалены (`git worktree list` — только основной). Установлены локальные линтеры actionlint и ShellCheck (Homebrew). Установлены браузеры Playwright Firefox 155 и WebKit 26.6 в `~/Library/Caches/ms-playwright` (обычный кэш инструментов). Чужие контейнеры не затрагивались; `vardahei-crm-sql` использовался только для агрегатных SELECT в DEV-00.
 
 ## Шаблон записи после сессии
 

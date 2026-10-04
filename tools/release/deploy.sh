@@ -18,6 +18,7 @@ mode=${4:-}
 [[ "$environment" == test || "$environment" == prod ]] || { echo "unknown environment $environment" >&2; exit 2; }
 [[ -z "$mode" || "$mode" == --rollback ]] || { echo "unknown option $mode" >&2; exit 2; }
 here=$(cd "$(dirname "$0")" && pwd)
+poll=${DEPLOY_POLL_SECONDS:-10}
 root=$(cd "$here/../.." && pwd)
 mkdir -p "$out"
 
@@ -60,7 +61,7 @@ if [[ "$mode" != --rollback ]]; then
       echo "the migration failed: no revision and no traffic was changed" >&2
       exit 1
     fi
-    sleep 10
+    sleep "$poll"
   done
   [[ "$status" == Succeeded ]] || { echo "the migration timed out: no revision and no traffic was changed" >&2; exit 1; }
 fi
@@ -79,15 +80,21 @@ latest=$(az containerapp show -g "$rg" -n "$web_app" --query properties.latestRe
 smoke_args=()
 [[ -n "${!client_var:-}" ]] && smoke_args=(--entra-client-id "${!client_var}")
 
-# The worker has no traffic to hold back: its single revision is replaced once the new one runs.
+# The worker has no traffic to hold back: its single revision replaces the old one once it is ready — its readiness
+# probe is the database (DEV-06), so a revision that cannot reach it never takes over.
 worker_revision=$(az containerapp show -g "$rg" -n "$worker_app" --query properties.latestRevisionName -o tsv)
 worker_state=""
+worker_health=""
 for _ in $(seq 1 60); do
   worker_state=$(az containerapp revision show -g "$rg" -n "$worker_app" --revision "$worker_revision" --query properties.runningState -o tsv)
-  [[ "$worker_state" == Running* ]] && break
-  sleep 10
+  worker_health=$(az containerapp revision show -g "$rg" -n "$worker_app" --revision "$worker_revision" --query properties.healthState -o tsv)
+  [[ "$worker_state" == Running* && "$worker_health" == Healthy ]] && break
+  sleep "$poll"
 done
-[[ "$worker_state" == Running* ]] || { echo "crm-worker revision $worker_revision is $worker_state" >&2; exit 1; }
+[[ "$worker_state" == Running* && "$worker_health" == Healthy ]] || {
+  echo "crm-worker revision $worker_revision is $worker_state, health $worker_health" >&2
+  exit 1
+}
 
 running_web=$(az containerapp revision show -g "$rg" -n "$web_app" --revision "$latest" --query "properties.template.containers[0].image" -o tsv)
 running_worker=$(az containerapp revision show -g "$rg" -n "$worker_app" --revision "$worker_revision" --query "properties.template.containers[0].image" -o tsv)
