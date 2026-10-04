@@ -20,11 +20,32 @@ using WireMock.Server;
 
 namespace Crm.IntegrationTests;
 
-/// <summary>One SQL Server container and one application instance for the whole test assembly.</summary>
+/// <summary>
+/// One SQL Server container and one application instance for the whole test assembly. The schema and the permissions are
+/// applied by the migrator as the server administrator; the application then runs as a SQL login in the crm_worker role
+/// only, without db_datawriter, exactly the rights it has in production (DEV-04). Tests that stand in for a database
+/// administrator — a restore, data from before a migration — use <see cref="AdminSqlAsync"/>.
+/// </summary>
 public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string Database = "crm_tests";
     private readonly MsSqlContainer _sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
     private readonly Lock _clientsLock = new();
+    private readonly string _runtimePassword = $"Rt-{Guid.NewGuid():N}aA1!";
+
+    /// <summary>The server administrator on the test database: what the migrator and a DBA have.</summary>
+    public string AdminConnectionString => new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_sql.GetConnectionString()) { InitialCatalog = Database }.ConnectionString;
+
+    /// <summary>The login the application runs as: a member of crm_worker and nothing else.</summary>
+    public string RuntimeConnectionString => LoginConnectionString("crm_worker_test", _runtimePassword);
+
+    public string LoginConnectionString(string login, string password) =>
+        new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_sql.GetConnectionString())
+        {
+            InitialCatalog = Database,
+            UserID = login,
+            Password = password,
+        }.ConnectionString;
 
     public WireMockServer Brreg { get; } = WireMockServer.Start();
 
@@ -41,8 +62,66 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
     public async ValueTask InitializeAsync()
     {
         await _sql.StartAsync();
-        // Build the host (runs migrations on startup).
+        // The migrator: schema, Hangfire, roles and grants, as the administrator.
+        await using (var migrator = new CrmMigrationFactory(this))
+        {
+            _ = migrator.Server;
+        }
+
+        await CreateLoginAsync("crm_worker_test", _runtimePassword, Crm.Infrastructure.Persistence.DatabaseRoles.Worker);
+        // The application, as its runtime role.
         _ = Server;
+    }
+
+    /// <summary>Creates a SQL login and database user that is a member of <paramref name="role"/> only.</summary>
+    public async Task CreateLoginAsync(string login, string password, string role)
+    {
+        await AdminSqlAsync($"""
+            IF SUSER_ID(N'{login}') IS NULL CREATE LOGIN [{login}] WITH PASSWORD = N'{password}', CHECK_POLICY = OFF;
+            IF DATABASE_PRINCIPAL_ID(N'{login}') IS NULL CREATE USER [{login}] FOR LOGIN [{login}];
+            {Crm.Infrastructure.Persistence.DatabasePermissions.MembershipScript(login, role)}
+            """);
+    }
+
+    /// <summary>Runs T-SQL as the server administrator on the test database.</summary>
+    public async Task AdminSqlAsync(string sql)
+    {
+        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(AdminConnectionString);
+        await connection.OpenAsync();
+        await using var command = new Microsoft.Data.SqlClient.SqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Runs parameterised T-SQL as the server administrator with the billing triggers disabled meanwhile — what a database
+    /// administrator does to put back a restore or data from before a migration. Disabling, the statements and enabling run in
+    /// one transaction: the schema lock keeps every other session out of those tables until the triggers are back, and a
+    /// failure leaves them enabled. Classes that use it belong to <see cref="DatabaseAdministrationCollection"/>.
+    /// </summary>
+    public async Task AdminSqlWithoutBillingTriggersAsync(FormattableString sql)
+    {
+        string[] tables = ["BillingRuns", "BillingBases", "BillingLines", "BillingApprovals", "Charges", "BillingExportAttempts"];
+        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(AdminConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = (Microsoft.Data.SqlClient.SqlTransaction)await connection.BeginTransactionAsync();
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        var arguments = sql.GetArguments();
+        var names = new object[arguments.Length];
+        for (var i = 0; i < arguments.Length; i++)
+        {
+            names[i] = $"@p{i}";
+            command.Parameters.AddWithValue($"@p{i}", arguments[i] ?? DBNull.Value);
+        }
+
+        command.CommandText = string.Concat(
+            "SET DEADLOCK_PRIORITY HIGH;",
+            string.Concat(tables.Select(t => $"DISABLE TRIGGER ALL ON [billing].[{t}];")),
+            string.Format(System.Globalization.CultureInfo.InvariantCulture, sql.Format, names),
+            ";",
+            string.Concat(tables.Select(t => $"ENABLE TRIGGER ALL ON [billing].[{t}];")));
+        await command.ExecuteNonQueryAsync();
+        await transaction.CommitAsync();
     }
 
     public override async ValueTask DisposeAsync()
@@ -56,17 +135,16 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
         await _sql.DisposeAsync();
     }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    protected override void ConfigureWebHost(IWebHostBuilder builder) => Configure(builder, RuntimeConnectionString, migrate: false);
+
+    internal void Configure(IWebHostBuilder builder, string connectionString, bool migrate)
     {
         builder.UseEnvironment("Testing");
         // UseSetting (not ConfigureAppConfiguration) so values are visible while Program.cs registers services.
         var settings = new Dictionary<string, string?>
         {
-            ["ConnectionStrings:crm"] = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_sql.GetConnectionString())
-            {
-                InitialCatalog = "crm_tests",
-            }.ConnectionString,
-            ["Database:MigrateOnStartup"] = "true",
+            ["ConnectionStrings:crm"] = connectionString,
+            ["Database:MigrateOnStartup"] = migrate ? "true" : "false",
             ["Hangfire:DashboardEnabled"] = "false",
             ["Auth:Mode"] = "Entra",
             ["AzureAd:Instance"] = "https://login.microsoftonline.com/",
@@ -115,6 +193,8 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
             ["Notifications:EmailEnabled"] = "true",
             ["Notifications:FromAddress"] = "crm@vardahei.no",
             ["Notifications:AppBaseUrl"] = "https://crm.test.local",
+            // The integrity tests chain what they just wrote; the settle time has its own test.
+            ["Audit:Integrity:SettleTime"] = "00:00:00",
         };
         foreach (var (key, value) in settings)
         {
@@ -296,4 +376,20 @@ public static class TestData
     };
 
     public static string Admin => CrmRoles.Admin;
+}
+
+/// <summary>
+/// Classes that act as the database administrator — disabling triggers to stage a restore or old data, checking what the roles
+/// may do — run alone, so no other test sees the database in that state.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class DatabaseAdministrationCollection
+{
+    public const string Name = "database-administration";
+}
+
+/// <summary>The migrator run: the same application configuration, as the server administrator, migrating on start.</summary>
+internal sealed class CrmMigrationFactory(CrmWebFactory factory) : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder) => factory.Configure(builder, factory.AdminConnectionString, migrate: true);
 }

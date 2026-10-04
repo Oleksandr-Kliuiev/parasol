@@ -1,0 +1,331 @@
+### 1. the previous version's schema (audit Initial, billing up to ChargeRegister) with its data
+Applying migration '20260915081313_Initial'.
+Done.
+Applying migration '20260916082954_Initial'.
+Applying migration '20260916183504_PendingCharges'.
+Applying migration '20261003230254_ChargeIdentity'.
+Applying migration '20261003233005_RevisionBoundApprovals'.
+Done.
+Applying migration '20261004002311_ChargeRegister'.
+Done.
+== billing data (counts and sums must not change through the DEV-04 migrations)
+T|Rows|Checksum
+-|----|--------
+runs|8|1991538453
+bases|9|-1513885206
+lines|23|-1287694785
+charges|18|-730911957
+attempts|0|NULL
+audit|3|1162002335
+### 2. apply DEV-04 (AppendOnlyAudit, ProtectApprovedBilling)
+Applying migration '20261004011342_AppendOnlyAudit'.
+Done.
+Applying migration '20261004011343_ProtectApprovedBilling'.
+Done.
+### 3. the migrator: every module, roles, grants, rollback guard, verification (twice: idempotent)
+      Applied and verified database roles and grants for 15 schemas
+      Applied and verified database roles and grants for 15 schemas
+== billing data (counts and sums must not change through the DEV-04 migrations)
+T|Rows|Checksum
+-|----|--------
+runs|8|1991538453
+bases|9|-1513885206
+lines|23|-1287694785
+charges|18|-730911957
+attempts|0|NULL
+audit|3|1162002335
+== data unchanged by the migrations
+== triggers
+Table|Trigger|Disabled
+-----|-------|--------
+audit.AuditEntries|trg_AuditEntries_AppendOnly|0
+billing.BillingApprovals|trg_BillingApprovals_Protect|0
+billing.BillingBases|trg_BillingBases_Protect|0
+billing.BillingExportAttempts|trg_BillingExportAttempts_Protect|0
+billing.BillingLines|trg_BillingLines_Protect|0
+billing.BillingRuns|trg_BillingRuns_Protect|0
+billing.Charges|trg_Charges_Protect|0
+DatabaseTrigger|Disabled
+---------------|--------
+trg_ApplicationRolesStayNarrow|0
+== roles and members
+Role|Member
+----|------
+crm_privacy|-
+crm_runtime|crm_web
+crm_runtime|crm_worker
+crm_web|-
+crm_worker|-
+== schema grants of crm_runtime
+Schema|Granted
+------|-------
+activities|DELETE,INSERT,SELECT,UPDATE
+audit|INSERT,SELECT
+billing|DELETE,INSERT,SELECT,UPDATE
+catalog|DELETE,INSERT,SELECT,UPDATE
+contracts|DELETE,INSERT,SELECT,UPDATE
+customers|DELETE,INSERT,SELECT,UPDATE
+customfields|DELETE,INSERT,SELECT,UPDATE
+hangfire|DELETE,EXECUTE,INSERT,SELECT,UPDATE
+identity|DELETE,INSERT,SELECT,UPDATE
+integration|DELETE,INSERT,SELECT,UPDATE
+licensing|DELETE,INSERT,SELECT,UPDATE
+notifications|DELETE,INSERT,SELECT,UPDATE
+projects|DELETE,INSERT,SELECT,UPDATE
+sales|DELETE,INSERT,SELECT,UPDATE
+service|DELETE,INSERT,SELECT,UPDATE
+time|DELETE,INSERT,SELECT,UPDATE
+== object denies
+Principal|Object|Denied
+---------|------|------
+crm_runtime|audit.AuditEntries|DELETE,UPDATE
+crm_runtime|audit.IntegrityCheckpoints|DELETE,UPDATE
+crm_runtime|audit.RetentionPolicies|DELETE,INSERT,UPDATE
+crm_runtime|billing.BillingApprovals|DELETE
+crm_runtime|billing.BillingBases|DELETE
+crm_runtime|billing.BillingExportAttempts|DELETE,UPDATE
+crm_runtime|billing.BillingLines|DELETE
+crm_runtime|billing.BillingRuns|DELETE
+crm_runtime|billing.Charges|DELETE
+crm_runtime|billing.InvoicePayments|DELETE
+crm_runtime|billing.Invoices|DELETE
+crm_runtime|billing.PendingCharges|DELETE
+crm_web|activities.OutboxMessages|DELETE,UPDATE
+crm_web|audit.IntegrityCheckpoints|INSERT
+crm_web|audit.OutboxMessages|DELETE,UPDATE
+crm_web|billing.OutboxMessages|DELETE,UPDATE
+crm_web|catalog.OutboxMessages|DELETE,UPDATE
+crm_web|contracts.OutboxMessages|DELETE,UPDATE
+crm_web|customers.OutboxMessages|DELETE,UPDATE
+crm_web|customfields.OutboxMessages|DELETE,UPDATE
+crm_web|identity.OutboxMessages|DELETE,UPDATE
+crm_web|integration.OutboxMessages|DELETE,UPDATE
+crm_web|licensing.OutboxMessages|DELETE,UPDATE
+crm_web|notifications.OutboxMessages|DELETE,UPDATE
+crm_web|projects.OutboxMessages|DELETE,UPDATE
+crm_web|sales.OutboxMessages|DELETE,UPDATE
+crm_web|service.OutboxMessages|DELETE,UPDATE
+crm_web|time.OutboxMessages|DELETE,UPDATE
+MigrationHistoryDenies
+----------------------
+45
+== object grants
+Principal|Object|permission_name
+---------|------|---------------
+crm_privacy|audit.ApplyRetention|EXECUTE
+== audit objects
+name|type_desc
+----|---------
+__EFMigrationsHistory|USER_TABLE
+ApplyRetention|SQL_STORED_PROCEDURE
+AuditEntries|USER_TABLE
+IntegrityCheckpoints|USER_TABLE
+OutboxMessages|USER_TABLE
+RetentionPolicies|USER_TABLE
+== migrations (audit, billing)
+Ctx|MigrationId
+---|-----------
+audit|20260915081313_Initial
+audit|20261004011342_AppendOnlyAudit
+billing|20261003230254_ChargeIdentity
+billing|20261003233005_RevisionBoundApprovals
+billing|20261004002311_ChargeRegister
+billing|20261004011343_ProtectApprovedBilling
+### 4. what each role may do now (every probe is rolled back)
+Login|Step|Outcome
+-----|----|-------
+mig_worker|draft basis total (open run R5)|allowed (1 rows)
+mig_worker|exported basis total (R3)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_worker|exported basis order number (R3)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_worker|approved basis back to draft (R4)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_worker|line of approved basis (R4)|refused 51004: BILLING_APPROVED_IMMUTABLE: the lines of an approved billing basis cannot be changed.
+mig_worker|delete line of exported basis|refused 229: The DELETE permission was denied on the object 'BillingLines', database 'crm_mig', schema 
+mig_worker|closed run notes (R1)|refused 51001: BILLING_APPROVED_IMMUTABLE: an approved billing run cannot be changed or deleted.
+mig_worker|failed basis to approved for a retry (R6)|allowed (1 rows)
+mig_worker|legacy charge decided billed|allowed (1 rows)
+mig_worker|committed charge amount|refused 51007: BILLING_CHARGE_IMMUTABLE: the charge cannot be changed this way.
+mig_worker|audit insert|allowed (1 rows)
+mig_worker|audit update|refused 229: The UPDATE permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_worker|audit delete|refused 229: The DELETE permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_worker|outbox claim|allowed (0 rows)
+mig_worker|create table|refused 262: CREATE TABLE permission denied in database 'crm_mig'.
+mig_worker|retention dry run|refused 229: The EXECUTE permission was denied on the object 'ApplyRetention', database 'crm_mig', sche
+mig_worker|retention of billing|refused 229: The EXECUTE permission was denied on the object 'ApplyRetention', database 'crm_mig', sche
+Login|Step|Outcome
+-----|----|-------
+mig_web|draft basis total (open run R5)|allowed (1 rows)
+mig_web|exported basis total (R3)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_web|exported basis order number (R3)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_web|approved basis back to draft (R4)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_web|line of approved basis (R4)|refused 51004: BILLING_APPROVED_IMMUTABLE: the lines of an approved billing basis cannot be changed.
+mig_web|delete line of exported basis|refused 229: The DELETE permission was denied on the object 'BillingLines', database 'crm_mig', schema 
+mig_web|closed run notes (R1)|refused 51001: BILLING_APPROVED_IMMUTABLE: an approved billing run cannot be changed or deleted.
+mig_web|failed basis to approved for a retry (R6)|allowed (1 rows)
+mig_web|legacy charge decided billed|allowed (1 rows)
+mig_web|committed charge amount|refused 51007: BILLING_CHARGE_IMMUTABLE: the charge cannot be changed this way.
+mig_web|audit insert|allowed (1 rows)
+mig_web|audit update|refused 229: The UPDATE permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_web|audit delete|refused 229: The DELETE permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_web|outbox claim|refused 229: The UPDATE permission was denied on the object 'OutboxMessages', database 'crm_mig', schem
+mig_web|create table|refused 262: CREATE TABLE permission denied in database 'crm_mig'.
+mig_web|retention dry run|refused 229: The EXECUTE permission was denied on the object 'ApplyRetention', database 'crm_mig', sche
+mig_web|retention of billing|refused 229: The EXECUTE permission was denied on the object 'ApplyRetention', database 'crm_mig', sche
+Module|Before|Entries|DryRun
+------|------|-------|------
+customers|2025-01-01 00:00:00.0000000 +00:00|1|1
+Login|Step|Outcome
+-----|----|-------
+mig_privacy|draft basis total (open run R5)|refused 229: The SELECT permission was denied on the object 'BillingBases', database 'crm_mig', schema 
+mig_privacy|exported basis total (R3)|refused 229: The SELECT permission was denied on the object 'BillingBases', database 'crm_mig', schema 
+mig_privacy|exported basis order number (R3)|refused 229: The SELECT permission was denied on the object 'BillingBases', database 'crm_mig', schema 
+mig_privacy|approved basis back to draft (R4)|refused 229: The SELECT permission was denied on the object 'BillingBases', database 'crm_mig', schema 
+mig_privacy|line of approved basis (R4)|refused 229: The SELECT permission was denied on the object 'BillingBases', database 'crm_mig', schema 
+mig_privacy|delete line of exported basis|refused 229: The SELECT permission was denied on the object 'BillingBases', database 'crm_mig', schema 
+mig_privacy|closed run notes (R1)|refused 229: The SELECT permission was denied on the object 'BillingRuns', database 'crm_mig', schema '
+mig_privacy|failed basis to approved for a retry (R6)|refused 229: The SELECT permission was denied on the object 'BillingBases', database 'crm_mig', schema 
+mig_privacy|legacy charge decided billed|refused 229: The SELECT permission was denied on the object 'Charges', database 'crm_mig', schema 'bill
+mig_privacy|committed charge amount|refused 229: The SELECT permission was denied on the object 'Charges', database 'crm_mig', schema 'bill
+mig_privacy|audit insert|refused 229: The INSERT permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_privacy|audit update|refused 229: The SELECT permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_privacy|audit delete|refused 229: The SELECT permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_privacy|outbox claim|refused 229: The SELECT permission was denied on the object 'OutboxMessages', database 'crm_mig', schem
+mig_privacy|create table|refused 262: CREATE TABLE permission denied in database 'crm_mig'.
+mig_privacy|retention dry run|allowed (1 rows)
+mig_privacy|retention of billing|refused 51020: AUDIT_RETENTION_PROTECTED: the audit of financial records is kept; retention does not appl
+== the previous migrator's grant is refused
+Msg 51031
+APPLICATION_ROLE_STAYS_NARROW: an identity of the application does not get a broad fixed role (DEV-04, runbook 08)
+### 5. roll the schema back (billing ChargeRegister, audit Initial)
+Reverting migration '20261004011343_ProtectApprovedBilling'.
+Done.
+Reverting migration '20261004011342_AppendOnlyAudit'.
+Done.
+== triggers
+Table|Trigger|Disabled
+-----|-------|--------
+DatabaseTrigger|Disabled
+---------------|--------
+trg_ApplicationRolesStayNarrow|0
+== roles and members
+Role|Member
+----|------
+crm_privacy|mig_privacy
+crm_runtime|crm_web
+crm_runtime|crm_worker
+crm_web|mig_web
+crm_worker|mig_worker
+== schema grants of crm_runtime
+Schema|Granted
+------|-------
+activities|DELETE,INSERT,SELECT,UPDATE
+audit|INSERT,SELECT
+billing|DELETE,INSERT,SELECT,UPDATE
+catalog|DELETE,INSERT,SELECT,UPDATE
+contracts|DELETE,INSERT,SELECT,UPDATE
+customers|DELETE,INSERT,SELECT,UPDATE
+customfields|DELETE,INSERT,SELECT,UPDATE
+hangfire|DELETE,EXECUTE,INSERT,SELECT,UPDATE
+identity|DELETE,INSERT,SELECT,UPDATE
+integration|DELETE,INSERT,SELECT,UPDATE
+licensing|DELETE,INSERT,SELECT,UPDATE
+notifications|DELETE,INSERT,SELECT,UPDATE
+projects|DELETE,INSERT,SELECT,UPDATE
+sales|DELETE,INSERT,SELECT,UPDATE
+service|DELETE,INSERT,SELECT,UPDATE
+time|DELETE,INSERT,SELECT,UPDATE
+== object denies
+Principal|Object|Denied
+---------|------|------
+crm_runtime|audit.AuditEntries|DELETE,UPDATE
+crm_runtime|billing.BillingApprovals|DELETE
+crm_runtime|billing.BillingBases|DELETE
+crm_runtime|billing.BillingExportAttempts|DELETE,UPDATE
+crm_runtime|billing.BillingLines|DELETE
+crm_runtime|billing.BillingRuns|DELETE
+crm_runtime|billing.Charges|DELETE
+crm_runtime|billing.InvoicePayments|DELETE
+crm_runtime|billing.Invoices|DELETE
+crm_runtime|billing.PendingCharges|DELETE
+crm_web|activities.OutboxMessages|DELETE,UPDATE
+crm_web|audit.OutboxMessages|DELETE,UPDATE
+crm_web|billing.OutboxMessages|DELETE,UPDATE
+crm_web|catalog.OutboxMessages|DELETE,UPDATE
+crm_web|contracts.OutboxMessages|DELETE,UPDATE
+crm_web|customers.OutboxMessages|DELETE,UPDATE
+crm_web|customfields.OutboxMessages|DELETE,UPDATE
+crm_web|identity.OutboxMessages|DELETE,UPDATE
+crm_web|integration.OutboxMessages|DELETE,UPDATE
+crm_web|licensing.OutboxMessages|DELETE,UPDATE
+crm_web|notifications.OutboxMessages|DELETE,UPDATE
+crm_web|projects.OutboxMessages|DELETE,UPDATE
+crm_web|sales.OutboxMessages|DELETE,UPDATE
+crm_web|service.OutboxMessages|DELETE,UPDATE
+crm_web|time.OutboxMessages|DELETE,UPDATE
+MigrationHistoryDenies
+----------------------
+45
+== object grants
+Principal|Object|permission_name
+---------|------|---------------
+== audit objects
+name|type_desc
+----|---------
+__EFMigrationsHistory|USER_TABLE
+AuditEntries|USER_TABLE
+IntegrityCheckpoints_rollback_20261004015007214|USER_TABLE
+OutboxMessages|USER_TABLE
+RetentionPolicies_rollback_20261004015007214|USER_TABLE
+== migrations (audit, billing)
+Ctx|MigrationId
+---|-----------
+audit|20260915081313_Initial
+billing|20261003230254_ChargeIdentity
+billing|20261003233005_RevisionBoundApprovals
+billing|20261004002311_ChargeRegister
+ArchiveTable
+------------
+IntegrityCheckpoints_rollback_20261004015007214
+RetentionPolicies_rollback_20261004015007214
+
+(2 rows affected)
+== after the rollback the roles stay narrow: the worker login has no fixed role and the old grant is still refused
+DataWriter|CrmWorker
+----------|---------
+0|1
+Msg 51031
+APPLICATION_ROLE_STAYS_NARROW: an identity of the application does not get a broad fixed role (DEV-04, runbook 08)
+== billing data (counts and sums must not change through the DEV-04 migrations)
+T|Rows|Checksum
+-|----|--------
+runs|8|1991538453
+bases|9|-1513885206
+lines|23|-1287694785
+charges|18|-730911957
+attempts|0|NULL
+audit|3|1162002335
+### 6. forward again after the rollback
+Applying migration '20261004011342_AppendOnlyAudit'.
+Done.
+Applying migration '20261004011343_ProtectApprovedBilling'.
+Done.
+      Applied and verified database roles and grants for 15 schemas
+Login|Step|Outcome
+-----|----|-------
+mig_worker|draft basis total (open run R5)|allowed (1 rows)
+mig_worker|exported basis total (R3)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_worker|exported basis order number (R3)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_worker|approved basis back to draft (R4)|refused 51003: BILLING_APPROVED_IMMUTABLE: an approved billing basis cannot be changed or deleted.
+mig_worker|line of approved basis (R4)|refused 51004: BILLING_APPROVED_IMMUTABLE: the lines of an approved billing basis cannot be changed.
+mig_worker|delete line of exported basis|refused 229: The DELETE permission was denied on the object 'BillingLines', database 'crm_mig', schema 
+mig_worker|closed run notes (R1)|refused 51001: BILLING_APPROVED_IMMUTABLE: an approved billing run cannot be changed or deleted.
+mig_worker|failed basis to approved for a retry (R6)|allowed (1 rows)
+mig_worker|legacy charge decided billed|allowed (1 rows)
+mig_worker|committed charge amount|refused 51007: BILLING_CHARGE_IMMUTABLE: the charge cannot be changed this way.
+mig_worker|audit insert|allowed (1 rows)
+mig_worker|audit update|refused 229: The UPDATE permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_worker|audit delete|refused 229: The DELETE permission was denied on the object 'AuditEntries', database 'crm_mig', schema 
+mig_worker|outbox claim|allowed (0 rows)
+mig_worker|create table|refused 262: CREATE TABLE permission denied in database 'crm_mig'.
+mig_worker|retention dry run|refused 229: The EXECUTE permission was denied on the object 'ApplyRetention', database 'crm_mig', sche
+mig_worker|retention of billing|refused 229: The EXECUTE permission was denied on the object 'ApplyRetention', database 'crm_mig', sche
+### container crm-mig-dev04 removed

@@ -89,7 +89,12 @@ namespace Crm.Billing.Persistence.Migrations
 
                     b.HasIndex("RunId", "ContentRevision");
 
-                    b.ToTable("BillingApprovals", "billing");
+                    b.ToTable("BillingApprovals", "billing", t =>
+                        {
+                            t.HasTrigger("trg_BillingApprovals_Protect");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.BillingBasis", b =>
@@ -174,7 +179,12 @@ namespace Crm.Billing.Persistence.Migrations
 
                     b.HasIndex("RunId", "OrganizationId");
 
-                    b.ToTable("BillingBases", "billing");
+                    b.ToTable("BillingBases", "billing", t =>
+                        {
+                            t.HasTrigger("trg_BillingBases_Protect");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.BillingExportAttempt", b =>
@@ -225,7 +235,12 @@ namespace Crm.Billing.Persistence.Migrations
 
                     b.HasIndex("BasisId");
 
-                    b.ToTable("BillingExportAttempts", "billing");
+                    b.ToTable("BillingExportAttempts", "billing", t =>
+                        {
+                            t.HasTrigger("trg_BillingExportAttempts_Protect");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.BillingLine", b =>
@@ -371,7 +386,12 @@ namespace Crm.Billing.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("[SourceKey] IS NOT NULL AND [IsDeleted] = 0");
 
-                    b.ToTable("BillingLines", "billing");
+                    b.ToTable("BillingLines", "billing", t =>
+                        {
+                            t.HasTrigger("trg_BillingLines_Protect");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.BillingRun", b =>
@@ -458,7 +478,12 @@ namespace Crm.Billing.Persistence.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("BillingRuns", "billing");
+                    b.ToTable("BillingRuns", "billing", t =>
+                        {
+                            t.HasTrigger("trg_BillingRuns_Protect");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.Charge", b =>
@@ -561,7 +586,12 @@ namespace Crm.Billing.Persistence.Migrations
 
                     b.HasIndex("SeriesId", "ServiceFrom");
 
-                    b.ToTable("Charges", "billing");
+                    b.ToTable("Charges", "billing", t =>
+                        {
+                            t.HasTrigger("trg_Charges_Protect");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.Invoice", b =>

@@ -11,8 +11,7 @@ param sqlMaxVCores int
 param logAnalyticsWorkspaceId string
 
 var roles = {
-  keyVaultSecretsUser: '4633458b-17de-408a-b874-0445c86b69e6'
-  keyVaultCertificateUser: 'db79e9a7-68ee-4b58-9aeb-b90e7c24fcba'
+  keyVaultReader: '21090545-7ca7-4776-b22c-e363652d74d2'
   keyVaultCryptoUser: '12338af0-0e69-4776-bea7-57ae8d297424'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 }
@@ -135,23 +134,15 @@ resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
   }
 }
 
-resource kvSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// crm-web (appIdentity) reads certificate metadata vault-wide — never a secret value; the private key of its sign-in
+// certificate and the provider secrets are granted one secret at a time (modules/secret-access.bicep, DEV-04).
+resource kvReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: keyVault
-  name: guid(keyVault.id, appIdentityPrincipalId, roles.keyVaultSecretsUser)
+  name: guid(keyVault.id, appIdentityPrincipalId, roles.keyVaultReader)
   properties: {
     principalId: appIdentityPrincipalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsUser)
-  }
-}
-
-resource kvCertificateUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault
-  name: guid(keyVault.id, appIdentityPrincipalId, roles.keyVaultCertificateUser)
-  properties: {
-    principalId: appIdentityPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultCertificateUser)
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultReader)
   }
 }
 

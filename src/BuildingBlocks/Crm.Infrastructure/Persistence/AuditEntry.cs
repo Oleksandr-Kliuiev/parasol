@@ -9,6 +9,9 @@ public static class AuditActions
     public const string Login = "Login";
     public const string Merge = "Merge";
     public const string TriggerJob = "TriggerJob";
+
+    /// <summary>The retention procedure removed the personal part of older entries (DEV-04, written by audit.ApplyRetention).</summary>
+    public const string Retention = "Retention";
 }
 
 /// <summary>

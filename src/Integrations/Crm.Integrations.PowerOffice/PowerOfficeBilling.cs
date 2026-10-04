@@ -19,7 +19,9 @@ internal sealed class PowerOfficeBillingTarget(
 {
     public string System => PowerOfficeTypes.System;
 
-    public bool IsConfigured => options.Value.IsConfigured;
+    // Readiness is checked against links and the catalog — stored data — when crm-web collects a run, and crm-web has no
+    // PowerOffice credentials (DEV-04-AC05): the switch decides, the send in crm-worker needs the keys.
+    public bool IsConfigured => options.Value.Enabled;
 
     public async Task<BillingReadiness> CheckAsync(
         IReadOnlyCollection<Guid> organizationIds, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)

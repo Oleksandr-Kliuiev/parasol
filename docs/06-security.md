@@ -47,14 +47,14 @@
 | Секрет | Хранение | Ротация | Доступ |
 |---|---|---|---|
 | Сертификаты приложений Entra | Key Vault (certificates) | Автоматически, 12 мес. | MI `crm-web`, `crm-worker` |
-| Atera API key | Key Vault (secret) | 6 мес. + при увольнении администратора Atera | MI `crm-worker`, `crm-web` (создание тикетов) |
+| Atera API key | Key Vault (secret) | 6 мес. + при увольнении администратора Atera | MI `crm-worker` (тикеты тоже создаёт worker через очередь исходящих операций) |
 | PowerOffice Client Key, Subscription Key | Key Vault | 12 мес. / по требованию | MI `crm-worker` |
 | Refresh token сервисного аккаунта Partner Center | Key Vault | Автоматически при использовании | MI `crm-worker` |
 | Секрет вебхука Atera | Key Vault | 12 мес. | MI `crm-web` |
-| Ключ Data Protection (обёртка) | Key Vault (key) | 90 дней | MI `crm-web`, `crm-worker` |
-| Подключение к SQL | Без пароля — Entra-аутентификация Managed Identity | — | MI |
+| Ключ Data Protection (обёртка) | Key Vault (key) | 90 дней | MI `crm-web` |
+| Подключение к SQL | Без пароля — Entra-аутентификация Managed Identity, у каждого хоста своя: `id-crm-app` → роль `crm_web`, `id-crm-worker` → `crm_worker`, без `db_datawriter` и DDL ([runbook 08](runbooks/08-database-permissions.md)) | — | MI |
 
-Key Vault: RBAC-модель, soft delete + purge protection, private endpoint, диагностические логи в Log Analytics; доступ людей — только через PIM.
+Key Vault: RBAC-модель, soft delete + purge protection, private endpoint, диагностические логи в Log Analytics; доступ людей — только через PIM. Роли, читающие значения секретов, выдаются на конкретный секрет, а не на хранилище: crm-web — только секрет своего сертификата, crm-worker — только секреты поставщиков (DEV-04-AC05, ADR-014).
 
 ## 6. Инфраструктура
 - Azure SQL, Storage, Key Vault — без публичного доступа, только private endpoints.
@@ -64,7 +64,7 @@ Key Vault: RBAC-модель, soft delete + purge protection, private endpoint, 
 - Отдельные подписки Azure для `test` и `prod`; деплой в `prod` — только из CI через федеративные учётные данные (OIDC), без ручного доступа Contributor (break-glass через PIM).
 
 ## 7. Аудит и мониторинг безопасности
-- **Журнал аудита CRM** (`audit.AuditEntry`): создание/изменение/удаление, слияние, экспорт, утверждения, изменение настроек интеграций, просмотр финансовых отчётов. Пользователям — только чтение; удаление записей аудита невозможно из приложения (отдельный SQL-пользователь без DELETE).
+- **Журнал аудита CRM** (`audit.AuditEntry`): создание/изменение/удаление, слияние, экспорт, утверждения, изменение настроек интеграций, просмотр финансовых отчётов. Пользователям — только чтение. Роли приложения пишут его только `INSERT` в транзакции бизнес-изменения; `UPDATE`/`DELETE` запрещены правами и триггером. Единственное изменение — процедура retention под отдельной ролью: обнуляет персональную часть старых записей модулей с утверждённой политикой (DEC-03), аудит финансовых записей не трогает никогда. Цепочка SHA-256 по фактам записей с контрольными точками в Log Analytics обнаруживает изменение администратором БД (защиты от него хэш в той же БД не даёт — ADR-014, [runbook 08](runbooks/08-database-permissions.md)).
 - Логи приложения не содержат: токены, секреты, тела писем, полные персональные данные (маскирование e-mail/телефонов в структурированных логах).
 - Microsoft Sentinel (если используется Компанией) — подключение Entra Sign-in logs, аудит Key Vault/SQL и событий CRM (вход с новых стран, массовый экспорт, изменения в интеграциях).
 

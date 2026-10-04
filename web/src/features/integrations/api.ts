@@ -1,8 +1,10 @@
+import { useRef } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
 import type {
   BillingDetailsMaster,
   BulkResult,
+  ConnectionTestStatus,
   EntityLink,
   IntegrationCapability,
   IntegrationStatus,
@@ -17,6 +19,31 @@ export function useIntegrationStatus(enabled = true) {
     queryKey: ['integrations', 'status'],
     enabled,
     queryFn: async ({ signal }) => (await api.get<IntegrationStatus[]>(`${BASE}/status`, signal)).data,
+  });
+}
+
+/**
+ * Asks every two seconds for crm-worker's answer to a queued connection test (only the worker holds the provider
+ * credentials) and hands it over once; after a minute without one it hands over null.
+ */
+export function useConnectionTestAnswer(
+  pending: { system: string; id: string } | null,
+  onFinished: (result: ConnectionTestStatus | null) => void,
+) {
+  const polls = useRef(0);
+  return useQuery({
+    queryKey: ['integrations', 'test', pending?.system, pending?.id],
+    enabled: pending !== null,
+    refetchInterval: 2_000,
+    queryFn: async ({ signal }) => {
+      const result = (await api.get<ConnectionTestStatus>(`${BASE}/${pending!.system}/test/${pending!.id}`, signal)).data;
+      polls.current += 1;
+      if (result.status !== 'Running' || polls.current >= 30) {
+        polls.current = 0;
+        onFinished(result.status === 'Running' ? null : result);
+      }
+      return result;
+    },
   });
 }
 
@@ -105,7 +132,7 @@ export function useIntegrationActions() {
       onSuccess,
     }),
     test: useMutation({
-      mutationFn: async (system: string) => (await api.post<{ success: boolean; message: string }>(`${BASE}/${system}/test`)).data,
+      mutationFn: async (system: string) => (await api.post<ConnectionTestStatus>(`${BASE}/${system}/test`)).data,
     }),
     retry: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/retry`), onSuccess }),
     cancel: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/cancel`), onSuccess }),

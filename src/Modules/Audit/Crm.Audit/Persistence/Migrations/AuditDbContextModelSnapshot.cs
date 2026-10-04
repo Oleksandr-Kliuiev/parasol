@@ -23,6 +23,45 @@ namespace Crm.Audit.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Crm.Audit.Persistence.AuditIntegrityCheckpoint", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ChainHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Entries")
+                        .HasColumnType("int");
+
+                    b.Property<long>("FromId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PreviousHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<long>("ToId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ToId")
+                        .IsUnique();
+
+                    b.ToTable("IntegrityCheckpoints", "audit");
+                });
+
             modelBuilder.Entity("Crm.Infrastructure.Persistence.AuditEntry", b =>
                 {
                     b.Property<long>("Id")

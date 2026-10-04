@@ -174,7 +174,7 @@
       "external_gates": [
         "EXT-07"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-04.md",
       "evidence_file": "evidence/DEV-04.md",
       "acceptance_ids": [

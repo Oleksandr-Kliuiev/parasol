@@ -2,8 +2,10 @@ using Crm.Authorization;
 using Crm.Catalog.Contracts;
 using Crm.Customers.Contracts;
 using Crm.Infrastructure.Http;
+using Crm.Infrastructure.Persistence;
 using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Domain;
 using Crm.SharedKernel.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -133,12 +135,34 @@ public static class MappingEndpoints
             })
             .RequirePermission(Permissions.IntegrationsManage);
 
-        group.MapPost("/{system}/test", async (string system, IEnumerable<IIntegrationAdapter> adapters, CancellationToken ct) =>
-                adapters.SingleOrDefault(a => a.System == system) is { } adapter
-                    ? Results.Ok(adapter.IsEnabled
-                        ? await adapter.TestConnectionAsync(ct)
-                        : new ConnectionTestResult(false, "The integration is disabled in configuration."))
-                    : NotFound(system))
+        // The test is the worker's: only crm-worker holds the provider credentials (DEV-04-AC05). The request is recorded as a
+        // sync run and handed over through the outbox; the page asks for the run until it has an answer.
+        group.MapPost("/{system}/test", async (
+                string system, IEnumerable<IIntegrationAdapter> adapters, IntegrationDbContext db, IRequestContext request, TimeProvider time, CancellationToken ct) =>
+            {
+                if (adapters.SingleOrDefault(a => a.System == system) is not { } adapter)
+                {
+                    return NotFound(system);
+                }
+
+                if (!adapter.IsEnabled)
+                {
+                    return Results.Ok(new ConnectionTestStatus(null, system, nameof(SyncRunStatus.Failed), false, "The integration is disabled in configuration.", null, null));
+                }
+
+                var now = time.GetUtcNow();
+                var run = new SyncRun { Id = SequentialId.New(now), System = system, Job = IntegrationConnectionTestHandler.Job, StartedAt = now, Status = SyncRunStatus.Running };
+                db.SyncRuns.Add(run);
+                db.OutboxMessages.Add(OutboxMessage.For(new IntegrationConnectionTestRequested(system, run.Id), now, request.CorrelationId));
+                await db.SaveChangesAsync(ct);
+                return Results.Accepted($"/api/v1/integrations/{system}/test/{run.Id}", ConnectionTestStatus.From(run));
+            })
+            .RequirePermission(Permissions.IntegrationsManage);
+
+        group.MapGet("/{system}/test/{id:guid}", async (string system, Guid id, IntegrationDbContext db, CancellationToken ct) =>
+                await db.SyncRuns.AsNoTracking().SingleOrDefaultAsync(r => r.Id == id && r.System == system && r.Job == IntegrationConnectionTestHandler.Job, ct) is { } run
+                    ? Results.Ok(ConnectionTestStatus.From(run))
+                    : NotFound(id.ToString()))
             .RequirePermission(Permissions.IntegrationsManage);
 
         group.MapGet("/records", async ([AsParameters] RecordQuery q, IEnumerable<IIntegrationAdapter> adapters, IntegrationDbContext db, ICustomersApi customers, ICatalogApi catalog, CancellationToken ct) =>

@@ -33,14 +33,17 @@ const hostArgs = [
   `--ConnectionStrings:crm="${sql}"`,
   `--Integrations:Brreg:BaseUrl=${mock}/enhetsregisteret/api/`,
   '--Integrations:PowerOffice:Enabled=true',
-  '--Integrations:PowerOffice:ApplicationKey=mock',
-  '--Integrations:PowerOffice:ClientKey=mock',
-  '--Integrations:PowerOffice:SubscriptionKey=mock',
   `--Integrations:PowerOffice:BaseUrl=${mock}/v2/`,
   `--Integrations:PowerOffice:TokenUrl=${mock}/OAuth/Token`,
   '--Integrations:PowerOffice:WriteEnabled=true',
   '--RateLimits:ApiPerMinute=100000',
   '--Auth:ActiveUserCacheSeconds=0',
+].join(' ');
+// As in production (DEV-04-AC05), only crm-worker gets the provider keys; crm-web works from the switches and stored data.
+const providerKeys = [
+  '--Integrations:PowerOffice:ApplicationKey=mock',
+  '--Integrations:PowerOffice:ClientKey=mock',
+  '--Integrations:PowerOffice:SubscriptionKey=mock',
 ].join(' ');
 
 // Hosts that are already running are reused only on request: they may be connected to another database than E2E_SQL.
@@ -84,7 +87,7 @@ export default defineConfig({
       reuseExistingServer: reuseServers,
     },
     {
-      command: `${dotnet} run --project ../src/Hosts/Crm.Worker --launch-profile http -- --urls http://localhost:5191 --Hangfire:PrepareSchema=true ${hostArgs}`,
+      command: `${dotnet} run --project ../src/Hosts/Crm.Worker --launch-profile http -- --urls http://localhost:5191 --Hangfire:PrepareSchema=true ${hostArgs} ${providerKeys}`,
       url: 'http://localhost:5191/health/live',
       timeout: 300_000,
       reuseExistingServer: reuseServers,

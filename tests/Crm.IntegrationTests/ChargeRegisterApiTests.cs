@@ -21,6 +21,7 @@ namespace Crm.IntegrationTests;
 /// The charge register across runs through the API and SQL Server (DEV-03, docs/adr/ADR-013). Every test bills months of its
 /// own (2032–2034) and looks only at its own customers, as the database is shared with the rest of the suite.
 /// </summary>
+[Collection(DatabaseAdministrationCollection.Name)]
 public class ChargeRegisterApiTests(CrmWebFactory factory)
 {
     private const string Billing = "/api/v1/billing";
@@ -460,21 +461,17 @@ public class ChargeRegisterApiTests(CrmWebFactory factory)
         OrdersPosted(customer).ShouldBe(1);
 
         // The database comes back from a backup taken before the send was recorded: the basis waits to be sent, its charge is
-        // committed, the approval event was never delivered and no outbound operation exists. PowerOffice has the order.
+        // committed, the approval event was never delivered and no outbound operation exists. PowerOffice has the order. The
+        // application cannot write that state (DEV-04); the restore is the administrator's.
         var reference = await ReferenceAsync(basisId);
-        await using (var scope = factory.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
-            await db.Database.ExecuteSqlInterpolatedAsync($"""
-                UPDATE billing.BillingBases SET Status = N'Approved', OrderNo = NULL, ExportedAt = NULL, SendStartedAt = NULL WHERE Id = {basisId};
-                DELETE FROM billing.BillingExportAttempts WHERE BasisId = {basisId};
-                UPDATE billing.Charges SET Status = N'Committed' WHERE BasisId = {basisId};
-                UPDATE billing.OutboxMessages SET ProcessedAt = NULL, LockedUntil = NULL
-                WHERE Type LIKE N'%BillingBasisApproved%' AND Payload LIKE {"%" + basisId + "%"};
-                """);
-            var integration = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-            await integration.OutboundOperations.Where(o => o.EntityId == basisId).ExecuteDeleteAsync();
-        }
+        await factory.AdminSqlWithoutBillingTriggersAsync($"""
+            UPDATE billing.BillingBases SET Status = N'Approved', OrderNo = NULL, ExportedAt = NULL, SendStartedAt = NULL WHERE Id = {basisId};
+            DELETE FROM billing.BillingExportAttempts WHERE BasisId = {basisId};
+            UPDATE billing.Charges SET Status = N'Committed' WHERE BasisId = {basisId};
+            UPDATE billing.OutboxMessages SET ProcessedAt = NULL, LockedUntil = NULL
+            WHERE Type LIKE N'%BillingBasisApproved%' AND Payload LIKE {"%" + basisId + "%"};
+            DELETE FROM integration.OutboundOperations WHERE EntityId = {basisId};
+            """);
 
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/SalesOrders").UsingGet().WithParam("externalImportReferences", reference))
             .AtPriority(1)
@@ -510,26 +507,23 @@ public class ChargeRegisterApiTests(CrmWebFactory factory)
         var neighbour = await CustomerAsync(admin, finance, "K", period, end, 1_500m, link: false);
 
         // The month was billed by the previous version: a closed run, an exported basis and a line without a charge key that
-        // names the contract line. The backfill made it a legacy charge, as the migration does (ADR-013).
+        // names the contract line. The backfill made it a legacy charge, as the migration does (ADR-013). That is data from
+        // before the migration, which only the administrator can stage now (DEV-04).
         var legacyRun = Guid.NewGuid();
         var legacyBasis = Guid.NewGuid();
         var legacyLine = Guid.NewGuid();
-        await using (var scope = factory.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
-            var refs = JsonSerializer.Serialize(new { contractId = customer.ContractId, contractLineId = customer.LineId });
-            await db.Database.ExecuteSqlInterpolatedAsync($"""
-                INSERT INTO billing.BillingRuns (Id, PeriodStart, PeriodEnd, Kind, Status, CollectedAt, ApprovedAt, RequiresSecondApproval, ExportedAt, ClosedAt, Notes, ContentRevision, ApprovedRevision, ApprovedDigest, CreatedAt, IsDeleted)
-                VALUES ({legacyRun}, {period}, {end}, N'Regular', N'Closed', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), {customer.Marker}, 0, 0, N'legacy', SYSDATETIMEOFFSET(), 0);
-                INSERT INTO billing.BillingBases (Id, RunId, OrganizationId, IdempotencyKey, TotalExVat, PreviousPeriodTotal, Status, OrderNo, ExportedAt, Revision, CreatedAt, IsDeleted)
-                VALUES ({legacyBasis}, {legacyRun}, {customer.OrganizationId}, {"legacy-" + legacyBasis}, 4000, 0, N'Exported', N'5501', SYSDATETIMEOFFSET(), 0, SYSDATETIMEOFFSET(), 0);
-                INSERT INTO billing.BillingLines (Id, BasisId, [Group], ProductId, Description, Quantity, UnitPrice, DiscountPct, VatRate, LineTotal, SourceRefs, ManuallyAdjusted, Origin, Decision, Conflict, CreatedAt, IsDeleted)
-                VALUES ({legacyLine}, {legacyBasis}, N'Subscription', {customer.ProductId}, N'Managed services (01.09.2032–30.09.2032)', 1, 4000, 0, 25, 4000, {refs}, 0, N'Collected', N'None', N'None', SYSDATETIMEOFFSET(), 0);
-                """);
-            db.Charges.Add(Charge.Legacy($"legacy:{legacyLine:N}", customer.OrganizationId, legacyRun, legacyBasis, legacyLine, 4_000m, period, end, customer.LineId,
-                "Unprovable: billed before charge keys and its references prove no obligation.", DateTimeOffset.UtcNow));
-            await db.SaveChangesAsync();
-        }
+        var refs = JsonSerializer.Serialize(new { contractId = customer.ContractId, contractLineId = customer.LineId });
+        await factory.AdminSqlWithoutBillingTriggersAsync($"""
+            INSERT INTO billing.BillingRuns (Id, PeriodStart, PeriodEnd, Kind, Status, CollectedAt, ApprovedAt, RequiresSecondApproval, ExportedAt, ClosedAt, Notes, ContentRevision, ApprovedRevision, ApprovedDigest, CreatedAt, IsDeleted)
+            VALUES ({legacyRun}, {period}, {end}, N'Regular', N'Closed', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), {customer.Marker}, 0, 0, N'legacy', SYSDATETIMEOFFSET(), 0);
+            INSERT INTO billing.BillingBases (Id, RunId, OrganizationId, IdempotencyKey, TotalExVat, PreviousPeriodTotal, Status, OrderNo, ExportedAt, Revision, CreatedAt, IsDeleted)
+            VALUES ({legacyBasis}, {legacyRun}, {customer.OrganizationId}, {"legacy-" + legacyBasis}, 4000, 0, N'Exported', N'5501', SYSDATETIMEOFFSET(), 0, SYSDATETIMEOFFSET(), 0);
+            INSERT INTO billing.BillingLines (Id, BasisId, [Group], ProductId, Description, Quantity, UnitPrice, DiscountPct, VatRate, LineTotal, SourceRefs, ManuallyAdjusted, Origin, Decision, Conflict, CreatedAt, IsDeleted)
+            VALUES ({legacyLine}, {legacyBasis}, N'Subscription', {customer.ProductId}, N'Managed services (01.09.2032–30.09.2032)', 1, 4000, 0, 25, 4000, {refs}, 0, N'Collected', N'None', N'None', SYSDATETIMEOFFSET(), 0);
+            INSERT INTO billing.Charges (Id, [Key], Kind, ServiceFrom, ServiceTo, ContractLineId, SourceOrganizationId, PayerOrganizationId, Currency, Amount, Status, RunId, BasisId, LineId, StatusChangedAt, Reason, CreatedAt, IsDeleted)
+            VALUES (NEWID(), {$"legacy:{legacyLine:N}"}, N'Legacy', {period}, {end}, {customer.LineId}, {customer.OrganizationId}, {customer.OrganizationId}, N'NOK', 4000, N'LegacyUnresolved',
+                    {legacyRun}, {legacyBasis}, {legacyLine}, SYSDATETIMEOFFSET(), N'Unprovable: billed before charge keys and its references prove no obligation.', SYSDATETIMEOFFSET(), 0);
+            """);
 
         // The report names the customer, the month, the line and its amount; others than Finance do not see it.
         (await factory.ClientAs(CrmRoles.ServiceLead, userKey: "register-lead").GetAsync($"{Billing}/charges/legacy")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);

@@ -1,0 +1,6 @@
+az bicep build (az 2.89.1), 04.10.2026:
+main.bicep: OK
+test.bicepparam (PowerOffice and Atera on): OK
+test.bicepparam (defaults): OK
+prod.bicepparam: OK
+Not deployed: no Azure resource, tenant or role assignment was created or changed.

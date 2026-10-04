@@ -74,7 +74,18 @@ jobs:
       - name: Run database migrations (Container Apps job inside the VNet)
         run: |
           JOB="caj-crm-migrate-$ENVIRONMENT"
-          az containerapp job update -g "$RESOURCE_GROUP" -n "$JOB" --image "${{ steps.acr.outputs.server }}/crm-web:$CRM_IMAGE_TAG"
+          # DEV-04: crm-web and crm-worker sign in to SQL as separate identities. The worker identity is ensured here, and the
+          # job told about both, so this run already creates their database users in crm_web/crm_worker before Bicep switches
+          # the containers to them (Bicep keeps the same values afterwards).
+          WEB_IDENTITY="id-crm-app-$ENVIRONMENT"
+          WORKER_IDENTITY="id-crm-worker-$ENVIRONMENT"
+          WEB_CLIENT=$(az identity show -g "$RESOURCE_GROUP" -n "$WEB_IDENTITY" --query clientId -o tsv)
+          WORKER_CLIENT=$(az identity show -g "$RESOURCE_GROUP" -n "$WORKER_IDENTITY" --query clientId -o tsv 2>/dev/null || \
+            az identity create -g "$RESOURCE_GROUP" -n "$WORKER_IDENTITY" --tags application=vardahei-crm environment="$ENVIRONMENT" --query clientId -o tsv)
+          az containerapp job update -g "$RESOURCE_GROUP" -n "$JOB" --image "${{ steps.acr.outputs.server }}/crm-web:$CRM_IMAGE_TAG" \
+            --set-env-vars "Database__WebIdentityName=$WEB_IDENTITY" "Database__WebIdentityClientId=$WEB_CLIENT" \
+                           "Database__WorkerIdentityName=$WORKER_IDENTITY" "Database__WorkerIdentityClientId=$WORKER_CLIENT" \
+            --remove-env-vars Database__AppIdentityName Database__AppIdentityClientId
           EXECUTION=$(az containerapp job start -g "$RESOURCE_GROUP" -n "$JOB" --query name -o tsv)
           for i in $(seq 1 90); do
             STATUS=$(az containerapp job execution show -g "$RESOURCE_GROUP" -n "$JOB" --job-execution-name "$EXECUTION" --query properties.status -o tsv)

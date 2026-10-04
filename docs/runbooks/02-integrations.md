@@ -138,7 +138,7 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 
 ### 4.1 Общий ящик и разрешение
 1. Создать общий ящик, например `crm@<домен>` (без лицензии, только для отправки).
-2. Дать управляемой идентичности `id-crm-app-<env>` разрешение Graph `Mail.Send` (Application) и **ограничить его этим ящиком** через RBAC for Applications в Exchange Online:
+2. Дать управляемой идентичности crm-worker `id-crm-worker-<env>` (сводку отправляет worker) разрешение Graph `Mail.Send` (Application) и **ограничить его этим ящиком** через RBAC for Applications в Exchange Online:
    ```powershell
    New-ServicePrincipal -AppId <appId> -ServiceId <objectId> -DisplayName "Vardahei CRM"
    New-ManagementScope -Name "CRM mailbox" -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'crm@<домен>'"
@@ -162,7 +162,7 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 
 ### 4a.1 Разрешение и настройки
 1. Собрать продавцов, которые отправляют предложения, в почтовую группу безопасности, например `crm-quote-senders@<домен>`.
-2. Расширить область действия `Mail.Send` управляемой идентичности на эту группу (в дополнение к общему ящику из §4.1):
+2. Дать управляемой идентичности crm-web `id-crm-app-<env>` (предложение отправляется из web) `Mail.Send`, ограниченный этой группой (общий ящик из §4.1 ей не нужен):
    ```powershell
    New-ManagementScope -Name "CRM quote senders" -RecipientRestrictionFilter "MemberOfGroup -eq 'CN=crm-quote-senders,...'"
    New-ManagementRoleAssignment -App <appId> -Role "Application Mail.Send" -CustomResourceScope "CRM quote senders"
@@ -198,7 +198,7 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 
 ### 4b.2 Документы в SharePoint
 1. Создать сайт «Kunder» и библиотеку «Dokumenter».
-2. Дать управляемой идентичности `id-crm-app-<env>` разрешение `Sites.Selected` и выдать доступ **только к этому сайту**:
+2. Дать управляемым идентичностям `id-crm-worker-<env>` (создаёт и переименовывает папки) и `id-crm-app-<env>` (вкладка «Документы») разрешение `Sites.Selected` и выдать каждой доступ **только к этому сайту**:
    ```http
    POST https://graph.microsoft.com/v1.0/sites/{siteId}/permissions
    { "roles": ["write"], "grantedToIdentities": [ { "application": { "id": "<appId>", "displayName": "Vardahei CRM" } } ] }
@@ -208,7 +208,7 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 5. Проверка: сделать организацию клиентом — папка `Название (оргномер)` появляется в библиотеке; переименовать организацию — папка переименовывается; вкладка «Документы» показывает содержимое и открывает SharePoint.
 
 ### 4b.3 Сообщения в каналы Teams
-1. В каждом канале («Salg», «Økonomi», «Drift») создать поток Power Automate «When a Teams webhook request is received» и скопировать URL (это секрет — в Key Vault).
+1. В каждом канале («Salg», «Økonomi», «Drift») создать поток Power Automate «When a Teams webhook request is received» и скопировать URL (это секрет — в Key Vault; сообщения отправляет worker, поэтому секрет получает только он — [runbook 08 §3](08-database-permissions.md#3-новый-модуль-таблица-или-секрет)).
 2. Настройки: `Integrations:MicrosoftGraph:Teams:Enabled=true`, `:Channels:Sales`, `:Channels:Finance`, `:Channels:Operations`, порог `:WonDealThreshold` (по умолчанию 100 000 NOK).
 3. Проверка: выиграть сделку дороже порога — карточка появляется в «Salg»; утвердить биллинг-прогон — карточка в «Økonomi».
 

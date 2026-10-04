@@ -166,6 +166,7 @@ public interface IBillingTargetSystem
 {
     string System { get; }
 
+    /// <summary>The accounting system is switched on for billing. Readiness is answered from stored links and the catalog.</summary>
     bool IsConfigured { get; }
 
     Task<BillingReadiness> CheckAsync(

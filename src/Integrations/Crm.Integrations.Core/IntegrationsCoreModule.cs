@@ -49,8 +49,9 @@ public static class IntegrationsCoreModule
                 var degraded = false;
                 foreach (var adapter in adapters.OrderBy(a => a.System))
                 {
+                    // A connection test is a question an administrator asked, not a synchronization: it says nothing about freshness.
                     var last = await db.SyncRuns.AsNoTracking()
-                        .Where(r => r.System == adapter.System && r.Status != SyncRunStatus.Running)
+                        .Where(r => r.System == adapter.System && r.Status != SyncRunStatus.Running && r.Job != IntegrationConnectionTestHandler.Job)
                         .OrderByDescending(r => r.StartedAt)
                         .FirstOrDefaultAsync(ct);
                     var paused = await db.IntegrationSwitches.AsNoTracking()

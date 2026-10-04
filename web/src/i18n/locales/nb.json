@@ -421,7 +421,9 @@
       "poweroffice-customers": "Kunder (PowerOffice)",
       "poweroffice-contact-persons": "Kontaktpersoner (PowerOffice)",
       "poweroffice-products": "Produkter (PowerOffice)",
-      "outbound-operations": "Send endringer til andre systemer"
+      "outbound-operations": "Send endringer til andre systemer",
+      "audit-integrity": "Integritetskontroll av revisjonsloggen",
+      "audit-integrity-full": "Integritetskontroll av revisjonsloggen (alle kontrollpunkter)"
     },
     "status": {
       "Running": "Kjører",
@@ -507,6 +509,8 @@
     "unlinked": "{{count}} ikke koblet",
     "outbound": "{{pending}} venter, {{failed}} feilet",
     "test": "Test tilkobling",
+    "testing": "Tester …",
+    "testNoAnswer": "Bakgrunnstjenesten har ikke svart på tilkoblingstesten ennå. Kontroller at crm-worker kjører, og prøv igjen.",
     "openMappings": "Åpne koblinger",
     "paused": "På pause",
     "pause": "Sett på pause",

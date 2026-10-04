@@ -81,15 +81,7 @@ public sealed class AuditingInterceptor(ICurrentUser currentUser, IRequestContex
 
             foreach (var domainEvent in entry.Entity.DomainEvents)
             {
-                var type = domainEvent.GetType();
-                outbox.Add(new OutboxMessage
-                {
-                    Id = SequentialId.New(now),
-                    Type = $"{type.FullName}, {type.Assembly.GetName().Name}",
-                    Payload = JsonSerializer.Serialize(domainEvent, type, JsonOptions),
-                    OccurredAt = domainEvent.OccurredAt,
-                    CorrelationId = requestContext.CorrelationId,
-                });
+                outbox.Add(OutboxMessage.For(domainEvent, now, requestContext.CorrelationId));
             }
 
             entry.Entity.ClearDomainEvents();

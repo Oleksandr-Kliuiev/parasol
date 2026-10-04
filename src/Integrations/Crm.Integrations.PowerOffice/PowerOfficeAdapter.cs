@@ -92,7 +92,9 @@ internal sealed class PowerOfficeAdapter(IOptions<PowerOfficeOptions> options, I
 {
     public string System => PowerOfficeTypes.System;
 
-    public bool IsEnabled => options.Value.IsConfigured;
+    // Switched on for the CRM: links, imports and billing readiness work from stored data, also on crm-web, which has no
+    // provider credentials (DEV-04-AC05). Calls to PowerOffice run in crm-worker and need IsConfigured.
+    public bool IsEnabled => options.Value.Enabled;
 
     public IReadOnlyList<ExternalTypeDescriptor> RecordTypes { get; } =
     [
@@ -120,6 +122,11 @@ internal sealed class PowerOfficeAdapter(IOptions<PowerOfficeOptions> options, I
 
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken cancellationToken)
     {
+        if (!options.Value.IsConfigured)
+        {
+            return new ConnectionTestResult(false, "PowerOffice credentials are not configured on this instance.");
+        }
+
         try
         {
             var client = services.GetRequiredService<IPowerOfficeClient>();

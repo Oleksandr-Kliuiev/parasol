@@ -421,7 +421,9 @@
       "poweroffice-customers": "Клиенты (PowerOffice)",
       "poweroffice-contact-persons": "Контактные лица (PowerOffice)",
       "poweroffice-products": "Продукты (PowerOffice)",
-      "outbound-operations": "Отправка изменений в другие системы"
+      "outbound-operations": "Отправка изменений в другие системы",
+      "audit-integrity": "Проверка целостности журнала аудита",
+      "audit-integrity-full": "Проверка целостности журнала аудита (все контрольные точки)"
     },
     "status": {
       "Running": "Выполняется",
@@ -507,6 +509,8 @@
     "unlinked": "Не связано: {{count}}",
     "outbound": "В очереди {{pending}}, ошибок {{failed}}",
     "test": "Проверить подключение",
+    "testing": "Проверяется…",
+    "testNoAnswer": "Фоновая служба ещё не ответила на проверку подключения. Убедитесь, что crm-worker работает, и повторите.",
     "openMappings": "Открыть сопоставления",
     "paused": "На паузе",
     "pause": "Приостановить",

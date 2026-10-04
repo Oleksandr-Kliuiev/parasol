@@ -421,7 +421,9 @@
       "poweroffice-customers": "Customers (PowerOffice)",
       "poweroffice-contact-persons": "Contact persons (PowerOffice)",
       "poweroffice-products": "Products (PowerOffice)",
-      "outbound-operations": "Send changes to other systems"
+      "outbound-operations": "Send changes to other systems",
+      "audit-integrity": "Audit trail integrity check",
+      "audit-integrity-full": "Audit trail integrity check (all checkpoints)"
     },
     "status": {
       "Running": "Running",
@@ -507,6 +509,8 @@
     "unlinked": "{{count}} not linked",
     "outbound": "{{pending}} waiting, {{failed}} failed",
     "test": "Test connection",
+    "testing": "Testing…",
+    "testNoAnswer": "The background service has not answered the connection test yet. Check that crm-worker is running and try again.",
     "openMappings": "Open mappings",
     "paused": "Paused",
     "pause": "Pause",

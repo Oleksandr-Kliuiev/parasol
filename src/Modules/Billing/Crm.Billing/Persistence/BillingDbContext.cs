@@ -47,7 +47,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
         modelBuilder.Entity<Charge>(b =>
         {
-            b.ToTable("Charges");
+            b.ToTable("Charges", t => t.HasTrigger(BillingTriggers.Charges));
             b.ConfigureAuditable();
             b.Property(x => x.Key).HasMaxLength(200);
             b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(24);
@@ -66,7 +66,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
         modelBuilder.Entity<BillingRun>(b =>
         {
-            b.ToTable("BillingRuns");
+            b.ToTable("BillingRuns", t => t.HasTrigger(BillingTriggers.Runs));
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
@@ -82,7 +82,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
         modelBuilder.Entity<BillingApproval>(b =>
         {
-            b.ToTable("BillingApprovals");
+            b.ToTable("BillingApprovals", t => t.HasTrigger(BillingTriggers.Approvals));
             b.ConfigureAuditable();
             b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.ContentDigest).HasMaxLength(64);
@@ -93,7 +93,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
         modelBuilder.Entity<BillingBasis>(b =>
         {
-            b.ToTable("BillingBases");
+            b.ToTable("BillingBases", t => t.HasTrigger(BillingTriggers.Bases));
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.IdempotencyKey).HasMaxLength(128);
@@ -116,7 +116,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
         modelBuilder.Entity<BillingLine>(b =>
         {
-            b.ToTable("BillingLines");
+            b.ToTable("BillingLines", t => t.HasTrigger(BillingTriggers.Lines));
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.Group).HasConversion<string>().HasMaxLength(16);
@@ -147,7 +147,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
         modelBuilder.Entity<BillingExportAttempt>(b =>
         {
-            b.ToTable("BillingExportAttempts");
+            b.ToTable("BillingExportAttempts", t => t.HasTrigger(BillingTriggers.ExportAttempts));
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.Result).HasMaxLength(32);

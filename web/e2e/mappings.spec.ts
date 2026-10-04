@@ -35,3 +35,14 @@ test('an administrator imports a PowerOffice customer from the mapping screen', 
   await expect(page.getByRole('dialog').getByText(/^Preview:/)).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
 });
+
+test('the connection test is queued by crm-web and answered by crm-worker, which alone holds the PowerOffice keys', async ({ page }) => {
+  await signIn(page, 'Crm.Admin', '/admin/integrations');
+  const card = page.getByRole('region', { name: 'PowerOffice Go' });
+  await card.getByRole('button', { name: 'Test connection' }).click();
+
+  // crm-web has no PowerOffice keys (playwright.config.ts): the page waits for the worker's answer.
+  await expect(card.getByRole('button', { name: 'Testing…' })).toBeDisabled();
+  await expect(toast(page, /^Connected to PowerOffice Go/)).toBeVisible({ timeout: 30_000 });
+  await expect(card.getByRole('button', { name: 'Test connection' })).toBeEnabled();
+});

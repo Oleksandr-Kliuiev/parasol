@@ -89,7 +89,24 @@ module data 'modules/data.bicep' = {
   }
 }
 
+// Provider secrets crm-worker resolves from Key Vault; crm-web gets none of them (DEV-04).
+var workerSecretNames = concat(
+  enablePowerOffice ? ['poweroffice-application-key', 'poweroffice-client-key', 'poweroffice-subscription-key'] : [],
+  enableAtera ? ['atera-api-key'] : [])
+
+module secretAccess 'modules/secret-access.bicep' = {
+  params: {
+    keyVaultName: data.outputs.keyVaultName
+    webPrincipalId: identities.outputs.appPrincipalId
+    workerPrincipalId: identities.outputs.workerPrincipalId
+    entraCertificateName: entraCertificateName
+    certificateReady: !bootstrapImages
+    workerSecretNames: workerSecretNames
+  }
+}
+
 module apps 'modules/apps.bicep' = {
+  dependsOn: [secretAccess]
   params: {
     location: location
     environmentName: environmentName
@@ -103,6 +120,10 @@ module apps 'modules/apps.bicep' = {
     appIdentityClientId: identities.outputs.appClientId
     appIdentityName: identities.outputs.appName
     appIdentityPrincipalId: identities.outputs.appPrincipalId
+    workerIdentityId: identities.outputs.workerId
+    workerIdentityClientId: identities.outputs.workerClientId
+    workerIdentityName: identities.outputs.workerName
+    workerIdentityPrincipalId: identities.outputs.workerPrincipalId
     migratorIdentityId: identities.outputs.migratorId
     migratorIdentityClientId: identities.outputs.migratorClientId
     migratorIdentityPrincipalId: identities.outputs.migratorPrincipalId

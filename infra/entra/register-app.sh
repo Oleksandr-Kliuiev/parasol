@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Registers the "Vardahei CRM" application in Entra ID for one environment (docs/05-integrations.md §1).
-# Run by a Global/Privileged Role Administrator:  ./register-app.sh test https://crm-test.example.no [app-identity-principal-id]
-# The optional third argument is the principal id of the managed identity id-crm-app-<env> (Bicep output of the first
-# deployment); it receives the Microsoft Graph application permission User.Read.All for the hourly user synchronization.
+# Run by a Global/Privileged Role Administrator:  ./register-app.sh test https://crm-test.example.no [worker-identity-principal-id]
+# The optional third argument is the principal id of the crm-worker managed identity id-crm-worker-<env> (created by the
+# deployment pipeline); it receives the Microsoft Graph application permission User.Read.All for the hourly user
+# synchronization, which runs in crm-worker (docs/runbooks/08-database-permissions.md).
 # Creates: app registration (single-tenant, web), App Roles, service principal with assignment required,
 # security groups CRM-<Role>-<env> and role assignments to those groups. Idempotent for re-runs.
 set -euo pipefail

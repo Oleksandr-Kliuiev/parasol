@@ -93,6 +93,9 @@ jobs.AddOrUpdate<EntraUserSyncJob>(
     new RecurringJobOptions { TimeZone = oslo });
 
 jobs.AddOrUpdate<ContractLifecycleJob>(ContractLifecycleJob.JobId, job => job.RunAsync(CancellationToken.None), "30 5 * * *", new RecurringJobOptions { TimeZone = oslo });
+// DEV-04: the audit hash chain is extended and rechecked every night; checkpoints go to the log workspace as anchors.
+jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditIntegrityJob.JobId, job => job.RunAsync(CancellationToken.None), "40 4 * * *", new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditIntegrityJob.FullJobId, job => job.VerifyAllAsync(CancellationToken.None), Cron.Never(), new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<QuoteExpiryJob>(QuoteExpiryJob.JobId, job => job.RunAsync(CancellationToken.None), "0 6 * * *", new RecurringJobOptions { TimeZone = oslo });
 
 jobs.AddOrUpdate<OutboundProcessorJob>(OutboundProcessorJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");

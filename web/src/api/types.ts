@@ -342,6 +342,17 @@ export interface IntegrationStatus {
   pausedBy: string | null;
 }
 
+/** A connection test runs in crm-worker, the only host with the provider credentials; `Running` until it answers. */
+export interface ConnectionTestStatus {
+  id: string | null;
+  system: string;
+  status: 'Running' | 'Succeeded' | 'Failed';
+  success: boolean | null;
+  message: string | null;
+  requestedAt: string | null;
+  finishedAt: string | null;
+}
+
 export interface IntegrationCapability {
   system: string;
   enabled: boolean;

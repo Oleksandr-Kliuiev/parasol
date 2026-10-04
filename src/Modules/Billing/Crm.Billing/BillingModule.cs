@@ -28,6 +28,7 @@ public static class BillingModule
         services.AddScoped<BillingService>();
         services.AddScoped<IBillingApi, BillingApi>();
         services.AddScoped<IProductUsage, BillingProductUsage>();
+        services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, BillingDatabasePermissions>();
         return services;
     }
 

@@ -46,7 +46,8 @@ internal sealed class PartnerCenterAdapter(IOptions<PartnerCenterOptions> option
 {
     public string System => PartnerCenterTypes.System;
 
-    public bool IsEnabled => options.Value.IsConfigured;
+    // Switched on for the CRM; calls to Partner Center run in crm-worker, the only host with the credentials (DEV-04-AC05).
+    public bool IsEnabled => options.Value.Enabled;
 
     public IReadOnlyList<ExternalTypeDescriptor> RecordTypes { get; } = [new(PartnerCenterTypes.System, PartnerCenterTypes.Customer, EntityTypes.Organization)];
 
@@ -61,6 +62,11 @@ internal sealed class PartnerCenterAdapter(IOptions<PartnerCenterOptions> option
 
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken cancellationToken)
     {
+        if (!options.Value.IsConfigured)
+        {
+            return new ConnectionTestResult(false, "Partner Center credentials are not configured on this instance.");
+        }
+
         try
         {
             var client = services.GetRequiredService<IPartnerCenterClient>();

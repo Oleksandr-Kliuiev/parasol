@@ -72,7 +72,8 @@ internal sealed class AteraAdapter(IOptions<AteraOptions> options, IServiceProvi
 {
     public string System => AteraTypes.System;
 
-    public bool IsEnabled => options.Value.IsConfigured;
+    // Switched on for the CRM; calls to Atera run in crm-worker, the only host with the API key (DEV-04-AC05).
+    public bool IsEnabled => options.Value.Enabled;
 
     public IReadOnlyList<ExternalTypeDescriptor> RecordTypes { get; } =
     [
@@ -92,6 +93,11 @@ internal sealed class AteraAdapter(IOptions<AteraOptions> options, IServiceProvi
 
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken cancellationToken)
     {
+        if (!options.Value.IsConfigured)
+        {
+            return new ConnectionTestResult(false, "The Atera API key is not configured on this instance.");
+        }
+
         try
         {
             await using var enumerator = services.GetRequiredService<IAteraClient>().GetCustomersAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);

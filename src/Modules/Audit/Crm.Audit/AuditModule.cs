@@ -42,6 +42,9 @@ public static class AuditModule
     public static IServiceCollection AddAuditModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddModuleDbContext<AuditDbContext>(configuration);
+        services.AddOptions<Features.AuditIntegrityOptions>().Bind(configuration.GetSection(Features.AuditIntegrityOptions.SectionName));
+        services.AddScoped<Features.AuditIntegrityJob>();
+        services.AddSingleton<Infrastructure.Persistence.IDatabasePermissionRules, AuditDatabasePermissions>();
         return services;
     }
 

@@ -12,8 +12,19 @@ public sealed class AuditDbContext(DbContextOptions<AuditDbContext> options) : M
 
     protected override bool OwnsAuditTable => true;
 
+    public DbSet<AuditIntegrityCheckpoint> IntegrityCheckpoints => Set<AuditIntegrityCheckpoint>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AuditIntegrityCheckpoint>(b =>
+        {
+            b.ToTable("IntegrityCheckpoints");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).UseIdentityColumn();
+            b.Property(x => x.PreviousHash).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.ChainHash).HasMaxLength(64).IsFixedLength();
+            b.HasIndex(x => x.ToId).IsUnique();
+        });
     }
 }
 

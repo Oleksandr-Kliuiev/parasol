@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Badge,
@@ -21,7 +22,7 @@ import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
-import { useIntegrationActions, useIntegrationStatus, useOutbound } from './api';
+import { useConnectionTestAnswer, useIntegrationActions, useIntegrationStatus, useOutbound } from './api';
 import { systemName } from './labels';
 
 const useStyles = makeStyles({
@@ -67,10 +68,22 @@ export function SystemsPanel() {
     }
   };
 
+  // The worker runs the test (it alone has the provider credentials); the answer is asked for until it comes.
+  const [pending, setPending] = useState<{ system: string; id: string } | null>(null);
+  useConnectionTestAnswer(pending, (result) => {
+    setPending(null);
+    if (result) notify(result.message ?? '', result.success ? 'success' : 'error');
+    else notify(t('systemsPanel.testNoAnswer'), 'warning');
+  });
+
   const test = async (system: string) => {
     try {
       const result = await actions.test.mutateAsync(system);
-      notify(result.message, result.success ? 'success' : 'error');
+      if (result.status === 'Running' && result.id) {
+        setPending({ system, id: result.id });
+      } else {
+        notify(result.message ?? '', result.success ? 'success' : 'error');
+      }
     } catch (error) {
       notify(t('errors.generic'), 'error', errorMessage(error, t));
     }
@@ -106,8 +119,8 @@ export function SystemsPanel() {
                 </span>
               )}
               <div className={styles.buttons}>
-                <Button size="small" onClick={() => void test(s.system)} disabled={!s.enabled || actions.test.isPending}>
-                  {t('systemsPanel.test')}
+                <Button size="small" onClick={() => void test(s.system)} disabled={!s.enabled || actions.test.isPending || pending !== null}>
+                  {pending?.system === s.system ? t('systemsPanel.testing') : t('systemsPanel.test')}
                 </Button>
                 <Button size="small" appearance="subtle" onClick={() => navigate(`/admin/mappings?system=${s.system}`)}>
                   {t('systemsPanel.openMappings')}

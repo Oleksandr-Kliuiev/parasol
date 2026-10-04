@@ -105,6 +105,7 @@ flowchart LR
 | Сертификат/секрет истекает | ≤ 30 дней | Sev3 | E-mail Admin |
 | Refresh token Partner Center не обновлялся | > 60 дней | Sev2 | E-mail Admin |
 | БД: DTU/vCore > 80 % | 15 мин | Sev3 | Teams |
+| Целостность аудита: `AUDIT_INTEGRITY_MISMATCH` в логах | ≥ 1 | Sev1 | по DEC-09 (получатели не назначены); [runbook 08 §5](runbooks/08-database-permissions.md#5-целостность-аудита) |
 
 ### 4.3 Health checks
 - `/health/live` — процесс жив.
@@ -119,6 +120,7 @@ flowchart LR
 5. Приостановка интеграции при инциденте (без деплоя) — [runbook 05](runbooks/05-pause-integration.md).
 6. Инцидент безопасности / утечка персональных данных — [runbook 06](runbooks/06-security-incident.md).
 7. Ручной биллинг при недоступности CRM — [runbook 07](runbooks/07-manual-billing.md).
+8. Права БД, retention и целостность аудита, секреты поставщиков — [runbook 08](runbooks/08-database-permissions.md).
 
 ### 4.5 Поддержка
 - L1 — Admin CRM внутри Компании (доступы, сопоставления, повтор синхронизаций).

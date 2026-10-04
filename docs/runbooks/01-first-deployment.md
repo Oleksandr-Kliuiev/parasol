@@ -33,7 +33,7 @@ az identity federated-credential create -g rg-crm-test --identity-name id-crm-gi
 ./infra/entra/register-app.sh test https://<временный-адрес-или-домен>
 az ad app permission admin-consent --id <APP_ID из вывода>
 ```
-Скрипт создаёт App Roles, группы `CRM-<Role>-test` и назначает роли группам. После шага 4 запустите его ещё раз с третьим аргументом — `principalId` управляемой идентичности `id-crm-app-test` (`az identity show -g rg-crm-test -n id-crm-app-test --query principalId -o tsv`): она получит право Graph `User.Read.All` для синхронизации пользователей. Redirect URI обновляется повторным запуском скрипта, когда станет известен итоговый адрес (шаг 6).
+Скрипт создаёт App Roles, группы `CRM-<Role>-test` и назначает роли группам. После шага 4 запустите его ещё раз с третьим аргументом — `principalId` управляемой идентичности crm-worker `id-crm-worker-test` (`az identity show -g rg-crm-test -n id-crm-worker-test --query principalId -o tsv`): она получит право Graph `User.Read.All` для синхронизации пользователей. crm-web (`id-crm-app-test`) это право не нужно ([runbook 08](08-database-permissions.md)). Redirect URI обновляется повторным запуском скрипта, когда станет известен итоговый адрес (шаг 6).
 
 ## 4. Инфраструктура без образов (bootstrap)
 ```bash
@@ -70,7 +70,7 @@ gh variable set CRM_ENTRA_TENANT_ID --body <tenant-id>
 gh variable set CRM_ENTRA_CLIENT_ID_TEST --body <app-id>
 gh workflow run deploy.yml -f environment=test
 ```
-Пайплайн: SPA → образы в ACR → задача миграций `caj-crm-migrate-test` (создаёт схемы и выдаёт `id-crm-app-test` права чтения/записи) → Bicep с новым тегом → smoke-проверка `/health/ready`.
+Пайплайн: SPA → образы в ACR → идентичность `id-crm-worker-test` (создаётся, если её нет) → задача миграций `caj-crm-migrate-test` (схемы, роли `crm_web`/`crm_worker`, права; `id-crm-app-test` становится членом `crm_web`, `id-crm-worker-test` — `crm_worker`, без `db_datawriter`) → Bicep с новым тегом → smoke-проверка `/health/ready`. Матрица прав — [runbook 08](08-database-permissions.md).
 
 Для `prod` в настройках GitHub Environment `prod` включите **Required reviewers**.
 

@@ -10,6 +10,10 @@ param appIdentityId string
 param appIdentityClientId string
 param appIdentityName string
 param appIdentityPrincipalId string
+param workerIdentityId string
+param workerIdentityClientId string
+param workerIdentityName string
+param workerIdentityPrincipalId string
 param migratorIdentityId string
 param migratorIdentityClientId string
 param migratorIdentityPrincipalId string
@@ -45,7 +49,7 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   }
 }
 
-resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for principalId in [appIdentityPrincipalId, migratorIdentityPrincipalId]: {
+resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for principalId in [appIdentityPrincipalId, workerIdentityPrincipalId, migratorIdentityPrincipalId]: {
   scope: registry
   name: guid(registry.id, principalId, acrPullRole)
   properties: {
@@ -77,7 +81,9 @@ resource environment 'Microsoft.App/managedEnvironments@2024-10-02-preview' = {
 }
 
 var sqlConnectionPrefix = 'Server=tcp:${sqlServerFqdn},1433;Database=${sqlDatabaseName};Authentication=Active Directory Managed Identity;Encrypt=True;Connect Timeout=30'
-var appConnectionString = '${sqlConnectionPrefix};User Id=${appIdentityClientId}'
+// Each host signs in to SQL as its own identity; the migrator maps crm-web to crm_web and crm-worker to crm_worker (DEV-04).
+var webConnectionString = '${sqlConnectionPrefix};User Id=${appIdentityClientId}'
+var workerConnectionString = '${sqlConnectionPrefix};User Id=${workerIdentityClientId}'
 var migratorConnectionString = '${sqlConnectionPrefix};User Id=${migratorIdentityClientId}'
 
 var commonEnv = [
@@ -86,9 +92,9 @@ var commonEnv = [
   { name: 'OTEL_SERVICE_NAME', value: 'crm' }
 ]
 
-var appEnv = concat(commonEnv, [
+var webEnv = concat(commonEnv, [
   { name: 'AZURE_CLIENT_ID', value: appIdentityClientId }
-  { name: 'ConnectionStrings__crm', value: appConnectionString }
+  { name: 'ConnectionStrings__crm', value: webConnectionString }
   { name: 'AzureAd__TenantId', value: entraTenantId }
   { name: 'AzureAd__ClientId', value: entraClientId }
   { name: 'AzureAd__ClientCertificates__0__SourceType', value: 'KeyVault' }
@@ -101,23 +107,33 @@ var appEnv = concat(commonEnv, [
   { name: 'Integrations__MicrosoftGraph__ManagedIdentityClientId', value: appIdentityClientId }
 ])
 
-// Integration keys live in Key Vault (docs/runbooks/02-integrations.md); Container Apps resolves them with the app identity.
+var workerEnv = concat(commonEnv, [
+  { name: 'AZURE_CLIENT_ID', value: workerIdentityClientId }
+  { name: 'ConnectionStrings__crm', value: workerConnectionString }
+  { name: 'Integrations__MicrosoftGraph__Enabled', value: 'true' }
+  { name: 'Integrations__MicrosoftGraph__TenantId', value: entraTenantId }
+  { name: 'Integrations__MicrosoftGraph__ManagedIdentityClientId', value: workerIdentityClientId }
+])
+
+// Provider keys live in Key Vault (docs/runbooks/02-integrations.md) and reach crm-worker only: it is the host that calls
+// PowerOffice and Atera (sync jobs, the outbound queue, connection tests). crm-web works from stored data and the switches.
 var integrationSecrets = concat(
   enablePowerOffice ? [
-    { name: 'poweroffice-application-key', keyVaultUrl: '${keyVaultUri}secrets/poweroffice-application-key', identity: appIdentityId }
-    { name: 'poweroffice-client-key', keyVaultUrl: '${keyVaultUri}secrets/poweroffice-client-key', identity: appIdentityId }
-    { name: 'poweroffice-subscription-key', keyVaultUrl: '${keyVaultUri}secrets/poweroffice-subscription-key', identity: appIdentityId }
+    { name: 'poweroffice-application-key', keyVaultUrl: '${keyVaultUri}secrets/poweroffice-application-key', identity: workerIdentityId }
+    { name: 'poweroffice-client-key', keyVaultUrl: '${keyVaultUri}secrets/poweroffice-client-key', identity: workerIdentityId }
+    { name: 'poweroffice-subscription-key', keyVaultUrl: '${keyVaultUri}secrets/poweroffice-subscription-key', identity: workerIdentityId }
   ] : [],
   enableAtera ? [
-    { name: 'atera-api-key', keyVaultUrl: '${keyVaultUri}secrets/atera-api-key', identity: appIdentityId }
+    { name: 'atera-api-key', keyVaultUrl: '${keyVaultUri}secrets/atera-api-key', identity: workerIdentityId }
   ] : [])
 
-var integrationEnv = concat(
-  [
-    { name: 'Integrations__PowerOffice__Enabled', value: string(enablePowerOffice) }
-    { name: 'Integrations__PowerOffice__Environment', value: powerOfficeEnvironment }
-    { name: 'Integrations__Atera__Enabled', value: string(enableAtera) }
-  ],
+var integrationSwitches = [
+  { name: 'Integrations__PowerOffice__Enabled', value: string(enablePowerOffice) }
+  { name: 'Integrations__PowerOffice__Environment', value: powerOfficeEnvironment }
+  { name: 'Integrations__Atera__Enabled', value: string(enableAtera) }
+]
+
+var integrationKeys = concat(
   enablePowerOffice ? [
     { name: 'Integrations__PowerOffice__ApplicationKey', secretRef: 'poweroffice-application-key' }
     { name: 'Integrations__PowerOffice__ClientKey', secretRef: 'poweroffice-client-key' }
@@ -129,7 +145,8 @@ var integrationEnv = concat(
 
 var webImage = bootstrapImages ? placeholderImage : '${registry.properties.loginServer}/crm-web:${imageTag}'
 var workerImage = bootstrapImages ? placeholderImage : '${registry.properties.loginServer}/crm-worker:${imageTag}'
-var registries = bootstrapImages ? [] : [{ server: registry.properties.loginServer, identity: appIdentityId }]
+var webRegistries = bootstrapImages ? [] : [{ server: registry.properties.loginServer, identity: appIdentityId }]
+var workerRegistries = bootstrapImages ? [] : [{ server: registry.properties.loginServer, identity: workerIdentityId }]
 
 resource web 'Microsoft.App/containerApps@2024-10-02-preview' = {
   name: 'ca-crm-web-${environmentName}'
@@ -152,8 +169,7 @@ resource web 'Microsoft.App/containerApps@2024-10-02-preview' = {
         allowInsecure: false
         traffic: [{ latestRevision: true, weight: 100 }]
       }
-      registries: registries
-      secrets: integrationSecrets
+      registries: webRegistries
     }
     template: {
       containers: [
@@ -161,7 +177,7 @@ resource web 'Microsoft.App/containerApps@2024-10-02-preview' = {
           name: 'crm-web'
           image: webImage
           resources: { cpu: json('0.5'), memory: '1Gi' }
-          env: concat(appEnv, integrationEnv)
+          env: concat(webEnv, integrationSwitches)
           probes: bootstrapImages ? [] : [
             { type: 'Liveness', httpGet: { path: '/health/live', port: 8080 }, periodSeconds: 30 }
             { type: 'Readiness', httpGet: { path: '/health/ready', port: 8080 }, periodSeconds: 10 }
@@ -184,7 +200,7 @@ resource worker 'Microsoft.App/containerApps@2024-10-02-preview' = {
   tags: tags
   identity: {
     type: 'UserAssigned'
-    userAssignedIdentities: { '${appIdentityId}': {} }
+    userAssignedIdentities: { '${workerIdentityId}': {} }
   }
   dependsOn: [acrPull]
   properties: {
@@ -192,7 +208,7 @@ resource worker 'Microsoft.App/containerApps@2024-10-02-preview' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
-      registries: registries
+      registries: workerRegistries
       secrets: integrationSecrets
     }
     template: {
@@ -201,7 +217,7 @@ resource worker 'Microsoft.App/containerApps@2024-10-02-preview' = {
           name: 'crm-worker'
           image: workerImage
           resources: { cpu: json('1'), memory: '2Gi' }
-          env: concat(appEnv, integrationEnv)
+          env: concat(workerEnv, integrationSwitches, integrationKeys)
         }
       ]
       scale: { minReplicas: 1, maxReplicas: 1 }
@@ -239,8 +255,10 @@ resource migrate 'Microsoft.App/jobs@2024-10-02-preview' = {
           env: concat(commonEnv, [
             { name: 'AZURE_CLIENT_ID', value: migratorIdentityClientId }
             { name: 'ConnectionStrings__crm', value: migratorConnectionString }
-            { name: 'Database__AppIdentityName', value: appIdentityName }
-            { name: 'Database__AppIdentityClientId', value: appIdentityClientId }
+            { name: 'Database__WebIdentityName', value: appIdentityName }
+            { name: 'Database__WebIdentityClientId', value: appIdentityClientId }
+            { name: 'Database__WorkerIdentityName', value: workerIdentityName }
+            { name: 'Database__WorkerIdentityClientId', value: workerIdentityClientId }
             { name: 'Auth__Mode', value: 'Entra' }
             { name: 'AzureAd__TenantId', value: entraTenantId }
             { name: 'AzureAd__ClientId', value: entraClientId }
