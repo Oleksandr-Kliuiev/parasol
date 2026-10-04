@@ -10,8 +10,8 @@ resource app 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   tags: tags
 }
 
-// crm-worker: SQL role crm_worker, the provider secrets (PowerOffice, Atera), Graph for the user sync, the digest e-mail and
-// SharePoint folders. Created by the deployment pipeline before the migrations run, so its database user exists in time.
+// crm-worker: SQL role crm_worker, the provider secrets (PowerOffice, Atera), Graph for the user and role syncs, the digest
+// e-mail and SharePoint folders. Created by the deployment pipeline before the migrations run, so its database user exists in time.
 resource worker 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-crm-worker-${environmentName}'
   location: location

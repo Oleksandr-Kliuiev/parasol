@@ -58,6 +58,7 @@ public static class CustomersModule
                 (await handler.HandleAsync(new ExportOrganizations(p.Search, p.Status, p.AccountManagerId, lang), ct))
                 .ToHttpResult(file => Results.File(file.Content, ExportOrganizationsHandler.ContentType, file.FileName)))
             .RequirePermission(Permissions.CustomersRead)
+            .ExportsData()
             .RequireRateLimiting(RateLimitPolicies.Export);
 
         // ТЗ §6.6: migration from the old systems; ?dryRun=true previews what the file would do without writing it.

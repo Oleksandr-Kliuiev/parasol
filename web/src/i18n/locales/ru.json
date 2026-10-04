@@ -111,7 +111,8 @@
       "PRJ_MEMBER_UNKNOWN": "Этот сотрудник не является активным пользователем CRM.",
       "TIM_PROJECT_NOT_AVAILABLE": "Проект не найден или вы в нём не участвуете.",
       "TIM_PROJECT_OTHER_ORGANIZATION": "Проект относится к другому клиенту, чем запись времени.",
-      "TIM_PROJECT_CLOSED": "Проект завершён или отменён, часы на него больше не записываются."
+      "TIM_PROJECT_CLOSED": "Проект завершён или отменён, часы на него больше не записываются.",
+      "AUTH_REVERIFY_REQUIRED": "Для этого действия права должны быть подтверждены Microsoft за последние несколько минут. Выйдите, войдите снова и повторите действие."
     }
   },
   "status": {
@@ -432,6 +433,7 @@
     "jobNames": {
       "brreg-registry-check": "Проверка статуса в реестре (Brønnøysund)",
       "entra-user-sync": "Синхронизация пользователей (Entra ID)",
+      "entra-role-sync": "Синхронизация ролей (Entra ID)",
       "atera-customers": "Клиенты (Atera)",
       "atera-contacts": "Контакты (Atera)",
       "poweroffice-customers": "Клиенты (PowerOffice)",

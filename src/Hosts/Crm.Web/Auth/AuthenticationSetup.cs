@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Crm.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Authentication;
@@ -14,6 +15,7 @@ public static class AuthenticationSetup
 {
     public const string CookieName = "__Host-crm";
     private static readonly string[] RevalidationScopes = ["User.Read"];
+    private static readonly TimeSpan RevalidationRetry = TimeSpan.FromMinutes(5);
 
     public static WebApplicationBuilder AddCrmAuthentication(this WebApplicationBuilder builder)
     {
@@ -73,7 +75,10 @@ public static class AuthenticationSetup
         return builder;
     }
 
-    /// <summary>Creates/refreshes the CRM user and stamps session claims. Shared by Entra and development sign-in.</summary>
+    /// <summary>
+    /// Creates/refreshes the CRM user with the roles the sign-in token carries, opens a server-side session and stamps the
+    /// session claims (DEV-10). Shared by Entra and development sign-in.
+    /// </summary>
     public static async Task ProvisionUserAsync(ClaimsPrincipal principal, IServiceProvider services, CancellationToken cancellationToken)
     {
         var identity = (ClaimsIdentity)principal.Identity!;
@@ -86,12 +91,17 @@ public static class AuthenticationSetup
         var email = principal.FindFirstValue("email") ?? principal.FindFirstValue(ClaimTypes.Email) ?? (upn.Contains('@') ? upn : null);
 
         var provisioning = services.GetRequiredService<IUserProvisioning>();
-        var profile = await provisioning.EnsureUserAsync(new ExternalIdentity(tenantId, objectId, upn, name, email), cancellationToken);
+        var profile = await provisioning.EnsureUserAsync(
+            new ExternalIdentity(tenantId, objectId, upn, name, email, Roles: principal.GetCrmRoles().ToList()), cancellationToken);
 
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+        var at = services.GetRequiredService<TimeProvider>().GetUtcNow();
+        var sessionId = await services.GetRequiredService<ISessionDirectory>().StartAsync(profile.Id, at, cancellationToken);
+        var now = at.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
         identity.AddClaim(new Claim(CrmClaimTypes.UserId, profile.Id.ToString()));
+        identity.AddClaim(new Claim(CrmClaimTypes.SessionId, sessionId.ToString()));
         identity.AddClaim(new Claim(CrmClaimTypes.SessionStarted, now));
         identity.AddClaim(new Claim(CrmClaimTypes.LastValidated, now));
+        identity.AddClaim(new Claim(PermissionAuthorization.RolesVerifiedClaim, now));
     }
 
     private static void ConfigureCookie(CookieAuthenticationOptions cookie, CrmAuthOptions options, bool revalidate)
@@ -125,13 +135,53 @@ public static class AuthenticationSetup
     private static async Task ValidatePrincipalAsync(CookieValidatePrincipalContext context, CrmAuthOptions options, bool revalidate)
     {
         var principal = context.Principal!;
-        var now = DateTimeOffset.UtcNow;
+        var services = context.HttpContext.RequestServices;
+        var now = services.GetRequiredService<TimeProvider>().GetUtcNow();
 
         if (ReadUnixClaim(principal, CrmClaimTypes.SessionStarted) is not { } started || now - started > options.AbsoluteExpiration)
         {
             await RejectAsync(context);
             return;
         }
+
+        // DEV-10: the session and its roles are the server's, not the cookie's. A cookie from before sessions were kept names
+        // none and signs in once more; an ended session, a deactivated user or roles left unconfirmed too long end this one.
+        if (!Guid.TryParse(principal.FindFirstValue(CrmClaimTypes.UserId), out var userId) ||
+            !Guid.TryParse(principal.FindFirstValue(CrmClaimTypes.SessionId), out var sessionId))
+        {
+            await RejectAsync(context);
+            return;
+        }
+
+        var state = await services.GetRequiredService<SessionStateCache>()
+            .GetAsync(userId, sessionId, services.GetRequiredService<ISessionDirectory>(), context.HttpContext.RequestAborted);
+        if (!state.SessionOpen || !state.IsActive || state.RolesVerifiedAt is not { } verified || now - verified > options.RoleGrace)
+        {
+            await RejectAsync(context);
+            return;
+        }
+
+        var identity = (ClaimsIdentity)principal.Identity!;
+        var version = state.RolesVersion.ToString(CultureInfo.InvariantCulture);
+        if (principal.FindFirstValue(CrmClaimTypes.RolesVersion) != version ||
+            !principal.GetCrmRoles().Order(StringComparer.Ordinal).SequenceEqual(state.Roles.Order(StringComparer.Ordinal)))
+        {
+            foreach (var claim in identity.Claims.Where(c => c.Type is ClaimTypes.Role or "roles" || c.Type == identity.RoleClaimType).ToList())
+            {
+                identity.RemoveClaim(claim);
+            }
+
+            foreach (var role in state.Roles)
+            {
+                identity.AddClaim(new Claim(identity.RoleClaimType, role));
+            }
+
+            SetClaim(identity, CrmClaimTypes.RolesVersion, version);
+            context.ShouldRenew = true;
+        }
+
+        // Written from the server's record on every request, so a value a cookie carries is never what authorization reads.
+        SetClaim(identity, PermissionAuthorization.RolesVerifiedClaim, verified.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
 
         if (!revalidate || ReadUnixClaim(principal, CrmClaimTypes.LastValidated) is { } last && now - last < options.RevalidationInterval)
         {
@@ -150,15 +200,45 @@ public static class AuthenticationSetup
             await RejectAsync(context);
             return;
         }
+        catch (Exception ex) when (IsUnavailable(ex, context.HttpContext.RequestAborted))
+        {
+            // DEV-10: Entra cannot be reached, so the check is postponed, not passed. The session reads on within the role grace
+            // while the directory's confirmation keeps governing privileged actions, and asks again in a few minutes rather than
+            // on every request. Only the exception type is logged: messages may name the account.
+            services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(AuthenticationSetup))
+                .LogWarning("Session revalidation with Entra ID is unavailable ({Error}); next attempt in {Minutes} minutes.", ex.GetType().Name, RevalidationRetry.TotalMinutes);
+            var retryAt = now - options.RevalidationInterval + RevalidationRetry;
+            SetClaim(identity, CrmClaimTypes.LastValidated, retryAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+            context.ShouldRenew = true;
+            return;
+        }
 
-        var identity = (ClaimsIdentity)principal.Identity!;
-        if (identity.FindFirst(CrmClaimTypes.LastValidated) is { } claim)
+        SetClaim(identity, CrmClaimTypes.LastValidated, now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        context.ShouldRenew = true;
+    }
+
+    /// <summary>
+    /// Entra did not answer — the network, a timeout, throttling or a server error — as opposed to answering that the account
+    /// may not have a token. Anything else is unexpected and fails the request.
+    /// </summary>
+    internal static bool IsUnavailable(Exception error, CancellationToken requestAborted) => error switch
+    {
+        HttpRequestException or TimeoutException => true,
+        OperationCanceledException => !requestAborted.IsCancellationRequested,
+        MsalServiceException service => service.StatusCode is 0 or 429 or >= 500 ||
+                                        service.ErrorCode is MsalError.RequestTimeout or MsalError.ServiceNotAvailable,
+        MsalClientException client => client.ErrorCode is MsalError.RequestTimeout or MsalError.ServiceNotAvailable,
+        _ => false,
+    };
+
+    private static void SetClaim(ClaimsIdentity identity, string type, string value)
+    {
+        foreach (var claim in identity.FindAll(type).ToList())
         {
             identity.RemoveClaim(claim);
         }
 
-        identity.AddClaim(new Claim(CrmClaimTypes.LastValidated, now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)));
-        context.ShouldRenew = true;
+        identity.AddClaim(new Claim(type, value));
     }
 
     private static async Task RejectAsync(CookieValidatePrincipalContext context)

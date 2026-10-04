@@ -111,7 +111,8 @@
       "PRJ_MEMBER_UNKNOWN": "Personen er ikke en aktiv CRM-bruker.",
       "TIM_PROJECT_NOT_AVAILABLE": "Prosjektet finnes ikke, eller du er ikke med i det.",
       "TIM_PROJECT_OTHER_ORGANIZATION": "Prosjektet hører til en annen kunde enn timeføringen.",
-      "TIM_PROJECT_CLOSED": "Prosjektet er fullført eller avlyst og tar ikke imot flere timer."
+      "TIM_PROJECT_CLOSED": "Prosjektet er fullført eller avlyst og tar ikke imot flere timer.",
+      "AUTH_REVERIFY_REQUIRED": "Denne handlingen krever at tilgangene dine er bekreftet av Microsoft de siste minuttene. Logg ut, logg inn igjen og gjenta den."
     }
   },
   "status": {
@@ -432,6 +433,7 @@
     "jobNames": {
       "brreg-registry-check": "Kontroll av registerstatus (Brønnøysund)",
       "entra-user-sync": "Brukersynkronisering (Entra ID)",
+      "entra-role-sync": "Rollesynkronisering (Entra ID)",
       "atera-customers": "Kunder (Atera)",
       "atera-contacts": "Kontakter (Atera)",
       "poweroffice-customers": "Kunder (PowerOffice)",

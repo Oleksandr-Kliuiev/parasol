@@ -41,7 +41,7 @@ Federated credential prod — только `repo:<org>/<repo>:environment:prod`:
 ./infra/entra/register-app.sh test https://<временный-адрес-или-домен>
 az ad app permission admin-consent --id <APP_ID из вывода>
 ```
-Скрипт создаёт App Roles, группы `CRM-<Role>-test` и назначает роли группам. После шага 4 запустите его ещё раз с третьим аргументом — `principalId` управляемой идентичности crm-worker `id-crm-worker-test` (`az identity show -g rg-crm-test -n id-crm-worker-test --query principalId -o tsv`): она получит право Graph `User.Read.All` для синхронизации пользователей. crm-web (`id-crm-app-test`) это право не нужно ([runbook 08](08-database-permissions.md)). Redirect URI обновляется повторным запуском скрипта, когда станет известен итоговый адрес (шаг 6).
+Скрипт создаёт App Roles, группы `CRM-<Role>-test` и назначает роли группам. После шага 4 запустите его ещё раз с третьим аргументом — `principalId` управляемой идентичности crm-worker `id-crm-worker-test` (`az identity show -g rg-crm-test -n id-crm-worker-test --query principalId -o tsv`): она получит права Graph `User.Read.All` (синхронизация пользователей), `Application.Read.All` и `GroupMember.Read.All` (синхронизация ролей каждые 2 минуты, [runbook 12](12-roles-and-sessions.md)). crm-web (`id-crm-app-test`) это право не нужно ([runbook 08](08-database-permissions.md)). Redirect URI обновляется повторным запуском скрипта, когда станет известен итоговый адрес (шаг 6).
 
 ## 4. Инфраструктура без образов (bootstrap)
 ```bash

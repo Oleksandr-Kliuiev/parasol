@@ -623,6 +623,9 @@ erDiagram
 | `billing.BillingBasis` | UNIQUE (`IdempotencyKey`) |
 | `billing.BillingRun` | UNIQUE (`PeriodStart`) WHERE `Status <> 'Closed'` |
 | `audit.AuditEntry` | Кластерный по `At`; INDEX (`EntityType`, `EntityId`); секционирование по году |
+| `identity.User` | UNIQUE (`TenantId`, `ObjectId`); подтверждённые роли `Roles`, `RolesVersion`, `RolesVerifiedAt` (DEV-10) |
+| `identity.UserSession` | INDEX (`UserId`); открыта, пока `EndedAt IS NULL` (DEV-10) |
+| `identity.DirectoryRoleConfirmation` | PK (`TenantId`); `ConfirmedAt` — маркер конкурентности запусков синхронизации ролей (DEV-10) |
 
 ## 8. Сроки хранения
 
@@ -634,6 +637,7 @@ erDiagram
 | Зеркало тикетов | 3 года (источник — Atera) | Минимизация |
 | `ExternalRecord` (сырые payload) | 90 дней | Отладка |
 | Журнал синхронизаций | 180 дней | Эксплуатация |
+| Серверные сессии (`identity.UserSession`) | 90 дней после окончания или абсолютного срока (предложение; очистка — DEV-11) | Безопасность: расследование входов |
 | Журнал аудита (нефинансовый) | 5 лет | Безопасность |
 
 Уточнить у заказчика и юриста на Этапе 0 ([09](09-assumptions-questions.md)).

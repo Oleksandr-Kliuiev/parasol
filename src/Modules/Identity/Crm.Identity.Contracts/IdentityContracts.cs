@@ -3,6 +3,7 @@ using Crm.SharedKernel.Domain;
 namespace Crm.Identity.Contracts;
 
 /// <summary>Identity asserted by Entra ID (or the development sign-in).</summary>
+/// <param name="Roles">The CRM roles the sign-in token carries: what Entra assigned at the moment of sign-in (DEV-10).</param>
 public sealed record ExternalIdentity(
     string TenantId,
     string ObjectId,
@@ -10,7 +11,8 @@ public sealed record ExternalIdentity(
     string DisplayName,
     string? Email,
     string? Department = null,
-    string? JobTitle = null);
+    string? JobTitle = null,
+    IReadOnlyCollection<string>? Roles = null);
 
 public sealed record UserSummary(Guid Id, string DisplayName, string? Email, bool IsActive);
 
@@ -66,3 +68,35 @@ public interface ITechnicianDirectory
 
 /// <summary>An administrator mapped (or unmapped) an external technician; records imported earlier can be re-assigned.</summary>
 public sealed record TechnicianMappingChanged(string System, string ExternalId, Guid? UserId) : DomainEvent;
+
+/// <summary>
+/// What a signed-in session may do now (DEV-10): whether the session is still open, the user still active, and the CRM roles
+/// the authority — the directory or the last sign-in token — last confirmed, with when.
+/// </summary>
+public sealed record SessionState(bool SessionOpen, bool IsActive, IReadOnlyList<string> Roles, int RolesVersion, DateTimeOffset? RolesVerifiedAt);
+
+/// <summary>Server-side sessions (DEV-10): the cookie only names one; ending it refuses that cookie on every replica.</summary>
+public interface ISessionDirectory
+{
+    Task<Guid> StartAsync(Guid userId, DateTimeOffset at, CancellationToken cancellationToken);
+
+    Task EndAsync(Guid sessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken);
+
+    Task<SessionState> GetAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken);
+}
+
+/// <summary>The CRM app roles of each user as the directory assigns them now — directly or through groups, PIM included (DEV-10).</summary>
+public interface IUserRoleDirectory
+{
+    /// <summary>
+    /// Records <paramref name="rolesByObjectId"/>, read from the directory at <paramref name="verifiedAt"/>, as confirmed for every
+    /// CRM user of the tenant; a user missing from it has no role. Only users whose roles changed are written. A reading older
+    /// than one a user already has (a later sign-in) changes nothing for that user, and one older than the reading applied
+    /// last changes nothing at all.
+    /// </summary>
+    Task<RoleSyncResult> ApplyAsync(
+        string tenantId, IReadOnlyDictionary<string, IReadOnlyCollection<string>> rolesByObjectId, DateTimeOffset verifiedAt, CancellationToken cancellationToken);
+}
+
+/// <param name="Superseded">A later reading had already been applied, so this one was discarded.</param>
+public sealed record RoleSyncResult(int Users, int Changed, bool Superseded = false);

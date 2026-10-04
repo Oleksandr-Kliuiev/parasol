@@ -312,6 +312,10 @@ internal sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOption
         if (ProvisionedUsers.TryGetValue(userKey, out var userId))
         {
             ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(CrmClaimTypes.UserId, userId));
+            // The test authority confirms the header roles on every request (DEV-10); the session tests use real cookies instead.
+            ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(
+                Crm.Authorization.PermissionAuthorization.RolesVerifiedClaim,
+                Context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
         else
         {

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modules\Customers\Crm.Customers\Crm.Customers.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\Crm.Identity\Crm.Identity.csproj" />
     <ProjectReference Include="..\..\src\Modules\CustomFields\Crm.CustomFields\Crm.CustomFields.csproj" />
     <ProjectReference Include="..\..\src\Modules\Catalog\Crm.Catalog\Crm.Catalog.csproj" />
     <ProjectReference Include="..\..\src\Modules\Contracts\Crm.Contracts\Crm.Contracts.csproj" />

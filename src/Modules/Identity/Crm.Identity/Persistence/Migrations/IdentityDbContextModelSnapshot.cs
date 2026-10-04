@@ -23,6 +23,21 @@ namespace Crm.Identity.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Crm.Identity.Domain.DirectoryRoleConfirmation", b =>
+                {
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("ConfirmedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("DirectoryRoleConfirmations", "identity");
+                });
+
             modelBuilder.Entity("Crm.Identity.Domain.TechnicianMapping", b =>
                 {
                     b.Property<Guid>("Id")
@@ -137,6 +152,19 @@ namespace Crm.Identity.Persistence.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("nvarchar(8)");
 
+                    b.Property<string>("Roles")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTimeOffset?>("RolesVerifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("RolesVersion")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -158,6 +186,36 @@ namespace Crm.Identity.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", "identity");
+                });
+
+            modelBuilder.Entity("Crm.Identity.Domain.UserSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EndReason")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserSessions", "identity");
                 });
 
             modelBuilder.Entity("Crm.Infrastructure.Persistence.AuditEntry", b =>

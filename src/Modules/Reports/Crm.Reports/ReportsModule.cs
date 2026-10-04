@@ -49,6 +49,7 @@ public static class ReportsModule
             })
             .WithTags("Reports")
             .RequirePermission(Permissions.ReportsMart)
+            .ExportsData()
             .RequireRateLimiting(RateLimitPolicies.Export);
 
         return app;

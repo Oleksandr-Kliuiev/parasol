@@ -74,6 +74,9 @@ async function request<T>(method: string, url: string, options: RequestOptions =
     } catch {
       // Non-JSON error body.
     }
+    // DEV-10: the session ended on the server (signed out elsewhere, account deactivated, roles not confirmed for too long):
+    // the user signs in again and comes back to this page.
+    if (response.status === 401 && url.startsWith('/api/')) window.location.assign(loginUrl());
     throw new ApiError(response.status, problem);
   }
 
@@ -95,6 +98,9 @@ export async function download(url: string): Promise<void> {
     } catch {
       // Non-JSON error body.
     }
+    // DEV-10: the session ended on the server (signed out elsewhere, account deactivated, roles not confirmed for too long):
+    // the user signs in again and comes back to this page.
+    if (response.status === 401 && url.startsWith('/api/')) window.location.assign(loginUrl());
     throw new ApiError(response.status, problem);
   }
 

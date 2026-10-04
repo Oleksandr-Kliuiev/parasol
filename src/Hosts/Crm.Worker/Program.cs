@@ -93,6 +93,12 @@ jobs.AddOrUpdate<EntraUserSyncJob>(
     job => job.RunAsync(CancellationToken.None),
     app.Services.GetRequiredService<IOptions<GraphOptions>>().Value.UserSyncCron,
     new RecurringJobOptions { TimeZone = oslo });
+// DEV-10: the CRM roles of every user as Entra ID assigns them now (directly, through groups, PIM); sessions follow it.
+jobs.AddOrUpdate<EntraRoleSyncJob>(
+    EntraRoleSyncJob.JobId,
+    job => job.RunAsync(CancellationToken.None),
+    app.Services.GetRequiredService<IOptions<GraphOptions>>().Value.RoleSyncCron,
+    new RecurringJobOptions { TimeZone = oslo });
 
 jobs.AddOrUpdate<ContractLifecycleJob>(ContractLifecycleJob.JobId, job => job.RunAsync(CancellationToken.None), "30 5 * * *", new RecurringJobOptions { TimeZone = oslo });
 // DEV-04: the audit hash chain is extended and rechecked every night; checkpoints go to the log workspace as anchors.

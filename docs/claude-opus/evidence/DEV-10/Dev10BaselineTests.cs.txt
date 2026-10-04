@@ -1,0 +1,155 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+using Crm.Authorization;
+using Crm.Web.Auth;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace Crm.IntegrationTests;
+
+/// <summary>
+/// Temporary reproduction of audit finding A15 on the release before DEV-10 (run in a throwaway worktree, never committed):
+/// a session cookie keeps the roles it was issued with, a signed-out cookie stays valid, and production starts without the
+/// shared Data Protection key ring.
+/// </summary>
+public class Dev10BaselineTests(CrmWebFactory factory)
+{
+    private const string Tenant = "11111111-1111-1111-1111-111111111111";
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task Baseline_roles_live_in_the_cookie_and_sign_out_is_local()
+    {
+        var report = new StringBuilder();
+        var keysA = Directory.CreateTempSubdirectory("dev10-keys-a-").FullName;
+        var keysB = Directory.CreateTempSubdirectory("dev10-keys-b-").FullName;
+        var oid = $"baseline-{Guid.NewGuid():N}"[..20];
+        using var replicaA = Host(keysA);
+        using var replicaB = Host(keysB);
+
+        var browser = Client(replicaA);
+        string cookie;
+        using (var signIn = new HttpRequestMessage(HttpMethod.Post, "/test/sign-in"))
+        {
+            signIn.Headers.Add("X-Test-Oid", oid);
+            signIn.Headers.Add("X-Test-Sign-In-Roles", CrmRoles.Finance);
+            var response = await browser.SendAsync(signIn, Ct);
+            response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+            cookie = string.Join("; ", response.Headers.GetValues("Set-Cookie")
+                .Where(c => c.StartsWith(AuthenticationSetup.CookieName, StringComparison.Ordinal)).Select(c => c.Split(';')[0]));
+        }
+        report.AppendLine($"Finance signed in on replica A; approve a run                     -> {(int)(await ApproveAsync(browser)).StatusCode} (404 = authorized, no such run)");
+
+        // Entra takes Finance away. Nothing in this release reads app-role assignments: the hourly revalidation redeems a
+        // refresh token for Graph User.Read (no CRM roles in it) and the user sync looks at accountEnabled only.
+        report.AppendLine($"Finance removed in Entra; same cookie approves                     -> {(int)(await ApproveAsync(browser)).StatusCode}");
+        var user = await browser.GetFromJsonAsync<JsonElement>("/bff/user", Ct);
+        report.AppendLine($"/bff/user still lists                                              -> {string.Join(",", user.GetProperty("roles").EnumerateArray().Select(r => r.GetString()))}");
+
+        // Replicas whose file systems are their own (Container Apps) and no shared key ring configured.
+        using var onB = Client(replicaB, cookie);
+        report.AppendLine($"The cookie on replica B (own key ring)                             -> {(int)(await onB.GetAsync("/bff/user", Ct)).StatusCode}");
+
+        (await browser.PostAsync("/bff/logout", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var copy = Client(replicaA, cookie);
+        report.AppendLine($"Signed out; a copy of the cookie on replica A: /bff/user            -> {(int)(await copy.GetAsync("/bff/user", Ct)).StatusCode}");
+        report.AppendLine($"Signed out; the copy approves                                      -> {(int)(await ApproveAsync(copy)).StatusCode}");
+
+        // The key ring setup of crm-web on its own (the rest of a production start needs Azure): no Blob, no Key Vault key.
+        var production = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
+        var setup = typeof(Program).Assembly.GetType("Crm.Web.Http.DataProtectionSetup", throwOnError: true)!;
+        Exception? refused = null;
+        try
+        {
+            setup.GetMethod("AddDataProtection")!.Invoke(null, [production]);
+        }
+        catch (System.Reflection.TargetInvocationException ex)
+        {
+            refused = ex.InnerException;
+        }
+
+        var repository = production.Services.BuildServiceProvider()
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>>().Value.XmlRepository;
+        report.AppendLine($"Production key ring setup without BlobUri/KeyVaultKeyUri refuses     -> {refused is not null}{(refused is null ? "" : " (" + refused.Message + ")")}; key repository: {(repository is null ? "default, local to the machine" : repository.GetType().Name)}");
+        File.WriteAllText(Environment.GetEnvironmentVariable("DEV10_REPORT") ?? Path.Combine(Path.GetTempPath(), "dev10-baseline.txt"), report.ToString());
+        Directory.Delete(keysA, true);
+        Directory.Delete(keysB, true);
+    }
+
+    private WebApplicationFactory<Program> Host(string keyRing) => factory.WithWebHostBuilder(builder =>
+    {
+        builder.UseSetting("Auth:RevalidationInterval", "1.00:00:00");
+        builder.ConfigureTestServices(services =>
+        {
+            services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRing));
+            services.PostConfigure<AuthenticationOptions>(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultForbidScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            });
+            services.AddTransient<IStartupFilter, BaselineSignIn>();
+        });
+    });
+
+    private static HttpClient Client(WebApplicationFactory<Program> host, string? cookie = null)
+    {
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false, HandleCookies = cookie is null,
+        });
+        client.DefaultRequestHeaders.Add("X-CSRF", "1");
+        if (cookie is not null)
+        {
+            client.DefaultRequestHeaders.Add("Cookie", cookie);
+        }
+
+        return client;
+    }
+
+    private static Task<HttpResponseMessage> ApproveAsync(HttpClient client)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/billing/runs/{Guid.NewGuid()}/approve");
+        request.Headers.IfMatch.ParseAdd("\"1\"");
+        return client.SendAsync(request, Ct);
+    }
+
+    private sealed class BaselineSignIn : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Map("/test/sign-in", branch => branch.Run(async context =>
+            {
+                var objectId = context.Request.Headers["X-Test-Oid"].ToString();
+                var claims = new List<Claim>
+                {
+                    new(CrmClaimTypes.TenantId, Tenant),
+                    new(CrmClaimTypes.ObjectId, objectId),
+                    new("preferred_username", $"{objectId}@test.local"),
+                    new("name", $"Baseline {objectId}"),
+                };
+                claims.AddRange(context.Request.Headers["X-Test-Sign-In-Roles"].ToString()
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries).Select(role => new Claim("roles", role)));
+                var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "AuthenticationTypes.Federation", "name", "roles"));
+                await AuthenticationSetup.ProvisionUserAsync(principal, context.RequestServices, context.RequestAborted);
+                await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                context.Response.StatusCode = StatusCodes.Status204NoContent;
+            }));
+            next(app);
+        };
+    }
+}

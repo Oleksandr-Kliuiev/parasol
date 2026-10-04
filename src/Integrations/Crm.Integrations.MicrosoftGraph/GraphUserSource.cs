@@ -23,6 +23,15 @@ public sealed class GraphOptions
 
     public string UserSyncCron { get; set; } = "15 * * * *";
 
+    /// <summary>
+    /// Client id of the CRM's own app registration (DEV-10): the role sync reads who is assigned to its app roles. Needs the
+    /// Graph application permissions Application.Read.All and GroupMember.Read.All on the worker's identity (runbook 12).
+    /// </summary>
+    public string? CrmAppId { get; set; }
+
+    /// <summary>Every two minutes: with the session cache this bounds the revocation of a privilege at about two and a half minutes.</summary>
+    public string RoleSyncCron { get; set; } = "*/2 * * * *";
+
     /// <summary>Meetings are pushed to the organizer's Outlook calendar (FR-ACT-02).</summary>
     public bool CalendarEnabled { get; set; }
 

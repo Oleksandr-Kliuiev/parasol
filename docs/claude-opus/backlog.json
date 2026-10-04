@@ -349,7 +349,7 @@
       "external_gates": [
         "EXT-02"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-10.md",
       "evidence_file": "evidence/DEV-10.md",
       "acceptance_ids": [

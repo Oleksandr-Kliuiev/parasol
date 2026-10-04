@@ -84,6 +84,10 @@ if (builder.Configuration.GetValue<string>("Auth:Mode") != "Development")
 }
 
 builder.Services.AddCrmAuthorization();
+// DEV-10: sessions and roles come from the server on every request (bounded per replica); a privileged action without a
+// recent confirmation of the roles answers with a coded 403.
+builder.Services.AddSingleton<SessionStateCache>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, CrmAuthorizationResultHandler>();
 builder.AddDataProtection();
 
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);

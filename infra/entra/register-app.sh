@@ -2,8 +2,9 @@
 # Registers the "Vardahei CRM" application in Entra ID for one environment (docs/05-integrations.md §1).
 # Run by a Global/Privileged Role Administrator:  ./register-app.sh test https://crm-test.example.no [worker-identity-principal-id]
 # The optional third argument is the principal id of the crm-worker managed identity id-crm-worker-<env> (created by the
-# deployment pipeline); it receives the Microsoft Graph application permission User.Read.All for the hourly user
-# synchronization, which runs in crm-worker (docs/runbooks/08-database-permissions.md).
+# deployment pipeline); it receives the Microsoft Graph application permissions the worker's directory jobs need:
+# User.Read.All for the hourly user synchronization, Application.Read.All and GroupMember.Read.All for the role
+# synchronization every two minutes (DEV-10, docs/adr/ADR-019-sessions-and-privilege-freshness.md).
 # Creates: app registration (single-tenant, web), App Roles, service principal with assignment required,
 # security groups CRM-<Role>-<env> and role assignments to those groups. Idempotent for re-runs.
 set -euo pipefail
@@ -13,7 +14,6 @@ BASE_URL="${2:?base URL, e.g. https://crm.example.no}"
 APP_NAME="Vardahei CRM (${ENV_NAME})"
 GRAPH_APP_ID="00000003-0000-0000-c000-000000000000"
 USER_READ_DELEGATED="e1fe6dd8-ba31-4d61-89e7-88639da4683d"   # User.Read
-USER_READ_ALL_APP="df021288-bdef-4463-88db-98f22de89214"     # User.Read.All (granted to the managed identity, not the app)
 APP_IDENTITY_PRINCIPAL_ID="${3:-}"
 
 role_json() { # value displayName description
@@ -82,14 +82,19 @@ done
 
 if [[ -n "$APP_IDENTITY_PRINCIPAL_ID" ]]; then
   GRAPH_SP_ID=$(az ad sp show --id "$GRAPH_APP_ID" --query id -o tsv)
-  HAS_ROLE=$(az rest --method GET --url "https://graph.microsoft.com/v1.0/servicePrincipals/${APP_IDENTITY_PRINCIPAL_ID}/appRoleAssignments" \
-    --query "value[?appRoleId=='${USER_READ_ALL_APP}'] | length(@)" -o tsv)
-  if [[ "$HAS_ROLE" == "0" ]]; then
-    az rest --method POST --url "https://graph.microsoft.com/v1.0/servicePrincipals/${APP_IDENTITY_PRINCIPAL_ID}/appRoleAssignments" \
-      --headers "Content-Type=application/json" \
-      --body "{\"principalId\":\"${APP_IDENTITY_PRINCIPAL_ID}\",\"resourceId\":\"${GRAPH_SP_ID}\",\"appRoleId\":\"${USER_READ_ALL_APP}\"}" >/dev/null
-  fi
-  echo "Managed identity ${APP_IDENTITY_PRINCIPAL_ID} -> Microsoft Graph User.Read.All"
+  # Application permissions of the managed identity, not of the app registration; ids are looked up by name.
+  for PERMISSION in User.Read.All Application.Read.All GroupMember.Read.All; do
+    ROLE_ID=$(az ad sp show --id "$GRAPH_APP_ID" --query "appRoles[?value=='${PERMISSION}' && contains(allowedMemberTypes, 'Application')].id | [0]" -o tsv)
+    [[ -n "$ROLE_ID" ]] || { echo "Microsoft Graph has no application permission ${PERMISSION}" >&2; exit 1; }
+    HAS_ROLE=$(az rest --method GET --url "https://graph.microsoft.com/v1.0/servicePrincipals/${APP_IDENTITY_PRINCIPAL_ID}/appRoleAssignments" \
+      --query "value[?appRoleId=='${ROLE_ID}'] | length(@)" -o tsv)
+    if [[ "$HAS_ROLE" == "0" ]]; then
+      az rest --method POST --url "https://graph.microsoft.com/v1.0/servicePrincipals/${APP_IDENTITY_PRINCIPAL_ID}/appRoleAssignments" \
+        --headers "Content-Type=application/json" \
+        --body "{\"principalId\":\"${APP_IDENTITY_PRINCIPAL_ID}\",\"resourceId\":\"${GRAPH_SP_ID}\",\"appRoleId\":\"${ROLE_ID}\"}" >/dev/null
+    fi
+    echo "Managed identity ${APP_IDENTITY_PRINCIPAL_ID} -> Microsoft Graph ${PERMISSION}"
+  done
 fi
 
 cat <<INFO

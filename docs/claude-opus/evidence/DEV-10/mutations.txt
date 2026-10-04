@@ -1,0 +1,60 @@
+# DEV-10 mutation checks, 04.10.2026 (code restored byte for byte after each; cmp against saved originals)
+
+## M1 EntraRoleSync reads groups/{id}/transitiveMembers instead of direct members
+Crm.IntegrationTests  Total: 7, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 15,025s
+Crm.IntegrationTests.SessionLifecycleTests.AC02_deactivation_a_group_left_and_an_expired_pim_activation_each_end_the_privilege [FAIL]
+Shouldly.ShouldAssertException : Roles(await nestedClient.GetFromJsonAsync<JsonElement>("/bff/user", Ct))
+should be empty but had
+1
+item and was
+["Crm.Admin"]
+Additional Info:
+
+## M2 EntraRoleSync keeps the roles of accounts disabled in Entra
+Crm.IntegrationTests  Total: 7, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 15,152s
+Crm.IntegrationTests.SessionLifecycleTests.AC02_deactivation_a_group_left_and_an_expired_pim_activation_each_end_the_privilege [FAIL]
+Shouldly.ShouldAssertException : (await ApproveAsync(directClient)).StatusCode
+should be
+HttpStatusCode.Forbidden
+but was
+HttpStatusCode.NotFound
+tests/Crm.IntegrationTests/SessionLifecycleTests.cs(117,0): at Crm.IntegrationTests.SessionLifecycleTests.AC02_deactivation_a_group_left_and_an_expired_pim_activation_each_end_the_privilege()
+
+## M3 User.ApplyDirectoryRoles stamps RolesVerifiedAt on every user even when nothing changed (the first implementation)
+Crm.IntegrationTests  Total: 7, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,942s
+Crm.IntegrationTests.SessionLifecycleTests.The_role_sync_writes_a_user_only_when_the_roles_change_and_confirms_everyone_else_once_for_the_tenant [FAIL]
+Shouldly.ShouldAssertException : await UserRowAsync(host, userId)
+should be
+(1, 00000000000007E6)
+but was
+(2, 00000000000007E8)
+tests/Crm.IntegrationTests/SessionLifecycleTests.cs(210,0): at Crm.IntegrationTests.SessionLifecycleTests.The_role_sync_writes_a_user_only_when_the_roles_change_and_confirms_everyone_else_once_for_the_tenant()
+
+## M4 web/src/api/client.ts: no redirect to sign-in on 401 from /api/
+vitest src/api/client.test.ts: Tests 1 failed | 7 passed (8)
+FAIL api client > sends the browser to sign in again when an API call answers 401, and back to this page afterwards
+
+## M5 OnValidatePrincipal keeps the cookie's role claims (the server's confirmed roles are not written into the session; condition replaced by a runtime-false one). A first attempt as 'false && A || B' still ran the block (operator precedence) and a constant 'if (false)' did not build (CS0162 as error) — both discarded, not counted
+Crm.IntegrationTests  Total: 8, Errors: 0, Failed: 5, Skipped: 0, Not Run: 0, Time: 14,111s
+Crm.IntegrationTests.SessionLifecycleTests.AC03_an_old_cookie_on_a_second_replica_brings_back_neither_a_revoked_role_nor_an_ended_session [FAIL]
+Crm.IntegrationTests.SessionLifecycleTests.The_role_sync_writes_a_user_only_when_the_roles_change_and_confirms_everyone_else_once_for_the_tenant [FAIL]
+Crm.IntegrationTests.SessionLifecycleTests.AC02_deactivation_a_group_left_and_an_expired_pim_activation_each_end_the_privilege [FAIL]
+Crm.IntegrationTests.SessionLifecycleTests.AC06_the_logs_carry_no_tokens_cookies_or_identity_claims [FAIL]
+Crm.IntegrationTests.SessionLifecycleTests.AC01_a_role_removed_in_the_directory_leaves_an_existing_cookie_within_the_bound [FAIL]
+
+## M6 PermissionAuthorizationHandler skips the freshness check
+Crm.IntegrationTests  Total: 8, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,336s
+Crm.IntegrationTests.SessionLifecycleTests.AC04_an_unreachable_directory_stops_privileged_actions_within_minutes_and_reading_within_hours [FAIL]
+
+## M7 /bff/logout deletes the cookie only (the server-side session is not ended)
+Crm.IntegrationTests  Total: 8, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 15,208s
+Crm.IntegrationTests.SessionLifecycleTests.AC03_an_old_cookie_on_a_second_replica_brings_back_neither_a_revoked_role_nor_an_ended_session [FAIL]
+
+## M8 an unreachable Entra during the hourly refresh-token check fails the request (behaviour before this change: 500 on every request)
+Crm.IntegrationTests  Total: 10, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 15,190s
+Crm.IntegrationTests.SessionLifecycleTests.Entra_answering_no_ends_the_session_and_entra_out_of_reach_postpones_the_check_without_failing_requests [FAIL]
+
+## M9 the absolute session lifetime is not enforced
+Crm.IntegrationTests  Total: 10, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 15,060s
+Crm.IntegrationTests.SessionLifecycleTests.An_active_session_with_freshly_confirmed_roles_still_ends_at_its_absolute_lifetime [FAIL]
+

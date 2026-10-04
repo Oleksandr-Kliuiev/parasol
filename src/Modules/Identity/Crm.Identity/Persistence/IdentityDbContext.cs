@@ -14,6 +14,10 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 
     public DbSet<TechnicianMapping> TechnicianMappings => Set<TechnicianMapping>();
 
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+
+    public DbSet<DirectoryRoleConfirmation> DirectoryRoleConfirmations => Set<DirectoryRoleConfirmation>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(b =>
@@ -28,7 +32,29 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             b.Property(x => x.Department).HasMaxLength(128);
             b.Property(x => x.JobTitle).HasMaxLength(128);
             b.Property(x => x.PreferredLanguage).HasMaxLength(8);
+            // DEV-10: seven roles at most, comma-separated; existing users start with none until their next confirmation.
+            b.Property(x => x.Roles).HasMaxLength(256).HasDefaultValue(string.Empty);
+            b.Ignore(x => x.RoleList);
             b.HasIndex(x => new { x.TenantId, x.ObjectId }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserSession>(b =>
+        {
+            b.ToTable("UserSessions");
+            // Ids come from the domain (SequentialId): a new session is inserted, never mistaken for an existing row.
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.EndReason).HasMaxLength(32);
+            b.HasIndex(x => x.UserId);
+        });
+
+        modelBuilder.Entity<DirectoryRoleConfirmation>(b =>
+        {
+            b.ToTable("DirectoryRoleConfirmations");
+            b.HasKey(x => x.TenantId);
+            b.Property(x => x.TenantId).HasMaxLength(64);
+            // Two overlapping runs: the one that saves second finds the confirmation moved and rolls back with its role changes.
+            b.Property(x => x.ConfirmedAt).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<TechnicianMapping>(b =>

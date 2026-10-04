@@ -1,0 +1,10 @@
+# A15 reproduced on 4a108ac (DEV-09 release) in a throwaway git worktree, 04.10.2026 ~10:45 UTC
+# Test: Dev10BaselineTests.cs.txt (copied into the worktree only; never committed). Synthetic user, Testcontainers SQL Server.
+
+Finance signed in on replica A; approve a run                     -> 404 (404 = authorized, no such run)
+Finance removed in Entra; same cookie approves                     -> 404
+/bff/user still lists                                              -> Crm.Finance
+The cookie on replica B (own key ring)                             -> 401
+Signed out; a copy of the cookie on replica A: /bff/user            -> 200
+Signed out; the copy approves                                      -> 404
+Production key ring setup without BlobUri/KeyVaultKeyUri refuses     -> False; key repository: default, local to the machine

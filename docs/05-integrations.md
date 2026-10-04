@@ -38,7 +38,9 @@
 | Разрешение | Тип | Релиз | Для чего |
 |---|---|---|---|
 | `openid`, `profile`, `email`, `offline_access`, `User.Read` | Delegated | R1 | Вход, профиль |
-| `User.Read.All` | Application — **выдаётся управляемой идентичности crm-worker** `id-crm-worker-<env>`, не регистрации приложения | R1 | Ежечасная синхронизация пользователей (delta query): отключённые аккаунты, имя, отдел, должность |
+| `User.Read.All` | Application — **выдаётся управляемой идентичности crm-worker** `id-crm-worker-<env>`, не регистрации приложения | R1 | Ежечасная синхронизация пользователей (delta query): отключённые аккаунты, имя, отдел, должность; список отключённых аккаунтов для синхронизации ролей |
+| `Application.Read.All` | Application — управляемой идентичности crm-worker | R1 (DEV-10) | Синхронизация ролей: роли и назначения приложения CRM (`appRoleAssignedTo`) |
+| `GroupMember.Read.All` | Application — управляемой идентичности crm-worker | R1 (DEV-10) | Синхронизация ролей: прямые члены групп, которым назначены роли CRM |
 | `Mail.Send` | Application — управляемой идентичности, **ограничено ящиками** через RBAC for Applications в Exchange Online: общий ящик `crm@` и группа продавцов `crm-quote-senders@` | R1 (сводка), R2 (предложения) | Ежедневная сводка уведомлений из общего ящика (S8); отправка предложения из ящика продавца (S9) |
 | `Calendars.ReadWrite` | Delegated | R2 (S10) | Встречи из CRM в календаре организатора и обратное чтение изменений |
 | `Mail.Read` | Delegated | R2 (S10) | Переписка с клиентом в карточке (только метаданные) |
@@ -63,6 +65,7 @@
 - Альтернатива, если политика доступа к ящикам продавцов не подходит: delegated `Mail.Send` вместе с работой с календарём и письмами в S10.
 
 ### 1.4 Сценарии Graph
+- **Синхронизация ролей** (задача `entra-role-sync`, каждые 2 минуты, `Integrations:MicrosoftGraph:RoleSyncCron`; DEV-10, [ADR-019](adr/ADR-019-sessions-and-privilege-freshness.md)): `GET /servicePrincipals?$filter=appId eq '<CrmAppId>'` (роли приложения, отключённые не считаются) → `GET /servicePrincipals/{id}/appRoleAssignedTo` → для групп `GET /groups/{id}/members/microsoft.graph.user` (только прямые члены — как в токене Entra; PIM-активация — членство на её срок) → `GET /users?$filter=accountEnabled eq false` (отключённый аккаунт ролей не держит). Результат — подтверждённые роли пользователей CRM в `identity.Users` (изменения — в журнал аудита) и время чтения в `identity.DirectoryRoleConfirmations`. Неудача ничего не подтверждает: через 5 минут привилегированные действия закрываются (runbook 12). В журнал синхронизаций попадают ошибки, изменения и раз в час — запуск без изменений.
 - **Синхронизация пользователей** (задача `entra-user-sync`, ежечасно в :15): `GET /users/delta?$select=id,displayName,mail,userPrincipalName,accountEnabled,department,jobTitle` → `identity.User`; delta-ссылка хранится в `integration.SyncCursors`. `accountEnabled=false` или `@removed` → деактивация; запросы деактивированного пользователя отклоняются (`401 USER_INACTIVE`) не позднее чем через 60 с. Создаются только пользователи, уже входившие в CRM.
 - **Календарь (S10):** `POST /me/events` с open extension `no.vardahei.crm` (в ней идентификатор активности), `PATCH` при правке, `DELETE` при снятии; обратное чтение — `GET /me/calendarView` за окно по запросу пользователя. Change notifications (публичный эндпоинт + продление подписок) отложены.
 - **Почта (S10):** `GET /me/messages?$search="participants:…"` по адресам контактов и доменам клиента, плюс настроенные общие ящики (`GET /users/{ящик}/messages`; 403 — ящик просто пропускается). В CRM попадают только `internetMessageId`, тема, участники, дата и ссылка — и только когда человек сохраняет письмо. Тело не копируется.

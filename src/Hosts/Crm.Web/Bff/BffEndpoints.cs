@@ -66,8 +66,19 @@ public static class BffEndpoints
             .AllowAnonymous()
             .ExcludeFromDescription();
 
-        group.MapPost("/logout", async (HttpContext context, CrmAuthOptions options) =>
+        group.MapPost("/logout", async (
+                HttpContext context, CrmAuthOptions options, ISessionDirectory sessions, SessionStateCache cache, TimeProvider time) =>
             {
+                // DEV-10: the session ends on the server, so this cookie — and any copy of it — is refused on every replica.
+                if (Guid.TryParse(context.User.FindFirstValue(CrmClaimTypes.SessionId), out var sessionId))
+                {
+                    await sessions.EndAsync(sessionId, "SignOut", time.GetUtcNow(), context.RequestAborted);
+                    if (Guid.TryParse(context.User.FindFirstValue(CrmClaimTypes.UserId), out var userId))
+                    {
+                        cache.Forget(userId, sessionId);
+                    }
+                }
+
                 await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 if (options.Mode == AuthMode.Entra)
                 {

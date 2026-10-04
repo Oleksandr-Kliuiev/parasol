@@ -125,6 +125,8 @@ var workerEnv = concat(commonEnv, [
   { name: 'Integrations__MicrosoftGraph__Enabled', value: 'true' }
   { name: 'Integrations__MicrosoftGraph__TenantId', value: entraTenantId }
   { name: 'Integrations__MicrosoftGraph__ManagedIdentityClientId', value: workerIdentityClientId }
+  // DEV-10: the role sync reads who holds the CRM's own app roles (Graph Application.Read.All, GroupMember.Read.All).
+  { name: 'Integrations__MicrosoftGraph__CrmAppId', value: entraClientId }
 ])
 
 // Provider keys live in Key Vault (docs/runbooks/02-integrations.md) and reach crm-worker only: it is the host that calls

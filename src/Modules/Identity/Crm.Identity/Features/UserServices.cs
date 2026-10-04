@@ -1,3 +1,4 @@
+using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Crm.Identity.Domain;
 using Crm.Identity.Persistence;
@@ -41,9 +42,14 @@ internal sealed class UserProvisioning(IdentityDbContext db, TimeProvider timePr
             db.Users.Add(user);
         }
 
-        user.RecordSignIn(
-            identity.UserPrincipalName, identity.DisplayName, identity.Email, identity.Department, identity.JobTitle,
-            timeProvider.GetUtcNow());
+        var now = timeProvider.GetUtcNow();
+        user.RecordSignIn(identity.UserPrincipalName, identity.DisplayName, identity.Email, identity.Department, identity.JobTitle, now);
+        if (identity.Roles is { } roles)
+        {
+            // The token was issued by Entra for this sign-in: its roles are what the directory assigns right now (DEV-10).
+            user.ConfirmRoles(roles.Where(CrmRoles.All.Contains), now);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return user.ToProfile();
     }
@@ -118,5 +124,87 @@ internal sealed class UserDirectorySync(IdentityDbContext db) : IUserDirectorySy
         }
 
         return new DirectorySyncResult(matched, updated, deactivated, reactivated);
+    }
+}
+
+/// <summary>Sessions and what they may do (DEV-10); one read answers both, so a replica's cache holds one entry per session.</summary>
+internal sealed class SessionDirectory(IdentityDbContext db) : ISessionDirectory
+{
+    public async Task<Guid> StartAsync(Guid userId, DateTimeOffset at, CancellationToken cancellationToken)
+    {
+        var session = UserSession.Start(userId, at);
+        db.UserSessions.Add(session);
+        await db.SaveChangesAsync(cancellationToken);
+        return session.Id;
+    }
+
+    public async Task EndAsync(Guid sessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken)
+    {
+        if (await db.UserSessions.SingleOrDefaultAsync(s => s.Id == sessionId, cancellationToken) is { } session)
+        {
+            session.End(reason, at);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public async Task<SessionState> GetAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken)
+    {
+        // One round trip: the user, whether this session is open and when the directory last confirmed the user's tenant.
+        var row = await db.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new
+            {
+                u.IsActive,
+                u.Roles,
+                u.RolesVersion,
+                u.RolesVerifiedAt,
+                DirectoryConfirmedAt = db.DirectoryRoleConfirmations
+                    .Where(c => c.TenantId == u.TenantId).Select(c => (DateTimeOffset?)c.ConfirmedAt).FirstOrDefault(),
+                Open = db.UserSessions.Any(s => s.Id == sessionId && s.UserId == u.Id && s.EndedAt == null),
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (row is null)
+        {
+            return new SessionState(false, false, [], 0, null);
+        }
+
+        var roles = row.Roles.Length == 0 ? [] : row.Roles.Split(',');
+        // The later of the user's own confirmation (a sign-in, a change) and the reading that covered the whole tenant.
+        var verified = (row.RolesVerifiedAt, row.DirectoryConfirmedAt) switch
+        {
+            ({ } own, { } directory) => own > directory ? own : directory,
+            var (own, directory) => own ?? directory,
+        };
+        return new SessionState(row.Open, row.IsActive, roles, row.RolesVersion, verified);
+    }
+}
+
+/// <summary>Applies the directory's role assignments to the CRM users of a tenant (DEV-10).</summary>
+internal sealed class UserRoleDirectory(IdentityDbContext db) : IUserRoleDirectory
+{
+    public async Task<RoleSyncResult> ApplyAsync(
+        string tenantId, IReadOnlyDictionary<string, IReadOnlyCollection<string>> rolesByObjectId, DateTimeOffset verifiedAt, CancellationToken cancellationToken)
+    {
+        var confirmation = await db.DirectoryRoleConfirmations.SingleOrDefaultAsync(c => c.TenantId == tenantId, cancellationToken);
+        if (confirmation is null)
+        {
+            db.DirectoryRoleConfirmations.Add(DirectoryRoleConfirmation.For(tenantId, verifiedAt));
+        }
+        else if (!confirmation.Advance(verifiedAt))
+        {
+            return new RoleSyncResult(0, 0, Superseded: true);
+        }
+
+        var users = await db.Users.Where(u => u.TenantId == tenantId).ToListAsync(cancellationToken);
+        var changed = 0;
+        foreach (var user in users)
+        {
+            var roles = rolesByObjectId.TryGetValue(user.ObjectId, out var assigned) ? assigned.Where(CrmRoles.All.Contains) : [];
+            changed += user.ApplyDirectoryRoles(roles, verifiedAt) ? 1 : 0;
+        }
+
+        // The confirmation and the changed users in one transaction: the tenant is never confirmed with roles left unapplied.
+        await db.SaveChangesAsync(cancellationToken);
+        return new RoleSyncResult(users.Count, changed);
     }
 }

@@ -24,6 +24,8 @@ public static class IdentityModule
         services.AddScoped<IUserProvisioning, UserProvisioning>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IUserDirectorySync, UserDirectorySync>();
+        services.AddScoped<ISessionDirectory, SessionDirectory>();
+        services.AddScoped<IUserRoleDirectory, UserRoleDirectory>();
         services.AddScoped<ITechnicianDirectory, TechnicianDirectory>();
         return services;
     }

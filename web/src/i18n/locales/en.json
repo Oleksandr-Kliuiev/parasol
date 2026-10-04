@@ -111,7 +111,8 @@
       "PRJ_MEMBER_UNKNOWN": "That person is not an active CRM user.",
       "TIM_PROJECT_NOT_AVAILABLE": "The project does not exist or you are not on it.",
       "TIM_PROJECT_OTHER_ORGANIZATION": "The project belongs to another customer than the time entry.",
-      "TIM_PROJECT_CLOSED": "The project is completed or cancelled and takes no more hours."
+      "TIM_PROJECT_CLOSED": "The project is completed or cancelled and takes no more hours.",
+      "AUTH_REVERIFY_REQUIRED": "This action needs your permissions confirmed by Microsoft in the last few minutes. Sign out, sign in again and repeat it."
     }
   },
   "status": {
@@ -432,6 +433,7 @@
     "jobNames": {
       "brreg-registry-check": "Registry status check (Brønnøysund)",
       "entra-user-sync": "User synchronization (Entra ID)",
+      "entra-role-sync": "Role synchronization (Entra ID)",
       "atera-customers": "Customers (Atera)",
       "atera-contacts": "Contacts (Atera)",
       "poweroffice-customers": "Customers (PowerOffice)",

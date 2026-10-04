@@ -155,6 +155,16 @@ public static class Permissions
         }.ToFrozenSet(),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Privileges whose changes are financial commands or administration (DEV-10): used for anything but reading, they need the
+    /// authority's recent confirmation of the caller's roles. Bulk exports are marked on the endpoint (<c>ExportsData</c>).
+    /// </summary>
+    public static readonly FrozenSet<string> Privileged = new[]
+    {
+        BillingManage, BillingApprove, BillingApproveSecond, TimeUnlock, SalesDiscountApprove,
+        IntegrationsManage, CustomFieldsManage, CustomersDelete,
+    }.ToFrozenSet(StringComparer.Ordinal);
+
     public static IReadOnlySet<string> ForRoles(IEnumerable<string> roles)
     {
         var result = new HashSet<string>(StringComparer.Ordinal);

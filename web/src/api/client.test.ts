@@ -7,6 +7,10 @@ function mockFetch(response: Response) {
   return fn;
 }
 
+function problem(status: number, body: Record<string, unknown>) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/problem+json' } });
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe('api client', () => {
@@ -46,6 +50,38 @@ describe('api client', () => {
   it('handles 204 No Content', async () => {
     mockFetch(new Response(null, { status: 204 }));
     await expect(api.delete('/api/v1/x')).resolves.toEqual({ data: undefined, etag: null });
+  });
+
+  it('sends the browser to sign in again when an API call answers 401, and back to this page afterwards', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, pathname: '/billing/runs/r1', search: '?tab=bases', assign });
+    mockFetch(problem(401, { title: 'Unauthorized', status: 401 }));
+
+    const error = await api.post('/api/v1/billing/runs/r1/approve', {}).catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+    expect(assign).toHaveBeenCalledWith('/bff/login?returnUrl=%2Fbilling%2Fruns%2Fr1%3Ftab%3Dbases');
+  });
+
+  it('leaves a 403 asking to confirm the permissions again to the page, which explains it', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    mockFetch(problem(403, { title: 'Forbidden', status: 403, code: 'AUTH_REVERIFY_REQUIRED' }));
+
+    const error = await api.post('/api/v1/billing/runs/r1/approve', {}).catch((e: unknown) => e);
+
+    expect((error as ApiError).code).toBe('AUTH_REVERIFY_REQUIRED');
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('does not redirect when /bff/user answers 401: the sign-in gate shows its own page', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    mockFetch(problem(401, { title: 'Unauthorized', status: 401 }));
+
+    await api.get('/bff/user').catch(() => undefined);
+
+    expect(assign).not.toHaveBeenCalled();
   });
 
   it('builds query strings without empty values', () => {

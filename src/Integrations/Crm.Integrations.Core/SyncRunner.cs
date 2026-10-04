@@ -17,8 +17,19 @@ public sealed class SyncProgress
 /// <summary>Records every synchronization run with its outcome, and stores incremental cursors.</summary>
 public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvider, ILogger<SyncRunner> logger)
 {
-    public async Task<SyncRun> RunAsync(string system, string job, Func<SyncProgress, CancellationToken, Task> work, CancellationToken cancellationToken)
+    /// <summary>
+    /// Runs <paramref name="work"/> and records the run. <paramref name="quietFor"/> is for a job that runs every few minutes
+    /// (DEV-10 role sync): a run that changed nothing, or was skipped, is recorded only when the job's last recorded run
+    /// started at least that long ago — a sign of life in the log instead of a row per run that drowns the other systems'.
+    /// Failures and changes are always recorded.
+    /// </summary>
+    public async Task<SyncRun> RunAsync(
+        string system, string job, Func<SyncProgress, CancellationToken, Task> work, CancellationToken cancellationToken, TimeSpan? quietFor = null)
     {
+        var recordQuiet = quietFor is not { } interval ||
+                          await LastRecordedAsync(system, job, cancellationToken) is not { } last ||
+                          timeProvider.GetUtcNow() - last >= interval;
+
         // A paused integration still records the run, so the log shows that the job fell due and was held (runbook 05).
         if (await IsPausedAsync(system, cancellationToken) is { } pause)
         {
@@ -32,8 +43,12 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
                 Status = SyncRunStatus.Skipped,
                 Message = Truncate($"Paused: {pause}"),
             };
-            db.SyncRuns.Add(skipped);
-            await db.SaveChangesAsync(cancellationToken);
+            if (recordQuiet)
+            {
+                db.SyncRuns.Add(skipped);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
             logger.LogInformation("Synchronization {System}/{Job} skipped: the integration is paused.", system, job);
             return skipped;
         }
@@ -46,8 +61,12 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
             StartedAt = timeProvider.GetUtcNow(),
             Status = SyncRunStatus.Running,
         };
-        db.SyncRuns.Add(run);
-        await db.SaveChangesAsync(cancellationToken);
+        if (quietFor is null)
+        {
+            // Shown while it runs; a quiet job is short and recorded when it ends, if at all.
+            db.SyncRuns.Add(run);
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         var progress = new SyncProgress();
         try
@@ -75,11 +94,25 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
                 run.Message ??= "Cancelled";
             }
 
-            await db.SaveChangesAsync(CancellationToken.None);
+            var quiet = run is { Status: SyncRunStatus.Succeeded, Changed: 0, Failed: 0 };
+            if (quietFor is null || !quiet || recordQuiet)
+            {
+                if (quietFor is not null)
+                {
+                    db.SyncRuns.Add(run);
+                }
+
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
         }
 
         return run;
     }
+
+    private async Task<DateTimeOffset?> LastRecordedAsync(string system, string job, CancellationToken cancellationToken) =>
+        await db.SyncRuns.AsNoTracking()
+            .Where(r => r.System == system && r.Job == job)
+            .MaxAsync(r => (DateTimeOffset?)r.StartedAt, cancellationToken);
 
     public async Task<string?> GetCursorAsync(string system, string stream, CancellationToken cancellationToken) =>
         await db.SyncCursors.AsNoTracking()

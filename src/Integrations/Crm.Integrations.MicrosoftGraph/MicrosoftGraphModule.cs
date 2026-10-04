@@ -35,6 +35,13 @@ public static class MicrosoftGraphModule
             })
             .AddHttpMessageHandler<GraphAuthenticationHandler>()
             .AddStandardResilienceHandler();
+        services.AddHttpClient<IGraphRoleAssignmentSource, GraphRoleAssignmentSource>((sp, client) =>
+            {
+                client.BaseAddress = sp.GetRequiredService<IOptions<GraphOptions>>().Value.BaseUrl;
+                client.Timeout = TimeSpan.FromMinutes(1);
+            })
+            .AddHttpMessageHandler<GraphAuthenticationHandler>()
+            .AddStandardResilienceHandler();
         services.AddOptions<GraphMailOptions>().Bind(configuration.GetSection(GraphMailOptions.SectionName));
         services.AddHttpClient<INotificationEmailSender, GraphMailSender>((sp, client) =>
             {
@@ -87,6 +94,7 @@ public static class MicrosoftGraphModule
             .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
 
         services.AddScoped<EntraUserSyncJob>();
+        services.AddScoped<EntraRoleSyncJob>();
         return services;
     }
 }
