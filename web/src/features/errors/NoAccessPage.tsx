@@ -1,5 +1,6 @@
 import { Button, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { CurrentUser } from '../../api/types';
 
@@ -27,8 +28,10 @@ const useStyles = makeStyles({
 export function NoAccessPage({ user }: { user: CurrentUser }) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const signOut = async () => {
     const { data } = await api.post<{ signOutUrl: string }>('/bff/logout');
+    queryClient.clear();
     window.location.assign(data.signOutUrl);
   };
   return (

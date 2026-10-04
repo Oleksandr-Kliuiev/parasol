@@ -213,7 +213,7 @@ public class QuotesApiTests(CrmWebFactory factory)
     }
 
     [Fact]
-    public async Task A_role_without_finance_read_sees_no_amounts_and_gets_no_document()
+    public async Task A_role_without_finance_read_sees_no_amounts_and_gets_no_document_even_of_a_quote_it_owns()
     {
         var sales = factory.ClientAs(CrmRoles.Sales, userKey: "quote-sales3");
         var reader = factory.ClientAs(CrmRoles.ReadOnly, userKey: "quote-reader");
@@ -227,6 +227,10 @@ public class QuotesApiTests(CrmWebFactory factory)
             lines = new object[] { new { name = "Drift", quantity = 1m, unitPrice = 5_000m, discountPct = 0m, recurrence = "Monthly" } },
         })).ReadJsonAsync()).GetProperty("id").GetGuid();
         (await sales.PostAsync($"{Sales}/quotes/{quoteId}/submit", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Someone else's quote is not there at all for ReadOnly (DEV-09); one handed to the reader is, without its money.
+        (await reader.GetAsync($"{Sales}/quotes/{quoteId}")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await sales.TransferQuoteAsync(quoteId, await reader.UserIdAsync())).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         var seen = await reader.GetFromJsonAsync<JsonElement>($"{Sales}/quotes/{quoteId}");
         seen.TryGetProperty("monthlyExVat", out _).ShouldBeFalse();

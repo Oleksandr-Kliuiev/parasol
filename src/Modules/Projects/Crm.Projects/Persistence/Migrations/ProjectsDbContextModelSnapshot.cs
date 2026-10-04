@@ -310,6 +310,48 @@ namespace Crm.Projects.Persistence.Migrations
                     b.ToTable("Projects", "projects");
                 });
 
+            modelBuilder.Entity("Crm.Projects.Domain.ProjectMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ProjectId", "UserId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("ProjectMembers", "projects");
+                });
+
             modelBuilder.Entity("Crm.Projects.Domain.ProjectPhase", b =>
                 {
                     b.Property<Guid>("Id")
@@ -410,6 +452,15 @@ namespace Crm.Projects.Persistence.Migrations
                     b.HasIndex("AssigneeId", "Status");
 
                     b.ToTable("ProjectTasks", "projects");
+                });
+
+            modelBuilder.Entity("Crm.Projects.Domain.ProjectMember", b =>
+                {
+                    b.HasOne("Crm.Projects.Domain.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Crm.Projects.Domain.ProjectPhase", b =>

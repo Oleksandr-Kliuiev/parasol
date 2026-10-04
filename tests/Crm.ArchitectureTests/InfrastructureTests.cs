@@ -100,4 +100,21 @@ public partial class InfrastructureTests
         common.ShouldContain("{ name: 'Documents__Provider', value: 'AzureBlob' }");
         common.ShouldContain("{ name: 'Documents__BlobContainerUri', value: documentsContainerUri }");
     }
+
+    /// <summary>
+    /// Record scope (DEV-09) is Restricted unless an environment file says otherwise, and what the file says reaches the apps:
+    /// opening it is a reviewed change to infra/env, never a missing setting.
+    /// </summary>
+    [Fact]
+    public void Record_scope_is_restricted_by_default_and_set_per_environment()
+    {
+        var main = File.ReadAllText(Path.Combine(Production.Root, "infra", "main.bicep"));
+        main.ShouldContain("@allowed(['Restricted', 'Open'])\nparam recordScope string = 'Restricted'");
+        main.ShouldContain("recordScope: recordScope");
+        Block(Bicep("apps.bicep"), "var commonEnv ").ShouldContain("{ name: 'Authorization__RecordScope', value: recordScope }");
+        foreach (var environment in new[] { "test", "prod" })
+        {
+            File.ReadAllText(Path.Combine(Production.Root, "infra", "env", $"{environment}.bicepparam")).ShouldContain("param recordScope = ");
+        }
+    }
 }

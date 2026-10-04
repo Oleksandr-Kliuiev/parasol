@@ -22,6 +22,7 @@ public static class ProjectsModule
         services.AddModuleServices(typeof(ProjectsModule).Assembly);
         services.AddScoped<ProjectService>();
         services.AddScoped<IProjectsApi, ProjectsApi>();
+        services.AddScoped<Crm.SharedKernel.Application.IRecordScopeReporter, ProjectScopeReporter>();
         return services;
     }
 
@@ -62,6 +63,16 @@ public static class ProjectsModule
 
         group.MapDelete("/{id:guid}", async (Guid id, ProjectService service, CancellationToken ct) =>
                 (await service.DeleteAsync(id, ct)).ToHttpResult(Results.NoContent))
+            .RequirePermission(Permissions.ProjectsWrite);
+
+        // DEV-09: the team decides, with the manager and the task assignees, who sees the project in the Restricted mode.
+        group.MapPost("/{id:guid}/members", async (Guid id, ProjectMemberRequest request, ProjectService service, HttpResponse response, CancellationToken ct) =>
+                (await service.AddMemberAsync(id, request, ct)).ToHttpResult(p => WithETag(response, p.Etag, Results.Ok(p))))
+            .Validate<ProjectMemberRequest>()
+            .RequirePermission(Permissions.ProjectsWrite);
+
+        group.MapDelete("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, ProjectService service, HttpResponse response, CancellationToken ct) =>
+                (await service.RemoveMemberAsync(id, userId, ct)).ToHttpResult(p => WithETag(response, p.Etag, Results.Ok(p))))
             .RequirePermission(Permissions.ProjectsWrite);
 
         MapPhases(group);

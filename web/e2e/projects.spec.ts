@@ -132,3 +132,32 @@ test('finance previews the yearly indexation before the prices change', async ({
   await page.goto(`/contracts/${contract.id}`);
   await expect(page.getByText('NOK 1,035.00').first()).toBeVisible();
 });
+
+test('a technician sees a project once on its team, and a project they are not on does not exist for them', async ({ page }) => {
+  const m = marker('Scope');
+  await signIn(page, 'Crm.Admin');
+  const organization = await createOrganization(page, { name: `${m} Omfang AS`, status: 'Customer', orgNumber: orgNumber() });
+  const project = await api.post<{ id: string }>(page, '/api/v1/projects', {
+    organizationId: organization.id, name: `${m} Utrulling`, type: 'Other', billingModel: 'TimeAndMaterial', startDate: '2026-10-01', budgetHours: 10, budgetAmount: 0,
+  });
+
+  // DEV-09: the list says whose projects it holds; a saved link to someone else's project is a page that does not exist.
+  await signIn(page, 'Crm.Technician', '/projects');
+  await expect(page.getByText('The projects you are on: as manager, team member or task assignee.')).toBeVisible();
+  await page.getByRole('searchbox', { name: 'Search project or number' }).fill(m);
+  await expect(page.getByText('No projects yet.')).toBeVisible();
+  await page.goto(`/projects/${project.id}`);
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+
+  // The administrator puts the technician on the team; the project is theirs to see at once.
+  await signIn(page, 'Crm.Admin', `/projects/${project.id}`);
+  await page.getByRole('combobox', { name: 'Person' }).pressSequentially('Dev Technician');
+  await page.getByRole('option', { name: /Dev Technician/ }).click();
+  await page.getByRole('button', { name: 'Add to team' }).click();
+  await expect(toast(page, 'Dev Technician is on the team.')).toBeVisible();
+
+  await signIn(page, 'Crm.Technician', `/projects/${project.id}`);
+  await expect(page.getByRole('heading', { level: 1, name: `${m} Utrulling` })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Team' }).getByText('Dev Technician')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add to team' })).toHaveCount(0);
+});

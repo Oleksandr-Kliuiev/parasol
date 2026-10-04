@@ -8,7 +8,16 @@ import { CurrentUserContext } from '../auth/CurrentUserContext';
 import { lightTheme } from '../app/theme';
 
 export function testUser(permissions: string[]): CurrentUser {
-  return { id: 'u1', displayName: 'Kari Nordmann', email: null, preferredLanguage: 'en', roles: ['Crm.Test'], permissions, authMode: 'Development' };
+  return {
+    id: 'u1',
+    displayName: 'Kari Nordmann',
+    email: null,
+    preferredLanguage: 'en',
+    roles: ['Crm.Test'],
+    permissions,
+    authMode: 'Development',
+    recordScope: { mode: 'Restricted', allQuotes: permissions.includes('sales.quotes.all'), allProjects: permissions.includes('projects.all') },
+  };
 }
 
 /** Renders routes inside the app providers; returns the router to assert navigation. */

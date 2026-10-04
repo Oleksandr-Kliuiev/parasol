@@ -44,6 +44,7 @@ import {
   Clock20Regular,
   PersonSettings20Regular,
   DocumentSearch20Regular,
+  LockClosed20Regular,
   Navigation20Regular,
   People20Regular,
   PlugConnected20Regular,
@@ -188,6 +189,8 @@ export function AppShell() {
         ? 'catalog'
         : location.pathname.startsWith('/admin/audit')
       ? 'audit'
+      : location.pathname.startsWith('/admin/record-access')
+        ? 'record-access'
       : location.pathname.startsWith('/admin/users')
         ? 'users'
         : location.pathname.startsWith('/admin/integrations')
@@ -220,6 +223,8 @@ export function AppShell() {
 
   const signOut = async () => {
     const { data } = await api.post<{ signOutUrl: string }>('/bff/logout');
+    // Nothing of this user's stays in memory for whoever uses the browser next (DEV-09).
+    queryClient.clear();
     window.location.assign(data.signOutUrl);
   };
 
@@ -327,6 +332,11 @@ export function AppShell() {
               {canAudit && (
                 <NavItem href="/admin/audit" value="audit" icon={<DocumentSearch20Regular />} onClick={go('/admin/audit')}>
                   {t('nav.audit')}
+                </NavItem>
+              )}
+              {canAudit && (
+                <NavItem href="/admin/record-access" value="record-access" icon={<LockClosed20Regular />} onClick={go('/admin/record-access')}>
+                  {t('nav.recordAccess')}
                 </NavItem>
               )}
               {canUsers && (

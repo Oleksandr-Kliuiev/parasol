@@ -35,6 +35,12 @@ public static class Permissions
     /// <summary>Approve a line discount above the limit of one's own role (BR-SAL-05).</summary>
     public const string SalesDiscountApprove = "sales.discount.approve";
 
+    /// <summary>
+    /// Every quote, not only the ones one owns (record scope, DEV-09/SEC-AZ-03). Without it — in the Restricted mode — a role
+    /// sees and works on the quotes whose current version it owns, and nothing else.
+    /// </summary>
+    public const string QuotesAll = "sales.quotes.all";
+
     /// <summary>Microsoft CSP subscriptions (read-only mirror plus the distributor import).</summary>
     public const string LicensingRead = "licensing.read";
     public const string LicensingManage = "licensing.manage";
@@ -88,6 +94,12 @@ public static class Permissions
 
     public const string ProjectsWrite = "projects.write";
 
+    /// <summary>
+    /// Every project, not only the ones one is on (record scope, DEV-09/SEC-AZ-03). Without it — in the Restricted mode — a role
+    /// sees the projects it manages, is a member of or has a task in.
+    /// </summary>
+    public const string ProjectsAll = "projects.all";
+
     public const string UsersRead = "users.read";
     public const string IntegrationsManage = "integrations.manage";
 
@@ -95,11 +107,15 @@ public static class Permissions
     [
         CustomersRead, CustomersWrite, CustomersDelete, ContactsWrite,
         CatalogRead, CatalogWrite, ContractsRead, ContractsWrite,
-        SalesRead, SalesWrite, SalesDiscountApprove, LicensingRead, LicensingManage, ActivitiesRead, ActivitiesWrite,
+        SalesRead, SalesWrite, SalesDiscountApprove, QuotesAll, LicensingRead, LicensingManage, ActivitiesRead, ActivitiesWrite,
         ServiceRead, ServiceWrite, TimeOwn, TimeRead, TimeManage, TimeUnlock,
-        BillingRead, BillingManage, BillingApprove, BillingApproveSecond, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite,
+        BillingRead, BillingManage, BillingApprove, BillingApproveSecond, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite, ProjectsAll,
         FinanceRead, FinanceCostRead, AuditRead, UsersRead, IntegrationsManage, CustomFieldsManage,
     ];
+
+    // Record scope (DEV-09) follows docs/02 §2 and SEC-AZ-03 until EXT-01 confirms the matrix (ADR-018): quotes — Sales its own,
+    // Management and Finance all, the service roles and ReadOnly only quotes they happen to own; projects — technicians the ones
+    // they are on, every other role all.
 
     private static readonly FrozenDictionary<string, FrozenSet<string>> ByRole = new Dictionary<string, FrozenSet<string>>
     {
@@ -107,15 +123,15 @@ public static class Permissions
         [CrmRoles.Management] = new[]
         {
             CustomersRead, CustomersWrite, CustomersDelete, ContactsWrite, CatalogRead, ContractsRead, ContractsWrite,
-            SalesRead, SalesWrite, SalesDiscountApprove, LicensingRead, ActivitiesRead, ActivitiesWrite,
-            ServiceRead, TimeRead, BillingRead, BillingApproveSecond, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite,
+            SalesRead, SalesWrite, SalesDiscountApprove, QuotesAll, LicensingRead, ActivitiesRead, ActivitiesWrite,
+            ServiceRead, TimeRead, BillingRead, BillingApproveSecond, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite, ProjectsAll,
             FinanceRead, FinanceCostRead, AuditRead, UsersRead,
         }.ToFrozenSet(),
         [CrmRoles.Sales] = new[]
         {
             CustomersRead, CustomersWrite, ContactsWrite, CatalogRead, ContractsRead, ContractsWrite, SalesRead, SalesWrite,
             LicensingRead, ActivitiesRead, ActivitiesWrite, ServiceRead, ServiceWrite, TimeOwn, BillingRead, ReportsRead,
-            ProjectsRead, ProjectsWrite, FinanceRead, UsersRead,
+            ProjectsRead, ProjectsWrite, ProjectsAll, FinanceRead, UsersRead,
         }.ToFrozenSet(),
         [CrmRoles.Technician] = new[]
         {
@@ -125,17 +141,17 @@ public static class Permissions
         [CrmRoles.ServiceLead] = new[]
         {
             CustomersRead, ContactsWrite, CatalogRead, ContractsRead, SalesRead, LicensingRead, ActivitiesRead, ActivitiesWrite,
-            ServiceRead, ServiceWrite, TimeOwn, TimeRead, TimeManage, BillingRead, ReportsRead, ProjectsRead, ProjectsWrite, UsersRead,
+            ServiceRead, ServiceWrite, TimeOwn, TimeRead, TimeManage, BillingRead, ReportsRead, ProjectsRead, ProjectsWrite, ProjectsAll, UsersRead,
         }.ToFrozenSet(),
         [CrmRoles.Finance] = new[]
         {
-            CustomersRead, CatalogRead, CatalogWrite, ContractsRead, ContractsWrite, SalesRead, LicensingRead, ActivitiesRead, ActivitiesWrite,
-            ServiceRead, TimeRead, TimeUnlock, BillingRead, BillingManage, BillingApprove, ReportsRead, ReportsMart, ProjectsRead,
+            CustomersRead, CatalogRead, CatalogWrite, ContractsRead, ContractsWrite, SalesRead, QuotesAll, LicensingRead, ActivitiesRead, ActivitiesWrite,
+            ServiceRead, TimeRead, TimeUnlock, BillingRead, BillingManage, BillingApprove, ReportsRead, ReportsMart, ProjectsRead, ProjectsAll,
             FinanceRead, FinanceCostRead, AuditRead, UsersRead,
         }.ToFrozenSet(),
         [CrmRoles.ReadOnly] = new[]
         {
-            CustomersRead, CatalogRead, ContractsRead, SalesRead, LicensingRead, ActivitiesRead, ServiceRead, ProjectsRead,
+            CustomersRead, CatalogRead, ContractsRead, SalesRead, LicensingRead, ActivitiesRead, ServiceRead, ProjectsRead, ProjectsAll,
         }.ToFrozenSet(),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 

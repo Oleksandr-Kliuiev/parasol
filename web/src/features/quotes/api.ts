@@ -102,6 +102,11 @@ export function useQuoteActions(id?: string) {
     }),
     cancel: useMutation(act('cancel')),
     revise: useMutation(act('revise')),
+    // DEV-09: the caller may lose sight of the quote, so the page refreshes (or leaves) once it knows.
+    transfer: useMutation({
+      mutationFn: ({ ownerId, etag }: { ownerId: string; etag: string }) => api.post<void>(`${BASE}/quotes/${id}/transfer`, { ownerId }, etag),
+    }),
+    refresh,
   };
 }
 

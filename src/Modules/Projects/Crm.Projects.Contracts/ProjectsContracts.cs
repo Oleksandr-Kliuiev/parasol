@@ -40,10 +40,16 @@ public sealed record ProjectRef(Guid Id, string Name, Guid OrganizationId, Proje
 
 public interface IProjectsApi
 {
+    /// <summary>The project as the caller may see it (DEV-09): null when it does not exist or is outside the caller's scope.</summary>
     Task<ProjectRef?> GetProjectAsync(Guid projectId, CancellationToken cancellationToken);
 
+    /// <summary>The organization's projects the caller may see (DEV-09).</summary>
     Task<IReadOnlyList<ProjectRef>> GetProjectsAsync(Guid organizationId, bool openOnly, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Names for project ids another record already carries (a time entry shows the project it was booked on). Not scoped:
+    /// it names what the caller's own record points to and lists nothing new.
+    /// </summary>
     Task<IReadOnlyDictionary<Guid, string>> GetProjectNamesAsync(IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken);
 
     /// <summary>

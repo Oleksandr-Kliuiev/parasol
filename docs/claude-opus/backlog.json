@@ -320,7 +320,7 @@
       "external_gates": [
         "EXT-01"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-09.md",
       "evidence_file": "evidence/DEV-09.md",
       "acceptance_ids": [

@@ -26,7 +26,7 @@ import {
 import { ArrowDownload20Regular, Send20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
-import { Permissions, useCan } from '../../auth/CurrentUserContext';
+import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
@@ -159,7 +159,11 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
   const canWrite = useCan(Permissions.salesWrite);
   const canApproveDiscount = useCan(Permissions.salesDiscountApprove);
   const canSeeMoney = useCan(Permissions.financeRead);
+  const user = useCurrentUser();
+  // DEV-09: limited to the quotes they own, a user keeps them their own; handing one over is the transfer below.
+  const ownQuotesOnly = !user.recordScope.allQuotes;
   const isNew = quote === null;
+  const isCurrentVersion = quote !== null && quote.versions.every((version) => version.versionNo <= quote.versionNo);
   const actions = useQuoteActions(quote?.id);
   const templates = useQuoteTemplates();
   const [form, setForm] = useState<FormState>(() =>
@@ -167,7 +171,7 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
       ? formOf(quote)
       : emptyForm(params.get('organizationId') ? { id: params.get('organizationId')!, name: params.get('organizationName') ?? '' } : null),
   );
-  const [dialog, setDialog] = useState<'send' | 'reject' | 'decline' | null>(null);
+  const [dialog, setDialog] = useState<'send' | 'reject' | 'decline' | 'transfer' | null>(null);
   const contacts = useOrganizationContacts(form.organization?.id);
   const restoreFocusTarget = useRestoreFocusTarget();
 
@@ -209,6 +213,19 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
     await run(t('quotes.saved'), () =>
       actions.update.mutateAsync({ request: requestOf(form, quote!.opportunityId), etag: quote!.etag }),
     );
+  };
+
+  const transfer = async (owner: { id: string; displayName: string }) => {
+    try {
+      await actions.transfer.mutateAsync({ ownerId: owner.id, etag: quote!.etag });
+      notify(t('quotes.transfer.done', { name: owner.displayName }));
+      setDialog(null);
+      // A user limited to their own quotes no longer sees this one: back to the list rather than a page that is gone.
+      if (ownQuotesOnly && owner.id !== user.id) navigate('/quotes', { replace: true });
+      await actions.refresh();
+    } catch (e) {
+      notify(t('errors.generic'), 'error', errorMessage(e, t));
+    }
   };
 
   const revise = async () => {
@@ -287,6 +304,11 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
                 {t('quotes.revise')}
               </Button>
             )}
+            {!isNew && canWrite && isCurrentVersion && (
+              <Button {...restoreFocusTarget} appearance="subtle" onClick={() => setDialog('transfer')}>
+                {t('quotes.transfer.action')}
+              </Button>
+            )}
           </div>
         }
       />
@@ -356,12 +378,18 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
                     ))}
                   </Dropdown>
                 </Field>
-                <Field label={t('quotes.fields.owner')}>
-                  <UserPicker
-                    value={form.ownerId ? { id: form.ownerId, displayName: form.ownerName ?? '' } : null}
-                    onChange={(user) => setForm({ ...form, ownerId: user?.id ?? null, ownerName: user?.displayName ?? null })}
-                  />
-                </Field>
+                {ownQuotesOnly ? (
+                  <Field label={t('quotes.fields.owner')} hint={t('quotes.ownerLocked')}>
+                    <Text>{form.ownerName ?? user.displayName}</Text>
+                  </Field>
+                ) : (
+                  <Field label={t('quotes.fields.owner')}>
+                    <UserPicker
+                      value={form.ownerId ? { id: form.ownerId, displayName: form.ownerName ?? '' } : null}
+                      onChange={(picked) => setForm({ ...form, ownerId: picked?.id ?? null, ownerName: picked?.displayName ?? null })}
+                    />
+                  </Field>
+                )}
                 <Field label={t('quotes.fields.validUntil')}>
                   <Input type="date" value={form.validUntil} onChange={(_, d) => setForm({ ...form, validUntil: d.value })} />
                 </Field>
@@ -557,6 +585,15 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
           pending={actions.send.isPending}
         />
       )}
+      {!isNew && dialog === 'transfer' && (
+        <TransferQuoteDialog
+          quote={quote!}
+          leavesScope={ownQuotesOnly}
+          pending={actions.transfer.isPending}
+          onClose={() => setDialog(null)}
+          onTransfer={(owner) => void transfer(owner)}
+        />
+      )}
       {!isNew && (dialog === 'reject' || dialog === 'decline') && (
         <ReasonDialog
           title={dialog === 'reject' ? t('quotes.rejectTitle') : t('quotes.declineTitle')}
@@ -574,6 +611,50 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
         />
       )}
     </>
+  );
+}
+
+/** Hands the quote, with its earlier versions, to another person (DEV-09). */
+function TransferQuoteDialog({
+  quote,
+  leavesScope,
+  pending,
+  onClose,
+  onTransfer,
+}: {
+  quote: Quote;
+  leavesScope: boolean;
+  pending: boolean;
+  onClose: () => void;
+  onTransfer: (owner: { id: string; displayName: string }) => void;
+}) {
+  const { t } = useTranslation();
+  const [owner, setOwner] = useState<{ id: string; displayName: string } | null>(null);
+  const unchanged = owner !== null && owner.id === quote.owner?.id;
+
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{t('quotes.transfer.title', { number: quote.number })}</DialogTitle>
+          <DialogContent>
+            <Field label={t('quotes.transfer.owner')} required>
+              <UserPicker value={owner} onChange={setOwner} />
+            </Field>
+            <p>{t('quotes.transfer.body')}</p>
+            {leavesScope && <p>{t('quotes.transfer.leavesScope')}</p>}
+          </DialogContent>
+          <DialogActions>
+            <Button appearance="secondary" onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+            <Button appearance="primary" disabled={pending || owner === null || unchanged} onClick={() => owner && onTransfer(owner)}>
+              {t('quotes.transfer.submit')}
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }
 

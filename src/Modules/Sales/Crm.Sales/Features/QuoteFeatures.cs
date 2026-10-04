@@ -22,6 +22,10 @@ public sealed record QuoteLineRequest(
     QuoteLineRecurrence Recurrence,
     decimal? VatRate);
 
+/// <param name="OwnerId">
+/// The owner; left out on create it is the caller, left out on update it stays as it is — an owner changes only to a person
+/// named, within the caller's record scope (DEV-09).
+/// </param>
 public sealed record QuoteRequest(
     Guid OrganizationId,
     Guid? ContactId,
@@ -40,6 +44,14 @@ public sealed record QuoteRequest(
 public sealed record RejectQuoteRequest(string Reason);
 
 public sealed record DeclineQuoteRequest(string? Reason);
+
+/// <summary>Hands the quote to another person (DEV-09).</summary>
+public sealed record TransferQuoteRequest(Guid OwnerId);
+
+internal sealed class TransferQuoteRequestValidator : AbstractValidator<TransferQuoteRequest>
+{
+    public TransferQuoteRequestValidator() => RuleFor(x => x.OwnerId).NotEmpty();
+}
 
 public sealed record SendQuoteRequest(string ToAddress, string? ToName, IReadOnlyList<string>? Cc, string? Subject, string? Message);
 

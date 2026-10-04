@@ -51,6 +51,14 @@ internal static class QuoteErrors
         $"A quote in status {status} cannot be changed; create a new version instead (BR-SAL-04).",
         new Dictionary<string, object?> { ["status"] = status.ToString() });
 
+    public static Error OwnerNotAllowed => Error.Forbidden(
+        "SAL_QUOTE_OWNER_NOT_ALLOWED", "You can only make yourself the owner of a quote; hand one over with a transfer (DEV-09).");
+
+    public static Error NotCurrent => Error.Conflict(
+        "SAL_QUOTE_NOT_CURRENT", "Only the current version of a quote can be handed over; its earlier versions follow it.");
+
+    public static Error UnknownOwner(Guid id) => Error.Validation("SAL_QUOTE_OWNER_UNKNOWN", $"User {id} is not an active CRM user.");
+
     public static Error WrongStatus(QuoteStatus status, string action) => Error.Conflict(
         "SAL_QUOTE_STATUS",
         $"A quote in status {status} cannot be {action}.",
@@ -360,6 +368,12 @@ public sealed class Quote : AuditableEntity
         Status = QuoteStatus.Cancelled;
         return Result.Success();
     }
+
+    /// <summary>
+    /// Hands the quote to another owner (DEV-09), in any status: who answers for a sent or accepted quote can change too. The
+    /// caller makes sure this is the current version, which the whole quote follows.
+    /// </summary>
+    public void TransferTo(Guid ownerId) => OwnerId = ownerId;
 
     /// <summary>Copies this version into a new draft (v2, v3 …) and leaves this one as history (BR-SAL-04).</summary>
     public Result<Quote> Revise(DateOnly today, int validityDays)

@@ -33,7 +33,7 @@ import {
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular, Delete20Regular, Edit20Regular } from '@fluentui/react-icons';
+import { Add20Regular, Delete20Regular, Dismiss16Regular, Edit20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
@@ -79,6 +79,27 @@ const useStyles = makeStyles({
   phaseMeta: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalM, color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   spacer: { flexGrow: 1 },
   actions: { display: 'flex', gap: tokens.spacingHorizontalXS },
+  team: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusLarge,
+    padding: tokens.spacingHorizontalM,
+    marginBottom: tokens.spacingVerticalM,
+  },
+  teamTitle: { margin: 0, fontSize: tokens.fontSizeBase400, fontWeight: tokens.fontWeightSemibold },
+  members: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, listStyleType: 'none', margin: 0, padding: 0 },
+  member: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalXXS,
+    paddingLeft: tokens.spacingHorizontalS,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusCircular,
+  },
+  addMember: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalS },
 });
 
 /** One implementation project: phases, tasks and plan against actual (FR-PRJ-01). */
@@ -199,6 +220,8 @@ export function ProjectPage() {
           <span className={styles.label}>{t('projects.progress.phases', { tasks: project.progress.openTasks })}</span>
         </div>
       </div>
+
+      <ProjectTeam project={project} canWrite={canWrite} />
 
       {canWrite && (
         <div className={catalog.filters}>
@@ -493,5 +516,73 @@ function TaskForm({ projectId, phaseId, task, onClose }: { projectId: string; ph
         </DialogActions>
       </DialogBody>
     </form>
+  );
+}
+
+/** The project's team (DEV-09): with the manager and the task assignees, they are the people who see the project. */
+function ProjectTeam({ project, canWrite }: { project: Project; canWrite: boolean }) {
+  const styles = useStyles();
+  const { t } = useTranslation();
+  const notify = useNotify();
+  const actions = useProjectActions(project.id);
+  const [person, setPerson] = useState<UserRef | null>(null);
+
+  const change = async (action: () => Promise<unknown>, success: string) => {
+    try {
+      await action();
+      notify(success);
+      return true;
+    } catch (e) {
+      notify(t('errors.generic'), 'error', errorMessage(e, t));
+      return false;
+    }
+  };
+
+  return (
+    <section className={styles.team} aria-labelledby="project-team">
+      <h2 id="project-team" className={styles.teamTitle}>
+        {t('projects.team.title')}
+      </h2>
+      <Text className={styles.label}>{t('projects.team.hint')}</Text>
+      {project.members.length === 0 ? (
+        <Text>{t('projects.team.empty')}</Text>
+      ) : (
+        <ul className={styles.members}>
+          {project.members.map((member) => (
+            <li key={member.id} className={styles.member}>
+              <Text>{member.name}</Text>
+              {canWrite && (
+                <Button
+                  size="small"
+                  appearance="subtle"
+                  icon={<Dismiss16Regular />}
+                  aria-label={t('projects.team.remove', { name: member.name })}
+                  disabled={actions.removeMember.isPending}
+                  onClick={() => void change(() => actions.removeMember.mutateAsync(member.id), t('projects.team.removed', { name: member.name }))}
+                />
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {canWrite && (
+        <div className={styles.addMember}>
+          <Field label={t('projects.team.person')}>
+            <UserPicker value={person} onChange={setPerson} />
+          </Field>
+          <Button
+            disabled={person === null || actions.addMember.isPending}
+            onClick={() =>
+              person &&
+              void change(() => actions.addMember.mutateAsync(person.id), t('projects.team.added', { name: person.displayName })).then(
+                (ok) => ok && setPerson(null),
+              )
+            }
+          >
+            {t('projects.team.add')}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

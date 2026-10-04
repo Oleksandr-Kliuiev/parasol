@@ -79,6 +79,14 @@ internal sealed class TaskRequestValidator : AbstractValidator<TaskRequest>
 
 public sealed record StatusRequest(ProjectStatus Status);
 
+/// <summary>Adds a person to the project's team (DEV-09).</summary>
+public sealed record ProjectMemberRequest(Guid UserId);
+
+internal sealed class ProjectMemberRequestValidator : AbstractValidator<ProjectMemberRequest>
+{
+    public ProjectMemberRequestValidator() => RuleFor(x => x.UserId).NotEmpty();
+}
+
 public sealed record PhaseStatusRequest(ProjectPhaseStatus Status);
 
 public sealed record ProjectTaskDto(
@@ -128,6 +136,7 @@ public sealed record ProjectResponse(
     string? Notes,
     ProjectProgressDto Progress,
     IReadOnlyList<ProjectPhaseDto> Phases,
+    IReadOnlyList<RefDto> Members,
     string Etag);
 
 public sealed record ProjectListItem(
@@ -153,6 +162,8 @@ internal static class ProjectApiErrors
 
     public static Error OrganizationNotFound(Guid id) => Error.Validation("PRJ_ORGANIZATION_NOT_FOUND", $"Organization {id} was not found.");
 
+    public static Error UnknownUser(Guid id) => Error.Validation("PRJ_MEMBER_UNKNOWN", $"User {id} is not an active CRM user.");
+
     public static Error InvalidETag => Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
 }
 
@@ -166,6 +177,7 @@ internal sealed class ProjectService(
     ICatalogApi catalog,
     ITimeTrackingApi timeTracking,
     IUserDirectory users,
+    IRecordScope scope,
     TimeProvider time)
 {
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
@@ -174,7 +186,8 @@ internal sealed class ProjectService(
 
     public async Task<IReadOnlyList<ProjectListItem>> ListAsync(ProjectQuery query, CancellationToken ct)
     {
-        var projects = db.Projects.AsNoTracking().Include(p => p.Phases).AsQueryable();
+        // The scope comes first; the manager filter and the rest only narrow what the caller may see (DEV-09).
+        var projects = db.Projects.AsNoTracking().Include(p => p.Phases).InScope(db, scope);
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var term = query.Search.Trim();
@@ -276,7 +289,7 @@ internal sealed class ProjectService(
 
     public async Task<Result> DeleteAsync(Guid id, CancellationToken ct)
     {
-        if (await db.Projects.SingleOrDefaultAsync(p => p.Id == id, ct) is not { } project)
+        if (await db.Projects.InScope(db, scope).SingleOrDefaultAsync(p => p.Id == id, ct) is not { } project)
         {
             return ProjectApiErrors.NotFound(id);
         }
@@ -313,14 +326,68 @@ internal sealed class ProjectService(
         return await ToResponseAsync(project, ct);
     }
 
+    /// <summary>
+    /// Adds someone to the team (DEV-09), in any project status: access to a closed project's history is still managed.
+    /// Adding a member twice changes nothing.
+    /// </summary>
+    public async Task<Result<ProjectResponse>> AddMemberAsync(Guid id, ProjectMemberRequest request, CancellationToken ct)
+    {
+        if (await LoadAsync(id, ct) is not { } project)
+        {
+            return ProjectApiErrors.NotFound(id);
+        }
+
+        if (await users.GetProfileAsync(request.UserId, ct) is not { IsActive: true })
+        {
+            return ProjectApiErrors.UnknownUser(request.UserId);
+        }
+
+        if (!await db.ProjectMembers.AnyAsync(m => m.ProjectId == id && m.UserId == request.UserId, ct))
+        {
+            db.ProjectMembers.Add(ProjectMember.Add(id, request.UserId));
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+            {
+                // Added by someone else at the same moment: the person is on the team either way.
+                db.ChangeTracker.Clear();
+                project = (await LoadAsync(id, ct))!;
+            }
+        }
+
+        return await ToResponseAsync(project, ct);
+    }
+
+    /// <summary>Takes someone off the team (DEV-09); the row stays, soft-deleted, so the audit log shows who had access when.</summary>
+    public async Task<Result<ProjectResponse>> RemoveMemberAsync(Guid id, Guid userId, CancellationToken ct)
+    {
+        if (await LoadAsync(id, ct) is not { } project)
+        {
+            return ProjectApiErrors.NotFound(id);
+        }
+
+        foreach (var member in await db.ProjectMembers.Where(m => m.ProjectId == id && m.UserId == userId).ToListAsync(ct))
+        {
+            member.MarkDeleted();
+        }
+
+        await db.SaveChangesAsync(ct);
+        return await ToResponseAsync(project, ct);
+    }
+
+    // Every load by id goes through the caller's scope: a project outside it does not exist for them (404), so ids reveal
+    // nothing (DEV-09).
     private Task<Project?> LoadAsync(Guid id, CancellationToken ct) =>
-        db.Projects.Include(p => p.Phases).ThenInclude(p => p.Tasks).SingleOrDefaultAsync(p => p.Id == id, ct);
+        db.Projects.InScope(db, scope).Include(p => p.Phases).ThenInclude(p => p.Tasks).SingleOrDefaultAsync(p => p.Id == id, ct);
 
     private async Task<ProjectResponse> ToResponseAsync(Project project, CancellationToken ct)
     {
         var organizations = await customers.GetOrganizationNamesAsync([project.OrganizationId], ct);
         var assigneeIds = project.Phases.SelectMany(p => p.Tasks).Where(t => t.AssigneeId != null).Select(t => t.AssigneeId!.Value);
-        var userIds = assigneeIds.Concat(project.ManagerId is { } m ? [m] : Array.Empty<Guid>()).Distinct().ToList();
+        var memberIds = await db.ProjectMembers.AsNoTracking().Where(m => m.ProjectId == project.Id).Select(m => m.UserId).ToListAsync(ct);
+        var userIds = assigneeIds.Concat(memberIds).Concat(project.ManagerId is { } m ? [m] : Array.Empty<Guid>()).Distinct().ToList();
         var people = await users.GetUsersAsync(userIds, ct);
         var productIds = project.Phases.Where(p => p.ProductId != null).Select(p => p.ProductId!.Value).Distinct().ToList();
         var products = productIds.Count > 0 ? await catalog.GetProductsAsync(productIds, ct) : new Dictionary<Guid, ProductRef>();
@@ -373,6 +440,7 @@ internal sealed class ProjectService(
             project.Notes,
             progress,
             phases,
+            memberIds.Select(id => Person(id)).OfType<RefDto>().OrderBy(p => p.Name, StringComparer.CurrentCulture).ToList(),
             db.GetETag(project));
     }
 }

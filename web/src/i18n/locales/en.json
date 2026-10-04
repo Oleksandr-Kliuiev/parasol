@@ -32,7 +32,8 @@
     "sla": "SLA report",
     "margins": "Margins",
     "customFields": "Custom fields",
-    "migration": "Migration"
+    "migration": "Migration",
+    "recordAccess": "Record access"
   },
   "header": {
     "search": "Search organizations",
@@ -103,7 +104,14 @@
       "INT_OUTBOUND_RUNNING": "The change is being sent right now; try again in a moment.",
       "SAL_DOCUMENT_PREPARING": "The document is being stored; it can be downloaded or sent in a moment.",
       "SAL_DOCUMENT_UNAVAILABLE": "The stored document cannot be read, so nothing was sent. Contact the administrator.",
-      "SAL_DOCUMENT_NOT_FOUND": "This document revision does not exist."
+      "SAL_DOCUMENT_NOT_FOUND": "This document revision does not exist.",
+      "SAL_QUOTE_OWNER_NOT_ALLOWED": "You can only make yourself the owner. To pass the quote on, hand it over.",
+      "SAL_QUOTE_NOT_CURRENT": "Only the current version can be handed over; the earlier ones follow it.",
+      "SAL_QUOTE_OWNER_UNKNOWN": "That person is not an active CRM user.",
+      "PRJ_MEMBER_UNKNOWN": "That person is not an active CRM user.",
+      "TIM_PROJECT_NOT_AVAILABLE": "The project does not exist or you are not on it.",
+      "TIM_PROJECT_OTHER_ORGANIZATION": "The project belongs to another customer than the time entry.",
+      "TIM_PROJECT_CLOSED": "The project is completed or cancelled and takes no more hours."
     }
   },
   "status": {
@@ -1477,6 +1485,17 @@
       "download": "Download revision {{revision}}",
       "preparingBody": "The document of this version is being stored. It can be downloaded and sent as soon as it is; the page updates by itself.",
       "reconstructedNote": "This version was released before documents were stored: the copy was made later from the data of that day and is not the document that was sent."
+    },
+    "scopeOwn": "The quotes you own. To pass one on, hand it over from the quote.",
+    "ownerLocked": "You are the owner; to change it, hand the quote over.",
+    "transfer": {
+      "action": "Hand over",
+      "title": "Hand over quote {{number}}",
+      "owner": "New owner",
+      "body": "The quote and its earlier versions get a new owner. The change is recorded in the audit log.",
+      "leavesScope": "Afterwards you will no longer see the quote.",
+      "submit": "Hand over",
+      "done": "The quote now belongs to {{name}}."
     }
   },
   "quoteTemplates": {
@@ -2093,6 +2112,17 @@
       "amount": "Worth of hours, budget {{budget}}",
       "phaseFees": "Fees from completed phases",
       "phases": "Phases completed, {{tasks}} open tasks"
+    },
+    "scopeAssigned": "The projects you are on: as manager, team member or task assignee.",
+    "team": {
+      "title": "Team",
+      "hint": "The manager, the team and the task assignees see the project. Technicians see no other projects.",
+      "empty": "No one on the team yet.",
+      "person": "Person",
+      "add": "Add to team",
+      "added": "{{name}} is on the team.",
+      "remove": "Remove {{name}} from the team",
+      "removed": "{{name}} is no longer on the team."
     }
   },
   "sla": {
@@ -2219,5 +2249,36 @@
       "Conflict": "Needs a decision",
       "Failed": "Failed"
     }
+  },
+  "appRoles": {
+    "Admin": "Admin",
+    "Management": "Management",
+    "Sales": "Sales",
+    "Technician": "Technician",
+    "ServiceLead": "Service lead",
+    "Finance": "Finance",
+    "ReadOnly": "Read-only"
+  },
+  "recordAccess": {
+    "title": "Record access",
+    "subtitle": "Who sees which quotes and projects. Check it before the restricted mode reaches real data.",
+    "mode": {
+      "Restricted": "Restricted: the limited roles see only their own or assigned records.",
+      "Open": "Open: everyone who can read quotes or projects sees all of them."
+    },
+    "kind": {
+      "quotes": "Quotes",
+      "projects": "Projects"
+    },
+    "seeAll": "See all: {{roles}}",
+    "limited": "Only their own or assigned: {{roles}}",
+    "total": "In total: {{value}}",
+    "withoutAssignee": "Without owner or assignee: {{value}} — only the roles that see all of them see these.",
+    "nobody": "No one owns or is assigned to any of them.",
+    "tableLabel": "{{kind}} per person",
+    "person": "Person",
+    "records": "Records",
+    "inactive": "inactive",
+    "unknownUser": "Unknown user"
   }
 }

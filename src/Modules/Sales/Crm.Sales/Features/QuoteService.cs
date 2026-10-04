@@ -28,6 +28,7 @@ internal sealed class QuoteService(
     ICurrentUser currentUser,
     IEnumerable<IQuoteMailSender> mailSenders,
     QuoteDocuments documents,
+    IRecordScope scope,
     IOptions<SalesOptions> options,
     TimeProvider time)
 {
@@ -107,7 +108,7 @@ internal sealed class QuoteService(
 
     public async Task<IReadOnlyList<QuoteListItem>> ListAsync(QuoteQuery query, CancellationToken ct)
     {
-        var quotes = db.Quotes.Include(q => q.Lines).AsQueryable();
+        var quotes = InScope(db.Quotes.Include(q => q.Lines));
         if (query.OrganizationId is { } organizationId)
         {
             quotes = quotes.Where(q => q.OrganizationId == organizationId);
@@ -174,6 +175,12 @@ internal sealed class QuoteService(
 
     public async Task<Result<QuoteDto>> CreateAsync(QuoteRequest request, CancellationToken ct)
     {
+        var owner = request.OwnerId ?? currentUser.UserId;
+        if (OwnerNotAllowed(owner, current: null) is { } notAllowed)
+        {
+            return notAllowed;
+        }
+
         var template = await ResolveTemplateAsync(request, ct);
         var validity = template?.ValidityDays ?? Settings.QuoteValidityDays;
         var header = new QuoteHeader(
@@ -181,7 +188,7 @@ internal sealed class QuoteService(
             request.ContactId,
             request.OpportunityId,
             request.Title,
-            request.OwnerId ?? currentUser.UserId,
+            owner,
             request.Language ?? template?.Language ?? "nb",
             request.ValidUntil ?? Today.AddDays(Math.Max(validity, 1)),
             request.TermMonths,
@@ -225,12 +232,19 @@ internal sealed class QuoteService(
             return SalesErrors.InvalidETag;
         }
 
+        // Leaving the owner out keeps it: a quote never loses its owner by omission (DEV-09).
+        var owner = request.OwnerId ?? quote.OwnerId;
+        if (OwnerNotAllowed(owner, quote.OwnerId) is { } notAllowed)
+        {
+            return notAllowed;
+        }
+
         var header = new QuoteHeader(
             request.OrganizationId,
             request.ContactId,
             request.OpportunityId,
             request.Title,
-            request.OwnerId,
+            owner,
             request.Language ?? quote.Language,
             request.ValidUntil ?? quote.ValidUntil,
             request.TermMonths,
@@ -325,6 +339,37 @@ internal sealed class QuoteService(
         db.Quotes.Add(revised.Value);
         await db.SaveChangesAsync(ct);
         return await ToDtoAsync(revised.Value, ct);
+    }
+
+    /// <summary>
+    /// Hands a quote to another person (DEV-09): the current version gets the new owner, and with it the whole quote. The
+    /// caller keeps seeing it only through a role that sees every quote; the change is in the audit log.
+    /// </summary>
+    public async Task<Result> TransferAsync(Guid id, TransferQuoteRequest request, string ifMatch, CancellationToken ct)
+    {
+        if (await LoadAsync(id, ct) is not { } quote)
+        {
+            return QuoteErrors.NotFound(id);
+        }
+
+        if (!db.ApplyIfMatch(quote, ifMatch))
+        {
+            return SalesErrors.InvalidETag;
+        }
+
+        if (await db.Quotes.AnyAsync(v => v.RootId == quote.RootId && v.VersionNo > quote.VersionNo, ct))
+        {
+            return QuoteErrors.NotCurrent;
+        }
+
+        if (await users.GetProfileAsync(request.OwnerId, ct) is not { IsActive: true })
+        {
+            return QuoteErrors.UnknownOwner(request.OwnerId);
+        }
+
+        quote.TransferTo(request.OwnerId);
+        await db.SaveChangesAsync(ct);
+        return Result.Success();
     }
 
     /// <summary>FR-SAL-04: the PDF leaves from the salesperson's own mailbox, so the reply comes back to them.</summary>
@@ -542,8 +587,33 @@ internal sealed class QuoteService(
         return await ToDtoAsync(quote, ct);
     }
 
+    // Every load by id goes through the caller's scope: a quote outside it does not exist for them (404, not 403), so ids
+    // reveal nothing (DEV-09).
     private async Task<Quote?> LoadAsync(Guid id, CancellationToken ct) =>
-        await db.Quotes.Include(q => q.Lines).SingleOrDefaultAsync(q => q.Id == id, ct);
+        await InScope(db.Quotes.Include(q => q.Lines)).SingleOrDefaultAsync(q => q.Id == id, ct);
+
+    /// <summary>
+    /// The quotes the caller may see (DEV-09): all of them, or — limited to its own — those whose newest version it owns. The
+    /// whole quote follows its current version: a transfer moves the earlier versions along, and a version is never visible
+    /// without its siblings.
+    /// </summary>
+    private IQueryable<Quote> InScope(IQueryable<Quote> quotes) =>
+        scope.LimitedTo(Permissions.QuotesAll) is { } userId
+            ? quotes.Where(q => db.Quotes
+                .Where(v => v.RootId == q.RootId)
+                .OrderByDescending(v => v.VersionNo)
+                .Select(v => v.OwnerId)
+                .FirstOrDefault() == userId)
+            : quotes;
+
+    /// <summary>
+    /// Who may be named owner (DEV-09). A role that sees every quote names anyone; one limited to its own quotes keeps them
+    /// its own — handing one over is an explicit transfer, after which the quote is no longer theirs to see.
+    /// </summary>
+    private Error? OwnerNotAllowed(Guid? requested, Guid? current) =>
+        scope.LimitedTo(Permissions.QuotesAll) is { } userId && requested != current && requested != userId
+            ? QuoteErrors.OwnerNotAllowed
+            : null;
 
     private async Task<QuoteDto> ToDtoAsync(Quote quote, CancellationToken ct)
     {

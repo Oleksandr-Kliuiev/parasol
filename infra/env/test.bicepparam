@@ -12,3 +12,5 @@ param enablePowerOffice = bool(readEnvironmentVariable('CRM_ENABLE_POWEROFFICE',
 // Fixed for this environment (DEV-05): never taken from a pipeline variable that could be missing or wrong.
 param powerOfficeEnvironment = 'Demo'
 param enableAtera = bool(readEnvironmentVariable('CRM_ENABLE_ATERA', 'false'))
+// Record scope (DEV-09, runbook 11): Open only as a dated, reviewed exception while owners and teams are reconciled.
+param recordScope = 'Restricted'

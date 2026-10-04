@@ -21,7 +21,7 @@ import {
 } from '@fluentui/react-components';
 import { Add20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
-import { Permissions, useCan } from '../../auth/CurrentUserContext';
+import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -45,6 +45,8 @@ export function ProjectsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const canWrite = useCan(Permissions.projectsWrite);
+  // DEV-09: a technician sees the projects they are on, and is told so.
+  const allProjects = useCurrentUser().recordScope.allProjects;
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
@@ -57,7 +59,7 @@ export function ProjectsPage() {
     <>
       <PageHeader
         title={t('projects.title')}
-        subtitle={t('projects.subtitle')}
+        subtitle={allProjects ? t('projects.subtitle') : t('projects.scopeAssigned')}
         actions={
           canWrite && (
             <Button {...restoreFocusTarget} appearance="primary" icon={<Add20Regular />} onClick={() => setCreating(true)}>

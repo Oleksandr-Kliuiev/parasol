@@ -149,6 +149,13 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
+// DEV-09: an environment that opens record scope says so on every start (ADR-018, runbook 11).
+if (app.Services.GetRequiredService<IOptions<Crm.Infrastructure.Security.RecordScopeOptions>>().Value.RecordScope == RecordScopeMode.Open)
+{
+    app.Logger.LogWarning(
+        "Record scope is Open: every holder of sales.read sees every quote, every holder of projects.read every project (DEV-09, runbook 11)");
+}
+
 if (args.Contains(DatabaseMigrator.MigrateOnlyArgument))
 {
     await DatabaseMigrator.MigrateAsync(app.Services);
@@ -201,6 +208,7 @@ app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
+app.MapRecordScopeEndpoints();
 app.MapHealthDetails();
 
 if (hangfireEnabled)

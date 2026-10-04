@@ -1,5 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Spinner, makeStyles, tokens } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError, loginUrl } from '../api/client';
@@ -16,12 +16,27 @@ const useStyles = makeStyles({
 export function AuthGate({ children }: { children: ReactNode }) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data, error, isPending, refetch } = useQuery({
     queryKey: currentUserQueryKey,
     queryFn: async ({ signal }) => (await api.get<CurrentUser>('/bff/user', signal)).data,
     retry: false,
     staleTime: 5 * 60_000,
+    // Asked again whenever the window gets focus, so a different sign-in on this browser is noticed at once (below).
+    refetchOnWindowFocus: 'always',
   });
+
+  // Someone else signed in on this browser (another tab, a shared PC): nothing cached for the previous user may be shown,
+  // so the cache is dropped and the app starts over for the new one (DEV-09).
+  const signedIn = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    if (signedIn.current !== null && signedIn.current !== data.id) {
+      queryClient.clear();
+      window.location.reload();
+    }
+    signedIn.current = data.id;
+  }, [data, queryClient]);
 
   const unauthenticated = error instanceof ApiError && error.status === 401;
 

@@ -50,6 +50,10 @@ param enableAtera bool = false
 @description('SQL Database max vCores (serverless).')
 param sqlMaxVCores int = environmentName == 'prod' ? 4 : 2
 
+@description('Record scope (DEV-09, ADR-018): Restricted applies SEC-AZ-03; Open is only a dated, reviewed exception while owners and project teams are reconciled (runbook 11).')
+@allowed(['Restricted', 'Open'])
+param recordScope string = 'Restricted'
+
 param tags object = {
   application: 'vardahei-crm'
   environment: environmentName
@@ -155,6 +159,7 @@ module apps 'modules/apps.bicep' = {
     enablePowerOffice: enablePowerOffice
     powerOfficeEnvironment: powerOfficeEnvironment
     enableAtera: enableAtera
+    recordScope: recordScope
   }
 }
 

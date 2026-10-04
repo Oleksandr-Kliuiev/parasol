@@ -223,6 +223,14 @@ export interface CurrentUser {
   roles: string[];
   permissions: string[];
   authMode: AuthMode;
+  /** What the user sees of the scoped records (DEV-09): every quote or project, or only their own / assigned ones. */
+  recordScope: RecordScope;
+}
+
+export interface RecordScope {
+  mode: 'Restricted' | 'Open';
+  allQuotes: boolean;
+  allProjects: boolean;
 }
 
 export interface SearchHit {

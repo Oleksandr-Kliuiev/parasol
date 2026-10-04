@@ -24,6 +24,7 @@ export const Permissions = {
   salesRead: 'sales.read',
   salesWrite: 'sales.write',
   salesDiscountApprove: 'sales.discount.approve',
+  quotesAll: 'sales.quotes.all',
   licensingRead: 'licensing.read',
   licensingManage: 'licensing.manage',
   activitiesRead: 'activities.read',
@@ -35,6 +36,7 @@ export const Permissions = {
   reportsRead: 'reports.read',
   projectsRead: 'projects.read',
   projectsWrite: 'projects.write',
+  projectsAll: 'projects.all',
   reportsMart: 'reports.mart',
   customFieldsManage: 'customfields.manage',
 } as const;

@@ -182,4 +182,15 @@ internal static class IntegrationTestHelpers
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
     }
+
+    /// <summary>The CRM user id of the client's signed-in user (provisioned on its first request).</summary>
+    public static async Task<Guid> UserIdAsync(this HttpClient client) =>
+        (await client.GetFromJsonAsync<JsonElement>("/bff/user")).GetProperty("id").GetGuid();
+
+    /// <summary>Hands a quote to another user (DEV-09), with the quote's current ETag.</summary>
+    public static async Task<HttpResponseMessage> TransferQuoteAsync(this HttpClient client, Guid quoteId, Guid ownerId)
+    {
+        var etag = (await client.GetFromJsonAsync<JsonElement>($"/api/v1/sales/quotes/{quoteId}")).GetProperty("etag").GetString()!;
+        return await client.PostWithETagAsync($"/api/v1/sales/quotes/{quoteId}/transfer", new { ownerId }, etag);
+    }
 }

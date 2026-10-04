@@ -252,20 +252,25 @@ public class QuoteDocumentsTests(CrmWebFactory factory)
         finance.Headers.GetValues("X-Content-Type-Options").Single().ShouldBe("nosniff");
         finance.Content.Headers.ContentDisposition!.DispositionType.ShouldBe("attachment");
 
-        // Read access without finance.read: no financial document.
+        // Roles without finance.read: someone else's quote is outside their record scope (DEV-09) — not found, by id or
+        // anything else; one they own is theirs to read, but not its financial document.
         foreach (var role in new[] { CrmRoles.ReadOnly, CrmRoles.Technician })
         {
-            var refused = await factory.ClientAs(role, userKey: $"doc-{role.ToLowerInvariant()}").GetAsync(url, Ct);
-            refused.StatusCode.ShouldBe(HttpStatusCode.Forbidden, role);
-            (await refused.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("SAL_QUOTE_PRICES_HIDDEN");
+            (await factory.ClientAs(role, userKey: $"doc-{role.ToLowerInvariant()}").GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound, role);
         }
+
+        var technician = factory.ClientAs(CrmRoles.Technician, userKey: $"doc-owner-{marker}");
+        (await sales.TransferQuoteAsync(quoteId, await technician.UserIdAsync())).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var refused = await technician.GetAsync(url, Ct);
+        refused.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await refused.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("SAL_QUOTE_PRICES_HIDDEN");
 
         // No read access at all, or no session: nothing.
         (await factory.ClientAs("Crm.Unknown", userKey: "doc-nobody").GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await factory.AnonymousClient().GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
         // The record names no storage address: the document is only reachable through this authorized path.
-        var quote = await sales.GetStringAsync($"{Sales}/quotes/{quoteId}", Ct);
+        var quote = await factory.ClientAs(CrmRoles.Finance, userKey: "doc-finance").GetStringAsync($"{Sales}/quotes/{quoteId}", Ct);
         quote.ShouldNotContain("quotes/");
         quote.ShouldNotContain("blob.core");
         quote.ShouldNotContain(factory.Documents.Root);

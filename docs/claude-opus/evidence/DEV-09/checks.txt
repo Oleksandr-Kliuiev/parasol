@@ -1,0 +1,9 @@
+# Checks, 04.10.2026 (UTC)
+07:38-07:40  ci.yml jobs backend and infrastructure (local emulation) -> PASSED (coverage: domain 96.43 %, backend 86.97 %)
+07:52        Crm.UnitTests -> Total: 392, Failed: 0 (RecordScopeTests 14)
+07:52        Crm.ArchitectureTests -> Total: 85, Failed: 0 (InfrastructureTests.Record_scope_is_restricted_by_default_and_set_per_environment)
+07:52        python3 -m unittest discover -s tools/release -> Ran 27 tests, OK
+07:56        Crm.IntegrationTests -> Crm.IntegrationTests  Total: 169, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 49,056s (RecordScopeTests 5)
+07:57        web: lint / typecheck -> clean / clean; vitest -> 18 files, 55 tests (QuoteRecordScope 5, ProjectTeam 3, AuthGate 2, RecordAccessPage 2); build -> initial total 283.6 KB (budget 300 KB)
+07:51-07:55  E2E on a fresh database (e2e-run.sh dev09final) -> 55 passed (see e2e.txt)
+07:47-07:50  tools/release/rollback-compat.sh d53b3eb -> 54 passed (DEV-08 release on the DEV-09 schema)

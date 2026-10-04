@@ -3,6 +3,7 @@ using Crm.Infrastructure.Documents;
 using Crm.Infrastructure.Health;
 using Crm.Infrastructure.Outbox;
 using Crm.Infrastructure.Persistence;
+using Crm.Infrastructure.Security;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Documents;
 using Crm.SharedKernel.Domain;
@@ -51,6 +52,10 @@ public static class ModuleRegistration
             services.AddSingleton<ProcessingLoopMonitor>();
             services.AddOptions<ProcessingHealthOptions>().BindConfiguration(ProcessingHealthOptions.SectionName);
             services.AddOptions<OutboxOptions>().BindConfiguration(OutboxOptions.SectionName);
+
+            // DEV-09: which records of a kind the caller may see; the owning module applies it to every query.
+            services.AddOptions<RecordScopeOptions>().BindConfiguration(RecordScopeOptions.SectionName);
+            services.TryAddScoped<IRecordScope, RecordScope>();
 
             // DEV-08: issued documents (quote PDFs) live in a document store, never re-rendered from changing data.
             services.AddOptions<DocumentStoreOptions>().BindConfiguration(DocumentStoreOptions.SectionName).ValidateOnStart();

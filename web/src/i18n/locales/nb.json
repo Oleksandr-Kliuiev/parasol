@@ -32,7 +32,8 @@
     "sla": "SLA-rapport",
     "margins": "Marginer",
     "customFields": "Egne felt",
-    "migration": "Migrering"
+    "migration": "Migrering",
+    "recordAccess": "Tilgang til poster"
   },
   "header": {
     "search": "Søk i organisasjoner",
@@ -103,7 +104,14 @@
       "INT_OUTBOUND_RUNNING": "Endringen sendes akkurat nå; prøv igjen om et øyeblikk.",
       "SAL_DOCUMENT_PREPARING": "Dokumentet lagres; det kan lastes ned eller sendes om et øyeblikk.",
       "SAL_DOCUMENT_UNAVAILABLE": "Det lagrede dokumentet kan ikke leses, så ingenting ble sendt. Kontakt administratoren.",
-      "SAL_DOCUMENT_NOT_FOUND": "Denne dokumentrevisjonen finnes ikke."
+      "SAL_DOCUMENT_NOT_FOUND": "Denne dokumentrevisjonen finnes ikke.",
+      "SAL_QUOTE_OWNER_NOT_ALLOWED": "Du kan bare gjøre deg selv til eier. Vil du gi tilbudet videre, overfører du det.",
+      "SAL_QUOTE_NOT_CURRENT": "Bare gjeldende versjon kan overføres; de tidligere følger med.",
+      "SAL_QUOTE_OWNER_UNKNOWN": "Personen er ikke en aktiv CRM-bruker.",
+      "PRJ_MEMBER_UNKNOWN": "Personen er ikke en aktiv CRM-bruker.",
+      "TIM_PROJECT_NOT_AVAILABLE": "Prosjektet finnes ikke, eller du er ikke med i det.",
+      "TIM_PROJECT_OTHER_ORGANIZATION": "Prosjektet hører til en annen kunde enn timeføringen.",
+      "TIM_PROJECT_CLOSED": "Prosjektet er fullført eller avlyst og tar ikke imot flere timer."
     }
   },
   "status": {
@@ -1477,6 +1485,17 @@
       "download": "Last ned revisjon {{revision}}",
       "preparingBody": "Dokumentet for denne versjonen lagres nå. Det kan lastes ned og sendes så snart det er lagret; siden oppdateres av seg selv.",
       "reconstructedNote": "Denne versjonen ble frigitt før dokumenter ble lagret: kopien er laget senere med opplysningene fra den dagen og er ikke dokumentet som ble sendt."
+    },
+    "scopeOwn": "Tilbudene du eier. Vil du gi et tilbud videre, overfører du det fra tilbudet.",
+    "ownerLocked": "Du er eier; vil du endre det, overfører du tilbudet.",
+    "transfer": {
+      "action": "Overfør",
+      "title": "Overfør tilbud {{number}}",
+      "owner": "Ny eier",
+      "body": "Tilbudet og de tidligere versjonene får ny eier. Endringen føres i revisjonsloggen.",
+      "leavesScope": "Etterpå ser du ikke tilbudet lenger.",
+      "submit": "Overfør",
+      "done": "Tilbudet tilhører nå {{name}}."
     }
   },
   "quoteTemplates": {
@@ -2093,6 +2112,17 @@
       "amount": "Verdi av timene, budsjett {{budget}}",
       "phaseFees": "Honorar fra fullførte faser",
       "phases": "Fullførte faser, {{tasks}} åpne oppgaver"
+    },
+    "scopeAssigned": "Prosjektene du er med i: som prosjektleder, i teamet eller med en oppgave.",
+    "team": {
+      "title": "Team",
+      "hint": "Prosjektlederen, teamet og de som har oppgaver, ser prosjektet. Teknikere ser ikke andre prosjekter.",
+      "empty": "Ingen i teamet ennå.",
+      "person": "Person",
+      "add": "Legg til i teamet",
+      "added": "{{name}} er med i teamet.",
+      "remove": "Fjern {{name}} fra teamet",
+      "removed": "{{name}} er ikke lenger med i teamet."
     }
   },
   "sla": {
@@ -2219,5 +2249,36 @@
       "Conflict": "Trenger avgjørelse",
       "Failed": "Feilet"
     }
+  },
+  "appRoles": {
+    "Admin": "Administrator",
+    "Management": "Ledelse",
+    "Sales": "Salg",
+    "Technician": "Tekniker",
+    "ServiceLead": "Serviceleder",
+    "Finance": "Økonomi",
+    "ReadOnly": "Lesetilgang"
+  },
+  "recordAccess": {
+    "title": "Tilgang til poster",
+    "subtitle": "Hvem som ser hvilke tilbud og prosjekter. Sjekk dette før begrenset modus tas i bruk på ekte data.",
+    "mode": {
+      "Restricted": "Begrenset: de begrensede rollene ser bare egne eller tildelte poster.",
+      "Open": "Åpen: alle som kan lese tilbud eller prosjekter, ser alle."
+    },
+    "kind": {
+      "quotes": "Tilbud",
+      "projects": "Prosjekter"
+    },
+    "seeAll": "Ser alle: {{roles}}",
+    "limited": "Bare egne eller tildelte: {{roles}}",
+    "total": "Totalt: {{value}}",
+    "withoutAssignee": "Uten eier eller tildelt person: {{value}} — bare rollene som ser alle, ser disse.",
+    "nobody": "Ingen eier eller er tildelt noen av dem.",
+    "tableLabel": "{{kind}} per person",
+    "person": "Person",
+    "records": "Poster",
+    "inactive": "inaktiv",
+    "unknownUser": "Ukjent bruker"
   }
 }

@@ -35,6 +35,7 @@ param webMinReplicas int
 param enablePowerOffice bool
 param powerOfficeEnvironment string
 param enableAtera bool
+param recordScope string
 
 var acrPullRole = '7f951dda-4ed3-4680-a7ca-43fe172d538f'
 var placeholderImage = 'mcr.microsoft.com/k8se/quickstart:latest'
@@ -97,6 +98,8 @@ var commonEnv = [
   { name: 'Documents__BlobContainerUri', value: documentsContainerUri }
   // Which deployment this is: the apps check environment-bound settings against it (PowerOffice Demo/Production, DEV-05).
   { name: 'Deployment__Environment', value: environmentName }
+  // Record scope (DEV-09): set per environment in infra/env/*.bicepparam; crm-web logs a warning on every start when Open.
+  { name: 'Authorization__RecordScope', value: recordScope }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
   { name: 'OTEL_SERVICE_NAME', value: 'crm' }
 ]

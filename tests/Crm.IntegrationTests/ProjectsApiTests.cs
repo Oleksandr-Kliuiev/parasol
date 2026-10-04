@@ -98,8 +98,11 @@ public class ProjectsApiTests(CrmWebFactory factory)
         line.GetProperty("description").GetString()!.ShouldContain("Pilot");
         line.GetProperty("lineTotal").GetDecimal().ShouldBe(40_000m);
 
-        // A technician may look at the project but not change it.
+        // A technician sees a project once on its team (DEV-09), and may look at it but not change it.
         var technician = factory.ClientAs(CrmRoles.Technician, userKey: "project-technician");
+        (await technician.GetAsync($"{Projects}/{projectId}")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await sales.PostAsJsonAsync($"{Projects}/{projectId}/members", new { userId = await technician.UserIdAsync() })).StatusCode
+            .ShouldBe(HttpStatusCode.OK);
         (await technician.GetAsync($"{Projects}/{projectId}")).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await technician.PostAsJsonAsync($"{Projects}/{projectId}/phases", new
         {

@@ -54,6 +54,12 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
   const run = await collectedBillingRun(page, `${m} a11y`);
   const bases = await api.get<Array<{ id: string }>>(page, `/api/v1/billing/runs/${run.id}/bases`);
   const hourBank = await api.post<{ id: string }>(page, '/api/v1/contracts/hour-banks', { organizationId: organization.id, contractId: contract.id, name: 'Klippekort', hours: 10, validFrom: '2026-01-01' });
+  // DEV-09: a project with a team, for the team section.
+  const project = await api.post<{ id: string }>(page, '/api/v1/projects', {
+    organizationId: organization.id, name: `${m} Prosjekt`, type: 'Other', billingModel: 'TimeAndMaterial', startDate: '2026-10-01', budgetHours: 10, budgetAmount: 0,
+  });
+  const me = await api.get<{ id: string }>(page, '/bff/user');
+  await api.post(page, `/api/v1/projects/${project.id}/members`, { userId: me.id });
 
   const pages: Array<[string, string]> = [
     ['My day', '/'],
@@ -65,6 +71,7 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     ['Duplicates', '/organizations/duplicates'],
     ['Contact', `/contacts/${contact.contactId}`],
     ['Audit log', '/admin/audit'],
+    ['Record access', '/admin/record-access'],
     ['Users', '/admin/users'],
     ['Integrations', '/admin/integrations'],
     ['Mappings', '/admin/mappings'],
@@ -89,6 +96,7 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     ['Deal', `/sales/opportunities/${opportunity.id}`],
     ['Pipeline stages', '/admin/pipeline'],
     ['Projects', '/projects'],
+    ['Project', `/projects/${project.id}`],
     ['SLA report', '/service/sla'],
     ['Margins', '/reports/margins'],
     ['Custom fields', '/admin/custom-fields'],

@@ -82,5 +82,13 @@ export function useProjectActions(id?: string) {
       mutationFn: (taskId: string) => api.delete(`${BASE}/${id}/tasks/${taskId}`),
       onSuccess: refresh,
     }),
+    addMember: useMutation({
+      mutationFn: (userId: string) => api.post<Project>(`${BASE}/${id}/members`, { userId }),
+      onSuccess: refresh,
+    }),
+    removeMember: useMutation({
+      mutationFn: (userId: string) => api.delete<Project>(`${BASE}/${id}/members/${userId}`),
+      onSuccess: refresh,
+    }),
   };
 }

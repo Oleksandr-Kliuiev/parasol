@@ -20,7 +20,7 @@ import {
 } from '@fluentui/react-components';
 import { Add20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
-import { Permissions, useCan } from '../../auth/CurrentUserContext';
+import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -46,6 +46,8 @@ export function QuotesPage() {
   const navigate = useNavigate();
   const canWrite = useCan(Permissions.salesWrite);
   const canSeeMoney = useCan(Permissions.financeRead);
+  // DEV-09: a user limited to their own quotes is told so, and "only mine" is what they always get.
+  const allQuotes = useCurrentUser().recordScope.allQuotes;
   const isPhone = useMediaQuery('(max-width: 700px)');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<QuoteStatus | ''>('');
@@ -63,7 +65,7 @@ export function QuotesPage() {
     <>
       <PageHeader
         title={t('quotes.title')}
-        subtitle={t('quotes.subtitle')}
+        subtitle={allQuotes ? t('quotes.subtitle') : t('quotes.scopeOwn')}
         actions={
           canWrite && (
             <Button appearance="primary" icon={<Add20Regular />} onClick={() => navigate('/quotes/new')}>
@@ -91,7 +93,7 @@ export function QuotesPage() {
             ))}
           </Dropdown>
         </Field>
-        <Checkbox label={t('quotes.mine')} checked={mine} onChange={(_, d) => setMine(Boolean(d.checked))} />
+        {allQuotes && <Checkbox label={t('quotes.mine')} checked={mine} onChange={(_, d) => setMine(Boolean(d.checked))} />}
         <Checkbox
           label={t('quotes.awaitingApproval')}
           checked={awaitingApproval}

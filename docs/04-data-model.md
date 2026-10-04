@@ -488,6 +488,7 @@ erDiagram
   ACTIVITY }o--o{ CONTACT : participants
   CUSTOM_FIELD_DEFINITION ||--o{ CUSTOM_FIELD_VALUE : answered
   PROJECT ||--o{ PROJECT_PHASE : has
+  PROJECT ||--o{ PROJECT_MEMBER : team
   PROJECT_PHASE ||--o{ PROJECT_TASK : has
   EXTERNAL_LINK }o--|| ANY_ENTITY : maps
   AUDIT_ENTRY }o--|| ANY_ENTITY : tracks
@@ -552,6 +553,12 @@ erDiagram
     decimal EstimatedHours
     string Status "Open|InProgress|Done|Cancelled"
   }
+  PROJECT_MEMBER {
+    uuid Id
+    uuid ProjectId
+    uuid UserId "участник команды (DEV-09): вместе с руководителем и исполнителями задач — те, кому назначен проект"
+    bool IsDeleted "удаление мягкое: журнал аудита хранит, кто и когда имел доступ"
+  }
   CUSTOM_FIELD_DEFINITION {
     uuid Id
     string Entity "Organization|Opportunity|Contract"
@@ -608,6 +615,7 @@ erDiagram
 | `projects.Project` | UNIQUE (`Number`); INDEX (`OrganizationId`, `Status`) |
 | `projects.ProjectPhase` | INDEX (`ProjectId`) |
 | `projects.ProjectTask` | INDEX (`PhaseId`); INDEX (`AssigneeId`, `Status`) |
+| `projects.ProjectMember` | UNIQUE (`ProjectId`, `UserId`) WHERE `IsDeleted = 0`; INDEX (`UserId`) |
 | `time.TimeEntry` (проект) | INDEX (`ProjectId`) WHERE `ProjectId IS NOT NULL` |
 | `customers.Organization` (группа) | INDEX (`ParentId`) WHERE `ParentId IS NOT NULL` |
 | `licensing.LicenseSnapshot` | UNIQUE (`OrganizationId`, `SnapshotDate`, `SkuId`); INDEX (`SnapshotDate`) |

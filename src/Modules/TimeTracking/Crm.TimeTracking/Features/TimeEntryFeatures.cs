@@ -98,6 +98,14 @@ internal static class TimeErrors
     public static Error Forbidden => new("TIM_NOT_OWNER", "You can only change your own time entries.", ErrorType.Forbidden);
 
     public static Error InvalidETag => Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
+
+    public static Error ProjectNotAvailable => Error.Validation(
+        "TIM_PROJECT_NOT_AVAILABLE", "The project does not exist or is not one you are assigned to (DEV-09).");
+
+    public static Error ProjectOtherOrganization => Error.Validation(
+        "TIM_PROJECT_OTHER_ORGANIZATION", "The project belongs to another organization than the time entry.");
+
+    public static Error ProjectClosed => Error.Conflict("TIM_PROJECT_CLOSED", "The project is completed or cancelled and takes no more hours.");
 }
 
 internal sealed class TimeEntryService(
@@ -188,6 +196,11 @@ internal sealed class TimeEntryService(
             return TimeErrors.PeriodClosed;
         }
 
+        if (await ProjectNotBookableAsync(request.ProjectId, request.OrganizationId, ct) is { } projectError)
+        {
+            return projectError;
+        }
+
         var created = TimeEntry.CreateManual(new ManualTimeEntry(
             request.OrganizationId, technicianId.Value, request.WorkDate, request.Hours, request.WorkType, request.Billable, request.Onsite,
             request.AfterHours, request.Description, null, request.ExternalTicketId, request.TicketTitle, request.ProjectId));
@@ -228,6 +241,13 @@ internal sealed class TimeEntryService(
         if (technicianId is null)
         {
             return TimeErrors.Forbidden;
+        }
+
+        // An entry already booked on a project keeps it: someone taken off the project can still correct yesterday's hours.
+        if ((request.ProjectId != entry.ProjectId || request.OrganizationId != entry.OrganizationId) &&
+            await ProjectNotBookableAsync(request.ProjectId, request.OrganizationId, ct) is { } projectError)
+        {
+            return projectError;
         }
 
         var updated = entry.Update(new ManualTimeEntry(
@@ -358,6 +378,30 @@ internal sealed class TimeEntryService(
     {
         var fromCatalog = await catalog.GetWorkTypesAsync(ct);
         return fromCatalog.Concat(options.Value.WorkTypes).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Hours go only to a project the caller may see (DEV-09), of the entry's organization and still taking hours — otherwise
+    /// they could land on, and the answer would name, any project.
+    /// </summary>
+    private async Task<Error?> ProjectNotBookableAsync(Guid? projectId, Guid organizationId, CancellationToken ct)
+    {
+        if (projectId is not { } id)
+        {
+            return null;
+        }
+
+        if (await projects.GetProjectAsync(id, ct) is not { } project)
+        {
+            return TimeErrors.ProjectNotAvailable;
+        }
+
+        if (project.OrganizationId != organizationId)
+        {
+            return TimeErrors.ProjectOtherOrganization;
+        }
+
+        return project.AcceptsHours ? null : TimeErrors.ProjectClosed;
     }
 
     private bool CanEdit(TimeEntry entry) =>

@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using Crm.Authorization;
 using Crm.Identity.Contracts;
+using Crm.SharedKernel.Application;
 using Crm.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -16,7 +17,11 @@ public sealed record BffUser(
     string? PreferredLanguage,
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Permissions,
-    AuthMode AuthMode);
+    AuthMode AuthMode,
+    BffRecordScope RecordScope);
+
+/// <summary>What the user sees of the scoped records (DEV-09), so a list can say "the quotes you own" instead of looking incomplete.</summary>
+public sealed record BffRecordScope(RecordScopeMode Mode, bool AllQuotes, bool AllProjects);
 
 public static class BffEndpoints
 {
@@ -79,7 +84,7 @@ public static class BffEndpoints
                     : Results.LocalRedirect("/"))
             .AllowAnonymous();
 
-        group.MapGet("/user", async (ClaimsPrincipal principal, IUserDirectory users, CrmAuthOptions options, CancellationToken ct) =>
+        group.MapGet("/user", async (ClaimsPrincipal principal, IUserDirectory users, CrmAuthOptions options, IRecordScope scope, CancellationToken ct) =>
             {
                 if (!Guid.TryParse(principal.FindFirstValue(CrmClaimTypes.UserId), out var userId) ||
                     await users.GetProfileAsync(userId, ct) is not { IsActive: true } profile)
@@ -90,7 +95,11 @@ public static class BffEndpoints
                 var roles = principal.GetCrmRoles().Order(StringComparer.Ordinal).ToList();
                 return Results.Ok(new BffUser(
                     profile.Id, profile.DisplayName, profile.Email, profile.PreferredLanguage, roles,
-                    principal.GetPermissions().Order(StringComparer.Ordinal).ToList(), options.Mode));
+                    principal.GetPermissions().Order(StringComparer.Ordinal).ToList(), options.Mode,
+                    new BffRecordScope(
+                        scope.Mode,
+                        scope.LimitedTo(Crm.Authorization.Permissions.QuotesAll) is null,
+                        scope.LimitedTo(Crm.Authorization.Permissions.ProjectsAll) is null)));
             });
 
         return app;

@@ -33,6 +33,7 @@ public static class SalesModule
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<QuoteDocumentJob>>()));
         services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, SalesDatabasePermissions>();
+        services.AddScoped<Crm.SharedKernel.Application.IRecordScopeReporter, QuoteScopeReporter>();
         services.AddScoped<ISalesApi, SalesApi>();
         services.AddScoped<IProductUsage, QuoteProductUsage>();
         return services;
@@ -208,6 +209,14 @@ public static class SalesModule
 
         group.MapPost("/quotes/{id:guid}/revise", async (Guid id, QuoteService service, CancellationToken ct) =>
                 (await service.ReviseAsync(id, ct)).ToHttpResult(q => Results.Created($"/api/v1/sales/quotes/{q.Id}", q)))
+            .RequirePermission(Permissions.SalesWrite);
+
+        // DEV-09: the caller may lose sight of the quote, so the answer carries no quote.
+        group.MapPost("/quotes/{id:guid}/transfer", async (Guid id, TransferQuoteRequest request, QuoteService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.TransferAsync(id, request, ifMatch, ct)).ToHttpResult(Results.NoContent))
+            .Validate<TransferQuoteRequest>()
             .RequirePermission(Permissions.SalesWrite);
 
         return app;

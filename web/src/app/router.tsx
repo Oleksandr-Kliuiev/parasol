@@ -55,6 +55,7 @@ export const routes: RouteObject[] = [
       { path: 'admin/technicians', lazy: async () => ({ Component: (await import('../features/admin/TechniciansPage')).TechniciansPage }) },
       { path: 'contacts/:id', lazy: async () => ({ Component: (await import('../features/contacts/ContactPage')).ContactPage }) },
       { path: 'admin/audit', lazy: async () => ({ Component: (await import('../features/audit/AuditLogPage')).AuditLogPage }) },
+      { path: 'admin/record-access', lazy: async () => ({ Component: (await import('../features/recordAccess/RecordAccessPage')).RecordAccessPage }) },
       { path: 'admin/users', lazy: async () => ({ Component: (await import('../features/admin/UsersPage')).UsersPage }) },
       { path: 'admin/integrations', lazy: async () => ({ Component: (await import('../features/admin/IntegrationsPage')).IntegrationsPage }) },
       { path: 'admin/mappings', lazy: async () => ({ Component: (await import('../features/integrations/MappingsPage')).MappingsPage }) },

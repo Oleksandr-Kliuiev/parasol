@@ -18,6 +18,8 @@ public sealed class ProjectsDbContext(DbContextOptions<ProjectsDbContext> option
 
     public DbSet<ProjectTask> ProjectTasks => Set<ProjectTask>();
 
+    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+
     /// <summary>Next project number, e.g. P-2026-0042. The sequence is global so numbers never repeat across years.</summary>
     public async Task<string> NextProjectNumberAsync(int year, CancellationToken cancellationToken)
     {
@@ -79,6 +81,16 @@ public sealed class ProjectsDbContext(DbContextOptions<ProjectsDbContext> option
             b.Property(x => x.Notes).HasMaxLength(2000);
             b.HasIndex(x => x.PhaseId);
             b.HasIndex(x => new { x.AssigneeId, x.Status });
+        });
+
+        // DEV-09: the team of a project; one live row per person (a removed member's row stays, soft-deleted, for the audit log).
+        modelBuilder.Entity<ProjectMember>(b =>
+        {
+            b.ToTable("ProjectMembers");
+            b.ConfigureAuditable();
+            b.HasOne<Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.ProjectId, x.UserId }).IsUnique().HasFilter("[IsDeleted] = 0");
+            b.HasIndex(x => x.UserId);
         });
     }
 }

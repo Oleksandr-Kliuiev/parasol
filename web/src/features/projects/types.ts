@@ -75,6 +75,8 @@ export interface Project {
   notes: string | null;
   progress: ProjectProgress;
   phases: ProjectPhase[];
+  /** The team (DEV-09): with the manager and the task assignees, the people the project is assigned to. */
+  members: Ref[];
   etag: string;
 }
 

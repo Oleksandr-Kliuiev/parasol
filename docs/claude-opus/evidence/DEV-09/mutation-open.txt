@@ -1,0 +1,11 @@
+# Mutation check: the record scope tests with record scope opened for the whole run (Authorization__RecordScope=Open)
+# 04.10.2026 ~09:21 local; every scenario must fail when the scope is not applied.
+    Crm.IntegrationTests.RecordScopeTests.AC05_finance_and_management_keep_their_access_and_nothing_in_a_request_sets_a_role [FAIL]
+    Crm.IntegrationTests.RecordScopeTests.AC03_search_documents_counts_history_and_custom_fields_do_not_go_around_the_scope [FAIL]
+    Crm.IntegrationTests.RecordScopeTests.AC04_handing_over_a_quote_or_a_project_moves_access_at_once_and_saved_links_go_dead [FAIL]
+    Crm.IntegrationTests.RecordScopeTests.AC01_a_salesperson_gets_no_other_salespersons_quote_by_id_filter_or_action [FAIL]
+    Crm.IntegrationTests.RecordScopeTests.AC02_a_technician_sees_the_projects_they_are_on_and_no_filter_widens_that [FAIL]
+   Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 5, Skipped: 0, Not Run: 0, Time: 12,030s
+
+# Normal run (Restricted, the default):
+   Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 14,399s
