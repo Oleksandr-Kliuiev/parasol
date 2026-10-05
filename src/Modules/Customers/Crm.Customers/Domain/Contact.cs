@@ -23,6 +23,13 @@ public sealed record ContactDetails(
     string? MobilePhone,
     string? PreferredLanguage);
 
+public enum AffiliationState
+{
+    None,
+    Active,
+    Ended,
+}
+
 public sealed record AffiliationDetails(string? Title, ContactRoles Roles, bool IsPrimary, bool IsActive = true);
 
 /// <summary>A person. One person can work with several organizations, each through its own affiliation (BR-CUS-05).</summary>
@@ -105,6 +112,119 @@ public sealed class Contact : AuditableEntity, IErasable
 
         return applied;
     }
+
+    /// <summary>
+    /// Fills only what the CRM has no value for (the migration import, DEV-20): a name, phone number or language already on
+    /// the person is never replaced or cleared. Returns the names of the fields that changed.
+    /// </summary>
+    public IReadOnlyList<string> FillGaps(ContactDetails details)
+    {
+        var changed = new List<string>();
+        if (string.IsNullOrWhiteSpace(FirstName) && Clean(details.FirstName) is { } first)
+        {
+            FirstName = first;
+            changed.Add("firstName");
+        }
+
+        if (string.IsNullOrWhiteSpace(LastName) && Clean(details.LastName) is { } last)
+        {
+            LastName = last;
+            changed.Add("lastName");
+        }
+
+        if (Email is null && NormalizeEmail(details.Email) is { } email)
+        {
+            Email = email;
+            changed.Add("email");
+        }
+
+        if (Phone is null && Clean(details.Phone) is { } phone)
+        {
+            Phone = phone;
+            changed.Add("phone");
+        }
+
+        if (MobilePhone is null && Clean(details.MobilePhone) is { } mobile)
+        {
+            MobilePhone = mobile;
+            changed.Add("mobilePhone");
+        }
+
+        if (PreferredLanguage is null && Clean(details.PreferredLanguage) is { } language)
+        {
+            PreferredLanguage = language;
+            changed.Add("preferredLanguage");
+        }
+
+        if (changed.Count > 0)
+        {
+            Raise(new ContactUpdated(Id));
+        }
+
+        return changed;
+    }
+
+    /// <summary>The fields where the file carries a value and the CRM holds a different one: names only, never values.</summary>
+    public IReadOnlyList<string> FindConflicts(ContactDetails details)
+    {
+        var conflicts = new List<string>();
+        if (Clean(details.FirstName) is { } first && FirstName.Length > 0 && NameKey(first) != NameKey(FirstName))
+        {
+            conflicts.Add("firstName");
+        }
+
+        if (Clean(details.LastName) is { } last && LastName.Length > 0 && NameKey(last) != NameKey(LastName))
+        {
+            conflicts.Add("lastName");
+        }
+
+        if (Clean(details.Phone) is { } phone && Phone is not null &&
+            (Crm.Customers.Domain.DuplicateDetector.PhoneKeyOf(phone) ?? phone) != (Crm.Customers.Domain.DuplicateDetector.PhoneKeyOf(Phone) ?? Phone))
+        {
+            conflicts.Add("phone");
+        }
+
+        return conflicts;
+    }
+
+    /// <summary>Lower case, single spaces: how two spellings of a person's name are compared.</summary>
+    public static string NameKey(string? value) =>
+        string.Join(' ', (value ?? string.Empty).ToLowerInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>
+    /// Fills the title and roles of an affiliation that has none (DEV-20) and never ends or restarts one: an affiliation that
+    /// was ended in the CRM is reported by <see cref="AffiliationState"/>, not revived. Returns the names that changed.
+    /// </summary>
+    public IReadOnlyList<string> FillAffiliationGaps(Guid organizationId, AffiliationDetails details)
+    {
+        var affiliation = _affiliations.FirstOrDefault(a => a.OrganizationId == organizationId && a.IsActive);
+        if (affiliation is null)
+        {
+            return [];
+        }
+
+        var changed = affiliation.FillGaps(details.Title, details.Roles);
+        if (changed.Count > 0)
+        {
+            Raise(new ContactAffiliationChanged(Id, organizationId));
+        }
+
+        return changed;
+    }
+
+    /// <summary>The roles that the file names and the CRM holds as something else, for an affiliation in force.</summary>
+    public bool AffiliationRoleConflicts(Guid organizationId, ContactRoles fileRoles) =>
+        fileRoles != ContactRoles.None &&
+        _affiliations.FirstOrDefault(a => a.OrganizationId == organizationId && a.IsActive) is { Roles: not ContactRoles.None } held &&
+        held.Roles != fileRoles;
+
+    /// <summary>Whether the person has an affiliation to the organization, and whether it is in force.</summary>
+    public AffiliationState StateFor(Guid organizationId) => _affiliations.FirstOrDefault(a => a.OrganizationId == organizationId) switch
+    {
+        null => AffiliationState.None,
+        { IsActive: true } => AffiliationState.Active,
+        _ => AffiliationState.Ended,
+    };
 
     public Result Affiliate(Guid organizationId, AffiliationDetails details)
     {
@@ -206,6 +326,25 @@ public sealed class OrganizationContact : AuditableEntity, IErasable
         Roles = details.Roles;
         IsActive = details.IsActive;
         IsPrimary = details.IsActive && details.IsPrimary;
+    }
+
+    /// <summary>Fills a missing title and missing roles; returns the names that changed.</summary>
+    internal IReadOnlyList<string> FillGaps(string? title, ContactRoles roles)
+    {
+        var changed = new List<string>();
+        if (Title is null && !string.IsNullOrWhiteSpace(title))
+        {
+            Title = title.Trim();
+            changed.Add("title");
+        }
+
+        if (Roles == ContactRoles.None && roles != ContactRoles.None)
+        {
+            Roles = roles;
+            changed.Add("roles");
+        }
+
+        return changed;
     }
 
     internal void ClearPrimary() => IsPrimary = false;

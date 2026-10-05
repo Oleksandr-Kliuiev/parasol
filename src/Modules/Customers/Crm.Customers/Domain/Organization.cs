@@ -109,6 +109,220 @@ public sealed class Organization : AuditableEntity
         return applied;
     }
 
+    /// <summary>
+    /// Fills only what the CRM has no value for (the migration import, DEV-20): an existing value is never replaced — also not
+    /// by a different one, which <see cref="FindConflicts"/> reports instead. Values the file does not carry are left alone.
+    /// The billing fields (invoice e-mail, EHF, billing address) are skipped when another system owns them
+    /// (<paramref name="includeBilling"/> false). Returns the names of the fields that changed and raises
+    /// <see cref="OrganizationUpdated"/> only when there are some.
+    /// </summary>
+    public IReadOnlyList<string> FillGaps(OrganizationDetails details, bool includeBilling = true)
+    {
+        var changed = new List<string>();
+        if (OrgNumber is null && Clean(details.OrgNumber) is { } number && Domain.OrgNumber.Parse(number) is { IsSuccess: true, Value: { } parsed })
+        {
+            OrgNumber = parsed;
+            // A different registry entity: its registry status must be checked again.
+            RegistryStatus = BrregStatus.Unknown;
+            RegistryCheckedAt = null;
+            changed.Add("orgNumber");
+        }
+
+        void Fill(ref string? field, string? incoming, string name, Func<string?, string?> clean)
+        {
+            if (field is null && clean(incoming) is { } value)
+            {
+                field = value;
+                changed.Add(name);
+            }
+        }
+
+        var legalForm = LegalForm;
+        Fill(ref legalForm, details.LegalForm, "legalForm", v => Clean(v)?.ToUpperInvariant());
+        LegalForm = legalForm;
+        var nace = NaceCode;
+        Fill(ref nace, details.NaceCode, "naceCode", Clean);
+        NaceCode = nace;
+        var website = Website;
+        Fill(ref website, details.Website, "website", NormalizeWebsite);
+        Website = website;
+        var phone = Phone;
+        Fill(ref phone, details.Phone, "phone", Clean);
+        Phone = phone;
+        var email = Email;
+        Fill(ref email, details.Email, "email", v => Clean(v)?.ToLowerInvariant());
+        Email = email;
+
+        if (AccountManagerId is null && details.AccountManagerId is { } manager)
+        {
+            AccountManagerId = manager;
+            changed.Add("accountManager");
+        }
+
+        if (PrimaryTechnicianId is null && details.PrimaryTechnicianId is { } technician)
+        {
+            PrimaryTechnicianId = technician;
+            changed.Add("primaryTechnician");
+        }
+
+        var postal = FillAddress(PostalAddress, details.PostalAddress);
+        PostalAddress = postal.Value;
+        if (postal.Changed)
+        {
+            changed.Add("postalAddress");
+        }
+
+        var visit = FillAddress(VisitAddress, details.VisitAddress);
+        VisitAddress = visit.Value;
+        if (visit.Changed)
+        {
+            changed.Add("visitAddress");
+        }
+
+        if (Domains.Length == 0 && NormalizeDomains(details.Domains) is { Length: > 0 } domains)
+        {
+            Domains = domains;
+            changed.Add("domains");
+        }
+
+        if (includeBilling)
+        {
+            var invoiceEmail = InvoiceEmail;
+            Fill(ref invoiceEmail, details.InvoiceEmail, "invoiceEmail", v => Clean(v)?.ToLowerInvariant());
+            InvoiceEmail = invoiceEmail;
+            if (!EhfEnabled && details.EhfEnabled)
+            {
+                EhfEnabled = true;
+                changed.Add("ehfEnabled");
+            }
+
+            var billing = FillAddress(BillingAddress, details.BillingAddress);
+            BillingAddress = billing.Value;
+            if (billing.Changed)
+            {
+                changed.Add("billingAddress");
+            }
+        }
+
+        if (changed.Count > 0)
+        {
+            Raise(new OrganizationUpdated(Id));
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// The fields where the file carries a value and the CRM holds a different one (DEV-20): names only, never the values.
+    /// Differences in case, spacing, a legal-form suffix of the name, the scheme of a website or the country code of a phone
+    /// number are not conflicts. The status is compared only when <paramref name="compareStatus"/> says the file carries one.
+    /// </summary>
+    public IReadOnlyList<string> FindConflicts(OrganizationDetails details, bool includeBilling = true, bool compareStatus = false)
+    {
+        var conflicts = new List<string>();
+        if (Clean(details.Name) is { } name && DuplicateDetector.NormalizeName(name) != DuplicateDetector.NormalizeName(Name))
+        {
+            conflicts.Add("name");
+        }
+
+        if (OrgNumber is not null && Clean(details.OrgNumber) is { } number && Domain.OrgNumber.Normalize(number) != OrgNumber)
+        {
+            conflicts.Add("orgNumber");
+        }
+
+        if (compareStatus && details.Status != Status)
+        {
+            conflicts.Add("status");
+        }
+
+        Differs(LegalForm, details.LegalForm?.ToUpperInvariant(), "legalForm");
+        Differs(NaceCode, details.NaceCode, "naceCode");
+        Differs(WebsiteKey(Website), WebsiteKey(details.Website), "website");
+        Differs(PhoneKey(Phone), PhoneKey(details.Phone), "phone");
+        Differs(Email, details.Email, "email");
+        if (AccountManagerId is { } current && details.AccountManagerId is { } incoming && current != incoming)
+        {
+            conflicts.Add("accountManager");
+        }
+
+        if (PrimaryTechnicianId is { } technician && details.PrimaryTechnicianId is { } other && technician != other)
+        {
+            conflicts.Add("primaryTechnician");
+        }
+
+        AddressDiffers(PostalAddress, details.PostalAddress, "postalAddress");
+        AddressDiffers(VisitAddress, details.VisitAddress, "visitAddress");
+        if (Domains.Length > 0 && NormalizeDomains(details.Domains) is { Length: > 0 } domains && domains.Except(Domains, StringComparer.Ordinal).Any())
+        {
+            conflicts.Add("domains");
+        }
+
+        if (includeBilling)
+        {
+            Differs(InvoiceEmail, details.InvoiceEmail, "invoiceEmail");
+            AddressDiffers(BillingAddress, details.BillingAddress, "billingAddress");
+        }
+
+        return conflicts;
+
+        void Differs(string? held, string? incomingValue, string field)
+        {
+            if (Clean(held) is { } a && Clean(incomingValue) is { } b && !string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+            {
+                conflicts.Add(field);
+            }
+        }
+
+        void AddressDiffers(Address held, Address? incomingAddress, string field)
+        {
+            var n = (incomingAddress ?? Address.Empty).Normalize();
+            if (SameOrEmpty(held.Street, n.Street) && SameOrEmpty(held.PostalCode, n.PostalCode) && SameOrEmpty(held.City, n.City))
+            {
+                return;
+            }
+
+            conflicts.Add(field);
+        }
+
+        static bool SameOrEmpty(string? a, string? b) => a is null || b is null || string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static (Address Value, bool Changed) FillAddress(Address current, Address? incoming)
+    {
+        var offered = (incoming ?? Address.Empty).Normalize();
+        if (offered == Address.Empty)
+        {
+            return (current, false);
+        }
+
+        if (current == Address.Empty)
+        {
+            return (offered, true);
+        }
+
+        var filled = new Address(current.Street ?? offered.Street, current.PostalCode ?? offered.PostalCode, current.City ?? offered.City, current.CountryCode ?? offered.CountryCode);
+        return (filled, filled != current);
+    }
+
+    private static string? WebsiteKey(string? value)
+    {
+        if (Clean(value) is not { } site)
+        {
+            return null;
+        }
+
+        site = site.ToLowerInvariant();
+        var scheme = site.IndexOf("://", StringComparison.Ordinal);
+        if (scheme >= 0)
+        {
+            site = site[(scheme + 3)..];
+        }
+
+        return (site.StartsWith("www.", StringComparison.Ordinal) ? site[4..] : site).TrimEnd('/');
+    }
+
+    private static string? PhoneKey(string? value) => DuplicateDetector.PhoneKeyOf(value) ?? Clean(value);
+
     /// <summary>Sets invoice e-mail, EHF and billing address from the billing master system; returns true when anything changed.</summary>
     public bool ApplyBillingDetails(string? invoiceEmail, bool? ehfEnabled, Address? billingAddress)
     {

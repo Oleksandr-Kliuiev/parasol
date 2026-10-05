@@ -222,6 +222,41 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
 
     }
 
+    public async Task<IReadOnlyList<BilledPeriodTotal>> GetBilledTotalsAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly firstMonth, DateOnly lastMonth, CancellationToken cancellationToken)
+    {
+        var windowStart = new DateOnly(firstMonth.Year, firstMonth.Month, 1);
+        var windowEnd = new DateOnly(lastMonth.Year, lastMonth.Month, 1).AddMonths(1);
+        var totals = new List<BilledPeriodTotal>();
+        foreach (var batch in organizationIds.Distinct().Chunk(500))
+        {
+            var rows = await (
+                    from charge in db.Charges.AsNoTracking()
+                    join run in db.BillingRuns.AsNoTracking() on charge.RunId equals (Guid?)run.Id
+                    where batch.Contains(charge.PayerOrganizationId) && charge.Status != ChargeStatus.Released &&
+                          run.PeriodStart >= windowStart && run.PeriodStart < windowEnd
+                    group charge by new { charge.PayerOrganizationId, run.PeriodStart.Year, run.PeriodStart.Month, charge.Currency } into g
+                    select new
+                    {
+                        g.Key.PayerOrganizationId,
+                        g.Key.Year,
+                        g.Key.Month,
+                        g.Key.Currency,
+                        Charges = g.Count(),
+                        Billed = g.Where(c => c.Status == ChargeStatus.ExportConfirmed).Sum(c => (decimal?)c.Amount) ?? 0m,
+                        Pending = g.Where(c => c.Status == ChargeStatus.Reserved || c.Status == ChargeStatus.Committed ||
+                                               c.Status == ChargeStatus.ReconciliationRequired).Sum(c => (decimal?)c.Amount) ?? 0m,
+                        Unconfirmed = g.Where(c => c.Status == ChargeStatus.LegacyUnresolved).Sum(c => (decimal?)c.Amount) ?? 0m,
+                    })
+                .ToListAsync(cancellationToken);
+            totals.AddRange(rows.Select(r => new BilledPeriodTotal(
+                r.PayerOrganizationId, new DateOnly(r.Year, r.Month, 1), r.Currency, r.Charges,
+                decimal.Round(r.Billed, 2), decimal.Round(r.Pending, 2), decimal.Round(r.Unconfirmed, 2))));
+        }
+
+        return totals.OrderBy(t => t.OrganizationId).ThenBy(t => t.PeriodStart).ThenBy(t => t.Currency, StringComparer.Ordinal).ToList();
+    }
+
     public async Task<IReadOnlyList<RevenueByMonth>> GetRevenueAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         DateOnly firstPeriod = from, lastPeriod = to;

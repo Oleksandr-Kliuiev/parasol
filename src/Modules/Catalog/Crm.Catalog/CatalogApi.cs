@@ -106,11 +106,21 @@ internal sealed class CatalogApi(CatalogDbContext db, PriceListService priceList
             25m, Math.Max(0, data.UnitPrice ?? 0), data.UnitCost is > 0 ? data.UnitCost : null, "NOK", null, CommitmentTerm.None, null, null, null));
         if (!created.IsSuccess)
         {
-            throw new InvalidOperationException(created.Error!.Message);
+            throw new InvalidOperationException($"Cannot import product: {created.Error!.Code}.");
         }
 
         db.Products.Add(created.Value);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // The next record must not trip over this one's half-built product.
+            db.ChangeTracker.Clear();
+            throw;
+        }
+
         return new ImportProductResult(created.Value.Id, true);
     }
 }

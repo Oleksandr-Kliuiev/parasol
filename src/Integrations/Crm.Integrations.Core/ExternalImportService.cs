@@ -40,7 +40,8 @@ public sealed class ExternalImportService(
             return existing.EntityId;
         }
 
-        return await ImportAsync(resolved.Adapter, resolved.Descriptor, record, cancellationToken);
+        var imported = await ImportAsync(resolved.Adapter, resolved.Descriptor, record, dryRun: false, cancellationToken);
+        return imported.IsSuccess ? imported.Value.EntityId : imported.Error!;
     }
 
     public async Task<Result<BulkResult>> AutoLinkAsync(string system, string type, CancellationToken cancellationToken)
@@ -52,6 +53,7 @@ public sealed class ExternalImportService(
 
         int linked = 0, skipped = 0, failed = 0;
         var errors = new List<string>();
+        var failures = new Dictionary<string, int>(StringComparer.Ordinal);
         var unlinked = await UnlinkedAsync(system, type, cancellationToken);
 
         if (resolved.Descriptor.EntityType == EntityTypes.Organization)
@@ -106,27 +108,30 @@ public sealed class ExternalImportService(
             skipped = unlinked.Count;
         }
 
-        return new BulkResult(linked, 0, skipped, failed, errors, DryRun: false);
+        return new BulkResult(linked, 0, skipped, failed, WithSummary(errors, failures), DryRun: false);
 
         async Task LinkOrCountAsync(ExternalTypeDescriptor descriptor, ExternalRecord record, Guid entityId, LinkMethod method)
         {
-            var result = await links.LinkAsync(descriptor.EntityType, entityId, record.System, record.ExternalType, record.ExternalId, method, user.UserId, cancellationToken);
+            var result = await TryLinkAsync(descriptor, record, entityId, method, cancellationToken);
             if (result.IsSuccess)
             {
                 linked++;
             }
             else
             {
-                skipped++;
-                if (errors.Count < 50)
-                {
-                    errors.Add($"{record.DisplayName}: {result.Error!.Message}");
-                }
+                // A link that could not be made is a failure to look at, not a record that was merely passed over.
+                failed++;
+                Note(errors, failures, record, result.Error!.Code);
             }
         }
     }
 
-    /// <summary>Imports every unlinked record. With <paramref name="dryRun"/> nothing is written and the counts show what would happen.</summary>
+    /// <summary>
+    /// Imports every unlinked record. With <paramref name="dryRun"/> nothing is written and the counts are exactly what the real
+    /// run reports: both walk the same decisions (a parent that is not linked is skipped, an erased person fails, "created"
+    /// means a new record was really made, a match is "linked"). Errors name the record by its external id and a code, never by
+    /// a person's or a company's name.
+    /// </summary>
     public async Task<Result<BulkResult>> ImportUnlinkedAsync(string system, string type, bool dryRun, CancellationToken cancellationToken)
     {
         if (Resolve(system, type) is not { } resolved)
@@ -137,6 +142,7 @@ public sealed class ExternalImportService(
         var unlinked = await UnlinkedAsync(system, type, cancellationToken);
         int created = 0, linked = 0, skipped = 0, failed = 0;
         var errors = new List<string>();
+        var codes = new Dictionary<string, int>(StringComparer.Ordinal);
         IOrganizationMatcher? matcher = resolved.Descriptor.EntityType == EntityTypes.Organization ? await customers.CreateMatcherAsync(cancellationToken) : null;
 
         foreach (var record in unlinked)
@@ -156,11 +162,11 @@ public sealed class ExternalImportService(
                 {
                     if (!dryRun)
                     {
-                        var link = await links.LinkAsync(EntityTypes.Organization, exact.OrganizationId, record.System, record.ExternalType, record.ExternalId,
-                            LinkMethod.Automatic, user.UserId, cancellationToken);
+                        var link = await TryLinkAsync(resolved.Descriptor, record, exact.OrganizationId, LinkMethod.Automatic, cancellationToken);
                         if (!link.IsSuccess)
                         {
-                            skipped++;
+                            failed++;
+                            Note(errors, codes, record, link.Error!.Code);
                             continue;
                         }
                     }
@@ -168,23 +174,19 @@ public sealed class ExternalImportService(
                     linked++;
                     continue;
                 }
-
-                if (dryRun)
-                {
-                    created++;
-                    continue;
-                }
-            }
-            else if (dryRun)
-            {
-                created++;
-                continue;
             }
 
-            var result = await ImportAsync(resolved.Adapter, resolved.Descriptor, record, cancellationToken);
+            var result = await ImportAsync(resolved.Adapter, resolved.Descriptor, record, dryRun, cancellationToken);
             if (result.IsSuccess)
             {
-                created++;
+                if (result.Value.Created)
+                {
+                    created++;
+                }
+                else
+                {
+                    linked++;
+                }
             }
             else if (result.Error!.Code == "INT_PARENT_NOT_LINKED")
             {
@@ -193,28 +195,44 @@ public sealed class ExternalImportService(
             else
             {
                 failed++;
-                if (errors.Count < 50)
-                {
-                    errors.Add($"{record.DisplayName}: {result.Error.Message}");
-                }
+                Note(errors, codes, record, result.Error.Code);
             }
         }
 
-        return new BulkResult(linked, created, skipped, failed, errors, dryRun);
+        return new BulkResult(linked, created, skipped, failed, WithSummary(errors, codes), dryRun);
     }
 
-    private async Task<Result<Guid>> ImportAsync(IIntegrationAdapter adapter, ExternalTypeDescriptor descriptor, ExternalRecord record, CancellationToken cancellationToken)
+    private sealed record Imported(Guid EntityId, bool Created);
+
+    /// <summary>
+    /// The decisions of an import, one record. A dry run takes every one of them, reading only, and stops short of the write:
+    /// whatever would make the real run skip or fail the record makes the preview say so.
+    /// </summary>
+    private async Task<Result<Imported>> ImportAsync(
+        IIntegrationAdapter adapter, ExternalTypeDescriptor descriptor, ExternalRecord record, bool dryRun, CancellationToken cancellationToken)
     {
         try
         {
             Guid entityId;
             LinkMethod method;
+            bool wasCreated;
             if (descriptor.EntityType == EntityTypes.Organization)
             {
                 var data = adapter.ToOrganizationData(record)
                            ?? throw new InvalidOperationException("The record cannot be read as an organization.");
+                if (string.IsNullOrWhiteSpace(data.Name))
+                {
+                    throw new InvalidOperationException("The record has no name.");
+                }
+
+                if (dryRun)
+                {
+                    return new Imported(Guid.Empty, Created: true);
+                }
+
                 var imported = await customers.ImportOrganizationAsync(data, OrganizationStatus.Customer, cancellationToken);
                 entityId = imported.OrganizationId;
+                wasCreated = imported.Created;
                 method = imported.Created ? LinkMethod.Imported : LinkMethod.Automatic;
             }
             else if (descriptor.EntityType == EntityTypes.Contact)
@@ -235,15 +253,34 @@ public sealed class ExternalImportService(
                 }
 
                 var data = adapter.ToContactData(record) ?? throw new InvalidOperationException("The record cannot be read as a contact.");
+                if (dryRun)
+                {
+                    // The import matches a person by a valid address; without one it makes a new contact.
+                    var address = data.Email?.Trim();
+                    var matchable = address is { Length: > 0 } && System.Net.Mail.MailAddress.TryCreate(address, out _);
+                    var existing = matchable ? await customers.FindContactsByEmailAsync([address!], cancellationToken) : new Dictionary<string, Guid>();
+                    return new Imported(Guid.Empty, Created: !matchable || !existing.ContainsKey(address!.ToLowerInvariant()));
+                }
+
                 var imported = await customers.ImportContactAsync(parent.EntityId, data, cancellationToken);
                 entityId = imported.ContactId;
+                wasCreated = imported.Created;
                 method = imported.Created ? LinkMethod.Imported : LinkMethod.Automatic;
             }
             else if (descriptor.EntityType == EntityTypes.Product)
             {
                 var data = adapter.ToProductData(record) ?? throw new InvalidOperationException("The record cannot be read as a product.");
+                if (dryRun)
+                {
+                    var code = string.IsNullOrWhiteSpace(data.Code) ? data.Name : data.Code;
+                    var sku = code.Trim();
+                    var existing = await catalog.FindProductsBySkuAsync([sku.Length > 64 ? sku[..64] : sku], cancellationToken);
+                    return new Imported(Guid.Empty, Created: existing.Count == 0);
+                }
+
                 var imported = await catalog.ImportProductAsync(data, cancellationToken);
                 entityId = imported.ProductId;
+                wasCreated = imported.Created;
                 method = imported.Created ? LinkMethod.Imported : LinkMethod.Automatic;
             }
             else
@@ -251,13 +288,55 @@ public sealed class ExternalImportService(
                 return Error.Validation("INT_IMPORT_UNSUPPORTED", $"Records of type {descriptor.ExternalType} cannot be imported.");
             }
 
+            var link = await TryLinkAsync(descriptor, record, entityId, method, cancellationToken);
+            return link.IsSuccess ? new Imported(entityId, wasCreated) : link.Error!;
+        }
+        catch (InvalidOperationException)
+        {
+            // The message of an exception from a module can carry the name of the record; the code is all that is passed on.
+            return Error.Validation("INT_IMPORT_FAILED", "The record cannot be imported.");
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            return new Error("INT_IMPORT_DB_FAILED", "The record could not be saved.", ErrorType.Failure);
+        }
+    }
+
+    /// <summary>Links, and a link the database refuses is a failure of this record, not of the whole run.</summary>
+    private async Task<Result<Guid>> TryLinkAsync(
+        ExternalTypeDescriptor descriptor, ExternalRecord record, Guid entityId, LinkMethod method, CancellationToken cancellationToken)
+    {
+        try
+        {
             var link = await links.LinkAsync(descriptor.EntityType, entityId, record.System, record.ExternalType, record.ExternalId, method, user.UserId, cancellationToken);
             return link.IsSuccess ? entityId : link.Error!;
         }
-        catch (InvalidOperationException ex)
+        catch (DbUpdateException)
         {
-            return Error.Validation("INT_IMPORT_FAILED", ex.Message);
+            db.ChangeTracker.Clear();
+            return new Error("INT_IMPORT_DB_FAILED", "The link could not be saved.", ErrorType.Failure);
         }
+    }
+
+    private static void Note(List<string> errors, Dictionary<string, int> codes, ExternalRecord record, string code)
+    {
+        codes[code] = codes.GetValueOrDefault(code) + 1;
+        if (errors.Count < 50)
+        {
+            errors.Add($"{record.ExternalType}/{record.ExternalId}: {code}");
+        }
+    }
+
+    /// <summary>The listed errors are capped; the last line counts every code, so a long failure list does not look like a short one.</summary>
+    private static List<string> WithSummary(List<string> errors, Dictionary<string, int> codes)
+    {
+        if (codes.Count > 0)
+        {
+            errors.Add("Summary: " + string.Join(", ", codes.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => $"{c.Key}={c.Value}")));
+        }
+
+        return errors;
     }
 
     private async Task<List<ExternalRecord>> UnlinkedAsync(string system, string type, CancellationToken cancellationToken)

@@ -95,13 +95,13 @@ public static class SubscriptionCsv
             var offerId = Value("offerid");
             if (subscriptionId is null || customerId is null || offerId is null)
             {
-                errors.Add($"Row {CsvTable.LineNumber(row)}: customer, subscription or offer is missing.");
+                errors.Add($"Row {table.Line(row)}: customer, subscription or offer is missing.");
                 continue;
             }
 
             if (!int.TryParse(Value("quantity"), CultureInfo.InvariantCulture, out var quantity) || quantity < 0)
             {
-                errors.Add($"Row {CsvTable.LineNumber(row)}: quantity '{Value("quantity")}' is not a whole number.");
+                errors.Add($"Row {table.Line(row)}: quantity '{Value("quantity")}' is not a whole number.");
                 continue;
             }
 

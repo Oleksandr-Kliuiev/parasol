@@ -120,12 +120,12 @@ DEV-19-AC03,DEV-19,"Сверка различает оплату, кредито
 DEV-19-AC04,DEV-19,CRM обновляет только принадлежащие ей поля и не затирает чужие изменения.,"Q1,Q2,Q7",pass,"evidence/DEV-19.md; IntegrationMappingTests, AteraPartnerCenterResilienceTests",2026-10-05
 DEV-19-AC05,DEV-19,Устаревшие/неполные количества видны Finance и попадают в список исключений.,"Q1,Q2,Q7",pass,"evidence/DEV-19.md; BillingQuantityFreshnessTests, CronAwareFreshnessTests",2026-10-05
 DEV-19-AC06,DEV-19,"EXT-03 содержит выбранный test tenant/account, сценарии, timestamps и очищенные доказательства; неизвестные credentials не считаются настроенной интеграцией.","Q1,Q2,Q7",blocked,evidence/DEV-19.md; evidence/DEV-19/contract-matrix.md; ProviderContractFixtureTests; EXT-03: sandbox accounts and owners not assigned,2026-10-05
-DEV-20-AC01,DEV-20,Dry-run и реальный импорт показывают согласованные created/updated/unchanged/rejected counts.,"Q1,Q2,Q3,Q7",not_run,,
-DEV-20-AC02,DEV-20,"Повтор того же source manifest не дублирует клиентов, ссылки и начисления.","Q1,Q2,Q3,Q7",not_run,,
-DEV-20-AC03,DEV-20,Все исходные записи имеют результат или объяснённое исключение; суммы сверены по клиентам/периодам/валютам.,"Q1,Q2,Q3,Q7",not_run,,
-DEV-20-AC04,DEV-20,Ошибки середины batch не теряют позицию продолжения и не оставляют необъяснимые частичные связи.,"Q1,Q2,Q3,Q7",not_run,,
-DEV-20-AC05,DEV-20,Импортированные owners соответствуют утверждённым scopes; персональные данные подпадают под политику.,"Q1,Q2,Q3,Q7",not_run,,
-DEV-20-AC06,DEV-20,Finance и Product Owner подтвердили пробную миграцию в EXT-09.,"Q1,Q2,Q3,Q7",not_run,,
+DEV-20-AC01,DEV-20,Dry-run и реальный импорт показывают согласованные created/updated/unchanged/rejected counts.,"Q1,Q2,Q3,Q7",pass,"evidence/DEV-20.md; MigrationImportTests, MigrationImportResumeTests",2026-10-05
+DEV-20-AC02,DEV-20,"Повтор того же source manifest не дублирует клиентов, ссылки и начисления.","Q1,Q2,Q3,Q7",pass,"evidence/DEV-20.md; MigrationImportTests, LaunchReadinessTests; charges are not imported (stay in the source system, reconciled by report): EXT-01/EXT-09",2026-10-05
+DEV-20-AC03,DEV-20,Все исходные записи имеют результат или объяснённое исключение; суммы сверены по клиентам/периодам/валютам.,"Q1,Q2,Q3,Q7",pass,"evidence/DEV-20.md; MigrationImportTests, MigrationCutoverTests, web/e2e/migration.spec.ts",2026-10-05
+DEV-20-AC04,DEV-20,Ошибки середины batch не теряют позицию продолжения и не оставляют необъяснимые частичные связи.,"Q1,Q2,Q3,Q7",pass,evidence/DEV-20.md; MigrationImportResumeTests,2026-10-05
+DEV-20-AC05,DEV-20,Импортированные owners соответствуют утверждённым scopes; персональные данные подпадают под политику.,"Q1,Q2,Q3,Q7",pass,evidence/DEV-20.md; owner resolution and no-PII run tables tested; approved record scopes for customers do not exist yet: EXT-01,2026-10-05
+DEV-20-AC06,DEV-20,Finance и Product Owner подтвердили пробную миграцию в EXT-09.,"Q1,Q2,Q3,Q7",blocked,evidence/DEV-20.md; EXT-09: Finance and Product Owner have not confirmed a trial migration on a real source,2026-10-05
 DEV-21-AC01,DEV-21,Каждое применимое ASVS L1/L2 требование имеет доказательство либо явный незакрытый gap; нет общей галочки соответствия.,"Q1,Q2,Q3,Q4,Q7",not_run,,
 DEV-21-AC02,DEV-21,"Негативные проверки scope, отзыва ролей, CSRF, экспорта и replay проходят после изменений.","Q1,Q2,Q3,Q4,Q7",not_run,,
 DEV-21-AC03,DEV-21,По независимой проверке нет известных незакрытых Critical/High в запускаемом контуре; retest приложен.,"Q1,Q2,Q3,Q4,Q7",not_run,,

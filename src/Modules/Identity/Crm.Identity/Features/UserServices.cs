@@ -76,6 +76,36 @@ internal sealed class UserDirectory(IdentityDbContext db) : IUserDirectory
             .Select(u => new UserSummary(u.Id, u.DisplayName, u.Email, u.IsActive))
             .ToDictionaryAsync(u => u.Id, cancellationToken);
     }
+
+    public async Task<IReadOnlyDictionary<string, UserSummary>> FindByEmailsAsync(
+        IReadOnlyCollection<string> emails, CancellationToken cancellationToken)
+    {
+        // The database compares without case (its collation); the match below is made without case as well.
+        var wanted = emails.Select(e => e.Trim().ToLowerInvariant()).Where(e => e.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        var found = new Dictionary<string, UserSummary>(StringComparer.Ordinal);
+        foreach (var batch in wanted.Chunk(500))
+        {
+            var users = await db.Users.AsNoTracking()
+                .Where(u => (u.Email != null && batch.Contains(u.Email)) || batch.Contains(u.UserPrincipalName))
+                .Select(u => new { u.Id, u.DisplayName, u.Email, u.UserPrincipalName, u.IsActive })
+                .ToListAsync(cancellationToken);
+            foreach (var email in batch)
+            {
+                var matches = users
+                    .Where(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(u.UserPrincipalName, email, StringComparison.OrdinalIgnoreCase))
+                    .Select(u => new UserSummary(u.Id, u.DisplayName, u.Email, u.IsActive))
+                    .DistinctBy(u => u.Id)
+                    .ToList();
+                if (matches.Count == 1)
+                {
+                    found[email] = matches[0];
+                }
+            }
+        }
+
+        return found;
+    }
 }
 
 internal static class UserMappings

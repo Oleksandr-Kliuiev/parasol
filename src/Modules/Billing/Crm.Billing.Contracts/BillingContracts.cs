@@ -122,6 +122,15 @@ public sealed record BilledLicenseLine(Guid OrganizationId, Guid? ProductId, dec
 
 public sealed record OverdueInvoice(Guid InvoiceId, string InvoiceNo, Guid? OrganizationId, decimal Outstanding, DateOnly DueDate, int DaysOverdue);
 
+/// <summary>
+/// What the charge register holds for one payer, month and currency (DEV-20, cutover reconciliation): <paramref name="Billed"/>
+/// is what the accounting system confirmed, <paramref name="Pending"/> what is reserved, committed or waiting for a person to
+/// check, and <paramref name="Unconfirmed"/> the lines billed before the register existed whose origin cannot be proven (they
+/// are never counted as billed). Amounts exclude VAT.
+/// </summary>
+public sealed record BilledPeriodTotal(
+    Guid OrganizationId, DateOnly PeriodStart, string Currency, int Charges, decimal Billed, decimal Pending, decimal Unconfirmed);
+
 /// <summary>Public API of the Billing module for integrations.</summary>
 public interface IBillingApi
 {
@@ -177,6 +186,13 @@ public interface IBillingApi
 
     /// <summary>Every invoice dated in the window, oldest first with the invoice number and id as tie-breakers (DEV-14).</summary>
     Task<IReadOnlyList<InvoiceRow>> GetInvoiceRowsAsync(DateOnly periodFrom, DateOnly periodTo, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The register's totals per payer, month of the run's period and currency, for the given payers and months (inclusive,
+    /// first day of the month) — summed in the database, read-only (DEV-20). A payer is the organization that is invoiced.
+    /// </summary>
+    Task<IReadOnlyList<BilledPeriodTotal>> GetBilledTotalsAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly firstMonth, DateOnly lastMonth, CancellationToken cancellationToken);
 
     Task<InvoiceTotals> GetInvoiceTotalsAsync(DateOnly today, CancellationToken cancellationToken);
 

@@ -113,6 +113,8 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     ['Margins', '/reports/margins'],
     ['Custom fields', '/admin/custom-fields'],
     ['Migration', '/admin/migration'],
+    ['Migration runs', '/admin/migration?tab=runs'],
+    ['Migration reconciliation', '/admin/migration?tab=reconcile'],
     ['Licenses', '/licenses'],
     ['Licence usage', '/licenses?view=usage'],
     ['Microsoft reconciliation', '/licenses?view=reconciliation'],
@@ -144,6 +146,13 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     await page.goto(path);
     await expectNoSeriousViolations(page, name);
   }
+
+  // DEV-20: a preview with a rejected row, its reason breakdown and the owner coverage on screen.
+  await page.goto('/admin/migration');
+  await page.getByRole('textbox', { name: 'Or paste the rows' }).fill('Navn;Organisasjonsnummer\nA11y Migrering AS;123\nA11y Annen AS;');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('region', { name: 'Rows that change something or need attention' })).toBeVisible();
+  await expectNoSeriousViolations(page, 'Migration preview');
 
   // DEV-13: the maintenance banner and the paused sign-in, with the public state faked for this page only — switching the
   // shared application to read-only would stop the specs running beside this one.

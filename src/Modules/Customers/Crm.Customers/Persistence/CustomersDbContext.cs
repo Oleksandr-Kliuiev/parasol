@@ -22,10 +22,18 @@ public sealed class CustomersDbContext(DbContextOptions<CustomersDbContext> opti
 
     public DbSet<DuplicateDismissal> DuplicateDismissals => Set<DuplicateDismissal>();
 
+    public DbSet<ImportRun> ImportRuns => Set<ImportRun>();
+
+    public DbSet<ImportRowOutcome> ImportRowOutcomes => Set<ImportRowOutcome>();
+
+    public DbSet<ImportRunEntity> ImportRunEntities => Set<ImportRunEntity>();
+
     private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
+        ConfigureImportRuns(modelBuilder);
+
         modelBuilder.Entity<Organization>(b =>
         {
             b.ToTable("Organizations");
@@ -100,6 +108,57 @@ public sealed class CustomersDbContext(DbContextOptions<CustomersDbContext> opti
             b.Property(x => x.Roles).HasConversion<int>();
             b.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.OrganizationId, x.ContactId }).IsUnique();
+        });
+    }
+
+    private static void ConfigureImportRuns(ModelBuilder modelBuilder)
+    {
+        // DEV-20: the manifest of a migration import. Plain entities: they are a log, not records someone edits, and they hold
+        // no personal data (hashes, counters, line numbers, codes, ids).
+        modelBuilder.Entity<ImportRun>(b =>
+        {
+            b.ToTable("ImportRuns");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.SourceSha256).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.MappingVersion).HasMaxLength(32);
+            b.Property(x => x.RepeatKey).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.Mode).HasConversion<string>().HasMaxLength(8);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.FailureCode).HasMaxLength(48);
+            b.Property(x => x.SummaryJson).HasMaxLength(4000);
+            // One real run per file and mapping: a second call resumes or repeats it instead of starting another.
+            b.HasIndex(x => x.RepeatKey).IsUnique().HasFilter("[Mode] = 'Real'");
+            b.HasIndex(x => new { x.StartedAt, x.Id });
+        });
+
+        modelBuilder.Entity<ImportRowOutcome>(b =>
+        {
+            b.ToTable("ImportRowOutcomes");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.SourceKey).HasMaxLength(64);
+            b.Property(x => x.Action).HasMaxLength(16);
+            b.Property(x => x.ReasonCode).HasMaxLength(48);
+            b.Property(x => x.ContactAction).HasMaxLength(16);
+            b.Property(x => x.FieldsChanged).HasMaxLength(512);
+            b.Property(x => x.ConflictFields).HasMaxLength(512);
+            b.Property(x => x.Warnings).HasMaxLength(512);
+            b.HasOne<ImportRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.RunId, x.Line }).IsUnique();
+            b.HasIndex(x => new { x.RunId, x.Action });
+        });
+
+        modelBuilder.Entity<ImportRunEntity>(b =>
+        {
+            b.ToTable("ImportRunEntities");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.EntityType).HasMaxLength(24);
+            b.Property(x => x.Action).HasMaxLength(16);
+            b.Property(x => x.Fields).HasMaxLength(512);
+            b.HasOne<ImportRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.RunId, x.EntityType, x.EntityId }).IsUnique();
         });
     }
 

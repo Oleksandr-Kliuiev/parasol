@@ -30,6 +30,13 @@ public interface IUserDirectory
     Task<UserProfile?> GetProfileAsync(Guid userId, CancellationToken cancellationToken);
 
     Task<IReadOnlyDictionary<Guid, UserSummary>> GetUsersAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The CRM user for each e-mail address (the mailbox or the sign-in name, compared without case); the key is the lower-case
+    /// address. An address no user has, or that several users share, is left out: the caller must not guess an owner. Inactive
+    /// users are returned with <see cref="UserSummary.IsActive"/> false, so the caller can refuse them (DEV-20).
+    /// </summary>
+    Task<IReadOnlyDictionary<string, UserSummary>> FindByEmailsAsync(IReadOnlyCollection<string> emails, CancellationToken cancellationToken);
 }
 
 /// <summary>A user as reported by the directory (Entra ID via Microsoft Graph delta query).</summary>

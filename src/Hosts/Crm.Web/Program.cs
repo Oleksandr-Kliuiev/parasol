@@ -138,6 +138,12 @@ builder.Services.AddRateLimiter(options =>
         Window = TimeSpan.FromHours(1),
     }));
 
+    options.AddPolicy(RateLimitPolicies.Migration, context => RateLimitPartition.GetFixedWindowLimiter(Partition(context), _ => new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = builder.Configuration.GetValue("RateLimits:MigrationPerHour", 60),
+        Window = TimeSpan.FromHours(1),
+    }));
+
     options.OnRejected = async (context, token) =>
     {
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))

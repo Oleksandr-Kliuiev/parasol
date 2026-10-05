@@ -126,6 +126,9 @@ public static class DuplicateDetector
 
     public static string? EmailDomainOf(string? email) => EmailDomain(email);
 
+    /// <summary>The digits of a phone number without the Norwegian country code, or null when too short to compare.</summary>
+    public static string? PhoneKeyOf(string? phone) => PhoneDigits(phone);
+
     public static (Guid, Guid) PairKey(Guid a, Guid b) => a.CompareTo(b) < 0 ? (a, b) : (b, a);
 
     private static string? EmailDomain(string? email)

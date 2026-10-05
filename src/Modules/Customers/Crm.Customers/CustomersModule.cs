@@ -28,6 +28,9 @@ public static class CustomersModule
         services.AddModuleServices(typeof(CustomersModule).Assembly);
         services.AddScoped<OrganizationDocumentsService>();
         services.AddScoped<MigrationImportService>();
+        services.AddScoped<MigrationRunReader>();
+        services.AddScoped<MigrationReconciliationService>();
+        services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, CustomersDatabasePermissions>();
         services.AddScoped<ICustomersApi, CustomersApi>();
         services.AddScoped<ISearchProvider, OrganizationSearchProvider>();
         services.AddScoped<ISearchProvider, ContactSearchProvider>();
@@ -67,14 +70,42 @@ public static class CustomersModule
             .ExportsData()
             .RequireRateLimiting(RateLimitPolicies.Export);
 
-        // ТЗ §6.6: migration from the old systems; ?dryRun=true previews what the file would do without writing it.
-        group.MapPost("/organizations/import", async (HttpRequest request, bool? dryRun, MigrationImportService service, CancellationToken ct) =>
-            {
-                using var reader = new StreamReader(request.Body);
-                var csv = await reader.ReadToEndAsync(ct);
-                return (await service.ImportAsync(csv, dryRun ?? false, ct)).ToHttpResult(Results.Ok);
-            })
+        // ТЗ §6.6, DEV-20: migration from the old systems. ?dryRun=true previews what the file would do and stores the run, so the
+        // real import can name it with ?expectedSha256=; the same file repeated resumes or returns its run. Not allowed in
+        // maintenance: even a preview stores a run.
+        group.MapPost("/organizations/import", async (
+                HttpRequest request, bool? dryRun, string? expectedSha256, MigrationImportService service, CancellationToken ct) =>
+                (await service.ImportAsync(await ReadBodyAsync(request, ct), dryRun ?? false, expectedSha256, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.CustomersDelete)
+            .RequireRateLimiting(RateLimitPolicies.Migration);
+
+        group.MapGet("/organizations/import/runs", async (string? cursor, int? limit, MigrationRunReader reader, CancellationToken ct) =>
+                Results.Ok(await reader.ListAsync(cursor, limit, ct)))
+            .RequirePermission(Permissions.CustomersDelete)
+            .ExportsData();
+
+        group.MapGet("/organizations/import/runs/{id:guid}", async (Guid id, MigrationRunReader reader, CancellationToken ct) =>
+                (await reader.GetAsync(id, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.CustomersDelete);
+
+        group.MapGet("/organizations/import/runs/{id:guid}/rows", async (
+                Guid id, string? action, string? cursor, int? limit, MigrationRunReader reader, CancellationToken ct) =>
+                (await reader.RowsAsync(id, action, cursor, limit, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.CustomersDelete)
+            .ExportsData();
+
+        // The batch marker: what the run created or changed — the compensation list; reading it changes nothing.
+        group.MapGet("/organizations/import/runs/{id:guid}/entities", async (
+                Guid id, string? cursor, int? limit, MigrationRunReader reader, CancellationToken ct) =>
+                (await reader.EntitiesAsync(id, cursor, limit, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.CustomersDelete)
+            .ExportsData();
+
+        // Cutover reconciliation: the old system's totals against the CRM's register. Reads only.
+        group.MapPost("/organizations/import/reconcile", async (HttpRequest request, MigrationReconciliationService service, CancellationToken ct) =>
+                (await service.ReconcileAsync(await ReadBodyAsync(request, ct), ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.CustomersDelete)
+            .ExportsData()
             .RequireRateLimiting(RateLimitPolicies.Export);
 
         group.MapGet("/organizations/duplicates", async (Guid? organizationId, FindDuplicatesHandler handler, CancellationToken ct) =>
@@ -191,6 +222,13 @@ public static class CustomersModule
             })
             .Validate<ContactPersonRequest>()
             .RequirePermission(Permissions.ContactsWrite);
+    }
+
+    private static async Task<byte[]> ReadBodyAsync(HttpRequest request, CancellationToken ct)
+    {
+        using var buffer = new MemoryStream();
+        await request.Body.CopyToAsync(buffer, ct);
+        return buffer.ToArray();
     }
 
     private static IResult WithETag(HttpResponse response, string etag, IResult result)

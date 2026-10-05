@@ -70,3 +70,21 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(width);
 });
+
+test('the migration screens fit a phone screen with a preview on show', async ({ page }) => {
+  const m = marker('MobMig');
+  await signIn(page, 'Crm.Admin');
+  await page.goto('/admin/migration');
+  await expectNoHorizontalScroll(page, 'Migration');
+  await page.getByRole('textbox', { name: 'Or paste the rows' }).fill(`Navn;Organisasjonsnummer\n${m} Mobil Migrering AS;123\n${m} Annen AS;`);
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('region', { name: 'Rows that change something or need attention' })).toBeVisible();
+  await expectNoHorizontalScroll(page, 'Migration preview');
+  for (const [name, path] of [
+    ['Migration runs', '/admin/migration?tab=runs'],
+    ['Migration reconciliation', '/admin/migration?tab=reconcile'],
+  ] as const) {
+    await page.goto(path);
+    await expectNoHorizontalScroll(page, name);
+  }
+});

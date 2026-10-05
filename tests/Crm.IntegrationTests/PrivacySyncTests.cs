@@ -69,7 +69,7 @@ public sealed class PrivacySyncTests(CrmWebFactory factory)
             var result = await migrated.ReadJsonAsync();
             result.GetProperty("contacts").GetInt32().ShouldBe(0);
             var warnings = result.GetProperty("warnings").EnumerateArray().Select(w => w.GetString()!).ToList();
-            warnings.ShouldContain(w => w.Contains("erased at their request", StringComparison.Ordinal));
+            warnings.ShouldContain(w => w.Contains("CONTACT_SUPPRESSED", StringComparison.Ordinal));
             warnings.ShouldAllBe(w => !w.Contains(person.Email, StringComparison.OrdinalIgnoreCase) && !w.Contains(person.FirstName, StringComparison.Ordinal));
         }
 

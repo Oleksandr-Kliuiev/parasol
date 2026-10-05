@@ -73,7 +73,7 @@ public static class PriceSheetCsv
             {
                 if (errors.Count < 20)
                 {
-                    errors.Add($"Row {CsvTable.LineNumber(row)}: the price '{table.Value(row, "unitprice")}' is not a number.");
+                    errors.Add($"Row {table.Line(row)}: the price '{table.Value(row, "unitprice")}' is not a number.");
                 }
 
                 continue;

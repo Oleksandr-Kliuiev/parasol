@@ -88,13 +88,13 @@ public static class MsBillingCsv
             var offerId = table.Value(row, "offerid");
             if (customerId is null || offerId is null)
             {
-                errors.Add($"Row {CsvTable.LineNumber(row)}: customer or offer is missing.");
+                errors.Add($"Row {table.Line(row)}: customer or offer is missing.");
                 continue;
             }
 
             if (CsvTable.Decimal(table.Value(row, "total")) is not { } total)
             {
-                errors.Add($"Row {CsvTable.LineNumber(row)}: the amount '{table.Value(row, "total")}' is not a number.");
+                errors.Add($"Row {table.Line(row)}: the amount '{table.Value(row, "total")}' is not a number.");
                 continue;
             }
 

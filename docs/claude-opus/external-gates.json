@@ -144,10 +144,13 @@
       "title": "Репетиция миграции и сверка",
       "required_owner_roles": "Data owners / Finance",
       "owner": "",
-      "status": "not_run",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-20.md",
+        "../runbooks/16-migration.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Finance и Product Owner не подтвердили пробную миграцию: нужны реальный образец источника (A-08), решение о глубине миграции (финансовая история, PDF), тестовая копия, прогон по runbook 16 (dry-run, real, повтор, сверка сумм по клиентам/периодам/валютам) и подписанный протокол. Локальный импорт на синтетических данных этого не заменяет.",
       "tasks": [
         "DEV-20",
         "DEV-22",

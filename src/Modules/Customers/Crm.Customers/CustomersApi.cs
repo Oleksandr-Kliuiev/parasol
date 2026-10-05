@@ -64,11 +64,11 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
         var created = Organization.Create(details);
         if (!created.IsSuccess)
         {
-            throw new InvalidOperationException($"Cannot import organization '{data.Name}': {created.Error!.Message}");
+            throw new InvalidOperationException($"Cannot import organization: {created.Error!.Code}.");
         }
 
         db.Organizations.Add(created.Value);
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveOrDiscardAsync(cancellationToken);
         return new ImportOrganizationResult(created.Value.Id, Created: true);
     }
 
@@ -201,7 +201,7 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
                 data.LastName, email, data.Phone, data.MobilePhone, null));
             if (!result.IsSuccess)
             {
-                throw new InvalidOperationException($"Cannot import contact: {result.Error!.Message}");
+                throw new InvalidOperationException($"Cannot import contact: {result.Error!.Code}.");
             }
 
             contact = result.Value;
@@ -213,8 +213,25 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
             contact.Affiliate(organizationId, new AffiliationDetails(data.Title, ContactRoles.None, IsPrimary: false));
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveOrDiscardAsync(cancellationToken);
         return new ImportContactResult(contact.Id, created);
+    }
+
+    /// <summary>
+    /// An import record whose save fails (a constraint, say) must not leave its half-built entities in this context, where the
+    /// next record's save would trip over them: they are dropped and the failure goes on to the caller, record by record.
+    /// </summary>
+    private async Task SaveOrDiscardAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            throw;
+        }
     }
 
     private static Address? ToAddress(AddressData? data) =>

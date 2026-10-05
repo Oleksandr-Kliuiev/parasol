@@ -86,10 +86,15 @@ public class LaunchReadinessTests(CrmWebFactory factory)
 
         var preview = await (await admin.PostAsync(
             $"{Organizations}/import?dryRun=true", new StringContent(csv, Encoding.UTF8, "text/csv"))).ReadJsonAsync();
-        preview.GetProperty("created").GetInt32().ShouldBe(2);
+        preview.GetProperty("created").GetInt32().ShouldBe(1);
         preview.GetProperty("updated").GetInt32().ShouldBe(1);
         preview.GetProperty("contacts").GetInt32().ShouldBe(2);
-        preview.GetProperty("warnings").EnumerateArray().ShouldContain(w => w.GetString()!.Contains("ikke et nummer", StringComparison.Ordinal));
+        // DEV-20: an invalid organization number rejects the row (it used to be dropped with a warning and the customer created
+        // without it); the answer names the line and a code, never the value.
+        preview.GetProperty("rejected").GetInt32().ShouldBe(1);
+        preview.GetProperty("rows").EnumerateArray().Single(r => r.GetProperty("action").GetString() == "Rejected")
+            .GetProperty("reasonCode").GetString().ShouldBe("INVALID_ORGNR");
+        preview.ToString().ShouldNotContain("ikke et nummer");
 
         // The preview wrote nothing.
         (await admin.GetFromJsonAsync<JsonElement>($"{Organizations}?search={marker}"))
@@ -97,11 +102,11 @@ public class LaunchReadinessTests(CrmWebFactory factory)
 
         var imported = await (await admin.PostAsync(
             $"{Organizations}/import", new StringContent(csv, Encoding.UTF8, "text/csv"))).ReadJsonAsync();
-        imported.GetProperty("created").GetInt32().ShouldBe(2);
+        imported.GetProperty("created").GetInt32().ShouldBe(1);
         imported.GetProperty("updated").GetInt32().ShouldBe(1);
 
         var items = (await admin.GetFromJsonAsync<JsonElement>($"{Organizations}?search={marker}")).GetProperty("items");
-        items.GetArrayLength().ShouldBe(3);
+        items.GetArrayLength().ShouldBe(2);
 
         // The existing customer was matched on its organization number and filled in, not duplicated.
         var existing = await admin.GetFromJsonAsync<JsonElement>($"{Organizations}/{existingId}");
@@ -110,12 +115,20 @@ public class LaunchReadinessTests(CrmWebFactory factory)
         (await admin.GetFromJsonAsync<JsonElement>($"{Organizations}/{existingId}/contacts"))
             .EnumerateArray().ShouldContain(c => c.GetProperty("email").GetString() == "kari@eksisterende.no");
 
-        // Running the same file again changes nothing.
+        // Running the same file again returns the stored run and changes nothing (DEV-20: the repeat key of the file).
         var again = await (await admin.PostAsync(
             $"{Organizations}/import", new StringContent(csv, Encoding.UTF8, "text/csv"))).ReadJsonAsync();
-        again.GetProperty("created").GetInt32().ShouldBe(0);
-        again.GetProperty("updated").GetInt32().ShouldBe(0);
-        again.GetProperty("unchanged").GetInt32().ShouldBe(3);
+        again.GetProperty("repeated").GetBoolean().ShouldBeTrue();
+        again.GetProperty("created").GetInt32().ShouldBe(1);
+        (await admin.GetFromJsonAsync<JsonElement>($"{Organizations}?search={marker}")).GetProperty("items").GetArrayLength().ShouldBe(2);
+
+        // The same rows in a file of another fingerprint are a new run, and find nothing to do.
+        var next = await (await admin.PostAsync(
+            $"{Organizations}/import", new StringContent(csv + "\n", Encoding.UTF8, "text/csv"))).ReadJsonAsync();
+        next.GetProperty("repeated").GetBoolean().ShouldBeFalse();
+        next.GetProperty("created").GetInt32().ShouldBe(0);
+        next.GetProperty("updated").GetInt32().ShouldBe(0);
+        next.GetProperty("unchanged").GetInt32().ShouldBe(2);
 
         // Migration is a delete-level right: sales cannot run it.
         var sales = factory.ClientAs(CrmRoles.Sales, userKey: "migration-sales");

@@ -364,7 +364,8 @@ public sealed class ListCompletenessTests(CrmWebFactory factory)
         (preview.GetProperty("created").GetInt32(), preview.GetProperty("failed").GetInt32()).ShouldBe((250, 1));
         var rows = preview.GetProperty("rows").EnumerateArray().ToList();
         rows.Count.ShouldBe(200, "the answer lists a sample; the counts above cover all 251 rows");
-        rows[0].GetProperty("action").GetString().ShouldBe("Failed", "what needs a person comes first, wherever it is in the file");
+        rows[0].GetProperty("action").GetString().ShouldBe("Rejected", "what needs a person comes first, wherever it is in the file");
+        rows[0].GetProperty("reasonCode").GetString().ShouldBe("MISSING_NAME");
         rows[0].GetProperty("line").GetInt32().ShouldBe(252);
     }
 
