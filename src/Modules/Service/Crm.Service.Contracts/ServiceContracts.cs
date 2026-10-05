@@ -79,6 +79,13 @@ public interface IServiceApi
     Task<IReadOnlyDictionary<Guid, IReadOnlyDictionary<DeviceType, int>>> GetDeviceCountsAsync(
         IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The same counts with their age (billing needs to know when a quantity was last read): the day of the snapshot used, or
+    /// <c>null</c> when the customer has no snapshot and the live device list answered instead.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, DeviceCountReading>> GetDeviceCountReadingsAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
+
     /// <summary>External ids of tickets that may still get work hours: open, or created or resolved since <paramref name="since"/>.</summary>
     Task<IReadOnlyList<TicketRef>> GetActiveTicketsAsync(string system, DateTimeOffset since, CancellationToken cancellationToken);
 
@@ -96,3 +103,6 @@ public interface IServiceApi
 
 /// <summary>A user asked for a ticket to be created in the service desk.</summary>
 public sealed record TicketRequested(Guid RequestId, Guid OrganizationId) : DomainEvent;
+
+/// <summary>Device counts of one organization; <paramref name="SnapshotDate"/> is null when no snapshot exists and the live list was counted.</summary>
+public sealed record DeviceCountReading(IReadOnlyDictionary<DeviceType, int> Counts, DateOnly? SnapshotDate);

@@ -3,6 +3,7 @@ using Crm.Customers.Contracts;
 using Crm.Integrations.Core;
 using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Domain;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Crm.Integrations.PowerOffice;
@@ -13,23 +14,17 @@ internal static class CustomerPatchBuilder
     public static IReadOnlyList<PatchOperation> Build(PoCustomer current, OrganizationSyncView organization, BillingDetailsMaster master)
     {
         var ops = new List<PatchOperation>();
-        void Replace(string path, string? currentValue, string? desired)
+        foreach (var field in Fields(current, organization, master))
         {
-            if (!string.Equals(Normalize(currentValue), Normalize(desired), StringComparison.Ordinal))
+            // An empty CRM value never clears what PowerOffice holds: the data may have been typed in Go, and a clear cannot be undone.
+            if (Normalize(field.Desired) is not null && !string.Equals(Normalize(field.Live), Normalize(field.Desired), StringComparison.Ordinal))
             {
-                ops.Add(new PatchOperation("replace", path, desired));
+                ops.Add(new PatchOperation("replace", field.Path, field.Desired));
             }
         }
 
-        Replace("/Name", current.Name, organization.Name);
-        Replace("/OrganizationNumber", PowerOfficeMapping.Digits(current.OrganizationNumber), organization.OrgNumber);
-        Replace("/EmailAddress", current.EmailAddress?.ToLowerInvariant(), organization.Email);
-        Replace("/PhoneNumber", current.PhoneNumber, organization.Phone);
-        Replace("/WebsiteUrl", current.WebsiteUrl, organization.Website);
-
         if (master == BillingDetailsMaster.Crm)
         {
-            Replace("/InvoiceEmailAddress", current.InvoiceEmailAddress?.ToLowerInvariant(), organization.Billing.InvoiceEmail);
             var isEhf = string.Equals(current.InvoiceDeliveryType, "EHF", StringComparison.OrdinalIgnoreCase);
             if (organization.Billing.EhfEnabled == true && !isEhf)
             {
@@ -48,6 +43,35 @@ internal static class CustomerPatchBuilder
         }
 
         return ops;
+    }
+
+    private readonly record struct Field(string Path, string? Live, string? Desired);
+
+    /// <summary>The plain text fields the CRM owns, with the live value in PowerOffice next to what the CRM wants there.</summary>
+    private static IEnumerable<Field> Fields(PoCustomer current, OrganizationSyncView organization, BillingDetailsMaster master)
+    {
+        yield return new Field("/Name", current.Name, organization.Name);
+        yield return new Field("/OrganizationNumber", PowerOfficeMapping.Digits(current.OrganizationNumber), organization.OrgNumber);
+        yield return new Field("/EmailAddress", current.EmailAddress?.ToLowerInvariant(), organization.Email);
+        yield return new Field("/PhoneNumber", current.PhoneNumber, organization.Phone);
+        yield return new Field("/WebsiteUrl", current.WebsiteUrl, organization.Website);
+        if (master == BillingDetailsMaster.Crm)
+        {
+            yield return new Field("/InvoiceEmailAddress", current.InvoiceEmailAddress?.ToLowerInvariant(), organization.Billing.InvoiceEmail);
+        }
+    }
+
+    /// <summary>
+    /// CRM-owned fields whose live value differs from both what the CRM wants and what the CRM last saw in PowerOffice (the
+    /// stored copy, which a push refreshes): someone edited them in Go. Only field names are returned, never values.
+    /// </summary>
+    public static IReadOnlyList<string> Discrepancies(PoCustomer live, PoCustomer lastKnown, OrganizationSyncView organization, BillingDetailsMaster master)
+    {
+        var known = Fields(lastKnown, organization, master).ToDictionary(f => f.Path, f => f.Live, StringComparer.Ordinal);
+        return Fields(live, organization, master)
+            .Where(f => Normalize(f.Live) != Normalize(known[f.Path]) && Normalize(f.Live) != Normalize(f.Desired))
+            .Select(f => f.Path.TrimStart('/'))
+            .ToList();
     }
 
     /// <summary>PowerOffice has one mail address: the billing address if set, otherwise the postal address.</summary>
@@ -129,7 +153,8 @@ internal sealed class PowerOfficeUpdateCustomerHandler(
     ICustomersApi customers,
     ExternalLinkService links,
     ExternalRecordStore records,
-    IOptions<PowerOfficeOptions> options) : IOutboundHandler
+    IOptions<PowerOfficeOptions> options,
+    ILogger<PowerOfficeUpdateCustomerHandler> logger) : IOutboundHandler
 {
     public string System => PowerOfficeTypes.System;
 
@@ -154,6 +179,17 @@ internal sealed class PowerOfficeUpdateCustomerHandler(
         var current = await client.GetCustomerAsync(id, cancellationToken)
                       ?? throw new PermanentOutboundException($"Customer {id} no longer exists in PowerOffice.");
         var ops = CustomerPatchBuilder.Build(current, organization, customers.BillingDetailsMaster);
+        if (await records.FindAsync(PowerOfficeTypes.System, PowerOfficeTypes.Customer, link.ExternalId, cancellationToken) is { } stored &&
+            ExternalRecordStore.Read<PoCustomer>(stored) is { } lastKnown)
+        {
+            var edited = CustomerPatchBuilder.Discrepancies(current, lastKnown, organization, customers.BillingDetailsMaster);
+            if (edited.Count > 0)
+            {
+                logger.LogWarning("PowerOffice customer {CustomerId} was edited outside the CRM in CRM-owned fields {Fields}; the CRM value is pushed over it.",
+                    id, string.Join(",", edited));
+            }
+        }
+
         if (ops.Count == 0)
         {
             return OutboundResult.NothingToDo;
@@ -261,7 +297,8 @@ internal sealed class PowerOfficeSyncContactPersonHandler(
         var ops = new List<PatchOperation>();
         void Compare(string path, string? currentValue, string? desired)
         {
-            if (!string.Equals(Clean(currentValue), Clean(desired), StringComparison.Ordinal) && (desired is not null || currentValue is not null))
+            // An empty CRM value never clears what PowerOffice holds.
+            if (Clean(desired) is not null && !string.Equals(Clean(currentValue), Clean(desired), StringComparison.Ordinal))
             {
                 ops.Add(new PatchOperation("replace", path, Clean(desired)));
             }

@@ -53,10 +53,13 @@
       "title": "Контракты реальных поставщиков и сверка эффектов",
       "required_owner_roles": "Integration owner / Finance",
       "owner": "",
-      "status": "not_run",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-19.md",
+        "evidence/DEV-19/contract-matrix.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Integration owner и Finance не назначены; нет разрешённых sandbox-аккаунтов PowerOffice Go, Atera и Partner Center и ключей. Нужно: сверка с актуальной документацией (с датами), сценарии чтения, инкрементальной синхронизации, права на поля, 429/таймауты, неопределённый исход отправки и поиск дубля, различение заказа/счёта/оплаты/кредита/списания, очищенные доказательства по contract-matrix.md. Локальные WireMock-тесты и синтетические фикстуры этого не заменяют.",
       "tasks": [
         "DEV-19",
         "DEV-23"

@@ -81,6 +81,7 @@ public partial class ChargeRegisterApiTests
         (await (await finance.RunCommandAsync(runId, "approve")).ReadJsonAsync()).GetProperty("status").GetString().ShouldBe("Approved");
         await factory.ProcessEventsAndOutboundAsync();
         var basisId = (await BasisOfAsync(finance, runId, customer))!.Value.GetProperty("id").GetGuid();
+        await AgeTheSendAsync(basisId);
         await RunPendingOperationsAsync(basisId);
         (await BasisAsync(finance, basisId)).Basis.GetProperty("status").GetString().ShouldBe("ReconciliationRequired");
         OrdersPosted(customer).ShouldBe(1);

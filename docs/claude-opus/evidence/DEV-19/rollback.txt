@@ -1,0 +1,45 @@
+== schema from 8005bd12935df2b74de3db06a6a5e73e24fd7c10 (current sources, uncommitted changes included), previous 8005bd1
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+== 1. the newer release migrates the database
+      Migrated PrivacyDbContext
+      Migrated IntegrationDbContext
+      Applied and verified database roles and grants for 16 schemas
+Schema|Newest
+------|------
+activities|20261004040649_OutboxDelivery
+audit|20261004095841_PrivacyErasure
+billing|20261005095917_InvoiceBalanceMovements
+catalog|20261004040643_OutboxDelivery
+contracts|20261004040644_OutboxDelivery
+customers|20261004040640_OutboxDelivery
+customfields|20261004040641_OutboxDelivery
+identity|20261004083007_SessionsAndConfirmedRoles
+integration|20261004201458_OperationalMonitoring
+licensing|20261004040650_OutboxDelivery
+notifications|20261004040652_OutboxDelivery
+privacy|20261004095906_PrivacyCases
+projects|20261004071249_ProjectMembers
+sales|20261004095840_QuoteDocumentErasure
+service|20261004220000_ReadPathIndexes
+time|20261004220001_ReadPathIndexes
+== 2. the previous release runs its own end-to-end suite on that schema
+Preparing worktree (detached HEAD 8005bd1)
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+
+Running 10 tests using 1 worker
+
+  ✓   1 [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (1.1m)
+  ✓   2 [desktop] › e2e/daily-workflows.spec.ts:7:1 › a save that loses to someone else shows both versions and never overwrites in silence @critical (932ms)
+  ✓   3 [desktop] › e2e/daily-workflows.spec.ts:70:1 › leaving a form with unsaved changes asks first and returns focus when the user stays @critical (1.9s)
+  ✓   4 [desktop] › e2e/monitoring.spec.ts:5:1 › an operator assigns and reviews an intentional pause and the signal recovers @critical (3.9s)
+  ✓   5 [desktop] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (2.9s)
+  ✓   6 [desktop] › e2e/privacy.spec.ts:22:1 › a person gets their data, then is erased and stays erased (DEV-11) @critical (8.4s)
+  ✓   7 [desktop] › e2e/quotes.spec.ts:5:1 › a quote with an extra discount is approved, downloaded and accepted @critical (7.5s)
+  ✓   8 [desktop] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (4.0s)
+  ✓   9 [desktop] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (587ms)
+  ✓  10 [desktop] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (1.7s)
+
+  10 passed (1.8m)

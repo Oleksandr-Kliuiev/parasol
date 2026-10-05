@@ -1,8 +1,10 @@
+using System.Net;
 using Crm.Integrations.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
+using Polly;
 
 namespace Crm.Integrations.PartnerCenter;
 
@@ -21,22 +23,19 @@ public static class PartnerCenterModule
             {
                 var options = sp.GetRequiredService<IOptions<PartnerCenterOptions>>().Value;
                 client.BaseAddress = options.BaseUrl;
+                client.Timeout = options.TotalTimeout + TimeSpan.FromSeconds(30);
                 client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             })
             .AddHttpMessageHandler<PartnerCenterAuthHandler>()
-            .AddStandardResilienceHandler(resilience =>
-            {
-                // Partner Center throttles with 429 and a Retry-After; the standard handler honours it.
-                resilience.Retry.MaxRetryAttempts = 4;
-                resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(1);
-            });
+            .AddResilienceHandler("partnercenter", Configure);
 
         services.AddHttpClient<IPartnerBillingClient, PartnerBillingClient>((sp, client) =>
             {
-                client.BaseAddress = sp.GetRequiredService<IOptions<PartnerCenterOptions>>().Value.GraphBaseUrl;
-                client.Timeout = TimeSpan.FromMinutes(2);
+                var options = sp.GetRequiredService<IOptions<PartnerCenterOptions>>().Value;
+                client.BaseAddress = options.GraphBaseUrl;
+                client.Timeout = options.TotalTimeout + TimeSpan.FromSeconds(30);
             })
-            .AddStandardResilienceHandler();
+            .AddResilienceHandler("partnercenter-billing", Configure);
 
         services.AddScoped<IIntegrationAdapter, PartnerCenterAdapter>();
         services.AddScoped<PartnerCenterCustomerSyncJob>();
@@ -44,5 +43,38 @@ public static class PartnerCenterModule
         services.AddScoped<PartnerCenterLicenseSyncJob>();
         services.AddScoped<PartnerBillingSyncJob>();
         return services;
+    }
+
+    /// <summary>
+    /// Explicit timeouts instead of the standard 10 s per attempt and 30 s per call: a page of customers or a billing blob can
+    /// take longer, and a read that is cut off retries and then fails the run (DEV-19). The order is total timeout, retry (which
+    /// honours Retry-After on 429), then the timeout of a single attempt.
+    /// </summary>
+    private static void Configure(ResiliencePipelineBuilder<HttpResponseMessage> pipeline, ResilienceHandlerContext context)
+    {
+        var options = context.ServiceProvider.GetRequiredService<IOptions<PartnerCenterOptions>>().Value;
+        pipeline.AddTimeout(options.TotalTimeout);
+        pipeline.AddRetry(new HttpRetryStrategyOptions
+        {
+            MaxRetryAttempts = 4,
+            UseJitter = true,
+            BackoffType = DelayBackoffType.Exponential,
+            Delay = options.RetryDelay,
+            ShouldRetryAfterHeader = true,
+            ShouldHandle = args => ValueTask.FromResult(ShouldRetry(args.Context.GetRequestMessage()?.Method, args.Outcome.Result?.StatusCode, args.Outcome.Exception)),
+        });
+        pipeline.AddTimeout(options.RequestTimeout);
+    }
+
+    /// <summary>Throttling is repeated for any method; transient failures only for reads (the billing export starts with a POST).</summary>
+    internal static bool ShouldRetry(HttpMethod? method, HttpStatusCode? status, Exception? exception)
+    {
+        if (status == HttpStatusCode.TooManyRequests)
+        {
+            return true;
+        }
+
+        var isRead = method == HttpMethod.Get || method == HttpMethod.Head;
+        return isRead && (exception is HttpRequestException or TimeoutException or Polly.Timeout.TimeoutRejectedException || status is HttpStatusCode.RequestTimeout || (int?)status >= 500);
     }
 }

@@ -38,6 +38,15 @@ public static class PowerOfficeModule
             .AddResilienceHandler("poweroffice", (pipeline, context) =>
             {
                 var options = context.ServiceProvider.GetRequiredService<IOptions<PowerOfficeOptions>>().Value;
+                // Order matters: the retry is outermost so that every attempt, a retry included, takes a token from the limiter
+                // and runs under its own timeout.
+                pipeline.AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = 4,
+                    UseJitter = true,
+                    Delay = options.RetryDelay,
+                    ShouldHandle = args => ValueTask.FromResult(ShouldRetry(args.Context.GetRequestMessage()?.Method, args.Outcome.Result?.StatusCode, args.Outcome.Exception)),
+                });
                 pipeline.AddRateLimiter(new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
                 {
                     TokenLimit = options.RequestsPerSecond,
@@ -46,17 +55,6 @@ public static class PowerOfficeModule
                     QueueLimit = 10_000,
                     AutoReplenishment = true,
                 }));
-                pipeline.AddRetry(new HttpRetryStrategyOptions
-                {
-                    MaxRetryAttempts = 4,
-                    UseJitter = true,
-                    Delay = TimeSpan.FromSeconds(1),
-                    // 429/503 mean "not processed" and are safe to repeat for any method; other failures only for reads.
-                    ShouldHandle = args => ValueTask.FromResult(
-                        args.Outcome.Result?.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable ||
-                        (args.Outcome.Result?.RequestMessage?.Method == HttpMethod.Get &&
-                         (args.Outcome.Exception is HttpRequestException or TimeoutException || (int?)args.Outcome.Result?.StatusCode >= 500))),
-                });
                 pipeline.AddTimeout(TimeSpan.FromSeconds(60));
             });
 
@@ -72,5 +70,21 @@ public static class PowerOfficeModule
         services.AddScoped<PowerOfficeInvoiceSyncJob>();
         services.AddModuleServices(typeof(PowerOfficeModule).Assembly);
         return services;
+    }
+
+    /// <summary>
+    /// 429 means PowerOffice did not process the request and is safe to repeat for any method. A 5xx (503 included), a timeout
+    /// or a dropped connection proves nothing about a write — the order or customer may exist — so only reads repeat on those;
+    /// a write's outcome is settled by the handler's lookup by external reference (ADR-013).
+    /// </summary>
+    internal static bool ShouldRetry(HttpMethod? method, HttpStatusCode? status, Exception? exception)
+    {
+        if (status == HttpStatusCode.TooManyRequests)
+        {
+            return true;
+        }
+
+        var isRead = method == HttpMethod.Get || method == HttpMethod.Head;
+        return isRead && (exception is HttpRequestException or TimeoutException or Polly.Timeout.TimeoutRejectedException || (int?)status >= 500);
     }
 }

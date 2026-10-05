@@ -634,7 +634,7 @@
         "EXT-02",
         "EXT-03"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-19.md",
       "evidence_file": "evidence/DEV-19.md",
       "acceptance_ids": [

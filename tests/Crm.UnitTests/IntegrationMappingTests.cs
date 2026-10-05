@@ -65,6 +65,79 @@ public class PowerOfficeMappingTests
         var json = JsonSerializer.Serialize(new[] { new PatchOperation("replace", "/Name", "X") });
         json.ShouldBe("""[{"op":"replace","path":"/Name","value":"X"}]""");
     }
+
+    [Fact]
+    public void A_field_the_crm_has_empty_never_clears_what_poweroffice_holds()
+    {
+        // PowerOffice has a phone number, a web site and an invoice address; the CRM has none of them. Nothing is pushed.
+        var customer = Customer();
+        var organization = Organization(phone: null, invoiceEmail: null, ehf: null) with { Website = null };
+
+        CustomerPatchBuilder.Build(customer, organization, BillingDetailsMaster.Crm).ShouldBeEmpty();
+        CustomerPatchBuilder.Build(customer, organization with { Email = "  " }, BillingDetailsMaster.Crm).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_field_the_crm_has_still_replaces_a_different_value_in_poweroffice()
+    {
+        var ops = CustomerPatchBuilder.Build(Customer(), Organization(phone: "22 99 99 99") with { Website = null }, BillingDetailsMaster.Crm);
+
+        ops.Select(o => o.Path).ShouldBe(["/PhoneNumber"]);
+    }
+
+    [Fact]
+    public void A_field_edited_in_poweroffice_is_reported_by_name_only_when_it_differs_from_both_the_crm_and_the_last_known_value()
+    {
+        var lastKnown = Customer();
+        var live = Customer(phone: "99 88 77 66", name: "Fjord IT Renamed AS");
+        // The CRM now wants the old name back (equals the last known) and a third phone number.
+        var organization = Organization(phone: "22 11 11 11");
+
+        CustomerPatchBuilder.Discrepancies(live, lastKnown, organization, BillingDetailsMaster.Crm)
+            .ShouldBe(["Name", "PhoneNumber"]);
+
+        // Unchanged since the last sync: nothing to report even though the CRM wants a different value.
+        CustomerPatchBuilder.Discrepancies(lastKnown, lastKnown, organization, BillingDetailsMaster.Crm).ShouldBeEmpty();
+        // The live value already equals what the CRM wants: the push is a no-op, not a discrepancy.
+        CustomerPatchBuilder.Discrepancies(Customer(phone: "22 11 11 11"), lastKnown, organization, BillingDetailsMaster.Crm).ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("GET", 429, null, true)]
+    [InlineData("POST", 429, null, true)]
+    [InlineData("PATCH", 429, null, true)]
+    [InlineData("GET", 503, null, true)]
+    [InlineData("GET", 500, null, true)]
+    [InlineData("GET", null, "http", true)]
+    [InlineData("GET", null, "timeout", true)]
+    [InlineData("POST", 503, null, false)]
+    [InlineData("POST", 500, null, false)]
+    [InlineData("POST", 502, null, false)]
+    [InlineData("POST", null, "http", false)]
+    [InlineData("POST", null, "timeout", false)]
+    [InlineData("PATCH", 503, null, false)]
+    [InlineData("GET", 404, null, false)]
+    [InlineData("GET", 200, null, false)]
+    public void Only_reads_are_repeated_on_server_errors_and_only_429_repeats_a_write(string method, int? status, string? failure, bool retried)
+    {
+        Exception? exception = failure switch
+        {
+            "http" => new HttpRequestException("connection reset"),
+            "timeout" => new TimeoutException(),
+            _ => null,
+        };
+
+        PowerOfficeModule.ShouldRetry(new HttpMethod(method), (System.Net.HttpStatusCode?)status, exception).ShouldBe(retried);
+    }
+
+    [Fact]
+    public void A_sync_reads_from_five_minutes_before_its_cursor_and_everything_without_one()
+    {
+        var cursor = DateTimeOffset.Parse("2026-09-12T10:00:00+00:00");
+
+        PowerOfficeCursor.ReadFrom(cursor).ShouldBe(DateTimeOffset.Parse("2026-09-12T09:55:00+00:00"));
+        PowerOfficeCursor.ReadFrom(null).ShouldBeNull();
+    }
 }
 
 public class AteraParsingTests

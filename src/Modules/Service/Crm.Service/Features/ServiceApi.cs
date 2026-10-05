@@ -154,11 +154,15 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     }
 
     public async Task<IReadOnlyDictionary<Guid, IReadOnlyDictionary<DeviceType, int>>> GetDeviceCountsAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken) =>
+        (await GetDeviceCountReadingsAsync(organizationIds, date, cancellationToken)).ToDictionary(r => r.Key, r => r.Value.Counts);
+
+    public async Task<IReadOnlyDictionary<Guid, DeviceCountReading>> GetDeviceCountReadingsAsync(
         IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken)
     {
         if (organizationIds.Count == 0)
         {
-            return new Dictionary<Guid, IReadOnlyDictionary<DeviceType, int>>();
+            return new Dictionary<Guid, DeviceCountReading>();
         }
 
         var latest = db.DeviceCountSnapshots.AsNoTracking()
@@ -168,10 +172,12 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
         var snapshots = await (
                 from snapshot in db.DeviceCountSnapshots.AsNoTracking()
                 join day in latest on new { snapshot.OrganizationId, snapshot.Date } equals new { day.OrganizationId, day.Date }
-                select new { snapshot.OrganizationId, snapshot.Type, snapshot.Count })
+                select new { snapshot.OrganizationId, snapshot.Date, snapshot.Type, snapshot.Count })
             .ToListAsync(cancellationToken);
         var result = snapshots.GroupBy(s => s.OrganizationId)
-            .ToDictionary(g => g.Key, g => (IReadOnlyDictionary<DeviceType, int>)g.ToDictionary(s => s.Type, s => s.Count));
+            .ToDictionary(
+                g => g.Key,
+                g => new DeviceCountReading(g.ToDictionary(s => s.Type, s => s.Count), g.Max(s => s.Date)));
         var withoutSnapshot = organizationIds.Where(id => !result.ContainsKey(id)).Distinct().ToList();
         if (withoutSnapshot.Count > 0)
         {
@@ -182,12 +188,12 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
                 .ToListAsync(cancellationToken);
             foreach (var group in live.GroupBy(d => d.OrganizationId))
             {
-                result[group.Key] = group.ToDictionary(d => d.Type, d => d.Count);
+                result[group.Key] = new DeviceCountReading(group.ToDictionary(d => d.Type, d => d.Count), null);
             }
 
             foreach (var id in withoutSnapshot)
             {
-                result.TryAdd(id, new Dictionary<DeviceType, int>());
+                result.TryAdd(id, new DeviceCountReading(new Dictionary<DeviceType, int>(), null));
             }
         }
 

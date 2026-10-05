@@ -61,7 +61,8 @@ public sealed record AteraTicket(
     DateTimeOffset CreatedAt,
     DateTimeOffset? FirstResponseAt,
     DateTimeOffset? ResolvedAt,
-    DateTimeOffset? LastActivityAt);
+    DateTimeOffset? LastActivityAt,
+    string? Description = null);
 
 public sealed record AteraWorkHours(
     string Id,
@@ -76,6 +77,9 @@ public sealed record AteraWorkHours(
     bool Onsite,
     string? WorkType,
     string? Description);
+
+/// <summary>All work-hour rows of one ticket; <paramref name="Dropped"/> counts rows that could not be used (no id, no or empty duration).</summary>
+public sealed record AteraWorkHoursResult(IReadOnlyList<AteraWorkHours> Records, int Dropped);
 
 public sealed record AteraAgent(string AgentId, long CustomerId, string MachineName, string? OsType, string? Os, bool Online, DateTimeOffset? LastSeenAt);
 
@@ -117,7 +121,11 @@ public interface IAteraClient
     /// <summary>Tickets, newest first; <paramref name="status"/> filters by ticket status (Open, Pending, Resolved, Closed).</summary>
     IAsyncEnumerable<AteraTicket> GetTicketsAsync(string? status, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<AteraWorkHours>> GetWorkHoursAsync(long ticketId, CancellationToken cancellationToken);
+    /// <summary>Every page of the ticket's work hours; rows that cannot be used are counted, never silently lost (DEV-19).</summary>
+    Task<AteraWorkHoursResult> GetWorkHoursAsync(long ticketId, CancellationToken cancellationToken);
+
+    /// <summary>One customer's tickets, newest first; used to find a ticket whose creation got no answer.</summary>
+    IAsyncEnumerable<AteraTicket> GetCustomerTicketsAsync(long customerId, CancellationToken cancellationToken);
 
     IAsyncEnumerable<AteraAgent> GetAgentsAsync(CancellationToken cancellationToken);
 
@@ -170,27 +178,84 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
     }
 
     public IAsyncEnumerable<AteraTicket> GetTicketsAsync(string? status, CancellationToken cancellationToken) =>
-        GetPagedAsync("tickets", ReadTicket, cancellationToken, status is null ? null : $"ticketStatus={Uri.EscapeDataString(status)}");
+        GetPagedAsync("tickets", ReadTicket, cancellationToken, status is null ? null : $"ticketStatus={Uri.EscapeDataString(status)}", t => t.TicketId);
 
-    public async Task<IReadOnlyList<AteraWorkHours>> GetWorkHoursAsync(long ticketId, CancellationToken cancellationToken)
+    public IAsyncEnumerable<AteraTicket> GetCustomerTicketsAsync(long customerId, CancellationToken cancellationToken) =>
+        GetPagedAsync($"tickets/customer/{customerId}", ReadTicket, cancellationToken, null, t => t.TicketId);
+
+    /// <summary>Upper bound for one ticket's work-hour pages; reaching it is an error, not the end of the list.</summary>
+    private const int MaxWorkHourPages = 200;
+
+    public async Task<AteraWorkHoursResult> GetWorkHoursAsync(long ticketId, CancellationToken cancellationToken)
     {
-        using var response = await http.GetAsync($"tickets/{ticketId}/workhoursrecords", cancellationToken);
-        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent)
+        var size = Math.Clamp(options.Value.ItemsInPage, 1, 50);
+        var records = new List<AteraWorkHours>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var dropped = 0;
+        string? next = $"tickets/{ticketId}/workhoursrecords?page=1&itemsInPage={size}";
+        for (var page = 1; next is not null; page++)
         {
-            return [];
+            if (page > MaxWorkHourPages)
+            {
+                throw new AteraApiException(HttpStatusCode.OK, $"Work hours of ticket {ticketId} span more than {MaxWorkHourPages} pages.");
+            }
+
+            using var response = await http.GetAsync(next, cancellationToken);
+            if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent)
+            {
+                break;
+            }
+
+            await EnsureSuccessAsync(response, cancellationToken);
+            using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+            var root = document.RootElement;
+            // Work hours come back either as a bare array (one page) or wrapped in the usual paged envelope.
+            var items = root.ValueKind == JsonValueKind.Array ? root : TryGet(root, out var wrapped, "items", "Items") ? wrapped : default;
+            if (items.ValueKind != JsonValueKind.Array)
+            {
+                break;
+            }
+
+            foreach (var element in items.EnumerateArray())
+            {
+                if (ReadWorkHours(element, ticketId) is { } hours)
+                {
+                    if (seen.Add(hours.Id))
+                    {
+                        records.Add(hours);
+                    }
+                }
+                else
+                {
+                    dropped++;
+                }
+            }
+
+            next = root.ValueKind == JsonValueKind.Object ? NextPage(root, page, size, items.GetArrayLength(), ticketId) : null;
         }
 
-        await EnsureSuccessAsync(response, cancellationToken);
-        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-        var root = document.RootElement;
-        // Work hours come back either as a bare array or wrapped in the usual paged envelope.
-        var items = root.ValueKind == JsonValueKind.Array ? root : TryGet(root, out var wrapped, "items", "Items") ? wrapped : default;
-        if (items.ValueKind != JsonValueKind.Array)
+        return new AteraWorkHoursResult(records, dropped);
+    }
+
+    /// <summary>The page after this one: the envelope's <c>nextLink</c> when it has one, else the next number while <c>totalPages</c> says there is more.</summary>
+    private string? NextPage(JsonElement root, int page, int size, int count, long ticketId)
+    {
+        if (Text(root, "nextLink", "NextLink") is { } link)
         {
-            return [];
+            // Followed only on Atera's own host: the client's base address decides where requests go.
+            if (!Uri.TryCreate(link, UriKind.Absolute, out var absolute))
+            {
+                return link.TrimStart('/');
+            }
+
+            var basePath = http.BaseAddress?.AbsolutePath ?? "/";
+            return absolute.PathAndQuery.StartsWith(basePath, StringComparison.OrdinalIgnoreCase) ? absolute.PathAndQuery[basePath.Length..] : absolute.PathAndQuery.TrimStart('/');
         }
 
-        return items.EnumerateArray().Select(e => ReadWorkHours(e, ticketId)).OfType<AteraWorkHours>().ToList();
+        var totalPages = Long(root, "totalPages", "TotalPages");
+        return totalPages is { } total && page < total && count > 0
+            ? $"tickets/{ticketId}/workhoursrecords?page={page + 1}&itemsInPage={size}"
+            : null;
     }
 
     public IAsyncEnumerable<AteraAgent> GetAgentsAsync(CancellationToken cancellationToken) =>
@@ -239,39 +304,77 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
+    /// <summary>
+    /// Reads a paged list. With <paramref name="key"/> the previous page is read once more after the next one: a list that changes
+    /// while it is read (a ticket closing leaves a status-filtered list, a new one pushes the rest down) shifts items across the
+    /// page boundary, and the overlap catches what moved to the tail of the page already read. Items are yielded once.
+    /// </summary>
     private async IAsyncEnumerable<T> GetPagedAsync<T>(
         string resource,
         Func<JsonElement, T?> read,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken,
-        string? filter = null)
+        string? filter = null,
+        Func<T, long>? key = null)
         where T : class
     {
         var size = Math.Clamp(options.Value.ItemsInPage, 1, 50);
+        var seen = key is null ? null : new HashSet<long>();
         for (int page = 1; page <= 100_000; page++)
         {
-            using var response = await http.GetAsync($"{resource}?page={page}&itemsInPage={size}{(filter is null ? string.Empty : "&" + filter)}", cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
-            using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-            var root = document.RootElement;
-            if (!TryGet(root, out var items, "items", "Items") || items.ValueKind != JsonValueKind.Array)
+            var (items, last) = await ReadPageAsync(resource, page, size, filter, read, cancellationToken);
+            foreach (var item in items)
             {
-                throw new AteraApiException(response.StatusCode, $"Unexpected Atera response for {resource}: no items array.");
-            }
-
-            foreach (var element in items.EnumerateArray())
-            {
-                if (read(element) is { } item)
+                if (seen is null || seen.Add(key!(item)))
                 {
                     yield return item;
                 }
             }
 
-            var totalPages = Long(root, "totalPages", "TotalPages");
-            if (items.GetArrayLength() < size || (totalPages is { } total && page >= total))
+            if (key is not null && page > 1)
+            {
+                var (previous, _) = await ReadPageAsync(resource, page - 1, size, filter, read, cancellationToken);
+                foreach (var item in previous)
+                {
+                    if (seen!.Add(key(item)))
+                    {
+                        yield return item;
+                    }
+                }
+            }
+
+            if (last)
             {
                 yield break;
             }
         }
+
+        throw new AteraApiException(HttpStatusCode.OK, $"Atera {resource} has more than 100000 pages.");
+    }
+
+    private async Task<(List<T> Items, bool Last)> ReadPageAsync<T>(
+        string resource, int page, int size, string? filter, Func<JsonElement, T?> read, CancellationToken cancellationToken)
+        where T : class
+    {
+        using var response = await http.GetAsync($"{resource}?page={page}&itemsInPage={size}{(filter is null ? string.Empty : "&" + filter)}", cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+        var root = document.RootElement;
+        if (!TryGet(root, out var items, "items", "Items") || items.ValueKind != JsonValueKind.Array)
+        {
+            throw new AteraApiException(response.StatusCode, $"Unexpected Atera response for {resource}: no items array.");
+        }
+
+        var result = new List<T>();
+        foreach (var element in items.EnumerateArray())
+        {
+            if (read(element) is { } item)
+            {
+                result.Add(item);
+            }
+        }
+
+        var totalPages = Long(root, "totalPages", "TotalPages");
+        return (result, items.GetArrayLength() < size || (totalPages is { } total && page >= total));
     }
 
     internal static AteraCustomer? ReadCustomer(JsonElement e) =>
@@ -325,7 +428,8 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
                 Date(e, "TicketCreatedDate", "Created", "CreatedDate") ?? DateTimeOffset.MinValue,
                 Date(e, "FirstResponseDate", "FirstCommentDate"),
                 Date(e, "TicketResolvedDate", "ClosedDate", "ResolvedDate"),
-                Date(e, "LastEndUserCommentTimestamp", "LastTechnicianCommentTimestamp", "TicketLastModified", "LastModified"))
+                Date(e, "LastEndUserCommentTimestamp", "LastTechnicianCommentTimestamp", "TicketLastModified", "LastModified"),
+                Text(e, "TicketDescription", "Description"))
             : null;
 
     internal static AteraWorkHours? ReadWorkHours(JsonElement e, long ticketId)

@@ -704,19 +704,34 @@ namespace Crm.Billing.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)")
+                        .HasDefaultValue("BalanceDecrease");
+
                     b.Property<DateTimeOffset?>("ModifiedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateOnly>("PaidAt")
-                        .HasColumnType("date");
+                    b.Property<DateOnly>("ObservedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("PaidAt");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasDefaultValue("Inferred from the remaining amount");
 
                     b.HasKey("Id");
 

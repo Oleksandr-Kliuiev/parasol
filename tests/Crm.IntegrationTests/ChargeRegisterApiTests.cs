@@ -336,7 +336,9 @@ public partial class ChargeRegisterApiTests(CrmWebFactory factory)
         refused.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await refused.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("BIL_RECONCILE_FIRST");
 
-        // The next attempt looks the order up, does not find it and holds the basis for a person instead of sending again.
+        // The next attempt looks the order up, does not find it and holds the basis for a person instead of sending again —
+        // once the unknown outcome has had its grace period.
+        await AgeTheSendAsync(foundBasisId, missingBasisId);
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var outbound = scope.ServiceProvider.GetRequiredService<OutboundProcessorJob>();

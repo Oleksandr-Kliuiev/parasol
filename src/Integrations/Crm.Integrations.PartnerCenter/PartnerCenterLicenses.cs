@@ -43,7 +43,8 @@ public sealed class PartnerCenterLicenseSyncJob(
             var byCustomer = links.ToDictionary(l => l.ExternalId, l => l.EntityId, StringComparer.Ordinal);
 
             var readings = new List<LicenseUsageReading>();
-            var tenantsWithoutAccess = 0;
+            var limited = new List<string>();
+            var emptyTenants = 0;
             await foreach (var customer in client.GetCustomersAsync(ct))
             {
                 // Only mapped customers: a reading without a CRM organization has nowhere to go.
@@ -52,22 +53,33 @@ public sealed class PartnerCenterLicenseSyncJob(
                     continue;
                 }
 
-                var skus = await client.GetSubscribedSkusAsync(customer, ct);
-                if (skus.Count == 0)
+                var reading = await client.GetSubscribedSkusAsync(customer, ct);
+                if (reading.Limitation is { } limitation)
                 {
-                    tenantsWithoutAccess++;
+                    // A tenant that cannot be read is a limitation of this run, not an empty tenant: it is counted as a failure
+                    // so the run is not reported as complete, and named (by Partner Center id, no customer data) in the message.
+                    progress.Failed++;
+                    limited.Add($"{customer.CustomerId}: {limitation}");
+                    logger.LogWarning("Partner Center licences of customer {CustomerId} not read: {Limitation}", customer.CustomerId, limitation);
                     continue;
                 }
 
-                progress.Read += skus.Count;
-                readings.AddRange(skus.Select(sku =>
+                if (reading.Skus.Count == 0)
+                {
+                    emptyTenants++;
+                    continue;
+                }
+
+                progress.Read += reading.Skus.Count;
+                readings.AddRange(reading.Skus.Select(sku =>
                     new LicenseUsageReading(organizationId, sku.SkuId, sku.SkuPartNumber, sku.Purchased, sku.Assigned)));
             }
 
             progress.Changed = await licensing.UpsertLicenseUsageAsync(readings, today, ct);
             progress.Message = string.Create(
                 CultureInfo.InvariantCulture,
-                $"read {progress.Read} SKUs, stored {progress.Changed}, tenants without a reading {tenantsWithoutAccess}");
+                $"read {progress.Read} SKUs, stored {progress.Changed}, tenants without SKUs {emptyTenants}, tenants not readable {limited.Count}") +
+                (limited.Count == 0 ? string.Empty : $" ({string.Join("; ", limited.Take(5))}{(limited.Count > 5 ? "; …" : string.Empty)})");
         }, cancellationToken);
     }
 }

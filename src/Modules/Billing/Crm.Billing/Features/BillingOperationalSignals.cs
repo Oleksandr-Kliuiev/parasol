@@ -10,6 +10,9 @@ namespace Crm.Billing.Features;
 /// <summary>Aggregate finance warnings, without amounts, customer names or descriptions.</summary>
 public sealed class BillingOperationalSignals(BillingDbContext db, TimeProvider time) : IOperationalSignalSource
 {
+    /// <summary>The anomaly codes of a basis built from a stale reading, no daily device count or an incomplete hours import.</summary>
+    private static readonly string[] EstimatedCodes = ["BIL_STALE_QUANTITY", "BIL_NO_DEVICE_SNAPSHOT", "BIL_INCOMPLETE_HOURS"];
+
     public async Task<IReadOnlyList<OperationalSignal>> ReadAsync(CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo")).DateTime);
@@ -28,12 +31,22 @@ public sealed class BillingOperationalSignals(BillingDbContext db, TimeProvider 
             db.BillingBases.Any(b => b.Id == l.BasisId && b.Status != BillingBasisStatus.Cancelled && b.Status != BillingBasisStatus.Exported));
         var conflictCount = await conflicts.CountAsync(cancellationToken);
         var conflictSince = await conflicts.Select(l => (DateTimeOffset?)l.CreatedAt).MinAsync(cancellationToken);
+        // Open bases that are to be billed from a quantity or hours that may be stale or incomplete (DEV-19). A count only: Finance
+        // decides whether such a basis may be billed, the signal just makes sure nobody overlooks it. It clears when the basis is
+        // exported or cancelled, or a re-collect finds fresh readings.
+        var (stale, noSnapshot, hours) = (EstimatedCodes[0], EstimatedCodes[1], EstimatedCodes[2]);
+        var estimated = db.BillingBases.AsNoTracking().Where(b =>
+            b.Status != BillingBasisStatus.Exported && b.Status != BillingBasisStatus.Cancelled && b.AnomaliesJson != null &&
+            (b.AnomaliesJson.Contains(stale) || b.AnomaliesJson.Contains(noSnapshot) || b.AnomaliesJson.Contains(hours)));
+        var estimatedCount = await estimated.CountAsync(cancellationToken);
+        var estimatedSince = await estimated.Select(b => (DateTimeOffset?)b.CreatedAt).MinAsync(cancellationToken);
         return
         [
             Signal("unbilled", "Unbilled", pendingCount, pendingSince, "ReviewOverdueCharges"),
             Signal("reconciliation", "ReconciliationRequired", uncertainCount, uncertainSince, "VerifyExternalEffect"),
             Signal("legacy", "LegacyUnresolved", legacyCount, legacySince, "ReviewLegacyCharges"),
             Signal("conflicts", "BillingConflict", conflictCount, conflictSince, "ResolveBillingConflicts"),
+            Signal("estimated", "EstimatedQuantity", estimatedCount, estimatedSince, "ReviewEstimatedQuantities"),
         ];
     }
 

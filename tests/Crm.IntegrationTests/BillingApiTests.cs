@@ -230,8 +230,9 @@ public class BillingApiTests(CrmWebFactory factory)
 
         // 4. The invoice comes back from PowerOffice and lands on the basis and the customer.
         var invoiceNo = $"INV-{marker}";
+        var creditedNo = $"CRN-{marker}";
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/OutgoingInvoices").UsingGet().WithParam("PageNumber", "1")).AtPriority(5)
-            .RespondWith(JsonReply(new[]
+            .RespondWith(JsonReply(new object[]
             {
                 new
                 {
@@ -239,6 +240,13 @@ public class BillingApiTests(CrmWebFactory factory)
                     InvoiceDate = "2027-03-31T00:00:00+00:00", DueDate = "2027-04-14T00:00:00+00:00",
                     TotalAmount = 23_750m, RemainingAmount = 23_750m, Status = "Sent", IsCredited = false,
                     PdfUrl = "https://go.poweroffice.net/invoice/9001", LastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00",
+                },
+                new
+                {
+                    Id = 9_002, InvoiceNo = creditedNo, OrderNo = (int?)null, CustomerId = (long?)null,
+                    InvoiceDate = "2099-01-01T00:00:00+00:00", DueDate = "2099-01-15T00:00:00+00:00",
+                    TotalAmount = 5_000m, RemainingAmount = 5_000m, Status = "Sent", IsCredited = false,
+                    PdfUrl = (string?)null, LastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00",
                 },
             }));
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/OutgoingInvoices").UsingGet().WithParam("PageNumber", "2")).AtPriority(5)
@@ -255,12 +263,17 @@ public class BillingApiTests(CrmWebFactory factory)
 
         // A payment in PowerOffice lowers the outstanding amount; the newer stub wins by priority.
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/OutgoingInvoices").UsingGet().WithParam("PageNumber", "1")).AtPriority(2)
-            .RespondWith(JsonReply(new[]
+            .RespondWith(JsonReply(new object[]
             {
                 new
                 {
                     Id = 9_001, InvoiceNo = invoiceNo, OrderNo = 5_042, InvoiceDate = "2027-03-31T00:00:00+00:00", DueDate = "2027-04-14T00:00:00+00:00",
                     TotalAmount = 23_750m, RemainingAmount = 0m, Status = "Paid", IsCredited = false, LastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00",
+                },
+                new
+                {
+                    Id = 9_002, InvoiceNo = creditedNo, OrderNo = (int?)null, InvoiceDate = "2099-01-01T00:00:00+00:00", DueDate = "2099-01-15T00:00:00+00:00",
+                    TotalAmount = 5_000m, RemainingAmount = 2_000m, Status = "Sent", IsCredited = true, LastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00",
                 },
             }));
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/OutgoingInvoices").UsingGet().WithParam("PageNumber", "2")).AtPriority(2)
@@ -271,6 +284,21 @@ public class BillingApiTests(CrmWebFactory factory)
             .GetProperty("invoices").EnumerateArray().Single();
         paid.GetProperty("status").GetString().ShouldBe("Paid");
         paid.GetProperty("outstanding").GetDecimal().ShouldBe(0m);
+
+        // The fall of the remaining amount is an observed decrease, not a ledger payment, and carries the day of the sync.
+        var decrease = paid.GetProperty("movements").EnumerateArray().ShouldHaveSingleItem();
+        decrease.GetProperty("kind").GetString().ShouldBe("BalanceDecrease");
+        decrease.GetProperty("amount").GetDecimal().ShouldBe(23_750m);
+        decrease.GetProperty("observedOn").GetString().ShouldNotBeNullOrEmpty();
+        decrease.GetProperty("source").GetString().ShouldNotBeNullOrEmpty();
+
+        // An invoice the accounting system credits is a credit note, even though its remaining amount only went down.
+        var all = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/invoices?limit=50");
+        var credited = all.GetProperty("invoices").EnumerateArray().Single(i => i.GetProperty("invoiceNo").GetString() == creditedNo);
+        credited.GetProperty("status").GetString().ShouldBe("Credited");
+        var credit = credited.GetProperty("movements").EnumerateArray().ShouldHaveSingleItem();
+        credit.GetProperty("kind").GetString().ShouldBe("CreditNote");
+        credit.GetProperty("amount").GetDecimal().ShouldBe(3_000m);
 
         // 5. The run is closed and stays closed, once no basis of it waits for export any more.
         (await factory.WaitForRunExportAsync(finance, runId)).ShouldBeOneOf("Exported", "ExportedWithErrors");

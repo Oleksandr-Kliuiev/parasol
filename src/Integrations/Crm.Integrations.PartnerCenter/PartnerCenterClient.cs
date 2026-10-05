@@ -20,6 +20,15 @@ public sealed record PcSubscribedSku(string SkuId, string SkuPartNumber, int Pur
 /// <summary>An invoice Microsoft sent the partner; the billing export is requested per invoice (FR-LIC-04).</summary>
 public sealed record PcInvoice(string Id, DateOnly? InvoiceDate, string? Currency, decimal Total);
 
+/// <summary>
+/// The licence reading of one tenant. <paramref name="Limitation"/> is set when the tenant could not be read at all (no GDAP
+/// relationship, expired or without the role): that is a visible limitation of the run, not an empty tenant.
+/// </summary>
+public sealed record PcSkuReading(IReadOnlyList<PcSubscribedSku> Skus, string? Limitation = null)
+{
+    public static PcSkuReading Limited(string reason) => new([], reason);
+}
+
 public interface IPartnerCenterClient
 {
     IAsyncEnumerable<PcCustomer> GetCustomersAsync(CancellationToken cancellationToken);
@@ -28,10 +37,10 @@ public interface IPartnerCenterClient
     Task<IReadOnlyList<ExternalSubscription>> GetSubscriptionsAsync(PcCustomer customer, CancellationToken cancellationToken);
 
     /// <summary>
-    /// "Bought / assigned" per SKU in the customer's tenant, read through the GDAP relationship (FR-LIC-03). Customers
-    /// without a live GDAP relationship answer 403/404 and come back empty.
+    /// "Bought / assigned" per SKU in the customer's tenant, read through the GDAP relationship (FR-LIC-03). A customer without
+    /// a live GDAP relationship answers 401/403/404: the reading carries that as a limitation, never as an empty tenant.
     /// </summary>
-    Task<IReadOnlyList<PcSubscribedSku>> GetSubscribedSkusAsync(PcCustomer customer, CancellationToken cancellationToken);
+    Task<PcSkuReading> GetSubscribedSkusAsync(PcCustomer customer, CancellationToken cancellationToken);
 
     /// <summary>The partner's own invoices, newest first, so the reconciliation knows which exports to ask for.</summary>
     Task<IReadOnlyList<PcInvoice>> GetInvoicesAsync(CancellationToken cancellationToken);
@@ -122,58 +131,113 @@ internal sealed class PartnerCenterAuthHandler(PartnerCenterTokenProvider tokens
 /// </summary>
 internal sealed class PartnerCenterClient(HttpClient http, IOptions<PartnerCenterOptions> options) : IPartnerCenterClient
 {
+    /// <summary>Pages read at most from one list; reaching it is an error, because stopping there would drop the rest unseen.</summary>
+    internal const int MaxPages = 1000;
+
     public async IAsyncEnumerable<PcCustomer> GetCustomersAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var size = Math.Clamp(options.Value.PageSize, 1, 500);
-        string? continuation = null;
-        for (var page = 0; page < 1000; page++)
+        await foreach (var item in ReadItemsAsync($"v1/customers?size={size}", allowNotFound: false, cancellationToken))
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"v1/customers?size={size}");
-            if (continuation is not null)
+            if (ReadCustomer(item) is { } customer)
             {
-                request.Headers.TryAddWithoutValidation("MS-ContinuationToken", continuation);
-            }
-
-            using var response = await http.SendAsync(request, cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
-            using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-            var root = document.RootElement;
-            if (root.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in items.EnumerateArray())
-                {
-                    if (ReadCustomer(item) is { } customer)
-                    {
-                        yield return customer;
-                    }
-                }
-            }
-
-            continuation = root.TryGetProperty("continuationToken", out var token) ? token.GetString() : null;
-            if (string.IsNullOrEmpty(continuation))
-            {
-                yield break;
+                yield return customer;
             }
         }
     }
 
     public async Task<IReadOnlyList<ExternalSubscription>> GetSubscriptionsAsync(PcCustomer customer, CancellationToken cancellationToken)
     {
-        using var response = await http.GetAsync($"v1/customers/{customer.CustomerId}/subscriptions", cancellationToken);
-        if (response.StatusCode is HttpStatusCode.NotFound)
+        var result = new List<ExternalSubscription>();
+        await foreach (var item in ReadItemsAsync($"v1/customers/{customer.CustomerId}/subscriptions", allowNotFound: true, cancellationToken))
         {
-            return [];
+            if (ReadSubscription(item, customer) is { } subscription)
+            {
+                result.Add(subscription);
+            }
         }
 
-        await EnsureSuccessAsync(response, cancellationToken);
-        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-        if (!document.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        return items.EnumerateArray().Select(item => ReadSubscription(item, customer)).OfType<ExternalSubscription>().ToList();
+        return result;
     }
+
+    /// <summary>
+    /// Every item of a list, following the continuation token (request header <c>MS-ContinuationToken</c>, answered in the body,
+    /// in <c>links.next</c> or in the response header) until Partner Center stops sending one. A list longer than
+    /// <see cref="MaxPages"/> pages, or a token that does not move, fails the read: a silent cut-off would look like a complete list.
+    /// </summary>
+    private async IAsyncEnumerable<JsonElement> ReadItemsAsync(
+        string url, bool allowNotFound, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        string? continuation = null;
+        var seenTokens = new HashSet<string>(StringComparer.Ordinal);
+        for (var page = 0; page < MaxPages; page++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            if (continuation is not null)
+            {
+                request.Headers.TryAddWithoutValidation("MS-ContinuationToken", continuation);
+            }
+
+            using var response = await http.SendAsync(request, cancellationToken);
+            if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
+            {
+                yield break;
+            }
+
+            await EnsureSuccessAsync(response, cancellationToken);
+            using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+            var root = document.RootElement;
+            if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    yield return item.Clone();
+                }
+            }
+
+            continuation = ContinuationOf(root, response);
+            if (string.IsNullOrEmpty(continuation))
+            {
+                yield break;
+            }
+
+            if (!seenTokens.Add(continuation))
+            {
+                throw new PartnerCenterApiException(HttpStatusCode.OK, $"Partner Center repeated a continuation token for {PathOf(url)}; the list cannot be read completely.");
+            }
+        }
+
+        throw new PartnerCenterApiException(HttpStatusCode.OK, $"Partner Center list {PathOf(url)} has more than {MaxPages} pages; it was not read completely.");
+    }
+
+    internal static string? ContinuationOf(JsonElement root, HttpResponseMessage response)
+    {
+        if (root.ValueKind == JsonValueKind.Object)
+        {
+            if (root.TryGetProperty("continuationToken", out var token) && token.ValueKind == JsonValueKind.String && token.GetString() is { Length: > 0 } fromBody)
+            {
+                return fromBody;
+            }
+
+            if (root.TryGetProperty("links", out var links) && links.ValueKind == JsonValueKind.Object &&
+                links.TryGetProperty("next", out var next) && next.ValueKind == JsonValueKind.Object &&
+                next.TryGetProperty("headers", out var headers) && headers.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var header in headers.EnumerateArray())
+                {
+                    if (header.TryGetProperty("key", out var key) && string.Equals(key.GetString(), "MS-ContinuationToken", StringComparison.OrdinalIgnoreCase) &&
+                        header.TryGetProperty("value", out var value) && value.GetString() is { Length: > 0 } fromLink)
+                    {
+                        return fromLink;
+                    }
+                }
+            }
+        }
+
+        return response.Headers.TryGetValues("MS-ContinuationToken", out var values) && values.FirstOrDefault() is { Length: > 0 } fromHeader ? fromHeader : null;
+    }
+
+    private static string PathOf(string url) => url.Split('?')[0];
 
     internal static PcCustomer? ReadCustomer(JsonElement e)
     {
@@ -230,45 +294,43 @@ internal sealed class PartnerCenterClient(HttpClient http, IOptions<PartnerCente
             null);
     }
 
-    public async Task<IReadOnlyList<PcSubscribedSku>> GetSubscribedSkusAsync(PcCustomer customer, CancellationToken cancellationToken)
+    public async Task<PcSkuReading> GetSubscribedSkusAsync(PcCustomer customer, CancellationToken cancellationToken)
     {
         using var response = await http.GetAsync($"v1/customers/{customer.CustomerId}/subscribedskus", cancellationToken);
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
         {
-            // No GDAP relationship (or it expired): the tenant simply has no reading today.
-            return [];
+            // No GDAP relationship, it expired, or it lacks the role: the tenant has no reading today and the run says so.
+            return PcSkuReading.Limited(response.StatusCode switch
+            {
+                HttpStatusCode.NotFound => "tenant not found through GDAP (404)",
+                HttpStatusCode.Unauthorized => "no access to the tenant, GDAP relationship missing or expired (401)",
+                _ => "no access to the tenant, GDAP relationship missing, expired or without the role (403)",
+            });
         }
 
         await EnsureSuccessAsync(response, cancellationToken);
         using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
         if (!document.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array)
         {
-            return [];
+            return new PcSkuReading([]);
         }
 
-        return items.EnumerateArray().Select(ReadSubscribedSku).OfType<PcSubscribedSku>().ToList();
+        return new PcSkuReading(items.EnumerateArray().Select(ReadSubscribedSku).OfType<PcSubscribedSku>().ToList());
     }
 
     public async Task<IReadOnlyList<PcInvoice>> GetInvoicesAsync(CancellationToken cancellationToken)
     {
-        using var response = await http.GetAsync("v1/invoices?size=50", cancellationToken);
-        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden)
+        var invoices = new List<PcInvoice>();
+        // 403 is a configuration fault (the account may not read invoices) and fails the run; only "no invoices" (404) is empty.
+        await foreach (var item in ReadItemsAsync("v1/invoices?size=50", allowNotFound: true, cancellationToken))
         {
-            return [];
+            if (ReadInvoice(item) is { } invoice)
+            {
+                invoices.Add(invoice);
+            }
         }
 
-        await EnsureSuccessAsync(response, cancellationToken);
-        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-        if (!document.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        return items.EnumerateArray()
-            .Select(ReadInvoice)
-            .OfType<PcInvoice>()
-            .OrderByDescending(i => i.InvoiceDate ?? DateOnly.MinValue)
-            .ToList();
+        return invoices.OrderByDescending(i => i.InvoiceDate ?? DateOnly.MinValue).ToList();
     }
 
     internal static PcInvoice? ReadInvoice(JsonElement e)

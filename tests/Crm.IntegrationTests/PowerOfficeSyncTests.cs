@@ -44,6 +44,11 @@ public class PowerOfficeSyncTests(CrmWebFactory factory)
             }));
         po.Given(Request.Create().WithPath("/v2/Customers").UsingGet().WithParam("PageNumber", "2")).AtPriority(10)
             .RespondWith(JsonReply(new[] { Customer(103, $"{marker} Gamma", null, "2026-09-12T10:00:00+00:00") }));
+        // A page shorter than the page size does not end the enumeration; only an empty answer does.
+        po.Given(Request.Create().WithPath("/v2/Customers").UsingGet().WithParam("PageNumber", "3")).AtPriority(10)
+            .RespondWith(Response.Create().WithStatusCode(204));
+        po.Given(Request.Create().WithPath("/v2/ContactPersons").UsingGet().WithParam("PageNumber", "2")).AtPriority(10)
+            .RespondWith(Response.Create().WithStatusCode(204));
         po.Given(Request.Create().WithPath("/v2/Customers").UsingGet().WithParam("lastChangedDateTimeOffsetGreaterThan")).AtPriority(1)
             .RespondWith(Response.Create().WithStatusCode(204));
         po.Given(Request.Create().WithPath("/v2/ContactPersons").UsingGet().WithParam("PageNumber", "1")).AtPriority(10)
@@ -124,9 +129,9 @@ public class PowerOfficeSyncTests(CrmWebFactory factory)
             .EnumerateArray().ShouldHaveSingleItem().GetProperty("method").GetString().ShouldBe("Exported");
         (await admin.PostAsync($"{Integrations}/poweroffice/organizations/{newId}/export", null)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
 
-        // 5. The next run continues from the cursor.
+        // 5. The next run continues from the cursor, five minutes back so a record changed while a page was read is not missed.
         await factory.RunJobAsync<PowerOfficeCustomerSyncJob>(j => j.RunAsync(CancellationToken.None));
-        po.LogEntries.ShouldContain(e => e.RequestMessage!.Path == "/v2/Customers" && e.RequestMessage.Url.Contains("lastChangedDateTimeOffsetGreaterThan=2026-09-12T10"));
+        po.LogEntries.ShouldContain(e => e.RequestMessage!.Path == "/v2/Customers" && e.RequestMessage.Url.Contains("lastChangedDateTimeOffsetGreaterThan=2026-09-12T09"));
 
         // 6. A merge moves the link to the surviving organization.
         var survivorId = await admin.CreateOrganizationAsync(new { name = $"{marker} Survivor AS", status = "Customer" });

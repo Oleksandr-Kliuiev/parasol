@@ -20,5 +20,16 @@ public sealed class BillingOptions
     /// <summary>SKU of the hourly product used when a work type has no product of its own.</summary>
     public string? FallbackHourlySku { get; set; }
 
+    /// <summary>
+    /// A licence or device reading older than this many days, counted back from the end of the period (or from today when the
+    /// period ends later), is flagged on the basis (DEV-19). It only informs Finance; it never blocks a basis.
+    /// </summary>
+    public int StaleQuantityDays { get; set; } = 3;
+
+    /// <summary>The synchronization job that brings in approved work hours; when its latest run is not a complete success the bases say hours may be missing.</summary>
+    public string HoursSyncSystem { get; set; } = "atera";
+
+    public string HoursSyncJob { get; set; } = "atera-work-hours";
+
     public string InvoiceSyncCron { get; set; } = "20 * * * *";
 }

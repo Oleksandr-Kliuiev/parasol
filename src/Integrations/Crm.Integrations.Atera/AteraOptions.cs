@@ -14,6 +14,15 @@ public sealed class AteraOptions
     /// <summary>Atera allows 700 requests per minute per account; leave room for other Atera integrations.</summary>
     public int RequestsPerMinute { get; set; } = 600;
 
+    /// <summary>Pause before the first repeat of a throttled (429) request; later repeats back off from it (DEV-19).</summary>
+    public TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// The recent-ticket pass reads newest first but a ticket's activity can be recent while its id is old, so it stops only
+    /// after this many consecutive pages in which no ticket is inside the window (DEV-19).
+    /// </summary>
+    public int RecentStopPages { get; set; } = 3;
+
     /// <summary>Atera caps page size at 50.</summary>
     public int ItemsInPage { get; set; } = 50;
 

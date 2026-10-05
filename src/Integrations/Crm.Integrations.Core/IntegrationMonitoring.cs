@@ -76,7 +76,10 @@ public sealed class IntegrationMonitoringReader(
         {
             streams.Add(("atera", "atera-tickets"));
             streams.Add(("atera", "atera-tickets-recent"));
+            streams.Add(("atera", "atera-work-hours"));
+            streams.Add(("atera", "atera-agents"));
         }
+        if (enabled.ContainsKey("partnercenter")) streams.Add(("partnercenter", "partnercenter-licenses"));
         if (enabled.ContainsKey("poweroffice")) streams.Add(("poweroffice", "poweroffice-invoices"));
         foreach (var stream in configuration.GetSection("Monitoring:Streams").GetChildren())
         {
@@ -117,8 +120,22 @@ public sealed class IntegrationMonitoringReader(
     {
         "atera-tickets-recent" or "atera-tickets" => 15,
         "poweroffice-invoices" => 90,
+        _ when CronJobs.TryGetValue(job, out var cron) =>
+            CronCadence.FreshnessMinutes(configuration[cron.Key], cron.Default) ?? configuration.GetValue("Monitoring:FreshnessMinutes", 1440),
         _ => configuration.GetValue("Monitoring:FreshnessMinutes", 1440),
     }, 1, 525600);
+
+    /// <summary>
+    /// Jobs whose freshness follows their schedule (DEV-19): the limit is the longest gap between two runs of the configured
+    /// cron plus half a gap and a quarter of an hour, so a daily job is not stale at 24 hours and a half-hourly one is stale
+    /// after an hour. The defaults repeat those of the options classes, which this project cannot reference.
+    /// </summary>
+    private static readonly Dictionary<string, (string Key, string Default)> CronJobs = new(StringComparer.Ordinal)
+    {
+        ["atera-work-hours"] = ("Integrations:Atera:WorkHoursSyncCron", "*/30 * * * *"),
+        ["atera-agents"] = ("Integrations:Atera:AgentSyncCron", "30 1 * * *"),
+        ["partnercenter-licenses"] = ("Integrations:PartnerCenter:LicenseSyncCron", "50 2 * * *"),
+    };
 
     public static MonitoringExceptionItem Item(string key, string category, string source, string kind, DateTimeOffset? at, int count,
         DateTimeOffset? succeeded = null, double? age = null, int? threshold = null) =>
@@ -136,4 +153,104 @@ internal sealed class ExceptionTriageRetention(IntegrationDbContext db) : IReten
         return ids.Count == 0 ? 0 : await db.ExceptionTriages.Where(t => ids.Contains(t.Id)).ExecuteDeleteAsync(cancellationToken);
     }
     private IQueryable<ExceptionTriage> Due(DateTimeOffset olderThan) => db.ExceptionTriages.Where(t => t.Status == "Resolved" && t.UpdatedAt < olderThan);
+}
+
+/// <summary>Reads the spacing of runs out of a five-field cron expression, for the schedules this project uses (minute and hour lists, ranges and steps).</summary>
+public static class CronCadence
+{
+    /// <summary>
+    /// Minutes after which a job on <paramref name="cron"/> (or <paramref name="fallback"/> when empty) is overdue, or null when
+    /// the expression restricts days or months, which this reading does not follow.
+    /// </summary>
+    public static int? FreshnessMinutes(string? cron, string fallback)
+    {
+        var gap = LongestGapMinutes(string.IsNullOrWhiteSpace(cron) ? fallback : cron);
+        return gap is { } minutes ? minutes + minutes / 2 + 15 : null;
+    }
+
+    /// <summary>The longest time between two runs within a day, wrapping over midnight; null when days or months are restricted or the text is not understood.</summary>
+    public static int? LongestGapMinutes(string cron)
+    {
+        var fields = cron.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (fields.Length != 5 || fields[2] != "*" || fields[3] != "*" || fields[4] != "*")
+        {
+            return null;
+        }
+
+        var minutes = Expand(fields[0], 0, 59);
+        var hours = Expand(fields[1], 0, 23);
+        if (minutes is null || hours is null)
+        {
+            return null;
+        }
+
+        var times = hours.SelectMany(h => minutes.Select(m => h * 60 + m)).Order().ToList();
+        if (times.Count == 0)
+        {
+            return null;
+        }
+
+        var gap = 1440 - times[^1] + times[0];
+        for (var i = 1; i < times.Count; i++)
+        {
+            gap = Math.Max(gap, times[i] - times[i - 1]);
+        }
+
+        return gap;
+    }
+
+    private static List<int>? Expand(string field, int min, int max)
+    {
+        var values = new SortedSet<int>();
+        foreach (var part in field.Split(','))
+        {
+            var step = 1;
+            var range = part;
+            var slash = part.IndexOf('/', StringComparison.Ordinal);
+            if (slash >= 0)
+            {
+                if (!int.TryParse(part[(slash + 1)..], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out step) || step < 1)
+                {
+                    return null;
+                }
+
+                range = part[..slash];
+            }
+
+            int from, to;
+            if (range == "*")
+            {
+                (from, to) = (min, max);
+            }
+            else if (range.Contains('-', StringComparison.Ordinal))
+            {
+                var bounds = range.Split('-');
+                if (bounds.Length != 2 || !int.TryParse(bounds[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out from) ||
+                    !int.TryParse(bounds[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out to))
+                {
+                    return null;
+                }
+            }
+            else if (int.TryParse(range, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out from))
+            {
+                to = slash >= 0 ? max : from;
+            }
+            else
+            {
+                return null;
+            }
+
+            if (from < min || to > max || from > to)
+            {
+                return null;
+            }
+
+            for (var v = from; v <= to; v += step)
+            {
+                values.Add(v);
+            }
+        }
+
+        return values.ToList();
+    }
 }

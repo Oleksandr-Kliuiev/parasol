@@ -4,6 +4,7 @@ using Crm.Customers.Contracts;
 using Crm.Integrations.Core;
 using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Operations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -56,6 +57,34 @@ internal static class AteraMapping
         return new AteraCustomerWrite(o.Name, o.OrgNumber, o.Domains.Count > 0 ? o.Domains[0] : null, address.Street, address.City, address.PostalCode,
             address.CountryCode is "NO" ? "Norway" : address.CountryCode, o.Phone, o.Website);
     }
+
+    /// <summary>
+    /// What to PUT to an existing Atera customer, or null when nothing the CRM owns differs. A field the CRM has no value for
+    /// keeps Atera's value instead of being overwritten with null (the PUT replaces the whole record), and a field that only
+    /// differs in case of the domain or surrounding blanks is not a change.
+    /// </summary>
+    public static AteraCustomerWrite? MergeForUpdate(AteraCustomer current, AteraCustomerWrite desired)
+    {
+        var merged = new AteraCustomerWrite(
+            desired.CustomerName.Trim(),
+            // Atera keeps the business number as free text ("NO 923609016 MVA"): the same number is not a change.
+            OrgNumber(desired.BusinessNumber) is { } number && number == OrgNumber(current.BusinessNumber)
+                ? Clean(current.BusinessNumber)
+                : Clean(desired.BusinessNumber) ?? Clean(current.BusinessNumber),
+            Clean(desired.Domain)?.ToLowerInvariant() ?? Clean(current.Domain),
+            Clean(desired.Address) ?? Clean(current.Address),
+            Clean(desired.City) ?? Clean(current.City),
+            Clean(desired.ZipCode) ?? Clean(current.ZipCode),
+            Clean(desired.Country) ?? Clean(current.Country),
+            Clean(desired.Phone) ?? Clean(current.Phone),
+            Clean(desired.Website) ?? Clean(current.Website));
+        var before = new AteraCustomerWrite(
+            current.Name.Trim(), Clean(current.BusinessNumber), Clean(current.Domain)?.ToLowerInvariant(), Clean(current.Address), Clean(current.City),
+            Clean(current.ZipCode), Clean(current.Country), Clean(current.Phone), Clean(current.Website));
+        return merged == before ? null : merged;
+    }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     /// <summary>Atera's BusinessNumber is free text; only a Norwegian-looking 9-digit number is used for matching.</summary>
     public static string? OrgNumber(string? businessNumber)
@@ -218,13 +247,22 @@ public sealed class AteraContactSyncJob(
     }
 }
 
+/// <summary>
+/// Creates the customer in Atera. Atera has no external reference field, so the create is journaled before it is sent; an
+/// earlier attempt that may have created the customer is settled by looking for it (by business number, else name) and never by
+/// sending again. A customer that cannot be found after an unknown outcome waits for a person (DEV-19).
+/// </summary>
 internal sealed class AteraCreateCustomerHandler(
     IAteraClient client,
     ICustomersApi customers,
     ExternalLinkService links,
     ExternalRecordStore records,
+    IExternalEffectJournal journal,
     IOptions<AteraOptions> options) : IOutboundHandler
 {
+    /// <summary>The journal kind of the customer POST. The reference is the Atera customer id.</summary>
+    public const string CustomerEffect = "customer-post";
+
     public string System => AteraTypes.System;
 
     public string Operation => AteraTypes.CreateCustomer;
@@ -247,8 +285,35 @@ internal sealed class AteraCreateCustomerHandler(
             throw new PermanentOutboundException("The organization no longer exists.");
         }
 
-        // Atera has no external reference field: never retry a create blindly. A failed create becomes a dead letter for review.
-        var id = await client.CreateCustomerAsync(AteraMapping.ToWrite(organization), cancellationToken);
+        var write = AteraMapping.ToWrite(organization);
+        var earlier = (await journal.ForEntityAsync(EntityTypes.Organization, organization.Id, cancellationToken))
+            .Where(e => e.System == System && e.Kind == CustomerEffect).ToList();
+        long id;
+        if (ExternalEffects.MayExist(earlier))
+        {
+            // An earlier create may have succeeded without the answer (or without the link): never send again before looking.
+            id = long.TryParse(ExternalEffects.LatestReference(earlier), NumberStyles.Integer, CultureInfo.InvariantCulture, out var reported)
+                ? reported
+                : await FindExistingAsync(write, cancellationToken)
+                  ?? throw new PermanentOutboundException(
+                      "An earlier create in Atera got no answer and no customer with this business number or name was found; check Atera before creating the customer again.");
+        }
+        else
+        {
+            var effect = await journal.BeginAsync(new ExternalEffect(System, CustomerEffect, EntityTypes.Organization, organization.Id, operation.Id), cancellationToken);
+            try
+            {
+                id = await client.CreateCustomerAsync(write, cancellationToken);
+            }
+            catch (AteraApiException rejected) when (AteraCreateTicketHandler.IsRejection(rejected.Status))
+            {
+                await journal.CompleteAsync(effect, EffectPhase.Failed, null, cancellationToken);
+                throw new PermanentOutboundException($"Atera rejected the customer ({(int)rejected.Status}).");
+            }
+
+            await journal.CompleteAsync(effect, EffectPhase.Sent, id.ToString(CultureInfo.InvariantCulture), cancellationToken);
+        }
+
         var externalId = id.ToString(CultureInfo.InvariantCulture);
         var link = await links.LinkAsync(EntityTypes.Organization, organization.Id, System, AteraTypes.Customer, externalId, LinkMethod.Exported, operation.RequestedBy, cancellationToken);
         if (!link.IsSuccess)
@@ -261,7 +326,26 @@ internal sealed class AteraCreateCustomerHandler(
             await records.UpsertAsync(AteraMapping.ToRecord(created), cancellationToken);
         }
 
-        return new OutboundResult($"Created Atera customer {id}.");
+        return new OutboundResult($"Created Atera customer {id}.", externalId);
+    }
+
+    /// <summary>The one Atera customer with the organization's business number (else, without one, its name); several are ambiguous and nothing is chosen.</summary>
+    private async Task<long?> FindExistingAsync(AteraCustomerWrite write, CancellationToken cancellationToken)
+    {
+        var number = AteraMapping.OrgNumber(write.BusinessNumber);
+        var matches = new List<long>();
+        await foreach (var customer in client.GetCustomersAsync(cancellationToken))
+        {
+            var same = number is not null
+                ? AteraMapping.OrgNumber(customer.BusinessNumber) == number
+                : string.Equals(customer.Name.Trim(), write.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase);
+            if (same)
+            {
+                matches.Add(customer.CustomerId);
+            }
+        }
+
+        return matches.Count == 1 ? matches[0] : null;
     }
 }
 
@@ -293,9 +377,7 @@ internal sealed class AteraUpdateCustomerHandler(
         var id = long.Parse(link.ExternalId, CultureInfo.InvariantCulture);
         var current = await client.GetCustomerAsync(id, cancellationToken)
                       ?? throw new PermanentOutboundException($"Customer {id} no longer exists in Atera.");
-        var desired = AteraMapping.ToWrite(organization);
-        var before = new AteraCustomerWrite(current.Name, current.BusinessNumber, current.Domain, current.Address, current.City, current.ZipCode, current.Country, current.Phone, current.Website);
-        if (Normalize(before) == Normalize(desired))
+        if (AteraMapping.MergeForUpdate(current, AteraMapping.ToWrite(organization)) is not { } desired)
         {
             return OutboundResult.NothingToDo;
         }
@@ -308,11 +390,6 @@ internal sealed class AteraUpdateCustomerHandler(
 
         return new OutboundResult($"Updated Atera customer {id}.");
     }
-
-    private static AteraCustomerWrite Normalize(AteraCustomerWrite w) => new(
-        w.CustomerName.Trim(), Clean(w.BusinessNumber), Clean(w.Domain)?.ToLowerInvariant(), Clean(w.Address), Clean(w.City), Clean(w.ZipCode), Clean(w.Country), Clean(w.Phone), Clean(w.Website));
-
-    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 internal sealed class AteraOrganizationChangedHandler(

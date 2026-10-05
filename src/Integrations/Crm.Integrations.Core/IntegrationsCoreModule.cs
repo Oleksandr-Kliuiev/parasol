@@ -18,6 +18,7 @@ public static class IntegrationsCoreModule
     {
         services.AddModuleDbContext<IntegrationDbContext>(configuration);
         services.AddScoped<SyncRunner>();
+        services.AddScoped<Crm.SharedKernel.Operations.ISyncCompletenessSource, SyncCompletenessReader>();
         services.AddScoped<IntegrationMonitoringReader>();
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, ExceptionTriageRetention>();
         services.AddScoped<ExternalRecordStore>();

@@ -42,6 +42,7 @@ import { Panel } from '../../shared/components/Panel';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { useCatalogStyles } from '../catalog/styles';
 import { useBases, useBillingSettings, useRun, useRunActions } from './api';
+import { anomalyText } from './anomalyText';
 import { BasisStatusBadge, RunStatusBadge } from './shared';
 import { monthLabel } from './period';
 import type { Approval, Run } from './types';
@@ -344,7 +345,7 @@ export function BillingRunPage() {
                       <span className={styles.anomaly}>
                         {basis.anomalies
                           .slice(0, 2)
-                          .map((a) => a.message)
+                          .map((a) => anomalyText(t, a))
                           .join(' ')}
                         {basis.anomalies.length > 2 ? ` +${basis.anomalies.length - 2}` : ''}
                       </span>

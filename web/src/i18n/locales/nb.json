@@ -1877,6 +1877,11 @@
     "decisionKept": "Avgjørelsen er beholdt",
     "conflictsBanner_one": "{{count}} linje trenger en avgjørelse: kilden ble endret etter at økonomi tok stilling til den. Kjøringen kan ikke godkjennes før den er løst.",
     "conflictsBanner_other": "{{count}} linjer trenger en avgjørelse: kilden ble endret etter at økonomi tok stilling til dem. Kjøringen kan ikke godkjennes før de er løst.",
+    "anomalyTexts": {
+      "BIL_STALE_QUANTITY": "{{product}}: antallet er hentet fra en avlesning {{date}}, som er eldre enn grensen.",
+      "BIL_NO_DEVICE_SNAPSHOT": "{{product}} faktureres per enhet, men det finnes ingen daglig enhetstelling; enhetene som er registrert nå telles.",
+      "BIL_INCOMPLETE_HOURS": "Siste import av arbeidstimer ({{date}}) ble ikke fullført; timer kan mangle i dette grunnlaget."
+    },
     "conflictsCount_one": "{{count}} linje trenger en avgjørelse",
     "conflictsCount_other": "{{count}} linjer trenger en avgjørelse",
     "discount": "{{pct}} % rabatt",
@@ -1945,8 +1950,8 @@
     "invoiceStatus": {
       "Draft": "Utkast",
       "Sent": "Sendt",
-      "PartiallyPaid": "Delvis betalt",
-      "Paid": "Betalt",
+      "PartiallyPaid": "Delvis oppgjort",
+      "Paid": "Ingen restbeløp",
       "Overdue": "Forfalt",
       "Credited": "Kreditert"
     },
@@ -1974,7 +1979,7 @@
     "outstanding": "Utestående",
     "overdue": "Forfalt",
     "count": "Fakturaer",
-    "openOnly": "Bare ubetalte",
+    "openOnly": "Bare med restbeløp",
     "overdueOnly": "Bare forfalte",
     "due": "forfall {{date}}",
     "noCustomer": "Ikke koblet til kunde",
@@ -1986,7 +1991,19 @@
       "total": "Sum inkl. mva",
       "outstanding": "Utestående"
     },
-    "totalsScope": "Summer for alle fakturaer som passer filteret ({{count}}), forfalt per {{date}}."
+    "totalsScope": "Summer for alle fakturaer som passer filteret ({{count}}), forfalt per {{date}}.",
+    "movements": {
+      "label": "Saldobevegelser",
+      "observedOn": "Observert {{date}}",
+      "dateHint": "Datoen er dagen synkroniseringen så endringen, ikke dagen pengene ble flyttet. Fakturadataene fra PowerOffice sier ikke om beløpet er betalt, kreditert eller avskrevet.",
+      "kinds": {
+        "BalanceDecrease": "Observert reduksjon (ikke en reskontrobetaling)",
+        "CreditNote": "Kreditnota",
+        "BalanceIncrease": "Restbeløpet økte – kontroller i PowerOffice",
+        "Payment": "Betaling",
+        "WriteOff": "Avskrivning"
+      }
+    }
   },
   "notifications": {
     "title": "Varsler",
@@ -2774,6 +2791,7 @@
       "ReconciliationRequired": "Ekstern effekt må avstemmes",
       "LegacyUnresolved": "Uavklarte eldre poster",
       "BillingConflict": "Faktureringskonflikt",
+      "EstimatedQuantity": "Estimerte eller ufullstendige faktureringsmengder",
       "UnmappedSubscriptions": "Abonnementer uten kobling",
       "LicenseDiscrepancy": "Lisensavvik",
       "DocumentPreparing": "Tilbudsdokumenter venter",
@@ -2792,6 +2810,7 @@
       "VerifyExternalEffect": "Bekreft eksternt resultat før nytt forsøk for å unngå dobbeltfakturering.",
       "ReviewLegacyCharges": "Identiteten til eldre poster må kontrolleres.",
       "ResolveBillingConflicts": "Fakturering kan ikke fortsette før kildekonflikter er avklart.",
+      "ReviewEstimatedQuantities": "Åpne faktureringsgrunnlag bygger på gamle avlesninger eller et ufullstendig timeimport; Økonomi avgjør om de kan faktureres.",
       "MapSubscriptions": "Abonnementer er ikke koblet til en CRM-kunde eller et produkt.",
       "ReviewPreviousMonthLicenseMargin": "Lisenskostnader og inntekter for forrige måned må avstemmes.",
       "QuoteDocumentsUnavailable": "Tilbudsdokumenter er ikke klare for nedlasting eller sending.",

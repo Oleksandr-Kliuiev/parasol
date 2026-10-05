@@ -6,7 +6,8 @@ namespace Crm.Billing.Domain;
 
 /// <summary>
 /// An invoice as the accounting system reports it (docs/05 §4.2). The CRM never edits invoices; it mirrors them so a customer's
-/// balance is visible next to their contracts. Payments are derived from the outstanding amount going down.
+/// balance is visible next to their contracts. The accounting system gives us only the remaining amount, so a change of it is
+/// kept as a balance movement of the kind we can prove (<see cref="InvoiceMovementKind"/>); nothing is called a payment.
 /// </summary>
 public sealed class Invoice : AuditableEntity
 {
@@ -39,11 +40,17 @@ public sealed class Invoice : AuditableEntity
         return invoice;
     }
 
-    /// <summary>Returns true when anything visible changed; a lower outstanding amount is recorded as a payment.</summary>
+    /// <summary>
+    /// Returns true when anything visible changed. A change of the remaining amount between two syncs is recorded as a movement:
+    /// a decrease of a credited invoice is a credit note, any other decrease an observed decrease (not a ledger payment), and an
+    /// increase is kept as a flagged movement so a reversal or a re-opened invoice is not lost.
+    /// </summary>
     public bool Apply(ExternalInvoice source, Guid? organizationId, Guid? basisId, DateTimeOffset now)
     {
         var before = Signature();
         var previousOutstanding = Outstanding;
+        var previousStatus = Status;
+        var firstSync = SyncedAt == default;
         OrderNo = source.OrderNo;
         ExternalReference = source.ExternalReference;
         OrganizationId = organizationId ?? OrganizationId;
@@ -56,10 +63,28 @@ public sealed class Invoice : AuditableEntity
         Url = source.Url;
         SyncedAt = now;
 
-        // A first sync starts at zero, so only a real decrease between two syncs counts as a payment.
-        if (Outstanding < previousOutstanding)
+        // A first sync starts at zero, so only a change between two syncs counts as a movement.
+        if (!firstSync)
         {
-            _payments.Add(InvoicePayment.Create(Id, DateOnly.FromDateTime(now.UtcDateTime), previousOutstanding - Outstanding));
+            var credited = Status == InvoiceStatus.Credited;
+            var flippedToCredited = credited && previousStatus != InvoiceStatus.Credited;
+            var observedOn = DateOnly.FromDateTime(now.UtcDateTime);
+            if (Outstanding < previousOutstanding)
+            {
+                _payments.Add(InvoicePayment.Create(Id, observedOn, previousOutstanding - Outstanding,
+                    credited ? InvoiceMovementKind.CreditNote : InvoiceMovementKind.BalanceDecrease,
+                    credited ? "The invoice is credited in the accounting system" : "The remaining amount went down between two syncs"));
+            }
+            else if (Outstanding > previousOutstanding)
+            {
+                _payments.Add(InvoicePayment.Create(Id, observedOn, Outstanding - previousOutstanding,
+                    InvoiceMovementKind.BalanceIncrease, "The remaining amount went up between two syncs; check the invoice in the accounting system"));
+            }
+            else if (flippedToCredited)
+            {
+                // Credited without a visible change of the remaining amount: the fact itself is the movement.
+                _payments.Add(InvoicePayment.Create(Id, observedOn, 0m, InvoiceMovementKind.CreditNote, "The invoice became credited in the accounting system"));
+            }
         }
 
         return before != Signature();
@@ -74,19 +99,48 @@ public sealed class Invoice : AuditableEntity
         Outstanding.ToString("0.####", CultureInfo.InvariantCulture), Status, Url);
 }
 
-/// <summary>A payment inferred from the outstanding amount of an invoice going down between two syncs.</summary>
+/// <summary>
+/// What a change of an invoice's remaining amount is known to be. The accounting system's invoice API does not give a ledger, so
+/// only the first kinds are ever written; <see cref="Payment"/> and <see cref="WriteOff"/> stay unused until a provider proves them.
+/// </summary>
+public enum InvoiceMovementKind
+{
+    /// <summary>The remaining amount went down between two syncs. Not a ledger payment: it can be a payment, a credit or a write-off.</summary>
+    BalanceDecrease,
+
+    /// <summary>The invoice is credited in the accounting system (the credited flag, with any change of the remaining amount).</summary>
+    CreditNote,
+
+    /// <summary>The remaining amount went up between two syncs; flagged for a person to look at.</summary>
+    BalanceIncrease,
+
+    /// <summary>A payment proven by a ledger entry. Not written yet.</summary>
+    Payment,
+
+    /// <summary>A write-off proven by a ledger entry. Not written yet.</summary>
+    WriteOff,
+}
+
+/// <summary>
+/// A change of the remaining amount of an invoice, as the sync observed it. <see cref="ObservedOn"/> is the day the sync saw the
+/// change, not the day money moved. The table keeps its old name and the date its old column (<c>PaidAt</c>) so the migration is additive.
+/// </summary>
 public sealed class InvoicePayment : AuditableEntity
 {
     private InvoicePayment() { }
 
     public Guid InvoiceId { get; private set; }
-    public DateOnly PaidAt { get; private set; }
+    public DateOnly ObservedOn { get; private set; }
     public decimal Amount { get; private set; }
+    public InvoiceMovementKind Kind { get; private set; }
+    public string Source { get; private set; } = string.Empty;
 
-    internal static InvoicePayment Create(Guid invoiceId, DateOnly paidAt, decimal amount) => new()
+    internal static InvoicePayment Create(Guid invoiceId, DateOnly observedOn, decimal amount, InvoiceMovementKind kind, string source) => new()
     {
         InvoiceId = invoiceId,
-        PaidAt = paidAt,
+        ObservedOn = observedOn,
         Amount = decimal.Round(amount, 2),
+        Kind = kind,
+        Source = source,
     };
 }

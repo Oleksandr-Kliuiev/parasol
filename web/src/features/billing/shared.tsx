@@ -1,6 +1,32 @@
-import { Badge, type BadgeProps } from '@fluentui/react-components';
+import { Badge, type BadgeProps, Text, Tooltip, tokens } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
-import type { BasisStatus, InvoiceStatus, RunStatus } from './types';
+import { formatDate, formatMoney } from '../../shared/utils/format';
+import type { BasisStatus, InvoiceMovement, InvoiceStatus, RunStatus } from './types';
+
+/**
+ * What changed an invoice's remaining amount, as the sync saw it. The date is the day it was observed, not a payment date, and
+ * a decrease is never called a payment: the accounting system does not say whether it was paid, credited or written off.
+ */
+export function InvoiceMovements({ movements, canSeeMoney }: { movements: InvoiceMovement[]; canSeeMoney: boolean }) {
+  const { t } = useTranslation();
+  if (movements.length === 0) return null;
+  return (
+    <ul aria-label={t('invoices.movements.label')} style={{ margin: 0, paddingLeft: tokens.spacingHorizontalM, listStyle: 'none' }}>
+      {movements.map((movement, index) => (
+        <li key={`${movement.observedOn}-${movement.kind}-${index}`}>
+          <Tooltip content={t('invoices.movements.dateHint')} relationship="description">
+            <Text size={200} style={{ color: movement.kind === 'BalanceIncrease' ? tokens.colorPaletteDarkOrangeForeground1 : tokens.colorNeutralForeground3 }}>
+              {t(`invoices.movements.kinds.${movement.kind}`)}
+              {canSeeMoney && movement.amount !== undefined ? ` ${formatMoney(movement.amount)}` : ''}
+              {' · '}
+              {t('invoices.movements.observedOn', { date: formatDate(movement.observedOn) })}
+            </Text>
+          </Tooltip>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 // Brand and tinted badges lose their contrast in the dark theme (see CLAUDE.md), so only neutral and outcome colours are used.
 const runColor: Record<RunStatus, BadgeProps['color']> = {

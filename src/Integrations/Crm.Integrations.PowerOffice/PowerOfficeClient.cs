@@ -127,6 +127,8 @@ public interface IPowerOfficeClient
 
 internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOptions> options) : IPowerOfficeClient
 {
+    private const int MaxPages = 10_000;
+
     public IAsyncEnumerable<PoCustomer> GetCustomersAsync(DateTimeOffset? changedSince, CancellationToken cancellationToken) =>
         GetPagedAsync<PoCustomer>("Customers", changedSince, cancellationToken);
 
@@ -261,7 +263,7 @@ internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOpt
     {
         var pageSize = Math.Clamp(options.Value.PageSize, 1, 20_000);
         var filter = changedSince is { } since ? $"&lastChangedDateTimeOffsetGreaterThan={Uri.EscapeDataString(since.ToString("O"))}" : string.Empty;
-        for (int page = 1; page <= 10_000; page++)
+        for (int page = 1; page <= MaxPages; page++)
         {
             using var response = await http.GetAsync($"{resource}?PageNumber={page}&PageSize={pageSize}{filter}", cancellationToken);
             if (response.StatusCode == HttpStatusCode.NoContent)
@@ -271,16 +273,21 @@ internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOpt
 
             await EnsureSuccessAsync(response, cancellationToken);
             var items = await response.Content.ReadFromJsonAsync<List<T>>(PoJson.Options, cancellationToken) ?? [];
+            // The server may cap the page size below what was asked for, so a short page does not mean the last one: only 204
+            // or an empty page ends the enumeration.
+            if (items.Count == 0)
+            {
+                yield break;
+            }
+
             foreach (var item in items)
             {
                 yield return item;
             }
-
-            if (items.Count < pageSize)
-            {
-                yield break;
-            }
         }
+
+        // Ending quietly here would let the caller advance its cursor over records it never read.
+        throw new PowerOfficeApiException(HttpStatusCode.OK, $"PowerOffice {resource} did not end after {MaxPages} pages.");
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)

@@ -6,8 +6,11 @@ using Crm.SharedKernel.Results;
 
 namespace Crm.Billing.Domain;
 
-/// <summary>One reason a basis needs a look before approval (BR-BIL-03).</summary>
-public sealed record BillingAnomaly(string Code, string Message);
+/// <summary>
+/// One reason a basis needs a look before approval (BR-BIL-03). <paramref name="Args"/> carries the values of the message (a
+/// date, a product name) so the interface can say it in the reader's language; the English <paramref name="Message"/> stays the fallback.
+/// </summary>
+public sealed record BillingAnomaly(string Code, string Message, IReadOnlyDictionary<string, string>? Args = null);
 
 /// <summary>
 /// A line as a source produced it. <paramref name="SourceKey"/> is the charge identity of a collected line: the same

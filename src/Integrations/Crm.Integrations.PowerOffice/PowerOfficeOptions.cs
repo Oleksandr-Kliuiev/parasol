@@ -34,6 +34,9 @@ public sealed class PowerOfficeOptions
 
     public int PageSize { get; set; } = 1000;
 
+    /// <summary>Base delay of the exponential retry backoff; tests shorten it.</summary>
+    public TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+
     /// <summary>Create and update customers in PowerOffice from the CRM. Off until the company has verified it in the demo client.</summary>
     public bool WriteEnabled { get; set; }
 

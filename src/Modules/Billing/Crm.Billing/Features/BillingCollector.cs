@@ -8,6 +8,7 @@ using Crm.Contracts.Contracts;
 using Crm.Customers.Contracts;
 using Crm.Licensing.Contracts;
 using Crm.Service.Contracts;
+using Crm.SharedKernel.Operations;
 using Crm.TimeTracking.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -34,8 +35,11 @@ internal sealed class BillingCollector(
     IEnumerable<IBillingTargetSystem> targets,
     ChargeLedger ledger,
     TimeProvider time,
-    IOptions<BillingOptions> options)
+    IOptions<BillingOptions> options,
+    IEnumerable<ISyncCompletenessSource> syncCompleteness)
 {
+    private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+
     public async Task<CollectResult> CollectAsync(BillingRun run, CancellationToken ct)
     {
         var settings = options.Value;
@@ -98,7 +102,11 @@ internal sealed class BillingCollector(
             .ToDictionary(a => (a.OrganizationId, a.ProductId), a => a);
 
         var deviceOrganizations = contractLines.Where(l => l.QuantityModel == QuantityModel.PerAteraDevice).Select(l => l.OrganizationId).Distinct().ToArray();
-        var devicesByOrganization = await service.GetDeviceCountsAsync(deviceOrganizations, periodEnd, ct);
+        var deviceReadings = await service.GetDeviceCountReadingsAsync(deviceOrganizations, periodEnd, ct);
+        // A reading is as old as the day it was taken, measured from the end of the period, or from today when the period is not over yet.
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Oslo).DateTime);
+        var readingReference = periodEnd < today ? periodEnd : today;
+        var hoursRun = await LatestHoursRunAsync(settings, ct);
         var previousTotals = await PreviousTotalsAsync(run, portfolioOrganizations, ct);
         var existing = await db.BillingBases
             .Include(b => b.Lines)
@@ -125,7 +133,8 @@ internal sealed class BillingCollector(
             var anomalies = new List<BillingAnomaly>();
             var organizationLines = contractLinesByOrganization[organizationId].ToList();
             var customerReference = organizationLines.Select(l => l.CustomerReference).FirstOrDefault(r => !string.IsNullOrWhiteSpace(r));
-            var deviceCounts = devicesByOrganization.GetValueOrDefault(organizationId) ?? new Dictionary<DeviceType, int>();
+            var deviceReading = deviceReadings.GetValueOrDefault(organizationId);
+            var deviceCounts = deviceReading?.Counts ?? new Dictionary<DeviceType, int>();
 
             foreach (var line in organizationLines)
             {
@@ -172,6 +181,10 @@ internal sealed class BillingCollector(
                 {
                     continue;
                 }
+
+                AddReadingAnomalies(
+                    anomalies, line, product, assigned.GetValueOrDefault((organizationId, line.ProductId)), deviceReading,
+                    readingReference, settings.StaleQuantityDays);
 
                 var prices = pricesByCategory[line.PriceCategory ?? defaultCategory];
                 var fullPrice = line.UnitPrice ?? (prices.TryGetValue(line.ProductId, out var resolved) ? resolved.UnitPrice : 0m);
@@ -238,6 +251,15 @@ internal sealed class BillingCollector(
             }
 
             AddPendingChargeLines(lines, organizationCharges.Except(heldCharges).ToList());
+            if (hoursRun is { Complete: false })
+            {
+                var at = TimeZoneInfo.ConvertTime(hoursRun.StartedAt, Oslo);
+                anomalies.Add(new BillingAnomaly(
+                    "BIL_INCOMPLETE_HOURS",
+                    $"The latest import of work hours did not finish completely ({at:dd.MM.yyyy HH:mm}); hours may be missing from this basis.",
+                    new Dictionary<string, string> { ["date"] = at.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture) }));
+            }
+
             // The customer the work was done for travels with each line, also when a group parent pays for it (FR-CUS-07).
             lines = lines.ConvertAll(l => l with { SourceOrganizationId = organizationId });
 
@@ -246,7 +268,11 @@ internal sealed class BillingCollector(
                 // Every line says which company in the group it belongs to, so one invoice still reads per company.
                 var subsidiary = subsidiaryNames.GetValueOrDefault(organizationId, "—");
                 lines = lines.ConvertAll(l => l with { Description = $"{subsidiary}: {l.Description}" });
-                anomalies = anomalies.ConvertAll(a => a with { Message = $"{subsidiary}: {a.Message}" });
+                anomalies = anomalies.ConvertAll(a => a with
+                {
+                    Message = $"{subsidiary}: {a.Message}",
+                    Args = new Dictionary<string, string>(a.Args ?? new Dictionary<string, string>()) { ["subsidiary"] = subsidiary },
+                });
                 if (draftIndexes.TryGetValue(invoicedTo, out var existingDraft))
                 {
                     drafts[existingDraft].Lines.AddRange(lines);
@@ -438,6 +464,66 @@ internal sealed class BillingCollector(
         anomalies.Add(new BillingAnomaly(
             "BIL_NO_SUBSCRIPTION", $"{product?.Name ?? "Product"} is billed per subscription, but the customer has none; the contract quantity is used."));
         return line.Quantity;
+    }
+
+    /// <summary>The latest finished run of the work-hours import, or null when no source answers or it never ran (nothing to judge).</summary>
+    private async Task<SyncCompleteness?> LatestHoursRunAsync(BillingOptions settings, CancellationToken ct)
+    {
+        foreach (var source in syncCompleteness)
+        {
+            if (await source.LatestAsync(settings.HoursSyncSystem, settings.HoursSyncJob, ct) is { } latest)
+            {
+                return latest;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// DEV-19: a quantity read long before the period ended, or counted from live devices because no snapshot exists, is billed
+    /// as it is but says so on the basis. Finance decides whether such a basis may be billed; nothing here blocks it.
+    /// </summary>
+    private static void AddReadingAnomalies(
+        List<BillingAnomaly> anomalies, BillableContractLine line, ProductRef? product, AssignedLicenses? assigned,
+        DeviceCountReading? devices, DateOnly reference, int staleDays)
+    {
+        var name = product?.Name ?? "Product";
+        if (line.QuantityModel == QuantityModel.PerM365User && assigned is { Assigned: > 0 } && reference.DayNumber - assigned.SnapshotDate.DayNumber > staleDays)
+        {
+            AddOnce(anomalies, "BIL_STALE_QUANTITY", name, assigned.SnapshotDate,
+                $"{name} is billed from a Microsoft 365 licence reading of {assigned.SnapshotDate:dd.MM.yyyy}, which is older than {staleDays} days.");
+        }
+
+        if (line.QuantityModel != QuantityModel.PerAteraDevice)
+        {
+            return;
+        }
+
+        if (devices?.SnapshotDate is not { } snapshot)
+        {
+            AddOnce(anomalies, "BIL_NO_DEVICE_SNAPSHOT", name, null,
+                $"{name} is billed per device, but no daily device count exists; the devices listed now are counted.");
+        }
+        else if (reference.DayNumber - snapshot.DayNumber > staleDays)
+        {
+            AddOnce(anomalies, "BIL_STALE_QUANTITY", name, snapshot,
+                $"{name} is billed from a device count of {snapshot:dd.MM.yyyy}, which is older than {staleDays} days.");
+        }
+    }
+
+    private static void AddOnce(List<BillingAnomaly> anomalies, string code, string product, DateOnly? date, string message)
+    {
+        var args = new Dictionary<string, string> { ["product"] = product };
+        if (date is { } day)
+        {
+            args["date"] = day.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+        }
+
+        if (!anomalies.Any(a => a.Code == code && a.Message == message))
+        {
+            anomalies.Add(new BillingAnomaly(code, message, args));
+        }
     }
 
     /// <summary>

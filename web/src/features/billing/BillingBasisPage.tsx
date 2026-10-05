@@ -55,7 +55,8 @@ import { NotFoundPage } from '../errors/NotFoundPage';
 import { useCatalogStyles } from '../catalog/styles';
 import { ProductPicker } from '../catalog/ProductPicker';
 import { useBasis, useBasisActions } from './api';
-import { BasisStatusBadge, InvoiceStatusBadge } from './shared';
+import { anomalyText } from './anomalyText';
+import { BasisStatusBadge, InvoiceMovements, InvoiceStatusBadge } from './shared';
 import { monthLabel } from './period';
 import type { ProductListItem } from '../catalog/types';
 import type { BasisLine } from './types';
@@ -208,7 +209,7 @@ export function BillingBasisPage() {
           <MessageBarBody>
             <ul className={styles.list}>
               {basis.anomalies.map((anomaly) => (
-                <li key={anomaly.code + anomaly.message}>{anomaly.message}</li>
+                <li key={anomaly.code + anomaly.message}>{anomalyText(t, anomaly)}</li>
               ))}
             </ul>
           </MessageBarBody>
@@ -278,6 +279,7 @@ export function BillingBasisPage() {
                         dueDate: invoice.dueDate ? formatDate(invoice.dueDate) : '—',
                       })}
                     </Text>
+                    <InvoiceMovements movements={invoice.movements} canSeeMoney={canSeeMoney} />
                   </li>
                 ))}
               </ul>

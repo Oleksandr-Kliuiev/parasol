@@ -233,7 +233,18 @@ public sealed record InvoiceDto(
     InvoiceStatus Status,
     bool IsOverdue,
     string? Url,
-    DateTimeOffset SyncedAt);
+    DateTimeOffset SyncedAt,
+    IReadOnlyList<InvoiceMovementDto> Movements);
+
+/// <summary>
+/// A change of the remaining amount of an invoice as the sync saw it. <paramref name="ObservedOn"/> is the day of the sync, not the
+/// day money moved, and a <c>BalanceDecrease</c> is not a ledger payment (it may be a payment, a credit or a write-off).
+/// </summary>
+public sealed record InvoiceMovementDto(
+    InvoiceMovementKind Kind,
+    DateOnly ObservedOn,
+    [property: SensitiveData(Permissions.FinanceRead)] decimal? Amount,
+    string Source);
 
 public sealed record BasisResponse(
     Guid Id,

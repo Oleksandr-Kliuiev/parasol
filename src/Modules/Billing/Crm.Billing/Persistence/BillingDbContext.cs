@@ -183,6 +183,11 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.Amount).HasPrecision(18, 2);
+            // The date kept its original column name: it says when the sync saw the change, not when money moved.
+            b.Property(x => x.ObservedOn).HasColumnName("PaidAt");
+            // Rows from before the kind existed were inferred decreases, so that is the default.
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(24).HasDefaultValue(InvoiceMovementKind.BalanceDecrease);
+            b.Property(x => x.Source).HasMaxLength(200).HasDefaultValue("Inferred from the remaining amount");
             b.HasIndex(x => x.InvoiceId);
         });
     }

@@ -1877,6 +1877,11 @@
     "decisionKept": "The decision is kept",
     "conflictsBanner_one": "{{count}} line needs a decision: its source changed after Finance decided about it. The run cannot be approved until it is resolved.",
     "conflictsBanner_other": "{{count}} lines need a decision: their source changed after Finance decided about them. The run cannot be approved until they are resolved.",
+    "anomalyTexts": {
+      "BIL_STALE_QUANTITY": "{{product}}: the quantity comes from a reading of {{date}}, which is older than the limit.",
+      "BIL_NO_DEVICE_SNAPSHOT": "{{product}} is billed per device, but no daily device count exists; the devices listed now are counted.",
+      "BIL_INCOMPLETE_HOURS": "The latest import of work hours ({{date}}) did not finish completely; hours may be missing from this basis."
+    },
     "conflictsCount_one": "{{count}} line needs a decision",
     "conflictsCount_other": "{{count}} lines need a decision",
     "discount": "{{pct}} % discount",
@@ -1945,8 +1950,8 @@
     "invoiceStatus": {
       "Draft": "Draft",
       "Sent": "Sent",
-      "PartiallyPaid": "Partly paid",
-      "Paid": "Paid",
+      "PartiallyPaid": "Partly settled",
+      "Paid": "Nothing outstanding",
       "Overdue": "Overdue",
       "Credited": "Credited"
     },
@@ -1974,7 +1979,7 @@
     "outstanding": "Outstanding",
     "overdue": "Overdue",
     "count": "Invoices",
-    "openOnly": "Unpaid only",
+    "openOnly": "With outstanding balance",
     "overdueOnly": "Overdue only",
     "due": "due {{date}}",
     "noCustomer": "Not linked to a customer",
@@ -1986,7 +1991,19 @@
       "total": "Total including VAT",
       "outstanding": "Outstanding"
     },
-    "totalsScope": "Totals of all invoices matching the filter ({{count}}), overdue as of {{date}}."
+    "totalsScope": "Totals of all invoices matching the filter ({{count}}), overdue as of {{date}}.",
+    "movements": {
+      "label": "Balance movements",
+      "observedOn": "Observed {{date}}",
+      "dateHint": "The date is the day the synchronisation observed the change, not the day money moved. PowerOffice's invoice data does not say whether the amount was paid, credited or written off.",
+      "kinds": {
+        "BalanceDecrease": "Observed decrease (not a ledger payment)",
+        "CreditNote": "Credit note",
+        "BalanceIncrease": "Remaining amount went up — check in PowerOffice",
+        "Payment": "Payment",
+        "WriteOff": "Write-off"
+      }
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -2774,6 +2791,7 @@
       "ReconciliationRequired": "External effect needs reconciliation",
       "LegacyUnresolved": "Unresolved legacy charges",
       "BillingConflict": "Billing conflict",
+      "EstimatedQuantity": "Estimated or incomplete billing quantities",
       "UnmappedSubscriptions": "Unmapped subscriptions",
       "LicenseDiscrepancy": "Licence discrepancy",
       "DocumentPreparing": "Quote documents pending",
@@ -2792,6 +2810,7 @@
       "VerifyExternalEffect": "Confirm the external outcome before any retry to avoid duplicate billing.",
       "ReviewLegacyCharges": "Legacy charge identities need a financial review.",
       "ResolveBillingConflicts": "Billing cannot proceed until conflicting source changes are reviewed.",
+      "ReviewEstimatedQuantities": "Open billing bases rest on old readings or an incomplete hours import; Finance decides whether they may be billed.",
       "MapSubscriptions": "Subscriptions are not connected to a CRM customer or product.",
       "ReviewPreviousMonthLicenseMargin": "Previous-month licence cost and revenue need reconciliation.",
       "QuoteDocumentsUnavailable": "Quote documents are not ready for download or sending.",

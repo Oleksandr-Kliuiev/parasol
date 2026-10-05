@@ -16,7 +16,20 @@ export interface Ref {
 
 export interface Anomaly {
   code: string;
+  /** English fallback; known codes are rendered from `args` through i18n (see `anomalyText`). */
   message: string;
+  args?: Record<string, string> | null;
+}
+
+/** `Payment` and `WriteOff` are never written yet: the accounting system's invoice data cannot prove them. */
+export type InvoiceMovementKind = 'BalanceDecrease' | 'CreditNote' | 'BalanceIncrease' | 'Payment' | 'WriteOff';
+
+/** A change of the remaining amount as a sync saw it; `observedOn` is the day of the sync, not the day money moved. */
+export interface InvoiceMovement {
+  kind: InvoiceMovementKind;
+  observedOn: string;
+  amount?: number;
+  source: string;
 }
 
 /** A supplementary run bills, for a closed period, only what no earlier run billed (ADR-013). */
@@ -144,6 +157,7 @@ export interface Invoice {
   isOverdue: boolean;
   url: string | null;
   syncedAt: string;
+  movements: InvoiceMovement[];
 }
 
 export interface Basis {

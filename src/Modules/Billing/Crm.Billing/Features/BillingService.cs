@@ -601,7 +601,7 @@ internal sealed class BillingService(
         }
 
         var limit = KeysetCursor.ClampLimit(query.Limit);
-        var page = await invoices.OrderByDescending(i => i.InvoiceDate).ThenByDescending(i => i.InvoiceNo).ThenByDescending(i => i.Id)
+        var page = await invoices.Include(i => i.Payments).OrderByDescending(i => i.InvoiceDate).ThenByDescending(i => i.InvoiceNo).ThenByDescending(i => i.Id)
             .Take(limit + 1).ToListAsync(ct);
         var rows = page.Take(limit).ToList();
         var names = await customers.GetOrganizationNamesAsync(rows.Where(i => i.OrganizationId != null).Select(i => i.OrganizationId!.Value).Distinct().ToList(), ct);
@@ -729,7 +729,7 @@ internal sealed class BillingService(
         var names = await customers.GetOrganizationNamesAsync([basis.OrganizationId], ct);
         var productIds = basis.CurrentLines.Where(l => l.ProductId is not null).Select(l => l.ProductId!.Value).Distinct().ToList();
         var products = await catalog.GetProductsAsync(productIds, ct);
-        var invoices = await db.Invoices.AsNoTracking().Where(i => i.BasisId == basis.Id).ToListAsync(ct);
+        var invoices = await db.Invoices.AsNoTracking().Include(i => i.Payments).Where(i => i.BasisId == basis.Id).ToListAsync(ct);
         var today = Today;
         var sourceCustomers = basis.CurrentLines
             .Where(l => l.SourceOrganizationId is { } source && source != basis.OrganizationId)
@@ -798,7 +798,8 @@ internal sealed class BillingService(
         invoice.Status,
         invoice.IsOverdue(today),
         invoice.Url,
-        invoice.SyncedAt);
+        invoice.SyncedAt,
+        invoice.Payments.OrderBy(p => p.ObservedOn).ThenBy(p => p.Id).Select(p => new InvoiceMovementDto(p.Kind, p.ObservedOn, p.Amount, p.Source)).ToList());
 
     private async Task<Dictionary<Guid, (int Organizations, int WithAnomalies, decimal Total, decimal LargestBasis)>> TotalsAsync(
         IReadOnlyCollection<Guid> runIds, CancellationToken ct)

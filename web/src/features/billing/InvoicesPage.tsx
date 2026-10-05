@@ -22,7 +22,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { formatDate, formatMoney } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useInvoicePages } from './api';
-import { InvoiceStatusBadge } from './shared';
+import { InvoiceMovements, InvoiceStatusBadge } from './shared';
 import { SavedViews } from '../../shared/views/SavedViews';
 
 const useStyles = makeStyles({
@@ -141,6 +141,7 @@ export function InvoicesPage() {
                   {canSeeMoney && (
                     <TableCell className={catalog.number}>
                       <span className={invoice.isOverdue ? styles.warn : undefined}>{formatMoney(invoice.outstanding)}</span>
+                      <InvoiceMovements movements={invoice.movements} canSeeMoney={canSeeMoney} />
                     </TableCell>
                   )}
                   <TableCell>
@@ -217,6 +218,7 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
                 {canSeeMoney && (
                   <TableCell className={catalog.number}>
                     <span className={invoice.isOverdue ? styles.warn : undefined}>{formatMoney(invoice.outstanding)}</span>
+                    <InvoiceMovements movements={invoice.movements} canSeeMoney={canSeeMoney} />
                   </TableCell>
                 )}
                 <TableCell>

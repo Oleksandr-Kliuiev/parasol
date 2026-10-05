@@ -16,7 +16,8 @@ namespace Crm.Integrations.PowerOffice;
 /// catalog products have a product code there.
 /// </summary>
 internal sealed class PowerOfficeBillingTarget(
-    ExternalLinkService links, ICatalogApi catalog, IOptions<PowerOfficeOptions> options) : IBillingTargetSystem
+    ExternalLinkService links, ICatalogApi catalog, ExternalRecordStore records, IOptions<PowerOfficeOptions> options,
+    ILogger<PowerOfficeBillingTarget> logger) : IBillingTargetSystem
 {
     public string System => PowerOfficeTypes.System;
 
@@ -32,18 +33,7 @@ internal sealed class PowerOfficeBillingTarget(
         var linkedProducts = await links.LinkedEntitiesAsync(
             EntityTypes.Product, PowerOfficeTypes.System, PowerOfficeTypes.Product, productIds, cancellationToken);
 
-        // Order lines carry the product code of Go, which is the CRM SKU by convention (docs/05 §4.2); the link only tells us
-        // the product exists there.
-        var products = await catalog.GetProductsAsync(linkedProducts.Keys.ToList(), cancellationToken);
-        var codes = new Dictionary<Guid, string>();
-        foreach (var (productId, _) in linkedProducts)
-        {
-            if (products.TryGetValue(productId, out var product))
-            {
-                codes[productId] = product.Sku;
-            }
-        }
-
+        var codes = await PowerOfficeProductCodes.ResolveAsync(linkedProducts, catalog, records, logger, cancellationToken);
         return new BillingReadiness(organizations.Keys.ToHashSet(), codes);
     }
 }
@@ -77,8 +67,17 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
     ExternalLinkService links,
     ICatalogApi catalog,
     IExternalEffectJournal journal,
-    IOptions<PowerOfficeOptions> options) : IOutboundHandler
+    ExternalRecordStore records,
+    TimeProvider time,
+    IOptions<PowerOfficeOptions> options,
+    ILogger<PowerOfficeCreateSalesOrderHandler> logger) : IOutboundHandler
 {
+    /// <summary>
+    /// How long an attempt that got no answer is given before a person is asked: the order may only become searchable a little
+    /// after the request, and the outbound queue repeats the lookup on its own backoff meanwhile.
+    /// </summary>
+    public static readonly TimeSpan UnknownOutcomeGrace = TimeSpan.FromMinutes(10);
+
     /// <summary>The journal kind of the order request itself, written right before the POST (DEV-13).</summary>
     public const string SalesOrderEffect = "sales-order";
 
@@ -122,6 +121,15 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
         if (basis.SendStarted)
         {
             // An earlier attempt may have created the order and the lookup does not show it: sending again could invoice twice.
+            // Shortly after the attempt that is the likelier explanation than a lost request, so the lookup is repeated by the
+            // outbound retry first; the send marker stays and nothing is sent. A basis whose marker has no time is old data.
+            if (basis.SendStartedAt is { } startedAt && time.GetUtcNow() - startedAt < UnknownOutcomeGrace)
+            {
+                logger.LogInformation("Sales order for basis {BasisId} not found yet; the earlier send is less than {Grace} old, looking again on the next attempt.",
+                    basis.BasisId, UnknownOutcomeGrace);
+                throw new SalesOrderOutcomeUnknownException(basis.IdempotencyKey);
+            }
+
             var message = $"An earlier send got no answer and no order with reference {basis.IdempotencyKey} was found; check PowerOffice and reconcile the basis.";
             await billing.MarkReconciliationRequiredAsync(basis.BasisId, System, message, operation.Id.ToString(), cancellationToken);
             throw new PermanentOutboundException(message);
@@ -203,12 +211,68 @@ internal sealed class PowerOfficeCreateSalesOrderHandler(
     internal static bool IsRejection(HttpStatusCode status) =>
         (int)status is >= 400 and < 500 && status is not (HttpStatusCode.RequestTimeout or HttpStatusCode.Conflict or HttpStatusCode.TooManyRequests);
 
-    private async Task<Dictionary<Guid, string>> ProductCodesAsync(ExportBasis basis, CancellationToken cancellationToken)
+    private async Task<IReadOnlyDictionary<Guid, string>> ProductCodesAsync(ExportBasis basis, CancellationToken cancellationToken)
     {
         var productIds = basis.Lines.Where(l => l.ProductId is not null).Select(l => l.ProductId!.Value).Distinct().ToList();
         var linked = await links.LinkedEntitiesAsync(EntityTypes.Product, System, PowerOfficeTypes.Product, productIds, cancellationToken);
-        var products = await catalog.GetProductsAsync(linked.Keys.ToList(), cancellationToken);
-        return products.ToDictionary(p => p.Key, p => p.Value.Sku);
+        return await PowerOfficeProductCodes.ResolveAsync(linked, catalog, records, logger, cancellationToken);
+    }
+}
+
+/// <summary>
+/// The send did not get an answer and the order is not found yet. Not permanent: the outbound queue tries again, and the lookup
+/// by reference comes first every time. The message carries the reference only.
+/// </summary>
+internal sealed class SalesOrderOutcomeUnknownException(string reference)
+    : Exception($"The outcome of the earlier send is unknown; no order with reference {reference} found yet.");
+
+/// <summary>
+/// The product code an order line carries is the one PowerOffice has on the linked product record, not the CRM SKU as it is
+/// today: renaming a SKU must not silently change what is invoiced. Without a stored record the SKU is used, as by convention
+/// (docs/05 §4.2); a record that is archived in Go is not a product to bill.
+/// </summary>
+internal static class PowerOfficeProductCodes
+{
+    public static async Task<Dictionary<Guid, string>> ResolveAsync(
+        IReadOnlyDictionary<Guid, string> linkedProducts, ICatalogApi catalog, ExternalRecordStore records, ILogger logger, CancellationToken cancellationToken)
+    {
+        var products = await catalog.GetProductsAsync(linkedProducts.Keys.ToList(), cancellationToken);
+        var codes = new Dictionary<Guid, string>();
+        foreach (var (productId, externalId) in linkedProducts)
+        {
+            if (!products.TryGetValue(productId, out var product))
+            {
+                continue;
+            }
+
+            var record = await records.FindAsync(PowerOfficeTypes.System, PowerOfficeTypes.Product, externalId, cancellationToken);
+            if (record is null)
+            {
+                codes[productId] = product.Sku;
+                continue;
+            }
+
+            if (record.IsGone)
+            {
+                continue;
+            }
+
+            var code = ExternalRecordStore.Read<PoProduct>(record)?.Code;
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                codes[productId] = product.Sku;
+                continue;
+            }
+
+            if (!string.Equals(code, product.Sku, StringComparison.Ordinal))
+            {
+                logger.LogWarning("CRM product {ProductId} has SKU that differs from the code of its linked PowerOffice product {ExternalId}; the PowerOffice code is used.", productId, externalId);
+            }
+
+            codes[productId] = code;
+        }
+
+        return codes;
     }
 }
 
@@ -239,7 +303,7 @@ public sealed class PowerOfficeInvoiceSyncJob(
             var since = PowerOfficeCursor.Parse(await runner.GetCursorAsync(PowerOfficeTypes.System, Stream, ct));
             var newest = since;
             var invoices = new List<ExternalInvoice>();
-            await foreach (var invoice in client.GetOutgoingInvoicesAsync(since, ct))
+            await foreach (var invoice in client.GetOutgoingInvoicesAsync(PowerOfficeCursor.ReadFrom(since), ct))
             {
                 progress.Read++;
                 if (invoice.LastChangedDateTimeOffset is { } changed && (newest is null || changed > newest))

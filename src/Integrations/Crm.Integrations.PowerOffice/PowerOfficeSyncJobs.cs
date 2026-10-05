@@ -38,7 +38,7 @@ public sealed class PowerOfficeCustomerSyncJob(
             IOrganizationMatcher? matcher = null;
             int autoLinked = 0, billingUpdates = 0;
 
-            await foreach (var customer in client.GetCustomersAsync(since, ct))
+            await foreach (var customer in client.GetCustomersAsync(PowerOfficeCursor.ReadFrom(since), ct))
             {
                 progress.Read++;
                 newest = newest is null || customer.LastChangedDateTimeOffset > newest ? customer.LastChangedDateTimeOffset : newest;
@@ -103,7 +103,7 @@ public sealed class PowerOfficeContactPersonSyncJob(
             var since = PowerOfficeCursor.Parse(await runner.GetCursorAsync(PowerOfficeTypes.System, Stream, ct));
             var newest = since;
             var changed = new List<(string ExternalId, string? Email)>();
-            await foreach (var person in client.GetContactPersonsAsync(since, ct))
+            await foreach (var person in client.GetContactPersonsAsync(PowerOfficeCursor.ReadFrom(since), ct))
             {
                 progress.Read++;
                 newest = newest is null || person.LastChangedDateTimeOffset > newest ? person.LastChangedDateTimeOffset : newest;
@@ -156,7 +156,7 @@ public sealed class PowerOfficeProductSyncJob(
         {
             var since = PowerOfficeCursor.Parse(await runner.GetCursorAsync(PowerOfficeTypes.System, Stream, ct));
             var newest = since;
-            await foreach (var product in client.GetProductsAsync(since, ct))
+            await foreach (var product in client.GetProductsAsync(PowerOfficeCursor.ReadFrom(since), ct))
             {
                 progress.Read++;
                 newest = newest is null || product.LastChangedDateTimeOffset > newest ? product.LastChangedDateTimeOffset : newest;
@@ -176,6 +176,16 @@ internal static class PowerOfficeCursor
 {
     public static DateTimeOffset? Parse(string? value) =>
         DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed) ? parsed : null;
+
+    /// <summary>
+    /// A record changed while a page was being read, or stamped by a clock slightly behind, can carry a change time just below
+    /// the stored cursor. Reading from a little earlier re-reads those records; upserts are hash-idempotent, so a record seen
+    /// twice is stored once and counted as changed only when its content differs.
+    /// </summary>
+    public static readonly TimeSpan Overlap = TimeSpan.FromMinutes(5);
+
+    /// <summary>Where a read starts for a stored cursor: the cursor minus <see cref="Overlap"/>; everything when there is none.</summary>
+    public static DateTimeOffset? ReadFrom(DateTimeOffset? cursor) => cursor?.Subtract(Overlap);
 
     public static string? Format(DateTimeOffset? value) => value?.ToString("O", CultureInfo.InvariantCulture);
 }

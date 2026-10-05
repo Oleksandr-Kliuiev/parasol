@@ -29,6 +29,15 @@ public sealed class PartnerCenterOptions
 
     public int PageSize { get; set; } = 200;
 
+    /// <summary>One attempt, a page of customers included; the standard 10 s is too short for a partner with thousands of customers.</summary>
+    public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>One call with its retries; must stay below the HTTP client's own timeout, which follows it.</summary>
+    public TimeSpan TotalTimeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>Pause before the first repeat of a throttled or failed read.</summary>
+    public TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(2);
+
     public string CustomerSyncCron { get; set; } = "40 2 * * *";
 
     /// <summary>Subscriptions every four hours (docs/05 §0).</summary>

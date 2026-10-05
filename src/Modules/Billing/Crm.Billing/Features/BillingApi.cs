@@ -41,7 +41,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
         var runs = await RunsOfAsync([basis], cancellationToken);
         var codes = await ProductCodesAsync([basis], cancellationToken);
         var checkedAt = await LastReconciledAsync(basis.Id, cancellationToken);
-        return ToExport(basis, runs[basis.RunId], codes) with { CheckedAt = checkedAt };
+        return ToExport(basis, runs[basis.RunId], codes) with { CheckedAt = checkedAt, SendStartedAt = basis.SendStartedAt };
     }
 
     /// <summary>When Finance last reconciled the basis with the accounting system; attempts before it are settled (DEV-13).</summary>
