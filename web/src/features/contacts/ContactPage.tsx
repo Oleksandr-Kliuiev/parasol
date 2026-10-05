@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Badge,
@@ -6,7 +6,6 @@ import {
   Field,
   Input,
   MessageBar,
-  MessageBarActions,
   MessageBarBody,
   Spinner,
   Table,
@@ -19,13 +18,17 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '../../api/client';
+import { api, ApiError } from '../../api/client';
 import type { Contact } from '../../api/types';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { errorMessage } from '../../shared/utils/errors';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { ConflictBar } from '../../shared/forms/ConflictBar';
+import { UnsavedChangesDialog } from '../../shared/forms/UnsavedChangesDialog';
+import { useConflictFlow } from '../../shared/forms/useConflictFlow';
+import { useUnsavedChanges } from '../../shared/forms/useUnsavedChanges';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { blankToNull } from '../../shared/utils/format';
@@ -34,8 +37,8 @@ import { NotFoundPage } from '../errors/NotFoundPage';
 import { useContact, useUpdateContactPerson } from './api';
 
 const useStyles = makeStyles({
-  layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
   actions: { display: 'flex', justifyContent: 'flex-end', marginTop: tokens.spacingVerticalM },
   tableWrap: { overflowX: 'auto' },
 });
@@ -58,6 +61,8 @@ export function ContactPage() {
   const navigate = useNavigate();
   const canPrivacy = useCan(Permissions.privacyManage);
   const { data, error, isPending, refetch } = useContact(id);
+  // "Keep my changes" after a conflict: the draft laid over the latest version, applied once the form is rebuilt from it.
+  const [carried, setCarried] = useState<PersonValues | null>(null);
 
   if (isPending) return <Spinner label={t('common.loading')} />;
   if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
@@ -83,7 +88,20 @@ export function ContactPage() {
       />
       <div className={styles.layout}>
         {/* Remounts with fresh values whenever a save or reload produces a new version. */}
-        <PersonForm key={data.etag ?? contact.id} contact={contact} etag={data.etag} onReload={() => void refetch()} />
+        <PersonForm
+          key={data.etag ?? contact.id}
+          contact={contact}
+          etag={data.etag}
+          carried={carried}
+          onReload={() => {
+            setCarried(null);
+            void refetch();
+          }}
+          onKeepMine={(values) => {
+            setCarried(values);
+            void refetch();
+          }}
+        />
 
         <Panel title={t('contacts.affiliations')}>
           <div className={styles.tableWrap}>
@@ -128,13 +146,31 @@ export function ContactPage() {
   );
 }
 
-function PersonForm({ contact, etag, onReload }: { contact: Contact; etag: string | null; onReload: () => void }) {
+interface PersonFormProps {
+  contact: Contact;
+  etag: string | null;
+  carried: PersonValues | null;
+  onReload: () => void;
+  onKeepMine: (values: PersonValues) => void;
+}
+
+function PersonForm({ contact, etag, carried, onReload, onKeepMine }: PersonFormProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const update = useUpdateContactPerson(contact.id);
   const canWrite = useCan(Permissions.contactsWrite);
-  const [current, setValues] = useState<PersonValues>(() => toValues(contact));
+  const base = useMemo(() => toValues(contact), [contact]);
+  const [current, setValues] = useState<PersonValues>(carried ?? base);
+  const { blocker } = useUnsavedChanges(JSON.stringify(current) !== JSON.stringify(base));
+  const conflictError = update.error instanceof ApiError && update.error.status === 412 ? update.error : null;
+  const conflictFlow = useConflictFlow<PersonValues>({
+    conflict: conflictError,
+    base,
+    getMine: () => current,
+    readLatest: async () => toValues((await api.get<Contact>(`/api/v1/customers/contacts/${contact.id}`)).data),
+    labelOf: (path) => t(`contacts.fields.${path}`),
+  });
 
   const save = async () => {
     try {
@@ -156,26 +192,29 @@ function PersonForm({ contact, etag, onReload }: { contact: Contact; etag: strin
   };
 
   const duplicate = update.error instanceof ApiError && update.error.code === 'CUS_DUPLICATE_CONTACT_EMAIL';
-  const conflict = update.error instanceof ApiError && update.error.status === 412;
+  const conflict = conflictError !== null;
 
   return (
         <Panel title={t('contacts.person')}>
-          {update.error && (
+          <UnsavedChangesDialog blocker={blocker} />
+          {conflict && (
+            <ConflictBar
+              details={conflictFlow.details}
+              onUseLatest={() => {
+                update.reset();
+                onReload();
+              }}
+              onKeepMine={() => {
+                const rebased = conflictFlow.keepMine();
+                if (!rebased) return;
+                update.reset();
+                onKeepMine(rebased);
+              }}
+            />
+          )}
+          {update.error && !conflict && (
             <MessageBar intent="error" style={{ marginBottom: 12 }}>
               <MessageBarBody>{duplicate ? t('contacts.duplicateEmail') : errorMessage(update.error, t)}</MessageBarBody>
-              {conflict && (
-                <MessageBarActions>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      update.reset();
-                      onReload();
-                    }}
-                  >
-                    {t('common.reload')}
-                  </Button>
-                </MessageBarActions>
-              )}
             </MessageBar>
           )}
           <form

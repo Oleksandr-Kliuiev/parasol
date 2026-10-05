@@ -62,14 +62,14 @@ import type { BasisLine } from './types';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   total: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
   muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   anomaly: { display: 'flex', gap: tokens.spacingHorizontalS, alignItems: 'flex-start', color: tokens.colorPaletteDarkOrangeForeground1 },
   list: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
   group: { fontWeight: tokens.fontWeightSemibold, backgroundColor: tokens.colorNeutralBackground2 },
   actions: { display: 'flex', gap: tokens.spacingHorizontalXS },
-  dialogGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: tokens.spacingHorizontalM },
+  dialogGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: tokens.spacingHorizontalM },
   wide: { gridColumn: '1 / -1' },
   excluded: { textDecorationLine: 'line-through', color: tokens.colorNeutralForeground3 },
   conflict: { display: 'flex', gap: tokens.spacingHorizontalXS, alignItems: 'flex-start', color: tokens.colorPaletteDarkOrangeForeground1, fontSize: tokens.fontSizeBase200 },

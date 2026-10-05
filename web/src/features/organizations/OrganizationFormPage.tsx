@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Controller, useForm, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,7 +11,6 @@ import {
   MessageBar,
   MessageBarActions,
   MessageBarBody,
-  MessageBarTitle,
   Option,
   Spinner,
   Switch,
@@ -19,12 +18,16 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '../../api/client';
+import { api, ApiError } from '../../api/client';
 import { organizationStatuses, type Address, type Organization, type OrganizationRequest, type RegistryOrganization, type RegistryStatus } from '../../api/types';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { errorMessage } from '../../shared/utils/errors';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
+import { ConflictBar } from '../../shared/forms/ConflictBar';
+import { useConflictFlow } from '../../shared/forms/useConflictFlow';
+import { UnsavedChangesDialog } from '../../shared/forms/UnsavedChangesDialog';
+import { useUnsavedChanges } from '../../shared/forms/useUnsavedChanges';
 import { UserPicker } from '../../shared/components/UserPicker';
 import { useNotify } from '../../shared/components/useNotify';
 import { blankToNull } from '../../shared/utils/format';
@@ -45,7 +48,7 @@ const useStyles = makeStyles({
   sections: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
     gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
   },
   wide: { gridColumn: '1 / -1' },
@@ -177,6 +180,8 @@ export function OrganizationFormPage() {
   const { t } = useTranslation();
   const { id } = useParams();
   const existing = useOrganization(id);
+  // "Keep my changes" after a conflict: the draft laid over the latest version, applied once the form is rebuilt from it.
+  const [carried, setCarried] = useState<FormValues | null>(null);
 
   if (id && existing.error) return <ErrorState error={existing.error} onRetry={() => void existing.refetch()} />;
   if (id && !existing.data) return <Spinner label={t('common.loading')} />;
@@ -188,7 +193,15 @@ export function OrganizationFormPage() {
       id={id}
       initial={existing.data?.data}
       etag={existing.data?.etag ?? null}
-      onReload={() => void existing.refetch()}
+      carried={carried}
+      onReload={() => {
+        setCarried(null);
+        void existing.refetch();
+      }}
+      onKeepMine={(values) => {
+        setCarried(values);
+        void existing.refetch();
+      }}
     />
   );
 }
@@ -197,10 +210,12 @@ interface OrganizationFormProps {
   id: string | undefined;
   initial: Organization | undefined;
   etag: string | null;
+  carried: FormValues | null;
   onReload: () => void;
+  onKeepMine: (values: FormValues) => void;
 }
 
-function OrganizationForm({ id, initial, etag, onReload }: OrganizationFormProps) {
+function OrganizationForm({ id, initial, etag, carried, onReload, onKeepMine }: OrganizationFormProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -218,8 +233,26 @@ function OrganizationForm({ id, initial, etag, onReload }: OrganizationFormProps
     handleSubmit,
     setError,
     setValue,
-    formState: { errors, isSubmitting },
+    getValues,
+    reset,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: initial ? toFormValues(initial) : defaults, mode: 'onBlur' });
+
+  const base = useMemo(() => (initial ? toFormValues(initial) : defaults), [initial]);
+  const { blocker, markSaved } = useUnsavedChanges(isDirty);
+  useEffect(() => {
+    if (carried) reset(carried, { keepDefaultValues: true });
+    // Only when the form is rebuilt from the latest version.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const conflictState = save.error instanceof ApiError && save.error.status === 412;
+  const conflictFlow = useConflictFlow<FormValues>({
+    conflict: conflictState ? save.error : null,
+    base,
+    getMine: () => getValues(),
+    readLatest: async () => toFormValues((await api.get<Organization>(`/api/v1/customers/organizations/${id}`)).data),
+    labelOf: (path) => t(`organizations.fields.${path.split('.')[0]}`),
+  });
 
   const applyRegistry = (r: RegistryOrganization) => {
     const opts = { shouldDirty: true, shouldValidate: true } as const;
@@ -242,6 +275,7 @@ function OrganizationForm({ id, initial, etag, onReload }: OrganizationFormProps
     try {
       const response = await save.mutateAsync({ request: toRequest(values), etag });
       notify(isEdit ? t('organizations.form.saved') : t('organizations.form.created'));
+      markSaved();
       navigate(`/organizations/${response.data.id}`);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'CUS_DUPLICATE_ORGNR') {
@@ -288,13 +322,14 @@ function OrganizationForm({ id, initial, etag, onReload }: OrganizationFormProps
     />
   );
 
-  const concurrencyConflict = save.error instanceof ApiError && save.error.status === 412;
+  const concurrencyConflict = conflictState;
   const otherError = save.error && !(save.error instanceof ApiError && [400, 409, 412].includes(save.error.status));
   const title = isEdit ? t('organizations.form.editTitle', { name: initial?.name }) : t('organizations.form.createTitle');
   const cancelTo = isEdit ? `/organizations/${id}` : '/organizations';
 
   return (
     <>
+      <UnsavedChangesDialog blocker={blocker} />
       <PageHeader title={title} back={{ to: cancelTo, label: t('common.back') }} />
       <div className={styles.messages} aria-live="polite">
         {duplicateId && (
@@ -313,23 +348,19 @@ function OrganizationForm({ id, initial, etag, onReload }: OrganizationFormProps
           </MessageBar>
         )}
         {concurrencyConflict && (
-          <MessageBar intent="error" layout="multiline">
-            <MessageBarBody>
-              <MessageBarTitle>{t('errors.generic')}</MessageBarTitle>
-              {t('errors.concurrency')}
-            </MessageBarBody>
-            <MessageBarActions>
-              <Button
-                size="small"
-                onClick={() => {
-                  save.reset();
-                  onReload();
-                }}
-              >
-                {t('common.reload')}
-              </Button>
-            </MessageBarActions>
-          </MessageBar>
+          <ConflictBar
+            details={conflictFlow.details}
+            onUseLatest={() => {
+              save.reset();
+              onReload();
+            }}
+            onKeepMine={() => {
+              const values = conflictFlow.keepMine();
+              if (!values) return;
+              save.reset();
+              onKeepMine(values);
+            }}
+          />
         )}
         {otherError && (
           <MessageBar intent="error">

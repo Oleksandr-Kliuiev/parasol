@@ -601,7 +601,7 @@
       "external_gates": [
         "EXT-10"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-18.md",
       "evidence_file": "evidence/DEV-18.md",
       "acceptance_ids": [

@@ -4,7 +4,7 @@ import { makeStyles, tokens } from '@fluentui/react-components';
 export const useCatalogStyles = makeStyles({
   tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
-  search: { width: '320px', maxWidth: '100%' },
+  search: { width: '100%', maxWidth: '320px' },
   tableWrap: {
     overflowX: 'auto',
     backgroundColor: tokens.colorNeutralBackground1,
@@ -28,6 +28,6 @@ export const useCatalogStyles = makeStyles({
     borderRadius: tokens.borderRadiusLarge,
   },
   cardMeta: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalS, color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
   wide: { gridColumn: '1 / -1' },
 });

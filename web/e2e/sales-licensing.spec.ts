@@ -40,7 +40,9 @@ test('a lead becomes a customer with a deal, and the deal is won', { tag: '@crit
   await activity.getByRole('textbox', { name: 'Subject' }).fill(`${m} Oppfølgingssamtale`);
   await activity.getByRole('button', { name: 'Log activity' }).click();
   await expect(toast(page, 'Activity logged')).toBeVisible();
-  await expect(page.getByText(`${m} Oppfølgingssamtale`)).toBeVisible();
+  // The deal shows the logged task both as its next step (DEV-18) and in the timeline.
+  await expect(page.getByRole('region', { name: 'Next step' })).toContainText(`${m} Oppfølgingssamtale`);
+  await expect(page.getByRole('listitem').filter({ hasText: `${m} Oppfølgingssamtale` })).toBeVisible();
 
   await page.getByRole('button', { name: 'Mark as won' }).click();
   await expect(toast(page, 'Deal won')).toBeVisible();

@@ -35,7 +35,7 @@ import { useProduct, useProductActions } from './api';
 
 const useStyles = makeStyles({
   tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   sku: { fontFamily: tokens.fontFamilyMonospace, color: tokens.colorNeutralForeground3 },
   components: { margin: 0, paddingInlineStart: tokens.spacingHorizontalL },
 });

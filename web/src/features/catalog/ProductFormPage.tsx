@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Button,
@@ -6,7 +6,6 @@ import {
   Field,
   Input,
   MessageBar,
-  MessageBarActions,
   MessageBarBody,
   Option,
   Spinner,
@@ -16,11 +15,15 @@ import {
 } from '@fluentui/react-components';
 import { Delete20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '../../api/client';
+import { api, ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
+import { ConflictBar } from '../../shared/forms/ConflictBar';
+import { UnsavedChangesDialog } from '../../shared/forms/UnsavedChangesDialog';
+import { useConflictFlow } from '../../shared/forms/useConflictFlow';
+import { useUnsavedChanges } from '../../shared/forms/useUnsavedChanges';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { blankToNull, parseDecimal } from '../../shared/utils/format';
@@ -44,7 +47,7 @@ import {
 
 const useStyles = makeStyles({
   sections: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL, maxWidth: '960px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
   wide: { gridColumn: '1 / -1' },
   actions: { display: 'flex', gap: tokens.spacingHorizontalS, justifyContent: 'flex-end' },
   component: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 120px auto', gap: tokens.spacingHorizontalS, alignItems: 'end' },
@@ -55,9 +58,27 @@ export function ProductFormPage() {
   const { t } = useTranslation();
   const { id } = useParams();
   const existing = useProduct(id);
+  // "Keep my changes" after a conflict: the draft laid over the latest version, applied once the form is rebuilt from it.
+  const [carried, setCarried] = useState<ProductDraft | null>(null);
   if (id && existing.error) return <ErrorState error={existing.error} onRetry={() => void existing.refetch()} />;
   if (id && !existing.data) return <Spinner label={t('common.loading')} />;
-  return <ProductForm key={existing.data?.etag ?? 'new'} id={id} initial={existing.data?.data} etag={existing.data?.etag ?? null} onReload={() => void existing.refetch()} />;
+  return (
+    <ProductForm
+      key={existing.data?.etag ?? 'new'}
+      id={id}
+      initial={existing.data?.data}
+      etag={existing.data?.etag ?? null}
+      carried={carried}
+      onReload={() => {
+        setCarried(null);
+        void existing.refetch();
+      }}
+      onKeepMine={(draft) => {
+        setCarried(draft);
+        void existing.refetch();
+      }}
+    />
+  );
 }
 
 interface ComponentRow {
@@ -66,40 +87,71 @@ interface ComponentRow {
   quantity: string;
 }
 
-function ProductForm({ id, initial, etag, onReload }: { id?: string; initial?: Product; etag: string | null; onReload: () => void }) {
+function draftOf(initial: Product | undefined) {
+  return {
+    values: {
+      sku: initial?.sku ?? '',
+      name: initial?.name ?? '',
+      nameEn: initial?.nameEn ?? '',
+      description: initial?.description ?? '',
+      type: (initial?.type ?? 'ManagedService') as ProductType,
+      businessLine: (initial?.businessLine ?? 'Atera') as BusinessLine,
+      unit: (initial?.unit ?? 'Device') as ProductUnit,
+      billingPeriod: (initial?.billingPeriod ?? 'Monthly') as BillingPeriod,
+      vatRate: String(initial?.vatRate ?? 25),
+      listPrice: initial ? String(initial.listPrice) : '',
+      unitCost: initial?.unitCost != null ? String(initial.unitCost) : '',
+      microsoftOfferId: initial?.microsoftOfferId ?? '',
+      commitmentTerm: (initial?.commitmentTerm ?? 'P1Y') as CommitmentTerm,
+      ateraWorkType: initial?.ateraWorkType ?? '',
+      revenueAccount: initial?.revenueAccount ?? '',
+    },
+    components: (initial?.components ?? []).map(
+      (c, i): ComponentRow => ({
+        key: i,
+        quantity: String(c.quantity),
+        product: { id: c.productId, sku: c.sku ?? '', name: c.name ?? '', type: 'ManagedService', businessLine: 'Other', unit: 'Piece', billingPeriod: 'Monthly', listPrice: 0, currency: 'NOK', isActive: true },
+      }),
+    ),
+  };
+}
+
+type ProductDraft = ReturnType<typeof draftOf>;
+
+interface ProductFormProps {
+  id?: string;
+  initial?: Product;
+  etag: string | null;
+  carried: ProductDraft | null;
+  onReload: () => void;
+  onKeepMine: (draft: ProductDraft) => void;
+}
+
+function ProductForm({ id, initial, etag, carried, onReload, onKeepMine }: ProductFormProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const notify = useNotify();
   const save = useSaveProduct(id);
   const canSeeCost = useCan(Permissions.financeCostRead);
-  const [values, setValues] = useState({
-    sku: initial?.sku ?? '',
-    name: initial?.name ?? '',
-    nameEn: initial?.nameEn ?? '',
-    description: initial?.description ?? '',
-    type: (initial?.type ?? 'ManagedService') as ProductType,
-    businessLine: (initial?.businessLine ?? 'Atera') as BusinessLine,
-    unit: (initial?.unit ?? 'Device') as ProductUnit,
-    billingPeriod: (initial?.billingPeriod ?? 'Monthly') as BillingPeriod,
-    vatRate: String(initial?.vatRate ?? 25),
-    listPrice: initial ? String(initial.listPrice) : '',
-    unitCost: initial?.unitCost != null ? String(initial.unitCost) : '',
-    microsoftOfferId: initial?.microsoftOfferId ?? '',
-    commitmentTerm: (initial?.commitmentTerm ?? 'P1Y') as CommitmentTerm,
-    ateraWorkType: initial?.ateraWorkType ?? '',
-    revenueAccount: initial?.revenueAccount ?? '',
-  });
-  const [components, setComponents] = useState<ComponentRow[]>(
-    (initial?.components ?? []).map((c, i) => ({
-      key: i,
-      quantity: String(c.quantity),
-      product: { id: c.productId, sku: c.sku ?? '', name: c.name ?? '', type: 'ManagedService', businessLine: 'Other', unit: 'Piece', billingPeriod: 'Monthly', listPrice: 0, currency: 'NOK', isActive: true },
-    })),
-  );
+  const base = useMemo(() => draftOf(initial), [initial]);
+  const start = carried ?? base;
+  const [values, setValues] = useState(start.values);
+  const [components, setComponents] = useState<ComponentRow[]>(start.components);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const set = <K extends keyof typeof values>(key: K, value: (typeof values)[K]) => setValues((v) => ({ ...v, [key]: value }));
+
+  const draft: ProductDraft = { values, components };
+  const { blocker, markSaved } = useUnsavedChanges(JSON.stringify(draft) !== JSON.stringify(base));
+  const conflictError = save.error instanceof ApiError && save.error.status === 412 ? save.error : null;
+  const conflictFlow = useConflictFlow<ProductDraft>({
+    conflict: conflictError,
+    base,
+    getMine: () => draft,
+    readLatest: async () => draftOf((await api.get<Product>(`/api/v1/catalog/products/${id}`)).data),
+    labelOf: (path) => (path.startsWith('values.') ? t(`catalog.fields.${path.split('.')[1]}`) : t('catalog.sections.bundle')),
+  });
 
   const submit = async () => {
     const next: Record<string, string> = {};
@@ -139,6 +191,7 @@ function ProductForm({ id, initial, etag, onReload }: { id?: string; initial?: P
         },
       });
       notify(id ? t('catalog.form.saved') : t('catalog.form.created'));
+      markSaved();
       navigate(`/catalog/products/${response.data.id}`);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'CAT_DUPLICATE_SKU') setErrors({ sku: t('catalog.form.duplicateSku') });
@@ -170,17 +223,23 @@ function ProductForm({ id, initial, etag, onReload }: { id?: string; initial?: P
 
   return (
     <>
+      <UnsavedChangesDialog blocker={blocker} />
       <PageHeader title={id ? t('catalog.form.editTitle', { name: initial?.name }) : t('catalog.products.new')} back={{ to: cancelTo, label: t('common.back') }} />
       <div className={styles.messages} aria-live="polite">
         {conflict && (
-          <MessageBar intent="error">
-            <MessageBarBody>{t('errors.concurrency')}</MessageBarBody>
-            <MessageBarActions>
-              <Button size="small" onClick={() => { save.reset(); onReload(); }}>
-                {t('common.reload')}
-              </Button>
-            </MessageBarActions>
-          </MessageBar>
+          <ConflictBar
+            details={conflictFlow.details}
+            onUseLatest={() => {
+              save.reset();
+              onReload();
+            }}
+            onKeepMine={() => {
+              const rebased = conflictFlow.keepMine();
+              if (!rebased) return;
+              save.reset();
+              onKeepMine(rebased);
+            }}
+          />
         )}
         {otherError && (
           <MessageBar intent="error">

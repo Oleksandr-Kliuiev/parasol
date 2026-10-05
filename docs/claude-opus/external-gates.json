@@ -156,10 +156,12 @@
       "title": "UAT и полный месячный параллельный биллинг",
       "required_owner_roles": "PO / users / Finance",
       "owner": "",
-      "status": "not_run",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-18.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "PO / пользователи / Finance должны назначить владельца и провести UAT по ролям (Sales, Technician, ServiceLead, Finance) без подсказок разработчика, ручную проверку со скринридером и реальными Safari/iOS/Android. Локальные Playwright-сценарии и автоматические проверки WCAG 2.2 не заменяют UAT. Месячный параллельный биллинг (DEV-22/23) здесь отдельно.",
       "tasks": [
         "DEV-18",
         "DEV-22",

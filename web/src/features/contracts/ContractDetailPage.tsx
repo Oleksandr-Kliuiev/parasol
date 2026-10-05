@@ -53,7 +53,7 @@ import type { Contract, ContractLine } from './types';
 
 const useStyles = makeStyles({
   tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
   value: { fontSize: tokens.fontSizeHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums', lineHeight: tokens.lineHeightHero700 },
   lineTools: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },

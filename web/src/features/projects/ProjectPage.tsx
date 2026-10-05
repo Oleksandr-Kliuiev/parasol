@@ -55,7 +55,7 @@ import { useProject, useProjectActions } from './api';
 import { phaseStatuses, projectStatuses, taskStatuses, type Project, type ProjectPhase, type ProjectPhaseStatus, type ProjectTask, type ProjectTaskStatus } from './types';
 
 const useStyles = makeStyles({
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
+  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
   tile: {
     display: 'flex',
     flexDirection: 'column',

@@ -46,7 +46,7 @@ import type { LegacyCharge } from './types';
 
 const useStyles = makeStyles({
   period: { fontWeight: tokens.fontWeightSemibold },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: tokens.spacingHorizontalM },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: tokens.spacingHorizontalM },
   kind: { marginInlineStart: tokens.spacingHorizontalS },
   legacy: { marginBottom: tokens.spacingVerticalL },
   hint: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, margin: `${tokens.spacingVerticalXS} 0 0` },

@@ -23,9 +23,10 @@ import { formatDate, formatMoney } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useInvoicePages } from './api';
 import { InvoiceStatusBadge } from './shared';
+import { SavedViews } from '../../shared/views/SavedViews';
 
 const useStyles = makeStyles({
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
+  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
   tile: {
     display: 'flex',
     flexDirection: 'column',
@@ -66,6 +67,9 @@ export function InvoicesPage() {
   return (
     <>
       <PageHeader title={t('invoices.title')} subtitle={t('invoices.subtitle')} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+        <SavedViews scope="invoices" keys={['open', 'overdue']} />
+      </div>
 
       {canSeeMoney && (
         <div className={styles.tiles}>

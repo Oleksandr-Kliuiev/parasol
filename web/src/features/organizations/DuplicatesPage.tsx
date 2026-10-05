@@ -59,7 +59,7 @@ const useStyles = makeStyles({
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   badges: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS },
-  sides: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' },
+  sides: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))' },
   side: {
     display: 'flex',
     flexDirection: 'column',

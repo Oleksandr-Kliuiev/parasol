@@ -32,6 +32,7 @@ import { type OpportunityFilters, fetchOpportunityPage, useOpportunityActions, u
 import { LoseDialog, OpportunityDialog } from './OpportunityDialog';
 import type { Opportunity } from './types';
 import type { ReactNode } from 'react';
+import { SavedViews } from '../../shared/views/SavedViews';
 
 const useStyles = makeStyles({
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -180,6 +181,9 @@ export function PipelinePage() {
           )
         }
       />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+        <SavedViews scope="pipeline" keys={['mine', 'stale']} />
+      </div>
       <div className={styles.filters}>
         <SearchBox
           id="pipeline-search"

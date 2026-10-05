@@ -34,6 +34,7 @@ import { errorMessage } from '../../shared/utils/errors';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { NARROW_SCREEN, useMediaQuery } from '../../shared/utils/useMediaQuery';
 import { useOrganizations } from './api';
+import { SavedViews } from '../../shared/views/SavedViews';
 
 const useStyles = makeStyles({
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -158,6 +159,7 @@ export function OrganizationsPage() {
             ))}
           </Dropdown>
         </Field>
+        <SavedViews scope="organizations" keys={['search', 'status']} />
       </div>
 
       {error ? (

@@ -10,7 +10,9 @@ import {
   DialogSurface,
   DialogTitle,
   MessageBar,
+  MessageBarActions,
   MessageBarBody,
+  MessageBarTitle,
   SearchBox,
   Spinner,
   Switch,
@@ -45,7 +47,7 @@ import { monthLabel } from './period';
 import type { Approval, Run } from './types';
 
 const useStyles = makeStyles({
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
+  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
   tile: {
     display: 'flex',
     flexDirection: 'column',
@@ -81,7 +83,7 @@ export function BillingRunPage() {
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const anomaliesOnly = params.get('anomalies') === 'true';
-  const { data: run, error, isPending, isFetching, refetch } = useRun(id);
+  const { data: run, error, isPending, isFetching, refetch, dataUpdatedAt } = useRun(id);
   const settings = useBillingSettings();
   const bases = useBases(id, { anomaliesOnly, search: search.trim() });
   const actions = useRunActions(id);
@@ -90,7 +92,8 @@ export function BillingRunPage() {
 
   if (isPending) return <Spinner label={t('common.loading')} />;
   if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
-  if (error || !run) return <ErrorState error={error} onRetry={() => void refetch()} />;
+  // A failed refresh keeps the run on screen: a long export must not turn into an error page because one poll failed.
+  if (!run) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
   const act = async (action: () => Promise<unknown>, message: string) => {
     try {
@@ -203,6 +206,32 @@ export function BillingRunPage() {
         }
       />
 
+      {run.status === 'Exporting' && (
+        <MessageBar intent="info" layout="multiline" role="status" style={{ marginBottom: tokens.spacingVerticalM }}>
+          <MessageBarBody>
+            <MessageBarTitle>{t('billing.exportProgress.title')}</MessageBarTitle>
+            {t('billing.exportProgress.body', { exported: run.exported, failed: run.failed, total: run.organizations })}{' '}
+            {t('billing.exportProgress.updated', { time: new Date(dataUpdatedAt).toLocaleTimeString(i18n.language, { timeZone: 'Europe/Oslo' }) })}
+          </MessageBarBody>
+          <MessageBarActions>
+            <Button size="small" disabled={isFetching} onClick={() => void refetch()}>
+              {t('billing.exportProgress.refresh')}
+            </Button>
+          </MessageBarActions>
+        </MessageBar>
+      )}
+      {error && (
+        <MessageBar intent="warning" layout="multiline" role="status" style={{ marginBottom: tokens.spacingVerticalM }}>
+          <MessageBarBody>
+            {t('billing.refreshFailed', { time: new Date(dataUpdatedAt).toLocaleTimeString(i18n.language, { timeZone: 'Europe/Oslo' }), reason: errorMessage(error, t) })}
+          </MessageBarBody>
+          <MessageBarActions>
+            <Button size="small" onClick={() => void refetch()}>
+              {t('common.retry')}
+            </Button>
+          </MessageBarActions>
+        </MessageBar>
+      )}
       {blockedByConflicts && (
         <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
           <MessageBarBody>{t('billing.conflictsBanner', { count: run.conflicts })}</MessageBarBody>

@@ -108,12 +108,12 @@ DEV-17-AC03,DEV-17,"Пользователь без финансового до�
 DEV-17-AC04,DEV-17,Массовый replay проверяет каждую запись и повторное нажатие; есть результаты по элементам и аудит.,"Q1,Q2,Q3,Q4",pass,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt,2026-10-04
 DEV-17-AC05,DEV-17,"У alerts определены severity, suppression/recovery и адресат; без реального адресата внешняя часть не считается принятой.","Q1,Q2,Q3,Q4",blocked,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt; EXT-01: real owners/recipients and Fired/Resolved delivery pending; runbook 15,2026-10-04
 DEV-17-AC06,DEV-17,Проверена деградация одной системы при продолжающейся работе независимых функций CRM.,"Q1,Q2,Q3,Q4",pass,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt,2026-10-04
-DEV-18-AC01,DEV-18,Сотрудник каждой роли завершает основной сценарий без подсказки разработчика на UAT.,"Q3,Q5",not_run,,
-DEV-18-AC02,DEV-18,Keyboard-only пользователь создаёт/исправляет запись и закрывает диалог с возвратом фокуса; ошибки объявляются assistive technology.,"Q3,Q5",not_run,,
-DEV-18-AC03,DEV-18,Долгий export показывает актуальное состояние и действия; двойное нажатие не создаёт вторую операцию.,"Q3,Q5",not_run,,
-DEV-18-AC04,DEV-18,412 предлагает перечитать и сопоставить изменения; не выполняется молчаливый overwrite.,"Q3,Q5",not_run,,
-DEV-18-AC05,DEV-18,На 360px и увеличении масштаба не теряются управляющие элементы; полная проверка WCAG не сведена к axe serious=0.,"Q3,Q5",not_run,,
-DEV-18-AC06,DEV-18,Первая загрузка остаётся ≤300 КБ gzip по принятому инструменту; новые строки есть во всех трёх локалях.,"Q3,Q5",not_run,,
+DEV-18-AC01,DEV-18,Сотрудник каждой роли завершает основной сценарий без подсказки разработчика на UAT.,"Q3,Q5",blocked,evidence/DEV-18.md; evidence/DEV-18/e2e.txt; EXT-10: UAT by role users pending (owner not assigned); scripted role scenarios pass,2026-10-05
+DEV-18-AC02,DEV-18,Keyboard-only пользователь создаёт/исправляет запись и закрывает диалог с возвратом фокуса; ошибки объявляются assistive technology.,"Q3,Q5",pass,evidence/DEV-18.md; evidence/DEV-18/e2e.txt (daily-workflows.spec keyboard/unsaved/validation); Safari/Firefox by hand and assistive technology: EXT-10,2026-10-05
+DEV-18-AC03,DEV-18,Долгий export показывает актуальное состояние и действия; двойное нажатие не создаёт вторую операцию.,"Q3,Q5",pass,"evidence/DEV-18.md; evidence/DEV-18/e2e.txt (daily-workflows.spec long export, double click)",2026-10-05
+DEV-18-AC04,DEV-18,412 предлагает перечитать и сопоставить изменения; не выполняется молчаливый overwrite.,"Q3,Q5",pass,evidence/DEV-18.md; evidence/DEV-18/e2e.txt (daily-workflows.spec conflict flows); web/src/shared/forms/diff.test.ts,2026-10-05
+DEV-18-AC05,DEV-18,На 360px и увеличении масштаба не теряются управляющие элементы; полная проверка WCAG не сведена к axe serious=0.,"Q3,Q5",pass,"evidence/DEV-18.md; evidence/DEV-18/e2e.txt (wcag22.spec, a11y.spec, mobile.spec); screen reader and real devices not run: EXT-10",2026-10-05
+DEV-18-AC06,DEV-18,Первая загрузка остаётся ≤300 КБ gzip по принятому инструменту; новые строки есть во всех трёх локалях.,"Q3,Q5",pass,evidence/DEV-18.md; npm run build initial total 288.4 KB gzip (budget 300 KB); nb/en/ru key parity test,2026-10-05
 DEV-19-AC01,DEV-19,"При потере ответа после реально созданного заказа повтор находит тот же заказ, а не создаёт второй.","Q1,Q2,Q7",not_run,,
 DEV-19-AC02,DEV-19,После 429/backoff все разрешённые записи прочитаны; cursor не перескакивает необработанный диапазон.,"Q1,Q2,Q7",not_run,,
 DEV-19-AC03,DEV-19,"Сверка различает оплату, кредитование и списание; реальные возможности API и ограничения приложены.","Q1,Q2,Q7",not_run,,

@@ -13,3 +13,8 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* A long unbroken name (a customer, a file, an address) wraps instead of widening the page (WCAG 1.4.10 reflow). */
+main :is(h1, h2, h3, p, li, a, dt, dd, label) {
+  overflow-wrap: anywhere;
+}

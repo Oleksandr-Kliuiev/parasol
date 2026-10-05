@@ -29,6 +29,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useContracts } from './api';
 import { ContractStatusBadge } from './ContractBadges';
 import { contractStatuses, type ContractListItem, type ContractStatus } from './types';
+import { SavedViews } from '../../shared/views/SavedViews';
 
 export function ContractsPage() {
   const styles = useCatalogStyles();
@@ -51,6 +52,7 @@ export function ContractsPage() {
         subtitle={t('contracts.subtitle')}
         actions={
           <>
+            <SavedViews scope="contracts" keys={['status', 'ending']} />
             <Button icon={<ShieldTask20Regular />} appearance="subtle" onClick={() => navigate('/contracts/sla-policies')}>
               {t('contracts.sla.title')}
             </Button>

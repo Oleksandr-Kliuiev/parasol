@@ -147,7 +147,11 @@
       "MONITORING_TRIAGE_STALE": "Another operator changed this review. Close it and reload before saving again.",
       "MONITORING_STILL_ACTIVE": "The source still reports this exception. Verify recovery and refresh before resolving it.",
       "OUTBOX_REPLAY_PARTIAL": "Replay stopped after a partial failure. Check each result. Verify unknown outcomes before creating a new selection."
-    }
+    },
+    "rateLimited": "Too many requests. Try again in {{seconds}} seconds.",
+    "rateLimitedNoWait": "Too many requests. Wait a moment and try again.",
+    "timeout": "The server took too long to answer. Your change may not have been saved; check the record before you try again.",
+    "offline": "You are offline. Reconnect and try again; nothing was sent."
   },
   "status": {
     "Lead": "Lead",
@@ -1400,6 +1404,14 @@
       "NoDecision": "No decision",
       "Timing": "Wrong timing",
       "Other": "Other"
+    },
+    "nextStep": {
+      "title": "Next step",
+      "none": "No next step. Add a task with an owner and a date so this deal does not stall.",
+      "noDue": "No date",
+      "unassigned": "Nobody assigned",
+      "more": "{{count}} more open tasks on this deal",
+      "add": "Add next step"
     }
   },
   "quotes": {
@@ -1945,7 +1957,14 @@
       "HourBank": "Prepaid hours",
       "OneOff": "One-off",
       "Info": "For information, no charge"
-    }
+    },
+    "exportProgress": {
+      "title": "Sending to PowerOffice",
+      "body": "{{exported}} sent, {{failed}} failed, out of {{total}} customers.",
+      "updated": "Updated {{time}}. You can leave the page; the sending continues and nothing is sent twice.",
+      "refresh": "Refresh now"
+    },
+    "refreshFailed": "Could not refresh the run. Showing the state from {{time}} ({{reason}}). The page tries again automatically."
   },
   "invoices": {
     "title": "Invoices",
@@ -2806,5 +2825,34 @@
     "recovered": "Source recovered — review pending",
     "resolveAfterRecovery": "Resolve this review after the source has recovered.",
     "recoveredLimit": "The list includes the {{shown}} most recently reviewed recovered exceptions out of {{total}} awaiting closure. Filters apply to this list; close completed reviews to see older cases."
+  },
+  "forms": {
+    "unsaved": {
+      "title": "Leave without saving?",
+      "body": "You have changes that are not saved. If you leave now, they are lost.",
+      "stay": "Keep editing",
+      "leave": "Leave and discard"
+    },
+    "conflict": {
+      "title": "This record changed while you were editing",
+      "body": "Nothing was overwritten. Choose how to continue; you can still review everything before saving.",
+      "sameFields": "You and someone else both changed:",
+      "mine": "yours",
+      "theirs": "theirs",
+      "otherFields": "Also changed by someone else (their values are kept): {{fields}}.",
+      "keepMine": "Keep my changes on the latest version",
+      "useLatest": "Discard mine, show the latest"
+    }
+  },
+  "views": {
+    "button": "Views",
+    "none": "No saved views",
+    "saveCurrent": "Save current filters…",
+    "delete": "Delete a view",
+    "name": "Name of the view",
+    "hint": "Saved in this browser for your account. Filters only; what you see is still decided by your permissions.",
+    "full": "You can keep 10 views. Delete one first.",
+    "storageFailed": "This browser would not store the view (private window or blocked site data).",
+    "discarded": "Saved views from an older version of the CRM could not be kept and were cleared. Save them again."
   }
 }

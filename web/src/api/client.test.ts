@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, MAINTENANCE_EVENT, query } from './client';
+import { api, ApiError, MAINTENANCE_EVENT, query, RequestTimeoutError } from './client';
 
 function mockFetch(response: Response) {
   const fn = vi.fn().mockResolvedValue(response);
@@ -101,5 +101,41 @@ describe('api client', () => {
     } finally {
       window.removeEventListener(MAINTENANCE_EVENT, heard);
     }
+  });
+
+  it('keeps how long the server asked to wait on a 429', async () => {
+    mockFetch(new Response('{}', { status: 429, headers: { 'Retry-After': '17', 'Content-Type': 'application/problem+json' } }));
+    const error = await api.post('/api/v1/x', {}).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).retryAfterSeconds).toBe(17);
+  });
+
+  it('reads a Retry-After date and leaves it undefined when absent', async () => {
+    mockFetch(new Response('{}', { status: 503, headers: { 'Retry-After': new Date(Date.now() + 30_000).toUTCString() } }));
+    const dated = (await api.get('/api/v1/x').catch((e: unknown) => e)) as ApiError;
+    expect(dated.retryAfterSeconds).toBeGreaterThan(20);
+    expect(dated.retryAfterSeconds).toBeLessThanOrEqual(30);
+    mockFetch(new Response('{}', { status: 429 }));
+    expect(((await api.get('/api/v1/x').catch((e: unknown) => e)) as ApiError).retryAfterSeconds).toBeUndefined();
+  });
+
+  it('reports a request that got no answer as a timeout, not as a failure of the server', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal('fetch', (_: string, init: RequestInit) => new Promise((_resolve, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason))));
+      const pending = api.post('/api/v1/x', {}).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(61_000);
+      expect(await pending).toBeInstanceOf(RequestTimeoutError);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets the caller abort without calling it a timeout', async () => {
+    const controller = new AbortController();
+    vi.stubGlobal('fetch', (_: string, init: RequestInit) => new Promise((_resolve, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason))));
+    const pending = api.get('/api/v1/x', controller.signal).catch((e: unknown) => e);
+    controller.abort();
+    expect(await pending).not.toBeInstanceOf(RequestTimeoutError);
   });
 });

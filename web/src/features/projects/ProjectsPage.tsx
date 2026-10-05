@@ -33,6 +33,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { ProjectDialog } from './ProjectDialog';
 import { useProjects } from './api';
 import { statusColor } from './shared';
+import { SavedViews } from '../../shared/views/SavedViews';
 
 const useStyles = makeStyles({
   progress: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, minWidth: '140px' },
@@ -70,6 +71,9 @@ export function ProjectsPage() {
           )
         }
       />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+        <SavedViews scope="projects" keys={['all']} />
+      </div>
 
       <div className={catalog.filters}>
         <SearchBox

@@ -34,7 +34,7 @@ import { HoursMeter } from './ContractBadges';
 import { HourBankEntryForm } from './ContractDialogs';
 
 const useStyles = makeStyles({
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start', marginBottom: tokens.spacingVerticalL },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start', marginBottom: tokens.spacingVerticalL },
   big: { fontSize: tokens.fontSizeHero800, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums', lineHeight: tokens.lineHeightHero800 },
   balance: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
   negative: { color: tokens.colorPaletteRedForeground1 },

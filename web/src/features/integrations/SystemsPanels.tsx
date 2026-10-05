@@ -30,7 +30,7 @@ import { useConnectionTestAnswer, useIntegrationActions, useIntegrationStatus, u
 import { systemName } from './labels';
 
 const useStyles = makeStyles({
-  cards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: tokens.spacingHorizontalM },
+  cards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: tokens.spacingHorizontalM },
   card: {
     display: 'flex',
     flexDirection: 'column',

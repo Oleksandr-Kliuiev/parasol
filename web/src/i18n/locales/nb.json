@@ -147,7 +147,11 @@
       "MONITORING_TRIAGE_STALE": "En annen operatør endret gjennomgangen. Lukk og last på nytt før du lagrer.",
       "MONITORING_STILL_ACTIVE": "Kilden melder fortsatt dette avviket. Bekreft gjenoppretting og oppdater før det lukkes.",
       "OUTBOX_REPLAY_PARTIAL": "Gjentakelsen stoppet etter en delvis feil. Kontroller hvert resultat. Avklar ukjente resultater før du velger på nytt."
-    }
+    },
+    "rateLimited": "For mange forespørsler. Prøv igjen om {{seconds}} sekunder.",
+    "rateLimitedNoWait": "For mange forespørsler. Vent litt og prøv igjen.",
+    "timeout": "Serveren brukte for lang tid på å svare. Endringen kan være lagret; sjekk posten før du prøver igjen.",
+    "offline": "Du er frakoblet. Koble til igjen og prøv på nytt; ingenting ble sendt."
   },
   "status": {
     "Lead": "Lead",
@@ -1400,6 +1404,14 @@
       "NoDecision": "Ingen beslutning",
       "Timing": "Feil tidspunkt",
       "Other": "Annet"
+    },
+    "nextStep": {
+      "title": "Neste steg",
+      "none": "Ingen neste steg. Legg til en oppgave med ansvarlig og dato slik at salget ikke stopper opp.",
+      "noDue": "Ingen dato",
+      "unassigned": "Ingen ansvarlig",
+      "more": "{{count}} flere åpne oppgaver på dette salget",
+      "add": "Legg til neste steg"
     }
   },
   "quotes": {
@@ -1945,7 +1957,14 @@
       "HourBank": "Forhåndskjøpte timer",
       "OneOff": "Engangsposter",
       "Info": "Til informasjon, uten beløp"
-    }
+    },
+    "exportProgress": {
+      "title": "Sender til PowerOffice",
+      "body": "{{exported}} sendt, {{failed}} feilet, av {{total}} kunder.",
+      "updated": "Oppdatert {{time}}. Du kan forlate siden; sendingen fortsetter og ingenting sendes to ganger.",
+      "refresh": "Oppdater nå"
+    },
+    "refreshFailed": "Kunne ikke oppdatere kjøringen. Viser status fra {{time}} ({{reason}}). Siden prøver igjen automatisk."
   },
   "invoices": {
     "title": "Fakturaer",
@@ -2806,5 +2825,34 @@
     "recovered": "Kilden er gjenopprettet — avventer behandling",
     "resolveAfterRecovery": "Lukk avviket etter at kilden er gjenopprettet.",
     "recoveredLimit": "Listen viser de {{shown}} sist behandlede gjenopprettede avvikene av {{total}} som venter på lukking. Filtrene gjelder denne listen; lukk ferdige avvik for å se eldre saker."
+  },
+  "forms": {
+    "unsaved": {
+      "title": "Forlate siden uten å lagre?",
+      "body": "Du har endringer som ikke er lagret. Forlater du siden nå, går de tapt.",
+      "stay": "Fortsett å redigere",
+      "leave": "Forlat og forkast"
+    },
+    "conflict": {
+      "title": "Posten ble endret mens du redigerte",
+      "body": "Ingenting ble overskrevet. Velg hvordan du vil fortsette; du kan gå gjennom alt før du lagrer.",
+      "sameFields": "Du og en annen endret begge:",
+      "mine": "din",
+      "theirs": "deres",
+      "otherFields": "Også endret av en annen (deres verdier beholdes): {{fields}}.",
+      "keepMine": "Behold mine endringer på siste versjon",
+      "useLatest": "Forkast mine, vis siste versjon"
+    }
+  },
+  "views": {
+    "button": "Visninger",
+    "none": "Ingen lagrede visninger",
+    "saveCurrent": "Lagre gjeldende filter…",
+    "delete": "Slett en visning",
+    "name": "Navn på visningen",
+    "hint": "Lagres i denne nettleseren for kontoen din. Kun filter; hva du ser avgjøres fortsatt av tilgangene dine.",
+    "full": "Du kan ha 10 visninger. Slett en først.",
+    "storageFailed": "Nettleseren ville ikke lagre visningen (privat vindu eller blokkert nettstedsdata).",
+    "discarded": "Lagrede visninger fra en eldre versjon av CRM kunne ikke beholdes og ble fjernet. Lagre dem på nytt."
   }
 }

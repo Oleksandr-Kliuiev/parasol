@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Button,
@@ -6,7 +6,6 @@ import {
   Field,
   Input,
   MessageBar,
-  MessageBarActions,
   MessageBarBody,
   Option,
   Spinner,
@@ -22,6 +21,10 @@ import type { Organization, UserRef } from '../../api/types';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
+import { ConflictBar } from '../../shared/forms/ConflictBar';
+import { UnsavedChangesDialog } from '../../shared/forms/UnsavedChangesDialog';
+import { useConflictFlow } from '../../shared/forms/useConflictFlow';
+import { useUnsavedChanges } from '../../shared/forms/useUnsavedChanges';
 import { UserPicker } from '../../shared/components/UserPicker';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
@@ -33,7 +36,7 @@ import { contractTypes, invoiceFrequencies, invoiceTimings, type Contract, type 
 
 const useStyles = makeStyles({
   sections: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL, maxWidth: '960px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
   wide: { gridColumn: '1 / -1' },
   actions: { display: 'flex', gap: tokens.spacingHorizontalS, justifyContent: 'flex-end' },
   messages: { marginBottom: tokens.spacingVerticalL },
@@ -44,6 +47,8 @@ export function ContractFormPage() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const existing = useContract(id);
+  // "Keep my changes" after a conflict: the draft laid over the latest version, applied once the form is rebuilt from it.
+  const [carried, setCarried] = useState<ContractDraft | null>(null);
   const organizationId = params.get('organizationId');
   const preset = useQuery({
     queryKey: ['organizations', 'detail', organizationId ?? ''],
@@ -62,7 +67,15 @@ export function ContractFormPage() {
       presetOrganization={organization}
       presetOwner={preset.data?.data.accountManager ?? null}
       etag={existing.data?.etag ?? null}
-      onReload={() => void existing.refetch()}
+      carried={carried}
+      onReload={() => {
+        setCarried(null);
+        void existing.refetch();
+      }}
+      onKeepMine={(draft) => {
+        setCarried(draft);
+        void existing.refetch();
+      }}
     />
   );
 }
@@ -73,10 +86,38 @@ interface ContractFormProps {
   presetOrganization: Ref | null;
   presetOwner: UserRef | null;
   etag: string | null;
+  carried: ContractDraft | null;
   onReload: () => void;
+  onKeepMine: (draft: ContractDraft) => void;
 }
 
-function ContractForm({ id, initial, presetOrganization, presetOwner, etag, onReload }: ContractFormProps) {
+function draftOf(initial: Contract | undefined, presetOrganization: Ref | null, presetOwner: UserRef | null) {
+  return {
+    organization: initial?.organization ?? presetOrganization,
+    owner: initial?.owner ? { id: initial.owner.id, displayName: initial.owner.name } : presetOwner,
+    values: {
+      title: initial?.title ?? '',
+      type: (initial?.type ?? 'Msp') as ContractType,
+      startDate: initial?.startDate ?? todayIso(),
+      endDate: initial?.endDate ?? '',
+      autoRenew: initial?.autoRenew ?? true,
+      renewalTermMonths: String(initial?.renewalTermMonths ?? 12),
+      noticePeriodDays: String(initial?.noticePeriodDays ?? 90),
+      slaPolicyId: initial?.slaPolicy?.id ?? '',
+      invoiceFrequency: (initial?.invoiceFrequency ?? 'Monthly') as InvoiceFrequency,
+      invoiceTiming: (initial?.invoiceTiming ?? 'InAdvance') as InvoiceTiming,
+      priceCategory: initial?.priceCategory ?? '',
+      indexation: initial?.indexation ?? false,
+      nextIndexationDate: initial?.nextIndexationDate ?? '',
+      customerReference: initial?.customerReference ?? '',
+      notes: initial?.notes ?? '',
+    },
+  };
+}
+
+type ContractDraft = ReturnType<typeof draftOf>;
+
+function ContractForm({ id, initial, presetOrganization, presetOwner, etag, carried, onReload, onKeepMine }: ContractFormProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -84,27 +125,27 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, onRe
   const save = useSaveContract(id);
   const sla = useSlaPolicies();
   const categories = useCategories();
-  const [organization, setOrganization] = useState<Ref | null>(initial?.organization ?? presetOrganization);
-  const [owner, setOwner] = useState<UserRef | null>(initial?.owner ? { id: initial.owner.id, displayName: initial.owner.name } : presetOwner);
-  const [values, setValues] = useState({
-    title: initial?.title ?? '',
-    type: (initial?.type ?? 'Msp') as ContractType,
-    startDate: initial?.startDate ?? todayIso(),
-    endDate: initial?.endDate ?? '',
-    autoRenew: initial?.autoRenew ?? true,
-    renewalTermMonths: String(initial?.renewalTermMonths ?? 12),
-    noticePeriodDays: String(initial?.noticePeriodDays ?? 90),
-    slaPolicyId: initial?.slaPolicy?.id ?? '',
-    invoiceFrequency: (initial?.invoiceFrequency ?? 'Monthly') as InvoiceFrequency,
-    invoiceTiming: (initial?.invoiceTiming ?? 'InAdvance') as InvoiceTiming,
-    priceCategory: initial?.priceCategory ?? '',
-    indexation: initial?.indexation ?? false,
-    nextIndexationDate: initial?.nextIndexationDate ?? '',
-    customerReference: initial?.customerReference ?? '',
-    notes: initial?.notes ?? '',
-  });
+  const base = useMemo(() => draftOf(initial, presetOrganization, presetOwner), [initial, presetOrganization, presetOwner]);
+  const start = carried ?? base;
+  const [organization, setOrganization] = useState<Ref | null>(start.organization);
+  const [owner, setOwner] = useState<UserRef | null>(start.owner);
+  const [values, setValues] = useState(start.values);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const set = <K extends keyof typeof values>(key: K, value: (typeof values)[K]) => setValues((v) => ({ ...v, [key]: value }));
+  const draft: ContractDraft = { organization, owner, values };
+  const dirty = JSON.stringify(draft) !== JSON.stringify(base);
+  const { blocker, markSaved } = useUnsavedChanges(dirty);
+  const conflictError = save.error instanceof ApiError && save.error.status === 412 ? save.error : null;
+  const conflictFlow = useConflictFlow<ContractDraft>({
+    conflict: conflictError,
+    base,
+    getMine: () => draft,
+    readLatest: async () => draftOf((await api.get<Contract>(`/api/v1/contracts/${id}`)).data, presetOrganization, presetOwner),
+    labelOf: (path) => {
+      const field = path.split('.').find((part) => part !== 'values') ?? path;
+      return t(`contracts.fields.${field === 'slaPolicyId' ? 'sla' : field}`);
+    },
+  });
   const running = initial ? initial.status !== 'Draft' : false;
   const underNotice = initial?.status === 'NoticeGiven';
 
@@ -145,6 +186,7 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, onRe
         },
       });
       notify(id ? t('contracts.form.saved') : t('contracts.form.created', { number: response.data.number }));
+      markSaved();
       navigate(`/contracts/${response.data.id}`);
     } catch (error) {
       if (error instanceof ApiError && error.status === 400) setErrors(error.fieldErrors);
@@ -171,17 +213,23 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, onRe
 
   return (
     <>
+      <UnsavedChangesDialog blocker={blocker} />
       <PageHeader title={id ? t('contracts.form.editTitle', { number: initial?.number }) : t('contracts.new')} back={{ to: cancelTo, label: t('common.back') }} />
       <div className={styles.messages} aria-live="polite">
         {conflict && (
-          <MessageBar intent="error">
-            <MessageBarBody>{t('errors.concurrency')}</MessageBarBody>
-            <MessageBarActions>
-              <Button size="small" onClick={() => { save.reset(); onReload(); }}>
-                {t('common.reload')}
-              </Button>
-            </MessageBarActions>
-          </MessageBar>
+          <ConflictBar
+            details={conflictFlow.details}
+            onUseLatest={() => {
+              save.reset();
+              onReload();
+            }}
+            onKeepMine={() => {
+              const rebased = conflictFlow.keepMine();
+              if (!rebased) return;
+              save.reset();
+              onKeepMine(rebased);
+            }}
+          />
         )}
         {otherError && (
           <MessageBar intent="error">

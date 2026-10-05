@@ -52,7 +52,7 @@ import { ReasonDialog } from './ReasonDialog';
 import { recordLabel } from './recordLabel';
 
 const useStyles = makeStyles({
-  layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM },
   details: { display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalL}`, margin: 0 },
   term: { color: tokens.colorNeutralForeground3 },

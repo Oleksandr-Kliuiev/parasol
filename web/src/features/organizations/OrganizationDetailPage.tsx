@@ -52,10 +52,11 @@ import { ActivityTimeline } from '../activities/ActivityTimeline';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 
 const useStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
+  // Eleven tabs do not fit a phone: the bar scrolls sideways (a focused tab scrolls into view) instead of widening the page.
+  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden' },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
     gap: tokens.spacingHorizontalL,
     alignItems: 'start',
   },

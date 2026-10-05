@@ -28,12 +28,13 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatDateTime, formatMoney } from '../../shared/utils/format';
 import { ActivityTimeline } from '../activities/ActivityTimeline';
 import { NotFoundPage } from '../errors/NotFoundPage';
+import { NextStep } from './NextStep';
 import { QuotesPanel } from '../quotes/QuotesPanel';
 import { useOpportunity, useOpportunityActions, useStages } from './api';
 import { LoseDialog, OpportunityDialog } from './OpportunityDialog';
 
 const useStyles = makeStyles({
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
   forecast: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
   muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
@@ -136,6 +137,7 @@ export function OpportunityPage() {
 
       <div className={styles.stack}>
         <div className={styles.grid}>
+          {opportunity.status === 'Open' && <NextStep organizationId={opportunity.organization.id} opportunityId={opportunity.id} />}
           {canSeeMoney && (
             <Panel title={t('opportunities.fields.forecast')}>
               <div className={styles.forecast}>{formatMoney(opportunity.forecastAmount ?? 0)}</div>

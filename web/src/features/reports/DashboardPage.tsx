@@ -25,7 +25,7 @@ import { useDashboard } from './api';
 import { RevenueChart } from './RevenueChart';
 
 const useStyles = makeStyles({
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
+  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
   tile: {
     display: 'flex',
     flexDirection: 'column',
@@ -38,7 +38,7 @@ const useStyles = makeStyles({
   value: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
   label: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   warn: { color: tokens.colorPaletteDarkOrangeForeground1 },
-  panels: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  panels: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
   share: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS },
   meter: { width: '80px', height: '8px', backgroundColor: tokens.colorNeutralBackground4, borderRadius: tokens.borderRadiusSmall, overflow: 'hidden' },

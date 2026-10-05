@@ -1,0 +1,281 @@
+
+> vardahei-crm-web@0.1.0 e2e
+> npm run build && playwright test
+
+
+> vardahei-crm-web@0.1.0 build
+> tsc -b && vite build && node scripts/bundle-budget.mjs
+
+vite v8.3.0 building client environment for production...
+transforming...
+✓ 2525 modules transformed.
+rendering chunks...
+computing gzip size...
+../src/Hosts/Crm.Web/wwwroot/index.html                                          4.58 kB │ gzip:   1.11 kB
+../src/Hosts/Crm.Web/wwwroot/assets/index-BoNvWiUq.css                           0.30 kB │ gzip:   0.24 kB
+../src/Hosts/Crm.Web/wwwroot/assets/CatalogPage-D0fqgof9.js                      0.07 kB │ gzip:   0.07 kB
+../src/Hosts/Crm.Web/wwwroot/assets/InvoicesPage-BXMx3H2M.js                     0.07 kB │ gzip:   0.07 kB
+../src/Hosts/Crm.Web/wwwroot/assets/LicensesPage-CBEPG7JW.js                     0.07 kB │ gzip:   0.07 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ContractsPage-DH2xV5_H.js                    0.07 kB │ gzip:   0.07 kB
+../src/Hosts/Crm.Web/wwwroot/assets/mergeCallbacks-ChLGui_y.js                   0.11 kB │ gzip:   0.12 kB │ map:     1.60 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useQuery-s46GWHJC.js                         0.14 kB │ gzip:   0.15 kB │ map:     0.60 kB
+../src/Hosts/Crm.Web/wwwroot/assets/types-BfmobsEV.js                            0.15 kB │ gzip:   0.15 kB │ map:     3.24 kB
+../src/Hosts/Crm.Web/wwwroot/assets/types-CIZfXN6-.js                            0.16 kB │ gzip:   0.16 kB │ map:    11.57 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-16-fqRKEI2a.js                         0.17 kB │ gzip:   0.17 kB │ map:    92.60 kB
+../src/Hosts/Crm.Web/wwwroot/assets/types-BKFU6uxy.js                            0.19 kB │ gzip:   0.18 kB │ map:     4.50 kB
+../src/Hosts/Crm.Web/wwwroot/assets/AvatarContext-DhV9LsE7.js                    0.21 kB │ gzip:   0.19 kB │ map:     0.79 kB
+../src/Hosts/Crm.Web/wwwroot/assets/OverridesContext-Dmx4Te8u.js                 0.22 kB │ gzip:   0.20 kB │ map:     0.77 kB
+../src/Hosts/Crm.Web/wwwroot/assets/isResolvedShorthand-UOBPrThh.js              0.22 kB │ gzip:   0.21 kB │ map:     1.34 kB
+../src/Hosts/Crm.Web/wwwroot/assets/period-qFQi4LYw.js                           0.26 kB │ gzip:   0.22 kB │ map:     0.84 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useDebouncedValue-CLzytm2D.js                0.29 kB │ gzip:   0.24 kB │ map:     0.76 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useRestoreFocus-QVFQFsA1.js                  0.31 kB │ gzip:   0.23 kB │ map:     1.35 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useKeyborgRef-a5iToTVL.js                    0.33 kB │ gzip:   0.26 kB │ map:     1.40 kB
+../src/Hosts/Crm.Web/wwwroot/assets/dialogStyles-CNmAKbVd.js                     0.34 kB │ gzip:   0.27 kB │ map:     0.70 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useMediaQuery-COjZXvsA.js                    0.36 kB │ gzip:   0.27 kB │ map:     0.93 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-17-DSw3z5uE.js                         0.41 kB │ gzip:   0.31 kB │ map:    93.92 kB
+../src/Hosts/Crm.Web/wwwroot/assets/labels-BLzdP2tC.js                           0.42 kB │ gzip:   0.27 kB │ map:     1.43 kB
+../src/Hosts/Crm.Web/wwwroot/assets/types-BHDXWJoU.js                            0.42 kB │ gzip:   0.29 kB │ map:     4.88 kB
+../src/Hosts/Crm.Web/wwwroot/assets/types-BxFq_DSd.js                            0.43 kB │ gzip:   0.32 kB │ map:     7.32 kB
+../src/Hosts/Crm.Web/wwwroot/assets/mergeArrowOffset-DGEQGjCK.js                 0.43 kB │ gzip:   0.30 kB │ map:     2.71 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Input-BM6iVaY6.js                            0.44 kB │ gzip:   0.31 kB │ map:     1.90 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-13-X5Wo4Bk_.js                         0.44 kB │ gzip:   0.30 kB │ map:   211.10 kB
+../src/Hosts/Crm.Web/wwwroot/assets/NotFoundPage-D-TJRlih.js                     0.46 kB │ gzip:   0.33 kB │ map:     1.22 kB
+../src/Hosts/Crm.Web/wwwroot/assets/shared-C_wfNk4C.js                           0.47 kB │ gzip:   0.34 kB │ map:     1.24 kB
+../src/Hosts/Crm.Web/wwwroot/assets/EmptyState-Cp4y9LrJ.js                       0.48 kB │ gzip:   0.35 kB │ map:     1.14 kB
+../src/Hosts/Crm.Web/wwwroot/assets/orgNumber-CV1PhgU1.js                        0.51 kB │ gzip:   0.33 kB │ map:     2.00 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useTimeout-Bt-Fe4qn.js                       0.51 kB │ gzip:   0.33 kB │ map:     3.08 kB
+../src/Hosts/Crm.Web/wwwroot/assets/toaster-D4wWo6Vv.js                          0.57 kB │ gzip:   0.35 kB │ map:     1.71 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useControllableState-CWp8Komh.js             0.57 kB │ gzip:   0.34 kB │ map:     5.12 kB
+../src/Hosts/Crm.Web/wwwroot/assets/getTriggerChild-DliB6tBV.js                  0.68 kB │ gzip:   0.41 kB │ map:     4.61 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ListFooter-CO-Bgyw1.js                       0.70 kB │ gzip:   0.48 kB │ map:     2.31 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-DStGSbJ_.js                              0.79 kB │ gzip:   0.41 kB │ map:     2.34 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useFocusWithin-BfRxd7VS.js                   0.81 kB │ gzip:   0.48 kB │ map:     4.23 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useFieldControlProps-DO9-Y8r2.js             0.85 kB │ gzip:   0.54 kB │ map:     4.60 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MenuDivider-BF0wOhVw.js                      0.85 kB │ gzip:   0.57 kB │ map:     4.18 kB
+../src/Hosts/Crm.Web/wwwroot/assets/paging-DMvXYHSh.js                           0.87 kB │ gzip:   0.54 kB │ map:     3.45 kB
+../src/Hosts/Crm.Web/wwwroot/assets/duplicatesApi-tpoAiMjT.js                    0.96 kB │ gzip:   0.50 kB │ map:     2.72 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-9-CBJ6FxN_.js                          1.06 kB │ gzip:   0.61 kB │ map:   234.92 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useFocusVisible-BaCfmLe1.js                  1.07 kB │ gzip:   0.57 kB │ map:     5.13 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ContractBadges-DpctwNQg.js                   1.09 kB │ gzip:   0.65 kB │ map:     2.66 kB
+../src/Hosts/Crm.Web/wwwroot/assets/OrganizationPicker-CO-CcrrO.js               1.11 kB │ gzip:   0.69 kB │ map:     3.12 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useInfiniteQuery-VzyB37IX.js                 1.17 kB │ gzip:   0.52 kB │ map:     3.96 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-C5ZL725u.js                              1.19 kB │ gzip:   0.58 kB │ map:     4.04 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ProductPicker-ukl_YZf0.js                    1.22 kB │ gzip:   0.74 kB │ map:     3.70 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-11-Dblqh7fc.js                         1.22 kB │ gzip:   0.63 kB │ map:   632.01 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-BRkNyBdj.js                              1.23 kB │ gzip:   0.53 kB │ map:     3.75 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-0-CkSvw3gN.js                          1.25 kB │ gzip:   0.60 kB │ map: 1,432.07 kB
+../src/Hosts/Crm.Web/wwwroot/assets/recordLabel-BTNvDV9H.js                      1.26 kB │ gzip:   0.72 kB │ map:     3.72 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-1-C7etgvaQ.js                          1.26 kB │ gzip:   0.55 kB │ map:   438.02 kB
+../src/Hosts/Crm.Web/wwwroot/assets/UserPicker-DanNJUug.js                       1.28 kB │ gzip:   0.79 kB │ map:     3.80 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Panel-bAZyXiuq.js                            1.36 kB │ gzip:   0.73 kB │ map:     3.47 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-27-DSRGUO-S.js                         1.49 kB │ gzip:   0.78 kB │ map:   943.87 kB
+../src/Hosts/Crm.Web/wwwroot/assets/styles-BUWpct3z.js                           1.52 kB │ gzip:   0.66 kB │ map:     3.08 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-DyIf9JdN.js                              1.54 kB │ gzip:   0.65 kB │ map:     5.37 kB
+../src/Hosts/Crm.Web/wwwroot/assets/text-oKzOa72f.js                             1.56 kB │ gzip:   0.73 kB │ map:     5.00 kB
+../src/Hosts/Crm.Web/wwwroot/assets/CurrentUserContext-U1wE2ZVp.js               1.58 kB │ gzip:   0.67 kB │ map:     3.03 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-D7lFshD0.js                              1.62 kB │ gzip:   0.68 kB │ map:     6.41 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-C2mXKNOW.js                              1.64 kB │ gzip:   0.70 kB │ map:     5.49 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-CjtLNMaM.js                              1.67 kB │ gzip:   0.73 kB │ map:     5.46 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-CvJO52Kh.js                              1.75 kB │ gzip:   0.66 kB │ map:     6.25 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-pAXWN-ks.js                              1.91 kB │ gzip:   0.85 kB │ map:     6.59 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-24-WkOORY2B.js                         1.98 kB │ gzip:   0.90 kB │ map:   536.28 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-18-BDvUa3D5.js                         1.99 kB │ gzip:   0.71 kB │ map:   925.88 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ChangeList-D0z8reQ4.js                       1.99 kB │ gzip:   1.00 kB │ map:     6.39 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-3-BcO-VwCD.js                          2.00 kB │ gzip:   0.69 kB │ map:   671.54 kB
+../src/Hosts/Crm.Web/wwwroot/assets/LinkedSystemsPanel-CR8M2jNW.js               2.01 kB │ gzip:   1.03 kB │ map:     5.46 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useMergeTabsterAttributes-vaA59y64.js        2.10 kB │ gzip:   1.03 kB │ map:    13.31 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Label-DSA3MgVu.js                            2.11 kB │ gzip:   1.01 kB │ map:     6.99 kB
+../src/Hosts/Crm.Web/wwwroot/assets/HourBankList-XE6d6Ypc.js                     2.12 kB │ gzip:   1.04 kB │ map:     4.74 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-CSjzz6rg.js                              2.26 kB │ gzip:   0.92 kB │ map:     7.51 kB
+../src/Hosts/Crm.Web/wwwroot/assets/UsersPage-BfUWu4Uy.js                        2.26 kB │ gzip:   1.11 kB │ map:     5.43 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-10-BLYpAnZX.js                         2.27 kB │ gzip:   0.98 kB │ map:   556.61 kB
+../src/Hosts/Crm.Web/wwwroot/assets/chunk-28-DZz5Pw1n.js                         2.29 kB │ gzip:   0.91 kB │ map:   427.61 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-CGkYHg7n.js                              2.38 kB │ gzip:   0.85 kB │ map:    11.18 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-_0Z-agv2.js                              2.42 kB │ gzip:   0.86 kB │ map:     8.40 kB
+../src/Hosts/Crm.Web/wwwroot/assets/HistoryList-CXnxTjYE.js                      2.46 kB │ gzip:   1.19 kB │ map:     6.18 kB
+../src/Hosts/Crm.Web/wwwroot/assets/TechniciansPage-DZNgK6Nf.js                  2.50 kB │ gzip:   1.10 kB │ map:     6.73 kB
+../src/Hosts/Crm.Web/wwwroot/assets/CustomFieldsPanel-DAJKz6Gn.js                2.53 kB │ gzip:   1.23 kB │ map:     7.17 kB
+../src/Hosts/Crm.Web/wwwroot/assets/RecordAccessPage-DPnUx4Aw.js                 2.64 kB │ gzip:   1.16 kB │ map:     7.39 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-BrdIMXq5.js                              2.79 kB │ gzip:   1.01 kB │ map:     8.78 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-D6bPov86.js                              2.84 kB │ gzip:   0.99 kB │ map:     8.77 kB
+../src/Hosts/Crm.Web/wwwroot/assets/NewPrivacyCasePage-CMQSyFOm.js               2.95 kB │ gzip:   1.39 kB │ map:     8.08 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-DRkYR_q3.js                              3.09 kB │ gzip:   1.12 kB │ map:     9.96 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ErrorState-DROABPZV.js                       3.17 kB │ gzip:   1.34 kB │ map:    13.21 kB
+../src/Hosts/Crm.Web/wwwroot/assets/api-DPcPQY8M.js                              3.30 kB │ gzip:   1.18 kB │ map:    11.56 kB
+../src/Hosts/Crm.Web/wwwroot/assets/TableCellLayout-DD0KyxaL.js                  3.30 kB │ gzip:   1.45 kB │ map:    11.46 kB
+../src/Hosts/Crm.Web/wwwroot/assets/AuditLogPage-DfvyqkOB.js                     3.53 kB │ gzip:   1.59 kB │ map:     9.23 kB
+../src/Hosts/Crm.Web/wwwroot/assets/SavedViews-BJILUVSD.js                       4.07 kB │ gzip:   1.75 kB │ map:   543.13 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MigrationPage-C-3lrVyZ.js                    4.12 kB │ gzip:   1.60 kB │ map:    11.60 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ProjectsPage-Ds3VjFKc.js                     4.44 kB │ gzip:   1.89 kB │ map:    11.93 kB
+../src/Hosts/Crm.Web/wwwroot/assets/PipelineStagesPage-Da4pCyqu.js               4.52 kB │ gzip:   1.73 kB │ map:    12.11 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ProgressBar-BDd_c5Dj.js                      4.69 kB │ gzip:   2.03 kB │ map:    18.45 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useUnsavedChanges-D10V_Mu1.js                4.77 kB │ gzip:   1.92 kB │ map:    17.41 kB
+../src/Hosts/Crm.Web/wwwroot/assets/QuotesPage-CKazjWch.js                       4.83 kB │ gzip:   1.84 kB │ map:    13.08 kB
+../src/Hosts/Crm.Web/wwwroot/assets/shared-BJxjgP3e.js                           4.94 kB │ gzip:   1.89 kB │ map:    16.71 kB
+../src/Hosts/Crm.Web/wwwroot/assets/HourBankPage-mR-RWtZ2.js                     5.02 kB │ gzip:   2.03 kB │ map:    12.02 kB
+../src/Hosts/Crm.Web/wwwroot/assets/shared-hOvu5pK-.js                           5.06 kB │ gzip:   1.60 kB │ map:    17.38 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ContactPage-BDxOnSpF.js                      5.10 kB │ gzip:   2.26 kB │ map:    14.95 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ContractsPage-DuwwWZaf.js                    5.11 kB │ gzip:   1.88 kB │ map:    13.39 kB
+../src/Hosts/Crm.Web/wwwroot/assets/IndexationPage-BHDZiEol.js                   5.15 kB │ gzip:   1.88 kB │ map:    14.20 kB
+../src/Hosts/Crm.Web/wwwroot/assets/SlaReportPage-r4fk9aDH.js                    5.24 kB │ gzip:   1.95 kB │ map:    13.76 kB
+../src/Hosts/Crm.Web/wwwroot/assets/QuoteTemplatesPage-tjo4wU_0.js               5.33 kB │ gzip:   2.00 kB │ map:    14.26 kB
+../src/Hosts/Crm.Web/wwwroot/assets/SearchBox-B-M0sqiy.js                        5.43 kB │ gzip:   2.11 kB │ map:   394.18 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useMutation-Dp57Y-pQ.js                      5.73 kB │ gzip:   1.85 kB │ map:    18.49 kB
+../src/Hosts/Crm.Web/wwwroot/assets/NotificationsPage-CPHqaSiT.js                5.83 kB │ gzip:   2.36 kB │ map:    16.51 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ProductDetailPage-B0AMvbiL.js                6.02 kB │ gzip:   2.35 kB │ map:    15.02 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Field-B4F64RPv.js                            6.13 kB │ gzip:   2.24 kB │ map:    18.49 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MarginsPage-CbDP9_O3.js                      6.16 kB │ gzip:   2.18 kB │ map:    15.90 kB
+../src/Hosts/Crm.Web/wwwroot/assets/CustomFieldsAdminPage-DQ7ICT30.js            6.49 kB │ gzip:   2.25 kB │ map:    18.64 kB
+../src/Hosts/Crm.Web/wwwroot/assets/OpportunityDialog-BeL2WGl3.js                6.55 kB │ gzip:   2.27 kB │ map:    18.46 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Portal-ClXiLRq4.js                           6.66 kB │ gzip:   2.60 kB │ map:    33.43 kB
+../src/Hosts/Crm.Web/wwwroot/assets/OrganizationsPage-xiYWHv48.js                6.69 kB │ gzip:   2.42 kB │ map:    17.91 kB
+../src/Hosts/Crm.Web/wwwroot/assets/InvoicesPage-A8V9GJ-u.js                     7.07 kB │ gzip:   2.11 kB │ map:    19.48 kB
+../src/Hosts/Crm.Web/wwwroot/assets/OpportunityPage-Em9NDJJb.js                  7.21 kB │ gzip:   2.57 kB │ map:    19.48 kB
+../src/Hosts/Crm.Web/wwwroot/assets/DuplicatesPage-D9UvdjcH.js                   7.28 kB │ gzip:   2.63 kB │ map:    19.09 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useNotify-CvPb6M_8.js                        7.31 kB │ gzip:   2.30 kB │ map:    31.29 kB
+../src/Hosts/Crm.Web/wwwroot/assets/PipelinePage-BRrVXG7d.js                     7.42 kB │ gzip:   2.83 kB │ map:    20.01 kB
+../src/Hosts/Crm.Web/wwwroot/assets/SkeletonItem-dEkM8rzo.js                     7.87 kB │ gzip:   2.68 kB │ map:    23.20 kB
+../src/Hosts/Crm.Web/wwwroot/assets/SlaPoliciesPage-D1M3NIkr.js                  8.24 kB │ gzip:   2.98 kB │ map:    22.37 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MessageBarBody-BU8AtokY.js                   8.58 kB │ gzip:   3.04 kB │ map:    34.19 kB
+../src/Hosts/Crm.Web/wwwroot/assets/BillingRunsPage-D0nDiRdM.js                  8.61 kB │ gzip:   2.96 kB │ map:    24.41 kB
+../src/Hosts/Crm.Web/wwwroot/assets/PrivacyPage-DHL94j_3.js                      8.69 kB │ gzip:   2.37 kB │ map:    24.19 kB
+../src/Hosts/Crm.Web/wwwroot/assets/TimesheetPage-DhCh-jLA.js                    9.16 kB │ gzip:   3.44 kB │ map:    25.39 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ProductFormPage-B0I6XmyX.js                  9.24 kB │ gzip:   3.44 kB │ map:    25.11 kB
+../src/Hosts/Crm.Web/wwwroot/assets/StatusBadges-BQtlXnNA.js                     9.30 kB │ gzip:   4.11 kB │ map:    35.51 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Spinner-Bho4G7nZ.js                          9.70 kB │ gzip:   2.74 kB │ map:    21.68 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Checkbox-BGxE56BK.js                         9.80 kB │ gzip:   3.28 kB │ map:   396.66 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ContractFormPage-BDuCuG4A.js                 9.90 kB │ gzip:   3.43 kB │ map:    26.47 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MappingsPage-BdplJPGu.js                    10.13 kB │ gzip:   3.58 kB │ map:    29.40 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MaintenancePage-Drjg6JVy.js                 10.85 kB │ gzip:   3.00 kB │ map:    29.88 kB
+../src/Hosts/Crm.Web/wwwroot/assets/DashboardPage-B2UcQmJT.js                   11.23 kB │ gzip:   3.12 kB │ map:    30.03 kB
+../src/Hosts/Crm.Web/wwwroot/assets/TimeEntriesPage-C21Fj_hx.js                 11.28 kB │ gzip:   3.87 kB │ map:    34.76 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MyDayPage-Cp4RKfuf.js                       11.28 kB │ gzip:   3.38 kB │ map:    32.48 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ContractDialogs-BGC4O0b7.js                 11.32 kB │ gzip:   3.12 kB │ map:    32.71 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Radio-BCIpFywT.js                           11.33 kB │ gzip:   2.98 kB │ map:    26.82 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ContractDetailPage-jebhxwO-.js              11.34 kB │ gzip:   3.76 kB │ map:    29.50 kB
+../src/Hosts/Crm.Web/wwwroot/assets/DialogContent-CWc9bkUl.js                   11.35 kB │ gzip:   3.09 kB │ map:    36.76 kB
+../src/Hosts/Crm.Web/wwwroot/assets/LeadsPage-BPBB0LyP.js                       11.43 kB │ gzip:   3.70 kB │ map:    32.60 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ActivityTimeline-CFcYmZHF.js                11.57 kB │ gzip:   3.99 kB │ map:    36.07 kB
+../src/Hosts/Crm.Web/wwwroot/assets/BillingRunPage-BXC-alYc.js                  12.20 kB │ gzip:   3.83 kB │ map:    33.87 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Textarea-8C63rbAv.js                        12.29 kB │ gzip:   4.14 kB │ map:    26.87 kB
+../src/Hosts/Crm.Web/wwwroot/assets/CatalogPage-ZDLjpqDA.js                     13.03 kB │ gzip:   3.74 kB │ map:    35.87 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Badge-By-DTBbI.js                           13.13 kB │ gzip:   3.46 kB │ map:    25.47 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Select-DiiroWuy.js                          13.16 kB │ gzip:   4.21 kB │ map:    27.42 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Switch-04JBWxht.js                          13.23 kB │ gzip:   3.12 kB │ map:    24.83 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useInputStyles.styles-BFY_6Ti_.js           13.58 kB │ gzip:   3.74 kB │ map:    25.95 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useArrowNavigationGroup-DaGC0hZJ.js         13.99 kB │ gzip:   4.78 kB │ map:    64.47 kB
+../src/Hosts/Crm.Web/wwwroot/assets/TableHeaderCell-CXBT-_7U.js                 14.57 kB │ gzip:   4.50 kB │ map:   269.37 kB
+../src/Hosts/Crm.Web/wwwroot/assets/PrivacyCasePage-BgOnOEOg.js                 14.97 kB │ gzip:   4.01 kB │ map:    41.97 kB
+../src/Hosts/Crm.Web/wwwroot/assets/PriceListPage-Cs5VJGpo.js                   15.07 kB │ gzip:   4.22 kB │ map:    42.08 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ProjectPage-0bGDboAu.js                     15.72 kB │ gzip:   4.40 kB │ map:    42.72 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Dropdown-FVCiPurs.js                        18.17 kB │ gzip:   5.88 kB │ map:    44.15 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Combobox-CCecfynY.js                        18.92 kB │ gzip:   6.33 kB │ map:    50.05 kB
+../src/Hosts/Crm.Web/wwwroot/assets/LicensesPage-BpZXrAj5.js                    19.39 kB │ gzip:   4.64 kB │ map:    55.32 kB
+../src/Hosts/Crm.Web/wwwroot/assets/BillingBasisPage-CmEBauBM.js                19.75 kB │ gzip:   5.20 kB │ map:    59.73 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useTabsterEscapeIgnore-BIfr4TV0.js          23.46 kB │ gzip:   8.34 kB │ map:    96.73 kB
+../src/Hosts/Crm.Web/wwwroot/assets/QuotePage-Le4p9Qsb.js                       24.10 kB │ gzip:   6.52 kB │ map:    72.86 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useDialogSurfaceContextValues-_tJz60kM.js   24.20 kB │ gzip:   8.57 kB │ map:   137.37 kB
+../src/Hosts/Crm.Web/wwwroot/assets/usePositioning-DZrh3w2Z.js                  27.71 kB │ gzip:  10.12 kB │ map:   162.25 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Tab-BO7DaVM7.js                             29.96 kB │ gzip:   8.26 kB │ map:    77.64 kB
+../src/Hosts/Crm.Web/wwwroot/assets/IntegrationsPage-Dvav-0g2.js                30.62 kB │ gzip:   7.69 kB │ map:    89.08 kB
+../src/Hosts/Crm.Web/wwwroot/assets/Avatar-DCN76No1.js                          35.09 kB │ gzip:  10.44 kB │ map:   996.35 kB
+../src/Hosts/Crm.Web/wwwroot/assets/MenuTrigger-D_V_ICwY.js                     37.79 kB │ gzip:  11.94 kB │ map:   160.47 kB
+../src/Hosts/Crm.Web/wwwroot/assets/OrganizationDetailPage-CpW_G-Kj.js          42.81 kB │ gzip:  10.52 kB │ map:   132.09 kB
+../src/Hosts/Crm.Web/wwwroot/assets/format-BfkVu30u.js                          45.03 kB │ gzip:  14.39 kB │ map:   140.86 kB
+../src/Hosts/Crm.Web/wwwroot/assets/useHasParentContext-Co7djw40.js             46.38 kB │ gzip:  14.83 kB │ map:   219.94 kB
+../src/Hosts/Crm.Web/wwwroot/assets/en-BxMJudol.js                              92.55 kB │ gzip:  31.23 kB │ map:   129.50 kB
+../src/Hosts/Crm.Web/wwwroot/assets/nb-B6_S6Ska.js                              95.06 kB │ gzip:  32.82 kB │ map:   132.01 kB
+../src/Hosts/Crm.Web/wwwroot/assets/OrganizationFormPage-DZEEmScy.js           129.18 kB │ gzip:  39.71 kB │ map:   723.97 kB
+../src/Hosts/Crm.Web/wwwroot/assets/ru-2pJYBZqS.js                             148.35 kB │ gzip:  41.20 kB │ map:   184.19 kB
+../src/Hosts/Crm.Web/wwwroot/assets/PageHeader-DKpksqhC.js                     250.14 kB │ gzip:  75.73 kB │ map: 2,284.72 kB
+../src/Hosts/Crm.Web/wwwroot/assets/index-Chq15jSx.js                          361.04 kB │ gzip: 108.67 kB │ map: 3,014.43 kB
+
+✓ built in 456ms
+   288.4 KB  initial total (budget 300 KB)
+
+Running 82 tests using 3 workers
+
+  ✓   1 [desktop] › e2e/analytics.spec.ts:4:1 › a custom field is defined once and answered on the customer card (3.0s)
+  ✓   4 [desktop] › e2e/analytics.spec.ts:32:1 › the sla report measures tickets against the contract and finance sees the margins (903ms)
+  ✓   5 [desktop] › e2e/catalog-contracts.spec.ts:4:1 › finance adds a product and prices it in a price list (3.4s)
+  ✓   6 [desktop] › e2e/catalog-contracts.spec.ts:48:1 › sales sets up a contract, gives notice and warns on a low hour bank (13.7s)
+  ✓   7 [desktop] › e2e/catalog-contracts.spec.ts:126:1 › the microsoft price sheet prices a draft price list after a preview (1.6s)
+  ✓   8 [desktop] › e2e/daily-workflows.spec.ts:7:1 › a save that loses to someone else shows both versions and never overwrites in silence @critical (936ms)
+  ✓   9 [desktop] › e2e/daily-workflows.spec.ts:51:1 › discarding my side after a conflict shows the latest version (847ms)
+  ✓  10 [desktop] › e2e/daily-workflows.spec.ts:70:1 › leaving a form with unsaved changes asks first and returns focus when the user stays @critical (1.9s)
+  ✓  11 [desktop] › e2e/daily-workflows.spec.ts:92:1 › a form that was saved leaves without asking (379ms)
+  ✓  12 [desktop] › e2e/daily-workflows.spec.ts:101:1 › a missing name is announced and tied to its field (339ms)
+  ✓  13 [desktop] › e2e/daily-workflows.spec.ts:110:1 › a double click on Create makes one organization (435ms)
+  ✓  14 [desktop] › e2e/daily-workflows.spec.ts:120:1 › a rate limit says how long to wait and keeps the draft (483ms)
+  ✓  15 [desktop] › e2e/daily-workflows.spec.ts:136:1 › saving without a connection says nothing was sent and keeps the draft (528ms)
+  ✓  16 [desktop] › e2e/daily-workflows.spec.ts:151:1 › a long export shows its progress and survives a failed refresh (3.8s)
+  ✓  17 [desktop] › e2e/daily-workflows.spec.ts:177:1 › saved views keep filters for this account and apply them again (2.0s)
+  ✓  18 [desktop] › e2e/daily-workflows.spec.ts:208:1 › a record is created and then corrected with the keyboard alone (740ms)
+  ✓  19 [desktop] › e2e/dashboard-notifications.spec.ts:11:1 › the dashboard adds up contracts, renewals and hours (1.0s)
+  ✓  20 [desktop] › e2e/dashboard-notifications.spec.ts:50:1 › a contract reminder reaches the bell and can be muted (5.1s)
+  ✓  21 [desktop] › e2e/duplicates.spec.ts:4:1 › management merges duplicates and undoes the merge (1.7s)
+  ✓  22 [desktop] › e2e/language.spec.ts:4:1 › the chosen language is saved to the profile (1.4s)
+  ✓  23 [desktop] › e2e/mappings.spec.ts:4:1 › an administrator imports a PowerOffice customer from the mapping screen (2.3s)
+  ✓  24 [desktop] › e2e/mappings.spec.ts:39:1 › the connection test is queued by crm-web and answered by crm-worker, which alone holds the PowerOffice keys (4.8s)
+  ✓  25 [desktop] › e2e/microsoft365.spec.ts:7:1 › the Microsoft 365 surfaces explain themselves when Graph is not connected (996ms)
+  ✓  26 [desktop] › e2e/migration.spec.ts:4:1 › a migration file is previewed before the customers are created (965ms)
+  ✓  27 [desktop] › e2e/migration.spec.ts:36:1 › an integration can be paused from the admin screen during an incident (714ms)
+  ✓  28 [desktop] › e2e/monitoring.spec.ts:5:1 › an operator assigns and reviews an intentional pause and the signal recovers @critical (3.9s)
+  ✓   2 [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (1.1m)
+  ✓  29 [desktop] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (7.9s)
+  ✓  30 [desktop] › e2e/billing.spec.ts:149:1 › a run without a PowerOffice customer reports the anomaly and can be cancelled (1.5s)
+  ✓  31 [desktop] › e2e/organizations.spec.ts:42:1 › the registry warns about a bankrupt company (1.1s)
+  ✓  33 [desktop] › e2e/organizations.spec.ts:49:1 › a technician can read organizations and manage contacts but not edit the organization (638ms)
+  ✓  32 [desktop] › e2e/billing.spec.ts:191:1 › a correction survives a new collect and a line left out stays out (2.9s)
+  ✓  35 [desktop] › e2e/billing.spec.ts:248:1 › an approval belongs to the revision on screen and a change sets it aside with the reason (1.5s)
+  ✓   3 [desktop] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations (1.2m)
+  ✓  37 [desktop] › e2e/a11y.spec.ts:205:1 › the app can be used with the keyboard (770ms)
+  ✓  34 [desktop] › e2e/privacy.spec.ts:22:1 › a person gets their data, then is erased and stays erased (DEV-11) @critical (5.4s)
+  ✓  39 [desktop] › e2e/quotes.spec.ts:5:1 › a quote with an extra discount is approved, downloaded and accepted @critical (1.3s)
+  ✓  40 [desktop] › e2e/quotes.spec.ts:71:1 › a new version starts from the old one and the old one becomes history (638ms)
+  ✓  41 [desktop] › e2e/quotes.spec.ts:98:1 › a quote template is edited by an administrator (711ms)
+  ✓  38 [desktop] › e2e/projects.spec.ts:4:1 › a project is planned in phases and a completed phase queues its fee (5.4s)
+  ✓  43 [desktop] › e2e/projects.spec.ts:61:1 › a subsidiary can be put on the parent company invoice (981ms)
+  ✓  42 [desktop] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (3.8s)
+  ✓  44 [desktop] › e2e/projects.spec.ts:83:1 › finance previews the yearly indexation before the prices change (828ms)
+  ✓  46 [desktop] › e2e/projects.spec.ts:136:1 › a technician sees a project once on its team, and a project they are not on does not exist for them (957ms)
+  ✓  45 [desktop] › e2e/sales-licensing.spec.ts:59:1 › a pipeline stage is renamed from the admin screen (1.5s)
+  ✓  47 [desktop] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (615ms)
+  ✓  49 [desktop] › e2e/search-and-export.spec.ts:21:1 › the organization list exports the filtered rows to Excel (797ms)
+  ✓  48 [desktop] › e2e/sales-licensing.spec.ts:82:1 › a lost deal keeps its reason and can be reopened (2.8s)
+  ✓  50 [desktop] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (2.5s)
+  ✓  51 [desktop] › e2e/sales-licensing.spec.ts:108:1 › a distributor file is previewed before the subscriptions are imported (2.5s)
+  ✓  53 [desktop] › e2e/sales-licensing.spec.ts:163:1 › microsoft cost lines are reconciled against what the customer was billed (2.1s)
+  ✓  36 [desktop] › e2e/billing.spec.ts:297:1 › a billed and closed month gets a supplementary run that bills nothing twice (19.1s)
+  ✓  52 [desktop] › e2e/service-time.spec.ts:50:1 › the service tab offers a ticket and reports that writing to Atera is off (6.4s)
+  ✓  54 [desktop] › e2e/wcag22.spec.ts:80:1 › pointer targets are at least 24×24 px on desktop and on a phone (11.8s)
+  ✓  56 [mobile] › e2e/mobile.spec.ts:14:1 › pages fit a phone screen and navigation works (17.1s)
+  ✓  57 [desktop] › e2e/wcag22.spec.ts:118:1 › keyboard focus is never hidden behind the header or a banner (9.2s)
+  ✓  59 [desktop] › e2e/wcag22.spec.ts:132:1 › content reflows at 320 px and survives text-spacing overrides (9.6s)
+  ✓  60 [desktop] › e2e/wcag22.spec.ts:164:1 › the page is usable at 200 % browser zoom and on a long name (933ms)
+  ✓  58 [firefox] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (15.4s)
+  ✓  61 [desktop] › e2e/wcag22.spec.ts:184:5 › Norwegian on a phone › pages have no missing texts and no horizontal scroll (6.1s)
+  ✓  62 [firefox] › e2e/daily-workflows.spec.ts:7:1 › a save that loses to someone else shows both versions and never overwrites in silence @critical (1.5s)
+  ✓  64 [firefox] › e2e/daily-workflows.spec.ts:70:1 › leaving a form with unsaved changes asks first and returns focus when the user stays @critical (1.5s)
+  ✓  65 [firefox] › e2e/monitoring.spec.ts:5:1 › an operator assigns and reviews an intentional pause and the signal recovers @critical (4.0s)
+  ✓  63 [desktop] › e2e/wcag22.spec.ts:184:5 › Russian on a phone › pages have no missing texts and no horizontal scroll (6.1s)
+  ✓  66 [firefox] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (3.4s)
+  ✓  67 [firefox] › e2e/privacy.spec.ts:22:1 › a person gets their data, then is erased and stays erased (DEV-11) @critical (4.2s)
+  ✓  68 [firefox] › e2e/quotes.spec.ts:5:1 › a quote with an extra discount is approved, downloaded and accepted @critical (4.8s)
+  ✓  69 [firefox] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (3.6s)
+  ✓  70 [firefox] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (875ms)
+  ✓  71 [firefox] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (3.7s)
+  ✓  73 [webkit] › e2e/daily-workflows.spec.ts:7:1 › a save that loses to someone else shows both versions and never overwrites in silence @critical (1.8s)
+  ✓  74 [webkit] › e2e/daily-workflows.spec.ts:70:1 › leaving a form with unsaved changes asks first and returns focus when the user stays @critical (1.5s)
+  ✓  75 [webkit] › e2e/monitoring.spec.ts:5:1 › an operator assigns and reviews an intentional pause and the signal recovers @critical (4.4s)
+  ✓  76 [webkit] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (3.4s)
+  ✓  55 [desktop-dark] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations (1.2m)
+  ✓  78 [desktop-dark] › e2e/a11y.spec.ts:205:1 › the app can be used with the keyboard (841ms)
+  ✓  77 [webkit] › e2e/privacy.spec.ts:22:1 › a person gets their data, then is erased and stays erased (DEV-11) @critical (5.9s)
+  ✓  79 [webkit] › e2e/quotes.spec.ts:5:1 › a quote with an extra discount is approved, downloaded and accepted @critical (3.7s)
+  ✓  81 [webkit] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (850ms)
+  ✓  80 [webkit] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (4.3s)
+  ✓  82 [webkit] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (2.7s)
+  ✓  72 [webkit] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (41.3s)
+
+  82 passed (3.3m)

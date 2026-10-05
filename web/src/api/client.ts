@@ -13,13 +13,16 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
   readonly problem: Problem;
+  /** Seconds the server asked the client to wait (`Retry-After` on 429/503), when it said so. */
+  readonly retryAfterSeconds: number | undefined;
 
-  constructor(status: number, problem: Problem) {
+  constructor(status: number, problem: Problem, retryAfterSeconds?: number) {
     super(problem.detail ?? problem.title ?? `Request failed with status ${status}`);
     this.name = 'ApiError';
     this.status = status;
     this.code = problem.code ?? problem.title;
     this.problem = problem;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 
   /** Field errors from a validation problem, keyed by lower-camel-case path (e.g. `visitAddress.city`). */
@@ -49,6 +52,26 @@ interface RequestOptions {
 
 export const CSRF_HEADER = 'X-CSRF';
 
+/** A request that has had no answer for this long is given up: the user sees "timed out", not an endless spinner. */
+export const REQUEST_TIMEOUT_MS = 60_000;
+
+/** Thrown when the request timed out; whether the server did the work is unknown, and the message says so. */
+export class RequestTimeoutError extends Error {
+  constructor() {
+    super('Request timed out');
+    this.name = 'RequestTimeoutError';
+  }
+}
+
+function retryAfter(response: Response): number | undefined {
+  const value = response.headers.get('Retry-After');
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds));
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? undefined : Math.max(0, Math.ceil((date - Date.now()) / 1000));
+}
+
 /** Fired when the server refused a change because the CRM is read-only for maintenance (DEV-13): the banner asks again. */
 export const MAINTENANCE_EVENT = 'crm:maintenance';
 
@@ -62,13 +85,23 @@ async function request<T>(method: string, url: string, options: RequestOptions =
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (options.ifMatch) headers['If-Match'] = options.ifMatch;
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    credentials: 'same-origin',
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    signal: options.signal,
-  });
+  const timeout = new AbortController();
+  const timer = setTimeout(() => timeout.abort(), REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      credentials: 'same-origin',
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: options.signal ? AbortSignal.any([options.signal, timeout.signal]) : timeout.signal,
+    });
+  } catch (error) {
+    if (timeout.signal.aborted && !options.signal?.aborted) throw new RequestTimeoutError();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!response.ok) {
     let problem: Problem = { status: response.status };
@@ -81,7 +114,7 @@ async function request<T>(method: string, url: string, options: RequestOptions =
     // the user signs in again and comes back to this page.
     if (response.status === 401 && url.startsWith('/api/')) window.location.assign(loginUrl());
     if (problem.code === 'MAINTENANCE_READ_ONLY') window.dispatchEvent(new Event(MAINTENANCE_EVENT));
-    throw new ApiError(response.status, problem);
+    throw new ApiError(response.status, problem, retryAfter(response));
   }
 
   const etag = response.headers.get('ETag');
@@ -105,7 +138,7 @@ export async function download(url: string): Promise<void> {
     // DEV-10: the session ended on the server (signed out elsewhere, account deactivated, roles not confirmed for too long):
     // the user signs in again and comes back to this page.
     if (response.status === 401 && url.startsWith('/api/')) window.location.assign(loginUrl());
-    throw new ApiError(response.status, problem);
+    throw new ApiError(response.status, problem, retryAfter(response));
   }
 
   const disposition = response.headers.get('Content-Disposition') ?? '';

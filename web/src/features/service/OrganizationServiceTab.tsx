@@ -46,7 +46,7 @@ import { deviceTypes } from './types';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: tokens.spacingHorizontalM },
+  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM },
   tile: {
     display: 'flex',
     flexDirection: 'column',
@@ -60,10 +60,10 @@ const useStyles = makeStyles({
   tileLabel: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   alert: { color: tokens.colorPaletteRedForeground1 },
   warning: { color: tokens.colorPaletteDarkOrangeForeground1 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   row: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'baseline', paddingBlock: tokens.spacingVerticalXS },
   list: { listStyle: 'none', margin: 0, padding: 0 },
-  dialogGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  dialogGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
   wide: { gridColumn: '1 / -1' },
 });
 

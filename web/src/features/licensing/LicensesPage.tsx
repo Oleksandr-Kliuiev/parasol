@@ -44,11 +44,12 @@ import { useCatalogStyles } from '../catalog/styles';
 import { LicenseUsageView, ReconciliationView } from './LicenseUsageViews';
 import { useImportSubscriptions, useLicensingAttention, useSubscriptions } from './api';
 import type { ImportResult, Subscription } from './types';
+import { SavedViews } from '../../shared/views/SavedViews';
 
 const useStyles = makeStyles({
   tiles: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))',
     gap: tokens.spacingHorizontalM,
     marginBottom: tokens.spacingVerticalL,
   },
@@ -122,6 +123,9 @@ export function LicensesPage() {
           )
         }
       />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+        <SavedViews scope="licenses" keys={['view', 'renewing', 'window', 'notBilled', 'unlinked']} />
+      </div>
 
       <TabList
         className={styles.tabs}
