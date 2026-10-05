@@ -74,9 +74,12 @@
       "required_owner_roles": "Operations",
       "owner": "",
       "status": "not_run",
-      "evidence": [],
+      "evidence": [
+        "../runbooks/03-database-restore.md",
+        "evidence/DEV-13.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Operations не назначены; учение восстановления в выделенной среде не проводилось: нет замеров RPO ≤ 1 ч и RTO ≤ 4 ч, сверки SQL, blob и ключей, повтора privacy suppression и сверки внешних эффектов (runbook 03). Локальные тесты восстановления (DEV-13) этого не заменяют.",
       "tasks": [
         "DEV-13",
         "DEV-23"
@@ -126,7 +129,7 @@
         "evidence/DEV-21/deferred-and-accepted.md"
       ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Data owner и Finance не назначены; не приняты сроки хранения по классам данных (сейчас только предложения docs/04 §8, Privacy:Retention:Mode=DryRun, политик в privacy.RetentionPolicies нет), порядок запросов субъекта, ограничения аудита финансовых модулей, роль регламентного удаления crm_privacy, обработка резервных копий, срок хранения таблиц прогонов миграции и legality check ответственным лицом (DEV-04, DEV-11, DEV-20, DEV-21).",
       "tasks": [
         "DEV-04",
         "DEV-11",
@@ -140,9 +143,12 @@
       "required_owner_roles": "BI owner",
       "owner": "",
       "status": "not_run",
-      "evidence": [],
+      "evidence": [
+        "../runbooks/14-power-bi-refresh.md",
+        "evidence/DEV-14.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "BI owner не назначен; плановое обновление в Power BI Service не проверено: способ обновления (DEC-06) не выбран, приложение BI и роли Crm.Bi.Read/Crm.Bi.Cost не выданы, не проверены истечение и ротация credentials, постраничное чтение и 429. Локальные тесты BI API и Power BI Desktop недостаточны.",
       "tasks": [
         "DEV-14",
         "DEV-23"
@@ -193,9 +199,13 @@
       "required_owner_roles": "Repository owner / operations / PO",
       "owner": "",
       "status": "not_run",
-      "evidence": [],
+      "evidence": [
+        "../runbooks/01-first-deployment.md",
+        "evidence/DEV-05.md",
+        "evidence/DEV-23/rollout-and-support.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Repository owner, operations и PO не назначены; remote-репозитория нет, workflows release.yml и promote.yml ни разу не запускались: не проверены branch protection, required reviewers и окружения test/prod, OIDC-федерация, secret scanning и push protection, CODEOWNERS, проверенный digest образов и принятый release manifest (runbook 01 §2, §6).",
       "tasks": [
         "DEV-05",
         "DEV-23"
