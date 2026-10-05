@@ -106,6 +106,45 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
             .Where(o => organizationIds.Contains(o.Id))
             .ToDictionaryAsync(o => o.Id, o => o.Name, cancellationToken);
 
+    public async Task<IReadOnlyDictionary<string, Guid>> FindOrganizationsByOrgNumberAsync(
+        IReadOnlyCollection<string> orgNumbers, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        foreach (var batch in orgNumbers.Select(OrgNumber.Normalize).Where(n => n.Length > 0).Distinct(StringComparer.Ordinal).Chunk(1000))
+        {
+            var rows = await db.Organizations.AsNoTracking()
+                .Where(o => o.OrgNumber != null && batch.Contains(o.OrgNumber))
+                .OrderBy(o => o.CreatedAt).ThenBy(o => o.Id)
+                .Select(o => new { o.Id, OrgNumber = o.OrgNumber! })
+                .ToListAsync(cancellationToken);
+            foreach (var row in rows)
+            {
+                // Organization numbers are unique among live organizations (BR-CUS-06); the oldest wins should data ever say otherwise.
+                result.TryAdd(row.OrgNumber, row.Id);
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> GetOrgNumbersAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<Guid, string>();
+        foreach (var batch in organizationIds.Distinct().Chunk(1000))
+        {
+            var rows = await db.Organizations.AsNoTracking()
+                .Where(o => o.OrgNumber != null && batch.Contains(o.Id))
+                .Select(o => new { o.Id, OrgNumber = o.OrgNumber! })
+                .ToListAsync(cancellationToken);
+            foreach (var row in rows)
+            {
+                result[row.Id] = row.OrgNumber;
+            }
+        }
+
+        return result;
+    }
+
     public async Task<IReadOnlyDictionary<Guid, Guid?>> GetAccountManagerIdsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken)
     {
         if (organizationIds.Count == 0) return new Dictionary<Guid, Guid?>();

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { createContact, createOrganization, marker, signIn } from './support';
+import { collectedBillingRun, createContact, createOrganization, marker, signIn } from './support';
 
 const createContactForMobile = (page: Page, organizationId: string, m: string) =>
   createContact(page, organizationId, { firstName: 'Mobil', lastName: m, email: `${m.toLowerCase()}@example.no`, mobilePhone: '900 00 000' });
@@ -87,4 +87,13 @@ test('the migration screens fit a phone screen with a preview on show', async ({
     await page.goto(path);
     await expectNoHorizontalScroll(page, name);
   }
+});
+
+test('the pilot reconciliation page fits a phone screen', async ({ page }) => {
+  await signIn(page, 'Crm.Finance');
+  const run = await collectedBillingRun(page, marker('MobPil'));
+  await page.goto(`/billing/runs/${run.id}/pilot`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Pilot reconciliation' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Lines of the run' })).toBeVisible();
+  await expectNoHorizontalScroll(page, 'Pilot reconciliation');
 });

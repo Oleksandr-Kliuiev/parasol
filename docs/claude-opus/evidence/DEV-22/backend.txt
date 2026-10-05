@@ -1,0 +1,25 @@
+== build
+== unit
+  total: 603
+  failed: 0
+  succeeded: 603
+== arch
+  total: 94
+  failed: 0
+  succeeded: 94
+== integration
+  total: 436
+  failed: 0
+  succeeded: 436
+== gate
+| Domain of Billing, Contracts, TimeTracking | 1290 | 1331 | 96.92 % | 90 % | pass | 91.10 % of 764 |
+| Rest of the backend (src/) | 24414 | 26904 | 90.74 % | 70 % | pass | 78.82 % of 14278 |
+Gate: **passed**
+== pending CustomersDbContext
+No changes have been made to the model since the last migration.
+== pending IdentityDbContext
+No changes have been made to the model since the last migration.
+== pending BillingDbContext
+No changes have been made to the model since the last migration.
+== rollback
+(first integration runs: 433/435 — two BiApiTests lost their contract to the Ended-contract billing defect fixed in this task; EndedContractBillingTests added; reruns 436/436)

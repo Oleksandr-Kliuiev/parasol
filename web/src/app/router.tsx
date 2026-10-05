@@ -43,6 +43,7 @@ export const routes: RouteObject[] = [
       { path: 'notifications', lazy: async () => ({ Component: (await import('../features/notifications/NotificationsPage')).NotificationsPage }) },
       { path: 'billing', lazy: async () => ({ Component: (await import('../features/billing/BillingRunsPage')).BillingRunsPage }) },
       { path: 'billing/runs/:id', lazy: async () => ({ Component: (await import('../features/billing/BillingRunPage')).BillingRunPage }) },
+      { path: 'billing/runs/:id/pilot', lazy: async () => ({ Component: (await import('../features/billing/pilot/PilotPage')).PilotPage }) },
       { path: 'billing/bases/:id', lazy: async () => ({ Component: (await import('../features/billing/BillingBasisPage')).BillingBasisPage }) },
       { path: 'billing/invoices', lazy: async () => ({ Component: (await import('../features/billing/InvoicesPage')).InvoicesPage }) },
       { path: 'projects', lazy: async () => ({ Component: (await import('../features/projects/ProjectsPage')).ProjectsPage }) },

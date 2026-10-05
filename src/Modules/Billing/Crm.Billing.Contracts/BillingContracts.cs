@@ -198,7 +198,16 @@ public interface IBillingApi
 
     /// <summary>Invoices past their due date with an amount left, oldest first.</summary>
     Task<IReadOnlyList<OverdueInvoice>> GetOverdueInvoicesAsync(DateOnly today, CancellationToken cancellationToken);
+
+    /// <summary>The runs of a period, newest first: whether one is still open and whether the period is already billed decides what a parallel pilot run would be (DEV-22).</summary>
+    Task<IReadOnlyList<RunPeriodState>> GetRunStatesAsync(DateOnly periodStart, CancellationToken cancellationToken);
+
+    /// <summary>Every run that is not closed, newest period first (DEV-22).</summary>
+    Task<IReadOnlyList<RunPeriodState>> GetOpenRunStatesAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>One billing run as far as the pilot readiness probe needs to know it.</summary>
+public sealed record RunPeriodState(Guid RunId, DateOnly PeriodStart, bool Supplementary, BillingRunStatus Status);
 
 /// <summary>
 /// Asked by billing before a run is approved: the accounting system says which customers and products it can invoice

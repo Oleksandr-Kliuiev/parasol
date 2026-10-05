@@ -1,0 +1,5 @@
+npm run e2e (web/), fresh hosts, own SQL container crm-e2e-dev22b (port 14346), run on the final code:
+   289.8 KB  initial total (budget 300 KB)
+  ✓  16 [desktop] › e2e/daily-workflows.spec.ts:151:1 › a long export shows its progress and survives a failed refresh (3.9s)
+  91 passed (3.4m)
+Earlier run by the UI agent on the same UI code: 91 passed (container crm-e2e-dev22, removed). Containers and web/test-results removed afterwards.

@@ -33,6 +33,7 @@ export const Permissions = {
   billingManage: 'billing.manage',
   billingApprove: 'billing.approve',
   billingApproveSecond: 'billing.approve.second',
+  billingReconcile: 'billing.reconcile',
   reportsRead: 'reports.read',
   projectsRead: 'projects.read',
   projectsWrite: 'projects.write',

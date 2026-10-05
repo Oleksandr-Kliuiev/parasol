@@ -127,6 +127,15 @@ public interface ICustomersApi
 
     Task<IReadOnlyDictionary<Guid, string>> GetOrganizationNamesAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The organizations that hold one of the given organization numbers (white space is ignored), keyed by the number; a number no
+    /// organization holds is absent. Reads only what is asked for, so a pilot comparison never loads the whole customer list.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, Guid>> FindOrganizationsByOrgNumberAsync(IReadOnlyCollection<string> orgNumbers, CancellationToken cancellationToken);
+
+    /// <summary>Organization numbers of the requested organizations; organizations without one are absent.</summary>
+    Task<IReadOnlyDictionary<Guid, string>> GetOrgNumbersAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
+
     /// <summary>Account managers for only the requested organizations; an empty batch performs no lookup.</summary>
     Task<IReadOnlyDictionary<Guid, Guid?>> GetAccountManagerIdsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
 

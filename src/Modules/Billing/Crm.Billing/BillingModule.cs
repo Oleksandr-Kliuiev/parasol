@@ -1,5 +1,6 @@
 using Crm.Authorization;
 using Crm.Billing.Contracts;
+using Crm.Billing.Domain;
 using Crm.Billing.Features;
 using Crm.Billing.Persistence;
 using Crm.Catalog.Contracts;
@@ -26,6 +27,9 @@ public static class BillingModule
         services.AddScoped<ChargeLedger>();
         services.AddScoped<BillingCollector>();
         services.AddScoped<BillingService>();
+        services.AddScoped<PilotTraceService>();
+        services.AddScoped<PilotComparisonService>();
+        services.AddScoped<PilotKpiService>();
         services.AddScoped<IBillingApi, BillingApi>();
         services.AddScoped<Crm.SharedKernel.Operations.IOperationalSignalSource, BillingOperationalSignals>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, BillingRestoreParticipant>();
@@ -185,6 +189,48 @@ public static class BillingModule
                 Results.Ok(await service.ListInvoicesAsync(new InvoiceQuery(p.OrganizationId, p.OpenOnly ?? false, p.OverdueOnly ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.BillingRead);
 
+        // DEV-22, the parallel pilot month. The trace is the line-by-line account of a run; the comparison sets the independent
+        // figures of the old method against it; the sign-off records Finance's judgement of the result. Nothing here writes to a
+        // billing table: documents go to the document store and every act leaves an audit entry with ids and hashes.
+        group.MapGet("/runs/{id:guid}/trace", async (
+                Guid id, [AsParameters] PilotTraceParameters p, PilotTraceService service, CancellationToken ct) =>
+                (await service.PageAsync(id, p.ToFilter(), p.Cursor, p.Limit, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.BillingRead);
+
+        group.MapGet("/runs/{id:guid}/trace.xlsx", async (
+                Guid id, [AsParameters] PilotTraceParameters p, string? lang, PilotTraceService service, CancellationToken ct) =>
+                (await service.ExportAsync(id, p.ToFilter(), lang, ct))
+                .ToHttpResult(file => Results.File(file.Content, PilotTraceService.ContentType, file.FileName)))
+            .RequirePermission(Permissions.BillingRead)
+            .ExportsData()
+            .RequireRateLimiting(RateLimitPolicies.Export);
+
+        group.MapPost("/runs/{id:guid}/pilot/compare", async (Guid id, HttpRequest request, PilotComparisonService service, CancellationToken ct) =>
+            {
+                var (content, failure) = await CsvUpload.ReadBytesAsync(request, ct);
+                return content is null ? failure! : (await service.CompareAsync(id, content, ct)).ToHttpResult(Results.Ok);
+            })
+            .RequirePermission(Permissions.BillingReconcile)
+            .ExportsData()
+            .RequireRateLimiting(RateLimitPolicies.Export);
+
+        group.MapPost("/runs/{id:guid}/pilot/signoff", async (
+                    Guid id, PilotSignoffRequest request, PilotComparisonService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.SignAsync(id, request, ifMatch, ct)).ToHttpResult(result => Results.Created($"/api/v1/billing/runs/{id}/pilot", result)))
+            .Validate<PilotSignoffRequest>()
+            .RequirePermission(Permissions.BillingReconcile);
+
+        group.MapGet("/runs/{id:guid}/pilot", async (Guid id, PilotComparisonService service, CancellationToken ct) =>
+                (await service.OverviewAsync(id, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.BillingRead);
+
+        group.MapGet("/pilot/kpi", async (DateOnly? from, DateOnly? to, PilotKpiService service, CancellationToken ct) =>
+                (await service.ReportAsync(from, to, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.BillingRead)
+            .RequirePermission(Permissions.FinanceRead);
+
         group.MapGet("/settings", (IOptions<BillingOptions> options) => Results.Ok(new
                 {
                     secondApprovalThreshold = options.Value.SecondApprovalThreshold,
@@ -201,6 +247,13 @@ public static class BillingModule
         response.Headers.ETag = etag;
         return result;
     }
+}
+
+public sealed record PilotTraceParameters(
+    [FromQuery] Guid? PayerId, [FromQuery] BillingGroup? Group, [FromQuery] string? Anomaly, [FromQuery] bool? AnomaliesOnly,
+    [FromQuery] string? Cursor, [FromQuery] int? Limit)
+{
+    internal PilotTraceFilter ToFilter() => new(PayerId, Group, Anomaly, AnomaliesOnly ?? false);
 }
 
 public sealed record RunParameters(

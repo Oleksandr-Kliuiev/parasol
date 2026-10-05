@@ -79,6 +79,12 @@ public static class Permissions
     /// <summary>Second approval for bases above the threshold (BR-BIL-04).</summary>
     public const string BillingApproveSecond = "billing.approve.second";
 
+    /// <summary>
+    /// Compare the independent figures of the old method with a billing run and sign the reconciliation of a parallel pilot month
+    /// (DEV-22). Finance and Admin; a signature is a commitment, so the permission is privileged.
+    /// </summary>
+    public const string BillingReconcile = "billing.reconcile";
+
     /// <summary>Dashboards and reports; money on them additionally needs <see cref="FinanceRead"/>.</summary>
     public const string ReportsRead = "reports.read";
 
@@ -121,7 +127,7 @@ public static class Permissions
         CatalogRead, CatalogWrite, ContractsRead, ContractsWrite,
         SalesRead, SalesWrite, SalesDiscountApprove, QuotesAll, LicensingRead, LicensingManage, ActivitiesRead, ActivitiesWrite,
         ServiceRead, ServiceWrite, TimeOwn, TimeRead, TimeManage, TimeUnlock,
-        BillingRead, BillingManage, BillingApprove, BillingApproveSecond, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite, ProjectsAll,
+        BillingRead, BillingManage, BillingApprove, BillingApproveSecond, BillingReconcile, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite, ProjectsAll,
         FinanceRead, FinanceCostRead, AuditRead, UsersRead, IntegrationsManage, CustomFieldsManage, PrivacyManage, OperationsMaintenance,
     ];
 
@@ -158,7 +164,7 @@ public static class Permissions
         [CrmRoles.Finance] = new[]
         {
             CustomersRead, CatalogRead, CatalogWrite, ContractsRead, ContractsWrite, SalesRead, QuotesAll, LicensingRead, ActivitiesRead, ActivitiesWrite,
-            ServiceRead, TimeRead, TimeUnlock, BillingRead, BillingManage, BillingApprove, ReportsRead, ReportsMart, ProjectsRead, ProjectsAll,
+            ServiceRead, TimeRead, TimeUnlock, BillingRead, BillingManage, BillingApprove, BillingReconcile, ReportsRead, ReportsMart, ProjectsRead, ProjectsAll,
             FinanceRead, FinanceCostRead, AuditRead, UsersRead,
         }.ToFrozenSet(),
         [CrmRoles.ReadOnly] = new[]
@@ -173,7 +179,7 @@ public static class Permissions
     /// </summary>
     public static readonly FrozenSet<string> Privileged = new[]
     {
-        BillingManage, BillingApprove, BillingApproveSecond, TimeUnlock, SalesDiscountApprove,
+        BillingManage, BillingApprove, BillingApproveSecond, BillingReconcile, TimeUnlock, SalesDiscountApprove,
         IntegrationsManage, CustomFieldsManage, CustomersDelete, PrivacyManage, OperationsMaintenance,
     }.ToFrozenSet(StringComparer.Ordinal);
 

@@ -351,6 +351,22 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
             .ToList();
     }
 
+    public async Task<IReadOnlyList<RunPeriodState>> GetRunStatesAsync(DateOnly periodStart, CancellationToken cancellationToken) =>
+        (await db.BillingRuns.AsNoTracking().Where(r => r.PeriodStart == periodStart)
+            .Select(r => new { r.Id, r.PeriodStart, r.Kind, r.Status })
+            .ToListAsync(cancellationToken))
+        .OrderByDescending(r => r.Id)
+        .Select(r => new RunPeriodState(r.Id, r.PeriodStart, r.Kind == BillingRunKind.Supplementary, r.Status))
+        .ToList();
+
+    public async Task<IReadOnlyList<RunPeriodState>> GetOpenRunStatesAsync(CancellationToken cancellationToken) =>
+        (await db.BillingRuns.AsNoTracking().Where(r => r.Status != BillingRunStatus.Closed)
+            .OrderByDescending(r => r.PeriodStart).ThenByDescending(r => r.Id)
+            .Select(r => new { r.Id, r.PeriodStart, r.Kind, r.Status })
+            .ToListAsync(cancellationToken))
+        .Select(r => new RunPeriodState(r.Id, r.PeriodStart, r.Kind == BillingRunKind.Supplementary, r.Status))
+        .ToList();
+
     private Task UpdateRunStatusAsync(Guid runId, CancellationToken ct) => UpdateRunStatusAsync(db, runId, time.GetUtcNow(), ct);
 
     /// <summary>

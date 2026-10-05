@@ -749,7 +749,7 @@
         "EXT-09",
         "EXT-10"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-22.md",
       "evidence_file": "evidence/DEV-22.md",
       "acceptance_ids": [

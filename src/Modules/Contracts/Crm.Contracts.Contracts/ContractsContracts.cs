@@ -202,6 +202,9 @@ public interface IContractsApi
 
     /// <summary>Live contracts whose end date falls within <paramref name="days"/>, soonest first.</summary>
     Task<IReadOnlyList<RenewalDue>> GetRenewalsAsync(DateOnly from, int days, CancellationToken cancellationToken);
+
+    /// <summary>Reminders (contract ending, notice deadline, low hour bank) whose due date has passed and nobody has acknowledged (pilot KPI, DEV-22).</summary>
+    Task<int> CountOverdueRemindersAsync(DateOnly today, CancellationToken cancellationToken);
 }
 
 public sealed record ContractActivated(Guid ContractId, Guid OrganizationId) : DomainEvent;

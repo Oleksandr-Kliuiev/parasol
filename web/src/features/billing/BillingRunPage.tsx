@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Badge,
   Button,
@@ -27,7 +27,7 @@ import {
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { ArrowSyncCheckmark20Regular, CheckmarkCircle20Regular, Send20Regular } from '@fluentui/react-icons';
+import { ArrowSyncCheckmark20Regular, CheckmarkCircle20Regular, ClipboardTaskListLtr20Regular, Send20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
@@ -77,6 +77,8 @@ export function BillingRunPage() {
   const { id = '' } = useParams();
   const notify = useNotify();
   const canManage = useCan(Permissions.billingManage);
+  const canReconcile = useCan(Permissions.billingReconcile);
+  const navigate = useNavigate();
   const canApprove = useCan(Permissions.billingApprove);
   const canApproveSecond = useCan(Permissions.billingApproveSecond);
   const canSeeMoney = useCan(Permissions.financeRead);
@@ -160,6 +162,11 @@ export function BillingRunPage() {
         }
         actions={
           <>
+            {canReconcile && (
+              <Button icon={<ClipboardTaskListLtr20Regular />} onClick={() => navigate(`/billing/runs/${run.id}/pilot`)}>
+                {t('pilot.open')}
+              </Button>
+            )}
             {canCollect && (
               <Button
                 icon={<ArrowSyncCheckmark20Regular />}

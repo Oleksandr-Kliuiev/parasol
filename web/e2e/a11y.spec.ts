@@ -127,6 +127,7 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     ['Price indexation', '/contracts/indexation'],
     ['Billing runs', '/billing'],
     ['Billing run', `/billing/runs/${run.id}`],
+    ['Pilot reconciliation', `/billing/runs/${run.id}/pilot`],
     ['Invoices', '/billing/invoices'],
     ['Organization invoices', `/organizations/${organization.id}?tab=invoices`],
     ...(bases[0] ? [['Billing basis', `/billing/bases/${bases[0].id}`] as [string, string]] : []),
@@ -153,6 +154,16 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByRole('region', { name: 'Rows that change something or need attention' })).toBeVisible();
   await expectNoSeriousViolations(page, 'Migration preview');
+
+  // DEV-22: a comparison with an unknown customer, its result and the sign-off form on screen.
+  const runPeriod = (await api.get<{ periodStart: string }>(page, `/api/v1/billing/runs/${run.id}`)).periodStart.slice(0, 7);
+  await page.goto(`/billing/runs/${run.id}/pilot`);
+  await page.getByRole('textbox', { name: 'Or paste the rows' }).fill(
+    `orgnr;period;currency;group;productCode;quantity;amountExVat;externalRef\n123456789;${runPeriod};NOK;Subscription;;;100;A11Y`,
+  );
+  await page.getByRole('button', { name: 'Compare', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Finance sign-off' })).toBeVisible();
+  await expectNoSeriousViolations(page, 'Pilot comparison and sign-off');
 
   // DEV-13: the maintenance banner and the paused sign-in, with the public state faked for this page only — switching the
   // shared application to read-only would stop the specs running beside this one.

@@ -509,6 +509,16 @@ public class BiApiTests(CrmWebFactory factory)
     private static readonly SemaphoreSlim StageLock = new(1, 1);
     private static Stage? _stage;
 
+    // The status and body travel with the failure: a refused run (an open run for the period, a collect in progress) otherwise
+    // surfaces as a missing "id" property far from its cause.
+    private static async Task<Guid> CreateRunAsync(HttpClient finance, int year, int month, string marker)
+    {
+        var response = await finance.PostAsJsonAsync("/api/v1/billing/runs", new { year, month, notes = marker }, Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.IsSuccessStatusCode.ShouldBeTrue($"{(int)response.StatusCode}: {body}");
+        return System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("id").GetGuid();
+    }
+
     private async Task<Stage> StageBillingAsync(HttpClient admin, HttpClient finance)
     {
         await StageLock.WaitAsync(Ct);
@@ -543,13 +553,16 @@ public class BiApiTests(CrmWebFactory factory)
             // share an order with that test's and the invoice would find the wrong one.
             factory.PowerOffice.Given(Request.Create().WithPath("/v2/SalesOrders").UsingPost().WithBody(new WildcardMatcher($"*{organizationId:N}*"))).AtPriority(1)
                 .RespondWith(JsonReply(new { Id = 7_100_000, OrderNo = Random.Shared.Next(7_100_000, 7_199_999), CustomerId = 1, Status = "Draft" }));
-            var april = (await (await finance.PostAsJsonAsync("/api/v1/billing/runs", new { year = 2024, month = 4, notes = marker }, Ct)).ReadJsonAsync()).GetProperty("id").GetGuid();
+            var april = await CreateRunAsync(finance, 2024, 4, marker);
             (await finance.RunCommandAsync(april, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
-            var march = (await (await finance.PostAsJsonAsync("/api/v1/billing/runs", new { year = 2024, month = 3, notes = marker }, Ct)).ReadJsonAsync()).GetProperty("id").GetGuid();
+            var march = await CreateRunAsync(finance, 2024, 3, marker);
             (await finance.RunCommandAsync(march, "collect")).StatusCode.ShouldBe(HttpStatusCode.OK);
             (await finance.RunCommandAsync(march, "approve")).StatusCode.ShouldBe(HttpStatusCode.OK);
-            var basisId = (await finance.GetFromJsonAsync<JsonElement>($"/api/v1/billing/runs/{march}/bases?search={marker}", Ct)).EnumerateArray()
-                .Single(b => b.GetProperty("organization").GetProperty("id").GetGuid() == organizationId).GetProperty("id").GetGuid();
+            var bases = await finance.GetFromJsonAsync<JsonElement>($"/api/v1/billing/runs/{march}/bases?search={marker}", Ct);
+            var ours = bases.EnumerateArray().Where(b => b.GetProperty("organization").GetProperty("id").GetGuid() == organizationId).ToList();
+            // What the run holds when the customer's basis is missing: the run itself and all its bases, to name the cause.
+            ours.Count.ShouldBe(1, $"contract {await admin.GetStringAsync($"/api/v1/contracts/{contractId}", Ct)} run {await finance.GetStringAsync($"/api/v1/billing/runs/{march}", Ct)} bases {await finance.GetStringAsync($"/api/v1/billing/runs/{march}/bases", Ct)} filtered {bases.GetRawText()}");
+            var basisId = ours[0].GetProperty("id").GetGuid();
             return _stage = new Stage(organizationId, name, productId, sku, basisId);
         }
         finally

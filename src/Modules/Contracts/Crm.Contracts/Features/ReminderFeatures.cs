@@ -398,7 +398,9 @@ internal sealed class ContractsApi(ContractsDbContext db, HourBankService hourBa
         var rows = await (
                 from line in db.ContractLines.AsNoTracking()
                 join contract in db.Contracts.AsNoTracking() on line.ContractId equals contract.Id
-                where (contract.Status == ContractStatus.Active || contract.Status == ContractStatus.NoticeGiven || contract.Status == ContractStatus.Suspended) &&
+                // An ended contract still owes what it delivered until its end date: the monthly job that marks it Ended runs before the
+                // run for its last period is collected, and dropping it then would lose the final invoice. The date window below bounds it.
+                where contract.Status != ContractStatus.Draft &&
                       contract.StartDate <= periodEnd && (contract.EndDate == null || contract.EndDate >= periodStart) &&
                       line.ValidFrom <= periodEnd && (line.ValidTo == null || line.ValidTo >= periodStart)
                 select new
@@ -559,6 +561,9 @@ internal sealed class ContractsApi(ContractsDbContext db, HourBankService hourBa
                 c.NoticePeriodDays > 0 ? c.EndDate!.Value.AddDays(-c.NoticePeriodDays) : null, c.OwnerId))
             .ToList();
     }
+
+    public Task<int> CountOverdueRemindersAsync(DateOnly today, CancellationToken cancellationToken) =>
+        db.Reminders.AsNoTracking().CountAsync(r => r.AcknowledgedAt == null && r.DueDate < today, cancellationToken);
 
     public async Task<IReadOnlyList<HourBankPurchase>> GetHourBankPurchasesAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
     {

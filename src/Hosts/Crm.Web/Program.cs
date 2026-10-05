@@ -275,6 +275,7 @@ app.MapProjectsEndpoints();
 app.MapActivitiesEndpoints();
 app.MapLicensingEndpoints();
 app.MapBillingEndpoints();
+app.MapPilotReadinessEndpoints();
 app.MapNotificationEndpoints();
 app.MapReportsEndpoints();
 app.MapPrivacyEndpoints();

@@ -36,6 +36,9 @@ public static class AuditActions
 
     /// <summary>An operator applied the restore reconciliation (DEV-13): what it held back is in the stored report it names.</summary>
     public const string Reconcile = "Reconcile";
+
+    /// <summary>A signed-in person signed a record of their own judgement (DEV-22: the Finance sign-off of a parallel pilot month). Ids and hashes only.</summary>
+    public const string Sign = "Sign";
 }
 
 /// <summary>
