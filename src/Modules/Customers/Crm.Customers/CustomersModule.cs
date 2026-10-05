@@ -75,14 +75,20 @@ public static class CustomersModule
         // maintenance: even a preview stores a run.
         group.MapPost("/organizations/import", async (
                 HttpRequest request, bool? dryRun, string? expectedSha256, MigrationImportService service, CancellationToken ct) =>
-                (await service.ImportAsync(await ReadBodyAsync(request, ct), dryRun ?? false, expectedSha256, ct)).ToHttpResult(Results.Ok))
+            {
+                var (content, failure) = await CsvUpload.ReadBytesAsync(request, ct);
+                return content is null ? failure! : (await service.ImportAsync(content, dryRun ?? false, expectedSha256, ct)).ToHttpResult(Results.Ok);
+            })
             .RequirePermission(Permissions.CustomersDelete)
             .RequireRateLimiting(RateLimitPolicies.Migration);
 
         group.MapGet("/organizations/import/runs", async (string? cursor, int? limit, MigrationRunReader reader, CancellationToken ct) =>
                 Results.Ok(await reader.ListAsync(cursor, limit, ct)))
             .RequirePermission(Permissions.CustomersDelete)
-            .ExportsData();
+            .ExportsData()
+            // Paging a run's rows is one request per page of a one-off migration: the hourly limit of the migration itself
+            // (not the 10 per hour of a file export) bounds it (F-G1-14).
+            .RequireRateLimiting(RateLimitPolicies.Migration);
 
         group.MapGet("/organizations/import/runs/{id:guid}", async (Guid id, MigrationRunReader reader, CancellationToken ct) =>
                 (await reader.GetAsync(id, ct)).ToHttpResult(Results.Ok))
@@ -92,18 +98,23 @@ public static class CustomersModule
                 Guid id, string? action, string? cursor, int? limit, MigrationRunReader reader, CancellationToken ct) =>
                 (await reader.RowsAsync(id, action, cursor, limit, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.CustomersDelete)
-            .ExportsData();
+            .ExportsData()
+            .RequireRateLimiting(RateLimitPolicies.Migration);
 
         // The batch marker: what the run created or changed — the compensation list; reading it changes nothing.
         group.MapGet("/organizations/import/runs/{id:guid}/entities", async (
                 Guid id, string? cursor, int? limit, MigrationRunReader reader, CancellationToken ct) =>
                 (await reader.EntitiesAsync(id, cursor, limit, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.CustomersDelete)
-            .ExportsData();
+            .ExportsData()
+            .RequireRateLimiting(RateLimitPolicies.Migration);
 
         // Cutover reconciliation: the old system's totals against the CRM's register. Reads only.
         group.MapPost("/organizations/import/reconcile", async (HttpRequest request, MigrationReconciliationService service, CancellationToken ct) =>
-                (await service.ReconcileAsync(await ReadBodyAsync(request, ct), ct)).ToHttpResult(Results.Ok))
+            {
+                var (content, failure) = await CsvUpload.ReadBytesAsync(request, ct);
+                return content is null ? failure! : (await service.ReconcileAsync(content, ct)).ToHttpResult(Results.Ok);
+            })
             .RequirePermission(Permissions.CustomersDelete)
             .ExportsData()
             .RequireRateLimiting(RateLimitPolicies.Export);
@@ -222,13 +233,6 @@ public static class CustomersModule
             })
             .Validate<ContactPersonRequest>()
             .RequirePermission(Permissions.ContactsWrite);
-    }
-
-    private static async Task<byte[]> ReadBodyAsync(HttpRequest request, CancellationToken ct)
-    {
-        using var buffer = new MemoryStream();
-        await request.Body.CopyToAsync(buffer, ct);
-        return buffer.ToArray();
     }
 
     private static IResult WithETag(HttpResponse response, string etag, IResult result)

@@ -114,7 +114,10 @@ internal sealed class DocumentStoreMaintenanceGate(
         var state = new MaintenanceState(mode, reason, reference, setBy, at, key);
         await store.PutAsync(key, JsonSerializer.SerializeToUtf8Bytes(new Stored(mode, reason, reference, setBy, at), Json), "application/json", cancellationToken);
         _cached = (state, time.GetUtcNow());
-        logger.LogWarning("MAINTENANCE {Mode} set by {SetBy}: {Reason} ({Reference})", mode, setBy, reason, reference);
+        // The reason is typed by a person: no line break may reach the console as a line of its own (F-G5-10).
+        logger.LogWarning(
+            "MAINTENANCE {Mode} set by {SetBy}: {Reason} ({Reference})",
+            mode, Crm.SharedKernel.Text.LogText.Clean(setBy), Crm.SharedKernel.Text.LogText.Clean(reason), Crm.SharedKernel.Text.LogText.Clean(reference));
         return state;
     }
 

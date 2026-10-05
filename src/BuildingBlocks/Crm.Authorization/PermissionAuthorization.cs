@@ -25,6 +25,13 @@ public sealed class AuthorizationFreshnessOptions
 /// <summary>Marks a read endpoint that exports data in bulk: it counts as privileged, like a financial command (DEV-10).</summary>
 public sealed class ExportsDataMetadata;
 
+/// <summary>
+/// Marks a change that rewrites prices for many customers at once (a mass indexation, activating a price list): it needs the
+/// authority's recent confirmation of the caller's roles like a financial command, although its permission (contracts.write,
+/// catalog.write) is also used for everyday edits and so is not privileged as a whole (F-G3-10).
+/// </summary>
+public sealed class RequiresFreshRolesMetadata;
+
 internal sealed class PermissionAuthorizationHandler(IOptions<AuthorizationFreshnessOptions> freshness, TimeProvider time)
     : AuthorizationHandler<PermissionRequirement>
 {
@@ -52,11 +59,18 @@ internal sealed class PermissionAuthorizationHandler(IOptions<AuthorizationFresh
     // A bulk export, whatever its permission; otherwise a change made through privileged permissions only.
     private static bool IsPrivileged(IReadOnlyList<string> granted, HttpContext? http) =>
         http?.GetEndpoint()?.Metadata.GetMetadata<ExportsDataMetadata>() is not null ||
+        http?.GetEndpoint()?.Metadata.GetMetadata<RequiresFreshRolesMetadata>() is not null ||
         (granted.All(Permissions.Privileged.Contains) &&
          (http is null || (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))));
 
+    // Two things must both be recent (F-G2-08, ASVS 6.8.4): the authority's confirmation of the roles AND the user's own last
+    // interactive authentication. A directory sync or a silent single-sign-on re-login moves only the first, so neither
+    // proves that the user is at the keyboard now.
     private bool IsFresh(ClaimsPrincipal user) =>
-        long.TryParse(user.FindFirstValue(PermissionAuthorization.RolesVerifiedClaim), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) &&
+        IsRecent(user, PermissionAuthorization.RolesVerifiedClaim) && IsRecent(user, PermissionAuthorization.AuthTimeClaim);
+
+    private bool IsRecent(ClaimsPrincipal user, string claim) =>
+        long.TryParse(user.FindFirstValue(claim), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) &&
         time.GetUtcNow() - DateTimeOffset.FromUnixTimeSeconds(seconds) <= freshness.Value.PrivilegedFreshness;
 }
 
@@ -67,6 +81,13 @@ public static class PermissionAuthorization
     /// own record (DEV-10); a value written into a cookie is overwritten, never trusted.
     /// </summary>
     public const string RolesVerifiedClaim = "crm_roles_verified";
+
+    /// <summary>
+    /// Unix seconds of the user's last interactive authentication (the id_token's <c>auth_time</c>, kept on the server-side
+    /// session). Set by the server on every request from its own record; absent when the identity provider did not say, which
+    /// fails closed for privileged actions.
+    /// </summary>
+    public const string AuthTimeClaim = "crm_auth_time";
 
     /// <summary>Failure reason and API error code when a privileged action needs a fresh confirmation of the roles.</summary>
     public const string ReverifyRequired = "AUTH_REVERIFY_REQUIRED";
@@ -108,6 +129,11 @@ public static class PermissionAuthorizationExtensions
     public static TBuilder RequirePermission<TBuilder>(this TBuilder builder, params string[] permissions)
         where TBuilder : IEndpointConventionBuilder =>
         builder.RequireAuthorization(PermissionPolicyProvider.Prefix + string.Join('|', permissions));
+
+    /// <summary>A change with a price-wide effect: needs a fresh confirmation of the roles whatever its permission (F-G3-10).</summary>
+    public static TBuilder RequiresFreshRoles<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder =>
+        builder.WithMetadata(new RequiresFreshRolesMetadata());
 
     /// <summary>A bulk export: when its permission is privileged, it needs a fresh confirmation of the roles like a command (DEV-10).</summary>
     public static TBuilder ExportsData<TBuilder>(this TBuilder builder)

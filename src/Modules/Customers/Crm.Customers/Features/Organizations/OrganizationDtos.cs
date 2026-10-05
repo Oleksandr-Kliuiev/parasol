@@ -1,6 +1,7 @@
 using Crm.Customers.Contracts;
 using Crm.Customers.Domain;
 using FluentValidation;
+using Crm.Infrastructure.Http;
 
 namespace Crm.Customers.Features.Organizations;
 
@@ -44,12 +45,15 @@ internal sealed class OrganizationRequestValidator : AbstractValidator<Organizat
             .WithErrorCode("CUS_INVALID_ORGNR")
             .WithMessage("Organization number must be 9 digits with a valid check digit.");
         RuleFor(x => x.Status).IsInEnum();
-        RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
-        RuleFor(x => x.InvoiceEmail).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.InvoiceEmail));
-        RuleFor(x => x.Website).MaximumLength(256);
+        RuleFor(x => x.Email).StrictEmail().When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.InvoiceEmail).StrictEmail().When(x => !string.IsNullOrWhiteSpace(x.InvoiceEmail));
+        RuleFor(x => x.Website).MaximumLength(256)
+            .Must(v => Crm.SharedKernel.Text.WebUrl.Normalize(v) is not null)
+            .When(x => !string.IsNullOrWhiteSpace(x.Website))
+            .WithErrorCode("CUS_INVALID_WEBSITE").WithMessage("The website must be an http or https address.");
         RuleFor(x => x.Phone).MaximumLength(32);
         RuleForEach(x => x.Domains).NotEmpty().MaximumLength(253)
-            .Matches(@"^@?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$").WithMessage("'{PropertyValue}' is not a valid domain.");
+            .Matches(@"^@?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\z").WithMessage("'{PropertyValue}' is not a valid domain.");
         RuleFor(x => x.Domains).Must(d => d is null || d.Count <= 20).WithMessage("At most 20 domains.");
         RuleFor(x => x.PostalAddress!).SetValidator(new AddressDtoValidator()).When(x => x.PostalAddress is not null);
         RuleFor(x => x.VisitAddress!).SetValidator(new AddressDtoValidator()).When(x => x.VisitAddress is not null);

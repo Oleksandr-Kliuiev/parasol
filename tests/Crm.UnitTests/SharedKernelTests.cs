@@ -81,3 +81,31 @@ public class SearchTermTests
     [InlineData(" a ")]
     public void Too_short_input_is_rejected(string? input) => SearchTerm.Parse(input).ShouldBeNull();
 }
+
+/// <summary>Text from a person in a log line, in a spreadsheet cell and in a CSV record (F-G5-10, F-G1-10).</summary>
+public class TextSafetyTests
+{
+    [Fact]
+    public void A_line_break_cannot_start_a_forged_log_line()
+    {
+        Crm.SharedKernel.Text.LogText.Clean("planned work\r\nfail: Crm.Security[0]\n      admin signed in\u2028x\u2029y\0z")
+            .ShouldBe("planned work  fail: Crm.Security[0]       admin signed in x y z");
+        Crm.SharedKernel.Text.LogText.Clean("plain").ShouldBe("plain");
+        Crm.SharedKernel.Text.LogText.Clean(null).ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData("=HYPERLINK(\"http://evil\",\"x\")", "\"'=HYPERLINK(\"\"http://evil\"\",\"\"x\"\")\"")]
+    [InlineData("+1+1", "'+1+1")]
+    [InlineData("-2+3", "'-2+3")]
+    [InlineData("@SUM(A1)", "'@SUM(A1)")]
+    [InlineData("\t=1", "'\t=1")]
+    [InlineData("\r=1", "\"'\r=1\"")]
+    [InlineData("Kari Nordmann", "Kari Nordmann")]
+    [InlineData("a;b", "\"a;b\"")]
+    [InlineData("two\nlines", "\"two\nlines\"")]
+    [InlineData("say \"hi\"", "\"say \"\"hi\"\"\"")]
+    [InlineData("", "")]
+    public void A_csv_cell_is_neutralized_and_quoted(string value, string expected) =>
+        Crm.SharedKernel.Text.CsvCell.Write(value).ShouldBe(expected);
+}

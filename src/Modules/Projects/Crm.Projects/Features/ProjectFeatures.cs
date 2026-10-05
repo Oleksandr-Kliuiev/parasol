@@ -178,9 +178,25 @@ internal sealed class ProjectService(
     ITimeTrackingApi timeTracking,
     IUserDirectory users,
     IRecordScope scope,
+    ICurrentUser currentUser,
     TimeProvider time)
 {
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+
+    // Budget amount, phase fee and bill-on-completion are money the response hides without finance.read (BOPLA): a caller
+    // who cannot read them cannot write them either, so the stored values stay (F-G3-01).
+    private bool SeesMoney => currentUser.HasPermission(Permissions.FinanceRead);
+
+    private ProjectDetails CreateDetails(ProjectRequest request) =>
+        SeesMoney ? request.ToDetails() : request.ToDetails() with { BudgetAmount = 0m };
+
+    private PhaseDetails PhaseDetailsFor(PhaseRequest request, ProjectPhase? existing)
+    {
+        var details = request.ToDetails();
+        return SeesMoney
+            ? details
+            : details with { Fee = existing?.Fee ?? 0m, BillOnCompletion = existing?.BillOnCompletion ?? false };
+    }
 
     private DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), Oslo).DateTime);
 
@@ -260,7 +276,7 @@ internal sealed class ProjectService(
         }
 
         var number = await db.NextProjectNumberAsync(Today.Year, ct);
-        var created = Project.Create(number, request.ToDetails());
+        var created = Project.Create(number, CreateDetails(request));
         if (!created.IsSuccess)
         {
             return created.Error!;
@@ -272,16 +288,16 @@ internal sealed class ProjectService(
     }
 
     public Task<Result<ProjectResponse>> UpdateAsync(Guid id, ProjectRequest request, string ifMatch, CancellationToken ct) =>
-        MutateAsync(id, ifMatch, project => project.Update(request.ToDetails()), ct);
+        MutateAsync(id, ifMatch, project => project.Update(SeesMoney ? request.ToDetails() : request.ToDetails() with { BudgetAmount = project.BudgetAmount }), ct);
 
     public Task<Result<ProjectResponse>> SetStatusAsync(Guid id, ProjectStatus status, CancellationToken ct) =>
         MutateAsync(id, null, project => project.SetStatus(status, Today), ct);
 
     public Task<Result<ProjectResponse>> AddPhaseAsync(Guid id, PhaseRequest request, CancellationToken ct) =>
-        MutateAsync(id, null, project => project.AddPhase(request.ToDetails()), ct);
+        MutateAsync(id, null, project => project.AddPhase(PhaseDetailsFor(request, null)), ct);
 
     public Task<Result<ProjectResponse>> UpdatePhaseAsync(Guid id, Guid phaseId, PhaseRequest request, CancellationToken ct) =>
-        MutateAsync(id, null, project => project.UpdatePhase(phaseId, request.ToDetails()), ct);
+        MutateAsync(id, null, project => project.UpdatePhase(phaseId, PhaseDetailsFor(request, project.Phases.SingleOrDefault(p => p.Id == phaseId))), ct);
 
     public Task<Result<ProjectResponse>> SetPhaseStatusAsync(Guid id, Guid phaseId, ProjectPhaseStatus status, CancellationToken ct) =>
         MutateAsync(id, null, project => project.SetPhaseStatus(phaseId, status, Today), ct);

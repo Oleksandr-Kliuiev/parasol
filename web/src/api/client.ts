@@ -79,6 +79,27 @@ export function loginUrl(returnUrl = window.location.pathname + window.location.
   return `/bff/login?returnUrl=${encodeURIComponent(returnUrl)}`;
 }
 
+/** Fired when the server wants the person to confirm their identity before a privileged action (F-G2-08): the dialog opens. */
+export const REVERIFY_EVENT = 'crm:reverify';
+export const REVERIFY_REQUIRED = 'AUTH_REVERIFY_REQUIRED';
+const DEFAULT_REVERIFY_URL = '/bff/login?reverify=1';
+
+/**
+ * Where "Confirm your identity" goes: the sign-in path of this app that asks Entra for an interactive sign-in, then back to
+ * this page. The address the server offered is used only when it is that path; the server validates the return address again.
+ */
+export function reverifyHref(offered?: unknown, returnUrl = window.location.pathname + window.location.search): string {
+  const base = typeof offered === 'string' && offered.startsWith('/bff/login?') && !offered.includes('//') ? offered : DEFAULT_REVERIFY_URL;
+  return `${base}&returnUrl=${encodeURIComponent(returnUrl)}`;
+}
+
+/** Tells the dialog that a privileged action was refused for want of a recent sign-in. */
+export function announceReverify(problem: Problem): void {
+  if (problem.code === REVERIFY_REQUIRED) {
+    window.dispatchEvent(new CustomEvent(REVERIFY_EVENT, { detail: { url: problem.reverifyUrl } }));
+  }
+}
+
 async function request<T>(method: string, url: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (method !== 'GET') headers[CSRF_HEADER] = '1';
@@ -114,6 +135,7 @@ async function request<T>(method: string, url: string, options: RequestOptions =
     // the user signs in again and comes back to this page.
     if (response.status === 401 && url.startsWith('/api/')) window.location.assign(loginUrl());
     if (problem.code === 'MAINTENANCE_READ_ONLY') window.dispatchEvent(new Event(MAINTENANCE_EVENT));
+    if (response.status === 403) announceReverify(problem);
     throw new ApiError(response.status, problem, retryAfter(response));
   }
 
@@ -138,6 +160,7 @@ export async function download(url: string): Promise<void> {
     // DEV-10: the session ended on the server (signed out elsewhere, account deactivated, roles not confirmed for too long):
     // the user signs in again and comes back to this page.
     if (response.status === 401 && url.startsWith('/api/')) window.location.assign(loginUrl());
+    if (response.status === 403) announceReverify(problem);
     throw new ApiError(response.status, problem, retryAfter(response));
   }
 

@@ -12,6 +12,11 @@ param enablePowerOffice = bool(readEnvironmentVariable('CRM_ENABLE_POWEROFFICE',
 // Fixed for this environment (DEV-05): never taken from a pipeline variable that could be missing or wrong.
 param powerOfficeEnvironment = 'Production'
 param enableAtera = bool(readEnvironmentVariable('CRM_ENABLE_ATERA', 'false'))
+// Partner Center and Teams secrets live in Key Vault and reach crm-worker only (DEV-21, runbook 02); the ids are identifiers.
+param enablePartnerCenter = bool(readEnvironmentVariable('CRM_ENABLE_PARTNERCENTER', 'false'))
+param partnerCenterTenantId = readEnvironmentVariable('CRM_PARTNERCENTER_TENANT_ID', '')
+param partnerCenterClientId = readEnvironmentVariable('CRM_PARTNERCENTER_CLIENT_ID', '')
+param enableTeams = bool(readEnvironmentVariable('CRM_ENABLE_TEAMS', 'false'))
 // Record scope (DEV-09, runbook 11): Open only as a dated, reviewed exception while owners and teams are reconciled.
 param recordScope = 'Restricted'
 // Read-only maintenance by configuration (DEV-13, runbook 03): only for an outage of the document store; the operator's

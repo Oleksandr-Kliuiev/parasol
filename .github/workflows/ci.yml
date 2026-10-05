@@ -144,6 +144,11 @@ jobs:
         run: python3 -m unittest discover -s tools/ops
       - name: Synthetic dataset ownership and isolation tests
         run: python3 -m unittest discover -s tools/load-test -p 'test_*.py'
+      # DEV-21: the same patterns the release applies to its artifacts, over configuration and runbooks. Test fixtures
+      # that contain fake secrets on purpose (tools/*/test_*.py) are not scanned. GitHub secret scanning and push protection
+      # are repository settings (EXT-11) and are not replaced by this.
+      - name: Secret patterns in infrastructure, workflows and runbooks
+        run: python3 tools/release/release.py scan-secrets infra .github docs/runbooks docs/adr
       - name: Bicep build and lint
         run: |
           az bicep build --file infra/main.bicep --stdout > /dev/null

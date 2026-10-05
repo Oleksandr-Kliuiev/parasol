@@ -12,7 +12,12 @@ public static class PartnerCenterModule
 {
     public static IServiceCollection AddPartnerCenterIntegration(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptions<PartnerCenterOptions>().Bind(configuration.GetSection(PartnerCenterOptions.SectionName));
+        services.AddOptions<PartnerCenterOptions>().Bind(configuration.GetSection(PartnerCenterOptions.SectionName))
+            .Validate(
+                options => Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.BaseUrl) && Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.GraphBaseUrl)
+                           && Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.EffectiveTokenUrl),
+                "Integrations:PartnerCenter:BaseUrl, GraphBaseUrl and TokenUrl must be https addresses.")
+            .ValidateOnStart();
         services.AddHttpClient<PartnerCenterTokenProvider>();
         services.AddSingleton<PartnerCenterTokenProvider>(sp => new PartnerCenterTokenProvider(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(PartnerCenterTokenProvider)),

@@ -69,7 +69,8 @@ export function ProjectDialog({ onClose, onCreated, project, organization }: Pro
       startDate,
       endDate: blankToNull(endDate),
       budgetHours: parseDecimal(budgetHours) ?? 0,
-      budgetAmount: canSeeMoney ? (parseDecimal(budgetAmount) ?? 0) : (project?.progress.budgetAmount ?? 0),
+      // Without finance.read the amount is not sent at all: the server keeps the stored one.
+      ...(canSeeMoney ? { budgetAmount: parseDecimal(budgetAmount) ?? 0 } : {}),
       contractId: project?.contractId ?? null,
       opportunityId: project?.opportunityId ?? null,
       notes: blankToNull(notes),

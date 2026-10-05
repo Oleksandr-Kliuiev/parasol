@@ -1,6 +1,7 @@
 using Crm.Authorization;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
+using Crm.Infrastructure.Http;
 using Crm.Infrastructure.Persistence;
 using Crm.Sales.Contracts;
 using Crm.Sales.Domain;
@@ -109,7 +110,7 @@ internal sealed class LeadRequestValidator : AbstractValidator<LeadRequest>
         RuleFor(x => x.OrgNumber).Must(v => string.IsNullOrWhiteSpace(v) || OrgNumberCheck.IsValid(v))
             .WithErrorCode("CUS_INVALID_ORGNR").WithMessage("Organization number must be 9 digits with a valid check digit.");
         RuleFor(x => x.ContactName).MaximumLength(256);
-        RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Email).StrictEmail().When(x => !string.IsNullOrWhiteSpace(x.Email));
         RuleFor(x => x.Phone).MaximumLength(32);
         RuleFor(x => x.Source).MaximumLength(64);
         RuleFor(x => x.Notes).MaximumLength(4000);
@@ -132,6 +133,32 @@ internal static class OrgNumberCheck
         var check = 11 - (sum % 11);
         check = check == 11 ? 0 : check;
         return check != 10 && check == digits[8] - '0';
+    }
+}
+
+internal sealed class DisqualifyRequestValidator : AbstractValidator<DisqualifyRequest>
+{
+    // The column holds 256 characters; the domain still answers "reason required" for an empty one (F-G1-06).
+    public DisqualifyRequestValidator() => RuleFor(x => x.Reason).MaximumLength(256);
+}
+
+internal sealed class MoveStageRequestValidator : AbstractValidator<MoveStageRequest>
+{
+    public MoveStageRequestValidator()
+    {
+        RuleFor(x => x.StageId).NotEmpty();
+        RuleFor(x => x.LostReason).MaximumLength(256);
+    }
+}
+
+internal sealed class ConvertLeadRequestValidator : AbstractValidator<ConvertLeadRequest>
+{
+    public ConvertLeadRequestValidator()
+    {
+        RuleFor(x => x.OpportunityName).MaximumLength(256);
+        RuleFor(x => x.OneOffAmount).InclusiveBetween(0, 100_000_000).When(x => x.OneOffAmount is not null);
+        RuleFor(x => x.Mrr).InclusiveBetween(0, 10_000_000).When(x => x.Mrr is not null);
+        RuleFor(x => x.TermMonths).InclusiveBetween(0, 120).When(x => x.TermMonths is not null);
     }
 }
 

@@ -193,12 +193,20 @@ namespace Crm.Identity.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("AuthenticatedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("EndReason")
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
                     b.Property<DateTimeOffset?>("EndedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ExternalSessionHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -212,6 +220,9 @@ namespace Crm.Identity.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExternalSessionHash")
+                        .HasFilter("[ExternalSessionHash] IS NOT NULL");
 
                     b.HasIndex("UserId");
 

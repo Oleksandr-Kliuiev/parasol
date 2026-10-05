@@ -60,6 +60,7 @@ import { BasisStatusBadge, InvoiceMovements, InvoiceStatusBadge } from './shared
 import { monthLabel } from './period';
 import type { ProductListItem } from '../catalog/types';
 import type { BasisLine } from './types';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -264,7 +265,7 @@ export function BillingBasisPage() {
                   <li key={invoice.id}>
                     <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {invoice.url ? (
-                        <Link href={invoice.url} target="_blank" rel="noopener noreferrer">
+                        <Link href={safeHttpUrl(invoice.url)} target="_blank" rel="noopener noreferrer">
                           {invoice.invoiceNo}
                         </Link>
                       ) : (

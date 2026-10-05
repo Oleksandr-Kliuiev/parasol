@@ -240,7 +240,7 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
     private static AddressData ToData(Address address) => new(address.Street, address.PostalCode, address.City, address.CountryCode);
 
     private static string? ValidEmail(string? email) =>
-        email is not null && System.Net.Mail.MailAddress.TryCreate(email.Trim(), out _) ? email.Trim() : null;
+        email is not null && Crm.SharedKernel.Text.EmailAddresses.IsValid(email.Trim()) ? email.Trim() : null;
 }
 
 internal sealed class OrganizationMatcher(IReadOnlyList<DuplicateCandidate> organizations) : IOrganizationMatcher

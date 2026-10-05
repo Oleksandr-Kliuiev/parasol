@@ -126,12 +126,12 @@ DEV-20-AC03,DEV-20,Все исходные записи имеют резуль�
 DEV-20-AC04,DEV-20,Ошибки середины batch не теряют позицию продолжения и не оставляют необъяснимые частичные связи.,"Q1,Q2,Q3,Q7",pass,evidence/DEV-20.md; MigrationImportResumeTests,2026-10-05
 DEV-20-AC05,DEV-20,Импортированные owners соответствуют утверждённым scopes; персональные данные подпадают под политику.,"Q1,Q2,Q3,Q7",pass,evidence/DEV-20.md; owner resolution and no-PII run tables tested; approved record scopes for customers do not exist yet: EXT-01,2026-10-05
 DEV-20-AC06,DEV-20,Finance и Product Owner подтвердили пробную миграцию в EXT-09.,"Q1,Q2,Q3,Q7",blocked,evidence/DEV-20.md; EXT-09: Finance and Product Owner have not confirmed a trial migration on a real source,2026-10-05
-DEV-21-AC01,DEV-21,Каждое применимое ASVS L1/L2 требование имеет доказательство либо явный незакрытый gap; нет общей галочки соответствия.,"Q1,Q2,Q3,Q4,Q7",not_run,,
-DEV-21-AC02,DEV-21,"Негативные проверки scope, отзыва ролей, CSRF, экспорта и replay проходят после изменений.","Q1,Q2,Q3,Q4,Q7",not_run,,
-DEV-21-AC03,DEV-21,По независимой проверке нет известных незакрытых Critical/High в запускаемом контуре; retest приложен.,"Q1,Q2,Q3,Q4,Q7",not_run,,
-DEV-21-AC04,DEV-21,Реальные CA/MFA и least privilege доказаны; снимок локальной конфигурации не заменяет их.,"Q1,Q2,Q3,Q4,Q7",not_run,,
-DEV-21-AC05,DEV-21,Логи/telemetry/artifacts не содержат secrets и лишние PII; тестовые trace очищены перед передачей.,"Q1,Q2,Q3,Q4,Q7",not_run,,
-DEV-21-AC06,DEV-21,Документация версии baseline обновлена до ASVS 5.0.0 и объясняет границы оценки.,"Q1,Q2,Q3,Q4,Q7",not_run,,
+DEV-21-AC01,DEV-21,Каждое применимое ASVS L1/L2 требование имеет доказательство либо явный незакрытый gap; нет общей галочки соответствия.,"Q1,Q2,Q3,Q4,Q7",pass,"evidence/DEV-21.md; evidence/DEV-21/asvs-5.0.0-l2-matrix.csv (253 L1/L2 requirements of the official ASVS 5.0.0 CSV); self-assessment, not independent",2026-10-05
+DEV-21-AC02,DEV-21,"Негативные проверки scope, отзыва ролей, CSRF, экспорта и replay проходят после изменений.","Q1,Q2,Q3,Q4,Q7",pass,"evidence/DEV-21.md; evidence/DEV-21/backend.txt; evidence/DEV-21/e2e.txt (RecordScopeTests, SessionLifecycleTests, ReverificationTests, WebHostSecurityTests, RequestHardeningTests, OutboxDeliveryTests)",2026-10-05
+DEV-21-AC03,DEV-21,По независимой проверке нет известных незакрытых Critical/High в запускаемом контуре; retest приложен.,"Q1,Q2,Q3,Q4,Q7",blocked,evidence/DEV-21.md; EXT-06: no independent review or retest; self-assessment found no Critical/High,2026-10-05
+DEV-21-AC04,DEV-21,Реальные CA/MFA и least privilege доказаны; снимок локальной конфигурации не заменяет их.,"Q1,Q2,Q3,Q4,Q7",blocked,evidence/DEV-21.md; EXT-02: real Conditional Access/MFA/PIM/least privilege not verified in a tenant,2026-10-05
+DEV-21-AC05,DEV-21,Логи/telemetry/artifacts не содержат secrets и лишние PII; тестовые trace очищены перед передачей.,"Q1,Q2,Q3,Q4,Q7",pass,"evidence/DEV-21.md; ADR-025; runbook 17; code and repository level only, live log sinks and handover not verified (EXT-02/EXT-06)",2026-10-05
+DEV-21-AC06,DEV-21,Документация версии baseline обновлена до ASVS 5.0.0 и объясняет границы оценки.,"Q1,Q2,Q3,Q4,Q7",pass,evidence/DEV-21.md; docs/06-security.md (ASVS 5.0.0 baseline and assessment boundaries); SECURITY.md,2026-10-05
 DEV-22-AC01,DEV-22,"У каждой роли есть заполненный протокол с исполнителем, датой, результатом и закрытыми блокирующими замечаниями.","Q3,Q5,Q6,Q7",not_run,,
 DEV-22-AC02,DEV-22,Полный месячный цикл завершён; одного успешного sandbox заказа недостаточно.,"Q3,Q5,Q6,Q7",not_run,,
 DEV-22-AC03,DEV-22,100% применимых оплачиваемых источников имеют объяснённый результат; необъяснённых расхождений сумм нет.,"Q3,Q5,Q6,Q7",not_run,,

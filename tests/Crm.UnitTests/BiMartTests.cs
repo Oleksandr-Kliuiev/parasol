@@ -62,3 +62,53 @@ public class BiMartTests
         BiService.Glossary["MRR"].ShouldContain("Not revenue billed");
     }
 }
+
+/// <summary>F-G3-02: the legacy mart returns plain rows, so each dataset names the finance permission it needs.</summary>
+public class LegacyMartPermissionTests
+{
+    private sealed class User(params string[] permissions) : Crm.SharedKernel.Application.ICurrentUser
+    {
+        public Guid? UserId => Guid.NewGuid();
+        public string DisplayName => "test";
+        public bool IsAuthenticated => true;
+        public bool HasPermission(string permission) => permissions.Contains(permission);
+    }
+
+    [Fact]
+    public void Cost_datasets_need_the_cost_grant_and_revenue_datasets_the_finance_grant()
+    {
+        var reportsOnly = new User(Crm.Authorization.Permissions.ReportsMart);
+        var finance = new User(Crm.Authorization.Permissions.ReportsMart, Crm.Authorization.Permissions.FinanceRead);
+        var cost = new User(Crm.Authorization.Permissions.ReportsMart, Crm.Authorization.Permissions.FinanceRead, Crm.Authorization.Permissions.FinanceCostRead);
+
+        foreach (var cell in new[] { "microsoft-costs", "margins", "MARGINS" })
+        {
+            Crm.Reports.MartService.RequiredPermission(cell).ShouldBe(Crm.Authorization.Permissions.FinanceCostRead);
+            Crm.Reports.MartService.Authorize(cell, reportsOnly).ShouldNotBeNull().Type.ShouldBe(Crm.SharedKernel.Results.ErrorType.Forbidden);
+            Crm.Reports.MartService.Authorize(cell, finance).ShouldNotBeNull();
+            Crm.Reports.MartService.Authorize(cell, cost).ShouldBeNull();
+        }
+
+        foreach (var dataset in new[] { "revenue-by-month", "revenue-by-customer" })
+        {
+            Crm.Reports.MartService.Authorize(dataset, reportsOnly).ShouldNotBeNull();
+            Crm.Reports.MartService.Authorize(dataset, finance).ShouldBeNull();
+        }
+
+        foreach (var dataset in new[] { "organizations", "subscriptions", "renewals", "hours-by-customer" })
+        {
+            Crm.Reports.MartService.Authorize(dataset, reportsOnly).ShouldBeNull();
+        }
+    }
+
+    [Fact]
+    public void Every_dataset_has_a_decision_so_a_new_one_cannot_be_forgotten()
+    {
+        // A new dataset has to be listed here on purpose: either it needs a finance grant or it is plain business data.
+        var plain = new[] { "organizations", "subscriptions", "renewals", "hours-by-customer" };
+        foreach (var dataset in Crm.Reports.MartService.Datasets)
+        {
+            (Crm.Reports.MartService.RequiredPermission(dataset) is not null || plain.Contains(dataset)).ShouldBeTrue(dataset);
+        }
+    }
+}

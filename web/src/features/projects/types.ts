@@ -105,7 +105,8 @@ export interface ProjectRequest {
   startDate: string;
   endDate: string | null;
   budgetHours: number;
-  budgetAmount: number;
+  /** Omitted for callers without finance.read: the server keeps the stored amount. */
+  budgetAmount?: number;
   contractId: string | null;
   opportunityId: string | null;
   notes: string | null;
@@ -116,8 +117,9 @@ export interface PhaseRequest {
   plannedStart: string | null;
   plannedEnd: string | null;
   plannedHours: number;
-  fee: number;
-  billOnCompletion: boolean;
+  /** Omitted for callers without finance.read: the server keeps the stored fee and billing flag. */
+  fee?: number;
+  billOnCompletion?: boolean;
   productId: string | null;
 }
 

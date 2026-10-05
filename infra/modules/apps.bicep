@@ -1,4 +1,6 @@
 param location string
+// DEV-21: the subnet the ingress runs in; the only sender whose X-Forwarded-* headers crm-web trusts.
+param appsSubnetPrefix string
 param environmentName string
 param shortSuffix string
 param tags object
@@ -35,6 +37,10 @@ param webMinReplicas int
 param enablePowerOffice bool
 param powerOfficeEnvironment string
 param enableAtera bool
+param enablePartnerCenter bool
+param partnerCenterTenantId string
+param partnerCenterClientId string
+param enableTeams bool
 param recordScope string
 param maintenanceForceReadOnly bool
 param biEnabled bool
@@ -48,6 +54,9 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existin
   name: logAnalyticsWorkspaceName
 }
 
+// DEV-21 (F-G4-12): the Basic SKU has no private endpoint or network rule, so the registry's public endpoint exists. Pulls
+// and pushes need an Entra identity (adminUserEnabled false); images are referenced by digest. Moving to Premium with a
+// private endpoint is a cost decision for the owner (docs/06-security.md §6), not made here.
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: 'crcrm${environmentName}${shortSuffix}'
   location: location
@@ -120,7 +129,14 @@ var biEnv = concat([
   { name: 'Bi__Audience', value: biAudience }
 ], biClientEnv)
 
+// DEV-21: crm-web refuses to start in Production with AllowedHosts '*'. The hosts are the app's own name under the environment's
+// default domain and its smoke-test label (outputs webUrl / webCandidateUrl); X-Forwarded-Host is honoured only for these and
+// only from the apps subnet (the ingress runs inside it).
+var webHosts = 'ca-crm-web-${environmentName}.${environment.properties.defaultDomain};ca-crm-web-${environmentName}---candidate.${environment.properties.defaultDomain}'
+
 var webEnv = concat(commonEnv, biEnv, [
+  { name: 'AllowedHosts', value: webHosts }
+  { name: 'Forwarded__KnownNetworks__0', value: appsSubnetPrefix }
   { name: 'OTEL_SERVICE_NAME', value: 'crm-web' }
   { name: 'AZURE_CLIENT_ID', value: appIdentityClientId }
   { name: 'ConnectionStrings__crm', value: webConnectionString }
@@ -157,13 +173,31 @@ var integrationSecrets = concat(
   ] : [],
   enableAtera ? [
     { name: 'atera-api-key', keyVaultUrl: '${keyVaultUri}secrets/atera-api-key', identity: workerIdentityId }
+  ] : [],
+  // DEV-21 / F-G4-02: Partner Center and the Teams webhook URLs (a bearer secret by design) are secrets too.
+  enablePartnerCenter ? [
+    { name: 'partnercenter-client-secret', keyVaultUrl: '${keyVaultUri}secrets/partnercenter-client-secret', identity: workerIdentityId }
+    { name: 'partnercenter-refresh-token', keyVaultUrl: '${keyVaultUri}secrets/partnercenter-refresh-token', identity: workerIdentityId }
+  ] : [],
+  enableTeams ? [
+    { name: 'teams-webhook-sales', keyVaultUrl: '${keyVaultUri}secrets/teams-webhook-sales', identity: workerIdentityId }
+    { name: 'teams-webhook-finance', keyVaultUrl: '${keyVaultUri}secrets/teams-webhook-finance', identity: workerIdentityId }
+    { name: 'teams-webhook-operations', keyVaultUrl: '${keyVaultUri}secrets/teams-webhook-operations', identity: workerIdentityId }
   ] : [])
 
 var integrationSwitches = [
   { name: 'Integrations__PowerOffice__Enabled', value: string(enablePowerOffice) }
   { name: 'Integrations__PowerOffice__Environment', value: powerOfficeEnvironment }
   { name: 'Integrations__Atera__Enabled', value: string(enableAtera) }
+  { name: 'Integrations__PartnerCenter__Enabled', value: string(enablePartnerCenter) }
+  { name: 'Integrations__MicrosoftGraph__Teams__Enabled', value: string(enableTeams) }
 ]
+
+// Identifiers, not secrets. Only crm-worker calls Partner Center.
+var partnerCenterSettings = enablePartnerCenter ? [
+  { name: 'Integrations__PartnerCenter__TenantId', value: partnerCenterTenantId }
+  { name: 'Integrations__PartnerCenter__ClientId', value: partnerCenterClientId }
+] : []
 
 var integrationKeys = concat(
   enablePowerOffice ? [
@@ -173,6 +207,15 @@ var integrationKeys = concat(
   ] : [],
   enableAtera ? [
     { name: 'Integrations__Atera__ApiKey', secretRef: 'atera-api-key' }
+  ] : [],
+  enablePartnerCenter ? [
+    { name: 'Integrations__PartnerCenter__ClientSecret', secretRef: 'partnercenter-client-secret' }
+    { name: 'Integrations__PartnerCenter__RefreshToken', secretRef: 'partnercenter-refresh-token' }
+  ] : [],
+  enableTeams ? [
+    { name: 'Integrations__MicrosoftGraph__Teams__Channels__Sales', secretRef: 'teams-webhook-sales' }
+    { name: 'Integrations__MicrosoftGraph__Teams__Channels__Finance', secretRef: 'teams-webhook-finance' }
+    { name: 'Integrations__MicrosoftGraph__Teams__Channels__Operations', secretRef: 'teams-webhook-operations' }
   ] : [])
 
 // Images are referenced by digest from the release manifest, never by a tag that could move (DEV-05).
@@ -259,7 +302,7 @@ resource worker 'Microsoft.App/containerApps@2024-10-02-preview' = {
           name: 'crm-worker'
           image: workerImage
           resources: { cpu: json('1'), memory: '2Gi' }
-          env: concat(workerEnv, integrationSwitches, integrationKeys)
+          env: concat(workerEnv, partnerCenterSettings, integrationSwitches, integrationKeys)
           // DEV-06: live fails when the outbox loop stops finishing rounds (the platform restarts the worker); ready is the
           // database, so a new revision that cannot reach it never replaces a working one.
           probes: bootstrapImages ? [] : [

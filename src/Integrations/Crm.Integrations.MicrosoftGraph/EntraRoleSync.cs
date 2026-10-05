@@ -94,7 +94,7 @@ internal sealed class GraphRoleAssignmentSource(HttpClient http) : IGraphRoleAss
             var body = await response.Content.ReadFromJsonAsync<GraphPage<T>>(cancellationToken)
                        ?? throw new InvalidOperationException("Empty page from Microsoft Graph.");
             items.AddRange(body.Value);
-            url = body.NextLink!;
+            url = body.NextLink is { } next ? GraphLinks.Require(http.BaseAddress, next) : null!;
         }
 
         return items;

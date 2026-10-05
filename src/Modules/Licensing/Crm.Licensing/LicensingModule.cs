@@ -44,9 +44,8 @@ public static class LicensingModule
         // The distributor export is pasted or uploaded as text; ?dryRun=true previews what the file would change (BR-LIC-05).
         group.MapPost("/import", async (HttpRequest request, bool? dryRun, LicensingService service, CancellationToken ct) =>
             {
-                using var reader = new StreamReader(request.Body);
-                var csv = await reader.ReadToEndAsync(ct);
-                return (await service.ImportAsync(csv, dryRun ?? false, ct)).ToHttpResult(Results.Ok);
+                var (csv, failure) = await CsvUpload.ReadTextAsync(request, ct);
+                return csv is null ? failure! : (await service.ImportAsync(csv, dryRun ?? false, ct)).ToHttpResult(Results.Ok);
             })
             .RequirePermission(Permissions.LicensingManage);
 
@@ -67,9 +66,8 @@ public static class LicensingModule
         // The distributor's invoice file, pasted like the subscription import; ?dryRun=true previews it.
         group.MapPost("/ms-billing/import", async (HttpRequest request, bool? dryRun, LicensingService service, CancellationToken ct) =>
             {
-                using var reader = new StreamReader(request.Body);
-                var csv = await reader.ReadToEndAsync(ct);
-                return (await service.ImportBilledCsvAsync(csv, dryRun ?? false, ct)).ToHttpResult(Results.Ok);
+                var (csv, failure) = await CsvUpload.ReadTextAsync(request, ct);
+                return csv is null ? failure! : (await service.ImportBilledCsvAsync(csv, dryRun ?? false, ct)).ToHttpResult(Results.Ok);
             })
             .RequirePermission(Permissions.FinanceCostRead);
 

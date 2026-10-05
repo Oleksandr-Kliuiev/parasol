@@ -25,7 +25,9 @@ public static class BrregModule
 {
     public static IServiceCollection AddBrregIntegration(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptions<BrregOptions>().Bind(configuration.GetSection(BrregOptions.SectionName));
+        services.AddOptions<BrregOptions>().Bind(configuration.GetSection(BrregOptions.SectionName))
+            .Validate(options => Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.BaseUrl), "Integrations:Brreg:BaseUrl must be an https address.")
+            .ValidateOnStart();
 
         services.AddHttpClient<IBrregClient, BrregClient>((sp, client) =>
             {

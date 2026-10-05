@@ -59,7 +59,7 @@ az role assignment create --assignee $(az ad signed-in-user show --query id -o t
 az keyvault update -n $KV --public-network-access Enabled --default-action Deny
 az keyvault network-rule add -n $KV --ip-address $MY_IP
 
-az keyvault certificate create --vault-name $KV -n crm-web-auth -p "$(az keyvault certificate get-default-policy | jq '.x509CertificateProperties.subject="CN=vardahei-crm-test" | .lifetimeActions[0].trigger.daysBeforeExpiry=30 | del(.lifetimeActions[0].trigger.lifetimePercentage)')"
+az keyvault certificate create --vault-name $KV -n crm-web-auth -p "$(az keyvault certificate get-default-policy | jq '.x509CertificateProperties.subject="CN=vardahei-crm-test" | .keyProperties.keySize=3072 | .lifetimeActions[0].trigger.daysBeforeExpiry=30 | del(.lifetimeActions[0].trigger.lifetimePercentage)')"
 az keyvault certificate download --vault-name $KV -n crm-web-auth -f crm-web-auth.cer -e DER
 az ad app credential reset --id <APP_ID> --cert @crm-web-auth.cer --append
 
@@ -68,6 +68,7 @@ az keyvault network-rule remove -n $KV --ip-address $MY_IP
 az keyvault update -n $KV --public-network-access Disabled
 rm crm-web-auth.cer
 ```
+Ключ сертификата — RSA 3072 (DEV-21, F-G4-08). Сертификат остаётся экспортируемым: crm-web читает закрытый ключ через секрет Key Vault, неэкспортируемый ключ приложение не получит — риск принят и ограничен правом на один секрет (DEV-04-AC05).
 Сертификат продлевается Key Vault автоматически; после продления новый публичный ключ нужно загрузить в регистрацию (алерт «сертификат истекает через 30 дней» — [07 § 4.2](../07-nfr-devops.md#42-алерты)).
 
 ## 6. Настройки GitHub и первый выпуск

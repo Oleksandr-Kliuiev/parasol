@@ -50,7 +50,7 @@ AppMetrics
 | summarize arg_max(TimeGenerated, *) by Name, Dimension
 | extend Value = Sum / max_of(1, ItemCount)
 '''
-var rules = [
+var declaredRules = [
   {
     id: 'http-errors'
     title: 'HTTP server errors'
@@ -202,7 +202,44 @@ datatable(Dimension:string)["crm-worker"]
     threshold: 0
     query: '${snapshots}\n| where Name == "crm.exceptions.count" and tostring(Properties["category"]) != "Financial" | project Dimension, Value'
   }
+  // DEV-21 (F-G5-01, docs/runbooks/08 §5): the integrity job logs AUDIT_INTEGRITY_MISMATCH at Critical when a checkpoint no
+  // longer matches the audit entries. A wider window than the others absorbs log ingestion delay. The line carries
+  // checkpoint ids only, never entry contents.
+  {
+    id: 'audit-integrity-mismatch'
+    title: 'Audit hash chain no longer matches its checkpoints'
+    severity: 1
+    group: 0
+    threshold: 0
+    frequency: 'PT5M'
+    window: 'PT30M'
+    query: '''
+AppTraces | where TimeGenerated > ago(30m) and Message startswith "AUDIT_INTEGRITY_MISMATCH"
+| summarize Value=todouble(count()) by Dimension=AppRoleName
+'''
+  }
+  // The nightly job (04:40) writes AUDIT_CHECKPOINT for every new settled range. No checkpoint for two days means the job
+  // stopped or telemetry export broke. A system that wrote no audit entry at all in that time also stays silent, so this is
+  // Sev 3 (docs/runbooks/15-monitoring.md); the host-telemetry and heartbeat rules cover a dead worker.
+  {
+    id: 'audit-checkpoint-missing'
+    title: 'No audit checkpoint logged for two days'
+    severity: 3
+    group: 0
+    threshold: 0
+    frequency: 'PT1H'
+    window: 'P2D'
+    query: '''
+datatable(Dimension:string)["crm-worker"]
+| join kind=leftouter (AppTraces | where TimeGenerated > ago(2d) and Message startswith "AUDIT_CHECKPOINT" | summarize LastSeen=max(TimeGenerated) by Dimension=AppRoleName) on Dimension
+| where isnull(LastSeen)
+| project Dimension, Value=1.0
+'''
+  }
 ]
+
+// Every rule evaluates each minute over five minutes unless it declares its own frequency and window (log-based rules).
+var rules = [for rule in declaredRules: union({ frequency: 'PT1M', window: 'PT5M' }, rule)]
 
 resource alerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for rule in rules: {
   name: 'alert-${name}-${rule.id}'
@@ -215,8 +252,8 @@ resource alerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for rule 
     enabled: alertsEnabled
     severity: rule.severity
     scopes: [workspaceId]
-    evaluationFrequency: 'PT1M'
-    windowSize: 'PT5M'
+    evaluationFrequency: rule.frequency
+    windowSize: rule.window
     autoMitigate: true
     resolveConfiguration: { autoResolved: true, timeToResolve: 'PT10M' }
     criteria: {

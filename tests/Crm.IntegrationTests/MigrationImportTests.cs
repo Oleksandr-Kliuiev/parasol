@@ -20,6 +20,14 @@ public sealed class MigrationImportTests(CrmWebFactory factory)
     private const string Organizations = "/api/v1/customers/organizations";
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    /// <summary>Raw bytes as the upload sends them: a CSV import takes only text/csv or text/plain (F-G2-05), whatever the encoding.</summary>
+    private static ByteArrayContent Csv(byte[] bytes)
+    {
+        var content = new ByteArrayContent(bytes);
+        content.Headers.ContentType = new("text/csv");
+        return content;
+    }
+
     internal static async Task<HttpResponseMessage> PostAsync(HttpClient client, string csv, bool dryRun, string? expectedSha256 = null)
     {
         var url = $"{Organizations}/import?dryRun={dryRun.ToString().ToLowerInvariant()}" + (expectedSha256 is null ? string.Empty : $"&expectedSha256={expectedSha256}");
@@ -411,7 +419,7 @@ public sealed class MigrationImportTests(CrmWebFactory factory)
         // UTF-8 with a BOM and a multi-line quoted value: the lines reported are the lines of the file.
         var good = $"﻿name;note;city\r\n\"{marker} Linje AS\";\"first\r\nsecond\";Bergen\r\n\r\n{marker} Neste AS;x;Oslo\r\n{marker} Skjev AS;x;Oslo;shifted\r\n";
         var utf8 = Encoding.UTF8.GetBytes(good);
-        var response = await admin.PostAsync($"{Organizations}/import?dryRun=true", new ByteArrayContent(utf8), Ct);
+        var response = await admin.PostAsync($"{Organizations}/import?dryRun=true", Csv(utf8), Ct);
         var result = await response.ReadJsonAsync();
         Counts(result).ShouldBe((Created: 2, Updated: 0, Unchanged: 0, Conflicts: 0, Rejected: 1, Contacts: 0, Total: 3));
         var rows = result.GetProperty("rows").EnumerateArray().ToList();
@@ -421,7 +429,7 @@ public sealed class MigrationImportTests(CrmWebFactory factory)
 
         // Latin-1 bytes are not UTF-8: the rows with such a letter are refused, not stored garbled.
         var latin1 = Encoding.Latin1.GetBytes($"name;city\n{marker} Blå AS;Bergen\n{marker} Grønn AS;Oslo\n{marker} Rod AS;Oslo\n");
-        var legacy = await (await admin.PostAsync($"{Organizations}/import?dryRun=true", new ByteArrayContent(latin1), Ct)).ReadJsonAsync();
+        var legacy = await (await admin.PostAsync($"{Organizations}/import?dryRun=true", Csv(latin1), Ct)).ReadJsonAsync();
         Counts(legacy).ShouldBe((Created: 1, Updated: 0, Unchanged: 0, Conflicts: 0, Rejected: 2, Contacts: 0, Total: 3));
         legacy.GetProperty("reasonCounts").GetProperty("ENCODING_INVALID").GetInt32().ShouldBe(2);
         legacy.GetProperty("warnings").EnumerateArray().Select(w => w.GetString()).ShouldContain("File: ENCODING_REPLACEMENT_CHARS");

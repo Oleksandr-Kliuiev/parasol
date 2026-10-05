@@ -8,6 +8,7 @@ using Crm.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Crm.Web.Bff;
 
@@ -30,13 +31,26 @@ public static class BffEndpoints
     {
         var group = app.MapGroup("/bff").WithTags("BFF");
 
-        group.MapGet("/login", (HttpContext context, string? returnUrl, string? role, CrmAuthOptions options) =>
+        group.MapGet("/login", (
+                HttpContext context, string? returnUrl, string? role, string? reverify, CrmAuthOptions options,
+                Microsoft.Extensions.Options.IOptions<AuthorizationFreshnessOptions> freshness) =>
             {
                 var target = SafeReturnUrl(returnUrl);
+                // F-G2-08: "confirm your identity" is a sign-in Entra must answer interactively and not older than the freshness
+                // window; the same address is the ordinary sign-in without the parameter.
+                var confirming = !string.IsNullOrEmpty(reverify) && reverify != "0";
                 if (options.Mode == AuthMode.Entra)
                 {
-                    return Results.Challenge(new AuthenticationProperties { RedirectUri = target }, [OpenIdConnectDefaults.AuthenticationScheme]);
+                    var properties = confirming
+                        ? Reverification.Challenge(
+                            target, freshness.Value.PrivilegedFreshness,
+                            context.User.FindFirstValue(CrmClaimTypes.ObjectId) ?? context.User.FindFirstValue("oid"))
+                        : new AuthenticationProperties { RedirectUri = target };
+                    return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
                 }
+
+                // Development: there is no second factor; confirming is signing in again, as the role already held when there is one.
+                role ??= confirming ? context.User.FindAll(ClaimTypes.Role).Select(c => c.Value).FirstOrDefault(CrmRoles.All.Contains) : null;
 
                 return role is null ? Results.Content(DevLoginPage(target), "text/html; charset=utf-8") : Results.LocalRedirect(
                     $"/bff/dev-login?role={Uri.EscapeDataString(role)}&returnUrl={Uri.EscapeDataString(target)}");
@@ -58,6 +72,9 @@ public static class BffEndpoints
                     new Claim("preferred_username", $"{slug}@dev.local"),
                     new Claim("name", $"Dev {role.Replace("Crm.", string.Empty, StringComparison.Ordinal)}"),
                     new Claim(ClaimTypes.Role, role),
+                    // The development sign-in is an interactive authentication: now.
+                    new Claim("auth_time", context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds()
+                        .ToString(System.Globalization.CultureInfo.InvariantCulture)),
                 ], CookieAuthenticationDefaults.AuthenticationScheme, "name", ClaimTypes.Role);
                 var principal = new ClaimsPrincipal(identity);
                 try
@@ -76,7 +93,8 @@ public static class BffEndpoints
             .ExcludeFromDescription();
 
         group.MapPost("/logout", async (
-                HttpContext context, CrmAuthOptions options, ISessionDirectory sessions, SessionStateCache cache, TimeProvider time) =>
+                HttpContext context, CrmAuthOptions options, ISessionDirectory sessions, SessionStateCache cache, TimeProvider time,
+                IDataProtectionProvider protection) =>
             {
                 // DEV-10: the session ends on the server, so this cookie — and any copy of it — is refused on every replica. Signing
                 // out stays possible during read-only maintenance (DEV-13): ending a session reduces access, it changes no data.
@@ -93,16 +111,20 @@ public static class BffEndpoints
                 await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 if (options.Mode == AuthMode.Entra)
                 {
-                    // The SPA navigates to this URL to complete single sign-out at Entra ID.
-                    return Results.Ok(new { signOutUrl = "/bff/signout-entra" });
+                    // The SPA navigates to this URL to complete single sign-out at Entra ID. The link carries a ticket that only
+                    // this POST (which needs the X-CSRF header, so only the SPA) can obtain and that is good for a minute: a
+                    // page on another site cannot send the browser to it to sign the user out of Entra.
+                    var ticket = protection.CreateProtector(SignOutPurpose).ToTimeLimitedDataProtector()
+                        .Protect(Guid.NewGuid().ToString("N"), TimeSpan.FromMinutes(1));
+                    return Results.Ok(new { signOutUrl = $"/bff/signout-entra?ticket={Uri.EscapeDataString(ticket)}" });
                 }
 
                 return Results.Ok(new { signOutUrl = "/" });
             })
             .AllowedInMaintenance();
 
-        group.MapGet("/signout-entra", (CrmAuthOptions options) =>
-                options.Mode == AuthMode.Entra
+        group.MapGet("/signout-entra", (string? ticket, CrmAuthOptions options, IDataProtectionProvider protection) =>
+                options.Mode == AuthMode.Entra && IsSignOutTicket(ticket, protection)
                     ? Results.SignOut(new AuthenticationProperties { RedirectUri = "/" }, [OpenIdConnectDefaults.AuthenticationScheme])
                     : Results.LocalRedirect("/"))
             .AllowAnonymous();
@@ -128,11 +150,27 @@ public static class BffEndpoints
         return app;
     }
 
-    internal static string SafeReturnUrl(string? returnUrl) =>
-        !string.IsNullOrEmpty(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//", StringComparison.Ordinal) &&
-        !returnUrl.StartsWith("/\\", StringComparison.Ordinal)
-            ? returnUrl
-            : "/";
+    internal const string SignOutPurpose = "Crm.Web.SignOutTicket";
+
+    internal static bool IsSignOutTicket(string? ticket, IDataProtectionProvider protection)
+    {
+        if (string.IsNullOrEmpty(ticket) || ticket.Length > 512)
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = protection.CreateProtector(SignOutPurpose).ToTimeLimitedDataProtector().Unprotect(ticket);
+            return true;
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    internal static string SafeReturnUrl(string? returnUrl) => ReturnUrl.Safe(returnUrl);
 
     private static string DevLoginPage(string returnUrl)
     {

@@ -56,6 +56,7 @@ public static class CustomFieldsModule
         group.MapPut("/{entity}/{entityId:guid}", async (
                 CustomFieldEntity entity, Guid entityId, SaveCustomFieldValuesRequest request, CustomFieldService service, CancellationToken ct) =>
                 (await service.SaveValuesAsync(entity, entityId, request.Values, ct)).ToHttpResult(Results.Ok))
+            .Validate<SaveCustomFieldValuesRequest>()
             .RequirePermission(Permissions.CustomersWrite);
 
         return app;

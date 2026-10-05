@@ -67,6 +67,11 @@ public static class MsBillingCsv
             return new MsBillingParseResult([], ["The file has no header row and no lines."], []);
         }
 
+        if (table.RowCount > CsvTable.MaxImportRows)
+        {
+            return new MsBillingParseResult([], [$"The file has more than {CsvTable.MaxImportRows} rows; split it."], table.UnknownColumns);
+        }
+
         var errors = new List<string>();
         foreach (var required in new[] { "customerid", "offerid", "total" })
         {

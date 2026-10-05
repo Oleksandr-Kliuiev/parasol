@@ -20,9 +20,14 @@ public static class MicrosoftGraphModule
     /// <summary>Calls made with the signed-in user's own token (calendar, mailbox).</summary>
     public const string DelegatedHttpClientName = "microsoft-graph-user";
 
+    // A redirect would carry the request, and with it a token or a card, to wherever the answer points (F-G5-12).
+    private static HttpMessageHandler NoRedirects() => new SocketsHttpHandler { AllowAutoRedirect = false };
+
     public static IServiceCollection AddMicrosoftGraphIntegration(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptions<GraphOptions>().Bind(configuration.GetSection(GraphOptions.SectionName));
+        services.AddOptions<GraphOptions>().Bind(configuration.GetSection(GraphOptions.SectionName))
+            .Validate(options => options.IsValid(out _), "Integrations:MicrosoftGraph has an address that is not https or a Teams webhook outside Teams:AllowedHostSuffixes.")
+            .ValidateOnStart();
         services.TryAddSingleton<TokenCredential>(sp => new DefaultAzureCredential(new DefaultAzureCredentialOptions
         {
             ManagedIdentityClientId = sp.GetRequiredService<IOptions<GraphOptions>>().Value.ManagedIdentityClientId,
@@ -34,6 +39,7 @@ public static class MicrosoftGraphModule
                 client.Timeout = TimeSpan.FromMinutes(2);
             })
             .AddHttpMessageHandler<GraphAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
         services.AddHttpClient<IGraphRoleAssignmentSource, GraphRoleAssignmentSource>((sp, client) =>
             {
@@ -41,6 +47,7 @@ public static class MicrosoftGraphModule
                 client.Timeout = TimeSpan.FromMinutes(1);
             })
             .AddHttpMessageHandler<GraphAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
         services.AddOptions<GraphMailOptions>().Bind(configuration.GetSection(GraphMailOptions.SectionName));
         services.AddHttpClient<INotificationEmailSender, GraphMailSender>((sp, client) =>
@@ -49,6 +56,7 @@ public static class MicrosoftGraphModule
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddHttpMessageHandler<GraphAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
         services.AddOptions<SalesMailOptions>().Bind(configuration.GetSection(SalesMailOptions.SectionName));
         services.AddHttpClient<IQuoteMailSender, GraphQuoteMailSender>((sp, client) =>
@@ -57,6 +65,7 @@ public static class MicrosoftGraphModule
                 client.Timeout = TimeSpan.FromSeconds(60);
             })
             .AddHttpMessageHandler<GraphAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
 
         // Delegated features: the web host plugs in the user's token; without it they report themselves unavailable.
@@ -68,6 +77,7 @@ public static class MicrosoftGraphModule
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddHttpMessageHandler<GraphDelegatedAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
         services.AddHttpClient<IUserMailbox, GraphMailbox>((sp, client) =>
             {
@@ -75,6 +85,7 @@ public static class MicrosoftGraphModule
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddHttpMessageHandler<GraphDelegatedAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
 
         // SharePoint runs on the application identity (Sites.Selected), Teams on a webhook URL that carries its own secret.
@@ -84,6 +95,7 @@ public static class MicrosoftGraphModule
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddHttpMessageHandler<GraphAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
         services.AddScoped<IDocumentLibrary>(sp => sp.GetRequiredService<GraphDocuments>());
         services.AddScoped<IDomainEventHandler<Crm.Customers.Contracts.OrganizationCreated>, OrganizationFolderHandler>();
@@ -91,6 +103,7 @@ public static class MicrosoftGraphModule
         // One attempt of the channel queue is one POST: a webhook has no idempotency key, and an automatic retry of a POST
         // that timed out after Teams took it would post the card twice (DEV-07). The queue retries later instead.
         services.AddHttpClient<ITeamsChannelSender, TeamsChannelSender>(client => client.Timeout = TimeSpan.FromSeconds(15))
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
 
         services.AddScoped<EntraUserSyncJob>();

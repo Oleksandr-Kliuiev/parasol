@@ -117,4 +117,47 @@ public partial class InfrastructureTests
             File.ReadAllText(Path.Combine(Production.Root, "infra", "env", $"{environment}.bicepparam")).ShouldContain("param recordScope = ");
         }
     }
+
+    /// <summary>
+    /// DEV-21 (F-G4-02): Partner Center and Teams webhook secrets follow the same rule as the other provider secrets — Key
+    /// Vault references resolved by the worker identity, granted one secret at a time, never present on crm-web.
+    /// </summary>
+    [Fact]
+    public void Partner_center_and_teams_secrets_are_per_secret_key_vault_references_for_the_worker()
+    {
+        var apps = Bicep("apps.bicep");
+        var secrets = Block(apps, "var integrationSecrets ");
+        var keys = Block(apps, "var integrationKeys ");
+        foreach (var name in new[] { "partnercenter-client-secret", "partnercenter-refresh-token", "teams-webhook-sales", "teams-webhook-finance", "teams-webhook-operations" })
+        {
+            secrets.ShouldContain($"name: '{name}'");
+            keys.ShouldContain($"secretRef: '{name}'");
+            Block(File.ReadAllText(Path.Combine(Production.Root, "infra", "main.bicep")), "var workerSecretNames ").ShouldContain($"'{name}'");
+        }
+
+        Block(apps, "var webEnv ").ShouldNotContain("PartnerCenter");
+        Block(apps, "var webEnv ").ShouldNotContain("Teams__Channels");
+    }
+
+    /// <summary>DEV-21 (F-G5-01): a broken audit chain is a Sev 1 alert, not only a log line (docs/runbooks/08 §5).</summary>
+    [Fact]
+    public void Crm_web_gets_its_allowed_hosts_and_trusted_proxy_network_from_the_deployment()
+    {
+        // DEV-21: Production refuses to start with AllowedHosts '*', and X-Forwarded-* is trusted only from the apps subnet.
+        var apps = File.ReadAllText(Path.Combine(Production.Root, "infra", "modules", "apps.bicep"));
+        apps.ShouldContain("name: 'AllowedHosts'");
+        apps.ShouldContain("name: 'Forwarded__KnownNetworks__0'");
+        apps.ShouldContain("---candidate.");
+        File.ReadAllText(Path.Combine(Production.Root, "infra", "main.bicep")).ShouldContain("appsSubnetPrefix: network.outputs.appsSubnetPrefix");
+    }
+
+    [Fact]
+    public void A_mismatch_of_the_audit_chain_raises_a_severity_1_alert()
+    {
+        var monitoring = Bicep("monitoring-operations.bicep");
+        var rule = Block(monitoring, "var declaredRules ");
+        var mismatch = rule[rule.IndexOf("id: 'audit-integrity-mismatch'", StringComparison.Ordinal)..];
+        mismatch.ShouldContain("severity: 1");
+        mismatch.ShouldContain("startswith \"AUDIT_INTEGRITY_MISMATCH\"");
+    }
 }

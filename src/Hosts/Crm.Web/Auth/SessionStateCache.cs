@@ -40,6 +40,9 @@ internal sealed class SessionStateCache(TimeProvider time, CrmAuthOptions option
         return state;
     }
 
+    /// <summary>Drops everything this replica remembers (sessions were ended by the identity provider).</summary>
+    public void ForgetAll() => _entries.Clear();
+
     /// <summary>Drops what this replica knows about a session it has just ended.</summary>
     public void Forget(Guid userId, Guid sessionId) => _entries.TryRemove((userId, sessionId), out _);
 }

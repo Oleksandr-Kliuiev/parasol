@@ -24,6 +24,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useInvoicePages } from './api';
 import { InvoiceMovements, InvoiceStatusBadge } from './shared';
 import { SavedViews } from '../../shared/views/SavedViews';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
@@ -114,7 +115,7 @@ export function InvoicesPage() {
                 <TableRow key={invoice.id}>
                   <TableCell>
                     {invoice.url ? (
-                      <Link href={invoice.url} target="_blank" rel="noopener noreferrer">
+                      <Link href={safeHttpUrl(invoice.url)} target="_blank" rel="noopener noreferrer">
                         {invoice.invoiceNo}
                       </Link>
                     ) : (
@@ -203,7 +204,7 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
               <TableRow key={invoice.id}>
                 <TableCell>
                   {invoice.url ? (
-                    <Link href={invoice.url} target="_blank" rel="noopener noreferrer">
+                    <Link href={safeHttpUrl(invoice.url)} target="_blank" rel="noopener noreferrer">
                       {invoice.invoiceNo}
                     </Link>
                   ) : (

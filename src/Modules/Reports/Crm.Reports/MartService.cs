@@ -1,9 +1,11 @@
 using System.Globalization;
 using System.Text;
+using Crm.Authorization;
 using Crm.Billing.Contracts;
 using Crm.Contracts.Contracts;
 using Crm.Customers.Contracts;
 using Crm.Licensing.Contracts;
+using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using Crm.TimeTracking.Contracts;
 
@@ -23,13 +25,36 @@ internal sealed class MartService(
     ILicensingApi licensing,
     ITimeTrackingApi timeTracking,
     IContractsApi contracts,
-    MarginService margins)
+    MarginService margins,
+    ICurrentUser currentUser)
 {
     public static readonly string[] Datasets =
         ["organizations", "revenue-by-month", "revenue-by-customer", "hours-by-customer", "microsoft-costs", "subscriptions", "margins", "renewals"];
 
+    /// <summary>
+    /// The finance permission a dataset needs on top of <c>reports.mart</c> (F-G3-02), the same split the BI datasets make:
+    /// Microsoft's costs and the margins are cost data, revenue is finance data. Rows leave this service as plain objects and
+    /// bypass the <c>[SensitiveData]</c> serializer, so the check is made here. null = no further permission.
+    /// </summary>
+    public static string? RequiredPermission(string? dataset) => dataset?.ToLowerInvariant() switch
+    {
+        "microsoft-costs" or "margins" => Permissions.FinanceCostRead,
+        "revenue-by-month" or "revenue-by-customer" => Permissions.FinanceRead,
+        _ => null,
+    };
+
+    internal static Error? Authorize(string? dataset, ICurrentUser user) =>
+        RequiredPermission(dataset) is { } permission && !user.HasPermission(permission)
+            ? Error.Forbidden("RPT_MART_FORBIDDEN", "Your role may not read this dataset.")
+            : null;
+
     public async Task<Result<MartTable>> GetAsync(string dataset, DateOnly from, DateOnly to, CancellationToken ct)
     {
+        if (Authorize(dataset, currentUser) is { } forbidden)
+        {
+            return forbidden;
+        }
+
         if (to < from || from.Year < 2020 || to.Year > 2100)
         {
             return Error.Validation("RPT_MART_PERIOD", "Give a period inside 2020–2100 that does not end before it starts.");
@@ -83,7 +108,12 @@ internal sealed class MartService(
         var names = await customers.GetOrganizationNamesAsync(rows.Select(r => r.OrganizationId).ToList(), ct);
         return Table("hours-by-customer", from, to,
             ["organizationId", "name", "hours", "billedHours", "amount"],
-            rows.Select(r => new object?[] { r.OrganizationId, names.GetValueOrDefault(r.OrganizationId, "—"), r.Hours, r.BilledHours, r.Amount }).ToList());
+            rows.Select(r => new object?[]
+            {
+                // The amount is money: without finance.read the column stays and its cells are empty.
+                r.OrganizationId, names.GetValueOrDefault(r.OrganizationId, "—"), r.Hours, r.BilledHours,
+                currentUser.HasPermission(Permissions.FinanceRead) ? r.Amount : null,
+            }).ToList());
     }
 
     private async Task<MartTable> MicrosoftCostsAsync(DateOnly from, DateOnly to, CancellationToken ct)
@@ -144,10 +174,11 @@ internal sealed class MartService(
     public static string ToCsv(MartTable table)
     {
         var text = new StringBuilder();
-        text.AppendLine(string.Join(';', table.Columns));
+        // Records end with CRLF whatever the host is, so a line break inside a quoted cell is never taken for a record end.
+        text.Append(string.Join(';', table.Columns)).Append("\r\n");
         foreach (var row in table.Rows)
         {
-            text.AppendLine(string.Join(';', row.Select(Cell)));
+            text.Append(string.Join(';', row.Select(Cell))).Append("\r\n");
         }
 
         return text.ToString();
@@ -160,8 +191,8 @@ internal sealed class MartService(
         decimal number => number.ToString("0.##", CultureInfo.InvariantCulture),
         DateOnly date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         DateTimeOffset moment => moment.ToString("O", CultureInfo.InvariantCulture),
-        string s when s.Contains(';', StringComparison.Ordinal) || s.Contains('"', StringComparison.Ordinal) =>
-            $"\"{s.Replace("\"", "\"\"", StringComparison.Ordinal)}\"",
+        // Text from the database (names, titles) may start a formula or hold a line break: neutralized and quoted (F-G1-10).
+        string s => Crm.SharedKernel.Text.CsvCell.Write(s),
         _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty,
     };
 }

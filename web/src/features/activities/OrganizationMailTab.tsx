@@ -18,6 +18,7 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { useActivityActions, useCustomerMail, useOutlookStatus } from './api';
 import type { MailMessage } from './types';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
@@ -101,7 +102,7 @@ export function OrganizationMailTab({ organizationId }: { organizationId: string
               <span className={styles.text}>
                 <span className={styles.subject}>
                   {message.webLink ? (
-                    <Link href={message.webLink} target="_blank" rel="noopener noreferrer">
+                    <Link href={safeHttpUrl(message.webLink)} target="_blank" rel="noopener noreferrer">
                       {message.subject}
                       <Open16Regular aria-hidden style={{ marginInlineStart: 4 }} />
                     </Link>

@@ -4,6 +4,7 @@ using Crm.Catalog.Domain;
 using Crm.Catalog.Features.Products;
 using Crm.Catalog.Persistence;
 using Crm.Infrastructure.Persistence;
+using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using Crm.SharedKernel.Text;
 using FluentValidation;
@@ -20,7 +21,7 @@ internal sealed class CategoryRequestValidator : AbstractValidator<CategoryReque
 {
     public CategoryRequestValidator()
     {
-        RuleFor(x => x.Code).NotEmpty().MaximumLength(32).Matches("^[A-Za-z0-9_\\-]+$");
+        RuleFor(x => x.Code).NotEmpty().MaximumLength(32).Matches("^[A-Za-z0-9_\\-]+\\z");
         RuleFor(x => x.Name).NotEmpty().MaximumLength(128);
         RuleFor(x => x.LicenseMarkupPct).InclusiveBetween(-100, 1000);
     }
@@ -149,7 +150,7 @@ internal static class PriceListErrors
 }
 
 /// <summary>Customer categories, price lists and their items. One service keeps the overlap rule (BR-CAT-01) in one place.</summary>
-internal sealed class PriceListService(CatalogDbContext db, IOptions<CatalogOptions> options, TimeProvider time)
+internal sealed class PriceListService(CatalogDbContext db, IOptions<CatalogOptions> options, ICurrentUser currentUser, TimeProvider time)
 {
     /// <summary>Rows a price sheet answer lists; the counts always cover the whole sheet.</summary>
     public const int MaxPreviewRows = 500;
@@ -370,6 +371,14 @@ internal sealed class PriceListService(CatalogDbContext db, IOptions<CatalogOpti
             return CatalogErrors.ProductNotFound(productId);
         }
 
+        // The cost, the partner price and the exchange rate are hidden without finance.cost.read, so such a caller cannot set
+        // or clear them: the stored cost stays and a partner price is refused (F-G3-01 class).
+        var seesCost = currentUser.HasPermission(Permissions.FinanceCostRead);
+        if (!seesCost && request.PartnerPrice is not null)
+        {
+            return new Error("CAT_PARTNER_PRICE_HIDDEN", "The partner price is cost data, which your role cannot see or change.", ErrorType.Forbidden);
+        }
+
         var item = await db.PriceListItems.SingleOrDefaultAsync(i => i.PriceListId == id && i.ProductId == productId, ct);
         if (item is null)
         {
@@ -385,7 +394,7 @@ internal sealed class PriceListService(CatalogDbContext db, IOptions<CatalogOpti
         }
         else
         {
-            item.SetPrice(request.UnitPrice!.Value, request.UnitCost);
+            item.SetPrice(request.UnitPrice!.Value, seesCost ? request.UnitCost : item.UnitCost);
         }
 
         await db.SaveChangesAsync(ct);

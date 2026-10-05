@@ -87,10 +87,12 @@ public static class SalesModule
 
         group.MapPost("/leads/{id:guid}/disqualify", async (Guid id, DisqualifyRequest request, SalesService service, CancellationToken ct) =>
                 (await service.DisqualifyLeadAsync(id, request.Reason, ct)).ToHttpResult(Results.Ok))
+            .Validate<DisqualifyRequest>()
             .RequirePermission(Permissions.SalesWrite);
 
         group.MapPost("/leads/{id:guid}/convert", async (Guid id, ConvertLeadRequest request, SalesService service, CancellationToken ct) =>
                 (await service.ConvertLeadAsync(id, request, ct)).ToHttpResult(Results.Ok))
+            .Validate<ConvertLeadRequest>()
             .RequirePermission(Permissions.SalesWrite);
 
         group.MapGet("/opportunities", async ([AsParameters] OpportunityParameters p, SalesService service, CancellationToken ct) =>
@@ -121,6 +123,7 @@ public static class SalesModule
 
         group.MapPost("/opportunities/{id:guid}/stage", async (Guid id, MoveStageRequest request, SalesService service, CancellationToken ct) =>
                 (await service.MoveOpportunityAsync(id, request, ct)).ToHttpResult(Results.Ok))
+            .Validate<MoveStageRequest>()
             .RequirePermission(Permissions.SalesWrite);
 
         group.MapPost("/opportunities/{id:guid}/reopen", async (Guid id, SalesService service, CancellationToken ct) =>
@@ -207,6 +210,7 @@ public static class SalesModule
 
         group.MapPost("/quotes/{id:guid}/decline", async (Guid id, DeclineQuoteRequest request, QuoteService service, CancellationToken ct) =>
                 (await service.DeclineAsync(id, request.Reason, ct)).ToHttpResult(Results.Ok))
+            .Validate<DeclineQuoteRequest>()
             .RequirePermission(Permissions.SalesWrite);
 
         group.MapPost("/quotes/{id:guid}/cancel", async (Guid id, QuoteService service, CancellationToken ct) =>

@@ -108,6 +108,10 @@ resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' = {
     softDeleteRetentionInDays: 90
     enablePurgeProtection: true
     publicNetworkAccess: 'Disabled'
+    // DEV-21 (F-G4-12): bypass AzureServices is the one exception next to the private endpoint (publicNetworkAccess is
+    // Disabled, defaultAction Deny). It admits only services on Microsoft's trusted-services list. Which services of this
+    // deployment depend on it (diagnostics, Backup, secret references of Container Apps) has NOT been verified in a real
+    // environment, so it stays until a test environment shows it can go (docs/06-security.md §6, EXT-11).
     networkAcls: { defaultAction: 'Deny', bypass: 'AzureServices' }
   }
 }
@@ -117,7 +121,9 @@ resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2024-11-01' = {
   name: 'dataprotection'
   properties: {
     kty: 'RSA'
-    keySize: 2048
+    // DEV-21 (F-G4-08): 3072 bits (128-bit security level). A different size creates a new key version; the previous
+    // version stays enabled, so key rings already wrapped with it stay readable. Verify in test before prod (not run here).
+    keySize: 3072
     keyOps: ['wrapKey', 'unwrapKey']
     rotationPolicy: {
       lifetimeActions: [{ action: { type: 'rotate' }, trigger: { timeAfterCreate: 'P90D' } }]

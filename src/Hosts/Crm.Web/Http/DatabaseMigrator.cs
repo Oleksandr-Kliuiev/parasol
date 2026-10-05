@@ -101,6 +101,6 @@ public static partial class DatabaseMigrator
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    [GeneratedRegex("^[A-Za-z0-9-_]{1,128}$")]
+    [GeneratedRegex("^[A-Za-z0-9-_]{1,128}\\z")]
     private static partial Regex IdentityNamePattern();
 }

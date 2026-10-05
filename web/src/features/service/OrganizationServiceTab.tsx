@@ -43,6 +43,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useOrganizationContacts } from '../contacts/api';
 import { useAlerts, useCreateTicketRequest, useDevices, useServiceSummary, useTicketOptions, useTicketRequests, useTickets } from './api';
 import { deviceTypes } from './types';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -147,7 +148,7 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
                 <TableRow key={ticket.id}>
                   <TableCell>
                     {ticket.url ? (
-                      <Link href={ticket.url} target="_blank" rel="noopener noreferrer">
+                      <Link href={safeHttpUrl(ticket.url)} target="_blank" rel="noopener noreferrer">
                         {ticket.title} <Open16Regular aria-hidden />
                       </Link>
                     ) : (
@@ -188,7 +189,7 @@ export function OrganizationServiceTab({ organizationId }: { organizationId: str
             {devices.items.map((device) => (
               <li key={device.id} className={styles.row}>
                 {device.url ? (
-                  <Link href={device.url} target="_blank" rel="noopener noreferrer">
+                  <Link href={safeHttpUrl(device.url)} target="_blank" rel="noopener noreferrer">
                     {device.machineName}
                   </Link>
                 ) : (

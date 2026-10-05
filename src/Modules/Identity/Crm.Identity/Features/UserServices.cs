@@ -2,6 +2,8 @@ using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Crm.Identity.Domain;
 using Crm.Identity.Persistence;
+using Crm.Infrastructure.Persistence;
+using Crm.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Identity.Features;
@@ -114,7 +116,7 @@ internal static class UserMappings
         new(user.Id, user.DisplayName, user.Email, user.PreferredLanguage, user.IsActive, user.RoleList);
 }
 
-internal sealed class UserDirectorySync(IdentityDbContext db) : IUserDirectorySync
+internal sealed class UserDirectorySync(IdentityDbContext db, TimeProvider time) : IUserDirectorySync
 {
     public async Task<DirectorySyncResult> ApplyAsync(IReadOnlyCollection<DirectoryUserChange> changes, CancellationToken cancellationToken)
     {
@@ -134,7 +136,14 @@ internal sealed class UserDirectorySync(IdentityDbContext db) : IUserDirectorySy
                 matched++;
                 if (change.Removed || change.AccountEnabled == false)
                 {
-                    deactivated += user.Deactivate() ? 1 : 0;
+                    if (user.Deactivate())
+                    {
+                        deactivated++;
+                        // F-G2-02/03: a session cookie copied before the deactivation must not work again when the account is
+                        // re-enabled — Reactivate()/RecordSignIn() set IsActive back, so the sessions end now.
+                        await EndSessionsAsync(user.Id, cancellationToken);
+                    }
+
                     continue;
                 }
 
@@ -155,27 +164,84 @@ internal sealed class UserDirectorySync(IdentityDbContext db) : IUserDirectorySy
 
         return new DirectorySyncResult(matched, updated, deactivated, reactivated);
     }
+
+    private async Task EndSessionsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+        foreach (var session in await db.UserSessions.Where(s => s.UserId == userId && s.EndedAt == null).ToListAsync(cancellationToken))
+        {
+            session.End("Deactivated", now);
+        }
+    }
 }
 
 /// <summary>Sessions and what they may do (DEV-10); one read answers both, so a replica's cache holds one entry per session.</summary>
-internal sealed class SessionDirectory(IdentityDbContext db) : ISessionDirectory
+internal sealed class SessionDirectory(IdentityDbContext db, IRequestContext request) : ISessionDirectory
 {
-    public async Task<Guid> StartAsync(Guid userId, DateTimeOffset at, CancellationToken cancellationToken)
+    private static readonly System.Text.Json.JsonSerializerOptions AuditJson = new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    /// <summary>The hash under which a session is looked up by the identity provider's own session id.</summary>
+    internal static string? HashOf(string? externalSessionId) =>
+        string.IsNullOrWhiteSpace(externalSessionId)
+            ? null
+            : Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(externalSessionId.Trim())));
+
+    public async Task<Guid> StartAsync(
+        Guid userId, DateTimeOffset at, string? externalSessionId, CancellationToken cancellationToken, DateTimeOffset? authenticatedAt = null)
     {
-        var session = UserSession.Start(userId, at);
+        // A time in the future (clock skew) is not user presence to come: it counts as now.
+        var session = UserSession.Start(userId, at, HashOf(externalSessionId), authenticatedAt is { } auth && auth > at ? at : authenticatedAt);
         db.UserSessions.Add(session);
+        // ASVS 16: sign-ins are audited — who (id), when, from where; no names, no token contents.
+        db.AuditEntries.Add(Audit(AuditActions.Login, userId, session.Id, at, new { }));
         await db.SaveChangesAsync(cancellationToken);
         return session.Id;
     }
 
     public async Task EndAsync(Guid sessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken)
     {
-        if (await db.UserSessions.SingleOrDefaultAsync(s => s.Id == sessionId, cancellationToken) is { } session)
+        if (await db.UserSessions.SingleOrDefaultAsync(s => s.Id == sessionId, cancellationToken) is { EndedAt: null } session)
         {
             session.End(reason, at);
+            db.AuditEntries.Add(Audit(AuditActions.Logout, session.UserId, session.Id, at, new { reason }));
             await db.SaveChangesAsync(cancellationToken);
         }
     }
+
+    public async Task<int> EndByExternalSessionAsync(string externalSessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken)
+    {
+        if (HashOf(externalSessionId) is not { } hash)
+        {
+            return 0;
+        }
+
+        var open = await db.UserSessions.Where(s => s.ExternalSessionHash == hash && s.EndedAt == null).ToListAsync(cancellationToken);
+        foreach (var session in open)
+        {
+            session.End(reason, at);
+            db.AuditEntries.Add(Audit(AuditActions.Logout, session.UserId, session.Id, at, new { reason }));
+        }
+
+        if (open.Count > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return open.Count;
+    }
+
+    private AuditEntry Audit(string action, Guid userId, Guid sessionId, DateTimeOffset at, object details) => new()
+    {
+        At = at,
+        UserId = userId,
+        Action = action,
+        Module = db.Schema,
+        EntityType = nameof(UserSession),
+        EntityId = sessionId,
+        Changes = System.Text.Json.JsonSerializer.Serialize(details, AuditJson),
+        CorrelationId = request.CorrelationId,
+        IpAddress = request.IpAddress,
+    };
 
     public async Task<SessionState> GetAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken)
     {
@@ -191,6 +257,7 @@ internal sealed class SessionDirectory(IdentityDbContext db) : ISessionDirectory
                 DirectoryConfirmedAt = db.DirectoryRoleConfirmations
                     .Where(c => c.TenantId == u.TenantId).Select(c => (DateTimeOffset?)c.ConfirmedAt).FirstOrDefault(),
                 Open = db.UserSessions.Any(s => s.Id == sessionId && s.UserId == u.Id && s.EndedAt == null),
+                AuthenticatedAt = db.UserSessions.Where(s => s.Id == sessionId && s.UserId == u.Id).Select(s => s.AuthenticatedAt).FirstOrDefault(),
             })
             .SingleOrDefaultAsync(cancellationToken);
         if (row is null)
@@ -205,7 +272,7 @@ internal sealed class SessionDirectory(IdentityDbContext db) : ISessionDirectory
             ({ } own, { } directory) => own > directory ? own : directory,
             var (own, directory) => own ?? directory,
         };
-        return new SessionState(row.Open, row.IsActive, roles, row.RolesVersion, verified);
+        return new SessionState(row.Open, row.IsActive, roles, row.RolesVersion, verified, row.AuthenticatedAt);
     }
 }
 

@@ -153,4 +153,64 @@ public class ProjectsApiTests(CrmWebFactory factory)
         var list = await lead.GetFromJsonAsync<JsonElement>($"{Projects}?search={marker}");
         list.GetProperty("items").EnumerateArray().Single().GetProperty("hours").GetDecimal().ShouldBe(6m);
     }
+
+    [Fact]
+    public async Task A_role_that_cannot_see_the_money_cannot_overwrite_it()
+    {
+        // Crm.ServiceLead edits projects but has no finance.read: the budget and the phase fee are hidden from it, so an edit
+        // (the SPA used to send 0) or a crafted request must leave the stored values alone (F-G3-01).
+        var sales = factory.ClientAs(CrmRoles.Sales, userKey: "project-sales");
+        var finance = factory.ClientAs(CrmRoles.Finance, userKey: "project-finance");
+        var lead = factory.ClientAs(CrmRoles.ServiceLead, userKey: "project-lead");
+        var marker = $"B{Guid.NewGuid():N}"[..10];
+        var organizationId = await sales.CreateOrganizationAsync(new { name = $"{marker} Budsjett AS", orgNumber = TestData.OrgNumber(), status = "Customer" });
+        var start = Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        object Body(decimal budget, string name) => new
+        {
+            organizationId, name, type = "M365Migration", billingModel = "PerPhase", startDate = start, endDate = (string?)null,
+            budgetHours = 10m, budgetAmount = budget,
+        };
+
+        var created = await (await sales.PostAsJsonAsync(Projects, Body(90_000m, $"{marker} Prosjekt"))).ReadJsonAsync();
+        var projectId = created.GetProperty("id").GetGuid();
+        var withPhase = await (await sales.PostAsJsonAsync($"{Projects}/{projectId}/phases", new
+        {
+            name = "Pilot", plannedStart = start, plannedEnd = (string?)null, plannedHours = 5m, fee = 12_000m, billOnCompletion = true, productId = (Guid?)null,
+        })).ReadJsonAsync();
+        var phaseId = withPhase.GetProperty("phases").EnumerateArray().Single().GetProperty("id").GetGuid();
+
+        // Edit as the lead, once as the SPA now does (keys omitted) and once as a crafted request with explicit zeros.
+        var etag = (await lead.GetAsync($"{Projects}/{projectId}")).Headers.ETag!.Tag;
+        var omitted = await lead.PutWithETagAsync($"{Projects}/{projectId}",
+            new { organizationId, name = $"{marker} Renamed", type = "M365Migration", billingModel = "PerPhase", startDate = start, budgetHours = 11m }, etag);
+        omitted.StatusCode.ShouldBe(HttpStatusCode.OK);
+        etag = omitted.Headers.ETag!.Tag;
+        (await lead.PutWithETagAsync($"{Projects}/{projectId}", Body(0m, $"{marker} Renamed again"), etag)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await lead.PutAsJsonAsync($"{Projects}/{projectId}/phases/{phaseId}", new
+        {
+            name = "Pilot 2", plannedStart = start, plannedEnd = (string?)null, plannedHours = 6m, fee = 0m, billOnCompletion = false, productId = (Guid?)null,
+        })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await lead.PostAsJsonAsync($"{Projects}/{projectId}/phases", new
+        {
+            name = "Hidden fee", plannedStart = start, plannedEnd = (string?)null, plannedHours = 1m, fee = 99_000m, billOnCompletion = true, productId = (Guid?)null,
+        })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var seen = await finance.GetFromJsonAsync<JsonElement>($"{Projects}/{projectId}");
+        seen.GetProperty("name").GetString().ShouldBe($"{marker} Renamed again");
+        seen.GetProperty("progress").GetProperty("budgetAmount").GetDecimal().ShouldBe(90_000m);
+        var phases = seen.GetProperty("phases").EnumerateArray().ToList();
+        var pilot = phases.Single(p => p.GetProperty("id").GetGuid() == phaseId);
+        pilot.GetProperty("name").GetString().ShouldBe("Pilot 2");
+        pilot.GetProperty("fee").GetDecimal().ShouldBe(12_000m);
+        pilot.GetProperty("billOnCompletion").GetBoolean().ShouldBeTrue();
+        var added = phases.Single(p => p.GetProperty("name").GetString() == "Hidden fee");
+        added.GetProperty("fee").GetDecimal().ShouldBe(0m);
+        added.GetProperty("billOnCompletion").GetBoolean().ShouldBeFalse();
+
+        // A project created by the lead has no budget it could have chosen.
+        var leadCreated = await (await lead.PostAsJsonAsync(Projects, Body(55_000m, $"{marker} Lead"))).ReadJsonAsync();
+        (await finance.GetFromJsonAsync<JsonElement>($"{Projects}/{leadCreated.GetProperty("id").GetGuid()}"))
+            .GetProperty("progress").GetProperty("budgetAmount").GetDecimal().ShouldBe(0m);
+    }
 }

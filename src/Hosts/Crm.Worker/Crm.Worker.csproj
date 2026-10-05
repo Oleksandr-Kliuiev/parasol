@@ -8,6 +8,10 @@
     <ContainerPort>8080</ContainerPort>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Local development settings (the sa connection string, the development sign-in) never travel with the image (F-G4-15). -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" />
     <PackageReference Include="Hangfire.SqlServer" />
   </ItemGroup>

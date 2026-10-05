@@ -1,6 +1,7 @@
 import { Button, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { AlertUrgent20Regular, CalendarClock20Regular, Timer20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { Panel } from '../../shared/components/Panel';
@@ -34,6 +35,8 @@ export function RemindersPanel() {
   const reminders = useReminders({ mine: true });
   const data = reminders.items;
   const acknowledge = useAcknowledgeReminder();
+  // Acknowledging changes a shared record, so it needs the contract write right (the server enforces it).
+  const canAcknowledge = useCan(Permissions.contractsWrite);
 
   const done = async (reminder: Reminder) => {
     try {
@@ -76,9 +79,9 @@ export function RemindersPanel() {
                 <span>{r.organization.name}</span>
               )}
             </span>
-            <Button size="small" appearance="subtle" onClick={() => void done(r)} aria-label={t('myDay.acknowledgeNamed', { name: (r.kind === 'HourBankLow' ? r.hourBank?.name : r.contract?.number) ?? r.organization.name })}>
+            {canAcknowledge && <Button size="small" appearance="subtle" onClick={() => void done(r)} aria-label={t('myDay.acknowledgeNamed', { name: (r.kind === 'HourBankLow' ? r.hourBank?.name : r.contract?.number) ?? r.organization.name })}>
               {t('myDay.acknowledge')}
-            </Button>
+            </Button>}
           </li>
         ))}
       </ul>

@@ -37,6 +37,8 @@ const hostArgs = [
   `--Integrations:PowerOffice:TokenUrl=${mock}/OAuth/Token`,
   '--Integrations:PowerOffice:WriteEnabled=true',
   '--RateLimits:ApiPerMinute=100000',
+  // Every test signs in through the development entry point from one address; the real budget has its own integration test.
+  '--RateLimits:SignInPerMinute=100000',
   '--Auth:ActiveUserCacheSeconds=0',
   // Issued quote documents belong to the database that references them (DEV-08): the e2e database gets its own folder,
   // otherwise the orphan cleanup of either worker would remove the other database's documents.

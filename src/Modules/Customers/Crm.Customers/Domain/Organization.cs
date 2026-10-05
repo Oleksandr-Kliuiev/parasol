@@ -485,7 +485,9 @@ public sealed class Organization : AuditableEntity
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    /// <summary>"havbris.no" → "https://havbris.no", so the website is always an absolute link.</summary>
-    private static string? NormalizeWebsite(string? value) =>
-        Clean(value) is { } site && !site.Contains("://", StringComparison.Ordinal) ? "https://" + site : Clean(value);
+    /// <summary>
+    /// "havbris.no" → "https://havbris.no", so the website is always an absolute link. Only http(s) is kept: a value from a sync
+    /// or an import with another scheme is dropped rather than stored (the API refuses it with a validation error first).
+    /// </summary>
+    private static string? NormalizeWebsite(string? value) => Crm.SharedKernel.Text.WebUrl.Normalize(value);
 }

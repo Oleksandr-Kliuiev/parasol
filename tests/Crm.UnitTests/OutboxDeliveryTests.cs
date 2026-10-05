@@ -86,4 +86,31 @@ public class OutboxDeliveryTests
         System.Text.RegularExpressions.Regex.Count(sql, @"WHERE \[Status\] = N'Pending'").ShouldBe(2);
         Should.Throw<InvalidOperationException>(() => OutboxMigrationSql.Backfill("billing]; DROP TABLE x; --"));
     }
+
+    [Fact]
+    public void Only_a_concrete_domain_event_of_the_application_resolves_from_the_name_in_the_table()
+    {
+        var resolver = new OutboxEventTypeResolver();
+        var known = typeof(Crm.Sales.Contracts.OpportunityLost);
+        resolver.Resolve($"{known.FullName}, {known.Assembly.GetName().Name}").ShouldBe(known);
+        // The assembly-qualified form with version and key is accepted as well.
+        resolver.Resolve(known.AssemblyQualifiedName).ShouldBe(known);
+
+        foreach (var hostile in new[]
+        {
+            "System.Diagnostics.Process, System.Diagnostics.Process",       // a framework type: neither Crm.* nor an event
+            "System.IO.FileInfo, System.Private.CoreLib",
+            "System.String",                                                // no assembly at all
+            $"{typeof(OutboxMessage).FullName}, Crm.Infrastructure",        // an application type that is not an event
+            $"{typeof(Crm.SharedKernel.Domain.DomainEvent).FullName}, Crm.SharedKernel", // the abstract base
+            "Crm.Evil.Thing, Crm.Evil",                                     // a Crm.* name nobody ships
+            "Newtonsoft.Json.JsonConvert, Newtonsoft.Json",
+            "", "   ", "not a type", new string('x', 600),
+        })
+        {
+            resolver.Resolve(hostile).ShouldBeNull(hostile);
+        }
+
+        resolver.Resolve(null).ShouldBeNull();
+    }
 }

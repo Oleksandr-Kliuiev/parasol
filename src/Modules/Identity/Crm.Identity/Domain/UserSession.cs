@@ -18,7 +18,17 @@ public sealed class UserSession : Entity
 
     public string? EndReason { get; private set; }
 
-    public static UserSession Start(Guid userId, DateTimeOffset at) => new() { UserId = userId, StartedAt = at };
+    /// <summary>SHA-256 (hex) of the identity provider's session id; the id itself is never stored.</summary>
+    public string? ExternalSessionHash { get; private set; }
+
+    /// <summary>
+    /// When the user last authenticated interactively, as the identity provider reported it (the id_token's <c>auth_time</c>).
+    /// A silent single-sign-on sign-in starts a session but does not move it. Null when the provider did not say.
+    /// </summary>
+    public DateTimeOffset? AuthenticatedAt { get; private set; }
+
+    public static UserSession Start(Guid userId, DateTimeOffset at, string? externalSessionHash = null, DateTimeOffset? authenticatedAt = null) =>
+        new() { UserId = userId, StartedAt = at, ExternalSessionHash = externalSessionHash, AuthenticatedAt = authenticatedAt };
 
     public void End(string reason, DateTimeOffset at)
     {

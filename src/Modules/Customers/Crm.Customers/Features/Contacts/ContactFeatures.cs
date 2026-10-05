@@ -1,5 +1,6 @@
 using Crm.Customers.Domain;
 using Crm.Customers.Persistence;
+using Crm.Infrastructure.Http;
 using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
@@ -87,7 +88,7 @@ internal sealed class CreateOrganizationContactRequestValidator : AbstractValida
             .WithName("name").WithMessage("First name or last name is required.");
         RuleFor(x => x.FirstName).MaximumLength(128);
         RuleFor(x => x.LastName).MaximumLength(128);
-        RuleFor(x => x.Email).EmailAddress().MaximumLength(256).When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Email).StrictEmail().MaximumLength(256).When(x => !string.IsNullOrWhiteSpace(x.Email));
         RuleFor(x => x.Phone).MaximumLength(32);
         RuleFor(x => x.MobilePhone).MaximumLength(32);
         RuleFor(x => x.Title).MaximumLength(128);
@@ -103,7 +104,7 @@ internal sealed class ContactPersonRequestValidator : AbstractValidator<ContactP
             .WithName("name").WithMessage("First name or last name is required.");
         RuleFor(x => x.FirstName).MaximumLength(128);
         RuleFor(x => x.LastName).MaximumLength(128);
-        RuleFor(x => x.Email).EmailAddress().MaximumLength(256).When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Email).StrictEmail().MaximumLength(256).When(x => !string.IsNullOrWhiteSpace(x.Email));
     }
 }
 

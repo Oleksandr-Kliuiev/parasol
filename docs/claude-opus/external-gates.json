@@ -37,10 +37,13 @@
       "title": "Реальный Entra tenant и отзыв прав",
       "required_owner_roles": "Tenant owner / security",
       "owner": "",
-      "status": "not_run",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-21.md",
+        "evidence/DEV-21/asvs-5.0.0-l2-matrix.csv"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Владелец tenant/security не назначен. Не проверены в реальном tenant: single tenant, Assignment required, Conditional Access/MFA и PIM, права Graph (least privilege), optional claim auth_time (register-app.sh нужно выполнить до выкладки DEV-21, иначе привилегированные действия остаются закрытыми), redirect URI, front-channel logout, срок отзыва прав (runbook 12 §5).",
       "tasks": [
         "DEV-10",
         "DEV-19",
@@ -100,10 +103,14 @@
       "title": "Независимая проверка безопасности",
       "required_owner_roles": "Security reviewer / PO",
       "owner": "",
-      "status": "not_run",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-21.md",
+        "evidence/DEV-21/matrix-summary.md",
+        "../runbooks/17-vulnerability-intake.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Не назначен независимый проверяющий (security reviewer / PO), не выбрана и не подготовлена тестовая среда с реальными ролями. Самооценка по ASVS 5.0.0 и пакет по runbook 17 готовы, но независимое заключение и повторная проверка (retest) не проведены.",
       "tasks": [
         "DEV-21",
         "DEV-23"
@@ -115,7 +122,9 @@
       "required_owner_roles": "Data owner / Finance",
       "owner": "",
       "status": "not_run",
-      "evidence": [],
+      "evidence": [
+        "evidence/DEV-21/deferred-and-accepted.md"
+      ],
       "verified_at": "",
       "blocker": "",
       "tasks": [

@@ -2,6 +2,7 @@ using Crm.Authorization;
 using Crm.Sales.Contracts;
 using Crm.Sales.Domain;
 using FluentValidation;
+using Crm.Infrastructure.Http;
 
 namespace Crm.Sales.Features;
 
@@ -44,6 +45,12 @@ public sealed record QuoteRequest(
 public sealed record RejectQuoteRequest(string Reason);
 
 public sealed record DeclineQuoteRequest(string? Reason);
+
+internal sealed class DeclineQuoteRequestValidator : AbstractValidator<DeclineQuoteRequest>
+{
+    // QuoteDocuments/Quotes.DeclineReason is 512 characters (F-G1-06).
+    public DeclineQuoteRequestValidator() => RuleFor(x => x.Reason).MaximumLength(512);
+}
 
 /// <summary>Hands the quote to another person (DEV-09).</summary>
 public sealed record TransferQuoteRequest(Guid OwnerId);
@@ -200,12 +207,12 @@ internal sealed class SendQuoteRequestValidator : AbstractValidator<SendQuoteReq
 {
     public SendQuoteRequestValidator()
     {
-        RuleFor(x => x.ToAddress).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.ToAddress).NotEmpty().StrictEmail().MaximumLength(256);
         RuleFor(x => x.ToName).MaximumLength(256);
         RuleFor(x => x.Subject).MaximumLength(256);
         RuleFor(x => x.Message).MaximumLength(4000);
         RuleFor(x => x.Cc).Must(cc => cc is null || cc.Count <= 5).WithMessage("At most five people can be copied.");
-        RuleForEach(x => x.Cc).EmailAddress();
+        RuleForEach(x => x.Cc).StrictEmail();
     }
 }
 

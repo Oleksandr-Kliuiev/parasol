@@ -116,7 +116,9 @@ public static class CatalogModule
 
         group.MapPost("/price-lists/{id:guid}/activate", async (Guid id, PriceListService service, CancellationToken ct) =>
                 (await service.SetActiveAsync(id, true, ct)).ToHttpResult(Results.NoContent))
-            .RequirePermission(Permissions.CatalogWrite);
+            .RequirePermission(Permissions.CatalogWrite)
+            // The list becomes the price source for new quotes and contract lines (F-G3-10).
+            .RequiresFreshRoles();
 
         group.MapPost("/price-lists/{id:guid}/deactivate", async (Guid id, PriceListService service, CancellationToken ct) =>
                 (await service.SetActiveAsync(id, false, ct)).ToHttpResult(Results.NoContent))
@@ -141,10 +143,9 @@ public static class CatalogModule
         group.MapPost("/price-lists/{id:guid}/price-sheet", async (
                 Guid id, decimal exchangeRate, decimal? markupPct, bool? dryRun, HttpRequest httpRequest, PriceListService service, CancellationToken ct) =>
             {
-                using var reader = new StreamReader(httpRequest.Body);
-                var csv = await reader.ReadToEndAsync(ct);
+                var (csv, failure) = await CsvUpload.ReadTextAsync(httpRequest, ct);
                 var request = new PriceSheetImportRequest(exchangeRate, markupPct);
-                return (await service.ImportPriceSheetAsync(id, csv, request, dryRun ?? false, ct)).ToHttpResult(Results.Ok);
+                return csv is null ? failure! : (await service.ImportPriceSheetAsync(id, csv, request, dryRun ?? false, ct)).ToHttpResult(Results.Ok);
             })
             .RequirePermission(Permissions.FinanceCostRead);
 

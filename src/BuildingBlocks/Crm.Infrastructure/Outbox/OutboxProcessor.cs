@@ -17,11 +17,64 @@ using Microsoft.Extensions.Options;
 
 namespace Crm.Infrastructure.Outbox;
 
+/// <summary>
+/// Turns the type name stored on an outbox row into a CLR type. The name comes from a table, so it is data, not code
+/// (F-G1-09, F-G5-11): only a concrete <see cref="IDomainEvent"/> from a <c>Crm.*</c> assembly is returned; any other type,
+/// and any assembly outside that prefix, resolves to null and the message is quarantined as unknown, before anything is
+/// deserialized into it. The cache is bounded so that unknown names cannot grow it.
+/// </summary>
 public sealed class OutboxEventTypeResolver
 {
+    private const int MaxCached = 2048;
+    private const string AssemblyPrefix = "Crm.";
+
     private readonly ConcurrentDictionary<string, Type?> _cache = new(StringComparer.Ordinal);
 
-    public Type? Resolve(string typeName) => _cache.GetOrAdd(typeName, static name => Type.GetType(name, throwOnError: false));
+    public Type? Resolve(string? typeName)
+    {
+        if (string.IsNullOrWhiteSpace(typeName) || typeName.Length > 512)
+        {
+            return null;
+        }
+
+        if (_cache.TryGetValue(typeName, out var cached))
+        {
+            return cached;
+        }
+
+        var resolved = Lookup(typeName);
+        if (_cache.Count < MaxCached)
+        {
+            _cache[typeName] = resolved;
+        }
+
+        return resolved;
+    }
+
+    private static Type? Lookup(string typeName)
+    {
+        try
+        {
+            var type = Type.GetType(typeName, ResolveAssembly, null, throwOnError: false);
+            return type is { IsClass: true, IsAbstract: false, IsGenericType: false } && typeof(IDomainEvent).IsAssignableFrom(type) ? type : null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or System.IO.IOException or BadImageFormatException or TypeLoadException or System.Security.SecurityException)
+        {
+            return null;
+        }
+    }
+
+    // Only the application's own assemblies are ever loaded for a name from the table.
+    private static System.Reflection.Assembly? ResolveAssembly(System.Reflection.AssemblyName name)
+    {
+        if (name.Name is null || !name.Name.StartsWith(AssemblyPrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == name.Name)
+               ?? System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(name.Name));
+    }
 }
 
 /// <summary>Timing of the outbox (DEV-07). Tests shorten it; production keeps the defaults.</summary>

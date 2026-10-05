@@ -79,16 +79,28 @@ public sealed record TechnicianMappingChanged(string System, string ExternalId, 
 
 /// <summary>
 /// What a signed-in session may do now (DEV-10): whether the session is still open, the user still active, and the CRM roles
-/// the authority — the directory or the last sign-in token — last confirmed, with when.
+/// the authority — the directory or the last sign-in token — last confirmed, with when. <paramref name="AuthenticatedAt"/> is
+/// when the user last authenticated interactively (F-G2-08): a directory sync never moves it.
 /// </summary>
-public sealed record SessionState(bool SessionOpen, bool IsActive, IReadOnlyList<string> Roles, int RolesVersion, DateTimeOffset? RolesVerifiedAt);
+public sealed record SessionState(
+    bool SessionOpen, bool IsActive, IReadOnlyList<string> Roles, int RolesVersion, DateTimeOffset? RolesVerifiedAt,
+    DateTimeOffset? AuthenticatedAt = null);
 
 /// <summary>Server-side sessions (DEV-10): the cookie only names one; ending it refuses that cookie on every replica.</summary>
 public interface ISessionDirectory
 {
-    Task<Guid> StartAsync(Guid userId, DateTimeOffset at, CancellationToken cancellationToken);
+    /// <summary>
+    /// Opens a session and audits the sign-in (ids only). <paramref name="externalSessionId"/> is the identity provider's
+    /// session id (the <c>sid</c> claim) when it has one; only a hash of it is kept, so the provider's front-channel logout can
+    /// name the session it ends. <paramref name="authenticatedAt"/> is the provider's <c>auth_time</c> (null when it sent none);
+    /// it is never later than <paramref name="at"/>. A re-verification is a new sign-in, so it opens a session with a new one.
+    /// </summary>
+    Task<Guid> StartAsync(Guid userId, DateTimeOffset at, string? externalSessionId, CancellationToken cancellationToken, DateTimeOffset? authenticatedAt = null);
 
     Task EndAsync(Guid sessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken);
+
+    /// <summary>Ends the open sessions that were opened for this identity-provider session id; returns how many.</summary>
+    Task<int> EndByExternalSessionAsync(string externalSessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken);
 
     Task<SessionState> GetAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken);
 }

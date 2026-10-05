@@ -18,7 +18,8 @@ export default defineConfig({
   build: {
     outDir: '../src/Hosts/Crm.Web/wwwroot',
     emptyOutDir: true,
-    sourcemap: true,
+    // No source maps in the build that is served: they would publish the SPA's source next to the bundle (ASVS 13.4).
+    sourcemap: false,
     // Pages are lazy routes (src/app/router.tsx); the initial download is guarded by scripts/bundle-budget.mjs.
     chunkSizeWarningLimit: 700,
   },

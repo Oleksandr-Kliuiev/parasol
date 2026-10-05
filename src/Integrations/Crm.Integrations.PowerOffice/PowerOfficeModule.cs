@@ -20,6 +20,9 @@ public static class PowerOfficeModule
             .Validate(
                 options => PowerOfficeOptions.FitsDeployment(options, configuration["Deployment:Environment"]),
                 "Integrations:PowerOffice:Environment does not fit Deployment:Environment: prod uses Production, test uses Demo.")
+            .Validate(
+                options => Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.EffectiveBaseUrl) && Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.EffectiveTokenUrl),
+                "Integrations:PowerOffice:BaseUrl and TokenUrl must be https addresses.")
             .ValidateOnStart();
         services.AddSingleton<PowerOfficeTokenProvider>();
         services.AddTransient<PowerOfficeAuthHandler>();

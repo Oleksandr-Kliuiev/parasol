@@ -7,6 +7,12 @@ public static class AuditActions
     public const string Delete = "Delete";
     public const string Export = "Export";
     public const string Login = "Login";
+
+    /// <summary>A client application read a financial dataset through the BI API: the dataset and the period, never the rows.</summary>
+    public const string Read = "Read";
+
+    /// <summary>A session ended: signed out, ended by the identity provider, or because the account was deactivated. Ids and the reason only.</summary>
+    public const string Logout = "Logout";
     public const string Merge = "Merge";
     public const string TriggerJob = "TriggerJob";
 

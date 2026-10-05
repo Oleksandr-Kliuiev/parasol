@@ -46,7 +46,20 @@ builder.Services.AddDatabaseReadiness();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<PersistenceExceptionHandler>();
-builder.Services.AddOpenApi();
+// The API description is a map of every route: served only where Openapi:Enabled says so (development by default), and then
+// only to a signed-in holder of integrations.manage.
+var openApiEnabled = builder.Configuration.GetValue("OpenApi:Enabled", builder.Environment.IsDevelopment());
+if (openApiEnabled)
+{
+    builder.Services.AddOpenApi();
+}
+
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+    options.Preload = false;
+});
 builder.Services.AddSingleton<IConfigureOptions<JsonOptions>, ConfigureJsonOptions>();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddScoped<IRequestContext, HttpRequestContext>();
@@ -90,12 +103,25 @@ builder.Services.AddCrmAuthorization();
 // DEV-10: sessions and roles come from the server on every request (bounded per replica); a privileged action without a
 // recent confirmation of the roles answers with a coded 403.
 builder.Services.AddSingleton<SessionStateCache>();
+builder.Services.AddScoped<IReportAccessAudit, ReportAccessAudit>();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, CrmAuthorizationResultHandler>();
 builder.AddDataProtection();
 
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);
 if (hangfireEnabled)
 {
+    // The dashboard's POSTs (trigger, requeue, delete) check an anti-forgery token only when the service exists; without it
+    // Hangfire compares two empty values and accepts any form post. The token cookie is host-bound and never sent cross-site.
+    builder.Services.AddAntiforgery(options =>
+    {
+        // A __Host- name needs Secure, which a local http dashboard cannot have; everywhere else the request is https.
+        options.Cookie.Name = builder.Environment.IsDevelopment() ? "crm-antiforgery" : "__Host-crm-antiforgery";
+        options.Cookie.Path = "/";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.HeaderName = "X-CSRF-TOKEN";
+    });
     builder.Services.AddHangfire(config => config
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
@@ -114,14 +140,28 @@ builder.Services.AddRateLimiter(options =>
         context.User.FindFirst(CrmClaimTypes.UserId)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
 
     // All API calls: 300 per user per minute (docs/06-security.md §4).
+    // The sign-in and sign-out paths (ASVS 2.4 / 6.3): each attempt costs a challenge and, on the callback, provisioning and a
+    // session row, so they have a small budget per client address; the rest of /bff (who am I, sign out) follows the API's.
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        context.Request.Path.StartsWithSegments("/api")
-            ? RateLimitPartition.GetFixedWindowLimiter(Partition(context), _ => new FixedWindowRateLimiterOptions
+    {
+        var path = context.Request.Path;
+        if (path.StartsWithSegments("/api") || path.StartsWithSegments("/bff") && !IsSignInPath(path))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(Partition(context), _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = builder.Configuration.GetValue("RateLimits:ApiPerMinute", 300),
                 Window = TimeSpan.FromMinutes(1),
+            });
+        }
+
+        return IsSignInPath(path)
+            ? RateLimitPartition.GetFixedWindowLimiter("sign-in:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"), _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue("RateLimits:SignInPerMinute", 30),
+                Window = TimeSpan.FromMinutes(1),
             })
-            : RateLimitPartition.GetNoLimiter("static"));
+            : RateLimitPartition.GetNoLimiter("static");
+    });
 
     // DEV-14: a refresh reads every page of every dataset, so the BI API has a budget of its own, per client application.
     options.AddPolicy(RateLimitPolicies.BiRefresh, context => RateLimitPartition.GetFixedWindowLimiter(
@@ -146,6 +186,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.OnRejected = async (context, token) =>
     {
+        SecurityLog.For(context.HttpContext).RateLimited(context.HttpContext);
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
         {
             context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -162,12 +203,16 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    HostSecurity.ConfigureForwardedHeaders(options, builder.Configuration, builder.Environment));
+
+if (HostSecurity.AllowedHostsProblem(builder.Configuration["AllowedHosts"], builder.Environment) is { } hostsProblem)
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-    // Azure Container Apps terminates TLS at its ingress; the proxy network is not known in advance.
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
-});
+    throw new InvalidOperationException(hostsProblem);
+}
+
+static bool IsSignInPath(PathString path) =>
+    path.StartsWithSegments("/bff/login") || path.StartsWithSegments("/bff/dev-login") || path.StartsWithSegments("/bff/signout-entra") ||
+    path.StartsWithSegments("/signin-oidc") || path.StartsWithSegments("/signout-oidc") || path.StartsWithSegments("/signout-callback-oidc");
 
 var app = builder.Build();
 
@@ -211,7 +256,11 @@ app.UseRateLimiter();
 app.UseMiddleware<CsrfHeaderMiddleware>();
 
 app.MapDefaultEndpoints();
-app.MapOpenApi("/openapi/{documentName}.json");
+if (openApiEnabled)
+{
+    app.MapOpenApi("/openapi/{documentName}.json").RequirePermission(Permissions.IntegrationsManage);
+}
+
 app.MapBffEndpoints();
 app.MapIdentityEndpoints();
 app.MapAuditEndpoints();

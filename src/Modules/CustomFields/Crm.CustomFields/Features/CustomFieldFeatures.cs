@@ -56,6 +56,17 @@ public sealed record CustomFieldValueDto(
 
 public sealed record SaveCustomFieldValuesRequest(IReadOnlyDictionary<string, string?> Values);
 
+internal sealed class SaveCustomFieldValuesRequestValidator : AbstractValidator<SaveCustomFieldValuesRequest>
+{
+    public SaveCustomFieldValuesRequestValidator()
+    {
+        RuleFor(x => x.Values).NotNull().Must(values => values is null || values.Count <= 200).WithMessage("Send at most 200 fields at a time.");
+        RuleForEach(x => x.Values).Must(pair => pair.Key.Length is > 0 and <= 64).WithMessage("A field key is 1-64 characters.")
+            .Must(pair => pair.Value is null || pair.Value.Length <= 1000).WithMessage("A value holds at most 1000 characters.")
+            .When(x => x.Values is not null);
+    }
+}
+
 /// <summary>
 /// Custom fields (FR-ADM-04): definitions per record type, and the values of one record. Nothing here knows what an
 /// organization or a contract is — the entity type and id are all the module stores, so no module depends on it.

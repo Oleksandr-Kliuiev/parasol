@@ -50,7 +50,7 @@ public static class NotificationsModule
         group.MapGet("/preferences", async (NotificationService service, CancellationToken ct) => Results.Ok(await service.GetPreferencesAsync(ct)));
 
         group.MapPut("/preferences", async (PreferencesRequest request, NotificationService service, CancellationToken ct) =>
-            Results.Ok(await service.SavePreferencesAsync(request, ct)));
+            Results.Ok(await service.SavePreferencesAsync(request, ct))).Validate<PreferencesRequest>();
 
         return app;
     }

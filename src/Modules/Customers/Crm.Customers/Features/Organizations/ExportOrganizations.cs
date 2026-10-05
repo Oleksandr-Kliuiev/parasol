@@ -81,6 +81,11 @@ internal sealed class ExportOrganizationsHandler(
                         // Org numbers and postal codes must stay text (leading zeros, no scientific notation).
                         cell.Value = text;
                         cell.Style.NumberFormat.Format = "@";
+                        if (Crm.SharedKernel.Text.CsvCell.LooksLikeFormula(text))
+                        {
+                            // Stored as a text cell already; the quote prefix keeps Excel from evaluating it when someone edits the cell (F-G1-10).
+                            cell.Style.IncludeQuotePrefix = true;
+                        }
                         break;
                 }
             }

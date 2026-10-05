@@ -54,7 +54,7 @@
   | extend p = split(Message, " ") | project TimeGenerated, Id = tolong(p[1]), ToId = tolong(p[3]), ChainHash = tostring(p[6])
   ```
   `ChainHash` каждой точки должен совпадать с `audit.IntegrityCheckpoints`. Несовпадение или исчезнувшая точка — инцидент ([runbook 06](06-security-incident.md)).
-- Алерт: `AppTraces | where Message startswith "AUDIT_INTEGRITY_MISMATCH"` ≥ 1 → Sev1, получатели — по DEC-09 (адреса не назначены).
+- Алерты (`infra/modules/monitoring-operations.bicep`, DEV-21): `alert-…-audit-integrity-mismatch` — `AppTraces | where Message startswith "AUDIT_INTEGRITY_MISMATCH"` ≥ 1 за 30 мин → Sev1; `alert-…-audit-checkpoint-missing` — ни одной строки `AUDIT_CHECKPOINT` за 2 суток → Sev3 (неактивная система без записей аудита тоже вызовет его; это сигнал проверить задачу `audit-integrity`, а не доказательство подделки). Получатели — по DEC-09/EXT-01, адреса не назначены; пока их нет, алерт виден только в Azure Monitor. Запись в Log Analytics с поддельным якорем возможна, пока Application Insights принимает приём без Entra ([06 § 5](../06-security.md#5-секреты-и-ключи)).
 
 ## 6. Действия администратора БД
 Ремонт данных утверждённых записей или подготовка восстановления — только администратор БД, по заявке, в одной транзакции (схемная блокировка не даёт другим сессиям работать с таблицей без триггера, ошибка оставляет триггер включённым):

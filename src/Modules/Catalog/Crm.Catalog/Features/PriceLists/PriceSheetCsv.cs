@@ -53,6 +53,11 @@ public static class PriceSheetCsv
             return new PriceSheetParseResult([], ["The file has no header row and no lines."], []);
         }
 
+        if (table.RowCount > CsvTable.MaxImportRows)
+        {
+            return new PriceSheetParseResult([], [$"The file has more than {CsvTable.MaxImportRows} rows; split it."], table.UnknownColumns);
+        }
+
         if (!table.Has("unitprice") || (!table.Has("offerid") && !table.Has("productid")))
         {
             return new PriceSheetParseResult(

@@ -304,9 +304,15 @@ internal sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOption
         {
             new(CrmClaimTypes.TenantId, "11111111-1111-1111-1111-111111111111"),
             new(CrmClaimTypes.ObjectId, $"test-{userKey}"),
+            // A stable user identifier: anti-forgery tokens are bound to it (without one they hash every claim, including the
+            // per-request time claims below, and a token would never be valid for a later request).
+            new(ClaimTypes.NameIdentifier, $"test-{userKey}"),
             new("preferred_username", $"{userKey}@test.local"),
             new("name", $"Test {userKey}"),
         };
+        // Header users are present on every request: their interactive authentication is "now" (F-G2-08).
+        var authTime = Context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        claims.Add(new Claim("auth_time", authTime));
         claims.AddRange(roles.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries).Select(r => new Claim("roles", r.Trim())));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName, "name", "roles"));
         if (ProvisionedUsers.TryGetValue(userKey, out var userId))
@@ -316,6 +322,7 @@ internal sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOption
             ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(
                 Crm.Authorization.PermissionAuthorization.RolesVerifiedClaim,
                 Context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(Crm.Authorization.PermissionAuthorization.AuthTimeClaim, authTime));
         }
         else
         {

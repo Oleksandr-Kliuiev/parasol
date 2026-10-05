@@ -40,7 +40,7 @@ public static class ServiceDefaultsExtensions
 
         var otel = builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics => metrics
-                .AddMeter("Crm.Health", "Crm.Operations", "Crm.Outbox")
+                .AddMeter("Crm.Health", "Crm.Operations", "Crm.Outbox", "Crm.Security")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())

@@ -5,6 +5,8 @@
 # deployment pipeline); it receives the Microsoft Graph application permissions the worker's directory jobs need:
 # User.Read.All for the hourly user synchronization, Application.Read.All and GroupMember.Read.All for the role
 # synchronization every two minutes (DEV-10, docs/adr/ADR-019-sessions-and-privilege-freshness.md).
+# The id_token carries the optional claim auth_time: privileged actions need the user's last interactive authentication to be
+# recent, not only the roles (F-G2-08, ADR-019). Without it those actions stay closed until the claim is configured.
 # Creates: app registration (single-tenant, web), App Roles, service principal with assignment required,
 # security groups CRM-<Role>-<env> and role assignments to those groups. Idempotent for re-runs.
 set -euo pipefail
@@ -49,7 +51,7 @@ az rest --method PATCH --url "https://graph.microsoft.com/v1.0/applications/${OB
     \"implicitGrantSettings\": { \"enableIdTokenIssuance\": false, \"enableAccessTokenIssuance\": false }
   },
   \"api\": { \"requestedAccessTokenVersion\": 2 },
-  \"optionalClaims\": { \"idToken\": [{ \"name\": \"xms_cc\" }, { \"name\": \"login_hint\" }] },
+  \"optionalClaims\": { \"idToken\": [{ \"name\": \"xms_cc\" }, { \"name\": \"login_hint\" }, { \"name\": \"auth_time\" }] },
   \"requiredResourceAccess\": [{
     \"resourceAppId\": \"${GRAPH_APP_ID}\",
     \"resourceAccess\": [

@@ -24,6 +24,8 @@ EXT-01 / DEC-09 ещё не принят. Конкретные люди, рез�
 | Sync failed | полный или частичный сбой | 2 | Operations: проверить источник и успешность повторного запуска |
 | Sync overdue | нет успеха или превышен порог | 2 | Operations: проверить источник, паузу, credentials, 429/timeouts |
 | Atera open / recent backfill / PowerOffice invoices | 15 / 15 / 90 мин с последнего полного успеха | 2 | Operations: пороги Sync overdue; recent backfill проверяется отдельно от открытых тикетов |
+| Аудит: `AUDIT_INTEGRITY_MISMATCH` | любая строка за 30 мин | 1 | Security owner + Operations: [runbook 06](06-security-incident.md), `audit-integrity-full`, сверка с якорями ([runbook 08](08-database-permissions.md) § 5); не перезапускать, пока не сохранены доказательства |
+| Аудит: нет `AUDIT_CHECKPOINT` | 2 суток | 3 | Operations: проверить задачу `audit-integrity` (04:40) и экспорт журналов; в системе без записей аудита сигнал ложный |
 | Unmapped | >0 | 3 | Operations: сопоставления, раздел ниже |
 | Финансовые исключения | >0 | 2 | Finance: сверка, раздел ниже |
 | Подготовка PDF / сопоставление подписок | >0 | 2 | Operations: разделы ниже |

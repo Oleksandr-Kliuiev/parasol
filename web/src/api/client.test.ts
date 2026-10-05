@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, MAINTENANCE_EVENT, query, RequestTimeoutError } from './client';
+import { api, ApiError, MAINTENANCE_EVENT, query, RequestTimeoutError, REVERIFY_EVENT, reverifyHref } from './client';
 
 function mockFetch(response: Response) {
   const fn = vi.fn().mockResolvedValue(response);
@@ -63,15 +63,39 @@ describe('api client', () => {
     expect(assign).toHaveBeenCalledWith('/bff/login?returnUrl=%2Fbilling%2Fruns%2Fr1%3Ftab%3Dbases');
   });
 
-  it('leaves a 403 asking to confirm the permissions again to the page, which explains it', async () => {
+  it('asks the page to open the identity confirmation on a 403 AUTH_REVERIFY_REQUIRED, and does not redirect by itself', async () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { ...window.location, assign });
-    mockFetch(problem(403, { title: 'Forbidden', status: 403, code: 'AUTH_REVERIFY_REQUIRED' }));
+    mockFetch(problem(403, { title: 'Forbidden', status: 403, code: 'AUTH_REVERIFY_REQUIRED', reverifyUrl: '/bff/login?reverify=1' }));
+    const heard = vi.fn();
+    window.addEventListener(REVERIFY_EVENT, heard);
 
     const error = await api.post('/api/v1/billing/runs/r1/approve', {}).catch((e: unknown) => e);
+    window.removeEventListener(REVERIFY_EVENT, heard);
 
     expect((error as ApiError).code).toBe('AUTH_REVERIFY_REQUIRED');
     expect(assign).not.toHaveBeenCalled();
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect((heard.mock.calls[0]![0] as CustomEvent).detail).toEqual({ url: '/bff/login?reverify=1' });
+  });
+
+  it('does not open the confirmation for an ordinary 403', async () => {
+    mockFetch(problem(403, { title: 'Forbidden', status: 403 }));
+    const heard = vi.fn();
+    window.addEventListener(REVERIFY_EVENT, heard);
+
+    await api.post('/api/v1/billing/runs/r1/approve', {}).catch(() => undefined);
+    window.removeEventListener(REVERIFY_EVENT, heard);
+
+    expect(heard).not.toHaveBeenCalled();
+  });
+
+  it('builds the confirmation address only from the sign-in path and carries this page as the way back', () => {
+    expect(reverifyHref('/bff/login?reverify=1', '/billing/runs/r1?tab=bases')).toBe('/bff/login?reverify=1&returnUrl=%2Fbilling%2Fruns%2Fr1%3Ftab%3Dbases');
+    // Anything else the server (or a spoofed response) offers is ignored.
+    expect(reverifyHref('https://evil.example/login?x=1', '/a')).toBe('/bff/login?reverify=1&returnUrl=%2Fa');
+    expect(reverifyHref('//evil.example', '/a')).toBe('/bff/login?reverify=1&returnUrl=%2Fa');
+    expect(reverifyHref(undefined, '/a')).toBe('/bff/login?reverify=1&returnUrl=%2Fa');
   });
 
   it('does not redirect when /bff/user answers 401: the sign-in gate shows its own page', async () => {

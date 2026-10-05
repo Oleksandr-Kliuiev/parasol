@@ -47,6 +47,18 @@ param powerOfficeEnvironment string
 @description('Connect Atera. Requires secret atera-api-key in Key Vault.')
 param enableAtera bool = false
 
+@description('Connect Partner Center (CSP). Requires secrets partnercenter-client-secret and partnercenter-refresh-token in Key Vault (DEV-21, F-G4-02).')
+param enablePartnerCenter bool = false
+
+@description('Partner tenant id of the Partner Center application; an identifier, not a secret. Required when enablePartnerCenter is true.')
+param partnerCenterTenantId string = ''
+
+@description('Application (client) id of the Partner Center application; an identifier, not a secret.')
+param partnerCenterClientId string = ''
+
+@description('Post cards to Teams channels. Requires secrets teams-webhook-sales, teams-webhook-finance and teams-webhook-operations in Key Vault; each URL is a bearer secret.')
+param enableTeams bool = false
+
 @description('SQL Database max vCores (serverless).')
 param sqlMaxVCores int = environmentName == 'prod' ? 4 : 2
 
@@ -74,6 +86,8 @@ param monitoringFinanceEmails array = []
 param monitoringRunbookUrl string = ''
 @description('Optional alert thresholds; defaults and units are in modules/monitoring-operations.bicep.')
 param monitoringThresholds object = {}
+@description('DEV-21 / F-G5-02: Entra-only telemetry ingestion. Leave false until the apps authenticate to Application Insights with their managed identity (needs an app change); see docs/06-security.md and runbook 15.')
+param monitoringEntraOnlyIngestion bool = false
 @description('Successful synchronization freshness in minutes by job id: Atera open/recent tickets 15, PowerOffice invoices 90.')
 param monitoringFreshness object = {
   'atera-tickets': 15
@@ -110,6 +124,12 @@ module monitoring 'modules/monitoring.bicep' = {
     financeEmails: monitoringFinanceEmails
     runbookUrl: monitoringRunbookUrl
     thresholdOverrides: monitoringThresholds
+    entraOnlyIngestion: monitoringEntraOnlyIngestion
+    publisherPrincipalIds: [
+      identities.outputs.appPrincipalId
+      identities.outputs.workerPrincipalId
+      identities.outputs.migratorPrincipalId
+    ]
   }
 }
 
@@ -141,7 +161,9 @@ module data 'modules/data.bicep' = {
 // Provider secrets crm-worker resolves from Key Vault; crm-web gets none of them (DEV-04).
 var workerSecretNames = concat(
   enablePowerOffice ? ['poweroffice-application-key', 'poweroffice-client-key', 'poweroffice-subscription-key'] : [],
-  enableAtera ? ['atera-api-key'] : [])
+  enableAtera ? ['atera-api-key'] : [],
+  enablePartnerCenter ? ['partnercenter-client-secret', 'partnercenter-refresh-token'] : [],
+  enableTeams ? ['teams-webhook-sales', 'teams-webhook-finance', 'teams-webhook-operations'] : [])
 
 module secretAccess 'modules/secret-access.bicep' = {
   params: {
@@ -162,6 +184,7 @@ module apps 'modules/apps.bicep' = {
     shortSuffix: shortSuffix
     tags: tags
     infrastructureSubnetId: network.outputs.appsSubnetId
+    appsSubnetPrefix: network.outputs.appsSubnetPrefix
     logAnalyticsCustomerId: monitoring.outputs.workspaceCustomerId
     logAnalyticsWorkspaceName: monitoring.outputs.workspaceName
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
@@ -194,6 +217,10 @@ module apps 'modules/apps.bicep' = {
     enablePowerOffice: enablePowerOffice
     powerOfficeEnvironment: powerOfficeEnvironment
     enableAtera: enableAtera
+    enablePartnerCenter: enablePartnerCenter
+    partnerCenterTenantId: partnerCenterTenantId
+    partnerCenterClientId: partnerCenterClientId
+    enableTeams: enableTeams
     recordScope: recordScope
     maintenanceForceReadOnly: maintenanceForceReadOnly
     biEnabled: biEnabled

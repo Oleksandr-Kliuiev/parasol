@@ -4,6 +4,7 @@ using Crm.Authorization;
 using Crm.Infrastructure.Http;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -19,6 +20,8 @@ public static class ReportsModule
 {
     public static IServiceCollection AddReportsModule(this IServiceCollection services, IConfiguration configuration)
     {
+        // Reporting has no module context, so AddModuleServices is not used; its request validators are registered here.
+        services.AddValidatorsFromAssembly(typeof(ReportsModule).Assembly, ServiceLifetime.Scoped, includeInternalTypes: true);
         services.AddScoped<DashboardService>();
         services.AddScoped<MarginService>();
         services.AddScoped<MartService>();
@@ -55,9 +58,13 @@ public static class ReportsModule
             .RequirePermission(Permissions.ReportsMart);
 
         app.MapGet("/api/v1/reports/mart/{dataset}", async (
-                string dataset, DateOnly? from, DateOnly? to, string? format, MartService mart, TimeProvider time, CancellationToken ct) =>
+                string dataset, DateOnly? from, DateOnly? to, string? format, MartService mart, TimeProvider time, IReportAccessAudit audit,
+                CancellationToken ct) =>
             {
                 var today = DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
+                // docs/06 §7: who read which dataset, for which period and in which format, and when — never the data.
+                var asCsv = string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase);
+                await audit.RecordAsync(ReportAccessKind.MartExport, dataset, null, from ?? today.AddMonths(-12), to ?? today, asCsv ? "csv" : "json", ct);
                 var result = await mart.GetAsync(dataset, from ?? today.AddMonths(-12), to ?? today, ct);
                 return result.ToHttpResult(table => string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase)
                     ? Results.Text(MartService.ToCsv(table), "text/csv; charset=utf-8")
@@ -102,6 +109,7 @@ public static class ReportsModule
                 string month, SnapshotRequest? request, BiSnapshotService snapshots, ICurrentUser user, CancellationToken ct) =>
                 (await snapshots.CaptureAsync(month, user.DisplayName ?? "unknown", request?.Reason?.Trim(), request?.Revise ?? false, ct))
                     .ToHttpResult(taken => Results.Ok(new { month, taken })))
+            .Validate<SnapshotRequest>()
             .WithTags("Reports")
             .RequirePermission(Permissions.FinanceCostRead);
     }
@@ -129,7 +137,8 @@ public static class ReportsModule
         }));
 
         bi.MapGet("/datasets/{dataset}", async (
-            string dataset, DateOnly? from, DateOnly? to, string? cursor, int? pageSize, ClaimsPrincipal user, BiService service, TimeProvider time, CancellationToken ct) =>
+            string dataset, DateOnly? from, DateOnly? to, string? cursor, int? pageSize, ClaimsPrincipal user, BiService service, TimeProvider time,
+            IReportAccessAudit audit, CancellationToken ct) =>
         {
             if (BiService.Find(dataset) is not { } definition)
             {
@@ -148,13 +157,20 @@ public static class ReportsModule
             }
 
             var today = DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
+            if (continuation is null)
+            {
+                // A refresh reads many pages; the trail records that it began, once per dataset (client, dataset, period).
+                await audit.RecordAsync(ReportAccessKind.BiRead, dataset, BiAccess.ClientOf(user), from ?? today.AddMonths(-12), to ?? today, null, ct);
+            }
+
             var asOf = continuation?.AsOf ?? service.Now;
             var table = await service.BuildAsync(definition, continuation?.From ?? from ?? today.AddMonths(-12), continuation?.To ?? to ?? today, asOf, ct);
             return table.ToHttpResult(t => Results.Ok(service.PageOf(t, continuation?.LastKey, pageSize ?? 0, asOf)));
         });
 
         bi.MapGet("/snapshots/{dataset}", async (
-            string dataset, string month, int? revision, string? cursor, int? pageSize, ClaimsPrincipal user, BiSnapshotService snapshots, IOptions<ReportsOptions> options, CancellationToken ct) =>
+            string dataset, string month, int? revision, string? cursor, int? pageSize, ClaimsPrincipal user, BiSnapshotService snapshots, IOptions<ReportsOptions> options,
+            IReportAccessAudit audit, CancellationToken ct) =>
         {
             if (BiService.Find(dataset) is not { Snapshot: true } definition)
             {
@@ -170,6 +186,11 @@ public static class ReportsModule
             if (!string.IsNullOrEmpty(cursor) && (!cursor.StartsWith('o') || !int.TryParse(cursor[1..], NumberStyles.None, CultureInfo.InvariantCulture, out offset)))
             {
                 return Problem(StatusCodes.Status400BadRequest, "BI_CURSOR", "The cursor is not one this API issued.");
+            }
+
+            if (string.IsNullOrEmpty(cursor))
+            {
+                await audit.RecordAsync(ReportAccessKind.BiSnapshotRead, dataset, BiAccess.ClientOf(user), null, null, month, ct);
             }
 
             return (await snapshots.ReadAsync(dataset, month, revision, ct)).ToHttpResult(document =>
@@ -189,3 +210,8 @@ public static class ReportsModule
 }
 
 public sealed record SnapshotRequest(string? Reason, bool Revise);
+
+internal sealed class SnapshotRequestValidator : AbstractValidator<SnapshotRequest>
+{
+    public SnapshotRequestValidator() => RuleFor(x => x.Reason).MaximumLength(500);
+}

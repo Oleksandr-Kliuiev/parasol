@@ -9,6 +9,7 @@ import { currentUserQueryKey } from './CurrentUserContext';
 const asUser = (id: string): CurrentUser => ({ ...testUser(['sales.read']), id, roles: ['Crm.Sales'] });
 
 afterEach(() => {
+  window.sessionStorage.clear();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -103,5 +104,28 @@ describe('AuthGate (DEV-09)', () => {
     );
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/bff/login?returnUrl=%2Fquotes'));
+  });
+
+  it('stops redirecting to sign-in after repeated attempts and says so', async () => {
+    window.sessionStorage.setItem('crm.loginAttempts', JSON.stringify([Date.now() - 3_000, Date.now() - 2_000, Date.now() - 1_000]));
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      url === '/bff/maintenance'
+        ? new Response(JSON.stringify({ mode: 'Normal', since: null, reason: null }), { status: 200 })
+        : new Response(JSON.stringify({ status: 401 }), { status: 401 })));
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, pathname: '/quotes', search: '', assign, reload: vi.fn() });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <AuthGate>
+          <p>The app</p>
+        </AuthGate>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText(/did not complete after several attempts/)).toBeInTheDocument();
+    expect(assign).not.toHaveBeenCalled();
+    window.sessionStorage.clear();
   });
 });

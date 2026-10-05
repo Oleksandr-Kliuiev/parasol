@@ -71,6 +71,11 @@ public static class SubscriptionCsv
             return new CsvParseResult([], ["The file has no data rows."], []);
         }
 
+        if (table.RowCount > CsvTable.MaxImportRows)
+        {
+            return new CsvParseResult([], [$"The file has more than {CsvTable.MaxImportRows} rows; split it."], table.UnknownColumns);
+        }
+
         var errors = new List<string>();
         foreach (var required in new[] { "customerid", "subscriptionid", "offerid", "quantity" })
         {

@@ -43,7 +43,7 @@ internal sealed class ProductRequestValidator : AbstractValidator<ProductRequest
 {
     public ProductRequestValidator()
     {
-        RuleFor(x => x.Sku).NotEmpty().MaximumLength(64).Matches("^[A-Za-z0-9._\\-/]+$").WithMessage("SKU may only contain letters, digits and . _ - /");
+        RuleFor(x => x.Sku).NotEmpty().MaximumLength(64).Matches("^[A-Za-z0-9._\\-/]+\\z").WithMessage("SKU may only contain letters, digits and . _ - /");
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.NameEn).MaximumLength(256);
         RuleFor(x => x.Description).MaximumLength(2000);

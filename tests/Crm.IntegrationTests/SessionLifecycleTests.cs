@@ -163,6 +163,88 @@ public sealed class SessionLifecycleTests(CrmWebFactory factory) : IDisposable
     }
 
     [Fact]
+    public async Task F_G2_08_a_privileged_action_needs_the_user_to_have_authenticated_recently_not_only_the_roles_to_be_confirmed()
+    {
+        await using var host = NewHost();
+        var oid = Oid("present");
+        EntraAssigns(assignments: [(oid, "User", FinanceRole)], members: []);
+
+        // Right after an interactive sign-in: allowed, and so is an export.
+        var (finance, _) = await host.SignInAsync(oid, CrmRoles.Finance);
+        (await ApproveAsync(finance)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await finance.GetAsync("/api/v1/customers/organizations/export", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Six minutes later the directory has confirmed the roles twice, so the roles are fresh — the user's presence is not.
+        host.Time.Advance(TimeSpan.FromMinutes(3));
+        await RunRoleSyncAsync(host);
+        host.Time.Advance(TimeSpan.FromMinutes(3));
+        await RunRoleSyncAsync(host);
+        host.Time.Advance(TimeSpan.FromSeconds(31));
+        var refused = await ApproveAsync(finance);
+        refused.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        var problem = await refused.ReadJsonAsync();
+        problem.GetProperty("code").GetString().ShouldBe(PermissionAuthorization.ReverifyRequired);
+        problem.GetProperty("reverifyUrl").GetString().ShouldBe("/bff/login?reverify=1");
+        (await finance.GetAsync("/api/v1/customers/organizations/export", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await finance.GetAsync("/api/v1/billing/runs", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK, "reading goes on");
+
+        // A silent single-sign-on re-login starts a new session, but Entra reports the old authentication time: still refused.
+        var silent = host.Client();
+        (await host.SignInAtAsync(oid, "3600", [CrmRoles.Finance], browser: silent)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await ApproveAsync(silent)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await silent.GetAsync("/api/v1/customers/organizations/export", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task F_G2_08_the_reverification_must_answer_with_a_recent_authentication_for_the_same_account()
+    {
+        await using var host = NewHost();
+        var oid = Oid("reverify");
+        var browser = host.Client();
+        (await host.SignInAtAsync(oid, "3600", [CrmRoles.Finance], browser: browser)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await ApproveAsync(browser)).StatusCode.ShouldBe(HttpStatusCode.Forbidden, "the single-sign-on session is an hour old");
+
+        // Entra ignored max_age and answered with the old authentication: nothing is signed in, the user is sent back to try again.
+        var old = await host.SignInAtAsync(oid, "3600", [CrmRoles.Finance], reverify: true, browser: browser);
+        old.StatusCode.ShouldBe(HttpStatusCode.SeeOther);
+        old.Headers.Location!.OriginalString.ShouldBe("/billing/runs?reverify=failed");
+        (await ApproveAsync(browser)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+
+        // No auth_time at all (the optional claim is missing from the app registration): also refused.
+        (await host.SignInAtAsync(oid, "none", [CrmRoles.Finance], reverify: true, browser: browser)).StatusCode.ShouldBe(HttpStatusCode.SeeOther);
+
+        // Another account answered: it is not the one that asked.
+        (await host.SignInAtAsync(Oid("someone-else"), "0", [CrmRoles.Finance], reverify: true, expectedObjectId: oid, browser: browser))
+            .StatusCode.ShouldBe(HttpStatusCode.SeeOther);
+
+        // Just inside max_age (five minutes, a minute of clock skew allowed): accepted, and the privileged action goes through.
+        (await host.SignInAtAsync(oid, "240", [CrmRoles.Finance], reverify: true, expectedObjectId: oid, browser: browser)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await ApproveAsync(browser)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+
+        // ... for as long as the window runs from the authentication, not from the answer.
+        host.Time.Advance(TimeSpan.FromMinutes(1.5));
+        (await ApproveAsync(browser)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task F_G2_08_a_required_acr_is_checked_on_the_reverification_only_when_it_is_configured()
+    {
+        await using var host = NewHost();
+        var oid = Oid("acr");
+        var browser = host.Client();
+        (await host.SignInAtAsync(oid, "0", [CrmRoles.Finance], reverify: true, acr: null, browser: browser)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        await using var strict = new SessionHost(
+            factory, ManualTimeProvider.InThePast(), _keyRing, AppId, _tenant, null, null, _ => { },
+            new Dictionary<string, string?> { ["Auth:RequiredAcr"] = "possessionorinherence" });
+        var other = strict.Client();
+        (await strict.SignInAtAsync(oid, "0", [CrmRoles.Finance], reverify: true, acr: "1", browser: other)).StatusCode.ShouldBe(HttpStatusCode.SeeOther);
+        (await strict.SignInAtAsync(oid, "0", [CrmRoles.Finance], reverify: true, browser: other)).StatusCode.ShouldBe(HttpStatusCode.SeeOther);
+        (await strict.SignInAtAsync(oid, "0", [CrmRoles.Finance], reverify: true, acr: "possessionorinherence", browser: other)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await ApproveAsync(other)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task AC04_an_unreachable_directory_stops_privileged_actions_within_minutes_and_reading_within_hours()
     {
         await using var host = NewHost();
@@ -184,10 +266,13 @@ public sealed class SessionLifecycleTests(CrmWebFactory factory) : IDisposable
         (await finance.GetAsync("/api/v1/customers/organizations/export", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden, "an export is privileged");
         (await finance.GetAsync("/api/v1/billing/runs", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK, "reading goes on");
 
-        // The directory answers again: privileged actions are back without a sign-in.
+        // The directory answers again and the roles are confirmed — which is not the user being present (F-G2-08): the privileged
+        // action still asks for a re-verification, and gets through after one.
         EntraAssigns(assignments: [(oid, "User", FinanceRole)], members: []);
         await RunRoleSyncAsync(host);
         host.Time.Advance(TimeSpan.FromSeconds(31));
+        (await ApproveAsync(finance)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await host.SignInAtAsync(oid, "0", [CrmRoles.Finance], reverify: true, browser: finance)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await ApproveAsync(finance)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
 
         // Never indefinitely: unconfirmed for longer than the grace, the session reads no more and must sign in again.
@@ -214,9 +299,12 @@ public sealed class SessionLifecycleTests(CrmWebFactory factory) : IDisposable
         await RunRoleSyncAsync(host);
         (await UserRowAsync(host, userId)).ShouldBe((audits, rowVersion));
 
-        // ... yet the reading counts as a confirmation: eight minutes after the sign-in, four after the reading, still fresh.
+        // ... yet the reading is a confirmation of the roles only: eight minutes after the sign-in the user is not known to be
+        // present, so a privileged action asks to confirm the identity although the roles were confirmed four minutes ago.
         host.Time.Advance(TimeSpan.FromMinutes(4));
-        (await ApproveAsync(finance)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var stale = await ApproveAsync(finance);
+        stale.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await stale.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe(PermissionAuthorization.ReverifyRequired);
 
         // A real change is written once, and audited with what changed.
         EntraAssigns(assignments: [], members: []);
@@ -263,11 +351,34 @@ public sealed class SessionLifecycleTests(CrmWebFactory factory) : IDisposable
 
         host.Time.Advance(TimeSpan.FromDays(1.5));
         await ConfirmAsync(host, new() { [oid] = [CrmRoles.Finance] });
-        (await ApproveAsync(finance)).StatusCode.ShouldBe(HttpStatusCode.NotFound, "a day and a half in, active and confirmed");
+        (await finance.GetAsync("/api/v1/billing/runs", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK, "a day and a half in, active and confirmed");
 
         host.Time.Advance(TimeSpan.FromDays(1.5) + TimeSpan.FromMinutes(1));
         await ConfirmAsync(host, new() { [oid] = [CrmRoles.Finance] });
         (await finance.GetAsync("/api/v1/billing/runs", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "past three days nothing extends it");
+    }
+
+    [Fact]
+    public async Task An_idle_session_ends_at_the_sliding_lifetime_and_activity_keeps_it_going_until_the_absolute_one()
+    {
+        // This host: sliding two days, absolute three; the directory keeps confirming the roles (F-G2-13).
+        await using var host = NewHost();
+        var idle = Oid("idle");
+        var active = Oid("active");
+        var (idleClient, _) = await host.SignInAsync(idle, CrmRoles.Finance);
+        var (activeClient, _) = await host.SignInAsync(active, CrmRoles.Finance);
+        var roles = new Dictionary<string, IReadOnlyCollection<string>> { [idle] = [CrmRoles.Finance], [active] = [CrmRoles.Finance] };
+
+        // Past half of the window a request renews the cookie, so the active user's expiry moves to about 3.2 days.
+        host.Time.Advance(TimeSpan.FromDays(1.2));
+        await ConfirmAsync(host, roles);
+        (await activeClient.GetAsync("/api/v1/billing/runs", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // 2.1 days after the sign-in nobody asked anything for the idle user: its cookie ran out, the renewed one did not.
+        host.Time.Advance(TimeSpan.FromDays(0.9) + TimeSpan.FromMinutes(1));
+        await ConfirmAsync(host, roles);
+        (await idleClient.GetAsync("/api/v1/billing/runs", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "idle for the whole sliding window");
+        (await activeClient.GetAsync("/api/v1/billing/runs", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK, "activity renewed the cookie");
     }
 
     [Fact]
@@ -480,7 +591,7 @@ internal sealed class SessionHost : IAsyncDisposable
 
     public SessionHost(
         CrmWebFactory factory, ManualTimeProvider time, string keyRing, string crmAppId, string tenant, CapturingLoggerProvider? logs,
-        ScriptedTokenAcquisition? entra = null, Action<IServiceCollection>? services = null)
+        ScriptedTokenAcquisition? entra = null, Action<IServiceCollection>? services = null, IReadOnlyDictionary<string, string?>? settings = null)
     {
         Time = time;
         Tenant = tenant;
@@ -494,6 +605,11 @@ internal sealed class SessionHost : IAsyncDisposable
             builder.UseSetting("Auth:ActiveUserCacheSeconds", "0");
             builder.UseSetting("Auth:RoleGrace", "08:00:00");
             builder.UseSetting("Auth:PrivilegedFreshness", "00:05:00");
+            foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+            {
+                builder.UseSetting(key, value);
+            }
+
             builder.UseSetting("Integrations:MicrosoftGraph:CrmAppId", crmAppId);
             builder.UseSetting("Integrations:MicrosoftGraph:TenantId", tenant);
             if (logs is not null)
@@ -550,13 +666,47 @@ internal sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>Signs in as Entra would — a fresh token with these roles — and returns the browser and its session cookie.</summary>
-    public async Task<(HttpClient Client, string Cookie)> SignInAsync(string objectId, params string[] roles)
+    public Task<(HttpClient Client, string Cookie)> SignInAsync(string objectId, params string[] roles) => SignInWithSessionAsync(objectId, null, roles);
+
+    /// <summary>
+    /// A sign-in whose token reports the user's last interactive authentication <paramref name="authenticatedSecondsAgo"/> seconds
+    /// ago ("none": no <c>auth_time</c> at all) — what a silent single-sign-on re-login looks like. With <paramref name="reverify"/>
+    /// it answers GET /bff/login?reverify=1 instead, so the answer is checked as the callback does.
+    /// </summary>
+    public async Task<HttpResponseMessage> SignInAtAsync(
+        string objectId, string authenticatedSecondsAgo, string[] roles, bool reverify = false, string? acr = null, string? expectedObjectId = null, HttpClient? browser = null)
+    {
+        var client = browser ?? Client();
+        using var request = new HttpRequestMessage(HttpMethod.Post, reverify ? "/test/reverify" : "/test/sign-in");
+        request.Headers.Add("X-Test-Oid", objectId);
+        request.Headers.Add("X-Test-Sign-In-Roles", string.Join(',', roles));
+        request.Headers.Add("X-Test-Auth-Age", authenticatedSecondsAgo);
+        if (acr is not null)
+        {
+            request.Headers.Add("X-Test-Acr", acr);
+        }
+
+        if (expectedObjectId is not null)
+        {
+            request.Headers.Add("X-Test-Expected-Oid", expectedObjectId);
+        }
+
+        return await client.SendAsync(request);
+    }
+
+    /// <summary>As <see cref="SignInAsync"/>, with the identity provider's session id (<c>sid</c>) in the token.</summary>
+    public async Task<(HttpClient Client, string Cookie)> SignInWithSessionAsync(string objectId, string? sid, params string[] roles)
     {
         var client = Client();
         // In headers, not the URL: Entra's callback carries no identity in the address either, and addresses are logged.
         using var request = new HttpRequestMessage(HttpMethod.Post, "/test/sign-in");
         request.Headers.Add("X-Test-Oid", objectId);
         request.Headers.Add("X-Test-Sign-In-Roles", string.Join(',', roles));
+        if (sid is not null)
+        {
+            request.Headers.Add("X-Test-Sid", sid);
+        }
+
         var response = await client.SendAsync(request);
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         var cookie = string.Join("; ", response.Headers.GetValues("Set-Cookie")
@@ -587,10 +737,11 @@ internal sealed class TestSignInStartupFilter(string tenant) : IStartupFilter
     {
         app.Map("/test/sign-in", branch => branch.Run(context => SignInAsync(context, legacy: false)));
         app.Map("/test/legacy-sign-in", branch => branch.Run(context => SignInAsync(context, legacy: true)));
+        app.Map("/test/reverify", branch => branch.Run(context => SignInAsync(context, legacy: false, reverify: true)));
         next(app);
     };
 
-    private async Task SignInAsync(HttpContext context, bool legacy)
+    private async Task SignInAsync(HttpContext context, bool legacy, bool reverify = false)
     {
         var objectId = context.Request.Headers["X-Test-Oid"].ToString();
         var claims = new List<Claim>
@@ -600,9 +751,50 @@ internal sealed class TestSignInStartupFilter(string tenant) : IStartupFilter
             new("preferred_username", $"{objectId}@test.local"),
             new("name", $"Session {objectId}"),
         };
+        if (context.Request.Headers["X-Test-Sid"].ToString() is { Length: > 0 } sid)
+        {
+            claims.Add(new Claim("sid", sid));
+        }
+
+        // The id_token's auth_time: now (an interactive sign-in) unless the test says the user authenticated N seconds ago, as a silent
+        // single-sign-on sign-in reports, or sends none (the optional claim is not configured).
+        var clock = context.RequestServices.GetRequiredService<TimeProvider>();
+        if (context.Request.Headers["X-Test-Auth-Age"].ToString() is { Length: > 0 } age)
+        {
+            if (age != "none")
+            {
+                claims.Add(new Claim("auth_time", (clock.GetUtcNow() - TimeSpan.FromSeconds(long.Parse(age))).ToUnixTimeSeconds().ToString()));
+            }
+        }
+        else
+        {
+            claims.Add(new Claim("auth_time", clock.GetUtcNow().ToUnixTimeSeconds().ToString()));
+        }
+
+        if (context.Request.Headers["X-Test-Acr"].ToString() is { Length: > 0 } acr)
+        {
+            claims.Add(new Claim("acr", acr));
+        }
+
         claims.AddRange(context.Request.Headers["X-Test-Sign-In-Roles"].ToString()
             .Split(',', StringSplitOptions.RemoveEmptyEntries).Select(role => new Claim("roles", role)));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "AuthenticationTypes.Federation", "name", "roles"));
+        if (reverify)
+        {
+            // The callback of GET /bff/login?reverify=1: the challenge's protected state, then the same decision as OnTokenValidated.
+            var maxAge = context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorizationFreshnessOptions>>().Value.PrivilegedFreshness;
+            var expected = context.Request.Headers["X-Test-Expected-Oid"].ToString();
+            var properties = Reverification.Challenge("/billing/runs", maxAge, expected.Length > 0 ? expected : null);
+            var rejected = Reverification.FailureRedirect(
+                principal, properties, clock.GetUtcNow(), context.RequestServices.GetRequiredService<CrmAuthOptions>().RequiredAcr, out _);
+            if (rejected is not null)
+            {
+                context.Response.StatusCode = StatusCodes.Status303SeeOther;
+                context.Response.Headers.Location = rejected;
+                return;
+            }
+        }
+
         try
         {
             await AuthenticationSetup.ProvisionUserAsync(principal, context.RequestServices, context.RequestAborted);

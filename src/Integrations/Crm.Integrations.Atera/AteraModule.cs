@@ -14,7 +14,9 @@ public static class AteraModule
 {
     public static IServiceCollection AddAteraIntegration(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptions<AteraOptions>().Bind(configuration.GetSection(AteraOptions.SectionName));
+        services.AddOptions<AteraOptions>().Bind(configuration.GetSection(AteraOptions.SectionName))
+            .Validate(options => Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.BaseUrl), "Integrations:Atera:BaseUrl must be an https address (the API key travels with every call).")
+            .ValidateOnStart();
         services.AddHttpClient<IAteraClient, AteraClient>((sp, client) =>
             {
                 var options = sp.GetRequiredService<IOptions<AteraOptions>>().Value;

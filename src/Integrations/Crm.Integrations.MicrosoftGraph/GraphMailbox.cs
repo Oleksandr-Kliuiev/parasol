@@ -52,7 +52,7 @@ internal sealed class GraphMailbox(HttpClient http, IOptions<GraphOptions> optio
     private async Task<IReadOnlyList<MailMessage>> ReadAsync(string? mailbox, string term, int take, CancellationToken cancellationToken)
     {
         var scope = mailbox is null ? "me" : $"users/{Uri.EscapeDataString(mailbox)}";
-        var url = $"{scope}/messages?$search=\"participants:{Uri.EscapeDataString(term)}\"&{Select}&$top={Math.Clamp(take, 1, 50)}";
+        var url = $"{scope}/messages?$search=\"participants:{Uri.EscapeDataString(KqlTerm(term))}\"&{Select}&$top={Math.Clamp(take, 1, 50)}";
         using var response = await http.GetAsync(url, cancellationToken);
         if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
         {
@@ -70,6 +70,13 @@ internal sealed class GraphMailbox(HttpClient http, IOptions<GraphOptions> optio
         var page = await response.Content.ReadFromJsonAsync<GraphMailMessagePage>(cancellationToken);
         return (page?.Value ?? []).Select(m => Map(m, mailbox ?? "me")).ToList();
     }
+
+    /// <summary>
+    /// A search term goes inside a quoted KQL phrase, so a double quote or a backslash would end it and widen the search
+    /// (F-G1-13): both and every control character are dropped. An address or a domain has none of them.
+    /// </summary>
+    internal static string KqlTerm(string term) =>
+        new(term.Where(c => c is not ('"' or '\\') && !char.IsControl(c)).ToArray());
 
     internal static MailMessage Map(GraphMailMessage message, string mailbox) => new(
         message.Id,

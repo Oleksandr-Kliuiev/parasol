@@ -29,10 +29,8 @@ internal sealed class TeamsChannelSender(HttpClient http, IOptions<GraphOptions>
         using var response = await http.PostAsJsonAsync(url, Payload(card), cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            logger.LogWarning(
-                "Teams channel {Channel} rejected the message with {Status}: {Body}",
-                channel, (int)response.StatusCode, body.Length > 200 ? body[..200] : body);
+            // The status code only: the response text of a webhook can echo the card or the URL's secret (F-G4-16).
+            logger.LogWarning("Teams channel {Channel} rejected the message with {Status}", channel, (int)response.StatusCode);
             // The queue tries again later and gives up after its attempts (DEV-07); a swallowed rejection was simply lost.
             throw new HttpRequestException($"Teams channel {channel} answered {(int)response.StatusCode}.", null, response.StatusCode);
         }

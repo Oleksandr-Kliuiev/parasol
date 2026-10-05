@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
@@ -55,7 +56,8 @@ public class BiApiTests(CrmWebFactory factory)
 
     private static string Token(
         string? tenant = null, string? audience = null, string? client = null, string[]? roles = null, string? scope = null, TimeSpan? expiresIn = null,
-        SecurityKey? key = null, string? tidClaim = null)
+        SecurityKey? key = null, string? tidClaim = null, string? algorithm = null,
+        IReadOnlyDictionary<string, object>? extra = null, bool withoutClientAuthentication = false)
     {
         var tid = tenant ?? Tenant;
         var lifetime = expiresIn ?? TimeSpan.FromHours(1);
@@ -63,6 +65,16 @@ public class BiApiTests(CrmWebFactory factory)
         {
             ["tid"] = tidClaim ?? tid, ["azp"] = client ?? Client, ["ver"] = "2.0", ["roles"] = roles ?? [BiAccess.ReadRole],
         };
+        if (!withoutClientAuthentication)
+        {
+            claims["azpacr"] = "2";
+        }
+
+        foreach (var (name, value) in extra ?? new Dictionary<string, object>())
+        {
+            claims[name] = value;
+        }
+
         if (scope is not null)
         {
             claims["scp"] = scope;
@@ -77,7 +89,7 @@ public class BiApiTests(CrmWebFactory factory)
             NotBefore = lifetime < TimeSpan.Zero ? now.AddHours(-3) : now.AddMinutes(-1),
             IssuedAt = lifetime < TimeSpan.Zero ? now.AddHours(-3) : now.AddMinutes(-1),
             Expires = now.Add(lifetime),
-            SigningCredentials = new SigningCredentials(key ?? Key, SecurityAlgorithms.RsaSha256),
+            SigningCredentials = new SigningCredentials(key ?? Key, algorithm ?? SecurityAlgorithms.RsaSha256),
         });
     }
 
@@ -115,8 +127,55 @@ public class BiApiTests(CrmWebFactory factory)
         (await As(host, Token(roles: [CrmRoles.Admin])).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await As(host, Token(roles: [], scope: "User.Read Files.Read")).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
-        // A delegated token with the right scope is as good as the application permission.
-        (await As(host, Token(roles: [], scope: $"openid {BiAccess.ReadScope}")).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        // No delegated scope opens the API, whatever it is called: a user's token is not checked against a CRM user.
+        (await As(host, Token(roles: [], scope: "Bi.Read Bi.Cost")).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task AC01_only_rs256_access_tokens_pass_not_other_algorithms_or_tokens_of_another_kind()
+    {
+        await using var host = Host();
+        var url = $"{Bi}/datasets/organizations?pageSize=1";
+
+        // Signed with the right key but with an algorithm Entra does not use here.
+        (await As(host, Token(algorithm: SecurityAlgorithms.RsaSha384)).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        // The shape of an id_token for the same audience: a nonce, or no sign of a client authentication.
+        (await As(host, Token(extra: new Dictionary<string, object> { ["nonce"] = "abc" })).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await As(host, Token(withoutClientAuthentication: true)).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await As(host, Token(extra: new Dictionary<string, object> { ["idtyp"] = "user" })).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        // The real thing, with an explicit application type.
+        (await As(host, Token(extra: new Dictionary<string, object> { ["idtyp"] = "app" })).GetAsync(url, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task AC01_the_start_of_a_bi_refresh_is_audited_per_dataset_with_the_client_but_not_per_page_or_with_rows()
+    {
+        await using var host = Host();
+        var from = $"2023-{DateTime.UtcNow.Second % 9 + 1:00}-01";
+        (await As(host, Token()).GetAsync($"{Bi}/datasets/organizations?from={from}&pageSize=1", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        await using var scope = host.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<Crm.Integrations.Core.Persistence.IntegrationDbContext>();
+        var entries = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            db.AuditEntries.Where(a => a.Module == "reports" && a.EntityType == "BiRead" && a.Changes!.Contains(Client) && a.Changes.Contains(from)), Ct);
+        entries.Count.ShouldBe(1);
+        entries[0].Action.ShouldBe("Read");
+        entries[0].UserId.ShouldBeNull("a client application, not a CRM user");
+        entries[0].Changes!.ShouldContain("\"dataset\":\"organizations\"");
+    }
+
+    [Fact]
+    public async Task AC01_a_refused_bi_token_is_logged_without_its_contents()
+    {
+        var logs = new CapturingLoggerProvider();
+        await using var host = Host(builder => builder.ConfigureServices(services => services.AddLogging(logging => logging.AddProvider(logs))));
+        (await As(host, Token(expiresIn: TimeSpan.FromMinutes(-90))).GetAsync($"{Bi}/datasets/organizations?pageSize=1&cursor=secret-cursor", Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await As(host, Token(client: Guid.NewGuid().ToString())).GetAsync($"{Bi}/datasets/organizations", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        var lines = logs.Lines.Where(l => l.Contains("BI ", StringComparison.Ordinal)).ToList();
+        lines.ShouldContain(l => l.Contains("BI bearer token rejected", StringComparison.Ordinal));
+        lines.ShouldContain(l => l.Contains("BI access denied", StringComparison.Ordinal));
+        logs.Lines.ShouldNotContain(l => l.Contains("eyJ", StringComparison.Ordinal) || l.Contains("secret-cursor", StringComparison.Ordinal));
     }
 
     [Fact]

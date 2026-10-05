@@ -54,7 +54,9 @@ public static class ContractsModule
         group.MapPost("/indexation", async (IndexationRequest request, IndexationService service, CancellationToken ct) =>
                 (await service.ApplyAsync(request, ct)).ToHttpResult(Results.Ok))
             .Validate<IndexationRequest>()
-            .RequirePermission(Permissions.ContractsWrite);
+            .RequirePermission(Permissions.ContractsWrite)
+            // A mass price revision: a stale or revoked role must not be able to run it (F-G3-10).
+            .RequiresFreshRoles();
     }
 
     private static void MapContracts(RouteGroupBuilder group)
@@ -180,7 +182,8 @@ public static class ContractsModule
 
         group.MapPost("/reminders/{id:guid}/acknowledge", async (Guid id, ReminderService service, CancellationToken ct) =>
                 (await service.AcknowledgeAsync(id, ct)).ToHttpResult(Results.NoContent))
-            .RequirePermission(Permissions.ContractsRead);
+            // F-G3-10: acknowledging changes a record every user sees, so reading is not enough.
+            .RequirePermission(Permissions.ContractsWrite);
     }
 
     private static IResult WithETag(HttpResponse response, Versioned<ContractResponse> versioned)

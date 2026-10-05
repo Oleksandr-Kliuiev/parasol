@@ -1,11 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Spinner, makeStyles, tokens } from '@fluentui/react-components';
+import { Button, MessageBar, MessageBarActions, MessageBarBody, Spinner, makeStyles, tokens } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError, loginUrl } from '../api/client';
 import type { CurrentUser } from '../api/types';
 import i18n, { changeLanguage, detectLanguage } from '../i18n';
 import { CurrentUserContext, currentUserQueryKey } from './CurrentUserContext';
+import { loginAttemptsExhausted, registerLoginAttempt, resetLoginAttempts } from './loginAttempts';
 import { NoAccessPage } from '../features/errors/NoAccessPage';
 import { fetchPublicMaintenance, publicMaintenanceKey } from '../features/operations/api';
 import { SignInPausedPage } from '../features/operations/SignInPausedPage';
@@ -54,8 +55,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const paused = unauthenticated && (signInPaused || maintenance.data?.mode === 'ReadOnly');
   const redirect = unauthenticated && !paused && (maintenance.data !== undefined || maintenance.isError);
 
+  // A sign-in that keeps coming back unauthenticated must not loop: after three redirects in a minute the page says so.
+  const loop = redirect && loginAttemptsExhausted();
   useEffect(() => {
-    if (redirect) window.location.assign(loginUrl());
+    if (redirect && registerLoginAttempt()) window.location.assign(loginUrl());
   }, [redirect]);
 
   useEffect(() => {
@@ -65,6 +68,26 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (paused) {
     return <SignInPausedPage state={maintenance.data} onCheck={() => void maintenance.refetch()} />;
+  }
+
+  if (loop) {
+    return (
+      <div className={styles.center}>
+        <MessageBar intent="error" layout="multiline">
+          <MessageBarBody>{t('errors.signInLoop')}</MessageBarBody>
+          <MessageBarActions>
+            <Button
+              onClick={() => {
+                resetLoginAttempts();
+                window.location.assign(loginUrl());
+              }}
+            >
+              {t('errors.signInLoopRetry')}
+            </Button>
+          </MessageBarActions>
+        </MessageBar>
+      </div>
+    );
   }
 
   if (isPending || unauthenticated) {

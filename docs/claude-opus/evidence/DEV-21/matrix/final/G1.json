@@ -1,0 +1,1384 @@
+{
+  "group": "G1",
+  "chapters": [
+    "V1",
+    "V2",
+    "V3"
+  ],
+  "assessed_at": "2026-10-05",
+  "assessor": "Claude (self-assessment, not independent)",
+  "level3_not_assessed": [
+    "V1.2.10",
+    "V1.3.12",
+    "V1.5.3",
+    "V2.3.5",
+    "V2.4.2",
+    "V3.1.1",
+    "V3.2.3",
+    "V3.3.5",
+    "V3.4.7",
+    "V3.4.8",
+    "V3.5.6",
+    "V3.5.7",
+    "V3.5.8",
+    "V3.6.1",
+    "V3.7.3",
+    "V3.7.4",
+    "V3.7.5"
+  ],
+  "rows": [
+    {
+      "req_id": "V1.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Application/Paging.cs:33",
+        "web/src/api/client.ts:147"
+      ],
+      "note": "The only explicit decoders are the keyset cursor (Base64Url once, then JSON into a concrete record) and the download file name (decodeURIComponent once, on a header the server wrote); everything else is decoded once by ASP.NET routing/model binding. No double-decode path found by grep. No dedicated test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "tests/Crm.UnitTests/NotificationTests.cs:134",
+        "src/Modules/Sales/Crm.Sales/Features/QuoteService.cs:563",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphCalendar.cs:116",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphMailbox.cs:55"
+      ],
+      "note": "Encoding happens at the sink for HTML mail (WebUtility.HtmlEncode), JSON (System.Text.Json), SQL (EF parameters) and React text. Two sinks are not encoded for their interpreter: the Graph $search KQL string (only URL-escaped, F-G1-13) and the mart CSV writer (F-G1-10). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "GraphMailbox.cs KqlTerm (OutboundAddressTests KqlTerm cases); MartService.Cell -> CsvCell.Write (CRLF records); ExportOrganizations quote prefix; RequestHardeningTests.A_cell_that_starts_a_formula_or_holds_a_line_break_is_neutralized_in_the_csv_and_the_workbook; SharedKernelTests.A_csv_cell_is_neutralized_and_quoted",
+      "finding_ids": [
+        "F-G1-10",
+        "F-G1-13"
+      ]
+    },
+    {
+      "req_id": "V1.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/Features/QuoteService.cs:549",
+        "src/Modules/Notifications/Crm.Notifications/Features/NotificationJobs.cs:327",
+        "tests/Crm.UnitTests/NotificationTests.cs:134"
+      ],
+      "note": "Every HTML document the server builds (quote e-mail Body(), notification digest, calendar body, dev sign-in page BffEndpoints.cs:140) passes user text through WebUtility.HtmlEncode; the SPA renders through React text nodes. Digest escaping is unit-tested; the quote e-mail body has no test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.2.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/src/api/client.ts:166",
+        "src/Integrations/Crm.Integrations.Brreg/BrregClient.cs:37",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphMailbox.cs:54",
+        "src/Modules/Customers/Crm.Customers/Domain/Organization.cs:490",
+        "web/src/features/organizations/OrganizationDetailPage.tsx:233"
+      ],
+      "note": "Query strings are built with URLSearchParams (client.ts query()) and server-side URLs use Uri.EscapeDataString. A user-entered organisation website is rendered as an href after a normaliser that only prepends https:// when \"://\" is absent, so \"javascript://x%0Aalert(1)\" is kept (F-G1-05); CSP script-src without unsafe-inline blocks execution, so this is defence in depth only. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/Modules/Customers/Crm.Customers/Features/Organizations/OrganizationDtos.cs (CUS_INVALID_WEBSITE), Crm.SharedKernel/Text/WebUrl.cs, web/src/shared/utils/safeUrl.ts; RequestHardeningTests.A_website_must_be_an_http_or_https_address; safeUrl.test.ts",
+      "finding_ids": [
+        "F-G1-05"
+      ]
+    },
+    {
+      "req_id": "V1.2.3",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:83",
+        "web/index.html"
+      ],
+      "note": "The app never builds JavaScript: index.html only references an external module script, JSON is written by System.Text.Json (HTML-safe encoder by default) and CSP script-src is 'self' with no unsafe-inline/eval. No test pins the CSP value.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.2.4",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Infrastructure/Persistence/DatabasePermissions.cs:124",
+        "src/Modules/Billing/Crm.Billing/Features/ChargeLedger.cs:21",
+        "src/Modules/Sales/Crm.Sales/Persistence/SalesDbContext.cs:45"
+      ],
+      "note": "All data access is EF Core LINQ (parameterised). The only raw SQL is constant text (sp_getapplock, sequence reads with compile-time schema/sequence constants, DDL for permissions); no FromSqlRaw/ExecuteSqlRaw with user data and no dynamic ORDER BY (no EF.Property / dynamic LINQ). No test or analyzer forbids new interpolated raw SQL.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.2.5",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:1"
+      ],
+      "note": "No Process.Start/ProcessStartInfo or shell invocation exists in src/ (grep); PDFs are produced by the in-process PdfBuilder and Excel by ClosedXML. Operator scripts (tools/ops) are outside the running application.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.2.6",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphUserSource.cs:77"
+      ],
+      "note": "The directory is read through Microsoft Graph REST; no LDAP/DirectoryEntry code exists in src/.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.2.7",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:1"
+      ],
+      "note": "No XML/XPath processing anywhere in src/ (grep XmlDocument/XPath/XDocument: none).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.2.8",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Documents/PdfBuilder.cs"
+      ],
+      "note": "No LaTeX processor; quote PDFs are written by the in-house PdfBuilder.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.2.9",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/DatabaseMigrator.cs:104",
+        "src/Modules/Catalog/Crm.Catalog/Features/Products/ProductFeatures.cs:46"
+      ],
+      "note": "Every Regex in src/ and web/src is a constant pattern; no pattern is composed from user input (grep Regex/RegExp), so there is nothing to escape. Trailing-newline behaviour of the constant validator patterns is recorded in F-G1-08.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": [
+        "F-G1-08"
+      ]
+    },
+    {
+      "req_id": "V1.3.1",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Modules/Sales/Crm.Sales/Features/QuoteFeatures.cs:161"
+      ],
+      "note": "The system accepts and stores plain text only: no WYSIWYG/HTML input, no dangerouslySetInnerHTML/innerHTML in web/src, and neither DOMPurify nor HtmlSanitizer is a dependency. docs/06-security.md section 4 still claims both (stale documentation, F-G1-15).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": [
+        "F-G1-15"
+      ]
+    },
+    {
+      "req_id": "V1.3.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/src/main.tsx",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:24"
+      ],
+      "note": "No eval/new Function/document.write in web/src and no Roslyn scripting or Assembly.Load in src/. The only reflection on data is Type.GetType for outbox events (see V1.5.2). ESLint config has no no-eval rule, so the property is not enforced mechanically.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/src/features/organizations/OrganizationDetailPage.tsx:233",
+        "web/src/features/contacts/ContactsTab.tsx:149",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphMailbox.cs:55"
+      ],
+      "note": "mailto:/tel: links use constant prefixes with validated e-mail/32-char phone; but the website href has no scheme allowlist (F-G1-05) and the Graph KQL term is not sanitised for quotes (F-G1-13). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/Modules/Customers/Crm.Customers/Features/Organizations/OrganizationDtos.cs (CUS_INVALID_WEBSITE), Crm.SharedKernel/Text/WebUrl.cs, web/src/shared/utils/safeUrl.ts; RequestHardeningTests.A_website_must_be_an_http_or_https_address; safeUrl.test.ts; GraphMailbox.KqlTerm",
+      "finding_ids": [
+        "F-G1-05",
+        "F-G1-13"
+      ]
+    },
+    {
+      "req_id": "V1.3.4",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Modules/Catalog/Crm.Catalog/CatalogModule.cs:144"
+      ],
+      "note": "No user-supplied SVG or image upload exists; the only uploads are CSV bodies (price sheet, licences, migration) parsed as text. Static favicon.svg is shipped by the build.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.5",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/Features/QuoteFeatures.cs:161"
+      ],
+      "note": "Quote intro/terms text and notification texts are plain strings written by PdfBuilder/HtmlEncode; there is no Markdown, CSS, XSL or template-language input.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.6",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.Brreg/BrregModule.cs:62",
+        "src/Integrations/Crm.Integrations.Brreg/BrregClient.cs:37",
+        "tests/Crm.IntegrationTests/BrregApiTests.cs:42"
+      ],
+      "note": "Outbound HTTP targets are fixed base URLs from options (Brreg, Atera, PowerOffice, Partner Center, Graph); user data only reaches path/query as 9 digits or Uri.EscapeDataString text, and Graph item ids come from stored links. No endpoint fetches a user-supplied URL; webhook receiving does not exist. BaseUrl/URL-template values are operator configuration.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.7",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.Atera/AteraServiceSync.cs:49",
+        "src/Modules/Notifications/Crm.Notifications/Features/NotificationTexts.cs:32"
+      ],
+      "note": "No template engine is fed user input: notice texts are code constants with parameters as values, and the only string.Format template (Atera ticket/device URL) comes from operator configuration with the id as argument.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.8",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:1"
+      ],
+      "note": ".NET application; JNDI does not exist.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.9",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:100"
+      ],
+      "note": "No memcache; caches are IMemoryCache, SQL-backed distributed cache (identity.TokenCache) and Hangfire SQL storage.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.10",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/Features/QuotePdf.cs:105",
+        "src/Integrations/Crm.Integrations.Atera/AteraServiceSync.cs:49"
+      ],
+      "note": "string.Format is only used with format strings that are constants (QuotePdf texts) or operator config (Atera URL template); user text is always an argument, never the format. No test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.3.11",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphQuoteMailSender.cs:29",
+        "src/Modules/Sales/Crm.Sales/Features/QuoteFeatures.cs:199"
+      ],
+      "note": "Mail goes out through Graph sendMail as structured JSON (no SMTP/IMAP protocol text), and recipients/subject are length- and format-validated (SendQuoteRequestValidator). The CRM does not speak SMTP or IMAP.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.4.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Domain/SequentialId.cs:19"
+      ],
+      "note": "Managed .NET 10 code. No unsafe blocks, DllImport or pointer arithmetic in src/; the single stackalloc is a fixed 16-byte Span in SequentialId.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.4.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Application/Paging.cs:41",
+        "src/Modules/Sales/Crm.Sales/Features/QuoteFeatures.cs:161",
+        "src/Modules/TimeTracking/Crm.TimeTracking/Features/TimeEntryFeatures.cs:33"
+      ],
+      "note": "Money is decimal, counts and limits are range-validated (quote qty <= 100000, price <= 1e8, hours <= 24, page limit clamped 1..200) and invariants are enforced in the domain. C# arithmetic is unchecked by default; no dedicated overflow test exists.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.4.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:1"
+      ],
+      "note": "Memory is garbage collected; no manual allocation. (Disposal of HttpResponseMessage/streams was not audited exhaustively.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.5.1",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/ExportOrganizations.cs:52"
+      ],
+      "note": "The app parses no XML: ClosedXML is only used to write an XLSX export (XLWorkbook is constructed only there), uploads are CSV via CsvTable, provider payloads are JSON.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V1.5.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:24",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:199",
+        "src/BuildingBlocks/Crm.SharedKernel/Application/Paging.cs:33"
+      ],
+      "note": "All client JSON binds to concrete records with System.Text.Json (no TypeNameHandling, no polymorphic type discriminators). However OutboxEventTypeResolver does Type.GetType(<string from the outbox table>) and deserialises into that type before checking it is an IDomainEvent (cast happens after Deserialize); only a writer of the outbox table could exploit it (F-G1-09). Hangfire uses Newtonsoft recommended settings over its own SQL storage. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:54 (OutboxEventTypeResolver: only concrete non-generic IDomainEvent from Crm.* assemblies, bounded cache, 512-char limit); OutboxDeliveryTests.Only_a_concrete_domain_event_of_the_application_resolves_from_the_name_in_the_table",
+      "finding_ids": [
+        "F-G1-09"
+      ]
+    },
+    {
+      "req_id": "V2.1.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/02-functional-spec.md:164",
+        "docs/04-data-model.md:22",
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/OrganizationDtos.cs:40"
+      ],
+      "note": "Rules are documented per business rule (BR-xx, org number MOD11, data-model comments) but field lengths, formats and ranges exist only in FluentValidation classes and EF configuration; there is no single validation-rule catalogue per input. || Post-fix reassessment 2026-10-05: still open - No validation-rule catalogue was added (not done in DEV-21); owner Dev team",
+      "severity": "low",
+      "fix": "Add a generated or hand-kept validation reference (field, type, length/range, rule id) to docs/04 or docs/06 and keep it in step with the validators.",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/02-functional-spec.md:311",
+        "src/Modules/Contracts/Crm.Contracts/Domain/Contract.cs:54"
+      ],
+      "note": "Cross-field rules (contract end after start, notice period vs end date, line within contract, second approval above threshold) are specified as BR-* and implemented, but there is no consolidated list of combined-data checks. || Post-fix reassessment 2026-10-05: still open - No consolidated combined-field rule list was added",
+      "severity": "low",
+      "fix": "Collect combined-field rules in the validation reference described for V2.1.1.",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.1.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/06-security.md:46",
+        "docs/02-functional-spec.md:311",
+        "docs/02-functional-spec.md:397"
+      ],
+      "note": "Several limits are documented (300 req/min per user, 10 exports/h, 50 000 export rows, 200 000 NOK second approval, 15 % discount) but import limits (5 000 rows), quote line cap (200), page cap (200) and per-user vs global semantics are only in code. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "docs/06-security.md section 4 limits table (rate limits, import size/rows, export rows, page cap) with scope and config keys",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/Features/QuoteFeatures.cs:161",
+        "src/Modules/TimeTracking/Crm.TimeTracking/Features/TimeEntryFeatures.cs:33",
+        "src/Modules/Sales/Crm.Sales/Features/SalesFeatures.cs:27",
+        "src/Modules/Sales/Crm.Sales/Persistence/SalesDbContext.cs:74"
+      ],
+      "note": "Main write DTOs have positive validation (types, ranges, lengths, allowlists). Free-text fields on several state-change requests have no length check: lead DisqualifyRequest.Reason (column 256), MoveStageRequest.LostReason (256), DeclineQuoteRequest.Reason (512), PauseIntegrationRequest.Reason (512); an over-long value reaches SQL and returns HTTP 500 instead of a 400 (F-G1-06). Constant regex validators also accept a trailing newline (F-G1-08). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "F-G1-06/08: validators for lead/stage/quote/period/preferences/snapshot/mapping reasons (SalesFeatures, TimeEntryFeatures, MappingEndpoints, ReportsModule...), regex \\z (ProductFeatures:46, PriceListFeatures, OrganizationDtos), PersistenceExceptionHandler 8152/2628/8115 -> 400; RequestHardeningTests.A_reason_longer_than_its_column_is_refused..., A_truncation_error_that_reaches_the_database_is_answered_as_a_400_not_a_500, A_trailing_line_break_does_not_pass_a_sku_a_price_list_code_or_a_domain",
+      "finding_ids": [
+        "F-G1-06",
+        "F-G1-08"
+      ]
+    },
+    {
+      "req_id": "V2.2.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Infrastructure/Http/ValidationFilter.cs:9",
+        "src/BuildingBlocks/Crm.Infrastructure/DependencyInjection/ModuleRegistration.cs:139"
+      ],
+      "note": "Validation is enforced server-side (FluentValidation via an endpoint filter), SPA zod checks are only convenience. But the filter is opt-in per endpoint (.Validate<T>()), is a silent no-op when no validator is registered, and about 30 body-taking POST/PUT endpoints (e.g. leads/disqualify, quotes/decline, time entries adjust/approve, outbox replay, pause) do not use it; nothing (test/analyzer) detects an endpoint added without validation (F-G1-07). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "RequestHardeningTests.Every_endpoint_with_a_json_body_has_a_validator_or_is_listed_with_a_reason (>80 body endpoints; a chained .Validate<T>() without a registered validator also fails; allowlist entries need a reason); AddValidatorsFromAssembly in ReportsModule",
+      "finding_ids": [
+        "F-G1-07"
+      ]
+    },
+    {
+      "req_id": "V2.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "tests/Crm.UnitTests/ContractsDomainTests.cs:262",
+        "tests/Crm.UnitTests/ContractsDomainTests.cs:47",
+        "tests/Crm.UnitTests/ContractsDomainTests.cs:335",
+        "tests/Crm.UnitTests/QuoteTests.cs:59"
+      ],
+      "note": "Related-field plausibility is enforced in the domain methods and covered by unit tests: contract cannot end before it starts, notice cannot be shorter than the notice period, lines lie within the contract, discount above the role limit waits for approval.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/Domain/Lead.cs:85",
+        "src/Modules/Sales/Crm.Sales/Domain/Opportunity.cs:70",
+        "tests/Crm.UnitTests/QuoteTests.cs:103",
+        "tests/Crm.UnitTests/ContractsDomainTests.cs:27",
+        "tests/Crm.IntegrationTests/BillingApprovalApiTests.cs:206"
+      ],
+      "note": "Status guards sit in the aggregates (lead disqualify/convert, opportunity move, quote decline/accept, contract notice/end, billing run phases and revision-bound approvals), each returning a coded conflict for the wrong state; unit and integration tests cover the main flows. Sampled flows only; not every endpoint transition was traced.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/02-functional-spec.md:311",
+        "tests/Crm.UnitTests/QuoteTests.cs:59",
+        "tests/Crm.IntegrationTests/BillingApprovalApiTests.cs:121",
+        "tests/Crm.IntegrationTests/ExportApiTests.cs:41",
+        "src/Hosts/Crm.Web/Program.cs:110"
+      ],
+      "note": "Limits are implemented and configurable: discount limit per role, strictly-greater-than 200 000 NOK second approval, 50 000-row export cap, 5 000-row import cap, 200-line quotes, per-user rate limits. Tests exist for discount, approval threshold and export rate limit; the 300/min global limit is configured to 100000 in the test factory and is not tested.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Contracts/Crm.Contracts/Features/ReminderFeatures.cs:112",
+        "tests/Crm.IntegrationTests/BillingApprovalApiTests.cs:460",
+        "tests/Crm.IntegrationTests/ContractLifecycleConcurrencyTests.cs:25"
+      ],
+      "note": "Handlers commit with one SaveChanges (audit + outbox in the same transaction via AuditingInterceptor), multi-step jobs use explicit transactions with execution strategies, and a refused approval is tested to leave signature, status, basis and outbox untouched.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.3.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Billing/Crm.Billing/Features/ChargeLedger.cs:21",
+        "src/Modules/Contracts/Crm.Contracts/Features/ReminderFeatures.cs:113",
+        "tests/Crm.IntegrationTests/ContractLifecycleConcurrencyTests.cs:25",
+        "tests/Crm.IntegrationTests/BillingApprovalApiTests.cs:206"
+      ],
+      "note": "Scarce/exclusive operations use SQL application locks (billing charges, contract lifecycle scan), unique indexes (one open billing run per period) and RowVersion/If-Match optimistic concurrency; races are exercised by integration tests.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V2.4.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:110",
+        "tests/Crm.IntegrationTests/ExportApiTests.cs:41",
+        "src/Modules/Customers/Crm.Customers/CustomersModule.cs:85"
+      ],
+      "note": "API calls are limited to 300/min per user and exports to 10/h per user (BI per client). Limiters are in-process fixed windows, so with up to 4 replicas (infra/modules/apps.bicep maxReplicas) the effective cap is multiplied; several .ExportsData() list endpoints (import-run rows/entities) only get the global limit; /bff/* is unlimited (sign-in itself is Entra). || Post-fix reassessment 2026-10-05: still open - All ExportsData endpoints are under a rate limit (RequestHardeningTests.Every_endpoint_that_exports_data_is_under_the_export_rate_limit), but limiters are in-process per replica (up to 4); documented, not changed (F-G1-14 deferred)",
+      "severity": "low",
+      "fix": "Document the per-replica semantics or move to a distributed limiter; add RequireRateLimiting(Export) to the remaining ExportsData endpoints (CustomersModule.cs:85,95,102).",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team / PO",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:92",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:252"
+      ],
+      "note": "nosniff is set on every response by SecurityHeadersMiddleware, API responses are JSON with no-store, downloads are attachment with explicit content types; the PDF path pins nosniff/attachment in a test. Only the PDF download is covered by a test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.2.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/src/features/organizations/OrganizationDetailPage.tsx:231",
+        "web/src/features/activities/ActivityTimeline.tsx:125"
+      ],
+      "note": "The SPA renders all data as React text; grep finds no dangerouslySetInnerHTML/innerHTML/insertAdjacentHTML/document.write in web/src. No lint rule forbids introducing it later.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:131",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:133"
+      ],
+      "note": "The session cookie is __Host-crm with Secure=Always. The OIDC correlation and nonce cookies created by the OpenID Connect handler keep their ASP.NET default names (.AspNetCore.Correlation.*, .AspNetCore.OpenIdConnect.Nonce.*): Secure by default but with neither __Host- nor __Secure- prefix (F-G1-03). No test pins cookie attributes. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "AuthenticationSetup.cs:19 CorrelationCookieName/NonceCookieName __Host- with Path=/; WebHostSecurityTests.The_oidc_handlers_own_cookies_carry_host_prefixes_and_the_token_cache_is_encrypted. (Code comment says __Secure-, names are __Host-: cosmetic.)",
+      "finding_ids": [
+        "F-G1-03"
+      ]
+    },
+    {
+      "req_id": "V3.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:134"
+      ],
+      "note": "The session cookie is SameSite=Strict; the short-lived OIDC correlation/nonce cookies use the framework default SameSite=None because the Entra form_post callback is cross-site, which is their purpose. No test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:17",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:131"
+      ],
+      "note": "The only long-lived cookie uses __Host- (Path=/, no Domain, Secure). The temporary OIDC cookies do not (F-G1-03). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "as V3.3.1",
+      "finding_ids": [
+        "F-G1-03"
+      ]
+    },
+    {
+      "req_id": "V3.3.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:132"
+      ],
+      "note": "The session cookie is HttpOnly; web/src reads no cookies (grep document.cookie: none) and the OIDC cookies are HttpOnly by default. No test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.4.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:197",
+        "docs/06-security.md:41"
+      ],
+      "note": "app.UseHsts() is called with no AddHsts configuration anywhere in the repo, so the header is the framework default (max-age 30 days, no includeSubDomains) and only outside Development; ASVS requires at least one year, and docs/06 section 4 promises 31536000; includeSubDomains (F-G1-02). No test. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "src/Hosts/Crm.Web/Program.cs:57 AddHsts(365 d, includeSubDomains, no preload); WebHostSecurityTests.HSTS_is_one_year_with_subdomains_and_no_preload_outside_development",
+      "finding_ids": [
+        "F-G1-02"
+      ]
+    },
+    {
+      "req_id": "V3.4.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:192"
+      ],
+      "note": "No CORS is configured (no AddCors/UseCors, no Access-Control-* header is ever emitted), so browsers apply same-origin policy; the BI endpoint is called server-to-server by Power BI with a bearer token. No test asserts the absence.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.4.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:83",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:99"
+      ],
+      "note": "A strict CSP (default-src/script-src 'self', object via default-src, base-uri, form-action, frame-ancestors; style-src allows unsafe-inline for Fluent/Griffel) is sent on the SPA and /bff, but not on /api responses and deliberately not on the Hangfire dashboard (/admin/jobs) which serves HTML (F-G1-12). No test pins the policy. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "WebInfrastructure.cs:89 data CSP default-src none on /api and /openapi, frame-ancestors none on /bff and /admin/jobs; WebHostSecurityTests.Signed_in_answers_are_never_cached_and_never_framed_while_the_app_keeps_its_own_policy, The_job_dashboard_is_never_framed_and_never_cached_...",
+      "finding_ids": [
+        "F-G1-12"
+      ]
+    },
+    {
+      "req_id": "V3.4.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:92",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:252"
+      ],
+      "note": "Set in OnStarting for every response (registered before static files, auth and endpoints). Only the PDF download is asserted by a test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.4.5",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:93"
+      ],
+      "note": "Referrer-Policy: strict-origin-when-cross-origin on every response. No test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.4.6",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:99",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:85"
+      ],
+      "note": "frame-ancestors is limited to self and Teams on all non-/api, non-/admin/jobs responses; /api JSON and the Hangfire dashboard carry no frame-ancestors or X-Frame-Options. The session cookie is SameSite=Strict so a cross-site frame has no session, which limits impact (F-G1-12). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "as V3.4.3 (X-Frame-Options DENY on /api, /bff, /admin/jobs)",
+      "finding_ids": [
+        "F-G1-12"
+      ]
+    },
+    {
+      "req_id": "V3.5.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:54",
+        "tests/Crm.IntegrationTests/CustomersApiTests.cs:223",
+        "web/src/api/client.ts:84"
+      ],
+      "note": "State-changing /api and /bff calls require the custom X-CSRF: 1 header, rejected with 403 otherwise, in addition to SameSite=Strict cookies and the absence of any CORS allowance. Tested for one endpoint (CustomersApiTests.State_changing_request_without_csrf_header_is_rejected); the middleware is global. Hangfire dashboard POSTs rely on Hangfire's own antiforgery (not verified here).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.5.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:54"
+      ],
+      "note": "The server does not rely on the preflight alone: a request without X-CSRF is refused even if the browser sent it as a simple request, and no CORS policy permits cross-origin credentials.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.5.3",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:104",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:46"
+      ],
+      "note": "No /api GET changes state (scripted scan of MapGet handlers found none). GET /bff/signout-entra is anonymous and ends the browser session (cookie) on a plain navigation, so any site can log a user out and it does not close the server-side session (F-G1-11); GET /bff/dev-login is Development-only. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:127 (time-limited sign-out ticket from POST /bff/logout), AuthenticationSetup.cs:86 (OnRemoteSignOut -> EndByExternalSessionAsync by hashed sid); WebHostSecurityTests.Entra_sign_out_needs_the_ticket_only_the_logout_post_hands_out, Front_channel_logout_ends_the_session_it_names_and_nobody_elses",
+      "finding_ids": [
+        "F-G1-11"
+      ]
+    },
+    {
+      "req_id": "V3.5.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:246",
+        "infra/modules/apps.bicep:200"
+      ],
+      "note": "SPA, API, BI endpoint and the Hangfire admin dashboard are served from the same hostname (single ingress), so an XSS in the dashboard (which has no CSP) would share origin with the CRM. The generated Container Apps FQDN is used; no custom domain separation exists. || Post-fix reassessment 2026-10-05: still open - Hangfire dashboard still shares the origin with the SPA; now never framed, no-store, anti-forgery token on POSTs; separate host or disabling the dashboard in production is an infra decision",
+      "severity": "low",
+      "fix": "Serve /admin/jobs behind a separate host or disable the dashboard in production (Hangfire__DashboardEnabled=false is already used for the migrator) and use worker diagnostics instead.",
+      "owner_hint": "infra",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Operations / PO",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.5.5",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/src/main.tsx"
+      ],
+      "note": "No window.postMessage sender/receiver and no message event listener in web/src (grep); the Teams tab (R2) is not implemented, so there is no cross-origin messaging.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.7.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/package.json",
+        ".github/workflows/ci.yml:33",
+        ".github/workflows/ci.yml:89"
+      ],
+      "note": "React 19, Fluent UI v9, Vite 8; no plugins, Flash, Silverlight or ActiveX; CI audits .NET (vulnerable packages) and npm packages and runs CodeQL. Dependency freshness is a process, not proven here.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V3.7.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:131",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:35"
+      ],
+      "note": "SafeReturnUrl accepts any string starting with \"/\" but not \"//\" or \"/\\\\\"; \"/%09/evil.com\" (a TAB) passes, becomes the OIDC RedirectUri and is emitted as Location \"/<TAB>/evil.com\", which browsers normalise to //evil.com. Kestrel emitting the TAB was reproduced in a throwaway app; the complete Entra round trip was not exercised. The dev-login path uses LocalRedirect (safe) (F-G1-01). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "src/Hosts/Crm.Web/Auth/ReturnUrl.cs:17; WebHostSecurityTests.A_return_address_that_is_not_a_path_of_this_application_becomes_the_start_page (24 inputs incl. %09, %0d%0a, %5C, %252F, full-width slash)",
+      "finding_ids": [
+        "F-G1-01"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-G1-01",
+      "title": "Post-login open redirect through returnUrl containing a TAB",
+      "severity": "medium",
+      "req_ids": [
+        "V3.7.2"
+      ],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:131",
+      "description": "SafeReturnUrl only rejects values starting with \"//\" or \"/\\\". A value \"/<TAB>/evil.com\" passes, is used as AuthenticationProperties.RedirectUri for the Entra challenge and is later written to a Location header. Kestrel permits HTAB in header values (verified with a throwaway Results.Redirect app, which emitted \"Location: /<TAB>/evil.com\"; LocalRedirect rejected it), and browsers delete tabs/newlines when parsing URLs, producing //evil.com.",
+      "reproduction": "Open https://<crm>/bff/login?returnUrl=/%09/evil.example while signed out; after the Entra sign-in the browser is redirected to evil.example (full Entra round trip not exercised; add a unit test on SafeReturnUrl(\"/\\t/evil.com\") that currently returns it unchanged).",
+      "fix": "Harden SafeReturnUrl: reject any char < 0x20 or 0x7f and backslashes, require Uri.TryCreate(..., UriKind.Relative) and a single leading slash; unit-test %09, %0a, %0d, %5c, //.",
+      "status": "fixed",
+      "fixed_by": "ReturnUrl.cs (all decoded forms, control chars, backslash, non-ASCII after slash); OnTicketReceived re-validates; WebHostSecurityTests 24 hostile + 6 valid inputs",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-02",
+      "title": "HSTS is the framework default (30 days, no includeSubDomains)",
+      "severity": "low",
+      "req_ids": [
+        "V3.4.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:197",
+      "description": "UseHsts() is called without AddHsts options; docs/06-security.md promises max-age=31536000; includeSubDomains. ASVS 5 requires at least one year.",
+      "reproduction": "curl -sI https://<test-or-prod host>/ | grep -i strict-transport  (expect max-age=2592000).",
+      "fix": "AddHsts with MaxAge 365 days and IncludeSubDomains, plus an integration test on a non-Development environment.",
+      "status": "fixed",
+      "fixed_by": "Program.cs:57 AddHsts 1 y + includeSubDomains; HSTS test",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-03",
+      "title": "OIDC correlation/nonce cookies have no __Host-/__Secure- prefix",
+      "severity": "low",
+      "req_ids": [
+        "V3.3.1",
+        "V3.3.3"
+      ],
+      "location": "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:41",
+      "description": "Only the session cookie is customised. The OpenID Connect handler issues .AspNetCore.Correlation.* and .AspNetCore.OpenIdConnect.Nonce.* cookies with default names (Secure, HttpOnly, SameSite=None) but without a cookie prefix.",
+      "reproduction": "Start a real Entra sign-in and inspect Set-Cookie of GET /bff/login.",
+      "fix": "Set oidc.CorrelationCookie.Name and oidc.NonceCookie.Name to __Secure- prefixed names in the AddMicrosoftIdentityWebApp options.",
+      "status": "fixed",
+      "fixed_by": "__Host- OIDC cookies; test The_oidc_handlers_own_cookies_...",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-04",
+      "title": "Unauthenticated OpenAPI document and production source maps",
+      "severity": "low",
+      "req_ids": [],
+      "location": "src/Hosts/Crm.Web/Program.cs:214",
+      "description": "app.MapOpenApi(\"/openapi/{documentName}.json\") has no authorization and is mapped in every environment; the Vite build sets sourcemap:true (web/vite.config.ts) and the 174 .map files in wwwroot are served by UseStaticFiles before authentication. Together they expose the full API surface and SPA source to anyone who can reach the ingress. Outside the G1 chapters (configuration disclosure); recorded for the owner.",
+      "reproduction": "curl https://<host>/openapi/v1.json and https://<host>/assets/index-<hash>.js.map without a cookie.",
+      "fix": "Map OpenAPI only in Development or require a permission; set build.sourcemap false (or upload maps to monitoring and exclude them from wwwroot).",
+      "status": "fixed",
+      "fixed_by": "OpenAPI off by default and RequirePermission(IntegrationsManage) when on; sourcemap=false",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-05",
+      "title": "Organisation website rendered as href without a scheme allowlist",
+      "severity": "low",
+      "req_ids": [
+        "V1.2.2",
+        "V1.3.3"
+      ],
+      "location": "src/Modules/Customers/Crm.Customers/Domain/Organization.cs:490",
+      "description": "NormalizeWebsite adds https:// only when \"://\" is missing, so \"javascript://x%0Aalert(1)\" or \"data://...\" is stored and rendered as <Link href> (OrganizationDetailPage.tsx:233). Execution is blocked by CSP script-src 'self' (no unsafe-inline), so this is defence in depth, but the same value also flows to exports.",
+      "reproduction": "PUT an organisation with website \"javascript://x%0Aalert(document.domain)\" and click the link on the detail page; verify CSP blocks it.",
+      "fix": "Validate website scheme in OrganizationValidator/NormalizeWebsite (http/https only) and in the SPA before building the href.",
+      "status": "fixed",
+      "fixed_by": "WebUrl.Normalize in validator, domain, Brreg client, SPA safeHttpUrl; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-06",
+      "title": "Unbounded free-text reasons cause HTTP 500 on database truncation",
+      "severity": "low",
+      "req_ids": [
+        "V2.2.1",
+        "V2.2.2"
+      ],
+      "location": "src/Modules/Sales/Crm.Sales/Features/SalesFeatures.cs:27",
+      "description": "DisqualifyRequest.Reason (column 256), MoveStageRequest.LostReason (256), DeclineQuoteRequest.Reason (512) and PauseIntegrationRequest.Reason (512) have no validator or domain length check; PersistenceExceptionHandler maps only SQL errors 2601/2627, so SQL error 2628/8152 becomes a 500.",
+      "reproduction": "POST /api/v1/sales/leads/{id}/disqualify with {\"reason\":\"x\"*300} and X-CSRF: 1 / If-Match; expect 400, observe 500.",
+      "fix": "Add validators with .NotEmpty().MaximumLength(n) and .Validate<T>() on the endpoints; optionally map SqlException 2628/8152 to a 400 VALIDATION problem.",
+      "status": "fixed",
+      "fixed_by": "validators + PersistenceExceptionHandler 400 safety net; RequestHardeningTests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-07",
+      "title": "Server-side validation is opt-in per endpoint",
+      "severity": "low",
+      "req_ids": [
+        "V2.2.2"
+      ],
+      "location": "src/BuildingBlocks/Crm.Infrastructure/Http/ValidationFilter.cs:15",
+      "description": "ValidationFilter<T> runs only where .Validate<T>() is chained and silently passes when no IValidator<T> is registered. About 30 body-taking endpoints do not chain it; no test enforces coverage.",
+      "reproduction": "List MapPost/MapPut/MapPatch handlers with record body parameters that lack .Validate<> (e.g. TimeTrackingModule /entries/{id}/adjust, /periods/.../reopen, IdentityModule /me/preferences).",
+      "fix": "Architecture test: every request type taking a string/collection must have a validator wired by .Validate<T>() or be explicitly allow-listed.",
+      "status": "fixed",
+      "fixed_by": "RequestHardeningTests.Every_endpoint_with_a_json_body_has_a_validator_or_is_listed_with_a_reason",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-08",
+      "title": ".NET regex validators accept a trailing newline",
+      "severity": "low",
+      "req_ids": [
+        "V2.2.1",
+        "V1.2.9"
+      ],
+      "location": "src/Modules/Catalog/Crm.Catalog/Features/Products/ProductFeatures.cs:46",
+      "description": "SKU (^[A-Za-z0-9._\\-/]+$), price-list code and organisation domain patterns end with $, which in .NET also matches before a final \\n, so \"ABC\\n\" passes. The value is then stored and printed in PDFs/exports.",
+      "reproduction": "Create a product with sku \"ABC\\n\" via the API; it is accepted.",
+      "fix": "Use \\z instead of $ in these patterns (ProductFeatures.cs:46, PriceListFeatures.cs:23, OrganizationDtos.cs:52).",
+      "status": "fixed",
+      "fixed_by": "\\z in the four listed regexes; test A_trailing_line_break_...",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-09",
+      "title": "Outbox event type is resolved from data before the IDomainEvent check",
+      "severity": "low",
+      "req_ids": [
+        "V1.5.2"
+      ],
+      "location": "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:24",
+      "description": "Type.GetType(message.Type) can return any loadable type; JsonSerializer.Deserialize instantiates it before the cast to IDomainEvent. Exploitation needs insert rights on an outbox table (crm_web has them), and System.Text.Json is not gadget-prone, so risk is low.",
+      "reproduction": "Insert an outbox row with Type = \"System.Text.StringBuilder, System.Private.CoreLib\" and observe it is instantiated before quarantine.",
+      "fix": "Restrict Resolve to types assignable to IDomainEvent (or a startup-built allowlist) and add a test.",
+      "status": "fixed",
+      "fixed_by": "OutboxEventTypeResolver restriction; OutboxDeliveryTests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-10",
+      "title": "Mart CSV output: rows can be broken and formulas are not neutralised",
+      "severity": "low",
+      "req_ids": [
+        "V1.2.10",
+        "V1.1.2"
+      ],
+      "location": "src/Modules/Reports/Crm.Reports/MartService.cs:156",
+      "description": "MartService.Cell quotes only values containing \";\" or a double quote. A newline/CR in a name (e.g. organisation name; only MaximumLength is validated) starts a new CSV record, and values starting with = + - @ are written as-is for Excel users. Excel export itself assigns strings as text cells with \"@\" format (ExportOrganizations.cs:83), but has no test with a leading \"=\" value.",
+      "reproduction": "Create an organisation named \"x\\n=HYPERLINK(...)\", then GET /api/v1/reports/mart/renewals?format=csv (when the organisation has a renewal).",
+      "fix": "Quote values containing CR/LF; prefix an apostrophe or a space to cells starting with = + - @ tab CR; add tests.",
+      "status": "fixed",
+      "fixed_by": "CsvCell + MartService CRLF/quoting + xlsx quote prefix; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-11",
+      "title": "Sign-out via anonymous GET does not end the server session",
+      "severity": "low",
+      "req_ids": [
+        "V3.5.3"
+      ],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:104",
+      "description": "GET /bff/signout-entra signs the cookie out on a plain navigation; any page can log a user out (<img src>), and a stolen copy of the cookie stays valid because only POST /bff/logout closes identity.UserSessions.",
+      "reproduction": "From another origin load <img src=\"https://<crm>/bff/signout-entra\"> while signed in.",
+      "fix": "Perform the Entra sign-out as a POST with X-CSRF after the server session is ended, or require a one-time state.",
+      "status": "fixed",
+      "fixed_by": "sign-out ticket + front-channel logout closes server session; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-12",
+      "title": "No CSP/frame-ancestors on /api and on the Hangfire dashboard",
+      "severity": "low",
+      "req_ids": [
+        "V3.4.3",
+        "V3.4.6"
+      ],
+      "location": "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:95",
+      "description": "SecurityHeadersMiddleware sets the CSP only for non-/api and non-/admin/jobs paths. /admin/jobs serves HTML with inline script and carries neither CSP nor X-Frame-Options. SameSite=Strict makes a cross-site framed dashboard unauthenticated, so impact is limited.",
+      "reproduction": "curl -sI https://<host>/admin/jobs and /api/v1/reports/dashboard: no Content-Security-Policy.",
+      "fix": "Add frame-ancestors/X-Frame-Options for both and a restrictive CSP on /api.",
+      "status": "fixed",
+      "fixed_by": "data CSP/XFO on /api,/openapi; frame-ancestors none on /bff,/admin/jobs; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-13",
+      "title": "Graph mailbox $search term is not escaped for the KQL string",
+      "severity": "low",
+      "req_ids": [
+        "V1.1.2",
+        "V1.3.3"
+      ],
+      "location": "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphMailbox.cs:55",
+      "description": "The term (contact e-mail or organisation domain) is URL-escaped but interpolated inside \"participants:\\\"...\\\"\". FluentValidation EmailAddress accepts a double quote, so a stored value can break out of the quoted KQL string and widen the search inside the signed-in user's own (delegated) mailbox.",
+      "reproduction": "Save a contact with e-mail  a\"b OR subject:x@example.com  (format permitting) and open the organisation mail tab.",
+      "fix": "Strip or escape \" and \\ in the term before building the $search expression; reject quotes in contact e-mail validation.",
+      "status": "fixed",
+      "fixed_by": "GraphMailbox.KqlTerm; OutboundAddressTests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G1-14",
+      "title": "Rate limits are per replica and some ExportsData endpoints have only the global limit",
+      "severity": "low",
+      "req_ids": [
+        "V2.4.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:110",
+      "description": "Fixed-window limiters live in each replica (maxReplicas 4), so the effective rate is up to 4x; CustomersModule import-run list/rows/entities (.ExportsData()) have no Export limiter.",
+      "reproduction": "Repeat GET /api/v1/customers/organizations/import/runs/{id}/rows beyond 10/hour: no 429 until the 300/min global limit.",
+      "fix": "Distributed limiter or documented per-replica values; add RequireRateLimiting(Export) to those endpoints.",
+      "status": "partly",
+      "fixed_by": "ExportsData endpoints all rate limited (test); limiters remain per replica (documented in docs/06 section 4)",
+      "remaining": "ExportsData endpoints all rate limited (test); limiters remain per replica (documented in docs/06 section 4)",
+      "owner": "Dev team / PO",
+      "decision_needed": "Accept per-replica limits or fund a distributed limiter; record with expiry date"
+    },
+    {
+      "id": "F-G1-15",
+      "title": "docs/06-security.md section 4 states controls the code does not have",
+      "severity": "low",
+      "req_ids": [
+        "V2.1.1",
+        "V3.4.1",
+        "V1.3.1"
+      ],
+      "location": "docs/06-security.md:41",
+      "description": "The document targets ASVS 4.0 L2, claims HSTS max-age 31536000, DOMPurify + HtmlSanitizer, and file-type whitelist/signature checks/Defender for uploads; the code has the 30-day default HSTS, neither sanitiser (no HTML input exists) and CSV-only uploads without signature checks.",
+      "reproduction": "Compare docs/06-security.md lines 41-45 with Program.cs:197, web/package.json and CatalogModule.cs:144.",
+      "fix": "Update the document to ASVS 5.0.0 and to what is implemented, or implement the claim.",
+      "status": "fixed",
+      "fixed_by": "docs/06 corrected; docs claims reconciled in this pass",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    }
+  ],
+  "reassessed_at": "2026-10-05",
+  "reassessor": "Claude (implementing agent): self-assessment, not independent; real tenant EXT-02, independent review EXT-06, data EXT-07, repository settings EXT-11",
+  "counts_before": {
+    "met": 24,
+    "partial": 16,
+    "not_applicable": 15,
+    "gap": 2
+  },
+  "counts_after": {
+    "met": 38,
+    "not_applicable": 15,
+    "partial": 4
+  }
+}

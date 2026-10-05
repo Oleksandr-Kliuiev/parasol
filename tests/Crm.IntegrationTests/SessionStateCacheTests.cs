@@ -56,7 +56,9 @@ public sealed class SessionStateCacheTests
     {
         public int Reads { get; private set; }
 
-        public Task<Guid> StartAsync(Guid userId, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<Guid> StartAsync(Guid userId, DateTimeOffset at, string? externalSessionId, CancellationToken cancellationToken, DateTimeOffset? authenticatedAt = null) => throw new NotSupportedException();
+
+        public Task<int> EndByExternalSessionAsync(string externalSessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task EndAsync(Guid sessionId, string reason, DateTimeOffset at, CancellationToken cancellationToken) => throw new NotSupportedException();
 

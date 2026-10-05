@@ -34,6 +34,13 @@ public sealed class CrmAuthOptions
     /// actions stop much sooner (<c>Auth:PrivilegedFreshness</c>).
     /// </summary>
     public TimeSpan RoleGrace { get; set; } = TimeSpan.FromHours(8);
+
+    /// <summary>
+    /// The <c>acr</c> claim a re-verification response must carry (F-G2-08), e.g. the value Conditional Access reports for
+    /// multi-factor authentication. Empty by default: the real strength of the second factor is an Entra tenant setting and
+    /// stays with EXT-02; the app only checks the claim when told which value to expect.
+    /// </summary>
+    public string RequiredAcr { get; set; } = string.Empty;
 }
 
 public static class CrmClaimTypes

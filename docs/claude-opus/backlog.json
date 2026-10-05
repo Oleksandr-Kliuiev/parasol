@@ -712,7 +712,7 @@
         "EXT-06",
         "EXT-07"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-21.md",
       "evidence_file": "evidence/DEV-21.md",
       "acceptance_ids": [

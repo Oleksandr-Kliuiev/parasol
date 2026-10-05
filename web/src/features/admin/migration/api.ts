@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError, CSRF_HEADER, MAINTENANCE_EVENT, api, loginUrl, type Problem } from '../../../api/client';
+import { ApiError, CSRF_HEADER, MAINTENANCE_EVENT, announceReverify, api, loginUrl, type Problem } from '../../../api/client';
 
 const BASE = '/api/v1/customers/organizations/import';
 
@@ -153,6 +153,7 @@ export async function postCsv<T>(url: string, csv: string): Promise<T> {
     const problem: Problem = { status: response.status, ...((body as Problem | null) ?? {}) };
     if (response.status === 401) window.location.assign(loginUrl());
     if (problem.code === 'MAINTENANCE_READ_ONLY') window.dispatchEvent(new Event(MAINTENANCE_EVENT));
+    if (response.status === 403) announceReverify(problem);
     const wait = Number(response.headers.get('Retry-After'));
     throw new ApiError(response.status, problem, Number.isFinite(wait) && wait > 0 ? Math.ceil(wait) : undefined);
   }

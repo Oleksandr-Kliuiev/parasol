@@ -18,13 +18,18 @@ internal sealed class NoDelegatedToken : IDelegatedTokenSource
     public Task<string?> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
 }
 
-internal sealed class GraphDelegatedAuthenticationHandler(IDelegatedTokenSource tokens) : DelegatingHandler
+internal sealed class GraphDelegatedAuthenticationHandler(IDelegatedTokenSource tokens, Microsoft.Extensions.Options.IOptions<GraphOptions> options) : DelegatingHandler
 {
     /// <summary>Scopes the delegated features need; consent is granted once for the application (docs/05 §1.3).</summary>
     public static readonly string[] Scopes = ["Calendars.ReadWrite", "Mail.Read"];
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        if (!GraphLinks.IsSameOrigin(options.Value.BaseUrl, request.RequestUri))
+        {
+            throw new InvalidOperationException("A request outside the configured Graph address was refused before a token was attached.");
+        }
+
         var token = await tokens.GetTokenAsync(Scopes, cancellationToken)
                     ?? throw new Crm.Activities.Contracts.UserNotConnectedException("Microsoft Graph");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -56,4 +61,10 @@ public sealed class GraphTeamsOptions
 
     /// <summary>Webhook URL per channel: Sales, Finance, Operations.</summary>
     public IDictionary<string, string> Channels { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A webhook URL must be https on one of these hosts (or a subdomain): Power Automate Workflows and the retired Office 365
+    /// connector domains. Add a suffix here when Microsoft moves the service; a URL anywhere else is refused at startup.
+    /// </summary>
+    public IList<string> AllowedHostSuffixes { get; } = ["logic.azure.com", "powerplatform.com", "webhook.office.com", "office.com"];
 }

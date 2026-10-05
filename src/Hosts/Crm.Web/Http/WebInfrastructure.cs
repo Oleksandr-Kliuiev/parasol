@@ -62,6 +62,7 @@ internal sealed class CsrfHeaderMiddleware(RequestDelegate next)
         if (isProtected && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method) &&
             !HttpMethods.IsOptions(context.Request.Method) && context.Request.Headers[HeaderName] != "1")
         {
+            SecurityLog.For(context).CsrfRefused(context);
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             await context.Response.WriteAsJsonAsync(new
             {
@@ -84,19 +85,35 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; " +
         "connect-src 'self'; frame-ancestors 'self' https://teams.microsoft.com https://*.teams.microsoft.com; base-uri 'self'; form-action 'self' https://login.microsoftonline.com";
 
+    // Responses that are data, not pages: nothing in them is framed, scripted or loaded.
+    private const string DataContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
+    private const string NoFramingPolicy = "frame-ancestors 'none'";
+
     public Task InvokeAsync(HttpContext context)
     {
+        // Read before the pipeline runs: a branch (the job dashboard) rewrites Path and PathBase while it handles the request.
+        var path = context.Request.Path;
         context.Response.OnStarting(() =>
         {
             var headers = context.Response.Headers;
             headers.XContentTypeOptions = "nosniff";
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
             headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
-            if (context.Request.Path.StartsWithSegments("/api"))
+            if (path.StartsWithSegments("/api") || path.StartsWithSegments("/openapi"))
             {
                 headers.CacheControl = "no-store";
+                headers.ContentSecurityPolicy = DataContentSecurityPolicy;
+                headers.XFrameOptions = "DENY";
             }
-            else if (!context.Request.Path.StartsWithSegments("/admin/jobs"))
+            else if (path.StartsWithSegments("/bff") || path.StartsWithSegments("/admin/jobs") || path.StartsWithSegments("/health/details"))
+            {
+                // Signed-in answers (who I am, the job dashboard) are never kept by a browser or a proxy and never framed.
+                // The dashboard's own pages bring inline script, so only framing is restricted there.
+                headers.CacheControl = "no-store";
+                headers.ContentSecurityPolicy = NoFramingPolicy;
+                headers.XFrameOptions = "DENY";
+            }
+            else
             {
                 headers.ContentSecurityPolicy = ContentSecurityPolicy;
             }
@@ -126,7 +143,12 @@ internal sealed class PersistenceExceptionHandler(IProblemDetailsService problem
                 "The record was changed by someone else. Reload it and apply your changes again."),
             DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } } => (StatusCodes.Status409Conflict, "DUPLICATE",
                 "A record with the same unique value already exists."),
-            BadHttpRequestException bad => (bad.StatusCode, "BAD_REQUEST", bad.Message),
+            // Safety net (F-G1-06): a value longer than its column (8152/2628) or a number past its precision (8115) that no
+            // validator caught is the caller's mistake, not a server fault; the fixed sentence names no table or column.
+            DbUpdateException { InnerException: SqlException { Number: 8152 or 2628 or 8115 } } => (StatusCodes.Status400BadRequest, "VALIDATION_FAILED",
+                "A value is too long or too large for the field it is stored in. Shorten it and try again."),
+            // The framework's text names parameters and DTO types: the caller gets a fixed sentence (ASVS 16.5).
+            BadHttpRequestException bad => (bad.StatusCode, "BAD_REQUEST", "The request could not be read. Check the parameters and the body."),
             JsonException => (StatusCodes.Status400BadRequest, "BAD_REQUEST", "The request body is not valid JSON."),
             // A send could not learn whether maintenance began (the document store is unreachable): nothing left (DEV-13).
             Crm.SharedKernel.Operations.MaintenanceStateUnavailableException => (StatusCodes.Status503ServiceUnavailable, "MAINTENANCE_STATE_UNAVAILABLE",

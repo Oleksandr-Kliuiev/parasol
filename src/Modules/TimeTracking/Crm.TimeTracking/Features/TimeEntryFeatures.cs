@@ -44,9 +44,29 @@ internal sealed class TimeEntryRequestValidator : AbstractValidator<TimeEntryReq
 
 public sealed record AdjustTimeEntryRequest(bool Billable, string? WorkType, bool AfterHours);
 
+internal sealed class AdjustTimeEntryRequestValidator : AbstractValidator<AdjustTimeEntryRequest>
+{
+    public AdjustTimeEntryRequestValidator() => RuleFor(x => x.WorkType).MaximumLength(128);
+}
+
 public sealed record ApproveRequest(IReadOnlyList<Guid> EntryIds);
 
+internal sealed class ApproveRequestValidator : AbstractValidator<ApproveRequest>
+{
+    /// <summary>One request approves or withdraws at most this many entries; the list screen works in pages of 200.</summary>
+    public const int MaxEntries = 1000;
+
+    public ApproveRequestValidator() => RuleFor(x => x.EntryIds).NotNull().Must(ids => ids is null || ids.Count <= MaxEntries)
+        .WithMessage($"Send at most {MaxEntries} entries at a time.");
+}
+
 public sealed record ReopenPeriodRequest(string Reason);
+
+internal sealed class ReopenPeriodRequestValidator : AbstractValidator<ReopenPeriodRequest>
+{
+    // TimePeriods.ReopenReason is 512 characters; an empty reason keeps its coded answer from the service (F-G1-06).
+    public ReopenPeriodRequestValidator() => RuleFor(x => x.Reason).MaximumLength(512);
+}
 
 public sealed record AllocationDto(
     TimeClassification Classification,

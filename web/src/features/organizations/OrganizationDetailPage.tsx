@@ -50,6 +50,7 @@ import { OrganizationGroupPanel } from './OrganizationGroupPanel';
 import { CustomFieldsPanel } from '../customfields/CustomFieldsPanel';
 import { ActivityTimeline } from '../activities/ActivityTimeline';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   // Eleven tabs do not fit a phone: the bar scrolls sideways (a focused tab scrolls into view) instead of widening the page.
@@ -230,7 +231,7 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
           items={[
             { label: f('email'), value: o.email && <Link href={`mailto:${o.email}`}>{o.email}</Link> },
             { label: f('phone'), value: o.phone && <Link href={`tel:${o.phone.replace(/\s/g, '')}`}>{o.phone}</Link> },
-            { label: f('website'), value: o.website && <Link href={o.website} target="_blank" rel="noopener noreferrer">{o.website}</Link> },
+            { label: f('website'), value: o.website && <Link href={safeHttpUrl(o.website)} target="_blank" rel="noopener noreferrer">{o.website}</Link> },
             { label: f('domains'), value: o.domains.length > 0 && <span className={styles.domains}>{o.domains.join(', ')}</span> },
           ]}
         />

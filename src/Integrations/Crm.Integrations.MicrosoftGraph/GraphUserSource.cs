@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Azure.Core;
+using Microsoft.Extensions.Options;
 
 namespace Crm.Integrations.MicrosoftGraph;
 
@@ -44,6 +45,35 @@ public sealed class GraphOptions
     public GraphSharePointOptions SharePoint { get; set; } = new();
 
     public GraphTeamsOptions Teams { get; set; } = new();
+
+    /// <summary>Startup check (F-G4-16): the Graph address is https and every Teams webhook is https on an allowed host.</summary>
+    internal bool IsValid(out string problem)
+    {
+        if (!Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(BaseUrl))
+        {
+            problem = "Integrations:MicrosoftGraph:BaseUrl must be an https address.";
+            return false;
+        }
+
+        foreach (var (channel, value) in Teams.Channels)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var url) || !Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(url)
+                || (!url.IsLoopback && !Crm.SharedKernel.Text.WebUrl.HostMatches(url, Teams.AllowedHostSuffixes)))
+            {
+                // The setting name only: the URL carries its own secret.
+                problem = $"Integrations:MicrosoftGraph:Teams:Channels:{channel} must be an https address on one of Teams:AllowedHostSuffixes.";
+                return false;
+            }
+        }
+
+        problem = string.Empty;
+        return true;
+    }
 }
 
 public sealed record GraphUser(
@@ -81,6 +111,12 @@ internal sealed class GraphUserSource(HttpClient http) : IGraphUserSource
     public async Task<GraphDeltaResult> GetUserChangesAsync(string? deltaLink, CancellationToken cancellationToken)
     {
         var users = new List<GraphUser>();
+        // A stored cursor that does not belong to this Graph address is treated like an expired one: the sync starts over.
+        if (deltaLink is not null && !GraphLinks.IsSameOrigin(http.BaseAddress, deltaLink))
+        {
+            throw new DeltaTokenExpiredException();
+        }
+
         var url = deltaLink ?? InitialQuery;
         for (int page = 0; page < 1000; page++)
         {
@@ -96,10 +132,11 @@ internal sealed class GraphUserSource(HttpClient http) : IGraphUserSource
             users.AddRange(body.Value);
             if (body.DeltaLink is not null)
             {
-                return new GraphDeltaResult(users, body.DeltaLink);
+                return new GraphDeltaResult(users, GraphLinks.Require(http.BaseAddress, body.DeltaLink));
             }
 
-            url = body.NextLink ?? throw new InvalidOperationException("Delta page has neither nextLink nor deltaLink.");
+            url = GraphLinks.Require(
+                http.BaseAddress, body.NextLink ?? throw new InvalidOperationException("Delta page has neither nextLink nor deltaLink."));
         }
 
         throw new InvalidOperationException("Too many delta pages.");
@@ -107,12 +144,18 @@ internal sealed class GraphUserSource(HttpClient http) : IGraphUserSource
 }
 
 /// <summary>Adds an app-only Graph token from the managed identity to every request.</summary>
-internal sealed class GraphAuthenticationHandler(TokenCredential credential) : DelegatingHandler
+internal sealed class GraphAuthenticationHandler(TokenCredential credential, IOptions<GraphOptions> options) : DelegatingHandler
 {
     private static readonly TokenRequestContext Scope = new(["https://graph.microsoft.com/.default"]);
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        // The token is never attached to a request for another host (F-G5-12).
+        if (!GraphLinks.IsSameOrigin(options.Value.BaseUrl, request.RequestUri))
+        {
+            throw new InvalidOperationException("A request outside the configured Graph address was refused before a token was attached.");
+        }
+
         var token = await credential.GetTokenAsync(Scope, cancellationToken);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
         return await base.SendAsync(request, cancellationToken);

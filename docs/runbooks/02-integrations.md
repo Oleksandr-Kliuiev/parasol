@@ -98,7 +98,11 @@ dotnet user-secrets set "Integrations:Atera:ApiKey" "<api key>" --project src/Ho
 ## 3. Microsoft Partner Center (CSP)
 
 ### 3.1 Доступ
-Нужен refresh token по Secure Application Model (см. [05 §2.2](../05-integrations.md#22-аутентификация--secure-application-model)): мульти-тенантное приложение партнёра + сервисный аккаунт с MFA. Токен и ключи приложения хранятся в Key Vault (`partnercenter-refresh-token`), локально — в `user-secrets`. Ключи не передаются в переписке и не попадают в журналы.
+Нужен refresh token по Secure Application Model (см. [05 §2.2](../05-integrations.md#22-аутентификация--secure-application-model)): мульти-тенантное приложение партнёра + сервисный аккаунт с MFA. Токен и ключи приложения хранятся в Key Vault, локально — в `user-secrets`. Ключи не передаются в переписке и не попадают в журналы.
+
+**Azure (DEV-21, F-G4-02).** Два секрета Key Vault: `partnercenter-client-secret` и `partnercenter-refresh-token`. Включение — переменные окружения GitHub `CRM_ENABLE_PARTNERCENTER=true`, `CRM_PARTNERCENTER_TENANT_ID`, `CRM_PARTNERCENTER_CLIENT_ID` (идентификаторы, не секреты). Bicep выдаёт `crm-worker` (и только ему) роль чтения на каждый из этих двух секретов и передаёт значения контейнеру как ссылки Key Vault; оба секрета должны существовать в хранилище до включения (так же, как секреты PowerOffice и Atera). Не проверено на реальном развёртывании. `crm-web` их не получает.
+
+Ограничения, которые остаются на стороне приложения: (1) приложение читает refresh-токен, но **не записывает обратно** новый токен, выданный при обмене, — оператор следит за сроком токена и при отказе повторяет согласие сервисного аккаунта и обновляет секрет; (2) вход по client secret, а не сертификатом (SEC-AUTH-05) — замена требует изменения кода.
 
 ```bash
 dotnet user-secrets set "Integrations:PartnerCenter:Enabled" "true" --project src/Hosts/Crm.Worker
@@ -210,11 +214,11 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 5. Проверка: сделать организацию клиентом — папка `Название (оргномер)` появляется в библиотеке; переименовать организацию — папка переименовывается; вкладка «Документы» показывает содержимое и открывает SharePoint.
 
 ### 4b.3 Сообщения в каналы Teams
-1. В каждом канале («Salg», «Økonomi», «Drift») создать поток Power Automate «When a Teams webhook request is received» и скопировать URL (это секрет — в Key Vault; сообщения отправляет worker, поэтому секрет получает только он — [runbook 08 §3](08-database-permissions.md#3-новый-модуль-таблица-или-секрет)).
-2. Настройки: `Integrations:MicrosoftGraph:Teams:Enabled=true`, `:Channels:Sales`, `:Channels:Finance`, `:Channels:Operations`, порог `:WonDealThreshold` (по умолчанию 100 000 NOK).
+1. В каждом канале («Salg», «Økonomi», «Drift») создать поток Power Automate «When a Teams webhook request is received» и скопировать URL (это секрет — в Key Vault; сообщения отправляет worker, поэтому секрет получает только он — [runbook 08 §3](08-database-permissions.md#3-новый-модуль-таблица-или-секрет)). Секреты Key Vault: `teams-webhook-sales`, `teams-webhook-finance`, `teams-webhook-operations`; включение — переменная окружения GitHub `CRM_ENABLE_TEAMS=true` (Bicep передаёт `Integrations__MicrosoftGraph__Teams__Channels__*` ссылками Key Vault только `crm-worker`; все три секрета должны существовать).
+2. Настройки (вне Azure/локально): `Integrations:MicrosoftGraph:Teams:Enabled=true`, `:Channels:Sales`, `:Channels:Finance`, `:Channels:Operations`, порог `:WonDealThreshold` (по умолчанию 100 000 NOK).
 3. Проверка: выиграть сделку дороже порога — карточка появляется в «Salg»; утвердить биллинг-прогон — карточка в «Økonomi».
 
 ## 5. Azure
 1. Создать секреты в Key Vault (временно открыв доступ, как в [runbook 01 §5](01-first-deployment.md#5-сертификат-приложения-учётные-данные-вместо-client-secret)).
-2. Переменные GitHub окружения: `CRM_ENABLE_POWEROFFICE=true`, `CRM_POWEROFFICE_ENVIRONMENT=Demo|Production`, `CRM_ENABLE_ATERA=true`, `CRM_ENABLE_PARTNERCENTER=true`.
+2. Переменные GitHub окружения: `CRM_ENABLE_POWEROFFICE=true`, `CRM_ENABLE_ATERA=true`, `CRM_ENABLE_PARTNERCENTER=true` (+ `CRM_PARTNERCENTER_TENANT_ID`, `CRM_PARTNERCENTER_CLIENT_ID`), `CRM_ENABLE_TEAMS=true`. Среда PowerOffice не переменная: она зафиксирована в `infra/env/*.bicepparam` (test — Demo, prod — Production).
 3. Запустить workflow Deploy. `WriteEnabled` включается переменной окружения контейнера `Integrations__PowerOffice__WriteEnabled` / `Integrations__Atera__WriteEnabled` после проверки.

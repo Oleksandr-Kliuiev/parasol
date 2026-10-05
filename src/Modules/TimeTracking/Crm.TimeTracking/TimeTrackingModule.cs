@@ -49,6 +49,7 @@ public static class TimeTrackingModule
 
         group.MapPost("/entries/{id:guid}/adjust", async (Guid id, AdjustTimeEntryRequest request, TimeEntryService service, CancellationToken ct) =>
                 (await service.AdjustAsync(id, request, ct)).ToHttpResult(Results.NoContent))
+            .Validate<AdjustTimeEntryRequest>()
             .RequirePermission(Permissions.TimeManage);
 
         group.MapDelete("/entries/{id:guid}", async (Guid id, TimeEntryService service, CancellationToken ct) =>
@@ -57,10 +58,12 @@ public static class TimeTrackingModule
 
         group.MapPost("/approve", async (ApproveRequest request, TimeApprovalService service, CancellationToken ct) =>
                 (await service.ApproveAsync(request.EntryIds, ct)).ToHttpResult(Results.Ok))
+            .Validate<ApproveRequest>()
             .RequirePermission(Permissions.TimeManage);
 
         group.MapPost("/withdraw", async (ApproveRequest request, TimeApprovalService service, CancellationToken ct) =>
                 (await service.WithdrawAsync(request.EntryIds, ct)).ToHttpResult(count => Results.Ok(new { withdrawn = count })))
+            .Validate<ApproveRequest>()
             .RequirePermission(Permissions.TimeManage);
 
         group.MapGet("/periods", async (int? year, TimeEntryService service, TimeProvider time, CancellationToken ct) =>
@@ -73,6 +76,7 @@ public static class TimeTrackingModule
 
         group.MapPost("/periods/{year:int}/{month:int}/reopen", async (int year, int month, ReopenPeriodRequest request, TimeEntryService service, CancellationToken ct) =>
                 (await service.ReopenPeriodAsync(year, month, request.Reason, ct)).ToHttpResult(Results.Ok))
+            .Validate<ReopenPeriodRequest>()
             .RequirePermission(Permissions.TimeUnlock);
 
         group.MapGet("/work-types", async (TimeEntryService service, CancellationToken ct) => Results.Ok(await service.WorkTypesAsync(ct)))

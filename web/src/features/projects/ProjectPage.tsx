@@ -380,8 +380,8 @@ function PhaseForm({ project, phase, onClose }: { project: Project; phase?: Proj
       plannedStart: blankToNull(plannedStart),
       plannedEnd: blankToNull(plannedEnd),
       plannedHours: parseDecimal(plannedHours) ?? 0,
-      fee: canSeeMoney ? (parseDecimal(fee) ?? 0) : (phase?.fee ?? 0),
-      billOnCompletion,
+      // Fee and bill-on-completion are finance data: omitted without finance.read, the server keeps the stored values.
+      ...(canSeeMoney ? { fee: parseDecimal(fee) ?? 0, billOnCompletion } : {}),
       productId: phase?.productId ?? null,
     };
     try {

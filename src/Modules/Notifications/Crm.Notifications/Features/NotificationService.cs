@@ -4,6 +4,7 @@ using Crm.Notifications.Domain;
 using Crm.Notifications.Persistence;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Notifications.Features;
@@ -26,6 +27,16 @@ public sealed record NotificationListResponse(int Unread, IReadOnlyList<Notifica
 public sealed record PreferencesResponse(bool EmailEnabled, int DigestHour, IReadOnlyList<NotificationKind> MutedKinds, bool EmailAvailable);
 
 public sealed record PreferencesRequest(bool EmailEnabled, int DigestHour, IReadOnlyList<NotificationKind>? MutedKinds);
+
+internal sealed class PreferencesRequestValidator : AbstractValidator<PreferencesRequest>
+{
+    public PreferencesRequestValidator()
+    {
+        RuleFor(x => x.DigestHour).InclusiveBetween(0, 23);
+        RuleFor(x => x.MutedKinds).Must(kinds => kinds is null || kinds.Count <= 64).WithMessage("Too many muted kinds.");
+        RuleForEach(x => x.MutedKinds).IsInEnum();
+    }
+}
 
 /// <summary>Notices of the signed-in user, and the preferences behind the digest.</summary>
 internal sealed class NotificationService(

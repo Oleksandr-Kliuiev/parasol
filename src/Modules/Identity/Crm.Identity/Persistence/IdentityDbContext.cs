@@ -46,6 +46,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.EndReason).HasMaxLength(32);
             b.HasIndex(x => x.UserId);
+            b.Property(x => x.ExternalSessionHash).HasMaxLength(64).IsUnicode(false);
+            b.HasIndex(x => x.ExternalSessionHash).HasFilter("[ExternalSessionHash] IS NOT NULL");
         });
 
         modelBuilder.Entity<DirectoryRoleConfirmation>(b =>

@@ -110,6 +110,10 @@ jobs:
       CRM_ENTRA_CLIENT_ID_PROD: ${{ vars.CRM_ENTRA_CLIENT_ID_PROD }}
       CRM_ENABLE_POWEROFFICE: ${{ vars.CRM_ENABLE_POWEROFFICE || 'false' }}
       CRM_ENABLE_ATERA: ${{ vars.CRM_ENABLE_ATERA || 'false' }}
+      CRM_ENABLE_PARTNERCENTER: ${{ vars.CRM_ENABLE_PARTNERCENTER || 'false' }}
+      CRM_PARTNERCENTER_TENANT_ID: ${{ vars.CRM_PARTNERCENTER_TENANT_ID }}
+      CRM_PARTNERCENTER_CLIENT_ID: ${{ vars.CRM_PARTNERCENTER_CLIENT_ID }}
+      CRM_ENABLE_TEAMS: ${{ vars.CRM_ENABLE_TEAMS || 'false' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4

@@ -30,3 +30,16 @@ describe('rebase', () => {
     expect(rebase(base, mine, latest)).toEqual({ name: 'Acme Norge', phone: '2', visitAddress: { city: 'Bergen', street: 'A' } });
   });
 });
+
+describe('rebase and prototype pollution', () => {
+  it('never walks or assigns a path through __proto__, constructor or prototype', () => {
+    const mine = JSON.parse('{"name":"x","__proto__":{"polluted":true},"a":{"__proto__":{"deep":true}},"constructor":{"prototype":{"viaCtor":true}}}');
+    const result = rebase({ name: 'Acme', a: {} } as Record<string, unknown>, mine as Record<string, unknown>, { name: 'Latest', a: {} });
+    expect(result.name).toBe('x');
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(({} as Record<string, unknown>).deep).toBeUndefined();
+    expect(({} as Record<string, unknown>).viaCtor).toBeUndefined();
+    expect((result as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+  });
+});

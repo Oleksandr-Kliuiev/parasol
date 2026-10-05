@@ -79,7 +79,7 @@ public static class OperationsEndpoints
                 try
                 {
                     state = await gate.SetAsync(
-                        request.Mode, request.Reason.Trim(), Clean(request.Reference), WhoIs(http.User), request.ExpectedKey, ct);
+                        request.Mode, Crm.SharedKernel.Text.LogText.Clean(request.Reason.Trim())!, Clean(request.Reference), WhoIs(http.User), request.ExpectedKey, ct);
                 }
                 catch (MaintenanceConflictException conflict)
                 {
@@ -292,7 +292,8 @@ public static class OperationsEndpoints
 
     private static DateTimeOffset? Since(MaintenanceState state) => state.At == DateTimeOffset.MinValue ? null : state.At;
 
-    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim()[..Math.Min(value.Trim().Length, 100)];
+    private static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : Crm.SharedKernel.Text.LogText.Clean(value.Trim()[..Math.Min(value.Trim().Length, 100)]);
 
     /// <summary>The operator as the decision shows them: name and user id — an employee, not a customer.</summary>
     private static string WhoIs(ClaimsPrincipal user) =>

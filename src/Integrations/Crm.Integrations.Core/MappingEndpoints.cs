@@ -10,6 +10,7 @@ using Crm.Integrations.Core.Persistence;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Domain;
 using Crm.SharedKernel.Results;
+using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -50,6 +51,18 @@ public sealed record RecordPage(IReadOnlyList<ExternalRecordItem> Items, string?
 
 public sealed record CreateLinkRequest(string System, string ExternalType, string ExternalId, Guid EntityId);
 
+internal sealed class CreateLinkRequestValidator : AbstractValidator<CreateLinkRequest>
+{
+    // Column lengths of integration.ExternalLinks (F-G1-07).
+    public CreateLinkRequestValidator()
+    {
+        RuleFor(x => x.System).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.ExternalType).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.ExternalId).NotEmpty().MaximumLength(128);
+        RuleFor(x => x.EntityId).NotEmpty();
+    }
+}
+
 public sealed record BulkResult(int Linked, int Created, int Skipped, int Failed, IReadOnlyList<string> Errors, bool DryRun);
 
 public sealed record EntityLinkItem(Guid Id, string System, string ExternalType, string ExternalId, string? DisplayName, LinkMethod Method, DateTimeOffset LinkedAt);
@@ -68,6 +81,13 @@ public sealed record IntegrationStatusItem(
     string? PausedBy);
 
 public sealed record PauseIntegrationRequest(bool Paused, string? Reason);
+
+internal sealed class PauseIntegrationRequestValidator : AbstractValidator<PauseIntegrationRequest>
+{
+    // IntegrationSwitches.Reason is 512 characters (F-G1-06).
+    public PauseIntegrationRequestValidator() => RuleFor(x => x.Reason).MaximumLength(512);
+}
+
 
 /// <summary>Mapping screen API (FR-ADM-01): external records, suggestions, links, import, bulk migration and the outbound queue.</summary>
 public static class MappingEndpoints
@@ -136,6 +156,7 @@ public static class MappingEndpoints
                 await db.SaveChangesAsync(ct);
                 return Results.Ok(new { system, paused = pause.IsPaused, reason = pause.Reason });
             })
+            .Validate<PauseIntegrationRequest>()
             .RequirePermission(Permissions.IntegrationsManage);
 
         // The test is the worker's: only crm-worker holds the provider credentials (DEV-04-AC05). The request is recorded as a
@@ -283,6 +304,7 @@ public static class MappingEndpoints
                 var result = await links.LinkAsync(descriptor.EntityType, request.EntityId, request.System, request.ExternalType, request.ExternalId, LinkMethod.Manual, user.UserId, ct);
                 return result.ToHttpResult(link => Results.Ok(new { link.Id }));
             })
+            .Validate<CreateLinkRequest>()
             .RequirePermission(Permissions.IntegrationsManage);
 
         group.MapDelete("/links/{id:guid}", async (Guid id, ExternalLinkService links, CancellationToken ct) =>

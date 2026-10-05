@@ -116,7 +116,7 @@
       "TIM_PROJECT_NOT_AVAILABLE": "Prosjektet finnes ikke, eller du er ikke med i det.",
       "TIM_PROJECT_OTHER_ORGANIZATION": "Prosjektet hører til en annen kunde enn timeføringen.",
       "TIM_PROJECT_CLOSED": "Prosjektet er fullført eller avlyst og tar ikke imot flere timer.",
-      "AUTH_REVERIFY_REQUIRED": "Denne handlingen krever at tilgangene dine er bekreftet av Microsoft de siste minuttene. Logg ut, logg inn igjen og gjenta den.",
+      "AUTH_REVERIFY_REQUIRED": "Denne handlingen krever at du bekrefter identiteten din på nytt. Bruk «Bekreft identitet» og gjenta handlingen.",
       "PRV_CASE_CLOSED": "Henvendelsen er lukket.",
       "PRV_CASE_NOT_FOUND": "Henvendelsen finnes ikke.",
       "PRV_CASE_NOT_PREVIEWED": "Forhåndsvis sletteplanen før den gjennomføres.",
@@ -157,7 +157,9 @@
     "rateLimited": "For mange forespørsler. Prøv igjen om {{seconds}} sekunder.",
     "rateLimitedNoWait": "For mange forespørsler. Vent litt og prøv igjen.",
     "timeout": "Serveren brukte for lang tid på å svare. Endringen kan være lagret; sjekk posten før du prøver igjen.",
-    "offline": "Du er frakoblet. Koble til igjen og prøv på nytt; ingenting ble sendt."
+    "offline": "Du er frakoblet. Koble til igjen og prøv på nytt; ingenting ble sendt.",
+    "signInLoop": "Innloggingen ble ikke fullført etter flere forsøk. Lukk andre faner med CRM og prøv igjen. Hvis det fortsetter, si fra til administrator.",
+    "signInLoopRetry": "Prøv igjen"
   },
   "status": {
     "Lead": "Lead",
@@ -3017,6 +3019,18 @@
     "recovered": "Kilden er gjenopprettet — avventer behandling",
     "resolveAfterRecovery": "Lukk avviket etter at kilden er gjenopprettet.",
     "recoveredLimit": "Listen viser de {{shown}} sist behandlede gjenopprettede avvikene av {{total}} som venter på lukking. Filtrene gjelder denne listen; lukk ferdige avvik for å se eldre saker."
+  },
+  "reverify": {
+    "title": "Bekreft identiteten din for å fortsette",
+    "body": "Denne handlingen krever at du logger inn på nytt, slik at vi vet at det er deg. Deretter kommer du tilbake til denne siden og kan gjenta handlingen.",
+    "unsaved": "Denne siden har endringer som ikke er lagret. Bekreftelsen laster siden på nytt, og endringene går tapt. Bli her og lagre dem først, eller fortsett og mist dem.",
+    "confirm": "Bekreft identitet",
+    "continueAnyway": "Fortsett og mist endringer",
+    "stay": "Bli og lagre først",
+    "cancel": "Ikke nå",
+    "failedTitle": "Identiteten din kunne ikke bekreftes",
+    "failedBody": "Microsoft meldte ikke en nylig innlogging for denne kontoen, eller det var en annen konto. Prøv igjen og oppgi passord eller tofaktorkode når du blir spurt.",
+    "tryAgain": "Prøv igjen"
   },
   "forms": {
     "unsaved": {

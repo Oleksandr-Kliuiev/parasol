@@ -21,6 +21,48 @@ public partial class AccessAndConcurrencyTests(CrmWebFactory factory)
     [GeneratedRegex(@"\{(?<name>\*{0,2}[^}:?]+)(?<constraint>:[^}?]+)?\??\}")]
     private static partial Regex RouteParameter();
 
+    /// <summary>
+    /// The only /api endpoints without a permission policy. They are authenticated through the fallback policy (or, for the
+    /// catch-all, answer nothing but a 404), and each says what protects it instead. A new endpoint without
+    /// <c>.RequirePermission(...)</c> fails <see cref="Every_api_endpoint_is_permission_protected_or_listed_with_the_reason"/>.
+    /// </summary>
+    private static readonly Dictionary<string, string> SignInOnly = new(StringComparer.Ordinal)
+    {
+        ["ANY /api/{**path}"] = "catch-all for unknown API routes: answers a JSON 404, reads and changes nothing",
+        ["GET /api/v1/audit/entities/{module}/{entityType}/{entityId:guid}"] = "the handler asks for audit.read or the history permission of the record's module (EntityHistoryPermissions)",
+        ["GET /api/v1/notifications/"] = "the signed-in user's own notices; the query filters by the caller's id",
+        ["POST /api/v1/notifications/{id:guid}/read"] = "own notice only (recipient = caller)",
+        ["POST /api/v1/notifications/read-all"] = "own notices only",
+        ["GET /api/v1/notifications/preferences"] = "own preferences",
+        ["PUT /api/v1/notifications/preferences"] = "own preferences",
+        ["PUT /api/v1/identity/me/preferences"] = "own language preference; the value is checked against the supported list",
+        ["GET /api/v1/search"] = "every search provider is filtered by its own required permission for the caller",
+    };
+
+    private static string EndpointKey(RouteEndpoint endpoint)
+    {
+        var methods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? [];
+        return $"{(methods.Count == 0 ? "ANY" : string.Join(",", methods))} {endpoint.RoutePattern.RawText}";
+    }
+
+    [Fact]
+    public void Every_api_endpoint_is_permission_protected_or_listed_with_the_reason()
+    {
+        var apiEndpoints = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(e => e.RoutePattern.RawText?.StartsWith("/api", StringComparison.Ordinal) == true)
+            .ToList();
+        apiEndpoints.Count.ShouldBeGreaterThan(100);
+
+        var unprotected = apiEndpoints
+            .Where(e => !e.Metadata.OfType<IAuthorizeData>().Any(a => a.Policy?.StartsWith("perm:", StringComparison.Ordinal) == true))
+            .Select(EndpointKey)
+            .ToList();
+
+        unprotected.Except(SignInOnly.Keys).ShouldBeEmpty("these endpoints have no .RequirePermission(...); add one or list them with a reason");
+        SignInOnly.Keys.Except(unprotected).ShouldBeEmpty("these endpoints are listed as sign-in only but now have a permission, or no longer exist");
+    }
+
     [Fact]
     public async Task Every_endpoint_refuses_every_role_that_lacks_its_permission()
     {

@@ -101,6 +101,89 @@ public class SessionAuthorizationTests
         }
     }
 
+    [Theory]
+    [InlineData(2, true, true)]
+    [InlineData(10, true, false)]
+    [InlineData(10, false, true)]
+    public async Task A_price_wide_change_needs_fresh_roles_although_its_permission_is_an_everyday_one(int minutesSinceConfirmation, bool marked, bool allowed)
+    {
+        // contracts.write is also what editing one contract needs, so it is not privileged as a whole (F-G3-10): the mass
+        // indexation and the price-list activation carry the mark instead.
+        Permissions.Privileged.ShouldNotContain(Permissions.ContractsWrite);
+        var authorization = Authorization(Noon);
+        var user = Principal(CrmRoles.Sales, Noon.AddMinutes(-minutesSinceConfirmation));
+        var http = new DefaultHttpContext();
+        http.Request.Method = "POST";
+        if (marked)
+        {
+            http.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(new RequiresFreshRolesMetadata()), "indexation"));
+        }
+
+        var result = await authorization.AuthorizeAsync(user, http, "perm:" + Permissions.ContractsWrite);
+
+        result.Succeeded.ShouldBe(allowed);
+        if (!allowed)
+        {
+            result.Failure!.FailureReasons.ShouldContain(r => r.Message == PermissionAuthorization.ReverifyRequired);
+        }
+    }
+
+    [Theory]
+    [InlineData("POST", false, 1, 1, true)]
+    [InlineData("POST", false, 1, 6, false)] // a directory sync renewed the roles, but the user last authenticated six minutes ago
+    [InlineData("POST", false, 6, 1, false)] // the user is present, the directory has not confirmed the roles
+    [InlineData("POST", false, 1, 5, true)]
+    [InlineData("GET", true, 1, 6, false)] // an export is held to the same rule
+    [InlineData("GET", true, 1, 1, true)]
+    [InlineData("GET", false, 1, 600, true)] // reading is not privileged
+    public async Task A_privileged_action_needs_both_fresh_roles_and_a_recent_interactive_sign_in(
+        string method, bool export, int minutesSinceRolesConfirmed, int minutesSinceAuthentication, bool allowed)
+    {
+        var authorization = Authorization(Noon);
+        var role = export ? CrmRoles.Sales : CrmRoles.Finance;
+        var permission = export ? Permissions.CustomersRead : Permissions.BillingApprove;
+        HeldBy(role, permission).ShouldBeTrue();
+        var user = Principal(role, Noon.AddMinutes(-minutesSinceRolesConfirmed), Noon.AddMinutes(-minutesSinceAuthentication));
+        var http = new DefaultHttpContext();
+        http.Request.Method = method;
+        if (export)
+        {
+            http.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(new ExportsDataMetadata()), "export"));
+        }
+
+        var result = await authorization.AuthorizeAsync(user, http, "perm:" + permission);
+
+        result.Succeeded.ShouldBe(allowed);
+        if (!allowed)
+        {
+            result.Failure!.FailureReasons.ShouldContain(r => r.Message == PermissionAuthorization.ReverifyRequired);
+        }
+    }
+
+    [Fact]
+    public async Task Without_an_authentication_time_a_privileged_action_fails_closed_until_a_reverification()
+    {
+        var authorization = Authorization(Noon);
+        var http = new DefaultHttpContext();
+        http.Request.Method = "POST";
+        var role = CrmRoles.Finance;
+        HeldBy(role, Permissions.BillingApprove).ShouldBeTrue();
+
+        // The identity provider sent no auth_time (the optional claim is not configured): never "fresh".
+        var unknown = Principal(role, Noon, withAuthTime: false);
+        (await authorization.AuthorizeAsync(unknown, http, "perm:" + Permissions.BillingApprove)).Failure!.FailureReasons
+            .ShouldContain(r => r.Message == PermissionAuthorization.ReverifyRequired);
+
+        // A malformed claim is no better.
+        var identity = (ClaimsIdentity)unknown.Identity!;
+        identity.AddClaim(new Claim(PermissionAuthorization.AuthTimeClaim, "yesterday"));
+        (await authorization.AuthorizeAsync(unknown, http, "perm:" + Permissions.BillingApprove)).Succeeded.ShouldBeFalse();
+
+        (await authorization.AuthorizeAsync(Principal(role, Noon), http, "perm:" + Permissions.BillingApprove)).Succeeded.ShouldBeTrue();
+    }
+
+    private static bool HeldBy(string role, string permission) => Permissions.ForRoles([role]).Contains(permission);
+
     [Fact]
     public async Task Without_a_confirmation_a_privileged_action_fails_closed_and_without_the_permission_it_is_plainly_refused()
     {
@@ -128,12 +211,21 @@ public class SessionAuthorizationTests
         return services.BuildServiceProvider().GetRequiredService<IAuthorizationService>();
     }
 
-    private static ClaimsPrincipal Principal(string role, DateTimeOffset confirmedAt) =>
-        new(new ClaimsIdentity(
-        [
-            new Claim("roles", role),
-            new Claim(PermissionAuthorization.RolesVerifiedClaim, confirmedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)),
-        ], "test", "name", "roles"));
+    // The user authenticated at the moment the roles were confirmed unless a test says otherwise (a sign-in does both).
+    private static ClaimsPrincipal Principal(string role, DateTimeOffset confirmedAt, DateTimeOffset? authenticatedAt = null, bool withAuthTime = true)
+    {
+        var claims = new List<Claim>
+        {
+            new("roles", role),
+            new(PermissionAuthorization.RolesVerifiedClaim, confirmedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)),
+        };
+        if (withAuthTime)
+        {
+            claims.Add(new Claim(PermissionAuthorization.AuthTimeClaim, (authenticatedAt ?? confirmedAt).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)));
+        }
+
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, "test", "name", "roles"));
+    }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {

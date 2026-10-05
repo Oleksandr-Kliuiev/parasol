@@ -76,6 +76,7 @@ resource zoneLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-0
 }]
 
 output appsSubnetId string = vnet.properties.subnets[0].id
+output appsSubnetPrefix string = vnet.properties.subnets[0].properties.addressPrefix
 output privateEndpointSubnetId string = vnet.properties.subnets[1].id
 output privateDnsZoneIds object = {
   sql: zones[0].id

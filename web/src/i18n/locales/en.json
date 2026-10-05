@@ -116,7 +116,7 @@
       "TIM_PROJECT_NOT_AVAILABLE": "The project does not exist or you are not on it.",
       "TIM_PROJECT_OTHER_ORGANIZATION": "The project belongs to another customer than the time entry.",
       "TIM_PROJECT_CLOSED": "The project is completed or cancelled and takes no more hours.",
-      "AUTH_REVERIFY_REQUIRED": "This action needs your permissions confirmed by Microsoft in the last few minutes. Sign out, sign in again and repeat it.",
+      "AUTH_REVERIFY_REQUIRED": "This action needs you to confirm your identity again. Use \"Confirm identity\" and repeat the action.",
       "PRV_CASE_CLOSED": "The request is closed.",
       "PRV_CASE_NOT_FOUND": "This request does not exist.",
       "PRV_CASE_NOT_PREVIEWED": "Preview the erasure plan before carrying it out.",
@@ -157,7 +157,9 @@
     "rateLimited": "Too many requests. Try again in {{seconds}} seconds.",
     "rateLimitedNoWait": "Too many requests. Wait a moment and try again.",
     "timeout": "The server took too long to answer. Your change may not have been saved; check the record before you try again.",
-    "offline": "You are offline. Reconnect and try again; nothing was sent."
+    "offline": "You are offline. Reconnect and try again; nothing was sent.",
+    "signInLoop": "Signing in did not complete after several attempts. Close other tabs of the CRM and try again; if it keeps happening, tell the administrator.",
+    "signInLoopRetry": "Try again"
   },
   "status": {
     "Lead": "Lead",
@@ -3017,6 +3019,18 @@
     "recovered": "Source recovered — review pending",
     "resolveAfterRecovery": "Resolve this review after the source has recovered.",
     "recoveredLimit": "The list includes the {{shown}} most recently reviewed recovered exceptions out of {{total}} awaiting closure. Filters apply to this list; close completed reviews to see older cases."
+  },
+  "reverify": {
+    "title": "Confirm your identity to continue",
+    "body": "This action needs you to sign in again so we know it is you. After that you come back to this page and can repeat the action.",
+    "unsaved": "This page has changes that are not saved. Confirming reloads the page and they are lost. Stay here to save them first, or continue and lose them.",
+    "confirm": "Confirm identity",
+    "continueAnyway": "Continue and lose changes",
+    "stay": "Stay and save first",
+    "cancel": "Not now",
+    "failedTitle": "Your identity could not be confirmed",
+    "failedBody": "Microsoft did not report a recent sign-in for this account, or it was another account. Try again and enter your password or second factor when asked.",
+    "tryAgain": "Try again"
   },
   "forms": {
     "unsaved": {

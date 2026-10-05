@@ -10,6 +10,9 @@ namespace Crm.SharedKernel.Text;
 /// </summary>
 public sealed class CsvTable
 {
+    /// <summary>Rows one distributor or price-sheet import may carry (the migration import keeps its own, smaller cap).</summary>
+    public const int MaxImportRows = 50_000;
+
     /// <summary>A row has more cells than the header and the extra ones hold something: the columns are probably shifted.</summary>
     public const string RaggedExtra = "RAGGED_ROW_EXTRA";
 

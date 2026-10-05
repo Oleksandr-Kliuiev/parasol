@@ -625,7 +625,7 @@ erDiagram
 | `billing.Invoice` | INDEX (`InvoiceDate`, `InvoiceNo`, `Id`) — порядок списка счетов и его курсор (DEV-12) |
 | `audit.AuditEntry` | Кластерный по `At`; INDEX (`EntityType`, `EntityId`); секционирование по году |
 | `identity.User` | UNIQUE (`TenantId`, `ObjectId`); подтверждённые роли `Roles`, `RolesVersion`, `RolesVerifiedAt` (DEV-10) |
-| `identity.UserSession` | INDEX (`UserId`); открыта, пока `EndedAt IS NULL` (DEV-10) |
+| `identity.UserSession` | INDEX (`UserId`); открыта, пока `EndedAt IS NULL` (DEV-10). `AuthenticatedAt` — nullable `datetimeoffset`: `auth_time` из id_token, последняя интерактивная аутентификация пользователя; `NULL`, если провайдер её не прислал (тогда привилегированные действия закрыты до подтверждения личности; DEV-21, F-G2-08). `ExternalSessionHash` — nullable `varchar(64)`: SHA-256 (hex) идентификатора сессии провайдера (`sid`), сам `sid` не хранится; фильтрованный индекс `WHERE ExternalSessionHash IS NOT NULL` служит front-channel logout (DEV-21, F-G2-04). Миграции `SessionExternalId`, `SessionAuthTime` — только расширение |
 | `identity.DirectoryRoleConfirmation` | PK (`TenantId`); `ConfirmedAt` — маркер конкурентности запусков синхронизации ролей (DEV-10) |
 
 ## 8. Сроки хранения

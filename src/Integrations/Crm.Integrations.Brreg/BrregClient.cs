@@ -86,8 +86,6 @@ internal sealed class BrregClient(HttpClient http) : IBrregClient
             a.Poststed,
             a.Landkode);
 
-    private static string? NormalizeWebsite(string? website) =>
-        string.IsNullOrWhiteSpace(website) ? null
-        : website.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? website
-        : "https://" + website;
+    // Only an http(s) address is offered; the register is outside input, so anything else is dropped (F-G1-05).
+    private static string? NormalizeWebsite(string? website) => Crm.SharedKernel.Text.WebUrl.Normalize(website);
 }

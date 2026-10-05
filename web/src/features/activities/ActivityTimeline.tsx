@@ -13,6 +13,7 @@ import { formatDateTime } from '../../shared/utils/format';
 import { useActivities, useActivityActions, useOutlookStatus } from './api';
 import { ActivityDialog } from './ActivityDialog';
 import type { Activity } from './types';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0 },
@@ -122,7 +123,7 @@ export function ActivityTimeline({
                       </Badge>
                     )}
                     {activity.webLink && (
-                      <Link href={activity.webLink} target="_blank" rel="noopener noreferrer">
+                      <Link href={safeHttpUrl(activity.webLink)} target="_blank" rel="noopener noreferrer">
                         {t('activities.openInOutlook')}
                         <Open16Regular aria-hidden style={{ marginInlineStart: 4 }} />
                       </Link>

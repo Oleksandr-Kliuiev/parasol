@@ -23,6 +23,7 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useCreateDocumentFolder, useOrganizationDocuments } from './api';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   head: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalM },
@@ -62,7 +63,7 @@ export function OrganizationDocumentsTab({ organizationId }: { organizationId: s
               <Folder20Regular aria-hidden />
               {data.folder.name}
             </Text>
-            <Link href={data.folder.webUrl} target="_blank" rel="noopener noreferrer">
+            <Link href={safeHttpUrl(data.folder.webUrl)} target="_blank" rel="noopener noreferrer">
               {t('documents.openInSharePoint')}
             </Link>
           </>
@@ -97,7 +98,7 @@ export function OrganizationDocumentsTab({ organizationId }: { organizationId: s
                     <TableCell>
                       <span className={styles.name}>
                         {item.isFolder ? <Folder20Regular aria-hidden /> : <Document20Regular aria-hidden />}
-                        <Link href={item.webUrl} target="_blank" rel="noopener noreferrer">
+                        <Link href={safeHttpUrl(item.webUrl)} target="_blank" rel="noopener noreferrer">
                           {item.name}
                           <Open16Regular aria-hidden style={{ marginInlineStart: 4 }} />
                         </Link>

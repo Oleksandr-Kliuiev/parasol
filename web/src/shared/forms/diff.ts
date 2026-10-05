@@ -2,6 +2,9 @@
 
 export type Differences = { path: string; mine: unknown; theirs: unknown }[];
 
+/** Keys that would reach the prototype chain when a dot-path is walked or assigned. */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -23,7 +26,7 @@ export function compareWithLatest(base: unknown, mine: unknown, latest: unknown)
   const myChanges = diffValues(base, mine);
   const theirChanges = new Set(diffValues(base, latest).map((d) => d.path));
   const lookup = (source: unknown, path: string) =>
-    path.split('.').reduce<unknown>((value, key) => (isObject(value) ? value[key] : undefined), source);
+    path.split('.').reduce<unknown>((value, key) => (isObject(value) && !UNSAFE_KEYS.has(key) ? value[key] : undefined), source);
   const overlapping = myChanges.filter((c) => theirChanges.has(c.path));
   const others = [...theirChanges].filter((p) => !myChanges.some((c) => c.path === p));
   return {
@@ -38,6 +41,8 @@ export function rebase<T>(base: T, mine: T, latest: T): T {
   const result = structuredClone(latest) as Record<string, unknown>;
   for (const { path } of diffValues(base, mine)) {
     const keys = path.split('.');
+    // A path that names the prototype chain is never copied (prototype pollution, ASVS V1.5): a form field cannot be called that.
+    if (keys.some((key) => UNSAFE_KEYS.has(key))) continue;
     let target: Record<string, unknown> = result;
     let source: unknown = mine;
     keys.slice(0, -1).forEach((key) => {

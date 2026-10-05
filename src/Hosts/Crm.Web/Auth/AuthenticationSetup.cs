@@ -4,6 +4,7 @@ using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Crm.Infrastructure.DependencyInjection;
 using Crm.SharedKernel.Operations;
+using Crm.Web.Http;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -15,6 +16,8 @@ namespace Crm.Web.Auth;
 public static class AuthenticationSetup
 {
     public const string CookieName = "__Host-crm";
+    public const string CorrelationCookieName = "__Host-crm-oidc-corr.";
+    public const string NonceCookieName = "__Host-crm-oidc-nonce.";
     private static readonly string[] RevalidationScopes = ["User.Read"];
     private static readonly TimeSpan RevalidationRetry = TimeSpan.FromMinutes(5);
 
@@ -36,22 +39,77 @@ public static class AuthenticationSetup
             return builder;
         }
 
+        if (TenantProblem(builder.Configuration["AzureAd:TenantId"], builder.Environment) is { } tenantProblem)
+        {
+            throw new InvalidOperationException(tenantProblem);
+        }
+
         builder.Services
             .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
             .AddMicrosoftIdentityWebApp(
                 oidc =>
                 {
                     builder.Configuration.Bind("AzureAd", oidc);
+                    // The handler's own cookies (state correlation, nonce) get a prefix the browser enforces. They must be
+                    // sent back by the cross-site form post from Entra (SameSite=None), hence __Secure-, and a __Host- name
+                    // needs Path=/, which the handler would otherwise narrow to the callback path.
+                    oidc.CorrelationCookie.Name = CorrelationCookieName;
+                    oidc.CorrelationCookie.Path = "/";
+                    oidc.NonceCookie.Name = NonceCookieName;
+                    oidc.NonceCookie.Path = "/";
                     oidc.ResponseType = "code";
                     oidc.UsePkce = true;
                     oidc.SaveTokens = false;
                     oidc.Events ??= new OpenIdConnectEvents();
+                    var previousTicket = oidc.Events.OnTicketReceived;
+                    oidc.Events.OnTicketReceived = async context =>
+                    {
+                        if (previousTicket is not null)
+                        {
+                            await previousTicket(context);
+                        }
+
+                        // The return address travelled in the protected state, but it is validated again where it is used.
+                        context.ReturnUri = ReturnUrl.Safe(context.ReturnUri);
+                    };
+                    var previousRemoteFailure = oidc.Events.OnRemoteFailure;
+                    oidc.Events.OnRemoteFailure = async context =>
+                    {
+                        // Only the exception type: its message can carry what the identity provider sent back.
+                        SecurityLog.For(context.HttpContext).SignInFailed(context.Failure?.GetType().Name ?? "unknown");
+                        if (previousRemoteFailure is not null)
+                        {
+                            await previousRemoteFailure(context);
+                        }
+                    };
+                    var previousRemoteSignOut = oidc.Events.OnRemoteSignOut;
+                    oidc.Events.OnRemoteSignOut = async context =>
+                    {
+                        if (previousRemoteSignOut is not null)
+                        {
+                            await previousRemoteSignOut(context);
+                        }
+
+                        await EndRemotelySignedOutSessionsAsync(context);
+                    };
                     var previous = oidc.Events.OnTokenValidated;
                     oidc.Events.OnTokenValidated = async context =>
                     {
                         if (previous is not null)
                         {
                             await previous(context);
+                        }
+
+                        var services = context.HttpContext.RequestServices;
+                        if (Reverification.FailureRedirect(
+                                context.Principal!, context.Properties, services.GetRequiredService<TimeProvider>().GetUtcNow(), options.RequiredAcr, out var reason) is { } failed)
+                        {
+                            // Entra may ignore max_age, so the answer is checked: an authentication older than asked for, or for another
+                            // account, proves nothing about who is here now. Nothing is signed in; the user is told and may try again.
+                            SecurityLog.For(context.HttpContext).SignInFailed("reverify_" + reason);
+                            context.HandleResponse();
+                            context.Response.Redirect(failed);
+                            return;
                         }
 
                         try
@@ -72,6 +130,12 @@ public static class AuthenticationSetup
             .EnableTokenAcquisitionToCallDownstreamApi(RevalidationScopes)
             .AddDistributedTokenCaches();
 
+        // The refresh tokens in identity.TokenCache are encrypted with the shared Data Protection key ring, not only by the
+        // disk/TDE: whoever may read the table cannot use them. Entries written before this setting are plain; they are not
+        // readable once encryption is on, and the signed-in user simply authenticates again when the cache has no usable entry.
+        builder.Services.Configure<Microsoft.Identity.Web.TokenCacheProviders.Distributed.MsalDistributedTokenCacheAdapterOptions>(
+            cache => cache.Encrypt = true);
+
         if (builder.Configuration.GetConnectionString(ModuleRegistration.ConnectionStringName) is { } connectionString)
         {
             builder.Services.AddDistributedSqlServerCache(cache =>
@@ -83,6 +147,67 @@ public static class AuthenticationSetup
         }
 
         return builder;
+    }
+
+    /// <summary>
+    /// A tenant-less (<c>common</c>, <c>organizations</c>, <c>consumers</c>) or missing tenant would accept sign-ins from
+    /// anywhere, so outside development the tenant must be a concrete directory (a GUID or a verified domain name).
+    /// </summary>
+    internal static string? TenantProblem(string? tenantId, IHostEnvironment environment)
+    {
+        if (environment.IsDevelopment())
+        {
+            return null;
+        }
+
+        var tenant = tenantId?.Trim();
+        var concrete = !string.IsNullOrEmpty(tenant) &&
+                       (Guid.TryParse(tenant, out var id) && id != Guid.Empty ||
+                        tenant.Contains('.', StringComparison.Ordinal) && !tenant.Contains('/', StringComparison.Ordinal) && !tenant.Contains(' ', StringComparison.Ordinal));
+        return concrete
+            ? null
+            : "AzureAd:TenantId must be the tenant's GUID or domain name outside Development: empty, 'common', 'organizations' and 'consumers' would admit other tenants.";
+    }
+
+    /// <summary>
+    /// Entra's front-channel logout (<c>/signout-oidc</c>) arrives from an iframe without the Strict session cookie, so it is
+    /// matched to CRM sessions by the identity provider's session id (<c>sid</c>) and the issuer it names. A request that names
+    /// no session ends nothing; one that names another issuer is ignored.
+    /// </summary>
+    private static async Task EndRemotelySignedOutSessionsAsync(RemoteSignOutContext context)
+    {
+        var services = context.HttpContext.RequestServices;
+        var log = SecurityLog.For(context.HttpContext);
+        var sid = context.Request.Query["sid"].ToString();
+        var issuer = context.Request.Query["iss"].ToString();
+        if (string.IsNullOrEmpty(sid) || sid.Length > 128)
+        {
+            return;
+        }
+
+        try
+        {
+            var configuration = context.Options.Configuration ?? await context.Options.ConfigurationManager!.GetConfigurationAsync(context.HttpContext.RequestAborted);
+            if (!string.IsNullOrEmpty(issuer) && !string.Equals(issuer, configuration.Issuer, StringComparison.Ordinal))
+            {
+                log.RemoteSignOutIgnored("issuer");
+                return;
+            }
+
+            using var scope = Crm.SharedKernel.Operations.MaintenanceScope.AllowWrites("remote-sign-out");
+            var ended = await services.GetRequiredService<ISessionDirectory>().EndByExternalSessionAsync(
+                sid, "RemoteSignOut", services.GetRequiredService<TimeProvider>().GetUtcNow(), context.HttpContext.RequestAborted);
+            if (ended > 0)
+            {
+                services.GetRequiredService<SessionStateCache>().ForgetAll();
+            }
+
+            log.RemoteSignOutApplied(ended);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log.RemoteSignOutIgnored(ex.GetType().Name);
+        }
     }
 
     /// <summary>Where a sign-in refused for maintenance lands: the app's start page says why (DEV-13).</summary>
@@ -117,13 +242,21 @@ public static class AuthenticationSetup
             new ExternalIdentity(tenantId, objectId, upn, name, email, Roles: principal.GetCrmRoles().ToList()), cancellationToken);
 
         var at = services.GetRequiredService<TimeProvider>().GetUtcNow();
-        var sessionId = await services.GetRequiredService<ISessionDirectory>().StartAsync(profile.Id, at, cancellationToken);
+        // The id_token's auth_time says when the user last authenticated interactively; a silent single-sign-on sign-in keeps the
+        // old one. Without it (the optional claim is not configured) privileged actions stay closed until a re-verification.
+        var authTime = Reverification.AuthTime(principal) is { } reported && reported > at ? at : Reverification.AuthTime(principal);
+        var sessionId = await services.GetRequiredService<ISessionDirectory>().StartAsync(
+            profile.Id, at, principal.FindFirstValue("sid"), cancellationToken, authTime);
         var now = at.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
         identity.AddClaim(new Claim(CrmClaimTypes.UserId, profile.Id.ToString()));
         identity.AddClaim(new Claim(CrmClaimTypes.SessionId, sessionId.ToString()));
         identity.AddClaim(new Claim(CrmClaimTypes.SessionStarted, now));
         identity.AddClaim(new Claim(CrmClaimTypes.LastValidated, now));
         identity.AddClaim(new Claim(PermissionAuthorization.RolesVerifiedClaim, now));
+        if (authTime is { } authenticated)
+        {
+            identity.AddClaim(new Claim(PermissionAuthorization.AuthTimeClaim, authenticated.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)));
+        }
     }
 
     private static void ConfigureCookie(CookieAuthenticationOptions cookie, CrmAuthOptions options, bool revalidate)
@@ -204,6 +337,17 @@ public static class AuthenticationSetup
 
         // Written from the server's record on every request, so a value a cookie carries is never what authorization reads.
         SetClaim(identity, PermissionAuthorization.RolesVerifiedClaim, verified.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        if (state.AuthenticatedAt is { } authenticatedAt)
+        {
+            SetClaim(identity, PermissionAuthorization.AuthTimeClaim, authenticatedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        }
+        else
+        {
+            foreach (var claim in identity.FindAll(PermissionAuthorization.AuthTimeClaim).ToList())
+            {
+                identity.RemoveClaim(claim);
+            }
+        }
 
         if (!revalidate || ReadUnixClaim(principal, CrmClaimTypes.LastValidated) is { } last && now - last < options.RevalidationInterval)
         {
@@ -224,7 +368,7 @@ public static class AuthenticationSetup
             await tokens.GetAccessTokenForUserAsync(
                 RevalidationScopes, user: principal, tokenAcquisitionOptions: new TokenAcquisitionOptions { ForceRefresh = true });
         }
-        catch (Exception ex) when (ex is MicrosoftIdentityWebChallengeUserException or MsalUiRequiredException)
+        catch (Exception ex) when (ex is MicrosoftIdentityWebChallengeUserException or MsalUiRequiredException or System.Security.Cryptography.CryptographicException)
         {
             await RejectAsync(context);
             return;

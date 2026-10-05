@@ -59,6 +59,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { Permissions, currentUserQueryKey, useCan, useCurrentUser } from '../auth/CurrentUserContext';
 import i18n, { changeLanguage as applyLanguage, languages, type LanguageCode } from '../i18n';
+import { ReverifyDialog } from '../auth/ReverifyDialog';
 import { NotificationsBell } from '../features/notifications/NotificationsBell';
 import { MaintenanceBanner } from '../features/operations/MaintenanceBanner';
 import { GlobalSearch } from './GlobalSearch';
@@ -467,6 +468,7 @@ export function AppShell() {
         </header>
         <main id="main" className={styles.content} tabIndex={-1}>
           <MaintenanceBanner />
+          <ReverifyDialog />
           <Outlet />
         </main>
       </div>
