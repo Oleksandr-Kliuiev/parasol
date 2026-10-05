@@ -187,12 +187,10 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
                 where run.PeriodStart >= first && run.PeriodStart <= last &&
                       basis.Status != BillingBasisStatus.Cancelled && line.Group == BillingGroup.License && line.Decision != BillingLineDecision.Exclusion
                 select new { basis.OrganizationId, line.ProductId, line.Quantity, line.LineTotal })
-            .ToListAsync(cancellationToken);
-
-        return rows
             .GroupBy(r => new { r.OrganizationId, r.ProductId })
             .Select(g => new BilledLicenseLine(g.Key.OrganizationId, g.Key.ProductId, g.Sum(r => r.Quantity), g.Sum(r => r.LineTotal)))
-            .ToList();
+            .ToListAsync(cancellationToken);
+        return rows;
     }
 
     public async Task<IReadOnlyList<RevenueByOrganization>> GetRevenueByOrganizationAsync(
@@ -206,6 +204,8 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
                       basis.Status != BillingBasisStatus.Cancelled && (!approvedOnly || basis.Status != BillingBasisStatus.Draft) &&
                       line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
                 select new { basis.OrganizationId, line.Group, line.LineTotal })
+            .GroupBy(r => new { r.OrganizationId, r.Group })
+            .Select(g => new { g.Key.OrganizationId, g.Key.Group, LineTotal = g.Sum(r => r.LineTotal) })
             .ToListAsync(cancellationToken);
 
         return rows
@@ -213,14 +213,12 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
             .Select(g => new RevenueByOrganization(
                 g.Key,
                 decimal.Round(g.Sum(r => r.LineTotal), 2),
-                Sum(g, BillingGroup.License),
-                Sum(g, BillingGroup.Subscription),
-                Sum(g, BillingGroup.HourlyWork) + Sum(g, BillingGroup.HourBank),
-                Sum(g, BillingGroup.OneOff)))
+                decimal.Round(g.Where(r => r.Group == BillingGroup.License).Sum(r => r.LineTotal), 2),
+                decimal.Round(g.Where(r => r.Group == BillingGroup.Subscription).Sum(r => r.LineTotal), 2),
+                decimal.Round(g.Where(r => r.Group == BillingGroup.HourlyWork).Sum(r => r.LineTotal), 2) +
+                    decimal.Round(g.Where(r => r.Group == BillingGroup.HourBank).Sum(r => r.LineTotal), 2),
+                decimal.Round(g.Where(r => r.Group == BillingGroup.OneOff).Sum(r => r.LineTotal), 2)))
             .ToList();
-
-        static decimal Sum(IEnumerable<dynamic> lines, BillingGroup group) =>
-            decimal.Round(lines.Where(l => (BillingGroup)l.Group == group).Sum(l => (decimal)l.LineTotal), 2);
 
     }
 
@@ -234,6 +232,8 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
                 where run.PeriodStart >= firstPeriod && run.PeriodStart <= lastPeriod &&
                       basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
                 select new { run.PeriodStart.Year, run.PeriodStart.Month, line.ProductId, line.LineTotal })
+            .GroupBy(r => new { r.Year, r.Month, r.ProductId })
+            .Select(g => new { g.Key.Year, g.Key.Month, g.Key.ProductId, LineTotal = g.Sum(r => r.LineTotal) })
             .ToListAsync(cancellationToken);
 
         return rows
@@ -259,6 +259,8 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
                 where run.PeriodStart >= periodFrom && run.PeriodStart <= periodTo &&
                       basis.Status != BillingBasisStatus.Cancelled && line.Group != BillingGroup.Info && line.Decision != BillingLineDecision.Exclusion
                 select new { run.PeriodStart.Year, run.PeriodStart.Month, Approved = basis.Status != BillingBasisStatus.Draft, line.LineTotal })
+            .GroupBy(r => new { r.Year, r.Month, r.Approved })
+            .Select(g => new { g.Key.Year, g.Key.Month, g.Key.Approved, LineTotal = g.Sum(r => r.LineTotal) })
             .ToListAsync(cancellationToken);
 
         return rows
@@ -285,16 +287,18 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
 
     public async Task<InvoiceTotals> GetInvoiceTotalsAsync(DateOnly today, CancellationToken cancellationToken)
     {
-        var open = await db.Invoices.AsNoTracking()
+        var totals = await db.Invoices.AsNoTracking()
             .Where(i => i.Outstanding > 0 && i.Status != InvoiceStatus.Credited)
-            .Select(i => new { i.Outstanding, i.DueDate })
-            .ToListAsync(cancellationToken);
-        var overdue = open.Where(i => i.DueDate != null && i.DueDate < today).ToList();
-        return new InvoiceTotals(
-            open.Count,
-            decimal.Round(open.Sum(i => i.Outstanding), 2),
-            decimal.Round(overdue.Sum(i => i.Outstanding), 2),
-            overdue.Count);
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Outstanding = g.Sum(i => i.Outstanding),
+                Overdue = g.Sum(i => i.DueDate != null && i.DueDate < today ? i.Outstanding : 0m),
+                OverdueCount = g.Count(i => i.DueDate != null && i.DueDate < today),
+            }).SingleOrDefaultAsync(cancellationToken);
+        return totals is null ? new InvoiceTotals(0, 0m, 0m, 0) : new InvoiceTotals(
+            totals.Count, decimal.Round(totals.Outstanding, 2), decimal.Round(totals.Overdue, 2), totals.OverdueCount);
     }
 
     /// <summary>Every overdue invoice (DEV-12): the daily scan notices all of them, not the oldest few hundred.</summary>

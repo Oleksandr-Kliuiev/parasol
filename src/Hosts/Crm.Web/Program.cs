@@ -229,6 +229,7 @@ app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
+app.MapMonitoringEndpoints();
 app.MapRecordScopeEndpoints();
 app.MapOperationsEndpoints();
 app.MapHealthDetails();

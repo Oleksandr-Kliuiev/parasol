@@ -65,6 +65,22 @@ param biAllowedClients array = []
 @description('Read-only maintenance by configuration (DEV-13, runbook 03): for an outage of the document store that holds the operator switch. Only a new deployment without it lifts it.')
 param maintenanceForceReadOnly bool = false
 
+@description('DEV-17 / EXT-01: notification delivery stays off until recipients and accountable owners are confirmed in test.')
+param monitoringNotificationsEnabled bool = false
+param monitoringOperationsOwner string = ''
+param monitoringFinanceOwner string = ''
+param monitoringOperationsEmails array = []
+param monitoringFinanceEmails array = []
+param monitoringRunbookUrl string = ''
+@description('Optional alert thresholds; defaults and units are in modules/monitoring-operations.bicep.')
+param monitoringThresholds object = {}
+@description('Successful synchronization freshness in minutes by job id: Atera open/recent tickets 15, PowerOffice invoices 90.')
+param monitoringFreshness object = {
+  'atera-tickets': 15
+  'atera-tickets-recent': 15
+  'poweroffice-invoices': 90
+}
+
 param tags object = {
   application: 'vardahei-crm'
   environment: environmentName
@@ -86,6 +102,14 @@ module monitoring 'modules/monitoring.bicep' = {
     location: location
     name: 'crm-${suffix}'
     tags: tags
+    alertsEnabled: !bootstrapImages
+    notificationsEnabled: monitoringNotificationsEnabled
+    operationsOwner: monitoringOperationsOwner
+    financeOwner: monitoringFinanceOwner
+    operationsEmails: monitoringOperationsEmails
+    financeEmails: monitoringFinanceEmails
+    runbookUrl: monitoringRunbookUrl
+    thresholdOverrides: monitoringThresholds
   }
 }
 
@@ -175,6 +199,7 @@ module apps 'modules/apps.bicep' = {
     biEnabled: biEnabled
     biAudience: biAudience
     biAllowedClients: biAllowedClients
+    monitoringFreshness: monitoringFreshness
   }
 }
 
@@ -191,3 +216,5 @@ output webAppName string = apps.outputs.webAppName
 output workerAppName string = apps.outputs.workerAppName
 output storageAccountName string = data.outputs.storageAccountName
 output documentsContainerUri string = data.outputs.documentsContainerUri
+output monitoringWorkbookId string = monitoring.outputs.workbookId
+output monitoringNotificationReadiness object = monitoring.outputs.notificationReadiness

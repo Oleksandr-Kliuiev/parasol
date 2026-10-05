@@ -15,6 +15,18 @@ public sealed class SyncProgress
     public string? Message { get; set; }
 }
 
+/// <summary>
+/// Safe failure at the scheduler boundary. Hangfire and telemetry may serialize the whole exception: provider responses,
+/// inner exceptions and exception Data must never cross this boundary, even when the application's own log is sanitized.
+/// </summary>
+public sealed class SyncFailedException(string system, string job, string errorType)
+    : Exception($"Synchronization {system}/{job} failed ({errorType}).")
+{
+    public string IntegrationSystem { get; } = system;
+    public string Job { get; } = job;
+    public string ErrorType { get; } = errorType;
+}
+
 /// <summary>Records every synchronization run with its outcome, and stores incremental cursors.</summary>
 public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvider, ILogger<SyncRunner> logger, IPrivacyReplayGate? privacy = null)
 {
@@ -54,7 +66,7 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
                 await db.SaveChangesAsync(cancellationToken);
             }
 
-            logger.LogInformation("Synchronization {System}/{Job} skipped: {Reason}.", system, job, pause);
+            logger.LogInformation("Synchronization {System}/{Job} skipped: paused.", system, job);
             return skipped;
         }
 
@@ -79,12 +91,18 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
             await work(progress, cancellationToken);
             run.Status = SyncRunStatus.Succeeded;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogError(ex, "Synchronization {System}/{Job} failed", system, job);
+            logger.LogError("Synchronization {System}/{Job} failed ({ErrorType})", system, job, ex.GetType().Name);
             run.Status = SyncRunStatus.Failed;
-            progress.Message = Truncate(ex.GetBaseException().Message);
-            throw;
+            progress.Message = $"Synchronization failed ({ex.GetType().Name}).";
+            throw new SyncFailedException(system, job, ex.GetType().Name);
+        }
+        catch (OperationCanceledException)
+        {
+            // Preserve cancellation semantics without propagating a provider's message or inner exception.
+            progress.Message = "Cancelled";
+            throw new OperationCanceledException("Synchronization cancelled.", cancellationToken);
         }
         finally
         {
@@ -109,6 +127,21 @@ public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvide
 
                 await db.SaveChangesAsync(CancellationToken.None);
             }
+        }
+
+        if (run.Status == SyncRunStatus.Succeeded && run.Failed == 0)
+        {
+            // HOLDLOCK serializes the absent-row case; completion only moves forward when two runs finish out of order.
+            var completed = run.FinishedAt!.Value;
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                MERGE [integration].[SyncSuccesses] WITH (HOLDLOCK) AS target
+                USING (SELECT {system} AS [System], {job} AS [Job], {completed} AS [SucceededAt]) AS source
+                ON target.[System] = source.[System] AND target.[Job] = source.[Job]
+                WHEN MATCHED AND target.[SucceededAt] < source.[SucceededAt] THEN
+                    UPDATE SET [SucceededAt] = source.[SucceededAt]
+                WHEN NOT MATCHED THEN INSERT ([System], [Job], [SucceededAt])
+                    VALUES (source.[System], source.[Job], source.[SucceededAt]);
+                """, CancellationToken.None);
         }
 
         return run;

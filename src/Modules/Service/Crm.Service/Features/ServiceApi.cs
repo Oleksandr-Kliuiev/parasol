@@ -113,8 +113,9 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     {
         var tickets = await db.Tickets.AsNoTracking()
             .Where(t => t.IsOpen)
-            .Select(t => new { t.TechnicianUserId })
-            .ToListAsync(cancellationToken);
+            .GroupBy(t => 1)
+            .Select(g => new { Open = g.Count(), Unassigned = g.Count(t => t.TechnicianUserId == null) })
+            .SingleOrDefaultAsync(cancellationToken);
         var alerts = await db.Alerts.AsNoTracking()
             .GroupBy(a => a.Severity)
             .Select(g => new { g.Key, Count = g.Count() })
@@ -126,8 +127,8 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             .ToListAsync(cancellationToken);
 
         return new ServiceLoad(
-            tickets.Count,
-            tickets.Count(t => t.TechnicianUserId is null),
+            tickets?.Open ?? 0,
+            tickets?.Unassigned ?? 0,
             alerts.FirstOrDefault(a => a.Key == AlertSeverity.Critical)?.Count ?? 0,
             alerts.FirstOrDefault(a => a.Key == AlertSeverity.Warning)?.Count ?? 0,
             devices.Sum(d => d.Count),
@@ -150,6 +151,47 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             .Where(d => d.OrganizationId == organizationId && d.RemovedAt == null)
             .GroupBy(d => d.Type)
             .ToDictionaryAsync(g => g.Key, g => g.Count(), cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, IReadOnlyDictionary<DeviceType, int>>> GetDeviceCountsAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken)
+    {
+        if (organizationIds.Count == 0)
+        {
+            return new Dictionary<Guid, IReadOnlyDictionary<DeviceType, int>>();
+        }
+
+        var latest = db.DeviceCountSnapshots.AsNoTracking()
+            .Where(s => organizationIds.Contains(s.OrganizationId) && s.Date <= date)
+            .GroupBy(s => s.OrganizationId)
+            .Select(g => new { OrganizationId = g.Key, Date = g.Max(s => s.Date) });
+        var snapshots = await (
+                from snapshot in db.DeviceCountSnapshots.AsNoTracking()
+                join day in latest on new { snapshot.OrganizationId, snapshot.Date } equals new { day.OrganizationId, day.Date }
+                select new { snapshot.OrganizationId, snapshot.Type, snapshot.Count })
+            .ToListAsync(cancellationToken);
+        var result = snapshots.GroupBy(s => s.OrganizationId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyDictionary<DeviceType, int>)g.ToDictionary(s => s.Type, s => s.Count));
+        var withoutSnapshot = organizationIds.Where(id => !result.ContainsKey(id)).Distinct().ToList();
+        if (withoutSnapshot.Count > 0)
+        {
+            var live = await db.Devices.AsNoTracking()
+                .Where(d => withoutSnapshot.Contains(d.OrganizationId) && d.RemovedAt == null)
+                .GroupBy(d => new { d.OrganizationId, d.Type })
+                .Select(g => new { g.Key.OrganizationId, g.Key.Type, Count = g.Count() })
+                .ToListAsync(cancellationToken);
+            foreach (var group in live.GroupBy(d => d.OrganizationId))
+            {
+                result[group.Key] = group.ToDictionary(d => d.Type, d => d.Count);
+            }
+
+            foreach (var id in withoutSnapshot)
+            {
+                result.TryAdd(id, new Dictionary<DeviceType, int>());
+            }
+        }
+
+        return result;
     }
 
     public async Task<IReadOnlyList<TicketRef>> GetActiveTicketsAsync(string system, DateTimeOffset since, CancellationToken cancellationToken) =>

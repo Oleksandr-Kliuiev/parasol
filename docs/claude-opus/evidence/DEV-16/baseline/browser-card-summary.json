@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "kind": "crm-browser-card",
+  "createdAt": "2026-10-04T21:35:49.469Z",
+  "datasetId": "dev16-37cba9904feb9ca0fa8bd4d01fd789e0",
+  "datasetChecksum": "sha256:7d32b44cd737ec67f3fcca42d9e6cc72b235a7ba2643b079d347c58f932caf85",
+  "datasetProfile": "full",
+  "counts": {
+    "organizations": 5000,
+    "contacts": 50000,
+    "tickets": 1000000,
+    "timeEntries": 1000000,
+    "auditEntries": 10000000
+  },
+  "seed": 1616,
+  "browser": {
+    "engine": "Chromium",
+    "version": "153.0.8010.12",
+    "playwrightVersion": "1.63.0"
+  },
+  "host": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "logicalCpus": 10,
+    "memoryBytes": 17179869184
+  },
+  "profile": {
+    "name": "Chromium desktop, cold browser cache, simulated constrained workstation",
+    "viewport": {
+      "width": 1365,
+      "height": 900
+    },
+    "deviceScaleFactor": 1,
+    "locale": "en-GB",
+    "timezoneId": "Europe/Oslo",
+    "colorScheme": "light",
+    "headless": true,
+    "cpuSlowdown": 4,
+    "network": {
+      "latencyMs": 40,
+      "downloadBytesPerSecond": 1310720,
+      "uploadBytesPerSecond": 131072
+    },
+    "cache": "A new browser context for each card; cache disabled. Authentication completed through the request context before measurement.",
+    "timeoutMs": 30000,
+    "settleMs": 2000,
+    "warmupSamples": 1,
+    "measuredSamples": 10
+  },
+  "provider": {
+    "mode": "simulated",
+    "baseUrl": "http://localhost:5302",
+    "latencyMs": 150,
+    "jitterMs": 100,
+    "failureEvery": 0,
+    "requestsPerSecond": 10
+  },
+  "auth": {
+    "mode": "Development",
+    "role": "Crm.Sales",
+    "externalSignInMeasured": false
+  },
+  "definitions": {
+    "firstUsefulContent": "First animation frame after the seeded organization name is visibly rendered as main h1 and at least one visible overview detail value (main section dl dd) is present. The time is relative to navigation start.",
+    "lcp": "Latest real largest-contentful-paint entry observed until page load and the stated settling window, before any input/scroll. Navigation, HTTP, missing-content and missing-LCP failures remain in samples.",
+    "source": "https://www.w3.org/TR/largest-contentful-paint/",
+    "thresholds": {
+      "firstUsefulMs": 2000,
+      "lcpMs": 2500,
+      "interpretation": "Every measured card sample must meet both limits and have no request/render errors."
+    },
+    "limits": "Synthetic Chromium lab profile only. CPU throttling is relative to the recorded host, not a substitute for the client devices and agreed deployment in EXT-05."
+  },
+  "warmup": [
+    {
+      "index": 0,
+      "organizationId": "16160001-0000-0000-0000-000000001617",
+      "cache": "cold",
+      "firstUsefulMs": 2084.800000190735,
+      "lcpMs": 2088,
+      "elapsedMs": 4088.800000190735,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    }
+  ],
+  "samples": [
+    {
+      "index": 0,
+      "organizationId": "16160001-0000-0000-0000-000000001617",
+      "cache": "cold",
+      "firstUsefulMs": 1715.5,
+      "lcpMs": 1716,
+      "elapsedMs": 3717.7000000476837,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 1,
+      "organizationId": "16160001-0000-0000-0000-000000001618",
+      "cache": "cold",
+      "firstUsefulMs": 1726.2999999523163,
+      "lcpMs": 1728,
+      "elapsedMs": 3729.5,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 2,
+      "organizationId": "16160001-0000-0000-0000-000000001619",
+      "cache": "cold",
+      "firstUsefulMs": 1771.7000000476837,
+      "lcpMs": 1776,
+      "elapsedMs": 3774.5,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 3,
+      "organizationId": "16160001-0000-0000-0000-000000001620",
+      "cache": "cold",
+      "firstUsefulMs": 1746,
+      "lcpMs": 1752,
+      "elapsedMs": 3749.2999999523163,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 4,
+      "organizationId": "16160001-0000-0000-0000-000000001621",
+      "cache": "cold",
+      "firstUsefulMs": 1757.1000001430511,
+      "lcpMs": 1760,
+      "elapsedMs": 3759.7999999523163,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 5,
+      "organizationId": "16160001-0000-0000-0000-000000001622",
+      "cache": "cold",
+      "firstUsefulMs": 1747.6000001430511,
+      "lcpMs": 1748,
+      "elapsedMs": 3749.600000143051,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 6,
+      "organizationId": "16160001-0000-0000-0000-000000001623",
+      "cache": "cold",
+      "firstUsefulMs": 1827.3999998569489,
+      "lcpMs": 1828,
+      "elapsedMs": 3830.2000000476837,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 7,
+      "organizationId": "16160001-0000-0000-0000-000000001624",
+      "cache": "cold",
+      "firstUsefulMs": 1750,
+      "lcpMs": 1756,
+      "elapsedMs": 3753.2000000476837,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 8,
+      "organizationId": "16160001-0000-0000-0000-000000001625",
+      "cache": "cold",
+      "firstUsefulMs": 1811.8000001907349,
+      "lcpMs": 1816,
+      "elapsedMs": 3815.100000143051,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    },
+    {
+      "index": 9,
+      "organizationId": "16160001-0000-0000-0000-000000001626",
+      "cache": "cold",
+      "firstUsefulMs": 1747,
+      "lcpMs": 1748,
+      "elapsedMs": 3748.300000190735,
+      "httpErrors": [],
+      "requestFailures": [],
+      "errors": []
+    }
+  ],
+  "screenshot": "/tmp/dev16-full/browser-card-profile.png",
+  "summary": {
+    "firstUsefulMs": {
+      "samples": 10,
+      "p50": 1747.6000001430511,
+      "p95": 1827.3999998569489,
+      "p99": 1827.3999998569489,
+      "max": 1827.3999998569489
+    },
+    "lcpMs": {
+      "samples": 10,
+      "p50": 1752,
+      "p95": 1828,
+      "p99": 1828,
+      "max": 1828
+    },
+    "failedSamples": 0,
+    "passed": true
+  },
+  "complete": true
+}

@@ -538,7 +538,7 @@
       "external_gates": [
         "EXT-05"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-16.md",
       "evidence_file": "evidence/DEV-16.md",
       "acceptance_ids": [
@@ -571,7 +571,7 @@
       "external_gates": [
         "EXT-01"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-17.md",
       "evidence_file": "evidence/DEV-17.md",
       "acceptance_ids": [

@@ -10,8 +10,8 @@ import { useDebouncedValue } from '../shared/utils/useDebouncedValue';
 import { NARROW_SCREEN, useMediaQuery } from '../shared/utils/useMediaQuery';
 
 const useStyles = makeStyles({
-  root: { position: 'relative', flex: 1, maxWidth: '480px' },
-  box: { width: '100%', maxWidth: 'none' },
+  root: { position: 'relative', flex: 1, minWidth: 0, maxWidth: '480px' },
+  box: { width: '100%', minWidth: 0, maxWidth: 'none' },
   panel: {
     position: 'absolute',
     top: 'calc(100% + 4px)',

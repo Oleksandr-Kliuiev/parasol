@@ -1,0 +1,25 @@
+DEV-16 verification commands. Working directory: repository root unless stated otherwise.
+Date:2026-10-04/05 UTC. Local SDK: PATH="$HOME/.dotnet:$PATH" DOTNET_ROOT="$HOME/.dotnet".
+No production services, provider accounts or Entra load were used.
+
+dotnet build Vardahei.Crm.slnx --no-restore -c Release --disable-build-servers -m:1
+dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj --no-build -c Release
+dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --no-build -c Release --coverage --coverage-output-format cobertura --coverage-output /tmp/dev16-unit.cobertura.xml
+dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --no-build -c Release --coverage --coverage-output-format cobertura --coverage-output /tmp/dev16-integration.cobertura.xml
+python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker /tmp/dev16-unit.cobertura.xml /tmp/dev16-integration.cobertura.xml
+node --experimental-vm-modules --test tools/load-test/*.test.mjs
+python3 -m unittest discover -s tools/load-test -p 'test_*.py'
+actionlint .github/workflows/ci.yml
+tools/release/rollback-compat.sh 9745703 --project=desktop --grep '@critical' --workers=1
+
+Performance executables were installed only under /private/tmp. Full environments used SQL port14348/Web5184/Worker5194/mock5302.
+See tools/load-test/README.md for init/provision/serve/capture/cleanup.
+
+K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_EXPORT=/private/tmp/dev16-full/workday.html k6 run --address localhost:6566 -e DATASET_MANIFEST=/private/tmp/dev16-full/dataset.json -e ALLOW_LOCAL_TLS=1 -e VUS=50 -e WARMUP=30s -e DURATION=2m -e SUMMARY_PATH=/private/tmp/dev16-full/workday.json --out json=/private/tmp/dev16-full/workday-samples.jsonl tools/load-test/workday.js
+k6 run --address localhost:6567 --log-format=json --console-output=/private/tmp/dev16-full/billing-protocol.jsonl -e DATASET_MANIFEST=/private/tmp/dev16-full/dataset.json -e ALLOW_LOCAL_TLS=1 -e SUMMARY_PATH=/private/tmp/dev16-full/billing.json tools/load-test/billing.js
+ALLOW_LOCAL_TLS=1 node tools/load-test/browser-card.mjs --manifest /private/tmp/dev16-full/dataset.json --output /private/tmp/dev16-full/browser-card-summary.json --samples 10 --warmup 1
+python3 tools/load-test/capture.py --directory /private/tmp/dev16-full --output /private/tmp/dev16-full/resources --seconds 420
+dotnet-counters collect --process-id <owned-Web-or-Worker-PID> --counters System.Runtime --format json --refresh-interval 1 --duration 00:07:00 --output <own-host-runtime.json>
+
+Native k6 boundary proof is archived beside its expected-failure (exit99) and success (exit0) logs.
+All workload errors, SLO failures and raw samples were retained. The initial full run failed SLO, the after-index and final guarded runs passed. Repeated billing used a new approved period without deleting prior financial records.

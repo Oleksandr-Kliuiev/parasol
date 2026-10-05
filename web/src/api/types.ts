@@ -305,7 +305,7 @@ export interface SyncRun {
   job: string;
   startedAt: string;
   finishedAt: string | null;
-  status: 'Running' | 'Succeeded' | 'Failed';
+  status: 'Running' | 'Succeeded' | 'Failed' | 'Skipped';
   read: number;
   changed: number;
   failed: number;
@@ -428,6 +428,7 @@ export type OutboundStatus = 'Pending' | 'Succeeded' | 'Failed' | 'DeadLetter' |
 
 export interface OutboundOperation {
   id: string;
+  etag: string;
   system: string;
   operation: string;
   entityType: string;

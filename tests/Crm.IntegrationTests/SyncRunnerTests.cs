@@ -30,7 +30,7 @@ public sealed class SyncRunnerTests(CrmWebFactory factory)
         time.Advance(TimeSpan.FromMinutes(2));
         await RunAsync(time, changed: 3);
         time.Advance(TimeSpan.FromMinutes(2));
-        await Should.ThrowAsync<InvalidOperationException>(() => RunAsync(time, changed: 0, fail: true));
+        await Should.ThrowAsync<SyncFailedException>(() => RunAsync(time, changed: 0, fail: true));
         (await RunsAsync()).ShouldBe([(SyncRunStatus.Succeeded, 0), (SyncRunStatus.Succeeded, 3), (SyncRunStatus.Failed, 0)]);
 
         time.Advance(TimeSpan.FromMinutes(30));
@@ -68,6 +68,53 @@ public sealed class SyncRunnerTests(CrmWebFactory factory)
         await RunAsync(time, changed: 0, quiet: false);
         await RunAsync(time, changed: 0, quiet: false);
         (await RunsAsync()).Count.ShouldBe(4);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Provider_failure_does_not_reach_scheduler_exception_storage_or_logs(bool timeout)
+    {
+        const string secret = "947321.87 NOK private customer";
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
+        var logger = new CapturingLogger<SyncRunner>();
+        var runner = new SyncRunner(db, TimeProvider.System, logger);
+        Exception providerError = timeout ? new OperationCanceledException(secret, new InvalidOperationException(secret)) :
+            new InvalidOperationException(secret, new HttpRequestException(secret));
+        providerError.Data["responseBody"] = secret;
+        var escaped = await Should.ThrowAsync<SyncFailedException>(() => runner.RunAsync(_system, "sensitive-failure", (_, _) =>
+            throw providerError, Ct));
+        escaped.IntegrationSystem.ShouldBe(_system);
+        escaped.Job.ShouldBe("sensitive-failure");
+        escaped.ErrorType.ShouldBe(providerError.GetType().Name);
+        escaped.InnerException.ShouldBeNull();
+        escaped.Data.Count.ShouldBe(0);
+        escaped.ToString().ShouldNotContain(secret);
+        logger.Lines.ShouldAllBe(line => !line.Contains(secret, StringComparison.Ordinal));
+        var recorded = await db.SyncRuns.AsNoTracking().SingleAsync(r => r.System == _system && r.Job == "sensitive-failure", Ct);
+        recorded.Status.ShouldBe(SyncRunStatus.Failed);
+        recorded.Message!.ShouldNotContain(secret);
+        (await db.SyncSuccesses.AnyAsync(r => r.System == _system && r.Job == "sensitive-failure", Ct)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Requested_cancellation_keeps_its_token_without_provider_details()
+    {
+        const string secret = "947321.87 NOK private customer";
+        using var cancelled = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
+        var runner = new SyncRunner(db, TimeProvider.System, NullLogger<SyncRunner>.Instance);
+        var escaped = await Should.ThrowAsync<OperationCanceledException>(() => runner.RunAsync(_system, "cancelled", (_, _) =>
+        {
+            cancelled.Cancel();
+            throw new OperationCanceledException(secret, new InvalidOperationException(secret), cancelled.Token);
+        }, cancelled.Token));
+        escaped.CancellationToken.ShouldBe(cancelled.Token);
+        escaped.InnerException.ShouldBeNull();
+        escaped.ToString().ShouldNotContain(secret);
+        (await db.SyncRuns.AsNoTracking().SingleAsync(r => r.System == _system && r.Job == "cancelled", Ct)).Status.ShouldBe(SyncRunStatus.Failed);
     }
 
     private async Task RunAsync(ManualTimeProvider time, int changed, bool fail = false, bool quiet = true)

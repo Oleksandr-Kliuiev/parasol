@@ -6,6 +6,7 @@ using System.Text.Json;
 using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Crm.Integrations.MicrosoftGraph;
+using Crm.Integrations.Core;
 using Crm.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -174,7 +175,7 @@ public sealed class SessionLifecycleTests(CrmWebFactory factory) : IDisposable
         // Graph refuses (no permission granted, an outage): nothing is confirmed, the confirmation ages.
         factory.Graph.Given(Request.Create().WithPath($"/graph/v1.0/servicePrincipals").WithParam("$filter", $"appId eq '{AppId}'").UsingGet())
             .WithGuid(GraphMapping(0)).RespondWith(Response.Create().WithStatusCode(403));
-        await Should.ThrowAsync<HttpRequestException>(() => RunRoleSyncAsync(host));
+        await Should.ThrowAsync<SyncFailedException>(() => RunRoleSyncAsync(host));
         host.Time.Advance(TimeSpan.FromMinutes(2));
         var stale = await ApproveAsync(finance);
         stale.StatusCode.ShouldBe(HttpStatusCode.Forbidden);

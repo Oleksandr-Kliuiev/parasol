@@ -102,7 +102,8 @@ internal sealed class DashboardService(
 
         var productIds = revenue.SelectMany(r => r.ByProduct.Keys).Distinct().ToList();
         var products = await catalog.GetProductsAsync(productIds, ct);
-        var organizations = await customers.GetOrganizationNamesAsync(renewals.Select(r => r.OrganizationId).Distinct().ToList(), ct);
+        // The total covers every renewal, but only the visible panel needs customer names (DEV-16).
+        var organizations = await customers.GetOrganizationNamesAsync(renewals.Take(RenewalsShown).Select(r => r.OrganizationId).Distinct().ToList(), ct);
 
         return new DashboardResponse(
             today,

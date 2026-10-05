@@ -127,16 +127,24 @@ internal sealed class TimeImportService(TimeTrackingDbContext db, TimeApprovalSe
     {
         var rows = await db.TimeEntries.AsNoTracking()
             .Where(e => e.WorkDate >= periodStart && e.WorkDate <= periodEnd && e.Status != TimeEntryStatus.New)
-            .Select(e => new { e.OrganizationId, e.Hours, e.Amount, Billed = e.Allocations.Sum(a => a.BilledHours) })
+            .GroupBy(e => e.OrganizationId)
+            .Select(g => new { OrganizationId = g.Key, Hours = g.Sum(e => e.Hours), Amount = g.Sum(e => e.Amount ?? 0m) })
             .ToListAsync(cancellationToken);
+        // Aggregate the allocations separately so joining them cannot multiply an entry's hours or amount.
+        var billed = await (
+                from allocation in db.TimeAllocations.AsNoTracking()
+                join entry in db.TimeEntries.AsNoTracking() on allocation.TimeEntryId equals entry.Id
+                where entry.WorkDate >= periodStart && entry.WorkDate <= periodEnd && entry.Status != TimeEntryStatus.New
+                group allocation by entry.OrganizationId into totals
+                select new { OrganizationId = totals.Key, Hours = totals.Sum(a => a.BilledHours) })
+            .ToDictionaryAsync(g => g.OrganizationId, g => g.Hours, cancellationToken);
 
         return rows
-            .GroupBy(r => r.OrganizationId)
-            .Select(g => new HoursByOrganization(
-                g.Key,
-                decimal.Round(g.Sum(r => r.Hours), 2),
-                decimal.Round(g.Sum(r => r.Billed), 2),
-                decimal.Round(g.Sum(r => r.Amount ?? 0m), 2)))
+            .Select(r => new HoursByOrganization(
+                r.OrganizationId,
+                decimal.Round(r.Hours, 2),
+                decimal.Round(billed.GetValueOrDefault(r.OrganizationId), 2),
+                decimal.Round(r.Amount, 2)))
             .ToList();
     }
 
@@ -149,16 +157,16 @@ internal sealed class TimeImportService(TimeTrackingDbContext db, TimeApprovalSe
 
         var rows = await db.TimeEntries.AsNoTracking()
             .Where(e => e.ProjectId != null && projectIds.Contains(e.ProjectId!.Value))
-            .Select(e => new { ProjectId = e.ProjectId!.Value, e.Hours, e.Billable, e.Amount })
+            .GroupBy(e => e.ProjectId!.Value)
+            .Select(g => new { ProjectId = g.Key, Hours = g.Sum(e => e.Hours), BillableHours = g.Sum(e => e.Billable ? e.Hours : 0m), Amount = g.Sum(e => e.Amount ?? 0m) })
             .ToListAsync(cancellationToken);
 
         return rows
-            .GroupBy(r => r.ProjectId)
-            .Select(g => new ProjectHours(
-                g.Key,
-                decimal.Round(g.Sum(r => r.Hours), 2),
-                decimal.Round(g.Where(r => r.Billable).Sum(r => r.Hours), 2),
-                decimal.Round(g.Sum(r => r.Amount ?? 0m), 2)))
+            .Select(r => new ProjectHours(
+                r.ProjectId,
+                decimal.Round(r.Hours, 2),
+                decimal.Round(r.BillableHours, 2),
+                decimal.Round(r.Amount, 2)))
             .ToList();
     }
 
@@ -166,34 +174,41 @@ internal sealed class TimeImportService(TimeTrackingDbContext db, TimeApprovalSe
     {
         var monthStart = new DateOnly(year, month, 1);
         var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-        var entries = await db.TimeEntries.AsNoTracking()
-            .Where(e => e.WorkDate >= monthStart && e.WorkDate <= monthEnd)
-            .Select(e => new { e.Id, e.TechnicianId, e.TechnicianName, e.Hours, e.Status })
+        var unapproved = await db.TimeEntries.AsNoTracking()
+            .Where(e => e.WorkDate >= monthStart && e.WorkDate <= monthEnd && e.Status == TimeEntryStatus.New)
+            // Match the old ordinal in-memory name grouping, including case and trailing spaces.
+            .GroupBy(e => new { e.TechnicianId, Name = EF.Functions.Collate(e.TechnicianName ?? "—", "Latin1_General_100_BIN2"), NameLength = EF.Functions.DataLength(e.TechnicianName ?? "—") })
+            .Select(g => new { g.Key.TechnicianId, g.Key.Name, Hours = g.Sum(e => e.Hours) })
             .ToListAsync(cancellationToken);
         var allocations = await (
                 from allocation in db.TimeAllocations.AsNoTracking()
                 join entry in db.TimeEntries.AsNoTracking() on allocation.TimeEntryId equals entry.Id
                 where entry.WorkDate >= monthStart && entry.WorkDate <= monthEnd
-                select new { entry.TechnicianId, entry.TechnicianName, allocation.Classification, allocation.Hours, allocation.BilledHours })
+                group allocation by new { entry.TechnicianId, Name = EF.Functions.Collate(entry.TechnicianName ?? "—", "Latin1_General_100_BIN2"), NameLength = EF.Functions.DataLength(entry.TechnicianName ?? "—") } into totals
+                select new
+                {
+                    totals.Key.TechnicianId,
+                    totals.Key.Name,
+                    Billed = totals.Sum(a => a.Classification == TimeClassification.Rate ? a.BilledHours : 0m),
+                    Covered = totals.Sum(a => a.Classification == TimeClassification.Covered ? a.Hours : 0m),
+                    Bank = totals.Sum(a => a.Classification == TimeClassification.HourBank ? a.Hours : 0m),
+                    NonBillable = totals.Sum(a => a.Classification == TimeClassification.NonBillable ? a.Hours : 0m),
+                })
             .ToListAsync(cancellationToken);
 
         // Entries still waiting for approval have no allocations yet; their hours count as not yet billable.
-        var unapproved = entries.Where(e => e.Status is TimeEntryStatus.New).ToList();
-
-        var keys = allocations.Select(a => (a.TechnicianId, Name: a.TechnicianName ?? "—"))
-            .Concat(unapproved.Select(e => (e.TechnicianId, Name: e.TechnicianName ?? "—")))
-            .Distinct()
-            .ToList();
+        var approvedByTechnician = allocations.ToDictionary(a => (a.TechnicianId, a.Name));
+        var pendingByTechnician = unapproved.ToDictionary(e => (e.TechnicianId, e.Name), e => e.Hours);
+        var keys = approvedByTechnician.Keys.Concat(pendingByTechnician.Keys).Distinct();
 
         return keys
             .Select(key =>
             {
-                var mine = allocations.Where(a => a.TechnicianId == key.TechnicianId && (a.TechnicianName ?? "—") == key.Name).ToList();
-                var pending = unapproved.Where(e => e.TechnicianId == key.TechnicianId && (e.TechnicianName ?? "—") == key.Name).Sum(e => e.Hours);
-                var billed = mine.Where(a => a.Classification == TimeClassification.Rate).Sum(a => a.BilledHours);
-                var covered = mine.Where(a => a.Classification == TimeClassification.Covered).Sum(a => a.Hours);
-                var bank = mine.Where(a => a.Classification == TimeClassification.HourBank).Sum(a => a.Hours);
-                var nonBillable = mine.Where(a => a.Classification == TimeClassification.NonBillable).Sum(a => a.Hours) + pending;
+                var mine = approvedByTechnician.GetValueOrDefault(key);
+                var billed = mine?.Billed ?? 0m;
+                var covered = mine?.Covered ?? 0m;
+                var bank = mine?.Bank ?? 0m;
+                var nonBillable = (mine?.NonBillable ?? 0m) + pendingByTechnician.GetValueOrDefault(key);
                 return new TechnicianUtilization(
                     key.TechnicianId,
                     key.Name,

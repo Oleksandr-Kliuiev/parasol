@@ -106,6 +106,14 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
             .Where(o => organizationIds.Contains(o.Id))
             .ToDictionaryAsync(o => o.Id, o => o.Name, cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, Guid?>> GetAccountManagerIdsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken)
+    {
+        if (organizationIds.Count == 0) return new Dictionary<Guid, Guid?>();
+        return await db.Organizations.AsNoTracking()
+            .Where(o => organizationIds.Contains(o.Id))
+            .ToDictionaryAsync(o => o.Id, o => o.AccountManagerId, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<OrganizationRef>> GetAllOrganizationsAsync(CancellationToken cancellationToken) =>
         await db.Organizations.AsNoTracking()
             .OrderBy(o => o.Name)

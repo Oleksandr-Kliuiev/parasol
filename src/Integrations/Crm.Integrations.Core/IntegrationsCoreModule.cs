@@ -18,6 +18,8 @@ public static class IntegrationsCoreModule
     {
         services.AddModuleDbContext<IntegrationDbContext>(configuration);
         services.AddScoped<SyncRunner>();
+        services.AddScoped<IntegrationMonitoringReader>();
+        services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, ExceptionTriageRetention>();
         services.AddScoped<ExternalRecordStore>();
         services.AddScoped<ExternalLinkService>();
         services.AddScoped<OutboundQueue>();
@@ -58,6 +60,8 @@ public static class IntegrationsCoreModule
                 var take = KeysetCursor.ClampLimit(limit);
                 var page = await runs.OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).Take(take + 1).ToListAsync(ct);
                 var rows = page.Take(take).ToList();
+                // Legacy runs may contain a provider response with invoice amounts or personal data.
+                foreach (var row in rows) row.Message = row.Status == SyncRunStatus.Failed ? "Synchronization failed." : null;
                 return Results.Ok(new PagedResult<SyncRun>(
                     rows, page.Count > take ? new KeysetCursor(rows[^1].StartedAt.ToString("O", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null, total));
             })
@@ -66,41 +70,24 @@ public static class IntegrationsCoreModule
 
         // NFR §4.3: what monitoring asks about the external systems. Deliberately not part of readiness — a sulking
         // integration must never take the CRM out of the load balancer.
-        app.MapGet("/health/integrations", async (IEnumerable<IIntegrationAdapter> adapters, IntegrationDbContext db, TimeProvider time, CancellationToken ct) =>
+        app.MapGet("/health/integrations", async (IntegrationMonitoringReader reader, CancellationToken ct) =>
             {
-                var now = time.GetUtcNow();
-                var systems = new List<object>();
-                var degraded = false;
-                foreach (var adapter in adapters.OrderBy(a => a.System))
+                var snapshot = await reader.ReadAsync(ct);
+                return Results.Ok(new
                 {
-                    // A connection test is a question an administrator asked, not a synchronization: it says nothing about freshness.
-                    var last = await db.SyncRuns.AsNoTracking()
-                        .Where(r => r.System == adapter.System && r.Status != SyncRunStatus.Running && r.Job != IntegrationConnectionTestHandler.Job)
-                        .OrderByDescending(r => r.StartedAt)
-                        .FirstOrDefaultAsync(ct);
-                    var paused = await db.IntegrationSwitches.AsNoTracking()
-                        .SingleOrDefaultAsync(s => s.System == adapter.System && s.IsPaused, ct);
-                    var failedOutbound = await db.OutboundOperations
-                        .CountAsync(o => o.System == adapter.System && (o.Status == OutboundStatus.Failed || o.Status == OutboundStatus.DeadLetter), ct);
-                    var unhealthy = adapter.IsEnabled && paused is null &&
-                                    (last is null || last.Status == SyncRunStatus.Failed || failedOutbound > 0);
-                    degraded |= unhealthy;
-                    systems.Add(new
+                    status = snapshot.Systems.Any(s => s.Enabled && !s.Paused &&
+                        (s.Freshness is "Stale" or "Never" || s.LastRunStatus == "Failed" || s.FailedOutbound > 0)) ? "Degraded" : "Healthy",
+                    checkedAt = snapshot.CheckedAt,
+                    systems = snapshot.Systems.GroupBy(s => s.System).Select(g => new
                     {
-                        system = adapter.System,
-                        enabled = adapter.IsEnabled,
-                        paused = paused is not null,
-                        pauseReason = paused?.Reason,
-                        lastRunAt = last?.StartedAt,
-                        lastRunStatus = last?.Status.ToString(),
-                        lastRunMessage = last?.Message,
-                        minutesSinceLastRun = last is null ? (int?)null : (int)(now - last.StartedAt).TotalMinutes,
-                        failedOutbound,
-                        healthy = !unhealthy,
-                    });
-                }
-
-                return Results.Ok(new { status = degraded ? "Degraded" : "Healthy", checkedAt = now, systems });
+                        system = g.Key,
+                        enabled = g.Any(s => s.Enabled),
+                        paused = g.Any(s => s.Paused),
+                        lastSucceededAt = g.Max(s => s.LastSucceededAt),
+                        healthy = g.All(s => !s.Enabled || s.Paused || (s.Freshness == "Fresh" && s.LastRunStatus != "Failed" && s.FailedOutbound == 0)),
+                        streams = g.ToList(),
+                    }),
+                });
             })
             .WithTags("Integrations")
             .RequirePermission(Permissions.IntegrationsManage);

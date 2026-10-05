@@ -390,13 +390,21 @@ internal sealed class LicensingService(
     /// BR-CON-02: assigned licences per organization and catalog product, from the newest reading on or before the date.
     /// A product is found by its Microsoft identifier, which may be the SKU part number or the SKU id.
     /// </summary>
-    public async Task<IReadOnlyList<AssignedLicenses>> GetAssignedLicensesAsync(DateOnly date, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<AssignedLicenses>> GetAssignedLicensesAsync(DateOnly date, CancellationToken cancellationToken) =>
+        AssignedLicensesAsync(null, date, cancellationToken);
+
+    public Task<IReadOnlyList<AssignedLicenses>> GetAssignedLicensesAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken) =>
+        AssignedLicensesAsync(organizationIds, date, cancellationToken);
+
+    private async Task<IReadOnlyList<AssignedLicenses>> AssignedLicensesAsync(IReadOnlyCollection<Guid>? organizationIds, DateOnly date, CancellationToken cancellationToken)
     {
+        if (organizationIds is { Count: 0 }) return [];
         // Readings are daily; a fortnight back survives a weekend of failed syncs without going stale silently.
         var from = date.AddDays(-14);
-        var snapshots = await db.LicenseSnapshots.AsNoTracking()
-            .Where(s => s.SnapshotDate <= date && s.SnapshotDate >= from)
-            .ToListAsync(cancellationToken);
+        var query = db.LicenseSnapshots.AsNoTracking().Where(s => s.SnapshotDate <= date && s.SnapshotDate >= from);
+        if (organizationIds is not null) query = query.Where(s => organizationIds.Contains(s.OrganizationId));
+        var snapshots = await query.GroupBy(s => new { s.OrganizationId, s.SkuId })
+            .Select(g => g.OrderByDescending(s => s.SnapshotDate).First()).ToListAsync(cancellationToken);
         if (snapshots.Count == 0)
         {
             return [];
@@ -408,9 +416,8 @@ internal sealed class LicensingService(
             .ToList();
         var products = await catalog.FindProductsByOfferIdAsync(keys, cancellationToken);
         var result = new List<AssignedLicenses>();
-        foreach (var group in snapshots.GroupBy(s => new { s.OrganizationId, s.SkuId }))
+        foreach (var latest in snapshots)
         {
-            var latest = group.MaxBy(s => s.SnapshotDate)!;
             if (!products.TryGetValue(latest.SkuPartNumber, out var product) && !products.TryGetValue(latest.SkuId, out product))
             {
                 continue;
@@ -426,15 +433,21 @@ internal sealed class LicensingService(
     public async Task<IReadOnlyList<MsCostByOrganization>> GetMsCostsAsync(
         DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
     {
-        var lines = await db.MsBilledLines.AsNoTracking()
+        var totals = await db.MsBilledLines.AsNoTracking()
             .Where(l => l.OrganizationId != null && l.PeriodStart <= periodEnd && l.PeriodEnd >= periodStart)
-            .Select(l => new { OrganizationId = l.OrganizationId!.Value, l.Total, l.Currency })
+            .GroupBy(l => l.OrganizationId!.Value)
+            .Select(g => new
+            {
+                OrganizationId = g.Key,
+                Total = g.Sum(l => l.Total),
+                Lines = g.Count(),
+                // Keep the existing representative-currency contract; no new currency split or conversion.
+                Currency = g.Select(l => l.Currency).FirstOrDefault(),
+            })
             .ToListAsync(cancellationToken);
 
-        return lines
-            .GroupBy(l => l.OrganizationId)
-            .Select(g => new MsCostByOrganization(
-                g.Key, decimal.Round(g.Sum(l => l.Total), 2), g.Select(l => l.Currency).FirstOrDefault() ?? "NOK", g.Count()))
+        return totals
+            .Select(g => new MsCostByOrganization(g.OrganizationId, decimal.Round(g.Total, 2), g.Currency ?? "NOK", g.Lines))
             .ToList();
     }
 
@@ -615,12 +628,21 @@ internal sealed class LicensingService(
         };
     }
 
-    public async Task<IReadOnlyList<SubscriptionQuantity>> GetSubscriptionQuantitiesAsync(DateOnly date, CancellationToken ct)
+    public Task<IReadOnlyList<SubscriptionQuantity>> GetSubscriptionQuantitiesAsync(DateOnly date, CancellationToken ct) =>
+        SubscriptionQuantitiesAsync(null, date, ct);
+
+    public Task<IReadOnlyList<SubscriptionQuantity>> GetSubscriptionQuantitiesAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken ct) =>
+        SubscriptionQuantitiesAsync(organizationIds, date, ct);
+
+    private async Task<IReadOnlyList<SubscriptionQuantity>> SubscriptionQuantitiesAsync(IReadOnlyCollection<Guid>? organizationIds, DateOnly date, CancellationToken ct)
     {
-        var rows = await db.CspSubscriptions.AsNoTracking()
+        if (organizationIds is { Count: 0 }) return [];
+        var query = db.CspSubscriptions.AsNoTracking()
             .Where(s => s.OrganizationId != null && s.ProductId != null && s.Status == SubscriptionStatus.Active &&
                         (s.StartDate == null || s.StartDate <= date) &&
-                        (s.CommitmentEndDate == null || s.CommitmentEndDate >= date))
+                        (s.CommitmentEndDate == null || s.CommitmentEndDate >= date));
+        if (organizationIds is not null) query = query.Where(s => organizationIds.Contains(s.OrganizationId!.Value));
+        var rows = await query
             .Select(s => new { OrganizationId = s.OrganizationId!.Value, ProductId = s.ProductId!.Value, s.OfferId, s.OfferName, s.Quantity, s.SubscriptionId })
             .ToListAsync(ct);
 
@@ -638,13 +660,19 @@ internal sealed class LicensingService(
 
     /// <summary>Every unmapped offer of the customer (DEV-12): each becomes an anomaly of its basis, none is left out of the review.</summary>
     public async Task<IReadOnlyList<string>> GetUnmappedOfferNamesAsync(Guid organizationId, DateOnly date, CancellationToken ct) =>
-        await db.CspSubscriptions.AsNoTracking()
-            .Where(s => s.OrganizationId == organizationId && s.ProductId == null && s.Status == SubscriptionStatus.Active &&
-                        (s.CommitmentEndDate == null || s.CommitmentEndDate >= date))
-            .Select(s => s.OfferName ?? s.OfferId)
-            .Distinct()
-            .OrderBy(name => name)
-            .ToListAsync(ct);
+        (await GetUnmappedOfferNamesAsync([organizationId], date, ct)).GetValueOrDefault(organizationId, []);
+
+    public async Task<IReadOnlyDictionary<Guid, IReadOnlyList<string>>> GetUnmappedOfferNamesAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken ct)
+    {
+        if (organizationIds.Count == 0) return new Dictionary<Guid, IReadOnlyList<string>>();
+        var rows = await db.CspSubscriptions.AsNoTracking()
+            .Where(s => s.OrganizationId != null && organizationIds.Contains(s.OrganizationId.Value) && s.ProductId == null &&
+                        s.Status == SubscriptionStatus.Active && (s.CommitmentEndDate == null || s.CommitmentEndDate >= date))
+            .Select(s => new { OrganizationId = s.OrganizationId!.Value, Name = s.OfferName ?? s.OfferId })
+            .Distinct().OrderBy(s => s.Name).ToListAsync(ct);
+        return rows.GroupBy(s => s.OrganizationId).ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(s => s.Name).ToList());
+    }
 
     private async Task<IReadOnlyList<SubscriptionDto>> ToDtosAsync(IReadOnlyList<CspSubscription> subscriptions, CancellationToken ct)
     {

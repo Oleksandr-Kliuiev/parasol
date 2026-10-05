@@ -64,7 +64,8 @@
     "status": "Status",
     "active": "Aktiv",
     "inactive": "Inaktiv",
-    "shownOf": "Viser {{shown}} av {{total}}"
+    "shownOf": "Viser {{shown}} av {{total}}",
+    "refresh": "Oppdater"
   },
   "errors": {
     "generic": "Noe gikk galt",
@@ -137,7 +138,15 @@
       "MAINTENANCE_STATE_UNAVAILABLE": "Ingenting ble sendt: det kan ikke leses akkurat nå om CRM-et er i vedlikehold. Prøv igjen om et minutt.",
       "MAINTENANCE_CHANGED": "En annen vedlikeholdsbeslutning ble tatt i mellomtiden. Se på gjeldende tilstand før du endrer den.",
       "MAINTENANCE_REQUIRED": "Sett CRM-et i skrivebeskyttet vedlikehold før du avstemmer en gjenoppretting.",
-      "REPORT_NOT_FOUND": "Avstemmingsrapporten ble ikke funnet."
+      "REPORT_NOT_FOUND": "Avstemmingsrapporten ble ikke funnet.",
+      "MONITORING_RETRY_STALE": "Utvalget er endret. Last listen på nytt og bekreft operasjonene.",
+      "MONITORING_RETRY_INVALID": "Bekreft 1–100 operasjoner og oppgi en begrunnelse på 10–500 tegn.",
+      "MONITORING_NOT_FOUND": "Avviket finnes ikke lenger eller er ikke tilgjengelig. Oppdater listen.",
+      "MONITORING_OWNER_INVALID": "Velg en aktiv CRM-bruker.",
+      "MONITORING_TRIAGE_INVALID": "Velg en gyldig status og en kommentar på maksimalt 2 000 tegn.",
+      "MONITORING_TRIAGE_STALE": "En annen operatør endret gjennomgangen. Lukk og last på nytt før du lagrer.",
+      "MONITORING_STILL_ACTIVE": "Kilden melder fortsatt dette avviket. Bekreft gjenoppretting og oppdater før det lukkes.",
+      "OUTBOX_REPLAY_PARTIAL": "Gjentakelsen stoppet etter en delvis feil. Kontroller hvert resultat. Avklar ukjente resultater før du velger på nytt."
     }
   },
   "status": {
@@ -484,7 +493,8 @@
     "status": {
       "Running": "Kjører",
       "Succeeded": "Fullført",
-      "Failed": "Feilet"
+      "Failed": "Feilet",
+      "Skipped": "Hoppet over"
     },
     "noJobs": "Ingen planlagte jobber ennå. De registreres når crm-worker starter."
   },
@@ -2675,5 +2685,126 @@
       "open": "Vis",
       "hide": "Skjul"
     }
+  },
+  "monitoring": {
+    "title": "Overvåking og avvikshåndtering",
+    "description": "Datakvaliteten vurderes fra siste vellykkede synkronisering. Mislykkede eller hoppede over forsøk oppdaterer ikke dataene.",
+    "checkedAt": "Kontrollert {{at}}",
+    "sources": "Dataenes aktualitet",
+    "exceptions": "Avvik som avventer behandling",
+    "noSuccess": "Ingen vellykket synkronisering registrert",
+    "age": "Alder: {{age}} min · grense: {{threshold}} min",
+    "all": "Alle",
+    "mine": "Tildelt meg",
+    "unassigned": "Ikke tildelt",
+    "reset": "Nullstill filtre",
+    "views": "Lagrede visninger",
+    "chooseView": "Velg en visning",
+    "viewName": "Navn på visning",
+    "saveView": "Lagre gjeldende visning",
+    "deleteView": "Slett visning",
+    "viewsHint": "Opptil 10 visninger lagres for kontoen din i denne nettleseren. Samme navn erstatter filtrene.",
+    "storageFailed": "Visningen kunne ikke lagres i denne nettleseren. Kontroller lagringsinnstillingene.",
+    "shown": "Viser {{shown}} av {{total}} avvik",
+    "empty": "Ingen avvik samsvarer med filtrene.",
+    "detected": "Oppdaget {{at}}",
+    "affected": "Berørte poster: {{count}}",
+    "edit": "Behandle avvik",
+    "editTitle": "Behandle: {{source}}",
+    "runbook": "Referanse til driftsrutine: {{reference}}",
+    "lastSuccess": "Siste vellykkede kjøring: {{at}}",
+    "assignMe": "Tildel til meg",
+    "commentHint": "Beskriv undersøkelsen og kontrollen av gjenoppretting (maks. 2 000 tegn). Ikke inkluder påloggingsinformasjon, kundedata eller beløp.",
+    "columns": {
+      "source": "Kilde",
+      "lastSuccess": "Siste vellykkede synkronisering",
+      "freshness": "Aktualitet",
+      "latestAttempt": "Siste forsøk",
+      "category": "Kategori",
+      "impact": "Konsekvens",
+      "owner": "Ansvarlig",
+      "status": "Behandlingsstatus",
+      "comment": "Kommentar"
+    },
+    "categories": {
+      "Integration": "Integrasjonsfeil",
+      "Financial": "Økonomiske avvik",
+      "Pause": "Bevisst pause"
+    },
+    "status": {
+      "Open": "Åpen",
+      "InProgress": "Under behandling",
+      "Resolved": "Løst"
+    },
+    "freshness": {
+      "Fresh": "Oppdatert",
+      "Stale": "Utdatert",
+      "Never": "Aldri fullført",
+      "Paused": "Bevisst satt på pause",
+      "Disabled": "Deaktivert"
+    },
+    "kinds": {
+      "SyncFailed": "Synkronisering mislyktes",
+      "SyncStale": "Utdaterte kildedata",
+      "OutboundFailed": "Ekstern levering mislyktes",
+      "Unmapped": "Kildeposter uten kobling",
+      "Paused": "Integrasjon satt på pause",
+      "OutboxDeadLetter": "Domenehendelser feilet",
+      "OutboxQuarantined": "Domenehendelser i karantene",
+      "Unbilled": "Ufakturerte poster",
+      "ReconciliationRequired": "Ekstern effekt må avstemmes",
+      "LegacyUnresolved": "Uavklarte eldre poster",
+      "BillingConflict": "Faktureringskonflikt",
+      "UnmappedSubscriptions": "Abonnementer uten kobling",
+      "LicenseDiscrepancy": "Lisensavvik",
+      "DocumentPreparing": "Tilbudsdokumenter venter",
+      "Other": "Driftsavvik",
+      "DirectoryConfirmationStale": "Bekreftelsen av katalogroller er foreldet"
+    },
+    "impacts": {
+      "SyncFailed": "Siste oppdatering mislyktes; lagrede poster kan være utdaterte.",
+      "SyncStale": "Kildedata har overskredet grensen for aktualitet.",
+      "OutboundFailed": "Endringer i kø har ikke nådd det eksterne systemet.",
+      "Unmapped": "Kildeposter kan ikke kobles til CRM-poster.",
+      "Paused": "Oppdateringer er stanset av en operatør.",
+      "OutboxDeadLetter": "Avhengige forretningsendringer venter på levering.",
+      "OutboxQuarantined": "En hendelsesbehandler avviste en hendelse; avhengig arbeid venter.",
+      "ReviewOverdueCharges": "Poster er fortsatt ufakturerte etter kontrollfristen.",
+      "VerifyExternalEffect": "Bekreft eksternt resultat før nytt forsøk for å unngå dobbeltfakturering.",
+      "ReviewLegacyCharges": "Identiteten til eldre poster må kontrolleres.",
+      "ResolveBillingConflicts": "Fakturering kan ikke fortsette før kildekonflikter er avklart.",
+      "MapSubscriptions": "Abonnementer er ikke koblet til en CRM-kunde eller et produkt.",
+      "ReviewPreviousMonthLicenseMargin": "Lisenskostnader og inntekter for forrige måned må avstemmes.",
+      "QuoteDocumentsUnavailable": "Tilbudsdokumenter er ikke klare for nedlasting eller sending.",
+      "Other": "Kontroller kilden og bekreft gjenoppretting før avviket lukkes.",
+      "ReconfirmDirectoryRoles": "Rolleendringer kan ikke bekreftes; privilegerte handlinger kan bli avvist."
+    },
+    "recovery": {
+      "Other": "Tildel en ansvarlig, kontroller kilden, følg driftsrutinen og bekreft en ny vellykket observasjon. Hold kommentaren fri for sensitive opplysninger.",
+      "SyncFailed": "Kontroller jobben og konfigurasjonen. Rett årsaken, kjør på nytt og bekreft at tidspunktet for siste vellykkede kjøring oppdateres.",
+      "SyncStale": "Kontroller arbeideren, tidsplanen og leverandøren. Bekreft en vellykket synkronisering innen aktualitetsgrensen; et hoppet over eller mislykket forsøk betyr ikke gjenoppretting.",
+      "Paused": "Bekreft pausen med den ansvarlige. Gjenoppta fra systemkortet når alt er klart, og kontroller vellykket synkronisering og kø.",
+      "OutboundFailed": "Kontroller eksternt resultat først. Velg konkrete feilede operasjoner nedenfor og prøv på nytt med begrunnelse når du har utelukket duplikater.",
+      "OutboxDeadLetter": "Rett feilen i hendelsesbehandleren. Velg konkrete hendelser nedenfor, oppgi en begrunnelse og kontroller hvert resultat og leveringen.",
+      "OutboxQuarantined": "Undersøk hvorfor hendelsen ble satt i karantene før gjentakelse. Rett hendelsesbehandleren eller konfigurasjonen og kontroller levering."
+    },
+    "operationResults": "Resultat per operasjon",
+    "exactSelection": "Nøyaktig utvalg",
+    "retrySelected": "Prøv valgte igjen ({{count}})",
+    "selectOperation": "Velg operasjon {{id}}",
+    "retryTitle": "Prøve {{count}} operasjoner igjen?",
+    "retryHint": "Bare operasjonene i listen forsøkes igjen. Kontroller først resultatet i det eksterne systemet.",
+    "retryConfirm": "Prøv {{count}} operasjoner igjen",
+    "operationStatus": {
+      "Requested": "Forespurt",
+      "Unavailable": "Utilgjengelig",
+      "Available": "Tilgjengelig",
+      "Stale": "Endret siden utvalget",
+      "Unknown": "Ukjent resultat — kontroller før nytt forsøk",
+      "NotRequested": "Ikke forespurt"
+    },
+    "recovered": "Kilden er gjenopprettet — avventer behandling",
+    "resolveAfterRecovery": "Lukk avviket etter at kilden er gjenopprettet.",
+    "recoveredLimit": "Listen viser de {{shown}} sist behandlede gjenopprettede avvikene av {{total}} som venter på lukking. Filtrene gjelder denne listen; lukk ferdige avvik for å se eldre saker."
   }
 }

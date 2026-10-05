@@ -82,6 +82,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Load scenario and simulator regression tests
+        run: node --experimental-vm-modules --test ../tools/load-test/*.test.mjs
       - run: npm run build
       # Build-time (dev) dependencies are audited too; an audit that failed is not a clean result.
       - name: npm audit
@@ -140,6 +142,8 @@ jobs:
         run: python3 -m unittest discover -s tools/release
       - name: Restore tooling tests
         run: python3 -m unittest discover -s tools/ops
+      - name: Synthetic dataset ownership and isolation tests
+        run: python3 -m unittest discover -s tools/load-test -p 'test_*.py'
       - name: Bicep build and lint
         run: |
           az bicep build --file infra/main.bicep --stdout > /dev/null

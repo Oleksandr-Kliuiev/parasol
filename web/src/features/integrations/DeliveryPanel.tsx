@@ -23,6 +23,8 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
+import { ApiError } from '../../api/client';
+import type { OperationResult } from './monitoringApi';
 import type { OutboxMessageItem } from '../../api/types';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -59,6 +61,7 @@ export function DeliveryPanel() {
   const styles = useStyles();
   const { t } = useTranslation();
   const outbox = useOutbox();
+  const [results, setResults] = useState<OperationResult[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState<OutboxMessageItem[] | null>(null);
 
@@ -73,7 +76,7 @@ export function DeliveryPanel() {
   const toggle = (message: OutboxMessageItem, on: boolean) =>
     setSelected((current) => {
       const next = new Set(current);
-      if (on) next.add(key(message));
+      if (on && chosen.length < MAX_REPLAY) next.add(key(message));
       else next.delete(key(message));
       return next;
     });
@@ -82,6 +85,7 @@ export function DeliveryPanel() {
     <Panel title={t('delivery.title')}>
       <div className={styles.stack}>
         <Text className={styles.muted}>{t('delivery.description')}</Text>
+        {results.length > 0 && <ul aria-label={t('monitoring.operationResults')} aria-live="polite">{results.map((r) => <li key={`${r.module}/${r.id}`}>{r.module} / {r.id}: {t(`monitoring.operationStatus.${r.status}`)}</li>)}</ul>}
         {waiting.length > 0 && (
           <ul className={styles.muted} aria-label={t('delivery.backlog')} style={{ margin: 0, paddingInlineStart: 18 }}>
             {waiting.map((c) => (
@@ -98,10 +102,10 @@ export function DeliveryPanel() {
         ) : (
           <>
             <div className={styles.toolbar}>
-              <Button appearance="primary" disabled={chosen.length === 0} onClick={() => setConfirming(chosen.slice(0, MAX_REPLAY))}>
+              <Button appearance="primary" disabled={chosen.length === 0 || chosen.length > MAX_REPLAY} onClick={() => setConfirming(chosen)}>
                 {t('delivery.replaySelected', { count: chosen.length })}
               </Button>
-              {chosen.length > MAX_REPLAY && <Text className={styles.muted}>{t('delivery.limit', { max: MAX_REPLAY })}</Text>}
+              {chosen.length >= MAX_REPLAY && <Text className={styles.muted}>{t('delivery.limit', { max: MAX_REPLAY })}</Text>}
             </div>
             <div className={styles.tableWrap}>
               <Table size="small" className={styles.table} aria-label={t('delivery.title')}>
@@ -131,7 +135,7 @@ export function DeliveryPanel() {
                         <Checkbox
                           aria-label={t('delivery.selectRow', { event: m.eventType, time: formatDateTime(m.occurredAt) })}
                           checked={selected.has(key(m)) && !m.replayRequested}
-                          disabled={m.replayRequested}
+                          disabled={m.replayRequested || (!selected.has(key(m)) && chosen.length >= MAX_REPLAY)}
                           onChange={(_, d) => toggle(m, d.checked === true)}
                         />
                       </TableCell>
@@ -172,6 +176,7 @@ export function DeliveryPanel() {
           {confirming && (
             <ReplayForm
               messages={confirming}
+              onResults={setResults}
               onClose={(done) => {
                 setConfirming(null);
                 if (done) setSelected(new Set());
@@ -184,11 +189,12 @@ export function DeliveryPanel() {
   );
 }
 
-function ReplayForm({ messages, onClose }: { messages: OutboxMessageItem[]; onClose: (done: boolean) => void }) {
+function ReplayForm({ messages, onClose, onResults }: { messages: OutboxMessageItem[]; onClose: (done: boolean) => void; onResults: (results: OperationResult[]) => void }) {
   const { t } = useTranslation();
   const notify = useNotify();
   const { replay } = useIntegrationActions();
   const [reason, setReason] = useState('');
+  const [results, setResults] = useState<OperationResult[]>([]);
   const byType = Object.entries(
     messages.reduce<Record<string, number>>((counts, m) => ({ ...counts, [m.eventType]: (counts[m.eventType] ?? 0) + 1 }), {}),
   );
@@ -197,13 +203,18 @@ function ReplayForm({ messages, onClose }: { messages: OutboxMessageItem[]; onCl
   const submit = async () => {
     try {
       const result = await replay.mutateAsync({
-        messages: messages.map((m) => ({ module: m.module, id: m.id })),
+        messages: messages.map((m) => ({ module: m.module, id: m.id, replays: m.replays })),
         reason: reason.trim(),
         expected: messages.length,
       });
+      onResults(result.items ?? messages.map((m) => ({ id: m.id, module: m.module, status: 'Requested' })));
       notify(t('delivery.requestedNotice', { count: result.requested }), 'success');
       onClose(true);
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiError && Array.isArray(error.problem.items)) {
+        const items = error.problem.items as OperationResult[];
+        setResults(items); onResults(items);
+      }
       // Shown in the dialog; the list reloads so the person can confirm what is there now.
     }
   };
@@ -212,7 +223,7 @@ function ReplayForm({ messages, onClose }: { messages: OutboxMessageItem[]; onCl
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        if (valid) void submit();
+        if (valid && !replay.isPending) void submit();
       }}
     >
       <DialogBody>
@@ -223,18 +234,20 @@ function ReplayForm({ messages, onClose }: { messages: OutboxMessageItem[]; onCl
               <MessageBarBody>{errorMessage(replay.error, t)}</MessageBarBody>
             </MessageBar>
           )}
+          {results.length > 0 && <ul aria-label={t('monitoring.operationResults')} aria-live="polite">{results.map((r) => <li key={`${r.module}/${r.id}`}>{r.module} / {r.id}: {t(`monitoring.operationStatus.${r.status}`)}</li>)}</ul>}
           <p style={{ marginTop: 0 }}>{t('delivery.confirmBody')}</p>
           <ul aria-label={t('delivery.confirmList')}>
             {byType.map(([type, count]) => (
               <li key={type}>{t('delivery.confirmLine', { type, count })}</li>
             ))}
           </ul>
+          <ul aria-label={t('monitoring.exactSelection')}>{messages.map((m) => <li key={`${m.module}/${m.id}`}>{m.module} / {m.id} · {m.eventType} · {formatDateTime(m.occurredAt)}</li>)}</ul>
           <Field label={t('delivery.reason')} hint={t('delivery.reasonHint', { min: MIN_REASON })} required>
             <Textarea value={reason} maxLength={500} onChange={(_, d) => setReason(d.value)} />
           </Field>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => onClose(false)}>{t('common.cancel')}</Button>
+          <Button disabled={replay.isPending} onClick={() => onClose(false)}>{t('common.cancel')}</Button>
           <Button appearance="primary" type="submit" disabled={!valid || replay.isPending}>
             {t('delivery.confirm', { count: messages.length })}
           </Button>

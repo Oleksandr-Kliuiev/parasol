@@ -105,7 +105,7 @@ public sealed class OutboxProcessor(
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    logger.LogError(ex, "Outbox processing failed for {Context}", contextType.Name);
+                    logger.LogError("Outbox processing failed for {Context} ({ErrorType})", contextType.Name, ex.GetType().Name);
                     // Without the database every other context would wait for its own timeouts too: the round ends here, so
                     // rounds keep finishing and liveness does not turn into a restart loop during an outage (DEV-06).
                     if (DatabaseUnavailable(ex))
@@ -267,9 +267,9 @@ public sealed class OutboxProcessor(
                 }
                 catch (Exception ex)
                 {
-                    // The text goes to the operators' list; the logged exception keeps the detail for diagnosis.
-                    logger.LogWarning(ex, "Outbox message {MessageId} ({EventType}): handler {Handler} failed", id, eventType.Name, handler.Name);
-                    errors.Add($"{handler.Name}: {ex.GetBaseException().Message}");
+                    // Exception messages can contain amounts and personal data; diagnostics retain identifiers and type only.
+                    logger.LogWarning("Outbox message {MessageId} ({EventType}): handler {Handler} failed ({ErrorType})", id, eventType.Name, handler.Name, ex.GetBaseException().GetType().Name);
+                    errors.Add($"{handler.Name}: {ex.GetBaseException().GetType().Name}");
                     continue;
                 }
 
@@ -386,7 +386,7 @@ public sealed class OutboxProcessor(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Outbox message {MessageId} could not be released; its lease will run out", id);
+            logger.LogWarning("Outbox message {MessageId} could not be released ({ErrorType}); its lease will run out", id, ex.GetType().Name);
         }
     }
 
@@ -569,7 +569,7 @@ public sealed class OutboxProcessor(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // The database may be away; the loop goes on and the heartbeat simply ages.
-            logger.LogWarning(ex, "The outbox heartbeat could not be stored");
+            logger.LogWarning("The outbox heartbeat could not be stored ({ErrorType})", ex.GetType().Name);
         }
     }
 

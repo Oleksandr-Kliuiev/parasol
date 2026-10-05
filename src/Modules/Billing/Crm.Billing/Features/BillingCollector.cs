@@ -60,11 +60,6 @@ internal sealed class BillingCollector(
             contractLines.Select(l => l.SeriesId).Distinct().ToList(),
             contractLines.Select(l => l.LineId).Distinct().ToList(),
             ct);
-        var subscriptions = await licensing.GetSubscriptionQuantitiesAsync(periodEnd, ct);
-        // Assigned Microsoft 365 licences from the tenant reading (FR-LIC-03); without it the contract estimate is used.
-        var assigned = (await licensing.GetAssignedLicensesAsync(periodEnd, ct))
-            .ToDictionary(a => (a.OrganizationId, a.ProductId), a => a);
-
         var defaultCategory = await catalog.GetDefaultCategoryAsync(ct);
         var productIds = contractLines.Select(l => l.ProductId).Distinct().ToList();
         var products = await catalog.GetProductsAsync(productIds, ct);
@@ -92,7 +87,19 @@ internal sealed class BillingCollector(
             ? await customers.GetOrganizationNamesAsync(invoiceTargets.Keys.ToList(), ct)
             : new Dictionary<Guid, string>();
 
-        var previousTotals = await PreviousTotalsAsync(run, ct);
+        // DEV-16: load only this run's portfolio once. Parents need their own anomaly review even when only subsidiaries bill.
+        var portfolioOrganizations = organizationIds.Concat(invoiceTargets.Values).Distinct().ToArray();
+        var subscriptions = await licensing.GetSubscriptionQuantitiesAsync(portfolioOrganizations, periodEnd, ct);
+        var contractedProducts = await contracts.GetContractedProductsAsync(portfolioOrganizations, periodEnd, ct);
+        var unmappedOffers = await licensing.GetUnmappedOfferNamesAsync(portfolioOrganizations, periodEnd, ct);
+        // Assigned readings are needed only for contract lines using the Microsoft 365 quantity model.
+        var assignedOrganizations = contractLines.Where(l => l.QuantityModel == QuantityModel.PerM365User).Select(l => l.OrganizationId).Distinct().ToArray();
+        var assigned = (await licensing.GetAssignedLicensesAsync(assignedOrganizations, periodEnd, ct))
+            .ToDictionary(a => (a.OrganizationId, a.ProductId), a => a);
+
+        var deviceOrganizations = contractLines.Where(l => l.QuantityModel == QuantityModel.PerAteraDevice).Select(l => l.OrganizationId).Distinct().ToArray();
+        var devicesByOrganization = await service.GetDeviceCountsAsync(deviceOrganizations, periodEnd, ct);
+        var previousTotals = await PreviousTotalsAsync(run, portfolioOrganizations, ct);
         var existing = await db.BillingBases
             .Include(b => b.Lines)
             .Where(b => b.RunId == run.Id)
@@ -105,17 +112,20 @@ internal sealed class BillingCollector(
 
         var hourlyProducts = await ResolveHourlyProductsAsync(billableTime, settings.FallbackHourlySku, ct);
         var subscriptionsByOrganization = subscriptions.GroupBy(s => s.OrganizationId).ToDictionary(g => g.Key, g => g.ToList());
+        var contractLinesByOrganization = contractLines.ToLookup(l => l.OrganizationId);
+        var timeByOrganization = billableTime.ToLookup(t => t.OrganizationId);
+        var purchasesByOrganization = purchases.ToLookup(p => p.OrganizationId);
+        var chargesByOrganization = pendingCharges.ToLookup(c => c.OrganizationId);
+        var draftIndexes = new Dictionary<Guid, int>();
         var drafts = new List<(Guid OrganizationId, List<LineDraft> Lines, List<BillingAnomaly> Anomalies, string? CustomerReference)>();
 
         foreach (var organizationId in organizationIds)
         {
             var lines = new List<LineDraft>();
             var anomalies = new List<BillingAnomaly>();
-            var organizationLines = contractLines.Where(l => l.OrganizationId == organizationId).ToList();
+            var organizationLines = contractLinesByOrganization[organizationId].ToList();
             var customerReference = organizationLines.Select(l => l.CustomerReference).FirstOrDefault(r => !string.IsNullOrWhiteSpace(r));
-            var deviceCounts = organizationLines.Any(l => l.QuantityModel == QuantityModel.PerAteraDevice)
-                ? await service.GetDeviceCountsAsync(organizationId, periodEnd, ct)
-                : new Dictionary<DeviceType, int>();
+            var deviceCounts = devicesByOrganization.GetValueOrDefault(organizationId) ?? new Dictionary<DeviceType, int>();
 
             foreach (var line in organizationLines)
             {
@@ -205,13 +215,13 @@ internal sealed class BillingCollector(
                 }
             }
 
-            var hours = billableTime.Where(t => t.OrganizationId == organizationId).ToList();
+            var hours = timeByOrganization[organizationId].ToList();
             var heldHours = hours.Where(t => snapshot.HeldElsewhere(ChargeLedger.TimeKey(t.AllocationId)) is not null).ToList();
             ReportHeldElsewhere(anomalies, heldHours.Select(t => snapshot.HeldElsewhere(ChargeLedger.TimeKey(t.AllocationId))!), snapshot,
                 charge => string.Create(CultureInfo.InvariantCulture, $"{heldHours.Count} approved time entries"));
             AddHourlyLines(lines, hours.Except(heldHours).ToList(), hourlyProducts, periodStart, periodEnd, settings, anomalies);
 
-            var organizationPurchases = purchases.Where(p => p.OrganizationId == organizationId).ToList();
+            var organizationPurchases = purchasesByOrganization[organizationId].ToList();
             var heldPurchases = organizationPurchases.Where(p => snapshot.HeldElsewhere(ChargeLedger.HourBankKey(p.EntryId)) is not null).ToList();
             foreach (var purchase in heldPurchases)
             {
@@ -220,7 +230,7 @@ internal sealed class BillingCollector(
 
             await AddHourBankLinesAsync(lines, organizationPurchases.Except(heldPurchases).ToList(), organizationLines, products, pricesByCategory, defaultCategory, anomalies, ct);
 
-            var organizationCharges = pendingCharges.Where(c => c.OrganizationId == organizationId).ToList();
+            var organizationCharges = chargesByOrganization[organizationId].ToList();
             var heldCharges = organizationCharges.Where(c => snapshot.HeldElsewhere(ChargeLedger.PendingKey(c.Id)) is not null).ToList();
             foreach (var pending in heldCharges)
             {
@@ -237,20 +247,19 @@ internal sealed class BillingCollector(
                 var subsidiary = subsidiaryNames.GetValueOrDefault(organizationId, "—");
                 lines = lines.ConvertAll(l => l with { Description = $"{subsidiary}: {l.Description}" });
                 anomalies = anomalies.ConvertAll(a => a with { Message = $"{subsidiary}: {a.Message}" });
-                var existingDraft = drafts.FindIndex(d => d.OrganizationId == invoicedTo);
-                if (existingDraft >= 0)
+                if (draftIndexes.TryGetValue(invoicedTo, out var existingDraft))
                 {
                     drafts[existingDraft].Lines.AddRange(lines);
                     drafts[existingDraft].Anomalies.AddRange(anomalies);
                     continue;
                 }
 
+                draftIndexes.Add(invoicedTo, drafts.Count);
                 drafts.Add((invoicedTo, lines, anomalies, null));
                 continue;
             }
 
-            var own = drafts.FindIndex(d => d.OrganizationId == organizationId);
-            if (own >= 0)
+            if (draftIndexes.TryGetValue(organizationId, out var own))
             {
                 // The parent was collected after one of its subsidiaries; its own lines go first on the invoice.
                 drafts[own].Lines.InsertRange(0, lines);
@@ -259,6 +268,7 @@ internal sealed class BillingCollector(
                 continue;
             }
 
+            draftIndexes.Add(organizationId, drafts.Count);
             drafts.Add((organizationId, lines, anomalies, customerReference));
         }
 
@@ -325,7 +335,9 @@ internal sealed class BillingCollector(
             conflicts += applied.Value.Conflicts;
 
             basis.SetPreviousTotal(previousTotals.GetValueOrDefault(organizationId));
-            await AddPortfolioAnomaliesAsync(anomalies, basis, organizationId, periodEnd, readiness, allProducts, settings, ct);
+            AddPortfolioAnomalies(anomalies, basis, organizationId, readiness, allProducts, settings,
+                contractedProducts.GetValueOrDefault(organizationId), subscriptionsByOrganization.GetValueOrDefault(organizationId),
+                unmappedOffers.GetValueOrDefault(organizationId));
             basis.SetAnomalies(anomalies);
 
             totalLines += basis.CurrentLines.Count();
@@ -624,15 +636,16 @@ internal sealed class BillingCollector(
         }
     }
 
-    private async Task AddPortfolioAnomaliesAsync(
+    private static void AddPortfolioAnomalies(
         List<BillingAnomaly> anomalies,
         BillingBasis basis,
         Guid organizationId,
-        DateOnly periodEnd,
         BillingReadiness? readiness,
         IReadOnlyDictionary<Guid, ProductRef> products,
         BillingOptions settings,
-        CancellationToken ct)
+        IReadOnlySet<Guid>? contracted,
+        IReadOnlyList<SubscriptionQuantity>? quantities,
+        IReadOnlyList<string>? unmappedOffers)
     {
         if (basis.PreviousPeriodTotal > 0)
         {
@@ -663,15 +676,13 @@ internal sealed class BillingCollector(
         }
 
         // BR-BIL-03: a subscription the customer pays Microsoft for but has no contract line for is money left on the table.
-        var contracted = await contracts.GetContractedProductsAsync(organizationId, periodEnd, ct);
-        var quantities = await licensing.GetSubscriptionQuantitiesAsync(periodEnd, ct);
-        foreach (var subscription in quantities.Where(s => s.OrganizationId == organizationId && !contracted.Contains(s.ProductId)))
+        foreach (var subscription in (quantities ?? []).Where(s => contracted?.Contains(s.ProductId) != true))
         {
             anomalies.Add(new BillingAnomaly(
                 "BIL_SUBSCRIPTION_NOT_CONTRACTED", $"{subscription.OfferName ?? subscription.OfferId} ({subscription.Quantity}) is not on any contract line."));
         }
 
-        foreach (var offer in await licensing.GetUnmappedOfferNamesAsync(organizationId, periodEnd, ct))
+        foreach (var offer in unmappedOffers ?? [])
         {
             anomalies.Add(new BillingAnomaly("BIL_SUBSCRIPTION_NOT_MAPPED", $"The subscription “{offer}” has no catalog product."));
         }
@@ -703,7 +714,7 @@ internal sealed class BillingCollector(
         return null;
     }
 
-    private async Task<Dictionary<Guid, decimal>> PreviousTotalsAsync(BillingRun run, CancellationToken ct)
+    private async Task<Dictionary<Guid, decimal>> PreviousTotalsAsync(BillingRun run, IReadOnlyCollection<Guid> organizationIds, CancellationToken ct)
     {
         var previous = await db.BillingRuns.AsNoTracking()
             .Where(r => r.PeriodStart < run.PeriodStart)
@@ -716,7 +727,7 @@ internal sealed class BillingCollector(
         }
 
         return await db.BillingBases.AsNoTracking()
-            .Where(b => b.RunId == previous)
+            .Where(b => b.RunId == previous && organizationIds.Contains(b.OrganizationId))
             .GroupBy(b => b.OrganizationId)
             .Select(g => new { g.Key, Total = g.Sum(b => b.TotalExVat) })
             .ToDictionaryAsync(x => x.Key, x => x.Total, ct);

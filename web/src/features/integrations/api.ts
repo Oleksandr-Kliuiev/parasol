@@ -105,7 +105,7 @@ export function useOutbox(enabled = true) {
 }
 
 export interface ReplayRequest {
-  messages: { module: string; id: string }[];
+  messages: { module: string; id: string; replays: number }[];
   reason: string;
   /** How many messages the person confirmed; the server refuses when that is no longer what can be replayed. */
   expected: number;
@@ -149,11 +149,11 @@ export function useIntegrationActions() {
     test: useMutation({
       mutationFn: async (system: string) => (await api.post<ConnectionTestStatus>(`${BASE}/${system}/test`)).data,
     }),
-    retry: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/retry`), onSuccess }),
+    retry: useMutation({ mutationFn: ({ id, etag, reason }: { id: string; etag: string; reason: string }) => api.post(`${BASE}/outbound/${id}/retry`, { reason }, etag), onSuccess }),
     cancel: useMutation({ mutationFn: (id: string) => api.post(`${BASE}/outbound/${id}/cancel`), onSuccess }),
     replay: useMutation({
       mutationFn: async (request: ReplayRequest) =>
-        (await api.post<{ requested: number; modules: string[] }>(`${BASE}/outbox/replay`, request)).data,
+        (await api.post<{ requested: number; modules: string[]; items: { module: string; id: string; status: 'Requested' | 'Unavailable' | 'Available' }[] }>(`${BASE}/outbox/replay`, request)).data,
       // A refused replay (the list changed meanwhile) also reloads the list, so the person confirms what is there now.
       onSettled: () => void refresh(),
     }),

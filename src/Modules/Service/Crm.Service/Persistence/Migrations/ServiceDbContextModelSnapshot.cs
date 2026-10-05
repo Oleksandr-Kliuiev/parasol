@@ -447,6 +447,10 @@ namespace Crm.Service.Persistence.Migrations
                     b.HasIndex("ContactId")
                         .HasFilter("[ContactId] IS NOT NULL");
 
+                    b.HasIndex("IsOpen")
+                        .HasFilter("[IsOpen] = 1")
+                        .HasAnnotation("SqlServer:Include", new[] { "TechnicianUserId" });
+
                     b.HasIndex("System", "ExternalId")
                         .IsUnique();
 

@@ -1,0 +1,22 @@
+[
+  {
+    "at": 1791150775.653259,
+    "requests": "NULL",
+    "locks": "[{\"request_mode\":\"S\",\"request_status\":\"GRANT\",\"count\":1}]"
+  },
+  {
+    "at": 1791150776.465664,
+    "requests": "NULL",
+    "locks": "[{\"request_mode\":\"IX\",\"request_status\":\"GRANT\",\"count\":3},{\"request_mode\":\"S\",\"request_status\":\"GRANT\",\"count\":18},{\"request_mode\":\"Sch-M\",\"request_status\":\"GRANT\",\"count\":1},{\"request_mode\":\"Sch-S\",\"request_status\":\"GRANT\",\"count\":12},{\"request_mode\":\"X\",\"request_status\":\"GRANT\",\"count\":8}]"
+  },
+  {
+    "at": 1791150777.2840059,
+    "requests": "[{\"session_id\":59,\"status\":\"running\",\"command\":\"CREATE INDEX\",\"blocking_session_id\":0,\"wait_type\":\"PAGEIOLATCH_EX\",\"wait_time\":0}]",
+    "locks": "[{\"request_mode\":\"IX\",\"request_status\":\"GRANT\",\"count\":8},{\"request_mode\":\"S\",\"request_status\":\"GRANT\",\"count\":31},{\"request_mode\":\"Sch-M\",\"request_status\":\"GRANT\",\"count\":3},{\"request_mode\":\"Sch-S\",\"request_status\":\"GRANT\",\"count\":9},{\"request_mode\":\"X\",\"request_status\":\"GRANT\",\"count\":895}]"
+  },
+  {
+    "at": 1791150778.180353,
+    "requests": "NULL",
+    "locks": "[{\"request_mode\":\"S\",\"request_status\":\"GRANT\",\"count\":2}]"
+  }
+]

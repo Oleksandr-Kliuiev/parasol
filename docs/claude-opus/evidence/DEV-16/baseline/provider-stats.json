@@ -1,0 +1,1 @@
+{"mode":"simulated","profile":{"latencyMs":150,"jitterMs":100,"requestsPerSecond":10,"failureEvery":0},"requests":1002,"throttled":0,"injectedFailures":0,"created":500,"duplicateReferences":0,"orders":500}

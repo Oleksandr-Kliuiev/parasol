@@ -1,0 +1,715 @@
+{
+  "schemaVersion": 1,
+  "kind": "crm-workday",
+  "createdAt": "2026-10-04T21:42:57.782Z",
+  "datasetId": "dev16-37cba9904feb9ca0fa8bd4d01fd789e0",
+  "datasetChecksum": "sha256:7d32b44cd737ec67f3fcca42d9e6cc72b235a7ba2643b079d347c58f932caf85",
+  "datasetProfile": "full",
+  "counts": {
+    "organizations": 5000,
+    "contacts": 50000,
+    "tickets": 1000000,
+    "timeEntries": 1000000,
+    "auditEntries": 10000000
+  },
+  "seed": 1616,
+  "workload": {
+    "concurrentSessions": 50,
+    "distinctRoleIdentities": 5,
+    "identityLimitation": "Virtual users have independent cookie sessions but share the manifest Development role identities; the harness supports at most seven distinct role identities and does not measure Entra sign-in.",
+    "timeEntryProfile": {
+      "year": 2026,
+      "month": 9,
+      "readableHistory": "time.read roles query a global page of dated entries including allocations",
+      "ownOnly": "time.own-only roles query an explicitly empty own list; seeded imported technicians have no signed-in user identity"
+    },
+    "duration": "2m",
+    "warmup": "30s",
+    "drainSeconds": 32,
+    "timeoutMs": 30000,
+    "provider": {
+      "mode": "simulated",
+      "baseUrl": "http://localhost:5302",
+      "latencyMs": 150,
+      "jitterMs": 100,
+      "failureEvery": 0,
+      "requestsPerSecond": 10
+    },
+    "errorSamplesIncluded": true,
+    "clientLatency": "Sequential requests use wall time. Each concurrent response conservatively uses the elapsed wall time of its two-request batch. Transport failures without timings are censored at REQUEST_TIMEOUT_MS."
+  },
+  "metrics": {
+    "crm_read_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 423.19822858014055,
+        "min": 1.606,
+        "med": 60,
+        "max": 19630,
+        "p(95)": 2158.0999999999995,
+        "p(99)": 7019.279999999996
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 13924,
+        "rate": 73.59625555106258
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "passes": 19981,
+        "fails": 0,
+        "rate": 1
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0.105,
+        "p(99)": 0.242,
+        "avg": 0.055297831083021776,
+        "min": 0.005,
+        "med": 0.044,
+        "max": 2.16
+      }
+    },
+    "crm_operation_attempts{phase:measure,kind:search}": {
+      "values": {
+        "count": 679,
+        "rate": 3.5889009996532244
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 3,
+        "min": 0,
+        "max": 50
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 1.582,
+        "med": 76.489,
+        "max": 19629.737,
+        "p(95)": 1983.966049999999,
+        "p(99)": 5654.896309999999,
+        "avg": 403.3108946423461
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 9.435,
+        "p(95)": 0.091,
+        "p(99)": 0.12976999999999989,
+        "avg": 0.052650100545819416,
+        "min": 0.006,
+        "med": 0.049
+      }
+    },
+    "crm_operation_failed": {
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 13814
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_connecting": {
+      "values": {
+        "min": 0,
+        "med": 0,
+        "max": 1.408,
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0.001556233840850331
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 795,
+        "rate": 4.202026943629328
+      }
+    },
+    "crm_operation_attempts{phase:measure,kind:read}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 8407,
+        "rate": 44.43577423281982
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_expected_conflicts": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 795,
+        "rate": 4.202026943629328
+      }
+    },
+    "crm_search_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1287.4276226415097,
+        "min": 240,
+        "med": 1144.457,
+        "max": 7336,
+        "p(95)": 2466.9999999999995,
+        "p(99)": 3540.72
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "values": {
+        "p(99)": 5654.896309999999,
+        "avg": 403.3108946423461,
+        "min": 1.582,
+        "med": 76.489,
+        "max": 19629.737,
+        "p(95)": 1983.966049999999
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "crm_read_ms{phase:measure}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 2032.6999999999996,
+        "p(99)": 5610.279999999999,
+        "avg": 361.7709312477683,
+        "min": 1.606,
+        "med": 58,
+        "max": 16356
+      },
+      "thresholds": {
+        "p(95)<=500": {
+          "ok": false
+        }
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 50,
+        "max": 50,
+        "value": 50
+      }
+    },
+    "crm_write_ms": {
+      "values": {
+        "avg": 141.89748647798748,
+        "min": 5,
+        "med": 107,
+        "max": 4762,
+        "p(95)": 313.98834999999946,
+        "p(99)": 574.5234899999999
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 13924
+      }
+    },
+    "http_req_failed{phase:measure}": {
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 11802
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "crm_expected_conflicts{phase:measure}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 679,
+        "rate": 3.5889009996532244
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "group_duration": {
+      "contains": "time",
+      "values": {
+        "avg": 2319.828617239831,
+        "min": 19.140458,
+        "med": 715.83375,
+        "max": 30950.821625,
+        "p(95)": 9515.153458199986,
+        "p(99)": 21357.552004999998
+      },
+      "type": "trend"
+    },
+    "crm_search_ms{phase:measure}": {
+      "contains": "time",
+      "values": {
+        "avg": 1216.081924889543,
+        "min": 274,
+        "med": 1138,
+        "max": 4460,
+        "p(95)": 2214.325,
+        "p(99)": 2544.63974
+      },
+      "thresholds": {
+        "p(95)<=1000": {
+          "ok": false
+        }
+      },
+      "type": "trend"
+    },
+    "crm_completed_workdays": {
+      "values": {
+        "count": 795,
+        "rate": 4.202026943629328
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "crm_operation_attempts{phase:measure,kind:write}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 2716,
+        "rate": 14.355603998612898
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_conflict_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 470,
+        "avg": 134.11658553459114,
+        "min": 5,
+        "med": 106,
+        "max": 2118,
+        "p(95)": 291.54999999999995
+      }
+    },
+    "crm_completed_workdays{phase:measure}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 679,
+        "rate": 3.5889009996532244
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 1983.8811999999991,
+        "p(99)": 5654.734839999998,
+        "avg": 403.20294671071747,
+        "min": 1.521,
+        "med": 76.324,
+        "max": 19629.609
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 2812540,
+        "rate": 14865.872779918525
+      }
+    },
+    "crm_operation_failed{phase:measure}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "passes": 0,
+        "fails": 11802,
+        "rate": 0
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1.450869936799868,
+        "min": 0,
+        "med": 0,
+        "max": 518.95,
+        "p(95)": 0.001,
+        "p(99)": 0.001
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 8677.926833,
+        "max": 36302.079083,
+        "p(95)": 21536.65236249997,
+        "p(99)": 28415.54833798,
+        "avg": 10006.546524627682,
+        "min": 3464.957334
+      }
+    },
+    "checks{phase:measure}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 17024,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate==1": {
+          "ok": true
+        }
+      }
+    },
+    "crm_operation_attempts": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 13814,
+        "rate": 73.01484301798179
+      }
+    },
+    "crm_write_ms{phase:measure}": {
+      "values": {
+        "p(95)": 299.5952499999998,
+        "p(99)": 447.6074499999999,
+        "avg": 134.26219108983796,
+        "min": 5,
+        "med": 117,
+        "max": 653
+      },
+      "thresholds": {
+        "p(95)<=1000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_tls_handshaking": {
+      "values": {
+        "max": 518.767,
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 1.4483746049985637,
+        "min": 0,
+        "med": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 24811815,
+        "rate": 131144.54735892615
+      }
+    }
+  },
+  "checks": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "name": "setup",
+        "path": "::setup",
+        "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 5,
+              "fails": 0,
+              "name": "synthetic identity and Development auth verified",
+              "path": "::setup::synthetic identity and Development auth verified",
+              "id": "8f3c937f5feb502b5d6c55c87239378b"
+            }
+          ]
+      },
+      {
+        "path": "::my day and customer card",
+        "id": "c6492066a05f8dd4e1ecc03e7aaa1d0d",
+        "groups": [],
+        "checks": [
+            {
+              "id": "98df900b729c8ad889efa41228f187d2",
+              "passes": 795,
+              "fails": 0,
+              "name": "notifications: expected business response",
+              "path": "::my day and customer card::notifications: expected business response"
+            },
+            {
+              "name": "contract reminders: expected business response",
+              "path": "::my day and customer card::contract reminders: expected business response",
+              "id": "99211bdb6acfa17b7c82806d317df09e",
+              "passes": 795,
+              "fails": 0
+            },
+            {
+              "path": "::my day and customer card::organizations: expected business response",
+              "id": "bad97d7b7452ada1f72127c10be6cf4b",
+              "passes": 795,
+              "fails": 0,
+              "name": "organizations: expected business response"
+            },
+            {
+              "id": "9ec8926b691fa5b632c52328e4c3e843",
+              "passes": 795,
+              "fails": 0,
+              "name": "organization list has seeded business records",
+              "path": "::my day and customer card::organization list has seeded business records"
+            },
+            {
+              "passes": 795,
+              "fails": 0,
+              "name": "organization card: expected business response",
+              "path": "::my day and customer card::organization card: expected business response",
+              "id": "c1d9e39e411deb80a174f9b3171bad67"
+            },
+            {
+              "id": "a4d1eef18a9a1a0ce87b195a5e7385c1",
+              "passes": 795,
+              "fails": 0,
+              "name": "customer card matches the seeded identity",
+              "path": "::my day and customer card::customer card matches the seeded identity"
+            },
+            {
+              "name": "customer contacts: expected business response",
+              "path": "::my day and customer card::customer contacts: expected business response",
+              "id": "5de896e35b33399b169674cccaa40452",
+              "passes": 795,
+              "fails": 0
+            },
+            {
+              "fails": 0,
+              "name": "customer contracts: expected business response",
+              "path": "::my day and customer card::customer contracts: expected business response",
+              "id": "e68df3e4d7e5176f968dd9dbba758943",
+              "passes": 795
+            },
+            {
+              "passes": 795,
+              "fails": 0,
+              "name": "service summary: expected business response",
+              "path": "::my day and customer card::service summary: expected business response",
+              "id": "e8547e8527de9e10c435020604b540db"
+            },
+            {
+              "passes": 795,
+              "fails": 0,
+              "name": "customer tickets: expected business response",
+              "path": "::my day and customer card::customer tickets: expected business response",
+              "id": "22703cf239df26c241d1cb4b8de5c3d3"
+            },
+            {
+              "name": "subscriptions: expected business response",
+              "path": "::my day and customer card::subscriptions: expected business response",
+              "id": "49649e2de37f1a714c133f5f93d06b94",
+              "passes": 795,
+              "fails": 0
+            },
+            {
+              "name": "customer invoices: expected business response",
+              "path": "::my day and customer card::customer invoices: expected business response",
+              "id": "948739746ec88e15b533a36e7146000f",
+              "passes": 547,
+              "fails": 0
+            }
+          ],
+        "name": "my day and customer card"
+      },
+      {
+        "checks": [
+          {
+            "fails": 0,
+            "name": "global search: expected business response",
+            "path": "::search, reports and time::global search: expected business response",
+            "id": "eef0d5150024a2bfcdfdfaa166db2267",
+            "passes": 795
+          },
+          {
+            "id": "fc1dca031331d1af32a29cd9a813dae9",
+            "passes": 795,
+            "fails": 0,
+            "name": "search returns seeded organizations",
+            "path": "::search, reports and time::search returns seeded organizations"
+          },
+          {
+            "name": "sales pipeline: expected business response",
+            "path": "::search, reports and time::sales pipeline: expected business response",
+            "id": "5c506926f48127626e85da6236dc83ea",
+            "passes": 795,
+            "fails": 0
+          },
+          {
+            "name": "time entries: empty-own-list profile: expected business response",
+            "path": "::search, reports and time::time entries: empty-own-list profile: expected business response",
+            "id": "415dd92f6154e3d2b2c35f8fe7ddb726",
+            "passes": 409,
+            "fails": 0
+          },
+          {
+            "name": "synthetic own-time profile returns an explicit empty page",
+            "path": "::search, reports and time::synthetic own-time profile returns an explicit empty page",
+            "id": "5e4ae8af7cf06beb93ceae2b7554c0d6",
+            "passes": 409,
+            "fails": 0
+          },
+          {
+            "path": "::search, reports and time::dashboard: expected business response",
+            "id": "643113bd8c4e4749341871252ff85bcf",
+            "passes": 547,
+            "fails": 0,
+            "name": "dashboard: expected business response"
+          },
+          {
+            "passes": 547,
+            "fails": 0,
+            "name": "dashboard returns business panels",
+            "path": "::search, reports and time::dashboard returns business panels",
+            "id": "5a6332e3fb0d7885392bf8d1f3b5a2ed"
+          },
+          {
+            "name": "historical time entries with allocations: expected business response",
+            "path": "::search, reports and time::historical time entries with allocations: expected business response",
+            "id": "561b0dc9cf91e13882c39e5af2d5fc43",
+            "passes": 386,
+            "fails": 0
+          },
+          {
+            "id": "2a8b1a7cb07672b8b72360914ca04125",
+            "passes": 386,
+            "fails": 0,
+            "name": "historical time page contains dated business hours and allocations",
+            "path": "::search, reports and time::historical time page contains dated business hours and allocations"
+          }
+        ],
+        "name": "search, reports and time",
+        "path": "::search, reports and time",
+        "id": "52fec031bad780532eca975c6e2d9815",
+        "groups": []
+      },
+      {
+        "name": "record a note and resolve concurrent edits",
+        "path": "::record a note and resolve concurrent edits",
+        "id": "962df82fb975ec0d82bf656954daa26b",
+        "groups": [],
+        "checks": [
+            {
+              "name": "create activity: expected business response",
+              "path": "::record a note and resolve concurrent edits::create activity: expected business response",
+              "id": "28deb02cf3e1f718903584eb4d0e3f75",
+              "passes": 795,
+              "fails": 0
+            },
+            {
+              "fails": 0,
+              "name": "created activity returns identity and concurrency token",
+              "path": "::record a note and resolve concurrent edits::created activity returns identity and concurrency token",
+              "id": "7566bdeb14c8c163b00efe2dc9813faf",
+              "passes": 795
+            },
+            {
+              "name": "edit activity: expected business response",
+              "path": "::record a note and resolve concurrent edits::edit activity: expected business response",
+              "id": "05b1fe67e7c35d4c93609ae232027f67",
+              "passes": 795,
+              "fails": 0
+            },
+            {
+              "name": "edited activity returns a new version",
+              "path": "::record a note and resolve concurrent edits::edited activity returns a new version",
+              "id": "aef945c3b749d0f7446a36f54644e7ab",
+              "passes": 795,
+              "fails": 0
+            },
+            {
+              "name": "concurrent activity edit: expected business response",
+              "path": "::record a note and resolve concurrent edits::concurrent activity edit: expected business response",
+              "id": "6a0eb30218cdc9ed9b14753a7fba4881",
+              "passes": 1590,
+              "fails": 0
+            },
+            {
+              "name": "exactly one concurrent edit wins and one gets 412",
+              "path": "::record a note and resolve concurrent edits::exactly one concurrent edit wins and one gets 412",
+              "id": "7123139773047ddc7b172aeace353f82",
+              "passes": 795,
+              "fails": 0
+            }
+          ]
+      }
+    ],
+    "checks": [
+      {
+        "name": "synthetic identity and Development auth verified",
+        "path": "::synthetic identity and Development auth verified",
+        "id": "a81e65ae97eb36180e2f03ed274542a5",
+        "passes": 50,
+        "fails": 0
+      }
+    ]
+  },
+  "thresholdsPassed": false
+}

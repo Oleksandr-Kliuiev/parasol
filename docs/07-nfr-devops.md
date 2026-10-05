@@ -87,11 +87,17 @@ flowchart LR
 - Запросы, ошибки, латентность по эндпоинтам (p50/p95/p99).
 - Состояние синхронизаций: последняя успешная, длительность, ошибки по системам.
 - Квоты: Atera (запросов/мин), Partner Center 429, PowerOffice 429.
-- Очереди: outbox, OutboundOperation (pending, dead letter), Hangfire failed jobs. Outbox (DEV-07) публикует meter `Crm.Outbox`: `crm.outbox.delivered`, `crm.outbox.failed_attempts`, `crm.outbox.dead_lettered`, `crm.outbox.quarantined`, `crm.outbox.replayed` (тег `module`) и gauge `crm.outbox.backlog` (теги `module`, `status`; пересчёт раз в минуту). Алерт на dead letter/карантин > 0 и на возраст ожидающих — DEV-17; разбор — runbook 09.
+- Очереди: outbox, OutboundOperation (pending, dead letter), Hangfire failed jobs. Outbox (DEV-07) публикует meter `Crm.Outbox`: `crm.outbox.delivered`, `crm.outbox.failed_attempts`, `crm.outbox.dead_lettered`, `crm.outbox.quarantined`, `crm.outbox.replayed` (тег `module`) и gauge `crm.outbox.backlog` (теги `module`, `status`; пересчёт раз в минуту). DEV-17 добавляет снимки возраста/глубины/dead-letter и правила Azure Monitor; разбор — runbooks 09 и 15.
 - Активные пользователи, входы, ошибки аутентификации.
 - Стоимость ресурсов (Cost Management бюджет с алертом).
 
 ### 4.2 Алерты
+
+Реализованный набор DEV-17: `infra/modules/monitoring-operations.bicep`, 16 stateful rules, две группы действий (operations/finance) и workbook. Контролируются HTTP 5xx/p95, SQL readiness, отсутствие телеметрии, heartbeat, очереди, ошибки sync и возраст полного успеха, сопоставления, финансовые и прочие исключения. Точные начальные пороги и восстановление — [runbook 15](runbooks/15-monitoring.md); адресаты задаются конфигурацией и не приняты до EXT-01. Сейчас доставка по умолчанию выключена.
+
+Свежесть обоих потоков тикетов Atera контролируется порогом 15 мин: открытые тикеты запускаются каждые 10 мин, полный проход недавних тикетов — каждые 10 мин со сдвигом на 5 мин. Для выполнения NFR-01d при EXT-01 проверить существующие переопределения расписания, длительность прохода и квоты; прежний ежечасный recent-проход не обеспечивает эту цель.
+
+Таблица ниже сохраняет исходные целевые каналы и пожелания спецификации: SMS/Teams, квоты, сроки credentials и ресурсные пороги не подтверждены этим выпуском. Её значения не являются описанием развёрнутых алертов; согласование с реализованными начальными порогами входит в EXT-01/DEC-09.
 
 | Алерт | Порог | Серьёзность | Канал |
 |---|---|---|---|
@@ -111,7 +117,7 @@ flowchart LR
 - `/health/live` — процесс жив; в crm-worker ещё и цикл outbox завершает раунды (в памяти, без БД: отказ SQL не перезапускает все реплики, «зависший» цикл перезапускается платформой через 10 мин без раунда).
 - `/health/ready` — БД отвечает (`SELECT 1`, соединение с таймаутом 3 с, весь ответ ≤ 4 с; проба Container Apps — 5 с) и в ней применены все миграции этой сборки (проверяется не чаще раза в 5 мин). Внешние системы (Atera, PowerOffice, Graph) в readiness не входят. Новая ревизия без доступа к SQL или со схемой отстающей от кода не получает трафик (web) и не заменяет работающую (worker).
 - `/health/details` (право `integrations.manage`) — каждая проверка со статусом и длительностью, heartbeat компонентов worker (`outbox` — после раундов цикла, `jobs` — задача Hangfire `worker-heartbeat` раз в минуту) с возрастом; старше 3 мин — `stale`, общий статус `Degraded`. Таблица `integration.WorkerHeartbeats`: строка на компонент и экземпляр, строки исчезнувших экземпляров удаляются через неделю.
-- `/health/integrations` (только для мониторинга, право `integrations.manage`) — по каждой внешней системе: включена ли, не на паузе ли, когда и чем закончился последний прогон, сколько исходящих операций с ошибкой; **не** влияет на readiness, поэтому сбой интеграции не выводит CRM из балансировщика.
+- `/health/integrations` (только для мониторинга, право `integrations.manage`) — по потокам system/job: включён ли, не на паузе ли, последний прогон, последний полный успех, возраст/порог свежести, ошибки исходящих операций; **не** влияет на readiness, поэтому сбой интеграции не выводит CRM из балансировщика.
 
 ### 4.4 Runbooks (обязательны к запуску R1)
 1. Деплой и откат — [runbook 01](runbooks/01-first-deployment.md) (§ 6 и § 9).
@@ -123,6 +129,8 @@ flowchart LR
 7. Ручной биллинг при недоступности CRM — [runbook 07](runbooks/07-manual-billing.md).
 8. Права БД, retention и целостность аудита, секреты поставщиков — [runbook 08](runbooks/08-database-permissions.md).
 9. Power BI: чтение CRM, плановое обновление, снимки закрытых месяцев — [runbook 14](runbooks/14-power-bi-refresh.md).
+
+10. Мониторинг, владельцы исключений, безопасные повторы и внешняя проверка алертов — [runbook 15](runbooks/15-monitoring.md).
 
 ### 4.5 Поддержка
 - L1 — Admin CRM внутри Компании (доступы, сопоставления, повтор синхронизаций).

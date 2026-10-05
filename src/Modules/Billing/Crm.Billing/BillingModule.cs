@@ -27,6 +27,7 @@ public static class BillingModule
         services.AddScoped<BillingCollector>();
         services.AddScoped<BillingService>();
         services.AddScoped<IBillingApi, BillingApi>();
+        services.AddScoped<Crm.SharedKernel.Operations.IOperationalSignalSource, BillingOperationalSignals>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, BillingRestoreParticipant>();
         services.AddScoped<IProductUsage, BillingProductUsage>();
         services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, BillingDatabasePermissions>();

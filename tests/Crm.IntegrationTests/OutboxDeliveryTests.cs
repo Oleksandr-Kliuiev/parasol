@@ -14,6 +14,8 @@ using Crm.Sales.Contracts;
 using Crm.Sales.Persistence;
 using Crm.SharedKernel.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -63,7 +65,7 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
         dead.Attempts.ShouldBe(OutboxMessage.MaxAttempts);
         dead.DeadLetteredAt.ShouldNotBeNull();
         dead.LockedUntil.ShouldBeNull();
-        dead.LastError.ShouldNotBeNull().ShouldContain("DeliveryProbeHandlerB: Probe B failed on purpose.");
+        dead.LastError.ShouldNotBeNull().ShouldContain("DeliveryProbeHandlerB: InvalidOperationException");
         // A succeeded at the first attempt and never ran again; B ran every time.
         factory.Probes.Runs(probe, DeliveryProbes.EffectA).ShouldBe(1);
         factory.Probes.Runs(probe, DeliveryProbes.EffectB).ShouldBe(OutboxMessage.MaxAttempts);
@@ -91,7 +93,7 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
 
         // The cause is fixed. The replay is asked for with a reason; a second request for the same message is refused.
         factory.Probes.FailB(probe, 0);
-        var body = new { messages = new[] { new { module = "customers", id } }, reason = "Probe B is fixed (DEV-07 test)", expected = 1 };
+        var body = new { messages = new[] { new { module = "customers", id, replays = 0 } }, reason = "Probe B is fixed (DEV-07 test)", expected = 1 };
         (await admin.PostAsJsonAsync($"{Outbox}/replay", body, Ct)).StatusCode.ShouldBe(HttpStatusCode.Accepted);
         var again = await admin.PostAsJsonAsync($"{Outbox}/replay", body, Ct);
         again.StatusCode.ShouldBe(HttpStatusCode.Conflict);
@@ -115,6 +117,123 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
         factory.Probes.Runs(probe, DeliveryProbes.EffectB).ShouldBe(OutboxMessage.MaxAttempts + 1);
         (await EffectsAsync(probe, DeliveryProbes.EffectA)).ShouldBe(1);
         (await EffectsAsync(probe, DeliveryProbes.EffectB)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Concurrent_bulk_replays_return_one_request_and_per_item_results_without_duplicate_audit()
+    {
+        var id = await ProbeAsync(Guid.NewGuid());
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<CustomersDbContext>().OutboxMessages.Where(m => m.Id == id)
+                .ExecuteUpdateAsync(update => update.SetProperty(m => m.Status, OutboxStatus.DeadLetter), Ct);
+        }
+
+        var admin = factory.ClientAs(CrmRoles.Admin, userKey: "dev17-replay-race");
+        var body = new { messages = new[] { new { module = "customers", id, replays = 0 } }, reason = "DEV-17 verified the handler recovery", expected = 1 };
+        var responses = await Task.WhenAll(admin.PostAsJsonAsync($"{Outbox}/replay", body, Ct), admin.PostAsJsonAsync($"{Outbox}/replay", body, Ct));
+        responses.Select(r => r.StatusCode).ShouldBe([HttpStatusCode.Accepted, HttpStatusCode.Conflict], ignoreOrder: true);
+        foreach (var response in responses)
+        {
+            var result = await response.ReadJsonAsync();
+            var item = result.GetProperty("items").EnumerateArray().Single();
+            item.GetProperty("id").GetGuid().ShouldBe(id);
+            item.GetProperty("status").GetString().ShouldBe(response.StatusCode == HttpStatusCode.Accepted ? "Requested" : "Unavailable");
+        }
+        // SingleAsync in the helper also proves there is exactly one request and one audit entry.
+        var (request, audit) = await ReplayRecordAsync(id);
+        request.Expected.ShouldBe(1);
+        audit.Changes.ShouldNotBeNull().ShouldContain(id.ToString());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_confirmation_cannot_replay_the_next_generation_after_worker_failure(bool corruptPayload)
+    {
+        var probe = Guid.NewGuid();
+        var id = await DeadLetterAsync(await ProbeAsync(probe));
+        factory.Probes.FailB(probe, int.MaxValue);
+        if (corruptPayload)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<CustomersDbContext>().OutboxMessages.Where(m => m.Id == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(m => m.Payload, "{corrupt payload}").SetProperty(m => m.Status, OutboxStatus.Quarantined), Ct);
+        }
+        var admin = factory.ClientAs(CrmRoles.Admin, userKey: "replay-generation");
+        var body = new { messages = new[] { new { module = "customers", id, replays = 0 } }, reason = "Investigated the initial delivery failure", expected = 1 };
+        (await admin.PostAsJsonAsync($"{Outbox}/replay", body, Ct)).StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        var processor = Processor();
+        await processor.ProcessContextAsync(Customers, Ct);
+        while ((await MessageAsync(Customers, id)).Status == OutboxStatus.Pending)
+            (await DeliverOnceAsync(processor, Customers, id)).ShouldBeFalse();
+        var failed = await MessageAsync(Customers, id);
+        failed.Status.ShouldBe(corruptPayload ? OutboxStatus.Quarantined : OutboxStatus.DeadLetter);
+        failed.Replays.ShouldBe(1);
+        await ShouldRefuseAsync(admin, body, HttpStatusCode.Conflict, "OUTBOX_REPLAY_STALE");
+        var (request, _) = await ReplayRecordAsync(id);
+        request.AppliedAt.ShouldNotBeNull();
+        // A deliberate new confirmation may retry the new generation, while the repeated original cannot.
+        var next = new { messages = new[] { new { module = "customers", id, replays = 1 } }, body.reason, expected = 1 };
+        (await admin.PostAsJsonAsync($"{Outbox}/replay", next, Ct)).StatusCode.ShouldBe(HttpStatusCode.Accepted);
+    }
+
+    [Fact]
+    public async Task A_partial_module_failure_reports_committed_unknown_and_not_requested_items()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var customer = OutboxMessage.For(new DeliveryProbe(Guid.NewGuid(), "partial-first"), now, null);
+        var sales = OutboxMessage.For(new DeliveryProbe(Guid.NewGuid(), "partial-second"), now, null);
+        var integration = OutboxMessage.For(new DeliveryProbe(Guid.NewGuid(), "partial-third"), now, null);
+        foreach (var message in new[] { customer, sales, integration }) message.Status = OutboxStatus.DeadLetter;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var customersDb = scope.ServiceProvider.GetRequiredService<CustomersDbContext>();
+            customersDb.OutboxMessages.Add(customer);
+            await customersDb.SaveChangesAsync(Ct);
+            var salesDb = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+            salesDb.OutboxMessages.Add(sales);
+            await salesDb.SaveChangesAsync(Ct);
+            var integrationDb = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
+            integrationDb.OutboxMessages.Add(integration);
+            await integrationDb.SaveChangesAsync(Ct);
+        }
+        await using var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddDbContext<SalesDbContext>(options => options.AddInterceptors(new RefuseReplaySave(sales.Id)))));
+        var admin = host.CreateClient();
+        admin.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, CrmRoles.Admin);
+        admin.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "partial-replay");
+        admin.DefaultRequestHeaders.Add("X-CSRF", "1");
+        var messages = new[]
+        {
+            new { module = "customers", id = customer.Id, replays = 0 },
+            new { module = "sales", id = sales.Id, replays = 0 },
+            new { module = "integration", id = integration.Id, replays = 0 },
+        };
+        var response = await admin.PostAsJsonAsync($"{Outbox}/replay", new { messages, expected = 3, reason = "DEV-17 partial commit simulation" }, Ct);
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        var body = await response.ReadJsonAsync();
+        body.GetProperty("code").GetString().ShouldBe("OUTBOX_REPLAY_PARTIAL");
+        var results = body.GetProperty("items").EnumerateArray().ToDictionary(i => i.GetProperty("id").GetGuid(), i => i.GetProperty("status").GetString());
+        results[customer.Id].ShouldBe("Requested");
+        results[sales.Id].ShouldBe("Unknown");
+        results[integration.Id].ShouldBe("NotRequested");
+        (await ReplayRecordAsync(customer.Id)).Request.Expected.ShouldBe(1);
+        await using var verify = factory.Services.CreateAsyncScope();
+        (await verify.ServiceProvider.GetRequiredService<SalesDbContext>().OutboxReplayRequests.CountAsync(r => r.MessageIds.Contains(sales.Id.ToString()), Ct)).ShouldBe(0);
+        (await verify.ServiceProvider.GetRequiredService<IntegrationDbContext>().OutboxReplayRequests.CountAsync(r => r.MessageIds.Contains(integration.Id.ToString()), Ct)).ShouldBe(0);
+    }
+
+    private sealed class RefuseReplaySave(Guid messageId) : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context is SalesDbContext db && db.ChangeTracker.Entries<OutboxReplayRequest>()
+                .Any(e => e.State == EntityState.Added && e.Entity.MessageIds.Contains(messageId.ToString(), StringComparison.Ordinal)))
+                throw new InvalidOperationException("Synthetic second-module write failure.");
+            return ValueTask.FromResult(result);
+        }
     }
 
     [Fact]
@@ -292,7 +411,7 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
 
         var failed = await MessageAsync(Customers, id);
         failed.Status.ShouldBe(OutboxStatus.Pending);
-        failed.LastError.ShouldNotBeNull().ShouldContain("a handler changes one module only");
+        failed.LastError.ShouldNotBeNull().ShouldContain("CrossModuleProbeHandler: InvalidOperationException");
         await using var check = factory.Services.CreateAsyncScope();
         var audit = check.ServiceProvider.GetRequiredService<CustomersDbContext>().AuditEntries;
         (await audit.CountAsync(a => a.EntityType == nameof(CrossModuleProbe) && a.EntityId == probe, Ct)).ShouldBe(0);
@@ -489,11 +608,18 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
         var ran = await OperationAsync(operationId);
         ran.Attempts.ShouldBe(1);
         ran.Status.ShouldBe(OutboundStatus.Failed);
-        ran.LastError.ShouldNotBeNull().ShouldContain("No handler");
+        ran.LastError.ShouldBe("Outbound operation failed (PermanentOutboundException).");
         ran.LeaseOwner.ShouldBeNull();
 
         // Sending it back and withdrawing it are a person's decisions, recorded with the change.
-        (await admin.PostAsync($"/api/v1/integrations/outbound/{operationId}/retry", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var queue = await admin.GetFromJsonAsync<JsonElement>("/api/v1/integrations/outbound?system=atera&limit=200", Ct);
+        var operationEtag = queue.GetProperty("items").EnumerateArray().Single(o => o.GetProperty("id").GetGuid() == operationId).GetProperty("etag").GetString()!;
+        using var retryRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/integrations/outbound/{operationId}/retry")
+        {
+            Content = JsonContent.Create(new { reason = "Fixed the synthetic delivery failure" }),
+        };
+        retryRequest.Headers.TryAddWithoutValidation("If-Match", operationEtag);
+        (await admin.SendAsync(retryRequest, Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
         var retried = await OperationAsync(operationId);
         retried.Status.ShouldBe(OutboundStatus.Pending);
         retried.Attempts.ShouldBe(0);
@@ -535,7 +661,7 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
 
         var admin = factory.ClientAs(CrmRoles.Admin, userKey: "outbox-bulk");
         var finance = factory.ClientAs(CrmRoles.Finance, userKey: "outbox-finance");
-        var messages = ids.Select(id => new { module = "customers", id }).ToArray();
+        var messages = ids.Select(id => new { module = "customers", id, replays = 0 }).ToArray();
         var body = new { messages, reason = "Replay after the DEV-07 bulk test", expected = 3 };
 
         (await finance.GetAsync(Outbox, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
@@ -544,11 +670,15 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
         withoutCsrf.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await withoutCsrf.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("CSRF_HEADER_REQUIRED");
 
-        var tooMany = Enumerable.Range(0, OutboxReplayRequest.MaxMessages + 1).Select(_ => new { module = "customers", id = Guid.NewGuid() }).ToArray();
+        var tooMany = Enumerable.Range(0, OutboxReplayRequest.MaxMessages + 1).Select(_ => new { module = "customers", id = Guid.NewGuid(), replays = 0 }).ToArray();
         await ShouldRefuseAsync(admin, new { messages = tooMany, reason = body.reason, expected = tooMany.Length }, HttpStatusCode.BadRequest, "OUTBOX_REPLAY_LIMIT");
         await ShouldRefuseAsync(admin, new { messages, reason = "  ", expected = 3 }, HttpStatusCode.BadRequest, "OUTBOX_REPLAY_REASON");
-        await ShouldRefuseAsync(admin, new { messages = new[] { new { module = "nowhere", id = ids[0] } }, reason = body.reason, expected = 1 },
+        await ShouldRefuseAsync(admin, new { messages = new[] { new { module = "nowhere", id = ids[0], replays = 0 } }, reason = body.reason, expected = 1 },
             HttpStatusCode.BadRequest, "OUTBOX_UNKNOWN_MODULE");
+        await ShouldRefuseAsync(admin, new { messages = new[] { new { module = "customers", id = ids[0] } }, reason = body.reason, expected = 1 },
+            HttpStatusCode.Conflict, "OUTBOX_REPLAY_STALE");
+        await ShouldRefuseAsync(admin, new { messages = new[] { new { module = "customers", id = ids[0], replays = 1 } }, reason = body.reason, expected = 1 },
+            HttpStatusCode.Conflict, "OUTBOX_REPLAY_STALE");
         // The person confirmed a different number than what is selected: nothing is requested.
         await ShouldRefuseAsync(admin, body with { expected = 2 }, HttpStatusCode.Conflict, "OUTBOX_REPLAY_STALE");
 
@@ -581,6 +711,21 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
             (await EffectsAsync(probe, DeliveryProbes.EffectA)).ShouldBe(1);
             (await EffectsAsync(probe, DeliveryProbes.EffectB)).ShouldBe(1);
         }
+    }
+
+    [Fact]
+    public async Task A_handler_failure_keeps_money_and_personal_values_out_of_operator_diagnostics_and_logs()
+    {
+        const string confidential = "Customer-secret 947321.87 NOK";
+        var probe = Guid.NewGuid();
+        factory.Probes.FailB(probe, 1);
+        var id = await ProbeAsync(probe, confidential);
+        var logger = new CapturingLogger<OutboxProcessor>();
+        await DeliverOnceAsync(Processor(logger: logger), Customers, id);
+        var failed = await MessageAsync(Customers, id);
+        failed.LastError.ShouldBe("DeliveryProbeHandlerB: InvalidOperationException");
+        string.Join('\n', logger.Lines).ShouldNotContain(confidential);
+        string.Join('\n', logger.Lines).ShouldNotContain("947321.87");
     }
 
     [Fact]

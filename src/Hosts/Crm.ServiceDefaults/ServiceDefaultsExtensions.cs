@@ -23,6 +23,7 @@ public static class ServiceDefaultsExtensions
         builder.ConfigureOpenTelemetry();
 
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+        builder.Services.AddHostedService<DatabaseReadinessTelemetry>();
         builder.Services.AddServiceDiscovery();
         builder.Services.ConfigureHttpClientDefaults(http => http.AddServiceDiscovery());
         return builder;
@@ -39,6 +40,7 @@ public static class ServiceDefaultsExtensions
 
         var otel = builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics => metrics
+                .AddMeter("Crm.Health", "Crm.Operations", "Crm.Outbox")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())

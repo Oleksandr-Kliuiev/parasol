@@ -223,9 +223,9 @@ public sealed class OutboundProcessorJob(
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // An HttpClient timeout arrives as a cancellation that nobody asked for: a failed attempt like any other.
-            logger.LogWarning(ex, "Outbound {System}/{Operation} for {EntityId} failed (attempt {Attempt})",
-                operation.System, operation.Operation, operation.EntityId, attempts);
-            var error = Truncate(ex.GetBaseException().Message);
+            logger.LogWarning("Outbound {System}/{Operation} for {EntityId} failed (attempt {Attempt}, {ErrorType})",
+                operation.System, operation.Operation, operation.EntityId, attempts, ex.GetType().Name);
+            var error = $"Outbound operation failed ({ex.GetType().Name}).";
             var now = timeProvider.GetUtcNow();
             if (ex is PermanentOutboundException && attempt is not null)
             {
@@ -282,8 +282,6 @@ public sealed class OutboundProcessorJob(
             .Where(o => o.Id == id && o.LeaseOwner == token && o.Status == OutboundStatus.Pending)
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.LockedUntil, lease), cancellationToken) == 1;
     }
-
-    private static string Truncate(string value) => value.Length > 4000 ? value[..4000] : value;
 
     /// <summary>Normal operation, read from the store now; an unreadable state sends nothing (DEV-13: fail closed for effects).</summary>
     private async Task<bool> MaySendAsync(CancellationToken cancellationToken)

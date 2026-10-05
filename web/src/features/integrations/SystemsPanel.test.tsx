@@ -21,6 +21,18 @@ const queued: ConnectionTestStatus = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('SystemsPanel', () => {
+  it('does not pause the integration when the reason prompt is cancelled', async () => {
+    const fetch = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify(status)));
+    const prompt = vi.fn(() => null);
+    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('prompt', prompt);
+    const user = userEvent.setup();
+    renderRoutes([{ path: '/admin', element: <SystemsPanel /> }], '/admin', testUser(['integrations.manage']));
+    await user.click(await screen.findByRole('button', { name: 'Pause' }));
+    expect(prompt).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+  });
+
   it('queues the connection test for the worker and shows its answer when it comes', async () => {
     let answered = false;
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {

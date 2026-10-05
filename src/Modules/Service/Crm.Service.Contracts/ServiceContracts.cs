@@ -75,6 +75,10 @@ public interface IServiceApi
     /// <summary>Device counts on a date: the snapshot of that day or the latest before it (BR-CON-01).</summary>
     Task<IReadOnlyDictionary<DeviceType, int>> GetDeviceCountsAsync(Guid organizationId, DateOnly date, CancellationToken cancellationToken);
 
+    /// <summary>The same dated counts for a billing batch; each customer uses its own latest snapshot, or its live devices when none exists.</summary>
+    Task<IReadOnlyDictionary<Guid, IReadOnlyDictionary<DeviceType, int>>> GetDeviceCountsAsync(
+        IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
+
     /// <summary>External ids of tickets that may still get work hours: open, or created or resolved since <paramref name="since"/>.</summary>
     Task<IReadOnlyList<TicketRef>> GetActiveTicketsAsync(string system, DateTimeOffset since, CancellationToken cancellationToken);
 

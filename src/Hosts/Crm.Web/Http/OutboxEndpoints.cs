@@ -32,7 +32,7 @@ public sealed record OutboxModuleCount(string Module, int Pending, int Processin
 
 public sealed record OutboxOverview(IReadOnlyList<OutboxModuleCount> Counts, IReadOnlyList<OutboxMessageItem> Items);
 
-public sealed record OutboxMessageRef(string Module, Guid Id);
+public sealed record OutboxMessageRef(string Module, Guid Id, int? Replays);
 
 /// <summary>
 /// What a person confirmed: these messages, this many of them, for this reason. The server replays nothing else and refuses
@@ -40,7 +40,9 @@ public sealed record OutboxMessageRef(string Module, Guid Id);
 /// </summary>
 public sealed record ReplayOutboxRequest(IReadOnlyList<OutboxMessageRef>? Messages, string? Reason, int Expected);
 
-public sealed record ReplayOutboxResponse(int Requested, IReadOnlyList<string> Modules);
+public sealed record ReplayOutboxItem(string Module, Guid Id, string Status);
+
+public sealed record ReplayOutboxResponse(int Requested, IReadOnlyList<string> Modules, IReadOnlyList<ReplayOutboxItem> Items);
 
 /// <summary>
 /// Delivery diagnostics and replay of the domain outbox for administrators (DEV-07). The web host only reads the outbox and
@@ -105,6 +107,8 @@ public static class OutboxEndpoints
                     return Error.Validation("OUTBOX_REPLAY_REASON", $"Say why the messages are replayed ({MinReasonLength}–{MaxReasonLength} characters).").ToProblem();
                 }
 
+                if (request.Messages?.Any(m => m is null || string.IsNullOrWhiteSpace(m.Module)) == true)
+                    return Error.Validation("OUTBOX_UNKNOWN_MODULE", "Every selected message must name its module.").ToProblem();
                 var selected = (request.Messages ?? []).DistinctBy(m => (m.Module.ToLowerInvariant(), m.Id)).ToList();
                 if (selected.Count is 0 or > OutboxReplayRequest.MaxMessages)
                 {
@@ -117,52 +121,88 @@ public static class OutboxEndpoints
                     return Error.Validation("OUTBOX_UNKNOWN_MODULE", $"There is no module '{unknown.Module}'.").ToProblem();
                 }
 
-                // What the person saw and confirmed must still be what can be replayed: dead or quarantined, not yet requested.
-                var plan = new List<(ModuleDbContext Context, List<OutboxMessage> Messages)>();
-                foreach (var group in selected.GroupBy(m => contexts[m.Module].Schema))
+                // A database session lock serializes replay requests across web replicas, including the absent request row.
+                // Per-module transactions remain independent, exactly as worker application is; all results name the records.
+                var lockContext = contexts.Values.First();
+                await lockContext.Database.OpenConnectionAsync(ct);
+                try
                 {
-                    var context = contexts[group.Key];
-                    var ids = group.Select(m => m.Id).ToList();
-                    var requested = await RequestedAsync(context, ct);
-                    var replayable = await context.OutboxMessages.AsNoTracking()
-                        .Where(m => ids.Contains(m.Id) && m.ProcessedAt == null && (m.Status == OutboxStatus.DeadLetter || m.Status == OutboxStatus.Quarantined))
-                        .ToListAsync(ct);
-                    plan.Add((context, replayable.Where(m => !requested.Contains(m.Id)).ToList()));
-                }
-
-                var replayableCount = plan.Sum(p => p.Messages.Count);
-                if (request.Expected != selected.Count || replayableCount != selected.Count)
-                {
-                    return Error.Conflict(
-                        "OUTBOX_REPLAY_STALE",
-                        $"{replayableCount} of the {selected.Count} selected messages can be replayed now (confirmed: {request.Expected}). Reload the list and confirm again.")
-                        .ToProblem();
-                }
-
-                // One request and one audit entry per module, each in that module's transaction.
-                var now = time.GetUtcNow();
-                foreach (var (context, messages) in plan)
-                {
-                    var replay = new OutboxReplayRequest
+                    await lockContext.Database.ExecuteSqlRawAsync("DECLARE @result int; EXEC @result = sys.sp_getapplock @Resource=N'crm-outbox-replay', @LockMode=N'Exclusive', @LockOwner=N'Session', @LockTimeout=10000; IF @result < 0 THROW 51000, 'Replay selection is busy.', 1;", ct);
+                    // What the person saw and confirmed must still be what can be replayed: dead or quarantined, not yet requested.
+                    var plan = new List<(ModuleDbContext Context, List<OutboxMessage> Messages)>();
+                    foreach (var group in selected.GroupBy(m => contexts[m.Module].Schema))
                     {
-                        Id = SequentialId.New(now),
-                        MessageIds = string.Join(',', messages.Select(m => m.Id)),
-                        Expected = messages.Count,
-                        Reason = reason,
-                        RequestedBy = user.UserId,
-                        RequestedByName = user.DisplayName,
-                        RequestedAt = now,
-                    };
-                    context.OutboxReplayRequests.Add(replay);
-                    context.RecordAudit(user, requestContext, time, AuditActions.Replay, nameof(OutboxMessage), replay.Id, new
-                    {
-                        Reason = reason,
-                        Messages = messages.Select(m => new { m.Id, EventType = ShortType(m.Type), Status = m.Status.ToString(), m.Attempts }).ToList(),
-                    });
-                    await context.SaveChangesAsync(ct);
-                }
+                        var context = contexts[group.Key];
+                        var ids = group.Select(m => m.Id).ToList();
+                        var requested = await RequestedAsync(context, ct);
+                        var replayable = await context.OutboxMessages.AsNoTracking()
+                            .Where(m => ids.Contains(m.Id) && m.ProcessedAt == null && (m.Status == OutboxStatus.DeadLetter || m.Status == OutboxStatus.Quarantined))
+                            .ToListAsync(ct);
+                        plan.Add((context, replayable.Where(m => !requested.Contains(m.Id) &&
+                            group.Single(s => s.Id == m.Id).Replays == m.Replays).ToList()));
+                    }
 
-                return Results.Accepted(value: new ReplayOutboxResponse(replayableCount, plan.Select(p => p.Context.Schema).ToList()));
+                    var replayableCount = plan.Sum(p => p.Messages.Count);
+                    if (request.Expected != selected.Count || replayableCount != selected.Count)
+                    {
+                        var available = plan.SelectMany(p => p.Messages.Select(m => (p.Context.Schema, m.Id))).ToHashSet();
+                        return new Error(
+                            "OUTBOX_REPLAY_STALE",
+                            $"{replayableCount} of the {selected.Count} selected messages can be replayed now (confirmed: {request.Expected}). Reload the list and confirm again.",
+                            ErrorType.Conflict, new Dictionary<string, object?>
+                            {
+                                ["items"] = selected.Select(m => new ReplayOutboxItem(m.Module, m.Id,
+                                    available.Contains((contexts[m.Module].Schema, m.Id)) ? "Available" : "Unavailable")).ToList(),
+                            }).ToProblem();
+                    }
+
+                    // One request and one audit entry per module, each in that module's transaction.
+                    var now = time.GetUtcNow();
+                    var completedModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var (context, messages) in plan)
+                    {
+                        var replay = new OutboxReplayRequest
+                        {
+                            Id = SequentialId.New(now),
+                            MessageIds = string.Join(',', messages.Select(m => m.Id)),
+                            Expected = messages.Count,
+                            Reason = reason,
+                            RequestedBy = user.UserId,
+                            RequestedByName = user.DisplayName,
+                            RequestedAt = now,
+                        };
+                        context.OutboxReplayRequests.Add(replay);
+                        context.RecordAudit(user, requestContext, time, AuditActions.Replay, nameof(OutboxMessage), replay.Id, new
+                        {
+                            Reason = reason,
+                            Messages = messages.Select(m => new { m.Id, EventType = ShortType(m.Type), Status = m.Status.ToString(), m.Attempts }).ToList(),
+                        });
+                        try
+                        {
+                            await context.SaveChangesAsync(ct);
+                            completedModules.Add(context.Schema);
+                        }
+                        catch (Exception) when (!ct.IsCancellationRequested)
+                        {
+                            // A lost commit acknowledgement is indistinguishable from a failed write. Name that module
+                            // Unknown, not failed: refresh the durable requests before confirming a new selection.
+                            return new Error("OUTBOX_REPLAY_PARTIAL", "Replay results could not be confirmed for every module. Reload before retrying.",
+                                ErrorType.Conflict, new Dictionary<string, object?>
+                                {
+                                    ["items"] = selected.Select(m => new ReplayOutboxItem(m.Module, m.Id,
+                                        completedModules.Contains(m.Module) ? "Requested" : contexts[m.Module].Schema == context.Schema ? "Unknown" : "NotRequested")).ToList(),
+                                }).ToProblem();
+                        }
+                    }
+
+                    return Results.Accepted(value: new ReplayOutboxResponse(replayableCount, plan.Select(p => p.Context.Schema).ToList(),
+                        selected.Select(m => new ReplayOutboxItem(m.Module, m.Id, "Requested")).ToList()));
+                }
+                finally
+                {
+                    await lockContext.Database.ExecuteSqlRawAsync("EXEC sys.sp_releaseapplock @Resource=N'crm-outbox-replay', @LockOwner=N'Session';", CancellationToken.None);
+                    await lockContext.Database.CloseConnectionAsync();
+                }
             })
             .RequirePermission(Permissions.IntegrationsManage);
 
@@ -191,7 +231,7 @@ public static class OutboxEndpoints
         message.Replays,
         message.NextAttemptAt,
         message.DeadLetteredAt,
-        message.LastError,
+        message.LastError is null ? null : "Delivery failed. Inspect the event type and handler diagnostics.",
         (message.DeliveredHandlers ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(h => h[(h.LastIndexOf('.') + 1)..]).ToList(),
         Encoding.UTF8.GetByteCount(message.Payload),
         PayloadFields(message.Payload),

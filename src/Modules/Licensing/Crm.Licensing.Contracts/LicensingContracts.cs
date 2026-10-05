@@ -86,8 +86,14 @@ public interface ILicensingApi
     /// <summary>Active subscriptions on a date grouped by organization and catalog product; unlinked subscriptions are left out (BR-LIC-03).</summary>
     Task<IReadOnlyList<SubscriptionQuantity>> GetSubscriptionQuantitiesAsync(DateOnly date, CancellationToken cancellationToken);
 
+    /// <summary>The same reading restricted in SQL to the customers needed by a billing run (DEV-16); an empty selection reads nothing.</summary>
+    Task<IReadOnlyList<SubscriptionQuantity>> GetSubscriptionQuantitiesAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
+
     /// <summary>Subscriptions of an organization that are active on a date but have no catalog product, for the billing anomaly list.</summary>
     Task<IReadOnlyList<string>> GetUnmappedOfferNamesAsync(Guid organizationId, DateOnly date, CancellationToken cancellationToken);
+
+    /// <summary>Unmapped offers for the selected customers in one query, grouped once for billing anomaly review.</summary>
+    Task<IReadOnlyDictionary<Guid, IReadOnlyList<string>>> GetUnmappedOfferNamesAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
 
     /// <summary>Subscriptions that need someone to look at them today: an open cancellation window or a renewal coming up.</summary>
     Task<IReadOnlyList<SubscriptionAttention>> GetAttentionAsync(DateOnly today, CancellationToken cancellationToken);
@@ -102,6 +108,9 @@ public interface ILicensingApi
     /// count Microsoft 365 users instead of trusting the contract's estimate (BR-CON-02).
     /// </summary>
     Task<IReadOnlyList<AssignedLicenses>> GetAssignedLicensesAsync(DateOnly date, CancellationToken cancellationToken);
+
+    /// <summary>Latest licence readings for only the selected customers, selected on the database before materialization.</summary>
+    Task<IReadOnlyList<AssignedLicenses>> GetAssignedLicensesAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
 
     /// <summary>Microsoft's cost per customer for a period, from the imported billing lines (FR-RPT-02).</summary>
     Task<IReadOnlyList<MsCostByOrganization>> GetMsCostsAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);

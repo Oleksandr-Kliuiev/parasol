@@ -41,6 +41,8 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.IsOpen, x.CreatedAtSource });
             b.HasIndex(x => x.ContactId).HasFilter("[ContactId] IS NOT NULL");
+            b.HasIndex(x => x.IsOpen).HasFilter("[IsOpen] = 1")
+                .IncludeProperties(x => x.TechnicianUserId);
         });
 
         modelBuilder.Entity<Device>(b =>

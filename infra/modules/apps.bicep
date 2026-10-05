@@ -95,7 +95,10 @@ var webConnectionString = '${sqlConnectionPrefix};User Id=${appIdentityClientId}
 var workerConnectionString = '${sqlConnectionPrefix};User Id=${workerIdentityClientId}'
 var migratorConnectionString = '${sqlConnectionPrefix};User Id=${migratorIdentityClientId}'
 
-var commonEnv = [
+param monitoringFreshness object = {}
+var monitoringEnv = [for threshold in items(monitoringFreshness): { name: 'Monitoring__Freshness__${threshold.key}', value: string(threshold.value) }]
+
+var commonEnv = concat([
   { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
   // Issued quote documents (DEV-08); each host reaches the container with its own identity (AZURE_CLIENT_ID).
   { name: 'Documents__Provider', value: 'AzureBlob' }
@@ -107,8 +110,7 @@ var commonEnv = [
   // Read-only maintenance by configuration (DEV-13): normally false; the operator's switch lives in the document store.
   { name: 'Maintenance__ForceReadOnly', value: string(maintenanceForceReadOnly) }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
-  { name: 'OTEL_SERVICE_NAME', value: 'crm' }
-]
+], monitoringEnv)
 
 // DEV-14: the BI read API takes bearer tokens on crm-web only; the worker has no use for it.
 var biClientEnv = [for (client, i) in biAllowedClients: { name: 'Bi__AllowedClients__${i}', value: client }]
@@ -119,6 +121,7 @@ var biEnv = concat([
 ], biClientEnv)
 
 var webEnv = concat(commonEnv, biEnv, [
+  { name: 'OTEL_SERVICE_NAME', value: 'crm-web' }
   { name: 'AZURE_CLIENT_ID', value: appIdentityClientId }
   { name: 'ConnectionStrings__crm', value: webConnectionString }
   { name: 'AzureAd__TenantId', value: entraTenantId }
@@ -134,6 +137,7 @@ var webEnv = concat(commonEnv, biEnv, [
 ])
 
 var workerEnv = concat(commonEnv, [
+  { name: 'OTEL_SERVICE_NAME', value: 'crm-worker' }
   { name: 'AZURE_CLIENT_ID', value: workerIdentityClientId }
   { name: 'ConnectionStrings__crm', value: workerConnectionString }
   { name: 'Integrations__MicrosoftGraph__Enabled', value: 'true' }
@@ -298,6 +302,7 @@ resource migrate 'Microsoft.App/jobs@2024-10-02-preview' = {
           args: bootstrapImages ? [] : ['--migrate-only']
           resources: { cpu: json('0.5'), memory: '1Gi' }
           env: concat(commonEnv, [
+            { name: 'OTEL_SERVICE_NAME', value: 'crm-migrator' }
             { name: 'AZURE_CLIENT_ID', value: migratorIdentityClientId }
             { name: 'ConnectionStrings__crm', value: migratorConnectionString }
             { name: 'Database__WebIdentityName', value: appIdentityName }

@@ -138,7 +138,7 @@ internal sealed class MartService(
     }
 
     private static MartTable Table(string dataset, DateOnly from, DateOnly to, string[] columns, List<object?[]> rows) =>
-        new(dataset, from, to, columns, rows.ConvertAll(r => (IReadOnlyList<object?>)r));
+        new(dataset, from, to, columns, rows);
 
     /// <summary>The same table as CSV, because Power BI's Web connector reads a file more happily than paged JSON.</summary>
     public static string ToCsv(MartTable table)

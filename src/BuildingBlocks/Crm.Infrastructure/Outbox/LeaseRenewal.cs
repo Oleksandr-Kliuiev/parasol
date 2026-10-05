@@ -37,7 +37,7 @@ public sealed class LeaseRenewal : IAsyncDisposable
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    logger.LogWarning(ex, "A lease could not be renewed; trying again at the next tick");
+                    logger.LogWarning("A lease could not be renewed ({ErrorType}); trying again at the next tick", ex.GetType().Name);
                     continue;
                 }
 

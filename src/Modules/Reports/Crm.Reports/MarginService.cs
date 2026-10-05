@@ -56,18 +56,18 @@ internal sealed class MarginService(
         var periodStart = new DateOnly(year, month, 1).AddMonths(1 - months);
         var periodEnd = new DateOnly(year, month, 1).AddMonths(1).AddDays(-1);
 
-        var revenue = await billing.GetRevenueByOrganizationAsync(periodStart, periodEnd, ct, approvedOnly);
+        var revenue = (await billing.GetRevenueByOrganizationAsync(periodStart, periodEnd, ct, approvedOnly)).ToDictionary(r => r.OrganizationId);
         var licenseCosts = (await licensing.GetMsCostsAsync(periodStart, periodEnd, ct)).ToDictionary(c => c.OrganizationId);
         var hours = (await timeTracking.GetHoursByOrganizationAsync(periodStart, periodEnd, ct)).ToDictionary(h => h.OrganizationId);
         var hourlyCost = Math.Max(0m, options.Value.InternalHourlyCost);
 
-        var organizationIds = revenue.Select(r => r.OrganizationId).Concat(hours.Keys).Concat(licenseCosts.Keys).Distinct().ToList();
+        var organizationIds = revenue.Keys.Concat(hours.Keys).Concat(licenseCosts.Keys).Distinct().ToList();
         var names = await customers.GetOrganizationNamesAsync(organizationIds, ct);
 
-        var rows = new List<CustomerMarginRow>();
+        var rows = new List<CustomerMarginRow>(organizationIds.Count);
         foreach (var organizationId in organizationIds)
         {
-            var billed = revenue.FirstOrDefault(r => r.OrganizationId == organizationId);
+            var billed = revenue.GetValueOrDefault(organizationId);
             var worked = hours.GetValueOrDefault(organizationId);
             var licenseCost = licenseCosts.GetValueOrDefault(organizationId)?.Cost ?? 0m;
             var hourCost = decimal.Round((worked?.Hours ?? 0m) * hourlyCost, 2);

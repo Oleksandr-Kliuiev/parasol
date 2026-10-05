@@ -108,7 +108,7 @@ internal sealed class QuoteDocuments(
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Quote document {DocumentId} could not be stored yet; it stays Preparing", documentId);
+            logger.LogWarning("Quote document {DocumentId} could not be stored yet ({ErrorType}); it stays Preparing", documentId, ex.GetType().Name);
             return null;
         }
     }

@@ -43,6 +43,9 @@ public sealed class TimeTrackingDbContext(DbContextOptions<TimeTrackingDbContext
             b.HasIndex(x => new { x.TechnicianId, x.WorkDate });
             b.HasIndex(x => new { x.Status, x.WorkDate });
             b.HasIndex(x => x.ProjectId).HasFilter("[ProjectId] IS NOT NULL");
+            b.HasIndex(x => new { x.WorkDate, x.Id }).IsDescending(true, false)
+                .HasFilter("[IsDeleted] = 0")
+                .IncludeProperties(x => new { x.OrganizationId, x.TechnicianId, x.TechnicianName, x.Hours, x.Billable, x.Status, x.Amount });
         });
 
         modelBuilder.Entity<TimeAllocation>(b =>
@@ -55,6 +58,10 @@ public sealed class TimeTrackingDbContext(DbContextOptions<TimeTrackingDbContext
             b.Property(x => x.Rate).HasPrecision(18, 2);
             b.Property(x => x.Amount).HasPrecision(18, 2);
             b.HasIndex(x => x.HourBankId).HasFilter("[HourBankId] IS NOT NULL");
+            b.HasIndex(x => x.TimeEntryId);
+            b.HasIndex(x => x.TimeEntryId, "IX_TimeAllocations_Active_TimeEntryId")
+                .HasFilter("[IsDeleted] = 0")
+                .IncludeProperties(x => new { x.Classification, x.Hours, x.BilledHours, x.Amount });
         });
 
         modelBuilder.Entity<TimePeriod>(b =>

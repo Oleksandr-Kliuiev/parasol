@@ -61,7 +61,7 @@ public class AteraSyncTests(CrmWebFactory factory)
         // A second full scan with identical data changes nothing.
         await factory.RunJobAsync<AteraCustomerSyncJob>(j => j.RunAsync(CancellationToken.None));
         var runs = await admin.GetFromJsonAsync<JsonElement>("/api/v1/integrations/runs?system=atera");
-        runs.GetProperty("items").EnumerateArray().First(r => r.GetProperty("job").GetString() == "atera-customers").GetProperty("message").GetString()!.ShouldStartWith("changed 0");
+        runs.GetProperty("items").EnumerateArray().First(r => r.GetProperty("job").GetString() == "atera-customers").GetProperty("changed").GetInt32().ShouldBe(0);
 
         var export = await admin.PostAsync($"/api/v1/integrations/atera/organizations/{organizationId}/export", null);
         export.StatusCode.ShouldBe(HttpStatusCode.BadRequest);

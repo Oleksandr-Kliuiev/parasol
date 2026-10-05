@@ -98,6 +98,7 @@ const useStyles = makeStyles({
     zIndex: 10,
   },
   spacer: { flex: 1 },
+  avatarButton: { minWidth: '40px', paddingInline: tokens.spacingHorizontalXS },
   content: {
     paddingInline: tokens.spacingHorizontalXXL,
     paddingBlock: tokens.spacingVerticalXL,
@@ -429,7 +430,7 @@ export function AppShell() {
           )}
           <Menu>
             <MenuTrigger disableButtonEnhancement>
-              <Button appearance="subtle" aria-label={user.displayName}>
+              <Button className={styles.avatarButton} appearance="subtle" aria-label={user.displayName}>
                 <Avatar name={user.displayName} size={28} color="colorful" />
               </Button>
             </MenuTrigger>

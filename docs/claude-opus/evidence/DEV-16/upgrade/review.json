@@ -1,0 +1,26 @@
+{
+  "beforeEqualsAfter": true,
+  "verifiedTableCount": 15,
+  "verifiedTotalCount": 5,
+  "upgradeSeconds": 3.1415280420333147,
+  "repeatSeconds": 1.526334083173424,
+  "hostsStopped": true,
+  "lockSamples": 4,
+  "samplesWithSchemaModificationGrant": 2,
+  "maxSimultaneousSchemaModificationGrantCount": 3,
+  "observedRequestCommands": [
+    "CREATE INDEX"
+  ],
+  "observedBlockingSessionIds": [
+    0
+  ],
+  "observedWaitTypes": [
+    "PAGEIOLATCH_EX"
+  ],
+  "conclusion": "The stopped-host local upgrade preserved all recorded row counts and aggregate totals. Offline CREATE INDEX acquired Sch-M; this is not evidence of a nonblocking upgrade under traffic.",
+  "limits": [
+    "Sampling does not establish continuous lock duration or rule out waits between samples.",
+    "Counts and sums are targeted invariants, not a full financial row checksum.",
+    "The repeat completed without error; the captured metadata regression test independently validates index keys/filter/includes and model snapshot consistency."
+  ]
+}

@@ -1,0 +1,341 @@
+{
+  "methodology": [
+    "Read-only summary of completed raw dotnet-counters JSON and Docker/ps samples.",
+    "UTC window is start inclusive, end exclusive. Full capture end includes the final sample.",
+    "Rate counters are sampled at approximately 1 second. Reported approximate allocation, CPU seconds, pauses and collections sum one-second rate samples; boundary/interval jitter is not a transaction trace.",
+    "GC maxPauseSecondsPerSample is the largest one-second total pause, not the maximum individual GC pause.",
+    "Runtime CPU user+system rates are combined per second; one core at full use = 1 CPU second/second. Docker/ps 100% = one core.",
+    "Thread pool queue/thread counters were emitted as rate deltas; they do not establish absolute occupancy/thread count, so no starvation or queue-size conclusion is drawn.",
+    "Memory is sampled working set/RSS, not proof of leak or total allocations. Docker block IO has rounded display units.",
+    "SQL Server amd64 emulation, 2 GiB engine target, shared M4 laptop: these are local diagnostic numbers, not EXT-05 capacity acceptance.",
+    "After-index fullCapture includes the first workload plus part of the guard rerun starting21:59:18Z. Only activeWorkday21:54:03\u201321:57:09Z compares the first after-index workload; full-capture totals are not a matched single-run comparison."
+  ],
+  "windows": {
+    "activeWorkday": {
+      "fromUtc": "2026-10-04T21:54:03Z",
+      "toUtc": "2026-10-04T21:57:09Z",
+      "durationSeconds": 186.0,
+      "hosts": {
+        "web": {
+          "workingSetMiB": {
+            "samples": 186,
+            "min": 158.5156,
+            "mean": 417.3296,
+            "median": 343.4062,
+            "p95": 913.5312,
+            "max": 1037.125,
+            "first": 158.5156,
+            "last": 338.9219
+          },
+          "allocationMiBPerSecond": {
+            "samples": 186,
+            "min": 0.0232,
+            "mean": 109.0065,
+            "median": 123.134,
+            "p95": 187.0278,
+            "max": 230.6286,
+            "first": 0.0235,
+            "last": 0.0299
+          },
+          "approxAllocatedGiB": 19.8,
+          "cpuCores": {
+            "samples": 186,
+            "min": 0.007,
+            "mean": 0.7295,
+            "median": 0.7748,
+            "p95": 1.2946,
+            "max": 2.9325,
+            "first": 0.0208,
+            "last": 0.008
+          },
+          "approxCpuSeconds": 135.6869,
+          "gc": {
+            "approxPauseSeconds": 0.9646,
+            "pausePercentageOfWindow": 0.5186,
+            "maxPauseSecondsPerSample": 0.079784,
+            "approxCollectionsByGeneration": {
+              "gc.heap.generation=gen0": 129,
+              "gc.heap.generation=gen1": 44,
+              "gc.heap.generation=gen2": 6
+            },
+            "heapAfterLastCollectionMiB": {
+              "samples": 186,
+              "min": 0.0,
+              "mean": 73.4893,
+              "median": 79.2976,
+              "p95": 87.7607,
+              "max": 99.5036,
+              "first": 0.0,
+              "last": 84.9818
+            },
+            "committedAfterLastCollectionMiB": {
+              "samples": 186,
+              "min": 0.0,
+              "mean": 384.0053,
+              "median": 197.2031,
+              "p95": 835.1875,
+              "max": 835.1875,
+              "first": 0.0,
+              "last": 196.8594
+            }
+          }
+        },
+        "worker": {
+          "workingSetMiB": {
+            "samples": 186,
+            "min": 80.9688,
+            "mean": 328.027,
+            "median": 302.0859,
+            "p95": 824.25,
+            "max": 906.8906,
+            "first": 250.8125,
+            "last": 237.7344
+          },
+          "allocationMiBPerSecond": {
+            "samples": 186,
+            "min": 0.0389,
+            "mean": 15.784,
+            "median": 16.1251,
+            "p95": 37.0323,
+            "max": 46.6366,
+            "first": 3.6587,
+            "last": 25.9279
+          },
+          "approxAllocatedGiB": 2.867,
+          "cpuCores": {
+            "samples": 186,
+            "min": 0.0019,
+            "mean": 0.1673,
+            "median": 0.1508,
+            "p95": 0.4202,
+            "max": 0.9099,
+            "first": 0.067,
+            "last": 0.1733
+          },
+          "approxCpuSeconds": 31.1256,
+          "gc": {
+            "approxPauseSeconds": 0.2646,
+            "pausePercentageOfWindow": 0.1422,
+            "maxPauseSecondsPerSample": 0.174835,
+            "approxCollectionsByGeneration": {
+              "gc.heap.generation=gen0": 13,
+              "gc.heap.generation=gen1": 1,
+              "gc.heap.generation=gen2": 1
+            },
+            "heapAfterLastCollectionMiB": {
+              "samples": 186,
+              "min": 18.9181,
+              "mean": 23.6386,
+              "median": 25.7597,
+              "p95": 27.9028,
+              "max": 28.316,
+              "first": 18.9181,
+              "last": 25.8223
+            },
+            "committedAfterLastCollectionMiB": {
+              "samples": 186,
+              "min": 101.4375,
+              "mean": 422.3256,
+              "median": 367.7656,
+              "p95": 724.4375,
+              "max": 724.4375,
+              "first": 101.4375,
+              "last": 252.25
+            }
+          }
+        }
+      },
+      "sql": {
+        "samples": 46,
+        "fromUtc": "2026-10-04T21:54:03Z",
+        "toUtc": "2026-10-04T21:57:05Z",
+        "cpuPercentAcrossCores": {
+          "samples": 46,
+          "min": 3.23,
+          "mean": 318.1478,
+          "median": 298.13,
+          "p95": 719.2975,
+          "max": 813.55,
+          "first": 49.91,
+          "last": 275.01
+        },
+        "memoryMiB": {
+          "samples": 46,
+          "min": 1914.88,
+          "mean": 1918.375,
+          "median": 1917.952,
+          "p95": 1921.024,
+          "max": 1927.168,
+          "first": 1914.88,
+          "last": 1915.904
+        },
+        "blockIoFirst": "361GB / 14.3GB",
+        "blockIoLast": "362GB / 14.5GB",
+        "approxReadGiB": 0.931
+      }
+    },
+    "fullCapture": {
+      "fromUtc": "2026-10-04T21:53:57.760929Z",
+      "toUtc": "2026-10-04T22:00:57.920856Z",
+      "durationSeconds": 420.16,
+      "hosts": {
+        "web": {
+          "workingSetMiB": {
+            "samples": 420,
+            "min": 158.0469,
+            "mean": 362.3593,
+            "median": 342.5547,
+            "p95": 669.4836,
+            "max": 1037.125,
+            "first": 158.0469,
+            "last": 349.2969
+          },
+          "allocationMiBPerSecond": {
+            "samples": 419,
+            "min": 0.0222,
+            "mean": 69.1797,
+            "median": 40.943,
+            "p95": 186.3597,
+            "max": 267.0746,
+            "first": 0.031,
+            "last": 137.9652
+          },
+          "approxAllocatedGiB": 28.3069,
+          "cpuCores": {
+            "samples": 419,
+            "min": 0.0035,
+            "mean": 0.4464,
+            "median": 0.3222,
+            "p95": 1.1308,
+            "max": 2.9325,
+            "first": 0.0323,
+            "last": 0.8502
+          },
+          "approxCpuSeconds": 187.0466,
+          "gc": {
+            "approxPauseSeconds": 1.4087,
+            "pausePercentageOfWindow": 0.3353,
+            "maxPauseSecondsPerSample": 0.079784,
+            "approxCollectionsByGeneration": {
+              "gc.heap.generation=gen0": 190,
+              "gc.heap.generation=gen1": 67,
+              "gc.heap.generation=gen2": 9
+            },
+            "heapAfterLastCollectionMiB": {
+              "samples": 421,
+              "min": 0.0,
+              "mean": 79.5881,
+              "median": 83.7478,
+              "p95": 94.0321,
+              "max": 124.7465,
+              "first": 0.0,
+              "last": 82.2048
+            },
+            "committedAfterLastCollectionMiB": {
+              "samples": 420,
+              "min": 0.0,
+              "mean": 280.7723,
+              "median": 197.1719,
+              "p95": 835.1875,
+              "max": 835.1875,
+              "first": 0.0,
+              "last": 198.5312
+            }
+          }
+        },
+        "worker": {
+          "workingSetMiB": {
+            "samples": 420,
+            "min": 80.9688,
+            "mean": 292.1477,
+            "median": 274.6875,
+            "p95": 438.4875,
+            "max": 906.8906,
+            "first": 249.25,
+            "last": 248.3594
+          },
+          "allocationMiBPerSecond": {
+            "samples": 419,
+            "min": 0.0083,
+            "mean": 17.9163,
+            "median": 17.8512,
+            "p95": 48.1293,
+            "max": 59.8104,
+            "first": 0.0544,
+            "last": 20.7319
+          },
+          "approxAllocatedGiB": 7.331,
+          "cpuCores": {
+            "samples": 419,
+            "min": 0.0019,
+            "mean": 0.1733,
+            "median": 0.1742,
+            "p95": 0.3506,
+            "max": 0.9099,
+            "first": 0.0226,
+            "last": 0.192
+          },
+          "approxCpuSeconds": 72.5984,
+          "gc": {
+            "approxPauseSeconds": 0.4006,
+            "pausePercentageOfWindow": 0.0953,
+            "maxPauseSecondsPerSample": 0.174835,
+            "approxCollectionsByGeneration": {
+              "gc.heap.generation=gen0": 60,
+              "gc.heap.generation=gen1": 1,
+              "gc.heap.generation=gen2": 1
+            },
+            "heapAfterLastCollectionMiB": {
+              "samples": 420,
+              "min": 18.9181,
+              "mean": 28.7923,
+              "median": 27.9028,
+              "p95": 38.5184,
+              "max": 38.7122,
+              "first": 18.9181,
+              "last": 38.7122
+            },
+            "committedAfterLastCollectionMiB": {
+              "samples": 420,
+              "min": 101.4375,
+              "mean": 311.3501,
+              "median": 223.9375,
+              "p95": 724.4375,
+              "max": 724.4375,
+              "first": 101.4375,
+              "last": 223.9062
+            }
+          }
+        }
+      },
+      "sql": {
+        "samples": 104,
+        "fromUtc": "2026-10-04T21:53:59Z",
+        "toUtc": "2026-10-04T22:00:56Z",
+        "cpuPercentAcrossCores": {
+          "samples": 104,
+          "min": 3.23,
+          "mean": 220.0313,
+          "median": 42.92,
+          "p95": 709.726,
+          "max": 813.55,
+          "first": 3.56,
+          "last": 456.5
+        },
+        "memoryMiB": {
+          "samples": 104,
+          "min": 1909.76,
+          "mean": 1916.8394,
+          "median": 1916.928,
+          "p95": 1920.8704,
+          "max": 1927.168,
+          "first": 1913.856,
+          "last": 1910.784
+        },
+        "blockIoFirst": "361GB / 14.3GB",
+        "blockIoLast": "362GB / 14.6GB",
+        "approxReadGiB": 0.931
+      }
+    }
+  }
+}

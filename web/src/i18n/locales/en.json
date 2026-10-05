@@ -64,7 +64,8 @@
     "status": "Status",
     "active": "Active",
     "inactive": "Inactive",
-    "shownOf": "Showing {{shown}} of {{total}}"
+    "shownOf": "Showing {{shown}} of {{total}}",
+    "refresh": "Refresh"
   },
   "errors": {
     "generic": "Something went wrong",
@@ -137,7 +138,15 @@
       "MAINTENANCE_STATE_UNAVAILABLE": "Nothing was sent: whether the CRM is in maintenance cannot be read right now. Try again in a minute.",
       "MAINTENANCE_CHANGED": "Another maintenance decision was taken meanwhile. Look at the current state before changing it.",
       "MAINTENANCE_REQUIRED": "Switch the CRM to read-only maintenance before reconciling a restore.",
-      "REPORT_NOT_FOUND": "The reconciliation report was not found."
+      "REPORT_NOT_FOUND": "The reconciliation report was not found.",
+      "MONITORING_RETRY_STALE": "The selection changed. Reload the list and confirm the current operations.",
+      "MONITORING_RETRY_INVALID": "Confirm 1–100 operations and give a reason of 10–500 characters.",
+      "MONITORING_NOT_FOUND": "The exception is no longer available or is no longer accessible. Refresh the list.",
+      "MONITORING_OWNER_INVALID": "Choose an active CRM user.",
+      "MONITORING_TRIAGE_INVALID": "Choose a valid status and keep the comment within 2,000 characters.",
+      "MONITORING_TRIAGE_STALE": "Another operator changed this review. Close it and reload before saving again.",
+      "MONITORING_STILL_ACTIVE": "The source still reports this exception. Verify recovery and refresh before resolving it.",
+      "OUTBOX_REPLAY_PARTIAL": "Replay stopped after a partial failure. Check each result. Verify unknown outcomes before creating a new selection."
     }
   },
   "status": {
@@ -484,7 +493,8 @@
     "status": {
       "Running": "Running",
       "Succeeded": "Succeeded",
-      "Failed": "Failed"
+      "Failed": "Failed",
+      "Skipped": "Skipped"
     },
     "noJobs": "No scheduled jobs yet. They are registered when crm-worker starts."
   },
@@ -2675,5 +2685,126 @@
       "open": "Show",
       "hide": "Hide"
     }
+  },
+  "monitoring": {
+    "title": "Monitoring and exception review",
+    "description": "Freshness is based on the last successful sync. Failed or skipped attempts do not refresh stored data.",
+    "checkedAt": "Checked {{at}}",
+    "sources": "Source freshness",
+    "exceptions": "Exceptions awaiting review",
+    "noSuccess": "No successful sync recorded",
+    "age": "Age: {{age}} min · limit: {{threshold}} min",
+    "all": "All",
+    "mine": "Assigned to me",
+    "unassigned": "Unassigned",
+    "reset": "Reset filters",
+    "views": "Saved views",
+    "chooseView": "Choose a view",
+    "viewName": "View name",
+    "saveView": "Save current view",
+    "deleteView": "Delete view",
+    "viewsHint": "Up to 10 views saved for your account in this browser. Saving the same name replaces its filters.",
+    "storageFailed": "The view could not be saved in this browser. Check browser storage settings.",
+    "shown": "{{shown}} of {{total}} exceptions shown",
+    "empty": "No exceptions match these filters.",
+    "detected": "Detected {{at}}",
+    "affected": "Affected records: {{count}}",
+    "edit": "Review exception",
+    "editTitle": "Review: {{source}}",
+    "runbook": "Runbook reference: {{reference}}",
+    "lastSuccess": "Last success: {{at}}",
+    "assignMe": "Assign to me",
+    "commentHint": "Record the investigation and recovery check (up to 2,000 characters). Do not include credentials, customer details or amounts.",
+    "columns": {
+      "source": "Source",
+      "lastSuccess": "Last successful sync",
+      "freshness": "Freshness",
+      "latestAttempt": "Latest attempt",
+      "category": "Category",
+      "impact": "Impact",
+      "owner": "Owner",
+      "status": "Review status",
+      "comment": "Comment"
+    },
+    "categories": {
+      "Integration": "Integration errors",
+      "Financial": "Financial anomalies",
+      "Pause": "Intentional pause"
+    },
+    "status": {
+      "Open": "Open",
+      "InProgress": "In progress",
+      "Resolved": "Resolved"
+    },
+    "freshness": {
+      "Fresh": "Fresh",
+      "Stale": "Stale",
+      "Never": "Never succeeded",
+      "Paused": "Intentionally paused",
+      "Disabled": "Disabled"
+    },
+    "kinds": {
+      "SyncFailed": "Sync failed",
+      "SyncStale": "Stale source data",
+      "OutboundFailed": "External delivery failed",
+      "Unmapped": "Unmapped source records",
+      "Paused": "Integration paused",
+      "OutboxDeadLetter": "Domain events failed",
+      "OutboxQuarantined": "Domain events quarantined",
+      "Unbilled": "Unbilled charges",
+      "ReconciliationRequired": "External effect needs reconciliation",
+      "LegacyUnresolved": "Unresolved legacy charges",
+      "BillingConflict": "Billing conflict",
+      "UnmappedSubscriptions": "Unmapped subscriptions",
+      "LicenseDiscrepancy": "Licence discrepancy",
+      "DocumentPreparing": "Quote documents pending",
+      "Other": "Operational exception",
+      "DirectoryConfirmationStale": "Directory role confirmation is stale"
+    },
+    "impacts": {
+      "SyncFailed": "The latest update failed; stored records may lag behind the source.",
+      "SyncStale": "Source data exceeded the configured freshness limit.",
+      "OutboundFailed": "Queued changes have not reached the external system.",
+      "Unmapped": "Source records cannot be connected to CRM records.",
+      "Paused": "Updates are held by an operator decision.",
+      "OutboxDeadLetter": "Dependent business changes are waiting for delivery.",
+      "OutboxQuarantined": "A handler rejected an event; dependent work is on hold.",
+      "ReviewOverdueCharges": "Charges remain unbilled beyond the review window.",
+      "VerifyExternalEffect": "Confirm the external outcome before any retry to avoid duplicate billing.",
+      "ReviewLegacyCharges": "Legacy charge identities need a financial review.",
+      "ResolveBillingConflicts": "Billing cannot proceed until conflicting source changes are reviewed.",
+      "MapSubscriptions": "Subscriptions are not connected to a CRM customer or product.",
+      "ReviewPreviousMonthLicenseMargin": "Previous-month licence cost and revenue need reconciliation.",
+      "QuoteDocumentsUnavailable": "Quote documents are not ready for download or sending.",
+      "Other": "Review the source and verify recovery before closing the exception.",
+      "ReconfirmDirectoryRoles": "Role changes cannot be confirmed; privileged actions may be refused."
+    },
+    "recovery": {
+      "Other": "Assign an owner, inspect the source, apply the documented recovery and confirm a successful new observation. Keep the comment free of sensitive details.",
+      "SyncFailed": "Inspect the failed job and configuration. After correcting the cause, run it again and verify that the last successful time advances.",
+      "SyncStale": "Check the worker, schedule and provider. Verify a successful sync within the freshness limit; a skipped or failed attempt is not recovery.",
+      "Paused": "Confirm the pause is intentional with its owner. Resume from the system card only when ready, then verify a successful sync and queue recovery.",
+      "OutboundFailed": "Check the external outcome first. Select concrete failed operations below and retry with a reason only when a duplicate external effect is ruled out.",
+      "OutboxDeadLetter": "Correct the handler failure. Select the exact events in Event delivery below, give a reason and verify each replay result and subsequent worker delivery.",
+      "OutboxQuarantined": "Review why the event was quarantined before replaying it. Correct the handler or configuration and verify each requested event is delivered."
+    },
+    "operationResults": "Results by operation",
+    "exactSelection": "Exact selection",
+    "retrySelected": "Retry selected ({{count}})",
+    "selectOperation": "Select operation {{id}}",
+    "retryTitle": "Retry {{count}} operations?",
+    "retryHint": "Only the listed operations will be retried. Check their outcome in the external system first.",
+    "retryConfirm": "Retry {{count}} operations",
+    "operationStatus": {
+      "Requested": "Requested",
+      "Unavailable": "Unavailable",
+      "Available": "Available",
+      "Stale": "Changed since selection",
+      "Unknown": "Outcome unknown — verify before retrying",
+      "NotRequested": "Not requested"
+    },
+    "recovered": "Source recovered — review pending",
+    "resolveAfterRecovery": "Resolve this review after the source has recovered.",
+    "recoveredLimit": "The list includes the {{shown}} most recently reviewed recovered exceptions out of {{total}} awaiting closure. Filters apply to this list; close completed reviews to see older cases."
   }
 }

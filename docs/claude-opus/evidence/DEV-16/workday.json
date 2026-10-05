@@ -1,0 +1,2143 @@
+{
+  "schemaVersion": 1,
+  "kind": "crm-workday",
+  "createdAt": "2026-10-04T22:02:23.296Z",
+  "datasetId": "dev16-37cba9904feb9ca0fa8bd4d01fd789e0",
+  "datasetChecksum": "sha256:7d32b44cd737ec67f3fcca42d9e6cc72b235a7ba2643b079d347c58f932caf85",
+  "datasetProfile": "full",
+  "counts": {
+    "organizations": 5000,
+    "contacts": 50000,
+    "tickets": 1000000,
+    "timeEntries": 1000000,
+    "auditEntries": 10000000
+  },
+  "seed": 1616,
+  "workload": {
+    "concurrentSessions": 50,
+    "distinctRoleIdentities": 5,
+    "identityLimitation": "Virtual users have independent cookie sessions but share the manifest Development role identities; the harness supports at most seven distinct role identities and does not measure Entra sign-in.",
+    "timeEntryProfile": {
+      "year": 2026,
+      "month": 9,
+      "periodSource": "history.readPeriod",
+      "readableHistory": "time.read roles query a global page of dated entries including allocations",
+      "ownOnly": "time.own-only roles query an explicitly empty own list; seeded imported technicians have no signed-in user identity"
+    },
+    "duration": "2m",
+    "warmup": "30s",
+    "drainSeconds": 32,
+    "timeoutMs": 30000,
+    "provider": {
+      "mode": "simulated",
+      "baseUrl": "http://localhost:5302",
+      "latencyMs": 150,
+      "jitterMs": 100,
+      "failureEvery": 0,
+      "requestsPerSecond": 10
+    },
+    "errorSamplesIncluded": true,
+    "interruptedIterations": 0,
+    "interruptionAccounting": "Started minus finished iteration counters; each phase/VU active-iteration gauge must end at zero. k6 1.3 does not expose exec.instance in handleSummary.",
+    "clientLatency": "Sequential requests use wall time. Each concurrent response conservatively uses the elapsed wall time of its two-request batch. Transport failures without timings are censored at REQUEST_TIMEOUT_MS."
+  },
+  "metrics": {
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "passes": 53766,
+        "fails": 0,
+        "rate": 1
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:14}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:13}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:12}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 7387952,
+        "rate": 40545.894191969826
+      }
+    },
+    "crm_operation_attempts{phase:measure,kind:read}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 21606,
+        "rate": 118.57610741267675
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:23}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:20}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:15}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_search_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 303.96158593012285,
+        "min": 124,
+        "med": 201,
+        "max": 1797,
+        "p(95)": 1056.6708499999988,
+        "p(99)": 1523
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:24}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "passes": 0,
+        "fails": 37333,
+        "rate": 0
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:43}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:27}": {
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "crm_active_iteration{phase:warmup,vu:47}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:6}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:44}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 9.332,
+        "max": 1796.945,
+        "p(95)": 167.00959999999984,
+        "p(99)": 401.41567999999984,
+        "avg": 35.296851284386314,
+        "min": 0.788
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:39}": {
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "crm_active_iteration{phase:measure,vu:30}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 70682577,
+        "rate": 387913.766664667
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:25}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_read_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 81,
+        "p(99)": 196.05207999999996,
+        "avg": 19.537096490898865,
+        "min": 0.815,
+        "med": 7,
+        "max": 623
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 2133,
+        "rate": 11.706138901751343
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:17}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:18}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:38}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:38}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:48}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:40}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 50,
+        "min": 0,
+        "max": 50
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:36}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:34}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:21}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:6}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0.072,
+        "p(99)": 0.118,
+        "avg": 0.03533865480941624,
+        "min": 0.004,
+        "med": 0.03,
+        "max": 1.943
+      }
+    },
+    "crm_iterations_finished": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "rate": 11.706138901751343,
+        "count": 2133
+      }
+    },
+    "checks{phase:measure}": {
+      "thresholds": {
+        "rate==1": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 43562,
+        "fails": 0
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:37}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:3}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:50}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:26}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "group_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 202.45478354476924,
+        "min": 0.001375,
+        "med": 84.57683349999999,
+        "max": 2142.863791,
+        "p(95)": 679.0433437499996,
+        "p(99)": 1779.1043772999992
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:42}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:39}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:warmup,vu:16}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_operation_attempts{phase:measure,kind:search}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 1717,
+        "rate": 9.423085088751549
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:15}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:3}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:4}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:41}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:7}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:47}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:26}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:40}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:36}": {
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "crm_expected_conflicts{phase:measure}": {
+      "values": {
+        "count": 1716,
+        "rate": 9.417596978624147
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 37333,
+        "rate": 204.8876153863492
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:9}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:25}": {
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "crm_active_iteration{phase:warmup,vu:33}": {
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "crm_active_iteration{phase:measure,vu:12}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:1}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:7}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:8}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:32}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:46}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:43}": {
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:31}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_connecting": {
+      "values": {
+        "avg": 0.0008330699381244475,
+        "min": 0,
+        "med": 0,
+        "max": 1.185,
+        "p(95)": 0,
+        "p(99)": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "crm_active_iteration{phase:measure,vu:17}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:4}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_operation_failed": {
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 37223
+      },
+      "type": "rate"
+    },
+    "crm_active_iteration{phase:warmup,vu:1}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:8}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:9}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_write_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 19.45392174940898,
+        "min": 4,
+        "med": 14,
+        "max": 231,
+        "p(95)": 52,
+        "p(99)": 80
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:32}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:5}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:28}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:10}": {
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "crm_operation_attempts": {
+      "values": {
+        "count": 37223,
+        "rate": 204.28392327233485
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "crm_active_iteration{phase:warmup,vu:2}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:13}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:11}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:19}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:28}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_completed_workdays{phase:measure}": {
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 1716,
+        "rate": 9.417596978624147
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:45}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0.5489042134304769,
+        "min": 0,
+        "med": 0,
+        "max": 531.38
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:35}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:34}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 50,
+        "min": 50,
+        "max": 50
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:16}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:30}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:22}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_completed_workdays": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 2115,
+        "rate": 11.607352919458082
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:42}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:23}": {
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_write_ms{phase:measure}": {
+      "thresholds": {
+        "p(95)<=1000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 13,
+        "max": 231,
+        "p(95)": 46,
+        "p(99)": 75,
+        "avg": 17.598692744755258,
+        "min": 4
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:46}": {
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:warmup,vu:35}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:29}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:22}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 1,
+        "value": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_operation_attempts{phase:measure,kind:write}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 6864,
+        "rate": 37.67038791449659
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:11}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:49}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "crm_read_ms{phase:measure}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 74,
+        "p(99)": 170,
+        "avg": 17.485516800888668,
+        "min": 0.824,
+        "med": 6,
+        "max": 551.042
+      },
+      "thresholds": {
+        "p(95)<=500": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:5}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_conflict_ms": {
+      "contains": "time",
+      "values": {
+        "avg": 18.740108037825028,
+        "min": 4,
+        "med": 14,
+        "max": 136.181,
+        "p(95)": 50,
+        "p(99)": 75
+      },
+      "type": "trend"
+    },
+    "crm_active_iteration{phase:measure,vu:41}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:19}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:24}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:33}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:21}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:48}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:14}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      }
+    },
+    "http_req_failed{phase:measure}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 30187
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:50}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:29}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:10}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_expected_conflicts": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "rate": 11.607352919458082,
+        "count": 2115
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:31}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:27}": {
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_operation_failed{phase:measure}": {
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 30187
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      },
+      "type": "rate"
+    },
+    "crm_active_iteration{phase:measure,vu:2}": {
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      }
+    },
+    "http_req_blocked": {
+      "contains": "time",
+      "values": {
+        "p(99)": 0.001,
+        "avg": 0.5501768408647231,
+        "min": 0,
+        "med": 0,
+        "max": 532.14,
+        "p(95)": 0.001
+      },
+      "type": "trend"
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 1796.986,
+        "p(95)": 167.1179999999999,
+        "p(99)": 401.4837199999999,
+        "avg": 35.3649806069699,
+        "min": 0.815,
+        "med": 9.403
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 3516.1083735016396,
+        "min": 0.034166,
+        "med": 3448.161541,
+        "max": 6909.221584,
+        "p(95)": 5089.515699999999,
+        "p(99)": 6275.47513868
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:18}": {
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "crm_active_iteration{phase:warmup,vu:49}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:measure,vu:45}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 0,
+        "max": 1,
+        "value": 0
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "crm_search_ms{phase:measure}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 267.5451654047754,
+        "min": 124.161,
+        "med": 189,
+        "max": 1797,
+        "p(95)": 653.5055999999986,
+        "p(99)": 1422.2799999999997
+      },
+      "thresholds": {
+        "p(95)<=1000": {
+          "ok": true
+        }
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:44}": {
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      },
+      "type": "gauge"
+    },
+    "crm_active_iteration{phase:measure,vu:20}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 1796.986,
+        "p(95)": 167.1179999999999,
+        "p(99)": 401.4837199999999,
+        "avg": 35.3649806069699,
+        "min": 0.815,
+        "med": 9.403
+      }
+    },
+    "crm_iterations_started": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 2133,
+        "rate": 11.706138901751343
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0.006,
+        "med": 0.029,
+        "max": 1.38,
+        "p(95)": 0.064,
+        "p(99)": 0.092,
+        "avg": 0.0327906677738189
+      }
+    },
+    "crm_active_iteration{phase:warmup,vu:37}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 1
+      },
+      "thresholds": {
+        "value==0": {
+          "ok": true
+        }
+      }
+    }
+  },
+  "checks": {
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "groups": [],
+        "checks": [
+            {
+              "name": "synthetic identity and Development auth verified",
+              "path": "::setup::synthetic identity and Development auth verified",
+              "id": "8f3c937f5feb502b5d6c55c87239378b",
+              "passes": 5,
+              "fails": 0
+            }
+          ],
+        "name": "setup",
+        "path": "::setup",
+        "id": "5c0f8025f7e0b6654089e5b00e950f1a"
+      },
+      {
+        "name": "my day and customer card",
+        "path": "::my day and customer card",
+        "id": "c6492066a05f8dd4e1ecc03e7aaa1d0d",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 0,
+              "name": "notifications: expected business response",
+              "path": "::my day and customer card::notifications: expected business response",
+              "id": "98df900b729c8ad889efa41228f187d2",
+              "passes": 2119
+            },
+            {
+              "name": "contract reminders: expected business response",
+              "path": "::my day and customer card::contract reminders: expected business response",
+              "id": "99211bdb6acfa17b7c82806d317df09e",
+              "passes": 2119,
+              "fails": 0
+            },
+            {
+              "path": "::my day and customer card::organizations: expected business response",
+              "id": "bad97d7b7452ada1f72127c10be6cf4b",
+              "passes": 2118,
+              "fails": 0,
+              "name": "organizations: expected business response"
+            },
+            {
+              "name": "organization list has seeded business records",
+              "path": "::my day and customer card::organization list has seeded business records",
+              "id": "9ec8926b691fa5b632c52328e4c3e843",
+              "passes": 2118,
+              "fails": 0
+            },
+            {
+              "id": "c1d9e39e411deb80a174f9b3171bad67",
+              "passes": 2118,
+              "fails": 0,
+              "name": "organization card: expected business response",
+              "path": "::my day and customer card::organization card: expected business response"
+            },
+            {
+              "fails": 0,
+              "name": "customer card matches the seeded identity",
+              "path": "::my day and customer card::customer card matches the seeded identity",
+              "id": "a4d1eef18a9a1a0ce87b195a5e7385c1",
+              "passes": 2118
+            },
+            {
+              "name": "customer contacts: expected business response",
+              "path": "::my day and customer card::customer contacts: expected business response",
+              "id": "5de896e35b33399b169674cccaa40452",
+              "passes": 2118,
+              "fails": 0
+            },
+            {
+              "path": "::my day and customer card::customer contracts: expected business response",
+              "id": "e68df3e4d7e5176f968dd9dbba758943",
+              "passes": 2118,
+              "fails": 0,
+              "name": "customer contracts: expected business response"
+            },
+            {
+              "name": "service summary: expected business response",
+              "path": "::my day and customer card::service summary: expected business response",
+              "id": "e8547e8527de9e10c435020604b540db",
+              "passes": 2118,
+              "fails": 0
+            },
+            {
+              "id": "22703cf239df26c241d1cb4b8de5c3d3",
+              "passes": 2118,
+              "fails": 0,
+              "name": "customer tickets: expected business response",
+              "path": "::my day and customer card::customer tickets: expected business response"
+            },
+            {
+              "name": "subscriptions: expected business response",
+              "path": "::my day and customer card::subscriptions: expected business response",
+              "id": "49649e2de37f1a714c133f5f93d06b94",
+              "passes": 2118,
+              "fails": 0
+            },
+            {
+              "name": "customer invoices: expected business response",
+              "path": "::my day and customer card::customer invoices: expected business response",
+              "id": "948739746ec88e15b533a36e7146000f",
+              "passes": 1676,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "name": "search, reports and time",
+        "path": "::search, reports and time",
+        "id": "52fec031bad780532eca975c6e2d9815",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 2118,
+              "fails": 0,
+              "name": "global search: expected business response",
+              "path": "::search, reports and time::global search: expected business response",
+              "id": "eef0d5150024a2bfcdfdfaa166db2267"
+            },
+            {
+              "name": "search returns seeded organizations",
+              "path": "::search, reports and time::search returns seeded organizations",
+              "id": "fc1dca031331d1af32a29cd9a813dae9",
+              "passes": 2118,
+              "fails": 0
+            },
+            {
+              "path": "::search, reports and time::sales pipeline: expected business response",
+              "id": "5c506926f48127626e85da6236dc83ea",
+              "passes": 2116,
+              "fails": 0,
+              "name": "sales pipeline: expected business response"
+            },
+            {
+              "name": "time entries: empty-own-list profile: expected business response",
+              "path": "::search, reports and time::time entries: empty-own-list profile: expected business response",
+              "id": "415dd92f6154e3d2b2c35f8fe7ddb726",
+              "passes": 864,
+              "fails": 0
+            },
+            {
+              "id": "5e4ae8af7cf06beb93ceae2b7554c0d6",
+              "passes": 864,
+              "fails": 0,
+              "name": "synthetic own-time profile returns an explicit empty page",
+              "path": "::search, reports and time::synthetic own-time profile returns an explicit empty page"
+            },
+            {
+              "path": "::search, reports and time::dashboard: expected business response",
+              "id": "643113bd8c4e4749341871252ff85bcf",
+              "passes": 1674,
+              "fails": 0,
+              "name": "dashboard: expected business response"
+            },
+            {
+              "name": "dashboard returns business panels",
+              "path": "::search, reports and time::dashboard returns business panels",
+              "id": "5a6332e3fb0d7885392bf8d1f3b5a2ed",
+              "passes": 1674,
+              "fails": 0
+            },
+            {
+              "name": "historical time entries with allocations: expected business response",
+              "path": "::search, reports and time::historical time entries with allocations: expected business response",
+              "id": "561b0dc9cf91e13882c39e5af2d5fc43",
+              "passes": 1251,
+              "fails": 0
+            },
+            {
+              "id": "2a8b1a7cb07672b8b72360914ca04125",
+              "passes": 1251,
+              "fails": 0,
+              "name": "historical time page contains dated business hours and allocations",
+              "path": "::search, reports and time::historical time page contains dated business hours and allocations"
+            }
+          ]
+      },
+      {
+        "name": "record a note and resolve concurrent edits",
+        "path": "::record a note and resolve concurrent edits",
+        "id": "962df82fb975ec0d82bf656954daa26b",
+        "groups": [],
+        "checks": [
+            {
+              "name": "create activity: expected business response",
+              "path": "::record a note and resolve concurrent edits::create activity: expected business response",
+              "id": "28deb02cf3e1f718903584eb4d0e3f75",
+              "passes": 2115,
+              "fails": 0
+            },
+            {
+              "passes": 2115,
+              "fails": 0,
+              "name": "created activity returns identity and concurrency token",
+              "path": "::record a note and resolve concurrent edits::created activity returns identity and concurrency token",
+              "id": "7566bdeb14c8c163b00efe2dc9813faf"
+            },
+            {
+              "name": "edit activity: expected business response",
+              "path": "::record a note and resolve concurrent edits::edit activity: expected business response",
+              "id": "05b1fe67e7c35d4c93609ae232027f67",
+              "passes": 2115,
+              "fails": 0
+            },
+            {
+              "id": "aef945c3b749d0f7446a36f54644e7ab",
+              "passes": 2115,
+              "fails": 0,
+              "name": "edited activity returns a new version",
+              "path": "::record a note and resolve concurrent edits::edited activity returns a new version"
+            },
+            {
+              "name": "concurrent activity edit: expected business response",
+              "path": "::record a note and resolve concurrent edits::concurrent activity edit: expected business response",
+              "id": "6a0eb30218cdc9ed9b14753a7fba4881",
+              "passes": 4230,
+              "fails": 0
+            },
+            {
+              "fails": 0,
+              "name": "exactly one concurrent edit wins and one gets 412",
+              "path": "::record a note and resolve concurrent edits::exactly one concurrent edit wins and one gets 412",
+              "id": "7123139773047ddc7b172aeace353f82",
+              "passes": 2115
+            }
+          ]
+      }
+    ],
+    "checks": [
+      {
+        "name": "synthetic identity and Development auth verified",
+        "path": "::synthetic identity and Development auth verified",
+        "id": "a81e65ae97eb36180e2f03ed274542a5",
+        "passes": 50,
+        "fails": 0
+      }
+    ],
+    "name": ""
+  },
+  "thresholdsPassed": true
+}

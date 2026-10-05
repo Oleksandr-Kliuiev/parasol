@@ -173,8 +173,35 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
 
     public DbSet<WorkerHeartbeat> WorkerHeartbeats => Set<WorkerHeartbeat>();
 
+    public DbSet<SyncSuccess> SyncSuccesses => Set<SyncSuccess>();
+
+    public DbSet<ExceptionTriage> ExceptionTriages => Set<ExceptionTriage>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<SyncSuccess>(b =>
+        {
+            b.ToTable("SyncSuccesses");
+            b.HasKey(x => new { x.System, x.Job });
+            b.Property(x => x.System).HasMaxLength(64);
+            b.Property(x => x.Job).HasMaxLength(128);
+        });
+        modelBuilder.Entity<ExceptionTriage>(b =>
+        {
+            b.ToTable("ExceptionTriages");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Key).HasMaxLength(256);
+            b.Property(x => x.Category).HasMaxLength(32);
+            b.Property(x => x.Source).HasMaxLength(128);
+            b.Property(x => x.Kind).HasMaxLength(64);
+            b.Property(x => x.RequiredPermission).HasMaxLength(128);
+            b.HasIndex(x => x.Key).IsUnique();
+            b.Property(x => x.Status).HasMaxLength(16);
+            b.Property(x => x.Comment).HasMaxLength(2000);
+            b.Property(x => x.RowVersion).IsRowVersion();
+            b.HasIndex(x => new { x.Status, x.UpdatedAt });
+        });
         modelBuilder.Entity<SyncRun>(b =>
         {
             b.ToTable("SyncRuns");

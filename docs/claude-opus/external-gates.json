@@ -15,10 +15,15 @@
       "title": "Бизнес-правила, данные и владельцы исключений",
       "required_owner_roles": "PO / Finance / Sales / ServiceLead / operations",
       "owner": "",
-      "status": "not_run",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-03.md",
+        "evidence/DEV-09.md",
+        "evidence/DEV-17.md",
+        "../runbooks/15-monitoring.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "Не подтверждены бизнес-решения DEC-01/02/08 и владельцы/получатели исключений DEC-09. Для DEV-17 нужны разрешённая test-среда, утверждённая постоянная конфигурация operations/finance и протокол Fired, отсутствие дублей, Resolved с реальными адресатами по runbook 15. Локальные тесты и компиляция Bicep не закрывают EXT-01.",
       "tasks": [
         "DEV-03",
         "DEV-09",
@@ -76,10 +81,12 @@
       "title": "Целевой масштаб и нагрузка",
       "required_owner_roles": "QA / operations / PO",
       "owner": "",
-      "status": "not_run",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-16.md"
+      ],
       "verified_at": "",
-      "blocker": "",
+      "blocker": "QA / operations / PO должны назначить владельца и согласовать DEC-07: инфраструктуру, смесь действий, длительность/пики, 50 различных identities и квоты реальных провайдеров. Локальные synthetic smoke/full и simulated export не заменяют внешний протокол.",
       "tasks": [
         "DEV-16",
         "DEV-23"

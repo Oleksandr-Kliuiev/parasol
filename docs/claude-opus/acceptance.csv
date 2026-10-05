@@ -96,18 +96,18 @@ DEV-15-AC03,DEV-15,CI публикует coverage с явным denominator и �
 DEV-15-AC04,DEV-15,Регрессионные проверки четырёх финансовых дефектов проверяют инварианты и подтверждают исходные нарушения; прохождение этих проверок после исправления принимается отдельно в DEV-01/02.,"Q1,Q2,Q3,Q5",pass,evidence/DEV-00.md and evidence/DEV-15.md: 5 unit + 5 integration regressions red on their invariants,2026-10-04
 DEV-15-AC05,DEV-15,"Критические сценарии проходят в Chromium/Firefox/WebKit; отсутствие browser runtime отражается как gap, а не pass.","Q1,Q2,Q3,Q5",pass,evidence/DEV-15/e2e-runs.log.txt: 6 @critical scenarios pass in Chromium/Firefox/WebKit; missing runtime fails (exit 1),2026-10-04
 DEV-15-AC06,DEV-15,Тесты не используют реальные ключи поставщиков и не очищают чужую или рабочую БД.,"Q1,Q2,Q3,Q5",pass,evidence/DEV-15.md: only test-*/mock keys; no DB cleanup code; E2E_SQL guard refuses remote server and non-crm_e2e database,2026-10-04
-DEV-16-AC01,DEV-16,"50 concurrent пользователей: p95 чтения ≤500 мс, записи ≤1 с; поиск ≤1 с при целевых объёмах.","Q1,Q2,Q6",not_run,,
-DEV-16-AC02,DEV-16,Биллинг 500 клиентов собирается ≤5 минут; экспорт ≤30 минут либо отклонение подтверждено ограничением provider и отдельно согласовано.,"Q1,Q2,Q6",not_run,,
-DEV-16-AC03,DEV-16,"Первый полезный контент карточки ≤2 с, LCP ≤2.5 с в зафиксированном клиентском профиле; серверный k6 не выдаётся за browser LCP.","Q1,Q2,Q6",not_run,,
-DEV-16-AC04,DEV-16,"Нет OOM, неограниченных materializations и повторного чтения всего portfolio на каждого клиента.","Q1,Q2,Q6",not_run,,
-DEV-16-AC05,DEV-16,Ошибки/таймауты не исключены из percentiles; протокол содержит failed checks.,"Q1,Q2,Q6",not_run,,
-DEV-16-AC06,DEV-16,Полный прогон в согласованной среде приложен к EXT-05; малый ноутбучный smoke не помечен как целевая нагрузка.,"Q1,Q2,Q6",not_run,,
-DEV-17-AC01,DEV-17,"Искусственная ошибка создаёт сигнал, доступный оператору, с runbook и владельцем; после исправления состояние обновляется.","Q1,Q2,Q3,Q4",not_run,,
-DEV-17-AC02,DEV-17,Новая failed/skipped синхронизация не делает устаревшие данные свежими.,"Q1,Q2,Q3,Q4",not_run,,
-DEV-17-AC03,DEV-17,"Пользователь без финансового доступа не видит суммы в исключениях, уведомлениях и общих логах.","Q1,Q2,Q3,Q4",not_run,,
-DEV-17-AC04,DEV-17,Массовый replay проверяет каждую запись и повторное нажатие; есть результаты по элементам и аудит.,"Q1,Q2,Q3,Q4",not_run,,
-DEV-17-AC05,DEV-17,"У alerts определены severity, suppression/recovery и адресат; без реального адресата внешняя часть не считается принятой.","Q1,Q2,Q3,Q4",not_run,,
-DEV-17-AC06,DEV-17,Проверена деградация одной системы при продолжающейся работе независимых функций CRM.,"Q1,Q2,Q3,Q4",not_run,,
+DEV-16-AC01,DEV-16,"50 concurrent пользователей: p95 чтения ≤500 мс, записи ≤1 с; поиск ≤1 с при целевых объёмах.","Q1,Q2,Q6",blocked,evidence/DEV-16.md; evidence/DEV-16/source-manifest.sha256; EXT-05 — согласованный профиль и внешний протокол отсутствуют,2026-10-05
+DEV-16-AC02,DEV-16,Биллинг 500 клиентов собирается ≤5 минут; экспорт ≤30 минут либо отклонение подтверждено ограничением provider и отдельно согласовано.,"Q1,Q2,Q6",blocked,evidence/DEV-16.md; evidence/DEV-16/source-manifest.sha256; EXT-05 — согласованный профиль и внешний протокол отсутствуют,2026-10-05
+DEV-16-AC03,DEV-16,"Первый полезный контент карточки ≤2 с, LCP ≤2.5 с в зафиксированном клиентском профиле; серверный k6 не выдаётся за browser LCP.","Q1,Q2,Q6",blocked,evidence/DEV-16.md; evidence/DEV-16/source-manifest.sha256; EXT-05 — согласованный профиль и внешний протокол отсутствуют,2026-10-05
+DEV-16-AC04,DEV-16,"Нет OOM, неограниченных materializations и повторного чтения всего portfolio на каждого клиента.","Q1,Q2,Q6",pass,evidence/DEV-16.md; evidence/DEV-16/source-manifest.sha256,2026-10-05
+DEV-16-AC05,DEV-16,Ошибки/таймауты не исключены из percentiles; протокол содержит failed checks.,"Q1,Q2,Q6",pass,evidence/DEV-16.md; evidence/DEV-16/source-manifest.sha256,2026-10-05
+DEV-16-AC06,DEV-16,Полный прогон в согласованной среде приложен к EXT-05; малый ноутбучный smoke не помечен как целевая нагрузка.,"Q1,Q2,Q6",blocked,evidence/DEV-16.md; evidence/DEV-16/source-manifest.sha256; EXT-05 — согласованный профиль и внешний протокол отсутствуют,2026-10-05
+DEV-17-AC01,DEV-17,"Искусственная ошибка создаёт сигнал, доступный оператору, с runbook и владельцем; после исправления состояние обновляется.","Q1,Q2,Q3,Q4",pass,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt,2026-10-04
+DEV-17-AC02,DEV-17,Новая failed/skipped синхронизация не делает устаревшие данные свежими.,"Q1,Q2,Q3,Q4",pass,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt,2026-10-04
+DEV-17-AC03,DEV-17,"Пользователь без финансового доступа не видит суммы в исключениях, уведомлениях и общих логах.","Q1,Q2,Q3,Q4",pass,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt,2026-10-04
+DEV-17-AC04,DEV-17,Массовый replay проверяет каждую запись и повторное нажатие; есть результаты по элементам и аудит.,"Q1,Q2,Q3,Q4",pass,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt,2026-10-04
+DEV-17-AC05,DEV-17,"У alerts определены severity, suppression/recovery и адресат; без реального адресата внешняя часть не считается принятой.","Q1,Q2,Q3,Q4",blocked,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt; EXT-01: real owners/recipients and Fired/Resolved delivery pending; runbook 15,2026-10-04
+DEV-17-AC06,DEV-17,Проверена деградация одной системы при продолжающейся работе независимых функций CRM.,"Q1,Q2,Q3,Q4",pass,evidence/DEV-17.md; evidence/DEV-17/backend.txt; evidence/DEV-17/e2e.txt,2026-10-04
 DEV-18-AC01,DEV-18,Сотрудник каждой роли завершает основной сценарий без подсказки разработчика на UAT.,"Q3,Q5",not_run,,
 DEV-18-AC02,DEV-18,Keyboard-only пользователь создаёт/исправляет запись и закрывает диалог с возвратом фокуса; ошибки объявляются assistive technology.,"Q3,Q5",not_run,,
 DEV-18-AC03,DEV-18,Долгий export показывает актуальное состояние и действия; двойное нажатие не создаёт вторую операцию.,"Q3,Q5",not_run,,

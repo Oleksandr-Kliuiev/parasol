@@ -1,0 +1,46 @@
+== schema from 97457037320ffe2f1b1afcd72f99402098b6d120 (current sources, uncommitted changes included), previous 97457037320ffe2f1b1afcd72f99402098b6d120
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+== 1. the newer release migrates the database
+      Migrated PrivacyDbContext
+      Migrated IntegrationDbContext
+      Applied and verified database roles and grants for 16 schemas
+Schema|Newest
+------|------
+activities|20261004040649_OutboxDelivery
+audit|20261004095841_PrivacyErasure
+billing|20261004112326_InvoiceListOrder
+catalog|20261004040643_OutboxDelivery
+contracts|20261004040644_OutboxDelivery
+customers|20261004040640_OutboxDelivery
+customfields|20261004040641_OutboxDelivery
+identity|20261004083007_SessionsAndConfirmedRoles
+integration|20261004201458_OperationalMonitoring
+licensing|20261004040650_OutboxDelivery
+notifications|20261004040652_OutboxDelivery
+privacy|20261004095906_PrivacyCases
+projects|20261004071249_ProjectMembers
+sales|20261004095840_QuoteDocumentErasure
+service|20261004040645_OutboxDelivery
+time|20261004040646_OutboxDelivery
+== 2. the previous release runs its own end-to-end suite on that schema
+Preparing worktree (detached HEAD 9745703)
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+[WebServer] (node:2051) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 7 tests using 1 worker
+
+(node:2075) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (19.1s)
+  ✓  2 [desktop] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (3.0s)
+  ✓  3 [desktop] › e2e/privacy.spec.ts:22:1 › a person gets their data, then is erased and stays erased (DEV-11) @critical (6.4s)
+  ✓  4 [desktop] › e2e/quotes.spec.ts:5:1 › a quote with an extra discount is approved, downloaded and accepted @critical (6.5s)
+  ✓  5 [desktop] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (3.5s)
+  ✓  6 [desktop] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (578ms)
+  ✓  7 [desktop] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (1.7s)
+
+  7 passed (59.0s)

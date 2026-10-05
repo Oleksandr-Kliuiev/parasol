@@ -44,7 +44,8 @@ public class LaunchReadinessTests(CrmWebFactory factory)
             var runs = await admin.GetFromJsonAsync<JsonElement>($"{Integrations}/runs?system=atera&limit=1");
             var run = runs.GetProperty("items").EnumerateArray().First();
             run.GetProperty("status").GetString().ShouldBe("Skipped");
-            run.GetProperty("message").GetString()!.ShouldContain("Incident 2026-09-24");
+            run.GetProperty("read").GetInt32().ShouldBe(0);
+            run.GetProperty("message").GetString().ShouldBeNull(); // Pause details remain on the operator system card.
 
             var health = await admin.GetFromJsonAsync<JsonElement>("/health/integrations");
             var healthAtera = health.GetProperty("systems").EnumerateArray().Single(s => s.GetProperty("system").GetString() == "atera");

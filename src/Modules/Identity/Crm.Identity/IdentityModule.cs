@@ -26,6 +26,7 @@ public static class IdentityModule
         services.AddScoped<IUserDirectorySync, UserDirectorySync>();
         services.AddScoped<ISessionDirectory, SessionDirectory>();
         services.AddScoped<IUserRoleDirectory, UserRoleDirectory>();
+        services.AddScoped<Crm.SharedKernel.Operations.IOperationalSignalSource, IdentityOperationalSignals>();
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, SessionRetention>();
         services.AddScoped<ITechnicianDirectory, TechnicianDirectory>();
         return services;

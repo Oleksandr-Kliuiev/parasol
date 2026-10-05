@@ -69,7 +69,7 @@ public sealed class DeliveryProbeHandlerB(
         probes.Ran(domainEvent.ProbeId, DeliveryProbes.EffectB);
         if (probes.BShouldFail(domainEvent.ProbeId))
         {
-            throw new InvalidOperationException("Probe B failed on purpose.");
+            throw new InvalidOperationException($"Probe B failed on purpose: {domainEvent.Note}");
         }
 
         db.RecordAudit(user, request, time, DeliveryProbes.EffectB, nameof(DeliveryProbe), domainEvent.ProbeId, null);

@@ -62,7 +62,7 @@ public class EntraUserSyncTests(CrmWebFactory factory)
         var first = runs.GetProperty("items").EnumerateArray().First();
         first.GetProperty("status").GetString().ShouldBe("Succeeded");
         first.GetProperty("read").GetInt32().ShouldBe(2);
-        first.GetProperty("message").GetString()!.ShouldContain("matched 1");
+        first.GetProperty("message").GetString().ShouldBeNull(); // General diagnostics omit provider detail (DEV-17).
 
         // Second run continues from the stored delta link and sees the account removed
         await RunSyncAsync();

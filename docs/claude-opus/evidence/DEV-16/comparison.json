@@ -1,0 +1,137 @@
+{
+  "baseline": {
+    "source": "before three ReadPathIndexes; other DEV-16 query changes already present",
+    "billingPeriod": "2026-09",
+    "thresholdsPassed": false,
+    "metrics": {
+      "crm_read_ms": {
+        "p(95)": 2032.6999999999996,
+        "p(99)": 5610.279999999999,
+        "avg": 361.7709312477683,
+        "min": 1.606,
+        "med": 58,
+        "max": 16356
+      },
+      "crm_write_ms": {
+        "p(95)": 299.5952499999998,
+        "p(99)": 447.6074499999999,
+        "avg": 134.26219108983796,
+        "min": 5,
+        "med": 117,
+        "max": 653
+      },
+      "crm_search_ms": {
+        "avg": 1216.081924889543,
+        "min": 274,
+        "med": 1138,
+        "max": 4460,
+        "p(95)": 2214.325,
+        "p(99)": 2544.63974
+      },
+      "checks": {
+        "rate": 1,
+        "passes": 17024,
+        "fails": 0
+      },
+      "http_req_failed": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 11802
+      }
+    }
+  },
+  "afterIndexes": {
+    "source": "three indexes applied; workload before final deadline-accounting fix",
+    "billingPeriod": "2026-10",
+    "thresholdsPassed": true,
+    "metrics": {
+      "crm_read_ms": {
+        "avg": 18.679910909600896,
+        "min": 0.768,
+        "med": 7,
+        "max": 816.635,
+        "p(95)": 78.2657,
+        "p(99)": 170.0307999999999
+      },
+      "crm_write_ms": {
+        "max": 305,
+        "p(95)": 48.0002,
+        "p(99)": 69.01183999999999,
+        "avg": 19.71614264705884,
+        "min": 4,
+        "med": 15.4225
+      },
+      "crm_search_ms": {
+        "med": 202,
+        "max": 1776.193,
+        "p(95)": 723.7669499999995,
+        "p(99)": 1493.1063299999998,
+        "avg": 283.9684029411768,
+        "min": 124
+      },
+      "checks": {
+        "rate": 1,
+        "passes": 43141,
+        "fails": 0
+      },
+      "http_req_failed": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 29894
+      }
+    }
+  },
+  "shared": {
+    "historyReadPeriod": "2026-09",
+    "warmupSeconds": 30,
+    "measureSeconds": 120,
+    "drainSeconds": 32,
+    "virtualSessions": 50,
+    "roleIdentities": 5,
+    "datasetChecksum": "sha256:7d32b44cd737ec67f3fcca42d9e6cc72b235a7ba2643b079d347c58f932caf85",
+    "sameDatabase": true,
+    "note": "Sequential local runs, each with concurrent billing. Prior activity/billing records retained. No cache reset; this is diagnostic evidence, not controlled external acceptance."
+  },
+  "finalGuardRun": {
+    "thresholdsPassed": true,
+    "interruptedIterations": 0,
+    "createdAt": "2026-10-04T22:02:23.296Z",
+    "metrics": {
+      "crm_read_ms": {
+        "p(95)": 74,
+        "p(99)": 170,
+        "avg": 17.485516800888668,
+        "min": 0.824,
+        "med": 6,
+        "max": 551.042
+      },
+      "crm_write_ms": {
+        "med": 13,
+        "max": 231,
+        "p(95)": 46,
+        "p(99)": 75,
+        "avg": 17.598692744755258,
+        "min": 4
+      },
+      "crm_search_ms": {
+        "avg": 267.5451654047754,
+        "min": 124.161,
+        "med": 189,
+        "max": 1797,
+        "p(95)": 653.5055999999986,
+        "p(99)": 1422.2799999999997
+      },
+      "checks": {
+        "rate": 1,
+        "passes": 43562,
+        "fails": 0
+      },
+      "http_req_failed": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 30187
+      }
+    },
+    "provenance": "Loaded deadline guard and iteration counters before metadata-only vu -> client_id tag rename. Final tag is verified by native k6 forced-interruption (exit99) and balanced-drain (exit0) proofs. Source manifest captures final files."
+  }
+}

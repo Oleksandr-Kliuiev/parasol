@@ -23,6 +23,7 @@ public static class LicensingModule
         services.AddModuleServices(typeof(LicensingModule).Assembly);
         services.AddScoped<LicensingService>();
         services.AddScoped<LicenseUsageService>();
+        services.AddScoped<Crm.SharedKernel.Operations.IOperationalSignalSource, LicensingOperationalSignals>();
         services.AddScoped<ILicensingApi>(sp => sp.GetRequiredService<LicensingService>());
         return services;
     }

@@ -17,9 +17,24 @@ public sealed record ConnectionTestStatus(
         run.System,
         run.Status.ToString(),
         run.Status switch { SyncRunStatus.Succeeded => true, SyncRunStatus.Failed => false, _ => null },
-        run.Message,
+        SafeMessage(run.System, run.Status, run.Message),
         run.StartedAt,
         run.FinishedAt);
+
+    internal static string? SafeMessage(string system, SyncRunStatus status, string? message) => status switch
+    {
+        SyncRunStatus.Succeeded => system switch
+        {
+            "atera" => "Connected to Atera.",
+            "partnercenter" => "Connected to Partner Center.",
+            // Preserve the environment only from these exact, application-authored strings.
+            "poweroffice" when message is "Connected to PowerOffice Go (Demo)." or "Connected to PowerOffice Go (Production)." => message,
+            "poweroffice" => "Connected to PowerOffice.",
+            _ => "Connection succeeded.",
+        },
+        SyncRunStatus.Failed => "Connection test failed. Review configuration and provider availability.",
+        _ => null,
+    };
 }
 
 /// <summary>
@@ -56,13 +71,13 @@ internal sealed class IntegrationConnectionTestHandler(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogWarning(ex, "Connection test of {System} failed", domainEvent.System);
-                result = new ConnectionTestResult(false, ex.GetBaseException().Message);
+                logger.LogWarning("Connection test of {System} failed ({ErrorType})", domainEvent.System, ex.GetType().Name);
+                result = new ConnectionTestResult(false, "Connection test failed.");
             }
         }
 
         run.Status = result.Success ? SyncRunStatus.Succeeded : SyncRunStatus.Failed;
-        run.Message = result.Message.Length > 1000 ? result.Message[..1000] : result.Message;
+        run.Message = ConnectionTestStatus.SafeMessage(run.System, run.Status, result.Message);
         run.FinishedAt = time.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
     }

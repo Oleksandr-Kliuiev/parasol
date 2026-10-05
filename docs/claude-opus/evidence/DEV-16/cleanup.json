@@ -1,0 +1,16 @@
+{
+  "ownedContainer": "crm-load-dev16-37cba9904feb",
+  "passwordsAbsentFromEvidence": true,
+  "sqlOomKilled": false,
+  "stoppedServePid": 7591,
+  "ownedContainerRemoved": true,
+  "privateStateRemoved": true,
+  "rollbackContainerRemoved": true,
+  "worktrees": [
+    "worktree /Users/vardahei/Vardahei_CRM_V2",
+    "HEAD 97457037320ffe2f1b1afcd72f99402098b6d120",
+    "branch refs/heads/codex/readiness",
+    ""
+  ],
+  "rollbackWorktreeRemoved": true
+}

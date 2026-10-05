@@ -62,6 +62,8 @@ builder.Services
 // DEV-06: the outbox loop with its liveness (rounds finish) and heartbeat; ready means the database answers.
 builder.Services.AddOutboxProcessing();
 builder.Services.AddDatabaseReadiness();
+// DEV-17: reads operational state independently of Hangfire, so a stalled job server remains observable.
+builder.Services.AddHostedService<OperationalTelemetry>();
 
 builder.Services.AddHangfire(config => config
     .UseSimpleAssemblyNameTypeSerializer()

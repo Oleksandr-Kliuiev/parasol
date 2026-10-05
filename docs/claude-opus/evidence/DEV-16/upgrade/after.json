@@ -1,0 +1,26 @@
+{
+  "counts": {
+    "customers.Organizations": 5000,
+    "customers.Contacts": 50000,
+    "service.Tickets": 1000000,
+    "time.TimeEntries": 1000000,
+    "audit.AuditEntries": 10007437,
+    "customers.OrganizationContacts": 50000,
+    "time.TimeAllocations": 1000000,
+    "contracts.Contracts": 500,
+    "contracts.ContractLines": 500,
+    "catalog.Products": 1,
+    "integration.ExternalLinks": 501,
+    "billing.BillingRuns": 1,
+    "billing.BillingBases": 500,
+    "billing.BillingLines": 500,
+    "billing.Charges": 500
+  },
+  "totals": {
+    "time.TimeEntries": "1875000.00",
+    "time.TimeAllocations": "1875000.00",
+    "billing.BillingBases": "750000.00",
+    "billing.BillingLines": "750000.00",
+    "billing.Charges": "750000.00"
+  }
+}

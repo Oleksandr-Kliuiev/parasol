@@ -43,7 +43,7 @@ public sealed class BrregRegistryCheckJob(
                     catch (HttpRequestException ex)
                     {
                         progress.Failed++;
-                        logger.LogWarning(ex, "Registry check failed for organization {OrganizationId}", organization.Id);
+                        logger.LogWarning("Registry check failed for organization {OrganizationId} ({ErrorType})", organization.Id, ex.GetType().Name);
                         // Mark as checked with unknown status so a single failing entity does not block the loop.
                         await customers.ApplyRegistryStatusAsync(organization.Id, BrregStatus.Unknown, timeProvider.GetUtcNow(), ct);
                     }

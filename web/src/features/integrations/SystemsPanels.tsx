@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Badge,
+  Checkbox,
+  Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Field, Textarea, MessageBar, MessageBarBody,
   Button,
   Table,
   TableBody,
@@ -12,10 +14,11 @@ import {
   Text,
   makeStyles,
   tokens,
-  type BadgeProps,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
-import type { OutboundStatus } from '../../api/types';
+import { ApiError } from '../../api/client';
+import { useBulkOutboundRetry, type OperationResult } from './monitoringApi';
+import type { OutboundOperation } from '../../api/types';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { ListFooter } from '../../shared/components/ListFooter';
@@ -40,16 +43,9 @@ const useStyles = makeStyles({
   muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   buttons: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS, marginTop: tokens.spacingVerticalXS },
   tableWrap: { overflowX: 'auto' },
+  table: { minWidth: '760px' },
   error: { color: tokens.colorPaletteRedForeground1, fontSize: tokens.fontSizeBase200, overflowWrap: 'anywhere' },
 });
-
-const statusColor: Record<OutboundStatus, BadgeProps['color']> = {
-  Pending: 'informative',
-  Succeeded: 'success',
-  Failed: 'danger',
-  DeadLetter: 'danger',
-  Cancelled: 'subtle',
-};
 
 export function SystemsPanel() {
   const styles = useStyles();
@@ -61,7 +57,9 @@ export function SystemsPanel() {
 
   const pause = async (system: string, paused: boolean) => {
     try {
-      const reason = paused ? (globalThis.prompt(t('systemsPanel.pauseReason')) ?? undefined) : undefined;
+      const answer = paused ? globalThis.prompt(t('systemsPanel.pauseReason')) : undefined;
+      if (answer === null) return;
+      const reason = answer;
       await actions.pause.mutateAsync({ system, paused, reason });
       notify(paused ? t('systemsPanel.pausedNotice') : t('systemsPanel.resumedNotice'));
     } catch (error) {
@@ -100,11 +98,11 @@ export function SystemsPanel() {
             <section key={s.system} className={styles.card} aria-label={systemName(t, s.system)}>
               <div className={styles.header}>
                 <Text weight="semibold">{systemName(t, s.system)}</Text>
-                <Badge appearance="tint" color={s.enabled ? 'success' : 'subtle'}>
+                <Badge appearance="outline" color="subtle">
                   {s.enabled ? t('systemsPanel.enabled') : t('systemsPanel.disabled')}
                 </Badge>
                 {s.paused && (
-                  <Badge appearance="outline" color="warning">
+                  <Badge appearance="outline" color="subtle">
                     {t('systemsPanel.paused')}
                   </Badge>
                 )}
@@ -144,6 +142,11 @@ export function OutboundPanel() {
   const { t } = useTranslation();
   const notify = useNotify();
   const outbound = useOutbound();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirming, setConfirming] = useState<OutboundOperation[] | null>(null);
+  const [results, setResults] = useState<OperationResult[]>([]);
+  const retryable = outbound.items.filter((o) => o.status === 'Failed' || o.status === 'DeadLetter');
+  const chosen = retryable.filter((o) => selected.has(o.id));
   const actions = useIntegrationActions();
 
   const act = async (action: () => Promise<unknown>) => {
@@ -156,15 +159,18 @@ export function OutboundPanel() {
 
   return (
     <Panel title={t('outbound.title')}>
+      {results.length > 0 && <ul aria-label={t('monitoring.operationResults')} aria-live="polite">{results.map((r) => <li key={r.id}>{r.id}: {t(`monitoring.operationStatus.${r.status}`)}</li>)}</ul>}
+      <Button disabled={!chosen.length || chosen.length > 100} onClick={() => setConfirming(chosen)}>{t('monitoring.retrySelected', { count: chosen.length })}</Button>
       {outbound.error ? (
         <ErrorState error={outbound.error} onRetry={() => void outbound.refetch()} />
       ) : outbound.isSuccess && outbound.items.length === 0 ? (
         <EmptyState message={t('outbound.empty')} />
       ) : (
-        <div className={styles.tableWrap}>
-          <Table size="small" aria-label={t('outbound.title')}>
+        <div className={styles.tableWrap} tabIndex={0} role="region" aria-label={t('outbound.title')}>
+          <Table size="small" className={styles.table} aria-label={t('outbound.title')}>
             <TableHeader>
               <TableRow>
+                <TableHeaderCell><Checkbox aria-label={t('delivery.selectAll')} checked={chosen.length > 0 && chosen.length === Math.min(100, retryable.length)} onChange={(_, d) => setSelected(d.checked === true ? new Set(retryable.slice(0, 100).map((o) => o.id)) : new Set())} /></TableHeaderCell>
                 <TableHeaderCell>{t('outbound.columns.created')}</TableHeaderCell>
                 <TableHeaderCell>{t('outbound.columns.operation')}</TableHeaderCell>
                 <TableHeaderCell>{t('outbound.columns.status')}</TableHeaderCell>
@@ -176,12 +182,13 @@ export function OutboundPanel() {
             <TableBody>
               {outbound.items.map((o) => (
                 <TableRow key={o.id}>
+                  <TableCell><Checkbox aria-label={t('monitoring.selectOperation', { id: o.id })} disabled={!retryable.includes(o) || (!selected.has(o.id) && chosen.length >= 100)} checked={selected.has(o.id) && retryable.includes(o)} onChange={(_, d) => setSelected((current) => { const next = new Set(current); if (d.checked) next.add(o.id); else next.delete(o.id); return next; })} /></TableCell>
                   <TableCell className="tabular">{formatDateTime(o.createdAt)}</TableCell>
                   <TableCell>
                     {systemName(t, o.system)} · {t(`outbound.operations.${o.operation}`, { defaultValue: o.operation })}
                   </TableCell>
                   <TableCell>
-                    <Badge appearance="tint" color={statusColor[o.status]}>
+                    <Badge appearance="outline" color="subtle">
                       {t(`outbound.status.${o.status}`)}
                     </Badge>
                   </TableCell>
@@ -189,7 +196,7 @@ export function OutboundPanel() {
                   <TableCell>{o.lastError ? <span className={styles.error}>{o.lastError}</span> : <span className={styles.muted}>{o.result}</span>}</TableCell>
                   <TableCell>
                     {(o.status === 'Failed' || o.status === 'DeadLetter') && (
-                      <Button size="small" onClick={() => void act(() => actions.retry.mutateAsync(o.id))}>
+                      <Button size="small" onClick={() => setConfirming([o])}>
                         {t('outbound.retry')}
                       </Button>
                     )}
@@ -206,6 +213,36 @@ export function OutboundPanel() {
           <ListFooter shown={outbound.items.length} total={outbound.total} hasMore={outbound.hasNextPage} loading={outbound.isFetchingNextPage} onMore={() => void outbound.fetchNextPage()} />
         </div>
       )}
+      <Dialog open={confirming !== null} onOpenChange={(_, d) => !d.open && setConfirming(null)}><DialogSurface>{confirming && <OutboundRetryForm operations={confirming} onResults={setResults} onClose={(done) => { setConfirming(null); if (done) setSelected(new Set()); }} />}</DialogSurface></Dialog>
     </Panel>
   );
+}
+
+function OutboundRetryForm({ operations, onClose, onResults }: { operations: OutboundOperation[]; onClose: (done: boolean) => void; onResults: (items: OperationResult[]) => void }) {
+  const { t } = useTranslation();
+  const retry = useBulkOutboundRetry();
+  const [reason, setReason] = useState('');
+  const [results, setResults] = useState<OperationResult[]>([]);
+  const submit = async () => {
+    try {
+      const result = await retry.mutateAsync({ messages: operations.map((o) => ({ id: o.id, etag: o.etag })), expected: operations.length, reason: reason.trim() });
+      onResults(result.items); onClose(true);
+    } catch (error) {
+      if (error instanceof ApiError && Array.isArray(error.problem.items)) {
+        const items = error.problem.items as OperationResult[];
+        setResults(items); onResults(items);
+      }
+    }
+  };
+  return <form onSubmit={(event) => { event.preventDefault(); if (reason.trim().length >= 10 && !retry.isPending) void submit(); }}><DialogBody>
+    <DialogTitle>{t('monitoring.retryTitle', { count: operations.length })}</DialogTitle>
+    <DialogContent>
+      {retry.error && <MessageBar intent="error"><MessageBarBody>{errorMessage(retry.error, t)}</MessageBarBody></MessageBar>}
+      {results.length > 0 && <ul aria-label={t('monitoring.operationResults')} aria-live="polite">{results.map((r) => <li key={r.id}>{r.id}: {t(`monitoring.operationStatus.${r.status}`)}</li>)}</ul>}
+      <p>{t('monitoring.retryHint')}</p>
+      <ul aria-label={t('monitoring.exactSelection')}>{operations.map((o) => <li key={o.id}>{systemName(t, o.system)} / {o.id} · {t(`outbound.operations.${o.operation}`, { defaultValue: o.operation })} · {formatDateTime(o.createdAt)}</li>)}</ul>
+      <Field required label={t('delivery.reason')} hint={t('delivery.reasonHint', { min: 10 })}><Textarea maxLength={500} value={reason} onChange={(_, d) => setReason(d.value)} /></Field>
+    </DialogContent>
+    <DialogActions><Button disabled={retry.isPending} onClick={() => onClose(false)}>{t('common.cancel')}</Button><Button type="submit" appearance="primary" disabled={reason.trim().length < 10 || retry.isPending}>{t('monitoring.retryConfirm', { count: operations.length })}</Button></DialogActions>
+  </DialogBody></form>;
 }

@@ -103,7 +103,24 @@ public sealed class ContractLifecycleJob(ContractsDbContext db, ICustomersApi cu
 {
     public const string JobId = "contract-lifecycle";
 
-    public async Task<ContractLifecycleResult> RunAsync(CancellationToken cancellationToken)
+    public Task<ContractLifecycleResult> RunAsync(CancellationToken cancellationToken) =>
+        db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            // Two worker replicas may start the same daily scan before either has written its reminders. Serialize the
+            // read/decide/write cycle in SQL, including renewals and their domain events; a retry starts from clean state.
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await db.Database.ExecuteSqlRawAsync("""
+                DECLARE @result int;
+                EXEC @result = sp_getapplock @Resource=N'contracts:lifecycle', @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=60000;
+                IF @result < 0 THROW 51000, N'CONTRACT_LIFECYCLE_BUSY', 1;
+                """, cancellationToken);
+            var result = await RunInTransactionAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        });
+
+    private async Task<ContractLifecycleResult> RunInTransactionAsync(CancellationToken cancellationToken)
     {
         var today = time.Today();
         int renewed = 0, ended = 0, reminders = 0;
@@ -145,27 +162,38 @@ public sealed class ContractLifecycleJob(ContractsDbContext db, ICustomersApi cu
         var existing = (await db.Reminders.AsNoTracking().Where(r => keys.Contains(r.DeduplicationKey)).Select(r => r.DeduplicationKey).ToListAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
 
+        var pending = new List<(Contract Contract, ReminderKind Kind, DateOnly DueDate, int? DaysBefore, string Reference)>();
         foreach (var contract in upcoming)
         {
             var end = contract.EndDate!.Value;
-            var assignee = contract.OwnerId ?? (await customers.GetOrganizationAsync(contract.OrganizationId, cancellationToken))?.AccountManagerId;
             if (RenewalSchedule.DueStep(end, today) is { } step)
             {
                 var reference = $"{step}@{end:yyyy-MM-dd}";
                 if (existing.Add(Key(ReminderKind.ContractEnding, contract, reference)))
                 {
-                    var reminder = Reminder.ForContract(ReminderKind.ContractEnding, contract, end, step, reference, assignee);
-                    reminder.RaiseEnding(end.DayNumber - today.DayNumber);
-                    db.Reminders.Add(reminder);
-                    reminders++;
+                    pending.Add((contract, ReminderKind.ContractEnding, end, step, reference));
                 }
             }
 
             if (RenewalSchedule.NoticeTaskDue(contract, today) && existing.Add(Key(ReminderKind.NoticeDeadline, contract, $"{end:yyyy-MM-dd}")))
             {
-                db.Reminders.Add(Reminder.ForContract(ReminderKind.NoticeDeadline, contract, end.AddDays(-contract.NoticePeriodDays), null, $"{end:yyyy-MM-dd}", assignee));
-                reminders++;
+                pending.Add((contract, ReminderKind.NoticeDeadline, end.AddDays(-contract.NoticePeriodDays), null, $"{end:yyyy-MM-dd}"));
             }
+        }
+
+        // A repeated scan has no pending work. Resolve only new reminders without a contract owner, once per batch.
+        var organizationIds = pending.Where(p => p.Contract.OwnerId == null).Select(p => p.Contract.OrganizationId).Distinct().ToList();
+        var managers = await customers.GetAccountManagerIdsAsync(organizationIds, cancellationToken);
+        foreach (var item in pending)
+        {
+            var assignee = item.Contract.OwnerId ?? managers.GetValueOrDefault(item.Contract.OrganizationId);
+            var reminder = Reminder.ForContract(item.Kind, item.Contract, item.DueDate, item.DaysBefore, item.Reference, assignee);
+            if (item.Kind == ReminderKind.ContractEnding)
+            {
+                reminder.RaiseEnding(item.DueDate.DayNumber - today.DayNumber);
+            }
+            db.Reminders.Add(reminder);
+            reminders++;
         }
 
         await db.SaveChangesAsync(cancellationToken);

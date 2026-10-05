@@ -127,6 +127,9 @@ public interface ICustomersApi
 
     Task<IReadOnlyDictionary<Guid, string>> GetOrganizationNamesAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
 
+    /// <summary>Account managers for only the requested organizations; an empty batch performs no lookup.</summary>
+    Task<IReadOnlyDictionary<Guid, Guid?>> GetAccountManagerIdsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
+
     /// <summary>Every organization as a flat row, for the reporting mart (FR-RPT-03).</summary>
     Task<IReadOnlyList<OrganizationRef>> GetAllOrganizationsAsync(CancellationToken cancellationToken);
 

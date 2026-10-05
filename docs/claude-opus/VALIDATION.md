@@ -105,7 +105,7 @@ Automated axe и dark/mobile tests дополнить ручными сцена�
 
 ## Q6 — нагрузка и отказ
 
-Существующий [workday.js](../../tools/load-test/workday.js) — стартовый smoke, не доказательство масштаба. DEV-16 создаёт полный профиль и воспроизводимый генератор. Использовать отдельную synthetic БД; Development sign-in никогда не включать в production.
+[Набор DEV-16](../../tools/load-test/README.md) содержит воспроизводимый генератор smoke/full, read/write/concurrency workload, billing-to-receipt, browser LCP/FUC и сбор ресурсов. Локальный полный набор и короткий прогон не заменяют согласованную EXT-05 нагрузку. Использовать отдельную synthetic БД; Development sign-in никогда не включать в production.
 
 Записать dataset seed/count, app digest/schema, инфраструктуру, warmup, длительность, read/write mix, p50/p95/p99, error rate, ресурсы и SQL count/plans. Предлагаемый полный прогон — 30 минут после прогрева плюс согласованный пик; итоговый workload должен быть утверждён EXT-05. Проверить 50 пользователей, p95 read ≤500 мс/write ≤1 с/search ≤1 с; 500 клиентов billing ≤5 мин, экспорт ≤30 мин либо подтверждённая отдельно принятая граница provider. HTTP 403 для роли, которая должна читать, — ошибка сценария.
 

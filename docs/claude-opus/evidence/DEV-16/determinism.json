@@ -1,0 +1,26 @@
+{
+  "verified": true,
+  "profile": "smoke",
+  "independentDatabaseNames": [
+    "crm_load_dev16_22db696b1ee2",
+    "crm_load_dev16_6166eca3789c"
+  ],
+  "checksum": "sha256:0d066f161d023fd0fbaaa607f90f8bfb0cacf1ca90bc2a8221daf55c3210f359",
+  "generatorChecksum": "sha256:03bd4d900001bb70792209e32fb212558c81d24446d323b1f3e1a8bf5a7b7443",
+  "tableCount": 11,
+  "counts": {
+    "organizations": 500,
+    "contacts": 5000,
+    "tickets": 10000,
+    "timeEntries": 10000,
+    "auditEntries": 100000
+  },
+  "seedSeconds": [
+    8.672,
+    8.691
+  ],
+  "history": {
+    "fromDate": "2021-10-05",
+    "toDate": "2026-10-04"
+  }
+}

@@ -40,7 +40,7 @@ public sealed class AteraOptions
     public string TicketSyncCron { get; set; } = "*/10 * * * *";
 
     /// <summary>Full pass over recent tickets, so closed ones and late changes are picked up.</summary>
-    public string RecentTicketSyncCron { get; set; } = "25 * * * *";
+    public string RecentTicketSyncCron { get; set; } = "5-59/10 * * * *";
 
     public string WorkHoursSyncCron { get; set; } = "*/30 * * * *";
 

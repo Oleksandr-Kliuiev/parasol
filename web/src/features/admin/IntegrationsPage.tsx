@@ -30,6 +30,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { NotFoundPage } from '../errors/NotFoundPage';
+import { MonitoringPanel } from '../integrations/MonitoringPanel';
 import { DeliveryPanel } from '../integrations/DeliveryPanel';
 import { OutboundPanel, SystemsPanel } from '../integrations/SystemsPanels';
 
@@ -42,7 +43,7 @@ const useStyles = makeStyles({
   message: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, overflowWrap: 'anywhere' },
 });
 
-const statusColor: Record<SyncRun['status'], BadgeProps['color']> = { Running: 'informative', Succeeded: 'success', Failed: 'danger' };
+const statusColor: Record<SyncRun['status'], BadgeProps['color']> = { Running: 'informative', Succeeded: 'success', Failed: 'danger', Skipped: 'subtle' };
 
 function duration(run: SyncRun): string {
   if (!run.finishedAt) return '…';
@@ -80,6 +81,7 @@ export function IntegrationsPage() {
     <>
       <PageHeader title={t('integrations.title')} subtitle={t('integrations.subtitle')} />
       <div className={styles.stack}>
+        <MonitoringPanel />
         <SystemsPanel />
         <Panel title={t('integrations.jobs')}>
           {jobsUnavailable ? (

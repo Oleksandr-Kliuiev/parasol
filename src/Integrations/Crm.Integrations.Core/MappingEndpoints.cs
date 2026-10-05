@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Crm.Authorization;
 using Crm.Catalog.Contracts;
 using Crm.Customers.Contracts;
@@ -343,34 +345,51 @@ public static class MappingEndpoints
                 var take = KeysetCursor.ClampLimit(limit);
                 var page = await query.OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id).Take(take + 1).ToListAsync(ct);
                 var rows = page.Take(take).ToList();
-                return Results.Ok(new PagedResult<OutboundOperation>(
-                    rows, page.Count > take ? new KeysetCursor(rows[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null, total));
+                return Results.Ok(new PagedResult<OutboundOperationItem>(
+                    rows.Select(OutboundOperationItem.From).ToList(),
+                    page.Count > take ? new KeysetCursor(rows[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture), rows[^1].Id).Encode() : null, total));
             })
             .RequirePermission(Permissions.IntegrationsManage);
 
         // DEV-07: who sent an operation back or withdrew it is recorded with the change, in one transaction.
         group.MapPost("/outbound/{id:guid}/retry", async (
-                Guid id, IntegrationDbContext db, ICurrentUser user, IRequestContext request, TimeProvider time, CancellationToken ct) =>
+                Guid id, OutboundRetryReason body, HttpRequest httpRequest, IntegrationDbContext db, ICurrentUser user, IRequestContext request, TimeProvider time, CancellationToken ct) =>
             {
-                var operation = await db.OutboundOperations.SingleOrDefaultAsync(
+                if (httpRequest.GetIfMatch() is not { } etag) return HeaderExtensions.PreconditionRequired();
+                var operation = await db.OutboundOperations.AsNoTracking().SingleOrDefaultAsync(
                     o => o.Id == id && (o.Status == OutboundStatus.Failed || o.Status == OutboundStatus.DeadLetter), ct);
                 if (operation is null)
                 {
                     return NotFound(id.ToString());
                 }
 
-                db.RecordAudit(user, request, time, AuditActions.Replay, nameof(OutboundOperation), id, new
+                if (etag != OutboundOperationItem.Version(operation))
+                    return Error.PreconditionFailed("INT_RETRY_STALE", "The operation changed. Reload before retrying.").ToProblem();
+                var reason = body.Reason?.Trim() ?? string.Empty;
+                if (reason.Length is < 10 or > 500)
+                    return Error.Validation("INT_RETRY_REASON", "Give a retry reason of 10–500 characters.").ToProblem();
+                return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
                 {
-                    operation.System, operation.Operation, operation.EntityId, Previous = operation.Status.ToString(), operation.Attempts, operation.LastError,
+                    await using var transaction = await db.Database.BeginTransactionAsync(ct);
+                    var now = time.GetUtcNow();
+                    var changed = await db.OutboundOperations.Where(o => o.Id == id && o.Status == operation.Status &&
+                        o.Attempts == operation.Attempts && o.CompletedAt == operation.CompletedAt && o.NextAttemptAt == operation.NextAttemptAt &&
+                        o.LockedUntil == operation.LockedUntil && o.LeaseOwner == operation.LeaseOwner &&
+                        (o.LockedUntil == null || o.LockedUntil < now)).ExecuteUpdateAsync(s => s
+                        .SetProperty(o => o.Status, OutboundStatus.Pending).SetProperty(o => o.Attempts, 0)
+                        .SetProperty(o => o.NextAttemptAt, now).SetProperty(o => o.CompletedAt, (DateTimeOffset?)null)
+                        .SetProperty(o => o.LockedUntil, (DateTimeOffset?)null).SetProperty(o => o.LeaseOwner, (Guid?)null)
+                        .SetProperty(o => o.LastError, (string?)null), ct);
+                    if (changed == 0)
+                        return Error.PreconditionFailed("INT_RETRY_STALE", "The operation changed. Reload before retrying.").ToProblem();
+                    db.RecordAudit(user, request, time, AuditActions.Replay, nameof(OutboundOperation), id, new
+                    {
+                        Reason = reason, operation.System, operation.Operation, operation.EntityId, Previous = operation.Status.ToString(), operation.Attempts,
+                    });
+                    await db.SaveChangesAsync(ct);
+                    await transaction.CommitAsync(ct);
+                    return Results.NoContent();
                 });
-                operation.Status = OutboundStatus.Pending;
-                operation.Attempts = 0;
-                operation.NextAttemptAt = time.GetUtcNow();
-                operation.CompletedAt = null;
-                operation.LockedUntil = null;
-                operation.LeaseOwner = null;
-                await db.SaveChangesAsync(ct);
-                return Results.NoContent();
             })
             .RequirePermission(Permissions.IntegrationsManage);
 
@@ -428,3 +447,25 @@ public sealed record RecordQuery(
     [FromQuery] bool? IncludeGone,
     [FromQuery] string? Cursor,
     [FromQuery] int? Limit);
+
+public sealed record OutboundRetryReason(string? Reason);
+
+/// <summary>Safe operator view with the exact delivery generation the operator is confirming.</summary>
+public sealed record OutboundOperationItem(
+    Guid Id, string System, string Operation, string EntityType, Guid EntityId, string IdempotencyKey,
+    OutboundStatus Status, int Attempts, DateTimeOffset CreatedAt, Guid? RequestedBy, DateTimeOffset NextAttemptAt,
+    DateTimeOffset? LockedUntil, Guid? LeaseOwner, DateTimeOffset? CompletedAt, string? LastError, string? Result, string Etag)
+{
+    public static OutboundOperationItem From(OutboundOperation operation) => new(
+        operation.Id, operation.System, operation.Operation, operation.EntityType, operation.EntityId, operation.IdempotencyKey,
+        operation.Status, operation.Attempts, operation.CreatedAt, operation.RequestedBy, operation.NextAttemptAt,
+        operation.LockedUntil, operation.LeaseOwner, operation.CompletedAt,
+        operation.LastError is null ? null : "Outbound operation failed.", null, Version(operation));
+
+    // Includes the outcome timestamp and next-attempt time, so Failed -> Pending -> Failed cannot reuse a confirmation,
+    // even when attempts and status repeat. The token contains neither provider errors nor their hashes.
+    public static string Version(OutboundOperation operation) => '"' + Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+    {
+        operation.Id, operation.Status, operation.Attempts, operation.CompletedAt, operation.NextAttemptAt, operation.LockedUntil, operation.LeaseOwner,
+    }))) + '"';
+}

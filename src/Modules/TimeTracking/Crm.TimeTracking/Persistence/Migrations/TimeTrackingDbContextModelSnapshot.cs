@@ -272,6 +272,10 @@ namespace Crm.TimeTracking.Persistence.Migrations
 
                     b.HasIndex("TimeEntryId");
 
+                    b.HasIndex(new[] { "TimeEntryId" }, "IX_TimeAllocations_Active_TimeEntryId")
+                        .HasFilter("[IsDeleted] = 0")
+                        .HasAnnotation("SqlServer:Include", new[] { "Classification", "Hours", "BilledHours", "Amount" });
+
                     b.ToTable("TimeAllocations", "time");
                 });
 
@@ -405,6 +409,11 @@ namespace Crm.TimeTracking.Persistence.Migrations
                     b.HasIndex("Status", "WorkDate");
 
                     b.HasIndex("TechnicianId", "WorkDate");
+
+                    b.HasIndex("WorkDate", "Id")
+                        .IsDescending(true, false)
+                        .HasFilter("[IsDeleted] = 0")
+                        .HasAnnotation("SqlServer:Include", new[] { "OrganizationId", "TechnicianId", "TechnicianName", "Hours", "Billable", "Status", "Amount" });
 
                     b.ToTable("TimeEntries", "time");
                 });

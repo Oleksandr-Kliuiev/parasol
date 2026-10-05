@@ -213,6 +213,66 @@ namespace Crm.Integrations.Core.Persistence.Migrations
                     b.ToTable("OutboxReplayRequests", "integration");
                 });
 
+            modelBuilder.Entity("Crm.Integrations.Core.ExceptionTriage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("RequiredPermission")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "UpdatedAt");
+
+                    b.ToTable("ExceptionTriages", "integration");
+                });
+
             modelBuilder.Entity("Crm.Integrations.Core.Persistence.ExternalLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -520,6 +580,24 @@ namespace Crm.Integrations.Core.Persistence.Migrations
                     b.HasIndex("System", "Job", "StartedAt");
 
                     b.ToTable("SyncRuns", "integration");
+                });
+
+            modelBuilder.Entity("Crm.Integrations.Core.SyncSuccess", b =>
+                {
+                    b.Property<string>("System")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Job")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("SucceededAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("System", "Job");
+
+                    b.ToTable("SyncSuccesses", "integration");
                 });
 
             modelBuilder.Entity("Crm.Integrations.Core.WorkerHeartbeat", b =>

@@ -30,7 +30,7 @@ public static class HealthEndpoints
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // Without the database the heartbeats cannot be read; the checks above already say so.
-                    services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(HealthEndpoints)).LogWarning(ex, "Worker heartbeats could not be read");
+                    services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(HealthEndpoints)).LogWarning("Worker heartbeats could not be read ({ErrorType})", ex.GetType().Name);
                 }
 
                 var missing = beats is null ? [] : ExpectedComponents.Where(c => beats.All(b => b.Component != c)).ToList();

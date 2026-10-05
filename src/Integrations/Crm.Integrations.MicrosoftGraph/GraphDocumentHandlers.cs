@@ -51,11 +51,11 @@ internal sealed class OrganizationFolderHandler(
         }
         catch (HttpRequestException exception)
         {
-            logger.LogWarning(exception, "The SharePoint folder of organization {Organization} could not be kept in step.", organizationId);
+            logger.LogWarning("The SharePoint folder of organization {Organization} could not be kept in step ({ErrorType}).", organizationId, exception.GetType().Name);
         }
         catch (InvalidOperationException exception)
         {
-            logger.LogWarning(exception, "SharePoint is configured but not usable for organization {Organization}.", organizationId);
+            logger.LogWarning("SharePoint is configured but not usable for organization {Organization} ({ErrorType}).", organizationId, exception.GetType().Name);
         }
     }
 }
