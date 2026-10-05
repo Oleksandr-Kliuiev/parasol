@@ -66,7 +66,7 @@ flowchart TB
   end
 
   SQL[(Azure SQL Database<br/>схемы по модулям + hangfire + integration)]
-  BLOB[(Azure Blob Storage<br/>вложения, PDF, выгрузки, DataProtection keys)]
+  BLOB[(Azure Blob Storage<br/>документы предложений, снимки BI и служебные объекты, DataProtection keys)]
   KV[Azure Key Vault<br/>секреты и сертификаты интеграций]
   AI[Application Insights<br/>+ Log Analytics]
 
@@ -307,13 +307,13 @@ flowchart LR
 
 ## 8. Данные
 
-- **Одна БД Azure SQL**, схема на модуль, отдельные схемы `hangfire`, `integration`, `audit`, `reporting`.
+- **Одна БД Azure SQL**, схема на модуль, отдельные схемы `hangfire`, `integration`, `audit`. Схемы `reporting` нет: отчётность схемы не имеет (ADR-022).
 - **Идентификаторы:** `uniqueidentifier`, генерируются в приложении (`SequentialId`) последовательными в порядке сортировки SQL Server — нет утечки количества записей и фрагментации кластерного индекса. UUID v7 не подходит: SQL Server сравнивает GUID с последних байтов.
 - **Оптимистичная блокировка:** `rowversion` + `ETag`/`If-Match` в API.
 - **История:** system-versioned temporal tables для контрактов, позиций, цен, подписок; журнал аудита (`audit.AuditEntry`) — для всех сущностей через EF `SaveChangesInterceptor` (кто, когда, операция, JSON diff, correlation ID).
 - **Мягкое удаление** для бизнес-сущностей (`IsDeleted`, глобальный фильтр EF). Персональные данные стирает дело модуля Privacy: псевдонимизация с сохранением ключей, ведь ссылки предложений, тикетов и истории остаются целыми. Историю аудита и сохранённые документы физически очищают процедуры оператора `crm_privacy`; стёртые записи представления скрывают сразу. Манифест удаления лежит вне базы и применяется заново после восстановления (DEV-11, [ADR-020](adr/ADR-020-data-subject-requests-and-retention.md)).
 - **Поиск:** модули регистрируют `ISearchProvider`; хост опрашивает только провайдеров, на которые у пользователя есть право. R1 — `LIKE` по нормализованным полям (оргномер, цифры телефона, домен), этого хватает для объёмов NFR-04; Full-Text Search Azure SQL — при росте данных (локальный образ SQL Server не содержит FTS), Azure AI Search — при > 1 млн документов или потребности в нечётком поиске.
-- **Витрина для Power BI (R2):** схема `reporting` с представлениями; отдельный read-only пользователь БД (Entra-группа), подключение через Power BI Gateway не требуется — Azure SQL с приватным доступом через VNet data gateway либо реплика только для чтения.
+- **Витрина для Power BI (R2):** ~~схема `reporting` с представлениями и read-only пользователь БД~~ — *этот план не реализован и заменён:* прямого доступа к SQL нет; Power BI читает через API — cookie-путь `/api/v1/reports/mart` (прежний) и `/api/v1/bi/v1` для Power BI Service (DEV-14, [ADR-022](adr/ADR-022-bi-read-api-and-snapshots.md)). Исходный текст плана: схема `reporting` с представлениями; отдельный read-only пользователь БД (Entra-группа), подключение через Power BI Gateway не требуется — Azure SQL с приватным доступом через VNet data gateway либо реплика только для чтения.
 - **Деньги:** `decimal(19,4)` + код валюты; все суммы в основаниях хранят и сумму, и цену, и курс на дату.
 
 ## 9. API

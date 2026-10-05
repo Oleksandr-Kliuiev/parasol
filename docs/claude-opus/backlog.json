@@ -807,7 +807,7 @@
         "EXT-10",
         "EXT-11"
       ],
-      "status": "todo",
+      "status": "code_verified",
       "task_file": "tasks/DEV-23.md",
       "evidence_file": "evidence/DEV-23.md",
       "acceptance_ids": [

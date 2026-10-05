@@ -4,6 +4,10 @@ CRM для IT-компании — поставщика услуг, лиценз
 Компания сама работает на этих продуктах: Microsoft 365 / Entra ID — рабочая среда и вход, Atera — сервис-деск и RMM, PowerOffice Go — бухгалтерия и счета.
 Вход в CRM — **только через Microsoft-аккаунт (Entra ID)**.
 
+## Статус
+
+**Релиз не выпущен и не принят.** Работы аудита от 03.10.2026 (DEV-00…DEV-22) выполнены локально и проверены на локальной среде и синтетических данных (`code_verified`); DEV-23 (допуск к выпуску) не закрыт. Внешние gate EXT-01…EXT-11 не пройдены (ни один не `passed`: UAT и месяц параллельного биллинга, реальный Entra tenant, sandbox провайдеров, независимая проверка безопасности, учение восстановления и др.). Это не production-ready система: она не разворачивалась в production, настоящие счета и сообщения не отправлялись. Подробно — [docs/08-roadmap § 0](docs/08-roadmap.md#0-состояние-на-05102026), [допуск](docs/claude-opus/GO_LIVE.md), [журнал работ](docs/claude-opus/PROGRESS.md).
+
 ## Комплект документов
 
 | # | Документ | Для кого | Что внутри |
@@ -17,6 +21,9 @@ CRM для IT-компании — поставщика услуг, лиценз
 | 07 | [НФТ, DevOps и эксплуатация](docs/07-nfr-devops.md) | DevOps, QA | Производительность, окружения, CI/CD, мониторинг, тестирование |
 | 08 | [План работ и релизы](docs/08-roadmap.md) | Руководитель проекта | Этапы, состав релизов, команда, риски |
 | 09 | [Допущения и открытые вопросы](docs/09-assumptions-questions.md) | Заказчик | Что принято по умолчанию и что нужно подтвердить |
+| 10 | [Аудит 03.10.2026](docs/10-audit-2026-10-03.md) | Все | Исторический отчёт аудита; результаты устранения — в конце документа |
+
+Дополнительно: [ADR](docs/adr/) (ADR-011…025 — решения аудитного пакета), [runbooks](docs/runbooks/) (01…18: развёртывание, интеграции, восстановление, права БД, события, документы, персональные данные, Power BI, мониторинг, миграция, пилотный биллинг), [пакет устранения аудита](docs/claude-opus/README.md) (порядок работ, `PROGRESS.md`, `backlog.json`, evidence по каждому заданию, `TRACEABILITY.md`, `external-gates.json`), политика сообщений об уязвимостях — [SECURITY.md](SECURITY.md). Документы 01–09 описывают целевую систему и по мере работ дополняются пометками о фактической реализации; формулировки-планы, которые не реализованы, помечены в тексте. Для агентов и новых разработчиков правила кода — [CLAUDE.md](CLAUDE.md).
 
 ## Ключевые решения — кратко
 
@@ -44,10 +51,16 @@ infra/               Bicep (Azure Norway East), скрипт регистрац�
 docs/runbooks        Эксплуатационные инструкции
 tools/load-test      Сценарий k6 «рабочий день» (NFR-01)
 ```
-Статус по спринтам — [08-roadmap § 3.1a](docs/08-roadmap.md#31a-статус-выполнения-на-16092026) (R1) и [§ 5.1](docs/08-roadmap.md#51-статус-выполнения-r2-на-23092026) (R2).
+Текущее состояние — [08-roadmap § 0](docs/08-roadmap.md#0-состояние-на-05102026); исторические статусы спринтов — [§ 3.1a](docs/08-roadmap.md#31a-статус-выполнения-на-16092026) (R1) и [§ 5.1](docs/08-roadmap.md#51-статус-выполнения-r2-на-25092026) (R2).
 
 ### Требования
-.NET SDK 10.0.401 (`global.json`), Node.js 24, Docker Desktop.
+.NET SDK 10.0.401 (`global.json`), Node.js 24, Docker Desktop. Если SDK установлен локально в `~/.dotnet`: `export PATH="$HOME/.dotnet:$PATH" DOTNET_ROOT="$HOME/.dotnet"`.
+
+### Сборка
+Предупреждения считаются ошибками:
+```bash
+dotnet build Vardahei.Crm.slnx
+```
 
 ### Запуск локально
 Вариант 1 — .NET Aspire (SQL Server в контейнере, crm-web, crm-worker, дашборд телеметрии):
@@ -71,6 +84,7 @@ npm --prefix web install && npm --prefix web run dev
 В окружении Development вход через Entra ID отключён (`Auth:Mode=Development`): на странице входа выбирается роль. В любом другом окружении этот режим запрещён при старте.
 
 ### Тесты
+Полный перечень проверок и критерии — [VALIDATION.md](docs/claude-opus/VALIDATION.md). Интеграционные тесты и e2e требуют Docker.
 ```bash
 dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj
 ```
@@ -112,5 +126,7 @@ k6 run -e BASE_URL=http://localhost:5180 tools/load-test/workday.js
 
 Попробовать сопоставления PowerOffice без ключей: локальная заглушка API — [tools/dev-mocks](tools/dev-mocks/README.md). Подключение настоящих PowerOffice Go и Atera — [runbook 02](docs/runbooks/02-integrations.md).
 
+Инструменты выпуска (DEV-05): `python3 -m unittest discover -s tools/release`; `shellcheck tools/release/*.sh`; совместимость предыдущего релиза с текущей схемой — `tools/release/rollback-compat.sh <sha>`. Bicep: `az bicep build --file infra/main.bicep --stdout > /dev/null`.
+
 ### Развёртывание
-Первое развёртывание окружения — [runbook 01](docs/runbooks/01-first-deployment.md). Далее каждый push в `main` разворачивает `test`; `prod` — ручной запуск workflow `Deploy` с подтверждением.
+Первое развёртывание окружения — [runbook 01](docs/runbooks/01-first-deployment.md). Конвейер (DEV-05, [ADR-015](docs/adr/ADR-015-release-pipeline.md)): успешный CI на `main` → `release.yml` один раз собирает образы и разворачивает их digest в `test`; `prod` — только workflow `promote.yml`, который переносит те же digest, не пересобирая. Конвейер не проверен на реальном репозитории и окружениях (EXT-11); этот репозиторий не разворачивался в production.

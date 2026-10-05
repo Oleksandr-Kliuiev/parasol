@@ -20,7 +20,7 @@
 
 ## 2. Переход с общей идентичности (одно окно, до развёртывания)
 Выполняет владелец тенанта и подписки; поручением не выполнялось.
-1. Конвейер (`deploy.yml`) сам создаёт `id-crm-worker-<env>`, если её нет, и передаёт задаче миграций обе идентичности — пользователи БД появляются раньше, чем контейнеры переключатся.
+1. Конвейер (`tools/release/deploy.sh`, запускаемый `release.yml`/`promote.yml`) сам создаёт `id-crm-worker-<env>`, если её нет, и передаёт задаче миграций обе идентичности — пользователи БД появляются раньше, чем контейнеры переключатся.
 2. **До** развёртывания выдать `id-crm-worker-<env>` Graph-разрешения: `User.Read.All` (`./infra/entra/register-app.sh <env> <url> <principalId worker>`), `Mail.Send` на ящик `crm@` ([runbook 02 §4.1](02-integrations.md#41-общий-ящик-и-разрешение), с appId worker), доступ `Sites.Selected` к сайту «Kunder» ([02 §4b.2](02-integrations.md#4b2-документы-в-sharepoint)). Без них синхронизация пользователей, сводка и папки SharePoint из worker не работают (видно по `/health/integrations` и логам).
 3. После проверки — снять у `id-crm-app-<env>` то, что ему больше не нужно: `User.Read.All` и область `Mail.Send` на `crm@`.
 4. Проверить: `SELECT r.name, m.name FROM sys.database_role_members x JOIN sys.database_principals r ON r.principal_id = x.role_principal_id JOIN sys.database_principals m ON m.principal_id = x.member_principal_id WHERE m.name LIKE 'id-crm-%';` — `id-crm-app-<env>` только в `crm_web`, `id-crm-worker-<env>` только в `crm_worker`.
