@@ -1,108 +1,72 @@
-# Independent review — Checkpoint B
+# Independent review — Checkpoint B, revision 2
 
-Дата: 2026-10-07. Ветка: `stage1/foundation`, HEAD `60306eb`; код checkpoint — `db872de`.
-База принятого Checkpoint A: `a04d805`. Diff B: 67 файлов, +3237/−238. Рабочее дерево до ревью чистое.
-Область: задания 1.4–1.6, требования `prompts/REVIEW_STAGE_1.md`, AGENTS.md, docs/01, docs/03, docs/05. История принятого A и закрытой R1 сохранена в `a04d805:REVIEW_REPORT.md`.
+Дата: 2026-10-07. Ветка: `stage1/foundation`, HEAD `e3196d7`; исправления — `f7ae5fb`.
+Область: повторная проверка B1–B4 и утверждений `CHECKPOINT_REPORT.md` по `prompts/REVIEW_STAGE_1.md`. Diff от предыдущего ревью `13336c9`: 21 файл, +637/−114. Рабочее дерево до проверки чистое. Предыдущие находки и доказательства сохранены в `13336c9:REVIEW_REPORT.md`; принятый Checkpoint A — в `a04d805:REVIEW_REPORT.md`.
 
 ## Вердикт
 
-**REQUEST_CHANGES — четыре обязательные находки P2; Checkpoint B пока не принят.**
+**REQUEST_CHANGES — остаётся одна обязательная находка P2: B3 исправлена не полностью. Checkpoint B пока не принят.**
 
-Штатные проверки подтверждены: **60/60 unit/PGlite, 56/56 PostgreSQL**, typecheck, API build/smoke, schema validation, SQL invariants и пустой migration drift. Дополнительные PostgreSQL-пробы выявили пробелы в lease/recovery и достоверности snapshot, которые штатный набор не покрывает. Ошибок межклиентского чтения в проверенных сценариях не найдено.
+**B1, B2 и B4 закрыты.** Проверено: **60/60 unit/PGlite, 69/69 PostgreSQL**, typecheck, API build/smoke, schema validation, PostgreSQL 17 invariants и пустой migration drift. Дополнительные пробы обнаружили потерю более нового результата при перекрывающихся первых sync. P0/P1 и ошибок межклиентского доступа в проверенных сценариях не найдено.
 
-Открытых P0/P1-находок по проверенному изменению нет. Ограничение Atera alerts учтено как решение владельца; оно не является новой находкой. Исправление R1 из Checkpoint A сохраняется, его тесты проходят.
+## B3 — [P2] Две первые попытки sync не упорядочены: новый результат ошибочно отбрасывается
 
-## B1 — [P2] Worker с истёкшим lease может отменить работу нового владельца
+**Место:** `packages/sync/sync-state.ts:15–20`, `packages/sync/sync-state.ts:37–39`; вызовы из `packages/sync/snapshots.ts:63–66` и `packages/sync/snapshots.ts:82–84`.
 
-**Место:** `packages/events/worker.ts:138–151`, прежде всего UPDATE на строках 144–145. Аналогично фазы 1/2 на строках 92–99 и 109–111 не проверяют принадлежность текущего захвата.
+`beginAttempt` делает только UPDATE существующей строки. Пока для connection/resource нет `SyncState`, каждая начавшаяся попытка получает `seq = null`. Первый завершившийся sync создаёт строку с `attemptSeq = recordedSeq = 0`. При завершении остальных `commitAttempt` уже видит строку и безусловно отвергает их из-за `attempt.seq !== null`, даже если они начались позже и несут более свежие данные или ошибку. Для начальной синхронизации действует «первый завершившийся победил», а не заявленный порядок попыток.
 
-`recordFailure` ограничивает UPDATE только scope, event ID и pending-статусом. Он не проверяет leaseOwner или версию захвата, а retry рассчитывает по устаревшему `claimed.attempts`. После повторного захвата старый worker по-прежнему может стереть чужой lease и записать RETRY/DEAD_LETTER. Блокировка строки защищает от двух observations, но не от перехода состояния по устаревшему захвату.
+**Воспроизведено на PostgreSQL 17.11, два Prisma-пула под confined runtime-ролью:**
 
-**Воспроизведение на двух Prisma-пулах:**
+1. Создать и активировать fixture Huntress connection; убедиться, что `SyncState(incident)` ещё отсутствует.
+2. Начать sync A с временем T; задержать `readSnapshot` перед возвратом корректного пустого набора.
+3. Пока A задержан, начать sync B с T+100 ms; также задержать чтение. Обе попытки уже прошли `beginAttempt`.
+4. Освободить A и дождаться его завершения; затем освободить B, который читает два инцидента через настоящий adapter и mock transport.
 
-1. Сохранить CRITICAL-событие; A захватывает его с lease 100 ms.
-2. После истечения lease B захватывает событие с lease 10 s и успешно сохраняет phase-1 decision через `prepareEvent`.
-3. A продолжает `processClaimed` со своим старым объектом; через существующий `beforeFinalCommit` инъецируется `AtlasError('STALE_WORKER_WRITE_FAILED', 'PERMANENT')`.
-4. Затем B пытается завершить своё сохранённое решение.
+**Факт:** A — `OK`, `itemCount=0`, `superseded=false`; B — `OK`, `itemCount=2`, **`superseded=true`**. Контекст остаётся **`OK`, `items=[]`, `asOf=T`, `lastSuccessAt=T`**. Счётчики состояния — 0/0. Два события B сохраняются в inbox, но текущий ресурс показывает старый пустой snapshot.
 
-**Факт:** A возвращает `DEAD_LETTER`, B — `ALREADY_FINISHED`. Строка: `DEAD_LETTER`, `attempts=2`, `leaseOwner=null`, `lastErrorCode=STALE_WORKER_WRITE_FAILED`; **observations=0**. Искусственная ошибка здесь моделирует сбой старого worker; порядок захватов и все переходы выполняет настоящий код на PostgreSQL.
+**Вторая проба:** тот же порядок первых попыток, A успешно читает два инцидента, а B завершается `AtlasError('UPSTREAM_UNAVAILABLE', 'TRANSIENT')`. B возвращает `ERROR`, `superseded=true`; контекст остаётся **`OK`, `safeErrorCode=null`**, хотя должен показывать STALE с причиной последнего сбоя. Это влияет и на видимость ошибок, а не только на выбор snapshot.
 
-Это шире признанного в checkpoint риска лишнего provider call: корректная работа нового владельца отменяется старым, и CRITICAL не получает observation.
+Новый тест «normal order» (`tests/pg/sync-order.pg.test.ts:69–77`) сначала полностью завершает предыдущий sync и лишь затем запускает следующий; состояния без строки при двух перекрывающихся попытках он не проверяет. Тест с обратным порядком завершения проходит, поскольку в нём первым фиксируется как раз новый результат.
 
-**Исправление:** выдать каждому захвату уникальный token/version; проверять его и текущий статус под блокировкой во всех изменениях phase 1, commit и failure. Устаревший worker должен завершаться как утративший захват, без смены статуса, очистки чужого lease и ложного failure-audit. Проверки только workerId недостаточно при его повторном использовании. Regression: новый владелец после устаревшей ошибки создаёт ровно одну observation/applied run, старый не меняет его состояние.
+**Обязательное исправление:** обеспечить устойчивый порядок попыток до vendor I/O также для первого чтения ресурса — атомарно создавать/нумеровать попытки либо сериализовать их. Отсутствующая строка не должна превращать более позднее чтение в безусловно устаревшее. Сохранить отдельную запись evidence от устаревших чтений. Если потребуется менять схему, добавить новую миграцию.
 
-## B2 — [P2] `maxAttempts` не ограничивает повторные падения процесса
+**Регрессии:** на исходно отсутствующем `SyncState` запустить A и B до завершения любого из них; проверить оба порядка завершения, пары success/success и success/error, а также одинаковые временные метки. Более новая ошибка должна оставить последний snapshot как STALE, более новый успех — обновить snapshot и время. Проверить общий механизм и для identity sync. До исправления утверждения о полном закрытии B3 в `CHECKPOINT_REPORT.md:26`, `:97`, `:208` не подтверждаются.
 
-**Место:** `packages/events/worker.ts:49–54`, `packages/events/worker.ts:169–172`; единственная проверка лимита — в `recordFailure` на строке 140.
+## Закрытые находки
 
-Захват увеличивает attempts, но выбирает событие независимо от достигнутого лимита. Если процесс погибает без выполнения catch/recordFailure, следующий worker захватывает его снова без ограничения. Это противоречит пункту 4 «Decisions and scope» checkpoint: падения сами по себе никогда не переводят событие в DEAD_LETTER.
-
-**Воспроизведение:** четыре последовательных `claimEvents` одного события, каждый с lease 100 ms и временем следующего захвата через 200 ms; захваченные события намеренно не обрабатываются — моделируются четыре падения. Затем `processPending(..., {maxAttempts: 3, batchSize: 1})` после очередного истечения lease.
-
-**Факт:** `PROCESSED`, **attempts=5**, provider вызван ещё один раз, observation создана. До восстановления строка оставалась RECEIVED с attempts=4, без dead-letter. При повторении падений attempts продолжает расти.
-
-**Исправление:** при recovery просроченных захватов атомарно завершать исчерпавшие лимит события как DEAD_LETTER с safeErrorCode и audit, не вызывая провайдера. Не ограничиваться исключением их из SELECT: иначе останутся невидимые зависшие pending-строки. Явно определить поведение сохранённой phase-1 decision на границе лимита. Regression должен моделировать падения без catch, включая configured maxAttempts и явный audited requeue.
-
-## B3 — [P2] Старый sync безусловно перезаписывает более свежий snapshot
-
-**Место:** `packages/sync/snapshots.ts:72–77`; соответствующая запись ошибки на строках 58–59 также не учитывает порядок попыток.
-
-Два sync одного connection/resource могут читать параллельно. Транзакция защищает целостность одного результата, но unconditional upsert не защищает от обратного порядка завершения. Snapshot, lastSuccessAt и lastSyncAt откатываются к времени старой попытки; ресурс при этом остаётся OK, если старый asOf ещё входит в freshness window.
-
-**Воспроизведение:** старое чтение с временем T задержано перед возвратом корректного пустого `SnapshotRead`. Новое чтение того же Huntress incident-ресурса с T+100 ms получает два инцидента и успешно фиксируется. Затем освобождается старое чтение. Проба использует выданный ResolvedConnection, scoped repository и confined PostgreSQL-роль; задержка реализована в подставленном connector.
-
-**Факт:** новое чтение сохранило 2 элемента; после завершения старого контекст возвращает **`status=OK`, `items=[]`**, asOf и lastSuccessAt равны **T**. Более свежая информация скрыта без ERROR/STALE. Уже записанный inbox этим не удаляется, но read-tool ресурса показывает неверное текущее состояние.
-
-**Исправление:** сериализовать sync по connection/resource либо фиксировать версию попытки и условно заменять snapshot/state только актуальным результатом. Старый success/error не должен менять более новое состояние. Сохранение событий старого чтения рассмотреть отдельно от замены текущего snapshot, чтобы не терять evidence. Regression: старый success и старый failure завершаются после нового success; новый snapshot и временные метки остаются неизменными.
-
-## B4 — [P2] Неполная пагинация Atera объявляется полным успешным чтением
-
-**Место:** `connectors/atera/connector.ts:46–50`; `parsePage` в `connectors/atera/contract.ts:25` читает totalItemCount, но adapter его не использует.
-
-Условие `page >= totalPages || items.length === 0` возвращает уже накопленную часть как полный результат. Пустая/nullable страница с ненулевым объявленным остатком не считается ошибкой. `SnapshotRead.itemCount` затем вычисляется как длина этой части, скрывая противоречие с vendor envelope.
-
-**Воспроизведение через настоящий Atera adapter и scoped mock:** сначала обычные fixtures сохраняют 2 тикета. Во втором чтении страница 1 прежняя, а страница 2 — HTTP 200 с `{items: [], page: 2, totalPages: 2, totalItemCount: 2}`.
-
-**Факт:** `syncResource` возвращает **OK, itemCount=1**; контекст — **OK, один тикет, truncated=false**. Последний полный snapshot из двух тикетов перезаписан неполным.
-
-**Исправление:** проверять полноту и согласованность envelope/собранного набора, включая пустые страницы и повторяющиеся ID. При противоречии завершать чтение явной ошибкой; прежний snapshot сохранять и показывать STALE. Для изменившейся во время пагинации коллекции выбрать bounded retry или видимую ошибку, не выдавать часть за полный набор. Добавить проверки пустой промежуточной/последней страницы с объявленными оставшимися элементами и полного пустого набора как корректного контроля.
-
-## Воспроизведённые команды и результаты
-
-Среда: Node 25.8.1, PostgreSQL 17.11, уже работающий локальный compose. PostgreSQL-команды выполнялись с `ATLAS_PG_ADMIN_URL` локального сервера; credentials в отчёте не сохраняются. Использованы существующие зависимости. Persistent dev-БД не изменялась.
-
-| Команда | Фактический результат |
+| Находка | Подтверждение |
 |---|---|
-| `npm test` | **60/60 PASS**, без skips; unit/reference + PGlite |
+| **B1 — закрыта** | Уникальный `claimToken` проверяется при подготовке/сохранении решения, финальном commit и записи failure. Регрессии подтверждают отсутствие изменений и ложного audit от старого владельца. Дополнительная проба: A остановлен внутри provider call, B перехватывает событие с тем же workerId и завершает его; после освобождения A получает CLAIM_LOST. В БД один DecisionRun и одна observation, событие PROCESSED. Два provider call в таком порядке остаются известным ограничением, но чужое состояние не меняется. |
+| **B2 — закрыта** | Захваты без catch ограничены maxAttempts; исчерпавшие лимит события атомарно получают DEAD_LETTER/ATTEMPTS_EXHAUSTED с audit. Проверены настроенный лимит, несколько пакетов и explicit requeue с переиспользованием сохранённого решения. Размер захвата проверен при force_generic_plan; выборка через MATERIALIZED CTE ограничена batchSize. |
+| **B4 — закрыта** | Проверены пустые страницы, несовпадающие totals, недостаточное число элементов и повтор ID в Atera/Huntress. Несогласованный набор даёт TRANSIENT UPSTREAM_PAGINATION_INCONSISTENT, сохраняет полный snapshot как STALE и не пишет частичные события. Полный пустой набор принимается. |
+
+Исходные сценарии B3 «старый успех/сбой завершается после нового успеха» также проходят; оставшийся дефект относится к инициализации порядка попыток.
+
+## Выполненные проверки
+
+Среда: Node 25.8.1, PostgreSQL 17.11. Использованы существующие зависимости и локальный compose; PostgreSQL-команды получают локальный `ATLAS_PG_ADMIN_URL`. Persistent dev-БД не изменялась.
+
+| Команда / проба | Результат |
+|---|---|
+| `npm test` | **60/60 PASS**, без skips |
 | `npm run typecheck` | PASS |
 | `npm run api:build` | PASS |
-| `npm run api:smoke` | PASS; fixture API |
+| `npm run api:smoke` | PASS, fixture API |
 | `npm run schema:validate` | PASS |
-| `npm run db:check:pg17` | PASS; 7 миграций, structural/FK/RLS invariants, identities, mapping, snapshots, inbox, runtime role, pool reuse |
-| `npm run test:pg` | **56/56 PASS**, без skips; Prisma deploy, roles.sql, seed, DB API, adapters/sync, inbox/worker |
-| `npm run db:check:drift` | PASS; diff пустой |
-| Два дополнительных `node --experimental-strip-types --input-type=module` PostgreSQL probe через stdin | **B1–B4 воспроизведены**, фактические результаты выше |
+| `npm run test:pg` | **69/69 PASS**, без skips |
+| `npm run db:check:pg17` | PASS: 8 миграций, structural/FK/RLS invariants, claim-token CHECK, runtime-role guard, pool reuse |
+| `npm run db:check:drift` | PASS, diff пустой |
+| Две дополнительные `node --experimental-strip-types --input-type=module` пробы через stdin | B3: оба описанных отклонения воспроизведены; B1: перехват во время provider call безопасен |
 | `git diff --check` | PASS |
 
-Каждая дополнительная проба создавала временную БД через `tests/support/pg-harness.ts:createTestDatabase`, выполняла `runSeed` и использовала `tests/support/events-fixtures.ts:liveHuntressWithConfirmedAgent`, `actors/gasta` из `tests/support/graph-fixtures.ts`. Worker-проба использовала два отдельных PrismaClient с runtimeUrl. Для B4 использован `vendor.overrides.ateraTicketsPage2` после bind/activate/resolve Atera `5001`. После проб соединения закрыты, временные БД и роли удалены. Исходники приложения и штатные тесты не менялись.
+Дополнительные пробы использовали `tests/support/pg-harness.ts:createTestDatabase/runSeed`, `actors/gasta` и `liveHuntressWithConfirmedAgent`; на каждую — отдельная throwaway-БД с миграциями и roles.sql. Задержки чтения/провайдера задавались Promise-gate в переданном adapter/provider. Каждая проба закрывала оба Prisma-пула и удаляла БД/роль в finally. После проверок временных тестовых БД и ролей не осталось. Исходники приложения и штатные тесты не менялись.
 
-Новые regression-тесты нужны именно на описанные порядки выполнения. Существующие тесты двух workers используют непересекающиеся действующие lease; crash-тест моделирует одно падение, а bounded retry — только пойманные исключения. Тесты partial-page проверяют HTTP 503, но не HTTP 200 с противоречивой пагинацией. Это объясняет зелёный штатный набор при воспроизводимых дефектах.
+Добавлена только миграция `202610072000_stage1_claim_token_sync_order`; предыдущие миграции в проверяемом diff не менялись. Исправление R1 Checkpoint A сохраняется, его тесты проходят.
 
-## Подтверждённое и границы проверки
+## Границы и следующий шаг
 
-- Scoped mapping, составные typed FK, immutable tenant binding, candidate/confirm/quarantine и RLS проверены. Чужие записи vendor отклоняются, tenant-фильтр передаётся на каждой проверенной странице, секреты не попадают в проверенные context/audit.
-- Обычные concurrent dedup, отдельное conflict evidence, две фазы decision/commit, rollback финальной транзакции, advisory failure и source urgency floor подтверждены существующими PostgreSQL-тестами. Проблемы B1/B2 ограничивают вывод о recovery.
-- Resource-specific failures сохраняют предыдущий snapshot, не изменяют соседние ресурсы и отображают STALE/ERROR в последовательных сценариях. Проблемы B3/B4 ограничивают вывод о достоверности полного свежего набора.
-- Новые изменения схемы находятся только в миграциях 1700/1800/1900; замороженные миграции не изменены.
-- Официальная [Huntress Swagger specification](https://api.huntress.io/v1/swagger_doc.json), доступная из [API reference](https://api.huntress.io/docs), дополнительно прочитана без credentials: проверены organization_id, limit/page_token, status=sent, severity low/high/critical и используемые поля IncidentReport. Это проверка документации, **не live-read**.
-- Atera contract остаётся **не сверенным с аккаунтом**. Чужой OpenAPI export не объявляется vendor/account verification. B4 воспроизводится уже на контракте, принятом самой реализацией, и не зависит от получения аккаунта.
+**Live Atera/Huntress/OpenAI не выполнялся.** Проверка HTTP использует mock transport и синтетические fixtures. Atera contract по-прежнему не сверен с аккаунтом; Atera alerts остаются UNAVAILABLE по принятому решению владельца. Эти ограничения не считаются новыми находками. Все перечисленные PostgreSQL-gates выполнены; `npm ci`, `npm audit`, Node 24/Windows, мутационные проверки автора и deployment persistent-dev повторно не выполнялись.
 
-## Открытые gates и следующий шаг
+Перед принятием B необходимо закрыть оставшуюся ветку B3, добавить регрессии начального состояния и уточнить CHECKPOINT_REPORT. Затем повторить затронутые PostgreSQL-тесты и обязательные проверки. После принятия B безопасен переход к 1.7 Decision Layer; отдельная shadow-job, timeout/budget/circuit-breaker и telemetry остаются там. UI, remediation, новые коннекторы и orchestration в scope этого ревью не входят.
 
-**Обязательные исправления перед принятием B: B1–B4.** После них повторить regression-пробы, `npm test`, typecheck, `test:pg`, schema validation/drift и API build/smoke; при изменении схемы добавить новую миграцию и повторить SQL/RLS checks. В CHECKPOINT_REPORT скорректировать утверждения о bounded crash recovery и полноте sync.
-
-**Live Atera/Huntress/OpenAI не выполнялся.** Нет использованных реальных credentials или account mappings. Mock transport и синтетические fixtures не заменяют этот gate. Все перечисленные PostgreSQL-команды выполнены, но дополнительные recovery/sync-сценарии пока не проходят требования.
-
-Отдельная durable shadow-job, timeout/budget/circuit-breaker и telemetry остаются заданием 1.7; отсутствие процесса по расписанию и RUNBOOK также явно отмечено автором. Эти известные ограничения не выданы здесь за уже реализованные возможности. `npm ci`, `npm audit`, Node 24, Windows, исторические мутационные проверки и persistent-dev deployment повторно не выполнялись.
-
-Безопасно сначала исправить B1–B4 в текущих доменах и пройти повторное ревью. После принятия B — 1.7 Decision Layer. UI, remediation, write-tools, M365/PowerOffice и orchestration вне текущего scope не добавлять. Production-ready статус не присваивается.
+В рамках повторного ревью изменён только `REVIEW_REPORT.md`; ветка не переключалась, коммиты не создавались.
