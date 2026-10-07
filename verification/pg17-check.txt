@@ -1,0 +1,7 @@
+PASS pg17-check
+PostgreSQL server: 17.10
+Migrations applied in order: 202610070001_foundation → 202610071200_v1_1_contracts → 202610071500_v1_1_2_conflict_scope_and_legacy_guard
+Structural invariants (owner): passed
+RLS acceptance (confined login role): passed
+Runtime-role guard (ownership of RawEvent, RLS disabled on Approval): passed
+Pool connection reuse (SET LOCAL ends with transaction; session SET would leak): passed

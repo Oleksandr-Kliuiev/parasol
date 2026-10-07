@@ -1,0 +1,254 @@
+
+> vardahei-atlas-stage1-reference@1.1.3 test
+> node --experimental-strip-types --test tests/*.test.ts
+
+TAP version 13
+# Subtest: DB rows map to ClientContextV1 with explicit resource statuses and whole-set counts
+ok 1 - DB rows map to ClientContextV1 with explicit resource statuses and whole-set counts
+  ---
+  duration_ms: 3.687331
+  type: 'test'
+  ...
+# Subtest: tool gateway works unchanged on a DB-mapped context
+ok 2 - tool gateway works unchanged on a DB-mapped context
+  ---
+  duration_ms: 1.379184
+  type: 'test'
+  ...
+# Subtest: scope context is derived from memberships and the identifier policy; the runtime role must be confined
+ok 3 - scope context is derived from memberships and the identifier policy; the runtime role must be confined
+  ---
+  duration_ms: 0.961744
+  type: 'test'
+  ...
+# Subtest: all migrations apply in order and the v1.1.2 invariants hold: identity with resource type and conflict rows, applied decision per event pinned by FK, severity rank, priority floor, append-only logs
+ok 4 - all migrations apply in order and the v1.1.2 invariants hold: identity with resource type and conflict rows, applied decision per event pinned by FK, severity rank, priority floor, append-only logs
+  ---
+  duration_ms: 2138.482812
+  type: 'test'
+  ...
+# Subtest: row-level security confines a non-owner role: no context denies, clients of one workspace are isolated, context ends with the transaction
+ok 5 - row-level security confines a non-owner role: no context denies, clients of one workspace are isolated, context ends with the transaction
+  ---
+  duration_ms: 1034.798812
+  type: 'test'
+  ...
+# Subtest: runtime-role guard rejects ownership of any protected table and detects a table with RLS disabled
+ok 6 - runtime-role guard rejects ownership of any protected table and detects a table with RLS disabled
+  ---
+  duration_ms: 856.66789
+  type: 'test'
+  ...
+# Subtest: upgrade of a populated v1.0 database: legacy closures are marked, not invented; legacy events get a versioned key; unknown statuses stop the migration
+ok 7 - upgrade of a populated v1.0 database: legacy closures are marked, not invented; legacy events get a versioned key; unknown statuses stop the migration
+  ---
+  duration_ms: 1614.327981
+  type: 'test'
+  ...
+# Subtest: upgrade path 1.1.0 → 1.1.1 → 1.1.2 yields the same schema shape (columns, constraints, indexes, policies, triggers) and passes the same invariants as a fresh install
+ok 8 - upgrade path 1.1.0 → 1.1.1 → 1.1.2 yields the same schema shape (columns, constraints, indexes, policies, triggers) and passes the same invariants as a fresh install
+  ---
+  duration_ms: 1866.916022
+  type: 'test'
+  ...
+# Subtest: cross-system context maps both sources to the same canonical device
+ok 9 - cross-system context maps both sources to the same canonical device
+  ---
+  duration_ms: 9.823011
+  type: 'test'
+  ...
+# Subtest: resolver requires matching resource type and a DEVICE entity; a person link with the same external ID never resolves
+ok 10 - resolver requires matching resource type and a DEVICE entity; a person link with the same external ID never resolves
+  ---
+  duration_ms: 0.256476
+  type: 'test'
+  ...
+# Subtest: event identity includes the resource type: alert 123 and ticket 123 on one connection are different events
+ok 11 - event identity includes the resource type: alert 123 and ticket 123 on one connection are different events
+  ---
+  duration_ms: 0.302011
+  type: 'test'
+  ...
+# Subtest: concurrent duplicate deliveries produce one observation and one audit event
+ok 12 - concurrent duplicate deliveries produce one observation and one audit event
+  ---
+  duration_ms: 13.410758
+  type: 'test'
+  ...
+# Subtest: changed upstream revision is retained as a distinct event
+ok 13 - changed upstream revision is retained as a distinct event
+  ---
+  duration_ms: 0.962576
+  type: 'test'
+  ...
+# Subtest: same ID and revision with different content: canonical evidence kept, conflicting content stored separately and routed to urgent review
+ok 14 - same ID and revision with different content: canonical evidence kept, conflicting content stored separately and routed to urgent review
+  ---
+  duration_ms: 1.624514
+  type: 'test'
+  ...
+# Subtest: concurrent delivery of conflicting content is detected before joining the in-flight canonical event
+ok 15 - concurrent delivery of conflicting content is detected before joining the in-flight canonical event
+  ---
+  duration_ms: 11.374589
+  type: 'test'
+  ...
+# Subtest: actor cannot ingest another client event
+ok 16 - actor cannot ingest another client event
+  ---
+  duration_ms: 1.041827
+  type: 'test'
+  ...
+# Subtest: cross-client and candidate links cannot resolve an identity
+ok 17 - cross-client and candidate links cannot resolve an identity
+  ---
+  duration_ms: 1.370552
+  type: 'test'
+  ...
+# Subtest: ambiguous confirmed links are quarantined to HUMAN_REVIEW with source severity, entity unresolved and audit written
+ok 18 - ambiguous confirmed links are quarantined to HUMAN_REVIEW with source severity, entity unresolved and audit written
+  ---
+  duration_ms: 1.236748
+  type: 'test'
+  ...
+# Subtest: transient failure after storage is retried with preserved attempt state, then processed once
+ok 19 - transient failure after storage is retried with preserved attempt state, then processed once
+  ---
+  duration_ms: 1.346565
+  type: 'test'
+  ...
+# Subtest: a failing audit append publishes nothing: no applied run, no observation; the retry completes once without calling the provider again
+ok 20 - a failing audit append publishes nothing: no applied run, no observation; the retry completes once without calling the provider again
+  ---
+  duration_ms: 1.27338
+  type: 'test'
+  ...
+# Subtest: permanent failure or exhausted attempts become a visible dead letter, never a lost event
+ok 21 - permanent failure or exhausted attempts become a visible dead letter, never a lost event
+  ---
+  duration_ms: 1.54149
+  type: 'test'
+  ...
+# Subtest: advisory provider refusal or failure becomes visible human review with a FAILED DecisionRun; the applied run is the fallback
+ok 22 - advisory provider refusal or failure becomes visible human review with a FAILED DecisionRun; the applied run is the fallback
+  ---
+  duration_ms: 2.141028
+  type: 'test'
+  ...
+# Subtest: explicit rules mode routes on the deterministic baseline without any provider dependency
+ok 23 - explicit rules mode routes on the deterministic baseline without any provider dependency
+  ---
+  duration_ms: 0.527595
+  type: 'test'
+  ...
+# Subtest: retry of the final commit reuses the stored decision: provider called once, no applied run until commit, exactly one applied run after
+ok 24 - retry of the final commit reuses the stored decision: provider called once, no applied run until commit, exactly one applied run after
+  ---
+  duration_ms: 0.816964
+  type: 'test'
+  ...
+# Subtest: low confidence cannot quietly become monitor
+ok 25 - low confidence cannot quietly become monitor
+  ---
+  duration_ms: 0.506084
+  type: 'test'
+  ...
+# Subtest: critical source signal retains urgency even if classifier says monitor; every reason is kept
+ok 26 - critical source signal retains urgency even if classifier says monitor; every reason is kept
+  ---
+  duration_ms: 0.40301
+  type: 'test'
+  ...
+# Subtest: shadow mode commits the rules baseline without waiting for the AI; the AI result lands later as a non-applied run and never changes the observation
+ok 27 - shadow mode commits the rules baseline without waiting for the AI; the AI result lands later as a non-applied run and never changes the observation
+  ---
+  duration_ms: 1.249729
+  type: 'test'
+  ...
+# Subtest: shadow provider failure is recorded as a non-applied FAILED run and does not touch the baseline
+ok 28 - shadow provider failure is recorded as a non-applied FAILED run and does not touch the baseline
+  ---
+  duration_ms: 0.627624
+  type: 'test'
+  ...
+# Subtest: rules provider is deterministic from source facts
+ok 29 - rules provider is deterministic from source facts
+  ---
+  duration_ms: 0.207588
+  type: 'test'
+  ...
+# Subtest: client audit records are built from an allowlist: no event payload, no unknown metadata
+ok 30 - client audit records are built from an allowlist: no event payload, no unknown metadata
+  ---
+  duration_ms: 0.847105
+  type: 'test'
+  ...
+# Subtest: returned observations and audit records cannot mutate internal state
+ok 31 - returned observations and audit records cannot mutate internal state
+  ---
+  duration_ms: 0.552853
+  type: 'test'
+  ...
+# Subtest: unknown or write tool is denied before execution and audited in the client log
+ok 32 - unknown or write tool is denied before execution and audited in the client log
+  ---
+  duration_ms: 1.189727
+  type: 'test'
+  ...
+# Subtest: scope denial is recorded in the workspace security audit, never in the target client audit, before any read
+ok 33 - scope denial is recorded in the workspace security audit, never in the target client audit, before any read
+  ---
+  duration_ms: 1.037065
+  type: 'test'
+  ...
+# Subtest: tool context with wrong scope or contract is rejected and audited
+ok 34 - tool context with wrong scope or contract is rejected and audited
+  ---
+  duration_ms: 1.075164
+  type: 'test'
+  ...
+# Subtest: resource tools return an explicit resource view, never undefined, for fixture and DB-shaped contexts
+ok 35 - resource tools return an explicit resource view, never undefined, for fixture and DB-shaped contexts
+  ---
+  duration_ms: 0.889336
+  type: 'test'
+  ...
+# Subtest: decision contract parser accepts allowed route and rejects refusals, extra answers, invalid probabilities and unexpected models
+ok 36 - decision contract parser accepts allowed route and rejects refusals, extra answers, invalid probabilities and unexpected models
+  ---
+  duration_ms: 0.870852
+  type: 'test'
+  ...
+# Subtest: model mismatch is a distinct FAILED DecisionRun code, not a generic failure
+ok 37 - model mismatch is a distinct FAILED DecisionRun code, not a generic failure
+  ---
+  duration_ms: 59.968513
+  type: 'test'
+  ...
+# Subtest: Decisions input omits client, person and external identifiers
+ok 38 - Decisions input omits client, person and external identifiers
+  ---
+  duration_ms: 0.229836
+  type: 'test'
+  ...
+# Subtest: OpenAI adapter sends configured model to the verified endpoint with a deadline; mocked transport only
+ok 39 - OpenAI adapter sends configured model to the verified endpoint with a deadline; mocked transport only
+  ---
+  duration_ms: 1.191139
+  type: 'test'
+  ...
+# Subtest: invalid source payload is rejected and source severity is taken from the source, not from a threshold
+ok 40 - invalid source payload is rejected and source severity is taken from the source, not from a threshold
+  ---
+  duration_ms: 0.273594
+  type: 'test'
+  ...
+1..40
+# tests 40
+# suites 0
+# pass 40
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8336.769961

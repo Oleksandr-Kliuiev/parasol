@@ -1,0 +1,3 @@
+# Persistent worker boundary
+
+Implement in task 1.6: PostgreSQL inbox, claim/lease, bounded retry, DecisionRun persistence (applied vs shadow) and atomic observation/audit finalization. The current executable reference is packages/events/pipeline.ts: it shows the required control flow (store → resolve → decide → deterministic rules → commit observation + audit; CONFLICT → review, TRANSIENT → RETRY, PERMANENT → DEAD_LETTER), but its memory maps are not shared across processes and do not survive restart. The worker connects as the confined runtime role and uses withScope for every write. See docs/03_CONNECTORS_AND_SYNC.md.

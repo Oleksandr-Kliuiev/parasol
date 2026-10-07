@@ -1,0 +1,200 @@
+{
+  "workspaceId": "demo-vardahei",
+  "clientId": "demo-gasta",
+  "contractVersion": "ClientContextV1",
+  "mode": "fixture",
+  "clientName": "Gasta (synthetic)",
+  "people": [
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "demo-kari",
+      "displayName": "Kari (synthetic)",
+      "email": "kari@example.invalid"
+    }
+  ],
+  "devices": [
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "demo-device-07",
+      "hostname": "GASTA-LT-07",
+      "personId": "demo-kari"
+    }
+  ],
+  "links": [
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "connectionId": "demo-atera-connection",
+      "system": "atera",
+      "resourceType": "agent",
+      "externalId": "demo-atera-agent-107",
+      "entityId": "demo-device-07",
+      "entityKind": "DEVICE",
+      "status": "CONFIRMED"
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "connectionId": "demo-huntress-connection",
+      "system": "huntress",
+      "resourceType": "agent",
+      "externalId": "demo-huntress-agent-207",
+      "entityId": "demo-device-07",
+      "entityKind": "DEVICE",
+      "status": "CONFIRMED"
+    }
+  ],
+  "observations": {
+    "items": [
+      {
+        "workspaceId": "demo-vardahei",
+        "clientId": "demo-gasta",
+        "id": "695b7e3f-7863-4de6-a7c2-ca142f0da27e",
+        "eventKey": "4c0df8edd60f21ac8e9499cf8ea48ea4c495224782cb0b0f455c1b05aaec2aa4",
+        "source": "huntress",
+        "resourceType": "incident",
+        "externalEventId": "demo-incident-1",
+        "revision": "1",
+        "entityId": "demo-device-07",
+        "kind": "SECURITY_INCIDENT",
+        "domain": "SECURITY",
+        "severity": "CRITICAL",
+        "priority": "URGENT",
+        "route": "HUMAN_REVIEW",
+        "confidence": 1,
+        "provider": "fixture",
+        "reasonCodes": [
+          "SYNTHETIC_FIXTURE_ONLY",
+          "SOURCE_URGENCY_FLOOR"
+        ],
+        "conflictOfEventKey": null,
+        "summary": "Possible credential theft (synthetic)",
+        "occurredAt": "2026-10-07T07:00:00.000Z",
+        "createdAt": "2026-10-07T12:33:25.195Z"
+      },
+      {
+        "workspaceId": "demo-vardahei",
+        "clientId": "demo-gasta",
+        "id": "22c14ef8-9c2a-48c3-963f-698ee5b45a58",
+        "eventKey": "2ad478e4991f0f8e71e88f6ce8142739d3fc1935699bd131f6c2ae0a585ce6d2",
+        "source": "atera",
+        "resourceType": "alert",
+        "externalEventId": "demo-alert-1",
+        "revision": "1",
+        "entityId": "demo-device-07",
+        "kind": "DISK_CAPACITY",
+        "domain": "OPERATIONS",
+        "severity": "MEDIUM",
+        "priority": "NORMAL",
+        "route": "MONITOR",
+        "confidence": 1,
+        "provider": "fixture",
+        "reasonCodes": [
+          "SYNTHETIC_FIXTURE_ONLY"
+        ],
+        "conflictOfEventKey": null,
+        "summary": "Disk capacity used: 96%",
+        "occurredAt": "2026-10-07T07:00:00.000Z",
+        "createdAt": "2026-10-07T12:33:25.195Z"
+      }
+    ],
+    "counts": {
+      "INFO": 0,
+      "LOW": 0,
+      "MEDIUM": 1,
+      "HIGH": 0,
+      "CRITICAL": 1
+    },
+    "total": 2,
+    "truncated": false
+  },
+  "resources": [
+    {
+      "source": "atera",
+      "resourceType": "alert",
+      "connectionId": "demo-atera-connection",
+      "status": "FIXTURE",
+      "asOf": "2026-10-07T07:00:00.000Z",
+      "lastSuccessAt": "2026-10-07T07:00:00.000Z",
+      "safeErrorCode": null,
+      "items": [
+        {
+          "workspaceId": "demo-vardahei",
+          "clientId": "demo-gasta",
+          "source": "atera",
+          "connectionId": "demo-atera-connection",
+          "resourceType": "alert",
+          "externalEventId": "demo-alert-1",
+          "revision": "1",
+          "externalDevice": {
+            "resourceType": "agent",
+            "externalId": "demo-atera-agent-107"
+          },
+          "occurredAt": "2026-10-07T07:00:00.000Z",
+          "receivedAt": "2026-10-07T07:00:00.000Z",
+          "kind": "DISK_CAPACITY",
+          "sourceSeverity": "MEDIUM",
+          "summary": "Disk capacity used: 96%",
+          "facts": {
+            "diskPercent": 96
+          }
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "source": "atera",
+      "resourceType": "ticket",
+      "connectionId": "demo-atera-connection",
+      "status": "FIXTURE",
+      "asOf": "2026-10-07T07:00:00.000Z",
+      "lastSuccessAt": "2026-10-07T07:00:00.000Z",
+      "safeErrorCode": null,
+      "items": [
+        {
+          "id": "demo-ticket-1",
+          "status": "OPEN",
+          "title": "Disk capacity follow-up (synthetic)"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "source": "huntress",
+      "resourceType": "incident",
+      "connectionId": "demo-huntress-connection",
+      "status": "FIXTURE",
+      "asOf": "2026-10-07T07:00:00.000Z",
+      "lastSuccessAt": "2026-10-07T07:00:00.000Z",
+      "safeErrorCode": null,
+      "items": [
+        {
+          "workspaceId": "demo-vardahei",
+          "clientId": "demo-gasta",
+          "source": "huntress",
+          "connectionId": "demo-huntress-connection",
+          "resourceType": "incident",
+          "externalEventId": "demo-incident-1",
+          "revision": "1",
+          "externalDevice": {
+            "resourceType": "agent",
+            "externalId": "demo-huntress-agent-207"
+          },
+          "occurredAt": "2026-10-07T07:00:00.000Z",
+          "receivedAt": "2026-10-07T07:00:00.000Z",
+          "kind": "SECURITY_INCIDENT",
+          "sourceSeverity": "CRITICAL",
+          "summary": "Possible credential theft (synthetic)",
+          "facts": {
+            "signal": "Possible credential theft (synthetic)"
+          }
+        }
+      ],
+      "truncated": false
+    }
+  ],
+  "generatedAt": "2026-10-07T12:33:25.196Z",
+  "completeness": "COMPLETE_FIXTURE"
+}

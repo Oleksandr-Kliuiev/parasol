@@ -1,0 +1,289 @@
+// Explicitly pinned to Prisma ORM 6.19.0 (not latest Prisma 8 contract syntax).
+// v1.1: CHECK constraints, partial unique indexes, append-only triggers and row-level security live in the migrations
+// (Prisma 6 cannot express them). Apply with `prisma migrate deploy`; never regenerate an applied migration.
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model Workspace {
+  id             String @id
+  name           String
+  clients        Client[]
+  securityAudits SecurityAuditEvent[]
+}
+model Client {
+  workspaceId String
+  id          String
+  name        String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  entities    Entity[]
+  connections Connection[]
+  audits      AuditEvent[]
+  executions  ToolExecution[]
+  approvals   Approval[]
+  @@id([workspaceId, id])
+}
+model Entity {
+  workspaceId String
+  clientId    String
+  id          String
+  kind        String
+  client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
+  person      Person?
+  device      Device?
+  links       EntityLink[]
+  observations Observation[]
+  @@id([workspaceId, clientId, id])
+}
+model Person {
+  workspaceId String
+  clientId    String
+  id          String
+  displayName String
+  email       String?
+  entity      Entity @relation(fields: [workspaceId, clientId, id], references: [workspaceId, clientId, id], onDelete: Restrict)
+  devices     Device[]
+  @@id([workspaceId, clientId, id])
+  @@index([workspaceId, clientId, email])
+}
+model Device {
+  workspaceId String
+  clientId    String
+  id          String
+  hostname    String
+  personId    String?
+  entity      Entity @relation(fields: [workspaceId, clientId, id], references: [workspaceId, clientId, id], onDelete: Restrict)
+  person      Person? @relation(fields: [workspaceId, clientId, personId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  @@id([workspaceId, clientId, id])
+  @@index([workspaceId, clientId, hostname])
+}
+model Connection {
+  workspaceId String
+  clientId    String
+  id          String
+  system      String
+  externalTenantId String
+  secretRef   String
+  status      String @default("DISABLED")
+  client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
+  entities    ExternalEntity[]
+  events      RawEvent[]
+  syncStates  SyncState[]
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, system, externalTenantId])
+}
+model ExternalEntity {
+  workspaceId String
+  clientId    String
+  id          String
+  connectionId String
+  resourceType String
+  externalId  String
+  attributes  Json
+  observedAt  DateTime
+  connection  Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  links       EntityLink[]
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, clientId, connectionId, resourceType, externalId])
+}
+model EntityLink {
+  workspaceId String
+  clientId    String
+  id          String
+  entityId    String
+  externalEntityId String
+  status      String @default("CANDIDATE")
+  method      String
+  confidence  Float?
+  confirmedBy String?
+  confirmedAt DateTime?
+  entity      Entity @relation(fields: [workspaceId, clientId, entityId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  external    ExternalEntity @relation(fields: [workspaceId, clientId, externalEntityId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, clientId, externalEntityId, entityId])
+}
+model RawEvent {
+  workspaceId String
+  clientId    String
+  id          String
+  connectionId String
+  /// Type of the source object (alert, ticket, incident). Part of event identity: alert 123 and ticket 123 are different events.
+  resourceType String
+  externalEventId String
+  revision    String
+  /// SHA-256 of [eventKeyVersion, workspace, client, source, connection, resourceType, externalEventId, revision].
+  eventKey    String @unique
+  eventKeyVersion String @default("v2")
+  normalized  Json
+  payloadHash String
+  occurredAt  DateTime
+  receivedAt  DateTime @default(now())
+  /// RECEIVED | PROCESSED | RETRY | DEAD_LETTER
+  status      String @default("RECEIVED")
+  attempts    Int @default(0)
+  lastErrorCode String?
+  /// Set on a redelivery with the same identity but different content: points at the canonical row, which is never overwritten.
+  /// The link is scoped and identity-bound (same workspace, client, connection, resourceType, externalEventId, revision);
+  /// one canonical row per identity (partial unique index) and "parent is canonical" (trigger) live in the migrations.
+  conflictOfEventKey String?
+  connection  Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  conflictOf  RawEvent? @relation("RawEventConflict", fields: [workspaceId, clientId, connectionId, resourceType, externalEventId, revision, conflictOfEventKey], references: [workspaceId, clientId, connectionId, resourceType, externalEventId, revision, eventKey], onDelete: Restrict, onUpdate: Restrict)
+  conflicts   RawEvent[] @relation("RawEventConflict")
+  decisions   DecisionRun[]
+  observation Observation?
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, clientId, connectionId, resourceType, externalEventId, revision, payloadHash])
+  /// Foreign-key target of the conflict link. Explicit map: Prisma's auto-generated name would collide with the unique above.
+  @@unique([workspaceId, clientId, connectionId, resourceType, externalEventId, revision, eventKey], map: "RawEvent_identity_eventKey_key")
+  @@index([workspaceId, clientId, status, receivedAt])
+}
+model DecisionRun {
+  workspaceId String
+  clientId    String
+  id          String
+  eventId     String
+  provider    String
+  /// fixture | rules | shadow | advisory
+  mode        String @default("fixture")
+  /// True for the one run whose route the observation uses. Shadow AI runs are stored with applied = false.
+  applied     Boolean @default(false)
+  /// Model requested from the provider and the identifier the provider returned. A mismatch is MODEL_MISMATCH, never silently accepted.
+  requestedModel String?
+  responseModel  String?
+  promptVersion String
+  inputHash   String
+  status      String
+  result      Json?
+  latencyMs   Int?
+  inputTokens Int?
+  safeErrorCode String?
+  createdAt   DateTime @default(now())
+  event       RawEvent @relation(fields: [workspaceId, clientId, eventId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  observations Observation[]
+  @@id([workspaceId, clientId, id])
+  /// Target of the composite foreign key from Observation: the referenced run must belong to the same event and be applied.
+  @@unique([workspaceId, clientId, id, eventId, applied])
+  @@index([workspaceId, clientId, eventId])
+}
+model Observation {
+  workspaceId String
+  clientId    String
+  id          String
+  eventId     String
+  /// Canonical entity resolved at processing time through a CONFIRMED link; null when unresolved or conflicting.
+  entityId    String?
+  /// Applied DecisionRun. The composite key includes eventId and applied, so the run cannot belong to another event or
+  /// client and cannot be a shadow (non-applied) run. decisionApplied is a constant true that carries `applied` into the key.
+  decisionRunId String?
+  decisionApplied Boolean @default(true)
+  /// OPERATIONS | SECURITY (Stage 1: DISK_CAPACITY -> OPERATIONS, SECURITY_INCIDENT -> SECURITY)
+  domain      String
+  severity    String
+  /// Numeric rank of severity for priority ordering. A CHECK constraint keeps it consistent with severity.
+  severityRank Int
+  /// NORMAL | URGENT, deterministic from source severity
+  priority    String @default("NORMAL")
+  route       String
+  confidence  Float
+  provider    String
+  promptVersion String
+  /// Every rule that influenced the result, in evaluation order.
+  reasonCodes String[]
+  /// OPEN | ACKNOWLEDGED | RESOLVED | SUPPRESSED. RESOLVED/SUPPRESSED need resolvedAt+resolvedBy unless legacyClosure.
+  status      String @default("OPEN")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  /// Closed before v1.1 without a recorded author/time. Set only by the v1.1 migration; a trigger rejects INSERTs with the
+  /// flag and false → true UPDATEs from anyone, including the owner. Clearing it on reopen is allowed.
+  legacyClosure Boolean @default(false)
+  event       RawEvent @relation(fields: [workspaceId, clientId, eventId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  entity      Entity? @relation(fields: [workspaceId, clientId, entityId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  decisionRun DecisionRun? @relation(fields: [workspaceId, clientId, decisionRunId, eventId, decisionApplied], references: [workspaceId, clientId, id, eventId, applied], onDelete: Restrict, onUpdate: Restrict)
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, clientId, eventId])
+  @@index([workspaceId, clientId, status, severity])
+  @@index([workspaceId, clientId, status, severityRank(sort: Desc), createdAt(sort: Desc), id])
+}
+model SyncState {
+  workspaceId String
+  clientId    String
+  connectionId String
+  resourceType String
+  cursor      String?
+  lastSyncAt  DateTime?
+  lastSuccessAt DateTime?
+  status      String
+  safeErrorCode String?
+  connection  Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  @@id([workspaceId, clientId, connectionId, resourceType])
+}
+model ToolExecution {
+  workspaceId String
+  clientId    String
+  id          String
+  actorId     String
+  toolName    String
+  riskLevel   Int
+  sideEffect  String
+  inputHash   String
+  status      String
+  correlationId String
+  createdAt   DateTime @default(now())
+  client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
+  @@id([workspaceId, clientId, id])
+}
+model AuditEvent {
+  workspaceId String
+  clientId    String
+  id          String
+  actorId     String
+  eventType   String
+  correlationId String
+  metadata    Json
+  recordedAt  DateTime @default(now())
+  client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
+  @@id([workspaceId, clientId, id])
+  @@index([workspaceId, clientId, recordedAt])
+}
+/// Workspace-level denial log. Scope and permission denials must not be written into a client's AuditEvent: the actor may
+/// not be a member of that client, and the client may not exist. requestedClientId is plain text, never a foreign key.
+/// Append-only by trigger, like AuditEvent.
+model SecurityAuditEvent {
+  workspaceId String
+  id          String
+  actorId     String
+  eventType   String
+  outcome     String @default("DENIED")
+  requestedClientId String?
+  reasonCode  String
+  correlationId String
+  metadata    Json
+  recordedAt  DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  @@id([workspaceId, id])
+  @@index([workspaceId, recordedAt])
+}
+// Reserved contract for a later write-action slice. No approval endpoints or actions in Stage 1.
+model Approval {
+  workspaceId String
+  clientId    String
+  id          String
+  requestedBy String
+  toolName    String
+  toolVersion String
+  canonicalInput Json
+  inputHash   String
+  riskLevel   Int
+  status      String @default("PENDING")
+  approvedBy  String?
+  approvedAt  DateTime?
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
+  @@id([workspaceId, clientId, id])
+}

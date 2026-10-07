@@ -1,0 +1,94 @@
+import { readFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import assert from 'node:assert/strict';
+import pg from 'pg';
+import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard } from '../tests/sql-invariants.ts';
+import type { SqlRunner } from '../tests/sql-invariants.ts';
+import { SET_SCOPE_SQL } from '../packages/graph/scope-context.ts';
+
+/**
+ * Integration check against a REAL PostgreSQL 17 server (not PGlite). Creates a throwaway database, applies both
+ * migrations as the owner, creates a confined LOGIN role like prisma/roles.sql, then verifies the SQL invariants and the
+ * RLS acceptance list through a connection pool, including connection reuse. Drops everything afterwards.
+ *
+ *   ATLAS_PG_ADMIN_URL=postgresql://owner@127.0.0.1:5432/postgres npm run db:check:pg17
+ *
+ * The admin role needs CREATEDB and CREATEROLE. With the compose file: postgresql://atlas:atlas_local_only@localhost:5432/atlas.
+ * This does not exercise Prisma Client; Prisma generate/seed/query integration remains a separate step (docs/06).
+ */
+const adminUrl = process.env.ATLAS_PG_ADMIN_URL;
+if (!adminUrl) { console.error('Set ATLAS_PG_ADMIN_URL to a PostgreSQL 17 admin connection string.'); process.exit(2); }
+const suffix = randomBytes(4).toString('hex');
+const dbName = `atlas_v11_check_${suffix}`;
+const roleName = `atlas_app_check_${suffix}`;
+const rolePassword = randomBytes(18).toString('hex');
+const migrations = ['202610070001_foundation', '202610071200_v1_1_contracts', '202610071500_v1_1_2_conflict_scope_and_legacy_guard'];
+
+const admin = new pg.Client({ connectionString: adminUrl });
+await admin.connect();
+const serverVersion = (await admin.query('SHOW server_version')).rows[0].server_version as string;
+const results: [string, string][] = [['PostgreSQL server', serverVersion]];
+const asRunner = (c: { query(sql: string, params?: unknown[]): Promise<{ rows: unknown[] }> }): SqlRunner => ({
+  exec: sql => c.query(sql).then(() => undefined),
+  query: async (sql, params) => (await c.query(sql, params)).rows as never
+});
+let owner: pg.Client | null = null; let appPool: pg.Pool | null = null;
+try {
+  assert.ok(serverVersion.startsWith('17.'), `expected PostgreSQL 17, got ${serverVersion}`);
+  await admin.query(`CREATE DATABASE "${dbName}"`);
+  await admin.query(`CREATE ROLE "${roleName}" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD '${rolePassword}'`);
+  const ownerUrl = new URL(adminUrl); ownerUrl.pathname = `/${dbName}`;
+  owner = new pg.Client({ connectionString: ownerUrl.toString() });
+  await owner.connect();
+  for (const m of migrations) await owner.query(await readFile(new URL(`../prisma/migrations/${m}/migration.sql`, import.meta.url), 'utf8'));
+  results.push(['Migrations applied in order', migrations.join(' → ')]);
+  // Same grants as prisma/roles.sql (the file itself uses a psql variable for the password).
+  await owner.query(`GRANT USAGE ON SCHEMA public TO "${roleName}";
+    GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO "${roleName}";
+    REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM "${roleName}";`);
+  const ownerRunner = asRunner(owner);
+  await seedGraph(ownerRunner);
+  await checkStructuralInvariants(ownerRunner);
+  results.push(['Structural invariants (owner)', 'passed']);
+
+  // Confined role through a pool of ONE connection: every checkout reuses the same physical connection.
+  const appUrl = new URL(ownerUrl.toString()); appUrl.username = roleName; appUrl.password = rolePassword;
+  appPool = new pg.Pool({ connectionString: appUrl.toString(), max: 1 });
+  const first = await appPool.connect();
+  const firstPid = (await first.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+  try { await checkRlsInvariants(asRunner(first), { label: 'PostgreSQL 17' }); } finally { first.release(); }
+  results.push(['RLS acceptance (confined login role)', 'passed']);
+
+  // Runtime-role guard: ownership of any protected table (not only Observation) and a table with RLS disabled are detected.
+  const guardClient = await appPool.connect();
+  try { await checkRuntimeRoleGuard(ownerRunner, asRunner(guardClient), roleName, {}); } finally { guardClient.release(); }
+  results.push(['Runtime-role guard (ownership of RawEvent, RLS disabled on Approval)', 'passed']);
+
+  // Connection reuse across pool checkouts: scope set in a transaction on checkout 1 is gone on checkout 2.
+  const c1 = await appPool.connect();
+  await c1.query('BEGIN'); await c1.query(SET_SCOPE_SQL, ['w', 'c1']);
+  assert.equal(Number((await c1.query(`SELECT count(*)::int AS n FROM "Observation"`)).rows[0].n), 2);
+  await c1.query('COMMIT'); c1.release();
+  const c2 = await appPool.connect();
+  assert.equal((await c2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid, firstPid, 'pool handed back the same connection');
+  assert.equal(Number((await c2.query(`SELECT count(*)::int AS n FROM "Observation"`)).rows[0].n), 0, 'no scope carried over between checkouts');
+  // Negative control: a SESSION-level set_config (is_local = false) WOULD leak into the next checkout. This is why
+  // scoped-db.ts uses is_local = true inside a transaction and nothing else.
+  await c2.query(`SELECT set_config('app.workspace_id', 'w', false), set_config('app.client_ids', 'c1', false)`);
+  c2.release();
+  const c3 = await appPool.connect();
+  assert.equal(Number((await c3.query(`SELECT count(*)::int AS n FROM "Observation"`)).rows[0].n), 2, 'negative control: session-level context leaks');
+  await c3.query('DISCARD ALL'); c3.release();
+  const c4 = await appPool.connect();
+  assert.equal(Number((await c4.query(`SELECT count(*)::int AS n FROM "Observation"`)).rows[0].n), 0);
+  c4.release();
+  results.push(['Pool connection reuse (SET LOCAL ends with transaction; session SET would leak)', 'passed']);
+  console.log('PASS pg17-check');
+} finally {
+  await appPool?.end().catch(() => undefined);
+  await owner?.end().catch(() => undefined);
+  await admin.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`).catch(() => undefined);
+  await admin.query(`DROP ROLE IF EXISTS "${roleName}"`).catch(() => undefined);
+  await admin.end();
+  for (const [k, v] of results) console.log(`${k}: ${v}`);
+}
