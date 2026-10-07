@@ -1,7 +1,15 @@
 import { PrismaClient } from '@prisma/client';
-import { scope, people, devices, links } from '../fixtures/gasta.ts';
+import { scope, actor, people, devices, links } from '../fixtures/gasta.ts';
+import { BEARER_TOKEN_PATTERN, hashToken } from '../packages/auth/token.ts';
 // Runs with the OWNER connection (DATABASE_URL), which bypasses row-level security by design; the application must use
 // the confined runtime role instead (prisma/roles.sql, ATLAS_RUNTIME_DATABASE_URL).
+// Optional: ATLAS_DEMO_TOKEN (your local random token) lets the synthetic actor call the DB-mode API. Only its SHA-256
+// digest is stored; the token itself is never written or printed.
+const demoToken = process.env.ATLAS_DEMO_TOKEN || null;
+if (demoToken !== null && !BEARER_TOKEN_PATTERN.test(demoToken)) {
+  console.error('ATLAS_DEMO_TOKEN must be 20-256 characters of A-Z a-z 0-9 - . _ ~ + / (optionally ending in =).');
+  process.exit(2);
+}
 const db = new PrismaClient();
 try {
   // Non-destructive, synthetic local seed. No vendor API calls and no table clearing.
@@ -26,6 +34,19 @@ try {
       const linkKey = { ...scope, id: `${link.system}-confirmed-link` };
       await tx.entityLink.upsert({ where: { workspaceId_clientId_id: linkKey }, update: {}, create: { ...linkKey, entityId: link.entityId, externalEntityId: externalKey.id, status: 'CONFIRMED', method: 'FIXTURE', confidence: 1, confirmedBy: 'demo-seeder', confirmedAt: new Date('2026-10-07T07:00:00Z') } });
     }
+    // Synthetic technician with the per-client membership of fixtures/gasta.ts (task 1.3)
+    await tx.actor.upsert({ where: { workspaceId_id: { workspaceId: actor.workspaceId, id: actor.id } }, update: {},
+      create: { workspaceId: actor.workspaceId, id: actor.id, displayName: 'Demo technician (synthetic)', workspacePermissions: actor.workspacePermissions } });
+    for (const membership of actor.memberships) {
+      const key = { workspaceId: actor.workspaceId, clientId: membership.clientId, actorId: actor.id };
+      await tx.clientMembership.upsert({ where: { workspaceId_clientId_actorId: key }, update: {}, create: { ...key, permissions: membership.permissions } });
+    }
+    if (demoToken !== null) {
+      const key = { workspaceId: actor.workspaceId, id: 'demo-technician-local-token' };
+      await tx.apiToken.upsert({ where: { workspaceId_id: key }, update: { tokenHash: hashToken(demoToken), revokedAt: null },
+        create: { ...key, actorId: actor.id, tokenHash: hashToken(demoToken), label: 'Local synthetic demo token (ATLAS_DEMO_TOKEN)' } });
+    }
   });
-  console.log('Synthetic Gasta/Kari/device graph seeded without deleting data.');
+  console.log(`Synthetic Gasta/Kari/device graph and demo actor seeded without deleting data; ${demoToken !== null
+    ? 'API token digest stored for ATLAS_DEMO_TOKEN.' : 'no API token (set ATLAS_DEMO_TOKEN to call the DB-mode API).'}`);
 } finally { await db.$disconnect(); }

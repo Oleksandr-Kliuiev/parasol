@@ -13,6 +13,7 @@ model Workspace {
   name           String
   clients        Client[]
   securityAudits SecurityAuditEvent[]
+  actors         Actor[]
 }
 model Client {
   workspaceId String
@@ -24,7 +25,51 @@ model Client {
   audits      AuditEvent[]
   executions  ToolExecution[]
   approvals   Approval[]
+  memberships ClientMembership[]
   @@id([workspaceId, id])
+}
+/// Verified actor (technician or service). Permissions are per client (ClientMembership); workspacePermissions cover
+/// MSP-wide reads such as the security audit. Read only through the authentication lookup policies (migration
+/// 202610071600); written by the owner (synthetic seed) until an administration slice exists.
+model Actor {
+  workspaceId String
+  id          String
+  displayName String
+  /// ACTIVE | DISABLED. Only ACTIVE actors authenticate.
+  status      String @default("ACTIVE")
+  /// Vocabulary fixed by a CHECK constraint: security_audit:read.
+  workspacePermissions String[] @default([])
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  memberships ClientMembership[]
+  tokens      ApiToken[]
+  @@id([workspaceId, id])
+}
+model ClientMembership {
+  workspaceId String
+  clientId    String
+  actorId     String
+  /// Vocabulary fixed by a CHECK constraint: context:read, events:ingest.
+  permissions String[] @default([])
+  createdAt   DateTime @default(now())
+  client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
+  actor       Actor @relation(fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Restrict)
+  @@id([workspaceId, clientId, actorId])
+  @@index([workspaceId, actorId])
+}
+/// Bearer API credential of an actor. Only the SHA-256 hex digest is stored (CHECK); the secret is never persisted.
+model ApiToken {
+  workspaceId String
+  id          String
+  actorId     String
+  tokenHash   String @unique
+  label       String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  actor       Actor @relation(fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Restrict)
+  @@id([workspaceId, id])
+  @@index([workspaceId, actorId])
 }
 model Entity {
   workspaceId String

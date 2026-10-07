@@ -154,6 +154,74 @@ export async function checkRlsInvariants(app: SqlRunner, options: { label: strin
   await app.exec('ROLLBACK');
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Identities (migration 202610071600): actors, per-client memberships and API token digests
+// ---------------------------------------------------------------------------------------------------------------------
+const DIGEST_1 = '1'.repeat(64); const DIGEST_2 = '2'.repeat(64);
+
+/** Two actors of workspace w with one membership each; one token digest each. Owner only; needs seedGraph first. */
+export async function seedIdentities(owner: SqlRunner): Promise<void> {
+  await owner.exec(`
+    INSERT INTO "Actor" ("workspaceId","id","displayName","workspacePermissions") VALUES ('w','tech','Technician',ARRAY['security_audit:read']),('w','other','Other technician',ARRAY[]::text[]);
+    INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId","permissions") VALUES ('w','c1','tech',ARRAY['context:read']),('w','c2','other',ARRAY['context:read']);
+    INSERT INTO "ApiToken" ("workspaceId","id","actorId","tokenHash") VALUES ('w','t1','tech','${DIGEST_1}'),('w','t2','other','${DIGEST_2}');`);
+}
+
+/** Structural rules, as the owner: explicit vocabularies, digests only, and every link carries the workspace. */
+export async function checkIdentityStructure(owner: SqlRunner): Promise<void> {
+  await rejects(owner.exec(`INSERT INTO "ApiToken" ("workspaceId","id","actorId","tokenHash") VALUES ('w','plain','tech','a-bearer-secret-in-plain-text')`), /tokenHash_check/);
+  await rejects(owner.exec(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId","permissions") VALUES ('w','c2','tech',ARRAY['tickets:write'])`), /permissions_check/);
+  await rejects(owner.exec(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId","permissions") VALUES ('w','c2','tech',ARRAY[NULL]::text[])`), /permissions_check/);
+  await rejects(owner.exec(`UPDATE "Actor" SET "workspacePermissions" = ARRAY['god_mode'] WHERE id = 'tech'`), /workspacePermissions_check/);
+  await rejects(owner.exec(`UPDATE "Actor" SET status = 'SUSPENDED' WHERE id = 'tech'`), /status_check/);
+  // An actor of workspace w cannot become a member of client cx of workspace w2, under either workspace
+  await rejects(owner.exec(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId") VALUES ('w2','cx','tech')`), /foreign key/);
+  await rejects(owner.exec(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId") VALUES ('w','cx','tech')`), /foreign key/);
+  await rejects(owner.exec(`INSERT INTO "ApiToken" ("workspaceId","id","actorId","tokenHash") VALUES ('w2','t9','tech','${'9'.repeat(64)}')`), /foreign key/);
+}
+
+/**
+ * Authentication lookup under RLS, through a CONFINED runner: a token row only for its own digest, an actor and its
+ * memberships only when named inside the workspace, nothing under an ordinary client scope, and no identity writes
+ * whatever context the role sets. `owner` verifies afterwards that the attempted writes changed nothing.
+ */
+export async function checkIdentityRlsInvariants(owner: SqlRunner, app: SqlRunner, options: { label: string }): Promise<void> {
+  const n = async (r: SqlRunner, sql: string) => Number((await r.query<{ n: number }>(sql))[0]?.n ?? 0);
+  const tables = ['Actor', 'ClientMembership', 'ApiToken'];
+  for (const t of tables) assert.equal(await n(app, `SELECT count(*)::int AS n FROM "${t}"`), 0, `${options.label}: ${t} without context`);
+  await app.exec('BEGIN');
+  await app.query(`SELECT set_config('app.token_hash', $1, true)`, [DIGEST_1]);
+  assert.deepEqual((await app.query<{ id: string }>(`SELECT id FROM "ApiToken"`)).map(r => r.id), ['t1'], 'only the token with this digest');
+  assert.equal(await n(app, `SELECT count(*)::int AS n FROM "Actor"`), 0, 'a digest alone names no actor');
+  await app.exec('COMMIT');
+  assert.equal(await n(app, `SELECT count(*)::int AS n FROM "ApiToken"`), 0, 'the lookup context ends with the transaction');
+  await app.exec('BEGIN');
+  await app.query(`SELECT set_config('app.workspace_id', 'w', true), set_config('app.actor_id', 'tech', true)`);
+  assert.deepEqual((await app.query<{ id: string }>(`SELECT id FROM "Actor"`)).map(r => r.id), ['tech']);
+  assert.deepEqual((await app.query<{ clientId: string; actorId: string }>(`SELECT "clientId", "actorId" FROM "ClientMembership"`)).map(r => `${r.actorId}@${r.clientId}`), ['tech@c1']);
+  assert.equal(await n(app, `SELECT count(*)::int AS n FROM "ApiToken"`), 0, 'naming an actor does not expose its tokens');
+  await app.exec('ROLLBACK');
+  await app.exec('BEGIN');
+  await app.query(`SELECT set_config('app.workspace_id', 'w2', true), set_config('app.actor_id', 'tech', true)`);
+  assert.equal(await n(app, `SELECT count(*)::int AS n FROM "Actor"`), 0, 'the same actor id in another workspace');
+  await app.exec('ROLLBACK');
+  await app.exec('BEGIN');
+  await app.query(SET_SCOPE_SQL, ['w', 'c1,c2']);
+  for (const t of tables) assert.equal(await n(app, `SELECT count(*)::int AS n FROM "${t}"`), 0, `${t} under an ordinary client scope`);
+  await app.exec('ROLLBACK');
+  // Writes: rejected by RLS (no write policy) or by the missing grant (roles.sql), or they touch no row. Never effective.
+  const attempt = async (sql: string) => { try { await app.exec(sql); } catch { await app.exec('ROLLBACK').catch(() => undefined); } };
+  await attempt(`INSERT INTO "ApiToken" ("workspaceId","id","actorId","tokenHash") VALUES ('w','t-rogue','tech','${'3'.repeat(64)}')`);
+  await attempt(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId","permissions") VALUES ('w','c2','tech',ARRAY['context:read'])`);
+  await attempt(`BEGIN; SELECT set_config('app.workspace_id', 'w', true), set_config('app.actor_id', 'tech', true);
+    UPDATE "ClientMembership" SET permissions = ARRAY['context:read','events:ingest']; UPDATE "Actor" SET status = 'DISABLED'; COMMIT;`);
+  await attempt(`BEGIN; SELECT set_config('app.token_hash', '${DIGEST_2}', true); UPDATE "ApiToken" SET "actorId" = 'tech'; COMMIT;`);
+  const rows = async (sql: string) => (await owner.query<{ s: string }>(sql)).map(r => r.s);
+  assert.deepEqual(await rows(`SELECT "actorId"||'@'||"clientId"||':'||array_to_string(permissions, '+') AS s FROM "ClientMembership" ORDER BY 1`), ['other@c2:context:read', 'tech@c1:context:read']);
+  assert.deepEqual(await rows(`SELECT id||':'||"actorId" AS s FROM "ApiToken" ORDER BY 1`), ['t1:tech', 't2:other']);
+  assert.deepEqual(await rows(`SELECT id||':'||status AS s FROM "Actor" ORDER BY 1`), ['other:ACTIVE', 'tech:ACTIVE']);
+}
+
 /**
  * The runtime-role guard must reject a role that owns ANY protected table (not only Observation) and must notice a
  * protected table whose RLS was disabled. `owner` reconfigures the database; `app` runs the check as the confined role.

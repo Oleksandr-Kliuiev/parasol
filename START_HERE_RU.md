@@ -79,13 +79,17 @@ POST /tools/execute
 
 ```sh
 docker compose up -d
-npm run db:deploy                                   # все три миграции, владельцем
+npm run db:deploy                                   # все миграции, владельцем
 psql "$DATABASE_URL" -v atlas_app_password="$(cat secret)" -f prisma/roles.sql   # confined runtime role
-npm run db:seed                                     # владельцем, синтетический граф
+ATLAS_DEMO_TOKEN="…" npm run db:seed                # владельцем: синтетический граф, актор, digest токена
 ATLAS_PG_ADMIN_URL="$DATABASE_URL" npm run db:check:pg17   # миграции, инварианты, RLS, пул — на настоящем сервере
+ATLAS_PG_ADMIN_URL="$DATABASE_URL" npm run test:pg         # Prisma/PostgreSQL: deploy, roles.sql, seed, API в режиме db
+ATLAS_PG_ADMIN_URL="$DATABASE_URL" npm run db:check:drift  # миграции и schema.prisma описывают одну схему
 ```
 
-Проверьте `DATABASE_URL` перед командами. Seed создаёт только синтетический граф и не очищает таблицы. Приложение (API/worker) подключается **только** через `ATLAS_RUNTIME_DATABASE_URL` с ролью `atlas_app`: владелец таблиц обходит RLS, и `assertRuntimeRole()` откажет в старте. NestJS reference API остаётся на фикстурах, даже после seed: подключение DB-service — задание 1.3. `packages/graph/prisma-context.ts` + `scoped-db.ts` + `context-mapper.ts` содержат scoped-query, установку RLS-контекста и маппинг в `ClientContextV1` для этого подключения.
+Без локального `psql` роль создаётся psql из контейнера: `docker compose exec -T postgres psql -U atlas -d atlas -v ON_ERROR_STOP=1 -v atlas_app_password="…" -f - < prisma/roles.sql`. Проверьте `DATABASE_URL` перед командами. Seed создаёт только синтетические данные и не очищает таблицы; `ATLAS_DEMO_TOKEN` сохраняется только как SHA-256 digest. Приложение (API/worker) подключается **только** через `ATLAS_RUNTIME_DATABASE_URL` с ролью `atlas_app`: владелец таблиц обходит RLS, и `assertRuntimeRole()` откажет в старте.
+
+API на PostgreSQL (задание 1.3): `npm run api:build`, затем `ATLAS_MODE=db ATLAS_RUNTIME_DATABASE_URL="postgresql://atlas_app:…@127.0.0.1:5432/atlas" npm run api:start` и запросы с `Authorization: Bearer <ATLAS_DEMO_TOKEN>`. Те же endpoints, что выше; актор, memberships, контекст и audit берутся из БД. Внешние ресурсы до задания 1.5 имеют статус `MISSING`, observations появятся с durable pipeline (1.6).
 
 ## Где главное
 

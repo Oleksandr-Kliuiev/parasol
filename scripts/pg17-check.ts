@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import pg from 'pg';
-import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard } from '../tests/sql-invariants.ts';
+import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants } from '../tests/sql-invariants.ts';
 import type { SqlRunner } from '../tests/sql-invariants.ts';
 import { SET_SCOPE_SQL } from '../packages/graph/scope-context.ts';
 import { migrationNames, migrationSql } from '../tests/support/migrations.ts';
@@ -45,7 +45,8 @@ try {
   // Same grants as prisma/roles.sql (the file itself uses a psql variable for the password).
   await owner.query(`GRANT USAGE ON SCHEMA public TO "${roleName}";
     GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO "${roleName}";
-    REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM "${roleName}";`);
+    REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM "${roleName}";
+    REVOKE INSERT, UPDATE ON "Actor", "ClientMembership", "ApiToken" FROM "${roleName}";`);
   const ownerRunner = asRunner(owner);
   await seedGraph(ownerRunner);
   await checkStructuralInvariants(ownerRunner);
@@ -58,6 +59,13 @@ try {
   const firstPid = (await first.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
   try { await checkRlsInvariants(asRunner(first), { label: 'PostgreSQL 17' }); } finally { first.release(); }
   results.push(['RLS acceptance (confined login role)', 'passed']);
+
+  // Identities (migration 202610071600): lookup by own digest, actor/memberships only when named, no runtime writes.
+  await seedIdentities(ownerRunner);
+  await checkIdentityStructure(ownerRunner);
+  const identityClient = await appPool.connect();
+  try { await checkIdentityRlsInvariants(ownerRunner, asRunner(identityClient), { label: 'PostgreSQL 17' }); } finally { identityClient.release(); }
+  results.push(['Identity lookup policies (token digest, named actor, no runtime writes)', 'passed']);
 
   // Runtime-role guard: ownership of any protected table (not only Observation) and a table with RLS disabled are detected.
   const guardClient = await appPool.connect();

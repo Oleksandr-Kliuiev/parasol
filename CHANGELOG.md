@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Stage 1 implementation, Checkpoint A (branch `stage1/foundation`)
+
+Tasks 1.1–1.3 on top of the 1.1.3 pack. Status, verification and open gates: `CHECKPOINT_REPORT.md`.
+
+### Added
+- Migration `202610071600_stage1_actor_membership`: `Actor`, `ClientMembership`, `ApiToken` (SHA-256 digest only) with CHECK vocabularies, workspace-carrying composite FKs and lookup-only RLS policies (`app.token_hash`, `app.actor_id`); no runtime write path. `prisma/roles.sql` revokes identity writes from the runtime role.
+- DB-backed API (`ATLAS_MODE=db`, `apps/api/src/db/`): bearer token → `Actor` from the database; `GET /clients`, `/clients/:id/overview|observations|audit`, `GET /audit/security`, `GET /tools`, `POST /tools/execute` over PostgreSQL through the runtime role; every denial is written to `SecurityAuditEvent` before the 403.
+- PostgreSQL audit sinks and bounded scoped reads (`packages/audit/prisma.ts`); `withWorkspaceScope`; synthetic seed adds the demo actor, its membership and the digest of `ATLAS_DEMO_TOKEN`.
+- `npm run test:pg` (throwaway databases through `prisma migrate deploy` + `prisma/roles.sql`), `npm run db:check:drift`, context-budget test, `docs/AI_CONTEXT_MAP.md`.
+
+### Changed
+- `schema.prisma` pins the two FK names and the `reasonCodes` default that the frozen migrations create (empty drift); migrations unchanged.
+- The gateway awaits its sinks (synchronous memory or asynchronous PostgreSQL); `assertRuntimeRole` also covers the identity tables; PGlite tests and `pg17-check` apply every migration in order; `npm run typecheck` covers `apps/`.
+
 ## 1.1.3 — 2026-10-07
 
 Acceptance release. The independent review of 1.1.2 confirmed S1–S3 closed and accepted the pack as the development baseline after one line in `schema.prisma`: Prisma's auto-generated names for the two `RawEvent` `@@unique` blocks collided (P1012), so the FK-target unique now carries `map: "RawEvent_identity_eventKey_key"` — the name the SQL migration already uses. The seven-field self relation is kept; Prisma 6.19 supports it. The reviewer's chain `schema:validate` → `db:generate` → `typecheck` → `api:build` → `api:smoke` passes with this fix. No code or SQL changed. Documentation now says three migrations everywhere, names the archive folder correctly, and `verification/RESULTS.md` records the reviewer's Prisma results instead of the stale "unverified" line.

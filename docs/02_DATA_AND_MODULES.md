@@ -16,7 +16,9 @@
 
 ## Actor и права
 
-`Actor { id, workspaceId, memberships: [{ clientId, permissions[] }], workspacePermissions[] }`. Права — на уровне клиента: техник может иметь `context:read` у одного клиента и не иметь у другого. `workspacePermissions` — MSP-уровень, например `security_audit:read`. Реализация проверенного актора и memberships — задание 1.3; контракт зафиксирован, чтобы 1.2 не строилось на плоском списке прав.
+`Actor { id, workspaceId, memberships: [{ clientId, permissions[] }], workspacePermissions[] }`. Права — на уровне клиента: техник может иметь `context:read` у одного клиента и не иметь у другого. `workspacePermissions` — MSP-уровень, например `security_audit:read`.
+
+Реализация (задание 1.3, миграция `202610071600_stage1_actor_membership`): таблицы `Actor`, `ClientMembership`, `ApiToken`. Словари прав закреплены CHECK (`context:read`, `events:ingest`; `security_audit:read`); токен хранится только как SHA-256 digest. Аутентификация идёт той же confined runtime-ролью по узким политикам RLS: строка `ApiToken` видна только транзакции, которая уже держит её digest (`app.token_hash`), `Actor` и его memberships — только когда токен назвал актора (`app.actor_id` в его workspace); обычный client scope их не видит; политик записи нет — identities пишет владелец (синтетический seed), пока не появится отдельный administration slice. `packages/auth/prisma-auth.ts` превращает bearer-токен в `Actor`; production IdP (например, OIDC) позже заменит только источник токена, не memberships.
 
 ## Таблицы
 
@@ -37,6 +39,9 @@
 | ToolExecution | Actor, tool, risk, inputHash, status, correlation |
 | AuditEvent | Append-only журнал клиента: allowlist полей, без payload, секретов и raw upstream response |
 | SecurityAuditEvent | **Append-only журнал workspace** для отказов по scope/правам: `requestedClientId` — текст, не FK (клиент может не существовать или быть вне scope актора); не попадает в журнал чужого клиента |
+| Actor | Проверенный актор workspace: `status` ACTIVE/DISABLED, `workspacePermissions[]` (CHECK-словарь) |
+| ClientMembership | Права актора на одного клиента: составные FK на `Client` и `Actor` (workspace в каждой связи), `permissions[]` (CHECK-словарь) |
+| ApiToken | Bearer-учётка актора: только SHA-256 `tokenHash` (CHECK), `expiresAt`, `revokedAt`; секрет не хранится |
 | Approval | Резерв будущего write slice, immutable input/scope |
 
 ### Семантика полей Stage 1
@@ -77,7 +82,7 @@
 | ToolsModule | Registry, runtime schemas, gateway | Исполнять неразрешённые tools |
 | AuditModule | Transactional append (client) + workspace security audit, scoped read | Хранить keys/raw private payloads; писать отказ в чужой клиентский журнал |
 
-Reference API использует один `AtlasFixtureModule` для компактного запуска. Это демонстрация, которую агент разбивает на указанные modules при DB-backed реализации. Интерфейсы сервисов не зависят от HTTP controllers.
+Reference API использует один `AtlasFixtureModule` для компактного запуска (`ATLAS_MODE=fixture`). DB-backed API (`ATLAS_MODE=db`, `apps/api/src/db/`) разбит на DatabaseModule, AuthModule, ClientGraphModule, AuditModule и ToolsModule; бизнес-логика живёт в `packages/` и от HTTP controllers не зависит.
 
 ## ClientContextV1 — единый выходной контракт
 
@@ -106,6 +111,8 @@ Reference API использует один `AtlasFixtureModule` для комп
 | POST /tools/execute | Client ID + registered tool + runtime-validated input |
 
 Reference body: `{"clientId":"demo-gasta","tool":"atlas.client.get_context"}`. Для DB version добавьте versioned DTO с `parameters` и request correlation. Не принимайте риск, sideEffect или permission от вызывающей модели.
+
+Аутентификация: `Authorization: Bearer <token>`. В режиме `db` токен разрешается в `Actor` из БД (иначе 401 без деталей); в режиме `fixture` сравнивается с `ATLAS_DEMO_TOKEN`. Клиент из URL разрешается только внутри workspace актора.
 
 HTTP-маппинг ошибок (`AtlasError.kind`): `SCOPE` → 403; `VALIDATION` → 400; `CONTEXT_SCOPE_MISMATCH`, `CONTEXT_CONTRACT_MISMATCH`, `TRANSIENT` → 502; остальное → 500. Отказ по scope до любой выборки пишется в `SecurityAuditEvent` с `requestedClientId`; отказ по инструменту/правам — в клиентский `AuditEvent` (`tool.denied`). `/ai/query`, approval endpoints и write tools пока отсутствуют. Не раскрывайте существование клиентов вне actor scope.
 

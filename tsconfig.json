@@ -5,6 +5,6 @@
     "experimentalDecorators": true, "emitDecoratorMetadata": true,
     "skipLibCheck": true, "types": ["node"]
   },
-  "include": ["packages/**/*.ts", "connectors/**/*.ts", "fixtures/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "prisma/seed.ts"],
+  "include": ["apps/**/*.ts", "packages/**/*.ts", "connectors/**/*.ts", "fixtures/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "prisma/seed.ts"],
   "exclude": ["node_modules", "dist"]
 }

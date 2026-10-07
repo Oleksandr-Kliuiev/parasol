@@ -1,11 +1,12 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
-import { Module, Controller, Get, Post, Param, Body, UseGuards, Injectable, UnauthorizedException, ForbiddenException, BadRequestException, BadGatewayException, InternalServerErrorException } from '@nestjs/common';
+import { Module, Controller, Get, Post, Param, Body, UseGuards, Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { runDemo } from '../../../fixtures/run-demo.ts';
 import type { DemoResult } from '../../../fixtures/run-demo.ts';
 import { scope, actor } from '../../../fixtures/gasta.ts';
 import { executeReadTool, stage1Tools } from '../../../packages/tools/gateway.ts';
-import { AtlasError, assertWorkspacePermission, hasClientPermission } from '../../../packages/core/contracts.ts';
+import { assertWorkspacePermission, hasClientPermission } from '../../../packages/core/contracts.ts';
+import { toHttp, parseToolRequest } from './http-boundary.ts';
 
 @Injectable()
 export class FixtureAuthGuard implements CanActivate {
@@ -37,16 +38,6 @@ export class FixtureContextService {
   }
 }
 
-/** Maps error kinds to HTTP without leaking internals: denial 403, bad input 400, broken upstream/contract 502, else 500. */
-function toHttp(error: unknown): never {
-  if (error instanceof AtlasError) {
-    if (error.kind === 'SCOPE') throw new ForbiddenException('Tool denied');
-    if (error.kind === 'VALIDATION') throw new BadRequestException();
-    if (error.code === 'CONTEXT_SCOPE_MISMATCH' || error.code === 'CONTEXT_CONTRACT_MISMATCH' || error.kind === 'TRANSIENT') throw new BadGatewayException(error.code);
-  }
-  throw new InternalServerErrorException();
-}
-
 @Controller()
 @UseGuards(FixtureAuthGuard)
 export class AtlasController {
@@ -68,10 +59,7 @@ export class AtlasController {
   }
   @Get('tools') tools() { return stage1Tools; }
   @Post('tools/execute') async execute(@Body() body: unknown) {
-    if (!body || typeof body !== 'object') throw new BadRequestException();
-    const input = body as Record<string, unknown>;
-    // Only clientId and tool are accepted. risk, sideEffect, actor or permissions in the body are a 400, never an input.
-    if (Object.keys(input).some(k => !['clientId', 'tool'].includes(k)) || typeof input.clientId !== 'string' || typeof input.tool !== 'string') throw new BadRequestException();
+    const input = parseToolRequest(body);
     const { context, audit, securityAudit } = await this.service.demo;
     const requested = { workspaceId: scope.workspaceId, clientId: input.clientId };
     try { return await executeReadTool(actor, requested, input.tool, async () => context, { audit, securityAudit }); }

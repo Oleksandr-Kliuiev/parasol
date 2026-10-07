@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
-import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard } from './sql-invariants.ts';
+import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants } from './sql-invariants.ts';
 import type { SqlRunner } from './sql-invariants.ts';
 import { migrationNames, migrationsAfter, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
 
@@ -29,7 +29,20 @@ function runner(db: PGlite): SqlRunner {
 const confinedRole = `CREATE ROLE atlas_app_test NOLOGIN NOINHERIT NOBYPASSRLS;
   GRANT USAGE ON SCHEMA public TO atlas_app_test;
   GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO atlas_app_test;
-  REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM atlas_app_test;`;
+  REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM atlas_app_test;
+  REVOKE INSERT, UPDATE ON "Actor", "ClientMembership", "ApiToken" FROM atlas_app_test;`;
+/**
+ * Statements run as the confined role, everything else as the owner: PGlite is one session, so each call switches roles.
+ * A statement that aborts an explicit transaction leaves the session in the owner role with the transaction rolled back.
+ */
+function asConfinedRole(db: PGlite): SqlRunner {
+  const asRole = async <T>(fn: () => Promise<T>): Promise<T> => {
+    await db.exec('SET ROLE atlas_app_test');
+    try { return await fn(); }
+    finally { try { await db.exec('RESET ROLE'); } catch { await db.exec('ROLLBACK'); await db.exec('RESET ROLE'); } }
+  };
+  return { exec: s => asRole(() => db.exec(s).then(() => undefined)), query: (s, params) => asRole(async () => (await db.query(s, params as never)).rows as never) };
+}
 /** Shape of the schema, independent of row data: columns, constraints and indexes. Used to prove upgrade-path equivalence. */
 async function schemaShape(db: PGlite): Promise<string[]> {
   const cols = await db.query<{ s: string }>(`SELECT table_name||'.'||column_name||':'||data_type||':'||is_nullable||':'||coalesce(column_default,'') AS s FROM information_schema.columns WHERE table_schema = current_schema() AND table_name <> '_prisma_migrations' ORDER BY 1`);
@@ -75,12 +88,21 @@ test('runtime-role guard rejects ownership of any protected table and detects a 
     await seedGraph(owner);
     await checkStructuralInvariants(owner); // populates RawEvent, so an owner-bypass is observable
     await db.exec(confinedRole);
-    // The guard query runs as the confined role; reconfiguration runs as the owner. PGlite has one session, so switch roles.
-    const app: SqlRunner = {
-      exec: async s => { await db.exec('SET ROLE atlas_app_test'); try { await db.exec(s); } finally { await db.exec('RESET ROLE'); } },
-      query: async (s, params) => { await db.exec('SET ROLE atlas_app_test'); try { return (await db.query(s, params as never)).rows as never; } finally { await db.exec('RESET ROLE'); } }
-    };
-    await checkRuntimeRoleGuard(owner, app, 'atlas_app_test', {});
+    // The guard query runs as the confined role; reconfiguration runs as the owner.
+    await checkRuntimeRoleGuard(owner, asConfinedRole(db), 'atlas_app_test', {});
+  } finally { await db.close(); }
+});
+
+test('identities: token visible only for its own digest, actor and memberships only when named, no identity writes by the runtime role', async () => {
+  const db = new PGlite();
+  try {
+    await migrateAll(db);
+    const owner = runner(db);
+    await seedGraph(owner);
+    await seedIdentities(owner);
+    await checkIdentityStructure(owner);
+    await db.exec(confinedRole);
+    await checkIdentityRlsInvariants(owner, asConfinedRole(db), { label: 'PGlite' });
   } finally { await db.close(); }
 });
 

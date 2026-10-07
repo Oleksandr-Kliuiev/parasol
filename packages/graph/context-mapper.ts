@@ -1,4 +1,4 @@
-import type { Scope, ClientContextV1, ObservationSummary, ResourceView, Person, Device, ExternalLink, Severity, System, ResourceType, EventKind, Domain, Priority, Route, Provider, EntityKind, LinkStatus } from '../core/contracts.ts';
+import type { Scope, ClientContextV1, ObservationPage, ObservationSummary, ResourceView, Person, Device, ExternalLink, Severity, System, ResourceType, EventKind, Domain, Priority, Route, Provider, EntityKind, LinkStatus } from '../core/contracts.ts';
 import { emptyCounts, severities, severityRank } from '../core/contracts.ts';
 
 // Row shapes as selected by packages/graph/prisma-context.ts. Kept free of Prisma imports so the mapping is unit-tested
@@ -60,6 +60,15 @@ export function mapResources(connections: DbConnectionRow[]): ResourceView[] {
   return views;
 }
 
+/** Items in priority order (severityRank DESC, createdAt DESC, id); counts and total cover the whole OPEN set. */
+export function mapObservationPage(scope: Scope, observations: DbObservationRow[], stats: DbObservationStats, limit: number): ObservationPage {
+  const counts = emptyCounts();
+  for (const { severity, count } of stats.bySeverity) if ((severities as readonly string[]).includes(severity)) counts[severity as Severity] = count;
+  const items = observations.map(row => mapObservationRow(scope, row))
+    .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
+  return { items, counts, total: stats.total, truncated: stats.total > limit };
+}
+
 export function mapClientContext(scope: Scope, graph: DbClientGraph, observations: DbObservationRow[], stats: DbObservationStats, limit: number, now: Date = new Date()): ClientContextV1 {
   const people: Person[] = []; const devices: Device[] = []; const links: ExternalLink[] = [];
   for (const entity of graph.entities) {
@@ -71,11 +80,7 @@ export function mapClientContext(scope: Scope, graph: DbClientGraph, observation
         entityKind: entity.kind as EntityKind, status: link.status as LinkStatus });
     }
   }
-  const counts = emptyCounts();
-  for (const { severity, count } of stats.bySeverity) if ((severities as readonly string[]).includes(severity)) counts[severity as Severity] = count;
-  const items = observations.map(row => mapObservationRow(scope, row))
-    .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
   return { ...scope, contractVersion: 'ClientContextV1', mode: 'db', clientName: graph.name, people, devices, links,
-    observations: { items, counts, total: stats.total, truncated: stats.total > limit },
+    observations: mapObservationPage(scope, observations, stats, limit),
     resources: mapResources(graph.connections), generatedAt: now.toISOString(), completeness: 'PARTIAL' };
 }

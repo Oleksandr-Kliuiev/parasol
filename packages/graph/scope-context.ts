@@ -36,10 +36,10 @@ export function workspaceContext(actor: Actor): ScopeContext {
 /** set_config(..., true) is the parameterised SET LOCAL: the context ends with the transaction, never with the connection. */
 export const SET_SCOPE_SQL = `SELECT set_config('app.workspace_id', $1, true), set_config('app.client_ids', $2, true)`;
 
-/** Every table the v1.1 migration protects with row-level security. The runtime check covers all of them, not one. */
+/** Every table protected with row-level security (v1.1 migration + 202610071600 identities). The runtime check covers all of them. */
 export const PROTECTED_TABLES: readonly string[] = [
   'Workspace', 'Client', 'Entity', 'Person', 'Device', 'Connection', 'ExternalEntity', 'EntityLink', 'RawEvent', 'DecisionRun',
-  'Observation', 'SyncState', 'ToolExecution', 'AuditEvent', 'SecurityAuditEvent', 'Approval'
+  'Observation', 'SyncState', 'ToolExecution', 'AuditEvent', 'SecurityAuditEvent', 'Approval', 'Actor', 'ClientMembership', 'ApiToken'
 ];
 const protectedTableList = PROTECTED_TABLES.map(t => `'${t}'`).join(',');
 

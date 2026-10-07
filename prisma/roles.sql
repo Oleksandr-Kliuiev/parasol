@@ -16,6 +16,9 @@ GRANT USAGE ON SCHEMA public TO atlas_app;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO atlas_app;
 -- Audit logs are insert-only for the application (the triggers enforce it for everyone, including the owner).
 REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM atlas_app;
+-- Actors, memberships and API tokens are only read, through the authentication lookup policies (migration
+-- 202610071600); the application never creates or changes identities.
+REVOKE INSERT, UPDATE ON "Actor", "ClientMembership", "ApiToken" FROM atlas_app;
 -- Migration bookkeeping is not application data.
 REVOKE ALL ON "_prisma_migrations" FROM atlas_app;
 -- Tables created by future migrations get the same grants automatically when created by this owner.

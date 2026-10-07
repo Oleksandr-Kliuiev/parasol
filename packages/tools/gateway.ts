@@ -14,7 +14,14 @@ export const stage1Tools: readonly ToolDefinition[] = Object.freeze([
   { name: 'huntress.incident.list', version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' }
 ].map(t => Object.freeze(t) as ToolDefinition));
 
-export interface GatewaySinks { audit: AuditSink; securityAudit: SecurityAuditSink }
+/**
+ * Sinks may be synchronous (in-memory reference) or asynchronous (PostgreSQL, packages/audit/prisma.ts). The gateway
+ * awaits every append, so a denial is recorded before the caller sees the error, and a failed append fails the call.
+ */
+export interface GatewaySinks {
+  audit: { append(...args: Parameters<AuditSink['append']>): void | Promise<void> };
+  securityAudit: { append(...args: Parameters<SecurityAuditSink['append']>): void | Promise<void> };
+}
 
 /**
  * Read-only gateway. Order matters: scope first (denial goes to the workspace security audit, never to the target client's
@@ -26,16 +33,16 @@ export async function executeReadTool(actor: Actor, scope: Scope, name: string,
   const toolLabel = String(name).slice(0, 100);
   try { assertScope(actor, scope); }
   catch (error) {
-    sinks.securityAudit.append({ workspaceId: actor.workspaceId, actorId: actor.id, eventType: 'tool.scope_denied', outcome: 'DENIED',
+    await sinks.securityAudit.append({ workspaceId: actor.workspaceId, actorId: actor.id, eventType: 'tool.scope_denied', outcome: 'DENIED',
       requestedClientId: scope.clientId, reasonCode: safeErrorCode(error), correlationId, metadata: { tool: toolLabel } });
     throw error;
   }
   const tool = stage1Tools.find(t => t.name === name);
   if (!tool || tool.risk !== 0 || tool.sideEffect !== 'NONE' || !hasClientPermission(actor, scope.clientId, tool.permission)) {
-    sinks.audit.append(scope, actor.id, 'tool.denied', correlationId, { tool: toolLabel, safeErrorCode: tool ? 'TOOL_NOT_ALLOWED' : 'UNKNOWN_TOOL' });
+    await sinks.audit.append(scope, actor.id, 'tool.denied', correlationId, { tool: toolLabel, safeErrorCode: tool ? 'TOOL_NOT_ALLOWED' : 'UNKNOWN_TOOL' });
     throw new AtlasError('TOOL_DENIED', 'SCOPE');
   }
-  sinks.audit.append(scope, actor.id, 'tool.started', correlationId, { tool: tool.name, toolVersion: tool.version });
+  await sinks.audit.append(scope, actor.id, 'tool.started', correlationId, { tool: tool.name, toolVersion: tool.version });
   try {
     const ctx = await readContext();
     if (ctx.contractVersion !== 'ClientContextV1') throw new AtlasError('CONTEXT_CONTRACT_MISMATCH', 'PERMANENT');
@@ -44,10 +51,10 @@ export async function executeReadTool(actor: Actor, scope: Scope, name: string,
       : tool.name === 'atera.alert.list' ? findResource(ctx, 'atera', 'alert')
       : tool.name === 'atera.ticket.list' ? findResource(ctx, 'atera', 'ticket')
       : findResource(ctx, 'huntress', 'incident');
-    sinks.audit.append(scope, actor.id, 'tool.succeeded', correlationId, { tool: tool.name, toolVersion: tool.version });
+    await sinks.audit.append(scope, actor.id, 'tool.succeeded', correlationId, { tool: tool.name, toolVersion: tool.version });
     return result;
   } catch (error) {
-    sinks.audit.append(scope, actor.id, 'tool.failed', correlationId, { tool: tool.name, toolVersion: tool.version, safeErrorCode: safeErrorCode(error) });
+    await sinks.audit.append(scope, actor.id, 'tool.failed', correlationId, { tool: tool.name, toolVersion: tool.version, safeErrorCode: safeErrorCode(error) });
     throw error;
   }
 }

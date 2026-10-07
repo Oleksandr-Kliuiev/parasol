@@ -15,8 +15,11 @@ Load the smallest set of files a task needs. Rules: `AGENTS.md`. Scope and plan:
 | Connectors / normalizers | `connectors/contracts.ts`, `connectors/<system>/normalizer.ts` | `docs/03_CONNECTORS_AND_SYNC.md` |
 | Read tools / gateway | `packages/tools/gateway.ts` | `packages/audit/memory.ts` |
 | Audit (client allowlist, workspace security audit) | `packages/audit/memory.ts` (reference), `packages/audit/prisma.ts` (PostgreSQL sinks + scoped reads) | `docs/02_DATA_AND_MODULES.md` (Audit) |
+| Authentication, actors, memberships | `packages/auth/prisma-auth.ts`, `packages/auth/token.ts`, migration `202610071600_stage1_actor_membership` | `apps/api/src/db/auth.ts` (guard, AccessPolicy) |
+| DB-backed API (`ATLAS_MODE=db`) | `apps/api/src/db/app.module.ts`, the controller of the route (`clients.ts`, `audit.ts`, `tools.ts`) | `apps/api/src/http-boundary.ts`, `tests/pg/api.pg.test.ts` |
 | Fixture API | `apps/api/src/atlas.module.ts`, `apps/api/src/main.ts` | `scripts/api-smoke.ts` |
-| PostgreSQL integration tests (Prisma, real server) | `tests/support/pg-harness.ts`, `tests/pg/*.pg.test.ts` | `tests/support/migrations.ts` |
+| PostgreSQL integration tests (Prisma, real server) | `tests/support/pg-harness.ts`, `tests/pg/*.pg.test.ts` | `tests/support/migrations.ts`, `tests/support/api-process.ts` |
+| Checkpoint status / open gates | `CHECKPOINT_REPORT.md` | `prompts/CHECKPOINT_REPORT.md` (template) |
 | Acceptance scenarios / gates | `docs/06_ACCEPTANCE.md` | `verification/RESULTS.md` |
 
 ## Do not load in full
@@ -34,6 +37,7 @@ Load the smallest set of files a task needs. Rules: `AGENTS.md`. Scope and plan:
 | Types / API build | `npm run typecheck`, `npm run api:build` |
 | Fixture API smoke | `npm run api:build && npm run api:smoke` |
 | Real PostgreSQL 17 SQL check | `ATLAS_PG_ADMIN_URL=… npm run db:check:pg17` |
-| Prisma/PostgreSQL integration (throwaway DB: deploy, roles.sql, seed, runtime role) | `ATLAS_PG_ADMIN_URL=… npm run test:pg` |
+| Prisma/PostgreSQL integration + DB-mode API (throwaway DB: deploy, roles.sql, seed, runtime role) | `ATLAS_PG_ADMIN_URL=… npm run test:pg` |
 | Migrations ↔ `schema.prisma` drift (must be empty) | `ATLAS_PG_ADMIN_URL=… npm run db:check:drift` |
-| Dev DB (owner, then runtime role) | `npm run db:deploy` → `prisma/roles.sql` via psql → `npm run db:seed` |
+| Dev DB (owner, then runtime role) | `npm run db:deploy` → `prisma/roles.sql` via psql → `ATLAS_DEMO_TOKEN=… npm run db:seed` |
+| DB-mode API | `npm run api:build && ATLAS_MODE=db ATLAS_RUNTIME_DATABASE_URL=… npm run api:start` |
