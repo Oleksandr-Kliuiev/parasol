@@ -152,7 +152,7 @@ Review: первое ревью (`13336c9`) — REQUEST_CHANGES, четыре н
 
 ## Verification
 
-Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Команды `npm` повторены на дереве `f7ae5fb` после `npm ci`.
+Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Полный прогон таблицы, включая `npm ci`, выполнен 2026-10-07 на дереве `ce466ae` (отчёт `91fda0d` поверх него кода не меняет). Вторая редакция отчёта проверялась так же, на `f7ae5fb`; первая — на `20cd453`/`db872de`.
 
 | Command/scenario | Environment | Actual result |
 |---|---|---|

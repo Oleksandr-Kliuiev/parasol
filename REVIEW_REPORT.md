@@ -1,72 +1,64 @@
-# Independent review — Checkpoint B, revision 2
+# Independent review — Checkpoint B, revision 3
 
-Дата: 2026-10-07. Ветка: `stage1/foundation`, HEAD `e3196d7`; исправления — `f7ae5fb`.
-Область: повторная проверка B1–B4 и утверждений `CHECKPOINT_REPORT.md` по `prompts/REVIEW_STAGE_1.md`. Diff от предыдущего ревью `13336c9`: 21 файл, +637/−114. Рабочее дерево до проверки чистое. Предыдущие находки и доказательства сохранены в `13336c9:REVIEW_REPORT.md`; принятый Checkpoint A — в `a04d805:REVIEW_REPORT.md`.
+Дата: 2026-10-07. Ветка: `stage1/foundation`, HEAD `91fda0d`; код исправления — `ce466ae`.
+Область: третья редакция CHECKPOINT_REPORT и закрытие оставшейся ветки B3 по `prompts/REVIEW_STAGE_1.md`. Diff от предыдущего ревью `17bd661`: 13 файлов, +175/−37. Рабочее дерево до проверки чистое. История находок: `13336c9:REVIEW_REPORT.md` (B1–B4), `17bd661:REVIEW_REPORT.md` (первые попытки B3). Checkpoint A принят ранее (`a04d805`).
 
 ## Вердикт
 
-**REQUEST_CHANGES — остаётся одна обязательная находка P2: B3 исправлена не полностью. Checkpoint B пока не принят.**
+**APPROVE — Checkpoint B принят. Все обязательные находки B1–B4 закрыты; блокирующих находок не осталось.**
 
-**B1, B2 и B4 закрыты.** Проверено: **60/60 unit/PGlite, 69/69 PostgreSQL**, typecheck, API build/smoke, schema validation, PostgreSQL 17 invariants и пустой migration drift. Дополнительные пробы обнаружили потерю более нового результата при перекрывающихся первых sync. P0/P1 и ошибок межклиентского доступа в проверенных сценариях не найдено.
+Повторно проверены **60/60 unit/PGlite, 75/75 PostgreSQL**, typecheck, API build/smoke, schema validation, SQL/RLS invariants и пустой migration drift. Две независимые пробы из предыдущего ревью теперь дают ожидаемый результат. В проверенном изменении новых дефектов корректности или межклиентского доступа не обнаружено.
 
-## B3 — [P2] Две первые попытки sync не упорядочены: новый результат ошибочно отбрасывается
+Принятие относится к заданиям 1.4–1.6 и заявленным ограничениям checkpoint; live-интеграции и последующие задания этим не подтверждаются.
 
-**Место:** `packages/sync/sync-state.ts:15–20`, `packages/sync/sync-state.ts:37–39`; вызовы из `packages/sync/snapshots.ts:63–66` и `packages/sync/snapshots.ts:82–84`.
+## B3 — закрыта, включая первые чтения
 
-`beginAttempt` делает только UPDATE существующей строки. Пока для connection/resource нет `SyncState`, каждая начавшаяся попытка получает `seq = null`. Первый завершившийся sync создаёт строку с `attemptSeq = recordedSeq = 0`. При завершении остальных `commitAttempt` уже видит строку и безусловно отвергает их из-за `attempt.seq !== null`, даже если они начались позже и несут более свежие данные или ошибку. Для начальной синхронизации действует «первый завершившийся победил», а не заявленный порядок попыток.
+- `packages/sync/sync-state.ts:16`: `INSERT … ON CONFLICT DO UPDATE` атомарно создаёт первую строку и выдаёт номер каждой попытке до vendor I/O. Ветка с `seq=null` удалена.
+- `packages/sync/sync-state.ts:36`: запись исхода выполняется под блокировкой уже существующей строки; сравниваются номер попытки и время. Success/error обновляют состояние через `update`. Устаревший результат сохраняет свои события, но не заменяет более новое состояние.
+- `prisma/migrations/202610072100_stage1_sync_attempt_pending/migration.sql`: новый статус PENDING допускает начатое чтение без выдуманного результата; CHECK запрещает ему время исхода/успеха, код ошибки и записанный номер.
+- `packages/graph/context-mapper.ts:75`: PENDING отображается как MISSING / SYNC_NOT_COMPLETED, с `items=null`.
+- `tests/pg/sync-order.pg.test.ts`: проверены первые success/success, success/error, error/success в обоих порядках завершения, одинаковые времена, identity sync и защита от отката времени. Сценарии действительно запускают обе попытки до завершения любой.
 
-**Воспроизведено на PostgreSQL 17.11, два Prisma-пула под confined runtime-ролью:**
+**Независимые PostgreSQL-пробы**, каждая на свежей throwaway-БД, два Prisma-пула, confined runtime-роль, исходно отсутствующий SyncState:
 
-1. Создать и активировать fixture Huntress connection; убедиться, что `SyncState(incident)` ещё отсутствует.
-2. Начать sync A с временем T; задержать `readSnapshot` перед возвратом корректного пустого набора.
-3. Пока A задержан, начать sync B с T+100 ms; также задержать чтение. Обе попытки уже прошли `beginAttempt`.
-4. Освободить A и дождаться его завершения; затем освободить B, который читает два инцидента через настоящий adapter и mock transport.
-
-**Факт:** A — `OK`, `itemCount=0`, `superseded=false`; B — `OK`, `itemCount=2`, **`superseded=true`**. Контекст остаётся **`OK`, `items=[]`, `asOf=T`, `lastSuccessAt=T`**. Счётчики состояния — 0/0. Два события B сохраняются в inbox, но текущий ресурс показывает старый пустой snapshot.
-
-**Вторая проба:** тот же порядок первых попыток, A успешно читает два инцидента, а B завершается `AtlasError('UPSTREAM_UNAVAILABLE', 'TRANSIENT')`. B возвращает `ERROR`, `superseded=true`; контекст остаётся **`OK`, `safeErrorCode=null`**, хотя должен показывать STALE с причиной последнего сбоя. Это влияет и на видимость ошибок, а не только на выбор snapshot.
-
-Новый тест «normal order» (`tests/pg/sync-order.pg.test.ts:69–77`) сначала полностью завершает предыдущий sync и лишь затем запускает следующий; состояния без строки при двух перекрывающихся попытках он не проверяет. Тест с обратным порядком завершения проходит, поскольку в нём первым фиксируется как раз новый результат.
-
-**Обязательное исправление:** обеспечить устойчивый порядок попыток до vendor I/O также для первого чтения ресурса — атомарно создавать/нумеровать попытки либо сериализовать их. Отсутствующая строка не должна превращать более позднее чтение в безусловно устаревшее. Сохранить отдельную запись evidence от устаревших чтений. Если потребуется менять схему, добавить новую миграцию.
-
-**Регрессии:** на исходно отсутствующем `SyncState` запустить A и B до завершения любого из них; проверить оба порядка завершения, пары success/success и success/error, а также одинаковые временные метки. Более новая ошибка должна оставить последний snapshot как STALE, более новый успех — обновить snapshot и время. Проверить общий механизм и для identity sync. До исправления утверждения о полном закрытии B3 в `CHECKPOINT_REPORT.md:26`, `:97`, `:208` не подтверждаются.
-
-## Закрытые находки
-
-| Находка | Подтверждение |
+| Порядок | Ожидаемый и полученный результат |
 |---|---|
-| **B1 — закрыта** | Уникальный `claimToken` проверяется при подготовке/сохранении решения, финальном commit и записи failure. Регрессии подтверждают отсутствие изменений и ложного audit от старого владельца. Дополнительная проба: A остановлен внутри provider call, B перехватывает событие с тем же workerId и завершает его; после освобождения A получает CLAIM_LOST. В БД один DecisionRun и одна observation, событие PROCESSED. Два provider call в таком порядке остаются известным ограничением, но чужое состояние не меняется. |
-| **B2 — закрыта** | Захваты без catch ограничены maxAttempts; исчерпавшие лимит события атомарно получают DEAD_LETTER/ATTEMPTS_EXHAUSTED с audit. Проверены настроенный лимит, несколько пакетов и explicit requeue с переиспользованием сохранённого решения. Размер захвата проверен при force_generic_plan; выборка через MATERIALIZED CTE ограничена batchSize. |
-| **B4 — закрыта** | Проверены пустые страницы, несовпадающие totals, недостаточное число элементов и повтор ID в Atera/Huntress. Несогласованный набор даёт TRANSIENT UPSTREAM_PAGINATION_INCONSISTENT, сохраняет полный snapshot как STALE и не пишет частичные события. Полный пустой набор принимается. |
+| A начинается в T и задержан; B начинается в T+100 ms и задержан; A сохраняет пустой набор, затем B читает два инцидента | B: OK, superseded=false; контекст: OK, два элемента, asOf=T+100 ms. Новый результат не отбрасывается |
+| Тот же порядок; A читает два инцидента, затем B завершается UPSTREAM_UNAVAILABLE | B: ERROR, superseded=false; контекст: STALE / UPSTREAM_UNAVAILABLE, прежние два элемента и asOf=T. Ошибка видима |
+| Контекст до завершения обеих попыток | В БД PENDING, attemptSeq=2, recordedSeq=0; контекст MISSING / SYNC_NOT_COMPLETED, items=null |
+| 12 одновременно начатых первых попыток другого ресурса через два пула | 12 разных последовательных номеров 1–12, без потери инкрементов |
 
-Исходные сценарии B3 «старый успех/сбой завершается после нового успеха» также проходят; оставшийся дефект относится к инициализации порядка попыток.
+B1, B2 и B4 были закрыты в предыдущем ревью; соответствующий код в текущем diff не менялся, регрессии worker-recovery и pagination повторно прошли в полном PostgreSQL-наборе. R1 из Checkpoint A также остаётся покрыта проходящими тестами.
 
 ## Выполненные проверки
 
-Среда: Node 25.8.1, PostgreSQL 17.11. Использованы существующие зависимости и локальный compose; PostgreSQL-команды получают локальный `ATLAS_PG_ADMIN_URL`. Persistent dev-БД не изменялась.
+Среда: Node 25.8.1, PostgreSQL 17.11. Использованы существующие зависимости и локальный compose. PostgreSQL-команды запускались с локальным `ATLAS_PG_ADMIN_URL`; persistent dev-БД не изменялась.
 
-| Команда / проба | Результат |
+| Команда | Результат |
 |---|---|
 | `npm test` | **60/60 PASS**, без skips |
 | `npm run typecheck` | PASS |
 | `npm run api:build` | PASS |
 | `npm run api:smoke` | PASS, fixture API |
 | `npm run schema:validate` | PASS |
-| `npm run test:pg` | **69/69 PASS**, без skips |
-| `npm run db:check:pg17` | PASS: 8 миграций, structural/FK/RLS invariants, claim-token CHECK, runtime-role guard, pool reuse |
+| `npm run test:pg` | **75/75 PASS**, без skips |
+| `npm run db:check:pg17` | PASS: 9 миграций, structural/FK/RLS invariants, PENDING CHECK, claim-token CHECK, runtime-role guard, pool reuse |
 | `npm run db:check:drift` | PASS, diff пустой |
-| Две дополнительные `node --experimental-strip-types --input-type=module` пробы через stdin | B3: оба описанных отклонения воспроизведены; B1: перехват во время provider call безопасен |
+| Дополнительная `node --experimental-strip-types --input-type=module` проба через stdin | Все четыре проверки из таблицы выше PASS |
 | `git diff --check` | PASS |
 
-Дополнительные пробы использовали `tests/support/pg-harness.ts:createTestDatabase/runSeed`, `actors/gasta` и `liveHuntressWithConfirmedAgent`; на каждую — отдельная throwaway-БД с миграциями и roles.sql. Задержки чтения/провайдера задавались Promise-gate в переданном adapter/provider. Каждая проба закрывала оба Prisma-пула и удаляла БД/роль в finally. После проверок временных тестовых БД и ролей не осталось. Исходники приложения и штатные тесты не менялись.
+Проба использовала `tests/support/pg-harness.ts:createTestDatabase/runSeed`, `actors/gasta`, `liveHuntressWithConfirmedAgent` и настоящий Huntress adapter с mock transport. Чтения задерживались Promise-gate; runtime-код не изменялся. После проверок соединения закрыты, временные БД и роли удалены; контрольный запрос показал 0/0. В diff добавлена только миграция 2100, предыдущие миграции не изменены.
 
-Добавлена только миграция `202610072000_stage1_claim_token_sync_order`; предыдущие миграции в проверяемом diff не менялись. Исправление R1 Checkpoint A сохраняется, его тесты проходят.
+## Неблокирующая неточность отчёта
 
-## Границы и следующий шаг
+В `CHECKPOINT_REPORT.md:155` вводный абзац Verification всё ещё связывает команды с деревом `f7ae5fb`, хотя таблица уже включает PENDING, 9 миграций и 75 тестов из `ce466ae`. Стоит уточнить commit для свежего прогона и отдельно оставить дату/commit прежнего `npm ci`. На принятие кода это не влияет: перечисленные выше проверки независимо повторены на текущем HEAD. Обязательных исправлений кода нет.
 
-**Live Atera/Huntress/OpenAI не выполнялся.** Проверка HTTP использует mock transport и синтетические fixtures. Atera contract по-прежнему не сверен с аккаунтом; Atera alerts остаются UNAVAILABLE по принятому решению владельца. Эти ограничения не считаются новыми находками. Все перечисленные PostgreSQL-gates выполнены; `npm ci`, `npm audit`, Node 24/Windows, мутационные проверки автора и deployment persistent-dev повторно не выполнялись.
+## Границы проверки и следующий шаг
 
-Перед принятием B необходимо закрыть оставшуюся ветку B3, добавить регрессии начального состояния и уточнить CHECKPOINT_REPORT. Затем повторить затронутые PostgreSQL-тесты и обязательные проверки. После принятия B безопасен переход к 1.7 Decision Layer; отдельная shadow-job, timeout/budget/circuit-breaker и telemetry остаются там. UI, remediation, новые коннекторы и orchestration в scope этого ревью не входят.
+**Невыполненных PostgreSQL-gates из списка выше нет. Live Atera/Huntress/OpenAI не выполнялся.** HTTP-проверки используют mock transport и синтетические fixtures. Контракт Atera по-прежнему требует сверки с аккаунтом до live-активации; Atera alerts остаются недоступны по принятому решению владельца. Реальные credentials и аккаунты в этом ревью не использовались.
 
-В рамках повторного ревью изменён только `REVIEW_REPORT.md`; ветка не переключалась, коммиты не создавались.
+`npm ci`, `npm audit`, Node 24/Windows, мутационные проверки автора и persistent-dev deployment повторно не выполнялись. Известные ограничения worker — отсутствие отдельного процесса по расписанию, продления lease и отдельной shadow-job — не объявляются здесь готовыми возможностями. Возможный лишний provider call при перехвате lease остаётся документированным ограничением.
+
+**Безопасный следующий шаг: задание 1.7 Decision Layer** — отдельная shadow-job, versioned DecisionConfig, модель/allowlist, MODEL_MISMATCH, advisory failure → HUMAN_REVIEW, timeout/budget/retry, circuit-breaker и telemetry. Проверить, что медленный shadow не задерживает следующее CRITICAL-событие. Live smoke остаётся отдельным gate; UI, remediation, новые коннекторы и orchestration вне текущего scope.
+
+В рамках ревью изменён только `REVIEW_REPORT.md`. Ветка не переключалась, коммиты не создавались.
