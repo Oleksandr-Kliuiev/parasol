@@ -1,17 +1,49 @@
 # Atlas Stage 1 checkpoint
 
-- **Date:** 2026-10-07
+- **Date:** 2026-10-08 (редакция 2; первая — 2026-10-07)
 - **Checkpoint:** **C** (после задания 1.10)
-- **Branch/commit:** `stage1/foundation` @ `1a95845` — проверенное состояние. Этот отчёт закоммичен поверх и кода не меняет.
+- **Branch/commit:** `stage1/foundation` @ `cbb511f` — проверенное состояние: исправления по ревью C1–C3. Эта редакция отчёта закоммичена поверх и кода не меняет. Первая редакция проверяла `1a95845`.
 - **Предыдущий checkpoint:** B принят ревью (`2a753d2`); его отчёт — `git show 2a753d2:CHECKPOINT_REPORT.md`.
 - **Tasks completed:**
   - 1.7 Decision Layer (`10f2578`);
   - 1.8 Observations and context (`7c9e8d6`);
   - 1.9 Tool Gateway (`9295f67`);
-  - 1.10 Acceptance (`1a95845`).
+  - 1.10 Acceptance (`1a95845`);
+  - исправления по ревью — `cbb511f`.
+- **Review:** ревью Checkpoint C (`4724036`, `REVIEW_REPORT.md`) — REQUEST_CHANGES: C1 и C2 (P2), C3 (P3). Все три исправлены в `cbb511f` (раздел ниже); нужна повторная проверка. P0/P1 нет.
 - **Статус: не production-ready.**
-  - Весь mock/recorded-объём выполнен и проверен на PostgreSQL 17.
-  - Live-read gate заблокирован ровно одним: нет credentials (раздел «Remaining gates / blockers»).
+  - Первая редакция утверждала, что mock/recorded-объём готов и остаются только credentials. Ревью нашло в нём два дефекта P2. Они исправлены, но принятие объёма — за повторным ревью.
+  - Live-read gate заблокирован отсутствием credentials. Кроме него открыты пункты раздела «Remaining gates / blockers».
+
+## Ревью C1–C3 — исправлено
+
+Все три находки воспроизведены тестами; новых миграций нет.
+
+- **C1 — triage одновременно с новой ревизией отправлял её в dead letter.**
+  - **Было:** жизненный цикл ревизий читал статус старой observation без блокировки, а затем безусловно переводил её в SUPPRESSED. Triage не берёт advisory lock объекта источника. Если человек успевал закрыть observation, UPDATE пытался выполнить RESOLVED → SUPPRESSED. Триггер правильно отказывал, финальная транзакция откатывалась, и новая CRITICAL-ревизия уходила в DEAD_LETTER (`UNEXPECTED_ERROR`).
+  - **Стало:** supersede — UPDATE с условием «строка ещё активна» (OPEN или ACKNOWLEDGED). Он ждёт транзакцию triage и перепроверяет закоммиченную строку:
+    - закрытое человеком остаётся закрытым;
+    - audit `observation.superseded` пишется только при состоявшемся переходе;
+    - новая ревизия завершается нормально.
+
+    Триггер жизненного цикла не ослаблен. Неиспользуемый результат `applyRevisionLifecycle` удалён.
+  - **Тесты:** `tests/pg/lifecycle-race.pg.test.ts` — оба порядка, для resolve и для suppress, на двух пулах через runtime-роль.
+    - Triage первым: тестовый триггер во временной БД держит его транзакцию после UPDATE до commit, worker ждёт строку (видно в `pg_stat_activity`). Итог: triage — RESOLVED/SUPPRESSED; новая CRITICAL — PROCESSED, одна applied DecisionRun, URGENT/HUMAN_REVIEW; у старой нет superseded-audit.
+    - Ревизия первой: worker держит финальную транзакцию перед commit, triage ждёт строку и получает `OBSERVATION_STATUS_CHANGED`; старая — SUPPRESSED со ссылкой на новую.
+  - **Контроль:** на коде `1a95845` оба теста «triage первым» падают с `DEAD_LETTER` / `UNEXPECTED_ERROR` — это и есть находка ревью. Мутации «безусловный supersede» и «audit без перехода» пойманы.
+- **C2 — `worker-once` ждал shadow первого клиента перед baseline следующего.**
+  - **Было:** операторский проход для каждого клиента делал baseline, затем весь пакет shadow.
+  - **Стало:** два отдельных входа.
+    - `worker-once` — только baseline: в shadow-режиме провайдер не вызывается.
+    - Новая команда `shadow-once` — только shadow-задания.
+
+    RUNBOOK требует независимых таймеров. Объединять проходы нельзя: systemd не запустит таймер, пока предыдущий запуск не завершён.
+  - **Тесты:** `tests/pg/operator-passes.pg.test.ts` — два клиента. Shadow-вызов первого удерживается, а CRITICAL второго уже получает applied baseline и URGENT observation. Baseline-проход не вызывает провайдера. Shadow-проход берёт задание, созданное за время удержания. Вне shadow-режима проход пуст. Существующий тест shadow-jobs (CRITICAL обрабатывается параллельно shadow runner) сохранён.
+  - **Контроль:** мутация «shadow внутри baseline-прохода» (поведение `1a95845`) роняет тест сразу: «the baseline pass called the provider», без зависания.
+- **C3 — rules/fixture записывали встроенный promptVersion вместо настроенного.**
+  - **Стало:** локальные провайдеры получают `promptVersion` конфигурации через `createDecisionRuntime`.
+  - **Тест:** в `tests/decision-config.test.ts` — config с `event-route-v2` и `review-config-v2` в режимах rules, fixture и shadow; и классификация, и строка DecisionRun несут v2. На старом коде тест падает (`event-route-v1`).
+- **Найдено попутно и названо:** guard провайдера (circuit breaker, бюджет в минуту) живёт в процессе. При проходе на процесс он действует в пределах одного прохода. RUNBOOK для устойчивого сбоя указывает режим `rules`.
 
 ## Result
 
@@ -49,7 +81,11 @@ Observations (активные, по приоритету):
 
 ### Shadow Decisions: applied и non-applied runs (`3-worker-pass.json`, `6-telemetry.json`)
 
-Конфигурация `decisions-2026-10-07.1`, режим shadow, OpenAI-адаптер поверх scripted endpoint. Модель ответила MONITOR 0.95 на оба события.
+Конфигурация `decisions-2026-10-07.1`, режим shadow, OpenAI-адаптер поверх scripted endpoint:
+- baseline — проход `worker-once`, провайдер не вызывается;
+- модельные runs — отдельный проход `shadow-once`.
+
+Модель ответила MONITOR 0.95 на оба события.
 
 | Событие | applied | provider | route | модель | input tokens | на run ссылается observation |
 |---|---|---|---|---|---|---|
@@ -91,13 +127,15 @@ Observations (активные, по приоритету):
 - **Отказ health check активного подключения (401):** `UPSTREAM_AUTH_FAILED`, проверка заканчивается после одного запроса.
 - **Ревью и разбор:**
   - очередь ревью и подтверждение;
-  - проход worker;
+  - проходы `worker-once` (baseline) и `shadow-once` (модель);
   - triage: acknowledge, затем resolve с ожидаемым статусом; устаревшее ожидание → `OBSERVATION_STATUS_CHANGED`;
   - telemetry.
 - **Отказы:**
   - чужой клиент, неверный ID клиента, нет права → `ops.scope_denied` в workspace security audit;
   - URL владельца, чужой токен → exit 2.
-- **CLI как процесс** (`tests/pg/ops-cli.pg.test.ts`): dead letter виден в `inbox`, после исправления `requeue` и проход его завершают; `worker-once` в режиме `rules` работает без ключа.
+- **CLI как процесс** (`tests/pg/ops-cli.pg.test.ts`):
+  - dead letter виден в `inbox`; после исправления `requeue` и проход его завершают;
+  - `worker-once` в режиме `rules` работает без ключа; `shadow-once` вне shadow-режима пуст.
 
 ### Fixture-тесты, PGlite, PostgreSQL 17 и live: что доказывает каждый слой
 
@@ -143,7 +181,7 @@ Observations (активные, по приоритету):
   - `mapping`, `confirm-link`, `reject-link`;
   - `inbox`, `requeue`;
   - `triage`, `telemetry`;
-  - `worker-once`, `decisions-smoke`.
+  - `worker-once`, `shadow-once` (отдельно после ревью C2), `decisions-smoke`.
 
   Работает только через runtime-роль, актор определяется токеном. Отказы по scope и правам пишутся в workspace security audit. Вывод — JSON; exit-коды 0, 1, 2.
 - **Seed** создаёт синтетического оператора с `ATLAS_OPERATOR_TOKEN`.
@@ -162,31 +200,38 @@ Observations (активные, по приоритету):
 
 ## Verification
 
-Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Полный прогон начат с `rm -rf node_modules dist && npm ci` на дереве `1a95845`. Подробности — `verification/RESULTS.md`.
+Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Полный прогон начат с `rm -rf node_modules dist && npm ci` 2026-10-08 на дереве `cbb511f`; первая редакция так же проверяла `1a95845` (80/80, 108/108). Подробности — `verification/RESULTS.md`.
 
 | Command/scenario | Environment | Actual result |
 |---|---|---|
 | `npm ci`, `db:generate`, `schema:validate` | локально | OK. Lockfile не менялся; `npm audit` — те же 10 находок (2 moderate, 8 high) |
-| `npm test` | unit + fixture + PGlite | **80/80** (67 unit/fixture, 13 PGlite) |
+| `npm test` | unit + fixture + PGlite | **81/81** (68 unit/fixture, 13 PGlite) |
 | `npm run typecheck`, `npm run api:build` | локально | pass |
 | `npm run api:smoke`, `npm run demo` | fixture | PASS |
 | `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 12 миграций по порядку; инварианты mapping, snapshots, inbox, decision layer, lifecycle, ledger; RLS через login-роль; guard; переиспользование соединений пула |
-| `npm run test:pg` | PostgreSQL 17.11, throwaway-БД на файл | **108/108** в 20 файлах. С Checkpoint B добавлены: shadow-jobs, decision-advisory, observation-lifecycle, tool-gateway (1.7–1.9), e2e — 9, ops-cli — 4. Прежние тесты проходят |
+| `npm run test:pg` | PostgreSQL 17.11, throwaway-БД на файл | **114/114** в 22 файлах. С Checkpoint B добавлены: shadow-jobs, decision-advisory, observation-lifecycle, tool-gateway (1.7–1.9), e2e — 9, ops-cli — 4; по ревью — lifecycle-race 4, operator-passes 2. Прежние тесты проходят |
 | E2E с evidence | PostgreSQL 17.11 | 9/9, `verification/e2e/*.json` |
 | `npm run db:check:drift` | PostgreSQL 17.11 | PASS, diff пустой |
 | Dev-БД | PostgreSQL 17.11, persistent volume | См. список после таблицы |
-| Остатки прогонов | PostgreSQL 17.11 | Throwaway-БД, ролей и процессов не осталось |
+| Остатки прогонов | PostgreSQL 17.11 | После финальных прогонов throwaway-БД, ролей и процессов нет. Одна временная БД с ролью осталась от моего отладочного прогона: тестовый файл упал на верхнем уровне до тестов, и его `after` не выполнился. Удалена |
 | Мутационные проверки | PGlite / PostgreSQL 17 | Все пойманы (код временно ломался, затем восстанавливался). См. список после таблицы |
 | `git diff --check` | локально | чисто |
 
 Dev-БД:
 - `db:deploy`: новых миграций нет;
 - seed с обоими токенами;
-- `ops`: `mapping`, `inbox`, `telemetry`, `worker-once` (rules) — exit 0;
-- shadow без ключа — `OPENAI_KEY_REQUIRED`; URL владельца — `RUNTIME_ROLE_BYPASSES_RLS`; токен техника на `mapping` — `PERMISSION_DENIED`;
+- `ops`: `mapping`, `inbox`, `telemetry`, `worker-once` и `shadow-once` (rules) — exit 0; `shadow-once` вне shadow-режима — без клиентов;
+- `worker-once` / `shadow-once` в shadow без ключа — `OPENAI_KEY_REQUIRED`; URL владельца — `RUNTIME_ROLE_BYPASSES_RLS`; токен техника на `mapping` — `PERMISSION_DENIED`;
 - API: overview 200 (PARTIAL, три MISSING-ресурса fixture), оператор на `/audit/security` — 403, старт через владельца отклонён.
 
 Мутационные проверки по заданиям:
+- **Ревью C, 6 из 6:**
+  - безусловный supersede;
+  - superseded-audit без перехода;
+  - shadow внутри baseline-прохода;
+  - shadow-проход вне shadow-режима;
+  - rules игнорирует свой promptVersion;
+  - runtime не передаёт promptVersion.
 - **1.7:**
   - нет shadow job в финальной транзакции;
   - advisory игнорирует guard;
@@ -222,7 +267,7 @@ Dev-БД:
   - вердикт live-read без ресурсов; smoke всегда OK;
   - унаследованные действия triage;
   - нет проверки runtime-роли; провал проверки → exit 0;
-  - shadow-проход со временем начала;
+  - shadow-проход с одним временем на всех клиентов;
   - нет health-gate и activation-gate;
   - подключения в физическом порядке;
   - seed игнорирует токен оператора.
@@ -236,10 +281,11 @@ Dev-БД:
 - пара key:secret Huntress и organization ID;
 - `OPENAI_API_KEY` для Decisions smoke.
 
-Всё, что можно сделать без них, сделано: тот же код проверен с mock transport, процедура и команды готовы (`docs/RUNBOOK.md` §5). До первого live-чтения Atera нужна сверка контракта с аккаунтом по чек-листу `connectors/CONTRACTS.md`; она входит в этот же gate. Live account setup и deployment без отдельного указания не начинаю.
+Код этого пути проверен с mock transport, процедура и команды готовы (`docs/RUNBOOK.md` §5). Live-проверку это не заменяет. До первого live-чтения Atera нужна сверка контракта с аккаунтом по чек-листу `connectors/CONTRACTS.md`; она входит в этот же gate. Live account setup и deployment без отдельного указания не начинаю.
 
 **Не production-ready** — открыто и названо:
-- **Нет планировщика и долгоживущего worker.** `worker-once` запускается вручную или внешним таймером.
+- **Нет планировщика и долгоживущего worker.** `worker-once` и `shadow-once` запускаются вручную или внешними таймерами.
+- **Guard провайдера живёт в процессе** и действует в пределах одного прохода. Устойчивый сбой провайдера — переключение в `rules`.
 - **Lease во время обработки не продлевается.** Медленный провайдер может привести к лишнему вызову: устаревший worker получит `CLAIM_LOST`. Истёкший lease тратит попытку.
 - **Нет vault backend (`vault://`) и provisioning акторов и токенов.** Есть только синтетические акторы seed.
 - **Нет HTTP-маршрутов** для привязки, ревью сопоставлений, inbox/requeue и triage — только CLI и сервисы.
@@ -257,7 +303,9 @@ Dev-БД:
 2. **`connectionId` у source-инструментов и отказ при неоднозначности** — исправление дефекта 1.9, найденного E2E. Версии инструментов остаются `1`, релиза не было.
 3. **Синтетический оператор в seed.** Seed — одна из двух разрешённых операций владельца, и создание актора там не нарушает правило «владелец — только миграции и seed».
 4. **E2E пишет evidence только при `ATLAS_E2E_EVIDENCE_DIR`.** Обычный прогон тестов файлов не создаёт.
-5. **Scope:**
+5. **C1: условный supersede вместо блокировки всех строк объекта.** Строки, которые worker видел закрытыми, он не трогает, даже если человек их тут же переоткрыл. Активные перепроверяются в момент UPDATE. Решение человека не перезаписывается ни в одном порядке.
+6. **C2: два отдельных прохода, а не порядок внутри одного.** Один процесс с обоими проходами всё равно связывает темп baseline с длительностью shadow через таймер. Независимый запуск ревью назвало допустимым.
+7. **Scope:**
    - нет write-actions (транспорт адаптеров допускает только GET), UI, Agents/Responses-оркестрации, векторной и графовой БД;
    - нет deployment и изменений аккаунтов;
    - в Decisions уходят только `source`, `kind`, `sourceSeverity` (и `diskPercent`);
@@ -266,12 +314,12 @@ Dev-БД:
 
 ## Next task
 
-**Ревью Checkpoint C.** Дальше, при наличии credentials и отдельного указания, — live-read gate по `docs/RUNBOOK.md` §5:
+**Повторное ревью Checkpoint C** (C1–C3). Дальше, при наличии credentials и отдельного указания, — live-read gate по `docs/RUNBOOK.md` §5:
 1. Чек-лист Atera в `connectors/CONTRACTS.md`.
 2. `npm run ops -- bind` для обоих tenant.
 3. `live-read` с секретом только в окружении команды.
 4. Ревью сопоставлений.
-5. `worker-once`.
+5. `worker-once` и, в shadow-режиме, `shadow-once`.
 6. `decisions-smoke`.
 7. Результаты — в раздел live `verification/RESULTS.md`: статусы, счётчики, коды; без credentials и tenant ID.
 
