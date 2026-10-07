@@ -5,10 +5,15 @@ import { AtlasError } from '../packages/core/contracts.ts';
 import { DECISION_CONFIG_FILE, loadDecisionConfig, parseDecisionConfig } from '../packages/decisions/config.ts';
 import { createDecisionRuntime } from '../packages/decisions/runtime.ts';
 import { DecisionGuard } from '../packages/decisions/guard.ts';
+import { decisionRunData, draftDecision } from '../packages/events/decision.ts';
+import type { NormalizedEvent } from '../packages/core/contracts.ts';
 
 // Task 1.7 without a database: the versioned decision configuration as shipped, its strict validation, the documented
 // environment overrides, and the runtime built from it.
 const shipped = JSON.parse(readFileSync(DECISION_CONFIG_FILE, 'utf8')) as Record<string, unknown>;
+const incidentEvent = (): NormalizedEvent => ({ workspaceId: 'w', clientId: 'c', source: 'huntress', connectionId: 'h', resourceType: 'incident', externalEventId: '1',
+  revision: '2026-10-07T06:00:00.000Z', externalDevice: null, occurredAt: '2026-10-07T06:00:00.000Z', receivedAt: '2026-10-07T06:00:00.000Z',
+  kind: 'SECURITY_INCIDENT', sourceSeverity: 'LOW', summary: 'Synthetic', facts: {} });
 const invalidField = (fn: () => unknown, field: string) => assert.throws(fn, (e: unknown) =>
   e instanceof AtlasError && e.code === 'DECISION_CONFIG_INVALID' && e.details.field === field && !e.message.includes('secret'));
 
@@ -55,4 +60,18 @@ test('the runtime builds the provider for the configured mode; OpenAI modes need
   assert.throws(() => createDecisionRuntime(config, { apiKey: '' }), (e: unknown) => e instanceof AtlasError && e.code === 'OPENAI_KEY_REQUIRED');
   const shadow = createDecisionRuntime(config, { apiKey: 'mock-not-a-key', fetch: async () => new Response('{}') });
   assert.deepEqual([shadow.provider.provider, shadow.provider.mode], ['openai', 'shadow']);
+});
+
+test('review C3: every run records the prompt version of its configuration, also from the local rules and fixture providers', async () => {
+  const event = incidentEvent();
+  for (const mode of ['rules', 'fixture', 'shadow'] as const) {
+    const config = { ...loadDecisionConfig({ env: {} }), configVersion: 'review-config-v2', promptVersion: 'event-route-v2', mode };
+    const runtime = createDecisionRuntime(config, { apiKey: 'test-key-not-a-credential', fetch: (async () => { throw new Error('no vendor call expected'); }) as typeof fetch });
+    const draft = await draftDecision(runtime.provider, config, event, runtime.guard);
+    assert.equal(draft.classification.promptVersion, 'event-route-v2', mode);
+    for (const run of draft.runs) {
+      const row = decisionRunData({ workspaceId: event.workspaceId, clientId: event.clientId }, 'event-1', event, run, config, 'run-1');
+      assert.deepEqual([row.promptVersion, row.configVersion], ['event-route-v2', 'review-config-v2'], `${mode}: ${run.provider}`);
+    }
+  }
 });

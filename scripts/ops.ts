@@ -8,8 +8,9 @@
 //   requeue --client C --event KEY          explicit, audited reprocessing of one dead letter
 //   triage --client C --observation O --action acknowledge|resolve|suppress|reopen [--expected STATUS]
 //   telemetry --client C [--minutes N]     decision telemetry of the last N minutes (default 60, at most 7 days)
-//   worker-once                             one event-worker pass (and, in shadow mode, one shadow-job pass) over the clients
-//                                           the operator may ingest for; settings from config/decisions.json
+//   worker-once                             one event-worker (baseline) pass over the clients the operator may ingest for
+//   shadow-once                             one shadow-job pass (shadow mode only) — separate from the baseline, run it from
+//                                           its own timer; both take their settings from config/decisions.json
 //   decisions-smoke                         one Decisions call with a compact synthetic input; OPENAI_API_KEY, no database
 // Database commands need ATLAS_RUNTIME_DATABASE_URL (the runtime role; the owner is refused) and ATLAS_OPERATOR_TOKEN, the
 // API token of the actor running the command; each command needs its own permission on the client (docs/RUNBOOK.md).

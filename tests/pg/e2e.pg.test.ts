@@ -111,10 +111,12 @@ test('mapping review: hostname matches wait in the queue as candidates and becom
   assert.deepEqual((await ops('mapping', '--client', 'demo-gasta')).output.items, []);
 });
 
-test('worker pass in shadow mode: the rules baseline is applied and committed; the model runs are stored applied=false and change nothing', async () => {
+test('shadow mode, two passes: the baseline pass applies and commits the rules decision; the shadow pass stores the model runs applied=false', async () => {
   const pass = await ops('worker-once');
-  assert.deepEqual([pass.output.configVersion, pass.output.mode, pass.output.clients],
-    [config.configVersion, 'shadow', [{ clientId: 'demo-gasta', events: { PROCESSED: 2 }, shadow: { DONE: 2 } }]]);
+  assert.deepEqual([pass.output.configVersion, pass.output.mode, pass.output.clients], [config.configVersion, 'shadow', [{ clientId: 'demo-gasta', events: { PROCESSED: 2 } }]]);
+  assert.equal(decisions.calls.count, 0, 'the baseline pass never calls the provider');
+  const shadow = await ops('shadow-once');
+  assert.deepEqual([shadow.output.configVersion, shadow.output.mode, shadow.output.clients], [config.configVersion, 'shadow', [{ clientId: 'demo-gasta', shadow: { DONE: 2 } }]]);
   assert.equal(decisions.calls.count, 2);
   for (const body of decisions.calls.bodies as { model: string; input: string }[]) {
     assert.deepEqual([body.model, Object.keys(JSON.parse(body.input)).sort()], ['gpt-6-luna', ['kind', 'source', 'sourceSeverity']]);
@@ -125,7 +127,7 @@ test('worker pass in shadow mode: the rules baseline is applied and committed; t
     FROM "DecisionRun" r JOIN "RawEvent" e ON e."workspaceId" = r."workspaceId" AND e."clientId" = r."clientId" AND e.id = r."eventId"
     LEFT JOIN "Observation" o ON o."workspaceId" = r."workspaceId" AND o."clientId" = r."clientId" AND o."decisionRunId" = r.id
     ORDER BY e."externalEventId", r.applied DESC`);
-  evidence('3-worker-pass', { pass: pass.output, decisionRuns: runs, decisionRequests: decisions.calls.bodies });
+  evidence('3-worker-pass', { workerOnce: pass.output, shadowOnce: shadow.output, decisionRuns: runs, decisionRequests: decisions.calls.bodies });
   assert.deepEqual(runs.map(r => [r.event, r.applied, r.provider, r.mode, r.status, (r.result as { route: string }).route, r.responseModel ?? '-', r.inputTokens ?? '-',
     r.configVersion, r.observationId !== null].join('|')), [
     `9001|true|rules|shadow|OK|HUMAN_REVIEW|-|-|${config.configVersion}|true`, `9001|false|openai|shadow|OK|MONITOR|gpt-6-luna|42|${config.configVersion}|false`,

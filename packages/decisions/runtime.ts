@@ -10,8 +10,8 @@ import { DecisionGuard } from './guard.ts';
  */
 export interface DecisionRuntime { config: DecisionConfig; provider: DecisionProvider; guard: DecisionGuard }
 export function createDecisionRuntime(config: DecisionConfig, deps: { apiKey?: string; fetch?: typeof fetch; now?: () => number } = {}): DecisionRuntime {
-  const provider: DecisionProvider = config.mode === 'rules' ? new RulesDecisionProvider()
-    : config.mode === 'fixture' ? new FixtureDecisionProvider()
+  const provider: DecisionProvider = config.mode === 'rules' ? new RulesDecisionProvider(config.promptVersion)
+    : config.mode === 'fixture' ? new FixtureDecisionProvider(config.promptVersion)
     : new OpenAIDecisionProvider(deps.apiKey ?? process.env.OPENAI_API_KEY ?? '', config, deps.fetch ?? fetch, config.mode);
   return { config, provider, guard: new DecisionGuard(config, deps.now) };
 }

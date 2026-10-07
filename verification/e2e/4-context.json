@@ -37,10 +37,10 @@
     {
       "workspaceId": "demo-vardahei",
       "clientId": "demo-gasta",
-      "connectionId": "gasta-atera",
+      "connectionId": "demo-atera-connection",
       "system": "atera",
       "resourceType": "agent",
-      "externalId": "107001",
+      "externalId": "demo-atera-agent-107",
       "entityId": "demo-device-07",
       "entityKind": "DEVICE",
       "status": "CONFIRMED"
@@ -48,10 +48,10 @@
     {
       "workspaceId": "demo-vardahei",
       "clientId": "demo-gasta",
-      "connectionId": "demo-atera-connection",
+      "connectionId": "gasta-atera",
       "system": "atera",
       "resourceType": "agent",
-      "externalId": "demo-atera-agent-107",
+      "externalId": "107001",
       "entityId": "demo-device-07",
       "entityKind": "DEVICE",
       "status": "CONFIRMED"
@@ -73,7 +73,7 @@
       {
         "workspaceId": "demo-vardahei",
         "clientId": "demo-gasta",
-        "id": "d2d531a7-ee3c-4d05-9d52-59bebc363a23",
+        "id": "f29259fe-445f-4990-aa51-c8a5178403be",
         "eventKey": "70c1644da1aba9568c43b3212f0299538f35394689077afd9dc76e6b74965ff7",
         "source": "huntress",
         "connectionId": "gasta-huntress",
@@ -81,7 +81,7 @@
         "externalEventId": "9001",
         "revision": "2026-10-07T06:45:00.000Z",
         "entityId": "demo-device-07",
-        "decisionRunId": "f56e4057-3f2b-443f-8170-467d8da1869c",
+        "decisionRunId": "804c32f5-c0fb-4a82-baea-fe40e472470f",
         "kind": "SECURITY_INCIDENT",
         "domain": "SECURITY",
         "severity": "CRITICAL",
@@ -100,13 +100,13 @@
         "supersededById": null,
         "summary": "Possible credential theft on GASTA-LT-07 (synthetic)",
         "occurredAt": "2026-10-07T06:40:00.000Z",
-        "createdAt": "2026-10-07T21:34:21.121Z",
-        "updatedAt": "2026-10-07T21:34:21.121Z"
+        "createdAt": "2026-10-07T22:11:46.609Z",
+        "updatedAt": "2026-10-07T22:11:46.609Z"
       },
       {
         "workspaceId": "demo-vardahei",
         "clientId": "demo-gasta",
-        "id": "d11e45fb-010a-4fe9-853b-32de4a061fc0",
+        "id": "dc45bdda-d27a-4371-94f4-e28706657395",
         "eventKey": "2ee9f4886a4e9ef7e2c3f78b36504a017a269504f226e07fe8bfb064cc16b712",
         "source": "huntress",
         "connectionId": "gasta-huntress",
@@ -114,7 +114,7 @@
         "externalEventId": "9002",
         "revision": "2026-10-06T12:00:00.000Z",
         "entityId": null,
-        "decisionRunId": "9cd2ccc4-2d88-4549-b970-fdb46f69617a",
+        "decisionRunId": "79a3eb13-705f-41fb-b7fc-e7b3408253b7",
         "kind": "SECURITY_INCIDENT",
         "domain": "SECURITY",
         "severity": "LOW",
@@ -133,8 +133,8 @@
         "supersededById": null,
         "summary": "Mailbox rule review (synthetic)",
         "occurredAt": "2026-10-06T12:00:00.000Z",
-        "createdAt": "2026-10-07T21:34:21.109Z",
-        "updatedAt": "2026-10-07T21:34:21.109Z"
+        "createdAt": "2026-10-07T22:11:46.619Z",
+        "updatedAt": "2026-10-07T22:11:46.619Z"
       }
     ],
     "counts": {
@@ -198,8 +198,8 @@
       "resourceType": "ticket",
       "connectionId": "gasta-atera",
       "status": "OK",
-      "asOf": "2026-10-07T21:34:21.027Z",
-      "lastSuccessAt": "2026-10-07T21:34:21.027Z",
+      "asOf": "2026-10-07T22:11:46.521Z",
+      "lastSuccessAt": "2026-10-07T22:11:46.521Z",
       "safeErrorCode": null,
       "items": [
         {
@@ -234,8 +234,8 @@
       "resourceType": "incident",
       "connectionId": "gasta-huntress",
       "status": "OK",
-      "asOf": "2026-10-07T21:34:20.969Z",
-      "lastSuccessAt": "2026-10-07T21:34:20.969Z",
+      "asOf": "2026-10-07T22:11:46.472Z",
+      "lastSuccessAt": "2026-10-07T22:11:46.472Z",
       "safeErrorCode": null,
       "items": [
         {
@@ -269,6 +269,6 @@
       "truncated": false
     }
   ],
-  "generatedAt": "2026-10-07T21:34:21.147Z",
+  "generatedAt": "2026-10-07T22:11:46.650Z",
   "completeness": "PARTIAL"
 }

@@ -17,7 +17,7 @@ import { listInbox, requeueDeadLetter } from '../events/inbox.ts';
 import type { SyncIo } from '../sync/snapshots.ts';
 import { liveReadCheck } from './live-read.ts';
 import type { LiveReadSummary } from './live-read.ts';
-import { runWorkerPass } from './worker-pass.ts';
+import { runShadowPass, runWorkerPass } from './worker-pass.ts';
 
 /**
  * Operator commands (task 1.10, docs/RUNBOOK.md): thin calls of the services as the authenticated actor, so permission,
@@ -30,7 +30,7 @@ export interface OperatorContext {
   db: PrismaClient; actor: Actor; io: SyncIo; workerId: string;
   /** Decision settings (config/decisions.json with its overrides). */
   config(): DecisionConfig;
-  /** Built on first use: only worker-once needs the provider (and, in shadow or advisory mode, its key). */
+  /** Built on first use: only worker-once and shadow-once need the provider (and, in shadow or advisory mode, its key). */
   runtime(): DecisionRuntime;
 }
 export type Flags = Readonly<Record<string, string>>;
@@ -73,17 +73,25 @@ const clientCommands: Readonly<Record<string, ClientCommand>> = {
       return done(await decisionTelemetry(ctx.db, ctx.actor, scope, { since: new Date(Date.now() - minutes * 60_000), deadlineMs: ctx.config().deadlineMs }));
     } },
 };
-/** Over every client the actor may ingest for. */
-async function workerOnce(ctx: OperatorContext): Promise<CommandResult> {
+/**
+ * Passes over every client the actor may ingest for: the baseline (`worker-once`) and the shadow experiment
+ * (`shadow-once`) are separate commands, so neither waits for the other (review C2). The guard lives in this process only:
+ * its circuit breaker and call budget act within one pass.
+ */
+const passes: Readonly<Record<string, (ctx: OperatorContext, runtime: DecisionRuntime) => Promise<unknown[]>>> = {
+  'worker-once': (ctx, runtime) => runWorkerPass(ctx.db, ctx.actor, runtime, ctx.workerId),
+  'shadow-once': (ctx, runtime) => runShadowPass(ctx.db, ctx.actor, runtime, ctx.workerId),
+};
+async function runPass(ctx: OperatorContext, command: string): Promise<CommandResult> {
   const runtime = ctx.runtime();
-  const clients = await runWorkerPass(ctx.db, ctx.actor, runtime, ctx.workerId);
+  const clients = await passes[command]!(ctx, runtime);
   return done({ workerId: ctx.workerId, configVersion: runtime.config.configVersion, mode: runtime.config.mode, guard: runtime.guard.snapshot(), clients });
 }
 /** `decisions-smoke` needs neither the database nor an actor: the process entry (scripts/ops.ts) runs it. */
-export const OPERATOR_COMMANDS: readonly string[] = [...Object.keys(clientCommands), 'worker-once', 'decisions-smoke'];
+export const OPERATOR_COMMANDS: readonly string[] = [...Object.keys(clientCommands), ...Object.keys(passes), 'decisions-smoke'];
 
 function specOf(command: string | undefined): Spec | null {
-  if (command === 'worker-once' || command === 'decisions-smoke') return { required: [] };
+  if (command === 'decisions-smoke' || (command !== undefined && Object.hasOwn(passes, command))) return { required: [] };
   if (command === undefined || !Object.hasOwn(clientCommands, command)) return null;
   const spec = clientCommands[command]!;
   return { required: ['client', ...spec.required], optional: spec.optional };
@@ -117,7 +125,7 @@ async function requireClient(ctx: OperatorContext, command: string, clientId: st
 
 /** One parsed invocation as the authenticated actor; `decisions-smoke` is not run here. */
 export async function runOperatorCommand(ctx: OperatorContext, invocation: Invocation): Promise<CommandResult> {
-  if (invocation.command === 'worker-once') return workerOnce(ctx);
+  if (Object.hasOwn(passes, invocation.command)) return runPass(ctx, invocation.command);
   const command = Object.hasOwn(clientCommands, invocation.command) ? clientCommands[invocation.command]! : null;
   const clientId = invocation.flags.client;
   if (!command || clientId === undefined) throw invalidArguments();

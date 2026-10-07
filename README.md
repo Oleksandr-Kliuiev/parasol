@@ -19,7 +19,7 @@ packages/events/      durable inbox, two-phase worker, shadow jobs; the in-memor
 packages/sync/        snapshot sync, activation, attempt order; packages/connections/: bindings and ResolvedConnection
 packages/observations/ lifecycle (triage, revisions) and observation pages
 packages/tools/       read-only registry with parameter schemas, gateway and ToolExecution ledger; packages/policy/: tool policy
-packages/ops/         operator commands (scripts/ops.ts): bind, live-read, mapping review, inbox/requeue, triage, telemetry, worker pass
+packages/ops/         operator commands (scripts/ops.ts): bind, live-read, mapping review, inbox/requeue, triage, telemetry, baseline and shadow passes
 packages/audit/       allowlisted client audit and workspace security audit (in-memory reference + PostgreSQL)
 packages/auth/        bearer tokens (digest only) and database authentication to Actor with per-client memberships
 connectors/           read-only Atera/Huntress adapters (GET-only transport, DTO validation), contracts in connectors/CONTRACTS.md

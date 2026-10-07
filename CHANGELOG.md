@@ -4,6 +4,18 @@
 
 Checkpoints A (tasks 1.1–1.3) and B (1.4–1.6) accepted by the independent review (`REVIEW_REPORT.md`). Checkpoint C (1.7–1.10) awaits review: status, verification and open gates in `CHECKPOINT_REPORT.md`; operation in `docs/RUNBOOK.md`.
 
+### Fixed — independent review of Checkpoint C (`REVIEW_REPORT.md`, C1–C3)
+- **C1: a person's triage racing a newer revision dead-lettered the revision.** The revision lifecycle read the older observation without a row lock and then superseded it unconditionally. A person could resolve or suppress the observation in between: triage does not take the source-object lock. The lifecycle trigger then rightly refused RESOLVED → SUPPRESSED, the whole final transaction rolled back, and the new CRITICAL revision ended as a DEAD_LETTER with `UNEXPECTED_ERROR`.
+  - Superseding is now an UPDATE conditional on the row being still active. It waits for the triage transaction and re-checks the committed row.
+  - An observation the person closed stays closed. Only a transition that happened is audited, and the new revision commits normally.
+  - The lifecycle trigger is unchanged.
+  - Regression `tests/pg/lifecycle-race.pg.test.ts` covers both orders, with resolve and with suppress. The triage-first cases fail on the previous code with `DEAD_LETTER` / `UNEXPECTED_ERROR`.
+- **C2: `worker-once` ran the shadow jobs of each client before the baseline of the next.** A slow experiment of one client held back a stored CRITICAL of another.
+  - The operator passes are now separate entry points: `worker-once` is the baseline only (in shadow mode it never calls the provider), and the new `shadow-once` runs the shadow jobs. The RUNBOOK runs them from independent timers.
+  - Regression `tests/pg/operator-passes.pg.test.ts`: while a shadow call of the first client is held, the CRITICAL of the second client gets its applied baseline and URGENT observation. A combined pass fails it at once.
+- **C3: the local rules and fixture providers recorded the built-in prompt version instead of the configured one.** They now take `promptVersion` from the configuration (`createDecisionRuntime`). Regression in `tests/decision-config.test.ts` with a version different from the default.
+- The guard (circuit breaker, call budget) lives in the process: in pass-per-process operation it acts within one pass. The RUNBOOK says so and points to the rules mode for a sustained outage.
+
 ### Added — task 1.10 Acceptance
 - Operator CLI `npm run ops -- <command>` (`scripts/ops.ts` over `packages/ops/`):
   - `bind` — explicit tenant binding;

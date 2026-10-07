@@ -42,16 +42,24 @@ export function rulesBaseline(event: NormalizedEvent, promptVersion: string = de
     : event.kind === 'SECURITY_INCIDENT' ? 'INVESTIGATE' : 'MONITOR';
   return { route, confidence: 1, provider: 'rules', reasonCodes: ['RULES_BASELINE'], promptVersion };
 }
+/**
+ * The local providers record the prompt version of the configuration they run under (createDecisionRuntime passes it), so
+ * a run made under a new configuration never carries the old version; the default serves tests and the reference only.
+ */
 export class RulesDecisionProvider implements DecisionProvider {
   readonly provider: Provider = 'rules';
   readonly mode: DecisionMode = 'rules';
-  async classify(event: NormalizedEvent): Promise<Classification> { return rulesBaseline(event); }
+  readonly #promptVersion: string;
+  constructor(promptVersion: string = defaultDecisionConfig.promptVersion) { this.#promptVersion = promptVersion; }
+  async classify(event: NormalizedEvent): Promise<Classification> { return rulesBaseline(event, this.#promptVersion); }
 }
 export class FixtureDecisionProvider implements DecisionProvider {
   readonly provider: Provider = 'fixture';
   readonly mode: DecisionMode = 'fixture';
+  readonly #promptVersion: string;
+  constructor(promptVersion: string = defaultDecisionConfig.promptVersion) { this.#promptVersion = promptVersion; }
   async classify(event: NormalizedEvent): Promise<Classification> {
     return { route: event.kind === 'SECURITY_INCIDENT' ? 'INVESTIGATE' : 'MONITOR', confidence: 1, provider: 'fixture',
-      reasonCodes: ['SYNTHETIC_FIXTURE_ONLY'], promptVersion: defaultDecisionConfig.promptVersion };
+      reasonCodes: ['SYNTHETIC_FIXTURE_ONLY'], promptVersion: this.#promptVersion };
   }
 }

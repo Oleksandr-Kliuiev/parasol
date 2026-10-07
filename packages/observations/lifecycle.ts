@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient, Prisma } from '@prisma/client';
 import type { Actor, ObservationStatus, Priority, Scope } from '../core/contracts.ts';
-import { AtlasError, assertPermission } from '../core/contracts.ts';
+import { AtlasError, activeObservationStatuses, assertPermission } from '../core/contracts.ts';
 import { clientAuditData } from '../audit/prisma.ts';
 import { withScope } from '../graph/scoped-db.ts';
 
@@ -68,17 +68,20 @@ export function revisionTime(revision: string): number | null {
 export interface CreatedObservation {
   id: string; connectionId: string; resourceType: string; externalEventId: string; revision: string; priority: Priority; conflictOfEventKey: string | null;
 }
-export interface RevisionOutcome { superseded: string[]; supersededBy: string | null }
 
 /**
  * Revision lifecycle inside the final transaction that created `created`. Serialized per source object by a transaction
  * advisory lock, so two revisions committed at the same time still see each other.
+ *
+ * A person's triage does not take that lock: between the read below and the UPDATE, an older observation may have been
+ * resolved or suppressed. The UPDATE is therefore conditional on the row being still active; it waits for the triage
+ * transaction and re-checks the committed row (review C1). A closed observation stays as the person left it, only a
+ * transition that happened is audited, and the new revision commits normally — never a dead letter from a lifecycle race.
  */
 export async function applyRevisionLifecycle(tx: Prisma.TransactionClient, scope: Scope, actorId: string, created: CreatedObservation,
-  correlationId: string, now: Date): Promise<RevisionOutcome> {
-  const none: RevisionOutcome = { superseded: [], supersededBy: null };
+  correlationId: string, now: Date): Promise<void> {
   const time = revisionTime(created.revision);
-  if (created.conflictOfEventKey !== null || time === null) return none;
+  if (created.conflictOfEventKey !== null || time === null) return;
   const objectKey = JSON.stringify([scope.workspaceId, scope.clientId, created.connectionId, created.resourceType, created.externalEventId]);
   await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${objectKey}, 0))`;
   const others = await tx.$queryRaw<{ id: string; status: ObservationStatus; priority: Priority; revision: string }[]>`
@@ -88,20 +91,20 @@ export async function applyRevisionLifecycle(tx: Prisma.TransactionClient, scope
       AND r."connectionId" = ${created.connectionId} AND r."resourceType" = ${created.resourceType} AND r."externalEventId" = ${created.externalEventId}`;
   const ordered = others.map(o => ({ ...o, time: revisionTime(o.revision) })).filter((o): o is typeof o & { time: number } => o.time !== null);
   const keepsUrgency = (older: { priority: Priority }, newer: { priority: Priority }) => older.priority === 'URGENT' && newer.priority !== 'URGENT';
-  const supersede = async (id: string, byId: string) => {
-    await tx.observation.update({ where: { workspaceId_clientId_id: { ...ids(scope), id } },
-      data: { status: 'SUPPRESSED', resolvedAt: now, resolvedBy: actorId, supersededById: byId, updatedAt: now }, select: { id: true } });
+  const supersede = async (id: string, byId: string): Promise<void> => {
+    const { count } = await tx.observation.updateMany({ where: { ...ids(scope), id, status: { in: [...activeObservationStatuses] } },
+      data: { status: 'SUPPRESSED', resolvedAt: now, resolvedBy: actorId, supersededById: byId, updatedAt: now } });
+    if (count === 0) return; // closed by a person meanwhile: it stays as they left it
     await tx.auditEvent.create({ data: clientAuditData(scope, actorId, 'observation.superseded', correlationId,
       { observationId: id, supersededById: byId, observationStatus: 'SUPPRESSED' }), select: { id: true } });
   };
   const newest = ordered.filter(o => o.time > time).sort((a, b) => b.time - a.time || a.id.localeCompare(b.id))[0];
   if (newest) {
-    if (keepsUrgency(created, newest)) return none; // a late urgent revision stays for a person to close
-    await supersede(created.id, newest.id);
-    return { superseded: [created.id], supersededBy: newest.id };
+    if (keepsUrgency(created, newest)) return; // a late urgent revision stays for a person to close
+    await supersede(created.id, newest.id); // created in this transaction: nobody else can have closed it
+    return;
   }
-  const older = ordered.filter(o => o.time < time && (o.status === 'OPEN' || o.status === 'ACKNOWLEDGED') && !keepsUrgency(o, created))
+  const older = ordered.filter(o => o.time < time && activeObservationStatuses.includes(o.status) && !keepsUrgency(o, created))
     .sort((a, b) => a.id.localeCompare(b.id));
   for (const o of older) await supersede(o.id, created.id);
-  return { superseded: older.map(o => o.id), supersededBy: null };
 }

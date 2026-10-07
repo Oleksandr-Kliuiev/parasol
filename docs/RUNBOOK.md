@@ -59,15 +59,19 @@ npm run api:build && ATLAS_MODE=db ATLAS_RUNTIME_DATABASE_URL=… npm run api:st
 
 Если у клиента несколько подключений одного источника (FIXTURE из seed и живое, или два tenant), source-инструменты требуют `parameters.connectionId`. Без него ответ — 409 `AMBIGUOUS_CONNECTION`; первая попавшаяся строка никогда не возвращается.
 
-**Worker.** Планировщика в Stage 1 нет. Проход запускается вручную или внешним таймером (cron, systemd timer):
+**Worker.** Планировщика в Stage 1 нет. Проходы запускаются вручную или внешними таймерами (cron, systemd timer). Baseline и shadow — два отдельных прохода; запускайте их от **независимых** таймеров:
 
 ```sh
-npm run ops -- worker-once
+npm run ops -- worker-once     # baseline: обработка событий, в shadow-режиме провайдер не вызывается
+npm run ops -- shadow-once     # только в shadow-режиме: shadow-задания (вызовы модели, non-applied runs)
 ```
+
+Медленный shadow-эксперимент одного клиента не задерживает baseline другого. Не объединяйте два прохода в один процесс: systemd не запускает таймер, пока предыдущий запуск не завершился.
 
 Параллельные проходы безопасны: claim, lease и claim token. Режим решений берётся из `config/decisions.json`:
 - в `shadow` и `advisory` нужен `OPENAI_API_KEY`;
-- `ATLAS_DECISIONS_MODE=rules` работает без провайдера. Такой override помечает версию суффиксом `-env`.
+- `ATLAS_DECISIONS_MODE=rules` работает без провайдера. Такой override помечает версию суффиксом `-env`;
+- guard провайдера (circuit breaker, бюджет в минуту) живёт в процессе, то есть действует в пределах одного прохода. При устойчивом сбое провайдера переключите режим на `rules` (раздел 6).
 
 ## 4. Операторские команды — `npm run ops -- <команда>`
 
@@ -92,9 +96,10 @@ Exit codes:
 | `confirm-link --client C --link L` / `reject-link … [--reason CODE]` | `mapping:review` | Решение по кандидату или конфликту. Отклонение CONFIRMED — отзыв |
 | `inbox --client C` | `context:read` | События RECEIVED, RETRY и DEAD_LETTER: eventKey, попытки, последний код |
 | `requeue --client C --event KEY` | `events:ingest` | Явная повторная обработка одного dead letter, с audit |
-| `triage --client C --observation O --action acknowledge\|resolve\|suppress\|reopen [--expected STATUS]` | `observations:triage` | Изменение жизненного цикла. С `--expected` чужое изменение даёт `OBSERVATION_STATUS_CHANGED`, а не перезапись |
+| `triage --client C --observation O --action acknowledge\|resolve\|suppress\|reopen [--expected STATUS]` | `observations:triage` | Изменение жизненного цикла. С `--expected` чужое изменение даёт `OBSERVATION_STATUS_CHANGED`, а не перезапись. Если новая ревизия того же инцидента успела заменить observation (superseded), triage получает этот же отказ; закрытое человеком новая ревизия не трогает |
 | `telemetry --client C [--minutes N]` | `context:read` | Runs, задержки, input tokens, согласие shadow с baseline, отказы guard, доля review (N ≤ 7 дней) |
-| `worker-once` | `events:ingest` на клиенте | Один проход worker и, в shadow, shadow-заданий по всем клиентам оператора |
+| `worker-once` | `events:ingest` на клиенте | Один проход baseline (worker) по всем клиентам оператора |
+| `shadow-once` | `events:ingest` на клиенте | Один проход shadow-заданий по всем клиентам оператора; вне shadow-режима — пустой |
 | `decisions-smoke` | — (`OPENAI_API_KEY`, без БД) | Один вызов Decisions с компактным синтетическим входом |
 
 ## 5. Live-read onboarding gate (docs/06)
@@ -131,7 +136,7 @@ Exit codes:
    - `UPSTREAM_RATE_LIMITED` — ждите `retryAfterSeconds`.
 5. **Mapping.** Выполните `npm run ops -- mapping --client demo-gasta`. Кандидат подтверждайте только после сверки устройства в консоли вендора: совпадение hostname не доказывает идентичность.
 6. **Решения и контекст:**
-   - `ATLAS_DECISIONS_MODE=rules npm run ops -- worker-once`;
+   - `ATLAS_DECISIONS_MODE=rules npm run ops -- worker-once` (shadow-режим: ещё `shadow-once`, с ключом);
    - затем `GET /clients/demo-gasta/overview` с `ATLAS_DEMO_TOKEN`;
    - live-ресурсы `OK` и `asOf` свежий. FIXTURE-подключения seed остаются `MISSING` — это честный ответ, не ошибка.
 7. **Decisions smoke:** `op run … -- npm run ops -- decisions-smoke`. Ожидается exit 0, `route`, `confidence` и `requestedModel = responseModel`.
@@ -146,13 +151,13 @@ Gate не создаёт и не закрывает tickets, не сбрасыв
 - **Провайдер деградировал.** Запускайте worker с `ATLAS_DECISIONS_MODE=rules` или выпустите новый `configVersion` с `mode: rules`.
   - Ingestion, контекст и read tools продолжают работать.
   - В advisory открытый circuit breaker или исчерпанный бюджет уже переводят событие в rules: `PROVIDER_CIRCUIT_OPEN` / `PROVIDER_BUDGET_EXHAUSTED` в reasonCodes.
-  - Состояние видно в `telemetry` и в `guard` вывода `worker-once`.
+  - Состояние видно в `telemetry` и в `guard` вывода `worker-once` / `shadow-once`. Guard действует в пределах прохода, поэтому устойчивый сбой — повод переключиться на `rules`, а не ждать circuit breaker.
 - **Vendor 429.** Ресурс получает `ERROR`/`STALE` с `UPSTREAM_RATE_LIMITED` и `retryAfterSeconds`. Следующее чтение — не раньше. Snapshot сохраняется с прежним `asOf`.
 - **Устройство не сопоставлено.** Observation получает `HUMAN_REVIEW` с `UNRESOLVED_DEVICE` или `AMBIGUOUS_DEVICE_LINK`; ревью через `mapping`, `confirm-link` / `reject-link`.
 - **Устаревший snapshot.** `STALE` с `asOf` и кодом: показывать последний snapshot, не утверждать актуальные числа. Окна свежести: alerts и incidents — 15 мин, tickets — 30 мин.
 - **Сбой обработки события.** Сначала ограниченные `RETRY`, затем `DEAD_LETTER` с audit `event.dead_lettered`; событие видно в `inbox`. После исправления причины — `requeue`. Если решение фазы 1 уже было сохранено, оно переиспользуется, и провайдер повторно не вызывается.
 - **Откат:**
-  - остановите внешние таймеры `worker-once` и запуски `live-read`;
+  - остановите внешние таймеры `worker-once` и `shadow-once` и запуски `live-read`;
   - переведите решения в `rules`;
   - БД и оба audit-журнала сохраните.
   

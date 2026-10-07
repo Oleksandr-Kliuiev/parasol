@@ -98,7 +98,7 @@ Live-окружения ни один gate не проверял: вендоры
 | Те же ID в разных клиентах изолированы; кандидат или конфликт — без слияния, видимое ревью | `tests/pg/mapping.pg.test.ts`, `tests/pg/e2e.pg.test.ts` (очередь ревью → подтверждение оператором) | P |
 | Конфликт привязки при CRITICAL — `HUMAN_REVIEW`/`URGENT`/`CRITICAL`, `entityId null`, `AMBIGUOUS_DEVICE_LINK`, audit | `tests/pg/worker-routing.pg.test.ts`, `tests/pipeline.test.ts` | P, U |
 | Alert и ticket с одним ID/revision — два события; contact→Person не разрешается как устройство | `tests/pipeline.test.ts`, `tests/sql-invariants.ts`, `tests/pg/mapping.pg.test.ts` | U, L, P |
-| Дубликат и конкурентные workers — одно observation на revision; новая revision — новое evidence | `tests/pg/inbox.pg.test.ts`, `tests/pg/worker.pg.test.ts`, `tests/pg/observation-lifecycle.pg.test.ts` | P |
+| Дубликат и конкурентные workers — одно observation на revision; новая revision — новое evidence; triage одновременно с новой ревизией — оба порядка без dead letter | `tests/pg/inbox.pg.test.ts`, `tests/pg/worker.pg.test.ts`, `tests/pg/observation-lifecycle.pg.test.ts`, `tests/pg/lifecycle-race.pg.test.ts` | P |
 | Тот же ID/revision с другим содержанием (в т.ч. CRITICAL после MEDIUM, конкурентно) — отдельное urgent evidence | `tests/pg/inbox.pg.test.ts`, `tests/pg/worker-routing.pg.test.ts`, `tests/pipeline.test.ts` | P, U |
 | Сбой после inbox / после DecisionRun / transient в финальной транзакции / сбой audit — RETRY, без дублей и повторного вызова провайдера | `tests/pg/worker.pg.test.ts`, `tests/pg/worker-recovery.pg.test.ts` (B1, B2, generic plans), `tests/pipeline.test.ts` (audit) | P, U |
 | Неожиданная ошибка — `DEAD_LETTER` + audit, событие доступно оператору, явный requeue | `tests/pg/worker.pg.test.ts`, `tests/pg/ops-cli.pg.test.ts` (`inbox`, `requeue`) | P |
@@ -109,7 +109,7 @@ Live-окружения ни один gate не проверял: вендоры
 | Ресурс без sync — `MISSING` с кодом, не `[]`; устаревший — `STALE` с `asOf` | `tests/resource-freshness.test.ts`, `tests/pg/sync.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | U, P |
 | Critical source + model MONITOR — urgent review, severity источника | `tests/pg/e2e.pg.test.ts`, `tests/pg/decision-advisory.pg.test.ts` | P |
 | Advisory: отказ, timeout, неверный ответ, `MODEL_MISMATCH` — `HUMAN_REVIEW`, FAILED run с моделями | `tests/pg/decision-advisory.pg.test.ts`, `tests/decision-guard.test.ts` | P, U |
-| Shadow — baseline сразу, AI-run `applied=false`, observation не меняется | `tests/pg/shadow-jobs.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | P |
+| Shadow — baseline сразу, AI-run `applied=false`, observation не меняется; операторский baseline-проход не ждёт shadow другого клиента | `tests/pg/shadow-jobs.pg.test.ts`, `tests/pg/operator-passes.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | P |
 | Read tool чужого клиента — отказ до чтения, `SecurityAuditEvent`, audit клиента не тронут | `tests/pg/tool-gateway.pg.test.ts`, `tests/pg/api.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | P |
 | Клиентский audit — только allowlist | `tests/audit-sanitize.test.ts`, `tests/pg/api.pg.test.ts` | U, P |
 | Модель передаёт actor/risk/credential; неизвестный или write tool — отказ | `tests/tool-gateway.test.ts`, `tests/pg/api.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | U, P |

@@ -41,7 +41,7 @@ test('refusals before any work, exit 2: the owner connection, a wrong token, bad
   assert.deepEqual(await ops(['mapping', '--client', 'demo-gasta'], { ATLAS_OPERATOR_TOKEN: generateToken() }),
     { code: 2, output: { command: 'mapping', error: 'OPERATOR_TOKEN_INVALID' } });
   const usage = await ops(['mapping']);
-  assert.deepEqual([usage.code, usage.output.error, (usage.output.commands as string[]).length], [2, 'INVALID_ARGUMENTS', 11]);
+  assert.deepEqual([usage.code, usage.output.error, (usage.output.commands as string[]).length], [2, 'INVALID_ARGUMENTS', 12]);
   assert.deepEqual(await ops(['worker-once'], { ATLAS_RUNTIME_DATABASE_URL: '' }), { code: 2, output: { command: 'worker-once', error: 'ATLAS_RUNTIME_DATABASE_URL is required' } });
   assert.deepEqual(await ops(['decisions-smoke']), { code: 2, output: { command: 'decisions-smoke', safeErrorCode: 'OPENAI_KEY_REQUIRED' } });
 });
@@ -70,7 +70,9 @@ test('worker-once (rules override) processes what a sync stored; a dead letter i
   assert.equal(pass.code, 0);
   assert.match(String(pass.output.workerId), /^worker-[A-Za-z0-9.-]*-\d+$/);
   assert.deepEqual([pass.output.configVersion, pass.output.mode, pass.output.clients], ['decisions-2026-10-07.1-env', 'rules',
-    [{ clientId: 'demo-gasta', events: { PROCESSED: 1, DEAD_LETTER: 1 }, shadow: {} }]], 'an override marks the recorded version; rules mode needs no key and runs no shadow');
+    [{ clientId: 'demo-gasta', events: { PROCESSED: 1, DEAD_LETTER: 1 } }]], 'an override marks the recorded version; rules mode needs no key');
+  const shadow = await ops(['shadow-once'], { ATLAS_DECISIONS_MODE: 'rules' });
+  assert.deepEqual([shadow.code, shadow.output.mode, shadow.output.clients], [0, 'rules', []], 'no experiment outside shadow mode');
   const inbox = await ops(['inbox', '--client', 'demo-gasta']);
   assert.deepEqual([inbox.code, (inbox.output.items as { eventKey: string; status: string; lastErrorCode: string }[]).map(i => `${i.eventKey}:${i.status}:${i.lastErrorCode}`)],
     [0, [`${original.eventKey}:DEAD_LETTER:INVALID_EVENT`]]);
@@ -78,7 +80,7 @@ test('worker-once (rules override) processes what a sync stored; a dead letter i
   await pgdb.owner.query(`UPDATE "RawEvent" SET normalized = $1 WHERE "eventKey" = $2`, [original.normalized, original.eventKey]); // the defect is fixed
   assert.deepEqual(await ops(['requeue', '--client', 'demo-gasta', '--event', original.eventKey]),
     { code: 0, output: { command: 'requeue', eventKey: original.eventKey, inboxStatus: 'RECEIVED' } });
-  assert.deepEqual((await ops(['worker-once'], { ATLAS_DECISIONS_MODE: 'rules' })).output.clients, [{ clientId: 'demo-gasta', events: { PROCESSED: 1 }, shadow: {} }]);
+  assert.deepEqual((await ops(['worker-once'], { ATLAS_DECISIONS_MODE: 'rules' })).output.clients, [{ clientId: 'demo-gasta', events: { PROCESSED: 1 } }]);
   assert.deepEqual((await ops(['inbox', '--client', 'demo-gasta'])).output.items, []);
   assert.deepEqual((await pgdb.owner.query(`SELECT "actorId", "eventType" FROM "AuditEvent" WHERE "eventType" LIKE 'event.%' ORDER BY "recordedAt"`)).rows,
     [{ actorId: 'demo-operator', eventType: 'event.dead_lettered' }, { actorId: 'demo-operator', eventType: 'event.requeued' }]);

@@ -14,15 +14,16 @@ test('arguments: a known command, only its flags, each once with a value; nothin
   assert.deepEqual(parseInvocation(['bind', '--client', 'demo-gasta', '--connection', 'gasta-atera', '--system', 'atera', '--tenant', '5001', '--secret-ref', 'env://ATERA_GASTA']),
     { command: 'bind', flags: { client: 'demo-gasta', connection: 'gasta-atera', system: 'atera', tenant: '5001', 'secret-ref': 'env://ATERA_GASTA' } });
   assert.deepEqual(parseInvocation(['worker-once']), { command: 'worker-once', flags: {} });
+  assert.deepEqual(parseInvocation(['shadow-once']), { command: 'shadow-once', flags: {} });
   assert.deepEqual(parseInvocation(['reject-link', '--client', 'c', '--link', 'l', '--reason', 'WRONG_DEVICE']).flags, { client: 'c', link: 'l', reason: 'WRONG_DEVICE' });
   for (const argv of [[], ['__proto__'], ['constructor'], ['toString', '--client', 'x'], ['bind', '--client', 'demo-gasta'], ['mapping'],
     ['mapping', '--client', 'a', '--client', 'b'], ['mapping', '--client', 'demo-gasta', '--link', 'x'], ['mapping', '--client'], ['mapping', '--client', '--link'],
-    ['mapping', '--client', ''], ['mapping', '-client', 'x'], ['mapping', '--Client', 'x'], ['mapping', '--client', 'x'.repeat(257)], ['worker-once', '--client', 'x'],
+    ['mapping', '--client', ''], ['mapping', '-client', 'x'], ['mapping', '--Client', 'x'], ['mapping', '--client', 'x'.repeat(257)], ['worker-once', '--client', 'x'], ['shadow-once', '--client', 'x'],
     ['decisions-smoke', '--model', 'x']]) {
     assert.throws(() => parseInvocation(argv), failsWith('INVALID_ARGUMENTS'), argv.join(' '));
   }
   assert.deepEqual(OPERATOR_COMMANDS, ['bind', 'live-read', 'mapping', 'confirm-link', 'reject-link', 'inbox', 'requeue', 'triage', 'telemetry', 'worker-once',
-    'decisions-smoke']);
+    'shadow-once', 'decisions-smoke']);
 });
 
 test('live-read verdict: active, healthy, identities read, every resource read or explicitly unavailable upstream', () => {

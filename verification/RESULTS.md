@@ -1,6 +1,6 @@
-# Verified results — Stage 1 (tasks 1.1–1.10), 7 October 2026
+# Verified results — Stage 1 (tasks 1.1–1.10 and the fixes of the Checkpoint C review), 8 October 2026
 
-Branch `stage1/foundation`. The verified state is the commit that adds this file (task 1.10); `CHECKPOINT_REPORT.md` names the hash. The results of the imported pack v1.1.3 remain in git: `git show 4d6f897:verification/RESULTS.md`.
+Branch `stage1/foundation`. The verified state is the commit that last changed this file: the fixes of review C1–C3. `CHECKPOINT_REPORT.md` names the hash. The first version of this file verified `1a95845` (task 1.10), on 7 October. The results of the imported pack v1.1.3 remain in git: `git show 4d6f897:verification/RESULTS.md`.
 
 Environment:
 - macOS 26.6.2 (arm64), Node.js v25.8.1, npm 11.11.0.
@@ -29,7 +29,7 @@ Mock transport and scripted responses are synthetic, shaped after the documented
 | Check | Command | Actual result |
 |---|---|---|
 | Install, client, schema | `npm ci`, `npm run db:generate`, `npm run schema:validate` | exit 0; schema valid |
-| Unit and fixture tests | `npm test` (all files except `tests/database.test.ts`) | 67 passed, 0 failed (`tests.txt`). Files: pipeline reference, context mapper, resource freshness, vendor contracts and normalizers, audit sanitizer, token format, decision config and guard, tool gateway (incl. `connectionId` selection and `AMBIGUOUS_CONNECTION`), ops CLI arguments / live-read verdict / Decisions smoke over a scripted endpoint, context budget (no active file over 700 lines) |
+| Unit and fixture tests | `npm test` (all files except `tests/database.test.ts`) | 68 passed, 0 failed (`tests.txt`). Files: pipeline reference, context mapper, resource freshness, vendor contracts and normalizers, audit sanitizer, token format, decision config (incl. review C3: the configured prompt version in every run) and guard, tool gateway (incl. `connectionId` selection and `AMBIGUOUS_CONNECTION`), ops CLI arguments / live-read verdict / Decisions smoke over a scripted endpoint, context budget (no active file over 700 lines) |
 | Types | `npm run typecheck` | 0 errors |
 | API build and fixture smoke | `npm run api:build && npm run api:smoke` | PASS (`api-smoke.txt`) |
 | Synthetic demo | `npm run demo` | `ClientContextV1` in fixture mode, CRITICAL first, three FIXTURE resources (`demo-context.json`) |
@@ -38,24 +38,26 @@ Mock transport and scripted responses are synthetic, shaped after the documented
 
 | Check | Command | Actual result |
 |---|---|---|
-| All 12 migrations, SQL invariants of every Stage 1 table, RLS acceptance, runtime-role guard, upgrade of a populated v1.0 database, path 1.1.0 → 1.1.2 | `npm test` (`tests/database.test.ts`) | 13 passed, 0 failed (`tests.txt`; the `npm test` total is 80/80) |
+| All 12 migrations, SQL invariants of every Stage 1 table, RLS acceptance, runtime-role guard, upgrade of a populated v1.0 database, path 1.1.0 → 1.1.2 | `npm test` (`tests/database.test.ts`) | 13 passed, 0 failed (`tests.txt`; the `npm test` total is 81/81) |
 
 ## PostgreSQL 17 (real server)
 
 | Check | Command | Actual result |
 |---|---|---|
 | SQL invariants and RLS on the server | `npm run db:check:pg17` | PASS (`pg17-check.txt`). 12 migrations in order; invariants of mapping, snapshots, inbox, decision layer, lifecycle and tool ledger; RLS through a confined login role and a pool of one connection; runtime-role guard; pool reuse |
-| Prisma/PostgreSQL integration, DB-mode API, E2E, ops CLI | `npm run test:pg` | 108 passed, 0 failed in 20 files (`test-pg.txt`). Each file uses a throwaway DB on the documented path: owner — `migrate deploy`, `roles.sql`, seed; then the runtime role |
+| Prisma/PostgreSQL integration, DB-mode API, E2E, ops CLI | `npm run test:pg` | 114 passed, 0 failed in 22 files (`test-pg.txt`). Each file uses a throwaway DB on the documented path: owner — `migrate deploy`, `roles.sql`, seed; then the runtime role |
+| Review C1: triage racing a newer revision | `tests/pg/lifecycle-race.pg.test.ts` (in `test:pg`) | 4 passed: both orders, with resolve and with suppress, on two pools. A test-only trigger in the throwaway DB holds the triage transaction before its commit. The triage-first cases fail on the previous code with `DEAD_LETTER` / `UNEXPECTED_ERROR` |
+| Review C2: separate baseline and shadow passes | `tests/pg/operator-passes.pg.test.ts` (in `test:pg`) | 2 passed: while a shadow call of the first client is held, the second client's CRITICAL gets its applied baseline and URGENT observation; the baseline pass makes no provider call. A combined pass fails it at once |
 | End to end (task 1.10, Checkpoint C) | `tests/pg/e2e.pg.test.ts` (in `test:pg`; `ATLAS_E2E_EVIDENCE_DIR=verification/e2e` writes the evidence) | 9 passed. Evidence of the run in `e2e/` — see the list after this table |
 | Ops CLI as a process | `tests/pg/ops-cli.pg.test.ts` (in `test:pg`) | 4 passed. See the list after this table |
 | Migrations ↔ `schema.prisma` | `npm run db:check:drift` | PASS: empty diff |
-| Dev database (owner, then runtime role) | `npm run db:deploy` (no pending), `db:seed` with both tokens; `npm run ops -- mapping / inbox / telemetry`, `worker-once` (rules); API `ATLAS_MODE=db` | See the list after this table |
+| Dev database (owner, then runtime role) | `npm run db:deploy` (no pending), `db:seed` with both tokens; `npm run ops -- mapping / inbox / telemetry`, `worker-once` and `shadow-once` (rules); API `ATLAS_MODE=db` | See the list after this table |
 | Leftovers | `pg_database` / `pg_roles` after all runs | No throwaway database or role left; no API or CLI process left |
 
 E2E evidence in `e2e/`:
 - `1-live-read.json` — live-read summaries and the vendor requests: GET only, tenant filters;
 - `2-mapping-queue.json`;
-- `3-worker-pass.json` — applied rules runs and non-applied model runs with models, tokens and `configVersion`;
+- `3-worker-pass.json` — the `worker-once` and `shadow-once` outputs, applied rules runs and non-applied model runs with models, tokens and `configVersion`;
 - `4-context.json` — the full `ClientContextV1`;
 - `5-read-tools.json` — ToolExecution rows, client audit, security audit;
 - `6-telemetry.json`.
@@ -67,18 +69,29 @@ Ops CLI process test:
 - `decisions-smoke` without a key: exit 2 `OPENAI_KEY_REQUIRED`, nothing sent;
 - bind: exit 0;
 - live-read without the credential variable: exit 1, `SECRET_NOT_FOUND`, nothing sent;
-- `worker-once` with `ATLAS_DECISIONS_MODE=rules`: version `-env`, no shadow;
+- `worker-once` with `ATLAS_DECISIONS_MODE=rules`: version `-env`; `shadow-once` in rules mode: no clients;
 - a dead letter: visible in `inbox`, then `requeue` and a processed pass;
 - mapping review; another client: exit 2 `SCOPE_DENIED`, recorded in the security audit.
 
 Dev database:
 - all CLI commands exit 0 through the runtime role and the operator token;
-- `worker-once` in shadow mode without a key: exit 2 `OPENAI_KEY_REQUIRED`;
+- `worker-once` and `shadow-once` in rules mode: exit 0, version `-env`; `shadow-once` reports no clients outside shadow mode;
+- `worker-once` or `shadow-once` in shadow mode without a key: exit 2 `OPENAI_KEY_REQUIRED`;
 - the owner URL: exit 2 `RUNTIME_ROLE_BYPASSES_RLS`;
 - the technician's token: `PERMISSION_DENIED`; another client: `SCOPE_DENIED`;
 - API: overview 200, PARTIAL with three MISSING fixture resources; the operator gets 403 on `/audit/security`; the API refuses to start through the owner (`RUNTIME_ROLE_BYPASSES_RLS`).
 
-Mutation checks of the task 1.10 code — each mutation applied alone, then the relevant test run. 16 of 16 were caught:
+Mutation checks — each mutation applied alone, then the relevant test run; all caught.
+
+Review fixes, 6 of 6:
+1. Supersede unconditional again.
+2. Superseded audit without a transition.
+3. Shadow inside the baseline pass.
+4. Shadow pass outside shadow mode.
+5. Rules provider ignores its prompt version.
+6. Runtime does not pass the prompt version.
+
+Task 1.10 code, 16 of 16:
 1. Ambiguity not refused.
 2. `connectionId` ignored.
 3. No security audit on a CLI refusal.
@@ -90,7 +103,7 @@ Mutation checks of the task 1.10 code — each mutation applied alone, then the 
 9. Inherited triage action names.
 10. No runtime-role check in the CLI.
 11. A failed check exits 0.
-12. The shadow pass uses the pass start time.
+12. The shadow pass reads the clock once for all clients.
 13. No health gate in live-read.
 14. No activation gate in live-read.
 15. Context connections in physical order.
@@ -112,6 +125,7 @@ Mutation 15 is caught through the physical order of the rows in this run; Postgr
 
 - Other platforms: Node 24, Linux and Windows were not run in this build; CI is absent.
 - Classifier accuracy, threshold calibration, latency and price of the live provider: not measured (telemetry exists, no live data).
+- The decision guard (circuit breaker, call budget) lives in the process. With one process per pass, it acts within one pass; a sustained outage is handled by the rules mode (`docs/RUNBOOK.md` §6).
 - `npm audit`: 10 advisories (2 moderate, 8 high) in pinned dependencies:
   - runtime: `@nestjs/core`, `@nestjs/platform-express` (via `multer`, `path-to-regexp`), `@nestjs/common` (via `file-type`);
   - tooling: `prisma` (via `@prisma/config`: `effect`, `deepmerge-ts`).
