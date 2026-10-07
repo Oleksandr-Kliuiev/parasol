@@ -40,7 +40,7 @@ export const SET_SCOPE_SQL = `SELECT set_config('app.workspace_id', $1, true), s
 export const PROTECTED_TABLES: readonly string[] = [
   'Workspace', 'Client', 'Entity', 'Person', 'Device', 'Connection', 'ExternalEntity', 'EntityLink', 'RawEvent', 'DecisionRun',
   'Observation', 'SyncState', 'ToolExecution', 'AuditEvent', 'SecurityAuditEvent', 'Approval', 'Actor', 'ClientMembership', 'ApiToken',
-  'ResourceSnapshot'
+  'ResourceSnapshot', 'ShadowJob'
 ];
 const protectedTableList = PROTECTED_TABLES.map(t => `'${t}'`).join(',');
 

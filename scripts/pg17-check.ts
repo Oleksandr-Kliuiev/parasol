@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants, checkMappingStructure,
-  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure } from '../tests/sql-invariants.ts';
+  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure, checkDecisionLayerStructure, checkShadowJobRls } from '../tests/sql-invariants.ts';
 import type { SqlRunner } from '../tests/sql-invariants.ts';
 import { SET_SCOPE_SQL } from '../packages/graph/scope-context.ts';
 import { migrationNames, migrationSql } from '../tests/support/migrations.ts';
@@ -58,6 +58,8 @@ try {
   results.push(['Snapshot schema (bounded items, attempt/success order, read-attempt order, PENDING, failure codes)', 'passed']);
   await checkInboxStructure(ownerRunner);
   results.push(['Inbox schema (leases with claim tokens, finished events, failure codes, decision vocabularies)', 'passed']);
+  await checkDecisionLayerStructure(ownerRunner);
+  results.push(['Decision layer schema (run config version and measurements, shadow jobs: scope link, leases, finished jobs, codes)', 'passed']);
 
   // Confined role through a pool of ONE connection: every checkout reuses the same physical connection.
   const appUrl = new URL(ownerUrl.toString()); appUrl.username = roleName; appUrl.password = rolePassword;
@@ -76,6 +78,9 @@ try {
   const snapshotClient = await appPool.connect();
   try { await checkSnapshotRls(asRunner(snapshotClient)); } finally { snapshotClient.release(); }
   results.push(['Snapshot RLS (no context, one client)', 'passed']);
+  const shadowClient = await appPool.connect();
+  try { await checkShadowJobRls(asRunner(shadowClient)); } finally { shadowClient.release(); }
+  results.push(['Shadow job RLS (no context, one client, no cross-client write)', 'passed']);
 
   // Runtime-role guard: ownership of any protected table (not only Observation) and a table with RLS disabled are detected.
   const guardClient = await appPool.connect();

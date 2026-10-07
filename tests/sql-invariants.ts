@@ -354,3 +354,40 @@ export async function checkRuntimeRoleGuard(owner: SqlRunner, app: SqlRunner, ap
   await owner.exec(`ALTER TABLE "Approval" ENABLE ROW LEVEL SECURITY`);
   assertConfinedRuntimeRole(await facts());
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Decision layer (migration 202610072200): DecisionRun config version and measurements; ShadowJob vocabulary, leases,
+// finished jobs and its scope-carrying link to the event. Owner, after checkStructuralInvariants (events r1, r3 in c1; r9 in c2).
+// ---------------------------------------------------------------------------------------------------------------------
+const shadowJob = (c: string, eventId: string, extra = '', values = '') =>
+  `INSERT INTO "ShadowJob" ("workspaceId","clientId","eventId","configVersion"${extra}) VALUES ('w','${c}','${eventId}','decisions-test.1'${values})`;
+export async function checkDecisionLayerStructure(owner: SqlRunner): Promise<void> {
+  await rejects(owner.exec(`UPDATE "DecisionRun" SET "configVersion" = 'Decisions V1' WHERE id = 'run3'`), /config_version_check/);
+  await owner.exec(`UPDATE "DecisionRun" SET "configVersion" = 'decisions-2026-10-07.1-env', "inputTokens" = 42, "latencyMs" = 120 WHERE id = 'run3'`);
+  await rejects(owner.exec(`UPDATE "DecisionRun" SET "inputTokens" = -1 WHERE id = 'run3'`), /measures_check/);
+  await rejects(owner.exec(`UPDATE "DecisionRun" SET "latencyMs" = -5 WHERE id = 'run3'`), /measures_check/);
+  await owner.exec(shadowJob('c1', 'r1'));
+  await rejects(owner.exec(shadowJob('c2', 'r1')), /foreign key/, 'a job belongs to an event of its own client');
+  await rejects(owner.exec(shadowJob('c1', 'r1')), /pkey|duplicate/, 'one job per event');
+  await rejects(owner.exec(shadowJob('c1', 'r3', ',"status"', `,'WAITING'`)), /ShadowJob_status_check/);
+  await rejects(owner.exec(`INSERT INTO "ShadowJob" ("workspaceId","clientId","eventId") VALUES ('w','c1','r3')`), /null value|not-null/, 'a job names its config version');
+  await rejects(owner.exec(shadowJob('c1', 'r3', ',"attempts"', ',-1')), /attempts_check/);
+  await rejects(owner.exec(shadowJob('c1', 'r3', ',"leaseOwner"', `,'w1'`)), /ShadowJob_lease_check/, 'a lease names owner, expiry and token');
+  await rejects(owner.exec(shadowJob('c1', 'r3', ',"status"', `,'DONE'`)), /ShadowJob_finished_check/, 'a finished job says when');
+  await rejects(owner.exec(shadowJob('c1', 'r3', ',"status","finishedAt"', `,'FAILED',now()`)), /ShadowJob_error_code_check/, 'a failed job says why');
+  await rejects(owner.exec(shadowJob('c1', 'r3', ',"status","finishedAt","lastErrorCode","leaseOwner","leaseExpiresAt","claimToken"',
+    `,'SKIPPED',now(),'PROVIDER_CIRCUIT_OPEN','w1',now(),gen_random_uuid()`)), /ShadowJob_finished_check/, 'a finished job holds no lease');
+  await rejects(owner.exec(shadowJob('c1', 'r3', ',"status"', `,'RETRY'`)), /ShadowJob_error_code_check/);
+  await owner.exec(shadowJob('c1', 'r3', ',"status","finishedAt","lastErrorCode"', `,'SKIPPED',now(),'PROVIDER_BUDGET_EXHAUSTED'`));
+  await owner.exec(shadowJob('c2', 'r9'));
+}
+
+/** Confined runner: shadow jobs follow the client scope like every other client table. */
+export async function checkShadowJobRls(app: SqlRunner): Promise<void> {
+  assert.equal(Number((await app.query<{ n: number }>(`SELECT count(*)::int AS n FROM "ShadowJob"`))[0]?.n ?? 0), 0, 'no context: no job');
+  await app.exec('BEGIN');
+  await app.query(SET_SCOPE_SQL, ['w', 'c2']);
+  assert.deepEqual((await app.query<{ eventId: string }>(`SELECT "eventId" FROM "ShadowJob"`)).map(r => r.eventId), ['r9']);
+  await rejects(app.exec(shadowJob('c1', 'r1c')), /row-level security/, 'no job written into another client');
+  await app.exec('ROLLBACK');
+}

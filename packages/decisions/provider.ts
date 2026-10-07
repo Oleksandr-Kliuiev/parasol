@@ -5,12 +5,16 @@ export interface DecisionProvider {
   classify(event: NormalizedEvent): Promise<Classification>;
 }
 /**
- * Versioned decision configuration. These values are test settings, not measured guarantees; the DB version reads them
- * from configuration and records the version used in each DecisionRun.
+ * Versioned decision configuration (task 1.7). Production loads it from config/decisions.json (packages/decisions/config.ts)
+ * and records configVersion in every DecisionRun. The values are test settings, not measured guarantees (docs/04).
  */
 export interface DecisionConfig {
+  /** Version of the configuration document; a run is traceable to the exact model, allowlist, deadline and threshold. */
+  configVersion: string;
+  /** Mode the provider is built for: fixture | rules | shadow | advisory. */
+  mode: DecisionMode;
   promptVersion: string;
-  /** Deadline for one provider call. */
+  /** Deadline for one provider call; it holds for every call, retries included. */
   deadlineMs: number;
   /** Provisional threshold below which a model route is replaced by HUMAN_REVIEW. Not a calibrated probability. */
   confidenceThreshold: number;
@@ -18,16 +22,17 @@ export interface DecisionConfig {
   model: string;
   /** Exact model identifiers accepted in a response. No automatic suffix matching. */
   allowedResponseModels: string[];
+  /** Provider calls one event may cost (each shadow attempt is one call), and calls per minute across events. */
+  budget: { maxProviderCallsPerEvent: number; maxProviderCallsPerMinute: number };
+  /** Consecutive provider failures that open the circuit, and how long it stays open before one probe call. */
+  circuitBreaker: { failureThreshold: number; openMs: number };
 }
+/** Built-in settings for tests and the in-memory reference pipeline; production uses config/decisions.json. */
 export const defaultDecisionConfig: DecisionConfig = {
-  promptVersion: 'event-route-v1', deadlineMs: 2500, confidenceThreshold: 0.8,
-  model: 'gpt-6-luna', allowedResponseModels: ['gpt-6-luna']
+  configVersion: 'builtin-test-default', mode: 'shadow', promptVersion: 'event-route-v1', deadlineMs: 2500, confidenceThreshold: 0.8,
+  model: 'gpt-6-luna', allowedResponseModels: ['gpt-6-luna'],
+  budget: { maxProviderCallsPerEvent: 3, maxProviderCallsPerMinute: 60 }, circuitBreaker: { failureThreshold: 5, openMs: 60_000 }
 };
-export function decisionConfigFromEnv(env: NodeJS.ProcessEnv = process.env): DecisionConfig {
-  const model = env.OPENAI_DECISIONS_MODEL?.trim() || defaultDecisionConfig.model;
-  const allowed = (env.OPENAI_DECISIONS_ALLOWED_MODELS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-  return { ...defaultDecisionConfig, model, allowedResponseModels: allowed.length ? allowed : [model] };
-}
 /**
  * Deterministic baseline from verified source facts only. It is the applied decision in shadow mode and the fallback when a
  * provider fails. It never looks at free text.

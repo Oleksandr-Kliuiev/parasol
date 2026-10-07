@@ -18,6 +18,17 @@ export function decisionInput(event: NormalizedEvent): string {
   return JSON.stringify({ source: event.source, kind: event.kind, sourceSeverity: event.sourceSeverity, diskPercent: event.facts.diskPercent });
 }
 
+/**
+ * Input tokens from `usage.input_tokens` when present as a non-negative integer, else null. The Decisions guide does not
+ * document `usage` (checked 2026-10-07; the API reference page was not reachable), so its absence or any other shape is
+ * normal and never fails the call; unknown usage fields are ignored (docs/04).
+ */
+export function inputTokensOf(body: unknown): number | null {
+  const usage = body && typeof body === 'object' ? (body as { usage?: unknown }).usage : undefined;
+  const tokens = usage && typeof usage === 'object' ? (usage as Record<string, unknown>).input_tokens : undefined;
+  return typeof tokens === 'number' && Number.isInteger(tokens) && tokens >= 0 && tokens <= 10_000_000 ? tokens : null;
+}
+
 export interface ParsedRoute { route: Classification['route']; confidence: number; responseModel: string }
 /**
  * Strict parser for one `choice` answer named `route`. Error codes are distinct so DecisionRun and metrics can tell a
@@ -78,8 +89,12 @@ export class OpenAIDecisionProvider implements DecisionProvider {
     if (!response.ok) throw new AtlasError(`DECISION_HTTP_${response.status}`, 'PERMANENT');
     let body: unknown;
     try { body = await response.json(); } catch { throw new AtlasError('INVALID_DECISION_RESPONSE', 'PERMANENT'); }
-    const parsed = parseRouteResponse(body, this.#config.allowedResponseModels);
+    const inputTokens = inputTokensOf(body);
+    let parsed: ParsedRoute;
+    try { parsed = parseRouteResponse(body, this.#config.allowedResponseModels); }
+    catch (error) { throw error instanceof AtlasError && inputTokens !== null ? error.withDetails({ inputTokens: String(inputTokens) }) : error; }
     return { route: parsed.route, confidence: parsed.confidence, provider: 'openai', reasonCodes: ['MODEL_ROUTE'],
-      promptVersion: this.#config.promptVersion, requestedModel: this.#config.model, responseModel: parsed.responseModel };
+      promptVersion: this.#config.promptVersion, requestedModel: this.#config.model, responseModel: parsed.responseModel,
+      ...(inputTokens !== null ? { inputTokens } : {}) };
   }
 }

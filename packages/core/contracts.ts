@@ -115,6 +115,8 @@ export interface Classification {
   route: Route; confidence: number; provider: Provider; promptVersion: string;
   reasonCodes: string[];
   requestedModel?: string; responseModel?: string;
+  /** Input tokens the provider reported for the call, when it reported them (task 1.7 telemetry). */
+  inputTokens?: number;
 }
 /** One provider call. In shadow mode the AI run is stored with applied=false next to the applied baseline run. */
 export interface DecisionRunRecord extends Scope {

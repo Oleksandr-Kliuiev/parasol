@@ -214,6 +214,7 @@ model RawEvent {
   conflicts   RawEvent[] @relation("RawEventConflict")
   decisions   DecisionRun[]
   observation Observation?
+  shadowJob   ShadowJob?
   @@id([workspaceId, clientId, id])
   @@unique([workspaceId, clientId, connectionId, resourceType, externalEventId, revision, payloadHash])
   /// Foreign-key target of the conflict link. Explicit map: Prisma's auto-generated name would collide with the unique above.
@@ -240,6 +241,8 @@ model DecisionRun {
   latencyMs   Int?
   inputTokens Int?
   safeErrorCode String?
+  /// Version of the decision configuration (config/decisions.json) the run was made under (task 1.7).
+  configVersion String?
   createdAt   DateTime @default(now())
   event       RawEvent @relation(fields: [workspaceId, clientId, eventId], references: [workspaceId, clientId, id], onDelete: Restrict)
   observations Observation[]
@@ -247,6 +250,26 @@ model DecisionRun {
   /// Target of the composite foreign key from Observation: the referenced run must belong to the same event and be applied.
   @@unique([workspaceId, clientId, id, eventId, applied])
   @@index([workspaceId, clientId, eventId])
+}
+/// Shadow mode (task 1.7): the AI call is a separate durable job, created in the baseline's final transaction and
+/// claimed like the inbox (lease owner, expiry and claim token: all or none). Each provider call is a DecisionRun with
+/// applied = false. PENDING | RETRY | DONE | FAILED | SKIPPED (CHECK); RETRY, FAILED and SKIPPED carry lastErrorCode.
+model ShadowJob {
+  workspaceId String
+  clientId    String
+  eventId     String
+  configVersion String
+  status      String @default("PENDING")
+  attempts    Int @default(0)
+  nextAttemptAt  DateTime @default(now())
+  leaseOwner     String?
+  leaseExpiresAt DateTime?
+  claimToken     String? @db.Uuid
+  lastErrorCode  String?
+  createdAt   DateTime @default(now())
+  finishedAt  DateTime?
+  event       RawEvent @relation(fields: [workspaceId, clientId, eventId], references: [workspaceId, clientId, id], onDelete: Restrict, map: "ShadowJob_event_fkey")
+  @@id([workspaceId, clientId, eventId])
 }
 model Observation {
   workspaceId String

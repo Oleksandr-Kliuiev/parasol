@@ -4,11 +4,10 @@ import type { Actor, NormalizedEvent, Provider, Route, Scope } from '../core/con
 import { AtlasError, assertPermission, domainOf, priorityOf, safeErrorCode, severityRank } from '../core/contracts.ts';
 import type { DecisionConfig, DecisionProvider } from '../decisions/provider.ts';
 import { defaultDecisionConfig } from '../decisions/provider.ts';
+import type { DecisionGuard } from '../decisions/guard.ts';
 import { clientAuditData } from '../audit/prisma.ts';
 import { withScope } from '../graph/scoped-db.ts';
-import { callProvider, draftDecision, finalRoute } from './decision.ts';
-import type { RunDraft } from './decision.ts';
-import { payloadHash } from './identity.ts';
+import { decisionRunData, draftDecision, finalRoute } from './decision.ts';
 import { assertStorableEvent } from './inbox.ts';
 
 /**
@@ -25,10 +24,13 @@ import { assertStorableEvent } from './inbox.ts';
 export interface ClaimOptions { workerId: string; leaseMs?: number; maxAttempts?: number; batchSize?: number }
 export interface WorkerOptions extends ClaimOptions {
   provider: DecisionProvider; config?: DecisionConfig; retryDelayMs?: (attempt: number) => number;
+  /** Circuit breaker and call budget of the provider (task 1.7); the process shares one with its shadow job runner. */
+  guard?: DecisionGuard;
   /** Test seam: runs inside the final transaction just before it commits. Production leaves it unset. */
   beforeFinalCommit?: (eventKey: string) => Promise<void>;
 }
-interface PreparedDecision { entityId: string | null; route: Route; confidence: number; provider: Provider; promptVersion: string; reasonCodes: string[]; appliedRunId: string; shadowPending: boolean }
+interface PreparedDecision { entityId: string | null; route: Route; confidence: number; provider: Provider; promptVersion: string; reasonCodes: string[]; appliedRunId: string;
+  shadowPending: boolean; configVersion?: string }
 export interface ClaimedEvent { id: string; eventKey: string; conflictOfEventKey: string | null; normalized: unknown; attempts: number; claimToken: string; prepared: PreparedDecision | null }
 export interface ProcessOutcome { eventKey: string; status: 'PROCESSED' | 'RETRY' | 'DEAD_LETTER' | 'CLAIM_LOST'; safeErrorCode: string | null; observationId: string | null }
 export interface ClaimResult { claimed: ClaimedEvent[]; deadLettered: ProcessOutcome[] }
@@ -111,14 +113,6 @@ async function resolveDevice(tx: Prisma.TransactionClient, scope: Scope, event: 
   return { entityId: links.find(l => l.status === 'CONFIRMED')?.entityId ?? null, conflictCode: null };
 }
 
-function runData(scope: Scope, claimed: ClaimedEvent, event: NormalizedEvent, run: RunDraft, config: DecisionConfig, id: string) {
-  return { ...ids(scope), id, eventId: claimed.id, provider: run.provider, mode: run.mode, applied: false,
-    requestedModel: run.result?.requestedModel ?? run.details.requestedModel ?? null, responseModel: run.result?.responseModel ?? run.details.responseModel ?? null,
-    promptVersion: run.result?.promptVersion ?? config.promptVersion, inputHash: payloadHash(event), status: run.result ? 'OK' : 'FAILED',
-    result: run.result ? { route: run.result.route, confidence: run.result.confidence, reasonCodes: run.result.reasonCodes } : undefined,
-    latencyMs: run.latencyMs, safeErrorCode: run.error };
-}
-
 /**
  * Phase 1, once per event. The stored decision is returned as is on every later attempt; the provider is not called.
  * A worker whose claim was taken over stops before the provider call, or at the latest when it would store the decision.
@@ -134,22 +128,26 @@ export async function prepareEvent(db: PrismaClient, actor: Actor, scope: Scope,
   });
   if ('stored' in start) return start.stored;
   const { resolution } = start;
-  const draft = await draftDecision(options.provider, config, event);
+  const draft = await draftDecision(options.provider, config, event, options.guard);
   const { route, reasonCodes } = finalRoute({ classification: draft.classification, entityId: resolution.entityId, linkConflictCode: resolution.conflictCode,
     conflictOfEventKey: claimed.conflictOfEventKey, sourceSeverity: event.sourceSeverity, confidenceThreshold: config.confidenceThreshold });
   return withScope(db, actor, [scope.clientId], async tx => {
     const row = await lockClaim(tx, scope, claimed);
     if (row.preparedDecision) return row.preparedDecision as PreparedDecision; // stored by an earlier claim of this event
     const runIds = draft.runs.map(() => randomUUID());
-    for (const [i, run] of draft.runs.entries()) await tx.decisionRun.create({ data: runData(scope, claimed, event, run, config, runIds[i]!), select: { id: true } });
+    for (const [i, run] of draft.runs.entries()) await tx.decisionRun.create({ data: decisionRunData(scope, claimed.id, event, run, config, runIds[i]!), select: { id: true } });
     const prepared: PreparedDecision = { entityId: resolution.entityId, route, confidence: draft.classification.confidence, provider: draft.classification.provider,
-      promptVersion: draft.classification.promptVersion, reasonCodes, appliedRunId: runIds[draft.appliedRun]!, shadowPending: draft.shadowPending };
+      promptVersion: draft.classification.promptVersion, reasonCodes, appliedRunId: runIds[draft.appliedRun]!, shadowPending: draft.shadowPending,
+      configVersion: config.configVersion };
     await tx.rawEvent.update({ where: { workspaceId_clientId_id: { ...ids(scope), id: claimed.id } }, data: { preparedDecision: prepared as unknown as Prisma.InputJsonValue }, select: { id: true } });
     return prepared;
   });
 }
 
-/** Phase 2: applied flag, observation, audit row and inbox completion in ONE transaction, under this claim's row lock. */
+/**
+ * Phase 2: applied flag, observation, audit row and inbox completion in ONE transaction, under this claim's row lock. In
+ * shadow mode the same transaction creates the event's ShadowJob: the AI call runs later, apart from this worker (task 1.7).
+ */
 async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, prepared: PreparedDecision, options: WorkerOptions): Promise<string> {
   assertStorableEvent(claimed.normalized);
   const event = claimed.normalized;
@@ -168,18 +166,14 @@ async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed
       ...(claimed.conflictOfEventKey ? { conflictOfEventKey: claimed.conflictOfEventKey } : {}) }), select: { id: true } });
     await tx.rawEvent.update({ where: { workspaceId_clientId_id: { ...ids(scope), id: claimed.id } },
       data: { status: 'PROCESSED', leaseOwner: null, leaseExpiresAt: null, claimToken: null, lastErrorCode: null }, select: { id: true } });
+    if (prepared.shadowPending) {
+      await tx.shadowJob.create({ data: { ...ids(scope), eventId: claimed.id, configVersion: prepared.configVersion ?? (options.config ?? defaultDecisionConfig).configVersion },
+        select: { eventId: true } });
+    }
     return observationId;
   });
 }
 
-/** Shadow (docs/04): after the baseline is committed, the AI result is stored as a run that is never applied. Best effort. */
-async function runShadow(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, options: WorkerOptions): Promise<void> {
-  assertStorableEvent(claimed.normalized);
-  const event = claimed.normalized;
-  const call = await callProvider(options.provider, event);
-  const run: RunDraft = { provider: options.provider.provider, mode: 'shadow', result: call.result, error: call.error, latencyMs: call.latencyMs, details: call.details };
-  await withScope(db, actor, [scope.clientId], tx => tx.decisionRun.create({ data: runData(scope, claimed, event, run, options.config ?? defaultDecisionConfig, randomUUID()), select: { id: true } }));
-}
 
 /** RETRY or DEAD_LETTER with an audit row, only while this claim is current: a claim taken over records nothing (CLAIM_LOST). */
 async function recordFailure(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, failure: AtlasError, options: WorkerOptions,
@@ -202,7 +196,6 @@ export async function processClaimed(db: PrismaClient, actor: Actor, scope: Scop
   try {
     const prepared = await prepareEvent(db, actor, scope, claimed, options);
     const observationId = await commitEvent(db, actor, scope, claimed, prepared, options);
-    if (prepared.shadowPending) await runShadow(db, actor, scope, claimed, options).catch(() => undefined);
     return { eventKey: claimed.eventKey, status: 'PROCESSED', safeErrorCode: null, observationId };
   } catch (error) {
     const failure = classify(error);

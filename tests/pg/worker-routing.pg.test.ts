@@ -4,6 +4,8 @@ import { PrismaClient } from '@prisma/client';
 import { AtlasError } from '../../packages/core/contracts.ts';
 import { ingestEvent } from '../../packages/events/inbox.ts';
 import { processPending } from '../../packages/events/worker.ts';
+import { processShadowJobs } from '../../packages/events/shadow.ts';
+import { defaultDecisionConfig } from '../../packages/decisions/provider.ts';
 import { registerExternalEntity, proposeLink, confirmLink } from '../../packages/graph/mapping.ts';
 import { getClientContext } from '../../packages/graph/prisma-context.ts';
 import { connectorFor, syncResource } from '../../packages/sync/snapshots.ts';
@@ -56,11 +58,13 @@ test('advisory: a provider failure is a FAILED run with its model plus an applie
   assert.deepEqual(await observations('adv-1'), ['LOW|NORMAL|HUMAN_REVIEW|demo-device-07|rules|PROVIDER_UNAVAILABLE_OR_INVALID,PROVIDER_TIMEOUT']);
 });
 
-test('shadow: the rules baseline is applied at once; the AI run is stored and never applied, and does not change the observation', async () => {
+test('shadow: the rules baseline is applied at once; the AI run comes from the separate shadow job, is never applied and does not change the observation', async () => {
   const provider = new CountingProvider('shadow', 'openai', () => ({ route: 'MONITOR', confidence: 0.99, provider: 'openai', promptVersion: 'event-route-v1',
     reasonCodes: ['MODEL_ROUTE'], requestedModel: 'gpt-6-luna', responseModel: 'gpt-6-luna' }));
   await ingestEvent(db, actors.sync, connection, incident(connection, 'sh-1', 'LOW'));
   await process(provider);
+  assert.deepEqual([await runs('sh-1'), provider.calls], [['rules|shadow|true|OK|-|-'], 0], 'the worker never calls the provider in shadow mode');
+  assert.deepEqual((await processShadowJobs(db, actors.sync, gasta, { workerId: 'shadow-a', provider, config: defaultDecisionConfig })).map(o => o.status), ['DONE']);
   assert.deepEqual(await observations('sh-1'), ['LOW|NORMAL|INVESTIGATE|demo-device-07|rules|RULES_BASELINE']);
   assert.deepEqual(await runs('sh-1'), ['openai|shadow|false|OK|-|gpt-6-luna', 'rules|shadow|true|OK|-|-']);
   assert.equal(provider.calls, 1);
