@@ -1,5 +1,7 @@
 # Vardahei Atlas — Stage 1 Development Pack v1.1.3
 
+> **Состояние ветки `stage1/foundation`:** задания 1.1–1.10 реализованы поверх пакета. Checkpoint C ждёт ревью. Live-проверка не выполнена: нет credentials. Статус и открытые gates — `CHECKPOINT_REPORT.md`, эксплуатация — `docs/RUNBOOK.md`, результаты по окружениям — `verification/RESULTS.md`. Текст ниже описывает исходный пакет.
+
 Дата: 7 октября 2026. Назначение: начать разработку Atlas Foundation в Codex Desktop или Claude Desktop.
 
 Это пакет спецификации и проверенного reference-кода. Производственная Stage 1 ещё не реализована: пример работает на синтетических данных и хранит pipeline в памяти. Prisma-схема, три миграции, RLS, runtime-роль и DB-query подготовлены для следующего шага. Доступ к вашим аккаунтам и клиентским системам не использовался.

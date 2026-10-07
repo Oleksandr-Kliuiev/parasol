@@ -47,5 +47,6 @@ test('re-seeding keeps the graph and rotates the local demo token: the old token
   runSeed(pgdb.ownerUrl, { ATLAS_DEMO_TOKEN: rotated });
   assert.equal(await authenticateToken(runtime, token), null);
   assert.deepEqual(await authenticateToken(runtime, rotated), actor);
-  assert.equal(Number((await pgdb.owner.query(`SELECT count(*)::int AS n FROM "ClientMembership"`)).rows[0].n), actor.memberships.length);
+  assert.deepEqual((await pgdb.owner.query(`SELECT "actorId", count(*)::int AS n FROM "ClientMembership" GROUP BY 1 ORDER BY 1`)).rows,
+    [{ actorId: 'demo-operator', n: 1 }, { actorId: actor.id, n: actor.memberships.length }], 'one membership row each, however often seeded');
 });

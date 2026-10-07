@@ -24,6 +24,7 @@ function assertQuery(query: ObservationQuery): void {
  * that forgot `where: scope` could not read another client. Only CONFIRMED links are returned; candidates stay out.
  * Live alerts/tickets/incidents come from the snapshot repository (task 1.5) with an explicit status per resource.
  * Observations: the active ones (OPEN and ACKNOWLEDGED) in priority order; an old CRITICAL is never pushed out by newer MEDIUMs.
+ * Entities, links and connections come in ID order, so the same data gives the same context (no physical row order).
  */
 export async function getClientContext(db: PrismaClient, actor: Actor, scope: Scope, limit: number = CONTEXT_OBSERVATION_LIMIT): Promise<ClientContextV1> {
   assertPermission(actor, scope, 'context:read');
@@ -33,12 +34,12 @@ export async function getClientContext(db: PrismaClient, actor: Actor, scope: Sc
       where: { workspaceId_id: { workspaceId: scope.workspaceId, id: scope.clientId } },
       select: {
         id: true, name: true,
-        entities: { select: { id: true, kind: true,
+        entities: { orderBy: { id: 'asc' }, select: { id: true, kind: true,
           person: { select: { displayName: true, email: true } },
           device: { select: { hostname: true, personId: true } },
-          links: { where: { status: 'CONFIRMED' }, select: { id: true, status: true,
+          links: { where: { status: 'CONFIRMED' }, orderBy: { id: 'asc' }, select: { id: true, status: true,
             external: { select: { externalId: true, resourceType: true, connection: { select: { id: true, system: true, status: true } } } } } } } },
-        connections: { select: { id: true, system: true, status: true,
+        connections: { orderBy: { id: 'asc' }, select: { id: true, system: true, status: true,
           syncStates: { select: { resourceType: true, status: true, lastSyncAt: true, lastSuccessAt: true, safeErrorCode: true,
             snapshot: { select: { asOf: true, items: true, itemCount: true, truncated: true } } } } } }
       }

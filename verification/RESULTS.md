@@ -1,49 +1,119 @@
-# Verified results — v1.1.3, 7 October 2026
+# Verified results — Stage 1 (tasks 1.1–1.10), 7 October 2026
 
-Environment of this build: Linux x86_64, Node.js v22.22.0, npm 10.9.4 (the pack declares Node 24+; everything below also ran on 22.22 because `--experimental-strip-types` is available there — Node 24 was not separately tested in this build). PGlite 0.3.14 (embedded PostgreSQL 17.5 core, in-process). Real PostgreSQL 17.10 server (standalone, TCP, non-superuser owner role) started locally for `scripts/pg17-check.ts`. Prisma engines could not be downloaded in this environment (HTTP 403 from the proxy to binaries.prisma.sh), which blocks `prisma validate/generate` and everything that needs the generated client; see the "Not executed" column.
+Branch `stage1/foundation`. The verified state is the commit that adds this file (task 1.10); `CHECKPOINT_REPORT.md` names the hash. The results of the imported pack v1.1.3 remain in git: `git show 4d6f897:verification/RESULTS.md`.
 
-v1.1.3 is a documentation and Prisma-naming release on top of 1.1.2: the independent reviewer accepted 1.1.2 after one line in `schema.prisma` (explicit `map: "RawEvent_identity_eventKey_key"` on the FK-target unique; Prisma's auto-generated names of the two `RawEvent` uniques collided, P1012). No code or SQL changed between 1.1.2 and 1.1.3. v1.1.2 closed findings S1–S3 of the review of 1.1.1 with a new migration (`202610071500_…`), an audit-before-publish ordering in the pipeline and a trigger protecting `legacyClosure`; S2 was reproduced on the 1.1.1 code before the change (`RETRY, applied = 1, observations = 0`). v1.1.1 was the corrective release after the independent review of 1.1.0 (`REVIEW_REPORT_v1.1.md`, findings R1–R7). Each finding was reproduced on the 1.1.0 code before the change (`R1`: applied runs 1 → 2 across a RETRY; `R2`: CRITICAL redelivery returned the MEDIUM observation, 0 conflict audits under concurrency; `R4`: advisory refusal → MONITOR; `R5`: FAILED run with `null` models) and is covered by a regression test below.
+Environment:
+- macOS 26.6.2 (arm64), Node.js v25.8.1, npm 11.11.0.
+- Prisma 6.19.0 (CLI and client), TypeScript 5.9.3, NestJS 11.1.6.
+- PGlite 0.3.14 (embedded PostgreSQL 17 core, in process).
+- PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2), the `postgres:17` image from `compose.yaml`, over TCP.
 
-Three environments are reported separately, as agreed for v1.1: **PGlite** (SQL of all three migrations and policies, in-process), **PostgreSQL 17** (real server: migrations, invariants, RLS through a confined LOGIN role, connection pool reuse) and **live** (vendor APIs, OpenAI Decisions, deployed database).
+Every chain started from `rm -rf node_modules dist && npm ci`.
 
-## Executed
+The environments are reported separately and are not interchangeable:
+- **Fixture/unit** — Node only. Synthetic contexts, in-memory sinks, mock vendors and a scripted Decisions endpoint.
+- **PGlite** — the SQL of all migrations, invariants and RLS in process.
+- **PostgreSQL 17** — a real server:
+  - migrations through `prisma migrate deploy` and `prisma/roles.sql`;
+  - the application through the confined runtime role;
+  - the compiled API in `ATLAS_MODE=db`;
+  - the ops CLI as a process.
 
-| Check | Command | Environment | Actual result |
-|---|---|---|---|
-| Synthetic demo | `npm run demo` | Node | `ClientContextV1`; Gasta/Kari/GASTA-LT-07; 2 observations (CRITICAL/URGENT/HUMAN_REVIEW first, then MEDIUM/NORMAL/MONITOR); 3 resources with status FIXTURE. Output in `demo-context.json` |
-| Pipeline, gateway, decisions, normalizers | `npm test` (`tests/pipeline.test.ts`) | Node | 32 passed, 0 failed. Includes: a failing audit append publishes nothing (applied 0, observation 0) and the retry completes once (S2); retry of the final commit reuses the stored decision (provider called once, 0 applied runs after the failed attempt, 1 after success) — R1; conflicting redelivery stored as separate urgent evidence, sequential and concurrent, canonical untouched, one conflict audit — R2; advisory refusal → HUMAN_REVIEW, explicit rules mode — R4; FAILED runs carry requested/response model for MODEL_MISMATCH and timeout — R5; shadow commits the baseline while the AI promise is still pending, AI result lands as non-applied, failure of the shadow call is a non-applied FAILED run — R7; plus the v1.1 suite (quarantine, dead-letter, identity, resolver, audit allowlist, security audit) |
-| Context mapper and scope context | `npm test` (`tests/context-mapper.test.ts`) | Node | 3 passed. DB-shaped rows → `ClientContextV1`; gateway unchanged over the mapped context; identifier policy; runtime-role facts incl. `ownsProtectedTables` and `unprotectedTables` |
-| All migrations + SQL invariants | `npm test` (`tests/database.test.ts`, test 1) | PGlite | Applied `202610070001_foundation`, `202610071200_v1_1_contracts`, `202610071500_v1_1_2_…`. Rejected: conflict link to another client's event, to another identity, to another resource type, to a non-canonical row (S1); `legacyClosure` on INSERT or false → true UPDATE, with or without a closed status (S3); cross-client device, conflicting confirmed link, second canonical row for one identity (same or different content without conflict link), duplicate conflict content, conflict row pointing at itself or at a missing key, invalid RawEvent status, audit UPDATE/DELETE/TRUNCATE on both logs, approval input change, second applied DecisionRun per event, observation pointing at another event's run, **observation pointing at a non-applied run, un-applying a referenced run** (R1), severityRank mismatch, CRITICAL with priority NORMAL, entity from another client, RESOLVED without resolvedAt/By, legacyClosure on an open row. Accepted: same ID with another resource type; conflict row linked to the canonical row (R2); ordering returns the older CRITICAL first; counts over the whole set |
-| Runtime-role guard | `npm test` (`tests/database.test.ts`, test 3) | PGlite | A NOBYPASSRLS role that owns only `RawEvent` is rejected (`ownsProtectedTables`) and demonstrably reads all clients without scope; `Approval` with RLS disabled is rejected (`RLS_NOT_ENABLED`); a correctly confined role passes (R3) |
-| Upgrade of a populated v1.0 database | `npm test` (`tests/database.test.ts`, test 4) | PGlite | foundation + v1.0-shaped rows (`OPEN` and `RESOLVED` observations, two events) + v1.1 migration: passes; `RESOLVED` row gets `legacyClosure = true` with `resolvedBy` still NULL, `OPEN` row does not; events get `resourceType = legacy-unknown`, `eventKeyVersion = v1`, `reasonCodes = ARRAY[reasonCode]`; new closures still need author/time. A v1.0 database with an unknown `Observation.status` stops the migration at the preflight with an explicit message (R6) |
-| Upgrade path 1.1.0 → 1.1.1 → 1.1.2 | `npm test` (`tests/database.test.ts`, test 5) | PGlite | foundation + the 1.1.0 text of the v1.1 migration + `prisma/upgrades/v1_1_0_to_v1_1_1.sql` + the 1.1.2 migration yields exactly the same schema shape (all columns, constraints, indexes, policies **and triggers**) as a fresh install, and passes the same structural invariants |
-| RLS acceptance (5 checks) | `npm test` (`tests/database.test.ts`, test 2) | PGlite, `SET ROLE` to a NOBYPASSRLS role | No context → 0 rows and INSERT rejected; context c1 sees only c1 without a `where clientId`; explicit c2 filter yields 0; write into c2 rejected; after COMMIT the same session sees 0 (context does not survive the transaction); wrong workspace → 0; multi-client membership sees exactly its clients; workspace security audit follows the workspace. Owner still sees everything (RLS not FORCEd by design) |
-| Real PostgreSQL 17 integration | `ATLAS_PG_ADMIN_URL=… npm run db:check:pg17` | **PostgreSQL 17.10 server** | PASS. Throwaway database created; all three migrations applied in order; S1/S3 invariants included; structural invariants (incl. R1/R2 constraints) passed as owner; confined LOGIN role (NOBYPASSRLS, not owner) passed the RLS acceptance list through a `pg.Pool` of one connection; **runtime-role guard** rejected the role after `ALTER TABLE "RawEvent" OWNER TO` it and after `DISABLE ROW LEVEL SECURITY` on `Approval`, and accepted it again after revert (R3); scope set in a transaction on checkout 1 is absent on checkout 2 (same backend PID); negative control: a session-level `set_config(..., false)` does leak into the next checkout — the reason `scoped-db.ts` uses `is_local = true` only; database and role dropped afterwards. Output in `pg17-check.txt` |
-| TypeScript (all code not depending on the generated Prisma client) | `tsc --noEmit` with `prisma-context.ts`, `scoped-db.ts`, `seed.ts` excluded | Node | 0 errors |
-| TypeScript (full project) | `npm run typecheck` | Node | Author's environment: 6 errors, all `@prisma/client has no exported member PrismaClient/Prisma` or implicit-any consequences, in exactly the three files that import the generated client — not resolvable here without `prisma generate` (see below). **Independent reviewer (Node 24, Prisma 6.19.0):** `schema:validate`, `db:generate`, full `typecheck`, `api:build` and `api:smoke` all pass on the 1.1.2 schema with the one-line `map` fix that 1.1.3 ships; the same chain passed on 1.1.1 and 1.1.0 before |
-| NestJS build | `npm run api:build` | Node | `dist/apps/api/src/{main,atlas.module}.js` emitted; same Prisma-client type errors reported for `prisma-context.ts`/`scoped-db.ts`, which the API does not import |
-| NestJS local HTTP smoke | `npm run api:smoke` | Node, loopback | PASS: 401 without token; overview 200 with `ClientContextV1` (2 items, total 2, not truncated, all resources FIXTURE); other client 403; `atera.ticket.list` 201 returns a `ResourceView` (FIXTURE, 1 item); `atera.ticket.create` 403; body with `risk` 400; tool for other client 403; client audit has `tool.succeeded` and `tool.denied` and no payload fields; `/audit/security` lists `client.overview_denied` and `tool.scope_denied` with `requestedClientId = other-client` |
-| Manifest | `MANIFEST.json` | — | Regenerated for v1.1 (SHA-256 per file) |
+  Vendors are still the mock transport and Decisions a scripted endpoint.
+- **Live** — real Atera, Huntress and OpenAI Decisions. **Not executed.**
 
-Test transcript: `tests.txt`. Node test totals: 40 passed, 0 failed.
+Mock transport and scripted responses are synthetic, shaped after the documented contracts. They are not live API verification.
 
-## Not executed / not completed
+## Fixture / unit — Node, no database
 
-| Check | Status | Why / what remains |
+| Check | Command | Actual result |
 |---|---|---|
-| `prisma validate`, `prisma generate` | **Not executed by the author; executed by the independent reviewer** | Prisma schema engine download blocked (403) in the author's build environment. The reviewer ran `schema:validate`, `db:generate` and full `typecheck` successfully on the 1.1.3 schema (1.1.2 + `map` fix), Prisma Client 6.19.0, with a synthetic `DATABASE_URL` — this confirms schema/client consistency, not queries against a running database |
-| `prisma migrate deploy` on a persisted database, `prisma/seed.ts`, `packages/graph/prisma-context.ts`, `withScope`, `assertRuntimeRole` | **Not executed** | Need the generated client. The SQL they rely on (migrations, policies, `SET_SCOPE_SQL`, `RUNTIME_ROLE_CHECK_SQL`) was executed on PostgreSQL 17 via `pg`; the Prisma call sites were not. The `g`/`tx` implicit-any errors disappear once the client exists |
-| DB-backed NestJS API | Not implemented | Task 1.3; reference API remains fixture-only |
-| `prisma/roles.sql` as a file | Not executed as a file | Needs `psql`; the identical grants were executed in `pg17-check.ts` through `pg`. The file itself was not run through psql here |
-| Real Atera, Huntress, Microsoft 365, PowerOffice requests | **No live call** | Credentials and account-specific contracts are out of scope; normalizers remain synthetic DTOs |
-| Real OpenAI Decisions request | **No live call** | HTTP transport tested with a mocked fetch only; the response `model` echo for `gpt-6-luna` is unverified, hence the configurable allowlist and `MODEL_MISMATCH` |
-| Durable worker, lease/recovery, outbox, two-process dedup | Not implemented | Reference pipeline is in-memory; its RETRY/DEAD_LETTER use a `commitHook` stand-in for the final transaction |
-| Classifier accuracy, threshold calibration, latency/price benchmark | Not measured | Shadow telemetry and eval are task 1.7 |
-| Windows/macOS execution, Node 24 | Not separately tested | Commands are cross-platform; only Linux/Node 22.22 ran here |
-| UI, write actions, deployment, customer messages | Not in scope | — |
+| Install, client, schema | `npm ci`, `npm run db:generate`, `npm run schema:validate` | exit 0; schema valid |
+| Unit and fixture tests | `npm test` (all files except `tests/database.test.ts`) | 67 passed, 0 failed (`tests.txt`). Files: pipeline reference, context mapper, resource freshness, vendor contracts and normalizers, audit sanitizer, token format, decision config and guard, tool gateway (incl. `connectionId` selection and `AMBIGUOUS_CONNECTION`), ops CLI arguments / live-read verdict / Decisions smoke over a scripted endpoint, context budget (no active file over 700 lines) |
+| Types | `npm run typecheck` | 0 errors |
+| API build and fixture smoke | `npm run api:build && npm run api:smoke` | PASS (`api-smoke.txt`) |
+| Synthetic demo | `npm run demo` | `ClientContextV1` in fixture mode, CRITICAL first, three FIXTURE resources (`demo-context.json`) |
 
-Therefore this result is a verified **Development Pack + reference implementation v1.1**, with SQL-level and RLS behaviour verified on both PGlite and a real PostgreSQL 17 server, and with the Prisma Client path explicitly unverified in this build. It is not a completed production Stage 1.
+## PGlite
 
-## Migration note
+| Check | Command | Actual result |
+|---|---|---|
+| All 12 migrations, SQL invariants of every Stage 1 table, RLS acceptance, runtime-role guard, upgrade of a populated v1.0 database, path 1.1.0 → 1.1.2 | `npm test` (`tests/database.test.ts`) | 13 passed, 0 failed (`tests.txt`; the `npm test` total is 80/80) |
 
-`202610070001_foundation` is unchanged from v1.0 and must never be edited once applied. `202610071200_v1_1_contracts` was **revised in 1.1.1** (R1 FK on `applied`, R2 conflict rows, R6 `legacyClosure` + preflight) before any known deployment and is frozen since; 1.1.2 changes (scoped conflict FK, canonical-parent trigger, `legacyClosure` guard) are the separate migration `202610071500_v1_1_2_conflict_scope_and_legacy_guard`. It is additive over a populated v1.0 database: preflight stops on unknown `Observation.status`/`RawEvent.status`; backfills are `resourceType = 'legacy-unknown'`, `eventKeyVersion = 'v1'`, `provider/promptVersion = 'unknown'`, `reasonCodes = ARRAY[reasonCode]`, `legacyClosure = true` for closures without author/time (nothing is invented). A database that applied the 1.1.0 text uses `prisma/upgrades/v1_1_0_to_v1_1_1.sql` (owner, one transaction); the as-shipped 1.1.0 text is kept in `prisma/upgrades/` for that test. `prisma/hardening.sql` remains the v1.0 supplement already appended to the foundation migration; do not apply it again. After `db:deploy`, run `prisma/roles.sql` as the owner and point the application at the confined role.
+## PostgreSQL 17 (real server)
+
+| Check | Command | Actual result |
+|---|---|---|
+| SQL invariants and RLS on the server | `npm run db:check:pg17` | PASS (`pg17-check.txt`). 12 migrations in order; invariants of mapping, snapshots, inbox, decision layer, lifecycle and tool ledger; RLS through a confined login role and a pool of one connection; runtime-role guard; pool reuse |
+| Prisma/PostgreSQL integration, DB-mode API, E2E, ops CLI | `npm run test:pg` | 108 passed, 0 failed in 20 files (`test-pg.txt`). Each file uses a throwaway DB on the documented path: owner — `migrate deploy`, `roles.sql`, seed; then the runtime role |
+| End to end (task 1.10, Checkpoint C) | `tests/pg/e2e.pg.test.ts` (in `test:pg`; `ATLAS_E2E_EVIDENCE_DIR=verification/e2e` writes the evidence) | 9 passed. Evidence of the run in `e2e/` — see the list after this table |
+| Ops CLI as a process | `tests/pg/ops-cli.pg.test.ts` (in `test:pg`) | 4 passed. See the list after this table |
+| Migrations ↔ `schema.prisma` | `npm run db:check:drift` | PASS: empty diff |
+| Dev database (owner, then runtime role) | `npm run db:deploy` (no pending), `db:seed` with both tokens; `npm run ops -- mapping / inbox / telemetry`, `worker-once` (rules); API `ATLAS_MODE=db` | See the list after this table |
+| Leftovers | `pg_database` / `pg_roles` after all runs | No throwaway database or role left; no API or CLI process left |
+
+E2E evidence in `e2e/`:
+- `1-live-read.json` — live-read summaries and the vendor requests: GET only, tenant filters;
+- `2-mapping-queue.json`;
+- `3-worker-pass.json` — applied rules runs and non-applied model runs with models, tokens and `configVersion`;
+- `4-context.json` — the full `ClientContextV1`;
+- `5-read-tools.json` — ToolExecution rows, client audit, security audit;
+- `6-telemetry.json`.
+
+Ops CLI process test:
+- the owner URL is refused: exit 2 `RUNTIME_ROLE_BYPASSES_RLS`;
+- a wrong token: exit 2 `OPERATOR_TOKEN_INVALID`;
+- bad arguments: exit 2;
+- `decisions-smoke` without a key: exit 2 `OPENAI_KEY_REQUIRED`, nothing sent;
+- bind: exit 0;
+- live-read without the credential variable: exit 1, `SECRET_NOT_FOUND`, nothing sent;
+- `worker-once` with `ATLAS_DECISIONS_MODE=rules`: version `-env`, no shadow;
+- a dead letter: visible in `inbox`, then `requeue` and a processed pass;
+- mapping review; another client: exit 2 `SCOPE_DENIED`, recorded in the security audit.
+
+Dev database:
+- all CLI commands exit 0 through the runtime role and the operator token;
+- `worker-once` in shadow mode without a key: exit 2 `OPENAI_KEY_REQUIRED`;
+- the owner URL: exit 2 `RUNTIME_ROLE_BYPASSES_RLS`;
+- the technician's token: `PERMISSION_DENIED`; another client: `SCOPE_DENIED`;
+- API: overview 200, PARTIAL with three MISSING fixture resources; the operator gets 403 on `/audit/security`; the API refuses to start through the owner (`RUNTIME_ROLE_BYPASSES_RLS`).
+
+Mutation checks of the task 1.10 code — each mutation applied alone, then the relevant test run. 16 of 16 were caught:
+1. Ambiguity not refused.
+2. `connectionId` ignored.
+3. No security audit on a CLI refusal.
+4. CLI permissions not checked.
+5. Duplicate flags accepted.
+6. Inherited command names accepted.
+7. Live-read verdict ignores resources.
+8. Smoke always OK.
+9. Inherited triage action names.
+10. No runtime-role check in the CLI.
+11. A failed check exits 0.
+12. The shadow pass uses the pass start time.
+13. No health gate in live-read.
+14. No activation gate in live-read.
+15. Context connections in physical order.
+16. Operator token ignored by the seed.
+
+Mutation 15 is caught through the physical order of the rows in this run; PostgreSQL does not guarantee that order, so this catch is not deterministic.
+
+## Live — not executed
+
+| Check | Status | What it needs / what is ready |
+|---|---|---|
+| Atera read (customer, agents, open tickets) | **Blocked: no credentials** | A read-only API key and the customer ID. Before the first read: the account checklist in `connectors/CONTRACTS.md` (the contract is from the public OpenAPI export, not confirmed against an account). Procedure: `docs/RUNBOOK.md` §5 (`npm run ops -- bind`, `live-read`) |
+| Atera alerts | Not read, by the owner's decision (2026-10-07) | No customer filter upstream; `UNAVAILABLE` / `UPSTREAM_TENANT_FILTER_UNAVAILABLE` |
+| Huntress read (organization, agents, incident reports) | **Blocked: no credentials** | The API key:secret pair and the organization ID; same procedure |
+| OpenAI Decisions smoke test | **Blocked: no API key** | `npm run ops -- decisions-smoke` (compact synthetic input). Without a key: exit 2 `OPENAI_KEY_REQUIRED`, verified. The response `model` for `gpt-6-luna` and `usage.input_tokens` are unverified against the live service |
+| Deployment, vault backend (`vault://`), scheduler, actor provisioning | Not in Stage 1 | `docs/RUNBOOK.md` §7 |
+
+## Not covered
+
+- Other platforms: Node 24, Linux and Windows were not run in this build; CI is absent.
+- Classifier accuracy, threshold calibration, latency and price of the live provider: not measured (telemetry exists, no live data).
+- `npm audit`: 10 advisories (2 moderate, 8 high) in pinned dependencies:
+  - runtime: `@nestjs/core`, `@nestjs/platform-express` (via `multer`, `path-to-regexp`), `@nestjs/common` (via `file-type`);
+  - tooling: `prisma` (via `@prisma/config`: `effect`, `deepmerge-ts`).
+
+  Versions stay pinned per `AGENTS.md`. An upgrade is a separate decision that a production deployment needs first.

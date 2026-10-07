@@ -1,0 +1,38 @@
+[
+  {
+    "linkId": "165f3264-7e95-4fd4-88f9-c7072d1be20e",
+    "status": "CANDIDATE",
+    "resourceType": "agent",
+    "entityKind": "DEVICE",
+    "entityId": "demo-device-07",
+    "externalEntityId": "386774f4-aa0d-42c8-90f5-f68b3314e92d",
+    "connectionId": "gasta-huntress",
+    "system": "huntress",
+    "externalId": "207001",
+    "method": "HOSTNAME_EXACT",
+    "createdBy": "demo-operator",
+    "createdAt": "2026-10-07T21:34:21.008Z",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "reasonCode": null,
+    "conflictsWithLinkId": null
+  },
+  {
+    "linkId": "19ea4fc1-29e7-4d8e-90fc-4f03761e41aa",
+    "status": "CANDIDATE",
+    "resourceType": "agent",
+    "entityKind": "DEVICE",
+    "entityId": "demo-device-07",
+    "externalEntityId": "7f950e82-ab60-437b-8166-3a4550377b08",
+    "connectionId": "gasta-atera",
+    "system": "atera",
+    "externalId": "107001",
+    "method": "HOSTNAME_EXACT",
+    "createdBy": "demo-operator",
+    "createdAt": "2026-10-07T21:34:21.044Z",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "reasonCode": null,
+    "conflictsWithLinkId": null
+  }
+]

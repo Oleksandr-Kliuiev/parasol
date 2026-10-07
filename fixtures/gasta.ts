@@ -6,6 +6,13 @@ export const actor: Actor = {
   memberships: [{ clientId: scope.clientId, permissions: ['context:read', 'events:ingest'] }],
   workspacePermissions: ['security_audit:read']
 };
+/** Synthetic operator for the ops CLI (task 1.10, docs/RUNBOOK.md): binds and checks connections, runs worker passes, reviews
+ * mappings, reads the context it triages and the decision telemetry on Gasta. No workspace permission. */
+export const operator: Actor = {
+  id: 'demo-operator', workspaceId: scope.workspaceId,
+  memberships: [{ clientId: scope.clientId, permissions: ['context:read', 'connections:manage', 'events:ingest', 'mapping:review', 'observations:triage'] }],
+  workspacePermissions: []
+};
 export const people: Person[] = [{ ...scope, id: 'demo-kari', displayName: 'Kari (synthetic)', email: 'kari@example.invalid' }];
 export const devices: Device[] = [{ ...scope, id: 'demo-device-07', hostname: 'GASTA-LT-07', personId: 'demo-kari' }];
 export const links: ExternalLink[] = [

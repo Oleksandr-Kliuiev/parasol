@@ -46,7 +46,10 @@ test('parameter schemas are strict: declared keys, types, bounds and required on
   const get = stage1Tools.find(t => t.name === 'atera.ticket.get')!.parameters;
   assert.throws(() => validateParameters(get, {}), failsWith('INVALID_TOOL_PARAMETERS', 'ticketId'), 'required');
   assert.throws(() => validateParameters(get, { ticketId: 'x y' }), failsWith('INVALID_TOOL_PARAMETERS', 'ticketId'));
-  assert.deepEqual(describeParameters(get), { ticketId: { type: 'string', required: true, description: 'Atera ticket ID', pattern: '^[\\x21-\\x7e]{1,128}$' } });
+  assert.throws(() => validateParameters(get, { ticketId: 'x', connectionId: 'a b' }), failsWith('INVALID_TOOL_PARAMETERS', 'connectionId'));
+  assert.deepEqual(describeParameters(get), { ticketId: { type: 'string', required: true, description: 'Atera ticket ID', pattern: '^[\\x21-\\x7e]{1,128}$' },
+    connectionId: { type: 'string', required: false, description: 'Atlas connection ID; required when the client has more than one Atera connection',
+      pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$' } });
   assert.deepEqual(describeTool(stage1Tools.find(t => t.name === 'atera.ticket.get')!).risk, 0);
 });
 
@@ -92,4 +95,21 @@ test('read tools by source ID keep the resource status: a missing resource is no
   assert.deepEqual([page.total, page.counts.CRITICAL, page.nextCursor], [page.items.length, page.items.length, null]);
   await assert.rejects(runTool(actor, scope, 'atlas.observation.list', async () => demo.context, sinks, { cursor: 'abc' }), failsWith('INVALID_CURSOR'),
     'a fixture context issues no cursor and accepts none');
+});
+
+test('several connections of one source: the tool name alone is ambiguous and refused; connectionId selects one view', async () => {
+  const demo = await runDemo(); const sinks = memorySinks(demo.audit, demo.securityAudit);
+  const view = (connectionId: string, status: ResourceView['status']): ResourceView => ({ source: 'huntress', resourceType: 'incident', connectionId, status,
+    asOf: null, lastSuccessAt: null, safeErrorCode: status === 'OK' ? null : 'SYNC_NOT_CONFIGURED', items: status === 'OK' ? [{ externalId: '9001' }] : null, truncated: false });
+  const two: ClientContextV1 = { ...demo.context, mode: 'db', resources: [view('demo-huntress-connection', 'MISSING'), view('gasta-huntress', 'OK')] };
+  for (const tool of ['huntress.incident.list', 'huntress.incident.get']) {
+    const parameters = tool.endsWith('.get') ? { incidentId: '9001' } : {};
+    await assert.rejects(runTool(actor, scope, tool, async () => two, sinks, parameters), failsWith('AMBIGUOUS_CONNECTION'), `${tool}: never the first row`);
+    const chosen = await runTool(actor, scope, tool, async () => two, sinks, { ...parameters, connectionId: 'gasta-huntress' }) as ResourceView;
+    assert.deepEqual([chosen.connectionId, chosen.status, chosen.items], ['gasta-huntress', 'OK', [{ externalId: '9001' }]]);
+    await assert.rejects(runTool(actor, scope, tool, async () => two, sinks, { ...parameters, connectionId: 'gasta-atera' }), failsWith('CONNECTION_NOT_FOUND'));
+  }
+  const failed = sinks.audit.list(scope).filter(a => a.eventType === 'tool.failed').map(a => a.metadata.safeErrorCode).slice(-4);
+  assert.deepEqual(failed, ['AMBIGUOUS_CONNECTION', 'CONNECTION_NOT_FOUND', 'AMBIGUOUS_CONNECTION', 'CONNECTION_NOT_FOUND'],
+    'checked after the policy and the schema: failed executions with their code');
 });

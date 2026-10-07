@@ -242,7 +242,3 @@ export interface ClientContextV1 extends Scope {
   completeness: 'COMPLETE_FIXTURE' | 'PARTIAL' | 'COMPLETE';
 }
 export function emptyCounts(): Record<Severity, number> { return { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }; }
-export function findResource(ctx: ClientContextV1, source: System, resourceType: ResourceType): ResourceView {
-  return ctx.resources.find(r => r.source === source && r.resourceType === resourceType) ??
-    { source, resourceType, connectionId: null, status: 'MISSING', asOf: null, lastSuccessAt: null, safeErrorCode: 'RESOURCE_NOT_CONFIGURED', items: null, truncated: false };
-}

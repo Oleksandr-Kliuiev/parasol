@@ -1,0 +1,202 @@
+{
+  "executions": [
+    {
+      "id": "c4ca4d7e-e4db-446d-a0a1-d623ac9a3552",
+      "correlationId": "req-e2e-0001",
+      "actorId": "demo-technician",
+      "toolName": "huntress.incident.get",
+      "toolVersion": "1",
+      "riskLevel": 0,
+      "sideEffect": "NONE",
+      "inputHash": "c031cc3732ee75eb985822ad2ff4b29d09b0f1f586441755d3b70766e8f60afa",
+      "status": "SUCCEEDED",
+      "safeErrorCode": null,
+      "createdAt": "2026-10-07T19:34:21.158Z",
+      "finishedAt": "2026-10-07T19:34:21.168Z"
+    },
+    {
+      "id": "91ba00d0-7082-41b1-b30f-a58a1ca2a222",
+      "correlationId": "req-e2e-0002",
+      "actorId": "demo-technician",
+      "toolName": "huntress.incident.list",
+      "toolVersion": "1",
+      "riskLevel": 0,
+      "sideEffect": "NONE",
+      "inputHash": "759ea77ba8f6560d36219409716683ede7cc2bf7168a99c9b9f1416559c3f56a",
+      "status": "FAILED",
+      "safeErrorCode": "AMBIGUOUS_CONNECTION",
+      "createdAt": "2026-10-07T19:34:21.175Z",
+      "finishedAt": "2026-10-07T19:34:21.183Z"
+    },
+    {
+      "id": "e212202a-26a8-4825-8aea-721ad5ff0408",
+      "correlationId": "req-e2e-0003",
+      "actorId": "demo-technician",
+      "toolName": "atera.ticket.list",
+      "toolVersion": "1",
+      "riskLevel": 0,
+      "sideEffect": "NONE",
+      "inputHash": "295cbf3766df063ad63ec633e00d97371603660d789c41aaff12e51097a3e533",
+      "status": "SUCCEEDED",
+      "safeErrorCode": null,
+      "createdAt": "2026-10-07T19:34:21.189Z",
+      "finishedAt": "2026-10-07T19:34:21.196Z"
+    },
+    {
+      "id": "e3aaf469-4707-49fb-92f6-2389751a24f8",
+      "correlationId": "req-e2e-0004",
+      "actorId": "demo-technician",
+      "toolName": "atlas.observation.list",
+      "toolVersion": "1",
+      "riskLevel": 0,
+      "sideEffect": "NONE",
+      "inputHash": "9411f2a308af2cbb207acf9d31343411db08f62b039fd976adc9dec2da7a8061",
+      "status": "SUCCEEDED",
+      "safeErrorCode": null,
+      "createdAt": "2026-10-07T19:34:21.202Z",
+      "finishedAt": "2026-10-07T19:34:21.207Z"
+    }
+  ],
+  "clientAudit": [
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "4ee73f84-a4ad-40b9-8bc5-e1e93324d7ac",
+      "actorId": "demo-technician",
+      "eventType": "tool.denied",
+      "correlationId": "req-e2e-0005",
+      "recordedAt": "2026-10-07T21:34:21.213Z",
+      "metadata": {
+        "tool": "atera.ticket.create",
+        "safeErrorCode": "UNKNOWN_TOOL"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "6b7faf5e-e2f2-42ce-a3c4-1390eefa5cd0",
+      "actorId": "demo-technician",
+      "eventType": "tool.succeeded",
+      "correlationId": "req-e2e-0004",
+      "recordedAt": "2026-10-07T21:34:21.208Z",
+      "metadata": {
+        "tool": "atlas.observation.list",
+        "toolVersion": "1",
+        "toolExecutionId": "e3aaf469-4707-49fb-92f6-2389751a24f8"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "1df208c2-400c-43eb-88b7-5fee34435a71",
+      "actorId": "demo-technician",
+      "eventType": "tool.started",
+      "correlationId": "req-e2e-0004",
+      "recordedAt": "2026-10-07T21:34:21.203Z",
+      "metadata": {
+        "tool": "atlas.observation.list",
+        "toolVersion": "1",
+        "toolExecutionId": "e3aaf469-4707-49fb-92f6-2389751a24f8"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "799fa75d-78bb-4845-a61e-fc5eab8ab0b9",
+      "actorId": "demo-technician",
+      "eventType": "tool.succeeded",
+      "correlationId": "req-e2e-0003",
+      "recordedAt": "2026-10-07T21:34:21.197Z",
+      "metadata": {
+        "tool": "atera.ticket.list",
+        "toolVersion": "1",
+        "toolExecutionId": "e212202a-26a8-4825-8aea-721ad5ff0408"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "72616dac-446d-42bd-9219-21c5d2da6e47",
+      "actorId": "demo-technician",
+      "eventType": "tool.started",
+      "correlationId": "req-e2e-0003",
+      "recordedAt": "2026-10-07T21:34:21.189Z",
+      "metadata": {
+        "tool": "atera.ticket.list",
+        "toolVersion": "1",
+        "toolExecutionId": "e212202a-26a8-4825-8aea-721ad5ff0408"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "a11d9106-b22e-43e2-aee1-cba6a745f137",
+      "actorId": "demo-technician",
+      "eventType": "tool.failed",
+      "correlationId": "req-e2e-0002",
+      "recordedAt": "2026-10-07T21:34:21.184Z",
+      "metadata": {
+        "tool": "huntress.incident.list",
+        "toolVersion": "1",
+        "safeErrorCode": "AMBIGUOUS_CONNECTION",
+        "toolExecutionId": "91ba00d0-7082-41b1-b30f-a58a1ca2a222"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "bf307f4d-e29e-4711-8b96-557d3233885c",
+      "actorId": "demo-technician",
+      "eventType": "tool.started",
+      "correlationId": "req-e2e-0002",
+      "recordedAt": "2026-10-07T21:34:21.175Z",
+      "metadata": {
+        "tool": "huntress.incident.list",
+        "toolVersion": "1",
+        "toolExecutionId": "91ba00d0-7082-41b1-b30f-a58a1ca2a222"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "820862dd-fdf8-4dcd-a3d0-58022d70cfc3",
+      "actorId": "demo-technician",
+      "eventType": "tool.succeeded",
+      "correlationId": "req-e2e-0001",
+      "recordedAt": "2026-10-07T21:34:21.170Z",
+      "metadata": {
+        "tool": "huntress.incident.get",
+        "toolVersion": "1",
+        "toolExecutionId": "c4ca4d7e-e4db-446d-a0a1-d623ac9a3552"
+      }
+    },
+    {
+      "workspaceId": "demo-vardahei",
+      "clientId": "demo-gasta",
+      "id": "71c992a8-b858-468d-a0b0-6308db891cdc",
+      "actorId": "demo-technician",
+      "eventType": "tool.started",
+      "correlationId": "req-e2e-0001",
+      "recordedAt": "2026-10-07T21:34:21.159Z",
+      "metadata": {
+        "tool": "huntress.incident.get",
+        "toolVersion": "1",
+        "toolExecutionId": "c4ca4d7e-e4db-446d-a0a1-d623ac9a3552"
+      }
+    }
+  ],
+  "securityAudit": [
+    {
+      "actorId": "demo-technician",
+      "eventType": "tool.scope_denied",
+      "outcome": "DENIED",
+      "requestedClientId": "demo-other",
+      "reasonCode": "SCOPE_DENIED",
+      "correlationId": "req-e2e-0006",
+      "metadata": {
+        "tool": "atera.ticket.list"
+      },
+      "recordedAt": "2026-10-07T19:34:21.219Z"
+    }
+  ]
+}

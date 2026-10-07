@@ -2,7 +2,40 @@
 
 ## Unreleased — Stage 1 implementation (branch `stage1/foundation`)
 
-Checkpoint A (tasks 1.1–1.3) accepted by the independent review (`REVIEW_REPORT.md`, revision 2). Status, verification and open gates of Checkpoint A: `CHECKPOINT_REPORT.md`.
+Checkpoints A (tasks 1.1–1.3) and B (1.4–1.6) accepted by the independent review (`REVIEW_REPORT.md`). Checkpoint C (1.7–1.10) awaits review: status, verification and open gates in `CHECKPOINT_REPORT.md`; operation in `docs/RUNBOOK.md`.
+
+### Added — task 1.10 Acceptance
+- Operator CLI `npm run ops -- <command>` (`scripts/ops.ts` over `packages/ops/`):
+  - `bind` — explicit tenant binding;
+  - `live-read` — activation, health check, one bounded sync; GET only;
+  - `mapping`, `confirm-link`, `reject-link` — mapping review;
+  - `inbox`, `requeue` — dead letters;
+  - `triage`, `telemetry`;
+  - `worker-once` — one event-worker and shadow-job pass; Stage 1 has no scheduler;
+  - `decisions-smoke` — one Decisions call with a compact synthetic input, no database.
+
+  Every database command runs as the runtime role (the owner is refused) and as the actor of `ATLAS_OPERATOR_TOKEN`. An out-of-scope or malformed client ID or a missing permission is refused before the service and recorded in the workspace security audit (`ops.scope_denied`; the audit allowlist gains `command`). Output is one JSON summary; exit codes: 0 done, 1 check failed, 2 usage, authentication or refusal.
+- Seed: a synthetic operator `demo-operator` (`context:read`, `connections:manage`, `events:ingest`, `mapping:review`, `observations:triage`) with the digest of `ATLAS_OPERATOR_TOKEN`; the two seed tokens must differ. The test harness no longer inherits either token from the developer's shell.
+- End to end on PostgreSQL 17 (`tests/pg/e2e.pg.test.ts`), one scenario on the documented path:
+  - bindings and a live-read check through the mock vendor (GET only, tenant-scoped, a failing health check stops before any sync);
+  - mapping review by the operator;
+  - a shadow-mode worker pass with the OpenAI adapter over a scripted endpoint: an applied rules run per event, a non-applied model run per event, compact inputs only;
+  - the full context over HTTP;
+  - read tools with ledger and audit, including ambiguity, write-tool and scope refusals;
+  - triage and telemetry.
+
+  With `ATLAS_E2E_EVIDENCE_DIR` it writes what it showed (`verification/e2e/`).
+- The CLI as a process (`tests/pg/ops-cli.pg.test.ts`): owner connection, wrong token, bad arguments, absent credential (exit 1, nothing sent), rules-mode passes, dead letter → inbox → requeue. Arguments, live-read verdict and Decisions smoke in `tests/ops-commands.test.ts`.
+- `docs/RUNBOOK.md` covers setup, roles and secrets, run, the operator commands, the live-read gate procedure, operational actions and rollback.
+- docs/06: current reference checks and an acceptance matrix (gate → tests → environment).
+- `verification/RESULTS.md`: dated, with fixture/unit, PGlite, PostgreSQL 17 and live reported separately.
+
+### Fixed — found by the end-to-end test (task 1.10)
+- **Read tools returned an arbitrary connection's view.** When a client had several connections of one source — the seed's FIXTURE connection next to a live binding, or two tenants — a read tool returned whichever connection the context listed first. The context listed connections in physical row order.
+  - Source tools now take an optional `connectionId`. Without it, several matching views give `AMBIGUOUS_CONNECTION` (CONFLICT → HTTP 409); an ID that is not one of them gives `CONNECTION_NOT_FOUND`.
+  - The context lists entities, links and connections in ID order.
+  - Tool versions stay `1`, since there has been no release. `findResource` is removed.
+- **Inherited names passed as triage actions.** `triageObservation` looked up the action on a plain object, so an inherited name such as `toString` passed the check and failed later with a TypeError. Only own keys count now (`INVALID_TRIAGE_ACTION`).
 
 ### Added — task 1.9 Tool Gateway
 - Migration `202610080000_stage1_tool_gateway`: `ToolExecution` becomes the ledger of executed read tools — `toolVersion`, `safeErrorCode`, `finishedAt`; checks for the status vocabulary (STARTED, SUCCEEDED, FAILED) and outcome consistency, the side-effect vocabulary, identity formats (tool name, version, SHA-256 input hash, correlation) and Stage 1 read-only (risk 0, NONE); trigger: a STARTED row only records its outcome; preflight on rows outside these rules.

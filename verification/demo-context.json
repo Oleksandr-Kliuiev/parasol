@@ -51,13 +51,15 @@
       {
         "workspaceId": "demo-vardahei",
         "clientId": "demo-gasta",
-        "id": "695b7e3f-7863-4de6-a7c2-ca142f0da27e",
+        "id": "d3759f4b-deeb-4ead-bad0-ae00f8fac803",
         "eventKey": "4c0df8edd60f21ac8e9499cf8ea48ea4c495224782cb0b0f455c1b05aaec2aa4",
         "source": "huntress",
+        "connectionId": "demo-huntress-connection",
         "resourceType": "incident",
         "externalEventId": "demo-incident-1",
         "revision": "1",
         "entityId": "demo-device-07",
+        "decisionRunId": "9bf38095-eb58-469b-938c-3bbc9b5bc70e",
         "kind": "SECURITY_INCIDENT",
         "domain": "SECURITY",
         "severity": "CRITICAL",
@@ -70,20 +72,27 @@
           "SOURCE_URGENCY_FLOOR"
         ],
         "conflictOfEventKey": null,
+        "status": "OPEN",
+        "acknowledgedAt": null,
+        "resolvedAt": null,
+        "supersededById": null,
         "summary": "Possible credential theft (synthetic)",
         "occurredAt": "2026-10-07T07:00:00.000Z",
-        "createdAt": "2026-10-07T12:33:25.195Z"
+        "createdAt": "2026-10-07T21:31:13.199Z",
+        "updatedAt": "2026-10-07T21:31:13.199Z"
       },
       {
         "workspaceId": "demo-vardahei",
         "clientId": "demo-gasta",
-        "id": "22c14ef8-9c2a-48c3-963f-698ee5b45a58",
+        "id": "adbf08eb-bbfa-4fd0-918d-0175d19646b9",
         "eventKey": "2ad478e4991f0f8e71e88f6ce8142739d3fc1935699bd131f6c2ae0a585ce6d2",
         "source": "atera",
+        "connectionId": "demo-atera-connection",
         "resourceType": "alert",
         "externalEventId": "demo-alert-1",
         "revision": "1",
         "entityId": "demo-device-07",
+        "decisionRunId": "933c35d1-db7f-42cd-aaff-a6f397a2a1a8",
         "kind": "DISK_CAPACITY",
         "domain": "OPERATIONS",
         "severity": "MEDIUM",
@@ -95,9 +104,14 @@
           "SYNTHETIC_FIXTURE_ONLY"
         ],
         "conflictOfEventKey": null,
+        "status": "OPEN",
+        "acknowledgedAt": null,
+        "resolvedAt": null,
+        "supersededById": null,
         "summary": "Disk capacity used: 96%",
         "occurredAt": "2026-10-07T07:00:00.000Z",
-        "createdAt": "2026-10-07T12:33:25.195Z"
+        "createdAt": "2026-10-07T21:31:13.199Z",
+        "updatedAt": "2026-10-07T21:31:13.199Z"
       }
     ],
     "counts": {
@@ -108,7 +122,8 @@
       "CRITICAL": 1
     },
     "total": 2,
-    "truncated": false
+    "truncated": false,
+    "nextCursor": null
   },
   "resources": [
     {
@@ -195,6 +210,6 @@
       "truncated": false
     }
   ],
-  "generatedAt": "2026-10-07T12:33:25.196Z",
+  "generatedAt": "2026-10-07T21:31:13.199Z",
   "completeness": "COMPLETE_FIXTURE"
 }

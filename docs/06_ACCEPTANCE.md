@@ -4,18 +4,27 @@
 
 ```sh
 npm ci
-npm run db:generate
-npm test                 # pipeline + context mapper + PGlite (все миграции, инварианты, RLS)
+npm run db:generate && npm run schema:validate
+npm test                 # unit + fixture + PGlite (все миграции, SQL-инварианты, RLS) — без сервера
 npm run typecheck
-npm run api:build
-npm run api:smoke
+npm run api:build && npm run api:smoke
 npm run demo
-ATLAS_PG_ADMIN_URL=postgresql://atlas:atlas_local_only@localhost:5432/atlas npm run db:check:pg17   # настоящий PostgreSQL 17
+docker compose up -d     # PostgreSQL 17 локально
+export ATLAS_PG_ADMIN_URL=postgresql://atlas:atlas_local_only@localhost:5432/atlas
+npm run db:check:pg17    # SQL-инварианты и RLS на настоящем PostgreSQL 17 (через pg, без Prisma Client)
+npm run test:pg          # Prisma/PostgreSQL integration, DB-mode API, E2E (задание 1.10), ops CLI
+npm run db:check:drift   # миграции ↔ schema.prisma: diff должен быть пустым
 ```
 
-DATABASE_URL задаётся для Prisma commands. Build должен предшествовать api:smoke. `db:check:pg17` создаёт временную БД и login-роль на указанном сервере, применяет все три миграции, проверяет инварианты и RLS через пул соединений и удаляет всё за собой; Prisma Client он не использует. В `verification/RESULTS.md` записаны фактические результаты сборки этого пакета — отдельно для PGlite, PostgreSQL 17 и live.
+- `DATABASE_URL` задаётся для Prisma commands. Build должен предшествовать `api:smoke` и `test:pg`: HTTP-тесты запускают собранный API из `dist`.
+- `db:check:pg17` создаёт временную БД и login-роль на указанном сервере и применяет все миграции. Затем проверяет инварианты и RLS через пул соединений и удаляет всё за собой.
+- `test:pg` проходит документированный путь на временной БД каждого файла:
+  - владельцем — `prisma migrate deploy`, `prisma/roles.sql` и seed;
+  - дальше всё — через runtime-роль.
+  Удаляет он тоже всё за собой.
+- В `verification/RESULTS.md` записаны фактические результаты — отдельно для fixture/unit, PGlite, PostgreSQL 17 и live.
 
-После `db:deploy` на сохраняемой БД выполните `prisma/roles.sql` (владельцем) и укажите приложению `ATLAS_RUNTIME_DATABASE_URL` с ролью `atlas_app`. Приложение, подключённое владельцем, обходит RLS; `assertRuntimeRole()` обязан это обнаружить и отказать в старте.
+После `db:deploy` на сохраняемой БД выполните `prisma/roles.sql` владельцем и укажите приложению `ATLAS_RUNTIME_DATABASE_URL` с ролью `atlas_app`. Приложение, подключённое владельцем, обходит RLS: `assertRuntimeRole()` обязан это обнаружить и отказать в старте. Установка, запуск и эксплуатация — `docs/RUNBOOK.md`.
 
 ## Upgrade from a populated v1.0 database
 
@@ -70,13 +79,55 @@ DATABASE_URL задаётся для Prisma commands. Build должен пре�
 | Audit UPDATE/DELETE/TRUNCATE by runtime role | Denied |
 | OpenAI disabled | Ingestion/context/read tools работают по rules |
 
+## Матрица приёмки (задание 1.10)
+
+Где доказан каждый gate. Окружения:
+- **U** — unit/fixture (Node, без БД);
+- **L** — PGlite, `npm test`;
+- **P** — настоящий PostgreSQL 17: `test:pg` через runtime-роль и `db:check:pg17`.
+
+Live-окружения ни один gate не проверял: вендоры и Decisions заменены mock transport и scripted fetch.
+
+| Gate | Тесты | Где |
+|---|---|---|
+| Без контекста — ни строки, запись отклонена; `c1` не видит `c2`; запрос без `where clientId` ограничен RLS | `tests/database.test.ts` (RLS acceptance), `scripts/pg17-check.ts`, `tests/pg/database.pg.test.ts` (withScope) | L, P |
+| Контекст не переживает транзакцию при переиспользовании соединения пула | `scripts/pg17-check.ts` (тот же backend PID, отрицательный контроль session `set_config`), `tests/pg/database.pg.test.ts` | P |
+| Владелец / BYPASSRLS / владение таблицей / RLS выключен — старт отклонён | `tests/database.test.ts` (runtime-role guard), `pg17-check`, `tests/pg/api.pg.test.ts`, `tests/pg/ops-cli.pg.test.ts` | L, P |
+| Graph seeded twice — один graph | `tests/pg/database.pg.test.ts` (seed), `tests/pg/auth.pg.test.ts` (повторный seed, ротация токена) | P |
+| Device IDs Atera/Huntress подтверждены — одно Device, ссылки на источники | `tests/pg/e2e.pg.test.ts` (четыре ссылки в контексте), `tests/pg/api.pg.test.ts` | P |
+| Те же ID в разных клиентах изолированы; кандидат или конфликт — без слияния, видимое ревью | `tests/pg/mapping.pg.test.ts`, `tests/pg/e2e.pg.test.ts` (очередь ревью → подтверждение оператором) | P |
+| Конфликт привязки при CRITICAL — `HUMAN_REVIEW`/`URGENT`/`CRITICAL`, `entityId null`, `AMBIGUOUS_DEVICE_LINK`, audit | `tests/pg/worker-routing.pg.test.ts`, `tests/pipeline.test.ts` | P, U |
+| Alert и ticket с одним ID/revision — два события; contact→Person не разрешается как устройство | `tests/pipeline.test.ts`, `tests/sql-invariants.ts`, `tests/pg/mapping.pg.test.ts` | U, L, P |
+| Дубликат и конкурентные workers — одно observation на revision; новая revision — новое evidence | `tests/pg/inbox.pg.test.ts`, `tests/pg/worker.pg.test.ts`, `tests/pg/observation-lifecycle.pg.test.ts` | P |
+| Тот же ID/revision с другим содержанием (в т.ч. CRITICAL после MEDIUM, конкурентно) — отдельное urgent evidence | `tests/pg/inbox.pg.test.ts`, `tests/pg/worker-routing.pg.test.ts`, `tests/pipeline.test.ts` | P, U |
+| Сбой после inbox / после DecisionRun / transient в финальной транзакции / сбой audit — RETRY, без дублей и повторного вызова провайдера | `tests/pg/worker.pg.test.ts`, `tests/pg/worker-recovery.pg.test.ts` (B1, B2, generic plans), `tests/pipeline.test.ts` (audit) | P, U |
+| Неожиданная ошибка — `DEAD_LETTER` + audit, событие доступно оператору, явный requeue | `tests/pg/worker.pg.test.ts`, `tests/pg/ops-cli.pg.test.ts` (`inbox`, `requeue`) | P |
+| Ограничения схемы (applied-run FK, CHECK severity/priority, partial unique, составные FK, legacyClosure, неизменяемость audit) | `tests/sql-invariants.ts` | L, P |
+| Upgrade v1.0 и путь 1.1.0 → 1.1.2 | `tests/database.test.ts` | L |
+| 100 новых MEDIUM и старый CRITICAL — CRITICAL первый, counts по всему набору | `tests/pg/api.pg.test.ts`, `tests/sql-invariants.ts` | P, L |
+| Сбой на странице 2 / несогласованные страницы — snapshot и lastSuccess не тронуты | `tests/pg/sync.pg.test.ts`, `tests/pg/pagination.pg.test.ts`, `tests/pg/worker-routing.pg.test.ts` | P |
+| Ресурс без sync — `MISSING` с кодом, не `[]`; устаревший — `STALE` с `asOf` | `tests/resource-freshness.test.ts`, `tests/pg/sync.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | U, P |
+| Critical source + model MONITOR — urgent review, severity источника | `tests/pg/e2e.pg.test.ts`, `tests/pg/decision-advisory.pg.test.ts` | P |
+| Advisory: отказ, timeout, неверный ответ, `MODEL_MISMATCH` — `HUMAN_REVIEW`, FAILED run с моделями | `tests/pg/decision-advisory.pg.test.ts`, `tests/decision-guard.test.ts` | P, U |
+| Shadow — baseline сразу, AI-run `applied=false`, observation не меняется | `tests/pg/shadow-jobs.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | P |
+| Read tool чужого клиента — отказ до чтения, `SecurityAuditEvent`, audit клиента не тронут | `tests/pg/tool-gateway.pg.test.ts`, `tests/pg/api.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | P |
+| Клиентский audit — только allowlist | `tests/audit-sanitize.test.ts`, `tests/pg/api.pg.test.ts` | U, P |
+| Модель передаёт actor/risk/credential; неизвестный или write tool — отказ | `tests/tool-gateway.test.ts`, `tests/pg/api.pg.test.ts`, `tests/pg/e2e.pg.test.ts` | U, P |
+| OpenAI выключен — ingestion, контекст и tools по rules | `tests/pg/ops-cli.pg.test.ts` (`worker-once` с `ATLAS_DECISIONS_MODE=rules`), `tests/pg/worker.pg.test.ts` | P |
+| Live-read gate (ниже) | Тот же код с mock transport: `tests/pg/e2e.pg.test.ts`, `tests/pg/ops-cli.pg.test.ts`. **Live не выполнен: нет credentials** | — |
+
 ## Live-read onboarding gate
 
 Настроить Atera customer и Huntress organization mapping; проверить разрешения read-only credentials, vendor filters/pagination и поддерживаемые resources; credential хранить в vault. Показать health и bounded read без изменения client data. Decisions live smoke-test выполняется отдельно с compact synthetic input и доступным API key; billing/account access не предполагаются.
 
 Пакет не разрешает создавать или закрывать реальный ticket, reset MFA, revoke sessions, отключать device/user или отправлять клиентам сообщения. Все такие действия принадлежат следующим slices.
 
+Процедура и команды — `docs/RUNBOOK.md`, раздел 5 (`npm run ops -- bind | live-read | decisions-smoke`).
+
 ## Operational actions
+
+Конкретные команды — `docs/RUNBOOK.md`, раздел 6.
+
 
 - Provider degraded: rules/review route + status banner/metadata, ingestion сохраняется.
 - Vendor 429: honor retry budget и Retry-After, сохранить pending/retry state.

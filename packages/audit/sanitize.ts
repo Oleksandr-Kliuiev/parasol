@@ -14,7 +14,9 @@ export const auditMetadataAllowlist: readonly string[] = [
   // Observation lifecycle (task 1.8): statuses and the Atlas ID of the superseding observation
   'previousStatus', 'observationStatus', 'supersededById',
   // Tool gateway (task 1.9): the execution row an audit entry belongs to, and the declared parameter a rejection names
-  'toolExecutionId', 'parameter'
+  'toolExecutionId', 'parameter',
+  // Operator CLI (task 1.10): the command a refused call named (one of a fixed set)
+  'command'
 ];
 export const AUDIT_TEXT_LIMIT = 200;
 

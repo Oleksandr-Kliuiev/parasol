@@ -37,7 +37,8 @@ export async function triageObservation(db: PrismaClient, actor: Actor, scope: S
   options: { expectedStatus?: ObservationStatus; now?: Date; correlationId?: string } = {}): Promise<TriageResult> {
   assertPermission(actor, scope, 'observations:triage');
   if (typeof observationId !== 'string' || !OBSERVATION_ID.test(observationId)) throw new AtlasError('INVALID_OBSERVATION_ID', 'VALIDATION');
-  const transition = TRANSITIONS[action];
+  // Own keys only: an inherited name such as `toString` is not an action
+  const transition = typeof action === 'string' && Object.hasOwn(TRANSITIONS, action) ? TRANSITIONS[action] : null;
   if (!transition) throw new AtlasError('INVALID_TRIAGE_ACTION', 'VALIDATION');
   const now = options.now ?? new Date();
   return withScope(db, actor, [scope.clientId], async tx => {

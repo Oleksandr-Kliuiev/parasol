@@ -1,7 +1,8 @@
 import type { ClientContextV1, ObservationPage, ObservationStatus, ResourceType, ResourceView, Scope, Severity, System } from '../core/contracts.ts';
-import { AtlasError, activeObservationStatuses, emptyCounts, findResource, observationStatuses, severities } from '../core/contracts.ts';
+import { AtlasError, activeObservationStatuses, emptyCounts, observationStatuses, severities } from '../core/contracts.ts';
 import type { ObservationQuery } from '../observations/query.ts';
 import { EXTERNAL_ID_PATTERN } from '../graph/mapping.ts';
+import { SCOPE_ID_PATTERN } from '../graph/scope-context.ts';
 import { describeParameters } from './parameters.ts';
 import type { ParameterSchema, Parameters } from './parameters.ts';
 
@@ -31,8 +32,27 @@ async function scopedContext(readers: ToolReaders, scope: Scope): Promise<Client
   if (ctx.workspaceId !== scope.workspaceId || ctx.clientId !== scope.clientId) throw new AtlasError('CONTEXT_SCOPE_MISMATCH', 'PERMANENT');
   return ctx;
 }
+/**
+ * The view of one source resource of the client; a source without a view is MISSING (RESOURCE_NOT_CONFIGURED), never an
+ * empty list. Several connections of the source (a second tenant, or a fixture connection next to a live one) make the
+ * tool name ambiguous: without `connectionId` that is AMBIGUOUS_CONNECTION (CONFLICT) instead of whichever row comes
+ * first; a `connectionId` that is not a connection of this source for the client is CONNECTION_NOT_FOUND.
+ */
+function selectResource(ctx: ClientContextV1, source: System, resourceType: ResourceType, connectionId?: string): ResourceView {
+  const views = ctx.resources.filter(r => r.source === source && r.resourceType === resourceType);
+  if (connectionId !== undefined) {
+    const view = views.find(r => r.connectionId === connectionId);
+    if (!view) throw new AtlasError('CONNECTION_NOT_FOUND', 'VALIDATION');
+    return view;
+  }
+  if (views.length > 1) throw new AtlasError('AMBIGUOUS_CONNECTION', 'CONFLICT');
+  return views[0] ?? { source, resourceType, connectionId: null, status: 'MISSING', asOf: null, lastSuccessAt: null, safeErrorCode: 'RESOURCE_NOT_CONFIGURED',
+    items: null, truncated: false };
+}
+const viewOf = async (readers: ToolReaders, parameters: Parameters, scope: Scope, source: System, resourceType: ResourceType) =>
+  selectResource(await scopedContext(readers, scope), source, resourceType, parameters.connectionId as string | undefined);
 const list = (source: System, resourceType: ResourceType) =>
-  async (readers: ToolReaders, _parameters: Parameters, scope: Scope): Promise<ResourceView> => findResource(await scopedContext(readers, scope), source, resourceType);
+  (readers: ToolReaders, parameters: Parameters, scope: Scope): Promise<ResourceView> => viewOf(readers, parameters, scope, source, resourceType);
 /**
  * One source object from the resource's last complete read: the same ResourceView with its items narrowed to that ID.
  * OK or STALE with an empty list means "not in the stored read" — and with `truncated` the read was bounded, so the object
@@ -40,11 +60,13 @@ const list = (source: System, resourceType: ResourceType) =>
  */
 const one = (source: System, resourceType: ResourceType, parameter: string) =>
   async (readers: ToolReaders, parameters: Parameters, scope: Scope): Promise<ResourceView> => {
-    const view = findResource(await scopedContext(readers, scope), source, resourceType);
+    const view = await viewOf(readers, parameters, scope, source, resourceType);
     const idOf = (item: unknown) => { const o = item as { externalId?: unknown; id?: unknown }; return o.externalId ?? o.id; };
     return { ...view, items: view.items === null ? null : view.items.filter(item => idOf(item) === parameters[parameter]) };
   };
 const sourceId = (description: string): ParameterSchema[string] => ({ type: 'string', pattern: EXTERNAL_ID_PATTERN, required: true, description });
+const connection = (system: string): ParameterSchema[string] => ({ type: 'string', pattern: SCOPE_ID_PATTERN,
+  description: `Atlas connection ID; required when the client has more than one ${system} connection` });
 
 export const stage1Tools: readonly ToolDefinition[] = Object.freeze(([
   { name: 'atlas.client.get_context', description: 'Bounded client context: graph, active observations by priority, resource views with status',
@@ -62,13 +84,15 @@ export const stage1Tools: readonly ToolDefinition[] = Object.freeze(([
       if (page.items.some(o => o.workspaceId !== scope.workspaceId || o.clientId !== scope.clientId)) throw new AtlasError('CONTEXT_SCOPE_MISMATCH', 'PERMANENT');
       return page;
     } },
-  { name: 'atera.alert.list', description: 'Atera alerts of the client as a resource view', parameters: {}, run: list('atera', 'alert') },
-  { name: 'atera.ticket.list', description: 'Open Atera tickets of the client as a resource view', parameters: {}, run: list('atera', 'ticket') },
-  { name: 'atera.ticket.get', description: 'One Atera ticket by its source ID from the last complete read', parameters: { ticketId: sourceId('Atera ticket ID') },
-    run: one('atera', 'ticket', 'ticketId') },
-  { name: 'huntress.incident.list', description: 'Open Huntress incidents of the client as a resource view', parameters: {}, run: list('huntress', 'incident') },
+  { name: 'atera.alert.list', description: 'Atera alerts of the client as a resource view', parameters: { connectionId: connection('Atera') }, run: list('atera', 'alert') },
+  { name: 'atera.ticket.list', description: 'Open Atera tickets of the client as a resource view', parameters: { connectionId: connection('Atera') },
+    run: list('atera', 'ticket') },
+  { name: 'atera.ticket.get', description: 'One Atera ticket by its source ID from the last complete read',
+    parameters: { ticketId: sourceId('Atera ticket ID'), connectionId: connection('Atera') }, run: one('atera', 'ticket', 'ticketId') },
+  { name: 'huntress.incident.list', description: 'Open Huntress incidents of the client as a resource view', parameters: { connectionId: connection('Huntress') },
+    run: list('huntress', 'incident') },
   { name: 'huntress.incident.get', description: 'One Huntress incident by its source ID from the last complete read',
-    parameters: { incidentId: sourceId('Huntress incident report ID') }, run: one('huntress', 'incident', 'incidentId') },
+    parameters: { incidentId: sourceId('Huntress incident report ID'), connectionId: connection('Huntress') }, run: one('huntress', 'incident', 'incidentId') },
 ] satisfies Omit<ToolDefinition, 'version' | 'risk' | 'sideEffect' | 'permission'>[])
   .map(t => Object.freeze({ ...t, version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' } as ToolDefinition)));
 

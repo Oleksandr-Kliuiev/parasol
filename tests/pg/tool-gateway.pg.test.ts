@@ -32,15 +32,17 @@ const auditOf = async (correlationId: string) => (await pgdb.owner.query(`SELECT
   FROM "AuditEvent" WHERE "correlationId" = $1 ORDER BY "recordedAt", "eventType" DESC`, [correlationId])).rows.map(r => r.s);
 
 test('an execution is a ToolExecution row written with its audit rows under one correlation; a failed read is FAILED with its code', async () => {
-  const outcome = await call('huntress.incident.get', { incidentId: '9001' }, 'req-tools-0001');
+  // The seeded fixture Huntress connection sits next to the live one: the caller names the live one (see the e2e for the refusal)
+  const outcome = await call('huntress.incident.get', { incidentId: '9001', connectionId: 'gasta-huntress' }, 'req-tools-0001');
   const view = outcome.result as ResourceView<SnapshotItem>;
   assert.deepEqual([view.status, view.items?.map(i => i.externalId), view.truncated], ['OK', ['9001'], false]);
   const [row] = await executions();
   assert.deepEqual(row, { id: outcome.executionId, toolName: 'huntress.incident.get', toolVersion: '1', riskLevel: 0, sideEffect: 'NONE',
-    inputHash: toolInputHash(gasta, { name: 'huntress.incident.get', version: '1' }, { incidentId: '9001' }), status: 'SUCCEEDED', correlationId: 'req-tools-0001',
+    inputHash: toolInputHash(gasta, { name: 'huntress.incident.get', version: '1' }, { incidentId: '9001', connectionId: 'gasta-huntress' }), status: 'SUCCEEDED',
+    correlationId: 'req-tools-0001',
     code: '-', finished: true, actorId: 'demo-reader' });
   assert.deepEqual(await auditOf('req-tools-0001'), [`tool.started|${outcome.executionId}|-`, `tool.succeeded|${outcome.executionId}|-`]);
-  const absent = (await call('huntress.incident.get', { incidentId: '9999' })).result as ResourceView;
+  const absent = (await call('huntress.incident.get', { incidentId: '9999', connectionId: 'gasta-huntress' })).result as ResourceView;
   assert.deepEqual([absent.status, absent.items], ['OK', []], 'read completely, and not there');
   const first = (await call('atlas.observation.list', { limit: 1 })).result as ObservationPage;
   const second = (await call('atlas.observation.list', { limit: 1, cursor: first.nextCursor })).result as ObservationPage;

@@ -46,8 +46,9 @@ export function runWithDatabase(url: string, command: string, args: string[], ex
   if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} exited ${result.status}: ${(result.stderr || result.stdout).slice(0, 2000)}`);
   return result.stdout;
 }
+/** The synthetic seed; tokens only when a test passes them, never inherited from the developer's shell. */
 export const runSeed = (ownerUrl: string, extraEnv: Record<string, string> = {}): string =>
-  runWithDatabase(ownerUrl, process.execPath, ['--experimental-strip-types', 'prisma/seed.ts'], extraEnv);
+  runWithDatabase(ownerUrl, process.execPath, ['--experimental-strip-types', 'prisma/seed.ts'], { ATLAS_DEMO_TOKEN: '', ATLAS_OPERATOR_TOKEN: '', ...extraEnv });
 
 export async function createTestDatabase(): Promise<PgTestDatabase> {
   const suffix = randomBytes(4).toString('hex');

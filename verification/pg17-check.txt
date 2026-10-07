@@ -1,7 +1,16 @@
 PASS pg17-check
-PostgreSQL server: 17.10
-Migrations applied in order: 202610070001_foundation → 202610071200_v1_1_contracts → 202610071500_v1_1_2_conflict_scope_and_legacy_guard
+PostgreSQL server: 17.11 (Debian 17.11-1.pgdg13+2)
+Migrations applied in order: 202610070001_foundation → 202610071200_v1_1_contracts → 202610071500_v1_1_2_conflict_scope_and_legacy_guard → 202610071600_stage1_actor_membership → 202610071700_stage1_mapping_workflow → 202610071800_stage1_resource_snapshots → 202610071900_stage1_event_inbox → 202610072000_stage1_claim_token_sync_order → 202610072100_stage1_sync_attempt_pending → 202610072200_stage1_decision_layer → 202610072300_stage1_observation_lifecycle → 202610080000_stage1_tool_gateway
 Structural invariants (owner): passed
+Mapping workflow schema (typed links, quarantine, immutable binding): passed
+Snapshot schema (bounded items, attempt/success order, read-attempt order, PENDING, failure codes): passed
+Inbox schema (leases with claim tokens, finished events, failure codes, decision vocabularies): passed
+Decision layer schema (run config version and measurements, shadow jobs: scope link, leases, finished jobs, codes): passed
+Observation lifecycle (immutable evidence, allowed status changes, acknowledgement author, superseding in client): passed
+Tool execution ledger (read tools only, outcome consistency, identity formats, final outcomes): passed
 RLS acceptance (confined login role): passed
+Identity lookup policies (token digest, named actor, no runtime writes): passed
+Snapshot RLS (no context, one client): passed
+Shadow job RLS (no context, one client, no cross-client write): passed
 Runtime-role guard (ownership of RawEvent, RLS disabled on Approval): passed
 Pool connection reuse (SET LOCAL ends with transaction; session SET would leak): passed
