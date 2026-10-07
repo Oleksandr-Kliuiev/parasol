@@ -27,7 +27,7 @@ export async function runDemo(): Promise<DemoResult> {
     .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
   const counts = emptyCounts();
   for (const o of observations) counts[o.severity as Severity] += 1;
-  const page: ObservationPage = { items: observations, counts, total: observations.length, truncated: false };
+  const page: ObservationPage = { items: observations, counts, total: observations.length, truncated: false, nextCursor: null };
   const fixture = (source: ResourceView['source'], resourceType: ResourceView['resourceType'], connectionId: string, items: unknown[]): ResourceView =>
     ({ source, resourceType, connectionId, status: 'FIXTURE', asOf: at, lastSuccessAt: at, safeErrorCode: null, items, truncated: false });
   const context: ClientContextV1 = { ...scope, contractVersion: 'ClientContextV1', mode: 'fixture', clientName: 'Gasta (synthetic)',

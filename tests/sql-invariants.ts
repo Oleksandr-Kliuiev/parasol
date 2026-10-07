@@ -179,7 +179,8 @@ export async function checkIdentityStructure(owner: SqlRunner): Promise<void> {
   await rejects(owner.exec(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId") VALUES ('w','cx','tech')`), /foreign key/);
   await rejects(owner.exec(`INSERT INTO "ApiToken" ("workspaceId","id","actorId","tokenHash") VALUES ('w2','t9','tech','${'9'.repeat(64)}')`), /foreign key/);
   // Mapping permissions (migration 202610071700) belong to the vocabulary
-  await owner.exec(`UPDATE "ClientMembership" SET permissions = ARRAY['context:read','mapping:review','connections:manage'] WHERE "actorId" = 'tech'`);
+  await owner.exec(`UPDATE "ClientMembership" SET permissions = ARRAY['context:read','mapping:review','connections:manage','observations:triage'] WHERE "actorId" = 'tech'`);
+  await rejects(owner.exec(`UPDATE "ClientMembership" SET permissions = ARRAY['observations:delete'] WHERE "actorId" = 'tech'`), /permissions_check/);
   await owner.exec(`UPDATE "ClientMembership" SET permissions = ARRAY['context:read'] WHERE "actorId" = 'tech'`);
 }
 
@@ -390,4 +391,31 @@ export async function checkShadowJobRls(app: SqlRunner): Promise<void> {
   assert.deepEqual((await app.query<{ eventId: string }>(`SELECT "eventId" FROM "ShadowJob"`)).map(r => r.eventId), ['r9']);
   await rejects(app.exec(shadowJob('c1', 'r1c')), /row-level security/, 'no job written into another client');
   await app.exec('ROLLBACK');
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Observation lifecycle (migration 202610072300): immutable evidence, the allowed status changes, acknowledgement with
+// author and time, superseding within the client. Owner, after checkStructuralInvariants (o-r1 CRITICAL and o-r3 MEDIUM
+// in c1, o-r9 in c2). Leaves o-r3 OPEN as it found it.
+// ---------------------------------------------------------------------------------------------------------------------
+export async function checkObservationLifecycle(owner: SqlRunner): Promise<void> {
+  const update = (set: string) => owner.exec(`UPDATE "Observation" SET ${set} WHERE id = 'o-r3'`);
+  for (const set of [`severity = 'LOW', "severityRank" = 1`, `priority = 'URGENT'`, `route = 'MONITOR'`, `"reasonCodes" = ARRAY['X']`,
+    `"entityId" = NULL`, `"eventId" = 'r1'`, `confidence = 0.1`, `"decisionRunId" = NULL`]) {
+    await rejects(update(set), /evidence is immutable/, `evidence stays: ${set}`);
+  }
+  await rejects(update(`status = 'ACKNOWLEDGED'`), /acknowledgement_check/, 'an acknowledgement names its author and time');
+  await update(`status = 'ACKNOWLEDGED', "acknowledgedAt" = now(), "acknowledgedBy" = 'tech'`);
+  await rejects(update(`status = 'OPEN', "acknowledgedAt" = NULL, "acknowledgedBy" = NULL`), /lifecycle allows/, 'ACKNOWLEDGED only moves on to a closure');
+  await update(`status = 'RESOLVED', "resolvedAt" = now(), "resolvedBy" = 'tech'`);
+  await rejects(update(`status = 'ACKNOWLEDGED'`), /lifecycle allows/);
+  await rejects(update(`status = 'OPEN', "resolvedAt" = NULL, "resolvedBy" = NULL`), /acknowledgement_check/, 'reopen clears the acknowledgement');
+  await update(`status = 'OPEN', "resolvedAt" = NULL, "resolvedBy" = NULL, "acknowledgedAt" = NULL, "acknowledgedBy" = NULL`);
+  await rejects(update(`"supersededById" = 'o-r1'`), /superseded_check/, 'only a suppressed observation is superseded');
+  const suppress = `status = 'SUPPRESSED', "resolvedAt" = now(), "resolvedBy" = 'worker'`;
+  await rejects(update(`${suppress}, "supersededById" = 'o-r3'`), /superseded_check/, 'never by itself');
+  await rejects(update(`${suppress}, "supersededById" = 'o-r9'`), /foreign key/, 'never by an observation of another client');
+  await update(`${suppress}, "supersededById" = 'o-r1'`);
+  await rejects(update(`status = 'RESOLVED', "supersededById" = NULL`), /lifecycle allows/, 'SUPPRESSED → RESOLVED is not a lifecycle step');
+  await update(`status = 'OPEN', "resolvedAt" = NULL, "resolvedBy" = NULL, "supersededById" = NULL`);
 }

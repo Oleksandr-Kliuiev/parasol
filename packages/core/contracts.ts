@@ -140,18 +140,30 @@ export interface Observation extends Scope {
   createdAt: string;
 }
 /** Bounded projection used in context and tool results. The full event is fetched by source ID through a read tool. */
+/** Observation lifecycle (task 1.8): OPEN → ACKNOWLEDGED → RESOLVED | SUPPRESSED; reopen goes back to OPEN. */
+export type ObservationStatus = 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED' | 'SUPPRESSED';
+export const observationStatuses: readonly ObservationStatus[] = ['OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'SUPPRESSED'];
+/** Still needing attention: the context lists these and counts them. */
+export const activeObservationStatuses: readonly ObservationStatus[] = ['OPEN', 'ACKNOWLEDGED'];
+/**
+ * Source link (source, connectionId, resourceType, externalEventId, revision, eventKey) and explanation (entityId,
+ * decisionRunId, priority, reasonCodes) are kept through every lifecycle change; `supersededById` points at the newer
+ * observation of the same source object. Operator identities stay in the audit, not in the summary.
+ */
 export interface ObservationSummary extends Scope {
-  id: string; eventKey: string; source: System; resourceType: ResourceType; externalEventId: string; revision: string;
-  entityId: string | null; kind: EventKind; domain: Domain; severity: Severity; priority: Priority;
+  id: string; eventKey: string; source: System; connectionId: string; resourceType: ResourceType; externalEventId: string; revision: string;
+  entityId: string | null; decisionRunId: string | null; kind: EventKind; domain: Domain; severity: Severity; priority: Priority;
   route: Route; confidence: number; provider: Provider; reasonCodes: string[]; conflictOfEventKey: string | null;
-  summary: string; occurredAt: string; createdAt: string;
+  status: ObservationStatus; acknowledgedAt: string | null; resolvedAt: string | null; supersededById: string | null;
+  summary: string; occurredAt: string; createdAt: string; updatedAt: string;
 }
 export function toObservationSummary(o: Observation): ObservationSummary {
-  return { workspaceId: o.workspaceId, clientId: o.clientId, id: o.id, eventKey: o.eventKey, source: o.event.source,
+  return { workspaceId: o.workspaceId, clientId: o.clientId, id: o.id, eventKey: o.eventKey, source: o.event.source, connectionId: o.event.connectionId,
     resourceType: o.event.resourceType, externalEventId: o.event.externalEventId, revision: o.event.revision,
-    entityId: o.entityId, kind: o.event.kind, domain: o.domain, severity: o.severity, priority: o.priority, route: o.route,
+    entityId: o.entityId, decisionRunId: o.decisionRunId, kind: o.event.kind, domain: o.domain, severity: o.severity, priority: o.priority, route: o.route,
     confidence: o.confidence, provider: o.provider, reasonCodes: [...o.reasonCodes], conflictOfEventKey: o.conflictOfEventKey,
-    summary: o.event.summary, occurredAt: o.event.occurredAt, createdAt: o.createdAt };
+    status: o.status, acknowledgedAt: null, resolvedAt: null, supersededById: null,
+    summary: o.event.summary, occurredAt: o.event.occurredAt, createdAt: o.createdAt, updatedAt: o.createdAt };
 }
 
 export type InboxStatus = 'RECEIVED' | 'PROCESSED' | 'RETRY' | 'DEAD_LETTER';
@@ -213,9 +225,11 @@ export interface ResourceView<T = unknown> {
 }
 export interface ObservationPage {
   items: ObservationSummary[];
-  /** Counts over the whole OPEN set, not over the returned page. */
+  /** Counts over the whole selected set (the context: every active observation), not over the returned page. */
   counts: Record<Severity, number>;
   total: number; truncated: boolean;
+  /** Opaque keyset cursor of the next page (GET /clients/:id/observations), null on the last page. */
+  nextCursor: string | null;
 }
 export interface ClientContextV1 extends Scope {
   contractVersion: 'ClientContextV1';

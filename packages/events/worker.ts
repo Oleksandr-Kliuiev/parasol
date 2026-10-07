@@ -9,6 +9,7 @@ import { clientAuditData } from '../audit/prisma.ts';
 import { withScope } from '../graph/scoped-db.ts';
 import { decisionRunData, draftDecision, finalRoute } from './decision.ts';
 import { assertStorableEvent } from './inbox.ts';
+import { applyRevisionLifecycle } from '../observations/lifecycle.ts';
 
 /**
  * Durable worker (task 1.6), docs/03 "Event inbox и worker" with the reference pipeline's contract:
@@ -26,7 +27,7 @@ export interface WorkerOptions extends ClaimOptions {
   provider: DecisionProvider; config?: DecisionConfig; retryDelayMs?: (attempt: number) => number;
   /** Circuit breaker and call budget of the provider (task 1.7); the process shares one with its shadow job runner. */
   guard?: DecisionGuard;
-  /** Test seam: runs inside the final transaction just before it commits. Production leaves it unset. */
+  /** Test seam: runs inside the final transaction just before it commits (after every write of it). Production leaves it unset. */
   beforeFinalCommit?: (eventKey: string) => Promise<void>;
 }
 interface PreparedDecision { entityId: string | null; route: Route; confidence: number; provider: Provider; promptVersion: string; reasonCodes: string[]; appliedRunId: string;
@@ -147,13 +148,13 @@ export async function prepareEvent(db: PrismaClient, actor: Actor, scope: Scope,
 /**
  * Phase 2: applied flag, observation, audit row and inbox completion in ONE transaction, under this claim's row lock. In
  * shadow mode the same transaction creates the event's ShadowJob: the AI call runs later, apart from this worker (task 1.7).
+ * The same transaction applies the revision lifecycle of the event's source object (task 1.8).
  */
 async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, prepared: PreparedDecision, options: WorkerOptions): Promise<string> {
   assertStorableEvent(claimed.normalized);
   const event = claimed.normalized;
   return withScope(db, actor, [scope.clientId], async tx => {
     await lockClaim(tx, scope, claimed);
-    if (options.beforeFinalCommit) await options.beforeFinalCommit(claimed.eventKey);
     const applied = await tx.decisionRun.updateMany({ where: { ...ids(scope), id: prepared.appliedRunId, eventId: claimed.id }, data: { applied: true } });
     if (applied.count !== 1) throw new AtlasError('APPLIED_RUN_MISSING', 'PERMANENT');
     const observationId = randomUUID();
@@ -161,15 +162,20 @@ async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed
     await tx.observation.create({ data: { ...ids(scope), id: observationId, eventId: claimed.id, entityId: prepared.entityId, decisionRunId: prepared.appliedRunId,
       domain: domainOf(event.kind), severity: event.sourceSeverity, severityRank: severityRank[event.sourceSeverity], priority, route: prepared.route,
       confidence: prepared.confidence, provider: prepared.provider, promptVersion: prepared.promptVersion, reasonCodes: prepared.reasonCodes, status: 'OPEN' }, select: { id: true } });
-    await tx.auditEvent.create({ data: clientAuditData(scope, actor.id, 'observation.created', randomUUID(), { observationId, eventKey: claimed.eventKey,
+    const correlationId = randomUUID();
+    await tx.auditEvent.create({ data: clientAuditData(scope, actor.id, 'observation.created', correlationId, { observationId, eventKey: claimed.eventKey,
       route: prepared.route, priority, provider: prepared.provider, reasonCodes: prepared.reasonCodes.join(','), decisionRunId: prepared.appliedRunId,
       ...(claimed.conflictOfEventKey ? { conflictOfEventKey: claimed.conflictOfEventKey } : {}) }), select: { id: true } });
+    // Revisions of the same source object (task 1.8): the newer one is current; a late one is superseded at once
+    await applyRevisionLifecycle(tx, scope, actor.id, { id: observationId, connectionId: event.connectionId, resourceType: event.resourceType,
+      externalEventId: event.externalEventId, revision: event.revision, priority, conflictOfEventKey: claimed.conflictOfEventKey }, correlationId, new Date());
     await tx.rawEvent.update({ where: { workspaceId_clientId_id: { ...ids(scope), id: claimed.id } },
       data: { status: 'PROCESSED', leaseOwner: null, leaseExpiresAt: null, claimToken: null, lastErrorCode: null }, select: { id: true } });
     if (prepared.shadowPending) {
       await tx.shadowJob.create({ data: { ...ids(scope), eventId: claimed.id, configVersion: prepared.configVersion ?? (options.config ?? defaultDecisionConfig).configVersion },
         select: { eventId: true } });
     }
+    if (options.beforeFinalCommit) await options.beforeFinalCommit(claimed.eventKey);
     return observationId;
   });
 }

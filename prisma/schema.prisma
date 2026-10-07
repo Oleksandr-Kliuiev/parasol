@@ -304,6 +304,14 @@ model Observation {
   /// Closed before v1.1 without a recorded author/time. Set only by the v1.1 migration; a trigger rejects INSERTs with the
   /// flag and false → true UPDATEs from anyone, including the owner. Clearing it on reopen is allowed.
   legacyClosure Boolean @default(false)
+  /// Lifecycle (task 1.8): who acknowledged and when (required for ACKNOWLEDGED, absent while OPEN); the newer observation
+  /// of the same source object that superseded this one (only with SUPPRESSED). A trigger allows only the documented status
+  /// changes and keeps the evidence (event, decision, entity, severity, priority, route, reasons) immutable.
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  supersededById String?
+  supersededBy Observation? @relation("ObservationSupersede", fields: [workspaceId, clientId, supersededById], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "Observation_supersededBy_fkey")
+  supersedes  Observation[] @relation("ObservationSupersede")
   event       RawEvent @relation(fields: [workspaceId, clientId, eventId], references: [workspaceId, clientId, id], onDelete: Restrict)
   entity      Entity? @relation(fields: [workspaceId, clientId, entityId], references: [workspaceId, clientId, id], onDelete: Restrict)
   decisionRun DecisionRun? @relation(fields: [workspaceId, clientId, decisionRunId, eventId, decisionApplied], references: [workspaceId, clientId, id, eventId, applied], onDelete: Restrict, onUpdate: Restrict, map: "Observation_decisionRun_fkey")

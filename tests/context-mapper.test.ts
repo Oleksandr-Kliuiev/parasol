@@ -26,21 +26,23 @@ const graph: DbClientGraph = {
   ]
 };
 const row = (id: string, severity: string, createdAt: string): DbObservationRow => ({
-  id, eventId: `e-${id}`, entityId: 'demo-device-07', domain: severity === 'CRITICAL' ? 'SECURITY' : 'OPERATIONS', severity,
+  id, eventId: `e-${id}`, entityId: 'demo-device-07', decisionRunId: `run-${id}`, domain: severity === 'CRITICAL' ? 'SECURITY' : 'OPERATIONS', severity,
   priority: severity === 'CRITICAL' ? 'URGENT' : 'NORMAL', route: 'HUMAN_REVIEW', confidence: 1, provider: 'rules', reasonCodes: ['RULES_BASELINE'],
-  createdAt: new Date(createdAt),
+  createdAt: new Date(createdAt), updatedAt: new Date(createdAt), status: 'OPEN', acknowledgedAt: null, resolvedAt: null, supersededById: null,
   event: { eventKey: `k-${id}`, conflictOfEventKey: null, connectionId: 'demo-atera-connection', resourceType: 'alert', externalEventId: id, revision: '1', occurredAt: new Date(createdAt),
     normalized: { kind: severity === 'CRITICAL' ? 'SECURITY_INCIDENT' : 'DISK_CAPACITY', summary: 'row summary' }, connection: { system: 'atera' } }
 });
 
 test('DB rows map to ClientContextV1 with explicit resource statuses and whole-set counts', () => {
   const rows = [row('o-old-critical', 'CRITICAL', '2026-10-01T00:00:00Z'), row('o-new-medium', 'MEDIUM', '2026-10-07T00:00:00Z')];
-  const ctx = mapClientContext(scope, graph, rows, { total: 150, bySeverity: [{ severity: 'MEDIUM', count: 149 }, { severity: 'CRITICAL', count: 1 }] }, 100);
+  const ctx = mapClientContext(scope, graph, rows, { total: 150, bySeverity: [{ severity: 'MEDIUM', count: 149 }, { severity: 'CRITICAL', count: 1 }] }, 'next-page');
   assert.equal(ctx.contractVersion, 'ClientContextV1'); assert.equal(ctx.mode, 'db'); assert.equal(ctx.completeness, 'PARTIAL');
   assert.equal(ctx.people.length, 1); assert.equal(ctx.devices.length, 1); assert.equal(ctx.links.length, 2);
   assert.equal(ctx.links[0]?.entityKind, 'DEVICE'); assert.equal(ctx.links[0]?.resourceType, 'agent');
   assert.deepEqual(ctx.observations.items.map(o => o.id), ['o-old-critical', 'o-new-medium'], 'older CRITICAL stays ahead of newer MEDIUM');
-  assert.equal(ctx.observations.total, 150); assert.equal(ctx.observations.truncated, true);
+  assert.deepEqual([ctx.observations.total, ctx.observations.truncated, ctx.observations.nextCursor], [150, true, 'next-page']);
+  assert.deepEqual([ctx.observations.items[0]?.status, ctx.observations.items[0]?.decisionRunId, ctx.observations.items[0]?.connectionId],
+    ['OPEN', 'run-o-old-critical', 'demo-atera-connection'], 'status, applied decision and source link travel with the item');
   assert.equal(ctx.observations.counts.MEDIUM, 149); assert.equal(ctx.observations.counts.CRITICAL, 1); assert.equal(ctx.observations.counts.INFO, 0);
   const byKey = Object.fromEntries(ctx.resources.map(r => [`${r.source}/${r.resourceType}`, r]));
   // A success always writes its snapshot in the same transaction; a sync state OK without one is reported, not hidden
@@ -50,7 +52,7 @@ test('DB rows map to ClientContextV1 with explicit resource statuses and whole-s
   assert.ok(ctx.resources.every(r => r.items === null), 'no resource pretends to be an empty list');
 });
 test('tool gateway works unchanged on a DB-mapped context', async () => {
-  const ctx = mapClientContext(scope, graph, [row('o1', 'MEDIUM', '2026-10-07T00:00:00Z')], { total: 1, bySeverity: [{ severity: 'MEDIUM', count: 1 }] }, 100);
+  const ctx = mapClientContext(scope, graph, [row('o1', 'MEDIUM', '2026-10-07T00:00:00Z')], { total: 1, bySeverity: [{ severity: 'MEDIUM', count: 1 }] }, null);
   const sinks = { audit: new MemoryAudit(), securityAudit: new MemorySecurityAudit() };
   const tickets = await executeReadTool(actor, scope, 'atera.ticket.list', async () => ctx, sinks) as { status: string; items: unknown };
   assert.equal(tickets.status, 'ERROR'); assert.equal(tickets.items, null);

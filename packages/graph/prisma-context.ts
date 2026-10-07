@@ -1,9 +1,11 @@
-import type { PrismaClient, Prisma } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import type { Actor, Scope, ClientContextV1, ObservationPage } from '../core/contracts.ts';
-import { AtlasError, assertPermission, hasClientPermission } from '../core/contracts.ts';
+import { AtlasError, assertPermission, hasClientPermission, observationStatuses, severities } from '../core/contracts.ts';
 import { withScope } from './scoped-db.ts';
 import { mapClientContext, mapObservationPage } from './context-mapper.ts';
-import type { DbClientGraph, DbObservationRow, DbObservationStats } from './context-mapper.ts';
+import type { DbClientGraph } from './context-mapper.ts';
+import { activeQuery, readObservationPage } from '../observations/query.ts';
+import type { ObservationQuery } from '../observations/query.ts';
 
 /** Page size of observations in the context and the upper bound of GET /clients/:id/observations. */
 export const CONTEXT_OBSERVATION_LIMIT = 100;
@@ -11,31 +13,17 @@ export const CONTEXT_OBSERVATION_LIMIT = 100;
 function assertLimit(limit: number): void {
   if (!Number.isInteger(limit) || limit < 1 || limit > CONTEXT_OBSERVATION_LIMIT) throw new AtlasError('INVALID_LIMIT', 'VALIDATION');
 }
-
-/**
- * Priority page of OPEN observations: severityRank DESC, createdAt DESC, id (an old CRITICAL is never pushed out by newer
- * MEDIUMs). Total and per-severity counts cover the whole OPEN set, not the returned page. Runs inside the caller's scope.
- */
-async function readObservationPage(tx: Prisma.TransactionClient, scope: Scope, limit: number): Promise<{ rows: DbObservationRow[]; stats: DbObservationStats }> {
-  const where = { workspaceId: scope.workspaceId, clientId: scope.clientId, status: 'OPEN' };
-  const [rows, total, grouped] = await Promise.all([
-    tx.observation.findMany({
-      where, orderBy: [{ severityRank: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }], take: limit,
-      select: { id: true, eventId: true, entityId: true, domain: true, severity: true, priority: true, route: true, confidence: true,
-        provider: true, reasonCodes: true, createdAt: true,
-        event: { select: { eventKey: true, conflictOfEventKey: true, connectionId: true, resourceType: true, externalEventId: true, revision: true, occurredAt: true, normalized: true,
-          connection: { select: { system: true } } } } }
-    }),
-    tx.observation.count({ where }),
-    tx.observation.groupBy({ by: ['severity'], where, _count: { _all: true } })
-  ]);
-  return { rows: rows as unknown as DbObservationRow[], stats: { total, bySeverity: grouped.map(g => ({ severity: g.severity, count: g._count._all })) } };
+const subset = <T>(values: readonly T[], allowed: readonly T[]) => values.length > 0 && new Set(values).size === values.length && values.every(v => allowed.includes(v));
+function assertQuery(query: ObservationQuery): void {
+  assertLimit(query.limit);
+  if (!subset(query.statuses, observationStatuses) || !subset(query.severities, severities)) throw new AtlasError('INVALID_OBSERVATION_QUERY', 'VALIDATION');
 }
 
 /**
  * DB-backed getClientContext. Runs inside withScope(): the RLS context is the single requested client, so even a query
  * that forgot `where: scope` could not read another client. Only CONFIRMED links are returned; candidates stay out.
  * Live alerts/tickets/incidents come from the snapshot repository (task 1.5) with an explicit status per resource.
+ * Observations: the active ones (OPEN and ACKNOWLEDGED) in priority order; an old CRITICAL is never pushed out by newer MEDIUMs.
  */
 export async function getClientContext(db: PrismaClient, actor: Actor, scope: Scope, limit: number = CONTEXT_OBSERVATION_LIMIT): Promise<ClientContextV1> {
   assertPermission(actor, scope, 'context:read');
@@ -56,18 +44,22 @@ export async function getClientContext(db: PrismaClient, actor: Actor, scope: Sc
       }
     });
     if (!client) throw new AtlasError('CLIENT_NOT_FOUND', 'VALIDATION');
-    const { rows, stats } = await readObservationPage(tx, scope, limit);
-    return mapClientContext(scope, client as unknown as DbClientGraph, rows, stats, limit);
+    const { rows, stats, nextCursor } = await readObservationPage(tx, scope, activeQuery(limit));
+    return mapClientContext(scope, client as unknown as DbClientGraph, rows, stats, nextCursor);
   });
 }
 
-/** GET /clients/:id/observations: the context's priority page without the graph. */
-export async function getObservationPage(db: PrismaClient, actor: Actor, scope: Scope, limit: number = CONTEXT_OBSERVATION_LIMIT): Promise<ObservationPage> {
+/**
+ * GET /clients/:id/observations (task 1.8): the selected statuses (default: the active ones, as in the context) and
+ * severities in priority order, page by page through the keyset cursor; counts and total cover the whole selection.
+ */
+export async function getObservationPage(db: PrismaClient, actor: Actor, scope: Scope,
+  query: ObservationQuery = activeQuery(CONTEXT_OBSERVATION_LIMIT)): Promise<ObservationPage> {
   assertPermission(actor, scope, 'context:read');
-  assertLimit(limit);
+  assertQuery(query);
   return withScope(db, actor, [scope.clientId], async tx => {
-    const { rows, stats } = await readObservationPage(tx, scope, limit);
-    return mapObservationPage(scope, rows, stats, limit);
+    const { rows, stats, nextCursor } = await readObservationPage(tx, scope, query);
+    return mapObservationPage(scope, rows, stats, nextCursor);
   });
 }
 

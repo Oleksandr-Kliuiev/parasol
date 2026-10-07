@@ -38,9 +38,9 @@ test('OK only for a fresh snapshot after a successful refresh; STALE by age or a
 test('completeness is COMPLETE only when every expected resource is OK', () => {
   const graph = (connections: DbConnectionRow[]) => ({ id: 'demo-gasta', name: 'Gasta (synthetic)', entities: [], connections });
   const stats = { total: 0, bySeverity: [] };
-  assert.equal(mapClientContext(scope, graph([connection('huntress', [state('incident', 'OK', null, 1)])]), [], stats, 100, now).completeness, 'COMPLETE');
-  assert.equal(mapClientContext(scope, graph([connection('huntress', [state('incident', 'OK', null, 20)])]), [], stats, 100, now).completeness, 'PARTIAL');
+  assert.equal(mapClientContext(scope, graph([connection('huntress', [state('incident', 'OK', null, 1)])]), [], stats, null, now).completeness, 'COMPLETE');
+  assert.equal(mapClientContext(scope, graph([connection('huntress', [state('incident', 'OK', null, 20)])]), [], stats, null, now).completeness, 'PARTIAL');
   assert.equal(mapClientContext(scope, graph([connection('huntress', [state('incident', 'OK', null, 1)]),
-    connection('atera', [state('ticket', 'OK', null, 1), state('alert', 'UNAVAILABLE', 'UPSTREAM_TENANT_FILTER_UNAVAILABLE', null)])]), [], stats, 100, now).completeness,
+    connection('atera', [state('ticket', 'OK', null, 1), state('alert', 'UNAVAILABLE', 'UPSTREAM_TENANT_FILTER_UNAVAILABLE', null)])]), [], stats, null, now).completeness,
     'PARTIAL', 'an unavailable resource keeps the context partial');
 });

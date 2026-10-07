@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants, checkMappingStructure,
-  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure, checkDecisionLayerStructure, checkShadowJobRls } from './sql-invariants.ts';
+  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure, checkDecisionLayerStructure, checkShadowJobRls, checkObservationLifecycle } from './sql-invariants.ts';
 import type { SqlRunner } from './sql-invariants.ts';
 import { migrationNames, migrationsAfter, migrationsThrough, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
 
@@ -126,6 +126,17 @@ test('inbox schema: leases name owner and expiry, finished events hold none, fai
     await seedGraph(owner);
     await checkStructuralInvariants(owner);
     await checkInboxStructure(owner);
+  } finally { await db.close(); }
+});
+
+test('observation lifecycle schema: immutable evidence, only the documented status changes, acknowledgement author, superseding within the client', async () => {
+  const db = new PGlite();
+  try {
+    await migrateAll(db);
+    const owner = runner(db);
+    await seedGraph(owner);
+    await checkStructuralInvariants(owner);
+    await checkObservationLifecycle(owner);
   } finally { await db.close(); }
 });
 

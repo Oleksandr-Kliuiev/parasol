@@ -1,4 +1,4 @@
-import type { Scope, ClientContextV1, ObservationPage, ObservationSummary, ResourceView, Person, Device, ExternalLink, Severity, System, ResourceType, EventKind, Domain, Priority, Route, Provider, EntityKind, LinkStatus } from '../core/contracts.ts';
+import type { Scope, ClientContextV1, ObservationPage, ObservationStatus, ObservationSummary, ResourceView, Person, Device, ExternalLink, Severity, System, ResourceType, EventKind, Domain, Priority, Route, Provider, EntityKind, LinkStatus } from '../core/contracts.ts';
 import { emptyCounts, severities, severityRank } from '../core/contracts.ts';
 
 // Row shapes as selected by packages/graph/prisma-context.ts. Kept free of Prisma imports so the mapping is unit-tested
@@ -18,8 +18,9 @@ export interface DbSyncStateRow {
 export interface DbConnectionRow { id: string; system: string; status: string; syncStates: DbSyncStateRow[] }
 export interface DbClientGraph { id: string; name: string; entities: DbEntityRow[]; connections: DbConnectionRow[] }
 export interface DbObservationRow {
-  id: string; eventId: string; entityId: string | null; domain: string; severity: string; priority: string; route: string;
-  confidence: number; provider: string; reasonCodes: string[]; createdAt: Date | string;
+  id: string; eventId: string; entityId: string | null; decisionRunId: string | null; domain: string; severity: string; priority: string; route: string;
+  confidence: number; provider: string; reasonCodes: string[]; createdAt: Date | string; updatedAt: Date | string;
+  status: string; acknowledgedAt: Date | string | null; resolvedAt: Date | string | null; supersededById: string | null;
   event: { eventKey: string; conflictOfEventKey: string | null; connectionId: string; resourceType: string; externalEventId: string; revision: string; occurredAt: Date | string;
     normalized: unknown; connection: { system: string } };
 }
@@ -43,12 +44,13 @@ export function mapObservationRow(scope: Scope, row: DbObservationRow): Observat
   const normalized = (row.event.normalized && typeof row.event.normalized === 'object' ? row.event.normalized : {}) as Record<string, unknown>;
   const kind: EventKind = normalized.kind === 'SECURITY_INCIDENT' ? 'SECURITY_INCIDENT' : 'DISK_CAPACITY';
   return { workspaceId: scope.workspaceId, clientId: scope.clientId, id: row.id, eventKey: row.event.eventKey,
-    source: asSystem(row.event.connection.system), resourceType: row.event.resourceType as ResourceType,
-    externalEventId: row.event.externalEventId, revision: row.event.revision, entityId: row.entityId, kind,
+    source: asSystem(row.event.connection.system), connectionId: row.event.connectionId, resourceType: row.event.resourceType as ResourceType,
+    externalEventId: row.event.externalEventId, revision: row.event.revision, entityId: row.entityId, decisionRunId: row.decisionRunId, kind,
     domain: row.domain as Domain, severity: row.severity as Severity, priority: row.priority as Priority, route: row.route as Route,
     confidence: row.confidence, provider: row.provider as Provider, reasonCodes: [...row.reasonCodes], conflictOfEventKey: row.event.conflictOfEventKey ?? null,
+    status: row.status as ObservationStatus, acknowledgedAt: iso(row.acknowledgedAt), resolvedAt: iso(row.resolvedAt), supersededById: row.supersededById,
     summary: typeof normalized.summary === 'string' ? normalized.summary.slice(0, 300) : '',
-    occurredAt: iso(row.event.occurredAt) ?? '', createdAt: iso(row.createdAt) ?? '' };
+    occurredAt: iso(row.event.occurredAt) ?? '', createdAt: iso(row.createdAt) ?? '', updatedAt: iso(row.updatedAt) ?? '' };
 }
 
 /**
@@ -86,16 +88,17 @@ export function mapResources(connections: DbConnectionRow[], now: Date = new Dat
   return views;
 }
 
-/** Items in priority order (severityRank DESC, createdAt DESC, id); counts and total cover the whole OPEN set. */
-export function mapObservationPage(scope: Scope, observations: DbObservationRow[], stats: DbObservationStats, limit: number): ObservationPage {
+/** Items in priority order (severityRank DESC, createdAt DESC, id); counts and total cover the whole selected set. */
+export function mapObservationPage(scope: Scope, observations: DbObservationRow[], stats: DbObservationStats, nextCursor: string | null): ObservationPage {
   const counts = emptyCounts();
   for (const { severity, count } of stats.bySeverity) if ((severities as readonly string[]).includes(severity)) counts[severity as Severity] = count;
   const items = observations.map(row => mapObservationRow(scope, row))
     .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
-  return { items, counts, total: stats.total, truncated: stats.total > limit };
+  return { items, counts, total: stats.total, truncated: nextCursor !== null, nextCursor };
 }
 
-export function mapClientContext(scope: Scope, graph: DbClientGraph, observations: DbObservationRow[], stats: DbObservationStats, limit: number, now: Date = new Date()): ClientContextV1 {
+export function mapClientContext(scope: Scope, graph: DbClientGraph, observations: DbObservationRow[], stats: DbObservationStats, nextCursor: string | null,
+  now: Date = new Date()): ClientContextV1 {
   const people: Person[] = []; const devices: Device[] = []; const links: ExternalLink[] = [];
   for (const entity of graph.entities) {
     if (entity.kind === 'PERSON' && entity.person) people.push({ ...scope, id: entity.id, displayName: entity.person.displayName, email: entity.person.email });
@@ -108,6 +111,6 @@ export function mapClientContext(scope: Scope, graph: DbClientGraph, observation
   }
   const resources = mapResources(graph.connections, now);
   return { ...scope, contractVersion: 'ClientContextV1', mode: 'db', clientName: graph.name, people, devices, links,
-    observations: mapObservationPage(scope, observations, stats, limit), resources, generatedAt: now.toISOString(),
+    observations: mapObservationPage(scope, observations, stats, nextCursor), resources, generatedAt: now.toISOString(),
     completeness: resources.length > 0 && resources.every(r => r.status === 'OK') ? 'COMPLETE' : 'PARTIAL' };
 }

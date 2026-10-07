@@ -155,3 +155,31 @@ test('one actor, two memberships: context:read on Gasta, only events:ingest on a
   assert.deepEqual(otherAudit, ['tool.denied|TOOL_NOT_ALLOWED'], 'a member without the permission: denial in that client\'s audit, no read');
   assert.equal((await json<unknown[]>('/tools', split)).length, 4);
 });
+
+test('observations over HTTP (task 1.8): status and severity filters, keyset pages, and invalid parameters as 400 before any query', async () => {
+  await pgdb.owner.query(`UPDATE "Observation" SET status = 'RESOLVED', "resolvedAt" = now(), "resolvedBy" = 'demo-technician' WHERE "clientId" = 'demo-gasta' AND severity = 'CRITICAL'`);
+  const active = await json<ObservationPage>('/clients/demo-gasta/observations', tech);
+  assert.deepEqual([active.total, active.counts.CRITICAL, active.items[0]?.severity, active.items[0]?.status], [101, 0, 'MEDIUM', 'OPEN'], 'closed ones leave the active set');
+  const resolved = await json<ObservationPage>('/clients/demo-gasta/observations?status=RESOLVED,SUPPRESSED', tech);
+  assert.deepEqual(resolved.items.map(o => `${o.severity}:${o.status}:${o.resolvedAt !== null}`), ['CRITICAL:RESOLVED:true']);
+  // Seven more MEDIUMs created at the very same millisecond: the pages must also walk a tie on the time, by id
+  await pgdb.owner.query(`
+    INSERT INTO "RawEvent" ("workspaceId","clientId","id","connectionId","resourceType","externalEventId","revision","eventKey","normalized","payloadHash","occurredAt","status")
+      SELECT 'demo-vardahei','demo-gasta','ev-tie-'||g,'demo-atera-connection','alert','demo-alert-tie-'||g,'1','key-tie-'||g,
+        jsonb_build_object('kind','DISK_CAPACITY','summary','Tie (synthetic) #'||g),'hash-tie-'||g, '2026-10-07T08:00:00.000Z','PROCESSED' FROM generate_series(1,7) g;
+    INSERT INTO "Observation" ("workspaceId","clientId","id","eventId","entityId","domain","severity","severityRank","priority","route","confidence","provider","promptVersion","reasonCodes","createdAt")
+      SELECT 'demo-vardahei','demo-gasta','obs-tie-'||g,'ev-tie-'||g,'demo-device-07','OPERATIONS','MEDIUM',2,'NORMAL','MONITOR',0.9,'rules','rules-v1',ARRAY['RULES_BASELINE'],
+        '2026-10-07T08:00:00.000Z' FROM generate_series(1,7) g;`);
+  const ids: string[] = []; let cursor: string | null = null;
+  do {
+    const page: ObservationPage = await json<ObservationPage>(`/clients/demo-gasta/observations?severity=MEDIUM&limit=3${cursor ? `&cursor=${cursor}` : ''}`, tech);
+    ids.push(...page.items.map(o => o.id)); cursor = page.nextCursor;
+  } while (cursor);
+  assert.deepEqual([ids.length, new Set(ids).size], [108, 108], 'every MEDIUM once across the pages, the tied ones included');
+  const tied = ids.filter(id => id.startsWith('obs-tie-'));
+  assert.deepEqual(tied, [...tied].sort(), 'a tie on time is ordered by id');
+  for (const bad of ['status=CLOSED', 'status=OPEN,OPEN', 'status=', 'severity=URGENT', 'cursor=%25', `cursor=${'a'.repeat(401)}`, 'cursor=abc',
+    'status=OPEN&status=RESOLVED', 'limit=0']) {
+    assert.equal((await call(`/clients/demo-gasta/observations?${bad}`, tech)).status, 400, bad);
+  }
+});

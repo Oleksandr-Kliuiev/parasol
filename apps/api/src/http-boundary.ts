@@ -1,5 +1,6 @@
 import { HttpException, ForbiddenException, BadRequestException, BadGatewayException, InternalServerErrorException, Logger } from '@nestjs/common';
-import { AtlasError, safeErrorCode } from '../../../packages/core/contracts.ts';
+import { AtlasError, activeObservationStatuses, observationStatuses, safeErrorCode, severities } from '../../../packages/core/contracts.ts';
+import type { ObservationQuery } from '../../../packages/observations/query.ts';
 
 const logger = new Logger('AtlasApi');
 
@@ -18,6 +19,24 @@ export function toHttp(error: unknown): never {
   const code = (error as { code?: unknown } | null)?.code;
   logger.error(`request failed: ${error instanceof Error ? error.name : typeof error} ${typeof code === 'string' ? code.slice(0, 40) : safeErrorCode(error)}`);
   throw new InternalServerErrorException();
+}
+
+/**
+ * GET /clients/:id/observations query (task 1.8): `status` and `severity` are comma-separated lists of known values without
+ * repeats (defaults: the active statuses, every severity), `cursor` an opaque base64url string, `limit` as parseLimit.
+ * Anything else — a repeated parameter, an unknown value, an empty item — is a 400 before any query runs.
+ */
+export function parseObservationQuery(query: { status?: unknown; severity?: unknown; cursor?: unknown; limit?: unknown }, max: number): ObservationQuery {
+  const list = <T extends string>(value: unknown, allowed: readonly T[], fallback: readonly T[]): T[] => {
+    if (value === undefined) return [...fallback];
+    if (typeof value !== 'string' || value.length > 100) throw new BadRequestException();
+    const items = value.split(',');
+    if (new Set(items).size !== items.length || !items.every(i => (allowed as readonly string[]).includes(i))) throw new BadRequestException();
+    return items as T[];
+  };
+  if (query.cursor !== undefined && (typeof query.cursor !== 'string' || !/^[A-Za-z0-9_-]{1,400}$/.test(query.cursor))) throw new BadRequestException();
+  return { statuses: list(query.status, observationStatuses, activeObservationStatuses), severities: list(query.severity, severities, severities),
+    limit: parseLimit(query.limit, max), cursor: (query.cursor as string | undefined) ?? null };
 }
 
 /** Page size from a query string: absent → `max`; anything but an integer in 1..max → 400. */
