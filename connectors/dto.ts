@@ -6,6 +6,12 @@ import { AtlasError } from '../packages/core/contracts.ts';
  * untrusted: it is bounded and made storable (no control characters, no lone surrogates) before it goes anywhere.
  */
 export const contractMismatch = (field: string) => new AtlasError('UPSTREAM_CONTRACT_MISMATCH', 'PERMANENT', { field });
+/**
+ * Pages of one read that disagree (review B4): changing totals, an empty page before the declared last one, a repeated ID
+ * or a count other than the declared one. The collection changed while it was paged, or the source is inconsistent: the
+ * read is not a complete set. TRANSIENT, so the previous snapshot stays (STALE) and the next sync reads it again.
+ */
+export const paginationInconsistent = (field: string) => new AtlasError('UPSTREAM_PAGINATION_INCONSISTENT', 'TRANSIENT', { field });
 export type JsonObject = Record<string, unknown>;
 
 export function record(value: unknown, field: string): JsonObject {

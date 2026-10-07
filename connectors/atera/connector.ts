@@ -3,6 +3,7 @@ import { AtlasError, safeErrorCode } from '../../packages/core/contracts.ts';
 import { assertResolvedConnection } from '../../packages/connections/connections.ts';
 import type { AtlasConnector, ConnectorDeps, ResolvedConnection, SnapshotRead, IdentityRead, ConnectionHealth } from '../contracts.ts';
 import { getJson } from '../http.ts';
+import { paginationInconsistent } from '../dto.ts';
 import { ATERA_BASE_URL, ATERA_CONTRACT_VERSION, parsePage, parseTicket, parseAgent, parseCustomerId, ticketItem, agentIdentity } from './contract.ts';
 
 /**
@@ -13,7 +14,8 @@ import { ATERA_BASE_URL, ATERA_CONTRACT_VERSION, parsePage, parseTicket, parseAg
  *   alerts   NOT READ: GET /api/v3/alerts has no customer filter, and docs/01 (condition 5) requires the upstream request
  *            itself to be limited to the bound customer, not only its result. The context shows the reason code.
  * Every record is checked again; one that names another customer fails the whole read. Pages: 50 items (documented
- * maximum), at most ATERA_MAX_PAGES.
+ * maximum), at most ATERA_MAX_PAGES. A read is complete only if its pages agree (review B4): the same totals on every page,
+ * no empty page before the declared last one, no repeated ID, and exactly totalItemCount records in the end.
  */
 export const ATERA_PAGE_SIZE = 50;
 export const ATERA_MAX_PAGES = 40;
@@ -31,13 +33,15 @@ async function authorization(deps: ConnectorDeps, connection: ResolvedConnection
 
 export function createAteraConnector(deps: ConnectorDeps): AtlasConnector {
   /** `request` builds path and filters from the validated customer ID, so nothing is requested before both checks passed. */
-  async function readAll<T extends { customerId: string }>(connection: ResolvedConnection,
+  async function readAll<T extends { id: string; customerId: string }>(connection: ResolvedConnection,
     request: (customer: string) => { path: string; filters: Record<string, string> }, item: (value: unknown) => T): Promise<T[]> {
     // Credential first: it is the gate for any upstream access (a FIXTURE connection is refused there).
     const headers = await authorization(deps, connection);
     const customer = customerId(connection);
     const { path, filters } = request(customer);
     const records: T[] = [];
+    const seen = new Set<string>();
+    let totals: { totalPages: number; totalItemCount: number } | null = null;
     for (let page = 1; ; page++) {
       const url = new URL(path, ATERA_BASE_URL);
       for (const [name, value] of Object.entries(filters)) url.searchParams.set(name, value);
@@ -46,8 +50,16 @@ export function createAteraConnector(deps: ConnectorDeps): AtlasConnector {
       const result = parsePage(await getJson(deps.transport, url, headers), item);
       if (result.page !== page) throw new AtlasError('UPSTREAM_CONTRACT_MISMATCH', 'PERMANENT', { field: 'page' });
       if (result.items.some(r => r.customerId !== customer)) throw new AtlasError('UPSTREAM_SCOPE_MISMATCH', 'PERMANENT');
+      totals ??= { totalPages: result.totalPages, totalItemCount: result.totalItemCount };
+      if (result.totalPages !== totals.totalPages) throw paginationInconsistent('totalPages');
+      if (result.totalItemCount !== totals.totalItemCount) throw paginationInconsistent('totalItemCount');
+      for (const r of result.items) { if (seen.has(r.id)) throw paginationInconsistent('id'); seen.add(r.id); }
       records.push(...result.items);
-      if (page >= result.totalPages || result.items.length === 0) return records;
+      if (page >= totals.totalPages) {
+        if (records.length !== totals.totalItemCount) throw paginationInconsistent('totalItemCount');
+        return records;
+      }
+      if (result.items.length === 0) throw paginationInconsistent('items');
       if (page >= ATERA_MAX_PAGES) throw new AtlasError('UPSTREAM_TOO_MANY_PAGES', 'PERMANENT');
     }
   }

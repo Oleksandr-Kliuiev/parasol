@@ -3,6 +3,7 @@ import { AtlasError, safeErrorCode } from '../../packages/core/contracts.ts';
 import { assertResolvedConnection } from '../../packages/connections/connections.ts';
 import type { AtlasConnector, ConnectorDeps, ResolvedConnection, SnapshotRead, IdentityRead, ConnectionHealth } from '../contracts.ts';
 import { getJson } from '../http.ts';
+import { paginationInconsistent } from '../dto.ts';
 import { HUNTRESS_BASE_URL, HUNTRESS_CONTRACT_VERSION, parsePage, parseAgent, parseIncident, parseOrganizationId, incidentItem, incidentEvent, agentIdentity } from './contract.ts';
 import type { HuntressPage } from './contract.ts';
 
@@ -28,12 +29,13 @@ async function authorization(deps: ConnectorDeps, connection: ResolvedConnection
 }
 
 export function createHuntressConnector(deps: ConnectorDeps): AtlasConnector {
-  async function readAll<T extends { organizationId: string }>(connection: ResolvedConnection, path: string, key: string,
+  async function readAll<T extends { id: string; organizationId: string }>(connection: ResolvedConnection, path: string, key: string,
     filters: Record<string, string>, item: (value: unknown) => T): Promise<T[]> {
     // Credential first: it is the gate for any upstream access (a FIXTURE connection is refused there).
     const headers = await authorization(deps, connection);
     const org = organizationId(connection);
     const records: T[] = [];
+    const seen = new Set<string>();
     let token: string | null = null;
     for (let page = 1; ; page++) {
       const url = new URL(path, HUNTRESS_BASE_URL);
@@ -43,6 +45,8 @@ export function createHuntressConnector(deps: ConnectorDeps): AtlasConnector {
       if (token) url.searchParams.set('page_token', token);
       const result: HuntressPage<T> = parsePage(await getJson(deps.transport, url, headers), key, item);
       if (result.items.some(r => r.organizationId !== org)) throw new AtlasError('UPSTREAM_SCOPE_MISMATCH', 'PERMANENT');
+      // A record on two pages: the set moved while it was paged, so this is not one complete read (review B4)
+      for (const r of result.items) { if (seen.has(r.id)) throw paginationInconsistent('id'); seen.add(r.id); }
       records.push(...result.items);
       token = result.nextPageToken;
       if (!token) return records;

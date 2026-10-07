@@ -62,7 +62,7 @@ test('restart: a worker that dies after phase 1 leaves its decision; once the le
   const provider = new CountingProvider();
   await ingestEvent(db, actors.sync, connection, incident(connection, 'crash-1', 'HIGH'));
   const t0 = new Date();
-  const [claimed] = await claimEvents(db, actors.sync, gasta, 'worker-dead', t0, 1_000, 10);
+  const [claimed] = (await claimEvents(db, actors.sync, gasta, { workerId: 'worker-dead', leaseMs: 1_000 }, t0)).claimed;
   assert.ok(claimed);
   await prepareEvent(db, actors.sync, gasta, claimed, options(provider)); // phase 1 stored; the worker dies here
   assert.equal(provider.calls, 1);

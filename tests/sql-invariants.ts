@@ -283,6 +283,10 @@ export async function checkSnapshotStructure(owner: SqlRunner): Promise<void> {
   await rejects(owner.exec(`INSERT INTO "SyncState" ("workspaceId","clientId","connectionId","resourceType","status","lastSyncAt") VALUES ('w','c1','h','agent','ERROR',now())`), /error_code_check/);
   await rejects(owner.exec(`UPDATE "SyncState" SET "lastSuccessAt" = "lastSyncAt" + interval '1 minute' WHERE "clientId" = 'c1'`), /success_order_check/);
   await rejects(owner.exec(`UPDATE "SyncState" SET status = 'PARTIAL', "safeErrorCode" = 'X' WHERE "clientId" = 'c1'`), /status_check/);
+  // Attempt order (migration 202610072000, review B3): the recorded attempt is one that was begun
+  await owner.exec(`UPDATE "SyncState" SET "attemptSeq" = 2, "recordedSeq" = 2 WHERE "clientId" = 'c1'`);
+  await rejects(owner.exec(`UPDATE "SyncState" SET "recordedSeq" = 3 WHERE "clientId" = 'c1'`), /attempt_order_check/);
+  await rejects(owner.exec(`UPDATE "SyncState" SET "recordedSeq" = -1 WHERE "clientId" = 'c1'`), /attempt_order_check/);
 }
 
 /** Confined runner: snapshots follow the client scope like every other client table. */
@@ -295,13 +299,17 @@ export async function checkSnapshotRls(app: SqlRunner): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Durable inbox (migration 202610071900): leases, finished events, failure codes, decision vocabularies. Owner, after checkStructuralInvariants.
+// Durable inbox (migrations 202610071900, 202610072000): leases with their claim token, finished events, failure codes,
+// decision vocabularies. Owner, after checkStructuralInvariants.
 // ---------------------------------------------------------------------------------------------------------------------
 export async function checkInboxStructure(owner: SqlRunner): Promise<void> {
-  await rejects(owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = 'w1' WHERE id = 'r3'`), /lease_pair_check/, 'a lease names its owner and its expiry');
-  await owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = 'w1', "leaseExpiresAt" = now() + interval '1 minute' WHERE id = 'r3'`);
+  await rejects(owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = 'w1' WHERE id = 'r3'`), /RawEvent_lease_check/, 'a lease names its owner, its expiry and its token');
+  await rejects(owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = 'w1', "leaseExpiresAt" = now() + interval '1 minute' WHERE id = 'r3'`), /RawEvent_lease_check/,
+    'no lease without a claim token (review B1)');
+  await rejects(owner.exec(`UPDATE "RawEvent" SET "claimToken" = gen_random_uuid() WHERE id = 'r3'`), /RawEvent_lease_check/, 'no claim token without a lease');
+  await owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = 'w1', "leaseExpiresAt" = now() + interval '1 minute', "claimToken" = gen_random_uuid() WHERE id = 'r3'`);
   await rejects(owner.exec(`UPDATE "RawEvent" SET status = 'PROCESSED' WHERE id = 'r3'`), /finished_without_lease_check/);
-  await owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = NULL, "leaseExpiresAt" = NULL WHERE id = 'r3'`);
+  await owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = NULL, "leaseExpiresAt" = NULL, "claimToken" = NULL WHERE id = 'r3'`);
   await rejects(owner.exec(`UPDATE "RawEvent" SET status = 'DEAD_LETTER' WHERE id = 'r3'`), /RawEvent_error_code_check/, 'a dead letter says why');
   await rejects(owner.exec(`UPDATE "RawEvent" SET "preparedDecision" = '[1]' WHERE id = 'r3'`), /prepared_decision_check/);
   await rejects(owner.exec(`INSERT INTO "DecisionRun" ("workspaceId","clientId","id","eventId","provider","mode","applied","promptVersion","inputHash","status","safeErrorCode")

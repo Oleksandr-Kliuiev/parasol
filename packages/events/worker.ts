@@ -13,21 +13,25 @@ import { assertStorableEvent } from './inbox.ts';
 
 /**
  * Durable worker (task 1.6), docs/03 "Event inbox и worker" with the reference pipeline's contract:
- *   claim (lease, FOR UPDATE SKIP LOCKED) → phase 1 once per event: resolve the device, decide (provider called outside any
- *   transaction), store the runs NOT applied together with the prepared decision → phase 2 in ONE transaction: applied flag,
- *   observation, audit row, inbox completion. A retry reuses the stored decision and never calls the provider again; a
- *   crashed worker's lease expires and the event is claimed again. TRANSIENT failures retry with backoff up to maxAttempts,
- *   PERMANENT or unknown ones are dead-lettered with an audit row. Nothing is ever dropped.
+ *   claim (lease + claim token, FOR UPDATE SKIP LOCKED) → phase 1 once per event: resolve the device, decide (provider
+ *   called outside any transaction), store the runs NOT applied together with the prepared decision → phase 2 in ONE
+ *   transaction: applied flag, observation, audit row, inbox completion. A retry reuses the stored decision and never calls
+ *   the provider again; a crashed worker's lease expires and the event is claimed again. TRANSIENT failures retry with
+ *   backoff up to maxAttempts, PERMANENT or unknown ones are dead-lettered with an audit row. Nothing is ever dropped.
+ * Review B1: a worker changes the event only while its claim token is the current one; a worker whose lease was taken
+ * over ends with CLAIM_LOST and changes nothing. Review B2: every claim uses up an attempt, also one that never reports
+ * back; an event whose claims ran out (attempts = maxAttempts, lease expired) is dead-lettered at the next claim.
  */
-export interface WorkerOptions {
-  workerId: string; provider: DecisionProvider; config?: DecisionConfig;
-  leaseMs?: number; maxAttempts?: number; batchSize?: number; retryDelayMs?: (attempt: number) => number;
+export interface ClaimOptions { workerId: string; leaseMs?: number; maxAttempts?: number; batchSize?: number }
+export interface WorkerOptions extends ClaimOptions {
+  provider: DecisionProvider; config?: DecisionConfig; retryDelayMs?: (attempt: number) => number;
   /** Test seam: runs inside the final transaction just before it commits. Production leaves it unset. */
   beforeFinalCommit?: (eventKey: string) => Promise<void>;
 }
 interface PreparedDecision { entityId: string | null; route: Route; confidence: number; provider: Provider; promptVersion: string; reasonCodes: string[]; appliedRunId: string; shadowPending: boolean }
-export interface ClaimedEvent { id: string; eventKey: string; conflictOfEventKey: string | null; normalized: unknown; attempts: number; prepared: PreparedDecision | null }
-export interface ProcessOutcome { eventKey: string; status: 'PROCESSED' | 'RETRY' | 'DEAD_LETTER' | 'ALREADY_FINISHED'; safeErrorCode: string | null; observationId: string | null }
+export interface ClaimedEvent { id: string; eventKey: string; conflictOfEventKey: string | null; normalized: unknown; attempts: number; claimToken: string; prepared: PreparedDecision | null }
+export interface ProcessOutcome { eventKey: string; status: 'PROCESSED' | 'RETRY' | 'DEAD_LETTER' | 'CLAIM_LOST'; safeErrorCode: string | null; observationId: string | null }
+export interface ClaimResult { claimed: ClaimedEvent[]; deadLettered: ProcessOutcome[] }
 
 const defaults = { leaseMs: 60_000, maxAttempts: 3, batchSize: 10, retryDelayMs: (attempt: number) => Math.min(15 * 60_000, 30_000 * 2 ** (attempt - 1)) };
 const ids = (scope: Scope) => ({ workspaceId: scope.workspaceId, clientId: scope.clientId });
@@ -39,26 +43,63 @@ function classify(error: unknown): AtlasError {
   return typeof code === 'string' && TRANSIENT_DB.has(code) ? new AtlasError('DATABASE_UNAVAILABLE', 'TRANSIENT') : new AtlasError('UNEXPECTED_ERROR', 'PERMANENT');
 }
 
-/** Claims due events of one client for this worker; attempts are counted on claim, so a crash still uses up an attempt. */
-export async function claimEvents(db: PrismaClient, actor: Actor, scope: Scope, workerId: string, now: Date, leaseMs = defaults.leaseMs,
-  limit = defaults.batchSize): Promise<ClaimedEvent[]> {
+/**
+ * Claims due events of one client for this worker. Each claim gets its own token and uses up an attempt, so a crash
+ * counts too. In the same transaction, due events that have used every attempt without an outcome (their last worker
+ * died) are dead-lettered with an audit row (ATTEMPTS_EXHAUSTED): no provider call, no hidden pending rows. A stored
+ * phase-1 decision stays with the event; an explicit requeue completes it without calling the provider again.
+ */
+export async function claimEvents(db: PrismaClient, actor: Actor, scope: Scope, options: ClaimOptions, now: Date = new Date()): Promise<ClaimResult> {
   assertPermission(actor, scope, 'events:ingest');
-  const until = new Date(now.getTime() + leaseMs);
-  const rows = await withScope(db, actor, [scope.clientId], tx => tx.$queryRaw<{ id: string; eventKey: string; conflictOfEventKey: string | null; normalized: unknown;
-    attempts: number; preparedDecision: unknown }[]>`
-    UPDATE "RawEvent" SET "leaseOwner" = ${workerId}, "leaseExpiresAt" = ${until}, attempts = attempts + 1
-    WHERE ("workspaceId", "clientId", id) IN (
-      SELECT "workspaceId", "clientId", id FROM "RawEvent"
-      WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND status IN ('RECEIVED', 'RETRY')
-        AND "nextAttemptAt" <= ${now} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${now})
-      ORDER BY "nextAttemptAt", "receivedAt", id LIMIT ${limit} FOR UPDATE SKIP LOCKED)
-    RETURNING id, "eventKey", "conflictOfEventKey", normalized, attempts, "preparedDecision"`);
-  return rows.map(r => ({ id: r.id, eventKey: r.eventKey, conflictOfEventKey: r.conflictOfEventKey, normalized: r.normalized, attempts: Number(r.attempts),
-    prepared: (r.preparedDecision ?? null) as PreparedDecision | null }));
+  const maxAttempts = options.maxAttempts ?? defaults.maxAttempts;
+  const limit = options.batchSize ?? defaults.batchSize;
+  const until = new Date(now.getTime() + (options.leaseMs ?? defaults.leaseMs));
+  // Each statement picks its rows in a MATERIALIZED CTE, evaluated exactly once: a LIMIT … FOR UPDATE SKIP LOCKED subquery
+  // inside IN (…) may be re-run per row by the planner, skip the rows this statement already changed and exceed the batch.
+  return withScope(db, actor, [scope.clientId], async tx => {
+    const exhausted = await tx.$queryRaw<{ eventKey: string; attempts: number }[]>`
+      WITH picked AS MATERIALIZED (
+        SELECT "workspaceId", "clientId", id FROM "RawEvent"
+        WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND status IN ('RECEIVED', 'RETRY') AND attempts >= ${maxAttempts}
+          AND "nextAttemptAt" <= ${now} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${now})
+        ORDER BY "nextAttemptAt", "receivedAt", id LIMIT ${limit} FOR UPDATE SKIP LOCKED)
+      UPDATE "RawEvent" r SET status = 'DEAD_LETTER', "lastErrorCode" = 'ATTEMPTS_EXHAUSTED', "leaseOwner" = NULL, "leaseExpiresAt" = NULL, "claimToken" = NULL
+      FROM picked p WHERE r."workspaceId" = p."workspaceId" AND r."clientId" = p."clientId" AND r.id = p.id
+      RETURNING r."eventKey", r.attempts`;
+    for (const row of exhausted) {
+      await tx.auditEvent.create({ data: clientAuditData(scope, actor.id, 'event.dead_lettered', randomUUID(),
+        { eventKey: row.eventKey, safeErrorCode: 'ATTEMPTS_EXHAUSTED', attempts: String(row.attempts), inboxStatus: 'DEAD_LETTER' }), select: { id: true } });
+    }
+    const rows = await tx.$queryRaw<{ id: string; eventKey: string; conflictOfEventKey: string | null; normalized: unknown; attempts: number;
+      claimToken: string; preparedDecision: unknown }[]>`
+      WITH picked AS MATERIALIZED (
+        SELECT "workspaceId", "clientId", id FROM "RawEvent"
+        WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND status IN ('RECEIVED', 'RETRY') AND attempts < ${maxAttempts}
+          AND "nextAttemptAt" <= ${now} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${now})
+        ORDER BY "nextAttemptAt", "receivedAt", id LIMIT ${limit} FOR UPDATE SKIP LOCKED)
+      UPDATE "RawEvent" r SET "leaseOwner" = ${options.workerId}, "leaseExpiresAt" = ${until}, "claimToken" = gen_random_uuid(), attempts = r.attempts + 1
+      FROM picked p WHERE r."workspaceId" = p."workspaceId" AND r."clientId" = p."clientId" AND r.id = p.id
+      RETURNING r.id, r."eventKey", r."conflictOfEventKey", r.normalized, r.attempts, r."claimToken"::text AS "claimToken", r."preparedDecision"`;
+    return {
+      claimed: rows.map(r => ({ id: r.id, eventKey: r.eventKey, conflictOfEventKey: r.conflictOfEventKey, normalized: r.normalized, attempts: Number(r.attempts),
+        claimToken: r.claimToken, prepared: (r.preparedDecision ?? null) as PreparedDecision | null })),
+      deadLettered: exhausted.map(r => ({ eventKey: r.eventKey, status: 'DEAD_LETTER' as const, safeErrorCode: 'ATTEMPTS_EXHAUSTED', observationId: null })),
+    };
+  });
+}
+
+/** Locks the event row for a change by this claim: the token must still be the current one and the event still pending. */
+async function lockClaim(tx: Prisma.TransactionClient, scope: Scope, claimed: ClaimedEvent): Promise<{ preparedDecision: unknown }> {
+  const [row] = await tx.$queryRaw<{ preparedDecision: unknown }[]>`SELECT "preparedDecision" FROM "RawEvent"
+    WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND id = ${claimed.id}
+      AND "claimToken" = ${claimed.claimToken}::uuid AND status IN ('RECEIVED', 'RETRY') FOR UPDATE`;
+  if (!row) throw new AtlasError('CLAIM_LOST', 'CONFLICT');
+  return row;
 }
 
 /** Device of the event through CONFIRMED links; a QUARANTINED link of that agent is an unresolved conflict (CONFLICT evidence). */
-async function resolveDevice(tx: Prisma.TransactionClient, scope: Scope, event: NormalizedEvent): Promise<{ entityId: string | null; conflictCode: string | null }> {
+interface DeviceResolution { entityId: string | null; conflictCode: string | null }
+async function resolveDevice(tx: Prisma.TransactionClient, scope: Scope, event: NormalizedEvent): Promise<DeviceResolution> {
   const ref = event.externalDevice;
   if (!ref || ref.resourceType !== 'agent') return { entityId: null, conflictCode: null };
   const external = await tx.externalEntity.findUnique({ where: { workspaceId_clientId_connectionId_resourceType_externalId:
@@ -78,20 +119,27 @@ function runData(scope: Scope, claimed: ClaimedEvent, event: NormalizedEvent, ru
     latencyMs: run.latencyMs, safeErrorCode: run.error };
 }
 
-/** Phase 1, once per event. The stored decision is returned as is on every later attempt; the provider is not called. */
+/**
+ * Phase 1, once per event. The stored decision is returned as is on every later attempt; the provider is not called.
+ * A worker whose claim was taken over stops before the provider call, or at the latest when it would store the decision.
+ */
 export async function prepareEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, options: WorkerOptions): Promise<PreparedDecision> {
   if (claimed.prepared) return claimed.prepared;
   const config = options.config ?? defaultDecisionConfig;
   assertStorableEvent(claimed.normalized);
   const event = claimed.normalized;
-  const resolution = await withScope(db, actor, [scope.clientId], tx => resolveDevice(tx, scope, event));
+  const start: { stored: PreparedDecision } | { resolution: DeviceResolution } = await withScope(db, actor, [scope.clientId], async tx => {
+    const row = await lockClaim(tx, scope, claimed);
+    return row.preparedDecision ? { stored: row.preparedDecision as PreparedDecision } : { resolution: await resolveDevice(tx, scope, event) };
+  });
+  if ('stored' in start) return start.stored;
+  const { resolution } = start;
   const draft = await draftDecision(options.provider, config, event);
   const { route, reasonCodes } = finalRoute({ classification: draft.classification, entityId: resolution.entityId, linkConflictCode: resolution.conflictCode,
     conflictOfEventKey: claimed.conflictOfEventKey, sourceSeverity: event.sourceSeverity, confidenceThreshold: config.confidenceThreshold });
   return withScope(db, actor, [scope.clientId], async tx => {
-    const [row] = await tx.$queryRaw<{ preparedDecision: unknown }[]>`SELECT "preparedDecision" FROM "RawEvent"
-      WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND id = ${claimed.id} FOR UPDATE`;
-    if (row?.preparedDecision) return row.preparedDecision as PreparedDecision; // a concurrent worker decided first
+    const row = await lockClaim(tx, scope, claimed);
+    if (row.preparedDecision) return row.preparedDecision as PreparedDecision; // stored by an earlier claim of this event
     const runIds = draft.runs.map(() => randomUUID());
     for (const [i, run] of draft.runs.entries()) await tx.decisionRun.create({ data: runData(scope, claimed, event, run, config, runIds[i]!), select: { id: true } });
     const prepared: PreparedDecision = { entityId: resolution.entityId, route, confidence: draft.classification.confidence, provider: draft.classification.provider,
@@ -101,14 +149,12 @@ export async function prepareEvent(db: PrismaClient, actor: Actor, scope: Scope,
   });
 }
 
-/** Phase 2: applied flag, observation, audit row and inbox completion in ONE transaction, serialized per event. */
-async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, prepared: PreparedDecision, options: WorkerOptions): Promise<string | null> {
+/** Phase 2: applied flag, observation, audit row and inbox completion in ONE transaction, under this claim's row lock. */
+async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, prepared: PreparedDecision, options: WorkerOptions): Promise<string> {
   assertStorableEvent(claimed.normalized);
   const event = claimed.normalized;
   return withScope(db, actor, [scope.clientId], async tx => {
-    const [row] = await tx.$queryRaw<{ status: string }[]>`SELECT status FROM "RawEvent"
-      WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND id = ${claimed.id} FOR UPDATE`;
-    if (!row || row.status === 'PROCESSED' || row.status === 'DEAD_LETTER') return null;
+    await lockClaim(tx, scope, claimed);
     if (options.beforeFinalCommit) await options.beforeFinalCommit(claimed.eventKey);
     const applied = await tx.decisionRun.updateMany({ where: { ...ids(scope), id: prepared.appliedRunId, eventId: claimed.id }, data: { applied: true } });
     if (applied.count !== 1) throw new AtlasError('APPLIED_RUN_MISSING', 'PERMANENT');
@@ -121,7 +167,7 @@ async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed
       route: prepared.route, priority, provider: prepared.provider, reasonCodes: prepared.reasonCodes.join(','), decisionRunId: prepared.appliedRunId,
       ...(claimed.conflictOfEventKey ? { conflictOfEventKey: claimed.conflictOfEventKey } : {}) }), select: { id: true } });
     await tx.rawEvent.update({ where: { workspaceId_clientId_id: { ...ids(scope), id: claimed.id } },
-      data: { status: 'PROCESSED', leaseOwner: null, leaseExpiresAt: null, lastErrorCode: null }, select: { id: true } });
+      data: { status: 'PROCESSED', leaseOwner: null, leaseExpiresAt: null, claimToken: null, lastErrorCode: null }, select: { id: true } });
     return observationId;
   });
 }
@@ -135,40 +181,43 @@ async function runShadow(db: PrismaClient, actor: Actor, scope: Scope, claimed: 
   await withScope(db, actor, [scope.clientId], tx => tx.decisionRun.create({ data: runData(scope, claimed, event, run, options.config ?? defaultDecisionConfig, randomUUID()), select: { id: true } }));
 }
 
-async function recordFailure(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, error: unknown, options: WorkerOptions, now: Date): Promise<'RETRY' | 'DEAD_LETTER'> {
-  const failure = classify(error);
+/** RETRY or DEAD_LETTER with an audit row, only while this claim is current: a claim taken over records nothing (CLAIM_LOST). */
+async function recordFailure(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, failure: AtlasError, options: WorkerOptions,
+  now: Date): Promise<'RETRY' | 'DEAD_LETTER' | 'CLAIM_LOST'> {
   const retry = failure.kind === 'TRANSIENT' && claimed.attempts < (options.maxAttempts ?? defaults.maxAttempts);
   const status = retry ? 'RETRY' : 'DEAD_LETTER';
   const delay = (options.retryDelayMs ?? defaults.retryDelayMs)(claimed.attempts);
-  await withScope(db, actor, [scope.clientId], async tx => {
-    const updated = await tx.rawEvent.updateMany({ where: { ...ids(scope), id: claimed.id, status: { in: ['RECEIVED', 'RETRY'] } },
-      data: { status, lastErrorCode: failure.code, leaseOwner: null, leaseExpiresAt: null, ...(retry ? { nextAttemptAt: new Date(now.getTime() + delay) } : {}) } });
-    if (updated.count === 1) {
-      await tx.auditEvent.create({ data: clientAuditData(scope, actor.id, retry ? 'event.retry_scheduled' : 'event.dead_lettered', randomUUID(),
-        { eventKey: claimed.eventKey, safeErrorCode: failure.code, attempts: String(claimed.attempts), inboxStatus: status }), select: { id: true } });
-    }
+  return withScope(db, actor, [scope.clientId], async tx => {
+    const updated = await tx.rawEvent.updateMany({ where: { ...ids(scope), id: claimed.id, claimToken: claimed.claimToken, status: { in: ['RECEIVED', 'RETRY'] } },
+      data: { status, lastErrorCode: failure.code, leaseOwner: null, leaseExpiresAt: null, claimToken: null, ...(retry ? { nextAttemptAt: new Date(now.getTime() + delay) } : {}) } });
+    if (updated.count !== 1) return 'CLAIM_LOST';
+    await tx.auditEvent.create({ data: clientAuditData(scope, actor.id, retry ? 'event.retry_scheduled' : 'event.dead_lettered', randomUUID(),
+      { eventKey: claimed.eventKey, safeErrorCode: failure.code, attempts: String(claimed.attempts), inboxStatus: status }), select: { id: true } });
+    return status;
   });
-  return status;
 }
 
-/** One claimed event through both phases; any failure becomes RETRY or DEAD_LETTER with its reason. */
+/** One claimed event through both phases; a failure becomes RETRY or DEAD_LETTER with its reason, or CLAIM_LOST (no change) if the claim was taken over. */
 export async function processClaimed(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, options: WorkerOptions, now: Date = new Date()): Promise<ProcessOutcome> {
   try {
     const prepared = await prepareEvent(db, actor, scope, claimed, options);
     const observationId = await commitEvent(db, actor, scope, claimed, prepared, options);
-    if (observationId === null) return { eventKey: claimed.eventKey, status: 'ALREADY_FINISHED', safeErrorCode: null, observationId: null };
     if (prepared.shadowPending) await runShadow(db, actor, scope, claimed, options).catch(() => undefined);
     return { eventKey: claimed.eventKey, status: 'PROCESSED', safeErrorCode: null, observationId };
   } catch (error) {
-    const status = await recordFailure(db, actor, scope, claimed, error, options, now);
-    return { eventKey: claimed.eventKey, status, safeErrorCode: safeErrorCode(classify(error)), observationId: null };
+    const failure = classify(error);
+    const status = failure.code === 'CLAIM_LOST' ? 'CLAIM_LOST' : await recordFailure(db, actor, scope, claimed, failure, options, now);
+    return { eventKey: claimed.eventKey, status, safeErrorCode: safeErrorCode(failure), observationId: null };
   }
 }
 
-/** One worker pass over a client: claim due events, process each. Workers on other processes take disjoint batches. */
+/**
+ * One worker pass over a client: dead-letter exhausted events, claim due ones, process each. Workers on other processes
+ * take disjoint batches.
+ */
 export async function processPending(db: PrismaClient, actor: Actor, scope: Scope, options: WorkerOptions, now: Date = new Date()): Promise<ProcessOutcome[]> {
-  const claimed = await claimEvents(db, actor, scope, options.workerId, now, options.leaseMs ?? defaults.leaseMs, options.batchSize ?? defaults.batchSize);
-  const outcomes: ProcessOutcome[] = [];
+  const { claimed, deadLettered } = await claimEvents(db, actor, scope, options, now);
+  const outcomes: ProcessOutcome[] = [...deadLettered];
   for (const event of claimed) outcomes.push(await processClaimed(db, actor, scope, event, options, now));
   return outcomes;
 }

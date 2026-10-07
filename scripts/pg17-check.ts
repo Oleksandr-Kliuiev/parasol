@@ -55,9 +55,9 @@ try {
   await checkMappingStructure(ownerRunner);
   results.push(['Mapping workflow schema (typed links, quarantine, immutable binding)', 'passed']);
   await checkSnapshotStructure(ownerRunner);
-  results.push(['Snapshot schema (bounded items, attempt/success order, failure codes)', 'passed']);
+  results.push(['Snapshot schema (bounded items, attempt/success order, read-attempt order, failure codes)', 'passed']);
   await checkInboxStructure(ownerRunner);
-  results.push(['Inbox schema (leases, finished events, failure codes, decision vocabularies)', 'passed']);
+  results.push(['Inbox schema (leases with claim tokens, finished events, failure codes, decision vocabularies)', 'passed']);
 
   // Confined role through a pool of ONE connection: every checkout reuses the same physical connection.
   const appUrl = new URL(ownerUrl.toString()); appUrl.username = roleName; appUrl.password = rolePassword;

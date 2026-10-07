@@ -34,7 +34,7 @@ const ids = (items: unknown) => (items as { externalId: string; severity: string
 
 test('a complete read replaces the snapshot and records success in one transaction; the context shows it OK and contact-free', async () => {
   const result = await syncConnection(db, actors.sync, huntress, io, at(5));
-  assert.deepEqual(result.identities, { status: 'OK', registered: 2, candidates: 1, ambiguous: 0, safeErrorCode: null, errorKind: null });
+  assert.deepEqual(result.identities, { status: 'OK', registered: 2, candidates: 1, ambiguous: 0, superseded: false, safeErrorCode: null, errorKind: null });
   assert.deepEqual(result.resources.map(r => [r.resourceType, r.status, r.itemCount]), [['incident', 'OK', 2]]);
   const incidents = await view('gasta-huntress', 'incident');
   assert.deepEqual([incidents.status, incidents.asOf, incidents.truncated, ids(incidents.items)], ['OK', at(5).toISOString(), false, ['9001:CRITICAL', '9002:LOW']]);

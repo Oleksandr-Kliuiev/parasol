@@ -7,8 +7,9 @@ import type { HttpTransport } from '../../connectors/http.ts';
 import { createConnector } from '../../connectors/registry.ts';
 import { assertResolvedConnection, resolveCredential } from '../connections/connections.ts';
 import { registerExternalEntity, suggestDeviceCandidate } from '../graph/mapping.ts';
-import { withScope, uniqueViolation } from '../graph/scoped-db.ts';
+import { uniqueViolation } from '../graph/scoped-db.ts';
 import { assertEventFromConnection, assertStorableEvent, storeEvent } from '../events/inbox.ts';
+import { beginAttempt, commitAttempt, nothing } from './sync-state.ts';
 
 /**
  * SyncModule core (task 1.5): snapshot reads of live resources and identity reads, following the sync order of docs/03.
@@ -36,6 +37,8 @@ export interface ResourceSyncResult {
   resourceType: ResourceType; status: 'OK' | 'ERROR' | 'UNAVAILABLE'; itemCount: number | null;
   /** Events of this read newly stored in the inbox, and redeliveries recognized as duplicates (durable dedup). */
   eventsStored: number; eventsDuplicate: number;
+  /** A read that began later had already been recorded: this outcome changed neither state nor snapshot (its events are stored). */
+  superseded: boolean;
   safeErrorCode: string | null; errorKind: ErrorKind | null; retryAfterSeconds: string | null;
 }
 const scopeOf = (c: ResolvedConnection): Scope => ({ workspaceId: c.workspaceId, clientId: c.clientId });
@@ -46,6 +49,8 @@ const scopeOf = (c: ResolvedConnection): Scope => ({ workspaceId: c.workspaceId,
  * transaction, so a read that fails anywhere stores nothing of itself. A failure on any page records ERROR with its code and kind
  * (TRANSIENT: retry later, honouring retryAfterSeconds) and leaves the previous snapshot and lastSuccessAt untouched.
  * A resource the source cannot read with a tenant filter is recorded UNAVAILABLE and never requested.
+ * Overlapping reads of one resource (review B3): only the outcome of the read that began later becomes the current state;
+ * an earlier read finishing late is `superseded` and only stores its events (packages/sync/sync-state.ts).
  */
 export async function syncResource(db: PrismaClient, actor: Actor, connection: ResolvedConnection, connector: AtlasConnector,
   resourceType: ResourceType, now: Date = new Date()): Promise<ResourceSyncResult> {
@@ -55,43 +60,49 @@ export async function syncResource(db: PrismaClient, actor: Actor, connection: R
   if (connector.system !== connection.system) throw new AtlasError('CONNECTOR_SYSTEM_MISMATCH', 'PERMANENT');
   const key = { ...scope, connectionId: connection.connectionId, resourceType };
   const where = { workspaceId_clientId_connectionId_resourceType: key };
-  const recordState = (status: 'ERROR' | 'UNAVAILABLE', code: string) => withScope(db, actor, [scope.clientId], tx =>
-    tx.syncState.upsert({ where, create: { ...key, status, safeErrorCode: code, lastSyncAt: now }, update: { status, safeErrorCode: code, lastSyncAt: now } }));
+  const attempt = await beginAttempt(db, actor, key, now);
+  const recordState = async (status: 'ERROR' | 'UNAVAILABLE', code: string) => (await commitAttempt(db, actor, key, attempt, (tx, recordedSeq) =>
+    tx.syncState.upsert({ where, create: { ...key, status, safeErrorCode: code, lastSyncAt: now, attemptSeq: recordedSeq, recordedSeq },
+      update: { status, safeErrorCode: code, lastSyncAt: now, recordedSeq } }), nothing)).recorded;
   const unavailable = connector.unavailableResources[resourceType];
   if (unavailable) {
-    await recordState('UNAVAILABLE', unavailable);
-    return { resourceType, status: 'UNAVAILABLE', itemCount: null, eventsStored: 0, eventsDuplicate: 0, safeErrorCode: unavailable, errorKind: null, retryAfterSeconds: null };
+    const recorded = await recordState('UNAVAILABLE', unavailable);
+    return { resourceType, status: 'UNAVAILABLE', itemCount: null, eventsStored: 0, eventsDuplicate: 0, superseded: !recorded, safeErrorCode: unavailable, errorKind: null,
+      retryAfterSeconds: null };
   }
   try {
     const read = await connector.readSnapshot(connection, resourceType);
     if (read.resourceType !== resourceType || read.itemCount !== read.items.length) throw new AtlasError('CONNECTOR_RESULT_INVALID', 'PERMANENT');
     for (const event of read.events) { assertEventFromConnection(event, connection); assertStorableEvent(event); }
     const correlationId = randomUUID();
-    let eventsStored = 0; let eventsDuplicate = 0;
     const items = boundedItems(read.items);
     const snapshot = { asOf: now, items: items as unknown as Prisma.InputJsonValue, itemCount: read.itemCount,
       truncated: read.itemCount > items.length, contractVersion: read.contractVersion };
     const success = { status: 'OK', safeErrorCode: null, cursor: null, lastSyncAt: now, lastSuccessAt: now };
-    await withScope(db, actor, [scope.clientId], async tx => {
-      await tx.syncState.upsert({ where, create: { ...key, ...success }, update: success });
+    const { recorded, value: counts } = await commitAttempt(db, actor, key, attempt, async (tx, recordedSeq) => {
+      await tx.syncState.upsert({ where, create: { ...key, ...success, attemptSeq: recordedSeq, recordedSeq }, update: { ...success, recordedSeq } });
       await tx.resourceSnapshot.upsert({ where, create: { ...key, ...snapshot }, update: snapshot });
+    }, async tx => {
+      const counted = { stored: 0, duplicate: 0 };
       for (const event of read.events) {
-        const stored = await storeEvent(tx, scope, actor.id, event, correlationId);
-        if (stored.outcome === 'STORED') eventsStored++; else eventsDuplicate++;
+        if ((await storeEvent(tx, scope, actor.id, event, correlationId)).outcome === 'STORED') counted.stored++; else counted.duplicate++;
       }
+      return counted;
     });
-    return { resourceType, status: 'OK', itemCount: read.itemCount, eventsStored, eventsDuplicate, safeErrorCode: null, errorKind: null, retryAfterSeconds: null };
+    return { resourceType, status: 'OK', itemCount: read.itemCount, eventsStored: counts.stored, eventsDuplicate: counts.duplicate, superseded: !recorded,
+      safeErrorCode: null, errorKind: null, retryAfterSeconds: null };
   } catch (thrown) {
-    // A concurrent sync of the same resource lost the race on an event identity: retry later, the winner's rows stand.
+    // Concurrent syncs that still collide after the one re-decision in commitAttempt: retry later, the winner's rows stand.
     const error = uniqueViolation(thrown) !== null ? new AtlasError('CONCURRENT_SYNC', 'TRANSIENT') : thrown;
     const code = safeErrorCode(error);
-    await recordState('ERROR', code);
-    return { resourceType, status: 'ERROR', itemCount: null, eventsStored: 0, eventsDuplicate: 0, safeErrorCode: code, errorKind: errorKind(error),
+    const recorded = await recordState('ERROR', code);
+    return { resourceType, status: 'ERROR', itemCount: null, eventsStored: 0, eventsDuplicate: 0, superseded: !recorded, safeErrorCode: code, errorKind: errorKind(error),
       retryAfterSeconds: errorDetails(error).retryAfterSeconds ?? null };
   }
 }
 
-export interface IdentitySyncResult { status: 'OK' | 'ERROR'; registered: number; candidates: number; ambiguous: number; safeErrorCode: string | null; errorKind: ErrorKind | null }
+export interface IdentitySyncResult { status: 'OK' | 'ERROR'; registered: number; candidates: number; ambiguous: number; superseded: boolean; safeErrorCode: string | null;
+  errorKind: ErrorKind | null }
 
 /**
  * Identity objects (agents): each is registered under the connection, then the matcher may propose a CANDIDATE link
@@ -104,6 +115,10 @@ export async function syncIdentities(db: PrismaClient, actor: Actor, connection:
   assertPermission(actor, scope, 'events:ingest');
   const key = { ...scope, connectionId: connection.connectionId, resourceType: 'agent' };
   const where = { workspaceId_clientId_connectionId_resourceType: key };
+  const attempt = await beginAttempt(db, actor, key, now);
+  type IdentityState = { status: 'OK' | 'ERROR'; safeErrorCode: string | null; lastSyncAt: Date; lastSuccessAt?: Date };
+  const recordState = async (state: IdentityState) => (await commitAttempt(db, actor, key, attempt, (tx, recordedSeq) =>
+    tx.syncState.upsert({ where, create: { ...key, ...state, attemptSeq: recordedSeq, recordedSeq }, update: { ...state, recordedSeq } }), nothing)).recorded;
   try {
     const identities = await connector.readIdentities(connection);
     let candidates = 0; let ambiguous = 0;
@@ -115,14 +130,12 @@ export async function syncIdentities(db: PrismaClient, actor: Actor, connection:
       if (suggestion.outcome === 'CANDIDATE') candidates++;
       if (suggestion.outcome === 'AMBIGUOUS') ambiguous++;
     }
-    const success = { status: 'OK', safeErrorCode: null, lastSyncAt: now, lastSuccessAt: now };
-    await withScope(db, actor, [scope.clientId], tx => tx.syncState.upsert({ where, create: { ...key, ...success }, update: success }));
-    return { status: 'OK', registered: identities.length, candidates, ambiguous, safeErrorCode: null, errorKind: null };
+    const recorded = await recordState({ status: 'OK', safeErrorCode: null, lastSyncAt: now, lastSuccessAt: now });
+    return { status: 'OK', registered: identities.length, candidates, ambiguous, superseded: !recorded, safeErrorCode: null, errorKind: null };
   } catch (error) {
     const code = safeErrorCode(error);
-    await withScope(db, actor, [scope.clientId], tx => tx.syncState.upsert({ where,
-      create: { ...key, status: 'ERROR', safeErrorCode: code, lastSyncAt: now }, update: { status: 'ERROR', safeErrorCode: code, lastSyncAt: now } }));
-    return { status: 'ERROR', registered: 0, candidates: 0, ambiguous: 0, safeErrorCode: code, errorKind: errorKind(error) };
+    const recorded = await recordState({ status: 'ERROR', safeErrorCode: code, lastSyncAt: now });
+    return { status: 'ERROR', registered: 0, candidates: 0, ambiguous: 0, superseded: !recorded, safeErrorCode: code, errorKind: errorKind(error) };
   }
 }
 

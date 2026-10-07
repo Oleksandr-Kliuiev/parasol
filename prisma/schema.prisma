@@ -197,11 +197,13 @@ model RawEvent {
   status      String @default("RECEIVED")
   attempts    Int @default(0)
   lastErrorCode String?
-  /// Durable inbox (task 1.6): due time of the next attempt, lease of the worker holding it (both or neither; none once
-  /// PROCESSED or DEAD_LETTER), and the phase-1 decision reused by every retry of the final transaction.
+  /// Durable inbox (task 1.6): due time of the next attempt, lease of the worker holding it (owner, expiry and the claim's
+  /// own token: all or none; none once PROCESSED or DEAD_LETTER), and the phase-1 decision reused by every retry of the
+  /// final transaction. A worker changes the event only while its claim token is current (review B1).
   nextAttemptAt  DateTime @default(now())
   leaseOwner     String?
   leaseExpiresAt DateTime?
+  claimToken     String? @db.Uuid
   preparedDecision Json?
   /// Set on a redelivery with the same identity but different content: points at the canonical row, which is never overwritten.
   /// The link is scoped and identity-bound (same workspace, client, connection, resourceType, externalEventId, revision);
@@ -299,6 +301,10 @@ model SyncState {
   /// does not read it. ERROR and UNAVAILABLE carry safeErrorCode; lastSuccessAt never runs ahead of lastSyncAt.
   status      String
   safeErrorCode String?
+  /// Order of read attempts (review B3): the number last given to an attempt, and the number of the attempt whose outcome
+  /// is recorded here. An outcome is recorded only if no attempt that began later has been recorded.
+  attemptSeq  Int @default(0)
+  recordedSeq Int @default(0)
   connection  Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict)
   snapshot    ResourceSnapshot?
   @@id([workspaceId, clientId, connectionId, resourceType])

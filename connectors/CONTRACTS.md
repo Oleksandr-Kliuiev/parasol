@@ -14,7 +14,7 @@ No credentials were used. Fixtures in `fixtures/vendor` are synthetic and shaped
 
 - Base `https://api.huntress.io`; HTTP Basic with base64(`<api key>:<api secret>`); the vault holds the pair as one secret.
 - Rate limit 60 requests/minute per account (sliding window) → 429; Atlas surfaces it as TRANSIENT with Retry-After.
-- Pagination: `limit` (1–500, Atlas uses 100) and `page_token`; the response has the plural key and `pagination.next_page_token` only when more pages exist. At most 20 pages per read.
+- Pagination: `limit` (1–500, Atlas uses 100) and `page_token`; the response has the plural key and `pagination.next_page_token` only when more pages exist. At most 20 pages per read. No totals are returned; a record ID seen twice in one read fails it as `UPSTREAM_PAGINATION_INCONSISTENT` (TRANSIENT).
 - Reads, all with the server-side filter `organization_id=<bound tenant>`:
   - `GET /v1/incident_reports?organization_id&status=sent` → snapshot `incident` (open = `sent`: the SOC has notified the partner).
   - `GET /v1/agents?organization_id` → identities `agent` (`id`, `organization_id`, `hostname`, `platform`, `updated_at`).
@@ -26,7 +26,7 @@ No credentials were used. Fixtures in `fixtures/vendor` are synthetic and shaped
 ## Atera (`connectors/atera/`) — confirm before activating a live connection
 
 - Base `https://app.atera.com`; the export documents JWT bearer authentication (`Authorization: Bearer {token}`).
-- Pagination: `page`, `itemsInPage` (max 50); envelope `items` (nullable), `page`, `totalPages`, `totalItemCount`, `prevLink`, `nextLink`. At most 40 pages per read.
+- Pagination: `page`, `itemsInPage` (max 50); envelope `items` (nullable), `page`, `totalPages`, `totalItemCount`, `prevLink`, `nextLink`. At most 40 pages per read. A read is complete only if every page carries the same `totalPages`/`totalItemCount`, no page before the declared last one is empty, no ID repeats and the read ends with exactly `totalItemCount` records; otherwise `UPSTREAM_PAGINATION_INCONSISTENT` (TRANSIENT) and the previous snapshot stays. An empty set (`totalItemCount` 0) is a complete read.
 - Reads:
   - `GET /api/v3/tickets?customerId=<bound tenant>&ticketStatus=Open` → snapshot `ticket` (`TicketID`, `CustomerID`, `TicketTitle`, `TicketStatus`, `TicketPriority` `Low|Medium|High|Critical`, `TicketCreatedDate`). Requester names, e-mail, phone, comments are not copied.
   - `GET /api/v3/agents/customer/<bound tenant>` → identities `agent` (`AgentID`, `CustomerID`, `MachineName` as hostname, `OSType`, `Modified`).
