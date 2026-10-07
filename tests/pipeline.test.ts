@@ -10,7 +10,8 @@ import { executeReadTool } from '../packages/tools/gateway.ts';
 import { runDemo } from '../fixtures/run-demo.ts';
 import { parseRouteResponse, decisionInput, OpenAIDecisionProvider } from '../packages/decisions/openai.ts';
 import { resolveDevice } from '../packages/graph/resolver.ts';
-import { MemoryAudit, MemorySecurityAudit, auditMetadataAllowlist } from '../packages/audit/memory.ts';
+import { MemoryAudit, MemorySecurityAudit } from '../packages/audit/memory.ts';
+import { auditMetadataAllowlist } from '../packages/audit/sanitize.ts';
 import { AtlasError } from '../packages/core/contracts.ts';
 import type { Classification, ExternalLink, NormalizedEvent } from '../packages/core/contracts.ts';
 

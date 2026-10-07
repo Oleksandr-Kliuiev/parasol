@@ -10,6 +10,9 @@ Tasks 1.1–1.3 on top of the 1.1.3 pack. Status, verification and open gates: `
 - PostgreSQL audit sinks and bounded scoped reads (`packages/audit/prisma.ts`); `withWorkspaceScope`; synthetic seed adds the demo actor, its membership and the digest of `ATLAS_DEMO_TOKEN`.
 - `npm run test:pg` (throwaway databases through `prisma migrate deploy` + `prisma/roles.sql`), `npm run db:check:drift`, context-budget test, `docs/AI_CONTEXT_MAP.md`.
 
+### Fixed — independent review of Checkpoint A (`REVIEW_REPORT.md`, R1)
+- A NUL byte or a lone UTF-16 surrogate in a requested client ID (URL or body) or a tool name made PostgreSQL reject the audit row: HTTP 500 and no record of the denial. Audit strings are now stored as escaped bounded text (`packages/audit/sanitize.ts: auditText`, both sinks); a malformed client ID is denied at the HTTP boundary with the same 403 and `INVALID_SCOPE_ID` in the security audit; a malformed tool name is a recorded `tool.denied` (`INVALID_TOOL_NAME`) after the scope check. Regression tests at unit, repository and HTTP level (`tests/audit-sanitize.test.ts`, `tests/pg/api-input.pg.test.ts`).
+
 ### Changed
 - `schema.prisma` pins the two FK names and the `reasonCodes` default that the frozen migrations create (empty drift); migrations unchanged.
 - The gateway awaits its sinks (synchronous memory or asynchronous PostgreSQL); `assertRuntimeRole` also covers the identity tables; PGlite tests and `pg17-check` apply every migration in order; `npm run typecheck` covers `apps/`.

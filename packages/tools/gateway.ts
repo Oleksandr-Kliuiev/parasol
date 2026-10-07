@@ -13,6 +13,8 @@ export const stage1Tools: readonly ToolDefinition[] = Object.freeze([
   { name: 'atera.ticket.list', version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' },
   { name: 'huntress.incident.list', version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' }
 ].map(t => Object.freeze(t) as ToolDefinition));
+/** Registry name syntax: lowercase dotted segments. Anything else is denied as INVALID_TOOL_NAME, never looked up. */
+export const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_]{0,31}(?:\.[a-z][a-z0-9_]{0,31}){1,3}$/;
 
 /**
  * Sinks may be synchronous (in-memory reference) or asynchronous (PostgreSQL, packages/audit/prisma.ts). The gateway
@@ -30,16 +32,19 @@ export interface GatewaySinks {
 export async function executeReadTool(actor: Actor, scope: Scope, name: string,
   readContext: () => Promise<ClientContextV1>, sinks: GatewaySinks): Promise<unknown> {
   const correlationId = randomUUID();
-  const toolLabel = String(name).slice(0, 100);
+  // Bounded by code points, so a surrogate pair is never split; the audit sinks escape what PostgreSQL cannot store.
+  const toolLabel = Array.from(String(name)).slice(0, 100).join('');
   try { assertScope(actor, scope); }
   catch (error) {
     await sinks.securityAudit.append({ workspaceId: actor.workspaceId, actorId: actor.id, eventType: 'tool.scope_denied', outcome: 'DENIED',
       requestedClientId: scope.clientId, reasonCode: safeErrorCode(error), correlationId, metadata: { tool: toolLabel } });
     throw error;
   }
-  const tool = stage1Tools.find(t => t.name === name);
+  const wellFormed = TOOL_NAME_PATTERN.test(name);
+  const tool = wellFormed ? stage1Tools.find(t => t.name === name) : undefined;
   if (!tool || tool.risk !== 0 || tool.sideEffect !== 'NONE' || !hasClientPermission(actor, scope.clientId, tool.permission)) {
-    await sinks.audit.append(scope, actor.id, 'tool.denied', correlationId, { tool: toolLabel, safeErrorCode: tool ? 'TOOL_NOT_ALLOWED' : 'UNKNOWN_TOOL' });
+    const reason = !wellFormed ? 'INVALID_TOOL_NAME' : tool ? 'TOOL_NOT_ALLOWED' : 'UNKNOWN_TOOL';
+    await sinks.audit.append(scope, actor.id, 'tool.denied', correlationId, { tool: toolLabel, safeErrorCode: reason });
     throw new AtlasError('TOOL_DENIED', 'SCOPE');
   }
   await sinks.audit.append(scope, actor.id, 'tool.started', correlationId, { tool: tool.name, toolVersion: tool.version });

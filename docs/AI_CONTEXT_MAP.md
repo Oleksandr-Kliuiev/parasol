@@ -14,9 +14,9 @@ Load the smallest set of files a task needs. Rules: `AGENTS.md`. Scope and plan:
 | Decisions provider / shadow / advisory | `packages/decisions/provider.ts`, `packages/decisions/openai.ts` | `docs/04_DECISION_LAYER.md` |
 | Connectors / normalizers | `connectors/contracts.ts`, `connectors/<system>/normalizer.ts` | `docs/03_CONNECTORS_AND_SYNC.md` |
 | Read tools / gateway | `packages/tools/gateway.ts` | `packages/audit/memory.ts` |
-| Audit (client allowlist, workspace security audit) | `packages/audit/memory.ts` (reference), `packages/audit/prisma.ts` (PostgreSQL sinks + scoped reads) | `docs/02_DATA_AND_MODULES.md` (Audit) |
+| Audit (client allowlist, workspace security audit) | `packages/audit/sanitize.ts` (allowlist, escaped audit text), `packages/audit/memory.ts` (reference), `packages/audit/prisma.ts` (PostgreSQL sinks + scoped reads) | `docs/02_DATA_AND_MODULES.md` (Audit), `tests/audit-sanitize.test.ts` |
 | Authentication, actors, memberships | `packages/auth/prisma-auth.ts`, `packages/auth/token.ts`, migration `202610071600_stage1_actor_membership` | `apps/api/src/db/auth.ts` (guard, AccessPolicy) |
-| DB-backed API (`ATLAS_MODE=db`) | `apps/api/src/db/app.module.ts`, the controller of the route (`clients.ts`, `audit.ts`, `tools.ts`) | `apps/api/src/http-boundary.ts`, `tests/pg/api.pg.test.ts` |
+| DB-backed API (`ATLAS_MODE=db`) | `apps/api/src/db/app.module.ts`, the controller of the route (`clients.ts`, `audit.ts`, `tools.ts`) | `apps/api/src/http-boundary.ts`, `tests/pg/api.pg.test.ts`, `tests/pg/api-input.pg.test.ts` (malformed input) |
 | Fixture API | `apps/api/src/atlas.module.ts`, `apps/api/src/main.ts` | `scripts/api-smoke.ts` |
 | PostgreSQL integration tests (Prisma, real server) | `tests/support/pg-harness.ts`, `tests/pg/*.pg.test.ts` | `tests/support/migrations.ts`, `tests/support/api-process.ts` |
 | Checkpoint status / open gates | `CHECKPOINT_REPORT.md` | `prompts/CHECKPOINT_REPORT.md` (template) |

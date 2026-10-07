@@ -137,3 +137,21 @@ test('GET /audit/security needs security_audit:read; a refused read is itself re
   assert.equal((await call('/audit/security?limit=1', tech)).status, 200);
   assert.equal((await call('/audit/security?limit=1000', tech)).status, 400);
 });
+
+test('one actor, two memberships: context:read on Gasta, only events:ingest on another client — each client gets exactly its permission', async () => {
+  const split = generateToken();
+  await pgdb.owner.query(`
+    INSERT INTO "Actor" ("workspaceId","id","displayName") VALUES ('demo-vardahei','demo-split','Split technician (synthetic)');
+    INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId","permissions") VALUES
+      ('demo-vardahei','demo-gasta','demo-split',ARRAY['context:read']), ('demo-vardahei','demo-other','demo-split',ARRAY['events:ingest']);
+    INSERT INTO "ApiToken" ("workspaceId","id","actorId","tokenHash") VALUES ('demo-vardahei','t-split','demo-split','${hashToken(split)}');`);
+  assert.deepEqual(await json('/clients', split), [{ id: 'demo-gasta', name: 'Gasta (synthetic)' }]);
+  assert.equal((await json<ClientContextV1>('/clients/demo-gasta/overview', split)).clientId, 'demo-gasta');
+  assert.equal((await call('/clients/demo-other/overview', split)).status, 403);
+  assert.ok((await securityRows()).includes('demo-split|client.overview_denied|demo-other|PERMISSION_DENIED'));
+  const tool = await call('/tools/execute', split, { method: 'POST', body: JSON.stringify({ clientId: 'demo-other', tool: 'atera.alert.list' }) });
+  assert.equal(tool.status, 403);
+  const otherAudit = (await pgdb.owner.query(`SELECT "eventType"||'|'||(metadata->>'safeErrorCode') AS s FROM "AuditEvent" WHERE "clientId" = 'demo-other' AND "actorId" = 'demo-split'`)).rows.map(r => r.s);
+  assert.deepEqual(otherAudit, ['tool.denied|TOOL_NOT_ALLOWED'], 'a member without the permission: denial in that client\'s audit, no read');
+  assert.equal((await json<unknown[]>('/tools', split)).length, 4);
+});

@@ -6,17 +6,17 @@ import { getClientContext } from '../../../../packages/graph/prisma-context.ts';
 import { PrismaAudit, PrismaSecurityAudit } from '../../../../packages/audit/prisma.ts';
 import { toHttp, parseToolRequest } from '../http-boundary.ts';
 import { PRISMA } from './database.ts';
-import { AuthModule, ApiTokenGuard, CurrentActor } from './auth.ts';
+import { AuthModule, ApiTokenGuard, AccessPolicy, CurrentActor } from './auth.ts';
 
 /**
- * ToolsModule over PostgreSQL: the read-only gateway with database sinks. Scope denial → workspace security audit before
- * any read; unknown or write tool → client audit `tool.denied`; success/failure → client audit. Runtime input schemas,
- * versioned DTOs with parameters and ToolExecution rows are task 1.9.
+ * ToolsModule over PostgreSQL: the read-only gateway with database sinks. Malformed client ID (checked here) or scope
+ * denial → workspace security audit before any read; malformed, unknown or write tool → client audit `tool.denied`;
+ * success/failure → client audit. Runtime input schemas, versioned DTOs with parameters and ToolExecution rows are 1.9.
  */
 @Controller('tools')
 @UseGuards(ApiTokenGuard)
 export class ToolsController {
-  constructor(@Inject(PRISMA) private readonly db: PrismaClient) {}
+  constructor(@Inject(PRISMA) private readonly db: PrismaClient, private readonly access: AccessPolicy) {}
 
   /** Registry entries the actor holds the permission for on at least one client. Risk metadata comes from the registry. */
   @Get() list(@CurrentActor() actor: Actor) {
@@ -24,6 +24,7 @@ export class ToolsController {
   }
   @Post('execute') async execute(@CurrentActor() actor: Actor, @Body() body: unknown) {
     const request = parseToolRequest(body);
+    await this.access.requireWellFormedClient(actor, request.clientId, 'tool.scope_denied', { tool: request.tool });
     const scope = { workspaceId: actor.workspaceId, clientId: request.clientId };
     const sinks = { audit: new PrismaAudit(this.db, actor), securityAudit: new PrismaSecurityAudit(this.db, actor) };
     try { return await executeReadTool(actor, scope, request.tool, () => getClientContext(this.db, actor, scope), sinks); }

@@ -120,3 +120,13 @@ test('audit sinks: a denial reaches only the workspace security log; the client 
   await assert.rejects(withWorkspaceScope(runtime, actor, tx => tx.securityAuditEvent.deleteMany({})), /permission denied/);
   await assert.rejects(pgdb.owner.query(`UPDATE "AuditEvent" SET "eventType" = 'changed'`), /append-only/);
 });
+
+test('review R1: the PostgreSQL sinks store NUL, controls and lone surrogates as escaped text instead of failing the write', async () => {
+  await new PrismaSecurityAudit(runtime, actor).append({ workspaceId: actor.workspaceId, actorId: actor.id, eventType: 'client.overview_denied',
+    outcome: 'DENIED', requestedClientId: 'ghost\u0000client\ud800', reasonCode: 'INVALID_SCOPE_ID', correlationId: 'corr-r1', metadata: { tool: 'bad\u0000tool\n\udc00' } });
+  await new PrismaAudit(runtime, actor).append(scope, actor.id, 'tool.denied', 'corr-r1b', { tool: 'unknown\ud800tool', safeErrorCode: 'INVALID_TOOL_NAME' });
+  const denial = (await listSecurityAudit(runtime, actor)).find(r => r.correlationId === 'corr-r1');
+  assert.deepEqual([denial?.requestedClientId, denial?.metadata], ['ghost\\u0000client\\ud800', { tool: 'bad\\u0000tool\\u000a\\udc00' }]);
+  const row = (await listClientAudit(runtime, actor, scope)).find(r => r.correlationId === 'corr-r1b');
+  assert.deepEqual(row?.metadata, { tool: 'unknown\\ud800tool', safeErrorCode: 'INVALID_TOOL_NAME' }, 'read back as written, not escaped twice');
+});

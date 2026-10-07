@@ -168,7 +168,10 @@ export interface AuditSink {
 }
 export interface SecurityAuditRecord {
   id: string; workspaceId: string; actorId: string; eventType: string; outcome: 'DENIED';
-  /** Client ID as requested by the caller. Plain text, never a foreign key: the client may not exist or may be out of scope. */
+  /**
+   * Client ID as requested by the caller, stored as escaped bounded text (packages/audit/sanitize.ts). Plain text, never a
+   * foreign key: the client may not exist, may be out of scope or may not even be a well-formed identifier.
+   */
   requestedClientId: string | null;
   reasonCode: string; correlationId: string; recordedAt: string; metadata: Record<string, string>;
 }
