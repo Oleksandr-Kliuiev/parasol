@@ -1,65 +1,73 @@
-import { randomUUID } from 'node:crypto';
-import type { Actor, Scope, ClientContextV1, AuditSink, SecurityAuditSink } from '../core/contracts.ts';
-import { AtlasError, assertScope, hasClientPermission, findResource, safeErrorCode } from '../core/contracts.ts';
-
-export interface ToolDefinition {
-  name: string; version: string; risk: 0 | 1 | 2 | 3 | 4; sideEffect: 'NONE' | 'CREATE' | 'UPDATE' | 'SECURITY' | 'DESTRUCTIVE';
-  permission: string;
-}
-/** Authoritative registry data. Risk and side effect come from here, never from the caller or the model. */
-export const stage1Tools: readonly ToolDefinition[] = Object.freeze([
-  { name: 'atlas.client.get_context', version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' },
-  { name: 'atera.alert.list', version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' },
-  { name: 'atera.ticket.list', version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' },
-  { name: 'huntress.incident.list', version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' }
-].map(t => Object.freeze(t) as ToolDefinition));
-/** Registry name syntax: lowercase dotted segments. Anything else is denied as INVALID_TOOL_NAME, never looked up. */
-export const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_]{0,31}(?:\.[a-z][a-z0-9_]{0,31}){1,3}$/;
+import { createHash, randomUUID } from 'node:crypto';
+import type { Actor, Scope, AuditSink, SecurityAuditSink } from '../core/contracts.ts';
+import { AtlasError, errorDetails, safeErrorCode } from '../core/contracts.ts';
+import { decideToolCall } from '../policy/tool-policy.ts';
+import { canonicalJson } from '../events/identity.ts';
+import { validateParameters } from './parameters.ts';
+import type { Parameters } from './parameters.ts';
+import type { ToolDefinition, ToolReaders } from './registry.ts';
+import type { ToolExecutionRecord, ToolLedger } from './ledger.ts';
 
 /**
- * Sinks may be synchronous (in-memory reference) or asynchronous (PostgreSQL, packages/audit/prisma.ts). The gateway
- * awaits every append, so a denial is recorded before the caller sees the error, and a failed append fails the call.
+ * Sinks may be synchronous (in-memory reference) or asynchronous (PostgreSQL). The gateway awaits every write, so a denial
+ * is recorded before the caller sees the error, and a failed write fails the call. The ledger writes each execution step
+ * together with its audit row.
  */
 export interface GatewaySinks {
-  audit: { append(...args: Parameters<AuditSink['append']>): void | Promise<void> };
-  securityAudit: { append(...args: Parameters<SecurityAuditSink['append']>): void | Promise<void> };
+  audit: { append(...args: Parameters_<AuditSink['append']>): void | Promise<void> };
+  securityAudit: { append(...args: Parameters_<SecurityAuditSink['append']>): void | Promise<void> };
+  ledger: ToolLedger;
+}
+type Parameters_<F> = F extends (...args: infer A) => unknown ? A : never;
+
+/** One call of the versioned tool DTO (v1): the tool name, its parameters and the request correlation. */
+export interface ToolCall { tool: string; parameters?: unknown; correlationId?: string }
+export interface ToolOutcome { tool: string; toolVersion: string; correlationId: string; executionId: string; result: unknown }
+
+/** SHA-256 of the canonical validated input — the basis a future approval binds to (docs/02). */
+export function toolInputHash(scope: Scope, tool: Pick<ToolDefinition, 'name' | 'version'>, parameters: Parameters): string {
+  return createHash('sha256').update(canonicalJson({ dto: '1', workspaceId: scope.workspaceId, clientId: scope.clientId, tool: tool.name,
+    toolVersion: tool.version, parameters })).digest('hex');
 }
 
 /**
- * Read-only gateway. Order matters: scope first (denial goes to the workspace security audit, never to the target client's
- * log), then registry + permission (denial goes to the client audit), then execution with scope verification of the result.
+ * Read tool gateway (task 1.9). Order matters:
+ *   1. policy — a scope denial goes to the workspace security audit, never to the target client's log, before any read;
+ *      a tool denial (malformed name, unknown, write, no permission) to the client audit (tool.denied);
+ *   2. runtime schema of the parameters — a violation is tool.rejected naming the parameter, never its value;
+ *   3. execution — ToolExecution STARTED → SUCCEEDED | FAILED, each step with its audit row; the result's scope is verified.
  */
-export async function executeReadTool(actor: Actor, scope: Scope, name: string,
-  readContext: () => Promise<ClientContextV1>, sinks: GatewaySinks): Promise<unknown> {
-  const correlationId = randomUUID();
+export async function executeTool(actor: Actor, scope: Scope, call: ToolCall, readers: ToolReaders, sinks: GatewaySinks): Promise<ToolOutcome> {
+  const correlationId = call.correlationId ?? randomUUID();
   // Bounded by code points, so a surrogate pair is never split; the audit sinks escape what PostgreSQL cannot store.
-  const toolLabel = Array.from(String(name)).slice(0, 100).join('');
-  try { assertScope(actor, scope); }
-  catch (error) {
+  const toolLabel = Array.from(String(call.tool)).slice(0, 100).join('');
+  const decision = decideToolCall(actor, scope, call.tool);
+  if (decision.effect === 'DENY_SCOPE') {
     await sinks.securityAudit.append({ workspaceId: actor.workspaceId, actorId: actor.id, eventType: 'tool.scope_denied', outcome: 'DENIED',
-      requestedClientId: scope.clientId, reasonCode: safeErrorCode(error), correlationId, metadata: { tool: toolLabel } });
-    throw error;
+      requestedClientId: scope.clientId, reasonCode: decision.reasonCode, correlationId, metadata: { tool: toolLabel } });
+    throw new AtlasError(decision.reasonCode, 'SCOPE');
   }
-  const wellFormed = TOOL_NAME_PATTERN.test(name);
-  const tool = wellFormed ? stage1Tools.find(t => t.name === name) : undefined;
-  if (!tool || tool.risk !== 0 || tool.sideEffect !== 'NONE' || !hasClientPermission(actor, scope.clientId, tool.permission)) {
-    const reason = !wellFormed ? 'INVALID_TOOL_NAME' : tool ? 'TOOL_NOT_ALLOWED' : 'UNKNOWN_TOOL';
-    await sinks.audit.append(scope, actor.id, 'tool.denied', correlationId, { tool: toolLabel, safeErrorCode: reason });
+  if (decision.effect === 'DENY_TOOL') {
+    await sinks.audit.append(scope, actor.id, 'tool.denied', correlationId, { tool: toolLabel, safeErrorCode: decision.reasonCode });
     throw new AtlasError('TOOL_DENIED', 'SCOPE');
   }
-  await sinks.audit.append(scope, actor.id, 'tool.started', correlationId, { tool: tool.name, toolVersion: tool.version });
+  const { tool } = decision;
+  let parameters: Parameters;
+  try { parameters = validateParameters(tool.parameters, call.parameters); }
+  catch (error) {
+    await sinks.audit.append(scope, actor.id, 'tool.rejected', correlationId, { tool: tool.name, toolVersion: tool.version, safeErrorCode: safeErrorCode(error),
+      parameter: errorDetails(error).parameter ?? 'parameters' });
+    throw error;
+  }
+  const execution: ToolExecutionRecord = { id: randomUUID(), scope, actorId: actor.id, toolName: tool.name, toolVersion: tool.version, riskLevel: tool.risk,
+    sideEffect: tool.sideEffect, inputHash: toolInputHash(scope, tool, parameters), correlationId };
+  await sinks.ledger.started(execution);
   try {
-    const ctx = await readContext();
-    if (ctx.contractVersion !== 'ClientContextV1') throw new AtlasError('CONTEXT_CONTRACT_MISMATCH', 'PERMANENT');
-    if (ctx.workspaceId !== scope.workspaceId || ctx.clientId !== scope.clientId) throw new AtlasError('CONTEXT_SCOPE_MISMATCH', 'PERMANENT');
-    const result = tool.name === 'atlas.client.get_context' ? ctx
-      : tool.name === 'atera.alert.list' ? findResource(ctx, 'atera', 'alert')
-      : tool.name === 'atera.ticket.list' ? findResource(ctx, 'atera', 'ticket')
-      : findResource(ctx, 'huntress', 'incident');
-    await sinks.audit.append(scope, actor.id, 'tool.succeeded', correlationId, { tool: tool.name, toolVersion: tool.version });
-    return result;
+    const result = await tool.run(readers, parameters, scope);
+    await sinks.ledger.finished(execution, { status: 'SUCCEEDED' });
+    return { tool: tool.name, toolVersion: tool.version, correlationId, executionId: execution.id, result };
   } catch (error) {
-    await sinks.audit.append(scope, actor.id, 'tool.failed', correlationId, { tool: tool.name, toolVersion: tool.version, safeErrorCode: safeErrorCode(error) });
+    await sinks.ledger.finished(execution, { status: 'FAILED', safeErrorCode: safeErrorCode(error) });
     throw error;
   }
 }

@@ -1,10 +1,12 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
-import { Module, Controller, Get, Post, Param, Body, UseGuards, Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Module, Controller, Get, Post, Param, Body, Res, UseGuards, Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { runDemo } from '../../../fixtures/run-demo.ts';
 import type { DemoResult } from '../../../fixtures/run-demo.ts';
 import { scope, actor } from '../../../fixtures/gasta.ts';
-import { executeReadTool, stage1Tools } from '../../../packages/tools/gateway.ts';
+import { executeTool } from '../../../packages/tools/gateway.ts';
+import { contextReaders, describeTool, stage1Tools } from '../../../packages/tools/registry.ts';
+import { MemoryToolLedger } from '../../../packages/tools/ledger.ts';
 import { assertWorkspacePermission, hasClientPermission } from '../../../packages/core/contracts.ts';
 import { toHttp, parseToolRequest } from './http-boundary.ts';
 
@@ -28,6 +30,7 @@ export class FixtureAuthGuard implements CanActivate {
 @Injectable()
 export class FixtureContextService {
   readonly demo: Promise<DemoResult> = runDemo();
+  readonly ledger: Promise<MemoryToolLedger> = this.demo.then(d => new MemoryToolLedger(d.audit));
   async check(clientId: string, eventType: string): Promise<void> {
     const allowed = actor.workspaceId === scope.workspaceId && hasClientPermission(actor, clientId, 'context:read');
     if (!allowed) {
@@ -57,12 +60,15 @@ export class AtlasController {
     try { assertWorkspacePermission(actor, scope.workspaceId, 'security_audit:read'); } catch (error) { toHttp(error); }
     return (await this.service.demo).securityAudit.list(scope.workspaceId);
   }
-  @Get('tools') tools() { return stage1Tools; }
-  @Post('tools/execute') async execute(@Body() body: unknown) {
+  @Get('tools') tools() { return stage1Tools.map(describeTool); }
+  @Post('tools/execute') async execute(@Body() body: unknown, @Res({ passthrough: true }) res: { setHeader(name: string, value: string): unknown }) {
     const input = parseToolRequest(body);
+    const correlationId = input.requestId ?? randomUUID();
+    res.setHeader('x-atlas-correlation-id', correlationId);
     const { context, audit, securityAudit } = await this.service.demo;
     const requested = { workspaceId: scope.workspaceId, clientId: input.clientId };
-    try { return await executeReadTool(actor, requested, input.tool, async () => context, { audit, securityAudit }); }
+    const sinks = { audit, securityAudit, ledger: await this.service.ledger };
+    try { return (await executeTool(actor, requested, { tool: input.tool, parameters: input.parameters, correlationId }, contextReaders(async () => context), sinks)).result; }
     catch (error) { toHttp(error); }
   }
 }

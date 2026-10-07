@@ -52,16 +52,17 @@ export class AccessPolicy {
    * HTTP-boundary format check: a client ID outside the identifier policy can never be in scope. It is denied with
    * INVALID_SCOPE_ID and audited like any out-of-scope client, before a query, an RLS setting or a gateway sees the value.
    */
-  async requireWellFormedClient(actor: Actor, clientId: string, eventType: string, metadata: Record<string, string> = {}): Promise<void> {
-    if (!SCOPE_ID_PATTERN.test(clientId)) await this.deny(actor, eventType, clientId, 'INVALID_SCOPE_ID', metadata);
+  async requireWellFormedClient(actor: Actor, clientId: string, eventType: string, metadata: Record<string, string> = {}, correlationId?: string): Promise<void> {
+    if (!SCOPE_ID_PATTERN.test(clientId)) await this.deny(actor, eventType, clientId, 'INVALID_SCOPE_ID', metadata, correlationId);
   }
   async requireWorkspace(actor: Actor, permission: string, eventType: string): Promise<void> {
     try { assertWorkspacePermission(actor, actor.workspaceId, permission); }
     catch (error) { await this.deny(actor, eventType, null, safeErrorCode(error)); }
   }
-  async deny(actor: Actor, eventType: string, requestedClientId: string | null, reasonCode: string, metadata: Record<string, string> = {}): Promise<never> {
+  async deny(actor: Actor, eventType: string, requestedClientId: string | null, reasonCode: string, metadata: Record<string, string> = {},
+    correlationId: string = randomUUID()): Promise<never> {
     await new PrismaSecurityAudit(this.db, actor).append({ workspaceId: actor.workspaceId, actorId: actor.id, eventType, outcome: 'DENIED',
-      requestedClientId, reasonCode, correlationId: randomUUID(), metadata });
+      requestedClientId, reasonCode, correlationId, metadata });
     throw new ForbiddenException('Access denied');
   }
 }

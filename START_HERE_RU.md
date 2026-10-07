@@ -72,7 +72,7 @@ POST /tools/execute
 Тело последнего запроса:
 
 ```json
-{"clientId":"demo-gasta","tool":"atlas.client.get_context"}
+{"version":"1","clientId":"demo-gasta","tool":"atlas.client.get_context","parameters":{}}
 ```
 
 ## PostgreSQL для разработки

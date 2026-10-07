@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { auditText, sanitizeAuditMetadata, pickAuditMetadata, AUDIT_TEXT_LIMIT } from '../packages/audit/sanitize.ts';
 import { MemoryAudit, MemorySecurityAudit } from '../packages/audit/memory.ts';
-import { executeReadTool, stage1Tools, TOOL_NAME_PATTERN } from '../packages/tools/gateway.ts';
+import { stage1Tools, TOOL_NAME_PATTERN } from '../packages/tools/registry.ts';
+import { memorySinks, runTool } from './support/tool-fixtures.ts';
 import { scope, actor } from '../fixtures/gasta.ts';
 
 // Review R1: untrusted strings must reach an audit row as text PostgreSQL can store, without losing what was requested.
@@ -47,11 +48,11 @@ test('gateway with in-memory sinks: a malformed client or tool is a recorded den
   const audit = new MemoryAudit(); const securityAudit = new MemorySecurityAudit();
   let reads = 0;
   const read = async () => { reads++; throw new Error('must not read'); };
-  await assert.rejects(executeReadTool(actor, { ...scope, clientId: 'ghost\u0000client' }, 'atera.alert.list', read, { audit, securityAudit }), /SCOPE_DENIED/);
+  await assert.rejects(runTool(actor, { ...scope, clientId: 'ghost\u0000client' }, 'atera.alert.list', read, memorySinks(audit, securityAudit)), /SCOPE_DENIED/);
   assert.deepEqual(securityAudit.list(scope.workspaceId).map(r => [r.requestedClientId, r.reasonCode, r.metadata.tool]),
     [['ghost\\u0000client', 'SCOPE_DENIED', 'atera.alert.list']]);
   for (const name of ['unknown\u0000tool', 'unknown\ud800tool']) {
-    await assert.rejects(executeReadTool(actor, scope, name, read, { audit, securityAudit }), /TOOL_DENIED/);
+    await assert.rejects(runTool(actor, scope, name, read, memorySinks(audit, securityAudit)), /TOOL_DENIED/);
   }
   assert.deepEqual(audit.list(scope).map(r => [r.eventType, r.metadata.tool, r.metadata.safeErrorCode]), [
     ['tool.denied', 'unknown\\u0000tool', 'INVALID_TOOL_NAME'], ['tool.denied', 'unknown\\ud800tool', 'INVALID_TOOL_NAME']]);

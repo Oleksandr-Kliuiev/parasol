@@ -7,7 +7,7 @@ import type { DecisionProvider } from '../packages/decisions/provider.ts';
 import { normalizeAtera } from '../connectors/atera/normalizer.ts';
 import { normalizeHuntress } from '../connectors/huntress/normalizer.ts';
 import { scope, actor, links } from '../fixtures/gasta.ts';
-import { executeReadTool } from '../packages/tools/gateway.ts';
+import { memorySinks, runTool } from './support/tool-fixtures.ts';
 import { runDemo } from '../fixtures/run-demo.ts';
 import { parseRouteResponse, decisionInput, OpenAIDecisionProvider } from '../packages/decisions/openai.ts';
 import { resolveDevice } from '../packages/graph/resolver.ts';
@@ -255,13 +255,13 @@ test('returned observations and audit records cannot mutate internal state', asy
 // --- Tool gateway ------------------------------------------------------------------------------------------------
 test('unknown or write tool is denied before execution and audited in the client log', async () => {
   const { context, audit, securityAudit } = await runDemo(); let reads = 0;
-  await assert.rejects(executeReadTool(actor, scope, 'atera.ticket.create', async () => { reads++; return context; }, { audit, securityAudit }), /TOOL_DENIED/);
-  assert.equal(reads, 0); assert.equal(audit.list(scope).at(-1)?.eventType, 'tool.denied');
+  await assert.rejects(runTool(actor, scope, 'atera.ticket.create', async () => { reads++; return context; }, memorySinks(audit, securityAudit)), /TOOL_DENIED/);
+  assert.equal(reads, 0); assert.deepEqual([audit.list(scope).at(-1)?.eventType, audit.list(scope).at(-1)?.metadata.safeErrorCode], ['tool.denied', 'UNKNOWN_TOOL']);
 });
 test('scope denial is recorded in the workspace security audit, never in the target client audit, before any read', async () => {
   const { context, audit, securityAudit } = await runDemo(); let reads = 0;
   const other = { workspaceId: scope.workspaceId, clientId: 'other-client' };
-  await assert.rejects(executeReadTool(actor, other, 'atlas.client.get_context', async () => { reads++; return context; }, { audit, securityAudit }), /SCOPE_DENIED/);
+  await assert.rejects(runTool(actor, other, 'atlas.client.get_context', async () => { reads++; return context; }, memorySinks(audit, securityAudit)), /SCOPE_DENIED/);
   assert.equal(reads, 0);
   assert.equal(audit.list(other).length, 0);
   const denial = securityAudit.list(scope.workspaceId).at(-1)!;
@@ -269,16 +269,16 @@ test('scope denial is recorded in the workspace security audit, never in the tar
 });
 test('tool context with wrong scope or contract is rejected and audited', async () => {
   const { context, audit, securityAudit } = await runDemo();
-  await assert.rejects(executeReadTool(actor, scope, 'atlas.client.get_context', async () => ({ ...context, clientId: 'wrong' }), { audit, securityAudit }), /CONTEXT_SCOPE_MISMATCH/);
+  await assert.rejects(runTool(actor, scope, 'atlas.client.get_context', async () => ({ ...context, clientId: 'wrong' }), memorySinks(audit, securityAudit)), /CONTEXT_SCOPE_MISMATCH/);
   assert.equal(audit.list(scope).at(-1)?.eventType, 'tool.failed'); assert.equal(audit.list(scope).at(-1)?.metadata.safeErrorCode, 'CONTEXT_SCOPE_MISMATCH');
-  await assert.rejects(executeReadTool(actor, scope, 'atlas.client.get_context', async () => ({ ...context, contractVersion: 'v0' } as never), { audit, securityAudit }), /CONTEXT_CONTRACT_MISMATCH/);
+  await assert.rejects(runTool(actor, scope, 'atlas.client.get_context', async () => ({ ...context, contractVersion: 'v0' } as never), memorySinks(audit, securityAudit)), /CONTEXT_CONTRACT_MISMATCH/);
 });
 test('resource tools return an explicit resource view, never undefined, for fixture and DB-shaped contexts', async () => {
   const { context, audit, securityAudit } = await runDemo();
-  const tickets = await executeReadTool(actor, scope, 'atera.ticket.list', async () => context, { audit, securityAudit }) as { status: string; items: unknown[] };
+  const tickets = await runTool(actor, scope, 'atera.ticket.list', async () => context, memorySinks(audit, securityAudit)) as { status: string; items: unknown[] };
   assert.equal(tickets.status, 'FIXTURE'); assert.equal(tickets.items.length, 1);
   const dbShaped = { ...context, mode: 'db' as const, resources: [] };
-  const missing = await executeReadTool(actor, scope, 'huntress.incident.list', async () => dbShaped, { audit, securityAudit }) as { status: string; items: unknown; safeErrorCode: string };
+  const missing = await runTool(actor, scope, 'huntress.incident.list', async () => dbShaped, memorySinks(audit, securityAudit)) as { status: string; items: unknown; safeErrorCode: string };
   assert.equal(missing.status, 'MISSING'); assert.equal(missing.items, null); assert.equal(missing.safeErrorCode, 'RESOURCE_NOT_CONFIGURED');
 });
 

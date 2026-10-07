@@ -38,7 +38,7 @@
 | Observation | `entityId` (разрешённая сущность), `decisionRunId` + константа `decisionApplied = true` (составной FK включает `eventId` **и** `applied`: ссылка возможна только на applied-run своего события, и его нельзя снять с applied — ON UPDATE RESTRICT), `domain`, `severity` + `severityRank` (CHECK), `priority` (CHECK: HIGH/CRITICAL ⇒ URGENT), `route`, `confidence`, `provider`, `promptVersion`, `reasonCodes[]`, lifecycle `status/updatedAt/resolvedAt/resolvedBy`, `legacyClosure` (закрытые до v1.1 строки без автора/времени; выставляется только миграцией — trigger отклоняет INSERT с флагом и UPDATE false→true от любой роли, сброс при reopen разрешён). Задание 1.8 (миграция 202610072300): `acknowledgedAt`/`acknowledgedBy` (обязательны для ACKNOWLEDGED, пусты у OPEN), `supersededById` — более новая observation того же объекта источника в том же клиенте (только у SUPPRESSED; составной FK); trigger `Observation_lifecycle` разрешает только переходы жизненного цикла и делает доказательную часть (событие, решение, сущность, severity, priority, route, причины) неизменяемой |
 | SyncState | Cursor, last attempt/success по connection/resource; `status` OK/ERROR/UNAVAILABLE (CHECK; ERROR/UNAVAILABLE с кодом); `lastSuccessAt` не позже `lastSyncAt`. Порядок попыток (ревью B3, миграция 202610072000): `attemptSeq` — номер, выданный последней начатой попытке, `recordedSeq` — номер попытки, чей исход записан (CHECK `recordedSeq <= attemptSeq`); исход записывается, только если позже начатая попытка ещё не записана. Номер выдаётся атомарно до чтения и для первого чтения: первая попытка создаёт строку со статусом `PENDING` (попытка начата, исхода нет: без времён, кода и записанного номера; CHECK, миграция 202610072100), в контексте это `MISSING` с `SYNC_NOT_COMPLETED` |
 | ResourceSnapshot | Последнее **полное** чтение live-ресурса (alert/ticket/incident) connection: `asOf`, до 100 компактных `SnapshotItem` (CHECK), `itemCount` источника, `truncated`, `contractVersion`; составной FK на SyncState того же scope/connection/resource; RLS по клиенту |
-| ToolExecution | Actor, tool, risk, inputHash, status, correlation |
+| ToolExecution | Журнал исполненных read tools (задание 1.9, миграция 202610080000): actor, tool и `toolVersion`, risk/sideEffect из реестра, `inputHash` (SHA-256 канонического проверенного входа), `correlationId`; STARTED → SUCCEEDED | FAILED (`safeErrorCode`, `finishedAt`) — каждый шаг вместе со своей записью client audit. CHECK: в Stage 1 только risk 0 и NONE; trigger: STARTED-строка лишь фиксирует исход. Отказы и отклонения — только записи audit |
 | AuditEvent | Append-only журнал клиента: allowlist полей, без payload, секретов и raw upstream response |
 | SecurityAuditEvent | **Append-only журнал workspace** для отказов по scope/правам: `requestedClientId` — текст, не FK (клиент может не существовать или быть вне scope актора); не попадает в журнал чужого клиента |
 | Actor | Проверенный актор workspace: `status` ACTIVE/DISABLED, `workspacePermissions[]` (CHECK-словарь) |
@@ -98,8 +98,8 @@ Workflow (задание 1.4, `packages/graph/mapping.ts`; все решения
 | EventsModule | Durable event inbox, dedup, классы ошибок, worker/outbox | Выполнять внешние действия; терять событие исключением |
 | DecisionsModule | Provider + validated advisory routing, applied/shadow runs | Authorization |
 | ObservationsModule | Source urgency, priority, evidence, freshness | Скрывать uncertain alerts |
-| PolicyModule | Deterministic scope/permission/risk decision | Спрашивать AI о правах |
-| ToolsModule | Registry, runtime schemas, gateway | Исполнять неразрешённые tools |
+| PolicyModule | Deterministic scope/permission/risk decision (`packages/policy/tool-policy.ts`: scope → имя → реестр → только чтение → право) | Спрашивать AI о правах |
+| ToolsModule | Registry, runtime schemas, gateway (`packages/tools/registry.ts`, `parameters.ts`, `gateway.ts`, журнал `ledger.ts`/`prisma-ledger.ts`) | Исполнять неразрешённые tools |
 | AuditModule | Transactional append (client) + workspace security audit, scoped read | Хранить keys/raw private payloads; писать отказ в чужой клиентский журнал |
 
 Reference API использует один `AtlasFixtureModule` для компактного запуска (`ATLAS_MODE=fixture`). DB-backed API (`ATLAS_MODE=db`, `apps/api/src/db/`) разбит на DatabaseModule, AuthModule, ClientGraphModule, AuditModule и ToolsModule; бизнес-логика живёт в `packages/` и от HTTP controllers не зависит.
@@ -127,14 +127,27 @@ Reference API использует один `AtlasFixtureModule` для комп
 | GET /clients/:id/observations | `ObservationPage`: фильтры `status` (по умолчанию OPEN,ACKNOWLEDGED) и `severity` (списки через запятую), `limit` ≤ 100, keyset-`cursor` (позиция последнего элемента, привязанная к фильтрам; чужой фильтр или повреждение — 400); `counts`/`total` по всей выборке, `nextCursor` |
 | GET /clients/:id/audit | Scoped client audit; ограниченная пагинация |
 | GET /audit/security | Workspace security audit отказов; требует `security_audit:read` |
-| GET /tools | Только доступные read tools; authoritative risk metadata |
-| POST /tools/execute | Client ID + registered tool + runtime-validated input |
+| GET /tools | Только доступные read tools; authoritative risk metadata и схемы параметров |
+| POST /tools/execute | Versioned DTO v1: `version` ("1"), `clientId`, `tool`, `parameters` (проверяются runtime-схемой инструмента), `requestId` (correlation, возвращается в `X-Atlas-Correlation-Id`, также при отказе); `X-Atlas-Tool-Execution-Id` — строка журнала |
 
 Reference body: `{"clientId":"demo-gasta","tool":"atlas.client.get_context"}`. Для DB version добавьте versioned DTO с `parameters` и request correlation. Не принимайте риск, sideEffect или permission от вызывающей модели.
 
+Реализация (задание 1.9). Порядок шлюза:
+1. **Политика.** Отказ по scope записывается в workspace security audit до любого чтения; отказ по инструменту (неверное имя, неизвестный, запись, нет права) — `tool.denied` в client audit.
+2. **Runtime-схема параметров.** Строгая: необъявленные ключи (в т.ч. `risk`) и неверные типы дают `tool.rejected` с именем параметра, никогда со значением, и 400.
+3. **Исполнение.** Пишется в журнал `ToolExecution` с записями `tool.started` / `tool.succeeded` / `tool.failed`.
+
+Read tools Stage 1 (все risk 0, `context:read`):
+- `atlas.client.get_context`;
+- `atlas.observation.list` — фильтры статуса и severity, `limit` и `cursor` как у `GET /clients/:id/observations`;
+- `atera.alert.list`, `atera.ticket.list`, `huntress.incident.list`;
+- `atera.ticket.get`, `huntress.incident.get` — один объект по source ID из последнего полного чтения: тот же `ResourceView` с отфильтрованными items. Пустой список у OK/STALE означает «нет в сохранённом чтении», при `truncated` объект может быть за его границей.
+
+Write-инструментов в реестре нет; зарегистрированный write-инструмент политика отклонила бы как `WRITE_TOOL_NOT_ALLOWED`.
+
 Аутентификация: `Authorization: Bearer <token>`. В режиме `db` токен разрешается в `Actor` из БД (иначе 401 без деталей); в режиме `fixture` сравнивается с `ATLAS_DEMO_TOKEN`. Клиент из URL разрешается только внутри workspace актора.
 
-HTTP-маппинг ошибок (`AtlasError.kind`): `SCOPE` → 403; `VALIDATION` → 400; `CONTEXT_SCOPE_MISMATCH`, `CONTEXT_CONTRACT_MISMATCH`, `TRANSIENT` → 502; остальное → 500. Отказ по scope до любой выборки пишется в `SecurityAuditEvent` с `requestedClientId`; отказ по инструменту/правам — в клиентский `AuditEvent` (`tool.denied`). `/ai/query`, approval endpoints и write tools пока отсутствуют. Не раскрывайте существование клиентов вне actor scope.
+HTTP-маппинг ошибок (`AtlasError.kind`): `SCOPE` → 403; `VALIDATION` → 400; `CONFLICT` → 409; `CONTEXT_SCOPE_MISMATCH`, `CONTEXT_CONTRACT_MISMATCH`, `TRANSIENT` → 502; остальное → 500. Отказ по scope до любой выборки пишется в `SecurityAuditEvent` с `requestedClientId`; отказ по инструменту/правам — в клиентский `AuditEvent` (`tool.denied`). `/ai/query`, approval endpoints и write tools пока отсутствуют. Не раскрывайте существование клиентов вне actor scope.
 
 Недопустимый ввод на HTTP-границе (ревью R1): никакой ввод не должен превращать отказ в 500 без записи. Client ID вне политики идентификаторов (URL или тело) — тот же 403, что и для клиента вне scope, с записью `SecurityAuditEvent` (`INVALID_SCOPE_ID`) до любого запроса, RLS-настройки или gateway. Имя инструмента вне синтаксиса реестра (`TOOL_NAME_PATTERN`) — 403 и клиентский `tool.denied` (`INVALID_TOOL_NAME`); scope проверяется раньше, поэтому чужой клиент с плохим именем инструмента остаётся scope-отказом. Структурно неверное тело (лишние поля, не строки, превышение длины) — 400 до любой проверки scope. Непереводимая %-последовательность в пути отклоняется Express (400) до маршрутизации: обработчик не вызывается и клиента, которому можно отказать, нет.
 

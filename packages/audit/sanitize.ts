@@ -12,7 +12,9 @@ export const auditMetadataAllowlist: readonly string[] = [
   // Mapping workflow (task 1.4): Atlas row identifiers only. Vendor IDs (externalId, externalTenantId) never enter the audit.
   'linkId', 'conflictsWithLinkId', 'linkStatus', 'method', 'externalEntityId', 'connectionId', 'system',
   // Observation lifecycle (task 1.8): statuses and the Atlas ID of the superseding observation
-  'previousStatus', 'observationStatus', 'supersededById'
+  'previousStatus', 'observationStatus', 'supersededById',
+  // Tool gateway (task 1.9): the execution row an audit entry belongs to, and the declared parameter a rejection names
+  'toolExecutionId', 'parameter'
 ];
 export const AUDIT_TEXT_LIMIT = 200;
 

@@ -1,12 +1,12 @@
-import { HttpException, ForbiddenException, BadRequestException, BadGatewayException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { HttpException, ForbiddenException, BadRequestException, BadGatewayException, ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { AtlasError, activeObservationStatuses, observationStatuses, safeErrorCode, severities } from '../../../packages/core/contracts.ts';
 import type { ObservationQuery } from '../../../packages/observations/query.ts';
 
 const logger = new Logger('AtlasApi');
 
 /**
- * AtlasError.kind → HTTP without leaking internals (docs/02): SCOPE 403, VALIDATION 400, broken upstream or result
- * contract 502, everything else 500. HTTP exceptions raised by the API layer pass through unchanged. Unexpected errors
+ * AtlasError.kind → HTTP without leaking internals (docs/02): SCOPE 403, VALIDATION 400, CONFLICT 409, broken upstream or
+ * result contract 502, everything else 500. HTTP exceptions raised by the API layer pass through unchanged. Unexpected errors
  * are logged by name and safe code only, never by message (which may carry query details).
  */
 export function toHttp(error: unknown): never {
@@ -14,6 +14,7 @@ export function toHttp(error: unknown): never {
   if (error instanceof AtlasError) {
     if (error.kind === 'SCOPE') throw new ForbiddenException('Access denied');
     if (error.kind === 'VALIDATION') throw new BadRequestException();
+    if (error.kind === 'CONFLICT') throw new ConflictException();
     if (error.code === 'CONTEXT_SCOPE_MISMATCH' || error.code === 'CONTEXT_CONTRACT_MISMATCH' || error.kind === 'TRANSIENT') throw new BadGatewayException(error.code);
   }
   const code = (error as { code?: unknown } | null)?.code;
@@ -47,13 +48,21 @@ export function parseLimit(value: unknown, max: number): number {
 }
 
 /**
- * POST /tools/execute body. Only clientId and tool are accepted; risk, sideEffect, actor or permissions in the body are a
- * 400, never an input. The actor and its permissions come from authentication, the tool metadata from the registry.
+ * POST /tools/execute body, versioned DTO v1 (task 1.9): `version` ("1", optional), `clientId`, `tool`, `parameters` (a
+ * plain object, optional — validated by the tool's runtime schema in the gateway) and `requestId` (optional correlation,
+ * echoed as X-Atlas-Correlation-Id). Risk, sideEffect, actor, permissions or any other field are a 400, never an input:
+ * the actor comes from authentication, the tool metadata from the registry.
  */
-export function parseToolRequest(body: unknown): { clientId: string; tool: string } {
+export interface ToolRequest { clientId: string; tool: string; parameters: unknown; requestId: string | null }
+export const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{8,64}$/;
+const TOOL_REQUEST_KEYS = ['version', 'clientId', 'tool', 'parameters', 'requestId'];
+export function parseToolRequest(body: unknown): ToolRequest {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException();
   const input = body as Record<string, unknown>;
-  if (Object.keys(input).some(k => k !== 'clientId' && k !== 'tool') || typeof input.clientId !== 'string' || typeof input.tool !== 'string'
-    || input.clientId.length > 128 || input.tool.length > 100) throw new BadRequestException();
-  return { clientId: input.clientId, tool: input.tool };
+  const plain = (v: unknown) => !!v && typeof v === 'object' && !Array.isArray(v);
+  if (Object.keys(input).some(k => !TOOL_REQUEST_KEYS.includes(k)) || typeof input.clientId !== 'string' || typeof input.tool !== 'string'
+    || input.clientId.length > 128 || input.tool.length > 100 || (input.version !== undefined && input.version !== '1')
+    || (input.parameters !== undefined && (!plain(input.parameters) || JSON.stringify(input.parameters).length > 2048))
+    || (input.requestId !== undefined && (typeof input.requestId !== 'string' || !REQUEST_ID_PATTERN.test(input.requestId)))) throw new BadRequestException();
+  return { clientId: input.clientId, tool: input.tool, parameters: input.parameters, requestId: (input.requestId as string | undefined) ?? null };
 }

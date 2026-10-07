@@ -76,3 +76,32 @@ test('structurally invalid bodies stay a 400 before any scope decision and write
     assert.deepEqual(await probe('/tools/execute', body), { status: 400, security: [], client: [] }, JSON.stringify(body).slice(0, 60));
   }
 });
+
+test('versioned tool DTO (task 1.9): version, parameters and requestId are checked at the boundary, the schema in the gateway; the correlation comes back', async () => {
+  for (const body of [{ version: '2', clientId: 'demo-gasta', tool: 'atera.alert.list' }, { version: 1, clientId: 'demo-gasta', tool: 'atera.alert.list' },
+    { clientId: 'demo-gasta', tool: 'atera.ticket.get', parameters: [] }, { clientId: 'demo-gasta', tool: 'atera.ticket.get', parameters: 'ticketId=1' },
+    { clientId: 'demo-gasta', tool: 'atera.ticket.get', parameters: { ticketId: 'x'.repeat(3000) } },
+    { clientId: 'demo-gasta', tool: 'atera.alert.list', requestId: 'short' }, { clientId: 'demo-gasta', tool: 'atera.alert.list', requestId: 'with spaces 1' }]) {
+    assert.deepEqual(await probe('/tools/execute', body), { status: 400, security: [], client: [] }, JSON.stringify(body).slice(0, 70));
+  }
+  assert.deepEqual(await probe('/tools/execute', { version: '1', clientId: 'demo-gasta', tool: 'atera.ticket.get', parameters: { ticketId: 'a b' } }),
+    { status: 400, security: [], client: ['demo-gasta|tool.rejected|atera.ticket.get|INVALID_TOOL_PARAMETERS'] }, 'the tool schema rejects, audited');
+  const post = (body: unknown) => fetch(`${api.base}/tools/execute`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body) });
+  const ok = await post({ version: '1', clientId: 'demo-gasta', tool: 'atera.ticket.get', parameters: { ticketId: '1' }, requestId: 'req-http-0001' });
+  const view = await ok.json() as { status: string; items: unknown };
+  assert.deepEqual([ok.status, ok.headers.get('x-atlas-correlation-id'), /^[0-9a-f-]{36}$/.test(ok.headers.get('x-atlas-tool-execution-id') ?? ''), view.status, view.items],
+    [201, 'req-http-0001', true, 'MISSING', null], 'a resource never read stays MISSING, also for one source ID');
+  const ledger = (await pgdb.owner.query(`SELECT status, "correlationId" FROM "ToolExecution" WHERE id = $1`, [ok.headers.get('x-atlas-tool-execution-id')])).rows;
+  assert.deepEqual(ledger, [{ status: 'SUCCEEDED', correlationId: 'req-http-0001' }]);
+  for (const [clientId, reason] of [['demo-other', 'SCOPE_DENIED'], ['ghost\u0000client', 'INVALID_SCOPE_ID']]) {
+    const denied = await post({ clientId, tool: 'atera.alert.list', requestId: 'req-http-0002' });
+    await denied.arrayBuffer();
+    assert.deepEqual([denied.status, denied.headers.get('x-atlas-correlation-id')], [403, 'req-http-0002'], reason);
+  }
+  assert.deepEqual((await pgdb.owner.query(`SELECT "reasonCode" FROM "SecurityAuditEvent" WHERE "correlationId" = 'req-http-0002' ORDER BY "recordedAt"`)).rows.map(r => r.reasonCode),
+    ['SCOPE_DENIED', 'INVALID_SCOPE_ID'], 'the denials carry the request correlation');
+  const tools = await (await fetch(`${api.base}/tools`, { headers: { Authorization: `Bearer ${token}` } })).json() as { name: string; risk: number; parameters: Record<string, { required: boolean }> }[];
+  const get = tools.find(t => t.name === 'atera.ticket.get')!;
+  assert.deepEqual([get.risk, get.parameters.ticketId?.required, tools.every(t => t.risk === 0)], [0, true, true]);
+});

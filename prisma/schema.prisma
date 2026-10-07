@@ -357,20 +357,27 @@ model ResourceSnapshot {
   syncState   SyncState @relation(fields: [workspaceId, clientId, connectionId, resourceType], references: [workspaceId, clientId, connectionId, resourceType], onDelete: Restrict, map: "ResourceSnapshot_syncState_fkey")
   @@id([workspaceId, clientId, connectionId, resourceType])
 }
+/// Ledger of executed read tools (task 1.9), written with its client audit row: STARTED, then SUCCEEDED or FAILED
+/// (safeErrorCode). Risk and side effect come from the registry; Stage 1 records read tools only (CHECK). inputHash is the
+/// SHA-256 of the canonical validated input. A trigger lets a STARTED row record its outcome and nothing else.
 model ToolExecution {
   workspaceId String
   clientId    String
   id          String
   actorId     String
   toolName    String
+  toolVersion String
   riskLevel   Int
   sideEffect  String
   inputHash   String
   status      String
   correlationId String
+  safeErrorCode String?
   createdAt   DateTime @default(now())
+  finishedAt  DateTime?
   client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
   @@id([workspaceId, clientId, id])
+  @@index([workspaceId, clientId, createdAt])
 }
 model AuditEvent {
   workspaceId String

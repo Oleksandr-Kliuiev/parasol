@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants, checkMappingStructure,
-  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure, checkDecisionLayerStructure, checkShadowJobRls, checkObservationLifecycle } from '../tests/sql-invariants.ts';
+  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure, checkDecisionLayerStructure, checkShadowJobRls, checkObservationLifecycle, checkToolLedger } from '../tests/sql-invariants.ts';
 import type { SqlRunner } from '../tests/sql-invariants.ts';
 import { SET_SCOPE_SQL } from '../packages/graph/scope-context.ts';
 import { migrationNames, migrationSql } from '../tests/support/migrations.ts';
@@ -62,6 +62,8 @@ try {
   results.push(['Decision layer schema (run config version and measurements, shadow jobs: scope link, leases, finished jobs, codes)', 'passed']);
   await checkObservationLifecycle(ownerRunner);
   results.push(['Observation lifecycle (immutable evidence, allowed status changes, acknowledgement author, superseding in client)', 'passed']);
+  await checkToolLedger(ownerRunner);
+  results.push(['Tool execution ledger (read tools only, outcome consistency, identity formats, final outcomes)', 'passed']);
 
   // Confined role through a pool of ONE connection: every checkout reuses the same physical connection.
   const appUrl = new URL(ownerUrl.toString()); appUrl.username = roleName; appUrl.password = rolePassword;

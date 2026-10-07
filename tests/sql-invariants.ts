@@ -419,3 +419,26 @@ export async function checkObservationLifecycle(owner: SqlRunner): Promise<void>
   await rejects(update(`status = 'RESOLVED', "supersededById" = NULL`), /lifecycle allows/, 'SUPPRESSED → RESOLVED is not a lifecycle step');
   await update(`status = 'OPEN', "resolvedAt" = NULL, "resolvedBy" = NULL, "supersededById" = NULL`);
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Tool execution ledger (migration 202610080000): read tools only, status vocabulary and outcome consistency, identity
+// formats, and a STARTED row only records its outcome. Owner, after checkStructuralInvariants (client c1 in w).
+// ---------------------------------------------------------------------------------------------------------------------
+const hash = 'a'.repeat(64);
+const execution = (id: string, columns = '', values = '') => `INSERT INTO "ToolExecution" ("workspaceId","clientId","id","actorId","toolName","toolVersion",
+  "riskLevel","sideEffect","inputHash","status","correlationId"${columns}) VALUES ('w','c1','${id}','tech','atera.ticket.list','1',0,'NONE','${hash}','STARTED','corr-12345678'${values})`;
+export async function checkToolLedger(owner: SqlRunner): Promise<void> {
+  await owner.exec(execution('x1'));
+  await rejects(owner.exec(execution('x2').replace(`'1',0,'NONE'`, `'1',2,'NONE'`)), /read_only_check/, 'Stage 1 records read tools only');
+  await rejects(owner.exec(execution('x3').replace(`'1',0,'NONE'`, `'1',0,'CREATE'`)), /read_only_check/);
+  await rejects(owner.exec(execution('x4').replace(`'1',0,'NONE'`, `'1',0,'WRITE'`)), /side_effect_check|read_only_check/);
+  await rejects(owner.exec(execution('x5', ',"finishedAt"', ',now()').replace(`'STARTED'`, `'DONE'`)), /ToolExecution_status_check/);
+  await rejects(owner.exec(execution('x6').replace(`'STARTED'`, `'SUCCEEDED'`)), /outcome_check/, 'a finished execution says when');
+  await rejects(owner.exec(execution('x7', ',"finishedAt"', ',now()').replace(`'STARTED'`, `'FAILED'`)), /outcome_check/, 'a failed execution says why');
+  await rejects(owner.exec(execution('x8').replace(`'${hash}'`, `'abc'`)), /identity_check/);
+  await rejects(owner.exec(execution('x9').replace(`'atera.ticket.list'`, `'Atera.Ticket'`)), /identity_check/);
+  await rejects(owner.exec(execution('x10').replace(`'corr-12345678'`, `'short'`)), /identity_check/);
+  await rejects(owner.exec(`UPDATE "ToolExecution" SET "toolName" = 'atera.alert.list' WHERE id = 'x1'`), /ledger/, 'nothing but the outcome changes');
+  await owner.exec(`UPDATE "ToolExecution" SET status = 'SUCCEEDED', "finishedAt" = now() WHERE id = 'x1'`);
+  await rejects(owner.exec(`UPDATE "ToolExecution" SET status = 'FAILED', "safeErrorCode" = 'X' WHERE id = 'x1'`), /ledger/, 'an outcome is final');
+}

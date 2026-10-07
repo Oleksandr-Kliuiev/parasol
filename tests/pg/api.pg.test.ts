@@ -120,12 +120,13 @@ test('read tools over the database: resource views with status, write tool denie
   assert.equal((await execute({ clientId: 'demo-gasta', tool: 'atera.ticket.list', risk: 0 })).status, 400);
   assert.equal((await execute({ clientId: 'demo-other', tool: 'atera.ticket.list' })).status, 403);
   assert.ok((await securityRows()).includes('demo-technician|tool.scope_denied|demo-other|SCOPE_DENIED'));
-  assert.equal((await json<unknown[]>('/tools', tech)).length, 4);
+  assert.equal((await json<unknown[]>('/tools', tech)).length, 7);
   assert.deepEqual(await json('/tools', ingestOnly), []);
   const audit = await json<AuditRecord[]>('/clients/demo-gasta/audit', tech);
   const events = audit.map(a => a.eventType);
   for (const e of ['tool.started', 'tool.succeeded', 'tool.denied']) assert.ok(events.includes(e), e);
-  assert.ok(audit.every(a => Object.keys(a.metadata).every(k => ['tool', 'toolVersion', 'safeErrorCode'].includes(k))), 'allowlisted metadata only');
+  assert.ok(audit.every(a => Object.keys(a.metadata).every(k => ['tool', 'toolVersion', 'safeErrorCode', 'toolExecutionId', 'parameter'].includes(k))),
+    'allowlisted metadata only');
 });
 
 test('GET /audit/security needs security_audit:read; a refused read is itself recorded', async () => {
@@ -152,8 +153,8 @@ test('one actor, two memberships: context:read on Gasta, only events:ingest on a
   const tool = await call('/tools/execute', split, { method: 'POST', body: JSON.stringify({ clientId: 'demo-other', tool: 'atera.alert.list' }) });
   assert.equal(tool.status, 403);
   const otherAudit = (await pgdb.owner.query(`SELECT "eventType"||'|'||(metadata->>'safeErrorCode') AS s FROM "AuditEvent" WHERE "clientId" = 'demo-other' AND "actorId" = 'demo-split'`)).rows.map(r => r.s);
-  assert.deepEqual(otherAudit, ['tool.denied|TOOL_NOT_ALLOWED'], 'a member without the permission: denial in that client\'s audit, no read');
-  assert.equal((await json<unknown[]>('/tools', split)).length, 4);
+  assert.deepEqual(otherAudit, ['tool.denied|PERMISSION_DENIED'], 'a member without the permission: denial in that client\'s audit, no read');
+  assert.equal((await json<unknown[]>('/tools', split)).length, 7);
 });
 
 test('observations over HTTP (task 1.8): status and severity filters, keyset pages, and invalid parameters as 400 before any query', async () => {

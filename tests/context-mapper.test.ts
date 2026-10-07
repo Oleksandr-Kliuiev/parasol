@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mapClientContext } from '../packages/graph/context-mapper.ts';
 import type { DbClientGraph, DbObservationRow } from '../packages/graph/context-mapper.ts';
-import { executeReadTool } from '../packages/tools/gateway.ts';
+import { memorySinks, runTool } from './support/tool-fixtures.ts';
 import { MemoryAudit, MemorySecurityAudit } from '../packages/audit/memory.ts';
 import { scope, actor } from '../fixtures/gasta.ts';
 import { scopeContext, assertConfinedRuntimeRole } from '../packages/graph/scope-context.ts';
@@ -53,12 +53,12 @@ test('DB rows map to ClientContextV1 with explicit resource statuses and whole-s
 });
 test('tool gateway works unchanged on a DB-mapped context', async () => {
   const ctx = mapClientContext(scope, graph, [row('o1', 'MEDIUM', '2026-10-07T00:00:00Z')], { total: 1, bySeverity: [{ severity: 'MEDIUM', count: 1 }] }, null);
-  const sinks = { audit: new MemoryAudit(), securityAudit: new MemorySecurityAudit() };
-  const tickets = await executeReadTool(actor, scope, 'atera.ticket.list', async () => ctx, sinks) as { status: string; items: unknown };
+  const sinks = memorySinks();
+  const tickets = await runTool(actor, scope, 'atera.ticket.list', async () => ctx, sinks) as { status: string; items: unknown };
   assert.equal(tickets.status, 'ERROR'); assert.equal(tickets.items, null);
-  const incidents = await executeReadTool(actor, scope, 'huntress.incident.list', async () => ctx, sinks) as { status: string };
+  const incidents = await runTool(actor, scope, 'huntress.incident.list', async () => ctx, sinks) as { status: string };
   assert.equal(incidents.status, 'MISSING');
-  const full = await executeReadTool(actor, scope, 'atlas.client.get_context', async () => ctx, sinks) as typeof ctx;
+  const full = await runTool(actor, scope, 'atlas.client.get_context', async () => ctx, sinks) as typeof ctx;
   assert.equal(full.observations.items[0]?.summary, 'row summary');
 });
 test('scope context is derived from memberships and the identifier policy; the runtime role must be confined', () => {
