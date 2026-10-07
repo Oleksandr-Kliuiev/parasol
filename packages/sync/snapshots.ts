@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { PrismaClient, Prisma } from '@prisma/client';
 import type { Actor, ErrorKind, ResourceType, Scope, SnapshotItem } from '../core/contracts.ts';
 import { AtlasError, assertPermission, errorDetails, errorKind, safeErrorCode, severityRank } from '../core/contracts.ts';
@@ -6,7 +7,8 @@ import type { HttpTransport } from '../../connectors/http.ts';
 import { createConnector } from '../../connectors/registry.ts';
 import { assertResolvedConnection, resolveCredential } from '../connections/connections.ts';
 import { registerExternalEntity, suggestDeviceCandidate } from '../graph/mapping.ts';
-import { withScope } from '../graph/scoped-db.ts';
+import { withScope, uniqueViolation } from '../graph/scoped-db.ts';
+import { assertEventFromConnection, assertStorableEvent, storeEvent } from '../events/inbox.ts';
 
 /**
  * SyncModule core (task 1.5): snapshot reads of live resources and identity reads, following the sync order of docs/03.
@@ -32,13 +34,16 @@ export function boundedItems(items: SnapshotItem[]): SnapshotItem[] {
 
 export interface ResourceSyncResult {
   resourceType: ResourceType; status: 'OK' | 'ERROR' | 'UNAVAILABLE'; itemCount: number | null;
+  /** Events of this read newly stored in the inbox, and redeliveries recognized as duplicates (durable dedup). */
+  eventsStored: number; eventsDuplicate: number;
   safeErrorCode: string | null; errorKind: ErrorKind | null; retryAfterSeconds: string | null;
 }
 const scopeOf = (c: ResolvedConnection): Scope => ({ workspaceId: c.workspaceId, clientId: c.clientId });
 
 /**
  * One live resource of one connection: every page is read and validated by the connector, then the snapshot is
- * replaced and the success recorded in ONE transaction. A failure on any page records ERROR with its code and kind
+ * replaced, the read's events are stored in the durable inbox (task 1.6) and the success is recorded — in ONE
+ * transaction, so a read that fails anywhere stores nothing of itself. A failure on any page records ERROR with its code and kind
  * (TRANSIENT: retry later, honouring retryAfterSeconds) and leaves the previous snapshot and lastSuccessAt untouched.
  * A resource the source cannot read with a tenant filter is recorded UNAVAILABLE and never requested.
  */
@@ -55,11 +60,14 @@ export async function syncResource(db: PrismaClient, actor: Actor, connection: R
   const unavailable = connector.unavailableResources[resourceType];
   if (unavailable) {
     await recordState('UNAVAILABLE', unavailable);
-    return { resourceType, status: 'UNAVAILABLE', itemCount: null, safeErrorCode: unavailable, errorKind: null, retryAfterSeconds: null };
+    return { resourceType, status: 'UNAVAILABLE', itemCount: null, eventsStored: 0, eventsDuplicate: 0, safeErrorCode: unavailable, errorKind: null, retryAfterSeconds: null };
   }
   try {
     const read = await connector.readSnapshot(connection, resourceType);
     if (read.resourceType !== resourceType || read.itemCount !== read.items.length) throw new AtlasError('CONNECTOR_RESULT_INVALID', 'PERMANENT');
+    for (const event of read.events) { assertEventFromConnection(event, connection); assertStorableEvent(event); }
+    const correlationId = randomUUID();
+    let eventsStored = 0; let eventsDuplicate = 0;
     const items = boundedItems(read.items);
     const snapshot = { asOf: now, items: items as unknown as Prisma.InputJsonValue, itemCount: read.itemCount,
       truncated: read.itemCount > items.length, contractVersion: read.contractVersion };
@@ -67,12 +75,18 @@ export async function syncResource(db: PrismaClient, actor: Actor, connection: R
     await withScope(db, actor, [scope.clientId], async tx => {
       await tx.syncState.upsert({ where, create: { ...key, ...success }, update: success });
       await tx.resourceSnapshot.upsert({ where, create: { ...key, ...snapshot }, update: snapshot });
+      for (const event of read.events) {
+        const stored = await storeEvent(tx, scope, actor.id, event, correlationId);
+        if (stored.outcome === 'STORED') eventsStored++; else eventsDuplicate++;
+      }
     });
-    return { resourceType, status: 'OK', itemCount: read.itemCount, safeErrorCode: null, errorKind: null, retryAfterSeconds: null };
-  } catch (error) {
+    return { resourceType, status: 'OK', itemCount: read.itemCount, eventsStored, eventsDuplicate, safeErrorCode: null, errorKind: null, retryAfterSeconds: null };
+  } catch (thrown) {
+    // A concurrent sync of the same resource lost the race on an event identity: retry later, the winner's rows stand.
+    const error = uniqueViolation(thrown) !== null ? new AtlasError('CONCURRENT_SYNC', 'TRANSIENT') : thrown;
     const code = safeErrorCode(error);
     await recordState('ERROR', code);
-    return { resourceType, status: 'ERROR', itemCount: null, safeErrorCode: code, errorKind: errorKind(error),
+    return { resourceType, status: 'ERROR', itemCount: null, eventsStored: 0, eventsDuplicate: 0, safeErrorCode: code, errorKind: errorKind(error),
       retryAfterSeconds: errorDetails(error).retryAfterSeconds ?? null };
   }
 }

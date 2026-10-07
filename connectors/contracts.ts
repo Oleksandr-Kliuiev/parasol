@@ -10,8 +10,12 @@ export interface ResolvedConnection extends Scope { connectionId: string; system
 export interface SyncContext extends ResolvedConnection { resourceType: ResourceType; cursor: string | null }
 export interface SyncResult { nextCursor: string | null; complete: boolean; events: NormalizedEvent[]; fetchedAt: string }
 export interface ExternalEntityRef extends ResolvedConnection { externalId: string; resourceType: ResourceType }
-/** A COMPLETE read of one live resource: every page fetched and validated. A partial read never produces this. */
-export interface SnapshotRead { resourceType: ResourceType; items: SnapshotItem[]; itemCount: number; contractVersion: string }
+/**
+ * A COMPLETE read of one live resource: every page fetched and validated. A partial read never produces this. `events`
+ * are the same records as normalized events for the durable inbox (task 1.6); empty for resources that are not event
+ * sources in Stage 1 (tickets).
+ */
+export interface SnapshotRead { resourceType: ResourceType; items: SnapshotItem[]; itemCount: number; contractVersion: string; events: NormalizedEvent[] }
 /** An identity object (agent in Stage 1) as a bounded, safe attribute projection, for registerExternalEntity. */
 export interface IdentityRead { resourceType: 'agent' | 'contact'; externalId: string; attributes: Record<string, string>; observedAt: string }
 export interface AtlasConnector {

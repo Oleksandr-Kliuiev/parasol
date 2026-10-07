@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants, checkMappingStructure,
-  checkSnapshotStructure, checkSnapshotRls } from './sql-invariants.ts';
+  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure } from './sql-invariants.ts';
 import type { SqlRunner } from './sql-invariants.ts';
 import { migrationNames, migrationsAfter, migrationsThrough, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
 
@@ -115,6 +115,17 @@ test('mapping workflow schema: typed links (agent-DEVICE, contact-PERSON), quara
     await seedGraph(owner);
     await checkStructuralInvariants(owner);
     await checkMappingStructure(owner);
+  } finally { await db.close(); }
+});
+
+test('inbox schema: leases name owner and expiry, finished events hold none, failures carry a code, decision vocabularies', async () => {
+  const db = new PGlite();
+  try {
+    await migrateAll(db);
+    const owner = runner(db);
+    await seedGraph(owner);
+    await checkStructuralInvariants(owner);
+    await checkInboxStructure(owner);
   } finally { await db.close(); }
 });
 

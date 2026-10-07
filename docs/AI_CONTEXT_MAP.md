@@ -10,7 +10,8 @@ Load the smallest set of files a task needs. Rules: `AGENTS.md`. Scope and plan:
 | Schema / new migration | `prisma/schema.prisma`, newest `prisma/migrations/*/migration.sql` | `docs/02_DATA_AND_MODULES.md` (tables), `tests/sql-invariants.ts` |
 | RLS, runtime role, scoped access (`withScope`, `withWorkspaceScope`, `assertRuntimeRole`) | `packages/graph/scope-context.ts`, `packages/graph/scoped-db.ts`, `prisma/roles.sql` | migration `202610071200_v1_1_contracts` section 5 |
 | DB-backed client context | `packages/graph/prisma-context.ts`, `packages/graph/context-mapper.ts` | `tests/context-mapper.test.ts` |
-| Event pipeline (dedup, conflict, retry, dead-letter) | `packages/events/pipeline.ts` | `tests/pipeline.test.ts`, `docs/03_CONNECTORS_AND_SYNC.md` |
+| Event pipeline, in-memory reference (dedup, conflict, retry, dead-letter) | `packages/events/pipeline.ts` | `tests/pipeline.test.ts`, `docs/03_CONNECTORS_AND_SYNC.md` |
+| Durable inbox and worker (store, claim/lease, two phases, retry/dead-letter, requeue) | `packages/events/inbox.ts`, `packages/events/worker.ts`, `packages/events/decision.ts`, `packages/events/identity.ts` | `tests/pg/inbox.pg.test.ts`, `tests/pg/worker.pg.test.ts`, `tests/pg/worker-routing.pg.test.ts`, `tests/support/events-fixtures.ts` |
 | Decisions provider / shadow / advisory | `packages/decisions/provider.ts`, `packages/decisions/openai.ts` | `docs/04_DECISION_LAYER.md` |
 | Connectors / normalizers | `connectors/contracts.ts`, `connectors/<system>/normalizer.ts` | `docs/03_CONNECTORS_AND_SYNC.md` |
 | Connection binding, `ResolvedConnection` issuance | `packages/connections/connections.ts` | `tests/pg/connections.pg.test.ts`, docs/03 (Mapping) |

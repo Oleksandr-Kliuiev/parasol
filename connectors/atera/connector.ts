@@ -69,7 +69,7 @@ export function createAteraConnector(deps: ConnectorDeps): AtlasConnector {
       assertResolvedConnection(connection);
       if (resourceType !== 'ticket') throw new AtlasError('RESOURCE_NOT_SUPPORTED', 'PERMANENT');
       const tickets = await readAll(connection, customer => ({ path: '/api/v3/tickets', filters: { customerId: customer, ticketStatus: 'Open' } }), parseTicket);
-      return { resourceType, items: tickets.map(ticketItem), itemCount: tickets.length, contractVersion: ATERA_CONTRACT_VERSION };
+      return { resourceType, items: tickets.map(ticketItem), itemCount: tickets.length, contractVersion: ATERA_CONTRACT_VERSION, events: [] };
     },
     async readIdentities(connection: ResolvedConnection): Promise<IdentityRead[]> {
       assertResolvedConnection(connection);

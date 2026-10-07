@@ -94,6 +94,14 @@ Worker использует DB claim/lease или SELECT FOR UPDATE SKIP LOCKED.
 
 Retry: transient network/429/5xx с Retry-After/backoff и лимитом попыток. Malformed DTO → quarantine/review, а не бесконечные retries. Refusal → visible review. Logs содержат safeErrorCode и correlation, но не токены и upstream response body.
 
+### Реализация (задание 1.6)
+
+- Inbox (`packages/events/inbox.ts`): событие сохраняется до любой обработки; `storeEvent` — дубликат (тот же eventKey и payloadHash) ничего не меняет, другое содержание — отдельная строка с `conflictOfEventKey` и audit `event.revision_conflict`; каноническая строка не перезаписывается. Принимаются только события выданной `ResolvedConnection` (workspace, client, connection, system совпадают). `listInbox` (context:read) показывает ожидающие, RETRY и DEAD_LETTER; `requeueDeadLetter` (events:ingest) — явное действие с audit `event.requeued`.
+- Источник событий Stage 1 — полное чтение открытого набора инцидентов Huntress (`status=sent`, ограничено числом страниц; дельта-курсор по времени в Stage 1 не используется): `syncResource` в одной транзакции заменяет snapshot и складывает события чтения в inbox. Повторное чтение — дубликаты; изменившийся `updated_at` — новая ревизия, новое evidence. Atera alerts не читаются (решение владельца, connectors/CONTRACTS.md); tickets в Stage 1 не являются событиями.
+- Worker (`packages/events/worker.ts`): `claimEvents` — `FOR UPDATE SKIP LOCKED` + lease, попытка считается при захвате; фаза 1 (`prepareEvent`) — разрешение устройства по CONFIRMED-связям, решение через общий `packages/events/decision.ts` (тот же код, что у reference pipeline), DecisionRun как не применённые вместе с `preparedDecision`; фаза 2 — applied, Observation, audit `observation.created` и PROCESSED в одной транзакции под блокировкой строки события. Падение после фазы 1 — lease истекает, другой worker завершает с сохранённым решением без нового вызова провайдера. TRANSIENT → RETRY с backoff до `maxAttempts`, затем DEAD_LETTER; PERMANENT и неизвестные ошибки (в т.ч. повреждённый сохранённый payload) → DEAD_LETTER сразу; обе ветки — с audit.
+- QUARANTINED-связь агента события — неразрешённый конфликт привязки: CONFLICT → `HUMAN_REVIEW`, `entityId = null`, `AMBIGUOUS_DEVICE_LINK`, исходная severity и priority.
+- Shadow: базовое решение применяется сразу, AI-run записывается после фиксации как не применённый (лучшее усилие, наблюдение не меняет); отдельная job, бюджет, circuit-breaker и телеметрия — задание 1.7. Outbox в Stage 1 не используется (нет исходящих действий). Жизненный цикл observation по ревизиям одного инцидента — задание 1.8.
+
 ## Freshness и context
 
 Каждый resource имеет fetchedAt/asOf, lastSuccessAt, status, source ID. `0 incidents` допустимо только после успешного полного чтения ресурса; ERROR/MISSING/STALE — отдельное состояние. Failure одного connector не скрывает evidence другого. Не смешивайте stale counts со свежими без метки.

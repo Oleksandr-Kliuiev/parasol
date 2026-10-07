@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants, checkMappingStructure,
-  checkSnapshotStructure, checkSnapshotRls } from '../tests/sql-invariants.ts';
+  checkSnapshotStructure, checkSnapshotRls, checkInboxStructure } from '../tests/sql-invariants.ts';
 import type { SqlRunner } from '../tests/sql-invariants.ts';
 import { SET_SCOPE_SQL } from '../packages/graph/scope-context.ts';
 import { migrationNames, migrationSql } from '../tests/support/migrations.ts';
@@ -56,6 +56,8 @@ try {
   results.push(['Mapping workflow schema (typed links, quarantine, immutable binding)', 'passed']);
   await checkSnapshotStructure(ownerRunner);
   results.push(['Snapshot schema (bounded items, attempt/success order, failure codes)', 'passed']);
+  await checkInboxStructure(ownerRunner);
+  results.push(['Inbox schema (leases, finished events, failure codes, decision vocabularies)', 'passed']);
 
   // Confined role through a pool of ONE connection: every checkout reuses the same physical connection.
   const appUrl = new URL(ownerUrl.toString()); appUrl.username = roleName; appUrl.password = rolePassword;

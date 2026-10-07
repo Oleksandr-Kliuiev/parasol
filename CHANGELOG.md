@@ -4,6 +4,14 @@
 
 Checkpoint A (tasks 1.1–1.3) accepted by the independent review (`REVIEW_REPORT.md`, revision 2). Status, verification and open gates of Checkpoint A: `CHECKPOINT_REPORT.md`.
 
+### Added — task 1.6 Persistent sync and events
+- Migration `202610071900_stage1_event_inbox`: RawEvent as the durable inbox (`nextAttemptAt`, lease owner/expiry, stored phase-1 `preparedDecision`, failure codes for RETRY/DEAD_LETTER, pending index) and DecisionRun vocabularies (OK/FAILED with codes; fixture/rules/openai); preflight on unknown values.
+- `packages/events/inbox.ts`: durable store with eventKey v2 dedup, content conflicts as linked evidence rows (canonical never overwritten, audited once), connection-bound ingestion, operator inbox view and explicit, audited requeue of dead letters.
+- `packages/events/worker.ts`: claim with `FOR UPDATE SKIP LOCKED` and leases; phase 1 stores the decision runs NOT applied with the prepared decision; phase 2 applies, creates the observation, audits and completes in one transaction; crash recovery by lease expiry without a second provider call; TRANSIENT → bounded RETRY with backoff → DEAD_LETTER, PERMANENT/unknown → DEAD_LETTER, all audited. A quarantined link of the event's agent is a CONFLICT (AMBIGUOUS_DEVICE_LINK) that keeps CRITICAL urgent.
+- Shared `packages/events/identity.ts` and `packages/events/decision.ts` (provider call validation, advisory fallback, deterministic route rules) now drive both the reference pipeline and the worker.
+- Huntress snapshot reads also feed the inbox, atomically with the snapshot; a failed read stores nothing; re-reads are duplicates.
+- Tests: inbox/lease/vocabulary SQL invariants (PGlite + pg17-check), inbox, worker and routing PostgreSQL tests incl. two workers, restart after phase 1, final-transaction retry, dead letters and end to end; mutation checks run.
+
 ### Added — task 1.5 Read adapters
 - Migration `202610071800_stage1_resource_snapshots`: `ResourceSnapshot` (last complete read per connection × alert/ticket/incident, at most 100 items with the source total, composite FK to its `SyncState`, RLS) and a `SyncState` vocabulary (OK/ERROR/UNAVAILABLE with codes; success never after the attempt). Decision recorded in docs/02: scoped snapshot persistence.
 - Read adapters with runtime DTO validation, tenant-scoped upstream requests, bounded pagination and classified HTTP errors: Huntress (incidents `status=sent`, agents, health; contract verified against the official reference) and Atera (open tickets by `customerId`, agents by customer, health; contract from an OpenAPI export, unverified against an account). Atera alerts are not read (no customer filter) and show `UPSTREAM_TENANT_FILTER_UNAVAILABLE`. `connectors/CONTRACTS.md` records sources, checksums, mappings and the account checklist.

@@ -294,6 +294,24 @@ export async function checkSnapshotRls(app: SqlRunner): Promise<void> {
   await app.exec('ROLLBACK');
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Durable inbox (migration 202610071900): leases, finished events, failure codes, decision vocabularies. Owner, after checkStructuralInvariants.
+// ---------------------------------------------------------------------------------------------------------------------
+export async function checkInboxStructure(owner: SqlRunner): Promise<void> {
+  await rejects(owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = 'w1' WHERE id = 'r3'`), /lease_pair_check/, 'a lease names its owner and its expiry');
+  await owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = 'w1', "leaseExpiresAt" = now() + interval '1 minute' WHERE id = 'r3'`);
+  await rejects(owner.exec(`UPDATE "RawEvent" SET status = 'PROCESSED' WHERE id = 'r3'`), /finished_without_lease_check/);
+  await owner.exec(`UPDATE "RawEvent" SET "leaseOwner" = NULL, "leaseExpiresAt" = NULL WHERE id = 'r3'`);
+  await rejects(owner.exec(`UPDATE "RawEvent" SET status = 'DEAD_LETTER' WHERE id = 'r3'`), /RawEvent_error_code_check/, 'a dead letter says why');
+  await rejects(owner.exec(`UPDATE "RawEvent" SET "preparedDecision" = '[1]' WHERE id = 'r3'`), /prepared_decision_check/);
+  await rejects(owner.exec(`INSERT INTO "DecisionRun" ("workspaceId","clientId","id","eventId","provider","mode","applied","promptVersion","inputHash","status","safeErrorCode")
+    VALUES ('w','c1','run-x','r3','rules','rules',false,'v1','h','UNKNOWN','X')`), /DecisionRun_status_check/);
+  await rejects(owner.exec(`INSERT INTO "DecisionRun" ("workspaceId","clientId","id","eventId","provider","mode","applied","promptVersion","inputHash","status")
+    VALUES ('w','c1','run-y','r3','gpt','rules',false,'v1','h','OK')`), /DecisionRun_provider_check/);
+  await rejects(owner.exec(`INSERT INTO "DecisionRun" ("workspaceId","clientId","id","eventId","provider","mode","applied","promptVersion","inputHash","status")
+    VALUES ('w','c1','run-z','r3','openai','advisory',false,'v1','h','FAILED')`), /DecisionRun_failure_code_check/, 'a failed run says why');
+}
+
 /**
  * The runtime-role guard must reject a role that owns ANY protected table (not only Observation) and must notice a
  * protected table whose RLS was disabled. `owner` reconfigures the database; `app` runs the check as the confined role.

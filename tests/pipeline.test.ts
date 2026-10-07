@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ReferencePipeline, eventKey } from '../packages/events/pipeline.ts';
+import { ReferencePipeline } from '../packages/events/pipeline.ts';
+import { eventKey } from '../packages/events/identity.ts';
 import { FixtureDecisionProvider, RulesDecisionProvider, defaultDecisionConfig } from '../packages/decisions/provider.ts';
 import type { DecisionProvider } from '../packages/decisions/provider.ts';
 import { normalizeAtera } from '../connectors/atera/normalizer.ts';

@@ -1,37 +1,13 @@
-import { createHash, randomUUID } from 'node:crypto';
-import type { Actor, Scope, NormalizedEvent, Observation, ExternalLink, Classification, DecisionRunRecord, InboxEntry, InboxStatus, AuditSink, Provider, Route } from '../core/contracts.ts';
-import { AtlasError, assertPermission, domainOf, priorityOf, routes, safeErrorCode, errorKind, errorDetails } from '../core/contracts.ts';
+import { randomUUID } from 'node:crypto';
+import type { Actor, Scope, NormalizedEvent, Observation, ExternalLink, DecisionRunRecord, InboxEntry, InboxStatus, AuditSink, Provider, Route } from '../core/contracts.ts';
+import { assertPermission, domainOf, priorityOf, safeErrorCode, errorKind } from '../core/contracts.ts';
 import { resolveDevice } from '../graph/resolver.ts';
 import type { DecisionProvider, DecisionConfig } from '../decisions/provider.ts';
-import { defaultDecisionConfig, rulesBaseline } from '../decisions/provider.ts';
+import { defaultDecisionConfig } from '../decisions/provider.ts';
 import { MemoryAudit } from '../audit/memory.ts';
-
-/** Event identity rule. Versioned: changing the rule means a new version, never a silent change of existing keys. */
-export const EVENT_KEY_VERSION = 'v2';
-export function eventKey(event: NormalizedEvent): string {
-  return createHash('sha256').update(JSON.stringify([EVENT_KEY_VERSION, event.workspaceId, event.clientId, event.source,
-    event.connectionId, event.resourceType, event.externalEventId, event.revision])).digest('hex');
-}
-/**
- * Identity of a conflicting redelivery: same source ID and revision as `canonicalKey`, different content. Deterministic, so
- * the same conflicting content delivered twice is still one event, while the canonical evidence is never overwritten.
- */
-export function conflictEventKey(canonicalKey: string, payloadHash: string): string {
-  return createHash('sha256').update(JSON.stringify([`${EVENT_KEY_VERSION}-conflict`, canonicalKey, payloadHash])).digest('hex');
-}
-/** Hash of the normalized content, independent of receivedAt. */
-export function payloadHash(event: NormalizedEvent): string {
-  const { receivedAt: _ignored, ...content } = event;
-  return createHash('sha256').update(canonicalJson(content)).digest('hex');
-}
-/** Deterministic JSON: object keys sorted recursively, so two equal payloads always hash equal. */
-export function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value as Record<string, unknown>).sort().map(k => `${JSON.stringify(k)}:${canonicalJson((value as Record<string, unknown>)[k])}`).join(',')}}`;
-  }
-  return JSON.stringify(value) ?? 'null';
-}
+import { eventKey, conflictEventKey, payloadHash } from './identity.ts';
+import { callProvider, draftDecision, finalRoute } from './decision.ts';
+import type { RunDraft } from './decision.ts';
 
 export interface IngestResult {
   eventKey: string; conflictOfEventKey: string | null; status: InboxStatus; attempts: number; observation: Observation | null; safeErrorCode: string | null;
@@ -165,69 +141,35 @@ export class ReferencePipeline {
   }
 
   async #prepare(event: NormalizedEvent, key: string, conflictOfEventKey: string | null): Promise<PreparedDecision> {
-    const reasonCodes: string[] = [];
-    if (conflictOfEventKey) reasonCodes.push('REVISION_PAYLOAD_CONFLICT');
     // 1. Graph resolution. A conflicting confirmed mapping is evidence for a human, not a reason to drop the event.
-    let entityId: string | null = null; let linkConflict = false;
+    let entityId: string | null = null; let linkConflictCode: string | null = null;
     try { entityId = resolveDevice(event, this.#links); }
-    catch (error) { if (errorKind(error) === 'CONFLICT') { linkConflict = true; reasonCodes.push(safeErrorCode(error)); } else throw error; }
+    catch (error) { if (errorKind(error) === 'CONFLICT') linkConflictCode = safeErrorCode(error); else throw error; }
 
-    // 2. Decision. Runs are persisted as NOT applied; the applied flag is set in phase 2 together with the observation.
-    let classification: Classification; let appliedRun: DecisionRunRecord;
-    if (this.#provider.mode === 'shadow') {
-      // Shadow never blocks the baseline: urgent evidence must not wait for an experiment.
-      classification = rulesBaseline(event, this.#config.promptVersion);
-      appliedRun = this.#recordRun(event, key, 'rules', classification, null, 0, {});
-      this.#launchShadow(event, key);
-    } else {
-      const call = await this.#callProvider(event);
-      const aiRun = this.#recordRun(event, key, this.#provider.provider, call.result, call.error, call.latencyMs, call.details);
-      if (call.result) { classification = call.result; appliedRun = aiRun; }
-      else {
-        // Advisory contract (docs/04): refusal, timeout, invalid output or an unexpected model → visible human review.
-        // A sustained outage is handled by switching the mode to `rules`, not by silently routing on rules here.
-        classification = { route: 'HUMAN_REVIEW', confidence: 0, provider: 'rules', promptVersion: this.#config.promptVersion,
-          reasonCodes: ['PROVIDER_UNAVAILABLE_OR_INVALID', call.error ?? 'UNKNOWN'] };
-        appliedRun = this.#recordRun(event, key, 'rules', classification, null, 0, {});
-      }
-    }
-    reasonCodes.push(...classification.reasonCodes);
-
-    // 3. Deterministic rules after the model. Each rule appends its reason; none overwrites another.
-    let route = classification.route;
-    if (classification.provider !== 'rules' && classification.confidence < this.#config.confidenceThreshold) { route = 'HUMAN_REVIEW'; reasonCodes.push('LOW_CONFIDENCE'); }
-    if (conflictOfEventKey || linkConflict) route = 'HUMAN_REVIEW';
-    else if (!entityId) { route = 'HUMAN_REVIEW'; reasonCodes.push('UNRESOLVED_DEVICE'); }
-    if (priorityOf(event.sourceSeverity) === 'URGENT') { route = 'HUMAN_REVIEW'; reasonCodes.push('SOURCE_URGENCY_FLOOR'); }
-
-    return { entityId, route, confidence: classification.confidence, provider: classification.provider, promptVersion: classification.promptVersion,
-      reasonCodes, appliedRunId: appliedRun.id };
-  }
-
-  async #callProvider(event: NormalizedEvent): Promise<{ result: Classification | null; error: string | null; details: Record<string, string>; latencyMs: number }> {
-    const started = Date.now();
-    try {
-      const result = await this.#provider.classify(event);
-      if (!Number.isFinite(result.confidence) || result.confidence < 0 || result.confidence > 1 || !routes.includes(result.route)) {
-        throw new AtlasError('INVALID_CLASSIFICATION', 'PERMANENT', { requestedModel: result.requestedModel ?? '', responseModel: result.responseModel ?? '' });
-      }
-      return { result, error: null, details: {}, latencyMs: Date.now() - started };
-    } catch (error) {
-      return { result: null, error: safeErrorCode(error), details: errorDetails(error), latencyMs: Date.now() - started };
-    }
+    // 2. Decision (decision.ts). Runs are recorded as NOT applied; the applied flag is set in phase 2 with the observation.
+    const draft = await draftDecision(this.#provider, this.#config, event);
+    const runs = draft.runs.map(run => this.#recordRun(event, key, run));
+    if (draft.shadowPending) this.#launchShadow(event, key);
+    // 3. Deterministic rules after the model (decision.ts): each appends its reason, none overwrites another.
+    const { route, reasonCodes } = finalRoute({ classification: draft.classification, entityId, linkConflictCode, conflictOfEventKey,
+      sourceSeverity: event.sourceSeverity, confidenceThreshold: this.#config.confidenceThreshold });
+    return { entityId, route, confidence: draft.classification.confidence, provider: draft.classification.provider,
+      promptVersion: draft.classification.promptVersion, reasonCodes, appliedRunId: runs[draft.appliedRun]!.id };
   }
 
   #launchShadow(event: NormalizedEvent, key: string): void {
-    const task = this.#callProvider(event).then(call => {
-      this.#recordRun(event, key, this.#provider.provider, call.result, call.error, call.latencyMs, call.details);
+    const task = callProvider(this.#provider, event).then(call => {
+      this.#recordRun(event, key, { provider: this.#provider.provider, mode: this.#provider.mode, result: call.result, error: call.error,
+        latencyMs: call.latencyMs, details: call.details });
     });
     this.#shadow.add(task);
     void task.finally(() => this.#shadow.delete(task));
   }
 
-  #recordRun(event: NormalizedEvent, key: string, provider: Provider, result: Classification | null, error: string | null, latencyMs: number, details: Record<string, string>): DecisionRunRecord {
+  #recordRun(event: NormalizedEvent, key: string, draft: RunDraft): DecisionRunRecord {
+    const { provider, mode, result, error, latencyMs, details } = draft;
     const run: DecisionRunRecord = { workspaceId: event.workspaceId, clientId: event.clientId, id: randomUUID(), eventKey: key,
-      provider, mode: this.#provider.mode, applied: false, status: result ? 'OK' : 'FAILED',
+      provider, mode, applied: false, status: result ? 'OK' : 'FAILED',
       route: result?.route ?? null, confidence: result?.confidence ?? null, promptVersion: result?.promptVersion ?? this.#config.promptVersion,
       requestedModel: result?.requestedModel ?? details.requestedModel ?? null, responseModel: result?.responseModel ?? details.responseModel ?? null,
       safeErrorCode: error, latencyMs, createdAt: new Date().toISOString() };

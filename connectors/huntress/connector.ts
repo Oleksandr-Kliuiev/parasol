@@ -3,7 +3,7 @@ import { AtlasError, safeErrorCode } from '../../packages/core/contracts.ts';
 import { assertResolvedConnection } from '../../packages/connections/connections.ts';
 import type { AtlasConnector, ConnectorDeps, ResolvedConnection, SnapshotRead, IdentityRead, ConnectionHealth } from '../contracts.ts';
 import { getJson } from '../http.ts';
-import { HUNTRESS_BASE_URL, HUNTRESS_CONTRACT_VERSION, parsePage, parseAgent, parseIncident, parseOrganizationId, incidentItem, agentIdentity } from './contract.ts';
+import { HUNTRESS_BASE_URL, HUNTRESS_CONTRACT_VERSION, parsePage, parseAgent, parseIncident, parseOrganizationId, incidentItem, incidentEvent, agentIdentity } from './contract.ts';
 import type { HuntressPage } from './contract.ts';
 
 /**
@@ -68,7 +68,10 @@ export function createHuntressConnector(deps: ConnectorDeps): AtlasConnector {
       if (resourceType !== 'incident') throw new AtlasError('RESOURCE_NOT_SUPPORTED', 'PERMANENT');
       // Open incident reports: status `sent` (SOC notified; not closed or dismissed).
       const reports = await readAll(connection, '/v1/incident_reports', 'incident_reports', { status: 'sent' }, parseIncident);
-      return { resourceType, items: reports.map(incidentItem), itemCount: reports.length, contractVersion: HUNTRESS_CONTRACT_VERSION };
+      const receivedAt = new Date().toISOString();
+      const scope = { workspaceId: connection.workspaceId, clientId: connection.clientId };
+      return { resourceType, items: reports.map(incidentItem), itemCount: reports.length, contractVersion: HUNTRESS_CONTRACT_VERSION,
+        events: reports.map(r => incidentEvent(scope, connection.connectionId, r, receivedAt)) };
     },
     async readIdentities(connection: ResolvedConnection): Promise<IdentityRead[]> {
       assertResolvedConnection(connection);

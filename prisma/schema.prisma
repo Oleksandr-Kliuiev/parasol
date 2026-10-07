@@ -197,6 +197,12 @@ model RawEvent {
   status      String @default("RECEIVED")
   attempts    Int @default(0)
   lastErrorCode String?
+  /// Durable inbox (task 1.6): due time of the next attempt, lease of the worker holding it (both or neither; none once
+  /// PROCESSED or DEAD_LETTER), and the phase-1 decision reused by every retry of the final transaction.
+  nextAttemptAt  DateTime @default(now())
+  leaseOwner     String?
+  leaseExpiresAt DateTime?
+  preparedDecision Json?
   /// Set on a redelivery with the same identity but different content: points at the canonical row, which is never overwritten.
   /// The link is scoped and identity-bound (same workspace, client, connection, resourceType, externalEventId, revision);
   /// one canonical row per identity (partial unique index) and "parent is canonical" (trigger) live in the migrations.
