@@ -10,7 +10,7 @@ export interface SqlRunner {
   exec(sql: string): Promise<void>;
   query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
 }
-export const rejects = async (p: Promise<unknown>, pattern?: RegExp) => pattern ? assert.rejects(p, pattern) : assert.rejects(p);
+export const rejects = async (p: Promise<unknown>, pattern?: RegExp, message?: string) => pattern ? assert.rejects(p, pattern, message) : assert.rejects(p, message);
 
 /** Two clients in one workspace, the Gasta graph in c1, a decoy device in c2, confirmed links to both sources. Owner only. */
 export async function seedGraph(owner: SqlRunner): Promise<void> {
@@ -262,6 +262,36 @@ export async function checkMappingStructure(owner: SqlRunner): Promise<void> {
   await rejects(owner.exec(`UPDATE "Connection" SET "boundBy" = 'someone-else' WHERE id = 'a'`), /provenance is immutable/);
   await rejects(owner.exec(`INSERT INTO "Connection" VALUES ('w','c2','a-dup','atera','atera-demo','fixture://none','DISABLED')`), /duplicate key/);
   await owner.exec(`UPDATE "Connection" SET status = 'DISABLED' WHERE id = 'a'`);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Snapshots (migration 202610071800): bounded items, success after attempt, codes for failures, client isolation
+// ---------------------------------------------------------------------------------------------------------------------
+const snapshot = (client: string, connection: string, type: string, items: string, count: number, truncated: boolean) =>
+  `INSERT INTO "ResourceSnapshot" VALUES ('w','${client}','${connection}','${type}',now(),'${items}',${count},${truncated},'test')`;
+
+/** Owner, after seedGraph. */
+export async function checkSnapshotStructure(owner: SqlRunner): Promise<void> {
+  await owner.exec(`INSERT INTO "SyncState" ("workspaceId","clientId","connectionId","resourceType","status","lastSyncAt","lastSuccessAt")
+    VALUES ('w','c1','h','incident','OK',now(),now()), ('w','c2','a2','ticket','OK',now(),now())`);
+  await owner.exec(snapshot('c1', 'h', 'incident', '[]', 0, false));
+  await owner.exec(snapshot('c2', 'a2', 'ticket', '[{"externalId":"t1"}]', 1, false));
+  await rejects(owner.exec(snapshot('c1', 'a', 'alert', '[]', 0, false)), /foreign key/, 'a snapshot needs the sync state of the same connection and resource');
+  await rejects(owner.exec(`UPDATE "ResourceSnapshot" SET "itemCount" = 5 WHERE "clientId" = 'c1'`), /items_check/, 'more in the source than stored means truncated');
+  await rejects(owner.exec(`UPDATE "ResourceSnapshot" SET items = (SELECT jsonb_agg(g) FROM generate_series(1, 101) g), "itemCount" = 101 WHERE "clientId" = 'c1'`), /items_check/);
+  await rejects(owner.exec(`UPDATE "ResourceSnapshot" SET items = '{}' WHERE "clientId" = 'c1'`), /items_check/);
+  await rejects(owner.exec(`INSERT INTO "SyncState" ("workspaceId","clientId","connectionId","resourceType","status","lastSyncAt") VALUES ('w','c1','h','agent','ERROR',now())`), /error_code_check/);
+  await rejects(owner.exec(`UPDATE "SyncState" SET "lastSuccessAt" = "lastSyncAt" + interval '1 minute' WHERE "clientId" = 'c1'`), /success_order_check/);
+  await rejects(owner.exec(`UPDATE "SyncState" SET status = 'PARTIAL', "safeErrorCode" = 'X' WHERE "clientId" = 'c1'`), /status_check/);
+}
+
+/** Confined runner: snapshots follow the client scope like every other client table. */
+export async function checkSnapshotRls(app: SqlRunner): Promise<void> {
+  assert.equal(Number((await app.query<{ n: number }>(`SELECT count(*)::int AS n FROM "ResourceSnapshot"`))[0]?.n ?? 0), 0, 'no context: no snapshot');
+  await app.exec('BEGIN');
+  await app.query(SET_SCOPE_SQL, ['w', 'c1']);
+  assert.deepEqual((await app.query<{ clientId: string }>(`SELECT "clientId" FROM "ResourceSnapshot"`)).map(r => r.clientId), ['c1']);
+  await app.exec('ROLLBACK');
 }
 
 /**

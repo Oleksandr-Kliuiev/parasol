@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import type { Actor, Scope, System } from '../core/contracts.ts';
-import { AtlasError, assertPermission } from '../core/contracts.ts';
-import type { ResolvedConnection } from '../../connectors/contracts.ts';
+import { AtlasError, assertPermission, assertScope } from '../core/contracts.ts';
+import type { ResolvedConnection, SecretResolver } from '../../connectors/contracts.ts';
 import { withScope, uniqueViolation } from '../graph/scoped-db.ts';
 import { SCOPE_ID_PATTERN } from '../graph/scope-context.ts';
 import { clientAuditData } from '../audit/prisma.ts';
@@ -25,10 +25,17 @@ const READABLE_STATUSES = new Set(['FIXTURE', 'ACTIVE']);
 export type ConnectionPurpose = 'sync' | 'read';
 const purposePermission: Record<ConnectionPurpose, string> = { sync: 'events:ingest', read: 'context:read' };
 
-const issued = new WeakSet<object>();
-/** First call of every adapter and secret resolver: only a ResolvedConnection issued by resolveConnection passes. */
+/** Issued connections and what they were issued for; only these objects pass assertResolvedConnection. */
+const issued = new WeakMap<object, ConnectionPurpose | 'activation'>();
+/** First call of every adapter and secret resolver: only a ResolvedConnection issued by this module passes. */
 export function assertResolvedConnection(connection: ResolvedConnection): void {
   if (typeof connection !== 'object' || connection === null || !issued.has(connection)) throw new AtlasError('CONNECTION_NOT_RESOLVED', 'SCOPE');
+}
+function issue(scope: Scope, row: { id: string; system: string; externalTenantId: string }, purpose: ConnectionPurpose | 'activation'): ResolvedConnection {
+  const resolved: ResolvedConnection = Object.freeze({ workspaceId: scope.workspaceId, clientId: scope.clientId, connectionId: row.id,
+    system: row.system as System, externalTenantId: row.externalTenantId });
+  issued.set(resolved, purpose);
+  return resolved;
 }
 
 /** Sync order step 1 (docs/03): check connection status and mapping, inside the actor's scope, then issue. */
@@ -40,10 +47,39 @@ export async function resolveConnection(db: PrismaClient, actor: Actor, scope: S
     select: { id: true, system: true, externalTenantId: true, status: true } }));
   if (!row) throw new AtlasError('CONNECTION_NOT_FOUND', 'VALIDATION');
   if (!READABLE_STATUSES.has(row.status)) throw new AtlasError('CONNECTION_DISABLED', 'VALIDATION');
-  const resolved: ResolvedConnection = Object.freeze({ workspaceId: scope.workspaceId, clientId: scope.clientId, connectionId: row.id,
-    system: row.system as System, externalTenantId: row.externalTenantId });
-  issued.add(resolved);
-  return resolved;
+  return issue(scope, row, purpose);
+}
+
+/** For the activation health check only (connections:manage): a DISABLED connection with recorded binding provenance. */
+export async function resolveConnectionForActivation(db: PrismaClient, actor: Actor, scope: Scope, connectionId: string): Promise<ResolvedConnection> {
+  assertPermission(actor, scope, 'connections:manage');
+  if (!SCOPE_ID_PATTERN.test(connectionId)) throw new AtlasError('CONNECTION_NOT_FOUND', 'VALIDATION');
+  const row = await withScope(db, actor, [scope.clientId], tx => tx.connection.findUnique({
+    where: { workspaceId_clientId_id: { workspaceId: scope.workspaceId, clientId: scope.clientId, id: connectionId } },
+    select: { id: true, system: true, externalTenantId: true, status: true, boundBy: true } }));
+  if (!row) throw new AtlasError('CONNECTION_NOT_FOUND', 'VALIDATION');
+  if (row.status !== 'DISABLED') throw new AtlasError(row.status === 'ACTIVE' ? 'CONNECTION_ALREADY_ACTIVE' : 'FIXTURE_CONNECTION_HAS_NO_UPSTREAM', 'VALIDATION');
+  if (!row.boundBy) throw new AtlasError('BINDING_PROVENANCE_MISSING', 'VALIDATION');
+  return issue(scope, row, 'activation');
+}
+
+/**
+ * Sync order step 2 (docs/03): the credential of an issued connection, read through the actor's scope and resolved in
+ * memory. Only an ACTIVE connection — or a DISABLED one issued for its activation check — ever reaches a vendor; a
+ * FIXTURE connection never does. The binding is re-read, so a connection changed since issue is refused.
+ */
+export async function resolveCredential(db: PrismaClient, actor: Actor, connection: ResolvedConnection, resolver: SecretResolver): Promise<string> {
+  const purpose = issued.get(connection);
+  if (!purpose) throw new AtlasError('CONNECTION_NOT_RESOLVED', 'SCOPE');
+  const scope = { workspaceId: connection.workspaceId, clientId: connection.clientId };
+  assertScope(actor, scope);
+  const row = await withScope(db, actor, [scope.clientId], tx => tx.connection.findUnique({
+    where: { workspaceId_clientId_id: { workspaceId: scope.workspaceId, clientId: scope.clientId, id: connection.connectionId } },
+    select: { secretRef: true, status: true, system: true, externalTenantId: true } }));
+  if (!row || row.system !== connection.system || row.externalTenantId !== connection.externalTenantId) throw new AtlasError('CONNECTION_NOT_FOUND', 'VALIDATION');
+  const live = purpose === 'activation' ? row.status === 'DISABLED' : row.status === 'ACTIVE';
+  if (!live) throw new AtlasError(row.status === 'FIXTURE' ? 'FIXTURE_CONNECTION_HAS_NO_UPSTREAM' : 'CONNECTION_NOT_LIVE', 'VALIDATION');
+  return resolver.resolve(row.secretRef, connection);
 }
 
 export interface ConnectionBinding { connectionId: string; system: System; externalTenantId: string; secretRef: string }

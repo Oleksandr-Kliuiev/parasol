@@ -185,6 +185,24 @@ export interface SecurityAuditSink {
 // A resource that is not available has an explicit status; it is never reported as an empty list.
 // ---------------------------------------------------------------------------------------------------------------------
 export type ResourceStatus = 'OK' | 'STALE' | 'ERROR' | 'MISSING' | 'FIXTURE';
+/**
+ * Compact projection of one live source record (task 1.5): source references and documented status fields only. The
+ * title is the source's one-line subject, bounded; contact names, e-mail addresses and phone numbers are never copied.
+ * The full record is read by source ID through a read tool.
+ */
+export interface SnapshotItem {
+  source: System; resourceType: ResourceType; externalId: string;
+  title: string;
+  /** Status as the source documents it (for example `sent`, `Open`). */
+  status: string;
+  /** Source severity after the documented mapping (connectors/CONTRACTS.md); null when the source has none (tickets). */
+  severity: Severity | null;
+  /** Source priority as documented (tickets); null otherwise. */
+  priority: string | null;
+  /** The device-like source object the record refers to, when the source states one. */
+  device: ExternalRef | null;
+  occurredAt: string | null; updatedAt: string | null;
+}
 export interface ResourceView<T = unknown> {
   source: System; resourceType: ResourceType; connectionId: string | null; status: ResourceStatus;
   asOf: string | null; lastSuccessAt: string | null; safeErrorCode: string | null;

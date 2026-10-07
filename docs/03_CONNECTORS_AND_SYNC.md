@@ -32,6 +32,17 @@
 
 Signals/escalations/remediations можно добавить после отдельной проверки фактического API/MCP contract. Huntress в этой Stage 1 — только источник evidence. M365/PowerOffice directories содержат scope notes для следующих slices.
 
+## Read adapters (задание 1.5)
+
+Контракты и их статус проверки — `connectors/CONTRACTS.md`: Huntress сверен с официальным API reference; Atera — по OpenAPI-экспорту v3 из публичного репозитория, **не сверен с аккаунтом** (документация вендора за логином), до активации live-connection нужен чек-лист из того же файла.
+
+- Huntress (`connectors/huntress/`): incidents `status=sent` и agents с серверным фильтром `organization_id`, Basic-аутентификация, `limit=100`, `page_token`, не более 20 страниц; health check — `GET /v1/organizations/{id}`.
+- Atera (`connectors/atera/`): открытые tickets с `customerId`, agents по `/agents/customer/{id}`, Bearer-аутентификация, 50 на страницу, не более 40 страниц; health check — `GET /api/v3/customers/{id}`. **Alerts не читаются**: у `GET /api/v3/alerts` нет фильтра по клиенту, а условие 5 docs/01 требует ограничивать сам upstream-запрос; ресурс записывается как `UNAVAILABLE` с `UPSTREAM_TENANT_FILTER_UNAVAILABLE`.
+- Каждая запись проверяется повторно: запись другого tenant проваливает всё чтение (`UPSTREAM_SCOPE_MISMATCH`). DTO валидируются при чтении; расхождение — `UPSTREAM_CONTRACT_MISMATCH` (PERMANENT, только имя поля). Ошибки HTTP классифицируются без URL, заголовков, секрета и тела (`connectors/http.ts`): 401/403 и 4xx — PERMANENT, 429 — TRANSIENT с Retry-After, 5xx/сеть/timeout — TRANSIENT.
+- Severity — документированные шкалы источников без порогов Atlas: Huntress `low/high/critical → LOW/HIGH/CRITICAL`; Atera alerts `Information/Warning/Critical → INFO/MEDIUM/CRITICAL` (закреплено для будущего чтения alerts).
+- Активация (`packages/sync/activation.ts`, `connections:manage`): health check против привязанного tenant с credential из `secretRef`; OK → ACTIVE (audit), иначе остаётся DISABLED с причиной в audit. Credential разрешается только для ACTIVE connection (и DISABLED во время своей активации); FIXTURE-connection вендора не вызывает никогда. `EnvSecretResolver` поддерживает `env://` (локально и для live smoke), `vault://` в Stage 1 не настроен.
+- Синхронизация (`packages/sync/snapshots.ts`, `events:ingest`): `syncConnection` — сначала identities (agents → `registerExternalEntity` → matcher предлагает CANDIDATE), затем каждый ресурс через `syncResource` (порядок шагов — ниже). Расписание, lease и durable event inbox — задание 1.6.
+
 ## Sync-порядок
 
 1. Проверить connection status и mapping.

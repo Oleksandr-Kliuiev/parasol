@@ -1,0 +1,4 @@
+{ "agents": [
+    { "id": 207008, "organization_id": 7001, "account_id": 42, "hostname": "GASTA-LT-08", "platform": "windows", "os": "Windows 11 Pro",
+      "last_callback_at": "2026-10-07T07:50:00Z", "created_at": "2025-03-02T09:00:00Z", "updated_at": "2026-10-07T07:50:00Z" } ],
+  "pagination": {} }

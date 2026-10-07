@@ -10,7 +10,11 @@ export interface DbEntityRow {
   device: { hostname: string; personId: string | null } | null;
   links: DbLinkRow[];
 }
-export interface DbSyncStateRow { resourceType: string; status: string; lastSyncAt: Date | string | null; lastSuccessAt: Date | string | null; safeErrorCode: string | null }
+export interface DbSnapshotRow { asOf: Date | string; items: unknown; itemCount: number; truncated: boolean }
+export interface DbSyncStateRow {
+  resourceType: string; status: string; lastSyncAt: Date | string | null; lastSuccessAt: Date | string | null; safeErrorCode: string | null;
+  snapshot?: DbSnapshotRow | null;
+}
 export interface DbConnectionRow { id: string; system: string; status: string; syncStates: DbSyncStateRow[] }
 export interface DbClientGraph { id: string; name: string; entities: DbEntityRow[]; connections: DbConnectionRow[] }
 export interface DbObservationRow {
@@ -20,6 +24,12 @@ export interface DbObservationRow {
     normalized: unknown; connection: { system: string } };
 }
 export interface DbObservationStats { total: number; bySeverity: { severity: string; count: number }[] }
+
+/**
+ * Freshness window per live resource — Atlas configuration, versioned with the code. A snapshot older than this, or one
+ * whose latest refresh failed, is STALE: shown with its asOf, never presented as the current state.
+ */
+export const RESOURCE_MAX_AGE_MS: Readonly<Partial<Record<ResourceType, number>>> = Object.freeze({ alert: 15 * 60_000, incident: 15 * 60_000, ticket: 30 * 60_000 });
 
 /** Resource types Stage 1 expects per system. A connection without a sync state for one of them reports MISSING. */
 export const expectedResources: Record<System, ResourceType[]> = {
@@ -41,19 +51,33 @@ export function mapObservationRow(scope: Scope, row: DbObservationRow): Observat
     occurredAt: iso(row.event.occurredAt) ?? '', createdAt: iso(row.createdAt) ?? '' };
 }
 
-export function mapResources(connections: DbConnectionRow[]): ResourceView[] {
+/**
+ * One ResourceView per connection × expected resource (task 1.5 snapshot repository):
+ *   no sync state → MISSING (SYNC_NOT_CONFIGURED); UNAVAILABLE → MISSING with the source's reason (no tenant-scoped read);
+ *   no complete read yet → ERROR with the failure code; fresh snapshot after a successful refresh → OK;
+ *   snapshot older than the freshness window, or latest refresh failed → STALE with the last snapshot and its asOf.
+ * Items are present only for OK and STALE; a resource is never reported as an empty list it did not read.
+ */
+export function mapResources(connections: DbConnectionRow[], now: Date = new Date()): ResourceView[] {
   const views: ResourceView[] = [];
   for (const connection of connections) {
     const system = asSystem(connection.system);
     for (const resourceType of expectedResources[system]) {
       const sync = connection.syncStates.find(s => s.resourceType === resourceType);
-      if (!sync) {
-        views.push({ source: system, resourceType, connectionId: connection.id, status: 'MISSING', asOf: null, lastSuccessAt: null, safeErrorCode: 'SYNC_NOT_CONFIGURED', items: null, truncated: false });
-      } else if (sync.status === 'ERROR') {
-        views.push({ source: system, resourceType, connectionId: connection.id, status: 'ERROR', asOf: iso(sync.lastSuccessAt), lastSuccessAt: iso(sync.lastSuccessAt), safeErrorCode: sync.safeErrorCode ?? 'SYNC_ERROR', items: null, truncated: false });
-      } else {
-        // Sync metadata exists but no snapshot repository yet (task 1.5): say so instead of returning an empty list.
-        views.push({ source: system, resourceType, connectionId: connection.id, status: 'MISSING', asOf: iso(sync.lastSuccessAt), lastSuccessAt: iso(sync.lastSuccessAt), safeErrorCode: 'SNAPSHOT_REPOSITORY_PENDING', items: null, truncated: false });
+      const view = (status: ResourceView['status'], safeErrorCode: string | null, snapshot: DbSnapshotRow | null = null): ResourceView => ({
+        source: system, resourceType, connectionId: connection.id, status, asOf: snapshot ? iso(snapshot.asOf) : null,
+        lastSuccessAt: iso(sync?.lastSuccessAt), safeErrorCode, items: snapshot && Array.isArray(snapshot.items) ? snapshot.items : null,
+        truncated: snapshot ? snapshot.truncated : false });
+      const snapshot = sync?.snapshot ?? null;
+      if (!sync) views.push(view('MISSING', 'SYNC_NOT_CONFIGURED'));
+      else if (sync.status === 'UNAVAILABLE') views.push(view('MISSING', sync.safeErrorCode ?? 'SOURCE_UNAVAILABLE'));
+      else if (!snapshot) views.push(sync.status === 'ERROR' ? view('ERROR', sync.safeErrorCode ?? 'SYNC_ERROR') : view('MISSING', 'SNAPSHOT_MISSING'));
+      else if (!Array.isArray(snapshot.items)) views.push(view('ERROR', 'SNAPSHOT_INVALID'));
+      else {
+        const age = now.getTime() - new Date(snapshot.asOf).getTime();
+        const fresh = age <= (RESOURCE_MAX_AGE_MS[resourceType] ?? 0);
+        if (sync.status === 'OK' && fresh) views.push(view('OK', null, snapshot));
+        else views.push(view('STALE', sync.status === 'ERROR' ? sync.safeErrorCode ?? 'SYNC_ERROR' : 'SNAPSHOT_STALE', snapshot));
       }
     }
   }
@@ -80,7 +104,8 @@ export function mapClientContext(scope: Scope, graph: DbClientGraph, observation
         entityKind: entity.kind as EntityKind, status: link.status as LinkStatus });
     }
   }
+  const resources = mapResources(graph.connections, now);
   return { ...scope, contractVersion: 'ClientContextV1', mode: 'db', clientName: graph.name, people, devices, links,
-    observations: mapObservationPage(scope, observations, stats, limit),
-    resources: mapResources(graph.connections), generatedAt: now.toISOString(), completeness: 'PARTIAL' };
+    observations: mapObservationPage(scope, observations, stats, limit), resources, generatedAt: now.toISOString(),
+    completeness: resources.length > 0 && resources.every(r => r.status === 'OK') ? 'COMPLETE' : 'PARTIAL' };
 }

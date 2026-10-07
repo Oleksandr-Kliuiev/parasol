@@ -39,7 +39,8 @@ export const SET_SCOPE_SQL = `SELECT set_config('app.workspace_id', $1, true), s
 /** Every table protected with row-level security (v1.1 migration + 202610071600 identities). The runtime check covers all of them. */
 export const PROTECTED_TABLES: readonly string[] = [
   'Workspace', 'Client', 'Entity', 'Person', 'Device', 'Connection', 'ExternalEntity', 'EntityLink', 'RawEvent', 'DecisionRun',
-  'Observation', 'SyncState', 'ToolExecution', 'AuditEvent', 'SecurityAuditEvent', 'Approval', 'Actor', 'ClientMembership', 'ApiToken'
+  'Observation', 'SyncState', 'ToolExecution', 'AuditEvent', 'SecurityAuditEvent', 'Approval', 'Actor', 'ClientMembership', 'ApiToken',
+  'ResourceSnapshot'
 ];
 const protectedTableList = PROTECTED_TABLES.map(t => `'${t}'`).join(',');
 

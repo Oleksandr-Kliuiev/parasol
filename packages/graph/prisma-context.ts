@@ -35,7 +35,7 @@ async function readObservationPage(tx: Prisma.TransactionClient, scope: Scope, l
 /**
  * DB-backed getClientContext. Runs inside withScope(): the RLS context is the single requested client, so even a query
  * that forgot `where: scope` could not read another client. Only CONFIRMED links are returned; candidates stay out.
- * Live tickets/alerts/incidents arrive with the snapshot repository in 1.5; until then every resource reports MISSING.
+ * Live alerts/tickets/incidents come from the snapshot repository (task 1.5) with an explicit status per resource.
  */
 export async function getClientContext(db: PrismaClient, actor: Actor, scope: Scope, limit: number = CONTEXT_OBSERVATION_LIMIT): Promise<ClientContextV1> {
   assertPermission(actor, scope, 'context:read');
@@ -51,7 +51,8 @@ export async function getClientContext(db: PrismaClient, actor: Actor, scope: Sc
           links: { where: { status: 'CONFIRMED' }, select: { id: true, status: true,
             external: { select: { externalId: true, resourceType: true, connection: { select: { id: true, system: true, status: true } } } } } } } },
         connections: { select: { id: true, system: true, status: true,
-          syncStates: { select: { resourceType: true, status: true, lastSyncAt: true, lastSuccessAt: true, safeErrorCode: true } } } }
+          syncStates: { select: { resourceType: true, status: true, lastSyncAt: true, lastSuccessAt: true, safeErrorCode: true,
+            snapshot: { select: { asOf: true, items: true, itemCount: true, truncated: true } } } } } }
       }
     });
     if (!client) throw new AtlasError('CLIENT_NOT_FOUND', 'VALIDATION');

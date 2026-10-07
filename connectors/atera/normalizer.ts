@@ -1,6 +1,7 @@
 import type { Scope, NormalizedEvent, Severity } from '../../packages/core/contracts.ts';
 import { AtlasError, severities } from '../../packages/core/contracts.ts';
-// Atlas-owned synthetic DTO. NOT a claim about Atera webhook field names. Task 1.5 replaces it with the validated vendor DTO.
+// Atlas-owned synthetic DTO for the in-memory reference pipeline and demo. NOT a claim about Atera field names: the
+// vendor contract the read adapters validate lives in connectors/atera/contract.ts (task 1.5, connectors/CONTRACTS.md).
 // `severity` stands for the severity the source reports; a disk-usage threshold is an Atlas policy, not a source fact,
 // and therefore lives in versioned configuration (see docs/04), never in the normalizer.
 export interface AteraAlertFixture { id: string; revision: string; agentId: string; at: string; diskPercent: number; severity: Severity }

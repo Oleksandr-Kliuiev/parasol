@@ -14,6 +14,8 @@ Load the smallest set of files a task needs. Rules: `AGENTS.md`. Scope and plan:
 | Decisions provider / shadow / advisory | `packages/decisions/provider.ts`, `packages/decisions/openai.ts` | `docs/04_DECISION_LAYER.md` |
 | Connectors / normalizers | `connectors/contracts.ts`, `connectors/<system>/normalizer.ts` | `docs/03_CONNECTORS_AND_SYNC.md` |
 | Connection binding, `ResolvedConnection` issuance | `packages/connections/connections.ts` | `tests/pg/connections.pg.test.ts`, docs/03 (Mapping) |
+| Read adapters (vendor contracts, HTTP, DTO validation) | `connectors/CONTRACTS.md`, `connectors/<system>/contract.ts`, `connectors/<system>/connector.ts` | `connectors/http.ts`, `connectors/dto.ts`, `tests/vendor-contracts.test.ts`, `tests/pg/adapters.pg.test.ts` |
+| Snapshot sync, activation, freshness → ResourceView | `packages/sync/snapshots.ts`, `packages/sync/activation.ts`, `packages/graph/context-mapper.ts` (`mapResources`) | `tests/pg/sync.pg.test.ts`, `tests/resource-freshness.test.ts`, `tests/support/vendor-routes.ts` |
 | Mapping workflow (external entities, candidates, confirm/quarantine/reject, review queue) | `packages/graph/mapping.ts`, migration `202610071700_stage1_mapping_workflow` | `tests/pg/mapping.pg.test.ts`, `tests/support/graph-fixtures.ts`, docs/02 (Entity matching) |
 | Read tools / gateway | `packages/tools/gateway.ts` | `packages/audit/memory.ts` |
 | Audit (client allowlist, workspace security audit) | `packages/audit/sanitize.ts` (allowlist, escaped audit text), `packages/audit/memory.ts` (reference), `packages/audit/prisma.ts` (PostgreSQL sinks + scoped reads) | `docs/02_DATA_AND_MODULES.md` (Audit), `tests/audit-sanitize.test.ts` |
@@ -30,6 +32,7 @@ Load the smallest set of files a task needs. Rules: `AGENTS.md`. Scope and plan:
 - `prisma/upgrades/*`, `CHANGELOG.md`, `verification/*`: history and evidence; search them with `rg` when a task needs a specific fact.
 - Frozen migrations (`202610070001_foundation`, `202610071200_v1_1_contracts`, `202610071500_v1_1_2_…`): read the section you need; never edit them.
 - `MANIFEST.json`: file hashes of the imported 1.1.3 pack, not of the current branch.
+- `fixtures/vendor/*.json`: synthetic vendor responses; open one only when a test about that endpoint fails.
 
 ## Commands
 

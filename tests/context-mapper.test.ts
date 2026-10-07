@@ -43,7 +43,8 @@ test('DB rows map to ClientContextV1 with explicit resource statuses and whole-s
   assert.equal(ctx.observations.total, 150); assert.equal(ctx.observations.truncated, true);
   assert.equal(ctx.observations.counts.MEDIUM, 149); assert.equal(ctx.observations.counts.CRITICAL, 1); assert.equal(ctx.observations.counts.INFO, 0);
   const byKey = Object.fromEntries(ctx.resources.map(r => [`${r.source}/${r.resourceType}`, r]));
-  assert.equal(byKey['atera/alert']?.status, 'MISSING'); assert.equal(byKey['atera/alert']?.safeErrorCode, 'SNAPSHOT_REPOSITORY_PENDING'); assert.equal(byKey['atera/alert']?.asOf, '2026-10-07T07:00:00.000Z');
+  // A success always writes its snapshot in the same transaction; a sync state OK without one is reported, not hidden
+  assert.equal(byKey['atera/alert']?.status, 'MISSING'); assert.equal(byKey['atera/alert']?.safeErrorCode, 'SNAPSHOT_MISSING'); assert.equal(byKey['atera/alert']?.asOf, null);
   assert.equal(byKey['atera/ticket']?.status, 'ERROR'); assert.equal(byKey['atera/ticket']?.safeErrorCode, 'VENDOR_HTTP_429');
   assert.equal(byKey['huntress/incident']?.status, 'MISSING'); assert.equal(byKey['huntress/incident']?.safeErrorCode, 'SYNC_NOT_CONFIGURED');
   assert.ok(ctx.resources.every(r => r.items === null), 'no resource pretends to be an empty list');

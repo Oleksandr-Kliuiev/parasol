@@ -289,9 +289,28 @@ model SyncState {
   cursor      String?
   lastSyncAt  DateTime?
   lastSuccessAt DateTime?
+  /// OK | ERROR | UNAVAILABLE (CHECK). UNAVAILABLE: the source has no tenant-scoped read for this resource, so Atlas
+  /// does not read it. ERROR and UNAVAILABLE carry safeErrorCode; lastSuccessAt never runs ahead of lastSyncAt.
   status      String
   safeErrorCode String?
   connection  Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  snapshot    ResourceSnapshot?
+  @@id([workspaceId, clientId, connectionId, resourceType])
+}
+/// Last COMPLETE read of one live resource (alert, ticket, incident) of one connection (task 1.5). Replaced only together
+/// with a SyncState success; a failed read keeps it. items: bounded projection (at most 100, CHECK), itemCount: source total.
+model ResourceSnapshot {
+  workspaceId String
+  clientId    String
+  connectionId String
+  resourceType String
+  asOf        DateTime
+  items       Json
+  itemCount   Int
+  truncated   Boolean
+  /// Vendor contract version the items were validated against (connectors/CONTRACTS.md).
+  contractVersion String
+  syncState   SyncState @relation(fields: [workspaceId, clientId, connectionId, resourceType], references: [workspaceId, clientId, connectionId, resourceType], onDelete: Restrict, map: "ResourceSnapshot_syncState_fkey")
   @@id([workspaceId, clientId, connectionId, resourceType])
 }
 model ToolExecution {
