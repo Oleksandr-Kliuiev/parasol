@@ -1,114 +1,80 @@
-# Independent review — Checkpoint A
+# Independent review — Checkpoint A, revision 2
 
-Дата: 2026-10-07. Проверено: `9770c83` (`1fdab12` — последний коммит кода) относительно `main @ 4d6f897`.
-Ветка ревью: `codex/review-checkpoint-a`. До ревью рабочее дерево чистое; diff: 43 файла, +1561/−100, включая checkpoint report.
-Область: задания 1.1–1.3. Следующие этапы не реализовывались; код приложения и миграции не изменялись.
+Дата: 2026-10-07. Проверено: `stage1/foundation @ 61122b9`; последний коммит кода — `c4c536c`.
+Первое ревью: `9770c83` относительно `main @ 4d6f897`; исходный отчёт сохранён в Git-коммите `4a38d5c`.
+Повторное ревью: diff `4a38d5c..61122b9` (16 файлов, +302/−50), исправление R1 и связанные регрессии.
+До повторного ревью рабочее дерево чистое. Изменён только этот отчёт; ветка осталась `stage1/foundation`.
 
 ## Вердикт
 
-**REQUEST_CHANGES: одно обязательное исправление P2 перед принятием Checkpoint A.**
+**APPROVE — Checkpoint A принят. R1 закрыта. Блокирующих находок не осталось; новых обязательных исправлений нет.**
 
-Штатные проверки подтверждены: 44/44 unit/PGlite, 17/17 PostgreSQL integration, typecheck, API build/smoke, schema validation и пустой migration drift. Межклиентский доступ в проверенных сценариях закрыт. Однако специально сформированная строка запроса ломает запись отказа в PostgreSQL: HTTP 500 без audit вместо контролируемого отказа с audit. Поэтому утверждение checkpoint «блокеров нет» требует пересмотра.
+Независимо воспроизведены 49/49 unit/PGlite и 22/22 PostgreSQL integration тестов, typecheck, API build/smoke, schema validation и пустой migration drift. Исходная шестисценарная HTTP-проба из первого отчёта повторена без изменения её кода: все запросы вернули 403 и добавили ровно одну запись в соответствующий журнал.
 
-P0/P1-находок не обнаружено. Durable pipeline, snapshots и live-вызовы не объявляются реализованными на основании этих тестов.
+Вердикт относится к заданиям 1.1–1.3. Он не означает завершение Stage 1 или готовность к production.
 
-## R1 — [P2] Недопустимые для PostgreSQL строки подавляют аудит отказов
+## Находки по серьёзности
 
-**Основное место:** `packages/audit/prisma.ts:40–44` — `requestedClientId` только обрезается, metadata проходит allowlist без приведения строк к допустимому представлению. Та же проблема у клиентского sink, `packages/audit/prisma.ts:27–30`.
+Открытых P0/P1/P2/P3-находок по проверенным изменениям нет.
 
-Путь входа: `apps/api/src/http-boundary.ts:34–39` принимает строки по типу и длине; `apps/api/src/db/auth.ts:43–55` передаёт client ID из URL в security audit. `packages/audit/memory.ts:8–14` ограничивает ключи и длину metadata, но сохраняет NUL и одиночные UTF-16 surrogates. Reference memory sink такие строки принимает; PostgreSQL text/jsonb — нет.
+**R1 [P2], потеря аудита на NUL/одиночном UTF-16 surrogate — исправлена в `c4c536c`.** Ранее четыре из шести запросов исходной пробы возвращали 500 без audit. Теперь результат стабилен: контролируемый отказ и сохранённый след запроса.
 
-**Условие:** аутентифицированный запрос содержит NUL в запрошенном client ID или NUL/одиночный surrogate в неизвестном имени инструмента. Это воспроизводится через собранный HTTP API, а не только прямым вызовом repository.
-
-| Запрос с действующим синтетическим токеном | HTTP | Новых SecurityAuditEvent | Новых AuditEvent |
-|---|---:|---:|---:|
-| `GET /clients/no-such-client/overview` (контроль) | 403 | 1 | 0 |
-| `GET /clients/ghost%00client/overview` | **500** | **0** | 0 |
-| `POST /tools/execute`, `clientId: "ghost\u0000client"`, обычный read-tool | **500** | **0** | 0 |
-| `POST /tools/execute`, `clientId: "demo-gasta"`, `tool: "unknown\u0000tool"` | **500** | 0 | **0** |
-| То же, `tool: "unknown\ud800tool"` | **500** | 0 | **0** |
-| То же, `tool: "unknown.tool"` (контроль) | 403 | 0 | 1 |
-
-**Последствие:** доступ остаётся запрещённым, но отказ отсутствует в журнале администратора/клиента. Вызывающий может детерминированно обходить запись отказа. Ошибка затрагивает уже реализованный DB-backed audit, поэтому не относится к отложенному заданию 1.9. Требование — docs/01, условие 7; docs/02, HTTP-маппинг и audit.
-
-**Необходимое исправление:**
-
-1. Сохранять ограниченное безопасное текстовое представление недопустимых символов во всех недоверенных строках audit, сохранив allowlist. Для requested client ID предпочтительно явное escaping, чтобы журнал отличал исходные значения; не подменять этим реальный scope.
-2. Проверять формат client ID и имени инструмента на HTTP-границе. Определить контролируемый 400/403 для malformed input, сохранив требуемый аудит уже установленных scope/tool-denials. Простого перехвата ошибки БД и возврата 403 без записи недостаточно.
-3. Добавить PostgreSQL API regression-тесты на приведённые случаи: отказ без 500, ровно одна ожидаемая audit-запись, ни одного чтения данных чужого клиента. Проверить и URL, и JSON body.
-
-## Воспроизведённые проверки
-
-Среда: Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 в уже запущенном локальном compose. Использованы существующие установленные зависимости. PostgreSQL-проверки создавали отдельные временные БД и роли с последующим удалением; persistent dev-БД не изменялась.
-
-Для PostgreSQL-команд `ATLAS_PG_ADMIN_URL` указывал на локальный compose (`127.0.0.1:5432/atlas`); URL с credentials не сохраняется в отчёте.
-
-| Команда | Результат |
+| Проверенный участок | Вывод |
 |---|---|
-| `npm test` | **44/44 PASS**, без skips; unit/reference и PGlite |
+| `packages/audit/sanitize.ts:16` | NUL, C0 controls, DEL и одиночные surrogates экранируются; обратный слэш удваивается. В пределах сохранённого префикса NUL отличается от буквального текста `\u0000`. Лимит 200 не разрезает escape или surrogate pair. |
+| `packages/audit/prisma.ts:27`, `packages/audit/memory.ts:11` | Оба sink применяют общие правила при записи, сохраняя явный список полей и allowlist metadata. Scope и actor authority не подменяются экранированными значениями. |
+| `packages/audit/sanitize.ts:40`, `packages/audit/prisma.ts:57` | Чтение применяет allowlist без повторного экранирования; PG-тест подтвердил round trip. |
+| `apps/api/src/db/auth.ts:44`, `apps/api/src/db/tools.ts:27` | Malformed client ID отклоняется до чтения клиентских данных и установки клиентского RLS-scope; `SecurityAuditEvent` получает `INVALID_SCOPE_ID`. Аутентификация и сама запись аудита по-прежнему обращаются к БД. |
+| `packages/tools/gateway.ts:37` | Scope проверяется раньше имени инструмента. Malformed tool в доступном клиенте даёт `tool.denied / INVALID_TOOL_NAME`; чужой клиент остаётся scope-отказом в workspace audit. |
+
+Схема, миграции, runtime grants, auth lookup и механизмы tenant isolation в исправлении не менялись. Повторные проверки RLS, составных FK, runtime-role guard и переиспользования соединений прошли.
+
+## Исходная проба R1 после исправления
+
+Проба извлечена из shell-блока `REVIEW_REPORT.md` первой редакции и исполнена через Node на исправленной сборке. Использованы новая временная PostgreSQL-БД, confined runtime role и случайный синтетический токен; после завершения БД и роль удалены.
+
+| Сценарий | HTTP | Новых SecurityAuditEvent | Новых AuditEvent |
+|---|---:|---:|---:|
+| Неизвестный клиент, обычный ID — контроль | 403 | 1 | 0 |
+| `GET /clients/ghost%00client/overview` | 403 | 1 | 0 |
+| Tool request с `clientId: "ghost\u0000client"` | 403 | 1 | 0 |
+| Доступный клиент, `tool: "unknown\u0000tool"` | 403 | 0 | 1 |
+| Доступный клиент, `tool: "unknown\ud800tool"` | 403 | 0 | 1 |
+| Доступный клиент, `tool: "unknown.tool"` — контроль | 403 | 0 | 1 |
+
+Точные сохранённые значения и reason codes дополнительно проверены в `tests/pg/api-input.pg.test.ts` и `tests/pg/database.pg.test.ts`. Unit-тест gateway считает вызовы read callback и подтверждает ноль чтений при отказах. HTTP-тест проверяет отсутствие `tool.started/tool.succeeded`; порядок до вызова client repository также проверен по коду.
+
+Необязательное замечание первого ревью тоже закрыто: `tests/pg/api.pg.test.ts:141` проверяет одного actor с `context:read` у Gasta и только `events:ingest` у другого клиента. REST и tool-вызов второго клиента отклоняются; права первого не переносятся на второй.
+
+## Воспроизведённые команды
+
+Среда: Node 25.8.1, PostgreSQL 17.11, локальный compose. Использованы существующие установленные зависимости. PostgreSQL-команды запускались с `ATLAS_PG_ADMIN_URL`, указывающим на локальный сервер; credentials не сохраняются в отчёте. Тесты работали во временных БД, persistent dev-БД не изменялась.
+
+| Команда / проверка | Фактический результат |
+|---|---|
+| `npm test` | **49/49 PASS**, без skips; unit/reference + PGlite |
 | `npm run typecheck` | PASS |
 | `npm run api:build` | PASS |
 | `npm run api:smoke` | PASS; fixture API |
-| `npm run schema:validate` | PASS; Prisma 6.19 schema |
-| `npm run db:check:pg17` | PASS; четыре миграции, SQL/FK-инварианты, RLS, identities, guard, pool reuse |
-| `npm run test:pg` | **17/17 PASS**, без skips; Prisma deploy, roles.sql, seed, auth, DB API |
+| `npm run schema:validate` | PASS |
+| `npm run db:check:pg17` | PASS; четыре миграции, structural/FK invariants, RLS, identities, runtime-role guard, pool reuse |
+| `npm run test:pg` | **22/22 PASS**, без skips; Prisma deploy, roles.sql, seed, auth, DB API, R1 и разные права одного actor |
 | `npm run db:check:drift` | PASS; diff пустой |
-| Дополнительный HTTP/PG probe ниже | R1 воспроизведён: четыре случая 500 без audit; два контроля 403 с audit |
+| Исходная HTTP/PG-проба R1 из `4a38d5c:REVIEW_REPORT.md` | **6/6**: HTTP 403, ровно одна ожидаемая audit-запись |
+| `git diff --check` | PASS |
 
-Команда для повторения probe после `npm run api:build` и настройки `ATLAS_PG_ADMIN_URL`:
+Для узкого повторения R1 после сборки: `node --experimental-strip-types --test tests/pg/api-input.pg.test.ts` с настроенным `ATLAS_PG_ADMIN_URL`. Общие текстовые правила проверяются командой `node --experimental-strip-types --test tests/audit-sanitize.test.ts`.
 
-```sh
-node --experimental-strip-types --input-type=module <<'NODE'
-import { createTestDatabase, runSeed } from './tests/support/pg-harness.ts';
-import { startApi } from './tests/support/api-process.ts';
-import { generateToken } from './packages/auth/token.ts';
-const db = await createTestDatabase();
-const token = generateToken();
-let api;
-try {
-  runSeed(db.ownerUrl, { ATLAS_DEMO_TOKEN: token });
-  api = await startApi({ ATLAS_MODE: 'db', ATLAS_RUNTIME_DATABASE_URL: db.runtimeUrl });
-  const counts = async () => (await db.owner.query(
-    'SELECT (SELECT count(*)::int FROM "SecurityAuditEvent") AS security, (SELECT count(*)::int FROM "AuditEvent") AS client'
-  )).rows[0];
-  for (const [label, path, body] of [
-    ['control client', '/clients/no-such-client/overview', null],
-    ['NUL path', '/clients/ghost%00client/overview', null],
-    ['NUL client', '/tools/execute', {clientId:'ghost\u0000client', tool:'atera.alert.list'}],
-    ['NUL tool', '/tools/execute', {clientId:'demo-gasta', tool:'unknown\u0000tool'}],
-    ['surrogate tool', '/tools/execute', {clientId:'demo-gasta', tool:'unknown\ud800tool'}],
-    ['control tool', '/tools/execute', {clientId:'demo-gasta', tool:'unknown.tool'}]
-  ]) {
-    const before = await counts();
-    const response = await fetch(api.base + path, {
-      method: body ? 'POST' : 'GET',
-      headers: {Authorization:`Bearer ${token}`, 'Content-Type':'application/json'},
-      ...(body ? {body:JSON.stringify(body)} : {})
-    });
-    const after = await counts();
-    console.log({label, status:response.status,
-      securityAuditAdded:after.security-before.security,
-      clientAuditAdded:after.client-before.client});
-    await response.arrayBuffer();
-  }
-} finally { await api?.stop(); await db.drop(); }
-NODE
-```
+## Оставшиеся gates и ограничения
 
-## Что подтверждено и что остаётся открытым
+- **Непройденных обязательных PostgreSQL-gates Checkpoint A в проверяемом объёме нет.** Данные graph и HTTP probes синтетические. Исторические ручные действия на persistent dev-БД заново не воспроизводились.
+- **Live Atera/Huntress/OpenAI не выполнялся:** реальные credentials и mapping не использовались. Mocked transport и fixture tests не являются live verification.
+- Durable pipeline/worker, DB-транзакция observation/audit, recovery нескольких workers, snapshots/freshness и последующие задания 1.4–1.10 остаются следующими этапами. Зелёные reference/SQL-тесты не подтверждают их реализацию через DB worker.
+- В повторном ревью не запускались `npm ci`, `npm audit`, Node 24, Windows и негативный контроль на старом коде. Сообщённое автором зависание Prisma не воспроизводилось; его причина здесь не подтверждена. Заявленные в checkpoint dependency advisories остаются отдельным вопросом; версии не изменялись.
+- Структурно неверные JSON-тела и недекодируемые URL по-прежнему могут получить 400 до scope-решения. Это отделено от проверенных scope/tool-denials и не является остатком R1.
 
-- Scoped reads выполняются через `withScope`; actor и memberships получаются по токену из БД. Owner-подключение отклоняется до старта HTTP. Scope не сохраняется при переиспользовании соединения.
-- Новые identity-связи включают workspace в FK; обычный client scope не открывает identities, runtime не может их изменять. Замороженные миграции не изменены.
-- Контекст сохраняет confirmed mappings, явные `MISSING`/`items: null`, приоритет старого CRITICAL и счётчики всего OPEN-набора. Проверенные ответы не содержат secretRef, tenant ID и token digest.
-- Атомарность observation/audit, retry/dedup и Decisions failure/shadow пока доказаны reference-тестами и SQL-инвариантами. DB worker отсутствует; эти результаты не подтверждают durable обработку несколькими workers.
-- **Непройденных обязательных PostgreSQL-gates для 1.1–1.3 нет**, но R1 — дополнительный выявленный дефект сверх зелёного штатного набора. Исторические ручные действия на persistent dev-БД и мутационные проверки из CHECKPOINT_REPORT заново не воспроизводились.
-- **Live Atera/Huntress/OpenAI не выполнялся.** Credentials и реальные mapping не использовались. DB graph и HTTP probes синтетические; fixture/transport tests не являются live verification.
-- `npm ci`, `npm audit`, Node 24 и Windows в этом ревью не запускались. Указанные в checkpoint dependency advisories остаются отдельным вопросом; версии не изменялись.
+## Что безопасно делать дальше
 
-## Необязательное усиление проверок
+Можно переходить к **1.4 Mapping workflow**: scoped `ResolvedConnection`, явный connection → customer/organization mapping, candidate/manual-confirm с resourceType/entityKind, отказ для cross-client/ambiguous links и quarantine conflicting confirmed mappings.
 
-Добавить HTTP-тест одного аутентифицированного actor с `context:read` у клиента A и только `events:ingest` у B. Сейчас DB API тестирует эти права на разных actors, а сценарий нескольких memberships проверяется ниже HTTP-слоя. Ошибки реализации здесь не обнаружено; это не блокер.
-
-## Следующий безопасный шаг
-
-Сначала исправить R1 и подтвердить PostgreSQL regression-тестом вместе с существующими проверками. Затем можно переходить к **1.4 Mapping workflow**: scoped `ResolvedConnection`, candidate/manual-confirm, отклонение cross-client и ambiguous links, quarantine conflicting confirmed mappings. Разрабатывать 1.5–1.10 или расширять scope в рамках этого ревью не требуется. Production-ready статус не присваивается.
+Обязательных исправлений перед этим переходом по результатам ревью нет. UI, write-actions, remediation и новые интеграции вне Stage 1 scope не добавлять; production-ready статус не присваивать.
