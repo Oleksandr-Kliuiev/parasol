@@ -8,6 +8,7 @@ import { registerExternalEntity, proposeLink, confirmLink } from '../../packages
 import { getClientContext } from '../../packages/graph/prisma-context.ts';
 import { connectorFor, syncResource } from '../../packages/sync/snapshots.ts';
 import { createTestDatabase, runSeed } from '../support/pg-harness.ts';
+import { vendorFixture } from '../support/mock-http.ts';
 import { actors, gasta, WS } from '../support/graph-fixtures.ts';
 import { CountingProvider, incident, liveHuntressWithConfirmedAgent } from '../support/events-fixtures.ts';
 
@@ -81,4 +82,21 @@ test('end to end: a Huntress read feeds the inbox atomically, the worker makes t
   assert.equal((await syncResource(db, actors.sync, connection, connector, 'incident')).status, 'ERROR');
   delete vendor.overrides.huntressIncidents;
   assert.equal(Number((await pgdb.owner.query(`SELECT count(*)::int AS n FROM "RawEvent"`)).rows[0].n), before);
+});
+
+test('partial page failure: a Huntress incident read failing on page 2 stores no event of page 1 and keeps the last snapshot', async () => {
+  const connector = connectorFor(db, actors.sync, connection, io);
+  const page1 = vendorFixture('huntress/incident-reports-sent.json') as { incident_reports: Record<string, unknown>[] };
+  const fresh = page1.incident_reports.map((r, i) => ({ ...r, id: 9100 + i, updated_at: '2026-10-07T08:00:00Z' }));
+  const counts = async () => (await pgdb.owner.query(`SELECT (SELECT count(*)::int FROM "RawEvent") AS e, (SELECT jsonb_array_length(items)
+    FROM "ResourceSnapshot" WHERE "connectionId" = $1 AND "resourceType" = 'incident') AS s`, [connection.connectionId])).rows[0];
+  const before = await counts();
+  vendor.overrides.huntressIncidents = { status: 200, body: { incident_reports: fresh, pagination: { next_page_token: 'p2' } } };
+  vendor.overrides.huntressIncidentsPage2 = { status: 503 };
+  const failed = await syncResource(db, actors.sync, connection, connector, 'incident');
+  delete vendor.overrides.huntressIncidents; delete vendor.overrides.huntressIncidentsPage2;
+  assert.deepEqual([failed.status, failed.eventsStored], ['ERROR', 0]);
+  assert.ok(vendor.requests.some(r => r.url.searchParams.get('page_token') === 'p2'), 'page 2 was requested');
+  assert.deepEqual(await counts(), before);
+  assert.deepEqual(await process(new CountingProvider()), []);
 });

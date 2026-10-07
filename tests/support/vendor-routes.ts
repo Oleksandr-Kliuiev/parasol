@@ -6,7 +6,7 @@ import type { Reply } from './mock-http.ts';
  * matches WITH its tenant filter (organization_id, customerId or the customer path), so an unscoped request falls through
  * to 404 and fails the test. `overrides` replace single endpoints (failures, foreign records); `extra` serves other tenants.
  */
-export type Endpoint = 'huntressOrganization' | 'huntressAgentsPage1' | 'huntressAgentsPage2' | 'huntressIncidents'
+export type Endpoint = 'huntressOrganization' | 'huntressAgentsPage1' | 'huntressAgentsPage2' | 'huntressIncidents' | 'huntressIncidentsPage2'
   | 'ateraCustomer' | 'ateraAgents' | 'ateraTicketsPage1' | 'ateraTicketsPage2';
 const ok = (fixture: string): Reply => ({ status: 200, body: vendorFixture(fixture) });
 
@@ -23,7 +23,10 @@ export function gastaVendor() {
       if (url.pathname === '/v1/agents' && q.get('organization_id') === '7001') {
         return q.get('page_token') ? pick('huntressAgentsPage2', 'huntress/agents-page-2.json') : pick('huntressAgentsPage1', 'huntress/agents-page-1.json');
       }
-      if (url.pathname === '/v1/incident_reports' && q.get('organization_id') === '7001' && q.get('status') === 'sent') return pick('huntressIncidents', 'huntress/incident-reports-sent.json');
+      if (url.pathname === '/v1/incident_reports' && q.get('organization_id') === '7001' && q.get('status') === 'sent') {
+        // The fixture is one page; a second page exists only when a test overrides both pages
+        return q.get('page_token') ? overrides.huntressIncidentsPage2 : pick('huntressIncidents', 'huntress/incident-reports-sent.json');
+      }
     }
     if (url.host === 'app.atera.com') {
       if (url.pathname === '/api/v3/customers/5001') return pick('ateraCustomer', 'atera/customer.json');
