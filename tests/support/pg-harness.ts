@@ -11,6 +11,8 @@ import pg from 'pg';
  * confined LOGIN role. Requires ATLAS_PG_ADMIN_URL with CREATEDB and CREATEROLE (the compose superuser works locally).
  */
 export const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
+/** The pinned Prisma CLI, run with this Node binary: no npx/shell lookup, so it behaves the same on every OS. */
+export const PRISMA_CLI = fileURLToPath(new URL('../../node_modules/prisma/build/index.js', import.meta.url));
 
 export interface PgTestDatabase {
   readonly name: string;
@@ -66,7 +68,7 @@ export async function createTestDatabase(): Promise<PgTestDatabase> {
     await admin.end().catch(() => undefined);
   };
   try {
-    runWithDatabase(ownerUrl.toString(), 'npx', ['prisma', 'migrate', 'deploy']);
+    runWithDatabase(ownerUrl.toString(), process.execPath, [PRISMA_CLI, 'migrate', 'deploy']);
     await owner.connect();
     await owner.query(renderRolesSql(await readFile(new URL('../../prisma/roles.sql', import.meta.url), 'utf8'), runtimeRole, password));
   } catch (error) { await drop(); throw error; }

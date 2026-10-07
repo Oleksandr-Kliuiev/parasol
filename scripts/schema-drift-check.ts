@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
 /**
@@ -19,7 +20,8 @@ let exitCode = 1;
 try {
   await admin.query(`CREATE DATABASE "${dbName}"`);
   const shadowUrl = new URL(adminUrl); shadowUrl.pathname = `/${dbName}`;
-  const result = spawnSync('npx', ['prisma', 'migrate', 'diff', '--from-migrations', 'prisma/migrations', '--to-schema-datamodel',
+  const prismaCli = fileURLToPath(new URL('../node_modules/prisma/build/index.js', import.meta.url));
+  const result = spawnSync(process.execPath, [prismaCli, 'migrate', 'diff', '--from-migrations', 'prisma/migrations', '--to-schema-datamodel',
     'prisma/schema.prisma', '--shadow-database-url', shadowUrl.toString(), '--script', '--exit-code'], { encoding: 'utf8' });
   // --exit-code: 0 = no difference, 2 = difference, 1 = error. Prisma's informational lines go to stderr.
   const diff = result.stdout.split('\n').filter(l => l.trim() !== '' && !/^-- This is an empty migration\.?$/.test(l.trim())).join('\n');
