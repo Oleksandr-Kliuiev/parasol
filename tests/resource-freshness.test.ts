@@ -25,6 +25,8 @@ test('OK only for a fresh snapshot after a successful refresh; STALE by age or a
   assert.deepEqual([failed.status, failed.safeErrorCode, failed.items?.length, failed.lastSuccessAt], ['STALE', 'UPSTREAM_UNAVAILABLE', 1, ago(5).toISOString()]);
   const never = one('huntress', state('incident', 'ERROR', 'UPSTREAM_AUTH_FAILED', null));
   assert.deepEqual([never.status, never.safeErrorCode, never.items], ['ERROR', 'UPSTREAM_AUTH_FAILED', null]);
+  const pending = one('huntress', state('incident', 'PENDING', null, null));
+  assert.deepEqual([pending.status, pending.safeErrorCode, pending.items], ['MISSING', 'SYNC_NOT_COMPLETED', null], 'a first read began, no outcome yet');
   const unavailable = one('atera', state('alert', 'UNAVAILABLE', 'UPSTREAM_TENANT_FILTER_UNAVAILABLE', null));
   assert.deepEqual([unavailable.status, unavailable.safeErrorCode, unavailable.items], ['MISSING', 'UPSTREAM_TENANT_FILTER_UNAVAILABLE', null]);
   const ticketAt20 = one('atera', state('ticket', 'OK', null, 20));

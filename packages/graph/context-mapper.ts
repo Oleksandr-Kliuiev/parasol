@@ -54,6 +54,7 @@ export function mapObservationRow(scope: Scope, row: DbObservationRow): Observat
 /**
  * One ResourceView per connection × expected resource (task 1.5 snapshot repository):
  *   no sync state → MISSING (SYNC_NOT_CONFIGURED); UNAVAILABLE → MISSING with the source's reason (no tenant-scoped read);
+ *   PENDING (a first read began, no outcome recorded yet) → MISSING (SYNC_NOT_COMPLETED);
  *   no complete read yet → ERROR with the failure code; fresh snapshot after a successful refresh → OK;
  *   snapshot older than the freshness window, or latest refresh failed → STALE with the last snapshot and its asOf.
  * Items are present only for OK and STALE; a resource is never reported as an empty list it did not read.
@@ -71,6 +72,7 @@ export function mapResources(connections: DbConnectionRow[], now: Date = new Dat
       const snapshot = sync?.snapshot ?? null;
       if (!sync) views.push(view('MISSING', 'SYNC_NOT_CONFIGURED'));
       else if (sync.status === 'UNAVAILABLE') views.push(view('MISSING', sync.safeErrorCode ?? 'SOURCE_UNAVAILABLE'));
+      else if (sync.status === 'PENDING') views.push(view('MISSING', 'SYNC_NOT_COMPLETED'));
       else if (!snapshot) views.push(sync.status === 'ERROR' ? view('ERROR', sync.safeErrorCode ?? 'SYNC_ERROR') : view('MISSING', 'SNAPSHOT_MISSING'));
       else if (!Array.isArray(snapshot.items)) views.push(view('ERROR', 'SNAPSHOT_INVALID'));
       else {

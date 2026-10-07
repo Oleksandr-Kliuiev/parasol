@@ -287,6 +287,12 @@ export async function checkSnapshotStructure(owner: SqlRunner): Promise<void> {
   await owner.exec(`UPDATE "SyncState" SET "attemptSeq" = 2, "recordedSeq" = 2 WHERE "clientId" = 'c1'`);
   await rejects(owner.exec(`UPDATE "SyncState" SET "recordedSeq" = 3 WHERE "clientId" = 'c1'`), /attempt_order_check/);
   await rejects(owner.exec(`UPDATE "SyncState" SET "recordedSeq" = -1 WHERE "clientId" = 'c1'`), /attempt_order_check/);
+  // PENDING (migration 202610072100): a first attempt began and nothing is recorded yet — no times, no code, no recorded number
+  await owner.exec(`INSERT INTO "SyncState" ("workspaceId","clientId","connectionId","resourceType","status","attemptSeq") VALUES ('w','c1','h','agent','PENDING',1)`);
+  const pending = `WHERE "clientId" = 'c1' AND "resourceType" = 'agent'`;
+  await rejects(owner.exec(`UPDATE "SyncState" SET "lastSyncAt" = now() ${pending}`), /pending_check/, 'PENDING has no outcome time');
+  await rejects(owner.exec(`UPDATE "SyncState" SET "safeErrorCode" = 'X' ${pending}`), /pending_check/);
+  await rejects(owner.exec(`UPDATE "SyncState" SET "recordedSeq" = 1 ${pending}`), /pending_check/);
 }
 
 /** Confined runner: snapshots follow the client scope like every other client table. */

@@ -62,8 +62,7 @@ export async function syncResource(db: PrismaClient, actor: Actor, connection: R
   const where = { workspaceId_clientId_connectionId_resourceType: key };
   const attempt = await beginAttempt(db, actor, key, now);
   const recordState = async (status: 'ERROR' | 'UNAVAILABLE', code: string) => (await commitAttempt(db, actor, key, attempt, (tx, recordedSeq) =>
-    tx.syncState.upsert({ where, create: { ...key, status, safeErrorCode: code, lastSyncAt: now, attemptSeq: recordedSeq, recordedSeq },
-      update: { status, safeErrorCode: code, lastSyncAt: now, recordedSeq } }), nothing)).recorded;
+    tx.syncState.update({ where, data: { status, safeErrorCode: code, lastSyncAt: now, recordedSeq } }), nothing)).recorded;
   const unavailable = connector.unavailableResources[resourceType];
   if (unavailable) {
     const recorded = await recordState('UNAVAILABLE', unavailable);
@@ -80,7 +79,7 @@ export async function syncResource(db: PrismaClient, actor: Actor, connection: R
       truncated: read.itemCount > items.length, contractVersion: read.contractVersion };
     const success = { status: 'OK', safeErrorCode: null, cursor: null, lastSyncAt: now, lastSuccessAt: now };
     const { recorded, value: counts } = await commitAttempt(db, actor, key, attempt, async (tx, recordedSeq) => {
-      await tx.syncState.upsert({ where, create: { ...key, ...success, attemptSeq: recordedSeq, recordedSeq }, update: { ...success, recordedSeq } });
+      await tx.syncState.update({ where, data: { ...success, recordedSeq } });
       await tx.resourceSnapshot.upsert({ where, create: { ...key, ...snapshot }, update: snapshot });
     }, async tx => {
       const counted = { stored: 0, duplicate: 0 };
@@ -118,7 +117,7 @@ export async function syncIdentities(db: PrismaClient, actor: Actor, connection:
   const attempt = await beginAttempt(db, actor, key, now);
   type IdentityState = { status: 'OK' | 'ERROR'; safeErrorCode: string | null; lastSyncAt: Date; lastSuccessAt?: Date };
   const recordState = async (state: IdentityState) => (await commitAttempt(db, actor, key, attempt, (tx, recordedSeq) =>
-    tx.syncState.upsert({ where, create: { ...key, ...state, attemptSeq: recordedSeq, recordedSeq }, update: { ...state, recordedSeq } }), nothing)).recorded;
+    tx.syncState.update({ where, data: { ...state, recordedSeq } }), nothing)).recorded;
   try {
     const identities = await connector.readIdentities(connection);
     let candidates = 0; let ambiguous = 0;

@@ -55,7 +55,7 @@ try {
   await checkMappingStructure(ownerRunner);
   results.push(['Mapping workflow schema (typed links, quarantine, immutable binding)', 'passed']);
   await checkSnapshotStructure(ownerRunner);
-  results.push(['Snapshot schema (bounded items, attempt/success order, read-attempt order, failure codes)', 'passed']);
+  results.push(['Snapshot schema (bounded items, attempt/success order, read-attempt order, PENDING, failure codes)', 'passed']);
   await checkInboxStructure(ownerRunner);
   results.push(['Inbox schema (leases with claim tokens, finished events, failure codes, decision vocabularies)', 'passed']);
 

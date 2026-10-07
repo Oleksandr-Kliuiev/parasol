@@ -297,8 +297,9 @@ model SyncState {
   cursor      String?
   lastSyncAt  DateTime?
   lastSuccessAt DateTime?
-  /// OK | ERROR | UNAVAILABLE (CHECK). UNAVAILABLE: the source has no tenant-scoped read for this resource, so Atlas
-  /// does not read it. ERROR and UNAVAILABLE carry safeErrorCode; lastSuccessAt never runs ahead of lastSyncAt.
+  /// PENDING | OK | ERROR | UNAVAILABLE (CHECK). UNAVAILABLE: the source has no tenant-scoped read for this resource, so
+  /// Atlas does not read it. ERROR and UNAVAILABLE carry safeErrorCode; lastSuccessAt never runs ahead of lastSyncAt.
+  /// PENDING: the first attempt began and no outcome is recorded yet (no times, no code).
   status      String
   safeErrorCode String?
   /// Order of read attempts (review B3): the number last given to an attempt, and the number of the attempt whose outcome
