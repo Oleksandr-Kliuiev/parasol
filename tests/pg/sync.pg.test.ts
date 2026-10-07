@@ -75,6 +75,10 @@ test('Atera: a read failing on page 2 keeps nothing of it; an old snapshot is ST
   assert.equal(failed.safeErrorCode, 'UPSTREAM_UNAVAILABLE');
   const kept = await view('gasta-atera', 'ticket');
   assert.deepEqual([kept.status, kept.safeErrorCode, kept.asOf, (kept.items as unknown[]).length], ['STALE', 'UPSTREAM_UNAVAILABLE', at(40).toISOString(), 2]);
+  // The failure belongs to that resource: its sibling and the other connection keep their own state, the connection stays ACTIVE
+  assert.deepEqual([(await view('gasta-atera', 'alert')).safeErrorCode, (await view('gasta-huntress', 'incident')).status], ['UPSTREAM_TENANT_FILTER_UNAVAILABLE', 'OK']);
+  assert.deepEqual((await pgdb.owner.query(`SELECT status FROM "Connection" WHERE id = 'gasta-atera'`)).rows, [{ status: 'ACTIVE' }]);
+  assert.equal((await resolveConnection(db, actors.sync, gasta, 'gasta-atera', 'sync')).connectionId, 'gasta-atera');
   assert.ok(vendor.requests.every(r => !r.url.pathname.startsWith('/api/v3/alerts')));
 });
 
