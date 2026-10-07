@@ -40,3 +40,6 @@ Account checklist (Atera):
 3. Confirm the time zone of zone-less timestamps (Atlas currently reads them as UTC).
 4. Confirm which `TicketStatus` values count as open in this account (Atlas reads `Open` only).
 5. Check whether a customer-scoped alert read exists for the account (filter, webhook or per-agent endpoint).
+
+Decision on Atera alerts (owner, 2026-10-07): keep them unavailable for now — no MSP-wide read with a post-filter. When
+account access exists, check item 5; only a customer-scoped read (filter, webhook or per-agent endpoint) re-opens them.
