@@ -2,8 +2,35 @@
 
 Date: 2026-10-07
 Checkpoint: **B** (после задания 1.6)
-Branch/commit: `stage1/foundation` @ `db872de` — проверенное состояние кода; этот отчёт закоммичен поверх. Checkpoint A принят ревью (`a04d805`); его отчёт: `git show 61122b9:CHECKPOINT_REPORT.md`.
-Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`, решение владельца по алертам Atera — `153e56a`); 1.6 Persistent sync/events (`20cd453`, тесты `806db3d`, `db872de`).
+Branch/commit: `stage1/foundation` @ `f7ae5fb` — проверенное состояние кода после исправлений по ревью; эта редакция отчёта закоммичена поверх. Первая редакция проверяла `db872de`. Checkpoint A принят ревью (`a04d805`); его отчёт: `git show 61122b9:CHECKPOINT_REPORT.md`.
+Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`, решение владельца по алертам Atera — `153e56a`); 1.6 Persistent sync/events (`20cd453`, тесты `806db3d`, `db872de`); исправления по ревью — `f7ae5fb`.
+Review: `REVIEW_REPORT.md` (ревью `60306eb`, отчёт закоммичен как `13336c9`) — REQUEST_CHANGES из-за четырёх находок P2 (B1–B4), P0/P1 нет. Все четыре исправлены в `f7ae5fb` (раздел «Review B1–B4» ниже); нужна повторная проверка ревьюером.
+
+## Review B1–B4 — исправлено
+
+Все четыре находки воспроизведены тестами в порядке выполнения из ревью. B3 и B4 сначала воспроизведены на неисправленном коде. B1 и B2 меняют API захвата, поэтому их тесты подтверждены контрольными мутациями. Схема меняется одной новой миграцией `202610072000_stage1_claim_token_sync_order`, прежние не тронуты.
+
+- **B1 — устаревший worker отменял работу нового владельца.**
+  - Было: изменения события проверяли только статус. Worker с истёкшим lease мог записать RETRY/DEAD_LETTER и стереть чужой lease; CRITICAL оставался без observation.
+  - Стало: у каждого захвата свой `claimToken`, lease — тройка owner/expiry/token (CHECK). Фаза 1, финальная транзакция и запись RETRY/DEAD_LETTER требуют текущий токен под блокировкой строки. Устаревший worker завершается `CLAIM_LOST` и ничего не меняет: ни статус, ни чужой lease, ни audit. Перехват он замечает до вызова провайдера.
+  - Тесты (`tests/pg/worker-recovery.pg.test.ts`): порядок ревьюера — новый владелец делает одно observation и один applied run, провайдер вызван один раз, в audit только `observation.created`; отдельно — устаревший commit и устаревший PERMANENT-сбой.
+- **B2 — падения без отчёта не ограничивались `maxAttempts`.**
+  - Стало: при захвате, в той же транзакции, события с исчерпанными попытками и истёкшим lease уходят в DEAD_LETTER (`ATTEMPTS_EXHAUSTED`, audit `event.dead_lettered`) без вызова провайдера. Невидимых зависших строк нет. Решение фазы 1, сохранённое до лимита, остаётся при событии: явный requeue завершает его без нового вызова провайдера.
+  - Тесты: три падения без отчёта при `maxAttempts` 3 дают видимый dead letter, повторного захвата нет, после requeue — PROCESSED с тем же решением; настроенный `maxAttempts` 2 одинаково считает пойманный сбой и падение; если исчерпавших событий больше, чем пакет, ни одно не берётся сверх лимита.
+- **Найдено при исправлении B2: размер пакета зависел от плана запроса.**
+  - Запрос захвата из задания 1.6 (`UPDATE … WHERE … IN (SELECT … LIMIT n FOR UPDATE SKIP LOCKED)`) при generic-плане подготовленного запроса брал больше `n` строк. При `plan_cache_mode = force_generic_plan` захват с пакетом 1 взял 2 события.
+  - Оба запроса захвата теперь выбирают строки в `WITH … AS MATERIALIZED`, который выполняется один раз. Набор `worker-recovery` идёт под `force_generic_plan`.
+  - Обработку «ровно один раз» это не нарушало (её держат блокировки, теперь и токен); нарушался только размер пакета.
+- **B3 — старая синхронизация перезаписывала более свежий snapshot.**
+  - Было (воспроизведено): после позднего завершения старого чтения контекст показывал `OK`, пустой список и старое время. Поздний старый сбой падал с нарушением CHECK `SyncState_success_order_check`.
+  - Стало: `SyncState.attemptSeq`/`recordedSeq` упорядочивают попытки (`packages/sync/sync-state.ts`). Попытка берёт номер до чтения. Её исход записывается, только если позже начатая попытка ещё не записана и её время не старше записанного. Старое чтение возвращает `superseded: true` и сохраняет только свои события, так что evidence не теряется. То же для чтения агентов.
+  - Тесты (`tests/pg/sync-order.pg.test.ts`): старый успех и старый сбой после нового успеха; обычный порядок; чтение агентов.
+- **B4 — несогласованная пагинация считалась полным чтением.**
+  - Было (воспроизведено): пустая последняя страница Atera при двух объявленных записях давала `OK` с одним тикетом и перезаписывала snapshot. Повтор инцидента Huntress на двух страницах тоже давал `OK`.
+  - Стало: Atera требует одинаковые `totalPages`/`totalItemCount` на всех страницах, отсутствие пустой страницы до объявленной последней, уникальные ID и ровно `totalItemCount` записей в конце; Huntress требует уникальные ID. Иначе `UPSTREAM_PAGINATION_INCONSISTENT` (TRANSIENT): прежний snapshot остаётся и показывается STALE, события этого чтения не сохраняются. Согласованный пустой набор — полное чтение.
+  - Тесты (`tests/pg/pagination.pg.test.ts`): случай ревьюера, пустая nullable-страница, пустая первая страница, повтор тикета, меняющиеся итоги, меньше записей, чем объявлено, повтор инцидента Huntress, корректный пустой набор.
+
+Контрольные мутации: каждая защита убиралась по отдельности, и её тест падал (таблица Verification). Исключение — запрос dead-letter в старой форме `IN (…)`: его перерасход зависит от статистики таблицы и проявился в одном прогоне из двух. Та же ошибка в запросе захвата ловится в каждом прогоне (4 из 4).
 
 ## Result
 
@@ -36,7 +63,7 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
      - маршрут — `HUMAN_REVIEW` с собственной severity: CRITICAL остаётся URGENT, первое observation сохраняется;
      - если два разных содержания приходят одновременно, получаются одна каноническая строка, один конфликт и один audit.
    - **Две фазы.**
-     - Захват: `FOR UPDATE SKIP LOCKED` с lease.
+     - Захват: `FOR UPDATE SKIP LOCKED` с lease и собственным токеном захвата.
      - Фаза 1: DecisionRun записываются с `applied = false`, решение сохраняется.
      - Фаза 2, одна транзакция: applied, Observation, audit `observation.created` и PROCESSED.
      - Два worker на двух пулах обработали 12 событий, каждое ровно один раз: 12 observations, 12 applied runs, 12 вызовов провайдера.
@@ -44,11 +71,14 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
      - Advisory: при сбое провайдера пишутся FAILED run с запрошенной моделью и применённый rules run, маршрут — `HUMAN_REVIEW`.
      - Shadow: rules применяется сразу; AI-run сохраняется с `applied = false` и на observation не влияет.
 
-3. **Восстановление после рестарта.** Worker падает после фазы 1. Пока lease действует, другой worker событие не берёт. После истечения lease он фиксирует сохранённое решение: провайдер вызван один раз, applied run и observation — по одному, `attempts = 2`.
+3. **Восстановление после рестарта.**
+   - Worker падает после фазы 1. Пока lease действует, другой worker событие не берёт. После истечения lease он фиксирует сохранённое решение: провайдер вызван один раз, applied run и observation — по одному, `attempts = 2`.
+   - Worker, чей lease перехватили, завершается `CLAIM_LOST` и ничего не меняет (B1).
+   - Падения без отчёта ограничены `maxAttempts`: после исчерпания событие уходит в видимый DEAD_LETTER `ATTEMPTS_EXHAUSTED` без вызова провайдера (B2).
 
 4. **Retry и dead-letter.**
    - **TRANSIENT-сбой финальной транзакции** откатывает её целиком, событие уходит в RETRY с backoff и аудитом `event.retry_scheduled`. Повтор использует сохранённое решение: один вызов провайдера, один applied run.
-   - **После `maxAttempts`** событие уходит в DEAD_LETTER с аудитом `event.dead_lettered`; это видно в inbox view (`context:read`) вместе с кодом ошибки.
+   - **После `maxAttempts`** событие уходит в DEAD_LETTER с аудитом `event.dead_lettered`; это видно в inbox view (`context:read`) вместе с кодом ошибки. Лимит считает и попытки, закончившиеся падением без отчёта (`ATTEMPTS_EXHAUSTED`).
    - **Повреждённый сохранённый payload** сразу даёт DEAD_LETTER (`INVALID_EVENT`, PERMANENT).
    - **Повторной обработки само по себе нет.** Requeue — явное действие с правом `events:ingest` и аудитом `event.requeued`; reader получает отказ.
 
@@ -64,6 +94,8 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
      - `lastSuccessAt` не сдвигается, Retry-After передаётся дальше.
    - **Изоляция сбоя.** Сбой тикетов Atera не трогает ни соседний ресурс (алерты сохраняют свою причину), ни другую connection (инциденты Huntress остаются OK); connection остаётся ACTIVE.
    - **Ни одного полного чтения** — ERROR, а не пустой список.
+   - **Перекрывающиеся чтения** одного ресурса: текущим становится исход позже начатого, старое чтение ничего не перезаписывает (B3).
+   - **Полнота чтения:** несогласованные страницы дают TRANSIENT-ошибку `UPSTREAM_PAGINATION_INCONSISTENT`, прежний snapshot остаётся (B4).
    - **Устаревание по возрасту:** alert и incident — 15 минут, ticket — 30 минут.
    - **`COMPLETE`** — только когда все ожидаемые ресурсы OK.
 
@@ -87,15 +119,18 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
   - CHECK на lease, на завершённые события и на коды ошибок;
   - индекс ожидающих событий;
   - словари `DecisionRun` (status, provider) с preflight.
+- `202610072000_stage1_claim_token_sync_order` (ревью):
+  - `RawEvent.claimToken` и CHECK тройки lease;
+  - `SyncState.attemptSeq`/`recordedSeq` с CHECK порядка.
 
 **Сервисы.**
 - `packages/connections/connections.ts` — привязка и выдача `ResolvedConnection`.
 - `packages/graph/mapping.ts` — регистрация, кандидаты, confirm/quarantine/reject, очередь review.
-- `packages/sync/snapshots.ts`, `activation.ts` — snapshot и события в одной транзакции, активация.
+- `packages/sync/snapshots.ts`, `activation.ts`, `sync-state.ts` — snapshot и события в одной транзакции, порядок попыток, активация.
 - `packages/graph/context-mapper.ts` (`mapResources`) — статусы `ResourceView`.
 - `packages/events/inbox.ts`, `worker.ts`, `decision.ts`, `identity.ts` — durable inbox и worker. Логика маршрута общая с in-memory reference (`pipeline.ts`).
 
-**Коннекторы.** `connectors/http.ts`, `dto.ts`, `huntress/*`, `atera/*`; источники контрактов и маппинги — в `connectors/CONTRACTS.md`.
+**Коннекторы.** `connectors/http.ts`, `dto.ts`, `huntress/*`, `atera/*`, включая проверку согласованности страниц; источники контрактов и маппинги — в `connectors/CONTRACTS.md`.
 
 **API и seed.** API не менялся. В seed синтетические связи получили `resourceType` (1.4).
 
@@ -103,21 +138,23 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
 
 ## Verification
 
-Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Команды `npm` повторены на дереве `20cd453` после `npm ci`. Тесты коммитов `806db3d` и `db872de` прогнаны повторно: `npm test`, `typecheck`, `test:pg`.
+Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Команды `npm` повторены на дереве `f7ae5fb` после `npm ci`.
 
 | Command/scenario | Environment | Actual result |
 |---|---|---|
 | `npm ci` | локально | OK. Lockfile с Checkpoint A не менялся. `npm audit`: 10 находок (2 moderate, 8 high), те же, что в Checkpoint A |
 | `npm run db:generate`, `npm run schema:validate` | локально | Prisma Client 6.19.0 сгенерирован, схема валидна |
-| `npm test` | unit + PGlite | **60/60 pass**, включая SQL-инварианты inbox и бюджет контекста |
+| `npm test` | unit + PGlite | **60/60 pass**, включая SQL-инварианты inbox (тройка lease с токеном), порядка попыток и бюджет контекста |
 | `npm run typecheck`, `npm run api:build` | локально | pass |
 | `npm run api:smoke`, `npm run demo` | fixture | PASS, поведение прежнее |
-| `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 7 миграций по порядку; структурные инварианты, в том числе mapping, snapshot и inbox; RLS через login-роль; lookup-политики identities; RLS snapshot; guard runtime-роли; переиспользование соединений пула |
-| `npm run test:pg` | PostgreSQL 17.11, throwaway-БД на файл | **56/56 pass**. Новые с Checkpoint A: connections 5, mapping 6, adapters 4, sync 4, inbox 4, worker 5, worker-routing 6. Прежние 22 тоже проходят |
+| `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 8 миграций по порядку; структурные инварианты, в том числе mapping, snapshot (с порядком попыток) и inbox (с токеном захвата); RLS через login-роль; lookup-политики identities; RLS snapshot; guard runtime-роли; переиспользование соединений пула |
+| `npm run test:pg` | PostgreSQL 17.11, throwaway-БД на файл | **69/69 pass**. Новые с Checkpoint A: connections 5, mapping 6, adapters 4, sync 4, inbox 4, worker 5, worker-routing 6; по ревью — worker-recovery 6 (под `force_generic_plan`), sync-order 4, pagination 3. Прежние 22 тоже проходят |
 | `npm run db:check:drift` | PostgreSQL 17.11, shadow-БД | PASS, diff пустой |
-| Dev-БД: `db:deploy` | PostgreSQL 17.11, persistent volume | Миграции 1700, 1800 и 1900 применены по ходу заданий. `assertRuntimeRole` принимает `atlas_app` и отклоняет owner (`RUNTIME_ROLE_BYPASSES_RLS`). Inbox view через runtime-роль работает; в dev-БД событий 0, seed их не создаёт |
+| Dev-БД: `db:deploy` | PostgreSQL 17.11, persistent volume | Миграции 1700, 1800, 1900 и 2000 применены по ходу работ. `assertRuntimeRole` принимает `atlas_app` и отклоняет owner (`RUNTIME_ROLE_BYPASSES_RLS`). Inbox view и проход захвата через runtime-роль работают; в dev-БД событий 0, seed их не создаёт |
+| Воспроизведение до исправления | PostgreSQL 17.11, неисправленный код | B3: контекст `OK`, пустой список, старые `asOf` и `lastSuccessAt`; поздний старый сбой — исключение CHECK 23514. B4: случай ревьюера и повтор инцидента Huntress — `OK`. B1/B2 воспроизвёл ревьюер; их тесты используют новый API захвата и подтверждены мутациями |
+| Проба generic-плана | PostgreSQL 17.11, throwaway-БД, `force_generic_plan` | Старая форма захвата `IN (…)`: пакет 1 взял 2 события. Форма `MATERIALIZED` CTE: 1 событие, проход dead-letter с пакетом 1 — одно событие |
 | Остатки тестовых прогонов | PostgreSQL 17.11 | Throwaway-БД и ролей не осталось: только `atlas` и `postgres`, роли `atlas` и `atlas_app` |
-| Мутационные проверки (код временно ломался, затем восстанавливался) | PGlite / PostgreSQL 17 | Все пойманы. 1.4: ослабленная проверка неоднозначности; снятая проверка конфликта при подтверждении; без блокировки строки и без unique — гонка. 1.5: снятый tenant-фильтр; пропуск чужой записи; перезапись snapshot при сбое; игнор возраста snapshot. 1.6: решение не переиспользуется; без SKIP LOCKED и lease; без retry; карантин игнорируется; конфликт принят за дубликат; точка сбоя после commit; сбой на странице 2 молча проглочен; ERROR записан на все ресурсы connection |
+| Мутационные проверки (код временно ломался, затем восстанавливался) | PGlite / PostgreSQL 17 | Все пойманы. 1.4: ослабленная проверка неоднозначности; снятая проверка конфликта при подтверждении; без блокировки строки и без unique — гонка. 1.5: снятый tenant-фильтр; пропуск чужой записи; перезапись snapshot при сбое; игнор возраста snapshot. 1.6: решение не переиспользуется; без SKIP LOCKED и lease; без retry; карантин игнорируется; конфликт принят за дубликат; точка сбоя после commit; сбой на странице 2 молча проглочен; ERROR записан на все ресурсы connection. Ревью B: блокировка без токена; запись сбоя без токена; без dead-letter исчерпанных; захват без фильтра лимита попыток; захват через `IN (…)` (4 из 4 прогонов); все исходы записываются без порядка попыток; без итоговой проверки числа; без проверки повторов ID (Atera, Huntress); итоги могут меняться между страницами. Исключение: dead-letter через `IN (…)` — пойман в одном прогоне из двух |
 | `git diff --check` | локально | чисто |
 
 Покрытие проверок задания 1.6 из docs/05:
@@ -130,17 +167,20 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
 - retry финального commit без второго вызова провайдера и без второго applied run;
 - CRITICAL-повтор с другим содержанием в urgent review.
 
-Все сценарии — тесты в `tests/pg/inbox|worker|worker-routing|sync.pg.test.ts`.
+Все сценарии — тесты в `tests/pg/inbox|worker|worker-routing|worker-recovery|sync|sync-order|pagination.pg.test.ts`.
 
 ## Remaining gates / blockers
 
-Блокеров для ревью нет. Не выполнено:
+Блокеров для ревью нет; находки B1–B4 исправлены, нужна повторная проверка ревьюером. Не выполнено:
 - **Live read-only smoke Atera/Huntress и live Decisions (OpenAI).** Нет credentials и сопоставления аккаунтов; по заданию это вне checkpoint и требует отдельного указания.
 - **Контракт Atera с аккаунтом не сверен.** Документация вендора закрыта логином. Сверить по чек-листу `connectors/CONTRACTS.md` до активации live-подключения Atera.
 - **Алерты Atera недоступны** по решению владельца. При доступе к аккаунту проверить, можно ли читать их по клиенту: фильтр, вебхук или endpoint по агенту.
 - **События только из инцидентов Huntress.** Тикеты Atera — только snapshot. Закрытие инцидента событием не является. Жизненный цикл observation по ревизиям одного инцидента — задание 1.8.
 - **Нет процесса-исполнителя.** `syncConnection` и `processPending` — функции. Запуска по расписанию (интервал, обход клиентов, graceful shutdown) пока нет; это нужно для RUNBOOK (1.10) или развёртывания.
-- **Shadow-вызов выполняется в том же проходе worker.** Он идёт после фиксации baseline и не блокирует его, но задерживает следующее событие пакета. Lease во время обработки не продлевается: медленный провайдер может пережить lease остатка пакета, и тогда событие возьмёт другой worker. Второго observation не будет — финальная транзакция проверяет статус под блокировкой строки. Но возможен лишний вызов провайдера и лишняя попытка в `attempts`. Отдельная shadow-job, timeout, бюджет и circuit-breaker — задание 1.7.
+- **Shadow-вызов выполняется в том же проходе worker.** Он идёт после фиксации baseline и не блокирует его, но задерживает следующее событие пакета. Отдельная shadow-job, timeout, бюджет и circuit-breaker — задание 1.7.
+- **Lease во время обработки не продлевается.**
+  - Если медленный провайдер переживёт lease, событие возьмёт другой worker. Устаревший получит `CLAIM_LOST` и ничего не изменит (B1), но возможен лишний вызов провайдера.
+  - Истёкший lease расходует попытку. Если lease короче времени обработки, событие может уйти в `ATTEMPTS_EXHAUSTED`: это видно в inbox и исправляется requeue.
 - **Объём чтения Huntress ограничен:** 20 страниц по 100. Больше — `UPSTREAM_TOO_MANY_PAGES` (ERROR). Snapshot хранит не больше 100 элементов: сначала самые серьёзные, плюс общее число у источника.
 - **Нет retention для `RawEvent`.** У runtime-роли нет DELETE, inbox растёт.
 - **HTTP-маршрутов** для очереди сопоставления, привязки и inbox/requeue нет — только сервисы и аудит.
@@ -158,12 +198,15 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
 1. **Алерты Atera не читаются** (решение владельца, вариант 1, `153e56a`). Чтение всех алертов MSP-аккаунта с раскладкой по клиентам не делалось.
 2. **«Incremental sync» в Stage 1 устроен так:** полное, ограниченное по объёму чтение открытого набора инцидентов плюс durable dedup. Курсора по времени нет. События пишутся атомарно со snapshot, поэтому чтение, упавшее на середине, не оставляет ни snapshot, ни событий.
 3. **Outbox не используется:** в Stage 1 нет исходящих действий.
-4. **Попытка считается при захвате.** Событие, на котором worker падает, тоже дойдёт до DEAD_LETTER после `maxAttempts`.
+4. **Попытка считается при захвате, и лимит действует на любые попытки.** Захват с истёкшим lease — израсходованная попытка. После `maxAttempts` событие уходит в DEAD_LETTER (`ATTEMPTS_EXHAUSTED`) при следующем захвате, а не исключается молча (B2).
 5. **Неизвестные ошибки** уходят в DEAD_LETTER сразу, как требует AGENTS.md: PERMANENT/unknown → dead-letter.
 6. **Shadow AI-run пишется после финальной транзакции**, best effort; до задания 1.7 отдельной job нет.
 7. **Значения по умолчанию** (настраиваются): lease 60 с, `maxAttempts` 3, пакет 10, backoff 30 с·2^(n−1), но не больше 15 минут.
 8. **Решение и маршрут вычисляет общий `packages/events/decision.ts`.** Его используют и in-memory reference, и worker, так что расхождения правил нет.
 9. **HTTP-маршруты сопоставления и inbox не добавлены:** в спецификации Stage 1 их нет.
+10. **Владение захватом проверяется токеном, а не `leaseOwner`:** workerId может повториться после рестарта, токен — нет (B1).
+11. **Порядок синхронизаций — номер попытки в `SyncState`, а не сериализация.** Чтения могут идти параллельно; записывается исход позже начатого, старое чтение сохраняет только события (B3).
+12. **Несогласованная пагинация — TRANSIENT.** Коллекция могла измениться во время обхода; следующий sync прочитает её снова, а прежний snapshot пока виден как STALE (B4).
 
 **Scope.**
 - **Ничего лишнего не добавлено:** нет write-tools и записей к вендорам (только GET), нет UI, Agents/Responses-оркестрации, векторной и графовой БД, развёртывания и изменений аккаунтов.
@@ -172,7 +215,7 @@ Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`,
 
 ## Next task
 
-**После ревью — задание 1.7, Decision Layer.** Нужно:
+**После повторного ревью — задание 1.7, Decision Layer.** Нужно:
 - rules baseline, fixture и OpenAI shadow как **отдельная job**: baseline фиксируется до результата AI, а worker не ждёт shadow-вызова;
 - `DecisionConfig` из versioned config; модель и allowlist ответов — из конфигурации;
 - `MODEL_MISMATCH` с requested/response model в DecisionRun и метриках;
