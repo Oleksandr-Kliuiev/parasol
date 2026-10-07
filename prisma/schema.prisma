@@ -130,7 +130,7 @@ model RawEvent {
   /// one canonical row per identity (partial unique index) and "parent is canonical" (trigger) live in the migrations.
   conflictOfEventKey String?
   connection  Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict)
-  conflictOf  RawEvent? @relation("RawEventConflict", fields: [workspaceId, clientId, connectionId, resourceType, externalEventId, revision, conflictOfEventKey], references: [workspaceId, clientId, connectionId, resourceType, externalEventId, revision, eventKey], onDelete: Restrict, onUpdate: Restrict)
+  conflictOf  RawEvent? @relation("RawEventConflict", fields: [workspaceId, clientId, connectionId, resourceType, externalEventId, revision, conflictOfEventKey], references: [workspaceId, clientId, connectionId, resourceType, externalEventId, revision, eventKey], onDelete: Restrict, onUpdate: Restrict, map: "RawEvent_conflictOf_fkey")
   conflicts   RawEvent[] @relation("RawEventConflict")
   decisions   DecisionRun[]
   observation Observation?
@@ -191,7 +191,7 @@ model Observation {
   provider    String
   promptVersion String
   /// Every rule that influenced the result, in evaluation order.
-  reasonCodes String[]
+  reasonCodes String[] @default([])
   /// OPEN | ACKNOWLEDGED | RESOLVED | SUPPRESSED. RESOLVED/SUPPRESSED need resolvedAt+resolvedBy unless legacyClosure.
   status      String @default("OPEN")
   createdAt   DateTime @default(now())
@@ -203,7 +203,7 @@ model Observation {
   legacyClosure Boolean @default(false)
   event       RawEvent @relation(fields: [workspaceId, clientId, eventId], references: [workspaceId, clientId, id], onDelete: Restrict)
   entity      Entity? @relation(fields: [workspaceId, clientId, entityId], references: [workspaceId, clientId, id], onDelete: Restrict)
-  decisionRun DecisionRun? @relation(fields: [workspaceId, clientId, decisionRunId, eventId, decisionApplied], references: [workspaceId, clientId, id, eventId, applied], onDelete: Restrict, onUpdate: Restrict)
+  decisionRun DecisionRun? @relation(fields: [workspaceId, clientId, decisionRunId, eventId, decisionApplied], references: [workspaceId, clientId, id, eventId, applied], onDelete: Restrict, onUpdate: Restrict, map: "Observation_decisionRun_fkey")
   @@id([workspaceId, clientId, id])
   @@unique([workspaceId, clientId, eventId])
   @@index([workspaceId, clientId, status, severity])

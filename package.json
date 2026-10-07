@@ -17,7 +17,9 @@
     "api:build": "tsc -p apps/api/tsconfig.json",
     "api:start": "node dist/apps/api/src/main.js",
     "api:smoke": "node --experimental-strip-types scripts/api-smoke.ts",
-    "db:check:pg17": "node --experimental-strip-types scripts/pg17-check.ts"
+    "db:check:pg17": "node --experimental-strip-types scripts/pg17-check.ts",
+    "db:check:drift": "node --experimental-strip-types scripts/schema-drift-check.ts",
+    "test:pg": "node --experimental-strip-types --test tests/pg/*.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "11.1.6",

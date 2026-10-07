@@ -1,14 +1,14 @@
-import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard } from '../tests/sql-invariants.ts';
 import type { SqlRunner } from '../tests/sql-invariants.ts';
 import { SET_SCOPE_SQL } from '../packages/graph/scope-context.ts';
+import { migrationNames, migrationSql } from '../tests/support/migrations.ts';
 
 /**
- * Integration check against a REAL PostgreSQL 17 server (not PGlite). Creates a throwaway database, applies both
- * migrations as the owner, creates a confined LOGIN role like prisma/roles.sql, then verifies the SQL invariants and the
+ * Integration check against a REAL PostgreSQL 17 server (not PGlite). Creates a throwaway database, applies every
+ * migration (prisma/migrations, in order) as the owner, creates a confined LOGIN role like prisma/roles.sql, then verifies the SQL invariants and the
  * RLS acceptance list through a connection pool, including connection reuse. Drops everything afterwards.
  *
  *   ATLAS_PG_ADMIN_URL=postgresql://owner@127.0.0.1:5432/postgres npm run db:check:pg17
@@ -22,7 +22,7 @@ const suffix = randomBytes(4).toString('hex');
 const dbName = `atlas_v11_check_${suffix}`;
 const roleName = `atlas_app_check_${suffix}`;
 const rolePassword = randomBytes(18).toString('hex');
-const migrations = ['202610070001_foundation', '202610071200_v1_1_contracts', '202610071500_v1_1_2_conflict_scope_and_legacy_guard'];
+const migrations = await migrationNames();
 
 const admin = new pg.Client({ connectionString: adminUrl });
 await admin.connect();
@@ -40,7 +40,7 @@ try {
   const ownerUrl = new URL(adminUrl); ownerUrl.pathname = `/${dbName}`;
   owner = new pg.Client({ connectionString: ownerUrl.toString() });
   await owner.connect();
-  for (const m of migrations) await owner.query(await readFile(new URL(`../prisma/migrations/${m}/migration.sql`, import.meta.url), 'utf8'));
+  for (const m of migrations) await owner.query(await migrationSql(m));
   results.push(['Migrations applied in order', migrations.join(' → ')]);
   // Same grants as prisma/roles.sql (the file itself uses a psql variable for the password).
   await owner.query(`GRANT USAGE ON SCHEMA public TO "${roleName}";

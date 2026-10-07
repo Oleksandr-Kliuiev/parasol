@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard } from './sql-invariants.ts';
 import type { SqlRunner } from './sql-invariants.ts';
+import { migrationNames, migrationsAfter, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
 
 // PGlite embeds the PostgreSQL 17 engine in-process. It verifies the SQL of both migrations and the policies, but it is
 // not a standalone PostgreSQL 17 server with connection pooling: scripts/pg17-check.ts covers that against a real server.
@@ -13,6 +14,11 @@ const V11 = '../prisma/migrations/202610071200_v1_1_contracts/migration.sql';
 const V112 = '../prisma/migrations/202610071500_v1_1_2_conflict_scope_and_legacy_guard/migration.sql';
 const V110_AS_SHIPPED = '../prisma/upgrades/202610071200_v1_1_contracts.as-shipped-in-1.1.0.sql';
 const UPGRADE = '../prisma/upgrades/v1_1_0_to_v1_1_1.sql';
+
+/** Fresh install: every migration in apply order, as `prisma migrate deploy` would run them. */
+async function migrateAll(db: PGlite): Promise<void> { for (const m of await migrationNames()) await db.exec(await migrationSql(m)); }
+/** Migrations added after the frozen v1.1.2 set, for upgrade-path tests that apply the frozen part by hand. */
+async function migrateAfterFrozen(db: PGlite): Promise<void> { for (const m of await migrationsAfter(FROZEN_V1_1_2)) await db.exec(await migrationSql(m)); }
 
 function runner(db: PGlite): SqlRunner {
   return {
@@ -37,7 +43,7 @@ async function schemaShape(db: PGlite): Promise<string[]> {
 test('all migrations apply in order and the v1.1.2 invariants hold: identity with resource type and conflict rows, applied decision per event pinned by FK, severity rank, priority floor, append-only logs', async () => {
   const db = new PGlite();
   try {
-    await db.exec(await sql(FOUNDATION)); await db.exec(await sql(V11)); await db.exec(await sql(V112));
+    await migrateAll(db);
     const owner = runner(db);
     await seedGraph(owner);
     await checkStructuralInvariants(owner);
@@ -47,7 +53,7 @@ test('all migrations apply in order and the v1.1.2 invariants hold: identity wit
 test('row-level security confines a non-owner role: no context denies, clients of one workspace are isolated, context ends with the transaction', async () => {
   const db = new PGlite();
   try {
-    await db.exec(await sql(FOUNDATION)); await db.exec(await sql(V11)); await db.exec(await sql(V112));
+    await migrateAll(db);
     const owner = runner(db);
     await seedGraph(owner);
     await checkStructuralInvariants(owner);
@@ -64,7 +70,7 @@ test('row-level security confines a non-owner role: no context denies, clients o
 test('runtime-role guard rejects ownership of any protected table and detects a table with RLS disabled', async () => {
   const db = new PGlite();
   try {
-    await db.exec(await sql(FOUNDATION)); await db.exec(await sql(V11)); await db.exec(await sql(V112));
+    await migrateAll(db);
     const owner = runner(db);
     await seedGraph(owner);
     await checkStructuralInvariants(owner); // populates RawEvent, so an owner-bypass is observable
@@ -90,7 +96,7 @@ test('upgrade of a populated v1.0 database: legacy closures are marked, not inve
       INSERT INTO "Observation" VALUES ('w','c1','o-open','r1','OPERATIONS','MEDIUM','MONITOR',1,'LEGACY_CODE','OPEN',now());
       INSERT INTO "Observation" VALUES ('w','c1','o-closed','r2','SECURITY','CRITICAL','HUMAN_REVIEW',1,'LEGACY_CODE','RESOLVED',now());
     `);
-    await db.exec(await sql(V11)); await db.exec(await sql(V112));
+    await db.exec(await sql(V11)); await db.exec(await sql(V112)); await migrateAfterFrozen(db);
     const rows = (await db.query<{ id: string; status: string; legacyClosure: boolean; resolvedBy: string | null; priority: string; severityRank: number; reasonCodes: string[] }>(
       `SELECT id, status, "legacyClosure", "resolvedBy", priority, "severityRank", "reasonCodes" FROM "Observation" ORDER BY id`)).rows;
     assert.deepEqual(rows.map(r => [r.id, r.status, r.legacyClosure, r.resolvedBy, r.priority, r.severityRank, r.reasonCodes]),
@@ -121,8 +127,9 @@ test('upgrade of a populated v1.0 database: legacy closures are marked, not inve
 test('upgrade path 1.1.0 → 1.1.1 → 1.1.2 yields the same schema shape (columns, constraints, indexes, policies, triggers) and passes the same invariants as a fresh install', async () => {
   const fresh = new PGlite(); const upgraded = new PGlite();
   try {
-    await fresh.exec(await sql(FOUNDATION)); await fresh.exec(await sql(V11)); await fresh.exec(await sql(V112));
+    await migrateAll(fresh);
     await upgraded.exec(await sql(FOUNDATION)); await upgraded.exec(await sql(V110_AS_SHIPPED)); await upgraded.exec(await sql(UPGRADE)); await upgraded.exec(await sql(V112));
+    await migrateAfterFrozen(upgraded);
     assert.deepEqual(await schemaShape(upgraded), await schemaShape(fresh));
     const owner = runner(upgraded);
     await seedGraph(owner);

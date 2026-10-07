@@ -1,8 +1,8 @@
 import type { PrismaClient, Prisma } from '@prisma/client';
 import type { Actor } from '../core/contracts.ts';
-import { scopeContext, RUNTIME_ROLE_CHECK_SQL, assertConfinedRuntimeRole } from './scope-context.ts';
+import { scopeContext, workspaceContext, RUNTIME_ROLE_CHECK_SQL, assertConfinedRuntimeRole } from './scope-context.ts';
 import type { RuntimeRoleFacts } from './scope-context.ts';
-export { SCOPE_ID_PATTERN, SET_SCOPE_SQL, RUNTIME_ROLE_CHECK_SQL, scopeContext, assertConfinedRuntimeRole } from './scope-context.ts';
+export { SCOPE_ID_PATTERN, SET_SCOPE_SQL, RUNTIME_ROLE_CHECK_SQL, scopeContext, workspaceContext, assertConfinedRuntimeRole } from './scope-context.ts';
 export type { ScopeContext, RuntimeRoleFacts } from './scope-context.ts';
 
 /**
@@ -21,6 +21,16 @@ export async function assertRuntimeRole(db: PrismaClient): Promise<void> {
 export async function withScope<T>(db: PrismaClient, actor: Actor, clientIds: string[],
   fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   const ctx = scopeContext(actor, clientIds);
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.$queryRaw`SELECT set_config('app.workspace_id', ${ctx.workspaceId}, true), set_config('app.client_ids', ${ctx.clientIds}, true)`;
+    return fn(tx);
+  });
+}
+
+/** Same transaction discipline at workspace level: no client in scope (workspaceContext). Used for the security audit. */
+export async function withWorkspaceScope<T>(db: PrismaClient, actor: Actor,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  const ctx = workspaceContext(actor);
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.$queryRaw`SELECT set_config('app.workspace_id', ${ctx.workspaceId}, true), set_config('app.client_ids', ${ctx.clientIds}, true)`;
     return fn(tx);
