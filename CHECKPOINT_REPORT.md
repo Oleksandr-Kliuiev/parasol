@@ -1,247 +1,278 @@
 # Atlas Stage 1 checkpoint
 
-Date: 2026-10-07
-Checkpoint: **B** (после задания 1.6)
-Branch/commit: `stage1/foundation` @ `ce466ae` — проверенное состояние кода после второго исправления по ревью; эта редакция отчёта (третья) закоммичена поверх. Первая редакция проверяла `db872de`, вторая — `f7ae5fb`. Checkpoint A принят ревью (`a04d805`); его отчёт: `git show 61122b9:CHECKPOINT_REPORT.md`.
-Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`, решение владельца по алертам Atera — `153e56a`); 1.6 Persistent sync/events (`20cd453`, тесты `806db3d`, `db872de`); исправления по ревью — `f7ae5fb`, `ce466ae`.
-Review: первое ревью (`13336c9`) — REQUEST_CHANGES, четыре находки P2 (B1–B4), исправлены в `f7ae5fb`. Повторное ревью (`17bd661`, `REVIEW_REPORT.md` revision 2) закрыло B1, B2 и B4 и оставило ветку B3: перекрывающиеся первые чтения ресурса без `SyncState`. Она исправлена в `ce466ae` (раздел «Повторное ревью: B3 для первых чтений» ниже); нужна проверка ревьюером. P0/P1 нет.
-
-## Повторное ревью: B3 для первых чтений — исправлено
-
-- **Было** (воспроизведено новыми тестами на коде `f7ae5fb`): пока строки `SyncState` нет, попытки не получали номера, и побеждала первая завершившаяся. Более позднее успешное чтение отбрасывалось: контекст `OK`, пустой список, старое время. Более поздняя ошибка скрывалась: `OK` вместо STALE. У чтения агентов то же.
-- **Стало** (миграция `202610072100_stage1_sync_attempt_pending`): каждая попытка атомарно получает номер до любого обращения к вендору (`INSERT … ON CONFLICT DO UPDATE`). Первая попытка ресурса создаёт строку состояния как `PENDING`: попытка начата, исхода нет — без времён, кода и записанного номера (CHECK). Исход записывается обычным `update`; правило то же — записывается исход позже начатой попытки, если его время не старше записанного. В контексте `PENDING` — `MISSING` с `SYNC_NOT_COMPLETED` (например, если первая попытка упала, не дойдя до записи).
-- **Тесты** (`tests/pg/sync-order.pg.test.ts`), все от ресурса без состояния, с проверкой, что обе попытки пронумерованы до завершения любой:
-  - успех/успех в обоих порядках завершения — текущим становится позже начатое чтение;
-  - успех, затем более поздняя ошибка: если ошибка завершилась второй — STALE с её кодом и прежним snapshot; если первой — состояние ERROR, а старое полное чтение помечено `superseded` и snapshot не заменяет (его события сохранены);
-  - ошибка, затем более поздний успех, в обоих порядках — записан успех;
-  - одинаковые времена — решает порядок начала;
-  - чтение агентов в обоих порядках;
-  - отстающие часы: позже начатая попытка с более старым временем ничего не записывает.
-- **Контроль:** пять тестов первых чтений падают на коде `f7ae5fb`. Мутации: без номера попытки падает тест одинаковых времён; без защиты по времени — тест отстающих часов; без отображения `PENDING` — unit-тест свежести.
-
-## Review B1–B4 — исправлено
-
-Все четыре находки воспроизведены тестами в порядке выполнения из ревью. B3 и B4 сначала воспроизведены на неисправленном коде. B1 и B2 меняют API захвата, поэтому их тесты подтверждены контрольными мутациями. Схема меняется одной новой миграцией `202610072000_stage1_claim_token_sync_order`, прежние не тронуты.
-
-- **B1 — устаревший worker отменял работу нового владельца.**
-  - Было: изменения события проверяли только статус. Worker с истёкшим lease мог записать RETRY/DEAD_LETTER и стереть чужой lease; CRITICAL оставался без observation.
-  - Стало: у каждого захвата свой `claimToken`, lease — тройка owner/expiry/token (CHECK). Фаза 1, финальная транзакция и запись RETRY/DEAD_LETTER требуют текущий токен под блокировкой строки. Устаревший worker завершается `CLAIM_LOST` и ничего не меняет: ни статус, ни чужой lease, ни audit. Перехват он замечает до вызова провайдера.
-  - Тесты (`tests/pg/worker-recovery.pg.test.ts`): порядок ревьюера — новый владелец делает одно observation и один applied run, провайдер вызван один раз, в audit только `observation.created`; отдельно — устаревший commit и устаревший PERMANENT-сбой.
-- **B2 — падения без отчёта не ограничивались `maxAttempts`.**
-  - Стало: при захвате, в той же транзакции, события с исчерпанными попытками и истёкшим lease уходят в DEAD_LETTER (`ATTEMPTS_EXHAUSTED`, audit `event.dead_lettered`) без вызова провайдера. Невидимых зависших строк нет. Решение фазы 1, сохранённое до лимита, остаётся при событии: явный requeue завершает его без нового вызова провайдера.
-  - Тесты: три падения без отчёта при `maxAttempts` 3 дают видимый dead letter, повторного захвата нет, после requeue — PROCESSED с тем же решением; настроенный `maxAttempts` 2 одинаково считает пойманный сбой и падение; если исчерпавших событий больше, чем пакет, ни одно не берётся сверх лимита.
-- **Найдено при исправлении B2: размер пакета зависел от плана запроса.**
-  - Запрос захвата из задания 1.6 (`UPDATE … WHERE … IN (SELECT … LIMIT n FOR UPDATE SKIP LOCKED)`) при generic-плане подготовленного запроса брал больше `n` строк. При `plan_cache_mode = force_generic_plan` захват с пакетом 1 взял 2 события.
-  - Оба запроса захвата теперь выбирают строки в `WITH … AS MATERIALIZED`, который выполняется один раз. Набор `worker-recovery` идёт под `force_generic_plan`.
-  - Обработку «ровно один раз» это не нарушало (её держат блокировки, теперь и токен); нарушался только размер пакета.
-- **B3 — старая синхронизация перезаписывала более свежий snapshot.**
-  - Было (воспроизведено): после позднего завершения старого чтения контекст показывал `OK`, пустой список и старое время. Поздний старый сбой падал с нарушением CHECK `SyncState_success_order_check`.
-  - Стало: `SyncState.attemptSeq`/`recordedSeq` упорядочивают попытки (`packages/sync/sync-state.ts`). Попытка берёт номер до чтения. Её исход записывается, только если позже начатая попытка ещё не записана и её время не старше записанного. Старое чтение возвращает `superseded: true` и сохраняет только свои события, так что evidence не теряется. То же для чтения агентов.
-  - Тесты (`tests/pg/sync-order.pg.test.ts`): старый успех и старый сбой после нового успеха; обычный порядок; чтение агентов.
-  - Неполно в `f7ae5fb`: для ресурса без состояния номер не выдавался — исправлено в `ce466ae` (раздел выше).
-- **B4 — несогласованная пагинация считалась полным чтением.**
-  - Было (воспроизведено): пустая последняя страница Atera при двух объявленных записях давала `OK` с одним тикетом и перезаписывала snapshot. Повтор инцидента Huntress на двух страницах тоже давал `OK`.
-  - Стало: Atera требует одинаковые `totalPages`/`totalItemCount` на всех страницах, отсутствие пустой страницы до объявленной последней, уникальные ID и ровно `totalItemCount` записей в конце; Huntress требует уникальные ID. Иначе `UPSTREAM_PAGINATION_INCONSISTENT` (TRANSIENT): прежний snapshot остаётся и показывается STALE, события этого чтения не сохраняются. Согласованный пустой набор — полное чтение.
-  - Тесты (`tests/pg/pagination.pg.test.ts`): случай ревьюера, пустая nullable-страница, пустая первая страница, повтор тикета, меняющиеся итоги, меньше записей, чем объявлено, повтор инцидента Huntress, корректный пустой набор.
-
-Контрольные мутации: каждая защита убиралась по отдельности, и её тест падал (таблица Verification). Исключение — запрос dead-letter в старой форме `IN (…)`: его перерасход зависит от статистики таблицы и проявился в одном прогоне из двух. Та же ошибка в запросе захвата ловится в каждом прогоне (4 из 4).
+- **Date:** 2026-10-07
+- **Checkpoint:** **C** (после задания 1.10)
+- **Branch/commit:** `stage1/foundation` @ `1a95845` — проверенное состояние. Этот отчёт закоммичен поверх и кода не меняет.
+- **Предыдущий checkpoint:** B принят ревью (`2a753d2`); его отчёт — `git show 2a753d2:CHECKPOINT_REPORT.md`.
+- **Tasks completed:**
+  - 1.7 Decision Layer (`10f2578`);
+  - 1.8 Observations and context (`7c9e8d6`);
+  - 1.9 Tool Gateway (`9295f67`);
+  - 1.10 Acceptance (`1a95845`).
+- **Статус: не production-ready.**
+  - Весь mock/recorded-объём выполнен и проверен на PostgreSQL 17.
+  - Live-read gate заблокирован ровно одним: нет credentials (раздел «Remaining gates / blockers»).
 
 ## Result
 
-**Что проверено и где.**
-- **Live:** ничего. Credentials нет; ни одного запроса к Atera, Huntress или OpenAI не было.
-- **Вендоры в тестах:** HTTP идёт в локальный mock-транспорт с синтетическими ответами (`fixtures/vendor`). Это проверка адаптеров по контракту, **не live API verification**. Контракт Huntress сверен с официальной спецификацией. Контракт Atera взят из экспорта документации Atera OpenAPI v3 в стороннем публичном репозитории и с аккаунтом не сверен.
-- **БД:** всё перечисленное ниже работает на PostgreSQL 17.11 через confined runtime-роль; на каждый тестовый файл — отдельная throwaway-БД. SQL-инварианты дополнительно гоняются в PGlite.
+Сквозной сценарий — `tests/pg/e2e.pg.test.ts` на PostgreSQL 17.11, документированным путём:
+- владелец: `prisma migrate deploy`, `roles.sql`, synthetic seed;
+- дальше всё через runtime-роль: операторские команды (тот же код, что `npm run ops`) и собранный API в `ATLAS_MODE=db` под токеном техника.
 
-1. **Scoped evidence Atera/Huntress.**
-   - **Привязка.** Клиент привязывается к Atera customer или Huntress organization явно: с автором и временем, в начальном состоянии DISABLED. Один tenant — один клиент: повторная привязка уже привязанного tenant отклоняется как CONFLICT, отказ записывается, первая привязка остаётся. В клиентский аудит не попадают ни tenant ID, ни secretRef.
-   - **Активация.** Health check идёт к привязанному tenant с разрешённым секретом. Если проверка не прошла, connection остаётся DISABLED.
-   - **Кто может читать.** Только выданный `ResolvedConnection`: скопированный или собранный вручную отклоняется до любой работы с БД. FIXTURE-подключения к вендору не обращаются.
-   - **Фильтр по tenant.** Каждый upstream-запрос фильтруется на стороне вендора:
-     - Huntress: `organization_id` на каждой странице;
-     - Atera: `customerId` у тикетов, путь `/agents/customer/{id}` у агентов.
+Вендоры — mock transport, Decisions — scripted endpoint. **Это не live-проверка.** Evidence этого прогона — `verification/e2e/*.json`.
 
-     Если в ответе есть запись чужого tenant, падает всё чтение (`UPSTREAM_SCOPE_MISMATCH`, PERMANENT), и ничего не сохраняется.
-   - **Алерты Atera** не запрашиваются (решение владельца). В контексте они `MISSING` с причиной `UPSTREAM_TENANT_FILTER_UNAVAILABLE`.
-   - **DTO и ошибки.** DTO проверяются при чтении. Расхождение с контрактом даёт PERMANENT-ошибку с именем поля, без значения. Контакты заявителя, комментарии и тексты аналитиков не копируются. Ошибки HTTP классифицируются без URL, заголовков, секрета и тела ответа.
-   - **Сопоставление.** Matcher предлагает только CANDIDATE, и только по точному hostname внутри клиента. При неоднозначности не создаётся ничего.
+### Полный context (`verification/e2e/4-context.json`)
 
-2. **Durable event processing.**
-   - **Источник событий.** Чтение открытых инцидентов Huntress пишет события в inbox в той же транзакции, что и snapshot.
-     - Повторное чтение даёт дубликаты; новый `updated_at` — новая ревизия.
-     - Неудачное чтение не сохраняет ничего, в том числе при сбое на второй странице.
-   - **Хранение до обработки.** Дубликат определяется по eventKey v2 и payload hash и ничего не меняет: из 6 одновременных доставок через два пула — 1 STORED и 5 DUPLICATE.
-   - **Конфликт содержания** (тот же ID и ревизия, другое содержание):
-     - сохраняется отдельной строкой с `conflictOfEventKey`;
-     - каноническая строка не перезаписывается, audit пишется один раз;
-     - маршрут — `HUMAN_REVIEW` с собственной severity: CRITICAL остаётся URGENT, первое observation сохраняется;
-     - если два разных содержания приходят одновременно, получаются одна каноническая строка, один конфликт и один audit.
-   - **Две фазы.**
-     - Захват: `FOR UPDATE SKIP LOCKED` с lease и собственным токеном захвата.
-     - Фаза 1: DecisionRun записываются с `applied = false`, решение сохраняется.
-     - Фаза 2, одна транзакция: applied, Observation, audit `observation.created` и PROCESSED.
-     - Два worker на двух пулах обработали 12 событий, каждое ровно один раз: 12 observations, 12 applied runs, 12 вызовов провайдера.
-   - **Advisory и shadow.**
-     - Advisory: при сбое провайдера пишутся FAILED run с запрошенной моделью и применённый rules run, маршрут — `HUMAN_REVIEW`.
-     - Shadow: rules применяется сразу; AI-run сохраняется с `applied = false` и на observation не влияет.
+Граф: Gasta → Kari → GASTA-LT-07, четыре подтверждённые связи:
+- две из seed (FIXTURE-подключения);
+- две оператор подтвердил после ревью: Huntress agent 207001 и Atera agent 107001. Совпадение hostname дало только CANDIDATE.
 
-3. **Восстановление после рестарта.**
-   - Worker падает после фазы 1. Пока lease действует, другой worker событие не берёт. После истечения lease он фиксирует сохранённое решение: провайдер вызван один раз, applied run и observation — по одному, `attempts = 2`.
-   - Worker, чей lease перехватили, завершается `CLAIM_LOST` и ничего не меняет (B1).
-   - Падения без отчёта ограничены `maxAttempts`: после исчерпания событие уходит в видимый DEAD_LETTER `ATTEMPTS_EXHAUSTED` без вызова провайдера (B2).
+Observations (активные, по приоритету):
 
-4. **Retry и dead-letter.**
-   - **TRANSIENT-сбой финальной транзакции** откатывает её целиком, событие уходит в RETRY с backoff и аудитом `event.retry_scheduled`. Повтор использует сохранённое решение: один вызов провайдера, один applied run.
-   - **После `maxAttempts`** событие уходит в DEAD_LETTER с аудитом `event.dead_lettered`; это видно в inbox view (`context:read`) вместе с кодом ошибки. Лимит считает и попытки, закончившиеся падением без отчёта (`ATTEMPTS_EXHAUSTED`).
-   - **Повреждённый сохранённый payload** сразу даёт DEAD_LETTER (`INVALID_EVENT`, PERMANENT).
-   - **Повторной обработки само по себе нет.** Requeue — явное действие с правом `events:ingest` и аудитом `event.requeued`; reader получает отказ.
+| Событие | Severity | Priority | Route | Entity | reasonCodes |
+|---|---|---|---|---|---|
+| Huntress 9001 | CRITICAL | URGENT | HUMAN_REVIEW | `demo-device-07` | RULES_BASELINE, SOURCE_URGENCY_FLOOR |
+| Huntress 9002 | LOW | NORMAL | HUMAN_REVIEW | — | RULES_BASELINE, UNRESOLVED_DEVICE |
 
-5. **Quarantine конфликтов привязки.**
-   - Первое подтверждение выигрывает. Конфликтующая связь получает статус QUARANTINED с указателем на победившую; она хранится, но не используется.
-   - Одновременные подтверждения из двух пулов дают ровно одну CONFIRMED.
-   - Событие агента с карантинной связью — CONFLICT: `HUMAN_REVIEW`, без entity, `AMBIGUOUS_DEVICE_LINK`; CRITICAL остаётся URGENT.
+Ресурсы (в порядке ID подключения):
 
-6. **Health и freshness по конкретному ресурсу.** Состояние синхронизации хранится на пару connection + ресурс.
-   - **Полное чтение** даёт OK.
-   - **Сбой обновления:**
-     - последний snapshot остаётся и показывается как STALE с кодом сбоя;
-     - `lastSuccessAt` не сдвигается, Retry-After передаётся дальше.
-   - **Изоляция сбоя.** Сбой тикетов Atera не трогает ни соседний ресурс (алерты сохраняют свою причину), ни другую connection (инциденты Huntress остаются OK); connection остаётся ACTIVE.
-   - **Ни одного полного чтения** — ERROR, а не пустой список.
-   - **Перекрывающиеся чтения** одного ресурса, в том числе первые: текущим становится исход позже начатого, старое чтение ничего не перезаписывает (B3).
-   - **Полнота чтения:** несогласованные страницы дают TRANSIENT-ошибку `UPSTREAM_PAGINATION_INCONSISTENT`, прежний snapshot остаётся (B4).
-   - **Устаревание по возрасту:** alert и incident — 15 минут, ticket — 30 минут.
-   - **`COMPLETE`** — только когда все ожидаемые ресурсы OK.
+| Подключение | Ресурс | Статус | Код / данные |
+|---|---|---|---|
+| `demo-atera-connection` (FIXTURE seed) | alert, ticket | MISSING | `SYNC_NOT_CONFIGURED` |
+| `demo-huntress-connection` (FIXTURE seed) | incident | MISSING | `SYNC_NOT_CONFIGURED` |
+| `gasta-atera` | alert | MISSING | `UPSTREAM_TENANT_FILTER_UNAVAILABLE` (решение владельца) |
+| `gasta-atera` | ticket | OK | 2 тикета |
+| `gasta-huntress` | incident | OK | 2 инцидента |
 
-7. **Webhook metadata не принимается за identity.** Webhook и HTTP-маршрута приёма событий в Stage 1 нет; API с Checkpoint A не менялся. Событие принимается только через выданный `ResolvedConnection` и с правом `events:ingest`. Workspace, client, connection и source в теле события должны с ним совпасть, иначе `EVENT_SCOPE_MISMATCH`.
+- `completeness: PARTIAL`.
+- В контексте нет `env://`, `secretRef`, токенов, тестовых credentials и текста аналитика.
+
+### Shadow Decisions: applied и non-applied runs (`3-worker-pass.json`, `6-telemetry.json`)
+
+Конфигурация `decisions-2026-10-07.1`, режим shadow, OpenAI-адаптер поверх scripted endpoint. Модель ответила MONITOR 0.95 на оба события.
+
+| Событие | applied | provider | route | модель | input tokens | на run ссылается observation |
+|---|---|---|---|---|---|---|
+| 9001 | true | rules | HUMAN_REVIEW | — | — | да |
+| 9001 | false | openai | MONITOR | gpt-6-luna | 42 | нет |
+| 9002 | true | rules | INVESTIGATE | — | — | да |
+| 9002 | false | openai | MONITOR | gpt-6-luna | 42 | нет |
+
+- **MONITOR модели ничего не изменил.** Observation ссылается только на applied rules run. CRITICAL остался URGENT/HUMAN_REVIEW по urgency floor. У 9002 маршрут observation — HUMAN_REVIEW, потому что устройство не сопоставлено; собственный маршрут applied run (INVESTIGATE) хранится в run.
+- **Вход Decisions — только** `{"source":"huntress","kind":"SECURITY_INCIDENT","sourceSeverity":…}`: без имён, hostname, summary и ID.
+- **Telemetry:**
+  - runs: openai OK 2, rules OK 2;
+  - input tokens: 84, по 42 на вызов;
+  - согласие с baseline: HUMAN_REVIEW→MONITOR 1, INVESTIGATE→MONITOR 1 — это согласие с baseline, не точность;
+  - shadow jobs: DONE 2; отказов guard нет.
+
+### Read tools с audit (`5-read-tools.json`)
+
+`POST /tools/execute` от `demo-technician` (`context:read`):
+
+| requestId | Инструмент | HTTP | ToolExecution | Audit |
+|---|---|---|---|---|
+| req-e2e-0001 | `huntress.incident.get` {9001, `connectionId: gasta-huntress`} | 201 | SUCCEEDED | started, succeeded |
+| req-e2e-0002 | `huntress.incident.list` без `connectionId` (у клиента два Huntress-подключения) | 409 | FAILED `AMBIGUOUS_CONNECTION` | started, failed |
+| req-e2e-0003 | `atera.ticket.list` {`connectionId: gasta-atera`} | 201 | SUCCEEDED, 2 тикета | started, succeeded |
+| req-e2e-0004 | `atlas.observation.list` {severity CRITICAL, HIGH} | 201 | SUCCEEDED, 9001 | started, succeeded |
+| req-e2e-0005 | `atera.ticket.create` | 403 | — | `tool.denied` UNKNOWN_TOOL |
+| req-e2e-0006 | `atera.ticket.list` для `demo-other` | 403 | — | workspace security audit `tool.scope_denied`, `requestedClientId demo-other`; audit `demo-other` пуст |
+
+`X-Atlas-Correlation-Id` = requestId; `X-Atlas-Tool-Execution-Id` = ID строки ToolExecution.
+
+### Операторский путь (задание 1.10)
+
+- **`bind` → `live-read` через mock vendor:**
+  - activation ACTIVE, health OK;
+  - identities: Huntress 2 / 1 candidate, Atera 1 / 1 candidate;
+  - ресурсы: Huntress incident OK (2 события в inbox), Atera ticket OK, alert UNAVAILABLE;
+  - все запросы — GET с фильтром tenant; алерты Atera не запрашивались.
+- **Отказ health check активного подключения (401):** `UPSTREAM_AUTH_FAILED`, проверка заканчивается после одного запроса.
+- **Ревью и разбор:**
+  - очередь ревью и подтверждение;
+  - проход worker;
+  - triage: acknowledge, затем resolve с ожидаемым статусом; устаревшее ожидание → `OBSERVATION_STATUS_CHANGED`;
+  - telemetry.
+- **Отказы:**
+  - чужой клиент, неверный ID клиента, нет права → `ops.scope_denied` в workspace security audit;
+  - URL владельца, чужой токен → exit 2.
+- **CLI как процесс** (`tests/pg/ops-cli.pg.test.ts`): dead letter виден в `inbox`, после исправления `requeue` и проход его завершают; `worker-once` в режиме `rules` работает без ключа.
+
+### Fixture-тесты, PGlite, PostgreSQL 17 и live: что доказывает каждый слой
+
+| Слой | Доказывает | Не доказывает |
+|---|---|---|
+| Fixture/unit (67 тестов, Node) | Контракты, правила и reference pipeline, политику и схемы параметров gateway, конфигурацию и guard Decisions, разбор DTO по синтетическим ответам вендоров, аргументы CLI | Ни БД, ни транзакций, ни конкуренции |
+| PGlite (13 тестов) | SQL всех 12 миграций: ограничения, триггеры, RLS-политики, путь обновления, guard runtime-роли — in-process через `SET ROLE` | Одно соединение, не сервер: нет login-роли, пулов, конкуренции, пути Prisma Client |
+| PostgreSQL 17 (108 тестов, `db:check:pg17`, drift) | Настоящий сервер и документированная установка; Prisma Client через ограниченную login-роль; два пула, `SKIP LOCKED`, advisory locks, generic plans; собранные API и CLI как процессы | Вендоры — mock transport с синтетическими ответами по документированным контрактам, Decisions — scripted fetch; ничего из реального аккаунта |
+| Live-read validation | Реальные фильтры tenant, права ключей, пагинация, rate limits, контракт Atera на аккаунте, реальный идентификатор модели и `usage` | **Не выполнялась** |
 
 ## Changes
 
-**Схема.** Только новые миграции, замороженные не тронуты.
-- `202610071700_stage1_mapping_workflow`:
-  - словарь статусов Connection;
-  - автор и время привязки, неизменяемые триггером;
-  - `resourceType`/`entityKind` в `EntityLink` с составными FK и CHECK совместимости;
-  - статус `QUARANTINED` с указателем внутри scope;
-  - права `mapping:review`, `connections:manage`;
-  - preflight.
-- `202610071800_stage1_resource_snapshots`:
-  - `ResourceSnapshot`: не больше 100 элементов плюс общее число у источника, FK на `SyncState`, RLS;
-  - словарь `SyncState`.
-- `202610071900_stage1_event_inbox`:
-  - колонки inbox в `RawEvent`: `nextAttemptAt`, lease, `preparedDecision`;
-  - CHECK на lease, на завершённые события и на коды ошибок;
-  - индекс ожидающих событий;
-  - словари `DecisionRun` (status, provider) с preflight.
-- `202610072000_stage1_claim_token_sync_order` (ревью):
-  - `RawEvent.claimToken` и CHECK тройки lease;
-  - `SyncState.attemptSeq`/`recordedSeq` с CHECK порядка.
+**1.7 Decision Layer** (`10f2578`):
+- Миграция `202610072200_stage1_decision_layer`: `DecisionRun.configVersion`; таблица `ShadowJob` (RLS, lease с claim token, по одной на событие).
+- Версионируемый `config/decisions.json` со строгой проверкой. Override из окружения помечает версию суффиксом `-env`.
+- Shadow — отдельная durable job; worker в shadow-режиме провайдер не вызывает.
+- `DecisionGuard`: circuit breaker и бюджет в минуту. В advisory при открытом circuit или исчерпанном бюджете событие явно переходит в rules.
+- Telemetry; `usage.input_tokens`, если он есть.
 
-**Сервисы.**
-- `packages/connections/connections.ts` — привязка и выдача `ResolvedConnection`.
-- `packages/graph/mapping.ts` — регистрация, кандидаты, confirm/quarantine/reject, очередь review.
-- `packages/sync/snapshots.ts`, `activation.ts`, `sync-state.ts` — snapshot и события в одной транзакции, порядок попыток, активация.
-- `packages/graph/context-mapper.ts` (`mapResources`) — статусы `ResourceView`.
-- `packages/events/inbox.ts`, `worker.ts`, `decision.ts`, `identity.ts` — durable inbox и worker. Логика маршрута общая с in-memory reference (`pipeline.ts`).
+**1.8 Observations and context** (`7c9e8d6`):
+- Миграция `202610072300_stage1_observation_lifecycle`:
+  - право `observations:triage`;
+  - автор и время acknowledge;
+  - `supersededById`;
+  - триггер допустимых переходов и неизменяемости evidence.
+- Triage с условием по ожидаемому статусу.
+- Жизненный цикл ревизий под advisory lock:
+  - urgent evidence не закрывается не-urgent ревизией;
+  - поздняя ревизия сразу superseded;
+  - конфликты остаются в ревью.
+- Страницы observations: фильтры status/severity и keyset cursor, привязанный к фильтрам. Контекст показывает OPEN и ACKNOWLEDGED.
 
-**Коннекторы.** `connectors/http.ts`, `dto.ts`, `huntress/*`, `atera/*`, включая проверку согласованности страниц; источники контрактов и маппинги — в `connectors/CONTRACTS.md`.
+**1.9 Tool Gateway** (`9295f67`):
+- Миграция `202610080000_stage1_tool_gateway`: `ToolExecution` как реестр выполнений — проверки, триггер, только read.
+- Детерминированная политика: scope → имя → реестр → read-only → право.
+- Строгие схемы параметров, 7 read tools.
+- Выполнение пишется вместе со строками audit.
+- DTO v1 с `requestId`; заголовки корреляции; CONFLICT → 409.
 
-**API и seed.** API не менялся. В seed синтетические связи получили `resourceType` (1.4).
+**1.10 Acceptance** (`1a95845`):
+- **Операторский CLI** `npm run ops -- <команда>` (`scripts/ops.ts`, `packages/ops/`):
+  - `bind`, `live-read`;
+  - `mapping`, `confirm-link`, `reject-link`;
+  - `inbox`, `requeue`;
+  - `triage`, `telemetry`;
+  - `worker-once`, `decisions-smoke`.
 
-**Тестовая поддержка.** `tests/support/mock-http.ts`, `vendor-routes.ts` (mock вендора с проверкой tenant-фильтра), `events-fixtures.ts`.
+  Работает только через runtime-роль, актор определяется токеном. Отказы по scope и правам пишутся в workspace security audit. Вывод — JSON; exit-коды 0, 1, 2.
+- **Seed** создаёт синтетического оператора с `ATLAS_OPERATOR_TOKEN`.
+- **Тесты:** E2E, тест CLI-процесса, unit-тесты CLI.
+- **Документация:**
+  - `docs/RUNBOOK.md`;
+  - матрица приёмки «gate → тест → окружение» в docs/06;
+  - датированный `verification/RESULTS.md` с evidence.
+- **Миграций в 1.10 нет.**
+- **Исправлено по находкам E2E:**
+  - **Read tools брали первую попавшуюся строку.** Если у клиента несколько подключений одного источника (FIXTURE seed рядом с живым), инструмент возвращал первую строку, а контекст перечислял подключения в физическом порядке. Теперь:
+    - `connectionId` выбирает подключение, без него — `AMBIGUOUS_CONNECTION` (409);
+    - сущности, связи и подключения идут в порядке ID;
+    - версии инструментов остаются `1`, релиза не было.
+  - **Triage принимал унаследованные имена действий.** `toString` проходил проверку и падал TypeError; теперь — `INVALID_TRIAGE_ACTION`.
 
 ## Verification
 
-Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Полный прогон таблицы, включая `npm ci`, выполнен 2026-10-07 на дереве `ce466ae` (отчёт `91fda0d` поверх него кода не меняет). Вторая редакция отчёта проверялась так же, на `f7ae5fb`; первая — на `20cd453`/`db872de`.
+Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Полный прогон начат с `rm -rf node_modules dist && npm ci` на дереве `1a95845`. Подробности — `verification/RESULTS.md`.
 
 | Command/scenario | Environment | Actual result |
 |---|---|---|
-| `npm ci` | локально | OK. Lockfile с Checkpoint A не менялся. `npm audit`: 10 находок (2 moderate, 8 high), те же, что в Checkpoint A |
-| `npm run db:generate`, `npm run schema:validate` | локально | Prisma Client 6.19.0 сгенерирован, схема валидна |
-| `npm test` | unit + PGlite | **60/60 pass**, включая SQL-инварианты inbox (тройка lease с токеном), порядка попыток и `PENDING`, отображение `PENDING` и бюджет контекста |
+| `npm ci`, `db:generate`, `schema:validate` | локально | OK. Lockfile не менялся; `npm audit` — те же 10 находок (2 moderate, 8 high) |
+| `npm test` | unit + fixture + PGlite | **80/80** (67 unit/fixture, 13 PGlite) |
 | `npm run typecheck`, `npm run api:build` | локально | pass |
-| `npm run api:smoke`, `npm run demo` | fixture | PASS, поведение прежнее |
-| `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 9 миграций по порядку; структурные инварианты, в том числе mapping, snapshot (с порядком попыток и `PENDING`) и inbox (с токеном захвата); RLS через login-роль; lookup-политики identities; RLS snapshot; guard runtime-роли; переиспользование соединений пула |
-| `npm run test:pg` | PostgreSQL 17.11, throwaway-БД на файл | **75/75 pass**. Новые с Checkpoint A: connections 5, mapping 6, adapters 4, sync 4, inbox 4, worker 5, worker-routing 6; по ревью — worker-recovery 6 (под `force_generic_plan`), sync-order 10, pagination 3. Прежние 22 тоже проходят |
-| `npm run db:check:drift` | PostgreSQL 17.11, shadow-БД | PASS, diff пустой |
-| Dev-БД: `db:deploy` | PostgreSQL 17.11, persistent volume | Миграции 1700–2100 применены по ходу работ. `assertRuntimeRole` принимает `atlas_app` и отклоняет owner (`RUNTIME_ROLE_BYPASSES_RLS`). Inbox view, проход захвата и контекст через runtime-роль работают; в dev-БД событий 0, seed их не создаёт |
-| Воспроизведение до исправления | PostgreSQL 17.11, неисправленный код | B3: контекст `OK`, пустой список, старые `asOf` и `lastSuccessAt`; поздний старый сбой — исключение CHECK 23514. B3 для первых чтений (код `f7ae5fb`): все пять новых тестов падают — показан старый пустой snapshot, скрыта более новая ошибка, отброшен более новый успех. B4: случай ревьюера и повтор инцидента Huntress — `OK`. B1/B2 воспроизвёл ревьюер; их тесты используют новый API захвата и подтверждены мутациями |
-| Проба generic-плана | PostgreSQL 17.11, throwaway-БД, `force_generic_plan` | Старая форма захвата `IN (…)`: пакет 1 взял 2 события. Форма `MATERIALIZED` CTE: 1 событие, проход dead-letter с пакетом 1 — одно событие |
-| Остатки тестовых прогонов | PostgreSQL 17.11 | Throwaway-БД и ролей не осталось: только `atlas` и `postgres`, роли `atlas` и `atlas_app` |
-| Мутационные проверки (код временно ломался, затем восстанавливался) | PGlite / PostgreSQL 17 | Все пойманы. 1.4: ослабленная проверка неоднозначности; снятая проверка конфликта при подтверждении; без блокировки строки и без unique — гонка. 1.5: снятый tenant-фильтр; пропуск чужой записи; перезапись snapshot при сбое; игнор возраста snapshot. 1.6: решение не переиспользуется; без SKIP LOCKED и lease; без retry; карантин игнорируется; конфликт принят за дубликат; точка сбоя после commit; сбой на странице 2 молча проглочен; ERROR записан на все ресурсы connection. Ревью B: блокировка без токена; запись сбоя без токена; без dead-letter исчерпанных; захват без фильтра лимита попыток; захват через `IN (…)` (4 из 4 прогонов); все исходы записываются без порядка попыток; без итоговой проверки числа; без проверки повторов ID (Atera, Huntress); итоги могут меняться между страницами. Повторное ревью: без номера попытки; без защиты по времени; без отображения `PENDING`. Исключение: dead-letter через `IN (…)` — пойман в одном прогоне из двух |
+| `npm run api:smoke`, `npm run demo` | fixture | PASS |
+| `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 12 миграций по порядку; инварианты mapping, snapshots, inbox, decision layer, lifecycle, ledger; RLS через login-роль; guard; переиспользование соединений пула |
+| `npm run test:pg` | PostgreSQL 17.11, throwaway-БД на файл | **108/108** в 20 файлах. С Checkpoint B добавлены: shadow-jobs, decision-advisory, observation-lifecycle, tool-gateway (1.7–1.9), e2e — 9, ops-cli — 4. Прежние тесты проходят |
+| E2E с evidence | PostgreSQL 17.11 | 9/9, `verification/e2e/*.json` |
+| `npm run db:check:drift` | PostgreSQL 17.11 | PASS, diff пустой |
+| Dev-БД | PostgreSQL 17.11, persistent volume | См. список после таблицы |
+| Остатки прогонов | PostgreSQL 17.11 | Throwaway-БД, ролей и процессов не осталось |
+| Мутационные проверки | PGlite / PostgreSQL 17 | Все пойманы (код временно ломался, затем восстанавливался). См. список после таблицы |
 | `git diff --check` | локально | чисто |
 
-Покрытие проверок задания 1.6 из docs/05:
-- два worker;
-- повтор ревизии;
-- рестарт;
-- сбой на второй странице;
-- видимый dead letter;
-- карантинная связь с сохранённым CRITICAL;
-- retry финального commit без второго вызова провайдера и без второго applied run;
-- CRITICAL-повтор с другим содержанием в urgent review.
+Dev-БД:
+- `db:deploy`: новых миграций нет;
+- seed с обоими токенами;
+- `ops`: `mapping`, `inbox`, `telemetry`, `worker-once` (rules) — exit 0;
+- shadow без ключа — `OPENAI_KEY_REQUIRED`; URL владельца — `RUNTIME_ROLE_BYPASSES_RLS`; токен техника на `mapping` — `PERMISSION_DENIED`;
+- API: overview 200 (PARTIAL, три MISSING-ресурса fixture), оператор на `/audit/security` — 403, старт через владельца отклонён.
 
-Все сценарии — тесты в `tests/pg/inbox|worker|worker-routing|worker-recovery|sync|sync-order|pagination.pg.test.ts`.
+Мутационные проверки по заданиям:
+- **1.7:**
+  - нет shadow job в финальной транзакции;
+  - advisory игнорирует guard;
+  - повторы shadow сверх бюджета;
+  - shadow run без проверки захвата;
+  - нет input tokens; нет `configVersion`;
+  - отказ модели считается outage;
+  - override не помечен.
+- **1.8:**
+  - контекст показывает закрытые;
+  - urgent закрыт не-urgent ревизией;
+  - поздняя ревизия не superseded;
+  - нет блокировки объекта источника;
+  - конфликты superseded;
+  - keyset теряет равные;
+  - cursor не привязан к фильтрам;
+  - triage без ожидаемого статуса;
+  - evidence не защищено.
+- **1.9:**
+  - write tool проходит политику;
+  - право до scope;
+  - параметры не проверяются;
+  - выполнение не в реестре;
+  - hash без параметров;
+  - get возвращает весь список;
+  - реестр принимает write;
+  - любая версия DTO;
+  - заголовок корреляции после проверки доступа.
+- **1.10 — 16 из 16:**
+  - неоднозначность не отклоняется; `connectionId` игнорируется;
+  - нет security audit отказа CLI; права CLI не проверяются;
+  - повтор флагов; унаследованные имена команд;
+  - вердикт live-read без ресурсов; smoke всегда OK;
+  - унаследованные действия triage;
+  - нет проверки runtime-роли; провал проверки → exit 0;
+  - shadow-проход со временем начала;
+  - нет health-gate и activation-gate;
+  - подключения в физическом порядке;
+  - seed игнорирует токен оператора.
+
+  Ловля мутации «физический порядок» зависит от порядка строк в прогоне, PostgreSQL его не гарантирует.
 
 ## Remaining gates / blockers
 
-Блокеров для ревью нет; B1, B2 и B4 закрыты повторным ревью, оставшаяся ветка B3 исправлена в `ce466ae` и ждёт проверки. Не выполнено:
-- **Live read-only smoke Atera/Huntress и live Decisions (OpenAI).** Нет credentials и сопоставления аккаунтов; по заданию это вне checkpoint и требует отдельного указания.
-- **Контракт Atera с аккаунтом не сверен.** Документация вендора закрыта логином. Сверить по чек-листу `connectors/CONTRACTS.md` до активации live-подключения Atera.
-- **Алерты Atera недоступны** по решению владельца. При доступе к аккаунту проверить, можно ли читать их по клиенту: фильтр, вебхук или endpoint по агенту.
-- **События только из инцидентов Huntress.** Тикеты Atera — только snapshot. Закрытие инцидента событием не является. Жизненный цикл observation по ревизиям одного инцидента — задание 1.8.
-- **Нет процесса-исполнителя.** `syncConnection` и `processPending` — функции. Запуска по расписанию (интервал, обход клиентов, graceful shutdown) пока нет; это нужно для RUNBOOK (1.10) или развёртывания.
-- **Shadow-вызов выполняется в том же проходе worker.** Он идёт после фиксации baseline и не блокирует его, но задерживает следующее событие пакета. Отдельная shadow-job, timeout, бюджет и circuit-breaker — задание 1.7.
-- **Lease во время обработки не продлевается.**
-  - Если медленный провайдер переживёт lease, событие возьмёт другой worker. Устаревший получит `CLAIM_LOST` и ничего не изменит (B1), но возможен лишний вызов провайдера.
-  - Истёкший lease расходует попытку. Если lease короче времени обработки, событие может уйти в `ATTEMPTS_EXHAUSTED`: это видно в inbox и исправляется requeue.
-- **Объём чтения Huntress ограничен:** 20 страниц по 100. Больше — `UPSTREAM_TOO_MANY_PAGES` (ERROR). Snapshot хранит не больше 100 элементов: сначала самые серьёзные, плюс общее число у источника.
-- **Нет retention для `RawEvent`.** У runtime-роли нет DELETE, inbox растёт.
-- **HTTP-маршрутов** для очереди сопоставления, привязки и inbox/requeue нет — только сервисы и аудит.
-- **Node 24 ровно и Windows** не запускались.
-- **`npm audit`, 10 находок** в закреплённых NestJS 11.1.6 и Prisma 6.19.0; нужен отдельный решённый patch-bump.
-- **Перенесено из Checkpoint A:**
-  - cursor и фильтры `GET /clients/:id/observations` (1.8);
-  - администрирование identities;
-  - ошибки аутентификации не попадают в security audit;
-  - `ToolExecution` (1.9);
-  - `MANIFEST.json` и `verification/RESULTS.md` описывают импортированный пакет, а не ветку.
+**Блокер live-read gate (docs/06) — нет credentials.** Нужны:
+- read-only API-ключ Atera и customer ID;
+- пара key:secret Huntress и organization ID;
+- `OPENAI_API_KEY` для Decisions smoke.
+
+Всё, что можно сделать без них, сделано: тот же код проверен с mock transport, процедура и команды готовы (`docs/RUNBOOK.md` §5). До первого live-чтения Atera нужна сверка контракта с аккаунтом по чек-листу `connectors/CONTRACTS.md`; она входит в этот же gate. Live account setup и deployment без отдельного указания не начинаю.
+
+**Не production-ready** — открыто и названо:
+- **Нет планировщика и долгоживущего worker.** `worker-once` запускается вручную или внешним таймером.
+- **Lease во время обработки не продлевается.** Медленный провайдер может привести к лишнему вызову: устаревший worker получит `CLAIM_LOST`. Истёкший lease тратит попытку.
+- **Нет vault backend (`vault://`) и provisioning акторов и токенов.** Есть только синтетические акторы seed.
+- **Нет HTTP-маршрутов** для привязки, ревью сопоставлений, inbox/requeue и triage — только CLI и сервисы.
+- **Ошибки аутентификации (401) не пишутся в security audit.**
+- **Нет retention `RawEvent`:** у runtime-роли нет DELETE.
+- **Объём чтения ограничен:** Huntress 20×100, Atera 40×50, snapshot ≤ 100 элементов.
+- **Алерты Atera недоступны** по решению владельца.
+- **`npm audit`: 10 находок** в закреплённых NestJS 11.1.6 и Prisma 6.19.0. Нужен отдельный решённый bump до production.
+- **Не запускались:** Node 24, Linux, Windows; CI нет. Точность классификатора, порог, задержка и цена live-провайдера не измерены.
+- **`MANIFEST.json` описывает импортированный пакет.** Ветку идентифицирует commit.
 
 ## Decisions and scope
 
-1. **Алерты Atera не читаются** (решение владельца, вариант 1, `153e56a`). Чтение всех алертов MSP-аккаунта с раскладкой по клиентам не делалось.
-2. **«Incremental sync» в Stage 1 устроен так:** полное, ограниченное по объёму чтение открытого набора инцидентов плюс durable dedup. Курсора по времени нет. События пишутся атомарно со snapshot, поэтому чтение, упавшее на середине, не оставляет ни snapshot, ни событий.
-3. **Outbox не используется:** в Stage 1 нет исходящих действий.
-4. **Попытка считается при захвате, и лимит действует на любые попытки.** Захват с истёкшим lease — израсходованная попытка. После `maxAttempts` событие уходит в DEAD_LETTER (`ATTEMPTS_EXHAUSTED`) при следующем захвате, а не исключается молча (B2).
-5. **Неизвестные ошибки** уходят в DEAD_LETTER сразу, как требует AGENTS.md: PERMANENT/unknown → dead-letter.
-6. **Shadow AI-run пишется после финальной транзакции**, best effort; до задания 1.7 отдельной job нет.
-7. **Значения по умолчанию** (настраиваются): lease 60 с, `maxAttempts` 3, пакет 10, backoff 30 с·2^(n−1), но не больше 15 минут.
-8. **Решение и маршрут вычисляет общий `packages/events/decision.ts`.** Его используют и in-memory reference, и worker, так что расхождения правил нет.
-9. **HTTP-маршруты сопоставления и inbox не добавлены:** в спецификации Stage 1 их нет.
-10. **Владение захватом проверяется токеном, а не `leaseOwner`:** workerId может повториться после рестарта, токен — нет (B1).
-11. **Порядок синхронизаций — номер попытки в `SyncState`, а не сериализация.** Чтения могут идти параллельно; номер выдаётся атомарно до чтения, и для первого чтения тоже (строка `PENDING`); записывается исход позже начатого, старое чтение сохраняет только события (B3). Следствие: если более поздняя попытка завершилась ошибкой раньше, чем старая успешная, состояние — эта ошибка, а старый полный набор snapshot не заменяет; следующий sync обновит ресурс.
-12. **Несогласованная пагинация — TRANSIENT.** Коллекция могла измениться во время обхода; следующий sync прочитает её снова, а прежний snapshot пока виден как STALE (B4).
-
-**Scope.**
-- **Ничего лишнего не добавлено:** нет write-tools и записей к вендорам (только GET), нет UI, Agents/Responses-оркестрации, векторной и графовой БД, развёртывания и изменений аккаунтов.
-- **Что уходит в Decisions.** Провайдер OpenAI из пакета отправляет только `source`, `kind`, `sourceSeverity` и `diskPercent`. Summary, идентификаторы, имена и контакты не уходят.
-- **Секреты.** В БД только `secretRef`; тестовые секреты mock-вендора живут в памяти теста; `.env` в git не попал.
+1. **Операторский CLI** вместо HTTP-маршрутов администрирования. Без него RUNBOOK и live-gate нельзя выполнить. CLI — тонкая обёртка над уже проверенными сервисами, со своей границей: runtime-роль, токен, security audit отказов. UI и новых HTTP-маршрутов нет.
+2. **`connectionId` у source-инструментов и отказ при неоднозначности** — исправление дефекта 1.9, найденного E2E. Версии инструментов остаются `1`, релиза не было.
+3. **Синтетический оператор в seed.** Seed — одна из двух разрешённых операций владельца, и создание актора там не нарушает правило «владелец — только миграции и seed».
+4. **E2E пишет evidence только при `ATLAS_E2E_EVIDENCE_DIR`.** Обычный прогон тестов файлов не создаёт.
+5. **Scope:**
+   - нет write-actions (транспорт адаптеров допускает только GET), UI, Agents/Responses-оркестрации, векторной и графовой БД;
+   - нет deployment и изменений аккаунтов;
+   - в Decisions уходят только `source`, `kind`, `sourceSeverity` (и `diskPercent`);
+   - в БД только `secretRef`; `.env` в git не попадает;
+   - зависимости закреплены, Prisma 6.19.
 
 ## Next task
 
-**После повторного ревью — задание 1.7, Decision Layer.** Нужно:
-- rules baseline, fixture и OpenAI shadow как **отдельная job**: baseline фиксируется до результата AI, а worker не ждёт shadow-вызова;
-- `DecisionConfig` из versioned config; модель и allowlist ответов — из конфигурации;
-- `MODEL_MISMATCH` с requested/response model в DecisionRun и метриках;
-- advisory-сбой → `HUMAN_REVIEW`;
-- переключение в `rules` при outage (circuit-breaker);
-- telemetry, budget и retry.
+**Ревью Checkpoint C.** Дальше, при наличии credentials и отдельного указания, — live-read gate по `docs/RUNBOOK.md` §5:
+1. Чек-лист Atera в `connectors/CONTRACTS.md`.
+2. `npm run ops -- bind` для обоих tenant.
+3. `live-read` с секретом только в окружении команды.
+4. Ревью сопоставлений.
+5. `worker-once`.
+6. `decisions-smoke`.
+7. Результаты — в раздел live `verification/RESULTS.md`: статусы, счётчики, коды; без credentials и tenant ID.
 
-Проверки (docs/05): timeout, refusal, дрейф схемы ответа, неизвестная модель, urgency floor; один applied run на событие; CRITICAL baseline доступен, пока shadow-вызов не завершён.
-
-Файлы: `packages/events/decision.ts`, `packages/events/worker.ts` (`runShadow`, `processClaimed`), `packages/decisions/provider.ts`, `packages/decisions/openai.ts`, `docs/04_DECISION_LAYER.md`, `tests/pg/worker-routing.pg.test.ts`.
-
-Старт:
-1. Прочитать docs/04 и этот отчёт.
-2. Вынести shadow из `processClaimed` в отдельный проход по событиям с завершённым baseline и без shadow-run: claim с lease, как у inbox.
-3. Добавить тест: медленный shadow-провайдер не задерживает обработку следующего CRITICAL-события.
+Файлы: `docs/RUNBOOK.md`, `scripts/ops.ts`, `packages/ops/commands.ts`, `connectors/CONTRACTS.md`.
