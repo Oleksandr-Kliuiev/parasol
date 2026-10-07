@@ -11,7 +11,8 @@ export type EntityKind = 'PERSON' | 'DEVICE';
 /** Vendor-neutral external resource types. Adapters map vendor objects onto these names; identity always includes the type. */
 export type ResourceType = 'customer' | 'organization' | 'agent' | 'contact' | 'alert' | 'ticket' | 'incident';
 export type DecisionMode = 'fixture' | 'rules' | 'shadow' | 'advisory';
-export type LinkStatus = 'CONFIRMED' | 'CANDIDATE' | 'REJECTED';
+/** QUARANTINED: a confirmation that conflicted with an existing confirmed link; kept for review, never resolved. */
+export type LinkStatus = 'CONFIRMED' | 'CANDIDATE' | 'REJECTED' | 'QUARANTINED';
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Errors. The kind decides what the durable pipeline does after an event is stored:

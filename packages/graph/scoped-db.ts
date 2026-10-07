@@ -27,6 +27,17 @@ export async function withScope<T>(db: PrismaClient, actor: Actor, clientIds: st
   });
 }
 
+/**
+ * Target of a unique violation (Prisma P2002) as a comma-separated field or constraint list, or null for any other error.
+ * Lets a service turn a lost race or a duplicate binding into a decided outcome instead of an unexpected error.
+ */
+export function uniqueViolation(error: unknown): string | null {
+  const e = error as { code?: unknown; meta?: { target?: unknown } } | null;
+  if (!e || e.code !== 'P2002') return null;
+  const target = e.meta?.target;
+  return Array.isArray(target) ? target.join(',') : String(target ?? '');
+}
+
 /** Same transaction discipline at workspace level: no client in scope (workspaceContext). Used for the security audit. */
 export async function withWorkspaceScope<T>(db: PrismaClient, actor: Actor,
   fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {

@@ -8,7 +8,9 @@
  * apart from the literal text `ghost\u0000client` (stored as `ghost\\u0000client`). Values are escaped once, when written.
  */
 export const auditMetadataAllowlist: readonly string[] = [
-  'observationId', 'eventKey', 'conflictOfEventKey', 'route', 'priority', 'provider', 'reasonCodes', 'tool', 'toolVersion', 'inboxStatus', 'safeErrorCode', 'attempts', 'decisionRunId'
+  'observationId', 'eventKey', 'conflictOfEventKey', 'route', 'priority', 'provider', 'reasonCodes', 'tool', 'toolVersion', 'inboxStatus', 'safeErrorCode', 'attempts', 'decisionRunId',
+  // Mapping workflow (task 1.4): Atlas row identifiers only. Vendor IDs (externalId, externalTenantId) never enter the audit.
+  'linkId', 'conflictsWithLinkId', 'linkStatus', 'method', 'externalEntityId', 'connectionId', 'system'
 ];
 export const AUDIT_TEXT_LIMIT = 200;
 

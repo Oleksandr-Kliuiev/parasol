@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
-import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants } from './sql-invariants.ts';
+import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants, checkMappingStructure } from './sql-invariants.ts';
 import type { SqlRunner } from './sql-invariants.ts';
-import { migrationNames, migrationsAfter, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
+import { migrationNames, migrationsAfter, migrationsThrough, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
 
 // PGlite embeds the PostgreSQL 17 engine in-process. It verifies the SQL of both migrations and the policies, but it is
 // not a standalone PostgreSQL 17 server with connection pooling: scripts/pg17-check.ts covers that against a real server.
@@ -104,6 +104,42 @@ test('identities: token visible only for its own digest, actor and memberships o
     await db.exec(confinedRole);
     await checkIdentityRlsInvariants(owner, asConfinedRole(db), { label: 'PGlite' });
   } finally { await db.close(); }
+});
+
+test('mapping workflow schema: typed links (agent-DEVICE, contact-PERSON), quarantine with a same-entity conflict pointer, immutable explicit binding', async () => {
+  const db = new PGlite();
+  try {
+    await migrateAll(db);
+    const owner = runner(db);
+    await seedGraph(owner);
+    await checkStructuralInvariants(owner);
+    await checkMappingStructure(owner);
+  } finally { await db.close(); }
+});
+
+test('mapping migration on a populated database: compatible links are typed in place, an incompatible link stops the migration', async () => {
+  const before = await migrationsThrough('202610071600_stage1_actor_membership');
+  const populated = (link: string) => `
+    INSERT INTO "Workspace" VALUES ('w','Demo'); INSERT INTO "Client" VALUES ('w','c1','Client 1');
+    INSERT INTO "Entity" VALUES ('w','c1','p1','PERSON'),('w','c1','d1','DEVICE');
+    INSERT INTO "Connection" VALUES ('w','c1','a','atera','atera-demo','fixture://none','FIXTURE');
+    INSERT INTO "ExternalEntity" VALUES ('w','c1','ea','a','agent','atera-107','{}',now());
+    INSERT INTO "EntityLink" VALUES ${link};`;
+  const ok = new PGlite();
+  try {
+    for (const m of before) await ok.exec(await migrationSql(m));
+    await ok.exec(populated(`('w','c1','l1','d1','ea','CONFIRMED','FIXTURE',1,'seed',now())`));
+    for (const m of await migrationsAfter('202610071600_stage1_actor_membership')) await ok.exec(await migrationSql(m));
+    const typed = (await ok.query<{ s: string }>(`SELECT id||':'||"resourceType"||':'||"entityKind"||':'||status AS s FROM "EntityLink"`)).rows.map(r => r.s);
+    assert.deepEqual(typed, ['l1:agent:DEVICE:CONFIRMED']);
+  } finally { await ok.close(); }
+  const bad = new PGlite();
+  try {
+    for (const m of before) await bad.exec(await migrationSql(m));
+    await bad.exec(populated(`('w','c1','l-bad','p1','ea','CANDIDATE','LEGACY',NULL,NULL,NULL)`));
+    await assert.rejects((async () => { for (const m of await migrationsAfter('202610071600_stage1_actor_membership')) await bad.exec(await migrationSql(m)); })(),
+      /v1\.4 preflight: an EntityLink joins an incompatible/);
+  } finally { await bad.close(); }
 });
 
 test('upgrade of a populated v1.0 database: legacy closures are marked, not invented; legacy events get a versioned key; unknown statuses stop the migration', async () => {

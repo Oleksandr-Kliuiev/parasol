@@ -20,6 +20,15 @@ const stringFields = (value: unknown): Record<string, string> =>
   value && typeof value === 'object' && !Array.isArray(value)
     ? Object.fromEntries(Object.entries(value).filter((e): e is [string, string] => typeof e[1] === 'string')) : {};
 
+/**
+ * The client audit row of one decision, for callers that write it inside their own transaction, atomically with the
+ * change it records (mapping decisions, connection bindings). Same field list and text rules as the sinks.
+ */
+export function clientAuditData(scope: Scope, actorId: string, eventType: string, correlationId: string, metadata: Record<string, string>) {
+  return { workspaceId: scope.workspaceId, clientId: scope.clientId, id: randomUUID(), actorId, eventType: auditText(eventType),
+    correlationId: auditText(correlationId), metadata: sanitizeAuditMetadata(metadata) };
+}
+
 /** Client audit sink bound to the authenticated actor of one request. */
 export class PrismaAudit {
   readonly #db: PrismaClient; readonly #actor: Actor;
@@ -27,9 +36,7 @@ export class PrismaAudit {
   async append(scope: Scope, actorId: string, eventType: string, correlationId: string, metadata: Record<string, string>): Promise<void> {
     if (actorId !== this.#actor.id) throw new AtlasError('AUDIT_ACTOR_MISMATCH', 'PERMANENT');
     await withScope(this.#db, this.#actor, [scope.clientId], tx => tx.auditEvent.create({
-      data: { workspaceId: scope.workspaceId, clientId: scope.clientId, id: randomUUID(), actorId, eventType: auditText(eventType),
-        correlationId: auditText(correlationId), metadata: sanitizeAuditMetadata(metadata) },
-      select: { id: true } }));
+      data: clientAuditData(scope, actorId, eventType, correlationId, metadata), select: { id: true } }));
   }
 }
 

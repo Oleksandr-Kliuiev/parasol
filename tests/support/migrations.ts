@@ -19,6 +19,12 @@ export async function migrationsAfter(name: string): Promise<string[]> {
   if (!all.includes(name)) throw new Error(`unknown migration ${name}`);
   return all.filter(m => m > name);
 }
+/** Migrations up to and including `name`, in apply order (state of a database deployed before a later migration). */
+export async function migrationsThrough(name: string): Promise<string[]> {
+  const all = await migrationNames();
+  if (!all.includes(name)) throw new Error(`unknown migration ${name}`);
+  return all.filter(m => m <= name);
+}
 export function migrationSql(name: string): Promise<string> {
   return readFile(new URL(`${name}/migration.sql`, migrationsDir), 'utf8');
 }

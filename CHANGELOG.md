@@ -1,8 +1,14 @@
 # Changelog
 
-## Unreleased — Stage 1 implementation, Checkpoint A (branch `stage1/foundation`)
+## Unreleased — Stage 1 implementation (branch `stage1/foundation`)
 
-Tasks 1.1–1.3 on top of the 1.1.3 pack. Status, verification and open gates: `CHECKPOINT_REPORT.md`.
+Checkpoint A (tasks 1.1–1.3) accepted by the independent review (`REVIEW_REPORT.md`, revision 2). Status, verification and open gates of Checkpoint A: `CHECKPOINT_REPORT.md`.
+
+### Added — task 1.4 Mapping workflow
+- Migration `202610071700_stage1_mapping_workflow`: Connection status vocabulary and explicit binding provenance (`boundBy`/`boundAt`, required for ACTIVE; bound tenant and provenance immutable by trigger); `EntityLink` carries `resourceType`/`entityKind` pinned by composite FKs to the typed rows and a compatibility CHECK (agent↔DEVICE, contact↔PERSON); status `QUARANTINED` with reviewer/reason and a scoped pointer to the conflicting link of the same external object; permissions `mapping:review`, `connections:manage`. Preflight stops on unknown connection statuses or incompatible existing links.
+- `packages/connections/connections.ts`: `resolveConnection` is the only issuer of (frozen) `ResolvedConnection`s, verified by `assertResolvedConnection`; `bindConnection` records explicit client ↔ customer/organization bindings (DISABLED until activation; a tenant bound elsewhere → `TENANT_ALREADY_BOUND`, audited).
+- `packages/graph/mapping.ts`: `registerExternalEntity`, `suggestDeviceCandidate` (exact hostname inside the client; ambiguity creates nothing and is audited), `proposeLink`, `confirmLink` (first confirmation wins; a conflicting one is QUARANTINED, never lost; serialized per external object), `rejectLink` (incl. revocation), `listMappingReview`. Decisions and their client audit rows commit together; vendor IDs never enter the audit.
+- Tests: mapping schema invariants (PGlite + `pg17-check`), migration preflight on a populated database, `tests/pg/connections.pg.test.ts`, `tests/pg/mapping.pg.test.ts` (incl. concurrent confirmations on two pools).
 
 ### Added
 - Migration `202610071600_stage1_actor_membership`: `Actor`, `ClientMembership`, `ApiToken` (SHA-256 digest only) with CHECK vocabularies, workspace-carrying composite FKs and lookup-only RLS policies (`app.token_hash`, `app.actor_id`); no runtime write path. `prisma/roles.sql` revokes identity writes from the runtime role.

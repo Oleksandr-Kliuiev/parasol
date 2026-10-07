@@ -49,7 +49,7 @@ model ClientMembership {
   workspaceId String
   clientId    String
   actorId     String
-  /// Vocabulary fixed by a CHECK constraint: context:read, events:ingest.
+  /// Vocabulary fixed by a CHECK constraint: context:read, events:ingest, mapping:review, connections:manage.
   permissions String[] @default([])
   createdAt   DateTime @default(now())
   client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
@@ -82,6 +82,8 @@ model Entity {
   links       EntityLink[]
   observations Observation[]
   @@id([workspaceId, clientId, id])
+  /// Target of the typed link foreign key (migration 202610071700): a link names the kind it expects.
+  @@unique([workspaceId, clientId, id, kind], map: "Entity_typed_key")
 }
 model Person {
   workspaceId String
@@ -112,7 +114,12 @@ model Connection {
   system      String
   externalTenantId String
   secretRef   String
+  /// DISABLED | FIXTURE | ACTIVE (CHECK). Only FIXTURE and ACTIVE connections resolve for reads.
   status      String @default("DISABLED")
+  /// Explicit binding provenance: who mapped this client to the external customer/organization, and when. Required for
+  /// ACTIVE (CHECK). The bound system/tenant and, once recorded, the provenance are immutable (trigger).
+  boundBy     String?
+  boundAt     DateTime?
   client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
   entities    ExternalEntity[]
   events      RawEvent[]
@@ -133,6 +140,8 @@ model ExternalEntity {
   links       EntityLink[]
   @@id([workspaceId, clientId, id])
   @@unique([workspaceId, clientId, connectionId, resourceType, externalId])
+  /// Target of the typed link foreign key: a link names the resource type it expects.
+  @@unique([workspaceId, clientId, id, resourceType], map: "ExternalEntity_typed_key")
 }
 model EntityLink {
   workspaceId String
@@ -140,15 +149,33 @@ model EntityLink {
   id          String
   entityId    String
   externalEntityId String
+  /// Carried by the link and pinned by the typed foreign keys; compatible pairs only: agent-DEVICE, contact-PERSON (CHECK).
+  resourceType String
+  entityKind  String
+  /// CANDIDATE | CONFIRMED | REJECTED | QUARANTINED. One CONFIRMED per external entity (partial unique index).
   status      String @default("CANDIDATE")
+  /// How the link was proposed: MANUAL, HOSTNAME_EXACT, FIXTURE. A hostname or name match never confirms by itself.
   method      String
   confidence  Float?
   confirmedBy String?
   confirmedAt DateTime?
-  entity      Entity @relation(fields: [workspaceId, clientId, entityId], references: [workspaceId, clientId, id], onDelete: Restrict)
-  external    ExternalEntity @relation(fields: [workspaceId, clientId, externalEntityId], references: [workspaceId, clientId, id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+  createdBy   String?
+  /// Who decided (confirm, reject, revoke, quarantine) and when. Required for QUARANTINED (CHECK).
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  /// Code, never free text: CONFLICTS_WITH_CONFIRMED, MANUAL_REJECT, ...
+  reasonCode  String?
+  /// For a quarantined confirmation: the confirmed link of the SAME external entity it conflicts with.
+  conflictsWithLinkId String?
+  entity      Entity @relation(fields: [workspaceId, clientId, entityId, entityKind], references: [workspaceId, clientId, id, kind], onDelete: Restrict, onUpdate: Restrict, map: "EntityLink_entity_typed_fkey")
+  external    ExternalEntity @relation(fields: [workspaceId, clientId, externalEntityId, resourceType], references: [workspaceId, clientId, id, resourceType], onDelete: Restrict, onUpdate: Restrict, map: "EntityLink_external_typed_fkey")
+  conflictsWith EntityLink? @relation("EntityLinkConflict", fields: [workspaceId, clientId, externalEntityId, conflictsWithLinkId], references: [workspaceId, clientId, externalEntityId, id], onDelete: Restrict, onUpdate: Restrict, map: "EntityLink_conflictsWith_fkey")
+  conflicts   EntityLink[] @relation("EntityLinkConflict")
   @@id([workspaceId, clientId, id])
   @@unique([workspaceId, clientId, externalEntityId, entityId])
+  /// Foreign-key target of conflictsWithLinkId (same scope, same external entity).
+  @@unique([workspaceId, clientId, externalEntityId, id], map: "EntityLink_external_link_key")
 }
 model RawEvent {
   workspaceId String

@@ -13,6 +13,8 @@ Load the smallest set of files a task needs. Rules: `AGENTS.md`. Scope and plan:
 | Event pipeline (dedup, conflict, retry, dead-letter) | `packages/events/pipeline.ts` | `tests/pipeline.test.ts`, `docs/03_CONNECTORS_AND_SYNC.md` |
 | Decisions provider / shadow / advisory | `packages/decisions/provider.ts`, `packages/decisions/openai.ts` | `docs/04_DECISION_LAYER.md` |
 | Connectors / normalizers | `connectors/contracts.ts`, `connectors/<system>/normalizer.ts` | `docs/03_CONNECTORS_AND_SYNC.md` |
+| Connection binding, `ResolvedConnection` issuance | `packages/connections/connections.ts` | `tests/pg/connections.pg.test.ts`, docs/03 (Mapping) |
+| Mapping workflow (external entities, candidates, confirm/quarantine/reject, review queue) | `packages/graph/mapping.ts`, migration `202610071700_stage1_mapping_workflow` | `tests/pg/mapping.pg.test.ts`, `tests/support/graph-fixtures.ts`, docs/02 (Entity matching) |
 | Read tools / gateway | `packages/tools/gateway.ts` | `packages/audit/memory.ts` |
 | Audit (client allowlist, workspace security audit) | `packages/audit/sanitize.ts` (allowlist, escaped audit text), `packages/audit/memory.ts` (reference), `packages/audit/prisma.ts` (PostgreSQL sinks + scoped reads) | `docs/02_DATA_AND_MODULES.md` (Audit), `tests/audit-sanitize.test.ts` |
 | Authentication, actors, memberships | `packages/auth/prisma-auth.ts`, `packages/auth/token.ts`, migration `202610071600_stage1_actor_membership` | `apps/api/src/db/auth.ts` (guard, AccessPolicy) |

@@ -81,11 +81,13 @@ test('composite foreign keys reject cross-client links even for the owner, who b
   // A device of another client cannot be assigned to Kari; a Gasta device cannot be linked to another client's agent
   await assert.rejects(ownerPrisma.device.update({ where: { workspaceId_clientId_id: { workspaceId: 'demo-vardahei', clientId: 'demo-other', id: 'other-device' } },
     data: { personId: 'demo-kari' } }), (e: { code?: string }) => e.code === 'P2003');
-  await assert.rejects(pgdb.owner.query(`INSERT INTO "EntityLink" VALUES ('demo-vardahei','demo-gasta','cross-link','demo-device-07','other-ext','CANDIDATE','MANUAL',NULL,NULL,NULL)`), /foreign key/);
+  await assert.rejects(pgdb.owner.query(`INSERT INTO "EntityLink" ("workspaceId","clientId","id","entityId","externalEntityId","resourceType","entityKind","method")
+    VALUES ('demo-vardahei','demo-gasta','cross-link','demo-device-07','other-ext','agent','DEVICE','MANUAL')`), /foreign key/);
   // The same holds for the runtime role with both clients in scope
   const both: Actor = { ...actor, memberships: [...actor.memberships, { clientId: 'demo-other', permissions: ['context:read'] }] };
   await assert.rejects(withScope(runtime, both, [scope.clientId, 'demo-other'], tx => tx.entityLink.create({ data: { workspaceId: 'demo-vardahei',
-    clientId: 'demo-gasta', id: 'cross-link-2', entityId: 'demo-device-07', externalEntityId: 'other-ext', method: 'MANUAL' } })), (e: { code?: string }) => e.code === 'P2003');
+    clientId: 'demo-gasta', id: 'cross-link-2', entityId: 'demo-device-07', externalEntityId: 'other-ext', resourceType: 'agent', entityKind: 'DEVICE', method: 'MANUAL' } })),
+    (e: { code?: string }) => e.code === 'P2003');
 });
 
 test('withScope confines Prisma queries through the runtime role: no context → nothing, one client without a where clause, context ends with the transaction', async () => {

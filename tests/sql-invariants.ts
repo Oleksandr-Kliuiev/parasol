@@ -22,7 +22,7 @@ export async function seedGraph(owner: SqlRunner): Promise<void> {
     INSERT INTO "Device" VALUES ('w','c1','d1','GASTA-LT-07','p1'),('w','c2','d9','OTHER-PC',NULL);
     INSERT INTO "Connection" VALUES ('w','c1','a','atera','atera-demo','fixture://none','FIXTURE'),('w','c1','h','huntress','huntress-demo','fixture://none','FIXTURE'),('w','c2','a2','atera','atera-other','fixture://none','FIXTURE');
     INSERT INTO "ExternalEntity" VALUES ('w','c1','ea','a','agent','atera-107','{}',now()),('w','c1','eh','h','agent','huntress-207','{}',now());
-    INSERT INTO "EntityLink" VALUES ('w','c1','l1','d1','ea','CONFIRMED','FIXTURE',1,'seed',now()),('w','c1','l2','d1','eh','CONFIRMED','FIXTURE',1,'seed',now());
+    INSERT INTO "EntityLink" ("workspaceId","clientId","id","entityId","externalEntityId","resourceType","entityKind","status","method","confidence","confirmedBy","confirmedAt") VALUES ('w','c1','l1','d1','ea','agent','DEVICE','CONFIRMED','FIXTURE',1,'seed',now()),('w','c1','l2','d1','eh','agent','DEVICE','CONFIRMED','FIXTURE',1,'seed',now());
   `);
 }
 
@@ -42,7 +42,7 @@ export async function checkStructuralInvariants(owner: SqlRunner): Promise<void>
   assert.equal(graph.length, 2);
   // Scoping and links
   await rejects(owner.exec(`INSERT INTO "Device" VALUES ('w','c2','d1','Wrong scope','p1')`));
-  await rejects(owner.exec(`INSERT INTO "EntityLink" VALUES ('w','c1','l3','d2','ea','CONFIRMED','FIXTURE',1,'seed',now())`));
+  await rejects(owner.exec(`INSERT INTO "EntityLink" ("workspaceId","clientId","id","entityId","externalEntityId","resourceType","entityKind","status","method","confidence","confirmedBy","confirmedAt") VALUES ('w','c1','l3','d2','ea','agent','DEVICE','CONFIRMED','FIXTURE',1,'seed',now())`), /one_confirmed_external/);
   // Event identity: resource type is part of it; a second canonical row for the same identity is rejected; same id with another type is a different event
   await owner.exec(rawEvent('w', 'c1', 'r1', 'a', 'alert', '123', '1', 'k1', 'p1'));
   await rejects(owner.exec(rawEvent('w', 'c1', 'r2', 'a', 'alert', '123', '1', 'k2', 'p1')));
@@ -178,6 +178,9 @@ export async function checkIdentityStructure(owner: SqlRunner): Promise<void> {
   await rejects(owner.exec(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId") VALUES ('w2','cx','tech')`), /foreign key/);
   await rejects(owner.exec(`INSERT INTO "ClientMembership" ("workspaceId","clientId","actorId") VALUES ('w','cx','tech')`), /foreign key/);
   await rejects(owner.exec(`INSERT INTO "ApiToken" ("workspaceId","id","actorId","tokenHash") VALUES ('w2','t9','tech','${'9'.repeat(64)}')`), /foreign key/);
+  // Mapping permissions (migration 202610071700) belong to the vocabulary
+  await owner.exec(`UPDATE "ClientMembership" SET permissions = ARRAY['context:read','mapping:review','connections:manage'] WHERE "actorId" = 'tech'`);
+  await owner.exec(`UPDATE "ClientMembership" SET permissions = ARRAY['context:read'] WHERE "actorId" = 'tech'`);
 }
 
 /**
@@ -220,6 +223,45 @@ export async function checkIdentityRlsInvariants(owner: SqlRunner, app: SqlRunne
   assert.deepEqual(await rows(`SELECT "actorId"||'@'||"clientId"||':'||array_to_string(permissions, '+') AS s FROM "ClientMembership" ORDER BY 1`), ['other@c2:context:read', 'tech@c1:context:read']);
   assert.deepEqual(await rows(`SELECT id||':'||"actorId" AS s FROM "ApiToken" ORDER BY 1`), ['t1:tech', 't2:other']);
   assert.deepEqual(await rows(`SELECT id||':'||status AS s FROM "Actor" ORDER BY 1`), ['other:ACTIVE', 'tech:ACTIVE']);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Mapping workflow (migration 202610071700): typed links, quarantine, explicit connection binding. Owner, after seedGraph.
+// ---------------------------------------------------------------------------------------------------------------------
+const link = (id: string, entity: string, external: string, type: string, kind: string, extra = '', extraValues = '') =>
+  `INSERT INTO "EntityLink" ("workspaceId","clientId","id","entityId","externalEntityId","resourceType","entityKind","method"${extra})
+   VALUES ('w','c1','${id}','${entity}','${external}','${type}','${kind}','MANUAL'${extraValues})`;
+
+export async function checkMappingStructure(owner: SqlRunner): Promise<void> {
+  await owner.exec(`INSERT INTO "ExternalEntity" VALUES ('w','c1','ec','a','contact','atera-contact-5','{}',now())`);
+  // Typed links: only agent-DEVICE and contact-PERSON, and the claimed types must be the real ones of both rows
+  await rejects(owner.exec(link('t-bad-pair', 'p1', 'ea', 'agent', 'PERSON')), /type_compat_check|foreign key/);
+  await rejects(owner.exec(link('t-lie-ext', 'p1', 'ea', 'contact', 'PERSON')), /external_typed_fkey/);
+  await rejects(owner.exec(link('t-lie-kind', 'd2', 'ec', 'contact', 'PERSON')), /entity_typed_fkey/);
+  await owner.exec(link('t-contact', 'p1', 'ec', 'contact', 'PERSON'));
+  // A linked entity cannot change kind, a linked external object cannot change resource type underneath the link
+  await rejects(owner.exec(`UPDATE "Entity" SET kind = 'PERSON' WHERE id = 'd1'`), /foreign key/);
+  await rejects(owner.exec(`UPDATE "ExternalEntity" SET "resourceType" = 'contact' WHERE id = 'ea'`), /foreign key/);
+  // Quarantine: decided by someone, for a reason; a conflict names a link of the SAME external entity, never itself
+  await rejects(owner.exec(link('q-bare', 'd2', 'ea', 'agent', 'DEVICE', ',"status"', ",'QUARANTINED'")), /quarantine_check/);
+  await rejects(owner.exec(link('q-no-target', 'd2', 'ea', 'agent', 'DEVICE', ',"status","reviewedBy","reviewedAt","reasonCode"',
+    ",'QUARANTINED','tech',now(),'CONFLICTS_WITH_CONFIRMED'")), /quarantine_check/);
+  await rejects(owner.exec(link('q-other-ext', 'd2', 'ea', 'agent', 'DEVICE', ',"status","reviewedBy","reviewedAt","reasonCode","conflictsWithLinkId"',
+    ",'QUARANTINED','tech',now(),'CONFLICTS_WITH_CONFIRMED','l2'")), /conflictsWith_fkey/);
+  await rejects(owner.exec(link('q-self', 'd2', 'ea', 'agent', 'DEVICE', ',"status","reviewedBy","reviewedAt","reasonCode","conflictsWithLinkId"',
+    ",'QUARANTINED','tech',now(),'CONFLICTS_WITH_CONFIRMED','q-self'")), /conflict_self_check|conflictsWith_fkey/);
+  await rejects(owner.exec(link('q-free-text', 'd2', 'ea', 'agent', 'DEVICE', ',"reasonCode"', ",'customer said so'")), /reason_code_check/);
+  await owner.exec(link('q-ok', 'd2', 'ea', 'agent', 'DEVICE', ',"status","reviewedBy","reviewedAt","reasonCode","conflictsWithLinkId"',
+    ",'QUARANTINED','tech',now(),'CONFLICTS_WITH_CONFIRMED','l1'"));
+  await rejects(owner.exec(`UPDATE "EntityLink" SET status = 'CONFIRMED', "confirmedBy" = 'tech', "confirmedAt" = now() WHERE id = 'q-ok'`), /one_confirmed_external/);
+  // Connection: status vocabulary, provenance for live bindings, immutable tenant
+  await rejects(owner.exec(`UPDATE "Connection" SET status = 'LIVE' WHERE id = 'a'`), /Connection_status_check/);
+  await rejects(owner.exec(`UPDATE "Connection" SET status = 'ACTIVE' WHERE id = 'a'`), /live_binding_check/);
+  await owner.exec(`UPDATE "Connection" SET status = 'ACTIVE', "boundBy" = 'admin', "boundAt" = now() WHERE id = 'a'`);
+  await rejects(owner.exec(`UPDATE "Connection" SET "externalTenantId" = 'atera-someone-else' WHERE id = 'a'`), /binding is immutable/);
+  await rejects(owner.exec(`UPDATE "Connection" SET "boundBy" = 'someone-else' WHERE id = 'a'`), /provenance is immutable/);
+  await rejects(owner.exec(`INSERT INTO "Connection" VALUES ('w','c2','a-dup','atera','atera-demo','fixture://none','DISABLED')`), /duplicate key/);
+  await owner.exec(`UPDATE "Connection" SET status = 'DISABLED' WHERE id = 'a'`);
 }
 
 /**

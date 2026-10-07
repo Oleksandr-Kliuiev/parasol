@@ -28,11 +28,11 @@ try {
     }
     for (const link of links) {
       const key = { ...scope, id: link.connectionId };
-      await tx.connection.upsert({ where: { workspaceId_clientId_id: key }, update: {}, create: { ...key, system: link.system, externalTenantId: `${link.system}-synthetic-gasta`, secretRef: 'fixture://no-credentials', status: 'FIXTURE' } });
+      await tx.connection.upsert({ where: { workspaceId_clientId_id: key }, update: {}, create: { ...key, system: link.system, externalTenantId: `${link.system}-synthetic-gasta`, secretRef: 'fixture://no-credentials', status: 'FIXTURE', boundBy: 'demo-seeder', boundAt: new Date('2026-10-07T07:00:00Z') } });
       const externalKey = { ...scope, id: `${link.system}-external-device` };
       await tx.externalEntity.upsert({ where: { workspaceId_clientId_id: externalKey }, update: {}, create: { ...externalKey, connectionId: link.connectionId, resourceType: link.resourceType, externalId: link.externalId, attributes: { hostname: 'GASTA-LT-07' }, observedAt: new Date('2026-10-07T07:00:00Z') } });
       const linkKey = { ...scope, id: `${link.system}-confirmed-link` };
-      await tx.entityLink.upsert({ where: { workspaceId_clientId_id: linkKey }, update: {}, create: { ...linkKey, entityId: link.entityId, externalEntityId: externalKey.id, status: 'CONFIRMED', method: 'FIXTURE', confidence: 1, confirmedBy: 'demo-seeder', confirmedAt: new Date('2026-10-07T07:00:00Z') } });
+      await tx.entityLink.upsert({ where: { workspaceId_clientId_id: linkKey }, update: {}, create: { ...linkKey, entityId: link.entityId, externalEntityId: externalKey.id, resourceType: link.resourceType, entityKind: link.entityKind, status: 'CONFIRMED', method: 'FIXTURE', confidence: 1, confirmedBy: 'demo-seeder', confirmedAt: new Date('2026-10-07T07:00:00Z'), createdBy: 'demo-seeder', reviewedBy: 'demo-seeder', reviewedAt: new Date('2026-10-07T07:00:00Z') } });
     }
     // Synthetic technician with the per-client membership of fixtures/gasta.ts (task 1.3)
     await tx.actor.upsert({ where: { workspaceId_id: { workspaceId: actor.workspaceId, id: actor.id } }, update: {},

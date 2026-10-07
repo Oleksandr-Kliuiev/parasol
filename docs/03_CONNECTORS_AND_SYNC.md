@@ -19,6 +19,11 @@
 
 Уникальность внешнего объекта — connection + resourceType + externalId. Для MSP-wide credential connection хранит явный client filter: read all tenants followed by post-filter недостаточен для изоляции. Предпочитайте vendor-supported customer/organization filtering. Если его нет, изолируйте connection/job и не допускайте данные чужих клиентов в API/AI context.
 
+Реализация (задание 1.4, `packages/connections/connections.ts`):
+
+- `bindConnection` (`connections:manage` на клиенте) — явная привязка клиента к customer/organization с `boundBy`/`boundAt`; новая привязка — `DISABLED`, чтение начинается после активации с health check (1.5). Tenant принадлежит одному клиенту workspace (unique): повторная привязка → `TENANT_ALREADY_BOUND` (CONFLICT) с записью в audit, ничего не перезаписывается. В audit нет tenant ID и secretRef; secretRef — только ссылка `vault://…` (`env://`, `fixture://` локально), не credential.
+- `resolveConnection(…, 'sync' | 'read')` — единственный источник `ResolvedConnection`: scoped-чтение через runtime-роль, статус FIXTURE/ACTIVE, tenant из БД; объект заморожен. Adapter, SecretResolver и mapping-сервисы первым делом вызывают `assertResolvedConnection`: скопированный или собранный вручную объект (например, с tenant ID из запроса или AI) отклоняется `CONNECTION_NOT_RESOLVED`.
+
 ## Live resources первой версии
 
 | Atera | Huntress |
