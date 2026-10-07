@@ -2,8 +2,28 @@
 
 Date: 2026-10-07
 Checkpoint: **A** (после задания 1.3)
-Branch/commit: `stage1/foundation` @ `1fdab12` — проверенное состояние кода; этот отчёт закоммичен поверх. База: `main` @ `4d6f897` (пакет 1.1.3 без изменений, sha256 архива сверен с `SHA256SUMS`).
+Branch/commit: `stage1/foundation` @ `c4c536c` — проверенное состояние кода после исправления по ревью; эта редакция отчёта закоммичена поверх. Первая редакция отчёта проверяла `1fdab12`. База: `main` @ `4d6f897` (пакет 1.1.3 без изменений, sha256 архива сверен с `SHA256SUMS`).
 Tasks completed: 1.1 Baseline, 1.2 Database, 1.3 Client Graph/API
+Review: `REVIEW_REPORT.md` (ревью `9770c83`) — REQUEST_CHANGES из-за одной находки R1 [P2], P0/P1 нет. R1 исправлена в `c4c536c` (раздел «Review R1» ниже); нужна повторная проверка ревьюером.
+
+## Review R1 — исправлено
+
+**Находка.** NUL или одиночный UTF-16 surrogate в запрошенном client ID (путь URL или тело) или в имени инструмента: PostgreSQL отклонял строку audit, API отвечал 500, и отказ не записывался. Доступ при этом оставался закрыт, но запись об отказе можно было детерминированно обойти. Утверждение первой редакции «блокеров нет» было неверным.
+
+**Исправление:**
+- `packages/audit/sanitize.ts` (`auditText`). Все недоверенные строки audit хранятся как ограниченный экранированный текст, ≤ 200 символов, в обоих sinks. NUL, управляющие символы, DEL и одиночные surrogates записываются как `\uXXXX`, обратный слэш удваивается. Граница не разрезает ни escape, ни пару surrogates. Экранирование выполняется один раз при записи; чтение применяет только allowlist.
+- **HTTP-граница.** Client ID вне политики идентификаторов получает тот же 403, что и любой клиент вне scope, с `INVALID_SCOPE_ID` в `SecurityAuditEvent`. Проверка срабатывает до любого запроса, RLS-настройки и gateway — во всех `/clients/:id/*` и `POST /tools/execute`.
+- **Gateway.** Имя инструмента вне синтаксиса реестра → клиентский `tool.denied` с `INVALID_TOOL_NAME`. Scope проверяется раньше, поэтому чужой клиент с плохим именем инструмента остаётся scope-отказом.
+- **Без изменений.** Структурно неверное тело — по-прежнему 400 до проверки scope. Непереводимая %-последовательность в пути — 400 от Express до маршрутизации: обработчик не вызывается и клиента, которому можно отказать, нет.
+
+**Доказательства:**
+- Probe ревьюера на исправленной сборке: все шесть случаев дают 403 и ровно одну audit-запись. Сохранено, например, `ghost\u0000client` (`INVALID_SCOPE_ID`) и `unknown\ud800tool` (`INVALID_TOOL_NAME`).
+- Новые тесты:
+  - `tests/audit-sanitize.test.ts` (unit);
+  - repository-уровень PostgreSQL в `tests/pg/database.pg.test.ts`;
+  - HTTP-регрессия `tests/pg/api-input.pg.test.ts`: путь и тело, без 500, ровно одна audit-запись, ни одного чтения.
+- Добавлен и необязательный тест ревьюера: один актор с `context:read` у Gasta и только `events:ingest` у другого клиента.
+- **Негативный контроль.** Новые тесты запущены против кода до исправления: все три регрессионных теста упали. Кроме того, процесс `database.pg.test.ts` после этого завис и был остановлен вручную. Вероятная причина: Prisma не завершает запрос, когда одиночный surrogate доходит до query engine внутри интерактивной транзакции. Вывод: недоверенные строки не должны доходить до Prisma без проверки. После исправления такие строки до Prisma не доходят.
 
 ## Result
 
@@ -55,27 +75,28 @@ Tasks completed: 1.1 Baseline, 1.2 Database, 1.3 Client Graph/API
 
 ## Verification
 
-Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`). Строки с командами `npm` повторены на `1fdab12` от `npm ci`. Dev-БД, ручной smoke и мутационные проверки выполнялись по ходу 1.2–1.3. Последний коммит меняет только запуск Prisma CLI в тестовом harness и drift-скрипте; код API, seed и миграций после этих проверок не менялся.
+Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`). Строки с командами `npm` повторены на дереве `c4c536c` от `npm ci`. Dev-БД и мутационные проверки выполнялись по ходу 1.2–1.3; seed и миграции после них не менялись. Ручной smoke на dev-БД повторён на сборке `c4c536c`, после исправления R1.
 
 | Command/scenario | Environment | Actual result |
 |---|---|---|
 | `npm ci` | локально | OK. `npm audit`: 10 находок (2 moderate, 8 high) в закреплённых деревьях NestJS 11.1.6 и Prisma 6.19.0 — см. blockers |
 | `npm run db:generate`, `npm run schema:validate` | локально | Prisma Client 6.19.0 сгенерирован, схема валидна |
-| `npm test` | unit + PGlite (встроенный движок PG 17) | **44/44 pass**: 40 исходных + context budget + identities + 2 token |
+| `npm test` | unit + PGlite (встроенный движок PG 17) | **49/49 pass**: 40 исходных + context budget + identities + 2 token + 5 R1 |
 | `npm run typecheck`, `npm run api:build` | локально | pass (typecheck включает `apps/`) |
 | `npm run api:smoke`, `npm run demo` | fixture | PASS, поведение прежнее |
 | `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 4 миграции по порядку, структурные инварианты, RLS acceptance, lookup-политики identities, guard runtime-роли, переиспользование соединений пула |
-| `npm run test:pg` | PostgreSQL 17.11, отдельная throwaway-БД на файл | **17/17 pass**: deploy всех миграций; `roles.sql` (guard принимает runtime-роль и отклоняет owner; нет DELETE, TRUNCATE и UPDATE журналов); seed ×2 без изменений; кросс-клиентские FK; RLS через Prisma; audit sinks; аутентификация; API в режиме db (см. Result) |
+| `npm run test:pg` | PostgreSQL 17.11, отдельная throwaway-БД на файл | **22/22 pass**: deploy всех миграций; `roles.sql` (guard принимает runtime-роль и отклоняет owner; нет DELETE, TRUNCATE и UPDATE журналов); seed ×2 без изменений; кросс-клиентские FK; RLS через Prisma; audit sinks; аутентификация; API в режиме db (см. Result); R1: недопустимый ввод в пути и теле, multi-membership |
 | `npm run db:check:drift` | PostgreSQL 17.11, shadow-БД | PASS, diff пустой. Контроль: на схеме из пакета — FAIL, 3 строки drift |
 | Dev-БД: `db:deploy` → `roles.sql` через `psql` контейнера → `db:seed` ×2 → `db:deploy` новой миграции → `db:seed` | PostgreSQL 17.11, persistent volume | 3, затем 1 миграция применены. Seed идемпотентен. Upgrade-путь: после миграции у `atlas_app` только SELECT на identities |
-| Ручной smoke API `ATLAS_MODE=db` на dev-БД | loopback | 401 без токена; `/clients` → `[demo-gasta]`; overview: Kari, GASTA-LT-07, 2 CONFIRMED, 3 `MISSING`, PARTIAL; `demo-other` → 403; отказ виден в `/audit/security` |
+| Ручной smoke API `ATLAS_MODE=db` на dev-БД (сборка `c4c536c`) | loopback | 401 без токена; `/clients` → `[demo-gasta]`; overview: Kari, GASTA-LT-07, 2 CONFIRMED, 3 `MISSING`, PARTIAL; `demo-other` → 403; `ghost%00client` → 403; оба отказа видны в `/audit/security` (`ghost\u0000client` с `INVALID_SCOPE_ID`) |
+| Probe ревьюера (R1) на исправленной сборке | PostgreSQL 17.11, throwaway-БД | 6/6 случаев: 403 и ровно одна audit-запись (до исправления: четыре ответа 500 без записи) |
 | Мутационные проверки (код временно ломался, затем восстановлен) | PGlite / PostgreSQL 17 | Каждый тест упал, как и должен: расширенный scope → тест `withScope`; политика `ApiToken USING (true)` → тест identities; отказ без security audit → 2 API-теста; сортировка только по `createdAt` → тест «CRITICAL первым» |
 
 По `verification/RESULTS.md` пакета теперь выполнено то, что там значилось как «не выполнено»: `prisma migrate deploy` на сохраняемой БД, `prisma/seed.ts`, `prisma-context`/`withScope`/`assertRuntimeRole` через Prisma, `prisma/roles.sql` как файл через psql и DB-backed NestJS API.
 
 ## Remaining gates / blockers
 
-Блокеров для Checkpoint A нет. Не выполнено:
+Известных блокеров после исправления R1 нет; принятие Checkpoint A — за повторной проверкой ревьюера. Не выполнено:
 - **Live read-only smoke Atera/Huntress и live Decisions (OpenAI)** — нет credentials и mapping аккаунтов; по заданию вне этого checkpoint.
 - **Durable pipeline/worker (1.6).** RawEvent, DecisionRun и Observation через Prisma ещё не пишутся; observations в БД есть только как тестовые фикстуры.
 - **Snapshot repository (1.5).** Ресурсы остаются `MISSING`.
