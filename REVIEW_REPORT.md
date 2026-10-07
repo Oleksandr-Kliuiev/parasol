@@ -1,64 +1,101 @@
-# Independent review — Checkpoint B, revision 3
+# Independent review — Checkpoint C
 
-Дата: 2026-10-07. Ветка: `stage1/foundation`, HEAD `91fda0d`; код исправления — `ce466ae`.
-Область: третья редакция CHECKPOINT_REPORT и закрытие оставшейся ветки B3 по `prompts/REVIEW_STAGE_1.md`. Diff от предыдущего ревью `17bd661`: 13 файлов, +175/−37. Рабочее дерево до проверки чистое. История находок: `13336c9:REVIEW_REPORT.md` (B1–B4), `17bd661:REVIEW_REPORT.md` (первые попытки B3). Checkpoint A принят ранее (`a04d805`).
+Дата: 2026-10-07. Ветка: `stage1/foundation`, HEAD `136088e`; код checkpoint — `1a95845`.
+База принятого Checkpoint B: `2a753d2`. Diff: 87 файлов, +4809/−802, включая сохранённые verification artifacts. Рабочее дерево до ревью чистое.
+Область: задания 1.7–1.10, CHECKPOINT_REPORT, `prompts/REVIEW_STAGE_1.md`, AGENTS.md и соответствующие требования docs/02, docs/04, docs/05. История принятого B сохранена в `2a753d2:REVIEW_REPORT.md`.
 
 ## Вердикт
 
-**APPROVE — Checkpoint B принят. Все обязательные находки B1–B4 закрыты; блокирующих находок не осталось.**
+**REQUEST_CHANGES — две обязательные находки P2: C1 и C2. Checkpoint C пока не принят.**
 
-Повторно проверены **60/60 unit/PGlite, 75/75 PostgreSQL**, typecheck, API build/smoke, schema validation, SQL/RLS invariants и пустой migration drift. Две независимые пробы из предыдущего ревью теперь дают ожидаемый результат. В проверенном изменении новых дефектов корректности или межклиентского доступа не обнаружено.
+Штатные проверки подтверждены: **80/80 unit/PGlite, 108/108 PostgreSQL**, typecheck, API build/smoke, schema validation, PostgreSQL invariants и пустой migration drift. Дополнительные пробы выявили гонку triage с обработкой ревизии и блокировку baseline следующего клиента ожиданием shadow в операторском проходе. Есть также неблокирующая C3 (P3) о версии конфигурации. P0/P1 и межклиентских утечек в проверенных сценариях не найдено.
 
-Принятие относится к заданиям 1.4–1.6 и заявленным ограничениям checkpoint; live-интеграции и последующие задания этим не подтверждаются.
+Отсутствие credentials корректно отмечено как отдельный live gate, но до принятия mock/recorded-объёма необходимо закрыть C1/C2.
 
-## B3 — закрыта, включая первые чтения
+## C1 — [P2] Конкурентный triage отправляет новую CRITICAL-ревизию в dead letter
 
-- `packages/sync/sync-state.ts:16`: `INSERT … ON CONFLICT DO UPDATE` атомарно создаёт первую строку и выдаёт номер каждой попытке до vendor I/O. Ветка с `seq=null` удалена.
-- `packages/sync/sync-state.ts:36`: запись исхода выполняется под блокировкой уже существующей строки; сравниваются номер попытки и время. Success/error обновляют состояние через `update`. Устаревший результат сохраняет свои события, но не заменяет более новое состояние.
-- `prisma/migrations/202610072100_stage1_sync_attempt_pending/migration.sql`: новый статус PENDING допускает начатое чтение без выдуманного результата; CHECK запрещает ему время исхода/успеха, код ошибки и записанный номер.
-- `packages/graph/context-mapper.ts:75`: PENDING отображается как MISSING / SYNC_NOT_COMPLETED, с `items=null`.
-- `tests/pg/sync-order.pg.test.ts`: проверены первые success/success, success/error, error/success в обоих порядках завершения, одинаковые времена, identity sync и защита от отката времени. Сценарии действительно запускают обе попытки до завершения любой.
+**Место:** `packages/observations/lifecycle.ts:84–88`, `:91–95`, `:103–105`; безусловный UPDATE — строки 92–93.
 
-**Независимые PostgreSQL-пробы**, каждая на свежей throwaway-БД, два Prisma-пула, confined runtime-роль, исходно отсутствующий SyncState:
+`applyRevisionLifecycle` читает статус старой observation без блокировки строки, выбирает активные строки в JavaScript и затем безусловно переводит их в SUPPRESSED. Advisory lock сериализует workers одного source object, но `triageObservation` его не использует. Если оператор успевает закрыть выбранную observation, UPDATE пытается выполнить RESOLVED → SUPPRESSED. Триггер правильно запрещает этот переход, однако вся финальная транзакция новой ревизии откатывается, а worker классифицирует исключение как PERMANENT/UNEXPECTED_ERROR и пишет DEAD_LETTER.
 
-| Порядок | Ожидаемый и полученный результат |
+**Воспроизведение на PostgreSQL 17.11 через два Prisma-пула и runtime-роль:**
+
+1. Сохранить и обработать LOW-ревизию Huntress `review-triage-race` с revision `2026-10-07T06:00:00.000Z` — OPEN observation.
+2. Сохранить новую CRITICAL-ревизию того же инцидента с revision `2026-10-07T07:00:00.000Z`.
+3. Начать настоящий `triageObservation(..., 'resolve', {expectedStatus:'OPEN'})` и задержать его транзакцию после UPDATE, до commit.
+4. Запустить `processPending` для новой ревизии: SELECT видит прежний committed OPEN, а UPDATE старой строки ждёт завершения triage.
+5. Дать triage завершиться; дождаться worker.
+
+**Факт:** triage успешно возвращает RESOLVED; новая CRITICAL-ревизия — **DEAD_LETTER, safeErrorCode=UNEXPECTED_ERROR, observationId=null**. Старое LOW закрыто, а новая срочная observation отсутствует. RawEvent сохранён и dead letter видим, но корректное входное событие требует ручного requeue из-за обычного пересечения двух разрешённых операций.
+
+Для воспроизводимого порядка только во временной БД установлен тестовый BEFORE INSERT trigger на audit `observation.resolved`: advisory gate удерживает triage перед commit. Через pg_stat_activity подтверждено, что worker уже ждёт UPDATE Observation; затем gate освобождён. Сервисы, авторизация, обработка события и ограничения схемы работают без подмены; искусственно генерируемого исключения нет.
+
+**Обязательное исправление:** согласовать supersede с triage — блокировать и перечитывать состояние либо условно менять только всё ещё активные строки с проверкой числа обновлений. Уже закрытую человеком observation сохранять; superseded-audit писать только при состоявшемся переходе. Новое событие должно завершаться нормально. Не скрывать гонку ослаблением lifecycle-trigger.
+
+**Регрессия:** оба порядка конкурентного resolve/suppress старой observation и commit новой ревизии; новая CRITICAL получает ровно одну applied DecisionRun и URGENT/HUMAN_REVIEW observation, triage и audit остаются согласованными. Существующие тесты отдельно проверяют triage и конкуренцию двух workers, но не их пересечение.
+
+## C2 — [P2] `worker-once` ждёт shadow первого клиента перед baseline следующего
+
+**Место:** `packages/ops/worker-pass.ts:20–26`, прежде всего `await processShadowJobs` на строке 25.
+
+Отдельная ShadowJob создана правильно, и `processPending` сам провайдера в shadow-режиме не вызывает. Но документированный entry point снова соединяет эти пути последовательно: для каждого клиента сначала baseline, затем весь пакет shadow, и лишь после этого — следующий клиент. Поэтому медленный эксперимент первого клиента задерживает уже сохранённый CRITICAL другого клиента. Это нарушает требование 1.7 о неблокирующем shadow на реальном операторском пути, хотя отдельный unit/service-сценарий проходит.
+
+**Воспроизведение:** два клиента в memberships оператора; у `demo-gasta` LOW, у следующего по сортировке `demo-other` CRITICAL. Вызвать настоящий `runWorkerPass` с shadow-провайдером, задержанным на Promise-gate. Проверить БД после начала первого AI-вызова, затем освободить его.
+
+| Момент | Первый клиент | Второй клиент |
+|---|---|---|
+| Первый shadow ещё выполняется | PROCESSED, 1 observation | **RECEIVED, 0 observations** |
+| Shadow освобождён, проход завершён | PROCESSED, shadow DONE | PROCESSED, shadow DONE |
+
+Использованы выданные ResolvedConnection, синтетические события и настоящий операторский проход под runtime-ролью. Второй connection — fixture Atera; события Atlas DTO, внешних вызовов нет. Задержка моделирует незавершённый вызов; реальная задержка ограничивается deadline каждого вызова и суммируется по пакету shadow.
+
+**Обязательное исправление:** развести baseline и shadow на уровне операторского entry point. Как минимум baseline всех клиентов текущего прохода должен завершаться до ожидания shadow; независимый запуск shadow также допустим и обеспечивает более явное разделение. Обновить CLI/RUNBOOK при изменении команд. Отсутствие планировщика не требует смешивать два пути.
+
+**Регрессия:** два клиента, held shadow первого; CRITICAL второго уже имеет applied baseline и URGENT observation до освобождения held-вызова. Дополнительно сохранить существующую проверку, что новая CRITICAL может обрабатываться параллельно отдельному shadow runner.
+
+## C3 — [P3, неблокирующая] Rules/fixture игнорируют настроенный promptVersion
+
+**Место:** `packages/decisions/runtime.ts:13–14`; `RulesDecisionProvider` и `FixtureDecisionProvider` в `packages/decisions/provider.ts`.
+
+`createDecisionRuntime(config)` передаёт конфигурацию только OpenAI-провайдеру. В rules/fixture классификация берёт `defaultDecisionConfig.promptVersion`, а `decisionRunData` предпочитает это значение версии из переданного config. После изменения versioned config строки будут иметь новый configVersion, но старый promptVersion; shadow-baseline при том же config ведёт себя иначе.
+
+**Проба без БД:** config с `configVersion=review-config-v2`, `promptVersion=event-route-v2`; `createDecisionRuntime` → `draftDecision`. В обоих режимах rules/fixture возвращается **event-route-v1**. Текущее значение в репозитории совпадает с default, поэтому это не блокирует текущие маршруты.
+
+Рекомендуется передавать promptVersion/config локальным провайдерам и добавить проверку с отличающимся от default значением. Если rules требуют отдельной версии, сделать это явным контрактом вместо неявного test default.
+
+## Воспроизведённые команды и результаты
+
+Среда: Node 25.8.1, PostgreSQL 17.11, локальный compose. Использованы установленные зависимости. Команды PostgreSQL получают локальный `ATLAS_PG_ADMIN_URL`; credentials не сохраняются в отчёте. Persistent dev-БД не изменялась.
+
+| Команда / проба | Результат |
 |---|---|
-| A начинается в T и задержан; B начинается в T+100 ms и задержан; A сохраняет пустой набор, затем B читает два инцидента | B: OK, superseded=false; контекст: OK, два элемента, asOf=T+100 ms. Новый результат не отбрасывается |
-| Тот же порядок; A читает два инцидента, затем B завершается UPSTREAM_UNAVAILABLE | B: ERROR, superseded=false; контекст: STALE / UPSTREAM_UNAVAILABLE, прежние два элемента и asOf=T. Ошибка видима |
-| Контекст до завершения обеих попыток | В БД PENDING, attemptSeq=2, recordedSeq=0; контекст MISSING / SYNC_NOT_COMPLETED, items=null |
-| 12 одновременно начатых первых попыток другого ресурса через два пула | 12 разных последовательных номеров 1–12, без потери инкрементов |
-
-B1, B2 и B4 были закрыты в предыдущем ревью; соответствующий код в текущем diff не менялся, регрессии worker-recovery и pagination повторно прошли в полном PostgreSQL-наборе. R1 из Checkpoint A также остаётся покрыта проходящими тестами.
-
-## Выполненные проверки
-
-Среда: Node 25.8.1, PostgreSQL 17.11. Использованы существующие зависимости и локальный compose. PostgreSQL-команды запускались с локальным `ATLAS_PG_ADMIN_URL`; persistent dev-БД не изменялась.
-
-| Команда | Результат |
-|---|---|
-| `npm test` | **60/60 PASS**, без skips |
+| `npm test` | **80/80 PASS**, без skips: 67 unit/fixture, 13 PGlite |
 | `npm run typecheck` | PASS |
 | `npm run api:build` | PASS |
 | `npm run api:smoke` | PASS, fixture API |
 | `npm run schema:validate` | PASS |
-| `npm run test:pg` | **75/75 PASS**, без skips |
-| `npm run db:check:pg17` | PASS: 9 миграций, structural/FK/RLS invariants, PENDING CHECK, claim-token CHECK, runtime-role guard, pool reuse |
+| `npm run test:pg` | **108/108 PASS**, без skips, включая E2E и CLI-процесс |
+| `npm run db:check:pg17` | PASS: 12 миграций, structural/FK/RLS invariants, decision/shadow, lifecycle, tool ledger, runtime guard и pool reuse |
 | `npm run db:check:drift` | PASS, diff пустой |
-| Дополнительная `node --experimental-strip-types --input-type=module` проба через stdin | Все четыре проверки из таблицы выше PASS |
+| Дополнительные `node --experimental-strip-types --input-type=module` пробы через stdin | C1/C2 воспроизведены на PostgreSQL; C3 — через реальные функции runtime/draft |
 | `git diff --check` | PASS |
 
-Проба использовала `tests/support/pg-harness.ts:createTestDatabase/runSeed`, `actors/gasta`, `liveHuntressWithConfirmedAgent` и настоящий Huntress adapter с mock transport. Чтения задерживались Promise-gate; runtime-код не изменялся. После проверок соединения закрыты, временные БД и роли удалены; контрольный запрос показал 0/0. В diff добавлена только миграция 2100, предыдущие миграции не изменены.
+PostgreSQL-пробы создавали отдельные throwaway-БД через `tests/support/pg-harness.ts`, применяли migrate deploy/roles.sql и synthetic seed; прикладной код подключался confined runtime-ролью. После проб временные БД, роли и тестовый trigger удалены; контрольный запрос показал **0 временных БД / 0 ролей**. Исходники и штатные тесты не менялись.
 
-## Неблокирующая неточность отчёта
+## Подтверждённое и границы
 
-В `CHECKPOINT_REPORT.md:155` вводный абзац Verification всё ещё связывает команды с деревом `f7ae5fb`, хотя таблица уже включает PENDING, 9 миграций и 75 тестов из `ce466ae`. Стоит уточнить commit для свежего прогона и отдельно оставить дату/commit прежнего `npm ci`. На принятие кода это не влияет: перечисленные выше проверки независимо повторены на текущем HEAD. Обязательных исправлений кода нет.
+- Scope/permission checks предшествуют чтениям; новые FK несут workspace/client scope. Проверки guard включают ShadowJob. Миграции 2200/2300/080000 новые; предыдущие не менялись.
+- Baseline, applied flag, observation, client audit, inbox completion и создание ShadowJob атомарны. При retry сохранённое решение переиспользуется. Shadow runs остаются non-applied; claim tokens и bounded retry проверены. C2 ограничивает независимость на уровне CLI.
+- Source urgency floor, сохранение конфликтного evidence, защита urgent от не-urgent ревизии, keyset pages и ожидаемый статус triage покрыты проходящими тестами. C1 ограничивает вывод о конкурентном lifecycle.
+- Gateway проверяет authoritative registry/risk/permission и схемы параметров; неоднозначное connection отклоняется. Execution ledger и audit пишутся транзакционно, scope denials — в security audit; malformed-input регрессии R1 проходят.
+- Mock vendor transport, scripted Decisions и синтетические DTO не выдаются за live-данные. E2E повторён в полном test:pg; исторические JSON evidence отдельно не перезаписывались.
+- **Live Atera/Huntress/OpenAI не выполнялся.** Реальные credentials, фильтры и контракты аккаунтов ещё требуют отдельного gate. Дополнительной проверки внешней документации в этом ревью не было.
+- `npm ci`, `npm audit`, мутационные проверки автора, отдельный `npm run demo`, Node 24/другие ОС и persistent-dev deployment не повторялись. Известные ограничения из CHECKPOINT_REPORT — планировщик, lease renewal, vault/provisioning, retention, dependency audit — не объявляются готовыми возможностями.
 
-## Границы проверки и следующий шаг
+## Обязательные исправления и следующий шаг
 
-**Невыполненных PostgreSQL-gates из списка выше нет. Live Atera/Huntress/OpenAI не выполнялся.** HTTP-проверки используют mock transport и синтетические fixtures. Контракт Atera по-прежнему требует сверки с аккаунтом до live-активации; Atera alerts остаются недоступны по принятому решению владельца. Реальные credentials и аккаунты в этом ревью не использовались.
+Закрыть **C1 и C2** в текущих доменах, добавить указанные регрессии, затем повторить tests/typecheck/build/smoke и PostgreSQL-проверки. C3 — рекомендуемая небольшая правка. В CHECKPOINT_REPORT скорректировать утверждение, что весь mock/recorded-объём готов и остаются только credentials.
 
-`npm ci`, `npm audit`, Node 24/Windows, мутационные проверки автора и persistent-dev deployment повторно не выполнялись. Известные ограничения worker — отсутствие отдельного процесса по расписанию, продления lease и отдельной shadow-job — не объявляются здесь готовыми возможностями. Возможный лишний provider call при перехвате lease остаётся документированным ограничением.
+После повторного принятия C безопасен отдельный live-read gate по RUNBOOK: сверка Atera account contract, tenant-scoped чтения Atera/Huntress и Decisions smoke, только при наличии credentials и указания владельца. Deployment, изменения аккаунтов, UI, remediation и новые коннекторы в это ревью не входят.
 
-**Безопасный следующий шаг: задание 1.7 Decision Layer** — отдельная shadow-job, versioned DecisionConfig, модель/allowlist, MODEL_MISMATCH, advisory failure → HUMAN_REVIEW, timeout/budget/retry, circuit-breaker и telemetry. Проверить, что медленный shadow не задерживает следующее CRITICAL-событие. Live smoke остаётся отдельным gate; UI, remediation, новые коннекторы и orchestration вне текущего scope.
-
-В рамках ревью изменён только `REVIEW_REPORT.md`. Ветка не переключалась, коммиты не создавались.
+Изменён только `REVIEW_REPORT.md`; ветка `stage1/foundation` сохранена, коммиты не создавались.
