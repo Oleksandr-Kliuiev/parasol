@@ -1,134 +1,190 @@
 # Atlas Stage 1 checkpoint
 
 Date: 2026-10-07
-Checkpoint: **A** (после задания 1.3)
-Branch/commit: `stage1/foundation` @ `c4c536c` — проверенное состояние кода после исправления по ревью; эта редакция отчёта закоммичена поверх. Первая редакция отчёта проверяла `1fdab12`. База: `main` @ `4d6f897` (пакет 1.1.3 без изменений, sha256 архива сверен с `SHA256SUMS`).
-Tasks completed: 1.1 Baseline, 1.2 Database, 1.3 Client Graph/API
-Review: `REVIEW_REPORT.md` (ревью `9770c83`) — REQUEST_CHANGES из-за одной находки R1 [P2], P0/P1 нет. R1 исправлена в `c4c536c` (раздел «Review R1» ниже); нужна повторная проверка ревьюером.
-
-## Review R1 — исправлено
-
-**Находка.** NUL или одиночный UTF-16 surrogate в запрошенном client ID (путь URL или тело) или в имени инструмента: PostgreSQL отклонял строку audit, API отвечал 500, и отказ не записывался. Доступ при этом оставался закрыт, но запись об отказе можно было детерминированно обойти. Утверждение первой редакции «блокеров нет» было неверным.
-
-**Исправление:**
-- `packages/audit/sanitize.ts` (`auditText`). Все недоверенные строки audit хранятся как ограниченный экранированный текст, ≤ 200 символов, в обоих sinks. NUL, управляющие символы, DEL и одиночные surrogates записываются как `\uXXXX`, обратный слэш удваивается. Граница не разрезает ни escape, ни пару surrogates. Экранирование выполняется один раз при записи; чтение применяет только allowlist.
-- **HTTP-граница.** Client ID вне политики идентификаторов получает тот же 403, что и любой клиент вне scope, с `INVALID_SCOPE_ID` в `SecurityAuditEvent`. Проверка срабатывает до любого запроса, RLS-настройки и gateway — во всех `/clients/:id/*` и `POST /tools/execute`.
-- **Gateway.** Имя инструмента вне синтаксиса реестра → клиентский `tool.denied` с `INVALID_TOOL_NAME`. Scope проверяется раньше, поэтому чужой клиент с плохим именем инструмента остаётся scope-отказом.
-- **Без изменений.** Структурно неверное тело — по-прежнему 400 до проверки scope. Непереводимая %-последовательность в пути — 400 от Express до маршрутизации: обработчик не вызывается и клиента, которому можно отказать, нет.
-
-**Доказательства:**
-- Probe ревьюера на исправленной сборке: все шесть случаев дают 403 и ровно одну audit-запись. Сохранено, например, `ghost\u0000client` (`INVALID_SCOPE_ID`) и `unknown\ud800tool` (`INVALID_TOOL_NAME`).
-- Новые тесты:
-  - `tests/audit-sanitize.test.ts` (unit);
-  - repository-уровень PostgreSQL в `tests/pg/database.pg.test.ts`;
-  - HTTP-регрессия `tests/pg/api-input.pg.test.ts`: путь и тело, без 500, ровно одна audit-запись, ни одного чтения.
-- Добавлен и необязательный тест ревьюера: один актор с `context:read` у Gasta и только `events:ingest` у другого клиента.
-- **Негативный контроль.** Новые тесты запущены против кода до исправления: все три регрессионных теста упали. Кроме того, процесс `database.pg.test.ts` после этого завис и был остановлен вручную. Вероятная причина: Prisma не завершает запрос, когда одиночный surrogate доходит до query engine внутри интерактивной транзакции. Вывод: недоверенные строки не должны доходить до Prisma без проверки. После исправления такие строки до Prisma не доходят.
+Checkpoint: **B** (после задания 1.6)
+Branch/commit: `stage1/foundation` @ `db872de` — проверенное состояние кода; этот отчёт закоммичен поверх. Checkpoint A принят ревью (`a04d805`); его отчёт: `git show 61122b9:CHECKPOINT_REPORT.md`.
+Tasks completed: 1.4 Mapping workflow (`0506eae`); 1.5 Read adapters (`36ed428`, решение владельца по алертам Atera — `153e56a`); 1.6 Persistent sync/events (`20cd453`, тесты `806db3d`, `db872de`).
 
 ## Result
 
-- **БД (PostgreSQL 17.11, docker compose, синтетические данные).** В persistent dev-БД есть Gasta → Kari → GASTA-LT-07 и два confirmed mapping устройства: Atera agent `demo-atera-agent-107` и Huntress agent `demo-huntress-agent-207` → `demo-device-07`. Connections — customer/organization mapping с `secretRef = fixture://no-credentials`, без credentials. Повторный seed ничего не меняет.
-- **Scoped DB context через confined runtime role.** `getClientContext` идёт через `withScope` ролью `atlas_app` из `prisma/roles.sql` (NOBYPASSRLS, не владелец). Результат: `ClientContextV1` с `mode: db` и `completeness: PARTIAL`.
-  - Ресурсы `atera/alert`, `atera/ticket`, `huntress/incident` имеют статус `MISSING` (`SYNC_NOT_CONFIGURED`) и `items: null`, не `[]`.
-  - Observations читаются из БД в приоритетном порядке: `severityRank DESC, createdAt DESC, id`. `counts` считаются по всему OPEN-набору, есть `truncated`.
-  - В dev-БД observations пока 0: durable pipeline — задание 1.6. Порядок доказан тестом на 102 синтетических строках.
-- **Аутентификация.** `Authorization: Bearer <token>` → `Actor` из БД: memberships с правами на каждого клиента и workspace-права. Хранится только SHA-256 digest токена. Без токена, с неверным, отозванным или просроченным токеном и для отключённого актора — 401.
-- **Изоляция и аудит.** Чужой или несуществующий клиент → одинаковый 403. Отказ записывается в `SecurityAuditEvent` до любого чтения. Журнал целевого клиента не трогается. `GET /audit/security` требует `security_audit:read`; отказ в доступе к журналу тоже записывается. В ответах нет `secretRef`, tenant ID, digest и токена.
-- **Отказ в старте.** API в режиме `db` не стартует через owner-подключение (`RUNTIME_ROLE_BYPASSES_RLS`) и без `ATLAS_RUNTIME_DATABASE_URL`.
-- **Статусы, раздельно:**
-  - Fixture-режим API работает как раньше: синтетика в памяти.
-  - DB-режим: настоящий PostgreSQL 17, синтетические данные.
-  - **Live: ничего.** Ни одного вызова Atera/Huntress/OpenAI, credentials нет.
+**Что проверено и где.**
+- **Live:** ничего. Credentials нет; ни одного запроса к Atera, Huntress или OpenAI не было.
+- **Вендоры в тестах:** HTTP идёт в локальный mock-транспорт с синтетическими ответами (`fixtures/vendor`). Это проверка адаптеров по контракту, **не live API verification**. Контракт Huntress сверен с официальной спецификацией. Контракт Atera взят из экспорта документации Atera OpenAPI v3 в стороннем публичном репозитории и с аккаунтом не сверен.
+- **БД:** всё перечисленное ниже работает на PostgreSQL 17.11 через confined runtime-роль; на каждый тестовый файл — отдельная throwaway-БД. SQL-инварианты дополнительно гоняются в PGlite.
+
+1. **Scoped evidence Atera/Huntress.**
+   - **Привязка.** Клиент привязывается к Atera customer или Huntress organization явно: с автором и временем, в начальном состоянии DISABLED. Один tenant — один клиент: повторная привязка уже привязанного tenant отклоняется как CONFLICT, отказ записывается, первая привязка остаётся. В клиентский аудит не попадают ни tenant ID, ни secretRef.
+   - **Активация.** Health check идёт к привязанному tenant с разрешённым секретом. Если проверка не прошла, connection остаётся DISABLED.
+   - **Кто может читать.** Только выданный `ResolvedConnection`: скопированный или собранный вручную отклоняется до любой работы с БД. FIXTURE-подключения к вендору не обращаются.
+   - **Фильтр по tenant.** Каждый upstream-запрос фильтруется на стороне вендора:
+     - Huntress: `organization_id` на каждой странице;
+     - Atera: `customerId` у тикетов, путь `/agents/customer/{id}` у агентов.
+
+     Если в ответе есть запись чужого tenant, падает всё чтение (`UPSTREAM_SCOPE_MISMATCH`, PERMANENT), и ничего не сохраняется.
+   - **Алерты Atera** не запрашиваются (решение владельца). В контексте они `MISSING` с причиной `UPSTREAM_TENANT_FILTER_UNAVAILABLE`.
+   - **DTO и ошибки.** DTO проверяются при чтении. Расхождение с контрактом даёт PERMANENT-ошибку с именем поля, без значения. Контакты заявителя, комментарии и тексты аналитиков не копируются. Ошибки HTTP классифицируются без URL, заголовков, секрета и тела ответа.
+   - **Сопоставление.** Matcher предлагает только CANDIDATE, и только по точному hostname внутри клиента. При неоднозначности не создаётся ничего.
+
+2. **Durable event processing.**
+   - **Источник событий.** Чтение открытых инцидентов Huntress пишет события в inbox в той же транзакции, что и snapshot.
+     - Повторное чтение даёт дубликаты; новый `updated_at` — новая ревизия.
+     - Неудачное чтение не сохраняет ничего, в том числе при сбое на второй странице.
+   - **Хранение до обработки.** Дубликат определяется по eventKey v2 и payload hash и ничего не меняет: из 6 одновременных доставок через два пула — 1 STORED и 5 DUPLICATE.
+   - **Конфликт содержания** (тот же ID и ревизия, другое содержание):
+     - сохраняется отдельной строкой с `conflictOfEventKey`;
+     - каноническая строка не перезаписывается, audit пишется один раз;
+     - маршрут — `HUMAN_REVIEW` с собственной severity: CRITICAL остаётся URGENT, первое observation сохраняется;
+     - если два разных содержания приходят одновременно, получаются одна каноническая строка, один конфликт и один audit.
+   - **Две фазы.**
+     - Захват: `FOR UPDATE SKIP LOCKED` с lease.
+     - Фаза 1: DecisionRun записываются с `applied = false`, решение сохраняется.
+     - Фаза 2, одна транзакция: applied, Observation, audit `observation.created` и PROCESSED.
+     - Два worker на двух пулах обработали 12 событий, каждое ровно один раз: 12 observations, 12 applied runs, 12 вызовов провайдера.
+   - **Advisory и shadow.**
+     - Advisory: при сбое провайдера пишутся FAILED run с запрошенной моделью и применённый rules run, маршрут — `HUMAN_REVIEW`.
+     - Shadow: rules применяется сразу; AI-run сохраняется с `applied = false` и на observation не влияет.
+
+3. **Восстановление после рестарта.** Worker падает после фазы 1. Пока lease действует, другой worker событие не берёт. После истечения lease он фиксирует сохранённое решение: провайдер вызван один раз, applied run и observation — по одному, `attempts = 2`.
+
+4. **Retry и dead-letter.**
+   - **TRANSIENT-сбой финальной транзакции** откатывает её целиком, событие уходит в RETRY с backoff и аудитом `event.retry_scheduled`. Повтор использует сохранённое решение: один вызов провайдера, один applied run.
+   - **После `maxAttempts`** событие уходит в DEAD_LETTER с аудитом `event.dead_lettered`; это видно в inbox view (`context:read`) вместе с кодом ошибки.
+   - **Повреждённый сохранённый payload** сразу даёт DEAD_LETTER (`INVALID_EVENT`, PERMANENT).
+   - **Повторной обработки само по себе нет.** Requeue — явное действие с правом `events:ingest` и аудитом `event.requeued`; reader получает отказ.
+
+5. **Quarantine конфликтов привязки.**
+   - Первое подтверждение выигрывает. Конфликтующая связь получает статус QUARANTINED с указателем на победившую; она хранится, но не используется.
+   - Одновременные подтверждения из двух пулов дают ровно одну CONFIRMED.
+   - Событие агента с карантинной связью — CONFLICT: `HUMAN_REVIEW`, без entity, `AMBIGUOUS_DEVICE_LINK`; CRITICAL остаётся URGENT.
+
+6. **Health и freshness по конкретному ресурсу.** Состояние синхронизации хранится на пару connection + ресурс.
+   - **Полное чтение** даёт OK.
+   - **Сбой обновления:**
+     - последний snapshot остаётся и показывается как STALE с кодом сбоя;
+     - `lastSuccessAt` не сдвигается, Retry-After передаётся дальше.
+   - **Изоляция сбоя.** Сбой тикетов Atera не трогает ни соседний ресурс (алерты сохраняют свою причину), ни другую connection (инциденты Huntress остаются OK); connection остаётся ACTIVE.
+   - **Ни одного полного чтения** — ERROR, а не пустой список.
+   - **Устаревание по возрасту:** alert и incident — 15 минут, ticket — 30 минут.
+   - **`COMPLETE`** — только когда все ожидаемые ресурсы OK.
+
+7. **Webhook metadata не принимается за identity.** Webhook и HTTP-маршрута приёма событий в Stage 1 нет; API с Checkpoint A не менялся. Событие принимается только через выданный `ResolvedConnection` и с правом `events:ingest`. Workspace, client, connection и source в теле события должны с ним совпасть, иначе `EVENT_SCOPE_MISMATCH`.
 
 ## Changes
 
-**Схема.** Добавлена миграция `202610071600_stage1_actor_membership`; три замороженные миграции не тронуты.
-- Таблицы `Actor`, `ClientMembership` и `ApiToken` (только digest токена).
-- CHECK-словари прав, составные FK с workspace в каждой связи.
-- RLS только для lookup-чтения: токен виден по собственному digest (`app.token_hash`), актор и его memberships — только когда токен назвал актора (`app.actor_id`). Политик записи для runtime-роли нет.
-- Условный `REVOKE` для уже существующей роли `atlas_app`. Такой же `REVOKE` добавлен в `roles.sql`.
-- `schema.prisma`: новые модели; закреплены два имени FK и default `reasonCodes`, которые создают замороженные миграции. Drift теперь пустой.
+**Схема.** Только новые миграции, замороженные не тронуты.
+- `202610071700_stage1_mapping_workflow`:
+  - словарь статусов Connection;
+  - автор и время привязки, неизменяемые триггером;
+  - `resourceType`/`entityKind` в `EntityLink` с составными FK и CHECK совместимости;
+  - статус `QUARANTINED` с указателем внутри scope;
+  - права `mapping:review`, `connections:manage`;
+  - preflight.
+- `202610071800_stage1_resource_snapshots`:
+  - `ResourceSnapshot`: не больше 100 элементов плюс общее число у источника, FK на `SyncState`, RLS;
+  - словарь `SyncState`.
+- `202610071900_stage1_event_inbox`:
+  - колонки inbox в `RawEvent`: `nextAttemptAt`, lease, `preparedDecision`;
+  - CHECK на lease, на завершённые события и на коды ошибок;
+  - индекс ожидающих событий;
+  - словари `DecisionRun` (status, provider) с preflight.
 
-**Сервисы (`packages/`):**
-- `auth/` — разбор bearer-токена, digest, `authenticateToken`.
-- `audit/prisma.ts` — client audit и workspace security audit в PostgreSQL (allowlist), ограниченное чтение с проверкой прав.
-- `graph/` — `withWorkspaceScope`; общая приоритетная страница observations, `getObservationPage`, `listClients`, проверка `limit`; `PROTECTED_TABLES` расширен на таблицы identities.
-- `tools/gateway.ts` — ждёт синхронные и асинхронные sinks.
+**Сервисы.**
+- `packages/connections/connections.ts` — привязка и выдача `ResolvedConnection`.
+- `packages/graph/mapping.ts` — регистрация, кандидаты, confirm/quarantine/reject, очередь review.
+- `packages/sync/snapshots.ts`, `activation.ts` — snapshot и события в одной транзакции, активация.
+- `packages/graph/context-mapper.ts` (`mapResources`) — статусы `ResourceView`.
+- `packages/events/inbox.ts`, `worker.ts`, `decision.ts`, `identity.ts` — durable inbox и worker. Логика маршрута общая с in-memory reference (`pipeline.ts`).
 
-**API.** `ATLAS_MODE=db`, `apps/api/src/db/`:
-- DatabaseModule — проверка роли до старта HTTP.
-- AuthModule — guard и `AccessPolicy`.
-- ClientGraphModule, AuditModule, ToolsModule.
+**Коннекторы.** `connectors/http.ts`, `dto.ts`, `huntress/*`, `atera/*`; источники контрактов и маппинги — в `connectors/CONTRACTS.md`.
 
-Маршруты те же, что в fixture-режиме. Fixture-модуль переведён на общие `http-boundary.ts`, поведение не изменилось.
+**API и seed.** API не менялся. В seed синтетические связи получили `resourceType` (1.4).
 
-**Seed.** Добавлены синтетический актор и его membership из `fixtures/gasta.ts`, плюс digest `ATLAS_DEMO_TOKEN`.
-
-**Connectors.** Без изменений: нормализаторы по-прежнему работают на синтетических Atlas DTO.
-
-**Инструменты:**
-- `npm run test:pg` — throwaway-БД по настоящему пути: `prisma migrate deploy` → сам `prisma/roles.sql` → seed.
-- `npm run db:check:drift` — сверка миграций и `schema.prisma`.
-- Тест бюджета контекста (файлы не длиннее 700 строк), `docs/AI_CONTEXT_MAP.md`, `CLAUDE.md`.
-- `npm run typecheck` теперь покрывает `apps/`.
-- Итог: 42 файла, +1448/−100 строк относительно `main`.
+**Тестовая поддержка.** `tests/support/mock-http.ts`, `vendor-routes.ts` (mock вендора с проверкой tenant-фильтра), `events-fixtures.ts`.
 
 ## Verification
 
-Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`). Строки с командами `npm` повторены на дереве `c4c536c` от `npm ci`. Dev-БД и мутационные проверки выполнялись по ходу 1.2–1.3; seed и миграции после них не менялись. Ручной smoke на dev-БД повторён на сборке `c4c536c`, после исправления R1.
+Среда: macOS 26.6.2 arm64, Node 25.8.1, npm 11.11.0, PostgreSQL 17.11 (`postgres:17`, docker compose). Команды `npm` повторены на дереве `20cd453` после `npm ci`. Тесты коммитов `806db3d` и `db872de` прогнаны повторно: `npm test`, `typecheck`, `test:pg`.
 
 | Command/scenario | Environment | Actual result |
 |---|---|---|
-| `npm ci` | локально | OK. `npm audit`: 10 находок (2 moderate, 8 high) в закреплённых деревьях NestJS 11.1.6 и Prisma 6.19.0 — см. blockers |
+| `npm ci` | локально | OK. Lockfile с Checkpoint A не менялся. `npm audit`: 10 находок (2 moderate, 8 high), те же, что в Checkpoint A |
 | `npm run db:generate`, `npm run schema:validate` | локально | Prisma Client 6.19.0 сгенерирован, схема валидна |
-| `npm test` | unit + PGlite (встроенный движок PG 17) | **49/49 pass**: 40 исходных + context budget + identities + 2 token + 5 R1 |
-| `npm run typecheck`, `npm run api:build` | локально | pass (typecheck включает `apps/`) |
+| `npm test` | unit + PGlite | **60/60 pass**, включая SQL-инварианты inbox и бюджет контекста |
+| `npm run typecheck`, `npm run api:build` | локально | pass |
 | `npm run api:smoke`, `npm run demo` | fixture | PASS, поведение прежнее |
-| `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 4 миграции по порядку, структурные инварианты, RLS acceptance, lookup-политики identities, guard runtime-роли, переиспользование соединений пула |
-| `npm run test:pg` | PostgreSQL 17.11, отдельная throwaway-БД на файл | **22/22 pass**: deploy всех миграций; `roles.sql` (guard принимает runtime-роль и отклоняет owner; нет DELETE, TRUNCATE и UPDATE журналов); seed ×2 без изменений; кросс-клиентские FK; RLS через Prisma; audit sinks; аутентификация; API в режиме db (см. Result); R1: недопустимый ввод в пути и теле, multi-membership |
-| `npm run db:check:drift` | PostgreSQL 17.11, shadow-БД | PASS, diff пустой. Контроль: на схеме из пакета — FAIL, 3 строки drift |
-| Dev-БД: `db:deploy` → `roles.sql` через `psql` контейнера → `db:seed` ×2 → `db:deploy` новой миграции → `db:seed` | PostgreSQL 17.11, persistent volume | 3, затем 1 миграция применены. Seed идемпотентен. Upgrade-путь: после миграции у `atlas_app` только SELECT на identities |
-| Ручной smoke API `ATLAS_MODE=db` на dev-БД (сборка `c4c536c`) | loopback | 401 без токена; `/clients` → `[demo-gasta]`; overview: Kari, GASTA-LT-07, 2 CONFIRMED, 3 `MISSING`, PARTIAL; `demo-other` → 403; `ghost%00client` → 403; оба отказа видны в `/audit/security` (`ghost\u0000client` с `INVALID_SCOPE_ID`) |
-| Probe ревьюера (R1) на исправленной сборке | PostgreSQL 17.11, throwaway-БД | 6/6 случаев: 403 и ровно одна audit-запись (до исправления: четыре ответа 500 без записи) |
-| Мутационные проверки (код временно ломался, затем восстановлен) | PGlite / PostgreSQL 17 | Каждый тест упал, как и должен: расширенный scope → тест `withScope`; политика `ApiToken USING (true)` → тест identities; отказ без security audit → 2 API-теста; сортировка только по `createdAt` → тест «CRITICAL первым» |
+| `npm run db:check:pg17` | PostgreSQL 17.11 | PASS: 7 миграций по порядку; структурные инварианты, в том числе mapping, snapshot и inbox; RLS через login-роль; lookup-политики identities; RLS snapshot; guard runtime-роли; переиспользование соединений пула |
+| `npm run test:pg` | PostgreSQL 17.11, throwaway-БД на файл | **56/56 pass**. Новые с Checkpoint A: connections 5, mapping 6, adapters 4, sync 4, inbox 4, worker 5, worker-routing 6. Прежние 22 тоже проходят |
+| `npm run db:check:drift` | PostgreSQL 17.11, shadow-БД | PASS, diff пустой |
+| Dev-БД: `db:deploy` | PostgreSQL 17.11, persistent volume | Миграции 1700, 1800 и 1900 применены по ходу заданий. `assertRuntimeRole` принимает `atlas_app` и отклоняет owner (`RUNTIME_ROLE_BYPASSES_RLS`). Inbox view через runtime-роль работает; в dev-БД событий 0, seed их не создаёт |
+| Остатки тестовых прогонов | PostgreSQL 17.11 | Throwaway-БД и ролей не осталось: только `atlas` и `postgres`, роли `atlas` и `atlas_app` |
+| Мутационные проверки (код временно ломался, затем восстанавливался) | PGlite / PostgreSQL 17 | Все пойманы. 1.4: ослабленная проверка неоднозначности; снятая проверка конфликта при подтверждении; без блокировки строки и без unique — гонка. 1.5: снятый tenant-фильтр; пропуск чужой записи; перезапись snapshot при сбое; игнор возраста snapshot. 1.6: решение не переиспользуется; без SKIP LOCKED и lease; без retry; карантин игнорируется; конфликт принят за дубликат; точка сбоя после commit; сбой на странице 2 молча проглочен; ERROR записан на все ресурсы connection |
+| `git diff --check` | локально | чисто |
 
-По `verification/RESULTS.md` пакета теперь выполнено то, что там значилось как «не выполнено»: `prisma migrate deploy` на сохраняемой БД, `prisma/seed.ts`, `prisma-context`/`withScope`/`assertRuntimeRole` через Prisma, `prisma/roles.sql` как файл через psql и DB-backed NestJS API.
+Покрытие проверок задания 1.6 из docs/05:
+- два worker;
+- повтор ревизии;
+- рестарт;
+- сбой на второй странице;
+- видимый dead letter;
+- карантинная связь с сохранённым CRITICAL;
+- retry финального commit без второго вызова провайдера и без второго applied run;
+- CRITICAL-повтор с другим содержанием в urgent review.
+
+Все сценарии — тесты в `tests/pg/inbox|worker|worker-routing|sync.pg.test.ts`.
 
 ## Remaining gates / blockers
 
-Известных блокеров после исправления R1 нет; принятие Checkpoint A — за повторной проверкой ревьюера. Не выполнено:
-- **Live read-only smoke Atera/Huntress и live Decisions (OpenAI)** — нет credentials и mapping аккаунтов; по заданию вне этого checkpoint.
-- **Durable pipeline/worker (1.6).** RawEvent, DecisionRun и Observation через Prisma ещё не пишутся; observations в БД есть только как тестовые фикстуры.
-- **Snapshot repository (1.5).** Ресурсы остаются `MISSING`.
-- **Node 24 ровно и Windows** не запускались. Проверено на Node 25.8.1 (`engines >=24`); spawn в тестах кроссплатформенный (node + Prisma CLI, без npx), но на Windows не запускался.
-- **`npm audit`, 10 находок** (path-to-regexp, multer и file-type в NestJS 11.1.6; effect и deepmerge-ts в Prisma 6.19.0). Версии закреплены `AGENTS.md`; нужен отдельный решённый patch-bump. API слушает только loopback.
-- **`GET /clients/:id/observations`**: только `limit`; cursor и фильтры status/severity из docs/02 не сделаны (план — 1.8).
-- **Нет администрирования identities.** Выдача и отзыв токенов, управление memberships — только владельцем (seed/SQL). Production IdP (OIDC) не входит в Stage 1.
-- **Ошибки аутентификации не пишутся в security audit** (для неизвестного токена workspace неизвестен); rate limiting нет.
-- **`ToolExecution` не пишется**; runtime-схемы входа и versioned DTO с `parameters` — задание 1.9.
-- **`MANIFEST.json` и `verification/RESULTS.md`** описывают импортированный пакет, а не ветку; актуальный статус ветки — этот отчёт.
+Блокеров для ревью нет. Не выполнено:
+- **Live read-only smoke Atera/Huntress и live Decisions (OpenAI).** Нет credentials и сопоставления аккаунтов; по заданию это вне checkpoint и требует отдельного указания.
+- **Контракт Atera с аккаунтом не сверен.** Документация вендора закрыта логином. Сверить по чек-листу `connectors/CONTRACTS.md` до активации live-подключения Atera.
+- **Алерты Atera недоступны** по решению владельца. При доступе к аккаунту проверить, можно ли читать их по клиенту: фильтр, вебхук или endpoint по агенту.
+- **События только из инцидентов Huntress.** Тикеты Atera — только snapshot. Закрытие инцидента событием не является. Жизненный цикл observation по ревизиям одного инцидента — задание 1.8.
+- **Нет процесса-исполнителя.** `syncConnection` и `processPending` — функции. Запуска по расписанию (интервал, обход клиентов, graceful shutdown) пока нет; это нужно для RUNBOOK (1.10) или развёртывания.
+- **Shadow-вызов выполняется в том же проходе worker.** Он идёт после фиксации baseline и не блокирует его, но задерживает следующее событие пакета. Lease во время обработки не продлевается: медленный провайдер может пережить lease остатка пакета, и тогда событие возьмёт другой worker. Второго observation не будет — финальная транзакция проверяет статус под блокировкой строки. Но возможен лишний вызов провайдера и лишняя попытка в `attempts`. Отдельная shadow-job, timeout, бюджет и circuit-breaker — задание 1.7.
+- **Объём чтения Huntress ограничен:** 20 страниц по 100. Больше — `UPSTREAM_TOO_MANY_PAGES` (ERROR). Snapshot хранит не больше 100 элементов: сначала самые серьёзные, плюс общее число у источника.
+- **Нет retention для `RawEvent`.** У runtime-роли нет DELETE, inbox растёт.
+- **HTTP-маршрутов** для очереди сопоставления, привязки и inbox/requeue нет — только сервисы и аудит.
+- **Node 24 ровно и Windows** не запускались.
+- **`npm audit`, 10 находок** в закреплённых NestJS 11.1.6 и Prisma 6.19.0; нужен отдельный решённый patch-bump.
+- **Перенесено из Checkpoint A:**
+  - cursor и фильтры `GET /clients/:id/observations` (1.8);
+  - администрирование identities;
+  - ошибки аутентификации не попадают в security audit;
+  - `ToolExecution` (1.9);
+  - `MANIFEST.json` и `verification/RESULTS.md` описывают импортированный пакет, а не ветку.
 
 ## Decisions and scope
 
-1. **Акторы и memberships хранятся в БД (новая миграция), а не в конфигурации.** docs/02 относит проверенного актора к 1.3, а права на клиента — это данные. Аутентификация идёт той же confined-ролью по узким RLS-политикам, без SECURITY DEFINER и без owner-подключения.
-2. **Токен хранится как SHA-256 digest, без медленного хеша.** Токены случайные и высокоэнтропийные; формат digest закреплён CHECK.
-3. **Identities пишет только seed (owner).** Это согласуется с правилом «миграции и синтетический seed — единственные owner-операции».
-4. **Drift устранён правкой `schema.prisma`**, замороженные миграции не тронуты.
-5. **Распределение отказов.** Отказ REST по scope или правам (в том числе member без `context:read`) → `SecurityAuditEvent` с `SCOPE_DENIED` или `PERMISSION_DENIED`. Отказ инструмента по правам или неизвестный инструмент → клиентский `tool.denied`, как в docs/02.
-6. **Списки.** `GET /clients` показывает только клиентов с `context:read`. `GET /tools` показывает инструменты, право на которые у актора есть хотя бы у одного клиента.
-7. **`ATLAS_API_PORT`** (по умолчанию 3100) добавлен для параллельных тестов; привязка остаётся только к 127.0.0.1.
-8. **Сверх пакета**, по глобальным правилам пользователя: `CLAUDE.md`, `docs/AI_CONTEXT_MAP.md`, тест бюджета контекста.
+1. **Алерты Atera не читаются** (решение владельца, вариант 1, `153e56a`). Чтение всех алертов MSP-аккаунта с раскладкой по клиентам не делалось.
+2. **«Incremental sync» в Stage 1 устроен так:** полное, ограниченное по объёму чтение открытого набора инцидентов плюс durable dedup. Курсора по времени нет. События пишутся атомарно со snapshot, поэтому чтение, упавшее на середине, не оставляет ни snapshot, ни событий.
+3. **Outbox не используется:** в Stage 1 нет исходящих действий.
+4. **Попытка считается при захвате.** Событие, на котором worker падает, тоже дойдёт до DEAD_LETTER после `maxAttempts`.
+5. **Неизвестные ошибки** уходят в DEAD_LETTER сразу, как требует AGENTS.md: PERMANENT/unknown → dead-letter.
+6. **Shadow AI-run пишется после финальной транзакции**, best effort; до задания 1.7 отдельной job нет.
+7. **Значения по умолчанию** (настраиваются): lease 60 с, `maxAttempts` 3, пакет 10, backoff 30 с·2^(n−1), но не больше 15 минут.
+8. **Решение и маршрут вычисляет общий `packages/events/decision.ts`.** Его используют и in-memory reference, и worker, так что расхождения правил нет.
+9. **HTTP-маршруты сопоставления и inbox не добавлены:** в спецификации Stage 1 их нет.
 
-**Scope.** Нет write-tools, UI, Agents/Responses-оркестрации, вызовов вендоров, deployment и изменений аккаунтов. Секретов в БД нет: только `secretRef` и digest токена. Локальный `.env` в git не попал.
+**Scope.**
+- **Ничего лишнего не добавлено:** нет write-tools и записей к вендорам (только GET), нет UI, Agents/Responses-оркестрации, векторной и графовой БД, развёртывания и изменений аккаунтов.
+- **Что уходит в Decisions.** Провайдер OpenAI из пакета отправляет только `source`, `kind`, `sourceSeverity` и `diskPercent`. Summary, идентификаторы, имена и контакты не уходят.
+- **Секреты.** В БД только `secretRef`; тестовые секреты mock-вендора живут в памяти теста; `.env` в git не попал.
 
 ## Next task
 
-**После ревью — задание 1.4, Mapping workflow.** Нужно:
-- явная привязка connection → customer/organization: scoped-сервис, который выдаёт `ResolvedConnection` (scope, connectionId, проверенный `externalTenantId`, без значения секрета);
-- интерфейсы candidate и manual-confirm для `EntityLink`, с `resourceType`/`entityKind`.
+**После ревью — задание 1.7, Decision Layer.** Нужно:
+- rules baseline, fixture и OpenAI shadow как **отдельная job**: baseline фиксируется до результата AI, а worker не ждёт shadow-вызова;
+- `DecisionConfig` из versioned config; модель и allowlist ответов — из конфигурации;
+- `MODEL_MISMATCH` с requested/response model в DecisionRun и метриках;
+- advisory-сбой → `HUMAN_REVIEW`;
+- переключение в `rules` при outage (circuit-breaker);
+- telemetry, budget и retry.
 
-Проверки: неоднозначные и кросс-клиентские связи отклоняются; конфликт confirmed-связи уходит в quarantine, не теряется.
+Проверки (docs/05): timeout, refusal, дрейф схемы ответа, неизвестная модель, urgency floor; один applied run на событие; CRITICAL baseline доступен, пока shadow-вызов не завершён.
 
-Файлы: `connectors/contracts.ts`, `packages/graph/resolver.ts`, `docs/03_CONNECTORS_AND_SYNC.md` (раздел Mapping), `prisma/schema.prisma` (`Connection`, `EntityLink`), `tests/sql-invariants.ts`, `tests/pg/`.
+Файлы: `packages/events/decision.ts`, `packages/events/worker.ts` (`runShadow`, `processClaimed`), `packages/decisions/provider.ts`, `packages/decisions/openai.ts`, `docs/04_DECISION_LAYER.md`, `tests/pg/worker-routing.pg.test.ts`.
 
-Старт: прочитать этот отчёт и раздел Mapping в docs/03. Добавить `resolveConnection(db, actor, scope, system)` поверх `withScope` и тест в `tests/pg/` на чужой клиент и на connection без mapping. Затем candidate-link через `withScope`: политика `EntityLink_scope` уже допускает запись в своём клиенте. Подтверждение — отдельная операция с `confirmedBy`/`confirmedAt`; partial unique `EntityLink_one_confirmed_external` уже в схеме.
+Старт:
+1. Прочитать docs/04 и этот отчёт.
+2. Вынести shadow из `processClaimed` в отдельный проход по событиям с завершённым baseline и без shadow-run: claim с lease, как у inbox.
+3. Добавить тест: медленный shadow-провайдер не задерживает обработку следующего CRITICAL-события.
