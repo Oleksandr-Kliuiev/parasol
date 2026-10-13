@@ -15,11 +15,11 @@ import { confirmLink, proposeLink } from './mapping.ts';
  * - an agent (Atera/Huntress) whose hostname equals exactly ONE planned or existing device (case-insensitive) → a CANDIDATE link
  *   to that device only — a name never proves identity, so a person confirms it in the mapping review queue;
  * - an agent without such a device → a Device made from it, linked and confirmed (the entity IS that object).
- * Guests, disabled users and objects that already carry a confirmed link are skipped. Idempotent. Without `apply` it only plans.
+ * Guests, users without a known type, disabled users and objects that already carry a confirmed link are skipped. Idempotent. Without `apply` it only plans.
  */
 export interface OnboardSummary {
   apply: boolean;
-  people: { planned: number; skippedGuests: number; skippedDisabled: number; alreadyLinked: number };
+  people: { planned: number; skippedGuests: number; skippedUnknownType: number; skippedDisabled: number; alreadyLinked: number };
   devices: { plannedFromM365: number; plannedFromAgents: number; alreadyLinked: number };
   candidates: { agentHostname: string; deviceHostname: string; status: string }[];
   ambiguousAgents: number;
@@ -44,14 +44,16 @@ export async function onboardClient(db: PrismaClient, actor: Actor, scope: Scope
     return { users: await directory('m365_user'), m365Devices: await directory('m365_device'), agents, devices, confirmed };
   });
 
-  const summary: OnboardSummary = { apply: options.apply, people: { planned: 0, skippedGuests: 0, skippedDisabled: 0, alreadyLinked: 0 },
+  const summary: OnboardSummary = { apply: options.apply, people: { planned: 0, skippedGuests: 0, skippedUnknownType: 0, skippedDisabled: 0, alreadyLinked: 0 },
     devices: { plannedFromM365: 0, plannedFromAgents: 0, alreadyLinked: 0 }, candidates: [], ambiguousAgents: 0,
     created: { people: 0, devices: 0, confirmedLinks: 0, candidateLinks: 0 } };
   const people: { ext: string; displayName: string; email: string | null }[] = [];
   for (const u of state.users) {
     if (!u.externalEntityId) continue;
     if (state.confirmed.has(u.externalEntityId)) { summary.people.alreadyLinked += 1; continue; }
-    if (u.dto.userType !== 'Member') { summary.people.skippedGuests += 1; continue; }
+    // The stored DTO carries the normalized type (connectors/microsoft365/directory-dto.ts): MEMBER, GUEST, UNKNOWN or null.
+    if (u.dto.userType === 'GUEST') { summary.people.skippedGuests += 1; continue; }
+    if (u.dto.userType !== 'MEMBER') { summary.people.skippedUnknownType += 1; continue; }
     if (u.dto.accountEnabled !== true) { summary.people.skippedDisabled += 1; continue; }
     const upn = typeof u.dto.userPrincipalName === 'string' ? u.dto.userPrincipalName.toLowerCase() : null;
     people.push({ ext: u.externalEntityId, displayName: String(u.dto.displayName ?? upn ?? 'Microsoft 365 user').slice(0, 200), email: upn });
