@@ -3,6 +3,8 @@
 //   live-read --client C --connection N     activation if needed, health check and one bounded sync — GET requests only;
 //                                           needs the credential variable that the connection's env:// reference names
 //   mapping --client C                      review queue: quarantined conflicts first, then candidates
+//   onboard --client C [--mode plan|apply]  canonical people/devices from source objects (enabled M365 members and devices,
+//                                           agents); confirmed links to their own objects, agent↔device hostname matches as candidates
 //   confirm-link --client C --link L        reject-link --client C --link L [--reason CODE]
 //   inbox --client C                        pending, retrying and dead-lettered events (eventKey, status, attempts, last code)
 //   requeue --client C --event KEY          explicit, audited reprocessing of one dead letter

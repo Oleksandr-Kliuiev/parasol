@@ -21,6 +21,7 @@ import { runShadowPass, runWorkerPass } from './worker-pass.ts';
 import { m365Commands } from './m365.ts';
 import type { M365OperatorDeps } from './m365.ts';
 import { CURSOR_MAX_LENGTH } from '../correlation/parameters.ts';
+import { onboardClient } from '../graph/onboarding.ts';
 
 /**
  * Operator commands (task 1.10, docs/RUNBOOK.md): thin calls of the services as the authenticated actor, so permission,
@@ -71,6 +72,12 @@ const clientCommands: Readonly<Record<string, ClientCommand>> = {
   'confirm-link': { required: ['link'], permissions: ['mapping:review'], run: async (ctx, scope, f) => done(await confirmLink(ctx.db, ctx.actor, scope, f.link!)) },
   'reject-link': { required: ['link'], optional: ['reason'], permissions: ['mapping:review'],
     run: async (ctx, scope, f) => done(await rejectLink(ctx.db, ctx.actor, scope, f.link!, f.reason ?? 'MANUAL_REJECT')) },
+  // Client onboarding of canonical people/devices from source objects (packages/graph/onboarding.ts): --mode plan (default) or apply.
+  onboard: { required: [], optional: ['mode'], permissions: ['mapping:review', 'context:read', 'm365:read'],
+    run: async (ctx, scope, f) => {
+      if (f.mode !== undefined && f.mode !== 'plan' && f.mode !== 'apply') throw invalidArguments();
+      return done(await onboardClient(ctx.db, ctx.actor, scope, { apply: f.mode === 'apply' }));
+    } },
   inbox: { required: [], permissions: ['context:read'], run: async (ctx, scope) => done({ items: await listInbox(ctx.db, ctx.actor, scope) }) },
   requeue: { required: ['event'], permissions: ['events:ingest'],
     run: async (ctx, scope, f) => { await requeueDeadLetter(ctx.db, ctx.actor, scope, f.event!); return done({ eventKey: f.event, inboxStatus: 'RECEIVED' }); } },
