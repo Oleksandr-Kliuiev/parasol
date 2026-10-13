@@ -8,3 +8,11 @@ export function isConsoleLocation(origin: string, pathname: string): boolean {
   const port = Number(match[1]);
   return port >= 1024 && port <= 65535 && pathname === '/operator/';
 }
+
+// Deployment (docs/deploy/DEPLOY.md): behind the edge's Microsoft sign-in the console is served over HTTPS on a DNS name
+// without a port. There is no token entry: the console connects with the edge session (credential.ts useSession).
+const SESSION_ORIGIN = /^https:\/\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
+export function isSessionLocation(origin: string, pathname: string): boolean {
+  return SESSION_ORIGIN.test(origin) && pathname === '/operator/';
+}

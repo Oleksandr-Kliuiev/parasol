@@ -7,6 +7,8 @@ import { AtlasFixtureModule } from './atlas.module.ts';
 import { AtlasDbModule } from './db/app.module.ts';
 import { connectRuntimeDatabase } from './db/database.ts';
 import { prepareOperatorConsole } from './operator/console.ts';
+import { allowedHostsFromEnv } from './operator/http.ts';
+import { proxyIdentityFromEnv, proxyIdentityMiddleware } from './deploy/proxy-identity.ts';
 import { askMode } from '../../../packages/ask/config.ts';
 import { installApiParsers } from './ask-http.ts';
 import { AskBudget } from '../../../packages/ask/budget.ts';
@@ -23,6 +25,9 @@ import { bridgeRemoteSeams, composeEvaluation } from './reval/evaluation.ts';
 // it activates nothing, reads no provider secret and makes no provider call at startup. Fixture + remote refuses to start.
 // Both branches disable Nest's automatic parsers: installApiParsers keeps the Host gate first, then the Ask boundary (MOCK)
 // and Nest's unchanged JSON/urlencoded defaults for every non-Ask request.
+// Deployment (docs/deploy/DEPLOY.md, never with the R-EVAL bridge): ATLAS_LISTEN_HOST (default 127.0.0.1; 0.0.0.0 inside a container),
+// ATLAS_ALLOWED_HOSTS (extra exact Host authorities of the console gate), ATLAS_PROXY_SECRET + ATLAS_PROXY_USERS (Microsoft sign-in
+// at the edge mapped to each user's own actor token, deploy/proxy-identity.ts); GET /openapi.json is served when the API runs in db mode.
 // ATLAS_REVAL_BRIDGE_FD=3 (R-EVAL RS-A, set only by its controller): db mode, runtime URL from the bridge; RS-C-A: Ask REMOTE comes
 // ONLY from the controller's launch frame (env Ask stays off) with the registration-lifetime gate and the evaluation handoff route.
 const bridge = process.env.ATLAS_REVAL_BRIDGE_FD === undefined ? null : await RevalBridge.start();
@@ -30,7 +35,11 @@ const mode = process.env.ATLAS_MODE || 'fixture';
 const port = Number(process.env.ATLAS_API_PORT ?? 3100);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('ATLAS_API_PORT must be an integer in 1024..65535');
 const ask = bridge ? 'remote' as const : askMode(process.env.ATLAS_ASK_MODE);
-const operatorConsole = await prepareOperatorConsole(process.env.ATLAS_OPERATOR_UI, port, fileURLToPath(new URL('../../../operator/', import.meta.url)));
+const listenHost = bridge ? '127.0.0.1' : process.env.ATLAS_LISTEN_HOST ?? '127.0.0.1';
+if (!/^(?:127\.0\.0\.1|0\.0\.0\.0)$/.test(listenHost)) throw new Error('ATLAS_LISTEN_HOST must be 127.0.0.1 or 0.0.0.0');
+const operatorConsole = await prepareOperatorConsole(process.env.ATLAS_OPERATOR_UI, port, fileURLToPath(new URL('../../../operator/', import.meta.url)),
+  bridge ? [] : allowedHostsFromEnv(process.env.ATLAS_ALLOWED_HOSTS));
+const proxyIdentity = bridge ? null : proxyIdentityFromEnv(process.env);
 let app: INestApplication;
 let evaluationGate: Awaited<ReturnType<typeof composeEvaluation>>['gate'] | undefined;
 // RS-D-A: the bridge's guard census exists before the Ask module, so its no-key seams are census-wrapped and the SAME budget feeds the
@@ -51,11 +60,13 @@ if (mode === 'fixture') {
   throw new Error('ATLAS_MODE must be fixture or db');
 }
 if (operatorConsole) app.use(operatorConsole);
+if (mode === 'db' && !bridge) app.use(proxyIdentityMiddleware(proxyIdentity));
 installApiParsers(app, ask, budget, undefined, evaluationGate);
 app.enableShutdownHooks();
 if (bridge) await bridge.bindAndAwaitOpen();
-await app.listen(port, '127.0.0.1');
-console.log(`Atlas ${mode === 'db' ? 'PostgreSQL' : 'synthetic fixture'} API: http://127.0.0.1:${port}`);
+await app.listen(port, listenHost);
+console.log(`Atlas ${mode === 'db' ? 'PostgreSQL' : 'synthetic fixture'} API: http://${listenHost}:${port}`);
+if (proxyIdentity) console.log(`Microsoft sign-in at the edge: ${proxyIdentity.users.size} provisioned user(s)`);
 if (operatorConsole) console.log(`Local operator console: http://127.0.0.1:${port}/operator/`);
 if (ask === 'mock') console.log('Ask Atlas: local synthetic MOCK; no external model');
 if (ask === 'remote') console.log('Ask Atlas: REMOTE V2, policy-gated per request; no provider call at startup');

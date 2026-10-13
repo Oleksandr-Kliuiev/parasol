@@ -22,8 +22,9 @@ test('holder: no getter or serialization exposes the token; malformed input is r
   const { calls, fetchImpl } = recorder(() => json([]));
   const holder = createCredentialHolder(fetchImpl);
   assert.ok(Object.isFrozen(holder));
-  // ASK-REMOTE R-C adds exactly one closed operation, askRemote (the AskRequestV2 POST); the surface stays exact.
-  assert.deepEqual(Object.keys(holder).sort(), ['ask', 'askRemote', 'clear', 'connected', 'epoch', 'execute', 'get', 'replace']);
+  // ASK-REMOTE R-C adds exactly one closed operation, askRemote (the AskRequestV2 POST); deployment adds useSession (the edge
+  // sign-in session, no token — tests/deploy-edge.test.ts); the surface stays exact.
+  assert.deepEqual(Object.keys(holder).sort(), ['ask', 'askRemote', 'clear', 'connected', 'epoch', 'execute', 'get', 'replace', 'useSession']);
   for (const bad of [` ${TOKEN}`, `${TOKEN} `, `${TOKEN}\n`, 'short', `Bearer ${TOKEN}`, `${TOKEN}!`, '']) {
     assert.equal(holder.replace(bad), false); assert.equal(holder.connected(), false);
   }

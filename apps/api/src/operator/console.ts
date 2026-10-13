@@ -16,7 +16,7 @@ export function operatorUiEnabled(value: string | undefined): boolean {
  * closed (OPERATOR_UI_ASSETS_UNAVAILABLE) before the server listens. `assetDirectory` is derived by main.ts from its own
  * module location (dist/operator next to dist/apps), so it does not depend on the working directory.
  */
-export async function prepareOperatorConsole(flag: string | undefined, port: number, assetDirectory: string) {
+export async function prepareOperatorConsole(flag: string | undefined, port: number, assetDirectory: string, extraHosts: readonly string[] = []) {
   if (!operatorUiEnabled(flag)) return null;
-  return operatorMiddleware(port, await loadOperatorAssets(assetDirectory));
+  return operatorMiddleware(port, await loadOperatorAssets(assetDirectory), extraHosts);
 }

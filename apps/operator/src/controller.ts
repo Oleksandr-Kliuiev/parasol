@@ -21,6 +21,8 @@ export interface Controller {
   state(): ConsoleState;
   /** Destroys the previous credential and all data, then connects with `raw` if it is a well-formed bearer token. */
   connect(raw: string): void;
+  /** Destroys the previous credential and all data, then connects with the edge sign-in session (deployment). */
+  connectSession(): void;
   disconnect(notice: SessionNotice): void;
   refreshClients(): void;
   search(text: string): void;
@@ -142,6 +144,13 @@ export function createController(holder: CredentialHolder, onChange: (state: Con
     connect(raw: string): void {
       resetCredentialWork();
       if (!holder.replace(raw)) { state = disconnectedState('TOKEN_FORMAT'); onChange(state); return; }
+      state = { ...disconnectedState(null), session: 'CONNECTING' };
+      loadClients();
+    },
+    connectSession(): void {
+      resetCredentialWork();
+      if (!holder.useSession) { state = disconnectedState('ORIGIN_REFUSED'); onChange(state); return; }
+      holder.useSession();
       state = { ...disconnectedState(null), session: 'CONNECTING' };
       loadClients();
     },

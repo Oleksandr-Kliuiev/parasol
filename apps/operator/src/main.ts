@@ -4,7 +4,7 @@ import { createCredentialHolder } from './credential.ts';
 import { createController } from './controller.ts';
 import { createView } from './view.ts';
 import { byId } from './dom.ts';
-import { isConsoleLocation } from './origin.ts';
+import { isConsoleLocation, isSessionLocation } from './origin.ts';
 import { disconnectedState } from './state.ts';
 import type { ConsoleState } from './state.ts';
 
@@ -19,7 +19,20 @@ const token = byId('token', HTMLInputElement);
 const submit = byId('connect-submit', HTMLButtonElement);
 const search = byId('client-search', HTMLInputElement);
 
-if (!isConsoleLocation(location.origin, location.pathname)) {
+const sessionMode = isSessionLocation(location.origin, location.pathname);
+if (sessionMode) {
+  // Deployment: signed in at the edge with a Microsoft account; no token entry, the session connects at once and again after
+  // a back/forward-cache restore. Leaving the page still destroys all data.
+  token.disabled = true; submit.disabled = true;
+  controller.connectSession();
+  view.render(controller.state());
+  byId('disconnect', HTMLButtonElement).addEventListener('click', () => controller.disconnect('DISCONNECTED'));
+  byId('refresh-clients', HTMLButtonElement).addEventListener('click', () => controller.refreshClients());
+  byId('refresh-queue', HTMLButtonElement).addEventListener('click', () => controller.refreshQueue());
+  search.addEventListener('input', () => controller.search(search.value));
+  addEventListener('pagehide', () => controller.disconnect('PAGE_HIDDEN'));
+  addEventListener('pageshow', event => { if (event.persisted) controller.connectSession(); });
+} else if (!isConsoleLocation(location.origin, location.pathname)) {
   // Outside the exact loopback console origin the token form is disabled; no credential can be entered or sent.
   token.disabled = true; submit.disabled = true;
   view.render(disconnectedState('ORIGIN_REFUSED'));

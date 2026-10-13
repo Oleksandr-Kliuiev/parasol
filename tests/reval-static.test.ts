@@ -24,11 +24,20 @@ test('production R-EVAL modules and entries import no test support and carry no 
     // main.ts keeps its accepted reads; bridge.ts re-checks ATLAS_MODE in the post-.env process env (its launch snapshot is
     // the whole-object copy LAUNCH_ENV); no other production module names an env variable directly.
     const allowedEnv: Record<string, string[]> = {
-      'apps/api/src/main.ts': ['ATLAS_REVAL_BRIDGE_FD', 'ATLAS_MODE', 'ATLAS_API_PORT', 'ATLAS_ASK_MODE', 'ATLAS_OPERATOR_UI', 'ATLAS_RUNTIME_DATABASE_URL', 'ATLAS_DEMO_TOKEN'],
+      // Deployment (docs/deploy/DEPLOY.md): ATLAS_LISTEN_HOST and ATLAS_ALLOWED_HOSTS, read only outside bridge mode (asserted below).
+      'apps/api/src/main.ts': ['ATLAS_REVAL_BRIDGE_FD', 'ATLAS_MODE', 'ATLAS_API_PORT', 'ATLAS_ASK_MODE', 'ATLAS_OPERATOR_UI', 'ATLAS_RUNTIME_DATABASE_URL', 'ATLAS_DEMO_TOKEN',
+        'ATLAS_LISTEN_HOST', 'ATLAS_ALLOWED_HOSTS'],
       'apps/api/src/reval/bridge.ts': ['ATLAS_MODE'],
     };
     for (const m of text.matchAll(/process\.env\.([A-Z_]+)/g)) assert.ok((allowedEnv[f] ?? []).includes(m[1]!), `${f} reads ${m[1]}`);
   }
+  // The deployment reads (listen host, Host allowlist, proxy identity) never happen in bridge mode: each is behind `bridge ?`.
+  const main = await read('apps/api/src/main.ts');
+  for (const name of ['process.env.ATLAS_LISTEN_HOST', 'process.env.ATLAS_ALLOWED_HOSTS', 'proxyIdentityFromEnv(process.env)']) {
+    const lines = main.split('\n').filter(l => l.includes(name) && !l.trimStart().startsWith('//'));
+    assert.ok(lines.length === 1 && /bridge \? /.test(lines[0]!), `main.ts reads ${name} only outside bridge mode`);
+  }
+  assert.ok(/if \(mode === 'db' && !bridge\) app\.use\(proxyIdentityMiddleware\(proxyIdentity\)\);/.test(main), 'no proxy identity in bridge mode');
   const controller = await read('packages/reval/controller.ts');
   assert.deepEqual([...controller.matchAll(/env\.(ATLAS_[A-Z_]+)/g)].map(m => m[1]), ['ATLAS_REVAL_CONFIG', 'ATLAS_REVAL_CONNECTION_ID', 'ATLAS_REVAL_SERVER_BOOT_ID']);
   const config = await read('packages/reval/config.ts');
