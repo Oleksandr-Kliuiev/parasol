@@ -10,7 +10,7 @@ import { confirmLink, proposeLink } from './mapping.ts';
  * synthetic seed created canonical people and devices. This step creates them FROM source identity objects and links each object
  * to the entity made from it through the accepted mapping workflow (proposeLink + confirmLink: mapping:review, m365:read for
  * M365 objects, fresh directory evidence, audited):
- * - every enabled MEMBER user of the active Microsoft 365 directory generation → a Person (display name, UPN as email);
+ * - every enabled MEMBER user (or one Graph sent without a type) of the active Microsoft 365 directory generation → a Person;
  * - every enabled Microsoft 365 device → a Device (display name as hostname);
  * - an agent (Atera/Huntress) whose hostname equals exactly ONE planned or existing device (case-insensitive) → a CANDIDATE link
  *   to that device only — a name never proves identity, so a person confirms it in the mapping review queue;
@@ -51,9 +51,10 @@ export async function onboardClient(db: PrismaClient, actor: Actor, scope: Scope
   for (const u of state.users) {
     if (!u.externalEntityId) continue;
     if (state.confirmed.has(u.externalEntityId)) { summary.people.alreadyLinked += 1; continue; }
-    // The stored DTO carries the normalized type (connectors/microsoft365/directory-dto.ts): MEMBER, GUEST, UNKNOWN or null.
+    // The stored DTO carries the normalized type (connectors/microsoft365/directory-dto.ts): MEMBER, GUEST, UNKNOWN or null. Graph
+    // omits userType for some member accounts (seen in this tenant), so null counts as a member; an unknown value is skipped.
     if (u.dto.userType === 'GUEST') { summary.people.skippedGuests += 1; continue; }
-    if (u.dto.userType !== 'MEMBER') { summary.people.skippedUnknownType += 1; continue; }
+    if (u.dto.userType !== 'MEMBER' && u.dto.userType !== null && u.dto.userType !== undefined) { summary.people.skippedUnknownType += 1; continue; }
     if (u.dto.accountEnabled !== true) { summary.people.skippedDisabled += 1; continue; }
     const upn = typeof u.dto.userPrincipalName === 'string' ? u.dto.userPrincipalName.toLowerCase() : null;
     people.push({ ext: u.externalEntityId, displayName: String(u.dto.displayName ?? upn ?? 'Microsoft 365 user').slice(0, 200), email: upn });
