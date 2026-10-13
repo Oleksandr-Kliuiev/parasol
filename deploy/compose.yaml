@@ -16,7 +16,7 @@ services:
     container_name: atlas-admin-api
     env_file: /etc/atlas-admin/api.env
     environment: { ATLAS_MODE: db, ATLAS_LISTEN_HOST: 0.0.0.0, ATLAS_API_PORT: "3100", ATLAS_OPERATOR_UI: "1",
-      ATLAS_ALLOWED_HOSTS: "admin.vardahei.tech,atlas-admin-api:3100" }
+      ATLAS_ALLOWED_HOSTS: "admin.vardahei.tech,atlas-admin-api:3100", ATLAS_DECISIONS_MODE: rules }
     depends_on: [db]
     networks: [internal, edge]
     restart: unless-stopped
@@ -31,6 +31,8 @@ services:
     container_name: atlas-admin-scheduler
     command: ["node", "--experimental-strip-types", "--no-warnings", "scripts/scheduler.ts"]
     env_file: /etc/atlas-admin/scheduler.env
+    # Decisions stay rules-only: no paid model call is admitted (config/decisions.json defaults to shadow).
+    environment: { ATLAS_DECISIONS_MODE: rules }
     depends_on: [api]
     networks: [internal]
     restart: unless-stopped
