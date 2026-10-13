@@ -16,7 +16,24 @@ export const auditMetadataAllowlist: readonly string[] = [
   // Tool gateway (task 1.9): the execution row an audit entry belongs to, and the declared parameter a rejection names
   'toolExecutionId', 'parameter',
   // Operator CLI (task 1.10): the command a refused call named (one of a fixed set)
-  'command'
+  'command',
+  // Stage 2: connection lifecycle (m365-disable) and retention counts — local IDs, statuses, versions and counts only
+  'connectionStatus', 'lifecycleVersion', 'clearedPointers', 'deletedDirectoryObjects', 'deletedGenerations', 'deletedMemberships',
+  'deletedLeaves', 'deletedAttempts', 'deletedEvidence',
+  // Stage 2 M365 sync (S2-B): local resource type, attempt sequence, Atlas request ID and counts — never vendor IDs or DTOs
+  'resourceType', 'attemptSeq', 'requestId', 'rowCount', 'evidenceCount', 'leafCount', 'attemptsUsed',
+  // Stage 2 reads (S2-C): rule version, page/total counts and the coverage code of one read — never a DTO, vendor ID or query
+  'ruleVersion', 'itemCount', 'total', 'coverageStatus',
+  // Stage 3 actions (S3-A): the local request ID, action type and request state — never title, description, customer or token
+  'actionRequestId', 'actionType', 'requestState',
+  // Stage 3 approval/reservation (S3-B): local approval/attempt IDs and the decision — never signer token, nonce or body
+  'actionApprovalId', 'actionAttemptId', 'approvalDecision',
+  // Stage 3 execution/verification (S3-C): attempt state, claimed ordinal, its target kind and result — never a ticket ID
+  'attemptState', 'verificationOrdinal', 'targetKind', 'verificationResult',
+  // Stage 4 PowerOffice (S4-A): exactly six keys, enforced per event by packages/poweroffice/audit.ts — local connectionId,
+  // attemptId, snapshotId, the operational attempt sequence, the local JSON outcome (not SecurityAuditEvent.outcome) and
+  // safeErrorCode (above). Never amounts, counts, dates, company keys or source IDs.
+  'attemptId', 'snapshotId', 'sequence', 'outcome'
 ];
 export const AUDIT_TEXT_LIMIT = 200;
 

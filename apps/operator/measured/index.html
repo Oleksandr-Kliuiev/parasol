@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Atlas operator console (measured evaluation)</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="main-measured.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">A</span>
+    <span class="brand-name">Atlas</span>
+    <span class="brand-sub">Operator console</span>
+  </div>
+  <div class="badges">
+    <span class="badge badge-local">Local console</span>
+    <span class="badge badge-local">Read-only</span>
+    <span class="badge badge-mode">Measured evaluation build</span>
+    <span id="mode-badge" class="badge badge-mode" hidden></span>
+    <span id="session-status" class="badge badge-session badge-disconnected">Not connected</span>
+  </div>
+  <button id="disconnect" type="button" class="btn btn-header" hidden>Disconnect</button>
+</header>
+<div class="layout">
+  <nav id="clients-panel" class="sidebar" aria-labelledby="clients-heading" hidden>
+    <div class="panel-head">
+      <h2 id="clients-heading">Clients</h2>
+      <button id="refresh-clients" type="button" class="btn btn-small">Refresh</button>
+    </div>
+    <label class="field-label" for="client-search">Search by name or ID</label>
+    <input id="client-search" class="field" type="search" maxlength="128" autocomplete="off" spellcheck="false" autocapitalize="off">
+    <p id="clients-status" class="panel-status" role="status" aria-live="polite"></p>
+    <ul id="client-list" class="client-list" aria-labelledby="clients-heading"></ul>
+  </nav>
+  <main id="main" class="work" tabindex="-1">
+    <section id="connect-panel" class="card connect" aria-labelledby="connect-heading">
+      <h1 id="connect-heading">Connect to the local Atlas API</h1>
+      <p class="muted">Enter an existing local operator token. It stays only in this page's memory and is cleared when you
+        disconnect, reload, or leave the page. The API decides which clients you can read.</p>
+      <form id="connect-form" class="connect-form" novalidate>
+        <label class="field-label" for="token">Operator token</label>
+        <input id="token" class="field" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off">
+        <button id="connect-submit" type="submit" class="btn btn-primary">Connect</button>
+      </form>
+      <p id="connect-notice" class="notice-line" role="status" aria-live="polite"></p>
+    </section>
+    <section id="scope-panel" class="card scope" aria-live="polite" hidden></section>
+    <div id="workspace" class="workspace" hidden>
+      <section id="queue-panel" class="card queue" aria-labelledby="queue-heading">
+        <div class="panel-head">
+          <h2 id="queue-heading" tabindex="-1">Observation queue</h2>
+          <button id="refresh-queue" type="button" class="btn btn-small">Refresh queue</button>
+        </div>
+        <div id="queue-controls"></div>
+        <p id="queue-status" class="panel-status" role="status" aria-live="polite"></p>
+        <div id="queue-body" aria-labelledby="queue-heading"></div>
+      </section>
+      <section id="detail-panel" class="card detail" aria-labelledby="detail-heading">
+        <h2 id="detail-heading" tabindex="-1">Selected observation</h2>
+        <p id="detail-status" class="visually-hidden" role="status" aria-live="polite"></p>
+        <div id="detail-body"></div>
+        <section id="evidence-panel" class="evidence" aria-labelledby="evidence-heading" hidden>
+          <h3 id="evidence-heading" tabindex="-1">Stored source evidence</h3>
+          <div id="evidence-action"></div>
+          <p id="evidence-status" class="panel-status" role="status" aria-live="polite"></p>
+          <div id="evidence-body"></div>
+        </section>
+      </section>
+      <section id="eval-panel" class="card ask" aria-labelledby="eval-heading" hidden>
+        <div class="panel-head">
+          <h2 id="eval-heading" tabindex="-1"></h2>
+          <span class="badge badge-ask">Measured synthetic sandbox</span>
+        </div>
+        <p id="eval-intro" class="muted small"></p>
+        <form id="eval-pair-form" class="connect-form" novalidate>
+          <label class="field-label" for="eval-nonce">Pairing code from the owner session</label>
+          <input id="eval-nonce" class="field" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off">
+          <button id="eval-pair" type="submit" class="btn btn-primary">Pair</button>
+        </form>
+        <p id="eval-pair-status" class="panel-status" role="status" aria-live="polite"></p>
+        <div id="eval-pane" class="ask-form" role="group" aria-labelledby="eval-heading" hidden>
+          <div id="eval-facts"></div>
+          <div id="eval-disclosure" class="ask-disclosure"></div>
+          <label class="field-label" for="eval-question">Question (type it exactly)</label>
+          <textarea id="eval-question" class="field ask-question" rows="3" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="eval-limit"></textarea>
+          <p id="eval-limit" class="muted small"></p>
+          <label class="check" for="eval-choice"><input id="eval-choice" type="radio" name="eval-choice"> <span id="eval-choice-label"></span></label>
+          <div class="ask-consent">
+            <p id="eval-cost" class="strong small"></p>
+            <label class="check" for="eval-consent"><input id="eval-consent" type="checkbox"> <span id="eval-consent-text"></span></label>
+          </div>
+          <button id="eval-submit" type="button" class="btn btn-primary">Ask</button>
+        </div>
+        <p id="eval-status" class="panel-status" role="status" aria-live="polite"></p>
+        <div id="eval-answer" class="ask-answer" aria-labelledby="eval-heading"></div>
+        <div id="eval-send-row" class="ask-consent" hidden>
+          <button id="eval-send" type="button" class="btn btn-secondary"></button>
+          <p id="eval-send-status" class="muted small" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+      <section id="ask-panel" class="card ask" aria-labelledby="ask-heading" hidden>
+        <div class="panel-head">
+          <h2 id="ask-heading" tabindex="-1">Ask Atlas</h2>
+          <span id="ask-badge" class="badge badge-ask">Ask Atlas — local synthetic MOCK; no external model</span>
+        </div>
+        <p id="ask-capability" class="panel-status" role="status" aria-live="polite"></p>
+        <div id="ask-capability-action"></div>
+        <p id="ask-context" class="muted"></p>
+        <div id="ask-form" class="ask-form" role="group" aria-labelledby="ask-heading" hidden>
+          <p id="ask-intro" class="muted small"></p>
+          <div id="ask-examples" class="ask-examples"></div>
+          <div id="ask-disclosure" class="ask-disclosure" hidden></div>
+          <label class="field-label" for="ask-question">Your question</label>
+          <textarea id="ask-question" class="field ask-question" rows="3" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="ask-limit ask-intro"></textarea>
+          <p id="ask-limit" class="muted small"></p>
+          <label class="check" for="ask-focus"><input id="ask-focus" type="checkbox" aria-describedby="ask-focus-note"> Use selected observation</label>
+          <p id="ask-focus-note" class="muted small"></p>
+          <div id="ask-consent-row" class="ask-consent" hidden>
+            <p id="ask-cost" class="strong small"></p>
+            <label class="check" for="ask-consent"><input id="ask-consent" type="checkbox" aria-describedby="ask-cost ask-consent-note"> <span id="ask-consent-text"></span></label>
+            <p id="ask-consent-note" class="muted small"></p>
+          </div>
+          <button id="ask-submit" type="button" class="btn btn-primary">Ask</button>
+        </div>
+        <p id="ask-status" class="panel-status" role="status" aria-live="polite"></p>
+        <div id="ask-answer" class="ask-answer" aria-labelledby="ask-heading"></div>
+      </section>
+      <section id="context-panel" class="card context" aria-labelledby="context-heading">
+        <h2 id="context-heading" tabindex="-1">Client context</h2>
+        <div id="context-body"></div>
+      </section>
+    </div>
+  </main>
+</div>
+</body>
+</html>

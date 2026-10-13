@@ -1,0 +1,22 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc4",
+  "packageHash": "9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163",
+  "checkedUtc": "2026-10-11T11:13:12.901847+00:00",
+  "manifestFilesMatched": 38,
+  "zipFilesMatched": 38,
+  "dependencyHashesMatched": 29,
+  "bothIndependentSameArtifactArchitectureApprovals": true,
+  "reviewReportHashesMatched": true,
+  "executionRC5ManifestFilesMatched": 120,
+  "baselineUnchanged": 1431,
+  "administrativeBaselineDeltas": [],
+  "contextRouting": "New feature-local AGENTS/README/DESIGN_STATUS; existing frozen context map preserved",
+  "headUnchanged": true,
+  "branch": "codex/reval-server-contracts-20261011",
+  "normativeFilesChangedAfterApproval": false,
+  "runtimeChecks": "NOT_RUN_FOR_DOC_ONLY_SERVER_DESIGN",
+  "serverImplementation": "NOT_STARTED",
+  "paidProductCalls": 0,
+  "activation": false,
+  "liveEligible": false
+}

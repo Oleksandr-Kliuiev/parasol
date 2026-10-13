@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { Actor, Scope, ClientContextV1, ObservationPage } from '../core/contracts.ts';
-import { AtlasError, assertPermission, hasClientPermission, observationStatuses, severities } from '../core/contracts.ts';
+import { AtlasError, M365_RESOURCE_TYPES, assertPermission, hasClientPermission, observationStatuses, severities } from '../core/contracts.ts';
 import { withScope } from './scoped-db.ts';
 import { mapClientContext, mapObservationPage } from './context-mapper.ts';
 import type { DbClientGraph } from './context-mapper.ts';
@@ -22,6 +22,8 @@ function assertQuery(query: ObservationQuery): void {
 /**
  * DB-backed getClientContext. Runs inside withScope(): the RLS context is the single requested client, so even a query
  * that forgot `where: scope` could not read another client. Only CONFIRMED links are returned; candidates stay out.
+ * ClientContextV1 is the Stage 1 contract: m365_* links and Microsoft 365 connections are excluded in the query itself,
+ * whatever the caller's permissions (M365 data has its own versioned read, docs/stage2/02_CONTRACTS.md §5).
  * Live alerts/tickets/incidents come from the snapshot repository (task 1.5) with an explicit status per resource.
  * Observations: the active ones (OPEN and ACKNOWLEDGED) in priority order; an old CRITICAL is never pushed out by newer MEDIUMs.
  * Entities, links and connections come in ID order, so the same data gives the same context (no physical row order).
@@ -37,9 +39,9 @@ export async function getClientContext(db: PrismaClient, actor: Actor, scope: Sc
         entities: { orderBy: { id: 'asc' }, select: { id: true, kind: true,
           person: { select: { displayName: true, email: true } },
           device: { select: { hostname: true, personId: true } },
-          links: { where: { status: 'CONFIRMED' }, orderBy: { id: 'asc' }, select: { id: true, status: true,
+          links: { where: { status: 'CONFIRMED', resourceType: { notIn: [...M365_RESOURCE_TYPES] } }, orderBy: { id: 'asc' }, select: { id: true, status: true,
             external: { select: { externalId: true, resourceType: true, connection: { select: { id: true, system: true, status: true } } } } } } } },
-        connections: { orderBy: { id: 'asc' }, select: { id: true, system: true, status: true,
+        connections: { where: { system: { not: 'microsoft365' } }, orderBy: { id: 'asc' }, select: { id: true, system: true, status: true,
           syncStates: { select: { resourceType: true, status: true, lastSyncAt: true, lastSuccessAt: true, safeErrorCode: true,
             snapshot: { select: { asOf: true, items: true, itemCount: true, truncated: true } } } } } }
       }

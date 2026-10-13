@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { Actor } from '../../../../packages/core/contracts.ts';
 import { executeTool } from '../../../../packages/tools/gateway.ts';
 import { describeTool } from '../../../../packages/tools/registry.ts';
+import { atlasTools } from '../../../../packages/tools/composed-registry.ts';
 import { toolsAvailableTo } from '../../../../packages/policy/tool-policy.ts';
 import { PrismaToolLedger, databaseReaders } from '../../../../packages/tools/prisma-ledger.ts';
 import { PrismaAudit, PrismaSecurityAudit } from '../../../../packages/audit/prisma.ts';
@@ -22,9 +23,9 @@ import { AuthModule, ApiTokenGuard, AccessPolicy, CurrentActor } from './auth.ts
 export class ToolsController {
   constructor(@Inject(PRISMA) private readonly db: PrismaClient, private readonly access: AccessPolicy) {}
 
-  /** Registry entries the actor holds the permission for on at least one client, with metadata and parameter schemas. */
+  /** Registry entries the actor holds ALL permissions for on one client, with metadata and parameter schemas (composed registry). */
   @Get() list(@CurrentActor() actor: Actor) {
-    return toolsAvailableTo(actor).map(describeTool);
+    return toolsAvailableTo(actor, atlasTools).map(describeTool);
   }
   @Post('execute') async execute(@CurrentActor() actor: Actor, @Body() body: unknown, @Res({ passthrough: true }) res: { setHeader(name: string, value: string): unknown }) {
     const request = parseToolRequest(body);
@@ -34,7 +35,8 @@ export class ToolsController {
     const scope = { workspaceId: actor.workspaceId, clientId: request.clientId };
     const sinks = { audit: new PrismaAudit(this.db, actor), securityAudit: new PrismaSecurityAudit(this.db, actor), ledger: new PrismaToolLedger(this.db, actor) };
     try {
-      const outcome = await executeTool(actor, scope, { tool: request.tool, parameters: request.parameters, correlationId }, databaseReaders(this.db, actor, scope), sinks);
+      const outcome = await executeTool(actor, scope, { tool: request.tool, parameters: request.parameters, correlationId },
+        databaseReaders(this.db, actor, scope, { correlationId }), sinks, atlasTools);
       res.setHeader('x-atlas-tool-execution-id', outcome.executionId);
       return outcome.result;
     } catch (error) { toHttp(error); }

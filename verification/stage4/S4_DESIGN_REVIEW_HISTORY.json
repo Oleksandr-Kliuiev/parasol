@@ -1,0 +1,60 @@
+{
+  "checkpoint": "Stage4 design",
+  "recordedAt": "2026-10-09T08:37:20.649378+00:00",
+  "rounds": [
+    {
+      "artifact": "S4-design-rc1",
+      "packageHash": "0553b3560cd5baee66c1b5294ff04fa05b47282def2d80242100af073a0c3175",
+      "manifest": "verification/stage4/S4_DESIGN_RC1_MANIFEST.json",
+      "manifestSha256": "9c8724f3c7d316aa83c6a452334ecaa195beb3af94e8d5ca9c0b3a893bff2259",
+      "archiveSha256": "d24ff04317b0f4fe908bf9389b07613c06b9ed9879f6e26c194e57c3e0c233b5",
+      "reviews": [
+        {
+          "reviewer": "ASTRA",
+          "model": "gpt-6-astra",
+          "effectiveEffort": "xhigh",
+          "freshSession": true,
+          "verdict": "CHANGES_REQUIRED",
+          "report": "docs/stage4/reviews/ASTRA_DESIGN_RC1.md",
+          "reportSha256": "ad5234a226bc79a783f1fc171109e3ec44765c17243c2ea09fe0aad54efaa76b"
+        },
+        {
+          "reviewer": "FABLE",
+          "model": "claude-fable-5-1",
+          "effectiveEffort": "high",
+          "freshSession": true,
+          "verdict": "CHANGES_REQUIRED",
+          "report": "docs/stage4/reviews/FABLE_DESIGN_RC1.md",
+          "reportSha256": "0a1586d60d963ff980036aeaa5e93430c53f38af4ae1e766cf8b037d2d98978f"
+        }
+      ]
+    },
+    {
+      "artifact": "S4-design-rc2",
+      "packageHash": "d848b026efcc2af30c7900ef6f5325e31c04c11825d4ec089dcf6baf984873ec",
+      "manifest": "verification/stage4/S4_DESIGN_RC2_MANIFEST.json",
+      "manifestSha256": "43f86a7eb492738a2fb0d9c43c18470e26d19860a259f708f38bb7e9ee3c7230",
+      "archiveSha256": "b96c15c71705107330deea840e7e219260755c8b82ba4e58d179bc602d9f6059",
+      "reviews": [
+        {
+          "reviewer": "ASTRA",
+          "model": "gpt-6-astra",
+          "effectiveEffort": "xhigh",
+          "freshSession": true,
+          "verdict": "APPROVED",
+          "report": "docs/stage4/reviews/ASTRA_DESIGN_RC2.md",
+          "reportSha256": "f992df46bc4539804ab1f04507db83b658a5b639d13904313d8263a2d30906b6"
+        },
+        {
+          "reviewer": "FABLE",
+          "model": "claude-fable-5-1",
+          "effectiveEffort": "high",
+          "freshSession": true,
+          "verdict": "APPROVED",
+          "report": "docs/stage4/reviews/FABLE_DESIGN_RC2.md",
+          "reportSha256": "0f9cc9fdb1c0f588b6059a29d24bcbc74c735ea0d02340705238cdc48c91a705"
+        }
+      ]
+    }
+  ]
+}

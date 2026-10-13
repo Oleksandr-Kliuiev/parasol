@@ -1,0 +1,92 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSB-rc2",
+ "window": [
+  "2026-10-11T20:04:53Z",
+  "2026-10-11T20:10:14Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17.11 (TCP seam, regression only)",
+  "nativePostgres": "17.11 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "node --test tests/*.test.ts",
+   "result": "520 tests: 511 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (CORPUS_IDENTITY_MISMATCH), unchanged since RS-A; reval-rc5-guard passes",
+   "log": "unit.txt"
+  },
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=<native> npm run test:pg",
+   "result": "746/746 pass, 0 fail, 0 skipped",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "12 parallel runs of tests/pg/reval-fixtures.pg.test.ts (review F4)",
+   "result": "12/12 exit 0",
+   "log": "repeats.txt, repeat-*.txt"
+  },
+  {
+   "command": "mutations M1 always-true intents, M2 hard-coded financeUnchanged, M3 dropped snapshot-#2 generation check, M4 dropped PAUSED checks (in place, restored byte-exact)",
+   "result": "each fails >=1 RS-B PG test (M1 1/9, M2-M4 1/6 failing)"
+  }
+ ],
+ "logs": {
+  "build.txt": "b8c5e0342d6a9c14866729526ce80bc52092f45360b00c6d1483634ed29a08b7",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "bb16f053923f7baab9feba346870f11cfde05ba290072bca07e7992d09c15995",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "repeat-1.txt": "da1ba52b61f659bd3ae9e582a6f9a4defd47ca54d2b8c5bbcf0310159785f2b2",
+  "repeat-10.txt": "67be64d03d62f469648c4fd474af3cb4b7446954c6fb3519b29a633acd580395",
+  "repeat-11.txt": "f170847c1e5795d8af95be5319f0b2344eaf972f057483674f935349168aacfc",
+  "repeat-12.txt": "7420baf62955d89cc71298d944e92872846767d6cca031047451ebbcc30a67e9",
+  "repeat-2.txt": "1bbc820d4e62d9a19ce7c83a48dfcdea581919555099b26fd1d8868f320afd51",
+  "repeat-3.txt": "7e48fadff38c025a71de38830b4ee8f6ee7e51343047f4e924b37c7c49abe039",
+  "repeat-4.txt": "b3382ce19c2257ad4f5127c4a8634e2199d7abd3e9cdb19f994df2ba99a8a590",
+  "repeat-5.txt": "8ef43ad98713533019e330da06fb84568c177f2458fbe09612795cb448d9b2e4",
+  "repeat-6.txt": "86cb8896f5db7d0a5ae1063175acd345b8c2ad7b61a00c49d6d542f81b4af93a",
+  "repeat-7.txt": "42ab38276d22618afb12a22103fec1050bc9ab2e4eb6189f12e329de3315c883",
+  "repeat-8.txt": "a0d65c943db42363d3dcb9a610c80af1cf11a3387690dce22df52b430f19275c",
+  "repeat-9.txt": "3a69780b10bb0a723a48f9165d87a40b574c056e349a162e9b7b7cab5377d0a0",
+  "repeats.txt": "409544fb6b52edc47f4a04495ee0203f46d1763a99ba5f03be67744a961b2c56",
+  "schema.txt": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "26d45e764f261ea491c627aa600248064b7f21eb773957ede64ccd6f1afc67de",
+  "test-pg.txt": "b8994a1b90001482b0eaf57943b7d6fdda7b1e1c36d2ecc5bde3f2a14fa23c85",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "unit.txt": "b3b1e5b059f36a76c2da08848763199bbedeeaa595420461d9e08ae6f54c3c4b"
+ },
+ "paidProductCalls": 0,
+ "providerCalls": 0,
+ "activation": "none"
+}

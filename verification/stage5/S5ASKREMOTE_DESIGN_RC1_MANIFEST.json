@@ -1,0 +1,117 @@
+{
+  "artifact": "S5ASKREMOTE-DESIGN-rc1",
+  "createdUtc": "2026-10-10T21:22:13.532070+00:00",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "packageHash": "6cf125c2476191dd000ae9097a683296dd7fae50c6e538faeaa87113f04742f7",
+  "files": [
+    {
+      "path": "docs/stage5/ask/remote/01_SCOPE.md",
+      "sha256": "4718ba09df6b541c510c9e53eaa2a85ebcddde296c7c4bed6dfd0515c1ed7078",
+      "bytes": 4675
+    },
+    {
+      "path": "docs/stage5/ask/remote/02_CONTRACTS.md",
+      "sha256": "097b6a8244ee09945d3c9935d01ddc87e317168ce2476fd3ebce582eff1b5e7e",
+      "bytes": 5801
+    },
+    {
+      "path": "docs/stage5/ask/remote/03_DATA_AND_PROVIDER.md",
+      "sha256": "25823747e924bbe99e83955197366751cbd85b695dc4d0e46102e62aef154333",
+      "bytes": 7012
+    },
+    {
+      "path": "docs/stage5/ask/remote/04_AUTHORITY_AND_BILLING.md",
+      "sha256": "37f48820b37621cdfd5b9444d0f50d9790d87dc0f294d230da836b173ebc889c",
+      "bytes": 10616
+    },
+    {
+      "path": "docs/stage5/ask/remote/05_ACCEPTANCE.md",
+      "sha256": "9b5d29c3a3129fac95bec6f87a42deacd61ff4d67fe8334dc4d314ddf7b7e106",
+      "bytes": 8891
+    },
+    {
+      "path": "docs/stage5/ask/remote/06_PROVIDER_DECISION.md",
+      "sha256": "509b3b12e967559cfb544a8c73f9694db5627c39c15397d3232cf7c4e107f2d5",
+      "bytes": 3938
+    },
+    {
+      "path": "docs/stage5/ask/remote/AGENTS.md",
+      "sha256": "57c78ac74c5340812098d62c0f7e22e5acca6851834e734bde6bb24d61dbcb26",
+      "bytes": 1281
+    },
+    {
+      "path": "docs/stage5/ask/remote/README.md",
+      "sha256": "2811288c8a379c57b48869fcce2ba1ca56fba843c501f68ff6be6e44c2444a2b",
+      "bytes": 2222
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-prompt.json",
+      "sha256": "52c6b5d5ba0c393086d48d084a577678532b09f2738c0bf8e9623c49477dd7a5",
+      "bytes": 1450
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-schema.json",
+      "sha256": "c9f70d915fb3f71643ffc4a329cda0fafe41b2424053374f6df7fb1254bcfe88",
+      "bytes": 295
+    }
+  ],
+  "sourceZip": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/design-rc1/S5ASKREMOTE_DESIGN_RC1_PACKAGE.zip",
+  "sourceZipSha256": "148a3f17d52a2dc6371d45f0744ef463454f45fa3f827fbaac4ee576dab8948e",
+  "baseline": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_BASELINE.json",
+    "sha256": "e9b2eb28de99ca27101a92f1d58cae9f750c1bf5ad1b3fb33d43c88e138d5536"
+  },
+  "administrativeDeltas": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_ADMINISTRATIVE_DELTAS.json",
+    "sha256": "b952a3d7349186599407704b0202433dbfa451a743403805e87813046b0d5519"
+  },
+  "dependencies": [
+    {
+      "path": "verification/stage5/S5ASKA_APPROVED.json",
+      "sha256": "0111e76cff410a4ee7706312cbc2d062ac7fbf134b62ee3ae4cf43109500f6ab"
+    },
+    {
+      "path": "verification/stage5/S5ASKA_CLOSURE_VERIFICATION.json",
+      "sha256": "4d02d0c03f3f33d2ac251cda2332bc1d71e124200945153a760b6acd09946de8"
+    },
+    {
+      "path": "verification/stage5/S5ASKB_APPROVED.json",
+      "sha256": "cbc6a118abb39bed17758cf992f8d974f9fe7456720cb74832624fb80af94c61"
+    },
+    {
+      "path": "verification/stage5/S5ASKB_CLOSURE_VERIFICATION.json",
+      "sha256": "46b76121025506d895a7c5745023858595611aa0076d44059526e492103326bc"
+    },
+    {
+      "path": "verification/stage5/S5ASK_DESIGN_APPROVED.json",
+      "sha256": "90b5ad7c598f5b89a193bfd7035efe1539bc13feaf0d9338d7fc7b49425e2c15"
+    },
+    {
+      "path": "verification/stage5/S5ASK_DESIGN_CLOSURE_VERIFICATION.json",
+      "sha256": "5654883d224a945b2bdb8687b33194ae117e7d65b0238fae240c37c3d9800d5e"
+    },
+    {
+      "path": "verification/stage5/S5B_APPROVED.json",
+      "sha256": "2e6b7b27bab868b997a8f93cc80e68d09549da6ee8529a7a2a2ca70016e637e4"
+    },
+    {
+      "path": "verification/stage5/S5B_CLOSURE_VERIFICATION.json",
+      "sha256": "4b52961d8ce4d2f3c8781a79003be2adb553bf757093c6f097aeca9eaacd5b2e"
+    }
+  ],
+  "scope": "Architecture only; no code/migration/test/build/key/provider HTTP/paid admission",
+  "reviewersRequired": [
+    {
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "freshContext": true
+    },
+    {
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "freshContext": true,
+      "route": "native Anthropic Max subscription, no API/credits/fallback"
+    }
+  ]
+}

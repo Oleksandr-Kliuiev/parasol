@@ -1,0 +1,141 @@
+{
+  "date": "2026-10-08",
+  "environment": "macOS, Node25.8.1, PostgreSQL17.11, Prisma6.19.0; local disposable databases, synthetic inputs",
+  "checks": [
+    {
+      "name": "schema",
+      "command": "npm run schema:validate",
+      "exitCode": 0,
+      "elapsedSeconds": 0.79,
+      "rawLogSha256": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/schema.log",
+      "summary": []
+    },
+    {
+      "name": "generate",
+      "command": "npm run db:generate",
+      "exitCode": 0,
+      "elapsedSeconds": 0.77,
+      "rawLogSha256": "3449c59eeea1fa561c40abd57cc72b2ea5706ce038f37cc8d3c495230a47d1ef",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/generate.log",
+      "summary": []
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "elapsedSeconds": 2.9,
+      "rawLogSha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/typecheck.log",
+      "summary": []
+    },
+    {
+      "name": "unit",
+      "command": "npm test",
+      "exitCode": 0,
+      "elapsedSeconds": 7.3,
+      "rawLogSha256": "4859617987cfc4d7c50751abe82200ccba7bd7e175787fb4610a22a9da9b007a",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/unit.log",
+      "summary": [
+        "\u2714 user: invalid required id and wrong types fail without echoing the value (0.225792ms)",
+        "\u2714 directory pages: one bad row, a duplicate id, a missing value or more than 500 rows fail the whole page (0.661125ms)",
+        "\u2714 sign-in: malformed required and optional fields fail safely (1.08325ms)",
+        "\u2139 tests 106",
+        "\u2139 pass 106",
+        "\u2139 fail 0",
+        "\u2139 skipped 0"
+      ]
+    },
+    {
+      "name": "api-build",
+      "command": "npm run api:build",
+      "exitCode": 0,
+      "elapsedSeconds": 1.7,
+      "rawLogSha256": "a812f0bdda249b054cb6061adfa1bcc5d1b0c6a750f03cce2a17ed686767ab39",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/api-build.log",
+      "summary": []
+    },
+    {
+      "name": "api-smoke",
+      "command": "npm run api:smoke",
+      "exitCode": 0,
+      "elapsedSeconds": 0.6,
+      "rawLogSha256": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/api-smoke.log",
+      "summary": []
+    },
+    {
+      "name": "pg-1",
+      "command": "npm run test:pg",
+      "exitCode": 0,
+      "elapsedSeconds": 14.96,
+      "rawLogSha256": "a7ae533d047c40c016864469d10391e4e5e7e8a5d2c344aa2616caa0fb2ea0fa",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/pg-1.log",
+      "summary": [
+        "\u2714 shadow mode, two passes: the baseline pass applies and commits the rules decision; the shadow pass stores the model runs applied=false (56.505ms)",
+        "\u2714 a held shadow call of the first client never holds back the baseline of the second; the baseline pass makes no provider call (164.602709ms)",
+        "\u2714 outside shadow mode the shadow pass is empty and calls nothing (0.308833ms)",
+        "\u2714 Atera: inconsistent pages fail the read as TRANSIENT and keep the last complete snapshot (306.76375ms)",
+        "\u2714 B2: more exhausted events than one batch: none is claimed beyond its limit; each is dead-lettered in a later pass (24.475625ms)",
+        "\u2139 tests 166",
+        "\u2139 pass 166",
+        "\u2139 fail 0",
+        "\u2139 skipped 0"
+      ]
+    },
+    {
+      "name": "pg-2",
+      "command": "npm run test:pg",
+      "exitCode": 0,
+      "elapsedSeconds": 14.23,
+      "rawLogSha256": "f369866ddb8bc5da673260c2997b7d3bdf1de3f98218ca36108f1205a6bdd782",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/pg-2.log",
+      "summary": [
+        "\u2714 shadow mode, two passes: the baseline pass applies and commits the rules decision; the shadow pass stores the model runs applied=false (55.434375ms)",
+        "\u2714 a held shadow call of the first client never holds back the baseline of the second; the baseline pass makes no provider call (207.91975ms)",
+        "\u2714 outside shadow mode the shadow pass is empty and calls nothing (0.147708ms)",
+        "\u2714 Atera: inconsistent pages fail the read as TRANSIENT and keep the last complete snapshot (266.920375ms)",
+        "\u2714 B2: more exhausted events than one batch: none is claimed beyond its limit; each is dead-lettered in a later pass (37.693916ms)",
+        "\u2139 tests 166",
+        "\u2139 pass 166",
+        "\u2139 fail 0",
+        "\u2139 skipped 0"
+      ]
+    },
+    {
+      "name": "pg17",
+      "command": "npm run db:check:pg17",
+      "exitCode": 0,
+      "elapsedSeconds": 0.63,
+      "rawLogSha256": "166edf5230e3e3a99fd17a9dfe00fbb75a42248a9817f6efe40fcdd3a7c3f927",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/pg17.log",
+      "summary": [
+        "PASS pg17-check"
+      ]
+    },
+    {
+      "name": "drift",
+      "command": "npm run db:check:drift",
+      "exitCode": 0,
+      "elapsedSeconds": 0.88,
+      "rawLogSha256": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/drift.log",
+      "summary": []
+    },
+    {
+      "name": "diff",
+      "command": "git diff --check",
+      "exitCode": 0,
+      "elapsedSeconds": 0.05,
+      "rawLogSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "localLogPath": "/var/folders/lc/bn810m856k9_cs18w_qkkbpr0000gn/T/atlas-stage2-native-fable-ksf7kb_3/final-checks-rc2/diff.log",
+      "summary": []
+    }
+  ],
+  "limitations": [
+    "No live vendor integration or deployment",
+    "Literal psql binary unavailable; returned protocol rows/fields/notices tested for password output",
+    "Non-superuser owner tested with PostgreSQL default admin-only membership; owner SET/INHERIT paths fail closed"
+  ],
+  "packageHash": "9220ceecebb2660386afedaec2b6a63a9daeb13cf6f5e12b158a96b7df5ad696"
+}

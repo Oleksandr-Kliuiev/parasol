@@ -1,0 +1,53 @@
+{
+  "phase": "s5ask-fable-rc1",
+  "exitCode": 0,
+  "elapsedSeconds": 614.4,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "high",
+  "actualMessageModels": [
+    "claude-fable-5-1"
+  ],
+  "provider": "native Anthropic firstParty/claude.ai (auth status verified; no provider env overrides)",
+  "billing": "subscription; no credits/API billing enabled; attributable quota unknown",
+  "sessionId": "28784fd9-3da4-410c-9c72-1e5eef1808c6",
+  "resultSubtype": "success",
+  "isError": false,
+  "numTurns": 57,
+  "rawUsage": {
+    "input_tokens": 514,
+    "cache_creation_input_tokens": 170904,
+    "cache_read_input_tokens": 1389032,
+    "output_tokens": 47249,
+    "output_tokens_details": {
+      "thinking_tokens": 23622
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 170904,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 32,
+        "output_tokens": 5494,
+        "cache_read_input_tokens": 174154,
+        "cache_creation_input_tokens": 8668,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 8668
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "permissionDenialsCount": 0,
+  "estimatedApiCostUsdNotSubscriptionQuota": 6.132927999999999,
+  "rawStreamSha256": "d64ec2179af3d15f1d085f311f36237a53c6022eb0d227b16870967d25c44e31"
+}

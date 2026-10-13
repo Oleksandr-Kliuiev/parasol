@@ -1,0 +1,12 @@
+{
+  "reviewer": "/root/astra_s5a_rc1",
+  "runtime": "native collaboration.spawn_agent",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "forkTurns": "none",
+  "packageHash": "3dfbaf4db36b802d59ee08bdee46daa2e3d574c8822adf55f261d27440283dab",
+  "manifestSha256": "8f93a3eff7dd5025b078df0f432ad24031198b46a87c5508d7ade79cbcf83e06",
+  "startedUtc": "2026-10-10T12:53:39.151068+00:00",
+  "identityQualification": "Explicit runtime assignment; underlying response-model and provider/billing telemetry not exposed. No CLI/API fallback requested.",
+  "writer": "Codex; frozen repository read-only for review"
+}

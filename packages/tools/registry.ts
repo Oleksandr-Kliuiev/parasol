@@ -5,20 +5,33 @@ import { EXTERNAL_ID_PATTERN } from '../graph/mapping.ts';
 import { SCOPE_ID_PATTERN } from '../graph/scope-context.ts';
 import { describeParameters } from './parameters.ts';
 import type { ParameterSchema, Parameters } from './parameters.ts';
+import type { CorrelationContextV1 } from '../correlation/contracts.ts';
+import type { SignInListV1 } from '../m365/read-contracts.ts';
 
 /**
- * Read tool registry (task 1.9). Each entry is authoritative data — name, version, risk, side effect, permission and the
+ * Read tool registry (task 1.9). Each entry is authoritative data — name, version, risk, side effect, permissions and the
  * runtime schema of its parameters — plus its read. A caller or a model supplies only the tool name and parameters; risk,
- * side effect and permission never come from them. Stage 1 registers read tools only (ADR-003).
+ * side effect and permissions never come from them. Stage 1 registers read tools only (ADR-003).
  */
 export interface ToolReaders {
   /** The client context, read inside the caller's scope (fixture context or the database through withScope). */
   context(): Promise<ClientContextV1>;
   observations(query: ObservationQuery): Promise<ObservationPage>;
+  /**
+   * Stage 2 M365 reads (S2-C), optional so that legacy reader implementations stay valid; an M365 tool called without them
+   * is refused (M365_READS_UNAVAILABLE), never answered with invented data. Raw validated tool parameters go in; each
+   * reader applies the shared strict parser and its own authority/snapshot checks.
+   */
+  m365?: M365ToolReaders;
+}
+export interface M365ToolReaders {
+  correlation(parameters: Parameters): Promise<CorrelationContextV1>;
+  signIns(parameters: Parameters): Promise<SignInListV1>;
 }
 export interface ToolDefinition {
   name: string; version: string; risk: 0 | 1 | 2 | 3 | 4; sideEffect: 'NONE' | 'CREATE' | 'UPDATE' | 'SECURITY' | 'DESTRUCTIVE';
-  permission: string; description: string; parameters: ParameterSchema;
+  /** All-of: one membership of the requested client must hold every permission (Stage 2 §5). Never empty. */
+  permissions: readonly string[]; description: string; parameters: ParameterSchema;
   run(readers: ToolReaders, parameters: Parameters, scope: Scope): Promise<unknown>;
 }
 /** Registry name syntax: lowercase dotted segments. Anything else is denied as INVALID_TOOL_NAME, never looked up. */
@@ -93,13 +106,22 @@ export const stage1Tools: readonly ToolDefinition[] = Object.freeze(([
     run: list('huntress', 'incident') },
   { name: 'huntress.incident.get', description: 'One Huntress incident by its source ID from the last complete read',
     parameters: { incidentId: sourceId('Huntress incident report ID'), connectionId: connection('Huntress') }, run: one('huntress', 'incident', 'incidentId') },
-] satisfies Omit<ToolDefinition, 'version' | 'risk' | 'sideEffect' | 'permission'>[])
-  .map(t => Object.freeze({ ...t, version: '1', risk: 0, sideEffect: 'NONE', permission: 'context:read' } as ToolDefinition)));
+] satisfies Omit<ToolDefinition, 'version' | 'risk' | 'sideEffect' | 'permissions'>[])
+  .map(t => Object.freeze({ ...t, version: '1', risk: 0, sideEffect: 'NONE', permissions: Object.freeze(['context:read']) } as ToolDefinition)));
 
-/** What GET /tools shows: authoritative metadata and parameter schemas, nothing executable. */
+/** Stage 1 entries keep their exact public discovery DTO (a singular `permission`); later tools publish `permissions`. */
+const LEGACY_DISCOVERY: ReadonlySet<string> = new Set(stage1Tools.map(t => t.name));
+
+/**
+ * What GET /tools shows: authoritative metadata and parameter schemas, nothing executable. A Stage 1 tool is described
+ * exactly as before — `permission: string`, in the same key order. Any other tool lists `permissions: string[]` (all
+ * required on one client) and has no singular permission field; the other fields are unchanged.
+ */
 export function describeTool(tool: ToolDefinition) {
-  return { name: tool.name, version: tool.version, risk: tool.risk, sideEffect: tool.sideEffect, permission: tool.permission,
-    description: tool.description, parameters: describeParameters(tool.parameters) };
+  const common = { name: tool.name, version: tool.version, risk: tool.risk, sideEffect: tool.sideEffect };
+  const rest = { description: tool.description, parameters: describeParameters(tool.parameters) };
+  if (LEGACY_DISCOVERY.has(tool.name) && tool.permissions.length === 1) return { ...common, permission: tool.permissions[0]!, ...rest };
+  return { ...common, permissions: [...tool.permissions], ...rest };
 }
 
 /**

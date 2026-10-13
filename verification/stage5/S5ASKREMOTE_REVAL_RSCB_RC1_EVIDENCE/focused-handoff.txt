@@ -1,0 +1,57 @@
+### run 1
+✔ edited request / swapped response body / edited status or correlation → CONTENT_MISMATCH with no TRANSFER; the slot burns (3381.542458ms)
+✔ receipt nonce: a wrong nonce never burns the slot; two concurrent correct RESPONSEs → exactly one transfer; replay after COMMIT → RAW_EXPIRED (740.700625ms)
+✔ Origin / Fetch-Metadata / session header / bearer are enforced before any comparison; a foreign bearer revokes the pair (649.598792ms)
+✔ forged ACK (wrong challenge) → ACK_INVALID, no COMMIT; a REJECTED ACK → COMMIT FAILED; a late ACK → DEADLINE and is dropped (3860.344292ms)
+(node:86541) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ losing the instrument after TRANSFER → IPC_LOST (UNVERIFIED) and the pair is revoked; an out-of-sequence ACK closes the connection (762.999834ms)
+✔ rc2 F4: a RESPONSE body completed after the 2 s handoff deadline → 504 DEADLINE before any comparison or TRANSFER (2601.037833ms)
+✔ rc2 F6: a policy paused after the answer → RESPONSE refused and the PAIR revoked; another current token of the same actor → PAIR_REVOKED (1403.469083ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14807.952209
+exit=0
+### run 2
+✔ edited request / swapped response body / edited status or correlation → CONTENT_MISMATCH with no TRANSFER; the slot burns (3221.073833ms)
+✔ receipt nonce: a wrong nonce never burns the slot; two concurrent correct RESPONSEs → exactly one transfer; replay after COMMIT → RAW_EXPIRED (769.264417ms)
+✔ Origin / Fetch-Metadata / session header / bearer are enforced before any comparison; a foreign bearer revokes the pair (689.229625ms)
+✔ forged ACK (wrong challenge) → ACK_INVALID, no COMMIT; a REJECTED ACK → COMMIT FAILED; a late ACK → DEADLINE and is dropped (3889.438167ms)
+(node:86596) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ losing the instrument after TRANSFER → IPC_LOST (UNVERIFIED) and the pair is revoked; an out-of-sequence ACK closes the connection (809.661ms)
+✔ rc2 F4: a RESPONSE body completed after the 2 s handoff deadline → 504 DEADLINE before any comparison or TRANSFER (2603.165625ms)
+✔ rc2 F6: a policy paused after the answer → RESPONSE refused and the PAIR revoked; another current token of the same actor → PAIR_REVOKED (1396.807208ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14770.745125
+exit=0
+### run 3
+✔ edited request / swapped response body / edited status or correlation → CONTENT_MISMATCH with no TRANSFER; the slot burns (3185.521ms)
+✔ receipt nonce: a wrong nonce never burns the slot; two concurrent correct RESPONSEs → exactly one transfer; replay after COMMIT → RAW_EXPIRED (748.495125ms)
+✔ Origin / Fetch-Metadata / session header / bearer are enforced before any comparison; a foreign bearer revokes the pair (655.765583ms)
+✔ forged ACK (wrong challenge) → ACK_INVALID, no COMMIT; a REJECTED ACK → COMMIT FAILED; a late ACK → DEADLINE and is dropped (3815.775834ms)
+(node:86653) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ losing the instrument after TRANSFER → IPC_LOST (UNVERIFIED) and the pair is revoked; an out-of-sequence ACK closes the connection (715.023042ms)
+✔ rc2 F4: a RESPONSE body completed after the 2 s handoff deadline → 504 DEADLINE before any comparison or TRANSFER (2596.3755ms)
+✔ rc2 F6: a policy paused after the answer → RESPONSE refused and the PAIR revoked; another current token of the same actor → PAIR_REVOKED (1381.577042ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14340.642959
+exit=0

@@ -1,0 +1,38 @@
+// ---------------------------------------------------------------------------------------------------------------------
+// Stage 5 R-EVAL server RS-A (docs/stage5/ask/remote/reval-server/rs-a/IMPLEMENTATION_BRIEF.md §5, migration
+// 202610131000). The immutable synthetic sandbox registration and its single current fixture binding. CHECKs, the
+// owner-only ALWAYS guard, FORCE RLS and atlas_reval_snapshot() live in the migration; the evidence definer/reader in
+// prisma/roles/reval.sql. Nothing is registered or populated by RS-A; the runtime holds no privilege on these tables.
+// ---------------------------------------------------------------------------------------------------------------------
+/// One registered synthetic sandbox per workspace, bound to one evidence-reader login OID. Never updated or deleted.
+model RevalSandboxRegistration {
+  registrationId        String                   @id @db.Uuid
+  databaseInstanceId    String                   @unique @db.Uuid
+  workspaceId           String                   @unique
+  clientId              String
+  actorId               String
+  admissionId           String                   @db.Uuid
+  evidenceReaderRoleOid BigInt                   @unique
+  datasetManifestSha256 String
+  buildManifestSha256   String
+  syntheticOnly         Boolean
+  createdAt             DateTime                 @default(now()) @db.Timestamptz(6)
+  client                Client                   @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict, onUpdate: Restrict, map: "RevalSandboxRegistration_client_fkey")
+  actor                 Actor                    @relation(fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Restrict, onUpdate: Restrict, map: "RevalSandboxRegistration_actor_fkey")
+  policy                RemoteAskPolicy          @relation(fields: [workspaceId, admissionId], references: [workspaceId, admissionId], onDelete: Restrict, onUpdate: Restrict, map: "RevalSandboxRegistration_policy_fkey")
+  admission             RemoteAskClientAdmission @relation(fields: [workspaceId, admissionId, clientId], references: [workspaceId, admissionId, clientId], onDelete: Restrict, onUpdate: Restrict, map: "RevalSandboxRegistration_admission_fkey")
+  bindings              RevalFixtureBinding[]
+  @@unique([registrationId, workspaceId, clientId, datasetManifestSha256], map: "RevalSandboxRegistration_binding_key")
+}
+/// The single current fixture binding of a registration: generation strictly increases; installedAt is DB time.
+model RevalFixtureBinding {
+  registrationId        String                   @id @db.Uuid
+  workspaceId           String
+  clientId              String
+  fixtureId             String
+  generation            BigInt
+  syntheticFreshnessAt  DateTime                 @db.Timestamptz(6)
+  datasetManifestSha256 String
+  installedAt           DateTime                 @default(now()) @db.Timestamptz(6)
+  registration          RevalSandboxRegistration @relation(fields: [registrationId, workspaceId, clientId, datasetManifestSha256], references: [registrationId, workspaceId, clientId, datasetManifestSha256], onDelete: Restrict, onUpdate: Restrict, map: "RevalFixtureBinding_registration_fkey")
+}

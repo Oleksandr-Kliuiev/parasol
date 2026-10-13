@@ -1,0 +1,66 @@
+{
+  "version": "S2LIVE-preflight-rc1",
+  "checkedAt": "2026-10-08T20:16:44.755126+00:00",
+  "status": "BLOCKED_EXTERNAL",
+  "scope": "local configuration presence and runtime/catalog checks only; no live acceptance",
+  "baselineCommit": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "acceptedS2C": {
+    "packageHash": "e43cc1858e7271577714e2b46e5c8d10956dd4e625cad779964a3a3ac6cbe3c0",
+    "filesReverified": 307,
+    "mismatches": 0
+  },
+  "normativeFilesReverified": 11,
+  "configurationPresence": {
+    "runtimeDatabaseUrl": true,
+    "adminDatabaseUrl": true,
+    "operatorToken": true,
+    "cursorSecretRef": false,
+    "cleanupRunnerSecretRef": false,
+    "m365MicrosoftAzureEntraNamedEnvironmentVariables": 0,
+    "credentialInference": "No standard-prefixed variables observed; arbitrary env:// credential references have not been inspected or ruled out."
+  },
+  "runtimeAdmission": {
+    "status": "FAILED",
+    "safeErrorCode": "RLS_NOT_ENABLED",
+    "applicationRowsRead": 0
+  },
+  "catalogDiagnosis": {
+    "protectedTablesExpected": 31,
+    "missingTables": [
+      "M365ResourceState",
+      "M365DirectoryGeneration",
+      "M365DirectoryObject",
+      "M365SyncRequest",
+      "M365SyncRootJob",
+      "M365SignInWindow",
+      "M365WindowAttempt",
+      "M365WindowLeaf",
+      "M365SignInEvidence",
+      "M365WindowEvidence"
+    ],
+    "presentProtectedTablesWithoutRls": [],
+    "migrationLedgerPresent": true,
+    "migrationHistoryRead": false
+  },
+  "callsAndMutations": {
+    "graphCalls": 0,
+    "vendorCalls": 0,
+    "providerCalls": 0,
+    "databaseWrites": 0,
+    "accountChanges": 0
+  },
+  "gates": {
+    "L1": "NOT_EXERCISED",
+    "L2": "NOT_EXERCISED",
+    "L3": "NOT_EXERCISED",
+    "L4": "NOT_EXERCISED"
+  },
+  "missingInputs": [
+    "explicit test client and authorized tenant plus M365 connection/config references",
+    "designated Stage 2-ready pilot database and confined runtime role",
+    "shared cursor secret reference and private local credential loading",
+    "owner evidence of read-only consent/license and nonempty source sample",
+    "Atera/Huntress live gate evidence/access and human mapping confirmation"
+  ],
+  "diagnosticLimit": "Runtime refusal preceded application data or secret-reference resolution. An earlier migration-ledger SELECT attempt returned a safe generic error and disclosed no rows; it was not repeated. Diagnosis uses catalogs only."
+}

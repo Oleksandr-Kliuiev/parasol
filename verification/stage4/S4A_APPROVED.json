@@ -1,0 +1,120 @@
+{
+  "checkpoint": "S4-A",
+  "artifact": "S4A-rc5",
+  "status": "ACCEPTED",
+  "recordedAt": "2026-10-09T11:59:47.337470+00:00",
+  "scope": "S4-A MOCK normalized DTO/aggregation, authority foundation, scoped schema/guards/roles/SQL cleanup foundation and compatibility; B/C workflows NOT_STARTED; LIVE DEFERRED_BY_OWNER",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "packageHash": "7efcdf162c9912655de0f812dbbb13cef83d6adb1564111525c737c025021bd9",
+  "manifest": "verification/stage4/S4A_RC5_MANIFEST.json",
+  "manifestSha256": "36bc34fae3c2fe78ea22b0334b66c05dc7ca52e6efe6cbfbe0c6c2fad1e60209",
+  "sourceArchive": "verification/stage4/S4A_RC5_PACKAGE.zip",
+  "sourceArchiveSha256": "bf56140a7d88d10ca9a5c1c12dc60a41eacbbd253259f9b199640594caa84bc7",
+  "architecturePackageHash": "d848b026efcc2af30c7900ef6f5325e31c04c11825d4ec089dcf6baf984873ec",
+  "review": "docs/stage4/reviews/ASTRA_S4A_RC5.md",
+  "reviewSha256": "7d040e83505cee8eb9d2893beea7d56754ac61787919a2d5a13660e4bbd4bf69",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "effectiveEffort": "xhigh",
+    "nativeAgent": "/root/astra_s4a_rc5",
+    "freshSession": true,
+    "forkTurns": "none",
+    "identityEvidence": "explicit native spawn/runtime assignment; report self-identification is not model proof"
+  },
+  "requiredFindingsRemaining": 0,
+  "closed": [
+    "RC1 F1: complete maintenance-role application routine EXECUTE confinement",
+    "RC1 F2: actual original DB-clock deadline at ACTIVE publication/failure transitions and deferred completion",
+    "RC1 F3: paired synthetic binding integrity without secretRef visibility, exact CHECK proof in cleanup/provision/readiness",
+    "RC1 F4: incomplete accumulator disposal permanently inert",
+    "RC2 F1: schema-qualified complete relation/column/sequence privileges",
+    "RC2 F2: user-created TEMP routine execution",
+    "RC2 F3: excess namespace CREATE/ownership",
+    "Integration: restricted builtin and unlisted large-object/FDW/shared-object capability checks",
+    "Test scope: shared/builtin PUBLIC drift always rollback-only and observer-isolated",
+    "RC3 R1: MAINTAIN effective privileges on maintenance surface and runtime3tables",
+    "RC3 R2: all tablespaces including nondefault PUBLIC CREATE checked",
+    "RC4 R1: all runtime table/column grant options rejected at startup/admission"
+  ],
+  "checkpointEvidence": {
+    "path": "verification/stage4/S4A_RC5_IMPLEMENTATION_EVIDENCE.json",
+    "sha256": "1816f39ed62422945096094351d6e708479260fb6deffc0cc47f14330f2d8712",
+    "unitPGlitePassed": 196,
+    "postgresqlPassed": 475,
+    "all11RequiredChecksPassed": true,
+    "logs": "/Users/oleksandr/.codex/atlas-evidence/stage4/S4A_RC5/required-final"
+  },
+  "independentVerification": {
+    "testsPassed": 116,
+    "additionalTablePrivilegeDriftRestoreCases": 24,
+    "unreadableRealPgTablespaceCatalogRefusal": true,
+    "report": "docs/stage4/reviews/ASTRA_S4A_RC5.md",
+    "logs": "/Users/oleksandr/.codex/atlas-evidence/stage4/S4A_RC5/independent-review"
+  },
+  "preserved": {
+    "stage2Normative": 11,
+    "stage3Normative": 8,
+    "stage4Normative": 8,
+    "oldMigrationArtifacts": 21,
+    "priorCheckpointArtifacts": 271
+  },
+  "nativeImplementationReceipts": [
+    "verification/stage4/S4A_RC1_OPUS_EXECUTION.json",
+    "verification/stage4/S4A_RC2_REPAIR_EXECUTION.json",
+    "verification/stage4/S4A_RC2_HARDENING_EXECUTION.json",
+    "verification/stage4/S4A_RC3_REPAIR_EXECUTION.json",
+    "verification/stage4/S4A_RC3_HARDENING_EXECUTION.json",
+    "verification/stage4/S4A_RC3_CLOSURE_EXECUTION.json",
+    "verification/stage4/S4A_RC4_REPAIR_EXECUTION.json",
+    "verification/stage4/S4A_RC5_REPAIR_EXECUTION.json"
+  ],
+  "administrativeDeltasAfterAcceptance": [
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "134a610281594934aacd052f2b7025033e5e18273f2e1019d881c0b04bd9aa5e",
+      "afterSha256": "80ea67ef37803364c2460fa9f3b488c076039a54907f5c7f4306f58e5eb28c94",
+      "kind": "administrative status/routing only after exact code acceptance"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "beforeSha256": "f24473663c7e090339b0ca510e3b483ea6496146f7da33904c16702150cabd6c",
+      "afterSha256": "c1f916f6de71e86de1fef63261a72446989fba9820630c529e294efd66a839a3",
+      "kind": "administrative status/routing only after exact code acceptance"
+    },
+    {
+      "path": "docs/stage4/REVIEW_STATUS.md",
+      "beforeSha256": "9c7c9ed79168a6ff66405ab8b16447211658caf590b1183a8184d82785f722e3",
+      "afterSha256": "77751be1ee3651c66a8e376fb38b7ccdac5891d1e0d0a44e6b74a5b055778cd5",
+      "kind": "administrative status/routing only after exact code acceptance"
+    },
+    {
+      "path": "docs/stage4/IMPLEMENTATION_STATUS.md",
+      "beforeSha256": "8f1a4f69b3cc5939381e53d8f2849425d39e7704c5db5872cf4cdbcf22da69d4",
+      "afterSha256": "2dfb0702b2eb4b95bdd358cc276d5fbc13549d76c35d1f27138658b6d035cb7b",
+      "kind": "administrative status/routing only after exact code acceptance"
+    }
+  ],
+  "deferred": [
+    "S4-B NOT_STARTED",
+    "S4-C NOT_STARTED",
+    "LIVE DEFERRED_BY_OWNER"
+  ],
+  "attributableSubscriptionQuota": "unknown; no credits/API/fallback enabled",
+  "evidenceQualifications": [
+    "The blanket no-PUBLIC-commit wording in frozen RC5 native report/root notes applies to new grant-option and built-in/shared/global/host-capable probes only. Complete rerun suite also commits DB-local synthetic PUBLIC ACL fixtures with repair/drop cleanup. Exact accepted review qualifies this distinction.",
+    "Earlier preRC3 committed shared PUBLIC parameter diagnostic was reported restored and then tests corrected; not retroactively safe.",
+    "Emscripten tablespace compatibility is pinned in-memory PGlite test-engine only, not support for arbitrary tablespace-capable distributions."
+  ],
+  "nativeImplementationSummary": {
+    "cohesiveSessions": 1,
+    "phases": 8,
+    "elapsedSecondsSum": 7135.8,
+    "actualModels": [
+      "claude-opus-5-5"
+    ],
+    "effort": "high",
+    "subscriptionQuotaAttributable": "unknown",
+    "estimatedApiDollarsNotQuota": "not used as subscription usage evidence"
+  }
+}

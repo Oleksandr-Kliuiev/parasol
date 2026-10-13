@@ -1,5 +1,5 @@
 import type { Actor, Scope } from '../core/contracts.ts';
-import { assertScope, hasClientPermission, safeErrorCode } from '../core/contracts.ts';
+import { assertScope, hasClientPermissions, safeErrorCode } from '../core/contracts.ts';
 import type { ToolDefinition } from '../tools/registry.ts';
 import { stage1Tools, TOOL_NAME_PATTERN } from '../tools/registry.ts';
 
@@ -9,7 +9,7 @@ import { stage1Tools, TOOL_NAME_PATTERN } from '../tools/registry.ts';
  * model sends (risk, side effect, permission, actor) takes part, and nothing is asked of an AI. Order:
  *   1. scope — a denial belongs to the workspace security audit and comes before any read;
  *   2. tool name syntax, 3. registry entry, 4. read-only (Stage 1 executes risk 0 without side effect, ADR-003),
- *   5. the tool's permission on this client — denials 2–5 belong to the client audit.
+ *   5. every permission of the tool on this client (all-of, one membership) — denials 2–5 belong to the client audit.
  */
 export type ToolDenial = 'INVALID_TOOL_NAME' | 'UNKNOWN_TOOL' | 'WRITE_TOOL_NOT_ALLOWED' | 'PERMISSION_DENIED';
 export type ToolPolicyDecision =
@@ -23,11 +23,15 @@ export function decideToolCall(actor: Actor, scope: Scope, name: string, registr
   const tool = registry.find(t => t.name === name);
   if (!tool) return { effect: 'DENY_TOOL', reasonCode: 'UNKNOWN_TOOL' };
   if (tool.risk !== 0 || tool.sideEffect !== 'NONE') return { effect: 'DENY_TOOL', reasonCode: 'WRITE_TOOL_NOT_ALLOWED' };
-  if (!hasClientPermission(actor, scope.clientId, tool.permission)) return { effect: 'DENY_TOOL', reasonCode: 'PERMISSION_DENIED' };
+  if (!hasClientPermissions(actor, scope.clientId, tool.permissions)) return { effect: 'DENY_TOOL', reasonCode: 'PERMISSION_DENIED' };
   return { effect: 'ALLOW', tool };
 }
 
-/** The registry entries an actor may call on at least one of its clients (GET /tools). */
+/**
+ * The registry entries an actor may call on at least one of its clients (GET /tools): one membership must hold ALL of a
+ * tool's permissions — context:read on client A and m365:read on client B never add up to a tool needing both.
+ */
 export function toolsAvailableTo(actor: Actor, registry: readonly ToolDefinition[] = stage1Tools): ToolDefinition[] {
-  return registry.filter(tool => tool.risk === 0 && tool.sideEffect === 'NONE' && actor.memberships.some(m => m.permissions.includes(tool.permission)));
+  return registry.filter(tool => tool.risk === 0 && tool.sideEffect === 'NONE'
+    && actor.memberships.some(m => hasClientPermissions(actor, m.clientId, tool.permissions)));
 }

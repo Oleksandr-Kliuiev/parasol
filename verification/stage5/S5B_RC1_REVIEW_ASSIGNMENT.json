@@ -1,0 +1,14 @@
+{
+  "checkpoint": "S5-B",
+  "artifact": "S5B-rc1",
+  "agent": "/root/astra_s5b_rc1",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "forkTurns": "none",
+  "freshActualCodeReview": true,
+  "packageHash": "0346dc1293e06dfe04c58cda197eb276baedf0784df1aef08f6cd951692f0d6b",
+  "manifestSha256": "b240149886391c12b686b43f8afbda1058456667e3757bb22116129b1ee27f4a",
+  "nativeAssignmentEvidence": "Successful explicit spawn_agent gpt-6-astra/xhigh; underlying response model/provider telemetry is not exposed by native subagent runtime. No silent fallback accepted.",
+  "writeOwnership": "Codex; frozen source and dist; reviewer outputs external only",
+  "timeUtc": "2026-10-10T15:33:59.630613+00:00"
+}

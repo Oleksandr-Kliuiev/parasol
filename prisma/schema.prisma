@@ -1,6 +1,9 @@
 // Explicitly pinned to Prisma ORM 6.19.0 (not latest Prisma 8 contract syntax).
 // v1.1: CHECK constraints, partial unique indexes, append-only triggers and row-level security live in the migrations
 // (Prisma 6 cannot express them). Apply with `prisma migrate deploy`; never regenerate an applied migration.
+// Multi-file schema (Prisma 6.7+ GA, no preview flag): this folder is the schema (package.json "prisma.schema": "prisma");
+// generator, datasource and Foundation/Stage 1 models live here, the Stage 2 Microsoft 365 models in prisma/m365.prisma.
+// A tool that names only this file misses those models — pass the folder `prisma`.
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,6 +17,8 @@ model Workspace {
   clients        Client[]
   securityAudits SecurityAuditEvent[]
   actors         Actor[]
+  actionFence    ActionAuthorityFence?
+  remoteAskPolicy RemoteAskPolicy?
 }
 model Client {
   workspaceId String
@@ -26,6 +31,9 @@ model Client {
   executions  ToolExecution[]
   approvals   Approval[]
   memberships ClientMembership[]
+  remoteAskAdmissions RemoteAskClientAdmission[]
+  remoteAskAttempts   RemoteAskAttempt[]
+  revalRegistrations  RevalSandboxRegistration[]
   @@id([workspaceId, id])
 }
 /// Verified actor (technician or service). Permissions are per client (ClientMembership); workspacePermissions cover
@@ -43,6 +51,9 @@ model Actor {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   memberships ClientMembership[]
   tokens      ApiToken[]
+  powerOfficeAttempts PowerOfficeAttempt[]
+  remoteAskAttempts   RemoteAskAttempt[]
+  revalRegistrations  RevalSandboxRegistration[]
   @@id([workspaceId, id])
 }
 model ClientMembership {
@@ -68,8 +79,12 @@ model ApiToken {
   expiresAt   DateTime?
   revokedAt   DateTime?
   actor       Actor @relation(fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Restrict)
+  /// Stage 3 signed identities (prisma/actions.prisma). A referenced token row is never deleted: revoke or replace it.
+  actionRequests  ActionRequest[]
+  actionApprovals ActionApproval[]
   @@id([workspaceId, id])
   @@index([workspaceId, actorId])
+  @@unique([workspaceId, actorId, id], map: "ApiToken_actor_token_key")
 }
 model Entity {
   workspaceId String
@@ -120,10 +135,22 @@ model Connection {
   /// ACTIVE (CHECK). The bound system/tenant and, once recorded, the provenance are immutable (trigger).
   boundBy     String?
   boundAt     DateTime?
+  /// Monotonic (trigger, migration 202610081000): bind, activation and m365-disable increment it; every status change must.
+  /// Activation capabilities, token caches and M365 publication are fenced on it.
+  lifecycleVersion Int @default(0)
   client      Client @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict)
   entities    ExternalEntity[]
   events      RawEvent[]
   syncStates  SyncState[]
+  m365States  M365ResourceState[]
+  m365SyncRequests M365SyncRequest[]
+  m365Windows M365SignInWindow[]
+  m365SignIns M365SignInEvidence[]
+  actionRequests    ActionRequest[]
+  actionMockTickets ActionMockTicket[]
+  powerOfficeStates    PowerOfficeState[]
+  powerOfficeAttempts  PowerOfficeAttempt[]
+  powerOfficeSnapshots PowerOfficeSnapshot[]
   @@id([workspaceId, clientId, id])
   @@unique([workspaceId, system, externalTenantId])
 }
@@ -138,10 +165,13 @@ model ExternalEntity {
   observedAt  DateTime
   connection  Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict)
   links       EntityLink[]
+  m365Objects M365DirectoryObject[]
   @@id([workspaceId, clientId, id])
   @@unique([workspaceId, clientId, connectionId, resourceType, externalId])
   /// Target of the typed link foreign key: a link names the resource type it expects.
   @@unique([workspaceId, clientId, id, resourceType], map: "ExternalEntity_typed_key")
+  /// Target of the M365 directory-object mirror key: same connection, type and opaque source ID (migration 202610081000).
+  @@unique([workspaceId, clientId, connectionId, resourceType, externalId, id], map: "ExternalEntity_mirror_key")
 }
 model EntityLink {
   workspaceId String

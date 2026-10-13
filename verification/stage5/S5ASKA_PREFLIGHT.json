@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-10T16:53:33.076321+00:00",
+  "claudeVersion": "2.1.293 (Claude Code)",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "requestedModel": "claude-opus-5-5",
+  "effort": "high",
+  "billing": "Native included subscription only; no API/credits/fallback, actual response-model stream required",
+  "attributableSubscriptionQuota": "unknown"
+}

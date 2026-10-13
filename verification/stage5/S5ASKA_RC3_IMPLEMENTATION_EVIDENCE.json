@@ -1,0 +1,436 @@
+{
+  "checkpoint": "ASK-A",
+  "artifact": "S5ASKA-rc3",
+  "scope": "Backend OFF/MOCK only; ASK-B and external inference excluded",
+  "results": {
+    "npm-test": {
+      "exit": 0,
+      "seconds": 9,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/01-npm-test.log"
+    },
+    "schema-validate": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/02-schema-validate.log"
+    },
+    "db-generate": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/03-db-generate.log"
+    },
+    "typecheck": {
+      "exit": 0,
+      "seconds": 7,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/04-typecheck.log"
+    },
+    "ui-typecheck": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/05-ui-typecheck.log"
+    },
+    "ui-build": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/06-ui-build.log"
+    },
+    "api-build": {
+      "exit": 0,
+      "seconds": 3,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/07-api-build.log"
+    },
+    "api-smoke": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/08-api-smoke.log"
+    },
+    "test-pg": {
+      "exit": 0,
+      "seconds": 158,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/09-test-pg.log"
+    },
+    "db-check-pg17": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/10-db-check-pg17.log"
+    },
+    "db-check-drift": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/11-db-check-drift.log"
+    },
+    "test-ui": {
+      "exit": 0,
+      "seconds": 39,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/12-test-ui.log"
+    },
+    "git-diff-check": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/13-git-diff-check.log"
+    },
+    "untracked-whitespace": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage5/s5aska-repair2-work/checks/14-untracked-whitespace.log"
+    }
+  },
+  "counts": {
+    "npm-test": {
+      "tests": 326,
+      "pass": 326,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "test-pg": {
+      "tests": 616,
+      "pass": 616,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "test-ui": {
+      "pass": 50,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "allRequiredChecksPassed": true,
+  "implementerReportedChecks": true,
+  "coordinatorVerifiedSummaryAndLogHashes": true,
+  "independentAcceptance": "PENDING",
+  "nativeExecution": {
+    "phase": "s5aska-repair2",
+    "sessionId": "60e70e73-4279-474b-a915-b95e4abfb6d9",
+    "requestedModel": "claude-opus-5-5",
+    "actualMessageModels": [
+      "claude-opus-5-5"
+    ],
+    "effort": "high",
+    "elapsedSeconds": 763.2,
+    "rawStreamSha256": "edd79bc560c69d0692d12ab365d1398f4f5cb9b01af4ed1c75e993add77a144f"
+  },
+  "report": {
+    "path": "docs/stage5/ask/S5ASKA_RC3_REPAIR_REPORT.md",
+    "sha256": "0d029ed91a6cb78562b5c5bc4c029c8c6b8588d451c9ef07598a68669ba606ca"
+  },
+  "supplementalEvidence": [
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/01-npm-test.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/01-npm-test.log",
+      "sha256": "f815f3822538cdd0510a422242a1f2e2cb09ee6636a21cd693305da85b8952bd",
+      "bytes": 40474
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/02-schema-validate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/02-schema-validate.log",
+      "sha256": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+      "bytes": 411
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/03-db-generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/03-db-generate.log",
+      "sha256": "1193e6ec04ef441a3543bf184a8183202d3cacafcfa9cef4674676d980e657ba",
+      "bytes": 651
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/04-typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/04-typecheck.log",
+      "sha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+      "bytes": 67
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/05-ui-typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/05-ui-typecheck.log",
+      "sha256": "94e4d3c0eae80d5541012e49723e5f5969b4d419b6c71a9b6d28e7f3068ef449",
+      "bytes": 101
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/06-ui-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/06-ui-build.log",
+      "sha256": "d1ad1fa476c3fb293b944f8bea77db41ee39f39de5ae8874cfca030809788a2e",
+      "bytes": 214
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/07-api-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/07-api-build.log",
+      "sha256": "8e990e28516731342cb119b69ba1aa9ee14ca8e33122472c19a5c8032ee44df2",
+      "bytes": 318
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/08-api-smoke.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/08-api-smoke.log",
+      "sha256": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+      "bytes": 289
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/09-test-pg.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/09-test-pg.log",
+      "sha256": "5d691ce12985fa5cd2ade8ef1ccfcae02edb3ed6e969cca430866f41a310a383",
+      "bytes": 89871
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/10-db-check-pg17.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/10-db-check-pg17.log",
+      "sha256": "e0f458b74dab2c3c193ca54424344ca9d60f0d4e906bf73571b5ee411cfcc0b8",
+      "bytes": 2745
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/11-db-check-drift.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/11-db-check-drift.log",
+      "sha256": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+      "bytes": 214
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/12-test-ui.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/12-test-ui.log",
+      "sha256": "bd467c6bfe5f9f8df3fb23a49c73f60d274cffbb1124e9a6b2d1376455a20f8d",
+      "bytes": 9232
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/13-git-diff-check.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/13-git-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/14-untracked-whitespace.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/14-untracked-whitespace.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/run.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/run.sh",
+      "sha256": "fb6156ce9b769cb41da4b0631ed5a8a050743af2ea552bd9a0b8bb109b009eba",
+      "bytes": 1030
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/checks/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/checks/summary.txt",
+      "sha256": "024b9ea0e9bbc93b7d5be6c717fdd64d7dd9685f292df6bba08e18417bc0d5ae",
+      "bytes": 458
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/focused/build-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/focused/build-1.log",
+      "sha256": "8e990e28516731342cb119b69ba1aa9ee14ca8e33122472c19a5c8032ee44df2",
+      "bytes": 318
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/focused/pg-all-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/focused/pg-all-1.log",
+      "sha256": "3b5152fdb4abe497a8533c781256a95bd51c41549dc13194821170e7732f7729",
+      "bytes": 8602
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/focused/pg-helper-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/focused/pg-helper-1.log",
+      "sha256": "79b44221bc2d82b2dbdbce89540c3753e0d2b3964b9270ee53195d79b6d63fec",
+      "bytes": 3828
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/focused/pg-helper-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/focused/pg-helper-2.log",
+      "sha256": "933986ffd8a5dcb376d5adf40ea32b3adc81d29c6f2826b3c36afb5f2ac88fe1",
+      "bytes": 2530
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/focused/pg-helper-3.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/focused/pg-helper-3.log",
+      "sha256": "c4c25ffe4783a6916251b5d7b7504496a76a3bfab2b9ae75c8b9ecb173661403",
+      "bytes": 2531
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/focused/unit-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/focused/unit-1.log",
+      "sha256": "cb22064bc6adf90544e72353644d6c09ebb9720c79202169e4fb3ed6ef659979",
+      "bytes": 5813
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/focused/unit-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/focused/unit-2.log",
+      "sha256": "f5c8f50ce86f6ea1bcc7db370c952b7bc91d30dce551555208e8142296d4d692",
+      "bytes": 5808
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/hostile/originals.sha256",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/hostile/originals.sha256",
+      "sha256": "6e6f88a5412916b4e9fe37d3355227476507e48163f7d5ef1031ae99e404d6ff",
+      "bytes": 502
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/hostile/review-fixture-boundary-run1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/hostile/review-fixture-boundary-run1.log",
+      "sha256": "00ed0bf90432e305fdb9fa884673f0a19ad5dadfa762f4b79ea584366aec5527",
+      "bytes": 524
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/hostile/review-fixture-boundary.copy.test.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/hostile/review-fixture-boundary.copy.test.ts",
+      "sha256": "7f681def099a2ebd951cdb77d658d36e9952269029c408ea2a560b634883026f",
+      "bytes": 2021
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/hostile/review-hostile-run1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/hostile/review-hostile-run1.log",
+      "sha256": "250fddb5cb0025ed63841b7adbbb81a39f99d634f3b1c165d1c35a4e76630ffa",
+      "bytes": 1270
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/hostile/review-hostile.copy.test.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/hostile/review-hostile.copy.test.ts",
+      "sha256": "7ce4a9936eff0cd84ac88ab049e9afecba3242c8971d6e81964d72f7ace5f502",
+      "bytes": 8900
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/hostile/review-token-boundary-run1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/hostile/review-token-boundary-run1.log",
+      "sha256": "5243573554b3050443e548f79e2616f46420f4c5de45676e0597462cfa9d45c4",
+      "bytes": 445
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/hostile/review-token-boundary.copy.test.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/hostile/review-token-boundary.copy.test.ts",
+      "sha256": "b72342ed0d107d294553729db1b1cd65c44247b25ae66fee24b190cc5588b012",
+      "bytes": 4343
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/controls.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/controls.py",
+      "sha256": "3ad94d3953287771f50488fc0c317be517beaabf174c0e9f0b67ad258c264f0e",
+      "bytes": 4372
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/r2a-actual-statement-checks-removed-20261010T210243.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/r2a-actual-statement-checks-removed-20261010T210243.log",
+      "sha256": "cd76053ccc081275c90970aee1520728b783603085c316b0a15ba66058ac702f",
+      "bytes": 7038
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/r2a-guarded-view-bypassed-20261010T210243.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/r2a-guarded-view-bypassed-20261010T210243.log",
+      "sha256": "cf7893a188899f96c9191ffe24008925d983ed80d8eff7dec97025fc206b57dd",
+      "bytes": 6850
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/r2a-timeout-rebound-removed-20261010T210243.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/r2a-timeout-rebound-removed-20261010T210243.log",
+      "sha256": "827b6a97369f8c85a1af89daeeda69919e576337b5908f6dd900f9c414a27524",
+      "bytes": 3407
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/r2b-admission-post-demo-check-20261010T210243.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/r2b-admission-post-demo-check-20261010T210243.log",
+      "sha256": "7f0596aabf80312b4dcc10b1d38b77d4349ba2e70306a4a4290f862edab22b64",
+      "bytes": 2414
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/r2b-denial-post-demo-check-20261010T210243.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/r2b-denial-post-demo-check-20261010T210243.log",
+      "sha256": "5f397076ded9cf89af3069b4d9dd0317387b8868ed1520262669b51bace5c296",
+      "bytes": 2459
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/r2b-publish-post-demo-check-20261010T210243.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/r2b-publish-post-demo-check-20261010T210243.log",
+      "sha256": "3ab4f474270a3b1323abef60e544f979caa2885e51e955d3c31cfc5e1e2788af",
+      "bytes": 2414
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/run-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/run-1.log",
+      "sha256": "6601f87538ec5476e4b6e44157386766821d425891da3e310c665055dedf6dab",
+      "bytes": 4860
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/source-before.sha256",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/source-before.sha256",
+      "sha256": "f77a954abb226c5e5495bcdf767ad7be87c94c61154fef3590e3fa682c5084b4",
+      "bytes": 1623
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/negative/summary-20261010T210243.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/negative/summary-20261010T210243.json",
+      "sha256": "5c953b2816349722fad15362d35e94fbfe7ea3957b9826e8909a95194de42814",
+      "bytes": 5398
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/build.log",
+      "sha256": "8e990e28516731342cb119b69ba1aa9ee14ca8e33122472c19a5c8032ee44df2",
+      "bytes": 318
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/files.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/files.txt",
+      "sha256": "a35e9fb075590a610b2636b7eec3dab64c818f66cddb10b8485260871d81c865",
+      "bytes": 43338
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/generate.log",
+      "sha256": "9cdbbe28fed6cfb4d3e8e3c4593006713f942d2ee2f856a6f100a802cc21354f",
+      "bytes": 1480
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/npm-ci.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/npm-ci.log",
+      "sha256": "07cf0c63a6ac2e1945a55166fbb69c656434721a4f797e0255dce43ab61abf74",
+      "bytes": 26
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/probe-mock-ui.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/probe-mock-ui.json",
+      "sha256": "6252bc5ccb9355a89fda00829ebf0890a72c224c53acd89c92dd06957bbae703",
+      "bytes": 409
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/probe-off.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/probe-off.json",
+      "sha256": "a283a80c72aa7752ba043cbcbb09a4a8cb9a63d68f557d93c602cd2c545dc3b7",
+      "bytes": 207
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/prune.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/prune.log",
+      "sha256": "ae8bc1ee7d2c64492ee8186a2a8daec9459591e9eb32cc07ee678e239eb017af",
+      "bytes": 29
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/serve-mock-ui.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/serve-mock-ui.log",
+      "sha256": "738f36b92af3c63c9c03a7c1a4dafe67bebd7599f0a9fd7195f5ef88310eb888",
+      "bytes": 160
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod/serve-off.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod/serve-off.log",
+      "sha256": "9df3c75d6c72a0201b60c6b7f6a512f773b9613a29c4c14c907b5764af8fea44",
+      "bytes": 52
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod-proof.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod-proof.log",
+      "sha256": "59393e6a9150bd38f88052f5b2e014349d09207c9a55aa96b45589e6a9c5bf6e",
+      "bytes": 1140
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod-scripts/probe.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod-scripts/probe.mjs",
+      "sha256": "e0b1ef87465cef1ed80e4903951591be72c0c859c14be9656b21c471c48437c4",
+      "bytes": 2548
+    },
+    {
+      "originalPath": "/tmp/atlas-stage5/s5aska-repair2-work/prod-scripts/prod-proof.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/aska/implementation-rc3/supplemental/prod-scripts/prod-proof.sh",
+      "sha256": "f577dd9b57b3ab812be4d96203dc4ac81683a1728e4a8229b66b175c3adefcd0",
+      "bytes": 2102
+    }
+  ],
+  "negativeControlQualification": "Repair controls and attempts are preserved in a separate directory; see current report and original rc1 evidence for limitations. Independent reviewer must assess proof adequacy.",
+  "productionQualification": "Repair uses a new isolated production copy and current probes; inspect current report and preserved logs. No deployment performed.",
+  "usageQualification": "Native subscription with no enabled credits/API routing; raw SDK accounting and API estimate do not prove attributable subscription quota."
+}

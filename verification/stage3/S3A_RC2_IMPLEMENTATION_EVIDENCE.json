@@ -1,0 +1,320 @@
+{
+ "checkpoint": "S3-A",
+ "revision": "RC2 (bounded repair of RC1 review F1-F4)",
+ "status": "REPAIRED_PENDING_FRESH_INDEPENDENT_REVIEW",
+ "implementerReportIsNotAcceptance": true,
+ "priorReview": {
+  "report": "docs/stage3/reviews/ASTRA_S3A_RC1.md",
+  "reportSha256": "3fb753c6beaf6502349d6a1c886503b426019aaa2732d641c078d638118dab6c",
+  "verdict": "REQUIRED_CHANGES (first actual checkpoint review; not acceptance)",
+  "rc1Package": "55c1157596bc6ba5b7068c02b776199d39222c48b10cae7fc087a2e4be061593",
+  "rc1SourceZipSha256": "02a53d39d2eaee45a5a2012bbffa6dd6b9348ca410eb574e15d619f87dd0c0cf",
+  "rc1ManifestUnchanged": true,
+  "rc1EvidenceUnchanged": true
+ },
+ "date": "2026-10-09T00:42:44+00:00",
+ "writer": {
+  "model": "claude-opus-5-5",
+  "effortRequested": "high",
+  "session": "21ca7ffa-f253-4a2f-a0b6-cfa3d67bb4ff (same S3-A session, from harness task path)",
+  "provider": "native Claude Code subscription session as launched by Codex; no API key, usage credits or fallback used",
+  "effortVerification": "requested effort not independently observable by the agent",
+  "subagents": 0,
+  "parallelWriters": 0,
+  "commits": 0,
+  "branchChanges": 0
+ },
+ "baselines": {
+  "originalS3A": {
+   "manifestSha256": "10535916a4f9ba6b440ce384df10cf78464b67acf00ba7bee7b5c0a32765dd78",
+   "files": 548,
+   "note": "pre-S3-A baseline (RC1 evidence); distinct from the repair baseline"
+  },
+  "repair": {
+   "manifestPrivate": "/tmp/atlas-stage3/s3a-rc1-repair-baseline.json",
+   "manifestSha256": "2260c80c98d0c3305d1201e11cdec47855eb840b277e4ffb50a9243f7d2e7564",
+   "files": 577,
+   "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+   "branch": "planning/stage2-m365",
+   "verifiedAtStart": "577/577 identical, nothing added or removed"
+  }
+ },
+ "current": {
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "files": 577,
+  "manifestSha256": "974c2962d5e3521a3a83d11b64a3b91f794a19947e17fba6de04d280c2747684",
+  "manifestRule": "sha256 of compact JSON [{path,sha256}] sorted by path over git ls-files -co --exclude-standard, excluding this evidence file",
+  "deltaFromRepairBaseline": {
+   "added": {},
+   "removed": [],
+   "changed": {
+    "docs/ROADMAP.md": {
+     "before": "781bc5a6b893e3df56958c729f9c41037d621ddfd6d33ca0128752e55821808a",
+     "after": "e68cf7d11a86a4844440ff3ff52344e6d52b92f08d96a2e4711fd513af5c93e0"
+    },
+    "docs/stage3/IMPLEMENTATION_STATUS.md": {
+     "before": "2d02e2d551643b2be1f629f525591da91970fc763aba4c8ca5466d98dce89d2e",
+     "after": "3ef6651b39cd6b5b8a94083595135f093c39070f1075e04f1050efd60306ad16"
+    },
+    "packages/actions/private-file.ts": {
+     "before": "dfe033ac0c26cc500a9cddb9eec868081ebf05873154edb5abf4a60c44b3992b",
+     "after": "7ac0717568bc8719f4c6b6fc0e79d93d6cfc214ffa3520ea6af204a560347c50"
+    },
+    "packages/graph/fence-role.ts": {
+     "before": "70e2fbba6a02e487a440ee4c00ec6ad0b2c9c54fedb90655b85d1a001cebefe9",
+     "after": "7dd2a92e456ec2536148df709f84d752da4221bb389cf445079cf82c5e13cf85"
+    },
+    "prisma/migrations/202610091100_stage3_action_requests/migration.sql": {
+     "before": "0f46960e765d6172c1fb1e55aeb7c1bd3548bdcf7ae586b45b6efbe46dbdd174",
+     "after": "e44438195505f031cc7f0bd3f67a8a7648530093e55b6e8a0b14f4b4fb23b8a7"
+    },
+    "prisma/roles.sql": {
+     "before": "f597f1440a4fb68644234211ea383924e86d939c39fa02f95ed3f1ec69399e97",
+     "after": "8949a28dd80a50247551f97de0902055f74abf3515b723dd587c04eb28a3497b"
+    },
+    "tests/action-canonical.test.ts": {
+     "before": "107e0dff73a0d9aeb89d912073607ff47239fa99a180986f00228e87b2c347e7",
+     "after": "6ceb3dec7b8f12d8ecfe38cdc89dca722e8dc2c7fb69fdf149d868913495b160"
+    },
+    "tests/context-mapper.test.ts": {
+     "before": "f6e74e9829769467bf3c7212d0a059b4e9575f39a6b08196d6d132ef0ac651a4",
+     "after": "f9366a915f949a67e0389f40cefa5d5e1d6d410d5db1d418a20b9c3c9bd65382"
+    },
+    "tests/pg/action-fence.pg.test.ts": {
+     "before": "a2c1b4a7dc9964af8e84cf3186cc71cd710d360661289099066f3216154f323a",
+     "after": "7703fa5b09d251d046fc73521fdc41c3e2759cc7face6a79d6d9d426ae8a944c"
+    },
+    "tests/pg/action-requests.pg.test.ts": {
+     "before": "ac196f10005704accaac3febf87cf48d2a450856f754470c5d726f5e742aef54",
+     "after": "1d69d4c08ee69f19a8105b88692b0e6dc5b2a655169236c69e80feb5514c64a4"
+    },
+    "tests/pg/action-signers.pg.test.ts": {
+     "before": "6b70f6913bb26750e5744424841bc8028b9d3a479defd5d966f48f1bac6032a1",
+     "after": "9e6bf15b03e5d80e504c3303c6284322e635899c2e387a25b00dbdb5ef1f15fd"
+    },
+    "tests/pg/pilot-driver.pg.test.ts": {
+     "before": "5b88a0d82a3916e61e831085b6d34fc660616d9c2a82232e781ec2b53ff860bf",
+     "after": "55fbd4851a6265461a0ad46ba12c3de27ca3d163d089bcda3ffdd30a87d80dc2"
+    }
+   }
+  }
+ },
+ "preservationCorrection": {
+  "rc1Claim": "RC1 evidence reported frozenMigrationsLockStage1ReportStage2Docs: true",
+  "correction": "That claim was false: RC1 edited docs/ROADMAP.md (a Stage 2 normative11 file pinned by docs/stage2/REVIEW_MANIFEST.json; e68cf7d1... -> 781bc5a6...), violating the brief. The RC1 check only looked at docs/stage2/* paths. RC2 restores the exact frozen bytes; the historical RC1 evidence/manifest/archive are left unchanged.",
+  "roadmapSha256Now": "e68cf7d11a86a4844440ff3ff52344e6d52b92f08d96a2e4711fd513af5c93e0",
+  "roadmapExpected": "e68cf7d11a86a4844440ff3ff52344e6d52b92f08d96a2e4711fd513af5c93e0",
+  "stage2Normative11AllMatchManifest": true,
+  "stage3Frozen8AllMatchRC4Manifest": true,
+  "prior19MigrationArtifactsUnchanged": true,
+  "stage1ReviewReportUnchanged": true,
+  "method": "recomputed sha256 of every file listed in docs/stage2/REVIEW_MANIFEST.json and verification/stage3/S3_DESIGN_RC4_MANIFEST.json; compared prisma/migrations/* and REVIEW_REPORT.md against the repair baseline"
+ },
+ "fixes": [
+  {
+   "id": "F1",
+   "change": "packages/graph/fence-role.ts: new readiness fact actionFenceRoutineViolations — every application routine (non-system schemas) the fence definer can EXECUTE other than its own trigger function must be in the explicit FENCE_SHARED_INVOKER_ROUTINES list (32 exact name(identity args) signatures of accepted Stage 1/2 SECURITY INVOKER helpers/trigger functions reachable via PUBLIC), must not be SECURITY DEFINER, and must carry no explicit ACL entry for the definer. Joined to the startup check and to every fenced admission. prisma/roles.sql: revokes explicit routine grants to the definer it can revoke, then refuses (unexpected routine) if any remain or any PUBLIC/SECURITY DEFINER routine is outside the same list. Migration 202610091100: atlas_action_history_guard/lifecycle_guard trigger functions now have PUBLIC EXECUTE revoked (triggers fire without EXECUTE), so no Stage 3 routine needs an allowance.",
+   "tests": [
+    "tests/pg/action-fence.pg.test.ts F1: unrelated non-PUBLIC SECURITY DEFINER routine granted to the definer -> fact>0, startup RUNTIME_ROLE_NOT_CONFINED, admission ACTION_FENCE_NOT_READY; roles.sql removes the grant -> ready; explicit grant on a listed helper -> refused then removed; new PUBLIC routine -> refused, roles.sql refuses until PUBLIC revoked; grant by another grantor through a grant option -> roles.sql refuses until revoked",
+    "tests/context-mapper.test.ts: new fact refuses startup; roles.sql and readiness lists identical, no Stage 3 or cleanup routine allowed"
+   ]
+  },
+  {
+   "id": "F2",
+   "change": "packages/actions/private-file.ts: readProtectedJson opens O_RDONLY|O_NOFOLLOW|O_NONBLOCK; same-descriptor fstat/read and all regular-file/mode/owner/link/size/UTF-8 rules unchanged; output path unchanged.",
+   "tests": [
+    "tests/action-canonical.test.ts: mkfifo -m 600 without a writer, read in a subprocess bounded to 10 s (SIGKILL) -> returns ACTION_INPUT_INVALID immediately; regular 0600 file still reads",
+    "mutation probe: without O_NONBLOCK the same test fails at the 10 s bound (fix then restored, byte-identical)"
+   ]
+  },
+  {
+   "id": "F3",
+   "change": "Migration 202610091100: ActionAttempt_claim_check requires token, ordinal, startedAt and deadline explicitly non-null before range/equality tests and is coalesced to false; ActionApproval_lifetime_check made explicit the same way. Audit of the other new CHECKs (ActionRequest contract/content/canonical/state, ActionApproval contract, ActionAttempt contract, ActionVerification contract, ActionMockTicket content, fence version): operands are NOT NULL columns or IS NULL OR-guarded, so they cannot evaluate to UNKNOWN; lifecycle triggers already coalesce to refusal. States, transitions and the S3-B/C service boundary unchanged; no new service.",
+   "tests": [
+    "tests/pg/action-signers.pg.test.ts A4: separate negatives for each absent mandatory claim field (token, ordinal, startedAt, deadline), ordinal 0/above count, wrong deadline, malformed candidate, stray ordinal/deadline outside ACTIVE; positive fully populated claim observed through the scoped runtime; approval APPROVED without expiry refused",
+    "mutation probe: with the RC1-shaped CHECK the new missing-ordinal negative fails (fix then restored, byte-identical)"
+   ]
+  },
+  {
+   "id": "F4",
+   "change": "docs/ROADMAP.md restored byte-exact from /tmp/atlas-stage3/ROADMAP.frozen.md; Stage 3 status kept in docs/stage3/IMPLEMENTATION_STATUS.md (updated for RC2) and REVIEW_STATUS.md; Stage 2 manifest not amended.",
+   "tests": [
+    "sha256 check against docs/stage2/REVIEW_MANIFEST.json (11/11 match)"
+   ]
+  }
+ ],
+ "adjacentTestChanges": [
+  "tests/pg/pilot-driver.pg.test.ts and tests/pg/action-requests.pg.test.ts: injected fault trigger functions now REVOKE PUBLIC EXECUTE (a new PUBLIC routine is intended F1 drift; the trigger still fires). Their behavioural assertions are unchanged."
+ ],
+ "checks": {
+  "final": [
+   {
+    "id": "npm-test",
+    "exit": 0,
+    "seconds": 8,
+    "counts": {
+     "tests": 177,
+     "pass": 177,
+     "fail": 0,
+     "cancelled": 0,
+     "skipped": 0
+    },
+    "command": "npm test"
+   },
+   {
+    "id": "schema-validate",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run schema:validate"
+   },
+   {
+    "id": "db-generate",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run db:generate"
+   },
+   {
+    "id": "typecheck",
+    "exit": 0,
+    "seconds": 4,
+    "command": "npm run typecheck"
+   },
+   {
+    "id": "api-build",
+    "exit": 0,
+    "seconds": 2,
+    "command": "npm run api:build"
+   },
+   {
+    "id": "api-smoke",
+    "exit": 0,
+    "seconds": 0,
+    "command": "npm run api:smoke"
+   },
+   {
+    "id": "test-pg",
+    "exit": 0,
+    "seconds": 48,
+    "counts": {
+     "tests": 340,
+     "pass": 340,
+     "fail": 0,
+     "cancelled": 0,
+     "skipped": 0
+    },
+    "command": "npm run test:pg (disposable PG17)"
+   },
+   {
+    "id": "db-check-pg17",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run db:check:pg17 (throwaway DB)"
+   },
+   {
+    "id": "db-check-drift",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run db:check:drift (throwaway shadow DB)"
+   },
+   {
+    "id": "git-diff-check",
+    "exit": 0,
+    "seconds": 0,
+    "command": "git diff --check"
+   }
+  ],
+  "firstRc2Run": {
+   "note": "before the adjacent fault-injection test fix: 337/340 PG (the two injected PUBLIC trigger functions correctly made startup/admission refuse; one follow-on failure). Logs preserved.",
+   "results": [
+    {
+     "id": "npm-test",
+     "exit": 0,
+     "seconds": 8,
+     "counts": {
+      "tests": 177,
+      "pass": 177,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+     }
+    },
+    {
+     "id": "schema-validate",
+     "exit": 0,
+     "seconds": 0
+    },
+    {
+     "id": "db-generate",
+     "exit": 0,
+     "seconds": 1
+    },
+    {
+     "id": "typecheck",
+     "exit": 0,
+     "seconds": 4
+    },
+    {
+     "id": "api-build",
+     "exit": 0,
+     "seconds": 2
+    },
+    {
+     "id": "api-smoke",
+     "exit": 0,
+     "seconds": 0
+    },
+    {
+     "id": "test-pg",
+     "exit": 1,
+     "seconds": 49,
+     "counts": {
+      "tests": 340,
+      "pass": 337,
+      "fail": 3,
+      "cancelled": 0,
+      "skipped": 0
+     }
+    },
+    {
+     "id": "db-check-pg17",
+     "exit": 0,
+     "seconds": 1
+    },
+    {
+     "id": "db-check-drift",
+     "exit": 0,
+     "seconds": 1
+    },
+    {
+     "id": "git-diff-check",
+     "exit": 0,
+     "seconds": 0
+    }
+   ]
+  },
+  "logs": {
+   "rc1": "/tmp/atlas-stage3/claude-tools/checks (unchanged)",
+   "rc2Run1": "/tmp/atlas-stage3/claude-tools/checks-rc2-run1",
+   "rc2Final": "/tmp/atlas-stage3/claude-tools/checks-rc2"
+  },
+  "whitespaceNewOrChangedFiles": "clean",
+  "leftoverDisposableDbsOrRoles": 0
+ },
+ "environment": {
+  "postgres": "local PG17 container; only disposable databases/roles via the existing harness",
+  "adminUrl": "ATLAS_PG_ADMIN_URL read from local .env by a wrapper, never printed",
+  "businessProviders": "none contacted",
+  "pilotConfig": "not read",
+  "persistentDb": "not migrated, seeded or provisioned"
+ },
+ "residualRisks": [
+  "F1 list is deliberately strict: any future migration that adds a routine reachable by the fence definer (new PUBLIC helper or trigger function) refuses startup until the routine is PUBLIC-revoked or the reviewed list is extended in both fence-role.ts and roles.sql (a unit test keeps the two lists identical). lifecycle-race test still creates a PUBLIC test trigger function but runs no readiness check.",
+  "Arbitrary superuser function-body replacement and other owner DDL bypass remain outside supported operation (unchanged).",
+  "Implicit FK key-share locks can surface as ACTION_DB_CONFLICT (unchanged, documented).",
+  "Per-admission readiness SQL now also scans routine ACLs; still tens of ms in tests.",
+  "Requester-expiry cap on approvals, claim/attempt atomicity and publication/recovery concurrency remain S3-B/C service duties, untested until those services exist."
+ ],
+ "notImplemented": "S3-B and S3-C services; any vendor adapter or live call.",
+ "writerHandoff": "Claude finished the bounded RC2 repair and stopped; sole checkout write ownership returns to Codex for RC2 freeze and a fresh Astra/xhigh review."
+}

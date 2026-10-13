@@ -7,6 +7,10 @@ import { getClientContext, getObservationPage } from '../graph/prisma-context.ts
 import type { ToolExecutionOutcome, ToolExecutionRecord, ToolLedger } from './ledger.ts';
 import { auditOfExecution } from './ledger.ts';
 import type { ToolReaders } from './registry.ts';
+import { envCursorKey } from '../correlation/cursor.ts';
+import type { CursorKeyProvider } from '../correlation/cursor.ts';
+import { readCorrelation } from '../correlation/read.ts';
+import { readSignIns } from '../m365/reads.ts';
 
 /**
  * ToolExecution ledger in PostgreSQL (task 1.9), bound to the authenticated actor of one request: each step writes the
@@ -37,7 +41,13 @@ export class PrismaToolLedger implements ToolLedger {
   }
 }
 
-/** What the tools read in DB mode: the scoped context and observation pages through the runtime role. */
-export function databaseReaders(db: PrismaClient, actor: Actor, scope: Scope): ToolReaders {
-  return { context: () => getClientContext(db, actor, scope), observations: query => getObservationPage(db, actor, scope, query) };
+/**
+ * What the tools read in DB mode: the scoped context and observation pages through the runtime role, and the Stage 2 M365
+ * reads (their own all-of authority, snapshot and current-authority checks). The cursor key resolves from the shared
+ * environment configuration at each M365 read (fails closed), unless explicitly injected.
+ */
+export function databaseReaders(db: PrismaClient, actor: Actor, scope: Scope, options: { cursorKey?: CursorKeyProvider; correlationId?: string } = {}): ToolReaders {
+  const deps = { cursorKey: options.cursorKey ?? envCursorKey(), correlationId: options.correlationId };
+  return { context: () => getClientContext(db, actor, scope), observations: query => getObservationPage(db, actor, scope, query),
+    m365: { correlation: parameters => readCorrelation(db, actor, scope, parameters, deps), signIns: parameters => readSignIns(db, actor, scope, parameters, deps) } };
 }

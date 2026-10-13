@@ -1,0 +1,27 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-RSA-BRIEF-rc2",
+  "packageHash": "c752398dea2c9eed10a2a9b0346e68011d4a085210487915885d16cf4893cfdb",
+  "manifestFiles": 44,
+  "briefLines": 430,
+  "acceptanceChecksLines": 127,
+  "baselineFilesUnchanged": 1540,
+  "delta": {
+    "changed": [
+      "docs/stage5/ask/remote/reval-server/rs-a/IMPLEMENTATION_BRIEF.md"
+    ],
+    "added": [
+      "docs/stage5/ask/remote/reval-server/rs-a/ACCEPTANCE_CHECKS.md"
+    ]
+  },
+  "nativeUnixPgFixture": {
+    "available": true,
+    "version": "17.11 (Homebrew)",
+    "listenAddresses": "",
+    "path": "/tmp/atlas-reval-rsa/native-pg-fixture.json",
+    "testOnly": true,
+    "candidateImplementationTested": false
+  },
+  "paidProductCalls": 0,
+  "activation": false,
+  "checks": "Static hashes/fences/line budget; nativePG fixture preflight only, no candidate runtime proof"
+}

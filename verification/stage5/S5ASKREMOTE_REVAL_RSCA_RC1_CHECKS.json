@@ -1,0 +1,92 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSC-A-rc1",
+ "window": [
+  "2026-10-11T22:39:15Z",
+  "2026-10-11T22:45:38Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts",
+   "result": "545 tests: 536 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (CORPUS_IDENTITY_MISMATCH; same 8 names as RS-B); reval-rc5-guard passes",
+   "log": "unit.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg",
+   "result": "764/764 pass, 0 fail, 0 skipped (native RS-C-A chain included: production S without a key -> 503 ASK_REMOTE_UNAVAILABLE, attempt NO_DISPATCH)",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "focused after the full run: node --test tests/pg/reval-eval-handoff.pg.test.ts (2 added HTTP edge checks: duplicate keys, invalid UTF-8)",
+   "result": "5/5 pass",
+   "log": "focused-handoff.txt"
+  },
+  {
+   "command": "focused after the full run: tests/reval-eval-controller.test.ts + tests/context-budget.test.ts; tsc --noEmit",
+   "result": "6/6 pass; tsc pass",
+   "log": "focused-unit.txt, focused-typecheck.txt"
+  },
+  {
+   "command": "history: first full test:pg of this checkpoint (before the N3 change to the reader-stall test and the C ARM-admission reorder)",
+   "result": "763/764; the one failure = rc2 F3 reader-stall test under load (marker never reached)",
+   "log": "test-pg-run1.txt"
+  },
+  {
+   "command": "mutations (in place, restored byte-exact): s2 PAUSED check removed; F9 confinement removed; F6 rethrow removed; V error listener removed",
+   "result": "N1 P3 and P1 tests fail (combined run); N1 P2 fails on the F6 mutation (OK FIXTURE_CHECK with false booleans); reval-verifier-events fails without the listener; all pass restored"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSCA_RC1_EVIDENCE",
+ "logs": {
+  "build.txt": "b8c5e0342d6a9c14866729526ce80bc52092f45360b00c6d1483634ed29a08b7",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "1b0396e46e98f46cef031271268689fb1ea7b850ea16da48908ebaefd82473ec",
+  "finished.txt": "d2695b0e2c3402570fee6c1fbaa1dfb190ffec2b91edef9e50072863378a948c",
+  "focused-handoff.txt": "e036de145cb6919f3de287690b78b70260c3c60a9d3d22efc431fcb77bb81465",
+  "focused-typecheck.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "focused-unit.txt": "fc04240b5c8593ce0c5c10fef1390ef467fe83116800d7f89f4e6321a3e890d3",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "schema.txt": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "ebdc24fe5c0fedb48d23c0b0d7f72f38b745dd244c97042eda9ffc01cc3602fb",
+  "test-pg-run1.txt": "a8a804070ec5dafb2ca4ccf4badc0b9fcaacd026858064458e2f58457c2f50dc",
+  "test-pg.txt": "7d20d38376b0f080ef99d88a117d9f97ab811cffa42c82c1b5a0aeed00524c40",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "unit.txt": "b73a674328538ebfc9fafafb1da45f49d2ec21151e26c4436fd2f1ebf28c3a7a"
+ }
+}

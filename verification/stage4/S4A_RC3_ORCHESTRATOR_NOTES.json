@@ -1,0 +1,56 @@
+{
+  "scope": "S4-A RC3 within unchanged dual-approved S4-design-RC2; no dependent B/C advancement",
+  "ownership": "Both repair2 followups and repair2 exited0/returned ownership; Codex now freezes source for fresh Astra/xhigh",
+  "priorArtifact": "S4A-rc2 preserved, CHANGES_REQUIRED; exact report/docs/stage4/reviews/ASTRA_S4A_RC2.md remains immutable",
+  "sourceDeltaFromRepair2Baseline": {
+    "changed": 3,
+    "added": 5,
+    "removed": 0,
+    "oldMigrationsNormsHistoryChanged": false
+  },
+  "nativePhases": [
+    "verification/stage4/S4A_RC3_REPAIR_EXECUTION.json",
+    "verification/stage4/S4A_RC3_HARDENING_EXECUTION.json",
+    "verification/stage4/S4A_RC3_CLOSURE_EXECUTION.json"
+  ],
+  "rootConfirmedAdditionalGapsAndClosure": [
+    {
+      "gap": "Explicit EXECUTE on initially restricted pg_read_file(text) was ignored due low OID; persisted through provisioning",
+      "probe": "metadata only, no invocation or filesystem/credential read; own disposable DB cleaned",
+      "result": "builtin initial ACL/effective drift checks and safe reset added; protected builtin and catalog PUBLIC drift now rollback-only tests"
+    },
+    {
+      "gap": "Owner-created one-byte synthetic LO readable by runner despite healthy readiness, survived provisioning",
+      "probe": "only octet_length marker; no financial/auth/credential data; LO unlinked and own disposable DB cleaned",
+      "result": "LO, FDW/server, user mappings, default ACL and shared-object authority covered with focused catalog unions and real separate-session regressions"
+    }
+  ],
+  "testScopeIncident": {
+    "fact": "Earlier hardening test temporarily committed PUBLIC SET on session_replication_role; pg_parameter_acl is a shared cluster catalog, so the test was not isolated by a disposable database alone",
+    "currentVerifiedState": "Root read-only metadata probe afterward confirmed pg_parameter_acl0 rows and0 PUBLIC entries; no residual grant. No private file or credential row was read by the probe/tests. Do not equate earlier test scope with per-database isolation.",
+    "correction": "Final builtin/shared PUBLIC drift remains uncommitted inside unconditional ROLLBACK, readiness executes SET LOCAL ROLE on same connection, production DO body uses validated wrapper removal/savepoint, separate observer checks unchanged snapshots; final native suite passed this.",
+    "metadataLogSha256": "24046433ded5202322431639930d773a6e2a347ab721624bf1ff5ea12dc481cf"
+  },
+  "sourceCheckIdentity": "Final rc3-sealed all11 passed on final source with no scratch file. Earlier rc3/rc3-final passes superseded by actual source changes and retained. Prior .s4a-probe.ts scratch was removed and absent from final run/artifact.",
+  "failedDiagnostics": "Preserved native raw reports and focused logs detail alias collision, sequence predicate evaluation, grantor handling, temp namespace/PUBLIC USAGE compatibility, initial metadata probe, PGlite pg_database limitation and rollback-envelope test fixes. Initial root builtin probe failed at import before DB creation, not pass evidence. No failed/cancelled run reclassified as pass.",
+  "implementationChoicesForIndependentReview": [
+    "PUBLIC schema USAGE alone permitted because it grants no object data access; explicit foreign schema grants, CREATE and ownership prohibited; preserves accepted Stage3 compatibility",
+    "Own checking-session temp namespace uses explicit ACL because PG reports temporary namespace privileges via database TEMP; user/temp objects still checked",
+    "pg_init_privs and safe initial builtin baseline; unrecorded owner-only sql_parts/transforms now denied",
+    "Residual: PUBLIC CREATE on nondefault user tablespace is not enumerated on PGlite; explicit/shared dependency authority is checked. No real tablespace/server filesystem operations were authorized or performed. Reviewer must assess whether this is required before acceptance."
+  ],
+  "tests": {
+    "unitPGlite": 196,
+    "postgresql": 466,
+    "requiredChecks": 11,
+    "allPassed": true,
+    "evidence": "verification/stage4/S4A_RC3_IMPLEMENTATION_EVIDENCE.json",
+    "sha256": "93f114b7d56b3745d5f4dd4df758acaeb17401ccc26a8fc33a9663f1f0f7294e"
+  },
+  "deferred": [
+    "S4-B",
+    "S4-C",
+    "LIVE DEFERRED_BY_OWNER"
+  ],
+  "attributableSubscriptionQuota": "unknown; no credits/API/fallback enabled; API estimates/cache statistics not quota evidence"
+}

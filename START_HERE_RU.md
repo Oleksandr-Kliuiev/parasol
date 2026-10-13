@@ -82,11 +82,11 @@ POST /tools/execute
 ```sh
 docker compose up -d
 npm run db:deploy                                   # все миграции, владельцем
-psql "$DATABASE_URL" -v atlas_app_password="$(cat secret)" -f prisma/roles.sql   # confined runtime role
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v atlas_app_password="$(cat secret)" -v atlas_cleanup_runner_password="$(cat runner-secret)" -f prisma/roles.sql   # роли после каждого deploy
 ATLAS_DEMO_TOKEN="…" npm run db:seed                # владельцем: синтетический граф, актор, digest токена
 ATLAS_PG_ADMIN_URL="$DATABASE_URL" npm run db:check:pg17   # миграции, инварианты, RLS, пул — на настоящем сервере
 ATLAS_PG_ADMIN_URL="$DATABASE_URL" npm run test:pg         # Prisma/PostgreSQL: deploy, roles.sql, seed, API в режиме db
-ATLAS_PG_ADMIN_URL="$DATABASE_URL" npm run db:check:drift  # миграции и schema.prisma описывают одну схему
+ATLAS_PG_ADMIN_URL="$DATABASE_URL" npm run db:check:drift  # миграции и prisma/*.prisma описывают одну схему
 ```
 
 Без локального `psql` роль создаётся psql из контейнера: `docker compose exec -T postgres psql -U atlas -d atlas -v ON_ERROR_STOP=1 -v atlas_app_password="…" -f - < prisma/roles.sql`. Проверьте `DATABASE_URL` перед командами. Seed создаёт только синтетические данные и не очищает таблицы; `ATLAS_DEMO_TOKEN` сохраняется только как SHA-256 digest. Приложение (API/worker) подключается **только** через `ATLAS_RUNTIME_DATABASE_URL` с ролью `atlas_app`: владелец таблиц обходит RLS, и `assertRuntimeRole()` откажет в старте.

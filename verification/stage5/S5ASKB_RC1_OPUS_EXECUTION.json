@@ -1,0 +1,55 @@
+{
+  "phase": "s5askb-rc1",
+  "exitCode": 0,
+  "elapsedSeconds": 3040.7,
+  "requestedModel": "claude-opus-5-5",
+  "effort": "high",
+  "actualMessageModels": [
+    "claude-opus-5-5"
+  ],
+  "provider": "native Anthropic firstParty/claude.ai (auth status verified; no provider env overrides)",
+  "billing": "subscription; no credits/API billing enabled; attributable quota unknown",
+  "sessionId": "de9faf68-215d-4742-8d88-503f198c1f3e",
+  "resultSubtype": "success",
+  "isError": false,
+  "numTurns": 13,
+  "rawUsage": {
+    "input_tokens": 26,
+    "cache_creation_input_tokens": 18554,
+    "cache_read_input_tokens": 5890301,
+    "output_tokens": 14111,
+    "output_tokens_details": {
+      "thinking_tokens": 1771
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 18554,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1624,
+        "cache_read_input_tokens": 503418,
+        "cache_creation_input_tokens": 879,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 879
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "permissionDenialsCount": 0,
+  "estimatedApiCostUsdNotSubscriptionQuota": 18.683375199999986,
+  "rawStreamSha256": "0ca9a3b1bec65200974feb3697409a720d175c4997d2868ead702bb82d344328",
+  "writerReturnedTo": "Codex",
+  "acceptance": "PENDING"
+}

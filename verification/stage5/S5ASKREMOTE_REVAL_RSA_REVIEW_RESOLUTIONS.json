@@ -1,0 +1,167 @@
+{
+  "status": "ROOT_CLASSIFIED_WITHIN_APPROVED_RS_A_SCOPE_FOR_INDEPENDENT_RC2_REVIEW",
+  "originalBriefHash": "e8f87336b1cf7e0ba7b18702378f3a6efb877b20e5d9aa4e9a96ee175bf85040",
+  "architectureHash": "9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163",
+  "classificationAuthority": "User-authorized RS-A implementation and current AGENTS cohesive focused-module rule; root routine implementation judgment; Opus F4 explicitly requests root classification. Does not expand behavior, public contract, authority or stage scope. Both code reviewers assess the exact classified RC2 artifact.",
+  "additionalFocusedPaths": [
+    {
+      "path": "packages/reval/channel.ts",
+      "sha256AtRc1": "a41f8c52e656537e62542ef30e5989c7b4392f4ebbe26d9a8fd78cfe547abc34",
+      "classification": "Focused internal RS-A production split"
+    },
+    {
+      "path": "packages/reval/config.ts",
+      "sha256AtRc1": "1cfccaf2573210c1366f61782944921f80f1a0b50a36923a9c38b2b2416f7249",
+      "classification": "Focused internal RS-A production split"
+    },
+    {
+      "path": "packages/reval/deps.ts",
+      "sha256AtRc1": "33ba93c2c9005dba0edc22f567b73f7515799fddf5898c2f02863a452ffd28a2",
+      "classification": "Focused internal RS-A production split"
+    },
+    {
+      "path": "packages/reval/pause.ts",
+      "sha256AtRc1": "043d0a54d38ae432e97ec3ea9f8a6217f09e709f92c919369450763a9e47c0e9",
+      "classification": "Focused internal RS-A production split"
+    },
+    {
+      "path": "packages/reval/server-link.ts",
+      "sha256AtRc1": "2f530f39442c1be86de1602243b7dc24bfe6e0179d23e5c13372656d61702434",
+      "classification": "Focused internal RS-A production split"
+    },
+    {
+      "path": "tests/support/reval-nonsuper.ts",
+      "sha256AtRc1": "b8d236fc75b6da5f9626c4c8eff1f411f4ae226e1e3a5bf57ca7a81809702009",
+      "classification": "Focused RS-A-only test harness support"
+    },
+    {
+      "path": "tests/support/reval-pg.ts",
+      "sha256AtRc1": "88f33dabb54f2ff3a73de41f92c8e5c4c7113ed9c88cd1d760b482eb67c26ff9",
+      "classification": "Focused RS-A-only test harness support"
+    },
+    {
+      "path": "tests/support/reval-pty.ts",
+      "sha256AtRc1": "23809abc1c1236bbd12672164c4fc1c630df9cd3b76e44958175096def300080",
+      "classification": "Focused RS-A-only test harness support"
+    },
+    {
+      "path": "tests/support/reval-test-pause-entry.ts",
+      "sha256AtRc1": "5a8c9285b2149088e16ccb2819fc3472e9e3465c438937ad204556249d604e53",
+      "classification": "Focused RS-A-only test harness support"
+    }
+  ],
+  "existingParityInvariantSupport": {
+    "path": "tests/support/poweroffice-envelope.ts",
+    "classification": "Bounded existing parity/invariant support: recognizes exactly the one new reval provisioning block while retaining original transaction-control invariant; no product behavior change",
+    "sha256AtRc1": "21f6b61a1b6f9377702aac4b4d9700a263174bb65d477db7cbc8b6bf7d1cd0c4"
+  },
+  "requirementsUnchanged": true,
+  "architectureGateReopened": false,
+  "runtimeCodeChangedByRoot": false,
+  "verificationCausalRecord": {
+    "resolutionOf": "Opus F5.2",
+    "rootDecision": "Accept the immutable same-run paired original PTY test and identical-argv direct child CLI probe as the causal record under the approved verification-only addendum. Original opaque timeout remains a failed test, never directly proven by its own test output or counted passing.",
+    "requiredEvidence": [
+      "Entire unfiltered current unit output and status retained",
+      "Companion direct PTY/CLI probe in same run log with exact original child argv and CORPUS_IDENTITY_MISMATCH/exit1",
+      "Source/build/guard hashes and drift before/after pair identical; only authorized RC_SOURCE_DRIFT/RC_BUILD_DRIFT",
+      "Per-name historical110 reconciliation remains mandatory, no edits to RC5 files/guard/pins/tests",
+      "Both independent code reviewers must approve sufficiency on exact RC2; missing or unrelated failure blocks qualification"
+    ],
+    "status": "FINAL_RC3_COMPLETE_UNIT_RERUN_PAIRED_RECORD_VERIFIED_BY_ROOT_FOR_BOTH_INDEPENDENT_REVIEWERS",
+    "finalPairedRecord": {
+      "path": "verification/stage5/S5ASKREMOTE_REVAL_RSA_RC3_EVIDENCE/rc3/final/unit-paired-rerun.log",
+      "sha256": "e5722b52133f23bc1d2e7b947c8f8a64cd3c79e29bfdc531e222459ea2c8db4b",
+      "beforeAfterIdentical": true,
+      "inventory": {
+        "buildFiles": 268,
+        "buildInventory": "583a4ca84af872b6e17943c563257e53983882bdcce1f74074f1043883215c13",
+        "guard": {
+          "drift": [
+            "RC_SOURCE_DRIFT",
+            "RC_BUILD_DRIFT"
+          ],
+          "ok": false
+        },
+        "label": "before",
+        "rc5Files": 120,
+        "rc5FilesMatchManifest": true,
+        "sourceFiles": 1753,
+        "sourceInventory": "adc6a9ce98ffda270518fd17d8846059ca8ca801903bb3622adda2b15d791874"
+      },
+      "reportedCurrentUnit": {
+        "tests": 509,
+        "pass": 501,
+        "fail": 8,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "probeExit": 1,
+      "probeCode": "CORPUS_IDENTITY_MISMATCH",
+      "receipts": 0,
+      "originalPtyFailureRemainsQualifiedIndirect": true,
+      "independentApprovalsStillPending": true
+    },
+    "supersededPairedRecord": "RC2 final5 superseded by RC3 code fixes; RC3 first run had 1 unrelated M365 hour-boundary failure; complete final unit rerun on IDENTICAL bytes has only8identity failures. Earlier failed run is disclosed, not waived or called passed."
+  },
+  "paidProductCalls": 0,
+  "activation": false,
+  "updatedUtc": "2026-10-11T17:17:31.995977+00:00",
+  "additionalRepairFocusedPaths": [
+    {
+      "path": "packages/reval/deadline.ts",
+      "sha256": "e5dfec29b382b976b1f62d1ddfa6cf62e41c219eeca33cf380f1e091602629ae",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/pg/reval-controls.pg.test.ts",
+      "sha256": "3219ecfcdcfa8a1459676ae03b59cede9f21fed20da2cefbe02134c9dfe6cf17",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/pg/reval-launch-controls.pg.test.ts",
+      "sha256": "714a0107d0ed6ec81a84f2d6d874774dfdfad6ccc1806d5cc2b832727ecc3000",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/reval-deadline.test.ts",
+      "sha256": "75339742e30609eaeddaf034e7b132b232d7af1f00897541d9a0646ef94e4145",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/reval-handshake.test.ts",
+      "sha256": "b2157e42d45100049868c119eafb8807409af7158dc03d35e3eefdda58986d19",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/support/reval-closure-harness.ts",
+      "sha256": "c63323a51cd79ff0f15d60067d6d32406fe9ac642564f6a8361a3ba3872e7ba0",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/support/reval-controller-harness.ts",
+      "sha256": "9b33bc75eb1a755931df6eae68b45d9034bd6126ee6ffd66bf26bf76f6baf556",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/support/reval-launch-harness.ts",
+      "sha256": "f18afe8fb20a9e8164a82acc6cb3ae6f099fda7f87439c58298107b92502d7dc",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/support/reval-scripted-child.ts",
+      "sha256": "9e38217da596c02eca499d1ade0dc7a9f2d323e337810a70b7692ca6a2675922",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    },
+    {
+      "path": "tests/support/reval-spy-child.ts",
+      "sha256": "95798a6cdf95d3fdab52d449e8f85d222da8ac762a5287ec662da288a324f9d5",
+      "classification": "Focused RS-A deadline/protocol repair module or direct acceptance-test/harness split within the approved existing scope; no new behavior/admission/stage authority"
+    }
+  ],
+  "rc3FocusedTestPath": {
+    "path": "tests/reval-reread-window.test.ts",
+    "sha256": "d3d7f659367a26a49a987bdfbd3ced46a1c53ee23bf5ec59afd72e8c5d8e7bde",
+    "classification": "Direct deterministic verification of existing RS-A pending-reread fail-closed invariant and approved E sub-deadline; no new authority/schema/stage"
+  }
+}

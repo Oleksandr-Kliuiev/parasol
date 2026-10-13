@@ -36,33 +36,6 @@ export function workspaceContext(actor: Actor): ScopeContext {
 /** set_config(..., true) is the parameterised SET LOCAL: the context ends with the transaction, never with the connection. */
 export const SET_SCOPE_SQL = `SELECT set_config('app.workspace_id', $1, true), set_config('app.client_ids', $2, true)`;
 
-/** Every table protected with row-level security (v1.1 migration + 202610071600 identities). The runtime check covers all of them. */
-export const PROTECTED_TABLES: readonly string[] = [
-  'Workspace', 'Client', 'Entity', 'Person', 'Device', 'Connection', 'ExternalEntity', 'EntityLink', 'RawEvent', 'DecisionRun',
-  'Observation', 'SyncState', 'ToolExecution', 'AuditEvent', 'SecurityAuditEvent', 'Approval', 'Actor', 'ClientMembership', 'ApiToken',
-  'ResourceSnapshot', 'ShadowJob'
-];
-const protectedTableList = PROTECTED_TABLES.map(t => `'${t}'`).join(',');
-
-/**
- * Facts about the current role that decide whether RLS can confine it:
- *   superuser / bypassRls   — policies are skipped entirely;
- *   ownsProtectedTables     — the role owns, directly or through role membership (pg_has_role MEMBER), any protected table;
- *   unprotectedTables       — protected tables that are missing or have RLS disabled in the current schema.
- */
-export const RUNTIME_ROLE_CHECK_SQL = `
-  WITH protected AS (SELECT unnest(ARRAY[${protectedTableList}]) AS relname),
-       present AS (SELECT c.relname, c.relrowsecurity, c.relowner FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                   WHERE n.nspname = current_schema() AND c.relkind = 'r' AND c.relname IN (SELECT relname FROM protected))
-  SELECT r.rolsuper AS "superuser", r.rolbypassrls AS "bypassRls",
-         EXISTS (SELECT 1 FROM present p WHERE pg_has_role(r.oid, p.relowner, 'MEMBER')) AS "ownsProtectedTables",
-         (SELECT count(*)::int FROM protected t LEFT JOIN present p ON p.relname = t.relname WHERE p.relname IS NULL OR NOT p.relrowsecurity) AS "unprotectedTables"
-  FROM pg_roles r WHERE r.rolname = current_user`;
-export interface RuntimeRoleFacts { superuser: boolean; bypassRls: boolean; ownsProtectedTables: boolean; unprotectedTables: number }
-export function assertConfinedRuntimeRole(facts: RuntimeRoleFacts | undefined): void {
-  if (!facts) throw new AtlasError('RUNTIME_ROLE_BYPASSES_RLS', 'PERMANENT', { reason: 'no role facts' });
-  if (facts.superuser) throw new AtlasError('RUNTIME_ROLE_BYPASSES_RLS', 'PERMANENT', { reason: 'superuser' });
-  if (facts.bypassRls) throw new AtlasError('RUNTIME_ROLE_BYPASSES_RLS', 'PERMANENT', { reason: 'BYPASSRLS' });
-  if (facts.ownsProtectedTables) throw new AtlasError('RUNTIME_ROLE_BYPASSES_RLS', 'PERMANENT', { reason: 'owns protected tables' });
-  if (Number(facts.unprotectedTables) > 0) throw new AtlasError('RLS_NOT_ENABLED', 'PERMANENT', { unprotectedTables: String(facts.unprotectedTables) });
-}
+// The runtime-role self-check (protected tables, Stage 2 grants, cleanup routine owner) lives in runtime-role.ts.
+export { PROTECTED_TABLES, RUNTIME_ROLE_CHECK_SQL, assertConfinedRuntimeRole } from './runtime-role.ts';
+export type { RuntimeRoleFacts } from './runtime-role.ts';

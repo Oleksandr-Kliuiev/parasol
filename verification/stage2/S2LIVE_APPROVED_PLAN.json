@@ -1,0 +1,45 @@
+{
+  "version": "S2LIVE-plan-rc5",
+  "approvedAt": "2026-10-08T20:57:03.683649+00:00",
+  "scope": "conditional operational preparation only; no provisioning/binding/harness/LIVE acceptance",
+  "packageHash": "7cfdc792c9702f6d283f2e8452823cd2c38d95d8eb1aeab4241b8a4c3ac5f2e3",
+  "briefSha256": "494c614b795101d68bcfeef16936c8f45313a15ed042c01f82d1c3b17a79a2f5",
+  "evidence": [
+    {
+      "path": "docs/stage2/reviews/ASTRA_S2LIVE_PLAN_RC5.md",
+      "sha256": "a69dd0054d8bdab0e1ee296d4412ba731de9a99595442b73dbe9cd7bcd34f5f6"
+    },
+    {
+      "path": "docs/stage2/reviews/FABLE_S2LIVE_PLAN_RC5.md",
+      "sha256": "039d292dbc4735cd8407bb4e69b7bb54be9477691ba2f3b002864b5991143f89"
+    },
+    {
+      "path": "verification/stage2/S2LIVE_FABLE_RC5_EXECUTION.json",
+      "sha256": "e15b9b8b29ac4d67faacd10f0e78e141ae931af9f655f52b2de10d4253e1e7ed"
+    }
+  ],
+  "reviews": [
+    {
+      "name": "GPT-6 Astra",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "route": "native subagent /root/astra_s2live_plan_rc4",
+      "session": "fresh RC4, bounded RC5 closure, effort retained",
+      "separateResponseModelMetadata": "not exposed"
+    },
+    {
+      "name": "Claude Fable5.1",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "route": "native Anthropic firstParty/claude.ai",
+      "actualAssistantModels": [
+        "claude-fable-5-1"
+      ],
+      "session": "a79d94ca-e058-4f9e-9cee-58be911ca975"
+    }
+  ],
+  "liveOutcome": "BLOCKED_EXTERNAL",
+  "L1toL4": "NOT_EXERCISED",
+  "planRepairRounds": 4,
+  "subscriptionQuotaAttribution": "unknown"
+}

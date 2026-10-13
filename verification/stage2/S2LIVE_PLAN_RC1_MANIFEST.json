@@ -1,0 +1,23 @@
+{
+  "version": "S2LIVE-plan-rc1",
+  "hashAlgorithm": "SHA256 over sorted path + LF + file SHA256 + LF",
+  "files": [
+    {
+      "path": "docs/stage2/reviews/S2LIVE_OPERATIONAL_BRIEF_RC1.md",
+      "sha256": "919ad79f266a86dbbee83c9b6eb2b269d9c84667290227113927064002cdcb22"
+    },
+    {
+      "path": "verification/stage2/S2LIVE_PREFLIGHT_RC1.json",
+      "sha256": "964e1a1a90ab1db78a9e45a43748057de55bcb7c55bfe5333cbf47f22dda1d0a"
+    },
+    {
+      "path": "verification/stage2/S2C_RC2_MANIFEST.json",
+      "sha256": "1051703ad9f1c00d76caf6c9814463284d9f41b15f0d5797010540114c4c9988"
+    },
+    {
+      "path": "docs/stage2/REVIEW_MANIFEST.json",
+      "sha256": "b88069dbc32eef0007f0e152b85687dce370605260eeb8a60bee9c36d5463577"
+    }
+  ],
+  "packageHash": "f7ce77e6cd6ad35c872bc6cbf1ba77b9647880cba64757dca318bc600f653120"
+}

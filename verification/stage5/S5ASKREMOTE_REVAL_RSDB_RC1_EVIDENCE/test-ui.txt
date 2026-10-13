@@ -1,0 +1,115 @@
+
+> vardahei-atlas-stage1-reference@1.1.3 test:ui
+> npm run api:build && playwright test -c tests/ui/playwright.config.ts
+
+
+> vardahei-atlas-stage1-reference@1.1.3 api:build
+> tsc -p apps/api/tsconfig.json && npm run ui:build
+
+
+> vardahei-atlas-stage1-reference@1.1.3 ui:build
+> node --experimental-strip-types scripts/operator-build.ts
+
+operator console: 41 assets, manifest e18fe8d43b9a0d240b1311d4975508d001f3826a5b4f6fcb2bd75bd6ddd2444a
+measured operator console: manifest 0884c6d5f5c5cf1854f237efd8e6fb5aceaf98b61743cb197fa2560a1908e05c
+
+Running 90 tests using 1 worker
+
+  ✓   1 tests/ui/artifact.spec.ts:11:1 › manifest lists exactly the built files with matching sizes and hashes (17ms)
+  ✓   2 tests/ui/artifact.spec.ts:22:1 › emitted ES module graph is closed, relative and browser-only (73ms)
+  ✓   3 tests/ui/artifact.spec.ts:44:1 › static assets: no inline code, handlers, remote resources, storage, logging or HTML injection (31ms)
+  ✓   4 tests/ui/artifact.spec.ts:63:1 › S5-B emitted code: only allowlisted API paths/tools, POST only in the credential holder, no data-driven attributes or URLs (44ms)
+  ✓   5 tests/ui/ask-fixture.spec.ts:46:1 › OFF: one capability GET per credential answers 404; no Ask panel, input or POST; the accepted console works unchanged (1.0s)
+  ✓   6 tests/ui/ask-fixture.spec.ts:62:1 › MOCK EN summary: badge, free input, cited answer with independent urgency, coverage and stored-read limits; citations open cards without network (865ms)
+  ✓   7 tests/ui/ask-fixture.spec.ts:114:1 › RU/EN focus questions: source urgency, FIXTURE stored-read state, confirmed device, and insufficient without a focus (1.4s)
+  ✓   8 tests/ui/ask-fixture.spec.ts:145:1 › unsupported keeps evidence, coverage and urgency; local refusals send nothing; the question marker is never echoed, kept or logged (825ms)
+  ✓   9 tests/ui/ask-fixture.spec.ts:173:1 › keyboard-only journey; changes clear answer and input; disconnect and pagehide leave nothing (1.5s)
+  ✓  10 tests/ui/ask-fixture.spec.ts:238:1 › the server budget (10 admitted questions per actor per rolling 60 s) answers ASK_BUSY: fixed message, no answer, no retry (2.5s)
+(node:48499) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ✓  11 tests/ui/ask-pg.spec.ts:48:1 › DB free-input journey: summary, urgency, source-read states, entities, insufficient and unsupported; exact audit rows, no other writes (1.7s)
+  ✓  12 tests/ui/ask-pg.spec.ts:104:1 › membership removed before asking: server 403 with one workspace denial and no client audit; full console scope reset, one picker refresh (782ms)
+  ✓  13 tests/ui/ask-pg.spec.ts:129:1 › token revoked before asking: server 401 disconnects the console and clears every region; no audit row (585ms)
+  ✓  14 tests/ui/ask-races.spec.ts:122:1 › double submit while pending sends once; delayed success/error after observation, filter, page, context or queue refresh never renders (3.6s)
+  ✓  15 tests/ui/ask-races.spec.ts:171:1 › stale 401/403 cannot disconnect or reset a newer session/scope; current 401 disconnects; current 403 resets once; 404/409 fixed (2.0s)
+  ✓  16 tests/ui/ask-races.spec.ts:216:1 › malformed or mismatched answers are discarded whole with a fixed message; server text never shown; nothing retried (1.9s)
+  ✓  17 tests/ui/ask-races.spec.ts:265:1 › capability: late MOCK of a replaced credential never exposes the input; a failure shows a fixed state and an explicit retry (686ms)
+  ✓  18 tests/ui/ask-races.spec.ts:316:1 › capability current 403: full scope reset and one picker refresh, never asked again (no loop, no auto-select) (665ms)
+  ✓  19 tests/ui/ask-races.spec.ts:346:1 › one original 10 s browser budget: an answer that never completes is TIMEOUT, not retried; the panel stays usable (11.9s)
+  ✓  20 tests/ui/ask-rc2.spec.ts:124:1 › R1 rendered: empty plans of all four supported intents with eligible evidence and a present focus show only the neutral no-claim text (943ms)
+  ✓  21 tests/ui/ask-rc2.spec.ts:157:1 › R1 rendered: genuinely absent focus/fact/evidence adds only the established note (914ms)
+  ✓  22 tests/ui/ask-rc2.spec.ts:224:1 › R2 keyboard: a deliberate focus change on a READY answer clears answer and draft in both directions; the choice and keyboard focus stay (585ms)
+  ✓  23 tests/ui/ask-rc2.spec.ts:250:1 › R2 race (abort never delivered): late success/error/401/403 after a focus change in both directions never render, disconnect or reset; a newer pending survives (4.5s)
+  ✓  24 tests/ui/ask-rc2.spec.ts:307:1 › R2 actual fixture server: a response delayed in transit across a deliberate focus change never renders (1.2s)
+  ✓  25 tests/ui/ask-remote-pg.spec.ts:40:1 › synthetic REMOTE journey: disclosure from the durable policy, consented V2 POST, real ledger/audit, question only in the captured synthetic request (2.1s)
+  ✓  26 tests/ui/ask-remote-pg.spec.ts:102:1 › actual policy revision: current 409 before any reservation; manual refresh shows the new version; new consent and UUID succeed (1.0s)
+  ✓  27 tests/ui/ask-remote-pg.spec.ts:127:1 › provider failures are ASK_REMOTE_UNAVAILABLE (never sign-out/scope/OFF); revoked admission is NOT_ADMITTED; actual 403 resets, 401 disconnects (2.6s)
+  ✓  28 tests/ui/ask-remote-pg.spec.ts:181:3 › inactive REMOTE startup (actual compiled process, production seams, no policy) › no admission: capability 503 NOT_ADMITTED shows unavailable (not OFF), no form, nothing reserved; startup made no provider call (164ms)
+  ✓  29 tests/ui/ask-remote-races.spec.ts:64:1 › REMOTE typing during a pending question invalidates it (late outcomes ignored, draft kept); MOCK typing during pending is unchanged (2.5s)
+  ✓  30 tests/ui/ask-remote-races.spec.ts:146:1 › every boundary clears consent; a late success/error/409/401/403 of the old question never renders or resets; a newer spinner survives (19.0s)
+  ✓  31 tests/ui/ask-remote-races.spec.ts:206:1 › credential replacement, pagehide and bfcache restore: draft, consent and answer cleared; late outcomes of the old session change nothing (3.6s)
+  ✓  32 tests/ui/ask-remote-ui.spec.ts:56:1 › REMOTE panel: fixed disclosure, cost and unchecked consent; no MOCK label/examples; nothing sent without consent; exact V2 body; capture then clear (1.6s)
+  ✓  33 tests/ui/ask-remote-ui.spec.ts:169:1 › malformed/mismatched remote answers are discarded whole; remote errors show fixed text without disconnect; NOT_ADMITTED is unavailable, not OFF (2.8s)
+  ✓  34 tests/ui/ask-remote-ui.spec.ts:256:1 › current policy 409: input/answer/consent cleared, unavailable with a manual refresh only; refresh, new consent, new UUID and version (1.4s)
+  ✓  35 tests/ui/ask-remote-ui.spec.ts:305:3 › REMOTE keyboard journey at 320px: labelled controls, consent by Space, live status, no horizontal overflow (518ms)
+  ✓  36 tests/ui/ask-remote-ui.spec.ts:305:3 › REMOTE keyboard journey at 768px: labelled controls, consent by Space, live status, no horizontal overflow (477ms)
+  ✓  37 tests/ui/ask-remote-ui.spec.ts:305:3 › REMOTE keyboard journey at 1440px: labelled controls, consent by Space, live status, no horizontal overflow (463ms)
+  ✓  38 tests/ui/ask-visual.spec.ts:37:3 › Ask journey at 320px: panel, cited answer with an opened evidence card, unsupported answer (1.0s)
+  ✓  39 tests/ui/ask-visual.spec.ts:37:3 › Ask journey at 768px: panel, cited answer with an opened evidence card, unsupported answer (1.1s)
+  ✓  40 tests/ui/ask-visual.spec.ts:37:3 › Ask journey at 1440px: panel, cited answer with an opened evidence card, unsupported answer (1.0s)
+  ✓  41 tests/ui/console-deadline-paging.spec.ts:84:1 › R1 built transport, default budget: a valid 10 000-client body received in time but validated past 10 s is TIMEOUT (1.3s)
+  ✓  42 tests/ui/console-deadline-paging.spec.ts:92:1 › R1 built transport, default budget: the same body validated just before 10 s is accepted (1.0s)
+  ✓  43 tests/ui/console-deadline-paging.spec.ts:99:1 › R1 console flow: a client list whose JSON parsing crosses the original budget is TIMEOUT, never a list or READY (1.8s)
+  ✓  44 tests/ui/console-deadline-paging.spec.ts:167:3 › R2 fixture overview with cursor and truncated: RESPONSE_INVALID, no validated context, badge or payload (269ms)
+  ✓  45 tests/ui/console-deadline-paging.spec.ts:167:3 › R2 fixture overview with cursor only: RESPONSE_INVALID, no validated context, badge or payload (244ms)
+  ✓  46 tests/ui/console-deadline-paging.spec.ts:167:3 › R2 fixture overview with truncated only: RESPONSE_INVALID, no validated context, badge or payload (246ms)
+  ✓  47 tests/ui/console-deadline-paging.spec.ts:177:1 › R2 near-cases: the unchanged fixture overview validates; a truncated DB page with a cursor still validates (491ms)
+  ✓  48 tests/ui/console-fixture.spec.ts:20:1 › built console loads as native modules under the enforced CSP, without errors (86ms)
+  ✓  49 tests/ui/console-fixture.spec.ts:53:1 › token field: password, no autocomplete, cleared on submit; Authorization only on fixed API GETs; nothing retained (100ms)
+  ✓  50 tests/ui/console-fixture.spec.ts:77:1 › malformed token is refused without any request; a well-formed wrong token is a 401 disconnect (105ms)
+  ✓  51 tests/ui/console-fixture.spec.ts:94:1 › fixture journey: explicit selection, validated context rendered from its allowlist only, fixed queue without a query (336ms)
+  ✓  52 tests/ui/console-fixture.spec.ts:128:1 › disconnect, reload, pagehide and back/forward restore all end disconnected with nothing retained; tabs are independent (771ms)
+  ✓  53 tests/ui/console-fixture.spec.ts:183:1 › keyboard: token entry, client selection, refresh and disconnect without a pointer (228ms)
+  ✓  54 tests/ui/console-journey-fixture.spec.ts:42:1 › fixed demo queue, urgent Huntress detail without request, Atera alert evidence via the actual Gateway (201) and its audit (743ms)
+  ✓  55 tests/ui/console-journey-fixture.spec.ts:120:1 › keyboard only: queue row, detail, evidence button; focus stays on the action and the result is announced (490ms)
+  ✓  56 tests/ui/console-journey-pg.spec.ts:95:1 › server order, counts, filters, limit and opaque pages; get/list evidence through the Gateway with ledger and audit only (1.9s)
+  ✓  57 tests/ui/console-journey-pg.spec.ts:200:1 › membership removed before the evidence click: server 403 + security audit, no execution row; full scope reset and one picker refresh (732ms)
+  ✓  58 tests/ui/console-pg.spec.ts:47:1 › valid stored token: authorized clients in server order, explicit selection, DB context validated, no new audit writes (463ms)
+  ✓  59 tests/ui/console-pg.spec.ts:79:1 › unknown, revoked and expired stored tokens are a 401 disconnect after exactly one request each (445ms)
+  ✓  60 tests/ui/console-pg.spec.ts:91:1 › an actor without clients gets an explicit empty state, not an authentication failure (214ms)
+  ✓  61 tests/ui/console-pg.spec.ts:100:1 › membership removed after listing: server 403 + security audit; console clears scope and refreshes the picker once (782ms)
+  ✓  62 tests/ui/console-races-queue.spec.ts:59:1 › delayed queue across a client switch and repeated refreshes: stale 403/401/500/success change nothing (495ms)
+  ✓  63 tests/ui/console-races-queue.spec.ts:93:1 › filter change during a queue load: the old page never renders; a context refresh clears queue, selection and evidence first (853ms)
+  ✓  64 tests/ui/console-races-queue.spec.ts:137:1 › pending evidence across selection changes: stale 201/403/401/500 never render, clear or unblock the current read (1.0s)
+  ✓  65 tests/ui/console-races-queue.spec.ts:185:1 › current evidence 403 clears the whole scope and refreshes the picker exactly once; current queue 401 disconnects (636ms)
+  ✓  66 tests/ui/console-races.spec.ts:61:1 › token replacement during a deferred list: old success, 401 and error cannot render or clear the new session (1.1s)
+  ✓  67 tests/ui/console-races.spec.ts:104:1 › client switch during deferred contexts: stale success, 403 and 500 never touch the current scope (1.0s)
+  ✓  68 tests/ui/console-races.spec.ts:154:1 › current 401 on a context clears everything; late completions after it change nothing (463ms)
+  ✓  69 tests/ui/console-races.spec.ts:183:1 › current 403: scope cleared, exactly one picker refresh, no auto-select and no loop (590ms)
+  ✓  70 tests/ui/console-races.spec.ts:208:1 › a 403 refresh supersedes a pending manual refresh: the superseded request is stale, never an error or a list (556ms)
+  ✓  71 tests/ui/console-races.spec.ts:235:1 › malformed, mismatched, redirected and oversized responses clear the panel with a fixed code and no echo (1.9s)
+  ✓  72 tests/ui/console-races.spec.ts:303:1 › large accepted list: 250 rows shown with an explicit limitation; local search reaches later clients (278ms)
+  ✓  73 tests/ui/console-races.spec.ts:327:1 › timeout: one original 10 s deadline, visible TIMEOUT, no automatic retry; late answer ignored (270ms)
+  ✓  74 tests/ui/console-render.spec.ts:60:1 › evidence read states: OK/STALE found, empty vs truncated empty, ERROR/MISSING unavailable, unknown times; no safe error code (1.0s)
+  ✓  75 tests/ui/console-render.spec.ts:99:1 › injected HTML, script, URL and CSS in every displayed field stay inert text: no element, attribute, link or execution (414ms)
+  ✓  76 tests/ui/console-render.spec.ts:166:1 › source urgency survives low confidence, MONITOR route and a NORMAL priority label; entity labels are confirmed-only (341ms)
+  ✓  77 tests/ui/console-render.spec.ts:210:1 › malformed or mismatched queue/evidence answers clear the panel with a fixed code, no echo; explicit retry recovers (1.4s)
+  ✓  78 tests/ui/console-visual-journey.spec.ts:35:3 › fixture journey at 320px: queue, urgent detail with honest Huntress limitation, Atera alert evidence (516ms)
+  ✓  79 tests/ui/console-visual-journey.spec.ts:70:3 › DB-shaped states at 320px: filters, paging, STALE truncated evidence without the selected item (289ms)
+  ✓  80 tests/ui/console-visual-journey.spec.ts:35:3 › fixture journey at 768px: queue, urgent detail with honest Huntress limitation, Atera alert evidence (500ms)
+  ✓  81 tests/ui/console-visual-journey.spec.ts:70:3 › DB-shaped states at 768px: filters, paging, STALE truncated evidence without the selected item (306ms)
+  ✓  82 tests/ui/console-visual-journey.spec.ts:35:3 › fixture journey at 1440px: queue, urgent detail with honest Huntress limitation, Atera alert evidence (501ms)
+  ✓  83 tests/ui/console-visual-journey.spec.ts:70:3 › DB-shaped states at 1440px: filters, paging, STALE truncated evidence without the selected item (325ms)
+  ✓  84 tests/ui/console-visual.spec.ts:22:3 › layout at 320px: disconnected and ready states fit, are labelled and keyboard reachable (259ms)
+  ✓  85 tests/ui/console-visual.spec.ts:22:3 › layout at 768px: disconnected and ready states fit, are labelled and keyboard reachable (264ms)
+  ✓  86 tests/ui/console-visual.spec.ts:22:3 › layout at 1440px: disconnected and ready states fit, are labelled and keyboard reachable (262ms)
+(node:48499) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+# REVAL_EVIDENCE RS-C-C 200 case paths through the measured pane: 200 COMMITTED (semantic MATCH, truth true), FX10 MISSING 15, 1177 s
+  ✓  87 tests/ui/eval-200.spec.ts:21:1 › all 200 frozen case paths (incl. 15 FX10 MISSING) through the measured pane: exact request, semantic MATCH, truth, COMMITTED handoff (19.6m)
+  ✓  88 tests/ui/eval-artifact.spec.ts:14:1 › measured build: exact manifest, measured entry only, no forbidden construct or storage API (28ms)
+  ✓  89 tests/ui/eval-artifact.spec.ts:27:1 › ordinary build: nothing of the evaluation pane (no pairing control, handoff path, session header or measured module) (21ms)
+  ✓  90 tests/ui/eval-pane.spec.ts:24:1 › manual pairing, one fixed choice and the exact 04 transitions in a real browser; ordinary Ask never offered; nothing retained (1.9s)
+
+  Slow test file: tests/ui/eval-200.spec.ts (19.6m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  90 passed (21.8m)

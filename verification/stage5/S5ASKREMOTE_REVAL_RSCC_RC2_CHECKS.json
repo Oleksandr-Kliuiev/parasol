@@ -1,0 +1,95 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSC-C-rc2",
+ "window": [
+  "2026-10-12T04:56:59Z",
+  "2026-10-12T05:25:28Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build (both consoles)",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/cli.ts artifact-check",
+   "result": "pass: ok true, drift [], candidate RS-C-C accepted:false",
+   "log": "artifact-check.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts",
+   "result": "587 tests: 578 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (same names as the accepted RS-C-A rc2 run)",
+   "log": "unit.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg",
+   "result": "770 tests: 768 pass, 2 fail",
+   "qualification": "both failures are in files RS-C-C does not touch and that passed in both rc1 runs: tests/pg/action-late.pg.test.ts 'C2/C6' (15 s timing under load) and tests/pg/m365-privacy-retention.pg.test.ts (top-level seed: a sign-in pass not PUBLISHED under load); both files pass 3/3 focused (focused-unrelated.txt). The m365 top-level failure may have left one throwaway atlas_it_* database (drop blocked by the session policy). All RS-C-C PG tests pass here, including reval-eval-console and the NB7 rehearsal (PRE\u2192ARM line)",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_E2E_200=1 npm run test:ui (all Playwright suites incl. the 200-path E2E with the on-the-wire hasFocus checks and the 320/768/1440 layout check)",
+   "result": "90 passed (21.8 min)",
+   "qualification": "200 COMMITTED, semantic MATCH, truth true, FX10 MISSING 15 (1179 s)",
+   "log": "test-ui.txt"
+  },
+  {
+   "command": "focused after the full run: 3 \u00d7 node --test tests/pg/m365-privacy-retention.pg.test.ts tests/pg/action-late.pg.test.ts",
+   "result": "3/3 runs 11/11 pass",
+   "log": "focused-unrelated.txt"
+  },
+  {
+   "command": "rc2 mutations M1\u2013M8 (pane error rules, refusal keeps send, pair-ending codes, 503 visible, build coverage, console boundary)",
+   "result": "8/8 detected",
+   "log": "mutations-rc2.txt"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSCC_RC2_EVIDENCE",
+ "logs": {
+  "artifact-check.txt": "83abdaa9aab1b7d0c45ff2cbde6f0f081b37560e23ce65be36c834041c7dc752",
+  "build.txt": "d453750ee883dbbdc04fce661ae45e53e7533454073566ff842c50b3d230e3d3",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "9ffb927860fb55de74292be12ee24b6120e7f4f1d7b6e2fd49d716a2ad00f7bd",
+  "finished.txt": "7f5613c5570a3501e1c74dfe1cac6282739608ec72b1f844776aca873a4bf993",
+  "focused-unrelated.txt": "3f52a7095f7334830c7ae34f6bb48c329ebd0c97acaf0e92b857d68b70a7bd70",
+  "mutations-rc2.txt": "011916fc0a7228054f1be600265d4fbc0da17e41ca55c8b263ef237cce9a713a",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "schema.txt": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "988ed2cb7cb7f8c1fe990c415330a7aa0ed04c215c62485b68237ba72c2aa15b",
+  "test-pg.txt": "2a627b2c5a916b30897c0ad599e162b90535df858c2835b500a3e97739edd444",
+  "test-ui.txt": "b4b40b1908f13fd8b3977fcacb6db2fdc849a2ffbde3c40930f46a66f5d695be",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "unit.txt": "035a8a873b08bb759ce214359b32a09c79987db2d36c9319bd2e23b052b69047"
+ }
+}

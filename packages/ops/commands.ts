@@ -18,6 +18,9 @@ import type { SyncIo } from '../sync/snapshots.ts';
 import { liveReadCheck } from './live-read.ts';
 import type { LiveReadSummary } from './live-read.ts';
 import { runShadowPass, runWorkerPass } from './worker-pass.ts';
+import { m365Commands } from './m365.ts';
+import type { M365OperatorDeps } from './m365.ts';
+import { CURSOR_MAX_LENGTH } from '../correlation/parameters.ts';
 
 /**
  * Operator commands (task 1.10, docs/RUNBOOK.md): thin calls of the services as the authenticated actor, so permission,
@@ -28,6 +31,8 @@ import { runShadowPass, runWorkerPass } from './worker-pass.ts';
  */
 export interface OperatorContext {
   db: PrismaClient; actor: Actor; io: SyncIo; workerId: string;
+  /** Stage 2 M365 composition (scripts/ops.ts); absent → the M365 sync/read/maintenance commands refuse with M365_NOT_CONFIGURED. */
+  m365?: M365OperatorDeps;
   /** Decision settings (config/decisions.json with its overrides). */
   config(): DecisionConfig;
   /** Built on first use: only worker-once and shadow-once need the provider (and, in shadow or advisory mode, its key). */
@@ -36,9 +41,15 @@ export interface OperatorContext {
 export type Flags = Readonly<Record<string, string>>;
 export interface Invocation { command: string; flags: Flags }
 export interface CommandResult { ok: boolean; output: Record<string, unknown> }
-interface Spec { required: readonly string[]; optional?: readonly string[] }
+interface Spec {
+  required: readonly string[]; optional?: readonly string[];
+  /** Flags allowed up to 512 ASCII characters (the shared cursor bound) instead of the generic 256 UTF-16 units. */
+  long?: readonly string[];
+  /** Mode/format rules of the flags, checked at parse time before any permission check, service call or I/O. */
+  validate?(flags: Flags): void;
+}
 /** About one client: `--client` is required and the permissions are checked at the boundary before `run`. */
-interface ClientCommand extends Spec { permissions: readonly string[]; run(ctx: OperatorContext, scope: Scope, flags: Flags): Promise<CommandResult> }
+export interface ClientCommand extends Spec { permissions: readonly string[]; run(ctx: OperatorContext, scope: Scope, flags: Flags): Promise<CommandResult> }
 
 const done = (output: object): CommandResult => ({ ok: true, output: { ...output } });
 const invalidArguments = () => new AtlasError('INVALID_ARGUMENTS', 'VALIDATION');
@@ -72,6 +83,7 @@ const clientCommands: Readonly<Record<string, ClientCommand>> = {
       if (!(minutes <= TELEMETRY_MAX_MINUTES)) throw invalidArguments();
       return done(await decisionTelemetry(ctx.db, ctx.actor, scope, { since: new Date(Date.now() - minutes * 60_000), deadlineMs: ctx.config().deadlineMs }));
     } },
+  ...m365Commands,
 };
 /**
  * Passes over every client the actor may ingest for: the baseline (`worker-once`) and the shadow experiment
@@ -94,7 +106,7 @@ function specOf(command: string | undefined): Spec | null {
   if (command === 'decisions-smoke' || (command !== undefined && Object.hasOwn(passes, command))) return { required: [] };
   if (command === undefined || !Object.hasOwn(clientCommands, command)) return null;
   const spec = clientCommands[command]!;
-  return { required: ['client', ...spec.required], optional: spec.optional };
+  return { required: ['client', ...spec.required], optional: spec.optional, long: spec.long, validate: spec.validate };
 }
 /** `<command> --name value …`: a known command, its flags only, each once, every value present. */
 export function parseInvocation(argv: readonly string[]): Invocation {
@@ -105,10 +117,13 @@ export function parseInvocation(argv: readonly string[]): Invocation {
   const flags: Record<string, string> = {};
   for (let i = 0; i < rest.length; i += 2) {
     const name = /^--([a-z][a-z-]{0,20})$/.exec(rest[i]!)?.[1]; const value = rest[i + 1]!;
-    if (!name || !allowed.includes(name) || Object.hasOwn(flags, name) || value.length === 0 || value.length > 256 || value.startsWith('--')) throw invalidArguments();
+    const long = !!name && (spec.long ?? []).includes(name);
+    if (!name || !allowed.includes(name) || Object.hasOwn(flags, name) || value.length === 0 || value.length > (long ? CURSOR_MAX_LENGTH : 256)
+      || (long && !/^[\x21-\x7e]+$/.test(value)) || value.startsWith('--')) throw invalidArguments();
     flags[name] = value;
   }
   if (spec.required.some(name => !Object.hasOwn(flags, name))) throw invalidArguments();
+  try { spec.validate?.(flags); } catch { throw invalidArguments(); }
   return { command: command!, flags };
 }
 

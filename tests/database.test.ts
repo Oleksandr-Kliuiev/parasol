@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeRoleGuard, seedIdentities, checkIdentityStructure, checkIdentityRlsInvariants, checkMappingStructure,
   checkSnapshotStructure, checkSnapshotRls, checkInboxStructure, checkDecisionLayerStructure, checkShadowJobRls, checkObservationLifecycle, checkToolLedger } from './sql-invariants.ts';
-import type { SqlRunner } from './sql-invariants.ts';
-import { migrationNames, migrationsAfter, migrationsThrough, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
+import { migrationsAfter, migrationsThrough, migrationSql, FROZEN_V1_1_2 } from './support/migrations.ts';
+import { migrateAll, provisionRoles, runner, asRole } from './support/pglite.ts';
 
 // PGlite embeds the PostgreSQL 17 engine in-process. It verifies the SQL of both migrations and the policies, but it is
 // not a standalone PostgreSQL 17 server with connection pooling: scripts/pg17-check.ts covers that against a real server.
@@ -16,34 +16,10 @@ const V112 = '../prisma/migrations/202610071500_v1_1_2_conflict_scope_and_legacy
 const V110_AS_SHIPPED = '../prisma/upgrades/202610071200_v1_1_contracts.as-shipped-in-1.1.0.sql';
 const UPGRADE = '../prisma/upgrades/v1_1_0_to_v1_1_1.sql';
 
-/** Fresh install: every migration in apply order, as `prisma migrate deploy` would run them. */
-async function migrateAll(db: PGlite): Promise<void> { for (const m of await migrationNames()) await db.exec(await migrationSql(m)); }
 /** Migrations added after the frozen v1.1.2 set, for upgrade-path tests that apply the frozen part by hand. */
 async function migrateAfterFrozen(db: PGlite): Promise<void> { for (const m of await migrationsAfter(FROZEN_V1_1_2)) await db.exec(await migrationSql(m)); }
-
-function runner(db: PGlite): SqlRunner {
-  return {
-    exec: s => db.exec(s).then(() => undefined),
-    query: async (s, params) => (await db.query(s, params as never)).rows as never
-  };
-}
-const confinedRole = `CREATE ROLE atlas_app_test NOLOGIN NOINHERIT NOBYPASSRLS;
-  GRANT USAGE ON SCHEMA public TO atlas_app_test;
-  GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO atlas_app_test;
-  REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM atlas_app_test;
-  REVOKE INSERT, UPDATE ON "Actor", "ClientMembership", "ApiToken" FROM atlas_app_test;`;
-/**
- * Statements run as the confined role, everything else as the owner: PGlite is one session, so each call switches roles.
- * A statement that aborts an explicit transaction leaves the session in the owner role with the transaction rolled back.
- */
-function asConfinedRole(db: PGlite): SqlRunner {
-  const asRole = async <T>(fn: () => Promise<T>): Promise<T> => {
-    await db.exec('SET ROLE atlas_app_test');
-    try { return await fn(); }
-    finally { try { await db.exec('RESET ROLE'); } catch { await db.exec('ROLLBACK'); await db.exec('RESET ROLE'); } }
-  };
-  return { exec: s => asRole(() => db.exec(s).then(() => undefined)), query: (s, params) => asRole(async () => (await db.query(s, params as never)).rows as never) };
-}
+/** The confined runtime role: the production prisma/roles.sql (no test-only grants), applied after the migrations. */
+const asConfinedRole = (db: PGlite) => asRole(db);
 /** Shape of the schema, independent of row data: columns, constraints and indexes. Used to prove upgrade-path equivalence. */
 async function schemaShape(db: PGlite): Promise<string[]> {
   const cols = await db.query<{ s: string }>(`SELECT table_name||'.'||column_name||':'||data_type||':'||is_nullable||':'||coalesce(column_default,'') AS s FROM information_schema.columns WHERE table_schema = current_schema() AND table_name <> '_prisma_migrations' ORDER BY 1`);
@@ -71,11 +47,12 @@ test('row-level security confines a non-owner role: no context denies, clients o
     const owner = runner(db);
     await seedGraph(owner);
     await checkStructuralInvariants(owner);
-    // Same grants as prisma/roles.sql, minus LOGIN/password: PGlite is a single in-process session, so we SET ROLE instead.
-    await db.exec(confinedRole);
-    await db.exec('SET ROLE atlas_app_test');
+    // prisma/roles.sql itself: PGlite is a single in-process session, so the role is entered with SET SESSION AUTHORIZATION
+    // instead of a login (session_user is then the runtime role, as the runtime self-check requires).
+    await provisionRoles(db);
+    await db.exec('SET SESSION AUTHORIZATION atlas_app_test');
     await checkRlsInvariants(runner(db), { label: 'PGlite' });
-    await db.exec('RESET ROLE');
+    await db.exec('SET SESSION AUTHORIZATION postgres'); // PGlite's initial superuser; it ignores RESET here
     const asOwner = await db.query(`SELECT count(*)::int AS n FROM "Observation"`);
     assert.equal((asOwner.rows[0] as { n: number }).n, 3, 'the owner still sees everything: RLS is not FORCEd, which is why the app must not run as owner');
   } finally { await db.close(); }
@@ -88,7 +65,7 @@ test('runtime-role guard rejects ownership of any protected table and detects a 
     const owner = runner(db);
     await seedGraph(owner);
     await checkStructuralInvariants(owner); // populates RawEvent, so an owner-bypass is observable
-    await db.exec(confinedRole);
+    await provisionRoles(db);
     // The guard query runs as the confined role; reconfiguration runs as the owner.
     await checkRuntimeRoleGuard(owner, asConfinedRole(db), 'atlas_app_test', {});
   } finally { await db.close(); }
@@ -102,7 +79,7 @@ test('identities: token visible only for its own digest, actor and memberships o
     await seedGraph(owner);
     await seedIdentities(owner);
     await checkIdentityStructure(owner);
-    await db.exec(confinedRole);
+    await provisionRoles(db);
     await checkIdentityRlsInvariants(owner, asConfinedRole(db), { label: 'PGlite' });
   } finally { await db.close(); }
 });
@@ -159,7 +136,7 @@ test('decision layer schema: config version and measurements of runs; shadow job
     await seedGraph(owner);
     await checkStructuralInvariants(owner);
     await checkDecisionLayerStructure(owner);
-    await db.exec(confinedRole);
+    await provisionRoles(db);
     await checkShadowJobRls(asConfinedRole(db));
   } finally { await db.close(); }
 });
@@ -171,7 +148,7 @@ test('snapshot schema: bounded items with the source total, success never after 
     const owner = runner(db);
     await seedGraph(owner);
     await checkSnapshotStructure(owner);
-    await db.exec(confinedRole);
+    await provisionRoles(db);
     await checkSnapshotRls(asConfinedRole(db));
   } finally { await db.close(); }
 });

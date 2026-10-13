@@ -1,0 +1,95 @@
+{
+  "status": "ACCEPTED",
+  "artifact": "S5ASKREMOTE-RC-rc1",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "packageHash": "9ae0c2b813388af58ee7d12e4df7f59521ba8cff417a4124ea9ddb2bff1c7fe1",
+  "manifest": {
+    "path": "verification/stage5/S5ASKREMOTE_RC_RC1_MANIFEST.json",
+    "sha256": "1b8128214440ba444b329fa496242aa8a9f074ac7fb106124ad6e7d6d0d94731"
+  },
+  "archive": {
+    "path": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rc/package-rc1/S5ASKREMOTE_RC_RC1_SOURCE.zip",
+    "sha256": "4cace5d30cb88d2f288e03023fe6f3330e4dffcdcca8403f9fa9f4a97fe5d3c4"
+  },
+  "closure": {
+    "path": "verification/stage5/S5ASKREMOTE_RC_CLOSURE_VERIFICATION.json",
+    "sha256": "77755ffb0c36b522115b84087c2d29a2693c67815ddb9e2f88e4d743ecdafe8e"
+  },
+  "review": {
+    "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_RC_RC1.md",
+    "sha256": "cf4e8a40aab4841da6ed04684e0b19d05adddd0a3c2f2f086ef4b2df6c0db9f1",
+    "model": "gpt-6-astra",
+    "effectiveEffort": "xhigh",
+    "freshContext": true,
+    "verdict": "APPROVED",
+    "assignment": {
+      "path": "verification/stage5/S5ASKREMOTE_RC_RC1_ASTRA_ASSIGNMENT.json",
+      "sha256": "33c2b0b7fc56aae5ba99dca2f6d0b3cf0af51e3cf9707b3fd59bf647b0eac9ae"
+    },
+    "rawProviderTelemetry": "Unavailable; explicit native assignment receipt"
+  },
+  "reviewResult": {
+    "path": "verification/stage5/S5ASKREMOTE_RC_RC1_ASTRA_RESULT.json",
+    "sha256": "a0e381c87499a35ae4febcd63d35508095eeefd7c6c938a09691940e54c4ff42"
+  },
+  "verification": {
+    "path": "verification/stage5/S5ASKREMOTE_RC_RC1_IMPLEMENTATION_EVIDENCE.json",
+    "sha256": "85bb5bd12865117002d38dd2888b207b3c2081bf7b0d5454f6714b71ce7d570a"
+  },
+  "nativeImplementation": {
+    "sessionId": "52b493a5-deaf-4f34-8374-c9b253f641bd",
+    "model": "claude-opus-5-5",
+    "effort": "high",
+    "phases": [
+      {
+        "execution": {
+          "path": "verification/stage5/S5ASKREMOTE_RC_RC1_OPUS_EXECUTION.json",
+          "sha256": "d0155dc9b2936f3865513c3ea1c7d55952e0584f236872efd7e49a48336f3bdb"
+        },
+        "rawStream": {
+          "sourcePath": "/tmp/atlas-stage5/askremote/rc/opus-rc-rc1.jsonl",
+          "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rc/implementation-rc1/opus-rc-rc1.jsonl",
+          "sha256": "f774e86cdc6d5b2721d9ecf3449b889a97485a29617774b3961d3f6ab9321e20",
+          "bytes": 18503
+        }
+      }
+    ],
+    "elapsedSeconds": null,
+    "repairRounds": 0,
+    "attributableSubscriptionQuota": "unknown",
+    "completionQualification": "Initial complete model success report followed by scheduled fallback wakeup wait; coordinator SIGINT also interrupted parent runner (exit1, native child exit not observed). Original raw stream preserved. SAME native Opus/high session then verified exact unchanged 27-file/244-build evidence and exited0 without further writes; finalization receipt is separate from original implementation invocation.",
+    "recordedCompletedInvocationElapsedSeconds": 18.1,
+    "elapsedTimeQualification": "Summed execution elapsedSeconds cover clean finalization invocations only; Initial invocation wall elapsed not captured in execution receipt; implementer reports about40min; completion wait and finalization tracked separately"
+  },
+  "requiredFindingsRemaining": 0,
+  "tests": {
+    "unitPGlite": 424,
+    "pg17": 687,
+    "browser": 86,
+    "requiredChecks": 14,
+    "compiledOutputs": 244
+  },
+  "residuals": [
+    "Fresh explicitly assigned native gpt-6-astra/xhigh; separate provider-side reviewer response telemetry is not exposed. No additional agents/model subprocesses or API billing/credits.",
+    "Initial native implementation child exit not observed after terminal SIGINT interrupted outer runner. Same-session read-only finalization exited0 separately; initial process success is not claimed.",
+    "Offline synthetic integration only. Actual provider quality, latency, EU account/project and retention evidence remain unverified; R-EVAL/data/budget/customer-use/LIVE/deployment not admitted; paid provider calls0.",
+    "Original question unsanitized; valid intent may be semantically wrong; admitted egress irrevocable; abort may bill; financial accounting is a reservation rather than provider invoice cap.",
+    "Inherited implementation executions are separated from independently rerun checks and independently authored probes; all failed harness/environment probes are retained with diagnoses."
+  ],
+  "nonblockingNotes": [
+    {
+      "id": "N1",
+      "note": "Independent I08/inherited M05 remove a redundant disclosure-only guard and survive; PanelWork still invalidates every disclosure boundary. Complete current-guard mutation is detected."
+    },
+    {
+      "id": "N2",
+      "note": "npm prune --omit=dev retains Prisma/TypeScript optional peers of runtime @prisma/client; independent and inherited inventories explicitly record this."
+    }
+  ],
+  "paidProviderCalls": 0,
+  "dataBudgetAdmission": "NOT_ADMITTED",
+  "nextCheckpoint": "R-EVAL only after separate explicit owner data/account/budget admission; live/customer/deployment remain deferred",
+  "nextCheckpointStatus": "NOT_STARTED",
+  "createdUtc": "2026-10-11T05:33:18.276583+00:00"
+}

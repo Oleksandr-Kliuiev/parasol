@@ -1,0 +1,24 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc4",
+  "packageHash": "fdff112c181dd2a653449afd7590de007d8086a4551705a378f1ed8210f1a6e9",
+  "hashMismatches": [],
+  "normativeTenFileMismatches": [],
+  "rcComparedEntries": 1555,
+  "rcDeltas": [
+    "docs/AI_CONTEXT_MAP.md",
+    "docs/DEVELOPMENT_WORKFLOW.md"
+  ],
+  "sourceTestBuildDeltas": [],
+  "whitespaceIssues": [],
+  "budgetArithmetic": {
+    "maxVerifiedCostMicroUsd": 9434,
+    "settled196Retained4Conditional": 3049064,
+    "settled190Retained10": 4792460,
+    "headroomFor181stWorstCaseSettledAttempt": 1880,
+    "headroomFor182ndWorstCaseSettledAttempt": -7554
+  },
+  "scope": "Static docs/identity/math checks only; runtime tests and paid eval not run",
+  "paidProductCalls": 0,
+  "dataBudget": "NOT_ADMITTED",
+  "checkedUtc": "2026-10-11T06:16:34.878189+00:00"
+}

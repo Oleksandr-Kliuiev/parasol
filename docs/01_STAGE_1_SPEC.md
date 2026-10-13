@@ -40,6 +40,9 @@ flowchart TD
 
 ## Следующие slices
 
+Актуальная последовательность поставки и соответствие старому roadmap: [ROADMAP.md](ROADMAP.md).
+Следующий срез детализирован в [Stage 2 M365 Correlation](stage2/README.md); статусы ревью указаны отдельно.
+
 | Slice | Сценарий |
 |---|---|
 | 2 | Huntress incident → device/person → M365 identity/sign-in evidence |

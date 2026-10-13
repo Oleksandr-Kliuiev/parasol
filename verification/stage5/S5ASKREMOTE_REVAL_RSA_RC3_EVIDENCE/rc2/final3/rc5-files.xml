@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+	<testcase name="matrix: exactly 200 cases in the RC6 group/language counts; the last 100 are all UNSUPPORTED" time="0.112075" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-corpus.test.ts"/>
+	<testcase name="categories: all eight unsupported and five adversarial categories exist in BOTH languages; both focus sides per group" time="0.000271" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-corpus.test.ts"/>
+	<testcase name="limits: every question is accepted unchanged by the exact AskRequestV2 parser and fits the ≤16 KiB question-only payload" time="0.003983" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-corpus.test.ts"/>
+	<testcase name="offline pre-egress negatives (NOT live cases): over-limit, lone surrogate and control text are 400; worst-case 2000-point text fits 16 KiB" time="0.001308" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-corpus.test.ts"/>
+	<testcase name="uniqueness and diversity negatives: duplicate ID/text, ID-only substitution, near duplicate, matrix/label/focus/content drift" time="0.759619" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-corpus.test.ts"/>
+	<testcase name="manifest: committed hashes equal the files; one changed byte changes the identity; stable seeded order" time="0.011938" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-corpus.test.ts"/>
+	<testcase name="human review: committed templates are empty PENDING; model attestations, same reviewer and divergent labels never resolve" time="0.003760" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-corpus.test.ts"/>
+	<testcase name="tests/ask-remote-eval-execution-cli.test.ts" time="0.579901" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-cli.test.ts" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testcase name="tests/ask-remote-eval-execution-liability.test.ts" time="0.538773" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-liability.test.ts" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testcase name="tests/ask-remote-eval-execution-operator.test.ts" time="0.578840" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-operator.test.ts" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testcase name="real pty: kernel echo stays off from startup verification through processing; Ctrl-C finalizes" time="90.059364" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-pty.test.ts" failure="PTY_TEST_TIMEOUT step 1">
+		<failure type="testCodeFailure" message="PTY_TEST_TIMEOUT step 1">
+[Error [ERR_TEST_FAILURE]: PTY_TEST_TIMEOUT step 1] {
+  code: 'ERR_TEST_FAILURE',
+  failureType: 'testCodeFailure',
+  cause: Error: PTY_TEST_TIMEOUT step 1
+      at Timeout._onTimeout (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-pty.test.ts:39:79)
+      at listOnTimeout (node:internal/timers:605:17)
+      at process.processTimers (node:internal/timers:541:7)
+}
+		</failure>
+	</testcase>
+	<testcase name="tests/ask-remote-eval-execution-receipt.test.ts" time="0.566264" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-receipt.test.ts" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testcase name="tests/ask-remote-eval-execution-repair.test.ts" time="0.548864" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-repair.test.ts" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testcase name="tests/ask-remote-eval-execution-replay.test.ts" time="0.576015" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-replay.test.ts" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testcase name="tests/ask-remote-eval-execution-session.test.ts" time="0.574400" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-session.test.ts" failure="test failed">
+		<failure type="testCodeFailure" message="test failed">
+[Error: test failed] { code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure', cause: 'test failed', exitCode: 1, signal: null }
+		</failure>
+	</testcase>
+	<testcase name="fixtures: every scenario is reachable under the accepted DB reader rules and built by the accepted validators" time="0.016845" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="scenario coverage: focus both ways, none/missing/off-page focus, empty bank, entity states, statuses, truncation, urgency beyond shown" time="0.000795" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="reachability negatives: unreachable source shapes are rejected (order, truncation, types, candidate as confirmed, dangling entity)" time="0.000648" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="tampered expectations are detected per category (claims, urgency, coverage, resource status, entity, evidence)" time="0.002819" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="forged answers fail the independent predicates (dropped urgency, extra/wrong-ref claim, coverage lie, shape, provenance)" time="0.002646" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="grounded wrong intent is a SEMANTIC failure, never a safety one; a false local projection is SAFETY for any intent" time="0.009036" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="scripted provider: only a validated exact intent passes; refusal/extra key/duplicate key/model/usage/HTTP never become an intent" time="0.000613" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="independence: the predicates import no production module; the fixture loader uses only the accepted source validators" time="0.000585" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="wire privacy: no fixture identifier, label, summary marker or bank ref reaches the serialized payload of any case" time="0.058879" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="full displayed facts: forged values that keep identity, claims and urgency intact still fail (reviewer falsifications)" time="0.003463" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="full displayed facts: every banked fact of every fixture has an independent expectation; a tampered expectation fails a true answer" time="0.000377" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-fixtures.test.ts"/>
+	<testcase name="guard self-test: every outbound surface throws OFFLINE_EGRESS_BLOCKED before I/O (loopback/.invalid targets only)" time="0.237437" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-offline.test.ts"/>
+	<testcase name="guard: ESM named bindings, a later-imported production transport module and this test process are all blocked" time="0.135147" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-offline.test.ts"/>
+	<testcase name="all: complete offline receipt is ok, reproducible, privacy-clean and explicit about what remains unverified" time="0.493162" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-offline.test.ts"/>
+	<testcase name="privacy scan negatives: a receipt carrying question text or forbidden keys is rejected" time="0.000241" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-offline.test.ts"/>
+	<testcase name="no live mode: unknown commands/flags are usage errors; the package reads no environment and has no network path" time="0.554540" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-offline.test.ts"/>
+	<testcase name="consumed-first: the first submission consumes the case even when it fails pre-egress; any later submission is refused" time="0.005246" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="manual gates: exact pasted text and focus setup, per-case consent under the confirmed tuple, a fresh preflight per submission" time="0.000232" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="pacing: capability preflights and submissions share the rolling 10/60 s window; blocked events consume nothing" time="0.000194" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="caps: headroom is checked from counters BEFORE dispatch; minimum DAY cap allows one fully retained attempt per day" time="0.002829" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="stop table: INVALID always FAILED; UNAVAILABLE FAILED only with a proven config fault, else INCOMPLETE; expiry; drift" time="0.001989" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="latency: nearest-rank p50/p95/max over completed answers with explicit n; censored timeouts are separate and never latency" time="0.000366" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="evidence: supervisor records hold only allowlisted safe keys — never question text, hashes, lengths or the observed intent" time="0.001941" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="admission shape: invalid admissions and orders are refused at construction (no silent defaults)" time="0.000351" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="publication: unauthorized publication is an AUTHORITY safety stop (FAILED); a withheld answer stops INCOMPLETE; both block dispatch" time="0.000700" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="settlement: KNOWN failure keeps the reserve and continues; UNKNOWN commit keeps the reserve and stops INCOMPLETE, no refund" time="0.000570" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="closure floor: never below the highest version ever observed; stale/foreign/incomplete receipts leave containment unconfirmed" time="0.002191" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="absorbing terminal states: an integrity stop during the in-flight case is never overwritten by its later outcome" time="0.030312" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="thresholdsMet: only a COMPLETE run with confirmed closure and zero safety in every category; late safety failures never pass" time="0.102535" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="post-submission text deviation: consumed CASE_FAIL (in flight or found after the record); a refusal deviation fails the run" time="0.000466" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-supervisor.test.ts"/>
+	<testcase name="no active file exceeds 700 lines" time="0.091860" classname="test" file="/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/context-budget.test.ts"/>
+	<!-- tests 46 -->
+	<!-- suites 0 -->
+	<!-- pass 38 -->
+	<!-- fail 8 -->
+	<!-- cancelled 0 -->
+	<!-- skipped 0 -->
+	<!-- todo 0 -->
+	<!-- duration_ms 90434.201083 -->
+</testsuites>

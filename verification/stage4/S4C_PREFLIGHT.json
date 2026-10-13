@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-10T09:13:45.644903+00:00",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "freshImplementationSession": true,
+  "subscriptionQuotaAttributable": "unknown",
+  "previousAcceptedS4BSealSha256": "bf0c92fa0ad30a28b4e522b4f9fd6ee4472330c8be9db48f0b55d8dd3792b697",
+  "acceptedInventoryVerification": "all files match except inspected administrative context practices",
+  "additionalAdministrativeDeltas": [
+    {
+      "path": "docs/AI_CONTEXT_MAP.md",
+      "expectedSha256": "2370395838abc4e2a961d2b3bca51f2d8d61973cc2e4781cbf98ea3a7aa2374e",
+      "actualSha256": "68587bcdab2a54952417372ae606db12e3d7dab1e07ac851661c1f8e7a88723e",
+      "qualification": "Inspected narrow delta: owner-approved 2026-10-10 orchestrator context practices/routing only; no source or normative contract change"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "expectedSha256": "baaea50e35817dd1e7ee5bccfdf00744ba2568e7bdc23c0a558760b062f513df",
+      "actualSha256": "af5c6fc4a8d5765c6d61d1d5fc626d6711534ddf3ed3061ee390775221195d3f",
+      "qualification": "Inspected narrow delta: owner-approved 2026-10-10 orchestrator context practices/routing only; no source or normative contract change"
+    }
+  ]
+}

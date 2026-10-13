@@ -1,0 +1,14 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-EXECUTION-rc3",
+  "packageHash": "c9f84e82fb3be9b00c7f7b7595047e62a376fd630c1c958e2fe31e45c0ba8ca4",
+  "manifestEntriesMatched": 117,
+  "zipEntriesMatched": 117,
+  "baselineFilesMatched": 1431,
+  "headMatched": true,
+  "currentArtifactMatchesBothApprovals": true,
+  "administrativeRoutingDeltas": "verification/stage5/S5ASKREMOTE_REVAL_EXECUTION_ADMIN_DELTA.json",
+  "administrativeBeforeArchive": "verification/stage5/S5ASKREMOTE_REVAL_EXECUTION_ADMIN_BEFORE.zip",
+  "frozenPendingSnapshotQualification": "Frozen README/report/context-map preserve pre-acceptance pending wording; execution STATUS.json and APPROVED.json are current administrative acceptance evidence. No reviewed files rewritten after acceptance.",
+  "reviewEvidenceAdministrativeOnly": true,
+  "paidProductCalls": 0
+}

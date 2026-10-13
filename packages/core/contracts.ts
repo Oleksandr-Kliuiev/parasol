@@ -8,8 +8,16 @@ export type EventKind = 'DISK_CAPACITY' | 'SECURITY_INCIDENT';
 /** Observation category. Stage 1 semantics: DISK_CAPACITY -> OPERATIONS, SECURITY_INCIDENT -> SECURITY. */
 export type Domain = 'OPERATIONS' | 'SECURITY';
 export type EntityKind = 'PERSON' | 'DEVICE';
-/** Vendor-neutral external resource types. Adapters map vendor objects onto these names; identity always includes the type. */
-export type ResourceType = 'customer' | 'organization' | 'agent' | 'contact' | 'alert' | 'ticket' | 'incident';
+/**
+ * Vendor-neutral external resource types. Adapters map vendor objects onto these names; identity always includes the type.
+ * m365_* (Stage 2) are internal: typed M365 links and evidence. ClientContextV1 and the Stage 1 tools never expose them.
+ */
+export type ResourceType = 'customer' | 'organization' | 'agent' | 'contact' | 'alert' | 'ticket' | 'incident' | M365ResourceType;
+export type M365ResourceType = 'm365_user' | 'm365_device' | 'm365_signin';
+export const M365_RESOURCE_TYPES: readonly M365ResourceType[] = ['m365_user', 'm365_device', 'm365_signin'];
+export const isM365ResourceType = (type: string): type is M365ResourceType => (M365_RESOURCE_TYPES as readonly string[]).includes(type);
+/** Per-client permission for M365 identities and sign-ins; always required together with the operation's own permission. */
+export const M365_READ = 'm365:read';
 export type DecisionMode = 'fixture' | 'rules' | 'shadow' | 'advisory';
 /** QUARANTINED: a confirmation that conflicted with an existing confirmed link; kept for review, never resolved. */
 export type LinkStatus = 'CONFIRMED' | 'CANDIDATE' | 'REJECTED' | 'QUARANTINED';
@@ -61,6 +69,13 @@ export function allowedClientIds(actor: Actor): string[] { return actor.membersh
 export function hasClientPermission(actor: Actor, clientId: string, permission: string): boolean {
   return actor.memberships.some(m => m.clientId === clientId && m.permissions.includes(permission));
 }
+/**
+ * All-of: ONE membership of this client holds every listed permission. Permissions of different clients never combine,
+ * and an empty list grants nothing.
+ */
+export function hasClientPermissions(actor: Actor, clientId: string, permissions: readonly string[]): boolean {
+  return permissions.length > 0 && actor.memberships.some(m => m.clientId === clientId && permissions.every(p => m.permissions.includes(p)));
+}
 export function assertScope(actor: Actor, scope: Scope): void {
   if (actor.workspaceId !== scope.workspaceId || !actor.memberships.some(m => m.clientId === scope.clientId)) {
     throw new AtlasError('SCOPE_DENIED', 'SCOPE');
@@ -69,6 +84,10 @@ export function assertScope(actor: Actor, scope: Scope): void {
 export function assertPermission(actor: Actor, scope: Scope, permission: string): void {
   assertScope(actor, scope);
   if (!hasClientPermission(actor, scope.clientId, permission)) throw new AtlasError('PERMISSION_DENIED', 'SCOPE');
+}
+export function assertPermissions(actor: Actor, scope: Scope, permissions: readonly string[]): void {
+  assertScope(actor, scope);
+  if (!hasClientPermissions(actor, scope.clientId, permissions)) throw new AtlasError('PERMISSION_DENIED', 'SCOPE');
 }
 export function assertWorkspacePermission(actor: Actor, workspaceId: string, permission: string): void {
   if (actor.workspaceId !== workspaceId || !actor.workspacePermissions.includes(permission)) {

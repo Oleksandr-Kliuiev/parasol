@@ -1,0 +1,98 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSD-A-rc2",
+ "status": "ACCEPTED_RS_D_A_RC2",
+ "acceptedUtc": "2026-10-13",
+ "gate": "owner's direct instruction (2026-10-11, kept for RS-D on 2026-10-12): ONE independent reviewer per RS-D part, native Claude Opus 5.5 effort max, clean initial session; bounded rc2 re-review in the same reviewer session. The Codex-orchestrated reviewer-cli dual Sol/Opus xhigh gate was not used; the owner decisions D1/D2 were not taken to Astra/Fable; no Sol/Astra/Fable approval claimed.",
+ "parentArchitecture": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc4 9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163 (as amended in application by owner decisions D1/D2, docs/stage5/ask/remote/reval-server/rs-d/OWNER_DECISIONS.md; frozen files unchanged)",
+ "parentCode": "S5ASKREMOTE-REVAL-SERVER-RSC-C-rc2 79bb82ab75df883c818c9ef42c2b49f0e5c7d272fa0894cc3db9756a8145cba1 (seal ebba81bd072772346ded1baa9c384231b5189124a7621913434f7d10e4bc3a9c)",
+ "baseline": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSDA_BASELINE.sha256",
+  "sha256": "43d21ca00a2f5dbd2287698b73e3badf1f2baf509a96951c81d3172177812738",
+  "note": "git ls-files -co --exclude-standard after the RS-C-C seal, before any RS-D edit"
+ },
+ "manifest": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSDA_RC2_MANIFEST.json",
+  "sha256": "38361d6bb4e78c917e75c555772e56f65310903a42efbbea4539c1e73fec2fbf"
+ },
+ "packageHash": "79d2556b72fb63c5a53b84264a582ed8b7177c7acc61c5b4a0d9e11143011951",
+ "checks": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSDA_RC2_CHECKS.json",
+  "sha256": "a1737d3a6e310538a5c6f81f0dbce289bbd1484e8a46f6b8b9ab2f0e9c702e54"
+ },
+ "candidateSha256": "bc2d287f09d8a7ffef47b10f09816a4238d4fda9bb2216b2c7667c7e2ae225ac",
+ "candidateNote": "the instrument identity's RS-D-A candidate digest of the accepted tree (scripts/reval-instrument/candidate.ts); with this seal present the instrument accepts only these bytes (candidate.accepted:true); the next revision pins this package's manifest",
+ "implementation": "Claude Code session d0382327-d726-4375-8d23-49e794437702, model claude-opus-5-5 (one writer); session effort not independently recorded",
+ "reviewerModelEvidence": "launched as model opus with effort max via the Claude Code Agent tool (fresh context, new reviewer for RS-D part A); the reviewer states effort cannot be confirmed from inside the session; process lineage is the implementer's host session",
+ "scope": "S guard census (exact 05 PROCESS_CENSUS: gate/handoff entry, task hooks, census-wrapped no-key seams, shared AskBudget owners, observer records); C PROCESS_CENSUS forwarding with the sticky epoch rule and DRAIN composition (census → atomic snapshot → census); O decoders; D2 fixture switch admitting only idle registered runtime/reader sessions; instrument identity pinning RS-C-C with the RS-D-A candidate layer; D1 fixture-grouped order bound to the run; PRE/POST/deferred/gap census checks with credit/integrity/continuity consequences; segment-boundary gate (voluntary closure + QUIESCENT DRAIN bound to its policyVersion and fenceEpoch); receipt v4; docs (brief, owner decisions, report, REVAL_RUNBOOK, INSTRUMENT_RUNBOOK).",
+ "evidence": {
+  "segments": "darwin/arm64 real O/C/S + real instrument code under PTY: 13 FX07 + 2 FX05 cases in ONE run with ONE guard epoch; GO refused before the closure and before the DRAIN (nothing consumed); owner pause-export, instrument and owner DRAIN QUIESCENT INTACT; maintenance switch with S and C connected (refused under the RS-B rule, admitted under D2); FIXTURE_CHECK; resume; re-PAIR; final DRAIN; every case census MATCH (Docker PG17: regression evidence, never MEASURED)",
+  "native": "native unix PG17 production chain + instrument: census MATCH with no capability consumption (no-key bridge seams)",
+  "e2e200": "200 frozen case paths through the measured pane: 200 COMMITTED, semantic MATCH, FX10 MISSING 15 (1177 s)",
+  "mutations": "45/45 single-line mutations detected (incl. M38-M45 for the rc2 repairs)"
+ },
+ "reviews": [
+  {
+   "round": "rc1",
+   "verdict": "CHANGES_REQUIRED",
+   "manifest": "verification/stage5/S5ASKREMOTE_REVAL_RSDA_RC1_MANIFEST.json 48edece0bf91a3f01814d4d189551106e0ac9a03071b36e9579ea00f4718c92b",
+   "required": [
+    "F1 Medium: a deferred POST census never made EXTRA activity RC5's duplicate-dispatch integrity failure",
+    "F2 Low: Part-A DRAIN QUIESCENT without a platform process inventory, deviation from 02 not declared",
+    "F3 Low: in the real chain continuity loss was only a retryable block; CENSUS_CONTINUITY_LOST unreachable",
+    "F4 Low: the D2 switch's C role check had no detecting test"
+   ],
+   "optional": [
+    "N1 brief vs fate model",
+    "N2 DB attempts between cases",
+    "N3 no monotonicity check",
+    "N4 boundary DRAIN bound by policyVersion only",
+    "N5 transport attribution to the CLAIMED arm",
+    "N6 untested details",
+    "N7 docs/RUNBOOK size",
+    "N8 O-path FAILURE producer"
+   ]
+  },
+  {
+   "round": "rc2",
+   "verdict": "APPROVE_RS_D_A",
+   "report": "docs/stage5/reviews/OPUS_S5ASKREMOTE_REVAL_RSDA_RC1.md (rc1 report with the appended rc2 section)",
+   "sha256": "8c4fa684562aacc017ca14b488d685bdcf5c2d7b4b9568cfd847b74b5100f593",
+   "findings": "F1-F4 CLOSED; N1-N8 fixed or stated as residuals",
+   "optional": [
+    "rc2-N1: the continuity stop on the immediate POST path (finish) has no detecting test",
+    "rc2-N2: rs-d/REVAL_RUNBOOK.md (moved RS-A..RS-C operator procedures) is not in CANDIDATE_PATHS; pin it in the next revision",
+    "rc2-N3: brief §6 receipt v4 text does not mention the per-drain closurePolicyVersion/closureFenceEpoch fields"
+   ]
+  }
+ ],
+ "residuals": [
+  "census fields are S self-measurements inside its trust boundary; a process with the runtime/reader password could use a registered application_name",
+  "pendingCommitCount is an owner-release upper bound",
+  "D1 evaluation-validity residual: fixture confounded with order position",
+  "Part-A DRAIN QUIESCENT is S census + DB snapshot only, NOT 02-QUIESCENT evidence (no platform process inventory)",
+  "deferred POST census allows capability/handoff traffic of the operator's next preflight",
+  "transport attribution to the one CLAIMED arm holds only while nothing else can dispatch (no-key bridge, single-client sandbox)",
+  "idle-check xid/xmin clause redundant with pg_locks (no detecting test possible); a registered S write during the switch relies on the accepted RS-B fingerprint re-check",
+  "S-detected census FAILURE relabelled CONTROLLER on the O path (as the accepted terminal path)"
+ ],
+ "carriedToRSDB": [
+  "DRAIN must be UNKNOWN unless C's platform adapter proves the complete process inventory (02); RS-D-A drains are not 02-QUIESCENT evidence",
+  "PLATFORM_PROOF/PRIVACY_PROOF adapters (fail-closed today); macOS Seatbelt probe: deny-all-but-loopback enforceable for S, denials not countable (destination coverage UNKNOWN); hostname-restricted provider egress not expressible in Seatbelt",
+  "next instrument revision pins this RS-D-A manifest/seal (incl. rs-d/REVAL_RUNBOOK.md, rc2-N2) and the RS-B/RS-C-A/RS-C-C/RS-D-A build inventory",
+  "rc2-N1 test for the immediate-POST continuity stop; rc2-N3 brief text",
+  "carried from RS-C-C: swept-vs-expired-uncollected OBSERVATION_UNAVAILABLE distinction, macOS F_FULLFSYNC, T2, optional buildManifestSha256 binding of receipt v4, RS-C-C review N2/N5"
+ ],
+ "ownerDecisions": [
+  "2026-10-11: RS-C/RS-D parts each with one Opus 5.5 max review",
+  "provider key pass-through: PENDING (tentatively Azure environment variables); bridge S never resolves a key",
+  "2026-10-12 D1: one admitted run follows the fixture-grouped order FIXTURE_GROUPED_FIRST_APPEARANCE_V1",
+  "2026-10-12 D2: S and C stay up through a fixture switch; the switch admits only idle registered runtime/reader sessions"
+ ],
+ "nextImplementation": "RS-D part B (platform/egress/privacy proof adapters), then part C (integration, final instrument revision, offline rehearsal/runbook)",
+ "administrativeDeltasAfterAcceptance": [],
+ "activation": "none",
+ "dataAdmission": "NOT_ADMITTED",
+ "budgetAdmission": "NOT_ADMITTED",
+ "paidProductCalls": 0,
+ "providerCalls": 0
+}

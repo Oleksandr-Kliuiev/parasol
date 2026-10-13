@@ -1,0 +1,31 @@
+{
+  "artifact": "S3-design-rc4",
+  "packageHash": "e2d574185b53f28b5fc25f039a1b8c3df2cc7111133077fca2b4318809364d3c",
+  "zipSha256": "8c07c235133f453b90c766793c40aa836aa0e1280666d0156e55f0838497eaa2",
+  "manifestSha256": "23ae811134b78cb4e908986222d205a396de0542f7aecc442b9d9c28cdb27963",
+  "status": "APPROVED_ARCHITECTURE_MOCK_ONLY",
+  "reviewers": [
+    {
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "freshAgent": "/root/astra_s3_design_rc4",
+      "report": "docs/stage3/reviews/ASTRA_DESIGN_RC4.md",
+      "reportSha256": "ee95049b16e57ce7dc8d1b7c4ef568c8a5a6ab66c5704551a84ba911e7e5be0a"
+    },
+    {
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "sessionId": "592fb49a-108e-42db-bf5a-9c1eb73fdfad",
+      "actualAssistantModels": [
+        "claude-fable-5-1"
+      ],
+      "provider": "native Anthropic firstParty/claude.ai (auth status verified; no provider env overrides)",
+      "billing": "subscription; no credits/API billing enabled; attributable quota unknown",
+      "report": "docs/stage3/reviews/FABLE_DESIGN_RC4.md",
+      "reportSha256": "3ffb8e4d3273e07357a158386a44fde1a5d71423227b51238d1a3cd6e2214f7a"
+    }
+  ],
+  "implementationAcceptance": "NOT_GRANTED",
+  "live": "DEFERRED_BY_OWNER",
+  "precisionDecision": "No pending request TTL added; original token expiry/authority/epoch still govern. Fable precision checks required in S3-A."
+}

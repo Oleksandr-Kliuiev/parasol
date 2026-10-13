@@ -1,0 +1,13 @@
+{
+  "agent": "/root/astra_s5aska_rc3",
+  "requestedModel": "gpt-6-astra",
+  "effort": "xhigh",
+  "freshContext": true,
+  "forkTurns": "none",
+  "startedUtc": "2026-10-10T19:10:01.940242+00:00",
+  "packageHash": "213eec92b91a907514161c485258304e197babb42fd5c63da66e3849112f5362",
+  "manifestSha256": "16957c64efc4b13814dce9edb861328b4ef0d1b7e1e304171b27e359121cb82b",
+  "briefSha256": "b657735649f1cc0c89465b58bedbfea6862621df91c8c1d1d3437ac2234764e7",
+  "runtimeEvidence": "Explicit native spawn_agent assignment; provider response-model telemetry not exposed",
+  "originalCheckoutAccess": "READ_ONLY"
+}

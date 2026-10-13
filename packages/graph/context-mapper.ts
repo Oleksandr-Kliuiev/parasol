@@ -1,5 +1,5 @@
 import type { Scope, ClientContextV1, ObservationPage, ObservationStatus, ObservationSummary, ResourceView, Person, Device, ExternalLink, Severity, System, ResourceType, EventKind, Domain, Priority, Route, Provider, EntityKind, LinkStatus } from '../core/contracts.ts';
-import { emptyCounts, severities, severityRank } from '../core/contracts.ts';
+import { emptyCounts, isM365ResourceType, severities, severityRank } from '../core/contracts.ts';
 
 // Row shapes as selected by packages/graph/prisma-context.ts. Kept free of Prisma imports so the mapping is unit-tested
 // without a generated client and so the API contract never depends on the storage shape.
@@ -104,6 +104,8 @@ export function mapClientContext(scope: Scope, graph: DbClientGraph, observation
     if (entity.kind === 'PERSON' && entity.person) people.push({ ...scope, id: entity.id, displayName: entity.person.displayName, email: entity.person.email });
     if (entity.kind === 'DEVICE' && entity.device) devices.push({ ...scope, id: entity.id, hostname: entity.device.hostname, personId: entity.device.personId });
     for (const link of entity.links) {
+      // Second guard behind the query filter (prisma-context.ts): no M365 link ever reaches the V1 projection.
+      if (isM365ResourceType(link.external.resourceType) || link.external.connection.system === 'microsoft365') continue;
       links.push({ ...scope, connectionId: link.external.connection.id, system: asSystem(link.external.connection.system),
         resourceType: link.external.resourceType as ResourceType, externalId: link.external.externalId, entityId: entity.id,
         entityKind: entity.kind as EntityKind, status: link.status as LinkStatus });

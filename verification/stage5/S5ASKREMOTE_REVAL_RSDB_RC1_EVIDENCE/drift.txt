@@ -1,0 +1,5 @@
+
+> vardahei-atlas-stage1-reference@1.1.3 db:check:drift
+> node --experimental-strip-types scripts/schema-drift-check.ts
+
+PASS schema drift: migrations and the prisma/*.prisma schema folder describe the same schema

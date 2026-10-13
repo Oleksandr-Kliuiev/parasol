@@ -1,0 +1,213 @@
+{
+  "artifact": "S5ASKREMOTE-DESIGN-rc2",
+  "checkpoint": "ASK-REMOTE engineering architecture",
+  "status": "APPROVED",
+  "scope": "Ten-file architecture only; R-A/B/C implementation NOT_STARTED; no account/data/budget/R-EVAL/LIVE/deployment admission",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "packageHash": "9c92327f6a3d693031c30cc907091f6dd61f4e0747491e10f00a784f877719d3",
+  "manifest": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_MANIFEST.json",
+    "sha256": "88a8b86695d8b3d6504d8ec88118394e276d0e09d163dbd39be09a6d81e14979"
+  },
+  "files": [
+    {
+      "path": "docs/stage5/ask/remote/01_SCOPE.md",
+      "sha256": "c8d27953f4304a964a98e7e74ab251dd11aed255ca23a9dc224536009cbe91c7",
+      "bytes": 5034
+    },
+    {
+      "path": "docs/stage5/ask/remote/02_CONTRACTS.md",
+      "sha256": "6a99dd2fd6ad9ff929de3c3e547eb0b715189a717350de587e14f13e7e131846",
+      "bytes": 6150
+    },
+    {
+      "path": "docs/stage5/ask/remote/03_DATA_AND_PROVIDER.md",
+      "sha256": "a3a7a28a6acc2748c56f7d454d23654d927a743b0bf9289914aef29b4aeedbeb",
+      "bytes": 8140
+    },
+    {
+      "path": "docs/stage5/ask/remote/04_AUTHORITY_AND_BILLING.md",
+      "sha256": "9e3f151c1583cf6ba9e1028f525c67c778bbd4fdbb9021aa6ab6af96b71d4441",
+      "bytes": 16330
+    },
+    {
+      "path": "docs/stage5/ask/remote/05_ACCEPTANCE.md",
+      "sha256": "c3794877842b4a36e1770991e4c7630a3afddcecefa4e8e900bf80199e93bd7e",
+      "bytes": 10459
+    },
+    {
+      "path": "docs/stage5/ask/remote/06_PROVIDER_DECISION.md",
+      "sha256": "509b3b12e967559cfb544a8c73f9694db5627c39c15397d3232cf7c4e107f2d5",
+      "bytes": 3938
+    },
+    {
+      "path": "docs/stage5/ask/remote/AGENTS.md",
+      "sha256": "57c78ac74c5340812098d62c0f7e22e5acca6851834e734bde6bb24d61dbcb26",
+      "bytes": 1281
+    },
+    {
+      "path": "docs/stage5/ask/remote/README.md",
+      "sha256": "2811288c8a379c57b48869fcce2ba1ca56fba843c501f68ff6be6e44c2444a2b",
+      "bytes": 2222
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-prompt.json",
+      "sha256": "52c6b5d5ba0c393086d48d084a577678532b09f2738c0bf8e9623c49477dd7a5",
+      "bytes": 1450
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-schema.json",
+      "sha256": "c9f70d915fb3f71643ffc4a329cda0fafe41b2424053374f6df7fb1254bcfe88",
+      "bytes": 295
+    }
+  ],
+  "archive": {
+    "path": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/design-rc2/S5ASKREMOTE_DESIGN_RC2_PACKAGE.zip",
+    "sha256": "f68e789ec039af13168ce798ec68d7a58722c8f917eb2cbec5143d2850eeba8c"
+  },
+  "baseline": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_BASELINE.json",
+    "sha256": "e9b2eb28de99ca27101a92f1d58cae9f750c1bf5ad1b3fb33d43c88e138d5536"
+  },
+  "dependencies": [
+    {
+      "path": "verification/stage5/S5ASKA_APPROVED.json",
+      "sha256": "0111e76cff410a4ee7706312cbc2d062ac7fbf134b62ee3ae4cf43109500f6ab"
+    },
+    {
+      "path": "verification/stage5/S5ASKA_CLOSURE_VERIFICATION.json",
+      "sha256": "4d02d0c03f3f33d2ac251cda2332bc1d71e124200945153a760b6acd09946de8"
+    },
+    {
+      "path": "verification/stage5/S5ASKB_APPROVED.json",
+      "sha256": "cbc6a118abb39bed17758cf992f8d974f9fe7456720cb74832624fb80af94c61"
+    },
+    {
+      "path": "verification/stage5/S5ASKB_CLOSURE_VERIFICATION.json",
+      "sha256": "46b76121025506d895a7c5745023858595611aa0076d44059526e492103326bc"
+    },
+    {
+      "path": "verification/stage5/S5ASK_DESIGN_APPROVED.json",
+      "sha256": "90b5ad7c598f5b89a193bfd7035efe1539bc13feaf0d9338d7fc7b49425e2c15"
+    },
+    {
+      "path": "verification/stage5/S5ASK_DESIGN_CLOSURE_VERIFICATION.json",
+      "sha256": "5654883d224a945b2bdb8687b33194ae117e7d65b0238fae240c37c3d9800d5e"
+    },
+    {
+      "path": "verification/stage5/S5B_APPROVED.json",
+      "sha256": "2e6b7b27bab868b997a8f93cc80e68d09549da6ee8529a7a2a2ca70016e637e4"
+    },
+    {
+      "path": "verification/stage5/S5B_CLOSURE_VERIFICATION.json",
+      "sha256": "4b52961d8ce4d2f3c8781a79003be2adb553bf757093c6f097aeca9eaacd5b2e"
+    }
+  ],
+  "reviews": [
+    {
+      "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_DESIGN_RC2.md",
+      "sha256": "9aebc0057c0f2c080445d11f852ccaa6f1b4bbde9e187bd43ccd6f26904cdfc8",
+      "verdict": "APPROVE",
+      "model": "gpt-6-astra",
+      "effectiveEffort": "xhigh",
+      "freshIndependentSession": true,
+      "nativeTask": "/root/astra_s5askremote_design_rc2",
+      "elapsedSeconds": 269.1,
+      "dispatch": {
+        "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_ASTRA_ASSIGNMENT.json",
+        "sha256": "a09b609ab4bb8f56f0978f42cc6b9b4625a764f8346e2789186b3a5a8e9c530b"
+      },
+      "evidence": {
+        "path": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/EVIDENCE.json",
+        "sha256": "0e11a8f39d3e44aa3e39aa2e4ef75f919580f21f927f05097835b55745988231"
+      },
+      "identityQualification": "Explicit native model/effort assignment; raw response-model/provider/fallback/billing telemetry unavailable"
+    },
+    {
+      "path": "docs/stage5/reviews/FABLE_S5ASKREMOTE_DESIGN_RC2.md",
+      "sha256": "83106b0762d3d4357a990cd323c9e725c541a0f05ddc5976c83aecf0d96a3dbd",
+      "verdict": "APPROVE",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "freshIndependentSession": true,
+      "sessionId": "2416ad1f-f8d1-47d7-a401-57ff8ec8ecf1",
+      "elapsedSeconds": 800.9,
+      "actualMessageModels": [
+        "claude-fable-5-1"
+      ],
+      "execution": {
+        "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_FABLE_EXECUTION.json",
+        "sha256": "5cb47c09815c5a574fdf8a74e10c9d4f87ff92a544ee333afac44661583cca10"
+      },
+      "preflight": {
+        "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_PREFLIGHT.json",
+        "sha256": "aad441db0fd5af71bab95c5b634ba363550099bc2c5ecb158ef903b4fef44433"
+      },
+      "rawStream": {
+        "path": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/fable-design-rc2.jsonl",
+        "sha256": "7ab78c8fdd2178c873b6fca60d4bac295e39bb4f47180e185320629da5adc41e"
+      },
+      "billing": "native firstParty/claude.ai Max; extra usage disabled; no API/credits/fallback",
+      "attributableSubscriptionQuota": "unknown"
+    }
+  ],
+  "dualReview": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_DUAL_REVIEW.json",
+    "sha256": "39424a558267ad687c13466d16e05ae3abd1b27e526842fd7a3dc47bd9192cae"
+  },
+  "requiredFindingsRemaining": 0,
+  "requiredFindingsClosed": [
+    {
+      "id": "A-R1",
+      "review": "RC1 Astra",
+      "resolution": "Persistent immutable admission identity and strictly monotonic independent policyVersion; stale-consent/overflow negatives required",
+      "section": "04: policy identity and consent revision"
+    },
+    {
+      "id": "F-R1",
+      "review": "RC1 Fable",
+      "resolution": "New confined remote definer receives exact scoped fence-column privileges; old fence owner and two policies unchanged",
+      "section": "04: role confinement"
+    },
+    {
+      "id": "F-R2",
+      "review": "RC1 Fable",
+      "resolution": "All new routine PUBLIC ACLs revoked; post-default runtime DML revocation; eighth-role/protected-table/readiness negatives",
+      "section": "04: default privileges and readiness"
+    },
+    {
+      "id": "F-R3",
+      "review": "RC1 Fable",
+      "resolution": "One persistent policy row revised in place; immutable project/admission; attempts reference stable identity and capture version as metadata",
+      "section": "04: policy identity and settlement records"
+    },
+    {
+      "id": "F-R4",
+      "review": "RC1 Fable",
+      "resolution": "Original remaining4500ms floor before INSERT, pre-return and dispatch; no-dispatch/unknown-commit negatives",
+      "section": "04: egress and deadline;05: required behavior matrix"
+    }
+  ],
+  "repairRounds": 1,
+  "nonblockingNotes": "Astra N1 closed through status-only routing updates; eight Fable notes preserved with dispositions in administrative DESIGN_STATUS.md. No reviewed normative changes.",
+  "verification": "Static/hash/archive/source/official-doc architecture review only; prior application tests not rerun or claimed as new evidence",
+  "reviewEffort": {
+    "AstraRC2Seconds": 269.1,
+    "FableRC1Seconds": 752.3,
+    "FableRC2Seconds": 800.9,
+    "attributableSubscriptionQuota": "unknown",
+    "estimatedApiDollarsAreNotQuota": true
+  },
+  "implementationStarted": false,
+  "paidCalls": 0,
+  "paidCallsScope": "Product provider inference; native development review uses existing subscription",
+  "dataBudgetAdmission": "NOT_ADMITTED",
+  "nextCheckpoint": "R-A concrete brief and fresh native Opus5.5/high; fresh Astra/xhigh actual-code acceptance",
+  "liveDeployment": "DEFERRED",
+  "closure": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_CLOSURE_VERIFICATION.json",
+    "sha256": "840772510385d7aae0391c4edb982e6ad52151a56928e02890b294b5a363cec8"
+  },
+  "approvedUtc": "2026-10-10T22:00:22.197337+00:00"
+}

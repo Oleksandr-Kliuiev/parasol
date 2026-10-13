@@ -1,0 +1,11 @@
+# REVAL_EVIDENCE NB7 ARM 7 ms, READY 1 ms, POST→COMMIT 14 ms, TERMINAL_OBSERVATION+journal fsync 17 ms
+✔ one case O → C → S with I and the browser: FIXTURE_CHECK, PAIR (+ secret), PAIR200, PRE, ARM, READY, answer, handoff, journaled observation (1797.293958ms)
+✔ controller refusals: PAIR needs a current FIXTURE_CHECK and live instrument ids; I cannot PAIR; an ARM failure after consumption stops arming (NB9); control loss ends the pair (2264.298084ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 18965.221833

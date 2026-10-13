@@ -1,0 +1,38 @@
+[
+  {
+    "path": "AGENTS.md",
+    "beforeSha256": "b9c3f5209944af3aa2739d9e7ae104089fdb73e91f3c2efc647c5a8f6c7a3d60",
+    "afterSha256": "b17d23fbf245d39966840931526a57f41d697337215fb7850fb592328466cda6",
+    "reason": "Administrative design routing/status only; accepted source/build/norms unchanged"
+  },
+  {
+    "path": "docs/AI_CONTEXT_MAP.md",
+    "beforeSha256": "6e1adaf3d5cebf6a857a8583d47028b24d50d79cb4e83d107d1778c7287fe70c",
+    "afterSha256": "eaf6778807ba6a5757c945fb354913faa03742a8a7f24803dd653ec2b12c5212",
+    "reason": "Administrative design routing/status only; accepted source/build/norms unchanged"
+  },
+  {
+    "path": "docs/DEVELOPMENT_WORKFLOW.md",
+    "beforeSha256": "43556b83612d6d9f10fb8e70e2ec35528471821249c027a26cd169007c1950d1",
+    "afterSha256": "0c29d332e085379427a60511b6fffe63094e153fff38e54145840d800cacc47a",
+    "reason": "Administrative design routing/status only; accepted source/build/norms unchanged"
+  },
+  {
+    "path": "docs/stage5/IMPLEMENTATION_STATUS.md",
+    "beforeSha256": "452de6ee1e05676f195de1656a9ea0f0a84d25f6e00b16d99639ff0e6a8e8386",
+    "afterSha256": "c0e64af1f267538979581dab59352dab2cafbb459c1bc97383d0aee7733898f5",
+    "reason": "Administrative design routing/status only; accepted source/build/norms unchanged"
+  },
+  {
+    "path": "docs/stage5/REVIEW_STATUS.md",
+    "beforeSha256": "9689a978a0c581f0c4597a3c33f2aaa7b9a4af07acaf2f89958a127bf7c88a5a",
+    "afterSha256": "4c34aaa9d6dbe6ba076f7a5be03c2b71e9869477de2fcba54b8e0ae1c704e166",
+    "reason": "Administrative design routing/status only; accepted source/build/norms unchanged"
+  },
+  {
+    "path": "docs/stage5/ask/DESIGN_STATUS.md",
+    "beforeSha256": "b02ba276a810140180b13a37494ed41448bbc85f5c28059e74cce77979c73d66",
+    "afterSha256": "10837bdc1b4d137d5ebd8b4e951e4bec915207aaff1fcb8ef8bc6e05c0c6d487",
+    "reason": "Administrative design routing/status only; accepted source/build/norms unchanged"
+  }
+]

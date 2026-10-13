@@ -1,0 +1,7 @@
+{
+  "reviewer": "/root/astra_s5b_brief_rc1",
+  "runtime": "native initial explicit gpt-6-astra/xhigh, bounded followup retains effort",
+  "effectiveEffort": "xhigh",
+  "packageHash": "5beba7475918ed55458084804265e6fab91186762ef78e47d9ce1143878d795f",
+  "identityQualification": "Explicit native assignment; underlying response-model/provider/billing telemetry not exposed; no CLI/API fallback."
+}

@@ -1,0 +1,14 @@
+{
+  "checkpoint": "S4-C",
+  "artifact": "S4C-rc1",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "nativeAgent": "/root/astra_s4c_rc1",
+  "freshSession": true,
+  "forkTurns": "none",
+  "spawnReturnedCanonicalTask": "/root/astra_s4c_rc1",
+  "recordedAt": "2026-10-10T09:49:11.772118+00:00",
+  "manifestSha256": "a6826075655a54d088672f0577d140a7f0844db79c9b041c408def0058bf3c52",
+  "packageHash": "6fec6be8f845f1f46be4201df65d1a8c7d95452bcdc5d19876a5a61485faee9a",
+  "evidenceQualification": "Observed explicit native spawn/runtime assignment; original invocation retained in chat. Independent provider response-model telemetry is not exposed; self-identification is not proof."
+}

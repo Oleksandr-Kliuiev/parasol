@@ -1,0 +1,10 @@
+# REVAL_EVIDENCE NB7 ARM 6 ms, READY 0 ms, POST→COMMIT 13 ms, TERMINAL_OBSERVATION+journal fsync 16 ms
+✔ one case O → C → S with I and the browser: FIXTURE_CHECK, PAIR (+ secret), PAIR200, PRE, ARM, READY, answer, handoff, journaled observation (1770.428375ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17427.368375

@@ -1,0 +1,11 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-RSA-BRIEF-rc1",
+  "packageHash": "059cb977895fcc2cfc110afc3108ac1e6cb58fb2cb8bef007a5cb64b112036e2",
+  "manifestFiles": 43,
+  "briefLines": 491,
+  "fencesBalanced": true,
+  "baselineFilesUnchanged": 1540,
+  "paidProductCalls": 0,
+  "activation": false,
+  "checks": "Hashes, line count, code-fence balance; no code or runtime proof claimed"
+}

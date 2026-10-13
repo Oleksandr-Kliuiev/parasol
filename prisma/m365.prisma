@@ -1,0 +1,231 @@
+// ---------------------------------------------------------------------------------------------------------------------
+// Stage 2 Microsoft 365 (docs/stage2/02_CONTRACTS.md §3, migrations 202610081000-1200). Every key and reference carries
+// workspace, client and connection. CHECKs, the publication fence, immutability, retention triggers and RLS live in the
+// migrations; runtime UPDATE is column-limited by prisma/roles.sql. Payload rows are deleted only after expiresAt.
+// ---------------------------------------------------------------------------------------------------------------------
+/// Read state per M365 connection × resource (m365_user, m365_device; m365_signin for capability only). PENDING | OK | ERROR
+/// | UNAVAILABLE | MISSING. activeGenerationId: the one published directory generation, null until the first full read.
+model M365ResourceState {
+  workspaceId        String
+  clientId           String
+  connectionId       String
+  resourceType       String
+  latestStartedSeq   Int       @default(0)
+  latestRecordedSeq  Int       @default(0)
+  latestPublishedSeq Int       @default(0)
+  activeGenerationId String?
+  lastAttemptAt      DateTime?
+  lastSuccessAt      DateTime?
+  status             String    @default("PENDING")
+  safeErrorCode      String?
+  /// Directory 429 timing (migration 202610081300): no attempt starts before it; set/cleared only by the newest attempt.
+  retryAt            DateTime?
+  /// Directory claims charged since the last publication or explicit reset, 0..8 (migration 202610081400); 0 on sign-in rows.
+  attemptsUsed       Int       @default(0)
+  connection         Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365ResourceState_connection_fkey")
+  activeGeneration   M365DirectoryGeneration? @relation("ActiveGeneration", fields: [workspaceId, clientId, connectionId, resourceType, activeGenerationId], references: [workspaceId, clientId, connectionId, resourceType, id], onDelete: Restrict, onUpdate: Restrict, map: "M365ResourceState_activeGeneration_fkey")
+  generations        M365DirectoryGeneration[] @relation("GenerationState")
+  @@id([workspaceId, clientId, connectionId, resourceType])
+}
+/// One full directory read: STAGING (claim token + lease) → PUBLISHED | FAILED. Publication needs the newest started
+/// sequence, the ACTIVE connection of the claimed lifecycleVersion and a typed mirror for every object.
+model M365DirectoryGeneration {
+  workspaceId      String
+  clientId         String
+  connectionId     String
+  resourceType     String
+  id               String
+  attemptSeq       Int
+  lifecycleVersion Int
+  state            String    @default("STAGING")
+  claimToken       String?   @db.Uuid
+  leaseExpiresAt   DateTime?
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  rowCount         Int       @default(0)
+  safeErrorCode    String?
+  expiresAt        DateTime
+  resourceState    M365ResourceState @relation("GenerationState", fields: [workspaceId, clientId, connectionId, resourceType], references: [workspaceId, clientId, connectionId, resourceType], onDelete: Restrict, onUpdate: Restrict, map: "M365DirectoryGeneration_state_fkey")
+  activeFor        M365ResourceState[] @relation("ActiveGeneration")
+  objects          M365DirectoryObject[]
+  @@id([workspaceId, clientId, connectionId, resourceType, id])
+  @@unique([workspaceId, clientId, connectionId, resourceType, attemptSeq], map: "M365DirectoryGeneration_seq_key")
+}
+/// Bounded allowlisted user/device DTO of one generation. deviceId is a lookup key, not unique (duplicates are AMBIGUOUS).
+model M365DirectoryObject {
+  workspaceId      String
+  clientId         String
+  connectionId     String
+  resourceType     String
+  generationId     String
+  sourceObjectId   String
+  externalEntityId String?
+  deviceId         String?
+  dto              Json
+  generation       M365DirectoryGeneration @relation(fields: [workspaceId, clientId, connectionId, resourceType, generationId], references: [workspaceId, clientId, connectionId, resourceType, id], onDelete: Restrict, onUpdate: Restrict, map: "M365DirectoryObject_generation_fkey")
+  mirror           ExternalEntity? @relation(fields: [workspaceId, clientId, connectionId, resourceType, sourceObjectId, externalEntityId], references: [workspaceId, clientId, connectionId, resourceType, externalId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365DirectoryObject_mirror_fkey")
+  @@id([workspaceId, clientId, connectionId, resourceType, generationId, sourceObjectId])
+  @@index([workspaceId, clientId, connectionId, resourceType, generationId, deviceId], map: "M365DirectoryObject_deviceId_idx")
+  @@index([workspaceId, clientId, externalEntityId], map: "M365DirectoryObject_mirror_idx")
+}
+/// Operator sign-in request (≤24h, ≤25 roots) with request-wide caps consumed durably. OPEN | COMPLETE | PARTIAL | FAILED.
+model M365SyncRequest {
+  workspaceId     String
+  clientId        String
+  connectionId    String
+  id              String
+  requestedFrom   DateTime
+  requestedTo     DateTime
+  retrievalFrom   DateTime?
+  retrievalTo     DateTime?
+  configVersion   String
+  rootCount       Int
+  totalLeaves     Int       @default(0)
+  totalStagedRows Int       @default(0)
+  state           String    @default("OPEN")
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  connection      Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365SyncRequest_connection_fkey")
+  rootJobs        M365SyncRootJob[]
+  @@id([workspaceId, clientId, connectionId, id])
+}
+/// Canonical UTC hour root (CHECK: aligned, rootTo = rootFrom + 1h), unique per connection; one published attempt pointer.
+model M365SignInWindow {
+  workspaceId        String
+  clientId           String
+  connectionId       String
+  id                 String
+  rootFrom           DateTime
+  rootTo             DateTime
+  latestStartedSeq   Int       @default(0)
+  latestRecordedSeq  Int       @default(0)
+  latestPublishedSeq Int       @default(0)
+  publishedAttemptId String?
+  status             String    @default("PENDING")
+  safeErrorCode      String?
+  lastAttemptAt      DateTime?
+  lastSuccessAt      DateTime?
+  connection         Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365SignInWindow_connection_fkey")
+  publishedAttempt   M365WindowAttempt? @relation("PublishedAttempt", fields: [workspaceId, clientId, connectionId, id, publishedAttemptId], references: [workspaceId, clientId, connectionId, windowId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365SignInWindow_publishedAttempt_fkey")
+  attempts           M365WindowAttempt[] @relation("WindowAttempts")
+  rootJobs           M365SyncRootJob[]
+  @@id([workspaceId, clientId, connectionId, id])
+  @@unique([workspaceId, clientId, connectionId, rootFrom], map: "M365SignInWindow_rootFrom_key")
+  @@unique([workspaceId, clientId, connectionId, id, rootFrom], map: "M365SignInWindow_root_key")
+}
+/// Retry budget of one root within one request; every claim consumes it. PENDING | RUNNING | RETRY | COMPLETE | FAILED.
+model M365SyncRootJob {
+  workspaceId   String
+  clientId      String
+  connectionId  String
+  requestId     String
+  windowId      String
+  attemptsUsed  Int       @default(0)
+  maxAttempts   Int
+  retryAt       DateTime?
+  state         String    @default("PENDING")
+  safeErrorCode String?
+  updatedAt     DateTime  @default(now())
+  request       M365SyncRequest @relation(fields: [workspaceId, clientId, connectionId, requestId], references: [workspaceId, clientId, connectionId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365SyncRootJob_request_fkey")
+  window        M365SignInWindow @relation(fields: [workspaceId, clientId, connectionId, windowId], references: [workspaceId, clientId, connectionId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365SyncRootJob_window_fkey")
+  attempts      M365WindowAttempt[]
+  @@id([workspaceId, clientId, connectionId, requestId, windowId])
+  @@index([workspaceId, clientId, connectionId, windowId], map: "M365SyncRootJob_window_idx")
+}
+/// Immutable attempt of one root with bounds fixed at claim. RUNNING → COMPLETE (publication only) | FAILED | SUPERSEDED.
+model M365WindowAttempt {
+  workspaceId      String
+  clientId         String
+  connectionId     String
+  windowId         String
+  id               String
+  rootFrom         DateTime
+  requestId        String
+  attemptSeq       Int
+  lifecycleVersion Int
+  coveredFrom      DateTime
+  coveredTo        DateTime
+  configVersion    String
+  claimToken       String?   @db.Uuid
+  leaseExpiresAt   DateTime?
+  deadlineAt       DateTime
+  state            String    @default("RUNNING")
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  publishedAt      DateTime?
+  safeErrorCode    String?
+  evidenceCount    Int       @default(0)
+  leafCount        Int       @default(0)
+  stagedRows       Int       @default(0)
+  expiresAt        DateTime
+  window           M365SignInWindow @relation("WindowAttempts", fields: [workspaceId, clientId, connectionId, windowId, rootFrom], references: [workspaceId, clientId, connectionId, id, rootFrom], onDelete: Restrict, onUpdate: Restrict, map: "M365WindowAttempt_window_fkey")
+  rootJob          M365SyncRootJob @relation(fields: [workspaceId, clientId, connectionId, requestId, windowId], references: [workspaceId, clientId, connectionId, requestId, windowId], onDelete: Restrict, onUpdate: Restrict, map: "M365WindowAttempt_rootJob_fkey")
+  publishedFor     M365SignInWindow[] @relation("PublishedAttempt")
+  leaves           M365WindowLeaf[]
+  @@id([workspaceId, clientId, connectionId, windowId, id])
+  @@unique([workspaceId, clientId, connectionId, windowId, attemptSeq], map: "M365WindowAttempt_seq_key")
+  @@index([workspaceId, clientId, connectionId, requestId, windowId], map: "M365WindowAttempt_rootJob_idx")
+}
+/// Leaf of an attempt's partition; SPLIT is a container with children inside it, never published evidence.
+model M365WindowLeaf {
+  workspaceId   String
+  clientId      String
+  connectionId  String
+  windowId      String
+  attemptId     String
+  id            String
+  parentLeafId  String?
+  fromInclusive DateTime
+  toExclusive   DateTime
+  state         String   @default("PENDING")
+  pagesRead     Int      @default(0)
+  rowCount      Int      @default(0)
+  safeErrorCode String?
+  attempt       M365WindowAttempt @relation(fields: [workspaceId, clientId, connectionId, windowId, attemptId], references: [workspaceId, clientId, connectionId, windowId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365WindowLeaf_attempt_fkey")
+  parent        M365WindowLeaf? @relation("LeafParent", fields: [workspaceId, clientId, connectionId, windowId, attemptId, parentLeafId], references: [workspaceId, clientId, connectionId, windowId, attemptId, id], onDelete: NoAction, onUpdate: Restrict, map: "M365WindowLeaf_parent_fkey")
+  children      M365WindowLeaf[] @relation("LeafParent")
+  evidence      M365WindowEvidence[]
+  @@id([workspaceId, clientId, connectionId, windowId, attemptId, id])
+  @@index([workspaceId, clientId, connectionId, windowId, attemptId, parentLeafId], map: "M365WindowLeaf_parent_idx")
+}
+/// Immutable allowlisted sign-in version (m365-signin-v1); same sourceId + contentHash deduplicates. userId/deviceId are
+/// plain vendor references, never internal keys. expiresAt ≤ occurredAt + 7 days.
+model M365SignInEvidence {
+  workspaceId  String
+  clientId     String
+  connectionId String
+  id           String
+  sourceId     String
+  contentHash  String
+  dtoVersion   String   @default("m365-signin-v1")
+  dto          Json
+  occurredAt   DateTime
+  userId       String?
+  deviceId     String?
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  expiresAt    DateTime
+  connection   Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365SignInEvidence_connection_fkey")
+  windows      M365WindowEvidence[]
+  @@id([workspaceId, clientId, connectionId, id])
+  @@unique([workspaceId, clientId, connectionId, sourceId, contentHash], map: "M365SignInEvidence_version_key")
+  @@index([workspaceId, clientId, connectionId, occurredAt], map: "M365SignInEvidence_occurredAt_idx")
+  @@index([workspaceId, clientId, connectionId, deviceId], map: "M365SignInEvidence_deviceId_idx")
+  @@index([workspaceId, clientId, connectionId, userId], map: "M365SignInEvidence_userId_idx")
+}
+/// Membership of an evidence version in an attempt's leaf; readable only through the root's published attempt.
+model M365WindowEvidence {
+  workspaceId  String
+  clientId     String
+  connectionId String
+  windowId     String
+  attemptId    String
+  leafId       String
+  evidenceId   String
+  leaf         M365WindowLeaf @relation(fields: [workspaceId, clientId, connectionId, windowId, attemptId, leafId], references: [workspaceId, clientId, connectionId, windowId, attemptId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365WindowEvidence_leaf_fkey")
+  evidence     M365SignInEvidence @relation(fields: [workspaceId, clientId, connectionId, evidenceId], references: [workspaceId, clientId, connectionId, id], onDelete: Restrict, onUpdate: Restrict, map: "M365WindowEvidence_evidence_fkey")
+  @@id([workspaceId, clientId, connectionId, windowId, attemptId, evidenceId])
+  @@index([workspaceId, clientId, connectionId, windowId, attemptId, leafId], map: "M365WindowEvidence_leaf_idx")
+  @@index([workspaceId, clientId, connectionId, evidenceId], map: "M365WindowEvidence_evidence_idx")
+}

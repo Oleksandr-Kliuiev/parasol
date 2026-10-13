@@ -1,0 +1,24 @@
+{
+  "from": "S5ASKREMOTE-REVAL-EXECUTION-rc2",
+  "fromHash": "9db596d556571e8e705b835eecd7d3daa0973ba16a74984fcf64a048650242f3",
+  "to": "S5ASKREMOTE-REVAL-EXECUTION-rc3",
+  "toHash": "c9f84e82fb3be9b00c7f7b7595047e62a376fd630c1c958e2fe31e45c0ba8ca4",
+  "changed": [
+    "docs/stage5/ask/remote/execution/IMPLEMENTATION_REPORT.md",
+    "docs/stage5/ask/remote/execution/README.md",
+    "docs/stage5/ask/remote/execution/rehearsal/EXECUTION_REHEARSAL_RECEIPT.json",
+    "scripts/ask-remote-eval-execution/AGENTS.md",
+    "scripts/ask-remote-eval-execution/cli.ts",
+    "scripts/ask-remote-eval-execution/operator.ts",
+    "scripts/ask-remote-eval-execution/receipt.ts",
+    "scripts/ask-remote-eval-execution/rehearsal.ts",
+    "scripts/ask-remote-eval-execution/session.ts",
+    "scripts/ask-remote-eval-execution/tty-input.ts",
+    "tests/ask-remote-eval-execution-operator.test.ts",
+    "tests/ask-remote-eval-execution-repair.test.ts"
+  ],
+  "added": [
+    "tests/ask-remote-eval-execution-pty.test.ts"
+  ],
+  "removed": []
+}

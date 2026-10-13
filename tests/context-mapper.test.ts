@@ -6,6 +6,8 @@ import { memorySinks, runTool } from './support/tool-fixtures.ts';
 import { MemoryAudit, MemorySecurityAudit } from '../packages/audit/memory.ts';
 import { scope, actor } from '../fixtures/gasta.ts';
 import { scopeContext, assertConfinedRuntimeRole } from '../packages/graph/scope-context.ts';
+import { FENCE_SHARED_INVOKER_ROUTINES } from '../packages/graph/fence-role.ts';
+import { readFile } from 'node:fs/promises';
 
 // Rows shaped exactly like the select in packages/graph/prisma-context.ts, so the mapping is verified without a generated client.
 const graph: DbClientGraph = {
@@ -66,11 +68,49 @@ test('scope context is derived from memberships and the identifier policy; the r
   assert.throws(() => scopeContext(actor, ['other-client']), /SCOPE_DENIED/);
   assert.throws(() => scopeContext(actor, []), /SCOPE_DENIED/);
   assert.throws(() => scopeContext({ ...actor, memberships: [{ clientId: 'a,b', permissions: [] }] }, ['a,b']), /INVALID_SCOPE_ID/);
-  const ok = { superuser: false, bypassRls: false, ownsProtectedTables: false, unprotectedTables: 0 };
+  const ok = { superuser: false, bypassRls: false, ownsProtectedTables: false, unprotectedTables: 0,
+    sessionRoleMismatch: false, runtimeAttributeViolations: 0, runtimeMemberships: 0,
+    cleanupRoutines: 1, runtimeCanExecuteCleanup: false, deletableTables: 0, unguardedUpdateColumns: 0, missingUpdateColumns: 0, cleanupOwnerViolations: 0, cleanupOwnerMissingGrants: 0,
+    cleanupExecuteViolations: 0, actionFenceFunctions: 1, actionFenceFunctionViolations: 0, actionFenceOwnerViolations: 0, actionFenceMissingGrants: 0, actionFenceRoutineViolations: 0,
+    actionPolicyViolations: 0, actionTriggerViolations: 0, actionRuntimeGrantViolations: 0, actionRuntimeMissingGrants: 0,
+    poTableViolations: 0, poPolicyViolations: 0, poTriggerViolations: 0, poRoutineViolations: 0, poOwnerViolations: 0, poOwnerMissingGrants: 0,
+    poExecuteViolations: 0, poRuntimeGrantViolations: 0, poRuntimeMissingGrants: 0,
+    arTableViolations: 0, arTriggerViolations: 0, arRoutineViolations: 0, arOwnerViolations: 0, arOwnerMissingGrants: 0,
+    arExecuteViolations: 0, arRuntimeGrantViolations: 0, arRuntimeMissingGrants: 0,
+    rvTableViolations: 0, rvTriggerViolations: 0, rvRoutineViolations: 0, rvDefinerViolations: 0, rvDefinerMissingGrants: 0,
+    rvReaderViolations: 0, rvExecuteViolations: 0, rvRuntimeViolations: 0 };
   assert.doesNotThrow(() => assertConfinedRuntimeRole(ok));
+  // Stage 2 provisioning facts fail closed (an upgrade stays stopped until prisma/roles.sql ran again)
+  for (const broken of [{ cleanupRoutines: 0 }, { runtimeCanExecuteCleanup: true }, { deletableTables: 1 }, { unguardedUpdateColumns: 3 }, { missingUpdateColumns: 1 }, { cleanupOwnerViolations: 1 },
+    { cleanupOwnerMissingGrants: 1 }, { cleanupExecuteViolations: 1 }, { sessionRoleMismatch: true }, { runtimeAttributeViolations: 1 },
+    { runtimeMemberships: 1 },
+    // Stage 3 action fence surface (fence-role.ts): incomplete provisioning or broad default grants also refuse startup
+    { actionFenceFunctions: 0 }, { actionFenceFunctionViolations: 1 }, { actionFenceOwnerViolations: 1 }, { actionFenceMissingGrants: 1 }, { actionFenceRoutineViolations: 1 },
+    { actionPolicyViolations: 1 }, { actionTriggerViolations: 1 }, { actionRuntimeGrantViolations: 1 }, { actionRuntimeMissingGrants: 1 },
+    // Stage 4 PowerOffice surface (poweroffice-role.ts): every fact fails closed as well
+    { poTableViolations: 1 }, { poPolicyViolations: 1 }, { poTriggerViolations: 1 }, { poRoutineViolations: 1 }, { poOwnerViolations: 1 },
+    { poOwnerMissingGrants: 1 }, { poExecuteViolations: 1 }, { poRuntimeGrantViolations: 1 }, { poRuntimeMissingGrants: 1 },
+    // Stage 5 ASK-REMOTE R-A surface (ask-remote-role.ts): every fact fails closed in every Ask mode
+    { arTableViolations: 1 }, { arTriggerViolations: 1 }, { arRoutineViolations: 1 }, { arOwnerViolations: 1 }, { arOwnerMissingGrants: 1 },
+    { arExecuteViolations: 1 }, { arRuntimeGrantViolations: 1 }, { arRuntimeMissingGrants: 1 },
+    // R-EVAL RS-A surface (reval-role.ts): every fact fails closed in every Ask mode
+    { rvTableViolations: 1 }, { rvTriggerViolations: 1 }, { rvRoutineViolations: 1 }, { rvDefinerViolations: 1 }, { rvDefinerMissingGrants: 1 },
+    { rvReaderViolations: 1 }, { rvExecuteViolations: 1 }, { rvRuntimeViolations: 1 }]) {
+    assert.throws(() => assertConfinedRuntimeRole({ ...ok, ...broken }), /RUNTIME_ROLE_NOT_CONFINED/, JSON.stringify(broken));
+  }
   assert.throws(() => assertConfinedRuntimeRole({ ...ok, ownsProtectedTables: true }), /RUNTIME_ROLE_BYPASSES_RLS/);
   assert.throws(() => assertConfinedRuntimeRole({ ...ok, bypassRls: true }), /RUNTIME_ROLE_BYPASSES_RLS/);
   assert.throws(() => assertConfinedRuntimeRole({ ...ok, superuser: true }), /RUNTIME_ROLE_BYPASSES_RLS/);
   assert.throws(() => assertConfinedRuntimeRole({ ...ok, unprotectedTables: 2 }), /RLS_NOT_ENABLED/);
   assert.throws(() => assertConfinedRuntimeRole(undefined), /RUNTIME_ROLE_BYPASSES_RLS/);
+});
+
+test('the fence definer\'s explicit shared-routine list is identical in prisma/roles.sql (provisioning) and the readiness check', async () => {
+  const sql = await readFile(new URL('../prisma/roles.sql', import.meta.url), 'utf8');
+  const block = /v_fence_shared TEXT\[\] := ARRAY\[([^\]]*)\];/.exec(sql)?.[1];
+  assert.ok(block, 'roles.sql declares the list');
+  assert.deepEqual([...block.matchAll(/'([^']+)'/g)].map(m => m[1]).sort(), [...FENCE_SHARED_INVOKER_ROUTINES].sort());
+  assert.ok(FENCE_SHARED_INVOKER_ROUTINES.every(r => /^public\.atlas_[a-z0-9_]+\(/.test(r)), 'every allowance names schema public');
+  assert.ok(!FENCE_SHARED_INVOKER_ROUTINES.some(r => r.startsWith('public.atlas_action_') || r.startsWith('public.atlas_m365_cleanup')),
+    'no Stage 3 routine, no SECURITY DEFINER cleanup routine');
 });

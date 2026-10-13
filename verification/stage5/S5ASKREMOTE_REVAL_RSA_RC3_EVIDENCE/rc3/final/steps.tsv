@@ -1,0 +1,12 @@
+typecheck	0	9s	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	npm run -s typecheck
+ui-typecheck	0	1s	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	npm run -s ui:typecheck
+db-generate	0	0s	bd6822287992145125784821004fade8b051e83201711a06a7596760e59824e7	npm run -s db:generate
+schema-validate	0	0s	1fa1e06af31f866d939dcbc2f900483ed3ca80ed28d58c5071c0556790d7092f	npm run -s schema:validate
+db-drift	0	1s	892b13f6d8d0c9be510e7746fe0a02fbdcdeb853749096fa335597962305d6a2	npm run -s db:check:drift
+db-pg17	0	1s	3ba8dd0aae637f81e7e201c4b7ebb3b77e3928839ed2b161906033bb0c720919	npm run -s db:check:pg17
+api-build	0	4s	a6aa931089b464f4c65e4a923b0460b903968733081bc2b5d7806e5f32081592	npm run -s api:build
+unit-paired	1	92s	4657c6ae9ab437b14002f95c5f460722dea0c37a9c6a13cd53fbc61e5751419c	/tmp/atlas-reval-rsa/checks/rc3/unit-paired.sh
+rc5-files	1	91s	7640d3e14e03179290112ad8ecb075f2dab031b6dd58042482986f72c365fe28	node --experimental-strip-types --test --test-reporter=tap --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=/tmp/atlas-reval-rsa/checks/rc3/final/rc5-files.xml tests/ask-remote-eval-corpus.test.ts tests/ask-remote-eval-execution-cli.test.ts tests/ask-remote-eval-execution-liability.test.ts tests/ask-remote-eval-execution-operator.test.ts tests/ask-remote-eval-execution-pty.test.ts tests/ask-remote-eval-execution-receipt.test.ts tests/ask-remote-eval-execution-repair.test.ts tests/ask-remote-eval-execution-replay.test.ts tests/ask-remote-eval-execution-session.test.ts tests/ask-remote-eval-fixtures.test.ts tests/ask-remote-eval-offline.test.ts tests/ask-remote-eval-supervisor.test.ts tests/context-budget.test.ts
+test-pg	0	209s	aa0139bd64c1d696ce63d6aa362bb37de84804449f6ce661e2e1a50cf766ec38	npm run -s test:pg
+test-ui	0	131s	ede0de7343afeea5a33181d9c33f8d4b38e17f38c179da59c3d9b2e8c2ac0ecd	npm run -s test:ui
+DONE

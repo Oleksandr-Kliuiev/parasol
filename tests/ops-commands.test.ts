@@ -22,8 +22,15 @@ test('arguments: a known command, only its flags, each once with a value; nothin
     ['decisions-smoke', '--model', 'x']]) {
     assert.throws(() => parseInvocation(argv), failsWith('INVALID_ARGUMENTS'), argv.join(' '));
   }
-  assert.deepEqual(OPERATOR_COMMANDS, ['bind', 'live-read', 'mapping', 'confirm-link', 'reject-link', 'inbox', 'requeue', 'triage', 'telemetry', 'worker-once',
-    'shadow-once', 'decisions-smoke']);
+  assert.deepEqual(OPERATOR_COMMANDS, ['bind', 'live-read', 'mapping', 'confirm-link', 'reject-link', 'inbox', 'requeue', 'triage', 'telemetry', 'm365-disable',
+    'm365-probe', 'm365-sync', 'm365-requeue', 'm365-directory-reset', 'm365-status', 'm365-directory', 'correlation', 'm365-cleanup',
+    'worker-once', 'shadow-once', 'decisions-smoke']);
+  // Stage 2: m365-disable names a client and a connection, nothing else (no tenant, no status, no version from the caller)
+  assert.deepEqual(parseInvocation(['m365-disable', '--client', 'demo-gasta', '--connection', 'gasta-m365']).flags, { client: 'demo-gasta', connection: 'gasta-m365' });
+  for (const argv of [['m365-disable', '--client', 'demo-gasta'], ['m365-disable', '--client', 'demo-gasta', '--connection', 'c', '--tenant', 't'],
+    ['m365-disable', '--client', 'demo-gasta', '--connection', 'c', '--version', '3']]) {
+    assert.throws(() => parseInvocation(argv), failsWith('INVALID_ARGUMENTS'), argv.join(' '));
+  }
 });
 
 test('live-read verdict: active, healthy, identities read, every resource read or explicitly unavailable upstream', () => {

@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-08T22:18:50.535946+00:00",
+  "auth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrideNames": [],
+  "interactiveModelPicker": {
+    "model": "Fable5.1",
+    "effort": "high",
+    "plan": "Claude Max",
+    "usageCreditsAnnotation": false,
+    "selectionCancelled": true,
+    "accountSettingsUnchanged": true
+  }
+}

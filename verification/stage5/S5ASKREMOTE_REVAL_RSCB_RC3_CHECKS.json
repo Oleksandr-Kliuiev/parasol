@@ -1,0 +1,82 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSC-B-rc3",
+ "window": [
+  "2026-10-12T02:04:59Z",
+  "2026-10-12T02:10:15Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/cli.ts artifact-check (after the build)",
+   "result": "pass: ok true, drift [], 1974 files (one ordered expected map; R-C built inventory merged, RS-A dist pins supersede)",
+   "log": "artifact-check.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts",
+   "result": "567 tests: 558 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (same names as the accepted RS-C-A rc2 run); tests/reval-instrument-{units,identity,run}.test.ts pass",
+   "log": "unit.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg",
+   "result": "771 tests: 771 pass",
+   "qualification": "RS-C-B E2E and native instrument evidence lines in this log",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "rc3 mutations (in place on run.ts, restored byte-exact): M8 N1 revert, M9a/M9b POST checks, M10 READY_ACK cap, M11a/M11b ARM_ACK echo, M12 persist before GO, M13 N3 revert",
+   "result": "8/8 detected by tests/reval-instrument-run.test.ts (rc2 M1\u2013M7 detected in RSCB_RC2_EVIDENCE/mutations.txt)",
+   "log": "mutations-rc3.txt"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSCB_RC3_EVIDENCE",
+ "logs": {
+  "artifact-check.txt": "1e442bf723792d2559f33f9f7a4c1ebe00d8d0175aefd189342575d632b70b01",
+  "build.txt": "b8c5e0342d6a9c14866729526ce80bc52092f45360b00c6d1483634ed29a08b7",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "7fc47972e48be729730aa566a0cca90246a3c66cb61baef39f992ecb2f2e23df",
+  "finished.txt": "e543575f4c6638384b23014e1bee06a8f92d14fd3dab3a20b38130fe2aabcb8d",
+  "mutations-rc3.txt": "fa1ffa4b984820fc5195d438e3e4ec77b5e27eea7ef45ac9f12d2584135a3405",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "schema.txt": "483597ce7a65126e31aa35ddd1fe32e4750b9848a95b06705ef4cf2113a8d39c",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "6bcb54ad288f12672b5643172ff83cf3f08752aa17e1b80959477ade9c9bbed8",
+  "test-pg.txt": "50205a0f54e82334d11326645d1c9788af19b165486e77a83f65c6fef4d41810",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "unit.txt": "47b0ad14cf56abc772e831ee6f26f6ecb845284833bbae82d1c5c6727831ed8f"
+ }
+}

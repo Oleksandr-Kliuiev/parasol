@@ -1,0 +1,432 @@
+{
+  "artifact": "S5ASKREMOTE-RA-rc2",
+  "packageHash": "1b6ff0b80b1bfcb68c82be4064aa7c909623769c03261bde9e9d87869df7556d",
+  "verdict": "APPROVE",
+  "requiredFindingsRemaining": 0,
+  "review": {
+    "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_RA_RC2.md",
+    "sha256": "5b7db7d22ad92084addde15149729a7a36c5abcd8d161bcdf3cd35c14f4a2fb0"
+  },
+  "rawEvidence": {
+    "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/EVIDENCE.json",
+    "sha256": "1a21f23112ca19ea96044f2ad7b0f2f8c32bfb15fdc5a86754d88b62e079381b"
+  },
+  "assignment": {
+    "path": "verification/stage5/S5ASKREMOTE_RA_RC2_ASTRA_ASSIGNMENT.json",
+    "sha256": "e59e53e4e28cacf95585e30c4abbc71d28c3d846c779a87c231557d0b57e6df2"
+  },
+  "requiredFindings": [],
+  "durableEvidence": [
+    {
+      "path": "ASSIGNMENT.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/ASSIGNMENT.json",
+      "sha256": "e59e53e4e28cacf95585e30c4abbc71d28c3d846c779a87c231557d0b57e6df2"
+    },
+    {
+      "path": "FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/FAILURES.md",
+      "sha256": "95b0a5bdad29290a920de8d5e8b01e50ff9e7840d56c0ff385d81fde06b44c72"
+    },
+    {
+      "path": "REPORT.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/REPORT.md",
+      "sha256": "5b7db7d22ad92084addde15149729a7a36c5abcd8d161bcdf3cd35c14f4a2fb0"
+    },
+    {
+      "path": "action-canonical-clean.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/action-canonical-clean.log",
+      "sha256": "03efca674cbb8b96f75bb01a23b80c35a67c290893ae0c147933b24a704b9241"
+    },
+    {
+      "path": "build-repeat.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/build-repeat.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475"
+    },
+    {
+      "path": "build-reproduction.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/build-reproduction.json",
+      "sha256": "563ea807560232f66a8d983e0b55ec32fca744b4897a3e01f9fdb01b9eb24a6b"
+    },
+    {
+      "path": "build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475"
+    },
+    {
+      "path": "cleanup-after-suite.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cleanup-after-suite.json",
+      "sha256": "6bf37a0360a566780aac33ac593d0f2382bd9e326b161e23c5b7ea66cd3b76da"
+    },
+    {
+      "path": "cleanup-baseline-complete.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cleanup-baseline-complete.json",
+      "sha256": "6bf37a0360a566780aac33ac593d0f2382bd9e326b161e23c5b7ea66cd3b76da"
+    },
+    {
+      "path": "cleanup-baseline.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cleanup-baseline.json",
+      "sha256": "3e102235f5175a0ead78a51656910e4d6cad31b03ee5127f61e334a4d2cb550d"
+    },
+    {
+      "path": "cleanup-complete.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cleanup-complete.json",
+      "sha256": "6bf37a0360a566780aac33ac593d0f2382bd9e326b161e23c5b7ea66cd3b76da"
+    },
+    {
+      "path": "cleanup-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cleanup-final.json",
+      "sha256": "6bf37a0360a566780aac33ac593d0f2382bd9e326b161e23c5b7ea66cd3b76da"
+    },
+    {
+      "path": "cumulative-diff-basis.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diff-basis.json",
+      "sha256": "500bdbb0bda376d61cbe3e5e5e0ec5005a7dfd8412aeb3fb96850224c79e77ee"
+    },
+    {
+      "path": "cumulative-diffs/docs/AI_CONTEXT_MAP.md.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/docs/AI_CONTEXT_MAP.md.diff",
+      "sha256": "1182b94f81006f4e94b87cb744cef8997b33f3df808ac251986c5602b6726009"
+    },
+    {
+      "path": "cumulative-diffs/docs/RUNBOOK.md.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/docs/RUNBOOK.md.diff",
+      "sha256": "b055955550dc6a973e42699f5a29da55042543c72d54546e516733e91aff83cc"
+    },
+    {
+      "path": "cumulative-diffs/packages/ask/AGENTS.md.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/packages/ask/AGENTS.md.diff",
+      "sha256": "979302a115858f29571fb2df4f4e56fabdef522e1e9caad60f386989728b3f96"
+    },
+    {
+      "path": "cumulative-diffs/packages/graph/runtime-role.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/packages/graph/runtime-role.ts.diff",
+      "sha256": "de516085264d5df5fa99f7ae8b24776f6f2c6ad882e5b2d1ea3f785be8975945"
+    },
+    {
+      "path": "cumulative-diffs/prisma/AGENTS.md.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/prisma/AGENTS.md.diff",
+      "sha256": "8780353937ca03646029d101d308b5fb0538442b59ae5e7b318d949315c3298e"
+    },
+    {
+      "path": "cumulative-diffs/prisma/roles.sql.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/prisma/roles.sql.diff",
+      "sha256": "d169c579ba19265d439c822b7505f8877095e46f9077248db1993d7ab4dae1c4"
+    },
+    {
+      "path": "cumulative-diffs/prisma/schema.prisma.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/prisma/schema.prisma.diff",
+      "sha256": "7412c979afb6f6239b5a8326e7f0486d1b37000020bd5eec40b23aad483ff915"
+    },
+    {
+      "path": "cumulative-diffs/tests/context-mapper.test.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/tests/context-mapper.test.ts.diff",
+      "sha256": "d8aed15c0dfd976c234494765f2e295fadd08424b5d938a295b5fc2566aaa046"
+    },
+    {
+      "path": "cumulative-diffs/tests/pg/AGENTS.md.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/tests/pg/AGENTS.md.diff",
+      "sha256": "2af78c4a67e9b2268ccc8e6a7496354e71695c5df29c862c736cb5f51884ee28"
+    },
+    {
+      "path": "cumulative-diffs/tests/pg/action-upgrade-s3b.pg.test.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/tests/pg/action-upgrade-s3b.pg.test.ts.diff",
+      "sha256": "81a0134d849bee01dc360362bdd0f3b30134589f12115fb07ba3d8c26d81aab7"
+    },
+    {
+      "path": "cumulative-diffs/tests/pg/action-upgrade-s3c.pg.test.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/tests/pg/action-upgrade-s3c.pg.test.ts.diff",
+      "sha256": "ff0ed4d23c50cc340ac8267852c6920f3fbd7e536c7664de8abc4bf12b69a7ce"
+    },
+    {
+      "path": "cumulative-diffs/tests/support/pg-harness.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/tests/support/pg-harness.ts.diff",
+      "sha256": "1360a02f783694663de7d4241caa26f94302d45ce42df9097eff9f40d5a317fc"
+    },
+    {
+      "path": "cumulative-diffs/tests/support/roles-sql.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/cumulative-diffs/tests/support/roles-sql.ts.diff",
+      "sha256": "fc9e6a0c0bdbd0c6f988d2846b3d1f8967467c0d2bbb24fb2092058af2c5e9c1"
+    },
+    {
+      "path": "final-identity-cleanup.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/final-identity-cleanup.json",
+      "sha256": "b361ba599381ffad13749c441cf069d78c07d59cf111d3f6d5cac421b8c534fc"
+    },
+    {
+      "path": "first-unit-attributed-output.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/first-unit-attributed-output.json",
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    },
+    {
+      "path": "focused-pg.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/focused-pg.log",
+      "sha256": "bd664352090cbab134599f2feaf50f97df2c1ca64083aea45d3aef86ceb54a86"
+    },
+    {
+      "path": "foreign-smoke.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/foreign-smoke.json",
+      "sha256": "76c4e631c8405010d068a16525f51dca962de2880f819828662c2e6a7760cf00"
+    },
+    {
+      "path": "foreign-smoke.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/foreign-smoke.mjs",
+      "sha256": "420a4554c9505f2c4b13b32cee44fa6b7c0d3db460dc169adf63b06a96f5254c"
+    },
+    {
+      "path": "generate-repeat.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/generate-repeat.log",
+      "sha256": "e16e8b0dade8fabc001d8e0580b71acd5839244503902b6fed1ed2abdbc5503f"
+    },
+    {
+      "path": "generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/generate.log",
+      "sha256": "ae24a8be0ea181a0002bbe645e42dd131710baef716d35bebc96bf506cb4015c"
+    },
+    {
+      "path": "identity-start.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/identity-start.json",
+      "sha256": "e6e5802a17fb4cf3449b9b5e97d4918029f622d4318294b56b10b7d9dc846311"
+    },
+    {
+      "path": "implementation-evidence-verification.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/implementation-evidence-verification.json",
+      "sha256": "9b22871001b939ad9082441ff2a6c9909eef826ebe9c42d199bf2bafe1c88cc7"
+    },
+    {
+      "path": "independent-probes.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/independent-probes.json",
+      "sha256": "a4a7da742991e6589750eeb50ddd74ae838b206ea213cbf8f26f3ba73818a497"
+    },
+    {
+      "path": "independent-probes.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/independent-probes.log",
+      "sha256": "64b3be5f33dc7a21658b3c511283ca3cc12d48c8ab8ce87f9d208082bfa59ff5"
+    },
+    {
+      "path": "independent-runs-completion.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/independent-runs-completion.json",
+      "sha256": "3af83c557e83d680579456c3da3b5a80bfaeeb1827942c3588a99324d43fd760"
+    },
+    {
+      "path": "independent-runs-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/independent-runs-final.json",
+      "sha256": "adf58e5d840474739f2b0226d73f3b82be7b2f69788e38366b36160b47796e7d"
+    },
+    {
+      "path": "independent-runs-repeat.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/independent-runs-repeat.json",
+      "sha256": "4f06639c71ac104fa69fa16f867f14e76f34444f67aae0f964091587ff039257"
+    },
+    {
+      "path": "independent-runs.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/independent-runs.json",
+      "sha256": "84d96d28082b4b59e75d2bb0de038e742c086ce58f5285da24b2ceb57dd5d0bf"
+    },
+    {
+      "path": "mutation-evidence-review.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/mutation-evidence-review.json",
+      "sha256": "594b448c0d5d6c2ea043d1fd45bc27eed673ffa77505c48e909d5f481b9d62b0"
+    },
+    {
+      "path": "native-model-receipt-check.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/native-model-receipt-check.json",
+      "sha256": "37d42109cc7dc5fa2a44a82445276f935ff6cb1bbff3f7ef9c7017f64c311bb0"
+    },
+    {
+      "path": "nonsuper-upgrade.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/nonsuper-upgrade.json",
+      "sha256": "33ff4d71c27293b77b3a90ab5bbbd7bdfedd9745dcf4a90bac80d7282085d165"
+    },
+    {
+      "path": "nonsuper-upgrade.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/nonsuper-upgrade.log",
+      "sha256": "f052d9744866d648f4c1b6fc9872a0e34ddcb2027acab74c2af5824a2698b94c"
+    },
+    {
+      "path": "npm-ci.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/npm-ci.log",
+      "sha256": "17e87bbe23bf4257c94b9eefb6fdc7fa09bad415a9d0f6aa06afa00b8897bd13"
+    },
+    {
+      "path": "original-inventory.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/original-inventory.json",
+      "sha256": "777da19b7aab2b40ab7c32dee908df8073b91ada4be3fbb5436ad24e44e47bb8"
+    },
+    {
+      "path": "pg-runner-initial.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/pg-runner-initial.py",
+      "sha256": "c16e3ba32ca5a3b2bc09936a6c8b46253f609fcbda22ceec1589b387d34c337c"
+    },
+    {
+      "path": "pg-runner-second.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/pg-runner-second.py",
+      "sha256": "267a1d51f9c459ed46d89a056fb0fb4a0ff753a718a7df911297aa31deeee6c7"
+    },
+    {
+      "path": "pg-runner-third.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/pg-runner-third.py",
+      "sha256": "652c24bd4c7f64701445362370b154dae2181ccc8a248fcbabb8f193d07bc295"
+    },
+    {
+      "path": "pg-runner.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/pg-runner.py",
+      "sha256": "a8390f585c1b694c935d5876a2f2351c157d14f62fcf917cf65d765a7ffca570"
+    },
+    {
+      "path": "prune.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/prune.log",
+      "sha256": "a711a0bae678f3be2476fe85f78a37eeb471186fee26685d10a6b304e1462958"
+    },
+    {
+      "path": "rc2-diffs/docs/RUNBOOK.md.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/docs/RUNBOOK.md.diff",
+      "sha256": "5715a8f4b3369de8ddcb644faf7b217cbe424106945225d6ae82bde1c0a80b01"
+    },
+    {
+      "path": "rc2-diffs/packages/ask/remote/AGENTS.md.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/packages/ask/remote/AGENTS.md.diff",
+      "sha256": "80f535207c713ea76671593f3f0b611a61eada266f22e9a53fb9c9e0ade18b50"
+    },
+    {
+      "path": "rc2-diffs/packages/ask/remote/budget.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/packages/ask/remote/budget.ts.diff",
+      "sha256": "9973fe0e3a919f03592afeeef11ed477d003a1134020021c8ba46cd397388bc8"
+    },
+    {
+      "path": "rc2-diffs/packages/graph/ask-remote-role.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/packages/graph/ask-remote-role.ts.diff",
+      "sha256": "a5788ed296740a2cd781c21f6086315f87ba53440d3f1f5965bc231914a5db42"
+    },
+    {
+      "path": "rc2-diffs/prisma/migrations/202610111010_stage5_ask_remote_state/migration.sql.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/prisma/migrations/202610111010_stage5_ask_remote_state/migration.sql.diff",
+      "sha256": "c2bfbdf90389e551de7a8d35c2ac2d54507a4ca45425c1e4d845ae9dd8eb7679"
+    },
+    {
+      "path": "rc2-diffs/prisma/migrations/202610111020_stage5_ask_remote_routines/migration.sql.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/prisma/migrations/202610111020_stage5_ask_remote_routines/migration.sql.diff",
+      "sha256": "d2e99caa16dd281a414cd9332121f2f4351e0eea0c7f8a7abe89f26293bd9942"
+    },
+    {
+      "path": "rc2-diffs/tests/ask-remote-budget.test.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/tests/ask-remote-budget.test.ts.diff",
+      "sha256": "e1335513c223b4760aa7d0b22a4b7ad642e83817246e3bd569ee9fe1d39f8880"
+    },
+    {
+      "path": "rc2-diffs/tests/pg/ask-remote-ledger.pg.test.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/tests/pg/ask-remote-ledger.pg.test.ts.diff",
+      "sha256": "4372621c0d01028cee124a414b2c49b041e3bdedc24c62b4f01c645ce7eb4373"
+    },
+    {
+      "path": "rc2-diffs/tests/pg/ask-remote-policy.pg.test.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/tests/pg/ask-remote-policy.pg.test.ts.diff",
+      "sha256": "554ff8b4f79569e6329f2e3a884ac075199ad05e37af36a80e616fa9e62ec608"
+    },
+    {
+      "path": "rc2-diffs/tests/pg/ask-remote-roles.pg.test.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/tests/pg/ask-remote-roles.pg.test.ts.diff",
+      "sha256": "d8bffdd6041e4892d4cadbf1022f8558ba25bb3f3fbb73255adfd501056fb97c"
+    },
+    {
+      "path": "rc2-diffs/tests/support/ask-remote-pg.ts.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/rc2-diffs/tests/support/ask-remote-pg.ts.diff",
+      "sha256": "05699b05335f39773d48abc2e7454e8ce2f0a3ff438e4b8f5c2d6d03cd66af9b"
+    },
+    {
+      "path": "resources-after.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/resources-after.log",
+      "sha256": "d8ae6c3e33a228213efebfd6a1c194e3dc0f0f6a578ee4113dc44f0ce28097fd"
+    },
+    {
+      "path": "resources-before.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/resources-before.log",
+      "sha256": "d8ae6c3e33a228213efebfd6a1c194e3dc0f0f6a578ee4113dc44f0ce28097fd"
+    },
+    {
+      "path": "resources-complete.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/resources-complete.log",
+      "sha256": "d8ae6c3e33a228213efebfd6a1c194e3dc0f0f6a578ee4113dc44f0ce28097fd"
+    },
+    {
+      "path": "resources-final.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/resources-final.log",
+      "sha256": "d8ae6c3e33a228213efebfd6a1c194e3dc0f0f6a578ee4113dc44f0ce28097fd"
+    },
+    {
+      "path": "scratch-prune-lock.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/scratch-prune-lock.diff",
+      "sha256": "7132704d3086dbf4c3f5a56a5b5fd5325ccbd8a1233c6c6708a3705de0a41e3a"
+    },
+    {
+      "path": "sealed-copy-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/sealed-copy-final.json",
+      "sha256": "a7e71177cb5bf8ca54b23d453cf42f009dcc296af09d42ea6f9e2be3ad574c12"
+    },
+    {
+      "path": "source/review/independent.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/source/review/independent.ts",
+      "sha256": "aa3aaaef89675fa50b0697e414230effa38c0acdb5e5c94f057206daecf6c757"
+    },
+    {
+      "path": "source/review/nonsuper-upgrade.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/source/review/nonsuper-upgrade.ts",
+      "sha256": "672a08fbc46540e0034484cbf65cb4d41811b99061628b37c6d3395730081549"
+    },
+    {
+      "path": "source/review/resources.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/source/review/resources.ts",
+      "sha256": "f00025d6e64fbaf438de42318b30d1a7a24809eac0d085100633ee5588ecc592"
+    },
+    {
+      "path": "typecheck-repeat.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/typecheck-repeat.log",
+      "sha256": "c321daca14b4fde24f36b1d8f60f8a8e6833a202a787667fdd08176152852c0d"
+    },
+    {
+      "path": "typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/typecheck.log",
+      "sha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41"
+    },
+    {
+      "path": "unit-clean.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/unit-clean.log",
+      "sha256": "a38280c51fd3c966f9d5957dce07192f6e8400667cc86701cca5d0d4b38fe0e4"
+    },
+    {
+      "path": "unit-git.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/unit-git.log",
+      "sha256": "3f6b13e75df635fa87f3affefb3756894b224fafc452064962dc201b960b8ce6"
+    },
+    {
+      "path": "unit.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/unit.log",
+      "sha256": "675181ccb0e74a2ad4c88b99e692b8d3774543ed70908a492e00718b12c9e01c"
+    },
+    {
+      "path": "EVIDENCE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/ra/review-rc2/astra/EVIDENCE.json",
+      "sha256": "1a21f23112ca19ea96044f2ad7b0f2f8c32bfb15fdc5a86754d88b62e079381b"
+    }
+  ],
+  "elapsedSeconds": 729.96,
+  "elapsedQualification": "Assignment to final evidence-file write wall time; not attributable billing/usage",
+  "model": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "freshContext": true,
+  "residuals": [
+    "SQL NO_DISPATCH trusts caller. Fresh-connection refund within window is observed; R-B must prove private in-process dispatch/refund ownership.",
+    "R-A does not prove bearer/permission composition, provider transport/model quality, R-B clocks/floor/drain, provider usage authenticity or invoice cap.",
+    "R-B/R-C, paid admission, R-EVAL, real tenant use, LIVE and deployment are outside approval."
+  ],
+  "nonblockingNotes": [
+    {
+      "id": "N1",
+      "priority": "P3",
+      "file": "packages/ask/remote/budget.ts",
+      "line": 59,
+      "summary": "utcPeriods fixed ISO slicing mishandles expanded-year Dates; no production caller or present admitted-clock reachability",
+      "suggestion": "Constrain supported civil years or derive full date/month without fixed offsets before arbitrary-date use",
+      "proof": "independent-probes.json"
+    }
+  ]
+}

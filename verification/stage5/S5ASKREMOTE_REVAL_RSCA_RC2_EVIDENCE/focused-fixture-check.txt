@@ -1,0 +1,19 @@
+# REVAL_EVIDENCE FIXTURE_CHECK latency 296 ms (Docker TCP seam; regression evidence only)
+# REVAL_EVIDENCE FIXTURE_CHECK latency 262 ms (Docker TCP seam; regression evidence only)
+✔ FIXTURE_CHECK through C → V: exact 03 payload, every proof true, within the 1800 ms budget; V and its backend gone (1151.128375ms)
+✔ a generation change while V runs → FIXTURE_MISMATCH (never a stale success); the next check proves the new generation (2178.738125ms)
+✔ RS-B N1 (P3): the policy turns ACTIVE while V runs → snapshot #2 refuses POLICY_CHANGED (no positive payload) (993.035708ms)
+✔ RS-B N1 (P1, F9): V connected as the table owner is refused UNAUTHORIZED by the accepted runtime confinement check (612.642667ms)
+✔ RS-B N1 (P2, F6): a source-read statement timeout is DEADLINE, never all-false proof booleans (687.007833ms)
+✔ the verifier re-checks current authority without a bearer: suspended designated actor → FAILURE UNAUTHORIZED (632.813416ms)
+✔ rc2 F1: FIXTURE_CHECK permits only the PAUSED binding — an ACTIVE policy is refused POLICY_CHANGED (no positive payload) (378.568416ms)
+✔ rc2 F3: an accounting change while V runs → financeUnchanged:false (all other proofs still true) (993.034375ms)
+✔ rc2 F3: a generation change AFTER V committed (before snapshot #2) → FIXTURE_MISMATCH, never a stale success (1089.372333ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9919.996125

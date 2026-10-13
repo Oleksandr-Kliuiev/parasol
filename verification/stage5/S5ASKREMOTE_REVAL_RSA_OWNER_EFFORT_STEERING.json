@@ -1,0 +1,16 @@
+{
+  "ownerInstruction": "\u0435\u0441\u043b\u0438 \u0432 \u044d\u0442\u043e\u0442 \u0440\u0430\u0437 \u043f\u0440\u0438\u0435\u043c\u043a\u0438 \u043d\u0435 \u0431\u0443\u0434\u0435\u0442, \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044e effort - xhigh",
+  "interpretation": "If current repaired RC2 fails to obtain dual code acceptance due required findings, next repair uses SAME native Opus5.5 author session at explicit xhigh. Current in-flight RC2 author phase remains medium until verdict. Reviewers remain xhigh.",
+  "scope": "Current RS-A implementation repairs; does not change architecture, billing, activation or other project stages",
+  "trigger": "Completed current RC2 independent acceptance round requires changes / lacks dual approval due findings",
+  "nextImplementationModel": "claude-opus-5-5",
+  "nextImplementationEffort": "xhigh",
+  "sameSessionId": "642adc68-1d33-4c80-be48-6c8135833222",
+  "status": "TRIGGERED_RC2_BOTH_CHANGES_REQUIRED_NEXT_REPAIR_XHIGH",
+  "recordedUtc": "2026-10-11T15:07:50.163180+00:00",
+  "rootCheckoutWriteOwnership": "Still native author; this preference record is /tmp only until author stops",
+  "triggerArtifact": "S5ASKREMOTE-REVAL-RSA-rc2",
+  "triggerPackageHash": "cd13f162c0eabc555bff18460820127aa3b7aeef82396be6e0739726e11817df",
+  "effectiveNextImplementationEffort": "xhigh",
+  "updatedUtc": "2026-10-11T16:48:03.443863+00:00"
+}

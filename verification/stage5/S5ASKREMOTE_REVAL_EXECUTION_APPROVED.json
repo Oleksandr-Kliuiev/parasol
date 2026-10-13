@@ -1,0 +1,43 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-EXECUTION-rc3",
+  "packageHash": "c9f84e82fb3be9b00c7f7b7595047e62a376fd630c1c958e2fe31e45c0ba8ca4",
+  "scope": "LOCAL execution instrument preparation only; no live/data/budget/human admission",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "manifest": {
+    "path": "verification/stage5/S5ASKREMOTE_REVAL_EXECUTION_RC3_MANIFEST.json",
+    "sha256": "a650a4edf2af891b25389b496f798c1ab70745a89cf0a735300ef2b2ebe14ff8"
+  },
+  "package": {
+    "path": "verification/stage5/S5ASKREMOTE_REVAL_EXECUTION_RC3_PACKAGE.zip",
+    "sha256": "0bd22889d7e0d52827aa1eadf1db15c7ad31fb5ab300a3743c8d9d80f760b593"
+  },
+  "checks": {
+    "path": "verification/stage5/S5ASKREMOTE_REVAL_EXECUTION_RC3_CHECKS.json",
+    "sha256": "80339e9a58772a9c199b27e126880327329dd17284abbeb1f6f7a8d196d8006c"
+  },
+  "reviews": [
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh",
+      "verdict": "APPROVE_LOCAL_EXECUTION_PREPARATION",
+      "report": "docs/stage5/reviews/SOL_S5ASKREMOTE_REVAL_EXECUTION_RC3.md",
+      "sha256": "5f6f1255dcea2ce7142e042c61b0319569b03696d4ebe651ec6de1ad0e00b589",
+      "backendTelemetry": "UNAVAILABLE"
+    },
+    {
+      "model": "claude-opus-5-5",
+      "effort": "xhigh",
+      "actualResponseModels": [
+        "claude-opus-5-5"
+      ],
+      "verdict": "APPROVE_LOCAL_EXECUTION_PREPARATION",
+      "report": "docs/stage5/reviews/OPUS_S5ASKREMOTE_REVAL_EXECUTION_RC3.md",
+      "sha256": "8654126b4b314914f9aac0030f91a6835986b8c35dfba34b9ceea3dd9fcf3f7a",
+      "responseModelEvidence": "verification/stage5/S5ASKREMOTE_REVAL_EXECUTION_RC3_OPUS_EVIDENCE.json"
+    }
+  ],
+  "paidProductCalls": 0,
+  "humanAttestation": "PENDING",
+  "dataBudgetAdmission": "NOT_ADMITTED",
+  "liveAcceptanceEligible": false
+}

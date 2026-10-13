@@ -256,13 +256,16 @@ export async function checkMappingStructure(owner: SqlRunner): Promise<void> {
     ",'QUARANTINED','tech',now(),'CONFLICTS_WITH_CONFIRMED','l1'"));
   await rejects(owner.exec(`UPDATE "EntityLink" SET status = 'CONFIRMED', "confirmedBy" = 'tech', "confirmedAt" = now() WHERE id = 'q-ok'`), /one_confirmed_external/);
   // Connection: status vocabulary, provenance for live bindings, immutable tenant
-  await rejects(owner.exec(`UPDATE "Connection" SET status = 'LIVE' WHERE id = 'a'`), /Connection_status_check/);
-  await rejects(owner.exec(`UPDATE "Connection" SET status = 'ACTIVE' WHERE id = 'a'`), /live_binding_check/);
-  await owner.exec(`UPDATE "Connection" SET status = 'ACTIVE', "boundBy" = 'admin', "boundAt" = now() WHERE id = 'a'`);
+  await rejects(owner.exec(`UPDATE "Connection" SET status = 'LIVE', "lifecycleVersion" = "lifecycleVersion" + 1 WHERE id = 'a'`), /Connection_status_check/);
+  await rejects(owner.exec(`UPDATE "Connection" SET status = 'ACTIVE', "lifecycleVersion" = "lifecycleVersion" + 1 WHERE id = 'a'`), /live_binding_check/);
+  // Stage 2 (migration 202610081000): every status change increments the monotonic lifecycleVersion
+  await rejects(owner.exec(`UPDATE "Connection" SET status = 'ACTIVE', "boundBy" = 'admin', "boundAt" = now() WHERE id = 'a'`), /increment lifecycleVersion/);
+  await owner.exec(`UPDATE "Connection" SET status = 'ACTIVE', "boundBy" = 'admin', "boundAt" = now(), "lifecycleVersion" = "lifecycleVersion" + 1 WHERE id = 'a'`);
+  await rejects(owner.exec(`UPDATE "Connection" SET "lifecycleVersion" = 0 WHERE id = 'a'`), /monotonic/);
   await rejects(owner.exec(`UPDATE "Connection" SET "externalTenantId" = 'atera-someone-else' WHERE id = 'a'`), /binding is immutable/);
   await rejects(owner.exec(`UPDATE "Connection" SET "boundBy" = 'someone-else' WHERE id = 'a'`), /provenance is immutable/);
   await rejects(owner.exec(`INSERT INTO "Connection" VALUES ('w','c2','a-dup','atera','atera-demo','fixture://none','DISABLED')`), /duplicate key/);
-  await owner.exec(`UPDATE "Connection" SET status = 'DISABLED' WHERE id = 'a'`);
+  await owner.exec(`UPDATE "Connection" SET status = 'DISABLED', "lifecycleVersion" = "lifecycleVersion" + 1 WHERE id = 'a'`);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,154 @@
+// ---------------------------------------------------------------------------------------------------------------------
+// Stage 3 governed actions (docs/stage3/03_DATA_AND_CONCURRENCY.md, migrations 202610091000/1100). Every key and reference
+// carries workspace and client; signer identities are scoped token rows (workspace, actor, token). CHECKs, the authority
+// fence, immutability/lifecycle triggers and ENABLE+FORCE RLS live in the migrations; runtime grants in prisma/roles.sql.
+// Approvals, attempts, verifications and synthetic tickets are defined for later checkpoints; S3-A only creates requests.
+// ---------------------------------------------------------------------------------------------------------------------
+/// One row per workspace; version is the authority epoch. Incremented by the SECURITY DEFINER fence trigger on every
+/// Actor/ClientMembership/ApiToken/Connection mutation; created at version 0 when the workspace is inserted. Runtime
+/// may only lock it (SELECT ... FOR UPDATE through UPDATE(workspaceId)); version changes only by +1 (trigger).
+model ActionAuthorityFence {
+  workspaceId String    @id
+  version     Int       @default(0)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ActionAuthorityFence_workspace_fkey")
+}
+/// Immutable stored intent: canonical input, its hash, the requester's signing token row and expiry snapshot, the bound
+/// connection snapshot and the authority epoch. Private content (markedTitle, description) never leaves through public
+/// output. state/safeErrorCode/updatedAt mutable; resultTicketId and terminalAt set once.
+model ActionRequest {
+  workspaceId                String
+  clientId                   String
+  id                         String    @db.Uuid
+  connectionId               String
+  requesterActorId           String
+  requesterTokenId           String
+  requesterTokenExpiresAt    DateTime?
+  idempotencyKey             String    @db.Uuid
+  intentHash                 String
+  dtoVersion                 String
+  actionType                 String
+  actionVersion              String
+  policyVersion              String
+  portVersion                String
+  mode                       String
+  connectionSystem           String
+  customerKey                String
+  connectionLifecycleVersion Int
+  secretRefDigest            String
+  authorityEpoch             Int
+  markedTitle                String
+  description                String
+  marker                     String
+  canonicalInput             Json
+  inputHash                  String
+  state                      String    @default("AWAITING_APPROVAL")
+  safeErrorCode              String?
+  resultTicketId             String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @default(now())
+  terminalAt                 DateTime?
+  connection                 Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "ActionRequest_connection_fkey")
+  requesterToken             ApiToken   @relation(fields: [workspaceId, requesterActorId, requesterTokenId], references: [workspaceId, actorId, id], onDelete: Restrict, onUpdate: Restrict, map: "ActionRequest_requesterToken_fkey")
+  approvals                  ActionApproval[]
+  attempt                    ActionAttempt?
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, clientId, requesterActorId, idempotencyKey], map: "ActionRequest_idempotency_key")
+  @@unique([workspaceId, clientId, id, requesterActorId, inputHash, authorityEpoch], map: "ActionRequest_binding_key")
+  @@index([workspaceId, clientId, createdAt, id], map: "ActionRequest_list_idx")
+}
+/// One decision per request (S3-B). Bound to the exact request hash and epoch (scoped FK); signer ≠ requester (CHECK).
+model ActionApproval {
+  workspaceId            String
+  clientId               String
+  id                     String    @db.Uuid
+  requestId              String    @db.Uuid
+  requesterActorId       String
+  requestHash            String
+  authorityEpoch         Int
+  actionVersion          String
+  policyVersion          String
+  portVersion            String
+  mode                   String
+  signerActorId          String
+  signerTokenId          String
+  approverTokenExpiresAt DateTime?
+  decision               String
+  decidedAt              DateTime
+  approvedAt             DateTime?
+  expiresAt              DateTime?
+  consumedAt             DateTime?
+  revokedAt              DateTime?
+  safeErrorCode          String?
+  request                ActionRequest @relation(fields: [workspaceId, clientId, requestId, requesterActorId, requestHash, authorityEpoch], references: [workspaceId, clientId, id, requesterActorId, inputHash, authorityEpoch], onDelete: Restrict, onUpdate: Restrict, map: "ActionApproval_request_fkey")
+  signerToken            ApiToken      @relation(fields: [workspaceId, signerActorId, signerTokenId], references: [workspaceId, actorId, id], onDelete: Restrict, onUpdate: Restrict, map: "ActionApproval_signerToken_fkey")
+  attempts               ActionAttempt[]
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, clientId, requestId], map: "ActionApproval_request_key")
+  @@unique([workspaceId, clientId, id, requestId], map: "ActionApproval_attempt_key")
+}
+/// The single lifetime create attempt of a request (S3-C), with its durable verification claim fields.
+model ActionAttempt {
+  workspaceId               String
+  clientId                  String
+  id                        String    @db.Uuid
+  requestId                 String    @db.Uuid
+  approvalId                String    @db.Uuid
+  attemptToken              String    @db.Uuid
+  createNonce               String    @db.Uuid
+  reservedAt                DateTime
+  startDeadlineAt           DateTime
+  state                     String    @default("RESERVED")
+  originalTicketId          String?
+  verifiedTicketId          String?
+  safeErrorCode             String?
+  outcomeAt                 DateTime?
+  updatedAt                 DateTime  @default(now())
+  verificationCount         Int       @default(0)
+  verificationSeq           Int       @default(0)
+  verificationState         String    @default("IDLE")
+  activeVerificationToken   String?   @db.Uuid
+  activeVerificationOrdinal Int?
+  activeStartedAt           DateTime?
+  activeDeadlineAt          DateTime?
+  activeCandidateId         String?
+  request                   ActionRequest  @relation(fields: [workspaceId, clientId, requestId], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "ActionAttempt_request_fkey")
+  approval                  ActionApproval @relation(fields: [workspaceId, clientId, approvalId, requestId], references: [workspaceId, clientId, id, requestId], onDelete: Restrict, onUpdate: Restrict, map: "ActionAttempt_approval_fkey")
+  verifications             ActionVerification[]
+  @@id([workspaceId, clientId, id])
+  @@unique([workspaceId, clientId, requestId], map: "ActionAttempt_request_key")
+  @@unique([workspaceId, clientId, approvalId], map: "ActionAttempt_approval_key")
+  @@unique([workspaceId, clientId, id, createNonce], map: "ActionAttempt_nonce_key")
+}
+/// One consumed verification ordinal (1..3, never refunded or replaced). One ACTIVE row per attempt (partial unique index).
+model ActionVerification {
+  workspaceId    String
+  clientId       String
+  attemptId      String    @db.Uuid
+  ordinal        Int
+  targetKind     String
+  nonce          String    @db.Uuid
+  targetTicketId String
+  requestHash    String
+  createNonce    String    @db.Uuid
+  startedAt      DateTime
+  deadlineAt     DateTime
+  state          String    @default("ACTIVE")
+  completedAt    DateTime?
+  safeErrorCode  String?
+  attempt        ActionAttempt @relation(fields: [workspaceId, clientId, attemptId, createNonce], references: [workspaceId, clientId, id, createNonce], onDelete: Restrict, onUpdate: Restrict, map: "ActionVerification_attempt_fkey")
+  @@id([workspaceId, clientId, attemptId, ordinal])
+}
+/// Built-in synthetic ticket store (S3-C). Immutable; never ExternalEntity/RawEvent/ResourceSnapshot or live evidence.
+model ActionMockTicket {
+  workspaceId  String
+  clientId     String
+  connectionId String
+  id           String     @db.Uuid
+  synthetic    String     @default("S3_SYNTHETIC")
+  customerKey  String
+  markedTitle  String
+  description  String
+  createdAt    DateTime   @default(now())
+  connection   Connection @relation(fields: [workspaceId, clientId, connectionId], references: [workspaceId, clientId, id], onDelete: Restrict, onUpdate: Restrict, map: "ActionMockTicket_connection_fkey")
+  @@id([workspaceId, clientId, connectionId, id])
+}

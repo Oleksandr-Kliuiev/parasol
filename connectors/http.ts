@@ -21,7 +21,7 @@ export function retryAfterSeconds(value: string | null, now: number = Date.now()
   return Number.isFinite(at) ? String(Math.min(3600, Math.max(0, Math.ceil((at - now) / 1000)))) : '60';
 }
 
-async function boundedText(response: Response, maxBytes: number): Promise<string> {
+export async function boundedText(response: Response, maxBytes: number): Promise<string> {
   const declared = Number(response.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBytes) {
     await response.body?.cancel().catch(() => undefined);

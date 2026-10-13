@@ -1,0 +1,13 @@
+{
+  "from": "da5932f84d426215cc898412e016cf50f8c0d0cc32017aba55f05ddcc335785b",
+  "to": "d706a437b2e77ccb215080d4676d2ae70fee53376636d3d9040590d5d8f2dc3a",
+  "changed": [
+    "docs/stage5/ask/remote/eval/IMPLEMENTATION_REPORT.md",
+    "docs/stage5/ask/remote/eval/README.md",
+    "scripts/ask-remote-eval/scenarios.ts"
+  ],
+  "scope": "docs and one scenario comment only; no behavioral change",
+  "priorCodeVerificationRetained": "verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_RC2_CHECKS.json",
+  "provenanceRestoredVerbatimFromRc1": true,
+  "corpusFixturesAndReceiptUnchanged": true
+}

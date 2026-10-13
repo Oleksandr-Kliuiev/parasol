@@ -1,0 +1,128 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSD-C-rc2",
+ "window": [
+  "2026-10-13T10:54:18Z",
+  "2026-10-13T12:14:30Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run ui:typecheck",
+   "result": "pass",
+   "log": "ui-typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build (both consoles)",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/build-inventory.ts --check",
+   "result": "pass (the sealed build inventory equals a fresh api:build)",
+   "log": "build-inventory.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/cli.ts artifact-check",
+   "result": "pass: ok true, drift [], candidate RS-D-C c6ed0a1934a6fd0bb397d890d684fefd39a0e6b1b65347a90bf9580694cec635 accepted:false (RS-D-B pinned, 44 outputs pinned by the build inventory)",
+   "log": "artifact-check.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts",
+   "result": "618 tests: 609 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (diffed against rc1: same files); no RS-D-C failure",
+   "log": "unit.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg",
+   "result": "781 tests: 772 pass, 8 fail, 1 skipped",
+   "qualification": "NOT a clean pass. The 8 failures (reval-closure executor lifetime; reval-eval-e2e one case; reval-fixture-check x4; reval-launch-controls R1; reval-launch real PTY) are FAILURE DEADLINE / CENSUS_UNAVAILABLE timing refusals of the bounded-latency checks while the host load average was 5.7-7.2 and the Docker VM used ~134% CPU; all of them passed in the focused rc2 run and in rc1. The skip is the rehearsal file without its flag (run below). See the re-run entries.",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test --test-concurrency=1 tests/pg/{reval-closure,reval-eval-e2e,reval-fixture-check,reval-launch-controls,reval-launch}.pg.test.ts (after test:ui, load ~5-6)",
+   "result": "29 tests: 28 pass, 1 fail",
+   "qualification": "all 7 other earlier failures pass; reval-eval-e2e \"one case\" again FAILURE CENSUS_UNAVAILABLE at its FIRST FIXTURE_CHECK (cold reader connect inside the 1800 ms FIXTURE_CHECK budget)",
+   "log": "test-pg-rerun.txt"
+  },
+  {
+   "command": "reval-eval-e2e repeated: the single test alone; the whole file alone twice; reval-closure then reval-eval-e2e sequentially",
+   "result": "4/4 pass (1 + 2 + 2 + 8 tests)",
+   "qualification": "the one-case test fails only under host load (2 of 6 runs, both with load average >= 5); recorded as a load-sensitive residual of the bounded first FIXTURE_CHECK, not as a pass of the full suite. RS-D-C does not change the FIXTURE_CHECK path: fixture-check.ts, snapshot-reader.ts and physical.ts equal the RS-D-C baseline; the controller.ts changes are the processInventory move and the ServerLink config path.",
+   "log": "test-pg-e2e-repeat-1.txt, test-pg-e2e-repeat-2.txt, test-pg-e2e-repeat-3.txt, test-pg-e2e-repeat-4.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_REHEARSAL=1 node --experimental-strip-types --test tests/pg/reval-rehearsal.pg.test.ts",
+   "result": "1 pass (2680 s)",
+   "qualification": "integrated offline rehearsal on the rc2 tree: 200 cases, 11 segments, 10 boundaries with S/C up (switch to generation 11), 2 mid-segment re-pairs via pair-ack, ONE guard epoch, every census MATCH, 12 proofs, run state COMPLETE_PENDING_REVIEW, receipt v6 bound to the registered build; Docker PG17 regression evidence, offline scripted provider, no key",
+   "log": "rehearsal.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_E2E_200=1 npm run test:ui",
+   "result": "90 passed (21.9 min)",
+   "qualification": "200 COMMITTED, semantic MATCH, truth true, FX10 MISSING 15 (1181 s)",
+   "log": "test-ui.txt"
+  },
+  {
+   "command": "python3 mutations-harness.py (RS-D-C rc2: 35 single-line mutations \u2014 the 22 rc1 mutations whose rules remain (D10/D16 targeted the removed BUILD_CHANGED, D25/D26 the replaced pair-id bound) plus E01\u2013E13 for the rc2 rules; each restored and sha-verified; S-side mutations rebuild dist per mutation)",
+   "result": "34/35 detected; D07 survives (qualified in IMPLEMENTATION_REPORT_C.md \u00a74: the RS-D-B seal sha anchor makes the status cross-check a redundant layer)",
+   "log": "mutations.txt"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSDC_RC2_EVIDENCE",
+ "logs": {
+  "artifact-check.txt": "9fc0b7c65b80e8f0947185b315188b96d56f83e8ae3df15678c37fc53d002442",
+  "build-inventory.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "build.txt": "d453750ee883dbbdc04fce661ae45e53e7533454073566ff842c50b3d230e3d3",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "5f4dc276d4b60c1ea36ba1169e3ab0c4e1d2606aa002f6084a3bb61202670636",
+  "finished.txt": "8e200ee278fb3523f9a925d750708d99c6762157f20a1d375b0a590a5005c658",
+  "mutations-harness.py": "2e791959fcdd2ab675bf2abbfa8f6f34301a9ca49900394b9bcd9ae890ac0062",
+  "mutations.txt": "773561dd049dc0bcee85bf28f5f2d4091cbedca66cb29c93779f8a92a930470a",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "rehearsal.txt": "2f908702ac1ffdf2b1f655acb2d6e8e9c0c2839599648ab14144c45fcabd0d23",
+  "schema.txt": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "b8ac0e57a2b49284158db80ef617bed43e69246966db9c9d1f8462adeacdc390",
+  "test-pg-e2e-repeat-1.txt": "1060dcd1c97b63fffa3fdea61d97c17d4d35828cad86f1707356c35e3db80bab",
+  "test-pg-e2e-repeat-2.txt": "b4ba2995330d368de90460ea33ad7b3c63b09051f8ec6c8adab6e0a16de9ac60",
+  "test-pg-e2e-repeat-3.txt": "6bec977a8f3d2d6dbe3efc733e9ed795a22725e90947946e7c2acfc1f3d621f1",
+  "test-pg-e2e-repeat-4.txt": "1e2b759cffb198a45f94c10928dc71d36e17bebad9b36d068e60462becc3188b",
+  "test-pg-rerun-started.txt": "b565f67e5f80f3ac79c09a25c8bfce5cc0cab09d9ac241dce4d6bdfa62002af7",
+  "test-pg-rerun.txt": "47af4fb6e27f646154ff03204ee2813d9512feaf60e6251d30af1a0694f17813",
+  "test-pg.txt": "ac5f1b2687dce40718b3bc160ebb762d5f6cba40b33528f7a8a73808484d5d12",
+  "test-ui.txt": "2106e3a7bebdedb78f671820b618497eb255aeda3743294724dd3188f5288832",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "ui-typecheck.txt": "94e4d3c0eae80d5541012e49723e5f5969b4d419b6c71a9b6d28e7f3068ef449",
+  "unit.txt": "191e21a15c7d352844020eda82f40331751b021c614f82bae957e1bffb8768a6"
+ },
+ "windowNote": "suite 10:54:18Z-12:10:10Z (finished.txt); the PG re-runs and repeats followed it (test-pg-rerun-started.txt)"
+}

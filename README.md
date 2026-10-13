@@ -1,6 +1,8 @@
 # Vardahei Atlas — Stage 1 v1.1.3
 
-Start with [START_HERE_RU.md](START_HERE_RU.md). Branch `stage1/foundation` implements tasks 1.1–1.10 on top of the pack (Checkpoint C awaits review); status, verification and open gates: [CHECKPOINT_REPORT.md](CHECKPOINT_REPORT.md); setup, operation and the live-read gate: [docs/RUNBOOK.md](docs/RUNBOOK.md); verified results by environment: [verification/RESULTS.md](verification/RESULTS.md).
+Stage 1 tasks 1.1–1.10 are accepted in the mock/recorded scope: [Checkpoint C review](REVIEW_REPORT.md), C1–C3 closed. Live-read remains open. Next work: [reconciled roadmap](docs/ROADMAP.md) and [Stage 2 M365 Correlation pack](docs/stage2/README.md); its actual architectural verdicts are in [review status](docs/stage2/REVIEW_STATUS.md).
+
+For the imported reference pack start with [START_HERE_RU.md](START_HERE_RU.md). Implementation details and open gates: [CHECKPOINT_REPORT.md](CHECKPOINT_REPORT.md); operation: [docs/RUNBOOK.md](docs/RUNBOOK.md); verified results by environment: [verification/RESULTS.md](verification/RESULTS.md). Historical future-tense descriptions in the imported pack do not override the dated review.
 
 The branch adds to the pack: a DB-backed API through a confined runtime role (RLS), per-client memberships with token authentication, a mapping workflow, read-only Atera/Huntress adapters with snapshot sync, a durable event inbox and worker, a decision layer (rules baseline, shadow/advisory OpenAI Decisions with guard and telemetry), observation lifecycle and pages, a ledgered read-tool gateway, and an operator CLI. Everything is tested against PGlite and a real PostgreSQL 17 server with mock vendors and a scripted Decisions endpoint. **No live vendor or Decisions call has been made** (no credentials), and it is not a production-ready system.
 
@@ -24,7 +26,7 @@ packages/audit/       allowlisted client audit and workspace security audit (in-
 packages/auth/        bearer tokens (digest only) and database authentication to Actor with per-client memberships
 connectors/           read-only Atera/Huntress adapters (GET-only transport, DTO validation), contracts in connectors/CONTRACTS.md
 fixtures/             synthetic Gasta graph and shared demo composition
-prisma/               schema, migrations (three frozen pack migrations + Stage 1 migrations), roles.sql (runtime role), upgrades/, synthetic seed
+prisma/               schema folder (schema.prisma + m365.prisma), migrations (three frozen pack migrations + Stage 1/2 migrations), roles.sql (managed roles), upgrades/, synthetic seed
 scripts/              demo CLI, API smoke, pg17-check (real PostgreSQL 17 SQL checks), schema-drift-check, ops (operator CLI)
 docs/                 normative specification, implementation plan, acceptance matrix (06), RUNBOOK
 prompts/              implementation/review tasks and checkpoint template

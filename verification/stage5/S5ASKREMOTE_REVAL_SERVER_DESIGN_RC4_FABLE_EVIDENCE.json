@@ -1,0 +1,72 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc4",
+  "packageHash": "9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163",
+  "requestedModel": "claude-fable-5-1",
+  "effort": "xhigh",
+  "actualAssistantMessageModels": [
+    "claude-fable-5-1"
+  ],
+  "sessionId": "34e9b516-d470-4837-9a77-5f570a3feec5",
+  "freshInitialContext": true,
+  "initialReviewArtifact": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc2",
+  "boundedOwnSessionReReview": true,
+  "RC3WithdrawnWithoutVerdict": true,
+  "preflight": {
+    "auth": {
+      "loggedIn": true,
+      "authMethod": "claude.ai",
+      "apiProvider": "firstParty",
+      "subscriptionType": "max"
+    },
+    "extraUsageEnabled": false,
+    "providerOverridePresent": false,
+    "fastMode": false,
+    "requestedModel": "claude-fable-5-1",
+    "effort": "xhigh",
+    "sameDayInteractiveModelPickerProof": "fable-billing-preflight.json",
+    "apiOrCreditsOrFallback": false
+  },
+  "durationMs": 263299,
+  "usage": {
+    "input_tokens": 130,
+    "cache_creation_input_tokens": 48013,
+    "cache_read_input_tokens": 1673692,
+    "output_tokens": 19575,
+    "output_tokens_details": {
+      "thinking_tokens": 9594
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 48013,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "subscriptionQuotaAttribution": "UNAVAILABLE",
+  "streamSha256": "86c6a082b97aab4f83e9b6f876e5a79d33d1da403e63f4a6e98aef16ca3da231",
+  "launchArguments": [
+    "--safe-mode",
+    "--settings",
+    "/tmp/atlas-reval-server-review/settings.json",
+    "--model",
+    "claude-fable-5-1",
+    "--effort",
+    "xhigh",
+    "--resume",
+    "34e9b516-d470-4837-9a77-5f570a3feec5",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "-p"
+  ],
+  "briefSha256": "c2ae753a404f93bfd6b51a55fd25ac3cc498854ed1f7b7d4416de9ff3991f60a",
+  "checkedUtc": "2026-10-11T11:12:48.634669+00:00",
+  "paidProductCalls": 0
+}

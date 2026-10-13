@@ -1,0 +1,15 @@
+✔ edited request / swapped response body / edited status or correlation → CONTENT_MISMATCH with no TRANSFER; the slot burns (3373.469041ms)
+✔ receipt nonce: a wrong nonce never burns the slot; two concurrent correct RESPONSEs → exactly one transfer; replay after COMMIT → RAW_EXPIRED (795.2065ms)
+✔ Origin / Fetch-Metadata / session header / bearer are enforced before any comparison; a foreign bearer burns the slot (690.447667ms)
+✔ forged ACK (wrong challenge) → ACK_INVALID, no COMMIT; a REJECTED ACK → COMMIT FAILED; a late ACK → DEADLINE and is dropped (3784.515083ms)
+(node:52375) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ losing the instrument after TRANSFER → IPC_LOST (UNVERIFIED) and the pair is revoked; an out-of-sequence ACK closes the connection (840.51925ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10670.352875

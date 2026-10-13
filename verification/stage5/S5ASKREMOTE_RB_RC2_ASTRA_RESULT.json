@@ -1,0 +1,322 @@
+{
+  "artifact": "S5ASKREMOTE-RB-rc2",
+  "packageHash": "a579f960a041b5bcd39f1f6eb6eb773015a4911dee9a04c00c76b4f9472f5337",
+  "verdict": "APPROVED",
+  "requiredFindingsRemaining": 0,
+  "review": {
+    "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_RB_RC2.md",
+    "sha256": "addb2ee2e037fa1187769f32cd314f14ddde0f35973f549d0879018716f8b6f3"
+  },
+  "rawEvidence": {
+    "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/EVIDENCE.json",
+    "sha256": "b7231a05b786887e40b842715d819ac6ecd5d46ac95ab5e106539b7adb2575c8"
+  },
+  "assignment": {
+    "path": "verification/stage5/S5ASKREMOTE_RB_RC2_ASTRA_ASSIGNMENT.json",
+    "sha256": "9bbfec0f07dd4cfdb3fbe37d0b09a702c84d69d051b77b3666fe8f3f8217830d"
+  },
+  "requiredFindings": [],
+  "durableEvidence": [
+    {
+      "path": "ASTRA_RC2_DISPATCH_RECEIPT.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/ASTRA_RC2_DISPATCH_RECEIPT.json",
+      "sha256": "9bbfec0f07dd4cfdb3fbe37d0b09a702c84d69d051b77b3666fe8f3f8217830d"
+    },
+    {
+      "path": "ASTRA_RC2_PROMPT.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/ASTRA_RC2_PROMPT.txt",
+      "sha256": "ec65b1ecf5176b0838931c8bfd5c947f8868af13746fa8549fe006a126aa7744"
+    },
+    {
+      "path": "FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/FAILURES.md",
+      "sha256": "a3c460d22606e1ba228b1ecee4833569175be1245f50933465efcd176339599c"
+    },
+    {
+      "path": "REPORT.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/REPORT.md",
+      "sha256": "addb2ee2e037fa1187769f32cd314f14ddde0f35973f549d0879018716f8b6f3"
+    },
+    {
+      "path": "adversarial-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/adversarial-results.json",
+      "sha256": "0fc7358b4af8dd6035c6907938c93ca51a8a8af2907a353a9d186fc04d96c7c3"
+    },
+    {
+      "path": "adversarial.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/adversarial.test.mjs",
+      "sha256": "76c3e56254adf3265cf58a1ee18e8879b59b0963f0ee3eefd76572521cbb2378"
+    },
+    {
+      "path": "checks.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/checks.json",
+      "sha256": "6764bb229ff1f221a89ae76cf3b161702f8b8510dda41edf9d09b8e6282a4f62"
+    },
+    {
+      "path": "cleanup-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/cleanup-final.json",
+      "sha256": "9aed6efce45c2948e4c4fde58d99c8b106597253f9cd41e096d9a837390eb691"
+    },
+    {
+      "path": "context-budget.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/context-budget.json",
+      "sha256": "6114e5e44145be1ae1a844b9884fa0af4db8c59c2080385973e78e070d613671"
+    },
+    {
+      "path": "dispatch-test-delta.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/dispatch-test-delta.diff",
+      "sha256": "d35c562745b3901df3f9f2e4a86af5de196c5640d4c58f5c777a4ad3d72f73d2"
+    },
+    {
+      "path": "finalize-check.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/finalize-check.py",
+      "sha256": "af156f4b33d3ca5ea819b2da8f9700343a80e14e747293ce82bb52ab05932ffe"
+    },
+    {
+      "path": "http-fixture.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/http-fixture.mjs",
+      "sha256": "ddf01d07fd14cc65cfa1e314499c944b09da8d436d0a482e1c310092c3bbd6d9"
+    },
+    {
+      "path": "identity-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/identity-final.json",
+      "sha256": "540f2b79cba8e73e7cb3cb490a56ddb8616d5e0917c1ec6417f9a1401337a3b6"
+    },
+    {
+      "path": "identity-initial.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/identity-initial.json",
+      "sha256": "540f2b79cba8e73e7cb3cb490a56ddb8616d5e0917c1ec6417f9a1401337a3b6"
+    },
+    {
+      "path": "inherited/RC2_COORDINATOR_COMPLETION.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited/RC2_COORDINATOR_COMPLETION.json",
+      "sha256": "a69960d7f278bd180f64ba95a8f4feff6f958302fb1922108661bd770f881cbe"
+    },
+    {
+      "path": "inherited/RC2_COORDINATOR_EVIDENCE_INDEX.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited/RC2_COORDINATOR_EVIDENCE_INDEX.json",
+      "sha256": "e2b3d88c49d11ccd09eab461dcd7413ac392eb0f871dfc9c576cd2d1315907a1"
+    },
+    {
+      "path": "inherited/RC2_COORDINATOR_FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited/RC2_COORDINATOR_FAILURES.md",
+      "sha256": "7ae433c1fa3e19243685e777b084c585ccb6e37682e6b74b9b5b372897d19ab6"
+    },
+    {
+      "path": "inherited-proof-hashes.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited-proof-hashes.json",
+      "sha256": "70d1ab2ece0fdf8596dba901eb447e17dc79d7de05be492ea6fc259fb29bde95"
+    },
+    {
+      "path": "isolated-build-identity.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/isolated-build-identity.json",
+      "sha256": "7c32b99406da62781a92450e70899a80a4efbed67effc76b14f2e6f35d3bd422"
+    },
+    {
+      "path": "logs/adversarial.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/adversarial.log",
+      "sha256": "dc5195e4e0e76e139408d2dfcccdf04a4883da2eb41155f06b4027350ea3ef24"
+    },
+    {
+      "path": "logs/build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475"
+    },
+    {
+      "path": "logs/git-add.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/git-add.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/git-commit.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/git-commit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/git-init.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/git-init.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/pg-adversarial-corrected.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-adversarial-corrected.log",
+      "sha256": "28fc56e16b486d766f8d08e430aacaedb2c8b342502cf8231a42fe91bba794f1"
+    },
+    {
+      "path": "logs/pg-adversarial.attempt1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-adversarial.attempt1.log",
+      "sha256": "746a180eee72eb6e7cbf35563495028422de30d41dd07b7648d5e670093d7208"
+    },
+    {
+      "path": "logs/pg-adversarial.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-adversarial.log",
+      "sha256": "746a180eee72eb6e7cbf35563495028422de30d41dd07b7648d5e670093d7208"
+    },
+    {
+      "path": "logs/pg-focused.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-focused.log",
+      "sha256": "5694a5ca851a1bd4ec3cb756e03458d5b3adc7b5d926ed5d78fcbfdf51824feb"
+    },
+    {
+      "path": "logs/typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/typecheck.log",
+      "sha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41"
+    },
+    {
+      "path": "logs/unit.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/unit.log",
+      "sha256": "907c482cdf82551ca36797d8aa6a6c3f17d54d60d4a020c5b758066d69e299de"
+    },
+    {
+      "path": "mutation-check.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutation-check.py",
+      "sha256": "4b0ba83cf7b96ec86249c3aea66a26e023bc1b5d91120722fc5e60a62af64aac"
+    },
+    {
+      "path": "mutations/floor-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/floor-results.json",
+      "sha256": "c3c9551799ba556a4457a05ab3928e1e6b19436c221521b6c3154e424c5de6d1"
+    },
+    {
+      "path": "mutations/floor.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/floor.log",
+      "sha256": "ddbc248206e470ed3dad485d1db07e445d2cd22d92383a2b8c4567547da2e8dc"
+    },
+    {
+      "path": "mutations/status-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/status-results.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "mutations/status.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/status.log",
+      "sha256": "a0042aee851c7bd29b756fb9c782f25377e091822f29922bea0ae76737ce93b4"
+    },
+    {
+      "path": "mutations/summary.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/summary.json",
+      "sha256": "7761cdd756f82d0a7ce4ed505cfd11e1b7f442d2198fca8a842ab4b29e448fc2"
+    },
+    {
+      "path": "native-execution-verification.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/native-execution-verification.json",
+      "sha256": "665b471487d12634c3a4ab1fd338c75c3b80d9d6135932b61fd852815b4f3a2a"
+    },
+    {
+      "path": "pg-adversarial-results.attempt1.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial-results.attempt1.json",
+      "sha256": "055eeb7a71fc9cacf918052f58a6d71ad5a5b55258efb6a1a55b8154f9b4bb24"
+    },
+    {
+      "path": "pg-adversarial-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial-results.json",
+      "sha256": "b725d7ba1d788c7e55f7ff4cba10ed05a826593450b4581d4c88db2f27d2d2aa"
+    },
+    {
+      "path": "pg-adversarial.test.attempt1.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial.test.attempt1.mjs",
+      "sha256": "3c45643bb891d5299f50d5b19ffe9b4bd1fbf7a54df80622008fefff48451d8e"
+    },
+    {
+      "path": "pg-adversarial.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial.test.mjs",
+      "sha256": "b5d7f14db20e5cf3cbd7270ccb2a961760c9e25bab7a8c5a2eac3622a5cadb35"
+    },
+    {
+      "path": "pg-baseline-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-baseline-rerun.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-baseline.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-baseline.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-checks-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-checks-rerun.json",
+      "sha256": "a0506553e13eb91e8cd55a3caecf45c72e7b38d4b67815a887abaaf761a4550a"
+    },
+    {
+      "path": "pg-checks.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-checks.json",
+      "sha256": "67eca24409818d06c67b5ee567fcad90a9383333802478fd4e5dddb4d7f43263"
+    },
+    {
+      "path": "pg-cleanup-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-cleanup-rerun.json",
+      "sha256": "d64309c455876e5693654879da40bb49e13f67eed61b718d9e9adf1f641b4bee"
+    },
+    {
+      "path": "pg-cleanup.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-cleanup.json",
+      "sha256": "d64309c455876e5693654879da40bb49e13f67eed61b718d9e9adf1f641b4bee"
+    },
+    {
+      "path": "pg-final-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-final-rerun.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-final.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-rerun.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-rerun.mjs",
+      "sha256": "2b271736f4b7dba05287d926dfee0c1cef3208e555356419e21c793763d4b80c"
+    },
+    {
+      "path": "pg-runner.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-runner.mjs",
+      "sha256": "d43ec8cacf953c666381230fcbf1c285ba8168f41ebc8ee244f741f450b60586"
+    },
+    {
+      "path": "run-checks.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/run-checks.py",
+      "sha256": "c076391d6a1751ae6e1774ac6553915d61877ce85ce7fcfa3dbf456b53fe40ea"
+    },
+    {
+      "path": "sealed-source-inventory.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/sealed-source-inventory.json",
+      "sha256": "d923f1fb22441b592064563b93c2d77b56b283a59a20508107e46aa6fab8b7cc"
+    },
+    {
+      "path": "verify.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/verify.py",
+      "sha256": "6944d43a9c6ef752452624e15a989aa4bccd0bb850283e164eaea76130812c06"
+    },
+    {
+      "path": "EVIDENCE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/EVIDENCE.json",
+      "sha256": "b7231a05b786887e40b842715d819ac6ecd5d46ac95ab5e106539b7adb2575c8"
+    }
+  ],
+  "elapsedSeconds": 658.21,
+  "elapsedQualification": "Assignment to final evidence-file write wall time; not attributable billing/usage",
+  "model": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "freshContext": true,
+  "residuals": [
+    "R-C, data/budget admission, paid inference, real data, R-EVAL and deployment remain outside acceptance.",
+    "Direct transport was driven only by in-process synthetic request/response seams; real TLS, account EU/retention eligibility and provider behavior/latency unverified.",
+    "Unknown delivery/commit/settlement preserves liability; abort is not proof of nonbilling. SQL trusts NO_DISPATCH; legacy reserve alone has no original-deadline-floor guarantee.",
+    "Native Codex provider-level reviewer telemetry and attributable subscription usage are unavailable; explicit fresh gpt-6-astra/xhigh assignment is preserved.",
+    "Full 687PG/73browser and clean-install production runs are inherited verified evidence, not independently repeated; independent focusedPG83 plus addedPG3 and unit405 passed."
+  ],
+  "nonblockingNotes": [
+    {
+      "id": "N1",
+      "note": "Native CLI exited1/isError on weekly subscription limit after source/report/checks, during unfinished native evidence indexing. Coordinator metadata-only index fills navigation; exact failure and missing native index qualification preserved, no relabelling as success."
+    },
+    {
+      "id": "N2",
+      "note": "M13c retains dispatch entry floor. Egress PG survived; post-resolution unit assertions killed it. Its kill is not evidence of removing every post-COMMIT floor. M12a/M13 redundant survivors and M03a secondary kill remain qualified."
+    },
+    {
+      "id": "N3",
+      "note": "Initial independent PG fixture reused intentionally latched failed-pause circuit; original failing evidence preserved. Fresh process circuit corrected fixture; final three tests pass with source unchanged."
+    }
+  ]
+}

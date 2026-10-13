@@ -6,6 +6,9 @@ import { seedGraph, checkStructuralInvariants, checkRlsInvariants, checkRuntimeR
 import type { SqlRunner } from '../tests/sql-invariants.ts';
 import { SET_SCOPE_SQL } from '../packages/graph/scope-context.ts';
 import { migrationNames, migrationSql } from '../tests/support/migrations.ts';
+import { dropRolesSql, readRolesSql, renderRolesSql, uniqueRoleNames } from '../tests/support/roles-sql.ts';
+import { checkM365Structure, checkM365Privileges, checkM365Rls } from '../tests/m365-sql-invariants.ts';
+import { checkM365DirectoryBudget } from '../tests/m365-budget-invariants.ts';
 
 /**
  * Integration check against a REAL PostgreSQL 17 server (not PGlite). Creates a throwaway database, applies every
@@ -21,7 +24,8 @@ const adminUrl = process.env.ATLAS_PG_ADMIN_URL;
 if (!adminUrl) { console.error('Set ATLAS_PG_ADMIN_URL to a PostgreSQL 17 admin connection string.'); process.exit(2); }
 const suffix = randomBytes(4).toString('hex');
 const dbName = `atlas_v11_check_${suffix}`;
-const roleName = `atlas_app_check_${suffix}`;
+const roles = uniqueRoleNames('check', suffix);
+const roleName = roles.runtime;
 const rolePassword = randomBytes(18).toString('hex');
 const migrations = await migrationNames();
 
@@ -37,17 +41,14 @@ let owner: pg.Client | null = null; let appPool: pg.Pool | null = null;
 try {
   assert.ok(serverVersion.startsWith('17.'), `expected PostgreSQL 17, got ${serverVersion}`);
   await admin.query(`CREATE DATABASE "${dbName}"`);
-  await admin.query(`CREATE ROLE "${roleName}" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD '${rolePassword}'`);
   const ownerUrl = new URL(adminUrl); ownerUrl.pathname = `/${dbName}`;
   owner = new pg.Client({ connectionString: ownerUrl.toString() });
   await owner.connect();
   for (const m of migrations) await owner.query(await migrationSql(m));
-  results.push(['Migrations applied in order', migrations.join(' → ')]);
-  // Same grants as prisma/roles.sql (the file itself uses a psql variable for the password).
-  await owner.query(`GRANT USAGE ON SCHEMA public TO "${roleName}";
-    GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO "${roleName}";
-    REVOKE UPDATE ON "AuditEvent", "SecurityAuditEvent" FROM "${roleName}";
-    REVOKE INSERT, UPDATE ON "Actor", "ClientMembership", "ApiToken" FROM "${roleName}";`);
+  results.push(['Migrations applied in order (no role created or referenced)', migrations.join(' → ')]);
+  // The production provisioning itself, after the migrations: prisma/roles.sql rendered for this check's role names.
+  await owner.query(renderRolesSql(await readRolesSql(), roles, { runtimePassword: rolePassword, runnerPassword: randomBytes(18).toString('hex') }));
+  results.push(['prisma/roles.sql (runtime, cleanup definer, cleanup runner)', 'applied']);
   const ownerRunner = asRunner(owner);
   await seedGraph(ownerRunner);
   await checkStructuralInvariants(ownerRunner);
@@ -86,6 +87,17 @@ try {
   try { await checkShadowJobRls(asRunner(shadowClient)); } finally { shadowClient.release(); }
   results.push(['Shadow job RLS (no context, one client, no cross-client write)', 'passed']);
 
+  // Stage 2 M365 (migrations 202610081000-1200 + roles.sql): structure as the owner, grants from the catalog, RLS as the login role
+  await checkM365Structure(ownerRunner);
+  results.push(['M365 schema (scope FKs, typed mirrors, publication fence, immutability, retention)', 'passed']);
+  await checkM365DirectoryBudget(ownerRunner);
+  results.push(['M365 directory retry budget (domain, claim/publication/reset transitions, sign-in rows at zero)', 'passed']);
+  await checkM365Privileges(ownerRunner, roles);
+  results.push(['M365 privileges (column-limited runtime UPDATE, EXECUTE-only runner, confined definer, no PUBLIC EXECUTE)', 'passed']);
+  const m365Client = await appPool.connect();
+  try { await checkM365Rls(asRunner(m365Client)); } finally { m365Client.release(); }
+  results.push(['M365 RLS (every new table: no context, other client, no foreign write, no DELETE)', 'passed']);
+
   // Runtime-role guard: ownership of any protected table (not only Observation) and a table with RLS disabled are detected.
   const guardClient = await appPool.connect();
   try { await checkRuntimeRoleGuard(ownerRunner, asRunner(guardClient), roleName, {}); } finally { guardClient.release(); }
@@ -115,7 +127,7 @@ try {
   await appPool?.end().catch(() => undefined);
   await owner?.end().catch(() => undefined);
   await admin.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`).catch(() => undefined);
-  await admin.query(`DROP ROLE IF EXISTS "${roleName}"`).catch(() => undefined);
+  for (const statement of dropRolesSql(roles)) await admin.query(statement).catch(() => undefined);
   await admin.end();
   for (const [k, v] of results) console.log(`${k}: ${v}`);
 }

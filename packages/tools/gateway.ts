@@ -6,6 +6,7 @@ import { canonicalJson } from '../events/identity.ts';
 import { validateParameters } from './parameters.ts';
 import type { Parameters } from './parameters.ts';
 import type { ToolDefinition, ToolReaders } from './registry.ts';
+import { stage1Tools } from './registry.ts';
 import type { ToolExecutionRecord, ToolLedger } from './ledger.ts';
 
 /**
@@ -37,11 +38,13 @@ export function toolInputHash(scope: Scope, tool: Pick<ToolDefinition, 'name' | 
  *   2. runtime schema of the parameters — a violation is tool.rejected naming the parameter, never its value;
  *   3. execution — ToolExecution STARTED → SUCCEEDED | FAILED, each step with its audit row; the result's scope is verified.
  */
-export async function executeTool(actor: Actor, scope: Scope, call: ToolCall, readers: ToolReaders, sinks: GatewaySinks): Promise<ToolOutcome> {
+export async function executeTool(actor: Actor, scope: Scope, call: ToolCall, readers: ToolReaders, sinks: GatewaySinks,
+  registry: readonly ToolDefinition[] = stage1Tools): Promise<ToolOutcome> {
   const correlationId = call.correlationId ?? randomUUID();
   // Bounded by code points, so a surrogate pair is never split; the audit sinks escape what PostgreSQL cannot store.
   const toolLabel = Array.from(String(call.tool)).slice(0, 100).join('');
-  const decision = decideToolCall(actor, scope, call.tool);
+  // The same registry as discovery: a tool is executed only through the policy over the registry that advertised it.
+  const decision = decideToolCall(actor, scope, call.tool, registry);
   if (decision.effect === 'DENY_SCOPE') {
     await sinks.securityAudit.append({ workspaceId: actor.workspaceId, actorId: actor.id, eventType: 'tool.scope_denied', outcome: 'DENIED',
       requestedClientId: scope.clientId, reasonCode: decision.reasonCode, correlationId, metadata: { tool: toolLabel } });

@@ -1,0 +1,55 @@
+{
+  "version": "S3-design-rc4",
+  "scope": "MOCK-only governed ticket flow; no production wire adapter, source implementation or real write approval",
+  "date": "2026-10-08T23:12:08.318189+00:00",
+  "baselineCommit": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "hashAlgorithm": "SHA256 UTF8 entries sorted by path: <sha256><two spaces><path><LF>",
+  "packageHash": "e2d574185b53f28b5fc25f039a1b8c3df2cc7111133077fca2b4318809364d3c",
+  "files": [
+    {
+      "path": "docs/stage3/01_SPEC.md",
+      "sha256": "1a4fafc413c6c0dc188d69381542f9b9eaec5376f1043f76af2719e8ffb80b2b"
+    },
+    {
+      "path": "docs/stage3/02_CONTRACTS.md",
+      "sha256": "eb4cf556a0ddff2940f002ee5eba10d3251b7d557425dff338a46ba2ec46591b"
+    },
+    {
+      "path": "docs/stage3/03_DATA_AND_CONCURRENCY.md",
+      "sha256": "929dade9ea0724d72065b58eed85fff2889750fb7c5e6eaa77fb0f1cec72da5e"
+    },
+    {
+      "path": "docs/stage3/04_EXECUTION_AND_PORT.md",
+      "sha256": "5abaaa435c41a87675527cae9d077af097c07e4d7dcd544d0821c4fea85d784b"
+    },
+    {
+      "path": "docs/stage3/05_IMPLEMENTATION_PLAN.md",
+      "sha256": "511f9ea3bc459e53ff2123e98fba814392624d6176b3a71caec1ebc91f878cb9"
+    },
+    {
+      "path": "docs/stage3/06_ACCEPTANCE.md",
+      "sha256": "592fdc3ac6c4b49f2d05891cd4522067a1539bc3f7a83157ec6c3d9f0a01354e"
+    },
+    {
+      "path": "docs/stage3/AGENTS.md",
+      "sha256": "bc8745b03a9836652b0c804a7a46f34585ebf8e4ef8c6023ca647cf1fec35db9"
+    },
+    {
+      "path": "docs/stage3/README.md",
+      "sha256": "988c3315ad1a19318efb14b4670e1db80f2a0d99cb33c155abf846312674f995"
+    }
+  ],
+  "preservedAcceptedRecorder": {
+    "manifest": "verification/stage2/S2LIVE_RECORDER_RC2_MANIFEST.json",
+    "sha256": "609535423130f10e13ff746318f09e5790016101ad75549e465c601bb9e81971",
+    "packageHash": "a02667ee81ef7f3ad809a7952d562a688d9caee408484a905c4e3b28212203e3",
+    "verifiedFiles": 324
+  },
+  "preservedStage2Normative": {
+    "manifest": "docs/stage2/REVIEW_MANIFEST.json",
+    "sha256": "b88069dbc32eef0007f0e152b85687dce370605260eeb8a60bee9c36d5463577",
+    "packageHash": "1d3b1064c2633ed64ab2089a7ea62401e9415a72b16ba5a9dcd9a50c870a1efb",
+    "verifiedFiles": 11
+  }
+}

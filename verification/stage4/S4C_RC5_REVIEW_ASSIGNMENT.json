@@ -1,0 +1,16 @@
+{
+  "checkpoint": "S4-C",
+  "artifact": "S4C-rc5",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "nativeAgent": "/root/astra_s4c_rc4",
+  "freshSession": false,
+  "initialReviewFreshSession": true,
+  "boundedReReviewOf": "S4C-rc4",
+  "forkTurns": "none",
+  "recordedAt": "2026-10-10T11:36:41.776804+00:00",
+  "manifestSha256": "e82261f28bb2855c3a0acb87b9a71351eade9f2a4f93354ae39eb68ebb1058e7",
+  "packageHash": "fa688a1a1f7161fc013e2c7ff63cba1b603c92c35d5cd68d02d446a600c99ae9",
+  "effortReason": "Bounded classification-only F1/F2 closure with unchanged timers/cancellation/authority/contracts, retain actual xhigh of original explicit assignment",
+  "evidenceQualification": "Explicit original native Astra/xhigh assignment retained; runtime effort not changed. Provider response-model telemetry unavailable; no fallback/API/credits enabled."
+}

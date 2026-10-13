@@ -1,0 +1,12 @@
+# REVAL_EVIDENCE fixtures FX01:g1:ALL_TRUE FX02:g2:ALL_TRUE FX03:g3:ALL_TRUE FX04:g4:ALL_TRUE FX05:g5:ALL_TRUE FX06:g6:ALL_TRUE FX07:g7:ALL_TRUE FX08:g8:ALL_TRUE FX09:g9:ALL_TRUE FX10:g10:ALL_TRUE FX11:g11:ALL_TRUE
+✔ register, then every frozen fixture through the real switch: 11 × 5 proven under the runtime role (6470.926416ms)
+# REVAL_EVIDENCE real-clock negative: mismatched FX01,FX02,FX03,FX05,FX07,FX08,FX09,FX10,FX11 equal FX04,FX06 (FX08 07:20 vs 07:58 limitation reported, not repaired)
+✔ clock isolation: the same DB rows read with the REAL clock no longer equal the frozen OK/STALE declarations (explicit negative) (1623.318708ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12260.778667

@@ -1,0 +1,17 @@
+✔ owner credential is the dedicated NOSUPERUSER NOBYPASSRLS table owner (recorded flags) (3.812292ms)
+✔ APPLIED path (ACTIVE→PAUSED): exactly four columns change, microsecond expiresAt kept, closure exact, one spawn, no policy value in JS (196.7135ms)
+✔ already-PAUSED (runtime MODEL_MISMATCH): routine IS called as the accepted no-op; closure only strictly above floors; equal floors latch (343.512209ms)
+✔ refusals before COMMIT roll back and never close: zero rows, argument difference, active no-op, injected rollback, REVOKED, version mismatch, max boundaries (1498.819208ms)
+✔ commit uncertainty and drift after a confirmed commit latch without closure; scope and physical refusals happen before any lock (1124.594208ms)
+✔ executor lifetime: blocked before connect, blocked on a lock (fence held first), killed after COMMIT, parent death — single spawn, bounded cleanup (3920.906792ms)
+# REVAL_EVIDENCE NB7 ARM 6 ms, READY 0 ms, POST→COMMIT 17 ms, TERMINAL_OBSERVATION+journal fsync 13 ms
+✔ one case O → C → S with I and the browser: FIXTURE_CHECK, PAIR (+ secret), PAIR200, PRE, ARM, READY, answer, handoff, journaled observation (1733.951875ms)
+✔ controller refusals: PAIR needs a current FIXTURE_CHECK and live instrument ids; I cannot PAIR; an ARM failure after consumption stops arming (NB9); control loss ends the pair (2120.2285ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 27487.017125

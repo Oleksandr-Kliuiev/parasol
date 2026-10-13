@@ -1,0 +1,66 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSB-rc1",
+ "recordedUtc": "2026-10-11T19:17:08Z",
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17.11 (TCP seam, regression only)",
+  "nativePostgres": "17.11 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "node --test tests/*.test.ts (npm test)",
+   "result": "519 tests: 510 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly RS-A rc3 qualified RC5 identity-only set (CORPUS_IDENTITY_MISMATCH: 7 ask-remote-eval-execution-* wrappers + RC5 pty); reval-rc5-guard passes",
+   "log": "unit.tap"
+  },
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.log"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.log"
+  },
+  {
+   "command": "npm run api:build && npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.log"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=<native> npm run test:pg",
+   "result": "741/741 pass, 0 fail, 0 skipped (incl. reval-native-unix and reval-native-rsb)",
+   "log": "test-pg.log"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.log"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.log"
+  },
+  {
+   "command": "git diff --check / trailing whitespace on touched files",
+   "result": "clean"
+  }
+ ],
+ "logs": {
+  "drift.log": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "pg17.log": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "schema.log": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.log": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "test-pg.exit": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
+  "test-pg.log": "291f48ee59555edda68d83441851b868ecab5dd1c88863dfc66bf8e38312c2f5",
+  "test-pg.start": "51f0eb5c77602f49b4ed7c92d7074f292c8710dd41afb1b7c35375c83d020069",
+  "typecheck.log": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "unit.exit": "cf205dbb8cea84897b488abcc281bf96698d5e94b1096b16657b4caba9082a22",
+  "unit.tap": "ea7020c7cd3a775ca0630c58bb15c9a58b98c5a3be5c7d8153359916c175f51e"
+ },
+ "paidProductCalls": 0,
+ "providerCalls": 0,
+ "activation": "none"
+}

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { scope, actor, operator, people, devices, links } from '../fixtures/gasta.ts';
 import { BEARER_TOKEN_PATTERN, hashToken } from '../packages/auth/token.ts';
+import { isFenceNotReady } from '../packages/graph/fence-errors.ts';
 // Runs with the OWNER connection (DATABASE_URL), which bypasses row-level security by design; the application must use
 // the confined runtime role instead (prisma/roles.sql, ATLAS_RUNTIME_DATABASE_URL).
 // Optional: ATLAS_DEMO_TOKEN (your local random token) lets the synthetic technician call the DB-mode API;
@@ -23,7 +24,7 @@ if (seeded[0]!.token !== null && seeded[0]!.token === seeded[1]!.token) {
 const db = new PrismaClient();
 try {
   // Non-destructive, synthetic local seed. No vendor API calls and no table clearing.
-  await db.$transaction(async tx => {
+  const outcome = await db.$transaction(async tx => {
     await tx.workspace.upsert({ where: { id: scope.workspaceId }, update: {}, create: { id: scope.workspaceId, name: 'Vardahei demo' } });
     await tx.client.upsert({ where: { workspaceId_id: { workspaceId: scope.workspaceId, id: scope.clientId } }, update: {}, create: { workspaceId: scope.workspaceId, id: scope.clientId, name: 'Gasta (synthetic)' } });
     for (const person of people) {
@@ -58,8 +59,16 @@ try {
           create: { ...key, actorId: s.actor.id, tokenHash: hashToken(s.token), label: s.label } });
       }
     }
+    return 'SEEDED' as const;
+  }).catch(error => {
+    // Stage 3: owner writes of actors, memberships, tokens and connections increment the workspace authority fence. A
+    // missing/refused fence (roles.sql not yet provisioned, or a corrupt fence) is reported as a fixed code only.
+    if (!isFenceNotReady(error)) throw error;
+    console.error('ACTION_FENCE_NOT_READY: the action authority fence is not provisioned; run prisma/roles.sql (docs/RUNBOOK.md). Nothing was seeded.');
+    process.exitCode = 1; // the transaction rolled back as a whole
+    return 'NOT_SEEDED' as const;
   });
   const stored = seeded.filter(s => s.token !== null).map(s => s.variable);
-  console.log(`Synthetic Gasta/Kari/device graph, demo technician and demo operator seeded without deleting data; ${stored.length > 0
+  if (outcome === 'SEEDED') console.log(`Synthetic Gasta/Kari/device graph, demo technician and demo operator seeded without deleting data; ${stored.length > 0
     ? `API token digests stored for ${stored.join(', ')}.` : 'no API token (set ATLAS_DEMO_TOKEN / ATLAS_OPERATOR_TOKEN to call the DB-mode API / ops CLI).'}`);
 } finally { await db.$disconnect(); }

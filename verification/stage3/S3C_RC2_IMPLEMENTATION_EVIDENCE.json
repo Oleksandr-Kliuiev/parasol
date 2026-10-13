@@ -1,0 +1,249 @@
+{
+  "checkpoint": "S3-C",
+  "artifact": "RC2 repair of RC1 (CHANGES_REQUIRED)",
+  "status": "RC2 repair IMPLEMENTED — PENDING independent effective-xhigh Astra re-review of a newly frozen RC2 artifact; not self-accepted",
+  "live": "S3-LIVE NOT_STARTED; LIVE DEFERRED_BY_OWNER; pilot untouched; no vendor/network call",
+  "review": {
+    "path": "docs/stage3/reviews/ASTRA_S3C_RC1.md",
+    "sha256": "ca644cf8f35ba158ffafe0feaa06f9c166d47a052bbb2902fbc0a4a63a873481",
+    "verdict": "CHANGES_REQUIRED (R1 P1, R2 P2, R3 P2)",
+    "reviewedPackage": "99529a43db18f4087dca4afabc1d7352ed1fcf3569c96e5435d9a5aa6c372485",
+    "reviewedManifestSha256": "77d0e62ad00a6c28c9c77b4f78127b5f4fd29a9f45b80ba52b47849adbe5df8c"
+  },
+  "baseline": {
+    "private": "/tmp/atlas-stage3/s3c-repair1-baseline.json",
+    "sha256": "34a4078d00f1315f89d36b961c3d42f9b3961c8cdaf6e03d72bae077d537a785",
+    "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+    "verifiedBeforeChanges": "all 637 baseline files byte-exact, HEAD equal, no extra dirty/untracked file"
+  },
+  "implementer": {
+    "model": "claude-opus-5-5 (native Claude Code; as declared by the session runtime; actual model evidence recorded separately by the driver)",
+    "effort": "high (launch-declared)",
+    "session": "the SAME cohesive S3-C implementation session, resumed; no subagents/workflow/MCP/browser/network tools",
+    "billing": "native subscription per launch; no API/credits/fallback/model switch by the implementer (not independently verifiable from inside the session)",
+    "writeOwnership": "sole checkout writer during the repair; explicitly returned to Codex at handback"
+  },
+  "elapsed": {
+    "startUtc": "2026-10-09T07:02:07Z",
+    "endUtc": "2026-10-09T07:20:37Z"
+  },
+  "fixes": {
+    "R1": {
+      "files": [
+        "packages/actions/mock-port.ts",
+        "packages/actions/execution.ts",
+        "packages/actions/verification.ts"
+      ],
+      "mechanism": "PortCall = AbortSignal + the monotonic instant it fires. Built-in store: no pool wait/transaction once cancelled; Prisma maxWait and transaction timeout capped by the time remaining at the call (no fresh window); after acquiring the connection the remaining time is re-read and set as SET LOCAL statement_timeout, so SQL blocked on a lock is cancelled by PostgreSQL at the deadline; the signal/deadline is re-checked after the statement and before COMMIT, so cancelled work rolls back; the promise settles only after commit/rollback (no write left running). Dispatcher passes the same deadline as its abort timer; reads pass the claim read deadline.",
+      "preserved": "possible invocation stays OUTCOME_UNKNOWN (never NOT_DISPATCHED); no port retry; owned late-fact continuation unchanged; the residual ambiguous window is between the last check and the COMMIT acknowledgement"
+    },
+    "R2": {
+      "files": [
+        "packages/actions/publication.ts"
+      ],
+      "diagnosis": "conflict and stale facts change no stored state, so state-based replay detection cannot see them; no existing column can hold their observation without exposing IDs; the committed audit row itself is the only durable fact receipt available without a migration",
+      "mechanism": "every fact audit row gets a deterministic ID: HMAC-SHA256(key = attempt token for create facts / claim nonce for read results, canonical {dto action-fact/1, event, attemptId, ticketId | ordinal+outcome}) in UUIDv8 layout. Conflict/stale publications look the ID up under the request -> attempt -> ordinal locks: already committed -> no-op (IDENTICAL / STALE, no audit); otherwise one audit row. Success facts keep their state guards and now also carry the stable ID. Metadata allowlist unchanged.",
+      "properties": "first audit retained; distinct facts audited once each; survives a new client/process (durable row); audit failure and known rollbacks leave no receipt so the retry records once within PUBLICATION_ATTEMPTS=3; the ID is a keyed PRF of private material never exposed (no ticket/candidate/nonce/token/hash, nor an unkeyed digest)"
+    },
+    "R3": {
+      "files": [
+        "packages/ops/actions.ts"
+      ],
+      "mechanism": "synthetic:true added to the INVALID_ARGUMENTS and missing-ATLAS_RUNTIME_DATABASE_URL envelopes and set on every success envelope; failure envelope already had it"
+    }
+  },
+  "changedFromBaseline": {
+    "docs/DEVELOPMENT_WORKFLOW.md": {
+      "before": "821a162e40faaf56f77cb40c567e93fbcb7c5e09b56ea16d9875dcea926e4917",
+      "after": "342d571f351f6bbc55fdb83c52244325f1811fd3da1d6bd4ef0f83d76e847d66"
+    },
+    "docs/stage3/IMPLEMENTATION_STATUS.md": {
+      "before": "95655c08534f391b6b14507d88cf05ae0174d03225970ad3b2bf3c42be328f50",
+      "after": "5eea6df9d1847aa9a46dfd1fd67a1b1c3f2d64edfbcd9e9b666ee4f155136daa"
+    },
+    "docs/stage3/REVIEW_STATUS.md": {
+      "before": "4a82875e982b5abaa8a3ceace1eef330794d7d9f99f946bd97288f70bd961bb4",
+      "after": "8eb56b4289828f7e731ae955f2cd5678a39335ced10d2a9b91c6d551363952cf"
+    },
+    "packages/actions/AGENTS.md": {
+      "before": "5f3268b3aeb272d94680b5dabee0a9ac43d0ee176d8fb9a0cb51d005136aa374",
+      "after": "3b30313cd81b33571651e6e858028aafe16946d66151d70e72a69fb935715371"
+    },
+    "packages/actions/execution.ts": {
+      "before": "c0e1871d9fef4a3b664e4b3c0f35e7d6623725fa729ab3c891cf7f09d87f8efb",
+      "after": "d4cc06e1920f3f01839c3996d1cd2c07f8e58503d9ea654ae8656d79ae7db91c"
+    },
+    "packages/actions/mock-port.ts": {
+      "before": "37d5079af958333d150d1b0d33cf9250833e92040f0613f448aaa5e931dc969c",
+      "after": "9a6e109b1435be02e26e96bdab06fe60c24ecd78ddd5373bec102b9758ded72f"
+    },
+    "packages/actions/publication.ts": {
+      "before": "057c0f9c1af773f6c3487fd966673cd4eb9d632f696fdc0ecccad1f0dd8e40f6",
+      "after": "3008fe89796fcd01c86350dbf04385edba4b3a229368b6b1820f3854c920d38a"
+    },
+    "packages/actions/verification.ts": {
+      "before": "cdb62083d3980585fa87a8c080bb9186549a58484bdf922d2a6e4ee0739fa35c",
+      "after": "2063c2ee425a89a46abf6be8d99624bd5c00c71e89cc0d2b1df33f675e0695fd"
+    },
+    "packages/ops/actions.ts": {
+      "before": "287213ed2e497ef47793767f3f90900c953d46836687284d7e153d1bb164a455",
+      "after": "281adebe502ac5fc45e60196ed25fd6bddaa32ea54a4f5282e7e4387386bd60b"
+    },
+    "tests/action-cli.test.ts": {
+      "before": "265660b7ded46cdf1b4d2c17e78ab6c472c932e5ff4b4f087bc977c0d3a13e80",
+      "after": "4b6984065513f1e64ca658d17980a92678af508c8f58bed3c55a365ed2f974ff"
+    },
+    "tests/pg/AGENTS.md": {
+      "before": "81b221e6d85fa15b8b7921cdd59511649ce740de74e6f0e31a347aa4580bbcb6",
+      "after": "e3eb72a483722e5db7a618bfe1fc1faff2cf3038374d3d1a5f81cc5932f68a11"
+    },
+    "tests/pg/action-cli.pg.test.ts": {
+      "before": "3514d0017d9caae870357889be331f7fbb5d4617b478a72acf9b66b4cdb3017f",
+      "after": "4f1119fa25c51d862dedc8e9420e913f93ebb523afae9284df3870be7a7ec498"
+    },
+    "tests/pg/action-late.pg.test.ts": {
+      "before": "e93b6f7a71813cd6078dc9439b0936293f6d2f563d248ed3d34d95c653e47d49",
+      "after": "baec2aa1501332051ece370a93203bb293bafee8ec609f6cb5709289a6cfcc72"
+    },
+    "tests/pg/action-recovery.pg.test.ts": {
+      "before": "9df5af620d96754be644938d0a08f314bdc14476d5a45f794bc7fd932c9a11da",
+      "after": "6a3ab6e0b04a73c6908883c6d78c490d555f2345b53ee7c3fe66362d7d97011a"
+    },
+    "tests/support/action-exec.ts": {
+      "before": "05f9f399b5d7e1ef3885ef70cb5604dc6d925a7c1ec4143f705ac4bbe652bf1d",
+      "after": "34dd5f1c1d9576fee2744b809dfe5d07ae3401556fd2e58aebc3abaca578c22b"
+    }
+  },
+  "newSinceBaseline": {
+    "tests/pg/action-port-cancel.pg.test.ts": "30f09e2b01e7bdda903e7e5569fb4b534dee8efc4b07abcfa1ed07a22faaec53",
+    "tests/pg/action-replay.pg.test.ts": "b01c513eb86f637ba43844f1d0c62c066f9610115fd4152f4fdd70fadf1c8552"
+  },
+  "frozenPreservation": {
+    "migrations": "20 migrations + migration_lock.toml byte-exact; no new migration, no grant/roles.sql/readiness change",
+    "headUnchanged": true,
+    "removedFromBaseline": [],
+    "frozenPathViolations": [],
+    "immutableRc1Artifacts": "verification/stage3/S3C_IMPLEMENTATION_EVIDENCE.json, S3C_RC1 manifest/execution/archive and the review report are unchanged (not in the delta)",
+    "normative": "Stage 2 eleven and Stage 3 eight normative files and docs/ROADMAP.md unchanged"
+  },
+  "focusedRuns": [
+    {
+      "log": "/tmp/atlas-stage3/s3c-checks/rc2/focus-cancel-1.log",
+      "outcome": "1 of 3 failed",
+      "cause": "test harness: PrismaPromise is lazy, so the pool-hold query never started (the dispatcher case then exercised only the lock)",
+      "fix": "holdPool() starts the query with .then(); test-only"
+    },
+    {
+      "log": "/tmp/atlas-stage3/s3c-checks/rc2/focus-cancel-2.log",
+      "outcome": "3/3 passed (pool wait create/read, blocked INSERT at deadline, abort before COMMIT, blocked read, in-window pool wait still commits, real 15 s dispatcher with 3 s pool wait + lock to 16 s)"
+    },
+    {
+      "log": "/tmp/atlas-stage3/s3c-checks/rc2/negative-control-rc1-port.log",
+      "outcome": "RC1 entry-only port (adapted to PortCall): pool-wait test FAILED; the blocked-SQL test hung because RC1 never cancels",
+      "note": "the hung control was auto-backgrounded by the tool after 300 s and killed by the implementer; the RC2 port was restored byte-exact (sha256 9a6e109b...); its one disposable DB and four roles were dropped (0 left)"
+    },
+    {
+      "log": "/tmp/atlas-stage3/s3c-checks/rc2/focus-replay-1.log",
+      "outcome": "3/3 passed"
+    },
+    {
+      "log": "/tmp/atlas-stage3/s3c-checks/rc2/negative-control-rc1-publication.log",
+      "outcome": "RC1 publication.ts (backup hash = baseline): all 3 replay tests FAILED; RC2 file restored byte-exact"
+    },
+    {
+      "log": "/tmp/atlas-stage3/s3c-checks/rc2/focus-all-actions-1.log",
+      "outcome": "84/84 action PostgreSQL tests passed",
+      "counts": {
+        "tests": 84,
+        "pass": 84,
+        "fail": 0
+      }
+    }
+  ],
+  "requiredChecks": {
+    "run": {
+      "logs": "/tmp/atlas-stage3/s3c-checks/rc2/run1",
+      "results": {
+        "npm-test": {
+          "exit": 0,
+          "seconds": 8
+        },
+        "schema-validate": {
+          "exit": 0,
+          "seconds": 1
+        },
+        "db-generate": {
+          "exit": 0,
+          "seconds": 1
+        },
+        "typecheck": {
+          "exit": 0,
+          "seconds": 5
+        },
+        "api-build": {
+          "exit": 0,
+          "seconds": 2
+        },
+        "api-smoke": {
+          "exit": 0,
+          "seconds": 0
+        },
+        "test-pg": {
+          "exit": 0,
+          "seconds": 56
+        },
+        "db-check-pg17": {
+          "exit": 0,
+          "seconds": 1
+        },
+        "db-check-drift": {
+          "exit": 0,
+          "seconds": 1
+        },
+        "git-diff-check": {
+          "exit": 0,
+          "seconds": 0
+        },
+        "untracked-whitespace": {
+          "exit": 0,
+          "seconds": 1
+        }
+      },
+      "npmTest": {
+        "tests": 181,
+        "pass": 181,
+        "fail": 0
+      },
+      "testPg": {
+        "tests": 401,
+        "pass": 401,
+        "fail": 0
+      },
+      "pg17": "PASS pg17-check, PostgreSQL 17.11",
+      "drift": "PASS schema drift",
+      "apiSmoke": "PASS"
+    },
+    "onFinalSource": true,
+    "comparison": "RC1: 180 unit/PGlite and 395 PostgreSQL; RC2 adds 1 unit and 6 PostgreSQL tests",
+    "leftovers": "0 disposable databases, 0 disposable roles after the run",
+    "logUrlScan": "no connection URL in any check log"
+  },
+  "acceptanceMapping": {
+    "R1": "tests/pg/action-port-cancel.pg.test.ts (real built-in port, no wrapper around its cancellation); existing action-late 15 s scenarios unchanged",
+    "R2": "tests/pg/action-replay.pg.test.ts (reproduction 1 and 2, distinct facts, new client, duplicate successful facts, audit rollback, 2x/3x 40001/40P01, forged identity, audit privacy incl. row ID)",
+    "R3": "tests/action-cli.test.ts R3 case (both reproductions); tests/pg/action-cli.pg.test.ts rejects any CLI-process envelope without synthetic:true and adds both failure envelopes"
+  },
+  "residualRisks": [
+    "Prisma 6.19 has no query-cancel API: an abort that precedes the deadline cannot interrupt a statement already blocked; it is cut at the deadline by statement_timeout at the latest and never commits (pre-COMMIT check).",
+    "The window between the last pre-COMMIT check and the COMMIT acknowledgement remains genuinely ambiguous and is reported as OUTCOME_UNKNOWN by design.",
+    "The Prisma transaction timeout is capped at the remaining time measured before the pool wait; the effective bound after a pool wait is the in-database statement_timeout plus the pre-COMMIT check.",
+    "Fact receipts rely on deterministic audit-row IDs (no migration); a reviewer should confirm that a keyed digest of private capability material as an audit primary key satisfies the privacy rule.",
+    "Wall-clock deadlines are exercised with bounded real waits; exact boundary instants are not deterministically tested.",
+    "MOCK evidence only; nothing about vendor wire behavior or production readiness is claimed."
+  ],
+  "notDone": [
+    "no commit, PR, deployment, persistent/pilot DB, account or network action",
+    "no reviewer report/seal or acceptance claim",
+    "no S3-LIVE functionality"
+  ]
+}

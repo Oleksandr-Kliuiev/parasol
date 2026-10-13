@@ -1,0 +1,12 @@
+{
+  "nativeTestPgStopped": true,
+  "testDataAndSecretsRemoved": true,
+  "temporaryCompatibilityLinksRemoved": [
+    "/opt/homebrew/share/postgresql@17",
+    "/opt/homebrew/lib/postgresql@17"
+  ],
+  "globalPackageInstallation": false,
+  "brewServiceStarted": false,
+  "paidProductCalls": 0,
+  "checkedUtc": "2026-10-11T17:26:46.281222+00:00"
+}

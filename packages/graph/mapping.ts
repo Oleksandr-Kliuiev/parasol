@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient, Prisma } from '@prisma/client';
 import type { Actor, Scope, EntityKind, ResourceType, LinkStatus } from '../core/contracts.ts';
-import { AtlasError, assertPermission } from '../core/contracts.ts';
+import { AtlasError, M365_RESOURCE_TYPES, assertPermission, isM365ResourceType } from '../core/contracts.ts';
 import type { ResolvedConnection } from '../../connectors/contracts.ts';
 import { assertResolvedConnection } from '../connections/connections.ts';
 import { clientAuditData } from '../audit/prisma.ts';
 import { withScope, uniqueViolation } from './scoped-db.ts';
 import { SCOPE_ID_PATTERN } from './scope-context.ts';
+import { assertFreshM365Membership, linkTarget, lockM365Directory, mayReviewM365 } from './m365-mapping.ts';
 
 /**
  * Mapping workflow (task 1.4, docs/02 "Entity matching"). Identity objects read from a source (agents, contacts) are
@@ -18,9 +19,22 @@ import { SCOPE_ID_PATTERN } from './scope-context.ts';
  * linked anyway (composite keys), so a cross-client link ends as "not found".
  */
 
-/** The only identity pairs a link may join (also a CHECK). Events and tenants are never linked to entities. */
-const LINKABLE: Readonly<Record<string, EntityKind>> = Object.freeze({ agent: 'DEVICE', contact: 'PERSON' });
+/**
+ * The only identity pairs a link may join (also a CHECK). Events, tenants and sign-ins are never linked to entities.
+ * M365 pairs follow the extra rules of m365-mapping.ts (m365:read, fresh directory evidence, manual decisions only).
+ */
+const LINKABLE: Readonly<Record<string, EntityKind>> = Object.freeze({ agent: 'DEVICE', contact: 'PERSON', m365_user: 'PERSON', m365_device: 'DEVICE' });
 export function linkableKind(resourceType: string): EntityKind | null { return LINKABLE[resourceType] ?? null; }
+/** Returned from a decision's transaction when the target is an M365 link and the actor lacks m365:read. */
+const M365_DENIED = Symbol('M365_DENIED');
+/** Safe audited denial on an authorized client (02 §1): the permission code only, no link or M365 identifier. */
+async function deniedM365(db: PrismaClient, actor: Actor, scope: Scope): Promise<never> {
+  await withScope(db, actor, [scope.clientId], tx => tx.auditEvent.create({
+    data: clientAuditData(scope, actor.id, 'mapping.denied', randomUUID(), { safeErrorCode: 'PERMISSION_DENIED' }), select: { id: true } }));
+  throw new AtlasError('PERMISSION_DENIED', 'SCOPE');
+}
+const settle = <T>(db: PrismaClient, actor: Actor, scope: Scope) => (result: T | typeof M365_DENIED): Promise<T> =>
+  result === M365_DENIED ? deniedM365(db, actor, scope) : Promise.resolve(result);
 
 export const EXTERNAL_ID_PATTERN = /^[\x21-\x7e]{1,128}$/;
 const ATTRIBUTE_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
@@ -56,6 +70,8 @@ export async function registerExternalEntity(db: PrismaClient, actor: Actor, con
   assertResolvedConnection(connection);
   const scope = scopeOf(connection);
   assertPermission(actor, scope, 'events:ingest');
+  // M365 mirrors are created only inside directory publication (task 2.5), never through this generic path.
+  if (isM365ResourceType(input.resourceType)) throw new AtlasError('M365_MIRROR_PUBLICATION_ONLY', 'VALIDATION');
   if (!linkableKind(input.resourceType)) throw new AtlasError('NOT_AN_IDENTITY_RESOURCE', 'VALIDATION');
   if (!EXTERNAL_ID_PATTERN.test(input.externalId)) throw new AtlasError('INVALID_EXTERNAL_ID', 'VALIDATION');
   assertStorableAttributes(input.attributes);
@@ -97,13 +113,19 @@ async function createCandidate(tx: Prisma.TransactionClient, scope: Scope, actor
   return { linkId: id, status: 'CANDIDATE', conflictsWithLinkId: null };
 }
 
-/** Manual proposal (mapping:review). Idempotent per (external object, entity): an existing link is returned unchanged. */
+/**
+ * Manual proposal (mapping:review; m365:read too for an M365 object). Idempotent per (external object, entity): an
+ * existing link is returned unchanged.
+ */
 export async function proposeLink(db: PrismaClient, actor: Actor, scope: Scope, link: { externalEntityId: string; entityId: string }): Promise<LinkDecision> {
   assertPermission(actor, scope, 'mapping:review');
   assertRowId(link.externalEntityId, 'EXTERNAL_ENTITY_NOT_FOUND'); assertRowId(link.entityId, 'ENTITY_NOT_FOUND');
   const ids = scopeOf(scope);
-  return retryOnce(() => withScope(db, actor, [ids.clientId], tx =>
-    createCandidate(tx, ids, actor.id, { externalEntityId: link.externalEntityId, entityId: link.entityId, method: 'MANUAL', correlationId: randomUUID() })));
+  return retryOnce(() => withScope(db, actor, [ids.clientId], async tx => {
+    const external = await tx.externalEntity.findUnique({ where: { workspaceId_clientId_id: { ...ids, id: link.externalEntityId } }, select: { resourceType: true } });
+    if (external && isM365ResourceType(external.resourceType) && !mayReviewM365(actor, ids.clientId)) return M365_DENIED;
+    return createCandidate(tx, ids, actor.id, { externalEntityId: link.externalEntityId, entityId: link.entityId, method: 'MANUAL', correlationId: randomUUID() });
+  })).then(settle<LinkDecision>(db, actor, ids));
 }
 
 export type Suggestion =
@@ -163,13 +185,22 @@ async function lockedLink(tx: Prisma.TransactionClient, scope: Scope, linkId: st
  * QUARANTINED with a pointer to the confirmed link (the partial unique index stays the last guard: a lost race is retried
  * once and then decided the same way). Re-confirming a CONFIRMED link is a no-op; a REJECTED or QUARANTINED link can be
  * confirmed by a new explicit decision and is checked for conflicts exactly like a candidate.
+ * The decision time comes from `clock` AFTER every lock of the attempt was acquired (each retry reads it again), so a lock
+ * wait can never carry a stale "now" past the M365 freshness or payload-expiry boundary; it is also the persisted
+ * confirmedAt/reviewedAt (the audit row keeps the database's recordedAt, as for every Stage 1 audit row).
  */
-export async function confirmLink(db: PrismaClient, actor: Actor, scope: Scope, linkId: string, now: Date = new Date()): Promise<LinkDecision> {
+export async function confirmLink(db: PrismaClient, actor: Actor, scope: Scope, linkId: string,
+  clock: () => Date = () => new Date()): Promise<LinkDecision> {
   assertPermission(actor, scope, 'mapping:review');
   assertRowId(linkId, 'LINK_NOT_FOUND');
   const ids = scopeOf(scope);
-  return retryOnce(() => withScope(db, actor, [ids.clientId], async (tx): Promise<LinkDecision> => {
+  return retryOnce(() => withScope(db, actor, [ids.clientId], async (tx): Promise<LinkDecision | typeof M365_DENIED> => {
+    const target = await linkTarget(tx, ids, linkId);
+    const m365 = isM365ResourceType(target.resourceType);
+    if (m365 && !mayReviewM365(actor, ids.clientId)) return M365_DENIED;
+    if (m365) await lockM365Directory(tx, ids, target);
     const link = await lockedLink(tx, ids, linkId);
+    const now = clock(); // all locks held: the decision clock is read here, never before a wait
     if (link.status === 'CONFIRMED') return { linkId, status: 'CONFIRMED', conflictsWithLinkId: null };
     const confirmed = await tx.entityLink.findFirst({ where: { ...ids, externalEntityId: link.externalEntityId, status: 'CONFIRMED' }, select: { id: true } });
     const where = { workspaceId_clientId_id: { ...ids, id: linkId } };
@@ -181,11 +212,12 @@ export async function confirmLink(db: PrismaClient, actor: Actor, scope: Scope, 
         { linkId, conflictsWithLinkId: confirmed.id, linkStatus: 'QUARANTINED', safeErrorCode: 'CONFLICTS_WITH_CONFIRMED' }), select: { id: true } });
       return { linkId, status: 'QUARANTINED', conflictsWithLinkId: confirmed.id };
     }
+    if (m365) await assertFreshM365Membership(tx, ids, link.externalEntityId, target, now);
     await tx.entityLink.update({ where, select: { id: true }, data: { status: 'CONFIRMED', confirmedBy: actor.id, confirmedAt: now,
       reviewedBy: actor.id, reviewedAt: now, reasonCode: null, conflictsWithLinkId: null } });
     await tx.auditEvent.create({ data: clientAuditData(ids, actor.id, 'mapping.link_confirmed', correlationId, { linkId, linkStatus: 'CONFIRMED' }), select: { id: true } });
     return { linkId, status: 'CONFIRMED', conflictsWithLinkId: null };
-  }));
+  })).then(settle<LinkDecision>(db, actor, ids));
 }
 
 /** Explicit rejection (mapping:review); for a CONFIRMED link this is a revocation. The reason is a code, never free text. */
@@ -195,7 +227,8 @@ export async function rejectLink(db: PrismaClient, actor: Actor, scope: Scope, l
   assertRowId(linkId, 'LINK_NOT_FOUND');
   if (!REASON_CODE_PATTERN.test(reasonCode)) throw new AtlasError('INVALID_REASON_CODE', 'VALIDATION');
   const ids = scopeOf(scope);
-  return withScope(db, actor, [ids.clientId], async (tx): Promise<LinkDecision> => {
+  return withScope(db, actor, [ids.clientId], async (tx): Promise<LinkDecision | typeof M365_DENIED> => {
+    if (isM365ResourceType((await linkTarget(tx, ids, linkId)).resourceType) && !mayReviewM365(actor, ids.clientId)) return M365_DENIED;
     const link = await lockedLink(tx, ids, linkId);
     if (link.status === 'REJECTED') return { linkId, status: 'REJECTED', conflictsWithLinkId: link.conflictsWithLinkId };
     await tx.entityLink.update({ where: { workspaceId_clientId_id: { ...ids, id: linkId } }, select: { id: true },
@@ -203,7 +236,7 @@ export async function rejectLink(db: PrismaClient, actor: Actor, scope: Scope, l
     await tx.auditEvent.create({ data: clientAuditData(ids, actor.id, link.status === 'CONFIRMED' ? 'mapping.link_revoked' : 'mapping.link_rejected',
       randomUUID(), { linkId, linkStatus: 'REJECTED', safeErrorCode: reasonCode }), select: { id: true } });
     return { linkId, status: 'REJECTED', conflictsWithLinkId: link.conflictsWithLinkId };
-  });
+  }).then(settle<LinkDecision>(db, actor, ids));
 }
 
 export interface MappingReviewItem {
@@ -212,12 +245,16 @@ export interface MappingReviewItem {
   reviewedBy: string | null; reviewedAt: string | null; reasonCode: string | null; conflictsWithLinkId: string | null;
 }
 
-/** Review queue (mapping:review): QUARANTINED conflicts first, then CANDIDATE links, oldest first; at most 100. */
+/**
+ * Review queue (mapping:review): QUARANTINED conflicts first, then CANDIDATE links, oldest first; at most 100. M365 links
+ * are part of it only for a reviewer who also holds m365:read on this client; otherwise the query itself excludes them.
+ */
 export async function listMappingReview(db: PrismaClient, actor: Actor, scope: Scope): Promise<MappingReviewItem[]> {
   assertPermission(actor, scope, 'mapping:review');
   const ids = scopeOf(scope);
+  const types = mayReviewM365(actor, ids.clientId) ? {} : { resourceType: { notIn: [...M365_RESOURCE_TYPES] } };
   const rows = await withScope(db, actor, [ids.clientId], tx => tx.entityLink.findMany({
-    where: { ...ids, status: { in: ['QUARANTINED', 'CANDIDATE'] } },
+    where: { ...ids, ...types, status: { in: ['QUARANTINED', 'CANDIDATE'] } },
     // 'QUARANTINED' sorts after 'CANDIDATE', so descending status puts conflicts first.
     orderBy: [{ status: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }], take: REVIEW_PAGE_LIMIT,
     select: { id: true, status: true, resourceType: true, entityKind: true, entityId: true, externalEntityId: true, method: true,

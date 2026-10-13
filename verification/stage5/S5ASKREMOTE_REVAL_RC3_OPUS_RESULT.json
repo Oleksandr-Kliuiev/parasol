@@ -1,0 +1,49 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc3",
+  "packageHash": "25f8032372e2b214ce9c960f9d00472478602df58b29a2e2174686c54b00cfea",
+  "verdict": "CHANGES_REQUIRED",
+  "actualResponseModels": [
+    "claude-opus-5-5"
+  ],
+  "effort": "xhigh",
+  "elapsedMs": 190046,
+  "usage": {
+    "input_tokens": 26,
+    "cache_creation_input_tokens": 67929,
+    "cache_read_input_tokens": 603441,
+    "output_tokens": 19747,
+    "output_tokens_details": {
+      "thinking_tokens": 15607
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 67929,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 16422,
+        "cache_read_input_tokens": 67067,
+        "cache_creation_input_tokens": 3492,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 3492
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "attributableSubscriptionQuota": "unknown",
+  "requiredFindings": [
+    "R1 semantic vs factual grading"
+  ],
+  "nonblockingCorrection": "known failed settlement can retain reserve after successful response"
+}

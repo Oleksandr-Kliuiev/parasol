@@ -1,0 +1,14 @@
+typecheck 0
+ui-typecheck 0
+schema 0
+build 0
+build-inventory 0
+artifact-check 0
+smoke 0
+unit 1
+pg17 0
+drift 0
+test-pg 0
+rehearsal 0
+test-ui 0
+ALL_DONE

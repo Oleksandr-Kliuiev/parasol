@@ -13,7 +13,7 @@ docker compose up -d     # PostgreSQL 17 локально
 export ATLAS_PG_ADMIN_URL=postgresql://atlas:atlas_local_only@localhost:5432/atlas
 npm run db:check:pg17    # SQL-инварианты и RLS на настоящем PostgreSQL 17 (через pg, без Prisma Client)
 npm run test:pg          # Prisma/PostgreSQL integration, DB-mode API, E2E (задание 1.10), ops CLI
-npm run db:check:drift   # миграции ↔ schema.prisma: diff должен быть пустым
+npm run db:check:drift   # миграции ↔ prisma/*.prisma (папка схемы): diff должен быть пустым
 ```
 
 - `DATABASE_URL` задаётся для Prisma commands. Build должен предшествовать `api:smoke` и `test:pg`: HTTP-тесты запускают собранный API из `dist`.

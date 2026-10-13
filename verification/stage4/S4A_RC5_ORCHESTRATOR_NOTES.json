@@ -1,0 +1,24 @@
+{
+  "artifact": "S4A-rc5",
+  "ownership": "native writer exited0 and returned sole source ownership to Codex",
+  "scope": "MOCK S4-A only; B/C not started; LIVE deferred",
+  "repairBaselineSha256": "f79444e23b8731c4ba543ea616a3fb0897683d88f0726684607ad6e21e22bfca",
+  "sourceDelta": {
+    "changed": [
+      "packages/graph/poweroffice-role.ts"
+    ],
+    "added": [
+      "tests/pg/poweroffice-grant-options.pg.test.ts"
+    ],
+    "removed": []
+  },
+  "priorArtifactsPreserved": 343,
+  "requiredRC4Finding": "runtime table/column grant options bypass readiness; implementation-reported fixed, acceptance pending",
+  "checks": "rc5 final all11 exit0;196unit/PGlite+475PG; focused120PG per native report",
+  "failures": "No failures in this repair phase; earlier failures remain preserved",
+  "finiteRegression": "6 table SELECT/INSERT grant-option cases;86 column SELECT/INSERT;15 approved mutable UPDATE; actual startup+admission refusal, exact production provisioning reset and observer isolation",
+  "unchanged": "approved grants, maintenance surface incl MAINTAIN/all-tablespace, all3 pendingPO migrations, acceptedStage1/2/3 norms/migrations/history",
+  "testSafety": "All phase grants rolled back; no shared/PUBLIC grants committed; no host/tablespace/credential operation",
+  "historicalSharedParameterIncident": "Earlier preRC3 committed PUBLIC parameter diagnostic restored and corrected to rollback-only; RC3/RC4 notes retain qualification. Not relabeled as safe.",
+  "acceptance": "PENDING fresh native gpt-6-astra/xhigh"
+}
