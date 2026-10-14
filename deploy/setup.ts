@@ -78,7 +78,9 @@ writeEnv('api.env', { ATLAS_RUNTIME_DATABASE_URL: runtimeUrl, ...cursor, ATLAS_P
 const vendor = Object.fromEntries(Object.entries(owner).filter(([k]) => /^(ATERA|HUNTRESS|M365)_/.test(k)));
 writeEnv('scheduler.env', { ATLAS_RUNTIME_DATABASE_URL: runtimeUrl, ATLAS_OPERATOR_TOKEN: tokens.ATLAS_SCHEDULER_TOKEN!, ...cursor, ...vendor,
   ATLAS_M365_CLEANUP_RUNNER_URL: `postgresql://atlas_m365_cleanup_runner:${need(gen, 'ATLAS_RUNNER_PASSWORD')}${host}`,
-  ATLAS_M365_CLEANUP_RUNNER_SECRET_REF: 'env://ATLAS_M365_CLEANUP_RUNNER_URL', ATLAS_SYNC_JOBS: site.ATLAS_SYNC_JOBS ?? '' });
+  ATLAS_M365_CLEANUP_RUNNER_SECRET_REF: 'env://ATLAS_M365_CLEANUP_RUNNER_URL',
+  // The hand-written jobs plus the per-connection jobs of deploy/sync-clients.ts (jobs.auto, one per line).
+  ATLAS_SYNC_JOBS: [site.ATLAS_SYNC_JOBS ?? '', ...(existsSync(`${S}/jobs.auto`) ? readFileSync(`${S}/jobs.auto`, 'utf8').split('\n') : [])].map(j => j.trim()).filter(Boolean).join(';') });
 const tenant = need(site, 'ATLAS_ENTRA_TENANT_ID');
 writeEnv('oauth2.env', {
   OAUTH2_PROXY_PROVIDER: 'oidc', OAUTH2_PROXY_PROVIDER_DISPLAY_NAME: 'Microsoft', OAUTH2_PROXY_OIDC_ISSUER_URL: `https://login.microsoftonline.com/${tenant}/v2.0`,

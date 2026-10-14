@@ -34,7 +34,7 @@ export async function buildMeasuredConsole(root = fileURLToPath(new URL('../', i
     }
   }
   await rm(tmp, { recursive: true, force: true });
-  await copyFile(join(root, 'apps/operator/styles.css'), join(out, 'styles.css'));
+  for (const file of ['tokens.css', 'styles.css', 'vardahei-it-logo.png']) await copyFile(join(root, 'apps/operator', file), join(out, file));
   await copyFile(join(root, 'apps/operator/measured/index.html'), join(out, 'index.html'));
   const files = [];
   for (const entry of (await readdir(out, { withFileTypes: true })).sort(byName)) {

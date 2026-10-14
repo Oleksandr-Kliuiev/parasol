@@ -19,7 +19,8 @@ test('manifest lists exactly the built files with matching sizes and hashes', as
     const body = await readFile(join(out, file.path));
     expect([file.path, body.byteLength, createHash('sha256').update(body).digest('hex')]).toEqual([file.path, file.bytes, file.sha256]);
   }
-  expect(names.filter(n => !/^[a-z][a-z0-9-]*\.(js|css|html)$/.test(n))).toEqual([]);
+  // The only binary asset is the static brand logo (design system); everything else is html/css/js.
+  expect(names.filter(n => !/^[a-z][a-z0-9-]*\.(js|css|html)$/.test(n))).toEqual(['vardahei-it-logo.png']);
 });
 
 test('emitted ES module graph is closed, relative and browser-only', async () => {
@@ -50,8 +51,9 @@ test('static assets: no inline code, handlers, remote resources, storage, loggin
   expect(/\sstyle\s*=/i.test(html)).toBe(false);
   expect(/(?:src|href)\s*=\s*["'](?:https?:|\/\/|data:|javascript:)/i.test(html)).toBe(false);
   expect(/\sname\s*=/.test(html.slice(html.indexOf('<form'), html.indexOf('</form>')))).toBe(false);
-  const css = await readFile(join(out, 'styles.css'), 'utf8');
-  expect(/url\(|@import|https?:/i.test(css)).toBe(false);
+  const stylesheets = (await readdir(out)).filter(n => n.endsWith('.css')).sort();
+  expect(stylesheets).toEqual(['styles.css', 'tokens.css']);
+  for (const name of stylesheets) expect(/url\(|@import|https?:/i.test(await readFile(join(out, name), 'utf8')), name).toBe(false);
   const forbidden = /localStorage|sessionStorage|document\.cookie|indexedDB|serviceWorker|SharedWorker|BroadcastChannel|postMessage|sendBeacon|XMLHttpRequest|WebSocket|EventSource|history\.(?:push|replace)State|console\.|innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\b|new Function|srcdoc|sourceMappingURL|location\.(?:assign|replace|href\s*=)/;
   for (const name of (await readdir(out)).filter(n => n.endsWith('.js'))) {
     const code = await readFile(join(out, name), 'utf8');

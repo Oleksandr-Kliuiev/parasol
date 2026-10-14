@@ -45,9 +45,15 @@ test('asset loader: only exact manifest entries, regular files inside the direct
   const assets = await loadOperatorAssets(await assetDir(BASIC));
   assert.deepEqual([...assets.keys()].sort(), ['/operator/', '/operator/main.js', '/operator/styles.css']);
   assert.equal(assets.get('/operator/main.js')!.contentType, 'text/javascript; charset=utf-8');
+  // The brand logo is the one binary asset type: served as image/png (nosniff applies to every response).
+  const withLogo = await loadOperatorAssets(await assetDir({ ...BASIC, 'vardahei-it-logo.png': '\u0089PNG' }));
+  assert.equal(withLogo.get('/operator/vardahei-it-logo.png')!.contentType, 'image/png');
   const rejects = async (dir: Promise<string> | string, name: string) =>
     assert.rejects(loadOperatorAssets(await dir), { message: ASSETS_UNAVAILABLE }, name);
   const entry = (path: string, body = 'x') => ({ path, bytes: Buffer.byteLength(body), sha256: sha(body) });
+  for (const path of ['logo.svg', 'logo.jpg', 'font.woff2', 'logo.PNG']) {
+    await rejects(assetDir(BASIC, { format: MANIFEST_FORMAT, files: [entry('index.html', BASIC['index.html']), entry(path)] }), path);
+  }
   await rejects(assetDir(BASIC, { format: 'other', files: [entry('index.html')] }), 'format');
   await rejects(assetDir(BASIC, { format: MANIFEST_FORMAT, files: [] }), 'empty');
   await rejects(assetDir({ 'main.js': 'x' }), 'no index');

@@ -11,7 +11,7 @@ import { buildMeasuredConsole } from './operator-measured-build.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const out = join(root, 'dist', 'operator');
-const STATIC_FILES = ['index.html', 'styles.css'];
+const STATIC_FILES = ['index.html', 'tokens.css', 'styles.css', 'vardahei-it-logo.png'];
 
 await rm(out, { recursive: true, force: true });
 const tsc = spawnSync(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '-p', join(root, 'apps/operator/tsconfig.json')],
