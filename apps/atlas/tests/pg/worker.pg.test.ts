@@ -60,8 +60,10 @@ test('two workers on two pools take disjoint batches; every event is processed e
 
 test('restart: a worker that dies after phase 1 leaves its decision; once the lease expires another worker commits it without calling the provider again', async () => {
   const provider = new CountingProvider();
-  await ingestEvent(db, actors.sync, connection, incident(connection, 'crash-1', 'HIGH'));
-  const t0 = new Date();
+  const stored = await ingestEvent(db, actors.sync, connection, incident(connection, 'crash-1', 'HIGH'));
+  // The explicit clock controls lease recovery; anchor it to the exact persisted eligibility time, not a host-clock race.
+  const t0 = new Date(Number((await pgdb.owner.query('SELECT extract(epoch FROM "nextAttemptAt") * 1000 AS instant FROM "RawEvent" WHERE "workspaceId"=$1 AND "clientId"=$2 AND "eventKey"=$3',
+    [gasta.workspaceId, gasta.clientId, stored.eventKey])).rows[0].instant));
   const [claimed] = (await claimEvents(db, actors.sync, gasta, { workerId: 'worker-dead', leaseMs: 1_000 }, t0)).claimed;
   assert.ok(claimed);
   await prepareEvent(db, actors.sync, gasta, claimed, options(provider)); // phase 1 stored; the worker dies here

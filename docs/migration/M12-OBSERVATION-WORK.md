@@ -69,13 +69,22 @@ acknowledgement провайдеру: Atlas может измениться по
 | CRM unit: Atlas/identity/source task | 178/178; после employee binding повторены 10/10 затронутых |
 | CRM SQL: source task + identity/workspace/queue | 77/77; после employee binding 11/11, всего 78 разных проверок |
 | CRM architecture | 94/94 |
-| Frontend, полный набор | 280/280, два workers, без пропусков |
+| Frontend, исходный полный набор M12 | 280/280, два workers, без пропусков |
+| Frontend, последний полный набор | 415/415, без пропусков; до последующей адресной правки фокуса |
+| Frontend, последующая адресная правка фокуса | 56/56; TypeScript, lint и SPA build пройдены; это отдельная проверка, не полный повтор 415 |
 | Playwright CRM: handoff, отзыв доступа, M10/M11/workspace/reverify | 24/24, без retries; Chromium/Firefox/WebKit, обе темы |
 | TypeScript, lint, SPA budget | Пройдены; initial bundle 291,0 КБ gzip при бюджете 300 КБ |
 | Web/Worker Release | Пройдены; 0 warnings/errors |
-| Atlas strict unit | 704/704, без исключений |
-| Atlas strict PostgreSQL / browser | Полные итоговые прогоны ещё выполняются |
+| Atlas strict unit | Итоговый полный повтор 711/711, 0 failures/skips/todos/cancellations |
+| Atlas strict PostgreSQL | Итоговый свежий полный повтор 789/789, 0 failures/skips/todos/cancellations |
+| Atlas strict browser | Итоговый полный набор 90/90, 0 failures/skips/retries; 200-case measured-pane journey COMMITTED/MATCH, runtime fixture очищен |
 | Root tooling / history / Gitleaks / diff | Пройдены; исходные HEAD/status/refs совпадают с началом работы |
+
+Безопасное [итоговое свидетельство Atlas](../testing/evidence/atlas-strict-current-2026-10-16.json)
+содержит полные unit 711/711, PostgreSQL 789/789 и browser 90/90 без исключений.
+Postflight подтвердил неизменность всех 1421 source/input hashes и точного состава файлов.
+Собственный нативный PostgreSQL остановлен; его cluster, private environment и runtime prefix
+удалены, runner завершён, cleanup exit code 0, оставшихся собственных runtime-процессов нет.
 
 Наборы проверяют
 идемпотентность независимых SQL scope, потерянный ответ commit, rollback всех четырёх записей,
@@ -94,6 +103,18 @@ BFF-контракт; долговременная запись проверяе
 Отдельно проверяется, что повтор после transient failure сохраняет backoff на тех же часах.
 Регрессии не добавляют ожиданий или повторов, маскирующих ошибку выборки.
 
+Промежуточный полный PostgreSQL-прогон прошёл обязательное offline учение всех 200 случаев,
+но завершился результатом 781/787 с шестью поздними сбоями shadow/worker и без пропусков.
+Это сохранённый диагноз предыдущего запуска; его причина и исправление описаны ниже.
+Успешное учение отдельно не считалось прохождением всего PG gate.
+
+Последующие измерения подтвердили такой же default process-clock cutoff в shadow worker:
+dueAt был на 1 мс позже process now, хотя DB clock уже прошёл eligibility. Shadow использует
+общий scoped DB clock для claim/lease и outcome/backoff; explicit clock сохранён. Тесты lease
+recovery привязаны к точному сохранённому dueAt (для batch — максимум), сохраняя прежние
+смещения времени, counts и fencing assertions. Адресный PG-набор 28/28 и clock unit 9/9
+прошли; затем свежий полный PostgreSQL повтор завершился 789/789 без исключений.
+
 В PG-проверке R-EVAL исправлен setup: cleanup регистрируется до запуска дочерних процессов,
 порт выделяется динамически, а owner IDENTITY проверяется до подключения инструмента.
 Неуспешный startup больше не оставляет тестовые процессы; отдельная регрессия это проверяет.
@@ -101,6 +122,22 @@ BFF-контракт; долговременная запись проверяе
 Ещё один тест выбирал последнюю denial-запись только по timestamp(3). Подтверждено совпадение
 времени двух разных UUID в одной миллисекунде; теперь проверяется ровно один новый audit ID
 с ожидаемым eventType и пустой metadata. Проверки прав и отсутствия client audit сохранены.
+
+Полный unit также обнаружил, что historicalReader дочитывал отсутствующий исторический
+context map из текущего дерева. Замороженные версии смешивались. Reader теперь закрыт:
+первичный неизменённый rsdc.gz, отдельный pinned supplement с исходным context map из
+459b1de, затем только 907 hash-checked исторических references; неизвестные/изменённые
+данные дают null. Проверены все 2101 запрошенных пути, tamper и прежний отказ RC5.
+Исторические манифесты, контрольные подписи и первичный архив byte-identical; production
+verifier не менялся. Адресные проверки 55/55 и полный unit 711/711 прошли.
+
+Последующий полный browser прошёл 90/90 за 21,9 минуты с workers=1/retries=0. Длительный
+measured-pane journey подтвердил все 200 случаев, включая 15 FX10 MISSING, как COMMITTED
+с semantic MATCH/truth true. Свежий полный PostgreSQL gate затем прошёл 789/789 за
+67,6 минуты, включая отдельное paced offline учение: 200/200 casePass, semantic/census MATCH,
+COMMITTED handoff и final terminal, 12 proofs и 11 QUIESCENT drains. Все 1421 замороженных
+source/input hashes и состав файлов совпали; собственные fixture и runtime paths очищены.
+Эти учения синтетические: live acceptance остаётся BLOCKED и не объявляется успешной.
 
 Независимая проверка дополнительно обнаружила перенос подтверждения между двумя сотрудниками
 с одинаковым доступом и сохранение старой родительской сводки после source denial при POST.
@@ -110,5 +147,7 @@ Employee binding и повторная проверка всей карточк�
 Combobox: теперь он выбирает реального сотрудника клавиатурой. Исключений и retries нет.
 
 Совместный синтетический проход двух реально запущенных приложений CRM → Atlas → PostgreSQL
-остаётся отдельным обязательным продуктовым воротом. Эти послойные проверки его не заменяют.
-Рабочие аккаунты провайдеров, Entra consent и VPS при этом не проверяются.
+проверен отдельно: [полный запуск после M17/M18](../testing/evidence/composition-current-2026-10-16.json)
+прошёл 8/8 со сборкой в том же запуске, точным durable/privacy evidence и очисткой.
+Получатель уже находился в «Мой день» до создания задачи и получил её ручным обновлением.
+Рабочие аккаунты провайдеров, Entra consent и VPS не проверяются.

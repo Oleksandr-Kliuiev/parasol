@@ -10,6 +10,7 @@ import { withScope } from '../graph/scoped-db.ts';
 import { decisionRunData, draftDecision, finalRoute } from './decision.ts';
 import { assertStorableEvent } from './inbox.ts';
 import { applyRevisionLifecycle } from '../observations/lifecycle.ts';
+import { queueClock } from './clock.ts';
 
 /**
  * Durable worker (task 1.6), docs/03 "Event inbox и worker" with the reference pipeline's contract:
@@ -46,10 +47,6 @@ function classify(error: unknown): AtlasError {
   return typeof code === 'string' && TRANSIENT_DB.has(code) ? new AtlasError('DATABASE_UNAVAILABLE', 'TRANSIENT') : new AtlasError('UNEXPECTED_ERROR', 'PERMANENT');
 }
 
-/** Caller must already be in a scoped transaction. Keep claims, leases and retries on one clock domain. */
-const workerClock = async (tx: Prisma.TransactionClient, explicit?: Date): Promise<Date> =>
-  explicit ?? (await tx.$queryRaw<{ instant: Date }[]>`SELECT clock_timestamp()::timestamptz(3) AS instant`)[0]!.instant;
-
 /**
  * Claims due events of one client for this worker. Each claim gets its own token and uses up an attempt, so a crash
  * counts too. In the same transaction, due events that have used every attempt without an outcome (their last worker
@@ -65,7 +62,7 @@ export async function claimEvents(db: PrismaClient, actor: Actor, scope: Scope, 
   return withScope(db, actor, [scope.clientId], async tx => {
     // Due timestamps originate in PostgreSQL. Use its clock at the stored millisecond precision, not a potentially
     // behind/truncated process clock. Explicit clocks remain available for deterministic scheduling and recovery.
-    const instant = await workerClock(tx, now);
+    const instant = await queueClock(tx, now);
     const until = new Date(instant.getTime() + (options.leaseMs ?? defaults.leaseMs));
     const exhausted = await tx.$queryRaw<{ eventKey: string; attempts: number }[]>`
       WITH picked AS MATERIALIZED (
@@ -195,7 +192,7 @@ async function recordFailure(db: PrismaClient, actor: Actor, scope: Scope, claim
   const status = retry ? 'RETRY' : 'DEAD_LETTER';
   const delay = (options.retryDelayMs ?? defaults.retryDelayMs)(claimed.attempts);
   return withScope(db, actor, [scope.clientId], async tx => {
-    const retryAt = retry ? new Date((await workerClock(tx, now)).getTime() + delay) : null;
+    const retryAt = retry ? new Date((await queueClock(tx, now)).getTime() + delay) : null;
     const updated = await tx.rawEvent.updateMany({ where: { ...ids(scope), id: claimed.id, claimToken: claimed.claimToken, status: { in: ['RECEIVED', 'RETRY'] } },
       data: { status, lastErrorCode: failure.code, leaseOwner: null, leaseExpiresAt: null, claimToken: null, ...(retryAt ? { nextAttemptAt: retryAt } : {}) } });
     if (updated.count !== 1) return 'CLAIM_LOST';

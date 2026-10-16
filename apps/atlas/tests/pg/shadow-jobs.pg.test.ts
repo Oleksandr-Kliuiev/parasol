@@ -127,3 +127,41 @@ test('telemetry from the durable records: shadow agreement with the baseline, jo
   assert.deepEqual([ai.calls, ai.withinDeadline, ai.p50Ms !== null && ai.p50Ms >= 0], [9, 9, true]);
   assert.deepEqual(report.inputTokens, [{ provider: 'openai', callsWithUsage: 6, total: 252, perCall: 42, perEvent: 42 }]);
 });
+
+test('each new shadow job is eligible on an immediate database-clock pass without sleeps or retries', async () => {
+  const provider = new CountingProvider('shadow', 'openai', () => modelRoute('MONITOR'));
+  for (let index = 0; index < 100; index++) {
+    const stored = await ingest(`shadow-clock-${index}`, 'LOW');
+    assert.deepEqual((await worker(provider)).map(o => [o.eventKey, o.status]), [[stored.eventKey, 'PROCESSED']], `baseline ${index}`);
+    const outcomes = await shadow(provider);
+    const eventId = (await pgdb.owner.query('SELECT id FROM "RawEvent" WHERE "workspaceId"=$1 AND "clientId"=$2 AND "eventKey"=$3',
+      [gasta.workspaceId, gasta.clientId, stored.eventKey])).rows[0].id;
+    assert.deepEqual(outcomes.map(o => [o.eventId, o.status]), [[eventId, 'DONE']], `independent shadow case ${index}`);
+  }
+  assert.equal(provider.calls, 100);
+});
+
+test('default shadow retry backoff begins after the failed provider work on the database clock', async () => {
+  const delay = 30_000; let failedAt = 0; let fail = true;
+  const provider: DecisionProvider = {
+    mode: 'shadow', provider: 'openai',
+    classify: async () => {
+      if (fail) {
+        fail = false;
+        await new Promise(resolve => setTimeout(resolve, 100));
+        failedAt = Number((await pgdb.owner.query('SELECT extract(epoch FROM clock_timestamp()) * 1000 AS instant')).rows[0].instant);
+        throw new AtlasError('SYNTHETIC_SHADOW_TIMEOUT', 'TRANSIENT');
+      }
+      return modelRoute('MONITOR');
+    },
+  };
+  const stored = await ingest('shadow-retry-clock', 'LOW'); await worker(provider);
+  const eventId = (await pgdb.owner.query('SELECT id FROM "RawEvent" WHERE "workspaceId"=$1 AND "clientId"=$2 AND "eventKey"=$3',
+    [gasta.workspaceId, gasta.clientId, stored.eventKey])).rows[0].id;
+  assert.deepEqual((await shadow(provider, { retryDelayMs: () => delay })).map(o => [o.eventId, o.status]), [[eventId, 'RETRY']]);
+  const retryAt = Number((await pgdb.owner.query('SELECT extract(epoch FROM "nextAttemptAt") * 1000 AS instant FROM "ShadowJob" WHERE "workspaceId"=$1 AND "clientId"=$2 AND "eventId"=$3',
+    [gasta.workspaceId, gasta.clientId, eventId])).rows[0].instant);
+  assert.ok(retryAt >= Math.round(failedAt) + delay, 'backoff includes the completed provider work');
+  assert.deepEqual(await shadow(provider), [], 'the database clock has not reached the retry deadline');
+  assert.deepEqual((await shadow(provider, {}, new Date(retryAt + 1))).map(o => [o.eventId, o.status]), [[eventId, 'DONE']]);
+});
