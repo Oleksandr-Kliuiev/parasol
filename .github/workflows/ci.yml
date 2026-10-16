@@ -1,0 +1,206 @@
+name: Parasol CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: parasol-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  history:
+    name: History and build tooling
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm run check:history
+      - run: node --test scripts/*.test.mjs
+
+  atlas:
+    name: Atlas build and inherited tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/unused
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/atlas/package-lock.json
+      - run: npm ci --prefix apps/atlas
+      - run: npm run build:atlas
+      - run: npm run check:atlas
+      # Executes EVERY unit test. Only the documented, immutable upstream baseline
+      # is tolerated. Any new failure or Atlas source change fails this gate.
+      - run: npm run test:atlas
+
+  atlas-integration:
+    name: Atlas PostgreSQL and browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: parasol_test
+          POSTGRES_PASSWORD: parasol_test_only
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U parasol_test -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://parasol_test:parasol_test_only@127.0.0.1:5432/postgres
+      ATLAS_PG_ADMIN_URL: postgresql://parasol_test:parasol_test_only@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/atlas/package-lock.json
+      - run: npm ci --prefix apps/atlas
+      - run: npm run build:atlas
+      - run: npm run db:check:pg17 --prefix apps/atlas
+      - run: npm run db:check:drift --prefix apps/atlas
+      - run: npm run test:atlas:pg
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/atlas
+      - run: npm run test:atlas:ui
+
+  crm-backend:
+    name: CRM backend and SQL integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/crm
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: apps/crm/global.json
+      - run: dotnet restore Vardahei.Crm.slnx
+      - run: dotnet build Vardahei.Crm.slnx --no-restore -c Release
+        id: build
+      - name: Dependency audit
+        run: |
+          dotnet list Vardahei.Crm.slnx package --vulnerable --include-transitive --format json > "$RUNNER_TEMP/vulnerable.json"
+          python3 tools/release/release.py vulnerable-dotnet "$RUNNER_TEMP/vulnerable.json" --min-projects "$(grep -c '<Project ' Vardahei.Crm.slnx)"
+      - name: Unit tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --no-build -c Release
+          --coverage --coverage-output-format cobertura --coverage-output "$RUNNER_TEMP/coverage/unit.cobertura.xml"
+      - name: Architecture tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj --no-build -c Release
+      - name: SQL Server and storage integration (local containers)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --no-build -c Release
+          --coverage --coverage-output-format cobertura --coverage-output "$RUNNER_TEMP/coverage/integration.cobertura.xml"
+      - name: Coverage gate
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker --summary "$GITHUB_STEP_SUMMARY"
+          "$RUNNER_TEMP/coverage/unit.cobertura.xml" "$RUNNER_TEMP/coverage/integration.cobertura.xml"
+
+  crm-frontend:
+    name: CRM frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/crm/web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/crm/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --maxWorkers=2
+      - run: node --experimental-vm-modules --test ../tools/load-test/*.test.mjs
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  crm-e2e:
+    name: CRM browser workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    needs: [crm-backend, crm-frontend]
+    services:
+      sql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: Local_Dev_Passw0rd!
+        ports: ['14333:1433']
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Local_Dev_Passw0rd!' -Q 'SELECT 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: apps/crm/global.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/crm/web/package-lock.json
+      - run: npm ci --prefix apps/crm/web
+      - run: npx playwright install --with-deps chromium firefox webkit
+        working-directory: apps/crm/web
+      - run: dotnet dev-certs https
+      - run: npm run test:crm:e2e
+
+  required:
+    name: Required checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    if: ${{ always() }}
+    needs: [history, atlas, atlas-integration, crm-backend, crm-frontend, crm-e2e]
+    steps:
+      - name: All checks must succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          failures = [name for name, job in results.items() if job['result'] != 'success']
+          if failures:
+              raise SystemExit('Unsuccessful checks: ' + ', '.join(failures))
+          print('All Parasol migration checks passed. See Atlas baseline warnings; this is not a production release.')
+          PY

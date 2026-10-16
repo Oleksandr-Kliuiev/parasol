@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "capturedOn": "2026-10-16",
+  "sources": [
+    {
+      "name": "atlas",
+      "url": "https://github.com/Oleksandr-Kliuiev/vardahei-atlas.git",
+      "prefix": "apps/atlas",
+      "defaultBranch": "main",
+      "commit": "992fdf7d73f09133798c7d5cceb5d235cdb87278",
+      "tree": "73bbcf3bdcdd331a7c6731258df4d2534e9e82f0",
+      "commits": 42,
+      "shallow": false,
+      "refs": [
+        {
+          "ref": "refs/heads/main",
+          "object": "992fdf7d73f09133798c7d5cceb5d235cdb87278"
+        }
+      ],
+      "importCommit": "dbc7390f1ca215e4b2641d527e840500e9f3c3be"
+    },
+    {
+      "name": "crm",
+      "url": "https://github.com/Oleksandr-Kliuiev/Vardahei_CRM_V2.git",
+      "prefix": "apps/crm",
+      "defaultBranch": "main",
+      "commit": "8f686dedf3fe3068fa6df82d08848cf62db21fc4",
+      "tree": "a1b6c19dfc7cb1775bf8654bf80de94d624e00bb",
+      "commits": 27,
+      "shallow": false,
+      "refs": [
+        {
+          "ref": "refs/heads/codex/readiness",
+          "object": "0c891419028c0538f18fbff6b29c9de998625ff7"
+        },
+        {
+          "ref": "refs/heads/main",
+          "object": "8f686dedf3fe3068fa6df82d08848cf62db21fc4"
+        }
+      ],
+      "importCommit": "73297a6d860e09508c824780111e52da696e77a9"
+    }
+  ]
+}
