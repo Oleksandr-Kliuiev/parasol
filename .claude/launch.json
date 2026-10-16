@@ -1,0 +1,62 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "crm-web",
+      "runtimeExecutable": "/Users/vardahei/.dotnet/dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Hosts/Crm.Web",
+        "--launch-profile",
+        "http"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "web",
+        "run",
+        "dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "crm-web-mocks",
+      "runtimeExecutable": "/Users/vardahei/.dotnet/dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Hosts/Crm.Web",
+        "--launch-profile",
+        "http",
+        "--",
+        "--Integrations:PowerOffice:Enabled=true",
+        "--Integrations:PowerOffice:ApplicationKey=mock",
+        "--Integrations:PowerOffice:ClientKey=mock",
+        "--Integrations:PowerOffice:SubscriptionKey=mock",
+        "--Integrations:PowerOffice:BaseUrl=http://localhost:5299/v2/",
+        "--Integrations:PowerOffice:TokenUrl=http://localhost:5299/OAuth/Token",
+        "--Integrations:PowerOffice:WriteEnabled=true",
+        "--Integrations:Brreg:BaseUrl=http://localhost:5299/enhetsregisteret/api/",
+        "--Integrations:Atera:Enabled=true",
+        "--Integrations:Atera:ApiKey=mock",
+        "--Integrations:Atera:BaseUrl=http://localhost:5299/api/v3/",
+        "--Integrations:Atera:WriteEnabled=true",
+        "--Integrations:Atera:SlaCustomFieldName=SLA"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "external-mocks",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/dev-mocks/external-apis.mjs"
+      ],
+      "port": 5299
+    }
+  ]
+}

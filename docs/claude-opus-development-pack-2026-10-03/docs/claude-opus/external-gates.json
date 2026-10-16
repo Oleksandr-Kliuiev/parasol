@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-03",
+  "status_values": [
+    "not_run",
+    "in_progress",
+    "blocked",
+    "failed",
+    "passed"
+  ],
+  "criteria_document": "DECISIONS.md",
+  "gates": [
+    {
+      "id": "EXT-01",
+      "title": "Бизнес-правила, данные и владельцы исключений",
+      "required_owner_roles": "PO / Finance / Sales / ServiceLead / operations",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-03",
+        "DEV-09",
+        "DEV-17",
+        "DEV-20",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-02",
+      "title": "Реальный Entra tenant и отзыв прав",
+      "required_owner_roles": "Tenant owner / security",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-10",
+        "DEV-19",
+        "DEV-21",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-03",
+      "title": "Контракты реальных поставщиков и сверка эффектов",
+      "required_owner_roles": "Integration owner / Finance",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-19",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-04",
+      "title": "Учение восстановления и RPO/RTO",
+      "required_owner_roles": "Operations",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-13",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-05",
+      "title": "Целевой масштаб и нагрузка",
+      "required_owner_roles": "QA / operations / PO",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-16",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-06",
+      "title": "Независимая проверка безопасности",
+      "required_owner_roles": "Security reviewer / PO",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-21",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-07",
+      "title": "Персональные данные, retention и legal holds",
+      "required_owner_roles": "Data owner / Finance",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-04",
+        "DEV-11",
+        "DEV-21",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-08",
+      "title": "Обновление Power BI Service",
+      "required_owner_roles": "BI owner",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-14",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-09",
+      "title": "Репетиция миграции и сверка",
+      "required_owner_roles": "Data owners / Finance",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-20",
+        "DEV-22",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-10",
+      "title": "UAT и полный месячный параллельный биллинг",
+      "required_owner_roles": "PO / users / Finance",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-18",
+        "DEV-22",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-11",
+      "title": "Проверенная конфигурация выпуска и поддержка",
+      "required_owner_roles": "Repository owner / operations / PO",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [],
+      "verified_at": "",
+      "blocker": "",
+      "tasks": [
+        "DEV-05",
+        "DEV-23"
+      ]
+    }
+  ]
+}
