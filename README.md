@@ -66,6 +66,7 @@ CRM сохраняет свои unit, architecture, SQL/storage integration, cov
 Инструкция запуска полного Atlas: [ATLAS.md](docs/testing/ATLAS.md).
 
 Текущие результаты и ограничения: [VERIFICATION.md](docs/migration/VERIFICATION.md).
+Следующий реализованный этап — [M04: единый CustomerId и подтверждённые связи Atlas ↔ CRM](docs/migration/M04-CUSTOMER-IDENTITY.md).
 GitHub Actions ранее не запускал jobs из-за billing/spending limit аккаунта;
 локальные результаты не подменяют подтверждение выполнения CI на GitHub.
 

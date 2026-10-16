@@ -23,6 +23,7 @@ public static class IntegrationsCoreModule
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, ExceptionTriageRetention>();
         services.AddScoped<ExternalRecordStore>();
         services.AddScoped<ExternalLinkService>();
+        services.AddScoped<Parasol.CustomerIdentityService>();
         services.AddScoped<OutboundQueue>();
         services.AddScoped<ExternalImportService>();
         // DEV-11: links, mirrored person records and queued changes in subject requests; retention of payloads and the run log.
