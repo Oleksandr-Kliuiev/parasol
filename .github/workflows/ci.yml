@@ -182,12 +182,29 @@ jobs:
       - run: dotnet dev-certs https
       - run: npm run test:crm:e2e
 
+  hostinger:
+    name: Hostinger images and real backup restore
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Deployment failure and isolation tests
+        run: python3 -m unittest discover -s deploy/hostinger/tests -v
+      - name: Build images, migrate both databases, backup and restore into a fresh isolated stack
+        run: >-
+          sudo python3 deploy/hostinger/rehearse.py
+          --directory "$RUNNER_TEMP/parasol-rehearsal" --release ci-${{ github.sha }}
+      - name: Publish only the secret-free synthetic drill report
+        run: sudo cat "$RUNNER_TEMP/parasol-rehearsal/report.json" | tee -a "$GITHUB_STEP_SUMMARY"
+
   required:
     name: Required checks
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: ${{ always() }}
-    needs: [history, atlas, atlas-integration, crm-backend, crm-frontend, crm-e2e]
+    needs: [history, atlas, atlas-integration, crm-backend, crm-frontend, crm-e2e, hostinger]
     steps:
       - name: All checks must succeed
         env:

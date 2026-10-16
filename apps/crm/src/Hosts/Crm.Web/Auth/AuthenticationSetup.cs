@@ -45,7 +45,12 @@ public static class AuthenticationSetup
         }
 
         builder.Services
-            .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+            // API requests challenge the local session; only /bff/login explicitly starts OIDC.
+            .AddAuthentication(authentication =>
+            {
+                authentication.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                authentication.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            })
             .AddMicrosoftIdentityWebApp(
                 oidc =>
                 {

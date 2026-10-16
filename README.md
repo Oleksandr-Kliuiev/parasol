@@ -6,8 +6,10 @@ M01–M03 объединяют исходники, историю Git, сбор�
 [M05](docs/migration/M05-WORKSPACE.md) использует вход и роли CRM для общей карточки клиента
 с технической сводкой Atlas. Базы пока раздельные: Atlas — PostgreSQL 17; CRM — SQL Server.
 [M06: документы](docs/migration/M06-VPS-DOCUMENTS.md) переносит хранилище на постоянный
-том VPS с атомарной записью и проверкой неизменности. Подключение реальных систем и
-VPS-развёртывание требуют следующих этапов.
+том VPS с атомарной записью и проверкой неизменности.
+[M07: комплект VPS](deploy/hostinger/README.md) добавляет Linux-образы, Caddy, private config,
+зашифрованные backup и отдельное учение restore. Реальный запуск и подключение провайдеров
+ещё не выполнены.
 
 ## Структура
 
@@ -15,6 +17,7 @@ VPS-развёртывание требуют следующих этапов.
 | --- | --- |
 | `apps/atlas` | Atlas: Node/TypeScript, Prisma, операторский интерфейс |
 | `apps/crm` | CRM: .NET, React/Vite, фоновые задания |
+| `deploy/hostinger` | Docker Compose, секреты в файлах, backup/restic, изолированное restore |
 | `scripts` | Общие команды сборки и проверки переноса |
 | `.github/workflows/ci.yml` | Единственный активный CI, без развёртывания |
 | `docs/migration` | Источники, способ импорта, известные ограничения |
@@ -54,7 +57,8 @@ DATABASE_URL=postgresql://test:test@127.0.0.1:5432/unused npm run check
 | `npm run test:crm:e2e` | CRM + worker + локальная SQL test DB + макеты внешних API |
 
 Сборка Atlas появляется в `apps/atlas/dist`; SPA CRM — в `apps/crm/src/Hosts/Crm.Web/wwwroot`,
-.NET-сборки — в каталогах `bin/Release`. Это результаты сборки, не готовый пакет VPS-развёртывания.
+.NET-сборки — в каталогах `bin/Release`. Для контейнеров и эксплуатации использовать
+[комплект Hostinger](deploy/hostinger/README.md), а не копировать локальные build-каталоги на сервер.
 
 ## Что означает зелёный CI
 
@@ -65,7 +69,9 @@ CI проверяет Linux-сборку Atlas и полный набор тес
 случаев выполняются с настоящими временными ограничениями.
 
 CRM сохраняет свои unit, architecture, SQL/storage integration, coverage, frontend,
-браузерные проверки и аудит зависимостей. Рабочие базы и внешние интеграции не используются.
+браузерные проверки и аудит зависимостей. Hostinger job дополнительно собирает образы,
+поднимает обе БД и проверяет настоящий restic backup/restore на синтетических данных.
+Рабочие базы и внешние интеграции не используются.
 Инструкция запуска полного Atlas: [ATLAS.md](docs/testing/ATLAS.md).
 
 Текущие результаты и ограничения: [VERIFICATION.md](docs/migration/VERIFICATION.md).

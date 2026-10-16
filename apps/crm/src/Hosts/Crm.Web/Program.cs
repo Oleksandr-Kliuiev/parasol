@@ -37,7 +37,14 @@ using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
 using Crm.Infrastructure.Http;
 
+if (args.Contains("--health-probe", StringComparer.Ordinal))
+{
+    Environment.Exit(await VpsHostConfiguration.HealthProbeAsync());
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.AddVpsConfiguration(args);
 
 builder.AddServiceDefaults();
 // DEV-06: ready means the database answers and has this build's schema; external systems never decide readiness.
