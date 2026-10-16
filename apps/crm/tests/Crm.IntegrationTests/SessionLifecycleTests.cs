@@ -446,9 +446,10 @@ public sealed class SessionLifecycleTests(CrmWebFactory factory) : IDisposable
     public void Production_does_not_start_without_the_shared_key_ring_and_half_a_configuration_starts_nowhere()
     {
         // Without one key ring for all replicas, a cookie issued by one is refused by the next, and sessions die with a replica.
-        using var production = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Production"));
+        using var production = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Production")
+            .UseSetting("DataProtection:KeyRingPath", "").UseSetting("DataProtection:CertificatePath", ""));
         Messages(Should.Throw<Exception>(() => production.CreateClient())).ShouldContain(m => m.Contains("share one key ring", StringComparison.Ordinal));
-        using var half = factory.WithWebHostBuilder(builder => builder.UseSetting("DataProtection:BlobUri", "https://example.blob.core.windows.net/keys/keys.xml"));
+        using var half = factory.WithWebHostBuilder(builder => builder.UseSetting("DataProtection:CertificatePath", ""));
         Messages(Should.Throw<Exception>(() => half.CreateClient())).ShouldContain(m => m.Contains("go together", StringComparison.Ordinal));
     }
 
@@ -621,7 +622,7 @@ internal sealed class SessionHost : IAsyncDisposable
             builder.ConfigureTestServices(collection =>
             {
                 collection.AddSingleton<TimeProvider>(time);
-                // Replicas share one key ring, as in Azure (Blob Storage + Key Vault).
+                // Replicas share the persistent key ring, as on the VPS.
                 collection.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRing));
                 collection.PostConfigure<AuthenticationOptions>(options =>
                 {

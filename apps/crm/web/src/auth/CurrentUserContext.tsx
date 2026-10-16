@@ -3,6 +3,7 @@ import type { CurrentUser } from '../api/types';
 
 export const Permissions = {
   customersRead: 'customers.read',
+  parasolAtlasRead: 'parasol.atlas.read',
   customersWrite: 'customers.write',
   customersDelete: 'customers.delete',
   contactsWrite: 'contacts.write',

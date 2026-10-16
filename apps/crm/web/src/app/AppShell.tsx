@@ -255,7 +255,7 @@ export function AppShell() {
         <NavDrawerHeader>
           <div className={styles.brand}>
             <span className={styles.brandMark} aria-hidden>
-              V
+              P
             </span>
             {t('app.name')}
           </div>
@@ -448,6 +448,7 @@ export function AppShell() {
                     <Text weight="semibold">{user.displayName}</Text>
                   </MenuGroupHeader>
                   {user.email && <MenuGroupHeader>{user.email}</MenuGroupHeader>}
+                  <MenuGroupHeader>{t('parasol.employeeRoles')}: {user.roles.map(role => t(`parasol.roles.${role.replace('Crm.', '')}`)).join(', ')}</MenuGroupHeader>
                 </MenuGroup>
                 <MenuDivider />
                 <MenuGroup>

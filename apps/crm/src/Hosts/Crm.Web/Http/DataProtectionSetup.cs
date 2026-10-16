@@ -1,53 +1,45 @@
-using Azure.Identity;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Crm.Web.Http;
 
 internal static class DataProtectionSetup
 {
-    /// <summary>
-    /// Keys shared by all replicas and preserved across deployments: stored in Blob Storage and wrapped with a Key Vault key
-    /// (docs/03-architecture.md §6). Without configuration (local development) the default file-system key ring is used.
-    /// </summary>
+    /// <summary>Hostinger: persistent key ring on the VPS, encrypted with a mounted certificate. No cloud key service.</summary>
     public static WebApplicationBuilder AddDataProtection(this WebApplicationBuilder builder)
     {
-        var dataProtection = builder.Services.AddDataProtection().SetApplicationName("vardahei-crm");
-        var blobUri = builder.Configuration["DataProtection:BlobUri"];
-        var keyUri = builder.Configuration["DataProtection:KeyVaultKeyUri"];
-        if (Problem(blobUri, keyUri, builder.Environment) is { } problem)
+        // Preserve the discriminator so existing CRM cookies can survive with the same key ring.
+        var protection = builder.Services.AddDataProtection().SetApplicationName("vardahei-crm");
+        var config = builder.Configuration.GetSection("DataProtection");
+        if (!string.IsNullOrWhiteSpace(config["BlobUri"]) || !string.IsNullOrWhiteSpace(config["KeyVaultKeyUri"]))
+            throw new InvalidOperationException("Azure key storage is not supported by Parasol. Configure the VPS key ring and certificate.");
+        var path = config["KeyRingPath"];
+        var certificatePath = config["CertificatePath"];
+        var hasPath = !string.IsNullOrWhiteSpace(path);
+        var hasCertificate = !string.IsNullOrWhiteSpace(certificatePath);
+        if (hasPath != hasCertificate)
+            throw new InvalidOperationException("DataProtection:KeyRingPath and DataProtection:CertificatePath go together: set both or neither.");
+        if (!hasPath)
         {
-            throw new InvalidOperationException(problem);
+            if (!builder.Environment.IsDevelopment())
+                throw new InvalidOperationException("Outside Development, all instances must share one key ring: configure DataProtection:KeyRingPath and CertificatePath.");
+            return builder;
         }
-
-        if (!string.IsNullOrWhiteSpace(blobUri) && !string.IsNullOrWhiteSpace(keyUri))
-        {
-            var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-            {
-                ManagedIdentityClientId = builder.Configuration["AZURE_CLIENT_ID"],
-            });
-            dataProtection
-                .PersistKeysToAzureBlobStorage(new Uri(blobUri), credential)
-                .ProtectKeysWithAzureKeyVault(new Uri(keyUri), credential);
-        }
-
+        if (!Path.IsPathFullyQualified(path!) || !Path.IsPathFullyQualified(certificatePath!))
+            throw new InvalidOperationException("DataProtection key ring and certificate paths must be absolute.");
+        // macOS cannot import PKCS#12 with EphemeralKeySet; Linux/VPS keeps the loaded private key in memory.
+        var flags = OperatingSystem.IsMacOS() ? X509KeyStorageFlags.DefaultKeySet : X509KeyStorageFlags.EphemeralKeySet;
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath!, config["CertificatePassword"], flags);
+        using var privateKey = certificate.GetRSAPrivateKey();
+        if (privateKey is null)
+            throw new InvalidOperationException("DataProtection requires a certificate with its RSA private key.");
+        protection.PersistKeysToFileSystem(new DirectoryInfo(path!)).ProtectKeysWithCertificate(certificate);
+        // Keep old certificates mounted until every key encrypted with them has been retired.
+        var oldCertificates = config.GetSection("PreviousCertificatePaths").Get<string[]>() ?? [];
+        if (oldCertificates.Any(p => !Path.IsPathFullyQualified(p)))
+            throw new InvalidOperationException("DataProtection previous certificate paths must be absolute.");
+        protection.UnprotectKeysWithAnyCertificate([certificate, .. oldCertificates.Select(p =>
+            X509CertificateLoader.LoadPkcs12FromFile(p, config["CertificatePassword"], flags))]);
         return builder;
-    }
-
-    /// <summary>
-    /// DEV-10: in production the key ring must be the shared one — a replica with keys of its own cannot read the cookies of the
-    /// others, and its sessions die with it; half a configuration is refused everywhere.
-    /// </summary>
-    internal static string? Problem(string? blobUri, string? keyUri, IHostEnvironment environment)
-    {
-        var blob = !string.IsNullOrWhiteSpace(blobUri);
-        var key = !string.IsNullOrWhiteSpace(keyUri);
-        if (blob != key)
-        {
-            return "DataProtection:BlobUri and DataProtection:KeyVaultKeyUri go together: set both or neither.";
-        }
-
-        return !blob && environment.IsProduction()
-            ? "Production needs DataProtection:BlobUri and DataProtection:KeyVaultKeyUri: every replica must share one key ring (DEV-10)."
-            : null;
     }
 }

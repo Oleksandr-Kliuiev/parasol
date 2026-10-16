@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Vardahei CRM",
+    "name": "Parasol",
     "skipToContent": "Hopp til innhold"
   },
   "nav": {
@@ -72,7 +72,7 @@
     "network": "Får ikke kontakt med serveren. Sjekk tilkoblingen og prøv igjen.",
     "notFoundTitle": "Fant ikke siden",
     "notFoundBody": "Siden eller posten finnes ikke, eller den er slettet.",
-    "noAccessTitle": "Du har ikke tilgang til Vardahei CRM",
+    "noAccessTitle": "Du har ikke tilgang til Parasol",
     "noAccessBody": "Du er logget inn med Microsoft-kontoen din, men den har ingen CRM-rolle. Be en administrator legge deg til i en av CRM-gruppene i Entra ID.",
     "forbidden": "Du har ikke tillatelse til å gjøre dette.",
     "concurrency": "Noen andre endret posten mens du redigerte. Last inn på nytt for å se endringene, og legg inn dine igjen.",
@@ -3332,6 +3332,65 @@
           "reason": "En innloggingsrad oppgir brukeren og tidspunktet, men ikke rollen, og revisjonsmodulen tilbyr ingen kontrakt til denne modulen, så tallet kan ikke lages her."
         }
       }
+    }
+  },
+  "parasol": {
+    "title": "Teknisk oversikt · Atlas",
+    "refresh": "Oppdater",
+    "noPermission": "Rollen din gir ikke tilgang til den tekniske oversikten.",
+    "employeeRoles": "Ansattroller",
+    "fixture": "Syntetiske demonstrasjonsdata. Dette er ikke data fra en ekte kunde.",
+    "snapshot": "Visningen ble satt sammen {{time}}",
+    "devices": "Kjente enheter",
+    "people": "Kjente personer",
+    "observations": "Aktive observasjoner",
+    "critical": "Kritiske",
+    "high": "Høy alvorlighetsgrad",
+    "coverage": "Antallene gjelder poster lagret i Atlas. Kildedekning og aktualitet vises nedenfor; dette er ikke antall maskiner hos kunden totalt.",
+    "noSources": "Ingen øyeblikksbilder er tilgjengelige.",
+    "asOf": "Øyeblikksbilde: {{time}}",
+    "lastSuccess": "Siste vellykkede oppdatering: {{time}}",
+    "returned": "Poster i øyeblikksbildet: {{count}}",
+    "truncated": "Poster i øyeblikksbildet: {{count}} (delvis liste)",
+    "status": {
+      "NOT_LINKED": "Kunden er ikke koblet til Atlas.",
+      "NOT_CONFIGURED": "Tilkoblingen til Atlas er ikke konfigurert.",
+      "ACCESS_DENIED": "Atlas-tilgangen din tillater ikke lesing av denne kunden.",
+      "SOURCE_NOT_FOUND": "Den koblede kunden finnes ikke i Atlas. Be en administrator kontrollere koblingen.",
+      "UNAVAILABLE": "Atlas er utilgjengelig. CRM-informasjonen er fortsatt tilgjengelig.",
+      "INVALID_RESPONSE": "Atlas returnerte et uventet svar. Ingen tekniske data vises.",
+      "IDENTITY_CHANGED": "Kundekoblingen er endret. Oppdater for å hente gjeldende data."
+    },
+    "sources": {
+      "atera": "Atera",
+      "huntress": "Huntress",
+      "microsoft365": "Microsoft 365",
+      "poweroffice": "PowerOffice"
+    },
+    "resources": {
+      "customer": "Kunder",
+      "organization": "Organisasjoner",
+      "agent": "Enheter",
+      "contact": "Kontakter",
+      "alert": "Varsler",
+      "ticket": "Saker",
+      "incident": "Hendelser"
+    },
+    "resourceStatus": {
+      "OK": "Oppdatert øyeblikksbilde",
+      "STALE": "Utdatert øyeblikksbilde",
+      "ERROR": "Kildefeil; data utilgjengelige",
+      "MISSING": "Mangler øyeblikksbilde",
+      "FIXTURE": "Syntetiske data"
+    },
+    "roles": {
+      "Admin": "Administrator",
+      "Management": "Leder",
+      "Sales": "Salg",
+      "Technician": "Tekniker",
+      "ServiceLead": "Serviceleder",
+      "Finance": "Økonomi",
+      "ReadOnly": "Lesetilgang"
     }
   }
 }

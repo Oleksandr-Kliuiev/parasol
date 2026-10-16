@@ -15,6 +15,21 @@ afterEach(() => {
 });
 
 describe('AuthGate (DEV-09)', () => {
+  it('clears customer data when the same employee loses a role or permission', async () => {
+    let signedIn = { ...asUser('u1'), roles: ['Crm.Admin'], permissions: ['parasol.atlas.read', 'finance.read'] };
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(signedIn), { status: 200 })));
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload, assign: vi.fn() });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(['parasol', 'workspace', 'u1'], { private: true });
+    render(<QueryClientProvider client={client}><AuthGate><p>The app</p></AuthGate></QueryClientProvider>);
+    expect(await screen.findByText('The app')).toBeInTheDocument();
+    signedIn = { ...signedIn, roles: ['Crm.Finance'], permissions: ['finance.read'] };
+    await client.refetchQueries({ queryKey: currentUserQueryKey });
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(client.getQueryData(['parasol', 'workspace', 'u1'])).toBeUndefined();
+  });
+
   it('drops everything cached and starts over when another person has signed in on the browser', async () => {
     let signedIn = asUser('u1');
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(signedIn), { status: 200 })));

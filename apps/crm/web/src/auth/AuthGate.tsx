@@ -29,16 +29,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: 'always',
   });
 
-  // Someone else signed in on this browser (another tab, a shared PC): nothing cached for the previous user may be shown,
-  // so the cache is dropped and the app starts over for the new one (DEV-09).
+  // A different employee or changed roles/permissions invalidate all customer data cached by this browser.
+  // Drop the cache and start over with the current authority (DEV-09, Parasol M05).
   const signedIn = useRef<string | null>(null);
   useEffect(() => {
     if (!data) return;
-    if (signedIn.current !== null && signedIn.current !== data.id) {
+    const access = JSON.stringify([data.id, [...data.roles].sort(), [...data.permissions].sort()]);
+    if (signedIn.current !== null && signedIn.current !== access) {
       queryClient.clear();
       window.location.reload();
     }
-    signedIn.current = data.id;
+    signedIn.current = access;
   }, [data, queryClient]);
 
   const unauthenticated = error instanceof ApiError && error.status === 401;

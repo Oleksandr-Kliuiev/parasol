@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Vardahei CRM",
+    "name": "Parasol",
     "skipToContent": "Skip to content"
   },
   "nav": {
@@ -72,7 +72,7 @@
     "network": "Could not reach the server. Check your connection and try again.",
     "notFoundTitle": "Page not found",
     "notFoundBody": "The page or record does not exist, or it has been deleted.",
-    "noAccessTitle": "You don't have access to Vardahei CRM",
+    "noAccessTitle": "You don't have access to Parasol",
     "noAccessBody": "Your Microsoft account is signed in, but no CRM role is assigned to it. Ask an administrator to add you to one of the CRM groups in Entra ID.",
     "forbidden": "You don't have permission to do this.",
     "concurrency": "Someone else changed this record while you were editing. Reload to see their changes, then apply yours again.",
@@ -3332,6 +3332,65 @@
           "reason": "A sign-in row names the user and the time but not the role, and the audit module offers no contract to this module, so the count cannot be made here."
         }
       }
+    }
+  },
+  "parasol": {
+    "title": "Technical workspace · Atlas",
+    "refresh": "Refresh",
+    "noPermission": "Your role does not include the technical workspace.",
+    "employeeRoles": "Employee roles",
+    "fixture": "Synthetic demonstration data. This is not a live customer snapshot.",
+    "snapshot": "View assembled at {{time}}",
+    "devices": "Known devices",
+    "people": "Known people",
+    "observations": "Active observations",
+    "critical": "Critical",
+    "high": "High severity",
+    "coverage": "Counts cover records stored in Atlas. Source coverage and freshness are shown below; this is not a count of all customer machines.",
+    "noSources": "No source snapshots are available.",
+    "asOf": "Snapshot: {{time}}",
+    "lastSuccess": "Last successful refresh: {{time}}",
+    "returned": "Records in snapshot: {{count}}",
+    "truncated": "Records in snapshot: {{count}} (partial list)",
+    "status": {
+      "NOT_LINKED": "This customer has not been linked to Atlas.",
+      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
+      "ACCESS_DENIED": "Your Atlas access does not permit reading this customer.",
+      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas. Ask an administrator to review the link.",
+      "UNAVAILABLE": "Atlas is unavailable. CRM information remains available.",
+      "INVALID_RESPONSE": "Atlas returned an unexpected response. No technical data is shown.",
+      "IDENTITY_CHANGED": "The customer link changed. Refresh to load current data."
+    },
+    "sources": {
+      "atera": "Atera",
+      "huntress": "Huntress",
+      "microsoft365": "Microsoft 365",
+      "poweroffice": "PowerOffice"
+    },
+    "resources": {
+      "customer": "Customers",
+      "organization": "Organizations",
+      "agent": "Devices",
+      "contact": "Contacts",
+      "alert": "Alerts",
+      "ticket": "Tickets",
+      "incident": "Incidents"
+    },
+    "resourceStatus": {
+      "OK": "Current snapshot",
+      "STALE": "Outdated snapshot",
+      "ERROR": "Source error; data unavailable",
+      "MISSING": "No snapshot",
+      "FIXTURE": "Synthetic data"
+    },
+    "roles": {
+      "Admin": "Administrator",
+      "Management": "Manager",
+      "Sales": "Sales",
+      "Technician": "Technician",
+      "ServiceLead": "Service lead",
+      "Finance": "Finance",
+      "ReadOnly": "Read only"
     }
   }
 }
