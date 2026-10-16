@@ -60,9 +60,13 @@ CI проверяет перенос и отсутствие новых регр
 Все тесты выполняются; исключение ограничено неизменённым деревом импортированного Atlas.
 Любое изменение Atlas требует закрыть или заново обосновать этот технический долг.
 
-CRM проходит обычные проверки без исключений: unit, architecture, SQL/storage integration,
+CI включает обычные проверки CRM без исключений: unit, architecture, SQL/storage integration,
 coverage, frontend, браузерные сценарии и аудит зависимостей. PostgreSQL и браузерные тесты
-Atlas также проходят без baseline-исключений.
+Atlas выполняются строго, без baseline-исключений.
+
+Текущий результат проверок и блокеры: [VERIFICATION.md](docs/migration/VERIFICATION.md).
+GitHub Actions пока не запускает jobs из-за billing/spending limit аккаунта.
+Полные PostgreSQL/browser suites Atlas имеют открытые ошибки; зелёного полного CI пока нет.
 
 История и SHA исходников сохранены: [описание импорта](docs/migration/IMPORT.md).
 План продолжения и границы этапа: [M01–M03](docs/migration/M01-M03.md).
