@@ -8,6 +8,7 @@
 - VPS deployment / M07: `deploy/hostinger/README.md`, `docs/migration/M07-HOSTINGER.md`; Compose, host configuration, restic and isolated recovery tooling.
 - Customer mapping UI / M08: `docs/migration/M08-CUSTOMER-MAPPING-UI.md`; CRM `web/src/features/parasol/CustomerIdentity*`, identity import validation and explicit link correction.
 - Employee-scoped Atlas directory / M09: `docs/migration/M09-ATLAS-DIRECTORY.md`; CRM `Parasol/Atlas{ReadClient,IdentityReader}`, `web/src/features/parasol/atlasIdentitySource.ts` and the mapping screen.
+- Devices and active observations / M10: `docs/migration/M10-CUSTOMER-TECHNICAL-DETAILS.md`; CRM `Parasol/Atlas{WorkspaceContracts,ProjectionJson,DeviceProjection,ObservationProjection,WorkspaceProjection}`, frontend `CustomerTechnicalDetails.tsx`, `workspaceContract.ts`, synthetic contract `contracts/customer-workspace`.
 - Original Git identities and import commits: `docs/migration/sources.json`, `IMPORT.md`.
 - Strict Atlas tests and native fixture setup: `docs/testing/ATLAS.md`.
 - Historical import failures (no longer an exception mechanism): `docs/migration/BASELINE.md`, `atlas-baseline.json`.

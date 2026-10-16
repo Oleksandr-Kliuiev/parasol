@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\contracts\customer-identity\atlas-export.v1.example.json" Link="Fixtures\atlas-export.v1.example.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\contracts\customer-workspace\atlas-context.v1.example.json" Link="Fixtures\atlas-context.v1.example.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

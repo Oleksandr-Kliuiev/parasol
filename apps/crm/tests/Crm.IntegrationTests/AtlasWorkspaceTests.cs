@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Crm.Authorization;
 using Crm.Integrations.Core.Parasol;
 using Crm.Integrations.Core.Persistence;
@@ -64,18 +65,9 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
         return client;
     }
 
-    internal static object Context(string clientId, string workspace = Workspace) => new
-    {
-        contractVersion = "ClientContextV1", workspaceId = workspace, clientId, mode = "db", completeness = "PARTIAL",
-        generatedAt = "2026-10-16T10:00:00Z", clientName = "Synthetic private customer name",
-        devices = new[] { new { name = "private-device" } }, people = new[] { new { email = "synthetic-private@example.invalid" } },
-        observations = new { total = 3, counts = new { INFO = 0, LOW = 0, MEDIUM = 1, HIGH = 1, CRITICAL = 1 } },
-        resources = new object[]
-        {
-            new { source = "atera", resourceType = "agent", status = "STALE", asOf = "2026-10-15T10:00:00Z", lastSuccessAt = "2026-10-15T10:00:00Z", items = new[] { new { secret = "synthetic-private-payload" } }, truncated = true },
-            new { source = "huntress", resourceType = "incident", status = "MISSING", asOf = (string?)null, lastSuccessAt = (string?)null, items = (object?)null, truncated = false },
-        },
-    };
+    internal static object Context(string clientId, string workspace = Workspace) => JsonSerializer.Deserialize<JsonElement>(
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "atlas-context.v1.example.json"))
+            .Replace("synthetic-client", clientId, StringComparison.Ordinal).Replace("synthetic-workspace", workspace, StringComparison.Ordinal));
 
     [Fact]
     public async Task One_BFF_session_reads_only_a_linked_customer_with_its_employees_Atlas_token()
@@ -91,7 +83,15 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
         response.Headers.CacheControl!.NoStore.ShouldBeTrue();
         var view = (await response.Content.ReadFromJsonAsync<AtlasWorkspaceView>())!;
         view.Status.ShouldBe("READY"); view.CustomerId.ShouldBe(id);
-        view.Summary!.KnownDevices.ShouldBe(1); view.Summary.ActiveObservations.ShouldBe(3);
+        view.Summary!.KnownDevices.ShouldBe(2); view.Summary.ActiveObservations.ShouldBe(3);
+        view.Summary.Devices[0].Hostname.ShouldBe("SYNTHETIC-LT-01");
+        view.Summary.Devices[0].Sources.ShouldBe(["atera", "huntress"]);
+        view.Summary.ObservationPage.Items[0].Severity.ShouldBe("CRITICAL");
+        view.Summary.ObservationPage.Items[0].Priority.ShouldBe("URGENT");
+        view.Summary.ObservationPage.Items[0].Route.ShouldBe("MONITOR");
+        view.Summary.ObservationPage.Items[0].DeviceId.ShouldBe("device-one");
+        view.Summary.ObservationPage.Items[1].DeviceStatus.ShouldBe("UNRESOLVED");
+        view.Summary.ObservationPage.Items[2].DeviceStatus.ShouldBe("UNAVAILABLE");
         view.Summary.Resources[0].Status.ShouldBe("STALE"); view.Summary.Resources[0].Truncated.ShouldBeTrue();
         view.Summary.Resources[1].ReturnedItems.ShouldBeNull();
         var body = await response.Content.ReadAsStringAsync();
@@ -134,6 +134,11 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
     [InlineData("invalid-json")]
     [InlineData("too-large")]
     [InlineData("negative-count")]
+    [InlineData("nested-device")]
+    [InlineData("nested-person")]
+    [InlineData("nested-link")]
+    [InlineData("nested-observation")]
+    [InlineData("priority-floor")]
     public async Task Untrusted_or_mismatched_responses_are_rejected(string scenario)
     {
         var (id, clientId) = await LinkedCustomer();
@@ -146,11 +151,43 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
             "too-large" => new string('x', 2 * 1024 * 1024 + 1),
             _ => JsonSerializer.Serialize(Context(clientId)).Replace("\"total\":3", "\"total\":-1", StringComparison.Ordinal),
         };
+        if (scenario.StartsWith("nested-", StringComparison.Ordinal) || scenario == "priority-floor")
+        {
+            var node = JsonNode.Parse(JsonSerializer.Serialize(Context(clientId)))!;
+            switch (scenario)
+            {
+                case "nested-device": node["devices"]![0]!["clientId"] = "other-customer"; break;
+                case "nested-person": node["people"]![0]!["workspaceId"] = "other-workspace"; break;
+                case "nested-link": node["links"]![0]!["clientId"] = "other-customer"; break;
+                case "nested-observation": node["observations"]!["items"]![0]!["clientId"] = "other-customer"; break;
+                case "priority-floor": node["observations"]!["items"]![0]!["priority"] = "NORMAL"; break;
+            }
+            body = node.ToJsonString();
+        }
         atlas.Given(Request.Create().WithPath($"/clients/{clientId}/overview").UsingGet())
             .RespondWith(Response.Create().WithHeader("Content-Type", "application/json").WithBody(body));
         await using var host = await Host(atlas);
         var view = await Client(host).GetFromJsonAsync<AtlasWorkspaceView>(PathFor(id));
         view!.Status.ShouldBe("INVALID_RESPONSE"); view.Summary.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Revoking_personal_access_does_not_return_previous_devices_or_observations()
+    {
+        var (id, clientId) = await LinkedCustomer();
+        using var atlas = WireMockServer.Start();
+        atlas.Given(Request.Create().WithPath($"/clients/{clientId}/overview").UsingGet())
+            .RespondWith(Response.Create().WithHeader("Content-Type", "application/json").WithBody(JsonSerializer.Serialize(Context(clientId))));
+        await using var host = await Host(atlas); using var client = Client(host);
+        var first = (await client.GetFromJsonAsync<AtlasWorkspaceView>(PathFor(id)))!;
+        first.Summary!.Devices.Count.ShouldBe(2); first.Summary.ObservationPage.Items.Count.ShouldBe(3);
+        atlas.Reset();
+        atlas.Given(Request.Create().WithPath($"/clients/{clientId}/overview")).RespondWith(Response.Create().WithStatusCode(403).WithBody("synthetic-private"));
+        var response = await client.GetAsync(PathFor(id));
+        response.Headers.CacheControl!.NoStore.ShouldBeTrue();
+        var denied = (await response.Content.ReadFromJsonAsync<AtlasWorkspaceView>())!;
+        denied.Status.ShouldBe("ACCESS_DENIED"); denied.Summary.ShouldBeNull();
+        var body = await response.Content.ReadAsStringAsync(); body.ShouldNotContain("SYNTHETIC-LT"); body.ShouldNotContain("synthetic-private");
     }
 
     [Fact]

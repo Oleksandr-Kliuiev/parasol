@@ -3,18 +3,9 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import { CustomerWorkspacePanel, type Workspace } from './CustomerWorkspacePanel';
+import { atlasWorkspace } from '../../test/atlasWorkspace';
 
-const ready: Workspace = {
-  customerId: 'customer-one', status: 'READY', summary: {
-    mode: 'db', generatedAt: '2026-10-16T10:00:00Z', completeness: 'PARTIAL',
-    knownDevices: 42, knownPeople: 11, activeObservations: 3,
-    severityCounts: { INFO: 0, LOW: 0, MEDIUM: 1, HIGH: 1, CRITICAL: 1 },
-    resources: [
-      { source: 'atera', resourceType: 'agent', status: 'STALE', asOf: '2026-10-15T10:00:00Z', lastSuccessAt: '2026-10-15T10:00:00Z', returnedItems: 25, truncated: true },
-      { source: 'huntress', resourceType: 'incident', status: 'MISSING', asOf: null, lastSuccessAt: null, returnedItems: null, truncated: false },
-    ],
-  },
-};
+const ready = atlasWorkspace();
 const render = (permissions = ['parasol.atlas.read']) => renderRoutes(
   [page(<CustomerWorkspacePanel customerId="customer-one" />)], '/', testUser(permissions));
 const response = (data: Workspace) => new Response(JSON.stringify(data), { status: 200 });

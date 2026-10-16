@@ -6,20 +6,9 @@ import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserConte
 import { Panel, DetailList } from '../../shared/components/Panel';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { formatDateTime } from '../../shared/utils/format';
-
-type Status = 'READY' | 'NOT_LINKED' | 'NOT_CONFIGURED' | 'ACCESS_DENIED' | 'SOURCE_NOT_FOUND' | 'UNAVAILABLE' | 'INVALID_RESPONSE' | 'IDENTITY_CHANGED';
-type ResourceStatus = 'OK' | 'STALE' | 'ERROR' | 'MISSING' | 'FIXTURE';
-export interface Workspace {
-  customerId: string;
-  status: Status;
-  summary: null | {
-    mode: 'db' | 'fixture'; generatedAt: string; completeness: string;
-    knownDevices: number; knownPeople: number; activeObservations: number;
-    severityCounts: Record<'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', number>;
-    resources: { source: string; resourceType: string; status: ResourceStatus; asOf: string | null;
-      lastSuccessAt: string | null; returnedItems: number | null; truncated: boolean }[];
-  };
-}
+import { CustomerTechnicalDetails } from './CustomerTechnicalDetails';
+import { parseWorkspace } from './workspaceContract';
+export type { Workspace } from './workspaceContract';
 
 const useStyles = makeStyles({
   list: { padding: 0, listStyle: 'none', display: 'grid', gap: tokens.spacingVerticalM },
@@ -40,7 +29,7 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
   const user = useCurrentUser();
   const query = useQuery({
     queryKey: ['parasol', 'workspace', user.id, customerId],
-    queryFn: async ({ signal }) => (await api.get<Workspace>(`/api/v1/parasol/customers/${customerId}/workspace`, signal)).data,
+    queryFn: async ({ signal }) => parseWorkspace((await api.get<unknown>(`/api/v1/parasol/customers/${customerId}/workspace`, signal)).data, customerId),
     retry: false, staleTime: 0, gcTime: 0,
     refetchOnWindowFocus: 'always',
   });
@@ -73,6 +62,7 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
             {r.returnedItems !== null && <Text block>{t(r.truncated ? 'parasol.truncated' : 'parasol.returned', { count: r.returnedItems })}</Text>}
           </li>)}
         </ul>
+        <CustomerTechnicalDetails summary={summary} />
       </>}
     </Panel>
   );

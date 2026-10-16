@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { api, createOrganization, marker, signIn } from './support';
+import { atlasWorkspace } from '../src/test/atlasWorkspace';
 
 test('one sign-in opens the customer workspace and respects employee roles', { tag: '@critical' }, async ({ page }) => {
   await signIn(page, 'Crm.Admin', '/organizations');
@@ -39,17 +40,11 @@ test('technical snapshot renders on a phone and disappears after access is revok
   await signIn(page, 'Crm.Admin', '/organizations');
   const customer = await createOrganization(page, { name: marker('Snapshot Parasol ') });
   let denied = false;
-  await page.route(`**/api/v1/parasol/customers/${customer.id}/workspace`, route => route.fulfill({ json: {
-    customerId: customer.id, status: denied ? 'ACCESS_DENIED' : 'READY', summary: denied ? null : {
-      mode: 'fixture', generatedAt: '2026-10-16T10:00:00Z', completeness: 'COMPLETE_FIXTURE',
-      knownDevices: 42, knownPeople: 11, activeObservations: 3,
-      severityCounts: { INFO: 0, LOW: 0, MEDIUM: 1, HIGH: 1, CRITICAL: 1 },
-      resources: [
-        { source: 'atera', resourceType: 'agent', status: 'STALE', asOf: '2026-10-15T10:00:00Z', lastSuccessAt: '2026-10-15T10:00:00Z', returnedItems: 25, truncated: true },
-        { source: 'huntress', resourceType: 'incident', status: 'MISSING', asOf: null, lastSuccessAt: null, returnedItems: null, truncated: false },
-      ],
-    },
-  } }));
+  const ready = atlasWorkspace(customer.id);
+  ready.summary!.mode = 'fixture'; ready.summary!.completeness = 'COMPLETE_FIXTURE';
+  await page.route(`**/api/v1/parasol/customers/${customer.id}/workspace`, route => route.fulfill({ json:
+    denied ? { customerId: customer.id, status: 'ACCESS_DENIED', summary: null } : ready,
+  }));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/organizations/${customer.id}`);
   const panel = page.getByRole('region', { name: 'Technical workspace · Atlas' });

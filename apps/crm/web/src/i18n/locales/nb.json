@@ -3458,5 +3458,60 @@
       "UNAVAILABLE": "Kunne ikke nå Atlas. Prøv igjen eller last opp en identitetseksport.",
       "INVALID_RESPONSE": "Atlas returnerte en ugyldig eller inkompatibel kundeliste. Ingen kunder ble lastet inn."
     }
+  },
+  "parasolDetails": {
+    "lists": "Tekniske lister",
+    "devices": "Enheter i Atlas",
+    "deviceNote": "Enheter registrert i Atlas. Bekreftede kildekoblinger viser opprinnelsen; listen viser ikke nettstatus eller en fullstendig enhetsoversikt.",
+    "noDevices": "Ingen enheter er registrert i Atlas. Kildesnapshots kan fortsatt mangle eller være ufullstendige.",
+    "searchDevices": "Søk i innlastede enheter",
+    "deviceMatches": "Enheter som samsvarer: {{matched}} av {{loaded}} innlastede",
+    "noMatches": "Ingen treff i den innlastede listen.",
+    "deviceId": "Enhets-ID i Atlas",
+    "deviceSources": "Bekreftede kilder: {{sources}}",
+    "noDeviceSources": "Ingen bekreftet kildekobling",
+    "visible": "Viser {{shown}} av {{total}} treff",
+    "moreDevices": "Vis flere innlastede enheter",
+    "observations": "Aktive observasjoner i Atlas",
+    "observationNote": "Lagrede åpne og bekreftede observasjoner, med høyeste alvorlighetsgrad først. Hendelsestidene gjelder observasjonen; hvor oppdaterte kildene er, vises ovenfor.",
+    "partialObservations": "Bare de første {{loaded}} av {{total}} aktive observasjoner er lastet inn. Søk og filtre gjelder kun denne siden; resten er tilgjengelig i Atlas.",
+    "noObservations": "Ingen aktive observasjoner er registrert i Atlas. Dette bekrefter ikke at alle kilder er oppdaterte eller at kunden er uten problemer.",
+    "searchObservations": "Søk i innlastede observasjoner",
+    "severityFilter": "Alvorlighetsgrad",
+    "statusFilter": "Observasjonsstatus",
+    "allSeverities": "Alle alvorlighetsgrader",
+    "allStatuses": "Alle aktive statuser",
+    "urgent": "Haster · HIGH / CRITICAL",
+    "observationMatches": "Observasjoner som samsvarer: {{matched}} av {{loaded}} innlastede",
+    "noSummary": "Observasjonen har ingen beskrivelse",
+    "confirmedDevice": "Bekreftet enhet: {{name}} ({{id}})",
+    "deviceStatus": {
+      "UNRESOLVED": "Enheten er ikke identifisert i Atlas",
+      "UNAVAILABLE": "Ingen bekreftet enhet for denne kilden i gjeldende register"
+    },
+    "route": "Atlas-anbefaling",
+    "occurredAt": "Hendelsen inntraff: {{time}}",
+    "updatedAt": "Observasjonen oppdatert: {{time}}",
+    "moreObservations": "Vis flere innlastede observasjoner",
+    "severity": {
+      "INFO": "Informasjon",
+      "LOW": "Lav",
+      "MEDIUM": "Middels",
+      "HIGH": "Høy",
+      "CRITICAL": "Kritisk"
+    },
+    "status": {
+      "OPEN": "Åpen",
+      "ACKNOWLEDGED": "Bekreftet"
+    },
+    "kind": {
+      "DISK_CAPACITY": "Diskkapasitet",
+      "SECURITY_INCIDENT": "Sikkerhetshendelse"
+    },
+    "routes": {
+      "MONITOR": "Overvåk",
+      "INVESTIGATE": "Undersøk",
+      "HUMAN_REVIEW": "Manuell gjennomgang"
+    }
   }
 }

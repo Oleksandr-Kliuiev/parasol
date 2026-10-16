@@ -3458,5 +3458,60 @@
       "UNAVAILABLE": "Atlas could not be reached. Try again or upload an identity export.",
       "INVALID_RESPONSE": "Atlas returned an invalid or incompatible customer list. No clients were loaded."
     }
+  },
+  "parasolDetails": {
+    "lists": "Technical lists",
+    "devices": "Atlas devices",
+    "deviceNote": "Devices recorded in the Atlas registry. Confirmed source links identify their origin; this list does not report online status or a complete fleet inventory.",
+    "noDevices": "No devices are recorded in this Atlas registry. Source snapshots may still be missing or incomplete.",
+    "searchDevices": "Search loaded devices",
+    "deviceMatches": "Matching devices: {{matched}} of {{loaded}} loaded",
+    "noMatches": "No matching records in the loaded list.",
+    "deviceId": "Atlas device ID",
+    "deviceSources": "Confirmed sources: {{sources}}",
+    "noDeviceSources": "No confirmed source link",
+    "visible": "Showing {{shown}} of {{total}} matching records",
+    "moreDevices": "Show more loaded devices",
+    "observations": "Active Atlas observations",
+    "observationNote": "Stored open and acknowledged observations, with the highest source severity first. Event times describe the observation; source snapshot freshness is shown above.",
+    "partialObservations": "Only the first {{loaded}} of {{total}} active observations are loaded. Search and filters apply to this page only; remaining observations are available in Atlas.",
+    "noObservations": "No active observations are recorded in Atlas. This does not confirm that every source is current or that the customer has no issues.",
+    "searchObservations": "Search loaded observations",
+    "severityFilter": "Observation severity",
+    "statusFilter": "Observation state",
+    "allSeverities": "All severities",
+    "allStatuses": "All active states",
+    "urgent": "Urgent · HIGH / CRITICAL",
+    "observationMatches": "Matching observations: {{matched}} of {{loaded}} loaded",
+    "noSummary": "No observation summary",
+    "confirmedDevice": "Confirmed device: {{name}} ({{id}})",
+    "deviceStatus": {
+      "UNRESOLVED": "Device not resolved in Atlas",
+      "UNAVAILABLE": "No confirmed device for this source in the current registry"
+    },
+    "route": "Atlas recommendation",
+    "occurredAt": "Event occurred: {{time}}",
+    "updatedAt": "Observation updated: {{time}}",
+    "moreObservations": "Show more loaded observations",
+    "severity": {
+      "INFO": "Information",
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "status": {
+      "OPEN": "Open",
+      "ACKNOWLEDGED": "Acknowledged"
+    },
+    "kind": {
+      "DISK_CAPACITY": "Disk capacity",
+      "SECURITY_INCIDENT": "Security incident"
+    },
+    "routes": {
+      "MONITOR": "Monitor",
+      "INVESTIGATE": "Investigate",
+      "HUMAN_REVIEW": "Human review"
+    }
   }
 }
