@@ -65,17 +65,13 @@ public static class ModuleRegistration
             services.TryAddSingleton<IDocumentStore>(sp =>
             {
                 var options = sp.GetRequiredService<IOptions<DocumentStoreOptions>>().Value;
-                if (options.Provider == DocumentStoreProvider.AzureBlob)
-                {
-                    options.ManagedIdentityClientId ??= sp.GetRequiredService<IConfiguration>()["AZURE_CLIENT_ID"];
-                    return AzureBlobDocumentStore.Create(options);
-                }
-
                 var root = Path.IsPathRooted(options.RootPath)
                     ? options.RootPath
                     : Path.Combine(sp.GetRequiredService<IHostEnvironment>().ContentRootPath, options.RootPath);
-                return new FileSystemDocumentStore(root);
+                return new FileSystemDocumentStore(root, createRoot: !sp.GetRequiredService<IHostEnvironment>().IsProduction(), volumeId: options.VolumeId);
             });
+
+            services.AddHostedService<DocumentStoreStartup>();
 
             // DEV-13: the maintenance switch and the external effect journal live in the document store, outside the business
             // database; the interceptors refuse database writes — saves and statements that bypass them — while the CRM is read-only.

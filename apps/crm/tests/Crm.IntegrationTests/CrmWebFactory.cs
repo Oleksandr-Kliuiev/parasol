@@ -224,6 +224,7 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
             // Quote documents (DEV-08) go to a folder of this run; the store below wraps it with switchable failures.
             ["Documents:Provider"] = "FileSystem",
             ["Documents:RootPath"] = Documents.Root,
+            ["Documents:VolumeId"] = Documents.VolumeId,
         };
         foreach (var (key, value) in settings)
         {
