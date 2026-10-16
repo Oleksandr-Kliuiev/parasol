@@ -21,6 +21,7 @@ public static class ActivitiesModule
         services.AddModuleServices(typeof(ActivitiesModule).Assembly);
         services.AddScoped<ActivityService>();
         services.AddScoped<OutlookService>();
+        services.AddScoped<IActivitiesApi, SourceTaskApi>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, ActivitiesRestoreParticipant>();
         // DEV-11: activities with or from a person in subject requests.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ActivitiesPersonalData>();

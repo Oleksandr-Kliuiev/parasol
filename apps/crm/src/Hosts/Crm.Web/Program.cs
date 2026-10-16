@@ -115,6 +115,9 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationM
 builder.AddDataProtection();
 // Protected browser continuations belong to the web host; the worker has no data-protection key ring.
 builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationQueueReader>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationSourceReader>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationTaskService>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.CustomerIdentityGuard>();
 builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationCursor>();
 
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);
@@ -294,6 +297,7 @@ app.MapSearchEndpoints();
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 Crm.Integrations.Core.Parasol.CustomerIdentityEndpoints.MapParasolCustomerIdentities(app);
+Crm.Integrations.Core.Parasol.AtlasObservationTaskEndpoints.MapParasolObservationTasks(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
 app.MapMonitoringEndpoints();

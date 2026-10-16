@@ -105,7 +105,7 @@ function ActivityForm({ organizationId, opportunityId, contractId, activity, def
           )}
           <div className={styles.grid}>
             <Field label={t('activities.fields.type')} required>
-              <Dropdown value={t(`activities.types.${type}`)} selectedOptions={[type]} onOptionSelect={(_, d) => setType(d.optionValue as ActivityType)}>
+              <Dropdown disabled={activity?.hasTechnicalSource} value={t(`activities.types.${type}`)} selectedOptions={[type]} onOptionSelect={(_, d) => setType(d.optionValue as ActivityType)}>
                 {activityTypes.filter((value) => value !== 'Email').map((value) => (
                   <Option key={value} value={value}>
                     {t(`activities.types.${value}`)}

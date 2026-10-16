@@ -14,6 +14,10 @@ public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHt
     public Task<AtlasReadResponse> OverviewAsync(string clientId, AtlasEmployeeCredential credential, CancellationToken ct) =>
         ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/overview", credential, 2 * 1024 * 1024, ct);
 
+    internal Task<AtlasReadResponse> ObservationAsync(string clientId, string observationId, AtlasEmployeeCredential credential, CancellationToken ct) =>
+        ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/observations/{Uri.EscapeDataString(observationId)}", credential, 1_048_576, ct,
+            notFound: "OBSERVATION_NOT_FOUND");
+
     internal Task<AtlasReadResponse> ObservationsAsync(string clientId, AtlasEmployeeCredential credential,
         AtlasObservationSelection selection, string? cursor, CancellationToken ct) =>
         ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/observations?limit=25&status={Uri.EscapeDataString(selection.AtlasStatuses)}"
@@ -21,7 +25,7 @@ public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHt
             + (cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}"), credential, 1_048_576, ct, cursor is not null);
 
     private async Task<AtlasReadResponse> ReadAsync(string path, AtlasEmployeeCredential credential, int maximumBytes, CancellationToken ct,
-        bool cursorRequest = false)
+        bool cursorRequest = false, string notFound = "SOURCE_NOT_FOUND")
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
@@ -33,7 +37,7 @@ public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHt
         {
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) return new("ACCESS_DENIED");
-            if (response.StatusCode == HttpStatusCode.NotFound) return new("SOURCE_NOT_FOUND");
+            if (response.StatusCode == HttpStatusCode.NotFound) return new(notFound);
             if (cursorRequest && response.StatusCode == HttpStatusCode.BadRequest) return new("INVALID_CURSOR");
             if (!response.IsSuccessStatusCode) return new("UNAVAILABLE");
             if (response.Content.Headers.ContentLength > maximumBytes || response.Content.Headers.ContentType?.MediaType != "application/json")

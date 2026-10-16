@@ -3547,5 +3547,54 @@
       "QUEUE_NOT_SUPPORTED": "Queue and history are not available in this Atlas mode. The active observations tab remains available.",
       "REQUEST_FAILED": "The queue could not be read. No previous page is shown. Refresh to try again."
     }
+  },
+  "parasolWork": {
+    "assign": "Assign work",
+    "viewLinked": "View linked work",
+    "title": "Assign observation work",
+    "source": "View Atlas source",
+    "privacy": "The task stores a general subject, assignee, due date and priority. Observation summaries and device names stay in this personal Atlas view and are not copied into the task.",
+    "sourceNote": "This is a fresh read through your personal Atlas access. The CRM task contains no saved observation summary or device name to fall back on.",
+    "persistedSubject": "Task subject",
+    "subject": "Review technical observation",
+    "assignee": "Choose an active technical employee",
+    "due": "Due date (optional)",
+    "confirm": "I confirm the assignee and due date",
+    "create": "Create task",
+    "previewAgain": "Read fresh preview",
+    "invalidDue": "Enter a valid date and time.",
+    "priority": "Task priority: {{priority}}",
+    "existingKept": "A linked task already exists. Its assignment, due date and state are kept.",
+    "taskUnavailable": "The linked task is no longer available. It will not be recreated automatically.",
+    "taskState": "Task state: {{state}}",
+    "taskStatus": {
+      "Open": "Open",
+      "Done": "Done",
+      "Cancelled": "Cancelled"
+    },
+    "assigned": "An employee is assigned. Open customer activities to see the current assignment.",
+    "unassigned": "No employee is assigned.",
+    "noDue": "No due date.",
+    "openActivities": "Open customer activities",
+    "cannotCreate": "No new task can be created from this observation. Existing linked work can still be reviewed.",
+    "status": {
+      "CREATED": "Task created.",
+      "EXISTING": "Existing linked task returned; no assignment or due date was changed.",
+      "NOT_LINKED": "This customer has not been linked to Atlas.",
+      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
+      "ACCESS_DENIED": "Your access does not permit reading this Atlas source.",
+      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas.",
+      "UNAVAILABLE": "Atlas is unavailable. No previous observation context is shown.",
+      "INVALID_RESPONSE": "The source returned an unexpected response. No unverified task or observation details are shown.",
+      "IDENTITY_CHANGED": "The customer link changed. Read the current source before assigning work.",
+      "OBSERVATION_NOT_FOUND": "This observation was not found in the current Atlas customer.",
+      "SOURCE_TASK_UNAVAILABLE": "The source task is no longer available for this customer link.",
+      "REQUEST_FAILED": "The source could not be read. No previous observation context is shown.",
+      "UNCERTAIN": "The task outcome is uncertain. Do not submit again yet. Read a fresh preview to find any task that was already created.",
+      "REVIEW_REQUIRED": "The task was not confirmed. Read a fresh preview and review your selection before trying again.",
+      "SOURCE_CHANGED": "The observation changed after the preview. Read a fresh preview before assigning work.",
+      "SOURCE_TERMINAL": "This observation is no longer active. Read a fresh preview to see any linked work.",
+      "ASSIGNEE_INVALID": "Choose an active employee with technical workspace access, then read a fresh preview."
+    }
   }
 }

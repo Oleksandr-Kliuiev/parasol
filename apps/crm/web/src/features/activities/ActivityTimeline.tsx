@@ -14,6 +14,7 @@ import { useActivities, useActivityActions, useOutlookStatus } from './api';
 import { ActivityDialog } from './ActivityDialog';
 import type { Activity } from './types';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0 },
@@ -138,6 +139,7 @@ export function ActivityTimeline({
                     {activity.assignee ? ` · ${activity.assignee.name}` : ''}
                     {activity.status === 'Done' && activity.completedAt ? ` · ${t('activities.doneAt', { at: formatDateTime(activity.completedAt) })}` : ''}
                   </div>
+                  {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
                 </span>
                 {canWrite && activity.type !== 'Email' && (
                   <span className={styles.actions}>

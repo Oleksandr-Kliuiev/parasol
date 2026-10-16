@@ -46,25 +46,32 @@ function classify(error: unknown): AtlasError {
   return typeof code === 'string' && TRANSIENT_DB.has(code) ? new AtlasError('DATABASE_UNAVAILABLE', 'TRANSIENT') : new AtlasError('UNEXPECTED_ERROR', 'PERMANENT');
 }
 
+/** Caller must already be in a scoped transaction. Keep claims, leases and retries on one clock domain. */
+const workerClock = async (tx: Prisma.TransactionClient, explicit?: Date): Promise<Date> =>
+  explicit ?? (await tx.$queryRaw<{ instant: Date }[]>`SELECT clock_timestamp()::timestamptz(3) AS instant`)[0]!.instant;
+
 /**
  * Claims due events of one client for this worker. Each claim gets its own token and uses up an attempt, so a crash
  * counts too. In the same transaction, due events that have used every attempt without an outcome (their last worker
  * died) are dead-lettered with an audit row (ATTEMPTS_EXHAUSTED): no provider call, no hidden pending rows. A stored
  * phase-1 decision stays with the event; an explicit requeue completes it without calling the provider again.
  */
-export async function claimEvents(db: PrismaClient, actor: Actor, scope: Scope, options: ClaimOptions, now: Date = new Date()): Promise<ClaimResult> {
+export async function claimEvents(db: PrismaClient, actor: Actor, scope: Scope, options: ClaimOptions, now?: Date): Promise<ClaimResult> {
   assertPermission(actor, scope, 'events:ingest');
   const maxAttempts = options.maxAttempts ?? defaults.maxAttempts;
   const limit = options.batchSize ?? defaults.batchSize;
-  const until = new Date(now.getTime() + (options.leaseMs ?? defaults.leaseMs));
   // Each statement picks its rows in a MATERIALIZED CTE, evaluated exactly once: a LIMIT … FOR UPDATE SKIP LOCKED subquery
   // inside IN (…) may be re-run per row by the planner, skip the rows this statement already changed and exceed the batch.
   return withScope(db, actor, [scope.clientId], async tx => {
+    // Due timestamps originate in PostgreSQL. Use its clock at the stored millisecond precision, not a potentially
+    // behind/truncated process clock. Explicit clocks remain available for deterministic scheduling and recovery.
+    const instant = await workerClock(tx, now);
+    const until = new Date(instant.getTime() + (options.leaseMs ?? defaults.leaseMs));
     const exhausted = await tx.$queryRaw<{ eventKey: string; attempts: number }[]>`
       WITH picked AS MATERIALIZED (
         SELECT "workspaceId", "clientId", id FROM "RawEvent"
         WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND status IN ('RECEIVED', 'RETRY') AND attempts >= ${maxAttempts}
-          AND "nextAttemptAt" <= ${now} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${now})
+          AND "nextAttemptAt" <= ${instant} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${instant})
         ORDER BY "nextAttemptAt", "receivedAt", id LIMIT ${limit} FOR UPDATE SKIP LOCKED)
       UPDATE "RawEvent" r SET status = 'DEAD_LETTER', "lastErrorCode" = 'ATTEMPTS_EXHAUSTED', "leaseOwner" = NULL, "leaseExpiresAt" = NULL, "claimToken" = NULL
       FROM picked p WHERE r."workspaceId" = p."workspaceId" AND r."clientId" = p."clientId" AND r.id = p.id
@@ -78,7 +85,7 @@ export async function claimEvents(db: PrismaClient, actor: Actor, scope: Scope, 
       WITH picked AS MATERIALIZED (
         SELECT "workspaceId", "clientId", id FROM "RawEvent"
         WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND status IN ('RECEIVED', 'RETRY') AND attempts < ${maxAttempts}
-          AND "nextAttemptAt" <= ${now} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${now})
+          AND "nextAttemptAt" <= ${instant} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${instant})
         ORDER BY "nextAttemptAt", "receivedAt", id LIMIT ${limit} FOR UPDATE SKIP LOCKED)
       UPDATE "RawEvent" r SET "leaseOwner" = ${options.workerId}, "leaseExpiresAt" = ${until}, "claimToken" = gen_random_uuid(), attempts = r.attempts + 1
       FROM picked p WHERE r."workspaceId" = p."workspaceId" AND r."clientId" = p."clientId" AND r.id = p.id
@@ -183,13 +190,14 @@ async function commitEvent(db: PrismaClient, actor: Actor, scope: Scope, claimed
 
 /** RETRY or DEAD_LETTER with an audit row, only while this claim is current: a claim taken over records nothing (CLAIM_LOST). */
 async function recordFailure(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, failure: AtlasError, options: WorkerOptions,
-  now: Date): Promise<'RETRY' | 'DEAD_LETTER' | 'CLAIM_LOST'> {
+  now?: Date): Promise<'RETRY' | 'DEAD_LETTER' | 'CLAIM_LOST'> {
   const retry = failure.kind === 'TRANSIENT' && claimed.attempts < (options.maxAttempts ?? defaults.maxAttempts);
   const status = retry ? 'RETRY' : 'DEAD_LETTER';
   const delay = (options.retryDelayMs ?? defaults.retryDelayMs)(claimed.attempts);
   return withScope(db, actor, [scope.clientId], async tx => {
+    const retryAt = retry ? new Date((await workerClock(tx, now)).getTime() + delay) : null;
     const updated = await tx.rawEvent.updateMany({ where: { ...ids(scope), id: claimed.id, claimToken: claimed.claimToken, status: { in: ['RECEIVED', 'RETRY'] } },
-      data: { status, lastErrorCode: failure.code, leaseOwner: null, leaseExpiresAt: null, claimToken: null, ...(retry ? { nextAttemptAt: new Date(now.getTime() + delay) } : {}) } });
+      data: { status, lastErrorCode: failure.code, leaseOwner: null, leaseExpiresAt: null, claimToken: null, ...(retryAt ? { nextAttemptAt: retryAt } : {}) } });
     if (updated.count !== 1) return 'CLAIM_LOST';
     await tx.auditEvent.create({ data: clientAuditData(scope, actor.id, retry ? 'event.retry_scheduled' : 'event.dead_lettered', randomUUID(),
       { eventKey: claimed.eventKey, safeErrorCode: failure.code, attempts: String(claimed.attempts), inboxStatus: status }), select: { id: true } });
@@ -198,7 +206,7 @@ async function recordFailure(db: PrismaClient, actor: Actor, scope: Scope, claim
 }
 
 /** One claimed event through both phases; a failure becomes RETRY or DEAD_LETTER with its reason, or CLAIM_LOST (no change) if the claim was taken over. */
-export async function processClaimed(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, options: WorkerOptions, now: Date = new Date()): Promise<ProcessOutcome> {
+export async function processClaimed(db: PrismaClient, actor: Actor, scope: Scope, claimed: ClaimedEvent, options: WorkerOptions, now?: Date): Promise<ProcessOutcome> {
   try {
     const prepared = await prepareEvent(db, actor, scope, claimed, options);
     const observationId = await commitEvent(db, actor, scope, claimed, prepared, options);
@@ -214,7 +222,7 @@ export async function processClaimed(db: PrismaClient, actor: Actor, scope: Scop
  * One worker pass over a client: dead-letter exhausted events, claim due ones, process each. Workers on other processes
  * take disjoint batches.
  */
-export async function processPending(db: PrismaClient, actor: Actor, scope: Scope, options: WorkerOptions, now: Date = new Date()): Promise<ProcessOutcome[]> {
+export async function processPending(db: PrismaClient, actor: Actor, scope: Scope, options: WorkerOptions, now?: Date): Promise<ProcessOutcome[]> {
   const { claimed, deadLettered } = await claimEvents(db, actor, scope, options, now);
   const outcomes: ProcessOutcome[] = [...deadLettered];
   for (const event of claimed) outcomes.push(await processClaimed(db, actor, scope, event, options, now));

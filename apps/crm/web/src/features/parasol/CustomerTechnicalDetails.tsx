@@ -24,7 +24,7 @@ export function CustomerTechnicalDetails({ customerId, summary, onSourceInvalida
     </TabList>
     <div role="tabpanel" id={`${id}-${active}`} aria-labelledby={`${id}-${active}-tab`}>
       {active === 'queue' ? <ObservationQueue customerId={customerId} onSourceInvalidated={onSourceInvalidated} />
-        : active === 'devices' ? <DeviceList devices={summary.devices} /> : <ObservationList summary={summary} openQueue={() => {
+        : active === 'devices' ? <DeviceList devices={summary.devices} /> : <ObservationList customerId={customerId} onSourceInvalidated={onSourceInvalidated} summary={summary} openQueue={() => {
           setActive('queue'); queueTab.current?.focus();
         }} />}
     </div>
@@ -64,7 +64,9 @@ function DeviceList({ devices }: { devices: WorkspaceSummary['devices'] }) {
   </section>;
 }
 
-function ObservationList({ summary, openQueue }: { summary: WorkspaceSummary; openQueue: () => void }) {
+function ObservationList({ summary, openQueue, customerId, onSourceInvalidated }: {
+  summary: WorkspaceSummary; openQueue: () => void; customerId: string; onSourceInvalidated: () => void;
+}) {
   const { t } = useTranslation();
   const styles = useTechnicalStyles();
   const heading = useId();
@@ -102,7 +104,7 @@ function ObservationList({ summary, openQueue }: { summary: WorkspaceSummary; op
       </div>
       <Text block role="status">{t('parasolDetails.observationMatches', { matched: matches.length, loaded: page.items.length })}</Text>
       {matches.length === 0 && <Text block>{t('parasolDetails.noMatches')}</Text>}
-      <ObservationRows items={matches.slice(0, limit)} devices={summary.devices} />
+      <ObservationRows items={matches.slice(0, limit)} devices={summary.devices} customerId={customerId} onSourceInvalidated={onSourceInvalidated} />
       <div className={styles.footer}>
         <Text>{t('parasolDetails.visible', { shown: Math.min(limit, matches.length), total: matches.length })}</Text>
         {matches.length > limit && <Button onClick={() => setLimit(n => n + batch)}>{t('parasolDetails.moreObservations')}</Button>}

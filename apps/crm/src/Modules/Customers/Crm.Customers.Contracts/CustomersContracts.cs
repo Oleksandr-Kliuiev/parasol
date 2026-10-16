@@ -1,4 +1,5 @@
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Results;
 
 namespace Crm.Customers.Contracts;
 
@@ -105,6 +106,9 @@ public sealed record ContactSyncView(
 /// <summary>Public API of the Customers module for other modules and integrations.</summary>
 public interface ICustomersApi
 {
+    /// <summary>Holds a read-only row lease while a different module commits its own operation; merge/delete waits for release.</summary>
+    Task<Result<T>> WithUsableOrganizationAsync<T>(Guid organizationId,
+        Func<OrganizationRef, CancellationToken, Task<Result<T>>> action, CancellationToken cancellationToken);
     Task<OrganizationRef?> GetOrganizationAsync(Guid organizationId, CancellationToken cancellationToken);
 
     /// <summary>Organizations with an org number whose registry status was last checked before <paramref name="checkedBefore"/>.</summary>

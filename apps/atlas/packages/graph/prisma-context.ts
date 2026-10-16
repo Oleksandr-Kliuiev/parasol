@@ -1,10 +1,10 @@
 import type { PrismaClient } from '@prisma/client';
-import type { Actor, Scope, ClientContextV1, ObservationPage } from '../core/contracts.ts';
+import type { Actor, Scope, ClientContextV1, ObservationPage, ObservationSummary } from '../core/contracts.ts';
 import { AtlasError, M365_RESOURCE_TYPES, assertPermission, hasClientPermission, observationStatuses, severities } from '../core/contracts.ts';
 import { withScope } from './scoped-db.ts';
-import { mapClientContext, mapObservationPage } from './context-mapper.ts';
-import type { DbClientGraph } from './context-mapper.ts';
-import { activeQuery, readObservationPage } from '../observations/query.ts';
+import { mapClientContext, mapObservationPage, mapObservationRow } from './context-mapper.ts';
+import type { DbClientGraph, DbObservationRow } from './context-mapper.ts';
+import { activeQuery, observationSelect, readObservationPage } from '../observations/query.ts';
 import type { ObservationQuery } from '../observations/query.ts';
 
 /** Page size of observations in the context and the upper bound of GET /clients/:id/observations. */
@@ -63,6 +63,21 @@ export async function getObservationPage(db: PrismaClient, actor: Actor, scope: 
   return withScope(db, actor, [scope.clientId], async tx => {
     const { rows, stats, nextCursor } = await readObservationPage(tx, scope, query);
     return mapObservationPage(scope, rows, stats, nextCursor);
+  });
+}
+
+/** Stored observation identifiers use the same bounded vocabulary as lifecycle commands and page cursors. */
+export function assertObservationId(id: string): void {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9._:-]{1,100}$/.test(id)) throw new AtlasError('INVALID_OBSERVATION_ID', 'VALIDATION');
+}
+
+/** Exact stored read, including resolved/suppressed history. Never searches another client or invokes a provider. */
+export async function getObservationSummary(db: PrismaClient, actor: Actor, scope: Scope, id: string): Promise<ObservationSummary | null> {
+  assertPermission(actor, scope, 'context:read');
+  assertObservationId(id);
+  return withScope(db, actor, [scope.clientId], async tx => {
+    const row = await tx.observation.findUnique({ where: { workspaceId_clientId_id: { ...scope, id } }, select: observationSelect });
+    return row ? mapObservationRow(scope, row as unknown as DbObservationRow) : null;
   });
 }
 

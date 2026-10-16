@@ -71,7 +71,8 @@ public sealed record ActivityDto(
     string? FromAddress,
     DateTimeOffset CreatedAt,
     RefDto? CreatedBy,
-    string Etag);
+    string Etag,
+    bool HasTechnicalSource = false);
 
 public sealed record ActivityQuery(
     Guid? OrganizationId, Guid? OpportunityId, Guid? ContractId, ActivityType? Type, bool MineOnly, bool OpenOnly, int? Limit = null, string? Cursor = null);
@@ -192,8 +193,19 @@ internal sealed class ActivityService(
         return (await ToDtosAsync([created.Value], ct))[0];
     }
 
-    public async Task<Result<ActivityDto>> UpdateAsync(Guid id, ActivityRequest request, string ifMatch, CancellationToken ct) =>
-        await MutateAsync(
+    public async Task<Result<ActivityDto>> UpdateAsync(Guid id, ActivityRequest request, string ifMatch, CancellationToken ct)
+    {
+        if (await db.SourceTaskLinks.AsNoTracking().AnyAsync(l => l.ActivityId == id, ct)
+            && await db.Activities.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, ct) is { } sourceTask)
+        {
+            if (request.Type != ActivityType.Task || request.OrganizationId != sourceTask.OrganizationId)
+                return Error.Conflict("ACT_SOURCE_TASK_IDENTITY_LOCKED", "A technical task keeps its type and customer.");
+            var assigneeId = request.AssigneeId ?? sourceTask.AssigneeId;
+            if (assigneeId != sourceTask.AssigneeId && (assigneeId is null
+                || await users.GetProfileAsync(assigneeId.Value, ct) is not { } assignee || !SourceTaskApi.IsEligibleAssignee(assignee)))
+                return Error.Validation("ACT_SOURCE_TASK_ASSIGNEE_INVALID", "Choose an active technical employee.");
+        }
+        return await MutateAsync(
             id,
             ifMatch,
             activity => activity.Update(ToDetails(request, activity.AssigneeId), time.GetUtcNow()),
@@ -216,6 +228,7 @@ internal sealed class ActivityService(
                     ? await outlook.PushMeetingAsync(activity, token)
                     : Result.Success();
             });
+    }
 
     /// <summary>Puts an existing meeting into the calendar, or refreshes the event after a failed attempt.</summary>
     public async Task<Result<ActivityDto>> AddToCalendarAsync(Guid id, CancellationToken ct) =>
@@ -290,6 +303,8 @@ internal sealed class ActivityService(
         var contacts = await customers.GetContactNamesAsync(activities.Where(a => a.ContactId != null).Select(a => a.ContactId!.Value).Distinct().ToList(), ct);
         var userIds = activities.SelectMany(a => new[] { a.AssigneeId, a.CreatedBy }).OfType<Guid>().Distinct().ToList();
         var people = await users.GetUsersAsync(userIds, ct);
+        var activityIds = activities.Select(a => a.Id).ToList();
+        var sourceIds = (await db.SourceTaskLinks.AsNoTracking().Where(l => activityIds.Contains(l.ActivityId)).Select(l => l.ActivityId).ToListAsync(ct)).ToHashSet();
         var now = time.GetUtcNow();
         RefDto? Person(Guid? id) => id is { } value && people.TryGetValue(value, out var user) ? new RefDto(user.Id, user.DisplayName) : null;
 
@@ -297,7 +312,7 @@ internal sealed class ActivityService(
             a.Id, a.Type, a.OrganizationId, organizations.GetValueOrDefault(a.OrganizationId), a.OpportunityId, a.ContractId, a.ContactId,
             a.ContactId is { } contactId ? contacts.GetValueOrDefault(contactId) : null, a.Subject, a.Body, a.DueAt, a.DurationMinutes,
             a.Location, a.Priority, Person(a.AssigneeId), a.Status, a.CompletedAt, a.IsOverdue(now), a.GraphEventId is not null,
-            a.CalendarSyncedAt, a.WebLink, a.FromAddress, a.CreatedAt, Person(a.CreatedBy), db.GetETag(a))).ToList();
+            a.CalendarSyncedAt, a.WebLink, a.FromAddress, a.CreatedAt, Person(a.CreatedBy), db.GetETag(a), sourceIds.Contains(a.Id))).ToList();
     }
 }
 

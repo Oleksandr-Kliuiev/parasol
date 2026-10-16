@@ -109,3 +109,35 @@ test('bounded retry ends in a visible dead letter, a corrupt stored payload is d
   assert.deepEqual((await processPending(db, actors.sync, gasta, options(provider))).map(o => `${o.eventKey === stored.eventKey}:${o.status}`), ['true:PROCESSED']);
   assert.equal((await audits('event.requeued')).length, 1);
 });
+
+test('each newly stored event is eligible on an immediate database-clock pass without sleeps or retries', async () => {
+  const provider = new CountingProvider();
+  for (let index = 0; index < 100; index++) {
+    const stored = await ingestEvent(db, actors.sync, connection, incident(connection, `immediate-clock-${index}`, 'LOW'));
+    const outcomes = await processPending(db, actors.sync, gasta, options(provider));
+    assert.deepEqual(outcomes.map(o => [o.eventKey, o.status]), [[stored.eventKey, 'PROCESSED']], `independent case ${index}`);
+  }
+  assert.equal(provider.calls, 100);
+});
+
+test('default retry backoff starts on the database clock after the failed work; immediate reclaim is refused', async () => {
+  const provider = new CountingProvider(); const delay = 30_000;
+  let failedAt = 0; let fail = true;
+  const stored = await ingestEvent(db, actors.sync, connection, incident(connection, 'database-retry-clock', 'LOW'));
+  const hook = async () => {
+    if (!fail) return;
+    fail = false;
+    await new Promise(resolve => setTimeout(resolve, 100));
+    failedAt = Number((await pgdb.owner.query('SELECT extract(epoch FROM clock_timestamp()) * 1000 AS instant')).rows[0].instant);
+    throw new AtlasError('SYNTHETIC_FAILED_WORK', 'TRANSIENT');
+  };
+  const workerOptions = options(provider, { retryDelayMs: () => delay, beforeFinalCommit: hook });
+  const [first] = await processPending(db, actors.sync, gasta, workerOptions);
+  assert.deepEqual([first?.eventKey, first?.status], [stored.eventKey, 'RETRY']);
+  const retryAt = Number((await pgdb.owner.query('SELECT extract(epoch FROM "nextAttemptAt") * 1000 AS instant FROM "RawEvent" WHERE "eventKey"=$1',
+    [stored.eventKey])).rows[0].instant);
+  assert.ok(retryAt >= Math.round(failedAt) + delay, 'the delay begins after failure, including the work duration');
+  assert.deepEqual(await processPending(db, actors.sync, gasta, workerOptions), [], 'the database clock has not reached the persisted retry deadline');
+  assert.deepEqual((await processPending(db, actors.sync, gasta, workerOptions, new Date(retryAt + 1))).map(o => o.status), ['PROCESSED']);
+  assert.equal(provider.calls, 1, 'the retry retains the stored decision');
+});

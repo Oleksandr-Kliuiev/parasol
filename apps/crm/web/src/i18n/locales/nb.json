@@ -3547,5 +3547,54 @@
       "QUEUE_NOT_SUPPORTED": "Kø og historikk er ikke tilgjengelig i denne Atlas-modusen. Fanen for aktive observasjoner er fortsatt tilgjengelig.",
       "REQUEST_FAILED": "Køen kunne ikke leses. Ingen tidligere side vises. Oppdater for å prøve igjen."
     }
+  },
+  "parasolWork": {
+    "assign": "Tildel arbeid",
+    "viewLinked": "Vis koblet arbeid",
+    "title": "Tildel observasjonsarbeid",
+    "source": "Vis Atlas-kilde",
+    "privacy": "Oppgaven lagrer en generell tittel, ansvarlig, frist og prioritet. Observasjonstekst og enhetsnavn forblir i denne personlige Atlas-visningen og kopieres ikke til oppgaven.",
+    "sourceNote": "Dette er en ny lesing med din personlige Atlas-tilgang. CRM-oppgaven inneholder ingen lagret observasjonstekst eller enhetsnavn som kan vises ved manglende tilgang.",
+    "persistedSubject": "Oppgavetittel",
+    "subject": "Review technical observation",
+    "assignee": "Velg en aktiv teknisk medarbeider",
+    "due": "Frist (valgfritt)",
+    "confirm": "Jeg bekrefter ansvarlig og frist",
+    "create": "Opprett oppgave",
+    "previewAgain": "Les ny forhåndsvisning",
+    "invalidDue": "Oppgi gyldig dato og klokkeslett.",
+    "priority": "Oppgaveprioritet: {{priority}}",
+    "existingKept": "En koblet oppgave finnes allerede. Ansvarlig, frist og tilstand beholdes.",
+    "taskUnavailable": "Den koblede oppgaven er ikke lenger tilgjengelig. Den opprettes ikke automatisk på nytt.",
+    "taskState": "Oppgavetilstand: {{state}}",
+    "taskStatus": {
+      "Open": "Åpen",
+      "Done": "Fullført",
+      "Cancelled": "Avbrutt"
+    },
+    "assigned": "En medarbeider er ansvarlig. Åpne kundeaktiviteter for å se gjeldende tildeling.",
+    "unassigned": "Ingen medarbeider er tildelt.",
+    "noDue": "Ingen frist.",
+    "openActivities": "Åpne kundeaktiviteter",
+    "cannotCreate": "Ingen ny oppgave kan opprettes fra denne observasjonen. Eksisterende koblet arbeid kan fortsatt vises.",
+    "status": {
+      "CREATED": "Oppgave opprettet.",
+      "EXISTING": "Eksisterende koblet oppgave returnert. Ansvarlig og frist er ikke endret.",
+      "NOT_LINKED": "Denne kunden er ikke koblet til Atlas.",
+      "NOT_CONFIGURED": "Atlas-forbindelsen er ikke konfigurert.",
+      "ACCESS_DENIED": "Tilgangen din tillater ikke lesing av denne Atlas-kilden.",
+      "SOURCE_NOT_FOUND": "Den koblede kunden ble ikke funnet i Atlas.",
+      "UNAVAILABLE": "Atlas er utilgjengelig. Ingen tidligere observasjonsdetaljer vises.",
+      "INVALID_RESPONSE": "Kilden returnerte et uventet svar. Ingen ubekreftede oppgave- eller observasjonsdetaljer vises.",
+      "IDENTITY_CHANGED": "Kundekoblingen ble endret. Les den gjeldende kilden før arbeidet tildeles.",
+      "OBSERVATION_NOT_FOUND": "Observasjonen ble ikke funnet hos den gjeldende Atlas-kunden.",
+      "SOURCE_TASK_UNAVAILABLE": "Kildeoppgaven er ikke lenger tilgjengelig for denne kundekoblingen.",
+      "REQUEST_FAILED": "Kilden kunne ikke leses. Ingen tidligere observasjonsdetaljer vises.",
+      "UNCERTAIN": "Oppgavens resultat er usikkert. Ikke send på nytt ennå. Les en ny forhåndsvisning for å finne en oppgave som allerede kan være opprettet.",
+      "REVIEW_REQUIRED": "Oppgaven ble ikke bekreftet. Les en ny forhåndsvisning og kontroller valget før du prøver igjen.",
+      "SOURCE_CHANGED": "Observasjonen ble endret etter forhåndsvisningen. Les en ny forhåndsvisning før arbeidet tildeles.",
+      "SOURCE_TERMINAL": "Observasjonen er ikke lenger aktiv. Les en ny forhåndsvisning for å se eventuelt koblet arbeid.",
+      "ASSIGNEE_INVALID": "Velg en aktiv medarbeider med teknisk arbeidsområdetilgang, og les en ny forhåndsvisning."
+    }
   }
 }

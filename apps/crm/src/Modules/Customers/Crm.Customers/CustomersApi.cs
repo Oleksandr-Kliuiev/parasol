@@ -1,4 +1,6 @@
 using Crm.Customers.Contracts;
+using System.Data;
+using Crm.SharedKernel.Results;
 using Crm.Customers.Domain;
 using Crm.Customers.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +11,19 @@ namespace Crm.Customers;
 internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOptions> options) : ICustomersApi
 {
     public BillingDetailsMaster BillingDetailsMaster => options.Value.BillingDetailsMaster;
+
+    public Task<Result<T>> WithUsableOrganizationAsync<T>(Guid organizationId,
+        Func<OrganizationRef, CancellationToken, Task<Result<T>>> action, CancellationToken cancellationToken) =>
+        db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            // No Customers writes: only the organization row stays stable until the owning module finishes its commit.
+            await using var lease = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            if (await GetOrganizationAsync(organizationId, cancellationToken) is not { } organization)
+                return (Result<T>)Error.NotFound("CUS_ORGANIZATION_UNAVAILABLE", "The customer is unavailable.");
+            var result = await action(organization, cancellationToken);
+            await lease.CommitAsync(cancellationToken);
+            return result;
+        });
 
     public Task<bool> IsMergeUndoneAsync(Guid mergeId, CancellationToken cancellationToken) =>
         db.OrganizationMerges.AsNoTracking().AnyAsync(m => m.Id == mergeId && m.UndoneAt != null, cancellationToken);

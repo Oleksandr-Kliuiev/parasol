@@ -94,7 +94,7 @@ function EmployeeQueue({ customerId, employeeId, onSourceInvalidated }: { custom
         <Text block>{t('parasolQueue.searchNote')}</Text>
         <Text block>{t('parasolDetails.observationMatches', { matched: matches.length, loaded: queue.items.length })}</Text>
         {matches.length === 0 && <Text block>{t('parasolDetails.noMatches')}</Text>}
-        <ObservationRows items={matches} devices={queue.devices} />
+        <ObservationRows items={matches} devices={queue.devices} customerId={customerId} onSourceInvalidated={onSourceInvalidated} />
       </>}
       <Text block role="status">{t('parasolQueue.page', { page: cursors.length, count: queue.items.length })}</Text>
       <div className={styles.footer}>

@@ -8,6 +8,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { useActivities, useActivityActions } from './api';
+import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0 },
@@ -57,6 +58,7 @@ export function MyTasksPanel() {
                 {activity.dueAt ? ` · ${t(activity.isOverdue ? 'activities.overdueAt' : 'activities.dueAt', { at: formatDateTime(activity.dueAt) })}` : ''}
               </span>
             </span>
+            {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
             <Button
               size="small"
               appearance="subtle"
