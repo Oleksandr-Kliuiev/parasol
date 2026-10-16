@@ -101,7 +101,11 @@ public sealed record ContactSyncView(
     string? Phone,
     string? MobilePhone,
     bool IsDeleted,
-    IReadOnlyList<ContactAffiliationView> Affiliations);
+    IReadOnlyList<ContactAffiliationView> Affiliations)
+{
+    /// <summary>Sync views contain only nondeleted affiliations; exporting also requires an active exact customer affiliation.</summary>
+    public bool IsUsableFor(Guid organizationId) => !IsDeleted && Affiliations.Any(a => a.OrganizationId == organizationId && a.IsActive);
+}
 
 /// <summary>Public API of the Customers module for other modules and integrations.</summary>
 public interface ICustomersApi

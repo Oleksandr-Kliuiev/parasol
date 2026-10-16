@@ -247,6 +247,19 @@ public static class ServiceModule
                     return Error.Validation("SRV_UNKNOWN_ORGANIZATION", "The organization does not exist.").ToProblem();
                 }
 
+                if (request.ContactId is not { } contactId ||
+                    await customers.GetContactForSyncAsync(contactId, ct) is not { } contact || !contact.IsUsableFor(request.OrganizationId))
+                {
+                    return Error.Validation("SRV_CONTACT_UNAVAILABLE", "Choose an active contact of this customer.",
+                        new Dictionary<string, object?>
+                        {
+                            ["errors"] = new Dictionary<string, string[]>
+                            {
+                                [nameof(request.ContactId)] = ["Choose an active contact of this customer."],
+                            },
+                        }).ToProblem();
+                }
+
                 var ticketRequest = TicketRequest.Create(request.OrganizationId, request.ContactId, request.Title, request.Description, request.Priority, request.Type);
                 db.TicketRequests.Add(ticketRequest);
                 await db.SaveChangesAsync(ct);
