@@ -50,8 +50,12 @@ It does not reuse an existing application or database.
 - My Day attention independently reads the forty/twenty/twenty customer sets, reports exact
   active/High/Critical totals and retains partial source coverage. The urgent preview opens
   the existing fresh M12 confirmation without creating another Task or writing to a provider.
+- Local connection readiness reads real configuration/SQL for Admin and personal configuration
+  for the technical employees and ReadOnly. Its local mapping review detects the intentionally
+  retained unlinked collision reference. Opening and refreshing the page must leave the Atlas
+  HTTP request counter and durable Task evidence unchanged; Finance receives no access.
 
-The seven scenarios form one synthetic workflow. A failed earlier action can also fail later
+The eight scenarios form one synthetic workflow. A failed earlier action can also fail later
 durability assertions; the first failure is retained rather than retried or hidden by skips.
 
 ## Ownership and retained evidence
@@ -65,13 +69,18 @@ CRM Web and Worker use separate restricted SQL roles. Atlas uses the existing co
 runtime role, without superuser, bypass-RLS, role membership or relation ownership. The
 gate verifies these facts before browser acceptance and again with durable evidence.
 
+The transparent Atlas recorder counts forwarded Atlas requests and mutating HTTP methods.
+The retained `providerWrites` field describes that counter; it is not a traffic monitor for
+every external provider. Atera, PowerOffice, Graph and PartnerCenter are explicitly disabled
+in this synthetic fixture and their endpoints are confined to an unused loopback address.
+
 Application subprocess groups are owned and bounded. CRM readiness uses a newly generated,
 run-specific certificate trusted only by the launcher; no system trust/keychain change is
 made. Private credentials, cookies, documents and Data Protection keys are removed only
 after owned resources are confirmed stopped. Unrelated processes and containers are untouched.
 
 `report.json` contains bounded synthetic counts, fixed failure classifications and cleanup
-status. Acceptance requires a build in the same invocation, all seven browser scenarios with
+status. Acceptance requires a build in the same invocation, all eight browser scenarios with
 zero failures/skips/retries, exact durable/privacy evidence and confirmed cleanup. Stage logs
 are private and redacted; browser artifacts contain synthetic fixture data. CI publishes only
 the compact report, never the private state, logs, screenshots or traces.
@@ -102,5 +111,26 @@ M14 adds the seventh attention scenario. Its
 scenarios against the actual compiled applications, including personal 40/20/20 attention,
 exact urgent counts and fresh M12 preview, with the same durable/privacy evidence and cleanup.
 It also correctly records `accepted: false` because it used `--skip-build` during the strict
-Atlas compiled-artifact freeze. Repeat the full command when that freeze ends, before closing
-these gates. The separate complete Atlas PostgreSQL/browser results remain pending in M12.
+Atlas compiled-artifact freeze. M15 adds the eighth local-readiness scenario. Its first full
+run exposed an incorrect auth-mode projection (7/8); the adapter now reads the actual auth
+singleton and both mode regressions pass. Two later complete runs passed all eight scenarios.
+
+The [current full-build run](evidence/composition-current-2026-10-16.json) includes M17/M18
+and the final customer-card/queue keyboard-refresh correction. It passed 8/8 with `accepted: true`, fresh
+builds of both applications, zero skipped/unexpected/flaky tests, exact Task/receipt/audit/
+outbox/privacy evidence, 555 forwarded Atlas requests, all restricted runtime roles and
+confirmed cleanup. The frontend passed the full 415/415 unit suite after M17, then the affected
+56/56 after the last refresh correction; these are separate runs. Current related
+mock-BFF browser regressions passed 38/38. Readiness screenshots in both themes and from the actual
+composition were inspected; neutral status labels are readable.
+
+Separate complete strict Atlas unit 711/711, PostgreSQL 789/789 and browser 90/90 pass
+without exceptions. [Safe evidence](evidence/atlas-strict-current-2026-10-16.json) confirms
+cleanup and all 1,421 frozen source/input hashes plus exact inventory unchanged.
+Composition does not substitute for these gates.
+No code or workflow has been published, and the new GitHub job remains unexecuted.
+
+M17 strengthens the accepted handoff scenario: the recipient is already on My Day before
+creation and uses the explicit personal-task refresh to receive and complete the task.
+The compact report refers to this final current-source invocation; earlier diagnostics and
+the auth-mode failure remain retained separately. Real provider accounts are unverified.
