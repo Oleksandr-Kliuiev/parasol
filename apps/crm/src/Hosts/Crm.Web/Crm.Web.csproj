@@ -16,8 +16,6 @@
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" />
     <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <PackageReference Include="Hangfire.AspNetCore" />
     <PackageReference Include="Hangfire.SqlServer" />
   </ItemGroup>

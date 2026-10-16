@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace Crm.UnitTests;
 
-/// <summary>Where issued documents go (DEV-08): a folder only outside production; a blob container needs its address.</summary>
+/// <summary>Production fails closed without a pre-provisioned private persistent directory.</summary>
 public class DocumentStoreOptionsTests
 {
     [Fact]
@@ -35,32 +35,51 @@ public class DocumentStoreOptionsTests
     }
 
     [Fact]
-    public async Task Production_refuses_the_folder_store_also_when_it_is_left_on_the_default()
+    public async Task Production_refuses_an_implicit_or_relative_folder()
     {
         foreach (var settings in new[] { new Dictionary<string, string?>(), new() { ["Documents:Provider"] = "FileSystem" } })
         {
             await using var services = Services("Production", settings);
             Should.Throw<OptionsValidationException>(() => services.GetRequiredService<IDocumentStore>())
-                .Message.ShouldContain("production uses AzureBlob");
+                .Message.ShouldContain("existing absolute path");
         }
     }
 
-    [Fact]
-    public async Task The_blob_store_needs_the_container_address_and_takes_the_apps_identity()
+    [Theory]
+    [InlineData("AzureBlob")]
+    [InlineData("99")]
+    public async Task Obsolete_or_unknown_providers_never_fall_back_to_a_folder(string provider)
     {
-        await using (var missing = Services("Production", new() { ["Documents:Provider"] = "AzureBlob" }))
-        {
-            Should.Throw<OptionsValidationException>(() => missing.GetRequiredService<IDocumentStore>()).Message.ShouldContain("BlobContainerUri");
-        }
+        await using var services = Services("Production", new() { ["Documents:Provider"] = provider });
+        Should.Throw<OptionsValidationException>(() => services.GetRequiredService<IDocumentStore>()).Message.ShouldContain("must be FileSystem");
+    }
 
-        await using var configured = Services("Production", new()
+    [Fact]
+    public async Task Production_uses_an_existing_absolute_folder_and_refuses_missing_or_public_storage()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"crm-persistent-{Guid.NewGuid():N}");
+        var volumeId = Guid.NewGuid().ToString("D");
+        try
         {
-            ["Documents:Provider"] = "AzureBlob",
-            ["Documents:BlobContainerUri"] = "https://stcrmtest.blob.core.windows.net/documents",
-            ["AZURE_CLIENT_ID"] = "00000000-0000-0000-0000-00000000c1d0",
-        });
-        configured.GetRequiredService<IDocumentStore>().ShouldBeOfType<AzureBlobDocumentStore>();
-        configured.GetRequiredService<IOptions<DocumentStoreOptions>>().Value.ManagedIdentityClientId.ShouldBe("00000000-0000-0000-0000-00000000c1d0");
+            await using (var missing = Services("Production", new() { ["Documents:RootPath"] = root }))
+            {
+                Should.Throw<OptionsValidationException>(() => missing.GetRequiredService<IDocumentStore>()).Message.ShouldContain("existing absolute path");
+                Directory.Exists(root).ShouldBeFalse();
+            }
+
+            Directory.CreateDirectory(root);
+            await File.WriteAllTextAsync(Path.Combine(root, ".parasol-volume"), volumeId, TestContext.Current.CancellationToken);
+            await using var configured = Services("Production", new() { ["Documents:RootPath"] = root, ["Documents:VolumeId"] = volumeId });
+            var store = configured.GetRequiredService<IDocumentStore>().ShouldBeOfType<FileSystemDocumentStore>();
+            await store.PutAsync("quotes/production.pdf", "%PDF-1.4"u8.ToArray(), "application/pdf", TestContext.Current.CancellationToken);
+            Directory.CreateDirectory(Path.Combine(root, "wwwroot", "documents"));
+            await using var publicStore = Services("Production", new() { ["Documents:RootPath"] = Path.Combine(root, "wwwroot", "documents"), ["Documents:VolumeId"] = volumeId }, root);
+            Should.Throw<OptionsValidationException>(() => publicStore.GetRequiredService<IDocumentStore>()).Message.ShouldContain("outside wwwroot");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     private static ServiceProvider Services(string environment, Dictionary<string, string?> settings, string? contentRoot = null)

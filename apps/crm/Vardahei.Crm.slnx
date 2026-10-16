@@ -86,4 +86,7 @@
     <Project Path="tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj" />
     <Project Path="tests/Crm.UnitTests/Crm.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Crm.DocumentStoreProbe/Crm.DocumentStoreProbe.csproj" />
+  </Folder>
 </Solution>

@@ -16,7 +16,10 @@ public sealed class TestDocumentStore : IDocumentStore
     {
         Root = Path.Combine(Path.GetTempPath(), $"crm-documents-{Guid.NewGuid():N}");
         Inner = new FileSystemDocumentStore(Root);
+        File.WriteAllText(Path.Combine(Root, ".parasol-volume"), VolumeId);
     }
+
+    public string VolumeId { get; } = Guid.NewGuid().ToString("D");
 
     public string Root { get; }
 

@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <ProjectReference Include="../../tools/Crm.DocumentStoreProbe/Crm.DocumentStoreProbe.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\src\Modules\Customers\Crm.Customers\Crm.Customers.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\Crm.Identity\Crm.Identity.csproj" />
     <ProjectReference Include="..\..\src\Modules\CustomFields\Crm.CustomFields\Crm.CustomFields.csproj" />
@@ -25,4 +26,10 @@
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\..\contracts\customer-identity\atlas-export.v1.example.json" Link="Fixtures\atlas-export.v1.example.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="CopyDocumentStoreProbe" AfterTargets="Build">
+    <ItemGroup>
+      <DocumentStoreProbeFiles Include="../../tools/Crm.DocumentStoreProbe/bin/$(Configuration)/$(TargetFramework)/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DocumentStoreProbeFiles)" DestinationFiles="@(DocumentStoreProbeFiles->'$(OutDir)DocumentStoreProbe/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

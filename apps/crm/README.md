@@ -45,7 +45,7 @@ src/Modules          Audit, Identity, Customers, Catalog, Contracts, Service, Ti
 src/Integrations     Brreg (реестр компаний), PowerOffice, Atera, PartnerCenter (CSP, только чтение)
 src/Hosts            Crm.Web (BFF + API + SPA), Crm.Worker (Hangfire, outbox), Crm.AppHost (.NET Aspire)
 web/                 SPA на React 19 + Fluent UI v9
-tests/               Unit, Architecture (границы модулей), Integration (SQL Server и Azurite для хранилища документов в Testcontainers)
+tests/               Unit, Architecture (границы модулей), Integration (SQL Server в Testcontainers и файловое хранилище документов VPS)
 infra/               Bicep (Azure Norway East), скрипт регистрации приложения в Entra ID
 .github/workflows    CI и деплой (OIDC в Azure)
 docs/runbooks        Эксплуатационные инструкции
@@ -130,3 +130,10 @@ k6 run -e BASE_URL=http://localhost:5180 tools/load-test/workday.js
 
 ### Развёртывание
 Первое развёртывание окружения — [runbook 01](docs/runbooks/01-first-deployment.md). Конвейер (DEV-05, [ADR-015](docs/adr/ADR-015-release-pipeline.md)): успешный CI на `main` → `release.yml` один раз собирает образы и разворачивает их digest в `test`; `prod` — только workflow `promote.yml`, который переносит те же digest, не пересобирая. Конвейер не проверен на реальном репозитории и окружениях (EXT-11); этот репозиторий не разворачивался в production.
+
+## Документы на VPS Parasol
+
+Production использует постоянный приватный том с атомарной записью и проверкой UUID.
+Конфигурация и восстановление: [runbook 16](docs/runbooks/16-vps-document-storage.md);
+гарантии неизменности: [ADR-026](docs/adr/ADR-026-vps-document-store.md).
+Azure Blob больше не поддерживается как runtime provider.
