@@ -81,15 +81,17 @@ test('injected HTML, script, URL and CSS in every displayed field stay inert tex
   await expect(page.locator('#evidence-action')).toContainText('not in an accepted format');
   const probe = await page.evaluate(() => ({
     pwned: (window as unknown as { __pwned?: number }).__pwned ?? null,
-    bodyElements: [...document.body.querySelectorAll('img, script, style, a:not(.skip-link), iframe, object, embed, link, svg, form:not(.connect-form):not(.queue-filters)')].map(e => e.tagName),
+    bodyElements: [...document.body.querySelectorAll('img:not(.brand-logo), script, style, a:not(.skip-link), iframe, object, embed, link, svg, form:not(.connect-form):not(.queue-filters)')].map(e => e.tagName),
     attributes: [...document.querySelectorAll('*')].flatMap(e => [...e.attributes].map(a => a.value)).filter(v => /evil|onerror|javascript:|<|pwned/.test(v)),
     skipLink: [...document.querySelectorAll('a')].map(a => a.getAttribute('href')),
+    images: [...document.querySelectorAll('img')].map(i => i.getAttribute('src')),
     display: getComputedStyle(document.body).display,
     text: document.body.textContent ?? ''
   }));
   expect(probe.pwned).toBeNull();
   expect(probe.bodyElements).toEqual([]);
   expect(probe.skipLink, 'the only link is the static skip link').toEqual(['#main']);
+  expect(probe.images, 'the only image is the static brand logo').toEqual(['vardahei-it-logo.png']);
   expect(probe.attributes).toEqual([]);
   expect(probe.display).toBe('block');
   expect(probe.text.split('<script>window.__pwned=2</script>').length - 1).toBeGreaterThanOrEqual(8);

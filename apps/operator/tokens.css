@@ -1,6 +1,6 @@
 /* Vardahei Atlas design tokens (design system v1, 2026-10-14). Brand anchors: blå #236e91, mørkgrå #3f3f42, grå #6b6e70.
    Scales are OKLCH-derived; components use only the semantic tokens (canvas, surface*, ink*, accent*, status, sev-*, ai-*).
-   Light by default; the dark values follow the operating system (prefers-color-scheme). No url(), imports or remote fonts. */
+   Light by default; the dark values follow the operating system (prefers-color-scheme). No external references, imports or remote fonts. */
 :root {
   color-scheme: light dark;
   --brand-blaa: #236e91;
