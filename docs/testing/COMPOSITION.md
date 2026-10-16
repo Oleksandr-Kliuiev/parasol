@@ -115,7 +115,7 @@ Atlas compiled-artifact freeze. M15 adds the eighth local-readiness scenario. It
 run exposed an incorrect auth-mode projection (7/8); the adapter now reads the actual auth
 singleton and both mode regressions pass. Two later complete runs passed all eight scenarios.
 
-The [current full-build run](evidence/composition-current-2026-10-16.json) includes M17/M18
+The [previous full-build run](evidence/composition-current-2026-10-16.json) includes M17/M18
 and the final customer-card/queue keyboard-refresh correction. It passed 8/8 with `accepted: true`, fresh
 builds of both applications, zero skipped/unexpected/flaky tests, exact Task/receipt/audit/
 outbox/privacy evidence, 555 forwarded Atlas requests, all restricted runtime roles and
@@ -132,5 +132,27 @@ No code or workflow has been published, and the new GitHub job remains unexecute
 
 M17 strengthens the accepted handoff scenario: the recipient is already on My Day before
 creation and uses the explicit personal-task refresh to receive and complete the task.
-The compact report refers to this final current-source invocation; earlier diagnostics and
+The compact report above refers to that M17/M18 invocation; earlier diagnostics and
 the auth-mode failure remain retained separately. Real provider accounts are unverified.
+
+## Current local verification, 17 October 2026
+
+The [current full-build run](evidence/composition-current-2026-10-17.json) includes M19 exact
+Activity navigation and the mobile Panel header correction. It passed 8/8 with `accepted: true`,
+zero skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles
+and confirmed cleanup. The recorder forwarded 564 Atlas requests and no mutating requests.
+The handoff now opens the exact Task and requires focus on its selected heading.
+
+The separate full frontend suite passed 456/456 in 53 files; ESLint, app/E2E/composition
+TypeScript and the 290.5/300 KB SPA budget pass. CRM browser regressions passed 49/49,
+including actual SQL-backed exact-selection, concurrent edit, missing/wrong customer and
+delayed-read cancellation in three engines, plus phone keyboard/Axe checks in both themes.
+Existing technical BFF mocks remain explicitly synthetic; they do not replace this full
+composition. SQL exact-selection/SourceTask tests passed 39/39 and architecture 94/94.
+
+The initial browser run's 48/49 timeout remains retained. The final cancellation assertion
+observes the real fetch AbortSignal before releasing the real API response, without changing
+the request or its promise. A separate 3/3 diagnostic and the final 49/49 pass establish that
+invariant; the original timeout cause is unproven. No retries, skips or failure exceptions
+were introduced. Atlas strict source/input hashes remain unchanged from the separate
+711/789/90 acceptance. No publication, deployment or live provider call occurred.
