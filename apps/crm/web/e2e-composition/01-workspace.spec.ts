@@ -50,7 +50,7 @@ test('real restricted runtimes expose forty scoped customers and four hundred re
   expect((await page.request.get('/bff/user')).status()).toBe(401);
 });
 
-test('actual customer cards retain source provenance, exact device links and six queue pages including history', async ({ browser }) => {
+test('actual customer cards retain source provenance, exact device links and six queue pages including history', async ({ browser }, testInfo) => {
   const f = fixture(); const admin = await staffContext(browser, 'Crm.Admin', `/organizations/${f.target.customerId}`);
   try {
     const view = await workspace(admin.page, f.target.customerId); const summary = view.summary;
@@ -79,6 +79,7 @@ test('actual customer cards retain source provenance, exact device links and six
     await expect(devices.getByText(f.target.duplicateHostname, { exact: true })).toHaveCount(2);
     await expect(devices.getByText(`Atlas device ID: ${f.target.confirmedDeviceId}`, { exact: true })).toBeVisible();
     await expect(devices.getByText(`Atlas device ID: ${f.target.unconfirmedDeviceId}`, { exact: true })).toBeVisible();
+    await panel.screenshot({ path: testInfo.outputPath('unified-customer-devices-synthetic.png') });
     const queue = panel.getByRole('region', { name: 'Observation queue and history', exact: true });
     const readQueuePage = async (cursor: string | null, action: () => Promise<void>) => {
       const responsePending = admin.page.waitForResponse(response => {
@@ -121,6 +122,7 @@ test('actual customer cards retain source provenance, exact device links and six
     await queue.getByLabel('Queue severity', { exact: true }).selectOption('LOW');
     await expect(queue.getByText('Matching observations across Atlas: 1', { exact: true })).toBeVisible();
     await expect(queue.getByText('Page 1 · 1 records loaded', { exact: true })).toBeVisible();
+    await panel.screenshot({ path: testInfo.outputPath('unified-customer-observation-synthetic.png') });
     await queue.getByRole('button', { name: 'Reset filters', exact: true }).click();
     await expect(queue.getByText('Page 1 · 25 records loaded', { exact: true })).toBeVisible();
     for (const [state, text] of [['RESOLVED', f.target.resolvedSummary], ['SUPPRESSED', f.target.suppressedSummary]]) {

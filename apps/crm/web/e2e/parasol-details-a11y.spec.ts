@@ -24,7 +24,10 @@ test('technical detail tabs, filters and long source text remain accessible on a
   s.observationPage.items[0]!.summary = 'SyntheticLongSummary'.repeat(15);
   s.activeObservations = 4; s.severityCounts.CRITICAL = 2; s.observationPage.truncated = true;
   let empty = false;
-  await page.route(`**/api/v1/parasol/customers/${customer.id}/workspace`, route => {
+  let heldRead: Promise<void> | undefined; let onHeldRead: (() => void) | undefined; let reads = 0;
+  await page.route(`**/api/v1/parasol/customers/${customer.id}/workspace`, async route => {
+    ++reads;
+    if (heldRead) { onHeldRead?.(); await heldRead; }
     const reply = structuredClone(ready);
     if (empty) {
       reply.summary!.devices = []; reply.summary!.knownDevices = 0; reply.summary!.activeObservations = 0;
@@ -50,8 +53,18 @@ test('technical detail tabs, filters and long source text remain accessible on a
   await accessible(page);
   await page.screenshot({ path: testInfo.outputPath('atlas-devices-mobile.png'), fullPage: true });
   empty = true;
-  await panel.getByRole('button', { name: 'Refresh', exact: true }).click();
+  const refresh = panel.getByRole('button', { name: 'Refresh', exact: true });
+  let release!: () => void; heldRead = new Promise<void>(resolve => { release = resolve; });
+  const started = new Promise<void>(resolve => { onHeldRead = resolve; }); const before = reads;
+  try {
+    await refresh.focus(); await page.keyboard.press('Enter'); await started;
+    await expect(refresh).toHaveAttribute('aria-disabled', 'true'); await expect(refresh).toBeFocused();
+    await expect(devices).toHaveCount(0);
+    await page.keyboard.press('Enter'); await page.keyboard.press('Space');
+    expect(reads, 'Busy keyboard activation must not start another workspace read').toBe(before + 1);
+  } finally { heldRead = undefined; onHeldRead = undefined; release(); }
   await expect(panel.getByText(/No active observations are recorded in Atlas/)).toBeVisible();
+  await expect(refresh).not.toHaveAttribute('aria-disabled', 'true'); await expect(refresh).toBeFocused();
   await accessible(page);
   await panel.getByRole('tab', { name: 'Atlas devices', exact: true }).click();
   await expect(panel.getByText(/No devices are recorded in this Atlas registry/)).toBeVisible();

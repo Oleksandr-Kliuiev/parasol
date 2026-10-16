@@ -22,7 +22,10 @@ test('queue history filters and pagination remain accessible on a phone', async 
   const overview = atlasWorkspace(customer.id); const s = overview.summary!;
   s.devices[0]!.hostname = 'SYNTHETIC-'.repeat(25);
   await page.route(`**/api/v1/parasol/customers/${customer.id}/workspace`, route => route.fulfill({ json: overview }));
-  await page.route(`**/api/v1/parasol/customers/${customer.id}/observations?*`, route => {
+  let heldRead: Promise<void> | undefined; let onHeldRead: (() => void) | undefined; let reads = 0;
+  await page.route(`**/api/v1/parasol/customers/${customer.id}/observations?*`, async route => {
+    ++reads;
+    if (heldRead) { onHeldRead?.(); await heldRead; }
     const url = new URL(route.request().url());
     const severity = url.searchParams.get('severity') ?? 'ALL'; const status = url.searchParams.get('status') ?? 'ACTIVE';
     const items = status === 'ACKNOWLEDGED' ? [] : [{ ...s.observationPage.items[0]!, summary: 'SyntheticLongQueueSummary'.repeat(12),
@@ -42,6 +45,18 @@ test('queue history filters and pagination remain accessible on a phone', async 
   await expect(queue.getByRole('listitem')).toHaveCount(1);
   await accessible(page);
   await page.screenshot({ path: testInfo.outputPath('queue-mobile.png'), fullPage: true });
+  const refresh = queue.getByRole('button', { name: 'Refresh queue', exact: true });
+  let release!: () => void; heldRead = new Promise<void>(resolve => { release = resolve; });
+  const started = new Promise<void>(resolve => { onHeldRead = resolve; }); const before = reads;
+  try {
+    await refresh.focus(); await page.keyboard.press('Enter'); await started;
+    await expect(refresh).toHaveAttribute('aria-disabled', 'true'); await expect(refresh).toBeFocused();
+    await expect(queue.getByRole('listitem')).toHaveCount(0);
+    await page.keyboard.press('Enter'); await page.keyboard.press('Space');
+    expect(reads, 'Busy keyboard activation must not start another queue read').toBe(before + 1);
+  } finally { heldRead = undefined; onHeldRead = undefined; release(); }
+  await expect(queue.getByRole('listitem')).toHaveCount(1);
+  await expect(refresh).not.toHaveAttribute('aria-disabled', 'true'); await expect(refresh).toBeFocused();
   await queue.getByLabel('Queue state').selectOption('RESOLVED');
   await expect(queue.getByRole('listitem')).toHaveCount(1);
   await accessible(page);

@@ -46,7 +46,7 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
   const data = !checking && !query.isError ? query.data : undefined;
   const summary = data?.status === 'READY' ? data.summary : null;
   return (
-    <Panel title={t('parasol.title')} actions={<Button size="small" disabled={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
+    <Panel title={t('parasol.title')} actions={<Button size="small" disabled={checking} disabledFocusable={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
       {checking && <Spinner size="small" label={t('common.loading')} />}
       {!checking && query.isError && <ErrorState error={query.error} onRetry={refreshWorkspace} />}
       {data && data.status !== 'READY' && <Text role="status">{t(`parasol.status.${data.status}`)}</Text>}

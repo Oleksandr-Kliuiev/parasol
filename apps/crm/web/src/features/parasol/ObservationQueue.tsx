@@ -61,7 +61,7 @@ function EmployeeQueue({ customerId, employeeId, onSourceInvalidated }: { custom
       </Select></Field>
     </div>
     <div className={styles.footer}>
-      <Button disabled={query.isFetching} onClick={resetPage}>{t('parasolQueue.refresh')}</Button>
+      <Button disabled={query.isFetching} disabledFocusable={query.isFetching} onClick={resetPage}>{t('parasolQueue.refresh')}</Button>
       <Button disabled={severity === 'ALL' && status === 'ACTIVE' && cursor === null && search === ''}
         onClick={() => setFilter({ severity: 'ALL', status: 'ACTIVE' })}>{t('parasolQueue.reset')}</Button>
     </div>
