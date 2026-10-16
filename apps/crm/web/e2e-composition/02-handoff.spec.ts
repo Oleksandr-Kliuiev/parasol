@@ -86,7 +86,10 @@ test('two genuine employee handoffs converge on one private Task, which personal
         && url.searchParams.get('open') === 'true' && !url.searchParams.has('cursor');
     });
     await technician.page.keyboard.press('Enter');
-    expect((await received).status(), 'Explicit recipient refresh starts from page one').toBe(200);
+    const receivedResponse = await received;
+    expect(receivedResponse.status(), 'Explicit recipient refresh starts from page one').toBe(200);
+    const receivedTask = ((await receivedResponse.json()) as { items: Activity[] }).items.find(item => item.id === taskId);
+    expect(receivedTask?.etag, 'The recipient received a version for its Task').toBeTruthy();
     await expect(personalTask).toHaveCount(1);
     await expect(refreshTasks).toBeFocused();
     await personalTask.getByRole('button', { name: 'View Atlas source', exact: true }).click();
@@ -95,7 +98,9 @@ test('two genuine employee handoffs converge on one private Task, which personal
     await personalSource.getByRole('button', { name: 'Close', exact: true }).click();
     const completed = technician.page.waitForResponse(r => r.url().endsWith(`/api/v1/activities/${taskId}/complete`) && r.request().method() === 'POST');
     await personalTask.getByRole('button', { name: 'Mark Review technical observation as done', exact: true }).click();
-    expect((await completed).status(), 'Ordinary personal Task completion').toBe(200);
+    const completedResponse = await completed;
+    expect(completedResponse.status(), 'Ordinary personal Task completion').toBe(200);
+    expect(completedResponse.request().headers()['if-match'], 'Completion carries the recipient’s displayed version').toBe(receivedTask!.etag);
     await expect(myTasks.getByText('Review technical observation', { exact: true })).toHaveCount(0);
     assertTaskEvidence(control('countsTaskEvidence'), 1, 2);
     const existingDialog = await openTargetAssignment(admin.page);

@@ -57,12 +57,14 @@ public sealed class SourceTaskEditTests(CrmWebFactory factory)
         missing.StatusCode.ShouldBe(HttpStatusCode.PreconditionRequired);
         Unchanged(await State(task.ActivityId), afterEdit);
 
-        // These existing status commands use tracked rowversion, not a client If-Match contract.
-        (await second.PostAsync(url + "/complete", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var completedResponse = await second.PostWithETagAsync(url + "/complete", new { }, etag1);
+        completedResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var completedDto = await completedResponse.Content.ReadFromJsonAsync<JsonElement>();
         var completed = await State(task.ActivityId);
         completed.Task.ShouldBe(afterEdit.Task with { Status = ActivityStatus.Done });
         completed.Source.ShouldBe(source); completed.SourceKey.ShouldBe(before.SourceKey);
-        (await first.PostAsync(url + "/reopen", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await first.PostWithETagAsync(url + "/reopen", new { }, completedDto.GetProperty("etag").GetString()!))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
         var reopened = await State(task.ActivityId);
         reopened.Task.ShouldBe(afterEdit.Task); reopened.Source.ShouldBe(source); reopened.SourceKey.ShouldBe(before.SourceKey);
     }

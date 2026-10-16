@@ -1,10 +1,13 @@
 import { Badge, Button, Link, Text, makeStyles, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
-import { CalendarLtr16Regular, CheckmarkCircle20Regular, Edit20Regular, Open16Regular } from '@fluentui/react-icons';
+import { ArrowUndo20Regular, CalendarLtr16Regular, CheckmarkCircle20Regular, Edit20Regular, Open16Regular } from '@fluentui/react-icons';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../shared/utils/format';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 import type { Activity } from './types';
+import { ActivityStatusFeedback } from './ActivityStatusFeedback';
+import type { StatusFocusRequest } from './useActivityStatusCommands';
 
 const useStyles = makeStyles({
   item: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: tokens.spacingHorizontalS, overflowWrap: 'anywhere',
@@ -19,17 +22,29 @@ const useStyles = makeStyles({
 });
 
 /** The same record and controls in the timeline and in an exact activity selection. */
-export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPending, selected, onEdit, onComplete, onCalendar }: {
+export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPending, selected, statusPending, statusStale,
+  focusRequest, onFocusReady, onEdit, onComplete, onReopen, onCalendar }: {
   activity: Activity;
   canWrite: boolean;
   calendar: boolean;
   calendarPending: boolean;
   selected?: boolean;
+  statusPending: boolean;
+  statusStale: boolean;
+  focusRequest: StatusFocusRequest | null;
+  onFocusReady: (request: StatusFocusRequest, button: HTMLButtonElement) => void;
   onEdit: (activity: Activity) => void;
-  onComplete: (activity: Activity) => void;
+  onComplete: (activity: Activity, trigger: HTMLButtonElement) => void;
+  onReopen: (activity: Activity, trigger: HTMLButtonElement) => void;
   onCalendar: (activity: Activity) => void;
 }) {
   const styles = useStyles(); const { t } = useTranslation(); const restoreFocusTarget = useRestoreFocusTarget();
+  const statusButton = useRef<HTMLButtonElement>(null);
+  const canReopen = activity.status === 'Done' && ['Task', 'Call', 'Meeting'].includes(activity.type);
+  useEffect(() => {
+    if (!statusPending && focusRequest?.id === activity.id && focusRequest.status === activity.status && statusButton.current)
+      onFocusReady(focusRequest, statusButton.current);
+  }, [focusRequest, activity.id, activity.status, statusPending, onFocusReady]);
   return <li className={styles.item}>
     <span>
       <span className={styles.head}>
@@ -51,14 +66,19 @@ export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPen
         {activity.status === 'Done' && activity.completedAt ? ` · ${t('activities.doneAt', { at: formatDateTime(activity.completedAt) })}` : ''}
       </div>
       {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
+      {statusStale && <ActivityStatusFeedback activity={activity} />}
     </span>
     {canWrite && activity.type !== 'Email' && <span className={styles.actions}>
       {activity.type === 'Meeting' && calendar && <Button size="small" appearance="subtle" icon={<CalendarLtr16Regular />}
         aria-label={t(activity.inCalendar ? 'activities.removeFromCalendarNamed' : 'activities.addToCalendarNamed', { subject: activity.subject })}
-        disabled={calendarPending} onClick={() => onCalendar(activity)} />}
-      {activity.status === 'Open' && <Button size="small" appearance="subtle" icon={<CheckmarkCircle20Regular />}
-        aria-label={t('activities.completeNamed', { subject: activity.subject })} onClick={() => onComplete(activity)} />}
+        disabled={calendarPending || statusPending} disabledFocusable={statusPending} onClick={() => onCalendar(activity)} />}
+      {(activity.status === 'Open' || canReopen) && <Button ref={statusButton} size="small" appearance="subtle"
+        disabled={statusPending || statusStale} disabledFocusable={statusPending || statusStale}
+        icon={canReopen ? <ArrowUndo20Regular /> : <CheckmarkCircle20Regular />}
+        aria-label={t(canReopen ? 'activities.reopenNamed' : 'activities.completeNamed', { subject: activity.subject })}
+        onClick={event => (canReopen ? onReopen : onComplete)(activity, event.currentTarget)} />}
       <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Edit20Regular />}
+        disabled={statusPending} disabledFocusable={statusPending}
         aria-label={t('activities.editNamed', { subject: activity.subject })} onClick={() => onEdit(activity)} />
     </span>}
   </li>;

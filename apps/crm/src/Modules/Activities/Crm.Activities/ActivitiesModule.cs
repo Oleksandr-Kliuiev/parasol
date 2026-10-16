@@ -56,12 +56,16 @@ public static class ActivitiesModule
             .Validate<ActivityRequest>()
             .RequirePermission(Permissions.ActivitiesWrite);
 
-        group.MapPost("/{id:guid}/complete", async (Guid id, ActivityService service, CancellationToken ct) =>
-                (await service.CompleteAsync(id, ct)).ToHttpResult(Results.Ok))
+        group.MapPost("/{id:guid}/complete", async (Guid id, ActivityService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.CompleteAsync(id, ifMatch, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ActivitiesWrite);
 
-        group.MapPost("/{id:guid}/reopen", async (Guid id, ActivityService service, CancellationToken ct) =>
-                (await service.ReopenAsync(id, ct)).ToHttpResult(Results.Ok))
+        group.MapPost("/{id:guid}/reopen", async (Guid id, ActivityService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.ReopenAsync(id, ifMatch, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ActivitiesWrite);
 
         // ---------- Outlook (FR-ACT-02, FR-ACT-03) ----------

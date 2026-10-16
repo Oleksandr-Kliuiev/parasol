@@ -42,6 +42,20 @@ test('selected activity and return to the customer timeline work with a keyboard
   await refresh.focus(); await page.keyboard.press('Enter');
   expect((await refreshed).status()).toBe(200);
   await expect(timeline.getByRole('listitem')).toHaveCount(1); await expect(refresh).toBeFocused();
+  const complete = timeline.getByRole('button', { name: `Mark ${subject} as done`, exact: true });
+  await complete.focus(); await page.keyboard.press('Enter');
+  const reopen = timeline.getByRole('button', { name: `Reopen ${subject}`, exact: true });
+  await expect(reopen).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(complete).toBeFocused();
+  await page.waitForLoadState('networkidle');
+  await page.evaluate(async () => {
+    await Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity)
+      .map(animation => animation.finished.catch(() => undefined)));
+  });
+  const statusResult = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .exclude('[data-tabster-dummy]').analyze();
+  expect(statusResult.violations.filter(violation => violation.impact === 'serious' || violation.impact === 'critical')
+    .map(violation => ({ id: violation.id, nodes: violation.nodes.map(node => node.target) }))).toEqual([]);
   const showAll = timeline.getByRole('button', { name: 'All customer activities', exact: true });
   await showAll.focus(); await page.keyboard.press('Enter');
   await expect(timeline.getByRole('heading', { name: 'Selected activity', exact: true })).toHaveCount(0);

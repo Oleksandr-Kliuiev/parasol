@@ -268,11 +268,11 @@ internal sealed class ActivityService(
             return Result.Success();
         });
 
-    public async Task<Result<ActivityDto>> CompleteAsync(Guid id, CancellationToken ct) =>
-        await MutateAsync(id, null, activity => activity.Complete(currentUser.UserId, time.GetUtcNow()), ct);
+    public async Task<Result<ActivityDto>> CompleteAsync(Guid id, string ifMatch, CancellationToken ct) =>
+        await MutateAsync(id, ifMatch, activity => activity.Complete(currentUser.UserId, time.GetUtcNow()), ct);
 
-    public async Task<Result<ActivityDto>> ReopenAsync(Guid id, CancellationToken ct) =>
-        await MutateAsync(id, null, activity => activity.Reopen(), ct);
+    public async Task<Result<ActivityDto>> ReopenAsync(Guid id, string ifMatch, CancellationToken ct) =>
+        await MutateAsync(id, ifMatch, activity => activity.Reopen(), ct);
 
     public async Task<Result> DeleteAsync(Guid id, CancellationToken ct)
     {
@@ -303,6 +303,13 @@ internal sealed class ActivityService(
         if (ifMatch is not null && !db.ApplyIfMatch(activity, ifMatch))
         {
             return Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
+        }
+
+        // Reject before a no-op or an external effect. Actual changes still use SQL rowversion at SaveChanges.
+        if (ifMatch is not null && db.IsStale(activity))
+        {
+            return Error.PreconditionFailed("CONCURRENCY_CONFLICT",
+                "The record was changed by someone else. Reload it and apply your changes again.");
         }
 
         var result = change(activity);

@@ -100,7 +100,8 @@ public sealed class AtlasObservationTaskApiTests(CrmWebFactory factory)
         task.GetProperty("hasTechnicalSource").GetBoolean().ShouldBeTrue(); task.GetProperty("priority").GetString().ShouldBe("High");
         var technical = await client.GetFromJsonAsync<AtlasObservationTaskPreview>($"/api/v1/parasol/activities/{outcome.Task.ActivityId}/atlas-observation", Json);
         technical!.Observation!.Summary.ShouldBe("Synthetic confidential source summary"); technical.CanCreate.ShouldBeFalse();
-        (await client.PostAsync($"/api/v1/activities/{outcome.Task.ActivityId}/complete", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await client.PostWithETagAsync($"/api/v1/activities/{outcome.Task.ActivityId}/complete", new { }, task.GetProperty("etag").GetString()!))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
         atlas.Reset(); Answer(atlas, sourceClient, Observation(sourceClient, "RESOLVED"));
         var replay = await client.PostAsJsonAsync(PathFor(customer, "task"), input with { DueAt = null });
         replay.StatusCode.ShouldBe(HttpStatusCode.OK);

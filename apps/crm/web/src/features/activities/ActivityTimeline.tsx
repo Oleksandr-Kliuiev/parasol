@@ -15,6 +15,7 @@ import { ActivityTimelineItem } from './ActivityTimelineItem';
 import { useSelectedActivity } from './useSelectedActivity';
 import type { ActivitySelection } from './activityNavigation';
 import type { Activity } from './types';
+import { useActivityStatusCommands } from './useActivityStatusCommands';
 
 const useStyles = makeStyles({ list: { listStyle: 'none', margin: 0, padding: 0 } });
 
@@ -54,10 +55,18 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
   const missingRevision = focused ? selected.data?.missingRevision ?? 0 : 0;
   const refetch = focused ? selected.refetch : activities.refetch;
   const [dialog, setDialog] = useState<{ activity?: Activity; errorUpdatedAt: number; missingRevision: number } | null>(null);
+  const editorOpen = dialog !== null && !error && dialog.errorUpdatedAt === errorUpdatedAt && dialog.missingRevision === missingRevision;
+  const status = useActivityStatusCommands(actions, { restoreFocus: true, focusBlocked: editorOpen });
   const alive = useRef(false);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const heading = useRef<HTMLHeadingElement>(null); const alreadyFocused = useRef(false);
   const refreshing = useRef(false);
+  const focusReadSettled = !(focused ? selected.isFetching : activities.isFetching);
+  const focusReplacementPresent = data.some(activity => activity.id === status.focusRequest?.id && activity.status === status.focusRequest.status);
+  useEffect(() => {
+    const request = status.focusRequest;
+    if (request && focusReadSettled && (error || !focusReplacementPresent)) status.discardFocus(request);
+  }, [status, focusReadSettled, error, focusReplacementPresent]);
   useEffect(() => {
     if (focused && data.length === 1 && !alreadyFocused.current) {
       alreadyFocused.current = true; heading.current?.focus();
@@ -66,7 +75,7 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
   const outlook = useOutlookStatus();
   const refreshSelected = async () => {
     if (checking || refreshing.current) return;
-    refreshing.current = true; setDialog(null);
+    refreshing.current = true; setDialog(null); status.clearConflicts();
     try { await selected.refetch(); }
     finally { refreshing.current = false; }
   };
@@ -78,11 +87,11 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
       if (alive.current) notify(t('activities.calendarSynced', { updated: result.updated }));
     } catch (e) { reportFailure(e); }
   };
-  const complete = async (activity: Activity) => {
-    try {
-      await actions.complete.mutateAsync(activity.id);
-      if (alive.current) notify(t('activities.completed'));
-    } catch (e) { reportFailure(e); }
+  const changeStatus = async (command: 'complete' | 'reopen', activity: Activity, trigger: HTMLButtonElement) => {
+    const outcome = await status.run(command, activity, trigger);
+    if (!alive.current) return;
+    if (outcome.kind === 'success') notify(t(command === 'complete' ? 'activities.completed' : 'activities.reopened'));
+    else if (outcome.kind === 'error') reportFailure(outcome.error);
   };
   const calendar = async (activity: Activity) => {
     try { await (activity.inCalendar ? actions.removeFromCalendar.mutateAsync(activity.id) : actions.addToCalendar.mutateAsync(activity.id)); }
@@ -107,13 +116,16 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
         <ul className={styles.list}>
           {data.map(activity => <ActivityTimelineItem key={activity.id} activity={activity} selected={focused} canWrite={canWrite}
             calendar={outlook.data?.calendar === true} calendarPending={actions.addToCalendar.isPending || actions.removeFromCalendar.isPending}
-            onEdit={activity => setDialog({ activity, errorUpdatedAt, missingRevision })} onComplete={activity => void complete(activity)} onCalendar={activity => void calendar(activity)} />)}
+            statusPending={status.pending.has(activity.id)} statusStale={status.isStale(activity)} focusRequest={status.focusRequest} onFocusReady={status.consumeFocus}
+            onEdit={activity => setDialog({ activity, errorUpdatedAt, missingRevision })}
+            onComplete={(activity, trigger) => void changeStatus('complete', activity, trigger)}
+            onReopen={(activity, trigger) => void changeStatus('reopen', activity, trigger)} onCalendar={activity => void calendar(activity)} />)}
         </ul>
         {!checking && data.length === 0 && <EmptyState message={t(focused ? 'activities.selectedMissing' : 'activities.empty')} />}
         {!focused && <ListFooter shown={data.length} total={activities.total} hasMore={activities.hasNextPage}
           loading={activities.isFetchingNextPage} onMore={() => void activities.fetchNextPage()} />}
       </>}
-    <ActivityDialog open={dialog !== null && !error && dialog.errorUpdatedAt === errorUpdatedAt && dialog.missingRevision === missingRevision}
+    <ActivityDialog open={editorOpen}
       onClose={() => setDialog(null)} organizationId={organizationId} opportunityId={opportunityId} contractId={contractId} activity={dialog?.activity} />
   </Panel>;
 }

@@ -128,7 +128,8 @@ public class SalesAndLicensingApiTests(CrmWebFactory factory)
         await factory.ProcessEventsAsync();
         (await sales.GetFromJsonAsync<JsonElement>($"{Sales}/opportunities/{opportunityId}")).GetProperty("isStale").GetBoolean().ShouldBeFalse();
 
-        (await sales.PostAsync($"{Activities}/{taskId}/complete", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await sales.PostWithETagAsync($"{Activities}/{taskId}/complete", new { }, created.GetProperty("etag").GetString()!))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
         (await sales.GetFromJsonAsync<JsonElement>($"{Activities}?mine=true&open=true&limit=200")).GetProperty("items").EnumerateArray()
             .ShouldNotContain(a => a.GetProperty("id").GetGuid() == taskId);
         (await factory.ClientAs(CrmRoles.ReadOnly).PostAsJsonAsync(Activities + "/", new { type = "Note", organizationId, subject = "Nei" }))

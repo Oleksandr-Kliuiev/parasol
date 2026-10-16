@@ -150,7 +150,10 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
             var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>(); (await identity.Users.SingleAsync(u => u.Id == actor)).Deactivate(); await identity.SaveChangesAsync();
         }
         // Another active employee may edit/complete work without silently reassigning an inactive existing assignee.
-        (await Update("Task", organization, actor)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await client.PostAsync($"/api/v1/activities/{created.ActivityId}/complete", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var edited = await Update("Task", organization, actor);
+        edited.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var updated = await edited.Content.ReadFromJsonAsync<JsonElement>();
+        (await client.PostWithETagAsync($"/api/v1/activities/{created.ActivityId}/complete", new { }, updated.GetProperty("etag").GetString()!))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 }

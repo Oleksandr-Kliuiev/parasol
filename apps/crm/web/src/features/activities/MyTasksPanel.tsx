@@ -13,6 +13,9 @@ import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { usePersonalTasks } from './usePersonalTasks';
 import { activityUrl } from './activityNavigation';
+import type { Activity } from './types';
+import { useActivityStatusCommands } from './useActivityStatusCommands';
+import { ActivityStatusFeedback } from './ActivityStatusFeedback';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0 },
@@ -45,25 +48,23 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
   const { t } = useTranslation();
   const notify = useNotify();
   const actions = useActivityActions();
+  const status = useActivityStatusCommands(actions);
   // The ten due first, and the rest on request: the panel says how many open tasks there are (DEV-12).
   const tasks = usePersonalTasks(employeeId, permissionsKey);
   const data = tasks.items;
   const active = useRef(false);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
 
-  const complete = async (id: string, subject: string) => {
-    try {
-      await actions.complete.mutateAsync(id);
-      if (!active.current) return;
-      notify(t('activities.completedNamed', { subject }));
-    } catch (e) {
-      if (!active.current) return;
-      notify(t('errors.generic'), 'error', errorMessage(e, t));
-    }
+  const complete = async (activity: Activity) => {
+    const outcome = await status.run('complete', activity);
+    if (!active.current) return;
+    if (outcome.kind === 'success') notify(t('activities.completedNamed', { subject: activity.subject }));
+    else if (outcome.kind === 'error') notify(t('errors.generic'), 'error', errorMessage(outcome.error, t));
   };
 
   return (
-    <Panel title={t('myDay.myTasks')} actions={<Button size="small" disabled={tasks.checking} disabledFocusable={tasks.checking} onClick={tasks.refresh}>{t('myDay.refreshMyTasks')}</Button>}>
+    <Panel title={t('myDay.myTasks')} actions={<Button size="small" disabled={tasks.checking} disabledFocusable={tasks.checking}
+      onClick={() => { status.clearConflicts(); tasks.refresh(); }}>{t('myDay.refreshMyTasks')}</Button>}>
       {tasks.checking && <Spinner size="small" label={t('common.loading')} />}
       {Boolean(tasks.error) && <MessageBar intent="error"><MessageBarBody><Text role="status">{t('myDay.myTasksReadFailed')}</Text></MessageBarBody></MessageBar>}
       {!tasks.checking && !tasks.error && data.length === 0 && <Text className={styles.muted}>{t('myDay.myTasksEmpty')}</Text>}
@@ -80,6 +81,7 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
                 {activity.dueAt ? ` · ${t(activity.isOverdue ? 'activities.overdueAt' : 'activities.dueAt', { at: formatDateTime(activity.dueAt) })}` : ''}
                 {` · ${t('activities.loggedAt', { at: formatDateTime(activity.createdAt) })}`}
               </span>
+              {status.isStale(activity) && <ActivityStatusFeedback activity={activity} />}
             </span>
             {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
             {canWrite && <Button
@@ -87,7 +89,9 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
               appearance="subtle"
               icon={<CheckmarkCircle20Regular />}
               aria-label={t('activities.completeNamed', { subject: activity.subject })}
-              onClick={() => void complete(activity.id, activity.subject)}
+              disabled={status.pending.has(activity.id) || status.isStale(activity)}
+              disabledFocusable={status.pending.has(activity.id) || status.isStale(activity)}
+              onClick={() => void complete(activity)}
             />}
           </li>
         ))}
