@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useParams } from 'react-router';
 import {
   Button,
@@ -302,8 +302,8 @@ export function BillingBasisPage() {
             </TableHeader>
             <TableBody>
               {groups.map((group) => (
-                <>
-                  <TableRow key={group} className={styles.group}>
+                <Fragment key={group}>
+                  <TableRow className={styles.group}>
                     <TableCell colSpan={canSeeMoney ? (withActions ? 6 : 5) : withActions ? 4 : 3}>{t(`billing.groups.${group}`)}</TableCell>
                   </TableRow>
                   {basis.lines
@@ -438,7 +438,7 @@ export function BillingBasisPage() {
                         </TableRow>
                       );
                     })}
-                </>
+                </Fragment>
               ))}
             </TableBody>
           </Table>
