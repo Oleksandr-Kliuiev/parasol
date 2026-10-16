@@ -3392,5 +3392,58 @@
       "Finance": "Økonomi",
       "ReadOnly": "Lesetilgang"
     }
+  },
+  "parasolIdentity": {
+    "title": "Koble Atlas-kunder",
+    "subtitle": "Koble eksisterende Atlas-kunder til kunderegisteret i CRM.",
+    "instructions": "Bruk en eksport av kundeidentiteter fra Atlas. Velg hver CRM-kunde uttrykkelig, og se gjennom hele planen før du lagrer. Ingen kunder opprettes, og tilgangsrettigheter endres ikke.",
+    "file": "Atlas-eksport (JSON)",
+    "fileHint": "Identitetseksport versjon 1, inntil 1000 kunder og 1 MiB. Bare arbeidsområde, kunde-ID-er og navn godtas. Filen beholdes kun i minnet på denne siden.",
+    "workspace": "Arbeidsområde i Atlas",
+    "atlasClient": "Kunde-ID i Atlas",
+    "crmCustomer": "CRM-kunde",
+    "rows": "Kundekoblinger",
+    "notSelected": "Ikke valgt — kunden forblir uendret.",
+    "choose": "Velg CRM-kunde",
+    "change": "Endre CRM-kunde",
+    "clearSelection": "Fjern valg",
+    "visibleRows": "Viser {{shown}} av {{total}} rader",
+    "selectionCount": "Valgt: {{selected}} av {{total}}. Uendret: {{omitted}}.",
+    "empty": "Eksporten inneholder ingen kunder.",
+    "preview": "Forhåndsvis koblinger",
+    "edit": "Endre valg",
+    "apply": "Lagre gjennomgåtte koblinger",
+    "reset": "Velg en annen fil",
+    "continue": "Fortsett med denne eksporten",
+    "reviewReady": "Kun forhåndsvisning: ingen koblinger er lagret. Kontroller alle valgte par nedenfor. Kunder som ikke er valgt, forblir uendret.",
+    "reviewBlocked": "Ingen koblinger er lagret. Løs alle konflikter og forhåndsvis på nytt. Eksisterende koblinger kan gjennomgås i kundekortet i CRM.",
+    "confirmLabel": "Jeg har kontrollert de valgte kundeparene og vil lagre disse koblingene.",
+    "applied": "Koblinger lagret: {{created}} nye, {{existing}} fantes allerede.",
+    "linkTitle": "Kundekobling · Atlas",
+    "unlink": "Fjern Atlas-kobling",
+    "unlinkTitle": "Fjerne denne Atlas-koblingen?",
+    "unlinkDescription": "Det tekniske arbeidsområdet vil ikke lenger bruke denne koblingen. Kundepostene i CRM og Atlas beholdes. Du kan deretter gjennomgå og lagre riktig kobling.",
+    "outcomes": {
+      "READY": "Klar til å koble",
+      "ALREADY_LINKED": "Allerede koblet til denne kunden",
+      "APPLIED": "Kobling lagret",
+      "ATLAS_ALREADY_LINKED": "Konflikt: Atlas-kunden er koblet til en annen CRM-kunde",
+      "CUSTOMER_ALREADY_LINKED": "Konflikt: CRM-kunden har allerede en annen Atlas-kobling",
+      "CUSTOMER_UNAVAILABLE": "CRM-kunden er utilgjengelig",
+      "IDENTITY_INCONSISTENT": "Lagret kobling må gjennomgås",
+      "UNKNOWN": "Ukjent resultat — forhåndsvis på nytt"
+    },
+    "errors": {
+      "invalidFile": "Dette er ikke en gyldig Atlas-identitetseksport versjon 1. Kontroller formatet, dupliserte ID-er og ekstra felt.",
+      "tooLarge": "Filen eller hele forespørselen er større enn 1 MiB. Bruk en mindre eksport.",
+      "noSelection": "Velg minst én CRM-kunde.",
+      "duplicateCustomer": "Samme CRM-kunde er valgt flere ganger. Hver kunde kan bare ha én Atlas-kobling.",
+      "forbidden": "Handlingen er ikke tillatt eller krever en ny pålogging.",
+      "previewFailed": "Kunne ikke lage forhåndsvisningen. Prøv igjen før du lagrer koblinger.",
+      "conflict": "De lagrede koblingene er endret. Ingenting fra denne forespørselen ble lagret. Forhåndsvis på nytt for å se gjeldende konflikter.",
+      "applyUncertain": "Resultatet kunne ikke bekreftes. Forhåndsvis på nytt for å se hvilke koblinger som allerede finnes før du prøver å lagre.",
+      "identityFailed": "Kunne ikke lese denne Atlas-koblingen. Oppdater for å se gjeldende tilstand.",
+      "unlinkFailed": "Fjerningen kunne ikke bekreftes. Kontroller den oppdaterte koblingen før du prøver igjen."
+    }
   }
 }

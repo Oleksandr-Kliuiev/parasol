@@ -60,6 +60,7 @@ export const routes: RouteObject[] = [
       { path: 'admin/users', lazy: async () => ({ Component: (await import('../features/admin/UsersPage')).UsersPage }) },
       { path: 'admin/integrations', lazy: async () => ({ Component: (await import('../features/admin/IntegrationsPage')).IntegrationsPage }) },
       { path: 'admin/mappings', lazy: async () => ({ Component: (await import('../features/integrations/MappingsPage')).MappingsPage }) },
+      { path: 'admin/mappings/atlas', lazy: async () => ({ Component: (await import('../features/parasol/CustomerIdentityImportPage')).CustomerIdentityImportPage }) },
       { path: 'admin/privacy', lazy: async () => ({ Component: (await import('../features/privacy/PrivacyPage')).PrivacyPage }) },
       { path: 'admin/privacy/new', lazy: async () => ({ Component: (await import('../features/privacy/NewPrivacyCasePage')).NewPrivacyCasePage }) },
       { path: 'admin/privacy/cases/:id', lazy: async () => ({ Component: (await import('../features/privacy/PrivacyCasePage')).PrivacyCasePage }) },

@@ -52,6 +52,7 @@ import { ActivityTimeline } from '../activities/ActivityTimeline';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { CustomerWorkspacePanel } from '../parasol/CustomerWorkspacePanel';
+import { CustomerIdentityPanel } from '../parasol/CustomerIdentityPanel';
 
 const useStyles = makeStyles({
   // Eleven tabs do not fit a phone: the bar scrolls sideways (a focused tab scrolls into view) instead of widening the page.
@@ -228,6 +229,7 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
   return (
     <div className={styles.grid}>
       <CustomerWorkspacePanel customerId={o.id} />
+      <CustomerIdentityPanel customerId={o.id} />
       <Panel title={t('organizations.sections.contactInfo')}>
         <DetailList
           items={[

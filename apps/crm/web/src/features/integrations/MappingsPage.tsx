@@ -120,7 +120,8 @@ export function MappingsPage() {
 
   return (
     <>
-      <PageHeader title={t('mappings.title')} subtitle={t('mappings.subtitle')} />
+      <PageHeader title={t('mappings.title')} subtitle={t('mappings.subtitle')}
+        actions={<AppLink to="/admin/mappings/atlas">{t('parasolIdentity.title')}</AppLink>} />
       {status.error && <ErrorState error={status.error} onRetry={() => void status.refetch()} />}
 
       <TabList selectedValue={system} onTabSelect={(_, d) => set({ system: String(d.value), type: null })}>

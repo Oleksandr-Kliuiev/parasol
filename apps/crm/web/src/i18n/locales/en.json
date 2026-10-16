@@ -3392,5 +3392,58 @@
       "Finance": "Finance",
       "ReadOnly": "Read only"
     }
+  },
+  "parasolIdentity": {
+    "title": "Link Atlas customers",
+    "subtitle": "Connect existing Atlas clients to the CRM customer directory.",
+    "instructions": "Use an Atlas customer identity export. Choose each CRM customer explicitly, then review the complete plan before applying it. No customer is created, and access rights are unchanged.",
+    "file": "Atlas export (JSON)",
+    "fileHint": "Version 1 identity export, up to 1000 clients and 1 MiB. Only workspace, client IDs and names are accepted. The file is kept in memory for this page only.",
+    "workspace": "Atlas workspace",
+    "atlasClient": "Atlas client ID",
+    "crmCustomer": "CRM customer",
+    "rows": "Customer mappings",
+    "notSelected": "Not selected — this client will be left unchanged.",
+    "choose": "Choose CRM customer",
+    "change": "Change CRM customer",
+    "clearSelection": "Clear selection",
+    "visibleRows": "Showing {{shown}} of {{total}} rows",
+    "selectionCount": "Selected: {{selected}} of {{total}}. Left unchanged: {{omitted}}.",
+    "empty": "The export contains no clients.",
+    "preview": "Preview mappings",
+    "edit": "Edit selection",
+    "apply": "Apply reviewed mappings",
+    "reset": "Choose another file",
+    "continue": "Continue with this export",
+    "reviewReady": "Preview only: no links have been saved. Check every selected pair below. Unselected clients will be left unchanged.",
+    "reviewBlocked": "No links have been saved. Resolve every conflict and preview again. Existing links can be reviewed in the CRM customer card.",
+    "confirmLabel": "I have checked the selected customer pairs and want to save these links.",
+    "applied": "Links saved: {{created}} new, {{existing}} already present.",
+    "linkTitle": "Customer link · Atlas",
+    "unlink": "Remove Atlas link",
+    "unlinkTitle": "Remove this Atlas link?",
+    "unlinkDescription": "The technical workspace will no longer use this link. CRM and Atlas customer records remain intact. You can then review and apply the correct mapping.",
+    "outcomes": {
+      "READY": "Ready to link",
+      "ALREADY_LINKED": "Already linked to this customer",
+      "APPLIED": "Link saved",
+      "ATLAS_ALREADY_LINKED": "Conflict: Atlas client is linked to another CRM customer",
+      "CUSTOMER_ALREADY_LINKED": "Conflict: CRM customer already has another Atlas link",
+      "CUSTOMER_UNAVAILABLE": "CRM customer is unavailable",
+      "IDENTITY_INCONSISTENT": "Stored link needs review",
+      "UNKNOWN": "Unknown result — preview again"
+    },
+    "errors": {
+      "invalidFile": "This is not a valid version 1 Atlas identity export. Check its format, duplicate IDs and extra fields.",
+      "tooLarge": "The file or complete request exceeds 1 MiB. Use a smaller export.",
+      "noSelection": "Choose at least one CRM customer.",
+      "duplicateCustomer": "One CRM customer was selected more than once. Each customer can have only one Atlas link.",
+      "forbidden": "This action is not permitted or requires a fresh sign-in.",
+      "previewFailed": "Could not build the preview. Try again before applying any links.",
+      "conflict": "The stored links changed. Nothing from this request was saved. Preview again to review the current conflicts.",
+      "applyUncertain": "The result could not be confirmed. Preview again to check which links already exist before trying to apply.",
+      "identityFailed": "Could not read this Atlas link. Refresh to check its current state.",
+      "unlinkFailed": "Removal could not be confirmed. Check the refreshed link before trying again."
+    }
   }
 }

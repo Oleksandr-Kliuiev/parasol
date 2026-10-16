@@ -20,14 +20,20 @@ public static class CustomerIdentityEndpoints
             })
             .RequirePermission(Permissions.ParasolAtlasRead);
         group.MapPost("/customer-identities/import", async (CustomerIdentityImport body, bool? dryRun, string? expectedSha256,
-                CustomerIdentityService service, CancellationToken ct) =>
-                (await service.ImportAsync(body, dryRun ?? true, expectedSha256, ct)).ToHttpResult(Results.Ok))
+                CustomerIdentityService service, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await service.ImportAsync(body, dryRun ?? true, expectedSha256, ct)).ToHttpResult(Results.Ok);
+            })
             .Validate<CustomerIdentityImport>()
             .RequirePermission(Permissions.IntegrationsManage)
             .RequireRateLimiting(RateLimitPolicies.Migration)
             .WithMetadata(new RequestSizeLimitAttribute(1_048_576));
-        group.MapGet("/customers/{customerId:guid}/identity", async (Guid customerId, CustomerIdentityService service, CancellationToken ct) =>
-                (await service.GetAsync(customerId, ct)).ToHttpResult(Results.Ok))
+        group.MapGet("/customers/{customerId:guid}/identity", async (Guid customerId, CustomerIdentityService service, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await service.GetAsync(customerId, ct)).ToHttpResult(Results.Ok);
+            })
             .RequirePermission(Permissions.CustomersRead);
         return app;
     }

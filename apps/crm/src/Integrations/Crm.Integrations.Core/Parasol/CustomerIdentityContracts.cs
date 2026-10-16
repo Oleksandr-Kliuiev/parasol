@@ -21,7 +21,7 @@ public sealed record CustomerIdentityImport(AtlasIdentitySnapshot Snapshot, IRea
 public sealed record CustomerIdentityPlanRow(string AtlasClientId, Guid CustomerId, string Outcome);
 public sealed record CustomerIdentityPlan(string Sha256, bool DryRun, bool CanApply, int UnmappedClients, IReadOnlyList<CustomerIdentityPlanRow> Rows);
 public sealed record AtlasCustomerReference(string WorkspaceId, string ClientId);
-public sealed record CustomerIdentityView(Guid CustomerId, AtlasCustomerReference? Atlas);
+public sealed record CustomerIdentityView(Guid CustomerId, AtlasCustomerReference? Atlas, Guid? LinkId = null);
 
 internal sealed class CustomerIdentityImportValidator : AbstractValidator<CustomerIdentityImport>
 {
