@@ -1,0 +1,85 @@
+{
+  "windows": {
+    "baseline": {
+      "fromUtc": "2026-10-04T21:39:47Z",
+      "toUtc": "2026-10-04T21:42:59Z",
+      "durationSeconds": 192.0
+    },
+    "after": {
+      "fromUtc": "2026-10-04T21:54:03Z",
+      "toUtc": "2026-10-04T21:57:09Z",
+      "durationSeconds": 186.0
+    }
+  },
+  "workload": {
+    "baseline": {
+      "httpRequests": 13924,
+      "iterations": 795,
+      "throughputRps": 73.59625555106258,
+      "readP95Ms": 2032.6999999999996,
+      "writeP95Ms": 299.5952499999998,
+      "searchP95Ms": 2214.325
+    },
+    "afterFirstRun": {
+      "source": "../after-index/workday.json",
+      "httpRequests": 36610,
+      "iterations": 2076,
+      "throughputRps": 196.24175858988528,
+      "readP95Ms": 78.2657,
+      "writeP95Ms": 48.0002,
+      "searchP95Ms": 723.7669499999995
+    }
+  },
+  "hosts": {
+    "web": {
+      "baseline": {
+        "rssMaxMiB": 845.4062,
+        "allocatedGiB": 7.5679,
+        "meanCpuCores": 0.3665,
+        "gcPauseSeconds": 0.5178
+      },
+      "after": {
+        "rssMaxMiB": 1037.125,
+        "allocatedGiB": 19.8,
+        "meanCpuCores": 0.7295,
+        "gcPauseSeconds": 0.9646
+      }
+    },
+    "worker": {
+      "baseline": {
+        "rssMaxMiB": 888.9219,
+        "allocatedGiB": 1.0002,
+        "meanCpuCores": 0.1037,
+        "gcPauseSeconds": 0.2253
+      },
+      "after": {
+        "rssMaxMiB": 906.8906,
+        "allocatedGiB": 2.867,
+        "meanCpuCores": 0.1673,
+        "gcPauseSeconds": 0.2646
+      }
+    }
+  },
+  "webApproxAllocatedKiBPerHttpRequest": {
+    "baseline": 569.9165692617064,
+    "after": 567.1074788309205
+  },
+  "sql": {
+    "baseline": {
+      "cpuMeanPercent": 602.0971,
+      "cpuMedianPercent": 753.545,
+      "readGiB": 330.824
+    },
+    "after": {
+      "cpuMeanPercent": 318.1478,
+      "cpuMedianPercent": 298.13,
+      "readGiB": 0.931
+    }
+  },
+  "interpretation": [
+    "First after-index run completed 2.629x as many HTTP requests; increased total allocation is consistent with throughput, not evidence of increased allocation per request.",
+    "Web allocation divided by all HTTP requests is an approximate process-wide ratio and includes background/billing activity; it is not a per-endpoint allocation profiler.",
+    "GC pauses remained below 1 second total per host in the active first run; SQL read reduction and seek plans explain the main latency improvement.",
+    "After full capture also contains part of a second guard run; compare these active windows, not full-capture totals."
+  ]
+}

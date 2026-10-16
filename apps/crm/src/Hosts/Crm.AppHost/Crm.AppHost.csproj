@@ -1,0 +1,14 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>vardahei-crm-apphost</UserSecretsId>
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);ASPIRE010</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Crm.Web\Crm.Web.csproj" />
+    <ProjectReference Include="..\Crm.Worker\Crm.Worker.csproj" />
+  </ItemGroup>
+</Project>

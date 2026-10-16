@@ -1,0 +1,178 @@
+DEV-07 — defects confirmed in the previous release (commit 51fbe5e, DEV-06), read from git on 2026-10-04
+
+== src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs @51fbe5e
+    43	    private const int BatchSize = 50;
+    44	    private const int MaxAttempts = 10;
+    45	    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+    46	    private static readonly TimeSpan Lease = TimeSpan.FromMinutes(2);
+   137	    public async Task<int> ProcessContextAsync(Type contextType, CancellationToken cancellationToken)
+   138	    {
+   139	        await using var scope = scopeFactory.CreateAsyncScope();
+   140	        var context = (ModuleDbContext)scope.ServiceProvider.GetRequiredService(contextType);
+   141	        var now = timeProvider.GetUtcNow();
+   142	
+   143	        var candidates = await context.OutboxMessages
+   144	            .Where(m => m.ProcessedAt == null && m.Attempts < MaxAttempts && (m.LockedUntil == null || m.LockedUntil < now))
+   145	            .OrderBy(m => m.OccurredAt)
+   146	            .Select(m => m.Id)
+   147	            .Take(BatchSize)
+   148	            .ToListAsync(cancellationToken);
+   149	
+   150	        int processed = 0;
+   151	        foreach (var id in candidates)
+   152	        {
+   153	            var leaseUntil = timeProvider.GetUtcNow().Add(Lease);
+   154	            int claimed = await context.OutboxMessages
+   155	                .Where(m => m.Id == id && m.ProcessedAt == null && (m.LockedUntil == null || m.LockedUntil < now))
+   156	                .ExecuteUpdateAsync(s => s.SetProperty(m => m.LockedUntil, leaseUntil), cancellationToken);
+   157	            if (claimed == 0)
+   158	            {
+   159	                continue;
+   160	            }
+   161	
+   162	            var message = await context.OutboxMessages.AsNoTracking().SingleAsync(m => m.Id == id, cancellationToken);
+   163	            string? error = null;
+   164	            try
+   165	            {
+   166	                var eventType = typeResolver.Resolve(message.Type)
+   167	                                ?? throw new InvalidOperationException($"Unknown event type '{message.Type}'.");
+   168	                var domainEvent = (IDomainEvent)JsonSerializer.Deserialize(message.Payload, eventType, JsonOptions)!;
+   169	                await using var handlerScope = scopeFactory.CreateAsyncScope();
+   170	                await (Task)DispatchMethod.MakeGenericMethod(eventType)
+   171	                    .Invoke(null, [handlerScope.ServiceProvider, domainEvent, cancellationToken])!;
+   172	                processed++;
+   173	            }
+   174	            catch (Exception ex) when (ex is not OperationCanceledException)
+   175	            {
+   176	                error = ex.GetBaseException().Message;
+   177	                logger.LogWarning(ex, "Outbox message {MessageId} of type {Type} failed", message.Id, message.Type);
+   178	            }
+   179	
+   180	            var finishedAt = timeProvider.GetUtcNow();
+   181	            await context.OutboxMessages
+   182	                .Where(m => m.Id == id)
+   183	                .ExecuteUpdateAsync(s => s
+   184	                    .SetProperty(m => m.ProcessedAt, error == null ? finishedAt : null)
+   185	                    .SetProperty(m => m.LockedUntil, (DateTimeOffset?)null)
+   186	                    .SetProperty(m => m.Attempts, m => m.Attempts + 1)
+   187	                    .SetProperty(m => m.LastError, error), cancellationToken);
+   188	        }
+   189	
+   190	        return processed;
+   191	    }
+   192	
+   193	    private static async Task DispatchAsync<TEvent>(IServiceProvider services, TEvent domainEvent, CancellationToken cancellationToken)
+   194	        where TEvent : IDomainEvent
+   195	    {
+   196	        foreach (var handler in services.GetServices<IDomainEventHandler<TEvent>>())
+   197	        {
+   198	            await handler.HandleAsync(domainEvent, cancellationToken);
+   199	        }
+   200	    }
+
+== tests/Crm.IntegrationTests/BillingApprovalApiTests.cs @51fbe5e (a redelivered event ran its handler again: a second outbound operation)
+   384	        // The worker dies after dispatching but before acknowledging: the approval events are delivered a second time.
+   385	        await using (var scope = factory.Services.CreateAsyncScope())
+   386	        {
+   387	            var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
+   388	            var run = runId.ToString();
+   389	            var basis = basisId.ToString();
+   390	            (await db.OutboxMessages
+   391	                .Where(m => (m.Type.Contains("BillingBasisApproved") && m.Payload.Contains(basis)) || (m.Type.Contains("BillingRunApproved") && m.Payload.Contains(run)))
+   392	                .ExecuteUpdateAsync(s => s.SetProperty(m => m.ProcessedAt, (DateTimeOffset?)null).SetProperty(m => m.LockedUntil, (DateTimeOffset?)null)))
+   393	                .ShouldBe(2);
+   394	        }
+   395	
+   396	        // The second delivery queues a second operation (the first one is done), and that operation finds nothing to send.
+   397	        async Task<List<OutboundOperation>> OperationsAsync()
+   398	        {
+   399	            await using var scope = factory.Services.CreateAsyncScope();
+   400	            return await scope.ServiceProvider.GetRequiredService<IntegrationDbContext>().OutboundOperations.AsNoTracking()
+   401	                .Where(o => o.EntityId == basisId).OrderBy(o => o.CreatedAt).ToListAsync();
+   402	        }
+   403	
+   404	        for (var attempt = 0; attempt < 10 && (await OperationsAsync()) is var current && (current.Count < 2 || current.Any(o => o.Status == OutboundStatus.Pending)); attempt++)
+   405	        {
+   406	            await factory.ProcessEventsAndOutboundAsync();
+   407	            await Task.Delay(100);
+   408	        }
+   409	
+   410	        var operations = await OperationsAsync();
+   411	        operations.Count.ShouldBe(2);
+   412	        operations.ShouldAllBe(o => o.Status == OutboundStatus.Succeeded);
+   413	        operations[1].Result.ShouldBe("No changes to push.");
+   414	
+   415	        OrdersPosted().ShouldBe(1);
+
+== src/Modules/Contracts/Crm.Contracts/Persistence/ContractsDbContext.cs @51fbe5e (source quote index not unique)
+    58	            b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
+    59	            b.Navigation(x => x.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+    60	            b.HasIndex(x => x.Number).IsUnique();
+    61	            b.HasIndex(x => x.SourceQuoteId);
+    62	            b.HasIndex(x => new { x.OrganizationId, x.Status });
+    63	            b.HasIndex(x => new { x.Status, x.EndDate });
+
+== src/Modules/Contracts/Crm.Contracts/Features/QuoteAcceptedHandler.cs @51fbe5e (guard ignores soft-deleted drafts)
+    29	        }
+    30	
+    31	        if (await db.Contracts.AnyAsync(c => c.SourceQuoteId == domainEvent.QuoteId, cancellationToken))
+    32	        {
+    33	            return;
+    34	        }
+    35	
+
+== src/Modules/Notifications/Crm.Notifications/Features/TeamsHandlers.cs @51fbe5e (direct webhook POST on every delivery)
+    75	        if (!teams.IsConfigured(TeamsChannel.Finance))
+    76	        {
+    77	            return;
+    78	        }
+    79	
+    80	        await teams.SendAsync(
+    81	            TeamsChannel.Finance,
+    82	            new TeamsCard(
+    83	                "Faktureringskjøring godkjent",
+    84	                $"Perioden {TeamsCards.Date(domainEvent.PeriodStart)}–{TeamsCards.Date(domainEvent.PeriodEnd)} er godkjent og legges ut som salgsordrer.",
+    85	                [new TeamsFact("Periode", $"{TeamsCards.Date(domainEvent.PeriodStart)} – {TeamsCards.Date(domainEvent.PeriodEnd)}")],
+    86	                TeamsCards.Link(notifications.Value, $"/billing/runs/{domainEvent.RunId}"),
+    87	                "Åpne kjøringen"),
+    88	            cancellationToken);
+    89	    }
+    90	}
+
+== src/Modules/Billing/Crm.Billing/Features/BillingApi.cs @51fbe5e (one handler, two modules, two transactions)
+340:internal sealed class BasisExportedHandler(
+341-    BillingDbContext db, ITimeTrackingApi timeTracking, TimeProvider time, ILogger<BasisExportedHandler> logger) : IDomainEventHandler<BillingBasisExported>
+342-{
+343-    public async Task HandleAsync(BillingBasisExported domainEvent, CancellationToken cancellationToken)
+344-    {
+345-        // Only what was invoiced closes its source: an excluded line leaves its hours and one-time items for a later run.
+346-        var lines = await db.BillingLines.AsNoTracking()
+347-            .Where(l => l.BasisId == domainEvent.BasisId && l.SourceRefs != null && l.Decision != BillingLineDecision.Exclusion)
+348-            .Select(l => l.SourceRefs!)
+349-            .ToListAsync(cancellationToken);
+350-        var chargeIds = lines.SelectMany(json => SourceRefs.Ids(json, "pendingChargeIds")).Distinct().ToList();
+351-        if (chargeIds.Count > 0)
+352-        {
+353-            // The one-time items on this basis are now invoiced and must not be collected into another run (BR-SAL-07) — also
+354-            // one withdrawn meanwhile (a project phase reopened), so that completing it again does not queue it a second time.
+355-            foreach (var charge in await db.PendingCharges.IgnoreQueryFilters().Where(c => chargeIds.Contains(c.Id)).ToListAsync(cancellationToken))
+356-            {
+357-                charge.MarkInvoiced(domainEvent.BasisId, time.GetUtcNow());
+358-            }
+359-
+360-            await db.SaveChangesAsync(cancellationToken);
+361-        }
+362-
+363-        var entryIds = lines.SelectMany(SourceRefs.TimeEntryIds).Distinct().ToList();
+364-        if (entryIds.Count == 0)
+365-        {
+366-            return;
+367-        }
+368-
+369-        var marked = await timeTracking.MarkInvoicedAsync(entryIds, cancellationToken);
+370-        logger.LogInformation(
+371-            "Basis {BasisId} exported as {OrderNo}: {Count} time entries and {Charges} one-time items marked invoiced.",
+372-            domainEvent.BasisId, domainEvent.OrderNo, marked, chargeIds.Count);
+373-    }
+374-}
+375-

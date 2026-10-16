@@ -1,0 +1,10 @@
+{
+  "capturedAt": "2026-10-04T22:03:21.826649+00:00",
+  "hashes": [
+    "0x273119C850F8392E",
+    "0xA24F3994F39DD549",
+    "0xEE5BE1D4CBE3959C",
+    "0xF89802A1CF38F587"
+  ],
+  "note": "Read-only cache metadata after both after-index workload runs completed. No query execution/cache reset."
+}

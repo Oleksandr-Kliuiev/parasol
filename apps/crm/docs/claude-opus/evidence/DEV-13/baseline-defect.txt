@@ -1,0 +1,5 @@
+PUT /api/v1/operations/maintenance -> 404 (no read-only switch exists)
+POST /api/v1/customers/organizations -> 201 (writes are never refused)
+order requests before the restore: 1
+after the restore: basis Exported, order 88901
+order requests to PowerOffice in total: 2 (one is right)

@@ -1,0 +1,19 @@
+Unit and architecture tests (dotnet test, Microsoft Testing Platform)
+2026-10-04T04:55:34Z
+  total: 362
+  failed: 0
+  succeeded: 362
+  skipped: 0
+  total: 83
+  failed: 0
+  succeeded: 83
+  skipped: 0
+
+Release tooling: python3 -m unittest test_release test_deploy — Ran 27 tests, OK
+
+Web (web/): npm run lint — clean; npm run typecheck — clean; vitest:
+ Test Files  13 passed (13)
+      Tests  41 passed (41)
+
+SPA build (npm run build):
+   283.3 KB  initial total (budget 300 KB)

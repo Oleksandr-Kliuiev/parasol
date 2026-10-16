@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Crm.Integrations.Core\Crm.Integrations.Core.csproj" />
+    <ProjectReference Include="..\..\Modules\Activities\Crm.Activities.Contracts\Crm.Activities.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Customers\Crm.Customers.Contracts\Crm.Customers.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\Crm.Identity.Contracts\Crm.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Notifications\Crm.Notifications.Contracts\Crm.Notifications.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Sales\Crm.Sales.Contracts\Crm.Sales.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Crm.UnitTests" />
+    <InternalsVisibleTo Include="Crm.IntegrationTests" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,823 @@
+{
+  "schema_version": 1,
+  "title": "Vardahei CRM readiness implementation",
+  "created_at": "2026-10-03",
+  "audited_date": "2026-10-03",
+  "execution_order": [
+    "DEV-00",
+    "DEV-15",
+    "DEV-01",
+    "DEV-02",
+    "DEV-03",
+    "DEV-04",
+    "DEV-05",
+    "DEV-06",
+    "DEV-07",
+    "DEV-08",
+    "DEV-09",
+    "DEV-10",
+    "DEV-11",
+    "DEV-12",
+    "DEV-13",
+    "DEV-14",
+    "DEV-17",
+    "DEV-16",
+    "DEV-18",
+    "DEV-19",
+    "DEV-20",
+    "DEV-21",
+    "DEV-22",
+    "DEV-23"
+  ],
+  "dependency_policy": "Implementation may proceed after code_verified or accepted dependencies; external gates are required for acceptance of their tasks and release. Baseline expected-failure evidence is allowed only for DEV-00.",
+  "status_values": [
+    "todo",
+    "in_progress",
+    "blocked",
+    "code_verified",
+    "accepted"
+  ],
+  "tasks": [
+    {
+      "id": "DEV-00",
+      "title": "Зафиксировать исходное состояние и регрессии",
+      "priority": "P1",
+      "audit": [
+        "A01",
+        "A02",
+        "A03",
+        "A05",
+        "A14"
+      ],
+      "dependencies": [],
+      "profiles": [
+        "Q0",
+        "Q1",
+        "Q2",
+        "Q3"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-00.md",
+      "evidence_file": "evidence/DEV-00.md",
+      "acceptance_ids": [
+        "DEV-00-AC01",
+        "DEV-00-AC02",
+        "DEV-00-AC03",
+        "DEV-00-AC04",
+        "DEV-00-AC05"
+      ]
+    },
+    {
+      "id": "DEV-01",
+      "title": "Идентичность начисления и сохранение ручных корректировок",
+      "priority": "P1",
+      "audit": [
+        "A01"
+      ],
+      "dependencies": [
+        "DEV-00"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-01.md",
+      "evidence_file": "evidence/DEV-01.md",
+      "acceptance_ids": [
+        "DEV-01-AC01",
+        "DEV-01-AC02",
+        "DEV-01-AC03",
+        "DEV-01-AC04",
+        "DEV-01-AC05",
+        "DEV-01-AC06"
+      ]
+    },
+    {
+      "id": "DEV-02",
+      "title": "Согласования конкретной версии расчёта",
+      "priority": "P1",
+      "audit": [
+        "A02"
+      ],
+      "dependencies": [
+        "DEV-01"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-02.md",
+      "evidence_file": "evidence/DEV-02.md",
+      "acceptance_ids": [
+        "DEV-02-AC01",
+        "DEV-02-AC02",
+        "DEV-02-AC03",
+        "DEV-02-AC04",
+        "DEV-02-AC05",
+        "DEV-02-AC06"
+      ]
+    },
+    {
+      "id": "DEV-03",
+      "title": "Реестр начислений и корректирующие прогоны",
+      "priority": "P1",
+      "audit": [
+        "A03"
+      ],
+      "dependencies": [
+        "DEV-01",
+        "DEV-02"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3"
+      ],
+      "external_gates": [
+        "EXT-01"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-03.md",
+      "evidence_file": "evidence/DEV-03.md",
+      "acceptance_ids": [
+        "DEV-03-AC01",
+        "DEV-03-AC02",
+        "DEV-03-AC03",
+        "DEV-03-AC04",
+        "DEV-03-AC05",
+        "DEV-03-AC06",
+        "DEV-03-AC07"
+      ]
+    },
+    {
+      "id": "DEV-04",
+      "title": "Неизменяемость аудита и минимальные права приложения",
+      "priority": "P1",
+      "audit": [
+        "A04"
+      ],
+      "dependencies": [
+        "DEV-03"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q4"
+      ],
+      "external_gates": [
+        "EXT-07"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-04.md",
+      "evidence_file": "evidence/DEV-04.md",
+      "acceptance_ids": [
+        "DEV-04-AC01",
+        "DEV-04-AC02",
+        "DEV-04-AC03",
+        "DEV-04-AC04",
+        "DEV-04-AC05",
+        "DEV-04-AC06"
+      ]
+    },
+    {
+      "id": "DEV-05",
+      "title": "Проверенный артефакт и управляемый выпуск",
+      "priority": "P1",
+      "audit": [
+        "A05"
+      ],
+      "dependencies": [
+        "DEV-00",
+        "DEV-15"
+      ],
+      "profiles": [
+        "Q1",
+        "Q3",
+        "Q4"
+      ],
+      "external_gates": [
+        "EXT-11"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-05.md",
+      "evidence_file": "evidence/DEV-05.md",
+      "acceptance_ids": [
+        "DEV-05-AC01",
+        "DEV-05-AC02",
+        "DEV-05-AC03",
+        "DEV-05-AC04",
+        "DEV-05-AC05",
+        "DEV-05-AC06"
+      ]
+    },
+    {
+      "id": "DEV-06",
+      "title": "Готовность сервиса и контроль работоспособности worker",
+      "priority": "P1",
+      "audit": [
+        "A06"
+      ],
+      "dependencies": [
+        "DEV-00"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q4"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-06.md",
+      "evidence_file": "evidence/DEV-06.md",
+      "acceptance_ids": [
+        "DEV-06-AC01",
+        "DEV-06-AC02",
+        "DEV-06-AC03",
+        "DEV-06-AC04",
+        "DEV-06-AC05"
+      ]
+    },
+    {
+      "id": "DEV-07",
+      "title": "Доставка событий и безопасный повтор",
+      "priority": "P1",
+      "audit": [
+        "A07"
+      ],
+      "dependencies": [
+        "DEV-00"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-07.md",
+      "evidence_file": "evidence/DEV-07.md",
+      "acceptance_ids": [
+        "DEV-07-AC01",
+        "DEV-07-AC02",
+        "DEV-07-AC03",
+        "DEV-07-AC04",
+        "DEV-07-AC05",
+        "DEV-07-AC06",
+        "DEV-07-AC07"
+      ]
+    },
+    {
+      "id": "DEV-08",
+      "title": "Фиксация отправленных коммерческих предложений",
+      "priority": "P1",
+      "audit": [
+        "A08"
+      ],
+      "dependencies": [
+        "DEV-00"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-08.md",
+      "evidence_file": "evidence/DEV-08.md",
+      "acceptance_ids": [
+        "DEV-08-AC01",
+        "DEV-08-AC02",
+        "DEV-08-AC03",
+        "DEV-08-AC04",
+        "DEV-08-AC05",
+        "DEV-08-AC06"
+      ]
+    },
+    {
+      "id": "DEV-09",
+      "title": "Авторизация на уровне записи",
+      "priority": "P1",
+      "audit": [
+        "A09"
+      ],
+      "dependencies": [
+        "DEV-00"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3"
+      ],
+      "external_gates": [
+        "EXT-01"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-09.md",
+      "evidence_file": "evidence/DEV-09.md",
+      "acceptance_ids": [
+        "DEV-09-AC01",
+        "DEV-09-AC02",
+        "DEV-09-AC03",
+        "DEV-09-AC04",
+        "DEV-09-AC05",
+        "DEV-09-AC06"
+      ]
+    },
+    {
+      "id": "DEV-10",
+      "title": "Отзыв привилегий и жизненный цикл сессии",
+      "priority": "P1",
+      "audit": [
+        "A15"
+      ],
+      "dependencies": [
+        "DEV-09"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2"
+      ],
+      "external_gates": [
+        "EXT-02"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-10.md",
+      "evidence_file": "evidence/DEV-10.md",
+      "acceptance_ids": [
+        "DEV-10-AC01",
+        "DEV-10-AC02",
+        "DEV-10-AC03",
+        "DEV-10-AC04",
+        "DEV-10-AC05",
+        "DEV-10-AC06"
+      ]
+    },
+    {
+      "id": "DEV-11",
+      "title": "Персональные данные и сроки хранения",
+      "priority": "P1",
+      "audit": [
+        "A10"
+      ],
+      "dependencies": [
+        "DEV-04",
+        "DEV-09"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4"
+      ],
+      "external_gates": [
+        "EXT-07"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-11.md",
+      "evidence_file": "evidence/DEV-11.md",
+      "acceptance_ids": [
+        "DEV-11-AC01",
+        "DEV-11-AC02",
+        "DEV-11-AC03",
+        "DEV-11-AC04",
+        "DEV-11-AC05",
+        "DEV-11-AC06",
+        "DEV-11-AC07"
+      ]
+    },
+    {
+      "id": "DEV-12",
+      "title": "Полные списки и корректные финансовые итоги",
+      "priority": "P2",
+      "audit": [
+        "A11",
+        "A16"
+      ],
+      "dependencies": [
+        "DEV-00"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-12.md",
+      "evidence_file": "evidence/DEV-12.md",
+      "acceptance_ids": [
+        "DEV-12-AC01",
+        "DEV-12-AC02",
+        "DEV-12-AC03",
+        "DEV-12-AC04",
+        "DEV-12-AC05",
+        "DEV-12-AC06"
+      ]
+    },
+    {
+      "id": "DEV-13",
+      "title": "Режим обслуживания и восстановление",
+      "priority": "P1",
+      "audit": [
+        "A12"
+      ],
+      "dependencies": [
+        "DEV-04",
+        "DEV-06",
+        "DEV-07",
+        "DEV-11"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q4"
+      ],
+      "external_gates": [
+        "EXT-04"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-13.md",
+      "evidence_file": "evidence/DEV-13.md",
+      "acceptance_ids": [
+        "DEV-13-AC01",
+        "DEV-13-AC02",
+        "DEV-13-AC03",
+        "DEV-13-AC04",
+        "DEV-13-AC05",
+        "DEV-13-AC06"
+      ]
+    },
+    {
+      "id": "DEV-14",
+      "title": "Рабочая BI-интеграция и определения показателей",
+      "priority": "P2",
+      "audit": [
+        "A13"
+      ],
+      "dependencies": [
+        "DEV-09",
+        "DEV-10",
+        "DEV-12"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q4"
+      ],
+      "external_gates": [
+        "EXT-08"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-14.md",
+      "evidence_file": "evidence/DEV-14.md",
+      "acceptance_ids": [
+        "DEV-14-AC01",
+        "DEV-14-AC02",
+        "DEV-14-AC03",
+        "DEV-14-AC04",
+        "DEV-14-AC05",
+        "DEV-14-AC06"
+      ]
+    },
+    {
+      "id": "DEV-15",
+      "title": "Надёжные тесты и полное покрытие архитектурных правил",
+      "priority": "P1",
+      "audit": [
+        "A14"
+      ],
+      "dependencies": [
+        "DEV-00"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q5"
+      ],
+      "external_gates": [],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-15.md",
+      "evidence_file": "evidence/DEV-15.md",
+      "acceptance_ids": [
+        "DEV-15-AC01",
+        "DEV-15-AC02",
+        "DEV-15-AC03",
+        "DEV-15-AC04",
+        "DEV-15-AC05",
+        "DEV-15-AC06"
+      ]
+    },
+    {
+      "id": "DEV-16",
+      "title": "Производительность на целевом объёме",
+      "priority": "P2",
+      "audit": [
+        "A16"
+      ],
+      "dependencies": [
+        "DEV-03",
+        "DEV-07",
+        "DEV-12",
+        "DEV-15"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q6"
+      ],
+      "external_gates": [
+        "EXT-05"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-16.md",
+      "evidence_file": "evidence/DEV-16.md",
+      "acceptance_ids": [
+        "DEV-16-AC01",
+        "DEV-16-AC02",
+        "DEV-16-AC03",
+        "DEV-16-AC04",
+        "DEV-16-AC05",
+        "DEV-16-AC06"
+      ]
+    },
+    {
+      "id": "DEV-17",
+      "title": "Мониторинг и рабочее место разбора исключений",
+      "priority": "P1",
+      "audit": [
+        "A06",
+        "A07"
+      ],
+      "dependencies": [
+        "DEV-06",
+        "DEV-07"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4"
+      ],
+      "external_gates": [
+        "EXT-01"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-17.md",
+      "evidence_file": "evidence/DEV-17.md",
+      "acceptance_ids": [
+        "DEV-17-AC01",
+        "DEV-17-AC02",
+        "DEV-17-AC03",
+        "DEV-17-AC04",
+        "DEV-17-AC05",
+        "DEV-17-AC06"
+      ]
+    },
+    {
+      "id": "DEV-18",
+      "title": "Ежедневные сценарии и доступность интерфейса",
+      "priority": "P2",
+      "audit": [],
+      "dependencies": [
+        "DEV-09",
+        "DEV-12",
+        "DEV-15",
+        "DEV-17"
+      ],
+      "profiles": [
+        "Q3",
+        "Q5"
+      ],
+      "external_gates": [
+        "EXT-10"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-18.md",
+      "evidence_file": "evidence/DEV-18.md",
+      "acceptance_ids": [
+        "DEV-18-AC01",
+        "DEV-18-AC02",
+        "DEV-18-AC03",
+        "DEV-18-AC04",
+        "DEV-18-AC05",
+        "DEV-18-AC06"
+      ]
+    },
+    {
+      "id": "DEV-19",
+      "title": "Реальные интеграции и сверка внешних эффектов",
+      "priority": "P1",
+      "audit": [],
+      "dependencies": [
+        "DEV-03",
+        "DEV-07",
+        "DEV-08",
+        "DEV-10",
+        "DEV-17"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q7"
+      ],
+      "external_gates": [
+        "EXT-02",
+        "EXT-03"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-19.md",
+      "evidence_file": "evidence/DEV-19.md",
+      "acceptance_ids": [
+        "DEV-19-AC01",
+        "DEV-19-AC02",
+        "DEV-19-AC03",
+        "DEV-19-AC04",
+        "DEV-19-AC05",
+        "DEV-19-AC06"
+      ]
+    },
+    {
+      "id": "DEV-20",
+      "title": "Пробная миграция и качество клиентских данных",
+      "priority": "P1",
+      "audit": [],
+      "dependencies": [
+        "DEV-03",
+        "DEV-09",
+        "DEV-11"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q7"
+      ],
+      "external_gates": [
+        "EXT-01",
+        "EXT-09"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-20.md",
+      "evidence_file": "evidence/DEV-20.md",
+      "acceptance_ids": [
+        "DEV-20-AC01",
+        "DEV-20-AC02",
+        "DEV-20-AC03",
+        "DEV-20-AC04",
+        "DEV-20-AC05",
+        "DEV-20-AC06"
+      ]
+    },
+    {
+      "id": "DEV-21",
+      "title": "Проверка безопасности по ASVS и устранение замечаний",
+      "priority": "P1",
+      "audit": [
+        "A04",
+        "A09",
+        "A10",
+        "A15"
+      ],
+      "dependencies": [
+        "DEV-04",
+        "DEV-05",
+        "DEV-08",
+        "DEV-09",
+        "DEV-10",
+        "DEV-11",
+        "DEV-13",
+        "DEV-14",
+        "DEV-17",
+        "DEV-18"
+      ],
+      "profiles": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4",
+        "Q7"
+      ],
+      "external_gates": [
+        "EXT-02",
+        "EXT-06",
+        "EXT-07"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-21.md",
+      "evidence_file": "evidence/DEV-21.md",
+      "acceptance_ids": [
+        "DEV-21-AC01",
+        "DEV-21-AC02",
+        "DEV-21-AC03",
+        "DEV-21-AC04",
+        "DEV-21-AC05",
+        "DEV-21-AC06"
+      ]
+    },
+    {
+      "id": "DEV-22",
+      "title": "Приёмка по ролям и параллельный месячный биллинг",
+      "priority": "P1",
+      "audit": [],
+      "dependencies": [
+        "DEV-03",
+        "DEV-08",
+        "DEV-11",
+        "DEV-12",
+        "DEV-16",
+        "DEV-18",
+        "DEV-19",
+        "DEV-20"
+      ],
+      "profiles": [
+        "Q3",
+        "Q5",
+        "Q6",
+        "Q7"
+      ],
+      "external_gates": [
+        "EXT-09",
+        "EXT-10"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-22.md",
+      "evidence_file": "evidence/DEV-22.md",
+      "acceptance_ids": [
+        "DEV-22-AC01",
+        "DEV-22-AC02",
+        "DEV-22-AC03",
+        "DEV-22-AC04",
+        "DEV-22-AC05",
+        "DEV-22-AC06"
+      ]
+    },
+    {
+      "id": "DEV-23",
+      "title": "Допуск к выпуску и сопровождение",
+      "priority": "P1",
+      "audit": [],
+      "dependencies": [
+        "DEV-00",
+        "DEV-01",
+        "DEV-02",
+        "DEV-03",
+        "DEV-04",
+        "DEV-05",
+        "DEV-06",
+        "DEV-07",
+        "DEV-08",
+        "DEV-09",
+        "DEV-10",
+        "DEV-11",
+        "DEV-12",
+        "DEV-13",
+        "DEV-14",
+        "DEV-15",
+        "DEV-16",
+        "DEV-17",
+        "DEV-18",
+        "DEV-19",
+        "DEV-20",
+        "DEV-21",
+        "DEV-22"
+      ],
+      "profiles": [
+        "Q7"
+      ],
+      "external_gates": [
+        "EXT-01",
+        "EXT-02",
+        "EXT-03",
+        "EXT-04",
+        "EXT-05",
+        "EXT-06",
+        "EXT-07",
+        "EXT-08",
+        "EXT-09",
+        "EXT-10",
+        "EXT-11"
+      ],
+      "status": "code_verified",
+      "task_file": "tasks/DEV-23.md",
+      "evidence_file": "evidence/DEV-23.md",
+      "acceptance_ids": [
+        "DEV-23-AC01",
+        "DEV-23-AC02",
+        "DEV-23-AC03",
+        "DEV-23-AC04",
+        "DEV-23-AC05",
+        "DEV-23-AC06"
+      ]
+    }
+  ]
+}

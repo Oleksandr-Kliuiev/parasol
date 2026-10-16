@@ -1,0 +1,71 @@
+# E2E runs for DEV-15 (each on a throwaway SQL Server container, database crm_e2e; summaries from the Playwright list reporter)
+
+## dev15-run1
+  ✘  44 [webkit] › e2e/billing.spec.ts:39:1 › a monthly run is collected, approved and sent to PowerOffice @critical (15.9s)
+  ✘  45 [webkit] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (16.0s)
+  ✘  46 [webkit] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted @critical (15.5s)
+  ✘  47 [webkit] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (15.6s)
+  ✘  49 [webkit] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (15.3s)
+  ✘  50 [webkit] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (15.3s)
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+  6 failed
+  44 passed (2.6m)
+
+## dev15-run2
+  6 passed (1.2m)
+
+## dev15-full1
+  50 passed (2.7m)
+
+## dev15-full2
+  50 passed (2.0m)
+
+## dev15-stress
+  ✘   4 [desktop] › e2e/a11y.spec.ts:20:1 › main pages have no serious accessibility violations (2.9s)
+  ✘   5 [desktop] › e2e/a11y.spec.ts:20:1 › main pages have no serious accessibility violations (2.9s)
+  ✘   1 [desktop] › e2e/billing.spec.ts:39:1 › a monthly run is collected, approved and sent to PowerOffice @critical (17.9s)
+  ✘   3 [desktop] › e2e/billing.spec.ts:39:1 › a monthly run is collected, approved and sent to PowerOffice @critical (17.9s)
+  ✘  11 [desktop] › e2e/billing.spec.ts:142:1 › a run without a PowerOffice customer reports the anomaly and can be cancelled (729ms)
+  ✘  22 [webkit] › e2e/billing.spec.ts:39:1 › a monthly run is collected, approved and sent to PowerOffice @critical (22.7s)
+  ✘  23 [webkit] › e2e/billing.spec.ts:39:1 › a monthly run is collected, approved and sent to PowerOffice @critical (25.0s)
+    Error: Creating a billing run for 2040-01-01 failed: 409 {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.10","title":"DUPLICATE","status":409,"detail":"A record with the same unique value already exists.","code":"DUPLICATE","traceId":"00-34d30dcdcf8782ecd181652a6cb592f1-6271a9e204c79f94-01"}
+    Error: Creating a billing run for 2040-01-01 failed: 409 {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.10","title":"DUPLICATE","status":409,"detail":"A record with the same unique value already exists.","code":"DUPLICATE","traceId":"00-156e592691081a1c992aad97c37968e9-f50f9e37f4660493-01"}
+    Error: expect(locator).toBeVisible() failed
+    Error: Creating a billing run for 2040-04-01 failed: 409 {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.10","title":"DUPLICATE","status":409,"detail":"A record with the same unique value already exists.","code":"DUPLICATE","traceId":"00-209ab37059e3126e35829094f67fe362-53c0c4bc1b1d4e66-01"}
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: strict mode violation: getByRole('row').filter({ hasText: 'FakGYH4A7 Faktura AS' }) resolved to 2 elements:
+
+## dev15-stress2
+  ✘   4 [desktop] › e2e/a11y.spec.ts:20:1 › main pages have no serious accessibility violations (1.5m)
+    Error: expect(locator).toBeVisible() failed
+  1 failed
+  23 passed (2.5m)
+
+## dev15-stress3
+  24 passed (1.9m)
+
+## dev15-final1
+  50 passed (2.0m)
+
+## dev15-final2
+  50 passed (3.0m)
+
+## dev15-nobrowser
+  ✘  1 [webkit] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (0ms)
+    Error: browserType.launch: Executable doesn't exist at /private/tmp/claude-501/-Users-vardahei-Vardahei-CRM-V2/03b2cf10-85b0-45bd-8062-9a4b58d2dbd4/scratchpad/no-browsers/webkit-2359/pw_run.sh
+  1 failed
+
+## failOnFlakyTests probe (temporary spec, removed): passes only on retry #1
+  ✘  1 e2e-flaky-probe/flaky.spec.ts:3:1 › fails on the first attempt only (2ms)
+  ✓  2 e2e-flaky-probe/flaky.spec.ts:3:1 › fails on the first attempt only (retry #1) (1ms)
+  1) e2e-flaky-probe/flaky.spec.ts:3:1 › fails on the first attempt only ───────────────────────────
+        at /Users/vardahei/Vardahei_CRM_V2/web/e2e-flaky-probe/flaky.spec.ts:4:26
+    Error Context: test-results/flaky-fails-on-the-first-attempt-only/error-context.md
+  1 flaky
+exit=1

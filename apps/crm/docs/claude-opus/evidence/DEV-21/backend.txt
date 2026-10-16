@@ -1,0 +1,39 @@
+== build
+    0 Warning(s)
+    0 Error(s)
+== unit
+  total: 603
+  failed: 0
+  succeeded: 603
+  skipped: 0
+== arch
+  total: 94
+  failed: 0
+  succeeded: 94
+  skipped: 0
+== integration
+== integration (first run: 426/427; WebHostSecurityTests dashboard antiforgery test used a test principal without a stable user id, fixed in CrmWebFactory)
+== integration, rerun after the fix: total 427, failed 0, succeeded 427
+== gate
+| Domain of Billing, Contracts, TimeTracking | 1290 | 1331 | 96.92 % | 90 % | pass | 91.10 % of 764 |
+| Rest of the backend (src/) | 23396 | 25864 | 90.46 % | 70 % | pass | 78.59 % of 13578 |
+Gate: **passed**
+== pending CustomersDbContext
+No changes have been made to the model since the last migration.
+== pending IdentityDbContext
+No changes have been made to the model since the last migration.
+== pending BillingDbContext
+No changes have been made to the model since the last migration.
+== rollback
+  ✓   1 [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (49.0s)
+  ✓   2 [desktop] › e2e/daily-workflows.spec.ts:7:1 › a save that loses to someone else shows both versions and never overwrites in silence @critical (934ms)
+  ✓   3 [desktop] › e2e/daily-workflows.spec.ts:70:1 › leaving a form with unsaved changes asks first and returns focus when the user stays @critical (1.9s)
+  ✓   4 [desktop] › e2e/monitoring.spec.ts:5:1 › an operator assigns and reviews an intentional pause and the signal recovers @critical (4.4s)
+  ✓   5 [desktop] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical (3.1s)
+  ✓   6 [desktop] › e2e/privacy.spec.ts:22:1 › a person gets their data, then is erased and stays erased (DEV-11) @critical (7.5s)
+  ✓   7 [desktop] › e2e/quotes.spec.ts:5:1 › a quote with an extra discount is approved, downloaded and accepted @critical (2.4s)
+  ✓   8 [desktop] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical (3.4s)
+  ✓   9 [desktop] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical (584ms)
+  ✓  10 [desktop] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical (1.7s)
+  10 passed (1.5m)
+ALLDONE

@@ -1,0 +1,629 @@
+{
+  "capturedAt": "2026-10-04T21:34:12.287824+00:00",
+  "profile": "full",
+  "database": "crm_load_dev16_37cba9904feb",
+  "datasetChecksum": "sha256:7d32b44cd737ec67f3fcca42d9e6cc72b235a7ba2643b079d347c58f932caf85",
+  "source": "sys.database_files + sys.dm_db_partition_stats (metadata-only; no customer values)",
+  "files": [
+    {
+      "name": "crm_load_dev16_37cba9904feb",
+      "type": "ROWS",
+      "allocatedMB": 4808.0,
+      "usedMB": 4745.25
+    },
+    {
+      "name": "crm_load_dev16_37cba9904feb_log",
+      "type": "LOG",
+      "allocatedMB": 776.0,
+      "usedMB": 184.391
+    }
+  ],
+  "tableCount": 11,
+  "tables": [
+    {
+      "table": "customers.Organizations",
+      "physicalRows": 5000,
+      "indexCount": 6,
+      "indexes": [
+        {
+          "name": "PK_Organizations",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 5000,
+          "reservedMB": 1.945,
+          "usedMB": 1.797
+        },
+        {
+          "name": "IX_Organizations_AccountManagerId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 5000,
+          "reservedMB": 0.32,
+          "usedMB": 0.203
+        },
+        {
+          "name": "IX_Organizations_Name_Id",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 5000,
+          "reservedMB": 0.633,
+          "usedMB": 0.477
+        },
+        {
+          "name": "IX_Organizations_OrgNumber",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([OrgNumber] IS NOT NULL AND [IsDeleted]=(0))",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        },
+        {
+          "name": "IX_Organizations_MergedIntoId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([MergedIntoId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        },
+        {
+          "name": "IX_Organizations_ParentId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([ParentId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        }
+      ]
+    },
+    {
+      "table": "customers.Contacts",
+      "physicalRows": 50000,
+      "indexCount": 3,
+      "indexes": [
+        {
+          "name": "PK_Contacts",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 50000,
+          "reservedMB": 10.695,
+          "usedMB": 10.094
+        },
+        {
+          "name": "IX_Contacts_Email",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([Email] IS NOT NULL AND [IsDeleted]=(0))",
+          "physicalRows": 50000,
+          "reservedMB": 6.695,
+          "usedMB": 5.93
+        },
+        {
+          "name": "IX_Contacts_LastName_FirstName",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 50000,
+          "reservedMB": 6.82,
+          "usedMB": 6.18
+        }
+      ]
+    },
+    {
+      "table": "service.Tickets",
+      "physicalRows": 1000000,
+      "indexCount": 4,
+      "indexes": [
+        {
+          "name": "PK_Tickets",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 306.32,
+          "usedMB": 291.297
+        },
+        {
+          "name": "IX_Tickets_ContactId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([ContactId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        },
+        {
+          "name": "IX_Tickets_OrganizationId_IsOpen_CreatedAtSource",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 68.07,
+          "usedMB": 61.867
+        },
+        {
+          "name": "IX_Tickets_System_ExternalId",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 46.633,
+          "usedMB": 42.82
+        }
+      ]
+    },
+    {
+      "table": "time.TimeEntries",
+      "physicalRows": 1000000,
+      "indexCount": 6,
+      "indexes": [
+        {
+          "name": "PK_TimeEntries",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 367.57,
+          "usedMB": 355.953
+        },
+        {
+          "name": "IX_TimeEntries_OrganizationId_WorkDate",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 55.883,
+          "usedMB": 51.789
+        },
+        {
+          "name": "IX_TimeEntries_Source_ExternalId",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([ExternalId] IS NOT NULL AND [IsDeleted]=(0))",
+          "physicalRows": 1000000,
+          "reservedMB": 123.133,
+          "usedMB": 111.43
+        },
+        {
+          "name": "IX_TimeEntries_Status_WorkDate",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 63.445,
+          "usedMB": 59.695
+        },
+        {
+          "name": "IX_TimeEntries_TechnicianId_WorkDate",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 58.758,
+          "usedMB": 54.398
+        },
+        {
+          "name": "IX_TimeEntries_ProjectId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([ProjectId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        }
+      ]
+    },
+    {
+      "table": "audit.AuditEntries",
+      "physicalRows": 10000000,
+      "indexCount": 4,
+      "indexes": [
+        {
+          "name": "PK_AuditEntries",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 10000000,
+          "reservedMB": 2098.328,
+          "usedMB": 2007.633
+        },
+        {
+          "name": "IX_AuditEntries_At",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 10000000,
+          "reservedMB": 332.203,
+          "usedMB": 331.938
+        },
+        {
+          "name": "IX_AuditEntries_EntityType_EntityId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 10000000,
+          "reservedMB": 635.266,
+          "usedMB": 607.875
+        },
+        {
+          "name": "IX_AuditEntries_UserId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 10000000,
+          "reservedMB": 334.641,
+          "usedMB": 293.211
+        }
+      ]
+    },
+    {
+      "table": "customers.OrganizationContacts",
+      "physicalRows": 50000,
+      "indexCount": 3,
+      "indexes": [
+        {
+          "name": "PK_OrganizationContacts",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 50000,
+          "reservedMB": 6.07,
+          "usedMB": 6.063
+        },
+        {
+          "name": "IX_OrganizationContacts_ContactId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 50000,
+          "reservedMB": 1.883,
+          "usedMB": 1.867
+        },
+        {
+          "name": "IX_OrganizationContacts_OrganizationId_ContactId",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 50000,
+          "reservedMB": 4.258,
+          "usedMB": 4.242
+        }
+      ]
+    },
+    {
+      "table": "time.TimeAllocations",
+      "physicalRows": 1000000,
+      "indexCount": 3,
+      "indexes": [
+        {
+          "name": "PK_TimeAllocations",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 164.758,
+          "usedMB": 157.313
+        },
+        {
+          "name": "IX_TimeAllocations_HourBankId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([HourBankId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        },
+        {
+          "name": "IX_TimeAllocations_TimeEntryId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1000000,
+          "reservedMB": 40.695,
+          "usedMB": 37.078
+        }
+      ]
+    },
+    {
+      "table": "catalog.Products",
+      "physicalRows": 1,
+      "indexCount": 3,
+      "indexes": [
+        {
+          "name": "PK_Products",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1,
+          "reservedMB": 0.07,
+          "usedMB": 0.016
+        },
+        {
+          "name": "IX_Products_Name_Id",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 1,
+          "reservedMB": 0.07,
+          "usedMB": 0.016
+        },
+        {
+          "name": "IX_Products_Sku",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([IsDeleted]=(0))",
+          "physicalRows": 1,
+          "reservedMB": 0.07,
+          "usedMB": 0.016
+        }
+      ]
+    },
+    {
+      "table": "contracts.Contracts",
+      "physicalRows": 500,
+      "indexCount": 8,
+      "indexes": [
+        {
+          "name": "PK_Contracts",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.32,
+          "usedMB": 0.188
+        },
+        {
+          "name": "IX_Contracts_MovedByMergeId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([MovedByMergeId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        },
+        {
+          "name": "IX_Contracts_Number",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.039
+        },
+        {
+          "name": "IX_Contracts_OrganizationId_Status",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.047
+        },
+        {
+          "name": "IX_Contracts_OwnerId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.039
+        },
+        {
+          "name": "IX_Contracts_SlaPolicyId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.039
+        },
+        {
+          "name": "IX_Contracts_Status_EndDate",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.039
+        },
+        {
+          "name": "IX_Contracts_SourceQuoteId",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([SourceQuoteId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        }
+      ]
+    },
+    {
+      "table": "contracts.ContractLines",
+      "physicalRows": 500,
+      "indexCount": 4,
+      "indexes": [
+        {
+          "name": "PK_ContractLines",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.258,
+          "usedMB": 0.117
+        },
+        {
+          "name": "IX_ContractLines_ContractId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.039
+        },
+        {
+          "name": "IX_ContractLines_ProductId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.039
+        },
+        {
+          "name": "IX_ContractLines_SeriesId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 500,
+          "reservedMB": 0.07,
+          "usedMB": 0.039
+        }
+      ]
+    },
+    {
+      "table": "integration.ExternalLinks",
+      "physicalRows": 501,
+      "indexCount": 4,
+      "indexes": [
+        {
+          "name": "PK_ExternalLinks",
+          "type": "CLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": true,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 501,
+          "reservedMB": 0.258,
+          "usedMB": 0.109
+        },
+        {
+          "name": "IX_ExternalLinks_EntityType_EntityId_System_ExternalType",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 501,
+          "reservedMB": 0.195,
+          "usedMB": 0.07
+        },
+        {
+          "name": "IX_ExternalLinks_MovedByMergeId",
+          "type": "NONCLUSTERED",
+          "isUnique": false,
+          "isPrimaryKey": false,
+          "hasFilter": true,
+          "filter": "([MovedByMergeId] IS NOT NULL)",
+          "physicalRows": 0,
+          "reservedMB": 0.0,
+          "usedMB": 0.0
+        },
+        {
+          "name": "IX_ExternalLinks_System_ExternalType_ExternalId",
+          "type": "NONCLUSTERED",
+          "isUnique": true,
+          "isPrimaryKey": false,
+          "hasFilter": false,
+          "filter": null,
+          "physicalRows": 501,
+          "reservedMB": 0.195,
+          "usedMB": 0.055
+        }
+      ]
+    }
+  ]
+}

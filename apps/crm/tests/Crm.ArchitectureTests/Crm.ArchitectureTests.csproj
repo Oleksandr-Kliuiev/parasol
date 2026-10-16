@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Hosts\Crm.Web\Crm.Web.csproj" />
+    <ProjectReference Include="..\..\src\Hosts\Crm.Worker\Crm.Worker.csproj" />
+  </ItemGroup>
+</Project>

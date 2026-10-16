@@ -1,0 +1,188 @@
+# DEV-12 baseline (A11), 04.10.2026 ~11:31 UTC. Synthetic data only.
+# The invoice tests of ListCompletenessTests (AC01-AC04, AC06, as first written before the fix) were run against 9dfe2b4
+# (the DEV-11 commit) in a temporary git worktree (scratchpad/wt-dev12-baseline, removed afterwards), SQL Server in Testcontainers.
+# Expected: every one fails on the old code. Result: 5/5 failed - count 25 of 520 with limit=25, 10 of 130 with a filter, 10 of 30
+# for a role without finance; no nextCursor at all (KeyNotFoundException). Request logging removed; nothing else edited.
+
+xUnit.net v3 In-Process Runner v4.0.1+8ed8aa354c (64-bit .NET 10.0.12)
+  Discovering: Crm.IntegrationTests
+  Discovered:  Crm.IntegrationTests
+  Starting:    Crm.IntegrationTests
+[testcontainers.org 00:00:00.16] Connected to Docker:
+  Host: unix:///var/run/docker.sock
+  Server Version: 29.5.3
+  Kernel Version: 6.12.76-linuxkit
+  API Version: 1.54
+  Operating System: Docker Desktop
+  Total Memory: 7.75 GB
+  Labels: 
+    com.docker.desktop.address=unix:///Users/vardahei/Library/Containers/com.docker.docker/Data/docker-cli.sock
+[testcontainers.org 00:00:00.27] Docker container 0f8fda6dc101 created
+[testcontainers.org 00:00:00.29] Start Docker container 0f8fda6dc101
+[testcontainers.org 00:00:00.37] Wait for Docker container 0f8fda6dc101 to complete readiness checks
+[testcontainers.org 00:00:01.40] Docker container 0f8fda6dc101 ready
+[testcontainers.org 00:00:01.47] Docker container 4fd40c02be53 created
+[testcontainers.org 00:00:01.47] Start Docker container 4fd40c02be53
+[testcontainers.org 00:00:01.53] Wait for Docker container 4fd40c02be53 to complete readiness checks
+[testcontainers.org 00:00:01.53] Execute "/bin/sh -c find /opt/mssql-tools*/bin/sqlcmd -type f -print -quit" at Docker container 4fd40c02be53
+[testcontainers.org 00:00:01.61] Execute "/opt/mssql-tools18/bin/sqlcmd -C -b -r 1 -d master -Q SELECT 1;" at Docker container 4fd40c02be53
+[testcontainers.org 00:00:07.33] Docker container 4fd40c02be53 ready
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915081313_Initial'.
+      Applying migration '20261004011342_AppendOnlyAudit'.
+      Applying migration '20261004040638_OutboxDelivery'.
+      Applying migration '20261004095841_PrivacyErasure'.
+      Migrated AuditDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915081324_Initial'.
+      Applying migration '20260915081342_TokenCache'.
+      Applying migration '20260915205432_TechnicianMappings'.
+      Applying migration '20261004040639_OutboxDelivery'.
+      Applying migration '20261004083007_SessionsAndConfirmedRoles'.
+      Migrated IdentityDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915081326_Initial'.
+      Applying migration '20260915094817_OrganizationMerges'.
+      Applying migration '20260922073130_OrganizationGroup'.
+      Applying migration '20261004040640_OutboxDelivery'.
+      Migrated CustomersDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260922105418_Initial'.
+      Applying migration '20261004040641_OutboxDelivery'.
+      Migrated CustomFieldsDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915191718_Initial'.
+      Applying migration '20261004040643_OutboxDelivery'.
+      Migrated CatalogDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915192708_Initial'.
+      Applying migration '20260916183501_ContractSourceQuote'.
+      Applying migration '20261004040644_OutboxDelivery'.
+      Migrated ContractsDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915231817_Initial'.
+      Applying migration '20261004040645_OutboxDelivery'.
+      Migrated ServiceDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915231819_Initial'.
+      Applying migration '20260922073132_TimeEntryProject'.
+      Applying migration '20261004040646_OutboxDelivery'.
+      Migrated TimeTrackingDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260916071957_Initial'.
+      Applying migration '20260916184621_Quotes'.
+      Applying migration '20261004040647_OutboxDelivery'.
+      Applying migration '20261004052355_QuoteDocuments'.
+      Applying migration '20261004095840_QuoteDocumentErasure'.
+      Migrated SalesDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260922073201_Initial'.
+      Applying migration '20261004040648_OutboxDelivery'.
+      Applying migration '20261004071249_ProjectMembers'.
+      Migrated ProjectsDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260916071959_Initial'.
+      Applying migration '20260921212126_OutlookActivities'.
+      Applying migration '20261004040649_OutboxDelivery'.
+      Migrated ActivitiesDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260916072001_Initial'.
+      Applying migration '20260922054410_LicenseUsageAndBilling'.
+      Applying migration '20261004040650_OutboxDelivery'.
+      Migrated LicensingDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260916082954_Initial'.
+      Applying migration '20260916183504_PendingCharges'.
+      Applying migration '20261003230254_ChargeIdentity'.
+      Applying migration '20261003233005_RevisionBoundApprovals'.
+      Applying migration '20261004002311_ChargeRegister'.
+      Applying migration '20261004011343_ProtectApprovedBilling'.
+      Applying migration '20261004040651_OutboxDelivery'.
+      Migrated BillingDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260916150925_Initial'.
+      Applying migration '20261004040652_OutboxDelivery'.
+      Migrated NotificationsDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20261004095906_PrivacyCases'.
+      Migrated PrivacyDbContext
+      Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+      Applying migration '20260915095455_Initial'.
+      Applying migration '20260915123122_ExternalLinksAndOutbound'.
+      Applying migration '20260922112327_IntegrationSwitches'.
+      Applying migration '20261004030441_WorkerHeartbeats'.
+      Applying migration '20261004040653_OutboxDelivery'.
+      Migrated IntegrationDbContext
+      Applied and verified database roles and grants for 16 schemas
+warn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]
+      The WebRootPath was not found: /private/tmp/claude-501/-Users-vardahei-Vardahei-CRM-V2/03b2cf10-85b0-45bd-8062-9a4b58d2dbd4/scratchpad/wt-dev12-baseline/src/Hosts/Crm.Web/wwwroot. Static files may be unavailable.
+warn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]
+      The WebRootPath was not found: /private/tmp/claude-501/-Users-vardahei-Vardahei-CRM-V2/03b2cf10-85b0-45bd-8062-9a4b58d2dbd4/scratchpad/wt-dev12-baseline/src/Hosts/Crm.Web/wwwroot. Static files may be unavailable.
+warn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]
+      The WebRootPath was not found: /private/tmp/claude-501/-Users-vardahei-Vardahei-CRM-V2/03b2cf10-85b0-45bd-8062-9a4b58d2dbd4/scratchpad/wt-dev12-baseline/src/Hosts/Crm.Web/wwwroot. Static files may be unavailable.
+warn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]
+      The WebRootPath was not found: /private/tmp/claude-501/-Users-vardahei-Vardahei-CRM-V2/03b2cf10-85b0-45bd-8062-9a4b58d2dbd4/scratchpad/wt-dev12-baseline/src/Hosts/Crm.Web/wwwroot. Static files may be unavailable.
+    Crm.IntegrationTests.ListCompletenessTests.AC06_an_invoice_arriving_between_two_pages_neither_repeats_nor_hides_the_others [FAIL]
+      System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.
+      Stack Trace:
+           at System.Text.Json.JsonElement.GetProperty(String propertyName)
+        tests/Crm.IntegrationTests/ListCompletenessTests.cs(107,0): at Crm.IntegrationTests.ListCompletenessTests.AC06_an_invoice_arriving_between_two_pages_neither_repeats_nor_hides_the_others()
+        --- End of stack trace from previous location ---
+    Crm.IntegrationTests.ListCompletenessTests.AC03_a_filter_changes_the_totals_and_the_list_together [FAIL]
+      Shouldly.ShouldAssertException : all.GetProperty("count").GetInt32()
+          should be
+      130
+          but was
+      10
+      Stack Trace:
+        tests/Crm.IntegrationTests/ListCompletenessTests.cs(65,0): at Crm.IntegrationTests.ListCompletenessTests.AC03_a_filter_changes_the_totals_and_the_list_together()
+           at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+           at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+           at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task, ConfigureAwaitOptions options)
+        --- End of stack trace from previous location ---
+           at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+           at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+           at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task, ConfigureAwaitOptions options)
+    Crm.IntegrationTests.ListCompletenessTests.AC04_a_role_without_finance_sees_no_amount_in_the_totals_the_rows_or_the_cursor [FAIL]
+      Shouldly.ShouldAssertException : lead.GetProperty("count").GetInt32()
+          should be
+      30
+          but was
+      10
+      
+      Additional Info:
+          how many is not money
+      Stack Trace:
+        tests/Crm.IntegrationTests/ListCompletenessTests.cs(82,0): at Crm.IntegrationTests.ListCompletenessTests.AC04_a_role_without_finance_sees_no_amount_in_the_totals_the_rows_or_the_cursor()
+           at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+           at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+           at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task, ConfigureAwaitOptions options)
+        --- End of stack trace from previous location ---
+           at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+           at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+           at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task, ConfigureAwaitOptions options)
+    Crm.IntegrationTests.ListCompletenessTests.AC01_the_debt_of_501_and_more_invoices_counts_every_invoice_whatever_the_page_size [FAIL]
+      Shouldly.ShouldAssertException : first.GetProperty("count").GetInt32()
+          should be
+      520
+          but was
+      25
+      Stack Trace:
+        tests/Crm.IntegrationTests/ListCompletenessTests.cs(30,0): at Crm.IntegrationTests.ListCompletenessTests.AC01_the_debt_of_501_and_more_invoices_counts_every_invoice_whatever_the_page_size()
+           at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+           at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+           at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task, ConfigureAwaitOptions options)
+        --- End of stack trace from previous location ---
+           at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+           at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+           at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task, ConfigureAwaitOptions options)
+    Crm.IntegrationTests.ListCompletenessTests.AC02_all_pages_together_return_every_invoice_exactly_once_even_with_equal_dates_and_numbers [FAIL]
+      System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.
+      Stack Trace:
+           at System.Text.Json.JsonElement.GetProperty(String propertyName)
+        tests/Crm.IntegrationTests/ListCompletenessTests.cs(188,0): at Crm.IntegrationTests.ListCompletenessTests.AllPagesAsync(HttpClient client, String url, Int32 limit)
+        tests/Crm.IntegrationTests/ListCompletenessTests.cs(45,0): at Crm.IntegrationTests.ListCompletenessTests.AC02_all_pages_together_return_every_invoice_exactly_once_even_with_equal_dates_and_numbers()
+        --- End of stack trace from previous location ---
+  Finished:    Crm.IntegrationTests (ID = '898e532931c908425141e1940deed7a5a0a755450a8ebdceb0a9ab251fd1076a')
+=== TEST EXECUTION SUMMARY ===
+   Crm.IntegrationTests  Total: 5, Errors: 0, Failed: 5, Skipped: 0, Not Run: 0, Time: 12,900s

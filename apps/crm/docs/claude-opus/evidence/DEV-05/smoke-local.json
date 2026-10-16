@@ -1,0 +1,7 @@
+{
+  "result": "pass",
+  "baseUrl": "https://localhost:5185",
+  "checkedAt": "2026-10-04T02:27:19Z",
+  "passed": ["live", "ready", "spa", "spa-asset", "api-anonymous", "api-write-without-csrf", "api-write-anonymous", "bff-user-anonymous", "anonymous-health-integrations", "anonymous-admin-jobs"],
+  "failed": []
+}

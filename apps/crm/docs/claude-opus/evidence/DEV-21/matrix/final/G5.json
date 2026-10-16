@@ -1,0 +1,1068 @@
+{
+  "group": "G5",
+  "chapters": [
+    "V15",
+    "V16",
+    "V17"
+  ],
+  "assessed_at": "2026-10-05",
+  "assessor": "Claude (self-assessment, not independent)",
+  "level3_not_assessed": [
+    "V15.1.4",
+    "V15.1.5",
+    "V15.2.4",
+    "V15.2.5",
+    "V15.4.1",
+    "V15.4.2",
+    "V15.4.3",
+    "V15.4.4",
+    "V16.5.4",
+    "V17.1.2",
+    "V17.2.5",
+    "V17.2.6",
+    "V17.2.7",
+    "V17.2.8"
+  ],
+  "rows": [
+    {
+      "req_id": "V15.1.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/06-security.md:48",
+        "tools/release/release.py:37",
+        ".github/dependabot.yml",
+        "docs/07-nfr-devops.md:139"
+      ],
+      "note": "CI blocks High/Critical packages (release.py BLOCKING_SEVERITIES) and Dependabot runs weekly, but no document states risk-based remediation time frames (days to fix per severity, routine library update cadence). docs/07:139 gives defect SLAs for the CRM, not for third-party components; Medium/Low findings are only warnings with no deadline. || Post-fix reassessment 2026-10-05: still open - Time frames are written (docs/06 section 4, runbook 17, SECURITY.md) but labelled PROPOSAL awaiting PO approval; Medium/Low not checked automatically",
+      "severity": "low",
+      "fix": "Add a short section to docs/06-security.md (or a runbook): e.g. Critical 48 h, High 7 d, Medium 30 d, Low next release; routine Dependabot merge cadence; who accepts a documented exception. Reference it from release.py warnings.",
+      "owner_hint": "process",
+      "external_gate": "EXT-11",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "PO",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        ".github/workflows/release.yml:81-93",
+        ".github/workflows/release.yml:96-110",
+        ".github/workflows/release.yml:144",
+        ".github/workflows/ci.yml:33-37",
+        ".github/dependabot.yml",
+        "Directory.Packages.props:1-6",
+        "web/package-lock.json"
+      ],
+      "note": "Each release builds SPDX SBOMs (syft) for crm-web and crm-worker, scans the image with grype (fail on High), signs provenance, secret-scans manifest+SBOMs and keeps them 90 days. Versions are central/pinned (Directory.Packages.props, npm lockfile with integrity hashes); only nuget.org and the npm registry are used; Dependabot covers nuget, npm and actions. No test asserts SBOM content beyond tests/Crm.ArchitectureTests/ReleasePipelineTests.cs and tools/release/test_release.py.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.1.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/06-security.md:46",
+        "src/Hosts/Crm.Web/Program.cs:110-162",
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/ExportOrganizations.cs:25-35",
+        "src/BuildingBlocks/Crm.SharedKernel/Application/Paging.cs:11"
+      ],
+      "note": "Rate limits (300/min API, 10/h export, BI budget), 50 000-row export cap, 5 000-row import cap and the 200-item page cap exist and rate limits are described in docs/06 section 4. There is no inventory of resource-demanding functions (billing collect, CSV imports, PDF generation, BI refresh, global search, report mart) with the expected abuse and the mitigation for each. || Post-fix reassessment 2026-10-05: still open - No inventory of resource-demanding functions",
+      "severity": "low",
+      "fix": "Add a table \"expensive functions\" to docs/03-architecture.md or docs/06-security.md: function, trigger, limit/guard, degradation behaviour.",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "dotnet list package --vulnerable --include-transitive (run 2026-10-05: 0)",
+        "npm audit --omit=dev (run 2026-10-05: 0)",
+        ".github/workflows/ci.yml:33-37",
+        ".github/workflows/ci.yml:89-95",
+        "tools/release/release.py:74-118"
+      ],
+      "note": "Today no component has a known vulnerability (both scans clean), and the pipeline fails closed on High/Critical (release.py check_vulnerable_dotnet / check_npm_audit), plus NuGetAudit as errors because TreatWarningsAsErrors is on. Because no remediation time frames are documented (V15.1.1) the requirement as worded cannot be shown to hold for Medium/Low advisories, which are only warned about. || Post-fix reassessment 2026-10-05: still open - Depends on approval of the V15.1.1 time frames; dependency-review.yml and base-image-scan.yml added",
+      "severity": "low",
+      "fix": "Close V15.1.1; then make release.py warn-with-deadline (fail when a Medium is older than the documented window).",
+      "owner_hint": "process",
+      "external_gate": "EXT-11",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "PO / Repository owner",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.2.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:110-162",
+        "src/BuildingBlocks/Crm.SharedKernel/Application/Paging.cs:11",
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/MigrationImport.cs:96",
+        "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:47-48",
+        "src/Modules/Catalog/Crm.Catalog/CatalogModule.cs:144-145"
+      ],
+      "note": "Per-user/API rate limiting, export and BI budgets, keyset paging clamped to 200, export and migration row caps and resilience timeouts exist. Gaps: the licence import, ms-billing import and price-sheet endpoints read the whole body into a string (Kestrel default 30 MB) with no row cap, no request timeout is configured, limits are per replica (in-memory fixed window), and UseRateLimiter runs after UseAuthorization (Program.cs:209-210) so unauthenticated floods are never limited. No test exercises 429 on the API-wide limiter. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/BuildingBlocks/Crm.Infrastructure/Http/CsvUpload.cs:26 (415 text/csv|text/plain only, 413 over Imports:MaxRequestBytes default 10 MB), CsvTable.MaxImportRows=50000 in SubscriptionCsv/MsBillingCsv/PriceSheetCsv, migration import MaxRows=5000; RequestHardeningTests.An_import_takes_only_text_up_to_the_size_limit and A_distributor_file_with_more_rows_than_the_cap_is_refused; reports/mart and BI rate limits and keyset paging unchanged",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:26-31",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:48",
+        "infra/modules/apps.bicep:312-315",
+        "src/Hosts/Crm.Web/Program.cs:214",
+        "web/vite.config.ts:21"
+      ],
+      "note": "Development sign-in is refused at startup outside Development and again at /bff/dev-login; the Hangfire dashboard is off in the worker and permission-gated in web; the image is chiseled non-root. But the SPA is built with sourcemap:true into wwwroot and served by UseStaticFiles before authentication (public .js.map files), and the OpenAPI document of every endpoint is mapped in all environments (any signed-in user can read it). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "sourcemap=false, OpenAPI off by default, development settings not published, dev sign-in refused outside Development. DAST (zap-baseline.yml) exists but runs only after the repository variable CRM_TEST_URL is set (EXT-11)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:37-48",
+        "src/BuildingBlocks/Crm.Authorization/SensitiveDataAttribute.cs",
+        "tests/Crm.UnitTests/AuthorizationTests.cs:66-75"
+      ],
+      "note": "Endpoints return response DTO records, not entities, and [SensitiveData] properties are removed server-side by a JSON modifier for callers lacking the permission (unit-tested). Not exhaustively verified: every endpoint's DTO (sampled), and CSV output of the report mart (MartService.ToCsv) which was not reviewed for the same filtering.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/EntraRoleSync.cs:97",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphUserSource.cs:102-118",
+        "src/Integrations/Crm.Integrations.Atera/AteraClient.cs:240-256"
+      ],
+      "note": "No handler sets AllowAutoRedirect=false, so all backend HttpClients follow redirects (default .NET behaviour drops Authorization on cross-host redirects). More relevant: Graph @odata.nextLink/deltaLink URLs from responses are requested as-is and GraphAuthenticationHandler attaches the app-only Graph token to whatever host the URL names; Atera, in contrast, rewrites nextLink onto its own base address. Requires a malicious/compromised upstream, hence low. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "MicrosoftGraphModule.cs NoRedirects (AllowAutoRedirect=false), GraphLinks.cs:10 same-origin checks on nextLink/deltaLink, DelegatedGraph handler refuses foreign origin before attaching a token; OutboundAddressTests",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Catalog/Crm.Catalog/CatalogModule.cs:126-128",
+        "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:35-40",
+        "CLAUDE.md (Architecture rules: SensitiveData / handlers must not let roles overwrite hidden fields)"
+      ],
+      "note": "Endpoints bind explicit request records with FluentValidation (.Validate<T>()), never domain entities; entities have private setters and domain methods; owner/state changes go through dedicated routes (e.g. quote transfer). Verified by sampling modules, not by an automated test that enumerates all request DTOs; hidden-field overwrite protection is claimed in CLAUDE.md and I did not locate a dedicated test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.3.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:164-170",
+        "src/Hosts/Crm.Web/Program.cs:192",
+        "src/Hosts/Crm.Web/appsettings.json:9",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:30-35"
+      ],
+      "note": "ForwardedHeaders processes X-Forwarded-For/Proto/Host with KnownIPNetworks and KnownProxies cleared (\"proxy network not known in advance\") and AllowedHosts is \"*\". With the default ForwardLimit of 1 the XFF value taken is the one the ingress appended, so client IP is probably right behind Container Apps ingress, but any caller who reaches the app with a forged X-Forwarded-Host/Proto changes Request.Host/Scheme (used by OIDC redirect URIs; Entra rejects unregistered URIs) and a direct path to the container would let them forge the audited IP. I could not verify here whether the Container Apps ingress overwrites client-supplied X-Forwarded-Host. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/Hosts/Crm.Web/Http/HostSecurity.cs:19,62 (KnownNetworks/KnownProxies, AllowedHosts for X-Forwarded-Host, Production refuses AllowedHosts \"*\"), infra/modules/apps.bicep (AllowedHosts + Forwarded__KnownNetworks__0 = apps subnet); WebHostSecurityTests.A_forwarded_header_counts_only_from_a_known_network_and_only_for_an_allowed_host, Production_refuses_to_start_with_every_host_allowed; InfrastructureTests.Crm_web_gets_its_allowed_hosts_and_trusted_proxy_network_from_the_deployment",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.3.5",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "Directory.Build.props:5-8",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:21-25",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:202-211"
+      ],
+      "note": "C# with nullable reference types and warnings-as-errors, typed DTOs and typed STJ deserialization (no TypeNameHandling-like polymorphism, Hangfire is the only Newtonsoft use) give strict typing; security comparisons use Ordinal. Exception: OutboxEventTypeResolver resolves the stored type name with Type.GetType and the processor deserializes the payload into it before checking it is an IDomainEvent, so a DB writer can select any loadable type (cache is also unbounded). JsonSerializerDefaults.Web additionally accepts numbers given as strings. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "OutboxEventTypeResolver (see V1.5.2)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.3.6",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/src/shared/forms/diff.ts:10-17",
+        "web/src/shared/forms/diff.ts:39-51"
+      ],
+      "note": "The SPA has no innerHTML/eval and uses typed forms, but rebase() writes target[key] along dot-separated paths derived from object keys of server/form data without excluding __proto__/constructor/prototype, and diffValues enumerates keys of JSON.parse output (which can carry an own \"__proto__\" key). Keys come from typed DTOs today, so exploitability is low; no unit test covers hostile keys. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "web/src/shared/forms/diff.ts:6 UNSAFE_KEYS (__proto__, constructor, prototype) skipped in read and write paths; diff.test.ts",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V15.3.7",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:35-40",
+        "src/Modules/Catalog/Crm.Catalog/CatalogModule.cs:139-142"
+      ],
+      "note": "Minimal-API binding uses explicit sources ([FromQuery] records, JSON body for writes), so query/body/cookie parameters are not merged. Duplicate query keys for a scalar parameter are joined by the framework (a=1&a=2 becomes \"1,2\") and arrays are limited (productId 1..200), but there is no explicit policy or test for repeated parameters. || Post-fix reassessment 2026-10-05: still open - No test for duplicated scalar query parameters",
+      "severity": "low",
+      "fix": "Add one integration test sending duplicated scalar query parameters and document the expected 400/first-wins behaviour.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/06-security.md:72-76",
+        "docs/03-architecture.md:71",
+        "infra/modules/monitoring.bicep:13-20",
+        "docs/runbooks/15-monitoring.md"
+      ],
+      "note": "Logging is described in fragments (audit table, Log Analytics + App Insights, monitoring signals) but no inventory lists per layer what is logged, format, destination, retention, access control and use (SQL auditing, Container Apps console logs, OTel traces, App Insights, audit.AuditEntries, Hangfire, Key Vault diagnostics). docs/06:74 states e-mail/phone masking in structured logs that no code implements. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "docs/adr/ADR-025-logging-inventory.md (layers, events, sinks, retention, readers, never-logged list; verified against code and Bicep 2026-10-05)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.2.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Infrastructure/Persistence/AuditEntry.cs:39-50",
+        "src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:35-38",
+        "src/BuildingBlocks/Crm.Infrastructure/Persistence/AuditingInterceptor.cs:67"
+      ],
+      "note": "Audit rows carry when (UTC), who (UserId, UserName), what (action, module, entity, field diff), where (IpAddress, CorrelationId = trace id). Operational log lines carry timestamp, category, scopes and trace id through OpenTelemetry but, except in audited paths, no actor; and some security-relevant actions write no audit entry at all (report mart export, BI reads, successful sign-in). || Post-fix reassessment 2026-10-05: still open - Security log lines carry user id; no actor-id log scope on every request log line",
+      "severity": "low",
+      "fix": "Add actor id (never name/e-mail) as a log scope in a middleware after authentication; see F-G5-03/04 for the missing events.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": [
+        "F-G5-03"
+      ]
+    },
+    {
+      "req_id": "V16.2.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Infrastructure/Persistence/AuditingInterceptor.cs:67",
+        "src/BuildingBlocks/Crm.Infrastructure/Persistence/AuditEntry.cs:42",
+        "src/Modules/Audit/Crm.Audit/Features/AuditIntegrityJob.cs:93-96"
+      ],
+      "note": "Audit and checkpoint timestamps come from TimeProvider.GetUtcNow() into DateTimeOffset columns; OpenTelemetry/Azure Monitor timestamps are UTC. Host clock synchronisation is the Azure Container Apps / Azure SQL platform (not configurable and not verifiable from the repository). Business \"today\" uses Oslo only for dates, not for log timestamps.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:55-63",
+        "infra/modules/apps.bicep:81-86",
+        "infra/modules/apps.bicep:112"
+      ],
+      "note": "Logs go to the console (Container Apps to Log Analytics), Azure Monitor/App Insights when the connection string is set, and an OTLP endpoint if OTEL_EXPORTER_OTLP_ENDPOINT is configured; the audit table and document store hold operational records. These destinations are not catalogued in a log inventory (V16.1.1), and the optional OTLP sink can be enabled by an environment variable with no documented approval. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "ADR-025 lists the only sinks: console/Container Apps -> Log Analytics, Azure Monitor exporter, optional OTLP (OTEL_EXPORTER_OTLP_ENDPOINT, set per environment by the operator), audit table, document store. Not enforced by code: startup does not refuse an unapproved OTLP host",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.2.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:24-31",
+        "src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:55-63",
+        "docs/runbooks/08-database-permissions.md:53-57"
+      ],
+      "note": "Logging is routed through OpenTelemetry with formatted message, scopes and trace correlation into App Insights/Log Analytics (AppTraces, AppRequests, AppDependencies), and structured templates ({MessageId}, {Handler}) are used throughout; runbook 08 already queries AppTraces by message prefix. Console output in the container is plain text (Simple formatter) and is only the secondary copy.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.2.5",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:305-332",
+        "tests/Crm.IntegrationTests/SyncRunnerTests.cs:76",
+        "tests/Crm.IntegrationTests/OutboxDeliveryTests.cs:717",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:213-219",
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/OrganizationDocuments.cs:34"
+      ],
+      "note": "Design logs ids and exception type names, not payloads, and three integration tests capture logs (down to Trace) and assert no tokens, cookies, claims, JWTs, provider text or personal values. Not uniformly enforced: several sites log whole exceptions (OrganizationDocuments.cs:34,54; OutlookFeatures.cs:184; NotificationJobs.cs:283; TeamsHandlers.cs:181) whose message may quote provider text, the maintenance reason is logged verbatim, and the documented e-mail/phone masking does not exist. || Post-fix reassessment 2026-10-05: still open - Several sites still pass exceptions to the logger; not changed. Mitigations: three log-capture tests, ADR-025",
+      "severity": "low",
+      "fix": "Replace LogWarning(exception, ...) with type-name-only logging (the pattern already used elsewhere) or a scrubber; add a Roslyn/architecture test banning ILogger calls that pass an Exception in module code.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.3.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:163-169",
+        "src/BuildingBlocks/Crm.Infrastructure/Persistence/AuditEntry.cs:9",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:33-48",
+        "src/Hosts/Crm.Web/appsettings.json:3-7",
+        "docs/06-security.md:75"
+      ],
+      "note": "Successful sign-in opens an identity.UserSessions row and user provisioning is audited; session end reasons are stored. But AuditActions.Login is never written, the session row has no IP/user-agent or auth method, failed or refused sign-ins (OIDC remote failure, maintenance refusal, failed BI bearer validation) are not recorded by the app and the framework messages are hidden by Microsoft.AspNetCore=Warning. Failed password/MFA attempts exist only in Entra sign-in logs, whose retention/export to the workspace is not configured in this repo (Sentinel is \"if used\"). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "EXT-02",
+      "status_before": "partial",
+      "fixed_by": "UserServices.cs:196 AuditActions.Login and :Logout (ids, reason, IP, correlation id) on every session start/end; OnRemoteFailure/JwtBearer failures logged by type only (SecurityLog.SignInFailed/BiTokenRejected); WebHostSecurityTests.Sign_in_and_sign_out_are_audited_with_ids_only, Refused_requests_leave_a_record_...; Entra-side sign-in logs remain tenant configuration (EXT-02)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:30-50",
+        "src/Hosts/Crm.Web/Auth/CrmAuthorizationResultHandler.cs:15-32",
+        "src/Hosts/Crm.Web/appsettings.json:3-7"
+      ],
+      "note": "Neither the PermissionAuthorizationHandler nor CrmAuthorizationResultHandler logs or audits a denied request; the framework message is suppressed by the Microsoft.AspNetCore=Warning filter and out-of-scope records answer 404 silently. Only anonymous request telemetry (status code) reaches App Insights, with no user, permission or route template for investigation. Failed AUTH_REVERIFY_REQUIRED attempts are likewise unlogged. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "src/Hosts/Crm.Web/Http/SecurityLog.cs (Crm.Security logger + meter), CrmAuthorizationResultHandler.cs:33, WebInfrastructure.cs CsrfRefused, Program.cs OnRejected; WebHostSecurityTests.Refused_requests_leave_a_record_with_ids_and_route_templates_but_no_query_string_or_token",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:54-77",
+        "src/Hosts/Crm.Web/Program.cs:147-161",
+        "src/Hosts/Crm.Web/Http/JobEndpoints.cs:89",
+        "src/Hosts/Crm.Web/Http/OutboxEndpoints.cs:175",
+        "src/Hosts/Crm.Web/Http/OperationsEndpoints.cs:107",
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/ExportOrganizations.cs:99"
+      ],
+      "note": "Privileged and operator actions are audited well (job trigger, outbox replay, maintenance, reconcile, customer export, imports, erasure, approvals via entity audit). Attempts to bypass controls are not logged: CSRF-header refusals (WebInfrastructure.cs:62-74), rate-limit rejections (Program.cs:147), validation failures, ETag precondition failures. Also not audited although docs/06 section 7 says financial report views are: report mart exports (ReportsModule.cs:57-69 has no RecordAudit) and Power BI bearer reads. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/Hosts/Crm.Web/Http/SecurityLog.cs (Crm.Security logger + meter), CrmAuthorizationResultHandler.cs:33, WebInfrastructure.cs CsrfRefused, Program.cs OnRejected; WebHostSecurityTests.Refused_requests_leave_a_record_with_ids_and_route_templates_but_no_query_string_or_token; ReportAccessAudit.cs (mart exports and BI reads audited: who, dataset, period, format, never rows); WebHostSecurityTests.Reading_a_mart_dataset_is_audited_with_who_what_and_when_but_not_the_rows; BiApiTests.AC01_the_start_of_a_bi_refresh_is_audited_.... Validation refusals are not logged (low value, no bypass)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.3.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:48",
+        "src/Hosts/Crm.Web/Program.cs:193",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:108",
+        "src/Integrations/Crm.Integrations.Core/SyncRunner.cs:96",
+        "infra/modules/monitoring-operations.bicep:55-62"
+      ],
+      "note": "Unhandled request exceptions go through UseExceptionHandler (logged at Error by the framework), background failures log with ErrorType (outbox, sync runs, outbound, jobs), and an alert exists for >5% HTTP 5xx plus dead-letter, sync-failed and heartbeat alerts. Backend TLS failures surface as HttpRequestException/SqlException type names in these logs (no dedicated TLS signal). Caveat: the audit-integrity mismatch is logged at Critical but has no alert (F-G5-01).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "related finding(s) F-G5-01 fixed; row was already met, status unchanged",
+      "finding_ids": [
+        "F-G5-01"
+      ]
+    },
+    {
+      "req_id": "V16.4.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Infrastructure/Operations/MaintenanceGate.cs:117",
+        "src/Hosts/Crm.Web/Http/OperationsEndpoints.cs:73-82",
+        "src/Hosts/Crm.Web/appsettings.json:2-7"
+      ],
+      "note": "All logging uses message templates (structured, so App Insights/OTel properties are not injectable), but nothing neutralises CR/LF or control characters in values and the container console uses the Simple formatter. The operator-supplied maintenance reason (10-500 chars, newlines allowed, logged verbatim at Warning) can forge extra console lines; other free-text logged values are partner warnings (PartnerCenterBilling.cs:53) and the first 200 chars of a Teams reply (GraphTeams.cs:33-35). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "Crm.SharedKernel/Text/LogText.cs + MaintenanceGate.cs:120 (operator-typed reason/reference/setBy cleaned); TextSafetyTests.A_line_break_cannot_start_a_forged_log_line. Console formatter stays Simple; other log parameters are ids, enums and route templates",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.4.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Modules/Audit/Crm.Audit/Persistence/AuditSql.cs:20-37",
+        "src/Modules/Audit/Crm.Audit/Features/AuditIntegrityJob.cs:28-36",
+        "tests/Crm.IntegrationTests/DatabasePermissionTests.cs:128",
+        "tests/Crm.IntegrationTests/DatabasePermissionTests.cs:467",
+        "infra/modules/monitoring.bicep:13-20"
+      ],
+      "note": "The audit table is append-only (trigger + DENY, DDL trigger against role widening) and a SHA-256 chain of checkpoints is anchored in the log workspace; tests prove insert-only rights and detection of a rewritten entry. Limits: the chain covers only the immutable facts (At, Action, Module, EntityType, EntityId, CorrelationId), so UserId/UserName/IpAddress/Changes can be rewritten by a DBA without detection (AuditIntegrityJob.cs:131); workspace access control, purge rights and retention (90 days, monitoring.bicep:19) are not defined in the repo; App Insights ingestion is not authenticated (see F-G5-02). || Post-fix reassessment 2026-10-05: still open - Mismatch/missing-checkpoint alerts added (monitoring-operations.bicep:209, InfrastructureTests.A_mismatch_of_the_audit_chain_raises_a_severity_1_alert). Open: App Insights still accepts non-Entra ingestion (monitoringEntraOnlyIngestion=false), so anchors can be forged; chain does not cover who/where/what (F-G5-14 deferred, needs ADR)",
+      "severity": "medium",
+      "fix": "Hash who/where into the chain with a separate keyed hash (or write a second checkpoint over them); define RBAC for the workspace (read = security role, no purge), lock the workspace with a resource lock, set per-table retention >= audit requirement; fix F-G5-02.",
+      "owner_hint": "infra",
+      "external_gate": "EXT-11",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team / Operations / Security owner",
+      "finding_ids": [
+        "F-G5-02"
+      ]
+    },
+    {
+      "req_id": "V16.4.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/monitoring.bicep:13-31",
+        "infra/modules/data.bicep:75-95",
+        "src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:58-63",
+        "docs/runbooks/08-database-permissions.md:57"
+      ],
+      "note": "Application telemetry, Container Apps logs and SQL auditing (SQLSecurityAuditEvents) are sent to a Log Analytics workspace outside the application database, and AUDIT_CHECKPOINT anchors are written there. Detection/escalation is incomplete: runbook 08:57 promises a Sev1 alert on AUDIT_INTEGRITY_MISMATCH that is not among the deployed rules (monitoring-operations.bicep ids end at operational-exceptions), alert recipients are not assigned (EXT-01), and App Insights has DisableLocalAuth:false. || Post-fix reassessment 2026-10-05: still open - Alert rules exist; delivery recipients are EXT-01; telemetry ingestion not Entra-only yet (F-G5-02)",
+      "severity": "medium",
+      "fix": "Add a scheduled-query alert for AUDIT_INTEGRITY_MISMATCH and for missing AUDIT_CHECKPOINT in 36 h; set DisableLocalAuth true and give hosts a managed-identity credential for UseAzureMonitor.",
+      "owner_hint": "infra",
+      "external_gate": "EXT-11",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Operations",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.5.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:47-48",
+        "src/Hosts/Crm.Web/Program.cs:193-194",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:123-148",
+        "infra/modules/apps.bicep:102"
+      ],
+      "note": "Production runs with ASPNETCORE_ENVIRONMENT=Production, UseExceptionHandler + ProblemDetails give a body of status/title/traceId without stack or SQL, and known failures map to coded generic messages (CONCURRENCY_CONFLICT, DUPLICATE). BadHttpRequestException.Message is returned verbatim (WebInfrastructure.cs:129), which can disclose parameter and DTO type names; no test posts a throwing handler or malformed body and asserts the response has no internals. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "WebInfrastructure.cs:151 fixed sentence for BadHttpRequestException; WebHostSecurityTests.A_malformed_body_is_answered_with_a_fixed_sentence_not_the_framework_text",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.5.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/MicrosoftGraphModule.cs:37",
+        "src/Integrations/Crm.Integrations.PowerOffice/PowerOfficeModule.cs:27",
+        "src/Integrations/Crm.Integrations.Atera/AteraModule.cs:29",
+        "tests/Crm.IntegrationTests/PowerOfficeResilienceTests.cs:57",
+        "tests/Crm.IntegrationTests/AteraResilienceTests.cs:30",
+        "src/Hosts/Crm.Web/Http/HealthEndpoints.cs:17"
+      ],
+      "note": "Every provider HttpClient has a resilience pipeline (standard handler or custom retry/circuit-breaker with writes retried only when safe), external effects go through queues/journals with fail-closed maintenance checks, and /health/integrations is excluded from readiness so a provider outage does not remove the CRM from the load balancer. Resilience tests cover 503/429/lost responses.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V16.5.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:40-47",
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:103",
+        "src/BuildingBlocks/Crm.Infrastructure/Operations/MaintenanceGate.cs",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:304-332",
+        "tests/Crm.IntegrationTests/EntraRevalidationTests.cs",
+        "tests/Crm.IntegrationTests/MaintenanceModeTests.cs"
+      ],
+      "note": "Fallback authorization policy requires authentication, privileged actions fail closed when the role confirmation is stale or the directory unreachable, the maintenance gate fails closed before external sends, outbox handlers are transactional with receipts, and DB-level triggers/approvals refuse partial states. Covered by the cited integration tests.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V17.1.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:94"
+      ],
+      "note": "No TURN/STUN/ICE server or relay exists. Searches of src/, web/src, tests/ and package manifests for WebRTC, RTCPeerConnection, getUserMedia, STUN, TURN, SRTP, mediasoup, livekit, SignalR, WebSocket and MapHub found nothing (only false matches of SQL \"RETURN\"); the CSP is connect-src 'self' and Permissions-Policy denies camera and microphone.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V17.2.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:83-94"
+      ],
+      "note": "No DTLS-SRTP media stack, no DTLS certificate or media server exists in the codebase or infra.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V17.2.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "infra/modules/apps.bicep"
+      ],
+      "note": "No media server; the only Container Apps are crm-web and crm-worker (HTTP/HTTPS ingress).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V17.2.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Hosts/Crm.Web/Program.cs:200-260"
+      ],
+      "note": "No RTP/SRTP processing; Teams integration is outbound webhook cards only (GraphTeams.cs), not media.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V17.2.4",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Hosts/Crm.Web/Program.cs:200-260"
+      ],
+      "note": "No media server or SRTP packet handling exists.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V17.3.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Hosts/Crm.Web/Program.cs:213-241"
+      ],
+      "note": "No WebRTC signaling server; endpoints are REST under /api and /bff and there is no WebSocket or SignalR hub mapped.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V17.3.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "web/package.json",
+        "src/Hosts/Crm.Web/Program.cs:213-241"
+      ],
+      "note": "No signaling messages are processed; the REST API's malformed-input handling is assessed under V15/V16.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-G5-01",
+      "title": "No alert for audit hash-chain mismatch although the runbook promises a Sev1",
+      "severity": "medium",
+      "req_ids": [
+        "V16.4.2",
+        "V16.4.3",
+        "V16.3.4"
+      ],
+      "location": "infra/modules/monitoring-operations.bicep (rules end at id operational-exceptions); docs/runbooks/08-database-permissions.md:57; src/Modules/Audit/Crm.Audit/Features/AuditIntegrityJob.cs:121",
+      "description": "AuditIntegrityJob logs AUDIT_INTEGRITY_MISMATCH at Critical and writes AUDIT_CHECKPOINT anchors, and runbook 08 says an alert on AppTraces startswith \"AUDIT_INTEGRITY_MISMATCH\" exists. grep over infra/ finds neither string: tampering with audit.AuditEntries would be logged but nobody is notified, and a stopped integrity job (no new checkpoints) is also unalerted.",
+      "reproduction": "grep -rn AUDIT_INTEGRITY infra/ returns nothing; in a test environment rewrite an old audit row with the trigger disabled, run audit-integrity-full: the log line appears, no Azure Monitor alert fires.",
+      "fix": "Add two scheduledQueryRules in monitoring-operations.bicep: (1) AppTraces | where Message startswith \"AUDIT_INTEGRITY_MISMATCH\" count>=1 Sev1; (2) no AUDIT_CHECKPOINT/job success in 36 h. Add an infrastructure test like MonitoringInfrastructureTests.",
+      "status": "fixed",
+      "fixed_by": "audit-integrity-mismatch and audit-checkpoint-missing rules; InfrastructureTests; delivery recipients EXT-01",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-02",
+      "title": "Application Insights accepts unauthenticated ingestion, so log anchors in the workspace can be forged",
+      "severity": "medium",
+      "req_ids": [
+        "V16.4.2",
+        "V16.4.3"
+      ],
+      "location": "infra/modules/monitoring.bicep:31 (DisableLocalAuth: false); infra/modules/apps.bicep:112; src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:58-63",
+      "description": "The audit chain relies on the log workspace as an independent copy \"that the database owner cannot rewrite\", but anyone who can read the Container App configuration (the connection string/instrumentation key is a plain environment variable) can post arbitrary AppTraces into the same workspace, including a fake AUDIT_CHECKPOINT that matches a tampered database, or noise that hides real signals.",
+      "reproduction": "Take APPLICATIONINSIGHTS_CONNECTION_STRING from the container app definition and send a trace with Message \"AUDIT_CHECKPOINT ...\" through the ingestion endpoint; it appears in AppTraces next to the real ones.",
+      "fix": "Set DisableLocalAuth: true, pass a ManagedIdentityCredential to UseAzureMonitor, grant Monitoring Metrics Publisher to the two identities; also separate roles so the CRM runtime identities cannot query/purge the workspace.",
+      "status": "partly",
+      "fixed_by": "Bicep switch and publisher roles prepared; default false until hosts authenticate to the exporter (code change)",
+      "remaining": "Bicep switch and publisher roles prepared; default false until hosts authenticate to the exporter (code change)",
+      "owner": "Dev team / Operations",
+      "decision_needed": "Implement Entra credential in the Azure Monitor exporter, then set monitoringEntraOnlyIngestion=true"
+    },
+    {
+      "id": "F-G5-03",
+      "title": "Denied requests, failed sign-ins, CSRF/429 refusals and bearer failures are not logged by the application",
+      "severity": "medium",
+      "req_ids": [
+        "V16.3.1",
+        "V16.3.2",
+        "V16.3.3"
+      ],
+      "location": "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:30-50; src/Hosts/Crm.Web/Auth/CrmAuthorizationResultHandler.cs:15-32; src/Hosts/Crm.Web/Http/WebInfrastructure.cs:54-77; src/Hosts/Crm.Web/Program.cs:147-161; src/Hosts/Crm.Web/Auth/BiAuthentication.cs:33-48; src/Hosts/Crm.Web/appsettings.json:3-7",
+      "description": "Microsoft.AspNetCore is filtered to Warning, which hides the framework's \"Authorization failed\" and JwtBearer/OIDC failure messages, and the CRM code adds none. A user probing endpoints they lack permission for, a replayed/wrong BI token or missing X-CSRF header leave only status-code telemetry without user/permission. AuditActions.Login exists but is never written, so successful sign-ins are visible only as identity.UserSessions rows.",
+      "reproduction": "Sign in as Crm.Technician, call GET /api/v1/billing/runs (403) 50 times, then query AppTraces/audit.AuditEntries for a record of the attempts: none. Send POST /api/v1/... without X-CSRF: 403, no log. Send an invalid bearer to /api/v1/bi/v1: 401, no log.",
+      "fix": "Add structured warnings with user id, route template, required permission and reason in the authorization result handler, JwtBearerEvents.OnAuthenticationFailed, OIDC OnRemoteFailure, CsrfHeaderMiddleware and OnRejected; write AuditActions.Login at session start; alert on bursts.",
+      "status": "fixed",
+      "fixed_by": "SecurityLog + handlers; test",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-04",
+      "title": "Report mart exports and Power BI reads are not audited, contradicting docs/06 section 7",
+      "severity": "medium",
+      "req_ids": [
+        "V16.3.3",
+        "V16.2.1"
+      ],
+      "location": "src/Modules/Reports/Crm.Reports/ReportsModule.cs:57-69; src/Modules/Reports/Crm.Reports/ReportsModule.cs:115; docs/06-security.md:73",
+      "description": "docs/06 lists \"viewing financial reports\" among audited events and the endpoint is marked ExportsData (privileged, rate-limited), but nothing in src/Modules/Reports calls RecordAudit; only customer export, imports, replay and similar actions do. A finance user can download revenue/margin datasets as CSV with no who/when/what trail beyond request telemetry.",
+      "reproduction": "As Crm.Finance GET /api/v1/reports/mart/<dataset>?format=csv, then query audit.AuditEntries by Action = Export: no row for this download.",
+      "fix": "Call db.RecordAudit(... AuditActions.Export, \"ReportMart\", ...) with dataset, period and row count (no values) in the handler; add per-client BI access audit (client id, dataset, page count) in the BI group; add an integration test.",
+      "status": "fixed",
+      "fixed_by": "ReportAccessAudit; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-05",
+      "title": "No documented remediation time frames for vulnerable or outdated third-party components",
+      "severity": "low",
+      "req_ids": [
+        "V15.1.1",
+        "V15.2.1"
+      ],
+      "location": "docs/06-security.md:48; tools/release/release.py:37; .github/dependabot.yml",
+      "description": "The pipeline blocks only High/Critical; Medium/Low advisories are warnings with no deadline and routine update cadence exists only as the Dependabot schedule. Without a stated window the requirement that components have not breached it cannot be evidenced.",
+      "reproduction": "Review docs/06 section 4 and runbooks for a days-per-severity statement: none.",
+      "fix": "Document time frames and the exception/acceptance route; make release.py enforce them.",
+      "status": "partly",
+      "fixed_by": "time frames written as a PROPOSAL (docs/06, runbook 17, SECURITY.md)",
+      "remaining": "time frames written as a PROPOSAL (docs/06, runbook 17, SECURITY.md)",
+      "owner": "PO",
+      "decision_needed": "Approve or change the time frames"
+    },
+    {
+      "id": "F-G5-06",
+      "title": "DAST is documented but not implemented; no dependency-review or secret-scanning evidence in the repository",
+      "severity": "low",
+      "req_ids": [
+        "V15.2.1",
+        "V15.2.3"
+      ],
+      "location": "docs/06-security.md:49 vs .github/workflows/*.yml; no .github/CODEOWNERS",
+      "description": "docs/06 says \"OWASP ZAP baseline on test weekly\" and GitHub secret scanning with push protection; no workflow, schedule or infra references ZAP/DAST, there is no dependency-review action on pull requests, and branch protection/secret scanning are repository settings that cannot be verified from files. CodeQL, vulnerable-package, npm-audit and grype scans do exist.",
+      "reproduction": "grep -rniE \"zap|dast|dependency-review\" .github infra tools returns nothing.",
+      "fix": "Add a weekly workflow running zaproxy baseline against the test URL with an auth-less scope, add actions/dependency-review-action on pull_request; confirm repo settings under EXT-11.",
+      "status": "partly",
+      "fixed_by": "workflows added; no CODEOWNERS (no confirmed owners), secret scanning/push protection are repository settings",
+      "remaining": "workflows added; no CODEOWNERS (no confirmed owners), secret scanning/push protection are repository settings",
+      "owner": "Repository owner",
+      "decision_needed": "EXT-11"
+    },
+    {
+      "id": "F-G5-07",
+      "title": "Forwarded headers trusted from any sender and AllowedHosts is \"*\"",
+      "severity": "medium",
+      "req_ids": [
+        "V15.3.4"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:164-170; src/Hosts/Crm.Web/appsettings.json:9",
+      "description": "KnownIPNetworks/KnownProxies are cleared and XForwardedHost is honoured, so a forged X-Forwarded-Host/Proto reaches Request.Host/Scheme; if the ingress does not overwrite them the app builds URLs from attacker-chosen values, and a direct network path to the container would also allow forging the client IP stored in audit rows and used as the rate-limit key. Not verified against the live ingress.",
+      "reproduction": "curl -H \"X-Forwarded-Host: evil.example\" https://<crm>/bff/login -i and read the redirect_uri parameter; curl -H \"X-Forwarded-For: 1.2.3.4\" then read IpAddress in a new audit entry.",
+      "fix": "Set AllowedHosts to the FQDN in apps.bicep; remove XForwardedHost; restrict KnownIPNetworks to the environment subnet; add a test.",
+      "status": "fixed",
+      "fixed_by": "as F-G2-07",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-08",
+      "title": "CSV import endpoints read unbounded bodies into memory without a row cap",
+      "severity": "low",
+      "req_ids": [
+        "V15.2.2"
+      ],
+      "location": "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:47-48 and :70-71; src/Modules/Catalog/Crm.Catalog/CatalogModule.cs:144-145",
+      "description": "The three endpoints ReadToEnd the request body (up to Kestrel's 30 MB default, about 60 MB as UTF-16) and parse it with CsvTable without a row cap, unlike the customer migration import (5 000 rows). A permitted user repeating 300 requests/min can exhaust worker/web memory.",
+      "reproduction": "As a licensing manager POST a 28 MB CSV of short rows to /api/v1/licensing/import?dryRun=true repeatedly and watch memory/latency.",
+      "fix": "Per-route size limit and a row cap shared with MigrationImport.MaxRows; stream parsing.",
+      "status": "fixed",
+      "fixed_by": "as F-G2-05",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-09",
+      "title": "Source maps and the OpenAPI document are shipped to production",
+      "severity": "low",
+      "req_ids": [
+        "V15.2.3"
+      ],
+      "location": "web/vite.config.ts:21; src/Hosts/Crm.Web/Program.cs:200-203,214",
+      "description": "Vite emits *.js.map into wwwroot (included in the container image), and UseStaticFiles runs before authentication so the maps are public; the full OpenAPI document is available to every signed-in user in Production.",
+      "reproduction": "curl -s https://<crm>/assets/<index-hash>.js.map without a cookie.",
+      "fix": "Disable sourcemap for release builds or exclude *.map from the image; map OpenAPI only in Development.",
+      "status": "fixed",
+      "fixed_by": "as F-G1-04",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-10",
+      "title": "Log forging through the maintenance reason in console logs",
+      "severity": "low",
+      "req_ids": [
+        "V16.4.1"
+      ],
+      "location": "src/BuildingBlocks/Crm.Infrastructure/Operations/MaintenanceGate.cs:117; src/Hosts/Crm.Web/Http/OperationsEndpoints.cs:73-82",
+      "description": "The reason (10-500 chars, CR/LF allowed) is written to a Warning log line verbatim; with the default Simple console formatter an operator can inject lines that look like other events.",
+      "reproduction": "PUT maintenance with reason \"ten chars\\n... AUDIT_CHECKPOINT 999 ...\" and read container console logs.",
+      "fix": "Strip control characters on input and use JSON console output in Production.",
+      "status": "fixed",
+      "fixed_by": "LogText.Clean in MaintenanceGate; TextSafetyTests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-11",
+      "title": "Outbox type resolver deserializes into any loadable type",
+      "severity": "low",
+      "req_ids": [
+        "V15.3.5"
+      ],
+      "location": "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:24; :202-211",
+      "description": "Type.GetType(message.Type) is followed by JsonSerializer.Deserialize into that type before the IDomainEvent cast; the type string comes from the module database. Needs DB write access (already game over for most things) but removes a cheap defence-in-depth.",
+      "reproduction": "Insert an outbox row with Type set to a different public type of a loaded assembly and observe the deserialization attempt.",
+      "fix": "Resolve only IDomainEvent implementations from module assemblies; bound the resolver cache.",
+      "status": "fixed",
+      "fixed_by": "as F-G1-09",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-12",
+      "title": "Graph app-only token attached to any URL and server-supplied nextLink followed unchecked",
+      "severity": "low",
+      "req_ids": [
+        "V15.3.2"
+      ],
+      "location": "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphUserSource.cs:110-118; EntraRoleSync.cs:97; GraphUserSource.cs:102",
+      "description": "GraphAuthenticationHandler sets Authorization for every request, while nextLink/deltaLink values from the response body are requested as given. A compromised or spoofed upstream response could point the worker at another host with a Graph token holding directory read permissions. Atera client already prevents this pattern.",
+      "reproduction": "Unit-test with WireMock returning @odata.nextLink to another host and observe that the second request carries the bearer.",
+      "fix": "Validate the host of nextLink/deltaLink against the Graph base address and make the handler refuse foreign hosts; set AllowAutoRedirect=false.",
+      "status": "fixed",
+      "fixed_by": "GraphLinks same-origin, NoRedirects; OutboundAddressTests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-13",
+      "title": "Logging documentation claims masking that does not exist; no log inventory",
+      "severity": "low",
+      "req_ids": [
+        "V16.1.1",
+        "V16.2.3",
+        "V16.2.5"
+      ],
+      "location": "docs/06-security.md:74",
+      "description": "The documentation states that e-mail and phone numbers are masked in structured logs; no masking code exists (grep for Mask/Redact finds only external-record redaction). Protection depends on developer discipline plus three log-capture tests.",
+      "reproduction": "grep -rniE \"mask\" src/ finds nothing in logging paths.",
+      "fix": "Correct the claim or implement a destructuring/enrichment filter; add the inventory.",
+      "status": "fixed",
+      "fixed_by": "docs corrected; ADR-025 inventory",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-14",
+      "title": "Audit hash chain does not cover who, where and what changed",
+      "severity": "low",
+      "req_ids": [
+        "V16.4.2"
+      ],
+      "location": "src/Modules/Audit/Crm.Audit/Features/AuditIntegrityJob.cs:131-133",
+      "description": "AuditFact contains At, Action, Module, EntityType, EntityId and CorrelationId only (kept so retention may clear personal parts). A privileged DBA who disables the trigger can change UserId/UserName/IpAddress/Changes of a financial row without breaking the chain.",
+      "reproduction": "Disable the trigger as admin, UPDATE audit.AuditEntries SET UserName = N'x' WHERE Id = 1, run audit-integrity-full: reports intact.",
+      "fix": "Add a second chain over a keyed hash of the personal columns that retention recomputes through the retention procedure, or accept and document the residual risk (SQL audit to the workspace does record the DDL).",
+      "status": "deferred",
+      "fixed_by": "",
+      "remaining": "audit chain does not cover who/where/what; schema/format change needs an ADR",
+      "owner": "Dev team / Security owner",
+      "decision_needed": "ADR: second checkpoint over actor/IP/changes with a keyed hash"
+    },
+    {
+      "id": "F-G5-15",
+      "title": "Prototype-pollution guard missing in SPA path-based merge",
+      "severity": "low",
+      "req_ids": [
+        "V15.3.6"
+      ],
+      "location": "web/src/shared/forms/diff.ts:39-51",
+      "description": "rebase() assigns along dot-paths taken from object keys without excluding __proto__/constructor/prototype. Inputs are typed DTOs today, so exploitation would need a server-controlled key.",
+      "reproduction": "Call rebase with base/mine/latest objects built by JSON.parse('{\"__proto__\":{\"x\":1}}') and check ({}).x afterwards.",
+      "fix": "Reject unsafe segments and add a vitest case.",
+      "status": "fixed",
+      "fixed_by": "diff.ts UNSAFE_KEYS; diff.test.ts",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G5-16",
+      "title": "Build reproducibility gaps: no NuGet lock files or source mapping, floating container base tag",
+      "severity": "low",
+      "req_ids": [
+        "V15.1.2"
+      ],
+      "location": "Directory.Packages.props; src/Hosts/Crm.Web/Crm.Web.csproj:6; no nuget.config",
+      "description": "Direct versions are pinned centrally but transitive versions float within dependency ranges (no packages.lock.json, RestorePackagesWithLockFile off), the only source is nuget.org without packageSourceMapping, ContinuousIntegrationBuild is not set, and the base image tag 10.0-noble-chiseled-extra is not pinned by digest. The release SBOM records what was built, so this affects repeatability rather than inventory.",
+      "reproduction": "Rebuild the same commit after a transitive package publishes a new patch version and compare image digests.",
+      "fix": "Enable lock files with --locked-mode in CI, add nuget.config with source mapping, set ContinuousIntegrationBuild in CI, pin the base image digest via Dependabot.",
+      "status": "partly",
+      "fixed_by": "nuget.config source mapping added; NuGet lock files deliberately not enabled (docs/06 section 4); base image tag",
+      "remaining": "nuget.config source mapping added; NuGet lock files deliberately not enabled (docs/06 section 4); base image tag",
+      "owner": "Repository owner",
+      "decision_needed": "Revisit lock files if reproducibility is required"
+    },
+    {
+      "id": "F-G5-17",
+      "title": "BadHttpRequestException messages returned to clients",
+      "severity": "low",
+      "req_ids": [
+        "V16.5.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:129",
+      "description": "The framework message (for example parameter names and DTO type names for binding failures) is copied into the problem detail.",
+      "reproduction": "POST malformed JSON or a wrong-typed body to a minimal-API route that binds a record and read the detail.",
+      "fix": "Return a fixed message.",
+      "status": "fixed",
+      "fixed_by": "fixed sentence for BadHttpRequestException; test",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    }
+  ],
+  "dependency_scan": {
+    "dotnet": "dotnet list Vardahei.Crm.slnx package --vulnerable --include-transitive, run 2026-10-05 against nuget.org (the only configured source): every project reported \"has no vulnerable packages given the current sources\"; 0 vulnerable direct or transitive packages. NuGetAudit is not disabled and warnings are errors. Deprecated/outdated packages were not enumerated.",
+    "npm": "npm audit --omit=dev in web/ on 2026-10-05: found 0 vulnerabilities; a full npm audit (with dev dependencies) also found 0. package-lock.json carries integrity hashes for 364 entries and CI uses npm ci."
+  },
+  "reassessed_at": "2026-10-05",
+  "reassessor": "Claude (implementing agent): self-assessment, not independent; real tenant EXT-02, independent review EXT-06, data EXT-07, repository settings EXT-11",
+  "counts_before": {
+    "partial": 19,
+    "met": 8,
+    "gap": 2,
+    "not_applicable": 7
+  },
+  "counts_after": {
+    "partial": 8,
+    "met": 21,
+    "not_applicable": 7
+  }
+}

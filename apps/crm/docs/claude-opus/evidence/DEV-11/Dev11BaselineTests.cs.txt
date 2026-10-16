@@ -1,0 +1,143 @@
+using System.Globalization;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using Crm.Authorization;
+using Crm.Integrations.Atera;
+using Crm.Integrations.Core;
+using Crm.Integrations.Core.Persistence;
+using Crm.Service.Contracts;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using WireMock.RequestBuilders;
+using WireMock.ResponseBuilders;
+
+namespace Crm.IntegrationTests;
+
+/// <summary>
+/// Temporary reproduction of audit finding A10 on the release before DEV-11 (run in a throwaway worktree, never committed):
+/// there is no subject request process, and the best an administrator can do by hand — overwrite the contact card — leaves the
+/// person in the change history, the outbox, the frozen quote document, activities, the ticket mirror and the integration
+/// mirror; the next Atera synchronization stores the person again, and nothing keeps them from being imported back.
+/// </summary>
+[Collection(AteraCollection.Name)]
+public sealed class Dev11BaselineTests(CrmWebFactory factory)
+{
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task Baseline_no_subject_requests_and_a_hand_made_erasure_leaves_copies_everywhere()
+    {
+        var report = new StringBuilder();
+        var marker = $"B{Guid.NewGuid():N}"[..10];
+        var admin = factory.ClientAs(CrmRoles.Admin, userKey: $"dev11-admin-{marker.ToLowerInvariant()}");
+        var salesKey = $"dev11-sales-{marker.ToLowerInvariant()}";
+        var sales = QuoteDocumentsTests.Client(factory, CrmRoles.Sales, salesKey);
+        var firstName = $"Solveig{marker}";
+        var email = $"solveig.{marker.ToLowerInvariant()}@example.no";
+        const string phone = "+47 91 23 45 67";
+
+        var organizationId = await admin.CreateOrganizationAsync(new
+        {
+            name = $"{marker} Personvern AS", status = "Customer", ehfEnabled = false,
+            postalAddress = new { street = "Gata 1", postalCode = "0150", city = "Oslo", countryCode = "NO" },
+        });
+        var created = await admin.PostAsJsonAsync($"/api/v1/customers/organizations/{organizationId}/contacts", new
+        {
+            firstName, lastName = "Nordli", email, phone, preferredLanguage = "nb", title = "Daglig leder", roles = new[] { "DecisionMaker" }, isPrimary = true,
+        }, Ct);
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var contactId = (await created.ReadJsonAsync()).GetProperty("contactId").GetGuid();
+
+        factory.Graph.Given(Request.Create().WithPath($"/graph/v1.0/users/{salesKey}@test.local/sendMail").UsingPost()).RespondWith(Response.Create().WithStatusCode(202));
+        var quoteId = await QuoteDocumentsTests.QuoteAsync(sales, organizationId, contactId, marker, "nb");
+        (await sales.PostAsync($"/api/v1/sales/quotes/{quoteId}/submit", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await sales.PostAsJsonAsync($"/api/v1/sales/quotes/{quoteId}/send", new { toAddress = email, subject = $"{marker} Tilbud" }, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await sales.PostAsJsonAsync("/api/v1/activities/", new { type = "Call", organizationId, contactId, subject = $"Samtale med {firstName}", priority = "Normal" }, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.Created);
+        var ateraTicketId = Random.Shared.NextInt64(10_000_000, 99_999_999);
+        var ateraContactId = Random.Shared.Next(100_000_000, 999_999_999);
+        var ateraCustomerId = Random.Shared.Next(100_000_000, 999_999_999);
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            (await scope.ServiceProvider.GetRequiredService<ExternalLinkService>().LinkAsync(
+                EntityTypes.Organization, organizationId, "atera", "Customer", ateraCustomerId.ToString(CultureInfo.InvariantCulture), LinkMethod.Manual, null, Ct)).IsSuccess.ShouldBeTrue();
+            await scope.ServiceProvider.GetRequiredService<IServiceApi>().UpsertTicketsAsync(
+            [
+                new ExternalTicket("atera", ateraTicketId, organizationId, contactId, $"{marker} Skriver", "Open", "Medium", null, "Problem", "Email",
+                    null, "Tekniker", $"{firstName} Nordli", email, DateTimeOffset.UtcNow.AddDays(-2), null, null, DateTimeOffset.UtcNow, null),
+            ], Ct);
+        }
+
+        report.AppendLine($"Subject requests: GET /api/v1/privacy/cases                                   -> {(int)(await admin.GetAsync("/api/v1/privacy/cases", Ct)).StatusCode} (no such process)");
+
+        // The only tool there is: overwrite the card.
+        var card = await admin.GetAsync($"/api/v1/customers/contacts/{contactId}", Ct);
+        var overwrite = await admin.PutWithETagAsync($"/api/v1/customers/contacts/{contactId}", new
+        {
+            firstName = "Anonymized", lastName = "", email = (string?)null, phone = (string?)null, mobilePhone = (string?)null, preferredLanguage = (string?)null,
+        }, card.Headers.ETag!.Tag);
+        report.AppendLine($"Card overwritten by hand (PUT contact)                                         -> {(int)overwrite.StatusCode}");
+
+        var history = await admin.GetStringAsync($"/api/v1/audit/entities/customers/Contact/{contactId}", Ct);
+        report.AppendLine($"Change history of the contact still shows the e-mail                           -> {history.Contains(email, StringComparison.Ordinal)}");
+        var quote = await admin.GetFromJsonAsync<JsonElement>($"/api/v1/sales/quotes/{quoteId}", Ct);
+        report.AppendLine($"Sent quote still names the recipient's address                                 -> {quote.GetProperty("sentTo").GetString() == email}");
+        report.AppendLine($"Its stored PDF is still served                                                 -> {(int)(await admin.GetAsync($"/api/v1/sales/quotes/{quoteId}/pdf", Ct)).StatusCode}");
+        var activities = await admin.GetStringAsync($"/api/v1/activities/?organizationId={organizationId}", Ct);
+        report.AppendLine($"Activities still carry the name                                                -> {activities.Contains($"Samtale med {firstName}", StringComparison.Ordinal)}");
+
+        int frozen, outbox;
+        await using (var connection = new SqlConnection(factory.AdminConnectionString))
+        {
+            await connection.OpenAsync(Ct);
+            frozen = await CountAsync(connection, "SELECT COUNT(*) FROM sales.QuoteDocuments WHERE QuoteId = @id AND SnapshotJson LIKE N'%' + @v + N'%';", quoteId, firstName);
+            outbox = await CountAsync(connection, "SELECT COUNT(*) FROM customers.OutboxMessages WHERE Payload LIKE N'%' + @v + N'%';", null, email);
+        }
+
+        report.AppendLine($"Frozen quote document snapshots still holding the name                         -> {frozen}");
+        report.AppendLine($"Outbox rows (customers) still holding the e-mail                               -> {outbox}");
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var ticket = await scope.ServiceProvider.GetRequiredService<Crm.Service.Persistence.ServiceDbContext>().Tickets.AsNoTracking().SingleAsync(t => t.ExternalId == ateraTicketId, Ct);
+            report.AppendLine($"Ticket mirror still holds the end user's address                               -> {ticket.EndUserEmail == email}");
+        }
+
+        // Atera still has the person: the next contact synchronization stores them again, and nothing marks them as erased.
+        factory.Atera.Given(Request.Create().WithPath("/api/v3/contacts").UsingGet().WithParam("page", "1"))
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBodyAsJson(new
+            {
+                items = new object[] { new { EndUserID = (long)ateraContactId, CustomerID = ateraCustomerId, Firstname = firstName, Lastname = "Nordli", Email = email } },
+                totalItemCount = 1, page = 1, itemsInPage = 1, totalPages = 1,
+            }));
+        await factory.RunJobAsync<AteraContactSyncJob>(j => j.RunAsync(CancellationToken.None));
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var record = await scope.ServiceProvider.GetRequiredService<IntegrationDbContext>().ExternalRecords.AsNoTracking()
+                .SingleAsync(r => r.System == "atera" && r.ExternalType == "Contact" && r.ExternalId == ateraContactId.ToString(CultureInfo.InvariantCulture), Ct);
+            report.AppendLine($"Next Atera sync stores the person again (record e-mail)                         -> {record.Email == email}");
+            var import = await admin.PostAsync($"/api/v1/integrations/records/atera/Contact/{ateraContactId}/import", null, Ct);
+            var body = await import.Content.ReadAsStringAsync(Ct);
+            var code = import.IsSuccessStatusCode ? "" : " " + (JsonDocument.Parse(body).RootElement.TryGetProperty("code", out var c) ? c.GetString() : body);
+            report.AppendLine($"Importing that record into the CRM                                             -> {(int)import.StatusCode}{code}");
+            var back = await scope.ServiceProvider.GetRequiredService<Crm.Customers.Persistence.CustomersDbContext>().Contacts.AsNoTracking().CountAsync(x => x.Email == email, Ct);
+            report.AppendLine($"CRM contacts carrying the erased address again                                 -> {back}");
+        }
+
+        File.WriteAllText(Environment.GetEnvironmentVariable("DEV11_REPORT") ?? Path.Combine(Path.GetTempPath(), "dev11-baseline.txt"), report.ToString());
+    }
+
+    private static async Task<int> CountAsync(SqlConnection connection, string sql, Guid? id, string value)
+    {
+        await using var command = new SqlCommand(sql, connection);
+        if (id is { } i)
+        {
+            command.Parameters.AddWithValue("@id", i);
+        }
+
+        command.Parameters.AddWithValue("@v", value);
+        return (int)(await command.ExecuteScalarAsync(Ct))!;
+    }
+}

@@ -1,0 +1,11 @@
+SKIP  uses: actions/checkout@v4
+SKIP  uses: actions/setup-dotnet@v4
+SUCCESS Restore                                                         0.7s
+SUCCESS Build                                                           3.5s
+SUCCESS Vulnerable packages                                            11.2s
+SUCCESS Unit tests (with coverage)                                      4.0s
+SUCCESS Architecture tests                                              2.1s
+SUCCESS Integration tests (SQL Server in Testcontainers, with coverage)   34.3s
+SUCCESS Coverage gate (NFR-10)                                          0.5s
+SKIP  uses: actions/upload-artifact@v4 (files: unit.cobertura.xml, integration.cobertura.xml)
+JOB backend: PASSED

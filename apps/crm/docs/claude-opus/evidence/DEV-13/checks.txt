@@ -1,0 +1,54 @@
+DEV-13 — commands and results (04.10.2026, macOS arm64, working copy on codex/readiness from 65b74c6 + DEV-13)
+
+Environment: export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH" DOTNET_ROOT="$HOME/.dotnet"; .NET SDK 10.0.401, Node 24.19.0,
+Playwright 1.63.0, Python 3.14.7, Azure CLI 2.89.1, Bicep CLI 0.47.16, SQL Server 2022 (mcr.microsoft.com/mssql/server:2022-latest).
+
+Baseline (A12 before DEV-13), temporary test Dev13BaselineTests.cs in a throwaway git worktree of 65b74c6 (removed afterwards):
+  Crm.IntegrationTests -method ...Dev13BaselineTests.Baseline_no_read_only_mode_and_a_restored_basis_is_sent_to_PowerOffice_a_second_time
+  -> passed: the defect is there (baseline-defect.txt): no switch (404), writes accepted (201), 2 order requests for one basis.
+  git show 65b74c6:docs/runbooks/03-database-restore.md / infra/modules/*.bicep -> baseline-runbook.txt
+
+Build and suites (Debug, final code):
+  dotnet build Vardahei.Crm.slnx                                   Build succeeded, 0 warnings
+  tests/Crm.UnitTests/bin/Debug/net10.0/Crm.UnitTests              Total 419, failed 0
+  tests/Crm.ArchitectureTests/bin/Debug/net10.0/Crm.ArchitectureTests  Total 91, failed 0
+  tests/Crm.IntegrationTests/bin/Debug/net10.0/Crm.IntegrationTests  run A: 227/227, run B: 227/227 (before RestoreReconciliationTests),
+                                                                    run C: 228/228 (final), Release run in the CI emulation: 228, passed
+  One Release run failed before the last fix: RestoreReconciliationTests expected the event id of its own WireMock stub, while
+  OutlookApiTests' stub of the same Graph path (higher priority) answered in a full run. The reconciliation itself linked the
+  meeting to the event it had; the test now compares with the event the meeting had before the restore (rerun with OutlookApiTests: 6/6).
+
+CI emulation (scratchpad ci-local.rb, the run: steps of .github/workflows/ci.yml):
+  backend         PASSED (restore, Release build, vulnerable packages, unit + coverage, architecture, integration + coverage, gate) -> ci-local-backend.txt
+  infrastructure  PASSED (release tooling tests, restore tooling tests, Bicep build and lint)                                       -> ci-local-infrastructure.txt
+  Coverage gate (NFR-10): domain of Billing/Contracts/TimeTracking 96.58 % (>= 90), rest of src 88.39 % (>= 70) -> coverage-summary.md, coverage-new-code.md
+
+Frontend (web/):
+  npm run lint / npm run typecheck                                  clean
+  npx vitest run                                                   24 files, 76 tests passed
+  npm audit --json + release.py npm-audit                           no High/Critical (0 vulnerabilities in total)
+  e2e (scratchpad e2e-run.sh, throwaway SQL container, fresh SPA build)  58 passed (dev13a before the last backend changes, dev13final on the final code) -> e2e.txt
+  The accessibility sweep (light and dark) covers /admin/maintenance, the maintenance banner and the "signing in is paused" page.
+
+Restore tooling and infrastructure:
+  python3 -m unittest discover -s tools/ops                         11 tests OK (fake az)
+  az bicep build --file infra/main.bicep; az bicep build-params infra/env/{test,prod}.bicepparam   OK
+  dotnet list Vardahei.Crm.slnx package --vulnerable --include-transitive + release.py vulnerable-dotnet   no High/Critical, 0 lower
+
+Rollback: tools/release/rollback-compat.sh 65b74c6 -> the release before DEV-13 passes its e2e (58) on the database the DEV-13 build migrated -> rollback-compat-65b74c6.txt
+  (DEV-13 adds no migration; the previous release ignores the maintenance objects and the journal in the document store.)
+
+Mutations (scratchpad mutations-dev13*.sh; each restored byte-identical): 15 of 15 caught -> mutations.txt
+
+Local restore drill: python3 tools/ops/local_restore_drill.py --label dev13a|dev13b --out <scratchpad>
+  dev13a failed at T8: resuming the integration paused in the copy before normal operation -> 503 (runbook defect, fixed) -> drill-local-first-run.md
+  dev13b passed: every check, no second order; RPO 55.9 s, RTO 17.4 s locally (not Azure) -> drill-local.md, drill-local.json
+  Own resources only: containers crm-drill-dev13a/b (removed by the script), its work folder (removed), ports 14337/5281/5291/5399.
+
+EF Core pending model changes (dotnet ef migrations has-pending-model-changes, 16 contexts, --no-build): none in any context —
+DEV-13 adds no migration and changes no entity mapping.
+
+docs/claude-opus/validate-package.py: VALID — 24 tasks, 145 criteria, 11 external gates; code_verified=15, todo=9.
+Secret scan: tools/release/release.py scan-secrets over the 110 files of the commit — no secret patterns in any file.
+Leftovers: no TODO/FIXME/XXX, Console.WriteLine or console.log in the changed files.
+Own e2e artefacts removed by exact list: 6 deletion manifests and 108 external effect journal entries under .local/documents-e2e.

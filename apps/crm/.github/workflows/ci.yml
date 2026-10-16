@@ -1,0 +1,196 @@
+name: CI
+
+# Every pull request and every commit on main. A commit on main whose required jobs all passed becomes a release: the
+# `release` job at the end builds the images once and deploys them to test (release.yml). Production only ever gets such a
+# release, by digest, through promote.yml (DEV-05, docs/adr/ADR-015-release-pipeline.md).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A newer push cancels a pull request's run, but never a run on main: it may be deploying to test.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore Vardahei.Crm.slnx
+      - name: Build
+        id: build
+        run: dotnet build Vardahei.Crm.slnx --no-restore -c Release
+      # Fails on a High/Critical package and on a scan that could not run or covered too little (no clean result by default).
+      - name: Vulnerable packages
+        shell: bash
+        run: |
+          dotnet list Vardahei.Crm.slnx package --vulnerable --include-transitive --format json > "$RUNNER_TEMP/vulnerable.json"
+          python3 tools/release/release.py vulnerable-dotnet "$RUNNER_TEMP/vulnerable.json" \
+            --min-projects "$(grep -c '<Project ' Vardahei.Crm.slnx)"
+      # Every test step runs once the build succeeded, so one red suite does not hide the result of the others.
+      - name: Unit tests (with coverage)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --no-build -c Release
+          --coverage --coverage-output-format cobertura --coverage-output "$RUNNER_TEMP/coverage/unit.cobertura.xml"
+      # Without coverage: instrumentation adds types to every assembly, which the dependency rules would report.
+      - name: Architecture tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj --no-build -c Release
+      - name: Integration tests (SQL Server in Testcontainers, with coverage)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --no-build -c Release
+          --coverage --coverage-output-format cobertura --coverage-output "$RUNNER_TEMP/coverage/integration.cobertura.xml"
+      # NFR-10: domain of billing, tariffs and contracts >= 90 %, rest of the backend >= 70 %, line coverage with the
+      # denominator printed. Crm.Worker is a composition root (host wiring only) that no test loads; its jobs live in module
+      # and integration assemblies and are measured there.
+      - name: Coverage gate (NFR-10)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >-
+          python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker --summary "$GITHUB_STEP_SUMMARY"
+          "$RUNNER_TEMP/coverage/unit.cobertura.xml" "$RUNNER_TEMP/coverage/integration.cobertura.xml"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        with:
+          name: coverage
+          path: ${{ runner.temp }}/coverage
+          retention-days: 14
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Load scenario and simulator regression tests
+        run: node --experimental-vm-modules --test ../tools/load-test/*.test.mjs
+      - run: npm run build
+      # Build-time (dev) dependencies are audited too; an audit that failed is not a clean result.
+      - name: npm audit
+        shell: bash
+        run: |
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
+          python3 ../tools/release/release.py npm-audit "$RUNNER_TEMP/npm-audit.json"
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    services:
+      sql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: Local_Dev_Passw0rd!
+        ports: ['14333:1433']
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Local_Dev_Passw0rd!' -Q 'SELECT 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # The critical scenarios also run in Firefox and WebKit (playwright.config.ts).
+      - run: npx playwright install --with-deps chromium firefox webkit
+      # crm-web serves the e2e suite over HTTPS on the development certificate, which needs no trust here.
+      - run: dotnet dev-certs https
+      - name: End-to-end tests (crm-web + crm-worker + SQL Server + external API mocks)
+        run: npm run e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 7
+
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Release tooling tests
+        run: python3 -m unittest discover -s tools/release
+      - name: Restore tooling tests
+        run: python3 -m unittest discover -s tools/ops
+      - name: Synthetic dataset ownership and isolation tests
+        run: python3 -m unittest discover -s tools/load-test -p 'test_*.py'
+      # DEV-21: the same patterns the release applies to its artifacts, over configuration and runbooks. Test fixtures
+      # that contain fake secrets on purpose (tools/*/test_*.py) are not scanned. GitHub secret scanning and push protection
+      # are repository settings (EXT-11) and are not replaced by this.
+      - name: Secret patterns in infrastructure, workflows and runbooks
+        run: python3 tools/release/release.py scan-secrets infra .github docs/runbooks docs/adr
+      - name: Bicep build and lint
+        run: |
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep build-params --file infra/env/test.bicepparam --stdout > /dev/null
+          az bicep build-params --file infra/env/prod.bicepparam --stdout > /dev/null
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    strategy:
+      matrix:
+        language: [csharp, javascript-typescript]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        if: matrix.language == 'csharp'
+        with:
+          global-json-file: global.json
+      - uses: github/codeql-action/init@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.language == 'csharp' && 'manual' || 'none' }}
+      - if: matrix.language == 'csharp'
+        run: dotnet build Vardahei.Crm.slnx -c Release
+      - uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+
+  # Only a commit pushed to main of this repository, and only when every required job above succeeded: `needs` skips this
+  # job otherwise, so a red job never publishes or deploys anything. Pull requests (also from forks) never get here and
+  # never see a credential.
+  release:
+    needs: [backend, frontend, e2e, infrastructure, codeql]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/release.yml
+    # The ceiling for the called workflow: OIDC for Azure, provenance attestations, and reading the running release's
+    # artifacts for the schema guard.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      actions: read
+    with:
+      checks: >-
+        backend=${{ needs.backend.result }},frontend=${{ needs.frontend.result }},e2e=${{ needs.e2e.result }},infrastructure=${{ needs.infrastructure.result }},codeql=${{ needs.codeql.result }}

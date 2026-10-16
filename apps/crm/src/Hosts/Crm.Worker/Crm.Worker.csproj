@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <!-- Shared by crm-web and crm-worker so integration keys are set once locally -->
+    <UserSecretsId>vardahei-crm</UserSecretsId>
+    <!-- dotnet publish -t:PublishContainer: distroless, non-root base image -->
+    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra</ContainerBaseImage>
+    <ContainerRepository>crm-worker</ContainerRepository>
+    <ContainerPort>8080</ContainerPort>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Local development settings (the sa connection string, the development sign-in) never travel with the image (F-G4-15). -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.SqlServer" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Crm.ServiceDefaults\Crm.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Modules\Audit\Crm.Audit\Crm.Audit.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\Crm.Identity\Crm.Identity.csproj" />
+    <ProjectReference Include="..\..\Modules\Customers\Crm.Customers\Crm.Customers.csproj" />
+    <ProjectReference Include="..\..\Modules\CustomFields\Crm.CustomFields\Crm.CustomFields.csproj" />
+    <ProjectReference Include="..\..\Modules\Catalog\Crm.Catalog\Crm.Catalog.csproj" />
+    <ProjectReference Include="..\..\Modules\Contracts\Crm.Contracts\Crm.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Service\Crm.Service\Crm.Service.csproj" />
+    <ProjectReference Include="..\..\Modules\TimeTracking\Crm.TimeTracking\Crm.TimeTracking.csproj" />
+    <ProjectReference Include="..\..\Modules\Sales\Crm.Sales\Crm.Sales.csproj" />
+    <ProjectReference Include="..\..\Modules\Projects\Crm.Projects\Crm.Projects.csproj" />
+    <ProjectReference Include="..\..\Modules\Activities\Crm.Activities\Crm.Activities.csproj" />
+    <ProjectReference Include="..\..\Modules\Billing\Crm.Billing\Crm.Billing.csproj" />
+    <ProjectReference Include="..\..\Modules\Notifications\Crm.Notifications\Crm.Notifications.csproj" />
+    <ProjectReference Include="..\..\Modules\Reports\Crm.Reports\Crm.Reports.csproj" />
+    <ProjectReference Include="..\..\Modules\Licensing\Crm.Licensing\Crm.Licensing.csproj" />
+    <ProjectReference Include="..\..\Modules\Privacy\Crm.Privacy\Crm.Privacy.csproj" />
+    <ProjectReference Include="..\..\Integrations\Crm.Integrations.Brreg\Crm.Integrations.Brreg.csproj" />
+    <ProjectReference Include="..\..\Integrations\Crm.Integrations.MicrosoftGraph\Crm.Integrations.MicrosoftGraph.csproj" />
+    <ProjectReference Include="..\..\Integrations\Crm.Integrations.PowerOffice\Crm.Integrations.PowerOffice.csproj" />
+    <ProjectReference Include="..\..\Integrations\Crm.Integrations.Atera\Crm.Integrations.Atera.csproj" />
+    <ProjectReference Include="..\..\Integrations\Crm.Integrations.PartnerCenter\Crm.Integrations.PartnerCenter.csproj" />
+  </ItemGroup>
+</Project>

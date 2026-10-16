@@ -1,0 +1,22 @@
+{
+  "baselineCommit": "97457037320ffe2f1b1afcd72f99402098b6d120",
+  "branch": "codex/readiness",
+  "kind": "uncommitted working-copy composition",
+  "scope": "Changed tracked files and relevant untracked DEV-17 + DEV-16 implementation, documentation and evidence. Combine with baselineCommit for unchanged files.",
+  "excluded": [
+    ".claude/",
+    "docs/claude-opus-development-pack-2026-10-03.zip",
+    "docs/claude-opus-development-pack-2026-10-03/",
+    "ignored build/private files",
+    "this manifest itself"
+  ],
+  "legacyManifest": "DEV-17/source-manifest.sha256 remains an immutable historical snapshot; shared files changed since it was created.",
+  "loadEvidence": {
+    "baseline": "Before three ReadPathIndexes; earlier DEV-16 query optimization already present.",
+    "afterIndexes": "Same full database after index upgrade; billing October versus baseline September; both read September time history.",
+    "guardRun": "Deadline guard and iteration accounting loaded before metadata-only custom tag rename vu→client_id; native k6 proofs verify final tag.",
+    "finalReview": "A later GetMsCostsAsync aggregate fix is checked by real SQL cardinality/financial-result tests and final suite. Full workload contains no MsBilledLines, so reported 50-VU timings precede that final localized fix."
+  },
+  "externalAcceptance": "EXT-05 blocked; local synthetic results only",
+  "commitOrPushPerformed": false
+}

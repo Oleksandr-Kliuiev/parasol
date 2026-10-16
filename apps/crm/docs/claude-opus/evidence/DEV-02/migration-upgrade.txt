@@ -1,0 +1,173 @@
+# RevisionBoundApprovals on the previous schema (DEV-01) with synthetic runs in the previous shape; throwaway container crm-mig-dev02, removed at the end
+# Driver: mig-run.sh; scripts: mig-legacy-runs.sql, mig-check.sql, mig-old-app.sql (copied next to this file); date: 2026-10-03T23:56:59Z
+### 1. previous schema (migrations up to ChargeIdentity, i.e. DEV-01)
+Applying migration '20260916082954_Initial'.
+Applying migration '20260916183504_PendingCharges'.
+Applying migration '20261003230254_ChargeIdentity'.
+Done.
+### 2. synthetic runs in the previous shape
+== runs
+Notes|Status|First|Second|NewColumns
+-----|------|-----|------|----------
+closed, two approvals|Closed|A|B|n/a
+exported, one approval|Exported|A|-|n/a
+exported with errors|ExportedWithErrors|A|B|n/a
+exporting|Exporting|A|-|n/a
+approved, ApprovedAt missing|Approved|A|B|n/a
+first approval, waiting for the second|InReview|A|-|n/a
+second approval given first (A02)|Collected|-|B|n/a
+collected, no approval|Collected|-|-|n/a
+draft|Draft|-|-|n/a
+== approval acts: table absent
+== archives
+ArchiveTable
+------------
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+### 3. apply RevisionBoundApprovals
+Applying migration '20261003233005_RevisionBoundApprovals'.
+Done.
+== runs
+Notes|Status|First|Second|NewColumns
+-----|------|-----|------|----------
+closed, two approvals|Closed|A|B|see below
+exported, one approval|Exported|A|-|see below
+exported with errors|ExportedWithErrors|A|B|see below
+exporting|Exporting|A|-|see below
+approved, ApprovedAt missing|Approved|A|B|see below
+first approval, waiting for the second|Collected|-|-|see below
+second approval given first (A02)|Collected|-|-|see below
+collected, no approval|Collected|-|-|see below
+draft|Draft|-|-|see below
+== revision columns
+Notes|ContentRevision|ApprovedRevision|ApprovedDigest
+-----|---------------|----------------|--------------
+closed, two approvals|0|0|legacy
+exported, one approval|0|0|legacy
+exported with errors|0|0|legacy
+exporting|0|0|legacy
+approved, ApprovedAt missing|0|0|legacy
+first approval, waiting for the second|1|null|null
+second approval given first (A02)|1|null|null
+collected, no approval|0|null|null
+draft|0|null|null
+== approval acts
+Notes|Kind|ApprovedBy|ContentRevision|ContentDigest|Policy|RequiredSecond|State|Reason|ApprovedAtFrom
+-----|----|----------|---------------|-------------|------|--------------|-----|------|--------------
+closed, two approvals|First|A|0|legacy|legacy|1|valid|-|run.ApprovedAt
+closed, two approvals|Second|B|0|legacy|legacy|1|valid|-|run.ApprovedAt
+exported, one approval|First|A|0|legacy|legacy|0|valid|-|run.ApprovedAt
+exported with errors|First|A|0|legacy|legacy|1|valid|-|run.ApprovedAt
+exported with errors|Second|B|0|legacy|legacy|1|valid|-|run.ApprovedAt
+exporting|First|A|0|legacy|legacy|0|valid|-|run.ApprovedAt
+approved, ApprovedAt missing|First|A|0|legacy|legacy|1|valid|-|run.ModifiedAt
+approved, ApprovedAt missing|Second|B|0|legacy|legacy|1|valid|-|run.ModifiedAt
+first approval, waiting for the second|First|A|0|legacy|legacy|1|set aside|Migrated|run.ModifiedAt
+second approval given first (A02)|Second|B|0|legacy|legacy|1|set aside|Migrated|run.ModifiedAt
+== archives
+ArchiveTable
+------------
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+20261003233005_RevisionBoundApprovals
+### 4. the previous version writes during the rollback window (its column list)
+Notes|Status|ContentRevision|ApprovedRevision
+-----|------|---------------|----------------
+inserted by the previous version|Approved|0|null
+### 5. apply again (must be a no-op)
+No migrations were applied. The database is already up to date.
+Done.
+### 6. roll the schema back to ChargeIdentity
+Reverting migration '20261003233005_RevisionBoundApprovals'.
+Done.
+== runs
+Notes|Status|First|Second|NewColumns
+-----|------|-----|------|----------
+closed, two approvals|Closed|A|B|n/a
+exported, one approval|Exported|A|-|n/a
+exported with errors|ExportedWithErrors|A|B|n/a
+exporting|Exporting|A|-|n/a
+approved, ApprovedAt missing|Approved|A|B|n/a
+first approval, waiting for the second|Collected|-|-|n/a
+second approval given first (A02)|Collected|-|-|n/a
+collected, no approval|Collected|-|-|n/a
+draft|Draft|-|-|n/a
+inserted by the previous version|Approved|A|-|n/a
+== approval acts: table absent
+== archives
+ArchiveTable
+------------
+BillingApprovals_rollback_20261003235614483
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+== archived acts
+Acts|Migrated
+----|--------
+10|2
+
+(1 rows affected)
+### 7. forward again after the rollback
+Applying migration '20261003233005_RevisionBoundApprovals'.
+Done.
+== runs
+Notes|Status|First|Second|NewColumns
+-----|------|-----|------|----------
+closed, two approvals|Closed|A|B|see below
+exported, one approval|Exported|A|-|see below
+exported with errors|ExportedWithErrors|A|B|see below
+exporting|Exporting|A|-|see below
+approved, ApprovedAt missing|Approved|A|B|see below
+first approval, waiting for the second|Collected|-|-|see below
+second approval given first (A02)|Collected|-|-|see below
+collected, no approval|Collected|-|-|see below
+draft|Draft|-|-|see below
+inserted by the previous version|Approved|A|-|see below
+== revision columns
+Notes|ContentRevision|ApprovedRevision|ApprovedDigest
+-----|---------------|----------------|--------------
+closed, two approvals|0|0|legacy
+exported, one approval|0|0|legacy
+exported with errors|0|0|legacy
+exporting|0|0|legacy
+approved, ApprovedAt missing|0|0|legacy
+first approval, waiting for the second|0|null|null
+second approval given first (A02)|0|null|null
+collected, no approval|0|null|null
+draft|0|null|null
+inserted by the previous version|0|0|legacy
+== approval acts
+Notes|Kind|ApprovedBy|ContentRevision|ContentDigest|Policy|RequiredSecond|State|Reason|ApprovedAtFrom
+-----|----|----------|---------------|-------------|------|--------------|-----|------|--------------
+closed, two approvals|First|A|0|legacy|legacy|1|valid|-|run.ApprovedAt
+closed, two approvals|Second|B|0|legacy|legacy|1|valid|-|run.ApprovedAt
+exported, one approval|First|A|0|legacy|legacy|0|valid|-|run.ApprovedAt
+exported with errors|First|A|0|legacy|legacy|1|valid|-|run.ApprovedAt
+exported with errors|Second|B|0|legacy|legacy|1|valid|-|run.ApprovedAt
+exporting|First|A|0|legacy|legacy|0|valid|-|run.ApprovedAt
+approved, ApprovedAt missing|First|A|0|legacy|legacy|1|valid|-|run.ModifiedAt
+approved, ApprovedAt missing|Second|B|0|legacy|legacy|1|valid|-|run.ModifiedAt
+inserted by the previous version|First|A|0|legacy|legacy|0|valid|-|run.ApprovedAt
+== archives
+ArchiveTable
+------------
+BillingApprovals_rollback_20261003235614483
+== migrations
+MigrationId
+-----------
+20260916082954_Initial
+20260916183504_PendingCharges
+20261003230254_ChargeIdentity
+20261003233005_RevisionBoundApprovals
+### container crm-mig-dev02 removed

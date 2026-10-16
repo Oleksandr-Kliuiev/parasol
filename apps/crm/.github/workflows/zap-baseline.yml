@@ -1,0 +1,52 @@
+name: ZAP baseline (test environment)
+
+# DEV-21 (F-G5-06, F-G4-13). A passive OWASP ZAP baseline scan of the TEST environment, weekly and on request.
+#
+# What this is: an UNAUTHENTICATED baseline. ZAP spiders the anonymous surface (the SPA shell, the sign-in redirect, public
+# headers) and reports passive findings. Everything behind the Entra sign-in is out of its reach.
+# What this is not: an authenticated test, an active scan or a penetration test. It is not evidence for ASVS requirements
+# about authorization, sessions or business logic, and it does not replace the independent review (EXT-06).
+#
+# Production is never a target: the URL comes only from the repository variable CRM_TEST_URL (no input, no default) and a
+# guard step refuses anything that is not https or that looks like production. Nothing here signs in, reads a secret or
+# reaches Azure; the workflow holds read-only repository access and files no issues.
+on:
+  schedule:
+    - cron: '30 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zap-baseline
+  cancel-in-progress: false
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    # No URL configured yet: the job is skipped, not green-by-accident with an empty target.
+    if: ${{ vars.CRM_TEST_URL != '' }}
+    env:
+      TARGET: ${{ vars.CRM_TEST_URL }}
+    steps:
+      - name: The target is the test environment
+        shell: bash
+        run: |
+          [[ "$TARGET" =~ ^https://[A-Za-z0-9.-]+/?$ ]] || { echo "CRM_TEST_URL must be a plain https origin" >&2; exit 1; }
+          host="${TARGET#https://}"; host="${host%/}"
+          case "${host,,}" in
+            *prod*) echo "CRM_TEST_URL looks like production; refusing to scan" >&2; exit 1 ;;
+            *test*) ;;
+            *) echo "CRM_TEST_URL does not look like the test environment (no 'test' in the host); refusing to scan" >&2; exit 1 ;;
+          esac
+          echo "Scanning $host (unauthenticated baseline)" >> "$GITHUB_STEP_SUMMARY"
+      # zaproxy/action-baseline v0.15.0, commit checked against the upstream tag on 2026-10-05. The scanner image is pinned by
+      # the digest the stable tag had that day; refresh both by hand together (no bot reads this file for image digests).
+      - uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: ${{ vars.CRM_TEST_URL }}
+          docker_name: ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap-baseline-report

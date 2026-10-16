@@ -1,0 +1,8 @@
+# Gate decisions on the same reports (after the domain tests)
+## without --allow-unmeasured Crm.Worker
+Gate: **FAILED — not measured: Crm.Worker**
+exit=1
+## threshold raised to 96 % for the critical scope (demonstration that the gate discriminates)
+Gate: **FAILED — critical below 96 %**
+## as configured in CI
+Gate: **passed**

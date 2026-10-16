@@ -1,0 +1,105 @@
+=== M1-AC02-journal-trusts-cache  src/BuildingBlocks/Crm.Infrastructure/Operations/EffectJournal.cs
+    -         await maintenance.EnsureMaySendAsync(cancellationToken);
+    +         _ = maintenance;
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,705s
+          Shouldly.ShouldAssertException : mail.StatusCode
+              should be
+    restored (cmp identical)
+=== M2-AC01-bulk-writes-pass  src/BuildingBlocks/Crm.Infrastructure/Operations/MaintenanceWriteInterceptor.cs
+    -     internal static bool Writes(CommandEventData eventData) => eventData.CommandSource is ⏎         CommandSource.ExecuteUpdate or CommandSource.ExecuteDelete or CommandSource.ExecuteSqlRaw;
+    +     internal static bool Writes(CommandEventData eventData) => eventData.CommandSource is CommandSource.Scaffolding;
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,795s
+          Shouldly.ShouldAssertException : Task `none.ExecuteUpdateAsync(s => s.SetProperty(o => o.LastError, "dev13"), Ct)`
+              should throw
+    restored (cmp identical)
+=== M3-AC01-request-barrier-open  src/Hosts/Crm.Web/Http/MaintenanceMiddleware.cs
+    -         var safe = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
+    +         var safe = method.Length > 0;
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 16,162s
+          Shouldly.ShouldAssertException : violations
+              should be empty but had
+    restored (cmp identical)
+=== M4-AC04-journal-forgotten  src/Integrations/Crm.Integrations.PowerOffice/PowerOfficeBilling.cs
+    -         if (ExternalEffects.MayExist(earlier))
+    +         if (ExternalEffects.MayExist(earlier) && earlier.Count < 0)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,986s
+          Shouldly.ShouldAssertException : await BasisAsync(finance, basisId)).Basis.GetProperty("status").GetString(
+              should be
+    restored (cmp identical)
+=== M5-AC04-finance-decision-ignored  src/Integrations/Crm.Integrations.PowerOffice/PowerOfficeBilling.cs
+    - .Where(e => e.System == System && e.Kind == SalesOrderEffect && (basis.CheckedAt is not { } checkedAt || e.At > checkedAt))
+    + .Where(e => e.System == System && e.Kind == SalesOrderEffect)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 14,643s
+          Shouldly.ShouldAssertException : exported.GetProperty("status").GetString()
+              should be
+    restored (cmp identical)
+=== M6-AC04-reconciliation-holds-nothing  src/Integrations/Crm.Integrations.Core/IntegrationRestore.cs
+    -             if (apply) ⏎             { ⏎                 operation.Status = OutboundStatus.Failed;
+    +             if (apply && operation.Attempts < 0) ⏎             { ⏎                 operation.Status = OutboundStatus.Failed;
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 15,691s
+          Shouldly.ShouldAssertException : held.Status
+              should be
+    restored (cmp identical)
+=== M7-AC01-everyone-signs-in  src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs
+    -             : Permissions.ForRoles(principal.GetCrmRoles()).Contains(Permissions.OperationsMaintenance)
+    +             : principal.Identity is not null
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 11,027s
+          Shouldly.ShouldAssertException : refused.StatusCode
+              should be
+    restored (cmp identical)
+=== M8-AC01-outbound-job-in-maintenance  src/Hosts/Crm.Worker/MaintenanceJobFilter.cs
+    -         (typeof(Crm.Integrations.Core.WorkerHeartbeatJob).FullName!, nameof(Crm.Integrations.Core.WorkerHeartbeatJob.RunAsync)),
+    +         (typeof(Crm.Integrations.Core.WorkerHeartbeatJob).FullName!, nameof(Crm.Integrations.Core.WorkerHeartbeatJob.RunAsync)), ⏎         (typeof(Crm.Integrations.Core.OutboundProcessorJob).FullName!, nameof(Crm.Integrations.Core.OutboundProcessorJob.RunAsync)),
+    test exit=1 Crm.ArchitectureTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 0,218s
+          Shouldly.ShouldAssertException : running
+              should be
+    restored (cmp identical)
+=== M9-AC03-switch-without-confirmation  tools/ops/restore.py
+    -             if args.execute and args.confirm != expected:
+    +             if False and args.execute and args.confirm != expected:
+    test exit=1 FAILED (failures=1)
+    AssertionError: 0 != 3 : []
+    restored (cmp identical)
+=== M10-AC02-outcomes-never-journaled  src/BuildingBlocks/Crm.Infrastructure/Operations/EffectJournal.cs
+    -         var name = entry.Phase == EffectPhase.Sending ? entry.Id : $"{ExternalEffects.AttemptOf(entry)}-{entry.Phase}";
+    +         var name = entry.Id;
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,748s
+          Shouldly.ShouldAssertException : journal.Select(e => e.Phase)
+              should be
+    restored (cmp identical)
+=== M11-AC02-bookkeeping-refused-mid-send  src/Integrations/Crm.Integrations.Core/Outbound.cs
+    -         using var inFlight = MaintenanceScope.AllowWrites("outbound-in-flight"); ⏎         await using var scope = scopeFactory.CreateAsyncScope(); ⏎         var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>(); ⏎         var operation
+    +         await using var scope = scopeFactory.CreateAsyncScope(); ⏎         var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>(); ⏎         var operation
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 10,279s
+          Crm.SharedKernel.Operations.MaintenanceReadOnlyException : The CRM is read-only for maintenance; nothing can be changed until it ends.
+    restored (cmp identical)
+=== M12-AC01-any-job-by-hand  src/Hosts/Crm.Web/Http/JobEndpoints.cs
+    -                 if (maintenance.IsReadOnly && !RunDuringMaintenance.Contains(jobId))
+    +                 if (maintenance.IsReadOnly && jobId.Length < 0)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 13,843s
+          Shouldly.ShouldAssertException : otherJob.StatusCode
+              should be
+    restored (cmp identical)
+=== M13-AC04-posts-not-marked  src/Modules/Notifications/Crm.Notifications/Features/NotificationsRestore.cs
+    -             if (apply) ⏎             { ⏎                 await db.ChannelPosts.Where(p => p.Id == post.Key && p.Status == ChannelPostStatus.Pending)
+    +             if (apply && post.Key == Guid.Empty) ⏎             { ⏎                 await db.ChannelPosts.Where(p => p.Id == post.Key && p.Status == ChannelPostStatus.Pending)
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,415s
+          Shouldly.ShouldAssertException : await PostStatusAsync(postId)
+              should be
+    restored (cmp identical)
+=== M14-AC04-meeting-linked-to-another-event  src/Modules/Activities/Crm.Activities/Features/ActivitiesRestore.cs
+    -                 activity.LinkCalendarEvent(eventId, null, time.GetUtcNow());
+    +                 activity.LinkCalendarEvent(activity.GraphEventId ?? string.Empty, null, time.GetUtcNow());
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,349s
+          Shouldly.ShouldAssertException : await GraphEventAsync(activityId)
+              should be
+    restored (cmp identical)
+=== M15-AC04-digest-not-marked  src/Modules/Notifications/Crm.Notifications/Features/NotificationsRestore.cs
+    -                 notices.ForEach(n => n.MarkEmailSent(sentAt));
+    +                 _ = sentAt;
+    test exit=1 Crm.IntegrationTests Total: 1, Errors: 0, Failed: 1, Skipped: 0, Not Run: 0, Time: 12,508s
+          Shouldly.ShouldAssertException : notice.EmailStatus
+              should be
+    restored (cmp identical)
+=== final build
+Build succeeded.

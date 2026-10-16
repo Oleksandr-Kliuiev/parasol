@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-03",
+  "status_values": [
+    "not_run",
+    "in_progress",
+    "blocked",
+    "failed",
+    "passed"
+  ],
+  "criteria_document": "DECISIONS.md",
+  "gates": [
+    {
+      "id": "EXT-01",
+      "title": "Бизнес-правила, данные и владельцы исключений",
+      "required_owner_roles": "PO / Finance / Sales / ServiceLead / operations",
+      "owner": "",
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-03.md",
+        "evidence/DEV-09.md",
+        "evidence/DEV-17.md",
+        "../runbooks/15-monitoring.md"
+      ],
+      "verified_at": "",
+      "blocker": "Не подтверждены бизнес-решения DEC-01/02/08 и владельцы/получатели исключений DEC-09. Для DEV-17 нужны разрешённая test-среда, утверждённая постоянная конфигурация operations/finance и протокол Fired, отсутствие дублей, Resolved с реальными адресатами по runbook 15. Локальные тесты и компиляция Bicep не закрывают EXT-01.",
+      "tasks": [
+        "DEV-03",
+        "DEV-09",
+        "DEV-17",
+        "DEV-20",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-02",
+      "title": "Реальный Entra tenant и отзыв прав",
+      "required_owner_roles": "Tenant owner / security",
+      "owner": "",
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-21.md",
+        "evidence/DEV-21/asvs-5.0.0-l2-matrix.csv"
+      ],
+      "verified_at": "",
+      "blocker": "Владелец tenant/security не назначен. Не проверены в реальном tenant: single tenant, Assignment required, Conditional Access/MFA и PIM, права Graph (least privilege), optional claim auth_time (register-app.sh нужно выполнить до выкладки DEV-21, иначе привилегированные действия остаются закрытыми), redirect URI, front-channel logout, срок отзыва прав (runbook 12 §5).",
+      "tasks": [
+        "DEV-10",
+        "DEV-19",
+        "DEV-21",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-03",
+      "title": "Контракты реальных поставщиков и сверка эффектов",
+      "required_owner_roles": "Integration owner / Finance",
+      "owner": "",
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-19.md",
+        "evidence/DEV-19/contract-matrix.md"
+      ],
+      "verified_at": "",
+      "blocker": "Integration owner и Finance не назначены; нет разрешённых sandbox-аккаунтов PowerOffice Go, Atera и Partner Center и ключей. Нужно: сверка с актуальной документацией (с датами), сценарии чтения, инкрементальной синхронизации, права на поля, 429/таймауты, неопределённый исход отправки и поиск дубля, различение заказа/счёта/оплаты/кредита/списания, очищенные доказательства по contract-matrix.md. Локальные WireMock-тесты и синтетические фикстуры этого не заменяют.",
+      "tasks": [
+        "DEV-19",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-04",
+      "title": "Учение восстановления и RPO/RTO",
+      "required_owner_roles": "Operations",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [
+        "../runbooks/03-database-restore.md",
+        "evidence/DEV-13.md"
+      ],
+      "verified_at": "",
+      "blocker": "Operations не назначены; учение восстановления в выделенной среде не проводилось: нет замеров RPO ≤ 1 ч и RTO ≤ 4 ч, сверки SQL, blob и ключей, повтора privacy suppression и сверки внешних эффектов (runbook 03). Локальные тесты восстановления (DEV-13) этого не заменяют.",
+      "tasks": [
+        "DEV-13",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-05",
+      "title": "Целевой масштаб и нагрузка",
+      "required_owner_roles": "QA / operations / PO",
+      "owner": "",
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-16.md"
+      ],
+      "verified_at": "",
+      "blocker": "QA / operations / PO должны назначить владельца и согласовать DEC-07: инфраструктуру, смесь действий, длительность/пики, 50 различных identities и квоты реальных провайдеров. Локальные synthetic smoke/full и simulated export не заменяют внешний протокол.",
+      "tasks": [
+        "DEV-16",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-06",
+      "title": "Независимая проверка безопасности",
+      "required_owner_roles": "Security reviewer / PO",
+      "owner": "",
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-21.md",
+        "evidence/DEV-21/matrix-summary.md",
+        "../runbooks/17-vulnerability-intake.md"
+      ],
+      "verified_at": "",
+      "blocker": "Не назначен независимый проверяющий (security reviewer / PO), не выбрана и не подготовлена тестовая среда с реальными ролями. Самооценка по ASVS 5.0.0 и пакет по runbook 17 готовы, но независимое заключение и повторная проверка (retest) не проведены.",
+      "tasks": [
+        "DEV-21",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-07",
+      "title": "Персональные данные, retention и legal holds",
+      "required_owner_roles": "Data owner / Finance",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [
+        "evidence/DEV-21/deferred-and-accepted.md"
+      ],
+      "verified_at": "",
+      "blocker": "Data owner и Finance не назначены; не приняты сроки хранения по классам данных (сейчас только предложения docs/04 §8, Privacy:Retention:Mode=DryRun, политик в privacy.RetentionPolicies нет), порядок запросов субъекта, ограничения аудита финансовых модулей, роль регламентного удаления crm_privacy, обработка резервных копий, срок хранения таблиц прогонов миграции и legality check ответственным лицом (DEV-04, DEV-11, DEV-20, DEV-21).",
+      "tasks": [
+        "DEV-04",
+        "DEV-11",
+        "DEV-21",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-08",
+      "title": "Обновление Power BI Service",
+      "required_owner_roles": "BI owner",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [
+        "../runbooks/14-power-bi-refresh.md",
+        "evidence/DEV-14.md"
+      ],
+      "verified_at": "",
+      "blocker": "BI owner не назначен; плановое обновление в Power BI Service не проверено: способ обновления (DEC-06) не выбран, приложение BI и роли Crm.Bi.Read/Crm.Bi.Cost не выданы, не проверены истечение и ротация credentials, постраничное чтение и 429. Локальные тесты BI API и Power BI Desktop недостаточны.",
+      "tasks": [
+        "DEV-14",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-09",
+      "title": "Репетиция миграции и сверка",
+      "required_owner_roles": "Data owners / Finance",
+      "owner": "",
+      "status": "blocked",
+      "evidence": [
+        "../runbooks/16-migration.md",
+        "../runbooks/18-pilot-billing.md",
+        "evidence/DEV-20.md",
+        "evidence/DEV-22.md"
+      ],
+      "verified_at": "",
+      "blocker": "Finance и Product Owner не подтвердили пробную миграцию: нужны реальный образец источника (A-08), решение о глубине миграции (финансовая история, PDF), тестовая копия, прогон по runbook 16 (dry-run, real, повтор, сверка сумм по клиентам/периодам/валютам) и подписанный протокол. Локальный импорт на синтетических данных этого не заменяет. Для DEV-22 нужен полный пилотный месяц (runbook 18) с независимым расчётом, пояснениями расхождений и подписью Finance; инструменты (трасса, сравнение, подпись, готовность, KPI) готовы, реального прогона нет.",
+      "tasks": [
+        "DEV-20",
+        "DEV-22",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-10",
+      "title": "UAT и полный месячный параллельный биллинг",
+      "required_owner_roles": "PO / users / Finance",
+      "owner": "",
+      "status": "blocked",
+      "evidence": [
+        "evidence/DEV-18.md",
+        "evidence/DEV-22.md",
+        "evidence/DEV-22/README.md"
+      ],
+      "verified_at": "",
+      "blocker": "PO / пользователи / Finance должны назначить владельца и провести UAT по ролям (Sales, Technician, ServiceLead, Finance) без подсказок разработчика, ручную проверку со скринридером и реальными Safari/iOS/Android. Локальные Playwright-сценарии и автоматические проверки WCAG 2.2 не заменяют UAT. Месячный параллельный биллинг (DEV-22/23) здесь отдельно. Для DEV-22 готовы сценарии, бланки протоколов и план обучения (evidence/DEV-22/); заполненных протоколов, замера времени обучения и подписей нет.",
+      "tasks": [
+        "DEV-18",
+        "DEV-22",
+        "DEV-23"
+      ]
+    },
+    {
+      "id": "EXT-11",
+      "title": "Проверенная конфигурация выпуска и поддержка",
+      "required_owner_roles": "Repository owner / operations / PO",
+      "owner": "",
+      "status": "not_run",
+      "evidence": [
+        "../runbooks/01-first-deployment.md",
+        "evidence/DEV-05.md",
+        "evidence/DEV-23/rollout-and-support.md"
+      ],
+      "verified_at": "",
+      "blocker": "Repository owner, operations и PO не назначены; remote-репозитория нет, workflows release.yml и promote.yml ни разу не запускались: не проверены branch protection, required reviewers и окружения test/prod, OIDC-федерация, secret scanning и push protection, CODEOWNERS, проверенный digest образов и принятый release manifest (runbook 01 §2, §6).",
+      "tasks": [
+        "DEV-05",
+        "DEV-23"
+      ]
+    }
+  ]
+}

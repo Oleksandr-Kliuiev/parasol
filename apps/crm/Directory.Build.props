@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- CA1062: nullable reference types cover argument null checks; CA1848/CA1873: LoggerMessage delegates are overkill here;
+         CA2007: ASP.NET Core has no sync context; CA1711/CA1716/CA1720: domain names (Status, Error, Type) are intentional -->
+    <NoWarn>$(NoWarn);CA1062;CA1848;CA1873;CA2007;CA1711;CA1716;CA1720;CA1515;CA1034;CA1000</NoWarn>
+  </PropertyGroup>
+</Project>

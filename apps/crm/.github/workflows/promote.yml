@@ -1,0 +1,172 @@
+name: Promote
+
+# Puts a verified release into an environment without rebuilding it (DEV-05, docs/adr/ADR-015-release-pipeline.md).
+# Promotion: a commit whose CI run on main succeeded in every required job, whose release manifest matches it and whose
+# test deployment passed its smoke test goes to prod as exactly those digests — imported, never rebuilt. Rollback: a
+# release that already ran in the environment goes back there, without migrations (expand/contract). Anything that does
+# not check out is refused before a credential of the target environment is used; prod waits for its reviewers.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA of the release (40 hex characters)
+        required: true
+        type: string
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [prod, test]
+        default: prod
+      rollback:
+        description: Go back to a release that already ran in this environment (no migrations)
+        required: true
+        type: boolean
+        default: false
+      accept_schema_break:
+        description: The release adds a schema break the running release does not survive; a maintenance window is arranged
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ inputs.sha }}
+      TARGET: ${{ inputs.environment }}
+      ROLLBACK: ${{ inputs.rollback }}
+    steps:
+      # The release tooling of the default branch checks the release; the release's own code is not executed here.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Find and check the release
+        shell: bash
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "'$SHA' is not a full commit SHA" >&2; exit 1; }
+          if [[ "$ROLLBACK" != true && "$TARGET" != prod ]]; then
+            echo "test gets every release from CI; promotion is to prod (or choose rollback)" >&2; exit 1
+          fi
+          run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main --event push --commit "$SHA" \
+            --json databaseId,conclusion --jq '[.[] | select(.conclusion == "success")][0].databaseId // empty')
+          [[ -n "$run" ]] || { echo "no successful CI run on main for $SHA" >&2; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/jobs?per_page=100" > jobs.json
+          mkdir -p verified
+          if [[ "$ROLLBACK" == true ]]; then
+            if [[ "$TARGET" == test ]]; then
+              gh run download "$run" --repo "$GITHUB_REPOSITORY" -n "deployment-test-$SHA" -D deployment
+              gh run download "$run" --repo "$GITHUB_REPOSITORY" -n "release-$SHA" -D release
+            else
+              source_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=deployment-prod-$SHA&per_page=100" \
+                --jq '[.artifacts[] | select(.expired == false)][0].workflow_run.id // empty')
+              [[ -n "$source_run" ]] || { echo "$SHA never ran in prod (or its record expired): nothing to roll back to" >&2; exit 1; }
+              gh run download "$source_run" --repo "$GITHUB_REPOSITORY" -n "deployment-prod-$SHA" -D deployment
+              mkdir -p release && cp deployment/release-manifest.json release/
+            fi
+            python3 tools/release/release.py promotion-check --sha "$SHA" --manifest release/release-manifest.json \
+              --deployment "deployment/deployment-$TARGET.json" --rollback
+          else
+            gh run download "$run" --repo "$GITHUB_REPOSITORY" -n "release-$SHA" -D release
+            gh run download "$run" --repo "$GITHUB_REPOSITORY" -n "deployment-test-$SHA" -D deployment
+            python3 tools/release/release.py promotion-check --sha "$SHA" --manifest release/release-manifest.json \
+              --deployment deployment/deployment-test.json --jobs jobs.json \
+              --required "backend,frontend,e2e,infrastructure,codeql,release / publish,release / deploy-test"
+          fi
+          cp release/release-manifest.json verified/
+          echo "ci_run=$run" > verified/source.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verified-${{ inputs.sha }}-${{ github.run_id }}
+          path: verified
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    # Required reviewers and the deployment branch policy of the environment apply here (EXT-11).
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ inputs.sha }}
+      TARGET: ${{ inputs.environment }}
+      ROLLBACK: ${{ inputs.rollback }}
+      ACCEPT_SCHEMA_BREAK: ${{ inputs.accept_schema_break }}
+      CRM_ENTRA_TENANT_ID: ${{ vars.CRM_ENTRA_TENANT_ID }}
+      CRM_ENTRA_CLIENT_ID_TEST: ${{ vars.CRM_ENTRA_CLIENT_ID_TEST }}
+      CRM_ENTRA_CLIENT_ID_PROD: ${{ vars.CRM_ENTRA_CLIENT_ID_PROD }}
+      CRM_ENABLE_POWEROFFICE: ${{ vars.CRM_ENABLE_POWEROFFICE || 'false' }}
+      CRM_ENABLE_ATERA: ${{ vars.CRM_ENABLE_ATERA || 'false' }}
+      CRM_ENABLE_PARTNERCENTER: ${{ vars.CRM_ENABLE_PARTNERCENTER || 'false' }}
+      CRM_PARTNERCENTER_TENANT_ID: ${{ vars.CRM_PARTNERCENTER_TENANT_ID }}
+      CRM_PARTNERCENTER_CLIENT_ID: ${{ vars.CRM_PARTNERCENTER_CLIENT_ID }}
+      CRM_ENABLE_TEAMS: ${{ vars.CRM_ENABLE_TEAMS || 'false' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: verified-${{ inputs.sha }}-${{ github.run_id }}
+          path: verified
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.CRM_ENTRA_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # The schema only moves forward: a release cannot run where a break it lacks is applied, and a new break needs an
+      # accepted maintenance window (tools/release/schema-breaks.json). Checked before anything changes.
+      - name: Schema guard against the release running in the environment
+        shell: bash
+        run: |
+          tools/release/current-release.sh "$TARGET" current
+          args=(--target verified/release-manifest.json)
+          [[ -f current/release-manifest.json ]] && args+=(--current current/release-manifest.json)
+          [[ "$ACCEPT_SCHEMA_BREAK" == true ]] && args+=(--accept-break)
+          python3 tools/release/release.py schema-guard "${args[@]}"
+      # A promotion copies the tested digests into this environment's registry; the provenance attestation proves they were
+      # built by this repository's release workflow. The digest after the copy must be the same.
+      - name: Import the tested images by digest
+        if: inputs.rollback == false
+        shell: bash
+        run: |
+          python3 tools/release/release.py manifest-verify verified/release-manifest.json --sha "$SHA"
+          target=$(az acr list -g "rg-crm-$TARGET" --query "[0].loginServer" -o tsv)
+          [[ -n "$target" ]] || { echo "no container registry in rg-crm-$TARGET" >&2; exit 1; }
+          for role in web worker; do
+            source=$(jq -er ".images.$role.reference" verified/release-manifest.json)
+            digest=$(jq -er ".images.$role.digest" verified/release-manifest.json)
+            az acr login --name "$(cut -d. -f1 <<< "$source")"
+            gh attestation verify "oci://$source" --repo "$GITHUB_REPOSITORY"
+            az acr import --name "${target%%.*}" --source "$source" --image "crm-$role:$SHA" --force
+            copied=$(az acr repository show -n "${target%%.*}" --image "crm-$role@$digest" --query digest -o tsv)
+            [[ "$copied" == "$digest" ]] || { echo "crm-$role in $target is $copied, the release is $digest" >&2; exit 1; }
+          done
+      - name: Deploy the release digests
+        shell: bash
+        run: |
+          if [[ "$ROLLBACK" == true ]]; then
+            tools/release/deploy.sh "$TARGET" verified/release-manifest.json deployment --rollback
+          else
+            tools/release/deploy.sh "$TARGET" verified/release-manifest.json deployment
+          fi
+          cp verified/release-manifest.json deployment/
+      - name: No secrets in the deployment record
+        run: python3 tools/release/release.py scan-secrets deployment
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deployment-${{ inputs.environment }}-${{ inputs.sha }}
+          path: deployment
+          retention-days: 90
+          if-no-files-found: error

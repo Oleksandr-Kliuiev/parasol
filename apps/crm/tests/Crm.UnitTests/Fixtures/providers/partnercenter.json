@@ -1,0 +1,16 @@
+{
+  "provider": "partnercenter",
+  "source": "synthetic",
+  "capturedAt": null,
+  "note": "Shape taken from PartnerCenterClient readers. Replace with sanitized sandbox captures after EXT-03.",
+  "customers": [
+    { "id": "00000000-0000-0000-0000-0000000000a1", "companyProfile": { "companyName": "Testfirma Alfa AS", "domain": "alfa.onmicrosoft.com", "tenantId": "00000000-0000-0000-0000-0000000000b1" }, "billingProfile": { "companyRegistrationNumber": "999 111 222" } }
+  ],
+  "subscribedSkus": [
+    { "skuId": "sku-1", "skuPartNumber": "O365_BUSINESS_PREMIUM", "prepaidUnits": { "enabled": 25 }, "consumedUnits": 21 },
+    { "skuId": "sku-2", "skuPartNumber": "EXCHANGE_S_STANDARD", "activeUnits": 5, "assignedUnits": 4 }
+  ],
+  "invoices": [
+    { "id": "G000000001", "invoiceDate": "2026-09-01T00:00:00Z", "currencyCode": "NOK", "totalCharges": 12345.67 }
+  ]
+}

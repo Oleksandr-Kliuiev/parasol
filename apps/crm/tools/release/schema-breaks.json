@@ -1,0 +1,31 @@
+{
+  "description": "Migrations after which a release without them cannot run on the schema (DEV-05, docs/adr/ADR-015-release-pipeline.md). A rollback to a release without a break that the environment already has is refused; deploying a break over a release without it needs an accepted maintenance window, because the running release keeps serving between the migrations and the traffic switch. Any migration that creates a trigger must be listed here, as a break or as reviewed compatible (tests/Crm.ArchitectureTests/MigrationCompatibilityTests).",
+  "breaks": [
+    {
+      "context": "Crm.Billing",
+      "migration": "20261004011343_ProtectApprovedBilling",
+      "reason": "SQL triggers on the billing tables (DEV-04). An EF Core model without HasTrigger, i.e. every release before DEV-04, writes with OUTPUT without INTO, which SQL Server refuses on a table with a trigger (error 334): its billing collects and approvals fail.",
+      "verifiedBy": "tools/release/rollback-compat.sh 646a565 (DEV-03 on this schema): 9 billing scenarios fail with HTTP 500 on collect"
+    }
+  ],
+  "reviewedCompatible": [
+    {
+      "context": "Crm.Audit",
+      "migration": "20261004011342_AppendOnlyAudit",
+      "reason": "Its trigger fires on UPDATE and DELETE of audit.AuditEntries only, and every release only inserts audit entries; the new tables are not mapped by older releases.",
+      "verifiedBy": "tools/release/rollback-compat.sh 646a565: the previous release writes audit entries on this schema in every passing scenario"
+    },
+    {
+      "context": "Crm.Sales",
+      "migration": "20261004052355_QuoteDocuments",
+      "reason": "Its trigger guards the new table sales.QuoteDocuments only, which no earlier release maps; the tables earlier releases write are untouched.",
+      "verifiedBy": "tools/release/rollback-compat.sh 51c5ea6 (DEV-07 on this schema), see docs/claude-opus/evidence/DEV-08.md"
+    },
+    {
+      "context": "Crm.Sales",
+      "migration": "20261004095840_QuoteDocumentErasure",
+      "reason": "It replaces the DEV-08 trigger on sales.QuoteDocuments with one that accepts every write earlier releases make (Preparing to Ready with hash and length) and adds only the privacy operator's erasure path; the two new columns are nullable and unmapped by earlier releases, and an erased document keeps its status, so an earlier release still reads it (a download then finds no stored object and answers that the document cannot be read).",
+      "verifiedBy": "tools/release/rollback-compat.sh 7b4c90c (DEV-10 on this schema), see docs/claude-opus/evidence/DEV-11.md"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "decision": "Retain compositional live reporting; a separate materialized reporting read model is not justified by the measured DEV-16 bottlenecks.",
+  "basis": [
+    "All four captured expensive query shapes now seek the new narrow indexes; the paged time list no longer sorts before TOP.",
+    "Read/write/search p95 passed in the first after-index 50-session run and the final guarded rerun.",
+    "No cross-module reporting schema or new consistency lag is required to achieve the observed improvement.",
+    "The active first after-index window processed 2.629x HTTP requests; approximate Web allocated bytes per request remained approximately stable (570\u2192567 KiB process-wide)."
+  ],
+  "measuredQueries": [
+    {
+      "query": "open ticket load",
+      "baselineLogicalReadsPerExecution": 38210.46,
+      "afterLogicalReadsPerExecution": 244.0,
+      "logicalReadReductionPercent": 99.36,
+      "baselineCpuMs": 289.875,
+      "afterCpuMs": 7.258,
+      "baselineElapsedMs": 752.304,
+      "afterElapsedMs": 9.201
+    },
+    {
+      "query": "time page (WorkDate DESC, Id ASC)",
+      "baselineLogicalReadsPerExecution": 46874.06,
+      "afterLogicalReadsPerExecution": 250.55,
+      "logicalReadReductionPercent": 99.47,
+      "baselineCpuMs": 408.655,
+      "afterCpuMs": 0.845,
+      "baselineElapsedMs": 1594.898,
+      "afterElapsedMs": 0.928
+    },
+    {
+      "query": "time period totals",
+      "baselineLogicalReadsPerExecution": 46666.76,
+      "afterLogicalReadsPerExecution": 283.0,
+      "logicalReadReductionPercent": 99.39,
+      "baselineCpuMs": 359.413,
+      "afterCpuMs": 11.67,
+      "baselineElapsedMs": 893.523,
+      "afterElapsedMs": 15.095
+    },
+    {
+      "query": "utilization allocation totals",
+      "baselineLogicalReadsPerExecution": 38865.49,
+      "afterLogicalReadsPerExecution": 7389.13,
+      "logicalReadReductionPercent": 80.99,
+      "baselineCpuMs": 643.964,
+      "afterCpuMs": 20.543,
+      "baselineElapsedMs": 1733.999,
+      "afterElapsedMs": 35.685
+    }
+  ],
+  "limitations": [
+    "These are sequential synthetic local runs on a shared M4 laptop with emulated SQL and a 2 GiB engine target; EXT-05 capacity acceptance remains separate.",
+    "Baseline cache counters and after-index post-two-run counters have different execution counts/lifetimes; per-execution averages and plan access paths support the diagnosis, not an isolated controlled benchmark.",
+    "After-index full runtime capture contains part of the second guard run; active-window comparison is in resource-comparison.json.",
+    "Index write/storage overhead is not isolated by this experiment, although workload write p95 improved and migration kept existing records/financial totals."
+  ],
+  "reconsiderWhen": [
+    "If agreed-environment measurements still breach read/reporting SLO under representative concurrency after these indexes, profile the remaining exact query shapes.",
+    "If repeated full-history BI/report aggregates dominate measured CPU/IO, evaluate an explicit reporting projection with agreed freshness, reconciliation, ownership and an ADR."
+  ]
+}

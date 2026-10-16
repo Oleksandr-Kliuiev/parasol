@@ -1,0 +1,938 @@
+{
+  "group": "G4",
+  "chapters": [
+    "V11",
+    "V12",
+    "V13",
+    "V14"
+  ],
+  "assessed_at": "2026-10-05",
+  "assessor": "Claude (self-assessment, not independent)",
+  "level3_not_assessed": [
+    "V11.1.3",
+    "V11.1.4",
+    "V11.2.4",
+    "V11.2.5",
+    "V11.3.4",
+    "V11.3.5",
+    "V11.5.2",
+    "V11.6.2",
+    "V11.7.1",
+    "V11.7.2",
+    "V12.1.4",
+    "V12.1.5",
+    "V12.3.5",
+    "V13.1.2",
+    "V13.1.3",
+    "V13.1.4",
+    "V13.2.6",
+    "V13.3.3",
+    "V13.3.4",
+    "V13.4.6",
+    "V13.4.7",
+    "V14.2.5",
+    "V14.2.6",
+    "V14.2.7",
+    "V14.2.8"
+  ],
+  "rows": [
+    {
+      "req_id": "V11.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/06-security.md:53-63",
+        "infra/modules/data.bicep:115-127",
+        "src/Modules/Privacy/Crm.Privacy/Persistence/Migrations/20261004095906_PrivacyCases.cs:351"
+      ],
+      "note": "Secret storage, owner and rotation interval are tabulated per secret (06 §5) and the Key Vault Data Protection wrapping key has a 90-day rotation policy. There is no key-management policy/lifecycle (generation, rotation, revocation, compromise, destruction, backup) and it omits the privacy HMAC key in the database and the Entra certificate policy.",
+      "severity": "low",
+      "fix": "Add an ADR/runbook \"Cryptographic key management\" covering every key in the inventory (see V11.1.2) with lifecycle steps and owners; reference NIST SP 800-57 or equivalent.",
+      "owner_hint": "process",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "gap",
+      "evidence": [],
+      "note": "No cryptographic inventory exists in docs/ or ADRs (searched docs/*.md, docs/adr, docs/runbooks for inventory/crypto terms). Keys/algorithms actually in use: ASP.NET Data Protection key ring wrapped by Key Vault RSA-2048, privacy.Keys HMAC-SHA256 key, Entra sign-in certificate, SHA-256 document/audit/billing digests, platform TLS/TDE/blob SSE.",
+      "severity": "low",
+      "fix": "Create docs/ inventory table (asset, algorithm, key size, location, owner, rotation, expiry, review date) and a CI/architecture test that fails when a new SHA256/HMAC/Aes/RSA call site is not listed.",
+      "owner_hint": "process",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.2.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Documents/IDocumentStore.cs:30-36",
+        "src/Modules/Privacy/Crm.Privacy/Features/Suppressions.cs:30-33",
+        "src/BuildingBlocks/Crm.SharedKernel/Domain/SequentialId.cs:20"
+      ],
+      "note": "All crypto is .NET BCL (SHA256/HMACSHA256/RandomNumberGenerator), ASP.NET Data Protection, Azure SDK and MSAL; grep of src found no hand-written primitives, MD5, SHA1 or Aes/RSA calls. No test pins this.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.2.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Documents/IDocumentStore.cs:30-36",
+        "src/Modules/Billing/Crm.Billing/Domain/BillingContentDigest.cs:43",
+        "src/Modules/Audit/Crm.Audit/Features/AuditIntegrityJob.cs:146"
+      ],
+      "note": "Data Protection and Key Vault give key/algorithm agility for the cookie ring, but SHA-256 is called directly at ~12 sites (documents, billing digest, audit chain, privacy manifests, import hashes, external records) with no central helper except DocumentHashes; I did not verify that every stored digest carries an algorithm identifier, so a hash change would need per-site code and data migration.",
+      "severity": "low",
+      "fix": "Route all digest calls through one helper that tags the algorithm (e.g. \"sha256:...\") and add an architecture test forbidding direct SHA256/HMAC use outside it.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/data.bicep:115-127",
+        "docs/runbooks/01-first-deployment.md:62"
+      ],
+      "note": "Data Protection wrapping key is RSA 2048 (about 112-bit security) and the Entra certificate is created from the default Key Vault policy (RSA 2048, exportable). Everything else is >=128-bit (SHA-256, HMAC-SHA256 with 32-byte key, DP AES-256, TLS 1.2+). Strictly below the 128-bit floor in ASVS.",
+      "severity": "low",
+      "fix": "Set keySize: 3072 on the dataProtectionKey resource (new version; ring re-wraps naturally) and give the certificate policy RSA 3072/non-exportable key in runbook 01 step 5.",
+      "owner_hint": "infra",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Domain/SequentialId.cs:20",
+        "src/Hosts/Crm.Web/Http/DataProtectionSetup.cs:14-31"
+      ],
+      "note": "Application code contains no block cipher or RSA padding calls (grep for Aes, RSA, ECB, PKCS found none in src). Cookie protection uses the ASP.NET Data Protection default (CBC+HMAC, not ECB); Key Vault key wrap padding is chosen by the Azure.Extensions library and I did not read its source.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.3.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/DataProtectionSetup.cs:14-31"
+      ],
+      "note": "Data Protection algorithms are left at framework defaults (AES-256-CBC + HMACSHA256 as I understand the default; no UseCryptographicAlgorithms call and no test pins it). That is not AES-GCM and could change with a framework upgrade.",
+      "severity": "low",
+      "fix": "Call UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration{EncryptionAlgorithm=AES_256_GCM,ValidationAlgorithm=HMACSHA256}) in DataProtectionSetup.AddDataProtection and add a unit test reading the descriptor; old ring keys stay readable.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/DataProtectionSetup.cs:28-30",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:198"
+      ],
+      "note": "The only application-level encryption is Data Protection (encrypt-then-MAC), and stored documents are integrity-checked by SHA-256 on read (AC03 test: altered or missing blob is neither shown nor sent). Caveat: the MSAL token cache in SQL is not encrypted at all (see F-G4-01).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.4.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Privacy/Crm.Privacy/Features/Suppressions.cs:30-33",
+        "src/BuildingBlocks/Crm.SharedKernel/Documents/IDocumentStore.cs:34",
+        "tests/Crm.UnitTests/PrivacyDomainTests.cs:31"
+      ],
+      "note": "Only SHA-256 and HMAC-SHA256 are used (grep: no MD5/SHA1). HMAC test pins key dependence and normalisation.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.4.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:39-73"
+      ],
+      "note": "The CRM stores no passwords; sign-in is Entra ID OIDC code flow with PKCE. Database access is by managed identity. (Local dev SQL password exists only in appsettings.Development.json.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.4.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Documents/IDocumentStore.cs:30-36",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:198",
+        "src/Modules/Audit/Crm.Audit/Features/AuditIntegrityJob.cs:146"
+      ],
+      "note": "Integrity uses SHA-256 for documents, billing content digests, privacy manifests and the audit chain; the document hash is verified before download/send (AC03). No SHA-1/MD5.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.4.4",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [],
+      "note": "No keys are derived from passwords anywhere in src (no Rfc2898/PBKDF/Argon use found).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.5.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Domain/SequentialId.cs:20",
+        "src/Modules/Privacy/Crm.Privacy/Persistence/Migrations/20261004095906_PrivacyCases.cs:351",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:177",
+        "src/BuildingBlocks/Crm.Infrastructure/Outbox/OutboxProcessor.cs:313"
+      ],
+      "note": "HMAC key is CRYPT_GEN_RANDOM(32); lease owner tokens use Guid.NewGuid (CSPRNG v4 on .NET); OIDC state/nonce/PKCE and cookie keys come from the framework. Random.Shared is only used for retry jitter. Ids are partly time-ordered (SequentialId: 8 random bytes), so authorization must not rely on id secrecy - it does not (record scope returns 404).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V11.6.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/data.bicep:115-127",
+        "src/Modules/Privacy/Crm.Privacy/Persistence/Migrations/20261004095906_PrivacyCases.cs:351",
+        "src/Hosts/Crm.Web/Http/DataProtectionSetup.cs:24-30"
+      ],
+      "note": "Key generation is done by Key Vault (RSA), SQL CRYPT_GEN_RANDOM and the Data Protection framework; the app generates no signatures itself (Entra assertions are signed by MSAL with the Key Vault certificate). Key Vault SKU is standard (software-protected), noted for V13.3.3 (L3).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.1.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/data.bicep:26",
+        "infra/modules/data.bicep:168",
+        "infra/modules/apps.bicep:203"
+      ],
+      "note": "SQL minimalTlsVersion 1.2 and storage TLS1_2 are set in IaC; no SslProtocols override exists in src so .NET uses OS defaults (1.2/1.3). The public ingress TLS versions are platform-managed by Azure Container Apps and nothing in the repo or smoke.sh verifies the served protocol set (no testssl/ZAP; docs/07 says ZAP is not implemented).",
+      "severity": "low",
+      "fix": "Add a post-deploy check to tools/release/smoke.sh (curl --tls-max 1.1 must fail; --tlsv1.2 and 1.3 succeed) or have EXT-06 testssl output attached.",
+      "owner_hint": "infra",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [],
+      "note": "Cipher suites on the public endpoint are chosen by the Azure Container Apps ingress and cannot be configured from this repository; Kestrel only listens on plain HTTP 8080 behind it. Needs an external scan of the real FQDN.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "EXT-06"
+    },
+    {
+      "req_id": "V12.1.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [],
+      "note": "No mTLS: no Kestrel client-certificate settings, AddCertificate or ClientCertificateMode in src or infra (grep). The Entra certificate is an outbound client assertion, not inbound authentication.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/apps.bicep:203",
+        "src/Hosts/Crm.Web/Program.cs:195-198",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:133",
+        "tools/release/smoke.sh:72"
+      ],
+      "note": "Ingress has allowInsecure: false (HTTP is redirected by the platform), HSTS is emitted outside Development, the session cookie is Secure=Always and __Host- prefixed, and the release smoke test fails if Strict-Transport-Security is missing. No unit/integration test covers it (only the post-deploy smoke). HSTS lifetime is weaker than documented (F-G4-04).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.2.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/apps.bicep:323",
+        "tools/release/smoke.sh:24"
+      ],
+      "note": "The service uses the platform-provided *.azurecontainerapps.io name with an Azure-managed publicly trusted certificate; no custom domain or self-signed cert in IaC, and smoke.sh uses curl without --insecure unless a flag is given. I did not inspect the live certificate.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.3.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/apps.bicep:92",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphTeams.cs:28-29",
+        "src/Integrations/Crm.Integrations.PowerOffice/PowerOfficeOptions.cs:28"
+      ],
+      "note": "SQL is Encrypt=True; Key Vault, Blob, Entra, Graph, Brreg, Atera, Partner Center and App Insights are HTTPS. But integration BaseUrl overrides and Teams webhook URLs are free Uri/string options with no https check, and the ingress-to-container hop and probes are plain HTTP 8080 inside the platform.",
+      "severity": "low",
+      "fix": "Add options validation (as DocumentStores.cs:41 does) requiring https for every BaseUrl/webhook and, for Teams, a host allowlist; consider environment peerTrafficConfiguration.encryption.enabled in apps.bicep.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/apps.bicep:92",
+        "infra/modules/apps.bicep:94-96"
+      ],
+      "note": "No custom certificate validation callback, DangerousAcceptAnyServerCertificate or SslProtocols override anywhere in src (grep); production SQL string has Encrypt=True and no TrustServerCertificate. TrustServerCertificate=True appears only in local/dev tooling strings. No test pins this.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/apps.bicep:221-228",
+        "infra/modules/apps.bicep:200-204",
+        "src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:65-67"
+      ],
+      "note": "crm-web and crm-worker never call each other over HTTP (they meet through SQL/outbox), which removes service-to-service HTTP. The only internal HTTP hops are the platform envoy to container 8080 and the health probes; the environment does not enable peer-to-peer traffic encryption.",
+      "severity": "low",
+      "fix": "Enable peerTrafficConfiguration.encryption.enabled on the managed environment (apps.bicep) and record the platform hop as an accepted risk in docs/03.",
+      "owner_hint": "infra",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V12.3.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/network.bicep:5-9",
+        "infra/modules/network.bicep:62-76",
+        "infra/modules/data.bicep:230-260"
+      ],
+      "note": "SQL, Key Vault and Blob are reached through private endpoints with Azure private DNS zones, so the public-CA certificates of the service FQDNs validate; no internal CA or self-signed certificate exists in IaC. Not tested from the running environment.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/05-integrations.md:5",
+        "docs/03-architecture.md:367-372",
+        "docs/06-security.md:53-63"
+      ],
+      "note": "External integrations, the NAT egress IP and the secret/identity table are documented, but I found no single list of all communication (Azure dependencies such as Blob/Key Vault/ACR/App Insights, inbound Power BI, Teams webhook hosts, ports and direction).",
+      "severity": "low",
+      "fix": "Add a communication matrix to docs/03 §11 (source, destination, protocol, auth, owner) and keep it in step with infra/*.bicep.",
+      "owner_hint": "process",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.2.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/apps.bicep:92-96",
+        "infra/modules/data.bicep:29",
+        "tests/Crm.ArchitectureTests/InfrastructureTests.cs:69-78"
+      ],
+      "note": "Backend links authenticate: SQL by Entra managed identity (Entra-only server), Blob/Key Vault/Graph by managed identity, BI by Entra bearer on its own scheme, providers by Key Vault-held keys. A test pins per-host SQL identities.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.2.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "tests/Crm.ArchitectureTests/InfrastructureTests.cs:26-66",
+        "infra/modules/secret-access.bicep:40-52",
+        "infra/modules/data.bicep:209-217",
+        "docs/adr/ADR-014-database-permissions-and-immutable-audit.md"
+      ],
+      "note": "Separate identities for web, worker and migrator; SQL roles crm_web/crm_worker without db_datawriter; Key Vault secret reads granted per secret; worker limited to the documents container. Residual over-breadth is recorded under V13.3.2.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/apps.bicep:92-96",
+        "src/Hosts/Crm.Web/appsettings.Development.json:9"
+      ],
+      "note": "Deployed hosts use managed identities and no passwords in Bicep/bicepparam/workflows (reviewed all three). The only default-style credential is the local container sa password in appsettings.Development.json, loaded only when ASPNETCORE_ENVIRONMENT=Development; see F-G4-15 about it shipping in the image.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.2.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.Atera/AteraClient.cs:243-251",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphTeams.cs:28-29",
+        "infra/modules/network.bicep:11-29"
+      ],
+      "note": "Outbound targets are fixed per client BaseAddress and Atera pagination links are re-pinned to the base path, so no user-supplied URL is fetched. But there is no explicit allowlist: BaseUrl options are unrestricted and Teams webhook URLs are POSTed to as configured; network egress is a NAT gateway with no firewall/FQDN filtering.",
+      "severity": "low",
+      "fix": "Validate configured URLs against a per-integration host allowlist at startup; optionally add Azure Firewall/NSG FQDN rules for egress.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.2.5",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/network.bicep:11-29",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:83-85"
+      ],
+      "note": "Browser-side loading is restricted by CSP (default-src/connect-src self, no third-party hosts in index.html). Server-side egress has no allowlist (see V13.2.4), so a compromised host could reach any Internet destination.",
+      "severity": "low",
+      "fix": "Same as V13.2.4; egress filtering is the infra half.",
+      "owner_hint": "infra",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.3.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/apps.bicep:152-176",
+        "infra/modules/secret-access.bicep:1-53",
+        "src/Integrations/Crm.Integrations.PartnerCenter/PartnerCenterOptions.cs:18-21",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphTeams.cs:10-13",
+        "docs/runbooks/02-integrations.md:104-108",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:73-83"
+      ],
+      "note": "PowerOffice and Atera keys, the Entra certificate and the Data Protection key follow a Key Vault + managed identity design with per-secret access. Partner Center ClientSecret/RefreshToken and the Teams webhook URLs (secrets by the code comment) have no Key Vault wiring in IaC and the runbook points at user-secrets; MSAL refresh tokens sit unencrypted in identity.TokenCache.",
+      "severity": "medium",
+      "fix": "Extend apps.bicep integrationSecrets/secret-access workerSecretNames for Partner Center and Teams (Key Vault references), use a certificate for Partner Center, and encrypt the token cache (F-G4-01).",
+      "owner_hint": "infra",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/data.bicep:140-158",
+        "infra/modules/data.bicep:219-227",
+        "infra/modules/apps.bicep:61-69"
+      ],
+      "note": "Per-secret Key Vault roles are good, but crm-web holds Key Vault Reader vault-wide and Storage Blob Data Contributor on the whole storage account (data.bicep comment admits it), the migrator is permanent SQL Entra administrator, and all three identities have AcrPull on the one registry.",
+      "severity": "low",
+      "fix": "Scope web blob role to the dataprotection and documents containers; document migrator admin as a deliberate exception.",
+      "owner_hint": "infra",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.4.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        ".github/workflows/release.yml:73-74",
+        "src/Hosts/Crm.Web/Program.cs:202-203"
+      ],
+      "note": "Images are built by dotnet publish -t:PublishContainer (publish output only, no repository checkout); static files are served from wwwroot and unknown paths fall back to index.html. I did not inspect a built image and no smoke check requests /.git/.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.4.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "infra/modules/apps.bicep:102",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:28-31",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:46-51",
+        "web/vite.config.ts:21"
+      ],
+      "note": "Production sets ASPNETCORE_ENVIRONMENT=Production on web, worker and migrator, development sign-in is refused outside Development, and no developer exception page or EF sensitive-data logging exists in src. However production builds ship JavaScript source maps (vite sourcemap: true), served anonymously.",
+      "severity": "low",
+      "fix": "Set build.sourcemap to false (or \"hidden\" and upload to monitoring only) in web/vite.config.ts; add a smoke check that /assets/*.map is 404.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.4.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:202-203"
+      ],
+      "note": "Only UseDefaultFiles/UseStaticFiles are configured; no UseDirectoryBrowser anywhere in src (grep). Not tested.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.4.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:213-260"
+      ],
+      "note": "Endpoints are mapped per verb and static/fallback only answer GET/HEAD, so TRACE should return 405, but this is reasoning from the framework: no test or smoke check sends TRACE, and ACA envoy behaviour is unverified.",
+      "severity": "low",
+      "fix": "Add `curl -X TRACE` (expect 404/405/501) to tools/release/smoke.sh.",
+      "owner_hint": "infra",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V13.4.5",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "tools/release/smoke.sh:85-95",
+        "src/Hosts/Crm.ServiceDefaults/ServiceDefaultsExtensions.cs:65-67",
+        "src/Hosts/Crm.Web/Program.cs:214",
+        "src/Hosts/Crm.Web/Program.cs:246-255",
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:103"
+      ],
+      "note": "Probes answer anonymously with a status word only; /health/details, /health/integrations and /admin/jobs require permissions and the smoke test asserts anonymous refusal. The OpenAPI document (/openapi/v1.json) is mapped in production and readable by any authenticated user through the fallback policy; smoke does not test it anonymously.",
+      "severity": "low",
+      "fix": "Map OpenAPI only in Development or add RequirePermission(Permissions.IntegrationsManage); add /openapi/v1.json to the smoke anonymous list.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V14.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/04-data-model.md:648-668",
+        "docs/06-security.md:79-87",
+        "src/BuildingBlocks/Crm.Authorization/SensitiveDataAttribute.cs"
+      ],
+      "note": "Personal data is inventoried per module (04 §9) and finance/cost fields have permission tiers, but there is no single classification of all data into protection levels (personal, finance, cost, operational, secrets). Retention periods and legal holds are still proposals.",
+      "severity": "low",
+      "fix": "Add a classification table (levels and members) to docs/06 and reference it from 04 §9; owner decisions via EXT-07.",
+      "owner_hint": "process",
+      "external_gate": "EXT-07"
+    },
+    {
+      "req_id": "V14.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/06-security.md:73-75",
+        "docs/04-data-model.md:631-646"
+      ],
+      "note": "Some requirements are written (log masking, audit immutability, retention classes in DryRun), but per-level requirements for encryption at rest, integrity, access, logging and retention are not documented as a set, and several retention values are unapproved.",
+      "severity": "low",
+      "fix": "Document protection requirements per class (encryption, integrity, access, logging, retention, backup) in docs/06.",
+      "owner_hint": "process",
+      "external_gate": "EXT-07"
+    },
+    {
+      "req_id": "V14.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "web/src/shared/views/store.ts:19-32",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:56-63"
+      ],
+      "note": "Credentials/tokens travel in cookie, CSRF header and bodies (SaveTokens=false), but list filters including free-text `search` live in the SPA address and GET query strings (e.g. customer or contact names). I did not determine whether any log or trace sink records query strings (OTel redaction defaults not verified); no personal-data lookup by e-mail in a URL was found.",
+      "severity": "low",
+      "fix": "Confirm query redaction in the Azure Monitor/OTel config, or POST-search for terms that may be personal; keep e-mail out of URLs.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V14.2.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:95-98",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:251",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:73-83",
+        "src/Hosts/Crm.Web/Http/ActiveUserMiddleware.cs:14"
+      ],
+      "note": "All /api responses are no-store and the PDF download is tested; server caches hold only roles/active flags for seconds. The SQL-backed MSAL token cache stores user refresh tokens (Graph mail/calendar scopes) unencrypted, and /bff responses are not no-store.",
+      "severity": "medium",
+      "fix": "Enable token cache encryption (see F-G4-01).",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V14.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:83-85",
+        "web/package.json"
+      ],
+      "note": "CSP restricts script/connect/font/img sources to self; index.html has no external URLs and web/ has no analytics/tracker dependency (grep). Telemetry goes to the tenant's own Application Insights; Teams cards go to the customer's Teams tenant by design.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V14.2.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Authorization/SensitiveDataAttribute.cs",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:305",
+        "docs/04-data-model.md:631-646"
+      ],
+      "note": "Individual controls exist and one is tested (no tokens/cookies in logs, AC06), but they cannot be shown to implement defined per-level requirements (V14.1.2), and retention is DryRun until EXT-07.",
+      "severity": "low",
+      "fix": "Close V14.1.2, then map each control to its class.",
+      "owner_hint": "process",
+      "external_gate": "EXT-07"
+    },
+    {
+      "req_id": "V14.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:78-102",
+        "web/src/app/AppShell.tsx:234-239",
+        "web/src/shared/views/store.ts:21"
+      ],
+      "note": "Sign-out ends the server session, the SPA clears the React Query cache and does a full navigation. No Clear-Site-Data header is sent, and localStorage saved-view filters (crm.views.<userId>.<scope>) survive sign-out and session expiry.",
+      "severity": "low",
+      "fix": "Return Clear-Site-Data: \"cache\" (and \"storage\" if saved views should go) from POST /bff/logout and /bff/signout-entra.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V14.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:95-98",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:110-126"
+      ],
+      "note": "Cache-Control: no-store is set only for paths under /api. /bff/user (name, e-mail, roles, permissions), /health/details, /openapi and /admin/jobs are authenticated but get no anti-cache header.",
+      "severity": "low",
+      "fix": "In SecurityHeadersMiddleware apply no-store to /bff (except static), /health/details, /openapi and /admin; add an integration test.",
+      "owner_hint": "code",
+      "external_gate": ""
+    },
+    {
+      "req_id": "V14.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/src/shared/views/store.ts:19-32",
+        "web/src/features/integrations/MonitoringPanel.tsx:33-37",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:47",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:131-134"
+      ],
+      "note": "Browser storage holds only allow-listed filter strings (<=200 chars) and view names; tokens are not saved (SaveTokens=false) and the session cookie is HttpOnly. A free-text search term could contain a customer name. A store.test.ts exists for the view store.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": ""
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-G4-01",
+      "title": "Entra refresh tokens cached unencrypted in SQL (identity.TokenCache)",
+      "severity": "medium",
+      "req_ids": [
+        "V14.2.2",
+        "V13.3.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:73-83",
+      "description": "EnableTokenAcquisitionToCallDownstreamApi().AddDistributedTokenCaches() backed by AddDistributedSqlServerCache stores MSAL user token caches (including refresh tokens for Graph delegated mail/calendar) in identity.TokenCache. No MsalDistributedTokenCacheAdapterOptions.Encrypt is configured and, to my knowledge of the library, the default is false, so values are serialized MSAL cache blobs readable by anyone with SELECT (DBA, backup holder, SQL injection). Not executed against a running database.",
+      "reproduction": "Sign in via Entra, then `SELECT TOP 1 Value FROM identity.TokenCache` as a reader of the identity schema and look for refresh_token entries in the (base64) payload; integration test could assert the stored bytes do not contain the token.",
+      "fix": "services.Configure<MsalDistributedTokenCacheAdapterOptions>(o => o.Encrypt = true) in AuthenticationSetup (Data Protection is already Key Vault-wrapped), add an integration test, and shorten cache sliding expiry to the 12 h absolute session."
+    },
+    {
+      "id": "F-G4-02",
+      "title": "Partner Center and Teams webhook secrets have no Key Vault path in infrastructure",
+      "severity": "medium",
+      "req_ids": [
+        "V13.3.1"
+      ],
+      "location": "infra/modules/apps.bicep:152-176; src/Integrations/Crm.Integrations.PartnerCenter/PartnerCenterOptions.cs:18-21; docs/runbooks/02-integrations.md:104-108",
+      "description": "IaC wires only PowerOffice and Atera secrets from Key Vault. Partner Center ClientSecret/RefreshToken and the Teams webhook URLs (a bearer secret by design, GraphTeams.cs:10-13) are plain configuration; the runbook instructs user-secrets, and in Container Apps the only remaining option is a plain env value visible to anyone who can read the app. Docs (06 §5) say these live in Key Vault, SEC-AUTH-05 says certificates not client secrets, and nothing writes a rotated refresh token back.",
+      "reproduction": "Enable Integrations__PartnerCenter__Enabled or Teams in prod: apps.bicep has no secretRef for them, so the values can only be supplied as env value:.",
+      "fix": "Add enablePartnerCenter/enableTeams params, KV-backed secrets in integrationSecrets and workerSecretNames, an architecture test like Provider_secrets_are_resolved_by_crm_worker_only, and certificate credentials for Partner Center."
+    },
+    {
+      "id": "F-G4-03",
+      "title": "Forwarded headers trust any sender and host filtering is off",
+      "severity": "low",
+      "req_ids": [
+        "V12.3.1",
+        "V13.4.2"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:164-170; src/Hosts/Crm.Web/appsettings.json:9",
+      "description": "KnownProxies/KnownIPNetworks are cleared and XForwardedHost is honoured, with AllowedHosts \"*\". Anything that can reach port 8080 directly (another app or compromised replica in the environment) can set client IP (audit, rate-limit fallback), scheme and host. The OIDC redirect URI follows the host, which Entra rejects unless registered. I could not determine whether the ACA envoy strips client-supplied X-Forwarded-Host.",
+      "reproduction": "From a peer container in the environment: `curl -H \"X-Forwarded-For: 1.2.3.4\" -H \"X-Forwarded-Host: evil.example\" http://ca-crm-web-prod:8080/bff/login` and inspect the redirect_uri / audit IP.",
+      "fix": "Set AllowedHosts per environment (FQDN plus the --candidate label host), set KnownIPNetworks to the apps subnet 10.40.0.0/23, drop XForwardedHost unless needed, add a test."
+    },
+    {
+      "id": "F-G4-04",
+      "title": "HSTS lifetime is the framework default, weaker than documented",
+      "severity": "low",
+      "req_ids": [
+        "V12.2.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:195-198; docs/06-security.md:41",
+      "description": "UseHsts() is called without AddHsts, so max-age is 30 days and includeSubDomains is off; docs/06 §4 promises max-age=31536000; includeSubDomains. smoke.sh only checks that the header exists.",
+      "reproduction": "curl -sI https://<fqdn>/ | grep -i strict-transport-security",
+      "fix": "services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = true; }) and assert the value in smoke.sh."
+    },
+    {
+      "id": "F-G4-05",
+      "title": "JavaScript source maps are published and served anonymously",
+      "severity": "low",
+      "req_ids": [
+        "V13.4.2"
+      ],
+      "location": "web/vite.config.ts:21; src/Hosts/Crm.Web/wwwroot/assets/*.map; src/Hosts/Crm.Web/Program.cs:202-203",
+      "description": "build.sourcemap is true and UseStaticFiles runs before authentication, so every *.js.map (full TS sources with sourcesContent) is downloadable without sign-in, exposing client logic and API surface (related to L3 V13.4.7).",
+      "reproduction": "Request https://<fqdn>/assets/AuditLogPage-D-QULnfZ.js.map without a cookie.",
+      "fix": "sourcemap: false (or hidden + private upload) and a smoke check that .map files return 404."
+    },
+    {
+      "id": "F-G4-06",
+      "title": "Authenticated /bff and admin responses lack Cache-Control: no-store",
+      "severity": "low",
+      "req_ids": [
+        "V14.3.2"
+      ],
+      "location": "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:95-98",
+      "description": "no-store is applied only to /api paths; GET /bff/user returns name, e-mail, roles and permissions, and /health/details, /openapi, /admin/jobs also carry no anti-cache header.",
+      "reproduction": "Sign in, GET /bff/user and inspect headers: no Cache-Control.",
+      "fix": "Broaden the condition to /bff, /health/details, /openapi and /admin; add an integration test."
+    },
+    {
+      "id": "F-G4-07",
+      "title": "OpenAPI document exposed in production to any authenticated user",
+      "severity": "low",
+      "req_ids": [
+        "V13.4.5"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:214",
+      "description": "MapOpenApi is unconditional; the fallback policy only requires authentication, so any signed-in role (including Technician) can fetch the full API description.",
+      "reproduction": "Sign in as the lowest role and GET /openapi/v1.json.",
+      "fix": "Map only in Development, or require an admin permission."
+    },
+    {
+      "id": "F-G4-08",
+      "title": "Key sizes below 128-bit security (RSA-2048)",
+      "severity": "low",
+      "req_ids": [
+        "V11.2.3"
+      ],
+      "location": "infra/modules/data.bicep:117-118; docs/runbooks/01-first-deployment.md:62",
+      "description": "The Data Protection wrapping key is RSA 2048 and the Entra certificate comes from the default policy (RSA 2048, exportable).",
+      "reproduction": "az keyvault key show -n dataprotection --vault-name <kv> --query key.n (length).",
+      "fix": "keySize 3072 for the key; RSA 3072 non-exportable certificate policy."
+    },
+    {
+      "id": "F-G4-09",
+      "title": "No Clear-Site-Data on sign-out; saved views persist",
+      "severity": "low",
+      "req_ids": [
+        "V14.3.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:78-102; web/src/shared/views/store.ts:21",
+      "description": "Logout relies on the SPA clearing memory; no Clear-Site-Data header, and localStorage views (filters possibly containing names) are kept per user across sign-out and expiry.",
+      "reproduction": "Sign out, inspect POST /bff/logout headers and Application > Local Storage.",
+      "fix": "Send Clear-Site-Data from logout endpoints; remove crm.views.* if policy requires."
+    },
+    {
+      "id": "F-G4-10",
+      "title": "No cryptographic key-management policy or inventory",
+      "severity": "low",
+      "req_ids": [
+        "V11.1.1",
+        "V11.1.2"
+      ],
+      "location": "docs/06-security.md:53-63",
+      "description": "Secrets are tabulated but keys, algorithms, certificates and their lifecycle are not inventoried; the privacy HMAC key is not in any document outside code comments.",
+      "reproduction": "Search docs for an inventory: none found.",
+      "fix": "Write the policy and inventory; add an architecture test for new crypto call sites."
+    },
+    {
+      "id": "F-G4-11",
+      "title": "Privacy HMAC key lives in the same database as the hashes it protects",
+      "severity": "low",
+      "req_ids": [
+        "V11.1.1",
+        "V14.1.2"
+      ],
+      "location": "src/Modules/Privacy/Crm.Privacy/Features/Suppressions.cs:20-24; src/Modules/Privacy/Crm.Privacy/Persistence/Migrations/20261004095906_PrivacyCases.cs:351",
+      "description": "Suppression hashes are HMAC-SHA256 keyed by privacy.Keys.Value, stored in the same SQL database (and backups); both crm_web and crm_worker can SELECT it (only I/U/D are denied). The class comment says an address can be confirmed \"only with access to the key\", but anyone with DB read has both, so the protection is only against partial leaks (e.g. an export of the suppression table).",
+      "reproduction": "As crm_worker: SELECT Value FROM privacy.Keys WHERE Name=N'suppression'; recompute HMAC for a candidate address and compare with privacy.Suppressions.",
+      "fix": "Keep the key in Key Vault (read by the worker) or document the accepted limitation in ADR-020."
+    },
+    {
+      "id": "F-G4-12",
+      "title": "No egress control and permissive trusted-service bypass",
+      "severity": "low",
+      "req_ids": [
+        "V13.2.4",
+        "V13.2.5",
+        "V13.3.2"
+      ],
+      "location": "infra/modules/network.bicep:11-29; infra/modules/data.bicep:111,173; infra/modules/apps.bicep:51-59",
+      "description": "Outbound traffic goes through a NAT gateway with no firewall/FQDN filtering; Key Vault and storage allow AzureServices bypass; the container registry (Basic SKU) has no private endpoint or network rule (not set, so public endpoint, Entra-only auth).",
+      "reproduction": "From a container, any HTTPS destination is reachable; az acr show --query publicNetworkAccess.",
+      "fix": "Azure Firewall/NSG egress rules, ACR networkRuleSet or Premium + private endpoint, justify or remove bypass."
+    },
+    {
+      "id": "F-G4-13",
+      "title": "Documented controls not present in repository (Defender, ZAP, image rescans)",
+      "severity": "low",
+      "req_ids": [
+        "V12.1.1",
+        "V13.3.2"
+      ],
+      "location": "docs/06-security.md:45,67-68; docs/07-nfr-devops.md:82",
+      "description": "Docs list Defender for SQL/Storage/Containers, a weekly ZAP baseline and the aspnet:10.0-noble-chiseled image; infra has no Microsoft.Security resources, CI has no ZAP job (docs/07 admits ZAP is not implemented) and csproj uses ...-chiseled-extra. Subscription-level Defender plans may exist outside this repo (not determinable).",
+      "reproduction": "grep -ri defender infra; list .github/workflows.",
+      "fix": "Either add the controls or correct docs; evidence real state through EXT-06 / EXT-11."
+    },
+    {
+      "id": "F-G4-14",
+      "title": "Base image referenced by mutable tag; images scanned only at release",
+      "severity": "low",
+      "req_ids": [
+        "V13.4.2",
+        "V12.1.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Crm.Web.csproj:6; src/Hosts/Crm.Worker/Crm.Worker.csproj:6; .github/workflows/release.yml:97-110",
+      "description": "ContainerBaseImage uses a tag, not a digest, so rebuilds are not reproducible; Dependabot has no docker ecosystem for it and deployed digests are not rescanned. Non-root is the default of the Microsoft chiseled image but was not verified on a built image.",
+      "reproduction": "Build twice on different days and compare base layers.",
+      "fix": "Pin ContainerBaseImage by digest, add scheduled rescan of the current prod digests; verify `USER app` in the manifest."
+    },
+    {
+      "id": "F-G4-15",
+      "title": "Development settings with a SQL password ship in the publish output",
+      "severity": "low",
+      "req_ids": [
+        "V13.2.3"
+      ],
+      "location": "src/Hosts/Crm.Web/appsettings.Development.json:9",
+      "description": "The Web SDK normally copies appsettings.*.json to the publish directory, so the local sa password and Dev auth mode reach the image (inactive under Production, and Development auth throws outside Development). Not verified by inspecting an image.",
+      "reproduction": "docker run --entrypoint ls on the image or list the SBOM files for appsettings.Development.json.",
+      "fix": "Exclude it from publish (CopyToPublishDirectory=Never)."
+    },
+    {
+      "id": "F-G4-16",
+      "title": "Integration endpoints and webhooks are not validated or allowlisted",
+      "severity": "low",
+      "req_ids": [
+        "V12.3.1",
+        "V13.2.4"
+      ],
+      "location": "src/Integrations/Crm.Integrations.MicrosoftGraph/GraphTeams.cs:28-35; src/Integrations/Crm.Integrations.PowerOffice/PowerOfficeOptions.cs:28",
+      "description": "Configured BaseUrl/webhook values are used as-is (http or any host accepted), and a rejected Teams response body (first 200 chars) is logged.",
+      "reproduction": "Set Integrations__MicrosoftGraph__Teams__Channels__Sales=http://example.invalid and observe the request is attempted.",
+      "fix": "Options validation for https + host suffix; log only status."
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+# Read-only aggregate inventory, 2026-10-03 (local SQL container vardahei-crm-sql, databases crm and crm_e2e)
+# Query: docs/claude-opus/evidence/DEV-00/inventory.sql. Counts only; no row contents were read.
+################ crm
+== billing.BillingRuns by status
+Status|runs|deleted|needs_second|same_approver|first_period|last_period
+------|----|-------|------------|-------------|------------|-----------
+== periods with more than one run (any status, not deleted)
+periods_with_several_runs
+-------------------------
+0
+== billing.BillingBases by status
+Status|bases|deleted|with_order_no|above_200k
+------|-----|-------|-------------|----------
+== billing.BillingLines
+Group|lines|deleted|manual_or_adjusted|without_source_refs
+-----|-----|-------|------------------|-------------------
+== same contract line source billed in more than one non-cancelled basis of the same period
+duplicated_sources
+------------------
+0
+== billing.PendingCharges
+SourceType|charges|waiting
+----------|-------|-------
+== billing.Invoices
+Status|invoices|without_basis
+------|--------|-------------
+== outbox per schema (processed / waiting / given up after 10 attempts)
+module|total|processed|waiting|stuck
+------|-----|---------|-------|-----
+activities|0|NULL|NULL|NULL
+audit|0|NULL|NULL|NULL
+billing|0|NULL|NULL|NULL
+catalog|6|0|6|0
+contracts|3|0|3|0
+customers|14|12|2|0
+customfields|0|NULL|NULL|NULL
+identity|0|NULL|NULL|NULL
+integration|0|NULL|NULL|NULL
+licensing|0|NULL|NULL|NULL
+notifications|0|NULL|NULL|NULL
+projects|0|NULL|NULL|NULL
+sales|0|NULL|NULL|NULL
+service|0|NULL|NULL|NULL
+time|0|NULL|NULL|NULL
+== integration.OutboundOperations by system/operation/status
+System|Operation|Status|operations
+------|---------|------|----------
+poweroffice|update-customer|Succeeded|1
+== sales.Quotes by status (PDF is rendered on download; no stored artifacts)
+Status|quote_versions
+------|--------------
+PendingApproval|1
+== identity.Users
+IsActive|users
+--------|-----
+1|4
+== audit.AuditEntries
+audit_entries
+-------------
+70
+################ crm_e2e
+== billing.BillingRuns by status
+Status|runs|deleted|needs_second|same_approver|first_period|last_period
+------|----|-------|------------|-------------|------------|-----------
+Collected|30|0|0|0|2026-07-01|2044-06-01
+ExportedWithErrors|29|0|0|0|2040-01-01|2046-01-01
+== periods with more than one run (any status, not deleted)
+periods_with_several_runs
+-------------------------
+0
+== billing.BillingBases by status
+Status|bases|deleted|with_order_no|above_200k
+------|-----|-------|-------------|----------
+Cancelled|23|0|0|0
+Draft|911|0|0|0
+Exported|446|0|446|0
+Failed|444|0|0|0
+== billing.BillingLines
+Group|lines|deleted|manual_or_adjusted|without_source_refs
+-----|-----|-------|------------------|-------------------
+OneOff|50|0|27|27
+Subscription|1801|0|0|0
+== same contract line source billed in more than one non-cancelled basis of the same period
+duplicated_sources
+------------------
+0
+== billing.PendingCharges
+SourceType|charges|waiting
+----------|-------|-------
+project-phase|5|5
+== billing.Invoices
+Status|invoices|without_basis
+------|--------|-------------
+Sent|337|0
+== outbox per schema (processed / waiting / given up after 10 attempts)
+module|total|processed|waiting|stuck
+------|-----|---------|-------|-----
+activities|93|93|0|0
+audit|0|NULL|NULL|NULL
+billing|1365|1365|0|0
+catalog|321|321|0|0
+contracts|418|418|0|0
+customers|1884|1884|0|0
+customfields|0|NULL|NULL|NULL
+identity|0|NULL|NULL|NULL
+integration|0|NULL|NULL|NULL
+licensing|0|NULL|NULL|NULL
+notifications|0|NULL|NULL|NULL
+projects|5|5|0|0
+sales|102|102|0|0
+service|34|34|0|0
+time|32|32|0|0
+== integration.OutboundOperations by system/operation/status
+System|Operation|Status|operations
+------|---------|------|----------
+poweroffice|create-sales-order|Failed|444
+poweroffice|create-sales-order|Succeeded|446
+poweroffice|sync-contact-person|Succeeded|254
+== sales.Quotes by status (PDF is rendered on download; no stored artifacts)
+Status|quote_versions
+------|--------------
+Accepted|10
+Draft|13
+Ready|20
+Superseded|12
+== identity.Users
+IsActive|users
+--------|-----
+1|6
+== audit.AuditEntries
+audit_entries
+-------------
+13874

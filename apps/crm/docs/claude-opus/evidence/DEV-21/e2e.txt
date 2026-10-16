@@ -1,0 +1,4 @@
+npm run e2e (web/), fresh hosts, own SQL container crm-e2e-dev21c (port 14344, database crm_e2e_dev21c), run by the privileged step-up agent on the final code:
+88 passed (3.7 min), 0 retries, 0 flaky. Includes chromium desktop and dark, mobile, firefox, webkit, wcag22, reverify.spec.ts.
+Earlier runs on the same code line (web host group): 86 passed; business-logic group: 24 targeted specs passed.
+The container and web/test-results were removed afterwards.

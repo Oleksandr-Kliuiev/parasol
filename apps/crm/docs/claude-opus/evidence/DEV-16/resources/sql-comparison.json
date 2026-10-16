@@ -1,0 +1,586 @@
+{
+  "methodology": [
+    "Match query_hash and preserve normalized statement text; never compare plan handles as query identities across DDL.",
+    "Subtract counters only for the same plan handle and statement offsets with identical normalized text and all monotonic counters. Otherwise report the end cache lifetime as such, not an exact capture interval.",
+    "Start/end snapshots contain only top20 by cumulative reads; missing does not mean zero executions, and plans evicted before the end are unobserved.",
+    "Compare per-execution measured reads/CPU/elapsed because workload execution counts differ. Cached XML row counts and subtree costs are estimates, not actual operator measurements.",
+    "No DBCC/cache reset or SQL requests were made by this comparison.",
+    "After-index targeted metadata snapshot follows completion of both after-index workloads; per-execution averages cover both runs. This is not a strictly matched workload interval."
+  ],
+  "queries": [
+    {
+      "queryHash": "0XF89802A1CF38F587",
+      "purpose": "open ticket load",
+      "baseline": {
+        "source": "/private/tmp/dev16-full/baseline/resources/sql-end.json",
+        "rows": [
+          {
+            "planHandle": "0x0600050070058B07109AB0110D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0xF89802A1CF38F587",
+            "queryText": "SELECT TOP(2) COUNT(*) AS [Open], COUNT(CASE\n    WHEN [t0].[TechnicianUserId] IS NULL THEN 1\nEND) AS [Unassigned]\nFROM (\n    SELECT [t].[TechnicianUserId], 1 AS [Key]\n    FROM [service].[Tickets] AS [t]\n    WHERE [t].[IsOpen] = CAST(1 AS bit)\n) AS [t0]\nGROUP BY [t0].[Key]",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 285,
+              "cpuMicroseconds": 82614435,
+              "elapsedMicroseconds": 214406581,
+              "logicalReads": 10889980,
+              "physicalReads": 6915522,
+              "returnedRows": 285
+            },
+            "perExecution": {
+              "cpuMs": 289.8752105263158,
+              "elapsedMs": 752.3037929824561,
+              "logicalReads": 38210.45614035088,
+              "physicalReads": 24264.98947368421,
+              "returnedRows": 1.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 285,
+          "cpuMicroseconds": 82614435,
+          "elapsedMicroseconds": 214406581,
+          "logicalReads": 10889980,
+          "physicalReads": 6915522,
+          "returnedRows": 285
+        },
+        "perExecution": {
+          "cpuMs": 289.8752105263158,
+          "elapsedMs": 752.3037929824561,
+          "logicalReads": 38210.45614035088,
+          "physicalReads": 24264.98947368421,
+          "returnedRows": 1.0
+        },
+        "available": true
+      },
+      "after": {
+        "source": "/private/tmp/dev16-full/resources/sql-targeted-after.json",
+        "rows": [
+          {
+            "planHandle": "0x0600050070058B07109AB0110D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0xF89802A1CF38F587",
+            "queryText": "SELECT TOP(2) COUNT(*) AS [Open], COUNT(CASE\n    WHEN [t0].[TechnicianUserId] IS NULL THEN 1\nEND) AS [Unassigned]\nFROM (\n    SELECT [t].[TechnicianUserId], 1 AS [Key]\n    FROM [service].[Tickets] AS [t]\n    WHERE [t].[IsOpen] = CAST(1 AS bit)\n) AS [t0]\nGROUP BY [t0].[Key]",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 3300,
+              "cpuMicroseconds": 23952287,
+              "elapsedMicroseconds": 30362841,
+              "logicalReads": 805200,
+              "physicalReads": 243,
+              "returnedRows": 3300
+            },
+            "perExecution": {
+              "cpuMs": 7.258268787878788,
+              "elapsedMs": 9.200860909090908,
+              "logicalReads": 244.0,
+              "physicalReads": 0.07363636363636364,
+              "returnedRows": 1.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 3300,
+          "cpuMicroseconds": 23952287,
+          "elapsedMicroseconds": 30362841,
+          "logicalReads": 805200,
+          "physicalReads": 243,
+          "returnedRows": 3300
+        },
+        "perExecution": {
+          "cpuMs": 7.258268787878788,
+          "elapsedMs": 9.200860909090908,
+          "logicalReads": 244.0,
+          "physicalReads": 0.07363636363636364,
+          "returnedRows": 1.0
+        },
+        "available": true
+      },
+      "afterToBaselinePerExecutionRatio": {
+        "cpuMs": 0.02503928768072377,
+        "elapsedMs": 0.01223024660372206,
+        "logicalReads": 0.0063856866587450115,
+        "physicalReads": 3.0346752763368604e-06
+      },
+      "baselinePlans": [
+        {
+          "file": "/private/tmp/dev16-full/baseline/resources/sql-end-plan-4.sqlplan",
+          "estimatedSubtreeCost": "27.807",
+          "access": [
+            {
+              "operation": "Clustered Index Scan",
+              "table": "[Tickets]",
+              "index": "[PK_Tickets]",
+              "estimatedRowsRead": "1e+06",
+              "estimatedRows": "50106.7"
+            }
+          ],
+          "sortOperators": 0,
+          "missingIndexImpactPercent": [
+            95.1815
+          ]
+        }
+      ],
+      "afterPlans": [
+        {
+          "file": "/private/tmp/dev16-full/resources/sql-targeted-after-plan-4.sqlplan",
+          "estimatedSubtreeCost": "0.101505",
+          "access": [
+            {
+              "operation": "Index Seek",
+              "table": "[Tickets]",
+              "index": "[IX_Tickets_IsOpen]",
+              "estimatedRowsRead": "50000",
+              "estimatedRows": "50000"
+            }
+          ],
+          "sortOperators": 0,
+          "missingIndexImpactPercent": []
+        }
+      ]
+    },
+    {
+      "queryHash": "0X273119C850F8392E",
+      "purpose": "time page (WorkDate DESC, Id ASC)",
+      "baseline": {
+        "source": "/private/tmp/dev16-full/baseline/resources/sql-end.json",
+        "rows": [
+          {
+            "planHandle": "0x06000500E7786302E0220E040D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0x273119C850F8392E",
+            "queryText": "SELECT [t1].[Id], [t1].[AfterHours], [t1].[Amount], [t1].[ApprovalCount], [t1].[ApprovedAt], [t1].[ApprovedBy], [t1].[Billable], [t1].[ContractId], [t1].[CreatedAt], [t1].[CreatedBy], [t1].[Description], [t1].[EndedAt], [t1].[ExternalId], [t1].[ExternalTicketId], [t1].[Hours], [t1].[IsDeleted], [t1].[ModifiedAt], [t1].[ModifiedBy], [t1].[Onsite], [t1].[OrganizationId], [t1].[ProjectId], [t1].[ReviewNote], [t1].[RowVersion], [t1].[Source], [t1].[StartedAt], [t1].[Status], [t1].[TechnicianExternalId], [t1].[TechnicianId], [t1].[TechnicianName], [t1].[TicketId], [t1].[TicketTitle], [t1].[WorkDate], [t1].[WorkType], [t2].[Id], [t2].[Amount], [t2].[BilledHours], [t2].[Classification], [t2].[CreatedAt], [t2].[CreatedBy], [t2].[HourBankId], [t2].[Hours], [t2].[IsDeleted], [t2].[ModifiedAt], [t2].[ModifiedBy], [t2].[Rate], [t2].[RowVersion], [t2].[TimeEntryId]\nFROM (\n    SELECT TOP(@p) [t].[Id], [t].[AfterHours], [t].[Amount], [t].[ApprovalCount], [t].[ApprovedAt], [t].[ApprovedBy], [t].[Billable], [t].[ContractId], [t].[CreatedAt], [t].[CreatedBy], [t].[Description], [t].[EndedAt], [t].[ExternalId], [t].[ExternalTicketId], [t].[Hours], [t].[IsDeleted], [t].[ModifiedAt], [t].[ModifiedBy], ",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 330,
+              "cpuMicroseconds": 134856236,
+              "elapsedMicroseconds": 526316375,
+              "logicalReads": 15468441,
+              "physicalReads": 8794665,
+              "returnedRows": 8580
+            },
+            "perExecution": {
+              "cpuMs": 408.6552606060606,
+              "elapsedMs": 1594.8981060606059,
+              "logicalReads": 46874.06363636364,
+              "physicalReads": 26650.5,
+              "returnedRows": 26.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 330,
+          "cpuMicroseconds": 134856236,
+          "elapsedMicroseconds": 526316375,
+          "logicalReads": 15468441,
+          "physicalReads": 8794665,
+          "returnedRows": 8580
+        },
+        "perExecution": {
+          "cpuMs": 408.6552606060606,
+          "elapsedMs": 1594.8981060606059,
+          "logicalReads": 46874.06363636364,
+          "physicalReads": 26650.5,
+          "returnedRows": 26.0
+        },
+        "available": true
+      },
+      "after": {
+        "source": "/private/tmp/dev16-full/resources/sql-targeted-after.json",
+        "rows": [
+          {
+            "planHandle": "0x06000500E7786302E0220E040D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0x273119C850F8392E",
+            "queryText": "SELECT [t1].[Id], [t1].[AfterHours], [t1].[Amount], [t1].[ApprovalCount], [t1].[ApprovedAt], [t1].[ApprovedBy], [t1].[Billable], [t1].[ContractId], [t1].[CreatedAt], [t1].[CreatedBy], [t1].[Description], [t1].[EndedAt], [t1].[ExternalId], [t1].[ExternalTicketId], [t1].[Hours], [t1].[IsDeleted], [t1].[ModifiedAt], [t1].[ModifiedBy], [t1].[Onsite], [t1].[OrganizationId], [t1].[ProjectId], [t1].[ReviewNote], [t1].[RowVersion], [t1].[Source], [t1].[StartedAt], [t1].[Status], [t1].[TechnicianExternalId], [t1].[TechnicianId], [t1].[TechnicianName], [t1].[TicketId], [t1].[TicketTitle], [t1].[WorkDate], [t1].[WorkType], [t2].[Id], [t2].[Amount], [t2].[BilledHours], [t2].[Classification], [t2].[CreatedAt], [t2].[CreatedBy], [t2].[HourBankId], [t2].[Hours], [t2].[IsDeleted], [t2].[ModifiedAt], [t2].[ModifiedBy], [t2].[Rate], [t2].[RowVersion], [t2].[TimeEntryId]\nFROM (\n    SELECT TOP(@p) [t].[Id], [t].[AfterHours], [t].[Amount], [t].[ApprovalCount], [t].[ApprovedAt], [t].[ApprovedBy], [t].[Billable], [t].[ContractId], [t].[CreatedAt], [t].[CreatedBy], [t].[Description], [t].[EndedAt], [t].[ExternalId], [t].[ExternalTicketId], [t].[Hours], [t].[IsDeleted], [t].[ModifiedAt], [t].[ModifiedBy], ",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 2459,
+              "cpuMicroseconds": 2077569,
+              "elapsedMicroseconds": 2281663,
+              "logicalReads": 616101,
+              "physicalReads": 589,
+              "returnedRows": 63934
+            },
+            "perExecution": {
+              "cpuMs": 0.8448836925579505,
+              "elapsedMs": 0.9278824725498169,
+              "logicalReads": 250.5494103294022,
+              "physicalReads": 0.23952826352175682,
+              "returnedRows": 26.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 2459,
+          "cpuMicroseconds": 2077569,
+          "elapsedMicroseconds": 2281663,
+          "logicalReads": 616101,
+          "physicalReads": 589,
+          "returnedRows": 63934
+        },
+        "perExecution": {
+          "cpuMs": 0.8448836925579505,
+          "elapsedMs": 0.9278824725498169,
+          "logicalReads": 250.5494103294022,
+          "physicalReads": 0.23952826352175682,
+          "returnedRows": 26.0
+        },
+        "available": true
+      },
+      "afterToBaselinePerExecutionRatio": {
+        "cpuMs": 0.002067472938693941,
+        "elapsedMs": 0.0005817816630566352,
+        "logicalReads": 0.005345160860664803,
+        "physicalReads": 8.987758710784293e-06
+      },
+      "baselinePlans": [
+        {
+          "file": "/private/tmp/dev16-full/baseline/resources/sql-end-plan-2.sqlplan",
+          "estimatedSubtreeCost": "56.2906",
+          "access": [
+            {
+              "operation": "Clustered Index Scan",
+              "table": "[TimeEntries]",
+              "index": "[PK_TimeEntries]",
+              "estimatedRowsRead": "1e+06",
+              "estimatedRows": "16543.1"
+            },
+            {
+              "operation": "Index Seek",
+              "table": "[TimeAllocations]",
+              "index": "[IX_TimeAllocations_TimeEntryId]",
+              "estimatedRowsRead": "40.6785",
+              "estimatedRows": "40.6785"
+            },
+            {
+              "operation": "Clustered Index Seek",
+              "table": "[TimeAllocations]",
+              "index": "[PK_TimeAllocations]",
+              "estimatedRowsRead": null,
+              "estimatedRows": "1"
+            }
+          ],
+          "sortOperators": 1,
+          "missingIndexImpactPercent": []
+        }
+      ],
+      "afterPlans": [
+        {
+          "file": "/private/tmp/dev16-full/resources/sql-targeted-after-plan-1.sqlplan",
+          "estimatedSubtreeCost": "3.56273",
+          "access": [
+            {
+              "operation": "Index Seek",
+              "table": "[TimeEntries]",
+              "index": "[IX_TimeEntries_WorkDate_Id]",
+              "estimatedRowsRead": "16543.1",
+              "estimatedRows": "26.1816"
+            },
+            {
+              "operation": "Clustered Index Seek",
+              "table": "[TimeEntries]",
+              "index": "[PK_TimeEntries]",
+              "estimatedRowsRead": null,
+              "estimatedRows": "1"
+            },
+            {
+              "operation": "Index Seek",
+              "table": "[TimeAllocations]",
+              "index": "[IX_TimeAllocations_Active_TimeEntryId]",
+              "estimatedRowsRead": "40.6785",
+              "estimatedRows": "40.6785"
+            },
+            {
+              "operation": "Clustered Index Seek",
+              "table": "[TimeAllocations]",
+              "index": "[PK_TimeAllocations]",
+              "estimatedRowsRead": null,
+              "estimatedRows": "1"
+            }
+          ],
+          "sortOperators": 0,
+          "missingIndexImpactPercent": []
+        }
+      ]
+    },
+    {
+      "queryHash": "0XA24F3994F39DD549",
+      "purpose": "time period totals",
+      "baseline": {
+        "source": "/private/tmp/dev16-full/baseline/resources/sql-end.json",
+        "rows": [
+          {
+            "planHandle": "0x060005000967FF0510E9DD2F0D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0xA24F3994F39DD549",
+            "queryText": "SELECT TOP(2) COUNT(*) AS [Count], COALESCE(SUM([t0].[Hours]), 0.0) AS [Hours], COALESCE(SUM(CASE\n    WHEN [t0].[Billable] = CAST(1 AS bit) THEN [t0].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Billable], COALESCE(SUM(CASE\n    WHEN [t0].[Status] IN (N'Approved', N'Invoiced') THEN [t0].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Approved], COALESCE(SUM(CASE\n    WHEN [t0].[Status] = N'New' THEN [t0].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [New], COALESCE(SUM(COALESCE([t0].[Amount], 0.0)), 0.0) AS [Amount]\nFROM (\n    SELECT [t].[Amount], [t].[Billable], [t].[Hours], [t].[Status], 1 AS [Key]\n    FROM [time].[TimeEntries] AS [t]\n    WHERE [t].[IsDeleted] = CAST(0 AS bit) AND [t].[WorkDate] >= @from AND [t].[WorkDate] < @to\n) AS [t0]\nGROUP BY [t0].[Key]",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 267,
+              "cpuMicroseconds": 95963241,
+              "elapsedMicroseconds": 238570514,
+              "logicalReads": 12460026,
+              "physicalReads": 7766245,
+              "returnedRows": 267
+            },
+            "perExecution": {
+              "cpuMs": 359.41288764044947,
+              "elapsedMs": 893.5225243445693,
+              "logicalReads": 46666.76404494382,
+              "physicalReads": 29087.059925093632,
+              "returnedRows": 1.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 267,
+          "cpuMicroseconds": 95963241,
+          "elapsedMicroseconds": 238570514,
+          "logicalReads": 12460026,
+          "physicalReads": 7766245,
+          "returnedRows": 267
+        },
+        "perExecution": {
+          "cpuMs": 359.41288764044947,
+          "elapsedMs": 893.5225243445693,
+          "logicalReads": 46666.76404494382,
+          "physicalReads": 29087.059925093632,
+          "returnedRows": 1.0
+        },
+        "available": true
+      },
+      "after": {
+        "source": "/private/tmp/dev16-full/resources/sql-targeted-after.json",
+        "rows": [
+          {
+            "planHandle": "0x060005000967FF0510E9DD2F0D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0xA24F3994F39DD549",
+            "queryText": "SELECT TOP(2) COUNT(*) AS [Count], COALESCE(SUM([t0].[Hours]), 0.0) AS [Hours], COALESCE(SUM(CASE\n    WHEN [t0].[Billable] = CAST(1 AS bit) THEN [t0].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Billable], COALESCE(SUM(CASE\n    WHEN [t0].[Status] IN (N'Approved', N'Invoiced') THEN [t0].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Approved], COALESCE(SUM(CASE\n    WHEN [t0].[Status] = N'New' THEN [t0].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [New], COALESCE(SUM(COALESCE([t0].[Amount], 0.0)), 0.0) AS [Amount]\nFROM (\n    SELECT [t].[Amount], [t].[Billable], [t].[Hours], [t].[Status], 1 AS [Key]\n    FROM [time].[TimeEntries] AS [t]\n    WHERE [t].[IsDeleted] = CAST(0 AS bit) AND [t].[WorkDate] >= @from AND [t].[WorkDate] < @to\n) AS [t0]\nGROUP BY [t0].[Key]",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 2466,
+              "cpuMicroseconds": 28778532,
+              "elapsedMicroseconds": 37224308,
+              "logicalReads": 697878,
+              "physicalReads": 0,
+              "returnedRows": 2466
+            },
+            "perExecution": {
+              "cpuMs": 11.670126520681267,
+              "elapsedMs": 15.095015409570154,
+              "logicalReads": 283.0,
+              "physicalReads": 0.0,
+              "returnedRows": 1.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 2466,
+          "cpuMicroseconds": 28778532,
+          "elapsedMicroseconds": 37224308,
+          "logicalReads": 697878,
+          "physicalReads": 0,
+          "returnedRows": 2466
+        },
+        "perExecution": {
+          "cpuMs": 11.670126520681267,
+          "elapsedMs": 15.095015409570154,
+          "logicalReads": 283.0,
+          "physicalReads": 0.0,
+          "returnedRows": 1.0
+        },
+        "available": true
+      },
+      "afterToBaselinePerExecutionRatio": {
+        "cpuMs": 0.032469972340991464,
+        "elapsedMs": 0.016893827517826577,
+        "logicalReads": 0.006064273060104369,
+        "physicalReads": 0.0
+      },
+      "baselinePlans": [
+        {
+          "file": "/private/tmp/dev16-full/baseline/resources/sql-end-plan-3.sqlplan",
+          "estimatedSubtreeCost": "34.0326",
+          "access": [
+            {
+              "operation": "Clustered Index Scan",
+              "table": "[TimeEntries]",
+              "index": "[PK_TimeEntries]",
+              "estimatedRowsRead": "1e+06",
+              "estimatedRows": "16543.1"
+            }
+          ],
+          "sortOperators": 0,
+          "missingIndexImpactPercent": [
+            85.5533
+          ]
+        }
+      ],
+      "afterPlans": [
+        {
+          "file": "/private/tmp/dev16-full/resources/sql-targeted-after-plan-2.sqlplan",
+          "estimatedSubtreeCost": "0.240399",
+          "access": [
+            {
+              "operation": "Index Seek",
+              "table": "[TimeEntries]",
+              "index": "[IX_TimeEntries_WorkDate_Id]",
+              "estimatedRowsRead": "16543.1",
+              "estimatedRows": "16543.1"
+            }
+          ],
+          "sortOperators": 0,
+          "missingIndexImpactPercent": []
+        }
+      ]
+    },
+    {
+      "queryHash": "0XEE5BE1D4CBE3959C",
+      "purpose": "utilization allocation totals",
+      "baseline": {
+        "source": "/private/tmp/dev16-full/baseline/resources/sql-end.json",
+        "rows": [
+          {
+            "planHandle": "0x0600050010709B22D04A0E040D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0xEE5BE1D4CBE3959C",
+            "queryText": "SELECT [s].[TechnicianId], [s].[Name], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'Rate' THEN [s].[BilledHours]\n    ELSE 0.0\nEND), 0.0) AS [Billed], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'Covered' THEN [s].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Covered], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'HourBank' THEN [s].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Bank], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'NonBillable' THEN [s].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [NonBillable]\nFROM (\n    SELECT [t].[BilledHours], [t].[Classification], [t].[Hours], [t1].[TechnicianId], COALESCE([t1].[TechnicianName], N'\u2014') COLLATE Latin1_General_100_BIN2 AS [Name], DATALENGTH(COALESCE([t1].[TechnicianName], N'\u2014')) AS [NameLength]\n    FROM [time].[TimeAllocations] AS [t]\n    INNER JOIN (\n        SELECT [t0].[Id], [t0].[TechnicianId], [t0].[TechnicianName], [t0].[WorkDate]\n        FROM [time].[TimeEntries] AS [t0]\n        WHERE [t0].[IsDeleted] = CAST(0 AS bit)\n    ) AS [t1] ON [t].[TimeEntryId] = [t1].[Id]\n    WHERE [t].[IsDeleted] = CAST(0 AS bit) AND [t1].[WorkDate] >= @monthStart AND [t1].[WorkDate] <= @monthEnd\n) AS [s]\nGROUP BY [s].[TechnicianId], [s].[Name], [s].[Nam",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 507,
+              "cpuMicroseconds": 326489563,
+              "elapsedMicroseconds": 879137446,
+              "logicalReads": 19704802,
+              "physicalReads": 6924407,
+              "returnedRows": 507
+            },
+            "perExecution": {
+              "cpuMs": 643.9636351084813,
+              "elapsedMs": 1733.9989072978303,
+              "logicalReads": 38865.48717948718,
+              "physicalReads": 13657.607495069033,
+              "returnedRows": 1.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 507,
+          "cpuMicroseconds": 326489563,
+          "elapsedMicroseconds": 879137446,
+          "logicalReads": 19704802,
+          "physicalReads": 6924407,
+          "returnedRows": 507
+        },
+        "perExecution": {
+          "cpuMs": 643.9636351084813,
+          "elapsedMs": 1733.9989072978303,
+          "logicalReads": 38865.48717948718,
+          "physicalReads": 13657.607495069033,
+          "returnedRows": 1.0
+        },
+        "available": true
+      },
+      "after": {
+        "source": "/private/tmp/dev16-full/resources/sql-targeted-after.json",
+        "rows": [
+          {
+            "planHandle": "0x0600050010709B22D04A0E040D00000001000000000000000000000000000000000000000000000000000000",
+            "queryHash": "0xEE5BE1D4CBE3959C",
+            "queryText": "SELECT [s].[TechnicianId], [s].[Name], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'Rate' THEN [s].[BilledHours]\n    ELSE 0.0\nEND), 0.0) AS [Billed], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'Covered' THEN [s].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Covered], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'HourBank' THEN [s].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [Bank], COALESCE(SUM(CASE\n    WHEN [s].[Classification] = N'NonBillable' THEN [s].[Hours]\n    ELSE 0.0\nEND), 0.0) AS [NonBillable]\nFROM (\n    SELECT [t].[BilledHours], [t].[Classification], [t].[Hours], [t1].[TechnicianId], COALESCE([t1].[TechnicianName], N'\u2014') COLLATE Latin1_General_100_BIN2 AS [Name], DATALENGTH(COALESCE([t1].[TechnicianName], N'\u2014')) AS [NameLength]\n    FROM [time].[TimeAllocations] AS [t]\n    INNER JOIN (\n        SELECT [t0].[Id], [t0].[TechnicianId], [t0].[TechnicianName], [t0].[WorkDate]\n        FROM [time].[TimeEntries] AS [t0]\n        WHERE [t0].[IsDeleted] = CAST(0 AS bit)\n    ) AS [t1] ON [t].[TimeEntryId] = [t1].[Id]\n    WHERE [t].[IsDeleted] = CAST(0 AS bit) AND [t1].[WorkDate] >= @monthStart AND [t1].[WorkDate] <= @monthEnd\n) AS [s]\nGROUP BY [s].[TechnicianId], [s].[Name], [s].[Nam",
+            "measurement": "end cache lifetime (new/reset/absent-from-start-top20); exact capture delta unavailable",
+            "counts": {
+              "executions": 3300,
+              "cpuMicroseconds": 67792213,
+              "elapsedMicroseconds": 117759469,
+              "logicalReads": 24384137,
+              "physicalReads": 3325,
+              "returnedRows": 3300
+            },
+            "perExecution": {
+              "cpuMs": 20.54309484848485,
+              "elapsedMs": 35.68468757575758,
+              "logicalReads": 7389.132424242424,
+              "physicalReads": 1.0075757575757576,
+              "returnedRows": 1.0
+            }
+          }
+        ],
+        "counts": {
+          "executions": 3300,
+          "cpuMicroseconds": 67792213,
+          "elapsedMicroseconds": 117759469,
+          "logicalReads": 24384137,
+          "physicalReads": 3325,
+          "returnedRows": 3300
+        },
+        "perExecution": {
+          "cpuMs": 20.54309484848485,
+          "elapsedMs": 35.68468757575758,
+          "logicalReads": 7389.132424242424,
+          "physicalReads": 1.0075757575757576,
+          "returnedRows": 1.0
+        },
+        "available": true
+      },
+      "afterToBaselinePerExecutionRatio": {
+        "cpuMs": 0.03190101696507162,
+        "elapsedMs": 0.020579417568011422,
+        "logicalReads": 0.190120669017172,
+        "physicalReads": 7.377395769643654e-05
+      },
+      "baselinePlans": [
+        {
+          "file": "/private/tmp/dev16-full/baseline/resources/sql-end-plan-1.sqlplan",
+          "estimatedSubtreeCost": "31.4115",
+          "access": [
+            {
+              "operation": "Index Scan",
+              "table": "[TimeEntries]",
+              "index": "[IX_TimeEntries_OrganizationId_WorkDate]",
+              "estimatedRowsRead": "1e+06",
+              "estimatedRows": "2426"
+            },
+            {
+              "operation": "Clustered Index Seek",
+              "table": "[TimeEntries]",
+              "index": "[PK_TimeEntries]",
+              "estimatedRowsRead": null,
+              "estimatedRows": "1"
+            },
+            {
+              "operation": "Clustered Index Scan",
+              "table": "[TimeAllocations]",
+              "index": "[PK_TimeAllocations]",
+              "estimatedRowsRead": "1e+06",
+              "estimatedRows": "1e+06"
+            }
+          ],
+          "sortOperators": 1,
+          "missingIndexImpactPercent": [
+            29.5755
+          ]
+        }
+      ],
+      "afterPlans": [
+        {
+          "file": "/private/tmp/dev16-full/resources/sql-targeted-after-plan-3.sqlplan",
+          "estimatedSubtreeCost": "6.62385",
+          "access": [
+            {
+              "operation": "Index Seek",
+              "table": "[TimeEntries]",
+              "index": "[IX_TimeEntries_WorkDate_Id]",
+              "estimatedRowsRead": "2426",
+              "estimatedRows": "2426"
+            },
+            {
+              "operation": "Index Seek",
+              "table": "[TimeAllocations]",
+              "index": "[IX_TimeAllocations_Active_TimeEntryId]",
+              "estimatedRowsRead": "40.6938",
+              "estimatedRows": "40.6938"
+            }
+          ],
+          "sortOperators": 1,
+          "missingIndexImpactPercent": []
+        }
+      ]
+    }
+  ]
+}

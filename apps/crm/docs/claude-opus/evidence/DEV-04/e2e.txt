@@ -1,0 +1,54 @@
+  ✓   1 [desktop] › e2e/analytics.spec.ts:4:1 › a custom field is defined once and answered on the customer card 
+  ✓   2 [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical 
+  ✓   3 [desktop] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations 
+  ✓   4 [desktop] › e2e/analytics.spec.ts:32:1 › the sla report measures tickets against the contract and finance sees the margins 
+  ✓   5 [desktop] › e2e/catalog-contracts.spec.ts:4:1 › finance adds a product and prices it in a price list 
+  ✓   6 [desktop] › e2e/catalog-contracts.spec.ts:48:1 › sales sets up a contract, gives notice and warns on a low hour bank 
+  ✓   7 [desktop] › e2e/billing.spec.ts:141:1 › a run without a PowerOffice customer reports the anomaly and can be cancelled 
+  ✓   8 [desktop] › e2e/billing.spec.ts:183:1 › a correction survives a new collect and a line left out stays out 
+  ✓   9 [desktop] › e2e/billing.spec.ts:240:1 › an approval belongs to the revision on screen and a change sets it aside with the reason 
+  ✓  10 [desktop] › e2e/billing.spec.ts:289:1 › a billed and closed month gets a supplementary run that bills nothing twice 
+  ✓  11 [desktop] › e2e/catalog-contracts.spec.ts:126:1 › the microsoft price sheet prices a draft price list after a preview 
+  ✓  12 [desktop] › e2e/dashboard-notifications.spec.ts:11:1 › the dashboard adds up contracts, renewals and hours 
+  ✓  13 [desktop] › e2e/duplicates.spec.ts:4:1 › management merges duplicates and undoes the merge 
+  ✓  14 [desktop] › e2e/dashboard-notifications.spec.ts:50:1 › a contract reminder reaches the bell and can be muted 
+  ✓  15 [desktop] › e2e/language.spec.ts:4:1 › the chosen language is saved to the profile 
+  ✓  16 [desktop] › e2e/mappings.spec.ts:4:1 › an administrator imports a PowerOffice customer from the mapping screen 
+  ✓  17 [desktop] › e2e/microsoft365.spec.ts:7:1 › the Microsoft 365 surfaces explain themselves when Graph is not connected 
+  ✓  18 [desktop] › e2e/migration.spec.ts:4:1 › a migration file is previewed before the customers are created 
+  ✓  19 [desktop] › e2e/mappings.spec.ts:39:1 › the connection test is queued by crm-web and answered by crm-worker, which alone holds the PowerOffice keys 
+  ✓  20 [desktop] › e2e/migration.spec.ts:36:1 › an integration can be paused from the admin screen during an incident 
+  ✓  21 [desktop] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical 
+  ✓  22 [desktop] › e2e/organizations.spec.ts:42:1 › the registry warns about a bankrupt company 
+  ✓  23 [desktop] › e2e/organizations.spec.ts:49:1 › a technician can read organizations and manage contacts but not edit the organization 
+  ✓  24 [desktop] › e2e/projects.spec.ts:4:1 › a project is planned in phases and a completed phase queues its fee 
+  ✓  25 [desktop] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted @critical 
+  ✓  26 [desktop] › e2e/quotes.spec.ts:62:1 › a new version starts from the old one and the old one becomes history 
+  ✓  27 [desktop] › e2e/quotes.spec.ts:89:1 › a quote template is edited by an administrator 
+  ✓  28 [desktop] › e2e/projects.spec.ts:61:1 › a subsidiary can be put on the parent company invoice 
+  ✓  29 [desktop] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical 
+  ✓  30 [desktop] › e2e/projects.spec.ts:83:1 › finance previews the yearly indexation before the prices change 
+  ✓  31 [desktop] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical 
+  ✓  32 [desktop] › e2e/search-and-export.spec.ts:21:1 › the organization list exports the filtered rows to Excel 
+  ✓  33 [desktop] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical 
+  ✓  34 [desktop] › e2e/sales-licensing.spec.ts:57:1 › a pipeline stage is renamed from the admin screen 
+  ✓  35 [desktop] › e2e/service-time.spec.ts:50:1 › the service tab offers a ticket and reports that writing to Atera is off 
+  ✓  36 [desktop] › e2e/sales-licensing.spec.ts:80:1 › a lost deal keeps its reason and can be reopened 
+  ✓  37 [desktop] › e2e/sales-licensing.spec.ts:106:1 › a distributor file is previewed before the subscriptions are imported 
+  ✓  38 [desktop] › e2e/sales-licensing.spec.ts:160:1 › microsoft cost lines are reconciled against what the customer was billed 
+  ✓  39 [desktop-dark] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations 
+  ✓  40 [mobile] › e2e/mobile.spec.ts:14:1 › pages fit a phone screen and navigation works 
+  ✓  41 [desktop] › e2e/a11y.spec.ts:160:1 › the app can be used with the keyboard 
+  ✓  42 [firefox] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical 
+  ✓  43 [firefox] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical 
+  ✓  44 [firefox] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted @critical 
+  ✓  45 [firefox] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical 
+  ✓  46 [firefox] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical 
+  ✓  47 [firefox] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical 
+  ✓  48 [webkit] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (1.1m)
+  ✓  49 [webkit] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history @critical 
+  ✓  50 [webkit] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted @critical 
+  ✓  51 [webkit] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won @critical 
+  ✓  52 [webkit] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard @critical 
+  ✓  53 [webkit] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them @critical 
+  ✓  54 [desktop-dark] › e2e/a11y.spec.ts:160:1 › the app can be used with the keyboard 

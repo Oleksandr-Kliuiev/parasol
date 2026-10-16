@@ -1,0 +1,60 @@
+# Integration suite repetitions during DEV-15 (each run: fresh SQL Testcontainer, 85-88 tests; the 5 BillingRegressionApiTests failures are the known DEV-00 regressions)
+
+## After the CrmWebFactory client lock, before the run-export wait and the outbox-test fix (it-repeat-*, it-stable-*)
+it-repeat-1 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-repeat-2 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-repeat-3 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-repeat-4 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-repeat-5 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-repeat-6 cleanup=0 unexpected=[BillingApiTests.A_monthly_run_collects_contracts_licences_and_hours_then_exports_to_poweroffice;]  total: 88  failed: 6 
+it-stable-1 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-stable-2 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-stable-3 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-stable-4 cleanup=0 unexpected=[CustomersApiTests.Outbox_processor_dispatches_events_to_handlers;]  total: 88  failed: 6 
+it-stable-5 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-stable-6 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-stable-7 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-stable-8 cleanup=0 unexpected=[BillingApiTests.A_monthly_run_collects_contracts_licences_and_hours_then_exports_to_poweroffice;]  total: 88  failed: 6 
+
+## Final test code (it-final-*)
+it-final-1 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-2 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-3 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-4 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-5 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-6 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-7 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-8 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-9 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-10 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-11 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-12 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-13 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-14 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-15 cleanup=0 unexpected=[BillingApiTests.A_monthly_run_collects_contracts_licences_and_hours_then_exports_to_poweroffice;]  total: 88  failed: 6 
+it-final-16 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-17 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-18 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-19 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-20 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-21 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-22 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-23 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-24 cleanup=0 unexpected=[]  total: 88  failed: 5 
+it-final-25 cleanup=0 unexpected=[]  total: 88  failed: 5 
+
+## Excerpt it-stable-8: the same sales order posted twice (identical ExternalImportReference)
+      should have single item but had
+      items and was
+  ["{"CustomerId":767929,"OrderDate":"2027-03-31T00:00:00+00:00","ExternalImportReference":"2027-03-ce9a089fccfbe6d0000101a103e24539-7ffbe0b837e8bf60000001a103e249dc","CustomerReference":"PO-4711","Lines":[{"ProductCode":"MSP-2DA8CA2577804B25","Description":"Managed services (01.03.2027\u201331.03.2027)","Quantity":1.00,"UnitPrice":5000.0000,"SortOrder":1},{"ProductCode":"M365-A9E316821F23424","De
+
+## Excerpt it-stable-8: run status update conflicts inside the export handler
+   2 Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException: The database operation was expected to affect 1 row(s), but actually affected 0 row(s); data may have been modified or deleted since entitie
+   1 at Crm.Billing.Features.BillingApi.MarkExportFailedAsync(Guid basisId, String system, String message, String correlationId, CancellationToken cancellationToken) in /Users/vardahei/Vardahei_CRM_V2/src/
+   1 at Crm.Billing.Features.BillingApi.MarkExportedAsync(Guid basisId, String system, String orderNo, String correlationId, CancellationToken cancellationToken) in /Users/vardahei/Vardahei_CRM_V2/src/Modu
+   2 at Crm.Billing.Features.BillingApi.UpdateRunStatusAsync(Guid runId, CancellationToken ct) in /Users/vardahei/Vardahei_CRM_V2/src/Modules/Billing/Crm.Billing/Features/BillingApi.cs:line 254
+
+## Excerpt it-final-15: run left in Exporting
+      should be one of
+      but was
+  "Exporting"

@@ -1,0 +1,69 @@
+using System.Globalization;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using Crm.Authorization;
+using static Crm.IntegrationTests.IntegrationTestHelpers;
+
+namespace Crm.IntegrationTests;
+
+/// <summary>
+/// Temporary reproduction of audit finding A09 on the release before DEV-09 (run in a throwaway worktree, never committed):
+/// "mine" is a filter, not a check — another salesperson reads and changes a quote, a technician reads and books hours on a
+/// project they are not on.
+/// </summary>
+public class Dev09BaselineTests(CrmWebFactory factory)
+{
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task Baseline_record_scope_is_only_a_filter()
+    {
+        var marker = $"Z{Guid.NewGuid():N}"[..10];
+        var a = factory.ClientAs(CrmRoles.Sales, userKey: $"base-a-{marker}");
+        var b = factory.ClientAs(CrmRoles.Sales, userKey: $"base-b-{marker}");
+        var technician = factory.ClientAs(CrmRoles.Technician, userKey: $"base-tech-{marker}");
+        var lead = factory.ClientAs(CrmRoles.ServiceLead, userKey: $"base-lead-{marker}");
+        var (organizationId, contactId) = await QuoteDocumentsTests.CustomerAsync(a, marker);
+        var quoteId = await QuoteDocumentsTests.QuoteAsync(a, organizationId, contactId, marker, "nb");
+        (await a.PostAsync($"/api/v1/sales/quotes/{quoteId}/submit", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var report = new StringBuilder();
+        var byId = await b.GetAsync($"/api/v1/sales/quotes/{quoteId}", Ct);
+        report.AppendLine($"Sales B  GET  /quotes/{{A's quote}}                -> {(int)byId.StatusCode} {byId.StatusCode}");
+        var all = await b.GetFromJsonAsync<JsonElement>($"/api/v1/sales/quotes?search={marker}&mine=false", Ct);
+        report.AppendLine($"Sales B  GET  /quotes?search=…&mine=false          -> {all.GetArrayLength()} row(s), A's quote included: {all.EnumerateArray().Any(q => q.GetProperty("id").GetGuid() == quoteId)}");
+        var mine = await b.GetFromJsonAsync<JsonElement>($"/api/v1/sales/quotes?search={marker}&mine=true", Ct);
+        report.AppendLine($"Sales B  GET  /quotes?search=…&mine=true           -> {mine.GetArrayLength()} row(s) (the filter only narrows)");
+        var pdf = await b.GetAsync($"/api/v1/sales/quotes/{quoteId}/pdf", Ct);
+        report.AppendLine($"Sales B  GET  /quotes/{{A's quote}}/pdf            -> {(int)pdf.StatusCode} {pdf.StatusCode}");
+        var revise = await b.PostAsync($"/api/v1/sales/quotes/{quoteId}/revise", null, Ct);
+        report.AppendLine($"Sales B  POST /quotes/{{A's quote}}/revise         -> {(int)revise.StatusCode} {revise.StatusCode} (B made a new version of A's quote)");
+
+        var projectId = (await (await lead.PostAsJsonAsync("/api/v1/projects", new
+        {
+            organizationId, name = $"{marker} Prosjekt", type = "Other", billingModel = "TimeAndMaterial",
+            startDate = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), budgetHours = 10m, budgetAmount = 0m,
+        }, Ct)).ReadJsonAsync()).GetProperty("id").GetGuid();
+        var project = await technician.GetAsync($"/api/v1/projects/{projectId}", Ct);
+        report.AppendLine($"Technician (not assigned) GET /projects/{{id}}      -> {(int)project.StatusCode} {project.StatusCode}");
+        var listed = await technician.GetFromJsonAsync<JsonElement>($"/api/v1/projects?search={marker}", Ct);
+        report.AppendLine($"Technician (not assigned) GET /projects?search=…   -> {listed.GetArrayLength()} row(s)");
+        var booked = await technician.PostAsJsonAsync("/api/v1/time/entries", new
+        {
+            organizationId, workDate = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), hours = 2m,
+            workType = "Onsite", billable = true, onsite = true, afterHours = false, description = "baseline", projectId,
+        }, Ct);
+        var bookedName = booked.IsSuccessStatusCode ? (await booked.ReadJsonAsync()).GetProperty("projectName").GetString() : null;
+        report.AppendLine($"Technician (not assigned) POST /time/entries on it -> {(int)booked.StatusCode} {booked.StatusCode}, projectName in answer: {bookedName}");
+
+        TestContext.Current.TestOutputHelper!.WriteLine(report.ToString());
+        File.WriteAllText(Environment.GetEnvironmentVariable("DEV09_BASELINE_REPORT")!, report.ToString());
+
+        // The defect: nothing but the caller's own choice of filter separates B from A's quote, or the technician from the project.
+        byId.StatusCode.ShouldBe(HttpStatusCode.OK);
+        project.StatusCode.ShouldBe(HttpStatusCode.OK);
+        booked.StatusCode.ShouldBe(HttpStatusCode.Created);
+    }
+}

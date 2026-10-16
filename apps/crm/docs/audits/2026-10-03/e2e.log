@@ -1,0 +1,109 @@
+[WebServer] (node:75850) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 38 tests using 3 workers
+
+(node:75884) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:75886) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:75885) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/38] [desktop] › e2e/billing.spec.ts:12:1 › a monthly run is collected, approved and sent to PowerOffice
+[2/38] [desktop] › e2e/analytics.spec.ts:4:1 › a custom field is defined once and answered on the customer card
+[3/38] [desktop] › e2e/a11y.spec.ts:20:1 › main pages have no serious accessibility violations
+[4/38] [desktop] › e2e/analytics.spec.ts:32:1 › the sla report measures tickets against the contract and finance sees the margins
+[5/38] [desktop] › e2e/catalog-contracts.spec.ts:4:1 › finance adds a product and prices it in a price list
+[6/38] [desktop] › e2e/catalog-contracts.spec.ts:48:1 › sales sets up a contract, gives notice and warns on a low hour bank
+  1) [desktop] › e2e/billing.spec.ts:12:1 › a monthly run is collected, approved and sent to PowerOffice 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.fui-ToastTitle').filter({ hasText: /Run for .* created/ })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('.fui-ToastTitle').filter({ hasText: /Run for .* created/ }) with timeout 15000ms
+      - waiting for locator('.fui-ToastTitle').filter({ hasText: /Run for .* created/ })
+
+
+      49 |   await dialog.getByRole('textbox', { name: 'Note' }).fill(m);
+      50 |   await dialog.getByRole('button', { name: 'Create' }).click();
+    > 51 |   await expect(toast(page, /Run for .* created/)).toBeVisible();
+         |                                                   ^
+      52 |   await expect(page).toHaveURL(/\/billing\/runs\//);
+      53 |   const runUrl = page.url();
+      54 |
+        at /Users/vardahei/Vardahei_CRM_V2/web/e2e/billing.spec.ts:51:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/billing-a-monthly-run-is-c-50080-ved-and-sent-to-PowerOffice-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/billing-a-monthly-run-is-c-50080-ved-and-sent-to-PowerOffice-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/billing-a-monthly-run-is-c-50080-ved-and-sent-to-PowerOffice-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/billing-a-monthly-run-is-c-50080-ved-and-sent-to-PowerOffice-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:75931) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/38] [desktop] › e2e/billing.spec.ts:119:1 › a run without a PowerOffice customer reports the anomaly and can be cancelled
+[8/38] [desktop] › e2e/dashboard-notifications.spec.ts:11:1 › the dashboard adds up contracts, renewals and hours
+[9/38] [desktop] › e2e/dashboard-notifications.spec.ts:50:1 › a contract reminder reaches the bell and can be muted
+[10/38] [desktop] › e2e/catalog-contracts.spec.ts:126:1 › the microsoft price sheet prices a draft price list after a preview
+[11/38] [desktop] › e2e/duplicates.spec.ts:4:1 › management merges duplicates and undoes the merge
+[12/38] [desktop] › e2e/language.spec.ts:4:1 › the chosen language is saved to the profile
+[13/38] [desktop] › e2e/mappings.spec.ts:4:1 › an administrator imports a PowerOffice customer from the mapping screen
+[14/38] [desktop] › e2e/microsoft365.spec.ts:7:1 › the Microsoft 365 surfaces explain themselves when Graph is not connected
+[15/38] [desktop] › e2e/migration.spec.ts:4:1 › a migration file is previewed before the customers are created
+[16/38] [desktop] › e2e/migration.spec.ts:36:1 › an integration can be paused from the admin screen during an incident
+[17/38] [desktop] › e2e/organizations.spec.ts:4:1 › sales creates an organization from the registry, adds a contact, edits it and sees the history
+[18/38] [desktop] › e2e/projects.spec.ts:4:1 › a project is planned in phases and a completed phase queues its fee
+[19/38] [desktop] › e2e/organizations.spec.ts:42:1 › the registry warns about a bankrupt company
+[20/38] [desktop] › e2e/organizations.spec.ts:49:1 › a technician can read organizations and manage contacts but not edit the organization
+[21/38] [desktop] › e2e/quotes.spec.ts:4:1 › a quote with an extra discount is approved, downloaded and accepted
+[22/38] [desktop] › e2e/projects.spec.ts:61:1 › a subsidiary can be put on the parent company invoice
+[23/38] [desktop] › e2e/projects.spec.ts:83:1 › finance previews the yearly indexation before the prices change
+[24/38] [desktop] › e2e/sales-licensing.spec.ts:4:1 › a lead becomes a customer with a deal, and the deal is won
+[25/38] [desktop] › e2e/sales-licensing.spec.ts:57:1 › a pipeline stage is renamed from the admin screen
+[26/38] [desktop] › e2e/quotes.spec.ts:62:1 › a new version starts from the old one and the old one becomes history
+[27/38] [desktop] › e2e/quotes.spec.ts:89:1 › a quote template is edited by an administrator
+[28/38] [desktop] › e2e/search-and-export.spec.ts:4:1 › global search finds a contact and opens it with the keyboard
+[29/38] [desktop] › e2e/sales-licensing.spec.ts:80:1 › a lost deal keeps its reason and can be reopened
+[30/38] [desktop] › e2e/search-and-export.spec.ts:21:1 › the organization list exports the filtered rows to Excel
+[31/38] [desktop] › e2e/service-time.spec.ts:4:1 › a technician books hours and the service lead approves them
+[32/38] [desktop] › e2e/sales-licensing.spec.ts:106:1 › a distributor file is previewed before the subscriptions are imported
+[33/38] [desktop] › e2e/service-time.spec.ts:50:1 › the service tab offers a ticket and reports that writing to Atera is off
+[34/38] [desktop] › e2e/sales-licensing.spec.ts:160:1 › microsoft cost lines are reconciled against what the customer was billed
+(node:76037) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[35/38] [desktop-dark] › e2e/a11y.spec.ts:20:1 › main pages have no serious accessibility violations
+(node:76049) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[36/38] [mobile] › e2e/mobile.spec.ts:14:1 › pages fit a phone screen and navigation works
+[37/38] [desktop] › e2e/a11y.spec.ts:158:1 › the app can be used with the keyboard
+[38/38] [desktop-dark] › e2e/a11y.spec.ts:158:1 › the app can be used with the keyboard
+  1 failed
+    [desktop] › e2e/billing.spec.ts:12:1 › a monthly run is collected, approved and sent to PowerOffice 
+  37 passed (2.0m)

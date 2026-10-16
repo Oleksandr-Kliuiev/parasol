@@ -1,0 +1,89 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/Crm.Authorization/Crm.Authorization.csproj" />
+    <Project Path="src/BuildingBlocks/Crm.Infrastructure/Crm.Infrastructure.csproj" />
+    <Project Path="src/BuildingBlocks/Crm.SharedKernel/Crm.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Hosts/">
+    <Project Path="src/Hosts/Crm.AppHost/Crm.AppHost.csproj" />
+    <Project Path="src/Hosts/Crm.ServiceDefaults/Crm.ServiceDefaults.csproj" />
+    <Project Path="src/Hosts/Crm.Web/Crm.Web.csproj" />
+    <Project Path="src/Hosts/Crm.Worker/Crm.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Integrations/">
+    <Project Path="src/Integrations/Crm.Integrations.Atera/Crm.Integrations.Atera.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.Brreg/Crm.Integrations.Brreg.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.Core/Crm.Integrations.Core.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.MicrosoftGraph/Crm.Integrations.MicrosoftGraph.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.PartnerCenter/Crm.Integrations.PartnerCenter.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.PowerOffice/Crm.Integrations.PowerOffice.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Activities/">
+    <Project Path="src/Modules/Activities/Crm.Activities.Contracts/Crm.Activities.Contracts.csproj" />
+    <Project Path="src/Modules/Activities/Crm.Activities/Crm.Activities.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Audit/">
+    <Project Path="src/Modules/Audit/Crm.Audit/Crm.Audit.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Catalog/">
+    <Project Path="src/Modules/Catalog/Crm.Catalog.Contracts/Crm.Catalog.Contracts.csproj" />
+    <Project Path="src/Modules/Catalog/Crm.Catalog/Crm.Catalog.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Contracts/">
+    <Project Path="src/Modules/Contracts/Crm.Contracts.Contracts/Crm.Contracts.Contracts.csproj" />
+    <Project Path="src/Modules/Contracts/Crm.Contracts/Crm.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/CustomFields/">
+    <Project Path="src/Modules/CustomFields/Crm.CustomFields/Crm.CustomFields.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Customers/">
+    <Project Path="src/Modules/Customers/Crm.Customers.Contracts/Crm.Customers.Contracts.csproj" />
+    <Project Path="src/Modules/Customers/Crm.Customers/Crm.Customers.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/Crm.Identity.Contracts/Crm.Identity.Contracts.csproj" />
+    <Project Path="src/Modules/Identity/Crm.Identity/Crm.Identity.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Billing/">
+    <Project Path="src/Modules/Billing/Crm.Billing.Contracts/Crm.Billing.Contracts.csproj" />
+    <Project Path="src/Modules/Billing/Crm.Billing/Crm.Billing.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Reports/">
+    <Project Path="src/Modules/Reports/Crm.Reports/Crm.Reports.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Notifications/">
+    <Project Path="src/Modules/Notifications/Crm.Notifications.Contracts/Crm.Notifications.Contracts.csproj" />
+    <Project Path="src/Modules/Notifications/Crm.Notifications/Crm.Notifications.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Licensing/">
+    <Project Path="src/Modules/Licensing/Crm.Licensing.Contracts/Crm.Licensing.Contracts.csproj" />
+    <Project Path="src/Modules/Licensing/Crm.Licensing/Crm.Licensing.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Privacy/">
+    <Project Path="src/Modules/Privacy/Crm.Privacy.Contracts/Crm.Privacy.Contracts.csproj" />
+    <Project Path="src/Modules/Privacy/Crm.Privacy/Crm.Privacy.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Projects/">
+    <Project Path="src/Modules/Projects/Crm.Projects.Contracts/Crm.Projects.Contracts.csproj" />
+    <Project Path="src/Modules/Projects/Crm.Projects/Crm.Projects.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Sales/">
+    <Project Path="src/Modules/Sales/Crm.Sales.Contracts/Crm.Sales.Contracts.csproj" />
+    <Project Path="src/Modules/Sales/Crm.Sales/Crm.Sales.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Service/">
+    <Project Path="src/Modules/Service/Crm.Service.Contracts/Crm.Service.Contracts.csproj" />
+    <Project Path="src/Modules/Service/Crm.Service/Crm.Service.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/TimeTracking/">
+    <Project Path="src/Modules/TimeTracking/Crm.TimeTracking.Contracts/Crm.TimeTracking.Contracts.csproj" />
+    <Project Path="src/Modules/TimeTracking/Crm.TimeTracking/Crm.TimeTracking.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj" />
+    <Project Path="tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj" />
+    <Project Path="tests/Crm.UnitTests/Crm.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,25 @@
+name: Dependency review
+
+# DEV-21 (F-G5-06). Pull requests only: it compares the dependency changes of the pull request with the advisory database
+# and fails on a High or Critical advisory. It is deliberately not a job of ci.yml: it has nothing to say about a push to
+# main, and a skipped job there would stop the release.
+#
+# Needs the dependency graph of the repository (and, for a private repository, GitHub Advanced Security): a repository
+# setting that cannot be read from files and is tracked as EXT-11. Without it the job fails visibly instead of passing.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # actions/dependency-review-action v4.9.0, commit checked against the upstream tag on 2026-10-05.
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+          # Read-only token: the summary goes to the job summary, not to a pull request comment.
+          comment-summary-in-pr: never

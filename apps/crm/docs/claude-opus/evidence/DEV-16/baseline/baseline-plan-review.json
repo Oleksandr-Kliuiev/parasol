@@ -1,0 +1,140 @@
+{
+  "source": "Captured SQL Server cached plans and cumulative sys.dm_exec_query_stats; no SQL/host action performed for this review",
+  "limitations": [
+    "Plan operator row counts and missing-index impact are optimizer estimates; average CPU/elapsed/reads are measured execution statistics.",
+    "Interim cumulative cache statistics are not endpoint percentiles and may include warmup.",
+    "Docker SQL CPU percentages sum across cores; 800% means approximately 8 cores.",
+    "2 GiB SQL engine memory target on local Docker is not a production capacity estimate."
+  ],
+  "queries": [
+    {
+      "queryHash": "0xF89802A1CF38F587",
+      "purpose": "open ticket load",
+      "executions": 78,
+      "averageCpuMs": 286.535,
+      "averageElapsedMs": 1550.373,
+      "averageLogicalReads": 38145.256,
+      "averagePhysicalReads": 28227.654,
+      "plan": "resources/sql-mid-plan-1.sqlplan",
+      "access": "PK_Tickets clustered scan: estimated 1,000,000 rows read to produce ~50,107 open tickets",
+      "missingIndexImpactPercent": 95.1815
+    },
+    {
+      "queryHash": "0x273119C850F8392E",
+      "purpose": "time page (WorkDate DESC, Id ASC)",
+      "executions": 56,
+      "averageCpuMs": 417.505,
+      "averageElapsedMs": 1999.109,
+      "averageLogicalReads": 46913.482,
+      "averagePhysicalReads": 33028.732,
+      "plan": "resources/sql-mid-plan-2.sqlplan",
+      "access": "PK_TimeEntries clustered scan: estimated 1,000,000 rows read, then sort/TOP for 26-entry page and allocation lookup"
+    },
+    {
+      "queryHash": "0xA24F3994F39DD549",
+      "purpose": "time period totals",
+      "executions": 49,
+      "averageCpuMs": 349.444,
+      "averageElapsedMs": 1258.236,
+      "averageLogicalReads": 46605.184,
+      "averagePhysicalReads": 31995.061,
+      "plan": "resources/sql-mid-plan-3.sqlplan",
+      "access": "PK_TimeEntries clustered scan: estimated 1,000,000 rows read for date-filtered SQL aggregate",
+      "missingIndexImpactPercent": 85.5533
+    },
+    {
+      "queryHash": "0xEE5BE1D4CBE3959C",
+      "purpose": "utilization allocation totals",
+      "executions": 38,
+      "averageCpuMs": 645.51,
+      "averageElapsedMs": 1505.961,
+      "averageLogicalReads": 39214.895,
+      "averagePhysicalReads": 17693.053,
+      "plan": "resources/sql-mid-plan-4.sqlplan",
+      "access": "IX_TimeEntries_OrganizationId_WorkDate scan estimated 1,000,000 rows plus PK lookups; PK_TimeAllocations scan estimated 1,000,000 rows",
+      "missingIndexImpactPercent": 29.5755
+    }
+  ],
+  "topFourShareOfCapturedTop20LogicalReads": 0.989614,
+  "resourceWindow": {
+    "fromUtc": "2026-10-04T21:39:27Z",
+    "toUtc": "2026-10-04T21:41:53Z",
+    "samples": 37,
+    "sqlCpuPercentMedian": 746.32,
+    "sqlCpuPercentMax": 809.4,
+    "first": {
+      "BlockIO": "3.78GB / 13.7GB",
+      "CPUPerc": "3.27%",
+      "Container": "crm-load-dev16-37cba9904feb",
+      "ID": "a2750e16958a",
+      "MemPerc": "21.91%",
+      "MemUsage": "1.698GiB / 7.75GiB",
+      "Name": "crm-load-dev16-37cba9904feb",
+      "NetIO": "5.87MB / 7.64MB",
+      "PIDs": "189"
+    },
+    "last": {
+      "BlockIO": "215GB / 13.8GB",
+      "CPUPerc": "760.98%",
+      "Container": "crm-load-dev16-37cba9904feb",
+      "ID": "a2750e16958a",
+      "MemPerc": "23.66%",
+      "MemUsage": "1.834GiB / 7.75GiB",
+      "Name": "crm-load-dev16-37cba9904feb",
+      "NetIO": "92.5MB / 121MB",
+      "PIDs": "423"
+    }
+  },
+  "diagnosis": "Repeated wide scans dominate read cost and saturate SQL CPU/IO; the low result cardinality makes covering/date-led filtered indexes the first measured candidate.",
+  "candidateIndexes": [
+    {
+      "table": "service.Tickets",
+      "name": "IX_Tickets_IsOpen",
+      "keys": [
+        "IsOpen ASC"
+      ],
+      "include": [
+        "TechnicianUserId"
+      ],
+      "filter": "IsOpen=1"
+    },
+    {
+      "table": "time.TimeEntries",
+      "name": "IX_TimeEntries_WorkDate_Id",
+      "keys": [
+        "WorkDate DESC",
+        "Id ASC"
+      ],
+      "include": [
+        "OrganizationId",
+        "TechnicianId",
+        "TechnicianName",
+        "Hours",
+        "Billable",
+        "Status",
+        "Amount"
+      ],
+      "filter": "IsDeleted=0"
+    },
+    {
+      "table": "time.TimeAllocations",
+      "name": "IX_TimeAllocations_Active_TimeEntryId",
+      "keys": [
+        "TimeEntryId ASC"
+      ],
+      "include": [
+        "Classification",
+        "Hours",
+        "BilledHours",
+        "Amount"
+      ],
+      "filter": "IsDeleted=0"
+    }
+  ],
+  "validationNext": [
+    "Finish and preserve baseline before database changes.",
+    "Apply additive module migrations while hosts stopped; original indexes and financial/audit data remain.",
+    "Compare the same four query shapes/read period and verify seek/covering access, measured reads/CPU and results.",
+    "Repeat 50-user workload with September readPeriod and a separate valid billing month; preserve raw outputs separately."
+  ]
+}

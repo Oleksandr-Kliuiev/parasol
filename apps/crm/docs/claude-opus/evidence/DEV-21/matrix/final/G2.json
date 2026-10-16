@@ -1,0 +1,1611 @@
+{
+  "group": "G2",
+  "chapters": [
+    "V4",
+    "V5",
+    "V6",
+    "V7"
+  ],
+  "assessed_at": "2026-10-05",
+  "assessor": "Claude (self-assessment, not independent)",
+  "level3_not_assessed": [
+    "V4.1.4",
+    "V4.1.5",
+    "V4.2.2",
+    "V4.2.3",
+    "V4.2.4",
+    "V4.2.5",
+    "V5.2.4",
+    "V5.2.5",
+    "V5.2.6",
+    "V5.3.3",
+    "V6.3.5",
+    "V6.3.6",
+    "V6.3.7",
+    "V6.3.8",
+    "V6.4.5",
+    "V6.4.6",
+    "V6.5.6",
+    "V6.5.7",
+    "V6.5.8",
+    "V6.6.4",
+    "V6.7.1",
+    "V6.7.2",
+    "V7.5.3"
+  ],
+  "rows": [
+    {
+      "req_id": "V4.1.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:80",
+        "src/Hosts/Crm.Web/Program.cs:259",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:252"
+      ],
+      "note": "Responses are produced by minimal-API Results (JSON with charset, Results.File with an explicit media type), problem details and WriteAsJsonAsync; SecurityHeadersMiddleware adds nosniff to every response. No test asserts Content-Type across all endpoints; only the quote PDF download is checked (attachment + nosniff).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "infra/modules/apps.bicep:200",
+        "src/Hosts/Crm.Web/Program.cs:195"
+      ],
+      "note": "Ingress has allowInsecure=false, so Container Apps redirects plain HTTP to HTTPS for every path including /api (the app has no UseHttpsRedirection of its own, and API clients are not told to fail instead). app.UseHsts() is called with framework defaults (30 days, no includeSubDomains), contradicting docs/06-security.md:41 (max-age=31536000; includeSubDomains). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "Program.cs:57 AddHsts 1 year; WebHostSecurityTests.HSTS_is_one_year_...; ingress allowInsecure=false unchanged (apps.bicep)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.1.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:164",
+        "src/Hosts/Crm.Web/appsettings.json:9"
+      ],
+      "note": "ForwardedHeaders trusts X-Forwarded-For/Proto/Host from any sender (KnownIPNetworks and KnownProxies cleared) and AllowedHosts is \"*\". Behind Container Apps ingress the proxy appends the real client IP (ForwardLimit 1 takes the right-most value), but the X-Forwarded-Host a client sends is not shown to be stripped, and Request.Host feeds the OIDC redirect_uri. Entra rejects unregistered reply URLs, so impact is limited. No test. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/Hosts/Crm.Web/Http/HostSecurity.cs:19,62 (KnownNetworks/KnownProxies, AllowedHosts for X-Forwarded-Host, Production refuses AllowedHosts \"*\"), infra/modules/apps.bicep (AllowedHosts + Forwarded__KnownNetworks__0 = apps subnet); WebHostSecurityTests.A_forwarded_header_counts_only_from_a_known_network_and_only_for_an_allowed_host, Production_refuses_to_start_with_every_host_allowed; InfrastructureTests.Crm_web_gets_its_allowed_hosts_and_trusted_proxy_network_from_the_deployment. Caveat: KnownNetworks falls back to the private ranges when unset outside Development; how the real ingress treats client-sent X-Forwarded-* is not verified (EXT-06)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.2.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:164",
+        "infra/modules/apps.bicep:200"
+      ],
+      "note": "Message framing is delegated to Kestrel behind the Azure Container Apps (Envoy) ingress; Kestrel rejects conflicting Content-Length/Transfer-Encoding by default and the repo changes no Kestrel limits or HTTP options. The behaviour of the ingress layer cannot be verified from the repo and there is no request-smuggling test. || Post-fix reassessment 2026-10-05: still open - Message framing behind the Container Apps ingress needs request-smuggling probes in the independent test (EXT-06); no code change expected",
+      "severity": "low",
+      "fix": "Include request-smuggling probes (CL.TE / TE.CL) against the test environment ingress in the independent test; no code change expected.",
+      "owner_hint": "infra",
+      "external_gate": "EXT-06",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Security owner",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.3.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Application/Paging.cs:41"
+      ],
+      "note": "No GraphQL, OData or other client-supplied query/expression language exists (verified by search of src/ and csproj files). List endpoints take fixed filters and a keyset limit clamped by KeysetCursor.ClampLimit.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.3.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:214"
+      ],
+      "note": "No GraphQL endpoint exists in the application; the only machine-readable schema endpoint is the OpenAPI document mapped at Program.cs:214 (its exposure is a V13 question, not assessed here).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.4.1",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:192"
+      ],
+      "note": "The web host has no WebSocket/SignalR endpoint (no UseWebSockets, MapHub or SignalR package found in src/); the request pipeline at Program.cs:192-241 maps only HTTP endpoints.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.4.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:192"
+      ],
+      "note": "No WebSocket handshake exists in the application (see V4.4.1).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.4.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:192"
+      ],
+      "note": "No WebSocket channel; the standard cookie session is the only session mechanism.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V4.4.4",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:192"
+      ],
+      "note": "No WebSocket channel, so no dedicated WebSocket tokens.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/06-security.md:45",
+        "src/Modules/Customers/Crm.Customers/CustomersModule.cs:74",
+        "src/Modules/Catalog/Crm.Catalog/CatalogModule.cs:142",
+        "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:44"
+      ],
+      "note": "The only inputs that resemble uploads are four CSV text bodies (organization migration, NCE price sheet, subscription import, MS billing import). docs/06-security.md:45 describes an upload allow-list, a 25 MB limit, signature checks and Defender for Storage that do not exist in code or infra; the actual formats, maximum size (Kestrel default ~30 MB) and the 5000-row migration cap are not documented per endpoint. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/BuildingBlocks/Crm.Infrastructure/Http/CsvUpload.cs:26 (415 text/csv|text/plain only, 413 over Imports:MaxRequestBytes default 10 MB), CsvTable.MaxImportRows=50000 in SubscriptionCsv/MsBillingCsv/PriceSheetCsv, migration import MaxRows=5000; RequestHardeningTests.An_import_takes_only_text_up_to_the_size_limit and A_distributor_file_with_more_rows_than_the_cap_is_refused; docs/06 section 4 now lists the real limits and states there is no file-signature, antivirus or 25 MB control",
+      "finding_ids": [
+        "F-G2-05"
+      ]
+    },
+    {
+      "req_id": "V5.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Customers/Crm.Customers/CustomersModule.cs:227",
+        "src/Modules/Catalog/Crm.Catalog/CatalogModule.cs:144",
+        "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:47",
+        "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:70",
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/MigrationImport.cs:119"
+      ],
+      "note": "No size limit is configured anywhere (no MaxRequestBodySize or RequestSizeLimit found); only the Kestrel default (~28.6 MB) applies. The import handlers buffer the entire body (MemoryStream / StreamReader.ReadToEnd) and parse it into List<List<string>> before any row cap (MigrationImport.MaxRows=5000 is checked after parsing; the licensing and price-sheet imports have no row cap). Callers need LicensingManage / FinanceCostRead / CustomersDelete, and only the migration and export endpoints have extra rate limits (global 300 req/min applies to the rest). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/BuildingBlocks/Crm.Infrastructure/Http/CsvUpload.cs:26 (415 text/csv|text/plain only, 413 over Imports:MaxRequestBytes default 10 MB), CsvTable.MaxImportRows=50000 in SubscriptionCsv/MsBillingCsv/PriceSheetCsv, migration import MaxRows=5000; RequestHardeningTests.An_import_takes_only_text_up_to_the_size_limit and A_distributor_file_with_more_rows_than_the_cap_is_refused",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.2.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/MigrationImport.cs:114",
+        "src/BuildingBlocks/Crm.SharedKernel/Text/CsvTable.cs:69"
+      ],
+      "note": "Imports take a raw request body: no file name, extension or Content-Type is checked (any media type is accepted). Content is validated structurally: the migration import decodes with an encoding check, requires a header with a name column and rejects bad rows with reasons, and CsvTable reports ragged rows and unterminated quotes; the licensing and price-sheet parsers reject unknown shapes. Nothing is stored as a file. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/BuildingBlocks/Crm.Infrastructure/Http/CsvUpload.cs:26 (415 text/csv|text/plain only, 413 over Imports:MaxRequestBytes default 10 MB), CsvTable.MaxImportRows=50000 in SubscriptionCsv/MsBillingCsv/PriceSheetCsv, migration import MaxRows=5000; RequestHardeningTests.An_import_takes_only_text_up_to_the_size_limit and A_distributor_file_with_more_rows_than_the_cap_is_refused",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.2.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Customers/Crm.Customers/CustomersModule.cs:227"
+      ],
+      "note": "The application accepts no compressed files or archives: the only file-like inputs are plain-text CSV bodies and there is no ZipArchive/GZipStream/request-decompression code in src/ (verified by search). The XLSX organization export is generated, never read back.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Program.cs:203",
+        "src/BuildingBlocks/Crm.Infrastructure/Documents/DocumentStores.cs:132",
+        "src/Modules/Sales/Crm.Sales/Domain/QuoteDocument.cs:98",
+        "tests/Crm.UnitTests/FileSystemDocumentStoreTests.cs:48"
+      ],
+      "note": "No user-supplied file lands in a web-served folder: UseStaticFiles serves only the built SPA in wwwroot; generated PDFs and manifests go to the private Blob container (production refuses the folder store, DocumentStores.cs:47) or a folder outside wwwroot in development. Stored objects are only ever returned as bytes through authorised API endpoints, never executed.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.3.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Infrastructure/Documents/DocumentStores.cs:132",
+        "src/BuildingBlocks/Crm.Infrastructure/Documents/DocumentStores.cs:213",
+        "src/Modules/Sales/Crm.Sales/Domain/QuoteDocument.cs:98",
+        "tests/Crm.UnitTests/FileSystemDocumentStoreTests.cs:48"
+      ],
+      "note": "Storage keys are built from internal GUIDs (quotes/{rootId}/{quoteId}/{documentId}.pdf) and guarded by DocumentKeys.Guard (allow-list of characters, no \"..\", no leading slash, <=512); the file store additionally checks the resolved path stays under the root. A unit theory covers ../, absolute and spaced keys. No user file name is used in any path.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.4.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/Domain/QuoteDocument.cs:100",
+        "src/Modules/Sales/Crm.Sales/SalesModule.cs:166",
+        "src/Modules/Customers/Crm.Customers/Features/Organizations/ExportOrganizations.cs:106",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:253"
+      ],
+      "note": "Download file names are server-generated (quote number + version, timestamped export name) and never taken from request parameters; Results.File sets Content-Disposition (attachment, asserted by the quote document integration test).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.4.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/SalesModule.cs:166",
+        "src/Modules/Sales/Crm.Sales/Domain/QuoteDocument.cs:100",
+        "tests/Crm.IntegrationTests/QuoteDocumentsTests.cs:253"
+      ],
+      "note": "Names are built from server-controlled values (quote numbers, dates); Results.File serialises the name through ContentDispositionHeaderValue (RFC 6266 filename/filename*). Residual: the quote Number format itself is assumed to be server-generated; no test feeds hostile characters through it.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V5.4.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Customers/Crm.Customers/CustomersModule.cs:227",
+        "src/BuildingBlocks/Crm.Infrastructure/Documents/DocumentStores.cs:15"
+      ],
+      "note": "No file from an untrusted source is stored or served: imports are parsed in memory and only a SHA-256 and row results are kept; the document store holds only server-generated PDFs/JSON. (docs/06-security.md:45 nevertheless promises Defender for Storage; infra contains no Defender setting - see V5.1.1.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.1.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/06-security.md:19",
+        "docs/06-security.md:20",
+        "src/Hosts/Crm.Web/Program.cs:117",
+        "docs/adr/ADR-019-sessions-and-privilege-freshness.md:3"
+      ],
+      "note": "Credential attacks are delegated to Entra (CA, MFA, Smart Lockout) and SEC-AUTH-01/02 say so, but the documentation does not state which anti-automation controls apply to the CRM entry points (/bff/login, /signin-oidc, dev sign-in) and the global rate limiter only covers /api, not /bff. The delegation itself is unproven in this repo. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "EXT-02",
+      "status_before": "partial",
+      "fixed_by": "docs/06-security.md SEC-AUTH-08 (abuse controls per entry point: Entra Smart Lockout/CA for credentials; sign-in paths 30/min per client address Program.cs:148-162; WebHostSecurityTests.Sign_in_paths_have_a_small_budget_per_client_address). Tenant-side lockout remains EXT-02",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.1.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM stores and verifies no passwords: users are created only from Entra identities (UserProvisioning), so no context-specific password word list applies. Entra password protection is a tenant setting.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.1.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/06-security.md:19",
+        "docs/06-security.md:45",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:20",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:46"
+      ],
+      "note": "Pathways are: Entra OIDC cookie session, Entra bearer for /api/v1/bi, and the development sign-in (Development only). Each is described (SEC-AUTH-*, SEC-AZ-04c, ADR-019 item 7) but there is no single list that ties pathway to controls. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "docs/06-security.md SEC-AUTH-08 pathway table (cookie/OIDC, BI bearer, development sign-in, worker managed identity)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.1",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (minimum length is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.2",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (password change is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.3",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (password change with current password is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.4",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (common-password check is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.5",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (composition rules is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.6",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (masked password input is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.7",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (paste and password managers is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.8",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (verbatim password verification is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.9",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (64-character passwords is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.10",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (periodic rotation is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.11",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (context-specific words is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.2.12",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM has no local passwords (breached-password check is therefore an Entra tenant concern): the only sign-in is OIDC code+PKCE to Entra (AuthenticationSetup.cs:36-70); the development sign-in is refused outside the Development environment (AuthenticationSetup.cs:30, ASPNETCORE_ENVIRONMENT=Production in 0:102) and has no password.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45",
+        "docs/06-security.md:20"
+      ],
+      "note": "Brute-force and credential-stuffing protection exists only in Entra (Smart Lockout, Conditional Access, MFA); the application never receives credentials. Configuration of those controls in the real tenant cannot be verified from the repo.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.3.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:46",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:30",
+        "tests/Crm.IntegrationTests/RecordScopeTests.cs:303",
+        "infra/modules/data.bicep:30"
+      ],
+      "note": "No default accounts exist in production: the dev-* identities are created only by /bff/dev-login, which requires Auth:Mode=Development AND IHostEnvironment.IsDevelopment (otherwise 404, covered in the integration host), startup throws if Mode=Development outside Development, and the SQL server is Entra-only (azureADOnlyAuthentication). The local sa password in appsettings.Development.json belongs to a developer container. The startup throw itself has no unit test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.3.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "docs/06-security.md:20",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45"
+      ],
+      "note": "MFA is a Conditional Access requirement in Entra (SEC-AUTH-02); the application does not inspect amr/acr claims, so it cannot detect a token issued without MFA. See F-G2-08 (medium).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": [
+        "F-G2-08"
+      ]
+    },
+    {
+      "req_id": "V6.3.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:30",
+        "tests/Crm.IntegrationTests/AccessAndConcurrencyTests.cs:36",
+        "src/Modules/Identity/Crm.Identity/IdentityModule.cs:120"
+      ],
+      "note": "Only three AllowAnonymous groups exist (health probes, /bff/login|signout-entra|maintenance, SPA/404 fallback) and the BI bearer is on its own scheme. But the test that is supposed to prove every endpoint is protected filters on endpoints that carry a perm: policy (AccessAndConcurrencyTests.cs:36-38), so an /api endpoint that forgot RequirePermission is not caught (it would silently fall back to \"any authenticated user\", as /me/preferences deliberately does). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "tests/Crm.IntegrationTests/AccessAndConcurrencyTests.cs Every_api_endpoint_is_permission_protected_or_listed_with_the_reason (explicit allowlist with reasons)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.4.1",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:95"
+      ],
+      "note": "The CRM issues no initial passwords or activation codes; a user row is created on the first Entra sign-in (UserProvisioning). Temporary access passes are an Entra process.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.4.2",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "No password hints or knowledge-based questions exist in the application or its UI (no local credentials at all).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.4.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The application has no password-reset flow; reset is Entra self-service password reset, whose MFA enforcement is a tenant setting (EXT-02).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.4.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "docs/06-security.md:20"
+      ],
+      "note": "Re-enrolment after a lost MFA factor happens in Entra / the IT helpdesk, not in the CRM; the identity-proofing procedure is not documented in the repo.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.5.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The application generates no lookup secrets, out-of-band codes or TOTPs; second factors live entirely in Entra. (Case numbers and expected-hash confirmations in the privacy and import flows are not authentication factors.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.5.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The application generates no lookup secrets, out-of-band codes or TOTPs; second factors live entirely in Entra. (Case numbers and expected-hash confirmations in the privacy and import flows are not authentication factors.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.5.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The application generates no lookup secrets, out-of-band codes or TOTPs; second factors live entirely in Entra. (Case numbers and expected-hash confirmations in the privacy and import flows are not authentication factors.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.5.4",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The application generates no lookup secrets, out-of-band codes or TOTPs; second factors live entirely in Entra. (Case numbers and expected-hash confirmations in the privacy and import flows are not authentication factors.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.5.5",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The application generates no lookup secrets, out-of-band codes or TOTPs; second factors live entirely in Entra. (Case numbers and expected-hash confirmations in the privacy and import flows are not authentication factors.)",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.6.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "docs/06-security.md:20"
+      ],
+      "note": "Whether SMS/voice OTP is allowed is decided by the Entra authentication-methods policy; the CRM offers no PSTN mechanism itself. The tenant policy cannot be verified from the repo.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.6.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The CRM has no out-of-band authentication requests of its own; push/number-matching is Entra Authenticator behaviour.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.6.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "The CRM has no code-based out-of-band mechanism; brute-force limits on codes are an Entra matter.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.8.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:40",
+        "infra/entra/register-app.sh:8",
+        "src/Modules/Reports/Crm.Reports/BiAccess.cs:46",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:35"
+      ],
+      "note": "Entra is the only IdP; the app registration is single-tenant with assignment required, users are keyed by (tenant id, object id), and BI tokens are checked against the configured tenant. But nothing in code asserts that AzureAd:TenantId is a concrete tenant (appsettings.json ships it empty, a mistaken \"common\"/\"organizations\" value would be accepted) and the cookie flow has no test with a real OIDC validation. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "AuthenticationSetup.cs:42 TenantProblem: Entra mode outside Development needs a GUID or domain tenant (not common/organizations/consumers); WebHostSecurityTests.Outside_development_the_tenant_is_one_concrete_directory",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.8.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:30",
+        "tests/Crm.IntegrationTests/BiApiTests.cs:96"
+      ],
+      "note": "The id_token of the browser flow is validated by Microsoft.Identity.Web (signature through the tenant JWKS, issuer, audience, nonce, lifetime) and the BI bearer sets RequireSignedTokens/ValidateIssuerSigningKey/ValidateLifetime explicitly; the BI test refuses expired, foreign-tenant, foreign-audience and unsigned tokens. The OIDC part relies on library defaults and has no CRM test.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.8.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:36"
+      ],
+      "note": "SAML is not used; the only federation protocol is OIDC with the authorization code flow.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V6.8.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:57",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:33",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45"
+      ],
+      "note": "The app does not request or check authentication strength or recentness from Entra (no acr/amr/auth_time/max_age/prompt). \"Fresh\" for privileged actions means the CRM role confirmation is <5 min old, which a silent SSO sign-in or the 2-minute directory sync satisfies without any user interaction; billing approval and exports therefore get no step-up. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "EXT-02",
+      "status_before": "partial",
+      "fixed_by": "Privileged = fresh roles AND auth_time: PermissionAuthorization.cs:70 IsRecent(crm_roles_verified)&&IsRecent(crm_auth_time); Reverification.cs (prompt=login + max_age, returned auth_time checked, same account, optional Auth:RequiredAcr); AuthenticationSetup.cs:104; tests SessionLifecycleTests.F_G2_08_*, ReverificationTests (8), SessionAuthorizationTests.A_privileged_action_needs_both_fresh_roles_and_a_recent_interactive_sign_in, Without_an_authentication_time_..._fails_closed. Caveats: id_token optional claim auth_time must be registered (infra/entra/register-app.sh) or privileged actions stay closed; Auth:RequiredAcr is empty by default, so authentication STRENGTH is Conditional Access (EXT-02)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/06-security.md:22",
+        "docs/adr/ADR-019-sessions-and-privilege-freshness.md:56",
+        "src/Hosts/Crm.Web/appsettings.json:11",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:257"
+      ],
+      "note": "Inactivity (8 h sliding) and absolute (12 h) lifetimes are documented in SEC-AUTH-04 and ADR-019 (item 7, with the rejected 5-minute alternative and its reasoning), set in appsettings and enforced by the cookie ticket and the SessionStarted claim; the absolute limit has an integration test with a manual clock.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "gap",
+      "evidence": [
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:163",
+        "docs/06-security.md:22"
+      ],
+      "note": "No document or code defines how many parallel sessions an account may have: every sign-in adds an UserSessions row and none is ever ended by a newer one. || Post-fix reassessment 2026-10-05: still open - Deferred: no concurrent-session policy, no session list/terminate (F-G2-02); needs a product decision",
+      "severity": "low",
+      "fix": "Document the decision (unlimited with an audit trail is acceptable for an internal CRM) in ADR-019 or add a per-user cap/notification; expose open sessions (see V7.5.2).",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "",
+      "owner_final": "PO / Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.1.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/06-security.md:19",
+        "docs/06-security.md:22",
+        "docs/adr/ADR-019-sessions-and-privilege-freshness.md:62"
+      ],
+      "note": "Entra is the one SSO system and the CRM-to-Entra relationship (hourly refresh-token check, single sign-out, directory sync) is documented, but the Entra-side session policy (sign-in frequency, persistent browser session, token lifetimes) that bounds the whole chain is not documented. || Post-fix reassessment 2026-10-05: still open - Entra session policy (sign-in frequency, persistence) is tenant configuration",
+      "severity": "low",
+      "fix": "Add the intended Entra Conditional Access session controls (sign-in frequency, persistence) to SEC-AUTH-02 and verify them in the tenant.",
+      "owner_hint": "process",
+      "external_gate": "EXT-02",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Security owner",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:157",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:180",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:180",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:143"
+      ],
+      "note": "Every request re-validates the cookie principal on the server: session row open, user active, roles and confirmation time come from the database (replica cache <=30 s); cookie role claims are overwritten. Integration test AC03 shows a copied cookie on a second replica is refused after logout and role removal.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.2.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Http/DataProtectionSetup.cs:12",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:129"
+      ],
+      "note": "The session token is the ASP.NET Core cookie ticket, encrypted and authenticated by Data Protection (shared Blob + Key Vault key ring, production refuses to start without it) and naming a server session id; no static API key or shared secret is used for user sessions.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.2.3",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.SharedKernel/Domain/SequentialId.cs:15",
+        "src/Modules/Identity/Crm.Identity/Domain/UserSession.cs:21",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:120"
+      ],
+      "note": "The session id is a unique GUID (64 CSPRNG bits + timestamp/counter via SequentialId) but it is never a bearer secret: the value presented by the browser is the Data Protection ciphertext, so guessing a session id has no use. A purely random id would be cleaner, no test of uniqueness.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.2.4",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:120",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:163",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:78"
+      ],
+      "note": "Each authentication (ProvisionUserAsync) creates a new UserSessions row and the SignIn issues a new cookie, so there is no fixation. The previous session of the same user is not ended: after re-authentication the old cookie value stays valid (until its own expiry) because StartAsync only inserts. || Post-fix reassessment 2026-10-05: still open - Deactivation now ends sessions (V7.4.2) but a re-authentication still leaves the previous session of the user valid (StartAsync does not end it); F-G2-03 partly fixed",
+      "severity": "low",
+      "fix": "In SessionDirectory.StartAsync end the session named by the incoming cookie (when present) in the same SaveChanges, with reason \"Reauthenticated\".",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.3.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:137",
+        "src/Hosts/Crm.Web/appsettings.json:12",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:257"
+      ],
+      "note": "An 8-hour sliding timeout (ticket renewed only after half the window has passed) is configured and documented with a risk rationale, but it spans a whole working day, effectively never forcing re-authentication in daytime, and no test covers the idle expiry (the lifecycle test only advances the clock for the absolute limit). || Post-fix reassessment 2026-10-05: still open - Idle expiry is now tested (SessionLifecycleTests.An_idle_session_ends_at_the_sliding_lifetime_and_activity_keeps_it_going_until_the_absolute_one) but the 8 h sliding window is unchanged and spans a working day (documented in SEC-AUTH-04); PO decision",
+      "severity": "low",
+      "fix": "Add an integration test that advances beyond SlidingExpiration without activity; consider a shorter idle limit (e.g. 2-4 h) for roles holding Privileged permissions.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "PO / Security owner",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:163",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:257"
+      ],
+      "note": "Absolute lifetime (12 h) is carried in the protected crm_session_started claim and enforced on every request regardless of activity; the integration test proves an active, directory-confirmed session still ends at the absolute limit.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.4.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:78",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:180",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:143",
+        "src/Hosts/Crm.Web/Auth/SessionStateCache.cs:23"
+      ],
+      "note": "POST /bff/logout closes the UserSessions row and the copied cookie is refused on the local replica at once and on other replicas after at most 30 s (cache TTL, tested in AC03). Paths that end the Entra session do not close the server session: GET /bff/signout-entra only calls Results.SignOut and no front-/back-channel logout handler exists, so a copy of the cookie survives until it expires or the hourly refresh check fails. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:127 (time-limited sign-out ticket from POST /bff/logout), AuthenticationSetup.cs:86 (OnRemoteSignOut -> EndByExternalSessionAsync by hashed sid); WebHostSecurityTests.Entra_sign_out_needs_the_ticket_only_the_logout_post_hands_out, Front_channel_logout_ends_the_session_it_names_and_nobody_elses. Needs the sid claim in the id_token and Entra front-channel logout URL (not verified on a real tenant: EXT-02)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.4.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:180",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:128",
+        "src/Modules/Identity/Crm.Identity/Domain/User.cs:98",
+        "src/Hosts/Crm.Web/Http/ActiveUserMiddleware.cs:14",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:80"
+      ],
+      "note": "A user deactivated by the Entra sync is refused on the next request after the 30 s session-state cache (ActiveUserMiddleware adds a 60 s cache; integration test AC02 shows 401). The sessions are not ended: User.Deactivate() only flips IsActive, and Reactivate() or a later sign-in (RecordSignIn sets IsActive=true) makes old cookies valid again until their 12 h absolute limit. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "UserServices.cs:144 UserDirectorySync.EndSessionsAsync on Deactivate; WebHostSecurityTests.A_cookie_copied_before_a_deactivation_does_not_come_back_with_the_account",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.4.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:46",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:9"
+      ],
+      "note": "The CRM manages no authentication factors or passwords: credential changes happen in Entra, and the hourly refresh-token redemption (AuthenticationSetup.cs:224) ends sessions after a password reset or session revocation. There is nothing in the app to offer \"end my other sessions\" for.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.4.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "web/src/app/AppShell.tsx:235",
+        "web/src/features/errors/NoAccessPage.tsx:33"
+      ],
+      "note": "The authenticated shell offers sign-out on every page and the no-access page has it as well; both POST /bff/logout and then follow signOutUrl to Entra. No UI test checks that the control is present on every route.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.4.5",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "gap",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:78",
+        "docs/adr/ADR-019-sessions-and-privilege-freshness.md:77",
+        "src/Modules/Identity/Crm.Identity/IdentityModule.cs:24"
+      ],
+      "note": "There is no endpoint or UI for an administrator to end one user's or all sessions (ADR-019 states this explicitly); urgent revocation depends on removing the role/disabling the account in Entra (~2.5 min) and key-ring rotation is deliberately not a revocation tool. A role-less but active user keeps an open session and the read-only shell. || Post-fix reassessment 2026-10-05: still open - Deferred: no administrator \"end sessions\" command or UI (ADR-019 states it explicitly); needs a product decision and privileged endpoint",
+      "severity": "low",
+      "fix": "Add POST /api/v1/identity/users/{id}/sessions/end and a global variant (reason, If-Match, audit, privileged permission, ExportsData-style freshness) that call SessionDirectory.EndAsync for open rows; document in runbook 12.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "",
+      "owner_final": "PO / Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.5.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:46",
+        "src/Modules/Identity/Crm.Identity/IdentityModule.cs:120"
+      ],
+      "note": "The application lets users change no authentication-relevant attribute: names, e-mail and roles come from Entra, /me/preferences changes only the UI language, and there is no role-assignment UI (docs/06-security.md STRIDE table). Such changes require Entra re-authentication in Entra itself.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.5.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "gap",
+      "evidence": [
+        "src/Modules/Identity/Crm.Identity/Domain/UserSession.cs:9",
+        "src/Modules/Identity/Crm.Identity/IdentityModule.cs:24"
+      ],
+      "note": "Sessions are stored (UserSessions) but no API or UI lets a user view or terminate their own active sessions. || Post-fix reassessment 2026-10-05: still open - Deferred: no per-user session list/terminate in the UI",
+      "severity": "low",
+      "fix": "Add GET /api/v1/identity/me/sessions and DELETE /me/sessions/{id} (and \"end all others\") restricted to the caller's rows, plus a SPA account page.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "",
+      "owner_final": "PO / Dev team",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.6.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:222",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:224",
+        "infra/entra/register-app.sh:48",
+        "docs/06-security.md:22"
+      ],
+      "note": "Relying-party/IdP coupling is handled by the hourly forced refresh-token redemption (Entra \"no\" ends the session, outage postpones 5 min; tested in SessionLifecycleTests.cs:274) and by RP-initiated sign-out. The registered logoutUrl /signout-oidc (register-app.sh:48) is the framework front-channel path, which does not close the server session, and no back-channel logout is configured. Entra-side session policy is a tenant matter. || Post-fix reassessment 2026-10-05: still open - Front-channel logout and the hourly refresh-token check close the RP session; Entra-side sign-in frequency and sid delivery are tenant facts",
+      "severity": "low",
+      "fix": "Close the server session from the remote-sign-out event (see V7.4.1) and verify Entra sign-in frequency in the tenant.",
+      "owner_hint": "infra",
+      "external_gate": "EXT-02",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Security owner",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V7.6.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:33",
+        "web/src/api/client.ts:78",
+        "web/src/auth/AuthGate.test.tsx:105"
+      ],
+      "note": "Creating a session needs a navigation to GET /bff/login, which the SPA triggers automatically on any 401, and the endpoint can be reached by any cross-site link or redirect; with an Entra SSO session the browser then completes sign-in without any click (login CSRF - the attacker gets no session, but the victim gets one unasked). There is no interstitial or consent step. || Post-fix reassessment 2026-10-05: still open - Login CSRF (F-G2-11) is not fixed: /bff/login still creates a session by navigation. Only a client-side loop guard (web/src/auth/loginAttempts.ts) was added, which is not this control",
+      "severity": "low",
+      "fix": "Show a \"Sign in\" button on the SPA landing state instead of auto-redirecting after logout, and require a same-site Sec-Fetch-Site (or a CSRF-style state value from the SPA) on /bff/login.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "Dev team",
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-G2-01",
+      "title": "Open redirect after sign-in: returnUrl control characters bypass SafeReturnUrl (static analysis, not executed)",
+      "severity": "medium",
+      "req_ids": [],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:131",
+      "description": "SafeReturnUrl accepts any string that starts with \"/\" and not with \"//\" or \"/\\\". In Entra mode the value becomes AuthenticationProperties.RedirectUri and the OIDC handler issues Response.Redirect(RedirectUri) after sign-in without Url.IsLocalUrl. A value such as \"/<TAB>/evil.example\" or \"/<TAB>\\evil.example\" starts with \"/\" followed by a tab, so it passes the check, Kestrel allows HTAB in header values, and browsers strip tabs/newlines when parsing Location, turning it into \"//evil.example\". Outside the assessed chapters (ASVS V3/V10 redirects) but found while reviewing the login flow. No test covers SafeReturnUrl.",
+      "reproduction": "Open https://<crm>/bff/login?returnUrl=%2F%09%2Fevil.example while signed out of the CRM; after Entra completes, check whether the final Location resolves to //evil.example. Unit-test SafeReturnUrl(\"/\\t/evil.example\") returns the input.",
+      "fix": "Reject returnUrl containing any control character (char.IsControl), backslash anywhere, or a \":\" before the first \"/\" segment; better, validate with new Uri(returnUrl, UriKind.Relative) and require Path-only; add unit tests for tab, CR, LF, \"%09\", \"/\\\\\".",
+      "status": "fixed",
+      "fixed_by": "duplicate of F-G1-01",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-02",
+      "title": "No way to see or end sessions: no admin termination, no per-user session list, no concurrent-session policy",
+      "severity": "low",
+      "req_ids": [
+        "V7.1.2",
+        "V7.4.5",
+        "V7.5.2"
+      ],
+      "location": "src/Modules/Identity/Crm.Identity/IdentityModule.cs:24",
+      "description": "identity.UserSessions is written and read only by the sign-in/logout/validation paths. There is no endpoint to end a given user's or all sessions (ADR-019 says so), no self-service list, and no documented rule on parallel sessions. Emergency revocation relies on the directory sync (~2.5 min) and works only by role removal or account disablement.",
+      "reproduction": "Sign in on two browsers as the same user; log out in one: the other stays valid. As Admin look for an API/UI to end the other: none exists.",
+      "fix": "Add self-service and administrator session endpoints (audited, privileged freshness) calling SessionDirectory.EndAsync; document the concurrency decision.",
+      "status": "deferred",
+      "fixed_by": "",
+      "remaining": "session list / administrator termination / concurrency policy not built",
+      "owner": "PO / Dev team",
+      "decision_needed": "Decide whether sessions must be listable and endable by an administrator; if yes, a privileged endpoint + UI task"
+    },
+    {
+      "id": "F-G2-03",
+      "title": "Old sessions survive re-authentication and deactivation; reactivation revives them",
+      "severity": "low",
+      "req_ids": [
+        "V7.2.4",
+        "V7.4.2"
+      ],
+      "location": "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:163",
+      "description": "SessionDirectory.StartAsync only inserts a row. A new sign-in does not end the session of the cookie it replaces, User.Deactivate() does not end open sessions, and User.RecordSignIn()/Reactivate() set IsActive=true again, so a cookie copied before the deactivation works again if the account is re-enabled within 12 h.",
+      "reproduction": "Sign in, copy the cookie, deactivate the account via the sync (cookie gets 401), re-enable it in Entra and let the sync run: the copied cookie is accepted again while younger than 12 h.",
+      "fix": "End open sessions in Deactivate handling and end the replaced session in StartAsync; add integration tests next to SessionLifecycleTests.AC02.",
+      "status": "partly",
+      "fixed_by": "deactivation ends open sessions (UserDirectorySync); re-authentication still leaves the previous session valid",
+      "remaining": "deactivation ends open sessions (UserDirectorySync); re-authentication still leaves the previous session valid",
+      "owner": "Dev team",
+      "decision_needed": "End the previous session on StartAsync, or accept (cookie is bound to a server row and expires)"
+    },
+    {
+      "id": "F-G2-04",
+      "title": "Entra-side sign-out routes do not end the server session; GET sign-out is a logout CSRF",
+      "severity": "low",
+      "req_ids": [
+        "V7.4.1",
+        "V7.6.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:104",
+      "description": "GET /bff/signout-entra is anonymous, state-changing and only calls Results.SignOut for the OIDC scheme; no OnRemoteSignOut handler or back-channel logout exists, and the registered logoutUrl /signout-oidc is the framework front-channel path. Neither closes identity.UserSessions. Any site can navigate the user to /bff/signout-entra to sign them out of Entra (the Strict cookie is not sent cross-site, but the Entra session is ended).",
+      "reproduction": "Copy the cookie, call GET /bff/signout-entra (or sign out of Entra elsewhere): the copied cookie still returns 200 on /bff/user until the hourly refresh check or expiry.",
+      "fix": "Implement OnRemoteSignOut/signout-entra to call ISessionDirectory.EndAsync(sid); make the Entra sign-out a POST with the CSRF header, or add a post-logout state value.",
+      "status": "fixed",
+      "fixed_by": "POST /bff/logout hands a one-minute ticket; signout-entra needs it; OnRemoteSignOut ends sessions by hashed sid",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-05",
+      "title": "CSV imports are unbounded in memory and not documented",
+      "severity": "low",
+      "req_ids": [
+        "V5.1.1",
+        "V5.2.1",
+        "V5.2.2"
+      ],
+      "location": "src/Modules/Licensing/Crm.Licensing/LicensingModule.cs:47",
+      "description": "Four endpoints (licensing import, ms-billing import, price-sheet import, organization migration import and reconcile) read the whole request body into memory and parse it fully before any row cap; only the Kestrel default body limit (~30 MB) applies and no content type is enforced. docs/06-security.md:45 claims a 25 MB limit, signature check and Defender scan that are not implemented.",
+      "reproduction": "As a user with licensing.manage POST a 28 MB CSV of short lines to /api/v1/licensing/import?dryRun=true several times in parallel and watch crm-web memory (1 GiB container).",
+      "fix": "Apply an explicit request size limit and row cap (e.g. 5 MB / 20 000 rows) on all four endpoints before parsing, require a text content type, and correct the documentation.",
+      "status": "fixed",
+      "fixed_by": "CsvUpload 415/413 + MaxImportRows; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-06",
+      "title": "HSTS uses framework defaults, contradicting the security specification",
+      "severity": "low",
+      "req_ids": [
+        "V4.1.2"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:195",
+      "description": "app.UseHsts() runs without AddHsts, so Strict-Transport-Security is max-age=2592000 without includeSubDomains, while docs/06-security.md:41 requires max-age=31536000; includeSubDomains. No test asserts the header.",
+      "reproduction": "curl -sI https://<crm>/ | grep -i strict-transport-security.",
+      "fix": "Configure HstsOptions (365 days, includeSubDomains) and add an integration test.",
+      "status": "fixed",
+      "fixed_by": "as F-G1-02",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-07",
+      "title": "Forwarded headers trusted from any sender and AllowedHosts \"*\"",
+      "severity": "low",
+      "req_ids": [
+        "V4.1.3"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:164",
+      "description": "KnownIPNetworks and KnownProxies are cleared and XForwardedHost is processed, with AllowedHosts \"*\". Request.Host (used for OIDC redirect_uri and absolute links) and RemoteIpAddress (used for audit and unauthenticated rate-limit partitions) are therefore only as trustworthy as the ingress is at stripping client-supplied values; not shown in the repo.",
+      "reproduction": "Send X-Forwarded-Host: evil.example to /bff/login on the test environment and inspect the redirect_uri in the Entra redirect.",
+      "fix": "Remove XForwardedHost or pin AllowedHosts to the app FQDN through Bicep; add a test.",
+      "status": "fixed",
+      "fixed_by": "HostSecurity + Bicep AllowedHosts/KnownNetworks; Production refuses \"*\" (appsettings.json still contains \"*\" for Development/Testing)",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-08",
+      "title": "Privileged actions have a role-confirmation freshness but no authentication step-up",
+      "severity": "medium",
+      "req_ids": [
+        "V6.8.4",
+        "V6.3.3"
+      ],
+      "location": "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:57",
+      "description": "AUTH_REVERIFY_REQUIRED is satisfied by any sign-in or by the directory sync marking roles confirmed; Entra SSO signs the user in silently and the app never requests or validates acr/amr/auth_time. A stolen or unattended session therefore performs billing approval, exports or maintenance after a silent re-login, and MFA enforcement cannot be seen by the application.",
+      "reproduction": "With an active Entra SSO session, wait 6 minutes, receive 403 AUTH_REVERIFY_REQUIRED, hit /bff/login: no prompt is shown and the next privileged call succeeds.",
+      "fix": "Challenge with prompt=login/max_age or an authentication-context claim for Privileged permissions and check auth_time/acr before stamping crm_roles_verified; real MFA enforcement remains EXT-02.",
+      "status": "fixed",
+      "fixed_by": "auth_time + max_age/prompt=login re-verification, session AuthenticatedAt, optional RequiredAcr; tenant claim registration and MFA strength remain EXT-02",
+      "remaining": "",
+      "owner": "Security owner",
+      "decision_needed": "Register auth_time optional claim in the real tenant; decide whether to set Auth:RequiredAcr"
+    },
+    {
+      "id": "F-G2-09",
+      "title": "The \"every endpoint is protected\" test skips endpoints without a perm: policy",
+      "severity": "low",
+      "req_ids": [
+        "V6.3.4"
+      ],
+      "location": "tests/Crm.IntegrationTests/AccessAndConcurrencyTests.cs:36",
+      "description": "The matrix test keeps only endpoints whose metadata contains a \"perm:\" policy (.Where(e => e.Policies.Count > 0)). An /api endpoint that omits RequirePermission is authenticated-only through the fallback policy and is not reported, although CLAUDE.md states that a test fails for unprotected endpoints. /api/v1/identity/me/preferences is such an endpoint by design.",
+      "reproduction": "Add app.MapGet(\"/api/v1/x\", () => 1) without RequirePermission: the test still passes.",
+      "fix": "Fail the test for any /api endpoint without a perm: policy unless it appears in an explicit allow-list.",
+      "status": "fixed",
+      "fixed_by": "allowlist test Every_api_endpoint_is_permission_protected_or_listed_with_the_reason",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-10",
+      "title": "MSAL token cache (refresh tokens) in SQL uses library defaults",
+      "severity": "low",
+      "req_ids": [],
+      "location": "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:73",
+      "description": "AddDistributedTokenCaches() with a SQL Server distributed cache (identity.TokenCache) is configured without MsalDistributedTokenCacheAdapterOptions, i.e. without application-level encryption of the cached refresh tokens (library default Encrypt=false); only TDE protects them from DBAs and from the crm_web role. Not a G2 requirement; reported as an adjacent session-security observation.",
+      "reproduction": "SELECT TOP 1 * FROM identity.TokenCache as a holder of read rights and inspect the blob.",
+      "fix": "Configure services.Configure<MsalDistributedTokenCacheAdapterOptions>(o => o.Encrypt = true) (Data Protection backed).",
+      "status": "fixed",
+      "fixed_by": "MSAL token cache Encrypt=true; test",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-11",
+      "title": "/bff/login creates a session without an explicit user action (login CSRF)",
+      "severity": "low",
+      "req_ids": [
+        "V7.6.2"
+      ],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:33",
+      "description": "GET /bff/login is anonymous, accepts cross-site navigations and, with an Entra SSO session, signs the user in silently; the SPA also redirects to it automatically on every 401 (web/src/api/client.ts:78).",
+      "reproduction": "From another origin link to https://<crm>/bff/login while the victim has an Entra session: a CRM session starts with no click.",
+      "fix": "Require a user gesture on the landing page after logout and reject cross-site navigations (Sec-Fetch-Site: cross-site) at /bff/login.",
+      "status": "open",
+      "fixed_by": "",
+      "remaining": "login CSRF not addressed; only a client loop guard added",
+      "owner": "Dev team",
+      "decision_needed": "Require a same-site marker or a user gesture on /bff/login, or accept the risk"
+    },
+    {
+      "id": "F-G2-12",
+      "title": "Entry points under /bff are outside rate limiting; Entra mode not guarded for tenant",
+      "severity": "low",
+      "req_ids": [
+        "V6.1.1",
+        "V6.3.1",
+        "V6.8.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:117",
+      "description": "The global limiter returns NoLimiter for everything except /api, so /bff/login and the OIDC callback have no throttle (each login attempt costs a Challenge and, on callback, user provisioning and a UserSessions insert). There is also no startup assertion that AzureAd:TenantId is a concrete tenant.",
+      "reproduction": "Loop GET /bff/login 1000 times: no 429 is returned.",
+      "fix": "Add a per-IP limiter policy on /bff/login and /signin-oidc, and fail startup when AzureAd:TenantId is empty or multi-tenant.",
+      "status": "fixed",
+      "fixed_by": "sign-in path rate limit 30/min per client address; TenantProblem startup guard; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G2-13",
+      "title": "Idle timeout of 8 hours is untested and effectively never forces re-authentication",
+      "severity": "low",
+      "req_ids": [
+        "V7.3.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:137",
+      "description": "Sliding expiration is 8 h (ticket reissued after half the window) and only the absolute limit is covered by SessionLifecycleTests.",
+      "reproduction": "Advance the test clock by 9 h without requests, expect 401; no such test exists.",
+      "fix": "Add the idle-expiry test and decide whether privileged roles need a shorter idle limit.",
+      "status": "partly",
+      "fixed_by": "idle expiry test added; 8 h window unchanged",
+      "remaining": "idle expiry test added; 8 h window unchanged",
+      "owner": "PO / Security owner",
+      "decision_needed": "Decide on a shorter idle limit for privileged roles"
+    }
+  ],
+  "reassessed_at": "2026-10-05",
+  "reassessor": "Claude (implementing agent): self-assessment, not independent; real tenant EXT-02, independent review EXT-06, data EXT-07, repository settings EXT-11",
+  "counts_before": {
+    "met": 13,
+    "partial": 18,
+    "not_applicable": 34,
+    "external": 4,
+    "gap": 3
+  },
+  "counts_after": {
+    "met": 25,
+    "partial": 6,
+    "not_applicable": 34,
+    "external": 4,
+    "gap": 3
+  }
+}

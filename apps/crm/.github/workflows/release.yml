@@ -1,0 +1,228 @@
+name: Release
+
+# Called by CI for a commit pushed to main once every required job passed (DEV-05, docs/adr/ADR-015-release-pipeline.md).
+# Builds crm-web and crm-worker once, pins them by digest in a release manifest with SBOMs, an image scan and provenance
+# attestations, deploys exactly those digests to test and smoke-tests them. Production gets the same digests later
+# through promote.yml; nothing here can run for a pull request or a fork.
+on:
+  workflow_call:
+    inputs:
+      checks:
+        description: Results of the required CI jobs, name=result,...
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Federated credential subject repo:<owner>/<repo>:environment:test — it can push to the test registry only.
+    environment: test
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      web: ${{ steps.images.outputs.web }}
+      worker: ${{ steps.images.outputs.worker }}
+    env:
+      RESOURCE_GROUP: rg-crm-test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.CRM_ENTRA_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build the SPA into crm-web
+        working-directory: web
+        run: npm ci && npm run build
+
+      - name: Test registry
+        id: acr
+        shell: bash
+        run: |
+          server=$(az acr list -g "$RESOURCE_GROUP" --query "[0].loginServer" -o tsv)
+          [[ -n "$server" ]] || { echo "no container registry in $RESOURCE_GROUP" >&2; exit 1; }
+          echo "server=$server" >> "$GITHUB_OUTPUT"
+          az acr login --name "${server%%.*}"
+
+      - name: Build and push the images once
+        id: images
+        shell: bash
+        env:
+          REGISTRY: ${{ steps.acr.outputs.server }}
+          SHA: ${{ github.sha }}
+        run: |
+          for host in Web Worker; do
+            repository="crm-${host,,}"
+            dotnet publish "src/Hosts/Crm.$host/Crm.$host.csproj" -c Release -t:PublishContainer --os linux --arch x64 \
+              -p:ContainerRegistry="$REGISTRY" -p:ContainerImageTags="$SHA"
+            digest=$(az acr repository show -n "${REGISTRY%%.*}" --image "$repository:$SHA" --query digest -o tsv)
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "no digest for $repository:$SHA" >&2; exit 1; }
+            echo "${host,,}=$REGISTRY/$repository@$digest" >> "$GITHUB_OUTPUT"
+            echo "${host,,}_digest=$digest" >> "$GITHUB_OUTPUT"
+          done
+
+      # DEV-21 (F-G4-14): a release image must not run as root. The base image sets a numeric user and the SDK keeps it; this
+      # fails the release if that ever stops being true for what was actually built.
+      - name: The images run as a non-root user
+        shell: bash
+        env:
+          WEB: ${{ steps.images.outputs.web }}
+          WORKER: ${{ steps.images.outputs.worker }}
+        run: |
+          for image in "$WEB" "$WORKER"; do
+            docker pull --quiet "$image" > /dev/null
+            user=$(docker image inspect --format '{{.Config.User}}' "$image")
+            case "$user" in
+              ""|0|root|0:*|root:*) echo "$image runs as '${user:-root}'" >&2; exit 1 ;;
+            esac
+            echo "$image runs as $user"
+          done
+
+      - name: SBOM of crm-web
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: ${{ steps.images.outputs.web }}
+          format: spdx-json
+          output-file: sbom-crm-web.spdx.json
+          upload-artifact: false
+      - name: SBOM of crm-worker
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: ${{ steps.images.outputs.worker }}
+          format: spdx-json
+          output-file: sbom-crm-worker.spdx.json
+          upload-artifact: false
+
+      # The release artifact itself is scanned; a scanner error fails the step like a finding does.
+      - name: Scan crm-web
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
+        with:
+          image: ${{ steps.images.outputs.web }}
+          severity-cutoff: high
+          fail-build: true
+          output-format: table
+      - name: Scan crm-worker
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
+        with:
+          image: ${{ steps.images.outputs.worker }}
+          severity-cutoff: high
+          fail-build: true
+          output-format: table
+
+      - name: Provenance of crm-web
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ${{ steps.acr.outputs.server }}/crm-web
+          subject-digest: ${{ steps.images.outputs.web_digest }}
+          push-to-registry: true
+      - name: Provenance of crm-worker
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ${{ steps.acr.outputs.server }}/crm-worker
+          subject-digest: ${{ steps.images.outputs.worker_digest }}
+          push-to-registry: true
+
+      - name: Release manifest
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          WEB: ${{ steps.images.outputs.web }}
+          WORKER: ${{ steps.images.outputs.worker }}
+          CHECKS: ${{ inputs.checks }}
+        run: |
+          args=()
+          IFS=',' read -ra results <<< "$CHECKS"
+          for result in "${results[@]}"; do args+=(--check "$result"); done
+          python3 tools/release/release.py manifest-create --sha "$SHA" --repository "$REPOSITORY" --run-id "$RUN_ID" \
+            --run-url "$RUN_URL" --web "$WEB" --worker "$WORKER" "${args[@]}" \
+            --sbom sbom-crm-web.spdx.json --sbom sbom-crm-worker.spdx.json --out release-manifest.json
+          python3 tools/release/release.py manifest-verify release-manifest.json --sha "$SHA"
+      - name: No secrets in the release artifact
+        run: python3 tools/release/release.py scan-secrets release-manifest.json sbom-crm-web.spdx.json sbom-crm-worker.spdx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ github.sha }}
+          path: |
+            release-manifest.json
+            sbom-crm-web.spdx.json
+            sbom-crm-worker.spdx.json
+          retention-days: 90
+          if-no-files-found: error
+
+  deploy-test:
+    needs: publish
+    runs-on: ubuntu-latest
+    environment: test
+    # A deployment is never cancelled half way; the next one waits.
+    concurrency:
+      group: deploy-test
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CRM_ENTRA_TENANT_ID: ${{ vars.CRM_ENTRA_TENANT_ID }}
+      CRM_ENTRA_CLIENT_ID_TEST: ${{ vars.CRM_ENTRA_CLIENT_ID_TEST }}
+      CRM_ENABLE_POWEROFFICE: ${{ vars.CRM_ENABLE_POWEROFFICE || 'false' }}
+      CRM_ENABLE_ATERA: ${{ vars.CRM_ENABLE_ATERA || 'false' }}
+      CRM_ENABLE_PARTNERCENTER: ${{ vars.CRM_ENABLE_PARTNERCENTER || 'false' }}
+      CRM_PARTNERCENTER_TENANT_ID: ${{ vars.CRM_PARTNERCENTER_TENANT_ID }}
+      CRM_PARTNERCENTER_CLIENT_ID: ${{ vars.CRM_PARTNERCENTER_CLIENT_ID }}
+      CRM_ENABLE_TEAMS: ${{ vars.CRM_ENABLE_TEAMS || 'false' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ github.sha }}
+          path: release
+      - name: The manifest belongs to this commit
+        run: python3 tools/release/release.py manifest-verify release/release-manifest.json --sha "${{ github.sha }}"
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.CRM_ENTRA_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # Test accepts a schema break of a new release (the running release may fail until the switch); a release without a
+      # break that test already has cannot go there (tools/release/schema-breaks.json).
+      - name: Schema guard against the release running in test
+        shell: bash
+        run: |
+          tools/release/current-release.sh test current
+          args=(--target release/release-manifest.json --accept-break)
+          [[ -f current/release-manifest.json ]] && args+=(--current current/release-manifest.json)
+          python3 tools/release/release.py schema-guard "${args[@]}"
+      # Migrations first (a failure changes no revision and no traffic), then the candidate revision, smoke test, traffic.
+      - name: Deploy the release digests to test
+        run: |
+          tools/release/deploy.sh test release/release-manifest.json deployment
+          cp release/release-manifest.json deployment/
+      - name: No secrets in the deployment record
+        run: python3 tools/release/release.py scan-secrets deployment
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deployment-test-${{ github.sha }}
+          path: deployment
+          retention-days: 90
+          if-no-files-found: error

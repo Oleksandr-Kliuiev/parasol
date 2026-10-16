@@ -1,0 +1,68 @@
+# Fixed caps and totals over a page at 9dfe2b4 (DEV-11 commit), the base of DEV-12.
+# Produced with: git grep -n -E '<pattern>' 9dfe2b4 -- <file>   (read-only; nothing checked out)
+
+src/Modules/Billing/Crm.Billing/Features/BillingService.cs:52:        var rows = await runs.OrderByDescending(r => r.PeriodStart).Take(Math.Clamp(query.Limit ?? 24, 1, 120)).ToListAsync(ct);
+src/Modules/Billing/Crm.Billing/Features/BillingService.cs:511:            items.Count,
+src/Modules/Billing/Crm.Billing/Features/BillingService.cs:562:            .Take(Math.Clamp(query.Limit ?? 100, 1, 500)).ToListAsync(ct);
+src/Modules/Billing/Crm.Billing/Features/BillingService.cs:566:            items.Count,
+src/Modules/Billing/Crm.Billing/Features/BillingService.cs:567:            decimal.Round(rows.Sum(i => i.Outstanding), 2),
+src/Modules/Sales/Crm.Sales/Features/QuoteService.cs:144:        var rows = await quotes.OrderByDescending(q => q.Number).ThenByDescending(q => q.VersionNo).Take(300).ToListAsync(ct);
+src/Modules/Sales/Crm.Sales/Features/SalesService.cs:101:        var rows = await leads.OrderByDescending(l => l.CreatedAt).Take(300).ToListAsync(ct);
+src/Modules/Sales/Crm.Sales/Features/SalesService.cs:194:        var rows = await FilterOpportunities(query).OrderBy(o => o.ExpectedCloseDate).ThenBy(o => o.Id).Take(500).ToListAsync(ct);
+src/Modules/Sales/Crm.Sales/Features/SalesService.cs:208:            .OrderBy(o => o.ExpectedCloseDate).Take(500).ToListAsync(ct);
+src/Modules/Sales/Crm.Sales/Features/SalesService.cs:222:            .Take(12)
+src/Modules/Sales/Crm.Sales/Features/SalesService.cs:509:            .Take(200)
+src/Modules/Projects/Crm.Projects/Features/ProjectFeatures.cs:217:        var rows = await projects.OrderByDescending(p => p.Number).Take(200).ToListAsync(ct);
+src/Modules/TimeTracking/Crm.TimeTracking/Features/TimeEntryFeatures.cs:168:        var rows = await entries.OrderByDescending(e => e.WorkDate).ThenBy(e => e.Id).Take(500).ToListAsync(ct);
+src/Modules/Service/Crm.Service/Features/SlaReport.cs:77:            .Take(5000)
+src/Modules/Service/Crm.Service/Features/SlaReport.cs:169:                .Take(BreachesShown)
+src/Modules/Service/Crm.Service/ServiceModule.cs:117:                    .Take(Math.Clamp(limit ?? 100, 1, 500)).ToListAsync(ct);
+src/Modules/Service/Crm.Service/ServiceModule.cs:162:                    .Select(d => new DeviceItem(d.Id, d.MachineName, d.Type, d.Os, d.Online, d.LastSeenAt, d.Url, d.RemovedAt)).Take(1000).ToListAsync(ct));
+src/Modules/Service/Crm.Service/ServiceModule.cs:169:                    .Select(a => new AlertItem(a.Id, a.Severity, a.Title, a.DeviceName, a.CreatedAtSource)).Take(200).ToListAsync(ct)))
+src/Modules/Service/Crm.Service/ServiceModule.cs:179:                    .Take(20).ToListAsync(ct));
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:147:        return new SubscriptionImportResult(created, updated, unchanged, withoutOrganization, warnings.Distinct().Take(20).ToList());
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:188:        var rows = await subscriptions.OrderBy(s => s.CspCustomerName).ThenBy(s => s.OfferName).Take(1000).ToListAsync(ct);
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:195:        var rows = await db.CspSubscriptions.AsNoTracking().Where(s => s.Status != SubscriptionStatus.Deleted).Take(2000).ToListAsync(ct);
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:206:            dtos.Where(d => d.CancellationWindowOpen).OrderBy(d => d.CancellationWindowEndsAt).Take(20).ToList(),
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:208:                .OrderBy(d => d.RenewalDate).Take(20).ToList(),
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:209:            dtos.Where(d => !d.IsBilled).OrderBy(d => d.OrganizationName).Take(20).ToList());
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:217:            .Take(2000)
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:405:        var rows = await db.CspSubscriptions.AsNoTracking().Where(s => s.Status != SubscriptionStatus.Deleted).Take(5000).ToListAsync(ct);
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:429:            return Error.Validation("LIC_IMPORT_INVALID", string.Join(" ", parsed.Errors.Take(5)),
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:465:                parsed.Errors.Concat(parsed.UnknownColumns.Select(c => $"Column '{c}' was ignored.")).Take(20).ToList());
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:477:        return result with { Warnings = result.Warnings.Concat(parsed.Errors).Take(20).ToList() };
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:488:            return Error.Validation("LIC_MSBILLING_INVALID", string.Join(" ", parsed.Errors.Take(5).DefaultIfEmpty("The file has no lines.")),
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:510:                .Take(20)
+src/Modules/Licensing/Crm.Licensing/Features/LicensingService.cs:542:            .Take(20)
+src/Modules/Licensing/Crm.Licensing/Features/LicenseUsageService.cs:142:                : group.Select(l => l.OfferName ?? l.OfferId).Distinct(StringComparer.OrdinalIgnoreCase).Take(5).ToList();
+src/Modules/Licensing/Crm.Licensing/Features/LicenseUsageService.cs:190:            .Take(24)
+src/Modules/Contracts/Crm.Contracts/Features/IndexationFeatures.cs:141:        return await query.OrderBy(c => c.Number).Take(500).ToListAsync(ct);
+src/Modules/Contracts/Crm.Contracts/Features/HourBankFeatures.cs:87:        var rows = await banks.OrderByDescending(b => b.ValidFrom).Take(200).ToListAsync(ct);
+src/Modules/Contracts/Crm.Contracts/Features/ReminderFeatures.cs:51:        var rows = await reminders.OrderBy(r => r.DueDate).Take(200).ToListAsync(ct);
+src/Modules/Contracts/Crm.Contracts/Features/ReminderFeatures.cs:299:            .Take(1)
+src/Modules/Contracts/Crm.Contracts/Features/ReminderFeatures.cs:491:            .Take(200)
+src/Modules/Notifications/Crm.Notifications/Features/NotificationService.cs:81:            .Take(Math.Clamp(limit ?? 50, 1, 200))
+src/Modules/Notifications/Crm.Notifications/Features/NotificationJobs.cs:189:            .Take(2000)
+src/Modules/Notifications/Crm.Notifications/Features/NotificationJobs.cs:269:        var shown = items.Take(Math.Clamp(settings.MaxItemsPerEmail, 1, 100)).ToList();
+src/Modules/Activities/Crm.Activities/Features/ActivityFeatures.cs:124:            .Take(300)
+src/Modules/Activities/Crm.Activities/Features/OutlookFeatures.cs:278:        .Take(5)
+src/Modules/Identity/Crm.Identity/IdentityModule.cs:54:                    .Take(200)
+src/Modules/Identity/Crm.Identity/IdentityModule.cs:69:                var rows = await query.OrderBy(m => m.UserId != null).ThenBy(m => m.Name).Take(500).ToListAsync(ct);
+src/Integrations/Crm.Integrations.Core/IntegrationsCoreModule.cs:47:                return Results.Ok(await runs.OrderByDescending(r => r.StartedAt).Take(Math.Clamp(limit ?? 50, 1, 200)).ToListAsync(ct));
+src/Integrations/Crm.Integrations.Core/MappingEndpoints.cs:334:                return Results.Ok(await query.OrderByDescending(o => o.CreatedAt).Take(200).ToListAsync(ct));
+src/Modules/Privacy/Crm.Privacy/Features/PrivacyCaseService.cs:154:        var cases = await query.OrderByDescending(c => c.ReceivedAt).Take(200).ToListAsync(ct);
+src/Modules/Privacy/Crm.Privacy/Features/LegalHoldService.cs:49:            .OrderByDescending(h => h.CreatedAt).Take(500).ToListAsync(ct);
+src/Modules/Privacy/Crm.Privacy/Features/LegalHoldService.cs:90:        var suppressions = await db.Suppressions.OrderByDescending(s => s.CreatedAt).Take(500).ToListAsync(ct);
+src/Modules/Customers/Crm.Customers/Features/Organizations/DuplicatesAndMerge.cs:82:            .Take(MaxPairs)
+src/Modules/Customers/Crm.Customers/Features/Organizations/DuplicatesAndMerge.cs:256:            .Take(50)
+src/Modules/Customers/Crm.Customers/Features/Organizations/MigrationImport.cs:199:            rows.Where(r => r.Action != "Unchanged").Take(200).ToList(),
+src/Modules/Customers/Crm.Customers/Features/Organizations/MigrationImport.cs:200:            warnings.Take(20).ToList());
+src/Modules/Customers/Crm.Customers/CustomersApi.cs:169:            .Take(50)
+src/Modules/Catalog/Crm.Catalog/Features/PriceLists/PriceListFeatures.cs:427:        var warnings = new List<string>(parsed.Errors.Take(10));
+src/Modules/Catalog/Crm.Catalog/Features/PriceLists/PriceListFeatures.cs:479:            rows.OrderByDescending(r => r.Changed).ThenBy(r => r.ProductName, StringComparer.CurrentCultureIgnoreCase).Take(500).ToList(),
+src/Modules/Catalog/Crm.Catalog/Features/PriceLists/PriceListFeatures.cs:480:            warnings.Take(20).ToList());
+src/Modules/Reports/Crm.Reports/DashboardService.cs:115:                .Take(20)
+src/Modules/Reports/Crm.Reports/DashboardService.cs:118:                .Take(15)
+src/Modules/Billing/Crm.Billing/Features/BillingApi.cs:36:            .Take(500)
+web/src/features/service/OrganizationServiceTab.tsx:185:            {(devices.data ?? []).slice(0, 25).map((device) => (
+web/src/features/catalog/PriceListPage.tsx:485:            {preview.rows.length > 10 && <Text className={catalog.muted}>{t('catalog.priceSheet.more', { rest: preview.rows.length - 10 })}</Text>}

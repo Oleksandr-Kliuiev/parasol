@@ -1,0 +1,1080 @@
+{
+  "group": "G3",
+  "chapters": [
+    "V8",
+    "V9",
+    "V10"
+  ],
+  "assessed_at": "2026-10-05",
+  "assessor": "Claude (self-assessment, not independent)",
+  "level3_not_assessed": [
+    "V8.1.3",
+    "V8.1.4",
+    "V8.2.4",
+    "V8.3.2",
+    "V8.3.3",
+    "V8.4.2",
+    "V10.2.3",
+    "V10.3.5",
+    "V10.4.12",
+    "V10.4.13",
+    "V10.4.14",
+    "V10.4.15",
+    "V10.4.16"
+  ],
+  "rows": [
+    {
+      "req_id": "V8.1.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "docs/06-security.md:28",
+        "docs/06-security.md:30",
+        "docs/02-functional-spec.md:38",
+        "docs/02-functional-spec.md:64",
+        "docs/adr/ADR-018-record-scope.md:1"
+      ],
+      "note": "Function-level rules are a role-to-permission matrix (docs/02 section 2, SEC-AZ-01/02) and data-specific rules are defined as record scope for quotes and projects (BR-ACC-04, SEC-AZ-03, ADR-018). The business confirmation of the quote/project matrix (DEC-01) is still pending and the doc matrix differs from Permissions.cs in places (see F-G3-04).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": [
+        "F-G3-04"
+      ]
+    },
+    {
+      "req_id": "V8.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "docs/06-security.md:31",
+        "docs/02-functional-spec.md:62",
+        "src/BuildingBlocks/Crm.Authorization/SensitiveDataAttribute.cs:10"
+      ],
+      "note": "Read-side field rules are documented (BR-ACC-02, SEC-AZ-04) but SEC-AZ-04 names an attribute [FinanceSensitive] that does not exist (code: [SensitiveData]); the write-side rule (a role that cannot see a field must not overwrite it) exists only in CLAUDE.md and is not documented as a requirement, which is exactly where F-G3-01 arises. There is no per-field list of which DTO fields need which permission. || Post-fix reassessment 2026-10-05: still open - SEC-AZ-04 now names [SensitiveData] and states the write-side rule (F-G3-01 fixed in code), but no per-field list of sensitive DTO fields exists and the docs/02 mismatch list (F-G3-04) is open; see role-matrix-mismatches.md",
+      "severity": "low",
+      "fix": "Update SEC-AZ-04 (attribute name, FinanceRead vs FinanceCostRead split, write-side rule, exports that bypass the serializer) and add a generated list of [SensitiveData] fields to docs/06-security.md.",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "PO / Dev team",
+      "finding_ids": [
+        "F-G3-01"
+      ]
+    },
+    {
+      "req_id": "V8.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:28",
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:102",
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:108",
+        "src/BuildingBlocks/Crm.Authorization/Permissions.cs:132",
+        "src/Hosts/Crm.Web/Program.cs:207",
+        "tests/Crm.IntegrationTests/AccessAndConcurrencyTests.cs:25 AccessAndConcurrencyTests.Every_endpoint_refuses_every_role_that_lacks_its_permission",
+        "tests/Crm.IntegrationTests/CustomersApiTests.cs:223 CustomersApiTests.Api_endpoints_all_require_a_permission",
+        "src/Modules/Reports/Crm.Reports/ReportsModule.cs:57"
+      ],
+      "note": "I enumerated all 300 Map* calls under src: every /api endpoint carries .RequirePermission except the 8 documented ownership/sign-in-only routes (search, own preferences, 5 notification routes, audit entity history) and the BI group, which has its own policy; a fallback policy requires sign-in everywhere else and two tests enumerate the live endpoint table (BI routes are not in that table by default, covered by BiApiTests). Gaps: legacy Power BI mart datasets are gated only by reports.mart (F-G3-02), the audit entity-history route and custom-field reads do not match the documented matrix (F-G3-04), and some state-changing or bulk routes are not privileged or are reachable on a read permission (F-G3-10). || Post-fix reassessment 2026-10-05: still open - Mart per-dataset permission, reminder acknowledge (contracts.write) and RequiresFreshRoles on indexation/price-list activation are fixed; open: docs/02 vs Permissions.cs mismatches (F-G3-04) and ExportsData is not applied to large paged lists (F-G3-10 partly)",
+      "severity": "low",
+      "fix": "See F-G3-02, F-G3-04, F-G3-10.",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "PO / Dev team",
+      "finding_ids": [
+        "F-G3-02",
+        "F-G3-04",
+        "F-G3-10"
+      ]
+    },
+    {
+      "req_id": "V8.2.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "partial",
+      "evidence": [
+        "src/Modules/Sales/Crm.Sales/Features/QuoteService.cs:643",
+        "src/Modules/Sales/Crm.Sales/Features/QuoteService.cs:650",
+        "src/Modules/Projects/Crm.Projects/Features/ProjectAccess.cs:15",
+        "src/BuildingBlocks/Crm.Infrastructure/Security/RecordScope.cs:23",
+        "src/Modules/TimeTracking/Crm.TimeTracking/Features/TimeEntryFeatures.cs:437",
+        "src/Modules/Notifications/Crm.Notifications/Features/NotificationService.cs:109",
+        "tests/Crm.IntegrationTests/RecordScopeTests.cs:30 RecordScopeTests.AC01_a_salesperson_gets_no_other_salespersons_quote_by_id_filter_or_action",
+        "tests/Crm.IntegrationTests/RecordScopeTests.cs:97 RecordScopeTests.AC02_a_technician_sees_the_projects_they_are_on_and_no_filter_widens_that",
+        "tests/Crm.IntegrationTests/RecordScopeTests.cs:146 RecordScopeTests.AC03_search_documents_counts_history_and_custom_fields_do_not_go_around_the_scope",
+        "src/Modules/Audit/Crm.Audit/AuditModule.cs:101"
+      ],
+      "note": "Quotes and projects are scoped in the owning module on every load-by-id, list, document and history path (out of scope = 404), time entries and notifications are bound to the caller, and the tests cover IDOR by id, filter, document, search and history. Everything else is permission-only by design: leads, opportunities, activities, contracts, billing and reports have no owner check (docs/02 says Sales sees own customers for billing and reports; DEC-01 pending), any activities.write holder can edit or delete any activity, and a manager can approve a discount on a quote they requested themselves. || Post-fix reassessment 2026-10-05: still open - Quote discount approver may be the author (F-G3-11): product decision; kept as accepted-by-default until PO decides",
+      "severity": "low",
+      "fix": "Decide per DEC-01/EXT-01 which of the remaining kinds need record scope; if activities should be owner-bound, apply IRecordScope-style filtering in ActivityService; add a four-eyes check (approver != ApprovalRequestedBy) in Quote.Approve if the business wants it.",
+      "owner_hint": "process",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "",
+      "owner_final": "PO",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V8.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Authorization/SensitiveDataAttribute.cs:15",
+        "src/Hosts/Crm.Web/Http/WebInfrastructure.cs:38",
+        "tests/Crm.UnitTests/AuthorizationTests.cs:66 SensitiveDataJsonModifierTests",
+        "src/Modules/Projects/Crm.Projects/Features/ProjectFeatures.cs:274",
+        "src/Modules/Projects/Crm.Projects/Domain/Project.cs:94",
+        "web/src/features/projects/ProjectDialog.tsx:72",
+        "web/src/features/projects/ProjectPage.tsx:383",
+        "src/Modules/Reports/Crm.Reports/MartService.cs:28"
+      ],
+      "note": "Read side is solid: 95 response properties carry [SensitiveData] and are dropped by the JSON modifier, with a unit test of the modifier. The write side is not: Crm.ServiceLead holds projects.write but not finance.read, never sees budgetAmount or phase fee, yet PUT /projects/{id} and the phase endpoints apply the request values unconditionally, and the shipped SPA sends 0 for them (ProjectDialog.tsx:72, ProjectPage.tsx:383) so an ordinary edit zeroes the budget and the phase fee that triggers billing on completion. The mart returns raw rows that bypass the serializer (F-G3-02). || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "gap",
+      "fixed_by": "ProjectFeatures.cs:188 SeesMoney (budget, phase fee, bill-on-completion kept), PriceListFeatures.cs:376 (cost kept, partner price refused CAT_PARTNER_PRICE_HIDDEN), SPA fallbacks removed; ProjectsApiTests.A_role_that_cannot_see_the_money_cannot_overwrite_it, RequestHardeningTests.A_caller_who_cannot_see_the_cost_cannot_overwrite_it_on_a_price_list_item; mart: MartService.cs:39 per-dataset finance permission, BiMartTests",
+      "finding_ids": [
+        "F-G3-02"
+      ]
+    },
+    {
+      "req_id": "V8.3.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/BuildingBlocks/Crm.Authorization/PermissionAuthorization.cs:28",
+        "src/Hosts/Crm.Web/Program.cs:207",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:157",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:178",
+        "docs/02-functional-spec.md:61",
+        "tests/Crm.IntegrationTests/RecordScopeTests.cs:268 RecordScopeTests.AC05_finance_and_management_keep_their_access_and_nothing_in_a_request_sets_a_role",
+        "tests/Crm.IntegrationTests/AccessAndConcurrencyTests.cs:25 AccessAndConcurrencyTests.Every_endpoint_refuses_every_role_that_lacks_its_permission"
+      ],
+      "note": "Permissions are computed on the server from roles that the server-side session confirms on every request (not from the cookie), record scope and field filtering run in the handlers and serializer, and client parameters such as mine/ownerId/role only narrow results (AC05). The SPA hides controls but nothing relies on it. Residual: the Hangfire dashboard POSTs rely on SameSite=Strict instead of the X-CSRF header (F-G3-07).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "related finding(s) F-G3-07 fixed; row was already met, status unchanged",
+      "finding_ids": [
+        "F-G3-07"
+      ]
+    },
+    {
+      "req_id": "V8.4.1",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "infra/entra/register-app.sh:38",
+        "src/Modules/Identity/Crm.Identity/Persistence/IdentityDbContext.cs:38"
+      ],
+      "note": "The CRM is a single-tenant application: the Entra registration is AzureADMyOrg with the tenant fixed in configuration, users are keyed (tenant, object id), and the BI policy also pins tid. The customers stored in it are data subjects, not tenants with separate consumers.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V9.1.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:28",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:40",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:41",
+        "tests/Crm.IntegrationTests/BiApiTests.cs:96 BiApiTests.AC01_an_expired_foreign_tenant_foreign_audience_unsigned_or_unfit_token_is_refused"
+      ],
+      "note": "The only JWTs the app consumes are Entra-issued: RequireSignedTokens and ValidateIssuerSigningKey are on for the BI scheme and the OIDC id_token goes through the OpenID Connect handler defaults (not overridden). The test refuses a token signed with a key the tenant never published and a garbage token; it has no alg=none case.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V9.1.2",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:33",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:41"
+      ],
+      "note": "TokenValidationParameters sets no ValidAlgorithms, so the accepted algorithm is whatever the signing key permits. Because keys come only from the tenant JWKS (RSA) and RequireSignedTokens rejects alg=none, the practical exposure is small, but there is no explicit allowlist and no test for it. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "BiAuthentication.cs:45 ValidAlgorithms=[RS256], ValidTypes JWT/at+jwt; BiApiTests.AC01_only_rs256_access_tokens_pass_not_other_algorithms_or_tokens_of_another_kind",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V9.1.3",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:30",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:32",
+        "tests/Crm.IntegrationTests/BiApiTests.cs:52"
+      ],
+      "note": "Signing keys come from the metadata of the fixed authority https://login.microsoftonline.com/{tenant}/v2.0 over HTTPS (RequireHttpsMetadata); the token cannot name a key source (jku/x5u/jwk are not honoured by the handler). The test replaces the key only through the options in the test host.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V9.2.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:39",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:40",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:43",
+        "tests/Crm.IntegrationTests/BiApiTests.cs:96 BiApiTests.AC01_an_expired_foreign_tenant_foreign_audience_unsigned_or_unfit_token_is_refused"
+      ],
+      "note": "ValidateLifetime and RequireExpirationTime are on with a 1 minute skew, so exp and nbf are enforced; the test refuses an expired token. A token with a future nbf is not tested.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V9.2.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:37",
+        "src/Modules/Reports/Crm.Reports/BiAccess.cs:46",
+        "src/Modules/Reports/Crm.Reports/ReportsModule.cs:32",
+        "docs/runbooks/14-power-bi-refresh.md:40"
+      ],
+      "note": "No check that the presented JWT is an access token for this API: the handler accepts any Entra token with the right aud, and the runbook sets the BI audience to the CRM app registration itself, i.e. the same audience the interactive sign-in id_token carries. It is safe today only because a v2 id_token has no azp/appid and no Crm.Bi.* role, so BiAuthorizationHandler refuses it. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "BiAuthentication.cs:81 IsAccessToken (azp/appid + azpacr/appidacr, no nonce, idtyp app) rejects id_tokens; BiApiTests.AC01_only_rs256_access_tokens_pass_.... Caveat: the BI audience is still the interactive app registration (runbook 14 unchanged); the token-kind check is the control",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V9.2.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:37",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:38",
+        "tests/Crm.IntegrationTests/BiApiTests.cs:96 BiApiTests.AC01_an_expired_foreign_tenant_foreign_audience_unsigned_or_unfit_token_is_refused"
+      ],
+      "note": "ValidateAudience with a single configured ValidAudience; the app refuses to start with BI enabled and no audience (BiAuthentication.cs:23). The test presents a token for another audience and gets 401.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V9.2.4",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Reports/Crm.Reports/BiService.cs:242"
+      ],
+      "note": "The application issues no JWTs or other signed tokens (no token creation code outside tests; the cookie uses ASP.NET Data Protection and the BI paging cursor is a non-authorizing value), so there is no shared issuer key and no audience to separate.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.1.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:47",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:73",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:123",
+        "src/Hosts/Crm.Web/Auth/DelegatedGraphToken.cs:27",
+        "tests/Crm.IntegrationTests/SessionLifecycleTests.cs:305 SessionLifecycleTests.AC06_the_logs_carry_no_tokens_cookies_or_identity_claims"
+      ],
+      "note": "Classic BFF: SaveTokens=false, access and refresh tokens live only in the server-side MSAL cache (identity.TokenCache) and the cookie carries a server session id; the SPA has no token handling (grep of web/src finds none) and Graph tokens are only acquired for server-side calls. The SQL token cache is not encrypted at application level (F-G3-08).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "related finding(s) F-G3-08 fixed; row was already met, status unchanged",
+      "finding_ids": [
+        "F-G3-08"
+      ]
+    },
+    {
+      "req_id": "V10.1.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:46",
+        "src/Hosts/Crm.Web/Http/DataProtectionSetup.cs:12"
+      ],
+      "note": "The ASP.NET Core OpenID Connect handler (response_type=code, not overridden) binds the callback to the initiating browser through its correlation cookie, state and nonce; the state is protected with the Data Protection ring that production requires to be shared by all replicas. No repo test exercises the real Entra callback (tests sign in through a stand-in), so this relies on framework defaults; the post-login returnUrl check is bypassable (F-G3-03).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "EXT-02",
+      "status_before": "met",
+      "fixed_by": "related finding(s) F-G3-03 fixed; row was already met, status unchanged",
+      "finding_ids": [
+        "F-G3-03"
+      ]
+    },
+    {
+      "req_id": "V10.2.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:46",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:47"
+      ],
+      "note": "Authorization code flow with UsePkce=true plus the handler default state and nonce; the token request is made server-side by a certificate-authenticated confidential client. No test pins ResponseType/UsePkce, so a regression would not be caught.",
+      "severity": "",
+      "fix": "Add a unit test over the configured OpenIdConnectOptions (ResponseType, UsePkce, SaveTokens).",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.2.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:39",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:44"
+      ],
+      "note": "There is exactly one authorization server for sign-in: the single-tenant Entra authority built from AzureAd:Instance and TenantId; no other AddOpenIdConnect/AddJwtBearer sign-in scheme exists (the BI scheme only validates, with its own fixed authority).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.3.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:37",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:38",
+        "tests/Crm.IntegrationTests/BiApiTests.cs:96 BiApiTests.AC01_an_expired_foreign_tenant_foreign_audience_unsigned_or_unfit_token_is_refused"
+      ],
+      "note": "The BI resource server validates aud against the single configured audience; the audience equals the CRM app registration (see V9.2.2 for the token-type caveat).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.3.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Modules/Reports/Crm.Reports/BiAccess.cs:25",
+        "src/Modules/Reports/Crm.Reports/BiAccess.cs:32",
+        "src/Modules/Reports/Crm.Reports/BiAccess.cs:46",
+        "tests/Crm.IntegrationTests/BiApiTests.cs:139 BiApiTests.AC02_bi_access_reads_only_the_datasets_it_holds_and_opens_nothing_else",
+        "infra/entra/register-app.sh:32"
+      ],
+      "note": "Decisions use tid, the client (azp/appid allowlist) and the role (app permission) or scope (delegated), and the tests cover wrong tenant, wrong client, missing role, CRM roles. The delegated path (scp Bi.Read/Bi.Cost) never looks at the user: any directory user using an allow-listed client with that scope would read the datasets, and no such scope is defined in register-app.sh (only Application roles), so the path is dead but accepted. || Post-fix reassessment 2026-10-05: verified in current code/tests (see fixed_by).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "partial",
+      "fixed_by": "BiAccess.cs:31 delegated scp branch removed (roles only); BiApiTests (scope-only token refused)",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.3.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Reports/Crm.Reports/BiAccess.cs:23"
+      ],
+      "note": "BI authorization identifies a client application (azp/appid), not a user, and does not store users; user identity from tokens is only used at sign-in (see V10.5.2).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.3.4",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Modules/Reports/Crm.Reports/BiAccess.cs:46"
+      ],
+      "note": "The BI API serves service-principal tokens and sets no authentication-strength, method or recency requirement (no acr/amr/auth_time checks needed). Privileged cookie actions use a freshness of the role confirmation, not of the authentication method; MFA/CA is an Entra matter.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "EXT-02",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.1",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "infra/entra/register-app.sh:39",
+        "infra/entra/register-app.sh:47",
+        "docs/05-integrations.md:30"
+      ],
+      "note": "Entra is the authorization server and compares redirect URIs exactly; the app registration script registers the single URI {BASE_URL}/signin-oidc. What is actually registered in the real tenant (no wildcards, no extras) cannot be proven from the repo.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.2",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:39"
+      ],
+      "note": "The application is not an authorization server: no authorize or token endpoint, no OpenIddict/IdentityServer/Duende package, no /connect or /oauth routes (verified by searching src); code single-use is Entra behaviour.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.3",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:39"
+      ],
+      "note": "Authorization code lifetime belongs to Entra; the application issues no authorization codes.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.4",
+      "level": 1,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "infra/entra/register-app.sh:49",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45"
+      ],
+      "note": "The registration script switches implicit id/access token issuance off and the client only uses the code flow; no password grant exists in the code. That the real tenant registration has implicit and public-client flows disabled needs checking.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.5",
+      "level": 1,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:44",
+        "src/Hosts/Crm.Web/appsettings.json:22"
+      ],
+      "note": "There is no public client: the browser SPA never receives tokens, and the only OAuth client is a confidential server-side web app with a Key Vault certificate.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.6",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:46"
+      ],
+      "note": "The client sends PKCE, but whether Entra enforces PKCE for this confidential web registration is not configurable by us; a stolen code is additionally useless without the client certificate.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.7",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:39"
+      ],
+      "note": "The app exposes no dynamic client registration and Entra tenant app registration is an admin function.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.8",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthOptions.cs:23",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:163",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:224"
+      ],
+      "note": "Refresh-token lifetimes are Entra policy. On our side the cookie session ends at 12 h absolute regardless of refresh, and an hourly forced refresh-token redemption ends the session when Entra refuses; the real token lifetime and CA sign-in frequency need confirming in the tenant.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.9",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:227",
+        "src/Hosts/Crm.Web/Http/ActiveUserMiddleware.cs:19"
+      ],
+      "note": "Revoking tokens and sessions is done in Entra (admin revoke sessions, user My Account); the CRM reacts by ending the session when the refresh token is refused and by the role/deactivation sync (ADR-019). Tenant procedure and test of revocation are EXT-02.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.10",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/appsettings.json:22",
+        "infra/modules/apps.bicep:129",
+        "infra/entra/register-app.sh:38"
+      ],
+      "note": "The confidential client authenticates with a certificate from Key Vault (AzureAd:ClientCertificates, no client secret configured for the sign-in registration; the only client_secret code is the separate Partner Center integration). Existence and rotation of the certificate in the real tenant is not proven here.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "infra",
+      "external_gate": "EXT-02",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.4.11",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "infra/entra/register-app.sh:56",
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/DelegatedGraph.cs:24",
+        "docs/05-integrations.md:36"
+      ],
+      "note": "The registration script declares only Graph User.Read, while the code requests Calendars.ReadWrite and Mail.Read dynamically (consent said to be granted once) so the declared and used permissions differ; whether admin consent in the tenant is limited to what is needed must be checked.",
+      "severity": "",
+      "fix": "Declare the delegated scopes in register-app.sh or document the dynamic consent; verify granted permissions in the tenant.",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.5.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:40",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:44"
+      ],
+      "note": "The OIDC handler default nonce validation is active (no ProtocolValidator or validation override in the code base). There is no repo test of the Entra callback, so it rests on framework defaults.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "EXT-02",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.5.2",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:107",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:109",
+        "src/Modules/Identity/Crm.Identity/Features/UserServices.cs:37",
+        "src/Modules/Identity/Crm.Identity/Persistence/IdentityDbContext.cs:38"
+      ],
+      "note": "A user is identified by (tid, oid) with a unique index, never by UPN or e-mail; UPN/e-mail are display attributes updated at sign-in.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.5.3",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:40",
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:44",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:30",
+        "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:32"
+      ],
+      "note": "Both the sign-in and the BI scheme use a fixed, configuration-built Entra authority (HTTPS metadata) rather than discovering an authorization server from user input, so there is no path for a hostile server to inject metadata. I did not independently verify the library-level issuer/metadata match check.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.5.4",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "met",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:44",
+        "src/Hosts/Crm.Web/appsettings.json:19"
+      ],
+      "note": "The handler validates aud against AzureAd:ClientId by default and nothing weakens it; no test covers it.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "met",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.5.5",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "infra/entra/register-app.sh:48",
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:104"
+      ],
+      "note": "Back-channel logout is not implemented (no logout_token handling anywhere); sign-out is local (POST /bff/logout ends the server session) plus Entra front-channel logout, which clears only the browser cookie and does not end the server-side session (F-G3-09).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "code",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": [
+        "F-G3-09"
+      ]
+    },
+    {
+      "req_id": "V10.6.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:45",
+        "infra/entra/register-app.sh:49"
+      ],
+      "note": "The client requests only response_type=code and the registration disables implicit issuance, so hybrid/implicit are not used; the OP (Entra) setting itself is verified in the tenant.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.6.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:104"
+      ],
+      "note": "The application is not an OpenID Provider; Entra owns the end-session endpoint. The app has an anonymous GET /bff/signout-entra that only clears the local cookie and redirects (F-G3-09).",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": [
+        "F-G3-09"
+      ]
+    },
+    {
+      "req_id": "V10.7.1",
+      "level": 2,
+      "applicability": "applicable",
+      "status": "external",
+      "evidence": [
+        "src/Integrations/Crm.Integrations.MicrosoftGraph/DelegatedGraph.cs:24",
+        "docs/05-integrations.md:36"
+      ],
+      "note": "Consent is Entra tenant configuration: the app asks for delegated Calendars.ReadWrite and Mail.Read and the docs say consent is granted once for the application, so user-consent policy and admin consent in the tenant are what to check.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "EXT-02",
+      "status_before": "external",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.7.2",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:39"
+      ],
+      "note": "The consent screen is presented by Entra; the app has no consent UI.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    },
+    {
+      "req_id": "V10.7.3",
+      "level": 2,
+      "applicability": "not_applicable",
+      "status": "not_applicable",
+      "evidence": [
+        "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:39"
+      ],
+      "note": "Consent review and revocation is Entra (My Apps / enterprise application permissions); the app stores no consents.",
+      "severity": "",
+      "fix": "",
+      "owner_hint": "external",
+      "external_gate": "",
+      "status_before": "not_applicable",
+      "fixed_by": "",
+      "finding_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-G3-01",
+      "title": "Non-finance role with projects.write overwrites hidden project budget and phase fee (BOPLA, write side)",
+      "severity": "medium",
+      "req_ids": [
+        "V8.2.3",
+        "V8.1.2"
+      ],
+      "location": "src/Modules/Projects/Crm.Projects/Features/ProjectFeatures.cs:274; web/src/features/projects/ProjectDialog.tsx:72; web/src/features/projects/ProjectPage.tsx:383",
+      "description": "ProjectResponse hides BudgetAmount, Amount, PhaseFeesCompleted and phase Fee for callers without finance.read ([SensitiveData]), but ProjectService.UpdateAsync/AddPhaseAsync/UpdatePhaseAsync apply the request values to the domain unconditionally (Project.Update assigns BudgetAmount, Phase.Update assigns Fee/BillOnCompletion). Crm.ServiceLead has projects.write and projects.all but not finance.read. The SPA falls back to project?.progress.budgetAmount ?? 0 and phase?.fee ?? 0, which are undefined for that role, so a routine edit by a service lead silently resets the budget to 0 and the phase fee to 0, and an API caller can set any value. A fee on a phase with BillOnCompletion becomes a billing.PendingCharge when the phase is completed, so the value feeds billing.",
+      "reproduction": "As Crm.ServiceLead create a project, then as Crm.Finance add a phase with fee 50000 and billOnCompletion=true and set budgetAmount 100000. As ServiceLead open the project, change the notes and save (or PUT /api/v1/projects/{id} with budgetAmount 0 and If-Match). As Finance GET the project: budgetAmount and the phase fee are 0. With the API, ServiceLead can also POST a phase with fee 1000000 and billOnCompletion=true and complete it to queue a charge.",
+      "fix": "In the Projects services ignore or reject BudgetAmount/Fee/BillOnCompletion when ICurrentUser lacks finance.read (keep stored values), make the SPA omit the keys instead of sending 0, and add an integration test (ServiceLead edit leaves the money fields unchanged).",
+      "status": "fixed",
+      "fixed_by": "SeesMoney in ProjectService + price-list cost; tests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G3-02",
+      "title": "Legacy Power BI mart returns cost and revenue datasets on reports.mart alone",
+      "severity": "low",
+      "req_ids": [
+        "V8.2.1",
+        "V8.2.3"
+      ],
+      "location": "src/Modules/Reports/Crm.Reports/ReportsModule.cs:57; src/Modules/Reports/Crm.Reports/MartService.cs:28",
+      "description": "GET /api/v1/reports/mart/{dataset} requires only reports.mart and returns object[] rows, which bypass the [SensitiveData] serializer. The datasets microsoft-costs, margins, hours-by-customer (amount) and revenue-* are finance.cost.read / finance.read data (the equivalent /reports/margins endpoint requires finance.cost.read and BiService splits cost datasets by Crm.Bi.Cost). Today only Admin, Management and Finance hold reports.mart and all three hold both finance permissions, so nothing leaks, but the control is one role-matrix edit away from a cost leak.",
+      "reproduction": "Add reports.mart to a role without finance.cost.read (for example Sales in Permissions.cs, or a test role), then GET /api/v1/reports/mart/microsoft-costs and /margins: both return Microsoft cost and margin rows.",
+      "fix": "In MartService.GetAsync check ICurrentUser for finance.read / finance.cost.read per dataset (like BiDataset.RequiresCost) and return 403 otherwise; add a unit/integration test that iterates MartService.Datasets.",
+      "status": "fixed",
+      "fixed_by": "MartService per-dataset finance permission; amount cells empty without finance.read; BiMartTests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G3-03",
+      "title": "Post-login redirect accepts \"/<TAB>/host\" (open redirect)",
+      "severity": "medium",
+      "req_ids": [
+        "V3.7.2",
+        "V10.1.2"
+      ],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:131",
+      "description": "SafeReturnUrl allows any string that starts with \"/\" and not with \"//\" or \"/\\\". A returnUrl of \"/%09/evil.example\" decodes to \"/<TAB>/evil.example\"; it is stored as the Entra challenge RedirectUri and sent back in a Location header after a successful sign-in. Browsers strip tab and newline characters when parsing URLs, so the redirect resolves to //evil.example, an off-site destination. (The dev-login path uses LocalRedirect, but the production Entra path does not.) There is no test of SafeReturnUrl.",
+      "reproduction": "Open https://<crm>/bff/login?returnUrl=%2F%09%2Fevil.example while signed out, complete the Entra sign-in and observe the browser leaving for evil.example (or unit-test BffEndpoints.SafeReturnUrl(\"/\\t/evil.example\") returns the input).",
+      "fix": "Replace SafeReturnUrl with a parse that requires Uri.TryCreate(returnUrl, UriKind.Relative), rejects any control character, \"\\\\\" and \"//\" prefix, and ideally allowlist known SPA path prefixes; add unit tests for tab, CR/LF, backslash and encoded variants.",
+      "status": "fixed",
+      "fixed_by": "duplicate of F-G1-01",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G3-04",
+      "title": "Role matrix in docs/02 and Permissions.cs disagree; some documented restrictions are not enforced",
+      "severity": "low",
+      "req_ids": [
+        "V8.1.1",
+        "V8.2.1",
+        "V8.2.2"
+      ],
+      "location": "docs/02-functional-spec.md:57; docs/02-functional-spec.md:59; src/BuildingBlocks/Crm.Authorization/Permissions.cs:132; src/Modules/CustomFields/Crm.CustomFields/CustomFieldsModule.cs:29; src/Modules/Audit/Crm.Audit/AuditModule.cs:59",
+      "description": "Compared with the matrix: (1) custom-field definitions and values are readable with customers.read (CustomFieldsModule.cs:29,52), so Technician, ServiceLead and ReadOnly can read them although the matrix gives them none; (2) Finance is documented as audit \"R (finance)\" but audit.read returns the whole audit log including customers and identity history, with no module filter by role; (3) users.read (user directory and Atera technician mappings with e-mail) is held by Management, Sales, Technician, ServiceLead and Finance although the matrix reserves users to Admin; (4) Sales sees every customer's billing runs, invoices and dashboard figures while the matrix says own customers only (documented as pending DEC-01); (5) the audit entity-history route lets customers.read read the history of any customer or contact by id. Each may be intended, but code and documentation must agree.",
+      "reproduction": "As Crm.Technician GET /api/v1/custom-fields/definitions (200) and /api/v1/identity/technicians; as Crm.Finance GET /api/v1/audit?module=identity (200); as Crm.Sales GET /api/v1/billing/runs (200).",
+      "fix": "Owner decides per row; then either change Permissions.cs / add module filters in AuditModule (and a dedicated custom-fields read permission) or update docs/02 section 2; add the matrix as a test that diffs Permissions.ForRoles against a table.",
+      "status": "deferred",
+      "fixed_by": "",
+      "remaining": "docs/02 section 2 and Permissions.cs still differ; see role-matrix-mismatches.md",
+      "owner": "PO",
+      "decision_needed": "Confirm the role matrix (DEC-01/EXT-01); then align docs or code"
+    },
+    {
+      "id": "F-G3-05",
+      "title": "BI bearer validation has no algorithm allowlist or token-type check, and the BI audience is the interactive app registration",
+      "severity": "low",
+      "req_ids": [
+        "V9.1.2",
+        "V9.2.2",
+        "V10.3.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Auth/BiAuthentication.cs:33; docs/runbooks/14-power-bi-refresh.md:40",
+      "description": "TokenValidationParameters sets neither ValidAlgorithms nor ValidTypes, and the runbook sets Bi:Audience to the CRM app registration, the same audience as the sign-in id_token. An Entra v2 id_token would pass audience validation and is stopped only because it lacks azp/appid and a Crm.Bi.* application role. This holds today but depends on token contents that Entra, not the code, controls.",
+      "reproduction": "Unit test: build a token with aud = Bi:Audience, valid tenant/issuer and signature but alg HS256 or as an id_token shape; verify only the claim checks reject it. Review: compare AzureAd:ClientId with CRM_BI_AUDIENCE in the environment.",
+      "fix": "Set ValidAlgorithms = [RS256], reject tokens without azp/appid or with idtyp indicating non-access use, fail startup when Bi:Audience equals AzureAd:ClientId (or move BI to its own app registration), and add negative tests.",
+      "status": "partly",
+      "fixed_by": "RS256 allowlist, token types, access-token-kind check done; BI audience is still the interactive app registration (runbook 14)",
+      "remaining": "RS256 allowlist, token types, access-token-kind check done; BI audience is still the interactive app registration (runbook 14)",
+      "owner": "Security owner / Operations",
+      "decision_needed": "Give BI its own app registration/audience at the next tenant change (EXT-02)"
+    },
+    {
+      "id": "F-G3-06",
+      "title": "BI policy accepts an unused delegated scope path that does not identify the user",
+      "severity": "low",
+      "req_ids": [
+        "V10.3.2"
+      ],
+      "location": "src/Modules/Reports/Crm.Reports/BiAccess.cs:32",
+      "description": "Holds() accepts scp Bi.Read/Bi.Cost besides the Application roles. No delegated scope is defined in infra/entra/register-app.sh, so the branch is dead, but if one is ever defined any directory user of an allow-listed client would be authorized without a CRM user check. The test BiApiTests pins the branch as intended behaviour.",
+      "reproduction": "Define scope Bi.Read on the app registration, grant it to an allow-listed client, sign in as any user and call GET /api/v1/bi/v1/ (200).",
+      "fix": "Delete the scp branch (and adjust BiApiTests) or require oid -> active CRM user with a permission.",
+      "status": "fixed",
+      "fixed_by": "delegated scp path removed; BiApiTests",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G3-07",
+      "title": "Hangfire dashboard POSTs are outside the X-CSRF check",
+      "severity": "low",
+      "req_ids": [
+        "V8.3.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Program.cs:246; src/Hosts/Crm.Web/Http/WebInfrastructure.cs:61",
+      "description": "CsrfHeaderMiddleware protects /api and /bff only. /admin/jobs (trigger, requeue, delete) is protected by integrations.manage with fresh confirmation but the only CSRF defence is SameSite=Strict on the session cookie. A same-site attacker context (sibling subdomain, XSS elsewhere on the site) could submit the form posts.",
+      "reproduction": "As an admin with a fresh confirmation, POST /admin/jobs/recurring/trigger without the X-CSRF header: the request is processed (MaintenanceModeTests posts it the same way).",
+      "fix": "Extend CsrfHeaderMiddleware to /admin/jobs (the dashboard UI would need a header injection) or remove the dashboard from production and use /api/v1/integrations/jobs, which is already X-CSRF protected.",
+      "status": "fixed",
+      "fixed_by": "Hangfire AddAntiforgery; dashboard POST test",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G3-08",
+      "title": "Refresh tokens are stored in SQL without application-level encryption",
+      "severity": "low",
+      "req_ids": [
+        "V10.1.1"
+      ],
+      "location": "src/Hosts/Crm.Web/Auth/AuthenticationSetup.cs:73",
+      "description": "AddDistributedTokenCaches() with the SQL cache uses Microsoft.Identity.Web defaults, where L2 encryption is off, so the MSAL cache blobs in identity.TokenCache (including refresh tokens for Calendars.ReadWrite and Mail.Read) are plaintext to anyone who can read the table or a backup. Redeeming a refresh token still needs the client certificate, which limits the abuse.",
+      "reproduction": "SELECT TOP 1 CAST(Value AS varbinary(max)) FROM identity.TokenCache as a DB reader and inspect the JSON.",
+      "fix": "Configure AddDistributedTokenCaches(o => o.Encrypt = true) with a Data Protection key ring that is already shared, and expire cache rows with the session.",
+      "status": "fixed",
+      "fixed_by": "as F-G2-10",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G3-09",
+      "title": "Entra front-channel logout and GET sign-out do not end the server-side session",
+      "severity": "low",
+      "req_ids": [
+        "V10.5.5",
+        "V10.6.2"
+      ],
+      "location": "src/Hosts/Crm.Web/Bff/BffEndpoints.cs:104; infra/entra/register-app.sh:48",
+      "description": "The registration sets logoutUrl /signout-oidc, which the stock OIDC handler serves by clearing the cookie of that browser only; nothing hooks OnRemoteSignOut to call ISessionDirectory.EndAsync, so a copied cookie stays valid until its session ends otherwise. GET /bff/signout-entra is anonymous and a cross-site GET can bounce a user to Entra sign-out (forced logout). Only POST /bff/logout ends the session row.",
+      "reproduction": "Sign in, copy the cookie, sign out of Entra from another application (front-channel logout hits /signout-oidc): the copied cookie still works against /api until the role grace or absolute expiry.",
+      "fix": "Handle OpenIdConnectEvents.OnRemoteSignOut by ending the session for the cookie sid, and make /bff/signout-entra POST-only or require the session.",
+      "status": "fixed",
+      "fixed_by": "as F-G2-04",
+      "remaining": "",
+      "owner": "",
+      "decision_needed": ""
+    },
+    {
+      "id": "F-G3-10",
+      "title": "Privilege coverage gaps: reminder acknowledgement on a read permission, price-affecting commands not privileged, ExportsData bypassable by paging",
+      "severity": "low",
+      "req_ids": [
+        "V8.2.1"
+      ],
+      "location": "src/Modules/Contracts/Crm.Contracts/ContractsModule.cs:181; src/Modules/Contracts/Crm.Contracts/ContractsModule.cs:54; src/BuildingBlocks/Crm.Authorization/Permissions.cs:174",
+      "description": "POST /contracts/reminders/{id}/acknowledge changes state with contracts.read (ReadOnly can call it). POST /contracts/indexation (mass price revision) and catalog price-list activation need only contracts.write / catalog.write, which are not in Permissions.Privileged, so a stale or revoked role remains usable for up to the 8 h role grace when Entra is unreachable. ExportsData marks the CSV/mart exports, but the same customer, audit and identity data can be paged through ordinary list endpoints within the 300 requests per minute limit.",
+      "reproduction": "As Crm.ReadOnly POST /api/v1/contracts/reminders/{id}/acknowledge (204). As any contracts.write role after the directory becomes unreachable and the confirmation is older than 5 min, POST /api/v1/contracts/indexation succeeds while billing commands return AUTH_REVERIFY_REQUIRED.",
+      "fix": "Require contracts.write for acknowledge, add ContractsWrite-for-indexation and price-list activation to a privileged set or mark them with a freshness metadata, and treat large paged reads as ExportsData where the business agrees.",
+      "status": "partly",
+      "fixed_by": "acknowledge needs contracts.write; RequiresFreshRoles on indexation and price-list activation; large paged lists are still not ExportsData",
+      "remaining": "acknowledge needs contracts.write; RequiresFreshRoles on indexation and price-list activation; large paged lists are still not ExportsData",
+      "owner": "Dev team / PO",
+      "decision_needed": "Decide whether paged reads of financial lists count as exports"
+    },
+    {
+      "id": "F-G3-11",
+      "title": "No separation of duties on quote discount approval",
+      "severity": "low",
+      "req_ids": [
+        "V8.2.2"
+      ],
+      "location": "src/Modules/Sales/Crm.Sales/Domain/Quote.cs:268",
+      "description": "Quote.Approve checks only the status; Management and Admin hold sales.write and sales.discount.approve and can submit a quote with an excess discount and approve it themselves. The specification (BR-SAL-05) does not require a second person, unlike billing (BillingErrors.SameApprover).",
+      "reproduction": "As Crm.Management create a quote with a 40 percent line discount, submit it (PendingApproval) and POST /approve with the same user: it becomes Ready.",
+      "fix": "If the business wants four-eyes, reject approval when ApprovedBy equals ApprovalRequestedBy and add a test; otherwise record the decision.",
+      "status": "deferred",
+      "fixed_by": "",
+      "remaining": "quote discount approver may be the author: product decision",
+      "owner": "PO",
+      "decision_needed": "Decide on separation of duties for discount approval (four-eyes) or record acceptance"
+    }
+  ],
+  "reassessed_at": "2026-10-05",
+  "reassessor": "Claude (implementing agent): self-assessment, not independent; real tenant EXT-02, independent review EXT-06, data EXT-07, repository settings EXT-11",
+  "counts_before": {
+    "met": 15,
+    "partial": 6,
+    "gap": 1,
+    "not_applicable": 13,
+    "external": 8
+  },
+  "counts_after": {
+    "met": 19,
+    "partial": 3,
+    "not_applicable": 13,
+    "external": 8
+  }
+}

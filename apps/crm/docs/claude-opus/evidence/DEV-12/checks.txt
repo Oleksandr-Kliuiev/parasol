@@ -1,0 +1,31 @@
+# DEV-12 final checks, 04.10.2026 (UTC). Local, synthetic data only.
+
+build (dotnet build Vardahei.Crm.slnx, SDK 10.0.401)        13:09  Build succeeded, 0 warnings, 0 errors
+unit tests (Crm.UnitTests)                                  13:09  413/413
+architecture tests (Crm.ArchitectureTests)                  13:09  89/89
+integration tests (SQL Server + Azurite, crm_worker), final code
+                                                            13:15  219/219
+                                                            13:16  219/219
+                                                            13:17  219/219
+CI job backend (ci-local.rb, steps of .github/workflows/ci.yml), final code
+                                                            13:19  PASSED — coverage: domain 96.50 % (1269/1315), backend 87.84 % (19 086/21 728)
+CI job infrastructure                                       13:04  PASSED — release tooling tests, Bicep build and lint
+web: eslint / tsc -b / vitest / vite build                  13:19  clean / clean / 69/69 (23 files) / initial bundle 285.7 KB (budget 300 KB)
+e2e, fresh SQL Server, SPA built (e2e-run.sh dev12final2)   12:59  58/58 (Chromium desktop + dark a11y, Firefox and WebKit for @critical)
+rollback-compat 9dfe2b4 (DEV-11 release e2e on the DEV-12 schema)
+                                                            13:04  58/58; applied billing 20261004112326_InvoiceListOrder
+EF Core pending model changes (has-pending-model-changes, 16 contexts)
+                                                            13:08  none
+mutations M1-M14 (mutations.txt)                            12:53  14/14 caught, every file restored byte for byte
+docs/claude-opus/validate-package.py                        13:22  VALID: 24 tasks, 145 criteria, 11 external gates; code_verified=14, todo=10
+
+No product source changed after the e2e run started (12:59): find src web/src web/e2e infra tools -newer <marker> found nothing;
+only tests/Crm.IntegrationTests/PrivacyTestData.cs and PrivacyTests.cs changed later, covered by the three integration runs and
+the final CI job.
+
+Migration files (unchanged since before the rollback check; mtime 11:23 UTC), SHA-256:
+985d57996ebd6577fd28a3eb5b7f5965088bf7d7e550b93023a7ac21dba413bd  src/Modules/Billing/Crm.Billing/Persistence/Migrations/20261004112326_InvoiceListOrder.cs
+264df73d011af8e261403e46f00b260c13283560d6557698607253fe47dfd0fd  src/Modules/Billing/Crm.Billing/Persistence/Migrations/20261004112326_InvoiceListOrder.Designer.cs
+19ade135f20b8a675d89e4c8936d63566e87921465b930e57d2b5d2c11d45e5a  src/Modules/Billing/Crm.Billing/Persistence/Migrations/BillingDbContextModelSnapshot.cs
+
+Secret scan (13:22): tools/release/release.py scan-secrets over the 166 files of the commit — no secret patterns in any file.

@@ -1,0 +1,34 @@
+name: Base image rescan
+
+# DEV-21 (F-G4-13, F-G4-14). The release pipeline scans an image once, when it is built (release.yml). The base image keeps
+# receiving fixes after that, so this weekly job scans the CURRENT base image of crm-web and crm-worker with the same
+# scanner and the same threshold. It does not see the digests that run in test or production (that needs Azure access, which
+# only release.yml and promote.yml have) and it opens no pull request: a red run is the signal to rebuild and release.
+on:
+  schedule:
+    - cron: '15 4 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    env:
+      # Keep in step with <ContainerBaseImage> in src/Hosts/*/*.csproj (tag only: the project follows the tag).
+      BASE_IMAGE: mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra
+    steps:
+      - name: The base image does not run as root
+        shell: bash
+        run: |
+          docker pull --quiet "$BASE_IMAGE" > /dev/null
+          user=$(docker image inspect --format '{{.Config.User}}' "$BASE_IMAGE")
+          case "$user" in ""|0|root|0:*|root:*) echo "$BASE_IMAGE runs as '${user:-root}'" >&2; exit 1 ;; esac
+          echo "$BASE_IMAGE runs as $user, digest $(docker image inspect --format '{{index .RepoDigests 0}}' "$BASE_IMAGE")" >> "$GITHUB_STEP_SUMMARY"
+      - uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
+        with:
+          image: ${{ env.BASE_IMAGE }}
+          severity-cutoff: high
+          fail-build: true
+          output-format: table

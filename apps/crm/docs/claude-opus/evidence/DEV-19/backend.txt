@@ -1,0 +1,43 @@
+== build
+    0 Warning(s)
+    0 Error(s)
+== unit
+Test run summary: Passed!
+  total: 488
+  failed: 0
+  succeeded: 488
+  skipped: 0
+  duration: 6s 648ms
+== arch
+Test run summary: Passed!
+  total: 91
+  failed: 0
+  succeeded: 91
+  skipped: 0
+  duration: 2s 165ms
+== integration
+Test run summary: Passed!
+  total: 312
+  failed: 0
+  succeeded: 312
+  skipped: 0
+  duration: 2m 22s 802ms
+== gate
+| Crm.ServiceDefaults | 40 | 46 | 86.96 % |
+| Crm.SharedKernel | 372 | 395 | 94.18 % |
+| Crm.TimeTracking | 759 | 859 | 88.36 % |
+| Crm.TimeTracking.Contracts | 44 | 44 | 100.00 % |
+| Crm.Web | 1333 | 1497 | 89.04 % |
+
+Gate: **passed**
+
+== pending BillingDbContext
+Specify --help for a list of available options and commands.
+Unexpected value 'Release' for option 'c'
+== pending IntegrationDbContext
+Specify --help for a list of available options and commands.
+Unexpected value 'Release' for option 'c'
+== pending ServiceDbContext
+Specify --help for a list of available options and commands.
+Unexpected value 'Release' for option 'c'
+ALLDONE

@@ -1,0 +1,59 @@
+== current 1721a1521dd37268468460fcdac75c6305e8f673 (uncommitted changes count as current), previous 646a565
+== 1. the current sources migrate the database (schema, roles, grants)
+Schema|Newest
+------|------
+activities|20260921212126_OutlookActivities
+audit|20261004011342_AppendOnlyAudit
+billing|20261004011343_ProtectApprovedBilling
+catalog|20260915191718_Initial
+contracts|20260916183501_ContractSourceQuote
+customers|20260922073130_OrganizationGroup
+customfields|20260922105418_Initial
+identity|20260915205432_TechnicianMappings
+integration|20260922112327_IntegrationSwitches
+licensing|20260922054410_LicenseUsageAndBilling
+notifications|20260916150925_Initial
+projects|20260922073201_Initial
+sales|20260916184621_Quotes
+service|20260915231817_Initial
+time|20260922073132_TimeEntryProject
+== 2. the previous release runs its own end-to-end suite on that schema
+  ✘   3 [desktop] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations (2.8s)
+  ✘   2 [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (17.5s)
+  ✘  15 [desktop] › e2e/billing.spec.ts:141:1 › a run without a PowerOffice customer reports the anomaly and can be cancelled (626ms)
+  ✘  17 [desktop] › e2e/billing.spec.ts:183:1 › a correction survives a new collect and a line left out stays out (628ms)
+  ✘  20 [desktop] › e2e/billing.spec.ts:240:1 › an approval belongs to the revision on screen and a change sets it aside with the reason (594ms)
+  ✘  21 [desktop] › e2e/billing.spec.ts:289:1 › a billed and closed month gets a supplementary run that bills nothing twice (586ms)
+  ✘  35 [desktop-dark] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations (539ms)
+  ✘  42 [firefox] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (17.5s)
+  ✘  48 [webkit] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical (18.2s)
+    Error: https://localhost:5181/api/v1/billing/runs/17bd543c-85cf-2fc1-0000-01a104c74a9b/collect → 500 {"type":"https://tools.ietf.org/html/rfc9110#section-15.6.1","title":"An error occurred while processing your request.","status":500,"traceId":"00-3ff407174a6b07c78d1ef90ec88c9e63-9e97c39c0c1affb0-01"}
+    test-results/a11y-main-pages-have-no-serious-accessibility-violations-desktop/test-failed-1.png
+    Error: expect(locator).toBeVisible() failed
+    test-results/billing-a-monthly-run-is-c-50080-ved-and-sent-to-PowerOffice-desktop/test-failed-1.png
+    Error: https://localhost:5181/api/v1/billing/runs/e0dbf438-db49-f938-0000-01a104c788e1/collect → 500 {"type":"https://tools.ietf.org/html/rfc9110#section-15.6.1","title":"An error occurred while processing your request.","status":500,"traceId":"00-16db769f22a605756e7162f35a3f683a-9868d880546f5985-01"}
+    test-results/billing-a-run-without-a-Po-2f7e8-nomaly-and-can-be-cancelled-desktop/test-failed-1.png
+    Error: https://localhost:5181/api/v1/billing/runs/ee7ac329-44c8-0e90-0000-01a104c78cb0/collect → 500 {"type":"https://tools.ietf.org/html/rfc9110#section-15.6.1","title":"An error occurred while processing your request.","status":500,"traceId":"00-6ccbba624178a774b120e5701abc9e74-39b9173b74520fd3-01"}
+    test-results/billing-a-correction-survi-b7a18-d-a-line-left-out-stays-out-desktop/test-failed-1.png
+    Error: https://localhost:5181/api/v1/billing/runs/9f8bf09e-13cc-fcb0-0000-01a104c790c6/collect → 500 {"type":"https://tools.ietf.org/html/rfc9110#section-15.6.1","title":"An error occurred while processing your request.","status":500,"traceId":"00-9c385f26904d88d702d8779aef82d862-e0b656927b0f8b1a-01"}
+    test-results/billing-an-approval-belong-187b1-ts-it-aside-with-the-reason-desktop/test-failed-1.png
+    Error: https://localhost:5181/api/v1/billing/runs/e6433077-d3c6-13fc-0000-01a104c7942c/collect → 500 {"type":"https://tools.ietf.org/html/rfc9110#section-15.6.1","title":"An error occurred while processing your request.","status":500,"traceId":"00-915896cfefbc31aa7988d410ffecdd68-fa5777f1853af312-01"}
+    test-results/billing-a-billed-and-close-874d8-un-that-bills-nothing-twice-desktop/test-failed-1.png
+    Error: https://localhost:5181/api/v1/billing/runs/b8d2f93e-d0dd-84a5-0000-01a104c7b39b/collect → 500 {"type":"https://tools.ietf.org/html/rfc9110#section-15.6.1","title":"An error occurred while processing your request.","status":500,"traceId":"00-c8b8cfef34c777ef1c523aa195a44763-0c633c52b1038534-01"}
+    test-results/a11y-main-pages-have-no-serious-accessibility-violations-desktop-dark/test-failed-1.png
+    Error: expect(locator).toBeVisible() failed
+    test-results/billing-a-monthly-run-is-c-50080-ved-and-sent-to-PowerOffice-firefox/test-failed-1.png
+    Error: expect(locator).toBeVisible() failed
+    test-results/billing-a-monthly-run-is-c-50080-ved-and-sent-to-PowerOffice-webkit/test-failed-1.png
+  9 failed
+    [desktop] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations ────────
+    [desktop] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical 
+    [desktop] › e2e/billing.spec.ts:141:1 › a run without a PowerOffice customer reports the anomaly and can be cancelled 
+    [desktop] › e2e/billing.spec.ts:183:1 › a correction survives a new collect and a line left out stays out 
+    [desktop] › e2e/billing.spec.ts:240:1 › an approval belongs to the revision on screen and a change sets it aside with the reason 
+    [desktop] › e2e/billing.spec.ts:289:1 › a billed and closed month gets a supplementary run that bills nothing twice 
+    [desktop-dark] › e2e/a11y.spec.ts:22:1 › main pages have no serious accessibility violations ───
+    [firefox] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical 
+    [webkit] › e2e/billing.spec.ts:40:1 › a monthly run is collected, approved and sent to PowerOffice @critical 
+  44 passed (1.4m)
+EXIT 1

@@ -1,0 +1,33 @@
+# DEV-09 baseline: audit finding A09 on the release before DEV-09 (commit d53b3eb)
+
+## Code (git show d53b3eb:...)
+# Quotes: the only scoping is a filter the caller chooses; every action loads by id without one.
+QuoteService.cs:131:        if (query.MineOnly)
+QuoteService.cs:132-        {
+QuoteService.cs:133-            var userId = currentUser.UserId;
+QuoteService.cs:134-            quotes = quotes.Where(q => q.OwnerId == userId);
+QuoteService.cs:135-        }
+QuoteService.cs:545:    private async Task<Quote?> LoadAsync(Guid id, CancellationToken ct) =>
+QuoteService.cs:546-        await db.Quotes.Include(q => q.Lines).SingleOrDefaultAsync(q => q.Id == id, ct);
+# Projects: the manager is a filter; loads by id have no scope; the service does not know the caller.
+ProjectFeatures.cs:194:        if (query.ManagerId is { } managerId)
+ProjectFeatures.cs:195-        {
+ProjectFeatures.cs:196-            projects = projects.Where(p => p.ManagerId == managerId);
+ProjectFeatures.cs:197-        }
+ProjectFeatures.cs:316:    private Task<Project?> LoadAsync(Guid id, CancellationToken ct) =>
+ProjectFeatures.cs:317-        db.Projects.Include(p => p.Phases).ThenInclude(p => p.Tasks).SingleOrDefaultAsync(p => p.Id == id, ct);
+# Time entries: the project id is stored as sent.
+TimeEntryFeatures.cs:193:            request.AfterHours, request.Description, null, request.ExternalTicketId, request.TicketTitle, request.ProjectId));
+
+## Reproduction, 04.10.2026 ~07:52 UTC
+# Throwaway worktree of d53b3eb (removed afterwards) with one temporary test (not committed; source: Dev09BaselineTests.cs.txt).
+# command: Crm.IntegrationTests -class Crm.IntegrationTests.Dev09BaselineTests  ->  Crm.IntegrationTests  Total: 1, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0, Time: 12,479s
+Sales B  GET  /quotes/{A's quote}                -> 200 OK
+Sales B  GET  /quotes?search=…&mine=false          -> 1 row(s), A's quote included: True
+Sales B  GET  /quotes?search=…&mine=true           -> 0 row(s) (the filter only narrows)
+Sales B  GET  /quotes/{A's quote}/pdf            -> 200 OK
+Sales B  POST /quotes/{A's quote}/revise         -> 201 Created (B made a new version of A's quote)
+Technician (not assigned) GET /projects/{id}      -> 200 OK
+Technician (not assigned) GET /projects?search=…   -> 1 row(s)
+Technician (not assigned) POST /time/entries on it -> 201 Created, projectName in answer: Z783fbcff9 Prosjekt
+# The same requests on DEV-09: RecordScopeTests.AC01 and AC02 (404, empty lists, TIM_PROJECT_NOT_AVAILABLE).

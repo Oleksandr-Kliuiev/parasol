@@ -1,0 +1,8 @@
+{
+  "upgradeSeconds": 3.1415280420333147,
+  "repeatSeconds": 1.526334083173424,
+  "beforeEqualsAfter": true,
+  "hostsStopped": true,
+  "locksSampled": 4,
+  "note": "Local synthetic DB only. Hosts stopped for the test. Offline index creation can block live workloads; the maintenance window must be assessed for the real SQL service."
+}

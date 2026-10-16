@@ -1,0 +1,4 @@
+SKIP  uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+SUCCESS Release tooling tests                                           8.5s
+SUCCESS Bicep build and lint                                            5.9s
+JOB infrastructure: PASSED

@@ -1,0 +1,41 @@
+DEV-17 final local verification — 2026-10-04
+Base: 97457037320ffe2f1b1afcd72f99402098b6d120; uncommitted source manifest accompanies this report.
+All database/provider data synthetic. No production deployment or real recipients.
+
+Repository root (PATH includes ~/.dotnet, DOTNET_ROOT=~/.dotnet):
+- dotnet build Vardahei.Crm.slnx --no-restore -c Release --disable-build-servers -m:1
+  exit 0, 0 warnings/errors (19.13s).
+- dotnet test --project tests/Crm.UnitTests/Crm.UnitTests.csproj --no-build -c Release --coverage --coverage-output-format cobertura --coverage-output /private/tmp/dev17-unit.cobertura.xml
+  exit 0, 423 passed / 0 failed / 0 skipped (9.176s).
+- dotnet test --project tests/Crm.ArchitectureTests/Crm.ArchitectureTests.csproj --no-build -c Release
+  exit 0, 91 passed / 0 failed / 0 skipped (3.116s). No coverage instrumentation.
+- dotnet test --project tests/Crm.IntegrationTests/Crm.IntegrationTests.csproj --no-build -c Release --coverage --coverage-output-format cobertura --coverage-output /private/tmp/dev17-integration.cobertura.xml
+  exit 0, 257 passed / 0 failed / 0 skipped (1m51.627s).
+- python3 tools/coverage/coverage-gate.py --allow-unmeasured Crm.Worker /private/tmp/dev17-unit.cobertura.xml /private/tmp/dev17-integration.cobertura.xml
+  exit 0; critical domain 96.88%, rest backend 88.73%. See backend.txt for denominator/exclusions.
+- dotnet ef migrations has-pending-model-changes --project src/Integrations/Crm.Integrations.Core --context IntegrationDbContext --configuration Release --no-build
+  exit 0, no pending model changes.
+
+web/:
+- npm run lint; npm run typecheck; npm run build
+  exit 0 each; initial bundle 287.2 KB gzip < 300 KB.
+- npm test -- --maxWorkers=2 (delegated UI verification on same source tree)
+  exit 0; 25 files, 86 passed, 0 failed (15.78s).
+  Earlier default-parallel run: 85 passed, 1 existing PrivacyCasePage dialog timeout with Keyborg teardown warning.
+  Isolated PrivacyCasePage: 6/6 pass; no privacy source changes or retries hidden.
+- npx playwright test --config=playwright.dev17.config.ts
+  exit 0; 61 passed, 0 failed/skipped, no retries (8.2m).
+  Temporary config copied base config, workers=1 and own document directory; E2E_SQL points only to dedicated local crm_e2e_dev17_final.
+  Config/env were removed after verification; reproducing requires a new dedicated local database and document directory as documented in VALIDATION.md.
+  Matrix includes Chromium light/dark, mobile, Firefox/WebKit critical scenarios. See e2e.txt and anonymized screenshots.
+
+Infrastructure:
+- Bicep 0.47.16 build infra/main.bicep and build-params infra/env/test.bicepparam / prod.bicepparam
+  exit 0 each. Compilation only, no Azure deployment/KQL/delivery verification.
+- tools/release/rollback-compat.sh 97457037320ffe2f1b1afcd72f99402098b6d120 --project=desktop --grep '@critical' --workers=1
+  exit 0; previous release 7/7 critical scenarios passed (59s) on current migration 20261004201458_OperationalMonitoring.
+  Temporary SQL container and previous-release worktree cleaned by script. See rollback.txt.
+
+Self-review: code/migration/permissions/diff reviewed by root and supporting agents in this session, not independent external acceptance.
+External: DEV-17-AC05 blocked by EXT-01; real owners, recipients, persistent configuration and Fired/Resolved protocol required.
+Dependencies/package versions did not change; vulnerability/image release scans were not rerun for this local source change.

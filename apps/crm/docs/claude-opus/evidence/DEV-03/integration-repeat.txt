@@ -1,0 +1,21 @@
+# Five consecutive runs of ChargeRegisterApiTests, BillingApprovalApiTests, ChargeIdentityApiTests, BillingApiTests, BillingRegressionApiTests, QuotesApiTests, ProjectsApiTests (Debug, fresh Testcontainers SQL each time), 2026-10-04 UTC
+== iteration 1 00:47:50
+  total: 41
+  failed: 0
+  succeeded: 41
+== iteration 2 00:48:08
+  total: 41
+  failed: 0
+  succeeded: 41
+== iteration 3 00:48:26
+  total: 41
+  failed: 0
+  succeeded: 41
+== iteration 4 00:48:43
+  total: 41
+  failed: 0
+  succeeded: 41
+== iteration 5 00:49:00
+  total: 41
+  failed: 0
+  succeeded: 41

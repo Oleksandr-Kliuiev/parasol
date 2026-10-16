@@ -1,0 +1,24 @@
+{
+  "provider": "atera",
+  "source": "synthetic",
+  "capturedAt": null,
+  "note": "Shape taken from the tolerant readers in AteraClient. Replace with sanitized sandbox captures when EXT-03 has run, then set source to 'sandbox' and capturedAt.",
+  "customers": [
+    { "CustomerID": 101, "CustomerName": "Testfirma Alfa AS", "BusinessNumber": "999111222", "Domain": "alfa.example.no", "Address": "Testveien 1", "City": "Oslo", "ZipCodeStr": "0150", "Country": "Norway", "Phone": "22 00 00 01", "Website": "https://alfa.example.no", "LastModified": "2026-09-30T10:15:00Z" }
+  ],
+  "contacts": [
+    { "EndUserID": 501, "CustomerID": 101, "Firstname": "Kari", "Lastname": "Test", "Email": "kari@alfa.example.no", "JobTitle": "IT", "Phone": "22 00 00 02", "MobilePhone": "900 00 001", "InIgnoreMode": false, "LastModified": "2026-09-30T10:15:00Z" }
+  ],
+  "tickets": [
+    { "TicketID": 9001, "CustomerID": 101, "EndUserID": 501, "TicketTitle": "Printer down", "TicketStatus": "Open", "TicketPriority": "High", "TicketType": "Incident", "TicketSource": "Email", "TechnicianContactID": 7, "TechnicianEmail": "tech@vardahei.example.no", "TechnicianFullName": "Tom Tekniker", "EndUserFirstName": "Kari", "EndUserLastName": "Test", "EndUserEmail": "kari@alfa.example.no", "TicketCreatedDate": "2026-09-29T08:00:00Z", "TicketDescription": "Skriveren svarer ikke. [CRM-TR:11111111-1111-1111-1111-111111111111]" }
+  ],
+  "workHours": [
+    { "WorkHoursID": "w-1", "TicketID": 9001, "TechnicianContactID": 7, "TechnicianEmail": "tech@vardahei.example.no", "TechnicianFullName": "Tom Tekniker", "StartWorkHour": "2026-09-29T09:00:00Z", "EndWorkHour": "2026-09-29T10:30:00Z", "TimeSpentInMinutes": 90, "Billable": true, "IsOnsite": false }
+  ],
+  "workHoursWithoutDuration": [
+    { "WorkHoursID": "w-2", "TicketID": 9001, "TimeSpentInMinutes": 0 }
+  ],
+  "agents": [
+    { "AgentID": "a-1", "CustomerID": 101, "MachineName": "PC-ALFA-01", "OSType": "Workstation", "OS": "Windows 11", "Online": true, "LastSeen": "2026-10-01T06:00:00Z" }
+  ]
+}

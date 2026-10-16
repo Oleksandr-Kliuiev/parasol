@@ -1,0 +1,176 @@
+
+Release build
+  Crm.SharedKernel -> /Users/vardahei/Vardahei_CRM_V2/src/BuildingBlocks/Crm.SharedKernel/bin/Release/net10.0/Crm.SharedKernel.dll
+  Crm.Authorization -> /Users/vardahei/Vardahei_CRM_V2/src/BuildingBlocks/Crm.Authorization/bin/Release/net10.0/Crm.Authorization.dll
+  Crm.Infrastructure -> /Users/vardahei/Vardahei_CRM_V2/src/BuildingBlocks/Crm.Infrastructure/bin/Release/net10.0/Crm.Infrastructure.dll
+  Crm.ServiceDefaults -> /Users/vardahei/Vardahei_CRM_V2/src/Hosts/Crm.ServiceDefaults/bin/Release/net10.0/Crm.ServiceDefaults.dll
+  Crm.Identity.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Identity/Crm.Identity.Contracts/bin/Release/net10.0/Crm.Identity.Contracts.dll
+  Crm.Privacy.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Privacy/Crm.Privacy.Contracts/bin/Release/net10.0/Crm.Privacy.Contracts.dll
+  Crm.Audit -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Audit/Crm.Audit/bin/Release/net10.0/Crm.Audit.dll
+  Crm.Identity -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Identity/Crm.Identity/bin/Release/net10.0/Crm.Identity.dll
+  Crm.Customers.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Customers/Crm.Customers.Contracts/bin/Release/net10.0/Crm.Customers.Contracts.dll
+  Crm.Customers -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Customers/Crm.Customers/bin/Release/net10.0/Crm.Customers.dll
+  Crm.CustomFields -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/CustomFields/Crm.CustomFields/bin/Release/net10.0/Crm.CustomFields.dll
+  Crm.Catalog.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Catalog/Crm.Catalog.Contracts/bin/Release/net10.0/Crm.Catalog.Contracts.dll
+  Crm.Catalog -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Catalog/Crm.Catalog/bin/Release/net10.0/Crm.Catalog.dll
+  Crm.Contracts.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Contracts/Crm.Contracts.Contracts/bin/Release/net10.0/Crm.Contracts.Contracts.dll
+  Crm.Sales.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Sales/Crm.Sales.Contracts/bin/Release/net10.0/Crm.Sales.Contracts.dll
+  Crm.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Contracts/Crm.Contracts/bin/Release/net10.0/Crm.Contracts.dll
+  Crm.Service.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Service/Crm.Service.Contracts/bin/Release/net10.0/Crm.Service.Contracts.dll
+  Crm.Service -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Service/Crm.Service/bin/Release/net10.0/Crm.Service.dll
+  Crm.TimeTracking.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/TimeTracking/Crm.TimeTracking.Contracts/bin/Release/net10.0/Crm.TimeTracking.Contracts.dll
+  Crm.Billing.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Billing/Crm.Billing.Contracts/bin/Release/net10.0/Crm.Billing.Contracts.dll
+  Crm.Projects.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Projects/Crm.Projects.Contracts/bin/Release/net10.0/Crm.Projects.Contracts.dll
+  Crm.TimeTracking -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/TimeTracking/Crm.TimeTracking/bin/Release/net10.0/Crm.TimeTracking.dll
+  Crm.Activities.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Activities/Crm.Activities.Contracts/bin/Release/net10.0/Crm.Activities.Contracts.dll
+  Crm.Sales -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Sales/Crm.Sales/bin/Release/net10.0/Crm.Sales.dll
+  Crm.Projects -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Projects/Crm.Projects/bin/Release/net10.0/Crm.Projects.dll
+  Crm.Activities -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Activities/Crm.Activities/bin/Release/net10.0/Crm.Activities.dll
+  Crm.Licensing.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Licensing/Crm.Licensing.Contracts/bin/Release/net10.0/Crm.Licensing.Contracts.dll
+  Crm.Billing -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Billing/Crm.Billing/bin/Release/net10.0/Crm.Billing.dll
+  Crm.Notifications.Contracts -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Notifications/Crm.Notifications.Contracts/bin/Release/net10.0/Crm.Notifications.Contracts.dll
+  Crm.Notifications -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Notifications/Crm.Notifications/bin/Release/net10.0/Crm.Notifications.dll
+  Crm.Reports -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Reports/Crm.Reports/bin/Release/net10.0/Crm.Reports.dll
+  Crm.Licensing -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Licensing/Crm.Licensing/bin/Release/net10.0/Crm.Licensing.dll
+  Crm.Privacy -> /Users/vardahei/Vardahei_CRM_V2/src/Modules/Privacy/Crm.Privacy/bin/Release/net10.0/Crm.Privacy.dll
+  Crm.Integrations.Core -> /Users/vardahei/Vardahei_CRM_V2/src/Integrations/Crm.Integrations.Core/bin/Release/net10.0/Crm.Integrations.Core.dll
+  Crm.Integrations.Brreg -> /Users/vardahei/Vardahei_CRM_V2/src/Integrations/Crm.Integrations.Brreg/bin/Release/net10.0/Crm.Integrations.Brreg.dll
+  Crm.Integrations.MicrosoftGraph -> /Users/vardahei/Vardahei_CRM_V2/src/Integrations/Crm.Integrations.MicrosoftGraph/bin/Release/net10.0/Crm.Integrations.MicrosoftGraph.dll
+  Crm.Integrations.PowerOffice -> /Users/vardahei/Vardahei_CRM_V2/src/Integrations/Crm.Integrations.PowerOffice/bin/Release/net10.0/Crm.Integrations.PowerOffice.dll
+  Crm.Integrations.Atera -> /Users/vardahei/Vardahei_CRM_V2/src/Integrations/Crm.Integrations.Atera/bin/Release/net10.0/Crm.Integrations.Atera.dll
+  Crm.Integrations.PartnerCenter -> /Users/vardahei/Vardahei_CRM_V2/src/Integrations/Crm.Integrations.PartnerCenter/bin/Release/net10.0/Crm.Integrations.PartnerCenter.dll
+  Crm.Web -> /Users/vardahei/Vardahei_CRM_V2/src/Hosts/Crm.Web/bin/Release/net10.0/Crm.Web.dll
+  Crm.Worker -> /Users/vardahei/Vardahei_CRM_V2/src/Hosts/Crm.Worker/bin/Release/net10.0/Crm.Worker.dll
+  Crm.AppHost -> /Users/vardahei/Vardahei_CRM_V2/src/Hosts/Crm.AppHost/bin/Release/net10.0/Crm.AppHost.dll
+  Crm.ArchitectureTests -> /Users/vardahei/Vardahei_CRM_V2/tests/Crm.ArchitectureTests/bin/Release/net10.0/Crm.ArchitectureTests.dll
+  Crm.IntegrationTests -> /Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/bin/Release/net10.0/Crm.IntegrationTests.dll
+  Crm.UnitTests -> /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:19.13
+
+Unit tests with coverage
+Running tests from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64)
+/Users/vardahei/Vardahei_CRM_V2/tests/Crm.UnitTests/bin/Release/net10.0/Crm.UnitTests.dll (net10.0|arm64) passed (3s 146ms)
+
+  In process file artifacts produced:
+    - /private/tmp/dev17-unit.cobertura.xml
+
+Test run summary: Passed!
+  total: 423
+  failed: 0
+  succeeded: 423
+  skipped: 0
+  duration: 9s 176ms
+
+Architecture tests (no coverage)
+Running tests from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.ArchitectureTests/bin/Release/net10.0/Crm.ArchitectureTests.dll (net10.0|arm64)
+/Users/vardahei/Vardahei_CRM_V2/tests/Crm.ArchitectureTests/bin/Release/net10.0/Crm.ArchitectureTests.dll (net10.0|arm64) passed (2s 653ms)
+
+Test run summary: Passed!
+  total: 91
+  failed: 0
+  succeeded: 91
+  skipped: 0
+  duration: 3s 116ms
+
+SQL/API integration tests with coverage
+Running tests from /Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/bin/Release/net10.0/Crm.IntegrationTests.dll (net10.0|arm64)
+/Users/vardahei/Vardahei_CRM_V2/tests/Crm.IntegrationTests/bin/Release/net10.0/Crm.IntegrationTests.dll (net10.0|arm64) passed (1m 46s 949ms)
+
+  In process file artifacts produced:
+    - /private/tmp/dev17-integration.cobertura.xml
+
+Test run summary: Passed!
+  total: 257
+  failed: 0
+  succeeded: 257
+  skipped: 0
+  duration: 1m 51s 627ms
+
+EF pending model changes
+No changes have been made to the model since the last migration.
+
+Coverage gate
+## Coverage (NFR-10)
+
+Reports: dev17-unit.cobertura.xml, dev17-integration.cobertura.xml
+
+| Scope | Covered lines | Coverable lines | Line coverage | Threshold | Result | Branch coverage (info) |
+|---|---:|---:|---:|---:|---|---:|
+| Domain of Billing, Contracts, TimeTracking | 1274 | 1315 | 96.88 % | 90 % | pass | 90.43 % of 752 |
+| Rest of the backend (src/) | 20848 | 23497 | 88.73 % | 70 % | pass | 74.51 % of 11660 |
+
+Excluded from the denominator:
+
+- EF Core migrations and model snapshots (generated): 41095 lines
+- sources generated at build time: 256 lines
+- Crm.Worker: no test loads it, so its lines are not measured (allowed by --allow-unmeasured)
+
+### Critical domain by file
+
+| File | Covered | Coverable | Line coverage |
+|---|---:|---:|---:|
+| src/Modules/Billing/Crm.Billing/Domain/BillingBasis.cs | 309 | 320 | 96.56 % |
+| src/Modules/Billing/Crm.Billing/Domain/BillingContentDigest.cs | 30 | 30 | 100.00 % |
+| src/Modules/Billing/Crm.Billing/Domain/BillingRun.cs | 153 | 167 | 91.62 % |
+| src/Modules/Billing/Crm.Billing/Domain/BillingSchedule.cs | 29 | 30 | 96.67 % |
+| src/Modules/Billing/Crm.Billing/Domain/Charge.cs | 104 | 110 | 94.55 % |
+| src/Modules/Billing/Crm.Billing/Domain/Invoice.cs | 37 | 38 | 97.37 % |
+| src/Modules/Billing/Crm.Billing/Domain/PendingCharge.cs | 36 | 37 | 97.30 % |
+| src/Modules/Contracts/Crm.Contracts/Domain/Contract.cs | 217 | 221 | 98.19 % |
+| src/Modules/Contracts/Crm.Contracts/Domain/HourBank.cs | 112 | 113 | 99.12 % |
+| src/Modules/Contracts/Crm.Contracts/Domain/SlaPolicy.cs | 40 | 40 | 100.00 % |
+| src/Modules/TimeTracking/Crm.TimeTracking/Domain/TariffEngine.cs | 49 | 51 | 96.08 % |
+| src/Modules/TimeTracking/Crm.TimeTracking/Domain/TimeEntry.cs | 158 | 158 | 100.00 % |
+
+### Backend by assembly
+
+| Assembly | Covered | Coverable | Line coverage |
+|---|---:|---:|---:|
+| Crm.Activities | 536 | 656 | 81.71 % |
+| Crm.Activities.Contracts | 30 | 32 | 93.75 % |
+| Crm.Audit | 244 | 344 | 70.93 % |
+| Crm.Authorization | 123 | 123 | 100.00 % |
+| Crm.Billing | 2415 | 2620 | 92.18 % |
+| Crm.Billing.Contracts | 45 | 47 | 95.74 % |
+| Crm.Catalog | 863 | 974 | 88.60 % |
+| Crm.Catalog.Contracts | 15 | 15 | 100.00 % |
+| Crm.Contracts | 1581 | 1668 | 94.78 % |
+| Crm.Contracts.Contracts | 73 | 75 | 97.33 % |
+| Crm.CustomFields | 210 | 234 | 89.74 % |
+| Crm.Customers | 1685 | 1812 | 92.99 % |
+| Crm.Customers.Contracts | 53 | 53 | 100.00 % |
+| Crm.Identity | 356 | 394 | 90.36 % |
+| Crm.Identity.Contracts | 27 | 27 | 100.00 % |
+| Crm.Infrastructure | 1077 | 1150 | 93.65 % |
+| Crm.Integrations.Atera | 688 | 856 | 80.37 % |
+| Crm.Integrations.Brreg | 118 | 165 | 71.52 % |
+| Crm.Integrations.Core | 1280 | 1449 | 88.34 % |
+| Crm.Integrations.MicrosoftGraph | 555 | 634 | 87.54 % |
+| Crm.Integrations.PartnerCenter | 297 | 578 | 51.38 % |
+| Crm.Integrations.PowerOffice | 776 | 833 | 93.16 % |
+| Crm.Licensing | 921 | 982 | 93.79 % |
+| Crm.Licensing.Contracts | 45 | 46 | 97.83 % |
+| Crm.Notifications | 590 | 673 | 87.67 % |
+| Crm.Notifications.Contracts | 12 | 12 | 100.00 % |
+| Crm.Privacy | 918 | 996 | 92.17 % |
+| Crm.Privacy.Contracts | 21 | 21 | 100.00 % |
+| Crm.Projects | 556 | 619 | 89.82 % |
+| Crm.Projects.Contracts | 11 | 11 | 100.00 % |
+| Crm.Reports | 598 | 690 | 86.67 % |
+| Crm.Sales | 2150 | 2412 | 89.14 % |
+| Crm.Sales.Contracts | 35 | 37 | 94.59 % |
+| Crm.Service | 675 | 729 | 92.59 % |
+| Crm.Service.Contracts | 25 | 27 | 92.59 % |
+| Crm.ServiceDefaults | 40 | 46 | 86.96 % |
+| Crm.SharedKernel | 371 | 394 | 94.16 % |
+| Crm.TimeTracking | 731 | 837 | 87.34 % |
+| Crm.TimeTracking.Contracts | 43 | 44 | 97.73 % |
+| Crm.Web | 1333 | 1497 | 89.04 % |
+
+Gate: **passed**
+

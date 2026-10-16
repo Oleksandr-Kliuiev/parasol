@@ -1,0 +1,78 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Crm.Authorization;
+using WireMock.RequestBuilders;
+using WireMock.ResponseBuilders;
+using static Crm.IntegrationTests.IntegrationTestHelpers;
+
+namespace Crm.IntegrationTests;
+
+/// <summary>
+/// Temporary reproduction of audit finding A08 on the release before DEV-08 (run in a throwaway worktree, never committed):
+/// the PDF is rendered from current data on every download and for the e-mail separately.
+/// </summary>
+public class Dev08BaselineTests(CrmWebFactory factory)
+{
+    private const string Sales = "/api/v1/sales";
+    private const string Customers = "/api/v1/customers";
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task Baseline_the_sent_document_and_a_later_download_differ_after_the_customer_changes()
+    {
+        var sales = factory.ClientAs(CrmRoles.Sales, userKey: "base-sales");
+        var marker = $"B{Guid.NewGuid():N}"[..10];
+        var organizationId = await sales.CreateOrganizationAsync(new
+        {
+            name = $"{marker} Kunde AS", status = "Customer", ehfEnabled = false,
+            postalAddress = new { street = "Kundeveien 1", postalCode = "5003", city = "Bergen", countryCode = "NO" },
+        });
+        var contactId = (await (await sales.PostAsJsonAsync($"{Customers}/organizations/{organizationId}/contacts", new
+        {
+            firstName = "Kari", lastName = "Hansen", email = $"kari.{marker}@example.no", roles = Array.Empty<string>(), isPrimary = true,
+        }, Ct)).ReadJsonAsync()).GetProperty("contactId").GetGuid();
+        var created = await sales.PostAsJsonAsync($"{Sales}/quotes", new
+        {
+            organizationId, contactId, title = $"{marker} Drift", language = "nb", termMonths = 12,
+            lines = new object[] { new { name = "Drift av arbeidsstasjoner", quantity = 10m, unitPrice = 450m, discountPct = 0m, recurrence = "Monthly" } },
+        }, Ct);
+        var quoteId = (await created.ReadJsonAsync()).GetProperty("id").GetGuid();
+        (await sales.PostAsync($"{Sales}/quotes/{quoteId}/submit", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        factory.Graph.Given(Request.Create().WithPath("/graph/v1.0/users/base-sales@test.local/sendMail").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(202));
+        (await sales.PostAsJsonAsync($"{Sales}/quotes/{quoteId}/send", new { toAddress = $"kari.{marker}@example.no", subject = $"{marker} Tilbud" }, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+        var attachment = Convert.FromBase64String(factory.Graph.LogEntries
+            .Where(e => e.RequestMessage!.Path.EndsWith("/sendMail", StringComparison.Ordinal))
+            .Select(e => JsonDocument.Parse(e.RequestMessage!.Body ?? "{}").RootElement)
+            .Where(b => b.TryGetProperty("message", out var m) && m.GetProperty("subject").GetString() == $"{marker} Tilbud")
+            .Single().GetProperty("message").GetProperty("attachments")[0].GetProperty("contentBytes").GetString()!);
+        var downloadedRightAfter = await (await sales.GetAsync($"{Sales}/quotes/{quoteId}/pdf", Ct)).Content.ReadAsByteArrayAsync(Ct);
+
+        // After sending: the customer is renamed and moves.
+        var url = $"{Customers}/organizations/{organizationId}";
+        var organization = await sales.GetAsync(url, Ct);
+        (await sales.PutWithETagAsync(url, new
+        {
+            name = $"{marker} Nytt Navn AS", orgNumber = (string?)null, legalForm = "AS", status = "Customer", ehfEnabled = false,
+            postalAddress = new { street = "Ny gate 9", postalCode = "9999", city = "Andeby", countryCode = "NO" },
+        }, organization.Headers.ETag!.Tag)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var downloadedLater = await (await sales.GetAsync($"{Sales}/quotes/{quoteId}/pdf", Ct)).Content.ReadAsByteArrayAsync(Ct);
+
+        string Hash(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var report = new StringBuilder()
+            .AppendLine($"attachment sent        sha256={Hash(attachment)} customer in PDF: {(Encoding.Latin1.GetString(attachment).Contains($"{marker} Kunde AS") ? "old name" : "?")}")
+            .AppendLine($"download right after   sha256={Hash(downloadedRightAfter)} equal to attachment: {downloadedRightAfter.SequenceEqual(attachment)}")
+            .AppendLine($"download after change  sha256={Hash(downloadedLater)} equal to attachment: {downloadedLater.SequenceEqual(attachment)}; customer in PDF: {(Encoding.Latin1.GetString(downloadedLater).Contains($"{marker} Nytt Navn AS") ? "NEW name" : "old name")}")
+            .ToString();
+        TestContext.Current.TestOutputHelper!.WriteLine(report);
+        File.WriteAllText(Environment.GetEnvironmentVariable("DEV08_BASELINE_REPORT")!, report);
+
+        // The defect: what can be downloaded after sending is not what was sent.
+        downloadedLater.ShouldNotBe(attachment);
+        Encoding.Latin1.GetString(downloadedLater).ShouldContain($"{marker} Nytt Navn AS");
+    }
+}
