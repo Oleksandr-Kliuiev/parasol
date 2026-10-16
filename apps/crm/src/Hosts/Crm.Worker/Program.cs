@@ -30,7 +30,14 @@ using Crm.SharedKernel.Application;
 using Crm.Worker;
 using Hangfire;
 
+if (args.Contains("--health-probe", StringComparer.Ordinal))
+{
+    Environment.Exit(await VpsHostConfiguration.HealthProbeAsync());
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.AddVpsConfiguration(args);
 
 builder.AddServiceDefaults();
 

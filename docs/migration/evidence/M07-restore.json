@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "syntheticOnly": true,
+  "snapshot": "ee1c77fbb6a4ff0a908625c5150cc8e0ace1923e870e3c5a213063daf7c85b85",
+  "backupSeconds": 14.31,
+  "restoreSeconds": 21.38,
+  "checks": [
+    "restic restore --verify",
+    "file inventory SHA-256",
+    "SQL VERIFYONLY/CHECKDB",
+    "PostgreSQL restore --exit-on-error",
+    "restricted runtime roles",
+    "web/Atlas readiness",
+    "SQL and PostgreSQL before/after markers",
+    "exact document and keyring inventory",
+    "corrupt encrypted pack rejected",
+    "edge isolation"
+  ],
+  "promoted": false,
+  "testedAt": "2026-10-16T14:14:43.674458+00:00",
+  "release": "m07-final",
+  "images": {
+    "crm-web": "sha256:dbf6551811db276a70513eca52e3b9b6a2611dbdba0b9d6bb070b84be0a89ebd",
+    "crm-worker": "sha256:e830c8c594131fdff0fac0b5b611afefaf2af3f4202bdeac4ada31ef44d26be6",
+    "atlas": "sha256:3c9bcb40928f0492156172be1b935bcfd8fca8969103906c60721400f509951c"
+  }
+}
