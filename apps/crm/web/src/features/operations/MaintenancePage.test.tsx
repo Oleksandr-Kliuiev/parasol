@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { configure, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from '@fluentui/react-components';
 import { TOASTER_ID } from '../../app/toaster';
@@ -68,9 +68,6 @@ function render() {
     testUser(['operations.maintenance']),
   );
 }
-
-// Fluent's modal handling hides nodes outside the active dialog on a timer in jsdom (see DeliveryPanel.test).
-configure({ defaultHidden: true });
 
 afterEach(() => vi.unstubAllGlobals());
 

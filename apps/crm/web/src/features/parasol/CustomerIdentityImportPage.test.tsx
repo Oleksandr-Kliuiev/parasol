@@ -44,7 +44,7 @@ describe('customer identity workflow', () => {
     const fetch = mock(url => response(url.includes('dryRun=false') ? { ...basePlan, dryRun: false, rows: [{ ...basePlan.rows[0], outcome: 'APPLIED' }] } : basePlan));
     render(); const user = userEvent.setup(); await choose(user);
     expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: 'Preview mappings' }));
+    await user.click(await screen.findByRole('button', { name: 'Preview mappings' }));
     const apply = await screen.findByRole('button', { name: 'Apply reviewed mappings' });
     expect(apply).toBeDisabled();
     await user.click(screen.getByRole('checkbox'));

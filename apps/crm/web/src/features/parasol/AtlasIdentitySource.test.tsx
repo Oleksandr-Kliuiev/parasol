@@ -30,7 +30,7 @@ describe('loading the Atlas directory in the mapping screen', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole('button', { name: 'Choose CRM customer' }));
     await user.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Link' }));
-    await user.click(screen.getByRole('button', { name: 'Preview mappings' }));
+    await user.click(await screen.findByRole('button', { name: 'Preview mappings' }));
     await user.click(await screen.findByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Apply reviewed mappings' }));
     expect(await screen.findByText('Links saved: 1 new, 0 already present.')).toBeVisible();
