@@ -12,4 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hosts\Crm.Web\Crm.Web.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\contracts\customer-identity\atlas-export.v1.example.json" Link="Fixtures\atlas-export.v1.example.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

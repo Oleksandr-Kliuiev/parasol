@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Module, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Inject, Module, Param, Query, UseGuards } from '@nestjs/common';
 import type { PrismaClient } from '@prisma/client';
 import type { Actor } from '../../../../packages/core/contracts.ts';
 import { getClientContext, getObservationPage, listClients, CONTEXT_OBSERVATION_LIMIT } from '../../../../packages/graph/prisma-context.ts';
@@ -18,6 +18,14 @@ export class ClientsController {
 
   @Get() async list(@CurrentActor() actor: Actor) {
     try { return await listClients(this.db, actor); } catch (error) { toHttp(error); }
+  }
+  /** Parasol identity migration: only this actor's visible clients, never connection secrets or external payloads. */
+  @Get('identity-export') @Header('Cache-Control', 'no-store') async identityExport(@CurrentActor() actor: Actor) {
+    try {
+      const clients = await listClients(this.db, actor);
+      return { schemaVersion: 1, source: 'atlas', workspaceId: actor.workspaceId,
+        clients: clients.map(c => ({ clientId: c.id, name: c.name })).sort((a, b) => a.clientId < b.clientId ? -1 : a.clientId > b.clientId ? 1 : 0) };
+    } catch (error) { toHttp(error); }
   }
   @Get(':id/overview') async overview(@CurrentActor() actor: Actor, @Param('id') id: string) {
     const scope = await this.access.requireClient(actor, id, 'context:read', 'client.overview_denied');

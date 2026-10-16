@@ -25,6 +25,8 @@ export const OPENAPI_DOCUMENT = Object.freeze({
   paths: {
     '/clients': { get: { summary: 'Clients the actor is a member of', responses: { 200: json('Client list', { type: 'array', items: { type: 'object',
       properties: { id: { type: 'string' }, name: { type: 'string' } } } }), 401: errors[401] } } },
+    '/clients/identity-export': { get: { summary: 'Parasol v1 identity snapshot of authorized clients only (context:read)',
+      responses: { 200: json('Atlas identity export: schemaVersion, source, workspaceId, clients'), ...errors } } },
     '/clients/{id}/overview': { get: { summary: 'ClientContextV1: resources with statuses, entities, open observations (context:read)',
       parameters: [clientId], responses: { 200: json('ClientContextV1'), ...errors } } },
     '/clients/{id}/observations': { get: { summary: 'Observation page, newest first (context:read)', parameters: [clientId,

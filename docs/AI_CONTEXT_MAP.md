@@ -2,6 +2,7 @@
 
 - Scope and local commands: `README.md`.
 - M01–M03 implementation and follow-up: `docs/migration/M01-M03.md`.
+- Customer identity / M04: `docs/migration/M04-CUSTOMER-IDENTITY.md`; Atlas `apps/api/src/db/clients.ts`, CRM `src/Integrations/Crm.Integrations.Core/Parasol`, shared fixture `contracts/customer-identity`.
 - Original Git identities and import commits: `docs/migration/sources.json`, `IMPORT.md`.
 - Strict Atlas tests and native fixture setup: `docs/testing/ATLAS.md`.
 - Historical import failures (no longer an exception mechanism): `docs/migration/BASELINE.md`, `atlas-baseline.json`.

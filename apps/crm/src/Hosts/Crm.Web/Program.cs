@@ -283,6 +283,7 @@ app.MapBrregEndpoints();
 app.MapSearchEndpoints();
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
+Crm.Integrations.Core.Parasol.CustomerIdentityEndpoints.MapParasolCustomerIdentities(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
 app.MapMonitoringEndpoints();

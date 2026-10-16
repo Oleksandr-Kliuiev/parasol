@@ -1,5 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import type { ClientContextV1, ObservationPage, ResourceView, AuditRecord, SecurityAuditRecord } from '../../packages/core/contracts.ts';
 import { generateToken, hashToken } from '../../packages/auth/token.ts';
 import { createTestDatabase, runSeed } from '../support/pg-harness.ts';
@@ -65,6 +66,16 @@ test('the API refuses to start through the owner connection or without a runtime
 test('authentication: no, malformed, unknown or revoked credentials are 401', async () => {
   for (const token of [null, 'short', generateToken(), revoked]) assert.equal((await call('/clients', token)).status, 401, String(token).slice(0, 8));
   assert.equal((await fetch(`${api.base}/clients`, { headers: { Authorization: `Basic ${tech}` } })).status, 401);
+});
+
+test('Parasol export matches the shared contract and only includes authorized clients', async () => {
+  const expected = JSON.parse(readFileSync(new URL('../../../../contracts/customer-identity/atlas-export.v1.example.json', import.meta.url), 'utf8'));
+  assert.deepEqual(await json('/clients/identity-export', tech), expected);
+  assert.equal((await call('/clients/identity-export', tech)).headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await json('/clients/identity-export', ingestOnly), { ...expected, clients: [] });
+  for (const token of [null, revoked]) assert.equal((await call('/clients/identity-export', token)).status, 401);
+  const raw = await (await call('/clients/identity-export', tech)).text();
+  for (const forbidden of ['secretRef', 'tokenHash', 'externalTenantId', 'demo-other', tech]) assert.ok(!raw.includes(forbidden));
 });
 
 test('Gasta → Kari → GASTA-LT-07 with both confirmed mappings, explicit MISSING resources and no secret fields', async () => {

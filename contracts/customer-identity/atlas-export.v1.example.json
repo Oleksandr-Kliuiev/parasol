@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "source": "atlas",
+  "workspaceId": "demo-vardahei",
+  "clients": [
+    { "clientId": "demo-gasta", "name": "Gasta (synthetic)" }
+  ]
+}
