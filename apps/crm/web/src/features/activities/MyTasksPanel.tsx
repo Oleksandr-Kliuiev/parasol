@@ -1,5 +1,6 @@
-import { Button, Text, makeStyles, tokens } from '@fluentui/react-components';
+import { Button, MessageBar, MessageBarBody, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { CheckmarkCircle20Regular } from '@fluentui/react-icons';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppLink } from '../../shared/components/AppLink';
 import { Panel } from '../../shared/components/Panel';
@@ -7,8 +8,10 @@ import { ListFooter } from '../../shared/components/ListFooter';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
-import { useActivities, useActivityActions } from './api';
+import { useActivityActions } from './api';
 import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
+import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
+import { usePersonalTasks } from './usePersonalTasks';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0 },
@@ -28,27 +31,41 @@ const useStyles = makeStyles({
 
 /** Open tasks and meetings assigned to the signed-in user (FR-ACT-01, "My day"). */
 export function MyTasksPanel() {
+  const user = useCurrentUser();
+  if (!user.permissions.includes(Permissions.activitiesRead)) return null;
+  const permissionsKey = JSON.stringify([...user.permissions].sort());
+  return <PersonalTasks key={`${user.id}:${permissionsKey}`} employeeId={user.id} permissionsKey={permissionsKey}
+    canWrite={user.permissions.includes(Permissions.activitiesWrite)} />;
+}
+
+function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: string; permissionsKey: string; canWrite: boolean }) {
   const styles = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const actions = useActivityActions();
   // The ten due first, and the rest on request: the panel says how many open tasks there are (DEV-12).
-  const tasks = useActivities({ mine: true, open: true }, true, 10);
-  const { items: data, isPending } = tasks;
+  const tasks = usePersonalTasks(employeeId, permissionsKey);
+  const data = tasks.items;
+  const active = useRef(false);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
 
   const complete = async (id: string, subject: string) => {
     try {
       await actions.complete.mutateAsync(id);
+      if (!active.current) return;
       notify(t('activities.completedNamed', { subject }));
     } catch (e) {
+      if (!active.current) return;
       notify(t('errors.generic'), 'error', errorMessage(e, t));
     }
   };
 
   return (
-    <Panel title={t('myDay.myTasks')}>
-      {!isPending && data.length === 0 && <Text className={styles.muted}>{t('myDay.myTasksEmpty')}</Text>}
-      <ul className={styles.list}>
+    <Panel title={t('myDay.myTasks')} actions={<Button size="small" disabled={tasks.checking} disabledFocusable={tasks.checking} onClick={tasks.refresh}>{t('myDay.refreshMyTasks')}</Button>}>
+      {tasks.checking && <Spinner size="small" label={t('common.loading')} />}
+      {Boolean(tasks.error) && <MessageBar intent="error"><MessageBarBody><Text role="status">{t('myDay.myTasksReadFailed')}</Text></MessageBarBody></MessageBar>}
+      {!tasks.checking && !tasks.error && data.length === 0 && <Text className={styles.muted}>{t('myDay.myTasksEmpty')}</Text>}
+      <ul key={tasks.revision} className={styles.list}>
         {data.map((activity) => (
           <li key={activity.id} className={styles.row}>
             <span className={styles.text}>
@@ -59,17 +76,17 @@ export function MyTasksPanel() {
               </span>
             </span>
             {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
-            <Button
+            {canWrite && <Button
               size="small"
               appearance="subtle"
               icon={<CheckmarkCircle20Regular />}
               aria-label={t('activities.completeNamed', { subject: activity.subject })}
               onClick={() => void complete(activity.id, activity.subject)}
-            />
+            />}
           </li>
         ))}
       </ul>
-      <ListFooter shown={data.length} total={tasks.total} hasMore={tasks.hasNextPage} loading={tasks.isFetchingNextPage} onMore={() => void tasks.fetchNextPage()} />
+      <ListFooter shown={data.length} total={tasks.total} hasMore={tasks.hasMore} loading={tasks.loadingMore} onMore={() => void tasks.loadMore()} />
     </Panel>
   );
 }

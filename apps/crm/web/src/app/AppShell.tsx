@@ -127,6 +127,7 @@ export function AppShell() {
   const canAudit = useCan(Permissions.auditRead);
   const canUsers = useCan(Permissions.usersRead);
   const canJobs = useCan(Permissions.integrationsManage);
+  const canConnections = useCan(Permissions.parasolAtlasRead) || canJobs;
   const canCatalog = useCan(Permissions.catalogRead);
   const canContracts = useCan(Permissions.contractsRead);
   const canOwnTime = useCan(Permissions.timeOwn);
@@ -162,7 +163,7 @@ export function AppShell() {
   }, []);
 
 
-  const selected = location.pathname.startsWith('/organizations') || location.pathname.startsWith('/contacts')
+  const selected = location.pathname.startsWith('/connections') ? 'connections' : location.pathname.startsWith('/organizations') || location.pathname.startsWith('/contacts')
     ? 'organizations'
     : location.pathname.startsWith('/dashboard')
       ? 'dashboard'
@@ -264,6 +265,9 @@ export function AppShell() {
           <NavItem href="/" value="my-day" icon={<Board20Regular />} onClick={go('/')}>
             {t('nav.myDay')}
           </NavItem>
+          {canConnections && <NavItem href="/connections" value="connections" icon={<PlugConnected20Regular />} onClick={go('/connections')}>
+            {t('nav.connections')}
+          </NavItem>}
           {canReports && (
             <NavItem href="/dashboard" value="dashboard" icon={<DataTrending20Regular />} onClick={go('/dashboard')}>
               {t('nav.dashboard')}

@@ -97,7 +97,7 @@ export function SlaPoliciesPage() {
               {data.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
-                    <span className={catalog.name}>{p.name}</span> {!p.isActive && <Badge appearance="outline" color="subtle">{t('catalog.inactive')}</Badge>}
+                    <span className={catalog.name}>{p.name}</span> {!p.isActive && <Badge appearance="outline" color="informative">{t('catalog.inactive')}</Badge>}
                     {p.ateraValue && <div className={catalog.muted}>{t('contracts.sla.ateraValueShort', { value: p.ateraValue })}</div>}
                   </TableCell>
                   <TableCell>{t(`contracts.coverages.${p.coverage}`)}</TableCell>

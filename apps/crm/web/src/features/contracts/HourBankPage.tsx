@@ -75,7 +75,7 @@ export function HourBankPage() {
           <>
             <AppLink to={`/organizations/${bank.organization.id}`}>{bank.organization.name}</AppLink>
             {bank.isLow && bank.status === 'Active' && <Badge appearance="tint" color="warning">{t('contracts.hourBanks.low')}</Badge>}
-            {bank.status === 'Closed' && <Badge appearance="outline" color="subtle">{t('contracts.hourBanks.closed')}</Badge>}
+            {bank.status === 'Closed' && <Badge appearance="outline" color="informative">{t('contracts.hourBanks.closed')}</Badge>}
           </>
         }
         actions={

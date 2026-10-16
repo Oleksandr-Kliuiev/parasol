@@ -136,7 +136,7 @@ function ProductsTab() {
                 <span className="tabular">
                   {formatMoney(p.listPrice, p.currency)} / {t(`catalog.units.${p.unit}`)}
                 </span>
-                {!p.isActive && <Badge appearance="outline" color="subtle">{t('catalog.inactive')}</Badge>}
+                {!p.isActive && <Badge appearance="outline" color="informative">{t('catalog.inactive')}</Badge>}
               </span>
             </li>
           ))}
@@ -160,7 +160,7 @@ function ProductsTab() {
                     <AppLink to={`/catalog/products/${p.id}`} className={styles.name}>
                       {p.name}
                     </AppLink>{' '}
-                    {!p.isActive && <Badge appearance="outline" color="subtle">{t('catalog.inactive')}</Badge>}
+                    {!p.isActive && <Badge appearance="outline" color="informative">{t('catalog.inactive')}</Badge>}
                     <div className={styles.sku}>{p.sku}</div>
                   </TableCell>
                   <TableCell>{t(`catalog.types.${p.type}`)}</TableCell>

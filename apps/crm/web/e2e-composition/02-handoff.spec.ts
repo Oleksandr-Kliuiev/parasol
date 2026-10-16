@@ -27,6 +27,11 @@ test('two genuine employee handoffs converge on one private Task, which personal
   const secondWriter = await staffContext(browser, 'Crm.Technician');
   const technician = await staffContext(browser, 'Crm.Technician');
   try {
+    await technician.page.goto('/');
+    const myTasks = technician.page.getByRole('region', { name: 'My tasks', exact: true });
+    const refreshTasks = myTasks.getByRole('button', { name: 'Refresh my tasks', exact: true });
+    await expect(refreshTasks).toBeEnabled();
+    await expect(myTasks.getByText('Nothing assigned to you right now.', { exact: true })).toBeVisible();
     const adminDialog = await openTargetAssignment(admin.page);
     const secondDialog = await openTargetAssignment(secondWriter.page);
     const due = '2030-11-01T10:00';
@@ -69,10 +74,18 @@ test('two genuine employee handoffs converge on one private Task, which personal
     await expect(source.getByText(f.target.observationSummaryOutsideFirst100, { exact: true })).toBeVisible();
     await expect(source.getByRole('button', { name: 'Create task', exact: true })).toHaveCount(0);
     await source.getByRole('button', { name: 'Close', exact: true }).click();
-    await technician.page.goto('/');
-    const myTasks = technician.page.getByRole('region', { name: 'My tasks', exact: true });
     const personalTask = myTasks.getByRole('listitem').filter({ hasText: 'Review technical observation' });
+    await expect(personalTask, 'The already-open recipient has not silently refreshed').toHaveCount(0);
+    await refreshTasks.focus();
+    const received = technician.page.waitForResponse(r => {
+      const url = new URL(r.url());
+      return r.request().method() === 'GET' && url.pathname === '/api/v1/activities/' && url.searchParams.get('mine') === 'true'
+        && url.searchParams.get('open') === 'true' && !url.searchParams.has('cursor');
+    });
+    await technician.page.keyboard.press('Enter');
+    expect((await received).status(), 'Explicit recipient refresh starts from page one').toBe(200);
     await expect(personalTask).toHaveCount(1);
+    await expect(refreshTasks).toBeFocused();
     await personalTask.getByRole('button', { name: 'View Atlas source', exact: true }).click();
     const personalSource = technician.page.getByRole('dialog', { name: 'View Atlas source', exact: true });
     await expect(personalSource.getByText(f.target.observationSummaryOutsideFirst100, { exact: true })).toBeVisible();

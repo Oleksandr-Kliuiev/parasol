@@ -15,6 +15,15 @@ const render = (allowed = permissions) => renderRoutes([page(<AtlasAttentionPane
 const region = () => within(screen.getByRole('region', { name: 'Technical attention · Atlas' }));
 afterEach(() => vi.unstubAllGlobals());
 
+function attentionWithOther() {
+  const value = atlasAttention(); const urgent = value.customers![0]!; urgent.customerName = 'Z urgent customer';
+  const other = { ...urgent, customerId: '33333333-3333-4333-8333-333333333333', customerName: 'A no-urgent customer',
+    activeObservations: 0, high: 0, critical: 0, preview: [], devices: [] };
+  value.customers!.unshift(other);
+  Object.assign(value.coverage!, { visibleClients: 5, matchedCustomers: 3, selectedCustomers: 3, attemptedCustomers: 3, readyCustomers: 2 });
+  return value;
+}
+
 describe('personal Atlas attention in My day', () => {
   it.each([[], ['customers.read'], ['parasol.atlas.read'], ['activities.write']].map(allowed => ({ allowed })))('does not mount or read without both customer and Atlas permissions ($allowed)', ({ allowed }) => {
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); render(allowed);
@@ -45,9 +54,70 @@ describe('personal Atlas attention in My day', () => {
     const value = atlasAttention(); const c = value.customers![0]!; c.high = 0; c.critical = 0; c.preview = []; c.devices = [];
     value.totals!.high = 0; value.totals!.critical = 0;
     vi.stubGlobal('fetch', vi.fn(async () => response(value))); render();
-    expect(await screen.findByText(/Other observations or missing source data may still require attention/)).toBeVisible();
+    await screen.findByText('Other customers with no urgent observations in this read (1)');
+    await userEvent.click(screen.getByText('Other customers with no urgent observations in this read (1)'));
+    expect(screen.getByText(/Other observations or missing source data may still require attention/)).toBeVisible();
     expect(region().getByText('Active observations in successfully read customers: 9 · High: 0 · Critical: 0')).toBeVisible();
     expect(region().queryByRole('button', { name: 'Assign work' })).not.toBeInTheDocument();
+  });
+
+  it('puts an urgent Z customer ahead of zero-urgent A while keeping unread failures visible', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => response(attentionWithOther()))); render();
+    await screen.findByText('Z urgent customer');
+    expect(region().getAllByRole('heading', { level: 3, hidden: true }).map(h => h.textContent))
+      .toEqual(['Z urgent customer', 'Synthetic unavailable customer', 'A no-urgent customer']);
+    expect(region().getByRole('region', { name: 'Synthetic unavailable customer' })).toBeVisible();
+    expect(region().getByText(/excluded from the observation totals/)).toBeVisible();
+    const other = region().getByText('Other customers with no urgent observations in this read (1)');
+    expect(other.closest('details')).not.toHaveAttribute('open');
+    expect(region().getByRole('region', { name: 'A no-urgent customer', hidden: true })).not.toBeVisible();
+    await userEvent.click(other);
+    const customer = within(region().getByRole('region', { name: 'A no-urgent customer' }));
+    await userEvent.click(customer.getByText('Source coverage and freshness'));
+    expect(customer.getByText('Outdated snapshot')).toBeVisible(); expect(customer.getByText('No snapshot')).toBeVisible();
+    expect(customer.getByText(/Other observations or missing source data may still require attention/)).toBeVisible();
+  });
+
+  it('orders urgent customers by critical count, then high count, then a stable customer-name tie', async () => {
+    const value = attentionWithOther(); const source = value.customers![1]!;
+    const high = { ...source, customerId: '44444444-4444-4444-8444-444444444444', customerName: 'A more high', high: 5, activeObservations: 10 };
+    const critical = { ...source, customerId: '55555555-5555-4555-8555-555555555555', customerName: 'B more critical', critical: 3, high: 0, activeObservations: 3,
+      preview: [...source.preview.slice(0, 2), { ...source.preview[0]!, id: 'critical-three' }] };
+    const tie = { ...source, customerId: '66666666-6666-4666-8666-666666666666', customerName: 'Y same counts' };
+    value.customers!.push(high, critical, tie);
+    Object.assign(value.coverage!, { visibleClients: 8, matchedCustomers: 6, selectedCustomers: 6, attemptedCustomers: 6, readyCustomers: 5 });
+    value.totals = { activeObservations: 31, high: 13, critical: 9 };
+    vi.stubGlobal('fetch', vi.fn(async () => response(value))); render();
+    await screen.findByText('Z urgent customer');
+    expect(region().getAllByRole('heading', { level: 3 }).map(h => h.textContent))
+      .toEqual(['B more critical', 'A more high', 'Y same counts', 'Z urgent customer', 'Synthetic unavailable customer', 'A no-urgent customer']);
+    expect(screen.getByText('A no-urgent customer')).not.toBeVisible();
+  });
+
+  it('resets the no-urgent disclosure and nested source details after a manual refresh', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => response(attentionWithOther()))); render();
+    const label = 'Other customers with no urgent observations in this read (1)'; await screen.findByText(label);
+    await userEvent.click(screen.getByText(label)); const customer = within(region().getByRole('region', { name: 'A no-urgent customer' }));
+    await userEvent.click(customer.getByText('Source coverage and freshness')); expect(customer.getByText('Outdated snapshot')).toBeVisible();
+    await userEvent.click(region().getByRole('button', { name: 'Refresh technical attention' }));
+    await screen.findByText(label); expect(screen.getByText(label).closest('details')).not.toHaveAttribute('open');
+    await userEvent.click(screen.getByText(label));
+    expect(within(region().getByRole('region', { name: 'A no-urgent customer' })).getByText('Source coverage and freshness').closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('removes the open no-urgent disclosure and its old rows when the employee changes', async () => {
+    let reads = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => response(++reads === 1 ? attentionWithOther() : atlasAttention())));
+    function ChangeEmployee() {
+      const [user, setUser] = useState(testUser(permissions));
+      return <CurrentUserContext.Provider value={user}><button onClick={() => setUser({ ...user, id: 'another-employee' })}>Change employee</button><AtlasAttentionPanel /></CurrentUserContext.Provider>;
+    }
+    renderRoutes([page(<ChangeEmployee />)], '/', testUser(permissions));
+    await userEvent.click(await screen.findByText('Other customers with no urgent observations in this read (1)'));
+    expect(region().getByRole('region', { name: 'A no-urgent customer' })).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Change employee' }));
+    await screen.findByText('Synthetic attention customer');
+    expect(screen.queryByText('A no-urgent customer')).not.toBeInTheDocument(); expect(screen.queryByText(/Other customers with no urgent observations/)).not.toBeInTheDocument();
   });
 
   it('allows read-only technical users to read attention without offering assignment', async () => {

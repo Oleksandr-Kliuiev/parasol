@@ -202,7 +202,7 @@ export function MappingsPage() {
                         #{r.externalId} · {formatDateTime(r.externalChangedAt ?? r.lastSeenAt)}
                       </span>{' '}
                       {r.isGone && (
-                        <Badge size="small" appearance="outline" color="subtle">
+                        <Badge size="small" appearance="outline" color="informative">
                           {t('mappings.gone')}
                         </Badge>
                       )}

@@ -109,7 +109,7 @@ export function ActivityTimeline({
               <li key={activity.id} className={styles.item}>
                 <span>
                   <span className={styles.head}>
-                    <Badge appearance="outline" color={activity.status === 'Open' ? 'informative' : 'subtle'}>
+                    <Badge appearance="outline" color="informative">
                       {t(`activities.types.${activity.type}`)}
                     </Badge>
                     <Text weight="semibold" className={activity.status === 'Done' ? styles.done : undefined}>

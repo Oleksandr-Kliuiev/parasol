@@ -5,9 +5,9 @@ import { acceptedReport } from './run.mjs';
 function evidence() {
   return {
     diagnostic: false, cleanup: true, build: { builtInThisRun: true },
-    browser: { expected: 7, unexpected: 0, skipped: 0, flaky: 0 },
+    browser: { expected: 8, unexpected: 0, skipped: 0, flaky: 0 },
     evidence: {
-      taskCount: 1, receiptCount: 1, createAuditCount: 1, totalActivityLoggedCount: 2, providerWrites: 0,
+      taskCount: 1, receiptCount: 1, createAuditCount: 1, totalActivityLoggedCount: 2, providerWrites: 0, atlasRequests: 1000,
       bodyIsNull: true, genericSubject: true, sourceTextAbsentFromTask: true, sourceTextAbsentFromAudit: true,
       privileges: { crmWebRestricted: true, crmWorkerRestricted: true, atlasRuntimeRestricted: true },
       actualScale: { clients: 40, devices: 400, employees: 3 },
@@ -15,9 +15,9 @@ function evidence() {
   };
 }
 
-test('composition acceptance needs all seven scenarios, a source build and owned cleanup', () => {
+test('composition acceptance needs all eight scenarios, a source build and owned cleanup', () => {
   const valid = evidence(); assert.equal(acceptedReport(valid), true);
-  for (const expected of [0, 1, 6, 8]) assert.equal(acceptedReport({ ...valid, browser: { ...valid.browser, expected } }), false);
+  for (const expected of [0, 1, 6, 7, 9]) assert.equal(acceptedReport({ ...valid, browser: { ...valid.browser, expected } }), false);
   for (const key of ['unexpected', 'skipped', 'flaky'])
     assert.equal(acceptedReport({ ...valid, browser: { ...valid.browser, [key]: 1 } }), false);
   assert.equal(acceptedReport({ ...valid, build: { builtInThisRun: false } }), false);
@@ -31,6 +31,8 @@ test('partial, duplicate, privacy or runtime-role evidence cannot be accepted', 
     for (const count of [0, 2]) assert.equal(acceptedReport({ ...valid, evidence: { ...valid.evidence, [key]: count } }), false);
   assert.equal(acceptedReport({ ...valid, evidence: { ...valid.evidence, totalActivityLoggedCount: 3 } }), false);
   assert.equal(acceptedReport({ ...valid, evidence: { ...valid.evidence, providerWrites: 1 } }), false);
+  for (const atlasRequests of [0, -1, 0.5, '1000', undefined])
+    assert.equal(acceptedReport({ ...valid, evidence: { ...valid.evidence, atlasRequests } }), false);
   for (const key of ['bodyIsNull', 'genericSubject', 'sourceTextAbsentFromTask', 'sourceTextAbsentFromAudit'])
     assert.equal(acceptedReport({ ...valid, evidence: { ...valid.evidence, [key]: false } }), false);
   for (const key of ['crmWebRestricted', 'crmWorkerRestricted', 'atlasRuntimeRestricted'])

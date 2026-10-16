@@ -98,11 +98,11 @@ export function SystemsPanel() {
             <section key={s.system} className={styles.card} aria-label={systemName(t, s.system)}>
               <div className={styles.header}>
                 <Text weight="semibold">{systemName(t, s.system)}</Text>
-                <Badge appearance="outline" color="subtle">
+                <Badge appearance="outline" color="informative">
                   {s.enabled ? t('systemsPanel.enabled') : t('systemsPanel.disabled')}
                 </Badge>
                 {s.paused && (
-                  <Badge appearance="outline" color="subtle">
+                  <Badge appearance="outline" color="informative">
                     {t('systemsPanel.paused')}
                   </Badge>
                 )}
@@ -188,7 +188,7 @@ export function OutboundPanel() {
                     {systemName(t, o.system)} · {t(`outbound.operations.${o.operation}`, { defaultValue: o.operation })}
                   </TableCell>
                   <TableCell>
-                    <Badge appearance="outline" color="subtle">
+                    <Badge appearance="outline" color="informative">
                       {t(`outbound.status.${o.status}`)}
                     </Badge>
                   </TableCell>

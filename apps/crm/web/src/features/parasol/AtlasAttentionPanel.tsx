@@ -37,6 +37,11 @@ function PersonalAttention({ employeeId, permissionsKey }: { employeeId: string;
   const checking = check.pending || query.isFetching;
   const view = !checking && !query.isError ? query.data : undefined;
   const data = view && ['READY', 'PARTIAL'].includes(view.status) ? view : null;
+  const urgent = (data?.customers ?? []).filter(c => c.status === 'READY' && c.high! + c.critical! > 0)
+    .sort((a, b) => b.critical! - a.critical! || b.high! - a.high!
+      || a.customerName.localeCompare(b.customerName, undefined, { sensitivity: 'base' }) || a.customerId.localeCompare(b.customerId));
+  const failed = (data?.customers ?? []).filter(c => c.status !== 'READY');
+  const other = (data?.customers ?? []).filter(c => c.status === 'READY' && c.high === 0 && c.critical === 0);
   const error = query.isError ? query.error instanceof ApiError && query.error.status === 403 ? 'ACCESS_DENIED'
     : query.error instanceof ApiError && query.error.status === 429 ? 'RATE_LIMITED' : 'REQUEST_FAILED'
     : view && !data ? view.status : null;
@@ -62,7 +67,11 @@ function PersonalAttention({ employeeId, permissionsKey }: { employeeId: string;
       <Text block>{t('parasolAttention.totals', { active: data.totals.activeObservations, high: data.totals.high, critical: data.totals.critical })}</Text>
       <Text block>{t('parasolAttention.previewNote')}</Text>
       {data.customers.length === 0 && <Text block role="status">{t('parasolAttention.empty')}</Text>}
-      <div className={styles.list}>{data.customers.map(customer => <AttentionCustomer key={customer.customerId} customer={customer} onSourceInvalidated={refresh} />)}</div>
+      <div className={styles.list}>{[...urgent, ...failed].map(customer => <AttentionCustomer key={customer.customerId} customer={customer} onSourceInvalidated={refresh} />)}</div>
+      {other.length > 0 && <details>
+        <summary>{t('parasolAttention.otherCustomers', { count: other.length })}</summary>
+        <div className={styles.list}>{other.map(customer => <AttentionCustomer key={customer.customerId} customer={customer} onSourceInvalidated={refresh} />)}</div>
+      </details>}
     </div>}
   </Panel>;
 }

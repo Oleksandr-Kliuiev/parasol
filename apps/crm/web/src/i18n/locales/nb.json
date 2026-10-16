@@ -4,6 +4,7 @@
     "skipToContent": "Hopp til innhold"
   },
   "nav": {
+    "connections": "Tilkoblinger",
     "myDay": "Min dag",
     "organizations": "Organisasjoner",
     "admin": "Administrasjon",
@@ -218,6 +219,8 @@
     },
     "myTasks": "Mine oppgaver",
     "myTasksEmpty": "Ingenting er tildelt deg nå.",
+    "refreshMyTasks": "Oppdater mine oppgaver",
+    "myTasksReadFailed": "Oppgavene dine kunne ikke leses. Ingen tidligere oppgaver vises. Oppdater for å prøve igjen.",
     "staleDeals": "Salg uten aktivitet",
     "licensingAttention": "Lisenser som trenger tilsyn",
     "cancellationWindow": "{{name}}: angrefristen går ut {{date}}",
@@ -1606,6 +1609,10 @@
     "editNamed": "Endre {{subject}}",
     "empty": "Ingenting er loggført ennå.",
     "saved": "Aktiviteten er lagret",
+    "saveSourceAssignee": "Denne medarbeideren kan ikke tildeles en teknisk oppgave. Velg en aktiv medarbeider med teknisk tilgang. Utkastet ditt er beholdt.",
+    "saveConflict": "Aktiviteten er endret eller kan ikke lenger redigeres som forespurt. Utkastet ditt er beholdt. Lukk og åpne den igjen for å se gjeldende opplysninger før du lagrer på nytt.",
+    "saveFailed": "Lagringen ble ikke bekreftet. Utkastet ditt er beholdt.",
+    "invalidDue": "Oppgi en gyldig dato og et gyldig klokkeslett.",
     "logged": "Aktiviteten er loggført",
     "completed": "Merket som utført",
     "completedNamed": "{{subject}} er merket som utført",
@@ -3548,6 +3555,86 @@
       "REQUEST_FAILED": "Køen kunne ikke leses. Ingen tidligere side vises. Oppdater for å prøve igjen."
     }
   },
+  "readiness": {
+    "title": "Tilkoblingsoversikt",
+    "subtitle": "Kun lokal konfigurasjon og lagrede opplysninger.",
+    "refresh": "Oppdater lokal oversikt",
+    "notChecked": "Tilkoblinger og tilgangsopplysninger er ikke kontrollert.",
+    "checkedAt": "Lokale opplysninger lest {{time}}",
+    "partial": "Noen lagrede opplysninger kunne ikke leses, eller den avgrensede koblingskontrollen er ufullstendig. Dette er ikke en kontroll av tilkoblingenes tilstand.",
+    "personalTitle": "Personlig Atlas-oppsett",
+    "personal": {
+      "DISABLED": "Atlas er deaktivert lokalt",
+      "PERSONAL_ENTRY_PRESENT": "Personlig oppføring finnes",
+      "PERSONAL_ENTRY_MISSING": "Personlig oppføring mangler"
+    },
+    "personalNote": "At oppsettet finnes, bekrefter ikke gyldige tilgangsopplysninger, nåværende Atlas-rettigheter eller kundedekning. Atlas er ikke kontaktet.",
+    "adminTitle": "Lagret administrativ konfigurasjon",
+    "workerNote": "Flaggene som vises her, kommer fra denne Web-instansen. Worker kan ha egen konfigurasjon. Tilgangsopplysninger for leverandører tilhører Worker. At de mangler i Web, betyr ikke at Worker mangler dem. Denne siden leser eller validerer dem ikke.",
+    "authMode": "Konfigurert innloggingsmåte",
+    "auth": {
+      "ENTRA": "Microsoft Entra",
+      "DEVELOPMENT": "Lokal utviklingsinnlogging"
+    },
+    "entraNote": "Innlogging via Microsoft 365 eller Entra bekrefter ikke teknisk tenant-overvåking eller at Microsoft Graph-integrasjonen er klar.",
+    "openIntegrations": "Åpne integrasjonsadministrasjon",
+    "enabled": "Aktivert lokalt",
+    "disabled": "Deaktivert lokalt",
+    "enabledFlag": "Lokalt aktiveringsflagg",
+    "writeFlag": "Lokalt skriveflagg",
+    "flagNote": "Dette er lokale konfigurasjonsflagg, ikke bekreftet tilkobling eller skrivetilgang hos leverandøren.",
+    "savedPause": "Lagret pausestatus",
+    "savedSuccess": "Lagret siste vellykkede synkronisering",
+    "storedUnavailable": "Lagret lokal tilstand kunne ikke leses. Tidligere tilstand eller erstatningstall på null vises ikke.",
+    "stored": {
+      "records": "Lagrede eksterne poster",
+      "unlinkedRecords": "Lagrede ukoblede poster",
+      "pendingOutbound": "Lagrede ventende utgående operasjoner",
+      "failedOutbound": "Lagrede mislykkede utgående operasjoner"
+    },
+    "graph": {
+      "enabled": "Lokalt Graph-aktiveringsflagg",
+      "calendarEnabled": "Kalenderflagg",
+      "mailEnabled": "E-postflagg",
+      "sharePointEnabled": "SharePoint-flagg",
+      "teamsEnabled": "Teams-flagg"
+    },
+    "graphNote": "Disse flaggene er uavhengige av innlogging. Lagrede Graph-tidspunkter kan være historiske og bekrefter ikke at integrasjonen er aktivert nå.",
+    "directorySavedAt": "Lagret vellykket katalogsynkronisering",
+    "rolesSavedAt": "Lagret vellykket rollesynkronisering",
+    "huntressUnknown": "Konfigurasjonen er ukjent her",
+    "huntressNote": "Huntress administreres i Atlas. Denne siden leser ikke Atlas-konfigurasjon og kontakter ikke Huntress.",
+    "mappingTitle": "Lagrede Atlas-koblinger",
+    "mappingNote": "Kontrollen gjelder bare det lagrede lokale CRM-registeret. Atlas-katalogen leses ikke, og kontrollen bekrefter ikke kildetilgang eller kundedekning.",
+    "mappingCoverage": "Lagrede koblinger undersøkt: {{examined}} av {{stored}} (grense {{limit}})",
+    "omittedLinks": "Lagrede koblinger som ikke er undersøkt",
+    "unlinkedReferences": "Lagrede referanser uten kobling",
+    "mappingStatus": {
+      "CHECKED": "Lokal kontroll fullført",
+      "INCOMPLETE": "Lokal kontroll ufullstendig",
+      "CHANGED": "Registeret ble endret under kontrollen",
+      "UNAVAILABLE": "Lokalt register utilgjengelig"
+    },
+    "review": {
+      "NO_LOCAL_ISSUES_FOUND": "Ingen problemer funnet i den fullstendige lokale registerkontrollen. Kildenes gyldighet er ikke kontrollert.",
+      "REQUIRED": "Lagrede koblinger må gjennomgås. Ikke undersøkte koblinger og ukoblede referanser er fortsatt synlige mangler.",
+      "UNKNOWN": "Koblingskontrollen er ukjent. Tidligere tall vises ikke."
+    },
+    "mappingCounts": {
+      "validLinks": "Gyldige lagrede koblinger",
+      "invalidIdentities": "Ugyldige lagrede identiteter",
+      "missingReferences": "Manglende lagrede referanser",
+      "goneReferences": "Utilgjengelige lagrede referanser",
+      "invalidReferences": "Ugyldige lagrede referanser",
+      "unavailableCustomers": "Utilgjengelige CRM-kunder"
+    },
+    "openMappings": "Gjennomgå lagrede Atlas-koblinger",
+    "error": {
+      "FORBIDDEN": "Dine nåværende rettigheter tillater ikke lesing av denne lokale oversikten. Tidligere opplysninger er fjernet.",
+      "REQUEST_FAILED": "Den lokale oversikten kunne ikke leses. Tidligere opplysninger vises ikke. Oppdater for å prøve igjen.",
+      "INVALID_RESPONSE": "Den lokale oversikten ga et ugyldig svar. Ingen ubekreftede opplysninger vises."
+    }
+  },
   "parasolAttention": {
     "title": "Atlas – kunder som krever oppmerksomhet",
     "refresh": "Oppdater oppmerksomhet",
@@ -3566,6 +3653,7 @@
     "limit": "Denne oppdateringen kontrollerer høyst 50 koblede kunder. Flere kunder er ikke inkludert.",
     "totals": "Aktive observasjoner hos kunder lest uten feil: {{active}} · Høy: {{high}} · Kritisk: {{critical}}",
     "previewNote": "Kundene vises hver for seg, med høyst tre observasjoner med HØY/KRITISK alvorlighet per kunde. Dette er en forhåndsvisning, ikke en fullstendig kø eller samlet rangering. Åpne en kunde for å lese hele køen.",
+    "otherCustomers": "Andre kunder uten hasteobservasjoner i denne lesingen ({{count}})",
     "empty": "Ingen koblede kunder ble valgt i denne lesingen. Dette bekrefter ikke kildenes tilstand eller dekning av alle selskapets kunder.",
     "customerCounts": "Høy: {{high}} · Kritisk: {{critical}}",
     "retrievedAt": "Kunden lest {{time}}",

@@ -123,7 +123,8 @@ export async function openTargetAssignment(page: Page) {
 export type Operation = 'revokeTechnicianMembership' | 'restoreTechnicianMembership' | 'revokeTechnicianToken' | 'restoreTechnicianToken' | 'countsTaskEvidence';
 export interface TaskEvidence {
   taskCount: number; receiptCount: number; createAuditCount: number; totalActivityLoggedCount: number;
-  bodyIsNull: boolean; genericSubject: boolean; sourceTextAbsentFromTask: boolean; sourceTextAbsentFromAudit: boolean; providerWrites: number;
+  bodyIsNull: boolean; genericSubject: boolean; sourceTextAbsentFromTask: boolean; sourceTextAbsentFromAudit: boolean;
+  providerWrites: number; atlasRequests: number;
   actualScale: { clients: number; devices: number; employees: number };
   privileges: { crmWebRestricted: boolean; crmWorkerRestricted: boolean; atlasRuntimeRestricted: boolean };
 }

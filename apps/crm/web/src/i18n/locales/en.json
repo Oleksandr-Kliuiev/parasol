@@ -4,6 +4,7 @@
     "skipToContent": "Skip to content"
   },
   "nav": {
+    "connections": "Connections",
     "myDay": "My day",
     "organizations": "Organizations",
     "admin": "Administration",
@@ -218,6 +219,8 @@
     },
     "myTasks": "My tasks",
     "myTasksEmpty": "Nothing assigned to you right now.",
+    "refreshMyTasks": "Refresh my tasks",
+    "myTasksReadFailed": "Your tasks could not be read. No previous tasks are shown. Refresh to try again.",
     "staleDeals": "Deals gone quiet",
     "licensingAttention": "Licenses needing attention",
     "cancellationWindow": "{{name}}: cancellation window closes {{date}}",
@@ -1606,6 +1609,10 @@
     "editNamed": "Edit {{subject}}",
     "empty": "Nothing logged yet.",
     "saved": "Activity saved",
+    "saveSourceAssignee": "This employee cannot be assigned to a technical task. Choose an active employee with technical access. Your draft has been kept.",
+    "saveConflict": "This activity changed or can no longer be edited as requested. Your draft has been kept. Close and reopen it to review the current record before saving again.",
+    "saveFailed": "Saving was not confirmed. Your draft has been kept.",
+    "invalidDue": "Enter a valid date and time.",
     "logged": "Activity logged",
     "completed": "Marked as done",
     "completedNamed": "{{subject}} marked as done",
@@ -3548,6 +3555,86 @@
       "REQUEST_FAILED": "The queue could not be read. No previous page is shown. Refresh to try again."
     }
   },
+  "readiness": {
+    "title": "Connection readiness",
+    "subtitle": "Local configuration and saved records only.",
+    "refresh": "Refresh local readiness",
+    "notChecked": "Connections and credentials have not been checked.",
+    "checkedAt": "Local metadata read at {{time}}",
+    "partial": "Some saved metadata could not be read or the bounded mapping review is incomplete. This is not a connection-health result.",
+    "personalTitle": "Personal Atlas configuration",
+    "personal": {
+      "DISABLED": "Atlas disabled locally",
+      "PERSONAL_ENTRY_PRESENT": "Personal entry present",
+      "PERSONAL_ENTRY_MISSING": "Personal entry missing"
+    },
+    "personalNote": "Configuration presence does not confirm credential validity, current Atlas permissions or customer coverage. Atlas was not contacted.",
+    "adminTitle": "Saved administrative configuration",
+    "workerNote": "Flags shown here come from this Web instance; the Worker may have separate configuration. Provider credentials belong to the Worker. Their absence in Web does not indicate missing Worker credentials; this page does not inspect or validate them.",
+    "authMode": "Configured sign-in mode",
+    "auth": {
+      "ENTRA": "Microsoft Entra",
+      "DEVELOPMENT": "Local development sign-in"
+    },
+    "entraNote": "Signing in through Microsoft 365 or Entra does not establish technical tenant monitoring or Microsoft Graph integration readiness.",
+    "openIntegrations": "Open integration administration",
+    "enabled": "Enabled locally",
+    "disabled": "Disabled locally",
+    "enabledFlag": "Local enabled flag",
+    "writeFlag": "Local write flag",
+    "flagNote": "These are local configuration flags, not verified connectivity or provider write permission.",
+    "savedPause": "Saved pause state",
+    "savedSuccess": "Saved last successful sync",
+    "storedUnavailable": "Saved local state could not be read. No previous state or zero-count substitute is shown.",
+    "stored": {
+      "records": "Stored external records",
+      "unlinkedRecords": "Stored unlinked records",
+      "pendingOutbound": "Saved pending outbound operations",
+      "failedOutbound": "Saved failed outbound operations"
+    },
+    "graph": {
+      "enabled": "Local Graph enabled flag",
+      "calendarEnabled": "Calendar flag",
+      "mailEnabled": "Mail flag",
+      "sharePointEnabled": "SharePoint flag",
+      "teamsEnabled": "Teams flag"
+    },
+    "graphNote": "These flags are separate from sign-in. Saved Graph timestamps may be historical and do not confirm that the integration is enabled now.",
+    "directorySavedAt": "Saved directory sync success",
+    "rolesSavedAt": "Saved role sync success",
+    "huntressUnknown": "Configuration unknown here",
+    "huntressNote": "Huntress is managed in Atlas. This page does not read Atlas configuration or contact Huntress.",
+    "mappingTitle": "Stored Atlas mappings",
+    "mappingNote": "This review examines the saved local CRM registry only. It does not read the Atlas directory or prove source access or customer coverage.",
+    "mappingCoverage": "Stored links examined: {{examined}} of {{stored}} (limit {{limit}})",
+    "omittedLinks": "Stored links not examined",
+    "unlinkedReferences": "Stored references without a link",
+    "mappingStatus": {
+      "CHECKED": "Local review completed",
+      "INCOMPLETE": "Local review incomplete",
+      "CHANGED": "Registry changed during review",
+      "UNAVAILABLE": "Local registry unavailable"
+    },
+    "review": {
+      "NO_LOCAL_ISSUES_FOUND": "No issues found in the complete local registry review. Source validity has not been checked.",
+      "REQUIRED": "Stored mappings need review. Unexamined links and unlinked references remain explicit gaps.",
+      "UNKNOWN": "Mapping review is unknown. No previous counts are shown."
+    },
+    "mappingCounts": {
+      "validLinks": "Valid stored links",
+      "invalidIdentities": "Invalid stored identities",
+      "missingReferences": "Missing stored references",
+      "goneReferences": "Unavailable stored references",
+      "invalidReferences": "Invalid stored references",
+      "unavailableCustomers": "Unavailable CRM customers"
+    },
+    "openMappings": "Review stored Atlas mappings",
+    "error": {
+      "FORBIDDEN": "Your current permissions do not allow reading this local readiness view. Previous details have been removed.",
+      "REQUEST_FAILED": "Local readiness could not be read. No previous details are shown. Refresh to try again.",
+      "INVALID_RESPONSE": "The local readiness response was invalid. No unverified details are shown."
+    }
+  },
   "parasolAttention": {
     "title": "Technical attention · Atlas",
     "refresh": "Refresh technical attention",
@@ -3566,6 +3653,7 @@
     "limit": "This refresh checks at most 50 matched customers. Additional customers are not included.",
     "totals": "Active observations in successfully read customers: {{active}} · High: {{high}} · Critical: {{critical}}",
     "previewNote": "Customers are grouped separately, with at most three HIGH/CRITICAL observations each. This is a preview, not a complete queue or a global ranking. Open a customer to read its full queue.",
+    "otherCustomers": "Other customers with no urgent observations in this read ({{count}})",
     "empty": "No matched customers were selected for this read. This does not establish source health or coverage of every company customer.",
     "customerCounts": "High: {{high}} · Critical: {{critical}}",
     "retrievedAt": "Customer read at {{time}}",

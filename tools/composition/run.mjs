@@ -29,10 +29,11 @@ export function failureLabel(error, interrupted = false) {
   return 'UNCLASSIFIED_STAGE_FAILURE';
 }
 export function acceptedReport({ build, browser, evidence, cleanup, diagnostic }) {
-  return !diagnostic && build?.builtInThisRun === true && browser?.expected === 7
+  return !diagnostic && build?.builtInThisRun === true && browser?.expected === 8
     && browser.unexpected === 0 && browser.skipped === 0 && browser.flaky === 0 && cleanup === true
     && evidence?.taskCount === 1 && evidence.receiptCount === 1 && evidence.createAuditCount === 1
     && evidence.totalActivityLoggedCount === 2 && evidence.providerWrites === 0
+    && Number.isSafeInteger(evidence.atlasRequests) && evidence.atlasRequests > 0
     && ['bodyIsNull', 'genericSubject', 'sourceTextAbsentFromTask', 'sourceTextAbsentFromAudit'].every(key => evidence[key] === true)
     && Object.keys(evidence.privileges ?? {}).length === 3
     && ['crmWebRestricted', 'crmWorkerRestricted', 'atlasRuntimeRestricted'].every(key => evidence.privileges?.[key] === true)

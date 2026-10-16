@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Crm.Customers.Contracts;
 using Crm.Integrations.Core.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -48,15 +47,6 @@ internal sealed class AtlasAttentionMappings(IntegrationDbContext db, ICustomers
     }
 
     private static bool Matches(string payload, string workspace, string client)
-    {
-        try
-        {
-            using var json = JsonDocument.Parse(payload, new() { MaxDepth = 4 });
-            var root = json.RootElement;
-            return root.ValueKind == JsonValueKind.Object && root.EnumerateObject().Count() == 2
-                && root.TryGetProperty("workspaceId", out var ws) && ws.ValueKind == JsonValueKind.String && ws.GetString() == workspace
-                && root.TryGetProperty("clientId", out var id) && id.ValueKind == JsonValueKind.String && id.GetString() == client;
-        }
-        catch (JsonException) { return false; }
-    }
+        => CustomerIdentityReferenceValidation.TryRead(payload, out var reference)
+            && reference!.WorkspaceId == workspace && reference.ClientId == client;
 }
