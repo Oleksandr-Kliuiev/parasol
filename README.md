@@ -20,6 +20,8 @@ M01–M03 объединяют исходники, историю Git, сбор�
 фильтры и защищённую пагинацию за пределами первой сотни наблюдений.
 [M12: назначенная работа](docs/migration/M12-OBSERVATION-WORK.md) связывает точное наблюдение
 с задачей CRM, исполнителем и сроком; повтор возвращает ту же задачу без дублирования.
+[M13: совместная проверка](docs/testing/COMPOSITION.md) запускает реальные CRM Web/Worker
+и Atlas с ограниченными БД и проверяет весь сценарий на 40 клиентах и 400 устройствах.
 Оставшиеся задачи до ежедневного использования описаны в [готовности продукта](docs/PRODUCT_READINESS.md).
 
 ## Структура
@@ -30,6 +32,7 @@ M01–M03 объединяют исходники, историю Git, сбор�
 | `apps/crm` | CRM: .NET, React/Vite, фоновые задания |
 | `deploy/hostinger` | Docker Compose, секреты в файлах, backup/restic, изолированное restore |
 | `scripts` | Общие команды сборки и проверки переноса |
+| `tools/composition` | Изолированный локальный запуск и проверка реальной связки CRM–Atlas |
 | `.github/workflows/ci.yml` | Единственный активный CI, без развёртывания |
 | `docs/migration` | Источники, способ импорта, известные ограничения |
 
@@ -66,6 +69,8 @@ DATABASE_URL=postgresql://test:test@127.0.0.1:5432/unused npm run check
 | `npm run test:atlas:ui` | Все браузерные тесты Atlas, включая 200 запросов; требуется Chromium и тестовый PG |
 | `npm run test:crm:integration` | Тесты CRM в локальных контейнерах после Release-сборки |
 | `npm run test:crm:e2e` | CRM + worker + локальная SQL test DB + макеты внешних API |
+| `npm run test:composition:unit` | Ограничения и достоверность локальной совместной проверки |
+| `npm run test:composition -- --directory /absolute/new/run` | Сборка, обе реальные БД, Web/Worker/Atlas и шесть совместных браузерных сценариев |
 
 Сборка Atlas появляется в `apps/atlas/dist`; SPA CRM — в `apps/crm/src/Hosts/Crm.Web/wwwroot`,
 .NET-сборки — в каталогах `bin/Release`. Для контейнеров и эксплуатации использовать
@@ -83,6 +88,9 @@ CRM сохраняет свои unit, architecture, SQL/storage integration, cov
 браузерные проверки и аудит зависимостей. Hostinger job дополнительно собирает образы,
 поднимает обе БД и проверяет настоящий restic backup/restore на синтетических данных.
 Рабочие базы и внешние интеграции не используются.
+Composition job дополнительно проверяет настоящую цепочку BFF → Atlas → PostgreSQL,
+роли трёх сотрудников и назначение/завершение задачи. Его локальный полный запуск прошёл;
+изменения CI пока не опубликованы и не выполнялись на GitHub.
 Инструкция запуска полного Atlas: [ATLAS.md](docs/testing/ATLAS.md).
 
 Текущие результаты и ограничения: [VERIFICATION.md](docs/migration/VERIFICATION.md).

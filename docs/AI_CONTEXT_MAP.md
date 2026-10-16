@@ -12,6 +12,7 @@
 - Devices and active observations / M10: `docs/migration/M10-CUSTOMER-TECHNICAL-DETAILS.md`; CRM `Parasol/Atlas{WorkspaceContracts,ProjectionJson,DeviceProjection,ObservationProjection,WorkspaceProjection}`, frontend `CustomerTechnicalDetails.tsx`, `workspaceContract.ts`, synthetic contract `contracts/customer-workspace`.
 - Full customer observation queue / M11: `docs/migration/M11-OBSERVATION-QUEUE.md`; CRM `Parasol/AtlasObservation{Queue*,Cursor}`, frontend `ObservationQueue.tsx`, `observationQueueContract.ts`, shared `technicalContract.ts` and `ObservationRows.tsx`.
 - Observation to assigned CRM work / M12: `docs/migration/M12-OBSERVATION-WORK.md`; CRM `Parasol/AtlasObservation{SourceReader,Task*}`, `CustomerIdentityGuard`, Activities `SourceTask*` and Customers read-only organization lease; frontend `ObservationTaskDialog.tsx`, `AtlasTaskSourceButton.tsx`.
+- Actual local CRM/Atlas composition / M13: `docs/testing/COMPOSITION.md`; `tools/composition`, `web/e2e-composition`; synthetic acceptance evidence in `docs/testing/evidence/composition-2026-10-16.json`.
 - Original Git identities and import commits: `docs/migration/sources.json`, `IMPORT.md`.
 - Strict Atlas tests and native fixture setup: `docs/testing/ATLAS.md`.
 - Historical import failures (no longer an exception mechanism): `docs/migration/BASELINE.md`, `atlas-baseline.json`.
