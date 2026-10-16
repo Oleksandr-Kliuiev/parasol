@@ -1,0 +1,11 @@
+rc3 mutation results (implementer, in place on scripts/reval-instrument/run.ts, restored and compared with cmp; tests/reval-instrument-run.test.ts):
+M8_N1_revert (credit-blocked COMMITTED → replyUnparseable again): fail 1
+M9a_post_consistent (no consistent check): fail 1
+M9b_post_admission (no admission check): fail 1
+M10_ready_cap (no READY_ACK cap): fail 1
+M11a_arm_fixture (no ARM_ACK fixtureId echo): fail 1
+M11b_arm_admission (no ARM_ACK admissionId echo): fail 1
+M12_persist_before_go (no persist before GO): fail 1
+M13_N3_revert (POST check on the run tuple): fail 1
+restored run.ts
+rc2 mutations M1–M7 (fault stop, coverage credit, record binding, END_PAIR, COMMIT drain, identity fold, publication match) were detected in rc2 (RSCB_RC2_EVIDENCE/mutations.txt).

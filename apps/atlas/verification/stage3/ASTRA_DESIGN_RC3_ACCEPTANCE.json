@@ -1,0 +1,12 @@
+{
+  "artifact": "S3-design-rc3",
+  "packageHash": "dc4c518527eaeb9aecad0d0186afa34dcdfc1bd3d3dec97f0e22467073f74887",
+  "reviewer": "gpt-6-astra",
+  "effort": "xhigh",
+  "freshAgent": "/root/astra_s3_design_rc3",
+  "verdict": "APPROVED",
+  "report": "docs/stage3/reviews/ASTRA_DESIGN_RC3.md",
+  "reportSha256": "205c75c115ccfa482eb10132610dc8264ba25fe0f2c8ed25bd5c69292a6d7783",
+  "scope": "architecture MOCK only; no code/LIVE acceptance",
+  "usage": "not exposed by native reviewer runtime"
+}

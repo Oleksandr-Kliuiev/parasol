@@ -1,0 +1,38 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-EXECUTION-rc4",
+  "packageHash": "04d676c1982ec2608e7e75fc39853ed2335e49c9e6645cc02b0274fb7ab5905e",
+  "tests": {
+    "pass": 105,
+    "fail": 0,
+    "skipped": 0,
+    "logHash": "1f1e2bae4504cc1024ee8d105549f545537d649ef490b5886332c5210cc83ba4"
+  },
+  "typecheckExit": 0,
+  "rehearsal": {
+    "pass": 51,
+    "total": 51,
+    "byteIdenticalStoredReceipt": true,
+    "sha256": "b34e6dcc9ed8f5e272e6689d41954056201f367a09cd9ffe9b5c48b5b979d0d4"
+  },
+  "baselineUnchanged": 1431,
+  "zipSha256": "1e3f91fbc3ff541b4b31c15add56da0a24ec5a4a49485e4da0f19c083a14d490",
+  "delta": {
+    "changed": [
+      "docs/stage5/ask/remote/execution/IMPLEMENTATION_REPORT.md",
+      "docs/stage5/ask/remote/execution/README.md",
+      "docs/stage5/ask/remote/execution/rehearsal/EXECUTION_REHEARSAL_RECEIPT.json",
+      "scripts/ask-remote-eval-execution/AGENTS.md",
+      "scripts/ask-remote-eval-execution/receipt.ts",
+      "scripts/ask-remote-eval-execution/rehearsal.ts",
+      "scripts/ask-remote-eval-execution/replay.ts",
+      "scripts/ask-remote-eval-execution/session.ts"
+    ],
+    "added": [
+      "docs/stage5/ask/remote/execution/ACCEPTANCE_STATUS.md",
+      "tests/ask-remote-eval-execution-liability.test.ts"
+    ],
+    "deleted": []
+  },
+  "paidProductCalls": 0,
+  "activation": false
+}

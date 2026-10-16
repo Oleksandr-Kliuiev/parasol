@@ -1,0 +1,10 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc6",
+  "packageHash": "66dcc033c71f5836e8904b289c0aeb493b5de96264098f884eded931e01b6fa7",
+  "hashMismatches": [],
+  "scope": "Docs/static identity only; no runtime tests/live eval",
+  "paidProductCalls": 0,
+  "dataBudget": "NOT_ADMITTED",
+  "independentAcceptedRCInventoryCheck": "Sol independently compared1555 entries; only2 declared administrative deltas",
+  "createdUtc": "2026-10-11T06:30:36.758488+00:00"
+}

@@ -1,0 +1,23 @@
+{
+  "checkpoint": "S4-A RC1",
+  "recordedAt": "2026-10-09T09:46:07.039140+00:00",
+  "writerReturned": "native process exited0, Codex sole writer; no code acceptance yet",
+  "firstFullPgRun": {
+    "log": "/tmp/atlas-stage4/s4a-work/test-pg-1.log",
+    "tests": 446,
+    "pass": 442,
+    "fail": 4,
+    "durationSeconds": 541.389,
+    "acceptedAsEvidence": false,
+    "orchestratorInterruption": "Codex SIGTERM only known stuck node worker PID32626, tests/pg/m365-privileges.pg.test.ts, after >6min; source ownership remained Claude",
+    "reason": "Other test workers exited; this worker still alive. Outdated expected 4 vs actual 6 roles and expected 8 vs actual 12 role uniqueness assertions found; assertion precedes second.drop(), so leak on failure is plausible, not independently established. Separate ORCHESTRATOR_PG_NOTE.md preserved.",
+    "repair": "Exact existing expectations updated; no relaxed assertions or rewritten accepted fixture bytes",
+    "finalRun": "195/195 unit/PGlite and446/446 PG17; all required steps exit0, test-pg60s."
+  },
+  "nativeReportQualification": "Verbatim implementer report retained. Its earlier-runtime difference marked unknown is qualified by the observed cancelled worker; the first run was not a passing check.",
+  "deferred": [
+    "B sync/source/publication/recovery",
+    "C public HTTP/CLI, maintain admission, paired runner and original10s wrapper",
+    "LIVE"
+  ]
+}

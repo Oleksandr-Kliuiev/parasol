@@ -1,0 +1,16 @@
+{
+  "checkpoint": "S3-A",
+  "writer": "native claude-opus-5-5/high",
+  "baselineManifestPrivate": "/tmp/atlas-stage3/s3a-baseline.json",
+  "baselineSha256": "10535916a4f9ba6b440ce384df10cf78464b67acf00ba7bee7b5c0a32765dd78",
+  "baselineFiles": 548,
+  "brief": "docs/stage3/S3A_IMPLEMENTATION_BRIEF.md",
+  "briefSha256": "f43a18f0684e9ecb58aabde24b2ac153c3b0998964d2f62ac6ee154dda740411",
+  "architecturePackage": "e2d574185b53f28b5fc25f039a1b8c3df2cc7111133077fca2b4318809364d3c",
+  "writerOwnership": "Claude on launch; Codex no checkout writes until finished/stopped",
+  "nativeAuth": "firstParty/claude.ai Max",
+  "extraUsageEnabled": false,
+  "actualCodeAcceptance": "PENDING",
+  "live": "DEFERRED_BY_OWNER",
+  "date": "2026-10-08T23:29:30.672332+00:00"
+}

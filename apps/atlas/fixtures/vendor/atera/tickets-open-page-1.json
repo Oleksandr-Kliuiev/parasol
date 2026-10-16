@@ -1,0 +1,8 @@
+{ "items": [
+    { "TicketID": 30001, "TicketTitle": "Disk capacity follow-up on GASTA-LT-07 (synthetic)", "TicketNumber": "30001", "TicketPriority": "High",
+      "TicketStatus": "Open", "TicketType": "Problem", "EndUserID": 801, "EndUserEmail": "kari@example.invalid", "EndUserFirstName": "Kari",
+      "EndUserLastName": "Synthetic", "EndUserPhone": "+47 000 00 000", "TicketCreatedDate": "2026-10-07T06:50:00", "CustomerID": 5001,
+      "CustomerName": "Gasta (synthetic)", "TechnicianFullName": "Demo Technician", "TechnicianEmail": "tech@example.invalid",
+      "LastEndUserComment": "Free-text comment (synthetic) — not copied by Atlas." } ],
+  "page": 1, "itemsInPage": 50, "totalPages": 2, "totalItemCount": 2, "prevLink": null,
+  "nextLink": "https://app.atera.com/api/v3/tickets?customerId=5001&ticketStatus=Open&page=2&itemsInPage=50" }

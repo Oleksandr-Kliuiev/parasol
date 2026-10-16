@@ -1,0 +1,17 @@
+{
+  "task": "/root/astra_s5askremote_ra_rc1",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "freshContext": true,
+  "launchTool": "collaboration.spawn_agent",
+  "launchArguments": {
+    "task_name": "astra_s5askremote_ra_rc1",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "fork_turns": "none"
+  },
+  "assignedUtc": "2026-10-10T23:04:02.627988+00:00",
+  "packageHash": "0ec08f53f3760327429986ee2ff6e6c571bb1802906280c41a3ce8cddd893c49",
+  "manifestSha256": "a891245d64dfcc9cad4db7e21547180455f0417eaebe5c0d8b59b8f4b301f677",
+  "qualification": "Explicit successful native assignment; raw provider response-model/fallback/billing telemetry unavailable"
+}

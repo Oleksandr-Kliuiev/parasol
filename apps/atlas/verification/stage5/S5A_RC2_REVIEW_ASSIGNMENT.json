@@ -1,0 +1,11 @@
+{
+  "reviewer": "/root/astra_s5a_rc1",
+  "runtime": "native collaboration.followup_task same initial independent reviewer",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh retained, no runtime change",
+  "packageHash": "b5819716edad5fc7b8b91b63ebcd239f7e07f5243b2c9c351ea93861c7d767ef",
+  "manifestSha256": "63a96f192a8c8fa21da79794a76ed9f17b4f4d49d8ec476417b11d9c0fc2b45f",
+  "startedUtc": "2026-10-10T13:16:51.559265+00:00",
+  "type": "bounded R1/R2 closure and nearby regression, approved contracts unchanged",
+  "identityQualification": "Explicit native initial assignment retained; underlying response-model and provider/billing telemetry not exposed. No CLI/API fallback."
+}

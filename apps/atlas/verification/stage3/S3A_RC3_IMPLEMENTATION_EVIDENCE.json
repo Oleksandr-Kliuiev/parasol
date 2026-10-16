@@ -1,0 +1,218 @@
+{
+ "checkpoint": "S3-A",
+ "revision": "RC3 (bounded repair of RC2 review F1-R1)",
+ "status": "REPAIRED_PENDING_FRESH_INDEPENDENT_REVIEW",
+ "implementerReportIsNotAcceptance": true,
+ "priorReview": {
+  "report": "docs/stage3/reviews/ASTRA_S3A_RC2.md",
+  "reportSha256": "953381ed7e10764c0d6e470b71267bd3ff8e27e9c48ea9095d7350d5f77d21a1",
+  "verdict": "REQUIRED_CHANGES (sole finding F1-R1; F1 original cases, F2, F3, F4 closed)",
+  "rc2Package": "b719dacaf6e39fc42849c32ff10ead5854ac1cf4668216fd8a474c5ac9ae17c3"
+ },
+ "date": "2026-10-09T00:55:25+00:00",
+ "writer": {
+  "model": "claude-opus-5-5",
+  "effortRequested": "high",
+  "session": "21ca7ffa-f253-4a2f-a0b6-cfa3d67bb4ff (same cohesive S3-A session, from harness task path)",
+  "provider": "native Claude Code subscription session as launched by Codex; no API key, usage credits or fallback used",
+  "effortVerification": "requested effort not independently observable by the agent",
+  "subagents": 0,
+  "parallelWriters": 0,
+  "commits": 0,
+  "branchChanges": 0
+ },
+ "baselines": {
+  "originalS3A": {
+   "sha256": "10535916a4f9ba6b440ce384df10cf78464b67acf00ba7bee7b5c0a32765dd78",
+   "files": 548
+  },
+  "rc1Repair": {
+   "sha256": "2260c80c98d0c3305d1201e11cdec47855eb840b277e4ffb50a9243f7d2e7564",
+   "files": 577
+  },
+  "rc2Repair": {
+   "manifestPrivate": "/tmp/atlas-stage3/s3a-rc2-repair-baseline.json",
+   "sha256": "c63bf1dbe0d22d0481aaf0c876c1b9f0cf0adf839b87b700f026bbfdc3db9491",
+   "files": 583,
+   "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+   "branch": "planning/stage2-m365",
+   "verifiedAtStart": "583/583 identical, nothing added or removed"
+  }
+ },
+ "current": {
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "files": 583,
+  "manifestSha256": "6720ff92fa2fdbc55a516086cabe5910b939547b241fc8b506dcd34c619d7c3c",
+  "manifestRule": "sha256 of compact JSON [{path,sha256}] sorted by path over git ls-files -co --exclude-standard, excluding this evidence file",
+  "deltaFromRc2RepairBaseline": {
+   "added": {},
+   "removed": [],
+   "changed": {
+    "docs/stage3/IMPLEMENTATION_STATUS.md": {
+     "before": "3ef6651b39cd6b5b8a94083595135f093c39070f1075e04f1050efd60306ad16",
+     "after": "bfb5e572e11f9ddedf4b43fa9d890908f28a8d8ebc95474754f13efae789e562"
+    },
+    "packages/graph/fence-role.ts": {
+     "before": "7dd2a92e456ec2536148df709f84d752da4221bb389cf445079cf82c5e13cf85",
+     "after": "57d04dce71d7c745452e8e161f1fbbe34ecf32742fc6d587ebc1dc32c7e66285"
+    },
+    "prisma/roles.sql": {
+     "before": "8949a28dd80a50247551f97de0902055f74abf3515b723dd587c04eb28a3497b",
+     "after": "40ce17f17a33fd8824a031ad287bc68ee22976c6351febd41b1acaa1d221de8a"
+    },
+    "tests/context-mapper.test.ts": {
+     "before": "f9366a915f949a67e0389f40cefa5d5e1d6d410d5db1d418a20b9c3c9bd65382",
+     "after": "9a90669ab01db6d5912bab73230fef6692c5efaf620f05d09bfcb63dc324f36a"
+    },
+    "tests/pg/action-fence.pg.test.ts": {
+     "before": "7703fa5b09d251d046fc73521fdc41c3e2759cc7face6a79d6d9d426ae8a944c",
+     "after": "73499b7d0d4017df50d25c910c8722cdd7c3a27560cfca7638fcb3af0e9108c0"
+    }
+   }
+  }
+ },
+ "preservation": {
+  "stage2Normative11": {
+   "manifest": "docs/stage2/REVIEW_MANIFEST.json",
+   "entries": 11,
+   "mismatches": []
+  },
+  "stage3Frozen8": {
+   "manifest": "verification/stage3/S3_DESIGN_RC4_MANIFEST.json",
+   "entries": 8,
+   "mismatches": []
+  },
+  "prior19MigrationArtifacts": {
+   "entries": 19,
+   "changed": []
+  },
+  "historicalArtifactsUnchanged": {
+   "REVIEW_REPORT.md": true,
+   "verification/stage3/S3A_IMPLEMENTATION_EVIDENCE.json": true,
+   "verification/stage3/S3A_RC2_IMPLEMENTATION_EVIDENCE.json": true,
+   "verification/stage3/S3A_RC1_MANIFEST.json": true,
+   "verification/stage3/S3A_RC2_MANIFEST.json": true,
+   "docs/stage3/reviews/ASTRA_S3A_RC1.md": true,
+   "docs/stage3/reviews/ASTRA_S3A_RC2.md": true,
+   "verification/stage3/S3A_HANDOFF.json": true
+  },
+  "method": "exact manifest entries recomputed; exact baseline entries compared (no directory-prefix shortcuts)"
+ },
+ "fix": {
+  "id": "F1-R1",
+  "change": "packages/graph/fence-role.ts and prisma/roles.sql: each of the 32 shared-helper allowances is now the approved schema-qualified identity public.name(identity arguments); the inventory computes quote_ident(nspname).quote_ident(proname)(pg_get_function_identity_arguments) for every routine in every non-system schema, so a same-name/same-arguments routine in another schema no longer matches. SECURITY DEFINER rejection, explicit-grant rejection/removal, the unchanged 32-routine scope, cleanup/auth surfaces and the scanned schema set are unchanged.",
+  "tests": [
+   "tests/pg/action-fence.pg.test.ts F1-R1: test_alias.atlas_app_workspace() (invoker, PUBLIC EXECUTE, schema USAGE to PUBLIC) is executable by the definer (returns 17 under SET LOCAL ROLE) -> routine fact > 0, startup RUNTIME_ROLE_NOT_CONFINED, fenced admission ACTION_FENCE_NOT_READY, roles.sql refuses; without PUBLIC readiness passes; an explicit grant on the alias refuses then is removed by roles.sql; after DROP SCHEMA the public helpers remain executable and readiness/provisioning pass",
+   "tests/context-mapper.test.ts: both list copies identical; every allowance names schema public; no Stage 3 or cleanup routine",
+   "mutation probe: with schema dropped from the identity (public. prefix forced) the F1-R1 test fails at the readiness fact; fix restored byte-identically",
+   "earlier F1/F2/F3/F4 tests retained unchanged in behaviour (F1 helpers hoisted to file level for reuse)"
+  ]
+ },
+ "checks": {
+  "results": [
+   {
+    "id": "npm-test",
+    "exit": 0,
+    "seconds": 8,
+    "counts": {
+     "tests": 177,
+     "pass": 177,
+     "fail": 0,
+     "cancelled": 0,
+     "skipped": 0
+    },
+    "command": "npm test"
+   },
+   {
+    "id": "schema-validate",
+    "exit": 0,
+    "seconds": 0,
+    "command": "npm run schema:validate"
+   },
+   {
+    "id": "db-generate",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run db:generate"
+   },
+   {
+    "id": "typecheck",
+    "exit": 0,
+    "seconds": 4,
+    "command": "npm run typecheck"
+   },
+   {
+    "id": "api-build",
+    "exit": 0,
+    "seconds": 2,
+    "command": "npm run api:build"
+   },
+   {
+    "id": "api-smoke",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run api:smoke"
+   },
+   {
+    "id": "test-pg",
+    "exit": 0,
+    "seconds": 48,
+    "counts": {
+     "tests": 341,
+     "pass": 341,
+     "fail": 0,
+     "cancelled": 0,
+     "skipped": 0
+    },
+    "command": "npm run test:pg (disposable PG17)"
+   },
+   {
+    "id": "db-check-pg17",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run db:check:pg17 (throwaway DB)"
+   },
+   {
+    "id": "db-check-drift",
+    "exit": 0,
+    "seconds": 1,
+    "command": "npm run db:check:drift (throwaway shadow DB)"
+   },
+   {
+    "id": "git-diff-check",
+    "exit": 0,
+    "seconds": 0,
+    "command": "git diff --check"
+   }
+  ],
+  "logs": {
+   "rc1": "/tmp/atlas-stage3/claude-tools/checks",
+   "rc2Run1": "/tmp/atlas-stage3/claude-tools/checks-rc2-run1",
+   "rc2": "/tmp/atlas-stage3/claude-tools/checks-rc2",
+   "rc3": "/tmp/atlas-stage3/claude-tools/checks-rc3"
+  },
+  "focused": {
+   "action-fence.pg": "7/7",
+   "context-mapper": "4/4"
+  },
+  "whitespaceChangedAndUntracked": "clean",
+  "leftoverDisposableDbsOrRoles": 0
+ },
+ "environment": {
+  "postgres": "local PG17; only disposable databases/roles via the existing harness",
+  "adminUrl": "read from local .env by a wrapper, never printed",
+  "businessProviders": "none",
+  "pilotConfig": "not read",
+  "persistentDb": "none"
+ },
+ "residualRisks": [
+  "The allowance list is strict and schema-exact: a future migration adding a definer-reachable routine (or moving a helper out of public) refuses startup until it is PUBLIC-revoked or the reviewed list is extended in both copies (unit test keeps them identical).",
+  "The generic pg_ schema-name exclusion is unchanged (the RC2 review established no supported bypass through it).",
+  "Arbitrary superuser function-body replacement / owner DDL bypass remains outside supported operation.",
+  "Implicit FK key-share locks may surface as ACTION_DB_CONFLICT; per-admission catalog checks carry a cost.",
+  "S3-B/C duties (requester-expiry cap, claim/attempt atomicity, publication/recovery concurrency) remain untested until those services exist."
+ ],
+ "notImplemented": "S3-B and S3-C services; any vendor adapter or live call.",
+ "writerHandoff": "Claude finished the bounded RC3 repair and stopped; sole checkout write ownership returns to Codex for RC3 freeze and fresh Astra/xhigh review."
+}

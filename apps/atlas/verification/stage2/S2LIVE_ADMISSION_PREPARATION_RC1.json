@@ -1,0 +1,36 @@
+{
+  "preparedBy": "Codex",
+  "date": "2026-10-08T21:44:56.042840+00:00",
+  "kind": "operational draft templates, not implementation or admission",
+  "acceptedRecorderHash": "a02667ee81ef7f3ad809a7952d562a688d9caee408484a905c4e3b28212203e3",
+  "acceptedEvidenceVerified": 9,
+  "acceptedPayloadVerified": 324,
+  "normativeFilesVerified": 11,
+  "templatesContainSecrets": false,
+  "templatesHaveRealScopeIds": false,
+  "templateNames": [
+    "admission.example.json",
+    "m365-status.example.json",
+    "README.txt"
+  ],
+  "directoryMode": "0700",
+  "fileMode": "0600",
+  "statusAdminEdit": {
+    "path": "docs/stage2/IMPLEMENTATION_STATUS.md",
+    "beforeSha256": "14d79f168a5884bb13303f1e1137991a55e9e85d584b884f2dbd3e545458b1a1",
+    "afterSha256": "0c7a1e3bb88ba9ef9423fce9b99c73e0bf46883a646ab7bd73fdf1c6834777d8"
+  },
+  "actualExecution": {
+    "databaseConnection": false,
+    "databaseWrites": false,
+    "GraphCalls": 0,
+    "VendorCalls": 0,
+    "ProviderCalls": 0
+  },
+  "pending": [
+    "owner target DB choice",
+    "private test client/tenant and reference names",
+    "consent/license and genuine vendor readiness",
+    "target-specific authorization for setup/bind/LIVE when concrete"
+  ]
+}

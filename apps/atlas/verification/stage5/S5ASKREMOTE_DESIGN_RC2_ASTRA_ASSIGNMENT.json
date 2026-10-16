@@ -1,0 +1,19 @@
+{
+  "task": "/root/astra_s5askremote_design_rc2",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "freshContext": true,
+  "launchTool": "collaboration.spawn_agent",
+  "launchArguments": {
+    "task_name": "astra_s5askremote_design_rc2",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "fork_turns": "none"
+  },
+  "launchOutcomeTask": "/root/astra_s5askremote_design_rc2",
+  "packageHash": "9c92327f6a3d693031c30cc907091f6dd61f4e0747491e10f00a784f877719d3",
+  "dispatchedBy": "Codex coordinator",
+  "rawProviderTelemetry": "unavailable",
+  "recordedLaunchUtc": "2026-10-10T21:44:40.317591+00:00",
+  "qualification": "Timestamp from coordinator external dispatch state; native tool launch is authoritative selection evidence"
+}

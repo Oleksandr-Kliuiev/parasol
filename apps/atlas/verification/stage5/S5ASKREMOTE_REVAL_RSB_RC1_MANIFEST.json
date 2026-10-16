@@ -1,0 +1,207 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSB-rc1",
+ "baselineFile": "verification/stage5/S5ASKREMOTE_REVAL_RSB_BASELINE.sha256",
+ "baselineFileSha256": "e5227b4f5ab37102077be34cd0481ce21bf1294bde91a27473fdb19a7248de4c",
+ "baselineHead": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+ "packageHashRule": "sha256 of sorted \"path\\tsha256\\n\" lines over changed+added files (receipts named S5ASKREMOTE_REVAL_RSB_RC1_* excluded)",
+ "packageHash": "5e92775279dea3248f04d939f1062cd686e7d0739e6bcad79520d522421d99c2",
+ "changed": [
+  {
+   "path": "docs/RUNBOOK.md",
+   "baseline": "f36152edc745115aacae8f2e7f50995b1e88b6bbc5d874232ba76d989832e02a",
+   "sha256": "7c6fa80c22faf05894fc1e87ea8b1bdcc93ea75e14b8f8c2c3ba87582a628c45"
+  },
+  {
+   "path": "packages/graph/reval-role.ts",
+   "baseline": "7daf4d202867e9b7e0dc4f4496cccee4131482715c91267afd64cf08602105dd",
+   "sha256": "fce2fe9ae5d8b9a8011a733663c16e4669ed47369407bfd18e576ed8bbd022ca"
+  },
+  {
+   "path": "packages/reval/AGENTS.md",
+   "baseline": "ae3619d426949bea1a3dd34faf41c1d15535f409e00f3ffbb0c067fd6fbf1648",
+   "sha256": "b5d00920e0dc9731d2c157c567ebd1e2d1a6b1820e90f66ff36d0f0258cbf555"
+  },
+  {
+   "path": "packages/reval/codes.ts",
+   "baseline": "eef4482054262e9ebd695ebfc7b24bba4774f0aefcf216d1cf89d2bd854a534c",
+   "sha256": "22c2ba2698bbcd755c6b09bd0c6978c684f0557e72b0b663f452022430b0d7bd"
+  },
+  {
+   "path": "packages/reval/controller.ts",
+   "baseline": "9980b700bdb1c9ddc54e37ec2ffea7b44deb16f247512760218d200e6fa72d81",
+   "sha256": "52b4d5a8f8ac0b833e163e82e4c6ab0a066368e981c4b8a02b3634e48d3cf51a"
+  },
+  {
+   "path": "packages/reval/deps.ts",
+   "baseline": "eb7ebf87cd91c4f5fad328b281e90929f65a53fad21ab4ca2bfd062fd4922f19",
+   "sha256": "03c32492ca0571e799e38e42bd5e47fc68b9e34dd3c023717f857a090041304e"
+  },
+  {
+   "path": "packages/reval/launch.ts",
+   "baseline": "cddac72ca0b18dc78f3497d7d06b9caec21ecfeca970aed030b2ba1f12b9e16a",
+   "sha256": "ceef2e9933b556a3d509c0550fe50dfa287391da3357f6948711f478a007df9c"
+  },
+  {
+   "path": "packages/reval/owner-cli.ts",
+   "baseline": "4f23ebf40c0179890b8c514344744dc576967b7ede86c61bcb8ab2a344996769",
+   "sha256": "22e02f323e14e663b9cae73468543c945747da7b5f8440a1512521b884a59a5c"
+  },
+  {
+   "path": "packages/reval/payloads.ts",
+   "baseline": "d8af5f89662891f9cd63998b54031b89f08ed787f27663b543e9cbf599ca065c",
+   "sha256": "d05dc5d1d7ab61a16d0537f4c7089b2b7ac9036b045d7c4cbc7d72e932c9d2d9"
+  },
+  {
+   "path": "packages/reval/private-frames.ts",
+   "baseline": "4cf0daa2a63b25e57fb97e132a6ccd075e685fee6fef4732f1d464430a3e498a",
+   "sha256": "66fd9f868832614a5bdba5c1743d47aa856ae0abc5b5dd1407ec1172502d81ac"
+  },
+  {
+   "path": "prisma/roles/reval.sql",
+   "baseline": "a656199369a577619e90312eb68cbb86e4fa99e22da732b912c75d5e5de075f6",
+   "sha256": "da2eb151c45b9327a1aea727ef65a0a5f6b3834a17a66227b05c56418bf0c59b"
+  },
+  {
+   "path": "scripts/reval-server/AGENTS.md",
+   "baseline": "d89f85aab75de2ff181b4e75fdf2eba180082e806f4ff993a7707273ec1a446a",
+   "sha256": "e14b1aa2d6017b951071ab418d3294b6788d9768a7bd4b682bc35b8a52846f89"
+  },
+  {
+   "path": "tests/pg/reval-launch.pg.test.ts",
+   "baseline": "7a20dcc813203af66a4f9e08aac03b1f7625cda9f055aa1f7fdd7ea7abe826c2",
+   "sha256": "929749bc07adf3b4c70a094743020684c182790bea73b40f79968db9c81b816b"
+  },
+  {
+   "path": "tests/pg/reval-roles.pg.test.ts",
+   "baseline": "26113b5d4f60ed119d74d6c75135eeff6ca1841bc327bba75afbba71a575fbc3",
+   "sha256": "879dfab7a0180e28f1be3225fb69766c6f49ecebf8411afeddcc8755ee5a5e3d"
+  },
+  {
+   "path": "tests/reval-protocol.test.ts",
+   "baseline": "3d286e6dd6b6c01b4b2a318d5b5d793d682aaf8747b3b09886463453e022958b",
+   "sha256": "770c3a2c8be3b9831a60c8018384f3d03ac0d223304818fdd3fb26ea707f8470"
+  },
+  {
+   "path": "tests/support/reval-test-controller-entry.ts",
+   "baseline": "2bd4211ee348dc2cb82f9343971454f9fe07755f99cd6d77de4d75826000db2d",
+   "sha256": "4f67d61f7ef634bd5da705b5f6389d4b53eae5d455730e5e84ba5aa07439a5a1"
+  },
+  {
+   "path": "tests/support/reval-test-deps.ts",
+   "baseline": "4b281281a7e25c3f3ee27cc8c27098ae4ba37dd009e7b1ad484445a2979a04e6",
+   "sha256": "84094566895993bed5a74ac099bfecad9c5044791f81f609986294ea147d0165"
+  }
+ ],
+ "added": [
+  {
+   "path": "docs/stage5/ask/remote/reval-server/rs-b/IMPLEMENTATION_BRIEF.md",
+   "sha256": "c4885a6b681470d3960a037bb8fbd4d1216632dd1af209f512b8927678062426"
+  },
+  {
+   "path": "docs/stage5/ask/remote/reval-server/rs-b/IMPLEMENTATION_REPORT.md",
+   "sha256": "f8077aeaefe5620f48b53d8e7cc3db6ee1cfb538c5c43af255c90f875dd3d02e"
+  },
+  {
+   "path": "packages/reval/dataset.ts",
+   "sha256": "bb894e6e927cca2d348e164d75d72803cc8a82c14fa27cca7697883efb88d19e"
+  },
+  {
+   "path": "packages/reval/fixture-check.ts",
+   "sha256": "5502a012d1771fc66ada54f4f80823d6b55cabfa86f1e89b7a3c5c9282117e88"
+  },
+  {
+   "path": "packages/reval/fixture-verify.ts",
+   "sha256": "8552092f9414303acca279d6406cd946a277404d3918bc00b48e82acc6b4edfd"
+  },
+  {
+   "path": "packages/reval/inventory.ts",
+   "sha256": "6e43507933ab5bbc9fae9579ef87bc950c641b625a8718437f91c9a35cd4c259"
+  },
+  {
+   "path": "packages/reval/maintain-cli.ts",
+   "sha256": "b2b3e1b5ba6969d491bd3bcfa5e5e59119d338ef7509f98c7161e3882b53b87c"
+  },
+  {
+   "path": "packages/reval/maintain-deps.ts",
+   "sha256": "3c703c9842827356fc364051c49eaa0b17ae3106535e572b357db4c711004798"
+  },
+  {
+   "path": "packages/reval/materialize.ts",
+   "sha256": "58ec1c5c259e4ab0a3d0368daf8ff06e0ac692f9447e48d88e0e0733e5871c67"
+  },
+  {
+   "path": "packages/reval/pg-tx.ts",
+   "sha256": "40e5e9df583332958de984a88e7d1bdb4e1ebc884261c103a6f4e686fe3b5633"
+  },
+  {
+   "path": "packages/reval/register.ts",
+   "sha256": "14ac478fac8eda4bf447b014efa29ff3d1a52190cdb362aa3791c0c1bdbbba73"
+  },
+  {
+   "path": "packages/reval/seed-mapping.json",
+   "sha256": "00276e6338b744813af6ff8981b456653baab6a85c642ffbc6a12f93f0fef47a"
+  },
+  {
+   "path": "packages/reval/seed-plan.ts",
+   "sha256": "62efdb4f50bef860b98ddb0d87f4160ac27fb5345b90f3ea8440615f8e14be2b"
+  },
+  {
+   "path": "packages/reval/source-clock.ts",
+   "sha256": "2db3ab6bc6223edd818bf5492c72481fbfa2b77f1e5cc6178ced0a333111b6d5"
+  },
+  {
+   "path": "packages/reval/verifier-exec.ts",
+   "sha256": "6d46979f79789c3097d5cec12e46687545175d8b5fd7f0b4a1915f960ad8861d"
+  },
+  {
+   "path": "scripts/reval-server/fixture-verifier.ts",
+   "sha256": "bce3c685c854555718d500feb924c5e7b2719e9e05f9974831bef5095f473cd7"
+  },
+  {
+   "path": "scripts/reval-server/maintain.ts",
+   "sha256": "379e5ff73e437a6bc47258389f21bcee244d95c45c18aa3524e93c8c9a51850e"
+  },
+  {
+   "path": "tests/pg/reval-fixture-check.pg.test.ts",
+   "sha256": "275e394c9beb5d29b33251670f62b4e7ee6f976e4fa3a5b1eccbc57179ab3521"
+  },
+  {
+   "path": "tests/pg/reval-fixtures.pg.test.ts",
+   "sha256": "209c24f226477cd41a3da8430dab1aef8d01823edf85a164be22a002a0d9c532"
+  },
+  {
+   "path": "tests/pg/reval-maintain-cli.pg.test.ts",
+   "sha256": "cbe311f26b312f1bd9ab78162c163ce87239b790c4e872e76a5d729576507db2"
+  },
+  {
+   "path": "tests/pg/reval-materialize.pg.test.ts",
+   "sha256": "cd10ebbfa9591ac95d66f808d0aab2dd2b4ed7f3b5cf8e0dd35b0caf9c449228"
+  },
+  {
+   "path": "tests/pg/reval-native-rsb.pg.test.ts",
+   "sha256": "7bcb6a3a64f392b96e1721457948f0bec53bfb5d66f42ed8c9dfb11ee3066665"
+  },
+  {
+   "path": "tests/reval-seed.test.ts",
+   "sha256": "3933f46f377554327c897771580519ae7e0a4e15ec140770bcf16a8bb64f03d0"
+  },
+  {
+   "path": "tests/support/reval-fixture-pg.ts",
+   "sha256": "ccce4ade2d9c1526fdbc278b4178426adb8034121edc4fe92c37ecce2c842abb"
+  },
+  {
+   "path": "tests/support/reval-test-verifier-entry.ts",
+   "sha256": "deb4da382b08b46f8436fe5436305dc8ea545758118e66fda716b1d9b9be9add"
+  },
+  {
+   "path": "verification/stage5/S5ASKREMOTE_REVAL_RSB_BASELINE.sha256",
+   "sha256": "e5227b4f5ab37102077be34cd0481ce21bf1294bde91a27473fdb19a7248de4c"
+  }
+ ],
+ "removed": [],
+ "counts": {
+  "changed": 17,
+  "added": 26,
+  "removed": 0
+ }
+}

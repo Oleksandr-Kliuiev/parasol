@@ -1,0 +1,16 @@
+{
+  "checkedUtc": "2026-10-10T18:56:12.012868+00:00",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "requestedModel": "claude-opus-5-5",
+  "effort": "high",
+  "resumeSession": "60e70e73-4279-474b-a915-b95e4abfb6d9",
+  "billing": "Native included subscription only; no API/credits/fallback; actual stream required",
+  "attributableSubscriptionQuota": "unknown"
+}

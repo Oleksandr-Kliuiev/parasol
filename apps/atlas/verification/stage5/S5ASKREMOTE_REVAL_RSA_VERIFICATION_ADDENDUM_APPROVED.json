@@ -1,0 +1,33 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-RSA-VERIFICATION-ADDENDUM-v2",
+  "status": "DUAL_APPROVED_VERIFICATION_ADDENDUM",
+  "path": "docs/stage5/ask/remote/reval-server/rs-a/VERIFICATION_ADDENDUM.md",
+  "sha256": "59c2fd7f82020d62cbbdd070494b62fcb5cdae719e0568c98ab8d34492dc99dc",
+  "parentBriefHash": "e8f87336b1cf7e0ba7b18702378f3a6efb877b20e5d9aa4e9a96ee175bf85040",
+  "scope": "Verification only; no runtime architecture change; no RC5 source/guard/hash changes",
+  "reviews": [
+    {
+      "role": "SOL",
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh",
+      "verdict": "APPROVE_VERIFICATION_ADDENDUM",
+      "requiredFindings": 0,
+      "report": "docs/stage5/reviews/SOL_S5ASKREMOTE_REVAL_RSA_VERIFICATION_ADDENDUM_V2.md",
+      "sha256": "484a443038a090bf5582998bb80fa67a8cf4fdfdd32fa42c419126eb2492be8e",
+      "effectiveModelEvidence": "UNAVAILABLE backend telemetry; explicit native launch"
+    },
+    {
+      "role": "OPUS",
+      "model": "claude-opus-5-5",
+      "effort": "xhigh",
+      "verdict": "APPROVE_VERIFICATION_ADDENDUM",
+      "requiredFindings": 0,
+      "report": "docs/stage5/reviews/OPUS_S5ASKREMOTE_REVAL_RSA_VERIFICATION_ADDENDUM_V2.md",
+      "sha256": "6d849c00ffbf50b6b1966a7ed73fe2da5afa6100f773168284fcff3897009eee",
+      "effectiveModelEvidence": "actual assistant-message metadata"
+    }
+  ],
+  "paidProductCalls": 0,
+  "activation": false,
+  "approvedUtc": "2026-10-11T13:04:06.683531+00:00"
+}

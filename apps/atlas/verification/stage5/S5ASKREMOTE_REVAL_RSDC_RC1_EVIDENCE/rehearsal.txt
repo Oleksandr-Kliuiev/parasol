@@ -1,0 +1,10 @@
+# REVAL_EVIDENCE RS-D-C integrated rehearsal: 200 cases, 11 segments, 10 boundaries (S/C up, switch to generation 11), 1 mid-segment re-pair(s), ONE guard epoch, every census MATCH, 12 proofs, run state COMPLETE_PENDING_REVIEW, 2693 s; PROOFS platform=rsd-seatbelt-s-v2 process=COMPLETE destinations=UNKNOWN verifiedZero=false privacy=UNKNOWN unreadable=16 matches=0 verifiedZero=false
+✔ integrated offline rehearsal: all 200 frozen cases, 11 segments, 10 boundaries with S/C up — census MATCH, QUIESCENT drains, proofs, receipt v6 (2693112.2815ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2695629.591709

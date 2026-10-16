@@ -1,0 +1,15 @@
+{
+  "checkpoint": "S4-C",
+  "artifact": "S4C-rc2",
+  "requestedModel": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "nativeAgent": "/root/astra_s4c_rc2",
+  "freshSession": true,
+  "forkTurns": "none",
+  "spawnReturnedCanonicalTask": "/root/astra_s4c_rc2",
+  "recordedAt": "2026-10-10T10:26:29.635201+00:00",
+  "manifestSha256": "9f73345345adf45fd7a5ab0a11053178cf81a68bb9900d62b57705a1d033cd64",
+  "packageHash": "21f0872e28409a5e29674b41d6f41da6b76ea4783a8d3a4cfee37381b9cf3cd1",
+  "effortReason": "Fresh xhigh because repair changes critical deadline/transaction cancellation/atomicity invariants",
+  "evidenceQualification": "Observed explicit native spawn/runtime assignment, original call in chat; independent provider response-model telemetry unavailable; self-identification not proof"
+}

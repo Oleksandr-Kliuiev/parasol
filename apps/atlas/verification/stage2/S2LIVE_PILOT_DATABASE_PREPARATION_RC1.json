@@ -1,0 +1,33 @@
+{
+  "kind": "designated disposable pilot database preparation, not LIVE",
+  "date": "2026-10-08T21:52:52.256723+00:00",
+  "ownerInput": "separate disposable DB selected and tenant domain supplied; raw identifiers remain private",
+  "target": "pilot-database-1",
+  "serverMajor": 17,
+  "migrationCount": 18,
+  "migrationsAllFinished": true,
+  "runtimeAdmission": "PASS",
+  "verifiedEmptyApplicationTables": 12,
+  "seedExecuted": false,
+  "operatorProvisioned": false,
+  "connectionBound": false,
+  "applicationRowsCreated": 0,
+  "GraphCalls": 0,
+  "VendorCalls": 0,
+  "ProviderCalls": 0,
+  "publicOidcDiscovery": {
+    "requests": 1,
+    "httpStatus": 200,
+    "tenantIdResolved": true,
+    "source": "Microsoft public tenant-specific OIDC metadata",
+    "GraphCapabilityEvidence": false
+  },
+  "baselinePackageHash": "a02667ee81ef7f3ad809a7952d562a688d9caee408484a905c4e3b28212203e3",
+  "pending": [
+    "explicit owner instruction for proposed target-specific setup exception",
+    "private M365 application reference",
+    "shared cursor reference",
+    "consent/license readiness",
+    "genuine vendor readiness; L3 existing genuine provenance"
+  ]
+}

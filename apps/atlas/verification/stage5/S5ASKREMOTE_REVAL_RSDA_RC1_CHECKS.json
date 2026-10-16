@@ -1,0 +1,96 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSD-A-rc1",
+ "window": [
+  "2026-10-12T22:48:32Z",
+  "2026-10-12T23:18:15Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run ui:typecheck",
+   "result": "pass",
+   "log": "ui-typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build (both consoles)",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/cli.ts artifact-check",
+   "result": "pass: ok true, drift [], candidate RS-D-A accepted:false",
+   "log": "artifact-check.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts",
+   "result": "602 tests: 593 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (same names as the accepted RS-C-C rc2 run)",
+   "log": "unit.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg",
+   "result": "778 tests: 778 pass",
+   "qualification": "includes tests/pg/reval-census.pg.test.ts, tests/pg/reval-segments.pg.test.ts (REVAL_EVIDENCE line), NB7 and the native production chain; no throwaway database left afterwards",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_E2E_200=1 npm run test:ui",
+   "result": "90 passed (21.8 min)",
+   "qualification": "200 COMMITTED, semantic MATCH, truth true, FX10 MISSING 15 (1178 s)",
+   "log": "test-ui.txt"
+  },
+  {
+   "command": "python3 rsda-mutations.py (37 single-line mutations, each restored and sha-verified)",
+   "result": "37/37 detected",
+   "qualification": "M33 survived the first pass; the gap-stop scenario now asserts the stricter effective state, rerun DETECTED",
+   "log": "mutations-rc1.txt"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSDA_RC1_EVIDENCE",
+ "logs": {
+  "artifact-check.txt": "0ea7c9f247e464f6fa8f453e43da8b219b10fbfd062d780909e1f472ddf91f5a",
+  "build.txt": "d453750ee883dbbdc04fce661ae45e53e7533454073566ff842c50b3d230e3d3",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "3be3ad92375271acd792cc98214ed987b7e953d8ad5aa2db4b99ca2d77587864",
+  "finished.txt": "6cf14d7e7253f5c273a22d5fadf39084a58622a0ba5c3fe5966badd058fbe24f",
+  "mutations-rc1.txt": "27919109a20f87ab6c59c0395ef854aa259fb291c8dd2beac4ae6880401bceb2",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "schema.txt": "483597ce7a65126e31aa35ddd1fe32e4750b9848a95b06705ef4cf2113a8d39c",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "86220ac0ffcc37103a2acc53241f41b41d1212eaf0f0f484f9ba1950cd132e25",
+  "test-pg.txt": "74c3487ade60fb20b7b3a8db329f509e79d05a018dd1cc46ca96e4aa88d337e9",
+  "test-ui.txt": "c86764b9ab62d768a492847985ac0898c81bafd9b13d2950cb20d5bd2af02492",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "ui-typecheck.txt": "94e4d3c0eae80d5541012e49723e5f5969b4d419b6c71a9b6d28e7f3068ef449",
+  "unit.txt": "0f03cfca1ed0c42f4ccf9808a0d5050ea74bf624ed53666198f21bb0868b8674"
+ }
+}

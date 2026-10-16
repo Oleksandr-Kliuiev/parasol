@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-08T20:19:51.783500+00:00",
+  "cliVersion": "2.1.293 (Claude Code)",
+  "auth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "providerOverrideKeys": [],
+  "oauthAccountHasExtraUsageEnabled": false,
+  "modelPicker": "Fresh interactive Fable5.1 row, High default, nativeClaudeMax; no Requires usage credits annotation. Esc canceled without selecting/changing defaults.",
+  "billing": "subscription only, no API/credits enabled; attributable quota unknown"
+}

@@ -1,0 +1,116 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSC-C-rc1",
+ "window": [
+  "2026-10-12T03:20:43Z",
+  "2026-10-12T03:48:55Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build (builds the ordinary AND the sealed measured console)",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/cli.ts artifact-check",
+   "result": "pass: ok true, drift [], candidate RS-C-C accepted:false",
+   "log": "artifact-check.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts (first run)",
+   "result": "579 tests: 569 pass, 9 fail, 1 skipped",
+   "qualification": "8 = the pre-existing RC5 identity-only set; 1 = tests/reval-rc5-guard.test.ts (the RS-C-C map row/operator-build deltas were not yet enumerated) \u2192 enumerated (RSCC_SOURCE_DELTAS/RSCC_OVERLAY_DELTAS), see rerun-unit.txt",
+   "log": "unit.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg (first run)",
+   "result": "775 tests: 775 pass",
+   "qualification": "includes reval-eval-console (serving/N1/exit 44) and the NB7 rehearsal",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_E2E_200=1 npm run test:ui (all Playwright suites incl. the 200-path E2E)",
+   "result": "90 passed (21.8 min)",
+   "qualification": "200 COMMITTED, semantic MATCH, truth true, FX10 MISSING 15 (1176 s); no file used by test:ui changed afterwards (only tests/reval-rc5-guard.test.ts, scripts/reval-instrument/candidate.ts list entries and the report)",
+   "log": "test-ui.txt"
+  },
+  {
+   "command": "after the guard-test fix: npm run typecheck",
+   "result": "pass",
+   "log": "rerun-typecheck.txt"
+  },
+  {
+   "command": "after the guard-test fix: cli.ts artifact-check",
+   "result": "pass: ok true, drift []",
+   "log": "rerun-artifact-check.txt"
+  },
+  {
+   "command": "after the guard-test fix: node --experimental-strip-types --test tests/*.test.ts",
+   "result": "579 tests: 570 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (same names as the accepted RS-C-A rc2 run)",
+   "log": "rerun-unit.txt"
+  },
+  {
+   "command": "after the guard-test fix: ATLAS_REVAL_NATIVE_PG_FIXTURE=\u2026 npm run test:pg",
+   "result": "775 tests: 775 pass",
+   "log": "rerun-test-pg.txt"
+  },
+  {
+   "command": "focused before the full run: node --test tests/pg/reval-nb7-rehearsal.pg.test.ts",
+   "result": "1/1 pass (NB7 attempted 8, successful 6, before 1, after 1)",
+   "log": "focused-nb7.txt"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSCC_RC1_EVIDENCE",
+ "logs": {
+  "artifact-check.txt": "db0cd5c1aba60c282b4b465ee39267b103b4b232001179daad5b1905ae853c5c",
+  "build.txt": "5019e13608bfc6b208cace412f289b333bbf420675f413349c0c911d39f93571",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "d21fe835be1e27fe51ce6349cbaff2b529e37b2e9985016e199994a1e4dc09b5",
+  "finished.txt": "f35847923669c128f1084a985f84081bf60721fd7fb12ca48f26c2994ec5f785",
+  "focused-nb7.txt": "6fedd5bd87be7bfcbbfa6b69c3146082655a0b4d3f2afed94581de1c9bf8e42d",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "rerun-artifact-check.txt": "f02c6341ed7d7594c8e790b11df8184fd5a708ce37378b4d2c3de1a38abc6927",
+  "rerun-finished.txt": "d0801c0d749262bc7cca6684467c7889c71bb09cb328d63002bc220a6f4afb92",
+  "rerun-started.txt": "559666eee17b2c538415d4ca36e37dc268aaa686c9c7b7c4fb23b24d994f8cce",
+  "rerun-test-pg.txt": "e604a885ac0b95117224e158f61809d4ba1158ee249355fa5614669446b41f67",
+  "rerun-typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "rerun-unit.txt": "d9921f442fd2676be49af59666e68e5f4962383d46063eae419e6e9f9cb20a08",
+  "schema.txt": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "164d8dae72b69583f7da2cb48f2619e9012a2cccde169f4ff1ff3035ac81448b",
+  "test-pg.txt": "aa01e010f9bbc480656183d8e89a6b836ca1dfe028cdfa6e0f1e65ef51df0573",
+  "test-ui.txt": "18be94df3afb68b3fba45831e911d5ec5c7e1cc88c520195913091ee4487904d",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "unit.txt": "28b71d362684d0a7b895136fdfab525ef5d5e0046a3ffd9878a9ca310b62f6a3"
+ }
+}

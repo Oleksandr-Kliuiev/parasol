@@ -1,0 +1,11 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-EXECUTION-rc5",
+  "packageHash": "5c6a7e521220b703ca78efd045376f7ac98e41c613e17e766b0eadc27b994d97",
+  "manifestFilesMatched": 120,
+  "baselineUnchanged": 1431,
+  "bothIndependentApprovals": true,
+  "historicalRC3SealPreserved": true,
+  "checkedUtc": "2026-10-11T10:07:59.411389+00:00",
+  "paidProductCalls": 0,
+  "liveEligible": false
+}

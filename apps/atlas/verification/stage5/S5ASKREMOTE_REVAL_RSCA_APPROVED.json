@@ -1,0 +1,103 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSC-A-rc2",
+ "status": "ACCEPTED_RS_C_A_RC2",
+ "acceptedUtc": "2026-10-12",
+ "packageHash": "1825c86d6c226e6973ffc6f2af0d540616d740f8f0db49f2edf473cd9bf7a0dc",
+ "manifest": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSCA_RC2_MANIFEST.json",
+  "sha256": "8f33b6363c0cf2be4abe6ee791ba92b651d6446c770f3d71bbda27b38d9e8b1b"
+ },
+ "checks": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSCA_RC2_CHECKS.json",
+  "sha256": "a1e76e8f2e765762189fdf138c0a4aea31f9a598e76a8edb3760fc9eea76f3cf"
+ },
+ "baseline": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSCA_BASELINE.sha256",
+  "note": "git ls-files -co --exclude-standard after the RS-B seal; lists itself with a stale (empty-file) hash"
+ },
+ "parentArchitecture": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc4 9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163",
+ "parentCode": "S5ASKREMOTE-REVAL-SERVER-RSB-rc2 a34d85d18d5c8eb86118a9ecadff1004da07e4f1e12a9e5a8250585b34a93fc2",
+ "gate": "owner's direct instruction (2026-10-11): ONE independent reviewer per RS-C part, native Claude Opus 5.5 effort max, clean initial session; bounded rc2 re-review in the same reviewer session. The Codex-orchestrated reviewer-cli dual Sol/Opus xhigh gate was not used; no Sol/Astra/Fable approval claimed.",
+ "implementation": "Claude Code session d0382327-d726-4375-8d23-49e794437702, model claude-opus-5-5 (one writer); session effort not independently recorded",
+ "reviews": [
+  {
+   "round": "rc1",
+   "verdict": "CHANGES_REQUIRED",
+   "manifest": "verification/stage5/S5ASKREMOTE_REVAL_RSCA_RC1_MANIFEST.json 5456b30f82438641e2b54ae36bcb47b8e96d8517170063f3027ab7cd56d1e477",
+   "blocking": [
+    "F1 provider key could resolve in bridge mode (Prisma dotenv)"
+   ],
+   "required": [
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7 (NB7/NB9/NB10)"
+   ],
+   "optional": [
+    "F8",
+    "F9",
+    "F10",
+    "F11",
+    "F12",
+    "F13"
+   ]
+  },
+  {
+   "round": "rc2",
+   "verdict": "APPROVE_RS_C_A",
+   "report": "docs/stage5/reviews/OPUS_S5ASKREMOTE_REVAL_RSCA_RC1.md (rc1 report with the appended rc2 section)",
+   "sha256": "d4b23b4d1c3c86f2ad9fad045f898c2657265d4601b0edc0978636e58459f8bc",
+   "findings": "F1-F10 and F12 CLOSED; F11 and F13 ADDRESSED; F9 macOS F_FULLFSYNC recorded residual",
+   "optional": [
+    "N1 P3: with the evaluation header, unrecognized routes and HEAD/OPTIONS on Ask paths return 400 instead of the ordinary 404 (04: unrecognized routes stay 404)",
+    "N2 P3: C retires the active case on its FINAL record while S still refuses a new arm during that case's live slot; a GO in that gap stops the run (fail-closed) — the instrument must sequence the next GO after the handoff or 120 s"
+   ]
+  }
+ ],
+ "reviewerModelEvidence": "launched as model opus with effort max via the Claude Code Agent tool (fresh context); the reviewer states its effort cannot be confirmed from inside the session and disclosed that its scratchpad path carries the implementer's host session id (it did not read the implementer's files)",
+ "ownerDecisions": [
+  "2026-10-11: RS-C in three parts (A server+controller, B instrument revision, C browser pane + 200-path E2E), each with one Opus 5.5 max review",
+  "provider key pass-through: PENDING (owner tentatively plans Azure environment variables); RS-C-A bridge seams never resolve a key"
+ ],
+ "carriedToRSCB": [
+  "N1 (route-unknown 404 with the evaluation header)",
+  "N2 (GO sequencing after handoff/120 s; I owns consumed/currentGO markers and the GO window)",
+  "I must reject a TRANSFER whose binding differs from its READY (defence in depth)",
+  "T2: the two measured sockets are proven separately, not tied to one I process (06 'the same I process')",
+  "RC5 instrument identity superseded by the RS-C-B revision (OFFLINE_FILE_DRIFT of budget.ts, remote/db.ts, remote/service.ts is enumerated)"
+ ],
+ "carriedToRSCC": [
+  "browser synthetic pane and sealed console build; 200 manual case paths incl. 15 FX10",
+  "NB7 target-platform latencies and the consecutive ARM/READY rehearsal with injected failures before/after consumption"
+ ],
+ "carriedToRSD": [
+  "PROCESS_CENSUS, DRAIN and the POST census (NB9 resume prerequisite)",
+  "egress/privacy containment; S's process.env still receives checkout .env names through Prisma dotenv",
+  "RS-B F5 (V runs TypeScript sources outside the declared digests); verify-once-then-run-by-path helper pattern",
+  "journal power-loss durability (macOS fsync is not F_FULLFSYNC)"
+ ],
+ "residuals": [
+  "Docker = regression evidence; native = test-fixture evidence; never MEASURED",
+  "time-based limits (120 s slot/nonce, 26 s window, 10 min retention, 16 revisions) are unit-tested with an injected clock and real-timer callbacks",
+  "the in-process generation test simulates a switch between ARM and phase1 (a real switch needs every other backend gone)",
+  "8 pre-existing RC5 identity-only unit failures (unchanged since RS-A)",
+  "test tooling: live owner PTY via /usr/bin/python3 -I stdlib pty relay",
+  "leaked throwaway test databases (atlas_it_0d6fe0d9 + role atlas_rv_owner_be158862, and six atlas_it_* from a stopped test:pg run) — drop was blocked by the session permission policy; owner may drop them"
+ ],
+ "paidProductCalls": 0,
+ "providerCalls": 0,
+ "activation": "none",
+ "dataAdmission": "NOT_ADMITTED",
+ "budgetAdmission": "NOT_ADMITTED",
+ "nextImplementation": "RS-C-B (instrument revision) next, with its own brief and one Opus 5.5 max review",
+ "administrativeDeltasAfterAcceptance": [
+  {
+   "path": "docs/stage5/ask/remote/reval-server/rs-c/AGENTS.md",
+   "from": "a79407a7c1851d8fea7c62ea1a2a42a59f83e5c89e08e13acc7305c44e3cf198",
+   "to": "57437aa75881c99c26757c809aac59d02746ef995f09d03290276744bd338ed1",
+   "change": "status routing line (part A accepted, seal pointer)"
+  }
+ ]
+}

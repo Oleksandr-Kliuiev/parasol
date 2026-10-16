@@ -1,0 +1,16 @@
+{
+  "artifact": "S5ASKREMOTE-RB-rc2",
+  "packageHash": "a579f960a041b5bcd39f1f6eb6eb773015a4911dee9a04c00c76b4f9472f5337",
+  "manifestSha256": "130cc342b2fcd3d6696a5bdf135624b45bb6b3552a76761296223330d6a9630c",
+  "model": "gpt-6-astra",
+  "requestedModel": "gpt-6-astra",
+  "effort": "xhigh",
+  "effectiveEffort": "xhigh",
+  "freshContext": true,
+  "forkTurns": "none",
+  "assignedUtc": "2026-10-11T01:32:42.068577+00:00",
+  "prompt": "/tmp/atlas-stage5/askremote/rb/ASTRA_RC2_PROMPT.txt",
+  "promptSha256": "ec65b1ecf5176b0838931c8bfd5c947f8868af13746fa8549fe006a126aa7744",
+  "nativeAgent": "/root/astra_s5askremote_rb_rc2",
+  "providerBilling": "Native Codex reviewer; no product provider/API calls; raw model billing telemetry unavailable"
+}

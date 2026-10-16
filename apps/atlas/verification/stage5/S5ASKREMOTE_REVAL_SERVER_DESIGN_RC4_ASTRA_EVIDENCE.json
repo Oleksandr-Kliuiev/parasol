@@ -1,0 +1,16 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc4",
+  "packageHash": "9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163",
+  "nativeTask": "/root/reval_server_rc2_astra_review",
+  "explicitRequestedModel": "gpt-6-astra",
+  "explicitReasoningEffort": "xhigh",
+  "initialForkTurns": "none",
+  "freshInitialContext": true,
+  "initialReviewArtifact": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc2",
+  "boundedOwnSessionReReview": true,
+  "separateFromAuthorAndOrchestrator": true,
+  "backendResponseModelTelemetry": "UNAVAILABLE",
+  "effectiveEffortTelemetry": "UNAVAILABLE",
+  "limitation": "Native explicit assignment is recorded; no independent backend model/effort/billing or attributable usage telemetry is exposed. Self-identification is not used as proof.",
+  "reportSha256": "3c61f76462fdb88075ce6c235c1b4bd218034534ecad285b2e29da25a3f24794"
+}

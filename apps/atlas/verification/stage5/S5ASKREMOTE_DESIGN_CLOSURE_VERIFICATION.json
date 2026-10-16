@@ -1,0 +1,460 @@
+{
+  "artifact": "S5ASKREMOTE-DESIGN-rc2",
+  "packageHash": "9c92327f6a3d693031c30cc907091f6dd61f4e0747491e10f00a784f877719d3",
+  "manifestSha256": "88a8b86695d8b3d6504d8ec88118394e276d0e09d163dbd39be09a6d81e14979",
+  "baseline": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_BASELINE.json",
+    "sha256": "e9b2eb28de99ca27101a92f1d58cae9f750c1bf5ad1b3fb33d43c88e138d5536"
+  },
+  "initialAdministrativeDeltas": {
+    "path": "verification/stage5/S5ASKREMOTE_DESIGN_ADMINISTRATIVE_DELTAS.json",
+    "sha256": "b952a3d7349186599407704b0202433dbfa451a743403805e87813046b0d5519"
+  },
+  "finalAdministrativeOnlyDeltas": [
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "b17d23fbf245d39966840931526a57f41d697337215fb7850fb592328466cda6",
+      "afterSha256": "18372b0866c8fa62a7db0dfe8cd098b8263166ac98d1c7c28dc9c66afa965208",
+      "kind": "Administrative approval/status/routing only; no requirements or reviewed contract changes"
+    },
+    {
+      "path": "docs/AI_CONTEXT_MAP.md",
+      "beforeSha256": "eaf6778807ba6a5757c945fb354913faa03742a8a7f24803dd653ec2b12c5212",
+      "afterSha256": "08733574dbb8d883bcecaea4e6a5d24ddf21ae42cd1145532182b7fffe13a3f7",
+      "kind": "Administrative approval/status/routing only; no requirements or reviewed contract changes"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "beforeSha256": "0c29d332e085379427a60511b6fffe63094e153fff38e54145840d800cacc47a",
+      "afterSha256": "74ae6174d0048828c6b41cd4c6acfa345f99f763a6bb3a0fb45553fadf1fbca4",
+      "kind": "Administrative approval/status/routing only; no requirements or reviewed contract changes"
+    },
+    {
+      "path": "docs/stage5/IMPLEMENTATION_STATUS.md",
+      "beforeSha256": "c0e64af1f267538979581dab59352dab2cafbb459c1bc97383d0aee7733898f5",
+      "afterSha256": "692fe462808cc705aa959c80a0371b7eb48c0e812bf443856e62f81117d82ee9",
+      "kind": "Administrative approval/status/routing only; no requirements or reviewed contract changes"
+    },
+    {
+      "path": "docs/stage5/REVIEW_STATUS.md",
+      "beforeSha256": "4c34aaa9d6dbe6ba076f7a5be03c2b71e9869477de2fcba54b8e0ae1c704e166",
+      "afterSha256": "7863c77f0658b05d4877df6740ff83201f9c0bbed14741c4a4fa2e05deea51a8",
+      "kind": "Administrative approval/status/routing only; no requirements or reviewed contract changes"
+    },
+    {
+      "path": "docs/stage5/ask/DESIGN_STATUS.md",
+      "beforeSha256": "10837bdc1b4d137d5ebd8b4e951e4bec915207aaff1fcb8ef8bc6e05c0c6d487",
+      "afterSha256": "15de8ea8fb0bca9239ef51950c97849b2b95e62e50e829956490c53c2ac8dcea",
+      "kind": "Administrative approval/status/routing only; no requirements or reviewed contract changes"
+    }
+  ],
+  "newAdministrativeStatusDelta": {
+    "path": "docs/stage5/ask/remote/DESIGN_STATUS.md",
+    "beforeSha256": "9311f6c0adf741acec0504f63f19f95bf3403055e89b7149be36ba73ebaf40a9",
+    "afterSha256": "5f47fb8c4474786e40bf2db8fa15f19a4116efa7f9ab97914024aec242ff3e95",
+    "kind": "New administrative design status only; ten normative files unchanged"
+  },
+  "newArtifacts": [
+    {
+      "path": "docs/stage5/ask/remote/01_SCOPE.md",
+      "sha256": "c8d27953f4304a964a98e7e74ab251dd11aed255ca23a9dc224536009cbe91c7",
+      "bytes": 5034
+    },
+    {
+      "path": "docs/stage5/ask/remote/02_CONTRACTS.md",
+      "sha256": "6a99dd2fd6ad9ff929de3c3e547eb0b715189a717350de587e14f13e7e131846",
+      "bytes": 6150
+    },
+    {
+      "path": "docs/stage5/ask/remote/03_DATA_AND_PROVIDER.md",
+      "sha256": "a3a7a28a6acc2748c56f7d454d23654d927a743b0bf9289914aef29b4aeedbeb",
+      "bytes": 8140
+    },
+    {
+      "path": "docs/stage5/ask/remote/04_AUTHORITY_AND_BILLING.md",
+      "sha256": "9e3f151c1583cf6ba9e1028f525c67c778bbd4fdbb9021aa6ab6af96b71d4441",
+      "bytes": 16330
+    },
+    {
+      "path": "docs/stage5/ask/remote/05_ACCEPTANCE.md",
+      "sha256": "c3794877842b4a36e1770991e4c7630a3afddcecefa4e8e900bf80199e93bd7e",
+      "bytes": 10459
+    },
+    {
+      "path": "docs/stage5/ask/remote/06_PROVIDER_DECISION.md",
+      "sha256": "509b3b12e967559cfb544a8c73f9694db5627c39c15397d3232cf7c4e107f2d5",
+      "bytes": 3938
+    },
+    {
+      "path": "docs/stage5/ask/remote/AGENTS.md",
+      "sha256": "57c78ac74c5340812098d62c0f7e22e5acca6851834e734bde6bb24d61dbcb26",
+      "bytes": 1281
+    },
+    {
+      "path": "docs/stage5/ask/remote/DESIGN_STATUS.md",
+      "sha256": "5f47fb8c4474786e40bf2db8fa15f19a4116efa7f9ab97914024aec242ff3e95",
+      "bytes": 3051
+    },
+    {
+      "path": "docs/stage5/ask/remote/README.md",
+      "sha256": "2811288c8a379c57b48869fcce2ba1ca56fba843c501f68ff6be6e44c2444a2b",
+      "bytes": 2222
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-prompt.json",
+      "sha256": "52c6b5d5ba0c393086d48d084a577678532b09f2738c0bf8e9623c49477dd7a5",
+      "bytes": 1450
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-schema.json",
+      "sha256": "c9f70d915fb3f71643ffc4a329cda0fafe41b2424053374f6df7fb1254bcfe88",
+      "bytes": 295
+    },
+    {
+      "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_DESIGN_RC1.md",
+      "sha256": "e406b3f30d94177bcaf707537a5e45c3ac560dab3683231b5828c85d145b0988",
+      "bytes": 9203
+    },
+    {
+      "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_DESIGN_RC2.md",
+      "sha256": "9aebc0057c0f2c080445d11f852ccaa6f1b4bbde9e187bd43ccd6f26904cdfc8",
+      "bytes": 11055
+    },
+    {
+      "path": "docs/stage5/reviews/FABLE_S5ASKREMOTE_DESIGN_RC1.md",
+      "sha256": "63d4c6bc6cfc2a8a37aab85328843ea9948ee1b0ac26371d4e6c1629609ff29c",
+      "bytes": 13392
+    },
+    {
+      "path": "docs/stage5/reviews/FABLE_S5ASKREMOTE_DESIGN_RC2.md",
+      "sha256": "83106b0762d3d4357a990cd323c9e725c541a0f05ddc5976c83aecf0d96a3dbd",
+      "bytes": 10752
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_ADMINISTRATIVE_DELTAS.json",
+      "sha256": "b952a3d7349186599407704b0202433dbfa451a743403805e87813046b0d5519",
+      "bytes": 1940
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_BASELINE.json",
+      "sha256": "e9b2eb28de99ca27101a92f1d58cae9f750c1bf5ad1b3fb33d43c88e138d5536",
+      "bytes": 211827
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC1_ASTRA_ASSIGNMENT.json",
+      "sha256": "836599a6be9f4df77752c38f49caf0b69b5f3a60f7eef44dfd9a1e67d1b5c7b1",
+      "bytes": 806
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC1_FABLE_EXECUTION.json",
+      "sha256": "e0018c0991e5f5fa46677567e8adb844a4c30d249ce4234d2f0881707cc94c48",
+      "bytes": 1574
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC1_MANIFEST.json",
+      "sha256": "ee17e5b84b56d8b7bace6c61f7466bb26ba97cd7379b6b87b73188465edceb0b",
+      "bytes": 4316
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC1_PREFLIGHT.json",
+      "sha256": "400c278626ab6b762aecc5ef7c1522ebcc3a2504a680e5add7f3f7f15150bb26",
+      "bytes": 867
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_ASTRA_ASSIGNMENT.json",
+      "sha256": "a09b609ab4bb8f56f0978f42cc6b9b4625a764f8346e2789186b3a5a8e9c530b",
+      "bytes": 762
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_DUAL_REVIEW.json",
+      "sha256": "39424a558267ad687c13466d16e05ae3abd1b27e526842fd7a3dc47bd9192cae",
+      "bytes": 4269
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_FABLE_EXECUTION.json",
+      "sha256": "5cb47c09815c5a574fdf8a74e10c9d4f87ff92a544ee333afac44661583cca10",
+      "bytes": 1574
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_MANIFEST.json",
+      "sha256": "88a8b86695d8b3d6504d8ec88118394e276d0e09d163dbd39be09a6d81e14979",
+      "bytes": 4317
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_DESIGN_RC2_PREFLIGHT.json",
+      "sha256": "aad441db0fd5af71bab95c5b634ba363550099bc2c5ecb158ef903b4fef44433",
+      "bytes": 867
+    }
+  ],
+  "durableEvidence": [
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/design-rc1/S5ASKREMOTE_DESIGN_RC1_MANIFEST.json",
+      "sha256": "ee17e5b84b56d8b7bace6c61f7466bb26ba97cd7379b6b87b73188465edceb0b",
+      "bytes": 4316
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/design-rc1/S5ASKREMOTE_DESIGN_RC1_PACKAGE.zip",
+      "sha256": "148a3f17d52a2dc6371d45f0744ef463454f45fa3f827fbaac4ee576dab8948e",
+      "bytes": 24220
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/design-rc2/S5ASKREMOTE_DESIGN_RC2_MANIFEST.json",
+      "sha256": "88a8b86695d8b3d6504d8ec88118394e276d0e09d163dbd39be09a6d81e14979",
+      "bytes": 4317
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/design-rc2/S5ASKREMOTE_DESIGN_RC2_PACKAGE.zip",
+      "sha256": "f68e789ec039af13168ce798ec68d7a58722c8f917eb2cbec5143d2850eeba8c",
+      "bytes": 27718
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/ASSIGNMENT.json",
+      "sha256": "836599a6be9f4df77752c38f49caf0b69b5f3a60f7eef44dfd9a1e67d1b5c7b1",
+      "bytes": 806
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/CAPTURE_RECEIPT.json",
+      "sha256": "f9ce51959af8f3b3614b3afe25d5970351df2e2f75241f814da7e4bd300359a6",
+      "bytes": 1907
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/EVIDENCE.json",
+      "sha256": "99a0ebc7d30cdb6d9fed94655a1b82191e6373e33a5bd457e3e366b5bd423345",
+      "bytes": 10485
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/REPORT.md",
+      "sha256": "e406b3f30d94177bcaf707537a5e45c3ac560dab3683231b5828c85d145b0988",
+      "bytes": 9203
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/administrative-verification.json",
+      "sha256": "f3031b8c6bf0da5730d36e79248633ccccf653868fab19943c941b9d9691fe0c",
+      "bytes": 2846
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/design-probe-result.json",
+      "sha256": "2d27f4f6da6ff794f26fec76630489d93e1eb2a4ecdf8cf32dcde2aaa68508e0",
+      "bytes": 568
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/design-probe.py",
+      "sha256": "3f9df94e378fb89434c500c82f683f801dd7160206d05b46c75dc81afcabafbe",
+      "bytes": 2521
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/diagnostics.json",
+      "sha256": "73266a035aa082aecdc04c350c1bca00ba7a05949bc0372f0cbb280d07a3d7c6",
+      "bytes": 848
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/final-identity-verification.json",
+      "sha256": "6750bc0b05349dad6ea7dab5056b5203b602c04b91d0e5551ab5db13bdbd2a88",
+      "bytes": 172
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/identity-verification.json",
+      "sha256": "a32738855f6d7c64c22e071f5e357308b4c46efeff15b2b029f839dc434fcc72",
+      "bytes": 7444
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/parent-norms-verification.json",
+      "sha256": "3e9a517931414aa27f99a1dad084a45f43a2477c16de3c173526f7bf47c18464",
+      "bytes": 188
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/policy-version-counterexample.json",
+      "sha256": "3e3eaed4b416e96901bb68a9fc92d908359d96c93da84aad52302bf2115fee10",
+      "bytes": 1680
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/astra/provider-docs-review.json",
+      "sha256": "895a16733ff382b1c9e60f27f6bb38bfe46bef7e59f7b825d250dda73050c8b9",
+      "bytes": 1981
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/CAPTURE_RECEIPT.json",
+      "sha256": "442ea6f94c9783527fcdee71b1fb94cbdf75c8940c391ab38a07fc987561f012",
+      "bytes": 1654
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/DESIGN_RC1_VERIFICATION.json",
+      "sha256": "7ffc62bc31a69daf374817070cc98cb73e02ce1d30d4ce1c52095cd0a0644399",
+      "bytes": 482
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/FABLE_RC1_PROMPT.txt",
+      "sha256": "7c31c585e34e0627e707901f61d3e3afea20757596bb76cba8467d650838da77",
+      "bytes": 4179
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/PREFLIGHT_RC1.json",
+      "sha256": "400c278626ab6b762aecc5ef7c1522ebcc3a2504a680e5add7f3f7f15150bb26",
+      "bytes": 867
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/REVIEW_BRIEF_RC1.txt",
+      "sha256": "a9531eb7cfa706229af60929bc8c7e5061babff26262e32dc9374917c9c40528",
+      "bytes": 3698
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/fable-design-rc1-execution.json",
+      "sha256": "e0018c0991e5f5fa46677567e8adb844a4c30d249ce4234d2f0881707cc94c48",
+      "bytes": 1574
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/fable-design-rc1-result.txt",
+      "sha256": "63d4c6bc6cfc2a8a37aab85328843ea9948ee1b0ac26371d4e6c1629609ff29c",
+      "bytes": 13392
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/fable-design-rc1.jsonl",
+      "sha256": "aeae70fc8a0f4d1bf7a40af1a65ec6a46bfb82d195dad789eb4718bbad6153d7",
+      "bytes": 1104842
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc1/fable/fable-design-rc1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/CAPTURE_RECEIPT.json",
+      "sha256": "fa91a5f27f604d7b4b61569ed1b22f48ee5f3bf2e7dc4be34679916b0f7e538f",
+      "bytes": 6516
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/ASSIGNMENT.json",
+      "sha256": "aad2c2cd38abae7ff6cd1c2acad6236dc3e93fafdf0d72da2d9520b0429d7ef0",
+      "bytes": 479
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/EVIDENCE.json",
+      "sha256": "0e11a8f39d3e44aa3e39aa2e4ef75f919580f21f927f05097835b55745988231",
+      "bytes": 7758
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/REPORT.md",
+      "sha256": "9aebc0057c0f2c080445d11f852ccaa6f1b4bbde9e187bd43ccd6f26904cdfc8",
+      "bytes": 11055
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/arithmetic.json",
+      "sha256": "0c96a074cae054df1da81860a56ba6eac49c42c7f9f1b66d15ca7579329061e9",
+      "bytes": 527
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/dependency-packages.json",
+      "sha256": "7a0560ade91a88dd37ff8fce0a82a70cac32e6dc6fb0915825ff6be530713a02",
+      "bytes": 1780
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/diagnostic-failures.json",
+      "sha256": "d89ff4cfff8f975a1cd036acd9d194ef94352825ccef4d09ae1d1bfee33006ee",
+      "bytes": 583
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/final-identity-check.json",
+      "sha256": "0fc381ed4f86df624fdf588156d93254682ec3205e0adb0986fc178f76db968f",
+      "bytes": 4164
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/identity.json",
+      "sha256": "9cf6a46a393f73eaa01845f87e68632d78a6d1d40b7490d95fb4867ee824b511",
+      "bytes": 17105
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/official-sources.json",
+      "sha256": "ab3a27f0729adf1d0a908c3efe69dc1932992e09a7af9e3dcf61af6df8b6d0da",
+      "bytes": 1662
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/source-checks.json",
+      "sha256": "77493810d87fc172703670f3c52e19a70d2850eaa5f0ffbeba38f3cb24dbe4e4",
+      "bytes": 2057
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/verify_identity.py",
+      "sha256": "d7e39daeae5655c74d7aeb26d5f257da3689bcd2e3fab8f51297cbd1f6d780ce",
+      "bytes": 3398
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/astra/verify_identity_v2.py",
+      "sha256": "3c272640e07ca63846401d42e3d55ea6d2054ce011a3d01dc17a1b73e9618ad8",
+      "bytes": 3668
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/coordinator/ASTRA_RC2_DISPATCH_RECEIPT.json",
+      "sha256": "a09b609ab4bb8f56f0978f42cc6b9b4625a764f8346e2789186b3a5a8e9c530b",
+      "bytes": 762
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/coordinator/PREPARATION_HARNESS_CORRECTION.json",
+      "sha256": "d351e2d79d238b52e119fe658557fef16922b0e528ce61dbc451e5d512635a8e",
+      "bytes": 335
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/coordinator/RC2_NORMATIVE_DELTA.json",
+      "sha256": "6bee572c59b6ccbfc94de0992ed4761188d4d7ce37360af0c5ea2fce12ad44cc",
+      "bytes": 1563
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/coordinator/RC2_PRE_CLOSURE_VERIFICATION.json",
+      "sha256": "feae8d8d15b39769fb3825d2d21e1404f2645b7912166142c28da6c1fdcd4266",
+      "bytes": 482
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/coordinator/RC2_REVIEW_FREEZE_INVENTORY.json",
+      "sha256": "ea53e8483852516e745d00742ddf02979d0dab4b6b6b9cf11a924c93a7c2c755",
+      "bytes": 4785
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/DESIGN_RC2_VERIFICATION.json",
+      "sha256": "feae8d8d15b39769fb3825d2d21e1404f2645b7912166142c28da6c1fdcd4266",
+      "bytes": 482
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/FABLE_RC2_PROMPT.txt",
+      "sha256": "2c305cb92f8688dc077cfc09eae5b561d64061653ba183762984be532367c088",
+      "bytes": 5370
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/PREFLIGHT_RC2.json",
+      "sha256": "aad441db0fd5af71bab95c5b634ba363550099bc2c5ecb158ef903b4fef44433",
+      "bytes": 867
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/REVIEW_BRIEF_RC2.txt",
+      "sha256": "2b245625031daac67c6e6e4c7f643af63a09fdde691484fe7be65545e8dc2c77",
+      "bytes": 4909
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/fable-design-rc2-execution.json",
+      "sha256": "5cb47c09815c5a574fdf8a74e10c9d4f87ff92a544ee333afac44661583cca10",
+      "bytes": 1574
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/fable-design-rc2-result.txt",
+      "sha256": "83106b0762d3d4357a990cd323c9e725c541a0f05ddc5976c83aecf0d96a3dbd",
+      "bytes": 10752
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/fable-design-rc2.jsonl",
+      "sha256": "7ab78c8fdd2178c873b6fca60d4bac295e39bb4f47180e185320629da5adc41e",
+      "bytes": 935742
+    },
+    {
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/review-rc2/fable/fable-design-rc2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "sourceContractTestBuildChangesAtClosure": false,
+  "baselineFilesVerified": 1175,
+  "builtFilesUnchanged": 224,
+  "preSealExactPathCount": 1201,
+  "selfExcludedFiles": [
+    "verification/stage5/S5ASKREMOTE_DESIGN_CLOSURE_VERIFICATION.json",
+    "verification/stage5/S5ASKREMOTE_DESIGN_APPROVED.json"
+  ],
+  "verifiedUtc": "2026-10-10T22:00:22.197337+00:00"
+}

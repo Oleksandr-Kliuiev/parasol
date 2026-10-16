@@ -1,0 +1,21 @@
+{
+  "checkpoint": "ASK-A",
+  "verifiedUtc": "2026-10-10T18:14:45.584742+00:00",
+  "ownership": "Codex",
+  "nativeWriterProcessStopped": true,
+  "noClaudeOrNodeProcessesInCheckoutOrStaging": true,
+  "scopeDelta": {
+    "changedBaselineFiles": 6,
+    "newImplementationFiles": 31,
+    "removedFiles": 0
+  },
+  "acceptedOperatorBuiltFilesVerifiedUnchanged": 33,
+  "operatorServedAssets": 32,
+  "operatorManifestIsAdditionalFile": true,
+  "packagingPreparationFailure": {
+    "cause": "Coordinator script incorrectly equated 32 served assets with all dist/operator files; baseline includes 33 files including manifest. Corrected count, exact path/hash equality verified; no implementation change.",
+    "preservedArchive": "/tmp/atlas-stage5/S5ASKA_RC1_SOURCE_FAILED_OPERATOR_COUNT_GUARD.zip",
+    "sha256": "41a205f7422922ebdfe9a872300c4e73d08dc76f71dd731c0ab997bdd6e27e9d"
+  },
+  "acceptance": "PENDING independent Astra/xhigh"
+}

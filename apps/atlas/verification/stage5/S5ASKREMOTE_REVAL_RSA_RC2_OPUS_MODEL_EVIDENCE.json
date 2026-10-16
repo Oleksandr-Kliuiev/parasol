@@ -1,0 +1,40 @@
+{
+  "role": "Independent same-own-session bounded acceptance re-review",
+  "sessionId": "8a8ff768-8a00-4d7b-8bfe-1499b0c34721",
+  "requestedModel": "claude-opus-5-5",
+  "actualAssistantMessageModels": [
+    "claude-opus-5-5"
+  ],
+  "effort": "xhigh",
+  "settingsSha256": "336e4beec8162898e37cb8f53fe20f32a6531844e24689fed2d0e3cacf99ea09",
+  "nativeAuth": "claude.ai firstParty Max; existing native subscription routing, no API/credits/fallback",
+  "streamSha256": "085ebc79b4d642cdba90bc126dac5798cd059cf192f3e31358a3b6a4655d9693",
+  "durationMs": 746940,
+  "usage": {
+    "input_tokens": 90,
+    "cache_creation_input_tokens": 593156,
+    "cache_read_input_tokens": 23035985,
+    "output_tokens": 60633,
+    "output_tokens_details": {
+      "thinking_tokens": 32677
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 593156,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "artifact": "S5ASKREMOTE-REVAL-RSA-rc2",
+  "packageHash": "cd13f162c0eabc555bff18460820127aa3b7aeef82396be6e0739726e11817df",
+  "reportSha256": "c3c12fe9b7045debe4ef16e6f7020a3ee7992be68eec4590c5b2c2bc2776e8d3",
+  "paidProductCalls": 0,
+  "activation": false
+}

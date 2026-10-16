@@ -1,0 +1,19 @@
+{
+  "requestedModel": "claude-fable-5-1",
+  "reportedModels": [
+    "deepseek-v4-flash",
+    "claude-fable-5-1"
+  ],
+  "isError": false,
+  "numTurns": 34,
+  "durationMs": 165736,
+  "attributionStatus": "FABLE_ATTRIBUTION_INVALID",
+  "reportedModelsMeaning": "Original CLI labels; not verified upstream inference identities",
+  "providerVerification": {
+    "currentEndpointHost": "api.deepseek.com",
+    "diagnosticRequestedModel": "claude-fable-5-1",
+    "diagnosticResponseModel": "deepseek-flash",
+    "historicalRawResponseModelSaved": false,
+    "details": "PROVIDER_ATTRIBUTION_CORRECTION.md"
+  }
+}

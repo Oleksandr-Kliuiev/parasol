@@ -1,0 +1,151 @@
+{
+ "candidate": "S2-C-rc2 (implementer candidate, not accepted)",
+ "date": "2026-10-08",
+ "executedBy": "native Claude Code claude-opus-5-5/high (sole writer)",
+ "environment": {
+  "node": "v25.8.1",
+  "postgres": "17.11 (disposable databases, local docker, UTC)",
+  "prisma": "6.19.0"
+ },
+ "checks": [
+  {
+   "name": "01_npm_test",
+   "invocation": "npm test",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:04:30Z",
+   "endUtc": "2026-10-08T18:04:38Z",
+   "elapsedSeconds": 8,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/01_npm_test.log",
+   "logSha256": "9549bd2d42981a6ee2c20e70e0fb5d769a1f5deb44a7f4c989c0f957c301e8f0",
+   "logBytes": 17948,
+   "counts": {
+    "tests": 145,
+    "suites": 0,
+    "pass": 145,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+   }
+  },
+  {
+   "name": "02_schema_validate",
+   "invocation": "npm run schema:validate",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:04:38Z",
+   "endUtc": "2026-10-08T18:04:39Z",
+   "elapsedSeconds": 1,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/02_schema_validate.log",
+   "logSha256": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+   "logBytes": 411
+  },
+  {
+   "name": "03_db_generate",
+   "invocation": "npm run db:generate",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:04:39Z",
+   "endUtc": "2026-10-08T18:04:39Z",
+   "elapsedSeconds": 0,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/03_db_generate.log",
+   "logSha256": "4f6d64773d5e303992feee55a4fec0bd1d3d9e212c40e48d52d76fa1dc8a6ffb",
+   "logBytes": 656
+  },
+  {
+   "name": "04_typecheck",
+   "invocation": "npm run typecheck",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:04:39Z",
+   "endUtc": "2026-10-08T18:04:43Z",
+   "elapsedSeconds": 4,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/04_typecheck.log",
+   "logSha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+   "logBytes": 67
+  },
+  {
+   "name": "05_api_build",
+   "invocation": "npm run api:build",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:04:43Z",
+   "endUtc": "2026-10-08T18:04:45Z",
+   "elapsedSeconds": 2,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/05_api_build.log",
+   "logSha256": "a812f0bdda249b054cb6061adfa1bcc5d1b0c6a750f03cce2a17ed686767ab39",
+   "logBytes": 84
+  },
+  {
+   "name": "06_api_smoke",
+   "invocation": "npm run api:smoke",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:04:45Z",
+   "endUtc": "2026-10-08T18:04:46Z",
+   "elapsedSeconds": 1,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/06_api_smoke.log",
+   "logSha256": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+   "logBytes": 289
+  },
+  {
+   "name": "07_test_pg",
+   "invocation": "env ATLAS_S2C_EVIDENCE_DIR=/tmp/atlas-s2c/checkpoint-rc2/evidence node --env-file=.env /opt/homebrew/bin/../lib/node_modules/npm/bin/npm-cli.js run test:pg",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:04:46Z",
+   "endUtc": "2026-10-08T18:05:32Z",
+   "elapsedSeconds": 46,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/07_test_pg.log",
+   "logSha256": "be6540f63ad66d8507c74b00e575b86f1c49a46e8e8026d7830a7f3d3f7fa6fe",
+   "logBytes": 42980,
+   "counts": {
+    "tests": 308,
+    "suites": 0,
+    "pass": 308,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+   }
+  },
+  {
+   "name": "08_db_check_pg17",
+   "invocation": "node --env-file=.env /opt/homebrew/bin/../lib/node_modules/npm/bin/npm-cli.js run db:check:pg17",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:05:32Z",
+   "endUtc": "2026-10-08T18:05:32Z",
+   "elapsedSeconds": 0,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/08_db_check_pg17.log",
+   "logSha256": "60607074888958f70cacb9ee075c294a6d579dbe00de7202447a0a609ac7ce3e",
+   "logBytes": 2539
+  },
+  {
+   "name": "09_db_check_drift",
+   "invocation": "node --env-file=.env /opt/homebrew/bin/../lib/node_modules/npm/bin/npm-cli.js run db:check:drift",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:05:32Z",
+   "endUtc": "2026-10-08T18:05:33Z",
+   "elapsedSeconds": 1,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/09_db_check_drift.log",
+   "logSha256": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+   "logBytes": 214
+  },
+  {
+   "name": "10_git_diff_check",
+   "invocation": "git diff --check",
+   "exitCode": 0,
+   "startUtc": "2026-10-08T18:05:33Z",
+   "endUtc": "2026-10-08T18:05:33Z",
+   "elapsedSeconds": 0,
+   "log": "/tmp/atlas-s2c/checkpoint-rc2/10_git_diff_check.log",
+   "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "logBytes": 0
+  }
+ ],
+ "allExitZero": true,
+ "zeroFailSkip": true,
+ "payload": {
+  "preCheckPackageHash": "e43cc1858e7271577714e2b46e5c8d10956dd4e625cad779964a3a3ac6cbe3c0",
+  "postCheckPackageHash": "e43cc1858e7271577714e2b46e5c8d10956dd4e625cad779964a3a3ac6cbe3c0",
+  "unchangedDuringChecks": true,
+  "payloadFiles": 307,
+  "latestSourceMtimeUtc": "2026-10-08T18:04:23.558944Z",
+  "latestSourcePath": "tests/pg/m365-api.pg.test.ts",
+  "firstCheckStartUtc": "2026-10-08T18:04:30Z"
+ }
+}

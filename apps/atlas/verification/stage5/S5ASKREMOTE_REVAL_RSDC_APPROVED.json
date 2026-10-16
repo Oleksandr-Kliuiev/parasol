@@ -1,0 +1,98 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSD-C-rc3",
+ "status": "ACCEPTED_RS_D_C_RC3",
+ "acceptedUtc": "2026-10-13",
+ "gate": "owner's direct instruction (2026-10-11, kept for RS-D; 2026-10-13: Astra/Fable agreement only for critical moments): ONE independent reviewer per RS-D part, native Claude Opus 5.5 effort max, clean initial session; bounded rc2 and rc3 re-reviews in the same reviewer session. Recorded deviation from the project's Sol/Opus xhigh checkpoint and Astra/Fable architecture gates.",
+ "parentArchitecture": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc4 9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163 (as amended in application by owner decisions D1/D2, docs/stage5/ask/remote/reval-server/rs-d/OWNER_DECISIONS.md; frozen files unchanged)",
+ "parentCode": "S5ASKREMOTE-REVAL-SERVER-RSD-B-rc2 93eb7e0fbb1a7db0893202d78bc05451af8f7157eb884fdeea8287e634843e26 (seal dc4dd7fe10a1ed7b8ddc55391925fabf766587086ca97db88c36718fbcb94b03)",
+ "baseline": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSDC_BASELINE.sha256",
+  "sha256": "98ec056836c6bbb5aa73714b31bd6b5a23b3b04a54ef2e121a0a3cb03c7b5c4d",
+  "note": "git ls-files -co --exclude-standard after the RS-D-B seal, before any RS-D-C edit"
+ },
+ "manifest": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSDC_RC3_MANIFEST.json",
+  "sha256": "f2af7ff0dd8f01e4d7932d195b271ee48b5b0c475e72b39a4b7a118f22973d61"
+ },
+ "packageHash": "6330ca7980864e8ef447bb9d1ed3d08c0559288d4a87971d019b25accdb60727",
+ "checks": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSDC_RC3_CHECKS.json",
+  "sha256": "c83da3063b3fb3cd2caf969ecaafb62dfa2e4e49708d39aac3dc74d12e662222"
+ },
+ "candidateSha256": "c7cb5f9bbbe7adb8ca9641765fdad6aa042bc5546e6bbdb1798b68c86ddb2707",
+ "candidateNote": "the instrument identity's RS-D-C candidate digest of the accepted tree (scripts/reval-instrument/candidate.ts); with this seal present the instrument accepts only these bytes (candidate.accepted:true). The sealed build inventory (S5ASKREMOTE_REVAL_RSD_BUILD_INVENTORY.json, 44 outputs of accepted RS-B…RS-D-B sources plus the measured console manifest) is a candidate path and is sealed with it.",
+ "buildInventory": {
+  "path": "verification/stage5/S5ASKREMOTE_REVAL_RSD_BUILD_INVENTORY.json",
+  "sha256": "b1559d17e35854eedfe1a7096d2cccc7b59be3df3d8f25512b6d008b27e0b2a2"
+ },
+ "implementation": "Claude Code session d0382327-d726-4375-8d23-49e794437702, model claude-opus-5-5 (one writer); session effort not independently recorded",
+ "reviewerModelEvidence": "launched as model opus with effort max via the Claude Code Agent tool (fresh context, new reviewer for RS-D part C); the reviewer states effort cannot be confirmed from inside the session; rc2 and rc3 re-reviews by SendMessage to the same agent",
+ "scope": "final instrument revision pinning RS-D-B (anchors, expected map, deltas, overlay rule) with a seal-aware identity test; sealed build inventory pinning every dist output rebuilt from accepted RS-B…RS-D-B sources (BUILD_DRIFT); receipt v6 with C's build digest from ONE IDENTITY per run and proofs bound to it; continuity loss → persisted CENSUS_CONTINUITY_LOST; TERMINAL_EXPIRED_UNCOLLECTED before consumption; measured F_FULLFSYNC on the C journal and receipt writes; S profile rsd-seatbelt-s-v2 (exact PG socket literal; write-deny of the project tree, helper, credential files, config file, C journal and instrument socket and of every directory above them and above the project root; DNS resolver denied; exec only node + helper); RS-C-C N2 console refusal headers + exact Host; pair refresh by pair-ack (BLOCKED_PAIR_REFRESH_REQUIRED); integrated offline rehearsal over all 200 cases/11 segments; final operator runbook (Russian) with declared pending limitations",
+ "evidence": {
+  "rehearsal": "rc3 tree, S under the rc3 profile: 200 cases, 11 segments, 10 boundaries with S/C up (switch to generation 11), 2 in-segment re-pairs via pair-ack, ONE guard epoch, every census MATCH, 12 proofs, run state COMPLETE_PENDING_REVIEW, receipt v6 bound to the registered build (2709 s); Docker PG17 regression evidence, offline scripted provider, no key",
+  "platform": "darwin/arm64 probe under the real profile: credential subdirectory rename (and read through the new name), helper-directory rename, project-root-parent rename, config-dir and ancestor rename, journal hard link all EPERM; S's own socket in the config dir binds; the unsandboxed control does all of them",
+  "e2e200": "200 frozen case paths through the measured pane: 200 COMMITTED, semantic MATCH, FX10 MISSING 15 (1181 s)",
+  "mutations": "rc3 37/38 single-line mutations detected (D07 qualified: the RS-D-B seal sha anchor makes its status cross-check redundant); D18 re-run in its rc3 form after a harness pattern fix",
+  "testPg": "rc3 suite 775/781 with 5 bounded-latency failures at load ~5-6, all passing on a sequential re-run (19/19); reviewer re-runs 3/3 and 17/17",
+  "testPgPostReview": "full test:pg after the rc3 approval (verification/stage5/S5ASKREMOTE_REVAL_RSDC_RC3_EVIDENCEtest-pg-full-postreview.txt sha256 c10e2b6acd06af2ef92179e577d05d49d47c40603a7ee5a2e8aebca809258719; load 3.0 at start, ~8 during the parallel run): 781 tests, 778 pass, 2 fail, 1 skipped — both native-chain timing refusals (reval-native-unix FAILURE DEADLINE instead of OWNER_REQUIRED; reval-native-instrument IPC_CONNECT_FAILED at connect); a sequential re-run of both files passes 2/2 (verification/stage5/S5ASKREMOTE_REVAL_RSDC_RC3_EVIDENCEtest-pg-native-rerun.txt sha256 57d7fc88202b17053ca17c0fc8958c5049ad401d2f660a93eb1ef6e6a68902b1). Still no clean full test:pg run on this host — recorded as a residual."
+ },
+ "reviews": [
+  {
+   "round": "rc1",
+   "verdict": "CHANGES_REQUIRED",
+   "manifest": "verification/stage5/S5ASKREMOTE_REVAL_RSDC_RC1_MANIFEST.json 04bca6715a481a38e9f739f1456650d51565e4b135e8b536b59019f1b9f63131 (packageHash 951f92e2c7b02bd1d091c3eefab8bb4af02f68eda19f269a8a13c653386bc4ba)",
+   "required": [
+    "F1 Low: S lost between cases was a retryable BLOCKED_* forever (regression of RS-D-A rc2 F3)",
+    "F2 Low: the identity test would fail by design after the RS-D-C seal",
+    "F3 Low: the pair-refresh bound did not keep the pair alive through the admitted case",
+    "F4 Low: the S write-denies were bypassable by a directory rename; the production wiring untested"
+   ]
+  },
+  {
+   "round": "rc2",
+   "verdict": "CHANGES_REQUIRED",
+   "manifest": "verification/stage5/S5ASKREMOTE_REVAL_RSDC_RC2_MANIFEST.json ea7a86e05e032852a1e49a8cba14f811920479c9256532147697563d9bb91e62 (packageHash 46c6487f94608780da59aa65fca393557e2c602c8c4e91dca1b17d116ea1f444)",
+   "findings": "F1-F3 closed; F4 closed as scoped",
+   "required": [
+    "F5 Medium: the path denies still did not hold against a compromised S (rename of a directory above a credential file or the helper), and the docs claimed they did"
+   ],
+   "optional": [
+    "N7 IDENTITY_UNVERIFIED while S is still launching (practically unreachable)",
+    "N8 doc wording",
+    "N9 pre-existing 1 ms receive timeout near an operation deadline"
+   ]
+  },
+  {
+   "round": "rc3",
+   "verdict": "APPROVE_RS_D_C",
+   "report": "docs/stage5/reviews/OPUS_S5ASKREMOTE_REVAL_RSDC_RC1.md (rc1 report with the appended rc2 and rc3 sections)",
+   "sha256": "b4c93032c9f4c2777a25c1c06b00854238c0662f628c3baa7df6cf43533a8da3",
+   "findings": "F5 CLOSED (four mutations incl. the rc2 rule detected; the three attacks EPERM under the real profile); N8 fixed; N7/N9 recorded",
+   "recommendation": "attach a full test:pg run at low load to the seal evidence (see evidence.testPgPostReview)"
+  }
+ ],
+ "ownerDecisions": [
+  "2026-10-11: RS-C/RS-D parts each with one Opus 5.5 max review",
+  "2026-10-13: Astra/Fable agreement only for critical moments",
+  "provider key pass-through: PENDING; bridge S never resolves a key",
+  "2026-10-12 D1: one admitted run follows the fixture-grouped order FIXTURE_GROUPED_FIRST_APPEARANCE_V1",
+  "2026-10-12 D2: S and C stay up through a fixture switch; the switch admits only idle registered runtime/reader sessions"
+ ],
+ "residuals": [
+  "T2: the instrument's control and handoff sockets are not tied to one I process (needs an extension of the frozen 06 frames)",
+  "no complete destination measurement and no verified zero on darwin; provider egress needs a host-level layer tied to the PENDING key decision",
+  "privacy proof incomplete by design; on a default PG collectionState is UNKNOWN",
+  "S profile limit (owner decision): an egress floor plus direct-path denies under (allow default), not containment of a compromised same-uid S (user-owned toolchain, startup files); closing it needs an allow-list write profile, protected toolchain prefixes or a separate uid",
+  "D1 evaluation-validity residual (fixture confounded with order position); loadedBinding stays UNVERIFIED",
+  "the bounded-latency PG tests are load-sensitive on this host",
+  "N7 and N9 (recorded, not changed); D07 mutation qualified"
+ ],
+ "knownPostSealTestState": "none expected: tests/reval-instrument-identity.test.ts asserts both the unsealed and the sealed candidate state (rc2 F2); verified after writing this seal",
+ "activation": "none",
+ "dataAdmission": "NOT_ADMITTED",
+ "budgetAdmission": "NOT_ADMITTED",
+ "providerCalls": 0,
+ "paidProductCalls": 0,
+ "administrativeDeltasAfterAcceptance": [],
+ "nextImplementation": "RS-D is complete with this seal (parts A, B, C). R-EVAL execution needs the separate owner data/budget admissions, the provider key decision and human label attestation."
+}

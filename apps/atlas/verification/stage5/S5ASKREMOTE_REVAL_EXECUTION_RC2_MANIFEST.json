@@ -1,0 +1,473 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-EXECUTION-rc2",
+  "packageHash": "9db596d556571e8e705b835eecd7d3daa0973ba16a74984fcf64a048650242f3",
+  "hashAlgorithm": "sha256(JSON.stringify(sorted file entries, compact separators))",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "760214a53de2d8386d56a83de7237c22044b2240cf0523f3b7cb173fd2dfb93b"
+    },
+    {
+      "path": "docs/AI_CONTEXT_MAP.md",
+      "sha256": "e6083a0d188e497da29e61a4ddc5fbc6cad8d92fa57bf0b500170f7257513f04"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "sha256": "1dc7abece0aa6a690ca214aa6f38411e4abdfa45f92d280a239727257858c3e6"
+    },
+    {
+      "path": "docs/stage5/ask/remote/03_DATA_AND_PROVIDER.md",
+      "sha256": "a3a7a28a6acc2748c56f7d454d23654d927a743b0bf9289914aef29b4aeedbeb"
+    },
+    {
+      "path": "docs/stage5/ask/remote/04_AUTHORITY_AND_BILLING.md",
+      "sha256": "9e3f151c1583cf6ba9e1028f525c67c778bbd4fdbb9021aa6ab6af96b71d4441"
+    },
+    {
+      "path": "docs/stage5/ask/remote/05_ACCEPTANCE.md",
+      "sha256": "c3794877842b4a36e1770991e4c7630a3afddcecefa4e8e900bf80199e93bd7e"
+    },
+    {
+      "path": "docs/stage5/ask/remote/S5ASKREMOTE_REVAL_ADMISSION.md",
+      "sha256": "05232a4f58f4a6cd1042ffad67a5a6b344508ff4261d55bc1ce7096735fdab80"
+    },
+    {
+      "path": "docs/stage5/ask/remote/S5ASKREMOTE_REVAL_PLAN.md",
+      "sha256": "212dec2d6328d0368d45e9e0505eb9d6216a6bcf18102119659981f0e9834a26"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/AGENTS.md",
+      "sha256": "4299ebe9161cd8255a7cf6c60009783baa4f98a08cb8aea3fc16996fd9f1ad8d"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/IMPLEMENTATION_REPORT.md",
+      "sha256": "295b6e3144b41830c02457117cc472e77d4f0e744965c6dda7d79638fb605ffa"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/README.md",
+      "sha256": "aea758283f627599c643d82ef7f025d298457a52eb71cf313cade00e142736a2"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/RUBRIC.md",
+      "sha256": "91ba857445e82e18acda198471ee2479f24f904d47eb42630e4a512b461057bf"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/adjudication/HUMAN_REVIEW_CHECKLIST.md",
+      "sha256": "1b5611893dd6cd6a1081e64d4cc36634c0cbace43d8c52fef6a613c2ebf3517b"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/adjudication/refusal-dual-review.jsonl",
+      "sha256": "0a391d0d4d109979306f8ac1d1de61bea6792b5ebf61c8ed0b3cc3bc648f3695"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/adjudication/supported-review.jsonl",
+      "sha256": "20d0b0f9ca87c25208c88f63012aa271023af908d7e5339f96b159ecfcb8cf1b"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/AGENTS.md",
+      "sha256": "d607112f0db4bb3b7917aba76a27af0b395b53dafd88f39ac00d0aeeac58827e"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/DATASET_MANIFEST.json",
+      "sha256": "224b1b8dedc775565f0eb1b5c5527096db29d2fc558854c58045d3879f12989a"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/cases-adversarial.jsonl",
+      "sha256": "57631560be98d60ef9478d2b42231edf5156560348e8459f6fc9b2da032e39cf"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/cases-supported-entity.jsonl",
+      "sha256": "05a8660ae7a015d88bba5e8db6d4d28a920df2c9f6a6926dc9427c69a31d104b"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/cases-supported-source-state.jsonl",
+      "sha256": "db1cc51b39c9ebc1302aee41e225f99df751270f07d9c003ff86cb78459b5e47"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/cases-supported-summary.jsonl",
+      "sha256": "dff015a761c6152c4cf9dd4351fb223e6ca8d3a0d13bc843a2a403c5e420d1fb"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/cases-supported-why-urgent.jsonl",
+      "sha256": "fd2abda6dc92782eec9337ddbb76fa5f4868fa687292d50bb555bbf6186db2d9"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/cases-unsupported.jsonl",
+      "sha256": "94b6a0cc40f9149f606246e56043bbc3e2acfc23224a651a6f2590dbf859c2a7"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/data/fixtures.json",
+      "sha256": "40f1744ae90b60e171b7897fce08bbe609ef5be6c908992586b470e08dcfaa8d"
+    },
+    {
+      "path": "docs/stage5/ask/remote/eval/rehearsal/OFFLINE_REHEARSAL_RECEIPT.json",
+      "sha256": "63a970c85d504ca9ee4041a57797cc1d6cc28824f40f59e2edfebde540b17fb6"
+    },
+    {
+      "path": "docs/stage5/ask/remote/execution/AGENTS.md",
+      "sha256": "8f7be7638f18f605d8f3c316d2ddd40f9d7a1225eb467f7fa1260c3e93ba4363"
+    },
+    {
+      "path": "docs/stage5/ask/remote/execution/IMPLEMENTATION_REPORT.md",
+      "sha256": "efb6a05111be8a7633f91732ed76974782249b56e9633db21c067c86812dacd3"
+    },
+    {
+      "path": "docs/stage5/ask/remote/execution/README.md",
+      "sha256": "9f71314cd638127b0762614bc435d75e2286d015294268517ae4a53caecb8723"
+    },
+    {
+      "path": "docs/stage5/ask/remote/execution/rehearsal/EXECUTION_REHEARSAL_RECEIPT.json",
+      "sha256": "104a3095880b96eec9af9a9c2f9a2fa218b1845fef3a27baf5256f7416717742"
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-prompt.json",
+      "sha256": "52c6b5d5ba0c393086d48d084a577678532b09f2738c0bf8e9623c49477dd7a5"
+    },
+    {
+      "path": "docs/stage5/ask/remote/intent-schema.json",
+      "sha256": "c9f70d915fb3f71643ffc4a329cda0fafe41b2424053374f6df7fb1254bcfe88"
+    },
+    {
+      "path": "package.json",
+      "sha256": "b1ecd207a37230b0e07925a8769780a15114284893af2555c7456cc5cf8ebb7b"
+    },
+    {
+      "path": "packages/ask/AGENTS.md",
+      "sha256": "3368ab0dd8076db3ecd18da2f8562d868c409c5aa0d5d9ab00c81f1e20bde6a3"
+    },
+    {
+      "path": "packages/ask/audit.ts",
+      "sha256": "e0005e9946867f1b6f02ef0e7d30e8cf87bcf6aa7cbc32ee8ac7d12a715d334d"
+    },
+    {
+      "path": "packages/ask/authority.ts",
+      "sha256": "dc9ee6e68fd3f67e8897d25810fa9b01058404d6cdebf11a32c33832b7e6b9c1"
+    },
+    {
+      "path": "packages/ask/budget.ts",
+      "sha256": "2a2075e3ec2ec5b6842224b9d967173ad1ee0fe3dfd9d0d6abcccdb6ad923c96"
+    },
+    {
+      "path": "packages/ask/compiler.ts",
+      "sha256": "e9a3cf7c72078156b300d2470eab8cf19554c02dec857771550709d068ae513c"
+    },
+    {
+      "path": "packages/ask/config.ts",
+      "sha256": "79be0dd83ba06c8c7f42b4cf30d3c9d7ef8a69067527ffb6290a508a5e351fc1"
+    },
+    {
+      "path": "packages/ask/contracts.ts",
+      "sha256": "20b75d1095ea36897eaa88145c9d131cafca4dba34e50943725a23e61ef3c6f0"
+    },
+    {
+      "path": "packages/ask/credential.ts",
+      "sha256": "003499777d4cf330717fa28884fc9184d5c61f2eb2cb37a7a112ca2e29a6fb79"
+    },
+    {
+      "path": "packages/ask/db-phase.ts",
+      "sha256": "64c0c523442781915484e53315da9289f71564f6edbebf2d183e7bbbcd9f2ca8"
+    },
+    {
+      "path": "packages/ask/fixture.ts",
+      "sha256": "5795ce5c96c894212d77e39d88e482737d769471e79c9470f0144309656082a5"
+    },
+    {
+      "path": "packages/ask/input.ts",
+      "sha256": "1f2a644d0447bb80d6dd9d7ec54893c5112ee1314f304d563baae5cc3114f5ee"
+    },
+    {
+      "path": "packages/ask/phase.ts",
+      "sha256": "2c44a9d65839285aa452b466193c8096d01ff40357b840364d3546a4e9414076"
+    },
+    {
+      "path": "packages/ask/planner.ts",
+      "sha256": "8791c79950ce99ebab921dd1dc194ab514588842f12788dc3f9bee5519d7e504"
+    },
+    {
+      "path": "packages/ask/projection.ts",
+      "sha256": "84af522e3f3b1515a92c05843d13364568e92b934f0ee94c4306466c8085d4d5"
+    },
+    {
+      "path": "packages/ask/read.ts",
+      "sha256": "d4822e58d8c6168ae4ddf2db37e14ef97610aa0df29e8cb308cefdfce50296f5"
+    },
+    {
+      "path": "packages/ask/remote/AGENTS.md",
+      "sha256": "91f37720238ba05c25eeb25ae8b91469fd6f3fa44f7f26511ed118514258e236"
+    },
+    {
+      "path": "packages/ask/remote/answer.ts",
+      "sha256": "0380c2bf857846fc902e4528c07a890e54341d92f72cae67ae4eebed9e8f2cef"
+    },
+    {
+      "path": "packages/ask/remote/budget.ts",
+      "sha256": "2962ded1368137a68e8d687dcc3d89992f0d1916ac3f27bfdc819d3b75bdc1ef"
+    },
+    {
+      "path": "packages/ask/remote/circuit.ts",
+      "sha256": "1f334553b1597b7b7655edad711cecdea194ae59857ff383dee624a57ebf4e6f"
+    },
+    {
+      "path": "packages/ask/remote/contracts.ts",
+      "sha256": "984a4be112590edb59c35165b21b06d9bf6f25ebcc70052c7b3edfcddf39244e"
+    },
+    {
+      "path": "packages/ask/remote/db.ts",
+      "sha256": "fd7f5b9bee6ff310a1ab16f2daad9f8514ebc97508ecddb0194d8b9cd0e671e3"
+    },
+    {
+      "path": "packages/ask/remote/dispatch.ts",
+      "sha256": "b550294e95b244eab8c71a9a010bc204b05ad37eb08333e73ef6d3cf0ab628f1"
+    },
+    {
+      "path": "packages/ask/remote/envelope.ts",
+      "sha256": "a8de0f21fa3213468e2394cf5a1d9e481dbc6f75c2c7aa52671063a735290601"
+    },
+    {
+      "path": "packages/ask/remote/input.ts",
+      "sha256": "2ab6a358875e1095866a8a89e22472826ed30987c1da3648034efb9b6163dbe8"
+    },
+    {
+      "path": "packages/ask/remote/json.ts",
+      "sha256": "242e642fb7b9a37a5a735ccd33e20b4031c60d2ff48593f81c1776c2f8bc9f73"
+    },
+    {
+      "path": "packages/ask/remote/ledger-sql.ts",
+      "sha256": "e3028e0703ba01b47ef18a4d8d114a867d4d259d8c95f43c7d265bfebae5cb69"
+    },
+    {
+      "path": "packages/ask/remote/payload.ts",
+      "sha256": "ea84eaacb55c98f6db68bbb279d4806223488cb80960cd1857fad4a298f7daf9"
+    },
+    {
+      "path": "packages/ask/remote/profile.ts",
+      "sha256": "6d0c41f714ddfe951eb541ecf46727c98b8e9920d3fc9876d9e8d9c642240100"
+    },
+    {
+      "path": "packages/ask/remote/secret.ts",
+      "sha256": "7c77ff1172b37fda55c3ee8e9f193e864404418816901e95650b2edf7c403f4a"
+    },
+    {
+      "path": "packages/ask/remote/service.ts",
+      "sha256": "a1175ea49e35ef85867c05d46e4b8a83668faa2498ee25177889db0ba2fddf68"
+    },
+    {
+      "path": "packages/ask/remote/transport.ts",
+      "sha256": "134ab318dc3c50e53be74065d9651102878f447be057e2012b31208a76cd8ffb"
+    },
+    {
+      "path": "packages/ask/selector.ts",
+      "sha256": "8a3cfa3196a7b9595f5cf4e81591aaf3cb63658d92aade67e1d54fe1536428ae"
+    },
+    {
+      "path": "packages/ask/service.ts",
+      "sha256": "856bc4d5db12f3b856e4019c3166ced9a123bd9b453695196bee6b63471197b4"
+    },
+    {
+      "path": "packages/ask/source.ts",
+      "sha256": "506a3d2f49fef3d79dc6ec4fc030a393d7af1169e1a45c722e079511991ff13f"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/AGENTS.md",
+      "sha256": "dbd1f400dba45812242da2640f6e60ddf697a73d3bbf03a068f448998cc60058"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/artifact.ts",
+      "sha256": "30e22d8b8c566c4aef5f9eb474d9396723ef7f1dfe1a2d840df79b3eb70687b6"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/book.ts",
+      "sha256": "ba3dd194d2b8592d017b357ba87043da17b8d912d176b5f5059cd62db7807389"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/cli.ts",
+      "sha256": "cf656e0091bc55bd66647ceade8d39cb4eccbb8dc6ab0d745cc3517691910150"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/closure.ts",
+      "sha256": "c76b7b7ccd73283e57873a7bdcaef245d7c46487224fd302a7324e2f85988733"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/corpus.ts",
+      "sha256": "d68fca6fc21d45074f92d448cddec9264e1d42eab50933bf1b3746840508a321"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/fake-v2.ts",
+      "sha256": "3dc3a25872b191a7018abf4f040d074de101a48a0fe6cc00bd75781cc5608421"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/operator.ts",
+      "sha256": "473411fb233fd2fd66bd27c084c31aa72dc4cfb44d55463db868bc95ce220244"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/receipt.ts",
+      "sha256": "9fb3a68ff167e9e05381bef8cdbc301d0950f81a9a7f22d000ddc339cf55af05"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/rehearsal.ts",
+      "sha256": "04b74f74e4413a67b040914cb3013dfb3d2a08edea9987bef0605b5fbc0b4e6a"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/replay.ts",
+      "sha256": "9361c884cdcaab86a90fc8d20f4635fa206ddf731425969d4420fc36da677b2c"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/session.ts",
+      "sha256": "7d9e259653e425bc3fb05da8a0a1da0b924bb0cd6097771fb829ecf3bf13439e"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/transient.ts",
+      "sha256": "39c1e4eeab668d9bc0c5f5f6c0c8eaf0beb6bb7c70546a4af0867ac79179ab48"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/tty-input.ts",
+      "sha256": "d8bf34e23d1a743bb25cbe14973b4b9e7d31f9bfe0ff567b4e24cec26b474fb3"
+    },
+    {
+      "path": "scripts/ask-remote-eval-execution/validate.ts",
+      "sha256": "a0561ef3ff9e8549b69412883f7aaaf14437d3072268282219253f7937d6160f"
+    },
+    {
+      "path": "scripts/ask-remote-eval/AGENTS.md",
+      "sha256": "07ebb13911b443e01fc40115b0e79402793fbe87c54f0ef567ae5295819abd79"
+    },
+    {
+      "path": "scripts/ask-remote-eval/adjudication.ts",
+      "sha256": "a3838cdc45e62baa53cd12610b7fd5f6781f85607f8704429c9d6bb4523ac078"
+    },
+    {
+      "path": "scripts/ask-remote-eval/cli.ts",
+      "sha256": "d4be6f289d1a471e993f9e60263d10e5178bd3025109214e39bff0523920fef1"
+    },
+    {
+      "path": "scripts/ask-remote-eval/commands.ts",
+      "sha256": "9574206b5c66c51031a0dce7bffe740908f4628f383c168d39b3d1d628a9b595"
+    },
+    {
+      "path": "scripts/ask-remote-eval/dataset.ts",
+      "sha256": "035893538d9103a4387640dc620ea306ae8d8774bb3b3cdf3f6db77c1b9fbbcb"
+    },
+    {
+      "path": "scripts/ask-remote-eval/evidence.ts",
+      "sha256": "195583705aadbe113ca0649a75988890adff65345405233482c75198adeea429"
+    },
+    {
+      "path": "scripts/ask-remote-eval/expected-facts.ts",
+      "sha256": "729a02afc12cfa751745f366dcc4bc779f1094a20281c5c3ba0936669196d971"
+    },
+    {
+      "path": "scripts/ask-remote-eval/fixtures.ts",
+      "sha256": "85ee3d5081eee6ae89a919e7f20cc66c98cf0fe1b4e105fb4abf80f01821401f"
+    },
+    {
+      "path": "scripts/ask-remote-eval/guard-preload.ts",
+      "sha256": "6a66952508f6915cba666306c554bc9cf2408b183f2bc023577d80cdd1939375"
+    },
+    {
+      "path": "scripts/ask-remote-eval/harness.ts",
+      "sha256": "fafe33299f36cb3862a497d8587b12f04372489eb662615c13fd003d16647125"
+    },
+    {
+      "path": "scripts/ask-remote-eval/net-guard.ts",
+      "sha256": "b0d9e8f7517c7c109b73fb25ae239ee4e49938c0885962104a0b884b69eaa4d5"
+    },
+    {
+      "path": "scripts/ask-remote-eval/predicates.ts",
+      "sha256": "de6b685a6853792b81710f0ef223d2fc178abd4b079ebf3132eee9962dedfd83"
+    },
+    {
+      "path": "scripts/ask-remote-eval/provider-stub.ts",
+      "sha256": "2c41d9fffe6fd2f1aeabf2f264b8d130338cd47569225dc0806218dc52b6b3b5"
+    },
+    {
+      "path": "scripts/ask-remote-eval/rehearsal.ts",
+      "sha256": "13797ed09938f97f56c92aae566053b8fc18f0be607cd04fa00be0093c5cfe22"
+    },
+    {
+      "path": "scripts/ask-remote-eval/scenarios.ts",
+      "sha256": "55432e4b13209f28d23b251db0a205e4a993d8b55961bf9aaed841d1fcfd8539"
+    },
+    {
+      "path": "scripts/ask-remote-eval/supervisor.ts",
+      "sha256": "f4793cc24a7077a9078d7a96efe73e8e23077d42b22d45870650a299d9ce4cb0"
+    },
+    {
+      "path": "tests/ask-remote-eval-corpus.test.ts",
+      "sha256": "3de50cb38961c1550504a93a3faddad3fa9d87a0481134513eb842e20fa1492c"
+    },
+    {
+      "path": "tests/ask-remote-eval-execution-cli.test.ts",
+      "sha256": "7aa639ecb0d96086f50c3a2893ada2f12fd59d7df8ad2ba753a10f7e00ba2537"
+    },
+    {
+      "path": "tests/ask-remote-eval-execution-operator.test.ts",
+      "sha256": "b2ef8b0d5e24740e46d366580757cc3567fd5f6f394be386f3d41b174b7a2088"
+    },
+    {
+      "path": "tests/ask-remote-eval-execution-receipt.test.ts",
+      "sha256": "ac7f4127adb042b0855cd7a0acd585b46cc70220da5660d6a3efe4171de25820"
+    },
+    {
+      "path": "tests/ask-remote-eval-execution-repair.test.ts",
+      "sha256": "9286c7eb40cb512d4fac18aa54b4136f8e896f9d5486a0e1760ee2c7166253f4"
+    },
+    {
+      "path": "tests/ask-remote-eval-execution-session.test.ts",
+      "sha256": "8c99cfc39d2255e93c236edaefe37d778a5fb1723a6b46e47fa67ea6da172cf0"
+    },
+    {
+      "path": "tests/ask-remote-eval-fixtures.test.ts",
+      "sha256": "9f12d3e818fea208761e734c9659fc3d4eb9accbaf4a783267c76f9184ae3c77"
+    },
+    {
+      "path": "tests/ask-remote-eval-offline.test.ts",
+      "sha256": "6af666fe330c810cba2d4deda40aa32233fc1a63bb52e3b703de5d8041c98ddf"
+    },
+    {
+      "path": "tests/ask-remote-eval-supervisor.test.ts",
+      "sha256": "a386e9567c71da12ce8c9f4d5512a3b434b7b2c168f9a55d96d62979829d237f"
+    },
+    {
+      "path": "tests/context-budget.test.ts",
+      "sha256": "e32371fb3efacf72756f04f141f51ffcea579286640257cec06cb1fd84e17531"
+    },
+    {
+      "path": "tests/support/ask-source.ts",
+      "sha256": "43426c6fbfb0c30501ea023484f95f07aa656c56baaf10ffc60ff93630b4ad91"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "ad8ba295da8796a7856b665484ba5847fb54a0735e7f9b9bc315c0d2b96f93ab"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_RC_APPROVED.json",
+      "sha256": "568bafad4f28ac7d46c027f5a80f5d9ee4e7427150abbadf4c4ee922cd9ce344"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_RC_CLOSURE_VERIFICATION.json",
+      "sha256": "77755ffb0c36b522115b84087c2d29a2693c67815ddb9e2f88e4d743ecdafe8e"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_RC_RC1_MANIFEST.json",
+      "sha256": "1b8128214440ba444b329fa496242aa8a9f074ac7fb106124ad6e7d6d0d94731"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_BASELINE.json",
+      "sha256": "e29b4a27856e40667462297e94d2ec04576c4c640479f009a34bf7c0e9e869d9"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_RC2_CHECKS.json",
+      "sha256": "a41847eb0bc2f4fefedfd9596be77968f4818992f3554e93895b74faf4f81185"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_RC3_MANIFEST.json",
+      "sha256": "3af49f790a2bff92a64b8ef83a9c7b8c1a174f758fb863de97e49086778ca58c"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_STATUS.json",
+      "sha256": "2d941db7ea908ee7bfc3d9d2b0272fcb0d7ec1b2bff7e63b533bb1a93f33d16e"
+    }
+  ],
+  "scope": "Local manual supervisor and offline fake-V2 rehearsal. Human/data/budget/live gates remain pending."
+}

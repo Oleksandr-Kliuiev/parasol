@@ -1,0 +1,2236 @@
+{
+  "artifact": "S5ASKREMOTE-RB-rc2",
+  "packageHash": "a579f960a041b5bcd39f1f6eb6eb773015a4911dee9a04c00c76b4f9472f5337",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "sourceContractTestBuildChangesAtClosure": false,
+  "administrativeOnlyDeltas": [
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "b942087fc6e55de58e82636495bf5abb8c0862cbe8f124d2c2d4d950bd132bef",
+      "afterSha256": "436156e6d2f95bc3bcab45e632b510bd6023c7ae5ef7f506f6cfc90c814ecdc2",
+      "reason": "Administrative current status/evidence routing only; no requirement/source/test/build change"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "beforeSha256": "381526b62a6adced83630b8f719dd9bfff008ddcedabc99a78c7d9b3dd4f859c",
+      "afterSha256": "f77c24bb126db07d78d27899e7c7b1b18965a07c3e2ec2ee5704a601f6b17627",
+      "reason": "Administrative current status/evidence routing only; no requirement/source/test/build change"
+    },
+    {
+      "path": "docs/stage5/IMPLEMENTATION_STATUS.md",
+      "beforeSha256": "b50ba333cd75ff1545a2542d8a2d6bf18d8af8e06f1f0b2fddc4ea14e9b3da37",
+      "afterSha256": "bbeaa22eb49efc30910e1584a9be96634398fcce09035358b344d5157c593558",
+      "reason": "Administrative current status/evidence routing only; no requirement/source/test/build change"
+    },
+    {
+      "path": "docs/stage5/REVIEW_STATUS.md",
+      "beforeSha256": "b620b9bcbeaace8a7a11f1411053ec274491e9043a3ee78441a78e8ca449133e",
+      "afterSha256": "3242b2ec3a24b7b9c819909446a8f3fd4dbc0e3c3137f528c8e1466a4a4e5e17",
+      "reason": "Administrative current status/evidence routing only; no requirement/source/test/build change"
+    },
+    {
+      "path": "docs/stage5/ask/remote/DESIGN_STATUS.md",
+      "beforeSha256": "28b17a196346100b895736ec74e83aa0784e0b7589fd960a413a4856d736fb63",
+      "afterSha256": "328eaa12758d109e393b700ddd09c7463a0ec0059cfd0a6986d16e92d4e9d4de",
+      "reason": "Administrative current status/evidence routing only; no requirement/source/test/build change"
+    }
+  ],
+  "newArtifacts": [
+    {
+      "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_RB_RC2.md",
+      "sha256": "addb2ee2e037fa1187769f32cd314f14ddde0f35973f549d0879018716f8b6f3"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_RB_RC2_ASTRA_ASSIGNMENT.json",
+      "sha256": "9bbfec0f07dd4cfdb3fbe37d0b09a702c84d69d051b77b3666fe8f3f8217830d"
+    },
+    {
+      "path": "verification/stage5/S5ASKREMOTE_RB_RC2_ASTRA_RESULT.json",
+      "sha256": "536f8055a96d154d2da0bd2129cdfda09811857ef0aea82ea7b3f6eb4a4ae215"
+    }
+  ],
+  "durableEvidence": [
+    {
+      "sourcePath": "/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/docs/stage5/ask/remote/S5ASKREMOTE_RB_IMPLEMENTATION_BRIEF.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/repository/docs/stage5/ask/remote/S5ASKREMOTE_RB_IMPLEMENTATION_BRIEF.md",
+      "sha256": "c76d227d6bf52eea09cccde63c78cd621e31c9df0a780540eaab204de08f2acc",
+      "bytes": 17419
+    },
+    {
+      "sourcePath": "/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/docs/stage5/ask/remote/S5ASKREMOTE_RB_IMPLEMENTATION_REPORT.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/repository/docs/stage5/ask/remote/S5ASKREMOTE_RB_IMPLEMENTATION_REPORT.md",
+      "sha256": "514a689c6149f36a35cde4598ac04bb454d589fe3fd6ca9a81cfd92121a47ce9",
+      "bytes": 10449
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/COORDINATOR_OBSERVATIONS.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/COORDINATOR_OBSERVATIONS.json",
+      "sha256": "3ed766205f83f9fbbae363254cd980034213fe61e11f5246dcd6575d8ec865e2",
+      "bytes": 985
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/IMPLEMENTATION_PROMPT.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/IMPLEMENTATION_PROMPT.txt",
+      "sha256": "a13728f1b56c6ce44883646e763484bacdcd31a95888503252682e59a51b343a",
+      "bytes": 1330
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/OFFICIAL_DOCS_CHECK.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/OFFICIAL_DOCS_CHECK.json",
+      "sha256": "0e40f35799dcb58b3a0559aa629393b33795ba256305fba91a553737889df79d",
+      "bytes": 809
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/PREPARATION_ADMINISTRATIVE_DELTAS.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/PREPARATION_ADMINISTRATIVE_DELTAS.json",
+      "sha256": "ef4e34bb715e798d22b89594d619e7d9ebe53731d2c008ab37d621025e646037",
+      "bytes": 1448
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/PREPARATION_BASELINE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/PREPARATION_BASELINE.json",
+      "sha256": "70b9177a1c522041a040492390bc21650b02c6e94ebc83d70e055d4a8daf44d0",
+      "bytes": 223439
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/baseline.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/baseline.json",
+      "sha256": "4cd65f904a68b329697ae4b128121ffd00f4cd3f680004f4332bd810e3025a51",
+      "bytes": 226504
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/EVIDENCE_INDEX.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/EVIDENCE_INDEX.json",
+      "sha256": "a75fdb0e007b8c8cc0a7473d07ea5b198f0bd2ee9b54441b3f75503f28152c82",
+      "bytes": 22305
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/FAILURES.md",
+      "sha256": "0a598acaf37ce2da3534fe68f01fa94ebce5c41ffdc9321a1f8ac0bb0524dd93",
+      "bytes": 1228
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/RB_DELTAS.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/RB_DELTAS.diff",
+      "sha256": "0c0abac9c8f8ebce178a2788a53332543e4a5e3087a01a3ee1c5526cd94b45d7",
+      "bytes": 287805
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/baseline/DESIGN_NORMS_CHECK.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/baseline/DESIGN_NORMS_CHECK.txt",
+      "sha256": "08c89d60a27f6edcf7e24f7e8cd2515cb1dfe9b2b42a58fcbe41b1d71b5a95c6",
+      "bytes": 54
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/baseline/PG_CLEANUP_BASELINE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/baseline/PG_CLEANUP_BASELINE.json",
+      "sha256": "15a9135fbe799efe8f6dfc069673a800654e0740ba6324565c8393f023f291ab",
+      "bytes": 1014
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/baseline/PG_CLEANUP_FINAL.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/baseline/PG_CLEANUP_FINAL.json",
+      "sha256": "d3e48821714ab80386057c7d60b7ba601ae6a339c09e275830477e8e57ad9323",
+      "bytes": 1014
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/baseline/PREWRITE_VERIFICATION.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/baseline/PREWRITE_VERIFICATION.json",
+      "sha256": "f26a7ff38c2b00c3b04a1a628210bc8f87c9f9baae7646fa62e0bb8be338a344",
+      "bytes": 1403
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/final/context-budget.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/final/context-budget.log",
+      "sha256": "2e762e2657f289726b4a382e27bb4a5389c8251baee02d7ab65031df6961e0cf",
+      "bytes": 166
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/final/git-diff-check.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/final/git-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/final/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/final/summary.txt",
+      "sha256": "78b9c794302c090e61156891e3e857fbcaf45e19bab47d11db368409890750e5",
+      "bytes": 72
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/final/untracked-ws.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/final/untracked-ws.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/api-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/api-build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/api-smoke.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/api-smoke.log",
+      "sha256": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+      "bytes": 289
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/browser-e2e.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/browser-e2e.log",
+      "sha256": "75337df7df9fef003d298b329749b66c8d316eb126e816315a439aa419905732",
+      "bytes": 13184
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/db-check-drift.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/db-check-drift.log",
+      "sha256": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+      "bytes": 214
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/db-check-pg17.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/db-check-pg17.log",
+      "sha256": "f766fbb3c0d32e2041eeb3bd11b9a9bf9b0df3e2bfaea376a361943a013a9f98",
+      "bytes": 2924
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/db-generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/db-generate.log",
+      "sha256": "7e1498a486b821872c0742dbf57ebd3fe1a8a36a41922850750557121f7a63c6",
+      "bytes": 651
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/git-diff-check.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/git-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/npm-test.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/npm-test.log",
+      "sha256": "a9c32f9f1fdb64b00f3c0c4044663fd9b765c221f1a4bed76c5e44ddd1da368e",
+      "bytes": 49449
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/schema-validate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/schema-validate.log",
+      "sha256": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+      "bytes": 411
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/summary.txt",
+      "sha256": "69b094422c0321b81905ae846ef22d75044cd3cee3199a6242bd576054b67395",
+      "bytes": 426
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/test-pg.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/test-pg.log",
+      "sha256": "08a9bc9f76754e322a493c2e6c157d45c3acaaa69f6d199331ca06caeb8b9d82",
+      "bytes": 103808
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/typecheck.log",
+      "sha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+      "bytes": 67
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/ui-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/ui-build.log",
+      "sha256": "44e3fa5e08eb210ca22ea975b443e79896b9b4faa3ef40d3a877e984dc98e932",
+      "bytes": 214
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/ui-typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/ui-typecheck.log",
+      "sha256": "94e4d3c0eae80d5541012e49723e5f5969b4d419b6c71a9b6d28e7f3068ef449",
+      "bytes": 101
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run1/untracked-ws.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run1/untracked-ws.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/api-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/api-build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/api-smoke.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/api-smoke.log",
+      "sha256": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+      "bytes": 289
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/browser-e2e.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/browser-e2e.log",
+      "sha256": "d6b2d034cfd7be62971113c0c93f39828dfdeb905ce37caf3057f3b0a4a9f9ff",
+      "bytes": 13185
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/db-check-drift.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/db-check-drift.log",
+      "sha256": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+      "bytes": 214
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/db-check-pg17.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/db-check-pg17.log",
+      "sha256": "f766fbb3c0d32e2041eeb3bd11b9a9bf9b0df3e2bfaea376a361943a013a9f98",
+      "bytes": 2924
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/db-generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/db-generate.log",
+      "sha256": "fb1a663381a2b0d55f1b714a93466950c6dec799c1e8a5580b984f71d8cf9b57",
+      "bytes": 608
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/git-diff-check.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/git-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/npm-test.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/npm-test.log",
+      "sha256": "aaf188a7961db020e93fa94a64aaac41c82db5156a49e065337dd9f07633cf24",
+      "bytes": 49449
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/schema-validate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/schema-validate.log",
+      "sha256": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+      "bytes": 411
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/summary.txt",
+      "sha256": "7d4055174e37a300874da261e1b594e7c6fbd677e21fd137e12dc7abd2109fd4",
+      "bytes": 426
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/test-pg.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/test-pg.log",
+      "sha256": "c250a0b5850a248346cd98ef57b460d8a13571866f11bd367c82ce05689f5a88",
+      "bytes": 100401
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/typecheck.log",
+      "sha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+      "bytes": 67
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/ui-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/ui-build.log",
+      "sha256": "44e3fa5e08eb210ca22ea975b443e79896b9b4faa3ef40d3a877e984dc98e932",
+      "bytes": 214
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/ui-typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/ui-typecheck.log",
+      "sha256": "94e4d3c0eae80d5541012e49723e5f5969b4d419b6c71a9b6d28e7f3068ef449",
+      "bytes": 101
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/run2/untracked-ws.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/run2/untracked-ws.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/checks/scope-interim.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/checks/scope-interim.json",
+      "sha256": "27202392376ebe9252d2470a5efeeb7a90b6233b022594b62b6471dbafed0f9a",
+      "bytes": 7486
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/focused/api-build-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/focused/api-build-1.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/focused/api-build-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/focused/api-build-2.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/focused/unit-ask-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/focused/unit-ask-1.log",
+      "sha256": "fd0a11aa856e89ad7848a8e9baad30f58da649e9f73494aaf5ed32562aea2adb",
+      "bytes": 8928
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/focused/unit-ask-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/focused/unit-ask-2.log",
+      "sha256": "d6967091fc524ae38bebe6ddbdc3e51aded62aea31d13a3dbebfff75c80d6b80",
+      "bytes": 7982
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/egress-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/egress-1.log",
+      "sha256": "c76baa4ad333556eed1e5bcdc66c8b10a725a14225e8f9b67eececbb9af9d1fd",
+      "bytes": 3519
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/egress-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/egress-2.log",
+      "sha256": "f36cc4683fdcd4b9e44aea4e796ee6ad224d46d195f133a3ba6c6084c57efeba",
+      "bytes": 1789
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/egress-3.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/egress-3.log",
+      "sha256": "2f324376a65de73c91299fa469a37aa2d0d63711c80294250c5c9aa82b499e44",
+      "bytes": 1791
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/floor-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/floor-1.log",
+      "sha256": "c45b0e67aedb360cad621286d99307a4ac3214c06c5e5b6666dcf9fac719f7e6",
+      "bytes": 1621
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/floor-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/floor-2.log",
+      "sha256": "c6204c7e13cd165f5690a116ef565bd76f4e1190b4e88c80532f374ee482e305",
+      "bytes": 797
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/journey-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/journey-1.log",
+      "sha256": "a4d70997968173fb583058ed89968c82fb1f44a20d99414ea9acce179a8ea27f",
+      "bytes": 1816
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/journey-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/journey-2.log",
+      "sha256": "1144f823fcbb27cccf0f2700bafa3f5f8e74fbd4b50e0761cb542537ffca8c68",
+      "bytes": 3468
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/journey-3.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/journey-3.log",
+      "sha256": "d7b267534b739779d5b61727fd60bc708edb0fa6a3fd3bb8d6fc62436148a381",
+      "bytes": 968
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/process-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/process-1.log",
+      "sha256": "21510f52cf43f9019f2c1c01f8710849c02449f7b995f2161a94da67bd9fdb9e",
+      "bytes": 518
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/ra-remote-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/ra-remote-1.log",
+      "sha256": "4aa2e971fce255e3862c30d5ef4a4e559ed475d00c0cf003eba502b98f55cf42",
+      "bytes": 3717
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/settle-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/settle-1.log",
+      "sha256": "aa357d69933067dceb2a3c3fbb64bbe1f83c9a8c9ae9cb5d64e418e482614e76",
+      "bytes": 2812
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/settle-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/settle-2.log",
+      "sha256": "3f28002409d98071b4efac5292c36ab964ec77b5109433470659fef179b7b563",
+      "bytes": 1112
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/upstream-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/upstream-1.log",
+      "sha256": "053a9d35da7efa06beae6d972fecf6c5da332243d211c4c7f6a49495fe26a1e9",
+      "bytes": 1776
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/pg/upstream-2.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/pg/upstream-2.log",
+      "sha256": "e5492491d7016d6e633ba85bbec1b055a9847a29597640d77357fe8adb931dde",
+      "bytes": 929
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/logs/prod-staging-run.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/logs/prod-staging-run.log",
+      "sha256": "2564f62df0721bcf04f213b4e8eff1e7d69313b034b2918b74c315b602d43afc",
+      "bytes": 1213
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M01-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M01-0.log",
+      "sha256": "82bd6bb2fdea2780f4d4fb3b52ad4143255cd4a605dbb291e13c046c751f874c",
+      "bytes": 1531
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M01-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M01-1.log",
+      "sha256": "bbb4baccc24e3e8a2f2ce79d232ba4c501674979987584ef0ef225d51480d59e",
+      "bytes": 5100
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M01.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M01.json",
+      "sha256": "a04b00521585bdf0e8230be6ec4e9e3727257c070050282d9a524ef488da8a07",
+      "bytes": 1586
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M02-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M02-0.log",
+      "sha256": "f3fd3e80673f5e7a43c8ed4148980ff531cde9e9b3fbdfba6e5946186c8ee20f",
+      "bytes": 3421
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M02.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M02.json",
+      "sha256": "503860c2d08a6c0e6ffcb7d4cc60aa4d3d9c60f31e45162e68b067d31738e06f",
+      "bytes": 657
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M03a-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M03a-0.log",
+      "sha256": "480ad6b76e5f4e0ab87096a0dce86b56e763ed986109f2787226a1d9b82fd8ab",
+      "bytes": 2583
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M03a.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M03a.json",
+      "sha256": "fcee9315c4f517dccf3141e011c6bfd783fccfeb17612e0d6ab6f19a16235ec6",
+      "bytes": 900
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M03b-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M03b-0.log",
+      "sha256": "a712c61365fc746cc59d5fb77ce3aa378909ead78a505235af056503e82894ab",
+      "bytes": 1820
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M03b.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M03b.json",
+      "sha256": "05f0a963971be9661a1269b4eb58b762b53a45bc16cee11886bd5524dd797de3",
+      "bytes": 860
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M04-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M04-0.log",
+      "sha256": "075676c76c49ab629d032c0a552a116665561434e31e9ceafc8613504f3b06cf",
+      "bytes": 5754
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M04.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M04.json",
+      "sha256": "1d6b002e849b648c33bc881f978d62ed639a4b5c6fcc846577bc5b31565fca2c",
+      "bytes": 1280
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M05a-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M05a-0.log",
+      "sha256": "680fc119eb62be947d828cae21b633b5e8254464f6b5bdb2e3df1e9128bc3cf4",
+      "bytes": 1472
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M05a-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M05a-1.log",
+      "sha256": "6fa2d4dc057bbc50609d2c1f3d321a4a20c848a924a8f746b8c8d1738ca2edd1",
+      "bytes": 3498
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M05a.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M05a.json",
+      "sha256": "63874ceab85a82adbbf384d5f4dd1e6bf7621ed65a2e723f46f42f426e02c852",
+      "bytes": 1265
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M05b-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M05b-0.log",
+      "sha256": "0742897e70efe83ac090d3db39983fb636ed81a384aa04d308b0c057063464c8",
+      "bytes": 3497
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M05b.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M05b.json",
+      "sha256": "11a4e691a8eadbe81fcde956baf02d2ed57292d912cacc9629d93e442df09a97",
+      "bytes": 838
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M06-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M06-0.log",
+      "sha256": "c68812bbeee03653ec84bcd2c3390891e7dfc991b783b9816edbc21963d5c21a",
+      "bytes": 2290
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M06.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M06.json",
+      "sha256": "e7342cbf438df86d0e0605fff9bdd3563fb6429716269684d8447aa93b85449d",
+      "bytes": 655
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M07-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M07-0.log",
+      "sha256": "164741da53217420041e03ab12086d5f250d5a1e6234469ad19eac0376f73e01",
+      "bytes": 1765
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M07.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M07.json",
+      "sha256": "d4de5080afb979e95285c161fad3dfc4a278be1d78c23867e02e99add013d5dd",
+      "bytes": 920
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M08-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M08-0.log",
+      "sha256": "f8377e6527342ec53a3be17d81b43368a59f537d49eeb633efc0cbea0d2c0bfb",
+      "bytes": 3911
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M08.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M08.json",
+      "sha256": "638df0093b95875be808d35f1b83e26c5365a59e945fd699d708cb573ba257cd",
+      "bytes": 930
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M09-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M09-0.log",
+      "sha256": "82ad8145530775f79bd3c2f9a6e6ad2cc718e6c2138d6a46c509eda90e8fed61",
+      "bytes": 3353
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M09.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M09.json",
+      "sha256": "bafb6cc39f01b23766370448b0e9f66101604daef6e2684d9e2c32930d2a6aa4",
+      "bytes": 808
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M10-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M10-0.log",
+      "sha256": "f1da6038d0ae99b26465bb1313eee0ae5ed937a03c7d744f52a216ebe66e2c77",
+      "bytes": 1667
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M10.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M10.json",
+      "sha256": "9261c3f3cd5a558aba83fc6cc9e97129d9727f6c30928f1f74fd3e911da9cea3",
+      "bytes": 675
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M11-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M11-0.log",
+      "sha256": "c047ebbf9d1fead1a24efaa815fc0a929ec1f1c46fee0e76f0cf83da99cf362b",
+      "bytes": 1832
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M11.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M11.json",
+      "sha256": "1b4aa3e3ed94118ec8b16ae55a154815b283ad96b7b5dcc6e03778e4e259ba8a",
+      "bytes": 694
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M12a-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M12a-0.log",
+      "sha256": "2c2ad1dc98a64e3079bd283c06d92b17b544e9c3f6b8359b38f49a7e337db77e",
+      "bytes": 1791
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M12a.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M12a.json",
+      "sha256": "adf9dec9afcbbad7f3dea8b1f3042aa5e5833435fa537fa3d80ed42b3903546b",
+      "bytes": 582
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M12b-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M12b-0.log",
+      "sha256": "c8bebc9708b3715edfb66ab08215b99ebe3b764f0abe0e7d8f0f35fab5bf1fdf",
+      "bytes": 2648
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M12b.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M12b.json",
+      "sha256": "30015be662d37f79274c4a62ab91f7f3b361bdff48f845517102957b8482080c",
+      "bytes": 928
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M13-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M13-0.log",
+      "sha256": "3df04876d622164961c88bca0b58dea442cdb7484365317de71764fdde82e880",
+      "bytes": 2496
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M13.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M13.json",
+      "sha256": "f766e4ce21bd4d4010b7a5cb6273c406de6a870377025e15e04df47dca1f775b",
+      "bytes": 663
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M14-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M14-0.log",
+      "sha256": "355a5736bf45373372ec4928d28cff6458131f631aa576fd566ca7197b5159f5",
+      "bytes": 2019
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/M14.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/M14.json",
+      "sha256": "1f37aaba998a0096cd7a0d1535c28af1bc52a355d7df718d7cbec9cadca10444",
+      "bytes": 632
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/pristine-after.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/pristine-after.json",
+      "sha256": "5e6c8b094d1467ffcbd29af98c57c72c27a1c0c47409bb0797c812b333d1465a",
+      "bytes": 7798
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/pristine-before.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/pristine-before.json",
+      "sha256": "5e6c8b094d1467ffcbd29af98c57c72c27a1c0c47409bb0797c812b333d1465a",
+      "bytes": 7798
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/run.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/run.log",
+      "sha256": "ed879ecbbffb196302e949fd48327628115a460739b020b1f3817d79a4f95ee9",
+      "bytes": 1109
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/mutation/spec.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/mutation/spec.json",
+      "sha256": "c083dd47fb78f96356128cd582fd6a7d3a3bf7c3c814113e6f9ea436145477cc",
+      "bytes": 10162
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/pgrun.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/pgrun.sh",
+      "sha256": "6a6aba4dd81e888ebf3a93721f2704bec260e6bd38bd624292c0c31ffbe764ff",
+      "bytes": 460
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/api-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/api-build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/db-generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/db-generate.log",
+      "sha256": "58b8731a6bb8fa88209188053e0a8840820a1fcd62f89f4ee813659e6e4fed24",
+      "bytes": 1485
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/db-smoke.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/db-smoke.json",
+      "sha256": "91cca5c7aaf799063e0572e4b96c5b2019fc7e56fcbee2fca40e18f17f02086c",
+      "bytes": 804
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/db-smoke.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/db-smoke.log",
+      "sha256": "d2adeb373889d8c546730089a81f60bf3049cc7b25f2ca125b577ff984ae0148",
+      "bytes": 657
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/http-disabled.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/http-disabled.txt",
+      "sha256": "07b984e177e34d9ed5ee3aa138c4d7d2770bc6672b3b4857accfc8c5fdd73a4c",
+      "bytes": 53
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/http-mock.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/http-mock.txt",
+      "sha256": "d1d83241784d800e2c4b6aea55d70b8d4a88138be4c286c69b9177ecb73b1751",
+      "bytes": 16
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/http-off.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/http-off.txt",
+      "sha256": "8fc7493c98b8259ccd85ac395831f0ff0fae75b43011e978e6fcedcd486c1922",
+      "bytes": 47
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/installed.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/installed.txt",
+      "sha256": "8ec7df067c36879211653090b7e41cb5a0f580002bc0ccc8dfe762d106a8449d",
+      "bytes": 666
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/npm-ci.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/npm-ci.log",
+      "sha256": "07cf0c63a6ac2e1945a55166fbb69c656434721a4f797e0255dce43ab61abf74",
+      "bytes": 26
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/package-identity.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/package-identity.txt",
+      "sha256": "ce41d6129a75e9cec20e6d89359dd4832ca6f22cdd812a82ba772c2fea8d2d4a",
+      "bytes": 161
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/prod-check-mock.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/prod-check-mock.json",
+      "sha256": "dcabe549f09eb89933adc70c8ef406d138d2a22c4caf5e77793848b8332e4266",
+      "bytes": 817
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/prod-check-mock.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/prod-check-mock.log",
+      "sha256": "866d4568eacaf9b4053443db6ce76e6c2f55905cefa9bdbd44756e4307059d5b",
+      "bytes": 679
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/prod-check-off.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/prod-check-off.json",
+      "sha256": "1568c06b2e566c6df772de601bb240d31bfc793f1a016d694e95753c84b6bc54",
+      "bytes": 622
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/prod-check-off.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/prod-check-off.log",
+      "sha256": "6c107b51607f4d91bc3ab709e3accc112bab39998d7d015ba23affe89c56eed1",
+      "bytes": 512
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/prune.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/prune.log",
+      "sha256": "60d082e7bf46374775420466c4b7ffe4cc09c8a736f1a3d4b8e13a13ac0a4564",
+      "bytes": 29
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/serve-disabled.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/serve-disabled.log",
+      "sha256": "792312a9ef2f5b509a6b1037a85b979265f2222cbb90b4b157323a08dcf6a053",
+      "bytes": 52
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/serve-mock.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/serve-mock.log",
+      "sha256": "f99648fa3cb5ad7a2ff89d00d55d0a8e8e31ed31c6343a49e0e0ab9b6c2b9bae",
+      "bytes": 160
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/serve-off.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/serve-off.log",
+      "sha256": "b0c7cac8f86b6c786c55caaa13bf21f436a702013e1085b0f2922b2bf790c701",
+      "bytes": 109
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/prod-staging/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/prod-staging/summary.txt",
+      "sha256": "bef258f7f7e253e8e38b7903c0357a03d1eea1a11610904cbc0d4acd47a64b89",
+      "bytes": 286
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scope-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scope-final.json",
+      "sha256": "06a071c2d290897468bbd227a113b6d729e9ae0d9a1b1622d375ddf25af36627",
+      "bytes": 8002
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/checks.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/checks.sh",
+      "sha256": "049880860fced1a8b62860b526f4495a977f753207632415a67ae990e727cf06",
+      "bytes": 1364
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/db-smoke.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/db-smoke.ts",
+      "sha256": "8d91632c19d9d12f61476e19cb1b4faf2919c2595c8a5d51c1eace94759b8c1c",
+      "bytes": 4445
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/mutate.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/mutate.py",
+      "sha256": "4041643b95a54238a9dec7ee89a762fd78b8588bb5129cbf15a9e9f06b850cb7",
+      "bytes": 3087
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/pg/db-inventory.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/pg/db-inventory.mjs",
+      "sha256": "270386c00af80b6259aedc134679b6c7ad14ed4cf5f151726e5087120c0168a2",
+      "bytes": 1223
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/prod-check.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/prod-check.mjs",
+      "sha256": "0f55128c76fec88fd503ac10861300db1b9cca1777bd89191c4a37f818962232",
+      "bytes": 6463
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/prod-staging.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/prod-staging.sh",
+      "sha256": "8dd7d6f16fab73ddf347cf0d3351bb940a827a566f0b583b150eaeeebc84556c",
+      "bytes": 5099
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/scope_final.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/scope_final.py",
+      "sha256": "82126120438553f6ef4fe58d5cf3a48a3e845db721b885080e74609dba68bc86",
+      "bytes": 2769
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/snapshot.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/snapshot.py",
+      "sha256": "70ffed7149aed63a3b15645fac81b9fd76591a2053fe04ac6825f6af2511ecc5",
+      "bytes": 499
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/impl/scripts/verify_baseline.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/impl/scripts/verify_baseline.py",
+      "sha256": "5714a313dabc5b36e47440cf471ae64ed5f1c0f0463a5efa581299afd136d9f3",
+      "bytes": 3009
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc1-execution.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/opus-rb-rc1-execution.json",
+      "sha256": "964fdb3c09034c7f5414443018a127504dcc3996cd84d1b1386acec206f8e3f2",
+      "bytes": 1580
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc1-result.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/opus-rb-rc1-result.txt",
+      "sha256": "5c819a50cd2cb5a013df76220cbfa4b4ab25320b4395e3faab854fb09c6a4b91",
+      "bytes": 6885
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc1.jsonl",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/opus-rb-rc1.jsonl",
+      "sha256": "1ad89e5ae7037ec5729489be5eb1db46d1aad75cca3e86fbbc5ee952cec64a3a",
+      "bytes": 3540663
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc1.stderr",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/opus-rb-rc1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/preflight.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/preflight.json",
+      "sha256": "32a6a3ad232d269096cefd5881073c4030106c279203747c6a318aee7a1fdf85",
+      "bytes": 684
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/run_opus.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/run_opus.py",
+      "sha256": "ca8a63922be9d280aacca264d2657ecefda1f84d97a5a25537b27700738ba639",
+      "bytes": 2986
+    },
+    {
+      "path": "ASSIGNMENT.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/ASSIGNMENT.txt",
+      "sha256": "0602176b1b51e1cb47fa4917ff1f8b434849526fa9c9c03b5b64185cbb23cfd4"
+    },
+    {
+      "path": "IMPLEMENTATION_FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/IMPLEMENTATION_FAILURES.md",
+      "sha256": "0a598acaf37ce2da3534fe68f01fa94ebce5c41ffdc9321a1f8ac0bb0524dd93"
+    },
+    {
+      "path": "REPORT.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/REPORT.md",
+      "sha256": "3f7ad01103e789969bda3cc236074108352315aeb392cfe7b5b45abeedecbd99"
+    },
+    {
+      "path": "adversarial-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/adversarial-results.json",
+      "sha256": "5efb62a0dbc6dc954682813aa63f6c8d8c811e1a15d6bd0417faff6b19772f93"
+    },
+    {
+      "path": "adversarial.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/adversarial.test.mjs",
+      "sha256": "3131cb2de17b0322f7de67a4080796873b74f2567b76666f93c1803c1a9b608f"
+    },
+    {
+      "path": "checks.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/checks.json",
+      "sha256": "8853a5f80a468344e05e0b1a27dfbe29e276dec9a1fbd7d1e6d85aa11ddb1ca0"
+    },
+    {
+      "path": "identity-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/identity-final.json",
+      "sha256": "3298bf48b4b2841940a80657852eb8c83a3fb75362ad1d0c2587e7454d7bf8d1"
+    },
+    {
+      "path": "identity-initial.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/identity-initial.json",
+      "sha256": "3298bf48b4b2841940a80657852eb8c83a3fb75362ad1d0c2587e7454d7bf8d1"
+    },
+    {
+      "path": "identity-verifier-original.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/identity-verifier-original.py",
+      "sha256": "00982dcaa836f7253d5cfcee09bf3bc3f6038442d9fe48881f6af98683f269c6"
+    },
+    {
+      "path": "inherited-proof-verification.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/inherited-proof-verification.json",
+      "sha256": "bb14abeaf8c20af942c0bbdb542e59047c6408df159c5d93d1a4e55e929982a8"
+    },
+    {
+      "path": "isolated-identity.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/isolated-identity.json",
+      "sha256": "53ea0c0b389e414ebc830d632d33cf6b336e197136ac6cd115a1f1812a59f316"
+    },
+    {
+      "path": "logs/adversarial.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/adversarial.log",
+      "sha256": "a50cffcbd346264ea71485983308548d81be2e7e9edf44b0a77360d7120ad16c"
+    },
+    {
+      "path": "logs/build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/pg-focused.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/pg-focused.log",
+      "sha256": "dbbb9096e77506df9f0d7d2fb5e29544a694021a83c98ff921cf09ec950a274f"
+    },
+    {
+      "path": "logs/typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/typecheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/ui-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/ui-build.log",
+      "sha256": "0f1203fe27948cd017c292e61f82ab007117e65800b347dfad939e6cc8d7d166"
+    },
+    {
+      "path": "logs/unit-environment-final.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/unit-environment-final.log",
+      "sha256": "aed59962dc063d4b8dce3c784455a56a45ccba6dded0233b090d84ca8a46aeed"
+    },
+    {
+      "path": "logs/unit-environment-recheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/unit-environment-recheck.log",
+      "sha256": "95b637db73471d4d6867689a9724affaad6ec2255270244f0432b74604d22cf0"
+    },
+    {
+      "path": "logs/unit.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/unit.log",
+      "sha256": "e53e2dab3e04867025222dbf03d03806a5b8a34c63f1868ce36234a879efbf95"
+    },
+    {
+      "path": "native-execution-inherited.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/native-execution-inherited.json",
+      "sha256": "964fdb3c09034c7f5414443018a127504dcc3996cd84d1b1386acec206f8e3f2"
+    },
+    {
+      "path": "pg-baseline.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/pg-baseline.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-cleanup.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/pg-cleanup.json",
+      "sha256": "d64309c455876e5693654879da40bb49e13f67eed61b718d9e9adf1f641b4bee"
+    },
+    {
+      "path": "pg-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/pg-final.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "process-ownership.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/process-ownership.json",
+      "sha256": "a7abd61f399b78216becda0d0a65122905cd5f9093f84feaae659a1a25b407d1"
+    },
+    {
+      "path": "runner.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/runner.mjs",
+      "sha256": "6aba7be28c4ea501b8047e75211624366e3203dd05b41ac054ab57b853de3623"
+    },
+    {
+      "path": "scope-final-inherited.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/scope-final-inherited.json",
+      "sha256": "06a071c2d290897468bbd227a113b6d729e9ae0d9a1b1622d375ddf25af36627"
+    },
+    {
+      "path": "unit-initial-created-file.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/unit-initial-created-file.txt",
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    },
+    {
+      "path": "write_evidence.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/write_evidence.py",
+      "sha256": "9efbbd3968a2e2f66d66ad9bc94864b366d6c01936971775cccd742b0abba191"
+    },
+    {
+      "path": "EVIDENCE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/EVIDENCE.json",
+      "sha256": "2626367b43dfba83a30294ba91f2cf0f9e2575aa10a1aaa74ba7c7a9bc306c3e"
+    },
+    {
+      "sourcePath": "/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/docs/stage5/ask/remote/S5ASKREMOTE_RB_RC2_REPAIR_REPORT.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repository/docs/stage5/ask/remote/S5ASKREMOTE_RB_RC2_REPAIR_REPORT.md",
+      "sha256": "4682e1b59a8848fdccba5b7eb338b085ee8f5129849cd0003d6268230fd7f500",
+      "bytes": 8202
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/COORDINATOR_PACKAGING_NOTES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/COORDINATOR_PACKAGING_NOTES.md",
+      "sha256": "f3bfacb8e91e21950ad99d803bea9ea6835e23735c3df879dd04866b2140ef6a",
+      "bytes": 705
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/RC2_COORDINATOR_COMPLETION.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/RC2_COORDINATOR_COMPLETION.json",
+      "sha256": "a69960d7f278bd180f64ba95a8f4feff6f958302fb1922108661bd770f881cbe",
+      "bytes": 2041
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/RC2_COORDINATOR_EVIDENCE_INDEX.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/RC2_COORDINATOR_EVIDENCE_INDEX.json",
+      "sha256": "e2b3d88c49d11ccd09eab461dcd7413ac392eb0f871dfc9c576cd2d1315907a1",
+      "bytes": 3600
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/RC2_COORDINATOR_FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/RC2_COORDINATOR_FAILURES.md",
+      "sha256": "7ae433c1fa3e19243685e777b084c585ccb6e37682e6b74b9b5b372897d19ab6",
+      "bytes": 974
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/REPAIR_RC2_PROMPT.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/REPAIR_RC2_PROMPT.txt",
+      "sha256": "69e3f8c328a4ea607d6c41ee39bd2786f31b7a228fef27a131645298412a3a56",
+      "bytes": 4759
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/capture_repair.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/capture_repair.py",
+      "sha256": "5a30284fad1e07d05f41555c05039dd94fb39af61c359809825dd2034b075806",
+      "bytes": 12572
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc2-execution.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/opus-rb-rc2-execution.json",
+      "sha256": "b13c71aa2cf6cb0d81500610f19014f962208417a81d1fc110e86473fed0fb94",
+      "bytes": 1593
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc2-result.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/opus-rb-rc2-result.txt",
+      "sha256": "457500470f2513a560d8d5d9e258cf0f70caecc24b14fec5a832f5d0d880c946",
+      "bytes": 66
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc2.jsonl",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/opus-rb-rc2.jsonl",
+      "sha256": "829f66fa817f3b5c7a2c04fefbe1b73d64e1340185476a7c3407ca65138beda1",
+      "bytes": 628216
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc2.stderr",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/opus-rb-rc2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/rc2-preflight.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/rc2-preflight.json",
+      "sha256": "4f0854e6abf1be84b95e8f80fdcbbd52c0ad403eb4b26181a92e9d38ef4f340a",
+      "bytes": 477
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-baseline-rc2.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-baseline-rc2.json",
+      "sha256": "7f02d644e644042d515c81ca946d216b1e90d08652c01b86eac77e466a037d2f",
+      "bytes": 237338
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/baseline/PG_CLEANUP_BASELINE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/baseline/PG_CLEANUP_BASELINE.json",
+      "sha256": "39ad9fe59ae13e9879014d1cd7300687fce5a9d7e201566f9f9694b2b742ba6a",
+      "bytes": 1014
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/baseline/PG_CLEANUP_FINAL.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/baseline/PG_CLEANUP_FINAL.json",
+      "sha256": "45db2be6c4c6ccde68bf55e58fab4db680463ed78a8b475dba19fefcaab8246b",
+      "bytes": 1014
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/baseline/PREWRITE_VERIFICATION.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/baseline/PREWRITE_VERIFICATION.json",
+      "sha256": "10ebb0670fafa7405365b89821a17fe3ee158a2864ce94fd311e9ea370e65aea",
+      "bytes": 617
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/final/context-budget.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/final/context-budget.log",
+      "sha256": "6b6160c718e2ab14757283cb331c3f7dca667949668134f48ef906a58c1174ad",
+      "bytes": 166
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/final/git-diff-check.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/final/git-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/final/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/final/summary.txt",
+      "sha256": "78b9c794302c090e61156891e3e857fbcaf45e19bab47d11db368409890750e5",
+      "bytes": 72
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/final/untracked-ws.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/final/untracked-ws.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/api-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/api-build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/api-smoke.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/api-smoke.log",
+      "sha256": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+      "bytes": 289
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/browser-e2e.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/browser-e2e.log",
+      "sha256": "ae89365b0e31f51acf95325a19ed9879e12e27a4faee38dfb6014c7188f5c3c7",
+      "bytes": 13187
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/db-check-drift.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/db-check-drift.log",
+      "sha256": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+      "bytes": 214
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/db-check-pg17.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/db-check-pg17.log",
+      "sha256": "f766fbb3c0d32e2041eeb3bd11b9a9bf9b0df3e2bfaea376a361943a013a9f98",
+      "bytes": 2924
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/db-generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/db-generate.log",
+      "sha256": "cf77def9770ed6a7e0ee1089c90ca6e8f5780983e10715aaf6e6ddec3ccdb559",
+      "bytes": 656
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/git-diff-check.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/git-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/npm-test.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/npm-test.log",
+      "sha256": "0ae63d57688d81eb68c2de0b3298558006869c5d03f5cd33631f1e701d967496",
+      "bytes": 51039
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/schema-validate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/schema-validate.log",
+      "sha256": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+      "bytes": 411
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/summary.txt",
+      "sha256": "33a8d7097db69c65d7bcfe919ff4d63538c65119bc85ad6dd3096a69327009b0",
+      "bytes": 426
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/test-pg.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/test-pg.log",
+      "sha256": "cd7aba384ba15be24bd373b7d7b5d1a49be4acde29e114af8e9794e69c7d8d7e",
+      "bytes": 101122
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/typecheck.log",
+      "sha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+      "bytes": 67
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/ui-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/ui-build.log",
+      "sha256": "44e3fa5e08eb210ca22ea975b443e79896b9b4faa3ef40d3a877e984dc98e932",
+      "bytes": 214
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/ui-typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/ui-typecheck.log",
+      "sha256": "94e4d3c0eae80d5541012e49723e5f5969b4d419b6c71a9b6d28e7f3068ef449",
+      "bytes": 101
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/checks/run1/untracked-ws.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/checks/run1/untracked-ws.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/api-build-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/api-build-1.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/pg-focused-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/pg-focused-1.log",
+      "sha256": "092728c7b5cb7e7f00592051e920f3bdc5b04d08b4a9dda71bf73ddfc8c94b16",
+      "bytes": 13449
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/pg-rc2-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/pg-rc2-1.log",
+      "sha256": "963aace9eafe19221d068732c288a080862a5431d38d50c07df716ad442264d4",
+      "bytes": 831
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/prod-staging-run.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/prod-staging-run.log",
+      "sha256": "5edf919369b8e682895843f02427d9440237fa48bdd3ad99e420ca24b212ceff",
+      "bytes": 1219
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/repro-final.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/repro-final.log",
+      "sha256": "5d0d38b533e89922b42e6a01c1f6f6ef3a3bfd25cf5e869ef5d8db608db57e25",
+      "bytes": 442
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/repro-postfix-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/repro-postfix-1.log",
+      "sha256": "87c195b504b600751668bffca3fc5b649ea273015abd39df0dbecb20649a9798",
+      "bytes": 442
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/repro-prefix.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/repro-prefix.log",
+      "sha256": "3712bd134ba8f374f8c5a39590133372023849b31f2522869c52ed471f2deff6",
+      "bytes": 1962
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/status-gate-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/status-gate-1.log",
+      "sha256": "1384bfbb79cd39cf9545566fde15e078130ed6e70e5a685224db65d29e9c4e60",
+      "bytes": 934
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/unit-focused-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/unit-focused-1.log",
+      "sha256": "8a5d898b8e17ee70de81bde8cfbf1fe813fd4f837a8fdb71b867f245fb0edfa1",
+      "bytes": 12894
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/logs/unit-remote-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/logs/unit-remote-1.log",
+      "sha256": "2736a8ef1e713226d6ebe4d1d1b2f9e004ce0d0c2a228605cbc5e75fd08a6efa",
+      "bytes": 7979
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M01-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M01-0.log",
+      "sha256": "f51ee935508687328a996c25fbd62e40d84beb17bf5c7615a1c3a177158bccaa",
+      "bytes": 1529
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M01-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M01-1.log",
+      "sha256": "366170fc6461add4cea058d3eeb473548da15ad1bbb3ac316c24e6056ab61a31",
+      "bytes": 5102
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M01.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M01.json",
+      "sha256": "f3e7d659cfb0aa01ee8983bd25e76064d84468660d06ca42e21ba3d259b40233",
+      "bytes": 1598
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M02-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M02-0.log",
+      "sha256": "5d2cde27b5699e17757284f0d963943276416383d683154479026809627c118a",
+      "bytes": 3428
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M02.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M02.json",
+      "sha256": "691b048fddc202fca1e7d430c4e4a71fd2a4e452ba280794abde496c1038c109",
+      "bytes": 665
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M03a-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M03a-0.log",
+      "sha256": "5e7464668040ed8c5094d567d47cac01ba521d4f1c74d2a58477ce01884396da",
+      "bytes": 2584
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M03a.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M03a.json",
+      "sha256": "40a0a6644736c17acbd3a7f840a745a59852eda452b1a3f418578942cb12eaae",
+      "bytes": 907
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M03b-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M03b-0.log",
+      "sha256": "9611d794c1b4dd18360db4f5d39a4b7378eafe6cb4ac252536f6a2d7a11fdadf",
+      "bytes": 1818
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M03b.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M03b.json",
+      "sha256": "bcb38b1f3236f3a65559c1a4bb47c3976a60a262a031f1a948776c20b6350b01",
+      "bytes": 866
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M04-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M04-0.log",
+      "sha256": "d1f5f81ea7a5c441c3429c5973fd7d3b75ac6b969b9561c172389d6765f9ad15",
+      "bytes": 5759
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M04.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M04.json",
+      "sha256": "675f388f40c3dc203f7e8c988fb9023acb0a71e22b771773bc409e91e2b052b1",
+      "bytes": 1289
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M05a-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M05a-0.log",
+      "sha256": "d30f8d37c0562389d4373b77f36c8013a7f1f339f621970ef804273c4bc046c4",
+      "bytes": 1471
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M05a-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M05a-1.log",
+      "sha256": "d2c69af6c50478a0efa549ec92d1e02bbe15bed139e63f9d1881abb3b6603fbe",
+      "bytes": 3502
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M05a.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M05a.json",
+      "sha256": "d6ce9cb458bf1e6e6c7947650bc41708fb08a7f1dfab2f2ec903231c74b306b8",
+      "bytes": 1278
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M05b-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M05b-0.log",
+      "sha256": "00c9443f018175102f55bedeaa728171790897ac50b799873afe0008206fd3f2",
+      "bytes": 3501
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M05b.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M05b.json",
+      "sha256": "484701c65ba4da4029ef6a3ac2bf94eea738128f20c67e1b0155fd8e01097582",
+      "bytes": 845
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M06-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M06-0.log",
+      "sha256": "45b74a265019f7fe2de69a8ea980464330f963ed149ccb21566b9e620bf4efa9",
+      "bytes": 2289
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M06.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M06.json",
+      "sha256": "92433407361a65790aa010cf33a39728b85f8a95c47f10e8471505f231e0f384",
+      "bytes": 660
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M07-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M07-0.log",
+      "sha256": "36a938440324d4bdcdaa33fe9b3c3bacd749dc9ba123b99b67ef69f843b774bd",
+      "bytes": 1771
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M07.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M07.json",
+      "sha256": "efa678c2531b3f8002aa2b7de29101aacca500e043cd50c1514543644d1568c2",
+      "bytes": 929
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M08-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M08-0.log",
+      "sha256": "39bed6c8fb91e6360a28883ba44cbce065201599e902b7de4c8ba0cfc85b437c",
+      "bytes": 3910
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M08.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M08.json",
+      "sha256": "6a2784d45d28bc4e4291bf2e9b51abef15381d2ea9baeefa128eb52738cfd182",
+      "bytes": 936
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M09-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M09-0.log",
+      "sha256": "17e1c0f332bb4a242448310e31741f514b3aee4693c760a1a3369d93cddcdd16",
+      "bytes": 3352
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M09.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M09.json",
+      "sha256": "e36105c3621b21cde2faac43d6d7a77004d999efa0a85f16b539a89392451fb9",
+      "bytes": 814
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M10-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M10-0.log",
+      "sha256": "c3eac74469753b9157c5ecbb6dae323ada5e95433f7378c363bb39836167618d",
+      "bytes": 1669
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M10.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M10.json",
+      "sha256": "48627488eea4de027968dd1f45457c260db863f2aae1745a6560c3051312cafe",
+      "bytes": 681
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M11-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M11-0.log",
+      "sha256": "b36021f98d694664a050b458f21a7f2961df2128abc28654f0fbb4c5e9115e52",
+      "bytes": 1834
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M11.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M11.json",
+      "sha256": "40544858a26c45ec0ba734da4f70fe7b2dd75b8e2cfbb3a87bff443811bebfe2",
+      "bytes": 700
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M12a-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M12a-0.log",
+      "sha256": "b4c0653d877c36aa6ef021798de41cc5d0e7e0b6425dab9afa945bf891f4009e",
+      "bytes": 1788
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M12a.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M12a.json",
+      "sha256": "2585fbfb5519fa49ac055d1e6582491d4510c651f4b02262c0b9fac5146f92fe",
+      "bytes": 588
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M12b-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M12b-0.log",
+      "sha256": "711ae061b122c390adf6b20cfc6a2cf9b238353b66a7ea039eaa434e067e6f9f",
+      "bytes": 2639
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M12b.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M12b.json",
+      "sha256": "ddb383119590ed40ee50836b3d48c21e28a1a59dce2c62fa9c9baa58641e131b",
+      "bytes": 933
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M13-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M13-0.log",
+      "sha256": "00e70424cda8c2a5e99902c2997993e6e1d9f2de4b5001fa7bf310fa14804af5",
+      "bytes": 1788
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M13.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M13.json",
+      "sha256": "7dca396860ce9bf3e3b0993aff357a2a1e79987c37bf0a131b987ca410301a0b",
+      "bytes": 521
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M13c-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M13c-0.log",
+      "sha256": "fcfa4be65c24633fdf40c13ec4ce6ed3958df398701a7d4b14c56566b6990b17",
+      "bytes": 1791
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M13c-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M13c-1.log",
+      "sha256": "7dff05e57e09c2cd55fce997f009968a92eba212bd286ddd0f640bc67c487639",
+      "bytes": 3721
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M13c.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M13c.json",
+      "sha256": "2d97b126bd294c2061f9754c08156dee4ecd8245cd45d8d078afbef03625ea9b",
+      "bytes": 1332
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M14-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M14-0.log",
+      "sha256": "64ef41a3d0d2bc4604995b3f5f727f11c7798966719567b29c31dc44cedb516f",
+      "bytes": 2013
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/M14.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/M14.json",
+      "sha256": "ab1ac6c863817382a07167ba6c4b9fc1b4fb50a500e29f0a4f67590bda7ad483",
+      "bytes": 635
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N01-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N01-0.log",
+      "sha256": "86ff4b9e1beca6450667f39e8c8abe0699cacc8c74c3091d25d3a0c5cbfd35fa",
+      "bytes": 3726
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N01-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N01-1.log",
+      "sha256": "da1ff4428a9e8974207dc7235f4fd1d3c397b86bc7f1e2037388701aa5a61819",
+      "bytes": 1539
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N01.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N01.json",
+      "sha256": "0b2ed23788185036edb6d4b54ceb2c112c43c3100b2e8273336db397b7be8423",
+      "bytes": 1334
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N02-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N02-0.log",
+      "sha256": "1edc1e2b6771c63999492a1591b3a384c5a9010b053739c592c8094dbfb6faff",
+      "bytes": 1480
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N02.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N02.json",
+      "sha256": "df03f847110e57f51a9c34d3dabb860505c981e3f1d712e01eefb11a396d5057",
+      "bytes": 665
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N03-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N03-0.log",
+      "sha256": "10cdfaa740f9edb58dcda04e071fbfa65ba57565f933bf45bbc6c6f53d52aa9e",
+      "bytes": 2893
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N03.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N03.json",
+      "sha256": "7e7d134288d2b7d2d9c37948cd5a56f96e45ef2c2624b794e3c0f2b8624e1132",
+      "bytes": 850
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N04-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N04-0.log",
+      "sha256": "54313bbb9ff3ebd200b92ccf6d99d265437e3a9eec8744e8a75cbc739b313446",
+      "bytes": 3672
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N04-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N04-1.log",
+      "sha256": "18c4e4d4af70a3e73cd7375e9c671d5966469b5944afdcda12b0e6a05ed9332c",
+      "bytes": 1572
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N04.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N04.json",
+      "sha256": "59db64eb70b88c0682eba29aa1fdec853838bb16aeab0221082de823bd896a75",
+      "bytes": 1324
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N05-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N05-0.log",
+      "sha256": "fbdb38a66d449f0d1352fe0d3ba23a7144a875b1903402ddf8873c5ba077594d",
+      "bytes": 5085
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N05-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N05-1.log",
+      "sha256": "80c16327a551d4de93f10a2e6dd5d9d386a8994424f0ba049594a54805198e15",
+      "bytes": 2395
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N05.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N05.json",
+      "sha256": "e93e118b03281fb75aa000c964182966b3a10a94593ae22b55f170eb29cd6700",
+      "bytes": 1891
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N06-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N06-0.log",
+      "sha256": "31477cb85e901e5b1f390f9b9fece37860af5229bcab36733bb79439586e66db",
+      "bytes": 3439
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N06-1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N06-1.log",
+      "sha256": "10c164432ae077b041f54234c9751a39daad168ccf63308e1d4b3f24c4d4ec31",
+      "bytes": 2407
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N06.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N06.json",
+      "sha256": "e5d45be39087702ba0ced8b88ee945ef16a50205c26de1f47e5c2a19d82294b7",
+      "bytes": 1494
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N07-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N07-0.log",
+      "sha256": "cce52491700afd1b1ffbf9e607eb62d99fe3a1a89f4eec5499483d19d7ce7956",
+      "bytes": 1498
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N07.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N07.json",
+      "sha256": "81c12f18f25f87e79e8e02007927a710472308dd92c70c609b9d79b01f4ca5a2",
+      "bytes": 718
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N08-0.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N08-0.log",
+      "sha256": "5aee3c11aebf4384043abb877c2617d15d90c8b4b8eaf0e99b1fb64f7c5dbecd",
+      "bytes": 1513
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/N08.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/N08.json",
+      "sha256": "fcae390ee43fe2874d49ca7ce8de8c37774a35231a19c2b049a028c01316371e",
+      "bytes": 683
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/pristine-after.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/pristine-after.json",
+      "sha256": "0a61687b4586341f856653152f1af6f64a6435d0bf656383a63a6c9bee2617d0",
+      "bytes": 167718
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/pristine-before.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/pristine-before.json",
+      "sha256": "0a61687b4586341f856653152f1af6f64a6435d0bf656383a63a6c9bee2617d0",
+      "bytes": 167718
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/run.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/run.log",
+      "sha256": "9e28f1312d8491dec50884af130bef57d1cbfe712b49ea70d57362afb4f60fac",
+      "bytes": 1661
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/mutation/spec.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/mutation/spec.json",
+      "sha256": "da820651563ebe19c7979c9c976fc92b605b801d8a5e341b1fb9e8bfea42f303",
+      "bytes": 15260
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/pgrun.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/pgrun.sh",
+      "sha256": "2f0a2ef39d68d8da244dd716187dc6f791f685e518e9a4701e6634dd81e3820e",
+      "bytes": 477
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/api-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/api-build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475",
+      "bytes": 318
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/db-generate.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/db-generate.log",
+      "sha256": "56440b40aa1dcba0e0a3124207685d987483a0de8a23efb70d3c24bfa84914e3",
+      "bytes": 1437
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/db-smoke.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/db-smoke.json",
+      "sha256": "91cca5c7aaf799063e0572e4b96c5b2019fc7e56fcbee2fca40e18f17f02086c",
+      "bytes": 804
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/db-smoke.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/db-smoke.log",
+      "sha256": "d2adeb373889d8c546730089a81f60bf3049cc7b25f2ca125b577ff984ae0148",
+      "bytes": 657
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/http-disabled.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/http-disabled.txt",
+      "sha256": "07b984e177e34d9ed5ee3aa138c4d7d2770bc6672b3b4857accfc8c5fdd73a4c",
+      "bytes": 53
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/http-mock.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/http-mock.txt",
+      "sha256": "d1d83241784d800e2c4b6aea55d70b8d4a88138be4c286c69b9177ecb73b1751",
+      "bytes": 16
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/http-off.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/http-off.txt",
+      "sha256": "8fc7493c98b8259ccd85ac395831f0ff0fae75b43011e978e6fcedcd486c1922",
+      "bytes": 47
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/installed.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/installed.txt",
+      "sha256": "8ec7df067c36879211653090b7e41cb5a0f580002bc0ccc8dfe762d106a8449d",
+      "bytes": 666
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/npm-ci.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/npm-ci.log",
+      "sha256": "07cf0c63a6ac2e1945a55166fbb69c656434721a4f797e0255dce43ab61abf74",
+      "bytes": 26
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/package-identity.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/package-identity.txt",
+      "sha256": "ce41d6129a75e9cec20e6d89359dd4832ca6f22cdd812a82ba772c2fea8d2d4a",
+      "bytes": 161
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/prod-check-mock.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/prod-check-mock.json",
+      "sha256": "dcabe549f09eb89933adc70c8ef406d138d2a22c4caf5e77793848b8332e4266",
+      "bytes": 817
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/prod-check-mock.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/prod-check-mock.log",
+      "sha256": "866d4568eacaf9b4053443db6ce76e6c2f55905cefa9bdbd44756e4307059d5b",
+      "bytes": 679
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/prod-check-off.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/prod-check-off.json",
+      "sha256": "1568c06b2e566c6df772de601bb240d31bfc793f1a016d694e95753c84b6bc54",
+      "bytes": 622
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/prod-check-off.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/prod-check-off.log",
+      "sha256": "6c107b51607f4d91bc3ab709e3accc112bab39998d7d015ba23affe89c56eed1",
+      "bytes": 512
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/prune.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/prune.log",
+      "sha256": "412800a28045a6296b4d38fab8ec82a2a075da3f9ec8068db6e8cecf265362dc",
+      "bytes": 29
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/serve-disabled.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/serve-disabled.log",
+      "sha256": "7fa5f6d7333238d9e6ffd107951de6517a1d5cb8d85a00ac4d4351acd9abec7a",
+      "bytes": 52
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/serve-mock.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/serve-mock.log",
+      "sha256": "d3bccd4dba0bae6f413184984741e61c026403c16fc90d16b5a43a1ee4680fda",
+      "bytes": 160
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/serve-off.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/serve-off.log",
+      "sha256": "9f48a6b9ee5cf3d0a5f3c43b8e74f57770ab1f306bb4d90569225c9ee18ce01b",
+      "bytes": 109
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/prod-staging/summary.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/prod-staging/summary.txt",
+      "sha256": "6358b7a2c03c7746670b63405cff23124e467961f69937a7265b52e51ec62e77",
+      "bytes": 292
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/repro/ADAPTATION.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/repro/ADAPTATION.diff",
+      "sha256": "0c295de48fe47da0f235c144c37f4478f9c3c166cf6b1f6851702c56f49ddc1e",
+      "bytes": 789
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/repro/adversarial-results.final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/repro/adversarial-results.final.json",
+      "sha256": "d9d13bf2f66be85eac94a474851b9225e8b21a87d037061fce0fba94b14b07fc",
+      "bytes": 773
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/repro/adversarial-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/repro/adversarial-results.json",
+      "sha256": "d9d13bf2f66be85eac94a474851b9225e8b21a87d037061fce0fba94b14b07fc",
+      "bytes": 773
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/repro/adversarial-results.prefix.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/repro/adversarial-results.prefix.json",
+      "sha256": "5efb62a0dbc6dc954682813aa63f6c8d8c811e1a15d6bd0417faff6b19772f93",
+      "bytes": 761
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/repro/adversarial.original.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/repro/adversarial.original.test.mjs",
+      "sha256": "3131cb2de17b0322f7de67a4080796873b74f2567b76666f93c1803c1a9b608f",
+      "bytes": 5277
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/repro/adversarial.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/repro/adversarial.test.mjs",
+      "sha256": "e20b0248bff8c62fd0cf0d50de2f52ecf997e2acfcb75248487c320f3b5089ad",
+      "bytes": 5298
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scope-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scope-final.json",
+      "sha256": "616cc9aef77a12d2b5fc18436725d6353f53336702e44ef84413f3bcd692340c",
+      "bytes": 2229
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/checks.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/checks.sh",
+      "sha256": "cb7b430b03b937702c95aabfd38c6dcaecd9fd4ec7ad03c2c60ef5d69d90483e",
+      "bytes": 1381
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/db-inventory.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/db-inventory.mjs",
+      "sha256": "270386c00af80b6259aedc134679b6c7ad14ed4cf5f151726e5087120c0168a2",
+      "bytes": 1223
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/db-smoke.ts",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/db-smoke.ts",
+      "sha256": "8d91632c19d9d12f61476e19cb1b4faf2919c2595c8a5d51c1eace94759b8c1c",
+      "bytes": 4445
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/mutate.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/mutate.py",
+      "sha256": "e3885e8573e49ffc0f14d8dbb37da5a87383b0815075b189e016c3bdb24a24f6",
+      "bytes": 3099
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/prod-check.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/prod-check.mjs",
+      "sha256": "0f55128c76fec88fd503ac10861300db1b9cca1777bd89191c4a37f818962232",
+      "bytes": 6463
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/prod-staging.sh",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/prod-staging.sh",
+      "sha256": "4635453d5fbc03d094a6a8af249eb384b254bf57704a2c2ab0b568bc8188f3a9",
+      "bytes": 5109
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/scope_final.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/scope_final.py",
+      "sha256": "832e2256f74c0c01048fcbf60c57ca0a8516f2dd3ace854a31d4f66abf24833e",
+      "bytes": 2970
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/scope_final_rc1style.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/scope_final_rc1style.py",
+      "sha256": "82126120438553f6ef4fe58d5cf3a48a3e845db721b885080e74609dba68bc86",
+      "bytes": 2769
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/snapshot.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/snapshot.py",
+      "sha256": "92b7b8eac3cf40fa3b33191e85ac8565157c1e4cca1571e742746c00d332e2a3",
+      "bytes": 477
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/repair-rc2/scripts/verify_repair_baseline.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/repair-rc2/scripts/verify_repair_baseline.py",
+      "sha256": "1e826590bba5c26b1cb393a848e1479fbae869db29f610033d3958c2c58d9b86",
+      "bytes": 3343
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/run_opus.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/run_opus.py",
+      "sha256": "ca8a63922be9d280aacca264d2657ecefda1f84d97a5a25537b27700738ba639",
+      "bytes": 2986
+    },
+    {
+      "sourcePath": "/tmp/atlas-stage5/askremote/rb/validate_native.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/validate_native.py",
+      "sha256": "2be53632c2953028f0d0e5d41390c0476d36f04e3cf71ad00aefa5ad454cd210",
+      "bytes": 1998
+    },
+    {
+      "path": "ASTRA_RC2_DISPATCH_RECEIPT.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/ASTRA_RC2_DISPATCH_RECEIPT.json",
+      "sha256": "9bbfec0f07dd4cfdb3fbe37d0b09a702c84d69d051b77b3666fe8f3f8217830d"
+    },
+    {
+      "path": "ASTRA_RC2_PROMPT.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/ASTRA_RC2_PROMPT.txt",
+      "sha256": "ec65b1ecf5176b0838931c8bfd5c947f8868af13746fa8549fe006a126aa7744"
+    },
+    {
+      "path": "FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/FAILURES.md",
+      "sha256": "a3c460d22606e1ba228b1ecee4833569175be1245f50933465efcd176339599c"
+    },
+    {
+      "path": "REPORT.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/REPORT.md",
+      "sha256": "addb2ee2e037fa1187769f32cd314f14ddde0f35973f549d0879018716f8b6f3"
+    },
+    {
+      "path": "adversarial-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/adversarial-results.json",
+      "sha256": "0fc7358b4af8dd6035c6907938c93ca51a8a8af2907a353a9d186fc04d96c7c3"
+    },
+    {
+      "path": "adversarial.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/adversarial.test.mjs",
+      "sha256": "76c3e56254adf3265cf58a1ee18e8879b59b0963f0ee3eefd76572521cbb2378"
+    },
+    {
+      "path": "checks.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/checks.json",
+      "sha256": "6764bb229ff1f221a89ae76cf3b161702f8b8510dda41edf9d09b8e6282a4f62"
+    },
+    {
+      "path": "cleanup-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/cleanup-final.json",
+      "sha256": "9aed6efce45c2948e4c4fde58d99c8b106597253f9cd41e096d9a837390eb691"
+    },
+    {
+      "path": "context-budget.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/context-budget.json",
+      "sha256": "6114e5e44145be1ae1a844b9884fa0af4db8c59c2080385973e78e070d613671"
+    },
+    {
+      "path": "dispatch-test-delta.diff",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/dispatch-test-delta.diff",
+      "sha256": "d35c562745b3901df3f9f2e4a86af5de196c5640d4c58f5c777a4ad3d72f73d2"
+    },
+    {
+      "path": "finalize-check.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/finalize-check.py",
+      "sha256": "af156f4b33d3ca5ea819b2da8f9700343a80e14e747293ce82bb52ab05932ffe"
+    },
+    {
+      "path": "http-fixture.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/http-fixture.mjs",
+      "sha256": "ddf01d07fd14cc65cfa1e314499c944b09da8d436d0a482e1c310092c3bbd6d9"
+    },
+    {
+      "path": "identity-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/identity-final.json",
+      "sha256": "540f2b79cba8e73e7cb3cb490a56ddb8616d5e0917c1ec6417f9a1401337a3b6"
+    },
+    {
+      "path": "identity-initial.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/identity-initial.json",
+      "sha256": "540f2b79cba8e73e7cb3cb490a56ddb8616d5e0917c1ec6417f9a1401337a3b6"
+    },
+    {
+      "path": "inherited/RC2_COORDINATOR_COMPLETION.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited/RC2_COORDINATOR_COMPLETION.json",
+      "sha256": "a69960d7f278bd180f64ba95a8f4feff6f958302fb1922108661bd770f881cbe"
+    },
+    {
+      "path": "inherited/RC2_COORDINATOR_EVIDENCE_INDEX.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited/RC2_COORDINATOR_EVIDENCE_INDEX.json",
+      "sha256": "e2b3d88c49d11ccd09eab461dcd7413ac392eb0f871dfc9c576cd2d1315907a1"
+    },
+    {
+      "path": "inherited/RC2_COORDINATOR_FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited/RC2_COORDINATOR_FAILURES.md",
+      "sha256": "7ae433c1fa3e19243685e777b084c585ccb6e37682e6b74b9b5b372897d19ab6"
+    },
+    {
+      "path": "inherited-proof-hashes.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/inherited-proof-hashes.json",
+      "sha256": "70d1ab2ece0fdf8596dba901eb447e17dc79d7de05be492ea6fc259fb29bde95"
+    },
+    {
+      "path": "isolated-build-identity.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/isolated-build-identity.json",
+      "sha256": "7c32b99406da62781a92450e70899a80a4efbed67effc76b14f2e6f35d3bd422"
+    },
+    {
+      "path": "logs/adversarial.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/adversarial.log",
+      "sha256": "dc5195e4e0e76e139408d2dfcccdf04a4883da2eb41155f06b4027350ea3ef24"
+    },
+    {
+      "path": "logs/build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/build.log",
+      "sha256": "bf13d3c91be7dc8f90e6aa722d8c085afc0acb687540d36eaef9bb386f5e4475"
+    },
+    {
+      "path": "logs/git-add.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/git-add.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/git-commit.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/git-commit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/git-init.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/git-init.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/pg-adversarial-corrected.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-adversarial-corrected.log",
+      "sha256": "28fc56e16b486d766f8d08e430aacaedb2c8b342502cf8231a42fe91bba794f1"
+    },
+    {
+      "path": "logs/pg-adversarial.attempt1.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-adversarial.attempt1.log",
+      "sha256": "746a180eee72eb6e7cbf35563495028422de30d41dd07b7648d5e670093d7208"
+    },
+    {
+      "path": "logs/pg-adversarial.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-adversarial.log",
+      "sha256": "746a180eee72eb6e7cbf35563495028422de30d41dd07b7648d5e670093d7208"
+    },
+    {
+      "path": "logs/pg-focused.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/pg-focused.log",
+      "sha256": "5694a5ca851a1bd4ec3cb756e03458d5b3adc7b5d926ed5d78fcbfdf51824feb"
+    },
+    {
+      "path": "logs/typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/typecheck.log",
+      "sha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41"
+    },
+    {
+      "path": "logs/unit.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/logs/unit.log",
+      "sha256": "907c482cdf82551ca36797d8aa6a6c3f17d54d60d4a020c5b758066d69e299de"
+    },
+    {
+      "path": "mutation-check.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutation-check.py",
+      "sha256": "4b0ba83cf7b96ec86249c3aea66a26e023bc1b5d91120722fc5e60a62af64aac"
+    },
+    {
+      "path": "mutations/floor-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/floor-results.json",
+      "sha256": "c3c9551799ba556a4457a05ab3928e1e6b19436c221521b6c3154e424c5de6d1"
+    },
+    {
+      "path": "mutations/floor.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/floor.log",
+      "sha256": "ddbc248206e470ed3dad485d1db07e445d2cd22d92383a2b8c4567547da2e8dc"
+    },
+    {
+      "path": "mutations/status-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/status-results.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "mutations/status.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/status.log",
+      "sha256": "a0042aee851c7bd29b756fb9c782f25377e091822f29922bea0ae76737ce93b4"
+    },
+    {
+      "path": "mutations/summary.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/mutations/summary.json",
+      "sha256": "7761cdd756f82d0a7ce4ed505cfd11e1b7f442d2198fca8a842ab4b29e448fc2"
+    },
+    {
+      "path": "native-execution-verification.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/native-execution-verification.json",
+      "sha256": "665b471487d12634c3a4ab1fd338c75c3b80d9d6135932b61fd852815b4f3a2a"
+    },
+    {
+      "path": "pg-adversarial-results.attempt1.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial-results.attempt1.json",
+      "sha256": "055eeb7a71fc9cacf918052f58a6d71ad5a5b55258efb6a1a55b8154f9b4bb24"
+    },
+    {
+      "path": "pg-adversarial-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial-results.json",
+      "sha256": "b725d7ba1d788c7e55f7ff4cba10ed05a826593450b4581d4c88db2f27d2d2aa"
+    },
+    {
+      "path": "pg-adversarial.test.attempt1.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial.test.attempt1.mjs",
+      "sha256": "3c45643bb891d5299f50d5b19ffe9b4bd1fbf7a54df80622008fefff48451d8e"
+    },
+    {
+      "path": "pg-adversarial.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-adversarial.test.mjs",
+      "sha256": "b5d7f14db20e5cf3cbd7270ccb2a961760c9e25bab7a8c5a2eac3622a5cadb35"
+    },
+    {
+      "path": "pg-baseline-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-baseline-rerun.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-baseline.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-baseline.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-checks-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-checks-rerun.json",
+      "sha256": "a0506553e13eb91e8cd55a3caecf45c72e7b38d4b67815a887abaaf761a4550a"
+    },
+    {
+      "path": "pg-checks.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-checks.json",
+      "sha256": "67eca24409818d06c67b5ee567fcad90a9383333802478fd4e5dddb4d7f43263"
+    },
+    {
+      "path": "pg-cleanup-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-cleanup-rerun.json",
+      "sha256": "d64309c455876e5693654879da40bb49e13f67eed61b718d9e9adf1f641b4bee"
+    },
+    {
+      "path": "pg-cleanup.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-cleanup.json",
+      "sha256": "d64309c455876e5693654879da40bb49e13f67eed61b718d9e9adf1f641b4bee"
+    },
+    {
+      "path": "pg-final-rerun.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-final-rerun.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-final.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-rerun.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-rerun.mjs",
+      "sha256": "2b271736f4b7dba05287d926dfee0c1cef3208e555356419e21c793763d4b80c"
+    },
+    {
+      "path": "pg-runner.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/pg-runner.mjs",
+      "sha256": "d43ec8cacf953c666381230fcbf1c285ba8168f41ebc8ee244f741f450b60586"
+    },
+    {
+      "path": "run-checks.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/run-checks.py",
+      "sha256": "c076391d6a1751ae6e1774ac6553915d61877ce85ce7fcfa3dbf456b53fe40ea"
+    },
+    {
+      "path": "sealed-source-inventory.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/sealed-source-inventory.json",
+      "sha256": "d923f1fb22441b592064563b93c2d77b56b283a59a20508107e46aa6fab8b7cc"
+    },
+    {
+      "path": "verify.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/verify.py",
+      "sha256": "6944d43a9c6ef752452624e15a989aa4bccd0bb850283e164eaea76130812c06"
+    },
+    {
+      "path": "EVIDENCE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc2/astra/EVIDENCE.json",
+      "sha256": "b7231a05b786887e40b842715d819ac6ecd5d46ac95ab5e106539b7adb2575c8"
+    }
+  ],
+  "selfExcludedFiles": [
+    "verification/stage5/S5ASKREMOTE_RB_CLOSURE_VERIFICATION.json",
+    "verification/stage5/S5ASKREMOTE_RB_APPROVED.json"
+  ],
+  "modelBillingQualification": "Native Opus actual stream models verified; Astra explicit fresh native assignment; raw reviewer provider telemetry/usage unavailable. Included subscription only; no extra usage/API/credits enabled; quota attribution unknown.",
+  "paidProviderCalls": 0,
+  "dataBudgetAdmission": "NOT_ADMITTED",
+  "nextCheckpointStatus": "NOT_STARTED",
+  "createdUtc": "2026-10-11T01:44:08.466512+00:00"
+}

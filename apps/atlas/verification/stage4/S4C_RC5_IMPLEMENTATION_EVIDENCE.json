@@ -1,0 +1,94 @@
+{
+  "checkpoint": "S4-C",
+  "scope": "MOCK dedicated reads/API/CLI, fresh maintenance admission, paired confined runner and original deadline, C1-C4 journeys; LIVE deferred",
+  "results": {
+    "npm-test": {
+      "exit": 0,
+      "seconds": 8,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/npm-test.log"
+    },
+    "schema-validate": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/schema-validate.log"
+    },
+    "db-generate": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/db-generate.log"
+    },
+    "typecheck": {
+      "exit": 0,
+      "seconds": 6,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/typecheck.log"
+    },
+    "api-build": {
+      "exit": 0,
+      "seconds": 3,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/api-build.log"
+    },
+    "api-smoke": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/api-smoke.log"
+    },
+    "test-pg": {
+      "exit": 0,
+      "seconds": 149,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/test-pg.log"
+    },
+    "db-check-pg17": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/db-check-pg17.log"
+    },
+    "db-check-drift": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/db-check-drift.log"
+    },
+    "git-diff-check": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/git-diff-check.log"
+    },
+    "untracked-whitespace": {
+      "exit": 0,
+      "seconds": 2,
+      "log": "/tmp/atlas-stage4/s4c-checks/rc5-final/untracked-ws.log"
+    }
+  },
+  "counts": {
+    "npm-test": {
+      "tests": 223,
+      "pass": 223,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "test-pg": {
+      "tests": 565,
+      "pass": 565,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  },
+  "allPassed": true,
+  "implementerReportedChecks": true,
+  "independentAcceptance": "PENDING",
+  "nativeExecution": {
+    "phase": "s4c-repair4",
+    "sessionId": "02752ee0-ea51-4249-b089-d6aba4205d5d",
+    "requestedModel": "claude-opus-5-5",
+    "actualMessageModels": [
+      "claude-opus-5-5"
+    ],
+    "effort": "high",
+    "elapsedSeconds": 654.3,
+    "rawStreamSha256": "18616f2ee7e48dd6ba71f4f97dd6034791f93aa492259e2ba1795f9104b2e546"
+  },
+  "LIVE": "DEFERRED_BY_OWNER"
+}

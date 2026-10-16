@@ -1,0 +1,10 @@
+
+> vardahei-atlas-stage1-reference@1.1.3 api:build
+> tsc -p apps/api/tsconfig.json && npm run ui:build
+
+
+> vardahei-atlas-stage1-reference@1.1.3 ui:build
+> node --experimental-strip-types scripts/operator-build.ts
+
+operator console: 41 assets, manifest e18fe8d43b9a0d240b1311d4975508d001f3826a5b4f6fcb2bd75bd6ddd2444a
+measured operator console: manifest 0884c6d5f5c5cf1854f237efd8e6fb5aceaf98b61743cb197fa2560a1908e05c

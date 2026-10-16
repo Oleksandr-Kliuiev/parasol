@@ -1,0 +1,214 @@
+{
+  "artifact": "S5ASKREMOTE-RB-rc1",
+  "packageHash": "5b711d7f2f365cffb0d68add4c3718fe1df2efc5af1ba4cc0a8eefa9ecda7d0f",
+  "verdict": "CHANGES_REQUIRED",
+  "requiredFindingsRemaining": 2,
+  "review": {
+    "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_RB_RC1.md",
+    "sha256": "3f7ad01103e789969bda3cc236074108352315aeb392cfe7b5b45abeedecbd99"
+  },
+  "rawEvidence": {
+    "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/EVIDENCE.json",
+    "sha256": "2626367b43dfba83a30294ba91f2cf0f9e2575aa10a1aaa74ba7c7a9bc306c3e"
+  },
+  "assignment": {
+    "path": "verification/stage5/S5ASKREMOTE_RB_RC1_ASTRA_ASSIGNMENT.json",
+    "sha256": "ace4040df5af501ecafefd56912ca70e547f6f4692ea5d5829d02bbce2389b04"
+  },
+  "requiredFindings": [
+    {
+      "id": "R1",
+      "priority": 1,
+      "file": "packages/ask/remote/dispatch.ts",
+      "line": 82,
+      "problem": "The last original-4500ms floor check is in service.provide before dispatchIntent resolves the secret and copies prepared bytes. At lines80-83 dispatch checks only terminal/provider-phase expiry, then consumes the capability. A controlled 1ms advance during secret resolution changes original remaining4500 to4499; the actual service+dispatch path still calls the transport, settles usage and publishes200. This violates the explicit post-COMMIT floor immediately before capability consumption; production synchronous work or scheduling/GC time can cross the same boundary.",
+      "requiredFix": "Carry the original task-bound deadline/floor authority into the private consumption boundary, and recheck it after secret resolution/prepared-byte work immediately before consumption. Below4500 must remain undispatched, produce ASK_DEADLINE504 and allow only private known-no-dispatch settlement. Preserve one provider phase starting before resolution, opaque task/one-use capability and the fixed adapter input boundary. Add exact4500/4499 and resolver/preparation delay regression tests through production orchestration, including owner/drain and no-wire assertions.",
+      "evidence": [
+        "adversarial.test.mjs:42",
+        "adversarial-results.json:floor-after-secret",
+        "logs/adversarial.log",
+        "source/packages/ask/remote/service.ts:91"
+      ]
+    },
+    {
+      "id": "R2",
+      "priority": 1,
+      "file": "packages/ask/remote/transport.ts",
+      "line": 58,
+      "problem": "The direct transport discards the already received HTTP status on overflow/error/abort and produces RESPONSE(status) only after end. A known401 response with65537 bytes yields OVERFLOW, so orchestration returns ASK_REMOTE_INVALID, settles DELIVERY_UNKNOWN, leaves the local circuit open and never attempts durable pause. The same401 with a small body correctly returns ASK_REMOTE_UNAVAILABLE, settles UPSTREAM_REJECTED and closes/pauses. An unending or failed error body likewise loses an already known status. This violates the fixed non-200 mapping and mandatory401/403 configuration-fault circuit.",
+      "requiredFix": "Preserve and classify non-200 status as soon as response headers arrive within the active provider phase; do not depend on successful body completion to recognize upstream rejection/auth faults. Keep all non-200 public replies ASK_REMOTE_UNAVAILABLE,401/403 immediate local close plus separate owner-held durable pause, full conservative reservation and zero retry. Bound/abort body cleanup while retaining the physical request+response ownership; never consume new late content after timeout. Add direct-transport-to-orchestration tests for401/403 and other non-200 statuses with oversized, stalled, aborted/error bodies, plus200 cap/late-body regressions.",
+      "evidence": [
+        "adversarial.test.mjs:47",
+        "adversarial.test.mjs:52",
+        "adversarial-results.json:401-oversize",
+        "adversarial-results.json:401-small",
+        "logs/adversarial.log"
+      ]
+    }
+  ],
+  "durableEvidence": [
+    {
+      "path": "ASSIGNMENT.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/ASSIGNMENT.txt",
+      "sha256": "0602176b1b51e1cb47fa4917ff1f8b434849526fa9c9c03b5b64185cbb23cfd4"
+    },
+    {
+      "path": "IMPLEMENTATION_FAILURES.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/IMPLEMENTATION_FAILURES.md",
+      "sha256": "0a598acaf37ce2da3534fe68f01fa94ebce5c41ffdc9321a1f8ac0bb0524dd93"
+    },
+    {
+      "path": "REPORT.md",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/REPORT.md",
+      "sha256": "3f7ad01103e789969bda3cc236074108352315aeb392cfe7b5b45abeedecbd99"
+    },
+    {
+      "path": "adversarial-results.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/adversarial-results.json",
+      "sha256": "5efb62a0dbc6dc954682813aa63f6c8d8c811e1a15d6bd0417faff6b19772f93"
+    },
+    {
+      "path": "adversarial.test.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/adversarial.test.mjs",
+      "sha256": "3131cb2de17b0322f7de67a4080796873b74f2567b76666f93c1803c1a9b608f"
+    },
+    {
+      "path": "checks.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/checks.json",
+      "sha256": "8853a5f80a468344e05e0b1a27dfbe29e276dec9a1fbd7d1e6d85aa11ddb1ca0"
+    },
+    {
+      "path": "identity-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/identity-final.json",
+      "sha256": "3298bf48b4b2841940a80657852eb8c83a3fb75362ad1d0c2587e7454d7bf8d1"
+    },
+    {
+      "path": "identity-initial.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/identity-initial.json",
+      "sha256": "3298bf48b4b2841940a80657852eb8c83a3fb75362ad1d0c2587e7454d7bf8d1"
+    },
+    {
+      "path": "identity-verifier-original.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/identity-verifier-original.py",
+      "sha256": "00982dcaa836f7253d5cfcee09bf3bc3f6038442d9fe48881f6af98683f269c6"
+    },
+    {
+      "path": "inherited-proof-verification.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/inherited-proof-verification.json",
+      "sha256": "bb14abeaf8c20af942c0bbdb542e59047c6408df159c5d93d1a4e55e929982a8"
+    },
+    {
+      "path": "isolated-identity.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/isolated-identity.json",
+      "sha256": "53ea0c0b389e414ebc830d632d33cf6b336e197136ac6cd115a1f1812a59f316"
+    },
+    {
+      "path": "logs/adversarial.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/adversarial.log",
+      "sha256": "a50cffcbd346264ea71485983308548d81be2e7e9edf44b0a77360d7120ad16c"
+    },
+    {
+      "path": "logs/build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/pg-focused.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/pg-focused.log",
+      "sha256": "dbbb9096e77506df9f0d7d2fb5e29544a694021a83c98ff921cf09ec950a274f"
+    },
+    {
+      "path": "logs/typecheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/typecheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/ui-build.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/ui-build.log",
+      "sha256": "0f1203fe27948cd017c292e61f82ab007117e65800b347dfad939e6cc8d7d166"
+    },
+    {
+      "path": "logs/unit-environment-final.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/unit-environment-final.log",
+      "sha256": "aed59962dc063d4b8dce3c784455a56a45ccba6dded0233b090d84ca8a46aeed"
+    },
+    {
+      "path": "logs/unit-environment-recheck.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/unit-environment-recheck.log",
+      "sha256": "95b637db73471d4d6867689a9724affaad6ec2255270244f0432b74604d22cf0"
+    },
+    {
+      "path": "logs/unit.log",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/logs/unit.log",
+      "sha256": "e53e2dab3e04867025222dbf03d03806a5b8a34c63f1868ce36234a879efbf95"
+    },
+    {
+      "path": "native-execution-inherited.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/native-execution-inherited.json",
+      "sha256": "964fdb3c09034c7f5414443018a127504dcc3996cd84d1b1386acec206f8e3f2"
+    },
+    {
+      "path": "pg-baseline.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/pg-baseline.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "pg-cleanup.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/pg-cleanup.json",
+      "sha256": "d64309c455876e5693654879da40bb49e13f67eed61b718d9e9adf1f641b4bee"
+    },
+    {
+      "path": "pg-final.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/pg-final.json",
+      "sha256": "42652210117aa8d3e563a201d6b022ad0727e063f3f055f447c7d2cb4195be9d"
+    },
+    {
+      "path": "process-ownership.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/process-ownership.json",
+      "sha256": "a7abd61f399b78216becda0d0a65122905cd5f9093f84feaae659a1a25b407d1"
+    },
+    {
+      "path": "runner.mjs",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/runner.mjs",
+      "sha256": "6aba7be28c4ea501b8047e75211624366e3203dd05b41ac054ab57b853de3623"
+    },
+    {
+      "path": "scope-final-inherited.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/scope-final-inherited.json",
+      "sha256": "06a071c2d290897468bbd227a113b6d729e9ae0d9a1b1622d375ddf25af36627"
+    },
+    {
+      "path": "unit-initial-created-file.txt",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/unit-initial-created-file.txt",
+      "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+    },
+    {
+      "path": "write_evidence.py",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/write_evidence.py",
+      "sha256": "9efbbd3968a2e2f66d66ad9bc94864b366d6c01936971775cccd742b0abba191"
+    },
+    {
+      "path": "EVIDENCE.json",
+      "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/review-rc1/astra/EVIDENCE.json",
+      "sha256": "2626367b43dfba83a30294ba91f2cf0f9e2575aa10a1aaa74ba7c7a9bc306c3e"
+    }
+  ],
+  "elapsedSeconds": 432.42,
+  "elapsedQualification": "Assignment to final evidence-file write wall time; not attributable billing/usage",
+  "model": "gpt-6-astra",
+  "effectiveEffort": "xhigh",
+  "freshContext": true,
+  "residuals": [
+    "CHANGES_REQUIRED; R-B is not accepted and dependent R-C must not advance. Required repairs stay in native Opus session d7982c45-9ae5-4da2-9568-3c31a1d6c269; renewed independent critical-boundary acceptance is required.",
+    "Offline engineering review only. Zero paid/product/provider calls and no account/key provisioning, foreign credential reads, data/budget admission, browser R-C activation, deployment or other model invocation by reviewer.",
+    "Real EU provider networking/TLS/account/project/retention eligibility, actual response shape, latency and semantic quality remain unverified. Transport evidence uses controlled in-process request seams, not vendor HTTP.",
+    "No claim that abort retracts admitted egress or billing, that application reservations cap the provider invoice, or that unknown commits/refunds are reconciled. Unknown delivery retains the reserve. In-process holds last until physical promises/callbacks finish; never-settling work retains capacity.",
+    "Full684PG,73browser, schema/drift/PG17 and clean install/dev-prune/foreigncwd production checks are inherited hash-verified implementation evidence, not newly rerun wholesale here. Independent copy uses copied dependencies, not an independent registry install.",
+    "Native reviewer explicitly assigned gpt-6-astra/xhigh. Independent provider response telemetry and attributable subscription quota for this reviewer are unavailable; no alternate model/billing was used."
+  ],
+  "nonblockingNotes": [
+    "Original sealed-source unit run392/393: unchanged action-canonical protected-output test requires a Git checkout. Missing.git allowed its synthetic verification/never-written.json marker. Isolated git init fixed the boundary; the first focused recheck then exposed that already-created marker. Preserved marker as unit-initial-created-file.txt, moved it out of source, and final unchanged suite passed8/8. All three logs retained. This is an extraction/environment disposition, not a candidate product finding; no assertions or source files were changed.",
+    "Inherited mutation results16/17 detected are supported by hash-bound logs. M12a is a redundant terminal-layer survivor, with combinedM12b detected. M03a is detected through rolling admission side effects; it is not evidence that removal bypassed SQL consent checks. The independent R1/R2 probes expose boundaries those mutations did not cover.",
+    "Focused source modules satisfy the hard700-line check. Shared phase/auth extraction and pure selector preserve the reviewed boundaries; existing whole-plan compiler/local facts code remains unchanged. The additive floor routine does not establish floor enforcement by the legacy R-A reserve routine, nor does SQL establish process continuity for NO_DISPATCH."
+  ]
+}

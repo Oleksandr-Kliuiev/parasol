@@ -1,0 +1,94 @@
+{
+  "checkpoint": "S4-A",
+  "scope": "MOCK-only DTO/aggregation/authority foundation/schema/roles/SQL cleanup foundation; B/C workflows deferred",
+  "results": {
+    "npm-test": {
+      "exit": 0,
+      "seconds": 9,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/npm-test.log"
+    },
+    "schema-validate": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/schema-validate.log"
+    },
+    "db-generate": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/db-generate.log"
+    },
+    "typecheck": {
+      "exit": 0,
+      "seconds": 6,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/typecheck.log"
+    },
+    "api-build": {
+      "exit": 0,
+      "seconds": 2,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/api-build.log"
+    },
+    "api-smoke": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/api-smoke.log"
+    },
+    "test-pg": {
+      "exit": 0,
+      "seconds": 60,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/test-pg.log"
+    },
+    "db-check-pg17": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/db-check-pg17.log"
+    },
+    "db-check-drift": {
+      "exit": 0,
+      "seconds": 0,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/db-check-drift.log"
+    },
+    "git-diff-check": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/git-diff-check.log"
+    },
+    "untracked-whitespace": {
+      "exit": 0,
+      "seconds": 1,
+      "log": "/tmp/atlas-stage4/s4a-checks/rc1/untracked-ws.log"
+    }
+  },
+  "counts": {
+    "npm-test": {
+      "tests": 195,
+      "pass": 195,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "test-pg": {
+      "tests": 446,
+      "pass": 446,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  },
+  "allPassed": true,
+  "implementerReportedChecks": true,
+  "independentAcceptance": "PENDING",
+  "nativeExecution": {
+    "phase": "s4a-implement",
+    "sessionId": "8e56f05b-1dbf-4fc4-b4da-a526b2fbeb5d",
+    "requestedModel": "claude-opus-5-5",
+    "actualMessageModels": [
+      "claude-opus-5-5"
+    ],
+    "effort": "high",
+    "elapsedSeconds": 3570.9,
+    "rawStreamSha256": "a50eedb518a2ec056e821b0fdaa9c1aa242cd26276305fccd4a52fc45140cd8d"
+  },
+  "LIVE": "DEFERRED_BY_OWNER"
+}

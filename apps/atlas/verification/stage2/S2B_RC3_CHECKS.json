@@ -1,0 +1,111 @@
+{
+  "candidate": "S2-B-rc3",
+  "date": "2026-10-08",
+  "packageHash": "9fdffa82f8355ab1e4920046001a0e449a75cc7227d69dc45593bd6e00e023d1",
+  "payloadFiles": 269,
+  "checks": [
+    {
+      "command": "npm run schema:validate",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/schema_validate.log",
+      "logSha256": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef"
+    },
+    {
+      "command": "npm run db:generate",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/db_generate.log",
+      "logSha256": "c817b02f9972d50e2d1910c7807caa5d8e393f127bd14b9b425581f609ddf517"
+    },
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/typecheck.log",
+      "logSha256": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41"
+    },
+    {
+      "command": "npm run test",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/test.log",
+      "logSha256": "dbc6e8eae569749060c62f4ed6b2232fdb153875a9799a03314b984c1c1eab29",
+      "tests": 132,
+      "pass": 132,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "command": "npm run api:build",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/api_build.log",
+      "logSha256": "a812f0bdda249b054cb6061adfa1bcc5d1b0c6a750f03cce2a17ed686767ab39"
+    },
+    {
+      "command": "npm run api:smoke",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/api_smoke.log",
+      "logSha256": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514"
+    },
+    {
+      "command": "npm run test:pg",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/test_pg.log",
+      "logSha256": "2410c0a729bc668957ab72b1999547227cd0791a9a24dc70e47e8f844e544af6",
+      "tests": 240,
+      "pass": 240,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "command": "npm run db:check:pg17",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/db_check_pg17.log",
+      "logSha256": "60607074888958f70cacb9ee075c294a6d579dbe00de7202447a0a609ac7ce3e"
+    },
+    {
+      "command": "npm run db:check:drift",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/db_check_drift.log",
+      "logSha256": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "executedBy": "native Claude Code claude-opus-5-5/high",
+      "elapsedSeconds": null,
+      "logArchiveEntry": "rc3-checkpoint/diff_check.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "orchestratorVerification": {
+    "allCommandExitCodesVerifiedFromActualToolResults": true,
+    "rawNativeStreamSha256": "df33b79a79c37c9a6ed04f2df6a9881cd990991625dc5ae2eb011ec0988fd4c5",
+    "reviewedDeltaMatchesImplementerPostCheckHashes": true,
+    "allCurrentAndZipPayloadHashesMatch": true,
+    "sourceWhitespace": "PASS including untracked delta",
+    "activeFileCeiling": "PASS",
+    "largestActiveFile": [
+      447,
+      "tests/sql-invariants.ts"
+    ],
+    "fullSuiteRepeats": "None: complete final execution logs verified; fresh reviewer performs independent focused checks."
+  }
+}

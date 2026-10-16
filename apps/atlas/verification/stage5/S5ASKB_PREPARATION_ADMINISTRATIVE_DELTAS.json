@@ -1,0 +1,35 @@
+{
+  "createdUtc": "2026-10-10T19:26:03.828867+00:00",
+  "deltas": [
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "f025b857b8a7bb8cff46367269f264b31dd490e6034dd057a3c523a1338c097c",
+      "afterSha256": "131b8fa0088e81af8dba417e2aaffa7c4f7254d28939d1b278a1e7ef4e51816d",
+      "reason": "Administrative authorization/status for ASK-B; no accepted source/contracts/build change"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "beforeSha256": "d970806a4c0547be9843c0587e35e7b03d5f814c36aff411eff644c5a177dcd8",
+      "afterSha256": "009b870d6091a78955dd41b548a3e59d0d500fd5756432df5337c23d4be7360f",
+      "reason": "Administrative authorization/status for ASK-B; no accepted source/contracts/build change"
+    },
+    {
+      "path": "docs/stage5/IMPLEMENTATION_STATUS.md",
+      "beforeSha256": "b12bb4e6a94c1655b6860be84d602d81c651d4f902ebfa1df628ec03b02ee6ec",
+      "afterSha256": "28007bd0494e444eba8392c1c1748cfb8901905f7b5b3fdc5fafa5906b2219b1",
+      "reason": "Administrative authorization/status for ASK-B; no accepted source/contracts/build change"
+    },
+    {
+      "path": "docs/stage5/REVIEW_STATUS.md",
+      "beforeSha256": "c8dc55f36a70e02a3c4da620aef112e1ebad2f1a1881e4083c5506a904aa8f89",
+      "afterSha256": "58d60eba75c24740784a4ef82a9bb7c4893db31efc74bc5ce537f208c5477827",
+      "reason": "Administrative authorization/status for ASK-B; no accepted source/contracts/build change"
+    },
+    {
+      "path": "docs/stage5/ask/DESIGN_STATUS.md",
+      "beforeSha256": "338906ce1c5c224a61bd153ac705388ada2565e3679806964d26351c73c9a2b3",
+      "afterSha256": "d39698f7d7106f39b3e6ce8fcd74c8fe17dac19703c283d574bf20702351cb27",
+      "reason": "Administrative authorization/status for ASK-B; no accepted source/contracts/build change"
+    }
+  ]
+}

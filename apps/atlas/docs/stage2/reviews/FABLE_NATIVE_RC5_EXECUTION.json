@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-08",
+  "packageVersion": "1.0-rc5",
+  "packageHash": "1d3b1064c2633ed64ab2089a7ea62401e9415a72b16ba5a9dcd9a50c870a1efb",
+  "requestedModel": "claude-fable-5-1",
+  "effort": "high",
+  "cliVersion": "2.1.293",
+  "authMethod": "claude.ai",
+  "apiProvider": "firstParty",
+  "endpointOverride": null,
+  "routeEvidence": "Native Anthropic authentication; no ANTHROPIC_* overrides. Raw request URL was not separately captured.",
+  "responseModelEvidence": "Actual assistant message.model and message_start models from stream-json; not self-identification or modelUsage accounting labels.",
+  "actualResponseModels": [
+    "claude-fable-5-1"
+  ],
+  "billingPreflight": {
+    "plan": "Max 5x",
+    "cachedExtraUsageEnabled": false,
+    "modelPickerDisplayedRequiresUsageCredits": false,
+    "billingSettingsChanged": false
+  },
+  "rawStreamSha256": "a8bfed700479e04cb7a2dd267bdd379996eca8a4557bde09000614818059e778",
+  "reportSha256": "bc1c7d5abd8c5f7062ea685dfba27014d154a0cb1d0016d7004933aececcf15b",
+  "execution": {
+    "exitCode": 0,
+    "elapsedSeconds": 167.8,
+    "actualMessageModels": [
+      "claude-fable-5-1"
+    ],
+    "toolCalls": 27,
+    "resultSubtype": "success",
+    "isError": false,
+    "duration_ms": 166306,
+    "numTurns": 28,
+    "estimatedApiCostUsdNotSubscriptionQuota": 1.9697470000000001
+  },
+  "limitations": [
+    "Read-only tools: reviewer could not recompute hashes or execute tests.",
+    "API-estimated cost is not a measured subscription quota charge."
+  ]
+}

@@ -1,0 +1,88 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSC-B-rc1",
+ "window": [
+  "2026-10-12T00:37:35Z",
+  "2026-10-12T00:43:01Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/cli.ts artifact-check (after the build)",
+   "result": "pass: ok true, drift [], 2154 files",
+   "log": "artifact-check.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts",
+   "result": "562 tests: 553 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (same names as the accepted RS-C-A rc2 run); the new tests/reval-instrument-{units,identity,run}.test.ts pass",
+   "log": "unit.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg",
+   "result": "771 tests: 770 pass, 1 fail",
+   "qualification": "the failure is the ACCEPTED RS-C-A test reval-eval-handoff 'late ACK \u2192 DEADLINE' (got 503 IPC_LOST): a pre-existing S timer-classification race (timer-probe.txt), not RS-C-B code; the file passes 3/3 focused (focused-handoff.txt); RS-C-B E2E and native instrument evidence lines are in this log",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "focused after the full run: 3 \u00d7 node --test tests/pg/reval-eval-handoff.pg.test.ts",
+   "result": "3/3 runs 7/7 pass",
+   "log": "focused-handoff.txt"
+  },
+  {
+   "command": "node timer-probe (diagnosis): setTimeout(target - performance.now()) fires before target",
+   "result": "881/2000 early, worst -1.85 ms",
+   "log": "timer-probe.txt"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSCB_RC1_EVIDENCE",
+ "logs": {
+  "artifact-check.txt": "a9e5afd6a2ab295a1635e86dab9c8e54e2e86cccbbd839a9eccd2925ee80b184",
+  "build.txt": "b8c5e0342d6a9c14866729526ce80bc52092f45360b00c6d1483634ed29a08b7",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "eaedfc1030d3ff82e822478785bb206ddbb846400f176a05df61133df7221db9",
+  "finished.txt": "1ae1b40ae99dd707df226d430cc1596dff4f577543423e6571c992c583f68140",
+  "focused-handoff.txt": "8e2d01c569a781d48582aae80311d711a5e71c242121afda060da9ce92249410",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "schema.txt": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "ca7594bc0db350c6a9451c79cc7e741fca867721b7536c566398048594c3d364",
+  "test-pg.txt": "c4de5160e50f6524c377046d15478d95702b29a6f7277c980d36c17426ad98e1",
+  "timer-probe.txt": "724be68a714497504055b8aed192a8d7128ada358b228f2ffea5301d5707d53c",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "unit.txt": "e496b516f324b8b143dc4bdae92fab571ffef421852bd737f231c99006700e31"
+ }
+}

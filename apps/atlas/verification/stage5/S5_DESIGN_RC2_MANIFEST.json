@@ -1,0 +1,71 @@
+{
+  "version": "S5-design-rc2",
+  "scope": "LOCAL READ-ONLY operator console first; Ask Atlas separate subsequent contract; LIVE deferred",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "baselineSha256": "bad263dc48eafaa571a0e84c7995b6a9813ae1f96b30671d28d128af46d20b4d",
+  "acceptedS4CSealSha256": "0a7f21f676edb3d3f07c921214254003d2625a478a9bc9c0a79f243860b1573b",
+  "files": [
+    {
+      "path": "docs/stage5/01_SPEC.md",
+      "sha256": "39d56445ad17161b0e398150adaa349944211f2d3b30260d33715f591239534a"
+    },
+    {
+      "path": "docs/stage5/02_CONTRACTS.md",
+      "sha256": "78c95f9da48d0808b90a1f3595bebe9a17de0c690176073ac0da59a49484e3e2"
+    },
+    {
+      "path": "docs/stage5/03_SECURITY_AND_STATE.md",
+      "sha256": "aec472b97ebafea63894396507d53600a41886ddabad1993ac60a228fa196181"
+    },
+    {
+      "path": "docs/stage5/04_ARCHITECTURE_AND_UX.md",
+      "sha256": "c5f5cd4b714a8f7a810b3039c391721eee331abd1c421c6e8b4dcc485cc107af"
+    },
+    {
+      "path": "docs/stage5/05_IMPLEMENTATION_PLAN.md",
+      "sha256": "2e7f83eb574fff1e0986a784e350bc057ed1b419da1b5ffeaee0818653187738"
+    },
+    {
+      "path": "docs/stage5/06_ACCEPTANCE.md",
+      "sha256": "57393b7e26304d75954ddb24e3f68b3c5f9faa2614d7e0fc0d3011865500af31"
+    },
+    {
+      "path": "docs/stage5/AGENTS.md",
+      "sha256": "05dd65a6c178d2b55a8501ebef981ed34523feea5006f54838b37a0eeef3aba9"
+    },
+    {
+      "path": "docs/stage5/README.md",
+      "sha256": "a3be8fda1c019f571a2ed07c7d89a686a304d0c635fe58cf6af3ae38a113e484"
+    }
+  ],
+  "packageHash": "45ae1eba60c0278c7831670c3589c9c0c05d62780e743337b74e0e0458ebccf1",
+  "hashRule": "sha256 UTF-8 sorted <sha256>  <path> newline",
+  "archive": "verification/stage5/S5_DESIGN_RC2_PACKAGE.zip",
+  "archiveSha256": "937f9d4bb868f92d15d2e51668bcfda914c314bca1a2791b645d76e34e174893",
+  "declaredRoutingDeltas": [
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "f1f69f8300151d04415238003a5d52edcf3062cfd285872cbaa8a5d28f37cbcf",
+      "afterSha256": "fa53261dba79b55891d5ea53cf576dc2cbba4dca8648a510fe52c1e23dd433a1",
+      "kind": "Stage5 administrative routing only"
+    },
+    {
+      "path": "docs/AI_CONTEXT_MAP.md",
+      "beforeSha256": "c838887fd7551f5d262b14af7115b4e742d5a8fcc4d9db2e6a866e9c39874561",
+      "afterSha256": "e33580906efef04ce40348d42765e552e52ff299b1afdf5ae52b2e1ed6015370",
+      "kind": "Stage5 administrative routing only"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "beforeSha256": "a8d170e566f19ae8e896e0425cd9ae9ed2ff7e5eb03edd0b6bcb2b99b5cc13c3",
+      "afterSha256": "90583777d288a0752ab57ea1049bc2765b84acaed0e92ac3810c4a5ec6b6830f",
+      "kind": "Stage5 administrative routing only"
+    }
+  ],
+  "preservedBaselineFiles": 891,
+  "codeChanges": "NONE",
+  "implementationAcceptance": "NOT_STARTED",
+  "LIVE": "DEFERRED_BY_OWNER",
+  "previousPackageHash": "eb2ca966fc4b2487e57bb8e24ed584a846c5eb0516a7ee00032102c32d415388"
+}

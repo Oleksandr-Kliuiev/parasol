@@ -1,0 +1,38 @@
+{
+  "requestedModel": "claude-opus-5-5",
+  "effort": "xhigh",
+  "actualAssistantMessageModels": [
+    "claude-opus-5-5"
+  ],
+  "sameOwnIndependentReviewerSession": true,
+  "streamSha256": "375a6830cd3f3605ebd8e0b55fc4e6e9f72e39a6a1bfaf6f079f046f5f797765",
+  "nativeAuth": "claude.ai firstParty Max",
+  "extraUsage": "org_level_disabled",
+  "fastMode": false,
+  "apiCreditsFallback": false,
+  "durationMs": 127923,
+  "usage": {
+    "input_tokens": 16,
+    "cache_creation_input_tokens": 22905,
+    "cache_read_input_tokens": 3506669,
+    "output_tokens": 14070,
+    "output_tokens_details": {
+      "thinking_tokens": 5132
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 22905,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "addendumVersion": 2,
+  "paidProductCalls": 0
+}

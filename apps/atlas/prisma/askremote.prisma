@@ -1,0 +1,106 @@
+// ---------------------------------------------------------------------------------------------------------------------
+// Stage 5 ASK-REMOTE R-A (docs/stage5/ask/remote/04_AUTHORITY_AND_BILLING.md, migrations 202610111000/1010/1020). The
+// inactive durable policy, its exact client allowlist, project UTC period counters and the financial attempt ledger. Every
+// key and reference carries the workspace. CHECKs, guards, the deferred ledger invariant, ENABLE+FORCE RLS and the confined
+// routines live in the migrations; the remote definer and the runtime's SELECT-only access in prisma/roles.sql. No question,
+// request ID, body, hash/length, provider response ID or URL is stored. Nothing is seeded or activated.
+// ---------------------------------------------------------------------------------------------------------------------
+/// Exactly one persistent row per workspace (never deleted or recreated). admissionId/projectIdentity are immutable;
+/// every material revision advances policyVersion by exactly one; max bigint is a terminal TOMBSTONE. Written only by
+/// the fence-first routines owned by the remote definer.
+model RemoteAskPolicy {
+  workspaceId             String   @id
+  admissionId             String   @unique @db.Uuid
+  projectIdentity         String   @unique
+  policyVersion           BigInt
+  state                   String   @default("INACTIVE")
+  stateReason             String?
+  profile                 String
+  endpointRegion          String
+  dataClass               String
+  promptSha256            String
+  schemaSha256            String
+  packageSha256           String
+  secretRef               String
+  ownerApprovalRef        String
+  retentionAttestationRef String
+  priceRevision           String
+  reserveMicroUsd         BigInt
+  dayCapMicroUsd          BigInt
+  monthCapMicroUsd        BigInt
+  expiresAt               DateTime @db.Timestamptz(6)
+  revisedAt               DateTime @db.Timestamptz(6)
+  createdAt               DateTime @default(now()) @db.Timestamptz(6)
+  workspace               Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskPolicy_workspace_fkey")
+  clients                 RemoteAskClientAdmission[]
+  counters                RemoteAskPeriodCounter[]
+  attempts                RemoteAskAttempt[]
+  revalRegistrations      RevalSandboxRegistration[]
+  @@unique([workspaceId, admissionId], map: "RemoteAskPolicy_admission_key")
+  @@unique([workspaceId, projectIdentity], map: "RemoteAskPolicy_project_key")
+  @@unique([workspaceId, admissionId, projectIdentity], map: "RemoteAskPolicy_binding_key")
+}
+/// Exact allowlist entry (ADMITTED | REMOVED), never deleted; changedAtPolicyVersion is the version its change advanced to.
+model RemoteAskClientAdmission {
+  workspaceId            String
+  admissionId            String   @db.Uuid
+  clientId               String
+  state                  String
+  changedAtPolicyVersion BigInt
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime @default(now()) @db.Timestamptz(6)
+  client                 Client             @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskClientAdmission_client_fkey")
+  policy                 RemoteAskPolicy    @relation(fields: [workspaceId, admissionId], references: [workspaceId, admissionId], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskClientAdmission_policy_fkey")
+  attempts               RemoteAskAttempt[]
+  revalRegistrations     RevalSandboxRegistration[]
+  @@id([workspaceId, admissionId, clientId])
+  @@index([workspaceId, clientId], map: "RemoteAskClientAdmission_client_idx")
+}
+/// UTC DAY/MONTH spend of the pinned project; always the sum of its period attempts' accountedMicroUsd (deferred check).
+model RemoteAskPeriodCounter {
+  workspaceId     String
+  projectIdentity String
+  kind            String
+  periodStart     DateTime @db.Date
+  chargedMicroUsd BigInt   @default(0)
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @db.Timestamptz(6)
+  policy          RemoteAskPolicy @relation(fields: [workspaceId, projectIdentity], references: [workspaceId, projectIdentity], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskPeriodCounter_policy_fkey")
+  @@id([workspaceId, projectIdentity, kind, periodStart])
+}
+/// One admitted egress attempt (accounting only): EGRESS_COMMITTED → SETTLED | UNKNOWN exactly once; captured admission,
+/// policyVersion, profile, price, rates and ORIGINAL UTC periods are immutable.
+model RemoteAskAttempt {
+  workspaceId       String
+  id                String    @db.Uuid
+  clientId          String
+  actorId           String
+  admissionId       String    @db.Uuid
+  projectIdentity   String
+  policyVersion     BigInt
+  profile           String
+  priceRevision     String
+  correlationId     String    @db.Uuid
+  dayStart          DateTime  @db.Date
+  monthStart        DateTime  @db.Date
+  reservedMicroUsd  BigInt
+  promptRate        Int
+  completionRate    Int
+  accountedMicroUsd BigInt
+  state             String
+  outcome           String?
+  promptTokens      Int?
+  completionTokens  Int?
+  createdAt         DateTime  @db.Timestamptz(6)
+  settledAt         DateTime? @db.Timestamptz(6)
+  client            Client                   @relation(fields: [workspaceId, clientId], references: [workspaceId, id], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskAttempt_client_fkey")
+  actor             Actor                    @relation(fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskAttempt_actor_fkey")
+  admission         RemoteAskClientAdmission @relation(fields: [workspaceId, admissionId, clientId], references: [workspaceId, admissionId, clientId], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskAttempt_admission_fkey")
+  policy            RemoteAskPolicy          @relation(fields: [workspaceId, admissionId, projectIdentity], references: [workspaceId, admissionId, projectIdentity], onDelete: Restrict, onUpdate: Restrict, map: "RemoteAskAttempt_policy_fkey")
+  @@id([workspaceId, id])
+  @@unique([workspaceId, correlationId], map: "RemoteAskAttempt_correlation_key")
+  @@index([workspaceId, projectIdentity, dayStart], map: "RemoteAskAttempt_day_idx")
+  @@index([workspaceId, projectIdentity, monthStart], map: "RemoteAskAttempt_month_idx")
+  @@index([workspaceId, clientId], map: "RemoteAskAttempt_client_idx")
+  @@index([workspaceId, actorId], map: "RemoteAskAttempt_actor_idx")
+}

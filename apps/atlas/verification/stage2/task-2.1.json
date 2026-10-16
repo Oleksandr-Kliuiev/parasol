@@ -1,0 +1,80 @@
+{
+  "task": "2.1",
+  "date": "2026-10-08",
+  "state": "implemented; pending S2-A independent acceptance",
+  "provider": "native Anthropic firstParty / claude.ai",
+  "architectureVersion": "1.0-rc5",
+  "architectureHash": "1d3b1064c2633ed64ab2089a7ea62401e9415a72b16ba5a9dcd9a50c870a1efb",
+  "executions": [
+    {
+      "exitCode": 0,
+      "sessionId": "32e72756-be33-46a0-bcae-932a972a7268",
+      "elapsedSeconds": 189.4,
+      "requestedModel": "claude-sonnet-5-5",
+      "effort": "medium",
+      "actualMessageModels": [
+        "claude-sonnet-5-5"
+      ],
+      "toolCalls": 41,
+      "resultSubtype": "success",
+      "isError": false,
+      "numTurns": 42,
+      "estimatedApiCostUsdNotSubscriptionQuota": 0.7595131999999999,
+      "permissionDenialsCount": 5,
+      "rawStreamSha256": "98ecfce29a25561f4f6a23a3d4209ff7b4f320bfaf87e19cf67d2116cc9fc547"
+    },
+    {
+      "exitCode": 0,
+      "sessionId": "32e72756-be33-46a0-bcae-932a972a7268",
+      "elapsedSeconds": 60.3,
+      "requestedModel": "claude-sonnet-5-5",
+      "effort": "medium",
+      "actualMessageModels": [
+        "claude-sonnet-5-5"
+      ],
+      "toolCalls": 13,
+      "resultSubtype": "success",
+      "isError": false,
+      "numTurns": 14,
+      "estimatedApiCostUsdNotSubscriptionQuota": 1.0749612,
+      "permissionDenialsCount": 0,
+      "rawStreamSha256": "4821747915b8a04789cbe94ea6bb0d92af1d440abcd41ecc47a77aca81eb5fa9"
+    }
+  ],
+  "orchestratorRepairRounds": 1,
+  "repairFindings": [
+    "preserve fractional source timestamp precision",
+    "test public compatibility rather than prohibiting planned internal type extension"
+  ],
+  "tests": {
+    "initial": "15 focused and 96 full unit/PGlite passed; typecheck passed",
+    "afterRepair": "17 focused passed; typecheck passed; full suite deferred to S2-A"
+  },
+  "files": [
+    {
+      "path": "connectors/microsoft365/dto-common.ts",
+      "sha256": "bc0bf73dee6aa32327fce1f703c7483f52f14b0872364d9c4e525ef29f3190a8"
+    },
+    {
+      "path": "connectors/microsoft365/directory-dto.ts",
+      "sha256": "0fb1d8785ab99f0160a89e2bc7c855db18bb059487a65fd3d091d339ee7b24d3"
+    },
+    {
+      "path": "connectors/microsoft365/signin-dto.ts",
+      "sha256": "2f03fa889e3d0da520390c7e89c42c5baef4c8d27cb5912c13c6e7951de25537"
+    },
+    {
+      "path": "packages/correlation/contracts.ts",
+      "sha256": "5acdf89e1dda7ce5c1feb4d23e3676f57a7aa3f2417ac6010062179668abe44c"
+    },
+    {
+      "path": "tests/m365-dto.test.ts",
+      "sha256": "c7294555c4fb7a10ddeb60b2c3b3f4c56244d329b89efb181cede6316e24e760"
+    },
+    {
+      "path": "tests/m365-public-compat.test.ts",
+      "sha256": "20fd8f3e02354924574abc09df0b13657939cd8987d25589aa7c1c40fc252bce"
+    }
+  ],
+  "subscriptionQuotaUsage": "unavailable; do not sum CLI API estimates as quota or assume resumed totals are incremental"
+}

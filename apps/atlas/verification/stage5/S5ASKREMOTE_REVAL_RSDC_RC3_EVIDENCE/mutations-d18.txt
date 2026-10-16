@@ -1,0 +1,2 @@
+D18 sandbox paths: C's journal/instrument socket writable (rc3 form): DETECTED (tests/reval-platform.test.ts)
+SUMMARY 1 / 1

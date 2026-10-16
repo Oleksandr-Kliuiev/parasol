@@ -1,0 +1,71 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc4",
+  "packageHash": "fdff112c181dd2a653449afd7590de007d8086a4551705a378f1ed8210f1a6e9",
+  "manifest": {
+    "path": "verification/stage5/S5ASKREMOTE_REVAL_RC4_MANIFEST.json",
+    "sha256": "00c713ced4c34bd38261b7948f2c5721ffd9ca5f28fd113c7991323d403a96d1"
+  },
+  "packageArchive": {
+    "path": "verification/stage5/S5ASKREMOTE_REVAL_RC4_PACKAGE.zip",
+    "sha256": "1c217ba119773b8071e1a426d2bae1c7f68d6d02fd14c5b5e109a55fe9d6276b"
+  },
+  "reviewStatus": "PARTIAL_REQUIRED_FABLE_PENDING",
+  "reviews": [
+    {
+      "role": "ASTRA",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "status": "APPROVE_PREPARATION",
+      "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_REVAL_RC4.md",
+      "sha256": "c06df97e5861ef3d623940cd9cd266319225d171199e3a60257781b90b0c18b5"
+    },
+    {
+      "role": "SOL",
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh",
+      "status": "APPROVE_PREPARATION",
+      "path": "docs/stage5/reviews/SOL_S5ASKREMOTE_REVAL_RC4.md",
+      "sha256": "4ee9fa08079c2a2d0a635b7001ddc7735f29287201a00dfc13050e50de95c3e2"
+    },
+    {
+      "role": "OPUS",
+      "model": "claude-opus-5-5",
+      "effort": "xhigh",
+      "status": "APPROVE_PREPARATION",
+      "path": "docs/stage5/reviews/OPUS_S5ASKREMOTE_REVAL_RC4.md",
+      "sha256": "3c1adc749e866d6b0c7b93f91422bf1818b5db58d7a746e627f9be1c8dda4ee9"
+    }
+  ],
+  "fable": {
+    "model": "claude-fable-5-1",
+    "effort": "xhigh",
+    "status": "PENDING_BILLING_PROOF",
+    "launched": false,
+    "reason": "No verified included-billing evidence for unattended Fable; user forbids paid calls. No substitute approval."
+  },
+  "dataBudget": "NOT_ADMITTED",
+  "datasetExecutionReadiness": "PENDING_SEPARATE_ARTIFACT_AND_ACCEPTANCE",
+  "paidProductCalls": 0,
+  "incrementalPaidReviewCallsAuthorized": false,
+  "reviewBilling": "Native included subscriptions only; API/credits/fallback prohibited; subscription quota attribution unknown",
+  "orchestratorRoleEvidence": "Owner policy gpt-6.1-sol/medium; current chat effective identity/effort not programmatically observable, no named-model gate inferred from it",
+  "sourceNormativeIntegrity": "1555 accepted R-C entries verified with only two declared administrative doc deltas;10 normative files unchanged",
+  "checks": {
+    "path": "verification/stage5/S5ASKREMOTE_REVAL_RC4_CHECKS.json",
+    "sha256": "beb2dcf29288a4d27c5976a697d8c85a1737171080a6970bd58a5b9059220a5d"
+  },
+  "frozenHashMismatches": [],
+  "remainingGates": [
+    "Fable preparation approval under no-paid constraint",
+    "frozen human-labelled dataset and accepted execution supervisor/procedure/rehearsal",
+    "provider project EU retention identity price proof",
+    "explicit owner data and monetary admission",
+    "actual full200 live eval and fresh Sol/Opus evidence acceptance"
+  ],
+  "residuals": [
+    "Model ID not immutable weights; raw question not sanitized; admitted egress irrevocable; abort may bill; application cap not invoice cap",
+    "Boolean persistence permits expectation re-derivation, not full answer replay for misclassified cases. Execution-artifact acceptance must demonstrate independent truth verification without persisting raw provider content.",
+    "Manifest gates are immutable initial dispatch snapshot; this receipt records current review status."
+  ],
+  "createdUtc": "2026-10-11T06:18:20.674323+00:00"
+}

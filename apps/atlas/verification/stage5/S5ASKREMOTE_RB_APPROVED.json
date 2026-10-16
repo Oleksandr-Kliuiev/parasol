@@ -1,0 +1,109 @@
+{
+  "status": "ACCEPTED",
+  "artifact": "S5ASKREMOTE-RB-rc2",
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "packageHash": "a579f960a041b5bcd39f1f6eb6eb773015a4911dee9a04c00c76b4f9472f5337",
+  "manifest": {
+    "path": "verification/stage5/S5ASKREMOTE_RB_RC2_MANIFEST.json",
+    "sha256": "130cc342b2fcd3d6696a5bdf135624b45bb6b3552a76761296223330d6a9630c"
+  },
+  "archive": {
+    "path": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/package-rc2/S5ASKREMOTE_RB_RC2_SOURCE.zip",
+    "sha256": "6c4ff36b8e7442a91acaf3b1047e8a561421bd90fa162130577762eb289deee7"
+  },
+  "closure": {
+    "path": "verification/stage5/S5ASKREMOTE_RB_CLOSURE_VERIFICATION.json",
+    "sha256": "0b5c7e4056511f1d3a1e04f6e9d2ede03a78b8122f87bac2ba3a8cc87630fd62"
+  },
+  "review": {
+    "path": "docs/stage5/reviews/ASTRA_S5ASKREMOTE_RB_RC2.md",
+    "sha256": "addb2ee2e037fa1187769f32cd314f14ddde0f35973f549d0879018716f8b6f3",
+    "model": "gpt-6-astra",
+    "effectiveEffort": "xhigh",
+    "freshContext": true,
+    "verdict": "APPROVED",
+    "assignment": {
+      "path": "verification/stage5/S5ASKREMOTE_RB_RC2_ASTRA_ASSIGNMENT.json",
+      "sha256": "9bbfec0f07dd4cfdb3fbe37d0b09a702c84d69d051b77b3666fe8f3f8217830d"
+    },
+    "rawProviderTelemetry": "unavailable; explicit native assignment receipt"
+  },
+  "reviewResult": {
+    "path": "verification/stage5/S5ASKREMOTE_RB_RC2_ASTRA_RESULT.json",
+    "sha256": "536f8055a96d154d2da0bd2129cdfda09811857ef0aea82ea7b3f6eb4a4ae215"
+  },
+  "verification": {
+    "path": "verification/stage5/S5ASKREMOTE_RB_RC2_IMPLEMENTATION_EVIDENCE.json",
+    "sha256": "7ef381948c6cc9aa9cc8d2cad7da8fb9a43d1388eae83dcdd45d4091d5c1b43b"
+  },
+  "nativeImplementation": {
+    "sessionId": "d7982c45-9ae5-4da2-9568-3c31a1d6c269",
+    "model": "claude-opus-5-5",
+    "effort": "high",
+    "phases": [
+      {
+        "execution": {
+          "path": "verification/stage5/S5ASKREMOTE_RB_RC1_OPUS_EXECUTION.json",
+          "sha256": "e69bf3340df5d3d4509b7d1619075d6fff6d02df9ae95ebd6dea2457fa668cb3"
+        },
+        "rawStream": {
+          "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc1.jsonl",
+          "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc1/opus-rb-rc1.jsonl",
+          "sha256": "1ad89e5ae7037ec5729489be5eb1db46d1aad75cca3e86fbbc5ee952cec64a3a",
+          "bytes": 3540663
+        }
+      },
+      {
+        "execution": {
+          "path": "verification/stage5/S5ASKREMOTE_RB_RC2_OPUS_EXECUTION.json",
+          "sha256": "7fe0bfd10835dbc94da2317a9ceea27bdacd5ccd802fb32863f0cd7c7741fab0"
+        },
+        "rawStream": {
+          "sourcePath": "/tmp/atlas-stage5/askremote/rb/opus-rb-rc2.jsonl",
+          "durablePath": "/Users/oleksandr/.codex/atlas-evidence/stage5/ask/remote/rb/implementation-rc2/opus-rb-rc2.jsonl",
+          "sha256": "829f66fa817f3b5c7a2c04fefbe1b73d64e1340185476a7c3407ca65138beda1",
+          "bytes": 628216
+        }
+      }
+    ],
+    "completionQualification": "RC1 native CLI success; RC2 source/check/report work completed then weekly subscription-limit exit1, synthetic quota notice preserved; Codex consolidated evidence only; actual-code acceptance independent Astra/xhigh",
+    "elapsedSeconds": 4732.6,
+    "repairRounds": 1,
+    "attributableSubscriptionQuota": "unknown"
+  },
+  "requiredFindingsRemaining": 0,
+  "tests": {
+    "unitPGlite": 405,
+    "pg17": 687,
+    "browser": 73,
+    "requiredChecks": 14,
+    "compiledOutputs": 244
+  },
+  "residuals": [
+    "R-C, data/budget admission, paid inference, real data, R-EVAL and deployment remain outside acceptance.",
+    "Direct transport was driven only by in-process synthetic request/response seams; real TLS, account EU/retention eligibility and provider behavior/latency unverified.",
+    "Unknown delivery/commit/settlement preserves liability; abort is not proof of nonbilling. SQL trusts NO_DISPATCH; legacy reserve alone has no original-deadline-floor guarantee.",
+    "Native Codex provider-level reviewer telemetry and attributable subscription usage are unavailable; explicit fresh gpt-6-astra/xhigh assignment is preserved.",
+    "Full 687PG/73browser and clean-install production runs are inherited verified evidence, not independently repeated; independent focusedPG83 plus addedPG3 and unit405 passed."
+  ],
+  "nonblockingNotes": [
+    {
+      "id": "N1",
+      "note": "Native CLI exited1/isError on weekly subscription limit after source/report/checks, during unfinished native evidence indexing. Coordinator metadata-only index fills navigation; exact failure and missing native index qualification preserved, no relabelling as success."
+    },
+    {
+      "id": "N2",
+      "note": "M13c retains dispatch entry floor. Egress PG survived; post-resolution unit assertions killed it. Its kill is not evidence of removing every post-COMMIT floor. M12a/M13 redundant survivors and M03a secondary kill remain qualified."
+    },
+    {
+      "id": "N3",
+      "note": "Initial independent PG fixture reused intentionally latched failed-pause circuit; original failing evidence preserved. Fresh process circuit corrected fixture; final three tests pass with source unchanged."
+    }
+  ],
+  "paidProviderCalls": 0,
+  "dataBudgetAdmission": "NOT_ADMITTED",
+  "nextCheckpoint": "R-C browser disclosure/consent only after separate fresh implementation handoff and accepted R-B identity verification; R-EVAL requires separate owner data/budget admission",
+  "nextCheckpointStatus": "NOT_STARTED",
+  "createdUtc": "2026-10-11T01:44:08.467948+00:00"
+}

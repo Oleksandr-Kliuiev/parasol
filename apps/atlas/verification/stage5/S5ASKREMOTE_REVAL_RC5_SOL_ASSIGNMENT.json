@@ -1,0 +1,15 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc5",
+  "packageHash": "983fd57185042cdce4d7a1d5980e07a0a173f071fc102d144483666266400285",
+  "taskName": "/root/reval_sol_clean_rc5",
+  "model": "gpt-6.1-sol",
+  "effort": "xhigh",
+  "fork_turns": "none",
+  "freshClean": true,
+  "otherVerdictsSupplied": false,
+  "implementerHistorySupplied": false,
+  "verdict": "APPROVE_PREPARATION",
+  "requiredFindings": [],
+  "responseModelTelemetry": "unavailable; native explicit launch receipt is model-assignment evidence",
+  "attributableUsage": "unknown"
+}

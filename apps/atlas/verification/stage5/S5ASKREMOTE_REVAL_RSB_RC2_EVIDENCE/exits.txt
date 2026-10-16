@@ -1,0 +1,8 @@
+unit exit=1
+typecheck exit=0
+schema exit=0
+build exit=0
+smoke exit=0
+test:pg exit=0
+pg17 exit=0
+drift exit=0

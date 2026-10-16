@@ -1,0 +1,13 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc1",
+  "packageHash": "6fc5fba082f0e25da0e87ea6ccc6aa7eb217686f95fc85bd0bdf41ef9b959eff",
+  "model": "claude-opus-5-5",
+  "effort": "xhigh",
+  "sessionId": "5c56ce4c-38db-47ac-971d-a46cd766a5ba",
+  "nativeAuth": "claude.ai firstParty Max (read-only auth status)",
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "billing": "Included subscription only; no fallback/API/credits; Fable not launched pending billing proof",
+  "startedUtc": "2026-10-11T05:56:36.669971+00:00",
+  "actualResponseModel": "PENDING"
+}

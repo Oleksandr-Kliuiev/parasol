@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-09T08:03:10.985683+00:00",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "cliVersion": "2.1.293 (Claude Code)",
+  "extraUsageEnabled": false,
+  "source": "local oauthAccount.hasExtraUsageEnabled boolean; no credential printed",
+  "billingReference": "https://support.claude.com/en/articles/15424964-claude-fable-models-on-your-plan",
+  "rule": "Fable5.1 included in Max within its limit; no credits/API/fallback permitted; a limit blocks the named gate",
+  "attributableQuota": "unknown",
+  "sources": [
+    {
+      "url": "https://developer.poweroffice.net/documentation/authentication",
+      "classification": "official public documentation only; not account/API or wire-contract verification"
+    },
+    {
+      "url": "https://developer.poweroffice.net/documentation/from-v1-to-v2",
+      "classification": "official public documentation only; not account/API or wire-contract verification"
+    },
+    {
+      "url": "https://developer.poweroffice.net/documentation/requests",
+      "classification": "official public documentation only; not account/API or wire-contract verification"
+    },
+    {
+      "url": "https://developer.poweroffice.net/workflow/usecase/reporting/retrieving-invoice-payments",
+      "classification": "official public documentation only; not account/API or wire-contract verification"
+    },
+    {
+      "url": "https://github.com/PowerOffice/go-api-documentation",
+      "classification": "official public documentation only; not account/API or wire-contract verification"
+    }
+  ]
+}

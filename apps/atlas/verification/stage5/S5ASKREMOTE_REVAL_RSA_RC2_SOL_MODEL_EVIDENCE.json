@@ -1,0 +1,18 @@
+{
+  "nativeThread": {
+    "id": "01a12b56-8218-7792-849f-da6bc798af1c",
+    "model": "gpt-6.1-sol",
+    "model_provider": "openai",
+    "reasoning_effort": "xhigh",
+    "agent_path": "/root/rsa_code_sol",
+    "rollout_path": "/Users/oleksandr/.codex/sessions/2026/10/11/rollout-2026-10-11T16-20-52-01a12b56-8218-7792-849f-da6bc798af1c.jsonl"
+  },
+  "latestNativeTurnContext": {
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh",
+    "cwd": "/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1"
+  },
+  "evidenceKind": "Native execution metadata; separate provider wire response ID not exposed",
+  "reviewArtifact": "S5ASKREMOTE-REVAL-RSA-rc2",
+  "packageHash": "cd13f162c0eabc555bff18460820127aa3b7aeef82396be6e0739726e11817df"
+}

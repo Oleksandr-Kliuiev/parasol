@@ -1,0 +1,8 @@
+{
+  "task": "/root/reval_execution_sol",
+  "requestedModel": "gpt-6.1-sol",
+  "effort": "xhigh",
+  "freshContext": true,
+  "verdict": "PENDING",
+  "backendTelemetry": "UNAVAILABLE"
+}

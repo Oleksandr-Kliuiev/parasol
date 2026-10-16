@@ -1,0 +1,32 @@
+[
+  {
+    "path": "AGENTS.md",
+    "beforeSha256": "131b8fa0088e81af8dba417e2aaffa7c4f7254d28939d1b278a1e7ef4e51816d",
+    "afterSha256": "c208b18aaff848a033d9d26f30c270ca5304726f91dcbdc94efff3ccec5daf0b",
+    "reason": "Administrative review disposition/repair routing only; no approved requirement or implementation change"
+  },
+  {
+    "path": "docs/DEVELOPMENT_WORKFLOW.md",
+    "beforeSha256": "009b870d6091a78955dd41b548a3e59d0d500fd5756432df5337c23d4be7360f",
+    "afterSha256": "b417f86e8dbe6b2d7113d5a841e5538dd0374e1a3475d32c8a3f4b44069e2e5b",
+    "reason": "Administrative review disposition/repair routing only; no approved requirement or implementation change"
+  },
+  {
+    "path": "docs/stage5/IMPLEMENTATION_STATUS.md",
+    "beforeSha256": "28007bd0494e444eba8392c1c1748cfb8901905f7b5b3fdc5fafa5906b2219b1",
+    "afterSha256": "b3315f6f3007b7abcab6d1f01bfcfe37a74e72a4b5a52efb5a6a0d73ef8217e3",
+    "reason": "Administrative review disposition/repair routing only; no approved requirement or implementation change"
+  },
+  {
+    "path": "docs/stage5/REVIEW_STATUS.md",
+    "beforeSha256": "58d60eba75c24740784a4ef82a9bb7c4893db31efc74bc5ce537f208c5477827",
+    "afterSha256": "19a7a3bd4e2c52ab13ae92553931a176e88b2bf1bccaed746707189ae7c7b94d",
+    "reason": "Administrative review disposition/repair routing only; no approved requirement or implementation change"
+  },
+  {
+    "path": "docs/stage5/ask/DESIGN_STATUS.md",
+    "beforeSha256": "d39698f7d7106f39b3e6ce8fcd74c8fe17dac19703c283d574bf20702351cb27",
+    "afterSha256": "fccaa36248b82edf4cb062481217b9a4dd5f8d2b7477592784d4250277aefcf5",
+    "reason": "Administrative review disposition/repair routing only; no approved requirement or implementation change"
+  }
+]

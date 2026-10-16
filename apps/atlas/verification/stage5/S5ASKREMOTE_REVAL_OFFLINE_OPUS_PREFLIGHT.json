@@ -1,0 +1,14 @@
+{
+  "sessionId": "c7193b19-a8cd-456e-a800-013c71dd1b4f",
+  "requestedModel": "claude-opus-5-5",
+  "effort": "xhigh",
+  "auth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "fastMode": false
+}

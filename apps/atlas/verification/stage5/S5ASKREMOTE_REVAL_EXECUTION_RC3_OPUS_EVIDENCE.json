@@ -1,0 +1,38 @@
+{
+  "sessionId": "4a5dbfbb-d680-4c38-83b7-cb3f643b6857",
+  "requestedModel": "claude-opus-5-5",
+  "effort": "xhigh",
+  "effectiveResponseModels": [
+    "claude-opus-5-5"
+  ],
+  "durationMs": 196124,
+  "isError": false,
+  "usage": {
+    "input_tokens": 24,
+    "cache_creation_input_tokens": 35401,
+    "cache_read_input_tokens": 4445711,
+    "output_tokens": 19369,
+    "output_tokens_details": {
+      "thinking_tokens": 8537
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 35401,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "verdict": "APPROVE_LOCAL_EXECUTION_PREPARATION",
+  "freshInitialSession": true,
+  "sameIndependentSessionBoundedReReviews": true,
+  "separateFromImplementation": true,
+  "billing": "native claude.ai Max firstParty; extraUsage=false, no API/credits/fast/fallback",
+  "subscriptionQuotaAttribution": "UNAVAILABLE"
+}

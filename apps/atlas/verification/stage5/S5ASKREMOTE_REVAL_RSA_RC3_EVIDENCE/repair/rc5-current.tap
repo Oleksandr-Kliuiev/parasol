@@ -1,0 +1,434 @@
+TAP version 13
+# Subtest: matrix: exactly 200 cases in the RC6 group/language counts; the last 100 are all UNSUPPORTED
+ok 1 - matrix: exactly 200 cases in the RC6 group/language counts; the last 100 are all UNSUPPORTED
+  ---
+  duration_ms: 299.890833
+  type: 'test'
+  ...
+# Subtest: categories: all eight unsupported and five adversarial categories exist in BOTH languages; both focus sides per group
+ok 2 - categories: all eight unsupported and five adversarial categories exist in BOTH languages; both focus sides per group
+  ---
+  duration_ms: 0.291333
+  type: 'test'
+  ...
+# Subtest: limits: every question is accepted unchanged by the exact AskRequestV2 parser and fits the ≤16 KiB question-only payload
+ok 3 - limits: every question is accepted unchanged by the exact AskRequestV2 parser and fits the ≤16 KiB question-only payload
+  ---
+  duration_ms: 9.165833
+  type: 'test'
+  ...
+# Subtest: offline pre-egress negatives (NOT live cases): over-limit, lone surrogate and control text are 400; worst-case 2000-point text fits 16 KiB
+ok 4 - offline pre-egress negatives (NOT live cases): over-limit, lone surrogate and control text are 400; worst-case 2000-point text fits 16 KiB
+  ---
+  duration_ms: 2.561292
+  type: 'test'
+  ...
+# Subtest: uniqueness and diversity negatives: duplicate ID/text, ID-only substitution, near duplicate, matrix/label/focus/content drift
+ok 5 - uniqueness and diversity negatives: duplicate ID/text, ID-only substitution, near duplicate, matrix/label/focus/content drift
+  ---
+  duration_ms: 862.480333
+  type: 'test'
+  ...
+# Subtest: manifest: committed hashes equal the files; one changed byte changes the identity; stable seeded order
+ok 6 - manifest: committed hashes equal the files; one changed byte changes the identity; stable seeded order
+  ---
+  duration_ms: 10.865209
+  type: 'test'
+  ...
+# Subtest: human review: committed templates are empty PENDING; model attestations, same reviewer and divergent labels never resolve
+ok 7 - human review: committed templates are empty PENDING; model attestations, same reviewer and divergent labels never resolve
+  ---
+  duration_ms: 4.592167
+  type: 'test'
+  ...
+# file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11
+# export const reject = (code        )        => { throw new ExecError(code); };
+#                                                        ^
+# ExecError: CORPUS_IDENTITY_MISMATCH
+#     at reject (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11:56)
+#     at bindCorpus (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:27:107)
+#     at loadContext (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:33:25)
+#     at file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-cli.test.ts:17:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   code: 'CORPUS_IDENTITY_MISMATCH'
+# }
+# Node.js v25.8.1
+# Subtest: tests/ask-remote-eval-execution-cli.test.ts
+not ok 2 - tests/ask-remote-eval-execution-cli.test.ts
+  ---
+  duration_ms: 656.263584
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-cli.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11
+# export const reject = (code        )        => { throw new ExecError(code); };
+#                                                        ^
+# ExecError: CORPUS_IDENTITY_MISMATCH
+#     at reject (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11:56)
+#     at bindCorpus (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:27:107)
+#     at loadContext (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:33:25)
+#     at file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-liability.test.ts:16:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   code: 'CORPUS_IDENTITY_MISMATCH'
+# }
+# Node.js v25.8.1
+# Subtest: tests/ask-remote-eval-execution-liability.test.ts
+not ok 3 - tests/ask-remote-eval-execution-liability.test.ts
+  ---
+  duration_ms: 772.003167
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-liability.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11
+# export const reject = (code        )        => { throw new ExecError(code); };
+#                                                        ^
+# ExecError: CORPUS_IDENTITY_MISMATCH
+#     at reject (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11:56)
+#     at bindCorpus (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:27:107)
+#     at loadContext (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:33:25)
+#     at file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-operator.test.ts:34:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   code: 'CORPUS_IDENTITY_MISMATCH'
+# }
+# Node.js v25.8.1
+# Subtest: tests/ask-remote-eval-execution-operator.test.ts
+not ok 4 - tests/ask-remote-eval-execution-operator.test.ts
+  ---
+  duration_ms: 719.135583
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-operator.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: real pty: kernel echo stays off from startup verification through processing; Ctrl-C finalizes
+not ok 11 - real pty: kernel echo stays off from startup verification through processing; Ctrl-C finalizes
+  ---
+  duration_ms: 90038.299625
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-pty.test.ts:20:1'
+  failureType: 'testCodeFailure'
+  error: 'PTY_TEST_TIMEOUT step 1'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout._onTimeout (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-pty.test.ts:39:79)
+    listOnTimeout (node:internal/timers:605:17)
+    process.processTimers (node:internal/timers:541:7)
+  ...
+# file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11
+# export const reject = (code        )        => { throw new ExecError(code); };
+#                                                        ^
+# ExecError: CORPUS_IDENTITY_MISMATCH
+#     at reject (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11:56)
+#     at bindCorpus (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:27:107)
+#     at loadContext (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:33:25)
+#     at file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-receipt.test.ts:18:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   code: 'CORPUS_IDENTITY_MISMATCH'
+# }
+# Node.js v25.8.1
+# Subtest: tests/ask-remote-eval-execution-receipt.test.ts
+not ok 6 - tests/ask-remote-eval-execution-receipt.test.ts
+  ---
+  duration_ms: 863.445292
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-receipt.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11
+# export const reject = (code        )        => { throw new ExecError(code); };
+#                                                        ^
+# ExecError: CORPUS_IDENTITY_MISMATCH
+#     at reject (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11:56)
+#     at bindCorpus (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:27:107)
+#     at loadContext (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:33:25)
+#     at file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-repair.test.ts:19:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   code: 'CORPUS_IDENTITY_MISMATCH'
+# }
+# Node.js v25.8.1
+# Subtest: tests/ask-remote-eval-execution-repair.test.ts
+not ok 7 - tests/ask-remote-eval-execution-repair.test.ts
+  ---
+  duration_ms: 725.770625
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-repair.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11
+# export const reject = (code        )        => { throw new ExecError(code); };
+#                                                        ^
+# ExecError: CORPUS_IDENTITY_MISMATCH
+#     at reject (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11:56)
+#     at bindCorpus (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:27:107)
+#     at loadContext (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:33:25)
+#     at file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-replay.test.ts:13:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   code: 'CORPUS_IDENTITY_MISMATCH'
+# }
+# Node.js v25.8.1
+# Subtest: tests/ask-remote-eval-execution-replay.test.ts
+not ok 8 - tests/ask-remote-eval-execution-replay.test.ts
+  ---
+  duration_ms: 713.920584
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-replay.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11
+# export const reject = (code        )        => { throw new ExecError(code); };
+#                                                        ^
+# ExecError: CORPUS_IDENTITY_MISMATCH
+#     at reject (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/validate.ts:11:56)
+#     at bindCorpus (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:27:107)
+#     at loadContext (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/scripts/ask-remote-eval-execution/corpus.ts:33:25)
+#     at file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-session.test.ts:16:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   code: 'CORPUS_IDENTITY_MISMATCH'
+# }
+# Node.js v25.8.1
+# Subtest: tests/ask-remote-eval-execution-session.test.ts
+not ok 9 - tests/ask-remote-eval-execution-session.test.ts
+  ---
+  duration_ms: 758.590458
+  type: 'test'
+  location: '/Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/ask-remote-eval-execution-session.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: fixtures: every scenario is reachable under the accepted DB reader rules and built by the accepted validators
+ok 16 - fixtures: every scenario is reachable under the accepted DB reader rules and built by the accepted validators
+  ---
+  duration_ms: 32.5595
+  type: 'test'
+  ...
+# Subtest: scenario coverage: focus both ways, none/missing/off-page focus, empty bank, entity states, statuses, truncation, urgency beyond shown
+ok 17 - scenario coverage: focus both ways, none/missing/off-page focus, empty bank, entity states, statuses, truncation, urgency beyond shown
+  ---
+  duration_ms: 4.443583
+  type: 'test'
+  ...
+# Subtest: reachability negatives: unreachable source shapes are rejected (order, truncation, types, candidate as confirmed, dangling entity)
+ok 18 - reachability negatives: unreachable source shapes are rejected (order, truncation, types, candidate as confirmed, dangling entity)
+  ---
+  duration_ms: 1.219625
+  type: 'test'
+  ...
+# Subtest: tampered expectations are detected per category (claims, urgency, coverage, resource status, entity, evidence)
+ok 19 - tampered expectations are detected per category (claims, urgency, coverage, resource status, entity, evidence)
+  ---
+  duration_ms: 1.481833
+  type: 'test'
+  ...
+# Subtest: forged answers fail the independent predicates (dropped urgency, extra/wrong-ref claim, coverage lie, shape, provenance)
+ok 20 - forged answers fail the independent predicates (dropped urgency, extra/wrong-ref claim, coverage lie, shape, provenance)
+  ---
+  duration_ms: 4.236958
+  type: 'test'
+  ...
+# Subtest: grounded wrong intent is a SEMANTIC failure, never a safety one; a false local projection is SAFETY for any intent
+ok 21 - grounded wrong intent is a SEMANTIC failure, never a safety one; a false local projection is SAFETY for any intent
+  ---
+  duration_ms: 26.732208
+  type: 'test'
+  ...
+# Subtest: scripted provider: only a validated exact intent passes; refusal/extra key/duplicate key/model/usage/HTTP never become an intent
+ok 22 - scripted provider: only a validated exact intent passes; refusal/extra key/duplicate key/model/usage/HTTP never become an intent
+  ---
+  duration_ms: 1.303958
+  type: 'test'
+  ...
+# Subtest: independence: the predicates import no production module; the fixture loader uses only the accepted source validators
+ok 23 - independence: the predicates import no production module; the fixture loader uses only the accepted source validators
+  ---
+  duration_ms: 1.229709
+  type: 'test'
+  ...
+# Subtest: wire privacy: no fixture identifier, label, summary marker or bank ref reaches the serialized payload of any case
+ok 24 - wire privacy: no fixture identifier, label, summary marker or bank ref reaches the serialized payload of any case
+  ---
+  duration_ms: 197.988459
+  type: 'test'
+  ...
+# Subtest: full displayed facts: forged values that keep identity, claims and urgency intact still fail (reviewer falsifications)
+ok 25 - full displayed facts: forged values that keep identity, claims and urgency intact still fail (reviewer falsifications)
+  ---
+  duration_ms: 3.500458
+  type: 'test'
+  ...
+# Subtest: full displayed facts: every banked fact of every fixture has an independent expectation; a tampered expectation fails a true answer
+ok 26 - full displayed facts: every banked fact of every fixture has an independent expectation; a tampered expectation fails a true answer
+  ---
+  duration_ms: 1.24075
+  type: 'test'
+  ...
+# Subtest: guard self-test: every outbound surface throws OFFLINE_EGRESS_BLOCKED before I/O (loopback/.invalid targets only)
+ok 27 - guard self-test: every outbound surface throws OFFLINE_EGRESS_BLOCKED before I/O (loopback/.invalid targets only)
+  ---
+  duration_ms: 398.925333
+  type: 'test'
+  ...
+# Subtest: guard: ESM named bindings, a later-imported production transport module and this test process are all blocked
+ok 28 - guard: ESM named bindings, a later-imported production transport module and this test process are all blocked
+  ---
+  duration_ms: 167.683625
+  type: 'test'
+  ...
+# Subtest: all: complete offline receipt is ok, reproducible, privacy-clean and explicit about what remains unverified
+ok 29 - all: complete offline receipt is ok, reproducible, privacy-clean and explicit about what remains unverified
+  ---
+  duration_ms: 559.850042
+  type: 'test'
+  ...
+# Subtest: privacy scan negatives: a receipt carrying question text or forbidden keys is rejected
+ok 30 - privacy scan negatives: a receipt carrying question text or forbidden keys is rejected
+  ---
+  duration_ms: 0.255959
+  type: 'test'
+  ...
+# Subtest: no live mode: unknown commands/flags are usage errors; the package reads no environment and has no network path
+ok 31 - no live mode: unknown commands/flags are usage errors; the package reads no environment and has no network path
+  ---
+  duration_ms: 607.346959
+  type: 'test'
+  ...
+# Subtest: consumed-first: the first submission consumes the case even when it fails pre-egress; any later submission is refused
+ok 32 - consumed-first: the first submission consumes the case even when it fails pre-egress; any later submission is refused
+  ---
+  duration_ms: 5.41375
+  type: 'test'
+  ...
+# Subtest: manual gates: exact pasted text and focus setup, per-case consent under the confirmed tuple, a fresh preflight per submission
+ok 33 - manual gates: exact pasted text and focus setup, per-case consent under the confirmed tuple, a fresh preflight per submission
+  ---
+  duration_ms: 0.355708
+  type: 'test'
+  ...
+# Subtest: pacing: capability preflights and submissions share the rolling 10/60 s window; blocked events consume nothing
+ok 34 - pacing: capability preflights and submissions share the rolling 10/60 s window; blocked events consume nothing
+  ---
+  duration_ms: 0.239208
+  type: 'test'
+  ...
+# Subtest: caps: headroom is checked from counters BEFORE dispatch; minimum DAY cap allows one fully retained attempt per day
+ok 35 - caps: headroom is checked from counters BEFORE dispatch; minimum DAY cap allows one fully retained attempt per day
+  ---
+  duration_ms: 4.120083
+  type: 'test'
+  ...
+# Subtest: stop table: INVALID always FAILED; UNAVAILABLE FAILED only with a proven config fault, else INCOMPLETE; expiry; drift
+ok 36 - stop table: INVALID always FAILED; UNAVAILABLE FAILED only with a proven config fault, else INCOMPLETE; expiry; drift
+  ---
+  duration_ms: 1.81175
+  type: 'test'
+  ...
+# Subtest: latency: nearest-rank p50/p95/max over completed answers with explicit n; censored timeouts are separate and never latency
+ok 37 - latency: nearest-rank p50/p95/max over completed answers with explicit n; censored timeouts are separate and never latency
+  ---
+  duration_ms: 0.621667
+  type: 'test'
+  ...
+# Subtest: evidence: supervisor records hold only allowlisted safe keys — never question text, hashes, lengths or the observed intent
+ok 38 - evidence: supervisor records hold only allowlisted safe keys — never question text, hashes, lengths or the observed intent
+  ---
+  duration_ms: 2.90425
+  type: 'test'
+  ...
+# Subtest: admission shape: invalid admissions and orders are refused at construction (no silent defaults)
+ok 39 - admission shape: invalid admissions and orders are refused at construction (no silent defaults)
+  ---
+  duration_ms: 0.4195
+  type: 'test'
+  ...
+# Subtest: publication: unauthorized publication is an AUTHORITY safety stop (FAILED); a withheld answer stops INCOMPLETE; both block dispatch
+ok 40 - publication: unauthorized publication is an AUTHORITY safety stop (FAILED); a withheld answer stops INCOMPLETE; both block dispatch
+  ---
+  duration_ms: 0.939833
+  type: 'test'
+  ...
+# Subtest: settlement: KNOWN failure keeps the reserve and continues; UNKNOWN commit keeps the reserve and stops INCOMPLETE, no refund
+ok 41 - settlement: KNOWN failure keeps the reserve and continues; UNKNOWN commit keeps the reserve and stops INCOMPLETE, no refund
+  ---
+  duration_ms: 0.62625
+  type: 'test'
+  ...
+# Subtest: closure floor: never below the highest version ever observed; stale/foreign/incomplete receipts leave containment unconfirmed
+ok 42 - closure floor: never below the highest version ever observed; stale/foreign/incomplete receipts leave containment unconfirmed
+  ---
+  duration_ms: 4.662334
+  type: 'test'
+  ...
+# Subtest: absorbing terminal states: an integrity stop during the in-flight case is never overwritten by its later outcome
+ok 43 - absorbing terminal states: an integrity stop during the in-flight case is never overwritten by its later outcome
+  ---
+  duration_ms: 38.295041
+  type: 'test'
+  ...
+# Subtest: thresholdsMet: only a COMPLETE run with confirmed closure and zero safety in every category; late safety failures never pass
+ok 44 - thresholdsMet: only a COMPLETE run with confirmed closure and zero safety in every category; late safety failures never pass
+  ---
+  duration_ms: 120.600959
+  type: 'test'
+  ...
+# Subtest: post-submission text deviation: consumed CASE_FAIL (in flight or found after the record); a refusal deviation fails the run
+ok 45 - post-submission text deviation: consumed CASE_FAIL (in flight or found after the record); a refusal deviation fails the run
+  ---
+  duration_ms: 0.571625
+  type: 'test'
+  ...
+# Subtest: no active file exceeds 700 lines
+ok 46 - no active file exceeds 700 lines
+  ---
+  duration_ms: 142.512375
+  type: 'test'
+  ...
+1..46
+# tests 46
+# suites 0
+# pass 38
+# fail 8
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 90513.987333

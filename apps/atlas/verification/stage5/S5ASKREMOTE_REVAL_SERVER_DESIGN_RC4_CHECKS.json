@@ -1,0 +1,25 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-SERVER-DESIGN-rc4",
+  "packageHash": "9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163",
+  "manifestFiles": 38,
+  "authorDraftByteIdentical": true,
+  "dependencyHashesVerified": 29,
+  "normativeMarkdownFiles": 8,
+  "maxMarkdownLines": 335,
+  "sourceChanges": false,
+  "paidProductCalls": 0,
+  "activation": false,
+  "zipSha256": "367fc6927f05fa77fcf0d6390e4881599a3557a336ba3afa2a07afee46ab5843",
+  "delta": {
+    "changed": [
+      "docs/stage5/ask/remote/reval-server/04_TRANSIENT_HANDOFF.md",
+      "docs/stage5/ask/remote/reval-server/05_PROOFS_AND_ACCEPTANCE.md",
+      "docs/stage5/ask/remote/reval-server/06_LOCAL_PROTOCOL.md",
+      "docs/stage5/ask/remote/reval-server/DEPENDENCY_REFERENCES.json",
+      "docs/stage5/ask/remote/reval-server/README.md"
+    ],
+    "added": [],
+    "deleted": []
+  },
+  "checks": "Static hashes/line budget/balanced code fences; no runtime/PG/browser proof claimed"
+}

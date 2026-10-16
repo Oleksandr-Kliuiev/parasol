@@ -1,0 +1,1217 @@
+{
+ "stage": "R-EVAL server RS-A",
+ "status": "IMPLEMENTATION_COMPLETE_CODE_ACCEPTANCE_PENDING",
+ "author": {
+  "surface": "native Claude Code",
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "session": "642adc68-1d33-4c80-be48-6c8135833222",
+  "subagents": 0
+ },
+ "paidProductCalls": 0,
+ "activation": false,
+ "network": false,
+ "commits": 0,
+ "governing": {
+  "serverDesignPackage": "9fa16222d6c32c18d4d193b6666e078fd3624a4bdb2ccb8ab9fbd68113b08163",
+  "briefPackage": "e8f87336b1cf7e0ba7b18702378f3a6efb877b20e5d9aa4e9a96ee175bf85040",
+  "brief": "caa8a5b446d3efa21aa07ae6574647e6425cbc9fb05bda423fad364c4e902aaa",
+  "acceptanceChecks": "5b2b3062b9ee9fa0e5ce2c92d55f5a7416c14c91830465db61b9ed507955e410",
+  "verificationAddendum": "59c2fd7f82020d62cbbdd070494b62fcb5cdae719e0568c98ab8d34492dc99dc"
+ },
+ "source": {
+  "head": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "codex/reval-server-contracts-20261011",
+  "node": "v25.8.1"
+ },
+ "runner": "/tmp/atlas-reval-rsa/checks/run-suite2.sh",
+ "steps": [
+  {
+   "name": "typecheck",
+   "exitCode": 0,
+   "duration": "9s",
+   "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "command": "npm run -s typecheck"
+  },
+  {
+   "name": "ui-typecheck",
+   "exitCode": 0,
+   "duration": "1s",
+   "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "command": "npm run -s ui:typecheck"
+  },
+  {
+   "name": "db-generate",
+   "exitCode": 0,
+   "duration": "1s",
+   "logSha256": "d33343a4b665f38d3431f51efee9cd3231ce7518266c33c16bf042b52f2e544e",
+   "command": "npm run -s db:generate"
+  },
+  {
+   "name": "schema-validate",
+   "exitCode": 0,
+   "duration": "0s",
+   "logSha256": "1fa1e06af31f866d939dcbc2f900483ed3ca80ed28d58c5071c0556790d7092f",
+   "command": "npm run -s schema:validate"
+  },
+  {
+   "name": "db-drift",
+   "exitCode": 0,
+   "duration": "1s",
+   "logSha256": "892b13f6d8d0c9be510e7746fe0a02fbdcdeb853749096fa335597962305d6a2",
+   "command": "npm run -s db:check:drift"
+  },
+  {
+   "name": "db-pg17",
+   "exitCode": 0,
+   "duration": "1s",
+   "logSha256": "3ba8dd0aae637f81e7e201c4b7ebb3b77e3928839ed2b161906033bb0c720919",
+   "command": "npm run -s db:check:pg17"
+  },
+  {
+   "name": "api-build",
+   "exitCode": 0,
+   "duration": "4s",
+   "logSha256": "a6aa931089b464f4c65e4a923b0460b903968733081bc2b5d7806e5f32081592",
+   "command": "npm run -s api:build"
+  },
+  {
+   "name": "unit",
+   "exitCode": 1,
+   "duration": "91s",
+   "logSha256": "593b9c6d7b20c6eef12cd7c2f06d14f5d26a171aa1e348bdf62b79edaaa7a38b",
+   "command": "node --experimental-strip-types --test --test-reporter=tap tests/*.test.ts"
+  },
+  {
+   "name": "test-pg",
+   "exitCode": 0,
+   "duration": "220s",
+   "logSha256": "ed76f3c9bcecca12ac9473f0b461c9c47dd4a64b6e1e40cf29915be5a49bf4ef",
+   "command": "npm run -s test:pg"
+  },
+  {
+   "name": "test-ui",
+   "exitCode": 0,
+   "duration": "130s",
+   "logSha256": "fbd37772339befa5e7f12fd6effa9b6178968275417decc0ab2e72ce098ee18b",
+   "command": "npm run -s test:ui"
+  }
+ ],
+ "unit": {
+  "note": "superseded by revision2Checks.unitComplete; revision 1 values below",
+  "revision1": {
+   "exitCode": 1,
+   "qualifiedNonzero": true,
+   "tests": 495,
+   "pass": 487,
+   "fail": 8,
+   "cancelled": 0,
+   "skipped": 0,
+   "failures": [
+    {
+     "tap": 12,
+     "file": "tests/ask-remote-eval-execution-cli.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 13,
+     "file": "tests/ask-remote-eval-execution-liability.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 14,
+     "file": "tests/ask-remote-eval-execution-operator.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 76,
+     "file": "tests/ask-remote-eval-execution-pty.test.ts",
+     "kind": "registered-test",
+     "name": "real pty: kernel echo stays off from startup verification through processing; Ctrl-C finalizes",
+     "observed": "PTY_TEST_TIMEOUT step 1",
+     "cause": "CORPUS_IDENTITY_MISMATCH (pty-probe.log ac790dfb31569394d5fc1cbd9c0af8bbb8c9e2a740d19ed21622dc05cde35392, exit=1)"
+    },
+    {
+     "tap": 16,
+     "file": "tests/ask-remote-eval-execution-receipt.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 17,
+     "file": "tests/ask-remote-eval-execution-repair.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 18,
+     "file": "tests/ask-remote-eval-execution-replay.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 19,
+     "file": "tests/ask-remote-eval-execution-session.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    }
+   ],
+   "rc5Reconciliation": {
+    "perFile": {
+     "ask-remote-eval-corpus.test.ts": {
+      "historical": 7,
+      "registered": 7,
+      "pass": 7,
+      "fail": [],
+      "wrapperFailed": false,
+      "namesMatch": true,
+      "blockedUnregistered": 0
+     },
+     "ask-remote-eval-execution-cli.test.ts": {
+      "historical": 6,
+      "registered": 0,
+      "pass": 0,
+      "fail": [],
+      "wrapperFailed": true,
+      "namesMatch": null,
+      "blockedUnregistered": 6
+     },
+     "ask-remote-eval-execution-liability.test.ts": {
+      "historical": 27,
+      "registered": 0,
+      "pass": 0,
+      "fail": [],
+      "wrapperFailed": true,
+      "namesMatch": null,
+      "blockedUnregistered": 27
+     },
+     "ask-remote-eval-execution-operator.test.ts": {
+      "historical": 4,
+      "registered": 0,
+      "pass": 0,
+      "fail": [],
+      "wrapperFailed": true,
+      "namesMatch": null,
+      "blockedUnregistered": 4
+     },
+     "ask-remote-eval-execution-pty.test.ts": {
+      "historical": 1,
+      "registered": 1,
+      "pass": 0,
+      "fail": [
+       "real pty: kernel echo stays off from startup verification through processing; Ctrl-C finalizes"
+      ],
+      "wrapperFailed": false,
+      "namesMatch": true,
+      "blockedUnregistered": 0
+     },
+     "ask-remote-eval-execution-receipt.test.ts": {
+      "historical": 5,
+      "registered": 0,
+      "pass": 0,
+      "fail": [],
+      "wrapperFailed": true,
+      "namesMatch": null,
+      "blockedUnregistered": 5
+     },
+     "ask-remote-eval-execution-repair.test.ts": {
+      "historical": 13,
+      "registered": 0,
+      "pass": 0,
+      "fail": [],
+      "wrapperFailed": true,
+      "namesMatch": null,
+      "blockedUnregistered": 13
+     },
+     "ask-remote-eval-execution-replay.test.ts": {
+      "historical": 5,
+      "registered": 0,
+      "pass": 0,
+      "fail": [],
+      "wrapperFailed": true,
+      "namesMatch": null,
+      "blockedUnregistered": 5
+     },
+     "ask-remote-eval-execution-session.test.ts": {
+      "historical": 11,
+      "registered": 0,
+      "pass": 0,
+      "fail": [],
+      "wrapperFailed": true,
+      "namesMatch": null,
+      "blockedUnregistered": 11
+     },
+     "ask-remote-eval-fixtures.test.ts": {
+      "historical": 11,
+      "registered": 11,
+      "pass": 11,
+      "fail": [],
+      "wrapperFailed": false,
+      "namesMatch": true,
+      "blockedUnregistered": 0
+     },
+     "ask-remote-eval-offline.test.ts": {
+      "historical": 5,
+      "registered": 5,
+      "pass": 5,
+      "fail": [],
+      "wrapperFailed": false,
+      "namesMatch": true,
+      "blockedUnregistered": 0
+     },
+     "ask-remote-eval-supervisor.test.ts": {
+      "historical": 14,
+      "registered": 14,
+      "pass": 14,
+      "fail": [],
+      "wrapperFailed": false,
+      "namesMatch": true,
+      "blockedUnregistered": 0
+     },
+     "context-budget.test.ts": {
+      "historical": 1,
+      "registered": 1,
+      "pass": 1,
+      "fail": [],
+      "wrapperFailed": false,
+      "namesMatch": true,
+      "blockedUnregistered": 0
+     }
+    },
+    "currentExecutedPass": 38,
+    "currentExecutedFail": 1,
+    "failedWrappers": 7,
+    "blockedUnregistered": 71,
+    "historicalPassed": 110,
+    "evidence": {
+     "rc5CurrentTap": "d146247268d9e430ae0c05b4cc8795fb54b3638c4625f3ab866ef4fd3492a283",
+     "rc5CurrentXml": "ba8a6a81306ca4440f322780a3fba2fd36b3c3e806770228c9a9a7bc2d8f64f8",
+     "reconcile": "2146e1932ff51d881ff9b69eb682a8d33d1606a600485f19887ff7b188efbcac"
+    },
+    "rc5TestFilesBytesEqualPinAndView": true
+   }
+  }
+ },
+ "historicalRc5": {
+  "reportedSeparately": true,
+  "rerun": false,
+  "finalProof": "/tmp/atlas-reval-rsa/HISTORICAL_RC5_FINAL_CHECKS.json",
+  "finalProofSha256": "d90892a801800a60cf93125cdceac77cc7f8644a61c03dddc610dc8f6748c589",
+  "tests": 110,
+  "pass": 110,
+  "fail": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "todo": 0,
+  "logSha256": "0eb98e5cd2943eb3c381316d6e9ff1f7c70a53294947db5ed284ce96ab3f931c",
+  "junitSha256": "c1fa398c9344230f7c58624608e72dda5bc5bf61a6531afeb5046d3b3f43e8e7",
+  "earlierReceiptSuperseded": "/tmp/atlas-reval-rsa/historical-rc5-v2-tests-receipt.json"
+ },
+ "testPg": {
+  "revision1Full": {
+   "exitCode": 0,
+   "tests": 712,
+   "pass": 712,
+   "log": "ed76f3c9bcecca12ac9473f0b461c9c47dd4a64b6e1e40cf29915be5a49bf4ef"
+  },
+  "revision2Focused": {
+   "files": 6,
+   "tests": 26,
+   "pass": 26,
+   "fail": 0,
+   "skipped": 0,
+   "cancelled": 0,
+   "exitCode": 0,
+   "nativeFixtureRan": true,
+   "log": "230bd383376226ef6136b4629ac1375539d816eb64a8124ddbd50be2125cbc4a"
+  }
+ },
+ "testUi": {
+  "exitCode": 0,
+  "passed": 86
+ },
+ "rc5Guard": {
+  "currentDrift": [
+   "RC_BUILD_DRIFT",
+   "RC_SOURCE_DRIFT"
+  ],
+  "sourceDeltas": [
+   {
+    "path": "apps/api/src/main.ts",
+    "old": "278af78d0389619b8801e29c74832dac0db100eada353527725c526c56ce99cc",
+    "new": "8a83b5ad683ebb91eb8a2d9be683083e4da070c84a53cdf92fbf6fa39f2a9309"
+   },
+   {
+    "path": "docs/RUNBOOK.md",
+    "old": "5adc9447bd99a8cab020d02e7a940c7a8446aa9cdd598594bda37902db9a9f4c",
+    "new": "f36152edc745115aacae8f2e7f50995b1e88b6bbc5d874232ba76d989832e02a"
+   },
+   {
+    "path": "packages/graph/runtime-role.ts",
+    "old": "6aac5e454c52de04c27241bd68ff3dc1980428397a37290b7dcbc720324818eb",
+    "new": "ac0c6c2921e79959cf214e177ab6cce52a999aab02cdc0b7b1f558dde9c74b7f"
+   },
+   {
+    "path": "prisma/askremote.prisma",
+    "old": "39455ebf57c1aff9b958e9d6fa3bff7387b6c56829a8e900a273a71647498619",
+    "new": "83fc46ba34f4cd29a223b40700298a1828bf2672c46442513cdf93729217d0d8"
+   },
+   {
+    "path": "prisma/roles.sql",
+    "old": "7a9419b37d1d575ad073abf0837850350879ae9b15c018cc6f0c19809b0d3f69",
+    "new": "3fde4eca919fe1461f58025be2cf50da1e371f18429ac0f12232d23a269edee8"
+   },
+   {
+    "path": "prisma/schema.prisma",
+    "old": "d4ce4995d9dd4540c51cd3beaa4e1f4ecb04d6362d06cd8692a3a4e3b9052bb5",
+    "new": "b03b28de2cad956949d7170b2311e37c8edeed6ce1ac876e151e03b4f732b898"
+   },
+   {
+    "path": "tests/context-mapper.test.ts",
+    "old": "61575892cc6610c2bb265a6e7180ab7b1fb75edd9ab247d990dba791dd98bfd9",
+    "new": "130c6d05f375956b4232c587bf26b84e1a9e7478ee4a060b98fd887cd522a826"
+   },
+   {
+    "path": "tests/m365-database.test.ts",
+    "old": "944fe27dc99f160c4f6ae4d8ce2583b7404b82d0eecec53761cf0a4c5fc6ec78",
+    "new": "fd04928d1d0a8a0d2b2b35cb0e2b0e4b4df5b0b44ec731ffad91ed0390961e8c"
+   },
+   {
+    "path": "tests/pg/action-upgrade-s3b.pg.test.ts",
+    "old": "ba143ca0cbbfc9b08fd060981738801d1f68dde78be9c756193f7de733f33f3b",
+    "new": "584f43177300fe8e52c99f89211ae1d7484d65b749e72b2ec62f3213f4379227"
+   },
+   {
+    "path": "tests/pg/action-upgrade-s3c.pg.test.ts",
+    "old": "65713bd629406ef3ca5affbb1cd384962dda29f5ce7ea4981f179aa035a4fcd2",
+    "new": "b552d0cb15be4136d62b7dce6c80fe66b26f157df7a432b895685da1981aebb6"
+   },
+   {
+    "path": "tests/pg/ask-remote-upgrade.pg.test.ts",
+    "old": "565dcac053af261714c7e03cf9a6e9e755a6bf3db5a87ea3e9cdd0da3f720906",
+    "new": "35326973cfbef90692e4ba6e7ada0dd8bc14caf55043473d160bfce282b82190"
+   },
+   {
+    "path": "tests/support/pg-harness.ts",
+    "old": "5ef48f7e58e314124f1a0db23f1b9a6b09c0238eeaa7cd5cad392e5875bcd56c",
+    "new": "0fa0842d88ce82dd1a43ee2667b70af14a93011711b275e08f3cf4e5042d90de"
+   },
+   {
+    "path": "tests/support/poweroffice-envelope.ts",
+    "old": "681c4458cd223ed37ce7cdbec2c40f6e189d319665d6ab827fcf47d8a0f4a382",
+    "new": "21f6b61a1b6f9377702aac4b4d9700a263174bb65d477db7cbc8b6bf7d1cd0c4"
+   },
+   {
+    "path": "tests/support/roles-sql.ts",
+    "old": "a88d5a22b75e2bca138ac843d2aeeeb8df8dbc4baae6682c66eb8b3fe1b60693",
+    "new": "f6ae8f486a14e954a601c84b81f2c411a2975a0564d557a56bdb7f642d9b04a4"
+   }
+  ],
+  "buildDeltas": [
+   {
+    "path": "dist/apps/api/src/main.js",
+    "old": "0877bd438bc8e7f28a4d36f66aecb98aa399fe17e354ade702852f3f83067629",
+    "new": "7137c74dc258a66fd90754f4d4c97803db6b57ce7fcd485906f4f6a7a595d870"
+   },
+   {
+    "path": "dist/packages/graph/runtime-role.js",
+    "old": "96b0db7006d2370d06211a67a37fe7ab29a486936bf18b5faa4939be95b1d5f2",
+    "new": "a63c47236eb38ea5c108162bd035d2386918b6616246ab264594cb2df134ef72"
+   }
+  ],
+  "pendingReviewerClassification": [
+   "tests/context-mapper.test.ts",
+   "tests/m365-database.test.ts",
+   "tests/pg/action-upgrade-s3b.pg.test.ts",
+   "tests/pg/action-upgrade-s3c.pg.test.ts",
+   "tests/pg/ask-remote-upgrade.pg.test.ts",
+   "tests/support/poweroffice-envelope.ts"
+  ],
+  "overlaysAtPin": true,
+  "rc5ExecutionFiles": 120,
+  "rc5ExecutionFilesUnchanged": true,
+  "rc5Edits": 0,
+  "tamperNegatives": {
+   "source": {
+    "path": "packages/actions/approvals.ts",
+    "drift": [
+     "RC_SOURCE_DRIFT"
+    ]
+   },
+   "build": {
+    "path": "dist/packages/ask/audit.js",
+    "drift": [
+     "RC_BUILD_DRIFT"
+    ]
+   },
+   "overlay": {
+    "path": "AGENTS.md",
+    "drift": [
+     "ADMIN_OVERLAY_DRIFT",
+     "OFFLINE_FILE_DRIFT",
+     "RC_SOURCE_DRIFT"
+    ]
+   },
+   "untamperedCopy": {
+    "ok": true,
+    "drift": []
+   }
+  }
+ },
+ "native": {
+  "descriptorSha256": "13de87997355e8ef5e89f35b982f48494157502eecfd15286b53bde4487969ff",
+  "server": "PostgreSQL 17.11 (Homebrew)",
+  "roleFlags": "owner/runtime/reader super=false bypassRls=false",
+  "closures": [
+   "APPLIED",
+   "NO-OP"
+  ],
+  "identityRef": "rsa-peertoken-unixphys-v1",
+  "loadedBinding": "UNVERIFIED",
+  "negatives": "socket inode / postmaster pid / start -1 s / start +1 s / database OID -> FAILURE REGISTRATION_MISMATCH (identity, snapshot), no S/E backend",
+  "pgStatActivityVisibleToReader": "VERIFIED",
+  "startEquality": {
+   "postmasterPid": "1791720581",
+   "queriedFloor": "1791720581",
+   "equal": true
+  }
+ },
+ "timings": {
+  "revision2": {
+   "identityMs": {
+    "p50": 5.7,
+    "max": 8.6
+   },
+   "pauseExportMs": {
+    "p50": 159.6,
+    "max": 289.6
+   }
+  },
+  "revision1": {
+   "identityMs": {
+    "p50": 5.7,
+    "max": 9.5
+   },
+   "pauseExportMs": {
+    "p50": 208.6,
+    "max": 255.6
+   },
+   "note": "PTY inter-arrival, Docker TCP seam, regression only"
+  },
+  "note": "PTY inter-arrival, Docker TCP seam, regression only"
+ },
+ "reproducibility": {
+  "helperSha256": "9624a353768cfd528538c4c965ad462295da4f8124a17c6d9bc0118248a983c1",
+  "cleanCopyHelperEqual": true,
+  "distJsInventory": {
+   "files": 202,
+   "checkout": "517cc5f8637bbb928a4a946944145bcf5ccdc71d73d7344e3e983bad14281e98",
+   "cleanCopy": "517cc5f8637bbb928a4a946944145bcf5ccdc71d73d7344e3e983bad14281e98"
+  },
+  "rc5BuildDeltasUnchanged": {
+   "dist/apps/api/src/main.js": "7137c74dc258a66fd90754f4d4c97803db6b57ce7fcd485906f4f6a7a595d870",
+   "dist/packages/graph/runtime-role.js": "a63c47236eb38ea5c108162bd035d2386918b6616246ab264594cb2df134ef72"
+  },
+  "log": "f6170bfe754eaadd6b77945ce7a6737729b9e811653f3f989a846add7aebb526"
+ },
+ "gitDiffCheck": 0,
+ "manifest": {
+  "sha256": "d27635759ac5a8749e37c656d558b8d8ae966b7dd109f367c881de9b5633c63f",
+  "changed": 14,
+  "missing": [],
+  "rc5Delta": [],
+  "changedBaseline": [
+   {
+    "path": "apps/api/src/main.ts",
+    "baseline": "278af78d0389619b8801e29c74832dac0db100eada353527725c526c56ce99cc",
+    "current": "8a83b5ad683ebb91eb8a2d9be683083e4da070c84a53cdf92fbf6fa39f2a9309"
+   },
+   {
+    "path": "docs/RUNBOOK.md",
+    "baseline": "5adc9447bd99a8cab020d02e7a940c7a8446aa9cdd598594bda37902db9a9f4c",
+    "current": "f36152edc745115aacae8f2e7f50995b1e88b6bbc5d874232ba76d989832e02a"
+   },
+   {
+    "path": "packages/graph/runtime-role.ts",
+    "baseline": "6aac5e454c52de04c27241bd68ff3dc1980428397a37290b7dcbc720324818eb",
+    "current": "ac0c6c2921e79959cf214e177ab6cce52a999aab02cdc0b7b1f558dde9c74b7f"
+   },
+   {
+    "path": "prisma/askremote.prisma",
+    "baseline": "39455ebf57c1aff9b958e9d6fa3bff7387b6c56829a8e900a273a71647498619",
+    "current": "83fc46ba34f4cd29a223b40700298a1828bf2672c46442513cdf93729217d0d8"
+   },
+   {
+    "path": "prisma/roles.sql",
+    "baseline": "7a9419b37d1d575ad073abf0837850350879ae9b15c018cc6f0c19809b0d3f69",
+    "current": "3fde4eca919fe1461f58025be2cf50da1e371f18429ac0f12232d23a269edee8"
+   },
+   {
+    "path": "prisma/schema.prisma",
+    "baseline": "d4ce4995d9dd4540c51cd3beaa4e1f4ecb04d6362d06cd8692a3a4e3b9052bb5",
+    "current": "b03b28de2cad956949d7170b2311e37c8edeed6ce1ac876e151e03b4f732b898"
+   },
+   {
+    "path": "tests/context-mapper.test.ts",
+    "baseline": "61575892cc6610c2bb265a6e7180ab7b1fb75edd9ab247d990dba791dd98bfd9",
+    "current": "130c6d05f375956b4232c587bf26b84e1a9e7478ee4a060b98fd887cd522a826"
+   },
+   {
+    "path": "tests/m365-database.test.ts",
+    "baseline": "944fe27dc99f160c4f6ae4d8ce2583b7404b82d0eecec53761cf0a4c5fc6ec78",
+    "current": "fd04928d1d0a8a0d2b2b35cb0e2b0e4b4df5b0b44ec731ffad91ed0390961e8c"
+   },
+   {
+    "path": "tests/pg/action-upgrade-s3b.pg.test.ts",
+    "baseline": "ba143ca0cbbfc9b08fd060981738801d1f68dde78be9c756193f7de733f33f3b",
+    "current": "584f43177300fe8e52c99f89211ae1d7484d65b749e72b2ec62f3213f4379227"
+   },
+   {
+    "path": "tests/pg/action-upgrade-s3c.pg.test.ts",
+    "baseline": "65713bd629406ef3ca5affbb1cd384962dda29f5ce7ea4981f179aa035a4fcd2",
+    "current": "b552d0cb15be4136d62b7dce6c80fe66b26f157df7a432b895685da1981aebb6"
+   },
+   {
+    "path": "tests/pg/ask-remote-upgrade.pg.test.ts",
+    "baseline": "565dcac053af261714c7e03cf9a6e9e755a6bf3db5a87ea3e9cdd0da3f720906",
+    "current": "35326973cfbef90692e4ba6e7ada0dd8bc14caf55043473d160bfce282b82190"
+   },
+   {
+    "path": "tests/support/pg-harness.ts",
+    "baseline": "5ef48f7e58e314124f1a0db23f1b9a6b09c0238eeaa7cd5cad392e5875bcd56c",
+    "current": "0fa0842d88ce82dd1a43ee2667b70af14a93011711b275e08f3cf4e5042d90de"
+   },
+   {
+    "path": "tests/support/poweroffice-envelope.ts",
+    "baseline": "681c4458cd223ed37ce7cdbec2c40f6e189d319665d6ab827fcf47d8a0f4a382",
+    "current": "21f6b61a1b6f9377702aac4b4d9700a263174bb65d477db7cbc8b6bf7d1cd0c4"
+   },
+   {
+    "path": "tests/support/roles-sql.ts",
+    "baseline": "a88d5a22b75e2bca138ac843d2aeeeb8df8dbc4baae6682c66eb8b3fe1b60693",
+    "current": "f6ae8f486a14e954a601c84b81f2c411a2975a0564d557a56bdb7f642d9b04a4"
+   }
+  ],
+  "newRsaFiles": [
+   {
+    "path": "apps/api/src/reval/bridge.ts",
+    "sha256": "6a73777c8ebcc7d535eb8f41b23843737d15e8c6d05d0ef88b76fe7362b4f92d",
+    "lines": 116
+   },
+   {
+    "path": "native/reval-peer/AGENTS.md",
+    "sha256": "62cc3e7f962e8e092f8eb26ef0b582a5dabc15cb456bfc0d85293b2366a45a15",
+    "lines": 5
+   },
+   {
+    "path": "native/reval-peer/peer.c",
+    "sha256": "bc6eb68b9e6ed08d9b4a785028b897ad83d9e8b77cfb10552aa11a09f9bc85bf",
+    "lines": 64
+   },
+   {
+    "path": "packages/graph/reval-role.ts",
+    "sha256": "7daf4d202867e9b7e0dc4f4496cccee4131482715c91267afd64cf08602105dd",
+    "lines": 240
+   },
+   {
+    "path": "packages/reval/AGENTS.md",
+    "sha256": "7df14fd32498d7d2980ac0f91b6f4e760afbdd781f7aab87e9af651c7adf0de3",
+    "lines": 12
+   },
+   {
+    "path": "packages/reval/channel.ts",
+    "sha256": "a41f8c52e656537e62542ef30e5989c7b4392f4ebbe26d9a8fd78cfe547abc34",
+    "lines": 70
+   },
+   {
+    "path": "packages/reval/closure.ts",
+    "sha256": "4f1697d81639cf5ea2a5dedc708f0148de16874e963bacb41de061528278e0bd",
+    "lines": 66
+   },
+   {
+    "path": "packages/reval/codes.ts",
+    "sha256": "eef4482054262e9ebd695ebfc7b24bba4774f0aefcf216d1cf89d2bd854a534c",
+    "lines": 84
+   },
+   {
+    "path": "packages/reval/config.ts",
+    "sha256": "1cfccaf2573210c1366f61782944921f80f1a0b50a36923a9c38b2b2416f7249",
+    "lines": 57
+   },
+   {
+    "path": "packages/reval/controller.ts",
+    "sha256": "b3fec5494b8da7cb9a04bc27bc6e2d02fbc6c1f5997798676de0e3c6031ea0dd",
+    "lines": 174
+   },
+   {
+    "path": "packages/reval/deps.ts",
+    "sha256": "33ba93c2c9005dba0edc22f567b73f7515799fddf5898c2f02863a452ffd28a2",
+    "lines": 80
+   },
+   {
+    "path": "packages/reval/envelope.ts",
+    "sha256": "46573487aec1c294ffe384186eecea0ec101ace4d4d47c18b730fbfc7d182048",
+    "lines": 131
+   },
+   {
+    "path": "packages/reval/frame.ts",
+    "sha256": "a405e2cea2fa8a2232af7dac140178c8844b7697b9d1c1c13c6f0348bbef7f7e",
+    "lines": 76
+   },
+   {
+    "path": "packages/reval/launch.ts",
+    "sha256": "cddac72ca0b18dc78f3497d7d06b9caec21ecfeca970aed030b2ba1f12b9e16a",
+    "lines": 81
+   },
+   {
+    "path": "packages/reval/owner-cli.ts",
+    "sha256": "4f23ebf40c0179890b8c514344744dc576967b7ede86c61bcb8ab2a344996769",
+    "lines": 100
+   },
+   {
+    "path": "packages/reval/owner-exec.ts",
+    "sha256": "15d1384b3c1958d91a7731d864a50fb9e28a1a807e363275e10429e1ffc494d8",
+    "lines": 141
+   },
+   {
+    "path": "packages/reval/pause.ts",
+    "sha256": "043d0a54d38ae432e97ec3ea9f8a6217f09e709f92c919369450763a9e47c0e9",
+    "lines": 77
+   },
+   {
+    "path": "packages/reval/payloads.ts",
+    "sha256": "d8af5f89662891f9cd63998b54031b89f08ed787f27663b543e9cbf599ca065c",
+    "lines": 171
+   },
+   {
+    "path": "packages/reval/peer.ts",
+    "sha256": "6fed50ef2e0cbb76a8a6bd6a0285f57c534d6f29b23027167f56850d2b7fd454",
+    "lines": 75
+   },
+   {
+    "path": "packages/reval/physical.ts",
+    "sha256": "9b40f5e9fa1692e41ad0e36c5acfdb8ee36d68694d6730b49b7451b9f7930695",
+    "lines": 93
+   },
+   {
+    "path": "packages/reval/private-frames.ts",
+    "sha256": "4cf0daa2a63b25e57fb97e132a6ccd075e685fee6fef4732f1d464430a3e498a",
+    "lines": 105
+   },
+   {
+    "path": "packages/reval/scalars.ts",
+    "sha256": "6352eb1f730a9a5542d773982fd4ec54be2f524b0f6e5c4aaa92e50a90579f25",
+    "lines": 76
+   },
+   {
+    "path": "packages/reval/secret-file.ts",
+    "sha256": "775b6a9ad3c609c49ad870b35944ce89bc8f1f6207825e485ac6cfdc4079764e",
+    "lines": 55
+   },
+   {
+    "path": "packages/reval/server-link.ts",
+    "sha256": "2f530f39442c1be86de1602243b7dc24bfe6e0179d23e5c13372656d61702434",
+    "lines": 114
+   },
+   {
+    "path": "packages/reval/snapshot-reader.ts",
+    "sha256": "59a27cab20e5a0fedaecd3dd4806537b610b465a5853e8ea2288159423a1018f",
+    "lines": 76
+   },
+   {
+    "path": "prisma/migrations/202610131000_stage5_reval_registration/migration.sql",
+    "sha256": "677aacd5406d0b3ef3545138583bf5b85c49417f5fbfd317c68ca4804b9a8869",
+    "lines": 279
+   },
+   {
+    "path": "prisma/reval.prisma",
+    "sha256": "631cc117bc198f292442b48668e66166596e3571050b2881000d31eb4cc75cfa",
+    "lines": 38
+   },
+   {
+    "path": "prisma/roles/reval.sql",
+    "sha256": "a656199369a577619e90312eb68cbb86e4fa99e22da732b912c75d5e5de075f6",
+    "lines": 232
+   },
+   {
+    "path": "scripts/reval-server/AGENTS.md",
+    "sha256": "d89f85aab75de2ff181b4e75fdf2eba180082e806f4ff993a7707273ec1a446a",
+    "lines": 6
+   },
+   {
+    "path": "scripts/reval-server/build-peer.ts",
+    "sha256": "7fd537efb495da6150d91c65a943c9c6af9f0a85adc8bbca94ad1af6ac14f7b3",
+    "lines": 29
+   },
+   {
+    "path": "scripts/reval-server/controller.ts",
+    "sha256": "e062764aaeace36023ccebfd4b560b051f7366e5b5250112b74092e38cf5ca94",
+    "lines": 5
+   },
+   {
+    "path": "scripts/reval-server/owner-exec.ts",
+    "sha256": "6a331d2bb5c08d261c89e44d123fcc25b6dee36d4b1ad7c4b2ae828a165e144a",
+    "lines": 15
+   },
+   {
+    "path": "scripts/reval-server/owner.ts",
+    "sha256": "14f21f7a5a4d3a792f1090a244c034a2f95ad2169d78ba022e98e0d13e316353",
+    "lines": 6
+   },
+   {
+    "path": "tests/pg/reval-closure.pg.test.ts",
+    "sha256": "ef3451d3919271debce923c618a077ee085d0b64cbc14d0f00a60ca8458a6de7",
+    "lines": 227
+   },
+   {
+    "path": "tests/pg/reval-launch.pg.test.ts",
+    "sha256": "307a421004ccecbb1078a6cae3b8d1e8554ef0edb8f8f366782eee74b8af9364",
+    "lines": 242
+   },
+   {
+    "path": "tests/pg/reval-native-unix.pg.test.ts",
+    "sha256": "8d0fac5a4bb73be1ae1f32f313c83144e429561509cda572f681ad2bf284d87d",
+    "lines": 128
+   },
+   {
+    "path": "tests/pg/reval-roles.pg.test.ts",
+    "sha256": "26113b5d4f60ed119d74d6c75135eeff6ca1841bc327bba75afbba71a575fbc3",
+    "lines": 125
+   },
+   {
+    "path": "tests/pg/reval-snapshot.pg.test.ts",
+    "sha256": "d9775fc14537e86dfe7039b635e27791d0660945ab933f62030217af35ee2b4d",
+    "lines": 230
+   },
+   {
+    "path": "tests/pg/reval-upgrade-guard.pg.test.ts",
+    "sha256": "cf10cc30795b3a296d95c1c8a756afcc4c579c2d33caf776522aa745e632fc3b",
+    "lines": 97
+   },
+   {
+    "path": "tests/reval-payloads.test.ts",
+    "sha256": "152f7c686a76f1735b0c28de02f0ee1f6519f2d892af6d5c22cbcd8c165b9146",
+    "lines": 204
+   },
+   {
+    "path": "tests/reval-physical-peer.test.ts",
+    "sha256": "28c2fe5172bb473ae7a51826ad8ac34ba86ceb26345a72fd7b38f24aab23a027",
+    "lines": 159
+   },
+   {
+    "path": "tests/reval-protocol.test.ts",
+    "sha256": "3d286e6dd6b6c01b4b2a318d5b5d793d682aaf8747b3b09886463453e022958b",
+    "lines": 172
+   },
+   {
+    "path": "tests/reval-rc5-guard.test.ts",
+    "sha256": "67e6ff44ace0d1817ce44aea3860ce64e497a3f80aa87dac370a4f70b2d66ff1",
+    "lines": 97
+   },
+   {
+    "path": "tests/reval-static.test.ts",
+    "sha256": "c4e437c2332cb272be80b89c6d9446c9fa3b8ac5fb87f0de227fef6f01c82366",
+    "lines": 78
+   },
+   {
+    "path": "tests/support/reval-nonsuper.ts",
+    "sha256": "b8d236fc75b6da5f9626c4c8eff1f411f4ae226e1e3a5bf57ca7a81809702009",
+    "lines": 52
+   },
+   {
+    "path": "tests/support/reval-pg.ts",
+    "sha256": "88f33dabb54f2ff3a73de41f92c8e5c4c7113ed9c88cd1d760b482eb67c26ff9",
+    "lines": 76
+   },
+   {
+    "path": "tests/support/reval-pty.ts",
+    "sha256": "23809abc1c1236bbd12672164c4fc1c630df9cd3b76e44958175096def300080",
+    "lines": 62
+   },
+   {
+    "path": "tests/support/reval-test-controller-entry.ts",
+    "sha256": "e36598999bd62fc266c9e3b1a0688b3f3d789c2ca290d72258f2f990a3509e8b",
+    "lines": 66
+   },
+   {
+    "path": "tests/support/reval-test-deps.ts",
+    "sha256": "bebab9d56ebaacd45193ee0ed8f22510581543dbdb7ac6d17435c5285f59caf7",
+    "lines": 78
+   },
+   {
+    "path": "tests/support/reval-test-exec-entry.ts",
+    "sha256": "33bbeab111adcd8805e689b153efcee7877f10285fde4bcc4eceb33687a04fad",
+    "lines": 41
+   },
+   {
+    "path": "tests/support/reval-test-owner-entry.ts",
+    "sha256": "e9c5f913b81caeb2ecb3a8d78f49e46b905f6d8adc6a37d6e3aed389612340ef",
+    "lines": 18
+   },
+   {
+    "path": "tests/support/reval-test-pause-entry.ts",
+    "sha256": "5a8c9285b2149088e16ccb2819fc3472e9e3465c438937ad204556249d604e53",
+    "lines": 19
+   },
+   {
+    "path": "tests/support/reval-test-server-entry.ts",
+    "sha256": "e11289b6e57d9ec6c9d0bfd1e700093cd2fdaaa0b6d0095371531141c4c661d8",
+    "lines": 27
+   },
+   {
+    "path": "tests/support/roles-s5remote.sql",
+    "sha256": "7a9419b37d1d575ad073abf0837850350879ae9b15c018cc6f0c19809b0d3f69",
+    "lines": 650
+   }
+  ]
+ },
+ "supersededRun": {
+  "dir": "/tmp/atlas-reval-rsa/checks/final",
+  "unitFail": 10,
+  "testPgFail": 6,
+  "fixed": true,
+  "leakedDbsDropped": [
+   "atlas_it_64f5440f",
+   "atlas_it_c4458600",
+   "atlas_it_2f841bc5"
+  ],
+  "cleanupLog": "2ebe651fbf283f9d166b97a24238db5f232cd93754a8275c92821386b672e99d"
+ },
+ "residuals": [
+  "helper TOCTOU / full image UNVERIFIED (RS-D)",
+  "socket swap window until next IDENTITY recheck",
+  "password strings resident in memory",
+  "RC5 compatibility PENDING (no re-pin adopted)",
+  "A3 production refuses until RS-B",
+  "6 parity/invariant §10-category deltas for reviewer classification",
+  "tests/support/roles-s5remote.sql 650 lines (byte-exact fixture)"
+ ],
+ "processes": {
+  "myChildrenRunning": 0,
+  "nativeFixturePostmasterLeftRunning": "root-owned"
+ },
+ "checkoutOwnership": "RETURNED_TO_ROOT_FOR_TWO_NEW_CLEAN_CODE_ACCEPTANCE_REVIEWERS",
+ "report": {
+  "path": "/tmp/atlas-reval-rsa/IMPLEMENTATION_REPORT.md",
+  "sha256": "aed0d18d8c66eaddf248a2982a903f8a318b8478f430ae39b8ebe51c0a834bea"
+ },
+ "revision": 2,
+ "provenance": {
+  "revision1": {
+   "report": "/tmp/atlas-reval-rsa/checks/repair/IMPLEMENTATION_REPORT.rev1.md",
+   "reportSha256": "997ca553d85945803d96c8d004e0a0fc789f8d19ed386cb6fe99e793e581d483",
+   "checks": "/tmp/atlas-reval-rsa/checks/repair/IMPLEMENTATION_CHECKS.rev1.json",
+   "checksSha256": "1e7bd2677acad1693f292a711aa32ee116ae30463f03206cd2aa31eb2967f848",
+   "fullSuiteDir": "/tmp/atlas-reval-rsa/checks/final2",
+   "supersededDir": "/tmp/atlas-reval-rsa/checks/final",
+   "ownerProcessExit": "44161 exited 0, ownership returned"
+  },
+  "revision2": {
+   "trigger": "/tmp/atlas-reval-rsa/ROOT_CODE_OBSERVATIONS.md + root instruction (bounded contract repair)",
+   "dir": "/tmp/atlas-reval-rsa/checks/repair/"
+  }
+ },
+ "repair": {
+  "physicalStartTolerance": {
+   "removed": true,
+   "was": "startMatches 0..5 s (physical.ts, deps.ts recheck, snapshot-reader wrapperBound); stub positive +2 s",
+   "now": "exact string equality with recorded postmasterStartTime (= postmaster.pid line 3) at all three sites; stub positive equal",
+   "negatives": [
+    "queried start -1 s alone -> step database, connection ended, 1 statement",
+    "queried start +1 s alone -> same",
+    "wrapper start -1/+1 -> unbound",
+    "native config start -1 s / +1 s -> FAILURE REGISTRATION_MISMATCH, no S/E backend"
+   ],
+   "mutationCheck": {
+    "log": "/tmp/atlas-reval-rsa/checks/repair/mutation.log",
+    "sha256": "717cd73e52bfaf0de25b1d99e4f17a77fad341d1698e2eb59365ad6f25722fa3",
+    "restoredToleranceFailsNewNegatives": 2
+   },
+   "nativeEquality": {
+    "postmasterPid": "1791720581",
+    "queriedFloor": "1791720581",
+    "equal": true
+   },
+   "platformPreventsEquality": false
+  },
+  "controllerExitCodes": {
+   "was": {
+    "CONFIG": 13,
+    "REGISTRATION": 14,
+    "STARTUP_DEADLINE": 15
+   },
+   "now": {
+    "PLATFORM": 10,
+    "HELPER": 11,
+    "PEER": 12
+   },
+   "config": "invalid launch env / unloadable config -> 11 (helper gate: no verifiable pinned helper; BRIEF §2); platform checked first",
+   "postProofStartup": "authenticated FAILURE response per op: REGISTRATION_MISMATCH | reader code | DEADLINE; S never launched; direction and fail-closed codes first",
+   "newCodesOrEnums": 0,
+   "wireFailureCodes": 43,
+   "wireFailureCodesUnchanged": true
+  },
+  "files": [
+   "packages/reval/physical.ts",
+   "packages/reval/snapshot-reader.ts",
+   "packages/reval/deps.ts",
+   "packages/reval/controller.ts",
+   "packages/reval/codes.ts",
+   "tests/reval-physical-peer.test.ts",
+   "tests/reval-payloads.test.ts",
+   "tests/pg/reval-launch.pg.test.ts",
+   "tests/pg/reval-native-unix.pg.test.ts",
+   "tests/support/reval-test-deps.ts",
+   "tests/support/reval-test-controller-entry.ts",
+   "docs/RUNBOOK.md"
+  ],
+  "rc5FilesTouched": 0,
+  "adminOverlaysTouched": 0,
+  "rc4NormsTouched": 0,
+  "rootOwnedTouched": 0
+ },
+ "revision2Checks": {
+  "typecheck": {
+   "exitCode": 0,
+   "log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "apiBuild": {
+   "exitCode": 0,
+   "log": "a6aa931089b464f4c65e4a923b0460b903968733081bc2b5d7806e5f32081592"
+  },
+  "focusedUnit": {
+   "files": 5,
+   "tests": 27,
+   "pass": 27,
+   "exitCode": 0
+  },
+  "focusedPg": {
+   "files": 6,
+   "tests": 26,
+   "pass": 26,
+   "fail": 0,
+   "skipped": 0,
+   "cancelled": 0,
+   "exitCode": 0,
+   "nativeFixtureRan": true,
+   "log": "230bd383376226ef6136b4629ac1375539d816eb64a8124ddbd50be2125cbc4a"
+  },
+  "unitComplete": {
+   "command": "node --experimental-strip-types --test --test-reporter=tap tests/*.test.ts",
+   "files": 85,
+   "exitCode": 1,
+   "qualifiedNonzero": true,
+   "tests": 496,
+   "pass": 488,
+   "fail": 8,
+   "cancelled": 0,
+   "skipped": 0,
+   "todo": 0,
+   "log": "7aae404aefefc259fd695411ea2847fb4d141ec1d37ad9437caeb2e18bc36503",
+   "failures": [
+    {
+     "tap": 12,
+     "file": "tests/ask-remote-eval-execution-cli.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 13,
+     "file": "tests/ask-remote-eval-execution-liability.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 14,
+     "file": "tests/ask-remote-eval-execution-operator.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 76,
+     "file": "tests/ask-remote-eval-execution-pty.test.ts",
+     "kind": "registered-test",
+     "name": "real pty: kernel echo stays off from startup verification through processing; Ctrl-C finalizes",
+     "observed": "PTY_TEST_TIMEOUT step 1",
+     "cause": "CORPUS_IDENTITY_MISMATCH (pty-probe.log ac790dfb31569394d5fc1cbd9c0af8bbb8c9e2a740d19ed21622dc05cde35392, exit=1)"
+    },
+    {
+     "tap": 16,
+     "file": "tests/ask-remote-eval-execution-receipt.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 17,
+     "file": "tests/ask-remote-eval-execution-repair.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 18,
+     "file": "tests/ask-remote-eval-execution-replay.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    },
+    {
+     "tap": 19,
+     "file": "tests/ask-remote-eval-execution-session.test.ts",
+     "kind": "module-load-wrapper",
+     "cause": "CORPUS_IDENTITY_MISMATCH"
+    }
+   ]
+  },
+  "rc5Reconciliation": {
+   "against": "/tmp/atlas-reval-rsa/HISTORICAL_RC5_FINAL_CHECKS.json",
+   "againstSha256": "d90892a801800a60cf93125cdceac77cc7f8644a61c03dddc610dc8f6748c589",
+   "currentExecutedPass": 38,
+   "currentExecutedFail": 1,
+   "failedWrappers": 7,
+   "blockedUnregistered": 71,
+   "historicalPassed": 110,
+   "namesEqual": true,
+   "rc5TestFilesBytesEqualPinAndView": true,
+   "tap": "be8c0d7b02331891679521ebe7a2f64e99001622e8afde0797ad17aae879d5e8",
+   "xml": "76b1f916486147a0f187855674dadeb7f2728f953dc9451f14f1172fd910af4c",
+   "reconcile": "2146e1932ff51d881ff9b69eb682a8d33d1606a600485f19887ff7b188efbcac",
+   "perFile": {
+    "ask-remote-eval-corpus.test.ts": {
+     "historical": 7,
+     "registered": 7,
+     "pass": 7,
+     "fail": [],
+     "wrapperFailed": false,
+     "namesMatch": true,
+     "blockedUnregistered": 0
+    },
+    "ask-remote-eval-execution-cli.test.ts": {
+     "historical": 6,
+     "registered": 0,
+     "pass": 0,
+     "fail": [],
+     "wrapperFailed": true,
+     "namesMatch": null,
+     "blockedUnregistered": 6
+    },
+    "ask-remote-eval-execution-liability.test.ts": {
+     "historical": 27,
+     "registered": 0,
+     "pass": 0,
+     "fail": [],
+     "wrapperFailed": true,
+     "namesMatch": null,
+     "blockedUnregistered": 27
+    },
+    "ask-remote-eval-execution-operator.test.ts": {
+     "historical": 4,
+     "registered": 0,
+     "pass": 0,
+     "fail": [],
+     "wrapperFailed": true,
+     "namesMatch": null,
+     "blockedUnregistered": 4
+    },
+    "ask-remote-eval-execution-pty.test.ts": {
+     "historical": 1,
+     "registered": 1,
+     "pass": 0,
+     "fail": [
+      "real pty: kernel echo stays off from startup verification through processing; Ctrl-C finalizes"
+     ],
+     "wrapperFailed": false,
+     "namesMatch": true,
+     "blockedUnregistered": 0
+    },
+    "ask-remote-eval-execution-receipt.test.ts": {
+     "historical": 5,
+     "registered": 0,
+     "pass": 0,
+     "fail": [],
+     "wrapperFailed": true,
+     "namesMatch": null,
+     "blockedUnregistered": 5
+    },
+    "ask-remote-eval-execution-repair.test.ts": {
+     "historical": 13,
+     "registered": 0,
+     "pass": 0,
+     "fail": [],
+     "wrapperFailed": true,
+     "namesMatch": null,
+     "blockedUnregistered": 13
+    },
+    "ask-remote-eval-execution-replay.test.ts": {
+     "historical": 5,
+     "registered": 0,
+     "pass": 0,
+     "fail": [],
+     "wrapperFailed": true,
+     "namesMatch": null,
+     "blockedUnregistered": 5
+    },
+    "ask-remote-eval-execution-session.test.ts": {
+     "historical": 11,
+     "registered": 0,
+     "pass": 0,
+     "fail": [],
+     "wrapperFailed": true,
+     "namesMatch": null,
+     "blockedUnregistered": 11
+    },
+    "ask-remote-eval-fixtures.test.ts": {
+     "historical": 11,
+     "registered": 11,
+     "pass": 11,
+     "fail": [],
+     "wrapperFailed": false,
+     "namesMatch": true,
+     "blockedUnregistered": 0
+    },
+    "ask-remote-eval-offline.test.ts": {
+     "historical": 5,
+     "registered": 5,
+     "pass": 5,
+     "fail": [],
+     "wrapperFailed": false,
+     "namesMatch": true,
+     "blockedUnregistered": 0
+    },
+    "ask-remote-eval-supervisor.test.ts": {
+     "historical": 14,
+     "registered": 14,
+     "pass": 14,
+     "fail": [],
+     "wrapperFailed": false,
+     "namesMatch": true,
+     "blockedUnregistered": 0
+    },
+    "context-budget.test.ts": {
+     "historical": 1,
+     "registered": 1,
+     "pass": 1,
+     "fail": [],
+     "wrapperFailed": false,
+     "namesMatch": true,
+     "blockedUnregistered": 0
+    }
+   }
+  },
+  "ptyProbe": {
+   "log": "ac790dfb31569394d5fc1cbd9c0af8bbb8c9e2a740d19ed21622dc05cde35392",
+   "cause": "CORPUS_IDENTITY_MISMATCH",
+   "exit": 1
+  },
+  "notRepeated": {
+   "uiTypecheck/dbGenerate/schemaValidate/dbDrift/dbPg17/testUi/fullTestPg": "revision 1 full suite (final2) all exit 0, test:pg 712/712, test:ui 86; no schema/migration/roles/UI/route change in revision 2"
+  }
+ },
+ "requirementViolationsKnown": 0,
+ "cleanup": {
+  "docker": "only 5 older foreign DBs; 0 stray test roles",
+  "native": "no databases; only atlas_* role is the fixture admin",
+  "log": "73d4dc16e8d351914ccc6dfe6412e84db183731e7e9362e240ae1c71a8c7cd67"
+ }
+}

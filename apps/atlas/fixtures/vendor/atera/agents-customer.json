@@ -1,0 +1,6 @@
+{ "items": [
+    { "AgentID": 107001, "DeviceGuid": "00000000-0000-4000-8000-000000000107", "CustomerID": 5001, "CustomerName": "Gasta (synthetic)",
+      "AgentName": "GASTA-LT-07", "MachineName": "GASTA-LT-07", "DomainName": "gasta.example.invalid", "OSType": "Windows 11",
+      "Online": true, "LastSeen": "2026-10-07T07:58:00", "Created": "2025-01-10T10:00:00", "Modified": "2026-10-07T07:58:00",
+      "VendorSerialNumber": "SYNTH-07", "WindowsSerialNumber": "SYNTH-WIN-07" } ],
+  "page": 1, "itemsInPage": 50, "totalPages": 1, "totalItemCount": 1, "prevLink": null, "nextLink": null }

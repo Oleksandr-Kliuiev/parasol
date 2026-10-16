@@ -1,0 +1,64 @@
+✔ owner credential is the dedicated NOSUPERUSER NOBYPASSRLS table owner (recorded flags) (5.863209ms)
+✔ APPLIED path (ACTIVE→PAUSED): exactly four columns change, microsecond expiresAt kept, closure exact, one spawn, no policy value in JS (228.066667ms)
+✔ already-PAUSED (runtime MODEL_MISMATCH): routine IS called as the accepted no-op; closure only strictly above floors; equal floors latch (342.265542ms)
+✔ refusals before COMMIT roll back and never close: zero rows, argument difference, active no-op, injected rollback, REVOKED, version mismatch, max boundaries (1474.766208ms)
+✔ commit uncertainty and drift after a confirmed commit latch without closure; scope and physical refusals happen before any lock (1095.137916ms)
+✔ executor lifetime: blocked before connect, blocked on a lock (fence held first), killed after COMMIT, parent death — single spawn, bounded cleanup (3961.42975ms)
+✖ one case O → C → S with I and the browser: FIXTURE_CHECK, PAIR (+ secret), PAIR200, PRE, ARM, READY, answer, handoff, journaled observation (1602.54225ms)
+✔ controller refusals: PAIR needs a current FIXTURE_CHECK and live instrument ids; I cannot PAIR; an ARM failure after consumption stops arming (NB9); control loss ends the pair (2509.443625ms)
+# REVAL_EVIDENCE FIXTURE_CHECK latency 284 ms (Docker TCP seam; regression evidence only)
+# REVAL_EVIDENCE FIXTURE_CHECK latency 268 ms (Docker TCP seam; regression evidence only)
+✔ FIXTURE_CHECK through C → V: exact 03 payload, every proof true, within the 1800 ms budget; V and its backend gone (1088.091375ms)
+✔ a generation change while V runs → FIXTURE_MISMATCH (never a stale success); the next check proves the new generation (2293.572209ms)
+✔ RS-B N1 (P3): the policy turns ACTIVE while V runs → snapshot #2 refuses POLICY_CHANGED (no positive payload) (1039.477584ms)
+✔ RS-B N1 (P1, F9): V connected as the table owner is refused UNAUTHORIZED by the accepted runtime confinement check (649.959833ms)
+✔ RS-B N1 (P2, F6): a source-read statement timeout is DEADLINE, never all-false proof booleans (704.938084ms)
+✔ the verifier re-checks current authority without a bearer: suspended designated actor → FAILURE UNAUTHORIZED (691.524667ms)
+✔ rc2 F1: FIXTURE_CHECK permits only the PAUSED binding — an ACTIVE policy is refused POLICY_CHANGED (no positive payload) (497.723125ms)
+✔ rc2 F3: an accounting change while V runs → financeUnchanged:false (all other proofs still true) (1155.627541ms)
+✔ rc2 F3: a generation change AFTER V committed (before snapshot #2) → FIXTURE_MISMATCH, never a stale success (1211.043416ms)
+✔ R4: reader correct, S directed to ANOTHER otherwise-ready database → S refuses before listen; a forged Bound.observed → S killed before listen (1977.284916ms)
+✔ R1: initial physical binding stalls on the real backend → authenticated FAILURE DEADLINE before 2 s, sticky; no S; the stalled backend is cancelled (2191.990375ms)
+✔ R1: IDENTITY physical recheck stall → IDENTITY_UNVERIFIED before 2 s (S killed); reconnect stall → CENSUS_UNAVAILABLE before 2 s; then the session recovers (3566.871083ms)
+✔ R1: owner EOF (O killed) during the initial-binding stall and during the IDENTITY recheck stall → C exits within 1.5 s, S stopped, backends gone, no late S (4550.387583ms)
+✔ F3.5: the controller's ACTUAL exits 10/11/12 are shown by O as LOCAL codes, never as a C response; nothing touched the database (1136.994625ms)
+✔ O without a TTY is refused before anything starts (115.69325ms)
+# REVAL_EVIDENCE pg_stat_activity cross-check visible to reader: VERIFIED
+# REVAL_EVIDENCE timing identity p50=5.1ms max=6.2ms (inter-arrival under the PTY; Docker TCP: regression only)
+# REVAL_EVIDENCE timing pause p50=150.0ms max=161.0ms (inter-arrival under the PTY; Docker TCP: regression only)
+✔ real PTY O→C→S→E: IDENTITY UNVERIFIED with the test ref, SNAPSHOT, PAUSE_EXPORT; inheritance allowlist + sentinel leak detector; no secrets; timing (4513.540292ms)
+✔ IDENTITY re-proves pid AND pidversion: a changed incarnation kills S; S killed → no relaunch; NONE mode never claims a server (2288.49425ms)
+✔ RS-D-B: an S launched WITHOUT the pinned Seatbelt profile is refused before it listens — IDENTITY never OK, no platform proof, S killed (607.302ms)
+✔ after the peer proof, startup (3)–(5) failures are authenticated FAILUREs with approved codes for every op; S never launched; no extra local exit (1359.045834ms)
+✔ production bridge refuses Ask remote/mock, an env URL, a missing launch frame and a non-launch first frame — before any credential or DB (3156.853542ms)
+✔ leak detector self-test: a deliberately inherited extra sentinel IS detected; the helper (unmodified) is inspected externally with lsof (501.989333ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 28
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68810.455125
+
+✖ failing tests:
+
+test at tests/pg/reval-eval-e2e.pg.test.ts:65:1
+✖ one case O → C → S with I and the browser: FIXTURE_CHECK, PAIR (+ secret), PAIR200, PRE, ARM, READY, answer, handoff, journaled observation (1602.54225ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /^OK FIXTURE_CHECK .*"financeUnchanged":true/. Input:
+  
+  'FAILURE CENSUS_UNAVAILABLE'
+  
+      at TestContext.<anonymous> (file:///Users/oleksandr/atlas-v1.1.3/vardahei-atlas-stage1-v1.1/tests/pg/reval-eval-e2e.pg.test.ts:69:12)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at listOnTimeout (node:internal/timers:567:9)
+      at process.processTimers (node:internal/timers:541:7)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILURE CENSUS_UNAVAILABLE',
+    expected: /^OK FIXTURE_CHECK .*"financeUnchanged":true/,
+    operator: 'match',
+    diff: 'simple'
+  }

@@ -1,0 +1,10 @@
+# REVAL_EVIDENCE NB7 rehearsal (darwin/arm64, Docker PG17): attempted 8, successful 6, failed before consumption 1 (unconsumed), failed after consumption 1 (consumed, run stopped); ARM min 7 / p50 11 / max 12 ms; READY min 0 / p50 0 / max 0 ms; GO→COMMIT min 316 / p50 409 / max 574 ms
+✔ NB7: consecutive ARM/READY cycles on the target platform with injected failures before and after consumption (82620.2005ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 84426.585167

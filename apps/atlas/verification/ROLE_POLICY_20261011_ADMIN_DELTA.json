@@ -1,0 +1,23 @@
+{
+  "scope": "Owner-requested administrative role policy clarification only; no source/test/build or frozen normative edits",
+  "ownerAuthorization": "2026-10-11: record architecture Astra/Fable vs clean independent acceptance Sol/Opus in AGENTS.md and workflow for future sessions",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "49001fb900707f41bc0f721e7e525f77c6b0b08de161473bad70b64477272316",
+      "afterSha256": "760214a53de2d8386d56a83de7237c22044b2240cf0523f3b7cb173fd2dfb93b"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "beforeSha256": "489411ffcd7a08db43d2f9c5e2a033dbd3a15d6ff6c6cceb1a42cb7eedb110ec",
+      "afterSha256": "6fe4399e7b5c4c0361f53cb36fced72d63ba2cb2ed5e5ae8c8d899d52d5bef5b"
+    }
+  ],
+  "beforeArchive": {
+    "path": "verification/ROLE_POLICY_20261011_BEFORE.zip",
+    "sha256": "5ffeaab53ed8e6332b21d0a0e143fc6a7ac6e9ef16bef1483c64fc99b7fdbea2"
+  },
+  "reviewedREVALIdentity": "S5ASKREMOTE-REVAL-PREP-rc6,66dcc033c71f5836e8904b289c0aeb493b5de96264098f884eded931e01b6fa7 remains frozen in its archive; current workflow admin delta declared separately",
+  "paidProductCalls": 0,
+  "createdUtc": "2026-10-11T06:35:47.206889+00:00"
+}

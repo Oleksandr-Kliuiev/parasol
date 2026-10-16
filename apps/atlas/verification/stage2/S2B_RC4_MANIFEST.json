@@ -1,0 +1,1338 @@
+{
+  "version": "S2-B-rc4",
+  "date": "2026-10-08",
+  "scope": "tasks2.4-2.6, S2-B B1-B6/B1a/B1b/B5a/B5b plus Stage1/S2-A regressions; excludes S2-C/LIVE",
+  "baselineCommit": "916a4d69853ff6da636e8609a2e0bd33aa787f66",
+  "branch": "planning/stage2-m365",
+  "architectureHash": "1d3b1064c2633ed64ab2089a7ea62401e9415a72b16ba5a9dcd9a50c870a1efb",
+  "baselineAcceptedS2AHash": "0a038288cd529ac1692b67bb8ed06343d3d381d04539aa8ed308aa45c144f2d1",
+  "stage1ReviewSha256": "7e186cf1722540d75511b0599cb55cacc2f2df06e8490389dd2a93abffc9fc78",
+  "hashAlgorithm": "SHA-256 of UTF-8 concatenated <sha256><two spaces><path><LF>, sorted by path",
+  "packageHash": "d122f0ea4031ce3421c114c286d409b974d83449d8db6f3930b53884486eb841",
+  "files": [
+    {
+      "path": ".env.example",
+      "sha256": "61709a86544f648296ee0cf5401857a64213b6fa9a456b9be73185a4babfe94c"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "b63ce42e2babc54a13558cf679f775191d18649bca9dc04072126ef50987e1a4"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "5d0a39606b63ea109fa71091b49c9dc85dd991d8e25443a5e3aefc3b79af6085"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "304029493a17b06e439814b1bbee91a023ce755c3af6a1c3686427d1f0e1200a"
+    },
+    {
+      "path": "CHECKPOINT_REPORT.md",
+      "sha256": "6dcfe15e10513d1fc6652a7373a55eb8d2cba1b0ea85b4c93c06fdcfe71bdaf1"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "1ae283e59e08ef31992f59c1d60d1e1948d8d1f7e0a1195347c27768d84bbb71"
+    },
+    {
+      "path": "MANIFEST.json",
+      "sha256": "0bc77b312006bc0487afc675cea38498b19c1ac06a58b0a005ba7353fb85aa65"
+    },
+    {
+      "path": "README.md",
+      "sha256": "7c066c708a01036b72b137023d5441f6b880c0213c34be4b768092100164a7b7"
+    },
+    {
+      "path": "REVIEW_REPORT.md",
+      "sha256": "7e186cf1722540d75511b0599cb55cacc2f2df06e8490389dd2a93abffc9fc78"
+    },
+    {
+      "path": "START_HERE_RU.md",
+      "sha256": "a3bc2fbf54f799affdff02cc2c1797211743582cdeeebcb413259c3929ba151c"
+    },
+    {
+      "path": "apps/api/src/atlas.module.ts",
+      "sha256": "c268770323017bcadcd75e0652a6a3957f940507715c59bffcd5251d76fc7251"
+    },
+    {
+      "path": "apps/api/src/db/app.module.ts",
+      "sha256": "0c7ecdecf74d8e43631f28c817c3b06031a8156397359ee5ee0f790f5f231cdc"
+    },
+    {
+      "path": "apps/api/src/db/audit.ts",
+      "sha256": "355172a49d9c37a3510e24b387da91d99e3d0c8e4ef9c3a55c5d3ebad6c4d7d7"
+    },
+    {
+      "path": "apps/api/src/db/auth.ts",
+      "sha256": "f41544d5093741b708d3b804783130abf3b9a0782b6a981ab71ea845e9b19ada"
+    },
+    {
+      "path": "apps/api/src/db/clients.ts",
+      "sha256": "c60a24d66c6e0d2d021566ffe44eac0dfa7f75c748878a42e4b95ae00d3e1baa"
+    },
+    {
+      "path": "apps/api/src/db/database.ts",
+      "sha256": "e34ab8d5f3ca49f65b8bd321f4428026deaa8691939151b2e6bbf48f3b8d781a"
+    },
+    {
+      "path": "apps/api/src/db/tools.ts",
+      "sha256": "56afd39d88a139e376091042c85b6758bf02d6a3919ecaf4c0d35c4244865e2e"
+    },
+    {
+      "path": "apps/api/src/http-boundary.ts",
+      "sha256": "19bfc44f6c6941ea21bf43909892f1ef5ddfa3a0edd5d99c56b12e4cb5db2534"
+    },
+    {
+      "path": "apps/api/src/main.ts",
+      "sha256": "5398eb0713eada5d0d7f512c85bad36b05248b7370fe80790d847bc669e20a1b"
+    },
+    {
+      "path": "apps/api/tsconfig.json",
+      "sha256": "55091d5d7c81ef3eed38c462fa79caea9c9cec5d8693f74e2e607cc3d68cca7c"
+    },
+    {
+      "path": "apps/web/README.md",
+      "sha256": "0a8c7a9e8360ab3ec3b0ab68e6a80992f4b651979e83735d673d4c5ddfaf9255"
+    },
+    {
+      "path": "apps/worker/README.md",
+      "sha256": "4337b38fd8302858b4199498d2cdec99489710952f833293666e96c414978707"
+    },
+    {
+      "path": "compose.yaml",
+      "sha256": "95e6120948e94f99d1f594b58da643fb762b0330edb0cc586048838eb5439020"
+    },
+    {
+      "path": "config/decisions.json",
+      "sha256": "9c94bbd04b45d6cad9945126df2895bfcaf46ad0244a1830df6c8b9a65ccdff9"
+    },
+    {
+      "path": "connectors/CONTRACTS.md",
+      "sha256": "2863ccbebca6c8e2ac80a6b3981f1a08606b5fae9785f44c6657989e388047f7"
+    },
+    {
+      "path": "connectors/atera/connector.ts",
+      "sha256": "8877bd7f9e7aa7be7d474b17d1a138a2d8358f3200e42ce9a74092da3f78ec6b"
+    },
+    {
+      "path": "connectors/atera/contract.ts",
+      "sha256": "0271c879a973875d4e9a8aa33f1f5a016332f92b103698451b3b000dc16d5101"
+    },
+    {
+      "path": "connectors/atera/normalizer.ts",
+      "sha256": "61790ed52bb0bd12a25889ee7d9285752fb0a65623806f5f6f888eed430aac68"
+    },
+    {
+      "path": "connectors/contracts.ts",
+      "sha256": "3cda473a0b591d22aecec26de8cc49c50b845759f832a423d65e5f6a48a2d596"
+    },
+    {
+      "path": "connectors/dto.ts",
+      "sha256": "7a997af73c5685fcbda8d711b13c09189b124974e1c0e03a056c4001150a76fa"
+    },
+    {
+      "path": "connectors/http.ts",
+      "sha256": "825584692fcb5e6af908a0efb62a4556f0db844371e4622644afe998f13cdc80"
+    },
+    {
+      "path": "connectors/huntress/connector.ts",
+      "sha256": "e70f968861b148a242547300e3d29e1721e755998aef6e7676b2cc2433d2e6ae"
+    },
+    {
+      "path": "connectors/huntress/contract.ts",
+      "sha256": "df0f4a0d5642fd2002ccde569a600461bfd3306685c1f20ae26c5df70c53664f"
+    },
+    {
+      "path": "connectors/huntress/normalizer.ts",
+      "sha256": "0ca02fd1d33864edfd3a1a1db1b0070fa8c121cb0b49b43995a3fe07c67d5358"
+    },
+    {
+      "path": "connectors/microsoft365/README.md",
+      "sha256": "0af57adab52b238f8447bc3a77ce74adc174a58cdcc68ff1860d834b31969bc2"
+    },
+    {
+      "path": "connectors/microsoft365/auth.ts",
+      "sha256": "1d59c345b66c76aa96aa3abe624e01eccaaf573e61ebc7a4bfe7b14b26b2b6d3"
+    },
+    {
+      "path": "connectors/microsoft365/connector.ts",
+      "sha256": "0e011f155862accb923c94f8fc5c67da09b3a04adbcda733e7598d841dd6592c"
+    },
+    {
+      "path": "connectors/microsoft365/contract.ts",
+      "sha256": "9719d4eb8e0d4b66ef209fc203982cca1000fed5a7c45f7e764bf1d29b3111bf"
+    },
+    {
+      "path": "connectors/microsoft365/directory-dto.ts",
+      "sha256": "0fb1d8785ab99f0160a89e2bc7c855db18bb059487a65fd3d091d339ee7b24d3"
+    },
+    {
+      "path": "connectors/microsoft365/dto-common.ts",
+      "sha256": "bc0bf73dee6aa32327fce1f703c7483f52f14b0872364d9c4e525ef29f3190a8"
+    },
+    {
+      "path": "connectors/microsoft365/http.ts",
+      "sha256": "bdbf580b042fea7a9a7b03fd1b99d482d544e8200269d2fdfa21bb4700c3f08a"
+    },
+    {
+      "path": "connectors/microsoft365/signin-dto.ts",
+      "sha256": "2f03fa889e3d0da520390c7e89c42c5baef4c8d27cb5912c13c6e7951de25537"
+    },
+    {
+      "path": "connectors/poweroffice/README.md",
+      "sha256": "99172d116177f822ea22702816786cdbb4bc949bb8e9c2a63ff5d471f15f1f71"
+    },
+    {
+      "path": "connectors/registry.ts",
+      "sha256": "2c6012182a80da4e571705fa60a7517c3ffda343a24cf65c560fbf55e1fe1af6"
+    },
+    {
+      "path": "connectors/secrets.ts",
+      "sha256": "fdfafbeb15abc13bf942066a4bf5916a12dc4a135f13abff61084569f3d09bb5"
+    },
+    {
+      "path": "docs/01_STAGE_1_SPEC.md",
+      "sha256": "ce6f1001412eb4f7b85b911f47b6235517ccd66756308263c017d4d4894f710d"
+    },
+    {
+      "path": "docs/02_DATA_AND_MODULES.md",
+      "sha256": "b0b0b79b0df0d707eaa944d7c85d31e1c98302f12d20fb81eae15f859248fefd"
+    },
+    {
+      "path": "docs/03_CONNECTORS_AND_SYNC.md",
+      "sha256": "4b5908b3f5890f65817d4411c424906c97f120e8ff970eefcd40ea9ef6f4bfde"
+    },
+    {
+      "path": "docs/04_DECISION_LAYER.md",
+      "sha256": "64d68191d37ef366fc811f9c78ec27bf8b541c15342683153aa87fd0bc50e970"
+    },
+    {
+      "path": "docs/05_IMPLEMENTATION_PLAN.md",
+      "sha256": "31234b85f36b7d580d26e26cb653a2e495ec8b8821f5ea92f66a35e2471e5a9b"
+    },
+    {
+      "path": "docs/06_ACCEPTANCE.md",
+      "sha256": "d3b20bcc742916742b65ab8d0df6a741c776b4fd872c82e167b4e7ba1fa70dce"
+    },
+    {
+      "path": "docs/07_SOURCES_AND_ADR.md",
+      "sha256": "7447e34b4486fd6aac386e10f7f72fc45d92cd7623d8e59d7769105a37adb8dc"
+    },
+    {
+      "path": "docs/AI_CONTEXT_MAP.md",
+      "sha256": "60e1da2437031745fa5fbaae1bb000ae3651a9bdcca5647496b0bf4a86e2ffc8"
+    },
+    {
+      "path": "docs/DEVELOPMENT_WORKFLOW.md",
+      "sha256": "e06d7e1ab6c46ad90ef4359434ac90206602299b21bb2d1d13829ad62f0a7123"
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "sha256": "e68cf7d11a86a4844440ff3ff52344e6d52b92f08d96a2e4711fd513af5c93e0"
+    },
+    {
+      "path": "docs/RUNBOOK.md",
+      "sha256": "1bf494faf3e5af2e4e4403c7deb310afba14170ff92546e2ba0969addb9a446d"
+    },
+    {
+      "path": "docs/stage2/01_SPEC.md",
+      "sha256": "ebe63b9a03038ca9e7ecbd442e35546fdf623a0376cb577b71411e14cda9bcd6"
+    },
+    {
+      "path": "docs/stage2/02_CONTRACTS.md",
+      "sha256": "a24ca3fa5d772de7a9ec6b862aba6e7cb138096cc9c84391111ecb81d06216d6"
+    },
+    {
+      "path": "docs/stage2/03_CONNECTOR_SYNC.md",
+      "sha256": "611d0ad0801ebb744c783429ec81d6bbc92255df17b535da205908746a9995c3"
+    },
+    {
+      "path": "docs/stage2/04_IMPLEMENTATION_PLAN.md",
+      "sha256": "dd8f5202adc1af0bb273d7eb16a9956679130667517b909740a8927630667de1"
+    },
+    {
+      "path": "docs/stage2/05_ACCEPTANCE.md",
+      "sha256": "df23ccca668fa474a4a74f5c3b780cbc41fc372f1a3fa160677999d85a90d98c"
+    },
+    {
+      "path": "docs/stage2/06_SOURCES_AND_ADR.md",
+      "sha256": "16a70bc607079de947a12ee9c2defa37400767c12e15bec293960d8eb390f5a7"
+    },
+    {
+      "path": "docs/stage2/AGENTS.md",
+      "sha256": "28b779e41f080e97b5a698ca903f309ddf20b12bfbd38cded1d7668ef3d81eda"
+    },
+    {
+      "path": "docs/stage2/README.md",
+      "sha256": "4d739bfbbcad0798d43b74cc23f6372faa5640b0ff9e80d4bfba15bc3d9317cf"
+    },
+    {
+      "path": "docs/stage2/REVIEW_MANIFEST.json",
+      "sha256": "b88069dbc32eef0007f0e152b85687dce370605260eeb8a60bee9c36d5463577"
+    },
+    {
+      "path": "fixtures/gasta.ts",
+      "sha256": "af74181183e4fd0dc3ec19352bbab61cb7b623f84fe5a565d36428e3c3d8bddc"
+    },
+    {
+      "path": "fixtures/run-demo.ts",
+      "sha256": "3764c5b8da7af13a41643415b39a0c826ed83c8cd5a997afa34082d41715254a"
+    },
+    {
+      "path": "fixtures/vendor/README.md",
+      "sha256": "8a808ced49daa7d4389c4586b0771c5d203dda289444b68d04a8fa87e587e310"
+    },
+    {
+      "path": "fixtures/vendor/atera/agents-customer.json",
+      "sha256": "3457490bd3defd90eb6f05a82a6a11fc5fe3c6e1d3d85165547dda6a177c45d5"
+    },
+    {
+      "path": "fixtures/vendor/atera/customer.json",
+      "sha256": "14922083925b1e8218aa5b1bc2fb3580636b8e12dc09fe244efd9944a9b442b9"
+    },
+    {
+      "path": "fixtures/vendor/atera/tickets-open-page-1.json",
+      "sha256": "c9fa5fc8fbde7eee61ed61719ce59bdd3789987c7c9afed252300b70298fc229"
+    },
+    {
+      "path": "fixtures/vendor/atera/tickets-open-page-2.json",
+      "sha256": "474a1e1474a3887acda851268f5a48cd23ad953f36b5af8ed8593b910429bf16"
+    },
+    {
+      "path": "fixtures/vendor/huntress/agents-page-1.json",
+      "sha256": "33f29f27018de2ce433ffb527832d7251de35826207fd74285c2f76642efeafc"
+    },
+    {
+      "path": "fixtures/vendor/huntress/agents-page-2.json",
+      "sha256": "bc75983684b6ffcc27990fbc6e692c53b010feeb0f675bf53cf0a870962a9c7c"
+    },
+    {
+      "path": "fixtures/vendor/huntress/incident-reports-sent.json",
+      "sha256": "8f35a90a0a7335f9634a74230ead956fd7aa075fa69c53ccf05b05a1bc22be12"
+    },
+    {
+      "path": "fixtures/vendor/huntress/organization.json",
+      "sha256": "a17fb3b296f1de1405a25671dcc94c8387c5a721d6e54053c32b13504f7ddfd9"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5449366fb95c726afabd66cb8bba96cb5c1709335afa5212e1b48f3c1f2660a6"
+    },
+    {
+      "path": "package.json",
+      "sha256": "bd7b63fe5312f65ef0f30f8e7b2cbb855473a5ab07aebb4938c26c1c2c4cacb2"
+    },
+    {
+      "path": "packages/audit/memory.ts",
+      "sha256": "14cc7dd44719fe2645284da4b07acae7ab0a900b1bc74a0b208de80b627c2b03"
+    },
+    {
+      "path": "packages/audit/prisma.ts",
+      "sha256": "242d8245c3043af953dbc0ba4b278862991344121dec828eee9f8861f153ab38"
+    },
+    {
+      "path": "packages/audit/sanitize.ts",
+      "sha256": "a56faca554001ac378a7076c2f4fa76614b6f34277d2ef033d7b910719551b09"
+    },
+    {
+      "path": "packages/auth/authority.ts",
+      "sha256": "746c6a8d630fb700525826dc2b3ea44de34d25d195a4517630a70c4511a4a0b4"
+    },
+    {
+      "path": "packages/auth/prisma-auth.ts",
+      "sha256": "1365cd536a8a0ad50ced87a382efbfd97e143810d9ef2a55bb7f5a1a15106b2f"
+    },
+    {
+      "path": "packages/auth/token.ts",
+      "sha256": "461811fed6fe62b608e1d0738c5f018e0e487212e247f90ffdc93abe92a38cad"
+    },
+    {
+      "path": "packages/connections/connections.ts",
+      "sha256": "3b267b558d2a6dedffa18aa210d04f56b19b8f8353947bcfdfe3aae53a4b118f"
+    },
+    {
+      "path": "packages/connections/m365-disable.ts",
+      "sha256": "eabeb5119634684eb918b8b6c379e2ef72833a188a4441dd8967122ece686a13"
+    },
+    {
+      "path": "packages/core/contracts.ts",
+      "sha256": "c903a2f52f52ac0711d84133ed0caf679d6aca2a58a3b9ecf23e501abec2c5c6"
+    },
+    {
+      "path": "packages/correlation/contracts.ts",
+      "sha256": "050a2a88588a55a362d90ed1c78a6faa2d70372d046ec8393ead5cd2164f46eb"
+    },
+    {
+      "path": "packages/decisions/config.ts",
+      "sha256": "a2afd0b61630999e95a28da73338a3d0b9fc3f3234371127707ac6c3c28ace76"
+    },
+    {
+      "path": "packages/decisions/guard.ts",
+      "sha256": "031d0f1be0cc8f8d20ec4af1d99e27b2936262822f7e4e827ca715032e456ba2"
+    },
+    {
+      "path": "packages/decisions/openai.ts",
+      "sha256": "8a4644ef808e31147725aff43d8adc394bc50132028ed286989de4a1d98c5c54"
+    },
+    {
+      "path": "packages/decisions/provider.ts",
+      "sha256": "f3751f3dba02829fec9b3906fc1761291850eb9f513d0301c7f4e003eb708b45"
+    },
+    {
+      "path": "packages/decisions/runtime.ts",
+      "sha256": "14e5b22fbb5409206ee856b7334c758f14ae1578e48ef547bd6c54ce08a9eff1"
+    },
+    {
+      "path": "packages/decisions/telemetry.ts",
+      "sha256": "4fb99a218e75de1ec8fbeec58befd6241503920ae7b80eed5468851308a315f2"
+    },
+    {
+      "path": "packages/events/decision.ts",
+      "sha256": "ef5ebbaed37fe9682e55962a271022d8c58cabd1a2faedd25fed9ec3da97e2ca"
+    },
+    {
+      "path": "packages/events/identity.ts",
+      "sha256": "8bafaae3c54a631ab69a50bcbabee896783ca2242548ae3fbdbe4f956d2e569a"
+    },
+    {
+      "path": "packages/events/inbox.ts",
+      "sha256": "ead8cbe8fdb9cca61248202c35ba6030358f0fb40c5fd57f3d0b535c89ea2ea8"
+    },
+    {
+      "path": "packages/events/pipeline.ts",
+      "sha256": "9015e8e1402464cc0d4223243ece848c984d760c653fcb2900ae073a756f22f9"
+    },
+    {
+      "path": "packages/events/shadow.ts",
+      "sha256": "296e8e732991bf835a877d7beec2a2270f6c91adfe22659ab149908e70a069fa"
+    },
+    {
+      "path": "packages/events/worker.ts",
+      "sha256": "537d9be313b56b964e0b449a478d99197fc2dea528503f2ed19a32f74749193f"
+    },
+    {
+      "path": "packages/graph/context-mapper.ts",
+      "sha256": "bd8e7b603ef8c134d4b7c05fdf6a0aa9276d1d0e70b1a510840b5bad8470cef5"
+    },
+    {
+      "path": "packages/graph/m365-mapping.ts",
+      "sha256": "78f61e6e7882d14631c2c9bd872ae2d4ac1583cdfa4aaa1ffcaca7b01c9b89b2"
+    },
+    {
+      "path": "packages/graph/mapping.ts",
+      "sha256": "5111b94c4625b74190cdc626795ec622bb9dd7b188e57d83bd6470a4cec6c0f6"
+    },
+    {
+      "path": "packages/graph/prisma-context.ts",
+      "sha256": "34cc5c1a19c94dac8b626a6e7095a7e024a3af77912001b609175155f8994ad5"
+    },
+    {
+      "path": "packages/graph/resolver.ts",
+      "sha256": "36a8df35bf671fefdcecd3eb3ec1c7d027376eb6b09841f88de7b9c93a443532"
+    },
+    {
+      "path": "packages/graph/runtime-role.ts",
+      "sha256": "70e7db72c2a502037a5e23906514cdb3d78492884d36ceda0303c495f846eb42"
+    },
+    {
+      "path": "packages/graph/scope-context.ts",
+      "sha256": "15dbab5c6844ee172e3aa829c7371b94ffd9eec52e674ff7292cf68c3783fa41"
+    },
+    {
+      "path": "packages/graph/scoped-db.ts",
+      "sha256": "c11c0efe210d32b44e7dbafc4e96cafcd91871e6c310989742789493373ce445"
+    },
+    {
+      "path": "packages/m365/AGENTS.md",
+      "sha256": "c9639e0f79bb4e510c96f4749a4a7f4b2abccad99afc94b5d8c0fc568363b063"
+    },
+    {
+      "path": "packages/m365/activation.ts",
+      "sha256": "bb8c36c1dce25a572df2015392e51928e7ce8230ef27ecf6c9000cb0e24a5ca5"
+    },
+    {
+      "path": "packages/m365/authority.ts",
+      "sha256": "ac924d53e4f5ab4741b9aa646a7c503e8610f9175a28de78107399b39a9a5418"
+    },
+    {
+      "path": "packages/m365/denial.ts",
+      "sha256": "0b1890fd7dd83791c95b7f0b889b8a516f36fa30594b4b599d25374cfc109bb5"
+    },
+    {
+      "path": "packages/m365/directory-retry.ts",
+      "sha256": "69e675d291650b65b1525914eba159a00943306188e46b1aab715128c47360bc"
+    },
+    {
+      "path": "packages/m365/directory.ts",
+      "sha256": "37c8ec06d40edb0aaf63012d639227c3656da44f0f6e4d220fb429ce4b79ef75"
+    },
+    {
+      "path": "packages/m365/ingest.ts",
+      "sha256": "8b12d47203e19a42d85066e79c092ae07630b0b2911b8e71aa31733c6d4036d2"
+    },
+    {
+      "path": "packages/m365/io.ts",
+      "sha256": "19d48ddf79aabf494915fb3ae411c0323493923fc3b39d8189b89d0ed3c05e62"
+    },
+    {
+      "path": "packages/m365/signin-rows.ts",
+      "sha256": "28a4690293235797f90ab1fd9a2248ab60ec0e5d26633281d482fa3ad309dc87"
+    },
+    {
+      "path": "packages/m365/status.ts",
+      "sha256": "1ec61aef5287f6bbf458e2ed34cba8603a7ab1ed2118c9bb00dd02ecde05c37f"
+    },
+    {
+      "path": "packages/m365/windows.ts",
+      "sha256": "289f92559cb96d395bb15211315bf351345af9f8e1fb5160bf711350a8c81947"
+    },
+    {
+      "path": "packages/observations/README.md",
+      "sha256": "afeab4ef59f345c17985bdf0fd6a32e07f9cf3152595d0ead2a7d560a3938d14"
+    },
+    {
+      "path": "packages/observations/lifecycle.ts",
+      "sha256": "05959497c5dd48797eaef5f32ee71a8311ea9b55584c83b58f975a8d73284924"
+    },
+    {
+      "path": "packages/observations/query.ts",
+      "sha256": "5e4e7f4615dd7d18795ac4e4974ae158c1b361c0946bd7005add58f8eb63b5c2"
+    },
+    {
+      "path": "packages/ops/commands.ts",
+      "sha256": "a0e608dadacaa0d66f2cd7b9f986542a04adf16ce3afc4c7c05562f70f766eba"
+    },
+    {
+      "path": "packages/ops/live-read.ts",
+      "sha256": "4f6c603e1f6babfb40bb9323d95de5cfbaf1138cdc6d7465293160e9d790e993"
+    },
+    {
+      "path": "packages/ops/m365.ts",
+      "sha256": "93aef4e1c5c0cb7aa4589b0d6444a8dc4d64bfecd28932a90f38c65ace9c3c42"
+    },
+    {
+      "path": "packages/ops/worker-pass.ts",
+      "sha256": "c9c487f2613135dffb9df2fda2ef3170c8ed91e70eab1a09c6a68955af90c9c9"
+    },
+    {
+      "path": "packages/policy/README.md",
+      "sha256": "169f966e4b0c4315941e014e7c3c868f2d3ba021d44849ce23e333f8f6b0bd56"
+    },
+    {
+      "path": "packages/policy/tool-policy.ts",
+      "sha256": "4c7320202eb796718993a59c5857b75d43d4d6e71911e1612574d0b4296cf6f6"
+    },
+    {
+      "path": "packages/sync/activation.ts",
+      "sha256": "cb3cb1b1429baa6c7e57b41ecf04cc1e868a50d9d6f7aaa895ab012bb22f19fe"
+    },
+    {
+      "path": "packages/sync/snapshots.ts",
+      "sha256": "2fc9db12521b50529c2b70ef32bebfaa067c777db95ada7cfce5f6ab7dac3ffa"
+    },
+    {
+      "path": "packages/sync/sync-state.ts",
+      "sha256": "b4aba96949e84b3368b55c5359659686d701dc8cf03bffee1c1482a38cfe42e7"
+    },
+    {
+      "path": "packages/tools/gateway.ts",
+      "sha256": "ff1c0e3ef1f370e3d21c0c3aa085e8ef9b79a525b35459afa7422429cd3b65cb"
+    },
+    {
+      "path": "packages/tools/ledger.ts",
+      "sha256": "401728a2cf4d34b8acfe00c6fd838a865de6cedde62295398b5eef3f36395c11"
+    },
+    {
+      "path": "packages/tools/parameters.ts",
+      "sha256": "17f3f28212b200dcbc255247d6aa170983caff78c834856d2f77ba42d504cfa4"
+    },
+    {
+      "path": "packages/tools/prisma-ledger.ts",
+      "sha256": "ba6636b6e308ba19a2ebbe9a55a1b7f6d515c382c6c6aa5e7dd055d264ce803f"
+    },
+    {
+      "path": "packages/tools/registry.ts",
+      "sha256": "0fc58fc69489a34e8daca495957d1423f156bf8709adaa1adf221fcba2e5104e"
+    },
+    {
+      "path": "prisma/AGENTS.md",
+      "sha256": "0f3e4805dc52c27914d7c9d4ad3adaec123319d09229841fda178c3f65cc17c0"
+    },
+    {
+      "path": "prisma/hardening.sql",
+      "sha256": "68ee33183885c63d67a4b894afd4746df8b00384147d64976c3f0b6374909134"
+    },
+    {
+      "path": "prisma/m365.prisma",
+      "sha256": "dcc3118334575c364f3abb7261a7a72bdb609676e31a363cd795be9e4fa66405"
+    },
+    {
+      "path": "prisma/migrations/202610070001_foundation/migration.sql",
+      "sha256": "2dcc0312a0c31b37842f70e50d94f5df963f5e078ad7961c10257e5830f38a0c"
+    },
+    {
+      "path": "prisma/migrations/202610071200_v1_1_contracts/migration.sql",
+      "sha256": "e768e5a708e9a9877d05d6499e5abc0dbca7af173842f720d332658cfbe865a0"
+    },
+    {
+      "path": "prisma/migrations/202610071500_v1_1_2_conflict_scope_and_legacy_guard/migration.sql",
+      "sha256": "db6aac19ff9657fbb633e8745454f5efa573d0a41c93ae962bb7a18799dddf81"
+    },
+    {
+      "path": "prisma/migrations/202610071600_stage1_actor_membership/migration.sql",
+      "sha256": "f5ce33bd106c75aa87e41f19f8382f8f4f37adcc4c3a23ee688124de51f9288e"
+    },
+    {
+      "path": "prisma/migrations/202610071700_stage1_mapping_workflow/migration.sql",
+      "sha256": "d649ae03864a1a6e0ceac3c4899cc35ec8fdb5b59c30dccfc6656ecea28b669a"
+    },
+    {
+      "path": "prisma/migrations/202610071800_stage1_resource_snapshots/migration.sql",
+      "sha256": "d2ab6ab4ebc0a3917b1f6f1925c1639df44240896523eac68a6f935329546bcc"
+    },
+    {
+      "path": "prisma/migrations/202610071900_stage1_event_inbox/migration.sql",
+      "sha256": "436da043de37fbf05a75eed1dd0b2a24462b7c268d459c270bdefc5588d75072"
+    },
+    {
+      "path": "prisma/migrations/202610072000_stage1_claim_token_sync_order/migration.sql",
+      "sha256": "36947df106b7095f8d6c9884d686b22cd3725bacccddaf7764ee9ef5a1453b5b"
+    },
+    {
+      "path": "prisma/migrations/202610072100_stage1_sync_attempt_pending/migration.sql",
+      "sha256": "d8555b6e4b28fa515753bc080efdcc3f4f0cb30aa3dc574a47580cc6dae79328"
+    },
+    {
+      "path": "prisma/migrations/202610072200_stage1_decision_layer/migration.sql",
+      "sha256": "f1a312fbaa166d2bb6383530d76bd45f33d5f7007bb114c93d234bbc788c76ba"
+    },
+    {
+      "path": "prisma/migrations/202610072300_stage1_observation_lifecycle/migration.sql",
+      "sha256": "361e5b4ee399c6a2d6af0e10e25c264a8d8a55fcd678286f3650a2f384d8ad1c"
+    },
+    {
+      "path": "prisma/migrations/202610080000_stage1_tool_gateway/migration.sql",
+      "sha256": "c37b5fa110cdca0e369103f9b03000e0a6c1b6557c7e96e66f73d3df0bb3bae1"
+    },
+    {
+      "path": "prisma/migrations/202610081000_stage2_m365_directory/migration.sql",
+      "sha256": "a8f78e313a43fa848304a961ab471aaf7eb309ab544fd28bdd7a86354d179105"
+    },
+    {
+      "path": "prisma/migrations/202610081100_stage2_m365_signin_windows/migration.sql",
+      "sha256": "9aa22cad3483b6f46a25efb73125b6dad3b1cbfbbc8e9726cae2832c678e0d91"
+    },
+    {
+      "path": "prisma/migrations/202610081150_stage2_m365_signin_triggers/migration.sql",
+      "sha256": "ffad5ba9281ee5c5f82dd08cd2a4e5225d963d389ea37ece90f32084480caaf3"
+    },
+    {
+      "path": "prisma/migrations/202610081200_stage2_m365_cleanup_routine/migration.sql",
+      "sha256": "21b93c03ae5d3d2c9b5e721a983ea099032dcfd8267e1068f0a83a4928998d70"
+    },
+    {
+      "path": "prisma/migrations/202610081300_stage2_m365_directory_retry/migration.sql",
+      "sha256": "d5ea5daa0adef12e57935f83f46f5c86c6718461b2d80d09f878c3bbff1c8674"
+    },
+    {
+      "path": "prisma/migrations/202610081400_stage2_m365_directory_budget/migration.sql",
+      "sha256": "b944f71b238922708f46b0aa95242f1e2a59b485ed2c69aa9c1cb8620a2d75f0"
+    },
+    {
+      "path": "prisma/migrations/migration_lock.toml",
+      "sha256": "1db17a8d051aa136110736752c5e1f8b7ed92b6ea8e803112fbbe2497047c210"
+    },
+    {
+      "path": "prisma/roles.sql",
+      "sha256": "c875edf89021e529570a2428658e3c578b426f5f00146d7174956e8afdf0f5b9"
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "sha256": "fe4f175e021ac8c6264b32d2f8de62f8469c328a3e81106080b8a695373e2439"
+    },
+    {
+      "path": "prisma/seed.ts",
+      "sha256": "5bd025e4be9d8ebed78655bb4574daae85a2b3961353efcc679158d343404dcb"
+    },
+    {
+      "path": "prisma/upgrades/202610071200_v1_1_contracts.as-shipped-in-1.1.0.sql",
+      "sha256": "010b65ed0457ccc4c8d231d3353e5d40993a5f41dffa00e9d4ca456718a1e1ee"
+    },
+    {
+      "path": "prisma/upgrades/v1_1_0_to_v1_1_1.sql",
+      "sha256": "92b937a070dd7393f14cd7684d91d262bd1b9519ea2f864b38390b1be99139c5"
+    },
+    {
+      "path": "prompts/CHECKPOINT_REPORT.md",
+      "sha256": "533e9a8543a1df03dcbad20c2a79706b0fb8c1406b486d6a786efef341d79d30"
+    },
+    {
+      "path": "prompts/IMPLEMENT_STAGE_1.md",
+      "sha256": "59896e0d73a44dcc45cefe3accebd0e82352078d89ed3c8e2f59c8638485feb2"
+    },
+    {
+      "path": "prompts/IMPLEMENT_STAGE_2.md",
+      "sha256": "e92d1aab575fee8499b676ee16ad6c5455f900ef7c0b73f2dd5f382346beecba"
+    },
+    {
+      "path": "prompts/REVIEW_STAGE_1.md",
+      "sha256": "214bd10757a3fe12d2ca9c508c0ea5a5d88e9a7ef495af779bb5374d5cac6933"
+    },
+    {
+      "path": "prompts/REVIEW_STAGE_2.md",
+      "sha256": "2e7f81616cfbe6eb5b1c613ac4d1d5331087c5ee5d77140e49e01fc8d3dcbe37"
+    },
+    {
+      "path": "scripts/api-smoke.ts",
+      "sha256": "83dbd44f2eb4f02bd2a5a8fc52899eb0e61a7938c06363e65378022a5dc90249"
+    },
+    {
+      "path": "scripts/demo.ts",
+      "sha256": "fbfeb8ae7c894d1a31012523f925712165f2f9c4a958397d744195db4f241865"
+    },
+    {
+      "path": "scripts/ops.ts",
+      "sha256": "010ee0e0888ca33c30465815bcc6974503f52bf57dff3b18ae835101877b04b9"
+    },
+    {
+      "path": "scripts/pg17-check.ts",
+      "sha256": "39ff4bd2bcae738f030d9a7a0b02f3419a619cb474e1219e6a440f3cce5bc6c8"
+    },
+    {
+      "path": "scripts/schema-drift-check.ts",
+      "sha256": "6bb38320fc01636b3d0ea2e02607064b6559eb878a48825430420dd26744d03c"
+    },
+    {
+      "path": "tests/audit-sanitize.test.ts",
+      "sha256": "b3e04703745f0b6b27d1f7d55069db6c22921518e18ac3847bfddc4fea53369b"
+    },
+    {
+      "path": "tests/auth-token.test.ts",
+      "sha256": "506f32b130b9f3ccbc8d2082410ca78933570e0a8ba4722d792cdaec77119f18"
+    },
+    {
+      "path": "tests/context-budget.test.ts",
+      "sha256": "e32371fb3efacf72756f04f141f51ffcea579286640257cec06cb1fd84e17531"
+    },
+    {
+      "path": "tests/context-mapper.test.ts",
+      "sha256": "207f4416c0198cb09140fa8c7f95d15eb7b7b38afeb2aafe469c7df2a8fc57b8"
+    },
+    {
+      "path": "tests/database.test.ts",
+      "sha256": "87b9ccb92cfb6be9f550219a0acc7b0668bb7f89918f9bdffdffffb7ad1dd3ca"
+    },
+    {
+      "path": "tests/decision-config.test.ts",
+      "sha256": "0591ec487bb22ad642b7a0d7f9fcaf0685acbe67eb07773f6c2a9d033a62b9c9"
+    },
+    {
+      "path": "tests/decision-guard.test.ts",
+      "sha256": "00aa66a624d175712f94b26e884eab6a7afb07ad6b7ca814192b5bbcc62cdf0c"
+    },
+    {
+      "path": "tests/m365-adapter.test.ts",
+      "sha256": "84d8f2a636d2f6bc7672bdc8ce898df58953bf165c852aac1275a208b7f70125"
+    },
+    {
+      "path": "tests/m365-auth.test.ts",
+      "sha256": "8f07bd1637ffa37739d65f6540e4833c416d1e0d1bb546adc1e740fe7de982fe"
+    },
+    {
+      "path": "tests/m365-budget-invariants.ts",
+      "sha256": "d05427eee6cf7017eec94ca9a518f44c1135d5877be831e49b0f997956488fdd"
+    },
+    {
+      "path": "tests/m365-cleanup-invariants.ts",
+      "sha256": "2ebd259d3fefbe395ce72385432a84601db3c4d4b8cc722f043ee95656dc785f"
+    },
+    {
+      "path": "tests/m365-database.test.ts",
+      "sha256": "9bbc5d9ded7982ff0aa4eac59e5704b3d511dae5597c051c301faeccd83dd845"
+    },
+    {
+      "path": "tests/m365-denial.test.ts",
+      "sha256": "152d063a61da54b73bdff00ae061bf4910bfe94f9f81f13404b1824a20b0b63c"
+    },
+    {
+      "path": "tests/m365-dto-storage-invariants.ts",
+      "sha256": "91fa33d6e9aaaf9cf514509628719aa244f08005c75c1f169d8c9ebc6ad5e1c0"
+    },
+    {
+      "path": "tests/m365-dto.test.ts",
+      "sha256": "c7294555c4fb7a10ddeb60b2c3b3f4c56244d329b89efb181cede6316e24e760"
+    },
+    {
+      "path": "tests/m365-http.test.ts",
+      "sha256": "2f65451af8748a82c1e95aca70476108b2232332d29546f2ee1c5bf99660362e"
+    },
+    {
+      "path": "tests/m365-prerequisite-invariants.ts",
+      "sha256": "ab686844e3957c008cfbc5543b82d31e1178227f8e644484dfb330f431679b63"
+    },
+    {
+      "path": "tests/m365-public-compat.test.ts",
+      "sha256": "20fd8f3e02354924574abc09df0b13657939cd8987d25589aa7c1c40fc252bce"
+    },
+    {
+      "path": "tests/m365-sql-invariants.ts",
+      "sha256": "2b771e536dbdc3ea37b994f567dad2af35650dcdffacd8dee3d1bd997010c828"
+    },
+    {
+      "path": "tests/ops-commands.test.ts",
+      "sha256": "bab4d75d88097c30da6b6f6f7f86ac40689218f13dec3a29e157a20b40b807d0"
+    },
+    {
+      "path": "tests/pg/AGENTS.md",
+      "sha256": "6ef0619bffbe386feaa52c5abe79a7bd50a58ed8a018f41317dde875caf55308"
+    },
+    {
+      "path": "tests/pg/adapters.pg.test.ts",
+      "sha256": "d438876782177380e1baa8ea67322a0f37f2d09e838010adac6f0689799755be"
+    },
+    {
+      "path": "tests/pg/api-input.pg.test.ts",
+      "sha256": "3e45bd3f2cae35d30bf2485966aa55876c6cf2506066556ac61a1635b6dd73bf"
+    },
+    {
+      "path": "tests/pg/api.pg.test.ts",
+      "sha256": "f0c9edcffe0b54cdc78f46ab412be0da402298c2893a76f57a93f6346fb51e54"
+    },
+    {
+      "path": "tests/pg/auth.pg.test.ts",
+      "sha256": "1eb24ae6de96340fff07c36bfd09388fbf5528ffe0ded8e48761b9c7da77cd2f"
+    },
+    {
+      "path": "tests/pg/connections.pg.test.ts",
+      "sha256": "12f19138719cc111b36276425ef760ce275b2be9dbe4fa24cb7aaf9bec9f5e57"
+    },
+    {
+      "path": "tests/pg/database.pg.test.ts",
+      "sha256": "988d1537305c686f926bc0e6fedbc32ecb4ee0717ac7be7cb7a6057dee447409"
+    },
+    {
+      "path": "tests/pg/decision-advisory.pg.test.ts",
+      "sha256": "ed5978dfc7623d29b175434da8fdaf624f5d76d70c2f225960dc71c08029980c"
+    },
+    {
+      "path": "tests/pg/e2e.pg.test.ts",
+      "sha256": "0715b63ba02462735b512522d5d6eef0369a0394fc02dc7ce86f457a50dd9f94"
+    },
+    {
+      "path": "tests/pg/inbox.pg.test.ts",
+      "sha256": "ecab567a345bdb7c3362f90aba731e8b186957b203de34dd5cd4434f7072c95c"
+    },
+    {
+      "path": "tests/pg/lifecycle-race.pg.test.ts",
+      "sha256": "c5db8c6e1df8237006665342d714df90b89a8c8280b246c9993ccfd0caf7bef2"
+    },
+    {
+      "path": "tests/pg/m365-activation.pg.test.ts",
+      "sha256": "6fda169fb432ecc928648683c686d15d8b0cde4f219a40fa6b217235b52c6d43"
+    },
+    {
+      "path": "tests/pg/m365-budget-upgrade.pg.test.ts",
+      "sha256": "8e96378c2b257d19a8a2168c4d420c2f18fa854a7577a949328566a3789ea374"
+    },
+    {
+      "path": "tests/pg/m365-confirm-clock.pg.test.ts",
+      "sha256": "7e5e9b02ce1c8ea0e5375040c2cccc35804603a77364c295211b7be8fc546a66"
+    },
+    {
+      "path": "tests/pg/m365-directory-budget.pg.test.ts",
+      "sha256": "7c85f84f5d713340681c581378cda1fee51da0eb80ce2431f8d68ed6639a5f15"
+    },
+    {
+      "path": "tests/pg/m365-directory-retry.pg.test.ts",
+      "sha256": "9cd71fd32aa47ac2d2c9625950970e5e5dc58c7cdd7555999191ce759980489e"
+    },
+    {
+      "path": "tests/pg/m365-directory.pg.test.ts",
+      "sha256": "7c56d0715a1b227943dc6f013313b0da58c70637abc81e4ec2c1f258bb6eaa13"
+    },
+    {
+      "path": "tests/pg/m365-disable.pg.test.ts",
+      "sha256": "13d979261a61b4b83b8252bc98b393b3a929e44452920e8501003dd1b1c29ae9"
+    },
+    {
+      "path": "tests/pg/m365-dto-storage.pg.test.ts",
+      "sha256": "c57eacee16569535b4166c67c874ff535ce118df93b97dea78c1ad172726bed3"
+    },
+    {
+      "path": "tests/pg/m365-nonsuper.pg.test.ts",
+      "sha256": "50e87ab6c6c316b5b11df3d778b1f95850165151a1e583280c43846b2252cb30"
+    },
+    {
+      "path": "tests/pg/m365-order.pg.test.ts",
+      "sha256": "1ccdd46d033d4b291de0592648668330598e6cffaa08d1a1b5fd59cd4caf982b"
+    },
+    {
+      "path": "tests/pg/m365-permissions.pg.test.ts",
+      "sha256": "3406a23abbb48ba5fcb13ce31887faa1f73bd2f87028bbeb14b55d3b43963509"
+    },
+    {
+      "path": "tests/pg/m365-prerequisites.pg.test.ts",
+      "sha256": "20f4c1be9d5fb0bd8d2a289ac736560c8f7789e35ee3e7443e3f449f4736a91f"
+    },
+    {
+      "path": "tests/pg/m365-privileges.pg.test.ts",
+      "sha256": "cc080b53dbf2dfa11d9b2059ecf48662be1fc89eca7be9184c6cf62fbab4c730"
+    },
+    {
+      "path": "tests/pg/m365-publication-atomic.pg.test.ts",
+      "sha256": "5db6b7e9fece76280d9d937d975a6f7e136e78b280168d3e7d04bb38dd983fc1"
+    },
+    {
+      "path": "tests/pg/m365-race-directory.pg.test.ts",
+      "sha256": "c1054fd06c2c07ece8a8e275c4af4655372ed39faab1fd4bb54e7ca1ad927918"
+    },
+    {
+      "path": "tests/pg/m365-race-signin.pg.test.ts",
+      "sha256": "9d9c2a2d7e2786fd09ab1828dc5b244e97801078f21978ff2f5c4c0736469611"
+    },
+    {
+      "path": "tests/pg/m365-retry-upgrade.pg.test.ts",
+      "sha256": "813adc38a9d1e796f184d8645e45739ebdd50a5d664de738219231c99e1091f6"
+    },
+    {
+      "path": "tests/pg/m365-routine-acl.pg.test.ts",
+      "sha256": "dfac43cd4d7d948a7f7bffa9755dc8aa932fdbb9727782baf2dd17f84e831d60"
+    },
+    {
+      "path": "tests/pg/m365-runtime-membership.pg.test.ts",
+      "sha256": "20fe035ea5045337716b2fff359208eb0f4262ba11fd4fe62f610ca40fd59aa9"
+    },
+    {
+      "path": "tests/pg/m365-schema.pg.test.ts",
+      "sha256": "567c810c705bbd51206b3a121d72246469d761467ad5c77913c63a756f953318"
+    },
+    {
+      "path": "tests/pg/m365-scope.pg.test.ts",
+      "sha256": "d3256df9326d63c18ce226e175a92681cf99478a58d8ca87941f0f98cff954b4"
+    },
+    {
+      "path": "tests/pg/m365-signin-outcomes.pg.test.ts",
+      "sha256": "a2a007367d06f524aa0f5fc86d1adc341adc5052949ff7c67bb506a34038a2f0"
+    },
+    {
+      "path": "tests/pg/m365-sync-denial.pg.test.ts",
+      "sha256": "3ba216a373c6b0d65dee4f047c817c85cff21891f48115377eebb1b553ce97f9"
+    },
+    {
+      "path": "tests/pg/m365-upgrade.pg.test.ts",
+      "sha256": "9373e5c28800858e8212dd526c216f1733960ca9d99feb8ace69e677a7d7f303"
+    },
+    {
+      "path": "tests/pg/m365-window-limits.pg.test.ts",
+      "sha256": "935466225104b694599b7e65d982e804c260eca86046dbba931d9b66fca811da"
+    },
+    {
+      "path": "tests/pg/m365-window-publication.pg.test.ts",
+      "sha256": "d66bd6e623129cabfb9d35f4264b5d18cd010e0c62c365ec28b439f07b6f35f0"
+    },
+    {
+      "path": "tests/pg/m365-window-recovery.pg.test.ts",
+      "sha256": "c57a83a0c0a4b39e258e76ae76ad1e0537271187adb3be0d18bacc67e8d09a90"
+    },
+    {
+      "path": "tests/pg/m365-windows.pg.test.ts",
+      "sha256": "053183580e1a6350936c9c046937d4cb747dab3b34968e454d2ea23d6e3ac69b"
+    },
+    {
+      "path": "tests/pg/mapping.pg.test.ts",
+      "sha256": "d2a41bf8fa419ff20f3b70648e13465169284ebc43a5fb5170e8a4a2d8f35e25"
+    },
+    {
+      "path": "tests/pg/observation-lifecycle.pg.test.ts",
+      "sha256": "9b70dd74b72c9e4e397012d36c8f8ad62b6622d5f9d4957a6118fccad8a91305"
+    },
+    {
+      "path": "tests/pg/operator-passes.pg.test.ts",
+      "sha256": "e3e6f0261255ef1a031d6d8f4023104346fbf64a39f042d3fa32f135a696c244"
+    },
+    {
+      "path": "tests/pg/ops-cli.pg.test.ts",
+      "sha256": "046672d30df4813e453cc7828d7067532ad7afef4ea5bb16614672e93a94a503"
+    },
+    {
+      "path": "tests/pg/pagination.pg.test.ts",
+      "sha256": "803f6bbd3b74561fbfb67921e9579100e4948f95da36833ff8142e808d028eb2"
+    },
+    {
+      "path": "tests/pg/roles-output.pg.test.ts",
+      "sha256": "3ce6db06978d7d291af3409d3097b0bf34be69d3fc4c8930afe303e0d4400d7b"
+    },
+    {
+      "path": "tests/pg/shadow-jobs.pg.test.ts",
+      "sha256": "86dfd11e1ee27f7ca71eb00f23012407a859bc70cb239c66bf0c406c0d4d7429"
+    },
+    {
+      "path": "tests/pg/sync-order.pg.test.ts",
+      "sha256": "b6d4075bc622e412815a033e1484c3b268760c67988f6aa6f965a39f809e476a"
+    },
+    {
+      "path": "tests/pg/sync.pg.test.ts",
+      "sha256": "61b9b9a1db279a36f40513a4825548fe1029c0072025541a8d7b0771ca284a09"
+    },
+    {
+      "path": "tests/pg/tool-gateway.pg.test.ts",
+      "sha256": "c302b11fe793722df44eddcec32fff021ef0e8c5cea2462bdc6be6f5ef339edd"
+    },
+    {
+      "path": "tests/pg/worker-recovery.pg.test.ts",
+      "sha256": "40c0e47b72c61cde705647fe3ba74f4fa576d345d9bf0659692b7590462df8d9"
+    },
+    {
+      "path": "tests/pg/worker-routing.pg.test.ts",
+      "sha256": "0cf6d5e6af4954d17c6d437d7e737b11dd4e46bf638421c3ace1f515c505e81d"
+    },
+    {
+      "path": "tests/pg/worker.pg.test.ts",
+      "sha256": "27f46929af6d5c0d5e0f04a8f2453eaf9a48afda3055ce785f69c2982cdf8952"
+    },
+    {
+      "path": "tests/pipeline.test.ts",
+      "sha256": "48dac2202c7054eaddd32de94a90bf66082c6a58fda641d467d4ae1e4b540258"
+    },
+    {
+      "path": "tests/resource-freshness.test.ts",
+      "sha256": "425daf08c841c8fe874d949ddde8bb3d408264a593a357fd93810f45ecc429cb"
+    },
+    {
+      "path": "tests/sql-invariants.ts",
+      "sha256": "b72aadf4edf37f2b0772d65e066885faf1cd6b404ab4c39ca676e7e303c487cc"
+    },
+    {
+      "path": "tests/support/api-process.ts",
+      "sha256": "994445526415aa003932afb87f47e910af1db37bf3df4e2045e0eb6ca228527b"
+    },
+    {
+      "path": "tests/support/decision-fixtures.ts",
+      "sha256": "e9808a6ada677b0363bcc8e59c34aa6da24103a2850af8ae9c4d09469df90afa"
+    },
+    {
+      "path": "tests/support/events-fixtures.ts",
+      "sha256": "f6471274328dca2e501b5243fa67312bb7d885856ac9585a6a0471f5e88b1c78"
+    },
+    {
+      "path": "tests/support/graph-fixtures.ts",
+      "sha256": "52338299d325f6a7654211dc0c6651bb8f150e256c13fc1b86c1420bf8b3226f"
+    },
+    {
+      "path": "tests/support/m365-fixtures.ts",
+      "sha256": "9705a7eb3d81284abacfc5b3bf99f5d7a35c7e22dae8a15128f4dfd41abfce42"
+    },
+    {
+      "path": "tests/support/m365-graph-mock.ts",
+      "sha256": "9bc72ce3688f7c76aab8c8ac10c6e46e3a822f1eb1a03d3cbdf8267e380b603e"
+    },
+    {
+      "path": "tests/support/m365-pg.ts",
+      "sha256": "0f986a1941f34186b9e81b6d7eabe7de8269e53265b94f7e5f87d3f6e302ba66"
+    },
+    {
+      "path": "tests/support/m365-signin-mock.ts",
+      "sha256": "3bf979f5dd3821fef444e067da10014c45b8b79b1a4bfbcf89c32879a46e3dd6"
+    },
+    {
+      "path": "tests/support/m365-window-rows.ts",
+      "sha256": "8cae1e67579a34d9620baa92e885d008cd97de3a2e85be9964bb7fe181702889"
+    },
+    {
+      "path": "tests/support/migrations.ts",
+      "sha256": "197e907b7b603c5c83da66a4346f810dc50f644e4b30c3f333698874ddb5769b"
+    },
+    {
+      "path": "tests/support/mock-http.ts",
+      "sha256": "df7caf4de199eacc86694642dde3d49491f21aa05e27b8b25be3e05bf3b74802"
+    },
+    {
+      "path": "tests/support/pg-harness.ts",
+      "sha256": "066dd198499b4996c9bd6e35c52e7ac8b7fb190eb6b8c7ad90ed29957489da6b"
+    },
+    {
+      "path": "tests/support/pg-race.ts",
+      "sha256": "3c39add68c10232fe3bf710e90307fb47fee4fe2cb77a02018784d09de533dc9"
+    },
+    {
+      "path": "tests/support/pglite.ts",
+      "sha256": "3189e5d18d5f331579b1317f258f5e97a22a90baa5ff31fcae0b375bad8a76c0"
+    },
+    {
+      "path": "tests/support/roles-sql.ts",
+      "sha256": "821c8c715dbd984a2d2ad22f94f093e5155f87ac10636882a0d7b447cab8d025"
+    },
+    {
+      "path": "tests/support/tool-fixtures.ts",
+      "sha256": "8788c94b6f9d496c82f2ade09ae38e9f5dca9a709fe47f9cc8f8ea600c37b766"
+    },
+    {
+      "path": "tests/support/vendor-routes.ts",
+      "sha256": "db6528628740508681981044fa4addb068ba2b142116f529e80a01b9dda02035"
+    },
+    {
+      "path": "tests/tool-gateway.test.ts",
+      "sha256": "a0c4e9aa3dea09444896baca612c7c01f86a5043f254f4b8c569eda321c52ba3"
+    },
+    {
+      "path": "tests/tool-permissions.test.ts",
+      "sha256": "3d95dd753e189347a80aed3b2336647f5b8501f0329269bbd1b8d1679d1e5378"
+    },
+    {
+      "path": "tests/vendor-contracts.test.ts",
+      "sha256": "3ee523597be22e4038882b81852662bf031d20aa06216d96d2e0dca3c4d48738"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "3622204a8045df23f22563cfdf7cab29206c243f848886519a5e1faf199ed2c3"
+    }
+  ],
+  "deltaFromS2A": [
+    ".env.example",
+    ".gitignore",
+    "CHANGELOG.md",
+    "CHECKPOINT_REPORT.md",
+    "CLAUDE.md",
+    "MANIFEST.json",
+    "REVIEW_REPORT.md",
+    "compose.yaml",
+    "connectors/http.ts",
+    "connectors/microsoft365/README.md",
+    "connectors/microsoft365/auth.ts",
+    "connectors/microsoft365/connector.ts",
+    "connectors/microsoft365/contract.ts",
+    "connectors/microsoft365/http.ts",
+    "docs/01_STAGE_1_SPEC.md",
+    "docs/02_DATA_AND_MODULES.md",
+    "docs/03_CONNECTORS_AND_SYNC.md",
+    "docs/04_DECISION_LAYER.md",
+    "docs/05_IMPLEMENTATION_PLAN.md",
+    "docs/07_SOURCES_AND_ADR.md",
+    "docs/AI_CONTEXT_MAP.md",
+    "docs/DEVELOPMENT_WORKFLOW.md",
+    "packages/audit/sanitize.ts",
+    "packages/connections/connections.ts",
+    "packages/connections/m365-disable.ts",
+    "packages/graph/runtime-role.ts",
+    "packages/m365/AGENTS.md",
+    "packages/m365/activation.ts",
+    "packages/m365/authority.ts",
+    "packages/m365/denial.ts",
+    "packages/m365/directory-retry.ts",
+    "packages/m365/directory.ts",
+    "packages/m365/ingest.ts",
+    "packages/m365/io.ts",
+    "packages/m365/signin-rows.ts",
+    "packages/m365/status.ts",
+    "packages/m365/windows.ts",
+    "packages/sync/activation.ts",
+    "prisma/AGENTS.md",
+    "prisma/m365.prisma",
+    "prisma/migrations/202610081300_stage2_m365_directory_retry/migration.sql",
+    "prisma/migrations/202610081400_stage2_m365_directory_budget/migration.sql",
+    "prisma/roles.sql",
+    "prompts/CHECKPOINT_REPORT.md",
+    "prompts/IMPLEMENT_STAGE_1.md",
+    "prompts/REVIEW_STAGE_1.md",
+    "scripts/pg17-check.ts",
+    "tests/context-mapper.test.ts",
+    "tests/m365-adapter.test.ts",
+    "tests/m365-auth.test.ts",
+    "tests/m365-budget-invariants.ts",
+    "tests/m365-database.test.ts",
+    "tests/m365-denial.test.ts",
+    "tests/m365-http.test.ts",
+    "tests/m365-sql-invariants.ts",
+    "tests/pg/AGENTS.md",
+    "tests/pg/m365-activation.pg.test.ts",
+    "tests/pg/m365-budget-upgrade.pg.test.ts",
+    "tests/pg/m365-directory-budget.pg.test.ts",
+    "tests/pg/m365-directory-retry.pg.test.ts",
+    "tests/pg/m365-directory.pg.test.ts",
+    "tests/pg/m365-order.pg.test.ts",
+    "tests/pg/m365-publication-atomic.pg.test.ts",
+    "tests/pg/m365-race-directory.pg.test.ts",
+    "tests/pg/m365-retry-upgrade.pg.test.ts",
+    "tests/pg/m365-signin-outcomes.pg.test.ts",
+    "tests/pg/m365-sync-denial.pg.test.ts",
+    "tests/pg/m365-window-limits.pg.test.ts",
+    "tests/pg/m365-window-publication.pg.test.ts",
+    "tests/pg/m365-window-recovery.pg.test.ts",
+    "tests/pg/m365-windows.pg.test.ts",
+    "tests/support/m365-fixtures.ts",
+    "tests/support/m365-graph-mock.ts",
+    "tests/support/m365-pg.ts",
+    "tests/support/m365-signin-mock.ts",
+    "tests/support/m365-window-rows.ts"
+  ],
+  "removedFromS2A": [],
+  "additionalPreexistingContextNotInS2APayload": [
+    ".env.example",
+    ".gitignore",
+    "CHANGELOG.md",
+    "CHECKPOINT_REPORT.md",
+    "CLAUDE.md",
+    "MANIFEST.json",
+    "REVIEW_REPORT.md",
+    "compose.yaml",
+    "docs/01_STAGE_1_SPEC.md",
+    "docs/02_DATA_AND_MODULES.md",
+    "docs/03_CONNECTORS_AND_SYNC.md",
+    "docs/04_DECISION_LAYER.md",
+    "docs/05_IMPLEMENTATION_PLAN.md",
+    "docs/07_SOURCES_AND_ADR.md",
+    "prompts/CHECKPOINT_REPORT.md",
+    "prompts/IMPLEMENT_STAGE_1.md",
+    "prompts/REVIEW_STAGE_1.md"
+  ],
+  "implementationDeltaFromS2A": [
+    "connectors/http.ts",
+    "connectors/microsoft365/README.md",
+    "connectors/microsoft365/auth.ts",
+    "connectors/microsoft365/connector.ts",
+    "connectors/microsoft365/contract.ts",
+    "connectors/microsoft365/http.ts",
+    "docs/AI_CONTEXT_MAP.md",
+    "docs/DEVELOPMENT_WORKFLOW.md",
+    "packages/audit/sanitize.ts",
+    "packages/connections/connections.ts",
+    "packages/connections/m365-disable.ts",
+    "packages/graph/runtime-role.ts",
+    "packages/m365/AGENTS.md",
+    "packages/m365/activation.ts",
+    "packages/m365/authority.ts",
+    "packages/m365/denial.ts",
+    "packages/m365/directory-retry.ts",
+    "packages/m365/directory.ts",
+    "packages/m365/ingest.ts",
+    "packages/m365/io.ts",
+    "packages/m365/signin-rows.ts",
+    "packages/m365/status.ts",
+    "packages/m365/windows.ts",
+    "packages/sync/activation.ts",
+    "prisma/AGENTS.md",
+    "prisma/m365.prisma",
+    "prisma/migrations/202610081300_stage2_m365_directory_retry/migration.sql",
+    "prisma/migrations/202610081400_stage2_m365_directory_budget/migration.sql",
+    "prisma/roles.sql",
+    "scripts/pg17-check.ts",
+    "tests/context-mapper.test.ts",
+    "tests/m365-adapter.test.ts",
+    "tests/m365-auth.test.ts",
+    "tests/m365-budget-invariants.ts",
+    "tests/m365-database.test.ts",
+    "tests/m365-denial.test.ts",
+    "tests/m365-http.test.ts",
+    "tests/m365-sql-invariants.ts",
+    "tests/pg/AGENTS.md",
+    "tests/pg/m365-activation.pg.test.ts",
+    "tests/pg/m365-budget-upgrade.pg.test.ts",
+    "tests/pg/m365-directory-budget.pg.test.ts",
+    "tests/pg/m365-directory-retry.pg.test.ts",
+    "tests/pg/m365-directory.pg.test.ts",
+    "tests/pg/m365-order.pg.test.ts",
+    "tests/pg/m365-publication-atomic.pg.test.ts",
+    "tests/pg/m365-race-directory.pg.test.ts",
+    "tests/pg/m365-retry-upgrade.pg.test.ts",
+    "tests/pg/m365-signin-outcomes.pg.test.ts",
+    "tests/pg/m365-sync-denial.pg.test.ts",
+    "tests/pg/m365-window-limits.pg.test.ts",
+    "tests/pg/m365-window-publication.pg.test.ts",
+    "tests/pg/m365-window-recovery.pg.test.ts",
+    "tests/pg/m365-windows.pg.test.ts",
+    "tests/support/m365-fixtures.ts",
+    "tests/support/m365-graph-mock.ts",
+    "tests/support/m365-pg.ts",
+    "tests/support/m365-signin-mock.ts",
+    "tests/support/m365-window-rows.ts"
+  ],
+  "previousCandidate": "S2-B-rc3",
+  "deltaFromRC1": [
+    "connectors/microsoft365/contract.ts",
+    "docs/AI_CONTEXT_MAP.md",
+    "docs/DEVELOPMENT_WORKFLOW.md",
+    "packages/graph/runtime-role.ts",
+    "packages/m365/AGENTS.md",
+    "packages/m365/activation.ts",
+    "packages/m365/denial.ts",
+    "packages/m365/directory-retry.ts",
+    "packages/m365/directory.ts",
+    "packages/m365/ingest.ts",
+    "packages/m365/status.ts",
+    "packages/m365/windows.ts",
+    "prisma/AGENTS.md",
+    "prisma/m365.prisma",
+    "prisma/migrations/202610081300_stage2_m365_directory_retry/migration.sql",
+    "prisma/migrations/202610081400_stage2_m365_directory_budget/migration.sql",
+    "prisma/roles.sql",
+    "scripts/pg17-check.ts",
+    "tests/context-mapper.test.ts",
+    "tests/m365-budget-invariants.ts",
+    "tests/m365-database.test.ts",
+    "tests/m365-denial.test.ts",
+    "tests/m365-sql-invariants.ts",
+    "tests/pg/AGENTS.md",
+    "tests/pg/m365-budget-upgrade.pg.test.ts",
+    "tests/pg/m365-directory-budget.pg.test.ts",
+    "tests/pg/m365-directory-retry.pg.test.ts",
+    "tests/pg/m365-directory.pg.test.ts",
+    "tests/pg/m365-order.pg.test.ts",
+    "tests/pg/m365-publication-atomic.pg.test.ts",
+    "tests/pg/m365-race-directory.pg.test.ts",
+    "tests/pg/m365-retry-upgrade.pg.test.ts",
+    "tests/pg/m365-signin-outcomes.pg.test.ts",
+    "tests/pg/m365-sync-denial.pg.test.ts",
+    "tests/pg/m365-window-limits.pg.test.ts",
+    "tests/pg/m365-window-recovery.pg.test.ts",
+    "tests/support/m365-fixtures.ts"
+  ],
+  "removedFromRC1": [],
+  "deltaFromRC2": [
+    "connectors/microsoft365/contract.ts",
+    "docs/AI_CONTEXT_MAP.md",
+    "docs/DEVELOPMENT_WORKFLOW.md",
+    "packages/graph/runtime-role.ts",
+    "packages/m365/AGENTS.md",
+    "packages/m365/activation.ts",
+    "packages/m365/denial.ts",
+    "packages/m365/directory-retry.ts",
+    "packages/m365/directory.ts",
+    "packages/m365/ingest.ts",
+    "packages/m365/status.ts",
+    "packages/m365/windows.ts",
+    "prisma/AGENTS.md",
+    "prisma/m365.prisma",
+    "prisma/migrations/202610081400_stage2_m365_directory_budget/migration.sql",
+    "prisma/roles.sql",
+    "scripts/pg17-check.ts",
+    "tests/m365-budget-invariants.ts",
+    "tests/m365-database.test.ts",
+    "tests/m365-denial.test.ts",
+    "tests/m365-sql-invariants.ts",
+    "tests/pg/AGENTS.md",
+    "tests/pg/m365-budget-upgrade.pg.test.ts",
+    "tests/pg/m365-directory-budget.pg.test.ts",
+    "tests/pg/m365-directory-retry.pg.test.ts",
+    "tests/pg/m365-directory.pg.test.ts",
+    "tests/pg/m365-publication-atomic.pg.test.ts",
+    "tests/pg/m365-race-directory.pg.test.ts",
+    "tests/pg/m365-retry-upgrade.pg.test.ts",
+    "tests/pg/m365-signin-outcomes.pg.test.ts",
+    "tests/pg/m365-sync-denial.pg.test.ts",
+    "tests/pg/m365-window-recovery.pg.test.ts",
+    "tests/support/m365-fixtures.ts"
+  ],
+  "removedFromRC2": [],
+  "correctivePolicy": {
+    "path": "docs/stage2/reviews/S2B_RETRY_REPAIR_PLAN_RC2.md",
+    "sha256": "95035762eb167b02b7332108d9b90c48499735e7b84a0f97cec29f43c69d3799",
+    "approvals": [
+      "docs/stage2/reviews/ASTRA_S2B_POLICY_RC2.md",
+      "docs/stage2/reviews/FABLE_S2B_POLICY_RC2.md"
+    ]
+  },
+  "deltaFromRC3": [
+    "docs/DEVELOPMENT_WORKFLOW.md"
+  ],
+  "administrativeDelta": "Status-only: S2-B pending wording replaced with factual RC3 acceptance/link; no model assignments, requirements, code or check evidence changed."
+}

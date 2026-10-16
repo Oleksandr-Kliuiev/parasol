@@ -1,0 +1,19 @@
+{
+  "checkedUtc": "2026-10-10T22:02:55.737094+00:00",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "extraUsageEvidenceField": "oauthAccount.hasExtraUsageEnabled",
+  "providerOverrides": false,
+  "cliVersion": "2.1.293 (Claude Code)",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "freshSession": "c369847a-a53f-49c8-8d0f-346ff833a938",
+  "billing": "Included native subscription only; no API/credits/fallback",
+  "attributableSubscriptionQuota": "unknown",
+  "actualMessageModelVerification": "Pending actual stream; requested identity insufficient"
+}

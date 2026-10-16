@@ -1,0 +1,74 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc1",
+  "packageHash": "6fc5fba082f0e25da0e87ea6ccc6aa7eb217686f95fc85bd0bdf41ef9b959eff",
+  "verdict": "CHANGES_REQUIRED",
+  "requiredFindings": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8"
+  ],
+  "actualResponseModels": [
+    "claude-opus-5-5"
+  ],
+  "requestedEffort": "xhigh",
+  "elapsedMs": 571543,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 21398,
+    "cache_read_input_tokens": 535,
+    "output_tokens": 62487,
+    "output_tokens_details": {
+      "thinking_tokens": 56374
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 21398,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 62487,
+        "cache_read_input_tokens": 535,
+        "cache_creation_input_tokens": 21398,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 21398
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 62487,
+      "cacheReadInputTokens": 535,
+      "cacheCreationInputTokens": 21398,
+      "webSearchRequests": 0,
+      "costUSD": 1.4210390000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 56374,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "subscriptionQuotaAttribution": "unknown; API dollar estimates not quota evidence",
+  "scopeQualification": "Supplied content only; no independent hash verification in initial no-tools review; not a Fable substitute",
+  "preflight": "verification/stage5/S5ASKREMOTE_REVAL_RC1_OPUS_PREFLIGHT.json",
+  "rawEvidenceSha256": "7789a90204e409aaca8c0db9f935aede0e909eeb7a5e8acc37a8f78e46099bd2"
+}

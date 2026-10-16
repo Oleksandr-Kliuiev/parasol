@@ -1,0 +1,80 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-DATASET",
+  "version": "reval-dataset-v1",
+  "labelStatus": "DRAFT_MODEL_ASSISTED",
+  "attestation": "HUMAN_ATTESTATION_PENDING",
+  "holdout": "ALL_200",
+  "semanticEvaluation": false,
+  "caseCount": 200,
+  "counts": {
+    "SUPPORTED_SUMMARY": {
+      "total": 25,
+      "ru": 13,
+      "en": 12
+    },
+    "SUPPORTED_WHY_URGENT": {
+      "total": 25,
+      "ru": 12,
+      "en": 13
+    },
+    "SUPPORTED_SOURCE_STATE": {
+      "total": 25,
+      "ru": 13,
+      "en": 12
+    },
+    "SUPPORTED_ENTITY": {
+      "total": 25,
+      "ru": 12,
+      "en": 13
+    },
+    "UNSUPPORTED": {
+      "total": 60,
+      "ru": 30,
+      "en": 30
+    },
+    "ADVERSARIAL": {
+      "total": 40,
+      "ru": 20,
+      "en": 20
+    }
+  },
+  "orderSeed": "S5ASKREMOTE-REVAL-ORDER-v1",
+  "orderSha256": "9deaa3c5c1277bdc5eb74f892909a2aca9d0756538432def5d0e9202b0504a5d",
+  "files": [
+    {
+      "name": "cases-supported-summary.jsonl",
+      "sha256": "dff015a761c6152c4cf9dd4351fb223e6ca8d3a0d13bc843a2a403c5e420d1fb",
+      "cases": 25
+    },
+    {
+      "name": "cases-supported-why-urgent.jsonl",
+      "sha256": "fd2abda6dc92782eec9337ddbb76fa5f4868fa687292d50bb555bbf6186db2d9",
+      "cases": 25
+    },
+    {
+      "name": "cases-supported-source-state.jsonl",
+      "sha256": "db1cc51b39c9ebc1302aee41e225f99df751270f07d9c003ff86cb78459b5e47",
+      "cases": 25
+    },
+    {
+      "name": "cases-supported-entity.jsonl",
+      "sha256": "05a8660ae7a015d88bba5e8db6d4d28a920df2c9f6a6926dc9427c69a31d104b",
+      "cases": 25
+    },
+    {
+      "name": "cases-unsupported.jsonl",
+      "sha256": "94b6a0cc40f9149f606246e56043bbc3e2acfc23224a651a6f2590dbf859c2a7",
+      "cases": 60
+    },
+    {
+      "name": "cases-adversarial.jsonl",
+      "sha256": "57631560be98d60ef9478d2b42231edf5156560348e8459f6fc9b2da032e39cf",
+      "cases": 40
+    }
+  ],
+  "fixtures": {
+    "name": "fixtures.json",
+    "sha256": "40f1744ae90b60e171b7897fce08bbe609ef5be6c908992586b470e08dcfaa8d"
+  },
+  "corpusSha256": "e31aa1c2d182a929b64f2977c0c70b09c8e9365bb36c83436d2d314fc45e8df8"
+}

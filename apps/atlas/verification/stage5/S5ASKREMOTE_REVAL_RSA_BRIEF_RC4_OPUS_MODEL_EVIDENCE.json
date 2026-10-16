@@ -1,0 +1,40 @@
+{
+  "requestedModel": "claude-opus-5-5",
+  "effort": "xhigh",
+  "actualAssistantMessageModels": [
+    "claude-opus-5-5"
+  ],
+  "sameOwnIndependentReviewerSession": true,
+  "streamSha256": "a0e0f9123e85760b5d22f3309da4391a9f864c0d3c1347a09243002e315a1b1a",
+  "nativeAuth": "claude.ai firstParty Max",
+  "extraUsage": "org_level_disabled",
+  "fastMode": false,
+  "providerOverride": false,
+  "apiCreditsFallback": false,
+  "durationMs": 132787,
+  "usage": {
+    "input_tokens": 16,
+    "cache_creation_input_tokens": 26195,
+    "cache_read_input_tokens": 2873711,
+    "output_tokens": 14459,
+    "output_tokens_details": {
+      "thinking_tokens": 7539
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 26195,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "artifact": "S5ASKREMOTE-REVAL-RSA-BRIEF-rc4",
+  "packageHash": "e8f87336b1cf7e0ba7b18702378f3a6efb877b20e5d9aa4e9a96ee175bf85040",
+  "paidProductCalls": 0
+}

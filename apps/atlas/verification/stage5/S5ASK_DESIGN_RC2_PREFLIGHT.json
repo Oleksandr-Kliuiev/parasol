@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-10T16:20:44.277737+00:00",
+  "claudeVersion": "2.1.293 (Claude Code)",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "high",
+  "FableBillingBasis": "Native Max subscription, extra usage disabled; previous exact Fable stream successful, no fallback_credit; fresh response-model evidence required. No API/credits route enabled.",
+  "priorExecutionSha256": "14b380db832564527fc10176efd4e14023838549dadb22e7d1fcde89ecbd90c1",
+  "attributableSubscriptionQuota": "unknown"
+}

@@ -1,0 +1,56 @@
+{
+  "command": "artifact-check",
+  "ok": true,
+  "liveAdmissionReadiness": "BLOCKED",
+  "liveAcceptanceEligible": false,
+  "drift": [],
+  "adminDeltaPaths": [
+    "docs/stage5/IMPLEMENTATION_STATUS.md",
+    "docs/stage5/REVIEW_STATUS.md",
+    "docs/stage5/ask/remote/DESIGN_STATUS.md"
+  ],
+  "filesChecked": 2089,
+  "identity": {
+    "offlinePackageHash": "d706a437b2e77ccb215080d4676d2ae70fee53376636d3d9040590d5d8f2dc3a",
+    "offlineManifestSha256": "3af49f790a2bff92a64b8ef83a9c7b8c1a174f758fb863de97e49086778ca58c",
+    "rcPackageHash": "9ae0c2b813388af58ee7d12e4df7f59521ba8cff417a4124ea9ddb2bff1c7fe1",
+    "rcManifestSha256": "1b8128214440ba444b329fa496242aa8a9f074ac7fb106124ad6e7d6d0d94731",
+    "datasetCorpusSha256": "e31aa1c2d182a929b64f2977c0c70b09c8e9365bb36c83436d2d314fc45e8df8",
+    "fixtureSha256": "40f1744ae90b60e171b7897fce08bbe609ef5be6c908992586b470e08dcfaa8d",
+    "orderSha256": "9deaa3c5c1277bdc5eb74f892909a2aca9d0756538432def5d0e9202b0504a5d",
+    "orderSeed": "S5ASKREMOTE-REVAL-ORDER-v1",
+    "executionToolSha256": "52b1cdd762c8ea7a4e064c670a4fbf07ab3790b573ae98985bc65c90497c11ed",
+    "comparatorSha256": "aa43cd8f77d02c4efd66569151ff262c59918a778d503b2d05754c19cd20667a",
+    "browserValidatorSha256": "b31b21a07d861d774aceb790d87ba70cf7ed433e95ec11cba7408ac5596105c1",
+    "projectionSha256": "940e5daabf9e71bd8a733333d0d85137ba1b5f6103a1ba6458492cbf77413ea5",
+    "adminOverlaySha256": "9e4ce08304d1bc69d067eff1e24cab898e86978ab968135ee3d112f74bbcc0aa"
+  },
+  "revision": {
+    "anchors": {
+      "rc5Manifest": "bf13e43f96c7c990d60f715ad60ddc7b101df8aab5ce23406c267e0d3e979fc3",
+      "rsaManifest": "a356a7d1a45ac704df0a875bb69ea92161e5c085556d86d4514cf0f9e55f862c",
+      "rsaSeal": "e89a4c0830628e3aa86c376c36908b353bab450a63ac870c53f55b982fe42bf9",
+      "rsbManifest": "b0643fb69ac6bd46d3ee40d82237835233b607038dde940e2967ecc968cc4534",
+      "rsbSeal": "b5f51e7716be3d42f32754079877e36542bffdea5dfd743f448570786de07b31",
+      "rscaManifest": "8f33b6363c0cf2be4abe6ee791ba92b651d6446c770f3d71bbda27b38d9e8b1b",
+      "rscaSeal": "7e52aae0ce8881f4432462697e899281b4befa2ae87fbe84d69eb15d8ce91afd",
+      "rscbManifest": "f74970284ebfedf37f8e240dc14b11c72f60f974eb8db494fddbe4e077d77929",
+      "rscbSeal": "db29082cd39e3c75749c8746f876b91c9b3fc163f79f658137cc3233f377b4cf",
+      "rsccManifest": "ecc2030a29c4ddf8ecd8338e9a64547e9c7112cbfe65707ae0a5de9703feb0c1",
+      "rsccSeal": "ebba81bd072772346ded1baa9c384231b5189124a7621913434f7d10e4bc3a9c",
+      "rsdaManifest": "38361d6bb4e78c917e75c555772e56f65310903a42efbbea4539c1e73fec2fbf",
+      "rsdaSeal": "5e0de7a81950b5cbf0a05d5cacc5a28dc19beecfc2a5ef05e9c1921bdfbfb406",
+      "rsdbManifest": "45d5df367b2510aea79b0cccf2fa62878ab167cdd358d3a5e877f70486bc14e0",
+      "rsdbSeal": "dc4dd7fe10a1ed7b8ddc55391925fabf766587086ca97db88c36718fbcb94b03"
+    },
+    "instrumentRevisionSha256": "9cd9b3ad87ed6bbbab0a0cb6614b23c1bc86de9a6b168506cb3aafb09f7e3112",
+    "rc5ToolSha256": "8a20b598679a7e50e4b7457b37750fedd8f2c597e441d0628cb1237d97bad776",
+    "rebuiltOutputsSha256": "45f8db29a3a5347c3f4eff27d21a3409b6109178b8d1fb2f5cdd757eb306edec",
+    "expectedFiles": 2045,
+    "candidate": {
+      "id": "RS-D-C",
+      "sha256": "86e5f7b873446e1fa4a38f71dafc889bc456546250d4a81d88b0ea6bf1960895",
+      "accepted": false
+    }
+  }
+}

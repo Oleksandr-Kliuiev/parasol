@@ -1,0 +1,24 @@
+{
+  "artifact": "S5ASKREMOTE-REVAL-PREP-rc6",
+  "packageHash": "66dcc033c71f5836e8904b289c0aeb493b5de96264098f884eded931e01b6fa7",
+  "sessionId": "8bc72aa5-b83c-40e3-9331-38914ca9f27c",
+  "freshClean": true,
+  "resumeUsed": true,
+  "model": "claude-opus-5-5",
+  "effort": "xhigh",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "fastMode": false,
+  "fallback": false,
+  "billing": "Included native Max only; API/credits prohibited",
+  "startedUtc": "2026-10-11T06:28:16.034099+00:00",
+  "attributableSubscriptionQuota": "unknown",
+  "freshCleanInitial": true,
+  "reviewMode": "Bounded repair in same independently clean initial session, xhigh retained"
+}

@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-10T08:20:50.603328+00:00",
+  "nativeAuth": {
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "extraUsageEnabled": false,
+  "providerOverrides": false,
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "subscriptionQuotaAttributable": "unknown"
+}

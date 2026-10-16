@@ -1,0 +1,96 @@
+{
+ "artifact": "S5ASKREMOTE-REVAL-SERVER-RSD-B-rc1",
+ "window": [
+  "2026-10-13T02:18:09Z",
+  "2026-10-13T02:47:27Z"
+ ],
+ "environment": {
+  "node": "v25.8.1",
+  "dockerPostgres": "17 (TCP seam, regression only)",
+  "nativePostgres": "17 disposable unix-socket cluster /private/tmp/rsb-pg (test-fixture evidence, never MEASURED)"
+ },
+ "checks": [
+  {
+   "command": "npm run typecheck",
+   "result": "pass",
+   "log": "typecheck.txt"
+  },
+  {
+   "command": "npm run ui:typecheck",
+   "result": "pass",
+   "log": "ui-typecheck.txt"
+  },
+  {
+   "command": "npm run schema:validate",
+   "result": "pass",
+   "log": "schema.txt"
+  },
+  {
+   "command": "npm run api:build (both consoles)",
+   "result": "pass",
+   "log": "build.txt"
+  },
+  {
+   "command": "node --experimental-strip-types scripts/reval-instrument/cli.ts artifact-check",
+   "result": "pass: ok true, drift [], candidate RS-D-B 71ff2cdd94aed72624a7e1c49f765ab13bbc4d149eb2284a7ea89582450c9ebf accepted:false",
+   "log": "artifact-check.txt"
+  },
+  {
+   "command": "npm run api:smoke",
+   "result": "pass",
+   "log": "smoke.txt"
+  },
+  {
+   "command": "node --experimental-strip-types --test tests/*.test.ts",
+   "result": "612 tests: 603 pass, 8 fail, 1 skipped",
+   "qualification": "the 8 failures are exactly the pre-existing RC5 identity-only set (same names as the accepted RS-D-A rc2 run; diffed)",
+   "log": "unit.txt"
+  },
+  {
+   "command": "npm run db:check:pg17",
+   "result": "pass",
+   "log": "pg17.txt"
+  },
+  {
+   "command": "npm run db:check:drift",
+   "result": "pass (empty drift)",
+   "log": "drift.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_NATIVE_PG_FIXTURE=/private/tmp/rsb-pg/native-pg-fixture.json npm run test:pg",
+   "result": "780 tests: 780 pass",
+   "qualification": "includes reval-launch (S under the pinned Seatbelt profile; an unsandboxed S refused; both proofs via O; DRAIN UNKNOWN with harness sessions), reval-census (dbInventory on a throwaway DB), reval-segments (QUIESCENT drains with the inventory, proofs in the receipt), NB7 and the native production chain; no throwaway database left afterwards",
+   "log": "test-pg.txt"
+  },
+  {
+   "command": "ATLAS_REVAL_E2E_200=1 npm run test:ui",
+   "result": "90 passed (21.8 min)",
+   "qualification": "200 COMMITTED, semantic MATCH, truth true, FX10 MISSING 15 (1177 s)",
+   "log": "test-ui.txt"
+  },
+  {
+   "command": "python3 mutations-harness.py (42 single-line mutations B01\u2013B41 + B07b, each restored and sha-verified; B01\u2013B06/B14/B39 re-run after the test additions)",
+   "result": "40/42 detected; B08 and B15 survive (qualified in IMPLEMENTATION_REPORT_B.md \u00a73)",
+   "log": "mutations.txt"
+  }
+ ],
+ "logDir": "verification/stage5/S5ASKREMOTE_REVAL_RSDB_RC1_EVIDENCE",
+ "logs": {
+  "artifact-check.txt": "6bab6dd3e41faff86e271ab8bc48930048937c4512a24be5c26ea6505099b213",
+  "build.txt": "d453750ee883dbbdc04fce661ae45e53e7533454073566ff842c50b3d230e3d3",
+  "drift.txt": "09745f1b994913bf6ad2fdcec79f7da0d6ceb405946380fd9885774b910d711f",
+  "exits.txt": "3be3ad92375271acd792cc98214ed987b7e953d8ad5aa2db4b99ca2d77587864",
+  "finished.txt": "15d63f7295348abff49c759f5acba0a4819eb729a43b58e919f84972e955fca8",
+  "mutations-harness.py": "7470a820d0fcfdaacd8a2c75cebff87a5bcbd25e8b7e64225f8f5fe5632e99ec",
+  "mutations.txt": "6048e778d4750893c37b14b763c402d562901ceb4d29c63211941d8df98a8432",
+  "pg17.txt": "ad9d66451e69caa21eca0cf7a49f0221b5802b20dbd3556675f10e8bbb182d37",
+  "schema.txt": "8c138270bd40c7dc512add52bc100c4c7f42074b0f371c2dd1314a46ef79dfef",
+  "smoke.txt": "200411f8d9d14e17c505fbe0e777272b68a00f1689e8f6fef735dfd00fe69514",
+  "started.txt": "72385edf8a25666f4b12c7ff1d1c7bf8b370816dedb75410dab7f9176b6816a1",
+  "test-pg.txt": "631e000376e1a57b3d480665038d2e2dea215562609a68cb1d9762ce2c84f87c",
+  "test-ui.txt": "f921c3c465927d46c0813e04ccefd3d7a25111d038aa749913e1024afbb0a3ff",
+  "typecheck.txt": "82ce872894ea3ff464db85484429617eb71eb7ae393adef0e216180bd46b5d41",
+  "ui-typecheck.txt": "94e4d3c0eae80d5541012e49723e5f5969b4d419b6c71a9b6d28e7f3068ef449",
+  "unit.txt": "6899e57ce601953b79c485cc08671a9239173a833e6258e6dca26051c019c1e7"
+ }
+}
