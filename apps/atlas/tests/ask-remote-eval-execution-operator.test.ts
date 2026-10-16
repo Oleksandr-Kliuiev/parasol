@@ -1,3 +1,4 @@
+import { loadContext, testArtifacts } from './support/reval-history.ts';
 import '../scripts/ask-remote-eval/guard-preload.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,6 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { capabilityV2 } from '../packages/ask/remote/contracts.ts';
-import { loadContext } from '../scripts/ask-remote-eval-execution/corpus.ts';
 import { fakeUuid } from '../scripts/ask-remote-eval-execution/fake-v2.ts';
 import { runOperatorSession } from '../scripts/ask-remote-eval-execution/operator.ts';
 import { replayNumeric } from '../scripts/ask-remote-eval-execution/replay.ts';
@@ -38,7 +38,7 @@ const MARK = 'MARKER-ПРОВЕРКА-7781';
 async function session(items: Item[], dir: string, rawWorks = true) {
   const out = { text: '' }; let mono = 5_000.25; const input = new FakeIn(items, out, rawWorks);
   const code = await runOperatorSession(dir, { input, output: { isTTY: true, write: (s: string) => { out.text += s; } },
-    clock: () => ({ utcMs: START + 60_000.5, monoMs: (mono += 333.333) }), nonce: () => 'c0ffee12', signals: false });
+    clock: () => ({ utcMs: START + 60_000.5, monoMs: (mono += 333.333) }), nonce: () => 'c0ffee12', signals: false }, testArtifacts);
   return { code, out: out.text, rawLog: input.rawLog };
 }
 const first = ctx.corpus.order[0]!; const c = ctx.corpus.cases.get(first)!;
@@ -111,7 +111,7 @@ test('RC2 R6: raw mode is armed before any output and kept; unavailable raw mode
     assert.match(ahead.out, /\[help\][\s\S]*UNKNOWN_COMMAND[\s\S]*\[quit\]/, 'type-ahead after a terminator is consumed by the next prompts');
     assert.ok(!ahead.out.includes('MARKER'));
     const out = { text: '' }; const input = new FakeIn(['quit\r'], out); input.isRaw = true;
-    assert.equal(await runOperatorSession(dir, { input, output: { isTTY: true, write: (x: string) => { out.text += x; } }, signals: false, armedPrior: true }), 0);
+    assert.equal(await runOperatorSession(dir, { input, output: { isTTY: true, write: (x: string) => { out.text += x; } }, signals: false, armedPrior: true }, testArtifacts), 0);
     assert.deepEqual(input.rawLog, [], 'armed by the CLI and prior raw: never switched off');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

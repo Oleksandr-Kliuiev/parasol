@@ -1,9 +1,9 @@
+import { verifyTestRevision } from '../support/reval-history.ts';
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { assertReceiptV6 } from '../../scripts/reval-instrument/receipt.ts';
 import { revise } from '../support/ask-remote-pg.ts';
 import { LiveOwner } from '../support/reval-eval-process.ts';
@@ -21,7 +21,7 @@ import { privateDir, writePrivate } from '../support/reval-test-deps.ts';
 // the receipt (v6) carries the drains, C's proofs and C's build. Docker PG17 = regression evidence only; never MEASURED.
 const darwin = process.platform === 'darwin' && process.arch === 'arm64';
 const skip = { skip: !darwin && 'darwin/arm64 only', timeout: 900_000 };
-const ctx = bindCorpus(verifyRevision().snapshot); // identity FIRST: no throwaway database on a top-level failure
+const ctx = bindCorpus(verifyTestRevision().snapshot); // identity FIRST: no throwaway database on a top-level failure
 const h = await segmentHarness('rsda-seg');
 after(async () => { await h.cleanup(); });
 

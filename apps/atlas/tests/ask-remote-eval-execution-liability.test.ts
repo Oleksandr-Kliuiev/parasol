@@ -1,10 +1,11 @@
+import { loadContext } from './support/reval-history.ts';
 import '../scripts/ask-remote-eval/guard-preload.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { EvalCase } from '../scripts/ask-remote-eval/dataset.ts';
 import type { FakeScript } from '../scripts/ask-remote-eval-execution/fake-v2.ts';
 import { buildReceipt } from '../scripts/ask-remote-eval-execution/receipt.ts';
-import { CONTRADICT, loadContext, observe, OTHER, playNext, playUntil, rig, UNRECONCILE } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
+import { CONTRADICT, observe, OTHER, playNext, playUntil, rig, UNRECONCILE } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
 import type { Play } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
 import { replayNumeric } from '../scripts/ask-remote-eval-execution/replay.ts';
 

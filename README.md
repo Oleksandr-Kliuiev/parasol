@@ -42,11 +42,11 @@ DATABASE_URL=postgresql://test:test@127.0.0.1:5432/unused npm run check
 | --- | --- |
 | `npm run bootstrap` | `npm ci` обоих приложений и `dotnet restore` CRM |
 | `npm run build` | Atlas API + оба интерфейса Atlas, CRM backend + SPA |
-| `npm run check` | История, типы, lint, CRM unit/architecture/frontend, Atlas import baseline |
+| `npm run check` | История, типы, lint, CRM unit/architecture/frontend, строгие Atlas unit |
 | `npm run check:history` | Проверка SHA, точности импорта и архивных веток |
-| `npm run test:atlas:strict` | Исходный набор Atlas без исключений; сейчас завершится с ошибками |
-| `npm run test:atlas:pg` | Тесты на отдельном PostgreSQL 17 (`ATLAS_PG_ADMIN_URL`) после сборки |
-| `npm run test:atlas:ui` | Браузерные тесты Atlas; предварительно установите его Chromium |
+| `npm run test:atlas:strict` | Полный unit-набор Atlas без ошибок и пропусков (macOS arm64) |
+| `npm run test:atlas:pg` | Полный PostgreSQL 17 набор, включая native Unix и 200-case rehearsal |
+| `npm run test:atlas:ui` | Все браузерные тесты Atlas, включая 200 запросов; требуется Chromium и тестовый PG |
 | `npm run test:crm:integration` | Тесты CRM в локальных контейнерах после Release-сборки |
 | `npm run test:crm:e2e` | CRM + worker + локальная SQL test DB + макеты внешних API |
 
@@ -55,18 +55,19 @@ DATABASE_URL=postgresql://test:test@127.0.0.1:5432/unused npm run check
 
 ## Что означает зелёный CI
 
-CI проверяет перенос и отсутствие новых регрессий. **Это не полная приёмка Atlas**:
-14 сбоев исходного `main` зафиксированы в [списке известных ошибок](docs/migration/BASELINE.md).
-Все тесты выполняются; исключение ограничено неизменённым деревом импортированного Atlas.
-Любое изменение Atlas требует закрыть или заново обосновать этот технический долг.
+CI проверяет Linux-сборку Atlas и полный набор тестов на macOS arm64, включая
+унаследованные нативные проверки терминала, peer credentials и F_FULLFSYNC.
+**Список разрешённых ошибок удалён.** Unit, PostgreSQL и browser gates отвергают ошибки,
+пропуски, отмены и todo; браузерный gate также отвергает retries. Оба сценария на 200
+случаев выполняются с настоящими временными ограничениями.
 
-CI включает обычные проверки CRM без исключений: unit, architecture, SQL/storage integration,
-coverage, frontend, браузерные сценарии и аудит зависимостей. PostgreSQL и браузерные тесты
-Atlas выполняются строго, без baseline-исключений.
+CRM сохраняет свои unit, architecture, SQL/storage integration, coverage, frontend,
+браузерные проверки и аудит зависимостей. Рабочие базы и внешние интеграции не используются.
+Инструкция запуска полного Atlas: [ATLAS.md](docs/testing/ATLAS.md).
 
-Текущий результат проверок и блокеры: [VERIFICATION.md](docs/migration/VERIFICATION.md).
-GitHub Actions пока не запускает jobs из-за billing/spending limit аккаунта.
-Полные PostgreSQL/browser suites Atlas имеют открытые ошибки; зелёного полного CI пока нет.
+Текущие результаты и ограничения: [VERIFICATION.md](docs/migration/VERIFICATION.md).
+GitHub Actions ранее не запускал jobs из-за billing/spending limit аккаунта;
+локальные результаты не подменяют подтверждение выполнения CI на GitHub.
 
 История и SHA исходников сохранены: [описание импорта](docs/migration/IMPORT.md).
 План продолжения и границы этапа: [M01–M03](docs/migration/M01-M03.md).

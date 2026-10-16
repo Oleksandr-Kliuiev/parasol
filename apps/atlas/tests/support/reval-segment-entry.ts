@@ -1,3 +1,4 @@
+import { verifyTestRevision } from './reval-history.ts';
 // TEST-ONLY segment rehearsal driver (rs-d brief A §6, brief C §1.8; owner decisions D1/D2), run under a live PTY as I (like the NB7
 // driver): the REAL instrument code on the unchanged RC5 ExecutionSession follows the fixture-grouped order and crosses every fixture
 // boundary with S and C up: GO is refused before the voluntary-pause closure and before the DRAIN (nothing consumed), the owner's
@@ -13,7 +14,6 @@ import { join } from 'node:path';
 import { sameIdentity } from '../../scripts/ask-remote-eval-execution/artifact.ts';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
 import { ExecutionSession } from '../../scripts/ask-remote-eval-execution/session.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { ControlClient, HandoffClient } from '../../scripts/reval-instrument/ipc.ts';
 import { withGroupedOrder } from '../../scripts/reval-instrument/order.ts';
 import { buildReceiptV6, writeReceiptV6 } from '../../scripts/reval-instrument/receipt.ts';
@@ -32,7 +32,7 @@ const expect = (got: string, want: string | RegExp, what: string) => {
   if (typeof want === 'string' ? got !== want : !want.test(got)) throw new Error(`${what} ${got}`);
 };
 
-const start = verifyRevision();
+const start = verifyTestRevision();
 if (!start.snapshot.ok || !start.revision) { out(`SEGMENTS_FAILED IDENTITY ${start.snapshot.drift.join(',')}`); process.exit(1); }
 const ctx = bindCorpus(start.snapshot);
 const { corpus, order } = withGroupedOrder(ctx.corpus);
@@ -55,12 +55,12 @@ const { control, handoff } = await connectBoth();
 out(`CONNECTED ${control.binding.connectionId} ${handoff.connectionId}`);
 mkdirSync(input.receiptDir, { recursive: true, mode: 0o700 });
 const session = new ExecutionSession({ runClass: 'UNADMITTED_LOCAL_OBSERVATION', clock: () => ({ utcMs: Date.now(), monoMs: performance.now() }),
-  verify: () => verifyRevision().snapshot, nonce: () => randomUUID().slice(0, 8), corpus }, input.admission);
+  verify: () => verifyTestRevision().snapshot, nonce: () => randomUUID().slice(0, 8), corpus }, input.admission);
 const connection = { registrationId: control.binding.registrationId, serverBootId: control.binding.serverBootId, controlConnectionId: control.binding.connectionId,
   handoffConnectionId: handoff.connectionId };
 const run: MeasuredRun = new MeasuredRun({ session, corpus, order, ports: { control, handoff }, mono: () => performance.now(), wallMs: () => Date.now(),
   persist: () => { try { writeReceiptV6(input.receiptDir, buildReceiptV6(session, run, ctx.cases, start.revision!, connection), ctx.cases, input.receiptName); return true; } catch { return false; } },
-  identityHolds: () => sameIdentity(start.snapshot, verifyRevision().snapshot) });
+  identityHolds: () => sameIdentity(start.snapshot, verifyTestRevision().snapshot) });
 const browser = { pairId: '', sessionToken: '', policyVersion: input.policyVersion };
 const drive = caseDriver({ port: input.port, bearer: input.bearer, clientId: input.clientId, admissionId: input.admission.admissionId, session, corpus, run, browser: () => browser });
 /** The browser PAIR with the owner's nonce, then the operator's `pair-ack` (the owner's PAIR_ACK: pairId + nonce expiry). */

@@ -126,8 +126,14 @@ test('approved pricing: policy AND every project attempt against the accepted co
   assert.ok(!pricingMatches(wrapper({ profile: 'other-profile' }), 'price-a'));
   assert.throws(() => exportSnapshot(wrapper({ priceRevision: 'price-b' }), 'price-a'), (e: ReaderFailure) => e.code === 'POLICY_CHANGED');
   const exported = exportSnapshot(wrapper({}, [tuple()]), 'price-a');
-  const text = JSON.stringify(exported);
-  for (const forbidden of ['price-a', '275', '825', 'pricing', 'systemIdentifier', 'registrationId']) assert.ok(!text.includes(forbidden), forbidden);
+  // Inspect fields/values, not substrings: a random snapshot UUID can legitimately contain 275 or 825.
+  const privateFields = new Set(['pricing', 'priceRevision', 'promptRate', 'completionRate', 'systemIdentifier', 'registrationId']);
+  const inspect = (value: unknown): void => {
+    if (value !== null && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) { assert.ok(!privateFields.has(key), key); inspect(child); }
+    } else assert.ok(!['price-a', '275', '825', 275, 825].includes(value as string | number), 'private pricing value');
+  };
+  inspect(exported);
   for (const [s, code] of [['RV001', 'REGISTRATION_MISMATCH'], ['RV002', 'CENSUS_UNAVAILABLE'], ['RV003', 'CENSUS_LIMIT_EXCEEDED'], ['RV004', 'POLICY_CHANGED'],
     ['RV005', 'FIXTURE_MISMATCH'], ['RV006', 'CENSUS_UNAVAILABLE'], ['57014', 'CENSUS_UNAVAILABLE'], ['55P03', 'CENSUS_UNAVAILABLE'], ['XX000', 'INTERNAL_FAILURE']] as const) {
     assert.equal(readerCodeFor(s), code, s);

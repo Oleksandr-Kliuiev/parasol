@@ -122,13 +122,16 @@ export class HandoffClient {
   next(ms = 3000): Promise<any> { return this.channel.next(ms); }
 }
 
-export interface HttpResult { status: number; headers: Record<string, string | string[] | undefined>; body: string }
+export interface HttpResult { status: number; headers: Record<string, string | string[] | undefined>; body: string; bodyBytes: Buffer }
 /** Raw loopback POST with exact headers (fetch cannot set Host/Sec-Fetch-Site). `body: null` sends headers only and never the body. */
 export function post(port: number, path: string, body: string | null, headers: Record<string, string>, method = 'POST'): Promise<HttpResult> {
   return new Promise((resolve, reject) => {
     const req = httpRequest({ host: '127.0.0.1', port, path, method, headers, setHost: false, agent: false }, res => {
       const chunks: Buffer[] = [];
-      res.on('data', c => chunks.push(c)); res.on('end', () => resolve({ status: res.statusCode!, headers: res.headers, body: Buffer.concat(chunks).toString('utf8') }));
+      res.on('data', c => chunks.push(c)); res.on('end', () => {
+        const bodyBytes = Buffer.concat(chunks);
+        resolve({ status: res.statusCode!, headers: res.headers, body: bodyBytes.toString('utf8'), bodyBytes });
+      });
     });
     req.on('error', reject);
     if (body === null) req.flushHeaders(); else req.end(body);

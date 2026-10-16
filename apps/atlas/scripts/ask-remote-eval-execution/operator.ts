@@ -14,14 +14,14 @@ import { performance } from 'node:perf_hooks';
 import { randomBytes } from 'node:crypto';
 import type { Clock } from '../ask-remote-eval/supervisor.ts';
 import { admissionBlockers } from './artifact.ts';
-import { loadContext } from './corpus.ts';
+import { productionArtifacts } from './corpus.ts';
+import type { ArtifactAccess } from './corpus.ts';
 import { buildReceipt, lockRun, writeReceipt } from './receipt.ts';
 import { ExecutionSession } from './session.ts';
 import type { OutcomeInput } from './session.ts';
 import { InputCollector } from './tty-input.ts';
 import type { Collected } from './tty-input.ts';
 import { codeOf } from './validate.ts';
-import { verifyArtifact } from './artifact.ts';
 
 export interface TtyIn { isTTY?: boolean; isRaw?: boolean; setRawMode(on: boolean): unknown; on(e: 'data', f: (b: Buffer) => void): unknown; off(e: 'data', f: (b: Buffer) => void): unknown; resume(): unknown; pause(): unknown }
 export interface TtyOut { isTTY?: boolean; write(s: string): unknown }
@@ -58,17 +58,17 @@ const COMMANDS = new Set(['help', 'admission', 'confirm', 'counters', 'capabilit
 
 class Aborted extends Error { constructor() { super('ABORTED'); } }
 
-export async function runOperatorSession(receiptDir: string, io: OperatorIo = { input: process.stdin, output: process.stdout, signals: true }): Promise<number> {
+export async function runOperatorSession(receiptDir: string, io: OperatorIo = { input: process.stdin, output: process.stdout, signals: true }, artifacts: ArtifactAccess = productionArtifacts): Promise<number> {
   if (!io.input.isTTY || !io.output.isTTY) { process.stderr.write('SESSION_REQUIRES_INTERACTIVE_TTY\n'); return 2; }
   const prior = io.armedPrior ?? io.input.isRaw === true;
   /** Restore exactly the mode found before arming (raw stays raw); called only at session exit/cleanup. */
   const restore = (): void => { try { if (!prior) io.input.setRawMode(false); } catch { /* terminal gone */ } io.input.pause(); };
   if (io.armedPrior === undefined) { try { io.input.setRawMode(true); } catch { /* checked below */ } }
   if (io.input.isRaw !== true) { restore(); process.stderr.write('TTY_RAW_MODE_UNAVAILABLE\n'); return 2; }
-  try { return await interactive(receiptDir, io, restore); } finally { restore(); }
+  try { return await interactive(receiptDir, io, restore, artifacts); } finally { restore(); }
 }
 
-async function interactive(receiptDir: string, io: OperatorIo, restore: () => void): Promise<number> {
+async function interactive(receiptDir: string, io: OperatorIo, restore: () => void, artifacts: ArtifactAccess): Promise<number> {
   const out = (line: string): void => { io.output.write(`${line}\n`); };
   try { if (!statSync(receiptDir).isDirectory()) throw new Error(); } catch { process.stderr.write('RECEIPT_DIR_INVALID\n'); return 2; }
   let pending: Buffer = Buffer.alloc(0);
@@ -97,7 +97,7 @@ async function interactive(receiptDir: string, io: OperatorIo, restore: () => vo
   const paste = (p: string): Promise<string> => read(p, true);
 
   BANNER.forEach(out);
-  const ctx = loadContext();
+  const ctx = artifacts.loadContext();
   out(`ARTIFACT ${ctx.snapshot.ok ? 'VERIFIED' : 'DRIFT'} files=${ctx.snapshot.filesChecked} drift=${ctx.snapshot.drift.join(',') || 'none'}`);
   out(`LIVE_ADMISSION BLOCKED: ${admissionBlockers(ctx.snapshot).join(',')}`);
   if (!ctx.snapshot.ok) return 1;
@@ -133,7 +133,7 @@ async function interactive(receiptDir: string, io: OperatorIo, restore: () => vo
           dayCapMicro: await line('DAY cap micro-USD'), monthCapMicro: await line('MONTH cap micro-USD'), openingFenceEpoch: await line('opening fence epoch'),
           pacingMax: await line('pacing max per 60 s (≤10)') };
         const created = new ExecutionSession({ runClass: 'UNADMITTED_LOCAL_OBSERVATION', clock: io.clock ?? (() => ({ utcMs: Date.now(), monoMs: performance.now() })),
-          verify: verifyArtifact, nonce: io.nonce ?? (() => randomBytes(4).toString('hex')), corpus: ctx.corpus }, input);
+          verify: artifacts.verifyArtifact, nonce: io.nonce ?? (() => randomBytes(4).toString('hex')), corpus: ctx.corpus }, input);
         lockRun(receiptDir, created.admission.admissionId);
         session = created; receiptName = `REVAL_EXECUTION_${created.admission.admissionId}.json`;
         out('ADMISSION_RECORDED_ATTESTED');

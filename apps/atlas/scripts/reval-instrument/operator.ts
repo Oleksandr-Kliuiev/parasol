@@ -37,16 +37,16 @@ const COMMANDS = new Set(['help', 'connect', 'admission', 'confirm', 'capability
   'unrecorded-click', 'deviation', 'closure', 'pause', 'drain', 'census', 'proofs', 'resume-day', 'resume-pause', 'export', 'quit']);
 class Aborted extends Error { constructor() { super('ABORTED'); } }
 
-export async function runInstrumentSession(ownerConfig: string, receiptDir: string, io: OperatorIo): Promise<number> {
+export async function runInstrumentSession(ownerConfig: string, receiptDir: string, io: OperatorIo, verify: typeof verifyRevision = verifyRevision): Promise<number> {
   if (!io.input.isTTY || !io.output.isTTY) { process.stderr.write('SESSION_REQUIRES_INTERACTIVE_TTY\n'); return 2; }
   const prior = io.armedPrior ?? io.input.isRaw === true;
   const restore = (): void => { try { if (!prior) io.input.setRawMode(false); } catch { /* terminal gone */ } io.input.pause(); };
   if (io.armedPrior === undefined) { try { io.input.setRawMode(true); } catch { /* checked below */ } }
   if (io.input.isRaw !== true) { restore(); process.stderr.write('TTY_RAW_MODE_UNAVAILABLE\n'); return 2; }
-  try { return await interactive(ownerConfig, receiptDir, io, restore); } finally { restore(); }
+  try { return await interactive(ownerConfig, receiptDir, io, restore, verify); } finally { restore(); }
 }
 
-async function interactive(ownerConfig: string, receiptDir: string, io: OperatorIo, restore: () => void): Promise<number> {
+async function interactive(ownerConfig: string, receiptDir: string, io: OperatorIo, restore: () => void, verifyArtifact: typeof verifyRevision): Promise<number> {
   const out = (line: string): void => { io.output.write(`${line}\n`); };
   try { if (!statSync(receiptDir).isDirectory()) throw new Error(); } catch { process.stderr.write('RECEIPT_DIR_INVALID\n'); return 2; }
   let config;
@@ -71,7 +71,7 @@ async function interactive(ownerConfig: string, receiptDir: string, io: Operator
   const paste = (p: string): Promise<string> => read(p, true);
 
   BANNER.forEach(out);
-  const start = verifyRevision();
+  const start = verifyArtifact();
   out(`ARTIFACT ${start.snapshot.ok ? 'VERIFIED' : 'DRIFT'} files=${start.snapshot.filesChecked} drift=${start.snapshot.drift.join(',') || 'none'}`);
   if (!start.snapshot.ok || start.revision === null) return 1;
   const ctx = bindCorpus(start.snapshot);
@@ -79,7 +79,7 @@ async function interactive(ownerConfig: string, receiptDir: string, io: Operator
   try { grouped = withGroupedOrder(ctx.corpus); } catch { out('ORDER_DRIFT'); return 1; }
   const { corpus, order } = grouped;
   out(`ORDER ${order.rule} ${order.sha256}`);
-  const verify = () => verifyRevision().snapshot;
+  const verify = () => verifyArtifact().snapshot;
   const dir = dirname(ownerConfig);
   // The only network the process may open: the owner's two measured sockets (the CLI installed the guard first).
   if (guardInstalled()) allowUnixSockets([join(dir, 'reval-instrument.sock'), join(dir, 'reval-handoff.sock')]);

@@ -1,3 +1,4 @@
+import { verifyTestRevision } from '../support/reval-history.ts';
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -9,7 +10,6 @@ import { computeDigests, PROJECT_ROOT } from '../../packages/reval/launch.ts';
 import { registerSandbox } from '../../packages/reval/register.ts';
 import { buildPeer } from '../../scripts/reval-server/build-peer.ts';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { assertReceiptV6 } from '../../scripts/reval-instrument/receipt.ts';
 import { fenceOf, PRICE, revise } from '../support/ask-remote-pg.ts';
 import { LiveOwner } from '../support/reval-eval-process.ts';
@@ -27,7 +27,7 @@ import { dockerPhysical, NODE_REALPATH, privateDir, writeOwnerConfig, writePriva
 const darwin = process.platform === 'darwin' && process.arch === 'arm64';
 const skip = { skip: !darwin && 'darwin/arm64 only' };
 // Identity and corpus FIRST: a top-level failure must happen before any throwaway database exists.
-const ctx = bindCorpus(verifyRevision().snapshot);
+const ctx = bindCorpus(verifyTestRevision().snapshot);
 const CASE = 'RE-UNS-051'; const question = ctx.corpus.cases.get(CASE)!.question;
 const ns = await nonsuperDatabase();
 const { db } = ns; const owner = db.owner;
@@ -45,7 +45,7 @@ const bearer = generateToken();
 await ownerTx(owner, () => owner.query(`INSERT INTO "ApiToken" ("workspaceId", id, "actorId", "tokenHash") VALUES ($1, 'tok-rscb', $2, $3)`, [WS, ACTOR, hashToken(bearer)]));
 const u = new URL(db.ownerUrl); const tcp = { host: u.hostname, port: Number(u.port || 5432) };
 const ownerEntry = fileURLToPath(new URL('../support/reval-test-owner-entry.ts', import.meta.url));
-const cli = fileURLToPath(new URL('../../scripts/reval-instrument/cli.ts', import.meta.url));
+const cli = fileURLToPath(new URL('../support/reval-instrument-cli.ts', import.meta.url));
 let n = 0; let port = 4900 + Math.floor(Math.random() * 300);
 
 async function session() {

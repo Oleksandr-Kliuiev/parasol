@@ -1,3 +1,4 @@
+import { loadContext } from './support/reval-history.ts';
 import '../scripts/ask-remote-eval/guard-preload.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,13 +6,12 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadContext } from '../scripts/ask-remote-eval-execution/corpus.ts';
 
 // Execution instrument CLI processes and static boundaries: no live/paid mode, TTY-only operator session, guard first,
 // no network/child/worker/environment surface in the tool, reproducible committed rehearsal receipt.
 
 const cli = (args: string[], input?: string) => spawnSync(process.execPath, ['--experimental-strip-types', '--no-warnings',
-  'scripts/ask-remote-eval-execution/cli.ts', ...args], { encoding: 'utf8', input, env: { PATH: process.env.PATH ?? '' }, timeout: 120_000 });
+  'tests/support/eval-execution-cli.ts', ...args], { encoding: 'utf8', input, env: { PATH: process.env.PATH ?? '' }, timeout: 120_000 });
 const DIR = new URL('../scripts/ask-remote-eval-execution/', import.meta.url);
 const sources = readdirSync(DIR).filter(n => n.endsWith('.ts')).map(n => [n, readFileSync(new URL(n, DIR), 'utf8')] as const);
 const ctx = loadContext();
@@ -38,7 +38,7 @@ test('artifact-check: identity verified for local use; live admission BLOCKED wi
   assert.deepEqual(out.drift, []);
 });
 
-test('rehearse: all scenarios pass, replay deterministic, output safe and equal to the committed receipt', () => {
+test('rehearse: all scenarios pass, replay deterministic, output safe and deterministic with the archived numeric outcome', () => {
   const r = cli(['rehearse']);
   assert.equal(r.status, 0, r.stderr);
   const out = JSON.parse(r.stdout) as Record<string, any>;
@@ -46,7 +46,10 @@ test('rehearse: all scenarios pass, replay deterministic, output safe and equal 
   assert.equal(out.scenarios.pass, out.scenarios.total); assert.equal(out.semanticEvaluation, false); assert.equal(out.liveAcceptanceEligible, false);
   for (const c of ctx.cases) assert.ok(!r.stdout.includes(JSON.stringify(c.question).slice(1, 41)), c.caseId);
   const committed = readFileSync(new URL('../docs/stage5/ask/remote/execution/rehearsal/EXECUTION_REHEARSAL_RECEIPT.json', import.meta.url), 'utf8');
-  assert.equal(r.stdout, committed);
+  assert.equal(r.stdout, cli(['rehearse']).stdout);
+  const historical = JSON.parse(committed);
+  assert.deepEqual(out.fullRunReceipt.run, historical.fullRunReceipt.run);
+  assert.deepEqual(out.fullRunReceipt.liability, historical.fullRunReceipt.liability);
 });
 
 test('replay --receipt: a saved receipt is schema-checked and its numeric evidence replayed; tampering fails closed', () => {
@@ -70,6 +73,7 @@ test('static boundary: guard installed first, no network/child/worker/env/eval s
   const staticImports = cliSource.split('\n').filter(l => /^import /.test(l));
   assert.deepEqual(staticImports, ["import { installNetworkGuard } from '../ask-remote-eval/net-guard.ts';"]);
   assert.ok(cliSource.indexOf('installNetworkGuard();') < cliSource.indexOf('await import('));
+  assert.ok(cliSource.indexOf('process.stdin.setRawMode(true)') < cliSource.indexOf('await import('), 'raw mode precedes dispatcher and corpus loading');
   const forbidden = /from 'node:(child_process|worker_threads|cluster|http|https|http2|net|tls|dgram|dns)'|\bfetch\(|process\.env|\beval\(|new Function\(|\bspawn|\bexec(Sync|File)?\(/;
   for (const [name, text] of sources) {
     assert.ok(!forbidden.test(text), name);
@@ -78,4 +82,12 @@ test('static boundary: guard installed first, no network/child/worker/env/eval s
   }
   const operator = sources.find(([n]) => n === 'operator.ts')![1];
   assert.ok(!/rehearsal|fake-v2/.test(operator.split('\n').filter(l => l.startsWith('import')).join('\n')), 'operator session never loads the fake');
+});
+
+test('production entry refuses the evolving checkout: a test fixture cannot admit a live artifact', () => {
+  const r = spawnSync(process.execPath, ['--experimental-strip-types', 'scripts/ask-remote-eval-execution/cli.ts', 'artifact-check'], { encoding: 'utf8' });
+  assert.equal(r.status, 1);
+  const result = JSON.parse(r.stdout);
+  assert.equal(result.ok, false); assert.equal(result.liveAcceptanceEligible, false);
+  assert.ok(result.admissionBlockers.includes('ARTIFACT_IDENTITY_NOT_VERIFIED'));
 });

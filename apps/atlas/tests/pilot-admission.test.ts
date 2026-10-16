@@ -34,7 +34,7 @@ test('a clean process only: NODE_OPTIONS, preloads/loaders and test-harness vari
 test('command allowlist: every other operator command is refused before its flags are even parsed', () => {
   const others = OPERATOR_COMMANDS.filter(c => !(PILOT_COMMANDS as readonly string[]).includes(c));
   assert.deepEqual([...others].sort(), ['bind', 'decisions-smoke', 'inbox', 'm365-cleanup', 'm365-directory-reset', 'm365-disable', 'm365-requeue',
-    'reject-link', 'requeue', 'shadow-once', 'telemetry', 'triage', 'worker-once'].sort());
+    'onboard', 'reject-link', 'requeue', 'shadow-once', 'telemetry', 'triage', 'worker-once'].sort());
   for (const command of [...others, 'unknown', '__proto__', 'M365-PROBE']) {
     assert.throws(() => validatePilotConfig(valid(command, { client: 'pilot-client', bogus: 'x' })), failsWith('PILOT_COMMAND_REFUSED'), command);
   }

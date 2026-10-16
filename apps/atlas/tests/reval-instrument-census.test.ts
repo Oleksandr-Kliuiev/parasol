@@ -1,3 +1,4 @@
+import { verifyTestRevision } from './support/reval-history.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -7,7 +8,6 @@ import { RESPONSE_KIND } from '../packages/reval/codes.ts';
 import { bindCorpus } from '../scripts/ask-remote-eval-execution/corpus.ts';
 import { compareCase, compareGap, segmentBoundaryProblem } from '../scripts/reval-instrument/census.ts';
 import type { CensusRecord } from '../scripts/reval-instrument/census.ts';
-import { verifyRevision } from '../scripts/reval-instrument/identity.ts';
 import { EMITTER, EXPECTED_KIND } from '../scripts/reval-instrument/ipc.ts';
 import { GROUPED_ORDER_SHA256, groupedOrder, ORDER_RULE, withGroupedOrder } from '../scripts/reval-instrument/order.ts';
 import { MeasuredRun } from '../scripts/reval-instrument/run.ts';
@@ -93,7 +93,7 @@ test('segment boundary: a CONFIRMED voluntary closure after the previous case an
 
 test('D1 grouped order: first-appearance groups, frozen order inside each group, the pinned digest, and the run binds its corpus to it', () => {
   assert.deepEqual(groupedOrder(['a1', 'b1', 'a2', 'c1', 'b2', 'a3'], id => id[0]!), ['a1', 'a2', 'a3', 'b1', 'b2', 'c1']);
-  const ctx = bindCorpus(verifyRevision().snapshot);
+  const ctx = bindCorpus(verifyTestRevision().snapshot);
   const { corpus, order } = withGroupedOrder(ctx.corpus);
   assert.deepEqual([order.rule, order.sha256, corpus.order.length, new Set(corpus.order).size], [ORDER_RULE, GROUPED_ORDER_SHA256, 200, 200]);
   const fx = (id: string) => corpus.cases.get(id)!.fixtureId;

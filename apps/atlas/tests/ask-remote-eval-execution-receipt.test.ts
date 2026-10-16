@@ -1,3 +1,4 @@
+import { loadContext } from './support/reval-history.ts';
 import '../scripts/ask-remote-eval/guard-preload.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ import { capabilityV2 } from '../packages/ask/remote/contracts.ts';
 import { admissionBlockers } from '../scripts/ask-remote-eval-execution/artifact.ts';
 import { fakeUuid } from '../scripts/ask-remote-eval-execution/fake-v2.ts';
 import { assertReceipt, buildReceipt, lockRun, writeReceipt } from '../scripts/ask-remote-eval-execution/receipt.ts';
-import { loadContext, playNext, rig } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
+import { playNext, rig } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
 import { checkCapability } from '../scripts/ask-remote-eval-execution/transient.ts';
 import { ExecError, ledgerValues } from '../scripts/ask-remote-eval-execution/validate.ts';
 

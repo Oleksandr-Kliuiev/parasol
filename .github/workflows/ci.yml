@@ -31,7 +31,7 @@ jobs:
       - run: node --test scripts/*.test.mjs
 
   atlas:
-    name: Atlas build and inherited tests
+    name: Atlas Linux build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -48,28 +48,15 @@ jobs:
       - run: npm ci --prefix apps/atlas
       - run: npm run build:atlas
       - run: npm run check:atlas
-      # Executes EVERY unit test. Only the documented, immutable upstream baseline
-      # is tolerated. Any new failure or Atlas source change fails this gate.
-      - run: npm run test:atlas
 
   atlas-integration:
-    name: Atlas PostgreSQL and browser
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: parasol_test
-          POSTGRES_PASSWORD: parasol_test_only
-          POSTGRES_DB: postgres
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U parasol_test -d postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 12
+    name: Atlas complete tests (no skips)
+    # The inherited peer-credential and F_FULLFSYNC contracts require native Darwin/arm64.
+    # Linux production builds are validated independently by the atlas job above.
+    runs-on: macos-15
+    timeout-minutes: 150
     env:
-      DATABASE_URL: postgresql://parasol_test:parasol_test_only@127.0.0.1:5432/postgres
-      ATLAS_PG_ADMIN_URL: postgresql://parasol_test:parasol_test_only@127.0.0.1:5432/postgres
+      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/unused
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -81,12 +68,22 @@ jobs:
           cache-dependency-path: apps/atlas/package-lock.json
       - run: npm ci --prefix apps/atlas
       - run: npm run build:atlas
+      - run: npm run test:atlas
+      - name: Install test database runtime
+        run: brew install postgresql@17
+      - name: Start disposable native PostgreSQL
+        run: node scripts/atlas-postgres.mjs start
       - run: npm run db:check:pg17 --prefix apps/atlas
       - run: npm run db:check:drift --prefix apps/atlas
-      - run: npm run test:atlas:pg
-      - run: npx playwright install --with-deps chromium
+      - name: Every PostgreSQL test, including native chain and paced 200-case rehearsal
+        run: npm run test:atlas:pg
+      - run: npx playwright install chromium
         working-directory: apps/atlas
-      - run: npm run test:atlas:ui
+      - name: Every browser test, including the paced 200-case journey
+        run: npm run test:atlas:ui
+      - name: Stop disposable PostgreSQL
+        if: ${{ always() }}
+        run: node scripts/atlas-postgres.mjs stop
 
   crm-backend:
     name: CRM backend and SQL integration
@@ -202,5 +199,5 @@ jobs:
           failures = [name for name, job in results.items() if job['result'] != 'success']
           if failures:
               raise SystemExit('Unsuccessful checks: ' + ', '.join(failures))
-          print('All Parasol migration checks passed. See Atlas baseline warnings; this is not a production release.')
+          print('All Parasol checks passed, including complete Atlas suites with no failure or skip exceptions.')
           PY

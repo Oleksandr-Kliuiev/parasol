@@ -1,3 +1,4 @@
+import { verifyTestRevision } from './support/reval-history.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
@@ -7,7 +8,6 @@ import { bindCorpus } from '../scripts/ask-remote-eval-execution/corpus.ts';
 import { FakeV2, fakeRequest } from '../scripts/ask-remote-eval-execution/fake-v2.ts';
 import { buildReceipt } from '../scripts/ask-remote-eval-execution/receipt.ts';
 import { ExecutionSession } from '../scripts/ask-remote-eval-execution/session.ts';
-import { verifyRevision } from '../scripts/reval-instrument/identity.ts';
 import { withGroupedOrder } from '../scripts/reval-instrument/order.ts';
 import { assertReceiptV6, buildReceiptV6, effectiveOf } from '../scripts/reval-instrument/receipt.ts';
 import { CASE_PAIR_RESERVE_MS, HANDOFF_SETTLE_MS, MeasuredRun, SLOT_CLEAR_MS } from '../scripts/reval-instrument/run.ts';
@@ -21,7 +21,7 @@ import { fakeSnapshot } from './support/reval-instrument-fixtures.ts';
 // plus S's handoff deadline; an arm S never claimed stops arming once expired (NB9). rc2: a detected fault in any record blocks
 // credit and arming and makes the run FAILED; a case without a FINAL record or with a contradicting publication is never credited;
 // a record or READY_ACK that does not answer I's own READY is refused; once armed, a failure ends I's pair. Synthetic values only.
-const SNAP = verifyRevision().snapshot; const REV = verifyRevision().revision!;
+const SNAP = verifyTestRevision().snapshot; const REV = verifyTestRevision().revision!;
 const CTX = bindCorpus(SNAP);
 // RS-D-A: the run follows the fixture-grouped order (owner decision D1); `supportedFirst` rigs use a custom order (no v4 receipt).
 const GROUPED = withGroupedOrder(CTX.corpus); const { corpus } = GROUPED;

@@ -1,3 +1,4 @@
+import { verifyTestRevision } from '../support/reval-history.ts';
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -9,7 +10,6 @@ import { generateToken, hashToken } from '../../packages/auth/token.ts';
 import { PROJECT_ROOT } from '../../packages/reval/launch.ts';
 import { buildPeer } from '../../scripts/reval-server/build-peer.ts';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { assertReceiptV6 } from '../../scripts/reval-instrument/receipt.ts';
 import { PRISMA_CLI, runWithDatabase } from '../support/pg-harness.ts';
 import { PRICE, revise } from '../support/ask-remote-pg.ts';
@@ -20,7 +20,7 @@ import { ACTOR, CLIENT, WS, provisionSandbox } from '../support/reval-fixture-pg
 import { dropRolesSql, readRolesSql, renderRolesSql, revalRoleNames, uniqueRoleNames } from '../support/roles-sql.ts';
 import { privateDir, writeOwnerConfig } from '../support/reval-test-deps.ts';
 
-// R-EVAL RS-C-B native Unix PG17 PRODUCTION CHAIN (rs-c brief B §7): with ATLAS_REVAL_NATIVE_PG_FIXTURE set, production
+// R-EVAL RS-C-B native Unix PG17 server chain (instrument artifact input is the verified historical test fixture) (rs-c brief B §7): with ATLAS_REVAL_NATIVE_PG_FIXTURE set, production
 // maintenance installs FX07 (the first frozen case's fixture); the production owner CLI (live PTY) → production controller → the
 // BUILT production bridge server (no-key seams) and the REAL instrument revision CLI (live PTY) run the first case: GO → the
 // browser's question → 503 ASK_REMOTE_UNAVAILABLE (never dispatched) → measured handoff of that ERROR → COMMITTED → finish → v4 (RS-D-A:
@@ -33,7 +33,7 @@ const fx: Native | null = fixturePath ? JSON.parse(readFileSync(fixturePath, 'ut
 const connect = async (user: string, password: string, database: string) => { const c = new pg.Client({ host: fx!.socketDir, port: fx!.port, user, password, database }); await c.connect(); return c; };
 const maintain = (config: string, ...args: string[]) => JSON.parse(spawnSync(process.execPath, [`${PROJECT_ROOT}/scripts/reval-server/maintain.ts`, '--config', config, ...args],
   { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } }).stdout.trim()) as Record<string, unknown>;
-const ctx = bindCorpus(verifyRevision().snapshot);
+const ctx = bindCorpus(verifyTestRevision().snapshot);
 const CASE = 'RE-UNS-051'; const question = ctx.corpus.cases.get(CASE)!.question;
 
 test('native production chain + instrument revision: GO → no-key ERROR → measured handoff COMMITTED → finish → receipt v6', { skip, timeout: 600000 }, async () => {
@@ -89,7 +89,7 @@ test('native production chain + instrument revision: GO → no-key ERROR → mea
   assert.match((await o.type('fixture-check'))[0]!, /^OK FIXTURE_CHECK .*"allFiveIntents":true/);
   const policyVersion = await revise(owner, WS, { state: 'ACTIVE' });
   const receipts = join(dir, 'receipts'); mkdirSync(receipts, { mode: 0o700 });
-  i = new LiveTty(dir, `${PROJECT_ROOT}/scripts/reval-instrument/cli.ts`, ['session', '--owner-config', config, '--receipt-dir', receipts], 'instrument');
+  i = new LiveTty(dir, `${PROJECT_ROOT}/tests/support/reval-instrument-cli.ts`, ['session', '--owner-config', config, '--receipt-dir', receipts], 'instrument');
   await i.expect(/ARTIFACT VERIFIED/, 30000);
   i.type('connect');
   const [, ctl, ho] = await i.expect(/CONNECTED ([0-9a-f-]{36}) ([0-9a-f-]{36})/);

@@ -285,8 +285,7 @@ export function runScenarios(ctx: Ctx): { id: string; pass: boolean; observed: R
   });
 }
 /** Rehearsal: all scenarios twice with fresh fakes/sessions + the full-run safe receipt; replay must be byte-identical. */
-export function rehearse(): Record<string, unknown> {
-  const ctx = loadContext();
+export function rehearse(ctx: Ctx = loadContext()): Record<string, unknown> {
   const once = () => { const results = runScenarios(ctx); const full = rig(ctx); for (let i = 0; i < 200; i += 1) playNext(full); closeWith(full, full.fake.pause());
     return { results, receipt: buildReceipt(full.session, ctx.cases) }; };
   const first = once(); const second = once();

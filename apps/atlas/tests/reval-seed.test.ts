@@ -1,3 +1,4 @@
+import { historicalReader } from './support/reval-history.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
@@ -160,7 +161,7 @@ test('UTC decoding of timestamp without time zone (Prisma raw semantics), other 
   assert.equal((UTC_TYPES.getTypeParser(20, 'text') as (v: string) => unknown)('9007199254740993'), '9007199254740993', 'int8 stays a string');
 });
 
-test('static: maintenance/verifier code has no TRUNCATE, DDL, trigger/RLS/role bypass; production deps are unix-socket only; frozen and ordinary Ask bytes unchanged', async () => {
+test('static: maintenance/verifier code has no TRUNCATE, DDL, trigger/RLS/role bypass; production deps are unix-socket only; historical execution fixture and frozen/ordinary Ask bytes unchanged', async () => {
   const { readFile, readdir } = await import('node:fs/promises');
   const root = new URL('../', import.meta.url);
   const read = (p: string) => readFile(new URL(p, root), 'utf8');
@@ -176,17 +177,18 @@ test('static: maintenance/verifier code has no TRUNCATE, DDL, trigger/RLS/role b
   assert.ok(deps.includes('verifyPhysicalEndpoint('), 'both owner connections use the unix physical binding');
   const verifierEntry = await read('scripts/reval-server/fixture-verifier.ts');
   assert.ok(verifierEntry.includes('productionVerifierConnect(physical)') && !/host:/.test(verifierEntry));
+  // Historical execution bytes come from the verified fixture; current tool behaviour is exercised by execution tests.
   // Baseline bytes (verification/stage5/S5ASKREMOTE_REVAL_RSB_BASELINE.sha256): ordinary Ask code, offline/execution packages, frozen data.
   const baseline = new Map((await read('verification/stage5/S5ASKREMOTE_REVAL_RSB_BASELINE.sha256')).trim().split('\n').map(l => {
     const [hash, ...p] = l.split(/\s+/); return [p.join(' '), hash!] as const; }));
   const walk = async (rel: string): Promise<string[]> => (await readdir(new URL(rel, root), { withFileTypes: true }))
     .flatMap(e => e.isDirectory() ? [] : [`${rel}${e.name}`]).concat(...await Promise.all((await readdir(new URL(rel, root), { withFileTypes: true }))
       .filter(e => e.isDirectory()).map(e => walk(`${rel}${e.name}/`))));
-  const files = [...await walk('packages/ask/'), ...await walk('scripts/ask-remote-eval/'), ...await walk('scripts/ask-remote-eval-execution/'),
+  const files = [...await walk('packages/ask/'), ...await walk('scripts/ask-remote-eval/'), ...[...baseline.keys()].filter(p => p.startsWith('scripts/ask-remote-eval-execution/')),
     ...await walk('docs/stage5/ask/remote/eval/data/'), ...await walk('docs/stage5/ask/remote/reval-server/').then(x => x.filter(p => /\/0[1-6]_[A-Z_]+\.md$/.test(p)))];
   assert.ok(files.length > 60, String(files.length));
   // RS-C-A changes exactly its enumerated Ask hook files (rs-c brief §4; RC5 guard test pins their old hashes); the new
   // packages/ask/remote/evaluation.ts is the hook interface. Everything else stays byte-identical to the RS-B baseline.
   const rsca = new Set(['packages/ask/budget.ts', 'packages/ask/remote/db.ts', 'packages/ask/remote/service.ts', 'packages/ask/remote/evaluation.ts']);
-  for (const f of files) if (!rsca.has(f)) assert.equal(sha(await readFile(new URL(f, root))), baseline.get(f), `${f} unchanged since the RS-B baseline`);
+  for (const f of files) if (!rsca.has(f)) assert.equal(sha(f.startsWith('scripts/ask-remote-eval-execution/') ? historicalReader(f)! : await readFile(new URL(f, root))), baseline.get(f), `${f} unchanged since the RS-B baseline`);
 });

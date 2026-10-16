@@ -33,7 +33,7 @@ test('the bridge S serves exactly the sealed measured console (never the ordinar
   assert.match(index.body, /main-measured\.js/); assert.doesNotMatch(index.body, /src="main\.js"/);
   for (const f of manifest.files.filter(x => x.path !== 'index.html')) {
     const r = await get(`/operator/${f.path}`);
-    assert.deepEqual([r.status, Buffer.byteLength(r.body)], [200, f.bytes], f.path);
+    assert.deepEqual([r.status, r.bodyBytes.length], [200, f.bytes], f.path);
   }
   assert.equal((await get('/operator/main.js')).status, 404, 'the ordinary entry is not part of the measured build');
   assert.equal((await get('/operator/manifest.json')).status, 404, 'the manifest itself is never an asset');
