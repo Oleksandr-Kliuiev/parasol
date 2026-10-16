@@ -3474,7 +3474,7 @@
     "moreDevices": "Vis flere innlastede enheter",
     "observations": "Aktive observasjoner i Atlas",
     "observationNote": "Lagrede åpne og bekreftede observasjoner, med høyeste alvorlighetsgrad først. Hendelsestidene gjelder observasjonen; hvor oppdaterte kildene er, vises ovenfor.",
-    "partialObservations": "Bare de første {{loaded}} av {{total}} aktive observasjoner er lastet inn. Søk og filtre gjelder kun denne siden; resten er tilgjengelig i Atlas.",
+    "partialObservations": "Bare de første {{loaded}} av {{total}} aktive observasjonene er lastet. Søk og filtre gjelder bare denne siden. Åpne hele køen for å lese resten.",
     "noObservations": "Ingen aktive observasjoner er registrert i Atlas. Dette bekrefter ikke at alle kilder er oppdaterte eller at kunden er uten problemer.",
     "searchObservations": "Søk i innlastede observasjoner",
     "severityFilter": "Alvorlighetsgrad",
@@ -3502,7 +3502,9 @@
     },
     "status": {
       "OPEN": "Åpen",
-      "ACKNOWLEDGED": "Bekreftet"
+      "ACKNOWLEDGED": "Bekreftet",
+      "RESOLVED": "Løst",
+      "SUPPRESSED": "Undertrykt"
     },
     "kind": {
       "DISK_CAPACITY": "Diskkapasitet",
@@ -3512,6 +3514,38 @@
       "MONITOR": "Overvåk",
       "INVESTIGATE": "Undersøk",
       "HUMAN_REVIEW": "Manuell gjennomgang"
+    }
+  },
+  "parasolQueue": {
+    "title": "Observasjonskø og historikk",
+    "open": "Åpne hele observasjonskøen",
+    "note": "Skrivebeskyttede observasjoner lagret i Atlas, inkludert løst og undertrykt historikk. Filtrene for alvorlighetsgrad og tilstand gjelder hele køen.",
+    "severityFilter": "Alvorlighetsgrad i køen",
+    "statusFilter": "Tilstand i køen",
+    "refresh": "Oppdater kø",
+    "reset": "Nullstill filtre",
+    "total": "Observasjoner som samsvarer i Atlas: {{total}}",
+    "countNote": "Antallene gjelder denne sideforespørselen og kan endres når Atlas oppdateres. Oppdatering starter på første side, slik at nye observasjoner kan vises.",
+    "retrievedAt": "Kø lest {{time}}",
+    "sources": "Kildedekning og aktualitet for denne lesingen",
+    "empty": "Ingen observasjoner på denne siden for de valgte filtrene. Dette bekrefter ikke at alle kilder er oppdatert eller at kunden ikke har problemer.",
+    "search": "Søk på denne køsiden",
+    "searchNote": "Søket gjelder bare denne siden. Filtrene for alvorlighetsgrad og tilstand gjelder hele Atlas-køen.",
+    "page": "Side {{page}} · {{count}} poster lastet",
+    "first": "Første side",
+    "previous": "Forrige side",
+    "next": "Neste side",
+    "status": {
+      "NOT_LINKED": "Denne kunden er ikke koblet til Atlas.",
+      "NOT_CONFIGURED": "Atlas-forbindelsen er ikke konfigurert.",
+      "ACCESS_DENIED": "Atlas-tilgangen din tillater ikke lesing av denne kunden.",
+      "SOURCE_NOT_FOUND": "Den koblede kunden ble ikke funnet i Atlas. Be en administrator kontrollere koblingen.",
+      "UNAVAILABLE": "Atlas er utilgjengelig. Ingen tidligere køside vises.",
+      "INVALID_RESPONSE": "Atlas returnerte et uventet svar. Ingen kødata vises.",
+      "IDENTITY_CHANGED": "Kundekoblingen ble endret. Start fra første side for å lese den gjeldende koblingen.",
+      "INVALID_CURSOR": "Denne sidereferansen er ikke lenger gyldig. Start fra første side.",
+      "QUEUE_NOT_SUPPORTED": "Kø og historikk er ikke tilgjengelig i denne Atlas-modusen. Fanen for aktive observasjoner er fortsatt tilgjengelig.",
+      "REQUEST_FAILED": "Køen kunne ikke leses. Ingen tidligere side vises. Oppdater for å prøve igjen."
     }
   }
 }

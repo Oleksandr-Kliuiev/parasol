@@ -113,6 +113,9 @@ builder.Services.AddSingleton<SessionStateCache>();
 builder.Services.AddScoped<IReportAccessAudit, ReportAccessAudit>();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, CrmAuthorizationResultHandler>();
 builder.AddDataProtection();
+// Protected browser continuations belong to the web host; the worker has no data-protection key ring.
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationQueueReader>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationCursor>();
 
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);
 if (hangfireEnabled)

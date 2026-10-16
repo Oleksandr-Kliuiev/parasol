@@ -1,28 +1,15 @@
 import { z } from 'zod';
+import { count, deviceSchema, observationSchema, resourceSchema, severities, severityCountsSchema, time, validTechnicalReferences } from './technicalContract';
 
-const sources = z.enum(['atera', 'huntress', 'microsoft365', 'poweroffice']);
-const resourceTypes = z.enum(['customer', 'organization', 'agent', 'contact', 'alert', 'ticket', 'incident']);
-export const severities = ['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
-const id = z.string().min(1).max(256).refine(s => s.trim().length > 0 && ![...s].some(c => c.charCodeAt(0) < 32));
-const time = z.iso.datetime({ offset: true });
-const count = z.number().int().nonnegative();
+export { severities } from './technicalContract';
 const summarySchema = z.strictObject({
   mode: z.enum(['db', 'fixture']), generatedAt: time, completeness: z.enum(['PARTIAL', 'COMPLETE', 'COMPLETE_FIXTURE']),
   knownDevices: count, knownPeople: count.max(1000), activeObservations: count,
-  severityCounts: z.strictObject({ INFO: count, LOW: count, MEDIUM: count, HIGH: count, CRITICAL: count }),
-  resources: z.array(z.strictObject({
-    source: sources, resourceType: resourceTypes, status: z.enum(['OK', 'STALE', 'ERROR', 'MISSING', 'FIXTURE']),
-    asOf: time.nullable(), lastSuccessAt: time.nullable(), returnedItems: count.max(1000).nullable(), truncated: z.boolean(),
-  })).max(100),
-  devices: z.array(z.strictObject({ id, hostname: id, sources: z.array(sources).max(4) })).max(1000),
+  severityCounts: severityCountsSchema,
+  resources: z.array(resourceSchema).max(100),
+  devices: z.array(deviceSchema).max(1000),
   observationPage: z.strictObject({
-    truncated: z.boolean(), items: z.array(z.strictObject({
-      id, summary: z.string().max(300), source: sources, resourceType: resourceTypes,
-      kind: z.enum(['DISK_CAPACITY', 'SECURITY_INCIDENT']), domain: z.enum(['OPERATIONS', 'SECURITY']),
-      severity: z.enum(severities), priority: z.enum(['NORMAL', 'URGENT']), route: z.enum(['MONITOR', 'INVESTIGATE', 'HUMAN_REVIEW']),
-      status: z.enum(['OPEN', 'ACKNOWLEDGED']), occurredAt: time, updatedAt: time,
-      deviceStatus: z.enum(['CONFIRMED', 'UNRESOLVED', 'UNAVAILABLE']), deviceId: id.nullable(),
-    })).max(100),
+    truncated: z.boolean(), items: z.array(observationSchema.extend({ status: z.enum(['OPEN', 'ACKNOWLEDGED']) })).max(100),
   }),
 });
 const workspaceSchema = z.strictObject({
@@ -42,18 +29,12 @@ export function parseWorkspace(value: unknown, customerId: string): Workspace {
   if (view.status !== 'READY') return s === null ? view : invalid;
   if (!s || (s.mode === 'fixture') !== (s.completeness === 'COMPLETE_FIXTURE') || s.knownDevices !== s.devices.length
     || s.activeObservations !== Object.values(s.severityCounts).reduce((a, b) => a + b, 0)) return invalid;
-  const devices = new Map(s.devices.map(d => [d.id, d]));
-  if (devices.size !== s.devices.length || s.devices.some(d => new Set(d.sources).size !== d.sources.length)) return invalid;
   const p = s.observationPage;
-  if (new Set(p.items.map(o => o.id)).size !== p.items.length || s.activeObservations < p.items.length
+  if (!validTechnicalReferences(s.devices, p.items, s.resources) || s.activeObservations < p.items.length
     || p.truncated !== (s.activeObservations > p.items.length) || (p.truncated && (p.items.length === 0 || s.mode === 'fixture'))) return invalid;
   for (const severity of severities) {
     const returned = p.items.filter(o => o.severity === severity).length;
     if (p.truncated ? returned > s.severityCounts[severity] : returned !== s.severityCounts[severity]) return invalid;
   }
-  if (p.items.some(o => o.priority !== (o.severity === 'HIGH' || o.severity === 'CRITICAL' ? 'URGENT' : 'NORMAL')
-    || o.domain !== (o.kind === 'DISK_CAPACITY' ? 'OPERATIONS' : 'SECURITY')
-    || (o.deviceStatus === 'CONFIRMED' ? o.deviceId === null || !devices.get(o.deviceId)?.sources.includes(o.source) : o.deviceId !== null))) return invalid;
-  if (s.resources.some(r => ['OK', 'STALE', 'FIXTURE'].includes(r.status) ? r.returnedItems === null : r.returnedItems !== null)) return invalid;
   return view;
 }

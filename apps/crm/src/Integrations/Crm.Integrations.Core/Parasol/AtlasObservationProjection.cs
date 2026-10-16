@@ -9,10 +9,29 @@ internal static class AtlasObservationProjection
     internal static AtlasObservationList Read(JsonElement page, AtlasCustomerReference expected, string mode,
         int total, IReadOnlyDictionary<string, int> counts, IReadOnlyList<AtlasDeviceView> devices)
     {
+        var items = ReadItems(page, expected, devices, 100, ["OPEN", "ACKNOWLEDGED"]);
+        var truncated = page.GetProperty("truncated").GetBoolean();
+        var cursor = page.GetProperty("nextCursor");
+        Require(total >= items.Count && truncated == (total > items.Count));
+        Require(truncated ? items.Count > 0 && cursor.ValueKind == JsonValueKind.String
+            && Regex.IsMatch(cursor.GetString()!, @"\A[A-Za-z0-9_-]{1,400}\z", RegexOptions.CultureInvariant) : cursor.ValueKind == JsonValueKind.Null);
+        Require(mode != "fixture" || !truncated);
+        foreach (var severity in Severities)
+        {
+            var returned = items.Count(i => i.Severity == severity);
+            Require(truncated ? returned <= counts[severity] : returned == counts[severity]);
+        }
+        return new(items, truncated);
+    }
+
+    internal static IReadOnlyList<AtlasObservationView> ReadItems(JsonElement page, AtlasCustomerReference expected,
+        IReadOnlyList<AtlasDeviceView> devices, int maximum, string[] statuses)
+    {
+        Object(page);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var items = new List<(AtlasObservationView View, DateTimeOffset CreatedAt)>();
         var byDevice = devices.ToDictionary(d => d.Id, StringComparer.Ordinal);
-        foreach (var row in Array(page, "items", 100))
+        foreach (var row in Array(page, "items", maximum))
         {
             Scope(row, expected);
             var id = Text(row, "id");
@@ -32,21 +51,10 @@ internal static class AtlasObservationProjection
             Require(updated >= created);
             items.Add((new(id, Text(row, "summary", 300, allowEmpty: true, multiline: true), source, Choice(row, "resourceType", ResourceTypes),
                 kind, domain, severity, priority, Choice(row, "route", ["MONITOR", "INVESTIGATE", "HUMAN_REVIEW"]),
-                Choice(row, "status", ["OPEN", "ACKNOWLEDGED"]), Date(row, "occurredAt") ?? throw new JsonException(),
+                Choice(row, "status", statuses), Date(row, "occurredAt") ?? throw new JsonException(),
                 updated, deviceStatus, device?.Id), created));
         }
-        var truncated = page.GetProperty("truncated").GetBoolean();
-        var cursor = page.GetProperty("nextCursor");
-        Require(total >= items.Count && truncated == (total > items.Count));
-        Require(truncated ? items.Count > 0 && cursor.ValueKind == JsonValueKind.String
-            && Regex.IsMatch(cursor.GetString()!, @"\A[A-Za-z0-9_-]{1,400}\z", RegexOptions.CultureInvariant) : cursor.ValueKind == JsonValueKind.Null);
-        Require(mode != "fixture" || !truncated);
-        foreach (var severity in Severities)
-        {
-            var returned = items.Count(i => i.View.Severity == severity);
-            Require(truncated ? returned <= counts[severity] : returned == counts[severity]);
-        }
-        return new(items.OrderByDescending(i => System.Array.IndexOf(Severities, i.View.Severity))
-            .ThenByDescending(i => i.CreatedAt).ThenBy(i => i.View.Id, StringComparer.Ordinal).Select(i => i.View).ToArray(), truncated);
+        return items.OrderByDescending(i => System.Array.IndexOf(Severities, i.View.Severity))
+            .ThenByDescending(i => i.CreatedAt).ThenBy(i => i.View.Id, StringComparer.Ordinal).Select(i => i.View).ToArray();
     }
 }

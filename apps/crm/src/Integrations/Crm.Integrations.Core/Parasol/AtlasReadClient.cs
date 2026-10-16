@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Crm.Integrations.Core.Parasol;
 
-/// <summary>Bounded, server-only reads on two fixed Atlas routes. No redirects, cookies, retries or upstream error text.</summary>
+/// <summary>Bounded, server-only reads on fixed Atlas routes. No redirects, cookies, retries or upstream error text.</summary>
 public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHttpClientFactory clients)
 {
     public Task<AtlasReadResponse> IdentityExportAsync(AtlasEmployeeCredential credential, CancellationToken ct) =>
@@ -14,7 +14,14 @@ public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHt
     public Task<AtlasReadResponse> OverviewAsync(string clientId, AtlasEmployeeCredential credential, CancellationToken ct) =>
         ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/overview", credential, 2 * 1024 * 1024, ct);
 
-    private async Task<AtlasReadResponse> ReadAsync(string path, AtlasEmployeeCredential credential, int maximumBytes, CancellationToken ct)
+    internal Task<AtlasReadResponse> ObservationsAsync(string clientId, AtlasEmployeeCredential credential,
+        AtlasObservationSelection selection, string? cursor, CancellationToken ct) =>
+        ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/observations?limit=25&status={Uri.EscapeDataString(selection.AtlasStatuses)}"
+            + $"&severity={Uri.EscapeDataString(selection.AtlasSeverities)}"
+            + (cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}"), credential, 1_048_576, ct, cursor is not null);
+
+    private async Task<AtlasReadResponse> ReadAsync(string path, AtlasEmployeeCredential credential, int maximumBytes, CancellationToken ct,
+        bool cursorRequest = false)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
@@ -27,6 +34,7 @@ public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHt
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) return new("ACCESS_DENIED");
             if (response.StatusCode == HttpStatusCode.NotFound) return new("SOURCE_NOT_FOUND");
+            if (cursorRequest && response.StatusCode == HttpStatusCode.BadRequest) return new("INVALID_CURSOR");
             if (!response.IsSuccessStatusCode) return new("UNAVAILABLE");
             if (response.Content.Headers.ContentLength > maximumBytes || response.Content.Headers.ContentType?.MediaType != "application/json")
                 return new("INVALID_RESPONSE");

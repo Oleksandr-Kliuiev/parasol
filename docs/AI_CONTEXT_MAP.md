@@ -1,6 +1,7 @@
 # Parasol context map
 
 - Scope and local commands: `README.md`.
+- Product readiness, current gaps and local pilot gates: `docs/PRODUCT_READINESS.md`.
 - M01–M03 implementation and follow-up: `docs/migration/M01-M03.md`.
 - Customer identity / M04: `docs/migration/M04-CUSTOMER-IDENTITY.md`; Atlas `apps/api/src/db/clients.ts`, CRM `src/Integrations/Crm.Integrations.Core/Parasol`, shared fixture `contracts/customer-identity`.
 - Unified entry, roles and customer workspace / M05: `docs/migration/M05-WORKSPACE.md`; CRM `Parasol/AtlasWorkspace*`, `web/src/features/parasol`, `Auth/AuthenticationSetup.cs`, `Http/DataProtectionSetup.cs`.
@@ -9,6 +10,7 @@
 - Customer mapping UI / M08: `docs/migration/M08-CUSTOMER-MAPPING-UI.md`; CRM `web/src/features/parasol/CustomerIdentity*`, identity import validation and explicit link correction.
 - Employee-scoped Atlas directory / M09: `docs/migration/M09-ATLAS-DIRECTORY.md`; CRM `Parasol/Atlas{ReadClient,IdentityReader}`, `web/src/features/parasol/atlasIdentitySource.ts` and the mapping screen.
 - Devices and active observations / M10: `docs/migration/M10-CUSTOMER-TECHNICAL-DETAILS.md`; CRM `Parasol/Atlas{WorkspaceContracts,ProjectionJson,DeviceProjection,ObservationProjection,WorkspaceProjection}`, frontend `CustomerTechnicalDetails.tsx`, `workspaceContract.ts`, synthetic contract `contracts/customer-workspace`.
+- Full customer observation queue / M11: `docs/migration/M11-OBSERVATION-QUEUE.md`; CRM `Parasol/AtlasObservation{Queue*,Cursor}`, frontend `ObservationQueue.tsx`, `observationQueueContract.ts`, shared `technicalContract.ts` and `ObservationRows.tsx`.
 - Original Git identities and import commits: `docs/migration/sources.json`, `IMPORT.md`.
 - Strict Atlas tests and native fixture setup: `docs/testing/ATLAS.md`.
 - Historical import failures (no longer an exception mechanism): `docs/migration/BASELINE.md`, `atlas-baseline.json`.

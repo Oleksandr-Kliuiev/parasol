@@ -27,6 +27,17 @@ public static class CustomerIdentityEndpoints
                 return (await reader.ReadAsync(customerId, ct)).ToHttpResult(Results.Ok);
             })
             .RequirePermission(Permissions.ParasolAtlasRead);
+        group.MapGet("/customers/{customerId:guid}/observations", async (Guid customerId, string? severity, string? status,
+                string? cursor, AtlasObservationQueueReader reader, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                var selection = AtlasObservationSelection.Parse(severity, status);
+                if (selection is null)
+                    return Crm.SharedKernel.Results.Error.Validation("PARASOL_ATLAS_QUEUE_FILTER_INVALID", "Choose a supported severity and status.")
+                        .ToProblem();
+                return (await reader.ReadAsync(customerId, selection, cursor, ct)).ToHttpResult(Results.Ok);
+            })
+            .RequirePermission(Permissions.ParasolAtlasRead);
         group.MapPost("/customer-identities/import", async (CustomerIdentityImport body, bool? dryRun, string? expectedSha256,
                 CustomerIdentityService service, HttpContext http, CancellationToken ct) =>
             {

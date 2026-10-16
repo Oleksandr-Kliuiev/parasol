@@ -3474,7 +3474,7 @@
     "moreDevices": "Show more loaded devices",
     "observations": "Active Atlas observations",
     "observationNote": "Stored open and acknowledged observations, with the highest source severity first. Event times describe the observation; source snapshot freshness is shown above.",
-    "partialObservations": "Only the first {{loaded}} of {{total}} active observations are loaded. Search and filters apply to this page only; remaining observations are available in Atlas.",
+    "partialObservations": "Only the first {{loaded}} of {{total}} active observations are loaded. Search and filters apply to this page only; open the full queue to read the remaining observations.",
     "noObservations": "No active observations are recorded in Atlas. This does not confirm that every source is current or that the customer has no issues.",
     "searchObservations": "Search loaded observations",
     "severityFilter": "Observation severity",
@@ -3502,7 +3502,9 @@
     },
     "status": {
       "OPEN": "Open",
-      "ACKNOWLEDGED": "Acknowledged"
+      "ACKNOWLEDGED": "Acknowledged",
+      "RESOLVED": "Resolved",
+      "SUPPRESSED": "Suppressed"
     },
     "kind": {
       "DISK_CAPACITY": "Disk capacity",
@@ -3512,6 +3514,38 @@
       "MONITOR": "Monitor",
       "INVESTIGATE": "Investigate",
       "HUMAN_REVIEW": "Human review"
+    }
+  },
+  "parasolQueue": {
+    "title": "Observation queue and history",
+    "open": "Open full observation queue",
+    "note": "Read-only observations stored in Atlas, including resolved and suppressed history. Severity and state filters apply to the full queue.",
+    "severityFilter": "Queue severity",
+    "statusFilter": "Queue state",
+    "refresh": "Refresh queue",
+    "reset": "Reset filters",
+    "total": "Matching observations across Atlas: {{total}}",
+    "countNote": "Counts reflect this page request and can change as Atlas updates. Refresh restarts at the first page so newly added observations can be seen.",
+    "retrievedAt": "Queue read at {{time}}",
+    "sources": "Source coverage and freshness for this read",
+    "empty": "No observations on this page for the selected filters. This does not confirm that every source is current or that the customer has no issues.",
+    "search": "Search this queue page",
+    "searchNote": "Search covers this page only. Severity and state filters apply to the full Atlas queue.",
+    "page": "Page {{page}} · {{count}} records loaded",
+    "first": "First page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "status": {
+      "NOT_LINKED": "This customer has not been linked to Atlas.",
+      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
+      "ACCESS_DENIED": "Your Atlas access does not permit reading this customer.",
+      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas. Ask an administrator to review the link.",
+      "UNAVAILABLE": "Atlas is unavailable. No previous queue page is shown.",
+      "INVALID_RESPONSE": "Atlas returned an unexpected response. No queue data is shown.",
+      "IDENTITY_CHANGED": "The customer link changed. Restart from the first page to read the current link.",
+      "INVALID_CURSOR": "This page reference is no longer valid. Restart from the first page.",
+      "QUEUE_NOT_SUPPORTED": "Queue and history are not available in this Atlas mode. The active observations tab remains available.",
+      "REQUEST_FAILED": "The queue could not be read. No previous page is shown. Refresh to try again."
     }
   }
 }
