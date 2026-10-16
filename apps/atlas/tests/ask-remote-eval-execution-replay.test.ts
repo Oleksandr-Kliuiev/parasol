@@ -1,8 +1,9 @@
+import { loadContext } from './support/reval-history.ts';
 import '../scripts/ask-remote-eval/guard-preload.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildReceipt, assertReceipt } from '../scripts/ask-remote-eval-execution/receipt.ts';
-import { loadContext, observe, playNext, playUntil, rig, SCENARIOS, UNPARSED_REQUEST, UNRECONCILE } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
+import { observe, playNext, playUntil, rig, SCENARIOS, UNPARSED_REQUEST, UNRECONCILE } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
 import { replayNumeric } from '../scripts/ask-remote-eval-execution/replay.ts';
 
 // RC4 required repairs (SIMULATED fake V2): Sol R1 — saved numeric replay re-validates bound ledger/counter numbers with the

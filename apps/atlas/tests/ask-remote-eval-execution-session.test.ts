@@ -1,3 +1,4 @@
+import { loadContext, verifyTestArtifact } from './support/reval-history.ts';
 import '../scripts/ask-remote-eval/guard-preload.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,7 +6,7 @@ import { INTENTS } from '../scripts/ask-remote-eval/dataset.ts';
 import { ADMIN_OVERLAYS, ADMIN_PATHS, adminOverlaySha256, overlayDrift, sameIdentity, verifyArtifact } from '../scripts/ask-remote-eval-execution/artifact.ts';
 import { fakeRequest } from '../scripts/ask-remote-eval-execution/fake-v2.ts';
 import { buildReceipt } from '../scripts/ask-remote-eval-execution/receipt.ts';
-import { ADMISSION_ID, advance, loadContext, playNext, playUntil, rig, runScenarios, SCENARIOS } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
+import { ADMISSION_ID, advance, playNext, playUntil, rig, runScenarios, SCENARIOS } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
 import { ExecutionSession } from '../scripts/ask-remote-eval-execution/session.ts';
 import { ExecError } from '../scripts/ask-remote-eval-execution/validate.ts';
 
@@ -18,7 +19,7 @@ const caseOf = (id: string) => ctx.corpus.cases.get(id)!;
 const focusOf = (id: string) => ctx.corpus.fixtures.get(caseOf(id).fixtureId)!.spec.requestedFocus;
 
 test('artifact identity verifies against both pinned accepted manifests and binds dataset/fixture/order', () => {
-  const s = verifyArtifact();
+  const s = verifyTestArtifact();
   assert.equal(s.ok, true); assert.deepEqual(s.drift, []);
   assert.equal(s.identity!.offlinePackageHash, 'd706a437b2e77ccb215080d4676d2ae70fee53376636d3d9040590d5d8f2dc3a');
   assert.equal(s.identity!.rcPackageHash, '9ae0c2b813388af58ee7d12e4df7f59521ba8cff417a4124ea9ddb2bff1c7fe1');
@@ -40,7 +41,7 @@ test('administrative overlays are frozen at exact pinned hashes: any other bytes
   assert.deepEqual(overlayDrift(ADMIN_OVERLAYS, p => p === 'AGENTS.md' ? null : exact(p)), ['AGENTS.md']);
   assert.deepEqual(overlayDrift(ADMIN_OVERLAYS, () => 'f'.repeat(64)), [...ADMIN_PATHS].sort());
   // The identity digest is of the PINNED table: a changed table changes it; disk is verified against the table, never sampled.
-  const s = verifyArtifact();
+  const s = verifyTestArtifact();
   assert.equal(s.ok, true); assert.ok(!s.drift.includes('ADMIN_OVERLAY_DRIFT'));
   assert.equal(s.identity!.adminOverlaySha256, adminOverlaySha256());
   assert.notEqual(adminOverlaySha256({ ...ADMIN_OVERLAYS, 'AGENTS.md': '0'.repeat(64) }), adminOverlaySha256());

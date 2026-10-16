@@ -1,3 +1,4 @@
+import { verifyTestRevision } from './reval-history.ts';
 // TEST-ONLY NB7 rehearsal driver (rs-c/IMPLEMENTATION_BRIEF_C.md §4; 04 "consecutive target-platform ARM/READY rehearsal"), run under
 // a live PTY so C/S accept it as I (same euid, node exe, a TTY). It drives the REAL instrument code — the measured IPC clients,
 // MeasuredRun (PRE census → PRE → consume → ARM → READY → GO), the 06 transfer, finish (POST census) and receipt v4 — on the
@@ -10,7 +11,6 @@ import { join } from 'node:path';
 import { sameIdentity } from '../../scripts/ask-remote-eval-execution/artifact.ts';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
 import { ExecutionSession } from '../../scripts/ask-remote-eval-execution/session.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { ControlClient, HandoffClient } from '../../scripts/reval-instrument/ipc.ts';
 import { withGroupedOrder } from '../../scripts/reval-instrument/order.ts';
 import { buildReceiptV6, writeReceiptV6 } from '../../scripts/reval-instrument/receipt.ts';
@@ -25,7 +25,7 @@ const nextLine = lineReader();
 const out = (line: string) => process.stdout.write(`${line}\n`);
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-const start = verifyRevision();
+const start = verifyTestRevision();
 if (!start.snapshot.ok || !start.revision) { out(`NB7_FAILED IDENTITY ${start.snapshot.drift.join(',')}`); process.exit(1); }
 const ctx = bindCorpus(start.snapshot);
 const { corpus, order } = withGroupedOrder(ctx.corpus);
@@ -37,12 +37,12 @@ const [, nonce, ack] = (await nextLine()).split(' ');
 const pairId = (JSON.parse(ack!) as { pairId: string }).pairId;
 mkdirSync(input.receiptDir, { recursive: true, mode: 0o700 });
 const session = new ExecutionSession({ runClass: 'UNADMITTED_LOCAL_OBSERVATION', clock: () => ({ utcMs: Date.now(), monoMs: performance.now() }),
-  verify: () => verifyRevision().snapshot, nonce: () => randomUUID().slice(0, 8), corpus }, input.admission);
+  verify: () => verifyTestRevision().snapshot, nonce: () => randomUUID().slice(0, 8), corpus }, input.admission);
 const connection = { registrationId: control.binding.registrationId, serverBootId: control.binding.serverBootId, controlConnectionId: control.binding.connectionId,
   handoffConnectionId: handoff.connectionId };
 const run: MeasuredRun = new MeasuredRun({ session, corpus, order, ports: { control, handoff }, mono: () => performance.now(), wallMs: () => Date.now(),
   persist: () => { try { writeReceiptV6(input.receiptDir, buildReceiptV6(session, run, ctx.cases, start.revision!, connection), ctx.cases, 'REVAL_NB7.json'); return true; } catch { return false; } },
-  identityHolds: () => sameIdentity(start.snapshot, verifyRevision().snapshot) });
+  identityHolds: () => sameIdentity(start.snapshot, verifyTestRevision().snapshot) });
 const browser = { pairId: pairId!, sessionToken: '', policyVersion: input.policyVersion };
 const drive = caseDriver({ port: input.port, bearer: input.bearer, clientId: input.clientId, admissionId: input.admission.admissionId, session, corpus, run, browser: () => browser });
 browser.sessionToken = await drive.pair(nonce!);

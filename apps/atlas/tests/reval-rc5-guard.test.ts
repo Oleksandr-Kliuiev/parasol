@@ -1,19 +1,18 @@
-import { test, after } from 'node:test';
+import { historicalReader } from './support/reval-history.ts';
+import { verifyArtifact } from '../scripts/ask-remote-eval-execution/artifact.ts';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFileSync, cpSync, existsSync, readFileSync, realpathSync, rmSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// R-EVAL RS-A verification addendum §3/§4 (docs/stage5/ask/remote/reval-server/rs-a/VERIFICATION_ADDENDUM.md): the UNCHANGED
-// RC5 guard (scripts/ask-remote-eval-execution/artifact.ts verifyArtifact) refuses the current RS-A tree ONLY because of the
-// explicitly enumerated, authorized R-C source/build child deltas — never ADMIN_OVERLAY_DRIFT or any other code — and, in
-// separate copied immutable historical views (module paths rooted IN each copy), three isolated tampers are each detected.
-// No RC5 file, pin, manifest or overlay is touched; no guard bypass or hash adoption. The checkout and archives stay unchanged.
+// The original RC5 verifier must reject the later RS-D-C artifact for its enumerated child deltas,
+// and reject the evolving Parasol checkout. Inputs come from the verified historical Reader rather
+// than an optional machine-local directory. Positive full-chain verification and isolated source,
+// build, overlay and seal tampering are exercised by reval-instrument-identity.test.ts.
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const sha = (p: string) => createHash('sha256').update(readFileSync(p)).digest('hex');
+const sha = (p: string) => createHash('sha256').update(historicalReader(p.slice(ROOT.length))!).digest('hex');
 /** The authorized RS-A child deltas of pinned R-C entries (brief §10), exact, with their pinned old hashes. */
 export const ALLOWED_SOURCE_DELTAS: Readonly<Record<string, string>> = Object.freeze({
   'apps/api/src/main.ts': '278af78d0389619b8801e29c74832dac0db100eada353527725c526c56ce99cc',
@@ -59,22 +58,16 @@ export const ALLOWED_BUILD_DELTAS: readonly string[] = ['dist/apps/api/src/main.
 interface Entry { path: string; sha256: string }
 const manifest = JSON.parse(readFileSync(join(ROOT, 'verification/stage5/S5ASKREMOTE_RC_RC1_MANIFEST.json'), 'utf8')) as { files: Entry[]; builtInventory: Entry[] };
 const overlays = (root: string): Record<string, string> => {
-  const art = readFileSync(join(root, 'scripts/ask-remote-eval-execution/artifact.ts'), 'utf8');
+  const art = historicalReader('scripts/ask-remote-eval-execution/artifact.ts')!.toString('utf8');
   return Object.fromEntries([...art.slice(art.indexOf('ADMIN_OVERLAYS'), art.indexOf('ADMIN_PATHS')).matchAll(/'([^']+)':\s*'([0-9a-f]{64})'/g)].map(m => [m[1]!, m[2]!]));
 };
-/** The unchanged guard, imported from `root` in a fresh process (cwd = root), offline. */
-function guard(root: string): { ok: boolean; drift: string[] } {
-  const out = execFileSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e',
-    'const m = await import(process.argv[1]); const s = m.verifyArtifact(); console.log(JSON.stringify({ ok: s.ok, drift: s.drift }));',
-    join(root, 'scripts/ask-remote-eval-execution/artifact.ts')], { cwd: root, encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } });
-  return JSON.parse(out.trim().split('\n').pop()!);
-}
+const guard = (_root: string) => { const s = verifyArtifact(historicalReader); return { ok: s.ok, drift: s.drift }; };
 const drifting = (root: string, list: Entry[]) => { const o = overlays(root); return list.filter(e => {
-  const p = join(root, e.path); const cur = existsSync(p) ? sha(p) : 'MISSING';
+  const p = join(root, e.path); const cur = historicalReader(e.path) !== null ? sha(p) : 'MISSING';
   return cur !== e.sha256 && !(o[e.path] !== undefined && o[e.path] === cur);
-}).map(e => ({ path: e.path, old: e.sha256, now: existsSync(join(root, e.path)) ? sha(join(root, e.path)) : 'MISSING' })); };
+}).map(e => ({ path: e.path, old: e.sha256, now: historicalReader(e.path) !== null ? sha(join(root, e.path)) : 'MISSING' })); };
 
-test('current RS-A/RS-C-A/RS-C-C tree: unchanged RC5 guard refuses ONLY for the enumerated authorized child deltas (RS-C-C: one enumerated overlay)', () => {
+test('frozen RS-D-C fixture: RC5 guard refuses ONLY for the enumerated authorized child deltas (RS-C-C: one enumerated overlay)', () => {
   const g = guard(ROOT);
   assert.equal(g.ok, false);
   // RS-C-A: its three enumerated Ask hook files are also offline-RC3 package files → OFFLINE_FILE_DRIFT, caused by exactly them.
@@ -100,32 +93,18 @@ test('current RS-A/RS-C-A/RS-C-C tree: unchanged RC5 guard refuses ONLY for the 
   for (const p of RSCA_RC5_EXECUTION_DELTAS) assert.equal(rc5.files.find(e => e.path === p)?.sha256, RSCA_SOURCE_DELTAS[p], `${p}: RC5 pin = R-C pin`);
 });
 
-const viewPath = process.env.ATLAS_REVAL_RC5_HISTORICAL_VIEW;
-const copies: string[] = [];
-after(() => { for (const c of copies) rmSync(c, { recursive: true, force: true }); });
-const copyView = (label: string): string => {
-  const dest = join(realpathSync(mkdtempSync(join(tmpdir(), `reval-rc5-${label}-`))), 'view');
-  cpSync(viewPath!, dest, { recursive: true, verbatimSymlinks: true }); copies.push(dest);
-  return dest;
-};
-test('copied historical views: unchanged guard passes untampered, and detects an unrelated source byte, a historical build byte and a wrong overlay hash', { skip: !viewPath && 'ATLAS_REVAL_RC5_HISTORICAL_VIEW not set (evidence run sets the root-assembled view)' }, () => {
-  const clean = copyView('clean');
-  assert.deepEqual(guard(clean), { ok: true, drift: [] }, 'the copied view itself verifies');
-  const o = overlays(clean);
-  const offline = new Set((JSON.parse(readFileSync(join(ROOT, 'verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_RC3_MANIFEST.json'), 'utf8')) as { files: Entry[] }).files.map(e => e.path));
-  const unrelated = manifest.files.find(e => !(e.path in ALLOWED_SOURCE_DELTAS) && !(e.path in o) && !offline.has(e.path) && e.path.startsWith('packages/') && e.path.endsWith('.ts'))!;
-  const built = manifest.builtInventory.find(e => !ALLOWED_BUILD_DELTAS.includes(e.path) && e.path.startsWith('dist/packages/ask/'))!;
-  const overlay = Object.keys(o).sort()[0]!;
-  for (const [label, rel, expected] of [['source', unrelated.path, ['RC_SOURCE_DRIFT']], ['build', built.path, ['RC_BUILD_DRIFT']],
-    ['overlay', overlay, ['ADMIN_OVERLAY_DRIFT', 'RC_SOURCE_DRIFT']]] as const) {
-    const view = copyView(label);
-    appendFileSync(join(view, rel), '\n');
-    const g = guard(view);
-    console.log(`# REVAL_EVIDENCE rc5-tamper ${label} ${rel} -> ${JSON.stringify(g)}`);
-    assert.equal(g.ok, false, label);
-    for (const code of expected) assert.ok(g.drift.includes(code), `${label}: ${code} in ${g.drift}`);
-    if (label === 'source') assert.deepEqual(g.drift, ['RC_SOURCE_DRIFT']);
-    if (label === 'build') assert.deepEqual(g.drift, ['RC_BUILD_DRIFT']);
+test('the production RC5 guard refuses the current checkout and corrupted pinned anchors', () => {
+  const current = verifyArtifact();
+  assert.equal(current.ok, false);
+  assert.ok(current.drift.includes('RC_SOURCE_DRIFT'));
+  assert.ok(current.drift.includes('RC_BUILD_DRIFT'));
+  for (const [path, code] of [
+    ['verification/stage5/S5ASKREMOTE_RC_RC1_MANIFEST.json', 'RC_MANIFEST_DRIFT'],
+    ['verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_RC3_MANIFEST.json', 'OFFLINE_MANIFEST_DRIFT'],
+    ['verification/stage5/S5ASKREMOTE_REVAL_OFFLINE_STATUS.json', 'OFFLINE_STATUS_MISMATCH'],
+  ]) {
+    const changed = verifyArtifact(p => p === path ? Buffer.from('{}') : historicalReader(p));
+    assert.equal(changed.ok, false);
+    assert.ok(changed.drift.includes(code!), `${path}: ${changed.drift.join(',')}`);
   }
-  assert.deepEqual(guard(clean), { ok: true, drift: [] }, 'the untampered copy is unaffected');
 });

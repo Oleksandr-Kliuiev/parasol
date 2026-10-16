@@ -25,7 +25,7 @@ test('real pty: kernel echo stays off from startup verification through processi
   // `cat FIFO |` and capture the pty output in a file that is polled.
   assert.equal(spawnSync('mkfifo', [fifo]).status, 0);
   const q = (a: string): string => `'${a.replace(/'/g, `'\\''`)}'`;
-  const argv = [process.execPath, '--experimental-strip-types', '--no-warnings', 'scripts/ask-remote-eval-execution/cli.ts', 'session', '--receipt-dir', dir].map(q).join(' ');
+  const argv = [process.execPath, '--experimental-strip-types', '--no-warnings', 'tests/support/eval-execution-cli.ts', 'session', '--receipt-dir', dir].map(q).join(' ');
   const inner = process.platform === 'darwin' ? `script -q /dev/null ${argv}` : `script -q -e -c ${q(argv)} /dev/null`;
   // Own process group, so every failure path kills sh, cat, script and the session together.
   const child = spawn('sh', ['-c', `cat ${q(fifo)} | ${inner} > ${q(outFile)} 2>&1`], { stdio: 'ignore', detached: true });

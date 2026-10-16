@@ -41,7 +41,7 @@ test('refusals before any work, exit 2: the owner connection, a wrong token, bad
   assert.deepEqual(await ops(['mapping', '--client', 'demo-gasta'], { ATLAS_OPERATOR_TOKEN: generateToken() }),
     { code: 2, output: { command: 'mapping', error: 'OPERATOR_TOKEN_INVALID' } });
   const usage = await ops(['mapping']);
-  assert.deepEqual([usage.code, usage.output.error, (usage.output.commands as string[]).length], [2, 'INVALID_ARGUMENTS', 21]);
+  assert.deepEqual([usage.code, usage.output.error, (usage.output.commands as string[]).length], [2, 'INVALID_ARGUMENTS', 22]);
   assert.deepEqual(await ops(['worker-once'], { ATLAS_RUNTIME_DATABASE_URL: '' }), { code: 2, output: { command: 'worker-once', error: 'ATLAS_RUNTIME_DATABASE_URL is required' } });
   assert.deepEqual(await ops(['decisions-smoke']), { code: 2, output: { command: 'decisions-smoke', safeErrorCode: 'OPENAI_KEY_REQUIRED' } });
 });

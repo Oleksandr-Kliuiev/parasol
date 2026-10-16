@@ -1,9 +1,9 @@
+import { verifyTestRevision } from '../support/reval-history.ts';
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { withGroupedOrder } from '../../scripts/reval-instrument/order.ts';
 import { assertReceiptV6 } from '../../scripts/reval-instrument/receipt.ts';
 import { revise } from '../support/ask-remote-pg.ts';
@@ -24,7 +24,7 @@ import { privateDir, writePrivate } from '../support/reval-test-deps.ts';
 const darwin = process.platform === 'darwin' && process.arch === 'arm64';
 const enabled = process.env.ATLAS_REVAL_REHEARSAL === '1';
 const skip = { skip: (!darwin && 'darwin/arm64 only') || (!enabled && 'set ATLAS_REVAL_REHEARSAL=1 (paced: ≈ 50 minutes)'), timeout: 5_400_000 };
-const ctx = bindCorpus(verifyRevision().snapshot); // identity FIRST: no throwaway database on a top-level failure
+const ctx = bindCorpus(verifyTestRevision().snapshot); // identity FIRST: no throwaway database on a top-level failure
 const grouped = withGroupedOrder(ctx.corpus).corpus;
 const fixtureOf = (id: string) => grouped.cases.get(id)!.fixtureId;
 const segments = grouped.order.reduce<{ fixtureId: string; cases: string[] }[]>((acc, id) => {

@@ -8,5 +8,5 @@
 - Keep secrets out of Git, logs, fixtures and reports. Use synthetic data for CI.
 - Keep independent concerns in cohesive files; aim near 500 lines and split before 700 where practical.
 - Run the smallest relevant checks. For root tooling use `node --test scripts/*.test.mjs`; for builds/tests see README.
-- The Atlas baseline is temporary import evidence, not permission to ignore new failures. Retire/review it before editing Atlas sources.
+- Atlas acceptance is strict: every unit, PostgreSQL and browser test must pass, with no skips or failure allowlist. Historical manifests are immutable test inputs, not approval for current code.
 - Ask before adding production dependencies, deploying, changing credentials or contacting people. Repository creation and the initial private push are already authorized for M01–M03.

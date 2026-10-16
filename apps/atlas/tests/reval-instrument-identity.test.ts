@@ -1,6 +1,7 @@
+import { historicalReader } from './support/reval-history.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,11 +21,11 @@ import type { Reader } from '../scripts/reval-instrument/identity.ts';
 // bytes). RS-D-C (final revision): RS-D-B is pinned, every output rebuilt from an accepted source is pinned by the sealed build
 // inventory, and the RS-D-C candidate layer is recorded (accepted exactly when its matching seal exists).
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const disk: Reader = p => { try { return readFileSync(join(ROOT, p)); } catch { return null; } };
+const disk: Reader = historicalReader;
 const overlay = (path: string, bytes: Buffer | null): Reader => p => p === path ? bytes : disk(p);
 const flip = (path: string): Reader => { const b = Buffer.from(disk(path)!); b[b.length - 1] ^= 1; return overlay(path, b); };
 
-test('chained identity: the current tree verifies; every pinned anchor, seal, source and non-rebuilt output byte is drift', () => {
+test('chained identity: the frozen RS-D-C fixture verifies; every pinned anchor, seal, source and non-rebuilt output byte is drift', () => {
   const base = verifyRevision(disk);
   assert.equal(base.snapshot.ok, true, base.snapshot.drift.join(','));
   assert.ok(base.revision && base.revision.expectedFiles > 1800);
@@ -134,4 +135,14 @@ console.log(JSON.stringify(out)); server.close(); otherServer.close(); process.e
   assert.deepEqual(out, { beforeAllow: 'INSTRUMENT_EGRESS_BLOCKED', fetch: 'INSTRUMENT_EGRESS_BLOCKED', tcp: 'INSTRUMENT_EGRESS_BLOCKED', dns: 'INSTRUMENT_EGRESS_BLOCKED',
     resolver: 'INSTRUMENT_EGRESS_BLOCKED', promiseResolver: 'INSTRUMENT_EGRESS_BLOCKED',
     relative: 'INSTRUMENT_EGRESS_BLOCKED', allowed: 'OK', otherPath: 'INSTRUMENT_EGRESS_BLOCKED', socketConnect: 'INSTRUMENT_EGRESS_BLOCKED', second: 'INSTRUMENT_EGRESS_BLOCKED' });
+});
+
+test('production instrument CLI rejects current drift and arms raw mode before dynamic imports', () => {
+  const source = readFileSync(join(ROOT, 'scripts/reval-instrument/cli.ts'), 'utf8');
+  assert.ok(source.indexOf('process.stdin.setRawMode(true)') < source.indexOf('await import('));
+  const result = spawnSync(process.execPath, ['--experimental-strip-types', join(ROOT, 'scripts/reval-instrument/cli.ts'), 'artifact-check'], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.ok, false); assert.equal(output.liveAcceptanceEligible, false);
+  assert.ok(output.drift.length > 0);
 });

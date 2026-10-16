@@ -1,3 +1,4 @@
+import { loadContext } from './support/reval-history.ts';
 import '../scripts/ask-remote-eval/guard-preload.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ import { ClosureFloor } from '../scripts/ask-remote-eval-execution/closure.ts';
 import { bindCorpus } from '../scripts/ask-remote-eval-execution/corpus.ts';
 import { fakeRequest, fakeUuid } from '../scripts/ask-remote-eval-execution/fake-v2.ts';
 import { buildReceipt } from '../scripts/ask-remote-eval-execution/receipt.ts';
-import { ADMISSION_ID, advance, loadContext, observe, playNext, rig, SCENARIOS, START } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
+import { ADMISSION_ID, advance, observe, playNext, rig, SCENARIOS, START } from '../scripts/ask-remote-eval-execution/rehearsal.ts';
 import { replayNumeric } from '../scripts/ask-remote-eval-execution/replay.ts';
 import { finishInput, InputCollector } from '../scripts/ask-remote-eval-execution/tty-input.ts';
 import { ExecError } from '../scripts/ask-remote-eval-execution/validate.ts';

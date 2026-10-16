@@ -1,3 +1,4 @@
+import { verifyTestRevision } from '../support/reval-history.ts';
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { realpathSync } from 'node:fs';
@@ -8,7 +9,6 @@ import { computeDigests, PROJECT_ROOT } from '../../packages/reval/launch.ts';
 import { registerSandbox } from '../../packages/reval/register.ts';
 import { buildPeer } from '../../scripts/reval-server/build-peer.ts';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { fenceOf, PRICE, revise } from '../support/ask-remote-pg.ts';
 import { LiveOwner } from '../support/reval-eval-process.ts';
 import { LiveTty } from '../support/reval-live-tty.ts';
@@ -24,7 +24,7 @@ import { dockerPhysical, NODE_REALPATH, privateDir, writeOwnerConfig, writePriva
 // consumption (run stops). Docker PG17 = regression evidence only; never MEASURED.
 const darwin = process.platform === 'darwin' && process.arch === 'arm64';
 const skip = { skip: !darwin && 'darwin/arm64 only', timeout: 600_000 };
-const ctx = bindCorpus(verifyRevision().snapshot); // identity FIRST: no throwaway database on a top-level failure
+const ctx = bindCorpus(verifyTestRevision().snapshot); // identity FIRST: no throwaway database on a top-level failure
 void ctx;
 const ns = await nonsuperDatabase();
 const { db } = ns; const owner = db.owner;

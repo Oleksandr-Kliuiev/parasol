@@ -15,10 +15,9 @@ import { NOTHING_RETAINED, recordConsole, tokenRetained } from '../support/opera
 // evidence"; the REAL instrument transfer code reruns the RC5 validators against the frozen case (request equals the frozen
 // question/observationId, semantic MATCH, truth true) and COMMITs; C collects the FINAL record. All 15 FX10 cases must request the
 // frozen absent ID and read it as MISSING (no focus fact, no extra focus row). The accepted per-actor limit (10 questions per 60 s)
-// paces the run (≥ 20 minutes), so this evidence test runs only with ATLAS_REVAL_E2E_200=1 (like the native-cluster tests).
+// paces the full suite (≥ 20 minutes); this test is always included.
 const ORDER = ['FX02', 'FX01', 'FX03', 'FX04', 'FX05', 'FX06', 'FX07', 'FX08', 'FX09', 'FX10', 'FX11'];
 test.setTimeout(50 * 60_000);
-test.skip(process.env.ATLAS_REVAL_E2E_200 !== '1', 'set ATLAS_REVAL_E2E_200=1 (paced: ≥ 20 minutes)');
 
 test('all 200 frozen case paths (incl. 15 FX10 MISSING) through the measured pane: exact request, semantic MATCH, truth, COMMITTED handoff', async ({ page, context }) => {
   const messages = recordConsole(page);

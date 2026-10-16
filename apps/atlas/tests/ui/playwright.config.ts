@@ -12,6 +12,7 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   retries: 0,
+  forbidOnly: true,
   timeout: 90_000,
   reporter: [['list']],
   use: {

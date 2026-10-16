@@ -33,3 +33,9 @@ export function loadContext(): Ctx {
   if (!cached) cached = bindCorpus(verifyArtifact());
   return cached;
 }
+
+export interface ArtifactAccess {
+  loadContext(): Ctx;
+  verifyArtifact(): Snapshot;
+}
+export const productionArtifacts: ArtifactAccess = { loadContext, verifyArtifact };

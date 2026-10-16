@@ -60,19 +60,27 @@ export function proxyIdentityMiddleware(config: ProxyIdentityConfig | null) {
   return (req: IncomingMessage, res: ServerResponse, next: () => void): void => {
     const path = (req.url ?? '').split('?')[0];
     if (path === '/openapi.json' && (req.method === 'GET' || req.method === 'HEAD')) return answer(res, 200, document, 'application/json');
+    // Authentication at the proxy boundary must preserve the dedicated PowerOffice error contract.
+    const refuse = (status: 401 | 403): void => {
+      if (/^\/clients\/[^/]+\/poweroffice\/[^/]+\/(status|summary)\/?$/.test(path!)) {
+        const code = status === 401 ? 'POWEROFFICE_AUTHENTICATION_FAILED' : 'PERMISSION_DENIED';
+        return answer(res, status, JSON.stringify({ statusCode: status, code, synthetic: true }), 'application/json');
+      }
+      return answer(res, status, status === 401 ? 'Unauthorized' : 'Forbidden');
+    };
     let authorizations = 0;
     for (let i = 0; i < req.rawHeaders.length; i += 2) if (req.rawHeaders[i]!.toLowerCase() === 'authorization') authorizations += 1;
     const header = req.headers.authorization;
     let email: string | null = null;
-    if (authorizations > 1) return answer(res, 401, 'Unauthorized');
+    if (authorizations > 1) return refuse(401);
     if (header !== undefined && /^basic /i.test(header)) {
       const decoded = Buffer.from(header.slice(6).trim(), 'base64').toString('utf8');
       const colon = decoded.indexOf(':');
       const secret = colon < 0 ? '' : decoded.slice(colon + 1);
-      if (!expected || colon < 1 || !timingSafeEqual(digest(secret), expected)) return answer(res, 401, 'Unauthorized');
+      if (!expected || colon < 1 || !timingSafeEqual(digest(secret), expected)) return refuse(401);
       const candidate = decoded.slice(0, colon).trim().toLowerCase();
       const token = config!.users.get(candidate);
-      if (!token) return answer(res, 403, 'Forbidden');
+      if (!token) return refuse(403);
       email = candidate;
       setBearer(req, token);
     }

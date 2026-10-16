@@ -130,3 +130,16 @@ test('console edge session: no Authorization, same-origin credentials; token mod
     [true, false, false, false, false]);
   assert.equal(isConsoleLocation('http://127.0.0.1:3100', '/operator/'), true, 'the local console is unchanged');
 });
+
+test('proxy refusals preserve the PowerOffice JSON contract with the boundary enabled or disabled', async () => {
+  for (const config of [null, proxyIdentityFromEnv(ENV)]) {
+    const port = await serve(proxyIdentityMiddleware(config));
+    for (const endpoint of ['status', 'summary']) {
+      for (const headers of [['Authorization: Basic abc'], ['Authorization: Bearer malformed', 'Authorization: Bearer duplicate']]) {
+        const r = await raw(port, [`GET /clients/synthetic/poweroffice/synthetic/${endpoint} HTTP/1.1`, 'Host: x', ...headers]);
+        assert.equal(r.status, 401);
+        assert.deepEqual(JSON.parse(r.body), { statusCode: 401, code: 'POWEROFFICE_AUTHENTICATION_FAILED', synthetic: true });
+      }
+    }
+  }
+});

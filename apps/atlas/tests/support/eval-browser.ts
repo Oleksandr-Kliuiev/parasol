@@ -1,9 +1,9 @@
+import { verifyTestRevision } from './reval-history.ts';
 import { randomUUID } from 'node:crypto';
 import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { newToken } from '../../packages/reval/eval-wire.ts';
 import { bindCorpus } from '../../scripts/ask-remote-eval-execution/corpus.ts';
-import { verifyRevision } from '../../scripts/reval-instrument/identity.ts';
 import { receiveTransfer } from '../../scripts/reval-instrument/transfer.ts';
 import type { ReadySent, TransferResult } from '../../scripts/reval-instrument/transfer.ts';
 import { HandoffClient } from './reval-eval-server.ts';
@@ -17,7 +17,7 @@ import { submitToken } from './operator-ui.ts';
  * performs every manual step on the sealed measured console: pairing code, typed question, the one fixed choice, consent, Ask,
  * "Send evaluation evidence". Synthetic data only; loopback only.
  */
-export const CORPUS = bindCorpus(verifyRevision().snapshot).corpus;
+export const CORPUS = bindCorpus(verifyTestRevision().snapshot).corpus;
 export const ctxOf = (caseId: string) => {
   const frozen = CORPUS.cases.get(caseId)!;
   return { frozen, fixture: CORPUS.fixtures.get(frozen.fixtureId)!, scope: CORPUS.scope };

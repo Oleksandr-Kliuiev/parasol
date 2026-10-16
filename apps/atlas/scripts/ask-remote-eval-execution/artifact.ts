@@ -38,7 +38,8 @@ export const adminOverlaySha256 = (overlays: Readonly<Record<string, string>> = 
   createHash('sha256').update(Object.keys(overlays).sort().map(p => `${p}:${overlays[p]}`).join('\n')).digest('hex');
 
 const sha = (bytes: Buffer | string): string => createHash('sha256').update(bytes).digest('hex');
-const fileSha = (path: string): string | null => { try { return sha(readFileSync(new URL(path, ROOT))); } catch { return null; } };
+export type ArtifactReader = (path: string) => Buffer | null;
+const diskReader: ArtifactReader = path => { try { return readFileSync(new URL(path, ROOT)); } catch { return null; } };
 interface Entry { readonly path: string; readonly sha256: string }
 const entries = (v: unknown): Entry[] => Array.isArray(v) && v.every(e => e !== null && typeof e === 'object' && typeof e.path === 'string'
   && typeof e.sha256 === 'string') ? v as Entry[] : [];
@@ -60,13 +61,13 @@ export function executionToolSha256(): string {
   const names = readdirSync(TOOL_DIR).filter(n => n.endsWith('.ts') || n === 'AGENTS.md').sort();
   return sha(names.map(n => `${n}:${sha(readFileSync(new URL(n, TOOL_DIR)))}`).join('\n'));
 }
-const group = (paths: readonly string[]): string => sha(paths.map(p => `${p}:${fileSha(p) ?? 'MISSING'}`).join('\n'));
-
-export function verifyArtifact(): Snapshot {
+export function verifyArtifact(read: ArtifactReader = diskReader): Snapshot {
+  const fileSha = (path: string): string | null => { const bytes = read(path); return bytes === null ? null : sha(bytes); };
+  const group = (paths: readonly string[]): string => sha(paths.map(p => `${p}:${fileSha(p) ?? 'MISSING'}`).join('\n'));
   const drift: string[] = []; const admin = new Set<string>(); let filesChecked = 0;
   const pinned = (anchor: { path: string; sha256: string }, code: string): Record<string, unknown> | null => {
     if (fileSha(anchor.path) !== anchor.sha256) { drift.push(code); return null; }
-    return JSON.parse(readFileSync(new URL(anchor.path, ROOT), 'utf8')) as Record<string, unknown>;
+    return JSON.parse(read(anchor.path)!.toString('utf8')) as Record<string, unknown>;
   };
   const check = (list: readonly Entry[], code: string): void => {
     if (list.length === 0) drift.push(`${code}_EMPTY`);
@@ -88,7 +89,7 @@ export function verifyArtifact(): Snapshot {
   }
   if (rc) { check(entries(rc.files), 'RC_SOURCE_DRIFT'); check(entries(rc.builtInventory), 'RC_BUILD_DRIFT'); }
   let status: Record<string, unknown> = {};
-  try { status = JSON.parse(readFileSync(new URL(OFFLINE_STATUS, ROOT), 'utf8')) as Record<string, unknown>; } catch { drift.push('OFFLINE_STATUS_UNREADABLE'); }
+  try { status = JSON.parse(read(OFFLINE_STATUS)!.toString('utf8')) as Record<string, unknown>; } catch { drift.push('OFFLINE_STATUS_UNREADABLE'); }
   if (status.status !== 'APPROVED_OFFLINE_PACKAGE' || !offline || status.packageHash !== offline.packageHash || status.manifest !== OFFLINE_MANIFEST.path
     || status.dataAdmission !== 'NOT_ADMITTED' || status.paidProductCalls !== 0) drift.push('OFFLINE_STATUS_MISMATCH');
 

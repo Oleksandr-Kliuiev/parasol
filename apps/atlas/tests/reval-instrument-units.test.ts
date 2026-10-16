@@ -1,10 +1,10 @@
+import { verifyTestRevision } from './support/reval-history.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { ledgerValues } from '../scripts/ask-remote-eval-execution/validate.ts';
 import { bindCorpus } from '../scripts/ask-remote-eval-execution/corpus.ts';
 import { FakeV2, fakeRequest } from '../scripts/ask-remote-eval-execution/fake-v2.ts';
-import { verifyRevision } from '../scripts/reval-instrument/identity.ts';
 import { countersOf, ledgerOf } from '../scripts/reval-instrument/ledger.ts';
 import { receiveTransfer, safeResultOf } from '../scripts/reval-instrument/transfer.ts';
 import type { ReadySent } from '../scripts/reval-instrument/transfer.ts';
@@ -14,7 +14,7 @@ import { fakeSnapshot } from './support/reval-instrument-fixtures.ts';
 // settlement vocabulary, and the 06 instrument side of the transfer (READY binding, accepted validators → SafeResult, PENDING before
 // ACK, COMMITTED only on the matching COMMIT). Pure: a fake handoff port; the frozen corpus via the chained identity.
 const ADMISSION = randomUUID();
-const ctxOf = (() => { const c = bindCorpus(verifyRevision().snapshot); return (caseId: string) => {
+const ctxOf = (() => { const c = bindCorpus(verifyTestRevision().snapshot); return (caseId: string) => {
   const frozen = c.corpus.cases.get(caseId)!; return { ctx: { frozen, fixture: c.corpus.fixtures.get(frozen.fixtureId)!, scope: c.corpus.scope }, corpus: c.corpus };
 }; })();
 
