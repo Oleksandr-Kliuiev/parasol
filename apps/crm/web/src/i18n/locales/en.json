@@ -3396,7 +3396,7 @@
   "parasolIdentity": {
     "title": "Link Atlas customers",
     "subtitle": "Connect existing Atlas clients to the CRM customer directory.",
-    "instructions": "Use an Atlas customer identity export. Choose each CRM customer explicitly, then review the complete plan before applying it. No customer is created, and access rights are unchanged.",
+    "instructions": "Load the clients available to you in Atlas or use an identity export file. Choose each CRM customer explicitly, then review the complete plan before applying it. No customer is created, and access rights are unchanged.",
     "file": "Atlas export (JSON)",
     "fileHint": "Version 1 identity export, up to 1000 clients and 1 MiB. Only workspace, client IDs and names are accepted. The file is kept in memory for this page only.",
     "workspace": "Atlas workspace",
@@ -3413,7 +3413,7 @@
     "preview": "Preview mappings",
     "edit": "Edit selection",
     "apply": "Apply reviewed mappings",
-    "reset": "Choose another file",
+    "reset": "Choose another source",
     "continue": "Continue with this export",
     "reviewReady": "Preview only: no links have been saved. Check every selected pair below. Unselected clients will be left unchanged.",
     "reviewBlocked": "No links have been saved. Resolve every conflict and preview again. Existing links can be reviewed in the CRM customer card.",
@@ -3443,7 +3443,20 @@
       "conflict": "The stored links changed. Nothing from this request was saved. Preview again to review the current conflicts.",
       "applyUncertain": "The result could not be confirmed. Preview again to check which links already exist before trying to apply.",
       "identityFailed": "Could not read this Atlas link. Refresh to check its current state.",
-      "unlinkFailed": "Removal could not be confirmed. Check the refreshed link before trying again."
+      "unlinkFailed": "Removal could not be confirmed. Check the refreshed link before trying again.",
+      "sourceFailed": "Could not load the Atlas directory. Try again; no links have been changed.",
+      "sourceRateLimited": "The export limit has been reached. Wait before trying again; you can still upload a file."
+    },
+    "loadAtlas": "Load from Atlas",
+    "sourceHint": "Reads only the Atlas clients your personal access permits. You can also upload an identity export below.",
+    "loadedAtlas": "Loaded from Atlas at {{time}}. This is the list available to your employee account at that time; it may not contain every company customer.",
+    "loadedFile": "Source: uploaded identity export. Its freshness depends on when the export was created.",
+    "atlasStatus": {
+      "NOT_CONFIGURED": "The Atlas connection has not been configured. You can upload an identity export instead.",
+      "ACCESS_DENIED": "Your personal Atlas access is missing or does not permit reading the customer directory.",
+      "SOURCE_NOT_FOUND": "This Atlas installation does not provide the identity export. Check its version or upload a file.",
+      "UNAVAILABLE": "Atlas could not be reached. Try again or upload an identity export.",
+      "INVALID_RESPONSE": "Atlas returned an invalid or incompatible customer list. No clients were loaded."
     }
   }
 }

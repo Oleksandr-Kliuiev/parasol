@@ -12,6 +12,14 @@ public static class CustomerIdentityEndpoints
     public static IEndpointRouteBuilder MapParasolCustomerIdentities(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/parasol").WithTags("Parasol");
+        group.MapGet("/customer-identities/atlas-export", async (AtlasIdentityReader reader, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await reader.ReadAsync(ct)).ToHttpResult(Results.Ok);
+            })
+            .RequirePermission(Permissions.IntegrationsManage)
+            .ExportsData()
+            .RequireRateLimiting(RateLimitPolicies.Export);
         group.MapGet("/customers/{customerId:guid}/workspace", async (Guid customerId, AtlasWorkspaceReader reader,
                 HttpContext http, CancellationToken ct) =>
             {

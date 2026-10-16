@@ -30,7 +30,7 @@ test('identity upload is accessible and long IDs stay within a phone viewport', 
   await page.setViewportSize({ width: 390, height: 844 });
   await accessible(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Choose another file' }).click();
+  await page.getByRole('button', { name: 'Choose another source' }).click();
   await expect(page.getByLabel('Atlas export (JSON)')).toBeVisible();
   const customer = await createOrganization(page, { name: marker('Mobile identity ') });
   await page.getByLabel('Atlas export (JSON)').setInputFiles({ name: 'synthetic.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({

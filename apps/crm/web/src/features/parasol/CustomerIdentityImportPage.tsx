@@ -5,8 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { api, ApiError, query } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { formatDateTime } from '../../shared/utils/format';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { IdentityMappingRows } from './IdentityMappingRows';
+import { loadAtlasIdentity } from './atlasIdentitySource';
 import { buildIdentityImport, canConfirmIdentityPlan, IdentityInputError, readIdentityFile,
   type AtlasIdentitySnapshot, type IdentityImport, type IdentityPlan, type SelectedCustomer } from './identityImport';
 
@@ -37,19 +39,42 @@ function IdentityImportForm() {
   const [busy, setBusy] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [fileVersion, setFileVersion] = useState(0);
+  const [atlasStatus, setAtlasStatus] = useState<string | null>(null);
+  const [retrievedAt, setRetrievedAt] = useState<string | null>(null);
+  const sourceRequest = useRef<AbortController | null>(null);
   const alive = useRef(true);
-  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; sourceRequest.current?.abort(); }; }, []);
 
   const clearReview = () => { setReview(null); setApplied(null); setConfirmed(false); setErrorKey(null); };
-  const reset = () => { clearReview(); setSnapshot(null); setSelected(new Map()); setFileVersion(n => n + 1); };
+  const reset = () => {
+    clearReview(); setSnapshot(null); setSelected(new Map()); setFileVersion(n => n + 1);
+    setAtlasStatus(null); setRetrievedAt(null);
+  };
   const readFile = async (file: File) => {
-    clearReview(); setSnapshot(null); setSelected(new Map()); setBusy(true);
+    reset(); setBusy(true);
     try {
       const next = await readIdentityFile(file);
       if (alive.current) setSnapshot(next);
     } catch (error) {
       if (alive.current) setErrorKey(error instanceof IdentityInputError ? error.code : 'invalidFile');
     } finally { if (alive.current) setBusy(false); }
+  };
+  const readAtlas = async () => {
+    if (busy) return;
+    reset(); setBusy(true);
+    const request = new AbortController(); sourceRequest.current = request;
+    try {
+      const result = await loadAtlasIdentity(request.signal);
+      if (!alive.current) return;
+      if (result.status === 'READY') { setSnapshot(result.snapshot); setRetrievedAt(result.retrievedAt); }
+      else setAtlasStatus(result.status);
+    } catch (error) {
+      if (alive.current) setErrorKey(error instanceof ApiError && error.status === 403 ? 'forbidden'
+        : error instanceof ApiError && error.status === 429 ? 'sourceRateLimited' : 'sourceFailed');
+    } finally {
+      if (sourceRequest.current === request) sourceRequest.current = null;
+      if (alive.current) setBusy(false);
+    }
   };
   const preview = async () => {
     if (!snapshot) return;
@@ -89,13 +114,19 @@ function IdentityImportForm() {
     <div className={styles.body}>
       <Text>{t('parasolIdentity.instructions')}</Text>
       {errorKey && <MessageBar layout="multiline" intent="error"><MessageBarBody>{t(`parasolIdentity.errors.${errorKey}`)}</MessageBarBody></MessageBar>}
-      {!snapshot && <Field label={{ children: t('parasolIdentity.file'), htmlFor: fileId }}
+      {atlasStatus && <MessageBar layout="multiline" intent="warning"><MessageBarBody>{t(`parasolIdentity.atlasStatus.${atlasStatus}`)}</MessageBarBody></MessageBar>}
+      {!snapshot && <>
+        <div className={styles.actions}><Button appearance="primary" disabled={busy} onClick={() => void readAtlas()}>{t('parasolIdentity.loadAtlas')}</Button></div>
+        <Text>{t('parasolIdentity.sourceHint')}</Text>
+        <Field label={{ children: t('parasolIdentity.file'), htmlFor: fileId }}
         hint={{ children: t('parasolIdentity.fileHint'), id: `${fileId}-hint` }}>
         <input key={fileVersion} id={fileId} aria-describedby={`${fileId}-hint`} className={styles.file} type="file" accept=".json,application/json" disabled={busy}
           onChange={e => { const file = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (file) void readFile(file); }} />
-      </Field>}
+        </Field>
+      </>}
       {busy && <Spinner size="small" label={t('common.loading')} />}
       {snapshot && <>
+        <Text>{retrievedAt ? t('parasolIdentity.loadedAtlas', { time: formatDateTime(retrievedAt) }) : t('parasolIdentity.loadedFile')}</Text>
         <Text className={styles.workspace} weight="semibold">{t('parasolIdentity.workspace')}: {snapshot.workspaceId}</Text>
         <Text>{t('parasolIdentity.selectionCount', { selected: selected.size, total: snapshot.clients.length, omitted: snapshot.clients.length - selected.size })}</Text>
         {snapshot.clients.length === 0 && <Text role="status">{t('parasolIdentity.empty')}</Text>}

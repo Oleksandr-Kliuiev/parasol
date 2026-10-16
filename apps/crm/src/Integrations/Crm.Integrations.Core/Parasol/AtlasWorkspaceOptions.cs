@@ -44,5 +44,7 @@ internal static class AtlasWorkspaceRegistration
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
             .RemoveAllLoggers(); // No customer paths, headers or upstream bodies in HttpClient logs.
         services.AddScoped<AtlasWorkspaceReader>();
+        services.AddScoped<AtlasReadClient>();
+        services.AddScoped<AtlasIdentityReader>();
     }
 }

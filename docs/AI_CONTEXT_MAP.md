@@ -7,6 +7,7 @@
 - VPS document storage / M06: `docs/migration/M06-VPS-DOCUMENTS.md`; CRM `Documents/FileSystemDocumentStore.cs`, ADR-026, runbook 16.
 - VPS deployment / M07: `deploy/hostinger/README.md`, `docs/migration/M07-HOSTINGER.md`; Compose, host configuration, restic and isolated recovery tooling.
 - Customer mapping UI / M08: `docs/migration/M08-CUSTOMER-MAPPING-UI.md`; CRM `web/src/features/parasol/CustomerIdentity*`, identity import validation and explicit link correction.
+- Employee-scoped Atlas directory / M09: `docs/migration/M09-ATLAS-DIRECTORY.md`; CRM `Parasol/Atlas{ReadClient,IdentityReader}`, `web/src/features/parasol/atlasIdentitySource.ts` and the mapping screen.
 - Original Git identities and import commits: `docs/migration/sources.json`, `IMPORT.md`.
 - Strict Atlas tests and native fixture setup: `docs/testing/ATLAS.md`.
 - Historical import failures (no longer an exception mechanism): `docs/migration/BASELINE.md`, `atlas-baseline.json`.

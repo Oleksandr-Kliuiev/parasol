@@ -3396,7 +3396,7 @@
   "parasolIdentity": {
     "title": "Koble Atlas-kunder",
     "subtitle": "Koble eksisterende Atlas-kunder til kunderegisteret i CRM.",
-    "instructions": "Bruk en eksport av kundeidentiteter fra Atlas. Velg hver CRM-kunde uttrykkelig, og se gjennom hele planen før du lagrer. Ingen kunder opprettes, og tilgangsrettigheter endres ikke.",
+    "instructions": "Hent kundene du har tilgang til i Atlas, eller bruk en identitetseksport. Velg hver CRM-kunde uttrykkelig, og se gjennom hele planen før du lagrer. Ingen kunder opprettes, og tilgangsrettigheter endres ikke.",
     "file": "Atlas-eksport (JSON)",
     "fileHint": "Identitetseksport versjon 1, inntil 1000 kunder og 1 MiB. Bare arbeidsområde, kunde-ID-er og navn godtas. Filen beholdes kun i minnet på denne siden.",
     "workspace": "Arbeidsområde i Atlas",
@@ -3413,7 +3413,7 @@
     "preview": "Forhåndsvis koblinger",
     "edit": "Endre valg",
     "apply": "Lagre gjennomgåtte koblinger",
-    "reset": "Velg en annen fil",
+    "reset": "Velg en annen kilde",
     "continue": "Fortsett med denne eksporten",
     "reviewReady": "Kun forhåndsvisning: ingen koblinger er lagret. Kontroller alle valgte par nedenfor. Kunder som ikke er valgt, forblir uendret.",
     "reviewBlocked": "Ingen koblinger er lagret. Løs alle konflikter og forhåndsvis på nytt. Eksisterende koblinger kan gjennomgås i kundekortet i CRM.",
@@ -3443,7 +3443,20 @@
       "conflict": "De lagrede koblingene er endret. Ingenting fra denne forespørselen ble lagret. Forhåndsvis på nytt for å se gjeldende konflikter.",
       "applyUncertain": "Resultatet kunne ikke bekreftes. Forhåndsvis på nytt for å se hvilke koblinger som allerede finnes før du prøver å lagre.",
       "identityFailed": "Kunne ikke lese denne Atlas-koblingen. Oppdater for å se gjeldende tilstand.",
-      "unlinkFailed": "Fjerningen kunne ikke bekreftes. Kontroller den oppdaterte koblingen før du prøver igjen."
+      "unlinkFailed": "Fjerningen kunne ikke bekreftes. Kontroller den oppdaterte koblingen før du prøver igjen.",
+      "sourceFailed": "Kunne ikke hente kunderegisteret fra Atlas. Prøv igjen; ingen koblinger er endret.",
+      "sourceRateLimited": "Eksportgrensen er nådd. Vent før du prøver igjen; du kan fortsatt laste opp en fil."
+    },
+    "loadAtlas": "Hent fra Atlas",
+    "sourceHint": "Leser bare Atlas-kunder som din personlige tilgang tillater. Du kan også laste opp en identitetseksport nedenfor.",
+    "loadedAtlas": "Hentet fra Atlas {{time}}. Listen viser kundene din medarbeiderkonto hadde tilgang til på dette tidspunktet, og kan mangle andre kunder i firmaet.",
+    "loadedFile": "Kilde: opplastet identitetseksport. Hvor oppdatert den er, avhenger av når eksporten ble laget.",
+    "atlasStatus": {
+      "NOT_CONFIGURED": "Atlas-tilkoblingen er ikke konfigurert. Du kan laste opp en identitetseksport i stedet.",
+      "ACCESS_DENIED": "Din personlige Atlas-tilgang mangler eller tillater ikke lesing av kunderegisteret.",
+      "SOURCE_NOT_FOUND": "Denne Atlas-installasjonen tilbyr ikke identitetseksporten. Kontroller versjonen eller last opp en fil.",
+      "UNAVAILABLE": "Kunne ikke nå Atlas. Prøv igjen eller last opp en identitetseksport.",
+      "INVALID_RESPONSE": "Atlas returnerte en ugyldig eller inkompatibel kundeliste. Ingen kunder ble lastet inn."
     }
   }
 }

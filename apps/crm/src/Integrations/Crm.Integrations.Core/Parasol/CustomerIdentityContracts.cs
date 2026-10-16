@@ -38,19 +38,22 @@ public static class CustomerIdentityContract
     public const string ExternalType = "Client";
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    private static bool Id(string? value) => value is { Length: > 0 and <= 128 } && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or ':');
+
+    public static bool IsValidSnapshot(AtlasIdentitySnapshot? s) => s is not null && s.SchemaVersion == 1 && s.Source == "atlas" && Id(s.WorkspaceId)
+        && s.Clients is not null && s.Clients.Count <= 1000
+        && s.Clients.All(c => c is not null && Id(c.ClientId) && !string.IsNullOrWhiteSpace(c.Name) && c.Name.Length <= 256)
+        && s.Clients.Select(c => c.ClientId).Distinct(StringComparer.Ordinal).Count() == s.Clients.Count;
+
     public static Error? Validate(CustomerIdentityImport input)
     {
-        static bool Id(string? value) => value is { Length: > 0 and <= 128 } && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or ':');
         var s = input.Snapshot;
-        if (s is null || s.SchemaVersion != 1 || s.Source != "atlas" || !Id(s.WorkspaceId)
-            || s.Clients is null || s.Clients.Count is > 1000
-            || s.Clients.Any(c => c is null || !Id(c.ClientId) || string.IsNullOrWhiteSpace(c.Name) || c.Name.Length > 256)
-            || s.Clients.Select(c => c.ClientId).Distinct(StringComparer.Ordinal).Count() != s.Clients.Count
+        if (!IsValidSnapshot(s)
             || input.Mappings is null || input.Mappings.Count is 0 or > 1000
             || input.Mappings.Any(m => m is null || !Id(m.AtlasClientId) || m.CustomerId == Guid.Empty)
             || input.Mappings.Select(m => m.AtlasClientId).Distinct(StringComparer.Ordinal).Count() != input.Mappings.Count
             || input.Mappings.Select(m => m.CustomerId).Distinct().Count() != input.Mappings.Count
-            || input.Mappings.Any(m => !s.Clients.Any(c => c.ClientId == m.AtlasClientId)))
+            || input.Mappings.Any(m => !s!.Clients.Any(c => c.ClientId == m.AtlasClientId)))
             return Error.Validation("PARASOL_IDENTITY_INVALID", "Supply a version 1 Atlas export and distinct explicit customer mappings (maximum 1000 rows).");
         return null;
     }
