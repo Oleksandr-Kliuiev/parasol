@@ -12,6 +12,7 @@ import { useActivityActions } from './api';
 import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { usePersonalTasks } from './usePersonalTasks';
+import { activityUrl } from './activityNavigation';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0 },
@@ -27,6 +28,7 @@ const useStyles = makeStyles({
   text: { display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 },
   muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   overdue: { color: tokens.colorPaletteRedForeground1, fontSize: tokens.fontSizeBase200 },
+  context: { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' },
 });
 
 /** Open tasks and meetings assigned to the signed-in user (FR-ACT-01, "My day"). */
@@ -69,10 +71,14 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
         {data.map((activity) => (
           <li key={activity.id} className={styles.row}>
             <span className={styles.text}>
-              <Text weight="semibold">{activity.subject}</Text>
+              <AppLink to={activityUrl(activity.organizationId, activity.id)}>
+                <Text weight="semibold">{activity.subject}</Text>
+                <span className={styles.context}>{` · ${t('activities.openForCustomer', { customer: activity.organizationName ?? '' })}`}</span>
+              </AppLink>
               <span className={activity.isOverdue ? styles.overdue : styles.muted}>
                 <AppLink to={`/organizations/${activity.organizationId}`}>{activity.organizationName}</AppLink>
                 {activity.dueAt ? ` · ${t(activity.isOverdue ? 'activities.overdueAt' : 'activities.dueAt', { at: formatDateTime(activity.dueAt) })}` : ''}
+                {` · ${t('activities.loggedAt', { at: formatDateTime(activity.createdAt) })}`}
               </span>
             </span>
             {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}

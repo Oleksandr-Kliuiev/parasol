@@ -4,6 +4,7 @@ using Crm.Activities.Persistence;
 using Crm.Authorization;
 using Crm.Infrastructure.DependencyInjection;
 using Crm.Infrastructure.Http;
+using Crm.SharedKernel.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -32,9 +33,15 @@ public static class ActivitiesModule
     {
         var group = app.MapGroup("/api/v1/activities").WithTags("Activities");
 
-        group.MapGet("/", async ([AsParameters] ActivityParameters p, ActivityService service, CancellationToken ct) =>
-                Results.Ok(await service.ListAsync(
-                    new ActivityQuery(p.OrganizationId, p.OpportunityId, p.ContractId, p.Type, p.Mine ?? false, p.Open ?? false, p.Limit, p.Cursor), ct)))
+        group.MapGet("/", async ([AsParameters] ActivityParameters p, ActivityService service, HttpRequest http, CancellationToken ct) =>
+            {
+                // Nullable GUID binding treats an explicitly empty selector as absent. Never broaden that into a timeline.
+                if (http.Query.ContainsKey(nameof(p.ActivityId)) && p.ActivityId is null)
+                    return Error.Validation("ACT_SELECTION_SCOPE_REQUIRED", "Select an activity within its customer.").ToProblem();
+                return (await service.ListAsync(
+                    new ActivityQuery(p.OrganizationId, p.OpportunityId, p.ContractId, p.Type, p.Mine ?? false, p.Open ?? false, p.Limit, p.Cursor, p.ActivityId), ct))
+                    .ToHttpResult(Results.Ok);
+            })
             .RequirePermission(Permissions.ActivitiesRead);
 
         group.MapPost("/", async (ActivityRequest request, ActivityService service, CancellationToken ct) =>
@@ -99,4 +106,5 @@ public sealed record ActivityParameters(
     [FromQuery] bool? Mine,
     [FromQuery] bool? Open,
     [FromQuery] int? Limit,
-    [FromQuery] string? Cursor);
+    [FromQuery] string? Cursor,
+    [FromQuery] Guid? ActivityId);

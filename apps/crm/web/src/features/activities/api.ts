@@ -16,6 +16,7 @@ const BASE = '/api/v1/activities';
 export interface ActivityFilters {
   [key: string]: string | number | boolean | null | undefined;
   organizationId?: string;
+  activityId?: string;
   opportunityId?: string;
   contractId?: string;
   type?: ActivityType | null;
@@ -50,8 +51,8 @@ export function useCustomerMail(organizationId: string, enabled: boolean) {
 }
 
 /** The timeline page by page — open items first by due date — with how many the filter matches (DEV-12). */
-export function useActivities(filters: ActivityFilters, enabled = true, limit?: number) {
-  return usePagedList<Activity>([...activityKeys.list(filters), limit], `${BASE}/`, filters, { enabled, limit });
+export function useActivities(filters: ActivityFilters, enabled = true, limit?: number, scopeKey?: string) {
+  return usePagedList<Activity>([...activityKeys.list(filters), limit, scopeKey], `${BASE}/`, filters, { enabled, limit });
 }
 
 export function useActivityActions() {

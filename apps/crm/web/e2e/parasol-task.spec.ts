@@ -31,11 +31,11 @@ test('review assigns work with explicit employee and source confirmation, then a
   await page.getByRole('option').filter({ hasText: 'Dev Admin' }).click();
   await dialog.getByRole('checkbox', { name: 'I confirm the assignee and due date' }).check();
   await dialog.getByRole('button', { name: 'Create task', exact: true }).click();
-  await expect(dialog.getByRole('link', { name: 'Open customer activities' })).toBeVisible();
+  await expect(dialog.getByRole('link', { name: 'Open task', exact: true })).toHaveAttribute('href', `/organizations/${customer.id}?tab=activities&activityId=${task.activityId}`);
   expect(writes).toBe(1); expect(bodies).toEqual([{ assigneeId: employee.id, dueAt: null, expectedSha256: 'a'.repeat(64) }]);
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await row.getByRole('button', { name: 'Assign work', exact: true }).click();
-  await expect(dialog.getByRole('link', { name: 'Open customer activities' })).toBeVisible();
+  await expect(dialog.getByRole('link', { name: 'Open task', exact: true })).toHaveAttribute('href', `/organizations/${customer.id}?tab=activities&activityId=${task.activityId}`);
   await expect(dialog.getByRole('button', { name: 'Create task', exact: true })).toHaveCount(0);
   expect(writes).toBe(1);
 });

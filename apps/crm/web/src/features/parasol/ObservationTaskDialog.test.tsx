@@ -50,7 +50,7 @@ describe('assigning local CRM work from an Atlas observation', () => {
     expect(writes[0]![0]).toBe('/api/v1/parasol/customers/customer-one/observations/critical-one/task');
     expect(JSON.parse(writes[0]![1].body as string)).toEqual({ assigneeId: 'u2', dueAt: new Date('2026-10-18T10:30').toISOString(), expectedSha256: 'a'.repeat(64) });
     expect(writes[0]![1].body).not.toMatch(/summary|hostname|source|priority|subject|device/);
-    expect(screen.getByRole('link', { name: 'Open customer activities' })).toHaveAttribute('href', '/organizations/customer-one?tab=activities');
+    expect(screen.getByRole('link', { name: 'Open task' })).toHaveAttribute('href', '/organizations/customer-one?tab=activities&activityId=task-one');
   });
 
   it('returns existing work without replacing its assignment, due date or completed state', async () => {
@@ -75,7 +75,7 @@ describe('assigning local CRM work from an Atlas observation', () => {
   it('does not navigate to an unavailable task or create a replacement', async () => {
     const p = atlasTaskPreview(); p.canCreate = false; p.task = { ...syntheticTask, isAvailable: false, assigneeId: null, dueAt: null };
     setup(p); expect(await screen.findByText(/The linked task is no longer available/)).toBeVisible();
-    expect(screen.queryByRole('link', { name: 'Open customer activities' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open task' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create task' })).not.toBeInTheDocument();
   });
 
@@ -115,7 +115,7 @@ describe('assigning local CRM work from an Atlas observation', () => {
     await selectAndConfirm(); await userEvent.click(screen.getByRole('button', { name: 'Create task' }));
     expect(await screen.findByText(/The task outcome is uncertain/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Create task' })).toBeDisabled();
-    expect(screen.queryByRole('link', { name: 'Open customer activities' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open task' })).not.toBeInTheDocument();
     expect(screen.queryByText(/synthetic-private/)).not.toBeInTheDocument(); expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(1);
   });
 

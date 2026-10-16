@@ -65,9 +65,12 @@ test('two genuine employee handoffs converge on one private Task, which personal
     expect(forbidden.some(text => JSON.stringify(task).includes(text)), 'The broad CRM Task contains no technical source payload or identity').toBe(false);
     const audit = await json(await admin.page.request.get(`/api/v1/audit/?module=activities&entityType=Activity&entityId=${taskId}&limit=200`), 'Real Task audit read');
     expect(forbidden.some(text => JSON.stringify(audit).includes(text)), 'The broad audit contains no copied source details').toBe(false);
-    await adminDialog.getByRole('link', { name: 'Open customer activities', exact: true }).click();
+    const openTask = adminDialog.getByRole('link', { name: 'Open task', exact: true });
+    await expect(openTask).toHaveAttribute('href', `/organizations/${f.target.customerId}?tab=activities&activityId=${taskId}`);
+    await openTask.click();
     const timeline = admin.page.getByRole('region', { name: 'Activities', exact: true });
     const timelineTask = timeline.getByRole('listitem').filter({ hasText: 'Review technical observation' });
+    await expect(timeline.getByRole('heading', { name: 'Selected activity', exact: true })).toBeFocused();
     await expect(timelineTask).toHaveCount(1);
     await timelineTask.getByRole('button', { name: 'View Atlas source', exact: true }).click();
     const source = admin.page.getByRole('dialog', { name: 'View Atlas source', exact: true });

@@ -143,6 +143,15 @@ it('shows no tasks only after a successful empty read', async () => {
   expect(await screen.findByText('Nothing assigned to you right now.')).toBeVisible(); expect(screen.queryByText(failure)).not.toBeInTheDocument();
 });
 
+it('links the chosen task to its exact customer activity and keeps the customer overview link', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => result())); render();
+  const task = await screen.findByRole('link', { name: new RegExp(first.subject) });
+  expect(task).toHaveTextContent(`Open activity for ${first.organizationName}`);
+  expect(task).toHaveAttribute('href', '/organizations/customer-one?tab=activities&activityId=task-one');
+  expect(screen.getByRole('link', { name: first.organizationName! })).toHaveAttribute('href', '/organizations/customer-one');
+  expect(screen.getByText(/logged/)).toBeVisible();
+});
+
 it.each([['success', 'employee'], ['failure', 'permissions']])('does not publish late completion %s after changing %s', async (outcome, scope) => {
   let finish!: (value: Response) => void; let writes = 0; let changed = false;
   const fetch = vi.fn(async (_: string, init: RequestInit) => {

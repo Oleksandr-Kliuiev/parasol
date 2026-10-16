@@ -75,7 +75,8 @@ public sealed record ActivityDto(
     bool HasTechnicalSource = false);
 
 public sealed record ActivityQuery(
-    Guid? OrganizationId, Guid? OpportunityId, Guid? ContractId, ActivityType? Type, bool MineOnly, bool OpenOnly, int? Limit = null, string? Cursor = null);
+    Guid? OrganizationId, Guid? OpportunityId, Guid? ContractId, ActivityType? Type, bool MineOnly, bool OpenOnly,
+    int? Limit = null, string? Cursor = null, Guid? ActivityId = null);
 
 internal sealed class ActivityService(
     ActivitiesDbContext db,
@@ -89,10 +90,25 @@ internal sealed class ActivityService(
     /// One page of the timeline — open items first by due date, then everything newest first — and how many the filter matches
     /// (DEV-12). The cursor carries the whole sort key, so a page continues exactly where the previous one ended.
     /// </summary>
-    public async Task<PagedResult<ActivityDto>> ListAsync(ActivityQuery query, CancellationToken ct)
+    public async Task<Result<PagedResult<ActivityDto>>> ListAsync(ActivityQuery query, CancellationToken ct)
     {
+        // A selected activity stays inside its live customer. A stale link must never fall back to the whole timeline.
+        if (query.ActivityId is { } selectedId)
+        {
+            if (selectedId == Guid.Empty || query.OrganizationId is null || query.OrganizationId == Guid.Empty)
+                return Error.Validation("ACT_SELECTION_SCOPE_REQUIRED", "Select an activity within its customer.");
+            if (query.Cursor is not null)
+                return Error.Validation("ACT_SELECTION_CURSOR_INVALID", "A selected activity cannot use a continuation cursor.");
+            if (await customers.GetOrganizationAsync(query.OrganizationId.Value, ct) is null)
+                return new PagedResult<ActivityDto>([], null, 0);
+        }
+
         // Tracked: rows carry their ETag so the timeline can edit an item straight away.
         var activities = db.Activities.AsQueryable();
+        if (query.ActivityId is { } activityId)
+        {
+            activities = activities.Where(a => a.Id == activityId);
+        }
         if (query.OrganizationId is { } organizationId)
         {
             activities = activities.Where(a => a.OrganizationId == organizationId);
@@ -122,6 +138,17 @@ internal sealed class ActivityService(
         if (query.OpenOnly)
         {
             activities = activities.Where(a => a.Status == ActivityStatus.Open);
+        }
+
+        if (query.ActivityId is not null)
+        {
+            // Exact selection has no continuation or page walk. Its count describes only the returned row.
+            var selectedActivity = await activities.SingleOrDefaultAsync(ct);
+            if (selectedActivity is null) return new PagedResult<ActivityDto>([], null, 0);
+            var selectedRows = await ToDtosAsync([selectedActivity], ct);
+            if (await customers.GetOrganizationAsync(query.OrganizationId!.Value, ct) is null)
+                return new PagedResult<ActivityDto>([], null, 0);
+            return new PagedResult<ActivityDto>(selectedRows, null, selectedRows.Count);
         }
 
         var total = await activities.CountAsync(ct);

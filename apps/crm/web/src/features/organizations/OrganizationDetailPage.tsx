@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Button,
   Dialog,
@@ -49,6 +49,7 @@ import { OrganizationProjectsTab } from '../projects/OrganizationProjectsTab';
 import { OrganizationGroupPanel } from './OrganizationGroupPanel';
 import { CustomFieldsPanel } from '../customfields/CustomFieldsPanel';
 import { ActivityTimeline } from '../activities/ActivityTimeline';
+import { activitySelection } from '../activities/activityNavigation';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { CustomerWorkspacePanel } from '../parasol/CustomerWorkspacePanel';
@@ -88,6 +89,7 @@ export function OrganizationDetailPage() {
   const navigate = useNavigate();
   const notify = useNotify();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const tab = (params.get('tab') as TabValue | null) ?? 'overview';
   const { data, error, isPending, refetch } = useOrganization(id);
   const canEdit = useCan(Permissions.customersWrite);
@@ -195,7 +197,11 @@ export function OrganizationDetailPage() {
       {tab === 'licenses' && canLicensing && <OrganizationLicensesTab organizationId={organization.id} />}
       {tab === 'projects' && canProjects && <OrganizationProjectsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'invoices' && canBilling && <OrganizationInvoicesTab organizationId={organization.id} />}
-      {tab === 'activities' && canActivities && <ActivityTimeline organizationId={organization.id} />}
+      {tab === 'activities' && canActivities && <ActivityTimeline organizationId={organization.id}
+        selection={activitySelection(params)} navigationKey={location.key} onShowAll={() => {
+          const next = new URLSearchParams(params); next.delete('activityId'); next.set('tab', 'activities');
+          setParams(next, { replace: true });
+        }} />}
       {tab === 'mail' && canActivities && <OrganizationMailTab organizationId={organization.id} />}
       {tab === 'documents' && <OrganizationDocumentsTab organizationId={organization.id} />}
       {tab === 'history' && <HistoryList module="customers" entityType="Organization" entityId={organization.id} />}
