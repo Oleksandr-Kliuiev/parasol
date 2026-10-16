@@ -3548,6 +3548,52 @@
       "REQUEST_FAILED": "Køen kunne ikke leses. Ingen tidligere side vises. Oppdater for å prøve igjen."
     }
   },
+  "parasolAttention": {
+    "title": "Atlas – kunder som krever oppmerksomhet",
+    "refresh": "Oppdater oppmerksomhet",
+    "note": "Din personlige Atlas-tilgang avgjør hvilke kunder som kan leses. Denne visningen er uavhengig av kundeansvaret ditt i CRM.",
+    "checkedAt": "Oppmerksomhetslesing fullført {{time}}",
+    "coverage": "Kunder lest uten feil: {{ready}} av {{selected}} valgte",
+    "visible": "Atlas-kunder du har tilgang til",
+    "matched": "Koblede CRM-kunder",
+    "attempted": "Kundelesinger forsøkt",
+    "unmapped": "Synlige Atlas-kunder uten CRM-kobling",
+    "mappingIssues": "Synlige Atlas-kunder med koblingsproblem",
+    "failed": "Valgte kunder som ikke ble lest uten feil",
+    "omitted": "Koblede kunder utenfor denne oppdateringen",
+    "partial": "Dekningen er ufullstendig. Uleste, ukoblede og utilgjengelige kunder regnes ikke som feilfrie.",
+    "timedOut": "Tidsrammen for oppdateringen ble nådd. Noen kundelesinger kan være ufullstendige.",
+    "limit": "Denne oppdateringen kontrollerer høyst 50 koblede kunder. Flere kunder er ikke inkludert.",
+    "totals": "Aktive observasjoner hos kunder lest uten feil: {{active}} · Høy: {{high}} · Kritisk: {{critical}}",
+    "previewNote": "Kundene vises hver for seg, med høyst tre observasjoner med HØY/KRITISK alvorlighet per kunde. Dette er en forhåndsvisning, ikke en fullstendig kø eller samlet rangering. Åpne en kunde for å lese hele køen.",
+    "empty": "Ingen koblede kunder ble valgt i denne lesingen. Dette bekrefter ikke kildenes tilstand eller dekning av alle selskapets kunder.",
+    "customerCounts": "Høy: {{high}} · Kritisk: {{critical}}",
+    "retrievedAt": "Kunden lest {{time}}",
+    "sourcePartial": "Atlas rapporterer ufullstendig eller syntetisk dekning for denne kunden.",
+    "sources": "Kildedekning og oppdateringstid",
+    "previewCount": "Hasteforhåndsvisning: {{shown}} av {{total}} aktive observasjoner med HØY/KRITISK alvorlighet",
+    "noUrgent": "Ingen aktive observasjoner med HØY/KRITISK alvorlighet er registrert for denne kunden. Andre observasjoner eller manglende kildedata kan fortsatt kreve oppmerksomhet.",
+    "openCustomer": "Åpne kundens arbeidsområde",
+    "status": {
+      "NOT_CONFIGURED": "Atlas-tilkoblingen er ikke konfigurert.",
+      "ACCESS_DENIED": "Din nåværende tilgang tillater ikke denne Atlas-lesingen. Tidligere kundeopplysninger er fjernet.",
+      "UNAVAILABLE": "Atlas-oppmerksomhet er utilgjengelig. Ingen tidligere kundeopplysninger vises.",
+      "INVALID_RESPONSE": "Oppmerksomhetssvaret var ugyldig. Ingen ubekreftede kundeopplysninger vises.",
+      "REQUEST_FAILED": "Oppmerksomhetslesingen mislyktes. Ingen tidligere kundeopplysninger vises. Oppdater for å prøve igjen.",
+      "RATE_LIMITED": "Oppdateringsgrensen er nådd. Vent før du oppdaterer igjen. Ingen tidligere kundeopplysninger vises."
+    },
+    "customerStatus": {
+      "NOT_LINKED": "Kundekoblingen er endret eller mangler. Ingen tekniske opplysninger vises.",
+      "NOT_CONFIGURED": "Atlas-tilkoblingen er ikke konfigurert.",
+      "ACCESS_DENIED": "Din nåværende tilgang tillater ikke lesing av denne kunden.",
+      "SOURCE_NOT_FOUND": "Den koblede kunden ble ikke funnet i Atlas. Koblingen må gjennomgås.",
+      "UNAVAILABLE": "Atlas kunne ikke lese denne kunden. Den er utelatt fra observasjonstallene.",
+      "INVALID_RESPONSE": "Denne kunden ga et ugyldig svar. Den er utelatt fra observasjonstallene.",
+      "IDENTITY_CHANGED": "Kundekoblingen ble endret under lesingen. Ingen tidligere tekniske opplysninger vises.",
+      "TIMEOUT": "Denne kunden ble ikke lest innen tidsrammen. Den er utelatt fra observasjonstallene.",
+      "CUSTOMER_UNAVAILABLE": "CRM-kunden er ikke lenger tilgjengelig. Ingen tekniske opplysninger vises."
+    }
+  },
   "parasolWork": {
     "assign": "Tildel arbeid",
     "viewLinked": "Vis koblet arbeid",

@@ -20,6 +20,7 @@ import { MyTasksPanel } from '../activities/MyTasksPanel';
 import { useOpportunities } from '../sales/api';
 import { useLicensingAttention } from '../licensing/api';
 import { useInvoices, useRuns } from '../billing/api';
+import { AtlasAttentionPanel } from '../parasol/AtlasAttentionPanel';
 
 const useStyles = makeStyles({
   grid: {
@@ -67,6 +68,7 @@ export function MyDayPage() {
       <PageHeader title={t('myDay.greeting', { name: firstName })} subtitle={t('myDay.subtitle')} />
       <div className={styles.grid}>
         <div className={styles.side}>
+          <AtlasAttentionPanel />
           {canActivities && <MyTasksPanel />}
           {canSales && <StaleDealsPanel />}
           {canLicensing && <LicensingAttentionPanel />}

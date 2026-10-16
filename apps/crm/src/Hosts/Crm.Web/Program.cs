@@ -119,6 +119,7 @@ builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationSourceR
 builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationTaskService>();
 builder.Services.AddScoped<Crm.Integrations.Core.Parasol.CustomerIdentityGuard>();
 builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationCursor>();
+Crm.Integrations.Core.Parasol.AtlasAttentionEndpoints.AddParasolAtlasAttention(builder.Services);
 
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);
 if (hangfireEnabled)
@@ -298,6 +299,7 @@ app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 Crm.Integrations.Core.Parasol.CustomerIdentityEndpoints.MapParasolCustomerIdentities(app);
 Crm.Integrations.Core.Parasol.AtlasObservationTaskEndpoints.MapParasolObservationTasks(app);
+Crm.Integrations.Core.Parasol.AtlasAttentionEndpoints.MapParasolAtlasAttention(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
 app.MapMonitoringEndpoints();

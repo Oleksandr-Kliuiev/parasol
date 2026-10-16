@@ -3548,6 +3548,52 @@
       "REQUEST_FAILED": "The queue could not be read. No previous page is shown. Refresh to try again."
     }
   },
+  "parasolAttention": {
+    "title": "Technical attention · Atlas",
+    "refresh": "Refresh technical attention",
+    "note": "Personal Atlas access determines which customers can be read. This view is independent of your CRM account-manager assignments.",
+    "checkedAt": "Attention read completed at {{time}}",
+    "coverage": "Customers read successfully: {{ready}} of {{selected}} selected",
+    "visible": "Atlas clients visible to you",
+    "matched": "Matched CRM customers",
+    "attempted": "Customer reads attempted",
+    "unmapped": "Visible Atlas clients without a CRM match",
+    "mappingIssues": "Visible Atlas clients with a mapping issue",
+    "failed": "Selected customers not successfully read",
+    "omitted": "Matched customers outside this refresh",
+    "partial": "Coverage is incomplete. Unread, unmapped and unavailable customers are not counted as healthy.",
+    "timedOut": "The refresh time budget was reached. Some customer reads may be incomplete.",
+    "limit": "This refresh checks at most 50 matched customers. Additional customers are not included.",
+    "totals": "Active observations in successfully read customers: {{active}} · High: {{high}} · Critical: {{critical}}",
+    "previewNote": "Customers are grouped separately, with at most three HIGH/CRITICAL observations each. This is a preview, not a complete queue or a global ranking. Open a customer to read its full queue.",
+    "empty": "No matched customers were selected for this read. This does not establish source health or coverage of every company customer.",
+    "customerCounts": "High: {{high}} · Critical: {{critical}}",
+    "retrievedAt": "Customer read at {{time}}",
+    "sourcePartial": "Atlas reports incomplete or synthetic coverage for this customer.",
+    "sources": "Source coverage and freshness",
+    "previewCount": "Urgent preview: {{shown}} of {{total}} active HIGH/CRITICAL observations",
+    "noUrgent": "No active HIGH/CRITICAL observations were recorded for this customer. Other observations or missing source data may still require attention.",
+    "openCustomer": "Open customer workspace",
+    "status": {
+      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
+      "ACCESS_DENIED": "Your current access does not permit this Atlas attention read. Previous customer details have been removed.",
+      "UNAVAILABLE": "Atlas attention is unavailable. No previous customer details are shown.",
+      "INVALID_RESPONSE": "The attention response was invalid. No unverified customer details are shown.",
+      "REQUEST_FAILED": "The attention read failed. No previous customer details are shown. Refresh to try again.",
+      "RATE_LIMITED": "The refresh limit has been reached. Wait before refreshing again; no previous customer details are shown."
+    },
+    "customerStatus": {
+      "NOT_LINKED": "The customer link changed or is missing. No technical details are shown.",
+      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
+      "ACCESS_DENIED": "Your current access does not permit reading this customer.",
+      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas. Its mapping needs review.",
+      "UNAVAILABLE": "Atlas could not read this customer. It is excluded from the observation totals.",
+      "INVALID_RESPONSE": "This customer returned an invalid response. It is excluded from the observation totals.",
+      "IDENTITY_CHANGED": "The customer mapping changed during this read. No previous technical details are shown.",
+      "TIMEOUT": "This customer was not read within the refresh budget. It is excluded from the observation totals.",
+      "CUSTOMER_UNAVAILABLE": "The CRM customer is no longer available. No technical details are shown."
+    }
+  },
   "parasolWork": {
     "assign": "Assign work",
     "viewLinked": "View linked work",

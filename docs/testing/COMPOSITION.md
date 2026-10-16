@@ -47,8 +47,11 @@ It does not reuse an existing application or database.
   authorized source with its own configured Atlas credential and existing read permissions.
 - A foreign-workspace collision fails closed. Replacing a mapping with the same source
   pair changes its LinkId and invalidates old confirmation hashes and queue cursors.
+- My Day attention independently reads the forty/twenty/twenty customer sets, reports exact
+  active/High/Critical totals and retains partial source coverage. The urgent preview opens
+  the existing fresh M12 confirmation without creating another Task or writing to a provider.
 
-The six scenarios form one synthetic workflow. A failed earlier action can also fail later
+The seven scenarios form one synthetic workflow. A failed earlier action can also fail later
 durability assertions; the first failure is retained rather than retried or hidden by skips.
 
 ## Ownership and retained evidence
@@ -68,7 +71,7 @@ made. Private credentials, cookies, documents and Data Protection keys are remov
 after owned resources are confirmed stopped. Unrelated processes and containers are untouched.
 
 `report.json` contains bounded synthetic counts, fixed failure classifications and cleanup
-status. Acceptance requires a build in the same invocation, all six browser scenarios with
+status. Acceptance requires a build in the same invocation, all seven browser scenarios with
 zero failures/skips/retries, exact durable/privacy evidence and confirmed cleanup. Stage logs
 are private and redacted; browser artifacts contain synthetic fixture data. CI publishes only
 the compact report, never the private state, logs, screenshots or traces.
@@ -94,6 +97,10 @@ access from the same manifest used to seed memberships. A subsequent
 [diagnostic run](evidence/composition-acl-diagnostic-2026-10-16.json) passed all six strengthened
 scenarios on the unchanged compiled applications, with exact evidence and cleanup. Its
 `accepted: false` correctly records `--skip-build`; it is not another full-build acceptance.
-Repeat the full command after the concurrent strict Atlas run releases its compiled-artifact
-freeze, before closing M13. The separate complete Atlas PostgreSQL/browser results remain
-pending in the M12 record.
+M14 adds the seventh attention scenario. Its
+[diagnostic run](evidence/composition-attention-diagnostic-2026-10-16.json) passed all seven
+scenarios against the actual compiled applications, including personal 40/20/20 attention,
+exact urgent counts and fresh M12 preview, with the same durable/privacy evidence and cleanup.
+It also correctly records `accepted: false` because it used `--skip-build` during the strict
+Atlas compiled-artifact freeze. Repeat the full command when that freeze ends, before closing
+these gates. The separate complete Atlas PostgreSQL/browser results remain pending in M12.
