@@ -31,6 +31,7 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
     public const string Database = "crm_tests";
     private readonly MsSqlContainer _sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
     private readonly Lock _clientsLock = new();
+    private readonly TestKeyRing _keyRing = new();
     private readonly string _runtimePassword = $"Rt-{Guid.NewGuid():N}aA1!";
 
     /// <summary>The server administrator on the test database: what the migrator and a DBA have.</summary>
@@ -146,6 +147,7 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
         Atera.Stop();
         PartnerCenter.Stop();
         await base.DisposeAsync();
+        _keyRing.Dispose();
         await _sql.DisposeAsync();
         // The test run's own document folder; nothing else is ever stored there.
         if (Directory.Exists(Documents.Root))
@@ -163,6 +165,9 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
         var settings = new Dictionary<string, string?>
         {
             ["ConnectionStrings:crm"] = connectionString,
+            ["DataProtection:KeyRingPath"] = _keyRing.KeyRingPath,
+            ["DataProtection:CertificatePath"] = _keyRing.CertificatePath,
+            ["DataProtection:CertificatePassword"] = TestKeyRing.Password,
             ["Database:MigrateOnStartup"] = migrate ? "true" : "false",
             ["Hangfire:DashboardEnabled"] = "false",
             ["Auth:Mode"] = "Entra",

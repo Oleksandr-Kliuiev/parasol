@@ -17,6 +17,9 @@ using static Crm.IntegrationTests.IntegrationTestHelpers;
 
 namespace Crm.IntegrationTests;
 
+// These tests inspect the global outbound queue between retry and dispatch. Other suites drain that queue;
+// they must not dispatch our synthetic probe before the Pending assertion. The two competing retries stay concurrent.
+[Collection(DatabaseAdministrationCollection.Name)]
 public sealed class MonitoringApiTests(CrmWebFactory factory)
 {
     private const string Url = "/api/v1/integrations/monitoring";
