@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { createConnection } from 'node:net';
 import { join } from 'node:path';
 import { generateToken, hashToken } from '../../packages/auth/token.ts';
@@ -63,7 +65,6 @@ export interface EvalServer {
   readonly clients: HandoffClient[];
   close(): Promise<void>;
 }
-let nextPort = 3800 + Math.floor(Math.random() * 400);
 const testFacts = (over: Partial<PeerFacts> = {}): PeerFacts => ({ pid: 999_999, pidversion: 1, euid: process.geteuid!(), ppid: 1, startSec: 1, startUsec: 0,
   hasTty: true, exeMatch: true, ...over });
 /** Real frozen FX02 case IDs (S admits only the 200 frozen IDs; each server process may use each ID once). */
@@ -83,23 +84,40 @@ export async function startEvalServer(s: Sandbox, o: { peer?: Partial<PeerFacts>
   const dir = await privateDir('evalsrv');
   const helper = buildPeer(join(dir, 'peer'));
   const scripted = new ScriptedProvider();
-  const port = ++nextPort; const serverBootId = randomUUID(); const handoffPath = join(dir, 'reval-handoff.sock');
+  const serverBootId = randomUUID(); const handoffPath = join(dir, 'reval-handoff.sock');
   // As the production bridge's runtime URL (bridge.ts): S's sessions carry its fixed application_name (RS-D-A D2 admits them idle).
   const url = new URL(s.ns.db.runtimeUrl); url.searchParams.set('application_name', 'atlas-reval-s-runtime');
   const db = await connectRuntimeDatabase(url.toString());
-  const app = await NestFactory.create(AtlasDbModule.forDatabase(db, 'remote', undefined, census.wrapSeams(o.bridgeSeams ? bridgeRemoteSeams() : scripted.seams())),
-    { logger: false, bodyParser: false });
-  let runtime: any = null;
-  const bridge = { launch: { workspaceId: WS, registrationId: s.r.registrationId, databaseInstanceId: s.r.databaseInstanceId, serverBootId,
-    nativePeerHelper: helper.path, nativePeerHelperSha256: helper.sha256, handoffSocketPath: handoffPath }, attach(rt: unknown) { runtime = rt; } };
-  const composed = await composeEvaluation({ app, db, bridge, port, peer: async () => testFacts(o.peer), census });
-  installApiParsers(app, 'remote', budget, undefined, composed.gate);
-  await app.listen(port, '127.0.0.1');
-  if (runtime !== composed) throw new Error('hub not attached');
-  const clients: HandoffClient[] = [];
-  return { port, runtime, scripted, handoffPath, serverBootId, clients,
-    // RS-C-C: the runtime connection is closed too, so a following fixture switch sees no other backend.
-    close: async () => { for (const c of clients) c.channel.close(); await app.close(); await db.$disconnect().catch(() => undefined); } };
+  let app: Awaited<ReturnType<typeof NestFactory.create>> | null = null;
+  try {
+    app = await NestFactory.create(AtlasDbModule.forDatabase(db, 'remote', undefined, census.wrapSeams(o.bridgeSeams ? bridgeRemoteSeams() : scripted.seams())),
+      { logger: false, bodyParser: false });
+    // Bind the actual HTTP server once to a kernel-assigned port. No guessed port or
+    // release/rebind race; callers receive it only after every boundary is installed.
+    const http = app.getHttpServer() as Server;
+    await new Promise<void>((resolve, reject) => {
+      const failed = (error: Error) => { http.off('listening', ready); reject(error); };
+      const ready = () => { http.off('error', failed); resolve(); };
+      http.once('error', failed); http.once('listening', ready); http.listen(0, '127.0.0.1');
+    });
+    const port = (http.address() as AddressInfo).port;
+    let runtime: any = null;
+    const bridge = { launch: { workspaceId: WS, registrationId: s.r.registrationId, databaseInstanceId: s.r.databaseInstanceId, serverBootId,
+      nativePeerHelper: helper.path, nativePeerHelperSha256: helper.sha256, handoffSocketPath: handoffPath }, attach(rt: unknown) { runtime = rt; } };
+    const composed = await composeEvaluation({ app, db, bridge, port, peer: async () => testFacts(o.peer), census });
+    installApiParsers(app, 'remote', budget, undefined, composed.gate);
+    await app.init();
+    if (runtime !== composed) throw new Error('hub not attached');
+    const clients: HandoffClient[] = [];
+    const startedApp = app;
+    return { port, runtime, scripted, handoffPath, serverBootId, clients,
+      // RS-C-C: the runtime connection is closed too, so a following fixture switch sees no other backend.
+      close: async () => { for (const c of clients) c.channel.close(); await startedApp.close(); await db.$disconnect().catch(() => undefined); } };
+  } catch (error) {
+    await app?.close().catch(() => undefined);
+    await db.$disconnect().catch(() => undefined);
+    throw error;
+  }
 }
 
 /** The test instrument's handoff connection (HELLO first, WELCOME, then sequenced READY/ACK frames). */
