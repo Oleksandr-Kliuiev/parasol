@@ -81,7 +81,7 @@ Back во время удержанного ответа настоящего AP
 Atlas source не меняется; его отдельное [строгое свидетельство](../testing/evidence/atlas-strict-current-2026-10-16.json)
 711/789/90 относится к неизменным Atlas inputs. Полный M19 composition доказывает совместную
 работу текущей CRM и Atlas, но не заменяет приёмку рабочих аккаунтов или VPS.
-Итоговый [полный composition](../testing/evidence/composition-current-2026-10-17.json)
+Итоговый [полный composition M19](../testing/evidence/composition-M19-2026-10-17.json)
 после мобильной правки сделал 564 forwarded Atlas requests; provider writes — 0.
 
 ## Диагностика unit-окружения

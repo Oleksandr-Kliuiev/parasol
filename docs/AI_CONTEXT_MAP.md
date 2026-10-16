@@ -19,6 +19,7 @@
 - Personal Task read/error/refresh reliability / M17: `docs/migration/M17-PERSONAL-TASK-RELIABILITY.md`; frontend `activities/MyTasksPanel.tsx` / `usePersonalTasks.ts`; actual recipient refresh in `02-handoff.spec.ts`.
 - Existing Atera ticket contact safety / M18: `docs/migration/M18-SERVICE-CONTACT-SAFETY.md`; Service ticket-request admission and Atera ticket handler; no new provider feature or credentials.
 - Exact customer Activity navigation / M19: `docs/migration/M19-EXACT-ACTIVITY-NAVIGATION.md`; Activities `ActivityQuery`/`ListAsync`, frontend `activityNavigation.ts`, `useSelectedActivity.ts`, `ActivityTimeline.tsx`; real API browser `activity-navigation*.spec.ts`. Test-only jsdom visibility model: `web/src/test/syntheticLayout.ts`.
+- Versioned complete/reopen / M20: `docs/migration/M20-ACTIVITY-STATUS-CONCURRENCY.md`; Activities status routes and `MutateAsync`, SQL `ActivityStatusConcurrencyTests.cs`; frontend `useActivityStatusCommands.ts`, `statusFocus.ts`, `ActivityStatusFeedback.tsx`; real API browser `activity-status.spec.ts`.
 - Original Git identities and import commits: `docs/migration/sources.json`, `IMPORT.md`.
 - Strict Atlas tests and native fixture setup: `docs/testing/ATLAS.md`; final local strict unit/PostgreSQL/browser evidence: `docs/testing/evidence/atlas-strict-current-2026-10-16.json`.
 - Historical import failures (no longer an exception mechanism): `docs/migration/BASELINE.md`, `atlas-baseline.json`.

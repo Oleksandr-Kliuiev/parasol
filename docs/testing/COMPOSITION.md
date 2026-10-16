@@ -135,9 +135,9 @@ creation and uses the explicit personal-task refresh to receive and complete the
 The compact report above refers to that M17/M18 invocation; earlier diagnostics and
 the auth-mode failure remain retained separately. Real provider accounts are unverified.
 
-## Current local verification, 17 October 2026
+## M19 local verification, 17 October 2026
 
-The [current full-build run](evidence/composition-current-2026-10-17.json) includes M19 exact
+The [M19 full-build run](evidence/composition-M19-2026-10-17.json) includes M19 exact
 Activity navigation and the mobile Panel header correction. It passed 8/8 with `accepted: true`,
 zero skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles
 and confirmed cleanup. The recorder forwarded 564 Atlas requests and no mutating requests.
@@ -156,3 +156,24 @@ the request or its promise. A separate 3/3 diagnostic and the final 49/49 pass e
 invariant; the original timeout cause is unproven. No retries, skips or failure exceptions
 were introduced. Atlas strict source/input hashes remain unchanged from the separate
 711/789/90 acceptance. No publication, deployment or live provider call occurred.
+
+## Current M20 local verification, 17 October 2026
+
+The [current full-build run](evidence/composition-current-2026-10-17.json) includes versioned
+complete/reopen and the native editor-close focus correction. It passed 8/8 with zero
+skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles and
+confirmed cleanup. The recorder forwarded 563 Atlas requests and no mutating requests.
+Completion now explicitly carries the recipient's actual displayed ETag.
+
+The [M20 acceptance summary](evidence/activity-status-M20-2026-10-17.json) records full
+frontend 484/484, 56 files, SQL 38/38, architecture 94/94, all static gates, the 290.5/300 KB
+SPA budget and final CRM browser 55/55 with cleanup. All 361 tested web inputs still match.
+Actual two-employee browser tests cover stale/fresh complete and reopen, pending duplicate
+admission, permissions and exact assignment/due/body/priority/version preservation.
+
+The initial browser 53/55 and separate native focus diagnostic remain retained. A closed
+editor left an empty, visibly animating DialogSurface in the DOM; the old raw-role gate
+mistook it for an open editor and did not capture focus ownership. The correction uses
+the actual editor lifecycle and keeps input/modal/hidden/inert fences. The unchanged phone
+assertions now pass in both themes, including keyboard focus and Axe. No timeout increase,
+retry, skip or failure exception was introduced. No live provider account or VPS was used.
