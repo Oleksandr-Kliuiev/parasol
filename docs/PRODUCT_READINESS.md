@@ -9,18 +9,21 @@
 Завершение очередного M-этапа не означает завершение всей цели. Отсутствие ошибок
 в синтетических тестах также не доказывает совместимость рабочего аккаунта провайдера.
 
-Текущий source-build composition после [M31](migration/M31-CUSTOMER-M365.md) проходит
-10/10 с новой сборкой и очисткой. В карточке доступны отдельные сохранённые метаданные
-Microsoft 365: count/freshness/coverage под context AND M365 read. M365 denial скрывает
-старый общий контекст до нового scoped чтения; полный отзыв удаляет все технические
-данные и сохраняет понятный клавиатурный фокус. M30 LinkId guard также сохранён.
+Текущий source-build composition после [M32](migration/M32-NAVIGATION-CLARITY.md) проходит
+10/10 с новой сборкой и очисткой. Устройства и наблюдения Atlas доступны в карточке
+клиента; длинные списки имеют собственную прокрутку, реквизиты остаются рядом на широком
+экране. Добавлены описательные названия вкладок браузера, подсказки скрытых краёв и
+доступный переход к содержимому. M31 M365 authority/revalidation и M30 LinkId guard сохранены.
 
-Отдельные текущие проверки: CRM unit 963, architecture 94, affected SQL 93, frontend
-614 в 70 файлах, CRM browser 87, tooling 22; строгие Atlas unit/PostgreSQL/browser —
-714/797/90, без пропусков и retries. Проверены 2717 неизменных application/tool inputs,
-TypeScript/ESLint/SPA и 292,2/300 КБ gzip. Все owned ресурсы этих запусков удалены.
-[Итоговое свидетельство M31](testing/evidence/customer-m365-M31-2026-10-17.json)
-разделяет эти области. Финансовый SQL 208 остаётся прежним M26, не новым M31 прогоном.
+Текущие проверки M32: affected frontend 110, полный frontend 620 в 71 файле, CRM browser
+93 в трёх движках, tooling 22, визуальная матрица 64/64 без errors/warnings/duplicate titles.
+TypeScript/ESLint/SPA и 292,4/300 КБ gzip проходят; все 2721 application/tool inputs
+совпадают до/после. Owned ресурсы тестов удалены.
+[Свидетельство M32](testing/evidence/ui-layout-M32-2026-10-17.json) отделяет новые прогоны
+от неизменной серверной приёмки M31: CRM unit963/architecture94/affected SQL93 и Atlas
+714/797/90 переиспользованы по точным 804/856/1426 inputs, не перезапускались для M32.
+[M31](testing/evidence/customer-m365-M31-2026-10-17.json) остаётся историческим свидетельством;
+его composition сохранён отдельным побайтовым архивом. Финансовый SQL208 остаётся M26.
 
 [M28](migration/M28-LOCAL-STAFF-DEMO.md) по-прежнему даёт
 [локальный пробный стенд](testing/LOCAL-DEMO.md) с таймером/Ctrl+C, своими БД и

@@ -404,7 +404,7 @@ remain unproven. Nothing was published, deployed or connected to a working accou
 
 ## M31 saved Microsoft 365 overview, 17 October 2026
 
-The [current source-build report](evidence/composition-current-2026-10-17.json),
+The [archived M31 source-build report](evidence/composition-M31-2026-10-17.json),
 `606c5c54e347`, passes 10/10 with a build in the same invocation, zero skipped/
 unexpected/flaky cases, exact durable/privacy evidence, restricted runtimes and cleanup.
 It forwards 570 Atlas GETs and zero mutating Atlas requests. All 2717 application/tool
@@ -427,3 +427,26 @@ See [M31 evidence](evidence/customer-m365-M31-2026-10-17.json). M26 financial SQ
 M29 native recovery remain historical, not new M31 runs. Staff feedback, measured human
 time savings and working-account/VPS acceptance are still open. Nothing was published
 or deployed.
+
+
+## M32 compact customer card and navigation, 17 October 2026
+
+The [current source-build report](evidence/composition-current-2026-10-17.json), also
+[stored immutably for M32](evidence/composition-M32-2026-10-17.json), `ff17fd2db426`,
+passes 10/10 with a fresh build, zero skipped/unexpected/flaky cases, exact durable/privacy
+facts, restricted runtimes and confirmed cleanup. It forwards 561 Atlas GETs and no
+mutating Atlas requests. All 2721 application/tool inputs match before/after. The
+[previous M31 report](evidence/composition-M31-2026-10-17.json) is archived byte for byte.
+
+Separate current gates pass: frontend110 affected/620 full, 93 CRM browser cases across
+Chromium/Firefox/WebKit, tooling22, TypeScript/ESLint/build and 292.4/300KB. The Chromium
+layout matrix checks 8 states × 4 widths × 2 themes = 64 views; no errors, warnings or
+duplicate page titles remain. All full-page screenshots were reviewed. Eight focused
+skip-link checks leave H1 below the sticky header. The diagnostic layout fixture remains
+accepted:false; normal composition alone provides joined-app acceptance.
+
+Backend/SQL/Atlas code is unchanged: exact 804/856/1426-input checks reuse M31's
+963/94/93 and 714/797/90 server acceptance, not new server runs. Historical M26 financial
+SQL208 and M29 native restore are not repeated. See [M32 evidence](evidence/ui-layout-M32-2026-10-17.json)
+for the measured page-height change and limits. Staff feedback/time savings and live-account/
+VPS acceptance remain open. Nothing was published or deployed.
