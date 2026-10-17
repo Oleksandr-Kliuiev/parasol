@@ -1,39 +1,9 @@
 {
-  "recordedAt": "2026-10-17T17:52:50.635423+00:00",
+  "recordedAt": "2026-10-17T21:34:30.707613+00:00",
   "scope": "local synthetic regression, not live-provider, Entra or deployment acceptance",
-  "sourceInputFiles": 1426,
-  "sourceFreezeSha256": "8054d4d39b0506a9529217565dce0958591f5a5daf28846a41b7692b446fe860",
+  "sourceInputFiles": 1428,
+  "sourceFreezeSha256": "8bdadb7bea58481742dc090d89414a3a12522ec87985ccf3a0f1aa8492eb65ca",
   "allCurrentInputHashesVerified": true,
-  "unit": {
-    "phase": "unit",
-    "passed": 714,
-    "failed": 0,
-    "skipped": 0,
-    "retries": 0,
-    "inputsUnchanged": 1426,
-    "exitCode": 0,
-    "logSha256": "a140cac222434a2d6ceece3adf0e726cbca5befabea416937b53bba96e016452"
-  },
-  "postgresql": {
-    "phase": "pg",
-    "passed": 797,
-    "failed": 0,
-    "skipped": 0,
-    "retries": 0,
-    "inputsUnchanged": 1426,
-    "exitCode": 0,
-    "logSha256": "07a4786abd2976d0599de22ad366afbee52954066130348bc8cca866abbf8cb2"
-  },
-  "browser": {
-    "phase": "browser",
-    "passed": 90,
-    "failed": 0,
-    "skipped": 0,
-    "retries": 0,
-    "inputsUnchanged": 1426,
-    "exitCode": 0,
-    "logSha256": "2d898c7cad55a33fbfedbe255061b78b28628b31b508bd0c5455f678205f6334"
-  },
   "cleanup": {
     "strictRunnerExited": true,
     "clusters": [
@@ -54,5 +24,35 @@
     "privateEnvironmentFilesRemoved": true,
     "cachedRuntimeProcessesRemaining": 0
   },
-  "historicalSealsAndFixturesChanged": false
+  "historicalSealsAndFixturesChanged": false,
+  "unit": {
+    "phase": "unit",
+    "passed": 717,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "inputsUnchanged": 1428,
+    "exitCode": 0,
+    "logSha256": "2a7d600124d2eead6b5cb45761f9ceaddcf4a1d96bbf60d009b8302208e5254c"
+  },
+  "postgresql": {
+    "phase": "pg",
+    "passed": 802,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "inputsUnchanged": 1428,
+    "exitCode": 0,
+    "logSha256": "aac30bcc0d16674d25307f97d994739974729789f1daf19c444af37bb6f40979"
+  },
+  "browser": {
+    "phase": "browser",
+    "passed": 90,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "inputsUnchanged": 1428,
+    "exitCode": 0,
+    "logSha256": "96415491aa8d972c3c62675496b8a6dbfe99594467458a2cac70ffbf3100d2aa"
+  }
 }

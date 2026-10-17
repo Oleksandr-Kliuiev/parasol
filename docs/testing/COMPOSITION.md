@@ -485,7 +485,7 @@ Nothing was published, deployed or connected to a working provider.
 
 ## M34 direct My day sections, 17 October 2026
 
-The [current source-build report](evidence/composition-current-2026-10-17.json), also
+The [archived M34 source-build report](evidence/composition-M34-2026-10-17.json), also
 [stored immutably for M34](evidence/composition-M34-2026-10-17.json), `adc00205be7b`, passes
 10/10 with a build in the same invocation, zero skipped/unexpected/flaky cases, restricted
 runtimes, exact durable/privacy facts, 548 Atlas GETs, no mutating Atlas requests and cleanup.
@@ -509,3 +509,30 @@ not new full server runs. M26 financial SQL208/M29 native restore and other full
 matrices remain historical. The original M33 demo's394 artifacts/source2723 were isolated
 from development; its30-minute timeout cleanup passed. Staff feedback/time savings and
 real Entra/provider/VPS gates remain open. Nothing was published or deployed.
+
+
+## M35 exact device observation history, 17 October 2026
+
+The [current source-build report](evidence/composition-current-2026-10-17.json), also
+[stored immutably for M35](evidence/composition-M35-2026-10-17.json), `96e64f797635`, passes
+11/11 with a new build, restricted runtimes, exact durable/privacy facts, 578 Atlas
+GETs, no mutating Atlas requests and cleanup. All2735 application/tool inputs match
+before/after and across both isolated checkouts; M34 is retained byte-for-byte.
+
+The eleventh case opens one exact registry device, reads125 observations on five pages
+including Low beyond100, rejects another device's protected continuation, reads resolved
+history, returns to the original button, and opens the same-name unconfirmed-source
+device without inventing current confirmation. Clearing restores the full126. A foreign
+registry ID is refused. The original ten scenarios and their assertions still run.
+
+Separate current gates pass CRM970unit/94architecture/99affectedSQL, frontend60affected/
+658full(75files,2workers), tooling22, focused3 and wide102 CRM browser cases, all static
+checks/build/budget(292.3/300KB), and strict Atlas717/802/90. The installed Chromium
+audit covers44 views with all screenshots reviewed and no error/warn: five states,
+four widths, both themes plus four NB/RU320px views. Controlled technical BFF UI QA
+is explicitly separate from this actual joined-app invocation.
+
+See [M35 evidence](evidence/device-history-M35-2026-10-17.json). No skips, allowlists,
+retries or production dependencies were added. Staff usability/time savings, working
+Entra/provider accounts, historical financial review and target VPS/offsite remain open.
+M26 financial SQL208 and M29 native recovery are historical. Nothing was published or deployed.

@@ -69,15 +69,18 @@ node scripts/atlas-postgres.mjs stop
 подтверждение готовности к рабочему развёртыванию.
 
 
-## Текущая локальная проверка M31, 17 октября 2026
+## Текущая локальная проверка M35, 17 октября 2026
 
-Отдельные полные строгие наборы прошли: unit **714/714**, PostgreSQL **797/797**,
-browser **90/90**. Ноль failures, skips, todos, cancellations и browser retries;
-длительные 200-case native/browser сценарии сохранены. Проверены 1426 неизменных
-source/input файлов. Все три owned native кластера, их loopback listeners, private
-окружения и принадлежащий запуску временный runtime prefix удалены.
+Полные строгие наборы прошли: unit **717/717**, PostgreSQL **802/802**, browser **90/90**.
+Ноль failures, skips, todos, cancellations и browser retries. Длительные 200-case
+native/browser сценарии сохранены. Проверены 1428 неизменных source/input файлов;
+все три owned native кластера, loopback listeners, private-окружения и принадлежащий
+запуску временный runtime prefix удалены.
 
-[Свидетельство](evidence/atlas-strict-current-2026-10-17.json) содержит hash исходников
-и логов и проверенную очистку. Прежний dated report от 16 октября остаётся неизменным.
+[Текущее свидетельство](evidence/atlas-strict-current-2026-10-17.json) совпадает с
+[неизменяемым M35](evidence/atlas-strict-M35-2026-10-17.json). Прежние
+[M31 714/797/90](evidence/atlas-strict-M31-2026-10-17.json) и dated report от 16 октября
+сохранены. Новые device-scoped проверки включают серверные counts/paging, same-name
+devices, foreign scope, закрытую историю, отзыв текущей связи и привязку cursor.
 Исторические seals/manifest/fixtures ради новых исходников не менялись. Это локальная
-синтетическая регрессия, не разрешение рабочего R-EVAL, не приёмка провайдеров или VPS.
+синтетическая регрессия, не разрешение рабочего R-EVAL и не приёмка провайдеров или VPS.
