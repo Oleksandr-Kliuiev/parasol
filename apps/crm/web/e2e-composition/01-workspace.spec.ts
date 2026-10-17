@@ -130,9 +130,10 @@ test('actual customer cards retain source provenance, exact device links and six
       await expect(queue.getByText(text!, { exact: true })).toBeVisible();
       await expect(queue.getByRole('button', { name: 'Assign work', exact: true })).toHaveCount(0);
       await queue.getByRole('button', { name: 'View linked work', exact: true }).click();
-      const dialog = admin.page.getByRole('dialog', { name: 'Assign observation work', exact: true });
-      await expect(dialog.getByText(/No new task can be created from this observation/)).toBeVisible();
+      const dialog = admin.page.getByRole('dialog', { name: 'View observation work', exact: true });
+      await expect(dialog.getByText('No CRM task is linked to this observation.', { exact: true })).toBeVisible();
       await expect(dialog.getByRole('button', { name: 'Create task', exact: true })).toHaveCount(0);
+      await expect(dialog.getByRole('combobox')).toHaveCount(0);
       await dialog.getByRole('button', { name: 'Close', exact: true }).click();
     }
   } finally { await admin.context.close(); }

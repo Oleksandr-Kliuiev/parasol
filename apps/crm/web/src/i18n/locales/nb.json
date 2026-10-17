@@ -3796,6 +3796,9 @@
     }
   },
   "parasolWork": {
+    "viewWork": "Vis arbeid",
+    "viewTitle": "Vis arbeid for observasjon",
+    "noLinkedWork": "Ingen CRM-oppgave er knyttet til denne observasjonen.",
     "assign": "Tildel arbeid",
     "viewLinked": "Vis koblet arbeid",
     "title": "Tildel observasjonsarbeid",

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { api, createOrganization, marker, signIn } from './support';
+import { api, createOrganization, marker, signIn, toast } from './support';
+import { computedTextContrast } from './computedTextContrast';
 
 test('selected activity and return to the customer timeline work with a keyboard on a phone', async ({ page }, testInfo) => {
   await signIn(page, 'Crm.Sales');
@@ -57,11 +58,18 @@ test('selected activity and return to the customer timeline work with a keyboard
   const reopen = timeline.getByRole('button', { name: `Reopen ${subject}`, exact: true });
   await expect(reopen).toBeFocused();
   await page.keyboard.press('Enter'); await expect(complete).toBeFocused();
+  // Check the confirmation while stable, then the final page after its timed dismissal.
+  // An Axe scan must not race a toast's automatic fade halfway through collecting colours.
+  const receipt = toast(page, 'Reopened');
+  await expect(receipt).toBeVisible(); await receipt.hover();
   await page.waitForLoadState('networkidle');
   await page.evaluate(async () => {
     await Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity)
       .map(animation => animation.finished.catch(() => undefined)));
   });
+  expect((await computedTextContrast(receipt)).ratio).toBeGreaterThanOrEqual(4.5);
+  await page.mouse.move(0, 0);
+  await expect(page.locator('.fui-ToastTitle')).toHaveCount(0);
   const statusResult = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .exclude('[data-tabster-dummy]').analyze();
   expect(statusResult.violations.filter(violation => violation.impact === 'serious' || violation.impact === 'critical')

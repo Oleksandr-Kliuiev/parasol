@@ -17,11 +17,12 @@ export function taskReadErrorStatus(error: unknown): 'ACCESS_DENIED' | 'IDENTITY
 
 export function useObservationTaskPreview(scope: TaskPreviewScope) {
   const user = useCurrentUser();
+  const permissionsKey = JSON.stringify([...user.permissions].sort());
   const route = scope.activityId
     ? `/api/v1/parasol/activities/${encodeURIComponent(scope.activityId)}/atlas-observation`
     : `${taskRoute(scope.customerId!, scope.observationId!)}/task-preview`;
   return useQuery({
-    queryKey: ['parasol', 'observation-task-preview', user.id, route],
+    queryKey: ['parasol', 'observation-task-preview', user.id, permissionsKey, route],
     queryFn: async ({ signal }) => parseTaskPreview((await api.get<unknown>(route, signal)).data, scope),
     retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: 'always',
   });

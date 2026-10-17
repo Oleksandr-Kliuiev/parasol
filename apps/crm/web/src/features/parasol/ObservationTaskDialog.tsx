@@ -71,7 +71,7 @@ export function ObservationTaskDialog({ customerId, observationId, allowCreate, 
   };
   return <Dialog open onOpenChange={(_, d) => { if (!d.open && !busy) onClose(); }}>
     <DialogSurface><DialogBody>
-      <DialogTitle>{t('parasolWork.title')}</DialogTitle>
+      <DialogTitle>{t(allowCreate ? 'parasolWork.title' : 'parasolWork.viewTitle')}</DialogTitle>
       <DialogContent>
         <Text block>{t('parasolWork.privacy')}</Text>
         {view?.mode === 'fixture' && <MessageBar intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
@@ -81,7 +81,7 @@ export function ObservationTaskDialog({ customerId, observationId, allowCreate, 
         {outcome && <Text block role="status">{t(`parasolWork.status.${outcome.status}`)}</Text>}
         {ready?.observation && ready.devices && <div className={technical.row}><ObservationContext observation={ready.observation} devices={ready.devices} /></div>}
         {task && <TechnicalTaskReference task={task} onNavigate={onClose} />}
-        {ready && !task && !ready.canCreate && <Text block>{t('parasolWork.cannotCreate')}</Text>}
+        {ready && !task && (!allowCreate || !ready.canCreate) && <Text block>{t(allowCreate ? 'parasolWork.cannotCreate' : 'parasolWork.noLinkedWork')}</Text>}
         {allowCreate && ready?.canCreate && !task && !outcome && <div className={styles.grid}>
           <Text block className={styles.wide}>{t('parasolWork.persistedSubject')}: {t('parasolWork.subject')}</Text>
           <Text block className={styles.wide}>{t('parasolWork.priority', { priority: t(ready.observation?.priority === 'URGENT' ? 'activities.priorities.High' : 'activities.priorities.Normal') })}</Text>

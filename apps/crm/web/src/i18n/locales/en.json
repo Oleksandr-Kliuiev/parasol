@@ -3796,6 +3796,9 @@
     }
   },
   "parasolWork": {
+    "viewWork": "View work",
+    "viewTitle": "View observation work",
+    "noLinkedWork": "No CRM task is linked to this observation.",
     "assign": "Assign work",
     "viewLinked": "View linked work",
     "title": "Assign observation work",

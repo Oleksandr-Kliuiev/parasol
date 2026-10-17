@@ -12,10 +12,12 @@ export function ObservationWorkButton({ customerId, observationId, status, onSou
   const canWrite = useCan(Permissions.activitiesWrite); const canRead = useCan(Permissions.activitiesRead);
   const canAtlas = useCan(Permissions.parasolAtlasRead); const restoreFocus = useRestoreFocusTarget();
   const active = status === 'OPEN' || status === 'ACKNOWLEDGED';
-  if (!canAtlas || (active ? !canWrite : !canRead)) return null;
+  const allowCreate = active && canWrite;
+  if (!canAtlas || !canRead) return null;
+  const permissionsKey = JSON.stringify([...user.permissions].sort());
   return <>
-    <Button {...restoreFocus} size="small" onClick={() => setOpen(true)}>{t(active ? 'parasolWork.assign' : 'parasolWork.viewLinked')}</Button>
-    {open && <ObservationTaskDialog key={`${user.id}:${customerId}:${observationId}`} customerId={customerId} observationId={observationId}
-      allowCreate={active && canWrite} onClose={() => setOpen(false)} onSourceInvalidated={onSourceInvalidated} />}
+    <Button {...restoreFocus} size="small" onClick={() => setOpen(true)}>{t(allowCreate ? 'parasolWork.assign' : active ? 'parasolWork.viewWork' : 'parasolWork.viewLinked')}</Button>
+    {open && <ObservationTaskDialog key={`${user.id}:${permissionsKey}:${customerId}:${observationId}`} customerId={customerId} observationId={observationId}
+      allowCreate={allowCreate} onClose={() => setOpen(false)} onSourceInvalidated={onSourceInvalidated} />}
   </>;
 }
