@@ -13,6 +13,7 @@ from configure import initialize
 from lifecycle import migrate, start
 from recovery import restore
 from snapshot import backup, inventory
+from rehearsal_workload import seed, capture, verify_integrity, mutate_after_backup, verify_restored
 
 
 def free_port():
@@ -40,6 +41,10 @@ def drill(root, release, build, keep):
         print('Migrating empty SQL Server/PostgreSQL databases', flush=True)
         migrate(source)
         start(source)
+        print('Seeding the synthetic observation/task/ticket/time recovery workload', flush=True)
+        workload = seed(source)
+        verify_integrity(source, workload)
+        before_workload = capture(source, workload)
         # The edge only exposes the web host, never internal health or Atlas.
         for route in ['/health/ready', '/bff/user']:
             try:
@@ -67,11 +72,14 @@ def drill(root, release, build, keep):
         # Simulate later data/loss in the synthetic source; the restored copy must recover the earlier point.
         source.sql("UPDATE dbo.ParasolRecoveryProbe SET Value='after-backup';", 'Crm')
         source.pg("UPDATE public.parasol_recovery_probe SET value='after-backup';")
+        mutate_after_backup(source, workload, before_workload)
         pdf.unlink()
         source.compose('stop')  # Simulate unavailable source; recovery cannot borrow either live database.
         print('Restoring both databases, documents and keyring into a new isolated stack', flush=True)
         with source.lock(): recovered = restore(source, result['snapshot'], target_path)
         target = Stack(target_path)
+        workload_proof = verify_restored(target, workload, before_workload)
+        workload_proof['sourceChangedAfterBackup'] = True
         if marker not in target.sql('SET NOCOUNT ON; SELECT Value FROM dbo.ParasolRecoveryProbe;', 'Crm').decode():
             raise RuntimeError('SQL point-in-time marker mismatch')
         if target.pg('SELECT value FROM public.parasol_recovery_probe;').decode().strip() != marker:
@@ -96,8 +104,10 @@ def drill(root, release, build, keep):
         report = {'status': 'passed', 'syntheticOnly': True, 'snapshot': result['snapshot'],
                   'backupSeconds': result['elapsedSeconds'], 'restoreSeconds': recovered['elapsedSeconds'],
                   'checks': recovered['checks'] + ['SQL and PostgreSQL before/after markers',
+                      'exact current workflow rows and rowversions', 'workflow relations and permanent keys',
+                      'both runtime logins deny receipt UPDATE/DELETE',
                       'exact document and keyring inventory', 'corrupt encrypted pack rejected', 'edge isolation'],
-                  'promoted': False}
+                  'workflow': workload_proof, 'promoted': False}
         write_json(root / 'report.json', report)
         print(json.dumps(report, indent=2))
     finally:
