@@ -13,7 +13,7 @@ namespace Crm.TimeTracking.Features;
 /// Work hours coming from the service desk (BR-TIM-01/02). An entry that changed after it was invoiced is flagged for Finance instead of
 /// being rewritten; an approved entry that changed is withdrawn so it is approved again with the new hours.
 /// </summary>
-internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeApprovalService approvals, TimeBankTransaction financial) : ITimeTrackingApi
+internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeApprovalService approvals, TimeBankTransaction financial, TimeBillingGuard billing) : ITimeTrackingApi
 {
     public async Task<IReadOnlyList<BillableTime>> GetBillableTimeAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
     {
@@ -45,12 +45,26 @@ internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeAp
                 })
             .ToListAsync(cancellationToken);
 
-        // Allocations of a withdrawn approval are soft-deleted and filtered out by the query filter, so what is left is current.
+        var claims = await billing.ReadEntriesAsync(rows.Select(r => new TimeBillingEntry(r.Id, r.OrganizationId)).Distinct().ToList(), cancellationToken);
+        if (claims.Any(c => !c.Proven)) throw new TimeBillingReviewException();
+        var owners = rows.GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First().OrganizationId);
+        if (claims.Any(c => c.EntryIds.Any(id => owners.TryGetValue(id, out var owner) && owner != c.OrganizationId)))
+            throw new TimeBillingReviewException();
+        var exported = claims.Where(c => c.Exported).SelectMany(c => c.AllocationIds).ToHashSet();
+        var knownEntries = claims.Where(c => c.Exported).SelectMany(c => c.EntryIds).ToHashSet();
+        var active = rows.GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.Select(r => r.AllocationId).ToHashSet());
+        if (claims.Where(c => c.Exported).Any(c => c.EntryIds.Any(id => active.TryGetValue(id, out var allocations)
+            && !c.AllocationIds.Any(allocations.Contains)))) throw new TimeBillingReviewException();
+        if (rows.Any(r => r.Status == TimeEntryStatus.Invoiced && knownEntries.Contains(r.Id) && !exported.Contains(r.AllocationId)))
+            throw new TimeBillingReviewException();
+        // An entry remains Approved while only a subset was exported (for example an excluded Rate alongside Info).
+        // Billing must omit the exported allocations only, preserving the remaining obligation for a later basis.
+        // Keep the old terminal fallback solely where no exact historical source snapshot is available.
         return rows
             .Select(r => new BillableTime(
                 r.Id, r.AllocationId, r.OrganizationId, r.Classification, r.WorkDate, r.Hours, r.BilledHours, r.Rate, r.Amount,
                 r.HourBankId, r.WorkType, r.AfterHours, r.Onsite, r.Description, r.ExternalTicketId, r.TicketTitle, r.TechnicianName,
-                r.Status == TimeEntryStatus.Invoiced))
+                exported.Contains(r.AllocationId) || r.Status == TimeEntryStatus.Invoiced && !knownEntries.Contains(r.Id)))
             .ToList();
     }
 

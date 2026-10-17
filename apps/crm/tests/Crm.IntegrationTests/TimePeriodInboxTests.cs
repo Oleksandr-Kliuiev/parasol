@@ -44,7 +44,8 @@ public sealed class TimePeriodInboxTests(CrmWebFactory factory)
             handling.Begin(messageId, handlerName); await handling.ClaimAsync(db, DateTimeOffset.UtcNow, Ct);
             if (invoice)
             {
-                var billing = DispatchProxy.Create<IBillingApi, BillingIds>(); ((BillingIds)billing).Ids = [row.Id];
+                var billing = DispatchProxy.Create<ITimeBillingReader, BillingIds>();
+                ((BillingIds)billing).Claims = [new(Guid.NewGuid(), org, [row.Id], row.CurrentAllocations.Select(a => a.Id).ToList(), true, true)];
                 await new BasisExportedHandler(db, billing, NullLogger<BasisExportedHandler>.Instance).HandleAsync(new(Guid.NewGuid(), org, "synthetic", "1"), Ct);
             }
             else await new TechnicianMappingHandler(db).HandleAsync(new("atera", source.TechnicianExternalId!, replacement), Ct);
@@ -85,9 +86,10 @@ public sealed class TimePeriodInboxTests(CrmWebFactory factory)
     }
     public class BillingIds : DispatchProxy
     {
-        internal IReadOnlyList<Guid> Ids { get; set; } = [];
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name == nameof(IBillingApi.GetInvoicedTimeEntryIdsAsync)
-            ? Task.FromResult(Ids) : throw new InvalidOperationException("Unexpected Billing call.");
+        internal IReadOnlyList<TimeBillingClaim> Claims { get; set; } = [];
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) =>
+            targetMethod?.Name is nameof(ITimeBillingReader.ReadExportedBasisAsync) or nameof(ITimeBillingReader.ReadAsync)
+                ? Task.FromResult(Claims) : throw new InvalidOperationException("Unexpected Billing call.");
     }
     private sealed class LostInboxAcknowledgement : Exception;
     private sealed class LoseAck(bool enabled) : DbTransactionInterceptor

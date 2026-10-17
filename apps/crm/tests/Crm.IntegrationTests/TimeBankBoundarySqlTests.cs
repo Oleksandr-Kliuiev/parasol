@@ -64,7 +64,7 @@ public sealed class TimeBankBoundarySqlTests(CrmWebFactory factory)
         await using var scope = factory.Services.CreateAsyncScope();
         await using var db = TimeMutationScope.Fresh(scope.ServiceProvider.GetRequiredService<TimeTrackingDbContext>());
         await using var transaction = await db.Database.BeginTransactionAsync(Ct);
-        var service = new TimeApprovalService(db, null!, null!, null!, TimeProvider.System, null!, scope.ServiceProvider.GetRequiredService<TimeBankTransaction>());
+        var service = new TimeApprovalService(db, null!, null!, null!, TimeProvider.System, null!, scope.ServiceProvider.GetRequiredService<TimeBankTransaction>(), scope.ServiceProvider.GetRequiredService<TimeBillingGuard>());
         var error = await Should.ThrowAsync<InvalidOperationException>(() => service.ApproveAsync([], Ct));
         error.Message.ShouldBe("A Time/bank command must own its complete transaction.");
         (await db.Database.SqlQueryRaw<int>("SELECT @@TRANCOUNT AS [Value]").SingleAsync(Ct)).ShouldBe(1);

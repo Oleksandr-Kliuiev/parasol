@@ -23,6 +23,8 @@ public static class TimeTrackingModule
         services.AddModuleServices(typeof(TimeTrackingModule).Assembly);
         services.AddScoped<TimeEntryService>();
         services.AddScoped<TimeApprovalService>();
+        services.AddScoped<TimeBillingGuard>();
+        services.AddScoped<ITimeBillingAdmission, TimeBillingAdmission>();
         services.AddScoped<ITimeTrackingApi, TimeImportService>();
         return services;
     }

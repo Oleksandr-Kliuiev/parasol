@@ -27,7 +27,8 @@ internal sealed partial class TimeEntryService(
     IUserDirectory users,
     ICurrentUser currentUser,
     TimeProvider time,
-    IOptions<TimeTrackingOptions> options)
+    IOptions<TimeTrackingOptions> options,
+    TimeBillingGuard billing)
 {
     public async Task<TimeEntryPage> ListAsync(TimeQuery query, CancellationToken ct)
     {

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Crm.Billing.Features;
 
 /// <summary>What integrations may do with billing: read approved bases, report the result and mirror invoices back.</summary>
-internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time) : IBillingApi
+internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time, ITimeBillingAdmission timeAdmission) : IBillingApi
 {
     public async Task<IReadOnlyList<Guid>> GetInvoicedTimeEntryIdsAsync(Guid basisId, CancellationToken cancellationToken)
     {
@@ -67,11 +67,23 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
 
     public async Task<bool> MarkExportSendingAsync(Guid basisId, string system, string? correlationId, CancellationToken cancellationToken)
     {
-        if (await db.BillingBases.Include(b => b.Attempts).SingleOrDefaultAsync(b => b.Id == basisId, cancellationToken) is not { } basis)
+        if (await db.BillingBases.Include(b => b.Attempts).Include(b => b.Lines).SingleOrDefaultAsync(b => b.Id == basisId, cancellationToken) is not { } basis)
         {
             return false;
         }
 
+        if (basis.SendStartedAt is not null) return false;
+        if (db.Database.CurrentTransaction is not null) throw new InvalidOperationException("Billing send admission must own its local command.");
+        var admission = await timeAdmission.HoldAsync(TimeBillingSources.Selections([basis]), cancellationToken);
+        if (!admission.IsSuccess)
+        {
+            // No send was admitted. Preserve the immutable basis and committed charges for explicit Finance correction.
+            basis.MarkFailed(system, admission.Error!.Code, time.GetUtcNow(), correlationId);
+            await db.SaveChangesAsync(cancellationToken);
+            await UpdateRunStatusAsync(basis.RunId, cancellationToken);
+            return false;
+        }
+        await using var sourceLease = admission.Value;
         if (!basis.MarkSending(system, time.GetUtcNow(), correlationId).IsSuccess)
         {
             return false;

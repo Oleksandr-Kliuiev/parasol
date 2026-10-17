@@ -30,7 +30,7 @@ public sealed class TaskWorkPermissionTests
     public async Task Verified_task_time_requires_service_and_activity_read_in_addition_to_own_time(string missing)
     {
         var user = new User([Permissions.TimeOwn, Permissions.ServiceRead, Permissions.ActivitiesRead], missing);
-        var api = new TimeEntryService(null!, null!, null!, null!, null!, null!, null!, null!, user, TimeProvider.System, null!);
+        var api = new TimeEntryService(null!, null!, null!, null!, null!, null!, null!, null!, user, TimeProvider.System, null!, null!);
         var request = new TimeEntryRequest(Guid.NewGuid(), null, new(2099, 4, 23), 1, null, false, false, false, null,
             null, null, null, Guid.NewGuid(), Guid.NewGuid());
         (await api.CreateAsync(request, default)).Error!.Code.ShouldBe("TIM_WORK_FORBIDDEN");
@@ -40,7 +40,7 @@ public sealed class TaskWorkPermissionTests
     public async Task Origin_without_exact_saved_ticket_is_invalid_before_any_database_lookup()
     {
         var user = new User([Permissions.TimeOwn, Permissions.ServiceRead, Permissions.ActivitiesRead]);
-        var api = new TimeEntryService(null!, null!, null!, null!, null!, null!, null!, null!, user, TimeProvider.System, null!);
+        var api = new TimeEntryService(null!, null!, null!, null!, null!, null!, null!, null!, user, TimeProvider.System, null!, null!);
         var request = new TimeEntryRequest(Guid.NewGuid(), null, new(2099, 4, 23), 1, null, false, false, false, null,
             12, "User supplied title", null, null, Guid.NewGuid());
         (await api.CreateAsync(request, default)).Error!.Code.ShouldBe("TIM_TICKET_INVALID");

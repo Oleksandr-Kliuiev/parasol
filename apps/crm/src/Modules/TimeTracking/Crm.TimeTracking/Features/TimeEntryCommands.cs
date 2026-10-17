@@ -27,6 +27,7 @@ internal sealed partial class TimeEntryService
         if (!rows.IsSuccess) return rows.Error!;
         if (rows.Value.SingleOrDefault() is not { } entry) return TimeErrors.NotFound(id);
         if (!CanEdit(entry)) return TimeErrors.Forbidden;
+        if (await billing.CheckAsync([entry], ct) is { } committed) return committed;
         if ((await MonthAdmission.ClosedAsync(write, admission.Value, ct)).Contains(TimeMonth.Of(entry.WorkDate))) return TimeErrors.PeriodClosed;
         var result = action(entry);
         if (!result.IsSuccess) return result;

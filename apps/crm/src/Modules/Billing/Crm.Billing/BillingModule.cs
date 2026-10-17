@@ -31,6 +31,7 @@ public static class BillingModule
         services.AddScoped<PilotComparisonService>();
         services.AddScoped<PilotKpiService>();
         services.AddScoped<IBillingApi, BillingApi>();
+        services.AddScoped<ITimeBillingReader, TimeBillingReader>();
         services.AddScoped<Crm.SharedKernel.Operations.IOperationalSignalSource, BillingOperationalSignals>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, BillingRestoreParticipant>();
         services.AddScoped<IProductUsage, BillingProductUsage>();

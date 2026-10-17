@@ -47,6 +47,8 @@ internal sealed partial class TimeImportService
                     continue;
                 }
                 if (!entry.DiffersFrom(incoming)) { unchanged++; continue; }
+                if (await billing.CheckAsync([entry], ct) is not null)
+                { entry.FlagForReview("Changed in the service desk after approved billing committed this work; Finance must correct it in a later period."); review++; continue; }
                 // Preserve either closed month's financial snapshot, including a New row moved by its source.
                 if (IsClosed(entry.WorkDate) || IsClosed(incoming.WorkDate))
                 { entry.FlagForReview("Changed in the service desk while an affected period is closed."); review++; continue; }

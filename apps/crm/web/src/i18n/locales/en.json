@@ -81,6 +81,8 @@
     "pageCrashed": "This page could not be displayed. Reload it; if the problem continues, contact the administrator.",
     "codes": {
       "TIM_BANK_RECONCILIATION_REQUIRED": "Historical bank movements do not match these hours. Ask Finance to review the entry before trying again.",
+      "TIM_BILLING_COMMITTED": "Approved billing already includes this work. Ask Finance to cancel an unsent basis or correct it in a later period.",
+      "TIM_BILLING_SOURCE_CHANGED": "The billing source changed. Reload and collect the draft again; historical mismatches need Finance review.",
       "TIM_PERIOD_BUSY": "This period is being changed. Refresh its state before trying again.",
       "TIM_WORK_CHANGED": "These hours moved to another period. Refresh the entries and review your changes.",
       "TIM_PERIOD_CLOSED": "This period is closed. Finance must reopen it before hours can be changed.",

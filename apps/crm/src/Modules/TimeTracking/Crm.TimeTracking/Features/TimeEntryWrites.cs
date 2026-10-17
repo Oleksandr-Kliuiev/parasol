@@ -81,6 +81,7 @@ internal sealed partial class TimeEntryService
                 if (entry is null) return TimeErrors.NotFound(entryId);
                 if (!admission.Value.Covers(entry.WorkDate)) return MonthAdmission.Changed;
                 if (!CanEdit(entry)) return TimeErrors.Forbidden;
+                if (await billing.CheckAsync([entry], token) is { } committed) return committed;
                 if (!writeDb.ApplyIfMatch(entry, ifMatch!)) return TimeErrors.InvalidETag;
                 if (writeDb.IsStale(entry)) return Error.PreconditionFailed("CONCURRENCY_CONFLICT", "The time entry changed. Reload it and review your changes.");
             }

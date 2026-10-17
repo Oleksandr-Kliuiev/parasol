@@ -20,7 +20,8 @@ internal sealed partial class TimeApprovalService(
     ICurrentUser currentUser,
     TimeProvider time,
     IOptions<TimeTrackingOptions> options,
-    TimeBankTransaction financial)
+    TimeBankTransaction financial,
+    TimeBillingGuard billing)
 {
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
 
@@ -56,6 +57,7 @@ internal sealed partial class TimeApprovalService(
                 continue;
             }
 
+            if (await billing.CheckAsync([entry], cancellationToken) is { } committed) return committed;
             if (await CheckNewApprovalAsync(entry, cancellationToken) is { } review) return review;
             var terms = await contracts.GetBillingTermsAsync(entry.OrganizationId, entry.WorkDate, cancellationToken);
             var key = (entry.OrganizationId, entry.Year, entry.Month);
@@ -135,6 +137,7 @@ internal sealed partial class TimeApprovalService(
         var closed = await MonthAdmission.ClosedAsync(write, admission.Value, cancellationToken);
         // Validate the entire batch before reversing ANY hour-bank consumption.
         if (entries.Any(e => closed.Contains(TimeMonth.Of(e.WorkDate)))) return TimeErrors.PeriodClosed;
+        if (await billing.CheckAsync(entries, cancellationToken) is { } committed) return committed;
         foreach (var entry in entries)
         {
             var result = await WithdrawAdmittedAsync(entry, admission.Value, cancellationToken);
