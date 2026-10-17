@@ -1,0 +1,107 @@
+{
+  "recordedAt": "2026-10-17T19:07:54.219850+00:00",
+  "scope": "M33 local synthetic read-only discovery of CRM work from active Atlas observations; product goal remains open",
+  "status": "locally-verified",
+  "frontend": {
+    "affected": 102,
+    "unit": 633,
+    "files": 72,
+    "maxWorkers": 2,
+    "browser": 96,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "tooling": 22,
+    "initialGzipKb": 292.4,
+    "budgetKb": 300,
+    "eslint": true,
+    "typeChecks": true,
+    "build": true,
+    "browserOnlyEditsAfterFullUnit": [
+      "apps/crm/web/e2e-composition/01-workspace.spec.ts",
+      "apps/crm/web/e2e/activity-navigation-a11y.spec.ts",
+      "apps/crm/web/e2e/parasol-readonly-work.spec.ts"
+    ],
+    "allUnitAndAppInputBytesUnchangedAfterFullUnit": true,
+    "compositionSpecEditAfterWideBrowser": [
+      "apps/crm/web/e2e-composition/01-workspace.spec.ts"
+    ],
+    "allWideBrowserInputBytesUnchangedAfterWidePass": true
+  },
+  "readOnlyFlow": {
+    "realCrmRole": "Crm.ReadOnly",
+    "realTaskCreationHttpStatus": 403,
+    "preview": "controlled BFF fixture, read only on explicit action",
+    "linkedTaskNavigation": "exact real CRM SQL Activity",
+    "assignmentControlsAbsent": true,
+    "noUiApiWrites": true,
+    "permissionChangeDiscardsOldPreviewAndForm": true,
+    "noBackgroundRowReads": true
+  },
+  "visual": {
+    "engine": "Chromium",
+    "states": [
+      "reader-no-linked-work",
+      "reader-linked-work"
+    ],
+    "widths": [
+      1440,
+      768,
+      390,
+      320
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "views": 16,
+    "errors": 0,
+    "warnings": 0,
+    "screenshotsReviewed": 16,
+    "keyboardAndAxeEngines": [
+      "Chromium",
+      "Firefox",
+      "WebKit"
+    ],
+    "notes": "Installed audit.mjs; internal Fluent UI spacing info reviewed, no rules disabled"
+  },
+  "composition": {
+    "report": "composition-M33-2026-10-17.json",
+    "reportSha256": "77700d6e3a296c04dcd6d1fd3273ed40955c26ad4664ed306001d19ad2fb8f2e",
+    "runId": "d25a7dc41b53",
+    "accepted": true,
+    "diagnostic": false,
+    "builtInThisRun": true,
+    "browser": 10,
+    "atlasRequests": 575,
+    "mutatingAtlasRequests": 0,
+    "cleanup": true
+  },
+  "inputChecks": {
+    "frontend": 413,
+    "crmBackendReused": 804,
+    "crmSqlSourceBuildFixtureReused": 856,
+    "atlasReused": 1426,
+    "rootTooling": 32,
+    "compositionUnion": 2723,
+    "allCurrentBytesMatch": true
+  },
+  "unchangedServerAcceptance": {
+    "source": "customer-m365-M31-2026-10-17.json",
+    "crmUnit": 963,
+    "crmArchitecture": 94,
+    "crmAffectedSql": 93,
+    "atlasUnit": 714,
+    "atlasPostgres": 797,
+    "atlasBrowser": 90,
+    "newFullServerRunsForM33": false
+  },
+  "limitations": [
+    "Atlas data in the new reader UI scenario uses a controlled BFF fixture; normal joined-app composition is separate actual CRM/Atlas/SQL evidence",
+    "Synthetic data and browser builds do not prove staff convenience, real provider compatibility or human time savings",
+    "M32 64-view matrix, M26 financial SQL208 and M29 native restore remain historical, not new M33 runs",
+    "Working-provider, Entra, target VPS and offsite recovery require separate authorization"
+  ],
+  "published": false,
+  "deployed": false
+}

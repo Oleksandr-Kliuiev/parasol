@@ -431,7 +431,7 @@ or deployed.
 
 ## M32 compact customer card and navigation, 17 October 2026
 
-The [current source-build report](evidence/composition-current-2026-10-17.json), also
+The [archived M32 source-build report](evidence/composition-M32-2026-10-17.json), also
 [stored immutably for M32](evidence/composition-M32-2026-10-17.json), `ff17fd2db426`,
 passes 10/10 with a fresh build, zero skipped/unexpected/flaky cases, exact durable/privacy
 facts, restricted runtimes and confirmed cleanup. It forwards 561 Atlas GETs and no
@@ -450,3 +450,34 @@ Backend/SQL/Atlas code is unchanged: exact 804/856/1426-input checks reuse M31's
 SQL208 and M29 native restore are not repeated. See [M32 evidence](evidence/ui-layout-M32-2026-10-17.json)
 for the measured page-height change and limits. Staff feedback/time savings and live-account/
 VPS acceptance remain open. Nothing was published or deployed.
+
+
+## M33 read-only observation work discovery, 17 October 2026
+
+The [current source-build report](evidence/composition-current-2026-10-17.json), also
+[stored immutably for M33](evidence/composition-M33-2026-10-17.json), `d25a7dc41b53`, passes
+10/10 with a fresh build, zero skipped/unexpected/flaky cases, restricted runtimes,
+exact durable/privacy facts and confirmed cleanup. It forwards 575 Atlas GETs and no
+mutating Atlas requests. All 2723 current application/tool inputs match before/after.
+The [M32 report](evidence/composition-M32-2026-10-17.json) remains byte-for-byte unchanged.
+
+Separate current gates pass: frontend 102 affected/633 full (72 files, two workers),
+96 CRM browser cases across Chromium/Firefox/WebKit, tooling 22 and static/build checks
+(292.4/300KB). Two E2E animation synchronizations and one composition expectation update followed full unit; every
+unit/application input byte remains unchanged, and final browser lint/types and the entire
+browser set were rerun for its two changes. The later composition-only expectation edit
+leaves ordinary browser inputs unchanged and is checked by scoped lint/types and the fresh
+10-case composition run. A separate installed measurable audit reviews 16 dialog views,
+no errors/warnings, all screenshots inspected. Existing contrast rules remain enabled.
+
+The new reader browser scenario uses an actual ReadOnly CRM session, a real saved SQL Task
+and the unchanged server's HTTP403 write denial; its Atlas preview is a controlled BFF
+fixture. It checks lazy GET, absent assignment controls, keyboard dismissal/focus and exact
+Activity navigation without UI writes. That scenario is not represented as an additional
+ReadOnly Atlas membership in this three-employee joined-app fixture.
+
+No backend/Atlas contracts or permissions changed: exact804/856/1426-input hashes reuse
+M31's963/94/93 and714/797/90 server gates, not new full server runs. M32 visual64, M26
+financialSQL208 and M29 native restore remain historical. See [M33 evidence](evidence/readonly-work-M33-2026-10-17.json).
+Staff feedback, human time savings, working-account and VPS acceptance remain open.
+Nothing was published, deployed or connected to a working provider.
