@@ -50,7 +50,10 @@ internal sealed partial class TimeEntryService
         {
             await using var writeDb = CreateWriteContext();
             // No execution-strategy callback: financial creation and its audit are never replayed.
-            await using var transaction = await writeDb.Database.BeginTransactionAsync(IsolationLevel.Serializable, token);
+            await using var transaction = await writeDb.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, token);
+            var admission = await TimeRowAdmission.DiscoverAsync(writeDb, id is { } existingId ? [existingId] : [],
+                MonthMode.Shared, [request.WorkDate], token);
+            if (!admission.IsSuccess) return admission.Error!;
             if (createRequestId is { } requestId)
             {
                 // Primary-key range lock serializes duplicate admissions, including two absent-key reads. The receipt
@@ -76,13 +79,13 @@ internal sealed partial class TimeEntryService
                 entry = await writeDb.TimeEntries.FromSqlInterpolated($"SELECT * FROM [time].[TimeEntries] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {entryId}")
                     .Include(e => e.Allocations).SingleOrDefaultAsync(token);
                 if (entry is null) return TimeErrors.NotFound(entryId);
+                if (!admission.Value.Covers(entry.WorkDate)) return MonthAdmission.Changed;
                 if (!CanEdit(entry)) return TimeErrors.Forbidden;
                 if (!writeDb.ApplyIfMatch(entry, ifMatch!)) return TimeErrors.InvalidETag;
                 if (writeDb.IsStale(entry)) return Error.PreconditionFailed("CONCURRENCY_CONFLICT", "The time entry changed. Reload it and review your changes.");
             }
-            var closed = (await writeDb.TimePeriods.AsNoTracking().Where(p => p.IsClosed)
-                .Select(p => new { p.Year, p.Month }).ToListAsync(token)).Select(p => (p.Year, p.Month)).ToHashSet();
-            if (closed.Contains((request.WorkDate.Year, request.WorkDate.Month)) || entry is not null && closed.Contains((entry.Year, entry.Month)))
+            var closed = await MonthAdmission.ClosedAsync(writeDb, admission.Value, token);
+            if (closed.Contains(TimeMonth.Of(request.WorkDate)) || entry is not null && closed.Contains(TimeMonth.Of(entry.WorkDate)))
                 return TimeErrors.PeriodClosed;
             var technicianId = await ResolveTechnicianAsync(request.TechnicianId ?? entry?.TechnicianId);
             if (technicianId is null) return TimeErrors.Forbidden;

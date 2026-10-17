@@ -202,21 +202,21 @@ export function TimeEntriesPage() {
             <Button disabled={selected.length === 0} onClick={() => void run(() => actions.withdraw.mutateAsync(selected), t('time.withdrawn'))}>
               {t('time.withdrawSelected')}
             </Button>
-            {period?.isClosed ? (
-              canUnlock && (
-                <Button {...restoreFocusTarget} icon={<LockOpen20Regular />} onClick={() => setReopening(period)}>
-                  {t('time.reopenPeriod')}
-                </Button>
-              )
-            ) : (
-              <Button
-                icon={<LockClosed20Regular />}
-                onClick={() => void run(() => periodActions.close.mutateAsync({ year, month }), t('time.periodClosedDone'))}
-              >
-                {t('time.closePeriod')}
-              </Button>
-            )}
           </>
+        )}
+        {period?.isClosed ? (
+          canUnlock && (
+            <Button {...restoreFocusTarget} icon={<LockOpen20Regular />} onClick={() => setReopening(period)}>
+              {t('time.reopenPeriod')}
+            </Button>
+          )
+        ) : (
+          canManage && (
+            <Button icon={<LockClosed20Regular />}
+              onClick={() => void run(() => periodActions.close.mutateAsync({ year, month }), t('time.periodClosedDone'))}>
+              {t('time.closePeriod')}
+            </Button>
+          )
         )}
       </div>
 

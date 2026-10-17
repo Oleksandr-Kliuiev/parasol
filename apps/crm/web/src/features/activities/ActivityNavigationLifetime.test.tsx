@@ -38,7 +38,7 @@ it('hides a selected record and its source controls on a failed refresh and does
   expect(await screen.findByText('Something went wrong')).toBeVisible();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); expect(screen.queryByText(first.subject)).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
-  failed = false; await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  failed = false; await userEvent.click(await screen.findByRole('button', { name: 'Try again' }));
   expect(await screen.findByText(first.subject)).toBeVisible(); expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 

@@ -111,62 +111,13 @@ internal sealed partial class TimeEntryService(
             totals?.Count ?? 0);
     }
 
-    public async Task<Result> AdjustAsync(Guid id, AdjustTimeEntryRequest request, CancellationToken ct)
-    {
-        if (await db.TimeEntries.SingleOrDefaultAsync(e => e.Id == id, ct) is not { } entry)
-        {
-            return TimeErrors.NotFound(id);
-        }
-
-        if ((await ClosedPeriodsAsync(ct)).Contains((entry.Year, entry.Month)))
-        {
-            return TimeErrors.PeriodClosed;
-        }
-
-        var result = entry.Adjust(request.Billable, request.WorkType, request.AfterHours);
-        if (!result.IsSuccess)
-        {
-            return result;
-        }
-
-        await db.SaveChangesAsync(ct);
-        return Result.Success();
-    }
-
-    public async Task<Result> DeleteAsync(Guid id, CancellationToken ct)
-    {
-        if (await db.TimeEntries.Include(e => e.Allocations).SingleOrDefaultAsync(e => e.Id == id, ct) is not { } entry)
-        {
-            return TimeErrors.NotFound(id);
-        }
-
-        if (!CanEdit(entry))
-        {
-            return TimeErrors.Forbidden;
-        }
-
-        if (entry.Source != TimeSource.Crm || entry.Status != TimeEntryStatus.New)
-        {
-            return Error.Conflict("TIM_NOT_DELETABLE", "Only new entries made in the CRM can be deleted.");
-        }
-
-        if ((await ClosedPeriodsAsync(ct)).Contains((entry.Year, entry.Month)))
-        {
-            return TimeErrors.PeriodClosed;
-        }
-
-        entry.MarkDeleted();
-        await db.SaveChangesAsync(ct);
-        return Result.Success();
-    }
-
     public async Task<IReadOnlyList<PeriodDto>> ListPeriodsAsync(int year, CancellationToken ct)
     {
         var periods = await db.TimePeriods.AsNoTracking().Where(p => p.Year == year).ToListAsync(ct);
         var from = new DateOnly(year, 1, 1);
-        var to = from.AddYears(1);
+        var to = new DateOnly(year, 12, 31);
         var stats = await db.TimeEntries.AsNoTracking()
-            .Where(e => e.WorkDate >= from && e.WorkDate < to)
+            .Where(e => e.WorkDate >= from && e.WorkDate <= to)
             .GroupBy(e => e.WorkDate.Month)
             .Select(g => new { Month = g.Key, New = g.Count(e => e.Status == TimeEntryStatus.New), Hours = g.Sum(e => e.Hours) })
             .ToListAsync(ct);
@@ -181,46 +132,6 @@ internal sealed partial class TimeEntryService(
                 period?.ClosedBy is { } by && closedBy.TryGetValue(by, out var user) ? user.DisplayName : null,
                 period?.ReopenReason, stat?.New ?? 0, stat?.Hours ?? 0);
         }).ToList();
-    }
-
-    public async Task<Result<PeriodDto>> ClosePeriodAsync(int year, int month, CancellationToken ct)
-    {
-        var from = new DateOnly(year, month, 1);
-        var to = from.AddMonths(1);
-        var newEntries = await db.TimeEntries.CountAsync(e => e.WorkDate >= from && e.WorkDate < to && e.Status == TimeEntryStatus.New, ct);
-        if (newEntries > 0)
-        {
-            return Error.Conflict("TIM_UNAPPROVED_ENTRIES", $"{newEntries} entries are still waiting for approval.",
-                new Dictionary<string, object?> { ["newEntries"] = newEntries });
-        }
-
-        var period = await db.TimePeriods.SingleOrDefaultAsync(p => p.Year == year && p.Month == month, ct);
-        if (period is null)
-        {
-            period = new TimePeriod(year, month);
-            db.TimePeriods.Add(period);
-        }
-
-        period.Close(currentUser.UserId, time.GetUtcNow());
-        await db.SaveChangesAsync(ct);
-        return (await ListPeriodsAsync(year, ct)).First(p => p.Month == month);
-    }
-
-    public async Task<Result<PeriodDto>> ReopenPeriodAsync(int year, int month, string reason, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            return Error.Validation("TIM_REASON_REQUIRED", "Give a reason for reopening the period; it is written to the audit log.");
-        }
-
-        if (await db.TimePeriods.SingleOrDefaultAsync(p => p.Year == year && p.Month == month, ct) is not { } period || !period.IsClosed)
-        {
-            return Error.NotFound("TIM_PERIOD_NOT_CLOSED", "The period is not closed.");
-        }
-
-        period.Reopen(reason, time.GetUtcNow());
-        await db.SaveChangesAsync(ct);
-        return (await ListPeriodsAsync(year, ct)).First(p => p.Month == month);
     }
 
     public async Task<IReadOnlyList<string>> WorkTypesAsync(CancellationToken ct)

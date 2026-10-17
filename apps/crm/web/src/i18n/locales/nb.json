@@ -80,6 +80,11 @@
     "validation": "Kontroller de markerte feltene.",
     "pageCrashed": "Siden kunne ikke vises. Last inn på nytt; kontakt administratoren hvis problemet vedvarer.",
     "codes": {
+      "TIM_PERIOD_BUSY": "Denne perioden endres nå. Oppdater statusen før du prøver igjen.",
+      "TIM_WORK_CHANGED": "Timene er flyttet til en annen periode. Oppdater føringene og kontroller endringene dine.",
+      "TIM_PERIOD_CLOSED": "Perioden er stengt. Økonomi må åpne den igjen før timer kan endres.",
+      "TIM_PERIOD_INVALID": "Velg et gyldig år og en gyldig måned.",
+      "TIM_REASON_TOO_LONG": "Begrunnelsen kan være på høyst 512 tegn.",
       "TIM_CREATE_REQUEST_CONFLICT": "Denne registreringen er allerede sendt inn med andre opplysninger. Kontroller timeføringene dine før du starter en ny registrering.",
       "TIM_CREATE_REQUEST_UNAVAILABLE": "Denne registreringen ble allerede godtatt, men føringen er ikke lenger tilgjengelig. Kontroller timeføringene dine før du starter en ny registrering.",
       "TIM_CREATE_REQUEST_INVALID": "Registreringen kunne ikke identifiseres. Lukk skjemaet og åpne et nytt.",

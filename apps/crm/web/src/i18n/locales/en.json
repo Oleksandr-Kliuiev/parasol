@@ -80,6 +80,11 @@
     "validation": "Check the highlighted fields.",
     "pageCrashed": "This page could not be displayed. Reload it; if the problem continues, contact the administrator.",
     "codes": {
+      "TIM_PERIOD_BUSY": "This period is being changed. Refresh its state before trying again.",
+      "TIM_WORK_CHANGED": "These hours moved to another period. Refresh the entries and review your changes.",
+      "TIM_PERIOD_CLOSED": "This period is closed. Finance must reopen it before hours can be changed.",
+      "TIM_PERIOD_INVALID": "Choose a valid year and month.",
+      "TIM_REASON_TOO_LONG": "The reason must be at most 512 characters.",
       "TIM_CREATE_REQUEST_CONFLICT": "This registration was already submitted with different details. Review your time entries before starting another registration.",
       "TIM_CREATE_REQUEST_UNAVAILABLE": "This registration was already accepted, but its entry is no longer available. Review your time entries before starting another registration.",
       "TIM_CREATE_REQUEST_INVALID": "This registration could not be identified. Close the form and open a new one.",
