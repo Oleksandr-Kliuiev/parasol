@@ -1,0 +1,131 @@
+{
+  "milestone": "M24",
+  "localDate": "2026-10-17",
+  "syntheticOnly": true,
+  "crm": {
+    "unit": {
+      "passed": 919,
+      "failed": 0,
+      "skipped": 0
+    },
+    "architecture": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0
+    },
+    "affectedSql": {
+      "passed": 118,
+      "failed": 0,
+      "skipped": 0,
+      "buildExit": 0,
+      "testExit": 0,
+      "cleanup": true,
+      "exactSourceInputs": 833,
+      "onlyFixtureAdapted": true
+    }
+  },
+  "frontend": {
+    "passed": 562,
+    "files": 64,
+    "failed": 0,
+    "skipped": 0,
+    "inputHashesUnchanged": 390,
+    "eslint": true,
+    "appTypescript": true,
+    "e2eTypescript": true,
+    "compositionTypescript": true,
+    "spaBuild": true,
+    "spaKB": 291.7,
+    "spaBudgetKB": 300
+  },
+  "browser": {
+    "expected": 73,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "cleanup": true
+  },
+  "composition": {
+    "accepted": true,
+    "builtInThisRun": true,
+    "passed": 9,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "atlasRequests": 571,
+    "providerWrites": 0,
+    "cleanup": true,
+    "ticketWork": {
+      "timeCount": 1,
+      "matchingTimeCount": 1,
+      "timeCreateAuditCount": 1,
+      "receiptCount": 1,
+      "taskPreserved": true
+    },
+    "totalActivityLoggedCount": 2
+  },
+  "compositionInputProof": {
+    "inputs": 2644,
+    "unchangedDuringInvocation": true,
+    "allInputsStillMatch": true
+  },
+  "previousAtlasStrictEvidence": {
+    "unit": 711,
+    "postgresql": 789,
+    "browser": 90,
+    "inputsStillMatch": 1421,
+    "rerunInM24": false
+  },
+  "protocol": [
+    "One Time-owned nonretrying local SQL transaction for approve, withdraw and import bank effects.",
+    "Separate Contracts context uses the same open connection/transaction and preserves module API, audit and outbox ownership.",
+    "Read-own-writes billing terms; month locks, financial application lock, rows and bank effects in that order.",
+    "Same database and SQL identity required; existing unowned transactions, active retry callbacks and inbox handlers cannot bind.",
+    "Unexpected historical receipts, including closed/depleted/deleted bank entries, require Finance review; validated completed legacy refunds are not repeated."
+  ],
+  "diagnosticsRetained": {
+    "baselineSql": {
+      "passed": 0,
+      "failed": 3,
+      "skipped": 0,
+      "facts": [
+        {
+          "scenario": "failed 1h approval, then edit to 2h and retry",
+          "bankUsed": 1,
+          "allocatedHours": 2
+        },
+        {
+          "scenario": "failed 2h approval, then edit to 1h and retry",
+          "bankUsed": 2,
+          "allocatedHours": 1
+        },
+        {
+          "scenario": "failed withdrawal before Time save",
+          "bankUsed": 0,
+          "stillAllocatedHours": 2
+        }
+      ],
+      "sourceBase": "f6f99b45192c7f1229247df721734990dd986fd3",
+      "cleanup": true
+    },
+    "initialPrototype": "CS8604 nullable transaction diagnostic fixed by capturing a non-null local transaction; no assertion or analyzer suppression.",
+    "unchangedBaselineAssertionsAfterFix": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "cleanup": true
+    }
+  },
+  "limits": [
+    "This is affected SQL coverage, not the complete CRM integration suite.",
+    "Atomicity covers one CRM SQL database and the explicit Time/Contracts command boundary only.",
+    "Legacy financial history needs separate Finance reconciliation before a financial pilot.",
+    "Export-to-invoiced asynchronous delivery remains the next financial boundary.",
+    "Upgrade all Web/Worker writers as a stopped cohort; arbitrary DBA writes and offline restore bypass application admission.",
+    "Working providers, Entra and Hostinger VPS are not verified by synthetic local tests."
+  ],
+  "published": false,
+  "deployed": false
+}

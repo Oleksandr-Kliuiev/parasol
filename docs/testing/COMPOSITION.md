@@ -231,9 +231,9 @@ regressions verify that contract. No acceptance threshold was relaxed.
 Concurrent period closure across all Time writers remains M23; already-closed refusal
 does not prove that race resolved. No publication, deployment or live provider call occurred.
 
-## Current M23 local verification, 17 October 2026
+## M23 local verification, 17 October 2026
 
-The [current source-build run](evidence/composition-current-2026-10-17.json) passed 9/9
+The [M23 source-build run](evidence/composition-M23-2026-10-17.json) passed 9/9
 with month admission active in the actual Task → ticket → own time chain. Exact durable
 evidence, restricted roles, privacy and cleanup passed; 577 Atlas requests, zero
 mutating requests. There were no skips, retries or flaky cases.
@@ -259,3 +259,27 @@ run; the original 2634-input manifest was unchanged during it. The subsequent or
 hashes are recorded separately and verified by current static/frontend and 70/70 browser
 checks. Both earlier 67/70 browser reports remain retained, first for opening the customer
 picker and then for the required Date label. Neither is accepted.
+
+## Current M24 local verification, 17 October 2026
+
+The [current source-build run](evidence/composition-current-2026-10-17.json) passes 9/9
+with Time/bank atomic commands in the compiled application. The same actual Task →
+ticket → own time chain, restricted roles, exact durable/privacy facts and cleanup pass;
+571 forwarded Atlas requests, zero mutating requests. No skips, retries or flaky cases.
+All 2644 source/build inputs still match their before/after hashes.
+
+The [M24 summary](evidence/time-bank-M24-2026-10-17.json) records 919 unit, 94 architecture,
+118 affected SQL, 562 frontend and 73 CRM browser cases, all passing. The new real-API
+workflow approves 2h from a 10h bank, withdraws, then reapproves in Chromium/Firefox/WebKit.
+Existing 70 browser regressions remain included. Static gates and 291.7/300 KB pass;
+833 backend/build and 390 web inputs match. Atlas strict 711/789/90 is retained against
+1421 unchanged inputs, not rerun in M24. Original repositories and imported history remain.
+
+Before the fix, three controlled real-SQL failures contradicted the same desired bank/
+allocation assertions (0/3). After the one-DB transaction fix, those assertions pass 3/3.
+The first prototype had CS8604, fixed without suppression. The extended SQL gate proves
+whole-batch rollback, read-own-writes, lost commit acknowledgement, imported implicit
+withdrawal rollback, old receipt refusal, exact transaction ownership and retry refusal.
+These are affected SQL tests, not the complete CRM integration suite. Historical Finance
+reconciliation and asynchronous export/invoiced admission remain required before a
+financial pilot; real providers, Entra and VPS remain separate. Nothing was published.
