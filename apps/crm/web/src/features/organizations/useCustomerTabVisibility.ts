@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
+import { scrollEdgeInset } from '../../shared/utils/useScrollEdges';
 
 /** Reveal the URL-selected tab horizontally, without moving focus or the page vertically. */
 export function useCustomerTabVisibility(tab: string, scope: string, ready: boolean) {
@@ -11,8 +12,8 @@ export function useCustomerTabVisibility(tab: string, scope: string, ready: bool
       if (!selected) return;
       const viewport = list.getBoundingClientRect();
       const item = selected.getBoundingClientRect();
-      const offset = item.left < viewport.left ? item.left - viewport.left
-        : item.right > viewport.right ? item.right - viewport.right : 0;
+      const offset = item.left < viewport.left + scrollEdgeInset ? item.left - viewport.left - scrollEdgeInset
+        : item.right > viewport.right - scrollEdgeInset ? item.right - viewport.right + scrollEdgeInset : 0;
       if (offset !== 0) list.scrollBy({ left: offset, behavior: 'instant' });
     };
     reveal();

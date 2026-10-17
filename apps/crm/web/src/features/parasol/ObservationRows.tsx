@@ -2,15 +2,15 @@ import type { AtlasDevice, AtlasObservation } from './technicalContract';
 import { useTechnicalStyles } from './technicalStyles';
 import { ObservationWorkButton } from './ObservationWorkButton';
 import { ObservationContext } from './ObservationContext';
+import { TechnicalList } from './TechnicalList';
 
-export function ObservationRows({ items, devices, customerId, onSourceInvalidated }: {
-  items: AtlasObservation[]; devices: AtlasDevice[]; customerId?: string; onSourceInvalidated?: () => void;
+export function ObservationRows({ items, devices, customerId, onSourceInvalidated, scrollLabel }: {
+  items: AtlasObservation[]; devices: AtlasDevice[]; customerId?: string; onSourceInvalidated?: () => void; scrollLabel?: string;
 }) {
   const styles = useTechnicalStyles();
-  return <ul className={styles.list}>
-    {items.map(o => <li key={o.id} className={styles.row}>
+  const rows = items.map(o => <li key={o.id} className={styles.row}>
       <ObservationContext observation={o} devices={devices} />
       {customerId && <ObservationWorkButton customerId={customerId} observationId={o.id} status={o.status} onSourceInvalidated={onSourceInvalidated} />}
-    </li>)}
-  </ul>;
+    </li>);
+  return scrollLabel ? <TechnicalList label={scrollLabel}>{rows}</TechnicalList> : <ul className={styles.list}>{rows}</ul>;
 }

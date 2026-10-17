@@ -83,7 +83,7 @@ describe('loading the Atlas directory in the mapping screen', () => {
     await user.click(screen.getByRole('button', { name: 'Load from Atlas' }));
     await user.click(await screen.findByRole('button', { name: 'Choose CRM customer' }));
     await user.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Link' }));
-    await user.click(screen.getByRole('button', { name: 'Choose another source' })); revoked = true;
+    await user.click(await screen.findByRole('button', { name: 'Choose another source' })); revoked = true;
     await user.click(screen.getByRole('button', { name: 'Load from Atlas' }));
     expect(await screen.findByText(/personal Atlas access is missing/)).toBeVisible();
     expect(screen.queryByText('Synthetic Atlas')).not.toBeInTheDocument();

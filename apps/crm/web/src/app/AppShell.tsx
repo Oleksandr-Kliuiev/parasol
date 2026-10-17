@@ -101,6 +101,7 @@ const useStyles = makeStyles({
   spacer: { flex: 1 },
   avatarButton: { minWidth: '40px', paddingInline: tokens.spacingHorizontalXS },
   content: {
+    scrollMarginBlockStart: '64px',
     paddingInline: tokens.spacingHorizontalXXL,
     paddingBlock: tokens.spacingVerticalXL,
     maxWidth: '1280px',
@@ -109,8 +110,16 @@ const useStyles = makeStyles({
     '@media (max-width: 600px)': { paddingInline: tokens.spacingHorizontalL },
   },
   skip: {
-    position: 'absolute',
+    position: 'fixed',
     left: '-9999px',
+    top: tokens.spacingVerticalM,
+    color: tokens.colorBrandForegroundLink,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: tokens.borderRadiusMedium,
+    paddingBlock: tokens.spacingVerticalS,
+    paddingInline: tokens.spacingHorizontalM,
+    ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px' },
     ':focus': { left: tokens.spacingHorizontalM, top: tokens.spacingVerticalM, zIndex: 100 },
   },
 });

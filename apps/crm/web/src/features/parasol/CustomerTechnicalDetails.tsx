@@ -5,6 +5,7 @@ import { severities, type WorkspaceSummary } from './workspaceContract';
 import { ObservationQueue } from './ObservationQueue';
 import { ObservationRows } from './ObservationRows';
 import { useTechnicalStyles } from './technicalStyles';
+import { TechnicalList } from './TechnicalList';
 
 const batch = 25;
 const AtlasM365Panel = lazy(() => import('./AtlasM365Panel').then(module => ({ default: module.AtlasM365Panel })));
@@ -54,14 +55,14 @@ function DeviceList({ devices }: { devices: WorkspaceSummary['devices'] }) {
       </Field></div>
       <Text block role="status">{t('parasolDetails.deviceMatches', { matched: matches.length, loaded: devices.length })}</Text>
       {matches.length === 0 && <Text block>{t('parasolDetails.noMatches')}</Text>}
-      <ul className={styles.list}>
+      <TechnicalList key={term} label={t('parasolDetails.devices')}>
         {matches.slice(0, limit).map(d => <li key={d.id} className={styles.row}>
           <Text weight="semibold">{d.hostname}</Text>
           <Text>{t('parasolDetails.deviceId')}: {d.id}</Text>
           <Text>{d.sources.length ? t('parasolDetails.deviceSources', { sources: d.sources.map(s => t(`parasol.sources.${s}`)).join(', ') })
             : t('parasolDetails.noDeviceSources')}</Text>
         </li>)}
-      </ul>
+      </TechnicalList>
       <div className={styles.footer}>
         <Text>{t('parasolDetails.visible', { shown: Math.min(limit, matches.length), total: matches.length })}</Text>
         {matches.length > limit && <Button onClick={() => setLimit(n => n + batch)}>{t('parasolDetails.moreDevices')}</Button>}
@@ -110,7 +111,8 @@ function ObservationList({ summary, openQueue, customerId, onSourceInvalidated }
       </div>
       <Text block role="status">{t('parasolDetails.observationMatches', { matched: matches.length, loaded: page.items.length })}</Text>
       {matches.length === 0 && <Text block>{t('parasolDetails.noMatches')}</Text>}
-      <ObservationRows items={matches.slice(0, limit)} devices={summary.devices} customerId={customerId} onSourceInvalidated={onSourceInvalidated} />
+      <ObservationRows key={`${severity}:${status}:${term}`} items={matches.slice(0, limit)} devices={summary.devices}
+        customerId={customerId} onSourceInvalidated={onSourceInvalidated} scrollLabel={t('parasolDetails.observations')} />
       <div className={styles.footer}>
         <Text>{t('parasolDetails.visible', { shown: Math.min(limit, matches.length), total: matches.length })}</Text>
         {matches.length > limit && <Button onClick={() => setLimit(n => n + batch)}>{t('parasolDetails.moreObservations')}</Button>}

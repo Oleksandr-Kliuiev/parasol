@@ -251,6 +251,8 @@
     "allCancellationWindows": "Alle {{count}} med åpent oppsigelsesvindu"
   },
   "organizations": {
+    "tabsLabel": "Kundeseksjoner",
+    "scrollableTable": "Rullbar kundetabell",
     "title": "Organisasjoner",
     "new": "Ny organisasjon",
     "searchPlaceholder": "Navn, org.nr., e-post eller domene",
@@ -3577,6 +3579,7 @@
     }
   },
   "parasolDetails": {
+    "scrollList": "Rull i listen for å se de innlastede postene.",
     "lists": "Tekniske lister",
     "devices": "Enheter i Atlas",
     "deviceNote": "Enheter registrert i Atlas. Bekreftede kildekoblinger viser opprinnelsen; listen viser ikke nettstatus eller en fullstendig enhetsoversikt.",

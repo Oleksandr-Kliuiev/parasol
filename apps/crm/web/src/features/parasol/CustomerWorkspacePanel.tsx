@@ -12,6 +12,7 @@ import { parseWorkspace } from './workspaceContract';
 export type { Workspace } from './workspaceContract';
 
 const useStyles = makeStyles({
+  container: { minWidth: 0 },
   list: { padding: 0, listStyle: 'none', display: 'grid', gap: tokens.spacingVerticalM },
   resource: { paddingTop: tokens.spacingVerticalS, borderTop: `1px solid ${tokens.colorNeutralStroke2}` },
   note: { marginBlock: tokens.spacingVerticalM },
@@ -65,12 +66,13 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
   const data = !checking && !query.isError ? query.data : undefined;
   const summary = data?.status === 'READY' ? data.summary : null;
   return (
+    <div className={styles.container} data-technical-layout={query.data?.status === 'READY' && !query.isError ? '' : undefined}>
     <Panel title={t('parasol.title')} actions={<Button ref={refreshButton} size="small" disabled={checking} disabledFocusable={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
       {checking && <Spinner size="small" label={t('common.loading')} />}
       {!checking && query.isError && <ErrorState error={query.error} onRetry={refreshWorkspace} />}
       {data && data.status !== 'READY' && <Text role="status">{t(`parasol.status.${data.status}`)}</Text>}
       {summary && <>
-        {summary.mode === 'fixture' && <MessageBar intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
+        {summary.mode === 'fixture' && <MessageBar layout="multiline" intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
         <Text block className={styles.note}>{t('parasol.snapshot', { time: formatDateTime(summary.generatedAt) })}</Text>
         <DetailList items={[
           { label: t('parasol.devices'), value: String(summary.knownDevices) },
@@ -95,5 +97,6 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
         key={`${user.id}:${sourceCheck.revision}`} customerId={customerId} summary={summary} contextChecking={checking}
         onSourceInvalidated={sourceInvalidated} onAccessDenied={recheckAccess} />}
     </Panel>
+    </div>
   );
 }

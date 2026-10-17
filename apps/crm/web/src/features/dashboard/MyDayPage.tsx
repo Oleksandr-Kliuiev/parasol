@@ -65,7 +65,7 @@ export function MyDayPage() {
 
   return (
     <>
-      <PageHeader title={t('myDay.greeting', { name: firstName })} subtitle={t('myDay.subtitle')} />
+      <PageHeader title={t('myDay.greeting', { name: firstName })} documentTitle={t('nav.myDay')} subtitle={t('myDay.subtitle')} />
       <div className={styles.grid}>
         <div className={styles.side}>
           <AtlasAttentionPanel />

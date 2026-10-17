@@ -251,6 +251,8 @@
     "allCancellationWindows": "All {{count}} with an open cancellation window"
   },
   "organizations": {
+    "tabsLabel": "Customer sections",
+    "scrollableTable": "Scrollable organizations table",
     "title": "Organizations",
     "new": "New organization",
     "searchPlaceholder": "Name, org. number, e-mail or domain",
@@ -3577,6 +3579,7 @@
     }
   },
   "parasolDetails": {
+    "scrollList": "Scroll within the list to view the loaded records.",
     "lists": "Technical lists",
     "devices": "Atlas devices",
     "deviceNote": "Devices recorded in the Atlas registry. Confirmed source links identify their origin; this list does not report online status or a complete fleet inventory.",
