@@ -454,7 +454,7 @@ VPS acceptance remain open. Nothing was published or deployed.
 
 ## M33 read-only observation work discovery, 17 October 2026
 
-The [current source-build report](evidence/composition-current-2026-10-17.json), also
+The [archived M33 source-build report](evidence/composition-M33-2026-10-17.json), also
 [stored immutably for M33](evidence/composition-M33-2026-10-17.json), `d25a7dc41b53`, passes
 10/10 with a fresh build, zero skipped/unexpected/flaky cases, restricted runtimes,
 exact durable/privacy facts and confirmed cleanup. It forwards 575 Atlas GETs and no
@@ -481,3 +481,31 @@ M31's963/94/93 and714/797/90 server gates, not new full server runs. M32 visual6
 financialSQL208 and M29 native restore remain historical. See [M33 evidence](evidence/readonly-work-M33-2026-10-17.json).
 Staff feedback, human time savings, working-account and VPS acceptance remain open.
 Nothing was published, deployed or connected to a working provider.
+
+
+## M34 direct My day sections, 17 October 2026
+
+The [current source-build report](evidence/composition-current-2026-10-17.json), also
+[stored immutably for M34](evidence/composition-M34-2026-10-17.json), `adc00205be7b`, passes
+10/10 with a build in the same invocation, zero skipped/unexpected/flaky cases, restricted
+runtimes, exact durable/privacy facts, 548 Atlas GETs, no mutating Atlas requests and cleanup.
+All 2728 application/tool inputs match before/after. M33 is retained byte-for-byte.
+The existing actual recipient handoff now uses the section link before personal refresh,
+then exercises its original assignment, source, saved-ticket, own-time and completion flow.
+
+Separate current checks: frontend42 affected/650 full(74files,2workers), browser focused3
+then full99, tooling22 and all types/lint/build gates (292.4/300KB). The focused three-engine
+case checks one-action section selection, keyboard Back, unchanged Task/Atlas request counts,
+local Development sign-in return and visibility after late sibling data loads. It uses
+real CRM SQL Task data and a controlled attention BFF fixture; no working provider is contacted.
+
+The installed Chromium audit covers32 views: overview/tasks/attention/returned navigation,
+four widths and both themes. All screenshots reviewed, no errors/warnings. The diagnostic
+fixture does not replace normal joined-app acceptance; no skips/allowlists/retries were added.
+See [M34 evidence](evidence/my-day-M34-2026-10-17.json).
+
+Unchanged backend804/SQL856/Atlas1426 inputs reuse M31's963/94/93 and714/797/90 server gates,
+not new full server runs. M26 financial SQL208/M29 native restore and other full visual
+matrices remain historical. The original M33 demo's394 artifacts/source2723 were isolated
+from development; its30-minute timeout cleanup passed. Staff feedback/time savings and
+real Entra/provider/VPS gates remain open. Nothing was published or deployed.

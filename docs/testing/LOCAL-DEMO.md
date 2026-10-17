@@ -57,7 +57,8 @@ npm run demo:local -- --directory "$PARASOL_DEMO_BASE/parasol-demo-review-01" --
 2. Выберите активное наблюдение, например **Synthetic older critical security incident**.
    Нажмите **Assign work**, выберите сотрудника с ролью Technician, задайте срок и
    подтвердите создание задачи. Исходное наблюдение остаётся отдельной записью Atlas.
-3. Откройте напечатанную ссылку **Crm.Technician**. В **My tasks** нажмите
+3. Откройте напечатанную ссылку **Crm.Technician**. В начале «Моего дня» выберите
+   ссылку **My tasks**, чтобы перейти к задачам без прокрутки обзора Atlas. В **My tasks** нажмите
    **Refresh my tasks**. Откройте **View Atlas source** и убедитесь, что понятны клиент,
    источник и причина работы. Закройте окно.
 4. В той же строке нажмите **Service ticket** → **Choose saved ticket**. Выберите
