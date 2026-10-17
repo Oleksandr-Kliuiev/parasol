@@ -24,6 +24,7 @@
     "test:crm:integration": "node scripts/tasks.mjs test:crm:integration",
     "test:crm:e2e": "node scripts/tasks.mjs test:crm:e2e",
     "test:composition": "node tools/composition/run.mjs",
-    "test:composition:unit": "node --test tools/composition/*.test.mjs"
+    "test:composition:unit": "node --test tools/composition/*.test.mjs tools/demo/*.test.mjs",
+    "demo:local": "node tools/demo/run.mjs"
   }
 }

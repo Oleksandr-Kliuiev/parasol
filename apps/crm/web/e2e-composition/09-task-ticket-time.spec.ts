@@ -62,7 +62,7 @@ test('an Atlas observation Task links to a saved ticket and records the current 
     const linkedResponse = await linking;
     expect(linkedResponse.status()).toBe(200);
     expect(linkedResponse.request().headers()['if-match']).toBe(initial.etag);
-    const linked = await linkedResponse.json() as { ticketId: string; available: boolean; ticket: { id: string; title: string } };
+    const linked = await linkedResponse.json() as { ticketId: string; available: boolean; etag: string; ticket: { id: string; title: string } };
     expect(linked.ticketId).toBe(saved.ticketId); expect(linked.available).toBe(true);
     expect(linked.ticket.id).toBe(saved.ticketId); expect(linked.ticket.title).toBe(saved.title);
     const register = dialog.getByRole('button', { name: 'Register hours', exact: true });
@@ -108,7 +108,15 @@ test('an Atlas observation Task links to a saved ticket and records the current 
     expect(unchanged.items[0]!.status).toBe('Done'); expect(unchanged.items[0]!.body).toBeNull();
     expect(Date.parse(unchanged.items[0]!.dueAt)).toBe(Date.parse(task.dueAt));
     await expect(page.getByRole('dialog', { name: 'Task service ticket', exact: true })).toBeVisible();
+    const refreshed = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/v1/activities/' && url.searchParams.get('activityId') === task.id && response.request().method() === 'GET';
+    });
     await page.keyboard.press('Escape'); await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(trigger).toBeFocused(); await accessible(page);
+    const refreshedResponse = await refreshed;
+    expect(refreshedResponse.status(), 'Closing a saved link rereads the complete selected Activity').toBe(200);
+    const freshTask = await refreshedResponse.json() as { items: { id: string; etag: string }[] };
+    expect(freshTask.items).toHaveLength(1); expect(freshTask.items[0]!.id).toBe(task.id); expect(freshTask.items[0]!.etag).toBe(linked.etag);
+    await expect(page.getByRole('button', { name: 'Refresh activity', exact: true })).toBeFocused(); await accessible(page);
   } finally { await session.context.close(); }
 });

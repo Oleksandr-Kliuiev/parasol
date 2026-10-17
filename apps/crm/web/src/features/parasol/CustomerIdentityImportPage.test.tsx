@@ -18,6 +18,7 @@ async function choose(user: ReturnType<typeof userEvent.setup>) {
   const dialog = await screen.findByRole('dialog');
   await user.click(await within(dialog).findByRole('button', { name: 'Link' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  await screen.findByRole('button', { name: 'Preview mappings' });
 }
 const mock = (handler: (url: string, init?: RequestInit) => Response | Promise<Response> = () => response(basePlan)) => {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => url.startsWith('/api/v1/search')

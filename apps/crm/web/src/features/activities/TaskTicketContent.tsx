@@ -18,6 +18,7 @@ const useStyles = makeStyles({
 
 interface Props {
   activity: Activity; scope: string; onClose: () => void; canWrite: boolean; canLogTime: boolean;
+  onAssociationSaved: () => void;
 }
 
 /** Mount the modal only once its code is ready, so its first keyboard focus is usable. */
@@ -27,7 +28,7 @@ export default function TaskTicketDialog(props: Props) {
   </Dialog>;
 }
 
-function TaskTicketContent({ activity, scope, onClose, canWrite, canLogTime }: Props) {
+function TaskTicketContent({ activity, scope, onClose, canWrite, canLogTime, onAssociationSaved }: Props) {
   const { t } = useTranslation(); const styles = useStyles();
   const link = useTaskTicket(activity.id, activity.organizationId, scope);
   const [choosing, setChoosing] = useState(false); const [selected, setSelected] = useState<TicketWorkRef | null>(null);
@@ -42,6 +43,7 @@ function TaskTicketContent({ activity, scope, onClose, canWrite, canLogTime }: P
   const ticket = association?.available ? association.ticket : null;
   const save = async (ticketId: string | null, trigger: HTMLButtonElement) => {
     if (await link.save(ticketId)) {
+      onAssociationSaved();
       if (document.activeElement === trigger) closeButton.current?.focus();
       setChoosing(false); setSelected(null); link.refresh();
     }

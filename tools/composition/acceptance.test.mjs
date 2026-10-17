@@ -1,6 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { acceptedReport } from './run.mjs';
+import { acceptedReport, executionPolicy } from './run.mjs';
+
+test('interactive demo always builds, excludes acceptance browser actions and remains diagnostic', () => {
+  assert.deepEqual(executionPolicy({ skipBuild: false, skipBrowser: false }), { demo: false, diagnostic: false });
+  assert.deepEqual(executionPolicy({ skipBuild: false, skipBrowser: true }, () => {}), { demo: true, diagnostic: true });
+  for (const options of [{ skipBuild: true, skipBrowser: true }, { skipBuild: false, skipBrowser: false }])
+    assert.throws(() => executionPolicy(options, () => {}));
+  for (const callback of [true, {}, 'callback', null])
+    assert.throws(() => executionPolicy({ skipBuild: false, skipBrowser: true }, callback));
+  const fixture = evidence();
+  assert.equal(acceptedReport({ ...fixture, ...executionPolicy({ skipBuild: false, skipBrowser: true }, () => {}) }), false);
+});
 
 function evidence() {
   return {

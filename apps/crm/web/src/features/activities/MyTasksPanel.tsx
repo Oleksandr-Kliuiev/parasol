@@ -55,7 +55,12 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
   const tasks = usePersonalTasks(employeeId, permissionsKey);
   const data = tasks.items;
   const active = useRef(false);
+  const refreshButton = useRef<HTMLButtonElement>(null);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  const refreshAfterTicket = () => {
+    status.clearConflicts(); tasks.refresh();
+    queueMicrotask(() => { if (active.current) refreshButton.current?.focus(); });
+  };
 
   const complete = async (activity: Activity) => {
     const outcome = await status.run('complete', activity);
@@ -65,7 +70,7 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
   };
 
   return (
-    <Panel title={t('myDay.myTasks')} actions={<Button size="small" disabled={tasks.checking} disabledFocusable={tasks.checking}
+    <Panel title={t('myDay.myTasks')} actions={<Button ref={refreshButton} size="small" disabled={tasks.checking} disabledFocusable={tasks.checking}
       onClick={() => { status.clearConflicts(); tasks.refresh(); }}>{t('myDay.refreshMyTasks')}</Button>}>
       {tasks.checking && <Spinner size="small" label={t('common.loading')} />}
       {Boolean(tasks.error) && <MessageBar intent="error"><MessageBarBody><Text role="status">{t('myDay.myTasksReadFailed')}</Text></MessageBarBody></MessageBar>}
@@ -87,7 +92,7 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
             </span>
             <span className={styles.actions}>
               {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
-              <TaskTicketButton activity={activity} />
+              <TaskTicketButton activity={activity} onCloseAfterChange={refreshAfterTicket} />
               {canWrite && <Button
                 size="small"
                 appearance="subtle"

@@ -24,7 +24,7 @@ const useStyles = makeStyles({
 
 /** The same record and controls in the timeline and in an exact activity selection. */
 export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPending, selected, statusPending, statusStale,
-  focusRequest, onFocusReady, onEdit, onComplete, onReopen, onCalendar }: {
+  focusRequest, onFocusReady, onEdit, onComplete, onReopen, onCalendar, onTicketChanged }: {
   activity: Activity;
   canWrite: boolean;
   calendar: boolean;
@@ -38,6 +38,7 @@ export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPen
   onComplete: (activity: Activity, trigger: HTMLButtonElement) => void;
   onReopen: (activity: Activity, trigger: HTMLButtonElement) => void;
   onCalendar: (activity: Activity) => void;
+  onTicketChanged: () => void;
 }) {
   const styles = useStyles(); const { t } = useTranslation(); const restoreFocusTarget = useRestoreFocusTarget();
   const statusButton = useRef<HTMLButtonElement>(null);
@@ -67,7 +68,7 @@ export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPen
         {activity.status === 'Done' && activity.completedAt ? ` · ${t('activities.doneAt', { at: formatDateTime(activity.completedAt) })}` : ''}
       </div>
       {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
-      <TaskTicketButton activity={activity} />
+      <TaskTicketButton activity={activity} onCloseAfterChange={onTicketChanged} />
       {statusStale && <ActivityStatusFeedback activity={activity} />}
     </span>
     {canWrite && activity.type !== 'Email' && <span className={styles.actions}>

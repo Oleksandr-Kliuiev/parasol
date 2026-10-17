@@ -43,6 +43,8 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
   canWrite: boolean;
 }) {
   const styles = useStyles(); const { t } = useTranslation(); const notify = useNotify();
+  const [ticketRefreshing, setTicketRefreshing] = useState(false);
+  const ticketCloseFocus = useRef<HTMLButtonElement>(null);
   const actions = useActivityActions(); const restoreFocusTarget = useRestoreFocusTarget();
   const filters = { organizationId, opportunityId, contractId };
   const activities = useActivities(filters, selection.kind === 'all', undefined, scopeKey);
@@ -50,8 +52,8 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
   const focused = selection.kind !== 'all';
   const error = focused ? selected.error : activities.error;
   const errorUpdatedAt = focused ? selected.errorUpdatedAt : activities.errorUpdatedAt;
-  const checking = focused ? selected.isFetching : activities.isPending;
-  const data = focused ? (!checking && !error && selected.data?.activity ? [selected.data.activity] : []) : activities.items;
+  const checking = ticketRefreshing || (focused ? selected.isFetching : activities.isPending);
+  const data = ticketRefreshing ? [] : focused ? (!checking && !error && selected.data?.activity ? [selected.data.activity] : []) : activities.items;
   const missingRevision = focused ? selected.data?.missingRevision ?? 0 : 0;
   const refetch = focused ? selected.refetch : activities.refetch;
   const [dialog, setDialog] = useState<{ activity?: Activity; errorUpdatedAt: number; missingRevision: number } | null>(null);
@@ -79,6 +81,12 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
     try { await selected.refetch(); }
     finally { refreshing.current = false; }
   };
+  const refreshAfterTicket = () => {
+    if (refreshing.current) return;
+    refreshing.current = true; setTicketRefreshing(true); setDialog(null); status.clearConflicts();
+    void refetch().finally(() => { refreshing.current = false; if (alive.current) setTicketRefreshing(false); });
+    queueMicrotask(() => { if (alive.current) ticketCloseFocus.current?.focus(); });
+  };
 
   const reportFailure = (e: unknown) => { if (alive.current) notify(t('errors.generic'), 'error', errorMessage(e, t)); };
   const syncCalendar = async () => {
@@ -99,13 +107,13 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
   };
 
   return <Panel title={title ?? t('activities.title')} actions={<>
-    {selection.kind === 'selected' && <Button size="small" disabled={checking} disabledFocusable={checking}
+    {selection.kind === 'selected' && <Button ref={ticketCloseFocus} size="small" disabled={checking} disabledFocusable={checking}
       onClick={() => void refreshSelected()}>{t('activities.refresh')}</Button>}
     {focused && <Button size="small" onClick={onShowAll}>{t('activities.showAll')}</Button>}
     {canWrite && !focused && <>
       {outlook.data?.calendar && <Button size="small" icon={<ArrowSync20Regular />} disabled={actions.syncCalendar.isPending}
         onClick={() => void syncCalendar()}>{t('activities.syncCalendar')}</Button>}
-      <Button {...restoreFocusTarget} size="small" icon={<Add20Regular />} onClick={() => setDialog({ errorUpdatedAt, missingRevision })}>{t('activities.log')}</Button>
+      <Button {...restoreFocusTarget} ref={ticketCloseFocus} size="small" icon={<Add20Regular />} onClick={() => setDialog({ errorUpdatedAt, missingRevision })}>{t('activities.log')}</Button>
     </>}
   </>}>
     {focused && <h3 ref={heading} tabIndex={-1}>{t('activities.selected')}</h3>}
@@ -119,10 +127,10 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
             statusPending={status.pending.has(activity.id)} statusStale={status.isStale(activity)} focusRequest={status.focusRequest} onFocusReady={status.consumeFocus}
             onEdit={activity => setDialog({ activity, errorUpdatedAt, missingRevision })}
             onComplete={(activity, trigger) => void changeStatus('complete', activity, trigger)}
-            onReopen={(activity, trigger) => void changeStatus('reopen', activity, trigger)} onCalendar={activity => void calendar(activity)} />)}
+            onReopen={(activity, trigger) => void changeStatus('reopen', activity, trigger)} onCalendar={activity => void calendar(activity)} onTicketChanged={refreshAfterTicket} />)}
         </ul>
         {!checking && data.length === 0 && <EmptyState message={t(focused ? 'activities.selectedMissing' : 'activities.empty')} />}
-        {!focused && <ListFooter shown={data.length} total={activities.total} hasMore={activities.hasNextPage}
+        {!focused && !ticketRefreshing && <ListFooter shown={data.length} total={activities.total} hasMore={activities.hasNextPage}
           loading={activities.isFetchingNextPage} onMore={() => void activities.fetchNextPage()} />}
       </>}
     <ActivityDialog open={editorOpen}

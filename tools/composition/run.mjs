@@ -44,7 +44,15 @@ export function acceptedReport({ build, browser, evidence, cleanup, diagnostic }
     && evidence.ticketWork.taskPreserved === true;
 }
 
-export async function runComposition(options) {
+export function executionPolicy(options, onReady) {
+  const demo = onReady !== undefined;
+  if (demo && (typeof onReady !== 'function' || options.skipBuild || options.skipBrowser !== true))
+    throw new Error('Interactive demos must build current sources and cannot run the acceptance browser suite.');
+  return { demo, diagnostic: Boolean(demo || options.skipBuild || options.skipBrowser) };
+}
+
+export async function runComposition(options, { onReady } = {}) {
+  const policy = executionPolicy(options, onReady);
   await createStateDirectory(options.directory);
   const inherited = safeEnvironment();
   // Imported Prisma test-harness children also receive this allowlist, never shell/database/provider credentials.
@@ -66,8 +74,8 @@ export async function runComposition(options) {
   const statePath = join(state.directory, 'private/state.json'); const manifestPath = join(state.directory, 'fixture.json');
   const reportPath = join(state.directory, 'report.json');
   const processes = []; let atlasDatabase; let gateway; let build; let browser; let evidence; let failedStage; let failureCode;
-  const controller = new AbortController();
-  const abort = () => controller.abort(new Error('Composition run interrupted.'));
+  const controller = new AbortController(); let stopRequested = false; let demoStopReason;
+  const abort = () => { stopRequested = true; controller.abort(new Error('Composition run interrupted.')); };
   process.once('SIGINT', abort); process.once('SIGTERM', abort);
   const watch = host => {
     processes.push(host);
@@ -114,12 +122,19 @@ export async function runComposition(options) {
     const confined = await privileges(state);
     if (!Object.values(confined).every(Boolean)) throw new Error('Restricted application database privileges were not confirmed.');
     const clients = state.plan.clients; const target = { ...state.plan.target, customerId: clients[0].crmCustomerId };
-    await jsonFile(manifestPath, { format: FORMAT, version: FORMAT, runId: state.runId, baseUrl: state.baseUrl, atlasUrl: state.atlasUrl,
+    const manifest = { format: FORMAT, version: FORMAT, runId: state.runId, baseUrl: state.baseUrl, atlasUrl: state.atlasUrl,
       workspaceId: state.plan.workspaceId, collisionWorkspaceId: COLLISION_WORKSPACE,
       employees: state.employees.map(({ id, role, displayName, visibleClientIds }) => ({ id, role, displayName, visibleClientIds })),
       clients, target, restrictedClient: { customerId: clients[20].crmCustomerId, atlasClientId: clients[20].atlasClientId, name: clients[20].name },
-      counts: state.plan.counts, privileges: confined, ticketWork: state.ticketWork });
+      counts: state.plan.counts, privileges: confined, ticketWork: state.ticketWork };
+    await jsonFile(manifestPath, manifest);
     state.phase = 'ready'; await save();
+    if (policy.demo) {
+      stage('serve local synthetic demo');
+      demoStopReason = await onReady(manifest, controller.signal);
+      if (controller.signal.aborted && !stopRequested) controller.signal.throwIfAborted();
+      if (!['timeout', 'interrupted'].includes(demoStopReason)) throw new Error('Invalid local demo stop reason.');
+    }
     if (!options.skipBrowser) {
       stage('run real browser composition acceptance');
       await command(process.execPath, [join(ROOT, 'apps/crm/web/node_modules/@playwright/test/cli.js'), 'test', '-c', join(ROOT, 'tools/composition/playwright.config.mjs')], {
@@ -142,9 +157,10 @@ export async function runComposition(options) {
     if (cleanup) await rm(join(state.directory, 'private'), { recursive: true, force: true });
     process.removeListener('SIGINT', abort); process.removeListener('SIGTERM', abort);
   }
-  const diagnostic = options.skipBuild || options.skipBrowser;
+  const diagnostic = policy.diagnostic;
   const report = { format: FORMAT, runId: state.runId, accepted: success && acceptedReport({ build, browser, evidence, cleanup, diagnostic }),
-    diagnostic, build, browser, evidence, cleanup, ...(failedStage ? { failedStage, failureCode } : {}) };
+    diagnostic, build, browser, evidence, cleanup, ...(policy.demo ? { demo: { stopReason: demoStopReason } } : {}),
+    ...(failedStage ? { failedStage, failureCode } : {}) };
   await jsonFile(reportPath, report);
   console.log(`Composition report: ${reportPath}`);
   if (!report.accepted && !diagnostic || !success || !cleanup) throw new Error(`Composition did not pass${failedStage ? ` at: ${failedStage}` : ''}. See the safe report.`);
