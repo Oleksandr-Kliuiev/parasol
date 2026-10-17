@@ -12,6 +12,7 @@ internal sealed partial class TimeImportService
         if (entries.Count == 0) return new(0, 0, 0, 0);
         var groups = entries.GroupBy(e => Source(e.System)).ToList();
         await using var mutation = await TimeMutationScope.OpenAsync(db, ct); var write = mutation.Db;
+        mutation.RequireFinancialOwner();
         await MonthAdmission.LockSourcesAsync(write, groups.Select(g => g.Key.ToString()), ct);
         var candidates = new List<TimeEntry>();
         foreach (var group in groups)
@@ -22,6 +23,8 @@ internal sealed partial class TimeImportService
         // Strongest mode up front: any source row can have been approved since discovery. No Shared->Exclusive upgrades.
         var admission = await MonthAdmission.AcquireAsync(write, candidates.Select(e => e.WorkDate).Concat(entries.Select(e => e.WorkDate)).Select(TimeMonth.Of), MonthMode.Exclusive, ct);
         if (!admission.IsSuccess) throw new TimeAdmissionException(admission.Error!.Code);
+        if (await MonthAdmission.FinancialAsync(write, ct) is { } busy) throw new TimeAdmissionException(busy.Code);
+        using var local = financial.Bind(write);
         var current = await TimeRowAdmission.ReadAsync(write, candidates.Select(e => e.Id).ToList(), admission.Value, ct);
         if (!current.IsSuccess) throw new TimeAdmissionException(current.Error!.Code);
         var closed = await MonthAdmission.ClosedAsync(write, admission.Value, ct);
@@ -48,7 +51,10 @@ internal sealed partial class TimeImportService
                 if (IsClosed(entry.WorkDate) || IsClosed(incoming.WorkDate))
                 { entry.FlagForReview("Changed in the service desk while an affected period is closed."); review++; continue; }
                 if (entry.Status is TimeEntryStatus.Approved or TimeEntryStatus.NonBillable)
-                    await approvals.WithdrawAdmittedAsync(entry, admission.Value, ct);
+                {
+                    var withdrawn = await approvals.WithdrawAdmittedAsync(entry, admission.Value, ct);
+                    if (!withdrawn.IsSuccess) throw new TimeAdmissionException(withdrawn.Error!.Code);
+                }
                 entry.ApplySource(incoming); updated++;
             }
         }

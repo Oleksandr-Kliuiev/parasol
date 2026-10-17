@@ -80,6 +80,7 @@
     "validation": "Kontroller de markerte feltene.",
     "pageCrashed": "Siden kunne ikke vises. Last inn på nytt; kontakt administratoren hvis problemet vedvarer.",
     "codes": {
+      "TIM_BANK_RECONCILIATION_REQUIRED": "Historiske bevegelser i timebanken stemmer ikke med timene. Be økonomi kontrollere føringen før du prøver igjen.",
       "TIM_PERIOD_BUSY": "Denne perioden endres nå. Oppdater statusen før du prøver igjen.",
       "TIM_WORK_CHANGED": "Timene er flyttet til en annen periode. Oppdater føringene og kontroller endringene dine.",
       "TIM_PERIOD_CLOSED": "Perioden er stengt. Økonomi må åpne den igjen før timer kan endres.",

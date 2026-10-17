@@ -66,7 +66,7 @@ public sealed record HourBankResponse(
     HourBankStatus Status,
     IReadOnlyList<HourBankEntryResponse>? Entries);
 
-internal sealed class HourBankService(ContractsDbContext db, ICustomersApi customers, IUserDirectory users, TimeProvider time)
+internal sealed class HourBankService(ContractsDbContext db, ICustomersApi customers, IUserDirectory users, TimeProvider time, TimeBankTransaction financial)
 {
     public async Task<PagedResult<HourBankResponse>> ListAsync(Guid? organizationId, Guid? contractId, bool includeClosed, int? limit, string? cursor, CancellationToken ct)
     {
@@ -167,15 +167,17 @@ internal sealed class HourBankService(ContractsDbContext db, ICustomersApi custo
     public async Task<HourBankConsumption?> ConsumeFromSourceAsync(
         Guid id, decimal hours, DateOnly date, string description, string sourceType, string sourceId, CancellationToken ct)
     {
+        await using var joined = await financial.JoinAsync(db, options => new ContractsDbContext(options), ct);
+        var write = joined ?? db;
         for (var attempt = 0; ; attempt++)
         {
-            if (await db.HourBankEntries.AsNoTracking().SingleOrDefaultAsync(e => e.SourceType == sourceType && e.SourceId == sourceId, ct) is { } existing)
+            if (await write.HourBankEntries.AsNoTracking().SingleOrDefaultAsync(e => e.SourceType == sourceType && e.SourceId == sourceId, ct) is { } existing)
             {
-                var existingBank = await db.HourBanks.AsNoTracking().SingleAsync(b => b.Id == existing.HourBankId, ct);
+                var existingBank = await write.HourBanks.AsNoTracking().SingleAsync(b => b.Id == existing.HourBankId, ct);
                 return new HourBankConsumption(existing.HourBankId, -existing.Hours + existing.OverageHours, existing.OverageHours, existingBank.RemainingHours);
             }
 
-            if (await db.HourBanks.SingleOrDefaultAsync(b => b.Id == id, ct) is not { } bank)
+            if (await write.HourBanks.SingleOrDefaultAsync(b => b.Id == id, ct) is not { } bank)
             {
                 return null;
             }
@@ -186,15 +188,15 @@ internal sealed class HourBankService(ContractsDbContext db, ICustomersApi custo
                 return null;
             }
 
-            db.HourBankEntries.Add(entry.Value);
+            write.HourBankEntries.Add(entry.Value);
             try
             {
-                await db.SaveChangesAsync(ct);
+                await write.SaveChangesAsync(ct);
                 return new HourBankConsumption(bank.Id, hours, entry.Value.OverageHours, bank.RemainingHours);
             }
-            catch (DbUpdateException) when (attempt < 2)
+            catch (DbUpdateException) when (joined is null && attempt < 2)
             {
-                db.ChangeTracker.Clear();
+                write.ChangeTracker.Clear();
             }
         }
     }
@@ -202,26 +204,28 @@ internal sealed class HourBankService(ContractsDbContext db, ICustomersApi custo
     /// <summary>Gives back what a source consumed (approval withdrawn). Idempotent: a second call finds the reversal and does nothing.</summary>
     public async Task ReverseAsync(string sourceType, string sourceId, CancellationToken ct)
     {
+        await using var joined = await financial.JoinAsync(db, options => new ContractsDbContext(options), ct);
+        var write = joined ?? db;
         var reversalType = sourceType + ReversalSuffix;
-        if (await db.HourBankEntries.AnyAsync(e => e.SourceType == reversalType && e.SourceId == sourceId, ct))
+        if (await write.HourBankEntries.AnyAsync(e => e.SourceType == reversalType && e.SourceId == sourceId, ct))
         {
             return;
         }
 
-        if (await db.HourBankEntries.AsNoTracking().SingleOrDefaultAsync(e => e.SourceType == sourceType && e.SourceId == sourceId, ct) is not { } consumption)
+        if (await write.HourBankEntries.AsNoTracking().SingleOrDefaultAsync(e => e.SourceType == sourceType && e.SourceId == sourceId, ct) is not { } consumption)
         {
             return;
         }
 
-        if (await db.HourBanks.SingleOrDefaultAsync(b => b.Id == consumption.HourBankId, ct) is not { } bank)
+        if (await write.HourBanks.SingleOrDefaultAsync(b => b.Id == consumption.HourBankId, ct) is not { } bank)
         {
             return;
         }
 
         var entry = bank.Adjust(-consumption.Hours, consumption.Date, $"Reversal: {consumption.Description ?? sourceId}", time.GetUtcNow());
         entry.AttachSource(reversalType, sourceId);
-        db.HourBankEntries.Add(entry);
-        await db.SaveChangesAsync(ct);
+        write.HourBankEntries.Add(entry);
+        await write.SaveChangesAsync(ct);
     }
 
     private const string ReversalSuffix = "Reversal";

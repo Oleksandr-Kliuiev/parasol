@@ -13,6 +13,10 @@ internal sealed class TimeMutationScope : IAsyncDisposable
     private TimeMutationScope(TimeTrackingDbContext db, IDbContextTransaction? transaction, bool owns)
     { Db = db; ownedTransaction = transaction; ownsContext = owns; }
     internal TimeTrackingDbContext Db { get; }
+    internal void RequireFinancialOwner()
+    {
+        if (ownedTransaction is null) throw new InvalidOperationException("A Time/bank command must own its complete transaction.");
+    }
 
     internal static TimeTrackingDbContext Fresh(TimeTrackingDbContext source) => new(
         new DbContextOptionsBuilder<TimeTrackingDbContext>((DbContextOptions<TimeTrackingDbContext>)source.GetService<IDbContextOptions>())

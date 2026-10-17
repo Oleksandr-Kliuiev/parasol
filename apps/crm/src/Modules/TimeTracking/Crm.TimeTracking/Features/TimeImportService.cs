@@ -1,5 +1,6 @@
 using Crm.Billing.Contracts;
 using Crm.Identity.Contracts;
+using Crm.Infrastructure.Persistence;
 using Crm.TimeTracking.Contracts;
 using Crm.TimeTracking.Domain;
 using Crm.TimeTracking.Persistence;
@@ -12,7 +13,7 @@ namespace Crm.TimeTracking.Features;
 /// Work hours coming from the service desk (BR-TIM-01/02). An entry that changed after it was invoiced is flagged for Finance instead of
 /// being rewritten; an approved entry that changed is withdrawn so it is approved again with the new hours.
 /// </summary>
-internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeApprovalService approvals) : ITimeTrackingApi
+internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeApprovalService approvals, TimeBankTransaction financial) : ITimeTrackingApi
 {
     public async Task<IReadOnlyList<BillableTime>> GetBillableTimeAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
     {

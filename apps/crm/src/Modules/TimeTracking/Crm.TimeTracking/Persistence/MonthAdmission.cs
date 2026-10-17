@@ -41,6 +41,11 @@ internal sealed class MonthAdmission
         return new MonthAdmission(ordered);
     }
 
+    // A small-team command may touch several banks across different months. Serialize Time bank work before entry
+    // locks so two cross-month commands cannot retain different bank rows in opposite orders through their commit.
+    internal static async Task<Error?> FinancialAsync(TimeTrackingDbContext db, CancellationToken ct) =>
+        await LockAsync(db, "time:bank-financial-work", "Exclusive", 15000, ct) < 0 ? Busy : null;
+
     // Imports and technician corrections first hold source namespace admission so new source rows cannot slip past
     // mapping discovery. Every source key is acquired before every month key, in ordinal order. Manual rows do not use it.
     internal static async Task LockSourcesAsync(TimeTrackingDbContext db, IEnumerable<string> sources, CancellationToken ct)

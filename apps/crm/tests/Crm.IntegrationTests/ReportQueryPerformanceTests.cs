@@ -122,7 +122,7 @@ public sealed class ReportQueryPerformanceTests(CrmWebFactory factory)
         var probe = new QueryProbe();
         await using var db = new TimeTrackingDbContext(new DbContextOptionsBuilder<TimeTrackingDbContext>()
             .UseSqlServer(factory.RuntimeConnectionString).AddInterceptors(probe).Options);
-        var api = new TimeImportService(db, scope.ServiceProvider.GetRequiredService<TimeApprovalService>());
+        var api = new TimeImportService(db, scope.ServiceProvider.GetRequiredService<TimeApprovalService>(), scope.ServiceProvider.GetRequiredService<Crm.Infrastructure.Persistence.TimeBankTransaction>());
         var utilization = (await api.GetUtilizationAsync(year, 2, Ct)).Single(row => row.TechnicianId == technician);
         utilization.BilledHours.ShouldBe(entries * 1.25m);
         utilization.CoveredHours.ShouldBe(entries * 2m);
