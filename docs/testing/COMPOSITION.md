@@ -61,8 +61,14 @@ It does not reuse an existing application or database.
   one time row, receipt and create audit, unchanged Task assignment/status, and only the
   original two ActivityLogged events (creation and completion). The mobile dialog is tested
   in both themes with keyboard, active-modal Axe and full-page checks before/after closing.
+- One active, bound synthetic Microsoft 365 connection has a published user count and an
+  outdated cloud-registration count, without adding canonical machines or people. Admin
+  reads metadata through the real BFF and restricted Atlas API; context-only Technician
+  receives an M365 denial, then a fresh authorized Stage 1 read before devices return.
+  Missing sign-in traversal remains unavailable with an explicit whole-window gap. Neither
+  directory DTOs nor sign-in rows reach the browser; no sync or durable work is created.
 
-The nine scenarios form one synthetic workflow. A failed earlier action can also fail later
+The ten scenarios form one synthetic workflow. A failed earlier action can also fail later
 durability assertions; the first failure is retained rather than retried or hidden by skips.
 
 ## Ownership and retained evidence
@@ -87,7 +93,7 @@ made. Private credentials, cookies, documents and Data Protection keys are remov
 after owned resources are confirmed stopped. Unrelated processes and containers are untouched.
 
 `report.json` contains bounded synthetic counts, fixed failure classifications and cleanup
-status. Acceptance requires a build in the same invocation, all nine browser scenarios with
+status. Acceptance requires a build in the same invocation, all ten browser scenarios with
 zero failures/skips/retries, exact durable/privacy evidence and confirmed cleanup. Stage logs
 are private and redacted; browser artifacts contain synthetic fixture data. CI publishes only
 the compact report, never the private state, logs, screenshots or traces.
@@ -394,3 +400,30 @@ all static/build gates and the 291.8/300 KB budget. Atlas strict 711/789/90 is r
 1421 unchanged inputs; M26's wider 78 browser/208 financial SQL and M29's native recovery
 are not new runs here. Human convenience/time savings and live-account/VPS acceptance
 remain unproven. Nothing was published, deployed or connected to a working account.
+
+
+## M31 saved Microsoft 365 overview, 17 October 2026
+
+The [current source-build report](evidence/composition-current-2026-10-17.json),
+`606c5c54e347`, passes 10/10 with a build in the same invocation, zero skipped/
+unexpected/flaky cases, exact durable/privacy evidence, restricted runtimes and cleanup.
+It forwards 570 Atlas GETs and zero mutating Atlas requests. All 2717 application/tool
+inputs match before/after. The prior M30 report is [archived byte for byte](evidence/composition-M30-2026-10-17.json).
+
+The M365 scenario reads saved metadata through the actual BFF: one fresh user record,
+one outdated cloud registration and unavailable sign-in coverage with a whole-window gap.
+It checks native keyboard disclosures, 390px/light/dark/Axe, private-field absence, a
+context-only employee's M365 denial followed by fresh authorized Stage 1, and unchanged
+Task/ticket/time evidence. There are still 40 clients, 400 canonical devices and 3 employees.
+
+The earlier [diagnostic](evidence/composition-M31-diagnostic-2026-10-17.json) remains
+`accepted: false` because it reused artifacts while the strict Atlas gate was live.
+Its two failed seed predecessors were cleaned; the fixed synthetic seed follows the
+normal retry-budget/publication/retention constraints without disabling triggers.
+
+Separate current gates pass: CRM unit963/architecture94/affected SQL93, frontend614,
+CRM browser87, tooling22, Atlas strict714/797/90 and all static/build checks (292.2/300KB).
+See [M31 evidence](evidence/customer-m365-M31-2026-10-17.json). M26 financial SQL208 and
+M29 native recovery remain historical, not new M31 runs. Staff feedback, measured human
+time savings and working-account/VPS acceptance are still open. Nothing was published
+or deployed.

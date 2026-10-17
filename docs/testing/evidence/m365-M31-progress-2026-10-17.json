@@ -1,0 +1,53 @@
+{
+  "scope": "M31 local synthetic development progress; not complete source-build or live-provider acceptance",
+  "status": "in-progress",
+  "crm": {
+    "unit": 963,
+    "architecture": 94,
+    "affectedSql": 93,
+    "frontend": 614,
+    "frontendAffected": 91,
+    "browser": 87,
+    "tooling": 22,
+    "skipped": 0,
+    "retries": 0,
+    "initialGzipKb": 292.2,
+    "budgetKb": 300
+  },
+  "atlas": {
+    "strictUnit": 714,
+    "strictBrowser": 90,
+    "focusedPostgresHttp": 8,
+    "strictPostgres": "running; no pass claimed",
+    "frozenInputs": 1426,
+    "cleanup": "three owned native clusters retained until the complete strict runner exits"
+  },
+  "composition": {
+    "report": "composition-M31-diagnostic-2026-10-17.json",
+    "runId": "e0c2d7449eb0",
+    "browser": 10,
+    "diagnostic": true,
+    "accepted": false,
+    "atlasRequests": 574,
+    "mutatingAtlasRequests": 0,
+    "cleanup": true,
+    "finalSourceBuild": "pending strict runner completion"
+  },
+  "inputChecks": {
+    "crmBackend": 804,
+    "crmSqlSourceBuildFixture": 856,
+    "frontend": 407,
+    "atlas": 1426,
+    "rootTooling": 32,
+    "compositionUnion": 2717,
+    "allCurrentBytesMatch": true
+  },
+  "limits": [
+    "financial SQL 208 is prior M26 evidence",
+    "native restore is prior M29 evidence, predating M30/M31",
+    "human convenience and time savings remain unmeasured",
+    "no working-provider, Entra or VPS acceptance"
+  ],
+  "published": false,
+  "deployed": false
+}

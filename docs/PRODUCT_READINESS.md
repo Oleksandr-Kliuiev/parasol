@@ -9,15 +9,18 @@
 Завершение очередного M-этапа не означает завершение всей цели. Отсутствие ошибок
 в синтетических тестах также не доказывает совместимость рабочего аккаунта провайдера.
 
-Текущий source-build composition после [M30](migration/M30-WORKSPACE-LINK-FENCE.md)
-прошёл 9/9 с новой сборкой и очисткой. Карточка теперь отклоняет старый ответ Atlas,
-если во время чтения удалили и заново подтвердили ту же пару клиента: проверяются
-и source pair, и LinkId. Ошибка сначала воспроизведена на настоящем SQL, затем все
-80 затронутых SQL проверок прошли. Новые прогоны: CRM unit 939, architecture 94,
-frontend 581 в 68 файлах, root/composition/demo tooling 22, TypeScript/ESLint/SPA и
-291,8/300 КБ gzip — без пропусков. Строгие Atlas 711/789/90 используются по точным
-1421 неизменным inputs; финансовый SQL 208 и широкий CRM browser 78 относятся к M26.
-[Свидетельство M30](testing/evidence/workspace-link-M30-2026-10-17.json) разделяет области.
+Текущий source-build composition после [M31](migration/M31-CUSTOMER-M365.md) проходит
+10/10 с новой сборкой и очисткой. В карточке доступны отдельные сохранённые метаданные
+Microsoft 365: count/freshness/coverage под context AND M365 read. M365 denial скрывает
+старый общий контекст до нового scoped чтения; полный отзыв удаляет все технические
+данные и сохраняет понятный клавиатурный фокус. M30 LinkId guard также сохранён.
+
+Отдельные текущие проверки: CRM unit 963, architecture 94, affected SQL 93, frontend
+614 в 70 файлах, CRM browser 87, tooling 22; строгие Atlas unit/PostgreSQL/browser —
+714/797/90, без пропусков и retries. Проверены 2717 неизменных application/tool inputs,
+TypeScript/ESLint/SPA и 292,2/300 КБ gzip. Все owned ресурсы этих запусков удалены.
+[Итоговое свидетельство M31](testing/evidence/customer-m365-M31-2026-10-17.json)
+разделяет эти области. Финансовый SQL 208 остаётся прежним M26, не новым M31 прогоном.
 
 [M28](migration/M28-LOCAL-STAFF-DEMO.md) по-прежнему даёт
 [локальный пробный стенд](testing/LOCAL-DEMO.md) с таймером/Ctrl+C, своими БД и
@@ -40,9 +43,9 @@ frontend 581 в 68 файлах, root/composition/demo tooling 22, TypeScript/ES
 | Требование | Свидетельство текущего состояния | Что ещё требуется |
 | --- | --- | --- |
 | Общая карточка и роли сотрудников | [M05](migration/M05-WORKSPACE.md), CRM BFF и server permissions | Реальная Entra-конфигурация и consent проверяются отдельно перед пилотом |
-| Однозначные связи клиентских записей | M04, M08, M09; атомарный предпросмотр и подтверждение; M14 сообщает личные unmatched/mapping issues; M15 проверяет локальные mappings с честным cap 500; текущий composition 9/9 проходит | Проверка рабочего каталога перед отдельным пилотом |
+| Однозначные связи клиентских записей | M04, M08, M09; атомарный предпросмотр и подтверждение; M14 сообщает личные unmatched/mapping issues; M15 проверяет локальные mappings с честным cap 500; текущий composition 10/10 проходит | Проверка рабочего каталога перед отдельным пилотом |
 | Устройства и наблюдения со свежестью и правами | [M10](migration/M10-CUSTOMER-TECHNICAL-DETAILS.md); [M13](testing/COMPOSITION.md) проверил реальные Web/Atlas и ограниченные БД, матрицу доступа 40/20/20 | Подтверждение рабочих источников перед отдельным пилотом |
-| Полная очередь клиента, серверные фильтры и история | [M11](migration/M11-OBSERVATION-QUEUE.md); текущий composition 9/9 прочитал 126 разных ID на шести реальных страницах; отдельный Atlas PostgreSQL 789/789 | Пилот с рабочими источниками по отдельному разрешению |
+| Полная очередь клиента, серверные фильтры и история | [M11](migration/M11-OBSERVATION-QUEUE.md); текущий composition 10/10 прочитал 126 разных ID на шести реальных страницах; отдельный Atlas PostgreSQL 797/797 | Пилот с рабочими источниками по отдельному разрешению |
 | Проблема превращается в назначенную работу | [M12](migration/M12-OBSERVATION-WORK.md); M13 проверил конкурентное назначение → личные задачи → завершение → повтор с одной durable Task | M27: сервисная заявка и собственные часы открываются из личной задачи без перехода в карточку; пилот с тремя сотрудниками и измерение времени остаются |
 | Изменение задачи сохраняет срок и чужую правку | [M16](migration/M16-TASK-EDITING.md): точный момент и исходный ETag редактора; [M20](migration/M20-ACTIVITY-STATUS-CONCURRENCY.md) добавляет displayed If-Match для complete/reopen, pending/conflict/focus guards; SQL 38/38, полный frontend 484/484, browser 55/55, actual composition 8/8 | Пилот с несколькими сотрудниками и измерение времени |
 | Личный список не скрывает ошибку под пустым результатом | [M17](migration/M17-PERSONAL-TASK-RELIABILITY.md): error/refresh/scope/paging/notification guards; [M19](migration/M19-EXACT-ACTIVITY-NAVIGATION.md) точно открывает одну запись, позволяет обновить её и возвращает весь timeline; actual handoff с уже открытым получателем прошёл | Пилот с тремя сотрудниками и измерение времени рабочего сценария |
@@ -50,8 +53,8 @@ frontend 581 в 68 файлах, root/composition/demo tooling 22, TypeScript/ES
 | Сервис, время и финансовые процессы используют имеющиеся модули | [M21](migration/M21-SAVED-SERVICE-DATA.md): достоверные сохранённые чтения; [M22](migration/M22-TASK-TICKET-TIME.md): подтверждённый owner заявки, Task→ticket→собственные часы, постоянная квитанция повтора; реальная локальная цепочка 9/9 | [M23](migration/M23-TIME-PERIOD-ADMISSION.md) закрыл гонку периода и лимита SLA; [M24](migration/M24-TIME-BANK-ATOMICITY.md) объединил Time/HourBank commit; [M25](migration/M25-TIME-BILLING-ADMISSION.md) защищает export/invoiced и частичные allocations; [M26](migration/M26-TIME-FINANCIAL-REVIEW.md) объясняет источники выбранной записи без изменения истории; далее — явные решения Finance, обратная связь сотрудников и рабочие Atera/PowerOffice |
 | Atera-заявка не экспортирует неподходящий контакт | [M18](migration/M18-SERVICE-CONTACT-SAFETY.md): admission и перед новой отправкой, exact owner/link fences, исходный журнал неопределённости; SQL 65/65 плюс последние affected 7/7 | Рабочий аккаунт/схема и eventual consistency остаются внешней проверкой |
 | Подключения показывают свою фактическую готовность | [M15](migration/M15-LOCAL-READINESS.md): read-only `/connections`, личная конфигурация Atlas, Web flags, сохранённые успехи/счётчики и локальные mappings; connectivity NOT_CHECKED; composition проходит | Реальная проверка аккаунтов отдельно |
-| Надёжное локальное воспроизведение | [M13](testing/COMPOSITION.md): текущий полный запуск 9/9 со сборкой, точная SQL/privacy-проверка, restricted roles и очистка; Atlas unit 711/711, PostgreSQL 789/789 и browser 90/90 | GitHub CI после будущего разрешения на публикацию |
-| Эксплуатация воспроизводима | [M07](migration/M07-HOSTINGER.md); [M29](migration/M29-CURRENT-WORKFLOW-RECOVERY.md) проверил текущие Linux images, native backup/restore цепочки Atlas → Task → ticket → Time → receipt с точными полями/rowversions и запретами UPDATE/DELETE обоих runtime login; операции 21/21 | Перед будущим запуском: Entra, ACME, offsite credentials, RTO и восстановление на целевом VPS |
+| Надёжное локальное воспроизведение | [M13](testing/COMPOSITION.md): текущий полный запуск 10/10 со сборкой, точная SQL/privacy-проверка, restricted roles и очистка; Atlas unit 714/714, PostgreSQL 797/797 и browser 90/90 | GitHub CI после будущего разрешения на публикацию |
+| Эксплуатация воспроизводима | [M07](migration/M07-HOSTINGER.md); [M29](migration/M29-CURRENT-WORKFLOW-RECOVERY.md) проверил свои Linux images до M30/M31, native backup/restore цепочки Atlas → Task → ticket → Time → receipt с точными полями/rowversions и запретами UPDATE/DELETE обоих runtime login; операции 21/21 | Перед будущим запуском: Entra, ACME, offsite credentials, RTO и восстановление на целевом VPS |
 
 Совместный локальный сценарий CRM → Atlas → PostgreSQL пройден в M13; компактное
 [текущее свидетельство](testing/evidence/composition-current-2026-10-17.json) сохранено без credentials.
@@ -69,7 +72,9 @@ M14 добавил личный обзор внимания, M15 — опера�
   Подтверждение рабочего аккаунта остаётся отдельным действием.
 - **Microsoft 365:** Stage 1 overview специально исключает M365 connections и
   `m365_*` links (`packages/graph/prisma-context.ts`). Вход Entra не означает технический
-  мониторинг tenant. Для него нужна отдельная проекция с соответствующими правами.
+  мониторинг tenant. M31 добавляет отдельную проекцию сохранённых count/freshness/coverage
+  под context AND M365 read; локальные M31-ворота пройдены. Graph sync и рабочий tenant
+  этим этапом не подключаются, состояние лицензий или безопасности не выводится.
 - **PowerOffice:** Atlas [MOCK export](../apps/atlas/connectors/poweroffice/README.md)
   синтетический. В CRM есть отдельная интеграция PowerOffice; она должна оставаться
   финансовым источником вместо параллельной реализации в Atlas.
@@ -170,3 +175,13 @@ same-pair LinkId в карточке. Reader теперь требует сох�
 Четыре детерминированные гонки и explicit Refresh в UI проверены; текущий actual
 composition 9/9 прошёл. Это исправление scope, а не приёмка рабочих аккаунтов или
 измерение удобства. [Протокол](migration/M30-WORKSPACE-LINK-FENCE.md).
+
+
+**M31 — отдельные сохранённые метаданные Microsoft 365.** Вкладка показывает количество
+directory records, свежесть и предыдущие 24 полных часа UTC без directory DTO/UPN/IP,
+запуска Graph или sync. Облачные регистрации не подменяют машины и лицензии. Отказ
+M365 требует свежего общего контекста перед возвратом устройств; при полном отказе
+карточка очищается. Локально проверены 963/94/93 CRM backend, 614 frontend, 87 CRM browser,
+714/797/90 Atlas и 10 actual source-build composition случаев, без исключений.
+Отзывы сотрудников, измерение времени и отдельно разрешённые внешние ворота остаются
+открытыми; эти числа не доказывают готовность рабочего tenant или всего продукта.
