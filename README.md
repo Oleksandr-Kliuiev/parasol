@@ -41,6 +41,9 @@ M01–M03 объединяют исходники, историю Git, сбор�
 [M21: сохранённые данные Service](docs/migration/M21-SAVED-SERVICE-DATA.md) различает загрузку,
 ошибку и пустой результат, перечитывает разделы без live sync Atera и изолирует клиентские
 формы и ответы. Выбранная вкладка клиента видна на узком экране.
+[M22: задача → заявка → часы](docs/migration/M22-TASK-TICKET-TIME.md) добавляет проверенную
+связь с сохранённой заявкой клиента, собственные явно введённые часы и защиту повторной
+отправки. Статус, исполнитель и срок задачи сохраняются.
 Оставшиеся задачи до ежедневного использования описаны в [готовности продукта](docs/PRODUCT_READINESS.md).
 
 ## Структура
@@ -89,7 +92,7 @@ DATABASE_URL=postgresql://test:test@127.0.0.1:5432/unused npm run check
 | `npm run test:crm:integration` | Тесты CRM в локальных контейнерах после Release-сборки |
 | `npm run test:crm:e2e` | CRM + worker + локальная SQL test DB + макеты внешних API |
 | `npm run test:composition:unit` | Ограничения и достоверность локальной совместной проверки |
-| `npm run test:composition -- --directory /absolute/new/run` | Сборка, обе реальные БД, Web/Worker/Atlas и шесть совместных браузерных сценариев |
+| `npm run test:composition -- --directory /absolute/new/run` | Сборка, обе реальные БД, Web/Worker/Atlas и девять совместных браузерных сценариев |
 
 Сборка Atlas появляется в `apps/atlas/dist`; SPA CRM — в `apps/crm/src/Hosts/Crm.Web/wwwroot`,
 .NET-сборки — в каталогах `bin/Release`. Для контейнеров и эксплуатации использовать

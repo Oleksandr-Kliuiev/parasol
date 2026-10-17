@@ -55,7 +55,14 @@ It does not reuse an existing application or database.
   retained unlinked collision reference. Opening and refreshing the page must leave the Atlas
   HTTP request counter and durable Task evidence unchanged; Finance receives no access.
 
-The eight scenarios form one synthetic workflow. A failed earlier action can also fail later
+- The actual observation Task from the handoff is linked through the UI to a synthetic saved
+  ticket with exact accepted Atera customer/LinkId provenance. Another employee explicitly
+  records 0.75 own hours; an identical request adopts the same time entry. Exact SQL requires
+  one time row, receipt and create audit, unchanged Task assignment/status, and only the
+  original two ActivityLogged events (creation and completion). The mobile dialog is tested
+  in both themes with keyboard, active-modal Axe and full-page checks before/after closing.
+
+The nine scenarios form one synthetic workflow. A failed earlier action can also fail later
 durability assertions; the first failure is retained rather than retried or hidden by skips.
 
 ## Ownership and retained evidence
@@ -80,7 +87,7 @@ made. Private credentials, cookies, documents and Data Protection keys are remov
 after owned resources are confirmed stopped. Unrelated processes and containers are untouched.
 
 `report.json` contains bounded synthetic counts, fixed failure classifications and cleanup
-status. Acceptance requires a build in the same invocation, all eight browser scenarios with
+status. Acceptance requires a build in the same invocation, all nine browser scenarios with
 zero failures/skips/retries, exact durable/privacy evidence and confirmed cleanup. Stage logs
 are private and redacted; browser artifacts contain synthetic fixture data. CI publishes only
 the compact report, never the private state, logs, screenshots or traces.
@@ -178,9 +185,9 @@ the actual editor lifecycle and keeps input/modal/hidden/inert fences. The uncha
 assertions now pass in both themes, including keyboard focus and Axe. No timeout increase,
 retry, skip or failure exception was introduced. No live provider account or VPS was used.
 
-## Current M21 local verification, 17 October 2026
+## M21 local verification, 17 October 2026
 
-The [current full-build run](evidence/composition-current-2026-10-17.json) includes scoped
+The [M21 full-build run](evidence/composition-M21-2026-10-17.json) includes scoped
 saved Service reads and mobile customer tab visibility. It passed 8/8, zero
 skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles
 and confirmed cleanup. The recorder forwarded 564 Atlas requests and no mutating requests.
@@ -200,3 +207,26 @@ Only the owned browser fixture API budget was aligned with existing E2E configur
 production and composition settings remain unchanged. Raw HTTP traces of that initial
 429 were not retained. No timeout increase or assertion exclusion was introduced.
 No publication, deployment or live provider call occurred.
+
+## Current M22 local verification, 17 October 2026
+
+The [current source-build run](evidence/composition-current-2026-10-17.json) passed all nine
+scenarios, including actual Atlas observation → assigned Task → verified saved ticket →
+current employee time and exact retry. It retained one time row, receipt and create audit,
+the unchanged Task and precisely two ActivityLogged events; provider writes were zero.
+The recorder forwarded 554 Atlas requests. Restricted roles, privacy and cleanup passed.
+
+The [M22 summary](evidence/task-ticket-time-M22-2026-10-17.json) records CRM 911 unit,
+94 architecture and 63 affected SQL tests, 559 frontend tests, static/build gates, the
+291.7/300 KB budget and 67 CRM browser regressions in three engines. All passed with
+zero skips/retries/exceptions. SQL uses exact current sources with only an owned loopback
+fixture adapter. The 811 backend/build and 387 web inputs still match their tested hashes.
+Atlas strict 711/789/90 is retained with all 1421 unchanged inputs, not rerun in M22.
+
+Earlier seed, modal-oracle and excess-contact-event failures remain retained and are
+described in M22. The first real-chain invocation passed 9/9 browser cases but was correctly
+rejected by durable evidence: linking emitted a third ActivityLogged. The domain now
+audits association metadata without a customer-contact event, and current SQL/domain
+regressions verify that contract. No acceptance threshold was relaxed.
+Concurrent period closure across all Time writers remains M23; already-closed refusal
+does not prove that race resolved. No publication, deployment or live provider call occurred.

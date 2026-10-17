@@ -41,7 +41,7 @@
   DOM-лог в этот момент показывает фон с aria-hidden=true после закрытия старой формы.
   Использовано обычное findByRole с прежним default
   timeout; проверки позднего POST, отсутствия GET/toast и сохранности новой формы прежние.
-- Полный [composition](../testing/evidence/composition-current-2026-10-17.json) с новой
+- Полный [composition](../testing/evidence/composition-M21-2026-10-17.json) с новой
   сборкой CRM/Atlas — 8/8, 0 skipped/unexpected/flaky; одна Task/receipt/create audit, два
   ActivityLogged, privacy evidence, restricted roles и cleanup проходят. Recorder переслал
   564 Atlas requests, mutating requests — 0. CRM browser — 67/67,
