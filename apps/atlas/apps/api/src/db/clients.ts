@@ -32,9 +32,10 @@ export class ClientsController {
     try { return await getClientContext(this.db, actor, scope); } catch (error) { toHttp(error); }
   }
   @Get(':id/observations') async observations(@CurrentActor() actor: Actor, @Param('id') id: string, @Query('limit') limit?: unknown,
-    @Query('status') status?: unknown, @Query('severity') severity?: unknown, @Query('cursor') cursor?: unknown) {
+    @Query('status') status?: unknown, @Query('severity') severity?: unknown, @Query('cursor') cursor?: unknown,
+    @Query('deviceId') deviceId?: unknown) {
     const scope = await this.access.requireClient(actor, id, 'context:read', 'client.observations_denied');
-    const query = parseObservationQuery({ limit, status, severity, cursor }, CONTEXT_OBSERVATION_LIMIT);
+    const query = parseObservationQuery({ limit, status, severity, cursor, deviceId }, CONTEXT_OBSERVATION_LIMIT);
     try { return await getObservationPage(this.db, actor, scope, query); } catch (error) { toHttp(error); }
   }
   @Get(':id/observations/:observationId') @Header('Cache-Control', 'no-store') async observation(@CurrentActor() actor: Actor,

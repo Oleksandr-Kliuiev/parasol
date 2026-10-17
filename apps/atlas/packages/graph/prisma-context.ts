@@ -4,7 +4,7 @@ import { AtlasError, M365_RESOURCE_TYPES, assertPermission, hasClientPermission,
 import { withScope } from './scoped-db.ts';
 import { mapClientContext, mapObservationPage, mapObservationRow } from './context-mapper.ts';
 import type { DbClientGraph, DbObservationRow } from './context-mapper.ts';
-import { activeQuery, observationSelect, readObservationPage } from '../observations/query.ts';
+import { activeQuery, isObservationDeviceId, observationSelect, readObservationPage } from '../observations/query.ts';
 import type { ObservationQuery } from '../observations/query.ts';
 
 /** Page size of observations in the context and the upper bound of GET /clients/:id/observations. */
@@ -16,7 +16,8 @@ function assertLimit(limit: number): void {
 const subset = <T>(values: readonly T[], allowed: readonly T[]) => values.length > 0 && new Set(values).size === values.length && values.every(v => allowed.includes(v));
 function assertQuery(query: ObservationQuery): void {
   assertLimit(query.limit);
-  if (!subset(query.statuses, observationStatuses) || !subset(query.severities, severities)) throw new AtlasError('INVALID_OBSERVATION_QUERY', 'VALIDATION');
+  if (!subset(query.statuses, observationStatuses) || !subset(query.severities, severities)
+    || (query.deviceId !== undefined && !isObservationDeviceId(query.deviceId))) throw new AtlasError('INVALID_OBSERVATION_QUERY', 'VALIDATION');
 }
 
 /**

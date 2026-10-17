@@ -28,7 +28,7 @@ test('full queue pages and server filters reach observations beyond the overview
     for (const item of items) counts[item.severity as keyof typeof counts]++;
     const total = items.length;
     return route.fulfill({ json: { customerId: customer.id, status: 'READY', queue: {
-      mode: 'db', generatedAt: s.generatedAt, retrievedAt: '2026-10-16T16:00:00Z', severity, status, total,
+      mode: 'db', generatedAt: s.generatedAt, retrievedAt: '2026-10-16T16:00:00Z', severity, status, total, deviceId: null,
       severityCounts: counts, items: items.slice(offset, offset + 25), devices: s.devices, resources: s.resources,
       nextCursor: offset + 25 < total ? `synthetic-${offset + 25}` : null,
     } } });

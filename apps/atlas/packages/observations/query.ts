@@ -10,12 +10,18 @@ import type { DbObservationRow, DbObservationStats } from '../graph/context-mapp
  * bound to the filters it was issued for; a cursor reused with other filters or altered is INVALID_CURSOR. Counts and
  * total cover the whole selected set, not the page.
  */
-export interface ObservationQuery { statuses: ObservationStatus[]; severities: Severity[]; limit: number; cursor: string | null }
+export interface ObservationQuery { statuses: ObservationStatus[]; severities: Severity[]; limit: number; cursor: string | null; deviceId?: string }
 export const activeQuery = (limit: number): ObservationQuery => ({ statuses: [...activeObservationStatuses], severities: [...severities], limit, cursor: null });
+
+/** Canonical IDs stay exact: names, case folding and whitespace normalization cannot establish identity. */
+export const isObservationDeviceId = (value: unknown): value is string => typeof value === 'string'
+  && value.length <= 256 && value.trim().length > 0 && !/[\u0000-\u001f\u007f-\u009f]/.test(value)
+  && Buffer.from(value, 'utf8').toString('utf8') === value;
 
 interface CursorKey { r: number; t: string; i: string; f: string }
 const filterKey = (q: ObservationQuery): string =>
-  createHash('sha256').update(JSON.stringify([[...q.statuses].sort(), [...q.severities].sort()])).digest('base64url').slice(0, 16);
+  createHash('sha256').update(JSON.stringify([[...q.statuses].sort(), [...q.severities].sort(),
+    ...(q.deviceId === undefined ? [] : [q.deviceId])])).digest('base64url').slice(0, 16);
 const invalidCursor = () => new AtlasError('INVALID_CURSOR', 'VALIDATION');
 
 export function encodeCursor(row: { severityRank: number; createdAt: Date; id: string }, query: ObservationQuery): string {
@@ -43,7 +49,11 @@ export const observationSelect = {
 /** One page of the selection inside the caller's scoped transaction, plus the totals of the whole selection. */
 export async function readObservationPage(tx: Prisma.TransactionClient, scope: Scope, query: ObservationQuery):
   Promise<{ rows: DbObservationRow[]; stats: DbObservationStats; nextCursor: string | null }> {
-  const where = { workspaceId: scope.workspaceId, clientId: scope.clientId, status: { in: query.statuses }, severity: { in: query.severities } };
+  const where: Prisma.ObservationWhereInput = { workspaceId: scope.workspaceId, clientId: scope.clientId,
+    status: { in: query.statuses }, severity: { in: query.severities },
+    // Keep the stored canonical association even if today's confirmed source link has changed.
+    ...(query.deviceId === undefined ? {} : { entityId: query.deviceId, entity: { is: { kind: 'DEVICE', device: { isNot: null } } } }),
+  };
   const after = query.cursor === null ? null : decodeCursor(query.cursor, query);
   const page = after === null ? where : { AND: [where, { OR: [
     { severityRank: { lt: after.severityRank } },

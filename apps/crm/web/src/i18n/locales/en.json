@@ -3635,7 +3635,9 @@
       "MONITOR": "Monitor",
       "INVESTIGATE": "Investigate",
       "HUMAN_REVIEW": "Human review"
-    }
+    },
+    "deviceObservations": "View observations",
+    "deviceObservationsFor": "View observations for {{name}}"
   },
   "parasolQueue": {
     "title": "Observation queue and history",
@@ -3666,8 +3668,14 @@
       "IDENTITY_CHANGED": "The customer link changed. Restart from the first page to read the current link.",
       "INVALID_CURSOR": "This page reference is no longer valid. Restart from the first page.",
       "QUEUE_NOT_SUPPORTED": "Queue and history are not available in this Atlas mode. The active observations tab remains available.",
-      "REQUEST_FAILED": "The queue could not be read. No previous page is shown. Refresh to try again."
-    }
+      "REQUEST_FAILED": "The queue could not be read. No previous page is shown. Refresh to try again.",
+      "DEVICE_NOT_AVAILABLE": "This device is no longer in the current Atlas registry. Refresh the customer workspace before choosing a device again."
+    },
+    "selectedDevice": "Selected device: {{name}}",
+    "selectingDevice": "Reading observations for the selected device.",
+    "deviceHistoryNote": "This history uses the exact device recorded by Atlas. Current source confirmation is shown for each observation. An empty result does not prove the device or sources are healthy.",
+    "allDevices": "All devices · keep other filters",
+    "backToDevice": "Back to device"
   },
   "readiness": {
     "title": "Connection readiness",

@@ -25,6 +25,7 @@ public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHt
         AtlasObservationSelection selection, string? cursor, CancellationToken ct) =>
         ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/observations?limit=25&status={Uri.EscapeDataString(selection.AtlasStatuses)}"
             + $"&severity={Uri.EscapeDataString(selection.AtlasSeverities)}"
+            + (selection.DeviceId is null ? "" : $"&deviceId={Uri.EscapeDataString(selection.DeviceId)}")
             + (cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}"), credential, 1_048_576, ct, cursor is not null);
 
     private async Task<AtlasReadResponse> ReadAsync(string path, AtlasEmployeeCredential credential, int maximumBytes, CancellationToken ct,

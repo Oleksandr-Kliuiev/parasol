@@ -14,7 +14,7 @@ public sealed class AtlasObservationQueueReader(CustomerIdentityService identiti
     {
         if (user.UserId is not { } employeeId || !user.HasPermission(Permissions.ParasolAtlasRead))
             return Error.Forbidden("PARASOL_ATLAS_FORBIDDEN", "Technical workspace access is required.");
-        if (!selection.IsValid) return Error.Validation("PARASOL_ATLAS_QUEUE_FILTER_INVALID", "Choose a supported severity and status.");
+        if (!selection.IsValid) return Error.Validation("PARASOL_ATLAS_QUEUE_FILTER_INVALID", "Choose supported observation filters.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         try
@@ -35,6 +35,8 @@ public sealed class AtlasObservationQueueReader(CustomerIdentityService identiti
             if (overview.Document is null) return new AtlasObservationQueueView(customerId, overview.Status);
             var summary = AtlasWorkspaceProjection.Read(overview.Document.RootElement, reference);
             if (summary.Mode == "fixture") return new AtlasObservationQueueView(customerId, "QUEUE_NOT_SUPPORTED");
+            if (selection.DeviceId is not null && !summary.Devices.Any(d => d.Id == selection.DeviceId))
+                return new AtlasObservationQueueView(customerId, "DEVICE_NOT_AVAILABLE");
             using var response = await atlas.ObservationsAsync(reference.ClientId, credential, selection, atlasCursor, timeout.Token);
             if (response.Document is null) return new AtlasObservationQueueView(customerId, response.Status);
             var page = AtlasObservationQueueProjection.Read(response.Document.RootElement, reference, selection, summary.Devices, atlasCursor);
@@ -45,7 +47,7 @@ public sealed class AtlasObservationQueueReader(CustomerIdentityService identiti
             var nextCursor = page.NextCursor is null ? null : cursors.Protect(employeeId, identity.Value, selection, page.NextCursor);
             return new AtlasObservationQueueView(customerId, "READY", new(summary.Mode, summary.GeneratedAt, time.GetUtcNow(),
                 selection.Severity.ToString(), selection.Status.ToString(), page.Total, page.SeverityCounts,
-                page.Items, summary.Devices, summary.Resources, nextCursor));
+                page.Items, summary.Devices, summary.Resources, nextCursor, selection.DeviceId));
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return new AtlasObservationQueueView(customerId, "UNAVAILABLE"); }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException)

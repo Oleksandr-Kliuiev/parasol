@@ -1,11 +1,11 @@
-import { lazy, Suspense, useId, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useId, useRef, useState } from 'react';
 import { Button, Field, Input, MessageBar, MessageBarBody, Select, Spinner, Tab, TabList, Text } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { severities, type WorkspaceSummary } from './workspaceContract';
 import { ObservationQueue } from './ObservationQueue';
 import { ObservationRows } from './ObservationRows';
 import { useTechnicalStyles } from './technicalStyles';
-import { TechnicalList } from './TechnicalList';
+import { AtlasDeviceList, deviceBatch } from './AtlasDeviceList';
 
 const batch = 25;
 const AtlasM365Panel = lazy(() => import('./AtlasM365Panel').then(module => ({ default: module.AtlasM365Panel })));
@@ -17,6 +17,10 @@ export function CustomerTechnicalDetails({ customerId, summary, contextChecking,
   const { t } = useTranslation();
   const styles = useTechnicalStyles();
   const [active, setActive] = useState('observations');
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [deviceList, setDeviceList] = useState({ search: '', limit: deviceBatch });
+  const [returnDevice, setReturnDevice] = useState<string | null>(null);
+  const deviceFocused = useCallback(() => setReturnDevice(null), []);
   const queueTab = useRef<HTMLButtonElement>(null);
   const id = useId();
   return <>
@@ -30,45 +34,17 @@ export function CustomerTechnicalDetails({ customerId, summary, contextChecking,
       {active === 'm365' ? <Suspense fallback={<Spinner size="small" label={t('common.loading')} />}>
         <AtlasM365Panel customerId={customerId} contextChecking={contextChecking} onSourceInvalidated={onSourceInvalidated} onAccessDenied={onAccessDenied} />
       </Suspense> : !summary ? <Spinner size="small" label={t('common.loading')} />
-        : active === 'queue' ? <ObservationQueue customerId={customerId} onSourceInvalidated={onSourceInvalidated} />
-        : active === 'devices' ? <DeviceList devices={summary.devices} /> : <ObservationList customerId={customerId} onSourceInvalidated={onSourceInvalidated} summary={summary} openQueue={() => {
+        : active === 'queue' ? <ObservationQueue customerId={customerId} onSourceInvalidated={onSourceInvalidated} deviceId={deviceId}
+          onClearDevice={() => setDeviceId(null)} onReturnToDevice={() => { setReturnDevice(deviceId); setActive('devices'); }} />
+        : active === 'devices' ? <AtlasDeviceList devices={summary.devices} selection={deviceList} onSelectionChange={setDeviceList}
+          focusDeviceId={returnDevice} onFocused={deviceFocused} onOpenObservations={id => {
+            setDeviceId(id); setActive('queue'); queueTab.current?.focus();
+          }} /> : <ObservationList customerId={customerId} onSourceInvalidated={onSourceInvalidated} summary={summary} openQueue={() => {
+          setDeviceId(null);
           setActive('queue'); queueTab.current?.focus();
         }} />}
     </div>
   </>;
-}
-
-function DeviceList({ devices }: { devices: WorkspaceSummary['devices'] }) {
-  const { t } = useTranslation();
-  const styles = useTechnicalStyles();
-  const heading = useId();
-  const [search, setSearch] = useState('');
-  const [limit, setLimit] = useState(batch);
-  const term = search.trim().toLocaleLowerCase();
-  const matches = devices.filter(d => `${d.hostname} ${d.id}`.toLocaleLowerCase().includes(term));
-  return <section className={styles.section} aria-labelledby={heading}>
-    <h3 className={styles.heading} id={heading}>{t('parasolDetails.devices')}</h3>
-    <Text block>{t('parasolDetails.deviceNote')}</Text>
-    {devices.length === 0 ? <Text block role="status">{t('parasolDetails.noDevices')}</Text> : <>
-      <div className={styles.tools}><Field label={t('parasolDetails.searchDevices')}>
-        <Input type="search" value={search} maxLength={256} onChange={(_, d) => { setSearch(d.value); setLimit(batch); }} />
-      </Field></div>
-      <Text block role="status">{t('parasolDetails.deviceMatches', { matched: matches.length, loaded: devices.length })}</Text>
-      {matches.length === 0 && <Text block>{t('parasolDetails.noMatches')}</Text>}
-      <TechnicalList key={term} label={t('parasolDetails.devices')}>
-        {matches.slice(0, limit).map(d => <li key={d.id} className={styles.row}>
-          <Text weight="semibold">{d.hostname}</Text>
-          <Text>{t('parasolDetails.deviceId')}: {d.id}</Text>
-          <Text>{d.sources.length ? t('parasolDetails.deviceSources', { sources: d.sources.map(s => t(`parasol.sources.${s}`)).join(', ') })
-            : t('parasolDetails.noDeviceSources')}</Text>
-        </li>)}
-      </TechnicalList>
-      <div className={styles.footer}>
-        <Text>{t('parasolDetails.visible', { shown: Math.min(limit, matches.length), total: matches.length })}</Text>
-        {matches.length > limit && <Button onClick={() => setLimit(n => n + batch)}>{t('parasolDetails.moreDevices')}</Button>}
-      </div>
-    </>}
-  </section>;
 }
 
 function ObservationList({ summary, openQueue, customerId, onSourceInvalidated }: {

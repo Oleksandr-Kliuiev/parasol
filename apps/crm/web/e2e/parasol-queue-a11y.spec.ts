@@ -31,7 +31,7 @@ test('queue history filters and pagination remain accessible on a phone', async 
     const items = status === 'ACKNOWLEDGED' ? [] : [{ ...s.observationPage.items[0]!, summary: 'SyntheticLongQueueSummary'.repeat(12),
       status: status === 'RESOLVED' ? 'RESOLVED' : 'OPEN' }];
     return route.fulfill({ json: { customerId: customer.id, status: 'READY', queue: {
-      mode: 'db', generatedAt: s.generatedAt, retrievedAt: '2026-10-16T16:00:00Z', severity, status,
+      mode: 'db', generatedAt: s.generatedAt, retrievedAt: '2026-10-16T16:00:00Z', severity, status, deviceId: null,
       total: items.length, severityCounts: { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: items.length },
       items, devices: s.devices, resources: s.resources, nextCursor: null,
     } } });

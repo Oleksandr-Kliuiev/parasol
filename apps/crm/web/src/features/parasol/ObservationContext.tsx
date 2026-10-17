@@ -15,7 +15,9 @@ export function ObservationContext({ observation: o, devices }: { observation: A
     </div>
     <Text weight="semibold">{o.summary || t('parasolDetails.noSummary')}</Text>
     <Text>{t(`parasol.sources.${o.source}`)} · {t(`parasolDetails.kind.${o.kind}`)}</Text>
-    <Text>{o.deviceId ? t('parasolDetails.confirmedDevice', { name: hostname, id: o.deviceId }) : t(`parasolDetails.deviceStatus.${o.deviceStatus}`)}</Text>
+    <Text>{o.deviceId
+      ? <code className={styles.identifier}>{t('parasolDetails.confirmedDevice', { name: hostname, id: o.deviceId })}</code>
+      : t(`parasolDetails.deviceStatus.${o.deviceStatus}`)}</Text>
     <Text>{t('parasolDetails.route')}: {t(`parasolDetails.routes.${o.route}`)}</Text>
     <Text>{t('parasolDetails.occurredAt', { time: formatDateTime(o.occurredAt) })}</Text>
     <Text>{t('parasolDetails.updatedAt', { time: formatDateTime(o.updatedAt) })}</Text>

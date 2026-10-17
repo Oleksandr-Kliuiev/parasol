@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.DataProtection;
@@ -10,15 +11,16 @@ public sealed class AtlasObservationCursor(IDataProtectionProvider protection, T
 {
     private readonly IDataProtector _protector = protection.CreateProtector("Parasol.Atlas.ObservationQueue.v1");
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
+    private static string? DeviceKey(string? id) => id is null ? null : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(id)));
     internal static bool IsAtlasCursor(string? value) => value is not null
         && Regex.IsMatch(value, @"\A[A-Za-z0-9_-]{1,400}\z", RegexOptions.CultureInvariant);
 
     internal string Protect(Guid employeeId, CustomerIdentityView identity, AtlasObservationSelection selection, string atlasCursor)
     {
-        if (identity.Atlas is null || identity.LinkId is null || !IsAtlasCursor(atlasCursor)) throw new InvalidOperationException();
+        if (identity.Atlas is null || identity.LinkId is null || !selection.IsValid || !IsAtlasCursor(atlasCursor)) throw new InvalidOperationException();
         var issuedAt = time.GetUtcNow();
         return _protector.Protect(JsonSerializer.Serialize(new Continuation(employeeId, identity.CustomerId, identity.LinkId.Value,
-            identity.Atlas.WorkspaceId, identity.Atlas.ClientId, selection.Severity, selection.Status, atlasCursor, issuedAt, issuedAt + Lifetime)));
+            identity.Atlas.WorkspaceId, identity.Atlas.ClientId, selection.Severity, selection.Status, atlasCursor, issuedAt, issuedAt + Lifetime, DeviceKey(selection.DeviceId))));
     }
 
     internal bool TryRead(string value, Guid employeeId, CustomerIdentityView identity, AtlasObservationSelection selection, out string? atlasCursor)
@@ -36,7 +38,8 @@ public sealed class AtlasObservationCursor(IDataProtectionProvider protection, T
             var now = time.GetUtcNow();
             if (continuation is null || continuation.EmployeeId != employeeId || continuation.CustomerId != identity.CustomerId
                 || continuation.Severity != selection.Severity
-                || continuation.Status != selection.Status || continuation.IssuedAt > now || continuation.ExpiresAt <= now
+                || continuation.Status != selection.Status || continuation.DeviceKey != DeviceKey(selection.DeviceId)
+                || continuation.IssuedAt > now || continuation.ExpiresAt <= now
                 || continuation.ExpiresAt - continuation.IssuedAt != Lifetime || !IsAtlasCursor(continuation.AtlasCursor)) return false;
             // Only an authenticated, current token for this employee/customer/selection can establish that the parent identity changed.
             if (continuation.LinkId != identity.LinkId || continuation.WorkspaceId != identity.Atlas.WorkspaceId
@@ -52,5 +55,5 @@ public sealed class AtlasObservationCursor(IDataProtectionProvider protection, T
     }
 
     private sealed record Continuation(Guid EmployeeId, Guid CustomerId, Guid LinkId, string WorkspaceId, string ClientId,
-        AtlasQueueSeverity Severity, AtlasQueueStatus Status, string AtlasCursor, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt);
+        AtlasQueueSeverity Severity, AtlasQueueStatus Status, string AtlasCursor, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, string? DeviceKey = null);
 }

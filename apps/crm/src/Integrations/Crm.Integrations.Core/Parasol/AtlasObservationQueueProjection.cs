@@ -14,6 +14,8 @@ internal static class AtlasObservationQueueProjection
         var total = Count(root.GetProperty("total"));
         Require(counts.Values.Sum(v => (long)v) == total);
         foreach (var severity in Severities.Except(selection.Severities, StringComparer.Ordinal)) Require(counts[severity] == 0);
+        if (selection.DeviceId is not null)
+            foreach (var row in Array(root, "items", 25)) Require(NullableId(row, "entityId") == selection.DeviceId);
         var items = AtlasObservationProjection.ReadItems(root, expected, devices, 25, selection.Statuses);
         Require(total >= items.Count && items.All(i => selection.Severities.Contains(i.Severity, StringComparer.Ordinal)));
         var cursorJson = root.GetProperty("nextCursor");

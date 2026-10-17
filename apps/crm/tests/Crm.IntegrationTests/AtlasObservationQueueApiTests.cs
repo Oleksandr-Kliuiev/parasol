@@ -83,11 +83,12 @@ public sealed class AtlasObservationQueueApiTests(CrmWebFactory factory)
         atlas.Given(Request.Create().WithPath($"/clients/{clientId}/overview").UsingGet().WithHeader("Authorization", $"Bearer {Token}"))
             .RespondWith(Response.Create().WithHeader("Content-Type", "application/json").WithBody((overview ?? Context(clientId)).ToJsonString()));
 
-    private static void AnswerPage(WireMockServer atlas, string clientId, JsonNode page, string? cursor = null, string status = "OPEN,ACKNOWLEDGED")
+    private static void AnswerPage(WireMockServer atlas, string clientId, JsonNode page, string? cursor = null, string status = "OPEN,ACKNOWLEDGED", string? deviceId = null)
     {
         var request = Request.Create().WithPath($"/clients/{clientId}/observations").UsingGet().WithHeader("Authorization", $"Bearer {Token}")
             .WithParam("limit", "25").WithParam("severity", "CRITICAL").WithParam("status", status);
         if (cursor is not null) request.WithParam("cursor", cursor);
+        if (deviceId is not null) request.WithParam("deviceId", deviceId);
         atlas.Given(request).AtPriority(cursor is null ? 5 : 1)
             .RespondWith(Response.Create().WithHeader("Content-Type", "application/json").WithHeader("Set-Cookie", "synthetic-private=1").WithBody(page.ToJsonString()));
     }
@@ -267,14 +268,17 @@ public sealed class AtlasObservationQueueApiTests(CrmWebFactory factory)
         atlas.LogEntries.ShouldBeEmpty();
     }
 
-    [Fact]
-    public async Task An_unlink_while_the_page_is_pending_discards_the_whole_queue()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("device-one")]
+    public async Task An_unlink_while_the_page_is_pending_discards_the_whole_queue(string? deviceId)
     {
         var (id, clientId) = await LinkedCustomer(); using var atlas = WireMockServer.Start();
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var handler = new DelayedPage(clientId, entered, resume);
         await using var host = await Host(atlas, handler); using var client = Client(host);
-        var pending = client.GetFromJsonAsync<AtlasObservationQueueView>(PathFor(id) + "?severity=CRITICAL");
+        var pending = client.GetFromJsonAsync<AtlasObservationQueueView>(PathFor(id) + "?severity=CRITICAL"
+            + (deviceId is null ? "" : $"&deviceId={deviceId}"));
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         try
         {
@@ -284,6 +288,64 @@ public sealed class AtlasObservationQueueApiTests(CrmWebFactory factory)
         }
         finally { resume.TrySetResult(); }
         var view = (await pending)!; view.Status.ShouldBe("IDENTITY_CHANGED"); view.Queue.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_device_filter_reaches_Atlas_and_remains_bound_across_pages_without_affecting_other_devices()
+    {
+        var (id, clientId) = await LinkedCustomer(); using var atlas = WireMockServer.Start();
+        AnswerOverview(atlas, clientId);
+        AnswerPage(atlas, clientId, Page(clientId), deviceId: "device-one");
+        AnswerPage(atlas, clientId, Page(clientId, 5, 30, null), SourceCursor, deviceId: "device-one");
+        await using var host = await Host(atlas); using var client = Client(host);
+        var path = PathFor(id) + "?severity=CRITICAL&deviceId=device-one";
+        var first = (await client.GetFromJsonAsync<AtlasObservationQueueView>(path))!;
+        first.Status.ShouldBe("READY"); first.Queue!.DeviceId.ShouldBe("device-one"); first.Queue.Total.ShouldBe(30);
+        var next = $"&cursor={Uri.EscapeDataString(first.Queue.NextCursor!)}";
+        var second = (await client.GetFromJsonAsync<AtlasObservationQueueView>(path + next))!;
+        second.Status.ShouldBe("READY"); second.Queue!.DeviceId.ShouldBe("device-one"); second.Queue.Items.Count.ShouldBe(5);
+        var reads = atlas.LogEntries.Count;
+        foreach (var changed in new[] { path.Replace("device-one", "device-two", StringComparison.Ordinal) + next,
+            PathFor(id) + "?severity=CRITICAL" + next })
+            (await client.GetFromJsonAsync<AtlasObservationQueueView>(changed))!.Status.ShouldBe("INVALID_CURSOR");
+        atlas.LogEntries.Count.ShouldBe(reads); atlas.LogEntries.All(l => l.RequestMessage!.Method == "GET").ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_missing_device_stops_at_the_registry_and_malformed_or_repeated_device_values_never_call_Atlas()
+    {
+        var (id, clientId) = await LinkedCustomer(); using var atlas = WireMockServer.Start(); AnswerOverview(atlas, clientId);
+        await using var host = await Host(atlas); using var client = Client(host);
+        var missing = (await client.GetFromJsonAsync<AtlasObservationQueueView>(PathFor(id) + "?deviceId=other-customer-device"))!;
+        missing.Status.ShouldBe("DEVICE_NOT_AVAILABLE"); missing.Queue.ShouldBeNull(); atlas.LogEntries.Count.ShouldBe(1);
+        foreach (var query in new[] { "deviceId=", "deviceId=%20", "deviceId=one&deviceId=two", "deviceId=pc%00bad", "deviceId=" + new string('x', 257) })
+            (await client.GetAsync(PathFor(id) + "?" + query)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        atlas.LogEntries.Count.ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("device-two")]
+    public async Task A_source_ignoring_the_device_filter_cannot_return_an_unrelated_or_unresolved_page(string? entityId)
+    {
+        var (id, clientId) = await LinkedCustomer(); using var atlas = WireMockServer.Start(); AnswerOverview(atlas, clientId);
+        var page = Page(clientId, 1, 1, null); page["items"]![0]!["entityId"] = entityId;
+        AnswerPage(atlas, clientId, page, deviceId: "device-one");
+        await using var host = await Host(atlas); using var client = Client(host);
+        var result = (await client.GetFromJsonAsync<AtlasObservationQueueView>(PathFor(id) + "?severity=CRITICAL&deviceId=device-one"))!;
+        result.Status.ShouldBe("INVALID_RESPONSE"); result.Queue.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Selected_history_keeps_a_stored_entity_without_restoring_its_missing_current_confirmation()
+    {
+        var (id, clientId) = await LinkedCustomer(); using var atlas = WireMockServer.Start();
+        var context = Context(clientId); context["links"] = new JsonArray();
+        AnswerOverview(atlas, clientId, context); AnswerPage(atlas, clientId, Page(clientId, 1, 1, null), deviceId: "device-one");
+        await using var host = await Host(atlas); using var client = Client(host);
+        var result = (await client.GetFromJsonAsync<AtlasObservationQueueView>(PathFor(id) + "?severity=CRITICAL&deviceId=device-one"))!;
+        result.Status.ShouldBe("READY"); result.Queue!.DeviceId.ShouldBe("device-one");
+        var row = result.Queue.Items.Single(); row.DeviceStatus.ShouldBe("UNAVAILABLE"); row.DeviceId.ShouldBeNull();
     }
 
     private sealed class DelayedPage(string clientId, TaskCompletionSource entered, TaskCompletionSource resume) : HttpMessageHandler

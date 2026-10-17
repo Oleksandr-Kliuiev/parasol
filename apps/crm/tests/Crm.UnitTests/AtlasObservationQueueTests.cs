@@ -150,20 +150,24 @@ public sealed class AtlasObservationQueueTests
         service.TryRead(cursor, employee, replaced, Selection, out _, out var expired).ShouldBeFalse(); expired.ShouldBeFalse();
     }
 
-    [Fact]
-    public async Task Upstream_query_is_fixed_typed_and_never_forwards_browser_parameters_or_cookies()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("pc:one/&cursor=forged#fragment")]
+    public async Task Upstream_query_is_fixed_typed_and_never_forwards_browser_parameters_or_cookies(string? deviceId)
     {
         var factory = new Factory((request, _) =>
         {
             request.RequestUri!.AbsolutePath.ShouldBe("/clients/synthetic-client/observations");
-            Uri.UnescapeDataString(request.RequestUri.Query).ShouldBe("?limit=25&status=OPEN,ACKNOWLEDGED&severity=HIGH,CRITICAL&cursor=synthetic_source_cursor");
+            request.RequestUri.Query.ShouldBe("?limit=25&status=OPEN%2CACKNOWLEDGED&severity=HIGH%2CCRITICAL"
+                + (deviceId is null ? "" : $"&deviceId={Uri.EscapeDataString(deviceId)}") + "&cursor=synthetic_source_cursor");
+            request.RequestUri.Fragment.ShouldBeEmpty();
             request.Headers.Authorization!.ToString().ShouldBe("Bearer synthetic-personal-token");
             request.Headers.Contains("Cookie").ShouldBeFalse();
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent("private-error") });
         });
         var client = new AtlasReadClient(Options.Create(new AtlasWorkspaceOptions { BaseUrl = "https://atlas.example.invalid/" }), factory);
         using var result = await client.ObservationsAsync("synthetic-client", new() { Token = "synthetic-personal-token" },
-            new(AtlasQueueSeverity.URGENT, AtlasQueueStatus.ACTIVE), "synthetic_source_cursor", default);
+            new(AtlasQueueSeverity.URGENT, AtlasQueueStatus.ACTIVE, deviceId), "synthetic_source_cursor", default);
         result.Status.ShouldBe("INVALID_CURSOR"); result.Document.ShouldBeNull(); factory.Calls.ShouldBe(1);
     }
 

@@ -28,12 +28,13 @@ public static class CustomerIdentityEndpoints
             })
             .RequirePermission(Permissions.ParasolAtlasRead);
         group.MapGet("/customers/{customerId:guid}/observations", async (Guid customerId, string? severity, string? status,
-                string? cursor, AtlasObservationQueueReader reader, HttpContext http, CancellationToken ct) =>
+                string? cursor, string? deviceId, AtlasObservationQueueReader reader, HttpContext http, CancellationToken ct) =>
             {
                 http.Response.Headers.CacheControl = "no-store";
-                var selection = AtlasObservationSelection.Parse(severity, status);
-                if (selection is null)
-                    return Crm.SharedKernel.Results.Error.Validation("PARASOL_ATLAS_QUEUE_FILTER_INVALID", "Choose a supported severity and status.")
+                var selection = AtlasObservationSelection.Parse(severity, status, deviceId);
+                if (selection is null || http.Request.Query.TryGetValue("deviceId", out var deviceValues)
+                    && (deviceValues.Count != 1 || string.IsNullOrEmpty(deviceValues[0])))
+                    return Crm.SharedKernel.Results.Error.Validation("PARASOL_ATLAS_QUEUE_FILTER_INVALID", "Choose supported observation filters.")
                         .ToProblem();
                 return (await reader.ReadAsync(customerId, selection, cursor, ct)).ToHttpResult(Results.Ok);
             })

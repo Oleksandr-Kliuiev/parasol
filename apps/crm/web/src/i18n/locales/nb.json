@@ -3635,7 +3635,9 @@
       "MONITOR": "Overvåk",
       "INVESTIGATE": "Undersøk",
       "HUMAN_REVIEW": "Manuell gjennomgang"
-    }
+    },
+    "deviceObservations": "Vis observasjoner",
+    "deviceObservationsFor": "Vis observasjoner for {{name}}"
   },
   "parasolQueue": {
     "title": "Observasjonskø og historikk",
@@ -3666,8 +3668,14 @@
       "IDENTITY_CHANGED": "Kundekoblingen ble endret. Start fra første side for å lese den gjeldende koblingen.",
       "INVALID_CURSOR": "Denne sidereferansen er ikke lenger gyldig. Start fra første side.",
       "QUEUE_NOT_SUPPORTED": "Kø og historikk er ikke tilgjengelig i denne Atlas-modusen. Fanen for aktive observasjoner er fortsatt tilgjengelig.",
-      "REQUEST_FAILED": "Køen kunne ikke leses. Ingen tidligere side vises. Oppdater for å prøve igjen."
-    }
+      "REQUEST_FAILED": "Køen kunne ikke leses. Ingen tidligere side vises. Oppdater for å prøve igjen.",
+      "DEVICE_NOT_AVAILABLE": "Enheten finnes ikke lenger i det gjeldende Atlas-registeret. Oppdater kundens arbeidsområde før du velger en enhet på nytt."
+    },
+    "selectedDevice": "Valgt enhet: {{name}}",
+    "selectingDevice": "Leser observasjoner for den valgte enheten.",
+    "deviceHistoryNote": "Historikken bruker den nøyaktige enheten registrert av Atlas. Gjeldende kildebekreftelse vises for hver observasjon. Et tomt resultat bekrefter ikke at enheten eller kildene er feilfrie.",
+    "allDevices": "Alle enheter · behold andre filtre",
+    "backToDevice": "Tilbake til enheten"
   },
   "readiness": {
     "title": "Tilkoblingsoversikt",

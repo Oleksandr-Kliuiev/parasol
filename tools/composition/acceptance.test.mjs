@@ -16,7 +16,7 @@ test('interactive demo always builds, excludes acceptance browser actions and re
 function evidence() {
   return {
     diagnostic: false, cleanup: true, build: { builtInThisRun: true },
-    browser: { expected: 10, unexpected: 0, skipped: 0, flaky: 0 },
+    browser: { expected: 11, unexpected: 0, skipped: 0, flaky: 0 },
     evidence: {
       taskCount: 1, receiptCount: 1, createAuditCount: 1, totalActivityLoggedCount: 2, providerWrites: 0, atlasRequests: 1000,
       bodyIsNull: true, genericSubject: true, sourceTextAbsentFromTask: true, sourceTextAbsentFromAudit: true,
@@ -29,7 +29,7 @@ function evidence() {
 
 test('composition acceptance needs all ten scenarios, a source build and owned cleanup', () => {
   const valid = evidence(); assert.equal(acceptedReport(valid), true);
-  for (const expected of [0, 1, 6, 7, 8, 9, 11]) assert.equal(acceptedReport({ ...valid, browser: { ...valid.browser, expected } }), false);
+  for (const expected of [0, 1, 6, 7, 8, 9, 10, 12]) assert.equal(acceptedReport({ ...valid, browser: { ...valid.browser, expected } }), false);
   for (const key of ['unexpected', 'skipped', 'flaky'])
     assert.equal(acceptedReport({ ...valid, browser: { ...valid.browser, [key]: 1 } }), false);
   assert.equal(acceptedReport({ ...valid, build: { builtInThisRun: false } }), false);
