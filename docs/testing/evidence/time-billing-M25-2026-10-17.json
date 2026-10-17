@@ -1,0 +1,157 @@
+{
+  "milestone": "M25",
+  "localDate": "2026-10-17",
+  "syntheticOnly": true,
+  "crm": {
+    "unit": {
+      "passed": 925,
+      "failed": 0,
+      "skipped": 0
+    },
+    "architecture": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0
+    },
+    "affectedSql": {
+      "passed": 195,
+      "failed": 0,
+      "skipped": 0,
+      "buildExit": 0,
+      "testExit": 0,
+      "cleanup": true,
+      "exactSourceInputs": 845,
+      "onlyFixtureAdapted": true
+    }
+  },
+  "frontend": {
+    "passed": 562,
+    "files": 64,
+    "failed": 0,
+    "skipped": 0,
+    "inputHashesUnchanged": 391,
+    "eslint": true,
+    "appTypescript": true,
+    "e2eTypescript": true,
+    "compositionTypescript": true,
+    "spaBuild": true,
+    "spaKB": 291.7,
+    "spaBudgetKB": 300
+  },
+  "browser": {
+    "expected": 76,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "cleanup": true
+  },
+  "composition": {
+    "accepted": true,
+    "builtInThisRun": true,
+    "passed": 9,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "atlasRequests": 572,
+    "providerWrites": 0,
+    "cleanup": true,
+    "ticketWork": {
+      "timeCount": 1,
+      "matchingTimeCount": 1,
+      "timeCreateAuditCount": 1,
+      "receiptCount": 1,
+      "taskPreserved": true
+    },
+    "totalActivityLoggedCount": 2
+  },
+  "compositionInputProof": {
+    "inputs": 2657,
+    "unchangedDuringInvocation": true,
+    "allInputsStillMatch": true
+  },
+  "previousAtlasStrictEvidence": {
+    "unit": 711,
+    "postgresql": 789,
+    "browser": 90,
+    "inputsStillMatch": 1421,
+    "rerunInM25": false
+  },
+  "protocol": [
+    "Exact current allocations and source organization are validated under ordered Time locks held through Billing save.",
+    "Approved/Exported/Failed/ReconciliationRequired nonexcluded time lines fence Time financial mutation before bank effects.",
+    "Draft, Cancelled and excluded source lines do not freeze unrelated work; cancellation is explicit Finance work.",
+    "Source imports preserve committed work and flag review rather than refunding bank hours.",
+    "Inbox finalization validates allocation revision, never EntryId alone; only its Time schema is written.",
+    "Partial exported Info does not hide excluded Rate: the real supplementary collector retains the remaining 2h.",
+    "Lost Billing commit acknowledgement retains one signature and durable financial admission; failed save releases its read lease.",
+    "Unprovable historical reads return a typed Finance conflict; no automatic ledger rewriting or new financial table."
+  ],
+  "diagnosticsRetained": {
+    "baselineSql": {
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "facts": [
+        {
+          "diagnostic": "source-changed-before-inbox",
+          "Updated": 1,
+          "NeedsReview": 0,
+          "Hours": 3.0,
+          "status": "New",
+          "bankUsed": 0.0
+        },
+        {
+          "diagnostic": "sending-before-inbox",
+          "withdrawalAccepted": true,
+          "status": "New",
+          "bankUsed": 0.0
+        },
+        {
+          "diagnostic": "exported-before-inbox",
+          "withdrawalAccepted": true,
+          "status": "New",
+          "bankUsed": 0.0
+        },
+        {
+          "diagnostic": "old-event-new-approval",
+          "ApprovalCount": 2,
+          "Hours": 3.0,
+          "status": "Invoiced"
+        }
+      ],
+      "cleanup": true
+    },
+    "firstPrototype": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "cleanup": true
+    },
+    "initialAdmission": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "cleanup": true
+    },
+    "initialCompile": "Existing constructor adapters required the new guard; arguments were supplied without changing permission/ownership assertions.",
+    "firstBroadObservation": "Owned ps/inspect failed; terminal testExit was not retained. No acceptance. Launcher now confirms disappearance and retains redacted test output even on observation failure.",
+    "secondBroadSql": {
+      "passed": 194,
+      "total": 195,
+      "skipped": 0,
+      "correction": "Another class drained the deliberately delayed event; Time was already Invoiced and the bank still used 2h. Delayed-delivery tests now use the existing nonparallel collection and explicitly assert Approved before mutation. Original consistency assertions remain."
+    }
+  },
+  "limits": [
+    "195 is affected financial SQL coverage, not the complete CRM integration suite.",
+    "This cooperative protocol requires one consistent Web/Worker cohort; do not mix pre-M25 writers.",
+    "Do not hold source read admission across a provider HTTP call or run it inside an inbox/retrying command.",
+    "Unknown pre-M24/M25 financial history requires Finance reconciliation; no automatic historical correction.",
+    "Arbitrary DBA SQL and offline restore require stopped writers and consistency verification.",
+    "Working providers, Entra and Hostinger VPS are not verified by local synthetic tests."
+  ],
+  "published": false,
+  "deployed": false
+}

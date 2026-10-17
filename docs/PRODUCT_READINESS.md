@@ -9,12 +9,13 @@
 Завершение очередного M-этапа не означает завершение всей цели. Отсутствие ошибок
 в синтетических тестах также не доказывает совместимость рабочего аккаунта провайдера.
 
-Текущий полный composition после M24 прошёл 9/9 с новой сборкой и очисткой.
-CRM browser — 73/73, frontend — 562/562, CRM unit — 919/919, architecture — 94/94,
-затронутые SQL integration — 118/118. [Свидетельство M24](testing/evidence/time-bank-M24-2026-10-17.json)
-фиксирует проверенный объём: это не полный SQL-набор CRM. M23 защищает границу месяца,
-M24 фиксирует изменения Time/HourBank в одной локальной SQL-транзакции. До финансового
-пилота остаются сверка исторических расхождений и асинхронная граница export → invoiced.
+Текущий полный composition после M25 прошёл 9/9 с новой сборкой и очисткой.
+CRM browser — 76/76, frontend — 562/562, CRM unit — 925/925, architecture — 94/94,
+затронутые SQL integration — 195/195. [Свидетельство M25](testing/evidence/time-billing-M25-2026-10-17.json)
+фиксирует проверенный объём: это не полный SQL-набор CRM. M23 защищает месяц, M24 даёт
+общий commit Time/HourBank, M25 защищает точную версию часов в утверждённом Billing и
+асинхронную финализацию. До финансового пилота остаются историческая сверка и отдельная
+приёмка рабочих Atera/PowerOffice; синтетические данные их не заменяют.
 
 ## Ежедневный сценарий
 
@@ -36,7 +37,7 @@ M24 фиксирует изменения Time/HourBank в одной локал
 | Изменение задачи сохраняет срок и чужую правку | [M16](migration/M16-TASK-EDITING.md): точный момент и исходный ETag редактора; [M20](migration/M20-ACTIVITY-STATUS-CONCURRENCY.md) добавляет displayed If-Match для complete/reopen, pending/conflict/focus guards; SQL 38/38, полный frontend 484/484, browser 55/55, actual composition 8/8 | Пилот с несколькими сотрудниками и измерение времени |
 | Личный список не скрывает ошибку под пустым результатом | [M17](migration/M17-PERSONAL-TASK-RELIABILITY.md): error/refresh/scope/paging/notification guards; [M19](migration/M19-EXACT-ACTIVITY-NAVIGATION.md) точно открывает одну запись, позволяет обновить её и возвращает весь timeline; actual handoff с уже открытым получателем прошёл | Пилот с тремя сотрудниками и измерение времени рабочего сценария |
 | Ежедневный обзор доступных клиентов | [M14](migration/M14-ATLAS-ATTENTION.md): личные клиенты, HIGH/CRITICAL preview, честный неполный охват и свежесть; свежий M12 диалог проверяет уже назначенную работу; current composition проходит | Назначенные задачи остаются в «Моих задачах», глобальный фильтр без исполнителя пока не заявлен |
-| Сервис, время и финансовые процессы используют имеющиеся модули | [M21](migration/M21-SAVED-SERVICE-DATA.md): достоверные сохранённые чтения; [M22](migration/M22-TASK-TICKET-TIME.md): подтверждённый owner заявки, Task→ticket→собственные часы, постоянная квитанция повтора; реальная локальная цепочка 9/9 | [M23](migration/M23-TIME-PERIOD-ADMISSION.md) закрыл гонку периода и лимита SLA; [M24](migration/M24-TIME-BANK-ATOMICITY.md) объединил Time/HourBank commit; далее — историческая сверка, export/invoiced и рабочие Atera/PowerOffice |
+| Сервис, время и финансовые процессы используют имеющиеся модули | [M21](migration/M21-SAVED-SERVICE-DATA.md): достоверные сохранённые чтения; [M22](migration/M22-TASK-TICKET-TIME.md): подтверждённый owner заявки, Task→ticket→собственные часы, постоянная квитанция повтора; реальная локальная цепочка 9/9 | [M23](migration/M23-TIME-PERIOD-ADMISSION.md) закрыл гонку периода и лимита SLA; [M24](migration/M24-TIME-BANK-ATOMICITY.md) объединил Time/HourBank commit; [M25](migration/M25-TIME-BILLING-ADMISSION.md) защищает export/invoiced и частичные allocations; далее — историческая сверка и рабочие Atera/PowerOffice |
 | Atera-заявка не экспортирует неподходящий контакт | [M18](migration/M18-SERVICE-CONTACT-SAFETY.md): admission и перед новой отправкой, exact owner/link fences, исходный журнал неопределённости; SQL 65/65 плюс последние affected 7/7 | Рабочий аккаунт/схема и eventual consistency остаются внешней проверкой |
 | Подключения показывают свою фактическую готовность | [M15](migration/M15-LOCAL-READINESS.md): read-only `/connections`, личная конфигурация Atlas, Web flags, сохранённые успехи/счётчики и локальные mappings; connectivity NOT_CHECKED; composition проходит | Реальная проверка аккаунтов отдельно |
 | Надёжное локальное воспроизведение | [M13](testing/COMPOSITION.md): текущий полный запуск 9/9 со сборкой, точная SQL/privacy-проверка, restricted roles и очистка; Atlas unit 711/711, PostgreSQL 789/789 и browser 90/90 | GitHub CI после будущего разрешения на публикацию |

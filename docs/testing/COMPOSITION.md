@@ -260,9 +260,9 @@ hashes are recorded separately and verified by current static/frontend and 70/70
 checks. Both earlier 67/70 browser reports remain retained, first for opening the customer
 picker and then for the required Date label. Neither is accepted.
 
-## Current M24 local verification, 17 October 2026
+## M24 local verification, 17 October 2026
 
-The [current source-build run](evidence/composition-current-2026-10-17.json) passes 9/9
+The [M24 source-build run](evidence/composition-M24-2026-10-17.json) passes 9/9
 with Time/bank atomic commands in the compiled application. The same actual Task →
 ticket → own time chain, restricted roles, exact durable/privacy facts and cleanup pass;
 571 forwarded Atlas requests, zero mutating requests. No skips, retries or flaky cases.
@@ -283,3 +283,24 @@ withdrawal rollback, old receipt refusal, exact transaction ownership and retry 
 These are affected SQL tests, not the complete CRM integration suite. Historical Finance
 reconciliation and asynchronous export/invoiced admission remain required before a
 financial pilot; real providers, Entra and VPS remain separate. Nothing was published.
+
+## Current M25 local verification, 17 October 2026
+
+The [current source-build run](evidence/composition-current-2026-10-17.json) passes 9/9
+with exact Time/Billing admission in the compiled application. Restricted roles, exact
+Task/ticket/time/privacy facts and cleanup pass: 572 Atlas requests, zero mutating requests.
+All 2657 source/build inputs still match their before/after hashes.
+
+The [M25 summary](evidence/time-billing-M25-2026-10-17.json) records 925 unit, 94 architecture,
+195 affected SQL, 562 frontend and 76 CRM browser cases, all passing without exceptions.
+The new real-API UI case proves a clear committed-billing refusal, Finance cancellation
+with a reason and successful bank refund in Chromium/Firefox/WebKit. Existing 73 cases
+remain included. Static gates and 291.7/300 KB pass; 845 backend/build and 391 web inputs
+match. Atlas strict 711/789/90 is reused against 1421 unchanged inputs, not rerun.
+
+The four original red SQL assertions pass unchanged in substance. Extended coverage
+proves save/rollback/lost-ack ownership, cancellation and the actual supplementary
+collector retaining excluded Rate after exported Info. Delayed-delivery tests are isolated
+from other classes' shared outbox drainers; the 194/195 diagnostic remains retained.
+Historical financial reconciliation, live accounts and VPS acceptance remain separate.
+Nothing was published or deployed.
