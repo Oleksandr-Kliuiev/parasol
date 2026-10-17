@@ -286,7 +286,7 @@ financial pilot; real providers, Entra and VPS remain separate. Nothing was publ
 
 ## Current M25 local verification, 17 October 2026
 
-The [current source-build run](evidence/composition-current-2026-10-17.json) passes 9/9
+The [M25 full-build run](evidence/composition-M25-2026-10-17.json) passes 9/9
 with exact Time/Billing admission in the compiled application. Restricted roles, exact
 Task/ticket/time/privacy facts and cleanup pass: 572 Atlas requests, zero mutating requests.
 All 2657 source/build inputs still match their before/after hashes.
@@ -308,7 +308,7 @@ Nothing was published or deployed.
 
 ## M26 local verification, 17 October 2026
 
-The [current full-build run](evidence/composition-current-2026-10-17.json),
+The [M26 full-build run](evidence/composition-M26-2026-10-17.json),
 `cacf315c9c43`, passes all nine scenarios with exact durable/privacy evidence,
 572 Atlas requests, zero mutating Atlas requests, restricted runtime roles and confirmed
 cleanup. Full before/after repository snapshots and all 2,669 accepted backend/web/Atlas
@@ -330,7 +330,7 @@ Nothing was published or deployed.
 
 ## M27 local verification, 17 October 2026
 
-The [current full-build run](evidence/composition-current-2026-10-17.json),
+The [M27 full-build run](evidence/composition-M27-2026-10-17.json),
 `714cd28c1d20`, passes 9/9 with zero skips/retries/flaky cases and confirmed cleanup.
 The real recipient opens the saved-ticket association directly from its My Day task at
 390px in both themes. Its real GET succeeds, the URL stays unchanged, Escape restores
@@ -349,7 +349,7 @@ Nothing was published, deployed or connected to a working provider account.
 
 ## M28 local demo and workflow verification, 17 October 2026
 
-The [current full-build run](evidence/composition-current-2026-10-17.json),
+The [M28 full-build run](evidence/composition-M28-2026-10-17.json),
 `f5b4e79986ca`, passes all nine scenarios with zero skips/retries/flaky cases,
 exact durable/privacy checks, restricted runtimes and confirmed cleanup. M28 adds an
 onReady lifecycle to the shared launcher for a bounded [human demo](LOCAL-DEMO.md).
@@ -372,3 +372,25 @@ Atlas reuse prior exact-input acceptance. No new 78-case CRM regression run is c
 The M27 report is [archived byte for byte](evidence/composition-M27-2026-10-17.json).
 Human time savings, staff feedback and working-account/VPS acceptance remain open.
 Nothing was published or deployed.
+
+
+## M30 workspace same-pair fence, 17 October 2026
+
+The [current source-build run](evidence/composition-current-2026-10-17.json),
+`211f41d30ea5`, passes 9/9 with zero skipped/unexpected/flaky cases, exact durable/privacy
+facts, restricted runtimes and confirmed cleanup. It forwards 564 Atlas requests and
+zero mutating requests. All 2698 application/tool inputs match before/after.
+The previous M28 report is [archived byte for byte](evidence/composition-M28-2026-10-17.json).
+
+M30 separately proves the workspace's replaced-same-pair race on real SQL with a controlled
+outbound handler. Before the fix, one of 23 workspace cases returned READY instead of
+IDENTITY_CHANGED; final affected SQL passes 80/80, including unlink/same-pair/different-pair/
+unchanged and explicit fresh GET. Frontend checks old registry removal and explicit Refresh.
+Composition is independent actual joined-app evidence, not a claim that it orchestrates
+that exact delayed-response race. See [M30 evidence](evidence/workspace-link-M30-2026-10-17.json).
+
+Current separate CRM unit 939, architecture 94, frontend 581 and tooling 22 pass, as do
+all static/build gates and the 291.8/300 KB budget. Atlas strict 711/789/90 is reused with
+1421 unchanged inputs; M26's wider 78 browser/208 financial SQL and M29's native recovery
+are not new runs here. Human convenience/time savings and live-account/VPS acceptance
+remain unproven. Nothing was published, deployed or connected to a working account.
