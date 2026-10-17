@@ -216,6 +216,7 @@
     "EndUser": "End user"
   },
   "myDay": {
+    "sectionsLabel": "My day sections",
     "greeting": "Hello, {{name}}",
     "subtitle": "Your organizations and what needs attention.",
     "myOrganizations": "My organizations",

@@ -21,6 +21,7 @@ import { useOpportunities } from '../sales/api';
 import { useLicensingAttention } from '../licensing/api';
 import { useInvoices, useRuns } from '../billing/api';
 import { AtlasAttentionPanel } from '../parasol/AtlasAttentionPanel';
+import { MyDaySection, MyDaySectionLinks } from './MyDaySections';
 
 const useStyles = makeStyles({
   grid: {
@@ -55,6 +56,9 @@ export function MyDayPage() {
   const canCreate = useCan(Permissions.customersWrite);
   const canContracts = useCan(Permissions.contractsRead);
   const canActivities = useCan(Permissions.activitiesRead);
+  const canCustomers = useCan(Permissions.customersRead);
+  const canAtlas = useCan(Permissions.parasolAtlasRead);
+  const canAttention = canCustomers && canAtlas;
   const canSales = useCan(Permissions.salesRead);
   const canLicensing = useCan(Permissions.licensingRead);
   const canBilling = useCan(Permissions.billingRead);
@@ -66,10 +70,11 @@ export function MyDayPage() {
   return (
     <>
       <PageHeader title={t('myDay.greeting', { name: firstName })} documentTitle={t('nav.myDay')} subtitle={t('myDay.subtitle')} />
+      <MyDaySectionLinks tasks={canActivities} attention={canAttention} />
       <div className={styles.grid}>
         <div className={styles.side}>
-          <AtlasAttentionPanel />
-          {canActivities && <MyTasksPanel />}
+          {canAttention && <MyDaySection name="attention"><AtlasAttentionPanel /></MyDaySection>}
+          {canActivities && <MyDaySection name="tasks"><MyTasksPanel /></MyDaySection>}
           {canSales && <StaleDealsPanel />}
           {canLicensing && <LicensingAttentionPanel />}
           {canBilling && <BillingPanel />}

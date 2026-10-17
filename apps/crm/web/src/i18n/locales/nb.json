@@ -216,6 +216,7 @@
     "EndUser": "Sluttbruker"
   },
   "myDay": {
+    "sectionsLabel": "Deler av Min dag",
     "greeting": "Hei, {{name}}",
     "subtitle": "Dine organisasjoner og det som trenger oppmerksomhet.",
     "myOrganizations": "Mine organisasjoner",

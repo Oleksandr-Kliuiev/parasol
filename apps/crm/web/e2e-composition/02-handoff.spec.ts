@@ -29,6 +29,9 @@ test('two genuine employee handoffs converge on one private Task, which personal
   const technician = await staffContext(browser, 'Crm.Technician');
   try {
     await technician.page.goto('/');
+    const sections = technician.page.getByRole('navigation', { name: 'My day sections', exact: true });
+    await sections.getByRole('link', { name: 'My tasks', exact: true }).click();
+    await expect(technician.page.locator('#my-day-tasks')).toBeFocused();
     const myTasks = technician.page.getByRole('region', { name: 'My tasks', exact: true });
     const refreshTasks = myTasks.getByRole('button', { name: 'Refresh my tasks', exact: true });
     await expect(refreshTasks).toBeEnabled();
