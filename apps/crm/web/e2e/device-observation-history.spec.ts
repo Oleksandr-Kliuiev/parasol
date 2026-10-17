@@ -31,6 +31,7 @@ test('device investigation preserves exact scope, keyboard return and other filt
   };
   await installFixtures(page);
   const capture = async (state: string, width: number, colorScheme: string, target = page) => {
+    await expect(target.locator('html')).toHaveAttribute('lang', state.startsWith('locale-') ? state.slice(7, 9) : 'en');
     await target.evaluate(async () => { await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))); });
     const a11y = await new AxeBuilder({ page: target }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('[data-tabster-dummy]').analyze();
     expect(a11y.violations.filter(v => v.impact === 'serious' || v.impact === 'critical').map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) }))).toEqual([]);
@@ -55,6 +56,9 @@ test('device investigation preserves exact scope, keyboard return and other filt
     await expect(action(), `Keyboard path from device search: ${tabPath.join(' → ')}`).toBeFocused(); await page.keyboard.press('Enter');
     const queue = panel.getByRole('region', { name: 'Observation queue and history', exact: true });
     await expect(queue.getByText('device-40 observation queue-1', { exact: true })).toBeVisible();
+    const firstTitle = queue.getByText('device-40 observation queue-1', { exact: true });
+    await expect(firstTitle, JSON.stringify({ viewport: page.viewportSize(), firstTitle: await firstTitle.boundingBox() })).toBeInViewport({ ratio: 1 });
+    await expect(queue.getByText(/Sources to review: 2/)).toBeVisible();
     const queueHeading = queue.getByRole('heading', { name: 'Observation queue and history', exact: true });
     await expect(queueHeading).toBeInViewport({ ratio: 1 });
     expect(await queueHeading.evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(53);
@@ -75,6 +79,20 @@ test('device investigation preserves exact scope, keyboard return and other filt
     await queue.getByLabel('Queue state', { exact: true }).selectOption('RESOLVED');
     await expect(queue.getByText('device-40 observation queue-1', { exact: true })).toBeVisible();
     expect(requests.at(-1)!.searchParams.get('cursor')).toBeNull(); await capture('history', width, colorScheme);
+    const beforeDetails = requests.length;
+    const readDetails = queue.locator('summary').filter({ hasText: 'Data details' });
+    await readDetails.focus(); await expect(readDetails).toBeFocused(); await page.keyboard.press('Enter');
+    await expect(queue.getByText(/Counts reflect this page request/)).toBeVisible();
+    await expect(queue.getByText('Outdated snapshot', { exact: true })).toBeVisible();
+    await capture('read-details', width, colorScheme);
+    await page.keyboard.press('Enter'); await expect(queue.getByText(/Counts reflect this page request/)).not.toBeVisible();
+    const help = queue.locator('summary').filter({ hasText: 'About this queue' });
+    await help.focus(); await expect(help).toBeFocused(); await page.keyboard.press('Enter');
+    await expect(queue.getByText(/Search covers this page only/)).toBeVisible();
+    await expect(queue.getByText(/This history uses the exact device/)).toBeVisible();
+    await capture('queue-help', width, colorScheme);
+    await page.keyboard.press('Enter');
+    expect(requests.length, 'Reading saved counts, source details and help must not issue another request').toBe(beforeDetails);
     await queue.getByRole('button', { name: 'All devices · keep other filters', exact: true }).click();
     await expect(queue.getByText('all observation queue-1', { exact: true })).toBeVisible();
     await expect(queue.getByLabel('Queue state', { exact: true })).toHaveValue('RESOLVED');

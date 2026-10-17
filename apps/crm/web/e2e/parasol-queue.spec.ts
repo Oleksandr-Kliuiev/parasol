@@ -39,7 +39,7 @@ test('full queue pages and server filters reach observations beyond the overview
   expect(requests).toHaveLength(0);
   await panel.getByRole('button', { name: 'Open full observation queue' }).click();
   const queue = panel.getByRole('region', { name: 'Observation queue and history' });
-  await expect(queue.getByText('Matching observations across Atlas: 126')).toBeVisible();
+  await expect(queue.getByText('Matches across pages: 126')).toBeVisible();
   await expect(queue.getByRole('listitem')).toHaveCount(25);
   for (let i = 1; i <= 5; i++) {
     await queue.getByRole('button', { name: 'Next page', exact: true }).click();

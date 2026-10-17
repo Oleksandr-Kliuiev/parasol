@@ -238,7 +238,6 @@ export function AppShell() {
     // Save first: switching the UI before the request completes lets a quick reload lose the choice.
     await api.put('/api/v1/identity/me/preferences', { language: code });
     await applyLanguage(code as LanguageCode);
-    document.documentElement.lang = code;
     await queryClient.invalidateQueries({ queryKey: currentUserQueryKey });
   };
 

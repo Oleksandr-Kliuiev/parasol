@@ -43,16 +43,16 @@ test('a device opens its complete actual history, keeps source uncertainty and c
     expect(changed.status).toBe('INVALID_CURSOR'); expect(changed.queue).toBeNull();
     await queue.getByLabel('Queue state', { exact: true }).selectOption('RESOLVED');
     await expect(queue.getByText(f.target.resolvedSummary, { exact: true })).toBeVisible();
-    await expect(queue.getByText('Matching observations across Atlas: 1', { exact: true })).toBeVisible();
+    await expect(queue.getByText('Matches across pages: 1', { exact: true })).toBeVisible();
     await queue.getByRole('button', { name: 'Back to device', exact: true }).click();
     await expect(action(f.target.confirmedDeviceId)).toBeFocused();
     await action(f.target.unconfirmedDeviceId).click();
     await expect(queue.getByText(f.target.unconfirmedSummary, { exact: true })).toBeVisible();
     await expect(queue.getByText('No confirmed device for this source in the current registry', { exact: true })).toBeVisible();
-    await expect(queue.getByText('Matching observations across Atlas: 1', { exact: true })).toBeVisible();
+    await expect(queue.getByText('Matches across pages: 1', { exact: true })).toBeVisible();
     await queue.getByRole('button', { name: 'All devices · keep other filters', exact: true }).click();
     await expect(queue.getByRole('heading', { name: 'Observation queue and history', exact: true })).toBeFocused();
-    await expect(queue.getByText('Matching observations across Atlas: 126', { exact: true })).toBeVisible();
+    await expect(queue.getByText('Matches across pages: 126', { exact: true })).toBeVisible();
     const unavailable = await json(await page.request.get(`${path}?deviceId=${encodeURIComponent(f.clients[1]!.deviceIds[0]!)}`), 'Foreign device admission in the current customer') as { status: string; queue: unknown };
     expect(unavailable.status).toBe('DEVICE_NOT_AVAILABLE'); expect(unavailable.queue).toBeNull();
   } finally { await staff.context.close(); }

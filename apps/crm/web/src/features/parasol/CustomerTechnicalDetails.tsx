@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useId, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Button, Field, Input, MessageBar, MessageBarBody, Select, Spinner, Tab, TabList, Text } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { severities, type WorkspaceSummary } from './workspaceContract';
@@ -22,12 +22,22 @@ export function CustomerTechnicalDetails({ customerId, summary, contextChecking,
   const [returnDevice, setReturnDevice] = useState<string | null>(null);
   const deviceFocused = useCallback(() => setReturnDevice(null), []);
   const queueTab = useRef<HTMLButtonElement>(null);
+  const queueFocusRequested = useRef(false);
+  useLayoutEffect(() => {
+    if (active !== 'queue' || !queueFocusRequested.current) return;
+    queueFocusRequested.current = false;
+    queueTab.current?.focus({ preventScroll: true });
+    queueTab.current?.scrollIntoView({ block: 'start' });
+  }, [active]);
+  const openQueue = (id: string | null) => {
+    queueFocusRequested.current = true; setDeviceId(id); setActive('queue');
+  };
   const id = useId();
   return <>
     <TabList className={styles.tabs} aria-label={t('parasolDetails.lists')} selectedValue={active} onTabSelect={(_, d) => setActive(String(d.value))}>
       <Tab disabled={!summary} id={`${id}-observations-tab`} aria-controls={`${id}-observations`} value="observations">{t('parasolDetails.observations')}</Tab>
       <Tab disabled={!summary} id={`${id}-devices-tab`} aria-controls={`${id}-devices`} value="devices">{t('parasolDetails.devices')}</Tab>
-      <Tab disabled={!summary} ref={queueTab} id={`${id}-queue-tab`} aria-controls={`${id}-queue`} value="queue">{t('parasolQueue.title')}</Tab>
+      <Tab disabled={!summary} className={styles.queueEntry} ref={queueTab} id={`${id}-queue-tab`} aria-controls={`${id}-queue`} value="queue">{t('parasolQueue.title')}</Tab>
       <Tab id={`${id}-m365-tab`} aria-controls={`${id}-m365`} value="m365">{t('parasolM365.title')}</Tab>
     </TabList>
     <div role="tabpanel" id={`${id}-${active}`} aria-labelledby={`${id}-${active}-tab`}>
@@ -37,12 +47,8 @@ export function CustomerTechnicalDetails({ customerId, summary, contextChecking,
         : active === 'queue' ? <ObservationQueue customerId={customerId} onSourceInvalidated={onSourceInvalidated} deviceId={deviceId}
           onClearDevice={() => setDeviceId(null)} onReturnToDevice={() => { setReturnDevice(deviceId); setActive('devices'); }} />
         : active === 'devices' ? <AtlasDeviceList devices={summary.devices} selection={deviceList} onSelectionChange={setDeviceList}
-          focusDeviceId={returnDevice} onFocused={deviceFocused} onOpenObservations={id => {
-            setDeviceId(id); setActive('queue'); queueTab.current?.focus();
-          }} /> : <ObservationList customerId={customerId} onSourceInvalidated={onSourceInvalidated} summary={summary} openQueue={() => {
-          setDeviceId(null);
-          setActive('queue'); queueTab.current?.focus();
-        }} />}
+          focusDeviceId={returnDevice} onFocused={deviceFocused} onOpenObservations={openQueue} />
+        : <ObservationList customerId={customerId} onSourceInvalidated={onSourceInvalidated} summary={summary} openQueue={() => openQueue(null)} />}
     </div>
   </>;
 }

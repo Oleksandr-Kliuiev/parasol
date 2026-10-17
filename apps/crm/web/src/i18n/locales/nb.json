@@ -3647,7 +3647,7 @@
     "statusFilter": "Tilstand i køen",
     "refresh": "Oppdater kø",
     "reset": "Nullstill filtre",
-    "total": "Observasjoner som samsvarer i Atlas: {{total}}",
+    "total": "Treff på alle sider: {{total}}",
     "countNote": "Antallene gjelder denne sideforespørselen og kan endres når Atlas oppdateres. Oppdatering starter på første side, slik at nye observasjoner kan vises.",
     "retrievedAt": "Kø lest {{time}}",
     "sources": "Kildedekning og aktualitet for denne lesingen",
@@ -3675,7 +3675,14 @@
     "selectingDevice": "Leser observasjoner for den valgte enheten.",
     "deviceHistoryNote": "Historikken bruker den nøyaktige enheten registrert av Atlas. Gjeldende kildebekreftelse vises for hver observasjon. Et tomt resultat bekrefter ikke at enheten eller kildene er feilfrie.",
     "allDevices": "Alle enheter · behold andre filtre",
-    "backToDevice": "Tilbake til enheten"
+    "backToDevice": "Tilbake til enheten",
+    "savedNote": "Lagrede Atlas-observasjoner; kildene kan være utdaterte.",
+    "readDetails": "Datadetaljer",
+    "reviewNeeded": "Kilder å kontrollere: {{count}}",
+    "about": "Om denne køen",
+    "pageMatches": "Denne siden: {{matched}} av {{loaded}} vises",
+    "scrollList": "Rull i listen for flere poster",
+    "missingFreshness": "Tidspunkt for øyeblikksbildet eller siste vellykkede oppdatering mangler."
   },
   "readiness": {
     "title": "Tilkoblingsoversikt",

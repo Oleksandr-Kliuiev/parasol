@@ -3647,7 +3647,7 @@
     "statusFilter": "Queue state",
     "refresh": "Refresh queue",
     "reset": "Reset filters",
-    "total": "Matching observations across Atlas: {{total}}",
+    "total": "Matches across pages: {{total}}",
     "countNote": "Counts reflect this page request and can change as Atlas updates. Refresh restarts at the first page so newly added observations can be seen.",
     "retrievedAt": "Queue read at {{time}}",
     "sources": "Source coverage and freshness for this read",
@@ -3675,7 +3675,14 @@
     "selectingDevice": "Reading observations for the selected device.",
     "deviceHistoryNote": "This history uses the exact device recorded by Atlas. Current source confirmation is shown for each observation. An empty result does not prove the device or sources are healthy.",
     "allDevices": "All devices · keep other filters",
-    "backToDevice": "Back to device"
+    "backToDevice": "Back to device",
+    "savedNote": "Saved Atlas observations; source freshness varies.",
+    "readDetails": "Data details",
+    "reviewNeeded": "Sources to review: {{count}}",
+    "about": "About this queue",
+    "pageMatches": "This page: {{matched}} of {{loaded}} shown",
+    "scrollList": "Scroll the list for more records",
+    "missingFreshness": "Snapshot or last-success time is unavailable."
   },
   "readiness": {
     "title": "Connection readiness",

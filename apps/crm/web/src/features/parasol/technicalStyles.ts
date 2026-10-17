@@ -2,8 +2,15 @@ import { makeStyles, tokens } from '@fluentui/react-components';
 
 export const useTechnicalStyles = makeStyles({
   tabs: { flexWrap: 'wrap', marginTop: tokens.spacingVerticalL },
+  queueEntry: { scrollMarginBlockStart: '64px' },
+  queueSection: { marginTop: tokens.spacingVerticalM },
   section: { marginTop: tokens.spacingVerticalXXL, minWidth: 0, overflowWrap: 'anywhere' },
   identifier: { fontFamily: 'inherit', fontSize: 'inherit' },
+  queueFacts: { display: 'grid', gap: tokens.spacingVerticalXS, marginBlock: tokens.spacingVerticalS },
+  queueTools: { gap: tokens.spacingHorizontalS, marginBlock: tokens.spacingVerticalS },
+  queueFooter: { gap: tokens.spacingHorizontalS, marginBlock: tokens.spacingVerticalS },
+  detailsSummary: { cursor: 'pointer', minHeight: '32px', paddingBlock: tokens.spacingVerticalXS,
+    ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '4px' } },
   heading: { fontSize: tokens.fontSizeBase400, marginBlock: tokens.spacingVerticalM, scrollMarginBlockStart: '64px',
     ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '4px' } },
   tools: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM,

@@ -43,6 +43,7 @@ async function loadResources(code: LanguageCode): Promise<void> {
 export async function changeLanguage(code: LanguageCode): Promise<void> {
   await loadResources(code);
   await i18n.changeLanguage(code);
+  document.documentElement.lang = code;
 }
 
 export async function initI18n(preferred?: string | null): Promise<void> {
@@ -57,6 +58,7 @@ export async function initI18n(preferred?: string | null): Promise<void> {
     returnNull: false,
   });
   await loadResources(language);
+  document.documentElement.lang = language;
 }
 
 export default i18n;

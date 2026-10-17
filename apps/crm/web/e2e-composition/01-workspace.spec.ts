@@ -96,7 +96,7 @@ test('actual customer cards retain source provenance, exact device links and six
       return result.queue;
     };
     let current = await readQueuePage(null, () => panel.getByRole('tab', { name: 'Observation queue and history', exact: true }).click());
-    await expect(queue.getByText('Matching observations across Atlas: 126', { exact: true })).toBeVisible();
+    await expect(queue.getByText('Matches across pages: 126', { exact: true })).toBeVisible();
     const observations: { id: string; severity: string }[] = [];
     for (let number = 1; number <= 6; number++) {
       if (number > 1) {
@@ -120,7 +120,7 @@ test('actual customer cards retain source provenance, exact device links and six
     await queue.getByRole('button', { name: 'Previous page', exact: true }).click();
     await expect(queue.getByText('Page 5 · 25 records loaded', { exact: true })).toBeVisible();
     await queue.getByLabel('Queue severity', { exact: true }).selectOption('LOW');
-    await expect(queue.getByText('Matching observations across Atlas: 1', { exact: true })).toBeVisible();
+    await expect(queue.getByText('Matches across pages: 1', { exact: true })).toBeVisible();
     await expect(queue.getByText('Page 1 · 1 records loaded', { exact: true })).toBeVisible();
     await panel.screenshot({ path: testInfo.outputPath('unified-customer-observation-synthetic.png') });
     await queue.getByRole('button', { name: 'Reset filters', exact: true }).click();

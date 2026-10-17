@@ -58,17 +58,17 @@ test('selected activity and return to the customer timeline work with a keyboard
   const reopen = timeline.getByRole('button', { name: `Reopen ${subject}`, exact: true });
   await expect(reopen).toBeFocused();
   await page.keyboard.press('Enter'); await expect(complete).toBeFocused();
-  // Check the confirmation while stable, then the final page after its timed dismissal.
-  // An Axe scan must not race a toast's automatic fade halfway through collecting colours.
+  // Wait for this receipt's entrance only. The finite timer animation belongs to its
+  // child; waiting for every page animation would wait for dismissal before measuring.
   const receipt = toast(page, 'Reopened');
-  await expect(receipt).toBeVisible(); await receipt.hover();
-  await page.waitForLoadState('networkidle');
-  await page.evaluate(async () => {
-    await Promise.all(document.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity)
+  await expect(receipt).toBeVisible();
+  const receiptContainer = page.locator('.fui-ToastContainer').filter({ has: receipt });
+  await receiptContainer.evaluate(async container => {
+    await Promise.all(container.getAnimations().filter(animation => animation.effect?.getTiming().iterations !== Infinity)
       .map(animation => animation.finished.catch(() => undefined)));
   });
+  await expect(receiptContainer).toHaveCSS('opacity', '1');
   expect((await computedTextContrast(receipt)).ratio).toBeGreaterThanOrEqual(4.5);
-  await page.mouse.move(0, 0);
   await expect(page.locator('.fui-ToastTitle')).toHaveCount(0);
   const statusResult = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .exclude('[data-tabster-dummy]').analyze();

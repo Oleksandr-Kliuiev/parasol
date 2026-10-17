@@ -4,8 +4,13 @@
  * modalizer on its timer. Model only the visibility inputs its real focus finder needs.
  * This is not layout measurement; browser tests remain authoritative for geometry/accessibility.
  * No aria-hidden, disabled, focus, timers or role-query behavior is overridden here.
+ * Native scrolling is absent in jsdom; its no-op below supplies the API, not geometry.
  */
 export function installSyntheticLayout() {
+  if (!HTMLElement.prototype.scrollIntoView) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true, writable: true,
+    value() { /* Native scrolling and viewport positions are checked in Playwright. */ },
+  });
   const originalRect = HTMLElement.prototype.getBoundingClientRect;
   const styleOf = (element: Element) => element.ownerDocument.defaultView?.getComputedStyle(element);
   const hasBox = (element: Element) => {

@@ -40,11 +40,11 @@ describe('the Atlas observation queue', () => {
       ? atlasQueue({ offset: 25, count: 2, nextCursor: null }) : atlasQueue()));
     vi.stubGlobal('fetch', fetch); renderQueue();
     await screen.findByText('Queue record 1'); const region = queueRegion();
-    expect(region.getByText('Matching observations across Atlas: 27')).toBeVisible();
+    expect(region.getByText('Matches across pages: 27')).toBeVisible();
     expect(region.getByText('Page 1 · 25 records loaded')).toBeVisible();
     expect(region.getAllByRole('listitem')).toHaveLength(27); // 25 observations plus two collapsed provenance rows.
     await userEvent.type(region.getByRole('searchbox'), 'record 1');
-    expect(region.getByText('Matching observations: 11 of 25 loaded')).toBeVisible();
+    expect(region.getByText('This page: 11 of 25 shown')).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
     await userEvent.click(region.getByRole('button', { name: 'Next page' }));
     expect(await screen.findByText('Queue record 26')).toBeVisible();
@@ -56,8 +56,11 @@ describe('the Atlas observation queue', () => {
     await userEvent.click(region.getByRole('button', { name: 'Previous page' }));
     expect(await screen.findByText('Queue record 1')).toBeVisible(); expect(fetch).toHaveBeenCalledTimes(3);
     expect(region.getByRole('button', { name: 'First page' })).toBeDisabled();
+    expect(region.getByText('Data details')).toBeVisible();
+    await userEvent.click(region.getByText('Data details'));
     expect(region.getByText('Source coverage and freshness for this read')).toBeVisible();
     expect(region.getByText(/Counts reflect this page request and can change/)).toBeVisible();
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it('resets cursor and search when server filters change, includes terminal history and retains urgency', async () => {
