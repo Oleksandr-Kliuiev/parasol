@@ -38,6 +38,11 @@ public static class CustomerIdentityEndpoints
                 return (await reader.ReadAsync(customerId, selection, cursor, ct)).ToHttpResult(Results.Ok);
             })
             .RequirePermission(Permissions.ParasolAtlasRead);
+        group.MapGet("/customers/{customerId:guid}/m365", async (Guid customerId, AtlasM365Reader reader, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await reader.ReadAsync(customerId, ct)).ToHttpResult(Results.Ok);
+            }).RequirePermission(Permissions.CustomersRead).RequirePermission(Permissions.ParasolAtlasRead);
         group.MapPost("/customer-identities/import", async (CustomerIdentityImport body, bool? dryRun, string? expectedSha256,
                 CustomerIdentityService service, HttpContext http, CancellationToken ct) =>
             {

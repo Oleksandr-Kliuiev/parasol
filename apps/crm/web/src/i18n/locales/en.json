@@ -3840,5 +3840,45 @@
       "SOURCE_TERMINAL": "This observation is no longer active. Read a fresh preview to see any linked work.",
       "ASSIGNEE_INVALID": "Choose an active employee with technical workspace access, then read a fresh preview."
     }
+  },
+  "parasolM365": {
+    "title": "Microsoft 365",
+    "noPermission": "Your role does not include customer technical data.",
+    "savedNote": "Saved Atlas data. Refresh reads stored snapshots; it does not synchronize Microsoft 365.",
+    "refresh": "Refresh Microsoft 365",
+    "accessDenied": "Your Atlas access does not permit reading this customer’s Microsoft 365 data.",
+    "notSupported": "This Atlas instance does not support the Microsoft 365 overview.",
+    "assessed": "Assessed at {{time}} UTC",
+    "window": "Sign-in collection: 24 complete UTC hours, {{from}} – {{to}} UTC",
+    "countNote": "Counts are imported directory records. Device registrations are separate from machine inventory and licensed seats.",
+    "partial": "Showing {{shown}} of {{total}} active connections. This overview is incomplete.",
+    "noConnections": "No active Microsoft 365 connection is available. This does not establish the state of the tenant.",
+    "coverageNote": "Coverage describes traversal of the source response, not every real-world sign-in or a security verdict.",
+    "connection": "Microsoft 365 connection {{index}}",
+    "m365_user": "Directory user records",
+    "m365_device": "Directory device registrations",
+    "records": "Records in snapshot",
+    "unavailable": "Unavailable",
+    "state": "Saved state",
+    "asOf": "Snapshot at {{time}} UTC",
+    "lastSuccess": "Last successful collection: {{time}} UTC",
+    "signIns": "Sign-in collection",
+    "coverage": "Traversal coverage",
+    "freshness": "Retrieval freshness",
+    "oldest": "Oldest contributing retrieval: {{time}} UTC",
+    "newest": "Newest contributing retrieval: {{time}} UTC",
+    "gaps": "Intervals without coverage: {{count}}",
+    "reference": "Atlas connection reference",
+    "coverageState": {
+      "COMPLETE": "Complete traversal",
+      "PARTIAL": "Partial traversal",
+      "UNAVAILABLE": "No usable coverage"
+    },
+    "freshnessState": {
+      "FRESH": "Fresh",
+      "STALE": "Outdated",
+      "MIXED": "Fresh and outdated portions",
+      "UNKNOWN": "Unknown"
+    }
   }
 }

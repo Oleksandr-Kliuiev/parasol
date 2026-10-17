@@ -3840,5 +3840,45 @@
       "SOURCE_TERMINAL": "Observasjonen er ikke lenger aktiv. Les en ny forhåndsvisning for å se eventuelt koblet arbeid.",
       "ASSIGNEE_INVALID": "Velg en aktiv medarbeider med teknisk arbeidsområdetilgang, og les en ny forhåndsvisning."
     }
+  },
+  "parasolM365": {
+    "title": "Microsoft 365",
+    "noPermission": "Rollen din har ikke tilgang til kundens tekniske data.",
+    "savedNote": "Lagrede Atlas-data. Oppdater leser lagrede øyeblikksbilder; Microsoft 365 synkroniseres ikke.",
+    "refresh": "Oppdater Microsoft 365",
+    "accessDenied": "Atlas-tilgangen din tillater ikke lesing av Microsoft 365-data for denne kunden.",
+    "notSupported": "Denne Atlas-instansen støtter ikke Microsoft 365-oversikten.",
+    "assessed": "Vurdert {{time}} UTC",
+    "window": "Innsamling av pålogginger: 24 hele UTC-timer, {{from}} – {{to}} UTC",
+    "countNote": "Antall gjelder importerte katalogposter. Enhetsregistreringer er atskilt fra maskinoversikten og lisensplasser.",
+    "partial": "Viser {{shown}} av {{total}} aktive tilkoblinger. Oversikten er ufullstendig.",
+    "noConnections": "Ingen aktiv Microsoft 365-tilkobling er tilgjengelig. Dette fastslår ikke tilstanden til tenanten.",
+    "coverageNote": "Dekningen beskriver gjennomlesing av kildesvaret, ikke alle faktiske pålogginger eller en sikkerhetsvurdering.",
+    "connection": "Microsoft 365-tilkobling {{index}}",
+    "m365_user": "Brukerposter i katalogen",
+    "m365_device": "Enhetsregistreringer i katalogen",
+    "records": "Poster i øyeblikksbildet",
+    "unavailable": "Utilgjengelig",
+    "state": "Lagret status",
+    "asOf": "Øyeblikksbilde {{time}} UTC",
+    "lastSuccess": "Siste vellykkede innsamling: {{time}} UTC",
+    "signIns": "Innsamling av pålogginger",
+    "coverage": "Dekning av gjennomlesing",
+    "freshness": "Hentingens aktualitet",
+    "oldest": "Eldste bidragende henting: {{time}} UTC",
+    "newest": "Nyeste bidragende henting: {{time}} UTC",
+    "gaps": "Antall manglende intervaller: {{count}}",
+    "reference": "Tilkoblingsreferanse i Atlas",
+    "coverageState": {
+      "COMPLETE": "Fullstendig gjennomlesing",
+      "PARTIAL": "Delvis gjennomlesing",
+      "UNAVAILABLE": "Ingen brukbar dekning"
+    },
+    "freshnessState": {
+      "FRESH": "Oppdatert",
+      "STALE": "Utdatert",
+      "MIXED": "Oppdaterte og utdaterte deler",
+      "UNKNOWN": "Ukjent"
+    }
   }
 }

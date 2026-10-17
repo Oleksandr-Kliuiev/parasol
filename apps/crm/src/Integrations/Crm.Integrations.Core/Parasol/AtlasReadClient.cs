@@ -14,6 +14,9 @@ public sealed class AtlasReadClient(IOptions<AtlasWorkspaceOptions> options, IHt
     public Task<AtlasReadResponse> OverviewAsync(string clientId, AtlasEmployeeCredential credential, CancellationToken ct) =>
         ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/overview", credential, 2 * 1024 * 1024, ct);
 
+    internal Task<AtlasReadResponse> M365OverviewAsync(string clientId, AtlasEmployeeCredential credential, CancellationToken ct) =>
+        ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/m365/overview", credential, 131_072, ct, notFound: "NOT_SUPPORTED");
+
     internal Task<AtlasReadResponse> ObservationAsync(string clientId, string observationId, AtlasEmployeeCredential credential, CancellationToken ct) =>
         ReadAsync($"clients/{Uri.EscapeDataString(clientId)}/observations/{Uri.EscapeDataString(observationId)}", credential, 1_048_576, ct,
             notFound: "OBSERVATION_NOT_FOUND");

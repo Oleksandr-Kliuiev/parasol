@@ -1,5 +1,5 @@
-import { useId, useRef, useState } from 'react';
-import { Button, Field, Input, MessageBar, MessageBarBody, Select, Tab, TabList, Text } from '@fluentui/react-components';
+import { lazy, Suspense, useId, useRef, useState } from 'react';
+import { Button, Field, Input, MessageBar, MessageBarBody, Select, Spinner, Tab, TabList, Text } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { severities, type WorkspaceSummary } from './workspaceContract';
 import { ObservationQueue } from './ObservationQueue';
@@ -7,9 +7,11 @@ import { ObservationRows } from './ObservationRows';
 import { useTechnicalStyles } from './technicalStyles';
 
 const batch = 25;
+const AtlasM365Panel = lazy(() => import('./AtlasM365Panel').then(module => ({ default: module.AtlasM365Panel })));
 
-export function CustomerTechnicalDetails({ customerId, summary, onSourceInvalidated }: {
-  customerId: string; summary: WorkspaceSummary; onSourceInvalidated: () => void;
+export function CustomerTechnicalDetails({ customerId, summary, contextChecking, onSourceInvalidated, onAccessDenied }: {
+  customerId: string; summary: WorkspaceSummary | null; contextChecking: boolean;
+  onSourceInvalidated: () => void; onAccessDenied: () => void;
 }) {
   const { t } = useTranslation();
   const styles = useTechnicalStyles();
@@ -18,12 +20,16 @@ export function CustomerTechnicalDetails({ customerId, summary, onSourceInvalida
   const id = useId();
   return <>
     <TabList className={styles.tabs} aria-label={t('parasolDetails.lists')} selectedValue={active} onTabSelect={(_, d) => setActive(String(d.value))}>
-      <Tab id={`${id}-observations-tab`} aria-controls={`${id}-observations`} value="observations">{t('parasolDetails.observations')}</Tab>
-      <Tab id={`${id}-devices-tab`} aria-controls={`${id}-devices`} value="devices">{t('parasolDetails.devices')}</Tab>
-      <Tab ref={queueTab} id={`${id}-queue-tab`} aria-controls={`${id}-queue`} value="queue">{t('parasolQueue.title')}</Tab>
+      <Tab disabled={!summary} id={`${id}-observations-tab`} aria-controls={`${id}-observations`} value="observations">{t('parasolDetails.observations')}</Tab>
+      <Tab disabled={!summary} id={`${id}-devices-tab`} aria-controls={`${id}-devices`} value="devices">{t('parasolDetails.devices')}</Tab>
+      <Tab disabled={!summary} ref={queueTab} id={`${id}-queue-tab`} aria-controls={`${id}-queue`} value="queue">{t('parasolQueue.title')}</Tab>
+      <Tab id={`${id}-m365-tab`} aria-controls={`${id}-m365`} value="m365">{t('parasolM365.title')}</Tab>
     </TabList>
     <div role="tabpanel" id={`${id}-${active}`} aria-labelledby={`${id}-${active}-tab`}>
-      {active === 'queue' ? <ObservationQueue customerId={customerId} onSourceInvalidated={onSourceInvalidated} />
+      {active === 'm365' ? <Suspense fallback={<Spinner size="small" label={t('common.loading')} />}>
+        <AtlasM365Panel customerId={customerId} contextChecking={contextChecking} onSourceInvalidated={onSourceInvalidated} onAccessDenied={onAccessDenied} />
+      </Suspense> : !summary ? <Spinner size="small" label={t('common.loading')} />
+        : active === 'queue' ? <ObservationQueue customerId={customerId} onSourceInvalidated={onSourceInvalidated} />
         : active === 'devices' ? <DeviceList devices={summary.devices} /> : <ObservationList customerId={customerId} onSourceInvalidated={onSourceInvalidated} summary={summary} openQueue={() => {
           setActive('queue'); queueTab.current?.focus();
         }} />}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Button, MessageBar, MessageBarBody, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +28,9 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
   const { t } = useTranslation();
   const styles = useStyles();
   const user = useCurrentUser();
-  const [sourceCheck, setSourceCheck] = useState({ pending: false, revision: 0 });
+  const refreshButton = useRef<HTMLButtonElement>(null);
+  const accessChecking = useRef(false);
+  const [sourceCheck, setSourceCheck] = useState({ pending: false, revision: 0, keepM365: false });
   const query = useQuery({
     queryKey: ['parasol', 'workspace', user.id, customerId],
     queryFn: async ({ signal }) => parseWorkspace((await api.get<unknown>(`/api/v1/parasol/customers/${customerId}/workspace`, signal)).data, customerId),
@@ -37,16 +39,33 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
   });
   const { refetch } = query;
   const refreshWorkspace = useCallback(() => {
-    setSourceCheck(s => ({ pending: true, revision: s.revision + 1 }));
+    setSourceCheck(s => ({ pending: true, revision: s.revision + 1, keepM365: false }));
     // An explicit gate and revision also clear the old queue if a fast read is batched without a fetching render.
     void refetch().finally(() => setSourceCheck(s => ({ ...s, pending: false })));
+  }, [refetch]);
+  const sourceInvalidated = useCallback(() => {
+    // Child technical panels disappear during the full scoped read. Keep a stable keyboard target.
+    refreshButton.current?.focus(); refreshWorkspace();
+  }, [refreshWorkspace]);
+  const recheckAccess = useCallback(() => {
+    if (accessChecking.current) return;
+    accessChecking.current = true;
+    // A Microsoft 365 denial may also mean that the whole Atlas context was revoked.
+    // Hide the old context while retaining the denial and its keyboard focus.
+    setSourceCheck(s => ({ ...s, pending: true, keepM365: true }));
+    void refetch().then(result => {
+      if (result.isError || result.data?.status !== 'READY') refreshButton.current?.focus();
+    }).finally(() => {
+      accessChecking.current = false;
+      setSourceCheck(s => ({ ...s, pending: false, keepM365: false }));
+    });
   }, [refetch]);
   // A fresh check hides the previous snapshot, including during a failed refresh or a permission change.
   const checking = sourceCheck.pending || query.isFetching;
   const data = !checking && !query.isError ? query.data : undefined;
   const summary = data?.status === 'READY' ? data.summary : null;
   return (
-    <Panel title={t('parasol.title')} actions={<Button size="small" disabled={checking} disabledFocusable={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
+    <Panel title={t('parasol.title')} actions={<Button ref={refreshButton} size="small" disabled={checking} disabledFocusable={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
       {checking && <Spinner size="small" label={t('common.loading')} />}
       {!checking && query.isError && <ErrorState error={query.error} onRetry={refreshWorkspace} />}
       {data && data.status !== 'READY' && <Text role="status">{t(`parasol.status.${data.status}`)}</Text>}
@@ -71,8 +90,10 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
             {r.returnedItems !== null && <Text block>{t(r.truncated ? 'parasol.truncated' : 'parasol.returned', { count: r.returnedItems })}</Text>}
           </li>)}
         </ul>
-        <CustomerTechnicalDetails key={`${user.id}:${sourceCheck.revision}`} customerId={customerId} summary={summary} onSourceInvalidated={refreshWorkspace} />
       </>}
+      {(summary || (sourceCheck.pending && sourceCheck.keepM365)) && <CustomerTechnicalDetails
+        key={`${user.id}:${sourceCheck.revision}`} customerId={customerId} summary={summary} contextChecking={checking}
+        onSourceInvalidated={sourceInvalidated} onAccessDenied={recheckAccess} />}
     </Panel>
   );
 }

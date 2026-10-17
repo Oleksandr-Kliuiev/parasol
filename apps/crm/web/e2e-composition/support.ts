@@ -128,6 +128,7 @@ export interface TaskEvidence {
   providerWrites: number; atlasRequests: number;
   actualScale: { clients: number; devices: number; employees: number };
   privileges: { crmWebRestricted: boolean; crmWorkerRestricted: boolean; atlasRuntimeRestricted: boolean };
+  ticketWork: { timeCount: number; matchingTimeCount: number; timeCreateAuditCount: number; receiptCount: number; taskPreserved: boolean };
 }
 
 /** Owner-only fixture control is a local process. It accepts no arbitrary SQL or browser input and returns no private rows. */

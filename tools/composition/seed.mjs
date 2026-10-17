@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { fixturePlan, ROLES, visibleClients } from './plan.mjs';
+import { seedM365Overview } from './m365-seed.mjs';
 
 const WS = fixturePlan().workspaceId;
 const AT = new Date('2026-10-16T12:00:00.000Z');
@@ -62,7 +63,8 @@ export async function seedAtlas(db, employees) {
       const actorId = `composition-actor-${index + 1}`; employee.actorId = actorId; employee.tokenId = `composition-token-${index + 1}`;
       employee.visibleClientIds = visibleClients(employee.role, plan.clients);
       await insert(db, 'Actor', { workspaceId: WS, id: actorId, displayName: `Synthetic source employee ${index + 1}`, workspacePermissions: [] });
-      for (const clientId of employee.visibleClientIds) await insert(db, 'ClientMembership', { workspaceId: WS, clientId, actorId, permissions: ['context:read'] });
+      for (const clientId of employee.visibleClientIds) await insert(db, 'ClientMembership', { workspaceId: WS, clientId, actorId,
+        permissions: employee.role === 'Crm.Admin' ? ['context:read', 'm365:read'] : ['context:read'] });
       await insert(db, 'ApiToken', { workspaceId: WS, id: employee.tokenId, actorId, tokenHash: createHash('sha256').update(employee.token).digest('hex'), label: 'Ephemeral synthetic composition credential' });
     }
     const clientId = plan.target.atlasClientId; const common = { clientId, deviceId: plan.target.confirmedDeviceId };
@@ -75,6 +77,7 @@ export async function seedAtlas(db, employees) {
     await observation(db, { ...common, id: plan.target.resolvedObservationId, summary: plan.target.resolvedSummary, status: 'RESOLVED' });
     await observation(db, { ...common, id: plan.target.suppressedObservationId, summary: plan.target.suppressedSummary, status: 'SUPPRESSED' });
     const old = new Date('2020-01-01T00:00:00Z');
+    await seedM365Overview(db, WS, clientId);
     await insert(db, 'SyncState', { workspaceId: WS, clientId, connectionId: `${clientId}-atera`, resourceType: 'alert', status: 'OK', lastSyncAt: old, lastSuccessAt: old });
     await insert(db, 'ResourceSnapshot', { workspaceId: WS, clientId, connectionId: `${clientId}-atera`, resourceType: 'alert', asOf: old,
       items: JSON.stringify([{ id: 'synthetic-stale-item', privateSourcePayload: 'Synthetic source-only marker' }]), itemCount: 1, truncated: false, contractVersion: 'composition-v1' });
