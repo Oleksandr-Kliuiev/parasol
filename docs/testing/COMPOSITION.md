@@ -536,3 +536,30 @@ See [M35 evidence](evidence/device-history-M35-2026-10-17.json). No skips, allow
 retries or production dependencies were added. Staff usability/time savings, working
 Entra/provider accounts, historical financial review and target VPS/offsite remain open.
 M26 financial SQL208 and M29 native recovery are historical. Nothing was published or deployed.
+
+
+## M36 queue clarity and document language, 18 October 2026
+
+The [current day18 source-build report](evidence/composition-current-2026-10-18.json), also
+[stored immutably for M36](evidence/composition-M36-2026-10-18.json), `ae3e3488af13`, passes
+11/11 with a fresh build, restricted runtimes, exact privacy/durable SQL facts, 563
+Atlas GETs, no mutating Atlas requests and cleanup. All2738 application/tool inputs
+match before/after. Day17 current/M35 reports are retained byte-for-byte.
+
+Current UI checks pass68affected/666full(77files,2workers), focused3/wide102, a separate
+saved-profile language/reload case1, receipt entrance/contrast subset2, tooling22 and lint/types/build/budget(291.9/300KB).
+The wide run completes before the profile-mutating Finance case, so it cannot change
+another parallel case's language. Initial EN/NB/RU and shared document language are
+verified in three engines; profile switching/reload is verified separately in Chromium.
+
+The installed diagnostic audit covers60 current views: seven states, four widths,
+both themes plus four NB/RU320px views. All screenshots reviewed, no error/warn.
+The first observation title in the main EN scenario is fully visible after the real product transition, including
+the long duplicate-hostname fixture. Expanded counts/evidence and help are keyboard
+accessible, preserve source uncertainty and issue no extra requests. Only those two
+expanded diagnostic captures receive a QA scroll for inspection; the entry assertion does not.
+
+See [M36 evidence](evidence/queue-clarity-M36-2026-10-18.json). Server805/SQL857/Atlas1428
+bytes match M35 exactly; its970/94/99 and717/802/90 gates are reused, not rerun. M26SQL208,
+M29native recovery and other full visual matrices remain historical. Staff workflow/time,
+working Entra/providers, historical finance and target VPS/offsite remain open. No publication/deployment.
