@@ -58,7 +58,7 @@ reopen может вернуть прежний ETag без записи/audit/o
   после активаций в одном act. Первоначальный диагностический отказ сохранён.
 - Полный ESLint, app/E2E/composition TypeScript и SPA 290,5/300 KB проходят. SHA256 всех
   361 текущего web input совпадает до и после итоговых проверок.
-- Полный [composition](../testing/evidence/composition-current-2026-10-17.json) с новой
+- Полный [composition M20](../testing/evidence/composition-M20-2026-10-17.json) с новой
   сборкой текущих CRM/Atlas прошёл 8/8: exact recipient ETag, одна Task/receipt/create audit,
   два ActivityLogged, прежние privacy assertions, restricted roles и cleanup. Recorder
   переслал 563 Atlas requests, mutating requests — 0. Web/Worker Release — 0 warnings/errors.

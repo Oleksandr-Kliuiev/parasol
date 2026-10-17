@@ -9,9 +9,11 @@
 Завершение очередного M-этапа не означает завершение всей цели. Отсутствие ошибок
 в синтетических тестах также не доказывает совместимость рабочего аккаунта провайдера.
 
-Текущий полный composition после M20 и коррекции фокуса прошёл 8/8
-с новой сборкой, точными SQL/privacy evidence и очисткой. Текущий CRM browser-набор — 55/55;
-полный frontend — 484/484, SQL статуса и затронутых API — 38/38, architecture — 94/94.
+Текущий полный composition после M21 прошёл 8/8 с новой сборкой, точными SQL/privacy
+evidence и очисткой. Текущий CRM browser-набор — 67/67; полный frontend — 513/513.
+[Свидетельство M21](testing/evidence/saved-service-M21-2026-10-17.json) сохраняет результаты.
+SQL статуса и затронутых API — 38/38, architecture — 94/94 из M20: все 775 входов
+остались неизменны, повторного backend-прогона M21 не было.
 Предыдущий M19 отдельно проверил exact-selection/SourceTask: 39/39 SQL.
 Отдельные строгие Atlas-наборы также завершены: unit 711/711, PostgreSQL 789/789 и browser
 90/90, без исключений; [безопасное свидетельство](testing/evidence/atlas-strict-current-2026-10-16.json).
@@ -36,7 +38,7 @@
 | Изменение задачи сохраняет срок и чужую правку | [M16](migration/M16-TASK-EDITING.md): точный момент и исходный ETag редактора; [M20](migration/M20-ACTIVITY-STATUS-CONCURRENCY.md) добавляет displayed If-Match для complete/reopen, pending/conflict/focus guards; SQL 38/38, полный frontend 484/484, browser 55/55, actual composition 8/8 | Пилот с несколькими сотрудниками и измерение времени |
 | Личный список не скрывает ошибку под пустым результатом | [M17](migration/M17-PERSONAL-TASK-RELIABILITY.md): error/refresh/scope/paging/notification guards; [M19](migration/M19-EXACT-ACTIVITY-NAVIGATION.md) точно открывает одну запись, позволяет обновить её и возвращает весь timeline; actual handoff с уже открытым получателем прошёл | Пилот с тремя сотрудниками и измерение времени рабочего сценария |
 | Ежедневный обзор доступных клиентов | [M14](migration/M14-ATLAS-ATTENTION.md): личные клиенты, HIGH/CRITICAL preview, честный неполный охват и свежесть; свежий M12 диалог проверяет уже назначенную работу; current composition проходит | Назначенные задачи остаются в «Моих задачах», глобальный фильтр без исполнителя пока не заявлен |
-| Сервис, время и финансовые процессы используют имеющиеся модули | CRM Service уже содержит Atera tickets/devices/alerts и TicketRequest | Честные loading/error и обновление сохранённых данных; проверенная Task→mirror ticket→time связь с доказательством owner; отдельное подтверждённое создание Atera-заявки |
+| Сервис, время и финансовые процессы используют имеющиеся модули | [M21](migration/M21-SAVED-SERVICE-DATA.md): независимые loading/error/empty, GET-обновление пяти сохранённых ресурсов, отмена старых ответов и сохранность формы; 513 frontend / 67 browser / 8 composition | Проверенная Task→mirror ticket→time связь с доказательством owner; отдельное подтверждённое создание Atera-заявки |
 | Atera-заявка не экспортирует неподходящий контакт | [M18](migration/M18-SERVICE-CONTACT-SAFETY.md): admission и перед новой отправкой, exact owner/link fences, исходный журнал неопределённости; SQL 65/65 плюс последние affected 7/7 | Рабочий аккаунт/схема и eventual consistency остаются внешней проверкой |
 | Подключения показывают свою фактическую готовность | [M15](migration/M15-LOCAL-READINESS.md): read-only `/connections`, личная конфигурация Atlas, Web flags, сохранённые успехи/счётчики и локальные mappings; connectivity NOT_CHECKED; composition проходит | Реальная проверка аккаунтов отдельно |
 | Надёжное локальное воспроизведение | [M13](testing/COMPOSITION.md): текущий полный запуск 8/8 со сборкой, точная SQL/privacy-проверка, restricted roles и очистка; Atlas unit 711/711, PostgreSQL 789/789 и browser 90/90 | GitHub CI после будущего разрешения на публикацию |

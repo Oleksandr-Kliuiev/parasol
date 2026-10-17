@@ -157,9 +157,9 @@ invariant; the original timeout cause is unproven. No retries, skips or failure 
 were introduced. Atlas strict source/input hashes remain unchanged from the separate
 711/789/90 acceptance. No publication, deployment or live provider call occurred.
 
-## Current M20 local verification, 17 October 2026
+## M20 local verification, 17 October 2026
 
-The [current full-build run](evidence/composition-current-2026-10-17.json) includes versioned
+The [M20 full-build run](evidence/composition-M20-2026-10-17.json) includes versioned
 complete/reopen and the native editor-close focus correction. It passed 8/8 with zero
 skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles and
 confirmed cleanup. The recorder forwarded 563 Atlas requests and no mutating requests.
@@ -177,3 +177,26 @@ mistook it for an open editor and did not capture focus ownership. The correctio
 the actual editor lifecycle and keeps input/modal/hidden/inert fences. The unchanged phone
 assertions now pass in both themes, including keyboard focus and Axe. No timeout increase,
 retry, skip or failure exception was introduced. No live provider account or VPS was used.
+
+## Current M21 local verification, 17 October 2026
+
+The [current full-build run](evidence/composition-current-2026-10-17.json) includes scoped
+saved Service reads and mobile customer tab visibility. It passed 8/8, zero
+skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles
+and confirmed cleanup. The recorder forwarded 564 Atlas requests and no mutating requests.
+
+The [M21 acceptance summary](evidence/saved-service-M21-2026-10-17.json) records 513/513
+frontend tests in 59 files, all static gates, 371 unchanged web inputs and the 290.5/300 KB
+SPA budget. CRM browser regressions passed 67/67 without retries, skips or exceptions,
+including real API independent read failures, GET-only refresh and native cancellation in
+three engines, existing time approval and disabled-Atera request handling, plus phone
+keyboard/Axe checks in both themes. Previous SQL/architecture and Atlas strict evidence
+are retained separately; their 775/1421 inputs still match and were not rerun in M21.
+
+The initial 63/67 browser report remains retained. Axe exposed an unfocusable Tickets
+scroll container; it now has a named keyboard target, visible focus and native ArrowRight
+coverage. Both initial WebKit sign-in failures showed Too many requests in AuthGate.
+Only the owned browser fixture API budget was aligned with existing E2E configuration;
+production and composition settings remain unchanged. Raw HTTP traces of that initial
+429 were not retained. No timeout increase or assertion exclusion was introduced.
+No publication, deployment or live provider call occurred.
