@@ -7,6 +7,13 @@ namespace Crm.Contracts.Features;
 
 internal sealed partial class ContractsApi
 {
+    public async Task<IReadOnlyList<HourBankReviewRef>> GetHourBankReviewRefsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var rows = await db.HourBanks.IgnoreQueryFilters().AsNoTracking().Where(b => ids.Contains(b.Id))
+            .Select(b => new { b.Id, b.OrganizationId, b.Name, b.Status, b.IsDeleted }).ToListAsync(ct);
+        return rows.Select(b => new HourBankReviewRef(b.Id, b.OrganizationId, b.Name, b.Status.ToString(), b.IsDeleted)).ToList();
+    }
+
     public async Task<IReadOnlyList<SourceBankUsage>> GetSourceBankUsageAsync(string sourceType, string sourceIdPrefix, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceType); ArgumentException.ThrowIfNullOrWhiteSpace(sourceIdPrefix);

@@ -112,6 +112,8 @@ public sealed record HourBankConsumption(Guid HourBankId, decimal Hours, decimal
 public sealed record SourceBankUsage(string SourceId, Guid HourBankId, DateOnly Date, decimal RequestedHours,
     decimal ConsumedHours, decimal ReturnedHours, bool Consistent);
 
+public sealed record HourBankReviewRef(Guid Id, Guid OrganizationId, string Name, string Status, bool Deleted);
+
 public enum ReminderKind
 {
     ContractEnding,
@@ -176,6 +178,9 @@ public interface IContractsApi
 
     /// <summary>All consumption/reversal receipts for an exact caller-owned source prefix, even on closed or depleted banks.</summary>
     Task<IReadOnlyList<SourceBankUsage>> GetSourceBankUsageAsync(string sourceType, string sourceIdPrefix, CancellationToken cancellationToken);
+
+    /// <summary>Read-only identities for diagnosing saved financial sources, including closed/deleted banks; no amounts.</summary>
+    Task<IReadOnlyList<HourBankReviewRef>> GetHourBankReviewRefsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 
     /// <summary>Products the organization has a live contract line for on a date; a CSP subscription outside this set is not billed (BR-LIC-03).</summary>
     Task<IReadOnlySet<Guid>> GetContractedProductsAsync(Guid organizationId, DateOnly date, CancellationToken cancellationToken);

@@ -113,7 +113,7 @@ public sealed record PeriodDto(int Year, int Month, bool IsClosed, DateTimeOffse
 
 public sealed record TimeQuery(
     int? Year, int? Month, DateOnly? From, DateOnly? To, Guid? OrganizationId, Guid? TechnicianId, TimeEntryStatus? Status, TimeSource? Source, bool MineOnly,
-    int? Limit = null, string? Cursor = null);
+    int? Limit = null, string? Cursor = null, bool ReviewOnly = false);
 
 internal static class TimeErrors
 {

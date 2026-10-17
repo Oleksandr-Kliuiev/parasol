@@ -76,6 +76,8 @@ internal sealed partial class TimeEntryService(
             entries = entries.Where(e => e.Source == source);
         }
 
+        if (query.ReviewOnly) entries = entries.Where(e => e.ReviewNote != null && e.ReviewNote != "");
+
         // The summary is one SQL aggregate over the whole filter, never a sum of the rows on the page (DEV-12).
         var totals = await entries
             .GroupBy(_ => 1)

@@ -41,7 +41,15 @@ test('approved billing explains why hours cannot be refunded and Finance cancell
   await expect(row.getByText('Hour bank 2 h', { exact: true })).toBeVisible();
   expect((await api.get<{ remainingHours: number }>(page, `/api/v1/contracts/hour-banks/${bank.id}`)).remainingHours).toBe(8);
 
-  await signIn(page, 'Crm.Finance', `/billing/bases/${basis.id}`);
+  await expect(row.getByRole('link', { name: 'Financial review', exact: true })).toHaveCount(0);
+  expect((await page.request.get(`/api/v1/time/entries/${entry.id}/financial-review`)).status()).toBe(403);
+  await signIn(page, 'Crm.Finance', `/time/entries?year=${year}&month=${month}`);
+  await row.getByRole('link', { name: 'Financial review', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/time/entries/${entry.id}/financial-review$`));
+  await expect(page.getByRole('heading', { name: 'Review saved time', exact: true })).toBeVisible();
+  await expect(page.getByText('Approved or exported billing protects this work. Use Finance cancellation for an unsent basis, or a later-period correction.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Hour bank comparison', exact: true }).getByRole('link', { name, exact: true })).toHaveAttribute('href', `/contracts/hour-banks/${bank.id}`);
+  await page.getByRole('link', { name: 'Open billing record', exact: true }).click();
   await page.getByRole('button', { name: 'Cancel basis', exact: true }).click();
   const cancel = page.getByRole('dialog');
   await cancel.getByRole('textbox', { name: /^Reason\s*\*?$/ }).fill('Synthetic reviewed customer correction');

@@ -51,6 +51,7 @@ export const routes: RouteObject[] = [
       { path: 'projects/:id', lazy: async () => ({ Component: (await import('../features/projects/ProjectPage')).ProjectPage }) },
       { path: 'licenses', lazy: async () => ({ Component: (await import('../features/licensing/LicensesPage')).LicensesPage }) },
       { path: 'time', lazy: async () => ({ Component: (await import('../features/time/TimesheetPage')).TimesheetPage }) },
+      { path: 'time/entries/:id/financial-review', lazy: async () => ({ Component: (await import('../features/time/TimeFinancialReviewPage')).TimeFinancialReviewPage }) },
       { path: 'time/entries', lazy: async () => ({ Component: (await import('../features/time/TimeEntriesPage')).TimeEntriesPage }) },
       { path: 'admin/quote-templates', lazy: async () => ({ Component: (await import('../features/quotes/QuoteTemplatesPage')).QuoteTemplatesPage }) },
       { path: 'admin/pipeline', lazy: async () => ({ Component: (await import('../features/admin/PipelineStagesPage')).PipelineStagesPage }) },
