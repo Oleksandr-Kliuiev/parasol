@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Activity } from '../src/features/activities/types';
 import { parseTaskOutcome } from '../src/features/parasol/observationTaskContract';
@@ -96,6 +97,44 @@ test('two genuine employee handoffs converge on one private Task, which personal
     const personalSource = technician.page.getByRole('dialog', { name: 'View Atlas source', exact: true });
     await expect(personalSource.getByText(f.target.observationSummaryOutsideFirst100, { exact: true })).toBeVisible();
     await personalSource.getByRole('button', { name: 'Close', exact: true }).click();
+    // The recipient can inspect its saved ticket directly from My Day, without navigating to the customer.
+    const myDayUrl = technician.page.url();
+    const ticketTrigger = personalTask.getByRole('button', { name: 'Service ticket for Review technical observation', exact: true });
+    await technician.page.setViewportSize({ width: 390, height: 844 });
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await technician.page.emulateMedia({ colorScheme });
+      await expect.poll(() => ticketTrigger.evaluate(element => getComputedStyle(element).getPropertyValue('--colorNeutralBackground1').trim()))
+        .toBe(colorScheme === 'dark' ? '#292929' : '#ffffff');
+      await technician.page.waitForLoadState('networkidle');
+      await technician.page.evaluate(async () => {
+        await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined)));
+      });
+      const taskSelector = await myTasks.getAttribute('aria-labelledby'); expect(taskSelector).toBeTruthy();
+      const scan = await new AxeBuilder({ page: technician.page }).include(`[aria-labelledby="${taskSelector}"]`)
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('[data-tabster-dummy]').analyze();
+      expect(scan.violations.filter(v => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+      expect(await technician.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const titleLines = await personalTask.getByText('Review technical observation', { exact: true }).evaluate(element => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size;
+      });
+      expect(titleLines, 'A short task title must remain readable instead of being squeezed into a narrow action column').toBeGreaterThan(0);
+      expect(titleLines).toBeLessThanOrEqual(2);
+      const ticketRead = technician.page.waitForResponse(r => {
+        const url = new URL(r.url());
+        return url.pathname === `/api/v1/activities/${taskId}/ticket` && r.request().method() === 'GET';
+      });
+      await ticketTrigger.focus(); await technician.page.keyboard.press('Enter');
+      const ticketResponse = await ticketRead;
+      expect(ticketResponse.status(), 'Direct My Day action reads the actual association API').toBe(200);
+      expect(await ticketResponse.json()).toMatchObject({ activityId: taskId, organizationId: f.target.customerId, ticketId: null });
+      const ticketDialog = technician.page.getByRole('dialog', { name: 'Task service ticket', exact: true });
+      await expect(ticketDialog.getByText('No Service ticket is linked to this task.', { exact: true })).toBeVisible();
+      expect(technician.page.url(), 'Reading the ticket keeps the personal task list in place').toBe(myDayUrl);
+      await technician.page.keyboard.press('Escape'); await expect(ticketDialog).toHaveCount(0);
+      await expect(ticketTrigger).toBeFocused();
+      await myTasks.screenshot({ path: test.info().outputPath(`my-day-ticket-${colorScheme}-synthetic.png`) });
+    }
     const completed = technician.page.waitForResponse(r => r.url().endsWith(`/api/v1/activities/${taskId}/complete`) && r.request().method() === 'POST');
     await personalTask.getByRole('button', { name: 'Mark Review technical observation as done', exact: true }).click();
     const completedResponse = await completed;

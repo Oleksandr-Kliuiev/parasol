@@ -16,6 +16,7 @@ import { activityUrl } from './activityNavigation';
 import type { Activity } from './types';
 import { useActivityStatusCommands } from './useActivityStatusCommands';
 import { ActivityStatusFeedback } from './ActivityStatusFeedback';
+import { TaskTicketButton } from './TaskTicketButton';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0 },
@@ -28,7 +29,8 @@ const useStyles = makeStyles({
     borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
     ':last-child': { borderBottom: 'none' },
   },
-  text: { display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 },
+  text: { display: 'flex', flexDirection: 'column', minWidth: 0, flex: '1 1 240px' },
+  actions: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalS, maxWidth: '100%', marginInlineStart: 'auto' },
   muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
   overdue: { color: tokens.colorPaletteRedForeground1, fontSize: tokens.fontSizeBase200 },
   context: { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' },
@@ -83,16 +85,19 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
               </span>
               {status.isStale(activity) && <ActivityStatusFeedback activity={activity} />}
             </span>
-            {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
-            {canWrite && <Button
-              size="small"
-              appearance="subtle"
-              icon={<CheckmarkCircle20Regular />}
-              aria-label={t('activities.completeNamed', { subject: activity.subject })}
-              disabled={status.pending.has(activity.id) || status.isStale(activity)}
-              disabledFocusable={status.pending.has(activity.id) || status.isStale(activity)}
-              onClick={() => void complete(activity)}
-            />}
+            <span className={styles.actions}>
+              {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
+              <TaskTicketButton activity={activity} />
+              {canWrite && <Button
+                size="small"
+                appearance="subtle"
+                icon={<CheckmarkCircle20Regular />}
+                aria-label={t('activities.completeNamed', { subject: activity.subject })}
+                disabled={status.pending.has(activity.id) || status.isStale(activity)}
+                disabledFocusable={status.pending.has(activity.id) || status.isStale(activity)}
+                onClick={() => void complete(activity)}
+              />}
+            </span>
           </li>
         ))}
       </ul>
