@@ -326,3 +326,22 @@ See [M26 evidence](evidence/time-financial-review-M26-2026-10-17.json) for scope
 The unchanged 1,421 Atlas inputs reuse the separate strict 711/789/90 acceptance.
 Human time savings, working provider accounts and VPS acceptance remain unverified.
 Nothing was published or deployed.
+
+
+## M27 local verification, 17 October 2026
+
+The [current full-build run](evidence/composition-current-2026-10-17.json),
+`714cd28c1d20`, passes 9/9 with zero skips/retries/flaky cases and confirmed cleanup.
+The real recipient opens the saved-ticket association directly from its My Day task at
+390px in both themes. Its real GET succeeds, the URL stays unchanged, Escape restores
+focus, scoped Axe reports no serious/critical violations and the page has no horizontal
+overflow. Existing source permissions, handoff, completion, privacy/durability and the
+separate actual ticket-to-own-time scenario retain all assertions.
+
+Full frontend 576/576 in 67 files and focused 49/49 pass; ESLint, all TypeScript targets,
+SPA build and budget pass. All 2,670 backend/web/Atlas input hashes match before/after the
+invocation. The unchanged backend and Atlas reuse the exact M26/strict inputs; no new
+78-case CRM browser run is claimed. See [M27 evidence](evidence/my-day-ticket-M27-2026-10-17.json)
+for that distinction and the structural action count. Human time savings remain unmeasured.
+The previous M26 report is [archived byte for byte](evidence/composition-M26-2026-10-17.json).
+Nothing was published, deployed or connected to a working provider account.
