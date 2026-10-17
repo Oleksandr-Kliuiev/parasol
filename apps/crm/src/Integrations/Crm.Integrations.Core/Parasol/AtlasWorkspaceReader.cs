@@ -28,10 +28,11 @@ public sealed class AtlasWorkspaceReader(CustomerIdentityService identities, ICu
             using var response = await atlas.OverviewAsync(reference.ClientId, credential, ct);
             if (response.Document is null) return new AtlasWorkspaceView(customerId, response.Status);
             var summary = AtlasWorkspaceProjection.Read(response.Document.RootElement, reference);
-            // An unlink/rebind while awaiting the source invalidates this result, including customer merge/deletion.
+            // Fence the link instance too: deleting/recreating the same pair cannot publish its earlier read.
             var current = await identities.GetAsync(customerId, ct);
             if (!current.IsSuccess) return current.Error!;
-            if (current.Value.Atlas != reference) return new AtlasWorkspaceView(customerId, "IDENTITY_CHANGED");
+            if (current.Value.Atlas != reference || current.Value.LinkId != identity.Value.LinkId)
+                return new AtlasWorkspaceView(customerId, "IDENTITY_CHANGED");
             return new AtlasWorkspaceView(customerId, "READY", summary);
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException)

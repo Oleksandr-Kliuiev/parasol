@@ -18,7 +18,7 @@ internal sealed class AtlasAttentionWorkspaces(IServiceScopeFactory scopes) : IA
             result.Error!.Type == ErrorType.Forbidden ? "ACCESS_DENIED" : "CUSTOMER_UNAVAILABLE");
         // A subsequent mapping change must not hide a source authentication failure from the whole-aggregate fence.
         if (workspace.Status == "ACCESS_DENIED") return workspace;
-        // The shared workspace reader verifies the pair; attention also fences a replaced same-pair LinkId.
+        // Recheck the full identity at this concurrent caller's boundary as well as inside the workspace read.
         var after = await identities.GetAsync(binding.CustomerId, ct);
         if (!after.IsSuccess) return new(binding.CustomerId, "CUSTOMER_UNAVAILABLE");
         return after.Value == binding.Identity ? workspace : new(binding.CustomerId, "IDENTITY_CHANGED");

@@ -4,11 +4,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Crm.Authorization;
 using Crm.Integrations.Core.Parasol;
-using Crm.Integrations.Core.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -30,13 +28,18 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var customerId = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
         var clientId = $"client-{Guid.NewGuid():N}";
+        await Link(customerId, clientId);
+        return (customerId, clientId);
+    }
+
+    private async Task Link(Guid customerId, string clientId)
+    {
         var input = new CustomerIdentityImport(new(1, "atlas", Workspace, [new(clientId, "Synthetic")]), [new(clientId, customerId)]);
         var path = "/api/v1/parasol/customer-identities/import";
         var preview = await Admin.PostAsJsonAsync(path, input);
         preview.StatusCode.ShouldBe(HttpStatusCode.OK);
         var hash = (await preview.Content.ReadFromJsonAsync<CustomerIdentityPlan>())!.Sha256;
         (await Admin.PostAsJsonAsync($"{path}?dryRun=false&expectedSha256={hash}", input)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        return (customerId, clientId);
     }
 
     private async Task<WebApplicationFactory<Program>> Host(WireMockServer atlas, string? credentialWorkspace = Workspace, HttpMessageHandler? handler = null)
@@ -190,34 +193,61 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
         var body = await response.Content.ReadAsStringAsync(); body.ShouldNotContain("SYNTHETIC-LT"); body.ShouldNotContain("synthetic-private");
     }
 
-    [Fact]
-    public async Task Unlinking_while_Atlas_is_answering_discards_the_old_customer_snapshot()
+    [Theory]
+    [InlineData("unlink")]
+    [InlineData("same-pair")]
+    [InlineData("different-pair")]
+    [InlineData("unchanged")]
+    public async Task Source_read_is_bound_to_the_original_LinkId_and_requires_a_fresh_read_after_relink(string change)
     {
         var (id, clientId) = await LinkedCustomer();
         using var atlas = WireMockServer.Start();
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var handler = new DelayedResponse(entered, resume, clientId);
+        using var handler = new DelayedResponse(entered, resume);
         await using var host = await Host(atlas, handler: handler);
         using var client = Client(host);
+        var identityPath = $"/api/v1/parasol/customers/{id}/identity";
+        var original = (await Admin.GetFromJsonAsync<CustomerIdentityView>(identityPath))!;
+        var currentClient = change == "different-pair" ? $"client-{Guid.NewGuid():N}" : clientId;
         var pending = client.GetFromJsonAsync<AtlasWorkspaceView>(PathFor(id));
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         try
         {
-            using var scope = factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-            var link = await db.ExternalLinks.AsNoTracking().SingleAsync(l => l.System == "Atlas" && l.EntityId == id);
-            (await Admin.DeleteAsync($"/api/v1/integrations/links/{link.Id}")).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+            if (change != "unchanged")
+            {
+                (await Admin.DeleteAsync($"/api/v1/integrations/links/{original.LinkId}")).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+                if (change != "unlink") await Link(id, currentClient);
+            }
         }
         finally { resume.TrySetResult(); }
         var result = await pending;
+        handler.Calls.ShouldBe(1); // No automatic replay against a new mapping.
+        if (change == "unchanged")
+        {
+            result!.Status.ShouldBe("READY"); result.Summary!.KnownDevices.ShouldBe(2);
+            return;
+        }
         result!.Status.ShouldBe("IDENTITY_CHANGED"); result.Summary.ShouldBeNull();
+        JsonSerializer.Serialize(result).ShouldNotContain("SYNTHETIC-LT");
+        var freshIdentity = (await Admin.GetFromJsonAsync<CustomerIdentityView>(identityPath))!;
+        freshIdentity.LinkId.ShouldNotBe(original.LinkId);
+        if (change != "unlink") freshIdentity.Atlas!.ClientId.ShouldBe(currentClient);
+        var fresh = (await client.GetFromJsonAsync<AtlasWorkspaceView>(PathFor(id)))!;
+        fresh.Status.ShouldBe(change == "unlink" ? "NOT_LINKED" : "READY");
+        if (change == "unlink") fresh.Summary.ShouldBeNull();
+        else fresh.Summary!.KnownDevices.ShouldBe(2);
+        handler.Calls.ShouldBe(change == "unlink" ? 1 : 2);
     }
 
-    private sealed class DelayedResponse(TaskCompletionSource entered, TaskCompletionSource resume, string clientId) : HttpMessageHandler
+    private sealed class DelayedResponse(TaskCompletionSource entered, TaskCompletionSource resume) : HttpMessageHandler
     {
+        private int calls;
+        public int Calls => Volatile.Read(ref calls);
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref calls);
+            var clientId = request.RequestUri!.Segments[2].TrimEnd('/');
             entered.TrySetResult();
             await resume.Task.WaitAsync(cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)

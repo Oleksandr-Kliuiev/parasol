@@ -45,6 +45,35 @@ describe('the unified customer workspace', () => {
     await waitFor(() => expect(screen.queryByText('42')).not.toBeInTheDocument());
   });
 
+  it('clears the old registry on a changed link and requires an explicit fresh read', async () => {
+    let finish!: (value: Response) => void;
+    const fresh = atlasWorkspace();
+    const device = fresh.summary!.devices[0];
+    const observation = fresh.summary!.observationPage.items[0];
+    if (!device || !observation) throw new Error('Synthetic workspace fixture must contain a device and observation.');
+    device.hostname = 'SYNTHETIC-FRESH-LINK';
+    observation.summary = 'Synthetic fresh source review';
+    const fetch = vi.fn().mockResolvedValueOnce(response(ready))
+      .mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }))
+      .mockResolvedValueOnce(response(fresh));
+    vi.stubGlobal('fetch', fetch); render();
+    await userEvent.click(await screen.findByRole('tab', { name: 'Atlas devices' }));
+    expect(screen.getByText('SYNTHETIC-LT-01')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(screen.queryByText('SYNTHETIC-LT-01')).not.toBeInTheDocument();
+    finish(response({ customerId: 'customer-one', status: 'IDENTITY_CHANGED', summary: null }));
+    expect(await screen.findByText('The customer link changed. Refresh to load current data.')).toBeVisible();
+    expect(screen.queryByRole('tab', { name: 'Atlas devices' })).not.toBeInTheDocument();
+    expect(screen.queryByText('42')).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByText('Synthetic fresh source review')).toBeVisible();
+    await userEvent.click(screen.getByRole('tab', { name: 'Atlas devices' }));
+    expect(screen.getByText('SYNTHETIC-FRESH-LINK')).toBeVisible();
+    expect(screen.queryByText('SYNTHETIC-LT-01')).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
   it('labels synthetic data visibly', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => response({ ...ready, summary: { ...ready.summary!, mode: 'fixture', completeness: 'COMPLETE_FIXTURE' } })));
     render(); expect(await screen.findByText(/Synthetic demonstration data/)).toBeVisible();
