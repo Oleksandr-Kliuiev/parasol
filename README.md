@@ -58,6 +58,8 @@ M01–M03 объединяют исходники, историю Git, сбор�
 просмотр не меняет финансовые данные.
 [M27: заявка из «Моих задач»](docs/migration/M27-MY-DAY-TICKET-SHORTCUT.md) открывает
 сохранённую заявку и форму собственных часов прямо из личной задачи, сохраняя «Мой день».
+[M28: локальный пробный проход](docs/testing/LOCAL-DEMO.md) запускает временный стенд
+на синтетических данных; после изменения связи заявки задача перечитывается перед новым действием.
 Оставшиеся задачи до ежедневного использования описаны в [готовности продукта](docs/PRODUCT_READINESS.md).
 
 ## Структура
@@ -105,8 +107,9 @@ DATABASE_URL=postgresql://test:test@127.0.0.1:5432/unused npm run check
 | `npm run test:atlas:ui` | Все браузерные тесты Atlas, включая 200 запросов; требуется Chromium и тестовый PG |
 | `npm run test:crm:integration` | Тесты CRM в локальных контейнерах после Release-сборки |
 | `npm run test:crm:e2e` | CRM + worker + локальная SQL test DB + макеты внешних API |
-| `npm run test:composition:unit` | Ограничения и достоверность локальной совместной проверки |
+| `npm run test:composition:unit` | Ограничения и достоверность composition и локального деморежима |
 | `npm run test:composition -- --directory /absolute/new/run` | Сборка, обе реальные БД, Web/Worker/Atlas и девять совместных браузерных сценариев |
+| `npm run demo:local -- --directory /absolute/new/demo --minutes 30` | Временный локальный стенд для ручного прохода, Ctrl+C/таймер и cleanup; [инструкция](docs/testing/LOCAL-DEMO.md) |
 
 Сборка Atlas появляется в `apps/atlas/dist`; SPA CRM — в `apps/crm/src/Hosts/Crm.Web/wwwroot`,
 .NET-сборки — в каталогах `bin/Release`. Для контейнеров и эксплуатации использовать

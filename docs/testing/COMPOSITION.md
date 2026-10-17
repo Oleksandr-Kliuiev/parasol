@@ -345,3 +345,30 @@ invocation. The unchanged backend and Atlas reuse the exact M26/strict inputs; n
 for that distinction and the structural action count. Human time savings remain unmeasured.
 The previous M26 report is [archived byte for byte](evidence/composition-M26-2026-10-17.json).
 Nothing was published, deployed or connected to a working provider account.
+
+
+## M28 local demo and workflow verification, 17 October 2026
+
+The [current full-build run](evidence/composition-current-2026-10-17.json),
+`f5b4e79986ca`, passes all nine scenarios with zero skips/retries/flaky cases,
+exact durable/privacy checks, restricted runtimes and confirmed cleanup. M28 adds an
+onReady lifecycle to the shared launcher for a bounded [human demo](LOCAL-DEMO.md).
+That mode always builds, excludes acceptance browser actions, and is diagnostic /
+accepted:false. Its CLI accepts only a fresh absolute path and 1–120 minutes.
+
+Separate actual held sessions prove expiry and SIGINT cleanup, public descriptor privacy,
+40/20/20 source scopes, removed owned containers/private material and a closed app port.
+The full manual-guide reproduction exposed stale parent Activity versions after linking.
+The UI now preserves the ticket/time flow, restores its trigger before parent teardown,
+rereads all current Activity fields and requires a new explicit status action. Final
+Chromium/Firefox/WebKit guide runs assign, read source, link ticket, record 0.25 own hours
+and complete the refreshed Task while the Atlas observation remains OPEN.
+
+Current tooling 22/22, focused frontend 53/53, full frontend 580/580 and all static/build
+checks pass. 2698 final application/tool hashes match before/after. The 31 root
+launcher inputs also match the earlier two lifecycle tests; their pre-fix UI scope is
+explicit in [M28 evidence](evidence/local-demo-M28-2026-10-17.json). Unchanged backend and
+Atlas reuse prior exact-input acceptance. No new 78-case CRM regression run is claimed.
+The M27 report is [archived byte for byte](evidence/composition-M27-2026-10-17.json).
+Human time savings, staff feedback and working-account/VPS acceptance remain open.
+Nothing was published or deployed.

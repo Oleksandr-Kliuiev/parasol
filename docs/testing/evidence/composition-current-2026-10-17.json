@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "runId": "714cd28c1d20",
+  "runId": "f5b4e79986ca",
   "accepted": true,
   "diagnostic": false,
   "build": {
@@ -8,8 +8,8 @@
     "diagnostic": false
   },
   "browser": {
-    "startTime": "2026-10-17T14:51:32.835Z",
-    "duration": 37843.715000000004,
+    "startTime": "2026-10-17T15:29:11.748Z",
+    "duration": 43791.369000000006,
     "expected": 9,
     "skipped": 0,
     "unexpected": 0,
@@ -25,7 +25,7 @@
     "sourceTextAbsentFromTask": true,
     "sourceTextAbsentFromAudit": true,
     "providerWrites": 0,
-    "atlasRequests": 567,
+    "atlasRequests": 563,
     "actualScale": {
       "clients": 40,
       "devices": 400,
