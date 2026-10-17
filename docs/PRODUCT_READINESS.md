@@ -46,7 +46,7 @@ Backend и Atlas не менялись: M26 CRM 939 unit / 94 architecture / 208
 | Atera-заявка не экспортирует неподходящий контакт | [M18](migration/M18-SERVICE-CONTACT-SAFETY.md): admission и перед новой отправкой, exact owner/link fences, исходный журнал неопределённости; SQL 65/65 плюс последние affected 7/7 | Рабочий аккаунт/схема и eventual consistency остаются внешней проверкой |
 | Подключения показывают свою фактическую готовность | [M15](migration/M15-LOCAL-READINESS.md): read-only `/connections`, личная конфигурация Atlas, Web flags, сохранённые успехи/счётчики и локальные mappings; connectivity NOT_CHECKED; composition проходит | Реальная проверка аккаунтов отдельно |
 | Надёжное локальное воспроизведение | [M13](testing/COMPOSITION.md): текущий полный запуск 9/9 со сборкой, точная SQL/privacy-проверка, restricted roles и очистка; Atlas unit 711/711, PostgreSQL 789/789 и browser 90/90 | GitHub CI после будущего разрешения на публикацию |
-| Эксплуатация воспроизводима | [M07](migration/M07-HOSTINGER.md), локальное учение backup/restore | Перед будущим запуском: Entra, ACME, offsite credentials, RTO и восстановление на целевом VPS |
+| Эксплуатация воспроизводима | [M07](migration/M07-HOSTINGER.md); [M29](migration/M29-CURRENT-WORKFLOW-RECOVERY.md) проверил текущие Linux images, native backup/restore цепочки Atlas → Task → ticket → Time → receipt с точными полями/rowversions и запретами UPDATE/DELETE обоих runtime login; операции 21/21 | Перед будущим запуском: Entra, ACME, offsite credentials, RTO и восстановление на целевом VPS |
 
 Совместный локальный сценарий CRM → Atlas → PostgreSQL пройден в M13; компактное
 [текущее свидетельство](testing/evidence/composition-current-2026-10-17.json) сохранено без credentials.
