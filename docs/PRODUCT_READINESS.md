@@ -9,12 +9,12 @@
 Завершение очередного M-этапа не означает завершение всей цели. Отсутствие ошибок
 в синтетических тестах также не доказывает совместимость рабочего аккаунта провайдера.
 
-Текущий полный composition после M22 прошёл 9/9 с новой сборкой, точными SQL/privacy
-evidence и очисткой. CRM browser — 67/67, frontend — 559/559, CRM unit — 911/911,
-architecture — 94/94, затронутые SQL integration — 63/63.
-[Свидетельство M22](testing/evidence/task-ticket-time-M22-2026-10-17.json) сохраняет
-результаты и границы проверки; полный SQL-набор CRM здесь не заявляется.
-До финансового пилота требуется M23: единый допуск всех Time writers и закрытия периодов.
+Текущий полный composition после M23 прошёл 9/9 с новой сборкой и очисткой.
+CRM browser — 70/70, frontend — 562/562, CRM unit — 917/917, architecture — 94/94,
+затронутые SQL integration — 102/102. [Свидетельство M23](testing/evidence/time-period-M23-2026-10-17.json)
+фиксирует проверенный объём: это не полный SQL-набор CRM. Конкурентное закрытие месяца
+и все Time writers используют общий admission. До финансового пилота остаются
+восстановление между Contracts HourBank/Time и асинхронная граница export → invoiced.
 
 ## Ежедневный сценарий
 
@@ -36,7 +36,7 @@ architecture — 94/94, затронутые SQL integration — 63/63.
 | Изменение задачи сохраняет срок и чужую правку | [M16](migration/M16-TASK-EDITING.md): точный момент и исходный ETag редактора; [M20](migration/M20-ACTIVITY-STATUS-CONCURRENCY.md) добавляет displayed If-Match для complete/reopen, pending/conflict/focus guards; SQL 38/38, полный frontend 484/484, browser 55/55, actual composition 8/8 | Пилот с несколькими сотрудниками и измерение времени |
 | Личный список не скрывает ошибку под пустым результатом | [M17](migration/M17-PERSONAL-TASK-RELIABILITY.md): error/refresh/scope/paging/notification guards; [M19](migration/M19-EXACT-ACTIVITY-NAVIGATION.md) точно открывает одну запись, позволяет обновить её и возвращает весь timeline; actual handoff с уже открытым получателем прошёл | Пилот с тремя сотрудниками и измерение времени рабочего сценария |
 | Ежедневный обзор доступных клиентов | [M14](migration/M14-ATLAS-ATTENTION.md): личные клиенты, HIGH/CRITICAL preview, честный неполный охват и свежесть; свежий M12 диалог проверяет уже назначенную работу; current composition проходит | Назначенные задачи остаются в «Моих задачах», глобальный фильтр без исполнителя пока не заявлен |
-| Сервис, время и финансовые процессы используют имеющиеся модули | [M21](migration/M21-SAVED-SERVICE-DATA.md): достоверные сохранённые чтения; [M22](migration/M22-TASK-TICKET-TIME.md): подтверждённый owner заявки, Task→ticket→собственные часы, постоянная квитанция повтора; реальная локальная цепочка 9/9 | M23: атомарность закрытия периода со всеми Time writers; отдельные границы HourBank/invoice; рабочие Atera/PowerOffice отдельно |
+| Сервис, время и финансовые процессы используют имеющиеся модули | [M21](migration/M21-SAVED-SERVICE-DATA.md): достоверные сохранённые чтения; [M22](migration/M22-TASK-TICKET-TIME.md): подтверждённый owner заявки, Task→ticket→собственные часы, постоянная квитанция повтора; реальная локальная цепочка 9/9 | [M23](migration/M23-TIME-PERIOD-ADMISSION.md) закрыл гонку периода и лимита SLA; далее — восстановление HourBank/Time, export/invoiced и рабочие Atera/PowerOffice |
 | Atera-заявка не экспортирует неподходящий контакт | [M18](migration/M18-SERVICE-CONTACT-SAFETY.md): admission и перед новой отправкой, exact owner/link fences, исходный журнал неопределённости; SQL 65/65 плюс последние affected 7/7 | Рабочий аккаунт/схема и eventual consistency остаются внешней проверкой |
 | Подключения показывают свою фактическую готовность | [M15](migration/M15-LOCAL-READINESS.md): read-only `/connections`, личная конфигурация Atlas, Web flags, сохранённые успехи/счётчики и локальные mappings; connectivity NOT_CHECKED; composition проходит | Реальная проверка аккаунтов отдельно |
 | Надёжное локальное воспроизведение | [M13](testing/COMPOSITION.md): текущий полный запуск 9/9 со сборкой, точная SQL/privacy-проверка, restricted roles и очистка; Atlas unit 711/711, PostgreSQL 789/789 и browser 90/90 | GitHub CI после будущего разрешения на публикацию |

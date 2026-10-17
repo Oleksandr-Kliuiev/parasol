@@ -208,9 +208,9 @@ production and composition settings remain unchanged. Raw HTTP traces of that in
 429 were not retained. No timeout increase or assertion exclusion was introduced.
 No publication, deployment or live provider call occurred.
 
-## Current M22 local verification, 17 October 2026
+## M22 local verification, 17 October 2026
 
-The [current source-build run](evidence/composition-current-2026-10-17.json) passed all nine
+The [M22 source-build run](evidence/composition-M22-2026-10-17.json) passed all nine
 scenarios, including actual Atlas observation → assigned Task → verified saved ticket →
 current employee time and exact retry. It retained one time row, receipt and create audit,
 the unchanged Task and precisely two ActivityLogged events; provider writes were zero.
@@ -230,3 +230,32 @@ audits association metadata without a customer-contact event, and current SQL/do
 regressions verify that contract. No acceptance threshold was relaxed.
 Concurrent period closure across all Time writers remains M23; already-closed refusal
 does not prove that race resolved. No publication, deployment or live provider call occurred.
+
+## Current M23 local verification, 17 October 2026
+
+The [current source-build run](evidence/composition-current-2026-10-17.json) passed 9/9
+with month admission active in the actual Task → ticket → own time chain. Exact durable
+evidence, restricted roles, privacy and cleanup passed; 577 Atlas requests, zero
+mutating requests. There were no skips, retries or flaky cases.
+
+The [M23 summary](evidence/time-period-M23-2026-10-17.json) records 917 unit, 94 architecture,
+102 affected SQL, 562 frontend and 70 CRM browser cases, all passing. The three new
+real-API browser cases check closing refusal, approval, closing, a retained refused time
+form, ServiceLead permissions and explicit Finance reopening. Existing 67 regressions
+remain included. 824 backend/build and 389 web inputs match; all 2634 composition inputs
+were unchanged through the invocation. Atlas strict 711/789/90 remains supported by its
+1421 frozen inputs and exact inventory; it was not rerun. Static gates and 291.7/300 KB pass.
+
+The first 100/101 SQL result remains retained: canceling a SQL-confirmed application-lock
+wait raised SqlException. The helper now normalizes it to cancellation only for a canceled
+caller token, keeping the original assertion, rollback and lock-release checks. All 102
+pass after the correction. Cross-module HourBank recovery and asynchronous invoice
+finalization are not established by period locks. Nothing was published or deployed.
+
+One independent CRM browser test was corrected after composition: Date's required marker
+is accepted and the submitted date is asserted. This file is not compiled into the SPA
+or imported by composition. All application/composition inputs still match the accepted
+run; the original 2634-input manifest was unchanged during it. The subsequent oracle
+hashes are recorded separately and verified by current static/frontend and 70/70 browser
+checks. Both earlier 67/70 browser reports remain retained, first for opening the customer
+picker and then for the required Date label. Neither is accepted.

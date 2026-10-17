@@ -61,7 +61,7 @@ Service-заявке и явно записанному времени сотр�
 в 63 файлах; ESLint, app/E2E/composition TypeScript, production build и budget 291.7/300 KB.
 CRM browser 67/67 в трёх движках и полный source-build composition 9/9 прошли без skips,
 retries, flaky или исключений; все временные ресурсы очищены. Компактный
-[совместный отчёт](../testing/evidence/composition-current-2026-10-17.json) содержит
+[совместный отчёт](../testing/evidence/composition-M22-2026-10-17.json) содержит
 554 Atlas requests, 0 mutating requests и точные SQL/privacy counts.
 387 web и 811 backend/build входов совпадают с проверенными SHA256.
 
