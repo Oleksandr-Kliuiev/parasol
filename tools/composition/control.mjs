@@ -4,6 +4,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { stateFile } from './runtime.mjs';
 import { assertPrivateState, sourceKey, fixturePlan, ROLES, WORKSPACE } from './plan.mjs';
 import { atlasRequire, sql, privileges, verifyContainer } from './database.mjs';
+import { ticketWorkEvidence } from './ticket-work.mjs';
 
 export const OPERATIONS = ['revokeTechnicianMembership', 'restoreTechnicianMembership',
   'revokeTechnicianToken', 'restoreTechnicianToken', 'countsTaskEvidence'];
@@ -30,7 +31,8 @@ async function taskEvidence(state, pg) {
     (SELECT count(*)::int FROM "Device" WHERE "workspaceId"=$1) devices,
     (SELECT count(*)::int FROM "Actor" WHERE "workspaceId"=$1) employees`, [WORKSPACE])).rows[0];
   const access = JSON.parse(await readFile(join(state.directory, 'private/atlas-access.json'), 'utf8'));
-  return { ...facts, providerWrites: access.providerWrites, atlasRequests: access.requests, actualScale: actual, privileges: await privileges(state) };
+  return { ...facts, providerWrites: access.providerWrites, atlasRequests: access.requests, actualScale: actual,
+    privileges: await privileges(state), ticketWork: await ticketWorkEvidence(state) };
 }
 
 export async function executeControl(path, operation) {

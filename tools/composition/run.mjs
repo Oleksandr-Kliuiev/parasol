@@ -11,6 +11,7 @@ import { bootstrapCrm, linkCustomers } from './bootstrap.mjs';
 import { seedAtlas, COLLISION_WORKSPACE } from './seed.mjs';
 import { recordingGateway } from './gateway.mjs';
 import { executeControl } from './control.mjs';
+import { seedTicketWork } from './ticket-work.mjs';
 import { requireBrowserPass } from '../../scripts/test-result.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -29,7 +30,7 @@ export function failureLabel(error, interrupted = false) {
   return 'UNCLASSIFIED_STAGE_FAILURE';
 }
 export function acceptedReport({ build, browser, evidence, cleanup, diagnostic }) {
-  return !diagnostic && build?.builtInThisRun === true && browser?.expected === 8
+  return !diagnostic && build?.builtInThisRun === true && browser?.expected === 9
     && browser.unexpected === 0 && browser.skipped === 0 && browser.flaky === 0 && cleanup === true
     && evidence?.taskCount === 1 && evidence.receiptCount === 1 && evidence.createAuditCount === 1
     && evidence.totalActivityLoggedCount === 2 && evidence.providerWrites === 0
@@ -37,7 +38,10 @@ export function acceptedReport({ build, browser, evidence, cleanup, diagnostic }
     && ['bodyIsNull', 'genericSubject', 'sourceTextAbsentFromTask', 'sourceTextAbsentFromAudit'].every(key => evidence[key] === true)
     && Object.keys(evidence.privileges ?? {}).length === 3
     && ['crmWebRestricted', 'crmWorkerRestricted', 'atlasRuntimeRestricted'].every(key => evidence.privileges?.[key] === true)
-    && evidence.actualScale?.clients === 40 && evidence.actualScale.devices === 400 && evidence.actualScale.employees === 3;
+    && evidence.actualScale?.clients === 40 && evidence.actualScale.devices === 400 && evidence.actualScale.employees === 3
+    && evidence.ticketWork?.timeCount === 1 && evidence.ticketWork.matchingTimeCount === 1
+    && evidence.ticketWork.timeCreateAuditCount === 1 && evidence.ticketWork.receiptCount === 1
+    && evidence.ticketWork.taskPreserved === true;
 }
 
 export async function runComposition(options) {
@@ -93,6 +97,7 @@ export async function runComposition(options) {
     stage('migrate Atlas and provision confined runtime role'); atlasDatabase = await prepareAtlasDatabase(state, controller.signal); await save();
     stage('bootstrap three real CRM employee identities and forty customers');
     const initialWeb = await web(false); await bootstrapCrm(state); await initialWeb.stop();
+    stage('seed owned saved-ticket provenance'); await seedTicketWork(state); await save();
     stage('seed owned synthetic Atlas database'); await seedAtlas(atlasDatabase.owner, state.employees); await save();
     const atlas = startProcess(process.execPath, [join(ROOT, 'apps/atlas/dist/apps/api/src/main.js')], {
       cwd: join(ROOT, 'apps/atlas'), label: 'Atlas API', bindingLine: `Atlas PostgreSQL API: http://127.0.0.1:${state.ports.atlas}`, env: safeEnvironment({ ATLAS_MODE: 'db', ATLAS_RUNTIME_DATABASE_URL: state.atlasRuntimeUrl,
@@ -113,7 +118,7 @@ export async function runComposition(options) {
       workspaceId: state.plan.workspaceId, collisionWorkspaceId: COLLISION_WORKSPACE,
       employees: state.employees.map(({ id, role, displayName, visibleClientIds }) => ({ id, role, displayName, visibleClientIds })),
       clients, target, restrictedClient: { customerId: clients[20].crmCustomerId, atlasClientId: clients[20].atlasClientId, name: clients[20].name },
-      counts: state.plan.counts, privileges: confined });
+      counts: state.plan.counts, privileges: confined, ticketWork: state.ticketWork });
     state.phase = 'ready'; await save();
     if (!options.skipBrowser) {
       stage('run real browser composition acceptance');

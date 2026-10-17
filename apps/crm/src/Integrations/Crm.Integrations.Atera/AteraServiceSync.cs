@@ -59,6 +59,10 @@ public sealed class AteraLinkIndex(IntegrationDbContext db)
 {
     public async Task<IReadOnlyDictionary<long, Guid>> CustomersAsync(CancellationToken ct) => await LoadAsync(AteraTypes.Customer, ct);
 
+    public async Task<IReadOnlyDictionary<long, TicketOwnerBinding>> TicketOwnersAsync(CancellationToken ct) =>
+        AteraTicketOwners.Resolve(await db.ExternalLinks.AsNoTracking()
+            .Where(row => row.System == AteraTypes.System && row.ExternalType == AteraTypes.Customer).ToListAsync(ct));
+
     public async Task<IReadOnlyDictionary<long, Guid>> ContactsAsync(CancellationToken ct) => await LoadAsync(AteraTypes.Contact, ct);
 
     private async Task<IReadOnlyDictionary<long, Guid>> LoadAsync(string externalType, CancellationToken ct)
@@ -108,7 +112,7 @@ public sealed class AteraTicketSyncJob(
 
         await runner.RunAsync(AteraTypes.System, recent ? RecentJobId : OpenJobId, async (progress, ct) =>
         {
-            var customers = await links.CustomersAsync(ct);
+            var customers = await links.TicketOwnersAsync(ct);
             var contacts = await links.ContactsAsync(ct);
             // DEV-11: a ticket's end user who was erased at their request is mirrored without name, address or contact.
             var suppressed = await suppressions.SnapshotAsync(ct);
@@ -152,7 +156,7 @@ public sealed class AteraTicketSyncJob(
             var tickets = new List<ExternalTicket>();
             foreach (var ticket in collected.DistinctBy(t => t.TicketId))
             {
-                if (ticket.CustomerId is not { } customerId || !customers.TryGetValue(customerId, out var organizationId))
+                if (ticket.CustomerId is not { } customerId || !customers.TryGetValue(customerId, out var owner))
                 {
                     skipped++;
                     continue;
@@ -163,13 +167,14 @@ public sealed class AteraTicketSyncJob(
                     ticket.EndUserEmail,
                     ticket.EndUserId is { } suppressedId ? new ExternalReference(AteraTypes.System, AteraTypes.Contact, suppressedId.ToString(CultureInfo.InvariantCulture)) : null);
                 tickets.Add(new ExternalTicket(
-                    AteraTypes.System, ticket.TicketId, organizationId,
+                    AteraTypes.System, ticket.TicketId, owner.OrganizationId,
                     !endUserSuppressed && ticket.EndUserId is { } endUserId && contacts.TryGetValue(endUserId, out var contactId) ? contactId : null,
                     ticket.Title, ticket.Status, ticket.Priority, ticket.Impact, ticket.Type, ticket.Source,
                     technicianKey is not null && technicianMap.TryGetValue(technicianKey, out var userId) ? userId : null,
                     ticket.TechnicianName, endUserSuppressed ? null : ticket.EndUserName, endUserSuppressed ? null : ticket.EndUserEmail,
                     ticket.CreatedAt, ticket.FirstResponseAt, ticket.ResolvedAt,
-                    ticket.LastActivityAt, AteraServiceMapping.Url(options.Value.TicketUrlTemplate, ticket.TicketId)));
+                    ticket.LastActivityAt, AteraServiceMapping.Url(options.Value.TicketUrlTemplate, ticket.TicketId),
+                    owner.CustomerId, owner.LinkId));
             }
 
             progress.Changed = await service.UpsertTicketsAsync(tickets, ct);

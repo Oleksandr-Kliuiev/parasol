@@ -38,6 +38,8 @@ export interface TimeEntry {
   isLocked: boolean;
   allocations: Allocation[];
   etag: string;
+  ticketId?: string | null;
+  sourceActivityId?: string | null;
 }
 
 export interface TimeSummary {
@@ -70,6 +72,9 @@ export interface TimeEntryRequest {
   externalTicketId: number | null;
   ticketTitle: string | null;
   projectId: string | null;
+  ticketId?: string | null;
+  sourceActivityId?: string | null;
+  clientRequestId?: string | null;
 }
 
 export interface Period {

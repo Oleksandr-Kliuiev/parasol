@@ -32,6 +32,11 @@ public sealed class Ticket : Entity
     public string? Url { get; private set; }
     public DateTimeOffset SyncedAt { get; private set; }
 
+    public long? OwnerCustomerId { get; private set; }
+    public Guid? OwnerLinkId { get; private set; }
+    /// <summary>Local time the last payload was accepted. Never a provider observation or successful sync claim.</summary>
+    public DateTimeOffset? ImportedAt { get; private set; }
+
     public static Ticket From(ExternalTicket source, DateTimeOffset now)
     {
         var ticket = new Ticket { System = source.System, ExternalId = source.ExternalId };
@@ -39,11 +44,14 @@ public sealed class Ticket : Entity
         return ticket;
     }
 
-    /// <summary>Returns true when a visible field changed.</summary>
+    /// <summary>Returns true when a visible field or exact owner proof changed. Import time alone is not a change.</summary>
     public bool Apply(ExternalTicket s, DateTimeOffset now)
     {
         var before = Signature();
         OrganizationId = s.OrganizationId;
+        OwnerCustomerId = s.OwnerCustomerId;
+        OwnerLinkId = s.OwnerLinkId;
+        ImportedAt = now;
         ContactId = s.ContactId;
         Title = s.Title.Length > 512 ? s.Title[..512] : s.Title;
         Status = s.Status;
@@ -87,7 +95,7 @@ public sealed class Ticket : Entity
         return true;
     }
 
-    private string Signature() => string.Join('|', OrganizationId, ContactId, Title, Status, Priority, Impact, Type, Source, TechnicianUserId, TechnicianName,
+    private string Signature() => string.Join('|', OwnerCustomerId, OwnerLinkId, OrganizationId, ContactId, Title, Status, Priority, Impact, Type, Source, TechnicianUserId, TechnicianName,
         EndUserName, EndUserEmail, CreatedAtSource.ToUnixTimeSeconds(), FirstResponseAt?.ToUnixTimeSeconds(), ResolvedAt?.ToUnixTimeSeconds(), LastActivityAt?.ToUnixTimeSeconds(), Url);
 }
 

@@ -17,7 +17,8 @@ public sealed record ManualTimeEntry(
     Guid? TicketId,
     long? ExternalTicketId,
     string? TicketTitle,
-    Guid? ProjectId);
+    Guid? ProjectId,
+    Guid? SourceActivityId = null);
 
 public sealed class TimeEntry : AuditableEntity
 {
@@ -32,6 +33,7 @@ public sealed class TimeEntry : AuditableEntity
     public string? TechnicianExternalId { get; private set; }
     public string? TechnicianName { get; private set; }
     public Guid? TicketId { get; private set; }
+    public Guid? SourceActivityId { get; private set; }
     public long? ExternalTicketId { get; private set; }
     public string? TicketTitle { get; private set; }
     public DateOnly WorkDate { get; private set; }
@@ -75,9 +77,10 @@ public sealed class TimeEntry : AuditableEntity
 
     public static Result<TimeEntry> CreateManual(ManualTimeEntry details)
     {
-        if (details.Hours is <= 0 or > 24)
+        var roundedHours = decimal.Round(details.Hours, 2);
+        if (details.Hours is <= 0 or > 24 || roundedHours <= 0)
         {
-            return Error.Validation("TIM_INVALID_HOURS", "Hours must be above 0 and at most 24.");
+            return Error.Validation("TIM_INVALID_HOURS", "Hours must round to at least 0.01 and be at most 24.");
         }
 
         return new TimeEntry
@@ -86,13 +89,14 @@ public sealed class TimeEntry : AuditableEntity
             OrganizationId = details.OrganizationId,
             TechnicianId = details.TechnicianId,
             WorkDate = details.WorkDate,
-            Hours = decimal.Round(details.Hours, 2),
+            Hours = roundedHours,
             WorkType = Clean(details.WorkType),
             Billable = details.Billable,
             Onsite = details.Onsite,
             AfterHours = details.AfterHours,
             Description = Clean(details.Description),
             TicketId = details.TicketId,
+            SourceActivityId = details.SourceActivityId,
             ExternalTicketId = details.ExternalTicketId,
             TicketTitle = Clean(details.TicketTitle),
             ProjectId = details.ProjectId,
@@ -149,21 +153,23 @@ public sealed class TimeEntry : AuditableEntity
             return Error.Conflict("TIM_SOURCE_OWNED", "The entry comes from the service desk; change it there.");
         }
 
-        if (details.Hours is <= 0 or > 24)
+        var roundedHours = decimal.Round(details.Hours, 2);
+        if (details.Hours is <= 0 or > 24 || roundedHours <= 0)
         {
-            return Error.Validation("TIM_INVALID_HOURS", "Hours must be above 0 and at most 24.");
+            return Error.Validation("TIM_INVALID_HOURS", "Hours must round to at least 0.01 and be at most 24.");
         }
 
         OrganizationId = details.OrganizationId;
         TechnicianId = details.TechnicianId;
         WorkDate = details.WorkDate;
-        Hours = decimal.Round(details.Hours, 2);
+        Hours = roundedHours;
         WorkType = Clean(details.WorkType);
         Billable = details.Billable;
         Onsite = details.Onsite;
         AfterHours = details.AfterHours;
         Description = Clean(details.Description);
         TicketId = details.TicketId;
+        SourceActivityId = details.SourceActivityId;
         ExternalTicketId = details.ExternalTicketId;
         TicketTitle = Clean(details.TicketTitle);
         ProjectId = details.ProjectId;

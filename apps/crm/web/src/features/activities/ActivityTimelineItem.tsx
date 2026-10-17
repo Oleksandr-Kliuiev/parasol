@@ -8,6 +8,7 @@ import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 import type { Activity } from './types';
 import { ActivityStatusFeedback } from './ActivityStatusFeedback';
 import type { StatusFocusRequest } from './useActivityStatusCommands';
+import { TaskTicketButton } from './TaskTicketButton';
 
 const useStyles = makeStyles({
   item: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: tokens.spacingHorizontalS, overflowWrap: 'anywhere',
@@ -66,6 +67,7 @@ export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPen
         {activity.status === 'Done' && activity.completedAt ? ` · ${t('activities.doneAt', { at: formatDateTime(activity.completedAt) })}` : ''}
       </div>
       {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
+      <TaskTicketButton activity={activity} />
       {statusStale && <ActivityStatusFeedback activity={activity} />}
     </span>
     {canWrite && activity.type !== 'Email' && <span className={styles.actions}>

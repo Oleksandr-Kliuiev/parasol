@@ -18,6 +18,7 @@ public static class TimeTrackingModule
     public static IServiceCollection AddTimeTrackingModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddModuleDbContext<TimeTrackingDbContext>(configuration);
+        services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, TimeTrackingDatabasePermissions>();
         services.AddOptions<TimeTrackingOptions>().Bind(configuration.GetSection(TimeTrackingOptions.SectionName));
         services.AddModuleServices(typeof(TimeTrackingModule).Assembly);
         services.AddScoped<TimeEntryService>();

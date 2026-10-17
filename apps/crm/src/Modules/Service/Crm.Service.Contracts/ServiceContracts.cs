@@ -43,7 +43,9 @@ public sealed record ExternalTicket(
     DateTimeOffset? FirstResponseAt,
     DateTimeOffset? ResolvedAt,
     DateTimeOffset? LastActivityAt,
-    string? Url);
+    string? Url,
+    long? OwnerCustomerId = null,
+    Guid? OwnerLinkId = null);
 
 public sealed record ExternalDevice(string ExternalId, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url);
 

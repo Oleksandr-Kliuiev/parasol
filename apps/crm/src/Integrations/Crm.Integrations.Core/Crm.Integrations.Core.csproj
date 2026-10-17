@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\Modules\Activities\Crm.Activities.Contracts\Crm.Activities.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\Crm.Catalog.Contracts\Crm.Catalog.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Privacy\Crm.Privacy.Contracts\Crm.Privacy.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Service\Crm.Service.Contracts\Crm.Service.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Crm.UnitTests" />

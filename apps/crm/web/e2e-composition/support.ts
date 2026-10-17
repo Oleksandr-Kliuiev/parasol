@@ -28,6 +28,7 @@ export interface Fixture {
   };
   restrictedClient: { customerId: string; atlasClientId: string };
   counts: { clients: number; devices: number; employees: number };
+  ticketWork: { customerId: string; ticketId: string; externalId: number; title: string; importedAt: string };
 }
 
 function loopback(value: string, https = false): URL {

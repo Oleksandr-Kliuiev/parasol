@@ -21,6 +21,8 @@ public static class ActivitiesModule
         services.AddModuleDbContext<ActivitiesDbContext>(configuration);
         services.AddModuleServices(typeof(ActivitiesModule).Assembly);
         services.AddScoped<ActivityService>();
+        services.AddScoped<ActivityTicketService>();
+        services.AddScoped<ITaskWorkApi, TaskWorkApi>();
         services.AddScoped<OutlookService>();
         services.AddScoped<IActivitiesApi, SourceTaskApi>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, ActivitiesRestoreParticipant>();
@@ -67,6 +69,16 @@ public static class ActivitiesModule
                     ? HeaderExtensions.PreconditionRequired()
                     : (await service.ReopenAsync(id, ifMatch, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ActivitiesWrite);
+
+        group.MapGet("/{id:guid}/ticket", async (Guid id, Guid organizationId, ActivityTicketService service, CancellationToken ct) =>
+                (await service.GetAsync(id, organizationId, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.ActivitiesRead).RequirePermission(Permissions.ServiceRead);
+
+        group.MapPut("/{id:guid}/ticket", async (Guid id, ActivityTicketRequest request, ActivityTicketService service, HttpRequest http, CancellationToken ct) =>
+                http.GetIfMatch() is not { } ifMatch
+                    ? HeaderExtensions.PreconditionRequired()
+                    : (await service.PutAsync(id, request, ifMatch, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.ActivitiesRead).RequirePermission(Permissions.ActivitiesWrite).RequirePermission(Permissions.ServiceRead);
 
         // ---------- Outlook (FR-ACT-02, FR-ACT-03) ----------
 
