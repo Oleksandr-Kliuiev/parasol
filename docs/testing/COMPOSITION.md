@@ -304,3 +304,25 @@ collector retaining excluded Rate after exported Info. Delayed-delivery tests ar
 from other classes' shared outbox drainers; the 194/195 diagnostic remains retained.
 Historical financial reconciliation, live accounts and VPS acceptance remain separate.
 Nothing was published or deployed.
+
+
+## M26 local verification, 17 October 2026
+
+The [current full-build run](evidence/composition-current-2026-10-17.json),
+`cacf315c9c43`, passes all nine scenarios with exact durable/privacy evidence,
+572 Atlas requests, zero mutating Atlas requests, restricted runtime roles and confirmed
+cleanup. Full before/after repository snapshots and all 2,669 accepted backend/web/Atlas
+input hashes match. This is the same invocation used for the current unified customer-card
+verification; it is not counted as a second run. The previous M25 report is archived
+[byte for byte](evidence/composition-M25-2026-10-17.json).
+
+Separate M26 verification passes 939 CRM unit, 94 architecture, 208 affected SQL,
+572 frontend and 78 CRM browser regressions. The finance review workflow uses its real
+API in three engines. Two new phone accessibility cases use a controlled synthetic
+report; they initially exposed long MessageBar text overflow (76/78), fixed in the
+product with multiline layout while retaining the same 390px viewport, width oracle,
+Axe and contrast thresholds. Final results have zero skips/retries/flaky cases.
+See [M26 evidence](evidence/time-financial-review-M26-2026-10-17.json) for scopes and limits.
+The unchanged 1,421 Atlas inputs reuse the separate strict 711/789/90 acceptance.
+Human time savings, working provider accounts and VPS acceptance remain unverified.
+Nothing was published or deployed.

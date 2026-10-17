@@ -86,3 +86,10 @@ Task/ticket/time/privacy facts, 572 Atlas requests и нулём mutating reques
 711 unit / 789 PostgreSQL / 90 browser поддержан 1421 неизменным входом, заново не запускался.
 Все восемь собственных runtime fixtures очищены. Оригинальные Git HEAD/status/refs,
 import history, diff-check и redacted secret scan проверяются перед локальным checkpoint.
+
+
+M26 добавил [read-only сверку выбранной записи](M26-TIME-FINANCIAL-REVIEW.md): Finance
+видит причины отказа и связи с банком/Billing без изменения M25 guards. Автоматическая
+правка исторических источников не добавлена. Предыдущий полный composition M25 сохранён
+[отдельно](../testing/evidence/composition-M25-2026-10-17.json); текущий указатель относится
+к подтверждённому source-build прогону M26.
