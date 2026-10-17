@@ -54,9 +54,10 @@ import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { CustomerWorkspacePanel } from '../parasol/CustomerWorkspacePanel';
 import { CustomerIdentityPanel } from '../parasol/CustomerIdentityPanel';
+import { useCustomerTabVisibility } from './useCustomerTabVisibility';
 
 const useStyles = makeStyles({
-  // Eleven tabs do not fit a phone: the bar scrolls sideways (a focused tab scrolls into view) instead of widening the page.
+  // The tab bar scrolls sideways without widening a phone; URL-selected tabs are revealed too.
   tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden' },
   grid: {
     display: 'grid',
@@ -84,7 +85,7 @@ type TabValue =
 
 export function OrganizationDetailPage() {
   const styles = useStyles();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const notify = useNotify();
@@ -106,6 +107,8 @@ export function OrganizationDetailPage() {
   const restoreFocusTarget = useRestoreFocusTarget();
   const duplicates = useDuplicates(id);
   const mergedIntoId = error instanceof ApiError && error.code === 'CUS_ORGANIZATION_MERGED' ? String(error.problem.mergedIntoId) : null;
+  const tabs = useCustomerTabVisibility(tab, JSON.stringify([id, i18n.resolvedLanguage, canContracts, canService, canSales,
+    canLicensing, canProjects, canBilling, canActivities]), !isPending && !error && !mergedIntoId);
 
   useEffect(() => {
     if (mergedIntoId) {
@@ -171,6 +174,7 @@ export function OrganizationDetailPage() {
       )}
 
       <TabList
+        ref={tabs}
         className={styles.tabs}
         selectedValue={tab}
         onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}

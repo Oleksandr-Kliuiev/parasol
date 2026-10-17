@@ -15,6 +15,16 @@ test('selected activity and return to the customer timeline work with a keyboard
   await page.goto(`/organizations/${customer.id}?tab=activities&activityId=${activity.id}`);
   const timeline = page.getByRole('region', { name: 'Activities', exact: true });
   await expect(timeline.getByRole('heading', { name: 'Selected activity', exact: true })).toBeFocused();
+  const activeTab = page.getByRole('tab', { name: 'Activities', exact: true });
+  await expect(activeTab).toHaveAttribute('aria-selected', 'true');
+  await expect(activeTab).toBeInViewport({ ratio: 1 });
+  const verticalScroll = await page.evaluate(() => window.scrollY);
+  await page.setViewportSize({ width: 360, height: 844 });
+  await expect(activeTab).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => window.scrollY)).toBe(verticalScroll);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(activeTab).toBeInViewport({ ratio: 1 });
+  await expect(timeline.getByRole('heading', { name: 'Selected activity', exact: true })).toBeFocused();
   await expect(timeline.getByRole('listitem')).toHaveCount(1);
   expect(await timeline.getByRole('heading', { name: 'Activities', exact: true }).evaluate(heading => {
     const text = document.createRange(); text.selectNodeContents(heading);

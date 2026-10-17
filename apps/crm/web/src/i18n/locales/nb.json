@@ -1154,6 +1154,17 @@
     }
   },
   "service": {
+    "savedData": "Lagrede servicedata",
+    "refreshSaved": "Oppdater lagrede data",
+    "savedMirror": "Lagrede CRM-data fra Atera. Oppdatering leser denne kopien på nytt; den sjekker ikke Atera direkte.",
+    "summary": "Lagret serviceoversikt",
+    "requests": "Forespørsler om saker",
+    "loadingSaved": "Leser lagrede data",
+    "readFailed": "Lagrede data kunne ikke leses. Ingen tidligere data vises. Prøv igjen eller oppdater lagrede data.",
+    "lastTicketChange": "Siste lagrede saksendring: {{at}}",
+    "lastTicketChangeUnknown": "Tidspunkt for siste lagrede saksendring er ukjent.",
+    "deviceTotalsUnknown": "Enhetstall er utilgjengelige til den lagrede oversikten kan leses.",
+    "noRequests": "Ingen lagrede saksforespørsler trenger oppfølging.",
     "openTickets": "Åpne saker",
     "devicesOnline": "Enheter ({{online}} på nett)",
     "criticalAlerts": "Kritiske varsler",

@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
-import { usePagedList } from '../../api/paging';
+import type { OrganizationContactItem } from '../../api/types';
+import { savedServicePolicy, useSavedServiceList, type SavedServiceScope } from './useSavedServiceList';
 import type { Alert, Device, ServiceSummary, SlaReport, Ticket, TicketOptions, TicketRequest } from './types';
 
 const BASE = '/api/v1/service';
@@ -26,52 +27,56 @@ export function useSlaReport(period: string, organizationId?: string) {
   });
 }
 
-export function useServiceSummary(organizationId: string, enabled = true) {
+export function useServiceSummary(organizationId: string, scope: SavedServiceScope) {
   return useQuery({
-    queryKey: serviceKeys.summary(organizationId),
-    enabled,
-    queryFn: async ({ signal }) => (await api.get<ServiceSummary>(`${BASE}/organizations/${organizationId}/summary`, signal)).data,
+    ...savedServicePolicy, queryKey: [...serviceKeys.summary(organizationId), scope.owner, scope.revision],
+    queryFn: async ({ signal }) => {
+      const answer = await api.get<ServiceSummary>(`${BASE}/organizations/${organizationId}/summary`, signal);
+      signal.throwIfAborted(); return answer.data;
+    },
   });
 }
 
 /** Open first, newest first; a page at a time with the count of all (DEV-12). */
-export function useTickets(filters: { organizationId?: string; contactId?: string; openOnly?: boolean; days?: number }, enabled = true) {
-  return usePagedList<Ticket>(serviceKeys.tickets(filters), `${BASE}/tickets`, filters, { enabled, limit: 25 });
+export function useTickets(filters: { organizationId?: string; contactId?: string; openOnly?: boolean; days?: number }, scope: SavedServiceScope) {
+  return useSavedServiceList<Ticket>(serviceKeys.tickets(filters), `${BASE}/tickets`, filters, scope, 25);
 }
 
 /** By machine name; the counts per type come from the summary, which counts every device. */
-export function useDevices(organizationId: string, enabled = true) {
-  return usePagedList<Device>(serviceKeys.devices(organizationId), `${BASE}/devices`, { organizationId }, { enabled, limit: 25 });
+export function useDevices(organizationId: string, scope: SavedServiceScope) {
+  return useSavedServiceList<Device>(serviceKeys.devices(organizationId), `${BASE}/devices`, { organizationId }, scope, 25);
 }
 
-export function useAlerts(organizationId: string, enabled = true) {
-  return usePagedList<Alert>(serviceKeys.alerts(organizationId), `${BASE}/alerts`, { organizationId }, { enabled, limit: 25 });
+export function useAlerts(organizationId: string, scope: SavedServiceScope) {
+  return useSavedServiceList<Alert>(serviceKeys.alerts(organizationId), `${BASE}/alerts`, { organizationId }, scope, 25);
 }
 
 /** Requests that still need attention: pending (the worker picks them up within a minute) or failed. */
-export function useTicketRequests(organizationId: string, enabled = true) {
-  return usePagedList<TicketRequest>(
-    serviceKeys.requests(organizationId),
-    `${BASE}/ticket-requests`,
-    { organizationId, attentionOnly: true },
-    { enabled, limit: 20, refetchWhile: (r) => r.status === 'Pending' },
-  );
+export function useTicketRequests(organizationId: string, scope: SavedServiceScope) {
+  return useSavedServiceList<TicketRequest>(serviceKeys.requests(organizationId), `${BASE}/ticket-requests`,
+    { organizationId, attentionOnly: true }, scope, 20, request => request.status === 'Pending');
 }
 
-export function useTicketOptions(enabled = true) {
+export function useTicketOptions(owner: string) {
   return useQuery({
-    queryKey: ['service', 'ticket-options'],
-    enabled,
-    staleTime: 600_000,
-    queryFn: async ({ signal }) => (await api.get<TicketOptions>(`${BASE}/ticket-options`, signal)).data,
+    ...savedServicePolicy, queryKey: ['service', 'ticket-options', owner],
+    queryFn: async ({ signal }) => { const answer = await api.get<TicketOptions>(`${BASE}/ticket-options`, signal); signal.throwIfAborted(); return answer.data; },
+  });
+}
+
+export function useTicketContacts(organizationId: string, owner: string) {
+  return useQuery({
+    ...savedServicePolicy, queryKey: ['service', 'ticket-contacts', organizationId, owner],
+    queryFn: async ({ signal }) => {
+      const answer = await api.get<OrganizationContactItem[]>(`/api/v1/customers/organizations/${organizationId}/contacts`, signal);
+      signal.throwIfAborted(); return answer.data;
+    },
   });
 }
 
 export function useCreateTicketRequest() {
-  const client = useQueryClient();
   return useMutation({
     mutationFn: (body: { organizationId: string; contactId: string | null; title: string; description: string; priority: string; type: string }) =>
       api.post<TicketRequest>(`${BASE}/ticket-requests`, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: serviceKeys.all }),
   });
 }
