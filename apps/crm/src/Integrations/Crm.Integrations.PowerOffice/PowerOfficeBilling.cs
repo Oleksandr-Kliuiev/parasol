@@ -298,7 +298,7 @@ public sealed class PowerOfficeInvoiceSyncJob(
             return;
         }
 
-        await runner.RunAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
+        await runner.RunExclusiveAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
         {
             var since = PowerOfficeCursor.Parse(await runner.GetCursorAsync(PowerOfficeTypes.System, Stream, ct));
             var newest = since;

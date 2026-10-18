@@ -147,7 +147,8 @@ public sealed class ExternalImportService(
 
         foreach (var record in unlinked)
         {
-            if (resolved.Descriptor.EntityType == EntityTypes.Organization)
+            if (resolved.Descriptor.EntityType == EntityTypes.Organization &&
+                await customers.GetOrganizationForSyncAsync(record.Id, cancellationToken) is null)
             {
                 var data = resolved.Adapter.ToOrganizationData(record);
                 var matches = data is null ? [] : matcher!.Match(data);
@@ -225,15 +226,10 @@ public sealed class ExternalImportService(
                     throw new InvalidOperationException("The record has no name.");
                 }
 
-                if (dryRun)
-                {
-                    return new Imported(Guid.Empty, Created: true);
-                }
-
-                var imported = await customers.ImportOrganizationAsync(data, OrganizationStatus.Customer, cancellationToken);
+                var imported = await customers.ImportOrganizationAsync(data with { SourceRecordId = record.Id, PreviewOnly = dryRun }, OrganizationStatus.Customer, cancellationToken);
                 entityId = imported.OrganizationId;
                 wasCreated = imported.Created;
-                method = imported.Created ? LinkMethod.Imported : LinkMethod.Automatic;
+                method = imported.Created || entityId == record.Id ? LinkMethod.Imported : LinkMethod.Automatic;
             }
             else if (descriptor.EntityType == EntityTypes.Contact)
             {
@@ -253,41 +249,25 @@ public sealed class ExternalImportService(
                 }
 
                 var data = adapter.ToContactData(record) ?? throw new InvalidOperationException("The record cannot be read as a contact.");
-                if (dryRun)
-                {
-                    // The import matches a person by a valid address; without one it makes a new contact.
-                    var address = data.Email?.Trim();
-                    var matchable = address is { Length: > 0 } && System.Net.Mail.MailAddress.TryCreate(address, out _);
-                    var existing = matchable ? await customers.FindContactsByEmailAsync([address!], cancellationToken) : new Dictionary<string, Guid>();
-                    return new Imported(Guid.Empty, Created: !matchable || !existing.ContainsKey(address!.ToLowerInvariant()));
-                }
-
-                var imported = await customers.ImportContactAsync(parent.EntityId, data, cancellationToken);
+                var imported = await customers.ImportContactAsync(parent.EntityId, data with { SourceRecordId = record.Id, PreviewOnly = dryRun }, cancellationToken);
                 entityId = imported.ContactId;
                 wasCreated = imported.Created;
-                method = imported.Created ? LinkMethod.Imported : LinkMethod.Automatic;
+                method = imported.Created || entityId == record.Id ? LinkMethod.Imported : LinkMethod.Automatic;
             }
             else if (descriptor.EntityType == EntityTypes.Product)
             {
                 var data = adapter.ToProductData(record) ?? throw new InvalidOperationException("The record cannot be read as a product.");
-                if (dryRun)
-                {
-                    var code = string.IsNullOrWhiteSpace(data.Code) ? data.Name : data.Code;
-                    var sku = code.Trim();
-                    var existing = await catalog.FindProductsBySkuAsync([sku.Length > 64 ? sku[..64] : sku], cancellationToken);
-                    return new Imported(Guid.Empty, Created: existing.Count == 0);
-                }
-
-                var imported = await catalog.ImportProductAsync(data, cancellationToken);
+                var imported = await catalog.ImportProductAsync(data with { SourceRecordId = record.Id, PreviewOnly = dryRun }, cancellationToken);
                 entityId = imported.ProductId;
                 wasCreated = imported.Created;
-                method = imported.Created ? LinkMethod.Imported : LinkMethod.Automatic;
+                method = imported.Created || entityId == record.Id ? LinkMethod.Imported : LinkMethod.Automatic;
             }
             else
             {
                 return Error.Validation("INT_IMPORT_UNSUPPORTED", $"Records of type {descriptor.ExternalType} cannot be imported.");
             }
 
+            if (dryRun) return new Imported(entityId, wasCreated);
             var link = await TryLinkAsync(descriptor, record, entityId, method, cancellationToken);
             return link.IsSuccess ? new Imported(entityId, wasCreated) : link.Error!;
         }

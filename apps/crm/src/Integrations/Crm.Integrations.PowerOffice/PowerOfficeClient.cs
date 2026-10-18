@@ -272,7 +272,8 @@ internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOpt
             }
 
             await EnsureSuccessAsync(response, cancellationToken);
-            var items = await response.Content.ReadFromJsonAsync<List<T>>(PoJson.Options, cancellationToken) ?? [];
+            var items = await response.Content.ReadFromJsonAsync<List<T>>(PoJson.Options, cancellationToken)
+                ?? throw new JsonException("PowerOffice returned a null page instead of a record array.");
             // The server may cap the page size below what was asked for, so a short page does not mean the last one: only 204
             // or an empty page ends the enumeration.
             if (items.Count == 0)

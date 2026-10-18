@@ -28,7 +28,7 @@ public sealed class SyncFailedException(string system, string job, string errorT
 }
 
 /// <summary>Records every synchronization run with its outcome, and stores incremental cursors.</summary>
-public sealed class SyncRunner(IntegrationDbContext db, TimeProvider timeProvider, ILogger<SyncRunner> logger, IPrivacyReplayGate? privacy = null)
+public sealed partial class SyncRunner(IntegrationDbContext db, TimeProvider timeProvider, ILogger<SyncRunner> logger, IPrivacyReplayGate? privacy = null)
 {
     /// <summary>
     /// Runs <paramref name="work"/> and records the run. <paramref name="quietFor"/> is for a job that runs every few minutes

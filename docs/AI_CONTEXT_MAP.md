@@ -1,5 +1,6 @@
 # Parasol context map
 
+- PowerOffice resumable import / M37: `docs/migration/M37-POWEROFFICE-RESUME.md`; full-copy scope in `docs/migration/M37-POWEROFFICE-REPLICA-PLAN.md`. Local synthetic development only. Possible PowerOffice replacement remains undecided; preserve existing features and outbound integration.
 - Scope and local commands: `README.md`.
 - Product readiness, current gaps and local pilot gates: `docs/PRODUCT_READINESS.md`.
 - M01–M03 implementation and follow-up: `docs/migration/M01-M03.md`.

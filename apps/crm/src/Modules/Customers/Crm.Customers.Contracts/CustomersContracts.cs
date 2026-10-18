@@ -46,7 +46,14 @@ public sealed record ExternalOrganizationData(
     IReadOnlyCollection<string> Domains,
     AddressData? VisitAddress,
     AddressData? PostalAddress,
-    BillingData? Billing);
+    BillingData? Billing)
+{
+    /// <summary>Stable local external-record key for crash-safe creation; never a user-supplied customer number.</summary>
+    public Guid? SourceRecordId { get; init; }
+
+    /// <summary>Calculate the same import decision without saving entities, affiliations or events.</summary>
+    public bool PreviewOnly { get; init; }
+}
 
 public enum MatchReason
 {
@@ -86,7 +93,14 @@ public sealed record OrganizationSyncView(
     BillingData Billing,
     bool IsDeleted);
 
-public sealed record ExternalContactData(string FirstName, string LastName, string? Email, string? Phone, string? MobilePhone, string? Title);
+public sealed record ExternalContactData(string FirstName, string LastName, string? Email, string? Phone, string? MobilePhone, string? Title)
+{
+    /// <summary>Stable local external-record key; allows resuming contacts that have no e-mail address.</summary>
+    public Guid? SourceRecordId { get; init; }
+
+    /// <summary>Calculate the same import decision without saving entities, affiliations or events.</summary>
+    public bool PreviewOnly { get; init; }
+}
 
 public sealed record ImportContactResult(Guid ContactId, bool Created);
 

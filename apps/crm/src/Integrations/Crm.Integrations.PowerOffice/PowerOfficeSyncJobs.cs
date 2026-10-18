@@ -31,7 +31,7 @@ public sealed class PowerOfficeCustomerSyncJob(
             return;
         }
 
-        await runner.RunAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
+        await runner.RunExclusiveAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
         {
             var since = PowerOfficeCursor.Parse(await runner.GetCursorAsync(PowerOfficeTypes.System, Stream, ct));
             var newest = since;
@@ -43,12 +43,9 @@ public sealed class PowerOfficeCustomerSyncJob(
                 progress.Read++;
                 newest = newest is null || customer.LastChangedDateTimeOffset > newest ? customer.LastChangedDateTimeOffset : newest;
                 var outcome = await records.UpsertAsync(PowerOfficeMapping.ToRecord(customer), ct);
-                if (!outcome.Changed)
-                {
-                    continue;
-                }
-
-                progress.Changed++;
+                // Saving the payload is not completion of its dependent work. Replay matching/billing even when a previous
+                // worker committed the same payload and then stopped before the link or customer write.
+                if (outcome.Changed) progress.Changed++;
                 var id = outcome.Record.ExternalId;
                 var link = await links.FindByExternalAsync(PowerOfficeTypes.System, PowerOfficeTypes.Customer, id, ct);
                 if (link is null && options.Value.AutoLinkByOrgNumber && customer.IsArchived != true)
@@ -98,11 +95,11 @@ public sealed class PowerOfficeContactPersonSyncJob(
             return;
         }
 
-        await runner.RunAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
+        await runner.RunExclusiveAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
         {
             var since = PowerOfficeCursor.Parse(await runner.GetCursorAsync(PowerOfficeTypes.System, Stream, ct));
             var newest = since;
-            var changed = new List<(string ExternalId, string? Email)>();
+            var replay = new List<(string ExternalId, string? Email)>();
             await foreach (var person in client.GetContactPersonsAsync(PowerOfficeCursor.ReadFrom(since), ct))
             {
                 progress.Read++;
@@ -111,13 +108,14 @@ public sealed class PowerOfficeContactPersonSyncJob(
                 if (outcome.Changed)
                 {
                     progress.Changed++;
-                    changed.Add((outcome.Record.ExternalId, outcome.Record.Email));
                 }
+                // Use the stored, possibly privacy-redacted e-mail; never reintroduce the incoming person's e-mail here.
+                replay.Add((outcome.Record.ExternalId, outcome.Record.Email));
             }
 
-            var byEmail = await customers.FindContactsByEmailAsync(changed.Where(c => c.Email != null).Select(c => c.Email!).ToList(), ct);
+            var byEmail = await customers.FindContactsByEmailAsync(replay.Where(c => c.Email != null).Select(c => c.Email!).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), ct);
             int autoLinked = 0;
-            foreach (var (externalId, email) in changed)
+            foreach (var (externalId, email) in replay)
             {
                 if (email is not null && byEmail.TryGetValue(email, out var contactId) &&
                     await links.FindByExternalAsync(PowerOfficeTypes.System, PowerOfficeTypes.ContactPerson, externalId, ct) is null &&
@@ -152,7 +150,7 @@ public sealed class PowerOfficeProductSyncJob(
             return;
         }
 
-        await runner.RunAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
+        await runner.RunExclusiveAsync(PowerOfficeTypes.System, JobId, async (progress, ct) =>
         {
             var since = PowerOfficeCursor.Parse(await runner.GetCursorAsync(PowerOfficeTypes.System, Stream, ct));
             var newest = since;
