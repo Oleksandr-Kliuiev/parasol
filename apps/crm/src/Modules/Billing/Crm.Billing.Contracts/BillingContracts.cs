@@ -173,6 +173,10 @@ public interface IBillingApi
 
     Task<IReadOnlyList<InvoiceCustomerBinding>> GetInvoiceCustomerBindingsAsync(string system, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<string?>> GetCustomerLedgerSourcesAsync(string system, CancellationToken cancellationToken);
+
+    Task<CustomerLedgerImportResult> ImportCustomerLedgerAsync(CustomerLedgerBatch batch, CancellationToken cancellationToken);
+
     Task BindHistoricalInvoiceAsync(Guid invoiceId, string expectedExternalCustomerId, Guid? organizationId, CancellationToken cancellationToken);
 
     /// <summary>What was billed per month, from the bases of the runs in the window (closed or not).</summary>

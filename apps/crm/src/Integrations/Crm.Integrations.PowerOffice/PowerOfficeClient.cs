@@ -125,6 +125,8 @@ public interface IPowerOfficeClient
     IAsyncEnumerable<PoOutgoingInvoice> GetOutgoingInvoicesAsync(DateTimeOffset? changedSince, CancellationToken cancellationToken);
 
     IAsyncEnumerable<PoOutgoingInvoiceLine> GetOutgoingInvoiceLinesAsync(Guid invoiceId, CancellationToken cancellationToken);
+
+    IAsyncEnumerable<PoCustomerLedgerEntry> GetCustomerLedgerAsync(CancellationToken cancellationToken);
 }
 
 internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOptions> options) : IPowerOfficeClient
@@ -264,6 +266,10 @@ internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOpt
     public IAsyncEnumerable<PoOutgoingInvoiceLine> GetOutgoingInvoiceLinesAsync(Guid invoiceId, CancellationToken cancellationToken) =>
         GetPagedAsync<PoOutgoingInvoiceLine>($"OutgoingInvoices/{invoiceId:D}/Lines", null, cancellationToken);
 
+    // Full posting-date coverage also catches old manual matching/unmatching and future-posted entries.
+    public IAsyncEnumerable<PoCustomerLedgerEntry> GetCustomerLedgerAsync(CancellationToken cancellationToken) =>
+        GetPagedAsync<PoCustomerLedgerEntry>("Customerledger/Statement?fromDate=0001-01-01&toDate=9999-12-31&OrderBy=Id%20asc", null, cancellationToken);
+
     private async IAsyncEnumerable<T> GetPagedAsync<T>(string resource, DateTimeOffset? changedSince, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken,
         string changedFilter = "lastChangedDateTimeOffsetGreaterThan")
     {
@@ -271,7 +277,7 @@ internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOpt
         var filter = changedSince is { } since ? $"&{changedFilter}={Uri.EscapeDataString(since.ToString("O"))}" : string.Empty;
         for (int page = 1; page <= MaxPages; page++)
         {
-            using var response = await http.GetAsync($"{resource}?PageNumber={page}&PageSize={pageSize}{filter}", cancellationToken);
+            using var response = await http.GetAsync($"{resource}{(resource.Contains('?') ? '&' : '?')}PageNumber={page}&PageSize={pageSize}{filter}", cancellationToken);
             if (response.StatusCode == HttpStatusCode.NoContent)
             {
                 yield break;

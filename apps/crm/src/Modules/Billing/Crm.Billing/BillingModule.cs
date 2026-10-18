@@ -195,6 +195,12 @@ public static class BillingModule
             .RequirePermission(Permissions.BillingRead)
             .RequirePermission(Permissions.FinanceRead);
 
+        group.MapGet("/customer-ledger", async (Guid? organizationId, Guid? invoiceId, int? offset, int? limit, BillingService service, CancellationToken ct) =>
+                offset is < 0 || limit is < 1 or > 200 ? Results.BadRequest() :
+                Results.Ok(await service.ReadCustomerLedgerAsync(new CustomerLedgerQuery(organizationId, invoiceId, offset ?? 0, limit ?? 50), ct)))
+            .RequirePermission(Permissions.BillingRead)
+            .RequirePermission(Permissions.FinanceRead);
+
         // DEV-22, the parallel pilot month. The trace is the line-by-line account of a run; the comparison sets the independent
         // figures of the old method against it; the sign-off records Finance's judgement of the result. Nothing here writes to a
         // billing table: documents go to the document store and every act leaves an audit entry with ids and hashes.

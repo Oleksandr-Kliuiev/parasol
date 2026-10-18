@@ -155,6 +155,9 @@ jobs.AddOrUpdate<PowerOfficeContactPersonSyncJob>(PowerOfficeContactPersonSyncJo
 jobs.AddOrUpdate<PowerOfficeProductSyncJob>(PowerOfficeProductSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.ProductSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<PowerOfficeInvoiceSyncJob>(PowerOfficeInvoiceSyncJob.JobId, job => job.RunAsync(CancellationToken.None), billing.InvoiceSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
+if (powerOffice.CustomerLedgerSyncEnabled)
+    jobs.AddOrUpdate<PowerOfficeLedgerSyncJob>(PowerOfficeLedgerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.CustomerLedgerSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
 var partnerCenter = app.Services.GetRequiredService<IOptions<PartnerCenterOptions>>().Value;
 jobs.AddOrUpdate<PartnerCenterCustomerSyncJob>(PartnerCenterCustomerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), partnerCenter.CustomerSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<PartnerCenterSubscriptionSyncJob>(PartnerCenterSubscriptionSyncJob.JobId, job => job.RunAsync(CancellationToken.None), partnerCenter.SubscriptionSyncCron, new RecurringJobOptions { TimeZone = oslo });

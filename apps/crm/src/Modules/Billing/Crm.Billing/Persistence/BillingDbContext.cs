@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Billing.Persistence;
 
-public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options) : ModuleDbContext(options)
+public sealed partial class BillingDbContext(DbContextOptions<BillingDbContext> options) : ModuleDbContext(options)
 {
     public const string SchemaName = "billing";
 
@@ -18,6 +18,10 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
     public DbSet<BillingExportAttempt> ExportAttempts => Set<BillingExportAttempt>();
 
+    public DbSet<CustomerLedgerEntry> CustomerLedgerEntries => Set<CustomerLedgerEntry>();
+    public DbSet<CustomerLedgerSnapshot> CustomerLedgerSnapshots => Set<CustomerLedgerSnapshot>();
+    public DbSet<CustomerLedgerVersion> CustomerLedgerVersions => Set<CustomerLedgerVersion>();
+
     public DbSet<Invoice> Invoices => Set<Invoice>();
 
     public DbSet<InvoicePayment> InvoicePayments => Set<InvoicePayment>();
@@ -30,6 +34,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
+        ConfigureCustomerLedger(modelBuilder);
         modelBuilder.Entity<PendingCharge>(b =>
         {
             b.ToTable("PendingCharges");

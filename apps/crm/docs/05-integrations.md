@@ -186,7 +186,7 @@ POST /tickets { TicketTitle, Description, TicketPriority, TicketImpact, TicketSt
 | Products | GET | `catalog.Product` по артикулу = код продукта; импорт недостающих | Ночью |
 | Sales orders | POST (создание), GET (проверка по внешней ссылке) | `billing.BillingBasis` → заказ | При выгрузке прогона |
 | Outgoing invoices / credit notes | GET (`balanceLastChangedDateTimeOffsetGreaterThan`) + `/OutgoingInvoices/{UUID}/Lines`; CustomerId → подтверждённая организация | `billing.Invoice` + атомарный HistoryJson со строками + наблюдаемые `InvoicePayment` | Каждый час |
-| Оплаты / остатки (reporting, customer ledger) | GET | `billing.Invoice.Outstanding`, движения остатка (`Kind`, DEV-19; не «платёж» до подтверждения ledger — EXT-03) | Каждый час |
+| Подтверждённые платежи / клиентские операции | GET `Customerledger/Statement`, полный диапазон проводок и все match/unmatch | `billing.CustomerLedgerEntries/Versions/Snapshots`; исходные платежи отдельно от наблюдений остатка | Opt-in, каждый час |
 | Time tracking entries | — (не используется; учёт времени в Atera и CRM) | — | — |
 
 ### 4.3 Выгрузка биллинга
@@ -221,7 +221,7 @@ sequenceDiagram
 - Утверждение прогона ставит по одному исходящему заказу на клиента в очередь (`poweroffice/create-sales-order`). Обработчик: `GET SalesOrders?externalImportReferences={ключ}` → если заказ есть, основание помечается выгруженным без повторного создания (BR-BIL-05); иначе `POST SalesOrders` с `CustomerId`, `OrderDate` = конец периода, `ExternalImportReference` = `{период}-{клиент}-{прогон}`, `CustomerReference` из контракта и строками (код продукта, описание с периодом, количество, цена без MVA, скидка).
 - **Код продукта в заказе — это артикул (SKU) продукта CRM**: в PowerOffice артикул совпадает с кодом продукта (§4.2), связь через `ExternalLink` лишь подтверждает, что продукт там есть.
 - Ошибки валидации (нет связи с клиентом, нет продукта в PowerOffice, пустое основание) — постоянные: основание получает статус «Ошибка» с текстом в журнале попыток, остальные клиенты продолжаются. «Отправить снова» ставит основание обратно в очередь.
-- Исходящие счета и кредит-ноты читаются ежечасно (`poweroffice-invoices`, по умолчанию `20 * * * *`): исторический stream `invoice-history-v1`, UUID источника, постраничные строки и CustomerId → подтверждённая организация. Основание по внешней ссылке/заказу добавляется только для того же клиента. `Balance` и posted-суммы — в валюте учёта клиента; документная валюта и суммы хранятся отдельно. Изменение остатка — наблюдаемое движение (`BalanceDecrease` / `CreditNote` / `BalanceIncrease`), не доказанная оплата; `Payment`/`WriteOff` не пишутся. Неполные строки помечаются явно, PDF/ledger пока не загружаются. Подробности и ограничения legacy-сверки: [M37 history](../../../docs/migration/M37-POWEROFFICE-INVOICE-HISTORY.md).
+- Исходящие счета и кредит-ноты читаются ежечасно (`poweroffice-invoices`, по умолчанию `20 * * * *`): исторический stream `invoice-history-v1`, UUID источника, постраничные строки и CustomerId → подтверждённая организация. Основание по внешней ссылке/заказу добавляется только для того же клиента. `Balance` и posted-суммы — в валюте учёта клиента; документная валюта и суммы хранятся отдельно. Изменение остатка — наблюдаемое движение (`BalanceDecrease` / `CreditNote` / `BalanceIncrease`), не доказанная оплата; `Payment`/`WriteOff` не пишутся. Неполные строки помечаются явно, PDF пока не загружаются. Подтверждённые операции загружает отдельный opt-in Customer Ledger import; он не переписывает наблюдения остатка. Подробности и ограничения legacy-сверки: [M37 history](../../../docs/migration/M37-POWEROFFICE-INVOICE-HISTORY.md).
 - Локальные заглушки (`tools/dev-mocks/external-apis.mjs`) повторяют оба эндпоинта: созданный заказ сразу превращается в исходящий счёт с MVA 25 %, поэтому всю цепочку можно проверить без ключей.
 
 ## 5. Brønnøysundregistrene (Enhetsregisteret)
@@ -257,3 +257,5 @@ sequenceDiagram
 - Для каждого адаптера — набор записанных ответов реальных API (обезличенных) и тесты на WireMock.Net.
 - Ночной «smoke» в `test`: чтение 1 страницы каждой сущности из PowerOffice Demo, Atera (тестовый клиент), Partner Center (только чтение) — ранний сигнал об изменении API.
 - Подписка на changelog PowerOffice API и уведомления Partner Center/Message Center; ответственный — техлид.
+
+M37 Customer Ledger: [контракт, связи и локальные проверки](../../../docs/migration/M37-POWEROFFICE-CUSTOMER-LEDGER.md). `CustomerLedgerSyncEnabled=false` по умолчанию; Source.Kind Payment/WriteOff не смешивается со старым InvoiceMovementKind.
