@@ -192,26 +192,26 @@ public static class BillingModule
                 Results.Ok(await service.ListInvoicesAsync(new InvoiceQuery(p.OrganizationId, p.OpenOnly ?? false, p.OverdueOnly ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.BillingRead);
 
-        group.MapGet("/invoices/{id:guid}/history", async (Guid id, BillingService service, CancellationToken ct) =>
-                await service.ReadInvoiceHistoryAsync(id, ct) is { } detail ? Results.Ok(detail) : Results.NotFound())
+        group.MapGet("/invoices/{id:guid}/history", async (Guid id, Guid? organizationId, BillingService service, CancellationToken ct) =>
+                await service.ReadInvoiceHistoryAsync(id, ct, organizationId) is { } detail ? Results.Ok(detail) : Results.NotFound())
             .RequirePermission(Permissions.BillingRead)
             .RequirePermission(Permissions.FinanceRead);
 
-        group.MapGet("/invoices/{id:guid}/documents", async (Guid id, InvoiceDocumentReader reader, CancellationToken ct) =>
-                await reader.ListAsync(id, ct) is { } documents ? Results.Ok(documents) : Results.NotFound())
+        group.MapGet("/invoices/{id:guid}/documents", async (Guid id, Guid? organizationId, InvoiceDocumentReader reader, CancellationToken ct) =>
+                await reader.ListAsync(id, ct, organizationId) is { } documents ? Results.Ok(documents) : Results.NotFound())
             .RequirePermission(Permissions.BillingRead).RequirePermission(Permissions.FinanceRead);
 
-        group.MapGet("/invoices/{id:guid}/documents/{documentId:guid}/download", async (Guid id, Guid documentId, InvoiceDocumentReader reader, HttpResponse response, CancellationToken ct) =>
+        group.MapGet("/invoices/{id:guid}/documents/{documentId:guid}/download", async (Guid id, Guid documentId, Guid? organizationId, InvoiceDocumentReader reader, HttpResponse response, CancellationToken ct) =>
             {
                 response.Headers.CacheControl = "no-store";
                 response.Headers["X-Content-Type-Options"] = "nosniff";
-                return (await reader.DownloadAsync(id, documentId, ct)).ToHttpResult(file => Results.File(file.Content, "application/pdf", file.FileName));
+                return (await reader.DownloadAsync(id, documentId, ct, organizationId)).ToHttpResult(file => Results.File(file.Content, "application/pdf", file.FileName));
             })
             .RequirePermission(Permissions.BillingRead).RequirePermission(Permissions.FinanceRead);
 
-        group.MapGet("/customer-ledger", async (Guid? organizationId, Guid? invoiceId, int? offset, int? limit, BillingService service, CancellationToken ct) =>
-                offset is < 0 || limit is < 1 or > 200 ? Results.BadRequest() :
-                Results.Ok(await service.ReadCustomerLedgerAsync(new CustomerLedgerQuery(organizationId, invoiceId, offset ?? 0, limit ?? 50), ct)))
+        group.MapGet("/customer-ledger", async (Guid? organizationId, Guid? invoiceId, int? offset, int? limit, CustomerLedgerKind? kind, BillingService service, CancellationToken ct) =>
+                offset is < 0 || limit is < 1 or > 200 || kind is { } k && !Enum.IsDefined(k) ? Results.BadRequest() :
+                Results.Ok(await service.ReadCustomerLedgerAsync(new CustomerLedgerQuery(organizationId, invoiceId, offset ?? 0, limit ?? 50, kind), ct)))
             .RequirePermission(Permissions.BillingRead)
             .RequirePermission(Permissions.FinanceRead);
 

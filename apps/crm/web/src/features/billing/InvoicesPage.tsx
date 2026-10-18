@@ -25,6 +25,7 @@ import { useInvoicePages } from './api';
 import { InvoiceMovements, InvoiceStatusBadge } from './shared';
 import { SavedViews } from '../../shared/views/SavedViews';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { CustomerFinanceTab } from './CustomerFinanceTab';
 
 const useStyles = makeStyles({
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
@@ -162,6 +163,11 @@ export function InvoicesPage() {
 
 /** Invoices and balance of one customer (docs/02 §4.2, tab "Invoices"). */
 export function OrganizationInvoicesTab({ organizationId }: { organizationId: string }) {
+  const finance = useCan(Permissions.financeRead);
+  return finance ? <CustomerFinanceTab organizationId={organizationId} /> : <OrganizationInvoiceSummary organizationId={organizationId} />;
+}
+
+function OrganizationInvoiceSummary({ organizationId }: { organizationId: string }) {
   const styles = useStyles();
   const catalog = useCatalogStyles();
   const { t } = useTranslation();

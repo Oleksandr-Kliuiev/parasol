@@ -1,5 +1,7 @@
 # Parasol context map
 
+- Customer finance card / M37: `docs/migration/M37-CUSTOMER-FINANCE-CARD.md`; invoice/credit lines, posted payments, versioned PDF downloads, customer-scoped reads and real local API browser fixture.
+
 - PowerOffice original invoice PDFs / M37: `docs/migration/M37-POWEROFFICE-INVOICE-PDFS.md`; opt-in ZIP/PDF import, exact voucher UUID, immutable versioned files, integrity-checked downloads and recovery. Local synthetic data only.
 
 - PowerOffice posted customer ledger / M37: `docs/migration/M37-POWEROFFICE-CUSTOMER-LEDGER.md`; opt-in full statements, immutable source versions, exact voucher/customer match groups and finance-protected ledger API. Local synthetic data only.

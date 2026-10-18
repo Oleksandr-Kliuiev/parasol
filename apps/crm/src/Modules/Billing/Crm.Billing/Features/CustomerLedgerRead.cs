@@ -8,8 +8,12 @@ namespace Crm.Billing.Features;
 public sealed record CustomerLedgerInvoiceLink(Guid InvoiceId, string InvoiceNo, Guid SourceVoucherId, string Relation);
 public sealed record CustomerLedgerItem(Guid Id, Guid? OrganizationId, ExternalCustomerLedgerEntry Source,
     DateTimeOffset LastSeenAt, bool PresentInLatestScan, IReadOnlyList<CustomerLedgerInvoiceLink> Invoices);
-public sealed record CustomerLedgerPage(int Total, int Offset, int Limit, IReadOnlyList<CustomerLedgerItem> Entries);
-public sealed record CustomerLedgerQuery(Guid? OrganizationId, Guid? InvoiceId, int Offset = 0, int Limit = 50);
+public sealed record CustomerLedgerPage(int Total, int Offset, int Limit, IReadOnlyList<CustomerLedgerItem> Entries)
+{
+    public int SourceCustomers { get; init; }
+    public DateTimeOffset? OldestSnapshotAt { get; init; }
+}
+public sealed record CustomerLedgerQuery(Guid? OrganizationId, Guid? InvoiceId, int Offset = 0, int Limit = 50, CustomerLedgerKind? Kind = null);
 
 internal sealed partial class BillingService
 {
@@ -39,13 +43,19 @@ internal sealed partial class BillingService
                 rows = rows.Where(e => e.CustomerKey == customer && e.LastSeenScanId == state.ScanId &&
                     (e.VoucherId == voucher && e.Kind == kind || e.MatchId != null && matches.Contains(e.MatchId.Value)));
             }
+            if (query.Kind is { } wantedKind) rows = rows.Where(e => e.Kind == wantedKind);
+            var relevant = snapshots.Where(s => query.OrganizationId == null || s.OrganizationId == query.OrganizationId).ToList();
             var total = await rows.CountAsync(ct);
             var page = await rows.OrderByDescending(e => e.PostingDate).ThenBy(e => e.ExternalId).Skip(query.Offset).Take(query.Limit).ToListAsync(ct);
             var links = await LedgerInvoiceLinksAsync(page, states, ct);
             var result = page.Select(e => new CustomerLedgerItem(e.Id, states[e.CustomerKey].OrganizationId, e.Source, e.LastSeenAt,
                 e.LastSeenScanId == states[e.CustomerKey].ScanId, links.GetValueOrDefault(e.Id) ?? [])).ToList();
             await read.CommitAsync(ct);
-            return new CustomerLedgerPage(total, query.Offset, query.Limit, result);
+            return new CustomerLedgerPage(total, query.Offset, query.Limit, result)
+            {
+                SourceCustomers = relevant.Count,
+                OldestSnapshotAt = relevant.Count == 0 ? null : relevant.Min(s => s.SavedAt),
+            };
         });
 
     private async Task<Dictionary<Guid, List<CustomerLedgerInvoiceLink>>> LedgerInvoiceLinksAsync(

@@ -11,9 +11,9 @@ public sealed record InvoiceDocumentDownload(byte[] Content, string FileName);
 
 internal sealed class InvoiceDocumentReader(BillingDbContext db, IDocumentStore store)
 {
-    public async Task<InvoiceDocumentsView?> ListAsync(Guid invoiceId, CancellationToken ct)
+    public async Task<InvoiceDocumentsView?> ListAsync(Guid invoiceId, CancellationToken ct, Guid? expectedOrganizationId = null)
     {
-        if (!await db.Invoices.AnyAsync(i => i.Id == invoiceId, ct)) return null;
+        if (!await db.Invoices.AnyAsync(i => i.Id == invoiceId && (expectedOrganizationId == null || i.OrganizationId == expectedOrganizationId), ct)) return null;
         var check = await db.InvoiceDocumentChecks.AsNoTracking().SingleOrDefaultAsync(d => d.InvoiceId == invoiceId, ct);
         var documents = await db.InvoiceDocuments.AsNoTracking().Where(d => d.InvoiceId == invoiceId)
             .OrderBy(d => d.ImportedAt).ThenBy(d => d.Id)
@@ -21,10 +21,10 @@ internal sealed class InvoiceDocumentReader(BillingDbContext db, IDocumentStore 
         return new(invoiceId, check?.HasPdf, check?.CheckedAt, documents);
     }
 
-    public async Task<Result<InvoiceDocumentDownload>> DownloadAsync(Guid invoiceId, Guid documentId, CancellationToken ct)
+    public async Task<Result<InvoiceDocumentDownload>> DownloadAsync(Guid invoiceId, Guid documentId, CancellationToken ct, Guid? expectedOrganizationId = null)
     {
         var document = await db.InvoiceDocuments.AsNoTracking().Where(d => d.InvoiceId == invoiceId && d.Id == documentId &&
-            db.Invoices.Any(i => i.Id == d.InvoiceId)).SingleOrDefaultAsync(ct);
+            db.Invoices.Any(i => i.Id == d.InvoiceId && (expectedOrganizationId == null || i.OrganizationId == expectedOrganizationId))).SingleOrDefaultAsync(ct);
         if (document is null) return Error.NotFound("BIL_DOCUMENT_NOT_FOUND", "Invoice document not found.");
         var content = await store.ReadAsync(document.ObjectKey, ct);
         if (content is null || content.LongLength != document.Length || DocumentHashes.Sha256(content) != document.ContentSha256)
