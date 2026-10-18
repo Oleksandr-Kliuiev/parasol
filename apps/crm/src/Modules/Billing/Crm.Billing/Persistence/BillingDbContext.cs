@@ -35,6 +35,7 @@ public sealed partial class BillingDbContext(DbContextOptions<BillingDbContext> 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         ConfigureCustomerLedger(modelBuilder);
+        ConfigureInvoiceDocuments(modelBuilder);
         modelBuilder.Entity<PendingCharge>(b =>
         {
             b.ToTable("PendingCharges");

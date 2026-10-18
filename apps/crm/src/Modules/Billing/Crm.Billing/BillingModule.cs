@@ -27,6 +27,8 @@ public static class BillingModule
         services.AddScoped<ChargeLedger>();
         services.AddScoped<BillingCollector>();
         services.AddScoped<BillingService>();
+        services.AddScoped<InvoiceDocumentReader>();
+        services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, InvoiceDocumentRestore>();
         services.AddScoped<PilotTraceService>();
         services.AddScoped<PilotComparisonService>();
         services.AddScoped<PilotKpiService>();
@@ -194,6 +196,18 @@ public static class BillingModule
                 await service.ReadInvoiceHistoryAsync(id, ct) is { } detail ? Results.Ok(detail) : Results.NotFound())
             .RequirePermission(Permissions.BillingRead)
             .RequirePermission(Permissions.FinanceRead);
+
+        group.MapGet("/invoices/{id:guid}/documents", async (Guid id, InvoiceDocumentReader reader, CancellationToken ct) =>
+                await reader.ListAsync(id, ct) is { } documents ? Results.Ok(documents) : Results.NotFound())
+            .RequirePermission(Permissions.BillingRead).RequirePermission(Permissions.FinanceRead);
+
+        group.MapGet("/invoices/{id:guid}/documents/{documentId:guid}/download", async (Guid id, Guid documentId, InvoiceDocumentReader reader, HttpResponse response, CancellationToken ct) =>
+            {
+                response.Headers.CacheControl = "no-store";
+                response.Headers["X-Content-Type-Options"] = "nosniff";
+                return (await reader.DownloadAsync(id, documentId, ct)).ToHttpResult(file => Results.File(file.Content, "application/pdf", file.FileName));
+            })
+            .RequirePermission(Permissions.BillingRead).RequirePermission(Permissions.FinanceRead);
 
         group.MapGet("/customer-ledger", async (Guid? organizationId, Guid? invoiceId, int? offset, int? limit, BillingService service, CancellationToken ct) =>
                 offset is < 0 || limit is < 1 or > 200 ? Results.BadRequest() :

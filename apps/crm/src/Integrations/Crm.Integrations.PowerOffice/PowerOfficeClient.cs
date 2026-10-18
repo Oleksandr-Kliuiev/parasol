@@ -127,9 +127,11 @@ public interface IPowerOfficeClient
     IAsyncEnumerable<PoOutgoingInvoiceLine> GetOutgoingInvoiceLinesAsync(Guid invoiceId, CancellationToken cancellationToken);
 
     IAsyncEnumerable<PoCustomerLedgerEntry> GetCustomerLedgerAsync(CancellationToken cancellationToken);
+    IAsyncEnumerable<PoVoucherDocumentation> GetVoucherDocumentationAsync(Guid voucherId, CancellationToken cancellationToken);
+    Task<byte[]> DownloadVoucherPdfArchiveAsync(Guid voucherId, CancellationToken cancellationToken);
 }
 
-internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOptions> options) : IPowerOfficeClient
+internal sealed partial class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOptions> options) : IPowerOfficeClient
 {
     private const int MaxPages = 10_000;
 

@@ -155,6 +155,10 @@ jobs.AddOrUpdate<PowerOfficeContactPersonSyncJob>(PowerOfficeContactPersonSyncJo
 jobs.AddOrUpdate<PowerOfficeProductSyncJob>(PowerOfficeProductSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.ProductSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<PowerOfficeInvoiceSyncJob>(PowerOfficeInvoiceSyncJob.JobId, job => job.RunAsync(CancellationToken.None), billing.InvoiceSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
+if (powerOffice.InvoicePdfSyncEnabled)
+    jobs.AddOrUpdate<PowerOfficePdfSyncJob>(PowerOfficePdfSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.InvoicePdfSyncCron, new RecurringJobOptions { TimeZone = oslo });
+else jobs.RemoveIfExists(PowerOfficePdfSyncJob.JobId);
+
 if (powerOffice.CustomerLedgerSyncEnabled)
     jobs.AddOrUpdate<PowerOfficeLedgerSyncJob>(PowerOfficeLedgerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.CustomerLedgerSyncCron, new RecurringJobOptions { TimeZone = oslo });
 

@@ -10,7 +10,7 @@ namespace Crm.Billing.Persistence;
 internal sealed class BillingDatabasePermissions : IDatabasePermissionRules
 {
     private static readonly string[] NeverDeleted =
-        ["BillingRuns", "BillingBases", "BillingLines", "BillingApprovals", "BillingExportAttempts", "Charges", "Invoices", "InvoicePayments", "PendingCharges", "CustomerLedgerEntries", "CustomerLedgerSnapshots", "CustomerLedgerVersions"];
+        ["BillingRuns", "BillingBases", "BillingLines", "BillingApprovals", "BillingExportAttempts", "Charges", "Invoices", "InvoicePayments", "PendingCharges", "CustomerLedgerEntries", "CustomerLedgerSnapshots", "CustomerLedgerVersions", "InvoiceDocuments", "InvoiceDocumentChecks"];
 
     public IEnumerable<string> Statements =>
         NeverDeleted.Select(table => DatabasePermissions.IfTable(
@@ -18,5 +18,7 @@ internal sealed class BillingDatabasePermissions : IDatabasePermissionRules
             .Append(DatabasePermissions.IfTable(
                 BillingDbContext.SchemaName, "BillingExportAttempts", $"DENY UPDATE ON OBJECT::[billing].[BillingExportAttempts] TO [{DatabaseRoles.Runtime}];"))
             .Append(DatabasePermissions.IfTable(BillingDbContext.SchemaName, "CustomerLedgerVersions",
-                $"DENY UPDATE ON OBJECT::[billing].[CustomerLedgerVersions] TO [{DatabaseRoles.Runtime}];"));
+                $"DENY UPDATE ON OBJECT::[billing].[CustomerLedgerVersions] TO [{DatabaseRoles.Runtime}];"))
+            .Append(DatabasePermissions.IfTable(BillingDbContext.SchemaName, "InvoiceDocuments",
+                $"DENY UPDATE ON OBJECT::[billing].[InvoiceDocuments] TO [{DatabaseRoles.Runtime}];"));
 }

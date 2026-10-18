@@ -1,5 +1,7 @@
 # Parasol context map
 
+- PowerOffice original invoice PDFs / M37: `docs/migration/M37-POWEROFFICE-INVOICE-PDFS.md`; opt-in ZIP/PDF import, exact voucher UUID, immutable versioned files, integrity-checked downloads and recovery. Local synthetic data only.
+
 - PowerOffice posted customer ledger / M37: `docs/migration/M37-POWEROFFICE-CUSTOMER-LEDGER.md`; opt-in full statements, immutable source versions, exact voucher/customer match groups and finance-protected ledger API. Local synthetic data only.
 - PowerOffice historical invoices / M37: `docs/migration/M37-POWEROFFICE-INVOICE-HISTORY.md`; UUID + atomic line snapshots, exact source customer leases, independent balance checkpoint and finance-protected history API. Local synthetic data only.
 - PowerOffice resumable import / M37: `docs/migration/M37-POWEROFFICE-RESUME.md`; full-copy scope in `docs/migration/M37-POWEROFFICE-REPLICA-PLAN.md`. Local synthetic development only. Possible PowerOffice replacement remains undecided; preserve existing features and outbound integration.

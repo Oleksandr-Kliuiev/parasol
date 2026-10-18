@@ -72,6 +72,7 @@ public static class PowerOfficeModule
         services.AddScoped<PowerOfficeProductSyncJob>();
         services.AddScoped<PowerOfficeInvoiceSyncJob>();
         services.AddScoped<PowerOfficeLedgerSyncJob>();
+        services.AddScoped<PowerOfficePdfSyncJob>();
         services.AddModuleServices(typeof(PowerOfficeModule).Assembly);
         return services;
     }

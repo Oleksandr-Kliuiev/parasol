@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Crm.Billing.Features;
 
 /// <summary>What integrations may do with billing: read approved bases, report the result and mirror invoices back.</summary>
-internal sealed partial class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time, ITimeBillingAdmission timeAdmission, ICustomersApi customers) : IBillingApi
+internal sealed partial class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time, ITimeBillingAdmission timeAdmission, ICustomersApi customers, Crm.SharedKernel.Documents.IDocumentStore documentStore) : IBillingApi
 {
     public async Task<IReadOnlyList<Guid>> GetInvoicedTimeEntryIdsAsync(Guid basisId, CancellationToken cancellationToken)
     {

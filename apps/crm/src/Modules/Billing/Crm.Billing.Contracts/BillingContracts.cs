@@ -137,6 +137,10 @@ public sealed record BilledPeriodTotal(
 /// <summary>Public API of the Billing module for integrations.</summary>
 public interface IBillingApi
 {
+    Task<IReadOnlyList<InvoiceDocumentSource>> GetInvoiceDocumentSourcesAsync(string system, int offset, int limit, CancellationToken cancellationToken);
+    Task<InvoiceDocumentImportResult> ImportInvoiceDocumentsAsync(string system, InvoiceDocumentSource source, bool? hasPdf,
+        IReadOnlyList<ExternalInvoicePdf> files, CancellationToken cancellationToken);
+
     /// <summary>
     /// The basis if it is approved and waiting to be sent; null once it is exported or cancelled, so a repeated delivery of
     /// <see cref="BillingBasisApproved"/> sends nothing a second time.

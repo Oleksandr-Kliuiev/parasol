@@ -823,6 +823,65 @@ namespace Crm.Billing.Persistence.Migrations
                     b.ToTable("Invoices", "billing");
                 });
 
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Length")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId", "SourceName", "ContentSha256")
+                        .IsUnique();
+
+                    b.ToTable("InvoiceDocuments", "billing");
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocumentCheck", b =>
+                {
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CheckedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool?>("HasPdf")
+                        .HasColumnType("bit");
+
+                    b.HasKey("InvoiceId");
+
+                    b.ToTable("InvoiceDocumentChecks", "billing");
+                });
+
             modelBuilder.Entity("Crm.Billing.Domain.InvoicePayment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1200,6 +1259,24 @@ namespace Crm.Billing.Persistence.Migrations
                     b.HasOne("Crm.Billing.Domain.CustomerLedgerEntry", null)
                         .WithMany("Versions")
                         .HasForeignKey("EntryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocument", b =>
+                {
+                    b.HasOne("Crm.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocumentCheck", b =>
+                {
+                    b.HasOne("Crm.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
