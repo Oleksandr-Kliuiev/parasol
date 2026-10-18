@@ -183,22 +183,30 @@ internal sealed partial class BillingService
             db.GetETag(basis));
     }
 
-    private static InvoiceDto ToDto(Invoice invoice, IReadOnlyDictionary<Guid, string> names, DateOnly today) => new(
-        invoice.Id,
-        invoice.System,
-        invoice.InvoiceNo,
-        invoice.OrderNo,
-        invoice.OrganizationId is { } id ? new RefDto(id, names.GetValueOrDefault(id, "—")) : null,
-        invoice.BasisId,
-        invoice.InvoiceDate,
-        invoice.DueDate,
-        invoice.TotalIncVat,
-        invoice.Outstanding,
-        invoice.Status,
-        invoice.IsOverdue(today),
-        invoice.Url,
-        invoice.SyncedAt,
-        invoice.Payments.OrderBy(p => p.ObservedOn).ThenBy(p => p.Id).Select(p => new InvoiceMovementDto(p.Kind, p.ObservedOn, p.Amount, p.Source)).ToList());
+    private static InvoiceDto ToDto(Invoice invoice, IReadOnlyDictionary<Guid, string> names, DateOnly today)
+    {
+        var history = invoice.History;
+        return new(
+            invoice.Id,
+            invoice.System,
+            invoice.InvoiceNo,
+            invoice.OrderNo,
+            invoice.OrganizationId is { } id ? new RefDto(id, names.GetValueOrDefault(id, "—")) : null,
+            invoice.BasisId,
+            invoice.InvoiceDate,
+            invoice.DueDate,
+            invoice.TotalIncVat,
+            invoice.Outstanding,
+            invoice.Status,
+            invoice.IsOverdue(today),
+            invoice.Url,
+            invoice.SyncedAt,
+            invoice.Payments.OrderBy(p => p.ObservedOn).ThenBy(p => p.Id).Select(p => new InvoiceMovementDto(p.Kind, p.ObservedOn, p.Amount, p.Source)).ToList())
+        {
+            ExternalId = invoice.ExternalId, DocumentKind = invoice.DocumentKind, DocumentCurrencyCode = history?.CurrencyCode,
+            LineCoverage = history?.LineCoverage, LineCount = history?.Lines.Count,
+        };
+    }
 
     private async Task<Dictionary<Guid, (int Organizations, int WithAnomalies, decimal Total, decimal LargestBasis)>> TotalsAsync(
         IReadOnlyCollection<Guid> runIds, CancellationToken ct)

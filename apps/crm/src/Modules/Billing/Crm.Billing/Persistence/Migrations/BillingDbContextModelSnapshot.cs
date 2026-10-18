@@ -608,12 +608,26 @@ namespace Crm.Billing.Persistence.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DocumentKind")
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
                     b.Property<DateOnly?>("DueDate")
                         .HasColumnType("date");
+
+                    b.Property<string>("ExternalCustomerId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid?>("ExternalId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ExternalReference")
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("HistoryJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateOnly>("InvoiceDate")
                         .HasColumnType("date");
@@ -675,8 +689,13 @@ namespace Crm.Billing.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "InvoiceDate");
 
+                    b.HasIndex("System", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("[ExternalId] IS NOT NULL");
+
                     b.HasIndex("System", "InvoiceNo")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ExternalId] IS NULL");
 
                     b.HasIndex("InvoiceDate", "InvoiceNo", "Id");
 

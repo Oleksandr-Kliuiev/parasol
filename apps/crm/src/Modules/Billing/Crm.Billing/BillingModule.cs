@@ -190,6 +190,11 @@ public static class BillingModule
                 Results.Ok(await service.ListInvoicesAsync(new InvoiceQuery(p.OrganizationId, p.OpenOnly ?? false, p.OverdueOnly ?? false, p.Limit, p.Cursor), ct)))
             .RequirePermission(Permissions.BillingRead);
 
+        group.MapGet("/invoices/{id:guid}/history", async (Guid id, BillingService service, CancellationToken ct) =>
+                await service.ReadInvoiceHistoryAsync(id, ct) is { } detail ? Results.Ok(detail) : Results.NotFound())
+            .RequirePermission(Permissions.BillingRead)
+            .RequirePermission(Permissions.FinanceRead);
+
         // DEV-22, the parallel pilot month. The trace is the line-by-line account of a run; the comparison sets the independent
         // figures of the old method against it; the sign-off records Finance's judgement of the result. Nothing here writes to a
         // billing table: documents go to the document store and every act leaves an audit entry with ids and hashes.

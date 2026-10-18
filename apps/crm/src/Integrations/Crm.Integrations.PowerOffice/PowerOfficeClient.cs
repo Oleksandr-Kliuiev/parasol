@@ -123,6 +123,8 @@ public interface IPowerOfficeClient
     Task<PoSalesOrder> CreateSalesOrderAsync(PoSalesOrderPost order, CancellationToken cancellationToken);
 
     IAsyncEnumerable<PoOutgoingInvoice> GetOutgoingInvoicesAsync(DateTimeOffset? changedSince, CancellationToken cancellationToken);
+
+    IAsyncEnumerable<PoOutgoingInvoiceLine> GetOutgoingInvoiceLinesAsync(Guid invoiceId, CancellationToken cancellationToken);
 }
 
 internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOptions> options) : IPowerOfficeClient
@@ -257,12 +259,16 @@ internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOpt
     }
 
     public IAsyncEnumerable<PoOutgoingInvoice> GetOutgoingInvoicesAsync(DateTimeOffset? changedSince, CancellationToken cancellationToken) =>
-        GetPagedAsync<PoOutgoingInvoice>("OutgoingInvoices", changedSince, cancellationToken);
+        GetPagedAsync<PoOutgoingInvoice>("OutgoingInvoices", changedSince, cancellationToken, "balanceLastChangedDateTimeOffsetGreaterThan");
 
-    private async IAsyncEnumerable<T> GetPagedAsync<T>(string resource, DateTimeOffset? changedSince, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    public IAsyncEnumerable<PoOutgoingInvoiceLine> GetOutgoingInvoiceLinesAsync(Guid invoiceId, CancellationToken cancellationToken) =>
+        GetPagedAsync<PoOutgoingInvoiceLine>($"OutgoingInvoices/{invoiceId:D}/Lines", null, cancellationToken);
+
+    private async IAsyncEnumerable<T> GetPagedAsync<T>(string resource, DateTimeOffset? changedSince, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken,
+        string changedFilter = "lastChangedDateTimeOffsetGreaterThan")
     {
         var pageSize = Math.Clamp(options.Value.PageSize, 1, 20_000);
-        var filter = changedSince is { } since ? $"&lastChangedDateTimeOffsetGreaterThan={Uri.EscapeDataString(since.ToString("O"))}" : string.Empty;
+        var filter = changedSince is { } since ? $"&{changedFilter}={Uri.EscapeDataString(since.ToString("O"))}" : string.Empty;
         for (int page = 1; page <= MaxPages; page++)
         {
             using var response = await http.GetAsync($"{resource}?PageNumber={page}&PageSize={pageSize}{filter}", cancellationToken);

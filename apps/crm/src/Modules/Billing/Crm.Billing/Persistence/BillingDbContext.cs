@@ -169,7 +169,11 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
             b.Property(x => x.Url).HasMaxLength(512);
             b.Property(x => x.TotalIncVat).HasPrecision(18, 2);
             b.Property(x => x.Outstanding).HasPrecision(18, 2);
-            b.HasIndex(x => new { x.System, x.InvoiceNo }).IsUnique();
+            b.Property(x => x.ExternalCustomerId).HasMaxLength(64);
+            b.Property(x => x.DocumentKind).HasConversion<string>().HasMaxLength(24);
+            b.Ignore(x => x.History);
+            b.HasIndex(x => new { x.System, x.InvoiceNo }).IsUnique().HasFilter("[ExternalId] IS NULL");
+            b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique().HasFilter("[ExternalId] IS NOT NULL");
             b.HasIndex(x => new { x.OrganizationId, x.InvoiceDate });
             // The invoice list's order (DEV-12): date, number, id.
             b.HasIndex(x => new { x.InvoiceDate, x.InvoiceNo, x.Id });

@@ -518,13 +518,13 @@ internal sealed partial class BillingService(
 
         if (query.OpenOnly)
         {
-            invoices = invoices.Where(i => i.Outstanding > 0);
+            invoices = invoices.Where(i => i.Outstanding != 0);
         }
 
         var today = Today;
         if (query.OverdueOnly)
         {
-            invoices = invoices.Where(i => i.Outstanding > 0 && i.DueDate != null && i.DueDate < today);
+            invoices = invoices.Where(i => i.Status != InvoiceStatus.Credited && i.DocumentKind != InvoiceDocumentKind.CreditNote && i.Outstanding > 0 && i.DueDate != null && i.DueDate < today);
         }
 
         var totals = await invoices
@@ -533,7 +533,7 @@ internal sealed partial class BillingService(
             {
                 Count = g.Count(),
                 Outstanding = g.Sum(i => i.Outstanding),
-                Overdue = g.Sum(i => i.Outstanding > 0 && i.DueDate != null && i.DueDate < today ? i.Outstanding : 0m),
+                Overdue = g.Sum(i => i.Status != InvoiceStatus.Credited && i.DocumentKind != InvoiceDocumentKind.CreditNote && i.Outstanding > 0 && i.DueDate != null && i.DueDate < today ? i.Outstanding : 0m),
             })
             .SingleOrDefaultAsync(ct);
 

@@ -93,7 +93,10 @@ public sealed record ExternalInvoice(
     decimal TotalIncVat,
     decimal Outstanding,
     InvoiceStatus Status,
-    string? Url);
+    string? Url)
+{
+    public ExternalInvoiceHistory? History { get; init; }
+}
 
 public sealed record InvoiceSyncResult(int Created, int Updated, int Unchanged, int Unmatched);
 
@@ -167,6 +170,10 @@ public interface IBillingApi
 
     /// <summary>Inserts or updates invoices and their outstanding amounts (BR-BIL-08).</summary>
     Task<InvoiceSyncResult> UpsertInvoicesAsync(IReadOnlyCollection<ExternalInvoice> invoices, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<InvoiceCustomerBinding>> GetInvoiceCustomerBindingsAsync(string system, CancellationToken cancellationToken);
+
+    Task BindHistoricalInvoiceAsync(Guid invoiceId, string expectedExternalCustomerId, Guid? organizationId, CancellationToken cancellationToken);
 
     /// <summary>What was billed per month, from the bases of the runs in the window (closed or not).</summary>
     Task<IReadOnlyList<RevenueByMonth>> GetRevenueAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
