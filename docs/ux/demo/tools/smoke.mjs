@@ -1,4 +1,4 @@
-// Parasol UX demo: smoke checks in a real browser (flows, keyboard, axe WCAG 2.2 AA in both themes).
+// Parasoll UX demo: smoke checks in a real browser (flows, keyboard, axe WCAG 2.2 AA in both themes).
 // Serves the demo itself on a free local port. Uses Playwright and axe from apps/crm/web (npm ci there first).
 // Usage: node docs/ux/demo/tools/smoke.mjs        (exit code 1 on any failure)
 import { createServer } from 'node:http';

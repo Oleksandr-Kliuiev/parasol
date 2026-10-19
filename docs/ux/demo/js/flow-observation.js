@@ -1,4 +1,4 @@
-/* Parasol UX demo: observation detail and "assign work".
+/* Parasoll UX demo: observation detail and "assign work".
    Assigning re-reads the observation first; if a colleague already created the task, it is shown instead of a duplicate. */
 (function () {
   'use strict';

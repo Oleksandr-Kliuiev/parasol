@@ -1,4 +1,4 @@
-/* Parasol UX demo: billing runs and PowerOffice invoices. Wording follows the ledger rules:
+/* Parasoll UX demo: billing runs and PowerOffice invoices. Wording follows the ledger rules:
    nothing is called "paid"; a balance at zero is "nothing outstanding", a payment is a posted ledger entry. */
 (function () {
   'use strict';
@@ -119,7 +119,7 @@
               })}</tbody></table></div>
               <div class="list-foot"><span>${t('billing.basesFoot', { shown: bases.length, n: D.bases.length })}</span></div>` })}
         </div>`;
-      return { title: t('nav.billing'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.billing') }], body: body };
+      return { title: t('nav.billing'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.billing') }], body: body };
     }
   };
   P.on('bases-flags', function (el) { P.state.ui.basesFlags = el.checked; P.app.refresh(); });
@@ -146,7 +146,7 @@
         </div>
         <div class="toolbar">${UI.seg('inv-mode', [{ value: 'open', label: t('inv.modeOpen'), count: o.open.length }, { value: 'overdue', label: t('inv.modeOverdue'), count: o.overdue.length }, { value: 'all', label: t('inv.modeAll'), count: all.length }], mode, t('inv.mode'))}</div>
         ${F.invoiceTable(list)}`;
-      return { title: t('nav.invoices'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.invoices') }], body: body };
+      return { title: t('nav.invoices'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.invoices') }], body: body };
     }
   };
   P.on('inv-mode', function (el) { P.state.ui.invMode = el.dataset.value; P.app.refresh(); });

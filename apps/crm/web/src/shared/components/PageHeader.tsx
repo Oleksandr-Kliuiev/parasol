@@ -41,9 +41,9 @@ export function PageHeader({ title, documentTitle, subtitle, meta, actions, back
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     const text = (documentTitle ?? heading.current?.textContent)?.replace(/\s+/g, ' ').trim();
-    const pageTitle = text ? `${text} · Parasol` : 'Parasol';
+    const pageTitle = text ? `${text} · Parasoll` : 'Parasoll';
     document.title = pageTitle;
-    return () => { if (document.title === pageTitle) document.title = 'Parasol'; };
+    return () => { if (document.title === pageTitle) document.title = 'Parasoll'; };
   }, [title, documentTitle]);
   return (
     <div className={styles.root}>

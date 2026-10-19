@@ -1,4 +1,4 @@
-/* Parasol UX demo: "My day". One screen answers: what is urgent, what is mine today, what is waiting,
+/* Parasoll UX demo: "My day". One screen answers: what is urgent, what is mine today, what is waiting,
    and how much I can trust the data. The composition adapts to the role. */
 (function () {
   'use strict';
@@ -258,7 +258,7 @@
         ${P.can('activities') ? h`<button class="btn btn-primary" type="button" data-action="new-task">${P.icon('plus', 'ic-16')}${t('create.task')}</button>` : ''}`;
       return {
         title: t('nav.day'),
-        crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.day') }],
+        crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.day') }],
         body: h`${UI.pageHead({ title: greeting(), sub: summary(), actions: actions })}
           <div class="kpis">${lay.kpis.map(function (k) { return k(); })}</div>
           <div class="dash">${lay.rows.map(function (row) { return row.map(function (fn) { return fn(); }); })}</div>`

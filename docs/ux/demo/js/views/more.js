@@ -1,4 +1,4 @@
-/* Parasol UX demo: lighter secondary pages (agreements, sales, projects, reports) and the
+/* Parasoll UX demo: lighter secondary pages (agreements, sales, projects, reports) and the
    "not found" / "no access" states, which say what is missing and where to go instead. */
 (function () {
   'use strict';
@@ -10,7 +10,7 @@
   var M = P.model;
   var UI = P.ui$;
 
-  function crumbs(key) { return [{ label: 'Parasol', href: '#/day' }, { label: t(key) }]; }
+  function crumbs(key) { return [{ label: 'Parasoll', href: '#/day' }, { label: t(key) }]; }
 
   /* ---------- Agreements ---------- */
 
@@ -127,13 +127,13 @@
 
   P.views.missing = {
     render: function () {
-      return { title: t('missing.title'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('missing.title') }],
+      return { title: t('missing.title'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('missing.title') }],
         body: UI.card({ body: UI.empty('search', t('missing.title'), t('missing.text'), h`<a class="btn btn-primary" href="#/day">${t('nav.day')}</a>`) }) };
     }
   };
   P.views.denied = {
     render: function (route, view) {
-      return { title: t('denied.title'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('denied.title') }],
+      return { title: t('denied.title'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('denied.title') }],
         body: UI.card({ body: UI.empty('lock', t('denied.title'), t('denied.text', { perm: t('perm.name.' + view.perm), role: t(D.roles[P.state.role].label) }),
           h`<a class="btn btn-primary" href="#/day">${t('nav.day')}</a>`) }) };
     }

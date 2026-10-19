@@ -5,7 +5,7 @@ test('the chosen language is saved to the profile', async ({ page }) => {
   await signIn(page, 'Crm.Finance', '/organizations');
   for (const [language, label, heading] of [
     ['nb', 'Norsk bokmål', 'Organisasjoner'],
-    ['ru', 'Русский', 'Организации'],
+    ['nn', 'Norsk nynorsk', 'Organisasjonar'],
     ['en', 'English', 'Organizations'],
   ] as const) {
     await page.getByRole('button', { name: 'Dev Finance' }).click();

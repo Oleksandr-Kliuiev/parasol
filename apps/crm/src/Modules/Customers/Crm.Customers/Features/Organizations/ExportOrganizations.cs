@@ -134,6 +134,16 @@ internal sealed record ExportHeaders(
             [OrganizationStatus.Former] = "Tidligere kunde", [OrganizationStatus.Partner] = "Partner",
         });
 
+    private static readonly ExportHeaders Nynorsk = new(
+        "Organisasjonar", "Namn", "Organisasjonsnummer", "Organisasjonsform", "Status", "Næringskode", "E-post", "Telefon", "Nettside",
+        "Faktura-e-post", "EHF", "Kundeansvarleg", "Hovudtekniker", "Besøksadresse", "Besøk postnr.", "Besøk stad", "Postadresse",
+        "Postnr.", "Poststad", "Domene", "Registerstatus", "Registerkontroll", "Oppretta", "Endra", "Ja", "Nei",
+        new Dictionary<OrganizationStatus, string>
+        {
+            [OrganizationStatus.Lead] = "Lead", [OrganizationStatus.Prospect] = "Prospekt", [OrganizationStatus.Customer] = "Kunde",
+            [OrganizationStatus.Former] = "Tidlegare kunde", [OrganizationStatus.Partner] = "Partnar",
+        });
+
     private static readonly ExportHeaders English = new(
         "Organizations", "Name", "Organization number", "Legal form", "Status", "NACE", "E-mail", "Phone", "Website",
         "Invoice e-mail", "EHF", "Account manager", "Primary technician", "Visiting address", "Visiting postal code", "Visiting city",
@@ -144,20 +154,10 @@ internal sealed record ExportHeaders(
             [OrganizationStatus.Former] = "Former customer", [OrganizationStatus.Partner] = "Partner",
         });
 
-    private static readonly ExportHeaders Russian = new(
-        "Организации", "Название", "Оргномер", "Орг. форма", "Статус", "NACE", "E-mail", "Телефон", "Сайт",
-        "E-mail для счетов", "EHF", "Менеджер", "Техник", "Фактический адрес", "Индекс (факт.)", "Город (факт.)",
-        "Почтовый адрес", "Индекс", "Город", "Домены", "Статус в реестре", "Проверено в реестре", "Создана", "Изменена", "Да", "Нет",
-        new Dictionary<OrganizationStatus, string>
-        {
-            [OrganizationStatus.Lead] = "Лид", [OrganizationStatus.Prospect] = "Потенциальный", [OrganizationStatus.Customer] = "Клиент",
-            [OrganizationStatus.Former] = "Бывший клиент", [OrganizationStatus.Partner] = "Партнёр",
-        });
-
     public static ExportHeaders For(string? language) => language switch
     {
         "en" => English,
-        "ru" => Russian,
+        "nn" => Nynorsk,
         _ => Norwegian,
     };
 }

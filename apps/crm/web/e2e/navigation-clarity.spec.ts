@@ -22,12 +22,12 @@ test('browser titles follow the page and the skip link remains readable above th
   test.setTimeout(180_000);
   const organization = await customer(page);
   await page.goto(`/organizations/${organization.id}`);
-  await expect(page).toHaveTitle(`${organization.name} · Parasol`);
+  await expect(page).toHaveTitle(`${organization.name} · Parasoll`);
   await page.getByRole('main').getByRole('link', { name: 'Organizations', exact: true }).click();
-  await expect(page).toHaveTitle('Organizations · Parasol');
+  await expect(page).toHaveTitle('Organizations · Parasoll');
   for (const width of [1440, 768, 390, 320]) for (const colorScheme of ['light', 'dark'] as const) {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme }); await page.goto('/');
-    await expect(page).toHaveTitle('My day · Parasol'); await page.waitForLoadState('networkidle');
+    await expect(page).toHaveTitle('My day · Parasoll'); await page.waitForLoadState('networkidle');
     await page.keyboard.press('Tab');
     const skip = page.getByRole('link', { name: 'Skip to content', exact: true });
     await expect(skip).toBeFocused(); await expect(skip).toBeInViewport(); await accessible(page);

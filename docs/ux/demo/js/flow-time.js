@@ -1,4 +1,4 @@
-/* Parasol UX demo: "Log time" from anywhere. Context fills the form (customer, task, ticket);
+/* Parasoll UX demo: "Log time" from anywhere. Context fills the form (customer, task, ticket);
    the person types only what the system cannot know. The allocation is a preview until approval. */
 (function () {
   'use strict';

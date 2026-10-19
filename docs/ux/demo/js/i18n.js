@@ -1,4 +1,4 @@
-/* Parasol UX demo: interface strings in three languages (RU default, EN, NB).
+/* Parasoll UX demo: interface strings in three languages (RU default, EN, NB).
    Keys are flat; a value can be a plural object { one, few, many, other }. */
 (function () {
   'use strict';

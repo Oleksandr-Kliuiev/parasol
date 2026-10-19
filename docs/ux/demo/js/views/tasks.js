@@ -1,4 +1,4 @@
-/* Parasol UX demo: tasks grouped by when they are due. "Mine" for everyone, "Team" for people who plan work. */
+/* Parasoll UX demo: tasks grouped by when they are due. "Mine" for everyone, "Team" for people who plan work. */
 (function () {
   'use strict';
 
@@ -70,7 +70,7 @@
         ${g.done.length ? h`<details class="done-group"><summary class="small strong">${t('work.done', { n: g.done.length })}</summary>
           <div class="rows">${g.done.map(function (x) { return R.taskRow(x, { showAssignee: s.scope === 'team' }); })}</div></details>` : ''}`,
           foot: h`<span>${t('tasks.foot')}</span>` })}`;
-      return { title: t('nav.tasks'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.tasks') }], body: body };
+      return { title: t('nav.tasks'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.tasks') }], body: body };
     }
   };
 

@@ -1,4 +1,4 @@
-/* Parasol UX demo: boot, view registry, render loop, global actions and keyboard shortcuts. */
+/* Parasoll UX demo: boot, view registry, render loop, global actions and keyboard shortcuts. */
 (function () {
   'use strict';
 
@@ -45,7 +45,7 @@
     P.$('#topbar').innerHTML = P.toHtml(P.renderTopbar(route, page.crumbs || [{ label: page.title }]));
     P.$('#tabbar').innerHTML = P.toHtml(P.renderTabbar(route));
     P.$('#view').innerHTML = P.toHtml(page.body);
-    document.title = page.title + ' · Parasol';
+    document.title = page.title + ' · Parasoll';
     P.$('#skip-link').textContent = t('shell.skip');
     P.$('#tabbar').setAttribute('aria-label', t('shell.mainNav'));
     if (view.mounted) view.mounted(route);

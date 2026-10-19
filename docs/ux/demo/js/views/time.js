@@ -1,4 +1,4 @@
-/* Parasol UX demo: time. A week grid that shows gaps against the daily norm, approval for service leads
+/* Parasoll UX demo: time. A week grid that shows gaps against the daily norm, approval for service leads
    with an allocation preview, and month periods with the reason a close is not yet possible. */
 (function () {
   'use strict';
@@ -26,7 +26,7 @@
       var panel = tab === 'approve' ? approve() : tab === 'periods' ? periods() : week();
       return {
         title: t('nav.time'),
-        crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.time') }],
+        crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.time') }],
         body: h`${UI.pageHead({ title: t('nav.time'), sub: t('time.sub'),
             actions: h`<button class="btn btn-primary" type="button" data-action="log-time">${P.icon('timer', 'ic-16')}${t('create.time')}</button>` })}
           ${UI.tabs(tabs, tab, '#/time/')}${panel}`

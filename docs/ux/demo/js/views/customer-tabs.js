@@ -1,4 +1,4 @@
-/* Parasol UX demo: customer card tabs (technical, work, finance, agreement, contacts, journal). */
+/* Parasoll UX demo: customer card tabs (technical, work, finance, agreement, contacts, journal). */
 (function () {
   'use strict';
 

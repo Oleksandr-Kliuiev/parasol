@@ -1,4 +1,4 @@
-/* Parasol UX demo: one queue of Atlas observations across every customer the person may see.
+/* Parasoll UX demo: one queue of Atlas observations across every customer the person may see.
    Counts cover the whole filter; coverage gaps are stated, never shown as "nothing found". */
 (function () {
   'use strict';
@@ -130,7 +130,7 @@
         </div>
         <div id="obs-results">${results()}</div>
         <p class="footnote">${P.icon('info', 'ic-14')}${t('obs.footnote')}</p>`;
-      return { title: t('nav.observations'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.observations') }], body: body };
+      return { title: t('nav.observations'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.observations') }], body: body };
     },
     mounted: function () {
       var q = document.getElementById('obs-q');

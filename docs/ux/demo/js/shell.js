@@ -1,4 +1,4 @@
-/* Parasol UX demo: navigation rail, top bar, phone tab bar, profile/demo menu and notifications.
+/* Parasoll UX demo: navigation rail, top bar, phone tab bar, profile/demo menu and notifications.
    Navigation is grouped by work, not by module, and only shows what the current role may open. */
 (function () {
   'use strict';
@@ -58,7 +58,7 @@
     return h`
       <div class="rail-brand">
         <span class="brand-mark">${P.icon('umbrella')}</span>
-        <span class="brand-text"><span class="brand-name">Parasol</span><span class="brand-sub">Vardahei AS</span></span>
+        <span class="brand-text"><span class="brand-name">Parasoll</span><span class="brand-sub">Vardahei AS</span></span>
         <button class="icon-btn is-sm on-rail rail-collapse" type="button" data-action="toggle-rail"
           aria-label="${mini ? t('shell.expandNav') : t('shell.collapseNav')}" title="${mini ? t('shell.expandNav') : t('shell.collapseNav')}">${P.icon(mini ? 'chevronRight' : 'chevronLeft', 'ic-16')}</button>
       </div>

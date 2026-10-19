@@ -6,7 +6,7 @@ test('one sign-in opens the customer workspace and respects employee roles', { t
   await signIn(page, 'Crm.Admin', '/organizations');
   const customer = await createOrganization(page, { name: marker('Parasol ') });
   await signIn(page, 'Crm.Technician', `/organizations/${customer.id}`);
-  await expect(page).toHaveTitle(`${customer.name} · Parasol`);
+  await expect(page).toHaveTitle(`${customer.name} · Parasoll`);
   const panel = page.getByRole('region', { name: 'Technical workspace · Atlas' });
   await expect(panel.getByText('This customer has not been linked to Atlas.')).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Invoices', exact: true })).toHaveCount(0);

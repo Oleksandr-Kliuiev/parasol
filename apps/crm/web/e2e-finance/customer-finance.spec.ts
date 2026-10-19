@@ -138,9 +138,9 @@ test('financial views and adjacent customer tabs fit all required widths and bot
   }
 });
 
-test('Russian and Norwegian customer finance copy remains readable at the narrowest width', async ({ page }, info) => {
+test('Nynorsk and Bokmål customer finance copy remains readable at the narrowest width', async ({ page }, info) => {
   const fixture = await setup(page); await page.setViewportSize({ width: 320, height: 900 });
-  for (const [language, title, open] of [['ru', 'Финансы клиента', 'Просмотр 20001'], ['nb', 'Kundeøkonomi', 'Vis 20001']]) {
+  for (const [language, title, open] of [['nn', 'Kundeøkonomi', 'Vis 20001'], ['nb', 'Kundeøkonomi', 'Vis 20001']]) {
     const response = await page.request.put('/api/v1/identity/me/preferences', { data: { language }, headers: { 'X-CSRF': '1' } });
     expect(response.ok()).toBe(true);
     await page.goto(`/organizations/${fixture.organizationId}?tab=invoices`);

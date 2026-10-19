@@ -1,4 +1,4 @@
-/* Parasol UX demo: drawer (bottom sheet on phones), modal, anchored popover and toasts.
+/* Parasoll UX demo: drawer (bottom sheet on phones), modal, anchored popover and toasts.
    Native <dialog> gives focus containment and Escape; focus returns to the control that opened it. */
 (function () {
   'use strict';

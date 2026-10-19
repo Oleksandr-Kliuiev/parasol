@@ -12,10 +12,11 @@ describe('the language announced by the document', () => {
   it.each([
     ['nb', 'Observasjonskø og historikk'],
     ['en', 'Observation queue and history'],
-    ['ru', 'Очередь наблюдений и история'],
+    ['nn', 'Observasjonskø og historikk'],
   ] as const)('follows the effective %s translations after a language change', async (code, title) => {
     await changeLanguage(code);
     expect(i18n.t('parasolQueue.title')).toBe(title);
+    expect(i18n.t('nav.organizations')).toBe({ nb: 'Organisasjoner', nn: 'Organisasjonar', en: 'Organizations' }[code]);
     expect(document.documentElement.lang).toBe(code);
   });
 });

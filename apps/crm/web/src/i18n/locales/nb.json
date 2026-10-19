@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Parasol",
+    "name": "Parasoll",
     "skipToContent": "Hopp til innhold"
   },
   "nav": {
@@ -84,7 +84,7 @@
     "network": "Får ikke kontakt med serveren. Sjekk tilkoblingen og prøv igjen.",
     "notFoundTitle": "Fant ikke siden",
     "notFoundBody": "Siden eller posten finnes ikke, eller den er slettet.",
-    "noAccessTitle": "Du har ikke tilgang til Parasol",
+    "noAccessTitle": "Du har ikke tilgang til Parasoll",
     "noAccessBody": "Du er logget inn med Microsoft-kontoen din, men den har ingen CRM-rolle. Be en administrator legge deg til i en av CRM-gruppene i Entra ID.",
     "forbidden": "Du har ikke tillatelse til å gjøre dette.",
     "concurrency": "Noen andre endret posten mens du redigerte. Last inn på nytt for å se endringene, og legg inn dine igjen.",

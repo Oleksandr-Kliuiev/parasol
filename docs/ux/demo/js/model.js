@@ -1,4 +1,4 @@
-/* Parasol UX demo: derived reads and the few writes the demo simulates (assign, complete, log time, approve).
+/* Parasoll UX demo: derived reads and the few writes the demo simulates (assign, complete, log time, approve).
    Writes mirror the real rules: one task per observation, explicit separate lifecycles, no silent overwrite. */
 (function () {
   'use strict';

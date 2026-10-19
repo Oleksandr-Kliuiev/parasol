@@ -1,4 +1,4 @@
-/* Parasol UX demo: shared view components. Every state carries a word and an icon, not colour alone. */
+/* Parasoll UX demo: shared view components. Every state carries a word and an icon, not colour alone. */
 (function () {
   'use strict';
 

@@ -1,6 +1,6 @@
 # Vardahei CRM v2 — notes for Claude
 
-CRM for an IT company (Microsoft / Atera / PowerOffice partner). Specs live in `docs/` (Russian); code, comments and commit messages are in English. UI strings go through i18n (`web/src/i18n/locales/{nb,en,ru}.json` — keep keys in sync; a vitest test fails otherwise). Only the chosen language is downloaded, so there is no fallback language at runtime.
+CRM for an IT company (Microsoft / Atera / PowerOffice partner). Specs live in `docs/` (Russian); code, comments and commit messages are in English. UI strings go through i18n (`web/src/i18n/locales/{nb,nn,en}.json` — Bokmål, Nynorsk, English; Russian was dropped; keep keys in sync, a vitest test fails otherwise). The product is spelled **Parasoll** in the interface. Only the chosen language is downloaded, so there is no fallback language at runtime.
 
 **State (05.10.2026):** DEV-00…DEV-22 of the audit package are implemented and checked locally (`code_verified`, synthetic data, mocks); DEV-23 (release readiness) is open and external gates EXT-01…EXT-11 are not passed. The system is **not released and not accepted** — see `docs/08-roadmap.md` § 0 and `docs/claude-opus/GO_LIVE.md`. Never write "accepted", "production-ready" or "paid" for anything a local run or a mock proved.
 

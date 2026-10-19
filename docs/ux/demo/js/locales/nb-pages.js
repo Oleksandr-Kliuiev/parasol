@@ -1,4 +1,4 @@
-/* Parasol UX demo: Norwegian Bokmål strings, part 2 (observations, tasks, time). */
+/* Parasoll UX demo: Norwegian Bokmål strings, part 2 (observations, tasks, time). */
 (function () {
   'use strict';
   var P = window.P;
@@ -139,7 +139,7 @@
     'conflict.theirs': 'Nå i oppgaven',
     'conflict.keepMine': 'Lagre min over den nye versjonen',
     'conflict.discard': 'Forkast min og vis den gjeldende',
-    'conflict.noRetry': 'Parasol prøver ikke å lagre på nytt av seg selv: du bestemmer.',
+    'conflict.noRetry': 'Parasoll prøver ikke å lagre på nytt av seg selv: du bestemmer.',
     'conflict.discarded': 'Viser gjeldende versjon av oppgaven',
 
     'tasks.sub': { one: '{n} åpen oppgave · forfalt: {late}', other: '{n} åpne oppgaver · forfalt: {late}' },
@@ -228,7 +228,7 @@
     'time.fromTask': 'Fra oppgaven «{title}»',
     'time.fromTicket': 'Fra sak #{id}',
     'time.fromAtera': 'import fra Atera',
-    'time.fromCrm': 'Parasol',
+    'time.fromCrm': 'Parasoll',
     'time.who': 'Ansatt',
     'time.status': 'Status',
     'time.approvePreview': 'Dette skjer ved godkjenning',

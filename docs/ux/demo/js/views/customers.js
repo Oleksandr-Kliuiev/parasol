@@ -1,4 +1,4 @@
-/* Parasol UX demo: customer list. One row joins CRM, Atlas and PowerOffice facts the person may see;
+/* Parasoll UX demo: customer list. One row joins CRM, Atlas and PowerOffice facts the person may see;
    what a role may not see is marked, not silently empty. */
 (function () {
   'use strict';
@@ -90,7 +90,7 @@
           <div class="chips" role="group" aria-label="${t('cust.filters')}">${chips.map(function (k) { return UI.chip('cust-chip', k, t('cust.chip.' + k), count(k), f.chip === k); })}</div>
         </div>
         <div id="cust-results">${results()}</div>`;
-      return { title: t('nav.customers'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.customers') }], body: body };
+      return { title: t('nav.customers'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.customers') }], body: body };
     },
     mounted: function () {
       var q = document.getElementById('cust-q');

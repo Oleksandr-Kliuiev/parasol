@@ -1,4 +1,4 @@
-/* Parasol UX demo: Norwegian Bokmål strings, part 3 (customer card, finance, billing, agreements, system). */
+/* Parasoll UX demo: Norwegian Bokmål strings, part 3 (customer card, finance, billing, agreements, system). */
 (function () {
   'use strict';
   var P = window.P;
@@ -37,7 +37,7 @@
     'cust.outstanding': 'Utestående',
     'cust.now': 'Haster nå',
     'cust.noAtlasTitle': 'Kunden er ikke koblet til Atlas',
-    'cust.noAtlasText': 'Til kunden er koblet, viser Parasol ingen maskiner eller observasjoner: de kan ikke knyttes sikkert til denne kunden.',
+    'cust.noAtlasText': 'Til kunden er koblet, viser Parasoll ingen maskiner eller observasjoner: de kan ikke knyttes sikkert til denne kunden.',
     'cust.mapAtlas': 'Koble til Atlas',
     'cust.noUrgentTitle': 'Ingenting haster',
     'cust.noUrgentText': 'Siste lesing fra Atlas har ingen observasjoner med høy eller kritisk alvorlighetsgrad.',
@@ -109,7 +109,7 @@
     'device.recurring': 'Disken fylles opp igjen og igjen',
     'device.recurringText': 'Tredje observasjon denne måneden. Det kan trengs et varig tiltak: flytt arkivet eller sett inn en større disk.',
     'device.sameName': 'En annen kunde har en maskin med samme navn',
-    'device.sameNameText': { one: '{n} maskin til har samme navn. Parasol viser alltid kunden ved siden av navnet.', other: '{n} maskiner til har samme navn. Parasol viser alltid kunden ved siden av navnet.' },
+    'device.sameNameText': { one: '{n} maskin til har samme navn. Parasoll viser alltid kunden ved siden av navnet.', other: '{n} maskiner til har samme navn. Parasoll viser alltid kunden ved siden av navnet.' },
     'device.allDevices': 'Alle maskinene til kunden',
 
     'fin.remindTask': 'Oppgave: påminn kunden',
@@ -178,7 +178,7 @@
     'pdf.version': 'Versjon {n}',
     'pdf.checked': 'lagret {date} · integritet kontrollert (SHA-256)',
     'pdf.download': 'Last ned',
-    'pdf.notStoredText': 'Original-PDF-en fra PowerOffice er ikke lagret ennå. Parasol lager aldri dokumentet på nytt selv.',
+    'pdf.notStoredText': 'Original-PDF-en fra PowerOffice er ikke lagret ennå. Parasoll lager aldri dokumentet på nytt selv.',
     'pdf.demo': 'Demoen laster ikke ned filer',
 
     'billing.sub': 'Månedlig fakturering: hent grunnlag, kontroller, godkjenn og eksporter salgsordrer til PowerOffice.',
@@ -299,8 +299,8 @@
     'conn.adminOnly': 'Integrasjonsadministratorer ser detaljene for Atera, PowerOffice og Microsoft Graph.',
 
     'admin.sub': 'Sjelden brukte innstillinger samlet på ett sted, så de ikke tar plass i hovedmenyen.',
-    'admin.foot': 'Disse delene åpnes ikke i demoen; hvert kort viser hvilken skjerm i dagens Parasol det står for.',
-    'admin.notInDemo': 'Ikke med i demoen. I dagens Parasol: {route}',
+    'admin.foot': 'Disse delene åpnes ikke i demoen; hvert kort viser hvilken skjerm i dagens Parasoll det står for.',
+    'admin.notInDemo': 'Ikke med i demoen. I dagens Parasoll: {route}',
     'admin.groupPeople': 'Personer og tilgang',
     'admin.groupData': 'Integrasjoner og data',
     'admin.groupCatalog': 'Katalog og salg',
@@ -352,7 +352,7 @@
     'sales.won': 'Vunnet',
     'sales.closes': 'Lukkes {date}',
     'sales.wonOn': 'Vunnet {date}',
-    'sales.foot': 'Dra-og-slipp, tilbud og godkjenning av rabatter fungerer som i dagens Parasol; i demoen er tavlen bare til visning.',
+    'sales.foot': 'Dra-og-slipp, tilbud og godkjenning av rabatter fungerer som i dagens Parasoll; i demoen er tavlen bare til visning.',
     'proj.sub': 'Planlagte timer og faktiske timer fra timeføringen.',
     'proj.used': '{used} av {plan} t ført',
     'proj.foot': 'Prosjektet har planen; timene kommer fra timeføringene, så timelisten, prosjektet og fakturaen stemmer overens.',

@@ -1,4 +1,4 @@
-/* Parasol UX demo: Norwegian Bokmål strings, part 1 (shell, shared terms, My day). */
+/* Parasoll UX demo: Norwegian Bokmål strings, part 1 (shell, shared terms, My day). */
 (function () {
   'use strict';
   var P = window.P;
@@ -58,7 +58,7 @@
     'shell.demoBadge': 'Demo · syntetiske data',
     'shell.skip': 'Gå til innholdet',
 
-    'demo.about': 'Dette er en forhåndsvisning av det nye Parasol-grensesnittet. Lagring, tildeling og timeføring finnes bare i denne fanen og nullstilles når siden lastes på nytt.',
+    'demo.about': 'Dette er en forhåndsvisning av det nye Parasoll-grensesnittet. Lagring, tildeling og timeføring finnes bare i denne fanen og nullstilles når siden lastes på nytt.',
     'demo.aboutData': 'Kunder, maskiner, oppgaver og fakturaer er oppdiktet. Bytt rolle for å se hvordan skjermene endres for tekniker, serviceleder og administrator.',
     'demo.switchRole': 'Bytt rolle',
 
@@ -265,7 +265,7 @@
     'rem.done': 'Ferdig',
     'rem.acked': 'Påminnelsen er merket som ferdig',
 
-    'feed.system': 'Parasol',
+    'feed.system': 'Parasoll',
     'feed.taskFromObs': 'opprettet en oppgave fra en Atlas-observasjon · {customer}',
     'feed.taskDone': 'fullførte en oppgave · {customer}',
     'feed.ateraImport': { one: 'importerte {n} timeføring fra Atera', other: 'importerte {n} timeføringer fra Atera' },
@@ -281,7 +281,7 @@
     'error.title': 'Siden kunne ikke vises',
     'error.text': 'Demoen fikk en visningsfeil. Ingen data er endret; åpne Min dag eller last siden på nytt.',
     'missing.title': 'Fant ikke siden',
-    'missing.text': 'Parasol har ingen side på denne adressen. Lenken kan være utdatert.',
+    'missing.text': 'Parasoll har ingen side på denne adressen. Lenken kan være utdatert.',
     'denied.title': 'Ingen tilgang',
     'denied.text': 'Denne siden krever tillatelsen «{perm}». Din rolle: {role}. En administrator gir tillatelser gjennom roller i Entra.'
   });

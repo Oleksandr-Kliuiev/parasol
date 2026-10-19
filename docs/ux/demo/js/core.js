@@ -1,4 +1,4 @@
-/* Parasol UX demo: namespace, escaped HTML templates, state, hash routing and formatting.
+/* Parasoll UX demo: namespace, escaped HTML templates, state, hash routing and formatting.
    Classic scripts (no modules) so the demo also opens straight from the file system. */
 (function () {
   'use strict';

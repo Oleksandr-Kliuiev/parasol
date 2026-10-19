@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Parasol",
+    "name": "Parasoll",
     "skipToContent": "Skip to content"
   },
   "nav": {
@@ -84,7 +84,7 @@
     "network": "Could not reach the server. Check your connection and try again.",
     "notFoundTitle": "Page not found",
     "notFoundBody": "The page or record does not exist, or it has been deleted.",
-    "noAccessTitle": "You don't have access to Parasol",
+    "noAccessTitle": "You don't have access to Parasoll",
     "noAccessBody": "Your Microsoft account is signed in, but no CRM role is assigned to it. Ask an administrator to add you to one of the CRM groups in Entra ID.",
     "forbidden": "You don't have permission to do this.",
     "concurrency": "Someone else changed this record while you were editing. Reload to see their changes, then apply yours again.",

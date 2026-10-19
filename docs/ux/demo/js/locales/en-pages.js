@@ -1,4 +1,4 @@
-/* Parasol UX demo: English strings, part 2 (observations, tasks, time). */
+/* Parasoll UX demo: English strings, part 2 (observations, tasks, time). */
 (function () {
   'use strict';
   var P = window.P;
@@ -139,7 +139,7 @@
     'conflict.theirs': 'Now in the task',
     'conflict.keepMine': 'Save mine on top of the new version',
     'conflict.discard': 'Discard mine and show the current one',
-    'conflict.noRetry': 'Parasol does not retry the save on its own: you decide.',
+    'conflict.noRetry': 'Parasoll does not retry the save on its own: you decide.',
     'conflict.discarded': 'Showing the current version of the task',
 
     'tasks.sub': { one: '{n} open task · overdue: {late}', other: '{n} open tasks · overdue: {late}' },
@@ -228,7 +228,7 @@
     'time.fromTask': 'From task “{title}”',
     'time.fromTicket': 'From ticket #{id}',
     'time.fromAtera': 'Atera import',
-    'time.fromCrm': 'Parasol',
+    'time.fromCrm': 'Parasoll',
     'time.who': 'Person',
     'time.status': 'Status',
     'time.approvePreview': 'What approval will do',

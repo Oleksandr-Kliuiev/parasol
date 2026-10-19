@@ -1,4 +1,4 @@
-/* Parasol UX demo: synthetic staff, roles, customers, devices and Atlas observations.
+/* Parasoll UX demo: synthetic staff, roles, customers, devices and Atlas observations.
    Everything here is invented for the demo; any resemblance to real companies is accidental. */
 (function () {
   'use strict';

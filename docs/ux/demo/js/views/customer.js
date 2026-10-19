@@ -1,4 +1,4 @@
-/* Parasol UX demo: customer card. The header answers "who, what agreement, how healthy, what is owed";
+/* Parasoll UX demo: customer card. The header answers "who, what agreement, how healthy, what is owed";
    tabs follow the work (technical, work, finance, agreement) instead of the source modules. */
 (function () {
   'use strict';

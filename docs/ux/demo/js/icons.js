@@ -1,4 +1,4 @@
-/* Parasol UX demo: inline stroke icons on a 24 px grid.
+/* Parasoll UX demo: inline stroke icons on a 24 px grid.
    Geometry follows Lucide (ISC licence, https://lucide.dev); icons are decorative and hidden from assistive tech. */
 (function () {
   'use strict';

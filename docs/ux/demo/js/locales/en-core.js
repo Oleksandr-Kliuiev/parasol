@@ -1,4 +1,4 @@
-/* Parasol UX demo: English strings, part 1 (shell, shared terms, My day). */
+/* Parasoll UX demo: English strings, part 1 (shell, shared terms, My day). */
 (function () {
   'use strict';
   var P = window.P;
@@ -58,7 +58,7 @@
     'shell.demoBadge': 'Demo · synthetic data',
     'shell.skip': 'Skip to content',
 
-    'demo.about': 'This is a preview of the future Parasol interface. Saves, assignments and time entries only live in this tab and reset on reload.',
+    'demo.about': 'This is a preview of the future Parasoll interface. Saves, assignments and time entries only live in this tab and reset on reload.',
     'demo.aboutData': 'Customers, machines, tasks and invoices are invented. Switch roles to see how the screens change for a technician, a service lead and an admin.',
     'demo.switchRole': 'Switch role',
 
@@ -265,7 +265,7 @@
     'rem.done': 'Done',
     'rem.acked': 'Reminder marked as done',
 
-    'feed.system': 'Parasol',
+    'feed.system': 'Parasoll',
     'feed.taskFromObs': 'created a task from an Atlas observation · {customer}',
     'feed.taskDone': 'completed a task · {customer}',
     'feed.ateraImport': { one: 'imported {n} time entry from Atera', other: 'imported {n} time entries from Atera' },
@@ -281,7 +281,7 @@
     'error.title': 'This page could not be shown',
     'error.text': 'The demo hit a display error. No data changed; open My day or reload the page.',
     'missing.title': 'Page not found',
-    'missing.text': 'Parasol has no page at this address. The link may be out of date.',
+    'missing.text': 'Parasoll has no page at this address. The link may be out of date.',
     'denied.title': 'No access',
     'denied.text': 'This page needs the “{perm}” permission. Your role: {role}. An admin grants permissions through Entra roles.'
   });

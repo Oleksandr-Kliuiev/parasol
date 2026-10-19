@@ -1,4 +1,4 @@
-/* Parasol UX demo: Russian strings, part 2 (observations, tasks, time, customers, finance, system). */
+/* Parasoll UX demo: Russian strings, part 2 (observations, tasks, time, customers, finance, system). */
 (function () {
   'use strict';
   var P = window.P;
@@ -139,7 +139,7 @@
     'conflict.theirs': 'Сейчас в задаче',
     'conflict.keepMine': 'Сохранить моё поверх новой версии',
     'conflict.discard': 'Отбросить моё и показать текущее',
-    'conflict.noRetry': 'Parasol не повторяет сохранение сам: решение за вами.',
+    'conflict.noRetry': 'Parasoll не повторяет сохранение сам: решение за вами.',
     'conflict.discarded': 'Показана текущая версия задачи',
 
     'tasks.sub': { one: '{n} открытая задача · просрочено: {late}', few: '{n} открытые задачи · просрочено: {late}', many: '{n} открытых задач · просрочено: {late}', other: '{n} открытой задачи · просрочено: {late}' },
@@ -228,7 +228,7 @@
     'time.fromTask': 'Из задачи «{title}»',
     'time.fromTicket': 'Из заявки #{id}',
     'time.fromAtera': 'импорт Atera',
-    'time.fromCrm': 'Parasol',
+    'time.fromCrm': 'Parasoll',
     'time.who': 'Сотрудник',
     'time.status': 'Статус',
     'time.approvePreview': 'Что произойдёт при утверждении',

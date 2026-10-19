@@ -1,4 +1,4 @@
-/* Parasol UX demo: connection readiness (saved facts only, never a live check) and the admin hub. */
+/* Parasoll UX demo: connection readiness (saved facts only, never a live check) and the admin hub. */
 (function () {
   'use strict';
 
@@ -51,7 +51,7 @@
             foot: h`<span class="row">${P.icon('info', 'ic-14')}${t('conn.notChecked')}</span>` }) : ''}
         </div>
         ${admin ? '' : h`<p class="footnote">${P.icon('lock', 'ic-14')}${t('conn.adminOnly')}</p>`}`;
-      return { title: t('nav.connections'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.connections') }], body: body };
+      return { title: t('nav.connections'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.connections') }], body: body };
     }
   };
 
@@ -75,7 +75,7 @@
             })}</div></section>`;
         })}</div>
         <p class="footnote">${P.icon('info', 'ic-14')}${t('admin.foot')}</p>`;
-      return { title: t('nav.admin'), crumbs: [{ label: 'Parasol', href: '#/day' }, { label: t('nav.admin') }], body: body };
+      return { title: t('nav.admin'), crumbs: [{ label: 'Parasoll', href: '#/day' }, { label: t('nav.admin') }], body: body };
     }
   };
   P.on('admin-open', function (el) { P.toast(t('admin.notInDemo', { route: el.dataset.value }), { tone: 'warn' }); });

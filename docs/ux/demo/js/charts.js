@@ -1,4 +1,4 @@
-/* Parasol UX demo: small SVG charts. One scale per chart, thin marks with a 4 px rounded data end,
+/* Parasoll UX demo: small SVG charts. One scale per chart, thin marks with a 4 px rounded data end,
    recessive solid gridlines, selective direct labels, hover/focus tooltips and a table twin.
    The SVG is redrawn at the container's pixel width, so labels stay at their real 12 px size. */
 (function () {

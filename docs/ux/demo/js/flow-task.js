@@ -1,4 +1,4 @@
-/* Parasol UX demo: task drawer, complete/reopen with undo, an edit conflict that keeps the draft,
+/* Parasoll UX demo: task drawer, complete/reopen with undo, an edit conflict that keeps the draft,
    new task, and the saved Atera ticket view. */
 (function () {
   'use strict';

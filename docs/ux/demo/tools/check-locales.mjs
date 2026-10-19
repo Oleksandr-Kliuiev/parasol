@@ -1,4 +1,4 @@
-// Parasol UX demo: every interface key used in code exists in RU, EN and NB, and the three sets match.
+// Parasoll UX demo: every interface key used in code exists in RU, EN and NB, and the three sets match.
 // Usage: node docs/ux/demo/tools/check-locales.mjs   (exit code 1 on any gap)
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';

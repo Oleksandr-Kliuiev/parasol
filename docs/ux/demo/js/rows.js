@@ -1,4 +1,4 @@
-/* Parasol UX demo: rows shared by My day, the observation queue, tasks and the customer card.
+/* Parasoll UX demo: rows shared by My day, the observation queue, tasks and the customer card.
    A row shows what it is, whose it is and the one next step, in the same place every time. */
 (function () {
   'use strict';

@@ -5,7 +5,7 @@ import { atlasQueue } from '../src/test/atlasQueue';
 import type { QueueState } from '../src/features/parasol/observationQueueContract';
 import { createOrganization, marker, signIn } from './support';
 import nb from '../src/i18n/locales/nb.json' with { type: 'json' };
-import ru from '../src/i18n/locales/ru.json' with { type: 'json' };
+import nn from '../src/i18n/locales/nn.json' with { type: 'json' };
 
 test('device investigation preserves exact scope, keyboard return and other filters across viewport sizes', { tag: '@critical' }, async ({ page, browser }, testInfo) => {
   test.setTimeout(180_000);
@@ -101,7 +101,7 @@ test('device investigation preserves exact scope, keyboard return and other filt
     expect(requests.at(-1)!.searchParams.get('deviceId')).toBeNull(); expect(requests.at(-1)!.searchParams.get('cursor')).toBeNull();
     await capture('cleared', width, colorScheme);
   }
-  for (const [locale, labels] of [['nb-NO', nb], ['ru-RU', ru]] as const) {
+  for (const [locale, labels] of [['nb-NO', nb], ['nn-NO', nn]] as const) {
     const context = await browser.newContext({ baseURL: new URL(page.url()).origin, locale, viewport: { width: 320, height: 900 }, ignoreHTTPSErrors: true });
     try {
       const localized = await context.newPage(); await installFixtures(localized);

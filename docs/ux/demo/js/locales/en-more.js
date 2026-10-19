@@ -1,4 +1,4 @@
-/* Parasol UX demo: English strings, part 3 (customer card, finance, billing, agreements, system). */
+/* Parasoll UX demo: English strings, part 3 (customer card, finance, billing, agreements, system). */
 (function () {
   'use strict';
   var P = window.P;
@@ -37,7 +37,7 @@
     'cust.outstanding': 'Outstanding',
     'cust.now': 'Urgent now',
     'cust.noAtlasTitle': 'Customer is not linked to Atlas',
-    'cust.noAtlasText': 'Until it is linked, Parasol shows no machines or observations: they cannot be attributed to this customer reliably.',
+    'cust.noAtlasText': 'Until it is linked, Parasoll shows no machines or observations: they cannot be attributed to this customer reliably.',
     'cust.mapAtlas': 'Link to Atlas',
     'cust.noUrgentTitle': 'No urgent observations',
     'cust.noUrgentText': 'The latest Atlas read has no high or critical observations.',
@@ -109,7 +109,7 @@
     'device.recurring': 'The disk keeps filling up',
     'device.recurringText': 'Third observation this month. A lasting fix may be needed: move the archive or fit a larger disk.',
     'device.sameName': 'Another customer has a machine with this name',
-    'device.sameNameText': { one: '{n} more machine has the same name. Parasol always shows the customer next to the name.', other: '{n} more machines have the same name. Parasol always shows the customer next to the name.' },
+    'device.sameNameText': { one: '{n} more machine has the same name. Parasoll always shows the customer next to the name.', other: '{n} more machines have the same name. Parasoll always shows the customer next to the name.' },
     'device.allDevices': 'All customer machines',
 
     'fin.remindTask': 'Task: remind the customer',
@@ -178,7 +178,7 @@
     'pdf.version': 'Version {n}',
     'pdf.checked': 'saved {date} · integrity checked (SHA-256)',
     'pdf.download': 'Download',
-    'pdf.notStoredText': 'The original PowerOffice PDF is not saved yet. Parasol never re-creates the document itself.',
+    'pdf.notStoredText': 'The original PowerOffice PDF is not saved yet. Parasoll never re-creates the document itself.',
     'pdf.demo': 'The demo does not download files',
 
     'billing.sub': 'Monthly billing: collect the bases, review, approve and export sales orders to PowerOffice.',
@@ -236,7 +236,7 @@
     'contract.price': 'Price',
     'contract.sum': 'Amount',
     'contract.monthly': 'Per month excl. VAT',
-    'contract.bankRule': 'The bank is reduced when hours are approved. Under 20 % Parasol reminds the account manager.',
+    'contract.bankRule': 'The bank is reduced when hours are approved. Under 20 % Parasoll reminds the account manager.',
     'contract.sla': 'SLA {win}',
     'contract.window': 'Support window',
     'contract.p1': 'critical',
@@ -299,8 +299,8 @@
     'conn.adminOnly': 'Integration admins see the Atera, PowerOffice and Microsoft Graph details.',
 
     'admin.sub': 'Rarely used settings in one place, so they stay out of the main menu.',
-    'admin.foot': 'These sections do not open in the demo; each card names the current Parasol screen it stands for.',
-    'admin.notInDemo': 'Not in the demo. In current Parasol: {route}',
+    'admin.foot': 'These sections do not open in the demo; each card names the current Parasoll screen it stands for.',
+    'admin.notInDemo': 'Not in the demo. In current Parasoll: {route}',
     'admin.groupPeople': 'People and access',
     'admin.groupData': 'Integrations and data',
     'admin.groupCatalog': 'Catalogue and sales',
@@ -352,7 +352,7 @@
     'sales.won': 'Won',
     'sales.closes': 'Closes {date}',
     'sales.wonOn': 'Won {date}',
-    'sales.foot': 'Dragging cards, quotes and discount approval work as in current Parasol; in the demo the board is read-only.',
+    'sales.foot': 'Dragging cards, quotes and discount approval work as in current Parasoll; in the demo the board is read-only.',
     'proj.sub': 'Planned hours and actual hours from time tracking.',
     'proj.used': '{used} of {plan} h logged',
     'proj.foot': 'A project holds the plan; hours come from time entries, so the timesheet, the project and the invoice agree.',

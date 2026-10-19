@@ -1,4 +1,4 @@
-/* Parasol UX demo: synthetic tasks, saved Atera tickets, time, contracts, PowerOffice finance,
+/* Parasoll UX demo: synthetic tasks, saved Atera tickets, time, contracts, PowerOffice finance,
    billing runs, reminders, notifications and connection readiness. */
 (function () {
   'use strict';

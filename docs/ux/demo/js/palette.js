@@ -1,4 +1,4 @@
-/* Parasol UX demo: command palette (Ctrl/Cmd+K). One box finds customers, machines and tasks and runs
+/* Parasoll UX demo: command palette (Ctrl/Cmd+K). One box finds customers, machines and tasks and runs
    frequent actions. Machines always show their customer, because hostnames repeat across customers. */
 (function () {
   'use strict';
