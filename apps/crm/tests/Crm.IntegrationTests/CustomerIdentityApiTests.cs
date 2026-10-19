@@ -32,6 +32,7 @@ public class CustomerIdentityApiTests(CrmWebFactory factory)
     {
         var response = await Admin.PostAsJsonAsync(Import, input);
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Headers.CacheControl!.NoStore.ShouldBeTrue();
         return (await response.Content.ReadFromJsonAsync<CustomerIdentityPlan>())!;
     }
     private Task<HttpResponseMessage> Apply(CustomerIdentityImport input, string hash) =>
@@ -68,7 +69,12 @@ public class CustomerIdentityApiTests(CrmWebFactory factory)
         var applied = await Apply(input, preview.Sha256);
         applied.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await applied.Content.ReadFromJsonAsync<CustomerIdentityPlan>())!.Rows.Single().Outcome.ShouldBe("APPLIED");
-        (await Admin.GetFromJsonAsync<CustomerIdentityView>(Identity(id))).ShouldBe(new(id, new(snapshot.WorkspaceId, snapshot.Clients[0].ClientId)));
+        var identityResponse = await Admin.GetAsync(Identity(id));
+        identityResponse.Headers.CacheControl!.NoStore.ShouldBeTrue();
+        var identity = (await identityResponse.Content.ReadFromJsonAsync<CustomerIdentityView>())!;
+        identity.CustomerId.ShouldBe(id);
+        identity.Atlas.ShouldBe(new(snapshot.WorkspaceId, snapshot.Clients[0].ClientId));
+        identity.LinkId.ShouldNotBeNull();
         var repeated = await Apply(input, preview.Sha256);
         repeated.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await repeated.Content.ReadFromJsonAsync<CustomerIdentityPlan>())!.Rows.Single().Outcome.ShouldBe("ALREADY_LINKED");
@@ -181,14 +187,12 @@ public class CustomerIdentityApiTests(CrmWebFactory factory)
     {
         var id = await Customer(); var input = Input(id);
         (await Apply(input, (await Preview(input)).Sha256)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        Guid linkId;
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-            linkId = (await db.ExternalLinks.SingleAsync(l => l.EntityId == id && l.System == "Atlas")).Id;
-        }
+        var linkId = (await Admin.GetFromJsonAsync<CustomerIdentityView>(Identity(id)))!.LinkId!.Value;
+        (await factory.ClientAs(CrmRoles.Technician).DeleteAsync($"/api/v1/integrations/links/{linkId}")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await factory.ClientAs(CrmRoles.Admin, csrf: false).DeleteAsync($"/api/v1/integrations/links/{linkId}")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await Admin.DeleteAsync($"/api/v1/integrations/links/{linkId}")).StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        (await Admin.GetFromJsonAsync<CustomerIdentityView>(Identity(id)))!.Atlas.ShouldBeNull();
+        var unlinked = (await Admin.GetFromJsonAsync<CustomerIdentityView>(Identity(id)))!;
+        unlinked.Atlas.ShouldBeNull(); unlinked.LinkId.ShouldBeNull();
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();

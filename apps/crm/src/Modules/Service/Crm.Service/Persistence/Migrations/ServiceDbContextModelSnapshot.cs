@@ -384,6 +384,9 @@ namespace Crm.Service.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<DateTimeOffset?>("ImportedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
@@ -391,6 +394,12 @@ namespace Crm.Service.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("OwnerCustomerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("OwnerLinkId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Priority")

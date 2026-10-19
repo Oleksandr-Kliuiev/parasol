@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { configure, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from '@fluentui/react-components';
 import type { OutboxMessageItem, OutboxOverview } from '../../api/types';
@@ -43,11 +43,7 @@ function stubFetch(replay: (body: unknown) => Response, data = overview) {
   return fetch;
 }
 
-/** The open dialog, found by its title: a role query over the whole page is too slow for jsdom on a loaded machine. */
-async function openedDialog(title: string) {
-  const heading = await screen.findByText(title, undefined, { timeout: 5_000 });
-  return heading.closest<HTMLElement>('[role="dialog"]')!;
-}
+const openedDialog = (title: string) => screen.findByRole('dialog', { name: title });
 
 function render() {
   renderRoutes(
@@ -56,11 +52,6 @@ function render() {
     testUser(['integrations.manage']),
   );
 }
-
-// Fluent's modal handling (Tabster) sets aria-hidden outside the active dialog on a timer; in jsdom it sometimes hides the
-// open dialog itself, which real browsers never do (see BillingRunsPage.test). Role queries therefore include hidden nodes;
-// accessibility is checked in the browser (web/e2e/a11y.spec.ts).
-configure({ defaultHidden: true });
 
 afterEach(() => vi.unstubAllGlobals());
 

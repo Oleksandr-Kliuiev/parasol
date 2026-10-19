@@ -29,11 +29,18 @@ const inbox = async (id: string) => (await pgdb.owner.query(`SELECT status||'|'|
 const audits = async (id: string) => (await pgdb.owner.query(`SELECT a."eventType"||':'||coalesce(a.metadata->>'safeErrorCode','-')||':'||coalesce(a.metadata->>'attempts','-') AS s
   FROM "AuditEvent" a JOIN "RawEvent" r ON a.metadata->>'eventKey' = r."eventKey" WHERE r."externalEventId" = $1 ORDER BY a."recordedAt"`, [id])).rows.map(r => r.s);
 const after_ = (t0: number, ms: number) => new Date(t0 + ms);
+/** Explicit lease scenarios begin when all their exact stored events are due, independent of host-clock rounding. */
+const eligibilityClock = async (...eventKeys: string[]): Promise<number> => {
+  const [row] = (await pgdb.owner.query(`SELECT count(*)::int AS count, extract(epoch FROM max("nextAttemptAt")) * 1000 AS instant
+    FROM "RawEvent" WHERE "workspaceId"=$1 AND "clientId"=$2 AND "eventKey"=ANY($3)`, [gasta.workspaceId, gasta.clientId, eventKeys])).rows;
+  assert.equal(row.count, eventKeys.length, 'all exact events in the lease scenario exist');
+  return Number(row.instant);
+};
 
 test('B1 (reviewer\'s order): the stale worker ends with CLAIM_LOST before calling the provider; the new owner makes the one observation', async () => {
   const provider = new CountingProvider();
-  await ingestEvent(db, actors.sync, connection, incident(connection, 'b1-1', 'CRITICAL'));
-  const t0 = Date.now();
+  const stored = await ingestEvent(db, actors.sync, connection, incident(connection, 'b1-1', 'CRITICAL'));
+  const t0 = await eligibilityClock(stored.eventKey);
   const [a] = (await claimEvents(db, actors.sync, gasta, { workerId: 'worker-a', leaseMs: 100 }, after_(t0, 0))).claimed;
   const [b] = (await claimEvents(db2, actors.sync, gasta, { workerId: 'worker-b', leaseMs: 10_000 }, after_(t0, 200))).claimed;
   assert.ok(a && b, 'B claims the event once A\'s lease has expired');
@@ -50,8 +57,8 @@ test('B1 (reviewer\'s order): the stale worker ends with CLAIM_LOST before calli
 
 test('B1: after a takeover the stale worker\'s commit and its failure are both refused; only the current claim decides', async () => {
   const provider = new CountingProvider();
-  await ingestEvent(db, actors.sync, connection, incident(connection, 'b1-2', 'HIGH'));
-  const t0 = Date.now();
+  const stored = await ingestEvent(db, actors.sync, connection, incident(connection, 'b1-2', 'HIGH'));
+  const t0 = await eligibilityClock(stored.eventKey);
   const [a] = (await claimEvents(db, actors.sync, gasta, { workerId: 'worker-a', leaseMs: 100 }, after_(t0, 0))).claimed;
   assert.ok(a);
   const decided = await prepareEvent(db, actors.sync, gasta, a, options(provider)); // A decides, then stalls past its lease
@@ -70,7 +77,7 @@ test('B1: after a takeover the stale worker\'s commit and its failure are both r
 test('B2 (reviewer\'s order): claims that never report back end in a visible dead letter at maxAttempts, without a provider call', async () => {
   const provider = new CountingProvider();
   const stored = await ingestEvent(db, actors.sync, connection, incident(connection, 'b2-1', 'CRITICAL'));
-  const t0 = Date.now();
+  const t0 = await eligibilityClock(stored.eventKey);
   const crash = { workerId: 'worker-crash', leaseMs: 100, maxAttempts: 3 };
   const [first] = (await claimEvents(db, actors.sync, gasta, crash, after_(t0, 0))).claimed; // dies at once
   const [second] = (await claimEvents(db, actors.sync, gasta, crash, after_(t0, 200))).claimed;
@@ -92,8 +99,8 @@ test('B2 (reviewer\'s order): claims that never report back end in a visible dea
 
 test('B2: a configured maxAttempts counts a reported failure and a silent crash alike', async () => {
   const provider = new CountingProvider();
-  await ingestEvent(db, actors.sync, connection, incident(connection, 'b2-2', 'LOW'));
-  const t0 = Date.now();
+  const stored = await ingestEvent(db, actors.sync, connection, incident(connection, 'b2-2', 'LOW'));
+  const t0 = await eligibilityClock(stored.eventKey);
   const failing = async () => { throw new AtlasError('INJECTED_COMMIT_FAILURE', 'TRANSIENT'); };
   const [retry] = await processPending(db, actors.sync, gasta, options(provider, { maxAttempts: 2, leaseMs: 100, beforeFinalCommit: failing }), after_(t0, 0));
   assert.deepEqual([retry?.status, retry?.safeErrorCode], ['RETRY', 'INJECTED_COMMIT_FAILURE']);
@@ -106,8 +113,9 @@ test('B2: a configured maxAttempts counts a reported failure and a silent crash 
 
 test('B2: more exhausted events than one batch: none is claimed beyond its limit; each is dead-lettered in a later pass', async () => {
   const provider = new CountingProvider();
-  for (const id of ['b2-3', 'b2-4']) await ingestEvent(db, actors.sync, connection, incident(connection, id, 'HIGH'));
-  const t0 = Date.now();
+  const stored = [];
+  for (const id of ['b2-3', 'b2-4']) stored.push(await ingestEvent(db, actors.sync, connection, incident(connection, id, 'HIGH')));
+  const t0 = await eligibilityClock(...stored.map(row => row.eventKey));
   const crash = { workerId: 'worker-crash', leaseMs: 100, maxAttempts: 3 };
   for (const ms of [0, 200, 400]) assert.equal((await claimEvents(db, actors.sync, gasta, crash, after_(t0, ms))).claimed.length, 2);
   const passes: string[][] = [];

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
 import { AppLink } from './AppLink';
 import { ArrowLeft16Regular } from '@fluentui/react-icons';
@@ -21,14 +21,22 @@ const useStyles = makeStyles({
 
 interface PageHeaderProps {
   title: ReactNode;
+  documentTitle?: string;
   subtitle?: ReactNode;
   meta?: ReactNode;
   actions?: ReactNode;
   back?: { to: string; label: string };
 }
 
-export function PageHeader({ title, subtitle, meta, actions, back }: PageHeaderProps) {
+export function PageHeader({ title, documentTitle, subtitle, meta, actions, back }: PageHeaderProps) {
   const styles = useStyles();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    const text = (documentTitle ?? heading.current?.textContent)?.replace(/\s+/g, ' ').trim();
+    const pageTitle = text ? `${text} · Parasol` : 'Parasol';
+    document.title = pageTitle;
+    return () => { if (document.title === pageTitle) document.title = 'Parasol'; };
+  }, [title, documentTitle]);
   return (
     <div className={styles.root}>
       <div className={styles.titles}>
@@ -38,7 +46,7 @@ export function PageHeader({ title, subtitle, meta, actions, back }: PageHeaderP
             {back.label}
           </AppLink>
         )}
-        <h1 className={styles.title}>{title}</h1>
+        <h1 ref={heading} className={styles.title}>{title}</h1>
         {subtitle && <Text style={{ color: tokens.colorNeutralForeground3 }}>{subtitle}</Text>}
         {meta && <div className={styles.meta}>{meta}</div>}
       </div>

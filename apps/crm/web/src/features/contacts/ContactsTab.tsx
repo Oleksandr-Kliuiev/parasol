@@ -130,7 +130,7 @@ export function ContactsTab({ organizationId, organizationName }: { organization
                       </Tooltip>
                     )}
                     {!contact.isActive && (
-                      <Badge appearance="outline" color="subtle" size="small">
+                      <Badge appearance="outline" color="informative" size="small">
                         {t('contacts.inactive')}
                       </Badge>
                     )}
@@ -195,7 +195,7 @@ export function ContactsTab({ organizationId, organizationName }: { organization
                           </Tooltip>
                         )}
                         {!contact.isActive && (
-                          <Badge appearance="outline" color="subtle" size="small">
+                          <Badge appearance="outline" color="informative" size="small">
                             {t('contacts.inactive')}
                           </Badge>
                         )}

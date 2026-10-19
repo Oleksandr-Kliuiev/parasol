@@ -32,6 +32,7 @@ public static class CustomersModule
         services.AddScoped<MigrationReconciliationService>();
         services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, CustomersDatabasePermissions>();
         services.AddScoped<ICustomersApi, CustomersApi>();
+        services.AddScoped<IOrganizationWorkLease, OrganizationWorkLease>();
         services.AddScoped<ISearchProvider, OrganizationSearchProvider>();
         services.AddScoped<ISearchProvider, ContactSearchProvider>();
         // DEV-11: the contact person in subject requests and the retention of former customers' contacts.

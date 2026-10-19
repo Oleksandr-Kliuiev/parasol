@@ -1,0 +1,134 @@
+{
+  "milestone": "M37-invoice-pdfs",
+  "date": "2026-10-18",
+  "status": "locally-verified",
+  "branch": "feat/m37-invoice-pdfs",
+  "baseCommit": "a212509c8f99a55ba36e7816ead5c73d4ca74bcb",
+  "scope": "Local synthetic data only; no real PowerOffice account, push, PR, deployment or new production dependencies.",
+  "unit": {
+    "passed": 1035,
+    "failed": 0,
+    "skipped": 0
+  },
+  "architecture": {
+    "passed": 94,
+    "failed": 0,
+    "skipped": 0
+  },
+  "affectedSql": {
+    "passed": 150,
+    "failed": 0,
+    "skipped": 0
+  },
+  "newPdfCases": {
+    "unit": 17,
+    "sqlHttp": 23
+  },
+  "builds": {
+    "web": true,
+    "worker": true,
+    "integration": true,
+    "warnings": 0,
+    "errors": 0
+  },
+  "efModelMatchesMigration": true,
+  "sourceContract": {
+    "source": "https://swagger.poweroffice.net/openapispecs/voucherdocumentation.json",
+    "checkedDate": "2026-10-18",
+    "schemaSha256": "e8ae1395bf72a5390b8006c25e758d1746036a5be3201ba8b7d791d3c470a236",
+    "listPath": "/VoucherDocumentation",
+    "downloadPath": "/VoucherDocumentation/Download",
+    "documentationType": "Pdf",
+    "responsePackaging": "zip",
+    "authRoles": [
+      "VoucherDocumentation",
+      "VoucherDocumentation_Full"
+    ],
+    "noAuthenticatedProviderRequests": true
+  },
+  "integrity": [
+    "ZIP CRC32 and expanded lengths",
+    "bounded ZIP and PDF envelope validation",
+    "SHA-256 and length after immutable storage write and before download",
+    "append-only source versions",
+    "exact voucher UUID and invoice kind",
+    "SQL rollback, concurrent replay, storage failure before/after write",
+    "restore participant detects missing/corrupt PDFs"
+  ],
+  "inputs": {
+    "backendFiles": 856,
+    "backendInputsSha256": "b1400a60fa635b5e1fd9e6950cb45cf3078d5e8c79f31379529df6c95ae23954",
+    "sqlSourceFiles": 908,
+    "sqlProvenanceSha256": "aa05bb1139651a482c47f9b4389981e8664a7e6d6b015627732a3379f9273ea7",
+    "allCurrent": true,
+    "standardFixtureUnchangedInRepo": true,
+    "scratchOnlyFixturePatchSha256": "59f280630077a2aa270774c9e4b90048c5243883ecb487a774489541474b07bc"
+  },
+  "runs": [
+    {
+      "name": "red-01",
+      "passed": 22,
+      "cleanup": true,
+      "logSha256": "7ded7a4af993334dd5a2d0f0121221fb42348ed2498b555ae9fabad731dff458"
+    },
+    {
+      "name": "sql-01",
+      "passed": 150,
+      "cleanup": true,
+      "logSha256": "db5028ab384d74bbb47cec0457750cece4a6021d5f4feefe888b062b3903bb87"
+    },
+    {
+      "name": "sql-02",
+      "passed": 150,
+      "cleanup": true,
+      "logSha256": "c1f80f5aebc0fe5ba6ad1b6904b4178bdbf49148c8afb2ffcfd689bd6379f901"
+    }
+  ],
+  "preservation": {
+    "repositories": {
+      "parasol": {
+        "head": true,
+        "status": true,
+        "diff": true,
+        "index": true,
+        "untracked": true
+      },
+      "vardahei-atlas-stage1-v1.1": {
+        "head": true,
+        "refs": true,
+        "status": true,
+        "diff": true,
+        "index": true,
+        "untracked": true
+      },
+      "Customers-CRM": {
+        "head": true,
+        "refs": true,
+        "status": true,
+        "diff": true,
+        "index": true,
+        "untracked": true
+      }
+    },
+    "onlyPermittedRefChanged": true,
+    "ownedBranchMoved": false,
+    "preservedDemoArtifacts": 394
+  },
+  "history": {
+    "originalImportsAndArchiveRefsVerified": true,
+    "logSha256": "85ee0e2903421e19d1710d40d14bbfa36d8a0d108ea0c2a12f7cae8846f0c867"
+  },
+  "limits": [
+    "PDF envelope checks are not a full semantic parser or malware scan. SHA-256 proves captured bytes, not legal authenticity.",
+    "All captured versions retained; current upstream disappearance does not delete history. No cleanup of invoice PDF orphan files.",
+    "One existing PowerOffice namespace; no multi-account switch. Optional stream not in M15 readiness aggregate.",
+    "No UI, browser/Atlas regression, Linux acceptance, full-stack backup rehearsal or Hostinger deployment performed in this change."
+  ],
+  "logs": {
+    "backend-02/backend-Unit-tests.log": "743c5485c59e79304f81dd72e2db8bb6614986ea1c99088ac9b3ec821bdc8127",
+    "backend-02/backend-Architecture-tests.log": "815ba7e4d342a9f0c0d93c4751c846489af092304a3792ed028500154497943f",
+    "backend-02/backend-Integration-build.log": "2e635c98f43d246ac0555b42c7688b1d9594bc07855aa576d2eb51fe9948cd97",
+    "worker-final-build.log": "56a6a2b92ce32afaff797119c2f906a9b5e034581b3c62ece855fc276c67d2ce",
+    "model-check.log": "815c5cd494b61a9d8737ba7653cd05fb05926e7b40a924683fa4eef4ca87566c"
+  }
+}

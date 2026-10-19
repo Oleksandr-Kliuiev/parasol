@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { configure, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderRoutes, testUser } from '../../test/renderWithProviders';
 import { MonitoringPanel } from './MonitoringPanel';
 import { OutboundPanel } from './SystemsPanels';
 import type { MonitoringOverview } from './monitoringApi';
 
-configure({ defaultHidden: true });
 const base = '/api/v1/integrations/monitoring';
 const overview: MonitoringOverview = {
   recoveredTotalCount: 0,

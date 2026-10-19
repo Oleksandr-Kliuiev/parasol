@@ -35,7 +35,7 @@ export function HourBankList({ contractId, organizationId }: { contractId?: stri
             <span className={styles.hours}>{t('contracts.hourBanks.remainingOf', { remaining: formatNumber(b.remainingHours), purchased: formatNumber(b.purchasedHours) })}</span>
             {b.isLow && b.status === 'Active' && <Badge appearance="tint" color="warning">{t('contracts.hourBanks.low')}</Badge>}
             {b.overageHours > 0 && <Badge appearance="tint" color="danger">{t('contracts.hourBanks.overage', { hours: formatNumber(b.overageHours) })}</Badge>}
-            {b.status === 'Closed' && <Badge appearance="outline" color="subtle">{t('contracts.hourBanks.closed')}</Badge>}
+            {b.status === 'Closed' && <Badge appearance="outline" color="informative">{t('contracts.hourBanks.closed')}</Badge>}
             <span className={styles.muted}>
               {formatDate(b.validFrom)}
               {b.validTo ? ` – ${formatDate(b.validTo)}` : ''}

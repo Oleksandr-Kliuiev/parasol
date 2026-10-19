@@ -49,6 +49,15 @@ public sealed class PowerOfficeOptions
 
     public string ProductSyncCron { get; set; } = "30 1 * * *";
 
+    /// <summary>Separate read-only customer ledger import; disabled until source access and coverage are explicitly configured.</summary>
+    public bool CustomerLedgerSyncEnabled { get; set; }
+
+    public string CustomerLedgerSyncCron { get; set; } = "35 * * * *";
+
+    /// <summary>Read-only original PDF import; explicit opt-in, separate from invoice and ledger polling.</summary>
+    public bool InvoicePdfSyncEnabled { get; set; }
+    public string InvoicePdfSyncCron { get; set; } = "45 2 * * *";
+
     public string UserAgent { get; set; } = "VardaheiCRM/2.0 (it@vardahei.no)";
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApplicationKey) && !string.IsNullOrWhiteSpace(ClientKey) && !string.IsNullOrWhiteSpace(SubscriptionKey);

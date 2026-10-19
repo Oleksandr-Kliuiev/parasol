@@ -1,0 +1,13 @@
+[Unit]
+Description=Parasol consistent encrypted backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/parasol/deploy/hostinger/parasol.py --state /srv/parasol backup
+# Killing the controller mid-backup can leave applications stopped; allow it to finish/resume.
+TimeoutStartSec=infinity
+Nice=10

@@ -71,10 +71,12 @@ public sealed record ActivityDto(
     string? FromAddress,
     DateTimeOffset CreatedAt,
     RefDto? CreatedBy,
-    string Etag);
+    string Etag,
+    bool HasTechnicalSource = false);
 
 public sealed record ActivityQuery(
-    Guid? OrganizationId, Guid? OpportunityId, Guid? ContractId, ActivityType? Type, bool MineOnly, bool OpenOnly, int? Limit = null, string? Cursor = null);
+    Guid? OrganizationId, Guid? OpportunityId, Guid? ContractId, ActivityType? Type, bool MineOnly, bool OpenOnly,
+    int? Limit = null, string? Cursor = null, Guid? ActivityId = null);
 
 internal sealed class ActivityService(
     ActivitiesDbContext db,
@@ -88,10 +90,25 @@ internal sealed class ActivityService(
     /// One page of the timeline — open items first by due date, then everything newest first — and how many the filter matches
     /// (DEV-12). The cursor carries the whole sort key, so a page continues exactly where the previous one ended.
     /// </summary>
-    public async Task<PagedResult<ActivityDto>> ListAsync(ActivityQuery query, CancellationToken ct)
+    public async Task<Result<PagedResult<ActivityDto>>> ListAsync(ActivityQuery query, CancellationToken ct)
     {
+        // A selected activity stays inside its live customer. A stale link must never fall back to the whole timeline.
+        if (query.ActivityId is { } selectedId)
+        {
+            if (selectedId == Guid.Empty || query.OrganizationId is null || query.OrganizationId == Guid.Empty)
+                return Error.Validation("ACT_SELECTION_SCOPE_REQUIRED", "Select an activity within its customer.");
+            if (query.Cursor is not null)
+                return Error.Validation("ACT_SELECTION_CURSOR_INVALID", "A selected activity cannot use a continuation cursor.");
+            if (await customers.GetOrganizationAsync(query.OrganizationId.Value, ct) is null)
+                return new PagedResult<ActivityDto>([], null, 0);
+        }
+
         // Tracked: rows carry their ETag so the timeline can edit an item straight away.
         var activities = db.Activities.AsQueryable();
+        if (query.ActivityId is { } activityId)
+        {
+            activities = activities.Where(a => a.Id == activityId);
+        }
         if (query.OrganizationId is { } organizationId)
         {
             activities = activities.Where(a => a.OrganizationId == organizationId);
@@ -121,6 +138,17 @@ internal sealed class ActivityService(
         if (query.OpenOnly)
         {
             activities = activities.Where(a => a.Status == ActivityStatus.Open);
+        }
+
+        if (query.ActivityId is not null)
+        {
+            // Exact selection has no continuation or page walk. Its count describes only the returned row.
+            var selectedActivity = await activities.SingleOrDefaultAsync(ct);
+            if (selectedActivity is null) return new PagedResult<ActivityDto>([], null, 0);
+            var selectedRows = await ToDtosAsync([selectedActivity], ct);
+            if (await customers.GetOrganizationAsync(query.OrganizationId!.Value, ct) is null)
+                return new PagedResult<ActivityDto>([], null, 0);
+            return new PagedResult<ActivityDto>(selectedRows, null, selectedRows.Count);
         }
 
         var total = await activities.CountAsync(ct);
@@ -192,8 +220,19 @@ internal sealed class ActivityService(
         return (await ToDtosAsync([created.Value], ct))[0];
     }
 
-    public async Task<Result<ActivityDto>> UpdateAsync(Guid id, ActivityRequest request, string ifMatch, CancellationToken ct) =>
-        await MutateAsync(
+    public async Task<Result<ActivityDto>> UpdateAsync(Guid id, ActivityRequest request, string ifMatch, CancellationToken ct)
+    {
+        if (await db.SourceTaskLinks.AsNoTracking().AnyAsync(l => l.ActivityId == id, ct)
+            && await db.Activities.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, ct) is { } sourceTask)
+        {
+            if (request.Type != ActivityType.Task || request.OrganizationId != sourceTask.OrganizationId)
+                return Error.Conflict("ACT_SOURCE_TASK_IDENTITY_LOCKED", "A technical task keeps its type and customer.");
+            var assigneeId = request.AssigneeId ?? sourceTask.AssigneeId;
+            if (assigneeId != sourceTask.AssigneeId && (assigneeId is null
+                || await users.GetProfileAsync(assigneeId.Value, ct) is not { } assignee || !SourceTaskApi.IsEligibleAssignee(assignee)))
+                return Error.Validation("ACT_SOURCE_TASK_ASSIGNEE_INVALID", "Choose an active technical employee.");
+        }
+        return await MutateAsync(
             id,
             ifMatch,
             activity => activity.Update(ToDetails(request, activity.AssigneeId), time.GetUtcNow()),
@@ -216,6 +255,7 @@ internal sealed class ActivityService(
                     ? await outlook.PushMeetingAsync(activity, token)
                     : Result.Success();
             });
+    }
 
     /// <summary>Puts an existing meeting into the calendar, or refreshes the event after a failed attempt.</summary>
     public async Task<Result<ActivityDto>> AddToCalendarAsync(Guid id, CancellationToken ct) =>
@@ -228,11 +268,11 @@ internal sealed class ActivityService(
             return Result.Success();
         });
 
-    public async Task<Result<ActivityDto>> CompleteAsync(Guid id, CancellationToken ct) =>
-        await MutateAsync(id, null, activity => activity.Complete(currentUser.UserId, time.GetUtcNow()), ct);
+    public async Task<Result<ActivityDto>> CompleteAsync(Guid id, string ifMatch, CancellationToken ct) =>
+        await MutateAsync(id, ifMatch, activity => activity.Complete(currentUser.UserId, time.GetUtcNow()), ct);
 
-    public async Task<Result<ActivityDto>> ReopenAsync(Guid id, CancellationToken ct) =>
-        await MutateAsync(id, null, activity => activity.Reopen(), ct);
+    public async Task<Result<ActivityDto>> ReopenAsync(Guid id, string ifMatch, CancellationToken ct) =>
+        await MutateAsync(id, ifMatch, activity => activity.Reopen(), ct);
 
     public async Task<Result> DeleteAsync(Guid id, CancellationToken ct)
     {
@@ -265,6 +305,13 @@ internal sealed class ActivityService(
             return Error.PreconditionFailed("INVALID_ETAG", "The If-Match header is not a valid ETag.");
         }
 
+        // Reject before a no-op or an external effect. Actual changes still use SQL rowversion at SaveChanges.
+        if (ifMatch is not null && db.IsStale(activity))
+        {
+            return Error.PreconditionFailed("CONCURRENCY_CONFLICT",
+                "The record was changed by someone else. Reload it and apply your changes again.");
+        }
+
         var result = change(activity);
         if (!result.IsSuccess)
         {
@@ -290,6 +337,8 @@ internal sealed class ActivityService(
         var contacts = await customers.GetContactNamesAsync(activities.Where(a => a.ContactId != null).Select(a => a.ContactId!.Value).Distinct().ToList(), ct);
         var userIds = activities.SelectMany(a => new[] { a.AssigneeId, a.CreatedBy }).OfType<Guid>().Distinct().ToList();
         var people = await users.GetUsersAsync(userIds, ct);
+        var activityIds = activities.Select(a => a.Id).ToList();
+        var sourceIds = (await db.SourceTaskLinks.AsNoTracking().Where(l => activityIds.Contains(l.ActivityId)).Select(l => l.ActivityId).ToListAsync(ct)).ToHashSet();
         var now = time.GetUtcNow();
         RefDto? Person(Guid? id) => id is { } value && people.TryGetValue(value, out var user) ? new RefDto(user.Id, user.DisplayName) : null;
 
@@ -297,7 +346,7 @@ internal sealed class ActivityService(
             a.Id, a.Type, a.OrganizationId, organizations.GetValueOrDefault(a.OrganizationId), a.OpportunityId, a.ContractId, a.ContactId,
             a.ContactId is { } contactId ? contacts.GetValueOrDefault(contactId) : null, a.Subject, a.Body, a.DueAt, a.DurationMinutes,
             a.Location, a.Priority, Person(a.AssigneeId), a.Status, a.CompletedAt, a.IsOverdue(now), a.GraphEventId is not null,
-            a.CalendarSyncedAt, a.WebLink, a.FromAddress, a.CreatedAt, Person(a.CreatedBy), db.GetETag(a))).ToList();
+            a.CalendarSyncedAt, a.WebLink, a.FromAddress, a.CreatedAt, Person(a.CreatedBy), db.GetETag(a), sourceIds.Contains(a.Id))).ToList();
     }
 }
 

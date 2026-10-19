@@ -121,6 +121,9 @@ public class AteraResilienceTests(CrmWebFactory factory)
         {
             system = "atera", externalType = "Contact", externalId = ateraContactId.ToString(CultureInfo.InvariantCulture), entityId = contactId,
         }, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        // A stored global contact link does not prove which Atera customer currently owns that contact.
+        host.Atera.Given(Request.Create().WithPath("/api/v3/contacts").UsingGet())
+            .RespondWith(JsonReply(new { items = new object[] { new { EndUserID = ateraContactId, CustomerID = customerId } }, totalPages = 1 }));
         return (await CreateRequestAsync(host, organizationId, contactId), customerId, ateraContactId);
     }
 

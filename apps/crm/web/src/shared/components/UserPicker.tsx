@@ -10,6 +10,7 @@ interface UserPickerProps {
   value: UserRef | null;
   onChange: (user: UserRef | null) => void;
   appearance?: ComboboxProps['appearance'];
+  disabled?: ComboboxProps['disabled'];
   'aria-labelledby'?: string;
 }
 

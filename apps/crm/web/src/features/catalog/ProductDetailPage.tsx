@@ -91,7 +91,7 @@ export function ProductDetailPage() {
           <>
             <Text className={styles.sku}>{p.sku}</Text>
             <Badge appearance="tint" color="brand">{t(`catalog.types.${p.type}`)}</Badge>
-            {!p.isActive && <Badge appearance="outline" color="subtle">{t('catalog.inactive')}</Badge>}
+            {!p.isActive && <Badge appearance="outline" color="informative">{t('catalog.inactive')}</Badge>}
           </>
         }
         actions={

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { configure, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderRoutes, testUser } from '../../test/renderWithProviders';
 import { BillingRunsPage } from './BillingRunsPage';
@@ -63,14 +63,9 @@ const show = () =>
     finance,
   );
 
-// Fluent's modal handling (Tabster) sets aria-hidden outside the active dialog on a timer; in jsdom, on a loaded machine, it
-// sometimes hides the open dialog itself, which real browsers never do (the e2e and axe checks of these dialogs pass). Role
-// queries therefore include hidden nodes here; accessibility is checked in the browser.
-configure({ defaultHidden: true });
-
 afterEach(() => vi.unstubAllGlobals());
 
-const openedDialog = () => screen.findByRole('dialog', undefined, { timeout: 5_000 });
+const openedDialog = () => screen.findByRole('dialog');
 
 
 describe('BillingRunsPage', () => {

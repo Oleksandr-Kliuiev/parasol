@@ -91,7 +91,7 @@ test('/openapi.json: the OpenAPI 3.1 document without authentication; it names e
   const r = await raw(port, ['GET /openapi.json HTTP/1.1', 'Host: x']);
   const doc = JSON.parse(r.body);
   assert.deepEqual([r.status, doc.openapi, doc.components.securitySchemes.bearer.scheme], [200, '3.1.0', 'bearer']);
-  for (const path of ['/clients', '/clients/{id}/overview', '/clients/{id}/observations', '/clients/{id}/audit', '/clients/{clientId}/observations/{observationId}/correlation',
+  for (const path of ['/clients', '/clients/{id}/overview', '/clients/{id}/observations', '/clients/{id}/observations/{observationId}', '/clients/{id}/audit', '/clients/{clientId}/observations/{observationId}/correlation',
     '/tools', '/tools/execute', '/audit/security', '/session']) assert.ok(doc.paths[path], path);
   assert.deepEqual(doc, JSON.parse(JSON.stringify(OPENAPI_DOCUMENT)));
 });

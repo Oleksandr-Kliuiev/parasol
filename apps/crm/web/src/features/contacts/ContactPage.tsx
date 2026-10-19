@@ -124,7 +124,7 @@ export function ContactPage() {
                         </Badge>
                       )}
                       {!a.isActive && (
-                        <Badge size="small" appearance="outline" color="subtle">
+                        <Badge size="small" appearance="outline" color="informative">
                           {t('contacts.inactive')}
                         </Badge>
                       )}

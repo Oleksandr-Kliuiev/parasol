@@ -10,10 +10,29 @@ const useStyles = makeStyles({
     paddingBlock: tokens.spacingVerticalL,
     minWidth: 0,
   },
+  header: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    columnGap: tokens.spacingHorizontalS,
+    rowGap: tokens.spacingVerticalS,
+  },
+  actions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    maxWidth: '100%',
+    minWidth: 0,
+  },
   heading: {
     margin: `0 0 ${tokens.spacingVerticalM}`,
     fontSize: tokens.fontSizeBase400,
     fontWeight: tokens.fontWeightSemibold,
+    flexShrink: 0,
+    maxWidth: '100%',
+    overflowWrap: 'anywhere',
   },
   list: {
     display: 'grid',
@@ -33,13 +52,13 @@ export function Panel({ title, children, actions }: { title?: string; children: 
   return (
     <section className={styles.panel} aria-labelledby={title ? headingId : undefined}>
       {(title || actions) && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <div className={styles.header}>
           {title && (
             <h2 id={headingId} className={styles.heading}>
               {title}
             </h2>
           )}
-          {actions}
+          {actions && <div className={styles.actions}>{actions}</div>}
         </div>
       )}
       {children}

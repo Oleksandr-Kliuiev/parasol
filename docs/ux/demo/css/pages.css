@@ -1,0 +1,469 @@
+/* Parasol UX demo: page-specific layouts (customer card, time, billing, system, sales). */
+
+/* ---------- Customer card ---------- */
+
+.back-link {
+  margin-bottom: var(--s-3);
+}
+
+.cust-head {
+  margin-bottom: var(--s-4);
+}
+
+.cust-head-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--s-4) var(--s-5);
+  padding: var(--s-5) var(--s-5) var(--s-4);
+}
+
+.cust-head-text {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.cust-head .page-title {
+  font-size: var(--fs-28);
+  line-height: 36px;
+  overflow-wrap: anywhere;
+}
+
+.cust-actions {
+  justify-content: flex-end;
+}
+
+/* Six facts: 6, 3 or 2 per row, so no fact is ever left alone on a line */
+.cust-facts {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0 var(--s-5) var(--s-5);
+  padding: var(--s-4);
+  border-radius: var(--r-ctl);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+@media (max-width: 1279px) {
+  .cust-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .cust-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  .cust-head-main {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cust-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 479px) {
+  .cust-head-main {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--s-4);
+  }
+
+  .cust-head .avatar.is-lg {
+    width: 56px;
+    height: 56px;
+    font-size: var(--fs-20);
+  }
+
+  .cust-facts {
+    margin: 0 var(--s-4) var(--s-4);
+    padding: var(--s-3);
+  }
+
+  .cust-actions > .btn {
+    flex: 1 1 140px;
+  }
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
+@media (max-width: 1099px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.source-strip {
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--surface);
+}
+
+.source-strip > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 48px;
+  padding: var(--s-2) var(--s-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.source-strip > summary::-webkit-details-marker {
+  display: none;
+}
+
+.source-strip[open] > summary .ic-16:last-child {
+  transform: rotate(180deg);
+}
+
+.source-strip .rows,
+.source-strip > p {
+  padding: 0 var(--s-4) var(--s-3);
+}
+
+.device-box {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--surface-2);
+}
+
+@media (max-width: 479px) {
+  .device-box {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .device-box > .btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+.run-facts {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
+}
+
+.fin-facts .fact-big,
+.run-facts .fact-big {
+  font-size: var(--fs-20);
+  line-height: 28px;
+  font-weight: 800;
+}
+
+.diff {
+  margin-top: var(--s-2);
+  font-size: var(--fs-13);
+}
+
+.diff th,
+.diff td {
+  padding: var(--s-1) var(--s-2);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.diff th {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.chooser {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+}
+
+.chooser legend {
+  padding: 0 var(--s-1);
+}
+
+/* ---------- Time ---------- */
+
+.week-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  width: 100%;
+}
+
+.week-label {
+  display: grid;
+  min-width: 120px;
+}
+
+.week-total {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 180px;
+}
+
+.week-grid {
+  min-width: 760px;
+}
+
+.week-grid tbody th,
+.week-grid tfoot th {
+  padding-left: var(--s-5);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.week-grid th.is-today {
+  color: var(--accent-ink);
+}
+
+.week-grid tfoot td,
+.week-grid tfoot th {
+  height: 48px;
+  background: var(--surface-2);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-grid td.is-short {
+  color: var(--warn-ink);
+}
+
+.period-rows .item {
+  padding-inline: var(--s-5);
+}
+
+.appr-item {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  cursor: pointer;
+}
+
+.appr-item input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent-strong);
+}
+
+/* ---------- Billing stepper ---------- */
+
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s-2);
+  margin-bottom: var(--s-5);
+}
+
+.step {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  padding-top: var(--s-1);
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-weight: 700;
+}
+
+.step::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: 32px;
+  right: calc(var(--s-2) * -1);
+  height: 2px;
+  background: var(--line-2);
+}
+
+.step:last-child::before {
+  content: none;
+}
+
+.step-dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  color: var(--muted);
+}
+
+.step.is-done {
+  color: var(--ink);
+}
+
+.step.is-done .step-dot {
+  border-color: transparent;
+  background: var(--good);
+  color: var(--surface);
+}
+
+.step.is-done::before {
+  background: var(--good);
+}
+
+.step.is-problem {
+  color: var(--warn-ink);
+}
+
+.step.is-problem .step-dot {
+  border-color: transparent;
+  background: var(--warn);
+  color: var(--surface);
+}
+
+.stepper.is-compact {
+  margin-bottom: var(--s-4);
+}
+
+@media (max-width: 599px) {
+  .stepper {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .step {
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--s-3);
+    padding: 0 0 var(--s-3);
+  }
+
+  .step::before {
+    top: 28px;
+    bottom: 0;
+    left: 13px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+}
+
+/* ---------- Card grids (connections, admin) ---------- */
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+
+.admin-group {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.admin-group > h2 {
+  font-family: var(--font-body);
+  letter-spacing: 0.06em;
+}
+
+/* Two per row: every group has an even number of cards, so rows are always full */
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+}
+
+@media (max-width: 767px) {
+  .admin-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.admin-card {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-card:hover {
+  box-shadow: var(--shadow-2);
+}
+
+.admin-text {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---------- Sales board ---------- */
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+
+@media (max-width: 1099px) {
+  .kanban {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .kanban {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.kanban-col {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-card);
+  background: var(--well);
+}
+
+.kanban-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 32px;
+  padding: 0 var(--s-1);
+}
+
+.deal-card {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-3) var(--s-4);
+  box-shadow: none;
+}
+
+/* ---------- Phone customer list ---------- */
+
+.cust-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  color: inherit;
+  text-decoration: none;
+}
+
+.cust-card:hover .item-title {
+  text-decoration: underline;
+}

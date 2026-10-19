@@ -1,0 +1,131 @@
+{
+  "recordedAt": "2026-10-17T23:01:07.149364+00:00",
+  "localDate": "2026-10-18",
+  "status": "locally-verified",
+  "scope": "M36 local queue clarity and document language; broad product goal remains open",
+  "frontend": {
+    "affected": 68,
+    "unit": 666,
+    "files": 77,
+    "maxWorkers": 2,
+    "focusedBrowserSubset": 3,
+    "wideBrowser": 102,
+    "receiptContrastFocusedBrowser": 2,
+    "savedProfileLanguageBrowser": 1,
+    "tooling": 22,
+    "eslint": true,
+    "types": true,
+    "build": true,
+    "initialGzipKb": 291.9,
+    "budgetKb": 300,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "language": {
+    "owner": "shared i18n initialization and effective change",
+    "languages": [
+      "nb",
+      "en",
+      "ru"
+    ],
+    "initialLocaleEngines": [
+      "Chromium",
+      "Firefox",
+      "WebKit"
+    ],
+    "profileSwitchAndReloadEngine": "Chromium",
+    "all60DocumentLanguageMetricsCorrect": true
+  },
+  "queue": {
+    "firstTitleFullyVisibleForEightSelectedLayouts": true,
+    "firstTitleViewportAssertionLanguage": "en",
+    "viewportHeight": 900,
+    "longHostnameAndDuplicateIdentityFixtureRetained": true,
+    "programmaticEntryFocusAlignedAfterLayout": true,
+    "manualTabHandlerUnchanged": true,
+    "readTimeAlwaysVisible": true,
+    "assemblyTimeAvailableInDetails": true,
+    "incompleteSourceWarningVisibleWhenCollapsed": true,
+    "missingFreshnessExplained": true,
+    "nativeKeyboardDisclosures": true,
+    "detailsAndHelpDoNotFetch": true,
+    "allSourceAndSeverityEvidenceRetained": true,
+    "filtersAndCursorSemanticsUnchanged": true
+  },
+  "visual": {
+    "engine": "Chromium",
+    "views": 60,
+    "widths": [
+      1440,
+      768,
+      390,
+      320
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "states": [
+      "devices",
+      "selected",
+      "returned",
+      "history",
+      "read-details",
+      "queue-help",
+      "cleared"
+    ],
+    "extraLocaleViews": 4,
+    "screenshotsReviewed": 60,
+    "errors": 0,
+    "warnings": 0,
+    "diagnosticScrollOnlyForExpandedEvidenceCaptures": true
+  },
+  "composition": {
+    "report": "composition-M36-2026-10-18.json",
+    "reportSha256": "bc8f2e02aa891203a7ab0490bf8be3847f8c567a1e50f608c867f51285f71da0",
+    "runId": "ae3e3488af13",
+    "accepted": true,
+    "diagnostic": false,
+    "builtInThisRun": true,
+    "browser": 11,
+    "atlasRequests": 563,
+    "mutatingAtlasRequests": 0,
+    "cleanup": true
+  },
+  "inputChecks": {
+    "frontend": 425,
+    "backendReused": 805,
+    "sqlBuildFixtureReused": 857,
+    "atlasReused": 1428,
+    "tooling": 32,
+    "compositionUnion": 2738,
+    "allCurrentBytesMatch": true
+  },
+  "serverAcceptanceReused": {
+    "evidence": "device-history-M35-2026-10-17.json",
+    "currentBytesMatch": true,
+    "sourceFiles": {
+      "backend": 805,
+      "sql": 857,
+      "atlas": 1428
+    },
+    "crmUnit": 970,
+    "crmArchitecture": 94,
+    "crmAffectedSql": 99,
+    "atlasUnit": 717,
+    "atlasPostgres": 802,
+    "atlasBrowser": 90,
+    "newFullServerRuns": false
+  },
+  "limitations": [
+    "Controlled technical BFF UI QA is separate from actual source-build joined-app acceptance",
+    "Synthetic data and Development authentication; real Entra/provider accounts are not connected",
+    "User only opened the prior demo; human workflow usability and time savings are not verified",
+    "NB/RU320 views check language, layout and accessible controls; first-title viewport assertion covers the main EN device scenario",
+    "Other full visual matrices, M26 financial SQL208 and M29 native recovery are historical",
+    "Historical financial review and target VPS/offsite acceptance remain open"
+  ],
+  "published": false,
+  "deployed": false
+}

@@ -1,195 +1,139 @@
-import { useState } from 'react';
-import { Badge, Button, Link, Text, makeStyles, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
-import { Add20Regular, ArrowSync20Regular, CalendarLtr16Regular, CheckmarkCircle20Regular, Edit20Regular, Open16Regular } from '@fluentui/react-icons';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Add20Regular, ArrowSync20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
-import { Permissions, useCan } from '../../auth/CurrentUserContext';
+import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
-import { formatDateTime } from '../../shared/utils/format';
 import { useActivities, useActivityActions, useOutlookStatus } from './api';
 import { ActivityDialog } from './ActivityDialog';
+import { ActivityTimelineItem } from './ActivityTimelineItem';
+import { useSelectedActivity } from './useSelectedActivity';
+import type { ActivitySelection } from './activityNavigation';
 import type { Activity } from './types';
-import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { useActivityStatusCommands } from './useActivityStatusCommands';
 
-const useStyles = makeStyles({
-  list: { listStyle: 'none', margin: 0, padding: 0 },
-  item: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) auto',
-    gap: tokens.spacingHorizontalS,
-    paddingBlock: tokens.spacingVerticalS,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
-    ':last-child': { borderBottom: 'none' },
-  },
-  head: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalS },
-  body: { whiteSpace: 'pre-wrap', color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
-  meta: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  overdue: { color: tokens.colorPaletteRedForeground1, fontSize: tokens.fontSizeBase200 },
-  done: { color: tokens.colorNeutralForeground3 },
-  // Tinted and brand-coloured badges do not keep their contrast in the dark theme, so priority is plain text.
-  high: { color: tokens.colorPaletteDarkOrangeForeground1, fontSize: tokens.fontSizeBase200, fontWeight: tokens.fontWeightSemibold },
-  actions: { display: 'flex', gap: tokens.spacingHorizontalXS, alignItems: 'start' },
-});
+const useStyles = makeStyles({ list: { listStyle: 'none', margin: 0, padding: 0 } });
 
-/** Tasks, calls, meetings and notes about one customer, deal or contract, newest open first. */
-export function ActivityTimeline({
-  organizationId,
-  opportunityId,
-  contractId,
-  title,
-}: {
+interface TimelineProps {
   organizationId: string;
   opportunityId?: string;
   contractId?: string;
   title?: string;
-}) {
-  const styles = useStyles();
-  const { t } = useTranslation();
-  const notify = useNotify();
-  const canWrite = useCan(Permissions.activitiesWrite);
-  const actions = useActivityActions();
-  const [dialog, setDialog] = useState<{ activity?: Activity } | null>(null);
-  const restoreFocusTarget = useRestoreFocusTarget();
-  const activities = useActivities({ organizationId, opportunityId, contractId });
-  const { items: data, error, isPending, refetch } = activities;
-  const outlook = useOutlookStatus();
+  selection?: ActivitySelection;
+  navigationKey?: string;
+  onShowAll?: () => void;
+}
 
+/** Exact selection and editor lifetimes follow the customer, URL and signed-in employee. */
+export function ActivityTimeline(props: TimelineProps) {
+  const user = useCurrentUser();
+  if (!user.permissions.includes(Permissions.activitiesRead)) return null;
+  const scopeKey = JSON.stringify([user.id, [...user.permissions].sort(), props.organizationId, props.opportunityId,
+    props.contractId, props.selection ?? { kind: 'all' }, props.navigationKey]);
+  return <Timeline key={scopeKey} {...props} scopeKey={scopeKey} canWrite={user.permissions.includes(Permissions.activitiesWrite)} />;
+}
+
+function Timeline({ organizationId, opportunityId, contractId, title, selection = { kind: 'all' }, onShowAll, scopeKey, canWrite }: TimelineProps & {
+  scopeKey: string;
+  canWrite: boolean;
+}) {
+  const styles = useStyles(); const { t } = useTranslation(); const notify = useNotify();
+  const [ticketRefreshing, setTicketRefreshing] = useState(false);
+  const ticketCloseFocus = useRef<HTMLButtonElement>(null);
+  const actions = useActivityActions(); const restoreFocusTarget = useRestoreFocusTarget();
+  const filters = { organizationId, opportunityId, contractId };
+  const activities = useActivities(filters, selection.kind === 'all', undefined, scopeKey);
+  const selected = useSelectedActivity(filters, selection, scopeKey);
+  const focused = selection.kind !== 'all';
+  const error = focused ? selected.error : activities.error;
+  const errorUpdatedAt = focused ? selected.errorUpdatedAt : activities.errorUpdatedAt;
+  const checking = ticketRefreshing || (focused ? selected.isFetching : activities.isPending);
+  const data = ticketRefreshing ? [] : focused ? (!checking && !error && selected.data?.activity ? [selected.data.activity] : []) : activities.items;
+  const missingRevision = focused ? selected.data?.missingRevision ?? 0 : 0;
+  const refetch = focused ? selected.refetch : activities.refetch;
+  const [dialog, setDialog] = useState<{ activity?: Activity; errorUpdatedAt: number; missingRevision: number } | null>(null);
+  const editorOpen = dialog !== null && !error && dialog.errorUpdatedAt === errorUpdatedAt && dialog.missingRevision === missingRevision;
+  const status = useActivityStatusCommands(actions, { restoreFocus: true, focusBlocked: editorOpen });
+  const alive = useRef(false);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const heading = useRef<HTMLHeadingElement>(null); const alreadyFocused = useRef(false);
+  const refreshing = useRef(false);
+  const focusReadSettled = !(focused ? selected.isFetching : activities.isFetching);
+  const focusReplacementPresent = data.some(activity => activity.id === status.focusRequest?.id && activity.status === status.focusRequest.status);
+  useEffect(() => {
+    const request = status.focusRequest;
+    if (request && focusReadSettled && (error || !focusReplacementPresent)) status.discardFocus(request);
+  }, [status, focusReadSettled, error, focusReplacementPresent]);
+  useEffect(() => {
+    if (focused && data.length === 1 && !alreadyFocused.current) {
+      alreadyFocused.current = true; heading.current?.focus();
+    }
+  }, [focused, data.length]);
+  const outlook = useOutlookStatus();
+  const refreshSelected = async () => {
+    if (checking || refreshing.current) return;
+    refreshing.current = true; setDialog(null); status.clearConflicts();
+    try { await selected.refetch(); }
+    finally { refreshing.current = false; }
+  };
+  const refreshAfterTicket = () => {
+    if (refreshing.current) return;
+    refreshing.current = true; setTicketRefreshing(true); setDialog(null); status.clearConflicts();
+    void refetch().finally(() => { refreshing.current = false; if (alive.current) setTicketRefreshing(false); });
+    queueMicrotask(() => { if (alive.current) ticketCloseFocus.current?.focus(); });
+  };
+
+  const reportFailure = (e: unknown) => { if (alive.current) notify(t('errors.generic'), 'error', errorMessage(e, t)); };
   const syncCalendar = async () => {
     try {
       const { data: result } = await actions.syncCalendar.mutateAsync();
-      notify(t('activities.calendarSynced', { updated: result.updated }));
-    } catch (e) {
-      notify(t('errors.generic'), 'error', errorMessage(e, t));
-    }
+      if (alive.current) notify(t('activities.calendarSynced', { updated: result.updated }));
+    } catch (e) { reportFailure(e); }
+  };
+  const changeStatus = async (command: 'complete' | 'reopen', activity: Activity, trigger: HTMLButtonElement) => {
+    const outcome = await status.run(command, activity, trigger);
+    if (!alive.current) return;
+    if (outcome.kind === 'success') notify(t(command === 'complete' ? 'activities.completed' : 'activities.reopened'));
+    else if (outcome.kind === 'error') reportFailure(outcome.error);
+  };
+  const calendar = async (activity: Activity) => {
+    try { await (activity.inCalendar ? actions.removeFromCalendar.mutateAsync(activity.id) : actions.addToCalendar.mutateAsync(activity.id)); }
+    catch (e) { reportFailure(e); }
   };
 
-  const complete = async (activity: Activity) => {
-    try {
-      await actions.complete.mutateAsync(activity.id);
-      notify(t('activities.completed'));
-    } catch (e) {
-      notify(t('errors.generic'), 'error', errorMessage(e, t));
-    }
-  };
-
-  return (
-    <Panel
-      title={title ?? t('activities.title')}
-      actions={
-        canWrite && (
-          <>
-            {outlook.data?.calendar && (
-              <Button
-                size="small"
-                icon={<ArrowSync20Regular />}
-                disabled={actions.syncCalendar.isPending}
-                onClick={() => void syncCalendar()}
-              >
-                {t('activities.syncCalendar')}
-              </Button>
-            )}
-            <Button {...restoreFocusTarget} size="small" icon={<Add20Regular />} onClick={() => setDialog({})}>
-              {t('activities.log')}
-            </Button>
-          </>
-        )
-      }
-    >
-      {error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : (
-        <>
-          <ul className={styles.list}>
-            {data.map((activity) => (
-              <li key={activity.id} className={styles.item}>
-                <span>
-                  <span className={styles.head}>
-                    <Badge appearance="outline" color={activity.status === 'Open' ? 'informative' : 'subtle'}>
-                      {t(`activities.types.${activity.type}`)}
-                    </Badge>
-                    <Text weight="semibold" className={activity.status === 'Done' ? styles.done : undefined}>
-                      {activity.subject}
-                    </Text>
-                    {activity.priority === 'High' && activity.status === 'Open' && (
-                      <Text className={styles.high}>{t('activities.priorities.High')}</Text>
-                    )}
-                    {activity.inCalendar && (
-                      <Badge appearance="outline" color="informative" icon={<CalendarLtr16Regular />}>
-                        {t('activities.inCalendar')}
-                      </Badge>
-                    )}
-                    {activity.webLink && (
-                      <Link href={safeHttpUrl(activity.webLink)} target="_blank" rel="noopener noreferrer">
-                        {t('activities.openInOutlook')}
-                        <Open16Regular aria-hidden style={{ marginInlineStart: 4 }} />
-                      </Link>
-                    )}
-                  </span>
-                  {activity.body && <div className={styles.body}>{activity.body}</div>}
-                  {activity.fromAddress && <div className={styles.meta}>{activity.fromAddress}</div>}
-                  <div className={activity.isOverdue ? styles.overdue : styles.meta}>
-                    {activity.dueAt
-                      ? t(activity.isOverdue ? 'activities.overdueAt' : 'activities.dueAt', { at: formatDateTime(activity.dueAt) })
-                      : t('activities.loggedAt', { at: formatDateTime(activity.createdAt) })}
-                    {activity.assignee ? ` · ${activity.assignee.name}` : ''}
-                    {activity.status === 'Done' && activity.completedAt ? ` · ${t('activities.doneAt', { at: formatDateTime(activity.completedAt) })}` : ''}
-                  </div>
-                </span>
-                {canWrite && activity.type !== 'Email' && (
-                  <span className={styles.actions}>
-                    {activity.type === 'Meeting' && outlook.data?.calendar && (
-                      <Button
-                        size="small"
-                        appearance="subtle"
-                        icon={<CalendarLtr16Regular />}
-                        aria-label={t(activity.inCalendar ? 'activities.removeFromCalendarNamed' : 'activities.addToCalendarNamed', { subject: activity.subject })}
-                        disabled={actions.addToCalendar.isPending || actions.removeFromCalendar.isPending}
-                        onClick={() =>
-                          void (activity.inCalendar
-                            ? actions.removeFromCalendar.mutateAsync(activity.id)
-                            : actions.addToCalendar.mutateAsync(activity.id)
-                          ).catch((e: unknown) => notify(t('errors.generic'), 'error', errorMessage(e, t)))
-                        }
-                      />
-                    )}
-                    {activity.status === 'Open' && (
-                      <Button
-                        size="small"
-                        appearance="subtle"
-                        icon={<CheckmarkCircle20Regular />}
-                        aria-label={t('activities.completeNamed', { subject: activity.subject })}
-                        onClick={() => void complete(activity)}
-                      />
-                    )}
-                    <Button
-                      {...restoreFocusTarget}
-                      size="small"
-                      appearance="subtle"
-                      icon={<Edit20Regular />}
-                      aria-label={t('activities.editNamed', { subject: activity.subject })}
-                      onClick={() => setDialog({ activity })}
-                    />
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-          {!isPending && data.length === 0 && <EmptyState message={t('activities.empty')} />}
-          <ListFooter shown={data.length} total={activities.total} hasMore={activities.hasNextPage} loading={activities.isFetchingNextPage} onMore={() => void activities.fetchNextPage()} />
-        </>
-      )}
-      <ActivityDialog
-        open={dialog !== null}
-        onClose={() => setDialog(null)}
-        organizationId={organizationId}
-        opportunityId={opportunityId}
-        contractId={contractId}
-        activity={dialog?.activity}
-      />
-    </Panel>
-  );
+  return <Panel title={title ?? t('activities.title')} actions={<>
+    {selection.kind === 'selected' && <Button ref={ticketCloseFocus} size="small" disabled={checking} disabledFocusable={checking}
+      onClick={() => void refreshSelected()}>{t('activities.refresh')}</Button>}
+    {focused && <Button size="small" onClick={onShowAll}>{t('activities.showAll')}</Button>}
+    {canWrite && !focused && <>
+      {outlook.data?.calendar && <Button size="small" icon={<ArrowSync20Regular />} disabled={actions.syncCalendar.isPending}
+        onClick={() => void syncCalendar()}>{t('activities.syncCalendar')}</Button>}
+      <Button {...restoreFocusTarget} ref={ticketCloseFocus} size="small" icon={<Add20Regular />} onClick={() => setDialog({ errorUpdatedAt, missingRevision })}>{t('activities.log')}</Button>
+    </>}
+  </>}>
+    {focused && <h3 ref={heading} tabIndex={-1}>{t('activities.selected')}</h3>}
+    {selection.kind === 'invalid' ? <Text role="status">{t('activities.invalidLink')}</Text>
+      : error ? <ErrorState error={error} onRetry={() => { setDialog(null); void (focused ? refreshSelected() : refetch()); }} />
+      : <>
+        {checking && <Spinner size="small" label={t('common.loading')} />}
+        <ul className={styles.list}>
+          {data.map(activity => <ActivityTimelineItem key={activity.id} activity={activity} selected={focused} canWrite={canWrite}
+            calendar={outlook.data?.calendar === true} calendarPending={actions.addToCalendar.isPending || actions.removeFromCalendar.isPending}
+            statusPending={status.pending.has(activity.id)} statusStale={status.isStale(activity)} focusRequest={status.focusRequest} onFocusReady={status.consumeFocus}
+            onEdit={activity => setDialog({ activity, errorUpdatedAt, missingRevision })}
+            onComplete={(activity, trigger) => void changeStatus('complete', activity, trigger)}
+            onReopen={(activity, trigger) => void changeStatus('reopen', activity, trigger)} onCalendar={activity => void calendar(activity)} onTicketChanged={refreshAfterTicket} />)}
+        </ul>
+        {!checking && data.length === 0 && <EmptyState message={t(focused ? 'activities.selectedMissing' : 'activities.empty')} />}
+        {!focused && !ticketRefreshing && <ListFooter shown={data.length} total={activities.total} hasMore={activities.hasNextPage}
+          loading={activities.isFetchingNextPage} onMore={() => void activities.fetchNextPage()} />}
+      </>}
+    <ActivityDialog open={editorOpen}
+      onClose={() => setDialog(null)} organizationId={organizationId} opportunityId={opportunityId} contractId={contractId} activity={dialog?.activity} />
+  </Panel>;
 }

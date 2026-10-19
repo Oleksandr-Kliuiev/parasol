@@ -1,0 +1,171 @@
+x-app: &app
+  platform: linux/amd64
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs: ['/tmp:mode=1777,size=256m']
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  stop_grace_period: 90s
+  logging: &logging
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+  environment: &crm-env
+    ASPNETCORE_ENVIRONMENT: Production
+    ASPNETCORE_HTTP_PORTS: '8080'
+    DOTNET_EnableDiagnostics: '0'
+    PARASOL_CONFIG_FILE: /run/secrets/app.json
+    Maintenance__ForceReadOnly: '${READ_ONLY:-true}'
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    restart: unless-stopped
+    ports: ['${BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-80}:80', '${BIND_ADDRESS:-0.0.0.0}:${HTTPS_PORT:-443}:443']
+    environment:
+      SITE_ADDRESS: '${SITE_ADDRESS:?set site address}'
+      TLS_EMAIL: '${TLS_EMAIL:?set TLS contact}'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - '${STATE_DIR}/data/caddy:/data'
+      - '${STATE_DIR}/data/caddy-config:/config'
+    networks:
+      front: {ipv4_address: '${PROXY_IP:?set trusted proxy IP}'}
+      edge: {}
+    depends_on:
+      crm-web: {condition: service_healthy}
+    logging: *logging
+
+  crm-web:
+    <<: *app
+    image: 'parasol-crm-web:${RELEASE:?set release}'
+    build: {context: ../.., dockerfile: deploy/hostinger/crm.Dockerfile, target: web}
+    volumes:
+      - '${STATE_DIR:?set absolute state directory}/config/web.json:/run/secrets/app.json:ro'
+      - '${STATE_DIR}/config/dp.pfx:/run/secrets/dp.pfx:ro'
+      - '${STATE_DIR}/config/oidc.pfx:/run/secrets/oidc.pfx:ro'
+      - '${STATE_DIR}/data/documents:/var/lib/parasol/documents'
+      - '${STATE_DIR}/data/keyring:/var/lib/parasol/keyring'
+    networks: [front, backend, egress]
+    depends_on:
+      sql: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, dotnet, Crm.Web.dll, --health-probe]
+      interval: 15s
+      timeout: 8s
+      start_period: 45s
+      retries: 12
+
+  crm-worker:
+    <<: *app
+    image: 'parasol-crm-worker:${RELEASE}'
+    build: {context: ../.., dockerfile: deploy/hostinger/crm.Dockerfile, target: worker}
+    volumes:
+      - '${STATE_DIR}/config/worker.json:/run/secrets/app.json:ro'
+      - '${STATE_DIR}/config/oidc.pfx:/run/secrets/oidc.pfx:ro'
+      - '${STATE_DIR}/data/documents:/var/lib/parasol/documents'
+    networks: [backend, egress]
+    depends_on:
+      sql: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, dotnet, Crm.Worker.dll, --health-probe]
+      interval: 15s
+      timeout: 8s
+      start_period: 45s
+      retries: 12
+
+  atlas:
+    <<: *app
+    image: 'parasol-atlas:${RELEASE}'
+    build: {context: ../.., dockerfile: deploy/hostinger/atlas.Dockerfile, target: server}
+    # Loopback BFF connection satisfies the existing HTTPS-or-loopback credential policy.
+    network_mode: service:crm-web
+    environment:
+      ATLAS_MODE: db
+      ATLAS_LISTEN_HOST: 127.0.0.1
+      PORT: '3100'
+      ATLAS_ASK_MODE: off
+      DECISIONS_MODE: rules
+    volumes:
+      - '${STATE_DIR}/config/atlas-runtime.json:/run/secrets/atlas.json:ro'
+    depends_on:
+      crm-web: {condition: service_started}
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, parasol-host.mjs, probe]
+      interval: 15s
+      timeout: 8s
+      start_period: 30s
+      retries: 12
+
+  sql:
+    platform: linux/amd64
+    image: mcr.microsoft.com/mssql/server:2022-latest@sha256:cf8f0ab2ebe61feec2eed2629061a07d247f791c2a8ddda74a4ac9f06a291718
+    restart: unless-stopped
+    environment: {ACCEPT_EULA: 'Y', MSSQL_PID: '${MSSQL_PID:-Express}', MSSQL_MEMORY_LIMIT_MB: '2048'}
+    entrypoint: [/bin/sh, /opt/parasol/sql-entrypoint.sh]
+    volumes:
+      - ./sql-entrypoint.sh:/opt/parasol/sql-entrypoint.sh:ro
+      - '${STATE_DIR}/config/sql-sa-password:/run/secrets/sql-sa-password:ro'
+      - sql-data:/var/opt/mssql
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, 'SQLCMDPASSWORD=$$(cat /run/secrets/sql-sa-password) /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -b -Q "SELECT 1" -o /dev/null']
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 30
+    logging: *logging
+
+  postgres:
+    image: postgres:17@sha256:ae69c452f483507a6b99fb654cf93aad7fe156ffd2c56247707eef4e36d3c12b
+    restart: unless-stopped
+    environment: {POSTGRES_DB: atlas, POSTGRES_PASSWORD_FILE: /run/secrets/pg-password}
+    volumes:
+      - '${STATE_DIR}/config/pg-password:/run/secrets/pg-password:ro'
+      - pg-data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD, pg_isready, -U, postgres, -d, atlas]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    logging: *logging
+
+  crm-migrate:
+    <<: *app
+    profiles: [tools]
+    image: 'parasol-crm-web:${RELEASE}'
+    restart: 'no'
+    command: [--migrate-only]
+    volumes:
+      - '${STATE_DIR}/config/migrate.json:/run/secrets/app.json:ro'
+      - '${STATE_DIR}/data/documents:/var/lib/parasol/documents'
+      - '${STATE_DIR}/config/dp.pfx:/run/secrets/dp.pfx:ro'
+      - '${STATE_DIR}/config/oidc.pfx:/run/secrets/oidc.pfx:ro'
+      - '${STATE_DIR}/data/keyring:/var/lib/parasol/keyring'
+    networks: [backend]
+
+  atlas-migrate:
+    <<: *app
+    profiles: [tools]
+    image: 'parasol-atlas-admin:${RELEASE}'
+    build: {context: ../.., dockerfile: deploy/hostinger/atlas.Dockerfile, target: admin}
+    restart: 'no'
+    environment: {}
+    command: [migrate]
+    volumes:
+      - '${STATE_DIR}/config/atlas-admin.json:/run/secrets/atlas.json:ro'
+    networks: [backend]
+
+networks:
+  edge: {}
+  backend: {internal: true}
+  front:
+    internal: true
+    ipam:
+      config: [{subnet: '${PROXY_SUBNET:?set proxy subnet}'}]
+  egress: {internal: '${ISOLATED:-false}'}
+volumes:
+  sql-data:
+  pg-data:
