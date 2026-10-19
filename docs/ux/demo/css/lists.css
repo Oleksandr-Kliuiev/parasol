@@ -1,0 +1,588 @@
+/* Parasol UX demo: list rows, tables, tabs, meters, banners and empty states. */
+
+/* ---------- Row lists ---------- */
+
+.rows {
+  display: grid;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--row-h);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--line);
+}
+
+.rows > .item:first-child {
+  border-top: 0;
+}
+
+/* On small phones the right-hand part of a row moves under the text instead of squeezing it */
+@media (max-width: 479px) {
+  .item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .item > .item-side {
+    grid-column: 2;
+    justify-self: start;
+    flex-wrap: wrap;
+  }
+}
+
+.item-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.item-title {
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+a.item-title,
+.item-title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.item-title:hover,
+.item-title a:hover {
+  text-decoration: underline;
+}
+
+.item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  color: var(--muted);
+  font-size: var(--fs-13);
+  min-width: 0;
+}
+
+
+.item-side {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  justify-self: end;
+}
+
+.item.is-done .item-title {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+
+.item-time {
+  min-width: 48px;
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-time.is-late {
+  color: var(--crit-ink);
+}
+
+.group-label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4) 0 var(--s-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.group-label .count {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.sev-rail {
+  width: 4px;
+  align-self: stretch;
+  border-radius: var(--r-pill);
+  background: var(--low);
+}
+
+.sev-rail.is-crit {
+  background: var(--crit);
+}
+
+.sev-rail.is-high {
+  background: var(--high);
+}
+
+.sev-rail.is-med {
+  background: var(--med);
+}
+
+/* ---------- Tables ---------- */
+
+.table-wrap {
+  position: relative;
+  overflow-x: auto;
+  border-radius: 0 0 var(--r-card) var(--r-card);
+}
+
+/* More columns to the right: the edge fades, so the reader sees the table continues */
+.table-wrap.has-more-right,
+.tabs.has-more-right {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+/* Wide data tables keep their columns and scroll inside their card; small ones (.is-fit) shrink */
+.table {
+  min-width: 640px;
+  font-size: var(--fs-14);
+}
+
+.table.is-fit {
+  min-width: 0;
+}
+
+.table th {
+  height: 40px;
+  padding: 0 var(--s-3);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--fs-12);
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table td {
+  height: var(--row-h);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: var(--s-5);
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: var(--s-5);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr.is-link {
+  cursor: pointer;
+}
+
+.table tbody tr:hover td {
+  background: var(--hover);
+}
+
+.table tbody tr.is-selected td {
+  background: var(--accent-soft);
+}
+
+.table .t-right {
+  text-align: right;
+}
+
+.table .t-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cell-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cell-title {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+a.cell-title:hover {
+  text-decoration: underline;
+}
+
+.cell-sub {
+  color: var(--muted);
+  font-size: var(--fs-13);
+}
+
+.list-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--fs-13);
+}
+
+.list-foot .btn {
+  margin-left: auto;
+}
+
+/* ---------- Tabs and segmented controls ---------- */
+
+.tabs {
+  display: flex;
+  gap: var(--s-1);
+  min-height: 48px;
+  margin-bottom: var(--s-5);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 48px;
+  padding: 0 var(--s-3);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab[aria-current="page"] {
+  color: var(--ink);
+}
+
+.tab[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: var(--s-2);
+  right: var(--s-2);
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+.tab .count {
+  min-width: 20px;
+  padding: 0 var(--s-1);
+  border-radius: var(--r-pill);
+  background: var(--well);
+  color: var(--ink-2);
+  font-size: var(--fs-12);
+  line-height: 20px;
+  text-align: center;
+}
+
+/* Radius = half the one-line height: a pill on one line, a rounded box if it wraps on a phone */
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: var(--s-1);
+  border-radius: 20px;
+  background: var(--well);
+  min-height: 40px;
+}
+
+.seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.seg button:hover {
+  color: var(--ink);
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.12);
+}
+
+.seg .count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.toolbar .search {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+
+/* ---------- Meters and progress ---------- */
+
+.meter {
+  position: relative;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--well);
+  overflow: hidden;
+}
+
+.meter > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--r-pill);
+  background: var(--good);
+}
+
+.meter.is-warn > span {
+  background: var(--warn);
+}
+
+.meter.is-crit > span {
+  background: var(--crit);
+}
+
+.meter.is-ink > span {
+  background: var(--chart-mark);
+}
+
+.meter-row {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.meter-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+  font-size: var(--fs-13);
+  white-space: nowrap;
+}
+
+/* ---------- Banners, empty and loading states ---------- */
+
+.banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.banner > .ic {
+  margin-top: 0;
+}
+
+.banner-title {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+
+.banner.is-warn {
+  border-color: transparent;
+  background: var(--warn-soft);
+}
+
+.banner.is-warn > .ic {
+  color: var(--warn-ink);
+}
+
+.banner.is-crit {
+  border-color: transparent;
+  background: var(--crit-soft);
+}
+
+.banner.is-crit > .ic {
+  color: var(--crit-ink);
+}
+
+.banner.is-info > .ic {
+  color: var(--med-ink);
+}
+
+.banner.is-good {
+  border-color: transparent;
+  background: var(--good-soft);
+}
+
+.banner.is-good > .ic {
+  color: var(--good-ink);
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  padding: var(--s-8) var(--s-4);
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty .ic {
+  width: 32px;
+  height: 32px;
+  color: var(--faint);
+}
+
+.empty-title {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.empty p {
+  max-width: 44ch;
+}
+
+.locked {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Definition lists and timelines ---------- */
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: var(--s-4) var(--s-5);
+}
+
+.fact {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.fact dt {
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.fact dd {
+  font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: minmax(120px, 40%) minmax(0, 1fr);
+  gap: var(--s-2) var(--s-4);
+}
+
+.kv dt {
+  color: var(--muted);
+}
+
+.kv dd {
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.timeline {
+  display: grid;
+}
+
+.tl-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: var(--s-3);
+  padding-bottom: var(--s-4);
+}
+
+.tl-item::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 36px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.tl-item:last-child::before {
+  content: none;
+}
+
+.tl-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--well);
+  color: var(--ink-2);
+}
+
+.tl-text {
+  padding-top: var(--s-1);
+  min-width: 0;
+}
+
+.tl-text .muted {
+  font-size: var(--fs-13);
+}

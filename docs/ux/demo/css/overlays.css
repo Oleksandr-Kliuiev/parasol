@@ -1,0 +1,457 @@
+/* Parasol UX demo: drawers, dialogs, popovers, menus, command palette and toasts. */
+
+dialog {
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  max-width: none;
+  max-height: none;
+}
+
+dialog::backdrop {
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/* ---------- Drawer (desktop) / bottom sheet (phone) ---------- */
+
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(560px, 100vw);
+  height: 100dvh;
+  margin: 0;
+}
+
+.drawer[open] {
+  animation: drawer-in 0.22s var(--ease);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: calc(env(safe-area-inset-top, 0px) + var(--s-5)) var(--s-6) var(--s-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-title {
+  display: grid;
+  gap: var(--s-2);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sheet-title h2 {
+  font-size: var(--fs-20);
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.sheet-body {
+  flex: 1 1 auto;
+  display: grid;
+  align-content: start;
+  gap: var(--s-6);
+  min-height: 0;
+  padding: var(--s-5) var(--s-6) var(--s-6);
+  overflow-y: auto;
+  position: relative;
+}
+
+.sheet-section {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.sheet-section > h3 {
+  font-family: var(--font-body);
+  font-size: var(--fs-12);
+  line-height: 16px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sheet-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-6) calc(env(safe-area-inset-bottom, 0px) + var(--s-4));
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.sheet-foot .spacer {
+  min-width: var(--s-2);
+}
+
+@media (max-width: 767px) {
+  .drawer {
+    inset: auto 0 0 0;
+    width: 100vw;
+    height: auto;
+    max-height: calc(100dvh - 48px);
+  }
+
+  .drawer[open] {
+    animation: sheet-up 0.22s var(--ease);
+  }
+
+  .sheet {
+    max-height: calc(100dvh - 48px);
+    border-left: 0;
+    border-radius: var(--r-card) var(--r-card) 0 0;
+  }
+
+  .sheet-head {
+    padding: var(--s-4) var(--s-4) var(--s-3);
+  }
+
+  .sheet-head::before {
+    content: "";
+    position: absolute;
+    top: var(--s-2);
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: var(--r-pill);
+    background: var(--line-2);
+  }
+
+  .sheet-body {
+    padding: var(--s-4);
+  }
+
+  .sheet-foot {
+    padding: var(--s-3) var(--s-4) calc(env(safe-area-inset-bottom, 0px) + var(--s-3));
+  }
+
+  .sheet-foot .btn {
+    flex: 1 1 140px;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+/* ---------- Centered dialog and command palette ---------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  width: min(640px, calc(100vw - 32px));
+  margin: 12vh auto auto;
+}
+
+.modal .sheet {
+  height: auto;
+  max-height: 76vh;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.palette-input {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.palette-input .ic {
+  color: var(--muted);
+}
+
+.palette-input input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 56px;
+  border: 0;
+  background: transparent;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  outline: none;
+}
+
+.palette-list {
+  max-height: 56vh;
+  overflow-y: auto;
+  padding: var(--s-2);
+}
+
+.palette-group {
+  padding: var(--s-3) var(--s-3) var(--s-1);
+}
+
+.palette-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: var(--r-ctl);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+}
+
+.palette-item[aria-selected="true"] {
+  background: var(--well);
+}
+
+.palette-item .tl-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.palette-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--fs-12);
+}
+
+.palette-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+@media (max-width: 767px) {
+  .modal {
+    margin-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  }
+}
+
+/* ---------- Popover and menus ---------- */
+
+.popover {
+  position: fixed;
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  animation: pop-in 0.16s var(--ease);
+}
+
+.popover.is-wide {
+  width: min(400px, calc(100vw - 32px));
+}
+
+@keyframes pop-in {
+  from {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+}
+
+.pop-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-4) var(--s-2);
+}
+
+.pop-head strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-16);
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.pop-body {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-2) var(--s-4) var(--s-4);
+}
+
+.pop-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 0 0 16px 16px;
+}
+
+.menu {
+  display: grid;
+  padding: var(--s-2);
+}
+
+/* Inside a sheet the menus share the sheet's own padding, so every item starts on one edge */
+.sheet-body .menu {
+  padding: 0;
+}
+
+.menu-label {
+  padding: var(--s-2) var(--s-3) var(--s-1);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+}
+
+.menu-item:hover {
+  background: var(--well);
+  text-decoration: none;
+}
+
+.menu-item .ic {
+  color: var(--muted);
+}
+
+.menu-item[aria-checked="true"] {
+  font-weight: 800;
+}
+
+.menu-item .check-mark {
+  margin-left: auto;
+  color: var(--accent-ink);
+}
+
+.menu-item[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.menu-item .menu-sub {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-12);
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: var(--s-2) var(--s-1);
+  background: var(--line);
+}
+
+.notif {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.notif:hover {
+  background: var(--hover);
+  text-decoration: none;
+}
+
+.notif.is-unread .notif-text strong::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: var(--s-2);
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+}
+
+/* ---------- Toasts ---------- */
+
+.toasts {
+  position: fixed;
+  right: max(var(--s-6), env(safe-area-inset-right, 0px));
+  bottom: max(var(--s-6), env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  display: grid;
+  gap: var(--s-2);
+  width: min(400px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  border-radius: 14px;
+  background: var(--rail-bg);
+  color: var(--rail-ink);
+  box-shadow: var(--shadow-pop);
+  pointer-events: auto;
+  animation: pop-in 0.18s var(--ease);
+}
+
+.toast .ic {
+  color: var(--good);
+}
+
+.toast.is-warn .ic {
+  color: var(--warn);
+}
+
+.toast .btn-link {
+  color: var(--accent);
+}
+
+@media (max-width: 767px) {
+  .toasts {
+    left: max(var(--s-4), env(safe-area-inset-left, 0px));
+    right: max(var(--s-4), env(safe-area-inset-right, 0px));
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+    width: auto;
+  }
+}
