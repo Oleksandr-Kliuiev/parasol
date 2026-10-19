@@ -6,7 +6,10 @@
   "nav": {
     "myDay": "Мой день",
     "organizations": "Организации",
-    "admin": "Администрирование",
+    "sectionWork": "Работа",
+    "sectionCustomers": "Клиенты",
+    "sectionFinance": "Финансы",
+    "sectionSystem": "Система",
     "audit": "Журнал аудита",
     "users": "Пользователи",
     "jobs": "Фоновые задачи",

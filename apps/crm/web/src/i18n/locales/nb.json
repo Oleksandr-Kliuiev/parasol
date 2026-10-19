@@ -6,7 +6,10 @@
   "nav": {
     "myDay": "Min dag",
     "organizations": "Organisasjoner",
-    "admin": "Administrasjon",
+    "sectionWork": "Arbeid",
+    "sectionCustomers": "Kunder",
+    "sectionFinance": "Økonomi",
+    "sectionSystem": "System",
     "audit": "Revisjonslogg",
     "users": "Brukere",
     "jobs": "Bakgrunnsjobber",

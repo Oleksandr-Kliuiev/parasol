@@ -6,7 +6,10 @@
   "nav": {
     "myDay": "My day",
     "organizations": "Organizations",
-    "admin": "Administration",
+    "sectionWork": "Work",
+    "sectionCustomers": "Customers",
+    "sectionFinance": "Finance",
+    "sectionSystem": "System",
     "audit": "Audit log",
     "users": "Users",
     "jobs": "Background jobs",
