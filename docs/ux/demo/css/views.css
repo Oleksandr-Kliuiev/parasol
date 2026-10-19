@@ -1,0 +1,479 @@
+/* Parasol UX demo: dashboard grid, shared view details and charts. */
+
+/* ---------- 12-column dashboard ---------- */
+
+/* Cards in one row share their height, so row edges line up like a grid */
+.dash {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: stretch;
+}
+
+.dash > .card,
+.dash > .dash-col {
+  grid-column: span 12;
+}
+
+.dash-col {
+  display: grid;
+  gap: var(--gap);
+  align-content: start;
+  min-width: 0;
+}
+
+.dash > .w-12 { grid-column: span 12; }
+
+.dash > .w-3 { grid-column: span 3; }
+.dash > .w-4 { grid-column: span 4; }
+.dash > .w-5 { grid-column: span 5; }
+.dash > .w-6 { grid-column: span 6; }
+.dash > .w-7 { grid-column: span 7; }
+.dash > .w-8 { grid-column: span 8; }
+
+@media (max-width: 1279px) {
+  .dash > .w-3,
+  .dash > .w-4,
+  .dash > .w-5,
+  .dash > .w-6,
+  .dash > .w-7,
+  .dash > .w-8 {
+    grid-column: span 6;
+  }
+
+  .dash > .t-12 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 899px) {
+  .dash > .card,
+  .dash > .w-3,
+  .dash > .w-4,
+  .dash > .w-5,
+  .dash > .w-6,
+  .dash > .w-7,
+  .dash > .w-8,
+  .dash > .t-12 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1279px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.kpis-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 899px) {
+  .kpis-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 359px) {
+  .kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .kpi-top {
+    padding: var(--s-3) var(--s-3) 0 var(--s-4);
+  }
+
+  .kpi-main {
+    padding: var(--s-2) var(--s-4) var(--s-3);
+  }
+
+  .kpi-value {
+    font-size: var(--fs-24);
+    line-height: 32px;
+  }
+
+  .kpi .card-foot {
+    padding: var(--s-2) var(--s-4);
+    font-size: var(--fs-12);
+    line-height: 16px;
+  }
+}
+
+/* ---------- Shared details ---------- */
+
+.link-plain {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link-plain:hover {
+  text-decoration: underline;
+}
+
+.linklike {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.linklike:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.item-title.linklike {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Text-only targets in rows still get a 24 px tall hit box (WCAG 2.5.8) */
+.linklike,
+a.cell-title,
+a.item-title,
+.link-plain,
+.crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.ticket-item .item-title.linklike {
+  display: inline;
+  line-height: 24px;
+}
+
+.date-chip {
+  min-height: var(--ctl-h);
+  padding-inline: var(--s-3);
+  font-size: var(--fs-13);
+}
+
+.page-banner {
+  margin-bottom: var(--s-4);
+}
+
+.footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  max-width: 90ch;
+  color: var(--muted);
+  font-size: var(--fs-13);
+}
+
+.footnote .ic-14 {
+  margin-top: 3px;
+}
+
+.measure {
+  max-width: 65ch;
+}
+
+.only-narrow {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .only-wide {
+    display: none;
+  }
+
+  .only-narrow {
+    display: grid;
+  }
+
+  .obs-cards,
+  .cust-cards {
+    padding: 0 var(--s-4);
+  }
+}
+
+.show-phone {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .show-phone {
+    display: inline-grid;
+  }
+}
+
+.filter-selects {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.filter-toggle {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .filter-toggle {
+    display: inline-flex;
+  }
+
+  .filter-selects {
+    display: none;
+    width: 100%;
+  }
+
+  .filter-selects.is-open {
+    display: flex;
+  }
+}
+
+.select-sm {
+  width: auto;
+  min-width: 160px;
+  max-width: 240px;
+  min-height: 36px;
+  font-size: var(--fs-13);
+}
+
+@media (max-width: 767px) {
+  .toolbar .search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+
+  .filters .spacer {
+    display: none;
+  }
+
+  .select-sm {
+    flex: 1 1 140px;
+    max-width: none;
+  }
+}
+
+/* My day: plan and observation groups */
+
+.plan-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding-bottom: var(--s-2);
+}
+
+.task-title-row {
+  gap: var(--s-1) var(--s-3);
+}
+
+.task-source {
+  margin-top: 2px;
+}
+
+.task-item .item-meta {
+  margin-top: 2px;
+}
+
+.obs-group + .obs-group {
+  margin-top: var(--s-2);
+}
+
+.obs-item {
+  grid-template-columns: 4px minmax(0, 1fr) auto;
+}
+
+/* Task rows: the checkbox lines up with the first line of text, the timer stays on the right */
+.task-item {
+  align-items: start;
+}
+
+.task-item > .item-side {
+  align-self: start;
+}
+
+@media (max-width: 479px) {
+  .obs-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .obs-item .item-side {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .task-item {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .task-item > .item-side {
+    grid-column: auto;
+  }
+}
+
+.source-item {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+/* Name and freshness share a line when the card is wide enough and wrap when it is not */
+.source-item .item-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+}
+
+.source-item .item-main > .item-title {
+  flex: 1 1 auto;
+}
+
+.source-item .item-main > .small {
+  flex-basis: 100%;
+}
+
+.ticket-item {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.ticket-item .item-title {
+  display: block;
+}
+
+.tag.is-late {
+  background: var(--crit-soft);
+  color: var(--crit-ink);
+}
+
+.group-label .ic-14 {
+  color: var(--muted);
+}
+
+.done-group {
+  margin-top: var(--s-3);
+  border-top: 1px solid var(--line);
+}
+
+.done-group > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+/* ---------- Charts ---------- */
+
+.chart-wrap {
+  position: relative;
+  margin-top: var(--s-3);
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.chart-target {
+  stroke: var(--accent-ink);
+  stroke-width: 1.5;
+}
+
+.chart-tick {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tick.is-strong {
+  fill: var(--ink-2);
+  font-weight: 800;
+}
+
+.chart-label {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chart-bar {
+  fill: var(--chart-mark);
+  transition: opacity 0.15s var(--ease);
+}
+
+.chart-mark.is-emph .chart-bar {
+  fill: var(--accent);
+}
+
+.chart-hit {
+  fill: transparent;
+}
+
+.chart-mark:hover .chart-bar,
+.chart-mark:focus-visible .chart-bar {
+  opacity: 0.82;
+}
+
+.chart-mark:focus-visible {
+  outline: none;
+}
+
+.chart-mark:focus-visible .chart-hit {
+  stroke: var(--focus);
+  stroke-width: 2;
+}
+
+.chart-tip {
+  position: absolute;
+  z-index: 2;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--rail-bg);
+  color: var(--rail-ink);
+  font-size: var(--fs-12);
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.chart-tip.is-on {
+  opacity: 1;
+}
+
+.mini-table {
+  min-width: 0;
+}
+
+.week-gap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-ctl);
+  background: var(--warn-soft);
+  color: var(--ink);
+}
+
+.mini-table td,
+.mini-table th {
+  height: 40px;
+}
