@@ -22,6 +22,7 @@ import {
   Text,
   Toaster,
   makeStyles,
+  mergeClasses,
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
@@ -34,11 +35,13 @@ import i18n, { changeLanguage as applyLanguage, languages, type LanguageCode } f
 import { ReverifyDialog } from '../auth/ReverifyDialog';
 import { NotificationsBell } from '../features/notifications/NotificationsBell';
 import { MaintenanceBanner } from '../features/operations/MaintenanceBanner';
+import { BottomTabs, TAB_BAR_HEIGHT } from './BottomTabs';
 import { GlobalSearch } from './GlobalSearch';
 import { selectedNavValue, useNavGroups } from './navigation';
 import { usePrefersDark } from './usePrefersDark';
 import { railThemeDarkPage, railThemeLightPage } from './railTheme';
 import { TOASTER_ID } from './toaster';
+import { useMediaQuery } from '../shared/utils/useMediaQuery';
 
 const useStyles = makeStyles({
   root: { display: 'flex', minHeight: '100vh', backgroundColor: tokens.colorNeutralBackground2 },
@@ -74,7 +77,7 @@ const useStyles = makeStyles({
     top: 0,
     zIndex: 10,
   },
-  spacer: { flex: 1 },
+  spacer: { flex: 1, '@media (max-width: 767px)': { flex: 0 } },
   avatarButton: { minWidth: '40px', paddingInline: tokens.spacingHorizontalXS },
   content: {
     paddingInline: tokens.spacingHorizontalXXL,
@@ -84,6 +87,7 @@ const useStyles = makeStyles({
     boxSizing: 'border-box',
     '@media (max-width: 600px)': { paddingInline: tokens.spacingHorizontalL },
   },
+  contentWithTabs: { paddingBottom: `calc(${TAB_BAR_HEIGHT} + env(safe-area-inset-bottom) + ${tokens.spacingVerticalL})` },
   skip: {
     position: 'absolute',
     left: '-9999px',
@@ -98,6 +102,8 @@ const useStyles = makeStyles({
 });
 
 const NARROW = '(max-width: 900px)';
+// Below this width the menu moves to bottom tabs; "More" opens the same drawer.
+const PHONE = '(max-width: 767px)';
 
 export function AppShell() {
   const styles = useStyles();
@@ -108,6 +114,7 @@ export function AppShell() {
   const queryClient = useQueryClient();
   const navGroups = useNavGroups();
   const prefersDark = usePrefersDark();
+  const phone = useMediaQuery(PHONE);
   const restoreFocusTarget = useRestoreFocusTarget();
 
   const [isNarrow, setIsNarrow] = useState(() => window.matchMedia(NARROW).matches);
@@ -192,7 +199,7 @@ export function AppShell() {
 
       <div className={styles.main}>
         <header className={styles.header}>
-          {(isNarrow || !drawerOpen) && (
+          {!phone && (isNarrow || !drawerOpen) && (
             <Button
               {...restoreFocusTarget}
               appearance="subtle"
@@ -247,12 +254,13 @@ export function AppShell() {
             </MenuPopover>
           </Menu>
         </header>
-        <main id="main" className={styles.content} tabIndex={-1}>
+        <main id="main" className={mergeClasses(styles.content, phone && styles.contentWithTabs)} tabIndex={-1}>
           <MaintenanceBanner />
           <ReverifyDialog />
           <Outlet />
         </main>
       </div>
+      {phone && <BottomTabs selected={selected} moreOpen={drawerOpen} onMore={() => setDrawerOpen(true)} />}
       <Toaster toasterId={TOASTER_ID} position="top-end" />
       <ScrollRestoration />
     </div>
