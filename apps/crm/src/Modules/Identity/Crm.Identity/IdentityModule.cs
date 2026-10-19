@@ -15,7 +15,7 @@ namespace Crm.Identity;
 
 public static class IdentityModule
 {
-    public static readonly string[] SupportedLanguages = ["nb", "en", "ru"];
+    public static readonly string[] SupportedLanguages = ["nb", "nn", "en"];
 
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, IConfiguration configuration)
     {

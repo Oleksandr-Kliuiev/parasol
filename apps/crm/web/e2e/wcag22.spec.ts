@@ -175,9 +175,9 @@ test('the page is usable at 200 % browser zoom and on a long name', async ({ pag
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Organizations' })).toBeVisible();
 });
 
-// DEV-18 item 5: the same pages in Norwegian and Russian, on a phone, with a long customer name — no missing text, nothing
+// DEV-18 item 5: the same pages in Bokmål and Nynorsk, on a phone, with a long customer name — no missing text, nothing
 // cut off. (The language comes from the browser; no profile is changed.)
-for (const [label, locale] of [['Norwegian', 'nb-NO'], ['Russian', 'ru-RU']] as const) {
+for (const [label, locale] of [['Norwegian', 'nb-NO'], ['Nynorsk', 'nn-NO']] as const) {
   test.describe(`${label} on a phone`, () => {
     test.use({ locale, viewport: { width: 360, height: 740 } });
 
@@ -186,7 +186,7 @@ for (const [label, locale] of [['Norwegian', 'nb-NO'], ['Russian', 'ru-RU']] as 
       await signIn(page, 'Crm.Admin');
       const organization = await createOrganization(page, { name: `${marker('Lang')} Svært Langt Selskapsnavn Utenfor Det Vanlige Teknologi og Rådgivning AS` });
       await page.goto('/organizations');
-      await expect(page.getByRole('heading', { level: 1, name: label === 'Norwegian' ? 'Organisasjoner' : 'Организации' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: label === 'Norwegian' ? 'Organisasjoner' : 'Organisasjonar' })).toBeVisible();
       for (const [name, path] of pages(organization.id)) {
         await page.goto(path);
         await ready(page);

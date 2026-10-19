@@ -30,6 +30,7 @@ import { useContracts } from './api';
 import { ContractStatusBadge } from './ContractBadges';
 import { contractStatuses, type ContractListItem, type ContractStatus } from './types';
 import { SavedViews } from '../../shared/views/SavedViews';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 export function ContractsPage() {
   const styles = useCatalogStyles();
@@ -141,7 +142,7 @@ export function ContractList({ rows, loading, empty, showOrganization }: { rows:
   }
 
   return (
-    <div className={styles.tableWrap}>
+    <ScrollTable className={styles.tableWrap}>
       <Table className={styles.table} aria-label={t('contracts.title')}>
         <TableHeader>
           <TableRow>
@@ -184,6 +185,6 @@ export function ContractList({ rows, loading, empty, showOrganization }: { rows:
       </Table>
       {loading && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
       {!loading && rows.length === 0 && <EmptyState message={empty} />}
-    </div>
+    </ScrollTable>
   );
 }

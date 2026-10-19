@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import {
   Button,
@@ -35,12 +35,15 @@ import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { NARROW_SCREEN, useMediaQuery } from '../../shared/utils/useMediaQuery';
 import { useOrganizations } from './api';
 import { SavedViews } from '../../shared/views/SavedViews';
+import { useScrollEdges } from '../../shared/utils/useScrollEdges';
 
 const useStyles = makeStyles({
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
   search: { flex: '1 1 320px', maxWidth: '480px' },
   tableWrap: {
     overflowX: 'auto',
+    scrollPaddingInline: '16px',
+    ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px' },
     backgroundColor: tokens.colorNeutralBackground1,
     borderRadius: tokens.borderRadiusLarge,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -61,6 +64,14 @@ const useStyles = makeStyles({
   },
   cardMeta: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalS, color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
 });
+
+function scrollTableOnKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+  if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+  if (!direction) return;
+  event.preventDefault();
+  event.currentTarget.scrollBy({ left: direction * event.currentTarget.clientWidth * 0.75, behavior: 'instant' });
+}
 
 export function OrganizationsPage() {
   const styles = useStyles();
@@ -96,6 +107,8 @@ export function OrganizationsPage() {
     status,
   });
   const rows = data?.pages.flatMap((page) => page.items) ?? [];
+  const table = useRef<HTMLDivElement>(null);
+  const tableEdges = useScrollEdges(table, 'x', `${narrow}:${rows.length}:${i18n.resolvedLanguage}:${Boolean(error)}`);
 
   const exportToExcel = async () => {
     setExporting(true);
@@ -194,7 +207,9 @@ export function OrganizationsPage() {
           )}
         </>
       ) : (
-        <div className={styles.tableWrap}>
+        <div ref={table} className={styles.tableWrap} style={tableEdges.style} role="region"
+          aria-label={t(tableEdges.overflow ? 'organizations.scrollableTable' : 'organizations.title')} tabIndex={tableEdges.overflow ? 0 : undefined}
+          onKeyDown={scrollTableOnKeyDown}>
           <Table className={styles.table} aria-label={t('organizations.title')}>
             <TableHeader>
               <TableRow>

@@ -43,6 +43,7 @@ import { RunStatusBadge } from './shared';
 import { monthLabel } from './period';
 import { Panel } from '../../shared/components/Panel';
 import type { LegacyCharge } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   period: { fontWeight: tokens.fontWeightSemibold },
@@ -84,7 +85,7 @@ export function BillingRunsPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('billing.title')}>
             <TableHeader>
               <TableRow>
@@ -139,7 +140,7 @@ export function BillingRunsPage() {
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('billing.empty')} />}
           <ListFooter shown={data.length} total={runs.total} hasMore={runs.hasNextPage} loading={runs.isFetchingNextPage} onMore={() => void runs.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
 
       <Dialog open={creating} onOpenChange={(_, d) => !d.open && setCreating(false)}>

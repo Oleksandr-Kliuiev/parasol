@@ -44,6 +44,7 @@ import { NotFoundPage } from '../errors/NotFoundPage';
 import { useIntegrationActions, useIntegrationStatus, useRecords, type RecordFilters } from './api';
 import { entityRoute, entityTypeOf, systemName, typeName } from './labels';
 import { OrganizationPickerDialog } from './OrganizationPickerDialog';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   toolbar: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBlock: tokens.spacingVerticalM },
@@ -120,7 +121,8 @@ export function MappingsPage() {
 
   return (
     <>
-      <PageHeader title={t('mappings.title')} subtitle={t('mappings.subtitle')} />
+      <PageHeader title={t('mappings.title')} subtitle={t('mappings.subtitle')}
+        actions={<AppLink to="/admin/mappings/atlas">{t('parasolIdentity.title')}</AppLink>} />
       {status.error && <ErrorState error={status.error} onRetry={() => void status.refetch()} />}
 
       <TabList selectedValue={system} onTabSelect={(_, d) => set({ system: String(d.value), type: null })}>
@@ -178,7 +180,7 @@ export function MappingsPage() {
       {records.error ? (
         <ErrorState error={records.error} onRetry={() => void records.refetch()} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('mappings.title')}>
             <TableHeader>
               <TableRow>
@@ -201,7 +203,7 @@ export function MappingsPage() {
                         #{r.externalId} · {formatDateTime(r.externalChangedAt ?? r.lastSeenAt)}
                       </span>{' '}
                       {r.isGone && (
-                        <Badge size="small" appearance="outline" color="subtle">
+                        <Badge size="small" appearance="outline" color="informative">
                           {t('mappings.gone')}
                         </Badge>
                       )}
@@ -281,7 +283,7 @@ export function MappingsPage() {
               </Button>
             </div>
           )}
-        </div>
+        </ScrollTable>
       )}
 
       <OrganizationPickerDialog

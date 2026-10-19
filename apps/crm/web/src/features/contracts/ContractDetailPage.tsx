@@ -17,7 +17,6 @@ import {
   Spinner,
   Switch,
   Tab,
-  TabList,
   Table,
   TableBody,
   TableCell,
@@ -50,9 +49,10 @@ import { ContractStatusBadge } from './ContractBadges';
 import { DateActionForm, HourBankForm, LineForm, ReviseLineForm } from './ContractDialogs';
 import { HourBankList } from './HourBankList';
 import type { Contract, ContractLine } from './types';
+import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
+  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
   value: { fontSize: tokens.fontSizeHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums', lineHeight: tokens.lineHeightHero700 },
@@ -155,10 +155,10 @@ export function ContractDetailPage() {
           )
         }
       />
-      <TabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}>
+      <ScrollTabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}>
         <Tab value="overview">{t('organizations.tabs.overview')}</Tab>
         <Tab value="history">{t('organizations.tabs.history')}</Tab>
-      </TabList>
+      </ScrollTabList>
 
       {tab === 'history' ? (
         <HistoryList module="contracts" entityType="Contract" entityId={c.id} />

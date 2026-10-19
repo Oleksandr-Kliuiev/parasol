@@ -1,13 +1,14 @@
-import { Tab, TabList, makeStyles, tokens } from '@fluentui/react-components';
+import { Tab, makeStyles, tokens } from '@fluentui/react-components';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { ImportPanel } from './migration/ImportPanel';
 import { ReconciliationPanel } from './migration/ReconciliationPanel';
 import { RunsPanel } from './migration/RunsPanel';
+import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
+  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
 });
 
 type TabKey = 'import' | 'runs' | 'reconcile';
@@ -23,7 +24,7 @@ export function MigrationPage() {
   return (
     <>
       <PageHeader title={t('migration.title')} subtitle={t('migration.subtitle')} />
-      <TabList
+      <ScrollTabList
         className={styles.tabs}
         selectedValue={tab}
         onTabSelect={(_, d) => setParams(d.value === 'import' ? {} : { tab: String(d.value) }, { replace: true })}
@@ -31,7 +32,7 @@ export function MigrationPage() {
         <Tab value="import">{t('migration.tabs.import')}</Tab>
         <Tab value="runs">{t('migration.tabs.runs')}</Tab>
         <Tab value="reconcile">{t('migration.tabs.reconcile')}</Tab>
-      </TabList>
+      </ScrollTabList>
       {tab === 'import' && <ImportPanel />}
       {tab === 'runs' && <RunsPanel runId={runId} onOpen={(id) => setParams(id ? { tab: 'runs', run: id } : { tab: 'runs' })} />}
       {tab === 'reconcile' && <ReconciliationPanel />}

@@ -48,6 +48,7 @@ import { formatOrgNumber, isValidOrgNumber } from '../../shared/utils/orgNumber'
 import type { UserRef } from '../../api/types';
 import { useLeadActions, useLeads, useStages } from './api';
 import { leadStatuses, type Lead, type LeadStatus } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   actions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS, justifyContent: 'flex-end' },
@@ -112,7 +113,7 @@ export function LeadsPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('leads.title')}>
             <TableHeader>
               <TableRow>
@@ -185,7 +186,7 @@ export function LeadsPage() {
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('leads.empty')} />}
           <ListFooter shown={data.length} total={leads.total} hasMore={leads.hasNextPage} loading={leads.isFetchingNextPage} onMore={() => void leads.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
 
       <Dialog open={dialog !== null} onOpenChange={(_, d) => !d.open && setDialog(null)}>

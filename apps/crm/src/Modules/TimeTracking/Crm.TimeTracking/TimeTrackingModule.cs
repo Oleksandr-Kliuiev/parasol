@@ -18,10 +18,14 @@ public static class TimeTrackingModule
     public static IServiceCollection AddTimeTrackingModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddModuleDbContext<TimeTrackingDbContext>(configuration);
+        services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, TimeTrackingDatabasePermissions>();
         services.AddOptions<TimeTrackingOptions>().Bind(configuration.GetSection(TimeTrackingOptions.SectionName));
         services.AddModuleServices(typeof(TimeTrackingModule).Assembly);
         services.AddScoped<TimeEntryService>();
         services.AddScoped<TimeApprovalService>();
+        services.AddScoped<TimeFinancialReviewService>();
+        services.AddScoped<TimeBillingGuard>();
+        services.AddScoped<ITimeBillingAdmission, TimeBillingAdmission>();
         services.AddScoped<ITimeTrackingApi, TimeImportService>();
         return services;
     }
@@ -32,8 +36,17 @@ public static class TimeTrackingModule
 
         group.MapGet("/entries", async ([AsParameters] TimeQueryParameters p, TimeEntryService service, CancellationToken ct) =>
                 Results.Ok(await service.ListAsync(
-                    new TimeQuery(p.Year, p.Month, p.From, p.To, p.OrganizationId, p.TechnicianId, p.Status, p.Source, p.Mine ?? false, p.Limit, p.Cursor), ct)))
+                    new TimeQuery(p.Year, p.Month, p.From, p.To, p.OrganizationId, p.TechnicianId, p.Status, p.Source, p.Mine ?? false, p.Limit, p.Cursor, p.ReviewOnly ?? false), ct)))
             .RequirePermission(Permissions.TimeOwn, Permissions.TimeRead);
+
+        // Separate policies are ANDed; one OR-list would allow non-Finance employees to read the diagnostic.
+        group.MapGet("/entries/{id:guid}/financial-review", async (Guid id, TimeFinancialReviewService service, HttpResponse http, CancellationToken ct) =>
+            {
+                http.Headers.CacheControl = "no-store";
+                return (await service.ReadAsync(id, ct)).ToHttpResult(Results.Ok);
+            })
+            .RequirePermission(Permissions.TimeRead).RequirePermission(Permissions.FinanceRead)
+            .RequirePermission(Permissions.ContractsRead).RequirePermission(Permissions.BillingRead).RequirePermission(Permissions.CustomersRead);
 
         group.MapPost("/entries", async (TimeEntryRequest request, TimeEntryService service, CancellationToken ct) =>
                 (await service.CreateAsync(request, ct)).ToHttpResult(e => Results.Created($"/api/v1/time/entries/{e.Id}", e)))
@@ -97,4 +110,5 @@ public sealed record TimeQueryParameters(
     [FromQuery] TimeSource? Source,
     [FromQuery] bool? Mine,
     [FromQuery] int? Limit,
-    [FromQuery] string? Cursor);
+    [FromQuery] string? Cursor,
+    [FromQuery] bool? ReviewOnly);

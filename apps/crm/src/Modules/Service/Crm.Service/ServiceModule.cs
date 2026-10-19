@@ -77,6 +77,7 @@ public static class ServiceModule
         services.AddModuleDbContext<ServiceDbContext>(configuration);
         services.AddModuleServices(typeof(ServiceModule).Assembly);
         services.AddScoped<IServiceApi, ServiceApi>();
+        services.AddScoped<ITicketWorkApi, TicketWorkApi>();
         services.AddScoped<SlaReportService>();
         // DEV-11: tickets and ticket requests of a person in subject requests, and the retention of the ticket mirror.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ServicePersonalData>();
@@ -87,6 +88,10 @@ public static class ServiceModule
     public static IEndpointRouteBuilder MapServiceEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/service").WithTags("Service");
+
+        group.MapGet("/work-tickets", async (Guid organizationId, int? limit, string? cursor, ITicketWorkApi tickets, CancellationToken ct) =>
+                (await tickets.ListAsync(organizationId, limit, cursor, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.ServiceRead);
 
         group.MapGet("/tickets", async (
                 Guid? organizationId, Guid? contactId, bool? openOnly, int? days, string? search, int? limit, string? cursor,
@@ -245,6 +250,19 @@ public static class ServiceModule
                 if (await customers.GetOrganizationAsync(request.OrganizationId, ct) is null)
                 {
                     return Error.Validation("SRV_UNKNOWN_ORGANIZATION", "The organization does not exist.").ToProblem();
+                }
+
+                if (request.ContactId is not { } contactId ||
+                    await customers.GetContactForSyncAsync(contactId, ct) is not { } contact || !contact.IsUsableFor(request.OrganizationId))
+                {
+                    return Error.Validation("SRV_CONTACT_UNAVAILABLE", "Choose an active contact of this customer.",
+                        new Dictionary<string, object?>
+                        {
+                            ["errors"] = new Dictionary<string, string[]>
+                            {
+                                [nameof(request.ContactId)] = ["Choose an active contact of this customer."],
+                            },
+                        }).ToProblem();
                 }
 
                 var ticketRequest = TicketRequest.Create(request.OrganizationId, request.ContactId, request.Title, request.Description, request.Priority, request.Type);

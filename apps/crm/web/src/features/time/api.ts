@@ -15,6 +15,7 @@ export interface TimeFilters {
   status?: TimeEntryStatus | null;
   source?: TimeSource | null;
   mine?: boolean;
+  reviewOnly?: boolean;
 }
 
 export const timeKeys = {

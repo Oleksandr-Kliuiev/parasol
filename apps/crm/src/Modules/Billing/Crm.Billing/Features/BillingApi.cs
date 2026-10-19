@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Crm.Billing.Features;
 
 /// <summary>What integrations may do with billing: read approved bases, report the result and mirror invoices back.</summary>
-internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time) : IBillingApi
+internal sealed partial class BillingApi(BillingDbContext db, ICatalogApi catalog, ChargeLedger ledger, TimeProvider time, ITimeBillingAdmission timeAdmission, ICustomersApi customers, Crm.SharedKernel.Documents.IDocumentStore documentStore) : IBillingApi
 {
     public async Task<IReadOnlyList<Guid>> GetInvoicedTimeEntryIdsAsync(Guid basisId, CancellationToken cancellationToken)
     {
@@ -67,11 +67,23 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
 
     public async Task<bool> MarkExportSendingAsync(Guid basisId, string system, string? correlationId, CancellationToken cancellationToken)
     {
-        if (await db.BillingBases.Include(b => b.Attempts).SingleOrDefaultAsync(b => b.Id == basisId, cancellationToken) is not { } basis)
+        if (await db.BillingBases.Include(b => b.Attempts).Include(b => b.Lines).SingleOrDefaultAsync(b => b.Id == basisId, cancellationToken) is not { } basis)
         {
             return false;
         }
 
+        if (basis.SendStartedAt is not null) return false;
+        if (db.Database.CurrentTransaction is not null) throw new InvalidOperationException("Billing send admission must own its local command.");
+        var admission = await timeAdmission.HoldAsync(TimeBillingSources.Selections([basis]), cancellationToken);
+        if (!admission.IsSuccess)
+        {
+            // No send was admitted. Preserve the immutable basis and committed charges for explicit Finance correction.
+            basis.MarkFailed(system, admission.Error!.Code, time.GetUtcNow(), correlationId);
+            await db.SaveChangesAsync(cancellationToken);
+            await UpdateRunStatusAsync(basis.RunId, cancellationToken);
+            return false;
+        }
+        await using var sourceLease = admission.Value;
         if (!basis.MarkSending(system, time.GetUtcNow(), correlationId).IsSuccess)
         {
             return false;
@@ -109,71 +121,6 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
         basis.MarkFailed(system, message, time.GetUtcNow(), correlationId);
         await db.SaveChangesAsync(cancellationToken);
         await UpdateRunStatusAsync(basis.RunId, cancellationToken);
-    }
-
-    public async Task<InvoiceSyncResult> UpsertInvoicesAsync(IReadOnlyCollection<ExternalInvoice> invoices, CancellationToken cancellationToken)
-    {
-        int created = 0, updated = 0, unchanged = 0, unmatched = 0;
-        var now = time.GetUtcNow();
-        foreach (var group in invoices.GroupBy(i => i.System, StringComparer.Ordinal))
-        {
-            var numbers = group.Select(i => i.InvoiceNo).Distinct(StringComparer.Ordinal).ToList();
-            var existing = await db.Invoices
-                .Include(i => i.Payments)
-                .Where(i => i.System == group.Key && numbers.Contains(i.InvoiceNo))
-                .ToDictionaryAsync(i => i.InvoiceNo, StringComparer.Ordinal, cancellationToken);
-
-            // The order reference carries the basis key, so an invoice finds its basis and customer even without a mapping.
-            var references = group.Select(i => i.ExternalReference).Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r!).Distinct(StringComparer.Ordinal).ToList();
-            var byKey = await db.BillingBases.AsNoTracking()
-                .Where(b => references.Contains(b.IdempotencyKey))
-                .Select(b => new { b.Id, b.IdempotencyKey, b.OrganizationId })
-                .ToDictionaryAsync(b => b.IdempotencyKey, StringComparer.Ordinal, cancellationToken);
-            var orderNumbers = group.Select(i => i.OrderNo).Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o!).Distinct(StringComparer.Ordinal).ToList();
-            var basesByOrder = await db.BillingBases.AsNoTracking()
-                .Where(b => b.OrderNo != null && orderNumbers.Contains(b.OrderNo))
-                .Select(b => new { b.Id, OrderNo = b.OrderNo!, b.OrganizationId, b.ExportedAt })
-                .ToListAsync(cancellationToken);
-            // An order number is not ours to keep unique: a credited and re-exported basis, or a restored database, can repeat
-            // it. The newest export wins instead of failing the whole sync.
-            var byOrder = basesByOrder
-                .GroupBy(b => b.OrderNo, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.OrderByDescending(b => b.ExportedAt).First(), StringComparer.Ordinal);
-
-            foreach (var incoming in group.DistinctBy(i => i.InvoiceNo, StringComparer.Ordinal))
-            {
-                var match = incoming.ExternalReference is { } key && byKey.TryGetValue(key, out var byReference)
-                    ? (byReference.Id, byReference.OrganizationId)
-                    : incoming.OrderNo is { } order && byOrder.TryGetValue(order, out var byOrderNo)
-                        ? (byOrderNo.Id, byOrderNo.OrganizationId)
-                        : ((Guid, Guid)?)null;
-                var organizationId = incoming.OrganizationId ?? match?.Item2;
-                if (organizationId is null)
-                {
-                    unmatched++;
-                }
-
-                if (existing.TryGetValue(incoming.InvoiceNo, out var invoice))
-                {
-                    if (invoice.Apply(incoming, organizationId, match?.Item1, now))
-                    {
-                        updated++;
-                    }
-                    else
-                    {
-                        unchanged++;
-                    }
-                }
-                else
-                {
-                    db.Invoices.Add(Invoice.From(incoming, organizationId, match?.Item1, now));
-                    created++;
-                }
-            }
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return new InvoiceSyncResult(created, updated, unchanged, unmatched);
     }
 
     /// <summary>FR-LIC-04: licence lines billed to customers for a period, so Microsoft's invoice can be held against them.</summary>
@@ -323,7 +270,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
     public async Task<InvoiceTotals> GetInvoiceTotalsAsync(DateOnly today, CancellationToken cancellationToken)
     {
         var totals = await db.Invoices.AsNoTracking()
-            .Where(i => i.Outstanding > 0 && i.Status != InvoiceStatus.Credited)
+            .Where(i => i.Outstanding > 0 && i.Status != InvoiceStatus.Credited && i.DocumentKind != InvoiceDocumentKind.CreditNote)
             .GroupBy(_ => 1)
             .Select(g => new
             {
@@ -340,7 +287,7 @@ internal sealed class BillingApi(BillingDbContext db, ICatalogApi catalog, Charg
     public async Task<IReadOnlyList<OverdueInvoice>> GetOverdueInvoicesAsync(DateOnly today, CancellationToken cancellationToken)
     {
         var rows = await db.Invoices.AsNoTracking()
-            .Where(i => i.Outstanding > 0 && i.Status != InvoiceStatus.Credited && i.DueDate != null && i.DueDate < today)
+            .Where(i => i.Outstanding > 0 && i.Status != InvoiceStatus.Credited && i.DocumentKind != InvoiceDocumentKind.CreditNote && i.DueDate != null && i.DueDate < today)
             .OrderBy(i => i.DueDate).ThenBy(i => i.Id)
             .Select(i => new { i.Id, i.InvoiceNo, i.OrganizationId, i.Outstanding, i.DueDate })
             .ToListAsync(cancellationToken);

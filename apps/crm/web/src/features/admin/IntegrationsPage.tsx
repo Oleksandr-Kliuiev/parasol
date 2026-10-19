@@ -33,6 +33,7 @@ import { NotFoundPage } from '../errors/NotFoundPage';
 import { MonitoringPanel } from '../integrations/MonitoringPanel';
 import { DeliveryPanel } from '../integrations/DeliveryPanel';
 import { OutboundPanel, SystemsPanel } from '../integrations/SystemsPanels';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -93,7 +94,7 @@ export function IntegrationsPage() {
           ) : jobs.data?.length === 0 ? (
             <EmptyState message={t('integrations.noJobs')} />
           ) : (
-            <div className={styles.tableWrap}>
+            <ScrollTable className={styles.tableWrap}>
               <Table size="small" className={styles.table} aria-label={t('integrations.jobs')}>
                 <TableHeader>
                   <TableRow>
@@ -128,7 +129,7 @@ export function IntegrationsPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollTable>
           )}
         </Panel>
 
@@ -140,7 +141,7 @@ export function IntegrationsPage() {
           ) : runs.isSuccess && runs.items.length === 0 ? (
             <EmptyState message={t('integrations.noRuns')} />
           ) : (
-            <div className={styles.tableWrap}>
+            <ScrollTable className={styles.tableWrap}>
               <Table size="small" className={styles.table} aria-label={t('integrations.runs')}>
                 <TableHeader>
                   <TableRow>
@@ -172,7 +173,7 @@ export function IntegrationsPage() {
                 </TableBody>
               </Table>
               <ListFooter shown={runs.items.length} total={runs.total} hasMore={runs.hasNextPage} loading={runs.isFetchingNextPage} onMore={() => void runs.fetchNextPage()} />
-            </div>
+            </ScrollTable>
           )}
         </Panel>
       </div>

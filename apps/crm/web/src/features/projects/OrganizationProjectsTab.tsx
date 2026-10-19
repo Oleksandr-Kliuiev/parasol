@@ -12,6 +12,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { ProjectDialog } from './ProjectDialog';
 import { statusColor } from './shared';
 import { useProjects } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 /** Implementation projects of one customer (docs/02 §4.10). */
 export function OrganizationProjectsTab({ organizationId, organizationName }: { organizationId: string; organizationName: string }) {
@@ -34,7 +35,7 @@ export function OrganizationProjectsTab({ organizationId, organizationName }: { 
           </Button>
         </div>
       )}
-      <div className={catalog.tableWrap}>
+      <ScrollTable className={catalog.tableWrap}>
         <Table className={catalog.table} aria-label={t('projects.title')}>
           <TableHeader>
             <TableRow>
@@ -77,7 +78,7 @@ export function OrganizationProjectsTab({ organizationId, organizationName }: { 
         </Table>
         {!isPending && data.length === 0 && <EmptyState message={t('projects.emptyForOrganization')} />}
         <ListFooter shown={data.length} total={projects.total} hasMore={projects.hasNextPage} loading={projects.isFetchingNextPage} onMore={() => void projects.fetchNextPage()} />
-      </div>
+      </ScrollTable>
 
       <Dialog open={creating} onOpenChange={(_, d) => !d.open && setCreating(false)}>
         <DialogSurface>

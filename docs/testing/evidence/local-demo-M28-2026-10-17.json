@@ -1,0 +1,226 @@
+{
+  "format": 1,
+  "milestone": "M28",
+  "date": "2026-10-17",
+  "acceptedLocally": true,
+  "scope": "Bounded reusable local synthetic staff demo and complete Activity refresh after closing a changed ticket association.",
+  "verification": {
+    "tooling": {
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "Root, composition and demo Node tests; included in the existing CI tooling command."
+    },
+    "focusedFrontend": {
+      "passed": 53,
+      "failed": 0,
+      "skipped": 0
+    },
+    "fullFrontend": {
+      "passed": 580,
+      "files": 68,
+      "failed": 0,
+      "skipped": 0
+    },
+    "static": [
+      "ESLint",
+      "app TypeScript",
+      "E2E TypeScript",
+      "composition TypeScript",
+      "Release application builds",
+      "SPA build",
+      "SPA budget"
+    ],
+    "bundleResult": "291.8 KB  initial total (budget 300 KB)",
+    "actualComposition": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "retries": 0,
+      "runId": "f5b4e79986ca",
+      "builtInThisRun": true,
+      "atlasRequests": 563,
+      "atlasMutatingRequests": 0,
+      "cleanup": true,
+      "clients": 40,
+      "devices": 400,
+      "employees": 3
+    },
+    "demoLifecycle": {
+      "timeout": {
+        "passed": true,
+        "mode": "timeout",
+        "runId": "04d39afb2341",
+        "sourceBuilt": true,
+        "roleCounts": {
+          "Crm.Admin": 40,
+          "Crm.Technician": 20,
+          "Crm.ServiceLead": 20
+        },
+        "actualCustomerDevices": 10,
+        "actualCriticalObservationVisible": true,
+        "acceptedAsComposition": false,
+        "diagnostic": true,
+        "cleanup": true,
+        "privateRemoved": true,
+        "ownedContainersRemoved": true,
+        "loopbackPortClosed": true,
+        "inputHashesUnchanged": 2697
+      },
+      "interrupt": {
+        "passed": true,
+        "mode": "interrupted",
+        "runId": "edf819021f2e",
+        "sourceBuilt": true,
+        "roleCounts": {
+          "Crm.Admin": 40,
+          "Crm.Technician": 20,
+          "Crm.ServiceLead": 20
+        },
+        "actualCustomerDevices": 10,
+        "actualCriticalObservationVisible": true,
+        "acceptedAsComposition": false,
+        "diagnostic": true,
+        "cleanup": true,
+        "privateRemoved": true,
+        "ownedContainersRemoved": true,
+        "loopbackPortClosed": true,
+        "inputHashesUnchanged": 2697
+      },
+      "scope": "Two real CLI invocations built sources and held the actual app. These precede the UI correction; all 31 launcher/tool inputs remain byte-identical. Final guided invocation below uses the corrected UI."
+    },
+    "finalGuidedDemo": {
+      "passed": true,
+      "mode": "walkthrough",
+      "guide": [
+        {
+          "passed": true,
+          "engine": "chromium",
+          "taskAssignedToRecipient": true,
+          "sourceReadFromMyDay": true,
+          "savedTicketLinkedFromMyDay": true,
+          "ownHours": 0.25,
+          "timeInputsInitiallyEmpty": true,
+          "customerNavigationDuringTicketTime": 0,
+          "fullTaskRefreshedAfterLink": true,
+          "completionUsedRefreshedVersion": true,
+          "taskCompleted": true,
+          "atlasObservationStillOpen": true
+        },
+        {
+          "passed": true,
+          "engine": "firefox",
+          "taskAssignedToRecipient": true,
+          "sourceReadFromMyDay": true,
+          "savedTicketLinkedFromMyDay": true,
+          "ownHours": 0.25,
+          "timeInputsInitiallyEmpty": true,
+          "customerNavigationDuringTicketTime": 0,
+          "fullTaskRefreshedAfterLink": true,
+          "completionUsedRefreshedVersion": true,
+          "taskCompleted": true,
+          "atlasObservationStillOpen": true
+        },
+        {
+          "passed": true,
+          "engine": "webkit",
+          "taskAssignedToRecipient": true,
+          "sourceReadFromMyDay": true,
+          "savedTicketLinkedFromMyDay": true,
+          "ownHours": 0.25,
+          "timeInputsInitiallyEmpty": true,
+          "customerNavigationDuringTicketTime": 0,
+          "fullTaskRefreshedAfterLink": true,
+          "completionUsedRefreshedVersion": true,
+          "taskCompleted": true,
+          "atlasObservationStillOpen": true
+        }
+      ],
+      "runId": "4457ae9efbfe",
+      "sourceBuilt": true,
+      "roleCounts": {
+        "Crm.Admin": 40,
+        "Crm.Technician": 20,
+        "Crm.ServiceLead": 20
+      },
+      "actualCustomerDevices": 10,
+      "actualCriticalObservationVisible": true,
+      "acceptedAsComposition": false,
+      "diagnostic": true,
+      "cleanup": true,
+      "privateRemoved": true,
+      "ownedContainersRemoved": true,
+      "loopbackPortClosed": true,
+      "inputHashesUnchanged": 2698
+    },
+    "verifiedInputHashes": {
+      "backendReused": 850,
+      "web": 400,
+      "atlasReused": 1421,
+      "rootTooling": 31,
+      "finalCompositionUnion": 2698
+    },
+    "reusedChecks": {
+      "crmUnit": 939,
+      "crmArchitecture": 94,
+      "affectedCrmSql": 208,
+      "atlasUnit": 711,
+      "atlasPostgresql": 789,
+      "atlasBrowser": 90,
+      "rerunForM28": false,
+      "reason": "All accepted backend and Atlas sources/inventories are unchanged. UI and launcher changes have their own current tests.",
+      "evidence": [
+        "time-financial-review-M26-2026-10-17.json",
+        "atlas-strict-current-2026-10-16.json"
+      ]
+    },
+    "previousBroaderCrmBrowser": {
+      "passed": 78,
+      "milestone": "M26",
+      "rerunForM28": false,
+      "note": "M28 proves the complete changed workflow in three engines; it does not claim a new full 78-case regression run."
+    }
+  },
+  "invariants": [
+    "Demo always builds current sources, uses fresh owned loopback databases and disables working provider/outbound channels.",
+    "Human demo is diagnostic and can never count as a nine-case composition acceptance run.",
+    "Existing directories are not reused/overwritten; cleanup checks ownership labels and removes private runtime material only after shutdown.",
+    "Public descriptor contains only fixed synthetic role links, scope/expiry and local URLs; no tokens, passwords or connection strings.",
+    "A successful association save preserves the open dialog/time form. Closing restores the still-mounted trigger, then rereads the full parent Activity.",
+    "Parent rows/commands are hidden while that read is pending. A refreshed full Activity is displayed before its next explicit status command.",
+    "No ETag-only adoption, automatic completion retry, command guard relaxation, new endpoint/schema/dependency or working provider call."
+  ],
+  "retainedDiagnostics": [
+    {
+      "stage": "initial private guide adapter",
+      "result": "Expected HTTP 201, actual canonical source Task endpoint returns HTTP 200.",
+      "resolution": "Corrected the private adapter and required outcome CREATED; endpoint behavior and product assertions unchanged."
+    },
+    {
+      "stage": "full real guide before UI correction",
+      "result": "Own 0.25 hours saved, then Task completion returned 412 after ticket link changed its rowversion.",
+      "resolution": "On changed-dialog close, reread all current Task facts before the next command. Do not substitute the association ETag into stale displayed fields."
+    },
+    {
+      "stage": "first UI verification",
+      "result": "578/580 full frontend; later focus variants failed 52/53 and 50/53.",
+      "resolution": "Preserve the original trigger through modal teardown, restore its focus, then notify the parent read. Keep accessible focus assertions. Existing mapping test waits for its accessible post-dialog button instead of a transient sync query."
+    },
+    {
+      "stage": "composition TypeScript",
+      "result": "Browser Response was passed to an APIResponse-only helper.",
+      "resolution": "Retain explicit HTTP 200 and body assertions using the browser Response API; compiler settings unchanged."
+    }
+  ],
+  "humanTimeSavingsMeasured": false,
+  "staffFeedback": "pending",
+  "originalRepositoriesPreserved": true,
+  "published": false,
+  "deployed": false,
+  "limits": [
+    "Synthetic local work proves neither working-account compatibility nor human time savings.",
+    "Real Entra/providers, historical financial decisions and Hostinger acceptance remain separate authorized gates."
+  ],
+  "goal": "active"
+}

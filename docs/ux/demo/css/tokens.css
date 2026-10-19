@@ -1,0 +1,259 @@
+/* Parasoll UX demo: design tokens.
+   Layout: a dark warm rail holds navigation; the cream work surface holds cards, one job per card;
+   every size sits on an 8-pt grid with 4 px as the half step.
+   Visual direction follows the Hearth reference (warm neutrals, ember accent, rounded cards).
+   Contrast pairs were computed (WCAG 2.2): body text >= 4.5:1, icons and rules >= 3:1. */
+
+:root {
+  color-scheme: light;
+
+  /* Neutrals, biased toward the ember accent */
+  --bg: #f4f0ea;
+  --surface: #fffdfa;
+  --surface-2: #f8f4ee;
+  --surface-3: #f1ebe3;
+  --well: rgba(40, 30, 20, 0.05);
+  --hover: rgba(40, 30, 20, 0.045);
+  --line: rgba(40, 30, 20, 0.09);
+  --line-2: rgba(40, 30, 20, 0.16);
+  --ink: #1d1915;
+  --ink-2: #4f4841;
+  --muted: #6b645c;
+  --faint: #8a8279; /* icons, rules and decorations only, never running text */
+
+  /* Accent */
+  --accent: #e4572e; /* marks, brand, highlights */
+  --accent-strong: #c8441d; /* filled buttons: on-accent text 4.7:1 */
+  --accent-strong-hover: #b23b18;
+  --accent-ink: #b53f19; /* accent text and links: 5.6:1 */
+  --accent-soft: #fbe6dd;
+  --on-accent: #fffaf5;
+
+  /* Status: separate from the accent; always shipped with an icon and a word */
+  --crit: #b42318;
+  --crit-ink: #9a1b12;
+  --crit-soft: #fdecea;
+  --high: #c46a00;
+  --high-ink: #8a4b00;
+  --high-soft: #fbefd9;
+  --med: #5b52d6;
+  --med-ink: #4a41c4;
+  --med-soft: #ebe9fc;
+  --low: #8a8279;
+  --low-ink: #4f4841;
+  --low-soft: rgba(40, 30, 20, 0.07);
+  --good: #0a8f74;
+  --good-ink: #0a6b57;
+  --good-soft: #dcf2ec;
+  --warn: #c98a12;
+  --warn-ink: #8f600a;
+  --warn-soft: #f8ecd2;
+
+  /* Charts */
+  --chart-mark: #3a332d;
+  --chart-mark-soft: rgba(40, 30, 20, 0.1);
+  --chart-grid: rgba(40, 30, 20, 0.08);
+
+  /* Avatar fills (identity only, never status) */
+  --av-1: #f6dccb;
+  --av-1-ink: #6b2f12;
+  --av-2: #dbe4f6;
+  --av-2-ink: #1f3a6b;
+  --av-3: #d9efe3;
+  --av-3-ink: #15513a;
+  --av-4: #f3e3c3;
+  --av-4-ink: #6a4708;
+  --av-5: #e8dff6;
+  --av-5-ink: #47307a;
+  --av-6: #efdce3;
+  --av-6-ink: #6d2541;
+
+  /* Navigation rail */
+  --rail-bg: #1b1714;
+  --rail-ink: #efe9e1;
+  --rail-muted: #a1978d;
+  --rail-pill: #2e2824;
+  --rail-hover: rgba(255, 255, 255, 0.05);
+  --rail-line: rgba(255, 255, 255, 0.08);
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgba(40, 30, 20, 0.04), 0 16px 32px -24px rgba(60, 40, 20, 0.3);
+  --shadow-2: 0 2px 4px rgba(40, 30, 20, 0.05), 0 24px 48px -24px rgba(60, 40, 20, 0.4);
+  --shadow-pop: 0 24px 56px -16px rgba(40, 30, 20, 0.34), 0 2px 6px rgba(40, 30, 20, 0.08);
+  --scrim: rgba(27, 23, 20, 0.42);
+  --focus: #c8441d;
+
+  /* Type: Onest (display, has Cyrillic) + Manrope (body) */
+  --font-display: "Onest", "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-28: 28px;
+  --fs-36: 36px;
+
+  /* Space */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --gap: 16px;
+
+  /* Shape */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-ctl: 12px;
+  --r-card: 20px;
+  --r-pill: 999px;
+
+  /* Layout */
+  --rail-w: 256px;
+  --rail-mini: 80px;
+  --topbar-h: 64px;
+  --content-max: 1360px;
+  --ctl-h: 40px;
+  --row-h: 56px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #141210;
+    --surface: #1e1b19;
+    --surface-2: #26221f;
+    --surface-3: #2d2825;
+    --well: rgba(255, 255, 255, 0.05);
+    --hover: rgba(255, 255, 255, 0.045);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-2: rgba(255, 255, 255, 0.16);
+    --ink: #f2ede6;
+    --ink-2: #d6cfc6;
+    --muted: #a9a198;
+    --faint: #7d756c;
+    --accent: #e8643d;
+    --accent-strong: #c8441d;
+    --accent-strong-hover: #d65027;
+    --accent-ink: #f39a7b;
+    --accent-soft: rgba(225, 90, 51, 0.18);
+    --on-accent: #fffaf5;
+    --crit: #f2705f;
+    --crit-ink: #ffb4a9;
+    --crit-soft: rgba(180, 35, 24, 0.26);
+    --high: #e0962e;
+    --high-ink: #f2bf6b;
+    --high-soft: rgba(201, 138, 18, 0.2);
+    --med: #8f88ee;
+    --med-ink: #b3adf7;
+    --med-soft: rgba(122, 114, 230, 0.2);
+    --low: #8c847a;
+    --low-ink: #d6cfc6;
+    --low-soft: rgba(255, 255, 255, 0.07);
+    --good: #2fb794;
+    --good-ink: #6fd8bb;
+    --good-soft: rgba(31, 158, 130, 0.17);
+    --warn: #d4a03a;
+    --warn-ink: #e2b866;
+    --warn-soft: rgba(190, 138, 42, 0.18);
+    --chart-mark: #d9d2c9;
+    --chart-mark-soft: rgba(255, 255, 255, 0.1);
+    --chart-grid: rgba(255, 255, 255, 0.08);
+    --av-1: #4a2a1b;
+    --av-1-ink: #f6cdb4;
+    --av-2: #23314a;
+    --av-2-ink: #c7d6f5;
+    --av-3: #1d3d2f;
+    --av-3-ink: #b7e5cc;
+    --av-4: #463718;
+    --av-4-ink: #f0d9a8;
+    --av-5: #352a4d;
+    --av-5-ink: #d9cdf5;
+    --av-6: #47232f;
+    --av-6-ink: #f0c6d4;
+    --rail-bg: #0f0d0c;
+    --rail-pill: #26211d;
+    --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 32px -24px rgba(0, 0, 0, 0.8);
+    --shadow-2: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -24px rgba(0, 0, 0, 0.9);
+    --shadow-pop: 0 24px 56px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    --scrim: rgba(0, 0, 0, 0.56);
+    --focus: #f39a7b;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141210;
+  --surface: #1e1b19;
+  --surface-2: #26221f;
+  --surface-3: #2d2825;
+  --well: rgba(255, 255, 255, 0.05);
+  --hover: rgba(255, 255, 255, 0.045);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.16);
+  --ink: #f2ede6;
+  --ink-2: #d6cfc6;
+  --muted: #a9a198;
+  --faint: #7d756c;
+  --accent: #e8643d;
+  --accent-strong: #c8441d;
+  --accent-strong-hover: #d65027;
+  --accent-ink: #f39a7b;
+  --accent-soft: rgba(225, 90, 51, 0.18);
+  --on-accent: #fffaf5;
+  --crit: #f2705f;
+  --crit-ink: #ffb4a9;
+  --crit-soft: rgba(180, 35, 24, 0.26);
+  --high: #e0962e;
+  --high-ink: #f2bf6b;
+  --high-soft: rgba(201, 138, 18, 0.2);
+  --med: #8f88ee;
+  --med-ink: #b3adf7;
+  --med-soft: rgba(122, 114, 230, 0.2);
+  --low: #8c847a;
+  --low-ink: #d6cfc6;
+  --low-soft: rgba(255, 255, 255, 0.07);
+  --good: #2fb794;
+  --good-ink: #6fd8bb;
+  --good-soft: rgba(31, 158, 130, 0.17);
+  --warn: #d4a03a;
+  --warn-ink: #e2b866;
+  --warn-soft: rgba(190, 138, 42, 0.18);
+  --chart-mark: #d9d2c9;
+  --chart-mark-soft: rgba(255, 255, 255, 0.1);
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --av-1: #4a2a1b;
+  --av-1-ink: #f6cdb4;
+  --av-2: #23314a;
+  --av-2-ink: #c7d6f5;
+  --av-3: #1d3d2f;
+  --av-3-ink: #b7e5cc;
+  --av-4: #463718;
+  --av-4-ink: #f0d9a8;
+  --av-5: #352a4d;
+  --av-5-ink: #d9cdf5;
+  --av-6: #47232f;
+  --av-6-ink: #f0c6d4;
+  --rail-bg: #0f0d0c;
+  --rail-pill: #26211d;
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 32px -24px rgba(0, 0, 0, 0.8);
+  --shadow-2: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -24px rgba(0, 0, 0, 0.9);
+  --shadow-pop: 0 24px 56px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --scrim: rgba(0, 0, 0, 0.56);
+  --focus: #f39a7b;
+}
+
+:root[data-density="compact"] {
+  --gap: 12px;
+  --row-h: 48px;
+  --ctl-h: 36px;
+}

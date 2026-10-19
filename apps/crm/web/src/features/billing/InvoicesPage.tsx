@@ -25,6 +25,8 @@ import { useInvoicePages } from './api';
 import { InvoiceMovements, InvoiceStatusBadge } from './shared';
 import { SavedViews } from '../../shared/views/SavedViews';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { CustomerFinanceTab } from './CustomerFinanceTab';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
@@ -98,7 +100,7 @@ export function InvoicesPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('invoices.title')}>
             <TableHeader>
               <TableRow>
@@ -154,7 +156,7 @@ export function InvoicesPage() {
           </Table>
           {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.empty')} />}
           <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
     </>
   );
@@ -162,6 +164,11 @@ export function InvoicesPage() {
 
 /** Invoices and balance of one customer (docs/02 §4.2, tab "Invoices"). */
 export function OrganizationInvoicesTab({ organizationId }: { organizationId: string }) {
+  const finance = useCan(Permissions.financeRead);
+  return finance ? <CustomerFinanceTab organizationId={organizationId} /> : <OrganizationInvoiceSummary organizationId={organizationId} />;
+}
+
+function OrganizationInvoiceSummary({ organizationId }: { organizationId: string }) {
   const styles = useStyles();
   const catalog = useCatalogStyles();
   const { t } = useTranslation();
@@ -188,7 +195,7 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
         </div>
       )}
       {canSeeMoney && data && data.count > 0 && <Text block className={styles.scope}>{t('invoices.totalsScope', { count: data.count, date: formatDate(data.asOf) })}</Text>}
-      <div className={catalog.tableWrap}>
+      <ScrollTable className={catalog.tableWrap}>
         <Table className={catalog.table} aria-label={t('invoices.title')}>
           <TableHeader>
             <TableRow>
@@ -231,7 +238,7 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
         </Table>
         {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.emptyForOrganization')} />}
         <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-      </div>
+      </ScrollTable>
     </>
   );
 }

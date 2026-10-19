@@ -39,6 +39,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useSaveSlaPolicy, useSlaPolicies } from './api';
 import { useDialogStyles } from './dialogStyles';
 import { coverages, type Coverage, type PriorityTarget, type SlaPolicy } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const priorities = ['p1', 'p2', 'p3', 'p4'] as const;
 
@@ -80,7 +81,7 @@ export function SlaPoliciesPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('contracts.sla.title')}>
             <TableHeader>
               <TableRow>
@@ -97,7 +98,7 @@ export function SlaPoliciesPage() {
               {data.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
-                    <span className={catalog.name}>{p.name}</span> {!p.isActive && <Badge appearance="outline" color="subtle">{t('catalog.inactive')}</Badge>}
+                    <span className={catalog.name}>{p.name}</span> {!p.isActive && <Badge appearance="outline" color="informative">{t('catalog.inactive')}</Badge>}
                     {p.ateraValue && <div className={catalog.muted}>{t('contracts.sla.ateraValueShort', { value: p.ateraValue })}</div>}
                   </TableCell>
                   <TableCell>{t(`contracts.coverages.${p.coverage}`)}</TableCell>
@@ -117,7 +118,7 @@ export function SlaPoliciesPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('contracts.sla.empty')} />}
-        </div>
+        </ScrollTable>
       )}
       <Dialog open={editing !== null} onOpenChange={(_, d) => !d.open && setEditing(null)}>
         <DialogSurface style={{ maxWidth: 680 }}>{editing !== null && <SlaForm existing={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}</DialogSurface>

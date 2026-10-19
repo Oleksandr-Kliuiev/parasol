@@ -112,22 +112,6 @@ public sealed record PoSalesOrderPost(
     string? CustomerReference,
     IReadOnlyList<PoSalesOrderLinePost> Lines);
 
-/// <summary>OutgoingInvoiceDto (subset). PowerOffice reports the remaining amount on the customer ledger.</summary>
-public sealed record PoOutgoingInvoice(
-    long Id,
-    string? InvoiceNo,
-    long? OrderNo,
-    long? CustomerId,
-    string? ExternalImportReference,
-    DateTimeOffset? InvoiceDate,
-    DateTimeOffset? DueDate,
-    decimal? TotalAmount,
-    decimal? RemainingAmount,
-    string? Status,
-    bool? IsCredited,
-    string? PdfUrl,
-    DateTimeOffset? LastChangedDateTimeOffset);
-
 /// <summary>RFC 6902 operation as accepted by PowerOffice PATCH endpoints (application/json-patch+json).</summary>
 public sealed record PatchOperation(
     [property: JsonPropertyName("op")] string Op,

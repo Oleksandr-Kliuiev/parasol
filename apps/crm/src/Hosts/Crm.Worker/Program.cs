@@ -30,7 +30,14 @@ using Crm.SharedKernel.Application;
 using Crm.Worker;
 using Hangfire;
 
+if (args.Contains("--health-probe", StringComparer.Ordinal))
+{
+    Environment.Exit(await VpsHostConfiguration.HealthProbeAsync());
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.AddVpsConfiguration(args);
 
 builder.AddServiceDefaults();
 
@@ -147,6 +154,13 @@ jobs.AddOrUpdate<PowerOfficeCustomerSyncJob>(PowerOfficeCustomerSyncJob.JobId, j
 jobs.AddOrUpdate<PowerOfficeContactPersonSyncJob>(PowerOfficeContactPersonSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.ContactPersonSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<PowerOfficeProductSyncJob>(PowerOfficeProductSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.ProductSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<PowerOfficeInvoiceSyncJob>(PowerOfficeInvoiceSyncJob.JobId, job => job.RunAsync(CancellationToken.None), billing.InvoiceSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
+if (powerOffice.InvoicePdfSyncEnabled)
+    jobs.AddOrUpdate<PowerOfficePdfSyncJob>(PowerOfficePdfSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.InvoicePdfSyncCron, new RecurringJobOptions { TimeZone = oslo });
+else jobs.RemoveIfExists(PowerOfficePdfSyncJob.JobId);
+
+if (powerOffice.CustomerLedgerSyncEnabled)
+    jobs.AddOrUpdate<PowerOfficeLedgerSyncJob>(PowerOfficeLedgerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), powerOffice.CustomerLedgerSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
 var partnerCenter = app.Services.GetRequiredService<IOptions<PartnerCenterOptions>>().Value;
 jobs.AddOrUpdate<PartnerCenterCustomerSyncJob>(PartnerCenterCustomerSyncJob.JobId, job => job.RunAsync(CancellationToken.None), partnerCenter.CustomerSyncCron, new RecurringJobOptions { TimeZone = oslo });

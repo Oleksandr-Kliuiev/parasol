@@ -22,6 +22,7 @@ import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { NotFoundPage } from '../errors/NotFoundPage';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   search: { maxWidth: '360px', marginBottom: tokens.spacingVerticalM },
@@ -45,7 +46,7 @@ export function UsersPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table aria-label={t('users.title')}>
             <TableHeader>
               <TableRow>
@@ -71,7 +72,7 @@ export function UsersPage() {
             </TableBody>
           </Table>
           <ListFooter shown={data.length} total={users.total} hasMore={users.hasNextPage} loading={users.isFetchingNextPage} onMore={() => void users.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
     </>
   );

@@ -30,7 +30,7 @@ import {
 import { CheckmarkCircle20Regular, LockClosed20Regular, LockOpen20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
-import { Permissions, useCan } from '../../auth/CurrentUserContext';
+import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
@@ -42,7 +42,9 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatMoney, formatNumber } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { usePeriodActions, usePeriods, useTimeActions, useTimeEntries } from './api';
+import { financialReviewPermissions } from './financialReviewAccess';
 import { timeStatuses, type Period, type TimeEntry, type TimeEntryStatus } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -84,6 +86,8 @@ export function TimeEntriesPage() {
   const { t, i18n } = useTranslation();
   const notify = useNotify();
   const canManage = useCan(Permissions.timeManage);
+  const user = useCurrentUser();
+  const canReview = financialReviewPermissions.every(p => user.permissions.includes(p));
   const canSeeMoney = useCan(Permissions.financeRead);
   const canUnlock = useCan(Permissions.timeUnlock);
   const actions = useTimeActions();
@@ -92,13 +96,14 @@ export function TimeEntriesPage() {
   const now = new Date();
   const year = Number(params.get('year') ?? now.getFullYear());
   const month = Number(params.get('month') ?? now.getMonth() + 1);
+  const reviewOnly = params.get('reviewOnly') === 'true';
   const status = (params.get('status') as TimeEntryStatus | null) ?? null;
   const [selected, setSelected] = useState<string[]>([]);
   const [adjusting, setAdjusting] = useState<TimeEntry | null>(null);
   const [reopening, setReopening] = useState<Period | null>(null);
   const restoreFocusTarget = useRestoreFocusTarget();
 
-  const pages = useTimeEntries({ year, month, status });
+  const pages = useTimeEntries({ year, month, status, reviewOnly });
   // The summary of the newest answer covers every entry the filter matches, not only the rows loaded so far.
   const data = pages.latest;
   const { error, isPending, refetch } = pages;
@@ -179,6 +184,8 @@ export function TimeEntriesPage() {
         </Field>
       </div>
 
+      <Checkbox label={t('financialReview.savedOnly')} checked={reviewOnly}
+        onChange={(_, d) => setParam('reviewOnly', d.checked ? 'true' : null)} />
       <div className={styles.bar}>
         <Text>
           {t('time.totals', {
@@ -202,28 +209,28 @@ export function TimeEntriesPage() {
             <Button disabled={selected.length === 0} onClick={() => void run(() => actions.withdraw.mutateAsync(selected), t('time.withdrawn'))}>
               {t('time.withdrawSelected')}
             </Button>
-            {period?.isClosed ? (
-              canUnlock && (
-                <Button {...restoreFocusTarget} icon={<LockOpen20Regular />} onClick={() => setReopening(period)}>
-                  {t('time.reopenPeriod')}
-                </Button>
-              )
-            ) : (
-              <Button
-                icon={<LockClosed20Regular />}
-                onClick={() => void run(() => periodActions.close.mutateAsync({ year, month }), t('time.periodClosedDone'))}
-              >
-                {t('time.closePeriod')}
-              </Button>
-            )}
           </>
+        )}
+        {period?.isClosed ? (
+          canUnlock && (
+            <Button {...restoreFocusTarget} icon={<LockOpen20Regular />} onClick={() => setReopening(period)}>
+              {t('time.reopenPeriod')}
+            </Button>
+          )
+        ) : (
+          canManage && (
+            <Button icon={<LockClosed20Regular />}
+              onClick={() => void run(() => periodActions.close.mutateAsync({ year, month }), t('time.periodClosedDone'))}>
+              {t('time.closePeriod')}
+            </Button>
+          )
         )}
       </div>
 
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('time.title')}>
             <TableHeader>
               <TableRow>
@@ -273,6 +280,7 @@ export function TimeEntriesPage() {
                       {entry.source === 'Atera' ? ' · Atera' : ''}
                     </div>
                     {entry.reviewNote && <div className={styles.review}>{entry.reviewNote}</div>}
+                    {canReview && <div><AppLink to={`/time/entries/${entry.id}/financial-review`}>{t('financialReview.open')}</AppLink></div>}
                   </TableCell>
                   <TableCell className={catalog.number}>{formatNumber(entry.hours)}</TableCell>
                   <TableCell>
@@ -305,7 +313,7 @@ export function TimeEntriesPage() {
           </Table>
           {!isPending && entries.length === 0 && <EmptyState message={t('time.empty')} />}
           <ListFooter shown={entries.length} total={data?.totalCount} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
 
       {canManage && (

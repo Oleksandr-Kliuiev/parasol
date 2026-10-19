@@ -38,7 +38,9 @@ if (action === 'stop') {
   let started = false;
   try {
     execFileSync(join(bin, 'initdb'), ['-D', data, '-U', 'parasol_test', `--pwfile=${passwordFile}`, '--auth=scram-sha-256', '--no-locale', '-E', 'UTF8'], { stdio: 'pipe' });
-    execFileSync(join(bin, 'pg_ctl'), ['-D', data, '-l', join(directory, 'server.log'), '-o', `-k ${directory} -p ${port} -h 127.0.0.1`, '-w', 'start'], { stdio: 'inherit' });
+    // Atlas timestamp columns and DB-clock expiry checks use UTC. initdb otherwise inherits the host's timezone.
+    execFileSync(join(bin, 'pg_ctl'), ['-D', data, '-l', join(directory, 'server.log'), '-o',
+      `-k ${directory} -p ${port} -h 127.0.0.1 -c timezone=UTC -c log_timezone=UTC`, '-w', 'start'], { stdio: 'inherit' });
     started = true;
     writeFileSync(descriptor, JSON.stringify({ socketDir: directory, port, dataDirectory: data, adminRole: 'parasol_test', adminSecretFile: passwordFile }), { mode: 0o600 });
     writeFileSync(join(directory, 'env.json'), JSON.stringify(environment, null, 2), { mode: 0o600 });

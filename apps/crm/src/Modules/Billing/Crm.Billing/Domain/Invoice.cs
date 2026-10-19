@@ -17,6 +17,11 @@ public sealed class Invoice : AuditableEntity
 
     public string System { get; private set; } = string.Empty;
     public string InvoiceNo { get; private set; } = string.Empty;
+    public Guid? ExternalId { get; private set; }
+    public string? ExternalCustomerId { get; private set; }
+    public string? HistoryJson { get; private set; }
+    public InvoiceDocumentKind? DocumentKind { get; private set; }
+    public ExternalInvoiceHistory? History => InvoiceHistoryCodec.Read(HistoryJson);
     public string? OrderNo { get; private set; }
     public string? ExternalReference { get; private set; }
     public Guid? OrganizationId { get; private set; }
@@ -31,7 +36,7 @@ public sealed class Invoice : AuditableEntity
 
     public IReadOnlyList<InvoicePayment> Payments => _payments;
 
-    public bool IsOverdue(DateOnly today) => Outstanding > 0 && DueDate is { } due && due < today;
+    public bool IsOverdue(DateOnly today) => Status != InvoiceStatus.Credited && DocumentKind != InvoiceDocumentKind.CreditNote && Outstanding > 0 && DueDate is { } due && due < today;
 
     public static Invoice From(ExternalInvoice source, Guid? organizationId, Guid? basisId, DateTimeOffset now)
     {
@@ -47,20 +52,40 @@ public sealed class Invoice : AuditableEntity
     /// </summary>
     public bool Apply(ExternalInvoice source, Guid? organizationId, Guid? basisId, DateTimeOffset now)
     {
+        if (source.History is { } history)
+        {
+            if (ExternalId is { } existingId && existingId != history.ExternalId)
+                throw new InvalidOperationException("An invoice source identity cannot change.");
+            if (ExternalId is not null && (source.InvoiceNo != InvoiceNo || DocumentKind != history.Kind ||
+                ExternalCustomerId is not null && ExternalCustomerId != history.ExternalCustomerId))
+                throw new InvalidOperationException("A posted invoice identity cannot change.");
+            if (History is { } previous && (history.LastChangedAt < previous.LastChangedAt ||
+                previous.BalanceChangedAt is { } balanceTime && (history.BalanceChangedAt is null || history.BalanceChangedAt < balanceTime)))
+                return false;
+        }
+        else if (ExternalId is not null) throw new InvalidOperationException("Historical invoices require their source identity.");
         var before = Signature();
         var previousOutstanding = Outstanding;
         var previousStatus = Status;
         var firstSync = SyncedAt == default;
         OrderNo = source.OrderNo;
         ExternalReference = source.ExternalReference;
-        OrganizationId = organizationId ?? OrganizationId;
-        BasisId = basisId ?? BasisId;
+        OrganizationId = source.History is not null ? organizationId : organizationId ?? OrganizationId;
+        BasisId = source.History is not null ? basisId : basisId ?? BasisId;
+        if (source.History is { } snapshot)
+        {
+            ExternalId = snapshot.ExternalId;
+            ExternalCustomerId = snapshot.ExternalCustomerId;
+            DocumentKind = snapshot.Kind;
+            HistoryJson = InvoiceHistoryCodec.Write(snapshot);
+            InvoiceNo = source.InvoiceNo;
+        }
         InvoiceDate = source.InvoiceDate;
         DueDate = source.DueDate;
         TotalIncVat = decimal.Round(source.TotalIncVat, 2);
         Outstanding = decimal.Round(source.Outstanding, 2);
         Status = source.Status;
-        Url = source.Url;
+        if (source.History is null || source.Url is not null) Url = source.Url;
         SyncedAt = now;
 
         // A first sync starts at zero, so only a change between two syncs counts as a movement.
@@ -92,8 +117,15 @@ public sealed class Invoice : AuditableEntity
 
     public void LinkBasis(Guid basisId) => BasisId = basisId;
 
+    public void BindHistoricalCustomer(Guid? organizationId, Guid? basisId)
+    {
+        if (ExternalId is null) throw new InvalidOperationException("Only a historical invoice can use source customer binding.");
+        OrganizationId = organizationId;
+        BasisId = basisId;
+    }
+
     private string Signature() => string.Join('|',
-        OrderNo, ExternalReference, OrganizationId, InvoiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        OrderNo, ExternalReference, OrganizationId, BasisId, InvoiceNo, ExternalId, HistoryJson, InvoiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         TotalIncVat.ToString("0.####", CultureInfo.InvariantCulture),
         Outstanding.ToString("0.####", CultureInfo.InvariantCulture), Status, Url);

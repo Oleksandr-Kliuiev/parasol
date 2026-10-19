@@ -10,6 +10,8 @@ public sealed class TimeTrackingDbContext(DbContextOptions<TimeTrackingDbContext
 
     public override string Schema => SchemaName;
 
+    public DbSet<TimeEntryCreateReceipt> TimeEntryCreateReceipts => Set<TimeEntryCreateReceipt>();
+
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
 
     public DbSet<TimeAllocation> TimeAllocations => Set<TimeAllocation>();
@@ -18,6 +20,13 @@ public sealed class TimeTrackingDbContext(DbContextOptions<TimeTrackingDbContext
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<TimeEntryCreateReceipt>(b =>
+        {
+            b.ToTable("TimeEntryCreateReceipts");
+            b.HasKey(x => x.ClientRequestId);
+            b.Property(x => x.ClientRequestId).ValueGeneratedNever();
+            b.Property(x => x.IntentHash).HasMaxLength(64).IsUnicode(false);
+        });
         modelBuilder.Entity<TimeEntry>(b =>
         {
             b.ToTable("TimeEntries");

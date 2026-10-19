@@ -46,6 +46,7 @@ import { anomalyText } from './anomalyText';
 import { BasisStatusBadge, RunStatusBadge } from './shared';
 import { monthLabel } from './period';
 import type { Approval, Run } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
@@ -314,7 +315,7 @@ export function BillingRunPage() {
       {bases.error ? (
         <ErrorState error={bases.error} onRetry={() => void bases.refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('billing.bases')}>
             <TableHeader>
               <TableRow>
@@ -375,7 +376,7 @@ export function BillingRunPage() {
             </TableBody>
           </Table>
           {!bases.isPending && (bases.data ?? []).length === 0 && <EmptyState message={t('billing.noBases')} />}
-        </div>
+        </ScrollTable>
       )}
 
       <Dialog open={closing} onOpenChange={(_, d) => !d.open && setClosing(false)}>

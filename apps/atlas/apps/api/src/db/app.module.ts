@@ -6,6 +6,7 @@ import { ClientGraphModule } from './clients.ts';
 import { AuditModule } from './audit.ts';
 import { ToolsModule } from './tools.ts';
 import { CorrelationsModule } from './correlations.ts';
+import { M365OverviewModule } from './m365-overview.ts';
 import { PowerOfficeModule } from './poweroffice.ts';
 import { AskDbModule } from './ask.ts';
 import { AskRemoteDbModule } from './ask-remote.ts';
@@ -23,7 +24,7 @@ import type { RemoteSeams } from '../../../../packages/ask/remote/secret.ts';
 @Module({})
 export class AtlasDbModule {
   static forDatabase(db: PrismaClient, ask: AskMode = 'off', planner?: AskPlanner, remoteSeams?: RemoteSeams): DynamicModule {
-    return { module: AtlasDbModule, imports: [DatabaseModule.forClient(db), ClientGraphModule, AuditModule, ToolsModule, CorrelationsModule, PowerOfficeModule,
+    return { module: AtlasDbModule, imports: [DatabaseModule.forClient(db), ClientGraphModule, AuditModule, ToolsModule, CorrelationsModule, M365OverviewModule, PowerOfficeModule,
       ...(ask === 'mock' ? [AskDbModule.forPlanner(planner)] : []), ...(ask === 'remote' ? [AskRemoteDbModule.forSeams(remoteSeams)] : [])] };
   }
 }

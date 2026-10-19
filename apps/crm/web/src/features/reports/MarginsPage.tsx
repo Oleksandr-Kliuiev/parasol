@@ -27,6 +27,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { formatDate, formatMoney, formatNumber } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useMargins, useMartDatasets } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   bar: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -132,7 +133,7 @@ export function MarginsPage() {
               </div>
             </div>
 
-            <div className={catalog.tableWrap}>
+            <ScrollTable className={catalog.tableWrap}>
               <Table className={catalog.table} aria-label={t('margins.title')}>
                 <TableHeader>
                   <TableRow>
@@ -172,7 +173,7 @@ export function MarginsPage() {
                 </TableBody>
               </Table>
               {data.rows.length === 0 && <EmptyState message={t('margins.empty')} />}
-            </div>
+            </ScrollTable>
           </>
         )
       )}

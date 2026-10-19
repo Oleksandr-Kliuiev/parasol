@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { configure, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from '@fluentui/react-components';
 import { TOASTER_ID } from '../../app/toaster';
@@ -31,13 +31,7 @@ function stub(data: Quote) {
   return fetch;
 }
 
-async function openedDialog(title: string) {
-  const heading = await screen.findByText(title, undefined, { timeout: 5_000 });
-  return heading.closest<HTMLElement>('[role="dialog"]')!;
-}
-
-// Fluent's modal handling may hide the open dialog itself in jsdom (see DeliveryPanel.test); accessibility is checked in the browser.
-configure({ defaultHidden: true });
+const openedDialog = (title: string) => screen.findByRole('dialog', { name: title });
 
 afterEach(() => vi.unstubAllGlobals());
 

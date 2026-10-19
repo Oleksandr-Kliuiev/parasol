@@ -11,7 +11,6 @@ import {
   DialogTitle,
   Spinner,
   Tab,
-  TabList,
   Text,
   makeStyles,
   tokens,
@@ -32,9 +31,10 @@ import { HistoryList } from '../audit/HistoryList';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { LinkedSystemsPanel } from '../integrations/LinkedSystemsPanel';
 import { useProduct, useProductActions } from './api';
+import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
+  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
   sku: { fontFamily: tokens.fontFamilyMonospace, color: tokens.colorNeutralForeground3 },
   components: { margin: 0, paddingInlineStart: tokens.spacingHorizontalL },
@@ -91,7 +91,7 @@ export function ProductDetailPage() {
           <>
             <Text className={styles.sku}>{p.sku}</Text>
             <Badge appearance="tint" color="brand">{t(`catalog.types.${p.type}`)}</Badge>
-            {!p.isActive && <Badge appearance="outline" color="subtle">{t('catalog.inactive')}</Badge>}
+            {!p.isActive && <Badge appearance="outline" color="informative">{t('catalog.inactive')}</Badge>}
           </>
         }
         actions={
@@ -110,10 +110,10 @@ export function ProductDetailPage() {
           )
         }
       />
-      <TabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}>
+      <ScrollTabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}>
         <Tab value="overview">{t('organizations.tabs.overview')}</Tab>
         <Tab value="history">{t('organizations.tabs.history')}</Tab>
-      </TabList>
+      </ScrollTabList>
 
       {tab === 'history' ? (
         <HistoryList module="catalog" entityType="Product" entityId={p.id} />

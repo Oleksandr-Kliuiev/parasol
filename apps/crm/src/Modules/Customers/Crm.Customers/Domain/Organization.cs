@@ -43,6 +43,8 @@ public sealed class Organization : AuditableEntity
 {
     private Organization() { }
 
+    private Organization(Guid id) : base(id) { }
+
     public string Name { get; private set; } = string.Empty;
     public string? OrgNumber { get; private set; }
     public string? LegalForm { get; private set; }
@@ -85,9 +87,10 @@ public sealed class Organization : AuditableEntity
         return Result.Success();
     }
 
-    public static Result<Organization> Create(OrganizationDetails details)
+    public static Result<Organization> Create(OrganizationDetails details, Guid? creationId = null)
     {
-        var organization = new Organization();
+        if (creationId is { } key) ArgumentOutOfRangeException.ThrowIfEqual(key, Guid.Empty, nameof(creationId));
+        var organization = creationId is { } id ? new Organization(id) : new Organization();
         var applied = organization.Apply(details);
         if (!applied.IsSuccess)
         {

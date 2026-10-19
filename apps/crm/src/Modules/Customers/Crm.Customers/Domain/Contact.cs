@@ -39,6 +39,8 @@ public sealed class Contact : AuditableEntity, IErasable
 
     private Contact() { }
 
+    private Contact(Guid id) : base(id) { }
+
     public string FirstName { get; private set; } = string.Empty;
     public string LastName { get; private set; } = string.Empty;
     public string? Email { get; private set; }
@@ -88,9 +90,10 @@ public sealed class Contact : AuditableEntity, IErasable
 
         return changed;
     }
-    public static Result<Contact> Create(ContactDetails details)
+    public static Result<Contact> Create(ContactDetails details, Guid? creationId = null)
     {
-        var contact = new Contact();
+        if (creationId is { } key) ArgumentOutOfRangeException.ThrowIfEqual(key, Guid.Empty, nameof(creationId));
+        var contact = creationId is { } id ? new Contact(id) : new Contact();
         var applied = contact.Apply(details);
         if (!applied.IsSuccess)
         {
