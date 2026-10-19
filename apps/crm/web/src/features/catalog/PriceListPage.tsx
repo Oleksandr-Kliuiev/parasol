@@ -44,6 +44,7 @@ import { PriceListDialog, PriceListStatusBadge } from './CatalogPage';
 import { useCatalogStyles } from './styles';
 import { ProductPicker } from './ProductPicker';
 import type { PriceList, PriceListItem, PriceSheetImportResult, ProductListItem } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   toolbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -141,7 +142,7 @@ export function PriceListPage() {
           )}
         </div>
       </div>
-      <div className={catalog.tableWrap}>
+      <ScrollTable className={catalog.tableWrap}>
         <Table className={catalog.table} aria-label={t('catalog.priceLists.items')}>
           <TableHeader>
             <TableRow>
@@ -192,7 +193,7 @@ export function PriceListPage() {
           </TableBody>
         </Table>
         {list.items.length === 0 && <EmptyState message={t('catalog.priceLists.noItems')} />}
-      </div>
+      </ScrollTable>
 
       <PriceListDialog
         open={editing}

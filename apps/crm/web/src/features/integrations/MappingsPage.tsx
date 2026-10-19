@@ -44,6 +44,7 @@ import { NotFoundPage } from '../errors/NotFoundPage';
 import { useIntegrationActions, useIntegrationStatus, useRecords, type RecordFilters } from './api';
 import { entityRoute, entityTypeOf, systemName, typeName } from './labels';
 import { OrganizationPickerDialog } from './OrganizationPickerDialog';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   toolbar: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBlock: tokens.spacingVerticalM },
@@ -179,7 +180,7 @@ export function MappingsPage() {
       {records.error ? (
         <ErrorState error={records.error} onRetry={() => void records.refetch()} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('mappings.title')}>
             <TableHeader>
               <TableRow>
@@ -282,7 +283,7 @@ export function MappingsPage() {
               </Button>
             </div>
           )}
-        </div>
+        </ScrollTable>
       )}
 
       <OrganizationPickerDialog

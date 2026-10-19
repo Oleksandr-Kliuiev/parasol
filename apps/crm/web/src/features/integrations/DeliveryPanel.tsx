@@ -33,6 +33,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { useIntegrationActions, useOutbox } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 /** The server's limits (OutboxEndpoints): a replay names at most this many messages and says why in this many characters. */
 export const MAX_REPLAY = 100;
@@ -107,7 +108,7 @@ export function DeliveryPanel() {
               </Button>
               {chosen.length >= MAX_REPLAY && <Text className={styles.muted}>{t('delivery.limit', { max: MAX_REPLAY })}</Text>}
             </div>
-            <div className={styles.tableWrap}>
+            <ScrollTable className={styles.tableWrap}>
               <Table size="small" className={styles.table} aria-label={t('delivery.title')}>
                 <TableHeader>
                   <TableRow>
@@ -166,7 +167,7 @@ export function DeliveryPanel() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollTable>
             {stuck > items.length && <Text className={styles.muted}>{t('delivery.newestShown', { shown: items.length, total: stuck })}</Text>}
           </>
         )}

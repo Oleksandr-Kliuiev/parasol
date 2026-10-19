@@ -33,6 +33,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useQuotes } from './api';
 import { QuoteStatusBadge } from './shared';
 import { quoteStatuses, type QuoteStatus } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
@@ -129,7 +130,7 @@ export function QuotesPage() {
           <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />
         </>
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('quotes.title')}>
             <TableHeader>
               <TableRow>
@@ -175,7 +176,7 @@ export function QuotesPage() {
             </TableBody>
           </Table>
           <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
     </>
   );

@@ -44,6 +44,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { usePeriodActions, usePeriods, useTimeActions, useTimeEntries } from './api';
 import { financialReviewPermissions } from './financialReviewAccess';
 import { timeStatuses, type Period, type TimeEntry, type TimeEntryStatus } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -229,7 +230,7 @@ export function TimeEntriesPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('time.title')}>
             <TableHeader>
               <TableRow>
@@ -312,7 +313,7 @@ export function TimeEntriesPage() {
           </Table>
           {!isPending && entries.length === 0 && <EmptyState message={t('time.empty')} />}
           <ListFooter shown={entries.length} total={data?.totalCount} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
 
       {canManage && (

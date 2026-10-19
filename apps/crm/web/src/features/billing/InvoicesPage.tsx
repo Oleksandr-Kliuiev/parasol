@@ -26,6 +26,7 @@ import { InvoiceMovements, InvoiceStatusBadge } from './shared';
 import { SavedViews } from '../../shared/views/SavedViews';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { CustomerFinanceTab } from './CustomerFinanceTab';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
@@ -99,7 +100,7 @@ export function InvoicesPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('invoices.title')}>
             <TableHeader>
               <TableRow>
@@ -155,7 +156,7 @@ export function InvoicesPage() {
           </Table>
           {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.empty')} />}
           <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
     </>
   );
@@ -194,7 +195,7 @@ function OrganizationInvoiceSummary({ organizationId }: { organizationId: string
         </div>
       )}
       {canSeeMoney && data && data.count > 0 && <Text block className={styles.scope}>{t('invoices.totalsScope', { count: data.count, date: formatDate(data.asOf) })}</Text>}
-      <div className={catalog.tableWrap}>
+      <ScrollTable className={catalog.tableWrap}>
         <Table className={catalog.table} aria-label={t('invoices.title')}>
           <TableHeader>
             <TableRow>
@@ -237,7 +238,7 @@ function OrganizationInvoiceSummary({ organizationId }: { organizationId: string
         </Table>
         {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.emptyForOrganization')} />}
         <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-      </div>
+      </ScrollTable>
     </>
   );
 }

@@ -25,6 +25,7 @@ import { formatDateTime } from '../../shared/utils/format';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { useAuditLog, type AuditFilters } from './api';
 import { ChangeList } from './ChangeList';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   filters: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM, alignItems: 'flex-end' },
@@ -92,7 +93,7 @@ export function AuditLogPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('audit.title')}>
             <TableHeader>
               <TableRow>
@@ -126,7 +127,7 @@ export function AuditLogPage() {
               </Button>
             </div>
           )}
-        </div>
+        </ScrollTable>
       )}
     </>
   );

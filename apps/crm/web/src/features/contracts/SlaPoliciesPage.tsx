@@ -39,6 +39,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useSaveSlaPolicy, useSlaPolicies } from './api';
 import { useDialogStyles } from './dialogStyles';
 import { coverages, type Coverage, type PriorityTarget, type SlaPolicy } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const priorities = ['p1', 'p2', 'p3', 'p4'] as const;
 
@@ -80,7 +81,7 @@ export function SlaPoliciesPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('contracts.sla.title')}>
             <TableHeader>
               <TableRow>
@@ -117,7 +118,7 @@ export function SlaPoliciesPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('contracts.sla.empty')} />}
-        </div>
+        </ScrollTable>
       )}
       <Dialog open={editing !== null} onOpenChange={(_, d) => !d.open && setEditing(null)}>
         <DialogSurface style={{ maxWidth: 680 }}>{editing !== null && <SlaForm existing={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}</DialogSurface>

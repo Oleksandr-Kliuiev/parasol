@@ -34,6 +34,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { NARROW_SCREEN, useMediaQuery } from '../../shared/utils/useMediaQuery';
 import { useOrganizationContacts, useUpdateAffiliation } from './api';
 import { AddContactDialog, EditAffiliationDialog } from './ContactDialogs';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   toolbar: { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -161,7 +162,7 @@ export function ContactsTab({ organizationId, organizationName }: { organization
           {data && data.length === 0 && <EmptyState message={t('contacts.empty')} />}
         </>
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('contacts.title')}>
             <TableHeader>
               <TableRow>
@@ -230,7 +231,7 @@ export function ContactsTab({ organizationId, organizationName }: { organization
             </TableBody>
           </Table>
           {data && data.length === 0 && <EmptyState message={t('contacts.empty')} />}
-        </div>
+        </ScrollTable>
       )}
 
       <AddContactDialog organizationId={organizationId} open={adding} onClose={() => setAdding(false)} />

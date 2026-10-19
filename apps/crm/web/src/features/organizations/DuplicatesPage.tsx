@@ -37,6 +37,7 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatDateTime } from '../../shared/utils/format';
 import { formatOrgNumber } from '../../shared/utils/orgNumber';
 import { useDuplicateActions, useDuplicates, useMerges } from './duplicatesApi';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   muted: { color: tokens.colorNeutralForeground3 },
@@ -211,7 +212,7 @@ export function DuplicatesPage() {
 
         {merges.items.length > 0 && (
           <Panel title={t('duplicates.recent')}>
-            <div className={styles.tableWrap}>
+            <ScrollTable className={styles.tableWrap}>
               <Table size="small">
                 <TableHeader>
                   <TableRow>
@@ -247,7 +248,7 @@ export function DuplicatesPage() {
                 </TableBody>
               </Table>
               <ListFooter shown={merges.items.length} total={merges.total} hasMore={merges.hasNextPage} loading={merges.isFetchingNextPage} onMore={() => void merges.fetchNextPage()} />
-            </div>
+            </ScrollTable>
           </Panel>
         )}
       </div>

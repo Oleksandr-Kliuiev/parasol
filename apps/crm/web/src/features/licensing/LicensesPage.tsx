@@ -15,7 +15,6 @@ import {
   SearchBox,
   Switch,
   Tab,
-  TabList,
   Table,
   TableBody,
   TableCell,
@@ -45,6 +44,8 @@ import { LicenseUsageView, ReconciliationView } from './LicenseUsageViews';
 import { useImportSubscriptions, useLicensingAttention, useSubscriptions } from './api';
 import type { ImportResult, Subscription } from './types';
 import { SavedViews } from '../../shared/views/SavedViews';
+import { ScrollTable } from '../../shared/components/ScrollTable';
+import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
   tiles: {
@@ -73,7 +74,7 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase200,
   },
   warn: { color: tokens.colorPaletteDarkOrangeForeground1 },
-  tabs: { marginBottom: tokens.spacingVerticalM },
+  tabs: { marginBottom: tokens.spacingVerticalM, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
 });
 
 /** CSP subscriptions across customers, with the two things that cost money if missed: cancellation windows and renewals. */
@@ -127,7 +128,7 @@ export function LicensesPage() {
         <SavedViews scope="licenses" keys={['view', 'renewing', 'window', 'notBilled', 'unlinked']} />
       </div>
 
-      <TabList
+      <ScrollTabList
         className={styles.tabs}
         selectedValue={view}
         onTabSelect={(_, d) => {
@@ -140,7 +141,7 @@ export function LicensesPage() {
         <Tab value="subscriptions">{t('licenses.tabs.subscriptions')}</Tab>
         <Tab value="usage">{t('licenses.tabs.usage')}</Tab>
         {canSeeCost && <Tab value="reconciliation">{t('licenses.tabs.reconciliation')}</Tab>}
-      </TabList>
+      </ScrollTabList>
 
       {view === 'usage' && <LicenseUsageView />}
       {view === 'reconciliation' && canSeeCost && <ReconciliationView />}
@@ -192,7 +193,7 @@ export function LicensesPage() {
           {error ? (
             <ErrorState error={error} onRetry={() => void refetch()} />
           ) : (
-            <div className={catalog.tableWrap}>
+            <ScrollTable className={catalog.tableWrap}>
               <Table className={catalog.table} aria-label={t('licenses.title')}>
                 <TableHeader>
                   <TableRow>
@@ -264,7 +265,7 @@ export function LicensesPage() {
               </Table>
               {!isPending && data.length === 0 && <EmptyState message={t('licenses.empty')} />}
               <ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />
-            </div>
+            </ScrollTable>
           )}
         </>
       )}
@@ -376,7 +377,7 @@ export function OrganizationLicensesTab({ organizationId }: { organizationId: st
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
   return (
-    <div className={catalog.tableWrap}>
+    <ScrollTable className={catalog.tableWrap}>
       <Table className={catalog.table} aria-label={t('licenses.title')}>
         <TableHeader>
           <TableRow>
@@ -425,6 +426,6 @@ export function OrganizationLicensesTab({ organizationId }: { organizationId: st
       </Table>
       {!isPending && data.length === 0 && <EmptyState message={t('licenses.emptyForOrganization')} />}
       <ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />
-    </div>
+    </ScrollTable>
   );
 }

@@ -35,6 +35,7 @@ import { blankToNull } from '../../shared/utils/format';
 import { HistoryList } from '../audit/HistoryList';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { useContact, useUpdateContactPerson } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
@@ -104,7 +105,7 @@ export function ContactPage() {
         />
 
         <Panel title={t('contacts.affiliations')}>
-          <div className={styles.tableWrap}>
+          <ScrollTable className={styles.tableWrap}>
             <Table size="small">
               <TableHeader>
                 <TableRow>
@@ -135,7 +136,7 @@ export function ContactPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollTable>
         </Panel>
 
         <Panel title={t('history.title')}>

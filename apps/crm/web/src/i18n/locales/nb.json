@@ -55,6 +55,7 @@
     "devMode": "Utviklerpålogging"
   },
   "common": {
+    "scrollableTable": "Rullbar tabell",
     "save": "Lagre",
     "saving": "Lagrer…",
     "cancel": "Avbryt",

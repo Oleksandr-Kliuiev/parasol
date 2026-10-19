@@ -36,6 +36,7 @@ import { formatDate, formatMoney, formatNumber } from '../../shared/utils/format
 import { useCatalogStyles } from '../catalog/styles';
 import { useImportMsBilling, useLicenseUsage, useReconciliation, useReconciliationPeriods } from './api';
 import type { ImportResult } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   bar: { display: 'flex', flexWrap: 'wrap', alignItems: 'end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -76,7 +77,7 @@ export function LicenseUsageView({ organizationId }: { organizationId?: string }
         {unusedSeats > 0 && <Text className={styles.warn}>{t('licenses.usage.unusedSeats', { seats: unusedSeats, days: windowDays })}</Text>}
       </div>
 
-      <div className={catalog.tableWrap}>
+      <ScrollTable className={catalog.tableWrap}>
         <Table className={catalog.table} aria-label={t('licenses.tabs.usage')}>
           <TableHeader>
             <TableRow>
@@ -112,7 +113,7 @@ export function LicenseUsageView({ organizationId }: { organizationId?: string }
           </TableBody>
         </Table>
         {!isPending && data.length === 0 && <EmptyState message={t(unusedOnly ? 'licenses.usage.noneUnused' : 'licenses.usage.empty')} />}
-      </div>
+      </ScrollTable>
     </>
   );
 }
@@ -179,7 +180,7 @@ export function ReconciliationView() {
             </div>
           </div>
 
-          <div className={catalog.tableWrap}>
+          <ScrollTable className={catalog.tableWrap}>
             <Table className={catalog.table} aria-label={t('licenses.tabs.reconciliation')}>
               <TableHeader>
                 <TableRow>
@@ -218,7 +219,7 @@ export function ReconciliationView() {
               </TableBody>
             </Table>
             {!isPending && (data?.rows.length ?? 0) === 0 && <EmptyState message={t('licenses.reconciliation.empty')} />}
-          </div>
+          </ScrollTable>
         </>
       )}
 

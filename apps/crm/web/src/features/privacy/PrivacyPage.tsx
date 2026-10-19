@@ -30,6 +30,7 @@ import { NotFoundPage } from '../errors/NotFoundPage';
 import { ReasonDialog } from './ReasonDialog';
 import { recordLabel } from './recordLabel';
 import { type LegalHold, type Suppression, useHoldActions, useLegalHolds, usePrivacyCases, useRetention, useSuppressions } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -80,7 +81,7 @@ function CasesPanel() {
       ) : data.length === 0 ? (
         <EmptyState message={t('privacy.cases.empty')} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table size="small" aria-label={t('privacy.cases.tableLabel')}>
             <TableHeader>
               <TableRow>
@@ -111,7 +112,7 @@ function CasesPanel() {
             </TableBody>
           </Table>
           <ListFooter shown={data.length} total={cases.total} hasMore={cases.hasNextPage} loading={cases.isFetchingNextPage} onMore={() => void cases.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
     </Panel>
   );
@@ -138,7 +139,7 @@ function HoldsPanel() {
       ) : data.length === 0 ? (
         <EmptyState message={t('privacy.holds.empty')} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table size="small" aria-label={t('privacy.holds.tableLabel')}>
             <TableHeader>
               <TableRow>
@@ -171,7 +172,7 @@ function HoldsPanel() {
             </TableBody>
           </Table>
           <ListFooter shown={data.length} total={holds.total} hasMore={holds.hasNextPage} loading={holds.isFetchingNextPage} onMore={() => void holds.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
       <ReasonDialog
         open={releasing !== null}
@@ -211,7 +212,7 @@ function SuppressionsPanel() {
       ) : data.length === 0 ? (
         <EmptyState message={t('privacy.suppressions.empty')} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table size="small" aria-label={t('privacy.suppressions.tableLabel')}>
             <TableHeader>
               <TableRow>
@@ -242,7 +243,7 @@ function SuppressionsPanel() {
             </TableBody>
           </Table>
           <ListFooter shown={data.length} total={suppressions.total} hasMore={suppressions.hasNextPage} loading={suppressions.isFetchingNextPage} onMore={() => void suppressions.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
       <ReasonDialog
         open={lifting !== null}
@@ -282,7 +283,7 @@ function RetentionPanel() {
       ) : (
         <>
           <Text className={styles.muted}>{t('privacy.retention.lastRun', { at: formatDateTime(data.lastRun.startedAt) })}</Text>
-          <div className={styles.tableWrap}>
+          <ScrollTable className={styles.tableWrap}>
             <Table size="small" aria-label={t('privacy.retention.tableLabel')}>
               <TableHeader>
                 <TableRow>
@@ -309,7 +310,7 @@ function RetentionPanel() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollTable>
         </>
       )}
     </Panel>

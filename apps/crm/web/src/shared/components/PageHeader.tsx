@@ -14,7 +14,15 @@ const useStyles = makeStyles({
   },
   titles: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS, minWidth: 0 },
   back: { display: 'inline-flex', alignItems: 'center', gap: tokens.spacingHorizontalXS, fontSize: tokens.fontSizeBase200 },
-  title: { margin: 0, fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, textWrap: 'balance' },
+  title: {
+    margin: 0,
+    fontSize: '32px',
+    lineHeight: '40px',
+    fontWeight: tokens.fontWeightBold,
+    letterSpacing: '-0.01em',
+    textWrap: 'balance',
+    '@media (max-width: 600px)': { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700 },
+  },
   meta: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalS },
   actions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS },
 });

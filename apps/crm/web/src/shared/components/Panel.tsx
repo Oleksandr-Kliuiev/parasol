@@ -6,9 +6,11 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     borderRadius: tokens.borderRadiusLarge,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
-    paddingInline: tokens.spacingHorizontalL,
-    paddingBlock: tokens.spacingVerticalL,
+    paddingInline: tokens.spacingHorizontalXL,
+    paddingBlock: tokens.spacingVerticalXL,
+    boxShadow: tokens.shadow4,
     minWidth: 0,
+    '@media (max-width: 600px)': { paddingInline: tokens.spacingHorizontalL, paddingBlock: tokens.spacingVerticalL },
   },
   header: {
     display: 'flex',

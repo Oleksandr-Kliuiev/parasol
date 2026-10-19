@@ -61,6 +61,7 @@ import { monthLabel } from './period';
 import type { ProductListItem } from '../catalog/types';
 import type { BasisLine } from './types';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -288,7 +289,7 @@ export function BillingBasisPage() {
           )}
         </div>
 
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('billing.lines')}>
             <TableHeader>
               <TableRow>
@@ -443,7 +444,7 @@ export function BillingBasisPage() {
             </TableBody>
           </Table>
           {basis.lines.length === 0 && <EmptyState message={t('billing.noLines')} />}
-        </div>
+        </ScrollTable>
       </div>
 
       <Dialog open={dialog !== null} onOpenChange={(_, d) => !d.open && setDialog(null)}>

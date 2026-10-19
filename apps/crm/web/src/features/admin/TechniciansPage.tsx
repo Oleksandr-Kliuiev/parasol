@@ -11,6 +11,7 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useMapTechnician, useTechnicianMappings } from '../time/api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 /** Technicians of Atera mapped to CRM users, so imported hours land on the right person (BR-TIM-01). */
 export function TechniciansPage() {
@@ -37,7 +38,7 @@ export function TechniciansPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('technicians.title')}>
             <TableHeader>
               <TableRow>
@@ -78,7 +79,7 @@ export function TechniciansPage() {
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('technicians.empty')} />}
           <ListFooter shown={data.length} total={mappings.total} hasMore={mappings.hasNextPage} loading={mappings.isFetchingNextPage} onMore={() => void mappings.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
     </>
   );

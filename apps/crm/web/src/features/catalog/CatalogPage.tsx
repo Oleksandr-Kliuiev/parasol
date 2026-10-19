@@ -20,7 +20,6 @@ import {
   SkeletonItem,
   Switch,
   Tab,
-  TabList,
   Table,
   TableBody,
   TableCell,
@@ -45,6 +44,8 @@ import { NARROW_SCREEN, useMediaQuery } from '../../shared/utils/useMediaQuery';
 import { useCategories, usePriceListActions, usePriceLists, useProducts, useSaveCategory } from './api';
 import { useCatalogStyles } from './styles';
 import { productTypes, type CustomerCategory, type ProductType } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
+import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 
 type TabValue = 'products' | 'price-lists' | 'categories';
@@ -58,11 +59,11 @@ export function CatalogPage() {
   return (
     <>
       <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle')} />
-      <TabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'products' ? {} : { tab: String(d.value) }, { replace: true })}>
+      <ScrollTabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'products' ? {} : { tab: String(d.value) }, { replace: true })}>
         <Tab value="products">{t('catalog.tabs.products')}</Tab>
         <Tab value="price-lists">{t('catalog.tabs.priceLists')}</Tab>
         <Tab value="categories">{t('catalog.tabs.categories')}</Tab>
-      </TabList>
+      </ScrollTabList>
       {tab === 'products' && <ProductsTab />}
       {tab === 'price-lists' && <PriceListsTab />}
       {tab === 'categories' && <CategoriesTab />}
@@ -142,7 +143,7 @@ function ProductsTab() {
           ))}
         </ul>
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('catalog.tabs.products')}>
             <TableHeader>
               <TableRow>
@@ -173,7 +174,7 @@ function ProductsTab() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ScrollTable>
       )}
       {isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
       {!isPending && !error && rows.length === 0 && <EmptyState message={debounced || type ? t('catalog.products.empty') : t('catalog.products.emptyAll')} />}
@@ -209,7 +210,7 @@ function PriceListsTab() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('catalog.tabs.priceLists')}>
             <TableHeader>
               <TableRow>
@@ -242,7 +243,7 @@ function PriceListsTab() {
           </Table>
           {isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
           {!isPending && data.length === 0 && <EmptyState message={t('catalog.priceLists.empty')} />}
-        </div>
+        </ScrollTable>
       )}
       <PriceListDialog open={creating} onClose={() => setCreating(false)} />
     </>
@@ -374,7 +375,7 @@ function CategoriesTab() {
           </Button>
         )}
       </div>
-      <div className={styles.tableWrap}>
+      <ScrollTable className={styles.tableWrap}>
         <Table className={styles.table} aria-label={t('catalog.tabs.categories')}>
           <TableHeader>
             <TableRow>
@@ -403,7 +404,7 @@ function CategoriesTab() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ScrollTable>
       <Dialog open={editing !== null} onOpenChange={(_, d) => !d.open && setEditing(null)}>
         <DialogSurface>{editing !== null && <CategoryForm existing={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}</DialogSurface>
       </Dialog>

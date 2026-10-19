@@ -32,6 +32,7 @@ import { errorMessage } from '../../shared/utils/errors';
 import { useCatalogStyles } from '../catalog/styles';
 import { useSaveStage, useStages } from '../sales/api';
 import type { Stage } from '../sales/types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 /** Pipeline stages: the order and win probability behind the forecast (FR-SAL-02). */
 export function PipelineStagesPage() {
@@ -59,7 +60,7 @@ export function PipelineStagesPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('pipeline.stages.title')}>
             <TableHeader>
               <TableRow>
@@ -100,7 +101,7 @@ export function PipelineStagesPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('pipeline.stages.empty')} />}
-        </div>
+        </ScrollTable>
       )}
 
       <Dialog open={editing !== null} onOpenChange={(_, d) => !d.open && setEditing(null)}>

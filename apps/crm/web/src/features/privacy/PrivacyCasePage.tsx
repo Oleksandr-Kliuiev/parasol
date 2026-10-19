@@ -50,6 +50,7 @@ import {
 } from './api';
 import { ReasonDialog } from './ReasonDialog';
 import { recordLabel } from './recordLabel';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
@@ -302,7 +303,7 @@ function PlanView({ plan, onHold }: { plan: Plan; onHold?: (record: PlannedErasu
   const styles = useStyles();
   return (
     <>
-      <div className={styles.tableWrap}>
+      <ScrollTable className={styles.tableWrap}>
         <Table size="small" aria-label={t('privacy.case.plan.counts')}>
           <TableHeader>
             <TableRow>
@@ -321,8 +322,8 @@ function PlanView({ plan, onHold }: { plan: Plan; onHold?: (record: PlannedErasu
             ))}
           </TableBody>
         </Table>
-      </div>
-      <div className={styles.tableWrap}>
+      </ScrollTable>
+      <ScrollTable className={styles.tableWrap}>
         <Table size="small" aria-label={t('privacy.case.plan.recordsLabel')}>
           <TableHeader>
             <TableRow>
@@ -362,7 +363,7 @@ function PlanView({ plan, onHold }: { plan: Plan; onHold?: (record: PlannedErasu
             })}
           </TableBody>
         </Table>
-      </div>
+      </ScrollTable>
     </>
   );
 }
@@ -504,7 +505,7 @@ function ReceiptPanel({ privacyCase }: { privacyCase: PrivacyCase }) {
     <Panel title={t('privacy.case.receipt.title')}>
       <div className={styles.stack}>
         <Text className={styles.muted}>{t('privacy.case.receipt.completed', { date: formatDateTime(privacyCase.completedAt) })}</Text>
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table size="small" aria-label={t('privacy.case.receipt.modules')}>
             <TableHeader>
               <TableRow>
@@ -521,9 +522,9 @@ function ReceiptPanel({ privacyCase }: { privacyCase: PrivacyCase }) {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ScrollTable>
         {receipt.retained.length > 0 && (
-          <div className={styles.tableWrap}>
+          <ScrollTable className={styles.tableWrap}>
             <Table size="small" aria-label={t('privacy.case.receipt.retained')}>
               <TableHeader>
                 <TableRow>
@@ -544,7 +545,7 @@ function ReceiptPanel({ privacyCase }: { privacyCase: PrivacyCase }) {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollTable>
         )}
         {receipt.retained.some((r) => r.basis === 'LegalHold') && (
           // A hold keeps its record only until it ends; then a new request for the same person erases what it kept.

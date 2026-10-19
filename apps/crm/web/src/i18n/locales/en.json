@@ -55,6 +55,7 @@
     "devMode": "Development sign-in"
   },
   "common": {
+    "scrollableTable": "Scrollable table",
     "save": "Save",
     "saving": "Saving…",
     "cancel": "Cancel",
