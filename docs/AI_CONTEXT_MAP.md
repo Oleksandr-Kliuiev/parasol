@@ -8,6 +8,7 @@
 - PowerOffice historical invoices / M37: `docs/migration/M37-POWEROFFICE-INVOICE-HISTORY.md`; UUID + atomic line snapshots, exact source customer leases, independent balance checkpoint and finance-protected history API. Local synthetic data only.
 - PowerOffice resumable import / M37: `docs/migration/M37-POWEROFFICE-RESUME.md`; full-copy scope in `docs/migration/M37-POWEROFFICE-REPLICA-PLAN.md`. Local synthetic development only. Possible PowerOffice replacement remains undecided; preserve existing features and outbound integration.
 - UX concept and clickable demo: `docs/ux/UX-CONCEPT.md`, `docs/ux/demo` (static, synthetic data, RU/EN/NB, no backend change); checks `docs/ux/demo/tools/check-locales.mjs` and `smoke.mjs`.
+- My day by job (finance / hours lead / work), existing panels only: `apps/crm/web/src/features/dashboard/myDayProfile.ts`, `MyDayPage.tsx`; no server change.
 - Scope and local commands: `README.md`.
 - Product readiness, current gaps and local pilot gates: `docs/PRODUCT_READINESS.md`.
 - M01–M03 implementation and follow-up: `docs/migration/M01-M03.md`.
