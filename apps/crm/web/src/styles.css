@@ -18,3 +18,16 @@ body {
 main :is(h1, h2, h3, p, li, a, dt, dd, label) {
   overflow-wrap: anywhere;
 }
+
+/* Tables (UX concept §8): quiet small-caps header, roomier rows. The tokens come from the Fluent theme, so light and dark follow it. */
+main .fui-TableHeaderCell {
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--colorNeutralForeground3);
+}
+
+main .fui-TableRow {
+  min-height: 48px;
+}

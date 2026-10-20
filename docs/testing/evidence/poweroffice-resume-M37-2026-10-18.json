@@ -1,0 +1,92 @@
+{
+  "milestone": "M37 resumable PowerOffice import foundation",
+  "status": "locally-verified",
+  "date": "2026-10-18",
+  "baseCommit": "63b595adc62763a7f6dc54d0bb7adb76b4624657",
+  "branch": "feat/m37-poweroffice-resume",
+  "scope": "Existing customer/contact/product import and serialization of existing PowerOffice sync jobs; not a full historical replica.",
+  "ownerDecision": "A full replacement of PowerOffice remains undecided; existing capabilities and outbound integration are retained.",
+  "unit": {
+    "total": 970,
+    "failed": 0,
+    "passed": 970,
+    "skipped": 0
+  },
+  "architecture": {
+    "total": 94,
+    "failed": 0,
+    "passed": 94,
+    "skipped": 0
+  },
+  "affectedSql": {
+    "total": 63,
+    "failed": 0,
+    "passed": 63,
+    "skipped": 0
+  },
+  "newSqlCases": 21,
+  "normalIntegrationBuild": true,
+  "newProductionDependencies": false,
+  "schemaChanges": false,
+  "sqlInputs": {
+    "files": 862,
+    "currentHashesVerified": true,
+    "onlyScratchFixtureAdapted": true,
+    "manifestSha256": "1376f3e569674e9132f9366f8c8d0809fc61d68a9e19aae167f99bc5eab56635"
+  },
+  "unitArchitectureInputs": {
+    "manifestFiles": 810,
+    "allProductionAndUnitArchitectureInputsUnchanged": true,
+    "onlyPostRunDifference": "Integration-test collection annotation; final normal build and SQL run include it."
+  },
+  "regressions": [
+    "Restart after payload before matching/billing",
+    "HTTP 503 or null page before cursor publication",
+    "Same-source entity creation before failed link commit, including contacts without e-mail",
+    "Concurrent import of the same source key",
+    "Preview without entity/link writes",
+    "Deleted/erased targets are not recreated",
+    "System-scoped writer serialization",
+    "Cancellation/failure releases lock",
+    "Killed or reopened SQL session cannot publish unlocked cursor",
+    "Recovered links retain Imported provenance",
+    "Existing PowerOffice outbound and Billing scenarios"
+  ],
+  "checkpoint": "Last fully completed stream cursor; interrupted range is safely reread, not resumed by mutable page number.",
+  "evidenceHistory": {
+    "originalReproductions": {
+      "failed": 3,
+      "passed": 0,
+      "skipped": 0
+    },
+    "firstCombinedRun": {
+      "total": 40,
+      "passed": 38,
+      "failed": 2,
+      "skipped": 0,
+      "corrections": "Fixture cursor isolation and CAST of SQL session ID; no assertion/deadline relaxed."
+    },
+    "extendedBeforeFinalRefinement": {
+      "total": 63,
+      "passed": 63,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "privateRunsCleaned": [
+    "red-02",
+    "sql-01",
+    "sql-02",
+    "sql-03"
+  ],
+  "liveAccountAccess": false,
+  "deployed": false,
+  "published": false,
+  "notClaimed": [
+    "Full financial history/ledger/document import",
+    "Account switching or multiple PowerOffice companies",
+    "Complete upstream snapshot or arbitrary late-change coverage",
+    "A new global outbound replica-mode gate",
+    "New browser/UI/Atlas/backup-restore acceptance"
+  ]
+}

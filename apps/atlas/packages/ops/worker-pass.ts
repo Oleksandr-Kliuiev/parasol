@@ -21,7 +21,7 @@ const ingestClients = (actor: Actor) => actor.memberships.map(m => m.clientId).f
 const optionsOf = (runtime: DecisionRuntime, workerId: string) => ({ workerId, provider: runtime.provider, config: runtime.config, guard: runtime.guard });
 
 /** The event worker for each client in turn: claim, decide (rules baseline in shadow mode), commit. */
-export async function runWorkerPass(db: PrismaClient, actor: Actor, runtime: DecisionRuntime, workerId: string, now: Date = new Date()): Promise<WorkerPassSummary[]> {
+export async function runWorkerPass(db: PrismaClient, actor: Actor, runtime: DecisionRuntime, workerId: string, now?: Date): Promise<WorkerPassSummary[]> {
   const summaries: WorkerPassSummary[] = [];
   for (const clientId of ingestClients(actor)) {
     const events = await processPending(db, actor, { workspaceId: actor.workspaceId, clientId }, optionsOf(runtime, workerId), now);

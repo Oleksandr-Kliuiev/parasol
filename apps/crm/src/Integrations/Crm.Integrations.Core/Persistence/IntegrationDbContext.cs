@@ -155,6 +155,14 @@ public sealed class OutboundOperation
 
 public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options) : ModuleDbContext(options)
 {
+    internal string? ExclusiveSyncResource { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.AddInterceptors(SyncExclusiveCommandInterceptor.Instance);
+    }
+
     public const string SchemaName = "integration";
 
     public override string Schema => SchemaName;

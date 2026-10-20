@@ -1,0 +1,124 @@
+{
+  "milestone": "M37 posted customer ledger operations and confirmed payment relationships",
+  "status": "locally-verified",
+  "date": "2026-10-18",
+  "branch": "feat/m37-customer-ledger",
+  "baseCommit": "7662751f895c45385ddd03c3f7dcc356c312ddca",
+  "unit": {
+    "total": 1018,
+    "failed": 0,
+    "passed": 1018,
+    "skipped": 0
+  },
+  "architecture": {
+    "total": 94,
+    "failed": 0,
+    "passed": 94,
+    "skipped": 0
+  },
+  "affectedSql": {
+    "total": 112,
+    "failed": 0,
+    "passed": 112,
+    "skipped": 0
+  },
+  "newUnitCases": 30,
+  "newSqlCases": 29,
+  "normalIntegrationBuild": true,
+  "workerBuild": true,
+  "pendingBillingModelChanges": false,
+  "schemaChanges": "Add CustomerLedgerSnapshots/Entries/Versions; no existing table data changed; source UUID/history/movements retained; lossy downgrade refused.",
+  "newProductionDependencies": false,
+  "liveAccountAccess": false,
+  "providerBusinessWrites": false,
+  "published": false,
+  "deployed": false,
+  "sqlInputs": {
+    "files": 892,
+    "allCurrentHashesVerified": true,
+    "onlyScratchFixtureAdapted": true,
+    "manifestSha256": "fcbe5dcfc1bd88c2825767e9cb075af217a454a47e9fd9a0f2ef1f458802ad04"
+  },
+  "backendInputs": {
+    "files": 840,
+    "allCurrentHashesVerified": true,
+    "manifestSha256": "b4a7b922e9374ccd9eadc64a7c2340b61d1bae22d58ed01c1cfd48ba0ed87483"
+  },
+  "providerContract": {
+    "verifiedDate": "2026-10-18",
+    "primarySources": [
+      "https://swagger.poweroffice.net/openapispecs/customerledger.json",
+      "https://developer.poweroffice.net/endpoints/reporting/customer-ledger",
+      "https://developer.poweroffice.net/workflow/usecase/reporting/retrieving-invoice-payments"
+    ],
+    "identity": "System + posted ledger entry Id (int64); invoice relationship via source customer + voucher UUID + current match group, never invoice number alone",
+    "mode": "Complete posting-date statement scan ordered by Id, 0001-01-01 through 9999-12-31; no open-item/type/origin/incremental filter",
+    "checkpoint": "customer-ledger-snapshot-v1 completion JSON; replay from start after failed reads or partial customer commits; no mutable page-number resume",
+    "paymentEvidence": "Posted IncomingOcrGiro/IncomingBankRemittance/BankJournal, except explicit write-off; source accounting confirmation, no bank access",
+    "schemaSha256": "47ab304451a415c39cd2150589d347db54fb7f3b2a676e719af935b20b1391af"
+  },
+  "regressions": [
+    "Posted payment with paged invoice anchor, replay and exact voucher relationship",
+    "Many-to-many matches, credit notes, explicit write-offs and manual/unknown types remain distinct; no invented allocation amount",
+    "Unallocated payments are retained without invoice-number matching",
+    "503/403/null page, invalid required field or conflicting duplicate Id do not publish partial statement or checkpoint",
+    "Per-customer transaction rollback and crash between customer commits; fresh-scope replay has no duplicate entries/versions",
+    "Unmatching removes active payment relationships while previous source versions survive",
+    "Absent rows are retained with PresentInLatestScan=false and no active relationships",
+    "Equal invoice numbers/MatchIds cannot cross customer or voucher boundaries",
+    "Ledger before invoice links automatically after invoice import without provider HTTP",
+    "Unknown customer and exact link/unlink/relink; mapping resolved after HTTP with source-link lease",
+    "Cancellation holds checkpoint and releases job lock",
+    "Concurrent module replay creates one entry and one immutable version",
+    "Missing source CustomerId can be filled for the same operation ID without replacement of an already known customer",
+    "2201-entry history with orphan recovery uses bounded SQL parameter batches",
+    "Finance + Billing AND permission protects raw source; stable paging and input bounds",
+    "Separate disabled-by-default flag makes no provider request",
+    "Source signed/client/original currency amounts retain decimal precision",
+    "No change to invoice balance, inferred movements, bases, charges or pending charges",
+    "Actual additive migration preserves historical invoice JSON, lines, observed movement and rowversion; lossy downgrade rejected",
+    "Runtime SQL denies deletion of operations/versions and update of prior versions",
+    "Existing PowerOffice invoice/resume/exclusive-lock/Billing regressions remain green"
+  ],
+  "earlierRuns": {
+    "firstNewSql": {
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0
+    },
+    "firstAffectedSql": {
+      "passed": 110,
+      "failed": 0,
+      "skipped": 0
+    },
+    "finalAdds": "Orphan CustomerId fill and 2201-entry SQL parameter bound; all tests rerun on final sources.",
+    "initialBuildCorrections": [
+      "CA1859 dictionary parameter type",
+      "CA1725 DispatchProxy parameter name",
+      "CA1826 indexed IReadOnlyList access; no analyzer suppression"
+    ]
+  },
+  "preservation": {
+    "originalRepositories": true,
+    "primaryLocalChanges": true,
+    "legacyDemoArtifacts": 394,
+    "archiveHistoryVerified": true
+  },
+  "privateRunsCleaned": [
+    "red-01",
+    "sql-01",
+    "sql-02"
+  ],
+  "notClaimed": [
+    "Live account/privilege/date-bound compatibility",
+    "Atomic upstream point-in-time snapshot",
+    "Bank verification or reconstructed per-invoice allocation amounts",
+    "Invoice.Outstanding updated by ledger import",
+    "New operation UI",
+    "Ledger versions exposed through a new history UI/API",
+    "Multiple accounts or account switching",
+    "Supplier/general ledger, payroll or full accounting replacement",
+    "Browser/Atlas/VPS restore acceptance",
+    "New ledger stream included in existing M15 readiness aggregate"
+  ]
+}

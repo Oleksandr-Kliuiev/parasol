@@ -21,6 +21,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { ProductPicker } from '../catalog/ProductPicker';
 import { emptyLine, lineAmount, type LineDraft } from './lineDraft';
 import { recurrences, type QuoteLine, type QuoteLineRecurrence } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   narrow: { width: '80px' },
@@ -49,7 +50,7 @@ export function QuoteLinesEditor({ lines, onChange, discountLimitPct, canSeeMone
 
   return (
     <>
-      <div className={catalog.tableWrap}>
+      <ScrollTable className={catalog.tableWrap}>
         <Table className={catalog.table} aria-label={t('quotes.lines')}>
           <TableHeader>
             <TableRow>
@@ -155,7 +156,7 @@ export function QuoteLinesEditor({ lines, onChange, discountLimitPct, canSeeMone
             })}
           </TableBody>
         </Table>
-      </div>
+      </ScrollTable>
       <Button className={styles.add} icon={<Add20Regular />} onClick={() => onChange([...lines, emptyLine()])}>
         {t('quotes.addLine')}
       </Button>
@@ -171,7 +172,7 @@ export function QuoteLinesTable({ lines, canSeeMoney }: { lines: QuoteLine[]; ca
   const groups = recurrences.filter((recurrence) => lines.some((line) => line.recurrence === recurrence));
 
   return (
-    <div className={catalog.tableWrap}>
+    <ScrollTable className={catalog.tableWrap}>
       <Table className={catalog.table} aria-label={t('quotes.lines')}>
         <TableHeader>
           <TableRow>
@@ -208,6 +209,6 @@ export function QuoteLinesTable({ lines, canSeeMoney }: { lines: QuoteLine[]; ca
           ))}
         </TableBody>
       </Table>
-    </div>
+    </ScrollTable>
   );
 }

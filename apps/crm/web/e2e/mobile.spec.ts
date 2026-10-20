@@ -55,11 +55,16 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
   await expect(email).toBeInViewport();
   await expect(page.getByRole('link', { name: '900 00 000' })).toBeInViewport();
 
+  // Phone navigation: the bottom tabs reach the daily places, "More" opens the full menu (UX concept §4).
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.getByRole('link', { name: 'Organizations' }).click();
+  const tabs = page.getByRole('navigation', { name: 'Main sections' });
+  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeHidden();
+  await tabs.getByRole('link', { name: 'Customers' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'My day' })).toBeHidden();
+  await expect(tabs.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
+  await tabs.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('link', { name: 'Leads' }).click();
+  await expect(page).toHaveURL(/\/sales\/leads/);
 
   const search = page.getByRole('combobox', { name: 'Search organizations' });
   await search.fill(m);

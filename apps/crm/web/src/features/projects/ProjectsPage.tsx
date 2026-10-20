@@ -34,6 +34,7 @@ import { ProjectDialog } from './ProjectDialog';
 import { useProjects } from './api';
 import { statusColor } from './shared';
 import { SavedViews } from '../../shared/views/SavedViews';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   progress: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, minWidth: '140px' },
@@ -99,7 +100,7 @@ export function ProjectsPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('projects.title')}>
             <TableHeader>
               <TableRow>
@@ -157,7 +158,7 @@ export function ProjectsPage() {
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('projects.empty')} />}
           <ListFooter shown={data.length} total={projects.total} hasMore={projects.hasNextPage} loading={projects.isFetchingNextPage} onMore={() => void projects.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
 
       <Dialog open={creating} onOpenChange={(_, d) => !d.open && setCreating(false)}>

@@ -474,16 +474,9 @@ internal sealed record TraceHeaders(
         "Change reason", "Conflict", "Anomalies", "Order no.", "Basis status", "Invoice no.", "Invoice status",
         "Run id", "Status", "Content revision", "Approved digest", "Lines", "Generated", "Amounts", "Included", "Omitted (no finance right)");
 
-    private static readonly TraceHeaders Russian = new(
-        "Трассировка", "Запуск", "Плательщик", "Оргномер", "Клиент, которому оказана услуга", "Группа", "Код продукта", "Описание",
-        "Ключ источника", "Период", "Количество", "Цена за единицу", "Скидка %", "НДС %", "Сумма строки без НДС", "Происхождение", "Решение",
-        "Причина изменения", "Конфликт", "Отклонения", "№ заказа", "Статус основания", "№ счёта", "Статус счёта",
-        "Id запуска", "Статус", "Версия содержимого", "Утверждённый хэш", "Строк", "Создано", "Суммы", "Включены", "Опущены (нет права finance)");
-
     public static TraceHeaders For(string? language) => language switch
     {
         "en" => English,
-        "ru" => Russian,
         _ => Norwegian,
     };
 }

@@ -35,6 +35,8 @@ public sealed class Product : AuditableEntity
 
     private Product() { }
 
+    private Product(Guid id) : base(id) { }
+
     public string Sku { get; private set; } = string.Empty;
     public string Name { get; private set; } = string.Empty;
     public string? NameEn { get; private set; }
@@ -59,9 +61,10 @@ public sealed class Product : AuditableEntity
     public IReadOnlyList<BundleComponent> Components =>
         ComponentsJson is null ? [] : JsonSerializer.Deserialize<List<BundleComponent>>(ComponentsJson, ComponentJson) ?? [];
 
-    public static Result<Product> Create(ProductDetails details)
+    public static Result<Product> Create(ProductDetails details, Guid? creationId = null)
     {
-        var product = new Product();
+        if (creationId is { } key) ArgumentOutOfRangeException.ThrowIfEqual(key, Guid.Empty, nameof(creationId));
+        var product = creationId is { } id ? new Product(id) : new Product();
         var applied = product.Apply(details);
         if (!applied.IsSuccess)
         {

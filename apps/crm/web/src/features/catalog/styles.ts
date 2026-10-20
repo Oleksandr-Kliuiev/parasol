@@ -2,7 +2,7 @@ import { makeStyles, tokens } from '@fluentui/react-components';
 
 /** Shared by catalog and contract list pages, so both look the same. */
 export const useCatalogStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
+  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
   filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
   search: { width: '100%', maxWidth: '320px' },
   tableWrap: {

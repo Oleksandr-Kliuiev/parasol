@@ -36,6 +36,7 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useDialogStyles } from '../contracts/dialogStyles';
 import { useCustomFieldActions, useCustomFieldDefinitions } from './api';
 import { customFieldEntities, customFieldTypes, type CustomFieldDefinition, type CustomFieldEntity, type CustomFieldType } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 /** Fields a company adds to its records without a code change (FR-ADM-04). */
 export function CustomFieldsAdminPage() {
@@ -71,7 +72,7 @@ export function CustomFieldsAdminPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('customFields.title')}>
             <TableHeader>
               <TableRow>
@@ -121,7 +122,7 @@ export function CustomFieldsAdminPage() {
             </TableBody>
           </Table>
           {!isPending && data.length === 0 && <EmptyState message={t('customFields.empty')} />}
-        </div>
+        </ScrollTable>
       )}
 
       <Dialog open={editing !== null} onOpenChange={(_, d) => !d.open && setEditing(null)}>

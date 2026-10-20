@@ -1,5 +1,4 @@
 using Azure.Core;
-using Azure.Identity;
 using Crm.Activities.Contracts;
 using Crm.Customers.Contracts;
 using Crm.Notifications.Contracts;
@@ -28,10 +27,8 @@ public static class MicrosoftGraphModule
         services.AddOptions<GraphOptions>().Bind(configuration.GetSection(GraphOptions.SectionName))
             .Validate(options => options.IsValid(out _), "Integrations:MicrosoftGraph has an address that is not https or a Teams webhook outside Teams:AllowedHostSuffixes.")
             .ValidateOnStart();
-        services.TryAddSingleton<TokenCredential>(sp => new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        {
-            ManagedIdentityClientId = sp.GetRequiredService<IOptions<GraphOptions>>().Value.ManagedIdentityClientId,
-        }));
+        services.TryAddSingleton<TokenCredential>(sp => FileGraphCredential.Create(
+            sp.GetRequiredService<IOptions<GraphOptions>>().Value));
         services.AddTransient<GraphAuthenticationHandler>();
         services.AddHttpClient<IGraphUserSource, GraphUserSource>((sp, client) =>
             {

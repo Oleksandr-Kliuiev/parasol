@@ -1,5 +1,5 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
-import { Module, Controller, Get, Post, Param, Body, Query, Res, UseGuards, Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Module, Controller, Get, Header, Post, Param, Body, Query, Res, UseGuards, Injectable, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { CanActivate, DynamicModule, ExecutionContext } from '@nestjs/common';
 import { runDemo } from '../../../fixtures/run-demo.ts';
 import type { DemoResult } from '../../../fixtures/run-demo.ts';
@@ -15,6 +15,7 @@ import { MemoryToolLedger } from '../../../packages/tools/ledger.ts';
 import type { ClientContextV1 } from '../../../packages/core/contracts.ts';
 import { assertWorkspacePermission, hasClientPermission, hasClientPermissions } from '../../../packages/core/contracts.ts';
 import { toHttp, parseToolRequest } from './http-boundary.ts';
+import { assertObservationId } from '../../../packages/graph/prisma-context.ts';
 import { correlationHttp, correlationQuery } from './db/correlations.ts';
 import type { AskMode } from '../../../packages/ask/config.ts';
 import { ASK_PLANNER, MOCK_PLANNER } from '../../../packages/ask/planner.ts';
@@ -66,6 +67,17 @@ export class AtlasController {
   }
   @Get('clients/:id/observations') async observations(@Param('id') id: string) {
     await this.service.check(id, 'client.observations_denied'); return (await this.service.demo).context.observations;
+  }
+  @Get('clients/:id/observations/:observationId') @Header('Cache-Control', 'no-store') async observation(@Param('id') id: string,
+    @Param('observationId') observationId: string) {
+    await this.service.check(id, 'client.observation_denied');
+    try {
+      assertObservationId(observationId);
+      const observation = (await this.service.demo).context.observations.items.find(o => o.id === observationId
+        && o.workspaceId === scope.workspaceId && o.clientId === id);
+      if (!observation) throw new NotFoundException();
+      return structuredClone(observation);
+    } catch (error) { toHttp(error); }
   }
   @Get('clients/:id/audit') async audit(@Param('id') id: string) {
     await this.service.check(id, 'client.audit_denied'); return (await this.service.demo).audit.list(scope);

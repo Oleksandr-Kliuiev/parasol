@@ -2,12 +2,13 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { SearchBox, Spinner, Text, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
-import { Building16Regular, Person16Regular } from '@fluentui/react-icons';
+import { ArrowRight16Regular, Building16Regular, Person16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { api, query } from '../api/client';
-import type { SearchResponse } from '../api/types';
+import type { SearchHit, SearchResponse } from '../api/types';
 import { useDebouncedValue } from '../shared/utils/useDebouncedValue';
 import { NARROW_SCREEN, useMediaQuery } from '../shared/utils/useMediaQuery';
+import { useNavGroups } from './navigation';
 
 const useStyles = makeStyles({
   root: { position: 'relative', flex: 1, minWidth: 0, maxWidth: '480px' },
@@ -56,12 +57,18 @@ const useStyles = makeStyles({
 const icons: Record<string, ReactElement> = {
   organizations: <Building16Regular />,
   contacts: <Person16Regular />,
+  commands: <ArrowRight16Regular />,
 };
 
-/** Header search (FR-GEN-01): grouped results as you type, arrow keys to move, Enter to open, Ctrl/Cmd+K to focus. */
+const MAX_COMMANDS = 5;
+
+/**
+ * Header search (FR-GEN-01) and command palette (UX concept §8): grouped results as you type, arrow keys to move, Enter
+ * to open, Ctrl/Cmd+K to focus. A "Go to" group lists the menu entries the user may open whose name matches the text.
+ */
 export function GlobalSearch() {
   const styles = useStyles();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -78,7 +85,21 @@ export function GlobalSearch() {
     queryFn: async ({ signal }) => (await api.get<SearchResponse>(`/api/v1/search${query({ q: term, take: 6 })}`, signal)).data,
   });
 
-  const items = useMemo(() => (data?.groups ?? []).flatMap((g) => g.items.map((item) => ({ ...item, group: g.group }))), [data]);
+  const navGroups = useNavGroups();
+  const typed = text.trim().toLocaleLowerCase(i18n.language);
+  const commands = useMemo<SearchHit[]>(() => {
+    if (typed.length < 2) return [];
+    return navGroups
+      .flatMap((group) => group.items.filter((item) => !item.external).map((item) => ({ item, section: t(`nav.${group.label}`) })))
+      .map(({ item, section }) => ({ id: `nav-${item.value}`, title: t(`nav.${item.label}`), subtitle: section, url: item.path }))
+      .filter((hit) => hit.title.toLocaleLowerCase(i18n.language).includes(typed))
+      .slice(0, MAX_COMMANDS);
+  }, [navGroups, typed, t, i18n.language]);
+  const groups = useMemo(
+    () => [...(commands.length > 0 ? [{ group: 'commands', items: commands }] : []), ...(term.length >= 2 ? (data?.groups ?? []) : [])],
+    [commands, data, term],
+  );
+  const items = useMemo(() => groups.flatMap((g) => g.items.map((item) => ({ ...item, group: g.group }))), [groups]);
 
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
@@ -117,7 +138,7 @@ export function GlobalSearch() {
     }
   };
 
-  const showPanel = open && term.length >= 2 && (items.length > 0 || (!isFetching && data !== undefined));
+  const showPanel = open && (commands.length > 0 || (term.length >= 2 && (items.length > 0 || (!isFetching && data !== undefined))));
   let index = -1;
 
   return (
@@ -145,7 +166,7 @@ export function GlobalSearch() {
       />
       {showPanel && (
         <div className={styles.panel} id={listId} role="listbox" aria-label={t('header.search')}>
-          {data?.groups.map((group) => (
+          {groups.map((group) => (
             <div key={group.group} role="group" aria-label={t(`search.groups.${group.group}`, { defaultValue: group.group })}>
               <span className={styles.groupLabel} aria-hidden>
                 {t(`search.groups.${group.group}`, { defaultValue: group.group })}

@@ -36,6 +36,7 @@ import { blankToNull } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useQuoteTemplates, useSaveQuoteTemplate } from './api';
 import type { QuoteTemplate } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: tokens.spacingHorizontalM },
@@ -71,7 +72,7 @@ export function QuoteTemplatesPage() {
       ) : data.length === 0 ? (
         <EmptyState message={t('quoteTemplates.empty')} />
       ) : (
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('quoteTemplates.title')}>
             <TableHeader>
               <TableRow>
@@ -112,7 +113,7 @@ export function QuoteTemplatesPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ScrollTable>
       )}
 
       {editing && <TemplateDialog template={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}

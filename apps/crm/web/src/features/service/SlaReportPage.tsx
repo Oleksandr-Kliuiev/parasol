@@ -24,6 +24,7 @@ import { formatDate, formatNumber } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useSlaReport } from './api';
 import type { SlaOrganizationRow } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   bar: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
@@ -109,7 +110,7 @@ export function SlaReportPage() {
               </div>
             </div>
 
-            <div className={catalog.tableWrap}>
+            <ScrollTable className={catalog.tableWrap}>
               <Table className={catalog.table} aria-label={t('sla.title')}>
                 <TableHeader>
                   <TableRow>
@@ -160,7 +161,7 @@ export function SlaReportPage() {
                 </TableBody>
               </Table>
               {data.organizations.length === 0 && <EmptyState message={t('sla.empty')} />}
-            </div>
+            </ScrollTable>
           </>
         )
       )}

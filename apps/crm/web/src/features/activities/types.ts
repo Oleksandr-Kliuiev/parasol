@@ -36,6 +36,8 @@ export interface Activity {
   createdAt: string;
   createdBy: ActivityRef | null;
   etag: string;
+  /** Presence only: source context is read separately through the employee's Atlas access. */
+  hasTechnicalSource?: boolean;
 }
 
 export interface ActivityRequest {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Button,
   Dialog,
@@ -49,13 +49,20 @@ import { OrganizationProjectsTab } from '../projects/OrganizationProjectsTab';
 import { OrganizationGroupPanel } from './OrganizationGroupPanel';
 import { CustomFieldsPanel } from '../customfields/CustomFieldsPanel';
 import { ActivityTimeline } from '../activities/ActivityTimeline';
+import { activitySelection } from '../activities/activityNavigation';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { CustomerWorkspacePanel } from '../parasol/CustomerWorkspacePanel';
+import { CustomerIdentityPanel } from '../parasol/CustomerIdentityPanel';
+import { useCustomerTabVisibility } from './useCustomerTabVisibility';
+import { useScrollEdges } from '../../shared/utils/useScrollEdges';
 
 const useStyles = makeStyles({
-  // Eleven tabs do not fit a phone: the bar scrolls sideways (a focused tab scrolls into view) instead of widening the page.
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden' },
+  // The tab bar scrolls sideways without widening a phone; URL-selected tabs are revealed too.
+  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
+  overview: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: tokens.spacingHorizontalL, alignItems: 'start', minWidth: 0,
+    '@media (min-width: 1100px)': { ':has([data-technical-layout])': { gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' } } },
+  stack: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: tokens.spacingHorizontalL, alignItems: 'start', minWidth: 0 },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
@@ -82,11 +89,12 @@ type TabValue =
 
 export function OrganizationDetailPage() {
   const styles = useStyles();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const notify = useNotify();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const tab = (params.get('tab') as TabValue | null) ?? 'overview';
   const { data, error, isPending, refetch } = useOrganization(id);
   const canEdit = useCan(Permissions.customersWrite);
@@ -103,6 +111,10 @@ export function OrganizationDetailPage() {
   const restoreFocusTarget = useRestoreFocusTarget();
   const duplicates = useDuplicates(id);
   const mergedIntoId = error instanceof ApiError && error.code === 'CUS_ORGANIZATION_MERGED' ? String(error.problem.mergedIntoId) : null;
+  const tabScope = JSON.stringify([id, i18n.resolvedLanguage, canContracts, canService, canSales,
+    canLicensing, canProjects, canBilling, canActivities]);
+  const tabs = useCustomerTabVisibility(tab, tabScope, !isPending && !error && !mergedIntoId);
+  const tabEdges = useScrollEdges(tabs, 'x', `${tabScope}:${tab}:${isPending}:${Boolean(error)}:${mergedIntoId}`);
 
   useEffect(() => {
     if (mergedIntoId) {
@@ -168,7 +180,10 @@ export function OrganizationDetailPage() {
       )}
 
       <TabList
+        ref={tabs}
         className={styles.tabs}
+        style={tabEdges.style}
+        aria-label={t('organizations.tabsLabel')}
         selectedValue={tab}
         onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}
       >
@@ -194,7 +209,11 @@ export function OrganizationDetailPage() {
       {tab === 'licenses' && canLicensing && <OrganizationLicensesTab organizationId={organization.id} />}
       {tab === 'projects' && canProjects && <OrganizationProjectsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'invoices' && canBilling && <OrganizationInvoicesTab organizationId={organization.id} />}
-      {tab === 'activities' && canActivities && <ActivityTimeline organizationId={organization.id} />}
+      {tab === 'activities' && canActivities && <ActivityTimeline organizationId={organization.id}
+        selection={activitySelection(params)} navigationKey={location.key} onShowAll={() => {
+          const next = new URLSearchParams(params); next.delete('activityId'); next.set('tab', 'activities');
+          setParams(next, { replace: true });
+        }} />}
       {tab === 'mail' && canActivities && <OrganizationMailTab organizationId={organization.id} />}
       {tab === 'documents' && <OrganizationDocumentsTab organizationId={organization.id} />}
       {tab === 'history' && <HistoryList module="customers" entityType="Organization" entityId={organization.id} />}
@@ -223,11 +242,16 @@ export function OrganizationDetailPage() {
 function Overview({ organization: o, etag }: { organization: Organization; etag: string | null }) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const technical = useCan(Permissions.parasolAtlasRead);
   const f = (key: string) => t(`organizations.fields.${key}`);
 
   return (
-    <div className={styles.grid}>
-      <CustomerWorkspacePanel customerId={o.id} />
+    <div className={technical ? styles.overview : styles.stack}>
+      <div className={technical ? styles.stack : styles.grid}>
+        <CustomerWorkspacePanel customerId={o.id} />
+        <CustomerIdentityPanel customerId={o.id} />
+      </div>
+      <div className={styles.grid}>
       <Panel title={t('organizations.sections.contactInfo')}>
         <DetailList
           items={[
@@ -288,6 +312,7 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
           ]}
         />
       </Panel>
+      </div>
     </div>
   );
 }

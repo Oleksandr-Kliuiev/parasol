@@ -203,6 +203,30 @@ Crm.Contracts/
 
 Каждый модуль имеет собственный `DbContext` на общей БД. Транзакция команды включает запись в outbox своей схемы — событие не теряется при сбое.
 
+В Parasol M24 ([ADR-027](adr/ADR-027-local-time-bank-transaction.md)) финансовые команды
+Time → Contracts используют одну локальную Time-owned SQL-транзакцию. Contracts сохраняет
+свой контекст, API, аудит и outbox, присоединяясь к той же connection/transaction. Граница
+явная: та же БД/SQL identity, без callback retry и произвольного внешнего owner. Порядок
+source fences → month locks → финансовый lock → rows → банк → Time commit. Это не меняет
+правило одного модуля для inbox handlers и не охватывает внешние вызовы. Старая история
+требует Finance review; export/invoiced остаётся отдельной границей.
+
+M25 ([ADR-028](adr/ADR-028-time-billing-admission.md)) защищает отдельную границу
+Time/Billing: точные source allocations проверяются под короткой Time read lease до
+Billing commit, затем immutable Billing state запрещает изменение часов. Lease не
+пересекает внешний HTTP и не пишет Time. Выделенный read-only контракт Billing возвращает
+финансовые source facts без сумм; Time writers проверяют их под M23 admission. Inbox
+сверяет revision и меняет только Time. Частичный экспорт учитывается по allocation,
+сохраняя исключённые часы для дополнительного сбора. Историческая неопределённость
+требует Finance review и не разрешает автоматически исправлять старые суммы.
+
+M26 ([ADR-029](adr/ADR-029-saved-time-financial-review.md)) даёт Finance read-only
+сверку одной выбранной записи времени. Пять AND permissions проверяются до lookup;
+имя клиента читается до Time month/row lease, Contracts/Billing — через публичные
+contracts. Повторный GET не меняет баланс, rowversion, audit/outbox и не создаёт period.
+Это наблюдение связанных фактов, не serializable аудит всей истории и не repair-команда.
+Фильтр `reviewOnly` охватывает сохранённые notes до totals/paging, сохраняя employee scope.
+
 ### 5.1 Доставка событий (DEV-07, [ADR-016](adr/ADR-016-outbox-delivery.md))
 - crm-worker выбирает сообщения outbox каждого модуля; захват — аренда с собственным токеном (`LeaseOwner`), продлеваемая, пока работают обработчики. Отметить прогресс, завершить или вернуть сообщение может только держатель токена (compare-and-set); исполнитель, чья аренда истекла и перешла другому, ничего не меняет.
 - Каждый обработчик — в своей области и транзакции. Обработчик модуля начинает её квитанцией `InboxReceipts (MessageId, Handler)` в схеме своего модуля, обработчик адаптера интеграции получает её при первом сохранении. Эффект и квитанция фиксируются вместе; повторная доставка находит квитанцию и ничего не делает. Сообщение помнит завершённые обработчики — повтор выполняет только остальных.

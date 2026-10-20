@@ -41,6 +41,7 @@ import {
   type RestoreLine,
   type RestoreReport,
 } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const MIN_REASON = 10;
 const MAX_REASON = 500;
@@ -321,7 +322,7 @@ function Lines({ lines }: { lines: RestoreLine[] }) {
   const styles = useStyles();
   const { t } = useTranslation();
   return (
-    <div className={styles.tableWrap}>
+    <ScrollTable className={styles.tableWrap}>
       <Table size="small" className={styles.table}>
         <TableHeader>
           <TableRow>
@@ -345,7 +346,7 @@ function Lines({ lines }: { lines: RestoreLine[] }) {
           ))}
         </TableBody>
       </Table>
-    </div>
+    </ScrollTable>
   );
 }
 
@@ -360,7 +361,7 @@ function ReportsPanel({ selected, onSelect }: { selected: string | null; onSelec
       {reports.error && <ErrorState error={reports.error} onRetry={() => void reports.refetch()} />}
       {reports.data && reports.data.length === 0 && <EmptyState message={t('maintenance.reports.empty')} />}
       {reports.data && reports.data.length > 0 && (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table size="small" className={styles.table} aria-label={t('maintenance.reports.title')}>
             <TableHeader>
               <TableRow>
@@ -393,7 +394,7 @@ function ReportsPanel({ selected, onSelect }: { selected: string | null; onSelec
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ScrollTable>
       )}
       {report.error && <ErrorState error={report.error} />}
       {report.data && <ReportView report={report.data} />}

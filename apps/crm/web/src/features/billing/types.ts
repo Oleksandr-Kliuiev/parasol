@@ -158,6 +158,11 @@ export interface Invoice {
   url: string | null;
   syncedAt: string;
   movements: InvoiceMovement[];
+  externalId?: string | null;
+  documentKind?: 'Invoice' | 'CreditNote' | null;
+  documentCurrencyCode?: string | null;
+  lineCoverage?: 'EmptyUnverified' | 'RetrievedUnverified' | 'Reconciled' | null;
+  lineCount?: number | null;
 }
 
 export interface Basis {

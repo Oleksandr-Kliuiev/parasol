@@ -1,3 +1,4 @@
+import { useCallback, useRef, useState } from 'react';
 import { Button, MessageBar, MessageBarBody, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -6,22 +7,12 @@ import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserConte
 import { Panel, DetailList } from '../../shared/components/Panel';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { formatDateTime } from '../../shared/utils/format';
-
-type Status = 'READY' | 'NOT_LINKED' | 'NOT_CONFIGURED' | 'ACCESS_DENIED' | 'SOURCE_NOT_FOUND' | 'UNAVAILABLE' | 'INVALID_RESPONSE' | 'IDENTITY_CHANGED';
-type ResourceStatus = 'OK' | 'STALE' | 'ERROR' | 'MISSING' | 'FIXTURE';
-export interface Workspace {
-  customerId: string;
-  status: Status;
-  summary: null | {
-    mode: 'db' | 'fixture'; generatedAt: string; completeness: string;
-    knownDevices: number; knownPeople: number; activeObservations: number;
-    severityCounts: Record<'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', number>;
-    resources: { source: string; resourceType: string; status: ResourceStatus; asOf: string | null;
-      lastSuccessAt: string | null; returnedItems: number | null; truncated: boolean }[];
-  };
-}
+import { CustomerTechnicalDetails } from './CustomerTechnicalDetails';
+import { parseWorkspace } from './workspaceContract';
+export type { Workspace } from './workspaceContract';
 
 const useStyles = makeStyles({
+  container: { minWidth: 0 },
   list: { padding: 0, listStyle: 'none', display: 'grid', gap: tokens.spacingVerticalM },
   resource: { paddingTop: tokens.spacingVerticalS, borderTop: `1px solid ${tokens.colorNeutralStroke2}` },
   note: { marginBlock: tokens.spacingVerticalM },
@@ -38,22 +29,50 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
   const { t } = useTranslation();
   const styles = useStyles();
   const user = useCurrentUser();
+  const refreshButton = useRef<HTMLButtonElement>(null);
+  const accessChecking = useRef(false);
+  const [sourceCheck, setSourceCheck] = useState({ pending: false, revision: 0, keepM365: false });
   const query = useQuery({
     queryKey: ['parasol', 'workspace', user.id, customerId],
-    queryFn: async ({ signal }) => (await api.get<Workspace>(`/api/v1/parasol/customers/${customerId}/workspace`, signal)).data,
+    queryFn: async ({ signal }) => parseWorkspace((await api.get<unknown>(`/api/v1/parasol/customers/${customerId}/workspace`, signal)).data, customerId),
     retry: false, staleTime: 0, gcTime: 0,
     refetchOnWindowFocus: 'always',
   });
+  const { refetch } = query;
+  const refreshWorkspace = useCallback(() => {
+    setSourceCheck(s => ({ pending: true, revision: s.revision + 1, keepM365: false }));
+    // An explicit gate and revision also clear the old queue if a fast read is batched without a fetching render.
+    void refetch().finally(() => setSourceCheck(s => ({ ...s, pending: false })));
+  }, [refetch]);
+  const sourceInvalidated = useCallback(() => {
+    // Child technical panels disappear during the full scoped read. Keep a stable keyboard target.
+    refreshButton.current?.focus(); refreshWorkspace();
+  }, [refreshWorkspace]);
+  const recheckAccess = useCallback(() => {
+    if (accessChecking.current) return;
+    accessChecking.current = true;
+    // A Microsoft 365 denial may also mean that the whole Atlas context was revoked.
+    // Hide the old context while retaining the denial and its keyboard focus.
+    setSourceCheck(s => ({ ...s, pending: true, keepM365: true }));
+    void refetch().then(result => {
+      if (result.isError || result.data?.status !== 'READY') refreshButton.current?.focus();
+    }).finally(() => {
+      accessChecking.current = false;
+      setSourceCheck(s => ({ ...s, pending: false, keepM365: false }));
+    });
+  }, [refetch]);
   // A fresh check hides the previous snapshot, including during a failed refresh or a permission change.
-  const data = !query.isFetching && !query.isError ? query.data : undefined;
+  const checking = sourceCheck.pending || query.isFetching;
+  const data = !checking && !query.isError ? query.data : undefined;
   const summary = data?.status === 'READY' ? data.summary : null;
   return (
-    <Panel title={t('parasol.title')} actions={<Button size="small" disabled={query.isFetching} onClick={() => void query.refetch()}>{t('parasol.refresh')}</Button>}>
-      {query.isFetching && <Spinner size="small" label={t('common.loading')} />}
-      {query.isError && <ErrorState error={query.error} onRetry={() => void query.refetch()} />}
+    <div className={styles.container} data-technical-layout={query.data?.status === 'READY' && !query.isError ? '' : undefined}>
+    <Panel title={t('parasol.title')} actions={<Button ref={refreshButton} size="small" disabled={checking} disabledFocusable={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
+      {checking && <Spinner size="small" label={t('common.loading')} />}
+      {!checking && query.isError && <ErrorState error={query.error} onRetry={refreshWorkspace} />}
       {data && data.status !== 'READY' && <Text role="status">{t(`parasol.status.${data.status}`)}</Text>}
       {summary && <>
-        {summary.mode === 'fixture' && <MessageBar intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
+        {summary.mode === 'fixture' && <MessageBar layout="multiline" intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
         <Text block className={styles.note}>{t('parasol.snapshot', { time: formatDateTime(summary.generatedAt) })}</Text>
         <DetailList items={[
           { label: t('parasol.devices'), value: String(summary.knownDevices) },
@@ -74,6 +93,10 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
           </li>)}
         </ul>
       </>}
+      {(summary || (sourceCheck.pending && sourceCheck.keepM365)) && <CustomerTechnicalDetails
+        key={`${user.id}:${sourceCheck.revision}`} customerId={customerId} summary={summary} contextChecking={checking}
+        onSourceInvalidated={sourceInvalidated} onAccessDenied={recheckAccess} />}
     </Panel>
+    </div>
   );
 }

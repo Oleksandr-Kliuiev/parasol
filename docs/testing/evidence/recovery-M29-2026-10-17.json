@@ -1,0 +1,77 @@
+{
+  "format": 1,
+  "milestone": "M29",
+  "verifiedAt": "2026-10-17",
+  "scope": "Local synthetic native persistence recovery; no working provider or VPS",
+  "applicationBuild": {
+    "currentLinuxImages": 4,
+    "builtBeforeThisDrill": true,
+    "applicationAndBuildInputsUnchanged": 2703,
+    "pushed": false
+  },
+  "operationsTests": {
+    "passed": 21,
+    "failed": 0,
+    "skipped": 0
+  },
+  "nativeRecovery": {
+    "status": "passed",
+    "finalRun": "native-04",
+    "automaticRetries": 0,
+    "previousFailedFixtureRunsRetainedPrivately": 3,
+    "backupSeconds": 16.51,
+    "restoreSeconds": 25.19,
+    "workflow": {
+      "sqlRows": 8,
+      "atlasRows": 5,
+      "exactRowsAndVersions": true,
+      "relationsAndKeys": true,
+      "runtimeReceiptUpdateDeleteDenied": true,
+      "ownerSeededPersistenceOnly": true,
+      "httpReplayTested": false,
+      "sourceChangedAfterBackup": true
+    },
+    "checks": [
+      "restic restore --verify",
+      "file inventory SHA-256",
+      "SQL VERIFYONLY/CHECKDB",
+      "PostgreSQL restore --exit-on-error",
+      "restricted runtime roles",
+      "web/Atlas readiness",
+      "SQL and PostgreSQL before/after markers",
+      "exact current workflow rows and rowversions",
+      "workflow relations and permanent keys",
+      "both runtime logins deny receipt UPDATE/DELETE",
+      "exact document and keyring inventory",
+      "corrupt encrypted pack rejected",
+      "edge isolation"
+    ],
+    "isolationObserved": {
+      "noPublishedPorts": true,
+      "allNetworksInternal": true,
+      "sourceStopped": true,
+      "noWorkerOrCaddy": true,
+      "exactCurrentApplicationImages": true,
+      "productionReadOnly": true,
+      "entraAuthPreserved": true
+    },
+    "promoted": false
+  },
+  "cleanup": {
+    "ownedProjects": 6,
+    "containersNetworksVolumesAndScratchAbsent": true,
+    "fixturePortsClosed": true,
+    "generatedPrivateStateRemoved": true,
+    "onlyOwnedResourcesTouched": true,
+    "localBuildImagesRetained": true
+  },
+  "originalRepositoriesPreserved": 2,
+  "published": false,
+  "deployed": false,
+  "limits": [
+    "Owner-seeded persistence; no HTTP replay or Entra login in this drill",
+    "Tiny local synthetic data; not production RTO/RPO or offsite access",
+    "Existing CRM/Atlas/composition gates are separate; no new full application suite claimed",
+    "Staff feedback, working provider checks and future target-VPS restore remain outstanding"
+  ]
+}

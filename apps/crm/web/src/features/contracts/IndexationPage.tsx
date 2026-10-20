@@ -27,6 +27,7 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatMoney, formatNumber, parseDecimal } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useApplyIndexation, useIndexationPreview } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   form: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
@@ -119,7 +120,7 @@ export function IndexationPage() {
               )}
             </div>
 
-            <div className={catalog.tableWrap}>
+            <ScrollTable className={catalog.tableWrap}>
               <Table className={catalog.table} aria-label={t('contracts.indexation.title')}>
                 <TableHeader>
                   <TableRow>
@@ -170,7 +171,7 @@ export function IndexationPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollTable>
 
             <MessageBar intent="info" style={{ marginTop: 12 }}>
               <MessageBarBody>{t('contracts.indexation.notifyHint')}</MessageBarBody>

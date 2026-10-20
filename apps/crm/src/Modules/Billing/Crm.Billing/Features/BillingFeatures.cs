@@ -234,7 +234,14 @@ public sealed record InvoiceDto(
     bool IsOverdue,
     string? Url,
     DateTimeOffset SyncedAt,
-    IReadOnlyList<InvoiceMovementDto> Movements);
+    IReadOnlyList<InvoiceMovementDto> Movements)
+{
+    public Guid? ExternalId { get; init; }
+    public InvoiceDocumentKind? DocumentKind { get; init; }
+    public string? DocumentCurrencyCode { get; init; }
+    public InvoiceLineCoverage? LineCoverage { get; init; }
+    public int? LineCount { get; init; }
+}
 
 /// <summary>
 /// A change of the remaining amount of an invoice as the sync saw it. <paramref name="ObservedOn"/> is the day of the sync, not the

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useParams } from 'react-router';
 import {
   Button,
@@ -61,6 +61,7 @@ import { monthLabel } from './period';
 import type { ProductListItem } from '../catalog/types';
 import type { BasisLine } from './types';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -288,7 +289,7 @@ export function BillingBasisPage() {
           )}
         </div>
 
-        <div className={catalog.tableWrap}>
+        <ScrollTable className={catalog.tableWrap}>
           <Table className={catalog.table} aria-label={t('billing.lines')}>
             <TableHeader>
               <TableRow>
@@ -302,8 +303,8 @@ export function BillingBasisPage() {
             </TableHeader>
             <TableBody>
               {groups.map((group) => (
-                <>
-                  <TableRow key={group} className={styles.group}>
+                <Fragment key={group}>
+                  <TableRow className={styles.group}>
                     <TableCell colSpan={canSeeMoney ? (withActions ? 6 : 5) : withActions ? 4 : 3}>{t(`billing.groups.${group}`)}</TableCell>
                   </TableRow>
                   {basis.lines
@@ -438,12 +439,12 @@ export function BillingBasisPage() {
                         </TableRow>
                       );
                     })}
-                </>
+                </Fragment>
               ))}
             </TableBody>
           </Table>
           {basis.lines.length === 0 && <EmptyState message={t('billing.noLines')} />}
-        </div>
+        </ScrollTable>
       </div>
 
       <Dialog open={dialog !== null} onOpenChange={(_, d) => !d.open && setDialog(null)}>

@@ -1,0 +1,60 @@
+{
+  "recordedAt": "2026-10-17T17:52:50.635423+00:00",
+  "scope": "M31 local synthetic implementation acceptance; product goal remains open",
+  "status": "locally-verified",
+  "crm": {
+    "unit": 963,
+    "architecture": 94,
+    "affectedSql": 93,
+    "frontendAffected": 91,
+    "frontend": 614,
+    "browser": 87,
+    "tooling": 22,
+    "skipped": 0,
+    "retries": 0,
+    "initialGzipKb": 292.2,
+    "budgetKb": 300
+  },
+  "atlas": {
+    "strictUnit": 714,
+    "strictPostgres": 797,
+    "strictBrowser": 90,
+    "skipped": 0,
+    "retries": 0,
+    "frozenInputs": 1426,
+    "completeEvidence": "atlas-strict-current-2026-10-17.json"
+  },
+  "composition": {
+    "report": "composition-current-2026-10-17.json",
+    "reportSha256": "d586f602cf2505543e0e44ec31795cf8bd0bf6feab370e5b3a4b4910357faa21",
+    "runId": "606c5c54e347",
+    "accepted": true,
+    "diagnostic": false,
+    "builtInThisRun": true,
+    "browser": 10,
+    "atlasRequests": 570,
+    "mutatingAtlasRequests": 0,
+    "cleanup": true
+  },
+  "inputChecks": {
+    "crmBackend": 804,
+    "crmSqlSourceBuildFixture": 856,
+    "frontend": 407,
+    "atlas": 1426,
+    "rootTooling": 32,
+    "compositionUnion": 2717,
+    "allCurrentBytesMatch": true
+  },
+  "residualGates": [
+    "staff feedback and measured human workflow time",
+    "working-provider and Entra checks by separate permission",
+    "historical financial reconciliation",
+    "target VPS/offsite/restore acceptance by separate permission"
+  ],
+  "historicalScope": {
+    "financialSql208": "M26, not rerun for M31",
+    "nativeRestore": "M29 images predate M30/M31"
+  },
+  "published": false,
+  "deployed": false
+}
