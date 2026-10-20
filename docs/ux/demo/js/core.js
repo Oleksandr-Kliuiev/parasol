@@ -53,7 +53,7 @@
 
   var prefs = readPrefs();
   P.state = {
-    lang: prefs.lang || 'ru',
+    lang: prefs.lang === 'ru' || !prefs.lang ? 'nb' : prefs.lang,
     theme: prefs.theme || document.documentElement.getAttribute('data-theme') || 'system',
     role: prefs.role || 'technician',
     density: prefs.density || 'comfortable',
@@ -146,8 +146,12 @@
 
   /* ---------- Locale-aware formatting ---------- */
 
-  var LOCALE = { ru: 'ru-RU', en: 'en-GB', nb: 'nb-NO' };
-  P.locale = function () { return LOCALE[P.state.lang] || 'ru-RU'; };
+  var LOCALE = { nb: 'nb-NO', nn: 'nn-NO', en: 'en-GB' };
+  /* A browser without Nynorsk data (some headless builds) formats dates and money in English: use Bokmål then */
+  P.locale = function () {
+    var wanted = LOCALE[P.state.lang] || 'nb-NO';
+    return Intl.DateTimeFormat.supportedLocalesOf([wanted]).length ? wanted : 'nb-NO';
+  };
 
   var nfCache = {};
   function nf(opts) {
@@ -185,10 +189,9 @@
     },
     month: function (y, m) {
       var s = new Intl.DateTimeFormat(P.locale(), { month: 'long', year: 'numeric' }).format(new Date(y, m, 1));
-      s = s.replace(/\s*г\.$/, '');
       return s.charAt(0).toUpperCase() + s.slice(1);
     },
-    /* "08:40", "вчера 23:10", "пт 16.10", "03.09.2026" depending on distance */
+    /* "08:40", "i går 23:10", "fre 16.10", "03.09.2026" depending on distance */
     when: function (d) {
       var diff = P.dayDiff(d, P.NOW);
       if (diff === 0) return P.t('when.today') + ' ' + P.fmt.time(d);

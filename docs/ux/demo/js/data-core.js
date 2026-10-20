@@ -64,26 +64,26 @@
 
   /* ---------- Customers ---------- */
 
-  var S = function (ru, en, nb) { return { ru: ru, en: en, nb: nb }; };
+  var S = function (nb, en, nn) { return { nb: nb, en: en, nn: nn }; };
   var SECT = {
-    accounting: S('Бухгалтерия', 'Accounting', 'Regnskap'),
-    estate: S('Недвижимость', 'Real estate', 'Eiendom'),
-    facility: S('Эксплуатация зданий', 'Facility services', 'Drift og vedlikehold'),
-    dental: S('Стоматология', 'Dental clinic', 'Tannklinikk'),
-    kindergarten: S('Детский сад', 'Kindergarten', 'Barnehage'),
-    law: S('Юридическая фирма', 'Law firm', 'Advokatfirma'),
-    electric: S('Электромонтаж', 'Electrical contractor', 'Elektroinstallasjon'),
-    bakery: S('Пекарня', 'Bakery', 'Bakeri'),
-    architects: S('Архитектура', 'Architects', 'Arkitekter'),
-    seafood: S('Морепродукты', 'Seafood', 'Sjømat'),
-    medical: S('Медицинский центр', 'Medical centre', 'Legesenter'),
-    logistics: S('Логистика', 'Logistics', 'Logistikk'),
-    construction: S('Строительство', 'Construction', 'Bygg og anlegg'),
-    marina: S('Гавань и сервис', 'Marina', 'Småbåthavn'),
-    retail: S('Розничная торговля', 'Retail', 'Varehandel'),
-    transport: S('Транспорт', 'Transport', 'Transport'),
-    hospitality: S('Гостиницы и кафе', 'Hospitality', 'Overnatting og servering'),
-    consulting: S('Консалтинг', 'Consulting', 'Rådgivning')
+    accounting: S('Regnskap', 'Accounting', 'Rekneskap'),
+    estate: S('Eiendom', 'Real estate', 'Eiendom'),
+    facility: S('Drift og vedlikehold', 'Facility services', 'Drift og vedlikehald'),
+    dental: S('Tannklinikk', 'Dental clinic', 'Tannklinikk'),
+    kindergarten: S('Barnehage', 'Kindergarten', 'Barnehage'),
+    law: S('Advokatfirma', 'Law firm', 'Advokatfirma'),
+    electric: S('Elektroinstallasjon', 'Electrical contractor', 'Elektroinstallasjon'),
+    bakery: S('Bakeri', 'Bakery', 'Bakeri'),
+    architects: S('Arkitekter', 'Architects', 'Arkitekter'),
+    seafood: S('Sjømat', 'Seafood', 'Sjømat'),
+    medical: S('Legesenter', 'Medical centre', 'Legesenter'),
+    logistics: S('Logistikk', 'Logistics', 'Logistikk'),
+    construction: S('Bygg og anlegg', 'Construction', 'Bygg og anlegg'),
+    marina: S('Småbåthavn', 'Marina', 'Småbåthavn'),
+    retail: S('Varehandel', 'Retail', 'Varehandel'),
+    transport: S('Transport', 'Transport', 'Transport'),
+    hospitality: S('Overnatting og servering', 'Hospitality', 'Overnatting og servering'),
+    consulting: S('Rådgivning', 'Consulting', 'Rådgiving')
   };
 
   var HAND = [
@@ -205,16 +205,16 @@
   var SEC = S;
   obs({ customer: 'fjordlys', sev: 'CRITICAL', kind: 'SECURITY_INCIDENT', summary: 'Possible credential theft on FJL-LT-07', host: 'FJL-LT-07',
     occurredAt: at(0, 7, 52), updatedAt: at(0, 8, 31),
-    detail: SEC('Huntress сообщает о запуске средства извлечения учётных данных из памяти процесса LSASS. Отчёт об инциденте отправлен и ожидает проверки.',
+    detail: SEC('Huntress melder om et verktøy som leser LSASS-minnet for å hente påloggingsdata. Hendelsesrapporten er sendt og venter på gjennomgang.',
       'Huntress reports a credential dumping tool reading LSASS memory. The incident report was sent and awaits review.',
-      'Huntress melder om et verktøy som leser LSASS-minnet for å hente påloggingsdata. Hendelsesrapporten er sendt og venter på gjennomgang.') });
+      'Huntress melder om eit verktøy som les LSASS-minnet for å hente påloggingsdata. Hendingsrapporten er send og ventar på gjennomgang.') });
   obs({ customer: 'fjordlys', sev: 'HIGH', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 97% (C:)', host: 'FJL-SRV-01',
     occurredAt: at(-1, 23, 10), task: 't2' });
   obs({ customer: 'bergvik', sev: 'HIGH', kind: 'SECURITY_INCIDENT', summary: 'Mailbox rule review', deviceStatus: 'UNAVAILABLE',
     occurredAt: at(-1, 21, 40),
-    detail: SEC('Новое правило пересылки во внешний ящик у пользователя resepsjon@. Устройство не определено: событие относится к почтовому ящику.',
+    detail: SEC('En ny videresendingsregel til en ekstern postkasse for resepsjon@. Ingen enhet: hendelsen gjelder en postkasse.',
       'A new forwarding rule to an external mailbox for resepsjon@. No device: the event belongs to a mailbox.',
-      'En ny videresendingsregel til en ekstern postkasse for resepsjon@. Ingen enhet: hendelsen gjelder en postkasse.') });
+      'Ei ny vidaresendingsregel til ei ekstern postkasse for resepsjon@. Inga eining: hendinga gjeld ei postkasse.') });
   obs({ customer: 'nordlys', sev: 'HIGH', kind: 'SECURITY_INCIDENT', summary: 'Security incident awaiting review', host: 'NLD-LT-14',
     status: 'ACKNOWLEDGED', occurredAt: at(-2, 15, 20), updatedAt: at(-1, 9, 5), task: 't3' });
   obs({ customer: 'kvamme', sev: 'HIGH', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 96% (C:)', host: 'KVS-LT-04',

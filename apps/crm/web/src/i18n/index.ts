@@ -27,7 +27,9 @@ export function detectLanguage(preferred?: string | null): LanguageCode {
 }
 
 export function localeOf(language: string): string {
-  return languages.find((l) => l.code === language)?.locale ?? 'nb-NO';
+  const locale = languages.find((l) => l.code === language)?.locale ?? 'nb-NO';
+  // A browser without Nynorsk data (some headless builds) would format dates and money in English: Bokmål is the next best.
+  return Intl.DateTimeFormat.supportedLocalesOf([locale]).length ? locale : 'nb-NO';
 }
 
 const loaded = new Set<LanguageCode>();

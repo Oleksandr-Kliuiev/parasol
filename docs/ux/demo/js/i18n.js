@@ -1,14 +1,14 @@
-/* Parasoll UX demo: interface strings in three languages (RU default, EN, NB).
-   Keys are flat; a value can be a plural object { one, few, many, other }. */
+/* Parasoll UX demo: interface strings in three languages (NB default, NN, EN).
+   Keys are flat; a value can be a plural object { one, other }. */
 (function () {
   'use strict';
 
   var P = window.P;
   P.locales = P.locales || {};
   P.languages = [
-    { code: 'ru', label: 'Русский' },
-    { code: 'en', label: 'English' },
-    { code: 'nb', label: 'Norsk bokmål' }
+    { code: 'nb', label: 'Norsk bokmål' },
+    { code: 'nn', label: 'Norsk nynorsk' },
+    { code: 'en', label: 'English' }
   ];
 
   var rules = {};
@@ -45,14 +45,14 @@
     return v;
   };
 
-  /* Synthetic user-written content carries its own translations: { ru, en, nb } */
+  /* Synthetic user-written content carries its own translations: { nb, nn, en } */
   P.L = function (value) {
     if (value == null) return '';
     if (typeof value === 'string') return value;
-    return value[P.state.lang] || value.en || value.ru || '';
+    return value[P.state.lang] || value.nb || value.en || '';
   };
 
   P.applyLang = function () {
-    document.documentElement.lang = P.state.lang === 'nb' ? 'nb' : P.state.lang;
+    document.documentElement.lang = P.state.lang;
   };
 })();

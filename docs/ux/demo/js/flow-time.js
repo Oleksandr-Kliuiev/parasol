@@ -148,7 +148,7 @@
     }
     var link = f.link.split(':');
     var entry = M.logTime({ customer: f.customer || null, date: parse(f.date), hours: hours, billable: f.billable, onsite: f.onsite,
-      desc: f.desc ? { ru: f.desc, en: f.desc, nb: f.desc } : { ru: 'Работа по задаче', en: 'Task work', nb: 'Arbeid med oppgave' },
+      desc: f.desc ? { nb: f.desc, en: f.desc, nn: f.desc } : { nb: 'Arbeid med oppgave', en: 'Task work', nn: 'Arbeid med oppgåve' },
       ticket: link[0] === 'ticket' ? link[1] : null, task: f.taskId || (link[0] === 'task' ? link[1] : null) });
     var taskId = entry.task;
     var c = D.customer(entry.customer);

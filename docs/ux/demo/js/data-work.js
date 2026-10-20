@@ -7,7 +7,7 @@
   var D = P.data;
   var at = P.at;
   var rnd = D.rnd;
-  var S = function (ru, en, nb) { return { ru: ru, en: en, nb: nb }; };
+  var S = function (nb, en, nn) { return { nb: nb, en: en, nn: nn }; };
 
   /* ---------- Tasks (CRM activities). A task made from an observation keeps the generic subject;
      the observation summary is never copied into it (privacy rule from M12). ---------- */
@@ -17,19 +17,19 @@
     { id: 't1', customer: 'kvamme', type: 'Task', subject: GENERIC, source: 'o5', ticket: '910219', assignee: 'ingrid', due: at(-3, 15, 0), priority: 'High', createdBy: 'jonas', createdAt: at(-4, 10, 30), version: 3 },
     { id: 't2', customer: 'fjordlys', type: 'Task', subject: GENERIC, source: 'o2', ticket: '910231', assignee: 'ingrid', due: at(0, 12, 0), priority: 'High', createdBy: 'ingrid', createdAt: at(0, 7, 40), version: 2 },
     { id: 't3', customer: 'nordlys', type: 'Task', subject: GENERIC, source: 'o4', ticket: null, assignee: 'ingrid', due: at(0, 14, 0), priority: 'High', createdBy: 'anna', createdAt: at(-1, 9, 10), version: 1, conflict: true },
-    { id: 't4', customer: 'bergvik', type: 'Task', subject: S('Новый сотрудник: подготовить ПК и учётную запись Microsoft 365', 'New employee: prepare PC and Microsoft 365 account', 'Ny ansatt: klargjør PC og Microsoft 365-konto'), ticket: '910225', assignee: 'ingrid', due: at(0, 15, 30), priority: 'Normal', createdBy: 'anna', createdAt: at(-4, 13, 0), version: 1 },
-    { id: 't5', customer: 'eikeli', type: 'Meeting', subject: S('Плановый визит: проверка резервного копирования', 'Scheduled visit: backup review', 'Planlagt besøk: gjennomgang av sikkerhetskopi'), assignee: 'ingrid', due: at(1, 9, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-7, 11, 0), version: 1, onsite: true },
-    { id: 't6', customer: 'skarvoy', type: 'Call', subject: S('Позвонить: VPN отключается из дома', 'Call: VPN drops when working from home', 'Ring: VPN faller ut hjemmefra'), ticket: '910228', assignee: 'ingrid', due: at(2, 10, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-5, 9, 0), version: 1 },
-    { id: 't7', customer: 'aerlige', type: 'Task', subject: S('Заменить батарею ИБП в серверной', 'Replace the UPS battery in the server room', 'Bytt UPS-batteri i serverrommet'), assignee: 'ingrid', due: null, priority: 'Low', createdBy: 'jonas', createdAt: at(-9, 14, 0), version: 1 },
-    { id: 't0', customer: 'fjordlys', type: 'Task', subject: S('Сбросить MFA для нового телефона пользователя', "Reset MFA for a user's new phone", 'Tilbakestill MFA for brukerens nye telefon'), assignee: 'ingrid', due: at(0, 9, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-1, 16, 0), version: 2, status: 'Done', completedAt: at(0, 8, 15) },
+    { id: 't4', customer: 'bergvik', type: 'Task', subject: S('Ny ansatt: klargjør PC og Microsoft 365-konto', 'New employee: prepare PC and Microsoft 365 account', 'Ny tilsett: gjer klar PC og Microsoft 365-konto'), ticket: '910225', assignee: 'ingrid', due: at(0, 15, 30), priority: 'Normal', createdBy: 'anna', createdAt: at(-4, 13, 0), version: 1 },
+    { id: 't5', customer: 'eikeli', type: 'Meeting', subject: S('Planlagt besøk: gjennomgang av sikkerhetskopi', 'Scheduled visit: backup review', 'Planlagt besøk: gjennomgang av tryggingskopi'), assignee: 'ingrid', due: at(1, 9, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-7, 11, 0), version: 1, onsite: true },
+    { id: 't6', customer: 'skarvoy', type: 'Call', subject: S('Ring: VPN faller ut hjemmefra', 'Call: VPN drops when working from home', 'Ring: VPN fell ut heimanfrå'), ticket: '910228', assignee: 'ingrid', due: at(2, 10, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-5, 9, 0), version: 1 },
+    { id: 't7', customer: 'aerlige', type: 'Task', subject: S('Bytt UPS-batteri i serverrommet', 'Replace the UPS battery in the server room', 'Byt UPS-batteri i serverrommet'), assignee: 'ingrid', due: null, priority: 'Low', createdBy: 'jonas', createdAt: at(-9, 14, 0), version: 1 },
+    { id: 't0', customer: 'fjordlys', type: 'Task', subject: S('Tilbakestill MFA for brukerens nye telefon', "Reset MFA for a user's new phone", 'Tilbakestill MFA for den nye telefonen til brukaren'), assignee: 'ingrid', due: at(0, 9, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-1, 16, 0), version: 2, status: 'Done', completedAt: at(0, 8, 15) },
     { id: 'j1', customer: 'havbris', type: 'Task', subject: GENERIC, source: 'o7', assignee: 'jonas', due: at(1, 12, 0), priority: 'High', createdBy: 'jonas', createdAt: at(-1, 15, 0), version: 1 },
-    { id: 'j2', customer: 'granlund', type: 'Task', subject: S('Обновить прошивку межсетевого экрана', 'Update the firewall firmware', 'Oppdater fastvaren på brannmuren'), assignee: 'jonas', due: at(0, 16, 0), priority: 'Normal', createdBy: 'jonas', createdAt: at(-3, 9, 0), version: 1 },
-    { id: 'j3', customer: 'vestbris', type: 'Task', subject: S('Принтер на складе не печатает', 'Warehouse printer does not print', 'Skriveren på lageret skriver ikke ut'), ticket: '910233', assignee: 'jonas', due: at(0, 11, 0), priority: 'Normal', createdBy: 'jonas', createdAt: at(-2, 13, 0), version: 1 },
-    { id: 'j4', customer: 'lindas', type: 'Call', subject: S('Обсудить переход на Microsoft 365 Business Premium', 'Discuss moving to Microsoft 365 Business Premium', 'Diskuter overgang til Microsoft 365 Business Premium'), assignee: 'jonas', due: at(4, 13, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-6, 10, 0), version: 1 },
+    { id: 'j2', customer: 'granlund', type: 'Task', subject: S('Oppdater fastvaren på brannmuren', 'Update the firewall firmware', 'Oppdater fastvara på brannmuren'), assignee: 'jonas', due: at(0, 16, 0), priority: 'Normal', createdBy: 'jonas', createdAt: at(-3, 9, 0), version: 1 },
+    { id: 'j3', customer: 'vestbris', type: 'Task', subject: S('Skriveren på lageret skriver ikke ut', 'Warehouse printer does not print', 'Skrivaren på lageret skriv ikkje ut'), ticket: '910233', assignee: 'jonas', due: at(0, 11, 0), priority: 'Normal', createdBy: 'jonas', createdAt: at(-2, 13, 0), version: 1 },
+    { id: 'j4', customer: 'lindas', type: 'Call', subject: S('Diskuter overgang til Microsoft 365 Business Premium', 'Discuss moving to Microsoft 365 Business Premium', 'Diskuter overgang til Microsoft 365 Business Premium'), assignee: 'jonas', due: at(4, 13, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-6, 10, 0), version: 1 },
     { id: 'j5', customer: 'eikeli', type: 'Task', subject: GENERIC, source: 'o6', assignee: 'jonas', due: at(0, 13, 0), priority: 'High', createdBy: 'jonas', createdAt: at(0, 8, 38), version: 1 },
-    { id: 'a1', customer: 'fjordlys', type: 'Task', subject: S('Продление договора K-2026-0001: подготовить предложение', 'Contract K-2026-0001 renewal: prepare a quote', 'Fornyelse av avtale K-2026-0001: lag tilbud'), assignee: 'anna', due: at(4, 12, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-2, 9, 0), version: 1 },
-    { id: 'a2', customer: 'fjordlys', type: 'Call', subject: S('Напомнить о счёте 10118', 'Remind the customer about invoice 10118', 'Påminn kunden om faktura 10118'), assignee: 'anna', due: at(0, 10, 0), priority: 'High', createdBy: 'anna', createdAt: at(0, 8, 0), version: 1 },
-    { id: 'a3', customer: 'c17', type: 'Task', subject: S('Подписать сверку пилотного биллинга за сентябрь', 'Sign the September pilot billing reconciliation', 'Signer avstemmingen av pilotfaktureringen for september'), assignee: 'anna', due: at(1, 15, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-5, 9, 0), version: 1 }
+    { id: 'a1', customer: 'fjordlys', type: 'Task', subject: S('Fornyelse av avtale K-2026-0001: lag tilbud', 'Contract K-2026-0001 renewal: prepare a quote', 'Fornying av avtale K-2026-0001: lag tilbod'), assignee: 'anna', due: at(4, 12, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-2, 9, 0), version: 1 },
+    { id: 'a2', customer: 'fjordlys', type: 'Call', subject: S('Påminn kunden om faktura 10118', 'Remind the customer about invoice 10118', 'Påminn kunden om faktura 10118'), assignee: 'anna', due: at(0, 10, 0), priority: 'High', createdBy: 'anna', createdAt: at(0, 8, 0), version: 1 },
+    { id: 'a3', customer: 'c17', type: 'Task', subject: S('Signer avstemmingen av pilotfaktureringen for september', 'Sign the September pilot billing reconciliation', 'Signer avstemminga av pilotfaktureringa for september'), assignee: 'anna', due: at(1, 15, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-5, 9, 0), version: 1 }
   ];
   D.tasks.forEach(function (t) { t.status = t.status || 'Open'; });
   D.task = function (id) { return D.tasks.filter(function (t) { return t.id === id; })[0]; };
@@ -54,19 +54,19 @@
 
   /* ---------- Time entries (hours in decimal, Oslo business dates) ---------- */
 
-  var W = function (ru, en, nb) { return S(ru, en, nb); };
+  var W = function (nb, en, nn) { return S(nb, en, nn); };
   var DESC = {
-    printer: W('Настройка нового принтера', 'New printer setup', 'Oppsett av ny skriver'),
-    backup: W('Ошибка резервного копирования, повторный запуск', 'Backup failure, rerun', 'Backup-feil, ny kjøring'),
-    review: W('Квартальный обзор на месте', 'Quarterly on-site review', 'Kvartalsvis gjennomgang på stedet'),
-    learning: W('Внутреннее: обучение Intune', 'Internal: Intune training', 'Internt: opplæring i Intune'),
-    disk: W('Очистка диска и перенос архива', 'Disk clean-up and archive move', 'Diskopprydding og flytting av arkiv'),
-    vpn: W('Диагностика VPN-клиента', 'VPN client troubleshooting', 'Feilsøking av VPN-klient'),
-    onboard: W('Подготовка ПК нового сотрудника', 'New employee PC preparation', 'Klargjøring av PC for ny ansatt'),
-    m365: W('Лицензии и почтовые ящики Microsoft 365', 'Microsoft 365 licences and mailboxes', 'Microsoft 365-lisenser og postkasser'),
-    router: W('Замена маршрутизатора в гавани', 'Router replacement at the marina', 'Bytte av ruter i havna'),
-    remote: W('Удалённая сессия (импорт Atera)', 'Remote session (Atera import)', 'Fjernøkt (import fra Atera)'),
-    patch: W('Установка обновлений на сервер', 'Server patching', 'Oppdatering av server')
+    printer: W('Oppsett av ny skriver', 'New printer setup', 'Oppsett av ny skrivar'),
+    backup: W('Backup-feil, ny kjøring', 'Backup failure, rerun', 'Backup-feil, ny køyring'),
+    review: W('Kvartalsvis gjennomgang på stedet', 'Quarterly on-site review', 'Kvartalsvis gjennomgang på staden'),
+    learning: W('Internt: opplæring i Intune', 'Internal: Intune training', 'Internt: opplæring i Intune'),
+    disk: W('Diskopprydding og flytting av arkiv', 'Disk clean-up and archive move', 'Diskopprydding og flytting av arkiv'),
+    vpn: W('Feilsøking av VPN-klient', 'VPN client troubleshooting', 'Feilsøking av VPN-klient'),
+    onboard: W('Klargjøring av PC for ny ansatt', 'New employee PC preparation', 'Klargjering av PC for ny tilsett'),
+    m365: W('Microsoft 365-lisenser og postkasser', 'Microsoft 365 licences and mailboxes', 'Microsoft 365-lisensar og postkassar'),
+    router: W('Bytte av ruter i havna', 'Router replacement at the marina', 'Bytte av ruter i hamna'),
+    remote: W('Fjernøkt (import fra Atera)', 'Remote session (Atera import)', 'Fjernøkt (import frå Atera)'),
+    patch: W('Oppdatering av server', 'Server patching', 'Oppdatering av server')
   };
   var seq = 0;
   function te(staff, customer, day, hours, desc, extra) {
@@ -124,16 +124,16 @@
       name: c.devicesN > 15 ? 'Managed Workstation Pro' : 'Managed Workstation',
       sla: c.devicesN > 25 ? '12x5' : '8x5', monthly: managed + (c.hourBank ? 0 : 0),
       lines: [
-        { text: S('Управляемая рабочая станция', 'Managed workstation', 'Administrert arbeidsstasjon'), qty: c.devicesN, unit: 450 },
-        { text: S('Резервное копирование Microsoft 365', 'Microsoft 365 backup', 'Sikkerhetskopi av Microsoft 365'), qty: Math.max(5, c.devicesN + 2), unit: 39 }
+        { text: S('Administrert arbeidsstasjon', 'Managed workstation', 'Administrert arbeidsstasjon'), qty: c.devicesN, unit: 450 },
+        { text: S('Sikkerhetskopi av Microsoft 365', 'Microsoft 365 backup', 'Tryggingskopi av Microsoft 365'), qty: Math.max(5, c.devicesN + 2), unit: 39 }
       ],
       start: new Date(2025, (i * 3) % 12, 1), renewal: renewal, notice: notice
     };
   });
   D.contractOf = function (customer) { return D.contracts.filter(function (k) { return k.customer === customer; })[0]; };
   D.slaPolicies = {
-    '8x5': { window: '08–16', days: S('пн–пт', 'Mon–Fri', 'man–fre'), p1: 4, p2: 8, p3: 16, p4: 40 },
-    '12x5': { window: '07–19', days: S('пн–пт', 'Mon–Fri', 'man–fre'), p1: 2, p2: 6, p3: 12, p4: 40 }
+    '8x5': { window: '08–16', days: S('man–fre', 'Mon–Fri', 'man–fre'), p1: 4, p2: 8, p3: 16, p4: 40 },
+    '12x5': { window: '07–19', days: S('man–fre', 'Mon–Fri', 'man–fre'), p1: 2, p2: 6, p3: 12, p4: 40 }
   };
 
   /* ---------- PowerOffice invoices, credit notes and posted ledger ---------- */
@@ -147,7 +147,7 @@
       var k = D.contractOf(c.id);
       var lines = k.lines.map(function (l) { return { text: l.text, qty: l.qty, unit: l.unit }; });
       var rateHours = c.hourBank && c.hourBank.left < 3 ? 2.5 : (rnd() > 0.88 ? 1.5 : 0);
-      if (rateHours) lines.push({ text: S('Работа по ставке', 'Work at hourly rate', 'Arbeid etter timepris'), qty: rateHours, unit: 1250, period: true });
+      if (rateHours) lines.push({ text: S('Arbeid etter timepris', 'Work at hourly rate', 'Arbeid etter timepris'), qty: rateHours, unit: 1250, period: true });
       var net = lines.reduce(function (s, l) { return s + l.qty * l.unit; }, 0);
       var total = Math.round(net * 1.25 * 100) / 100;
       var date = new Date(2026, period[0], period[1]);
@@ -166,12 +166,12 @@
       /* A credit note for the August invoice, numbered in date order */
       D.invoices.push({ no: String(invNo++), customer: 'fjordlys', kind: 'CreditNote', date: new Date(2026, 8, 10), due: new Date(2026, 8, 10),
         net: -1250, total: -1562.5, outstanding: 0, related: D.invoices.filter(function (x) { return x.customer === 'fjordlys'; })[0].no,
-        lines: [{ text: S('Кредит: часы учтены дважды в августе', 'Credit: hours counted twice in August', 'Kreditt: timer telt to ganger i august'), qty: 1, unit: -1250 }],
+        lines: [{ text: S('Kreditt: timer telt to ganger i august', 'Credit: hours counted twice in August', 'Kreditt: timar telt to gonger i august'), qty: 1, unit: -1250 }],
         coverage: 'RetrievedUnverified', pdf: 'STORED' });
     }
   });
   D.overdueNo = D.invoices.filter(function (x) { return x.customer === 'fjordlys' && x.kind === 'Invoice'; }).pop().no;
-  D.task('a2').subject = S('Напомнить о счёте ' + D.overdueNo, 'Remind the customer about invoice ' + D.overdueNo, 'Påminn kunden om faktura ' + D.overdueNo);
+  D.task('a2').subject = S('Påminn kunden om faktura ' + D.overdueNo, 'Remind the customer about invoice ' + D.overdueNo, 'Påminn kunden om faktura ' + D.overdueNo);
 
   D.invoiceStatus = function (inv) {
     if (inv.kind === 'CreditNote') return 'Credited';

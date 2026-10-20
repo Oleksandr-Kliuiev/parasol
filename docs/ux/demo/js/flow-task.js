@@ -246,7 +246,7 @@
       return;
     }
     var due = { today: P.at(0, 16, 0), tomorrow: P.at(1, 12, 0), week: P.at(4, 12, 0), none: null }[draft.due];
-    var task = { id: 'n' + Date.now(), customer: draft.customer, type: draft.type, subject: { ru: draft.subject, en: draft.subject, nb: draft.subject },
+    var task = { id: 'n' + Date.now(), customer: draft.customer, type: draft.type, subject: { nb: draft.subject, en: draft.subject, nn: draft.subject },
       assignee: draft.assignee, due: due, priority: 'Normal', createdBy: P.me().id, createdAt: new Date(P.NOW), version: 1, status: 'Open' };
     D.tasks.push(task);
     P.drawer.close();

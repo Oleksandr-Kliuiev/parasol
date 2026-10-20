@@ -1,4 +1,4 @@
-// Parasoll UX demo: every interface key used in code exists in RU, EN and NB, and the three sets match.
+// Parasoll UX demo: every interface key used in code exists in NB, NN and EN, and the three sets match.
 // Usage: node docs/ux/demo/tools/check-locales.mjs   (exit code 1 on any gap)
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -85,10 +85,10 @@ for (const lang of Object.keys(L)) {
   console.log(`${lang}: ${Object.keys(L[lang]).length} keys, missing ${missing.length}${missing.length ? ': ' + missing.join(', ') : ''}`);
   if (missing.length) failed = true;
 }
-for (const lang of Object.keys(L).filter((l) => l !== 'ru')) {
-  const a = Object.keys(L.ru).filter((k) => !(k in L[lang]));
-  const b = Object.keys(L[lang]).filter((k) => !(k in L.ru));
-  if (a.length || b.length) { failed = true; console.log(`${lang} differs from ru: missing ${a.join(', ')} extra ${b.join(', ')}`); }
+for (const lang of Object.keys(L).filter((l) => l !== 'nb')) {
+  const a = Object.keys(L.nb).filter((k) => !(k in L[lang]));
+  const b = Object.keys(L[lang]).filter((k) => !(k in L.nb));
+  if (a.length || b.length) { failed = true; console.log(`${lang} differs from nb: missing ${a.join(', ')} extra ${b.join(', ')}`); }
 }
 console.log(failed ? 'FAIL' : 'PASS: all three languages are complete and in sync');
 process.exit(failed ? 1 : 0);

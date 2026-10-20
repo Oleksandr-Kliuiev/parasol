@@ -32,7 +32,7 @@ const pageErrors = [];
 
 async function open(role, route, opts) {
   const ctx = await browser.newContext({ viewport: { width: (opts && opts.width) || 1440, height: 900 }, colorScheme: (opts && opts.theme) || 'light' });
-  await ctx.addInitScript(([r, th]) => localStorage.setItem('parasol-ux-demo', JSON.stringify({ role: r, theme: th, lang: 'ru' })), [role, (opts && opts.theme) || 'light']);
+  await ctx.addInitScript(([r, th]) => localStorage.setItem('parasol-ux-demo', JSON.stringify({ role: r, theme: th, lang: 'nb' })), [role, (opts && opts.theme) || 'light']);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => pageErrors.push(String(e)));
   await page.goto(base + route, { waitUntil: 'networkidle' });
@@ -69,7 +69,7 @@ ok((await focusId(page)) === 'tf-hours', 'time form starts in the hours field');
 await page.click('[data-action="save-time"]');
 await page.waitForTimeout(150);
 ok(await page.locator('#tf-desc-err').count() === 1, 'billable time without a description is refused inline');
-await page.fill('#tf-desc', 'Очистка диска и перенос архива');
+await page.fill('#tf-desc', 'Diskopprydding og flytting av arkiv');
 await page.click('[data-action="save-time"]');
 await page.waitForTimeout(250);
 await page.click('.toast [data-action="toast-action"]');
