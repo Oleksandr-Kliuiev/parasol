@@ -40,11 +40,11 @@ Ask Atlas, слой решений OpenAI, макеты действий и Powe
 - Вкладка клиента **«Drift»** (EN «Operations») вместо «Service»; старые ссылки `?tab=service` работают. Порядок:
   сводка → оповещения → устройства (у каждого число открытых оповещений) → заявки Atera → запросы заявок. Во
   «Обзоре» нет прежнего технического блока; в «Клиент в двух словах» — число открытых оповещений со ссылкой на «Drift».
-- **«Arbeid → Varsler»** (`/alerts`) вместо очереди наблюдений `/observations`: открытые оповещения всех клиентов,
+- **«Arbeid → Driftsvarsler»** (`/alerts`) вместо очереди наблюдений `/observations`: открытые оповещения всех клиентов,
   фильтры, «Назначить» → задача CRM. Тема задачи — заголовок оповещения, её можно изменить; у задачи кнопка «Источник».
 - **«Мой день»:** панель пяти самых срочных открытых оповещений всех клиентов (сначала Critical, затем самые старые)
   со ссылкой `/alerts?alert=<id>`, свежестью копии Atera («прочитано в …», «чтение не завершилось», «ещё не
-  прочитано») и числом открытых; плитка «Kritiske varsler» берёт то же чтение, переход по разделу ведёт к панели.
+  прочитано») и числом открытых; плитка «Kritiske driftsvarsler» берёт то же чтение, переход по разделу ведёт к панели.
   Раскладку (работа, руководство или финансы; по умолчанию работа) каждый выбирает сам переключателем «Показать
   первым»: при полном доступе выбор по правам поставил бы всем биллинг первым.
 - **`/connections`:** каждая интеграция экземпляра (Atera, PowerOffice, Partner Center, Microsoft Graph,
@@ -126,14 +126,17 @@ Ask Atlas, слой решений OpenAI, макеты действий и Powe
 | NB | NN | EN | Смысл |
 | --- | --- | --- | --- |
 | Drift | Drift | Operations | раздел меню и вкладка клиента: устройства, оповещения, безопасность, копии |
-| Varsel / Varsler | Varsel / Varsel | Alert / Alerts | сигнал из Atera, Huntress или CloudAlly либо найденный CRM пробел; не задача |
+| Driftsvarsel / Driftsvarsler | Driftsvarsel / Driftsvarsel | Alert / Alerts | сигнал из Atera, Huntress или CloudAlly либо найденный CRM пробел; не задача |
+| Varsel / Varsler | Varsel / Varsel | Notification / Notifications | колокольчик и страница уведомлений; не оповещение |
 | Enhet / Enheter | Eining / Einingar | Device / Devices | машина клиента; Atera и Huntress в одной строке |
 | Sikkerhet · Sikkerhetshendelse | Tryggleik · Tryggleikshending | Security · Security incident | инциденты Huntress (M41) |
 | Sikkerhetskopi | Tryggingskopi | Backup | копии CloudAlly (M42) |
 | Kilde: Atera / Huntress / CloudAlly | Kjelde: Atera / Huntress / CloudAlly | Source: … | метка источника |
 
-Формы сверены с `nb.json`/`nn.json` («Tryggleikshending» и «tryggingskopi» там уже есть). «Observasjon» уходит.
-В NB/NN «Varsler» сейчас называет и колокольчик уведомлений — см. риски. Глоссарий интерфейса целиком —
+Формы сверены с `nb.json`/`nn.json` («Tryggleikshending», «tryggingskopi» и «driftsvarsel» там уже есть).
+«Observasjon» уходит. Колокольчик уведомлений в NB/NN остаётся «Varsler» / «Varsel», как `notifications.*`, поэтому
+оповещения — «Driftsvarsler» / «Driftsvarsel» (решение владельца); определённые формы: NB driftsvarselet /
+driftsvarslene, NN driftsvarselet / driftsvarsla. Глоссарий интерфейса целиком —
 [UX-CONCEPT §7](../ux/UX-CONCEPT.md#7-тексты-состояния-и-термины).
 
 ## Оповещения Atera: жизненный цикл (C4)
@@ -330,8 +333,10 @@ user-task-walkthrough.
 
 - Оповещение нельзя закрыть по неполному чтению: закрывает только полный постраничный проход (так и сделано в C4).
 - Ключи i18n, собранные во время выполнения, typecheck не ловит: нужны тест паритета, e2e и поиск по удалённым префиксам.
-- В NB/NN колокольчик уведомлений тоже называется «Varsler» / «Varsel»: одно слово для двух понятий. В UX-демо
-  колокольчик уже назван «Meldinger» / «Meldingar»; для продукта это решение владельца.
+- ~~В NB/NN колокольчик уведомлений тоже называется «Varsler» / «Varsel»: одно слово для двух понятий.~~ Снято
+  решением владельца: колокольчик остаётся «Varsler» / «Varsel», оповещения называются «Driftsvarsler» /
+  «Driftsvarsel» (словарь выше); так пишут «Мой день» продукта и UX-демо. Остаток: вкладка «Drift» ещё берёт
+  `service.criticalAlerts`, `service.alerts` и `service.noAlerts` с голым «varsler» / «varsel».
 - Резервные копии Hostinger до M38 (с дампом PostgreSQL) новым инструментом не восстановить; в них только синтетика.
 - Atera: поля v3, дата перехода на JWT и лимит запросов не подтверждены на аккаунте; webhooks заявок есть только в
   планах Enterprise/SuperPower; адрес страницы оповещения не подтверждён (`AlertUrlTemplate` пуст).
@@ -344,4 +349,4 @@ user-task-walkthrough.
 - Полный доступ: компрометация одной учётной записи открывает всё. Защита — MFA (Conditional Access или security
   defaults), повторный вход перед опасным действием, отзыв за ~2,5 минуты и журнал аудита (ADR-030).
 - [M01–M03](M01-M03.md) — запись об импорте и не меняется; её ссылки на удалённые `BASELINE.md`, `ATLAS.md` и M04
-  читаются через `git show 73c0158:…`.
+  стали текстом с пометкой, что файл удалён в M38 и читается через `git show 73c0158:<путь>`.

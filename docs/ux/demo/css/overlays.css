@@ -236,6 +236,15 @@ dialog::backdrop {
   height: 32px;
 }
 
+/* A command is a sentence ("Driftsvarsler som haster, uten oppgave"): on a phone it takes a second line
+   instead of losing its end to an ellipsis */
+.palette-item .item-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
 .palette-foot {
   display: flex;
   flex-wrap: wrap;
