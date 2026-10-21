@@ -102,6 +102,17 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
     expect(await fitsWidth(page), `connections scroll sideways at ${width} px (${scheme})`).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`connections-actions-${width}-${scheme}.png`), fullPage: true });
 
+    // The ticket's panel registers hours with its customer and number filled in, and the form names the ticket it found.
+    await page.goto(`/tickets?ticket=${uncertain!.ticketId}`);
+    await page.getByRole('dialog', { name, exact: true }).getByRole('button', { name: 'Register hours', exact: true }).click();
+    const fromTicket = page.getByRole('dialog', { name: 'Register hours', exact: true });
+    await expect(fromTicket.getByText(`${name} · Open`, { exact: true })).toBeVisible();
+    await settled(page);
+    expect(await seriousViolations(page), `time form from a ticket at ${width} px (${scheme})`).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath(`time-form-from-ticket-${width}-${scheme}.png`) });
+    await fromTicket.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(fromTicket).toHaveCount(0);
+
     // The time form offers the Atera step for a ticket number; once saved, the dialog goes on into its confirmation.
     await page.goto('/time');
     await page.getByRole('button', { name: 'Register hours', exact: true }).first().click();
@@ -122,8 +133,24 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
     await settled(page);
     expect(await seriousViolations(page), `time recording confirmation at ${width} px (${scheme})`).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath(`time-atera-confirmation-${width}-${scheme}.png`) });
-    await record.getByRole('button', { name: 'Skip', exact: true }).click();
+    await record.getByRole('button', { name: 'Record later', exact: true }).click();
     await expect(record).toHaveCount(0);
+
+    // My timesheet: the hours left for later are recorded from the entry's menu (M39); the page and the menu pass axe, and the
+    // keyboard opens the menu and comes back to its button.
+    await page.goto('/time');
+    const more = page.getByRole('button', { name: new RegExp(`^More for 0\\.5 h for ${customer.name},`) }).first();
+    await expect(more).toBeVisible();
+    await settled(page);
+    expect(await seriousViolations(page), `My timesheet at ${width} px (${scheme})`).toEqual([]);
+    expect(await fitsWidth(page), `My timesheet scrolls sideways at ${width} px (${scheme})`).toBe(true);
+    await more.focus(); await page.keyboard.press('Enter');
+    await expect(page.getByRole('menuitem', { name: 'Record in Atera', exact: true })).toBeVisible();
+    await settled(page);
+    expect(await seriousViolations(page, '[role="menu"]'), `an entry's menu at ${width} px (${scheme})`).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath(`timesheet-entry-menu-${width}-${scheme}.png`) });
+    await page.keyboard.press('Escape');
+    await expect(more).toBeFocused();
   }
   } finally {
     // The shared database keeps no action waiting for a check (Connections would show it as a gap).

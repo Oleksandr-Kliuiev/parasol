@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Button, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
 import { Add20Regular, CheckmarkCircle20Regular, ChevronLeft20Regular, ChevronRight20Regular, Clock20Regular, MoneyOff20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { cardSurface, h } from '../../app/hearth';
@@ -14,9 +14,13 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatNumber, todayIso } from '../../shared/utils/format';
 import { addDays, startOfWeek } from '../../shared/utils/week';
+import { useCurrentUser } from '../../auth/CurrentUserContext';
+import { ActionDetailDialog } from '../actions/ActionDetailDialog';
+import { ActionDialog } from '../actions/ActionDialog';
+import { useAction, useActionAvailable, useActionFacts } from '../actions/api';
 import { useAllTimeEntries, useTimeActions } from './api';
 import { TimeEntryDialogHost } from './TimeEntryDialog';
-import { TimesheetDay } from './TimesheetDay';
+import { TimesheetDay, type AteraRecording } from './TimesheetDay';
 import type { TimeEntry } from './types';
 
 const useStyles = makeStyles({
@@ -73,6 +77,18 @@ export function TimesheetPage() {
   const waiting = (data?.items ?? []).filter((e) => e.status === 'New').length;
   const hoursText = (hours: number | undefined) => (hours === undefined ? t('myDay.loadingValue') : t('myDay.kpi.hoursValue', { hours: formatNumber(hours) }));
 
+  // M39: the person's own Parasoll entries on a ticket can be recorded in Atera later; what Atera has of them is read for the week
+  // in one lookup (per 50 entries), and a recording without a clear answer is checked from its card.
+  const user = useCurrentUser();
+  const onTickets = (data?.items ?? []).filter((e) => e.source === 'Crm' && e.externalTicketId !== null && e.technicianId === user.id);
+  const recordings = useActionFacts('atera', 'time-entry', [onTickets.map((e) => e.id)]);
+  const recordAvailable = useActionAvailable('atera', 'time.record', onTickets.length > 0);
+  const [recording, setRecording] = useState<TimeEntry | null>(null);
+  const shownRecording = useKeptWhileClosing(recording);
+  const [checking, setChecking] = useState<string | null>(null);
+  const checked = useAction(checking).data ?? null;
+  const atera: AteraRecording = { facts: recordings.facts, available: recordAvailable, onRecord: setRecording, onCheck: setChecking };
+
   // Deleting an entry cannot be undone, so it asks first; the day's register button then takes the focus the row had.
   const remove = async () => {
     if (!removing) return;
@@ -122,7 +138,7 @@ export function TimesheetPage() {
           <div className={styles.week}>
             {days.map((day) => (
               <TimesheetDay key={day} day={day} today={day === today} entries={(data?.items ?? []).filter((e) => e.workDate === day)}
-                loading={isPending} onRegister={(date) => setDialog({ date })} onEdit={(entry) => setDialog({ entry })} onRemove={setRemoving} />
+                loading={isPending} atera={atera} onRegister={(date) => setDialog({ date })} onEdit={(entry) => setDialog({ entry })} onRemove={setRemoving} />
             ))}
           </div>
         </>
@@ -135,6 +151,11 @@ export function TimesheetPage() {
         {t('time.deleteBody')}
       </ConfirmDialog>
       <TimeEntryDialogHost open={dialog !== null} entry={shown?.entry} defaultDate={shown?.date} onClose={() => setDialog(null)} />
+      <ActionDialog
+        request={recording ? { system: 'atera', kind: 'time.record', targetType: 'time-entry', targetId: recording.id, parameters: {} } : null}
+        title={t('time.recordTitle', { number: `#${shownRecording?.externalTicketId ?? ''}` })} confirm={t('time.recordConfirm')}
+        details={<Text block>{t('time.recordLater')}</Text>} onClose={() => setRecording(null)} />
+      <ActionDetailDialog action={checking !== null && checked?.id === checking ? checked : null} onClose={() => setChecking(null)} />
     </>
   );
 }

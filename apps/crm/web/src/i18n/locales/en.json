@@ -1872,8 +1872,16 @@
     "recordInAteraHint": "After saving you see what Atera gets, and confirm it.",
     "recordTitle": "Record on {{number}} in Atera",
     "recordConfirm": "Record in Atera",
-    "recordSaved": "The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.",
-    "recordSkip": "Skip"
+    "recordSaved": "The hours are saved in Parasoll. Atera gets them when you confirm, now or later from My timesheet; do not also add them in Atera by hand, or they are counted twice.",
+    "recordSkip": "Record later",
+    "recordLater": "Atera gets these hours only when you confirm; do not also add them in Atera by hand, or they are counted twice.",
+    "recordedInAtera": "In Atera",
+    "alreadyRecorded": "These hours are already recorded in Atera. A change here does not reach Atera.",
+    "recordInAteraItem": "Record in Atera",
+    "checkRecording": "Check the recording in Atera",
+    "moreNamed": "More for {{hours}} h for {{organization}}, {{date}}",
+    "ticketFound": "#{{number}} {{title}} · {{status}}",
+    "ticketMissing": "No ticket #{{number}} for {{organization}} in Parasoll"
   },
   "technicians": {
     "title": "Technicians",

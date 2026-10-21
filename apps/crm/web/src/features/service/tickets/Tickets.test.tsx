@@ -167,6 +167,27 @@ describe('tickets (M39.2)', () => {
     expect(screen.getByRole('dialog', { name: '#4711 Printer is down' })).toBeVisible();
   });
 
+  it('registers hours on the ticket from its panel, with its customer and number filled in and the number found', async () => {
+    vi.stubGlobal('fetch', api((url) => url === '/api/v1/time/work-types' ? json(['Remote support'])
+      : url.startsWith('/api/v1/projects') ? json({ items: [], nextCursor: null, totalCount: 0 }) : null));
+    render('/tickets?ticket=t1', ['service.read', 'service.write', 'time.own']);
+    const panel = await screen.findByRole('dialog', { name: '#4711 Printer is down' });
+    await userEvent.click(within(panel).getByRole('button', { name: 'Register hours' }));
+    const form = await screen.findByRole('dialog', { name: 'Register hours' });
+    expect(within(form).getByRole('combobox', { name: 'Organization' })).toHaveValue('Havbris AS');
+    expect(within(form).getByRole('textbox', { name: 'Ticket' })).toHaveValue('4711');
+    expect(await within(form).findByText('#4711 Printer is down · Open')).toBeVisible();
+    // Customer and ticket are there: the hours come next.
+    await waitFor(() => expect(within(form).getByRole('textbox', { name: 'Hours' })).toHaveFocus());
+  });
+
+  it('offers no hours to someone without time of their own', async () => {
+    vi.stubGlobal('fetch', api());
+    render('/tickets?ticket=t1', ['service.read', 'service.write']);
+    const panel = await screen.findByRole('dialog', { name: '#4711 Printer is down' });
+    expect(within(panel).queryByRole('button', { name: 'Register hours' })).not.toBeInTheDocument();
+  });
+
   it('offers no changes to someone who only reads service data', async () => {
     vi.stubGlobal('fetch', api());
     render('/tickets?ticket=t1', ['service.read']);

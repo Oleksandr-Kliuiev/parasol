@@ -182,13 +182,15 @@ test('own hours are recorded on the ticket in Atera from the time form, and the 
   await form.getByRole('combobox', { name: 'Work type' }).fill('Remote');
   await form.getByRole('textbox', { name: 'Description' }).fill(`Satte opp bærbar (${customer.marker})`);
   await form.getByRole('textbox', { name: 'Ticket' }).fill(String(ticket.TicketID));
+  // The number is checked against the customer's saved tickets before anything is saved.
+  await expect(form.getByText(`#${ticket.TicketID} ${ticket.TicketTitle} · Open`, { exact: true })).toBeVisible();
   await form.getByRole('checkbox', { name: 'Also record in Atera' }).check();
   await form.getByRole('button', { name: 'Register hours', exact: true }).click();
   await expect(toast(page, 'Hours registered')).toBeVisible();
 
   // The same dialog goes on into the confirmation of what Atera gets.
   const record = page.getByRole('dialog', { name: `Record on #${ticket.TicketID} in Atera`, exact: true });
-  await expect(record.getByText('The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.', { exact: true })).toBeVisible();
+  await expect(record.getByText('The hours are saved in Parasoll. Atera gets them when you confirm, now or later from My timesheet; do not also add them in Atera by hand, or they are counted twice.', { exact: true })).toBeVisible();
   await expect(record.getByText(new RegExp(`^1\\.5 h are recorded on #${ticket.TicketID} in Atera, \\d\\d\\.\\d\\d\\.\\d{4} \\d\\d:\\d\\d–\\d\\d:\\d\\d\\.$`))).toBeVisible();
   // The form takes no start time: the confirmation says where the hours start in Atera.
   await expect(record.getByText('The entry has no start time, so the hours start at 08:00 on its date.', { exact: true })).toBeVisible();
@@ -208,4 +210,58 @@ test('own hours are recorded on the ticket in Atera from the time form, and the 
     `/api/v1/time/entries?organizationId=${customer.organizationId}&limit=100`)).items.filter((entry) => entry.externalTicketId === ticket.TicketID);
   await syncAtera(page, ['atera-work-hours'], async () => (await entries()).some((entry) => entry.source === 'Atera'), 'the hours recorded in Atera itself');
   expect((await entries()).map((entry) => `${entry.source} ${entry.hours}`).sort()).toEqual(['Atera 0.5', 'Crm 1.5']);
+});
+
+test('hours registered from a ticket panel without Atera are recorded there later from My timesheet', { tag: '@critical' }, async ({ page }) => {
+  test.setTimeout(300_000);
+  await signIn(page, 'Crm.Admin');
+  const customer = await linkedAteraCustomer(page, 'Tl');
+  const ticket = await ateraTicket(page, customer, { TicketTitle: `${customer.marker} skjermen flimrer` });
+  await syncTicket(page, ticket, 0);
+  await writeAsTechnician(page);
+
+  // From the ticket's panel the form knows the customer and the number, and names the ticket it found; Atera is left for later.
+  const panel = await openTicket(page, ticket);
+  await panel.getByRole('button', { name: 'Register hours', exact: true }).click();
+  const form = page.getByRole('dialog', { name: 'Register hours', exact: true });
+  await expect(form.getByRole('combobox', { name: 'Organization' })).toHaveValue(customer.name);
+  await expect(form.getByRole('textbox', { name: 'Ticket' })).toHaveValue(String(ticket.TicketID));
+  await expect(form.getByText(`#${ticket.TicketID} ${ticket.TicketTitle} · Open`, { exact: true })).toBeVisible();
+  await expect(form.getByRole('checkbox', { name: 'Also record in Atera' })).toBeVisible();
+  await form.getByRole('textbox', { name: 'Hours' }).fill('0,5');
+  await form.getByRole('textbox', { name: 'Description' }).fill(`Byttet skjermkabel (${customer.marker})`);
+  await form.getByRole('button', { name: 'Register hours', exact: true }).click();
+  await expect(toast(page, 'Hours registered')).toBeVisible();
+  await expect(form).toHaveCount(0);
+  expect((await ateraTicketState(page, ticket)).WorkHours).toEqual([]);
+
+  // My timesheet: the entry's menu records it in Atera, through the same confirmation.
+  await page.goto('/time');
+  const more = page.getByRole('button', { name: new RegExp(`^More for 0\\.5 h for ${customer.name},`) });
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Record in Atera', exact: true }).click();
+  const record = page.getByRole('dialog', { name: `Record on #${ticket.TicketID} in Atera`, exact: true });
+  await expect(record.getByText('Atera gets these hours only when you confirm; do not also add them in Atera by hand, or they are counted twice.', { exact: true })).toBeVisible();
+  await expect(record.getByText(new RegExp(`^0\\.5 h are recorded on #${ticket.TicketID} in Atera, `))).toBeVisible();
+  await record.getByRole('button', { name: 'Record in Atera', exact: true }).click();
+  await expect(followUp(record)).toContainText('Done', { timeout: SENT });
+  await record.getByRole('button', { name: 'Close', exact: true }).click();
+  // The row says the hours are in Atera and offers them no more.
+  const item = page.getByText(`Byttet skjermkabel (${customer.marker})`, { exact: true }).locator('xpath=ancestor::li[1]');
+  await expect(item.getByText('In Atera', { exact: true })).toBeVisible();
+  await expect(more).toHaveCount(0);
+  expect((await ateraTicketState(page, ticket)).WorkHours).toEqual([expect.objectContaining({
+    TechnicianContactID: DEV_TECHNICIAN, TimeSpentInMinutes: 30, Description: expect.stringMatching(/\[CRM-TE:[0-9a-f-]{36}\]$/),
+  })]);
+
+  // A number Parasoll does not know for the customer is named, and Atera is not offered for it.
+  await page.getByRole('button', { name: 'Register hours', exact: true }).first().click();
+  const other = page.getByRole('dialog', { name: 'Register hours', exact: true });
+  await other.getByRole('combobox', { name: 'Organization' }).pressSequentially(customer.marker);
+  await page.getByRole('option', { name: customer.name }).click();
+  await other.getByRole('textbox', { name: 'Ticket' }).fill('999999999');
+  await expect(other.getByText(`No ticket #999999999 for ${customer.name} in Parasoll`, { exact: true })).toBeVisible();
+  await expect(other.getByRole('checkbox', { name: 'Also record in Atera' })).toHaveCount(0);
+  await other.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(other).toHaveCount(0);
 });

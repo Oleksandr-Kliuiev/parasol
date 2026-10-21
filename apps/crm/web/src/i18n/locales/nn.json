@@ -1872,8 +1872,16 @@
     "recordInAteraHint": "Når timane er lagra, ser du kva Atera får, og stadfestar det.",
     "recordTitle": "Før på {{number}} i Atera",
     "recordConfirm": "Før i Atera",
-    "recordSaved": "Timane er lagra i Parasoll. Atera får dei berre viss du stadfestar no; ikkje før dei i tillegg for hand i Atera, elles blir dei talde to gonger.",
-    "recordSkip": "Hopp over"
+    "recordSaved": "Timane er lagra i Parasoll. Atera får dei når du stadfestar, no eller seinare frå Timelista mi; ikkje før dei i tillegg for hand i Atera, elles blir dei talde to gonger.",
+    "recordSkip": "Før seinare",
+    "recordLater": "Atera får desse timane først når du stadfestar; ikkje før dei i tillegg for hand i Atera, elles blir dei talde to gonger.",
+    "recordedInAtera": "I Atera",
+    "alreadyRecorded": "Desse timane er alt førte i Atera. Ei endring her når ikkje Atera.",
+    "recordInAteraItem": "Før i Atera",
+    "checkRecording": "Sjekk føringa i Atera",
+    "moreNamed": "Meir for {{hours}} t for {{organization}}, {{date}}",
+    "ticketFound": "#{{number}} {{title}} · {{status}}",
+    "ticketMissing": "Inga sak #{{number}} for {{organization}} i Parasoll"
   },
   "technicians": {
     "title": "Teknikarar",

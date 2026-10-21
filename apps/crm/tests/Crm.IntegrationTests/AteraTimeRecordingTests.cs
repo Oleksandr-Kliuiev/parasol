@@ -110,6 +110,38 @@ public class AteraTimeRecordingTests(CrmWebFactory factory)
     }
 
     [Fact]
+    public async Task Hours_saved_without_Atera_are_recorded_later_and_the_lookup_says_which_entries_Atera_has()
+    {
+        await using var host = AteraTicketHost.Start(factory, kinds: Kinds);
+        var ticket = await host.TicketAsync();
+        await host.MapTechnicianAsync();
+        var later = await EntryAsync(host, ticket, "Lagret først, ført i Atera etterpå");
+        var never = await EntryAsync(host, ticket, "Bare i Parasoll");
+        host.On("GET", $"/api/v3/tickets/{ticket.TicketId}/workhoursrecords").RespondWith(JsonReply(Array.Empty<object>()));
+        host.On("POST", $"/api/v3/tickets/{ticket.TicketId}/workhours").RespondWith(JsonReply(new { ActionID = "wh-91" }));
+
+        async Task<Dictionary<string, JsonElement>> FactsAsync(string role)
+        {
+            var response = await host.Client(role).PostAsJsonAsync("/api/v1/actions/lookup", new
+            {
+                system = "atera", targetType = AteraTimeRecordAction.Target, targetIds = new[] { later.ToString("D"), never.ToString("D") },
+            }, Ct);
+            response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+            return (await response.ReadJsonAsync()).GetProperty("items").EnumerateArray().ToDictionary(f => f.GetProperty("targetId").GetString()!);
+        }
+
+        (await FactsAsync(Crm.Authorization.CrmRoles.Technician)).ShouldBeEmpty("nothing was asked of Atera yet");
+        (await host.RunAsync(await AskAsync(host, later))).Status.ShouldBe(VendorActionStatus.Succeeded);
+        // A technician (time.own) reads the facts of the hours they recorded; the other entry is still to be recorded.
+        var facts = await FactsAsync(Crm.Authorization.CrmRoles.Technician);
+        facts.Keys.ShouldBe([later.ToString("D")]);
+        facts[later.ToString("D")].GetProperty("done").GetInt32().ShouldBe(1);
+        facts[later.ToString("D")].GetProperty("waiting").GetInt32().ShouldBe(0);
+        var posted = host.Posted($"/api/v3/tickets/{ticket.TicketId}/workhours");
+        posted.GetProperty("Comments").GetString().ShouldBe($"Lagret først, ført i Atera etterpå\n\n{AteraTimeMarker.Of(later)}");
+    }
+
+    [Fact]
     public async Task Only_the_person_whose_time_it_is_records_it_and_only_on_a_ticket_of_its_customer()
     {
         await using var host = AteraTicketHost.Start(factory, kinds: Kinds);

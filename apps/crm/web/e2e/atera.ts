@@ -99,10 +99,13 @@ export async function settled(page: Page) {
   });
 }
 
-/** Serious or critical axe findings under WCAG 2.2 AA; Tabster's focus sentinels are skipped (see a11y.spec.ts). */
-export async function seriousViolations(page: Page) {
-  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
-    .exclude('[data-tabster-dummy]').analyze();
+/**
+ * Serious or critical axe findings under WCAG 2.2 AA; Tabster's focus sentinels are skipped (see a11y.spec.ts). `include` narrows the
+ * scan to a popup (an open menu): over the page, its layer would count as covering the controls under it.
+ */
+export async function seriousViolations(page: Page, include?: string) {
+  const builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).exclude('[data-tabster-dummy]');
+  const result = await (include ? builder.include(include) : builder).analyze();
   return result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
     .map((v) => ({ id: v.id, nodes: v.nodes.slice(0, 3).map((n) => n.target.join(' ')) }));
 }
