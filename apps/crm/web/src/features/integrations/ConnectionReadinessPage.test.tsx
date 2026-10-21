@@ -43,8 +43,8 @@ describe('the connections page', () => {
     expect(office.getByText("Switched off in this installation's settings, so its jobs do not run.")).toBeVisible();
     expect(office.queryByRole('listitem')).not.toBeInTheDocument();
     const service = within(screen.getByRole('region', { name: worker }));
-    expect(service.getAllByRole('listitem').map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs|Actions at vendors)$/).textContent))
-      .toEqual(['Change delivery', 'Scheduled jobs', 'Actions at vendors']);
+    expect(service.getAllByRole('listitem').map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs|Action delivery to vendors)$/).textContent))
+      .toEqual(['Change delivery', 'Scheduled jobs', 'Action delivery to vendors']);
     expect(service.getAllByText('Running')).toHaveLength(3);
     // Nothing needs attention: the way to administration stays in the note at the end only; the action log has only its filters.
     expect(screen.getByRole('link', { name: 'Open integration administration' })).toHaveAttribute('href', '/admin/integrations');

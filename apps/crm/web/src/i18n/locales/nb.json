@@ -1538,10 +1538,16 @@
     "notReadYet": "Ikke lest ennå",
     "ticketOpenAtSource": "{{title}} i {{source}}",
     "reads": {
-      "tickets": "Saker ({{system}})",
+      "tickets": "Åpne saker ({{system}})",
       "conversations": "Meldinger i saker ({{system}})",
       "alerts": "Driftsvarsler ({{system}})",
       "devices": "Enheter ({{system}})"
+    },
+    "readLine": {
+      "notRead": "{{source}} er ikke lest ennå",
+      "incomplete": "{{source}}: lesingen {{time}} ble ikke fullført",
+      "late": "{{source}} lest {{time}}: neste lesing er forsinket",
+      "readAt": "{{source}} lest {{time}}"
     }
   },
   "alerts": {
@@ -1866,8 +1872,8 @@
     "recordInAteraHint": "Når timene er lagret, ser du hva Atera får, og bekrefter det.",
     "recordTitle": "Før på {{number}} i Atera",
     "recordConfirm": "Før i Atera",
-    "recordSaved": "Timene er lagret i Parasoll. Atera får dem først når du bekrefter.",
-    "recordSkip": "Ikke nå"
+    "recordSaved": "Timene er lagret i Parasoll. Atera får dem bare hvis du bekrefter nå; ikke før dem i tillegg for hånd i Atera, ellers telles de to ganger.",
+    "recordSkip": "Hopp over"
   },
   "technicians": {
     "title": "Teknikere",
@@ -4163,7 +4169,9 @@
       "OutboundFailed_one": "{{system}}: {{count}} endring kunne ikke sendes",
       "OutboundFailed_other": "{{system}}: {{count}} endringer kunne ikke sendes",
       "WorkerLate": "Bakgrunnstjenesten, {{component}}: siste livstegn {{age}}",
-      "WorkerMissing": "Bakgrunnstjenesten, {{component}}: ingen livstegn ennå"
+      "WorkerMissing": "Bakgrunnstjenesten, {{component}}: ingen livstegn ennå",
+      "ActionsUncertain_one": "{{system}}: {{count}} handling må sjekkes",
+      "ActionsUncertain_other": "{{system}}: {{count}} handlinger må sjekkes"
     },
     "state": {
       "on": "Oppdatert",
@@ -4194,7 +4202,7 @@
       "components": {
         "outbox": "Levering av endringer",
         "jobs": "Planlagte jobber",
-        "actions": "Handlinger hos leverandører"
+        "actions": "Levering av handlinger til leverandører"
       },
       "state": {
         "Current": "Kjører",
@@ -4351,7 +4359,7 @@
   },
   "actions": {
     "status": {
-      "Scheduled": "Venter",
+      "Scheduled": "Holdes tilbake",
       "Queued": "I kø",
       "Sending": "Sendes",
       "Succeeded": "Utført",
@@ -4369,8 +4377,8 @@
       "VND_WRITE_DISABLED": "Endringer i dette systemet er slått av.",
       "VND_CUSTOMER_NOT_ALLOWED": "Endringer er foreløpig bare tillatt for testkundene.",
       "VND_UNKNOWN_KIND": "Denne handlingen finnes ikke.",
-      "VND_KIND_UNKNOWN": "CRM kjenner ikke lenger denne typen handling; ingenting ble sendt.",
-      "VND_TARGET_NOT_FOUND": "CRM har ingen lagret kopi av denne posten.",
+      "VND_KIND_UNKNOWN": "Parasoll kjenner ikke lenger denne typen handling; ingenting ble sendt.",
+      "VND_TARGET_NOT_FOUND": "Parasoll har ingen lagret kopi av denne posten.",
       "VND_FORBIDDEN": "Tilgangen din omfatter ikke denne handlingen.",
       "VND_PREVIEW_EXPIRED": "Forhåndsvisningen er eldre enn ti minutter; se på den igjen.",
       "VND_PREVIEW_STALE": "Handlingen er ikke den forhåndsvisningen viste; se på den igjen.",
@@ -4390,7 +4398,7 @@
       "VND_NO_ANSWER": "Det kom ikke noe klart svar. Sjekk om det skjedde.",
       "VND_EARLIER_ATTEMPT": "Et tidligere forsøk kan ha gått gjennom uten svar. Sjekk før du ber om det igjen.",
       "VND_VENDOR_UNAVAILABLE": "Systemet kunne ikke nås etter flere forsøk; ingenting ble sendt.",
-      "VND_WAITING": "Venter: CRM kunne ikke registrere forsøket ennå.",
+      "VND_WAITING": "Venter: Parasoll kunne ikke registrere forsøket ennå.",
       "VND_CANCELLED": "Avbrutt før den ble sendt.",
       "VND_SETTLED_DONE": "Sjekket: det skjedde.",
       "VND_SETTLED_NOT_DONE": "Sjekket: det skjedde ikke.",
@@ -4427,7 +4435,7 @@
       "cancelAction": "Avbryt handlingen",
       "held": "Sendes om {{seconds}} s. Frem til da kan du avbryte den.",
       "sending": "Sender til {{system}} …",
-      "uncertainNext": "{{system}} ga ikke noe klart svar. Sjekk der om det skjedde, og registrer hva du fant i handlingsloggen under Tilkoblinger.",
+      "uncertainNext": "{{system}} ga ikke noe klart svar, så ingenting sendes på nytt. Sjekk i {{system}} om det skjedde, og registrer hva du fant under Handlinger hos leverandører på siden Tilkoblinger.",
       "openAtVendor": "Sjekk i {{system}}",
       "keepsGoing": "Du kan lukke vinduet; handlingen fortsetter."
     },
@@ -4447,15 +4455,15 @@
       "done": "Det skjedde i {{system}}",
       "notDone": "Det skjedde ikke i {{system}}",
       "reason": "Hva du sjekket",
-      "confirm": "Registrer"
+      "confirm": "Lagre det du fant"
     },
     "log": {
       "title": "Handlinger hos leverandører",
-      "note": "Alt CRM har bedt leverandørene om, nyeste først. En handling uten klart svar venter til noen sjekker hos leverandøren.",
+      "note": "Alt Parasoll har bedt leverandørene om, nyeste først. En handling uten klart svar venter til noen sjekker hos leverandøren.",
       "filter": "Vis handlinger",
       "all": "Alle",
       "attention": "Må sjekkes",
-      "waiting": "Venter",
+      "waiting": "Ikke sendt ennå",
       "none": "Ingen handlinger ennå.",
       "noneUncertain": "Ingen handlinger må sjekkes.",
       "noneWaiting": "Ingenting venter på å bli sendt."
@@ -4468,7 +4476,7 @@
           "status": "Endre status",
           "priority": "Endre prioritet",
           "technician": "Gi til tekniker",
-          "close": "Lukk sak"
+          "close": "Lukk saken"
         },
         "time": {
           "record": "Før tid i Atera"
@@ -4479,7 +4487,7 @@
       "VND_EFFECT_TICKET_REPLY": "{{to}} ser dette svaret i Atera, og får det på e-post når varslingene i Atera er på.",
       "VND_EFFECT_TICKET_REPLY_CUSTOMER": "Kunden ser dette svaret i Atera, og får det på e-post når varslingene i Atera er på.",
       "VND_EFFECT_TICKET_NOTE": "Bare teknikere ser denne merknaden; kunden gjør ikke det.",
-      "VND_EFFECT_TICKET_AUTHOR": "Det skrives i Atera som {{name}}.",
+      "VND_EFFECT_TICKET_AUTHOR": "Atera viser det som skrevet av {{name}}.",
       "VND_EFFECT_TICKET_REOPEN": "Saken har status {{status}}: Atera kan åpne den igjen når kunden får svar.",
       "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_PRIORITY": "Prioritet: {{from}} → {{to}}",
@@ -4489,12 +4497,13 @@
       "VND_EFFECT_TIME_BILLABLE": "Atera merker dem som fakturerbare.",
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera merker dem som ikke fakturerbare.",
       "VND_EFFECT_TIME_NO_DOUBLE": "Timeimporten kjenner dem igjen, så de telles aldri to ganger.",
-      "VND_EFFECT_TIME_DEFAULT_START": "Føringen har ingen starttid, så timene starter kl. {{from}} på datoen."
+      "VND_EFFECT_TIME_DEFAULT_START": "Føringen har ingen starttid, så timene starter kl. {{from}} på datoen.",
+      "VND_EFFECT_TIME_AUTHOR": "Atera viser dem som ført av {{name}}."
     }
   },
   "tickets": {
     "title": "Saker",
-    "subtitle": "Åpne saker for alle kunder, nyeste først. Atera tar vare på dem; du svarer og endrer dem her.",
+    "subtitle": "Åpne saker for alle kunder, nyeste først. Sakene ligger i Atera; du svarer på dem og endrer dem her.",
     "subtitleAll": "Alle åpne saker og alle saker fra de siste 90 dagene, nyeste først.",
     "refresh": "Oppdater sakene",
     "filters": "Filtrer saker",
@@ -4506,7 +4515,7 @@
     },
     "whoLabel": "Hvem sine saker",
     "who": {
-      "everyone": "Alles",
+      "everyone": "Alle teknikere",
       "mine": "Mine"
     },
     "totals_one": "{{count}} åpen sak",
@@ -4540,15 +4549,16 @@
       "noTechnician": "Ingen tekniker",
       "created": "Opprettet",
       "resolved": "Løst",
-      "source": "Kilde"
+      "source": "Kilde",
+      "noPriority": "Ingen prioritet"
     },
     "panel": {
       "title": "Sak",
       "loading": "Leser saken …",
-      "notFound": "CRM har ingen lagret kopi av denne saken.",
+      "notFound": "Parasoll har ingen lagret kopi av denne saken.",
       "openInSource": "Åpne i {{name}}",
       "actions": "Handlinger på denne saken",
-      "noActions": "Ingenting er bedt om for denne saken fra CRM ennå."
+      "noActions": "Ingenting er sendt fra Parasoll for denne saken ennå."
     },
     "actions": {
       "label": "Endre saken",

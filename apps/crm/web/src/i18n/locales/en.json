@@ -1538,10 +1538,16 @@
     "notReadYet": "Not read yet",
     "ticketOpenAtSource": "{{title}} in {{source}}",
     "reads": {
-      "tickets": "Tickets ({{system}})",
+      "tickets": "Open tickets ({{system}})",
       "conversations": "Ticket messages ({{system}})",
       "alerts": "Alerts ({{system}})",
       "devices": "Devices ({{system}})"
+    },
+    "readLine": {
+      "notRead": "{{source}} not read yet",
+      "incomplete": "{{source}}: the read at {{time}} did not finish",
+      "late": "{{source}} read at {{time}}: the next read is late",
+      "readAt": "{{source}} read at {{time}}"
     }
   },
   "alerts": {
@@ -1866,8 +1872,8 @@
     "recordInAteraHint": "After saving you see what Atera gets, and confirm it.",
     "recordTitle": "Record on {{number}} in Atera",
     "recordConfirm": "Record in Atera",
-    "recordSaved": "The hours are saved in Parasoll. Atera gets them only when you confirm.",
-    "recordSkip": "Not now"
+    "recordSaved": "The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.",
+    "recordSkip": "Skip"
   },
   "technicians": {
     "title": "Technicians",
@@ -4165,7 +4171,9 @@
       "OutboundFailed_one": "{{system}}: {{count}} change could not be sent",
       "OutboundFailed_other": "{{system}}: {{count}} changes could not be sent",
       "WorkerLate": "Background service, {{component}}: last sign of life {{age}}",
-      "WorkerMissing": "Background service, {{component}}: no sign of life yet"
+      "WorkerMissing": "Background service, {{component}}: no sign of life yet",
+      "ActionsUncertain_one": "{{system}}: {{count}} action needs a check",
+      "ActionsUncertain_other": "{{system}}: {{count}} actions need a check"
     },
     "state": {
       "on": "Up to date",
@@ -4196,7 +4204,7 @@
       "components": {
         "outbox": "Change delivery",
         "jobs": "Scheduled jobs",
-        "actions": "Actions at vendors"
+        "actions": "Action delivery to vendors"
       },
       "state": {
         "Current": "Running",
@@ -4371,8 +4379,8 @@
       "VND_WRITE_DISABLED": "Changes to this system are switched off.",
       "VND_CUSTOMER_NOT_ALLOWED": "Changes are only allowed for the test customers for now.",
       "VND_UNKNOWN_KIND": "There is no such action.",
-      "VND_KIND_UNKNOWN": "This kind of action is no longer known to the CRM; nothing was sent.",
-      "VND_TARGET_NOT_FOUND": "The CRM has no saved copy of this record.",
+      "VND_KIND_UNKNOWN": "Parasoll no longer knows this kind of action; nothing was sent.",
+      "VND_TARGET_NOT_FOUND": "Parasoll has no saved copy of this record.",
       "VND_FORBIDDEN": "Your access does not include this action.",
       "VND_PREVIEW_EXPIRED": "The preview is older than ten minutes; look at it again.",
       "VND_PREVIEW_STALE": "The action is not the one the preview showed; look at it again.",
@@ -4392,7 +4400,7 @@
       "VND_NO_ANSWER": "No clear answer came back. Check whether it happened.",
       "VND_EARLIER_ATTEMPT": "An earlier attempt may have got through without an answer. Check before asking again.",
       "VND_VENDOR_UNAVAILABLE": "The system could not be reached after several attempts; nothing was sent.",
-      "VND_WAITING": "Waiting: the CRM could not record the attempt yet.",
+      "VND_WAITING": "Waiting: Parasoll could not record the attempt yet.",
       "VND_CANCELLED": "Cancelled before it was sent.",
       "VND_SETTLED_DONE": "Checked: it happened.",
       "VND_SETTLED_NOT_DONE": "Checked: it did not happen.",
@@ -4429,7 +4437,7 @@
       "cancelAction": "Cancel the action",
       "held": "Sent in {{seconds}} s. Until then you can cancel it.",
       "sending": "Sending to {{system}}…",
-      "uncertainNext": "{{system}} gave no clear answer. Check there whether it happened, then record what you found in the action log under Connections.",
+      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened, then record what you found under Actions at vendors on the Connections page.",
       "openAtVendor": "Check in {{system}}",
       "keepsGoing": "You can close this window; the action carries on."
     },
@@ -4449,15 +4457,15 @@
       "done": "It happened in {{system}}",
       "notDone": "It did not happen in {{system}}",
       "reason": "What you checked",
-      "confirm": "Record"
+      "confirm": "Save what you found"
     },
     "log": {
       "title": "Actions at vendors",
-      "note": "Everything asked of the vendors from the CRM, newest first. An action without a clear answer waits until someone checks at the vendor.",
+      "note": "Everything Parasoll asked of the vendors, newest first. An action without a clear answer waits until someone checks at the vendor.",
       "filter": "Show actions",
       "all": "All",
       "attention": "Check needed",
-      "waiting": "Waiting",
+      "waiting": "Not sent yet",
       "none": "No actions yet.",
       "noneUncertain": "No action needs a check.",
       "noneWaiting": "Nothing is waiting to be sent."
@@ -4481,7 +4489,7 @@
       "VND_EFFECT_TICKET_REPLY": "{{to}} sees this reply in Atera, and gets it by e-mail when Atera's notifications are on.",
       "VND_EFFECT_TICKET_REPLY_CUSTOMER": "The customer sees this reply in Atera, and gets it by e-mail when Atera's notifications are on.",
       "VND_EFFECT_TICKET_NOTE": "Only technicians see this note; the customer does not.",
-      "VND_EFFECT_TICKET_AUTHOR": "It is written in Atera as {{name}}.",
+      "VND_EFFECT_TICKET_AUTHOR": "Atera shows it as written by {{name}}.",
       "VND_EFFECT_TICKET_REOPEN": "The ticket is {{status}}: Atera may open it again when the customer is answered.",
       "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_PRIORITY": "Priority: {{from}} → {{to}}",
@@ -4491,12 +4499,13 @@
       "VND_EFFECT_TIME_BILLABLE": "Atera marks them billable.",
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera marks them not billable.",
       "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice.",
-      "VND_EFFECT_TIME_DEFAULT_START": "The entry has no start time, so the hours start at {{from}} on its date."
+      "VND_EFFECT_TIME_DEFAULT_START": "The entry has no start time, so the hours start at {{from}} on its date.",
+      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}."
     }
   },
   "tickets": {
     "title": "Tickets",
-    "subtitle": "Open tickets of every customer, newest first. Atera keeps them; you answer and change them here.",
+    "subtitle": "Open tickets of every customer, newest first. They live in Atera; you answer and change them here.",
     "subtitleAll": "Every open ticket and every ticket of the last 90 days, newest first.",
     "refresh": "Refresh tickets",
     "filters": "Filter tickets",
@@ -4508,7 +4517,7 @@
     },
     "whoLabel": "Whose tickets",
     "who": {
-      "everyone": "Everyone's",
+      "everyone": "All technicians",
       "mine": "Mine"
     },
     "totals_one": "{{count}} open ticket",
@@ -4542,15 +4551,16 @@
       "noTechnician": "No technician",
       "created": "Created",
       "resolved": "Resolved",
-      "source": "Source"
+      "source": "Source",
+      "noPriority": "No priority"
     },
     "panel": {
       "title": "Ticket",
       "loading": "Reading the ticket…",
-      "notFound": "The CRM has no saved copy of this ticket.",
+      "notFound": "Parasoll has no saved copy of this ticket.",
       "openInSource": "Open in {{name}}",
       "actions": "Actions on this ticket",
-      "noActions": "Nothing has been asked for this ticket from the CRM yet."
+      "noActions": "Nothing has been sent from Parasoll for this ticket yet."
     },
     "actions": {
       "label": "Change the ticket",

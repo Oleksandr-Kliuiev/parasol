@@ -79,6 +79,19 @@ public sealed class ConnectionStatusReaderTests
     }
 
     [Fact]
+    public void An_action_without_a_clear_answer_keeps_the_page_from_green_until_someone_checks_it()
+    {
+        var state = State([Stream("atera", "atera-alerts", Minutes(2)), Stream("atera", "atera-tickets", Minutes(3))],
+            Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5)) with { UncertainActions = new Dictionary<string, int> { ["atera"] = 2 } };
+
+        var view = ConnectionStatusReader.Compose([Atera], state, Now);
+
+        view.Status.ShouldBe("Gaps");
+        view.Gaps.ShouldBe([new ConnectionGap("ActionsUncertain", "atera", Count: 2)]);
+        ConnectionStatusReader.Compose([Atera], state with { UncertainActions = new Dictionary<string, int>() }, Now).Status.ShouldBe("Ready");
+    }
+
+    [Fact]
     public void A_pause_is_one_gap_for_the_integration_and_a_switched_off_integration_none()
     {
         var office = new ConnectionDefinition("poweroffice", false, false, ["poweroffice-customers"]);

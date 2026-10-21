@@ -56,7 +56,7 @@ describe('tickets (M39.2)', () => {
     const { router } = render();
     expect(await screen.findByRole('button', { name: '#4711 Printer is down' })).toBeVisible();
     expect(screen.getByText('2 open tickets')).toBeVisible();
-    expect(screen.getByText(/^Tickets \(Atera\) read at .* · Ticket messages \(Atera\) read at /)).toBeVisible();
+    expect(screen.getByText(/^Open tickets \(Atera\) read at .* · Ticket messages \(Atera\) read at /)).toBeVisible();
     expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?openOnly=true&limit=25');
 
     await userEvent.click(screen.getByRole('button', { name: 'Mine' }));
@@ -74,7 +74,8 @@ describe('tickets (M39.2)', () => {
     const panel = await screen.findByRole('dialog', { name: '#4711 Printer is down' });
     expect(within(panel).getByText('Havbris AS')).toBeVisible();
     expect(within(panel).getByText('Kari Kunde · kari@example.no')).toBeVisible();
-    expect(within(panel).getByText(/Tickets \(Atera\) read at .* · Ticket messages \(Atera\) read at/)).toBeVisible();
+    // The panel says how fresh the ticket list is; the conversation says when this ticket's messages were read.
+    expect(within(panel).getByText(/^Open tickets \(Atera\) read at [^·]*$/)).toBeVisible();
     expect(within(panel).getByRole('link', { name: /Open in Atera/ })).toHaveAttribute('href', 'https://atera.example/ticket/4711');
 
     const conversation = within(within(panel).getByRole('region', { name: 'Conversation' }));
@@ -113,7 +114,7 @@ describe('tickets (M39.2)', () => {
 
     const confirm = await screen.findByRole('dialog', { name: 'Reply in #4711' });
     expect(await within(confirm).findByText('Kari Kunde sees this reply in Atera, and gets it by e-mail when Atera\'s notifications are on.')).toBeVisible();
-    expect(within(confirm).getByText('It is written in Atera as Tor Tekniker.')).toBeVisible();
+    expect(within(confirm).getByText('Atera shows it as written by Tor Tekniker.')).toBeVisible();
     expect(within(confirm).getByText('On my way')).toBeVisible();
     await userEvent.click(within(confirm).getByRole('button', { name: 'Send the reply' }));
     expect(await within(confirm).findByText('The vendor accepted the change.')).toBeVisible();

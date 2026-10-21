@@ -45,7 +45,7 @@ public sealed class ConnectionStatusReader
 
     /// <summary>
     /// Green only for a complete picture: every job of every enabled integration fresh and not failed since its last success,
-    /// nothing unsent, no pause and every worker part beating. Everything else is a gap; a state that could not be read is
+    /// nothing unsent, no action waiting for a check at the vendor, no pause and every worker part beating. Everything else is a gap; a state that could not be read is
     /// Unavailable, with neither figures nor gaps.
     /// </summary>
     internal static ConnectionStatusView Compose(IReadOnlyList<ConnectionDefinition> connections, ConnectionStoredState? state, DateTimeOffset now)
@@ -88,6 +88,11 @@ public sealed class ConnectionStatusReader
             if (failedOutbound > 0)
             {
                 gaps.Add(new("OutboundFailed", connection.System, Count: failedOutbound));
+            }
+
+            if (state.UncertainActions?.GetValueOrDefault(connection.System) is > 0 and var uncertain)
+            {
+                gaps.Add(new("ActionsUncertain", connection.System, Count: uncertain));
             }
         }
 

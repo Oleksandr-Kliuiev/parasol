@@ -116,7 +116,7 @@ internal sealed class AteraTimeRecordAction(
                 ["from"] = local.Start.ToString("HH:mm", CultureInfo.InvariantCulture),
             })],
             new VendorActionEffect(entry.Billable ? "VND_EFFECT_TIME_BILLABLE" : "VND_EFFECT_TIME_NOT_BILLABLE", new Dictionary<string, string?>()),
-            new VendorActionEffect("VND_EFFECT_TICKET_AUTHOR", new Dictionary<string, string?> { ["name"] = technician.Name ?? technician.Email ?? technician.ExternalId }),
+            new VendorActionEffect("VND_EFFECT_TIME_AUTHOR", new Dictionary<string, string?> { ["name"] = technician.Name ?? technician.Email ?? technician.ExternalId }),
             new VendorActionEffect("VND_EFFECT_TIME_NO_DOUBLE", new Dictionary<string, string?>()),
         ], null, parameters);
     }

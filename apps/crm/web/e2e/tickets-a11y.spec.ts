@@ -40,7 +40,7 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
     await panel.getByRole('textbox', { name: 'Reply', exact: true }).fill('Vi ser på det i dag.');
     await panel.getByRole('button', { name: 'Send the reply', exact: true }).click();
     const confirm = page.getByRole('dialog', { name: `Reply in #${ticket.TicketID}`, exact: true });
-    await expect(confirm.getByText('It is written in Atera as Dev Admin.', { exact: true })).toBeVisible();
+    await expect(confirm.getByText('Atera shows it as written by Dev Admin.', { exact: true })).toBeVisible();
     await expect(confirm.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
     await settled(page);
     expect(await seriousViolations(page), `action confirmation at ${width} px (${scheme})`).toEqual([]);
@@ -78,7 +78,7 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
     await settled(page);
     expect(await seriousViolations(page), `time recording confirmation at ${width} px (${scheme})`).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath(`time-atera-confirmation-${width}-${scheme}.png`) });
-    await record.getByRole('button', { name: 'Not now', exact: true }).click();
+    await record.getByRole('button', { name: 'Skip', exact: true }).click();
     await expect(record).toHaveCount(0);
   }
 });

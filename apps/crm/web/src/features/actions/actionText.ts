@@ -6,8 +6,27 @@ import type { ActionBlock, ActionEffect, VendorAction } from './types';
 /** The kind as people say it ("Reply to the customer"); a kind the interface does not know yet keeps its code. */
 export const kindName = (t: TFunction, system: string, kind: string) => t(`actions.kinds.${system}.${kind}`, { defaultValue: kind });
 
+/** Values that are Atera's own words (a status, a priority) or empty, said the way the rest of the interface says them. */
+const effectValues = (t: TFunction, effect: ActionEffect): Record<string, string | null> => {
+  const values = { ...effect.values };
+  const word = (group: 'statuses' | 'priorities', value: string | null | undefined, empty: string) =>
+    value ? t(`tickets.${group}.${value}`, { defaultValue: value }) : t(empty);
+  switch (effect.code) {
+    case 'VND_EFFECT_TICKET_STATUS':
+      return { ...values, from: word('statuses', values.from, 'tickets.statuses.Open'), to: word('statuses', values.to, 'tickets.statuses.Open') };
+    case 'VND_EFFECT_TICKET_REOPEN':
+      return { ...values, status: word('statuses', values.status, 'tickets.statuses.Open') };
+    case 'VND_EFFECT_TICKET_PRIORITY':
+      return { ...values, from: word('priorities', values.from, 'tickets.fields.noPriority'), to: word('priorities', values.to, 'tickets.fields.noPriority') };
+    case 'VND_EFFECT_TICKET_TECHNICIAN':
+      return { ...values, from: values.from || t('tickets.fields.noTechnician') };
+    default:
+      return values;
+  }
+};
+
 export const effectText = (t: TFunction, effect: ActionEffect) =>
-  t(`actions.effects.${effect.code}`, { ...effect.values, defaultValue: effect.code, interpolation: { escapeValue: false } });
+  t(`actions.effects.${effect.code}`, { ...effectValues(t, effect), defaultValue: effect.code, interpolation: { escapeValue: false } });
 
 /**
  * Every code of the action path — what blocks an action, why a command was refused, what the worker did — lives in one place

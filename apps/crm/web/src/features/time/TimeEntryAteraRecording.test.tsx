@@ -54,7 +54,7 @@ it('goes on from the saved entry into the Atera confirmation and sends the comma
 
   const dialog = await screen.findByRole('dialog', { name: 'Record on #4711 in Atera' });
   expect(await within(dialog).findByText('1.5 h are recorded on #4711 in Atera, 17.10.2026 08:00–09:30.')).toBeVisible();
-  expect(within(dialog).getByText('The hours are saved in Parasoll. Atera gets them only when you confirm.')).toBeVisible();
+  expect(within(dialog).getByText('The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.')).toBeVisible();
   expect(within(dialog).getByText('Atera marks them billable.')).toBeVisible();
   expect(within(dialog).getByText('The work-hours import recognises them, so they are never counted twice.')).toBeVisible();
   expect(urls(fetch).filter((call) => call.startsWith('POST /api/v1/time/entries'))).toHaveLength(1);
@@ -66,13 +66,13 @@ it('goes on from the saved entry into the Atera confirmation and sends the comma
   expect(command).toMatchObject({ system: 'atera', kind: 'time.record', targetType: 'time-entry', targetId: 'entry-new', parameters: {}, previewToken: 'token' });
 });
 
-it('keeps the saved entry and closes at once when the person says Not now', async () => {
+it('keeps the saved entry and closes at once when the person skips Atera', async () => {
   const fetch = server(); vi.stubGlobal('fetch', fetch); renderTimeEntry(null);
   await fillNewEntry('4711');
   await userEvent.click(await screen.findByRole('checkbox', { name: 'Also record in Atera' }));
   await userEvent.click(screen.getByRole('button', { name: 'Register hours' }));
   const dialog = await screen.findByRole('dialog', { name: 'Record on #4711 in Atera' });
-  await userEvent.click(await within(dialog).findByRole('button', { name: 'Not now' }));
+  await userEvent.click(await within(dialog).findByRole('button', { name: 'Skip' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(urls(fetch)).not.toContain('POST /api/v1/actions');
   expect(urls(fetch).filter((call) => call.startsWith('POST /api/v1/time/entries'))).toHaveLength(1);

@@ -1,6 +1,6 @@
 import { useState, type Ref } from 'react';
 import { Button, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
-import { CheckmarkCircle16Regular, ChevronDown16Regular, PersonArrowRight16Regular } from '@fluentui/react-icons';
+import { CheckmarkCircle16Regular, ChevronDown16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import type { TicketDetail } from '../types';
 import { useAteraTechnicians } from './api';
@@ -30,7 +30,8 @@ export function TicketActionsBar({ ticket, onAsk, groupRef }: { ticket: TicketDe
         <Button {...restore} size="small" icon={<ChevronDown16Regular />} iconPosition="after">{t('tickets.actions.status')}</Button>
       </MenuTrigger>
       <MenuPopover><MenuList>
-        {ticketStatuses.filter((status) => status.toLowerCase() !== ticket.status.toLowerCase()).map((status) => (
+        {/* Closed is Close ticket's: one way to close a ticket. */}
+        {ticketStatuses.filter((status) => status !== 'Closed' && status.toLowerCase() !== ticket.status.toLowerCase()).map((status) => (
           <MenuItem key={status} onClick={() => ask('ticket.status', { status }, t('tickets.actions.statusTitle', { number, status: t(`tickets.statuses.${status}`) }),
             t('tickets.actions.statusConfirm', { status: t(`tickets.statuses.${status}`) }))}>
             {t(`tickets.statuses.${status}`)}
@@ -51,7 +52,7 @@ export function TicketActionsBar({ ticket, onAsk, groupRef }: { ticket: TicketDe
     </Menu>
     <Menu open={technicianMenu} onOpenChange={(_, data) => setTechnicianMenu(data.open)}>
       <MenuTrigger disableButtonEnhancement>
-        <Button {...restore} size="small" icon={<PersonArrowRight16Regular />}>{t('tickets.actions.technician')}</Button>
+        <Button {...restore} size="small" icon={<ChevronDown16Regular />} iconPosition="after">{t('tickets.actions.technician')}</Button>
       </MenuTrigger>
       <MenuPopover><MenuList>
         {technicians.isFetching && <MenuItem disabled><Spinner size="extra-tiny" label={t('common.loading')} /></MenuItem>}

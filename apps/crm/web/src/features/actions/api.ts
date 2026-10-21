@@ -8,7 +8,8 @@ const BASE = '/api/v1/actions';
 export const actionKeys = {
   all: ['actions'] as const,
   one: (id: string) => ['actions', 'one', id] as const,
-  log: (filters: ActionLogFilters) => ['actions', 'log', filters] as const,
+  // The page size is part of the key: the filter counts read one row, and that page must never stand in for the list's.
+  log: (filters: ActionLogFilters, limit?: number) => ['actions', 'log', filters, limit ?? null] as const,
   kinds: (system: string) => ['actions', 'kinds', system] as const,
 };
 
@@ -76,7 +77,7 @@ export function useAction(id: string | null, initial?: VendorAction) {
 /** The log, newest first, a page at a time; it polls while an action on the loaded pages still waits for the worker. */
 export function useActionLog(filters: ActionLogFilters, options: { enabled?: boolean; limit?: number } = {}) {
   const result = useInfiniteQuery<ActionPage, Error, InfiniteData<ActionPage, string | null>, ReturnType<typeof actionKeys.log>, string | null>({
-    queryKey: actionKeys.log(filters),
+    queryKey: actionKeys.log(filters, options.limit),
     enabled: options.enabled ?? true,
     initialPageParam: null,
     queryFn: async ({ pageParam, signal }) =>

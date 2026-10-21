@@ -96,7 +96,8 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
         <span>{sourceName(t, ticket.system)}</span>
         {link && <Link href={link} target="_blank" rel="noopener noreferrer" className={styles.external}>
           {t('tickets.panel.openInSource', { name: sourceName(t, ticket.system) })}<Open16Regular aria-hidden /></Link>}
-        <ServiceReadLine reads={[ticket.ticketsRead, ticket.conversationsRead]} />
+        {/* The conversation below says when this ticket's messages were read: the fact is said once. */}
+        <ServiceReadLine reads={[ticket.ticketsRead]} />
       </span> },
     ]} />
     {canWrite && <TicketActionsBar ticket={ticket} onAsk={openAsk} groupRef={bar} />}

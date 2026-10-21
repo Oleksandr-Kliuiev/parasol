@@ -45,7 +45,7 @@ test('a technician answers a ticket and moves it on from its panel, and Atera ge
   await panel.getByRole('textbox', { name: 'Reply', exact: true }).fill(text);
   await panel.getByRole('button', { name: 'Send the reply', exact: true }).click();
   const reply = page.getByRole('dialog', { name: `Reply in #${ticket.TicketID}`, exact: true });
-  await expect(reply.getByText('It is written in Atera as Dev Admin.', { exact: true })).toBeVisible();
+  await expect(reply.getByText('Atera shows it as written by Dev Admin.', { exact: true })).toBeVisible();
   await expect(reply.getByText(text, { exact: true })).toBeVisible();
   await reply.getByRole('button', { name: 'Send the reply', exact: true }).click();
   await expect(followUp(reply)).toContainText('Done', { timeout: SENT });
@@ -88,7 +88,7 @@ test('a reply without a clear answer is never sent again and waits in the action
   const reply = page.getByRole('dialog', { name: `Reply in #${ticket.TicketID}`, exact: true });
   await reply.getByRole('button', { name: 'Send the reply', exact: true }).click();
   await expect(followUp(reply)).toContainText('Check needed', { timeout: SENT });
-  await expect(reply.getByText(/^Atera gave no clear answer\. Check there whether it happened/)).toBeVisible();
+  await expect(reply.getByText(/^Atera gave no clear answer, so nothing is sent again\. Check in Atera whether it happened/)).toBeVisible();
   await expect(reply.getByRole('link', { name: 'Check in Atera' })).toHaveAttribute('href', new RegExp(`/${ticket.TicketID}$`));
   await reply.getByRole('button', { name: 'Close', exact: true }).click();
   expect((await ateraTicketState(page, ticket)).Comments).toEqual([]);
@@ -103,7 +103,7 @@ test('a reply without a clear answer is never sent again and waits in the action
   const detail = page.getByRole('dialog', { name: title, exact: true });
   await detail.getByRole('radio', { name: 'It did not happen in Atera', exact: true }).check();
   await detail.getByRole('textbox', { name: 'What you checked' }).fill('No reply in the ticket in Atera at 10:05.');
-  await detail.getByRole('button', { name: 'Record', exact: true }).click();
+  await detail.getByRole('button', { name: 'Save what you found', exact: true }).click();
   await expect(detail.getByRole('status')).toContainText('Failed');
   await detail.getByRole('button', { name: 'Close', exact: true }).first().click();
 
@@ -137,7 +137,7 @@ test('own hours are recorded on the ticket in Atera from the time form, and the 
 
   // The same dialog goes on into the confirmation of what Atera gets.
   const record = page.getByRole('dialog', { name: `Record on #${ticket.TicketID} in Atera`, exact: true });
-  await expect(record.getByText('The hours are saved in Parasoll. Atera gets them only when you confirm.', { exact: true })).toBeVisible();
+  await expect(record.getByText('The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.', { exact: true })).toBeVisible();
   await expect(record.getByText(new RegExp(`^1\\.5 h are recorded on #${ticket.TicketID} in Atera, \\d\\d\\.\\d\\d\\.\\d{4} \\d\\d:\\d\\d–\\d\\d:\\d\\d\\.$`))).toBeVisible();
   // The form takes no start time: the confirmation says where the hours start in Atera.
   await expect(record.getByText('The entry has no start time, so the hours start at 08:00 on its date.', { exact: true })).toBeVisible();

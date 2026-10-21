@@ -36,7 +36,7 @@ it('renders zero counts and empty states only after successful saved reads and s
   expect(region('summary').getAllByText('0')).toHaveLength(4); expect(screen.getByText('No devices from Atera yet.')).toBeVisible();
   expect(screen.getByText('No saved ticket requests need attention.')).toBeVisible();
   // M39.2: one read line names every source, never a single "last change" that says nothing about alerts or devices.
-  expect(region('summary').getByText(/^Tickets \(Atera\) read at .* · Alerts \(Atera\) read at .* · Devices \(Atera\) read at /)).toBeVisible();
+  expect(region('summary').getByText(/^Open tickets \(Atera\) read at .* · Alerts \(Atera\) read at .* · Devices \(Atera\) read at /)).toBeVisible();
   expect(screen.queryByText(/^Last synced/)).not.toBeInTheDocument();
   expect(screen.getByText(/Refresh rereads this copy; it does not check Atera live/)).toBeVisible();
 });
@@ -45,7 +45,7 @@ it('shows a kind of data that was never read as not read, never as a zero (M38 U
   const reads = summary.reads.map((read) => read.source === 'tickets' ? { ...read, startedAt: null, complete: false } : read);
   vi.stubGlobal('fetch', vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, openTickets: 0, reads }) : empty()));
   renderService();
-  expect(await region('summary').findByText(/Tickets \(Atera\) not read yet/)).toBeVisible();
+  expect(await region('summary').findByText(/Open tickets \(Atera\) not read yet/)).toBeVisible();
   const tickets = region('summary').getByText('Open tickets').parentElement!;
   expect(within(tickets).getByText('—')).toBeVisible(); expect(within(tickets).getByText('Not read yet')).toBeVisible();
   expect(within(tickets).queryByText('0')).not.toBeInTheDocument();

@@ -79,10 +79,12 @@ function Detail({ initial, onClose }: { initial: VendorAction; onClose: () => vo
         ]} />
         {action.status === 'Uncertain' && <>
           <Text className={styles.muted}>{t('actions.settle.intro', { system: systemName(t, action.system) })}</Text>
-          <RadioGroup value={verdict} onChange={(_, data) => setVerdict(data.value as 'Succeeded' | 'Failed')} aria-label={t('actions.settle.question')}>
-            <Radio value="Succeeded" label={t('actions.settle.done', { system: systemName(t, action.system) })} />
-            <Radio value="Failed" label={t('actions.settle.notDone', { system: systemName(t, action.system) })} />
-          </RadioGroup>
+          <Field label={t('actions.settle.question')} required>
+            <RadioGroup value={verdict} onChange={(_, data) => setVerdict(data.value as 'Succeeded' | 'Failed')}>
+              <Radio value="Succeeded" label={t('actions.settle.done', { system: systemName(t, action.system) })} />
+              <Radio value="Failed" label={t('actions.settle.notDone', { system: systemName(t, action.system) })} />
+            </RadioGroup>
+          </Field>
           <Field label={t('actions.settle.reason')} required hint={t('actions.dialog.reasonHint', { min: REASON_MIN, max: 500 })}>
             <Textarea value={reason} onChange={(_, data) => setReason(data.value)} maxLength={500} resize="vertical" />
           </Field>
