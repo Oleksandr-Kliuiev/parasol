@@ -22,7 +22,7 @@ describe('navigation groups', () => {
 
   it('keeps each entry behind the permission it had before the regrouping', () => {
     expect(groupsFor(['time.own', 'contracts.read', 'billing.read', 'reports.read', 'finance.cost.read', 'service.read'])).toEqual([
-      ['work', ['my-day', 'alerts', 'timesheet']],
+      ['work', ['my-day', 'alerts', 'tickets', 'timesheet']],
       ['customers', ['organizations', 'contracts']],
       ['finance', ['billing', 'invoices', 'dashboard', 'margins', 'sla']],
     ]);
@@ -47,16 +47,18 @@ describe('navigation groups', () => {
       ['system', ['connections', 'integrations', 'technicians', 'mappings', 'jobs']],
     ]);
     expect(groupsFor(['customers.read', 'service.read', 'activities.read'])).toEqual([
-      ['work', ['my-day', 'alerts']],
+      ['work', ['my-day', 'alerts', 'tickets']],
       ['customers', ['organizations']],
       ['finance', ['sla']],
     ]);
   });
 
   it('lists Alerts under Work, right after My day, for anyone who reads service data, and marks it on the queue', () => {
-    expect(groupsFor(['service.read'])[0]).toEqual(['work', ['my-day', 'alerts']]);
+    expect(groupsFor(['service.read'])[0]).toEqual(['work', ['my-day', 'alerts', 'tickets']]);
     expect(groupsFor(['customers.read'])[0]).toEqual(['work', ['my-day']]);
     expect(selectedNavValue('/alerts')).toBe('alerts');
+    // M39.2: the tickets of every customer come right after the alerts.
+    expect(selectedNavValue('/tickets')).toBe('tickets');
     expect(selectedNavValue('/organizations/o1')).toBe('organizations');
   });
 

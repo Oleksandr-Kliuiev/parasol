@@ -52,7 +52,8 @@
     "collapse": "Collapse menu",
     "expand": "Expand menu",
     "mainMenu": "Main menu",
-    "opensNewTab": "(opens in a new tab)"
+    "opensNewTab": "(opens in a new tab)",
+    "tickets": "Tickets"
   },
   "header": {
     "search": "Search organizations",
@@ -1532,7 +1533,15 @@
       "type": "Type"
     },
     "nothingSaved": "No Atera data is saved for this customer: it is not linked to Atera, or Atera has not been read for it yet. The figures appear after the first read.",
-    "nothingSavedShort": "No Atera data saved for this customer yet."
+    "nothingSavedShort": "No Atera data saved for this customer yet.",
+    "notReadYet": "Not read yet",
+    "ticketOpenAtSource": "{{title}} in {{source}}",
+    "reads": {
+      "tickets": "Tickets ({{system}})",
+      "conversations": "Ticket messages ({{system}})",
+      "alerts": "Alerts ({{system}})",
+      "devices": "Devices ({{system}})"
+    }
   },
   "alerts": {
     "title": "Alerts",
@@ -4379,7 +4388,17 @@
       "VND_CANCELLED": "Cancelled before it was sent.",
       "VND_SETTLED_DONE": "Checked: it happened.",
       "VND_SETTLED_NOT_DONE": "Checked: it did not happen.",
-      "VND_HELD_AFTER_RESTORE": "Held after a database restore: it may have got through. Check and record what you found."
+      "VND_HELD_AFTER_RESTORE": "Held after a database restore: it may have got through. Check and record what you found.",
+      "VND_TEXT_REQUIRED": "Write the text first.",
+      "VND_TEXT_TOO_LONG": "The text is longer than 8000 characters.",
+      "VND_TECHNICIAN_UNMAPPED": "Your account is not linked to an Atera technician. An administrator links it under Technicians.",
+      "VND_NO_CHANGE": "The ticket already has this value.",
+      "VND_VALUE_UNKNOWN": "Choose one of the values Atera knows.",
+      "VND_TECHNICIAN_UNKNOWN": "Choose a technician Atera knows.",
+      "VND_TICKET_MOVED": "The ticket belongs to another customer in Atera now; nothing was sent.",
+      "VND_TARGET_GONE": "The ticket no longer exists in Atera; nothing was sent.",
+      "VND_VENDOR_REFUSED": "Atera refused it; nothing changed.",
+      "VND_VENDOR_BUSY": "Atera could not be read; it is tried again."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4429,6 +4448,140 @@
       "none": "No actions yet.",
       "noneUncertain": "No action needs a check.",
       "noneWaiting": "Nothing is waiting to be sent."
+    },
+    "kinds": {
+      "atera": {
+        "ticket": {
+          "reply": "Reply to the customer",
+          "note": "Internal note",
+          "status": "Change status",
+          "priority": "Change priority",
+          "technician": "Give to technician",
+          "close": "Close ticket"
+        },
+        "time": {
+          "record": "Record time in Atera"
+        }
+      }
+    },
+    "effects": {
+      "VND_EFFECT_TICKET_REPLY": "{{to}} sees this reply in Atera, and gets it by e-mail when Atera's notifications are on.",
+      "VND_EFFECT_TICKET_REPLY_CUSTOMER": "The customer sees this reply in Atera, and gets it by e-mail when Atera's notifications are on.",
+      "VND_EFFECT_TICKET_NOTE": "Only technicians see this note; the customer does not.",
+      "VND_EFFECT_TICKET_AUTHOR": "It is written in Atera as {{name}}.",
+      "VND_EFFECT_TICKET_REOPEN": "The ticket is {{status}}: Atera may open it again when the customer is answered.",
+      "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_PRIORITY": "Priority: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_TECHNICIAN": "Technician: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera may tell the customer that the ticket is solved."
+    }
+  },
+  "tickets": {
+    "title": "Tickets",
+    "subtitle": "Open tickets of every customer, newest first. Atera keeps them; you answer and change them here.",
+    "subtitleAll": "Every open ticket and every ticket of the last 90 days, newest first.",
+    "refresh": "Refresh tickets",
+    "filters": "Filter tickets",
+    "search": "Search title or number",
+    "stateLabel": "Which tickets",
+    "show": {
+      "open": "Open",
+      "all": "All"
+    },
+    "whoLabel": "Whose tickets",
+    "who": {
+      "everyone": "Everyone's",
+      "mine": "Mine"
+    },
+    "totals_one": "{{count}} open ticket",
+    "totals_other": "{{count}} open tickets",
+    "totalsAll_one": "{{count}} ticket",
+    "totalsAll_other": "{{count}} tickets",
+    "listTitle": "Tickets",
+    "empty": "No open tickets.",
+    "emptyAll": "No tickets in the last 90 days.",
+    "emptyFiltered": "No ticket matches the filter.",
+    "clearFilters": "Clear filters",
+    "statuses": {
+      "Open": "Open",
+      "Pending": "Pending",
+      "Resolved": "Resolved",
+      "Closed": "Closed"
+    },
+    "priorities": {
+      "Low": "Low",
+      "Medium": "Medium",
+      "High": "High",
+      "Critical": "Critical"
+    },
+    "fields": {
+      "status": "Status",
+      "priority": "Priority",
+      "customer": "Customer",
+      "unknownCustomer": "Unknown customer",
+      "contact": "Contact",
+      "technician": "Technician",
+      "noTechnician": "No technician",
+      "created": "Created",
+      "resolved": "Resolved",
+      "source": "Source"
+    },
+    "panel": {
+      "title": "Ticket",
+      "loading": "Reading the ticket…",
+      "notFound": "The CRM has no saved copy of this ticket.",
+      "openInSource": "Open in {{name}}",
+      "actions": "Actions on this ticket",
+      "noActions": "Nothing has been asked for this ticket from the CRM yet."
+    },
+    "actions": {
+      "label": "Change the ticket",
+      "status": "Status",
+      "priority": "Priority",
+      "technician": "Give to technician",
+      "close": "Close ticket",
+      "statusTitle": "Set {{number}} to {{status}}",
+      "statusConfirm": "Set to {{status}}",
+      "priorityTitle": "Change the priority of {{number}}",
+      "priorityConfirm": "Set priority {{priority}}",
+      "technicianTitle": "Give {{number}} to a technician",
+      "technicianConfirm": "Give to {{name}}",
+      "closeTitle": "Close {{number}}",
+      "closeConfirm": "Close the ticket",
+      "techniciansFailed": "The technicians could not be read.",
+      "noTechnicians": "No Atera technician is known yet."
+    },
+    "conversation": {
+      "title": "Conversation",
+      "readAt": "Messages read",
+      "notRead": "The messages of this ticket have not been read yet.",
+      "earlier": "Show earlier messages ({{shown}} of {{total}})",
+      "empty": "No messages in this ticket.",
+      "emptyUnread": "No messages are saved yet: they appear after the next read.",
+      "internal": "Internal note",
+      "authors": {
+        "Unknown": "Unknown",
+        "Technician": "Technician",
+        "EndUser": "Customer"
+      },
+      "roles": {
+        "Unknown": "Message",
+        "Technician": "Reply",
+        "EndUser": "Customer"
+      }
+    },
+    "composer": {
+      "kind": "Kind of message",
+      "reply": "Reply to the customer",
+      "note": "Internal note",
+      "replyLabel": "Reply",
+      "noteLabel": "Note",
+      "replyHint": "The customer sees this in Atera, and by e-mail when Atera's notifications are on.",
+      "noteHint": "Only technicians see this.",
+      "sendReply": "Send the reply",
+      "addNote": "Add the note",
+      "replyTitle": "Reply in {{number}}",
+      "noteTitle": "Internal note in {{number}}"
     }
   }
 }

@@ -80,6 +80,14 @@ export interface AlertPage {
   reads: AlertSourceRead[];
 }
 
+/**
+ * The latest finished read of one kind of service data (M39.2), as the alert reads: a figure of a source never read is not a zero,
+ * a read that did not finish or whose successor is overdue is said so.
+ */
+export interface ServiceSourceRead extends AlertSourceRead {
+  source: 'tickets' | 'conversations' | 'alerts' | 'devices';
+}
+
 export interface ServiceSummary {
   openTickets: number;
   ticketsLast90Days: number;
@@ -88,6 +96,44 @@ export interface ServiceSummary {
   criticalAlerts: number;
   warningAlerts: number;
   lastSyncedAt: string | null;
+  reads: ServiceSourceRead[];
+}
+
+/** One ticket with what its panel shows (M39.2): the ticket list's read and the conversation's own read time. */
+export interface TicketDetail extends Omit<Ticket, 'organizationName' | 'contactName'> {
+  system: string;
+  organizationName: string | null;
+  contactName: string | null;
+  endUserEmail: string | null;
+  impact: string | null;
+  source: string | null;
+  technicianUserId: string | null;
+  firstResponseAt: string | null;
+  commentsReadAt: string | null;
+  ticketsRead: ServiceSourceRead;
+  conversationsRead: ServiceSourceRead;
+}
+
+export type TicketCommentAuthor = 'Unknown' | 'Technician' | 'EndUser';
+
+/** One message of a ticket's conversation as the CRM last read it. */
+export interface TicketComment {
+  id: string;
+  externalId: string;
+  text: string;
+  isInternal: boolean;
+  author: TicketCommentAuthor;
+  authorName: string | null;
+  technicianUserId: string | null;
+  createdAt: string;
+}
+
+/** An Atera technician a ticket can be given to, with the CRM user they are mapped to. */
+export interface AteraTechnician {
+  id: string;
+  name: string;
+  email: string | null;
+  userId: string | null;
 }
 
 export interface TicketRequest {

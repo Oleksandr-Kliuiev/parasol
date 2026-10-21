@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Badge, Button, Link, MessageBar, MessageBarBody, Switch, Table, TableBody, TableCell, TableHeader,
   TableHeaderCell, TableRow, Text, makeStyles, mergeClasses, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
@@ -27,6 +27,8 @@ import { AlertTaskCell } from './alerts/AlertTaskCell';
 import { AlertTaskDialogHost } from './alerts/AlertTaskDialogHost';
 import { useAlertTaskLinks } from './alerts/alertTasks';
 import { sourceName } from './alerts/alertText';
+import { ServiceReadLine } from './ServiceReadLine';
+import { TicketPanel } from './tickets/TicketPanel';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -48,6 +50,9 @@ const useStyles = makeStyles({
     '& b': { color: h.text, fontVariantNumeric: 'tabular-nums' },
   },
   ticket: { fontWeight: 600 },
+  // The title is the way into the ticket: it wraps like text and keeps a 24 px hit box (WCAG 2.5.8).
+  openTicket: { textAlign: 'left', minHeight: '24px', overflowWrap: 'anywhere' },
+  ticketTitle: { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '6px', minWidth: 0 },
   // A link that opens Atera in a new tab (a ticket, a device): its mark stays beside the name, also when the name wraps; a 24 px
   // hit box (WCAG 2.5.8).
   external: { display: 'inline-flex', alignItems: 'center', gap: '4px', minHeight: '24px', '& svg': { flexShrink: 0 } },
@@ -93,10 +98,21 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
   // of reporting "0 critical alerts" for a customer it knows nothing about.
   const nothingSaved = summaryAvailable && summary.data.lastSyncedAt === null && totalDevices === 0 && summary.data.openTickets === 0
     && summary.data.criticalAlerts === 0 && summary.data.warningAlerts === 0;
+  // M39.2: a figure of a kind of data that was never read is not a zero; the read line under the figures says why.
+  const reads = summaryAvailable ? summary.data.reads ?? [] : [];
+  const unread = (source: 'tickets' | 'alerts' | 'devices') => summaryAvailable && reads.find((read) => read.source === source)?.startedAt == null;
+  const figure = (source: 'tickets' | 'alerts' | 'devices', value: ReactNode, note?: string) =>
+    unread(source) ? { value: '—', note: t('service.notReadYet') } : { value, note };
 
   // One alert in a side panel with its own address (?alert=), as in the queue: Back closes it.
   const [params, setParams] = useSearchParams(); const location = useLocation(); const navigate = useNavigate();
   const peekId = params.get('alert');
+  const ticketId = params.get('ticket');
+  const openTicket = (id: string) => { const next = new URLSearchParams(params); next.set('ticket', id); setParams(next, { state: { ticketPeek: true } }); };
+  const closeTicket = () => {
+    if ((location.state as { ticketPeek?: boolean } | null)?.ticketPeek) { void navigate(-1); return; }
+    const next = new URLSearchParams(params); next.delete('ticket'); setParams(next, { replace: true });
+  };
   const openAlert = (alert: Alert) => { const next = new URLSearchParams(params); next.set('alert', alert.id); setParams(next, { state: { alertPeek: true } }); };
   const closeAlert = () => {
     if ((location.state as { alertPeek?: boolean } | null)?.alertPeek) { void navigate(-1); return; }
@@ -112,15 +128,13 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
         {nothingSaved && <Text block>{t('service.nothingSaved')}</Text>}
         {summaryAvailable && !nothingSaved && <>
           <FigureGrid className={styles.facts} items={[
-            { label: t('service.criticalAlerts'), value: count(summary.data.criticalAlerts, 'bad') },
-            { label: t('service.warningAlerts'), value: count(summary.data.warningAlerts, 'warning') },
+            { label: t('service.criticalAlerts'), ...figure('alerts', count(summary.data.criticalAlerts, 'bad')) },
+            { label: t('service.warningAlerts'), ...figure('alerts', count(summary.data.warningAlerts, 'warning')) },
             // Devices are read nightly: how many were online then, not now.
-            { label: t('service.devices'), value: String(totalDevices), note: t('service.onlineCount', { count: summary.data.devicesOnline }) },
-            { label: t('service.openTickets'), value: String(summary.data.openTickets) },
+            { label: t('service.devices'), ...figure('devices', String(totalDevices), t('service.onlineCount', { count: summary.data.devicesOnline })) },
+            { label: t('service.openTickets'), ...figure('tickets', String(summary.data.openTickets)) },
           ]} />
-          <Text className={styles.muted}>
-            {summary.data.lastSyncedAt ? t('service.lastTicketChange', { at: formatDateTime(summary.data.lastSyncedAt) }) : t('service.lastTicketChangeUnknown')}
-          </Text>
+          {reads.length > 0 && <ServiceReadLine reads={reads} />}
         </>}
       </section>
     </Panel>
@@ -174,9 +188,12 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
           </TableRow></TableHeader>
           <TableBody>{tickets.items.map(ticket => <TableRow key={ticket.id}>
             <TableCell>
-              {ticket.url
-                ? <Link href={safeHttpUrl(ticket.url)} target="_blank" rel="noopener noreferrer" className={mergeClasses(styles.ticket, styles.external)}><span>{ticket.title}</span><Open16Regular aria-hidden /></Link>
-                : <span className={styles.ticket}>{ticket.title}</span>}
+              {/* M39.2: the ticket opens here, with its conversation and answer; Atera is a link beside it. */}
+              <span className={styles.ticketTitle}>
+                <Link as="button" type="button" className={mergeClasses(styles.ticket, styles.openTicket)} onClick={() => openTicket(ticket.id)}>{ticket.title}</Link>
+                {ticket.url && <Link href={safeHttpUrl(ticket.url)} target="_blank" rel="noopener noreferrer" className={styles.external}
+                  aria-label={t('service.ticketOpenAtSource', { title: ticket.title, source: sourceName(t, 'atera') })}><Open16Regular aria-hidden /></Link>}
+              </span>
               <div className={styles.ticketMeta}>{[`#${ticket.externalId}`, ticket.priority].filter(Boolean).join(' · ')}</div>
             </TableCell>
             <TableCell><Badge appearance="tint" color={ticket.isOpen ? 'informative' : 'subtle'}>{ticket.status}</Badge></TableCell>
@@ -204,6 +221,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
     {canCreate && <CreateTicketDialog open={creating} organizationId={organizationId} owner={owner} onClose={() => setCreating(false)} onQueued={() => setRevision(value => value + 1)} />}
     {/* Mounted for an alert only: the tab keeps no read of its own about a panel nobody opened. */}
     {peekId !== null && <AlertDetailDrawer alertId={peekId} onClose={closeAlert} />}
+    {ticketId !== null && <TicketPanel ticketId={ticketId} onClose={closeTicket} />}
   </div></AlertTaskDialogHost>;
 }
 

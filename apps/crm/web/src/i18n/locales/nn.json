@@ -52,7 +52,8 @@
     "collapse": "Gjer menyen smal",
     "expand": "Gjer menyen brei",
     "mainMenu": "Hovudmeny",
-    "opensNewTab": "(blir opna i ei ny fane)"
+    "opensNewTab": "(blir opna i ei ny fane)",
+    "tickets": "Saker"
   },
   "header": {
     "search": "Søk i organisasjonar",
@@ -1532,7 +1533,15 @@
       "type": "Type"
     },
     "nothingSaved": "Ingen Atera-data er lagra for denne kunden: han er ikkje kopla til Atera, eller Atera er ikkje lese for han enno. Tala blir viste etter første lesing.",
-    "nothingSavedShort": "Ingen Atera-data er lagra for denne kunden enno."
+    "nothingSavedShort": "Ingen Atera-data er lagra for denne kunden enno.",
+    "notReadYet": "Ikkje lese enno",
+    "ticketOpenAtSource": "{{title}} i {{source}}",
+    "reads": {
+      "tickets": "Saker ({{system}})",
+      "conversations": "Meldingar i saker ({{system}})",
+      "alerts": "Driftsvarsel ({{system}})",
+      "devices": "Einingar ({{system}})"
+    }
   },
   "alerts": {
     "title": "Driftsvarsel",
@@ -4377,7 +4386,17 @@
       "VND_CANCELLED": "Avbroten før ho vart send.",
       "VND_SETTLED_DONE": "Sjekka: det skjedde.",
       "VND_SETTLED_NOT_DONE": "Sjekka: det skjedde ikkje.",
-      "VND_HELD_AFTER_RESTORE": "Halden tilbake etter ei gjenoppretting av databasen: ho kan ha gått gjennom. Sjekk og registrer kva du fann."
+      "VND_HELD_AFTER_RESTORE": "Halden tilbake etter ei gjenoppretting av databasen: ho kan ha gått gjennom. Sjekk og registrer kva du fann.",
+      "VND_TEXT_REQUIRED": "Skriv teksten først.",
+      "VND_TEXT_TOO_LONG": "Teksten er lengre enn 8000 teikn.",
+      "VND_TECHNICIAN_UNMAPPED": "Kontoen din er ikkje kopla til ein Atera-tekniker. Ein administrator koplar han under Teknikarar.",
+      "VND_NO_CHANGE": "Saka har allereie denne verdien.",
+      "VND_VALUE_UNKNOWN": "Vel ein av verdiane Atera kjenner.",
+      "VND_TECHNICIAN_UNKNOWN": "Vel ein tekniker Atera kjenner.",
+      "VND_TICKET_MOVED": "Saka høyrer til ein annan kunde i Atera no; ingenting vart sendt.",
+      "VND_TARGET_GONE": "Saka finst ikkje lenger i Atera; ingenting vart sendt.",
+      "VND_VENDOR_REFUSED": "Atera avviste det; ingenting vart endra.",
+      "VND_VENDOR_BUSY": "Atera kunne ikkje lesast; det blir prøvd igjen."
     },
     "dialog": {
       "previewing": "Sjekkar kva handlinga vil gjere …",
@@ -4427,6 +4446,140 @@
       "none": "Ingen handlingar enno.",
       "noneUncertain": "Ingen handlingar må sjekkast.",
       "noneWaiting": "Ingenting ventar på å bli sendt."
+    },
+    "kinds": {
+      "atera": {
+        "ticket": {
+          "reply": "Svar til kunden",
+          "note": "Intern merknad",
+          "status": "Endre status",
+          "priority": "Endre prioritet",
+          "technician": "Gje til tekniker",
+          "close": "Lukk sak"
+        },
+        "time": {
+          "record": "Før tid i Atera"
+        }
+      }
+    },
+    "effects": {
+      "VND_EFFECT_TICKET_REPLY": "{{to}} ser dette svaret i Atera, og får det på e-post når varslingane i Atera er på.",
+      "VND_EFFECT_TICKET_REPLY_CUSTOMER": "Kunden ser dette svaret i Atera, og får det på e-post når varslingane i Atera er på.",
+      "VND_EFFECT_TICKET_NOTE": "Berre teknikarar ser denne merknaden; kunden gjer ikkje det.",
+      "VND_EFFECT_TICKET_AUTHOR": "Det blir skrive i Atera som {{name}}.",
+      "VND_EFFECT_TICKET_REOPEN": "Saka har status {{status}}: Atera kan opne henne igjen når kunden får svar.",
+      "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_PRIORITY": "Prioritet: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_TECHNICIAN": "Tekniker: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera kan seie frå til kunden at saka er løyst."
+    }
+  },
+  "tickets": {
+    "title": "Saker",
+    "subtitle": "Opne saker for alle kundar, nyaste først. Atera tek vare på dei; du svarar og endrar dei her.",
+    "subtitleAll": "Alle opne saker og alle saker frå dei siste 90 dagane, nyaste først.",
+    "refresh": "Oppdater sakene",
+    "filters": "Filtrer saker",
+    "search": "Søk i tittel eller nummer",
+    "stateLabel": "Kva saker",
+    "show": {
+      "open": "Opne",
+      "all": "Alle"
+    },
+    "whoLabel": "Kven sine saker",
+    "who": {
+      "everyone": "Alle sine",
+      "mine": "Mine"
+    },
+    "totals_one": "{{count}} open sak",
+    "totals_other": "{{count}} opne saker",
+    "totalsAll_one": "{{count}} sak",
+    "totalsAll_other": "{{count}} saker",
+    "listTitle": "Saker",
+    "empty": "Ingen opne saker.",
+    "emptyAll": "Ingen saker dei siste 90 dagane.",
+    "emptyFiltered": "Ingen saker passar til filteret.",
+    "clearFilters": "Fjern filtera",
+    "statuses": {
+      "Open": "Open",
+      "Pending": "Ventar",
+      "Resolved": "Løyst",
+      "Closed": "Lukka"
+    },
+    "priorities": {
+      "Low": "Låg",
+      "Medium": "Middels",
+      "High": "Høg",
+      "Critical": "Kritisk"
+    },
+    "fields": {
+      "status": "Status",
+      "priority": "Prioritet",
+      "customer": "Kunde",
+      "unknownCustomer": "Ukjend kunde",
+      "contact": "Kontakt",
+      "technician": "Tekniker",
+      "noTechnician": "Ingen tekniker",
+      "created": "Oppretta",
+      "resolved": "Løyst",
+      "source": "Kjelde"
+    },
+    "panel": {
+      "title": "Sak",
+      "loading": "Les saka …",
+      "notFound": "CRM har inga lagra kopi av denne saka.",
+      "openInSource": "Opne i {{name}}",
+      "actions": "Handlingar på denne saka",
+      "noActions": "Ingenting er bede om for denne saka frå CRM enno."
+    },
+    "actions": {
+      "label": "Endre saka",
+      "status": "Status",
+      "priority": "Prioritet",
+      "technician": "Gje til tekniker",
+      "close": "Lukk saka",
+      "statusTitle": "Set {{number}} til {{status}}",
+      "statusConfirm": "Set til {{status}}",
+      "priorityTitle": "Endre prioriteten på {{number}}",
+      "priorityConfirm": "Set prioritet {{priority}}",
+      "technicianTitle": "Gje {{number}} til ein tekniker",
+      "technicianConfirm": "Gje til {{name}}",
+      "closeTitle": "Lukk {{number}}",
+      "closeConfirm": "Lukk saka",
+      "techniciansFailed": "Teknikarane kunne ikkje lesast.",
+      "noTechnicians": "Ingen Atera-teknikarar er kjende enno."
+    },
+    "conversation": {
+      "title": "Samtale",
+      "readAt": "Meldingar lesne",
+      "notRead": "Meldingane i denne saka er ikkje lesne enno.",
+      "earlier": "Vis tidlegare meldingar ({{shown}} av {{total}})",
+      "empty": "Ingen meldingar i denne saka.",
+      "emptyUnread": "Ingen meldingar er lagra enno: dei blir viste etter neste lesing.",
+      "internal": "Intern merknad",
+      "authors": {
+        "Unknown": "Ukjend",
+        "Technician": "Tekniker",
+        "EndUser": "Kunde"
+      },
+      "roles": {
+        "Unknown": "Melding",
+        "Technician": "Svar",
+        "EndUser": "Kunde"
+      }
+    },
+    "composer": {
+      "kind": "Type melding",
+      "reply": "Svar til kunden",
+      "note": "Intern merknad",
+      "replyLabel": "Svar",
+      "noteLabel": "Merknad",
+      "replyHint": "Kunden ser dette i Atera, og på e-post når varslingane i Atera er på.",
+      "noteHint": "Berre teknikarar ser dette.",
+      "sendReply": "Send svaret",
+      "addNote": "Legg til merknaden",
+      "replyTitle": "Svar i {{number}}",
+      "noteTitle": "Intern merknad i {{number}}"
     }
   }
 }

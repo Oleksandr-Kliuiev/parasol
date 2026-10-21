@@ -27,13 +27,17 @@ const useStyles = makeStyles({
  * finish, or a next read that is overdue, in the warning tone with the way to the connections page for whoever may open it; "not
  * read yet" before the first read. Never more than the reads proved.
  */
-export function AlertReadLine({ reads, className }: { reads: readonly AlertSourceRead[]; className?: string }) {
+export function AlertReadLine<T extends AlertSourceRead>({ reads, className, label }: {
+  reads: readonly T[]; className?: string;
+  /** What each read is called; the source system's name by default ("Atera"), "Tickets (Atera)" for the service reads (M39.2). */
+  label?: (read: T) => string;
+}) {
   const { t } = useTranslation(); const styles = useStyles();
   const canConnections = useCan(Permissions.integrationsManage);
   const freshness = alertsFreshness(reads);
   const warn = freshness === 'incomplete' || freshness === 'late';
-  const said = (read: AlertSourceRead) => {
-    const source = sourceName(t, read.system);
+  const said = (read: T) => {
+    const source = label ? label(read) : sourceName(t, read.system);
     if (read.startedAt === null) return t('alerts.reads.notRead', { source });
     const key = !read.complete ? 'alerts.reads.incomplete' : read.late ? 'alerts.reads.late' : 'alerts.reads.readAt';
     return t(key, { source, time: formatReadAt(read.startedAt) });

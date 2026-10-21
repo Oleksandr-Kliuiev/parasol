@@ -130,8 +130,9 @@ internal abstract class AteraTicketAction(IServiceApi service, ICustomersApi cus
     protected static string? Text(JsonElement parameters, string name) =>
         parameters.ValueKind == JsonValueKind.Object && parameters.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
+    /// <summary>An effect with its values; a value the ticket does not have (no priority yet) is said as a dash, never left empty.</summary>
     protected static VendorActionEffect Effect(string code, params (string Name, string? Value)[] values) =>
-        new(code, values.ToDictionary(v => v.Name, v => v.Value));
+        new(code, values.ToDictionary(v => v.Name, v => (string?)(string.IsNullOrWhiteSpace(v.Value) ? "—" : v.Value)));
 
     /// <summary>The Atera technician a CRM user writes as: the mapping with a numeric Atera id (an e-mail key cannot sign a comment).</summary>
     protected static async Task<TechnicianListing?> TechnicianOfAsync(ITechnicianDirectory technicians, Guid? userId, CancellationToken ct) =>
@@ -175,9 +176,9 @@ internal sealed class AteraTicketCommentAction(
 
         var effects = new List<VendorActionEffect>
         {
-            isInternal
-                ? Effect("VND_EFFECT_TICKET_NOTE")
-                : Effect("VND_EFFECT_TICKET_REPLY", ("to", ticket.EndUserName ?? ticket.EndUserEmail)),
+            isInternal ? Effect("VND_EFFECT_TICKET_NOTE")
+            : (ticket.EndUserName ?? ticket.EndUserEmail) is { } to ? Effect("VND_EFFECT_TICKET_REPLY", ("to", to))
+            : Effect("VND_EFFECT_TICKET_REPLY_CUSTOMER"),
             Effect("VND_EFFECT_TICKET_AUTHOR", ("name", technician.Name ?? technician.Email)),
         };
         if (!isInternal && !ticket.IsOpen)

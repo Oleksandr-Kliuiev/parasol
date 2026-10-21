@@ -27,6 +27,7 @@ export { DocumentQuestionMark24Regular } from '@fluentui/react-icons/svg/documen
 export { DocumentSearch20Regular } from '@fluentui/react-icons/svg/document-search';
 export { DocumentText20Regular } from '@fluentui/react-icons/svg/document-text';
 export { ErrorCircle24Regular } from '@fluentui/react-icons/svg/error-circle';
+export { Headset20Regular } from '@fluentui/react-icons/svg/headset';
 export { KeyMultiple20Regular } from '@fluentui/react-icons/svg/key-multiple';
 export { LockClosed20Regular, LockClosed24Regular } from '@fluentui/react-icons/svg/lock-closed';
 export { MoreHorizontal20Regular } from '@fluentui/react-icons/svg/more-horizontal';

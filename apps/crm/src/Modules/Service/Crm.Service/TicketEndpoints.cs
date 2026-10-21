@@ -86,6 +86,19 @@ internal static class TicketEndpoints
 
     public static RouteGroupBuilder MapTicketEndpoints(this RouteGroupBuilder group)
     {
+        // How fresh every kind of service data is, for a list that says when it was read (the tickets page, M39.2).
+        group.MapGet("/reads", async (IEnumerable<ISyncCompletenessSource> completeness, CancellationToken ct) =>
+            {
+                var reads = new List<ServiceSourceRead>();
+                foreach (var (source, _, _) in ServiceSourceRead.Jobs)
+                {
+                    reads.Add(await ServiceSourceRead.LatestAsync(completeness, source, ct));
+                }
+
+                return Results.Ok(reads);
+            })
+            .RequirePermission(Permissions.ServiceRead);
+
         group.MapGet("/tickets/{id:guid}", async (
                 Guid id, ServiceDbContext db, ICustomersApi customers, IEnumerable<ISyncCompletenessSource> completeness, CancellationToken ct) =>
             {

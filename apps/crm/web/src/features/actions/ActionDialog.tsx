@@ -37,23 +37,27 @@ const useStyles = makeStyles({
  * reason, then a hold with a way back), and follows the action until the worker has an outcome. Closing it never stops an action:
  * the action log keeps it.
  */
-export function ActionDialog({ request, title, confirm, details, onClose, onFinished }: {
+export function ActionDialog({ request, title, confirm, details, onClose, onAccepted, onFinished }: {
   request: ActionRequest | null; title: string; confirm: string;
   /** What the preview cannot show in words, such as the text of a reply, placed above the effects. */
   details?: ReactNode;
-  onClose: () => void; onFinished?: (action: VendorAction) => void;
+  onClose: () => void;
+  /** The command was saved: the action will be sent whether or not the dialog stays open (a composer empties itself here). */
+  onAccepted?: (action: VendorAction) => void;
+  onFinished?: (action: VendorAction) => void;
 }) {
   const shown = useKeptWhileClosing(request);
   const keptTitle = useKeptWhileClosing(title, request !== null);
   const keptDetails = useKeptWhileClosing(details, request !== null);
   return <Dialog open={request !== null} onOpenChange={(_, data) => { if (!data.open) onClose(); }}>
     <DialogSurface>{shown && <ActionFlow key={JSON.stringify(shown)} request={shown} title={keptTitle} confirm={confirm} details={keptDetails}
-      onClose={onClose} onFinished={onFinished} />}</DialogSurface>
+      onClose={onClose} onAccepted={onAccepted} onFinished={onFinished} />}</DialogSurface>
   </Dialog>;
 }
 
-function ActionFlow({ request, title, confirm, details, onClose, onFinished }: {
-  request: ActionRequest; title: string; confirm: string; details?: ReactNode; onClose: () => void; onFinished?: (action: VendorAction) => void;
+function ActionFlow({ request, title, confirm, details, onClose, onAccepted, onFinished }: {
+  request: ActionRequest; title: string; confirm: string; details?: ReactNode; onClose: () => void;
+  onAccepted?: (action: VendorAction) => void; onFinished?: (action: VendorAction) => void;
 }) {
   const { t } = useTranslation(); const styles = useStyles(); const refresh = useRefreshActions();
   // The preview is asked once per opening and again only on purpose: a renewal after the server said it aged or changed.
@@ -93,7 +97,7 @@ function ActionFlow({ request, title, confirm, details, onClose, onFinished }: {
     try {
       const action = await requestAction(preview, request, commandKey.current, { reason: confirmation?.reason ? reason.trim() : undefined, typedName: typed });
       if (!alive.current) return;
-      setAccepted(action); refresh(action);
+      setAccepted(action); refresh(action); onAccepted?.(action);
     } catch (error) {
       if (!alive.current) return;
       if (error instanceof ApiError && error.code === REVERIFY_REQUIRED) setNote('reverify');
