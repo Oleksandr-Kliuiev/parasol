@@ -48,6 +48,13 @@ const useStyles = makeStyles({
   // Fluent tables share the width equally between columns, so each table keeps room for its widest cells and scrolls on a phone.
   table: { minWidth: '760px' },
   smallTable: { minWidth: '560px' },
+  // Retention: the two counts get a fixed width, so the data class and its period share the rest of the row; at 640 px
+  // a period's note ("Proposal, not approved") keeps to one line.
+  retentionTable: { minWidth: '640px' },
+  countCol: { width: '112px' },
+  // A data class the interface has no name for falls back to its code, which breaks inside its column rather than run
+  // into the period next to it.
+  dataClass: { overflowWrap: 'break-word' },
   explanation: { color: h.muted, fontSize: '13px', overflowWrap: 'anywhere', minWidth: '180px' },
   mode: { marginBottom: '12px' },
 });
@@ -337,27 +344,36 @@ function RetentionPanel() {
         <>
           <p className={mergeClasses(settings.note, styles.mode)}>{t('privacy.retention.lastRun', { at: formatDateTime(data.lastRun.startedAt) })}</p>
           <ScrollTable className={table.inset}>
-            <Table className={styles.smallTable} aria-label={t('privacy.retention.tableLabel')}>
+            <Table className={mergeClasses(styles.retentionTable, table.roomy)} aria-label={t('privacy.retention.tableLabel')}>
               <TableHeader>
                 <TableRow>
                   <TableHeaderCell>{t('privacy.retention.class')}</TableHeaderCell>
                   <TableHeaderCell>{t('privacy.retention.period')}</TableHeaderCell>
-                  <TableHeaderCell className={styles.number}>{t('privacy.retention.due')}</TableHeaderCell>
-                  <TableHeaderCell className={styles.number}>{t('privacy.retention.removed')}</TableHeaderCell>
+                  <TableHeaderCell className={mergeClasses(styles.number, styles.countCol)}>{t('privacy.retention.due')}</TableHeaderCell>
+                  <TableHeaderCell className={mergeClasses(styles.number, styles.countCol)}>{t('privacy.retention.removed')}</TableHeaderCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.lastRun.classes.map((c) => (
                   <TableRow key={c.dataClass}>
-                    <TableCell>
+                    <TableCell className={styles.dataClass}>
                       {t(`privacy.retention.classes.${c.dataClass}`, { defaultValue: c.dataClass })}
                       {c.error && <div className={styles.warning}>{t('privacy.retention.error', { error: c.error })}</div>}
                     </TableCell>
+                    {/* A class with neither an approved nor a proposed period is not counted: no proposal, and no zero. */}
                     <TableCell>
-                      {c.days === null ? '—' : t('privacy.retention.days', { count: c.days })}
-                      <div className={styles.muted}>{c.approved ? t('privacy.retention.approved', { reference: c.reference }) : t('privacy.retention.proposal')}</div>
+                      {c.days === null ? t('privacy.retention.noPeriod') : t('privacy.retention.days', { count: c.days })}
+                      <div className={styles.muted}>
+                        {c.approved
+                          ? t('privacy.retention.approved', { reference: c.reference })
+                          : c.days === null
+                            ? t('privacy.retention.noProposal')
+                            : t('privacy.retention.proposal')}
+                      </div>
                     </TableCell>
-                    <TableCell className={styles.number}>{formatNumber(c.due, 0)}</TableCell>
+                    <TableCell className={styles.number}>
+                      {c.days === null ? <span className={styles.muted}>{t('privacy.retention.notCounted')}</span> : formatNumber(c.due, 0)}
+                    </TableCell>
                     <TableCell className={styles.number}>{formatNumber(c.removed, 0)}</TableCell>
                   </TableRow>
                 ))}

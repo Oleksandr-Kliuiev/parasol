@@ -3520,6 +3520,9 @@
       "days_other": "{{count}} dagar",
       "approved": "Godkjend ({{reference}})",
       "proposal": "Forslag, ikkje godkjend",
+      "noPeriod": "Ingen periode",
+      "noProposal": "Verken føreslått eller godkjend",
+      "notCounted": "Ikkje talt",
       "error": "Feila: {{error}}",
       "classes": {
         "customers": {
@@ -3532,6 +3535,7 @@
           "tickets": "Lukka saker"
         },
         "integration": {
+          "exception-triage": "Behandling av løyste avvik",
           "external-payloads": "Kopiar av eksterne postar",
           "sync-runs": "Synkroniseringslogg"
         },

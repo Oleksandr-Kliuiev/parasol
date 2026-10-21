@@ -3522,6 +3522,9 @@
       "days_other": "{{count}} days",
       "approved": "Approved ({{reference}})",
       "proposal": "Proposal, not approved",
+      "noPeriod": "No period",
+      "noProposal": "None proposed or approved",
+      "notCounted": "Not counted",
       "error": "Failed: {{error}}",
       "classes": {
         "customers": {
@@ -3534,6 +3537,7 @@
           "tickets": "Closed tickets"
         },
         "integration": {
+          "exception-triage": "Reviews of resolved exceptions",
           "external-payloads": "Copies of external records",
           "sync-runs": "Synchronization log"
         },

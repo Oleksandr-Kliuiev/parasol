@@ -185,34 +185,54 @@ main :is(h1, h2, h3) {
 .h-stagger > :nth-child(8) { animation-delay: 315ms; }
 .h-stagger > :nth-child(n + 9) { animation-delay: 360ms; }
 
-/* Native file pickers look like the secondary button of the visual system, the chosen name in quiet text after it. */
-input[type='file'] {
+/* Native file pickers are fields of the visual system: 42 px high, the field's edge all round (--h-field-edge, at least
+   3:1 on the card, the well and the page, WCAG 1.4.11), the picker's button inside at the start in the look of the
+   secondary button, the chosen name after it in quiet text. :where() keeps these defaults below any class, so a visually
+   hidden picker keeps its own zero border and padding. A picker spans its column like the other fields: Chromium never
+   lets one shrink below a width of 34 characters unless its width is a percentage, so a narrow dialog would scroll. */
+:where(input[type='file']) {
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
+  padding: 4px 14px 4px 4px;
+  border: 1px solid var(--h-field-edge);
+  border-radius: 12px;
+  background: var(--h-surface);
   color: var(--h-muted);
   font: 500 13px/1.4 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-input[type='file']::file-selector-button {
-  height: 36px;
+:where(input[type='file']):where(:hover) {
+  border-color: var(--h-field-edge-hover);
+}
+:where(input[type='file'])::file-selector-button {
+  height: 32px;
   margin-right: 12px;
-  padding: 0 13px;
+  padding: 0 12px;
   border: 1px solid var(--h-line-2);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--h-surface);
   color: var(--h-text);
   font: 700 12.5px/1 'Manrope', ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
   transition: background-color 0.15s;
 }
-input[type='file']:hover::file-selector-button {
+:where(input[type='file']):where(:hover)::file-selector-button {
   background: var(--h-surface-2);
 }
-input[type='file']:focus-visible {
-  outline: 2px solid var(--h-ember);
-  outline-offset: 2px;
-  border-radius: 10px;
+/* The ring of the other fields: an ember edge and a soft halo; the transparent outline shows in forced colours. */
+:where(input[type='file']):where(:focus-visible) {
+  outline: 2px solid transparent;
+  border-color: var(--h-ember);
+  box-shadow: 0 0 0 3px var(--h-ember-soft);
 }
-input[type='file']:disabled::file-selector-button {
-  opacity: 0.45;
+:where(input[type='file']):where(:disabled) {
+  opacity: 0.55;
+  border-color: var(--h-line-2);
+  cursor: not-allowed;
+}
+:where(input[type='file']):where(:disabled)::file-selector-button {
   cursor: not-allowed;
 }
 
@@ -245,6 +265,10 @@ input::-webkit-calendar-picker-indicator:hover {
   *::before,
   *::after {
     animation: none !important;
+    transition: none !important;
+  }
+  /* The file picker's button is a pseudo-element the universal selector above does not reach. */
+  input[type='file']::file-selector-button {
     transition: none !important;
   }
 }

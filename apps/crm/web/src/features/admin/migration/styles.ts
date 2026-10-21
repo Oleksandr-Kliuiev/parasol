@@ -8,8 +8,9 @@ export const useMigrationStyles = makeStyles({
   form: { display: 'grid', gap: '16px', minWidth: 0, '& > *': { minWidth: 0 } },
   // The one explaining line under a card title.
   lead: { margin: '-6px 0 0', color: h.muted, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' },
-  // A file picker of the form: the native input, drawn by the global style as a secondary button with the name after it.
-  file: { justifySelf: 'start', maxWidth: '100%' },
+  // A file picker of the form: the native input, drawn by the global style as a field (the picker's button inside, the
+  // chosen name after it), as wide as a file name needs rather than the whole card.
+  file: { maxWidth: '400px' },
   // The rows of a CSV read best in a fixed-width font.
   csv: { '& textarea': { fontFamily: tokens.fontFamilyMonospace, fontSize: '12.5px', lineHeight: '20px' } },
   // A hint of a few lines keeps to a readable measure.
