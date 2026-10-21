@@ -14,6 +14,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Crm.IntegrationTests;
 
+/// <summary>
+/// The view counts the whole Atlas registry and all stored provider evidence, and the tests compare table totals and provider
+/// calls before and after a read, so the class runs alone (it also stages concurrent changes as the administrator) and every
+/// test starts without the rows those counts read.
+/// </summary>
+[Collection(DatabaseAdministrationCollection.Name)]
 public sealed class LocalReadinessApiTests(CrmWebFactory factory) : IAsyncLifetime
 {
     private const string Endpoint = "/api/v1/parasol/local-readiness";
@@ -22,7 +28,17 @@ public sealed class LocalReadinessApiTests(CrmWebFactory factory) : IAsyncLifeti
     private readonly List<Guid> ownedLinks = []; private readonly List<Guid> ownedRecords = []; private readonly List<Guid> ownedOutbound = [];
     private readonly List<(string System, string Job)> ownedSuccesses = [];
     private HttpClient Admin => factory.ClientAs(CrmRoles.Admin, userKey);
-    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
+    public async ValueTask InitializeAsync()
+    {
+        // Rows other classes left behind. The collation ignores case, so this also takes differently-cased rows: the view skips
+        // them, but they would still collide with the sync-success keys used here.
+        await using var scope = factory.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
+        await db.ExternalLinks.Where(row => row.System == CustomerIdentityContract.System && row.ExternalType == CustomerIdentityContract.ExternalType).ExecuteDeleteAsync();
+        await db.ExternalRecords.Where(row => (row.System == CustomerIdentityContract.System && row.ExternalType == CustomerIdentityContract.ExternalType)
+            || row.System == "atera").ExecuteDeleteAsync();
+        await db.OutboundOperations.Where(row => row.System == "atera").ExecuteDeleteAsync();
+        await db.SyncSuccesses.Where(row => row.System == "atera" || row.System == "poweroffice" || row.System == "microsoft-graph").ExecuteDeleteAsync();
+    }
     public async ValueTask DisposeAsync()
     {
         await using var scope = factory.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
