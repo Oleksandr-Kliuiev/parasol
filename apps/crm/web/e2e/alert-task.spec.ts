@@ -56,7 +56,9 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   await signIn(page, 'Crm.Admin');
   const mine = page.getByRole('region', { name: 'My tasks', exact: true }).getByRole('listitem').filter({ hasText: `${m} free disk space` });
   const source = await showInMyTasks(page, mine.getByRole('button', { name: `Source of ${m} free disk space on SRV-${m}`, exact: true }));
-  await source.click();
+  // Opened from the keyboard: WebKit and Firefox on macOS do not focus a button on a click, so a mouse opening has no place
+  // to give focus back to; the keyboard path is the one the return of focus is for.
+  await source.focus(); await page.keyboard.press('Enter');
   const sourceDialog = page.getByRole('dialog', { name: 'Source of the task', exact: true });
   await expect(sourceDialog.getByText(`${m} disk almost full`)).toBeVisible();
   await expect(sourceDialog.getByText('Open', { exact: true })).toBeVisible();
