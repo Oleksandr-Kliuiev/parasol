@@ -240,13 +240,16 @@ Huntress или наоборот; Defender выключен; копия не у�
 | C2 | Из CRM убраны мост, право `parasol.atlas.read`, страницы и строки интерфейса; `/connections` переехал в `features/integrations` и требует `integrations.manage` | `0639732` |
 | C3 | Удалены `apps/atlas`, `contracts/`, корневые раннеры, CI jobs `atlas` и `atlas-integration`, сервисы VPS `atlas`, `atlas-migrate`, `postgres`; учение восстановления хранит оповещение Atera и его квитанцию задачи | `571f76b` |
 | C4 | Жизненный цикл оповещений и чтение по всем клиентам (выше) | `ee1b9a5` |
-| C5 | Вкладка «Drift» (`features/service/`), `BoundedList` вместо `TechnicalList` | заполняется после слияния |
-| C6 | Очередь `/alerts`, задача из оповещения, кнопка «Источник»; `DENY UPDATE, DELETE` на квитанции задач для `crm_runtime` | заполняется после слияния |
+| C5 | Вкладка «Drift» (`features/service/OperationsTab.tsx`; `?tab=service` открывает её же) и очередь «Driftsvarsler» `/alerts` (`features/service/alerts/`, `?alert=<id>` открывает панель оповещения); открытые — сначала по важности, затем самые старые (keyset), решённые — сначала последние; `GET /api/v1/service/alerts/{id}` | `c0d1641` |
+| C6 | Задача из оповещения: `GET/POST /api/v1/activities/source-tasks[/preview\|/lookup]`, `GET /api/v1/activities/{id}/source`; тождество `["SourceTaskV1","atera","alert", клиент Atera, id оповещения,"Task"]` в прежних колонках; связи неподдерживаемых систем молчат (`ACT_SOURCE_UNSUPPORTED`); кнопка «Источник» у задачи; `DENY UPDATE, DELETE` на квитанции задач для `crm_runtime` | `f372678` |
 | C7 | «Мой день»: `features/dashboard/UrgentAlertsPanel.tsx` и плитка на чтении `/service/alerts/urgent`, раздел `alerts`; личная раскладка `work`/`lead`/`finance` в `identity.Users.MyDayLayout` (миграция `20261021105916_MyDayLayout`), `PUT /api/v1/identity/me/my-day-layout` `{"layout": …}` → 204, `/bff/user` возвращает `myDayLayout` | `8500bdd` |
 | C8 | `/connections`: `GET /api/v1/integrations/connections` (`integrations.manage`, no-store) → `{status: Ready \| Gaps \| Unavailable, checkedAt, integrations, worker, gaps}` из `IntegrationMonitoringReader` и `WorkerHeartbeatReader`; сервер — `Crm.Integrations.Core/Readiness/ConnectionStatusReader.cs`, страница — `features/integrations/ConnectionReadinessPage.tsx`, пространство i18n `readiness` → `connectionStatus`, e2e `connections*.spec.ts` | `2ae3cc0` |
 | C9 | Полный доступ: вход разработчика первым предлагает `Crm.Admin` — «Employee (full access)», узкие роли остаются ниже для проверки прав; тексты «Нет доступа», отказов и пользователей говорят о группе «Parasoll – full tilgang»; карточка учётной записи показывает e-mail вместо роли. Логика авторизации не менялась. ADR-030 и runbooks 01, 12 — в C10 | `e4c8cea`, `45a7eee` |
-| C10 | Документы (этот файл и правки остальных) | заполняется после слияния |
-| C11 | `scripts/retired-names.test.mjs` в CI job `history`: старого имени нет ни в путях, ни в содержимом, кроме записей об импорте и этого документа | заполняется после слияния |
+| C10 | Документы (этот файл и правки остальных); словарь «Driftsvarsler» в продукте, демо и документах | `bd05546`, `21971d2`, `746fd0f` |
+| C11 | `scripts/retired-names.test.mjs` в CI job `history`: старого имени нет ни в путях, ни в содержимом, кроме записей об импорте и этого документа | `8c72c8d` |
+| — | Вложенные рабочие копии Claude Code в `.gitignore`; тест очереди outbox больше не зависит от сообщений других классов (одна выборка берёт 50 самых старых) | `ec9c2a2`, `9f6bb13` |
+| — | Найдено e2e: диалог назначения живёт над списком (`AlertTaskDialogHost`), а не в строке, — иначе поиск или смена раскладки закрывали его вместе с ответом «Задача создана»; фокус возвращается к кнопке оповещения у задачи и в WebKit/Firefox; тесты фильтра клиента и раздела «Мой день» | `3867fb1`, `d8a6ba2`, `5d86b13` |
+| — | Найдено UX-проходом и аудитом вёрстки: пределы свежести для всех 17 заданий (`Crm.Integrations.Core/FreshnessLimits.cs`; оповещения Atera опаздывают через 60 минут, а не через сутки); время чтения рядом с оповещениями в очереди, панели, «Drift», «Моём дне» и окне оповещения у задачи — `reads: [{system, startedAt, complete, late}]` в `GET /api/v1/service/alerts` и `/alerts/urgent`; раскладка «Сначала часы» действительно начинается с часов; кнопка у задачи — «Driftsvarsel»; у устройств «последний раз на связи», ↗ к Atera и тип в единственном числе; «опаздывает после» на `/connections`; на прежних страницах — край полей выбора файла и таблица персональных данных без наложения | `50a52af`, `6260247`, `7088739` |
 
 ## Этапы после M38
 
@@ -258,9 +261,9 @@ Huntress или наоборот; Defender выключен; копия не у�
 | --- | --- | --- |
 | M39.0 подготовка | ничего видимого | `AteraClient.cs` и `tools/dev-mocks/external-apis.mjs` по файлам; запрет перенаправлений в клиентах Atera, PowerOffice и Partner Center (сейчас `X-API-KEY` ушёл бы на адрес перенаправления); вход Atera по Bearer |
 | M39.1 действия | журнал действий, общий диалог подтверждения | `Crm.Integrations.Core/Actions/*`, миграция `VendorActions`, `features/actions/*` |
-| M39.2 заявки | `/tickets`: переписка, ответ, заметка, статус, приоритет, исполнитель, закрытие | `TicketComments`, синхронизация по `/tickets/lastmodified`, панель заявки |
+| M39.2 заявки | `/tickets`: переписка, ответ, заметка, статус, приоритет, исполнитель, закрытие; сводка «Drift» называет время чтения каждого источника, а не «0» по ни разу не прочитанным заявкам (находка UX-прохода M38) | `TicketComments`, синхронизация по `/tickets/lastmodified`, панель заявки, чтения по источникам в сводке Service |
 | M39.3 часы в Atera (вместе с M39.2) | флажок «Записать и в Atera» в форме часов | квитанции отправленных часов, без двойного учёта при обратном импорте |
-| M40 машины и оповещения | одна строка на машину, инвентарь, патчи, закрыть оповещение Atera, пробелы покрытия | `Machines`, `MachineMatcher`, правила пробелов, чистка решённых |
+| M40 машины и оповещения | одна строка на машину, инвентарь, патчи, закрыть оповещение Atera, пробелы покрытия; в «Моём дне» у срочного видно, у кого задача, и его можно отдать коллеге в два действия (находка UX-прохода M38) | `Machines`, `MachineMatcher`, правила пробелов, чистка решённых, связи задач в панели срочного |
 | M40.S каркас | ничего видимого | пустые модули Security и Backup, регистрация, макеты поставщиков в тестах |
 | M41 Huntress | инциденты с одобрением исправлений, изоляция, эскалации, покрытие и Defender | `Crm.Integrations.Huntress`, `Modules/Security`, панели |
 | M42 CloudAlly (параллельно с M41) | вкладка «Sikkerhetskopi», «копировать сейчас», мастер восстановления | `Crm.Integrations.CloudAlly`, `Modules/Backup` |
@@ -312,14 +315,16 @@ POST принимает только явно перечисленные пол�
 
 | Проверка | Результат |
 | --- | --- |
-| `node --test scripts/*.test.mjs`, `npm run check:history`, `npm run test:harness:unit` | заполняется после проверки |
-| `npm run build:crm`, `npm run check` (lint, типы, frontend, unit, architecture) | заполняется после проверки |
-| `npm run test:crm:integration` (SQL Server) | заполняется после проверки |
-| `npm run test:crm:e2e` (Chromium, Firefox, WebKit) | заполняется после проверки |
-| `npm --prefix apps/crm/web run e2e:finance -- <новый каталог>` | заполняется после проверки |
-| `python3 -m unittest discover -s deploy/hostinger/tests -v` | заполняется после проверки |
-| `node docs/ux/demo/tools/check-locales.mjs`, `node docs/ux/demo/tools/smoke.mjs` | заполняется после проверки |
-| `git grep -il atlas` — только записи об импорте и этот документ | заполняется после проверки |
+| `node --test scripts/*.test.mjs`, `npm run check:history`, `npm run test:harness:unit` | 2/2 (в том числе запрет старого имени); обе истории импорта подтверждены; 7/7 |
+| `npm run build:crm`, `npm run check` (lint, типы, frontend, unit, architecture) | .NET Release: 0 предупреждений, 0 ошибок; unit 900/900; architecture 94/94; lint и типы чисто; frontend 82 файла, 596/596; первая загрузка 279,7 из 300 КБ |
+| `npm run test:crm:integration` (SQL Server) | 780/780, пропусков 0 |
+| `npm run test:crm:e2e` (Chromium, Firefox, WebKit, телефон) | 158/158 без повторов и пропусков |
+| `npm --prefix apps/crm/web run e2e:finance -- <новый каталог>` | 5/5, без пропусков и повторов, собственные ресурсы убраны |
+| `python3 -m unittest discover -s deploy/hostinger/tests -v` | 24 OK |
+| `node docs/ux/demo/tools/check-locales.mjs`, `node docs/ux/demo/tools/smoke.mjs` | 863 ключа в nb, nn и en; все проверки smoke прошли |
+| `git grep -il atlas` — только записи об импорте и этот документ | `sources.json`, `IMPORT.md`, `M01-M03.md`, этот документ |
+| `ui-layout-audit`: 34 страницы × 1440/768/390/320 × светлая/тёмная, reduced motion; после правок UX-прохода — ещё 120 проверок 15 состояний страниц M38 | на страницах M38 замечаний нет; на прежних страницах исправлены край полей выбора файла и наложение в таблице персональных данных; остаются предупреждения: страница на 6–21 px выше окна (уведомления, доступ к записям, миграция) и технические id в журнале аудита |
+| UX-проход (design-critique, user-task-walkthrough, accessibility-review) по снимкам | нарушений WCAG 2.2 AA не найдено; исправлены свежесть оповещений, время чтения рядом с оповещениями, раскладка «Сначала часы», кнопка «Driftsvarsel», строки устройств, тон ссылок, тексты `/connections`; отложены время чтения заявок в сводке (M39.2) и передача срочного коллеге из «Моего дня» (M40) |
 
 Новые e2e: `customer-operations`, `alert-queue`, `alert-task`, `connections`, `alerts-a11y`; ширины 1440, 768, 390,
 320 в светлой и тёмной теме, axe WCAG 2.2 AA, клавиатура. `ui-layout-audit` по вкладке «Drift», `/alerts`, «Моему дню»
@@ -335,8 +340,7 @@ user-task-walkthrough.
 - Ключи i18n, собранные во время выполнения, typecheck не ловит: нужны тест паритета, e2e и поиск по удалённым префиксам.
 - ~~В NB/NN колокольчик уведомлений тоже называется «Varsler» / «Varsel»: одно слово для двух понятий.~~ Снято
   решением владельца: колокольчик остаётся «Varsler» / «Varsel», оповещения называются «Driftsvarsler» /
-  «Driftsvarsel» (словарь выше); так пишут «Мой день» продукта и UX-демо. Остаток: вкладка «Drift» ещё берёт
-  `service.criticalAlerts`, `service.alerts` и `service.noAlerts` с голым «varsler» / «varsel».
+  «Driftsvarsel» (словарь выше); так пишут меню, очередь, вкладка «Drift», «Мой день» и UX-демо.
 - Резервные копии Hostinger до M38 (с дампом PostgreSQL) новым инструментом не восстановить; в них только синтетика.
 - Atera: поля v3, дата перехода на JWT и лимит запросов не подтверждены на аккаунте; webhooks заявок есть только в
   планах Enterprise/SuperPower; адрес страницы оповещения не подтверждён (`AlertUrlTemplate` пуст).

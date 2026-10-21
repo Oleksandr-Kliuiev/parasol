@@ -8,18 +8,19 @@ SQL integration и браузерный тест должен пройти, бе
 
 | Проверка | Команда | Результат M38 |
 | --- | --- | --- |
-| История импорта, корневые инструменты, помощники финансового сценария | `npm run check:history`, `node --test scripts/*.test.mjs`, `npm run test:harness:unit` | заполняется после проверки |
-| Сборка и быстрые проверки CRM | `npm run build`, `npm run check` | заполняется после проверки |
-| SQL Server и storage integration | `npm run test:crm:integration` | заполняется после проверки |
-| Браузерные сценарии (Chromium, Firefox, WebKit) | `npm run test:crm:e2e` | заполняется после проверки |
-| Финансы клиента на настоящих Web/Worker | `npm --prefix apps/crm/web run e2e:finance -- <новый каталог>` | заполняется после проверки |
-| Комплект Hostinger | `python3 -m unittest discover -s deploy/hostinger/tests -v` | заполняется после проверки |
-| UX-демо | `node docs/ux/demo/tools/check-locales.mjs`, `node docs/ux/demo/tools/smoke.mjs` | заполняется после проверки |
+| История импорта, корневые инструменты, помощники финансового сценария | `npm run check:history`, `node --test scripts/*.test.mjs`, `npm run test:harness:unit` | обе истории подтверждены; 2/2 (в том числе запрет старого имени); 7/7 |
+| Сборка и быстрые проверки CRM | `npm run build`, `npm run check` | .NET Release: 0 предупреждений, 0 ошибок; unit 900/900, architecture 94/94; lint и типы чисто; frontend 82 файла, 596 тестов; первая загрузка 279,7 из 300 КБ |
+| SQL Server и storage integration | `npm run test:crm:integration` | 780/780, пропусков 0 |
+| Браузерные сценарии (Chromium, Firefox, WebKit, телефон) | `npm run test:crm:e2e` | 158/158 без повторов и пропусков |
+| Финансы клиента на настоящих Web/Worker | `npm --prefix apps/crm/web run e2e:finance -- <новый каталог>` | 5/5, без пропусков и повторов, собственные ресурсы убраны |
+| Комплект Hostinger | `python3 -m unittest discover -s deploy/hostinger/tests -v` | 24 OK |
+| UX-демо | `node docs/ux/demo/tools/check-locales.mjs`, `node docs/ux/demo/tools/smoke.mjs` | 863 ключа в nb, nn, en; все проверки smoke прошли |
+| Вёрстка (`ui-layout-audit`) | 34 страницы × 1440/768/390/320 × светлая/тёмная, reduced motion | страницы M38 — 0 замечаний; на прежних страницах найдены и исправлены край поля файла (миграция) и наложение текста (персональные данные); остались предупреждения: страница на 6–21 px выше окна (уведомления, доступ к записям, миграция) и технические id в журнале аудита |
 
 CI выполняет те же проверки в jobs `history`, `crm-backend`, `crm-frontend`, `crm-e2e` и `hostinger`; job `required`
-требует успеха всех ([README](../../README.md#что-означает-зелёный-ci)). Последние известные запуски GitHub Actions
-не исполнили ни одного шага из-за оплаты или spending limit аккаунта; локальные результаты не означают зелёный
-GitHub CI. Учение восстановления Hostinger локально требует `sudo`, рабочие аккаунты поставщиков не проверяются.
+требует успеха всех ([README](../../README.md#что-означает-зелёный-ci)). GitHub Actions выполняет их для PR
+`feat/crm-hearth-design`; ветка M38 на GitHub ещё не отправлена, её CI не запускался, и локальные результаты его не
+заменяют. Учение восстановления Hostinger локально требует `sudo`, рабочие аккаунты поставщиков не проверяются.
 
 Результаты отдельных этапов — в их документах (M05–M07, M16–M27, M29, M32, M34, M37). Их свидетельства JSON удалены
 в M38 вместе с проверками прежнего сервиса интеграций и читаются из Git: `git show 73c0158:docs/testing/evidence/<файл>`.
