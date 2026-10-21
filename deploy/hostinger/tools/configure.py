@@ -37,7 +37,7 @@ def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, 
         (path / name).mkdir(parents=True, mode=0o700)
     config = path / 'config'
     secret = lambda: secrets.token_hex(24)
-    sa, pg, web, worker, dp = [secret() for _ in range(5)]
+    sa, web, worker, dp = [secret() for _ in range(4)]
     # SQL policy requires mixed character classes.
     sa = 'S1!' + sa; web = 'W1!' + web; worker = 'R1!' + worker
     certificate(config, dp)
@@ -58,7 +58,6 @@ def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, 
             {'SourceType': 'Path', 'CertificateDiskPath': '/run/secrets/oidc.pfx', 'CertificatePassword': oidc_password}]},
         'Documents': {'Provider': 'FileSystem', 'RootPath': '/var/lib/parasol/documents', 'VolumeId': volume},
         'DataProtection': {'KeyRingPath': '/var/lib/parasol/keyring', 'CertificatePath': '/run/secrets/dp.pfx', 'CertificatePassword': dp},
-        'Parasol': {'Atlas': {'Enabled': False, 'BaseUrl': 'http://127.0.0.1:3100/', 'Employees': {}}},
         'Hangfire': {'DashboardEnabled': False, 'PrepareSchema': False},
     }
     octet = secrets.randbelow(200) + 20
@@ -67,18 +66,12 @@ def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, 
         cfg = json.loads(json.dumps(application))
         cfg['ConnectionStrings'] = {'Crm': f'Server=sql,1433;Database=Crm;User ID={login};Password={pwd};Encrypt=True;TrustServerCertificate=True'}
         if name == 'worker':
-            for key in ('DataProtection', 'AzureAd', 'Auth', 'Forwarded', 'Parasol'):
+            for key in ('DataProtection', 'AzureAd', 'Auth', 'Forwarded'):
                 cfg.pop(key, None)
         write_json(config / f'{name}.json', cfg, 0o444)
     # Fixed login names, only generated passwords enter SQL text through stdin.
     write_json(config / 'sql-logins.json', {'parasol_web': web, 'parasol_worker': worker})
-    for name, value in [('sql-sa-password', sa), ('pg-password', pg)]:
-        (config / name).write_text(value); (config / name).chmod(0o444)
-    roles = {name: secret() for name in ['atlas_app_password', 'atlas_cleanup_runner_password',
-                                        'atlas_poweroffice_runner_password', 'atlas_reval_reader_password']}
-    write_json(config / 'atlas-admin.json', {'ownerUrl': f'postgresql://postgres:{pg}@postgres:5432/atlas', **roles}, 0o444)
-    write_json(config / 'atlas-runtime.json', {
-        'runtimeUrl': f'postgresql://atlas_app:{roles["atlas_app_password"]}@postgres:5432/atlas', 'cursorSecret': secret()}, 0o444)
+    (config / 'sql-sa-password').write_text(sa); (config / 'sql-sa-password').chmod(0o444)
     for name in ('dp.pfx', 'oidc.pfx'):
         (config / name).chmod(0o444)
     (path / 'backup/password').write_text(secret())

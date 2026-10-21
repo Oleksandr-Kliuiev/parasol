@@ -32,22 +32,16 @@ IF IS_SRVROLEMEMBER('sysadmin') <> 0 OR IS_ROLEMEMBER('db_owner') <> 0
  OR IS_ROLEMEMBER('{role}') <> 1 OR HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'ALTER') <> 0
  THROW 51031, 'Runtime permissions failed', 1;
 REVERT;""", 'Crm')
-    stack.pg("""DO $$ BEGIN
-IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='atlas_app' AND (rolsuper OR rolbypassrls OR rolcreatedb OR rolcreaterole))
- OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='atlas_app' AND rolcanlogin)
-THEN RAISE EXCEPTION 'Atlas runtime permissions failed'; END IF; END $$;""")
 
 
 def migrate(stack):
     if set(stack.compose('ps', '--status', 'running', '--services').decode().split()) & set(WRITERS):
         raise ValueError('Stop application services before running migrations')
-    print('Starting private databases', flush=True)
-    stack.compose('up', '-d', '--wait', '--wait-timeout', '300', 'sql', 'postgres')
+    print('Starting the private database', flush=True)
+    stack.compose('up', '-d', '--wait', '--wait-timeout', '300', 'sql')
     prepare_files(stack)
     print('Applying CRM migrations', flush=True)
     stack.compose('run', '--rm', '--no-deps', 'crm-migrate')
-    print('Applying Atlas migrations and roles', flush=True)
-    stack.compose('run', '--rm', '--no-deps', 'atlas-migrate')
     sql_logins(stack, users=True)
     validate_permissions(stack)
 
@@ -55,10 +49,10 @@ def migrate(stack):
 def start(stack):
     if stack.meta['kind'] == 'restore':
         raise ValueError('Restored state stays quarantined; recovery review and journal replay precede promotion')
-    stack.compose('up', '-d', '--wait', '--wait-timeout', '300', 'crm-web', 'crm-worker', 'atlas', 'caddy')
+    stack.compose('up', '-d', '--wait', '--wait-timeout', '300', 'crm-web', 'crm-worker', 'caddy')
 
 
 def image_ids(stack):
     release = stack.meta['compose']['RELEASE']
     return {service: run(['docker', 'image', 'inspect', f'parasol-{service}:{release}', '--format', '{{.Id}}']).decode().strip()
-            for service in ('crm-web', 'crm-worker', 'atlas')}
+            for service in ('crm-web', 'crm-worker')}

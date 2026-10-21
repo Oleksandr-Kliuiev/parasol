@@ -1,4 +1,4 @@
-"""Consistent native database dumps plus documents/keyring, encrypted in restic."""
+"""A consistent native SQL Server backup plus documents/keyring, encrypted in restic."""
 import hashlib
 import json
 from pathlib import Path
@@ -36,10 +36,9 @@ def verify(root):
     manifest = json.loads((root / 'manifest.json').read_text())
     if manifest.get('format') != 1 or manifest.get('files') != inventory(root):
         raise ValueError('Snapshot inventory does not match; restore refused')
-    required = {'crm.bak', 'atlas.dump', 'roles.sql', 'config/web.json', 'config/worker.json',
-                'config/migrate.json', 'config/dp.pfx', 'config/oidc.pfx', 'config/sql-logins.json',
-                'config/sql-sa-password', 'config/pg-password', 'config/atlas-admin.json',
-                'config/atlas-runtime.json', 'data/documents/.parasol-volume', 'stack.json'}
+    required = {'crm.bak', 'config/web.json', 'config/worker.json', 'config/migrate.json', 'config/dp.pfx',
+                'config/oidc.pfx', 'config/sql-logins.json', 'config/sql-sa-password',
+                'data/documents/.parasol-volume', 'stack.json'}
     if not required.issubset(manifest['files']) or not any(
             name.startswith('data/keyring/key-') and name.endswith('.xml') for name in manifest['files']):
         raise ValueError('Snapshot is incomplete')
@@ -53,14 +52,10 @@ def verify(root):
 
 def capture(stack, staging):
     stack.compose('exec', '-T', 'sql', 'mkdir', '-p', '/var/opt/mssql/backup')
+    # COPY_ONLY avoids disturbing other backup chains. No compression: Express supports this path.
     stack.sql("BACKUP DATABASE [Crm] TO DISK=N'/var/opt/mssql/backup/parasol.bak' WITH COPY_ONLY, INIT, CHECKSUM;")
     stack.sql("RESTORE VERIFYONLY FROM DISK=N'/var/opt/mssql/backup/parasol.bak' WITH CHECKSUM;")
     run(['docker', 'cp', f'{stack.cid("sql")}:/var/opt/mssql/backup/parasol.bak', staging / 'crm.bak'])
-    # COPY_ONLY avoids disturbing other backup chains. No compression: Express supports this path.
-    with (staging / 'atlas.dump').open('wb') as dump:
-        stack.compose('exec', '-T', 'postgres', 'pg_dump', '-U', 'postgres', '-d', 'atlas', '--format=custom', output_file=dump)
-    roles = stack.compose('exec', '-T', 'postgres', 'pg_dumpall', '-U', 'postgres', '--globals-only')
-    (staging / 'roles.sql').write_bytes(roles)
     for name in ('config', 'data'):
         # Check links before copying: shutil would otherwise dereference them.
         inventory(stack.path / name)

@@ -1,8 +1,0 @@
-# Probe: Node setTimeout(fn, target - performance.now()) firing before performance.now() >= target (diagnosis of the test-pg flake)
-// Does setTimeout(fn, target - performance.now()) ever fire BEFORE performance.now() >= target?
-let early = 0, n = 0, worst = 0;
-const one = () => new Promise(res => { const target = performance.now() + 20 + Math.random() * 5; setTimeout(() => { const d = performance.now() - target; if (d < 0) { early++; worst = Math.min(worst, d); } n++; res(); }, Math.max(0, target - performance.now())); });
-for (let i = 0; i < 400; i++) await Promise.all([one(), one(), one(), one(), one()]);
-console.log(JSON.stringify({ n, early, worstMs: Number(worst.toFixed(3)) }));
-# output:
-{"n":2000,"early":881,"worstMs":-1.85}

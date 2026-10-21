@@ -1,20 +1,18 @@
 # Parasol на Hostinger VPS
 
-Комплект одного Linux x64 сервера: Caddy → CRM web + Atlas по loopback, отдельный
-CRM worker, SQL Server 2022 и PostgreSQL 17. Azure-инфраструктуры нет. Microsoft 365
-остаётся провайдером входа; название секции `AzureAd` — формат Microsoft.Identity.Web.
+Комплект одного Linux x64 сервера: Caddy → CRM web, отдельный CRM worker и
+SQL Server 2022. Azure-инфраструктуры нет. Microsoft 365 остаётся провайдером
+входа; название секции `AzureAd` — формат Microsoft.Identity.Web.
 
 Это инструкция подготовки и эксплуатации. Наличие файлов не означает, что рабочий VPS,
 DNS, Entra, резервная площадка или мониторинг уже настроены.
 
 ## Состав и границы
 
-- `compose.yaml`: наружу опубликованы только 80/443 Caddy; SQL, PostgreSQL, web, worker
-  и Atlas не публикуют порты. Atlas разделяет сетевое пространство web и слушает
-  `127.0.0.1:3100`, сохраняя правило M05 «HTTPS либо loopback» для employee credentials.
-- `crm.Dockerfile`, `atlas.Dockerfile`: воспроизводимые версии и digest базовых образов;
-  web/worker работают UID 1654, Atlas UID 1000, с read-only rootfs, без capabilities.
-  Prisma CLI находится в отдельном `atlas-admin` образе. Docker context исключает секреты
+- `compose.yaml`: наружу опубликованы только 80/443 Caddy; SQL, web и worker не публикуют
+  порты.
+- `crm.Dockerfile`: воспроизводимые версии и digest базовых образов; web/worker работают
+  UID 1654, с read-only rootfs, без capabilities. Docker context исключает секреты
   и результаты локальных сборок. Образы собираются локально; публикации в registry нет.
 - `parasol.py`: создание **нового** state, build, миграции, запуск, backup, проверка и
   восстановление. Python ≥3.11, OpenSSL и Docker Engine с Compose v2; pip не нужен.
@@ -34,7 +32,7 @@ SQL настроен как **Express**, не Developer/Evaluation. Express им
 ## Новая инсталляция
 
 Команды ниже выполняет оператор после разрешения на реальное развёртывание. Не применять
-их к существующей CRM/Atlas базе. Перенос имеющихся данных — отдельная операция.
+их к существующей базе CRM. Перенос имеющихся данных — отдельная операция.
 
 1. Подготовить Linux x64, Docker/Compose, Python 3.11+, OpenSSL. Использовать отдельного
    оператора/sudo; членство в Docker group равносильно root. Открыть 80/443, ограничить SSH.
@@ -71,9 +69,9 @@ SQL настроен как **Express**, не Developer/Evaluation. Express им
    ```
 
    Migrations работают один раз с admin-доступом. Web/worker получают разные SQL logins
-   и только роли `crm_web`/`crm_worker`; Atlas — `atlas_app`, без owner/superuser/BYPASSRLS.
-   Runtime не выполняет DDL. Обновления выполнять в окне обслуживания, после backup,
-   остановив приложения; все команды оператора используют один file lock.
+   и только роли `crm_web`/`crm_worker`, без owner/sysadmin. Runtime не выполняет DDL.
+   Обновления выполнять в окне обслуживания, после backup, остановив приложения; все
+   команды оператора используют один file lock.
 8. В maintenance проверить HTTPS, локальный 401, offsite backup + restore на отдельном
    хосте. Для **первого** Entra входа в пустую БД требуется запись профиля: в согласованном
    окне bootstrap установить `READ_ONLY=false`, сохранив внешние интеграции выключенными,
@@ -88,7 +86,7 @@ SQL настроен как **Express**, не Developer/Evaluation. Express им
 `/srv/parasol` и `config/` — 0700, владелец root/оператор. Отдельные файлы, монтируемые в
 непривилегированные контейнеры, — 0444 **внутри закрытого родительского каталога**. Это
 намеренно: Compose bind mounts не меняют UID file secrets. Контейнер видит только свои
-явные mounts; web не получает SA/PG owner/restic password. Не открывать родительский каталог.
+явные mounts; web не получает SA/restic password. Не открывать родительский каталог.
 `data/documents` и `data/keyring` принадлежат UID/GID 1654, 0700. Том и маркер нельзя
 пересоздавать при обычном обновлении. State включает TLS данные Caddy.
 
@@ -96,17 +94,13 @@ SQL TLS внутри закрытой bridge-сети использует `Trus
 не должны быть опубликованы. Для вынесенной БД требуется проверяемый сертификат и другое
 развёртывание, а не удаление проверки соединения.
 
-Внешние интеграции, mail/SharePoint/Teams, provider writes, Ask и Atlas scheduler выключены.
+Внешние интеграции, mail/SharePoint/Teams и provider writes выключены.
 Для Graph application permissions добавить в private JSON `Integrations:MicrosoftGraph`:
 `Enabled`, `TenantId`, `ClientId`, `CertificatePath=/run/secrets/oidc.pfx`, `CertificatePassword`.
 Если Graph использует отдельную app registration, смонтировать отдельный PFX только нужным
 сервисам. Нет DefaultAzureCredential, managed identity, Key Vault или Application Insights.
 Delegated календарь/почта продолжают использовать сессию вошедшего сотрудника.
-
-Общий workspace включается после создания отдельных Atlas actors и tokens каждого
-сотрудника: `Parasol:Atlas:Enabled=true`, `Employees` по M05, `BaseUrl=http://127.0.0.1:3100/`.
-Provisioning не создаёт реальные фирмы/пользователей автоматически. Документация M05 описывает
-права; не запускать исторический Atlas `deploy/setup.ts` с жёстко заданными пользователями.
+Provisioning не создаёт реальные фирмы/пользователей автоматически.
 
 Сертификаты ротировать отдельной согласованной операцией. Для DP сохранить старые PFX в
 `PreviousCertificatePaths`, пока существуют зашифрованные ими ключи; включить дополнительные
@@ -115,9 +109,9 @@ PFX/config и перезапустить. Старый DP сертификат �
 
 ## Резервные копии
 
-Backup останавливает Caddy, web, worker и Atlas, делает SQL `COPY_ONLY ... CHECKSUM`
-и `RESTORE VERIFYONLY`, PostgreSQL custom dump + globals/роли, копирует документы,
-keyring, TLS данные и private config. SHA-256 inventory охватывает весь набор.
+Backup останавливает Caddy, web и worker, делает SQL `COPY_ONLY ... CHECKSUM`
+и `RESTORE VERIFYONLY`, копирует документы, keyring, TLS данные и private config.
+SHA-256 inventory охватывает весь набор.
 Затем запускает **только ранее работавшие** сервисы, а зашифрованную загрузку restic
 выполняет уже после возобновления работы. Ночное окно включает краткую недоступность.
 Файловая блокировка исключает параллельные операции. Restic читает и восстанавливает файлы
@@ -174,7 +168,7 @@ Retention: 7 daily / 4 weekly / 6 monthly. `retention` делает только
 
 Отдельно хранить в защищённом хранилище `stack.json`, адрес repository, пароль restic,
 SSH recovery key и verified known_hosts; доступ к исходникам/конкретным образам и Docker/Compose.
-Без пароля restic его содержимое нельзя расшифровать. Сам backup содержит оба DB dumps,
+Без пароля restic его содержимое нельзя расшифровать. Сам backup содержит SQL backup CRM,
 приложенческие credentials, PFX, документы/keyring и manifest, но **не** ключи доступа к себе.
 Для переноса приложения на другой сервер сохранить образы через `docker image save` либо
 согласовать private registry; manifest проверяет точные image IDs, а не доверяет перетегированному tag.
@@ -191,10 +185,10 @@ state исправного исходного сервера как источн
 и находиться вне source. `latest` не принимается: оператор выбирает конкретный snapshot.
 
 Восстановление сверяет restic AEAD/хеши, manifest и точные application image IDs; поднимает
-**новые** Compose project, сети и DB volumes; восстанавливает PostgreSQL roles до данных,
-SQL с CHECKSUM/VERIFYONLY/CHECKDB, перепривязывает SQL logins и проверяет runtime roles.
-Документы, маркер тома, PFX и keyring копируются побайтно. Поднимаются только web и Atlas
-для внутренних readiness checks: все их сети internal, worker и Caddy выключены,
+**новые** Compose project, сети и DB volume; восстанавливает SQL с CHECKSUM/VERIFYONLY/CHECKDB,
+перепривязывает SQL logins и проверяет runtime roles.
+Документы, маркер тома, PFX и keyring копируются побайтно. Поднимается только web
+для внутренней readiness check: все его сети internal, worker и Caddy выключены,
 портов наружу нет, `Maintenance:ForceReadOnly=true`.
 
 Результат — `quarantined`, не готовая замена production. Команда `up` отказывает для
@@ -217,7 +211,7 @@ PowerOffice/почту и показ клиентских данных до reco
    Порядок и API описаны в ADR-021 и историческом runbook 03; команды Azure из него
    не применять. Этот комплект не подменяет бизнес-проверку сопоставлением числа файлов.
 4. Проверить SQL Ready-документы: каждый ключ существует, SHA-256 и длина совпадают;
-   открыть выборку PDF/версий, проверить роли, customer mapping, сводку Atlas и вход/выход.
+   открыть выборку PDF/версий, проверить роли, customer mapping, алерты Atera и вход/выход.
    Старая сессия/TokenCache расшифровываются только с правильным keyring/PFX; при компрометации
    хоста следует согласованно отозвать сессии и заменить credentials вместо их восстановления.
 5. Проверить актуальные Entra credentials и сертификаты, отключённые интеграции, новые
@@ -240,16 +234,17 @@ sudo python3 deploy/hostinger/rehearse.py --directory /absolute/new/private/dril
 Скрипт создаёт только синтетические tenant IDs/сертификаты/данные; приложения не имеют
 внешней сети. Caddy доступен на случайном localhost HTTP порту; ACME и реальный вход не
 вызываются. Проверяются production-режим приложений, schema migrations, ограниченные роли,
-защита API, native backup, последующее изменение обеих БД/потеря документа, восстановление
+защита API, native backup, последующее изменение БД/потеря документа, восстановление
 прежнего содержимого в новый стек, точное совпадение документов/keyring, отказ при повреждении
 зашифрованного restic pack и последующая полная проверка исправленного repository.
 
-Текущий сценарий дополнительно сохраняет синтетическую цепочку наблюдение Atlas →
-назначенная CRM-задача → подтверждённый сохранённый тикет → свои 0,25 часа → постоянная
-квитанция создания. После backup исходные задача, часы и состояние наблюдения меняются.
-В восстановленной копии должны совпасть все поля 8 SQL и 5 PostgreSQL записей, включая
-rowversion, исходный hash квитанции и связи. Проверяются ключи SourceTaskLinks/квитанции
-и фактический запрет UPDATE/DELETE квитанций под обоими runtime SQL login.
+Текущий сценарий дополнительно сохраняет синтетическую цепочку алерт Atera (`service.Alerts`) →
+назначенная CRM-задача с постоянной квитанцией источника (`SourceTaskLinks`, System `atera`) →
+подтверждённый сохранённый тикет → свои 0,25 часа → постоянная квитанция создания.
+После backup исходные задача, часы и важность алерта меняются. В восстановленной копии
+должны совпасть все поля 9 SQL записей, включая rowversion, исходный hash квитанции и связи.
+Проверяются ключи SourceTaskLinks/квитанции и фактический запрет UPDATE/DELETE квитанций
+под обоими runtime SQL login.
 Seeder работает только в изолированном rehearsal с пустыми бизнес-таблицами; рабочий
 restore новых таблиц не требует и старые backups не переписывает. Это проверка хранения
 через owner, а не входа Entra или HTTP-повтора: API-сценарии отдельно проверяют браузерные

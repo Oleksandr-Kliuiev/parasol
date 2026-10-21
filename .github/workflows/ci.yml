@@ -31,61 +31,6 @@ jobs:
       - run: node --test scripts/*.test.mjs
       - run: npm run test:harness:unit
 
-  atlas:
-    name: Atlas Linux build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/unused
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: apps/atlas/package-lock.json
-      - run: npm ci --prefix apps/atlas
-      - run: npm run build:atlas
-      - run: npm run check:atlas
-
-  atlas-integration:
-    name: Atlas complete tests (no skips)
-    # The inherited peer-credential and F_FULLFSYNC contracts require native Darwin/arm64.
-    # Linux production builds are validated independently by the atlas job above.
-    runs-on: macos-15
-    timeout-minutes: 150
-    env:
-      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/unused
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: apps/atlas/package-lock.json
-      - run: npm ci --prefix apps/atlas
-      - run: npm run build:atlas
-      - run: npm run test:atlas
-      - name: Install test database runtime
-        run: brew install postgresql@17
-      - name: Start disposable native PostgreSQL
-        run: node scripts/atlas-postgres.mjs start
-      - run: npm run db:check:pg17 --prefix apps/atlas
-      - run: npm run db:check:drift --prefix apps/atlas
-      - name: Every PostgreSQL test, including native chain and paced 200-case rehearsal
-        run: npm run test:atlas:pg
-      - run: npx playwright install chromium
-        working-directory: apps/atlas
-      - name: Every browser test, including the paced 200-case journey
-        run: npm run test:atlas:ui
-      - name: Stop disposable PostgreSQL
-        if: ${{ always() }}
-        run: node scripts/atlas-postgres.mjs stop
-
   crm-backend:
     name: CRM backend and SQL integration
     runs-on: ubuntu-24.04
@@ -194,7 +139,7 @@ jobs:
           persist-credentials: false
       - name: Deployment failure and isolation tests
         run: python3 -m unittest discover -s deploy/hostinger/tests -v
-      - name: Build images, migrate both databases, backup and restore into a fresh isolated stack
+      - name: Build images, migrate the database, backup and restore into a fresh isolated stack
         run: >-
           sudo env PARASOL_REHEARSAL_DIAGNOSTICS=1 python3 deploy/hostinger/rehearse.py
           --directory "$RUNNER_TEMP/parasol-rehearsal" --release ci-${{ github.sha }}
@@ -206,7 +151,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: ${{ always() }}
-    needs: [history, atlas, atlas-integration, crm-backend, crm-frontend, crm-e2e, hostinger]
+    needs: [history, crm-backend, crm-frontend, crm-e2e, hostinger]
     steps:
       - name: All checks must succeed
         env:
@@ -218,5 +163,5 @@ jobs:
           failures = [name for name, job in results.items() if job['result'] != 'success']
           if failures:
               raise SystemExit('Unsuccessful checks: ' + ', '.join(failures))
-          print('All Parasol checks passed, including complete Atlas suites with no failure or skip exceptions.')
+          print('All Parasol checks passed: history, CRM backend, frontend and browser workflows, Hostinger restore drill.')
           PY

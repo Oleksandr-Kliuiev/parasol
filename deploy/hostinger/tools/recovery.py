@@ -39,13 +39,7 @@ def restore(source, snapshot_id, destination):
     target = Stack(destination)
     if manifest['images'] != image_ids(target):
         raise ValueError('Restore requires the exact application images recorded by this snapshot')
-    target.compose('up', '-d', '--wait', '--wait-timeout', '300', 'sql', 'postgres')
-    # PostgreSQL bootstrap already creates postgres. All other roles come from the backup, including RLS definers.
-    roles = (root / 'roles.sql').read_text().replace('CREATE ROLE postgres;\n', '')
-    target.pg(roles)
-    with (root / 'atlas.dump').open('rb') as dump:
-        target.compose('exec', '-T', 'postgres', 'pg_restore', '-U', 'postgres', '-d', 'atlas',
-                       '--exit-on-error', input_file=dump)
+    target.compose('up', '-d', '--wait', '--wait-timeout', '300', 'sql')
     target.compose('exec', '-T', 'sql', 'mkdir', '-p', '/var/opt/mssql/backup')
     run(['docker', 'cp', root / 'crm.bak', f'{target.cid("sql")}:/var/opt/mssql/backup/parasol.bak'])
     target.compose('exec', '-T', '--user', '0', 'sql', 'chown', '10001:0', '/var/opt/mssql/backup/parasol.bak')
@@ -58,14 +52,14 @@ DBCC CHECKDB ([Crm]) WITH NO_INFOMSGS;""")
     sql_logins(target, users=True)
     validate_permissions(target)
     prepare_files(target)
-    target.compose('up', '-d', '--wait', '--wait-timeout', '300', 'crm-web', 'atlas')
+    target.compose('up', '-d', '--wait', '--wait-timeout', '300', 'crm-web')
     target.compose('exec', '-T', 'sql', 'rm', '-f', '/var/opt/mssql/backup/parasol.bak')
     shutil.rmtree(incoming)
     result = {'status': 'quarantined', 'snapshot': snapshot_id,
               'elapsedSeconds': round(time.monotonic() - started, 2), 'documentFiles': len([
                   name for name in manifest['files'] if name.startswith('data/documents/')]),
               'checks': ['restic restore --verify', 'file inventory SHA-256', 'SQL VERIFYONLY/CHECKDB',
-                         'PostgreSQL restore --exit-on-error', 'restricted runtime roles', 'web/Atlas readiness'],
+                         'restricted runtime roles', 'web readiness'],
               'promotionBlocked': True}
     write_json(destination / 'restore-status.json', result)
     write_json(source.path / 'restore-proof.json', {**result, 'verifiedAt': datetime.now(timezone.utc).isoformat()})

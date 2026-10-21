@@ -1,6 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": { "rootDir": ".", "outDir": "../../dist/.operator-measured-build" },
-  "include": ["src/**/*.ts", "measured/**/*.ts"],
-  "exclude": ["src/main.ts"]
-}

@@ -1,9 +1,0 @@
-Mutation results (implementer, before the rc2 full run; each file restored and compared with cmp):
-M1_fault_stop (run.ts #accept: no TERMINAL_FAULT stop): fail 1
-M2_coverage_credit (terminal.ts: non-FINAL → null): fail 3
-M3_binding (terminal.ts terminalMatches → true): fail 1
-M4_end_pair (run.ts: no END_PAIR after an armed failure): fail 1
-M5_drain (transfer.ts: COMMIT after REJECTED not read): fail 1
-M6_identity_fold (identity.ts: rebuilt digest not in executionToolSha256): fail 1
-M7_publication (terminal.ts: no publication match): fail 1
-restored run.ts terminal.ts transfer.ts identity.ts

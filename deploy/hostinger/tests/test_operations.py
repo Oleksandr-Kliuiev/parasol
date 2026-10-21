@@ -23,7 +23,7 @@ class FakeStack:
     def compose(self, *args):
         self.calls.append(args)
         if args[:3] == ('ps', '--status', 'running'):
-            return b'crm-web\ncrm-worker\natlas\n' if len(self.calls) == 1 else b''
+            return b'crm-web\ncrm-worker\n' if len(self.calls) == 1 else b''
         if args[0] == 'stop' and self.fail_stop:
             raise RuntimeError('synthetic partial stop failure')
         return b''
@@ -42,6 +42,21 @@ class OperationsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             initialize(self.root, rehearsal=True)
         self.assertEqual((self.root / 'sentinel').read_text(), 'keep')
+
+    def test_new_installation_holds_only_crm_and_sql_server_secrets(self):
+        # The temporary directory may sit below a symlinked /var (macOS); private state refuses symlinked parents.
+        state = self.root.resolve() / 'state'
+        initialize(state, rehearsal=True, release='synthetic')
+        config = state / 'config'
+        self.assertEqual(sorted(path.name for path in config.iterdir()), ['dp.pfx', 'migrate.json', 'oidc.pfx',
+                         'sql-logins.json', 'sql-sa-password', 'web.json', 'worker.json'])
+        self.assertEqual(config.stat().st_mode & 0o777, 0o700)
+        for name in ('web', 'worker', 'migrate'):
+            settings = json.loads((config / f'{name}.json').read_text())
+            self.assertNotIn('Parasol', settings)
+            self.assertIn('Server=sql,1433;Database=Crm;', settings['ConnectionStrings']['Crm'])
+        worker = json.loads((config / 'worker.json').read_text())
+        self.assertFalse({'DataProtection', 'AzureAd', 'Auth', 'Forwarded'} & set(worker))
 
     def test_failed_command_withholds_output_but_keeps_a_tail_for_the_drill(self):
         with self.assertRaises(RuntimeError) as caught:
@@ -72,11 +87,9 @@ class OperationsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'incomplete'): verify(self.root)
 
     def complete_snapshot(self):
-        names = ['crm.bak', 'atlas.dump', 'roles.sql', 'config/web.json', 'config/worker.json',
-                 'config/migrate.json', 'config/dp.pfx', 'config/oidc.pfx', 'config/sql-logins.json',
-                 'config/sql-sa-password', 'config/pg-password', 'config/atlas-admin.json',
-                 'config/atlas-runtime.json', 'data/documents/.parasol-volume', 'stack.json',
-                 'data/keyring/key-synthetic.xml']
+        names = ['crm.bak', 'config/web.json', 'config/worker.json', 'config/migrate.json', 'config/dp.pfx',
+                 'config/oidc.pfx', 'config/sql-logins.json', 'config/sql-sa-password',
+                 'data/documents/.parasol-volume', 'stack.json', 'data/keyring/key-synthetic.xml']
         for name in names:
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -106,7 +119,7 @@ class OperationsTests(unittest.TestCase):
         stack = FakeStack(self.root)
         with patch('snapshot.capture', side_effect=RuntimeError('synthetic dump failure')):
             with self.assertRaises(RuntimeError): backup(stack)
-        self.assertIn(('up', '-d', '--no-recreate', '--no-deps', '--wait', '--wait-timeout', '300', 'crm-web', 'crm-worker', 'atlas'), stack.calls)
+        self.assertIn(('up', '-d', '--no-recreate', '--no-deps', '--wait', '--wait-timeout', '300', 'crm-web', 'crm-worker'), stack.calls)
         self.assertFalse(list(self.root.glob('.snapshot-*')))
         self.assertEqual(json.loads((self.root / 'backup-status.json').read_text())['status'], 'failed')
 

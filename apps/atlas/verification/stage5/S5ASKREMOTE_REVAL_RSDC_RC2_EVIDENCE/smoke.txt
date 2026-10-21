@@ -1,5 +1,0 @@
-
-> vardahei-atlas-stage1-reference@1.1.3 api:smoke
-> node --experimental-strip-types scripts/api-smoke.ts
-
-PASS: API auth, ClientContextV1 overview, client isolation, read tool resource view, write denial, DTO validation, client audit without payload, workspace security audit of denials.

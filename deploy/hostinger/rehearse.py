@@ -38,15 +38,15 @@ def drill(root, release, build, keep):
     try:
         if build:
             print('Building Linux application images', flush=True)
-            source.compose('build', 'crm-web', 'crm-worker', 'atlas', 'atlas-migrate')
-        print('Migrating empty SQL Server/PostgreSQL databases', flush=True)
+            source.compose('build', 'crm-web', 'crm-worker')
+        print('Migrating the empty SQL Server database', flush=True)
         migrate(source)
         start(source)
-        print('Seeding the synthetic observation/task/ticket/time recovery workload', flush=True)
+        print('Seeding the synthetic alert/task/ticket/time recovery workload', flush=True)
         workload = seed(source)
         verify_integrity(source, workload)
         before_workload = capture(source, workload)
-        # The edge only exposes the web host, never internal health or Atlas.
+        # The edge only exposes the web host, never internal health.
         for route in ['/health/ready', '/bff/user']:
             try:
                 urllib.request.urlopen(f'http://localhost:{meta["compose"]["HTTP_PORT"]}{route}', timeout=10)
@@ -56,7 +56,6 @@ def drill(root, release, build, keep):
                 raise RuntimeError('Private route unexpectedly exposed by the edge')
         marker = secrets.token_hex(16)
         source.sql(f"CREATE TABLE dbo.ParasolRecoveryProbe (Id int PRIMARY KEY, Value varchar(64) NOT NULL); INSERT dbo.ParasolRecoveryProbe VALUES (1, '{marker}');", 'Crm')
-        source.pg(f"CREATE TABLE public.parasol_recovery_probe (id int PRIMARY KEY, value text NOT NULL); INSERT INTO public.parasol_recovery_probe VALUES (1, '{marker}');")
         documents = source_path / 'data/documents'
         (documents / 'rehearsal').mkdir(mode=0o700)
         pdf = documents / 'rehearsal/immutable.pdf'
@@ -76,19 +75,16 @@ def drill(root, release, build, keep):
         source.restic('check', '--read-data')
         # Simulate later data/loss in the synthetic source; the restored copy must recover the earlier point.
         source.sql("UPDATE dbo.ParasolRecoveryProbe SET Value='after-backup';", 'Crm')
-        source.pg("UPDATE public.parasol_recovery_probe SET value='after-backup';")
         mutate_after_backup(source, workload, before_workload)
         pdf.unlink()
-        source.compose('stop')  # Simulate unavailable source; recovery cannot borrow either live database.
-        print('Restoring both databases, documents and keyring into a new isolated stack', flush=True)
+        source.compose('stop')  # Simulate unavailable source; recovery cannot borrow the live database.
+        print('Restoring the database, documents and keyring into a new isolated stack', flush=True)
         with source.lock(): recovered = restore(source, result['snapshot'], target_path)
         target = Stack(target_path)
         workload_proof = verify_restored(target, workload, before_workload)
         workload_proof['sourceChangedAfterBackup'] = True
         if marker not in target.sql('SET NOCOUNT ON; SELECT Value FROM dbo.ParasolRecoveryProbe;', 'Crm').decode():
             raise RuntimeError('SQL point-in-time marker mismatch')
-        if target.pg('SELECT value FROM public.parasol_recovery_probe;').decode().strip() != marker:
-            raise RuntimeError('PostgreSQL point-in-time marker mismatch')
         if before_documents != inventory(target_path / 'data/documents'):
             raise RuntimeError('Restored document inventory changed')
         if before_keys != inventory(target_path / 'data/keyring'):
@@ -108,7 +104,7 @@ def drill(root, release, build, keep):
         source.restic('check', '--read-data')
         report = {'status': 'passed', 'syntheticOnly': True, 'snapshot': result['snapshot'],
                   'backupSeconds': result['elapsedSeconds'], 'restoreSeconds': recovered['elapsedSeconds'],
-                  'checks': recovered['checks'] + ['SQL and PostgreSQL before/after markers',
+                  'checks': recovered['checks'] + ['SQL before/after marker',
                       'exact current workflow rows and rowversions', 'workflow relations and permanent keys',
                       'both runtime logins deny receipt UPDATE/DELETE',
                       'exact document and keyring inventory', 'corrupt encrypted pack rejected', 'edge isolation'],

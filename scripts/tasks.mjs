@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const atlas = 'apps/atlas';
 const crm = 'apps/crm';
 const web = `${crm}/web`;
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -11,16 +10,11 @@ const command = (cwd, exe, ...args) => ({ cwd, exe, args });
 const nr = (cwd, name, ...args) => command(cwd, npm, 'run', name, ...args);
 const test = name => command(crm, dotnet, 'test', '--project', `tests/Crm.${name}Tests/Crm.${name}Tests.csproj`, '--no-build', '-c', 'Release');
 const tasks = {
-  bootstrap: [command(atlas, npm, 'ci'), command(web, npm, 'ci'), command(crm, dotnet, 'restore', 'Vardahei.Crm.slnx')],
-  'build:atlas': [nr(atlas, 'db:generate'), nr(atlas, 'api:build'), command(atlas, process.execPath, '--experimental-strip-types', 'scripts/operator-measured-build.ts')],
+  bootstrap: [command(web, npm, 'ci'), command(crm, dotnet, 'restore', 'Vardahei.Crm.slnx')],
   'build:crm': [command(crm, dotnet, 'build', 'Vardahei.Crm.slnx', '--no-restore', '-c', 'Release'), nr(web, 'build')],
-  build: ['build:atlas', 'build:crm'],
-  'check:atlas': [nr(atlas, 'typecheck'), nr(atlas, 'ui:typecheck'), nr(atlas, 'schema:validate')],
+  build: ['build:crm'],
   'check:crm': [nr(web, 'lint'), nr(web, 'typecheck'), nr(web, 'test', '--', '--maxWorkers=2'), 'test:crm:unit', 'test:crm:architecture'],
-  check: [command('.', process.execPath, 'scripts/verify-history.mjs'), 'check:atlas', 'check:crm', command('.', process.execPath, 'scripts/atlas-tests.mjs')],
-  'test:atlas:strict': [command('.', process.execPath, 'scripts/atlas-tests.mjs')],
-  'test:atlas:pg': [command('.', process.execPath, 'scripts/atlas-tests.mjs', 'pg')],
-  'test:atlas:ui': [nr(atlas, 'api:build'), command('.', process.execPath, 'scripts/atlas-browser-tests.mjs')],
+  check: [command('.', process.execPath, 'scripts/verify-history.mjs'), 'check:crm'],
   'test:crm:unit': [test('Unit')],
   'test:crm:architecture': [test('Architecture')],
   'test:crm:integration': [test('Integration')],
