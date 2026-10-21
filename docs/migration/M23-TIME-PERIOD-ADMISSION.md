@@ -72,11 +72,13 @@ Source HTTP и файловых операций под этими блокир�
 
 ## Проверки
 
-[Свидетельство M23](../testing/evidence/time-period-M23-2026-10-17.json): 917/917 CRM unit,
+Свидетельство M23 (удалено в M38:
+`git show 73c0158:docs/testing/evidence/time-period-M23-2026-10-17.json`): 917/917 CRM unit,
 94/94 architecture, 102/102 затронутых SQL integration. Полный frontend — 562/562 в 64 файлах;
 ESLint, app/E2E/composition TypeScript, production build и budget 291.7/300 KB проходят.
 CRM browser — 70/70, включая новый реальный сценарий периода в Chromium/Firefox/WebKit.
-Полный совместный source-build — 9/9, 577 Atlas requests и 0 mutating requests;
+Полный совместный source-build — 9/9, 577 запросов к прежнему сервису интеграций (удалён в
+[M38](M38-OPERATIONS-IN-CRM.md)) и 0 mutating requests;
 точная Task/ticket/time/receipt/privacy evidence и restricted roles подтверждены. Все
 временные ресурсы очищены; пропусков, retries, flaky и исключений нет.
 
@@ -87,7 +89,7 @@ SQL lock wait. Исправлена нормализация только при
 Первоначальный analyzer diagnostic CA1512 исправлен штатным ThrowIfNegative без suppression.
 
 824 backend/build и 389 web inputs совпадают с проверенными SHA256; 2634 входов
-совместного прогона не менялись во время выполнения. Atlas не изменён: 1421 вход совпадает
+совместного прогона не менялись во время выполнения. Прежний сервис не изменён: 1421 вход совпадает
 с отдельным строгим 711 unit / 789 PostgreSQL / 90 browser; он не запускался заново.
 Сохранность исходных Git HEAD/status/refs, import history, diff-check и redacted secret scan
 проверяются перед локальным checkpoint.
@@ -144,5 +146,6 @@ Time и не устраняют промежуток между реальным
 
 [M24](M24-TIME-BANK-ATOMICITY.md) устраняет раздельный commit Time/HourBank явной
 локальной транзакцией и не ослабляет month admission или inbox ownership. Историческая
-приёмка M23 сохранена в [архивном composition](../testing/evidence/composition-M23-2026-10-17.json).
+приёмка M23 сохранена в архивном composition (свидетельство удалено в M38:
+`git show 73c0158:docs/testing/evidence/composition-M23-2026-10-17.json`).
 Граница export/invoiced и сверка старой финансовой истории остаются обязательными.

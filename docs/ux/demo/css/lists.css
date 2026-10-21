@@ -531,8 +531,12 @@ a.cell-title:hover {
   gap: var(--s-2) var(--s-4);
 }
 
+/* A long compound label ("Katalogsynkronisering") hyphenates or breaks instead of running into its value */
 .kv dt {
   color: var(--muted);
+  min-width: 0;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .kv dd {

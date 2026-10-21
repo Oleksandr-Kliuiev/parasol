@@ -73,7 +73,8 @@ writers не участвуют в новом протоколе. Рабочие
 
 ## Итоговая локальная приёмка
 
-[Свидетельство M25](../testing/evidence/time-billing-M25-2026-10-17.json):
+Свидетельство M25 (удалено в M38:
+`git show 73c0158:docs/testing/evidence/time-billing-M25-2026-10-17.json`):
 925/925 unit, 94/94 architecture, 195/195 затронутых SQL и 562/562 frontend в 64 файлах.
 Это не полный SQL-набор CRM. ESLint, app/E2E/composition TypeScript, production SPA и
 бюджет 291.7/300 KB проходят. CRM browser — 76/76 без skips/retries/flaky: новый реальный
@@ -81,9 +82,11 @@ Time → Finance approval → понятный отказ → отмена с п
 в Chromium/Firefox/WebKit вместе с прежними 73 регрессиями.
 
 Полный source-build composition прошёл 9/9 с restricted SQL/PostgreSQL roles и точными
-Task/ticket/time/privacy facts, 572 Atlas requests и нулём mutating requests. Все 2657
-входов совпадают до/после. 845 backend/build и 391 web inputs не менялись; Atlas strict
-711 unit / 789 PostgreSQL / 90 browser поддержан 1421 неизменным входом, заново не запускался.
+Task/ticket/time/privacy facts, 572 запросами к прежнему сервису интеграций (удалён в
+[M38](M38-OPERATIONS-IN-CRM.md)) и нулём mutating requests. Все 2657
+входов совпадают до/после. 845 backend/build и 391 web inputs не менялись; строгий набор
+прежнего сервиса 711 unit / 789 PostgreSQL / 90 browser поддержан 1421 неизменным входом,
+заново не запускался.
 Все восемь собственных runtime fixtures очищены. Оригинальные Git HEAD/status/refs,
 import history, diff-check и redacted secret scan проверяются перед локальным checkpoint.
 
@@ -91,5 +94,6 @@ import history, diff-check и redacted secret scan проверяются пер
 M26 добавил [read-only сверку выбранной записи](M26-TIME-FINANCIAL-REVIEW.md): Finance
 видит причины отказа и связи с банком/Billing без изменения M25 guards. Автоматическая
 правка исторических источников не добавлена. Предыдущий полный composition M25 сохранён
-[отдельно](../testing/evidence/composition-M25-2026-10-17.json); текущий указатель относится
-к подтверждённому source-build прогону M26.
+отдельно (свидетельство удалено в M38:
+`git show 73c0158:docs/testing/evidence/composition-M25-2026-10-17.json`); текущий указатель
+относится к подтверждённому source-build прогону M26.

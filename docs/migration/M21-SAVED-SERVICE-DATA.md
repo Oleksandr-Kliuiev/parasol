@@ -41,13 +41,16 @@
   DOM-лог в этот момент показывает фон с aria-hidden=true после закрытия старой формы.
   Использовано обычное findByRole с прежним default
   timeout; проверки позднего POST, отсутствия GET/toast и сохранности новой формы прежние.
-- Полный [composition](../testing/evidence/composition-M21-2026-10-17.json) с новой
-  сборкой CRM/Atlas — 8/8, 0 skipped/unexpected/flaky; одна Task/receipt/create audit, два
-  ActivityLogged, privacy evidence, restricted roles и cleanup проходят. Recorder переслал
-  564 Atlas requests, mutating requests — 0. CRM browser — 67/67,
+- Полный composition (свидетельство удалено в M38:
+  `git show 73c0158:docs/testing/evidence/composition-M21-2026-10-17.json`) с новой
+  сборкой CRM и прежнего сервиса интеграций (удалён в [M38](M38-OPERATIONS-IN-CRM.md)) — 8/8,
+  0 skipped/unexpected/flaky; одна Task/receipt/create audit, два ActivityLogged, privacy
+  evidence, restricted roles и cleanup проходят. Recorder переслал 564 запроса к прежнему
+  сервису, mutating requests — 0. CRM browser — 67/67,
   без skipped/unexpected/flaky/retries; owned runtime очищен. Предыдущий M20 сохранён отдельно.
 
-Итоговое [свидетельство M21](../testing/evidence/saved-service-M21-2026-10-17.json)
+Итоговое свидетельство M21 (удалено в M38:
+`git show 73c0158:docs/testing/evidence/saved-service-M21-2026-10-17.json`)
 содержит текущие результаты. Первый browser-прогон 63/67 сохранён: Axe выявил
 нефокусируемую горизонтальную таблицу Tickets; оба сбоя входа WebKit показывали
 в AuthGate «Too many requests». Таблица получила именованную область с видимым фокусом;
@@ -56,7 +59,7 @@
 не менялись. Сырые HTTP-трассы первоначального 429 не сохранялись.
 
 Backend SQL 38/38 и architecture 94/94 повторно не запускались: все 775 исходных входов
-совпадают по SHA256. Код Atlas также не изменён: 1421 вход совпадает со строгими
+совпадают по SHA256. Код прежнего сервиса также не изменён: 1421 вход совпадает со строгими
 711 unit / 789 PostgreSQL / 90 browser. Сохранность исходных Git HEAD/status/refs,
 import history, diff-check и secret scan проверяются перед локальным checkpoint.
 

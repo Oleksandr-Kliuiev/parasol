@@ -133,8 +133,10 @@ PDF/вложения, ledger-операции, входящие счета, payr
 ## Проверки
 
 Результаты локальных unit, architecture и SQL-проверок фиксируются отдельным
-отчётом `docs/testing/evidence/poweroffice-invoice-history-M37-2026-10-18.json`.
-Предыдущие отчёты неизменны. Проверки браузера, Atlas и VPS restore не повторялись:
+отчётом (удалён в M38:
+`git show 73c0158:docs/testing/evidence/poweroffice-invoice-history-M37-2026-10-18.json`).
+Предыдущие отчёты неизменны. Проверки браузера, прежнего сервиса интеграций (удалён в
+[M38](M38-OPERATIONS-IN-CRM.md)) и VPS restore не повторялись:
 изменён backend импорта, интерфейс и инфраструктура не менялись.
 
 Окончательный результат: **988/988 unit**, **94/94 architecture**, **83/83 затронутых

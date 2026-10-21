@@ -59,6 +59,13 @@
     P.charts.fit();
   };
 
+  /* The same control can exist twice (wide table and phone cards): focus the copy that is showing */
+  P.focusKey = function (key) {
+    var el = P.$$('[data-focus="' + key + '"]').filter(function (x) { return x.getClientRects().length > 0; })[0];
+    if (el) el.focus({ preventScroll: true });
+    return el || null;
+  };
+
   /* Re-render after a state change without moving focus away from the control the person used */
   app.refresh = function () {
     var active = document.activeElement;
@@ -66,7 +73,7 @@
     var y = window.scrollY;
     app.render();
     window.scrollTo(0, y);
-    if (key) { var el = document.querySelector('[data-focus="' + key + '"]'); if (el) el.focus({ preventScroll: true }); }
+    if (key) P.focusKey(key);
     if (P.drawer.isOpen()) P.drawer.refresh();
   };
 
@@ -156,7 +163,7 @@
     P.popover.close(); P.drawer.close();
     P.modal.open(function () {
       var rows = [['⌘K / Ctrl K', 'keys.palette'], ['/', 'keys.search'], ['N', 'keys.newTask'], ['T', 'keys.logTime'],
-        ['G → D', 'keys.goDay'], ['G → O', 'keys.goObs'], ['G → C', 'keys.goCustomers'], ['G → V', 'keys.goTime'], ['Esc', 'keys.close']];
+        ['G → D', 'keys.goDay'], ['G → A', 'keys.goAlerts'], ['G → C', 'keys.goCustomers'], ['G → V', 'keys.goTime'], ['Esc', 'keys.close']];
       return P.sheet({ title: t('profile.shortcuts'), body: P.html`<dl class="kv">${rows.map(function (r) {
         return P.html`<dt><span class="kbd">${r[0]}</span></dt><dd>${t(r[1])}</dd>`;
       })}</dl>` });
@@ -174,7 +181,7 @@
     var k = e.key.toLowerCase();
     if (gPending) {
       gPending = false;
-      var map = { d: '/day', o: '/observations', c: '/customers', v: '/time', t: '/tasks' };
+      var map = { d: '/day', a: '/alerts', c: '/customers', v: '/time', t: '/tasks' };
       if (map[k]) { e.preventDefault(); P.go(map[k]); }
       return;
     }

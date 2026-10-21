@@ -34,7 +34,6 @@
 | 18 | Транспорт: вход пользователей | TLS завершается на ingress Azure Container Apps (`allowInsecure: false`), версия и набор шифров задаются платформой и в репозитории не проверяются (EXT-06); HSTS 1 год + includeSubDomains | Сертификат платформы | Платформа | Operations | `apps.bicep`, `Program.cs` (`AddHsts`) |
 | 19 | Хранение: TDE SQL, шифрование Blob по умолчанию | Ключи, управляемые службой (service-managed) | Платформа | Платформа | Operations | Не настраивается в репозитории; ключи клиента не используются (при требовании — отдельное решение) |
 | 20 | Секреты интеграций (Atera, PowerOffice, Partner Center, Teams webhook) | Не криптографические ключи, а секреты: Key Vault | Key Vault, по секрету | Таблица в docs/06 § 5 | Operations | `apps.bicep`, `secret-access.bicep` |
-| 21 | Parasol: привязка продолжения очереди к выбранному устройству (M35) | SHA-256 от точного UTF-8 canonical ID; фиксированный hex внутри существующего Data Protection continuation | Хеш без ключа; сам не даёт полномочий. Подлинность и конфиденциальность обеспечивает прежний IDataProtector. Parasol хранит его keyring в файловом томе VPS (M05/M07), Azure не добавляется | Прежний срок продолжения 15 мин, смены ключей и credentials нет | Dev team | `Parasol/AtlasObservationCursor.cs`, `DeviceKey`; unit `AtlasDeviceObservationTests`, SQL `AtlasObservationQueueApiTests`. Фиксированный размер сохраняет предел 2048 символа даже для ID из 256 Unicode code units |
 
 ### Что не используется
 

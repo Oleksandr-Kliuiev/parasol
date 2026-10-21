@@ -265,7 +265,7 @@ dialog::backdrop {
   position: fixed;
   z-index: 60;
   width: min(360px, calc(100vw - 32px));
-  max-height: min(70vh, 560px);
+  max-height: min(80vh, 640px);
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -305,7 +305,10 @@ dialog::backdrop {
   padding: var(--s-2) var(--s-4) var(--s-4);
 }
 
+/* The confirm button never scrolls out of a tall popover: the foot stays pinned to its bottom edge */
 .pop-foot {
+  position: sticky;
+  bottom: 0;
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2);

@@ -79,7 +79,7 @@
 
   var ROUTES = [
     ['day', /^\/?(day)?$/],
-    ['observations', /^\/observations$/],
+    ['alerts', /^\/alerts$/],
     ['tasks', /^\/tasks$/],
     ['time', /^\/time(?:\/([\w-]+))?$/],
     ['customers', /^\/customers$/],
@@ -94,9 +94,18 @@
     ['admin', /^\/admin$/]
   ];
 
+  /* Old addresses that still open the same page, like the CRM keeps ?tab=service: the address is rewritten in place */
+  var ALIASES = [[/^\/customers\/([\w-]+)\/technical$/, '/customers/$1/operations']];
+
   P.memPath = null; /* used when the host frame does not let the page change its own hash */
   P.parseRoute = function () {
     var path = P.memPath || (location.hash || '').replace(/^#/, '') || '/day';
+    ALIASES.forEach(function (a) {
+      if (!a[0].test(path)) return;
+      path = path.replace(a[0], a[1]);
+      if (P.memPath) P.memPath = path;
+      try { if (location.hash !== '#' + path) history.replaceState(null, '', '#' + path); } catch (e) { /* keep the in-memory route */ }
+    });
     for (var i = 0; i < ROUTES.length; i++) {
       var m = path.match(ROUTES[i][1]);
       if (m) return { name: ROUTES[i][0], params: m.slice(1), path: path };

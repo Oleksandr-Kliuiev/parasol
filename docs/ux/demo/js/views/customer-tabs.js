@@ -1,4 +1,4 @@
-/* Parasoll UX demo: customer card tabs (technical, work, finance, agreement, contacts, journal). */
+/* Parasoll UX demo: customer card tabs (operations, work, finance, agreement, contacts, journal). */
 (function () {
   'use strict';
 
@@ -21,70 +21,107 @@
     P.app.refresh();
   });
 
-  /* ---------- Technical ---------- */
+  /* ---------- Operations: summary, then alerts, then devices with their open alerts ---------- */
 
-  TABS.technical = function (c) {
-    if (c.atlas !== 'READY') {
-      return UI.card({ body: UI.empty('link', t('cust.noAtlasTitle'), t('cust.noAtlasText'), P.can('integrations') ? h`<a class="btn btn-sm" href="#/admin">${t('cust.mapAtlas')}</a>` : '') });
-    }
-    if (!D.canSee(c.id)) return UI.card({ body: UI.empty('lock', t('perm.noAtlasTitle'), t('perm.atlasHint')) });
-    var devices = D.devicesOf(c.id);
-    var obs = D.observations.filter(function (o) { return o.customer === c.id; });
-    var active = M.sortObs(obs.filter(D.isActive));
-    var past = M.sortObs(obs.filter(function (o) { return !D.isActive(o); }));
-    var s = sub('tech-' + c.id, [
-      { value: 'devices', label: t('tech.devices'), count: devices.length },
-      { value: 'observations', label: t('tech.observations'), count: active.length },
-      { value: 'history', label: t('tech.history'), count: past.length },
-      { value: 'm365', label: 'Microsoft 365' }
-    ], active.some(D.isUrgent) ? 'observations' : 'devices');
-    var sources = D.sourcesFor(c.id);
-    var stale = sources.filter(function (x) { return x.status !== 'OK'; });
-    var strip = h`<details class="source-strip"><summary><span class="row-wrap">${P.icon('database', 'ic-16')}<strong>${t('tech.sources')}</strong>
-        ${stale.length ? h`<span class="pill pill-warn">${t('tech.sourcesReview', { n: stale.length })}</span>` : h`<span class="pill pill-good">${t('tech.sourcesOk')}</span>`}
-        <span class="small muted">${t('day.kAtlasRead', { time: P.fmt.time(D.atlasReadAt) })}</span></span>${P.icon('chevronDown', 'ic-16 muted')}</summary>
-      <ul class="rows">${sources.map(function (x) {
-        return h`<li class="item"><span class="tl-icon">${P.icon(x.source === 'huntress' ? 'shield' : x.source === 'microsoft365' ? 'cloud' : 'server', 'ic-16')}</span>
-          <div class="item-main"><span class="item-title">${t(x.label)}</span>${x.status === 'UNAVAILABLE' ? h`<span class="small muted">${t('source.ateraAlertsWhy')}</span>` : ''}</div>
-          <div class="item-side">${UI.fresh(x.status, x.asOf)}</div></li>`;
-      })}</ul><p class="small muted">${t('tech.sourcesNote')}</p></details>`;
-    var panel;
-    if (s.value === 'devices') {
-      panel = UI.card({ flush: true, body: h`<div class="table-wrap"><table class="table">
-        <caption class="sr-only">${t('tech.devices')}</caption>
-        <thead><tr><th scope="col">${t('tech.colDevice')}</th><th scope="col">${t('tech.colLinks')}</th><th scope="col">${t('tech.colOs')}</th>
-          <th scope="col">${t('tech.colState')}</th><th scope="col">${t('tech.colObs')}</th><th scope="col"><span class="sr-only">${t('common.actions')}</span></th></tr></thead>
-        <tbody>${devices.map(function (d) {
-          var a = active.filter(function (o) { return o.device === d.id; });
-          var worst = a[0];
-          return h`<tr><td><div class="row">${P.icon(d.kind === 'server' ? 'server' : d.kind === 'laptop' ? 'laptop' : 'monitor', 'ic-16 muted')}<span class="strong break">${d.host}</span></div></td>
-            <td><div class="row-wrap">${d.sources.map(function (x) { return h`<span class="tag">${UI.sourceName(x)}</span>`; })}${d.sources.length < 2 ? h`<span class="small muted">${t('tech.partialLinks')}</span>` : ''}</div></td>
+  /* The least fresh connected source speaks for the whole summary */
+  function weakest(sources) {
+    var order = { ERROR: 0, STALE: 1, MISSING: 2, UNAVAILABLE: 3, OK: 4 };
+    var used = sources.filter(function (x) { return x.status !== 'NOT_CONNECTED'; });
+    return used.slice().sort(function (a, b) { return order[a.status] - order[b.status] || (a.asOf || 0) - (b.asOf || 0); })[0];
+  }
+
+  var DEVICE_ROWS = 10;
+  function deviceIcon(d) { return d.kind === 'server' ? 'server' : d.kind === 'laptop' ? 'laptop' : 'monitor'; }
+  function onlineState(d) {
+    if (d.online == null) return h`<span class="muted">—</span>`;
+    return d.online ? h`<span class="row small">${P.icon('circleCheck', 'ic-14')}${t('device.online')}</span>`
+      : h`<span class="row small muted">${P.icon('minusCircle', 'ic-14')}${t('device.offline')}</span>`;
+  }
+  function openAlertsOf(mine) {
+    return mine.length ? h`<span class="row-wrap nowrap">${UI.sev(mine[0].severity)}<span class="small num">${t('ops.openN', { n: mine.length })}</span></span>`
+      : h`<span class="muted small">${t('ops.none')}</span>`;
+  }
+  function historyButton(d) {
+    return h`<button class="btn btn-sm btn-quiet" type="button" data-action="open-device" data-id="${d.id}" aria-label="${t('ops.historyFor', { host: d.host })}">${t('ops.historyBtn')}</button>`;
+  }
+
+  /* Devices with open alerts first (worst first), then the rest in Atera order; the first ten, or all on request */
+  function devicesCard(c, devices, open) {
+    var rows = devices.map(function (d, i) { return { d: d, i: i, mine: open.filter(function (a) { return a.device === d.id; }) }; })
+      .sort(function (x, y) {
+        var rx = x.mine.length ? D.SEV_ORDER[x.mine[0].severity] : 9;
+        var ry = y.mine.length ? D.SEV_ORDER[y.mine[0].severity] : 9;
+        return rx - ry || y.mine.length - x.mine.length || x.i - y.i;
+      });
+    var all = !!P.state.ui['ops-all-' + c.id];
+    var shown = all ? rows : rows.slice(0, DEVICE_ROWS);
+    var toggle = rows.length > DEVICE_ROWS ? h`<button class="btn btn-sm" type="button" data-action="ops-devices" data-id="${c.id}" data-focus="ops-devices" aria-expanded="${all ? 'true' : 'false'}">${all ? t('ops.showFewer') : t('ops.showAll', { n: rows.length })}</button>` : '';
+    return UI.card({ flush: true, title: t('cust.devices'), icon: 'monitor', titleId: 'ops-devices', count: devices.length, body: h`<div class="table-wrap only-wide"><table class="table">
+        <caption class="sr-only">${t('cust.devices')}</caption>
+        <thead><tr><th scope="col">${t('ops.colDevice')}</th><th scope="col">${t('ops.colSources')}</th><th scope="col">${t('ops.colOs')}</th>
+          <th scope="col">${t('ops.colState')}</th><th scope="col">${t('cust.openAlerts')}</th><th scope="col"><span class="sr-only">${t('common.actions')}</span></th></tr></thead>
+        <tbody>${shown.map(function (x) {
+          var d = x.d;
+          return h`<tr><td><div class="row">${P.icon(deviceIcon(d), 'ic-16 muted')}<span class="strong break">${d.host}</span></div></td>
+            <td><div class="row-wrap">${d.sources.map(function (s) { return h`<span class="tag">${UI.sourceName(s)}</span>`; })}${d.sources.length < 2 ? h`<span class="small muted">${t('ops.partial')}</span>` : ''}</div></td>
             <td class="nowrap">${d.os || h`<span class="muted">—</span>`}</td>
-            <td class="nowrap">${d.online == null ? h`<span class="muted">—</span>` : d.online ? h`<span class="row small">${P.icon('circleCheck', 'ic-14')}${t('device.online')}</span>` : h`<span class="row small muted">${P.icon('minusCircle', 'ic-14')}${t('device.offline')}</span>`}</td>
-            <td>${worst ? h`<span class="row-wrap">${UI.sev(worst.severity)}${a.length > 1 ? h`<span class="small muted">+${a.length - 1}</span>` : ''}</span>` : h`<span class="muted small">${t('tech.none')}</span>`}</td>
-            <td class="t-right"><button class="btn btn-sm btn-quiet" type="button" data-action="open-device" data-id="${d.id}">${t('tech.historyBtn')}</button></td></tr>`;
+            <td class="nowrap">${onlineState(d)}</td>
+            <td>${openAlertsOf(x.mine)}</td>
+            <td class="t-right">${historyButton(d)}</td></tr>`;
         })}</tbody></table></div>
-        <div class="list-foot"><span>${t('tech.devicesFoot', { time: P.fmt.time(D.ticketsReadAt) })}</span></div>` });
-    } else if (s.value === 'observations') {
-      panel = UI.card({ body: active.length ? h`<div class="rows">${active.map(function (o) { return R.obsRow(o, { hideCustomer: true }); })}</div>` : UI.empty('shieldCheck', t('cust.noUrgentTitle'), '') });
-    } else if (s.value === 'history') {
-      panel = UI.card({ body: past.length ? h`<div class="rows">${past.map(function (o) {
-        var dev = R.deviceOf(o);
-        return h`<div class="item"><span class="sev-rail ${UI.SEV[o.severity].rail}"></span><div class="item-main">
-          <button class="item-title linklike" type="button" data-action="open-observation" data-id="${o.id}">${o.summary}</button>
-          <div class="item-meta">${UI.obsStatus(o.status)}<span>${dev ? dev.host : ''}</span><span>${P.fmt.date(o.occurredAt)}</span></div></div><span></span></div>`;
-      })}</div>` : UI.empty('history', t('tech.noHistory'), '') });
-    } else {
-      var m = D.m365[c.id];
-      panel = UI.card({ body: m ? h`<dl class="facts">
-          <div class="fact"><dt>${t('m365.users')}</dt><dd class="num">${P.fmt.num(m.users)}</dd></div>
-          <div class="fact"><dt>${t('m365.registrations')}</dt><dd class="num">${P.fmt.num(m.registrations)}</dd></div>
-          <div class="fact"><dt>${t('m365.signins')}</dt><dd>${t('m365.coverage.' + m.coverage)}</dd></div>
-          <div class="fact"><dt>${t('m365.asOf')}</dt><dd>${UI.fresh(P.dayDiff(P.NOW, m.asOf) > 0 ? 'STALE' : 'OK', m.asOf)}</dd></div></dl>
-        ${m.gap ? h`<div class="page-banner">${UI.banner('warn', t('m365.gapTitle'), t('m365.gapText', { from: P.fmt.dateTime(m.gap[0]), to: P.fmt.time(m.gap[1]) }))}</div>` : ''}
-        <p class="small muted">${t('m365.note')}</p>` : UI.empty('cloud', t('m365.none'), t('m365.noneText')) });
-    }
-    return h`<div class="stack-4">${strip}<div>${s.seg}</div>${panel}</div>`;
+      <div class="rows only-narrow device-cards">${shown.map(function (x) {
+        var d = x.d;
+        return h`<div class="item device-item"><span class="tl-icon">${P.icon(deviceIcon(d), 'ic-16')}</span>
+          <div class="item-main"><span class="item-title break">${d.host}</span>
+            <div class="item-meta">${d.os ? h`<span>${d.os}</span>` : ''}${d.online == null ? '' : h`<span>${d.online ? t('device.online') : t('device.offline')}</span>`}
+              <span>${d.sources.map(UI.sourceName).join(', ')}${d.sources.length < 2 ? ' · ' + t('ops.partial') : ''}</span></div>
+            <div class="row-wrap">${openAlertsOf(x.mine)}</div></div>
+          <div class="item-side">${historyButton(d)}</div></div>`;
+      })}</div>
+      <div class="list-foot"><span>${t('ops.devicesFoot', { time: P.fmt.time(D.syncedAt) })}</span>${toggle}</div>` });
+  }
+  P.on('ops-devices', function (el) { var k = 'ops-all-' + el.dataset.id; P.state.ui[k] = !P.state.ui[k]; P.app.refresh(); });
+
+  TABS.operations = function (c) {
+    if (c.atera !== 'LINKED') return UI.card({ body: P.noAteraState() });
+    var devices = D.devicesOf(c.id);
+    var alerts = D.alertsOf(c.id);
+    var open = M.sortAlerts(alerts.filter(D.isOpen));
+    var past = M.sortAlerts(alerts.filter(function (a) { return !D.isOpen(a); }));
+    var urgent = open.filter(D.isUrgent).length;
+    var offline = devices.filter(function (d) { return d.online === false; }).length;
+    var sources = D.sourcesFor(c.id);
+    /* A source that is not connected yet is a known gap, said once; "needs attention" is for connected ones */
+    var review = sources.filter(function (x) { return x.status !== 'OK' && x.status !== 'NOT_CONNECTED'; });
+    var later = sources.filter(function (x) { return x.status === 'NOT_CONNECTED'; });
+    var oldest = weakest(sources);
+
+    var summary = UI.card({ cls: 'ops-summary', body: h`<dl class="facts ops-facts">
+        <div class="fact"><dt>${t('cust.openAlerts')}</dt><dd><span class="fact-big num">${P.fmt.num(open.length)}</span>${urgent ? h` <span class="pill pill-high">${t('cust.urgentN', { n: urgent })}</span>` : ''}</dd></div>
+        <div class="fact"><dt>${t('cust.devices')}</dt><dd><span class="fact-big num">${P.fmt.num(devices.length)}</span>${offline ? h` <span class="small muted">${t('ops.offlineN', { n: offline })}</span>` : ''}</dd></div>
+        <div class="fact"><dt>${t('alert.synced')}</dt><dd>${UI.fresh(oldest.status, oldest.asOf)}</dd></div>
+        <div class="fact"><dt>${t('ops.link')}</dt><dd>${t('ops.ateraCustomer', { id: String(c.ateraId) })}</dd></div></dl>
+      <details class="source-strip"><summary><span class="row-wrap">${P.icon('database', 'ic-16')}<strong>${t('ops.sources')}</strong>
+          ${review.length ? h`<span class="pill pill-warn">${t('ops.sourcesReview', { n: review.length })}</span>` : h`<span class="pill pill-good">${t('ops.sourcesOk')}</span>`}
+          ${later.length ? h`<span class="pill pill-outline">${P.icon('plug', 'ic-14')}${t('ops.notConnectedN', { n: later.length })}</span>` : ''}</span>${P.icon('chevronDown', 'ic-16 muted')}</summary>
+        <ul class="rows">${sources.map(function (x) {
+          return h`<li class="item"><span class="tl-icon">${P.icon(UI.sourceIcon(x.source), 'ic-16')}</span>
+            <div class="item-main"><span class="item-title">${t(x.label)}</span>${x.why ? h`<span class="small muted">${t(x.why)}</span>` : ''}</div>
+            <div class="item-side">${UI.fresh(x.status, x.asOf)}</div></li>`;
+        })}</ul><p class="small muted">${t('ops.sourcesNote')}</p></details>` });
+
+    var alertsCard = UI.card({ title: t('cust.openAlerts'), icon: 'pulse', titleId: 'ops-alerts', count: open.length,
+      body: h`${open.length ? h`<div class="rows">${open.map(function (a) { return R.alertRow(a, { hideCustomer: true }); })}</div>`
+          : UI.empty('shieldCheck', t('ops.noOpen'), t('ops.noOpenText'))}
+        ${past.length ? h`<details class="done-group"><summary class="small strong">${t('ops.history', { n: past.length })}</summary><div class="rows">${past.map(function (a) {
+          var dev = R.deviceOf(a);
+          return h`<div class="item"><span class="sev-rail ${UI.SEV[a.severity].rail}"></span><div class="item-main">
+            <button class="item-title linklike" type="button" data-action="open-alert" data-id="${a.id}">${a.title}</button>
+            <div class="item-meta">${UI.alertStatus(a.status)}<span class="break">${dev ? dev.host : ''}</span><span>${P.fmt.date(a.occurredAt)}</span></div></div><span></span></div>`;
+        })}</div></details>` : ''}`,
+      foot: h`<span>${t('sync.at', { time: P.fmt.time(D.syncedAt) })}</span>` });
+
+    return h`<div class="stack-4">${summary}${alertsCard}${devicesCard(c, devices, open)}</div>`;
   };
 
   /* ---------- Work: tasks, saved tickets and this month's time in one place ---------- */

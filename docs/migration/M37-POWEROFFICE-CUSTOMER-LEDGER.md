@@ -171,5 +171,7 @@ loopback, владение/очистка контейнера), рабочая 
 SQL-пакетами. Ни одна проверка не удалена и не ослаблена. Все три созданных
 SQL-контейнера и их private state очищены.
 
-[Итоговое свидетельство](../testing/evidence/poweroffice-customer-ledger-M37-2026-10-18.json).
-UI/browser, Atlas и backup/restore не изменялись и в этом срезе не проверялись заново.
+Итоговое свидетельство (удалено в M38:
+`git show 73c0158:docs/testing/evidence/poweroffice-customer-ledger-M37-2026-10-18.json`).
+UI/browser, прежний сервис интеграций (удалён в [M38](M38-OPERATIONS-IN-CRM.md)) и backup/restore
+не изменялись и в этом срезе не проверялись заново.

@@ -1,5 +1,5 @@
 /* Parasoll UX demo: customer card. The header answers "who, what agreement, how healthy, what is owed";
-   tabs follow the work (technical, work, finance, agreement) instead of the source modules. */
+   tabs follow the work (operations, work, finance, agreement) instead of the source modules. */
 (function () {
   'use strict';
 
@@ -14,11 +14,11 @@
   P.customerTabs = {};
 
   function tabsFor(c) {
-    var urgent = D.canSee(c.id) ? P.views.customers.urgentFor(c).length : null;
+    var alerts = D.alertsOf(c.id).filter(D.isOpen).length;
     var open = D.tasks.filter(function (x) { return x.customer === c.id && x.status === 'Open'; }).length;
     return [
       { id: 'overview', label: t('ctab.overview') },
-      { id: 'technical', label: t('ctab.technical'), count: urgent || null },
+      { id: 'operations', label: t('ctab.operations'), count: alerts || null },
       { id: 'work', label: t('ctab.work'), count: open || null },
       P.can('billing') && { id: 'finance', label: t('ctab.finance') },
       P.can('contracts') && { id: 'contract', label: t('ctab.contract') },
@@ -30,7 +30,6 @@
   function header(c) {
     var k = D.contractOf(c.id);
     var sla = k ? D.slaPolicies[k.sla] : null;
-    var m365 = D.m365[c.id];
     var out = P.views.customers.outstandingFor(c);
     var overdue = D.invoices.filter(function (x) { return x.customer === c.id && D.invoiceStatus(x) === 'Overdue'; }).length;
     return h`<section class="card cust-head" aria-labelledby="page-title">
@@ -43,7 +42,7 @@
             <span class="pill pill-outline">${t('status.' + c.status)}</span>
             ${k ? h`<span class="pill pill-outline">${P.icon('contract', 'ic-14')}${k.id} · ${k.name}</span>` : ''}
             ${sla ? h`<span class="pill pill-outline">${P.icon('clock', 'ic-14')}${t('sla.short', { win: k.sla.replace('x', '×'), p1: sla.p1 })}</span>` : ''}
-            ${c.atlas === 'READY' ? h`<span class="pill pill-good">${P.icon('link', 'ic-14')}${t('cust.atlasLinked')}</span>` : h`<span class="pill pill-warn">${P.icon('link', 'ic-14')}${t('cust.atlasNotLinked')}</span>`}
+            ${c.atera === 'LINKED' ? h`<span class="pill pill-good">${P.icon('link', 'ic-14')}${t('cust.ateraLinked')}</span>` : h`<span class="pill pill-warn">${P.icon('link', 'ic-14')}${t('cust.noAtera')}</span>`}
           </div>
         </div>
         <div class="page-actions cust-actions">
@@ -54,30 +53,43 @@
       <dl class="facts cust-facts">
         <div class="fact"><dt>${t('cust.am')}</dt><dd>${UI.person(c.am)}</dd></div>
         <div class="fact"><dt>${t('cust.tech')}</dt><dd>${UI.person(c.tech)}</dd></div>
-        <div class="fact"><dt>${t('cust.devices')}</dt><dd>${c.atlas !== 'READY' ? t('cust.noAtlas') : D.canSee(c.id) ? h`<span class="num">${P.fmt.num(D.devicesOf(c.id).length)}</span>` : h`<span class="locked">${P.icon('lock', 'ic-14')}${t('perm.noAtlas')}</span>`}</dd></div>
-        <div class="fact"><dt>${t('cust.m365')}</dt><dd>${m365 && D.canSee(c.id) ? t('m365.usersShort', { n: m365.users }) : h`<span class="muted">${t('m365.none')}</span>`}</dd></div>
+        <div class="fact"><dt>${t('cust.devices')}</dt><dd>${c.atera !== 'LINKED' ? t('cust.noAtera') : h`<span class="num">${P.fmt.num(D.devicesOf(c.id).length)}</span>`}</dd></div>
+        <div class="fact"><dt>${t('cust.openAlerts')}</dt><dd>${alertsFact(c)}</dd></div>
         <div class="fact"><dt>${t('cust.bank')}</dt><dd>${UI.bank(c.hourBank, true)}</dd></div>
         <div class="fact"><dt>${t('cust.outstanding')}</dt><dd>${out ? h`${UI.money(out)}${overdue && P.can('finance') ? h` <span class="pill pill-crit">${t('fin.overdueN', { n: overdue })}</span>` : ''}` : P.can('finance') ? t('fin.nothing') : UI.money(0)}</dd></div>
       </dl>
     </section>`;
   }
 
+  /* Open alerts link to the Operations tab; without an Atera link the number is unknown, not zero */
+  function alertsFact(c) {
+    if (c.atera !== 'LINKED') return h`<span class="muted">${t('cust.unknown')}</span>`;
+    var open = D.alertsOf(c.id).filter(D.isOpen);
+    var urgent = open.filter(D.isUrgent).length;
+    return h`<a class="link-plain num" href="#/customers/${c.id}/operations" aria-label="${t('cust.alertsLink', { n: open.length })}">${P.fmt.num(open.length)}</a>${urgent ? h` <span class="pill pill-high">${t('cust.urgentN', { n: urgent })}</span>` : ''}`;
+  }
+
+  /* Not linked to Atera: say why nothing is shown, and give the way to the mapping to whoever may change it */
+  P.noAteraState = function () {
+    return UI.empty('link', t('cust.noAteraTitle'), t('cust.noAteraText') + (P.can('integrations') ? '' : ' ' + t('cust.noAteraWho')),
+      P.can('integrations') ? h`<a class="btn btn-sm" href="#/admin">${t('cust.mapAtera')}</a>` : '');
+  };
+
   /* ---------- Overview ---------- */
 
   P.customerTabs.overview = function (c) {
-    var urgent = D.canSee(c.id) ? M.sortObs(P.views.customers.urgentFor(c)) : [];
+    var linked = c.atera === 'LINKED';
+    var urgent = M.sortAlerts(P.views.customers.urgentFor(c));
     var tasks = M.sortTasks(D.tasks.filter(function (x) { return x.customer === c.id && x.status === 'Open'; }));
     var tickets = D.ticketsOf(c.id).filter(function (x) { return x.status === 'Open' || x.status === 'Pending'; });
-    var m365 = D.m365[c.id];
     var month = D.time.filter(function (e) { return e.customer === c.id && e.date.getMonth() === 9; });
     var left = h`
       ${UI.card({ title: t('cust.now'), icon: 'pulse', titleId: 'co-now', count: urgent.length,
-        tools: c.atlas === 'READY' && D.canSee(c.id) ? h`<a class="btn btn-link" href="#/customers/${c.id}/technical">${t('cust.allTechnical')}</a>` : '',
-        body: c.atlas !== 'READY' ? UI.empty('link', t('cust.noAtlasTitle'), t('cust.noAtlasText'))
-          : !D.canSee(c.id) ? UI.empty('lock', t('perm.noAtlasTitle'), t('perm.atlasHint'))
-          : urgent.length ? h`<div class="rows">${urgent.map(function (o) { return R.obsRow(o, { hideCustomer: true }); })}</div>`
+        tools: linked ? h`<a class="btn btn-link" href="#/customers/${c.id}/operations">${t('cust.allOperations')}</a>` : '',
+        body: !linked ? P.noAteraState()
+          : urgent.length ? h`<div class="rows">${urgent.map(function (a) { return R.alertRow(a, { hideCustomer: true }); })}</div>`
           : UI.empty('shieldCheck', t('cust.noUrgentTitle'), t('cust.noUrgentText')),
-        foot: c.atlas === 'READY' && D.canSee(c.id) ? h`<span>${t('day.kAtlasRead', { time: P.fmt.time(D.atlasReadAt) })}</span>` : '' })}
+        foot: linked ? h`<span>${t('sync.at', { time: P.fmt.time(D.syncedAt) })}</span>` : '' })}
       ${UI.card({ title: t('cust.openWork'), icon: 'tasks', titleId: 'co-work', count: tasks.length + tickets.length,
         tools: h`<a class="btn btn-link" href="#/customers/${c.id}/work">${t('cust.allWork')}</a>`,
         body: tasks.length || tickets.length ? h`<div class="rows">${tasks.map(function (x) { return R.taskRow(x, { hideCustomer: true, showAssignee: true }); })}${tickets.filter(function (tk) {
@@ -88,12 +100,6 @@
       ${UI.card({ title: t('cust.bankCard'), icon: 'hourglass', titleId: 'co-bank',
         body: c.hourBank ? h`${UI.bank(c.hourBank)}<p class="small muted">${t('cust.bankMonth', { hours: P.fmt.hours(M.sumHours(month)) })}</p>
           ${UI.bankState(c.hourBank) === 'is-crit' ? UI.banner('warn', t('cust.bankLowTitle'), t('cust.bankLowText')) : ''}` : h`<p class="muted">${t('cust.noBankText')}</p>` })}
-      ${UI.card({ title: t('cust.m365Card'), icon: 'cloud', titleId: 'co-m365',
-        body: m365 && D.canSee(c.id) ? h`<dl class="kv"><dt>${t('m365.users')}</dt><dd class="num">${P.fmt.num(m365.users)}</dd>
-            <dt>${t('m365.registrations')}</dt><dd class="num">${P.fmt.num(m365.registrations)}</dd>
-            <dt>${t('m365.signins')}</dt><dd>${t('m365.coverage.' + m365.coverage)}</dd>
-            <dt>${t('m365.asOf')}</dt><dd>${UI.fresh(P.dayDiff(P.NOW, m365.asOf) > 0 ? 'STALE' : 'OK', m365.asOf)}</dd></dl>
-          <p class="small muted">${t('m365.note')}</p>` : h`<p class="muted">${t('m365.noneText')}</p>` })}
       ${P.can('billing') ? UI.card({ title: t('cust.finCard'), icon: 'wallet', titleId: 'co-fin', body: finSummary(c),
         tools: h`<a class="btn btn-link" href="#/customers/${c.id}/finance">${t('ctab.finance')}</a>`,
         foot: h`<span>${t('fin.syncedAt', { time: P.fmt.time(D.financeReadAt) })}</span>` }) : ''}`;

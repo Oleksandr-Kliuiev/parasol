@@ -194,8 +194,9 @@ a.item-title,
     display: grid;
   }
 
-  .obs-cards,
-  .cust-cards {
+  .alert-cards,
+  .cust-cards,
+  .device-cards {
     padding: 0 var(--s-4);
   }
 }
@@ -260,7 +261,7 @@ a.item-title,
   }
 }
 
-/* My day: plan and observation groups */
+/* My day: plan and alert groups */
 
 .plan-progress {
   display: grid;
@@ -278,15 +279,26 @@ a.item-title,
   margin-top: 2px;
 }
 
+/* "Source: Atera · host" opens the alert; long host names wrap inside the tag instead of overflowing */
+.source-tag {
+  max-width: 100%;
+  white-space: normal;
+  text-align: start;
+}
+
+.source-tag .ic-14 {
+  flex: none;
+}
+
 .task-item .item-meta {
   margin-top: 2px;
 }
 
-.obs-group + .obs-group {
+.alert-group + .alert-group {
   margin-top: var(--s-2);
 }
 
-.obs-item {
+.alert-item {
   grid-template-columns: 4px minmax(0, 1fr) auto;
 }
 
@@ -299,12 +311,19 @@ a.item-title,
   align-self: start;
 }
 
+/* Device cards on phones: the icon lines up with the host name, the history button stays on the right */
+.device-item {
+  align-items: start;
+}
+
 @media (max-width: 479px) {
-  .obs-item {
+  .alert-item,
+  .device-item {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .obs-item .item-side {
+  .alert-item .item-side,
+  .device-item .item-side {
     grid-column: 2;
     justify-self: start;
   }

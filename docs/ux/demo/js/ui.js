@@ -22,21 +22,23 @@
     return h`<span class="pill ${s.cls}">${P.icon(s.icon, 'ic-14')}${t('sev.' + sev)}</span>`;
   };
 
-  UI.obsStatus = function (status) {
-    var map = { OPEN: ['pill-outline', 'circleDashed'], ACKNOWLEDGED: ['pill-outline', 'eye'], RESOLVED: ['pill-good', 'circleCheck'], SUPPRESSED: ['', 'minusCircle'] };
+  /* Alert lifecycle in the CRM: open, closed here, closed at the source, or hidden with a reason */
+  UI.alertStatus = function (status) {
+    var map = { OPEN: ['pill-outline', 'circleDashed'], CLOSED: ['pill-good', 'circleCheck'], CLOSED_AT_SOURCE: ['pill-good', 'circleCheck'], HIDDEN: ['', 'eye'] };
     var m = map[status];
-    return h`<span class="pill ${m[0]}">${P.icon(m[1], 'ic-14')}${t('obsStatus.' + status)}</span>`;
+    return h`<span class="pill ${m[0]}">${P.icon(m[1], 'ic-14')}${t('alertStatus.' + status)}</span>`;
   };
 
   UI.kind = function (kind) {
     return h`<span class="row small muted">${P.icon(kind === 'SECURITY_INCIDENT' ? 'shield' : 'disk', 'ic-14')}${t('kind.' + kind)}</span>`;
   };
 
-  /* Freshness of one source: OK / STALE / ERROR / MISSING / UNAVAILABLE / FIXTURE */
+  /* Freshness of one source: OK / STALE / ERROR / MISSING / UNAVAILABLE / NOT_CONNECTED / FIXTURE */
   UI.fresh = function (status, asOf) {
     var map = {
       OK: ['pill-good', 'circleCheck'], STALE: ['pill-warn', 'clock'], ERROR: ['pill-crit', 'circleX'],
-      MISSING: ['pill-outline', 'circleDashed'], UNAVAILABLE: ['pill-outline', 'minusCircle'], FIXTURE: ['pill-accent', 'flask']
+      MISSING: ['pill-outline', 'circleDashed'], UNAVAILABLE: ['pill-outline', 'minusCircle'], NOT_CONNECTED: ['pill-outline', 'plug'],
+      FIXTURE: ['pill-accent', 'flask']
     };
     var m = map[status] || map.MISSING;
     var when = asOf ? ' · ' + (P.sameDay(asOf, P.NOW) ? P.fmt.time(asOf) : P.fmt.when(asOf)) : '';
@@ -92,19 +94,14 @@
     return h`<a class="${cls || 'link-plain'}" href="#/customers/${c.id}">${c.name}</a>`;
   };
 
-  UI.taskSubject = function (task) {
-    return task.subject === 'generic' ? t('task.genericSubject') : P.L(task.subject);
-  };
+  UI.taskSubject = function (task) { return P.L(task.subject); };
 
-  /* The observation behind a task, resolved at render time for people with Atlas access */
+  /* The alert behind a task: its severity, a "Source" button that opens it, and its state once it is no longer open */
   UI.taskSource = function (task) {
-    if (!task.source) return '';
-    var o = D.observation(task.source);
-    if (!P.can('atlas') || !D.canSee(task.customer)) {
-      return h`<span class="locked">${P.icon('lock', 'ic-14')}${t('task.sourceHidden')}</span>`;
-    }
-    var dev = o.device ? D.devices.filter(function (d) { return d.id === o.device; })[0] : null;
-    return h`<span class="row-wrap">${UI.sev(o.severity)}<span class="ink-2 small break">${o.summary}${dev ? ' · ' + dev.host : ''}</span></span>`;
+    var a = task.source ? D.alert(task.source) : null;
+    if (!a) return '';
+    var dev = a.device ? D.devices.filter(function (d) { return d.id === a.device; })[0] : null;
+    return h`<span class="row-wrap">${UI.sev(a.severity)}<button class="tag is-link source-tag" type="button" data-action="open-alert" data-id="${a.id}">${P.icon('pulse', 'ic-14')}<span class="break">${t('src.label', { source: UI.sourceName(a.source) })}${dev ? ' · ' + dev.host : ''}</span></button>${D.isOpen(a) ? '' : UI.alertStatus(a.status)}</span>`;
   };
 
   UI.due = function (task) {
@@ -180,6 +177,7 @@
     </header>`;
   };
 
-  /* Source names and statuses for observations */
+  /* Source names and icons: Atera, Huntress, CloudAlly, PowerOffice */
   UI.sourceName = function (s) { return t('src.' + s); };
+  UI.sourceIcon = function (s) { return { huntress: 'shield', cloudally: 'cloud', poweroffice: 'files' }[s] || 'server'; };
 })();

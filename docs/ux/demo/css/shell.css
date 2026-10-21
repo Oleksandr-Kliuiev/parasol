@@ -388,10 +388,12 @@
   color: var(--accent-ink);
 }
 
+/* Icon-only on phones. .btn comes later in the cascade (components.css), so this needs both classes to win */
 @media (max-width: 767px) {
-  .create-btn {
+  .btn.create-btn {
     width: var(--ctl-h);
     padding: 0;
+    justify-content: center;
   }
 }
 
@@ -557,7 +559,7 @@
     right: 0;
     bottom: 0;
     z-index: 30;
-    /* Tabs size to their labels and share the rest, so one long word ("Observasjoner") never gets cut */
+    /* Tabs size to their labels and share the rest, so one long label never gets cut */
     display: flex;
     gap: var(--s-1);
     padding: var(--s-2) max(var(--s-2), env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + var(--s-2)) max(var(--s-2), env(safe-area-inset-left, 0px));
