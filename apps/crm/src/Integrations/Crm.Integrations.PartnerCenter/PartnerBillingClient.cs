@@ -172,7 +172,7 @@ internal sealed class PartnerBillingClient(
     /// </summary>
     private async Task<HttpResponseMessage> GetLinkAsync(string link, CancellationToken cancellationToken)
     {
-        var (uri, destination) = PartnerBillingLinks.Classify(options.Value.GraphBaseUrl, link, options.Value.BillingStorageHostSuffixes);
+        var (uri, destination) = PartnerBillingLinks.Classify(options.Value.GraphBaseUrl, link, options.Value.EffectiveBillingStorageHostSuffixes);
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         if (destination == PartnerBillingLinks.Destination.Graph)
         {

@@ -92,6 +92,12 @@ public class PartnerBillingExportTests
             {
                 case "/v1.0/reports/partners/billing/reconciliation/billed/export":
                     context.Response.StatusCode = StatusCodes.Status202Accepted;
+                    if (_operation.Length == 0)
+                    {
+                        // No Location: the client builds the operation's path on Graph from the id in the body.
+                        return Json(context, new { id = "op-1" });
+                    }
+
                     context.Response.Headers.Location = _operation;
                     return Task.CompletedTask;
                 case "/" + Operation:
@@ -116,6 +122,7 @@ public class PartnerBillingExportTests
     [Theory]
     [InlineData("{graph}" + Operation, "{graph}" + Manifest, 3)]
     [InlineData("/" + Operation, "{storage}export/manifest.json?" + Sas, 2)]
+    [InlineData("", "{graph}" + Manifest, 3)]
     public async Task The_export_reads_graph_with_the_token_and_storage_with_the_signature_alone(string operation, string manifest, int graphRequests)
     {
         await using var stand = await Stand.StartAsync(operation, manifest, "{storage}export/part-1.json?" + Sas);

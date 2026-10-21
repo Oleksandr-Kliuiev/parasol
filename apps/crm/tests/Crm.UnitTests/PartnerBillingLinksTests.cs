@@ -1,4 +1,5 @@
 using Crm.Integrations.PartnerCenter;
+using Microsoft.Extensions.Configuration;
 
 namespace Crm.UnitTests;
 
@@ -9,7 +10,7 @@ namespace Crm.UnitTests;
 public class PartnerBillingLinksTests
 {
     private static readonly Uri Graph = new("https://graph.microsoft.com/v1.0/");
-    private static readonly IList<string> Storage = new PartnerCenterOptions().BillingStorageHostSuffixes;
+    private static readonly IReadOnlyList<string> Storage = new PartnerCenterOptions().EffectiveBillingStorageHostSuffixes;
 
     /// <summary>A SAS in the shape Microsoft hands out for the export, escaped as in the manifest.</summary>
     private const string Sas = "sv=2021-08-06&se=2026-10-22T12%3A00%3A00Z&sr=d&sp=rl&sdd=7&sig=RpVY0WBGUHJ2APB3N76jtMak8loAWY4oiA0%2FaoJX1bM%3D";
@@ -64,5 +65,55 @@ public class PartnerBillingLinksTests
         refused.Message.ShouldNotContain("account.");
         refused.Message.ShouldNotContain("169.254");
         refused.Message.ShouldNotContain("sig=");
+    }
+
+    /// <summary>Odd spellings: whatever the parser makes of them, the request goes to Graph, into the export storage, or nowhere.</summary>
+    [Theory]
+    [InlineData("https://graph.microsoft.com./v1.0/x")]
+    [InlineData("https://graph%2Emicrosoft.com/v1.0/x")]
+    [InlineData("https://grаph.microsoft.com/v1.0/x")]
+    [InlineData("https://graph.microsoft.com\t.evil.example/v1.0/x")]
+    [InlineData("https://graph.microsoft.com‮.evil.example/v1.0/x")]
+    [InlineData("https://graph.microsoft.com\\@evil.example/v1.0/x")]
+    [InlineData("https://evil.example\\@graph.microsoft.com/v1.0/x")]
+    [InlineData("https://account.blob.core.windows.net./part-1.json?sig=c2ln")]
+    [InlineData("https://account.blob.core.windows.net%2Eevil.example/part-1.json?sig=c2ln")]
+    public void An_odd_spelling_reaches_no_other_host(string link)
+    {
+        try
+        {
+            var (uri, destination) = PartnerBillingLinks.Classify(Graph, link, Storage);
+
+            if (destination == PartnerBillingLinks.Destination.Graph)
+            {
+                uri.IdnHost.ShouldBe("graph.microsoft.com");
+            }
+            else
+            {
+                uri.IdnHost.ShouldEndWith(".blob.core.windows.net");
+            }
+        }
+        catch (PartnerBillingLinkRefusedException)
+        {
+            // Refused before any request is made.
+        }
+    }
+
+    [Fact]
+    public void A_configured_storage_list_replaces_the_default_so_it_can_be_narrowed_to_the_export_accounts()
+    {
+        var options = new PartnerCenterOptions();
+        options.EffectiveBillingStorageHostSuffixes.ShouldBe(["blob.core.windows.net"]);
+
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["BillingStorageHostSuffixes:0"] = "adlsreconbuprodeastus201.blob.core.windows.net" })
+            .Build()
+            .Bind(options);
+
+        options.EffectiveBillingStorageHostSuffixes.ShouldBe(["adlsreconbuprodeastus201.blob.core.windows.net"]);
+        PartnerBillingLinks.Classify(Graph, "https://adlsreconbuprodeastus201.blob.core.windows.net/billed/part-1.json.gz?" + Sas, options.EffectiveBillingStorageHostSuffixes)
+            .Destination.ShouldBe(PartnerBillingLinks.Destination.Storage);
+        Should.Throw<PartnerBillingLinkRefusedException>(() => PartnerBillingLinks.Classify(
+            Graph, "https://someone-else.blob.core.windows.net/part-1.json?" + Sas, options.EffectiveBillingStorageHostSuffixes));
     }
 }
