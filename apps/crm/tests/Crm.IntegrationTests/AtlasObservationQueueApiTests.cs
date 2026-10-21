@@ -249,10 +249,11 @@ public sealed class AtlasObservationQueueApiTests(CrmWebFactory factory)
     {
         var (id, clientId) = await LinkedCustomer(); using var atlas = WireMockServer.Start(); using var handler = new SlowReads(clientId);
         await using var host = await Host(atlas, handler); using var client = Client(host);
-        var watch = System.Diagnostics.Stopwatch.StartNew();
         var view = (await client.GetFromJsonAsync<AtlasObservationQueueView>(PathFor(id)))!;
         view.Status.ShouldBe("UNAVAILABLE"); view.Queue.ShouldBeNull(); handler.Calls.ShouldBe(2);
-        watch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(13));
+        // From the first source read, not from the request: a cold test host spends seconds before it (3 s on a CI runner).
+        // One shared deadline ends both 7 s reads at about 10 s; two independent budgets would take 14 s.
+        System.Diagnostics.Stopwatch.GetElapsedTime(handler.FirstCallAt).ShouldBeLessThan(TimeSpan.FromSeconds(13));
     }
 
     [Fact]
@@ -361,9 +362,11 @@ public sealed class AtlasObservationQueueApiTests(CrmWebFactory factory)
     private sealed class SlowReads(string clientId) : HttpMessageHandler
     {
         public int Calls { get; private set; }
+        public long FirstCallAt { get; private set; }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Calls++; await Task.Delay(TimeSpan.FromSeconds(7), cancellationToken);
+            if (Calls++ == 0) FirstCallAt = System.Diagnostics.Stopwatch.GetTimestamp();
+            await Task.Delay(TimeSpan.FromSeconds(7), cancellationToken);
             var isOverview = request.RequestUri!.AbsolutePath.EndsWith("/overview", StringComparison.Ordinal);
             return new(HttpStatusCode.OK) { Content = new StringContent((isOverview ? Context(clientId) : Page(clientId, 1, 1, null)).ToJsonString(), System.Text.Encoding.UTF8, "application/json") };
         }
