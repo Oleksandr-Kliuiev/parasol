@@ -18,12 +18,18 @@ export interface TicketQueueFilters {
   openOnly?: boolean;
   mine?: boolean;
   search?: string;
+  organizationId?: string | null;
 }
 
-/** Tickets across customers (M39.2): open first, newest first, a page at a time with the count of all (DEV-12). */
+/**
+ * Tickets across customers (M39.2): open first, then the most recently active, a page at a time with the count of all (DEV-12). The
+ * search finds a title, a number or the contact; a customer narrows the queue to its tickets.
+ */
 export function useTicketQueue(filters: TicketQueueFilters) {
-  return usePagedList<Ticket>(ticketKeys.queue(filters), `${BASE}/tickets`,
-    { openOnly: filters.openOnly || undefined, mine: filters.mine || undefined, search: filters.search || undefined }, { limit: 25 });
+  return usePagedList<Ticket>(ticketKeys.queue(filters), `${BASE}/tickets`, {
+    openOnly: filters.openOnly || undefined, mine: filters.mine || undefined, search: filters.search || undefined,
+    organizationId: filters.organizationId || undefined,
+  }, { limit: 25 });
 }
 
 /** How fresh each kind of service data is; read with the list it stands beside. */

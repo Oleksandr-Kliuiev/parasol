@@ -4517,11 +4517,11 @@
   },
   "tickets": {
     "title": "Tickets",
-    "subtitle": "Open tickets of every customer, newest first. They live in Atera; you answer and change them here.",
-    "subtitleAll": "Every open ticket and every ticket of the last 90 days, newest first.",
+    "subtitle": "Open tickets of every customer, the most recently active first. They live in Atera; you answer and change them here.",
+    "subtitleAll": "Every open ticket and every ticket of the last 90 days, the most recently active first.",
     "refresh": "Refresh tickets",
     "filters": "Filter tickets",
-    "search": "Search title or number",
+    "search": "Search title, number or contact",
     "stateLabel": "Which tickets",
     "show": {
       "open": "Open",
@@ -4622,6 +4622,8 @@
       "addNote": "Add the note",
       "replyTitle": "Reply in {{number}}",
       "noteTitle": "Internal note in {{number}}"
-    }
+    },
+    "customerFilter": "Customer",
+    "anyCustomer": "All customers"
   }
 }

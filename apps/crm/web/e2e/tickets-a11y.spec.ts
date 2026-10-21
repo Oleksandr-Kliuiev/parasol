@@ -24,7 +24,7 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
   // A reply whose answer is lost: the confirmation's follow-up asks, there and then, what the person found at Atera.
   await failAtera(page, 'POST', `/api/v3/tickets/${ticket.TicketID}/comments`, 503, 1);
   await page.goto('/tickets');
-  await page.getByRole('searchbox', { name: 'Search title or number' }).fill(m);
+  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(m);
   await page.getByRole('button', { name, exact: true }).click();
   const lostIn = page.getByRole('dialog', { name, exact: true });
   await lostIn.getByRole('textbox', { name: 'Reply', exact: true }).fill('Vi ser på det nå.');
@@ -47,7 +47,7 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
   for (const [width, height] of widths) {
     await page.setViewportSize({ width, height });
     await page.goto('/tickets');
-    await page.getByRole('searchbox', { name: 'Search title or number' }).fill(m);
+    await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(m);
     const open = page.getByRole('button', { name, exact: true });
     await expect(open).toBeVisible();
     await settled(page);

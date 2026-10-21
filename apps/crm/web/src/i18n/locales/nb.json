@@ -4515,11 +4515,11 @@
   },
   "tickets": {
     "title": "Saker",
-    "subtitle": "Åpne saker for alle kunder, nyeste først. Sakene ligger i Atera; du svarer på dem og endrer dem her.",
-    "subtitleAll": "Alle åpne saker og alle saker fra de siste 90 dagene, nyeste først.",
+    "subtitle": "Åpne saker for alle kunder, sist aktive først. Sakene ligger i Atera; du svarer på dem og endrer dem her.",
+    "subtitleAll": "Alle åpne saker og alle saker fra de siste 90 dagene, sist aktive først.",
     "refresh": "Oppdater sakene",
     "filters": "Filtrer saker",
-    "search": "Søk i tittel eller nummer",
+    "search": "Søk i tittel, nummer eller kontakt",
     "stateLabel": "Hvilke saker",
     "show": {
       "open": "Åpne",
@@ -4620,6 +4620,8 @@
       "addNote": "Legg til merknaden",
       "replyTitle": "Svar i {{number}}",
       "noteTitle": "Intern merknad i {{number}}"
-    }
+    },
+    "customerFilter": "Kunde",
+    "anyCustomer": "Alle kunder"
   }
 }

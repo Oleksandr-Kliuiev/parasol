@@ -129,7 +129,9 @@ export interface AteraTicketState extends AteraTicket {
 }
 
 /** A ticket of the customer in Atera, given to the development sign-in's technician unless the fields say otherwise. */
-export const ateraTicket = (page: Page, customer: AteraCustomer, fields: { TicketTitle: string; TechnicianContactID?: number }) =>
+export const ateraTicket = (page: Page, customer: AteraCustomer, fields: {
+  TicketTitle: string; TechnicianContactID?: number; EndUserFirstName?: string; EndUserLastName?: string; EndUserEmail?: string;
+}) =>
   controlPost<AteraTicket>(page, 'tickets', { CustomerID: customer.customerId, TechnicianContactID: DEV_TECHNICIAN, ...fields });
 
 /** A message from the customer's end user, as if written in Atera's portal or by e-mail. */

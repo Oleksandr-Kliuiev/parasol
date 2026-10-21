@@ -18,6 +18,7 @@ import { ActionStatusBadge } from '../../actions/ActionStatusBadge';
 import { RecordRow, RowMeta } from '../../billing/RecordRow';
 import { useFlushStyles } from '../../billing/flushStyles';
 import { ForbiddenPage } from '../../errors/ForbiddenPage';
+import { CustomerFilter } from '../CustomerFilter';
 import { ServiceReadLine } from '../ServiceReadLine';
 import type { Ticket } from '../types';
 import { useServiceReads, useTicketQueue } from './api';
@@ -46,7 +47,8 @@ function Tickets() {
   const debounced = useDebouncedValue(search.trim());
   const all = params.get('show') === 'all';
   const mine = params.get('mine') === '1';
-  const queue = useTicketQueue({ openOnly: !all, mine, search: debounced });
+  const customer = params.get('customer');
+  const queue = useTicketQueue({ openOnly: !all, mine, search: debounced, organizationId: customer });
   const reads = useServiceReads();
   const ticketReads = reads.data?.filter((read) => read.source === 'tickets' || read.source === 'conversations');
 
@@ -69,7 +71,7 @@ function Tickets() {
   // Which rows wait for someone to check an action at Atera: one lookup per page of rows (tickets come from Atera, M39).
   const facts = useActionFacts('atera', 'ticket', queue.data?.pages.map((page) => page.items.map((ticket) => String(ticket.externalId))) ?? []);
   const refreshing = queue.isFetching && !queue.isFetchingNextPage;
-  const filtered = mine || debounced !== '';
+  const filtered = mine || debounced !== '' || customer !== null;
 
   return <>
     <PageHeader title={t('tickets.title')} subtitle={t(all ? 'tickets.subtitleAll' : 'tickets.subtitle')}
@@ -79,6 +81,9 @@ function Tickets() {
     <Toolbar label={t('tickets.filters')}>
       <FilterField kind="search" label={t('tickets.search')}>
         <SearchBox value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('tickets.search')} />
+      </FilterField>
+      <FilterField label={t('tickets.customerFilter')}>
+        <CustomerFilter value={customer} onChange={(id) => setParam('customer', id)} placeholder={t('tickets.anyCustomer')} />
       </FilterField>
       <FilterChips<'open' | 'all'> label={t('tickets.stateLabel')} value={all ? 'all' : 'open'} onChange={(value) => setParam('show', value === 'all' ? 'all' : null)}
         options={[{ value: 'open', label: t('tickets.show.open') }, { value: 'all', label: t('tickets.show.all') }]} />
@@ -94,7 +99,10 @@ function Tickets() {
             ? <ul className={flush.list}>{queue.items.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} onOpen={() => open(ticket)}
               check={(facts.facts.get(String(ticket.externalId))?.uncertain ?? 0) > 0} />)}</ul>
             : <EmptyState icon={<Headset24Regular />} message={t(filtered ? 'tickets.emptyFiltered' : all ? 'tickets.emptyAll' : 'tickets.empty')}
-              action={filtered && <Button onClick={() => { setSearch(''); setParam('mine', null); }}>{t('tickets.clearFilters')}</Button>} />}
+              action={filtered && <Button onClick={() => {
+                setSearch('');
+                const next = new URLSearchParams(params); next.delete('mine'); next.delete('customer'); setParams(next, { replace: true });
+              }}>{t('tickets.clearFilters')}</Button>} />}
           <ListFooter shown={queue.items.length} total={queue.total} hasMore={Boolean(queue.hasNextPage)} loading={queue.isFetchingNextPage}
             onMore={() => void queue.fetchNextPage()} />
         </Panel>

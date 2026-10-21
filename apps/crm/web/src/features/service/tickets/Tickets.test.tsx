@@ -66,6 +66,28 @@ describe('tickets (M39.2)', () => {
     await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?mine=true&limit=25'));
   });
 
+  it('narrows the queue to one customer through the address, and the empty list clears it with the other filters', async () => {
+    const fetch = api((url) => url === '/api/v1/customers/organizations/o1' ? json({ id: 'o1', name: 'Havbris AS' })
+      : url.startsWith('/api/v1/customers/organizations') ? json({ items: [{ id: 'o1', name: 'Havbris AS' }], nextCursor: null, totalCount: 1 })
+        : url.startsWith('/api/v1/service/tickets?') && url.includes('organizationId=o1') ? json({ items: [], nextCursor: null, totalCount: 0 }) : null);
+    vi.stubGlobal('fetch', fetch);
+    const { router } = render('/tickets?customer=o1&mine=1');
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?openOnly=true&mine=true&organizationId=o1&limit=25'));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Customer' })).toHaveValue('Havbris AS'));
+    expect(await screen.findByText('No ticket matches the filter.')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?openOnly=true&limit=25'));
+  });
+
+  it('searches the title, the number and the contact, and says the most recently active come first', async () => {
+    const fetch = api(); vi.stubGlobal('fetch', fetch);
+    render();
+    expect(await screen.findByText(/the most recently active first/)).toBeVisible();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search title, number or contact' }), { target: { value: 'Kari' } });
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?openOnly=true&search=Kari&limit=25'));
+  });
+
   it('opens a ticket in its own panel with its facts, both read times and the conversation oldest first', async () => {
     vi.stubGlobal('fetch', api());
     const { router } = render();

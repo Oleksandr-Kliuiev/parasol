@@ -15,7 +15,7 @@ const SENT = 30_000;
 /** Opens the ticket's panel from the Tickets page, narrowed to its title. */
 async function openTicket(page: Page, ticket: AteraTicket) {
   await page.goto('/tickets');
-  await page.getByRole('searchbox', { name: 'Search title or number' }).fill(ticket.TicketTitle);
+  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(ticket.TicketTitle);
   const name = `#${ticket.TicketID} ${ticket.TicketTitle}`;
   await page.getByRole('button', { name, exact: true }).click();
   const panel = page.getByRole('dialog', { name, exact: true });
@@ -160,7 +160,7 @@ test('a reply without a clear answer is never sent again: its confirmation asks 
   expect((await ateraTicketState(page, ticket)).Comments).toEqual([]);
   await panel.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(panel).toHaveCount(0);
-  await page.getByRole('searchbox', { name: 'Search title or number' }).fill(ticket.TicketTitle);
+  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(ticket.TicketTitle);
   await expect(row).toBeVisible();
   await expect(row.getByText('Check needed', { exact: true })).toHaveCount(0);
 });
@@ -265,3 +265,36 @@ test('hours registered from a ticket panel without Atera are recorded there late
   await other.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(other).toHaveCount(0);
 });
+
+test('the queue finds a ticket by its contact, narrows to one customer and puts the most recently active first', { tag: '@critical' }, async ({ page }) => {
+  test.setTimeout(300_000);
+  await signIn(page, 'Crm.Admin');
+  const customer = await linkedAteraCustomer(page, 'Tq');
+  const m = customer.marker;
+  const older = await ateraTicket(page, customer, {
+    TicketTitle: `${m} skriveren står`, EndUserFirstName: 'Solveig', EndUserLastName: `Kontakt${m}`, EndUserEmail: `solveig.${m.toLowerCase()}@kunde.example`,
+  });
+  const newer = await ateraTicket(page, customer, { TicketTitle: `${m} ny bærbar` });
+  // The customer writes on the older ticket afterwards: it is the most recently active now.
+  await customerMessage(page, older, `${m}: skriveren står fortsatt.`);
+  await syncTicket(page, older, 1);
+  await syncTicket(page, newer, 0);
+
+  // One customer's tickets, through the filter and the address.
+  await page.goto('/tickets');
+  await page.getByRole('combobox', { name: 'Customer' }).pressSequentially(m);
+  await page.getByRole('option', { name: customer.name }).click();
+  await expect(page).toHaveURL(new RegExp(`[?&]customer=${customer.organizationId}`));
+  await expect(page.getByText('2 open tickets', { exact: true })).toBeVisible();
+  const list = page.getByRole('region', { name: 'Tickets', exact: true }).getByRole('list');
+  await expect(list.getByRole('button', { name: /^#\d+ / })).toHaveText([`#${older.TicketID} ${older.TicketTitle}`, `#${newer.TicketID} ${newer.TicketTitle}`]);
+
+  // The contact as Atera names them finds their ticket, also without the customer.
+  await page.goto('/tickets');
+  await page.getByRole('searchbox', { name: 'Search title, number or contact', exact: true }).fill(`Kontakt${m}`);
+  await expect(page.getByText('1 open ticket', { exact: true })).toBeVisible();
+  await expect(list.getByRole('button', { name: /^#\d+ / })).toHaveText([`#${older.TicketID} ${older.TicketTitle}`]);
+  await page.getByRole('searchbox', { name: 'Search title, number or contact', exact: true }).fill(`solveig.${m.toLowerCase()}@`);
+  await expect(list.getByRole('button', { name: /^#\d+ / })).toHaveText([`#${older.TicketID} ${older.TicketTitle}`]);
+});
+

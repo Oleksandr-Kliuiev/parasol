@@ -12,7 +12,7 @@ import { FilterChips, FilterField, Toolbar } from '../../../shared/components/To
 import { useDebouncedValue } from '../../../shared/utils/useDebouncedValue';
 import { ForbiddenPage } from '../../errors/ForbiddenPage';
 import { alertSeverities, type AlertSeverity } from '../types';
-import { AlertCustomerFilter } from './AlertCustomerFilter';
+import { CustomerFilter } from '../CustomerFilter';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { AlertReadLine } from './AlertReadLine';
 import { AlertQueueEmpty, AlertQueueList } from './AlertQueueList';
@@ -90,7 +90,7 @@ function Queue() {
         options={[{ value: '', label: t('alerts.allSeverities') },
           ...alertSeverities.map((value) => ({ value, label: t(`service.severities.${value}`), dot: value === 'Critical' ? h.ember : h.saffron }))]} />
       <FilterField label={t('alerts.customerFilter')}>
-        <AlertCustomerFilter value={organizationId} onChange={(id) => setParam('customer', id)} />
+        <CustomerFilter value={organizationId} onChange={(id) => setParam('customer', id)} placeholder={t('alerts.anyCustomer')} />
       </FilterField>
     </Toolbar>
     {queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : queue.isPending
