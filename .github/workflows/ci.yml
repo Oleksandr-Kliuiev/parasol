@@ -182,6 +182,14 @@ jobs:
         working-directory: apps/crm/web
       - run: dotnet dev-certs https
       - run: npm run test:crm:e2e
+      - name: Keep the traces and screenshots of failed or flaky browser runs (synthetic data only)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crm-e2e-test-results
+          path: apps/crm/web/test-results
+          retention-days: 7
+          if-no-files-found: ignore
 
   hostinger:
     name: Hostinger images and real backup restore
