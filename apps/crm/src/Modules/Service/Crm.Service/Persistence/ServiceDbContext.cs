@@ -21,6 +21,8 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
 
     public DbSet<TicketRequest> TicketRequests => Set<TicketRequest>();
 
+    public DbSet<TicketComment> TicketComments => Set<TicketComment>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Ticket>(b =>
@@ -44,6 +46,24 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasIndex(x => x.ContactId).HasFilter("[ContactId] IS NOT NULL");
             b.HasIndex(x => x.IsOpen).HasFilter("[IsOpen] = 1")
                 .IncludeProperties(x => x.TechnicianUserId);
+            // The cross-customer ticket list (M39.2): open first, newest first, and a person's own tickets.
+            b.HasIndex(x => new { x.IsOpen, x.CreatedAtSource });
+            b.HasIndex(x => new { x.TechnicianUserId, x.IsOpen }).HasFilter("[TechnicianUserId] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<TicketComment>(b =>
+        {
+            b.ToTable("TicketComments");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.System).HasMaxLength(32);
+            b.Property(x => x.ExternalId).HasMaxLength(128);
+            b.Property(x => x.Author).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.AuthorName).HasMaxLength(TicketComment.AuthorNameLength);
+            // M39.2: a conversation belongs to its ticket in this schema; retention deletes closed tickets and their comments with them.
+            b.HasOne<Ticket>().WithMany().HasForeignKey(x => x.TicketId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
+            b.HasIndex(x => new { x.TicketId, x.CreatedAtSource });
         });
 
         modelBuilder.Entity<Device>(b =>

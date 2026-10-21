@@ -49,6 +49,47 @@ public sealed record ExternalTicket(
 
 public sealed record ExternalDevice(string ExternalId, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url);
 
+/// <summary>Who wrote a comment of a ticket: a technician, the customer's end user, or the service desk does not say.</summary>
+public enum TicketCommentAuthor
+{
+    Unknown,
+    Technician,
+    EndUser,
+}
+
+/// <summary>
+/// One message of a ticket's conversation as read from the service desk (M39.2), with the CRM user of a technician resolved.
+/// <paramref name="ExternalId"/> is the desk's own id: the same comment read again updates its row.
+/// </summary>
+public sealed record ExternalTicketComment(
+    string ExternalId, string Text, bool IsInternal, TicketCommentAuthor Author, string? AuthorName, Guid? TechnicianUserId, DateTimeOffset CreatedAt);
+
+/// <summary>What applying one complete read of a ticket's conversation changed; <c>Applied</c> is false when the CRM has no such ticket.</summary>
+public sealed record TicketConversationResult(bool Applied, int Added, int Updated, int Removed)
+{
+    public int Changed => Added + Updated + Removed;
+}
+
+/// <summary>
+/// A stored ticket as an integration's action sees it (M39.2): the preview starts from it, the worker compares it with the live
+/// ticket. <paramref name="OwnerCustomerId"/> is the desk's customer the ticket was read under.
+/// </summary>
+public sealed record TicketView(
+    Guid Id,
+    string System,
+    long ExternalId,
+    Guid OrganizationId,
+    string Title,
+    string Status,
+    bool IsOpen,
+    string? Priority,
+    Guid? TechnicianUserId,
+    string? TechnicianName,
+    string? EndUserName,
+    string? EndUserEmail,
+    long? OwnerCustomerId,
+    string? Url);
+
 public sealed record TicketRef(Guid Id, string System, long ExternalId, Guid OrganizationId, string Title, string Status);
 
 public sealed record TicketRequestView(
@@ -111,6 +152,23 @@ public interface IServiceApi
     Task CompleteTicketRequestAsync(Guid requestId, long externalTicketId, string? url, CancellationToken cancellationToken);
 
     Task FailTicketRequestAsync(Guid requestId, string message, CancellationToken cancellationToken);
+
+    /// <summary>A stored ticket by the desk's id, open or not; null when the CRM has none (M39.2).</summary>
+    Task<TicketView?> GetTicketAsync(string system, long externalId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Applies one complete read of a ticket's conversation (M39.2): listed comments are added or updated, comments the read no
+    /// longer lists are removed, and the ticket remembers when its conversation was read. With <paramref name="withheld"/> the
+    /// person the ticket is about asked to be forgotten (DEV-11): comments are kept without their text and author.
+    /// </summary>
+    Task<TicketConversationResult> ApplyTicketConversationAsync(
+        string system, long ticketExternalId, IReadOnlyCollection<ExternalTicketComment> comments, bool withheld, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Open tickets whose conversation was read before <paramref name="readBefore"/> or never, the longest waiting first, at most
+    /// <paramref name="limit"/>: what a conversation read looks at when the desk's list of changes may have missed a comment.
+    /// </summary>
+    Task<IReadOnlyList<TicketRef>> GetStaleConversationsAsync(string system, DateTimeOffset readBefore, int limit, CancellationToken cancellationToken);
 }
 
 /// <summary>A user asked for a ticket to be created in the service desk.</summary>

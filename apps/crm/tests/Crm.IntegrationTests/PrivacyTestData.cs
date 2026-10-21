@@ -130,6 +130,13 @@ internal static class PrivacyTestData
                 new ExternalTicket("atera", ateraTicketId, organizationId, contactId, $"{marker} Skriver virker ikke", "Open", "Medium", null, "Problem", "Email",
                     null, "Tekniker", $"{firstName} {lastName}", email, DateTimeOffset.UtcNow.AddDays(-2), null, null, DateTimeOffset.UtcNow, null),
             ], Ct);
+            // M39.2: the ticket's conversation is about the person too.
+            await scope.ServiceProvider.GetRequiredService<IServiceApi>().ApplyTicketConversationAsync("atera", ateraTicketId,
+            [
+                new ExternalTicketComment($"prv-{marker}-1", $"{firstName} sin skriver svarer ikke", false, TicketCommentAuthor.EndUser, $"{firstName} {lastName}", null,
+                    DateTimeOffset.UtcNow.AddDays(-2)),
+                new ExternalTicketComment($"prv-{marker}-2", $"Hei {firstName}, vi ser på det", false, TicketCommentAuthor.Technician, "Tekniker", null, DateTimeOffset.UtcNow.AddDays(-1)),
+            ], withheld: false, Ct);
         }
 
         var ticketRequest = await sales.PostAsJsonAsync("/api/v1/service/ticket-requests", new

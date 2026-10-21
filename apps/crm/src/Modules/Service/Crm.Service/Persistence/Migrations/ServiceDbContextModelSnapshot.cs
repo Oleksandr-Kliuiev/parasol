@@ -398,6 +398,9 @@ namespace Crm.Service.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("CommentsReadAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid?>("ContactId")
                         .HasColumnType("uniqueidentifier");
 
@@ -499,12 +502,75 @@ namespace Crm.Service.Persistence.Migrations
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("IsOpen"), new[] { "TechnicianUserId" });
 
+                    b.HasIndex("IsOpen", "CreatedAtSource");
+
                     b.HasIndex("System", "ExternalId")
                         .IsUnique();
+
+                    b.HasIndex("TechnicianUserId", "IsOpen")
+                        .HasFilter("[TechnicianUserId] IS NOT NULL");
 
                     b.HasIndex("OrganizationId", "IsOpen", "CreatedAtSource");
 
                     b.ToTable("Tickets", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.TicketComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Author")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("AuthorName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("CreatedAtSource")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("IsInternal")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("SyncedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("System")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid?>("TechnicianUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("System", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("TicketId", "CreatedAtSource");
+
+                    b.ToTable("TicketComments", "service");
                 });
 
             modelBuilder.Entity("Crm.Service.Domain.TicketRequest", b =>
@@ -579,6 +645,15 @@ namespace Crm.Service.Persistence.Migrations
                     b.HasIndex("OrganizationId", "Status");
 
                     b.ToTable("TicketRequests", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.TicketComment", b =>
+                {
+                    b.HasOne("Crm.Service.Domain.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

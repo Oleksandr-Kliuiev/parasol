@@ -92,6 +92,36 @@ public sealed record AteraTicketWrite(
 
 public sealed record AteraContactWrite(long CustomerID, string Firstname, string Lastname, string? Email, string? Phone);
 
+/// <summary>Who wrote a comment of a ticket: a technician, the customer's end user, or Atera does not say.</summary>
+public enum AteraCommentAuthor
+{
+    Unknown,
+    Technician,
+    EndUser,
+}
+
+/// <summary>One message of a ticket's conversation (M39.2): a reply to or from the customer, or a technician's internal note.</summary>
+public sealed record AteraComment(
+    string CommentId,
+    long TicketId,
+    string Text,
+    bool IsInternal,
+    AteraCommentAuthor Author,
+    string? AuthorExternalId,
+    string? AuthorName,
+    string? AuthorEmail,
+    DateTimeOffset CreatedAt);
+
+/// <summary>A comment written as the technician <paramref name="TechnicianId"/>; an internal one stays hidden from the customer.</summary>
+public sealed record AteraCommentWrite(string Text, long TechnicianId, bool IsInternal, DateTimeOffset At);
+
+/// <summary>The ticket fields the CRM changes (M39.2); a null field keeps Atera's value.</summary>
+public sealed record AteraTicketUpdate(string? Status = null, string? Priority = null, long? TechnicianContactId = null);
+
+/// <summary>Work done on a ticket, recorded in Atera by the CRM (M39.3).</summary>
+public sealed record AteraWorkHoursWrite(
+    DateTimeOffset Start, DateTimeOffset End, long TechnicianId, string? TechnicianEmail, bool Billable, bool OnSite, string? Comments);
+
 public sealed class AteraApiException(HttpStatusCode status, string message) : Exception(message)
 {
     public HttpStatusCode Status { get; } = status;

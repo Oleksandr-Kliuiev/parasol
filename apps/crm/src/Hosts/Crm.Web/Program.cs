@@ -297,6 +297,7 @@ Crm.Web.CustomerFacts.CustomerFactsEndpoints.MapCustomerFactsEndpoints(app);
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 app.MapVendorActionEndpoints();
+app.MapAteraEndpoints();
 Crm.Integrations.Core.Readiness.ConnectionStatusEndpoints.MapConnectionStatus(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();

@@ -213,6 +213,12 @@ public sealed class AteraAlertSyncTests(CrmWebFactory factory)
         public IAsyncEnumerable<AteraContact> GetContactsAsync(CancellationToken ct) => throw new NotSupportedException();
         public Task<AteraCustomer?> GetCustomerAsync(long id, CancellationToken ct) => throw new NotSupportedException();
         public Task<long> CreateCustomerAsync(AteraCustomerWrite customer, CancellationToken ct) => throw new NotSupportedException();
+        public Task<AteraTicket?> GetTicketAsync(long ticketId, CancellationToken ct) => throw new NotSupportedException();
+        public IAsyncEnumerable<AteraTicket> GetModifiedTicketsAsync(DateTimeOffset since, CancellationToken ct) => throw new NotSupportedException();
+        public Task<IReadOnlyList<AteraComment>> GetTicketCommentsAsync(long ticketId, CancellationToken ct) => throw new NotSupportedException();
+        public Task<string?> CreateTicketCommentAsync(long ticketId, AteraCommentWrite comment, CancellationToken ct) => throw new NotSupportedException();
+        public Task UpdateTicketAsync(long ticketId, AteraTicketUpdate update, CancellationToken ct) => throw new NotSupportedException();
+        public Task<string?> CreateWorkHoursAsync(long ticketId, AteraWorkHoursWrite hours, CancellationToken ct) => throw new NotSupportedException();
         public Task UpdateCustomerAsync(long id, AteraCustomerWrite customer, CancellationToken ct) => throw new NotSupportedException();
         public Task<string?> GetCustomerFieldAsync(long id, string field, CancellationToken ct) => throw new NotSupportedException();
         public Task SetCustomerFieldAsync(long id, string field, string value, CancellationToken ct) => throw new NotSupportedException();

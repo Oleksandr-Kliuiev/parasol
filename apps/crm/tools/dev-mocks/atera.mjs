@@ -1,8 +1,10 @@
 // Atera API v3 stand-in for external-apis.mjs: /api/v3/customers, /contacts, /tickets (+ workhoursrecords), /agents, /alerts and
-// /customvalues (shapes from the Atera docs), plus test-only control routes under /_mock/atera that add a customer with a fresh
-// organization number, its agents and alerts, and close an alert again (README). Data is in memory and new on every start.
+// /customvalues (shapes from the Atera docs), with one ticket, its conversation and its changes in atera-tickets.mjs, plus
+// test-only control routes under /_mock/atera that add a customer with a fresh organization number, its agents, alerts and
+// tickets, and close an alert again (README). Data is in memory and new on every start.
 
 import { hoursAgo, seedAtera } from './atera-data.mjs';
+import { createAteraTickets } from './atera-tickets.mjs';
 
 export function createAtera({ customers, base, run, orgNumber, newId, send }) {
   const { ateraCustomers, ateraContacts, ateraTickets, ateraWorkHours, ateraAgents, ateraAlerts } = seedAtera({ customers, base, run });
@@ -40,10 +42,14 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     }
   };
   const customerOf = (id) => ateraCustomers.find((c) => c.CustomerID === Number(id));
+  const ticketRoutes = createAteraTickets({
+    tickets: ateraTickets, workHours: ateraWorkHours, contacts: ateraContacts, customerOf, newId, send, page: ateraPage, parse,
+  });
 
   // Test-only control routes: never part of Atera's API, never behind its key.
   function control(req, res, url, body) {
     const path = url.pathname.slice('/_mock/atera/'.length);
+    if (ticketRoutes.control(req, res, path, body)) return;
     const removeAlert = path.match(/^alerts\/([^/]+)$/);
     if (removeAlert && req.method === 'DELETE') {
       // Closing an alert in Atera takes it off the open list; the CRM's next complete read resolves it.
@@ -79,6 +85,7 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     // Atera's v3 key, or a token in Authorization: Bearer (M39.0); the stand-in checks only that one of them is there.
     if (!req.headers['x-api-key'] && !/^Bearer \S+$/.test(req.headers.authorization ?? '')) return send(res, 401, { message: 'Missing X-API-KEY or bearer token' });
     const path = url.pathname.slice('/api/v3/'.length);
+    if (ticketRoutes.api(req, res, url, body, path)) return;
     if (path === 'customers') return ateraPage(res, url, ateraCustomers);
     if (path === 'contacts' && req.method === 'GET') return ateraPage(res, url, ateraContacts);
     if (path === 'contacts' && req.method === 'POST') {
@@ -96,7 +103,7 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
       const ticket = {
         TicketID: newId(), CustomerID: contact?.CustomerID, EndUserID: request.EndUserID, TicketTitle: request.TicketTitle,
         TicketStatus: 'Open', TicketPriority: request.TicketPriority, TicketType: request.TicketType, TicketSource: 'CRM',
-        TicketCreatedDate: new Date().toISOString(),
+        TicketCreatedDate: new Date().toISOString(), TicketLastModified: new Date().toISOString(),
       };
       ateraTickets.unshift(ticket);
       ateraWorkHours.set(ticket.TicketID, []);

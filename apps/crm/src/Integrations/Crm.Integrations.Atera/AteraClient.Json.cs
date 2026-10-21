@@ -112,6 +112,44 @@ internal sealed partial class AteraClient
                 Date(e, "Created", "CreatedDate", "AlertCreated") ?? DateTimeOffset.MinValue)
             : null;
 
+    /// <summary>
+    /// A comment, read by field name with fallbacks: Atera nests the author either flat (<c>TechnicianContactID</c>, <c>EnduserID</c>)
+    /// or in the details object a comment is posted with. Without an id or a time it cannot be kept, so it is not read.
+    /// </summary>
+    internal static AteraComment? ReadComment(JsonElement e, long ticketId)
+    {
+        if (Text(e, "CommentID", "CommentId", "ID", "Id") is not { } id ||
+            Date(e, "CommentTimestampUTC", "CommentDate", "Date", "Created", "CreatedDate") is not { } created)
+        {
+            return null;
+        }
+
+        var technicianDetails = TryGet(e, out var technician, "TechnicianCommentDetails") && technician.ValueKind == JsonValueKind.Object ? technician : default;
+        var endUserDetails = TryGet(e, out var endUser, "EnduserCommentDetails", "EndUserCommentDetails") && endUser.ValueKind == JsonValueKind.Object ? endUser : default;
+        var technicianId = Text(e, "TechnicianContactID", "TechnicianID", "TechnicianId")
+                           ?? (technicianDetails.ValueKind == JsonValueKind.Object ? Text(technicianDetails, "TechnicianId", "TechnicianID", "TechnicianContactID") : null);
+        var endUserId = Text(e, "EnduserID", "EndUserID", "EnduserId", "EndUserId")
+                        ?? (endUserDetails.ValueKind == JsonValueKind.Object ? Text(endUserDetails, "EnduserId", "EndUserId", "EnduserID") : null);
+        var isInternal = Bool(e, "IsInternal", "Internal")
+                         ?? (technicianDetails.ValueKind == JsonValueKind.Object ? Bool(technicianDetails, "IsInternal") : null) ?? false;
+        // Only technicians write internal notes, so an internal comment without a named author is still a technician's.
+        var author = technicianId is not null || technicianDetails.ValueKind == JsonValueKind.Object || isInternal ? AteraCommentAuthor.Technician
+            : endUserId is not null || endUserDetails.ValueKind == JsonValueKind.Object ? AteraCommentAuthor.EndUser
+            : AteraCommentAuthor.Unknown;
+        var name = Text(e, "TechnicianFullName", "EndUserFullName", "FullName", "CreatorName", "Name")
+                   ?? (string.Join(' ', new[] { Text(e, "FirstName", "Firstname"), Text(e, "LastName", "Lastname") }.Where(s => s is not null)) is { Length: > 0 } full ? full : null);
+        return new AteraComment(
+            id,
+            Long(e, "TicketID", "TicketId") ?? ticketId,
+            Text(e, "CommentText", "Comment", "Text", "Body") ?? string.Empty,
+            isInternal,
+            author,
+            author == AteraCommentAuthor.Technician ? technicianId : endUserId,
+            name,
+            Text(e, "Email", "TechnicianEmail", "EndUserEmail", "EnduserEmail"),
+            created);
+    }
+
     private static decimal? Decimal(JsonElement e, params string[] names) =>
         TryGet(e, out var v, names)
             ? v.ValueKind == JsonValueKind.Number && v.TryGetDecimal(out var n) ? n

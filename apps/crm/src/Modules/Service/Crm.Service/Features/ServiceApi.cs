@@ -237,6 +237,16 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             await db.SaveChangesAsync(cancellationToken);
         }
     }
+
+    public Task<TicketView?> GetTicketAsync(string system, long externalId, CancellationToken cancellationToken) =>
+        new TicketConversations(db, time).GetAsync(system, externalId, cancellationToken);
+
+    public Task<TicketConversationResult> ApplyTicketConversationAsync(
+        string system, long ticketExternalId, IReadOnlyCollection<ExternalTicketComment> comments, bool withheld, CancellationToken cancellationToken) =>
+        new TicketConversations(db, time).ApplyAsync(system, ticketExternalId, comments, withheld, cancellationToken);
+
+    public Task<IReadOnlyList<TicketRef>> GetStaleConversationsAsync(string system, DateTimeOffset readBefore, int limit, CancellationToken cancellationToken) =>
+        new TicketConversations(db, time).StaleAsync(system, readBefore, limit, cancellationToken);
 }
 
 /// <summary>
@@ -263,4 +273,5 @@ internal sealed class ServiceMergeHandler(ServiceDbContext db, ICustomersApi cus
         await db.TicketRequests.Where(r => r.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(r => r.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
     }
+
 }

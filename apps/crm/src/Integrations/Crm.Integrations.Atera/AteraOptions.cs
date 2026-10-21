@@ -94,6 +94,31 @@ public sealed class AteraOptions
 
     public string ContactSyncCron { get; set; } = "20 * * * *";
 
+    /// <summary>
+    /// Actions are simulated (M39.1): the worker reads the live ticket and says what it would send, and sends nothing. With writing
+    /// off and DryRun on, the whole action path can be tried against the live account without a single write.
+    /// </summary>
+    public bool DryRun { get; set; }
+
+    /// <summary>
+    /// The kinds of action people may ask of Atera (M39.1/M39.2): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
+    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>. Empty by default: a kind is off until
+    /// it is listed, and a kind added in a later release stays off until someone lists it.
+    /// </summary>
+    public List<string> EnabledActions { get; set; } = [];
+
+    /// <summary>Tickets' conversations (M39.2, <c>atera-ticket-conversations</c>).</summary>
+    public string TicketConversationSyncCron { get; set; } = "*/5 * * * *";
+
+    /// <summary>An open ticket whose conversation is older than this is read again even when Atera's list of changes did not name it.</summary>
+    public int ConversationRefreshMinutes { get; set; } = 60;
+
+    /// <summary>At most this many such tickets per run, the longest unread first.</summary>
+    public int ConversationRefreshBatch { get; set; } = 25;
+
+    /// <summary>The first run, without a cursor, reads the tickets changed in this many days.</summary>
+    public int ConversationBackfillDays { get; set; } = 14;
+
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey);
 }
 

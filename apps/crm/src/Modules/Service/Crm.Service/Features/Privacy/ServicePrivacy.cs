@@ -7,9 +7,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Crm.Service.Features.Privacy;
 
 /// <summary>
-/// The service module's part in subject requests (DEV-11): tickets mirrored from Atera where the person is the end user, and
-/// ticket requests made for them. A ticket forgets its end user (Atera keeps the ticket; the next synchronization leaves the
-/// person out while they are suppressed); a ticket request loses what was written about the person.
+/// The service module's part in subject requests (DEV-11): tickets mirrored from Atera where the person is the end user, with their
+/// conversations (M39.2), and ticket requests made for them. A ticket forgets its end user and its conversation keeps only its
+/// shape (Atera keeps the ticket; the next synchronization leaves the person out while they are suppressed); a ticket request
+/// loses what was written about the person.
 /// </summary>
 internal sealed class ServicePersonalData(ServiceDbContext db) : IPersonalDataContributor
 {
@@ -32,6 +33,18 @@ internal sealed class ServicePersonalData(ServiceDbContext db) : IPersonalDataCo
             ["endUserEmail"] = t.EndUserEmail,
             ["createdAt"] = t.CreatedAtSource.ToString("O", CultureInfo.InvariantCulture),
         })).ToList();
+        var ticketIds = tickets.Select(t => t.Id).ToList();
+        var comments = await db.TicketComments.AsNoTracking().Where(c => ticketIds.Contains(c.TicketId))
+            .OrderBy(c => c.TicketId).ThenBy(c => c.CreatedAtSource).ToListAsync(cancellationToken);
+        items.AddRange(comments.Select(c => new PersonalDataItem("ticketComment", c.Id, new Dictionary<string, string?>
+        {
+            ["ticket"] = tickets.Single(t => t.Id == c.TicketId).ExternalId.ToString(CultureInfo.InvariantCulture),
+            ["author"] = c.Author.ToString(),
+            ["authorName"] = c.AuthorName,
+            ["internal"] = c.IsInternal ? "true" : "false",
+            ["text"] = c.Text,
+            ["createdAt"] = c.CreatedAtSource.ToString("O", CultureInfo.InvariantCulture),
+        })));
         items.AddRange(requests.Select(r => new PersonalDataItem("ticketRequest", r.Id, new Dictionary<string, string?>
         {
             ["title"] = r.Title,
@@ -39,7 +52,7 @@ internal sealed class ServicePersonalData(ServiceDbContext db) : IPersonalDataCo
             ["status"] = r.Status.ToString(),
             ["createdAt"] = r.CreatedAt.ToString("O", CultureInfo.InvariantCulture),
         })));
-        return new PersonalDataSection(Module, items, ["Atera keeps the tickets themselves, with their conversation; the CRM mirrors the fields listed here."]);
+        return new PersonalDataSection(Module, items, ["Atera keeps the tickets themselves, with their conversation; the CRM mirrors the fields and the comments listed here."]);
     }
 
     public async Task<IReadOnlyList<PlannedErasure>> PlanAsync(DataSubject subject, CancellationToken cancellationToken)
@@ -71,6 +84,12 @@ internal sealed class ServicePersonalData(ServiceDbContext db) : IPersonalDataCo
         foreach (var ticket in await db.Tickets.Where(t => ticketIds.Contains(t.Id)).ToListAsync(ct))
         {
             applied += ticket.ForgetEndUser() ? 1 : 0;
+        }
+
+        // The conversation of the person's tickets is about them: it keeps its shape, not its words or authors (M39.2).
+        foreach (var comment in await db.TicketComments.Where(c => ticketIds.Contains(c.TicketId)).ToListAsync(ct))
+        {
+            applied += comment.Forget() ? 1 : 0;
         }
 
         foreach (var request in await db.TicketRequests.IgnoreQueryFilters().Where(r => requestIds.Contains(r.Id)).ToListAsync(ct))

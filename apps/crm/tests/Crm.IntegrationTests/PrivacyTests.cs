@@ -52,6 +52,8 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         Items(sections["sales"], "quote").ShouldAllBe(q => q.GetProperty("fields").GetProperty("sentTo").GetString() == person.Email);
         Items(sections["activities"], "activity").Select(a => a.GetProperty("recordId").GetGuid()).ShouldBe([person.CallId, person.MailId], ignoreOrder: true);
         Items(sections["service"], "ticket").ShouldHaveSingleItem().GetProperty("fields").GetProperty("endUserEmail").GetString().ShouldBe(person.Email);
+        Items(sections["service"], "ticketComment").Select(c => c.GetProperty("fields").GetProperty("text").GetString())
+            .ShouldBe([$"{person.FirstName} sin skriver svarer ikke", $"Hei {person.FirstName}, vi ser på det"]);
         Items(sections["service"], "ticketRequest").ShouldHaveSingleItem().GetProperty("recordId").GetGuid().ShouldBe(person.TicketRequestId);
         Items(sections["integration"], "externalLink").Select(l => l.GetProperty("fields").GetProperty("externalId").GetString()).ShouldContain(person.AteraContactId);
         Items(sections["integration"], "externalRecord").Select(r => r.GetProperty("recordId").GetGuid()).ShouldContain(person.ExternalRecordId);
@@ -130,6 +132,11 @@ public sealed class PrivacyTests(CrmWebFactory factory)
             ticket.EndUserName.ShouldBeNull();
             ticket.EndUserEmail.ShouldBeNull();
             ticket.ContactId.ShouldBeNull();
+            // The conversation keeps its shape, not its words or authors (M39.2).
+            var comments = await scope.ServiceProvider.GetRequiredService<ServiceDbContext>().TicketComments.AsNoTracking()
+                .Where(c => c.TicketId == person.TicketId).ToListAsync(Ct);
+            comments.Count.ShouldBe(2);
+            comments.ShouldAllBe(c => c.Text == "—" && c.AuthorName == null);
             var integration = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
             var record = await integration.ExternalRecords.AsNoTracking().SingleAsync(r => r.Id == person.ExternalRecordId, Ct);
             record.DisplayName.ShouldBe("—");
