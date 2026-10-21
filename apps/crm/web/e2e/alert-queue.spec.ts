@@ -36,7 +36,7 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
   await expect(page).toHaveURL(/severity=warning/);
   await expect(rows).toHaveText([new RegExp(`${m} backup is late`)]);
   await page.getByRole('group', { name: 'Severity' }).getByRole('button', { name: 'All severities' }).click();
-  await page.getByRole('combobox', { name: 'Customer' }).fill(second.name);
+  await page.getByRole('combobox', { name: 'Customer' }).pressSequentially(second.name);
   await page.getByRole('option', { name: second.name }).click();
   await expect(page).toHaveURL(new RegExp(`customer=${second.organizationId}`));
   await expect(rows).toHaveText([new RegExp(`${m} firewall down`)]);

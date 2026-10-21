@@ -41,6 +41,8 @@ test('My day shortcuts reach assigned work and return by keyboard without reread
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`tasks-${width}-${colorScheme}.png`) });
       await page.goBack(); await expect(navigation).toBeFocused();
+      // Back returns to the section links, which start with urgent alerts; the tasks link is the next stop.
+      await page.keyboard.press('Tab'); await expect(navigation.getByRole('link', { name: 'Urgent alerts', exact: true })).toBeFocused();
       await page.keyboard.press('Tab'); await expect(tasksLink).toBeFocused(); await page.waitForLoadState('networkidle');
       expect(reads, 'Section navigation must not create extra data reads').toEqual(before);
       if (width === 1440 && colorScheme === 'light') await signIn(page, 'Crm.Admin', '/?section=tasks');
