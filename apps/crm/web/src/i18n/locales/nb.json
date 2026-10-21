@@ -284,9 +284,6 @@
     "alerts": {
       "title": "Driftsvarsler som haster",
       "refresh": "Oppdater driftsvarsler som haster",
-      "readAt": "{{source}} lest {{time}}",
-      "readIncomplete": "{{source}}: lesingen {{time}} ble ikke fullført",
-      "notRead": "{{source}} er ikke lest ennå",
       "shownSome": "{{shown}} av {{total}} åpne driftsvarsler, de mest alvorlige og eldste først",
       "shownAll_one": "{{count}} åpent driftsvarsel",
       "shownAll_other": "{{count}} åpne driftsvarsler, de mest alvorlige og eldste først",
@@ -315,6 +312,8 @@
       "alertsFoot_other": "{{count}} advarsler",
       "alertsFootIncomplete_one": "{{count}} advarsel · siste lesing ufullstendig",
       "alertsFootIncomplete_other": "{{count}} advarsler · siste lesing ufullstendig",
+      "alertsFootLate_one": "{{count}} advarsel · neste lesing forsinket",
+      "alertsFootLate_other": "{{count}} advarsler · neste lesing forsinket",
       "alertsNotRead": "Ikke lest ennå",
       "alertsFailed": "Kunne ikke leses",
       "tasks": "Mine åpne oppgaver",
@@ -1558,6 +1557,13 @@
     "source": "Kilde: {{name}}",
     "sourceNames": {
       "atera": "Atera"
+    },
+    "reads": {
+      "readAt": "{{source}} lest {{time}}",
+      "incomplete": "{{source}}: lesingen {{time}} ble ikke fullført",
+      "late": "{{source}} lest {{time}}: neste lesing er forsinket",
+      "notRead": "{{source}} er ikke lest ennå",
+      "connections": "Tilkoblingsstatus"
     },
     "states": {
       "Open": "Åpent",

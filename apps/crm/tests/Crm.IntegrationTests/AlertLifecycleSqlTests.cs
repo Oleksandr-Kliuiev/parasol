@@ -145,6 +145,10 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
         first.GetProperty("items").GetArrayLength().ShouldBe(25, "25 by default");
         first.GetProperty("nextCursor").GetString().ShouldNotBeNullOrEmpty();
         (first.GetProperty("totalCount").GetInt32(), first.GetProperty("critical").GetInt32(), first.GetProperty("warning").GetInt32()).ShouldBe((28, 9, 19));
+        // The page says how fresh the stored alerts are, as the urgent list does: one read per source, the same for any filter.
+        var read = first.GetProperty("reads").EnumerateArray().ShouldHaveSingleItem();
+        read.GetProperty("system").GetString().ShouldBe("atera");
+        read.EnumerateObject().Select(p => p.Name).ShouldBe(["system", "startedAt", "complete", "late"]);
         var item = first.GetProperty("items")[0];
         (item.GetProperty("organizationName").GetString(), item.GetProperty("state").GetString(), item.GetProperty("kind").GetString())
             .ShouldBe(($"{marker} Varsel AS", "Open", "Monitoring"));

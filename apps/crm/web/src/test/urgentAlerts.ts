@@ -1,4 +1,5 @@
 import type { UrgentAlert, UrgentAlerts } from '../features/dashboard/urgentAlerts';
+import { alertRead } from './alerts';
 
 /** A synthetic open alert of the Service module's urgent list. */
 export function urgentAlert(id: string, overrides: Partial<UrgentAlert> = {}): UrgentAlert {
@@ -17,7 +18,7 @@ export function urgentAlerts(overrides: Partial<UrgentAlerts> = {}): UrgentAlert
       urgentAlert('a2', { severity: 'Warning', title: 'Backup agent offline', organizationName: 'Havbris Test AS', deviceName: 'PC-17', createdAt: '2026-10-21T05:00:00Z' }),
     ],
     totalCount: 7, critical: 1, warning: 6,
-    reads: [{ system: 'atera', startedAt: '2026-10-21T06:30:00Z', complete: true }],
+    reads: [alertRead()],
     ...overrides,
   };
 }

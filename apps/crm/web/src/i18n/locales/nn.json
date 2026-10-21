@@ -284,9 +284,6 @@
     "alerts": {
       "title": "Driftsvarsel som hastar",
       "refresh": "Oppdater driftsvarsel som hastar",
-      "readAt": "{{source}} lesen {{time}}",
-      "readIncomplete": "{{source}}: lesinga {{time}} vart ikkje fullført",
-      "notRead": "{{source}} er ikkje lesen enno",
       "shownSome": "{{shown}} av {{total}} opne driftsvarsel, dei mest alvorlege og eldste først",
       "shownAll_one": "{{count}} ope driftsvarsel",
       "shownAll_other": "{{count}} opne driftsvarsel, dei mest alvorlege og eldste først",
@@ -315,6 +312,8 @@
       "alertsFoot_other": "{{count}} åtvaringar",
       "alertsFootIncomplete_one": "{{count}} åtvaring · siste lesing ufullstendig",
       "alertsFootIncomplete_other": "{{count}} åtvaringar · siste lesing ufullstendig",
+      "alertsFootLate_one": "{{count}} åtvaring · neste lesing forseinka",
+      "alertsFootLate_other": "{{count}} åtvaringar · neste lesing forseinka",
       "alertsNotRead": "Ikkje lesen enno",
       "alertsFailed": "Kunne ikkje lesast",
       "tasks": "Mine opne oppgåver",
@@ -1558,6 +1557,13 @@
     "source": "Kjelde: {{name}}",
     "sourceNames": {
       "atera": "Atera"
+    },
+    "reads": {
+      "readAt": "{{source}} lesen {{time}}",
+      "incomplete": "{{source}}: lesinga {{time}} vart ikkje fullført",
+      "late": "{{source}} lesen {{time}}: neste lesing er forseinka",
+      "notRead": "{{source}} er ikkje lesen enno",
+      "connections": "Tilkoplingsstatus"
     },
     "states": {
       "Open": "Ope",

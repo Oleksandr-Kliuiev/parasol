@@ -19,9 +19,10 @@ import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { useAlerts, useDevices, useServiceSummary, useTicketRequests, useTickets } from './api';
 import { CreateTicketDialog } from './CreateTicketDialog';
 import { SavedServiceReadState } from './SavedServiceReadState';
-import { deviceTypes, type Alert } from './types';
+import { deviceTypes, type Alert, type AlertPage } from './types';
 import { AlertAge, AlertFacts, AlertSeverityBadge } from './alerts/AlertBits';
 import { AlertDetailDrawer } from './alerts/AlertDetailDrawer';
+import { AlertReadLine } from './alerts/AlertReadLine';
 import { AlertTaskCell } from './alerts/AlertTaskCell';
 import { AlertTaskDialogHost } from './alerts/AlertTaskDialogHost';
 import { useAlertTaskLinks } from './alerts/alertTasks';
@@ -80,6 +81,8 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
   const devices = useDevices(organizationId, scope); const alerts = useAlerts(organizationId, scope); const requests = useTicketRequests(organizationId, scope);
   // One task lookup per page of alerts the tab has read, never one per row.
   const alertTasks = useAlertTaskLinks(alerts.available ? (alerts.data?.pages ?? []).map((page) => page.items.map((alert) => alert.id)) : []);
+  // How fresh the stored alerts are, from the newest page the tab read (the list's answer carries the reads).
+  const alertReads = alerts.available ? (alerts.data?.pages.at(-1) as AlertPage | undefined)?.reads : undefined;
   const checking = summary.isFetching || tickets.checking || devices.checking || alerts.checking || requests.checking;
   useEffect(() => { if (!checking) refreshing.current = false; }, [checking, revision]);
   const refresh = () => { if (checking || refreshing.current) return; refreshing.current = true; setRevision(value => value + 1); };
@@ -123,7 +126,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
     </Panel>
 
     {/* Critical first, then the longest waiting: the server's order of open alerts. */}
-    <Panel title={t('service.alerts')} icon={<Alert16Regular />} flush className={flush.panel}>
+    <Panel title={t('service.alerts')} icon={<Alert16Regular />} flush className={flush.panel} actions={alertReads && <AlertReadLine reads={alertReads} />}>
       <div className={mergeClasses(styles.pad, !alerts.available && styles.padEnd)}>
         <SavedServiceReadState checking={alerts.checking} error={alerts.error} onRetry={alerts.refresh} />
       </div>

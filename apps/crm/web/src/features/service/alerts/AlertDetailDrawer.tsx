@@ -9,6 +9,8 @@ import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
+import { AlertReadLine } from './AlertReadLine';
+import { useAlertReads } from './alertReads';
 import { AlertTaskSection } from './AlertTaskSection';
 import { sourceName } from './alertText';
 import { useAlert } from './useAlertQueue';
@@ -24,13 +26,16 @@ const useStyles = makeStyles({
 });
 
 /**
- * One alert in a side panel (M38): its fields as stored now and the link to its source when one is set up. The address holds the
- * alert (`?alert=`), so My day and Back can open and close it.
+ * One alert in a side panel (M38): its fields as stored now, the link to its source when one is set up, and how fresh the stored
+ * copy is, apart from when the alert was raised. The address holds the alert (`?alert=`), so My day and Back can open and close it.
  */
 export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null; onClose: () => void }) {
   const { t } = useTranslation(); const styles = useStyles();
   const read = useAlert(alertId);
+  // Read with the alert: how fresh the stored copy is now, not when the list behind the panel was read.
+  const reads = useAlertReads(alertId !== null);
   const alert = alertId !== null && !read.isFetching ? read.data : undefined;
+  const sourceReads = alert && !reads.isFetching ? reads.data?.filter((r) => r.system === alert.system) : undefined;
   const title = alert?.title ?? t('alerts.detail.title');
   const link = alert?.url ? safeHttpUrl(alert.url) : undefined;
   const missing = read.error instanceof ApiError && read.error.status === 404;
@@ -63,6 +68,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
               ? <Link href={link} target="_blank" rel="noopener noreferrer" className={styles.external}>
                 {t('alerts.detail.openInSource', { name: sourceName(t, alert.system) })}<Open16Regular aria-hidden /></Link>
               : <Text size={200} className={styles.muted}>{t('alerts.detail.noLink', { name: sourceName(t, alert.system) })}</Text>}
+            {sourceReads && sourceReads.length > 0 && <AlertReadLine reads={sourceReads} />}
           </span> },
         ]} />
         <AlertTaskSection alert={alert} onNavigate={onClose} />

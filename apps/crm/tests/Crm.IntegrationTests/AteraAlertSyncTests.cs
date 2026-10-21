@@ -75,9 +75,14 @@ public sealed class AteraAlertSyncTests(CrmWebFactory factory)
 
         var run = await LatestRunAsync();
         (run.Status, run.Failed).ShouldBe((SyncRunStatus.Succeeded, 0));
-        var urgent = await factory.ClientAs(CrmRoles.Technician, userKey: "m38-atera").GetFromJsonAsync<JsonElement>("/api/v1/service/alerts/urgent", Ct);
+        var technician = factory.ClientAs(CrmRoles.Technician, userKey: "m38-atera");
+        var urgent = await technician.GetFromJsonAsync<JsonElement>("/api/v1/service/alerts/urgent", Ct);
         var read = urgent.GetProperty("reads").EnumerateArray().Single(r => r.GetProperty("system").GetString() == "atera");
-        (read.GetProperty("complete").GetBoolean(), read.GetProperty("startedAt").GetDateTimeOffset()).ShouldBe((true, run.StartedAt));
+        (read.GetProperty("complete").GetBoolean(), read.GetProperty("startedAt").GetDateTimeOffset(), read.GetProperty("late").GetBoolean())
+            .ShouldBe((true, run.StartedAt, false));
+        // The queue and a customer's tab say the same about the reads as My day, whatever they filter.
+        var queue = await technician.GetFromJsonAsync<JsonElement>($"/api/v1/service/alerts?organizationId={organizationId}&state=Resolved&limit=1", Ct);
+        queue.GetProperty("reads").GetRawText().ShouldBe(urgent.GetProperty("reads").GetRawText());
     }
 
     [Fact]
@@ -96,8 +101,13 @@ public sealed class AteraAlertSyncTests(CrmWebFactory factory)
         var after = await RowsAsync(marker);
         after.Select(a => (a.Id, a.ExternalId, a.State, a.LastSeenAt)).ShouldBe(before.Select(a => (a.Id, a.ExternalId, a.State, a.LastSeenAt)), ignoreOrder: true);
         (await LatestRunAsync()).Status.ShouldBe(SyncRunStatus.Failed);
-        var urgent = await factory.ClientAs(CrmRoles.Technician, userKey: "m38-atera").GetFromJsonAsync<JsonElement>("/api/v1/service/alerts/urgent", Ct);
-        urgent.GetProperty("reads").EnumerateArray().Single(r => r.GetProperty("system").GetString() == "atera").GetProperty("complete").GetBoolean().ShouldBeFalse();
+        var technician = factory.ClientAs(CrmRoles.Technician, userKey: "m38-atera");
+        foreach (var path in new[] { "/api/v1/service/alerts/urgent", "/api/v1/service/alerts?limit=1" })
+        {
+            var answer = await technician.GetFromJsonAsync<JsonElement>(path, Ct);
+            answer.GetProperty("reads").EnumerateArray().Single(r => r.GetProperty("system").GetString() == "atera").GetProperty("complete").GetBoolean()
+                .ShouldBeFalse(path);
+        }
     }
 
     [Fact]

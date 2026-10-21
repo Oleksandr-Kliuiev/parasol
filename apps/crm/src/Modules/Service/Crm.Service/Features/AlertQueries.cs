@@ -29,14 +29,16 @@ public sealed record AlertListItem(
     DateTimeOffset? ResolvedAt,
     string? Url);
 
-/// <summary>A page of alerts. The counts cover the whole filter, not the page (DEV-12).</summary>
-public sealed record AlertPage(IReadOnlyList<AlertListItem> Items, string? NextCursor, int TotalCount, int Critical, int Warning);
+/// <summary>A page of alerts. The counts cover the whole filter, not the page (DEV-12); the reads say how fresh the stored alerts are.</summary>
+public sealed record AlertPage(
+    IReadOnlyList<AlertListItem> Items, string? NextCursor, int TotalCount, int Critical, int Warning, IReadOnlyList<AlertSourceRead> Reads);
 
 /// <summary>
 /// The latest finished read of one alert source: when it started and whether it read everything. A read that failed, stopped
-/// part-way or was held by a pause is not complete, so the alerts shown are those of an earlier read.
+/// part-way or was held by a pause is not complete, so the alerts shown are those of an earlier read. A late read ended longer
+/// ago than the source's freshness limit (the connections page calls it late): the next one is overdue.
 /// </summary>
-public sealed record AlertSourceRead(string System, DateTimeOffset? StartedAt, bool Complete);
+public sealed record AlertSourceRead(string System, DateTimeOffset? StartedAt, bool Complete, bool Late);
 
 /// <summary>The open alerts that waited longest at the highest severity, out of <c>TotalCount</c> open ones.</summary>
 public sealed record UrgentAlerts(IReadOnlyList<AlertListItem> Items, int TotalCount, int Critical, int Warning, IReadOnlyList<AlertSourceRead> Reads);
@@ -105,7 +107,7 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
         var page = await (resolved ? AlertOrder.Resolved(alerts, after) : AlertOrder.Open(alerts, after)).Take(take + 1).ToListAsync(ct);
         var rows = page.Take(take).ToList();
         var next = page.Count > take ? AlertOrder.Cursor(rows[^1], resolved).Encode() : null;
-        return new AlertPage(await ItemsAsync(rows, ct), next, counts.Total, counts.Critical, counts.Warning);
+        return new AlertPage(await ItemsAsync(rows, ct), next, counts.Total, counts.Critical, counts.Warning, await ReadsAsync(ct));
     }
 
     /// <summary>One stored alert in any state, with its customer's name: the queue's side panel and a link from My day.</summary>
@@ -127,13 +129,7 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
         var counts = await CountAsync(open, ct);
         var take = Math.Clamp(limit ?? UrgentDefaultLimit, 1, UrgentMaxLimit);
         var rows = await AlertOrder.Open(open, null).Take(take).ToListAsync(ct);
-        var reads = new List<AlertSourceRead>(Sources.Length);
-        foreach (var (system, job) in Sources)
-        {
-            reads.Add(await LatestReadAsync(system, job, ct));
-        }
-
-        return new UrgentAlerts(await ItemsAsync(rows, ct), counts.Total, counts.Critical, counts.Warning, reads);
+        return new UrgentAlerts(await ItemsAsync(rows, ct), counts.Total, counts.Critical, counts.Warning, await ReadsAsync(ct));
     }
 
     private static async Task<(int Total, int Critical, int Warning)> CountAsync(IQueryable<Alert> alerts, CancellationToken ct)
@@ -144,17 +140,29 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
             bySeverity.Where(c => c.Severity == AlertSeverity.Warning).Sum(c => c.Count));
     }
 
+    /// <summary>The latest finished read of every alert source, one question per source: the same for any filter or page.</summary>
+    private async Task<IReadOnlyList<AlertSourceRead>> ReadsAsync(CancellationToken ct)
+    {
+        var reads = new List<AlertSourceRead>(Sources.Length);
+        foreach (var (system, job) in Sources)
+        {
+            reads.Add(await LatestReadAsync(system, job, ct));
+        }
+
+        return reads;
+    }
+
     private async Task<AlertSourceRead> LatestReadAsync(string system, string job, CancellationToken ct)
     {
         foreach (var source in completeness)
         {
             if (await source.LatestAsync(system, job, ct) is { } latest)
             {
-                return new AlertSourceRead(system, latest.StartedAt, latest.Complete);
+                return new AlertSourceRead(system, latest.StartedAt, latest.Complete, latest.Late);
             }
         }
 
-        return new AlertSourceRead(system, null, false);
+        return new AlertSourceRead(system, null, false, false);
     }
 
     private async Task<IReadOnlyList<AlertListItem>> ItemsAsync(List<Alert> rows, CancellationToken ct)

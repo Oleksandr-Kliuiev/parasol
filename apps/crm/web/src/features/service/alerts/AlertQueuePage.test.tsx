@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../../test/renderWithProviders';
-import { alertPage, syntheticAlert } from '../../../test/alerts';
+import { alertPage, alertRead, syntheticAlert } from '../../../test/alerts';
+import { formatReadAt } from '../../../shared/utils/format';
 import { AlertQueuePage } from './AlertQueuePage';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -52,6 +53,8 @@ describe('alert queue', () => {
     expect(within(rows[1]!).getByRole('button', { name: 'Assign Backup is late' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent('30 alerts: 1 critical, 1 warnings');
     expect(screen.getByText('Showing 2 of 30')).toBeVisible();
+    // How fresh the stored alerts are, from the same answer as the rows.
+    expect(screen.getByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}`)).toBeVisible();
     // Open alerts by default, a page of 25, and one task lookup for the page.
     const urls = fetch.mock.calls.map(([url]) => String(url));
     expect(urls).toContain('/api/v1/service/alerts?limit=25');
@@ -89,6 +92,25 @@ describe('alert queue', () => {
     expect(within(panel).getByRole('link', { name: 'Open in Atera' })).toHaveAttribute('rel', 'noopener noreferrer');
     expect(within(panel).getByText('Open')).toBeVisible();
     expect(await within(panel).findByRole('button', { name: 'Assign' })).toBeVisible();
+    // How fresh the stored copy is, apart from when the alert was raised.
+    expect(await within(panel).findByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}`)).toBeVisible();
+  });
+
+  it('says a read that did not finish, or a next read that is overdue, in the warning tone with the way to the connections page', async () => {
+    let read = alertRead({ complete: false });
+    stub((url) => url.pathname === '/api/v1/service/alerts' ? json(alertPage([critical, warning], null, 2, [read])) : undefined);
+    render('/alerts', [...all, 'integrations.manage']);
+    expect(await screen.findByText(`Atera: the read at ${formatReadAt('2026-10-21T06:30:00Z')} did not finish ·`)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Connection status' })).toHaveAttribute('href', '/connections');
+
+    read = alertRead({ late: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh alerts' }));
+    expect(await screen.findByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}: the next read is late ·`)).toBeVisible();
+
+    read = alertRead({ startedAt: null, complete: false });
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh alerts' }));
+    expect(await screen.findByText('Atera not read yet')).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Connection status' })).not.toBeInTheDocument();
   });
 
   it('says an alert without a configured link has none', async () => {

@@ -1,24 +1,23 @@
 import { useRef, useState } from 'react';
 import { Badge, Button, MessageBar, MessageBarBody, Spinner, Text, makeStyles, mergeClasses } from '@fluentui/react-components';
-import { Alert16Regular, AlertOn24Regular, AlertUrgent16Regular, ArrowClockwise16Regular, Warning16Regular } from '@fluentui/react-icons';
+import { Alert16Regular, AlertOn24Regular, AlertUrgent16Regular, ArrowClockwise16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { Panel } from '../../shared/components/Panel';
-import { formatDateTime, formatReadAt, formatRelative } from '../../shared/utils/format';
+import { formatDateTime, formatRelative } from '../../shared/utils/format';
 import { useFlushStyles } from '../billing/flushStyles';
 import { RecordRow, RowMeta } from '../billing/RecordRow';
-import { alertSourceName, alertsFreshness, useUrgentAlerts, type AlertSourceRead, type UrgentAlerts } from './urgentAlerts';
+import { AlertReadLine } from '../service/alerts/AlertReadLine';
+import { alertsFreshness } from '../service/alerts/alertReads';
+import { useUrgentAlerts, type UrgentAlerts } from './urgentAlerts';
 
 const useStyles = makeStyles({
   // A read state or an empty line inside the flush panel keeps the panel's side padding and a bottom edge.
   pad: { paddingLeft: '20px', paddingRight: '20px', paddingBottom: '16px', '@media (max-width: 600px)': { paddingLeft: '16px', paddingRight: '16px' } },
   caption: { display: 'block', color: h.muted, fontSize: '12.5px', lineHeight: '18px' },
-  read: { display: 'inline-flex', alignItems: 'center', gap: '4px', color: h.muted, fontSize: '12.5px', lineHeight: '18px', fontVariantNumeric: 'tabular-nums' },
-  // A read that did not finish is said in the warning tone, with its mark: the list may be older than the time beside it.
-  partial: { color: h.saffronT, '& svg': { flexShrink: 0 } },
   foot: { paddingTop: '12px', paddingBottom: '16px', borderTop: `1px solid ${h.line}` },
   context: { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' },
 });
@@ -54,7 +53,7 @@ function UrgentAlertsList({ employeeId, permissionsKey }: { employeeId: string; 
 
   return (
     <Panel title={t('myDay.alerts.title')} icon={<AlertUrgent16Regular />} flush className={flush.panel} actions={<>
-      {data && <SourceReads reads={data.reads} />}
+      {data && <AlertReadLine reads={data.reads} />}
       <Button size="small" icon={<ArrowClockwise16Regular />} aria-label={t('myDay.alerts.refresh')}
         disabled={checking} disabledFocusable={checking} onClick={refresh}>{t('common.refresh')}</Button>
     </>}>
@@ -76,25 +75,6 @@ function UrgentAlertsList({ employeeId, permissionsKey }: { employeeId: string; 
         </div>
       </>}
     </Panel>
-  );
-}
-
-/** "Atera read 08:30" per source: a read that did not finish, or none yet, is said as such. */
-function SourceReads({ reads }: { reads: UrgentAlerts['reads'] }) {
-  const { t } = useTranslation();
-  const styles = useStyles();
-  const said = (read: AlertSourceRead) => {
-    const source = alertSourceName(read.system);
-    if (read.startedAt === null) return t('myDay.alerts.notRead', { source });
-    const time = formatReadAt(read.startedAt);
-    return t(read.complete ? 'myDay.alerts.readAt' : 'myDay.alerts.readIncomplete', { source, time });
-  };
-  const partial = alertsFreshness(reads) === 'incomplete';
-  return (
-    <Text className={mergeClasses(styles.read, partial && styles.partial)}>
-      {partial && <Warning16Regular aria-hidden />}
-      {reads.map(said).join(' · ')}
-    </Text>
   );
 }
 

@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
+import { alertPage, alertRead } from '../../test/alerts';
+import { formatReadAt } from '../../shared/utils/format';
 import { TaskSourceButton } from './TaskSourceButton';
 import type { Activity } from './types';
 
@@ -20,22 +22,29 @@ const source = {
     url: 'https://app.atera.com/new/alert/920029', resolvedAt: '2026-10-21T09:00:00Z' },
 };
 const readers = ['customers.read', 'service.read', 'activities.read'];
+const sourceUrl = '/api/v1/activities/t1/source';
+const readsUrl = '/api/v1/service/alerts?limit=1';
+const readAt = formatReadAt('2026-10-21T06:30:00Z');
 
-function stub(answer: () => Response = () => json(source)) {
-  const fetch = vi.fn(async (input: string) => (String(input) === '/api/v1/activities/t1/source' ? answer() : json({}, 404)));
+function stub(answer: () => Response = () => json(source), reads: () => Response = () => json(alertPage([]))) {
+  const fetch = vi.fn(async (input: string) => (String(input) === sourceUrl ? answer() : String(input) === readsUrl ? reads() : json({}, 404)));
   vi.stubGlobal('fetch', fetch);
   return fetch;
 }
+const calls = (fetch: ReturnType<typeof stub>, url: string) => fetch.mock.calls.filter(([input]) => String(input) === url).length;
 const render = (activity: Activity = task, permissions = readers) =>
   renderRoutes([page(<TaskSourceButton activity={activity} />)], '/', testUser(permissions));
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('task source', () => {
-  it('reads the alert behind the task when asked, and shows it as it is now', async () => {
+  it('reads the alert behind the task when asked, and shows it as it is now with the time its source was read', async () => {
     const fetch = stub(); render();
     expect(fetch).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Source of Free disk space on SRV-01' }));
+    // The visible word says what opens; the subject tells one task's button from another's.
+    const button = screen.getByRole('button', { name: 'Source of Free disk space on SRV-01' });
+    expect(button).toHaveTextContent(/^Source$/);
+    await userEvent.click(button);
     const dialog = await screen.findByRole('dialog', { name: 'Source of the task' });
     expect(await within(dialog).findByText('Disk almost full on SRV-01')).toBeVisible();
     expect(within(dialog).getByText('Critical')).toBeVisible();
@@ -43,10 +52,28 @@ describe('task source', () => {
     expect(within(dialog).getAllByText('Resolved')[0]).toBeVisible();
     expect(within(dialog).getByRole('link', { name: 'Open in Atera' })).toHaveAttribute('href', 'https://app.atera.com/new/alert/920029');
     expect(within(dialog).getByRole('link', { name: 'Open in Alerts' })).toHaveAttribute('href', '/alerts?alert=a1');
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(await within(dialog).findByText(`Atera read at ${readAt}`)).toBeVisible();
+    expect([calls(fetch, sourceUrl), calls(fetch, readsUrl)]).toEqual([1, 1]);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Refresh' }));
     expect(await within(dialog).findByText('Disk almost full on SRV-01')).toBeVisible();
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect([calls(fetch, sourceUrl), calls(fetch, readsUrl)]).toEqual([2, 2]);
+  });
+
+  it('says a read that did not finish in the warning tone, with the way to the connections page for whoever may open it', async () => {
+    stub(undefined, () => json(alertPage([], null, 0, [alertRead({ complete: false })])));
+    const { unmount } = render(task, [...readers, 'integrations.manage']);
+    await userEvent.click(screen.getByRole('button', { name: /^Source/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Source of the task' });
+    // The dot before the link is bound to the sentence (a no-break space, read as a space).
+    expect(await within(dialog).findByText(`Atera: the read at ${readAt} did not finish ·`)).toBeVisible();
+    expect(within(dialog).getByRole('link', { name: 'Connection status' })).toHaveAttribute('href', '/connections');
+    unmount();
+
+    render();
+    await userEvent.click(screen.getByRole('button', { name: /^Source/ }));
+    const again = await screen.findByRole('dialog', { name: 'Source of the task' });
+    expect(await within(again).findByText(`Atera: the read at ${readAt} did not finish`)).toBeVisible();
+    expect(within(again).queryByRole('link', { name: 'Connection status' })).not.toBeInTheDocument();
   });
 
   it('says the alert is no longer stored for the customer', async () => {

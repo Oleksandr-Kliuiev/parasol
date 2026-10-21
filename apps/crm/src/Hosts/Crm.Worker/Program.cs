@@ -102,7 +102,7 @@ var jobs = app.Services.GetRequiredService<IRecurringJobManager>();
 jobs.AddOrUpdate<BrregRegistryCheckJob>(
     BrregRegistryCheckJob.JobId,
     job => job.RunAsync(CancellationToken.None),
-    "0 2 * * *",
+    BrregRegistryCheckJob.Cron,
     new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<EntraUserSyncJob>(
     EntraUserSyncJob.JobId,

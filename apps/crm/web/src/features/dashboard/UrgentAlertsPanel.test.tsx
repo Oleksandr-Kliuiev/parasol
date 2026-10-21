@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
+import { alertRead } from '../../test/alerts';
 import { urgentAlert, urgentAlerts } from '../../test/urgentAlerts';
 import { formatReadAt } from '../../shared/utils/format';
 import { MyDayPage } from './MyDayPage';
@@ -41,19 +42,31 @@ describe('the urgent alerts of My day', () => {
   });
 
   it('says when the last read did not finish, and never calls a source nobody has read empty', async () => {
-    let reply = urgentAlerts({ items: [urgentAlert('a1')], totalCount: 1, warning: 0, reads: [{ system: 'atera', startedAt: '2026-10-21T06:30:00Z', complete: false }] });
+    let reply = urgentAlerts({ items: [urgentAlert('a1')], totalCount: 1, warning: 0, reads: [alertRead({ complete: false })] });
     stub(() => json(reply));
     renderRoutes([page(<UrgentAlertsPanel />)], '/', testUser(['service.read']));
     const panel = await screen.findByRole('region', { name: 'Urgent alerts' });
     expect(await within(panel).findByText(`Atera: the read at ${formatReadAt('2026-10-21T06:30:00Z')} did not finish`)).toBeVisible();
+    // The connections page is closed to this person, so the line offers no way there.
+    expect(within(panel).queryByRole('link', { name: 'Connection status' })).not.toBeInTheDocument();
     expect(within(panel).getByText('1 open alert')).toBeVisible();
 
-    reply = urgentAlerts({ items: [], totalCount: 0, critical: 0, warning: 0, reads: [{ system: 'atera', startedAt: null, complete: false }] });
+    reply = urgentAlerts({ items: [], totalCount: 0, critical: 0, warning: 0, reads: [alertRead({ startedAt: null, complete: false })] });
     await userEvent.click(within(panel).getByRole('button', { name: 'Refresh urgent alerts' }));
     expect(await within(panel).findByText('Atera not read yet')).toBeVisible();
     expect(within(panel).getByText('Alerts appear here after the first read.')).toBeVisible();
     expect(within(panel).queryByText('No open alerts.')).not.toBeInTheDocument();
     expect(within(panel).queryByRole('link', { name: /All open alerts/ })).not.toBeInTheDocument();
+  });
+
+  it('says a complete read whose next one is overdue in the warning tone, with the way to the connections page', async () => {
+    stub(() => json(urgentAlerts({ reads: [alertRead({ late: true })] })));
+    renderRoutes([page(<UrgentAlertsPanel />)], '/', testUser(['service.read', 'integrations.manage']));
+    const panel = await screen.findByRole('region', { name: 'Urgent alerts' });
+    const line = await within(panel).findByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}: the next read is late ·`);
+    expect(line.parentElement!.querySelector('svg')).not.toBeNull();
+    expect(within(panel).getByRole('link', { name: 'Connection status' })).toHaveAttribute('href', '/connections');
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(2);
   });
 
   it('hides the earlier list while it reads again and after a failed read, and keeps focus on the refresh', async () => {
@@ -100,7 +113,7 @@ describe('the critical alerts figure', () => {
   });
 
   it.each([
-    ['nobody has read the source', () => json(urgentAlerts({ items: [], totalCount: 0, critical: 0, warning: 0, reads: [{ system: 'atera', startedAt: null, complete: false }] })), 'Not read yet'],
+    ['nobody has read the source', () => json(urgentAlerts({ items: [], totalCount: 0, critical: 0, warning: 0, reads: [alertRead({ startedAt: null, complete: false })] })), 'Not read yet'],
     ['the read failed', () => json({ detail: 'synthetic-private-error' }, 500), 'Could not be read'],
   ])('shows no zero when %s', async (_, reply, foot) => {
     stub(reply);
@@ -112,9 +125,15 @@ describe('the critical alerts figure', () => {
   });
 
   it('says a read that did not finish in its footer too', async () => {
-    stub(() => json(urgentAlerts({ reads: [{ system: 'atera', startedAt: '2026-10-21T06:30:00Z', complete: false }] })));
+    stub(() => json(urgentAlerts({ reads: [alertRead({ complete: false })] })));
     renderRoutes([page(<MyDayPage />)], '/', testUser(['service.read', 'customers.read']));
     expect(await within(await tile()).findByText('6 warnings · last read incomplete')).toBeVisible();
+  });
+
+  it('says an overdue read in its footer too', async () => {
+    stub(() => json(urgentAlerts({ reads: [alertRead({ late: true })] })));
+    renderRoutes([page(<MyDayPage />)], '/', testUser(['service.read', 'customers.read']));
+    expect(await within(await tile()).findByText('6 warnings · next read late')).toBeVisible();
   });
 
   it('waits with the panel while it reads again instead of showing the figure of the last read', async () => {

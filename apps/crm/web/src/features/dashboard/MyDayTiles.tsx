@@ -11,7 +11,8 @@ import { useInvoices } from '../billing/api';
 import { useReminders } from '../contracts/api';
 import { useAllTimeEntries } from '../time/api';
 import type { MyDayProfile } from './myDayProfile';
-import { alertsFreshness, useUrgentAlertsAnswer } from './urgentAlerts';
+import { alertsFreshness } from '../service/alerts/alertReads';
+import { useUrgentAlertsAnswer } from './urgentAlerts';
 
 type Tile = 'alerts' | 'tasks' | 'hours' | 'reminders' | 'overdue' | 'registry';
 
@@ -55,7 +56,8 @@ export function MyDayTiles({ profile, organizations, warnings }: { profile: MyDa
         label={t('myDay.kpi.alerts')}
         value={alertsEnded ? '—' : alerts.data ? formatNumber(alerts.data.critical) : pending}
         foot={alertsEnded ? t(alertsEnded) : alerts.data
-          ? t(alertsRead === 'incomplete' ? 'myDay.kpi.alertsFootIncomplete' : 'myDay.kpi.alertsFoot', { count: alerts.data.warning })
+          ? t(alertsRead === 'incomplete' ? 'myDay.kpi.alertsFootIncomplete' : alertsRead === 'late' ? 'myDay.kpi.alertsFootLate' : 'myDay.kpi.alertsFoot',
+            { count: alerts.data.warning })
           : pending}
         to="?section=alerts#my-day-alerts"
       />

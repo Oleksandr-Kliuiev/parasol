@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { AlertSeverity } from '../service/types';
+import type { AlertSeverity, AlertSourceRead } from '../service/types';
 
 /** One open alert, as the urgent list of the Service module returns it; `createdAt` is the source's time. */
 export interface UrgentAlert {
@@ -20,13 +20,6 @@ export interface UrgentAlert {
   lastSeenAt: string | null;
   resolvedAt: string | null;
   url: string | null;
-}
-
-/** The latest finished read of one alert source; an incomplete one leaves the alerts of an earlier read in place. */
-export interface AlertSourceRead {
-  system: string;
-  startedAt: string | null;
-  complete: boolean;
 }
 
 /** The most severe open alerts, oldest first, out of `totalCount` open ones; the counts cover every open alert. */
@@ -68,16 +61,3 @@ export function useUrgentAlertsAnswer(employeeId: string, permissionsKey: string
   const settled = state !== undefined && state.fetchStatus !== 'fetching';
   return { data: settled && state.status === 'success' ? state.data : undefined, failed: settled && state.status === 'error' };
 }
-
-/** Where the list stands: no source read yet, the latest read of some source did not finish, or every source read completely. */
-export type AlertsFreshness = 'notRead' | 'incomplete' | 'complete';
-
-export function alertsFreshness(reads: readonly AlertSourceRead[]): AlertsFreshness {
-  if (reads.length === 0 || reads.every((read) => read.startedAt === null)) return 'notRead';
-  return reads.every((read) => read.complete) ? 'complete' : 'incomplete';
-}
-
-const sourceNames: Record<string, string> = { atera: 'Atera' };
-
-/** A source is named by its vendor, as the label of where an alert came from (M38 vocabulary). */
-export const alertSourceName = (system: string) => sourceNames[system] ?? system;

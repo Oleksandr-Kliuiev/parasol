@@ -35,6 +35,8 @@ test('the Drift tab lists a customer’s open alerts first, then its devices wit
   const devices = page.getByRole('region', { name: 'Devices', exact: true });
   await expect(devices.getByRole('listitem').filter({ hasText: server }).getByText('3 open alerts', { exact: true })).toBeVisible();
   await expect(devices.getByRole('listitem').filter({ hasText: `PC-${customer.marker}` }).getByText(/open alert/)).toHaveCount(0);
+  // How fresh the stored alerts are, beside them (a read another spec held with a pause says it did not finish).
+  await expect(alerts.getByText(/^Atera:? (the )?read at /)).toBeVisible();
 
   // The title opens the alert in a side panel, with its link to Atera; Escape closes it and focus returns to the title.
   const title = alerts.getByRole('button', { name: `${customer.marker} disk almost full`, exact: true });

@@ -14,6 +14,7 @@ import { ForbiddenPage } from '../../errors/ForbiddenPage';
 import { alertSeverities, type AlertSeverity } from '../types';
 import { AlertCustomerFilter } from './AlertCustomerFilter';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
+import { AlertReadLine } from './AlertReadLine';
 import { AlertQueueEmpty, AlertQueueList } from './AlertQueueList';
 import { AlertTaskDialogHost } from './AlertTaskDialogHost';
 import { pageIds, useAlertTaskLinks } from './alertTasks';
@@ -73,6 +74,8 @@ function Queue() {
   // The assign dialog is held above the list, which reloads (search, filters) and switches between table and cards.
   return <AlertTaskDialogHost>
     <PageHeader title={t('alerts.title')} subtitle={t(state === 'Resolved' ? 'alerts.subtitleResolved' : 'alerts.subtitle')}
+      // How fresh the stored alerts are, from the same answer as the rows: no time is shown while a new read is under way.
+      meta={queue.reads && !queue.error && !(queue.isFetching && !queue.isFetchingNextPage) && <AlertReadLine reads={queue.reads} />}
       actions={<Button icon={<ArrowClockwise20Regular />} aria-label={t('alerts.refresh')} disabled={queue.isFetching} disabledFocusable={queue.isFetching}
         onClick={() => void queue.refetch()}>{t('common.refresh')}</Button>} />
     <Toolbar label={t('alerts.filters')}>

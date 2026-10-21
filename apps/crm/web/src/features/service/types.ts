@@ -59,13 +59,25 @@ export interface Alert {
   url: string | null;
 }
 
-/** A page of alerts; the counts cover the whole filter, not the page (DEV-12). */
+/**
+ * The latest finished read of one alert source (M38). One that did not finish (failed, stopped part-way, held by a pause) left
+ * the alerts of an earlier read in place; a late one ended longer ago than its job's freshness limit, so the next is overdue.
+ */
+export interface AlertSourceRead {
+  system: string;
+  startedAt: string | null;
+  complete: boolean;
+  late: boolean;
+}
+
+/** A page of alerts; the counts cover the whole filter, not the page (DEV-12); the reads say how fresh the stored alerts are. */
 export interface AlertPage {
   items: Alert[];
   nextCursor: string | null;
   totalCount: number;
   critical: number;
   warning: number;
+  reads: AlertSourceRead[];
 }
 
 export interface ServiceSummary {

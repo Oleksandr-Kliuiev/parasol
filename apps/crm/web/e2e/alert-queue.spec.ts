@@ -30,6 +30,8 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
     new RegExp(`Warning.*${m} backup is late.*${first.name}`)]);
   await expect(rows.first()).toContainText('Source: Atera');
   await expect(page.getByRole('status').filter({ hasText: /alerts:/ })).toHaveText('3 alerts: 2 critical, 1 warnings');
+  // How fresh the stored alerts are, under the page title (a read another spec held with a pause says it did not finish).
+  await expect(page.getByRole('main').getByText(/^Atera:? (the )?read at /)).toBeVisible();
   await expect(rows.first().getByRole('button', { name: `Assign ${m} disk almost full`, exact: true })).toBeVisible();
 
   await page.getByRole('group', { name: 'Severity' }).getByRole('button', { name: /^Warning/ }).click();
@@ -56,6 +58,7 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
   const panel = page.getByRole('dialog', { name: stored!.title, exact: true });
   await expect(panel.getByText(first.name)).toBeVisible();
   await expect(panel.getByRole('link', { name: 'Open in Atera', exact: true })).toBeVisible();
+  await expect(panel.getByText(/^Atera:? (the )?read at /)).toBeVisible();
   await panel.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(panel).toHaveCount(0); await expect(page).not.toHaveURL(/alert=/);
 

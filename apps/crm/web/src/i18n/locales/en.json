@@ -284,9 +284,6 @@
     "alerts": {
       "title": "Urgent alerts",
       "refresh": "Refresh urgent alerts",
-      "readAt": "{{source}} read at {{time}}",
-      "readIncomplete": "{{source}}: the read at {{time}} did not finish",
-      "notRead": "{{source}} not read yet",
       "shownSome": "{{shown}} of {{total}} open alerts, most severe and oldest first",
       "shownAll_one": "{{count}} open alert",
       "shownAll_other": "{{count}} open alerts, most severe and oldest first",
@@ -315,6 +312,8 @@
       "alertsFoot_other": "{{count}} warnings",
       "alertsFootIncomplete_one": "{{count}} warning · last read incomplete",
       "alertsFootIncomplete_other": "{{count}} warnings · last read incomplete",
+      "alertsFootLate_one": "{{count}} warning · next read late",
+      "alertsFootLate_other": "{{count}} warnings · next read late",
       "alertsNotRead": "Not read yet",
       "alertsFailed": "Could not be read",
       "tasks": "My open tasks",
@@ -1558,6 +1557,13 @@
     "source": "Source: {{name}}",
     "sourceNames": {
       "atera": "Atera"
+    },
+    "reads": {
+      "readAt": "{{source}} read at {{time}}",
+      "incomplete": "{{source}}: the read at {{time}} did not finish",
+      "late": "{{source}} read at {{time}}: the next read is late",
+      "notRead": "{{source}} not read yet",
+      "connections": "Connection status"
     },
     "states": {
       "Open": "Open",

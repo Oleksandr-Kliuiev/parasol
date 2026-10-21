@@ -62,6 +62,8 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   const sourceDialog = page.getByRole('dialog', { name: 'Source of the task', exact: true });
   await expect(sourceDialog.getByText(`${m} disk almost full`)).toBeVisible();
   await expect(sourceDialog.getByText('Open', { exact: true })).toBeVisible();
+  // When Atera was last read, apart from when the alert was raised (a read another spec held with a pause says it did not finish).
+  await expect(sourceDialog.getByText(/^Atera:? (the )?read at /)).toBeVisible();
   await sourceDialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(source).toBeFocused();
   await closeAteraAlert(page, atera);

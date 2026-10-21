@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderRoutes, testUser } from '../../test/renderWithProviders';
 import { alertPage, syntheticAlert } from '../../test/alerts';
+import { formatReadAt } from '../../shared/utils/format';
 import { OperationsTab } from './OperationsTab';
 import type { Device } from './types';
 
@@ -79,5 +80,7 @@ describe('Customer Drift tab (DEV-12)', () => {
     expect(devices.getByText('2 open alerts')).toBeVisible();
     // A device without open alerts says nothing about them.
     expect(devices.getAllByText(/open alert/)).toHaveLength(1);
+    // How fresh the stored alerts are, beside the list, from the same answer as the rows.
+    expect(panel.getByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}`)).toBeVisible();
   });
 });
