@@ -30,6 +30,7 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
     new RegExp(`Warning.*${m} backup is late.*${first.name}`)]);
   await expect(rows.first()).toContainText('Source: Atera');
   await expect(page.getByRole('status').filter({ hasText: /alerts:/ })).toHaveText('3 alerts: 2 critical, 1 warnings');
+  await expect(rows.first().getByRole('button', { name: `Assign ${m} disk almost full`, exact: true })).toBeVisible();
 
   await page.getByRole('group', { name: 'Severity' }).getByRole('button', { name: /^Warning/ }).click();
   await expect(page).toHaveURL(/severity=warning/);
@@ -58,11 +59,12 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
   await panel.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(panel).toHaveCount(0); await expect(page).not.toHaveURL(/alert=/);
 
-  // A phone shows cards with the same facts, and nothing scrolls sideways.
+  // A phone shows cards with the same facts and actions, and nothing scrolls sideways.
   await page.setViewportSize({ width: 390, height: 844 });
   await search.fill(m);
   const cards = page.getByRole('list', { name: 'Alerts' }).getByRole('listitem').filter({ hasText: m });
   await expect(cards).toHaveCount(2);
+  await expect(cards.first().getByRole('button', { name: `Assign ${m} disk almost full`, exact: true })).toBeVisible();
   await settled(page);
   expect(await fitsWidth(page)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('alert-queue-390.png'), fullPage: true });

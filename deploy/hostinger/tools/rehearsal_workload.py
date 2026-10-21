@@ -11,7 +11,7 @@ import uuid
 
 AT = '2026-10-17T12:00:00+00:00'
 DESCRIPTION = 'Reviewed synthetic recovery work'
-# service.Alerts gains columns of its own; rows are inserted with the existing ones and fingerprinted whole.
+# Rows are inserted with the columns the workflow needs (later columns are nullable or defaulted) and fingerprinted whole.
 SQL_TABLES = ('identity.Users', 'customers.Organizations', 'integration.ExternalLinks',
               'service.Tickets', 'service.Alerts', 'activities.Activities', 'activities.SourceTaskLinks',
               'time.TimeEntries', 'time.TimeEntryCreateReceipts')
@@ -40,15 +40,15 @@ class Workload:
     task: str = field(default_factory=lambda: str(uuid.uuid4()))
     time_entry: str = field(default_factory=lambda: str(uuid.uuid4()))
     request: str = field(default_factory=lambda: str(uuid.uuid4()))
-    # The source-task receipt names the alert as Atera does: the account, the linked customer and the alert id.
-    workspace: str = 'atera'
-    client: str = '900029'
+    # The source-task receipt names the alert as the CRM does (M38): system, kind, the Atera customer and the alert id.
+    source_kind: str = 'alert'
+    customer: str = '900029'
     alert_external_id: str = '920029'
 
     @property
     def source_key(self):
         # SourceTaskIdentityRules.Key: SHA-256 of the compact JSON identity array.
-        return digest(compact(['SourceTaskV1', 'atera', self.workspace, self.client,
+        return digest(compact(['SourceTaskV1', 'atera', self.source_kind, self.customer,
                                self.alert_external_id, 'Task']))
 
     @property
@@ -90,16 +90,16 @@ INSERT [service].[Tickets]
  (Id,System,ExternalId,OrganizationId,Title,Status,IsOpen,CreatedAtSource,SyncedAt,OwnerCustomerId,OwnerLinkId,ImportedAt)
  VALUES ('{f.ticket}','atera',910029,'{f.organization}','Synthetic recovery ticket','Open',1,
  '{AT}','{AT}',900029,'{f.external_link}','{AT}');
-INSERT [service].[Alerts] (Id,System,ExternalId,OrganizationId,Severity,Title,DeviceName,CreatedAtSource)
- VALUES ('{f.alert}','atera','{f.alert_external_id}','{f.organization}','Critical','Synthetic recovery alert',
+INSERT [service].[Alerts] (Id,System,ExternalId,OrganizationId,ExternalCustomerId,Severity,Title,DeviceName,CreatedAtSource)
+ VALUES ('{f.alert}','atera','{f.alert_external_id}','{f.organization}','{f.customer}','Critical','Synthetic recovery alert',
  'SYNTHETIC-RECOVERY-01','{AT}');
 INSERT [activities].[Activities]
  (Id,Type,OrganizationId,Subject,Priority,Status,AssigneeId,DueAt,LinkedTicketId,CreatedAt,CreatedBy,IsDeleted)
- VALUES ('{f.task}','Task','{f.organization}','Review technical observation','High','Open',
+ VALUES ('{f.task}','Task','{f.organization}','Synthetic recovery alert','High','Open',
  '{f.technician}','2030-01-01T12:00:00+00:00','{f.ticket}','{AT}','{f.technician}',0);
 INSERT [activities].[SourceTaskLinks]
  (SourceKey,ActivityId,System,WorkspaceId,ClientId,ObservationId,TargetKind,CreatedAt,CreatedBy)
- VALUES ('{f.source_key}','{f.task}','atera','{f.workspace}','{f.client}','{f.alert_external_id}','Task','{AT}','{f.technician}');
+ VALUES ('{f.source_key}','{f.task}','atera','{f.source_kind}','{f.customer}','{f.alert_external_id}','Task','{AT}','{f.technician}');
 INSERT [time].[TimeEntries]
  (Id,Source,OrganizationId,TechnicianId,TicketId,SourceActivityId,ExternalTicketId,TicketTitle,
  WorkDate,Hours,WorkType,Billable,Onsite,AfterHours,Description,Status,ApprovalCount,CreatedAt,CreatedBy,IsDeleted)
@@ -140,14 +140,15 @@ def verify_integrity(stack, f):
     stack.sql(f"""SET NOCOUNT ON;
 IF (SELECT COUNT(*) FROM [activities].[SourceTaskLinks] s
  JOIN [activities].[Activities] a ON a.Id=s.ActivityId
- JOIN [service].[Alerts] al ON al.System=s.System AND al.ExternalId=s.ObservationId AND al.OrganizationId=a.OrganizationId
+ JOIN [service].[Alerts] al ON al.System=s.System AND al.ExternalId=s.ObservationId AND al.ExternalCustomerId=s.ClientId
+ AND al.OrganizationId=a.OrganizationId
  JOIN [service].[Tickets] t ON t.Id=a.LinkedTicketId
  JOIN [time].[TimeEntries] e ON e.SourceActivityId=a.Id AND e.TicketId=t.Id
  JOIN [time].[TimeEntryCreateReceipts] r ON r.TimeEntryId=e.Id
  JOIN [identity].[Users] u ON u.Id=a.AssigneeId AND u.Id=e.TechnicianId AND u.Id=r.RequestedBy
  JOIN [customers].[Organizations] o ON o.Id=a.OrganizationId AND o.Id=e.OrganizationId AND o.Id=t.OrganizationId
  JOIN [integration].[ExternalLinks] l ON l.Id=t.OwnerLinkId AND l.EntityId=o.Id AND l.System=s.System AND l.ExternalId=s.ClientId
- WHERE s.SourceKey='{f.source_key}' AND s.WorkspaceId='{f.workspace}' AND s.ClientId='{f.client}'
+ WHERE s.SourceKey='{f.source_key}' AND s.WorkspaceId='{f.source_kind}' AND s.ClientId='{f.customer}'
  AND s.ObservationId='{f.alert_external_id}' AND s.TargetKind='Task' AND s.System='atera'
  AND al.Id='{f.alert}' AND al.Severity='Critical'
  AND r.ClientRequestId='{f.request}' AND r.IntentHash='{f.intent_hash}' AND e.Hours=0.25

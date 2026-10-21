@@ -25,7 +25,7 @@ public sealed class SourceTaskPersistenceTests(CrmWebFactory factory)
         var organization = await Organization(factory); var employee = await Employee(factory, CrmRoles.Technician); var source = Source();
         var fault = new LostCommitOnce();
         await using var host = Host(factory, employee, configure: services => services.AddDbContext<ActivitiesDbContext>(o => o.AddInterceptors(fault)));
-        var draft = new SourceTaskDraft(source, organization, employee, null, ActivityPriority.Normal);
+        var draft = new SourceTaskDraft(source, organization, employee, null, ActivityPriority.Normal, Subject);
         await Should.ThrowAsync<SyntheticLostAcknowledgement>(() => Create(host, draft));
         var replay = (await Create(host, draft)).Value;
         replay.Created.ShouldBeFalse(); replay.IsAvailable.ShouldBeTrue();
@@ -41,7 +41,7 @@ public sealed class SourceTaskPersistenceTests(CrmWebFactory factory)
     {
         var organization = await Organization(factory); var employee = await Employee(factory, CrmRoles.Technician); var source = Source();
         await using var host = Host(factory, employee, configure: services => services.AddDbContext<ActivitiesDbContext>(o => o.AddInterceptors(new RefuseSourceSave())));
-        await Should.ThrowAsync<SyntheticRefusedSave>(() => Create(host, new(source, organization, employee, null, ActivityPriority.Normal)));
+        await Should.ThrowAsync<SyntheticRefusedSave>(() => Create(host, new(source, organization, employee, null, ActivityPriority.Normal, Subject)));
         await using var scope = factory.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<ActivitiesDbContext>();
         (await db.SourceTaskLinks.CountAsync(l => l.SourceKey == SourceTaskIdentityRules.Key(source))).ShouldBe(0);
         (await db.Activities.CountAsync(a => a.OrganizationId == organization)).ShouldBe(0);
@@ -60,7 +60,7 @@ public sealed class SourceTaskPersistenceTests(CrmWebFactory factory)
             services.AddDbContext<ActivitiesDbContext>(o => o.AddInterceptors(pause));
             services.AddDbContext<CustomersDbContext>(o => o.AddInterceptors(update));
         });
-        var pendingTask = Create(host, new(source, sourceOrganization, employee, null, ActivityPriority.Normal));
+        var pendingTask = Create(host, new(source, sourceOrganization, employee, null, ActivityPriority.Normal, Subject));
         await pause.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         using var client = host.CreateClient(); client.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, CrmRoles.Management);
         client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "source-task-merge-" + Guid.NewGuid().ToString("N"));
@@ -87,14 +87,14 @@ public sealed class SourceTaskPersistenceTests(CrmWebFactory factory)
         (await Find(host, source, sourceOrganization)).Error!.Code.ShouldBe("ACT_SOURCE_TASK_CUSTOMER_CHANGED");
         var moved = (await Find(host, source, targetOrganization)).Value!;
         moved.ActivityId.ShouldBe(task.ActivityId); moved.OrganizationId.ShouldBe(targetOrganization);
-        (await Create(host, new(source, targetOrganization, employee, null, ActivityPriority.High))).Value.Created.ShouldBeFalse();
+        (await Create(host, new(source, targetOrganization, employee, null, ActivityPriority.High, Subject))).Value.Created.ShouldBeFalse();
     }
 
     [Fact]
     public async Task A_missing_customer_leaves_no_receipt_or_task()
     {
         var employee = await Employee(factory, CrmRoles.Technician); await using var host = Host(factory, employee); var source = Source();
-        (await Create(host, new(source, Guid.NewGuid(), employee, null, ActivityPriority.Normal))).Error!.Code.ShouldBe("CUS_ORGANIZATION_UNAVAILABLE");
+        (await Create(host, new(source, Guid.NewGuid(), employee, null, ActivityPriority.Normal, Subject))).Error!.Code.ShouldBe("CUS_ORGANIZATION_UNAVAILABLE");
         await using var scope = factory.Services.CreateAsyncScope();
         (await scope.ServiceProvider.GetRequiredService<ActivitiesDbContext>().SourceTaskLinks.CountAsync(l => l.SourceKey == SourceTaskIdentityRules.Key(source))).ShouldBe(0);
     }

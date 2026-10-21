@@ -184,7 +184,7 @@ public sealed class ActivityStatusConcurrencyTests(CrmWebFactory factory)
     {
         var organization = await Organization(factory); var employee = actor ?? await Employee(factory, CrmRoles.Technician);
         await using var host = Host(factory, employee);
-        var task = (await Create(host, new(Source(), organization, employee, DateTimeOffset.Parse("2090-01-01T10:30:45.123Z"), ActivityPriority.Normal))).Value;
+        var task = (await Create(host, new(Source(), organization, employee, DateTimeOffset.Parse("2090-01-01T10:30:45.123Z"), ActivityPriority.Normal, Subject))).Value;
         return new(organization, task.ActivityId);
     }
     private static HttpClient Client(WebApplicationFactory<Program> host, string role)

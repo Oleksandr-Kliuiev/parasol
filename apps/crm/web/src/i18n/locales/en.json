@@ -1552,7 +1552,8 @@
       "alert": "Alert",
       "customer": "Customer",
       "waiting": "Raised",
-      "resolved": "Resolved"
+      "resolved": "Resolved",
+      "task": "Task"
     },
     "source": "Source: {{name}}",
     "sourceNames": {
@@ -1579,7 +1580,10 @@
       "source": "Source",
       "openInSource": "Open in {{name}}",
       "noLink": "No link to alerts in {{name}} is set up.",
-      "notFound": "This alert is not stored in Parasoll."
+      "notFound": "This alert is not stored in Parasoll.",
+      "unsupported": "Parasoll does not create tasks from this source.",
+      "task": "Task",
+      "noTaskResolved": "No task. The alert is resolved."
     },
     "highlight": {
       "label": "Open alerts",
@@ -1587,6 +1591,61 @@
       "critical_other": "{{count}} critical",
       "noCritical": "None critical",
       "none": "No open alerts"
+    },
+    "task": {
+      "assign": "Assign",
+      "assignNamed": "Assign {{title}}",
+      "assigned": "Assigned",
+      "unassigned": "Unassigned",
+      "due": "due {{due}}",
+      "noDue": "no due date",
+      "open": "Open task",
+      "openNamed": "{{facts}}: task {{subject}}",
+      "deleted": "Task deleted",
+      "status": {
+        "Open": "Open",
+        "Done": "Done",
+        "Cancelled": "Cancelled"
+      }
+    },
+    "dialog": {
+      "title": "Assign alert",
+      "subject": "Task subject",
+      "subjectHint": "Starts as the alert's title. Edit it if another wording is clearer.",
+      "subjectRequired": "Write a subject.",
+      "subjectTooLong": "Use at most 256 characters.",
+      "subjectInvalid": "Write a subject on one line, at most 256 characters.",
+      "assignee": "Assignee",
+      "assignToMe": "Me",
+      "assigneeRequired": "Choose who gets the task.",
+      "assigneeInvalid": "This person cannot get tasks from alerts. Choose someone else.",
+      "due": "Due (optional)",
+      "dueShortcuts": "Quick due dates",
+      "dueIn": {
+        "today": "Today 16:00",
+        "tomorrow": "Tomorrow 16:00",
+        "inThreeDays": "In 3 days",
+        "none": "No due date"
+      },
+      "invalidDue": "Enter a valid date and time.",
+      "priorityFrom": {
+        "Critical": "Priority: High, as the alert is critical.",
+        "Warning": "Priority: Normal, as the alert is a warning."
+      },
+      "summaryDue": "Creates a task for {{name}}, due {{due}}.",
+      "summaryNoDue": "Creates a task for {{name}} with no due date.",
+      "create": "Create task",
+      "creating": "Creating task…",
+      "created": "Task created.",
+      "existing": "This alert already had a task, so no new task was created.",
+      "hasTask": "This alert already has a task.",
+      "changed": "The alert changed after you opened it. Check it, then create the task.",
+      "resolved": "The alert is resolved, so no task can be created from it.",
+      "customerChanged": "The alert's task now belongs to another customer. Open that customer's activities to review it.",
+      "uncertain": "Parasoll could not confirm whether the task was created. Read the alert again to check before you try again.",
+      "refused": "The task was not created. Read the alert again and check your choices.",
+      "readAgain": "Read again",
+      "cannotCreate": "You can see this alert, but you cannot assign it."
     }
   },
   "taskTicket": {
@@ -2137,7 +2196,7 @@
     "selectedMissing": "This activity was not found for this customer. It may have been removed or moved.",
     "empty": "Nothing logged yet.",
     "saved": "Activity saved",
-    "saveSourceAssignee": "This employee cannot be assigned to a technical task. Choose an active employee with technical access. Your draft has been kept.",
+    "saveSourceAssignee": "This employee cannot be given a task made from an alert. Choose an active employee who can see service data. Your draft has been kept.",
     "saveConflict": "This activity changed or can no longer be edited as requested. Your draft has been kept. Close and reopen it to review the current record before saving again.",
     "saveFailed": "Saving was not confirmed. Your draft has been kept.",
     "invalidDue": "Enter a valid date and time.",
@@ -2188,6 +2247,16 @@
       "Open": "Open",
       "Done": "Done",
       "Cancelled": "Cancelled"
+    },
+    "source": {
+      "open": "Source",
+      "openNamed": "Source of {{subject}}",
+      "title": "Source of the task",
+      "note": "The alert as Parasoll stores it now.",
+      "gone": "The alert is no longer stored for this customer.",
+      "unsupported": "This task was made from a source Parasoll no longer reads.",
+      "openInAlerts": "Open in Alerts",
+      "noDescription": "No description. Source shows the alert the task was made from."
     }
   },
   "mail": {

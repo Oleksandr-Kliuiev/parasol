@@ -1552,7 +1552,8 @@
       "alert": "Driftsvarsel",
       "customer": "Kunde",
       "waiting": "Meldt",
-      "resolved": "Løyst"
+      "resolved": "Løyst",
+      "task": "Oppgåve"
     },
     "source": "Kjelde: {{name}}",
     "sourceNames": {
@@ -1579,7 +1580,10 @@
       "source": "Kjelde",
       "openInSource": "Opne i {{name}}",
       "noLink": "Det er ikkje sett opp nokon lenkje til driftsvarsel i {{name}}.",
-      "notFound": "Dette driftsvarselet er ikkje lagra i Parasoll."
+      "notFound": "Dette driftsvarselet er ikkje lagra i Parasoll.",
+      "unsupported": "Parasoll opprettar ikkje oppgåver frå denne kjelda.",
+      "task": "Oppgåve",
+      "noTaskResolved": "Inga oppgåve. Driftsvarselet er løyst."
     },
     "highlight": {
       "label": "Opne driftsvarsel",
@@ -1587,6 +1591,61 @@
       "critical_other": "{{count}} kritiske",
       "noCritical": "Ingen kritiske",
       "none": "Ingen opne driftsvarsel"
+    },
+    "task": {
+      "assign": "Tildel",
+      "assignNamed": "Tildel {{title}}",
+      "assigned": "Tildelt",
+      "unassigned": "Ikkje tildelt",
+      "due": "frist {{due}}",
+      "noDue": "ingen frist",
+      "open": "Opne oppgåva",
+      "openNamed": "{{facts}}: oppgåva {{subject}}",
+      "deleted": "Oppgåva er sletta",
+      "status": {
+        "Open": "Open",
+        "Done": "Fullført",
+        "Cancelled": "Avbroten"
+      }
+    },
+    "dialog": {
+      "title": "Tildel driftsvarsel",
+      "subject": "Emne for oppgåva",
+      "subjectHint": "Startar som tittelen på driftsvarselet. Endre han dersom ein annan ordlyd er tydelegare.",
+      "subjectRequired": "Skriv eit emne.",
+      "subjectTooLong": "Bruk høgst 256 teikn.",
+      "subjectInvalid": "Skriv eit emne på éi linje, høgst 256 teikn.",
+      "assignee": "Ansvarleg",
+      "assignToMe": "Meg",
+      "assigneeRequired": "Vel kven som får oppgåva.",
+      "assigneeInvalid": "Denne personen kan ikkje få oppgåver frå driftsvarsel. Vel ein annan.",
+      "due": "Frist (valfri)",
+      "dueShortcuts": "Raske fristar",
+      "dueIn": {
+        "today": "I dag 16:00",
+        "tomorrow": "I morgon 16:00",
+        "inThreeDays": "Om 3 dagar",
+        "none": "Ingen frist"
+      },
+      "invalidDue": "Skriv inn ein gyldig dato og tid.",
+      "priorityFrom": {
+        "Critical": "Prioritet: Høg, fordi driftsvarselet er kritisk.",
+        "Warning": "Prioritet: Normal, fordi driftsvarselet er ei åtvaring."
+      },
+      "summaryDue": "Opprettar ei oppgåve til {{name}} med frist {{due}}.",
+      "summaryNoDue": "Opprettar ei oppgåve til {{name}} utan frist.",
+      "create": "Opprett oppgåve",
+      "creating": "Opprettar oppgåve…",
+      "created": "Oppgåva er oppretta.",
+      "existing": "Driftsvarselet hadde alt ei oppgåve, så inga ny vart oppretta.",
+      "hasTask": "Driftsvarselet har alt ei oppgåve.",
+      "changed": "Driftsvarselet er endra etter at du opna det. Sjå over det, og opprett så oppgåva.",
+      "resolved": "Driftsvarselet er løyst, så det kan ikkje opprettast noka oppgåve frå det.",
+      "customerChanged": "Oppgåva til driftsvarselet høyrer no til ein annan kunde. Opne aktivitetane til den kunden for å sjå over ho.",
+      "uncertain": "Parasoll kunne ikkje stadfeste om oppgåva vart oppretta. Les driftsvarselet på nytt for å sjekke før du prøver igjen.",
+      "refused": "Oppgåva vart ikkje oppretta. Les driftsvarselet på nytt og sjå over vala dine.",
+      "readAgain": "Les på nytt",
+      "cannotCreate": "Du kan sjå dette driftsvarselet, men ikkje tildele det."
     }
   },
   "taskTicket": {
@@ -2135,7 +2194,7 @@
     "selectedMissing": "Fann ikkje denne aktiviteten for kunden. Han kan ha vorte fjerna eller flytta.",
     "empty": "Ingenting er loggført enno.",
     "saved": "Aktiviteten er lagra",
-    "saveSourceAssignee": "Denne medarbeidaren kan ikkje tildelast ei teknisk oppgåve. Vel ein aktiv medarbeidar med teknisk tilgang. Utkastet ditt er behalde.",
+    "saveSourceAssignee": "Denne medarbeidaren kan ikkje få ei oppgåve laga frå eit driftsvarsel. Vel ein aktiv medarbeidar som kan sjå servicedata. Utkastet ditt er behalde.",
     "saveConflict": "Aktiviteten er endra eller kan ikkje lenger redigerast som førespurd. Utkastet ditt er behalde. Lukk og opne han igjen for å sjå gjeldande opplysningar før du lagrar på nytt.",
     "saveFailed": "Lagringa vart ikkje stadfesta. Utkastet ditt er behalde.",
     "invalidDue": "Oppgi ein gyldig dato og eit gyldig klokkeslett.",
@@ -2186,6 +2245,16 @@
       "Open": "Open",
       "Done": "Fullført",
       "Cancelled": "Avbroten"
+    },
+    "source": {
+      "open": "Kjelde",
+      "openNamed": "Kjelde for {{subject}}",
+      "title": "Kjelda til oppgåva",
+      "note": "Driftsvarselet slik Parasoll lagrar det no.",
+      "gone": "Driftsvarselet er ikkje lenger lagra for denne kunden.",
+      "unsupported": "Denne oppgåva vart laga frå ei kjelde Parasoll ikkje lenger les.",
+      "openInAlerts": "Opne i Driftsvarsel",
+      "noDescription": "Inga skildring. Kjelde viser driftsvarselet oppgåva vart laga frå."
     }
   },
   "mail": {

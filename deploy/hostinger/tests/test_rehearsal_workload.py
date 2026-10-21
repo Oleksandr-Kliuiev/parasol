@@ -57,15 +57,19 @@ class WorkloadTests(unittest.TestCase):
             with self.subTest(table=table):
                 self.assertIn(f'IF EXISTS (SELECT 1 FROM {workload.sql_table(table)})', query)
                 self.assertIn(f'INSERT {workload.sql_table(table)}', query)
-        # Only the columns service.Alerts has today; columns added later must be nullable or defaulted.
-        self.assertIn('INSERT [service].[Alerts] (Id,System,ExternalId,OrganizationId,Severity,Title,DeviceName,'
-                      'CreatedAtSource)\n VALUES (' + f"'{fixture.alert}','atera','920029'", query)
-        self.assertIn(f"VALUES ('{fixture.source_key}','{fixture.task}','atera','atera','900029','920029','Task'", query)
+        # The alert carries its Atera customer, as the receipt does; columns added later must be nullable or defaulted.
+        self.assertIn('INSERT [service].[Alerts] (Id,System,ExternalId,OrganizationId,ExternalCustomerId,Severity,Title,DeviceName,'
+                      'CreatedAtSource)\n VALUES (' + f"'{fixture.alert}','atera','920029','{fixture.organization}','900029'", query)
+        self.assertIn(f"VALUES ('{fixture.source_key}','{fixture.task}','atera','alert','900029','920029','Task'", query)
+        # The task's subject is the alert's title, as the CRM offers it.
+        self.assertIn(f"VALUES ('{fixture.task}','Task','{fixture.organization}','Synthetic recovery alert','High','Open'", query)
 
     def test_receipt_key_is_the_crm_source_task_key_of_the_atera_alert(self):
-        # SourceTaskIdentityRules.Key hashes the System.Text.Json form of the identity array.
-        expected = hashlib.sha256(b'["SourceTaskV1","atera","atera","900029","920029","Task"]').hexdigest()
+        # SourceTaskIdentityRules.Key hashes the System.Text.Json form of the identity array; the CRM's unit test
+        # SourceTaskTests pins the same digest for the same alert.
+        expected = hashlib.sha256(b'["SourceTaskV1","atera","alert","900029","920029","Task"]').hexdigest()
         self.assertEqual(self.fixture.source_key, expected)
+        self.assertEqual(expected, '8f7340d260a6b240d65f9673b311315552400b89b6fa17821b1fc5c60aae6aa6')
 
     def test_fingerprint_requires_every_sql_row_instead_of_accepting_truncated_output(self):
         count = len(workload.SQL_TABLES)

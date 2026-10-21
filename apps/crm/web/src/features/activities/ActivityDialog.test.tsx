@@ -67,7 +67,7 @@ it.each(['2025-08-20T13:45', ''])('sends an explicitly changed due value %s as a
 });
 
 it.each([
-  [400, 'ACT_SOURCE_TASK_ASSIGNEE_INVALID', 'This employee cannot be assigned to a technical task.'],
+  [400, 'ACT_SOURCE_TASK_ASSIGNEE_INVALID', 'This employee cannot be given a task made from an alert.'],
   [409, 'ACT_SOURCE_TASK_IDENTITY_LOCKED', 'This activity changed or can no longer be edited as requested.'],
   [412, 'CONCURRENCY_CONFLICT', 'This activity changed or can no longer be edited as requested.'],
 ] as const)('shows HTTP%s refusal, keeps the draft and never retries the write automatically', async (status, code, message) => {
@@ -121,7 +121,7 @@ it('resets the draft and refusal when switching to a different activity', async 
   const state = setup(null, { status: 400, code: 'ACT_SOURCE_TASK_ASSIGNEE_INVALID' }, (value, onClose) => <Editor original={value} onClose={onClose} />);
   await screen.findByRole('dialog'); await userEvent.type(screen.getByRole('textbox', { name: 'Subject' }), ' old draft');
   await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-  const refusal = await screen.findByText(/^This employee cannot be assigned/);
+  const refusal = await screen.findByText(/^This employee cannot be given/);
   const next = { ...activity('2025-07-15T09:15:23.456Z'), id: 'another-task', subject: 'Another task', etag: '"another-version"' };
   await act(async () => replace(next));
   expect(refusal).not.toBeInTheDocument(); expect(screen.getByRole('textbox', { name: 'Subject' })).toHaveValue('Another task');
@@ -153,7 +153,7 @@ it.each(['success', 'failure'])('ignores late %s UI effects after saving A, clos
   expect(state.onClose).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('dialog')).toBeVisible();
   expect(screen.getByRole('textbox', { name: 'Subject' })).toHaveValue('Another task B draft');
-  expect(screen.queryByText(/^This employee cannot be assigned/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^This employee cannot be given/)).not.toBeInTheDocument();
   expect(state.writes()).toHaveLength(1);
 });
 

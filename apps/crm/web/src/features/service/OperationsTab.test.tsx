@@ -52,24 +52,29 @@ describe('Customer Drift tab (DEV-12)', () => {
       .toEqual(['Saved service data', 'Open alerts', 'Devices', 'Tickets', 'Ticket requests']);
   });
 
-  it('lists open alerts with severity, device and age, and counts open alerts per device', async () => {
+  it('lists open alerts with severity, device, age and task, asks one task lookup per page and counts alerts per device', async () => {
     const alerts = [syntheticAlert({ id: 'a1' }), syntheticAlert({ id: 'a2', severity: 'Warning', title: 'Backup is late', deviceName: null })];
-    const fetch = vi.fn(async (url: string) => {
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes('/summary')) return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Server: 1 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 1, lastSyncedAt: '2026-10-21T08:00:00Z' });
       if (url.includes('/service/alerts')) return json(alertPage(alerts));
       if (url.includes('/service/devices')) return json({ items: [{ ...device(1), machineName: 'SRV-01', type: 'Server', openAlerts: 2 }, device(2)], nextCursor: null, totalCount: 2 });
+      if (url.endsWith('/source-tasks/lookup') && init?.method === 'POST') return json({ items: [{ alertId: 'a1', task: {
+        id: 't1', organizationId: 'o1', subject: 'Free disk space', status: 'Open', assignee: { id: 'u2', name: 'Ola Tekniker' }, dueAt: null, isAvailable: true } }] });
       return json(empty);
     });
     vi.stubGlobal('fetch', fetch);
-    renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/', testUser(['service.read']));
+    renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/',
+      testUser(['service.read', 'activities.read', 'activities.write']));
     const panel = within(await screen.findByRole('region', { name: 'Open alerts' }));
     const rows = await panel.findAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual([expect.stringContaining('Disk almost full on SRV-01'), expect.stringContaining('Backup is late')]);
     expect(within(rows[0]!).getByText('Critical')).toBeVisible();
     expect(within(rows[0]!).getByText(/^SRV-01/)).toBeVisible();
     expect(rows[0]!.querySelector('time')).toHaveAttribute('dateTime', '2026-10-21T06:00:00Z');
+    expect(await within(rows[0]!).findByRole('link', { name: /^Ola Tekniker · no due date: task Free disk space/ })).toBeVisible();
+    expect(within(rows[1]!).getByRole('button', { name: 'Assign Backup is late' })).toBeVisible();
     expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/alerts?organizationId=o1&limit=25');
-    await waitFor(() => expect(screen.getByRole('region', { name: 'Devices' })).toBeVisible());
+    await waitFor(() => expect(fetch.mock.calls.filter(([url]) => url.endsWith('/source-tasks/lookup'))).toHaveLength(1));
     const devices = within(screen.getByRole('region', { name: 'Devices' }));
     expect(devices.getByText('2 open alerts')).toBeVisible();
     // A device without open alerts says nothing about them.

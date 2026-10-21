@@ -22,6 +22,8 @@ import { SavedServiceReadState } from './SavedServiceReadState';
 import { deviceTypes, type Alert } from './types';
 import { AlertAge, AlertFacts, AlertSeverityBadge } from './alerts/AlertBits';
 import { AlertDetailDrawer } from './alerts/AlertDetailDrawer';
+import { AlertTaskCell } from './alerts/AlertTaskCell';
+import { useAlertTaskLinks } from './alerts/alertTasks';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -75,6 +77,8 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
   // The region mounts only once the saved list is available: measure again then, not only when the row count changes.
   const ticketScroll = useRef<HTMLDivElement>(null); const ticketEdges = useScrollEdges(ticketScroll, 'x', `${tickets.available}:${tickets.items.length}`);
   const devices = useDevices(organizationId, scope); const alerts = useAlerts(organizationId, scope); const requests = useTicketRequests(organizationId, scope);
+  // One task lookup per page of alerts the tab has read, never one per row.
+  const alertTasks = useAlertTaskLinks(alerts.available ? (alerts.data?.pages ?? []).map((page) => page.items.map((alert) => alert.id)) : []);
   const checking = summary.isFetching || tickets.checking || devices.checking || alerts.checking || requests.checking;
   useEffect(() => { if (!checking) refreshing.current = false; }, [checking, revision]);
   const refresh = () => { if (checking || refreshing.current) return; refreshing.current = true; setRevision(value => value + 1); };
@@ -125,7 +129,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
       <ul className={flush.list}>{alerts.items.map(alert => <RecordRow key={alert.id} icon={<Alert16Regular />} tone={alert.severity === 'Critical' ? 'ember' : 'saffron'}
         title={<Link {...restoreFocusTarget} as="button" className={styles.alertTitle} onClick={() => openAlert(alert)}>{alert.title}</Link>}
         meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />]} />}
-        end={<AlertSeverityBadge severity={alert.severity} />} />)}</ul>
+        end={<><AlertSeverityBadge severity={alert.severity} /><AlertTaskCell alert={alert} task={alertTasks.links.get(alert.id)} /></>} />)}</ul>
       {alerts.available && alerts.items.length === 0 && <EmptyState icon={<AlertOn24Regular />} message={t(nothingSaved ? 'service.nothingSavedShort' : 'service.noAlerts')} />}
       <ListFooter shown={alerts.items.length} total={alerts.total} hasMore={alerts.hasNextPage} loading={alerts.isFetchingNextPage} onMore={() => void alerts.fetchNextPage()} />
     </Panel>

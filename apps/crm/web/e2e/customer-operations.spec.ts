@@ -31,6 +31,7 @@ test('the Drift tab lists a customer’s open alerts first, then its devices wit
     new RegExp(`${customer.marker} service stopped.*Critical`), new RegExp(`${customer.marker} disk almost full.*Critical`),
     new RegExp(`${customer.marker} backup is late.*Warning`)]);
   await expect(alerts.getByRole('listitem').first().locator('time')).toHaveAttribute('datetime', /T/);
+  await expect(alerts.getByRole('button', { name: `Assign ${customer.marker} disk almost full`, exact: true })).toBeVisible();
   const devices = page.getByRole('region', { name: 'Devices', exact: true });
   await expect(devices.getByRole('listitem').filter({ hasText: server }).getByText('3 open alerts', { exact: true })).toBeVisible();
   await expect(devices.getByRole('listitem').filter({ hasText: `PC-${customer.marker}` }).getByText(/open alert/)).toHaveCount(0);

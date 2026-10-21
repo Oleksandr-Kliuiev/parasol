@@ -36,7 +36,7 @@ export interface Activity {
   createdAt: string;
   createdBy: ActivityRef | null;
   etag: string;
-  /** Presence only: the task was created from a technical source, whose text is never copied into the task. */
+  /** The task was made from an alert of a source the CRM reads (M38): its Source button reads the alert as it is now. */
   hasTechnicalSource?: boolean;
 }
 

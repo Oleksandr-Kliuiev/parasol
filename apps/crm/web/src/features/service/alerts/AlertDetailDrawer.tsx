@@ -9,6 +9,7 @@ import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
+import { AlertTaskSection } from './AlertTaskSection';
 import { sourceName } from './alertText';
 import { useAlert } from './useAlertQueue';
 
@@ -64,6 +65,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
               : <Text size={200} className={styles.muted}>{t('alerts.detail.noLink', { name: sourceName(t, alert.system) })}</Text>}
           </span> },
         ]} />
+        <AlertTaskSection alert={alert} onNavigate={onClose} />
       </>}
     </DrawerBody>
   </OverlayDrawer>;

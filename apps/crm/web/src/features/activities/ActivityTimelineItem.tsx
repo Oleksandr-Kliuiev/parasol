@@ -10,6 +10,7 @@ import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import type { Activity, ActivityType } from './types';
 import { ActivityStatusFeedback } from './ActivityStatusFeedback';
 import type { StatusFocusRequest } from './useActivityStatusCommands';
+import { TaskSourceButton } from './TaskSourceButton';
 import { TaskTicketButton } from './TaskTicketButton';
 
 const useStyles = makeStyles({
@@ -92,6 +93,7 @@ export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPen
         {activity.assignee ? ` · ${activity.assignee.name}` : ''}
         {activity.status === 'Done' && activity.completedAt ? ` · ${t('activities.doneAt', { at: formatDateTime(activity.completedAt) })}` : ''}
       </div>
+      <TaskSourceButton activity={activity} />
       <TaskTicketButton activity={activity} onCloseAfterChange={onTicketChanged} />
       {statusStale && <ActivityStatusFeedback activity={activity} />}
     </span>

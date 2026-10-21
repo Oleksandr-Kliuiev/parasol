@@ -14,6 +14,7 @@ import { useActivityActions } from './api';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { usePersonalTasks } from './usePersonalTasks';
 import { activityUrl } from './activityNavigation';
+import { TaskSourceButton } from './TaskSourceButton';
 import type { Activity } from './types';
 import { useActivityStatusCommands } from './useActivityStatusCommands';
 import { ActivityStatusFeedback } from './ActivityStatusFeedback';
@@ -87,9 +88,10 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
     else if (outcome.kind === 'error') notify(t('errors.generic'), 'error', errorMessage(outcome.error, t));
   };
 
-  // The same actions in the row and in the side panel: the ticket and its hours, done.
+  // The same actions in the row and in the side panel: the alert it was made from, the ticket and its hours, done.
   // In the side panel there is room for the word next to the done mark.
   const actionsOf = (activity: Activity, labelled = false) => <>
+    <TaskSourceButton activity={activity} />
     <TaskTicketButton activity={activity} onCloseAfterChange={refreshAfterTicket} />
     {canWrite && <Button
       size="small"

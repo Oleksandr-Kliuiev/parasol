@@ -15,6 +15,7 @@ import { alertSeverities, type AlertSeverity } from '../types';
 import { AlertCustomerFilter } from './AlertCustomerFilter';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { AlertQueueEmpty, AlertQueueList } from './AlertQueueList';
+import { pageIds, useAlertTaskLinks } from './alertTasks';
 import { useAlertQueue } from './useAlertQueue';
 
 const useStyles = makeStyles({
@@ -42,6 +43,7 @@ function Queue() {
   const organizationId = params.get('customer');
   const filters = { state, severity, organizationId, search: debounced } as const;
   const queue = useAlertQueue(filters);
+  const links = useAlertTaskLinks(pageIds(queue.pages));
   const filtered = severity !== null || organizationId !== null || debounced !== '';
 
   const setParam = (key: string, value: string | null) => {
@@ -93,7 +95,7 @@ function Queue() {
         {total !== null && total > 0 && <Text className={styles.totals} role="status">
           {t('alerts.totals', { count: total, critical: queue.critical ?? 0, warning: queue.warning ?? 0 })}
         </Text>}
-        <AlertQueueList alerts={queue.items} resolved={state === 'Resolved'} empty={empty} onOpen={(alert) => openPeek(alert.id)}
+        <AlertQueueList alerts={queue.items} tasks={links.links} resolved={state === 'Resolved'} empty={empty} onOpen={(alert) => openPeek(alert.id)}
           footer={<ListFooter shown={queue.items.length} total={total} hasMore={Boolean(queue.hasNextPage)} loading={queue.isFetchingNextPage}
             onMore={() => void queue.fetchNextPage()} />} />
       </>}
