@@ -96,7 +96,7 @@
     "notFoundTitle": "Page not found",
     "notFoundBody": "The page or record does not exist, or it has been deleted.",
     "noAccessTitle": "You don't have access to Parasoll",
-    "noAccessBody": "Your Microsoft account is signed in, but no CRM role is assigned to it. Ask an administrator to add you to one of the CRM groups in Entra ID.",
+    "noAccessBody": "You are signed in with your Microsoft account, but you are not in the Parasoll group yet. Ask an administrator to add you to the group “Parasoll – full tilgang” in Entra ID.",
     "forbidden": "You don't have permission to do this.",
     "concurrency": "Someone else changed this record while you were editing. Reload to see their changes, then apply yours again.",
     "validation": "Check the highlighted fields.",
@@ -217,8 +217,8 @@
     "signInLoop": "Signing in did not complete after several attempts. Close other tabs of the CRM and try again; if it keeps happening, tell the administrator.",
     "signInLoopRetry": "Try again",
     "forbiddenTitle": "No access",
-    "forbiddenPage": "Your role does not open this page. Ask an administrator if you need it.",
-    "forbiddenRead": "Your role does not give access to this information. Ask an administrator if you need it."
+    "forbiddenPage": "You don't have access to this page. Ask an administrator if you need it.",
+    "forbiddenRead": "You don't have access to this information. Ask an administrator if you need it."
   },
   "status": {
     "Lead": "Lead",
@@ -654,7 +654,7 @@
   },
   "users": {
     "title": "Users",
-    "subtitle": "People who have signed in. Roles are assigned in Microsoft Entra ID and reach Parasoll within a few minutes; a new employee appears after the first sign-in.",
+    "subtitle": "People who have signed in. Access is given in Microsoft Entra ID, normally through the group “Parasoll – full tilgang”, and reaches Parasoll within a few minutes; a new employee appears after the first sign-in.",
     "columns": {
       "name": "Name",
       "email": "E-mail",

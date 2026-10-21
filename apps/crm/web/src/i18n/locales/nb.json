@@ -96,7 +96,7 @@
     "notFoundTitle": "Fant ikke siden",
     "notFoundBody": "Siden eller posten finnes ikke, eller den er slettet.",
     "noAccessTitle": "Du har ikke tilgang til Parasoll",
-    "noAccessBody": "Du er logget inn med Microsoft-kontoen din, men den har ingen CRM-rolle. Be en administrator legge deg til i en av CRM-gruppene i Entra ID.",
+    "noAccessBody": "Du er logget inn med Microsoft-kontoen din, men du er ikke med i Parasoll-gruppen ennå. Be en administrator legge deg til i gruppen «Parasoll – full tilgang» i Entra ID.",
     "forbidden": "Du har ikke tillatelse til å gjøre dette.",
     "concurrency": "Noen andre endret posten mens du redigerte. Last inn på nytt for å se endringene, og legg inn dine igjen.",
     "validation": "Kontroller de markerte feltene.",
@@ -217,8 +217,8 @@
     "signInLoop": "Innloggingen ble ikke fullført etter flere forsøk. Lukk andre faner med CRM og prøv igjen. Hvis det fortsetter, si fra til administrator.",
     "signInLoopRetry": "Prøv igjen",
     "forbiddenTitle": "Ingen tilgang",
-    "forbiddenPage": "Rollen din gir ikke tilgang til denne siden. Spør en administrator hvis du trenger den.",
-    "forbiddenRead": "Rollen din gir ikke tilgang til denne informasjonen. Spør en administrator hvis du trenger den."
+    "forbiddenPage": "Du har ikke tilgang til denne siden. Spør en administrator hvis du trenger den.",
+    "forbiddenRead": "Du har ikke tilgang til denne informasjonen. Spør en administrator hvis du trenger den."
   },
   "status": {
     "Lead": "Lead",
@@ -654,7 +654,7 @@
   },
   "users": {
     "title": "Brukere",
-    "subtitle": "Personer som har logget inn. Roller tildeles i Microsoft Entra ID og når Parasoll innen noen minutter; en ny ansatt vises etter første innlogging.",
+    "subtitle": "Personer som har logget inn. Tilgang gis i Microsoft Entra ID, vanligvis gjennom gruppen «Parasoll – full tilgang», og når Parasoll innen noen minutter; en ny ansatt vises etter første innlogging.",
     "columns": {
       "name": "Navn",
       "email": "E-post",

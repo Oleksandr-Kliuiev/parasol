@@ -174,17 +174,25 @@ public static class BffEndpoints
 
     internal static string SafeReturnUrl(string? returnUrl) => ReturnUrl.Safe(returnUrl);
 
+    /// <summary>
+    /// M38: every employee has full access (the Entra group that gives Crm.Admin), so the sign-in that stands for them comes
+    /// first; the narrower roles stay below it for testing the permission checks the code keeps.
+    /// </summary>
     private static string DevLoginPage(string returnUrl)
     {
-        var buttons = string.Join("\n", CrmRoles.All.Select(role =>
-            $"<a href=\"/bff/dev-login?role={WebUtility.UrlEncode(role)}&amp;returnUrl={WebUtility.UrlEncode(returnUrl)}\">{WebUtility.HtmlEncode(role)}</a>"));
+        string Link(string role, string label) =>
+            $"<a href=\"/bff/dev-login?role={WebUtility.UrlEncode(role)}&amp;returnUrl={WebUtility.UrlEncode(returnUrl)}\">{label}</a>";
+        var employee = Link(CrmRoles.Admin, $"Employee (full access) <small>{WebUtility.HtmlEncode(CrmRoles.Admin)}</small>");
+        var others = string.Join("\n", CrmRoles.All.Where(role => role != CrmRoles.Admin).Select(role => Link(role, WebUtility.HtmlEncode(role))));
         return $$"""
             <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Development sign-in</title>
             <style>html{color-scheme:light}body{background:#f3f5f6;font-family:system-ui;max-width:420px;margin:64px auto;padding:0 16px;color:#15212a}
             a{display:block;padding:10px 14px;margin:6px 0;border:1px solid #d9e0e4;border-radius:6px;text-decoration:none;color:#0a6b73}
-            a:hover{background:#ddeff0}p{color:#5a6a74}</style></head><body>
-            <h1>Development sign-in</h1><p>Entra ID is disabled (Auth:Mode=Development). Choose a role:</p>
-            {{buttons}}
+            a:hover{background:#ddeff0}p,small{color:#5a6a74}h2{font-size:16px;margin-top:28px}</style></head><body>
+            <h1>Development sign-in</h1><p>Entra ID is disabled (Auth:Mode=Development). Every employee signs in with full access:</p>
+            {{employee}}
+            <h2>Other roles</h2><p>Only for testing the permission checks; no employee is given them.</p>
+            {{others}}
             </body></html>
             """;
     }
