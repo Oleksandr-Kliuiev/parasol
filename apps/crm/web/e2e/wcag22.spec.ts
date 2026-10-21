@@ -153,7 +153,9 @@ test('content reflows at 320 px and survives text-spacing overrides', async ({ p
         .filter((el) => {
           const style = getComputedStyle(el);
           const rect = el.getBoundingClientRect();
-          return rect.width > 0 && style.overflow !== 'visible' && style.textOverflow !== 'ellipsis' && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
+          // A visually hidden label (a 1×1 px box read only by screen readers) shows no text that spacing could cut off.
+          const shown = rect.width > 1 && rect.height > 1;
+          return shown && style.overflow !== 'visible' && style.textOverflow !== 'ellipsis' && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
         })
         .map((el) => `${el.tagName.toLowerCase()}[${el.textContent?.trim().slice(0, 30)}]`),
     );
@@ -171,8 +173,9 @@ test('the page is usable at 200 % browser zoom and on a long name', async ({ pag
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow, `scrolls by ${overflow}px: ${(await stickingOut(page)).join(' | ')}`).toBeLessThanOrEqual(1);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: /Open navigation/ }).click();
-  await expect(page.getByRole('navigation').getByRole('link', { name: 'Organizations' })).toBeVisible();
+  // 640 px is a phone layout: the full menu opens from "More" in the bottom tabs.
+  await page.getByRole('navigation', { name: 'Main sections' }).getByRole('button', { name: 'More' }).click();
+  await expect(page.getByRole('navigation', { name: 'Main menu' }).getByRole('link', { name: 'Organizations' })).toBeVisible();
 });
 
 // DEV-18 item 5: the same pages in Bokmål and Nynorsk, on a phone, with a long customer name — no missing text, nothing

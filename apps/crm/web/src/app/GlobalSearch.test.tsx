@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { SearchResponse } from '../api/types';
 import { renderRoutes, testUser } from '../test/renderWithProviders';
@@ -65,7 +65,9 @@ describe('GlobalSearch', () => {
 
     await user.type(screen.getByRole('combobox', { name: 'Search organizations' }), 'billing');
 
-    expect(await screen.findByText('Nothing found.')).toBeInTheDocument();
+    expect(await within(await screen.findByRole('listbox')).findByText('Nothing found.')).toBeInTheDocument();
+    // The same words reach screen readers through the status beside the list.
+    expect(screen.getByRole('status')).toHaveTextContent('Nothing found.');
     expect(screen.queryByRole('option')).toBeNull();
   });
 });

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
+  Avatar,
   Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -22,6 +22,9 @@ import {
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
+import { DocumentCopy24Regular, History16Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import type { DuplicatePair, DuplicateSide } from '../../api/types';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
@@ -32,6 +35,7 @@ import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { OrganizationStatusBadge } from '../../shared/components/StatusBadges';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatDateTime } from '../../shared/utils/format';
@@ -40,12 +44,14 @@ import { useDuplicateActions, useDuplicates, useMerges } from './duplicatesApi';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  muted: { color: tokens.colorNeutralForeground3 },
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
+  muted: { color: h.muted },
+  stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  // One possible pair: a card with the reasons on a well strip and the two organizations side by side.
   pair: {
     backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
+    border: `1px solid ${h.line}`,
+    borderRadius: '20px',
+    boxShadow: tokens.shadow4,
     overflow: 'hidden',
   },
   reasons: {
@@ -53,28 +59,35 @@ const useStyles = makeStyles({
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: tokens.spacingHorizontalS,
-    paddingInline: tokens.spacingHorizontalL,
-    paddingBlock: tokens.spacingVerticalS,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    gap: '8px',
+    paddingLeft: '20px',
+    paddingRight: '12px',
+    paddingTop: '10px',
+    paddingBottom: '10px',
+    backgroundColor: h.surface2,
+    borderBottom: `1px solid ${h.line}`,
   },
-  badges: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS },
+  badges: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
   sides: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))' },
   side: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalS,
-    paddingInline: tokens.spacingHorizontalL,
-    paddingBlock: tokens.spacingVerticalM,
-    ':first-child': { borderRight: `1px solid ${tokens.colorNeutralStroke2}` },
+    gap: '12px',
+    paddingLeft: '20px',
+    paddingRight: '20px',
+    paddingTop: '16px',
+    paddingBottom: '18px',
+    ':first-child': { borderRight: `1px solid ${h.line}` },
   },
-  sideHeader: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'baseline' },
-  facts: { margin: 0, display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: tokens.spacingHorizontalM, rowGap: tokens.spacingVerticalXXS },
-  term: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  value: { margin: 0, fontSize: tokens.fontSizeBase300, overflowWrap: 'anywhere', fontVariantNumeric: 'tabular-nums' },
-  different: { backgroundColor: tokens.colorPaletteYellowBackground1, borderRadius: tokens.borderRadiusSmall, paddingInline: '2px' },
-  tableWrap: { overflowX: 'auto' },
+  sideHeader: { display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' },
+  sideName: { fontFamily: h.display, fontSize: '17px', lineHeight: '22px', fontWeight: 600, color: 'inherit' },
+  facts: { margin: 0, display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: '16px', rowGap: '6px' },
+  term: { color: h.muted, fontSize: '13px' },
+  value: { margin: 0, fontSize: '14px', fontWeight: 600, overflowWrap: 'anywhere', fontVariantNumeric: 'tabular-nums' },
+  different: { backgroundColor: h.saffronSoft, color: h.saffronT, borderRadius: '6px', paddingLeft: '4px', paddingRight: '4px' },
+  note: { color: h.muted, fontSize: '12px' },
+  // The table sits flush in its panel: no second card around it.
+  tableWrap: { border: 'none', borderRadius: 0, boxShadow: 'none' },
 });
 
 type Field = 'orgNumber' | 'city' | 'email' | 'phone' | 'domains';
@@ -97,6 +110,7 @@ export function DuplicatesPage() {
   const merges = useMerges();
   const actions = useDuplicateActions();
   const [pending, setPending] = useState<{ target: DuplicateSide; source: DuplicateSide } | null>(null);
+  const shown = useKeptWhileClosing(pending);
   const restoreFocusTarget = useRestoreFocusTarget();
 
   const merge = async () => {
@@ -131,10 +145,9 @@ export function DuplicatesPage() {
   const side = (current: DuplicateSide, other: DuplicateSide) => (
     <div className={styles.side}>
       <div className={styles.sideHeader}>
-        <AppLink to={`/organizations/${current.id}`}>
-          <Text weight="semibold" size={400}>
-            {current.name}
-          </Text>
+        <Avatar name={current.name} size={36} color="colorful" aria-hidden />
+        <AppLink to={`/organizations/${current.id}`} className={styles.sideName}>
+          {current.name}
         </AppLink>
         <OrganizationStatusBadge status={current.status} />
       </div>
@@ -150,14 +163,13 @@ export function DuplicatesPage() {
           );
         })}
       </dl>
-      <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+      <Text className={styles.note}>
         {t('duplicates.contacts', { count: current.activeContacts })} · {t('duplicates.created', { date: formatDate(current.createdAt) })}
       </Text>
       {canMerge && (
         <div>
           <Button
             {...restoreFocusTarget}
-            appearance="primary"
             size="small"
             aria-label={`${t('duplicates.keep')}: ${current.name}`}
             onClick={() => setPending({ target: current, source: other })}
@@ -181,7 +193,7 @@ export function DuplicatesPage() {
         {duplicates.error && <ErrorState error={duplicates.error} onRetry={() => void duplicates.refetch()} />}
         {duplicates.data?.items.length === 0 && (
           <Panel>
-            <EmptyState message={t('duplicates.empty')} />
+            <EmptyState icon={<DocumentCopy24Regular />} message={t('duplicates.empty')} />
           </Panel>
         )}
         {duplicates.data && duplicates.data.totalCount != null && duplicates.data.totalCount > duplicates.data.items.length && (
@@ -211,7 +223,7 @@ export function DuplicatesPage() {
         ))}
 
         {merges.items.length > 0 && (
-          <Panel title={t('duplicates.recent')}>
+          <Panel title={t('duplicates.recent')} icon={<History16Regular />} flush>
             <ScrollTable className={styles.tableWrap}>
               <Table size="small">
                 <TableHeader>
@@ -255,10 +267,10 @@ export function DuplicatesPage() {
 
       <Dialog open={pending !== null} onOpenChange={(_, d) => !d.open && setPending(null)}>
         <DialogSurface>
-          {pending && (
+          {shown && (
             <DialogBody>
-              <DialogTitle>{t('duplicates.confirmTitle', { source: pending.source.name, target: pending.target.name })}</DialogTitle>
-              <DialogContent>{t('duplicates.confirmBody', { source: pending.source.name, target: pending.target.name })}</DialogContent>
+              <DialogTitle>{t('duplicates.confirmTitle', { source: shown.source.name, target: shown.target.name })}</DialogTitle>
+              <DialogContent>{t('duplicates.confirmBody', { source: shown.source.name, target: shown.target.name })}</DialogContent>
               <DialogActions>
                 <Button onClick={() => setPending(null)}>{t('common.cancel')}</Button>
                 <Button appearance="primary" onClick={() => void merge()} disabled={actions.merge.isPending}>

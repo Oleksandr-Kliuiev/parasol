@@ -1,10 +1,12 @@
-import { Text } from '@fluentui/react-components';
+import { Text, mergeClasses } from '@fluentui/react-components';
 import { Warning20Filled } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { Panel } from '../../shared/components/Panel';
-import { formatDate, formatMoney } from '../../shared/utils/format';
+import { formatDate, formatMoney, todayIso } from '../../shared/utils/format';
+import { usePeriods } from '../time/api';
+import { monthName } from '../time/monthName';
 import { RunStatusBadge } from '../billing/shared';
 import { monthLabel } from '../billing/period';
 import { useOpportunities } from '../sales/api';
@@ -21,11 +23,11 @@ export function StaleDealsPanel() {
   const deals = useOpportunities({ mine: true, stale: true }, true, 8);
   const { items: data, isPending } = deals;
 
-  if (!isPending && data.length === 0) return null;
+  if (isPending || data.length === 0) return null;
 
   return (
     <Panel title={t('myDay.staleDeals')}>
-      <ul className={styles.list}>
+      <ul className={mergeClasses(styles.list, 'h-stagger')}>
         {data.map((opportunity) => (
           <li key={opportunity.id} className={styles.row}>
             <div className={styles.rowText}>
@@ -60,7 +62,7 @@ export function LicensingAttentionPanel() {
 
   return (
     <Panel title={t('myDay.licensingAttention')}>
-      <ul className={styles.list}>
+      <ul className={mergeClasses(styles.list, 'h-stagger')}>
         {closing.slice(0, 5).map((subscription) => (
           <li key={subscription.id} className={styles.row}>
             <span className={styles.warning}>
@@ -109,7 +111,7 @@ export function BillingPanel() {
 
   return (
     <Panel title={t('myDay.billing')}>
-      <ul className={styles.list}>
+      <ul className={mergeClasses(styles.list, 'h-stagger')}>
         {open && (
           <li className={styles.row}>
             <div className={styles.rowText}>
@@ -149,15 +151,27 @@ export function BillingPanel() {
   );
 }
 
-/** Where a team lead goes to approve hours (the page already exists; no count is shown because none is read here). */
+/**
+ * What waits for the team lead's approval: the open months of this year that hold entries in the "New" state, each with its
+ * count and a link to exactly those entries (the periods list counts them; nothing is estimated here).
+ */
 export function HoursReviewPanel() {
   const styles = useMyDayStyles();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const year = Number(todayIso().slice(0, 4));
+  const periods = usePeriods(year);
+  const waiting = (periods.data ?? []).filter((p) => !p.isClosed && p.newEntries > 0).sort((a, b) => b.month - a.month);
   return (
     <Panel title={t('myDay.hoursReview')}>
-      <Text block className={styles.muted}>
-        {t('myDay.hoursReviewNote')}
-      </Text>
+      {periods.isError ? <Text block className={styles.muted}>{t('organizations.highlights.unread')}</Text>
+        : periods.isPending ? <Text block className={styles.muted}>{t('common.loading')}</Text>
+        : waiting.length === 0 ? <Text block className={styles.muted}>{t('myDay.hoursReviewNone', { year })}</Text>
+        : <ul className={styles.list}>{waiting.map((p) => (
+            <li key={p.month}>
+              <AppLink to={`/time/entries?year=${p.year}&month=${p.month}&status=New`}>
+                {t('myDay.hoursReviewMonth', { month: monthName(p.year, p.month, i18n.language), count: p.newEntries })}
+              </AppLink>
+            </li>))}</ul>}
       <AppLink to="/time/entries">{t('myDay.hoursReviewOpen')}</AppLink>
     </Panel>
   );

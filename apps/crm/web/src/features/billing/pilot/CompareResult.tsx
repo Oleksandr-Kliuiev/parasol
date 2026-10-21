@@ -1,13 +1,23 @@
 import { useState } from 'react';
-import { Button, Switch, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components';
+import { Button, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, makeStyles } from '@fluentui/react-components';
+import { DataBarHorizontalDescending16Regular, Warning16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { h } from '../../../app/hearth';
 import { Panel } from '../../../shared/components/Panel';
+import { FilterChips } from '../../../shared/components/Toolbar';
 import { formatDateTime, formatNumber } from '../../../shared/utils/format';
+import { FigureGrid } from '../../reports/FigureGrid';
 import { compareStatuses, type CompareItem, type ComparisonResult } from './api';
-import { ScrollRegion, Verdict } from './parts';
+import { KeyText, ScrollRegion, Verdict } from './parts';
 import { money, usePilotStyles } from './styles';
 
 const PAGE = 100;
+
+const useStyles = makeStyles({
+  // How many keys still need an explanation: the figure that decides the sign-off, said once and in its tone.
+  toExplain: { display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '12px', color: h.saffronT, fontWeight: 600 },
+  keysHead: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px 12px', marginTop: '20px', marginBottom: '10px' },
+});
 
 function itemLabel(item: CompareItem): string {
   return item.key;
@@ -16,6 +26,7 @@ function itemLabel(item: CompareItem): string {
 /** The comparison as stored: per-key verdicts, per-payer summary and totals per currency, with the id and the hash that a sign-off names. */
 export function CompareResult({ result }: { result: ComparisonResult }) {
   const styles = usePilotStyles();
+  const local = useStyles();
   const { t } = useTranslation();
   const doc = result.comparison;
   const [exceptionsOnly, setExceptionsOnly] = useState(true);
@@ -24,45 +35,35 @@ export function CompareResult({ result }: { result: ComparisonResult }) {
   const visible = items.slice(0, shown);
 
   return (
-    <Panel title={t('pilot.result.title')}>
-      <dl className={styles.facts}>
+    <Panel title={t('pilot.result.title')} icon={<DataBarHorizontalDescending16Regular />}>
+      {/* What a sign-off names, kept whole: the comparison id and both fingerprints. */}
+      <dl className={styles.evidence}>
         <div className={styles.fact}>
-          <dt className={styles.muted}>{t('pilot.result.comparisonId')}</dt>
-          <dd style={{ margin: 0 }} className={styles.mono}>
-            {doc.comparisonId}
-          </dd>
+          <dt className={styles.term}>{t('pilot.result.comparisonId')}</dt>
+          <dd className={styles.mono}>{doc.comparisonId}</dd>
         </div>
         <div className={styles.fact}>
-          <dt className={styles.muted}>{t('pilot.result.documentSha')}</dt>
-          <dd style={{ margin: 0 }} className={styles.mono}>
-            {result.documentSha256}
-          </dd>
+          <dt className={styles.term}>{t('pilot.result.made')}</dt>
+          <dd>{t('pilot.result.madeText', { at: formatDateTime(doc.at), rows: doc.fileRows, revision: doc.runContentRevision })}</dd>
         </div>
         <div className={styles.fact}>
-          <dt className={styles.muted}>{t('pilot.result.fileSha')}</dt>
-          <dd style={{ margin: 0 }} className={styles.mono}>
-            {doc.fileSha256}
-          </dd>
+          <dt className={styles.term}>{t('pilot.result.documentSha')}</dt>
+          <dd className={styles.key}>{result.documentSha256}</dd>
         </div>
         <div className={styles.fact}>
-          <dt className={styles.muted}>{t('pilot.result.made')}</dt>
-          <dd style={{ margin: 0 }}>{t('pilot.result.madeText', { at: formatDateTime(doc.at), rows: doc.fileRows, revision: doc.runContentRevision })}</dd>
+          <dt className={styles.term}>{t('pilot.result.fileSha')}</dt>
+          <dd className={styles.key}>{doc.fileSha256}</dd>
         </div>
       </dl>
       {doc.unknownColumns.length > 0 && (
-        <p className={styles.muted}>{t('pilot.result.unknownColumns', { columns: doc.unknownColumns.join(', ') })}</p>
+        <p className={styles.lead}>{t('pilot.result.unknownColumns', { columns: doc.unknownColumns.join(', ') })}</p>
       )}
 
       <h3 className={styles.heading}>{t('pilot.result.counts')}</h3>
-      <ul className={styles.list} aria-label={t('pilot.result.counts')}>
-        {compareStatuses.map((status) => (
-          <li key={status}>
-            <Verdict status={status} />: {doc.statusCounts[status] ?? 0}
-          </li>
-        ))}
-      </ul>
-      <p style={{ marginBottom: 0 }}>
-        <Text weight="semibold">{t('pilot.result.exceptions', { number: doc.exceptionCount })}</Text>
+      <FigureGrid items={compareStatuses.map((status) => ({ label: t(`pilot.verdict.${status}`, { defaultValue: status }), value: String(doc.statusCounts[status] ?? 0) }))} />
+      <p className={local.toExplain}>
+        {doc.exceptionCount > 0 && <Warning16Regular aria-hidden />}
+        <Text weight="semibold" className={doc.exceptionCount > 0 ? styles.warn : styles.good}>{t('pilot.result.exceptions', { number: doc.exceptionCount })}</Text>
       </p>
 
       <h3 className={styles.heading}>{t('pilot.result.totals')}</h3>
@@ -127,15 +128,18 @@ export function CompareResult({ result }: { result: ComparisonResult }) {
         </Table>
       </ScrollRegion>
 
-      <h3 className={styles.heading}>{t('pilot.result.keysTitle')}</h3>
-      <Switch
-        label={t('pilot.result.exceptionsOnly')}
-        checked={exceptionsOnly}
-        onChange={(_, d) => {
-          setExceptionsOnly(d.checked);
-          setShown(PAGE);
-        }}
-      />
+      <div className={local.keysHead}>
+        <h3 className={styles.heading} style={{ marginTop: 0, marginBottom: 0 }}>{t('pilot.result.keysTitle')}</h3>
+        <FilterChips
+          label={t('pilot.result.exceptionsOnly')}
+          value={exceptionsOnly ? 'on' : ''}
+          options={[{ value: 'on', label: t('pilot.result.exceptionsOnly') }]}
+          onChange={() => {
+            setExceptionsOnly(!exceptionsOnly);
+            setShown(PAGE);
+          }}
+        />
+      </div>
       <ScrollRegion label={t('pilot.result.keysTitle')}>
         <Table className={styles.table} style={{ minWidth: 960 }} aria-label={t('pilot.result.keysTitle')}>
           <TableHeader>
@@ -153,7 +157,7 @@ export function CompareResult({ result }: { result: ComparisonResult }) {
             {visible.map((item) => (
               <TableRow key={item.key}>
                 <TableCell>
-                  <span className={styles.mono}>{itemLabel(item)}</span>
+                  <span className={styles.keyText}><KeyText value={itemLabel(item)} /></span>
                   {item.line !== null && <div className={styles.muted}>{t('pilot.result.fileLine', { line: item.line })}</div>}
                 </TableCell>
                 <TableCell>
@@ -171,7 +175,7 @@ export function CompareResult({ result }: { result: ComparisonResult }) {
           </TableBody>
         </Table>
       </ScrollRegion>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'center', paddingBlock: 12 }}>
+      <div className={styles.footer}>
         <Text className={styles.muted} aria-live="polite">
           {t('common.shownOf', { shown: visible.length, total: items.length })}
         </Text>

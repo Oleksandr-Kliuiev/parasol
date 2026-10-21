@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -14,24 +13,37 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useTranslation } from 'react-i18next';
 import { api, query } from '../../api/client';
 import type { SearchResponse } from '../../api/types';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
+import { h } from '../../app/hearth';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { IconChip } from '../admin/IconChip';
+import { Box16Regular, Box24Regular, Building16Regular, Building24Regular } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
-  list: { listStyle: 'none', margin: `${tokens.spacingVerticalM} 0 0`, padding: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
+  search: { width: '100%', maxWidth: 'none' },
+  // Hits as quiet rows of the visual system: an icon chip, the name over its detail line, the action on the right.
+  list: { listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'grid', gap: '8px' },
   item: {
-    display: 'flex',
-    justifyContent: 'space-between',
+    display: 'grid',
+    gridTemplateColumns: '32px minmax(0, 1fr) auto',
     alignItems: 'center',
-    gap: tokens.spacingHorizontalM,
-    paddingBlock: tokens.spacingVerticalS,
-    paddingInline: tokens.spacingHorizontalM,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
+    columnGap: '12px',
+    paddingTop: '10px',
+    paddingBottom: '10px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    borderRadius: '14px',
+    backgroundColor: h.well,
+    minWidth: 0,
   },
-  muted: { color: tokens.colorNeutralForeground3 },
+  text: { display: 'grid', minWidth: 0 },
+  name: { fontWeight: tokens.fontWeightSemibold, fontSize: '14px', lineHeight: '20px', overflowWrap: 'anywhere' },
+  muted: { color: h.muted, fontSize: '12.5px', lineHeight: '18px', overflowWrap: 'anywhere' },
+  hint: { display: 'block', marginTop: '10px', color: h.muted, fontSize: '13px', lineHeight: '20px' },
 });
 
 interface OrganizationPickerDialogProps {
@@ -44,9 +56,10 @@ interface OrganizationPickerDialogProps {
 }
 
 export function OrganizationPickerDialog({ open, group = 'organizations', initialSearch, onPick, onClose }: OrganizationPickerDialogProps) {
+  // The picker mounts with the surface, once per opening, and stays while the dialog leaves.
   return (
     <Dialog open={open} onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>{open && <PickerBody group={group} initialSearch={initialSearch} onPick={onPick} onClose={onClose} />}</DialogSurface>
+      <DialogSurface><PickerBody group={group} initialSearch={initialSearch} onPick={onPick} onClose={onClose} /></DialogSurface>
     </Dialog>
   );
 }
@@ -68,25 +81,25 @@ function PickerBody({ group = 'organizations', initialSearch, onPick, onClose }:
       <DialogTitle>{group === 'products' ? t('mappings.pickProductTitle') : t('mappings.pickTitle')}</DialogTitle>
       <DialogContent>
         <SearchBox
+          className={styles.search}
           value={text}
           onChange={(_, d) => setText(d.value)}
           placeholder={t('mappings.pickSearch')}
           aria-label={t('mappings.pickSearch')}
           contentAfter={isFetching ? <Spinner size="extra-tiny" /> : undefined}
-          style={{ width: '100%', maxWidth: 'none' }}
         />
+        {term.length < 2 ? (
+          <Text className={styles.hint}>{t('mappings.pickHint')}</Text>
+        ) : (
+          !isFetching && organizations.length === 0 && <EmptyState message={t('mappings.pickEmpty')} icon={group === 'products' ? <Box24Regular /> : <Building24Regular />} />
+        )}
         <ul className={styles.list}>
           {organizations.map((o) => (
             <li key={o.id} className={styles.item}>
-              <span>
-                <Text weight="semibold" block>
-                  {o.title}
-                </Text>
-                {o.subtitle && (
-                  <Text size={200} className={styles.muted}>
-                    {o.subtitle}
-                  </Text>
-                )}
+              <IconChip icon={group === 'products' ? <Box16Regular /> : <Building16Regular />} tone={group === 'products' ? 'saffron' : 'iris'} small />
+              <span className={styles.text}>
+                <span className={styles.name}>{o.title}</span>
+                {o.subtitle && <span className={styles.muted}>{o.subtitle}</span>}
               </span>
               <Button size="small" onClick={() => onPick({ id: o.id, name: o.title })}>
                 {t('mappings.link')}

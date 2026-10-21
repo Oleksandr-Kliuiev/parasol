@@ -4,15 +4,19 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 import { AppLink } from '../../shared/components/AppLink';
 import { maintainSectionPosition } from './maintainSectionPosition';
+import { h } from '../../app/hearth';
+import { useReveal } from '../../app/motion';
 
 const ids = { tasks: 'my-day-tasks', attention: 'my-day-attention' } as const;
 const useStyles = makeStyles({
-  links: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM,
-    marginBottom: tokens.spacingVerticalL,
+  links: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px',
+    marginBottom: '16px', borderRadius: '12px',
     ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px' } },
-  link: { display: 'inline-flex', alignItems: 'center', minHeight: '32px', paddingInline: tokens.spacingHorizontalS,
-    paddingBlock: tokens.spacingVerticalXS },
-  target: { scrollMarginBlockStart: '64px', minWidth: 0,
+  // Chips of the visual system: quick jumps to a section, not filters.
+  link: { display: 'inline-flex', alignItems: 'center', minHeight: '32px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '999px',
+    border: `1px solid ${h.line}`, backgroundColor: tokens.colorNeutralBackground1, color: h.muted, fontSize: '12.5px', fontWeight: 700,
+    textDecorationLine: 'none', ':hover': { color: h.text, border: `1px solid ${h.line2}`, textDecorationLine: 'none' } },
+  target: { minWidth: 0,
     ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px', borderRadius: tokens.borderRadiusLarge } },
 });
 
@@ -24,6 +28,8 @@ export function MyDaySectionLinks({ tasks, attention }: { tasks: boolean; attent
   const section = value === 'tasks' || value === 'attention' ? value : null;
   const url = search + hash;
   const links = useRef<HTMLElement>(null);
+  // The jumps rise with the rest of the page instead of standing there before the header has landed.
+  useReveal(links, 'item');
   const previous = useRef<{ section: keyof typeof ids | null; url: string } | null>(null);
   const origin = useRef<string | null>(null);
   useEffect(() => {

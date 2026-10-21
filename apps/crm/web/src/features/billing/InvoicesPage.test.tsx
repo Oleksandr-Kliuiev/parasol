@@ -62,7 +62,10 @@ describe('Invoices (DEV-12)', () => {
     renderRoutes([{ path: '*', element: <InvoicesPage /> }], '/billing/invoices', testUser(['billing.read']));
 
     await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(4));
-    expect(screen.queryByText('Outstanding')).not.toBeInTheDocument();
+    // No money tiles and no money columns; the "Outstanding" filter itself is not an amount.
+    expect(screen.queryByRole('group', { name: 'Invoice totals' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Outstanding' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Total including VAT' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Totals of all invoices/)).not.toBeInTheDocument();
   });
 });

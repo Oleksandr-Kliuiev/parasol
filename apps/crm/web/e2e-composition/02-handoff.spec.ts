@@ -11,7 +11,8 @@ async function confirmAssignment(page: Page, dialog: Locator, localDue: string) 
   const picker = dialog.getByRole('combobox'); await picker.fill(employee('Crm.Technician').displayName); await picker.press('ArrowDown');
   await page.getByRole('option').filter({ hasText: employee('Crm.Technician').displayName }).click();
   await dialog.getByLabel('Due date (optional)', { exact: true }).fill(localDue);
-  await dialog.getByRole('checkbox', { name: 'I confirm the assignee and due date', exact: true }).check();
+  // No check box: the sentence beside the button names the reviewed assignee and due date.
+  await expect(dialog.getByText(`Creates a task for ${employee('Crm.Technician').displayName}, due `)).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Create task', exact: true })).toBeEnabled();
 }
 
@@ -104,10 +105,16 @@ test('two genuine employee handoffs converge on one private Task, which personal
     const myDayUrl = technician.page.url();
     const ticketTrigger = personalTask.getByRole('button', { name: 'Service ticket for Review technical observation', exact: true });
     await technician.page.setViewportSize({ width: 390, height: 844 });
+    // The app's theme switch (data-theme on <html>) and Fluent's surface token both follow the scheme. The palette is the
+    // visual system's (app/theme.ts), so the check compares the two modes instead of naming Fluent's default colours.
+    const theme = () => ticketTrigger.evaluate(element =>
+      [document.documentElement.dataset.theme ?? '', getComputedStyle(element).getPropertyValue('--colorNeutralBackground1').trim()]);
+    let lightSurface = '';
     for (const colorScheme of ['light', 'dark'] as const) {
       await technician.page.emulateMedia({ colorScheme });
-      await expect.poll(() => ticketTrigger.evaluate(element => getComputedStyle(element).getPropertyValue('--colorNeutralBackground1').trim()))
-        .toBe(colorScheme === 'dark' ? '#292929' : '#ffffff');
+      await expect.poll(async () => { const [mode, surface] = await theme(); return mode === colorScheme && surface !== '' && surface !== lightSurface; })
+        .toBe(true);
+      if (colorScheme === 'light') lightSurface = (await theme())[1]!;
       await technician.page.waitForLoadState('networkidle');
       await technician.page.evaluate(async () => {
         await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined)));
@@ -145,7 +152,7 @@ test('two genuine employee handoffs converge on one private Task, which personal
     expect(completedResponse.request().headers()['if-match'], 'Completion carries the recipient’s displayed version').toBe(receivedTask!.etag);
     await expect(myTasks.getByText('Review technical observation', { exact: true })).toHaveCount(0);
     assertTaskEvidence(control('countsTaskEvidence'), 1, 2);
-    const existingDialog = await openTargetAssignment(admin.page);
+    const existingDialog = await openTargetAssignment(admin.page, { state: 'Task done', assignee: employee('Crm.Technician').displayName });
     await expect(existingDialog.getByText('Task state: Done', { exact: true })).toBeVisible();
     await expect(existingDialog.getByRole('button', { name: 'Create task', exact: true })).toHaveCount(0);
     const preview = await taskPreview(admin.page); expect(preview.status).toBe('READY'); expect(preview.canCreate).toBe(false);

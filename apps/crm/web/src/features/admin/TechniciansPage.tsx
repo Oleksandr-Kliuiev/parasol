@@ -1,21 +1,30 @@
-import { Badge, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components';
+import { Badge, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, makeStyles, mergeClasses } from '@fluentui/react-components';
+import { PeopleTeam24Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 import { UserPicker } from '../../shared/components/UserPicker';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
-import { useCatalogStyles } from '../catalog/styles';
 import { useMapTechnician, useTechnicianMappings } from '../time/api';
-import { ScrollTable } from '../../shared/components/ScrollTable';
+import { PersonCell } from './settingsUi';
+import { useTableCardStyles } from './tableCard';
+
+const useStyles = makeStyles({
+  user: { display: 'grid', gap: '4px', minWidth: 0, maxWidth: '320px' },
+  notMapped: { color: h.muted },
+});
 
 /** Technicians of Atera mapped to CRM users, so imported hours land on the right person (BR-TIM-01). */
 export function TechniciansPage() {
-  const styles = useCatalogStyles();
+  const styles = useStyles();
+  const table = useTableCardStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const canMap = useCan(Permissions.integrationsManage);
@@ -38,8 +47,8 @@ export function TechniciansPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <ScrollTable className={styles.tableWrap}>
-          <Table className={styles.table} aria-label={t('technicians.title')}>
+        <ScrollTable>
+          <Table className={mergeClasses(table.min800, table.roomy)} aria-label={t('technicians.title')}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>{t('technicians.columns.technician')}</TableHeaderCell>
@@ -52,32 +61,31 @@ export function TechniciansPage() {
               {data.map((mapping) => (
                 <TableRow key={mapping.id}>
                   <TableCell>
-                    <span className={styles.name}>{mapping.name ?? mapping.externalId}</span>
-                    <div className={styles.sku}>{mapping.email ?? `#${mapping.externalId}`}</div>
+                    <PersonCell name={mapping.name ?? mapping.externalId} detail={mapping.email ?? `#${mapping.externalId}`} />
                   </TableCell>
                   <TableCell>
-                    <Badge appearance="tint" color="brand">
-                      {t(`systems.${mapping.system}`, { defaultValue: mapping.system })}
-                    </Badge>
+                    <Badge appearance="outline">{t(`systems.${mapping.system}`, { defaultValue: mapping.system })}</Badge>
                   </TableCell>
                   <TableCell>
-                    {canMap ? (
-                      <UserPicker
-                        aria-labelledby={undefined}
-                        value={mapping.userId ? { id: mapping.userId, displayName: mapping.userName ?? '' } : null}
-                        onChange={(user) => void assign(mapping.id, user?.id ?? null)}
-                      />
-                    ) : (
-                      <Text>{mapping.userName ?? t('technicians.notMapped')}</Text>
-                    )}
-                    {mapping.userId && <div className={styles.sku}>{t(`technicians.methods.${mapping.method}`)}</div>}
+                    <div className={styles.user}>
+                      {canMap ? (
+                        <UserPicker
+                          aria-labelledby={undefined}
+                          value={mapping.userId ? { id: mapping.userId, displayName: mapping.userName ?? '' } : null}
+                          onChange={(user) => void assign(mapping.id, user?.id ?? null)}
+                        />
+                      ) : (
+                        <Text className={mapping.userName ? undefined : styles.notMapped}>{mapping.userName ?? t('technicians.notMapped')}</Text>
+                      )}
+                      {mapping.userId && <span className={table.sub}>{t(`technicians.methods.${mapping.method}`)}</span>}
+                    </div>
                   </TableCell>
-                  <TableCell className="tabular">{formatDateTime(mapping.lastSeenAt)}</TableCell>
+                  <TableCell className={table.nowrap}>{formatDateTime(mapping.lastSeenAt)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {!isPending && data.length === 0 && <EmptyState message={t('technicians.empty')} />}
+          {!isPending && data.length === 0 && <EmptyState message={t('technicians.empty')} icon={<PeopleTeam24Regular />} />}
           <ListFooter shown={data.length} total={mappings.total} hasMore={mappings.hasNextPage} loading={mappings.isFetchingNextPage} onMore={() => void mappings.fetchNextPage()} />
         </ScrollTable>
       )}

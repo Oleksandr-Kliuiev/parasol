@@ -90,3 +90,20 @@ it.each([200, 400])('does not invalidate an active new-owner time query or close
   expect(probe).toHaveBeenCalledTimes(1); expect(screen.queryByText('Entry saved')).not.toBeInTheDocument(); expect(screen.queryByText('Synthetic old error')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled(); expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue('2.5');
 });
+
+it('takes minutes and clock times, says what it saves, and names what is wrong once a field is left', async () => {
+  const fetch = vi.fn(async (url: string, init: RequestInit) => init.method === 'PUT' ? json({ id: entry.id }) : fetchOptions(url));
+  vi.stubGlobal('fetch', fetch); renderTimeEntry(); await screen.findByRole('combobox', { name: 'Organization' });
+  const hours = screen.getByRole('textbox', { name: 'Hours' });
+  await userEvent.clear(hours); await userEvent.type(hours, '45'); await userEvent.tab();
+  expect(screen.getByText('At most 24 hours in one entry. For minutes, type 45 min or 0:45.')).toBeVisible();
+  expect(hours).toHaveAttribute('aria-invalid', 'true'); expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await userEvent.clear(hours); await userEvent.type(hours, '0:45');
+  expect(screen.getByText('Saved as 0.75 h')).toBeVisible(); expect(screen.getByRole('button', { name: '45 min', pressed: true })).toBeVisible();
+  const ticket = screen.getByRole('textbox', { name: 'Ticket' });
+  await userEvent.clear(ticket); await userEvent.type(ticket, 'abc'); await userEvent.tab();
+  expect(screen.getByText('Type the ticket number with digits only, like 4711.')).toBeVisible();
+  await userEvent.clear(ticket); await userEvent.type(ticket, '909');
+  await userEvent.click(screen.getByRole('button', { name: 'Save' })); await waitFor(() => expect(saves(fetch)).toHaveLength(1));
+  expect(JSON.parse(saves(fetch)[0]![1].body as string)).toMatchObject({ hours: 0.75, externalTicketId: 909 });
+});

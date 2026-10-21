@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Button, Field, Input, MessageBar, MessageBarBody, Select, Switch, makeStyles, tokens } from '@fluentui/react-components';
+import { Button, Field, Input, MessageBar, MessageBarBody, Select, Switch, makeStyles } from '@fluentui/react-components';
+import { TextBulletListSquare16Regular } from '@fluentui/react-icons';
+import { Panel } from '../../shared/components/Panel';
 import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
@@ -8,12 +11,25 @@ import { useCustomFieldValues, useSaveCustomFieldValues } from './api';
 import type { CustomFieldEntity, CustomFieldValue } from './types';
 
 const useStyles = makeStyles({
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
-  actions: { display: 'flex', justifyContent: 'flex-end', gap: tokens.spacingHorizontalS, marginTop: tokens.spacingVerticalM },
+  // Fields side by side in the card, as on the settings forms: 16 px between them, never stretched past a readable width.
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))', gap: '16px', alignItems: 'start' },
+  error: { marginTop: '12px' },
+  // The save button closes the form on a hairline, like the footer of a settings card.
+  actions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '8px',
+    marginTop: '16px',
+    paddingTop: '16px',
+    borderTop: `1px solid ${h.line}`,
+  },
 });
 
-/** The company's own fields on a record (FR-ADM-04). Renders nothing when nobody has defined any. */
-export function CustomFieldsPanel({ entity, entityId }: { entity: CustomFieldEntity; entityId: string }) {
+/**
+ * The company's own fields on a record (FR-ADM-04). Renders nothing when nobody has defined any; `framed` brings its own
+ * card, so a record page never shows an empty "Custom fields" card.
+ */
+export function CustomFieldsPanel({ entity, entityId, framed = false }: { entity: CustomFieldEntity; entityId: string; framed?: boolean }) {
   const styles = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
@@ -38,7 +54,7 @@ export function CustomFieldsPanel({ entity, entityId }: { entity: CustomFieldEnt
     }
   };
 
-  return (
+  const form = (
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
       <div className={styles.grid}>
         {data.map((field) => (
@@ -52,7 +68,7 @@ export function CustomFieldsPanel({ entity, entityId }: { entity: CustomFieldEnt
         ))}
       </div>
       {save.error && (
-        <MessageBar intent="error" style={{ marginTop: 12 }}>
+        <MessageBar intent="error" className={styles.error}>
           <MessageBarBody>{errorMessage(save.error, t)}</MessageBarBody>
         </MessageBar>
       )}
@@ -64,6 +80,13 @@ export function CustomFieldsPanel({ entity, entityId }: { entity: CustomFieldEnt
         </div>
       )}
     </form>
+  );
+  return framed ? (
+    <Panel title={t('customFields.panelTitle')} icon={<TextBulletListSquare16Regular />}>
+      {form}
+    </Panel>
+  ) : (
+    form
   );
 }
 

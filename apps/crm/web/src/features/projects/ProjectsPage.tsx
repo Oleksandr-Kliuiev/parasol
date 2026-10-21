@@ -3,10 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router';
 import {
   Badge,
   Button,
-  Dialog,
   DialogSurface,
   ProgressBar,
   SearchBox,
+  Skeleton,
+  SkeletonItem,
   Switch,
   Table,
   TableBody,
@@ -16,10 +17,11 @@ import {
   TableRow,
   Text,
   makeStyles,
-  tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { Add20Regular, Briefcase16Regular, Briefcase24Regular } from '@fluentui/react-icons';
+import { RecordCell } from '../organizations/RecordCell';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
@@ -27,6 +29,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { FilterField, Toolbar } from '../../shared/components/Toolbar';
 import { formatDate, formatNumber } from '../../shared/utils/format';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { useCatalogStyles } from '../catalog/styles';
@@ -35,10 +38,13 @@ import { useProjects } from './api';
 import { statusColor } from './shared';
 import { SavedViews } from '../../shared/views/SavedViews';
 import { ScrollTable } from '../../shared/components/ScrollTable';
+import { h } from '../../app/hearth';
 
 const useStyles = makeStyles({
-  progress: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, minWidth: '140px' },
-  over: { color: tokens.colorPaletteDarkOrangeForeground1 },
+  progress: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontVariantNumeric: 'tabular-nums' },
+  person: { fontWeight: 500, fontSize: '13px' },
+  orgLink: { color: 'inherit', fontWeight: 600 },
+  over: { color: h.saffronT },
 });
 
 /** Implementation projects across customers (FR-PRJ-01). */
@@ -65,27 +71,23 @@ export function ProjectsPage() {
         title={t('projects.title')}
         subtitle={allProjects ? t('projects.subtitle') : t('projects.scopeAssigned')}
         actions={
-          canWrite && (
-            <Button {...restoreFocusTarget} appearance="primary" icon={<Add20Regular />} onClick={() => setCreating(true)}>
-              {t('projects.new')}
-            </Button>
-          )
+          <>
+            <SavedViews scope="projects" keys={['all']} />
+            {canWrite && (
+              <Button {...restoreFocusTarget} appearance="primary" icon={<Add20Regular />} onClick={() => setCreating(true)}>
+                {t('projects.new')}
+              </Button>
+            )}
+          </>
         }
       />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
-        <SavedViews scope="projects" keys={['all']} />
-      </div>
 
-      <div className={catalog.filters}>
-        <SearchBox
-          id="projects-search"
-          className={catalog.search}
-          value={search}
-          onChange={(_, d) => setSearch(d.value)}
-          placeholder={t('projects.search')}
-          aria-label={t('projects.search')}
-        />
+      <Toolbar label={t('projects.filterLabel')}>
+        <FilterField kind="search" label={t('projects.search')}>
+          <SearchBox id="projects-search" value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('projects.search')} />
+        </FilterField>
         <Switch
+          className={catalog.toggle}
           label={t('projects.filters.includeClosed')}
           checked={!openOnly}
           onChange={(_, d) => {
@@ -95,42 +97,51 @@ export function ProjectsPage() {
             setParams(next, { replace: true });
           }}
         />
-      </div>
+      </Toolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('projects.title')}>
+          <Table className={catalog.table} style={{ minWidth: 1060 }} aria-label={t('projects.title')}>
             <TableHeader>
               <TableRow>
+                {/* Content widths: every cell adds 12 px of padding on each side; project and customer share the rest. */}
                 <TableHeaderCell>{t('projects.fields.project')}</TableHeaderCell>
                 <TableHeaderCell>{t('projects.fields.customer')}</TableHeaderCell>
-                <TableHeaderCell>{t('projects.fields.status')}</TableHeaderCell>
-                <TableHeaderCell>{t('projects.fields.manager')}</TableHeaderCell>
-                <TableHeaderCell>{t('projects.fields.period')}</TableHeaderCell>
-                <TableHeaderCell>{t('projects.fields.hours')}</TableHeaderCell>
-                <TableHeaderCell className={catalog.number}>{t('projects.fields.phases')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 96 }}>{t('projects.fields.status')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 136 }}>{t('projects.fields.manager')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 178 }}>{t('projects.fields.period')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 116 }}>{t('projects.fields.hours')}</TableHeaderCell>
+                <TableHeaderCell className={catalog.number} style={{ width: 56 }}>{t('projects.fields.phases')}</TableHeaderCell>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell>
-                    <AppLink to={`/projects/${project.id}`}>{project.name}</AppLink>
-                    <div className={catalog.sku}>
-                      {project.number} · {t(`projects.types.${project.type}`)}
-                    </div>
+                    <RecordCell
+                      icon={<Briefcase16Regular />}
+                      tone="iris"
+                      name={<AppLink to={`/projects/${project.id}`} className={catalog.name}>{project.name}</AppLink>}
+                      meta={[project.number, t(`projects.types.${project.type}`)]}
+                    />
                   </TableCell>
                   <TableCell>
-                    <AppLink to={`/organizations/${project.organization.id}?tab=projects`}>{project.organization.name}</AppLink>
+                    <RecordCell
+                      avatarName={project.organization.name}
+                      size={28}
+                      name={<AppLink to={`/organizations/${project.organization.id}?tab=projects`} className={styles.orgLink}>{project.organization.name}</AppLink>}
+                    />
                   </TableCell>
                   <TableCell>
-                    <Badge appearance="outline" color={statusColor(project.status)}>
+                    <Badge appearance="tint" color={statusColor(project.status)}>
                       {t(`projects.statuses.${project.status}`)}
                     </Badge>
                   </TableCell>
-                  <TableCell>{project.manager?.name ?? '—'}</TableCell>
+                  <TableCell>
+                    {project.manager ? <RecordCell avatarName={project.manager.name} size={28} name={<span className={styles.person}>{project.manager.name}</span>} /> : '—'}
+                  </TableCell>
                   <TableCell className="tabular">
                     {formatDate(project.startDate)}
                     {project.endDate ? ` – ${formatDate(project.endDate)}` : ''}
@@ -156,22 +167,21 @@ export function ProjectsPage() {
               ))}
             </TableBody>
           </Table>
-          {!isPending && data.length === 0 && <EmptyState message={t('projects.empty')} />}
+          {isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
+          {!isPending && data.length === 0 && <EmptyState icon={<Briefcase24Regular />} message={t('projects.empty')} />}
           <ListFooter shown={data.length} total={projects.total} hasMore={projects.hasNextPage} loading={projects.isFetchingNextPage} onMore={() => void projects.fetchNextPage()} />
         </ScrollTable>
       )}
 
       <Dialog open={creating} onOpenChange={(_, d) => !d.open && setCreating(false)}>
         <DialogSurface>
-          {creating && (
-            <ProjectDialog
-              onClose={() => setCreating(false)}
-              onCreated={(id) => {
-                setCreating(false);
-                void navigate(`/projects/${id}`);
-              }}
-            />
-          )}
+          <ProjectDialog
+            onClose={() => setCreating(false)}
+            onCreated={(id) => {
+              setCreating(false);
+              void navigate(`/projects/${id}`);
+            }}
+          />
         </DialogSurface>
       </Dialog>
     </>

@@ -77,7 +77,9 @@ describe('the Atlas observation queue', () => {
     expect(fetch.mock.calls.at(-1)![0]).toContain('severity=URGENT&status=ACTIVE'); expect(fetch.mock.calls.at(-1)![0]).not.toContain('cursor');
     await userEvent.selectOptions(region.getByLabelText('Queue state'), 'RESOLVED');
     await waitFor(() => expect(region.getAllByText('Resolved')).toHaveLength(26)); // option + rows
-    expect(region.getAllByText('Urgent · HIGH / CRITICAL')).toHaveLength(26);
+    const resolvedRows = within(region.getByText('Queue record 1').closest('ul')!).getAllByRole('listitem');
+    expect(resolvedRows).toHaveLength(25);
+    for (const row of resolvedRows) expect(within(row).getByText(/^(High|Critical)$/)).toBeVisible();
     expect(region.getAllByText('Atlas recommendation: Monitor')).toHaveLength(25);
     await userEvent.selectOptions(region.getByLabelText('Queue state'), 'SUPPRESSED');
     await waitFor(() => expect(region.getAllByText('Suppressed')).toHaveLength(26));

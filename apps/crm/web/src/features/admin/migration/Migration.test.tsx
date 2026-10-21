@@ -62,7 +62,8 @@ describe('migration result', () => {
     expect(screen.getByText('Conflicts').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Rejected', { selector: 'dt' }).nextSibling).toHaveTextContent('1');
     expect(screen.getByText(/The organization number is not valid\./)).toBeInTheDocument();
-    expect(screen.getByText(/rows name a known owner/)).toBeInTheDocument();
+    expect(screen.getByText('Known owner').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('Owner the CRM does not know').nextSibling).toHaveTextContent('1');
     expect(screen.getByText(/Contract start/)).toBeInTheDocument();
     expect(screen.getByText(/Column “Notes” is not used\./)).toBeInTheDocument();
     expect(screen.getByText('The CRM holds a different value than the file. The CRM value is kept.', { selector: 'td' })).toBeInTheDocument();

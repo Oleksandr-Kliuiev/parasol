@@ -14,10 +14,16 @@ test('My day distinguishes partial customer coverage, source freshness and a bou
   await page.goto('/'); const panel = page.getByRole('region', { name: 'Technical attention · Atlas', exact: true });
   await expect(panel.getByText('Customers read successfully: 1 of 2 selected', { exact: true })).toBeVisible();
   await expect(panel.getByText('Active observations in successfully read customers: 9 · High: 4 · Critical: 2', { exact: true })).toBeVisible();
-  await expect(panel.getByText(/Coverage is incomplete/)).toBeVisible(); await expect(panel.getByText(/not a complete queue or a global ranking/)).toBeVisible();
+  await expect(panel.getByText(/Coverage is incomplete/)).toBeVisible();
+  // Gaps stay in sight; how the read works is one step away, without a new request.
+  await expect(panel.getByText(/^Check coverage: .*Selected customers not successfully read: 1/)).toBeVisible();
+  await expect(panel.getByText(/At most three urgent observations per customer/)).toBeVisible();
+  await expect(panel.getByText(/not a complete queue or a global ranking/)).toBeHidden();
+  await panel.getByText('Coverage and how this view works', { exact: true }).click();
+  await expect(panel.getByText(/not a complete queue or a global ranking/)).toBeVisible(); expect(reads).toBe(1);
   const group = panel.getByRole('region', { name: customer.name, exact: true });
   await expect(group.getByRole('listitem')).toHaveCount(3);
-  await expect(group.getByText('Urgent preview: 3 of 6 active HIGH/CRITICAL observations', { exact: true })).toBeVisible();
+  await expect(group.getByText('Showing 3 of 6 urgent observations', { exact: true })).toBeVisible();
   await group.getByText('Source coverage and freshness', { exact: true }).click();
   await expect(group.getByText('Outdated snapshot', { exact: true })).toBeVisible(); await expect(group.getByText('No snapshot', { exact: true })).toBeVisible();
   await expect(panel.getByRole('region', { name: 'Synthetic unavailable customer', exact: true }).getByText(/excluded from the observation totals/)).toBeVisible();
@@ -45,7 +51,8 @@ test('My day opens a fresh exact M12 preview before offering assigned work', { t
   await expect(dialog.getByText(observation.summary, { exact: true })).toBeVisible();
   await expect(dialog.getByText('Task priority: High', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Create task', exact: true })).toBeDisabled();
-  await expect(dialog.getByRole('checkbox')).not.toBeChecked();
+  await expect(dialog.getByRole('checkbox')).toHaveCount(0);
+  await expect(dialog.getByRole('group', { name: 'Quick due dates', exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: 'Close', exact: true }).click(); expect(previews).toBe(1); expect(writes).toBe(0);
 });
 

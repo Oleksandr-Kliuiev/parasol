@@ -111,12 +111,19 @@ export async function openQueue(page: Page) {
   return queue;
 }
 
-export async function openTargetAssignment(page: Page) {
+/**
+ * Opens the target observation's work from the customer's queue. Once the observation has a task, its row says so (UX 2026,
+ * В3: "Task done · <assignee> · due …", read for the page from CRM tasks) and the button opens the task to look at it.
+ */
+export async function openTargetAssignment(page: Page, linked?: { state: 'Task open' | 'Task done'; assignee: string }) {
   const f = fixture(); await page.goto(`/organizations/${f.target.customerId}`);
   const queue = await openQueue(page); await queue.getByLabel('Queue severity', { exact: true }).selectOption('LOW');
   const row = queue.getByRole('listitem').filter({ hasText: f.target.observationSummaryOutsideFirst100 });
-  await expect(row).toHaveCount(1); await row.getByRole('button', { name: 'Assign work', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Assign observation work', exact: true });
+  await expect(row).toHaveCount(1);
+  const literal = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (linked) await expect(row.getByText(new RegExp(`^${linked.state} · ${literal(linked.assignee)} · due `))).toBeVisible();
+  await row.getByRole('button', { name: linked ? 'View linked work' : 'Assign work', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: linked ? 'View observation work' : 'Assign observation work', exact: true });
   await expect(dialog.getByText(f.target.observationSummaryOutsideFirst100, { exact: true })).toBeVisible();
   return dialog;
 }

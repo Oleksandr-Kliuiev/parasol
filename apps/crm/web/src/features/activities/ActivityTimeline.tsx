@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
-import { Add20Regular, ArrowSync20Regular } from '@fluentui/react-icons';
+import { Button, Spinner, Text, makeStyles, useRestoreFocusTarget, mergeClasses } from '@fluentui/react-components';
+import { Add20Regular, ArrowSync20Regular, History24Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -121,7 +121,7 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
       : error ? <ErrorState error={error} onRetry={() => { setDialog(null); void (focused ? refreshSelected() : refetch()); }} />
       : <>
         {checking && <Spinner size="small" label={t('common.loading')} />}
-        <ul className={styles.list}>
+        <ul className={mergeClasses(styles.list, 'h-stagger')}>
           {data.map(activity => <ActivityTimelineItem key={activity.id} activity={activity} selected={focused} canWrite={canWrite}
             calendar={outlook.data?.calendar === true} calendarPending={actions.addToCalendar.isPending || actions.removeFromCalendar.isPending}
             statusPending={status.pending.has(activity.id)} statusStale={status.isStale(activity)} focusRequest={status.focusRequest} onFocusReady={status.consumeFocus}
@@ -129,7 +129,7 @@ function Timeline({ organizationId, opportunityId, contractId, title, selection 
             onComplete={(activity, trigger) => void changeStatus('complete', activity, trigger)}
             onReopen={(activity, trigger) => void changeStatus('reopen', activity, trigger)} onCalendar={activity => void calendar(activity)} onTicketChanged={refreshAfterTicket} />)}
         </ul>
-        {!checking && data.length === 0 && <EmptyState message={t(focused ? 'activities.selectedMissing' : 'activities.empty')} />}
+        {!checking && data.length === 0 && <EmptyState icon={<History24Regular />} message={t(focused ? 'activities.selectedMissing' : 'activities.empty')} />}
         {!focused && !ticketRefreshing && <ListFooter shown={data.length} total={activities.total} hasMore={activities.hasNextPage}
           loading={activities.isFetchingNextPage} onMore={() => void activities.fetchNextPage()} />}
       </>}

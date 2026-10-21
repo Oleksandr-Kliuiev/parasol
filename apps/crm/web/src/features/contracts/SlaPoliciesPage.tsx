@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -25,13 +24,17 @@ import {
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { h } from '../../app/hearth';
+import { RecordCell } from '../organizations/RecordCell';
+import { Add20Regular, ShieldTask16Regular, ShieldTask24Regular } from '@fluentui/react-icons';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { blankToNull, formatMoney, formatNumber, parseDecimal } from '../../shared/utils/format';
@@ -44,8 +47,12 @@ import { ScrollTable } from '../../shared/components/ScrollTable';
 const priorities = ['p1', 'p2', 'p3', 'p4'] as const;
 
 const useStyles = makeStyles({
-  targets: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`, alignItems: 'center' },
-  head: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
+  targets: { display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '8px 12px', alignItems: 'center' },
+  // The group's name reads like the label of a field; the column heads like a table's.
+  legend: { marginBottom: '8px', padding: 0, fontSize: '12.5px', lineHeight: '18px', fontWeight: 700, color: tokens.colorNeutralForeground2 },
+  head: { color: h.muted, fontSize: '12px', fontWeight: 700 },
+  priority: { minWidth: '28px', fontWeight: 700, fontVariantNumeric: 'tabular-nums' },
+  targetError: { marginTop: '8px', marginBottom: 0, color: tokens.colorPaletteRedForeground1, fontSize: '12px', lineHeight: '17px' },
 });
 
 /** 90 → "1 h 30 min", 2880 → "2 d". Business days are not implied; the coverage says when the clock runs. */
@@ -62,6 +69,7 @@ export function SlaPoliciesPage() {
   const canSeePrices = useCan(Permissions.financeRead);
   const { data = [], error, isPending, refetch } = useSlaPolicies(true);
   const [editing, setEditing] = useState<SlaPolicy | 'new' | null>(null);
+  const shown = useKeptWhileClosing(editing);
   const restoreFocusTarget = useRestoreFocusTarget();
 
   return (
@@ -82,46 +90,54 @@ export function SlaPoliciesPage() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('contracts.sla.title')}>
+          <Table className={catalog.table} style={{ minWidth: canSeePrices ? 1060 : 880 }} aria-label={t('contracts.sla.title')}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>{t('contracts.fields.name')}</TableHeaderCell>
-                <TableHeaderCell>{t('contracts.fields.coverage')}</TableHeaderCell>
-                <TableHeaderCell>{t('contracts.sla.p1Response')}</TableHeaderCell>
-                <TableHeaderCell className={catalog.number}>{t('contracts.fields.includedHoursPerMonth')}</TableHeaderCell>
-                {canSeePrices && <TableHeaderCell className={catalog.number}>{t('contracts.fields.overageRate')}</TableHeaderCell>}
-                <TableHeaderCell className={catalog.number}>{t('contracts.sla.contracts')}</TableHeaderCell>
-                {canWrite && <TableHeaderCell />}
+                <TableHeaderCell style={{ width: 146 }}>{t('contracts.fields.coverage')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 96 }}>{t('contracts.sla.p1Response')}</TableHeaderCell>
+                <TableHeaderCell className={catalog.number} style={{ width: 150 }}>{t('contracts.fields.includedHoursPerMonth')}</TableHeaderCell>
+                {canSeePrices && <TableHeaderCell className={catalog.number} style={{ width: 170 }}>{t('contracts.fields.overageRate')}</TableHeaderCell>}
+                <TableHeaderCell className={catalog.number} style={{ width: 76 }}>{t('contracts.sla.contracts')}</TableHeaderCell>
+                {canWrite && <TableHeaderCell style={{ width: 96 }} />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
-                    <span className={catalog.name}>{p.name}</span> {!p.isActive && <Badge appearance="outline" color="informative">{t('catalog.inactive')}</Badge>}
-                    {p.ateraValue && <div className={catalog.muted}>{t('contracts.sla.ateraValueShort', { value: p.ateraValue })}</div>}
+                    <RecordCell
+                      icon={<ShieldTask16Regular />}
+                      tone="saffron"
+                      name={<><span className={catalog.name}>{p.name}</span> {!p.isActive && <Badge appearance="tint" color="subtle">{t('catalog.inactive')}</Badge>}</>}
+                      meta={[p.ateraValue && t('contracts.sla.ateraValueShort', { value: p.ateraValue })]}
+                    />
                   </TableCell>
                   <TableCell>{t(`contracts.coverages.${p.coverage}`)}</TableCell>
-                  <TableCell>{formatDuration(p.p1.responseMinutes, t)}</TableCell>
-                  <TableCell className={catalog.number}>{formatNumber(p.includedHoursPerMonth)}</TableCell>
-                  {canSeePrices && <TableCell className={catalog.number}>{formatMoney(p.overageRate)}</TableCell>}
-                  <TableCell className={catalog.number}>{p.contractCount}</TableCell>
+                  <TableCell className="tabular">{formatDuration(p.p1.responseMinutes, t)}</TableCell>
+                  <TableCell className={catalog.number}>
+                    {formatNumber(p.includedHoursPerMonth)} <span className={catalog.muted}>{t('contracts.hoursShort')}</span>
+                  </TableCell>
+                  {canSeePrices && <TableCell className={catalog.number}>{p.overageRate != null ? formatMoney(p.overageRate) : '—'}</TableCell>}
+                  <TableCell className={catalog.number}>{formatNumber(p.contractCount, 0)}</TableCell>
                   {canWrite && (
                     <TableCell>
-                      <Button {...restoreFocusTarget} size="small" appearance="subtle" aria-label={t('contracts.sla.editNamed', { name: p.name })} onClick={() => setEditing(p)}>
-                        {t('common.edit')}
-                      </Button>
+                      <span className={catalog.rowActions}>
+                        <Button {...restoreFocusTarget} size="small" appearance="subtle" aria-label={t('contracts.sla.editNamed', { name: p.name })} onClick={() => setEditing(p)}>
+                          {t('common.edit')}
+                        </Button>
+                      </span>
                     </TableCell>
                   )}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {!isPending && data.length === 0 && <EmptyState message={t('contracts.sla.empty')} />}
+          {!isPending && data.length === 0 && <EmptyState icon={<ShieldTask24Regular />} message={t('contracts.sla.empty')} />}
         </ScrollTable>
       )}
       <Dialog open={editing !== null} onOpenChange={(_, d) => !d.open && setEditing(null)}>
-        <DialogSurface style={{ maxWidth: 680 }}>{editing !== null && <SlaForm existing={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}</DialogSurface>
+        <DialogSurface style={{ maxWidth: 680 }}>{shown !== null && <SlaForm existing={shown === 'new' ? null : shown} onClose={() => setEditing(null)} />}</DialogSurface>
       </Dialog>
     </>
   );
@@ -221,14 +237,14 @@ function SlaForm({ existing, onClose }: { existing: SlaPolicy | null; onClose: (
               </Dropdown>
             </Field>
             <fieldset className={dialog.wide} style={{ border: 'none', margin: 0, padding: 0 }}>
-              <legend style={{ fontWeight: 600, marginBottom: 8 }}>{t('contracts.sla.targets')}</legend>
+              <legend className={styles.legend}>{t('contracts.sla.targets')}</legend>
               <div className={styles.targets}>
                 <span />
                 <span className={styles.head}>{t('contracts.sla.responseHours')}</span>
                 <span className={styles.head}>{t('contracts.sla.resolutionHours')}</span>
                 {priorities.map((p) => (
                   <div key={p} style={{ display: 'contents' }}>
-                    <strong>{p.toUpperCase()}</strong>
+                    <span className={styles.priority}>{p.toUpperCase()}</span>
                     <Input
                       inputMode="decimal"
                       aria-label={t('contracts.sla.responseFor', { priority: p.toUpperCase() })}
@@ -245,7 +261,7 @@ function SlaForm({ existing, onClose }: { existing: SlaPolicy | null; onClose: (
                 ))}
               </div>
               {(targetsInvalid || orderInvalid) && (
-                <p style={{ color: tokens.colorPaletteRedForeground1, marginBottom: 0 }}>{orderInvalid ? t('contracts.sla.orderError') : t('contracts.sla.targetError')}</p>
+                <p className={styles.targetError}>{orderInvalid ? t('contracts.sla.orderError') : t('contracts.sla.targetError')}</p>
               )}
             </fieldset>
             <Field label={t('contracts.fields.includedHoursPerMonth')}>
@@ -262,7 +278,7 @@ function SlaForm({ existing, onClose }: { existing: SlaPolicy | null; onClose: (
             <Field label={t('contracts.fields.ateraValue')} hint={t('contracts.sla.ateraHint')}>
               <Input value={ateraValue} onChange={(_, d) => setAteraValue(d.value)} />
             </Field>
-            <Switch label={t('contracts.sla.activeLabel')} checked={isActive} onChange={(_, d) => setIsActive(d.checked)} />
+            <Switch className={dialog.controlRow} label={t('contracts.sla.activeLabel')} checked={isActive} onChange={(_, d) => setIsActive(d.checked)} />
           </div>
         </DialogContent>
         <DialogActions>

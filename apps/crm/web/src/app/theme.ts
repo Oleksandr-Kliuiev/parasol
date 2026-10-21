@@ -1,9 +1,9 @@
 import { createDarkTheme, createLightTheme, type BrandVariants, type Theme } from '@fluentui/react-components';
 
-// Parasol visual system (docs/ux/UX-CONCEPT.md §8, tokens in docs/ux/demo/css/tokens.css): warm neutrals, ember accent,
-// 12 px controls, 20 px cards. Text sits on three families of surfaces: page (Background2), card (Background1) and the
-// dark navigation rail (see railTokens).
-// Fonts stay on the system stack until the owner decides on self-hosted Manrope and Onest (new production assets).
+// Parasoll visual system after the Hearth reference (docs/ux/UX-CONCEPT.md §8): warm neutrals, ember accent, Manrope text
+// and Bricolage Grotesque headings (self-hosted in public/fonts, see styles.css), 12 px controls, 20 px cards. Text sits on
+// three families of surfaces: page (Background2), card (Background1, with Background3 for wells and card footers) and
+// the dark navigation rail (railTheme.ts). Component shapes that tokens cannot express live in hearthStyles.ts.
 
 // Ember ramp. Shade 80 (#C8441D) fills primary buttons (white text 4.7:1), 70 is the link colour and hover (#B53F19,
 // 5.6:1 on the card surface), 90 (#E4572E) is the accent for marks and focus highlights.
@@ -27,6 +27,19 @@ export const ember: BrandVariants = {
 };
 
 // Elements 12 px, cards and dialogs 20 px; checkboxes and other small marks keep a tight radius.
+export const fontFamilyBase = "'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
+/** Headings, numbers in tiles and card titles. */
+export const fontFamilyDisplay = "'Bricolage Grotesque', 'Manrope', ui-sans-serif, system-ui, sans-serif";
+
+// Manrope is set at 500 for running text, 700 for emphasis, as in the reference.
+const type: Partial<Theme> = {
+  fontFamilyBase,
+  fontWeightRegular: 500,
+  fontWeightMedium: 600,
+  fontWeightSemibold: 700,
+  fontWeightBold: 800,
+};
+
 const shape: Partial<Theme> = {
   borderRadiusSmall: '6px',
   borderRadiusMedium: '12px',
@@ -42,14 +55,14 @@ const lightSurfaces: Partial<Theme> = {
   colorNeutralBackground1Hover: '#F8F4EE',
   colorNeutralBackground1Pressed: '#F1EBE3',
   colorNeutralBackground1Selected: '#F1EBE3',
-  colorNeutralBackground2: '#F4F0EA',
+  colorNeutralBackground2: '#F3EFE8',
   colorNeutralBackground2Hover: '#EEE8DF',
   colorNeutralBackground2Pressed: '#E8E1D7',
   colorNeutralBackground2Selected: '#EEE8DF',
-  colorNeutralBackground3: '#F1EBE3',
-  colorNeutralBackground3Hover: '#EBE4DA',
-  colorNeutralBackground3Pressed: '#E4DDD2',
-  colorNeutralBackground3Selected: '#EBE4DA',
+  colorNeutralBackground3: '#F7F3ED',
+  colorNeutralBackground3Hover: '#F1EBE3',
+  colorNeutralBackground3Pressed: '#EBE4DA',
+  colorNeutralBackground3Selected: '#F1EBE3',
   colorNeutralBackground4: '#EBE4DA',
   colorNeutralBackground5: '#E4DCD1',
   colorNeutralBackground6: '#DDD4C8',
@@ -72,30 +85,39 @@ const lightSurfaces: Partial<Theme> = {
   colorNeutralForeground3Pressed: '#4F4841',
   colorNeutralForeground3Selected: '#4F4841',
   colorNeutralForeground4: '#6B645C',
-  colorNeutralStroke1: '#D9D1C6',
-  colorNeutralStroke1Hover: '#CBC2B6',
-  colorNeutralStroke1Pressed: '#BFB5A8',
-  colorNeutralStroke1Selected: '#CBC2B6',
-  colorNeutralStroke2: '#E9E3DB',
-  colorNeutralStroke3: '#F1EBE3',
-  colorNeutralStrokeSubtle: '#E9E3DB',
+  colorNeutralStroke1: 'rgba(40, 30, 20, 0.16)',
+  colorNeutralStroke1Hover: 'rgba(40, 30, 20, 0.28)',
+  colorNeutralStroke1Pressed: 'rgba(40, 30, 20, 0.34)',
+  colorNeutralStroke1Selected: 'rgba(40, 30, 20, 0.28)',
+  colorNeutralStroke2: 'rgba(40, 30, 20, 0.09)',
+  colorNeutralStroke3: 'rgba(40, 30, 20, 0.06)',
+  colorNeutralStrokeSubtle: 'rgba(40, 30, 20, 0.09)',
   colorNeutralStrokeAccessible: '#6B645C',
   colorNeutralStrokeAccessibleHover: '#4F4841',
   colorNeutralStrokeAccessiblePressed: '#1D1915',
   colorNeutralStrokeAccessibleSelected: '#B53F19',
   colorNeutralStrokeDisabled: '#E4DDD2',
+  // Disabled text in the warm grey of the palette (Fluent's is a cool #BDBDBD).
+  colorNeutralForegroundDisabled: '#A39B92',
   colorNeutralBackgroundDisabled: '#F1EBE3',
   colorNeutralBackgroundStatic: '#3A332D',
   colorNeutralBackgroundInverted: '#1D1915',
   colorNeutralBackgroundAlpha: 'rgba(255, 253, 250, 0.5)',
   colorNeutralBackgroundAlpha2: 'rgba(255, 253, 250, 0.8)',
   colorBackgroundOverlay: 'rgba(27, 23, 20, 0.42)',
-  shadow2: '0 1px 2px rgba(40, 30, 20, 0.06)',
-  shadow4: '0 1px 2px rgba(40, 30, 20, 0.04), 0 16px 32px -24px rgba(60, 40, 20, 0.3)',
-  shadow8: '0 2px 4px rgba(40, 30, 20, 0.05), 0 24px 48px -24px rgba(60, 40, 20, 0.4)',
-  shadow16: '0 2px 4px rgba(40, 30, 20, 0.05), 0 24px 48px -24px rgba(60, 40, 20, 0.4)',
-  shadow28: '0 24px 56px -16px rgba(40, 30, 20, 0.34), 0 2px 6px rgba(40, 30, 20, 0.08)',
-  shadow64: '0 24px 56px -16px rgba(40, 30, 20, 0.34), 0 2px 6px rgba(40, 30, 20, 0.08)',
+  colorNeutralStencil1: '#EEE8DF',
+  colorNeutralStencil2: '#F7F3ED',
+  colorNeutralStencil1Alpha: 'rgba(40, 30, 20, 0.07)',
+  colorNeutralStencil2Alpha: 'rgba(40, 30, 20, 0.03)',
+  colorPaletteRedBorder2: '#C2401B',
+  colorPaletteRedForeground1: '#B53F19',
+  shadow2: '0 1px 2px rgba(40, 30, 20, 0.04)',
+  // Cards rest on a soft long shadow; lifted surfaces (hover, sticky bars) and popovers have their own.
+  shadow4: '0 1px 2px rgba(40, 30, 20, 0.04), 0 18px 40px -28px rgba(60, 40, 20, 0.28)',
+  shadow8: '0 2px 4px rgba(40, 30, 20, 0.05), 0 28px 50px -28px rgba(60, 40, 20, 0.38)',
+  shadow16: '0 24px 60px -18px rgba(40, 30, 20, 0.32), 0 2px 6px rgba(40, 30, 20, 0.08)',
+  shadow28: '0 24px 60px -18px rgba(40, 30, 20, 0.32), 0 2px 6px rgba(40, 30, 20, 0.08)',
+  shadow64: '0 24px 60px -18px rgba(40, 30, 20, 0.32), 0 2px 6px rgba(40, 30, 20, 0.08)',
 };
 
 const darkSurfaces: Partial<Theme> = {
@@ -133,34 +155,69 @@ const darkSurfaces: Partial<Theme> = {
   colorNeutralForeground3Pressed: '#D6CFC6',
   colorNeutralForeground3Selected: '#D6CFC6',
   colorNeutralForeground4: '#A9A198',
-  colorNeutralStroke1: '#4A4642',
-  colorNeutralStroke1Hover: '#5A5651',
-  colorNeutralStroke1Pressed: '#6A655F',
-  colorNeutralStroke1Selected: '#5A5651',
-  colorNeutralStroke2: '#34312E',
-  colorNeutralStroke3: '#2A2724',
-  colorNeutralStrokeSubtle: '#34312E',
+  colorNeutralStroke1: 'rgba(255, 255, 255, 0.16)',
+  colorNeutralStroke1Hover: 'rgba(255, 255, 255, 0.28)',
+  colorNeutralStroke1Pressed: 'rgba(255, 255, 255, 0.34)',
+  colorNeutralStroke1Selected: 'rgba(255, 255, 255, 0.28)',
+  colorNeutralStroke2: 'rgba(255, 255, 255, 0.086)',
+  colorNeutralStroke3: 'rgba(255, 255, 255, 0.06)',
+  colorNeutralStrokeSubtle: 'rgba(255, 255, 255, 0.086)',
   colorNeutralStrokeAccessible: '#A9A198',
   colorNeutralStrokeAccessibleHover: '#D6CFC6',
   colorNeutralStrokeAccessiblePressed: '#F2EDE6',
   colorNeutralStrokeAccessibleSelected: '#F39A7B',
   colorNeutralStrokeDisabled: '#34312E',
+  colorNeutralForegroundDisabled: '#6E675F',
   colorNeutralBackgroundDisabled: '#26221F',
   colorNeutralBackgroundStatic: '#3B3531',
   colorNeutralBackgroundInverted: '#F2EDE6',
   colorNeutralBackgroundAlpha: 'rgba(30, 27, 25, 0.5)',
   colorNeutralBackgroundAlpha2: 'rgba(30, 27, 25, 0.8)',
   colorBackgroundOverlay: 'rgba(0, 0, 0, 0.56)',
+  colorNeutralStencil1: '#2D2825',
+  colorNeutralStencil2: '#36302C',
+  colorNeutralStencil1Alpha: 'rgba(255, 255, 255, 0.07)',
+  colorNeutralStencil2Alpha: 'rgba(255, 255, 255, 0.03)',
+  colorPaletteRedBorder2: '#F39A7B',
+  colorPaletteRedForeground1: '#F39A7B',
   shadow2: '0 1px 0 rgba(255, 255, 255, 0.04) inset',
-  shadow4: '0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 32px -24px rgba(0, 0, 0, 0.8)',
-  shadow8: '0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -24px rgba(0, 0, 0, 0.9)',
-  shadow16: '0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -24px rgba(0, 0, 0, 0.9)',
+  shadow4: '0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 40px -28px rgba(0, 0, 0, 0.8)',
+  shadow8: '0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 28px 50px -26px rgba(0, 0, 0, 0.9)',
+  shadow16: '0 24px 60px -18px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08)',
   shadow28: '0 24px 56px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08)',
   shadow64: '0 24px 56px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08)',
 };
 
+// Switched on, ticked and chosen controls are spruce, as in the reference: Fluent paints them with the compound brand
+// colours (switch track, checkbox box, radio dot, progress bar). Fields hide their compound-brand focus line.
+const spruceChecked: Record<'light' | 'dark', Partial<Theme>> = {
+  light: {
+    colorCompoundBrandBackground: '#0A8F74',
+    colorCompoundBrandBackgroundHover: '#0A7A63',
+    colorCompoundBrandBackgroundPressed: '#086A56',
+    colorCompoundBrandForeground1: '#0A8F74',
+    colorCompoundBrandForeground1Hover: '#0A7A63',
+    colorCompoundBrandForeground1Pressed: '#086A56',
+    colorCompoundBrandStroke: '#0A8F74',
+    colorCompoundBrandStrokeHover: '#0A7A63',
+    colorCompoundBrandStrokePressed: '#086A56',
+  },
+  dark: {
+    colorCompoundBrandBackground: '#1F9E82',
+    colorCompoundBrandBackgroundHover: '#25B192',
+    colorCompoundBrandBackgroundPressed: '#1A8A71',
+    colorCompoundBrandForeground1: '#5CCFB1',
+    colorCompoundBrandForeground1Hover: '#7ADBC1',
+    colorCompoundBrandForeground1Pressed: '#5CCFB1',
+    colorCompoundBrandStroke: '#1F9E82',
+    colorCompoundBrandStrokeHover: '#25B192',
+    colorCompoundBrandStrokePressed: '#1A8A71',
+  },
+};
+
 export const lightTheme: Theme = {
   ...createLightTheme(ember),
+  ...type,
   ...shape,
   ...lightSurfaces,
   // Fluent derives the link from shade 70 and the hover from shade 60; the concept wants #B53F19 for links.
@@ -170,10 +227,12 @@ export const lightTheme: Theme = {
   colorBrandForegroundLinkSelected: ember[70],
   colorCompoundBrandStroke: ember[80],
   colorStrokeFocus2: '#C8441D',
+  ...spruceChecked.light,
 };
 
 export const darkTheme: Theme = {
   ...createDarkTheme(ember),
+  ...type,
   ...shape,
   ...darkSurfaces,
   // Filled buttons keep the light-theme ember (white text 4.7:1); hover is lighter, as in the demo.
@@ -186,6 +245,7 @@ export const darkTheme: Theme = {
   colorCompoundBrandBackgroundPressed: '#B23B18',
   colorCompoundBrandStroke: '#E8643D',
   colorCompoundBrandStrokeHover: '#F39A7B',
+  ...spruceChecked.dark,
   colorBrandForeground1: ember[120],
   colorBrandForeground2: ember[120],
   colorBrandForegroundLink: ember[120],

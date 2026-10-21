@@ -56,6 +56,8 @@ internal sealed class ListOrganizationsHandler(CustomersDbContext db, IUserDirec
     {
         var limit = KeysetCursor.ClampLimit(query.Limit);
         var organizations = db.Organizations.AsNoTracking().ApplyFilters(query.Search, query.Status, query.AccountManagerId);
+        // How many the filter matches, counted before the page (DEV-12): the list's status filters show it.
+        var total = await organizations.CountAsync(cancellationToken);
 
         if (KeysetCursor.Decode(query.Cursor) is { } cursor)
         {
@@ -85,7 +87,7 @@ internal sealed class ListOrganizationsHandler(CustomersDbContext db, IUserDirec
             .ToList();
 
         var last = items.LastOrDefault();
-        return new PagedResult<OrganizationListItem>(result, hasMore && last is not null ? new KeysetCursor(last.Name, last.Id).Encode() : null);
+        return new PagedResult<OrganizationListItem>(result, hasMore && last is not null ? new KeysetCursor(last.Name, last.Id).Encode() : null, total);
     }
 }
 

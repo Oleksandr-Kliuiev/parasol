@@ -18,6 +18,8 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
+import { Building16Regular, ContactCard16Regular, Location16Regular, Person16Regular, Receipt16Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
 import { api, ApiError } from '../../api/client';
 import { organizationStatuses, type Address, type Organization, type OrganizationRequest, type RegistryOrganization, type RegistryStatus } from '../../api/types';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -37,24 +39,43 @@ import { RegistryLookup } from './RegistryLookup';
 import { useCustomerSettings } from '../integrations/api';
 
 const useStyles = makeStyles({
+  // The fields stay a readable width (about 760 px); the register lookup sits beside them on a wide screen.
   layout: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 380px)',
-    gap: tokens.spacingHorizontalXL,
+    gridTemplateColumns: 'minmax(0, 760px) minmax(280px, 360px)',
+    gap: '24px',
     alignItems: 'start',
-    '@media (max-width: 1100px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
+    '@media (max-width: 1100px)': { gridTemplateColumns: 'minmax(0, 760px)' },
   },
-  aside: { position: 'sticky', top: '68px', '@media (max-width: 1100px)': { position: 'static', order: -1 } },
-  sections: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
+  // The register lookup is the first step of a new customer, so it comes first in the page's order (and the Tab order):
+  // above the fields on a narrow screen, beside them on a wide one (WCAG 1.3.2, 2.4.3).
+  aside: { position: 'sticky', top: '88px', gridColumn: 2, gridRow: 1, '@media (max-width: 1100px)': { position: 'static', gridColumn: 1, gridRow: 'auto' } },
+  sections: { display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, gridColumn: 1, gridRow: 1, '@media (max-width: 1100px)': { gridRow: 'auto' } },
+  // Fields start at the top of their row (a hint under one field must not stretch its neighbours) and a dropdown
+  // gives up Fluent's 250 px minimum to fit its column.
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
-    gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
+    gap: '14px 16px',
+    alignItems: 'start',
+    '& .fui-Dropdown, & .fui-Combobox': { minWidth: 0 },
   },
   wide: { gridColumn: '1 / -1' },
-  addressTitle: { gridColumn: '1 / -1', margin: 0, fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold, color: tokens.colorNeutralForeground2 },
-  actions: { display: 'flex', gap: tokens.spacingHorizontalS, justifyContent: 'flex-end' },
-  messages: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS, marginBottom: tokens.spacingVerticalL },
+  // One address: street across, postal code, city and country under it; a hairline between the three addresses.
+  address: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)',
+    gap: '14px 16px',
+    alignItems: 'start',
+    ':not(:first-child)': { borderTop: `1px solid ${h.line}`, paddingTop: '16px', marginTop: '4px' },
+    // Inputs shrink with their column instead of keeping the browser's 20-character width.
+    '& > *, & .fui-Input': { minWidth: 0 },
+    '@media (max-width: 560px)': { gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' },
+  },
+  addresses: { display: 'grid', gap: '16px' },
+  addressTitle: { gridColumn: '1 / -1', margin: 0, fontSize: '13px', lineHeight: '18px', fontWeight: tokens.fontWeightSemibold, color: h.muted },
+  actions: { display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' },
+  messages: { display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', ':empty': { marginBottom: 0 } },
 });
 
 const emptyAddress = { street: '', postalCode: '', city: '', countryCode: 'NO' };
@@ -82,15 +103,16 @@ function toAddress(values: AddressValues): Address {
 function useSchema() {
   const { t } = useTranslation();
   return useMemo(() => {
-    const optionalEmail = z.string().trim().refine((v) => v === '' || z.email().safeParse(v).success, t('errors.validation'));
+    // Each field says what it wants (WCAG 3.3.3), not only that something is wrong.
+    const optionalEmail = z.string().trim().refine((v) => v === '' || z.email().safeParse(v).success, t('organizations.form.invalidEmail'));
     const address = z.object({
       street: z.string().max(256),
       postalCode: z.string().max(16),
       city: z.string().max(128),
-      countryCode: z.string().trim().refine((v) => v === '' || /^[A-Za-z]{2}$/.test(v), t('errors.validation')),
+      countryCode: z.string().trim().refine((v) => v === '' || /^[A-Za-z]{2}$/.test(v), t('organizations.form.invalidCountry')),
     });
     return z.object({
-      name: z.string().trim().min(1, t('errors.validation')).max(256),
+      name: z.string().trim().min(1, t('organizations.form.nameRequired')).max(256),
       orgNumber: z.string().refine((v) => v.trim() === '' || isValidOrgNumber(v), t('organizations.form.invalidOrgNumber')),
       legalForm: z.string().max(16),
       status: z.enum(organizationStatuses),
@@ -107,7 +129,7 @@ function useSchema() {
       billingAddress: address,
       domains: z.string().refine(
         (v) => v.split(',').map((d) => d.trim()).filter(Boolean).every((d) => /^@?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(d)),
-        t('errors.validation'),
+        t('organizations.form.invalidDomains'),
       ),
     });
   }, [t]);
@@ -375,8 +397,13 @@ function OrganizationForm({ id, initial, etag, carried, onReload, onKeepMine }: 
       </div>
 
       <form onSubmit={(e) => void onSubmit(e)} noValidate className={styles.layout}>
+        {!isEdit && (
+          <aside className={styles.aside}>
+            <RegistryLookup onSelect={applyRegistry} />
+          </aside>
+        )}
         <div className={styles.sections}>
-          <Panel title={t('organizations.sections.company')}>
+          <Panel title={t('organizations.sections.company')} icon={<Building16Regular />}>
             <div className={styles.grid}>
               {text('name', t('organizations.fields.name'), { required: true, className: styles.wide })}
               {text('orgNumber', t('organizations.fields.orgNumber'), { inputMode: 'numeric' })}
@@ -404,7 +431,7 @@ function OrganizationForm({ id, initial, etag, carried, onReload, onKeepMine }: 
             </div>
           </Panel>
 
-          <Panel title={t('organizations.sections.contactInfo')}>
+          <Panel title={t('organizations.sections.contactInfo')} icon={<ContactCard16Regular />}>
             <div className={styles.grid}>
               {text('email', t('organizations.fields.email'), { type: 'email' })}
               {text('phone', t('organizations.fields.phone'), { type: 'tel' })}
@@ -413,7 +440,7 @@ function OrganizationForm({ id, initial, etag, carried, onReload, onKeepMine }: 
             </div>
           </Panel>
 
-          <Panel title={t('organizations.sections.responsibility')}>
+          <Panel title={t('organizations.sections.responsibility')} icon={<Person16Regular />}>
             <div className={styles.grid}>
               {(['accountManager', 'primaryTechnician'] as const).map((name) => (
                 <Controller
@@ -430,10 +457,10 @@ function OrganizationForm({ id, initial, etag, carried, onReload, onKeepMine }: 
             </div>
           </Panel>
 
-          <Panel title={t('organizations.sections.addresses')}>
-            <div className={styles.grid}>
+          <Panel title={t('organizations.sections.addresses')} icon={<Location16Regular />}>
+            <div className={styles.addresses}>
               {addressKeys.map((key) => (
-                <div key={key} className={styles.wide} style={{ display: 'contents' }}>
+                <div key={key} className={styles.address}>
                   <h3 className={styles.addressTitle}>{t(`organizations.fields.${key}`)}</h3>
                   {text(`${key}.street`, t('organizations.fields.street'), { className: styles.wide, disabled: billingManaged && key === 'billingAddress' })}
                   {text(`${key}.postalCode`, t('organizations.fields.postalCode'), { inputMode: 'numeric', disabled: billingManaged && key === 'billingAddress' })}
@@ -444,7 +471,7 @@ function OrganizationForm({ id, initial, etag, carried, onReload, onKeepMine }: 
             </div>
           </Panel>
 
-          <Panel title={t('organizations.sections.invoicing')}>
+          <Panel title={t('organizations.sections.invoicing')} icon={<Receipt16Regular />}>
             <div className={styles.grid}>
               {text('invoiceEmail', t('organizations.fields.invoiceEmail'), {
                 type: 'email',
@@ -470,12 +497,6 @@ function OrganizationForm({ id, initial, etag, carried, onReload, onKeepMine }: 
             </Button>
           </div>
         </div>
-
-        {!isEdit && (
-          <aside className={styles.aside}>
-            <RegistryLookup onSelect={applyRegistry} />
-          </aside>
-        )}
       </form>
     </>
   );

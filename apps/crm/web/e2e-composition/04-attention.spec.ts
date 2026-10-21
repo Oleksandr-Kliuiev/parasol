@@ -45,7 +45,7 @@ test('personal My Day attention reads the independent forty/twenty/twenty client
         expect(target.resources?.some(resource => resource.status === 'STALE')).toBe(true);
         const customer = panel.getByRole('region', { name: f.clients[0]!.name, exact: true });
         await expect(customer.getByText(f.target.criticalSummary, { exact: true })).toBeVisible();
-        await expect(customer.getByText('Urgent preview: 3 of 5 active HIGH/CRITICAL observations', { exact: true })).toBeVisible();
+        await expect(customer.getByText('Showing 3 of 5 urgent observations', { exact: true })).toBeVisible();
         const row = customer.getByRole('listitem').filter({ hasText: f.target.criticalSummary });
         await row.getByRole('button', { name: 'Assign work', exact: true }).click();
         const dialog = session.page.getByRole('dialog', { name: 'Assign observation work', exact: true });

@@ -7,11 +7,14 @@ interface AppLinkProps {
   children: ReactNode;
   className?: string;
   appearance?: 'default' | 'subtle';
+  /** For a link that shows only an icon. */
+  ariaLabel?: string;
+  title?: string;
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
 /** Fluent-styled link with client-side navigation (keeps Ctrl/Cmd+click and middle-click behaviour). */
-export function AppLink({ to, children, className, appearance, onClick }: AppLinkProps) {
+export function AppLink({ to, children, className, appearance, ariaLabel, title, onClick }: AppLinkProps) {
   const href = useHref(to);
   const navigate = useLinkClickHandler<HTMLAnchorElement>(to);
   return (
@@ -20,6 +23,8 @@ export function AppLink({ to, children, className, appearance, onClick }: AppLin
       href={href}
       className={className}
       appearance={appearance}
+      aria-label={ariaLabel}
+      title={title}
       onClick={(event: MouseEvent<HTMLAnchorElement>) => {
         onClick?.(event);
         if (!event.defaultPrevented) navigate(event);

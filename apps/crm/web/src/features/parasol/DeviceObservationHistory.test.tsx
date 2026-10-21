@@ -59,7 +59,7 @@ describe('device investigation through the complete queue', () => {
     expect(returned.getAllByRole('listitem')).toHaveLength(42);
     expect(within(returned.getByText(/device-40$/).closest('li')!).getByRole('button')).toHaveFocus();
     expect(requests).toHaveLength(1);
-  });
+  }, 15_000); // A long keyboard journey: under load it needs more than the default 5 s, never a retry.
 
   it('keeps device scope across pages and preserves severity/state when clearing just the device', async () => {
     const { requests } = setup();

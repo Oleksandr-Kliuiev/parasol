@@ -1,88 +1,54 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { Badge, Button, DialogSurface, Dropdown, Option, Spinner, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import {
-  Badge,
-  Button,
-  Checkbox,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  Dropdown,
-  Field,
-  Input,
-  MessageBar,
-  MessageBarBody,
-  Option,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  Text,
-  makeStyles,
-  tokens,
-  useRestoreFocusTarget,
-} from '@fluentui/react-components';
-import { CheckmarkCircle20Regular, LockClosed20Regular, LockOpen20Regular } from '@fluentui/react-icons';
+  CalendarLtr16Regular,
+  CheckmarkCircle16Regular,
+  CheckmarkCircle20Regular,
+  Clock16Regular,
+  Clock24Regular,
+  Hourglass16Regular,
+  LockClosed16Regular,
+  LockClosed20Regular,
+  LockOpen20Regular,
+  Money16Regular,
+} from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
-import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
-import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { StatGrid, StatTile } from '../../shared/components/KpiTile';
+import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
+import { FilterChips, FilterField, Toolbar } from '../../shared/components/Toolbar';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatMoney, formatNumber } from '../../shared/utils/format';
-import { useCatalogStyles } from '../catalog/styles';
-import { usePeriodActions, usePeriods, useTimeActions, useTimeEntries } from './api';
+import { usePeriods, useTimeActions, useTimeEntries } from './api';
+import { ClosePeriodDialog } from './ClosePeriodDialog';
 import { financialReviewPermissions } from './financialReviewAccess';
+import { monthName } from './monthName';
+import { AdjustDialog, ReopenDialog } from './TimeEntryReviewDialogs';
+import { TimeEntriesTable } from './TimeEntriesTable';
+import { actionable, statusDot } from './timeEntryState';
+import { TimePeriodsPanel } from './TimePeriodsPanel';
 import { timeStatuses, type Period, type TimeEntry, type TimeEntryStatus } from './types';
-import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  filters: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
-  bar: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalM,
-    padding: tokens.spacingHorizontalM,
-    marginBottom: tokens.spacingVerticalM,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
-  },
-  spacer: { flex: 1 },
-  allocations: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS, alignItems: 'center' },
-  // Plain text rather than tinted badges: the same row is read in both themes, and the label already says everything.
-  allocation: {
-    paddingInline: tokens.spacingHorizontalXS,
-    borderInlineStartWidth: '2px',
-    borderInlineStartStyle: 'solid',
-    borderInlineStartColor: tokens.colorBrandStroke2,
-    color: tokens.colorNeutralForeground2,
-    fontSize: tokens.fontSizeBase200,
-    whiteSpace: 'nowrap',
-  },
-  review: { color: tokens.colorPaletteDarkOrangeForeground1, fontSize: tokens.fontSizeBase200 },
-  periods: { listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: tokens.spacingVerticalXS },
-  period: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, paddingBlock: tokens.spacingVerticalXXS },
+  // Four figures of the month in one row; two by two on a phone.
+  stats: { gridTemplateColumns: 'repeat(auto-fit, minmax(min(190px, 100%), 1fr))', '@media (max-width: 560px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } },
+  month: { minWidth: '200px' },
+  // A card without a table keeps the card's own padding around its message.
+  body: { paddingLeft: '20px', paddingRight: '20px', paddingBottom: '20px', '@media (max-width: 600px)': { paddingLeft: '16px', paddingRight: '16px', paddingBottom: '16px' } },
+  loading: { paddingTop: '24px', paddingBottom: '24px' },
 });
-
-const monthName = (year: number, month: number, language: string) =>
-  new Intl.DateTimeFormat(language, { month: 'long', year: 'numeric' }).format(new Date(Date.UTC(year, month - 1, 1)));
 
 /** Everyone's hours for a month: correct, approve and close the period (FR-TIM-03). */
 export function TimeEntriesPage() {
   const styles = useStyles();
-  const catalog = useCatalogStyles();
   const { t, i18n } = useTranslation();
   const notify = useNotify();
   const canManage = useCan(Permissions.timeManage);
@@ -91,16 +57,23 @@ export function TimeEntriesPage() {
   const canSeeMoney = useCan(Permissions.financeRead);
   const canUnlock = useCan(Permissions.timeUnlock);
   const actions = useTimeActions();
-  const periodActions = usePeriodActions();
   const [params, setParams] = useSearchParams();
   const now = new Date();
   const year = Number(params.get('year') ?? now.getFullYear());
   const month = Number(params.get('month') ?? now.getMonth() + 1);
   const reviewOnly = params.get('reviewOnly') === 'true';
   const status = (params.get('status') as TimeEntryStatus | null) ?? null;
-  const [selected, setSelected] = useState<string[]>([]);
+  // The selection belongs to one month and filter: another month (a tile, Back) starts with none.
+  const view = `${year}-${month}-${status ?? ''}-${reviewOnly}`;
+  const [selection, setSelection] = useState<{ view: string; ids: string[] }>({ view, ids: [] });
+  const selected = selection.view === view ? selection.ids : [];
+  const setSelected = (ids: string[]) => setSelection({ view, ids });
   const [adjusting, setAdjusting] = useState<TimeEntry | null>(null);
   const [reopening, setReopening] = useState<Period | null>(null);
+  const [closingPeriod, setClosingPeriod] = useState(false);
+  const panelHeading = useRef<HTMLHeadingElement>(null);
+  const shownEntry = useKeptWhileClosing(adjusting);
+  const shownPeriod = useKeptWhileClosing(reopening);
   const restoreFocusTarget = useRestoreFocusTarget();
 
   const pages = useTimeEntries({ year, month, status, reviewOnly });
@@ -109,8 +82,18 @@ export function TimeEntriesPage() {
   const { error, isPending, refetch } = pages;
   const periods = usePeriods(year);
   const period = periods.data?.find((p) => p.month === month);
+  const closed = period?.isClosed === true;
   const entries = pages.items;
-  const selectable = entries.filter((e) => e.status === 'New' && !e.isLocked).map((e) => e.id);
+  // Approval and withdrawal are offered for what they can apply to: never in a closed month, never for billed work.
+  // Each action counts and sends only the chosen entries it applies to, so "Approve (4)" approves four.
+  const chosen = entries.filter((e) => selected.includes(e.id));
+  const approvable = canManage && !closed ? chosen.filter((e) => e.status === 'New' && !e.isLocked).map((e) => e.id) : [];
+  const withdrawable = canManage && !closed ? chosen.filter((e) => (e.status === 'Approved' || e.status === 'NonBillable') && !e.isLocked).map((e) => e.id) : [];
+  const canApprove = approvable.length > 0;
+  const canWithdraw = withdrawable.length > 0;
+  const filtered = status !== null || reviewOnly;
+  // While the month loads its figures show a placeholder, not a zero that would count up later.
+  const hours = (value: number | undefined) => (value === undefined ? t('myDay.loadingValue') : `${formatNumber(value)} ${t('contracts.hoursShort')}`);
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
@@ -120,11 +103,21 @@ export function TimeEntriesPage() {
     setSelected([]);
   };
 
-  const run = async (action: () => Promise<unknown>, success: string) => {
+  const monthHref = (value: number) => {
+    const next = new URLSearchParams(params);
+    next.set('year', String(year));
+    next.set('month', String(value));
+    return `?${next.toString()}`;
+  };
+
+  // The bulk buttons go with the selection they act on; focus stays in the card instead of falling to the page.
+  const settle = () => { setSelected([]); panelHeading.current?.focus(); };
+
+  const withdraw = async () => {
     try {
-      await action();
-      notify(success);
-      setSelected([]);
+      await actions.withdraw.mutateAsync(withdrawable);
+      notify(t('time.withdrawn'));
+      settle();
     } catch (e) {
       notify(t('errors.generic'), 'error', errorMessage(e, t));
     }
@@ -132,24 +125,40 @@ export function TimeEntriesPage() {
 
   const approve = async () => {
     try {
-      const result = await actions.approve.mutateAsync(selected);
-      notify(
-        t('time.approved', { count: result.data.approved }),
-        result.data.skipped > 0 ? 'warning' : 'success',
-        result.data.skipped > 0 ? result.data.skippedReasons.join(' ') : undefined,
-      );
-      setSelected([]);
+      const result = await actions.approve.mutateAsync(approvable);
+      // The server words its reasons in English; the person gets the count in their language and the rows show the state.
+      notify(t('time.approved', { count: result.data.approved }), result.data.skipped > 0 ? 'warning' : 'success',
+        result.data.skipped > 0 ? t('time.approveSkipped', { count: result.data.skipped }) : undefined);
+      settle();
     } catch (e) {
       notify(t('errors.generic'), 'error', errorMessage(e, t));
     }
   };
 
+  const closedBadge = closed && (
+    <Badge appearance="tint" color="informative" icon={<LockClosed16Regular />}>
+      {period?.closedAt && period.closedByName
+        ? t('time.periodClosed', { at: formatDate(period.closedAt), by: period.closedByName })
+        : t('time.closed')}
+    </Badge>
+  );
+
   return (
     <>
       <PageHeader title={t('time.title')} subtitle={t('time.subtitle')} />
-      <div className={styles.filters}>
-        <Field label={t('time.fields.period')}>
+      <Toolbar
+        end={
+          <FilterChips
+            label={t('financialReview.savedOnly')}
+            value={reviewOnly ? 'on' : ''}
+            options={[{ value: 'on', label: t('financialReview.savedOnlyShort') }]}
+            onChange={() => setParam('reviewOnly', reviewOnly ? null : 'true')}
+          />
+        }
+      >
+        <FilterField label={t('time.fields.period')}>
           <Dropdown
+            className={styles.month}
             value={monthName(year, month, i18n.language)}
             selectedOptions={[`${year}-${month}`]}
             onOptionSelect={(_, d) => {
@@ -167,274 +176,94 @@ export function TimeEntriesPage() {
               </Option>
             )))}
           </Dropdown>
-        </Field>
-        <Field label={t('time.fields.status')}>
-          <Dropdown
-            value={status ? t(`time.statuses.${status}`) : t('common.all')}
-            selectedOptions={[status ?? '']}
-            onOptionSelect={(_, d) => setParam('status', d.optionValue || null)}
-          >
-            <Option value="">{t('common.all')}</Option>
-            {timeStatuses.map((s) => (
-              <Option key={s} value={s}>
-                {t(`time.statuses.${s}`)}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-      </div>
+        </FilterField>
+        <FilterChips
+          label={t('time.fields.status')}
+          value={status ?? 'all'}
+          options={[{ value: 'all', label: t('common.all') }, ...timeStatuses.map((s) => ({ value: s, label: t(`time.statuses.${s}`), dot: statusDot[s] }))]}
+          onChange={(value) => setParam('status', value === 'all' ? null : value)}
+        />
+      </Toolbar>
 
-      <Checkbox label={t('financialReview.savedOnly')} checked={reviewOnly}
-        onChange={(_, d) => setParam('reviewOnly', d.checked ? 'true' : null)} />
-      <div className={styles.bar}>
-        <Text>
-          {t('time.totals', {
-            hours: formatNumber(data?.summary.hours ?? 0),
-            approved: formatNumber(data?.summary.approvedHours ?? 0),
-            pending: formatNumber(data?.summary.newHours ?? 0),
-          })}
-        </Text>
-        {canSeeMoney && <Text className={catalog.muted}>{t('time.amountTotal', { amount: formatMoney(data?.summary.amount ?? 0) })}</Text>}
-        {period?.isClosed && (
-          <Badge appearance="tint" color="informative" icon={<LockClosed20Regular />}>
-            {t('time.periodClosed', { at: period.closedAt ? formatDate(period.closedAt) : '', by: period.closedByName ?? '' })}
-          </Badge>
-        )}
-        <span className={styles.spacer} />
-        {canManage && (
-          <>
-            <Button appearance="primary" icon={<CheckmarkCircle20Regular />} disabled={selected.length === 0} onClick={() => void approve()}>
-              {t('time.approveSelected', { count: selected.length })}
+      {!error && (
+        <StatGrid className={styles.stats} label={t('time.figuresLabel', { month: monthName(year, month, i18n.language) })}>
+          <StatTile icon={<Clock16Regular />} tone="ember" label={t('time.fields.hours')} value={hours(data?.summary.hours)}
+            note={t('time.billableTotal', { hours: formatNumber(data?.summary.billableHours ?? 0) })} />
+          <StatTile icon={<CheckmarkCircle16Regular />} tone="spruce" label={t('time.statuses.Approved')} value={hours(data?.summary.approvedHours)} />
+          <StatTile icon={<Hourglass16Regular />} tone="saffron" label={t('time.tiles.waiting')} value={hours(data?.summary.newHours)}
+            note={period && !closed ? t('time.entriesCount', { count: period.newEntries }) : undefined} />
+          {canSeeMoney && <StatTile icon={<Money16Regular />} tone="iris" label={t('time.tiles.toBill')}
+            value={data ? formatMoney(data.summary.amount ?? 0) : t('myDay.loadingValue')} />}
+        </StatGrid>
+      )}
+
+      <Panel flush headingRef={panelHeading} title={monthName(year, month, i18n.language)} icon={<CalendarLtr16Regular />} actions={(closedBadge || canManage || (closed && canUnlock)) && (
+        <>
+          {closedBadge}
+          {canWithdraw && (
+            <Button onClick={() => void withdraw()}>
+              {t('time.withdrawSelected', { count: withdrawable.length })}
             </Button>
-            <Button disabled={selected.length === 0} onClick={() => void run(() => actions.withdraw.mutateAsync(selected), t('time.withdrawn'))}>
-              {t('time.withdrawSelected')}
+          )}
+          {closed ? (
+            canUnlock && (
+              <Button {...restoreFocusTarget} icon={<LockOpen20Regular />} onClick={() => setReopening(period!)}>
+                {t('time.reopenPeriod')}
+              </Button>
+            )
+          ) : (
+            canManage && (
+              <Button {...restoreFocusTarget} icon={<LockClosed20Regular />} onClick={() => setClosingPeriod(true)}>
+                {t('time.closePeriod', { month: monthName(year, month, i18n.language) })}
+              </Button>
+            )
+          )}
+          {canApprove && (
+            <Button appearance="primary" icon={<CheckmarkCircle20Regular />} onClick={() => void approve()}>
+              {t('time.approveSelected', { count: approvable.length })}
             </Button>
-          </>
-        )}
-        {period?.isClosed ? (
-          canUnlock && (
-            <Button {...restoreFocusTarget} icon={<LockOpen20Regular />} onClick={() => setReopening(period)}>
-              {t('time.reopenPeriod')}
-            </Button>
-          )
+          )}
+        </>
+      )}>
+        {error ? (
+          <div className={styles.body}><ErrorState error={error} onRetry={() => void refetch()} /></div>
+        ) : isPending ? (
+          <div className={styles.loading}><Spinner size="small" label={t('common.loading')} /></div>
+        ) : entries.length === 0 ? (
+          <EmptyState
+            icon={<Clock24Regular />}
+            message={filtered ? t('time.emptyFiltered') : t('time.empty')}
+            action={filtered && (
+              <Button onClick={() => {
+                const next = new URLSearchParams(params);
+                next.delete('status');
+                next.delete('reviewOnly');
+                setParams(next, { replace: true });
+              }}>
+                {t('time.showAll')}
+              </Button>
+            )}
+          />
         ) : (
-          canManage && (
-            <Button icon={<LockClosed20Regular />}
-              onClick={() => void run(() => periodActions.close.mutateAsync({ year, month }), t('time.periodClosedDone'))}>
-              {t('time.closePeriod')}
-            </Button>
-          )
+          <TimeEntriesTable entries={entries} selectable={canManage && !closed && entries.some(actionable)} canManage={canManage && !closed}
+            canReview={canReview} canSeeMoney={canSeeMoney} selected={selected} onSelect={setSelected} onAdjust={setAdjusting} />
         )}
-      </div>
+        <ListFooter shown={entries.length} total={data?.totalCount} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
+      </Panel>
 
-      {error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : (
-        <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('time.title')}>
-            <TableHeader>
-              <TableRow>
-                {canManage && (
-                  <TableHeaderCell>
-                    <Checkbox
-                      aria-label={t('time.selectAll')}
-                      checked={selected.length > 0 && selected.length === selectable.length ? true : selected.length > 0 ? 'mixed' : false}
-                      disabled={selectable.length === 0}
-                      onChange={(_, d) => setSelected(d.checked ? selectable : [])}
-                    />
-                  </TableHeaderCell>
-                )}
-                <TableHeaderCell>{t('time.fields.workDate')}</TableHeaderCell>
-                <TableHeaderCell>{t('time.fields.organization')}</TableHeaderCell>
-                <TableHeaderCell>{t('time.fields.technician')}</TableHeaderCell>
-                <TableHeaderCell>{t('time.fields.work')}</TableHeaderCell>
-                <TableHeaderCell className={catalog.number}>{t('time.fields.hours')}</TableHeaderCell>
-                <TableHeaderCell>{t('time.fields.billing')}</TableHeaderCell>
-                {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('time.fields.amount')}</TableHeaderCell>}
-                {canManage && <TableHeaderCell />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  {canManage && (
-                    <TableCell>
-                      <Checkbox
-                        aria-label={t('time.selectEntry', { date: formatDate(entry.workDate), organization: entry.organizationName ?? '' })}
-                        checked={selected.includes(entry.id)}
-                        disabled={entry.isLocked || (entry.status !== 'New' && entry.status !== 'Approved' && entry.status !== 'NonBillable')}
-                        onChange={(_, d) => setSelected((ids) => (d.checked ? [...ids, entry.id] : ids.filter((id) => id !== entry.id)))}
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell className="tabular">{formatDate(entry.workDate)}</TableCell>
-                  <TableCell>
-                    <AppLink to={`/organizations/${entry.organizationId}`}>{entry.organizationName}</AppLink>
-                  </TableCell>
-                  <TableCell>{entry.technicianName}</TableCell>
-                  <TableCell>
-                    {entry.description ?? entry.ticketTitle}
-                    <div className={catalog.sku}>
-                      {entry.workType}
-                      {entry.externalTicketId ? ` · #${entry.externalTicketId}` : ''}
-                      {entry.source === 'Atera' ? ' · Atera' : ''}
-                    </div>
-                    {entry.reviewNote && <div className={styles.review}>{entry.reviewNote}</div>}
-                    {canReview && <div><AppLink to={`/time/entries/${entry.id}/financial-review`}>{t('financialReview.open')}</AppLink></div>}
-                  </TableCell>
-                  <TableCell className={catalog.number}>{formatNumber(entry.hours)}</TableCell>
-                  <TableCell>
-                    <span className={styles.allocations}>
-                      {entry.status === 'New' || entry.allocations.length === 0 ? (
-                        <Text className={styles.allocation}>{t(`time.statuses.${entry.status}`)}</Text>
-                      ) : (
-                        entry.allocations.map((allocation, index) => (
-                          <Text key={index} className={styles.allocation}>
-                            {t(`time.classifications.${allocation.classification}`)} {formatNumber(allocation.hours)} {t('contracts.hoursShort')}
-                          </Text>
-                        ))
-                      )}
-                    </span>
-                  </TableCell>
-                  {canSeeMoney && <TableCell className={catalog.number}>{formatMoney(entry.amount)}</TableCell>}
-                  {canManage && (
-                    <TableCell>
-                      {entry.status === 'New' && !entry.isLocked && (
-                        <Button {...restoreFocusTarget} size="small" appearance="subtle" onClick={() => setAdjusting(entry)}
-                          aria-label={t('time.adjustNamed', { date: formatDate(entry.workDate), organization: entry.organizationName ?? '' })}>
-                          {t('time.adjust')}
-                        </Button>
-                      )}
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {!isPending && entries.length === 0 && <EmptyState message={t('time.empty')} />}
-          <ListFooter shown={entries.length} total={data?.totalCount} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-        </ScrollTable>
-      )}
-
-      {canManage && (
-        <Panel title={t('time.periods')}>
-          <ul className={styles.periods}>
-            {(periods.data ?? []).map((p) => (
-              <li key={p.month} className={styles.period}>
-                <Text weight={p.month === month ? 'semibold' : 'regular'}>{monthName(p.year, p.month, i18n.language)}</Text>
-                <Text className="tabular">
-                  {formatNumber(p.hours)} {t('contracts.hoursShort')}
-                </Text>
-                {p.isClosed ? (
-                  <Badge appearance="tint" color="informative" icon={<LockClosed20Regular />}>
-                    {t('time.closed')}
-                  </Badge>
-                ) : p.newEntries > 0 ? (
-                  <Badge appearance="tint" color="warning">
-                    {t('time.pendingCount', { count: p.newEntries })}
-                  </Badge>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
+      {canManage && <TimePeriodsPanel periods={periods.data ?? []} month={month} hrefFor={monthHref} />}
 
       <Dialog open={adjusting !== null} onOpenChange={(_, d) => !d.open && setAdjusting(null)}>
-        <DialogSurface>{adjusting !== null && <AdjustDialog entry={adjusting} onClose={() => setAdjusting(null)} />}</DialogSurface>
+        <DialogSurface>{shownEntry !== null && <AdjustDialog entry={shownEntry} onClose={() => setAdjusting(null)} />}</DialogSurface>
       </Dialog>
+      {canManage && !closed && (
+        <ClosePeriodDialog open={closingPeriod} year={year} month={month} waiting={period?.newEntries ?? 0}
+          waitingHref={(() => { const next = new URLSearchParams(params); next.set('status', 'New'); return `?${next.toString()}`; })()}
+          onClosed={() => { setClosingPeriod(false); setSelected([]); }} onCancel={() => setClosingPeriod(false)} />
+      )}
       <Dialog open={reopening !== null} onOpenChange={(_, d) => !d.open && setReopening(null)}>
-        <DialogSurface>{reopening !== null && <ReopenDialog period={reopening} onClose={() => setReopening(null)} />}</DialogSurface>
+        <DialogSurface>{shownPeriod !== null && <ReopenDialog period={shownPeriod} onClose={() => setReopening(null)} />}</DialogSurface>
       </Dialog>
     </>
-  );
-}
-
-function AdjustDialog({ entry, onClose }: { entry: TimeEntry; onClose: () => void }) {
-  const { t } = useTranslation();
-  const notify = useNotify();
-  const actions = useTimeActions();
-  const [billable, setBillable] = useState(entry.billable);
-  const [afterHours, setAfterHours] = useState(entry.afterHours);
-  const [workType, setWorkType] = useState(entry.workType ?? '');
-
-  const submit = async () => {
-    try {
-      await actions.adjust.mutateAsync({ id: entry.id, billable, workType: workType.trim() || null, afterHours });
-      notify(t('time.adjusted'));
-      onClose();
-    } catch (e) {
-      notify(t('errors.generic'), 'error', errorMessage(e, t));
-    }
-  };
-
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-      <DialogBody>
-        <DialogTitle>{t('time.adjustTitle')}</DialogTitle>
-        <DialogContent>
-          {actions.adjust.error && (
-            <MessageBar intent="error" style={{ marginBottom: 12 }}>
-              <MessageBarBody>{errorMessage(actions.adjust.error, t)}</MessageBarBody>
-            </MessageBar>
-          )}
-          <p style={{ marginTop: 0 }}>{t('time.adjustBody')}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Checkbox label={t('time.fields.billable')} checked={billable} onChange={(_, d) => setBillable(Boolean(d.checked))} />
-            <Checkbox label={t('time.fields.afterHours')} checked={afterHours} onChange={(_, d) => setAfterHours(Boolean(d.checked))} />
-            <Field label={t('time.fields.workType')}>
-              <Input value={workType} onChange={(_, d) => setWorkType(d.value)} />
-            </Field>
-          </div>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button appearance="primary" type="submit" disabled={actions.adjust.isPending}>
-            {t('common.save')}
-          </Button>
-        </DialogActions>
-      </DialogBody>
-    </form>
-  );
-}
-
-function ReopenDialog({ period, onClose }: { period: Period; onClose: () => void }) {
-  const { t, i18n } = useTranslation();
-  const notify = useNotify();
-  const actions = usePeriodActions();
-  const [reason, setReason] = useState('');
-
-  const submit = async () => {
-    try {
-      await actions.reopen.mutateAsync({ year: period.year, month: period.month, reason: reason.trim() });
-      notify(t('time.periodReopened'));
-      onClose();
-    } catch (e) {
-      notify(t('errors.generic'), 'error', errorMessage(e, t));
-    }
-  };
-
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-      <DialogBody>
-        <DialogTitle>{t('time.reopenTitle', { period: monthName(period.year, period.month, i18n.language) })}</DialogTitle>
-        <DialogContent>
-          {actions.reopen.error instanceof ApiError && (
-            <MessageBar intent="error" style={{ marginBottom: 12 }}>
-              <MessageBarBody>{errorMessage(actions.reopen.error, t)}</MessageBarBody>
-            </MessageBar>
-          )}
-          <Field label={t('time.reopenReason')} required hint={t('time.reopenHint')}>
-            <Input value={reason} onChange={(_, d) => setReason(d.value)} />
-          </Field>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button appearance="primary" type="submit" disabled={!reason.trim() || actions.reopen.isPending}>
-            {t('time.reopenPeriod')}
-          </Button>
-        </DialogActions>
-      </DialogBody>
-    </form>
   );
 }

@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import {
+  AlertUrgent20Regular,
   ArrowImport20Regular,
   ArrowSwap20Regular,
   Board20Regular,
@@ -26,7 +27,7 @@ import {
   TextboxSettings20Regular,
   Timer20Regular,
   Wrench20Regular,
-} from '@fluentui/react-icons';
+} from './shellIcons';
 import { Permissions, useCan } from '../auth/CurrentUserContext';
 
 export interface NavEntry {
@@ -58,11 +59,13 @@ const selectedByPrefix: ReadonlyArray<readonly [string, string]> = [
   ['/admin/quote-templates', 'quote-templates'],
   ['/pipeline', 'pipeline'],
   ['/sales/leads', 'leads'],
+  ['/sales/opportunities', 'pipeline'],
   ['/projects', 'projects'],
   ['/licenses', 'licenses'],
   ['/admin/pipeline', 'pipeline-stages'],
   ['/time/entries', 'time-entries'],
   ['/time', 'timesheet'],
+  ['/observations', 'observations'],
   ['/admin/technicians', 'technicians'],
   ['/contracts', 'contracts'],
   ['/catalog', 'catalog'],
@@ -79,8 +82,10 @@ const selectedByPrefix: ReadonlyArray<readonly [string, string]> = [
   ['/service/sla', 'sla'],
 ];
 
+/** The menu entry of a path; none for a page outside the menu (notifications, an unknown address). */
 export function selectedNavValue(pathname: string): string {
-  return selectedByPrefix.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? 'my-day';
+  if (pathname === '/') return 'my-day';
+  return selectedByPrefix.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? '';
 }
 
 /**
@@ -92,6 +97,7 @@ export function useNavGroups(): NavGroup[] {
   const canUsers = useCan(Permissions.usersRead);
   const canJobs = useCan(Permissions.integrationsManage);
   const canAtlas = useCan(Permissions.parasolAtlasRead);
+  const canCustomers = useCan(Permissions.customersRead);
   const canCatalog = useCan(Permissions.catalogRead);
   const canContracts = useCan(Permissions.contractsRead);
   const canOwnTime = useCan(Permissions.timeOwn);
@@ -131,6 +137,8 @@ export function useNavGroups(): NavGroup[] {
       label: 'sectionWork',
       items: [
         ...entry(true, 'my-day', '/', 'myDay', <Board20Regular />),
+        // One queue of every urgent Atlas observation of the person's customers (UX 2026, В1).
+        ...entry(canCustomers && canAtlas, 'observations', '/observations', 'observations', <AlertUrgent20Regular />),
         ...entry(canTime, 'timesheet', '/time', 'timesheet', <Clock20Regular />),
         ...entry(canTimeAll, 'time-entries', '/time/entries', 'timeEntries', <Clock20Regular />),
       ],

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import {
+  Avatar,
   Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -15,7 +15,6 @@ import {
   MessageBarTitle,
   SearchBox,
   Spinner,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -24,10 +23,24 @@ import {
   TableRow,
   Text,
   makeStyles,
+  mergeClasses,
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { ArrowSyncCheckmark20Regular, CheckmarkCircle20Regular, ClipboardTaskListLtr20Regular, Send20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import {
+  ArrowSyncCheckmark20Regular,
+  Building16Regular,
+  BuildingMultiple24Regular,
+  CheckmarkCircle16Regular,
+  CheckmarkCircle20Regular,
+  ClipboardTaskListLtr20Regular,
+  Money16Regular,
+  PersonAvailable16Regular,
+  Send16Regular,
+  Send20Regular,
+  Warning16Regular,
+} from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
@@ -35,6 +48,7 @@ import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { FilterChips, FilterField, Toolbar } from '../../shared/components/Toolbar';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime, formatMoney, formatNumber } from '../../shared/utils/format';
@@ -47,33 +61,48 @@ import { BasisStatusBadge, RunStatusBadge } from './shared';
 import { monthLabel } from './period';
 import type { Approval, Run } from './types';
 import { ScrollTable } from '../../shared/components/ScrollTable';
+import { StatGrid, StatTile } from '../../shared/components/KpiTile';
+import { h } from '../../app/hearth';
+import { useFlushStyles, useStatFitStyles } from './flushStyles';
+import { RecordRow, RowMeta } from './RecordRow';
 
 const useStyles = makeStyles({
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
-  tile: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXXS,
-    padding: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
+  label: { color: h.muted, fontSize: '13px' },
+  anomaly: { color: h.saffronT, fontSize: '12.5px', lineHeight: '18px' },
+  change: { fontSize: '12.5px', lineHeight: '18px', color: h.muted },
+  approvals: { marginBottom: '16px' },
+  // What the approval is about, then what it still needs: two short lines under the card title.
+  status: { display: 'grid', gap: '2px', marginTop: 0, marginBottom: '16px', paddingLeft: '20px', paddingRight: '20px', '@media (max-width: 600px)': { paddingLeft: '16px', paddingRight: '16px' } },
+  statusLead: { fontWeight: 600 },
+  statusNote: { color: h.muted, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' },
+  person: { display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
+  setAside: { color: h.muted },
+  approvedMark: { display: 'inline-flex', alignItems: 'center', gap: '6px', color: h.spruceT, fontSize: '12.5px', fontWeight: 600 },
+  customer: { fontWeight: 600 },
+  failed: { color: h.emberT, fontWeight: 600 },
+  subheading: {
+    margin: 0,
+    paddingTop: '16px',
+    paddingBottom: '8px',
+    paddingLeft: '20px',
+    paddingRight: '20px',
+    borderTop: `1px solid ${h.line}`,
+    color: h.muted,
+    fontSize: '12px',
+    lineHeight: '16px',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    '@media (max-width: 600px)': { paddingLeft: '16px', paddingRight: '16px' },
   },
-  value: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
-  label: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  warn: { color: tokens.colorPaletteDarkOrangeForeground1 },
-  anomaly: { color: tokens.colorPaletteDarkOrangeForeground1, fontSize: tokens.fontSizeBase200 },
-  change: { fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 },
-  approvals: { marginBottom: tokens.spacingVerticalL },
-  approvalList: { margin: 0, paddingInlineStart: tokens.spacingHorizontalL, display: 'grid', rowGap: tokens.spacingVerticalXS },
-  setAside: { color: tokens.colorNeutralForeground3 },
-  subheading: { margin: `${tokens.spacingVerticalM} 0 ${tokens.spacingVerticalXS}`, fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold },
 });
 
 /** One run: what was collected, what needs a look and the way to approval and export. */
 export function BillingRunPage() {
   const styles = useStyles();
+  const stat = useStatFitStyles();
   const catalog = useCatalogStyles();
+  const flush = useFlushStyles();
   const { t, i18n } = useTranslation();
   const { id = '' } = useParams();
   const notify = useNotify();
@@ -118,9 +147,9 @@ export function BillingRunPage() {
     }
   };
 
-  const setFlag = (value: boolean) => {
+  const setFilter = (value: 'all' | 'anomalies') => {
     const next = new URLSearchParams(params);
-    if (value) next.set('anomalies', 'true');
+    if (value === 'anomalies') next.set('anomalies', 'true');
     else next.delete('anomalies');
     setParams(next, { replace: true });
   };
@@ -154,7 +183,7 @@ export function BillingRunPage() {
           <>
             <RunStatusBadge status={run.status} requiresSecondApproval={run.requiresSecondApproval} />
             {run.kind === 'Supplementary' && (
-              <Badge appearance="outline" color="informative">
+              <Badge appearance="tint" color="informative">
                 {t('billing.supplementary.badge')}
               </Badge>
             )}
@@ -177,6 +206,20 @@ export function BillingRunPage() {
                 {run.status === 'Draft' ? t('billing.collect') : t('billing.recollect')}
               </Button>
             )}
+            {canExport && (
+              <Button
+                icon={<Send20Regular />}
+                disabled={actions.exportRun.isPending}
+                onClick={() => void act(() => actions.exportRun.mutateAsync(), t('billing.exportQueued'))}
+              >
+                {run.failed > 0 ? t('billing.retryFailed', { count: run.failed }) : t('billing.export')}
+              </Button>
+            )}
+            {canClose && (
+              <Button {...restoreFocusTarget} onClick={() => setClosing(true)}>
+                {t('billing.close')}
+              </Button>
+            )}
             {needsFirstApproval && (
               <Button
                 appearance="primary"
@@ -195,20 +238,6 @@ export function BillingRunPage() {
                 onClick={() => void approveRun(actions.secondApprove)}
               >
                 {t('billing.secondApprove')}
-              </Button>
-            )}
-            {canExport && (
-              <Button
-                icon={<Send20Regular />}
-                disabled={actions.exportRun.isPending}
-                onClick={() => void act(() => actions.exportRun.mutateAsync(), t('billing.exportQueued'))}
-              >
-                {run.failed > 0 ? t('billing.retryFailed', { count: run.failed }) : t('billing.export')}
-              </Button>
-            )}
-            {canClose && (
-              <Button {...restoreFocusTarget} onClick={() => setClosing(true)}>
-                {t('billing.close')}
               </Button>
             )}
           </>
@@ -271,52 +300,47 @@ export function BillingRunPage() {
         </MessageBar>
       )}
 
-      <div className={styles.tiles}>
-        {canSeeMoney && (
-          <div className={styles.tile}>
-            <span className={styles.value}>{formatMoney(run.totalExVat)}</span>
-            <span className={styles.label}>{t('billing.fields.total')}</span>
-          </div>
-        )}
-        <div className={styles.tile}>
-          <span className={styles.value}>{formatNumber(run.organizations, 0)}</span>
-          <span className={styles.label}>{t('billing.fields.customers')}</span>
-        </div>
-        <div className={styles.tile}>
-          <span className={`${styles.value} ${run.withAnomalies > 0 ? styles.warn : ''}`}>{run.withAnomalies}</span>
-          <span className={styles.label}>{t('billing.fields.anomalies')}</span>
-        </div>
-        <div className={styles.tile}>
-          <span className={styles.value}>{run.exported}</span>
-          <span className={styles.label}>{t('billing.fields.exported')}</span>
-        </div>
-        {run.failed > 0 && (
-          <div className={styles.tile}>
-            <span className={`${styles.value} ${styles.warn}`}>{run.failed}</span>
-            <span className={styles.label}>{t('billing.fields.failed')}</span>
-          </div>
-        )}
-      </div>
+      <StatGrid className={stat.fit}>
+        {canSeeMoney && <StatTile className={stat.money} icon={<Money16Regular />} tone="spruce" label={t('billing.fields.total')} value={formatMoney(run.totalExVat)} />}
+        <StatTile icon={<Building16Regular />} tone="iris" label={t('billing.fields.customers')} value={formatNumber(run.organizations, 0)} />
+        <StatTile
+          icon={<Warning16Regular />}
+          tone="saffron"
+          label={t('billing.fields.anomalies')}
+          value={run.withAnomalies}
+          status={run.withAnomalies > 0 ? 'bad' : undefined}
+        />
+        {/* What failed belongs to what was sent: one tile, the failures in its note (and in the banner above). */}
+        <StatTile icon={<Send16Regular />} label={t('billing.fields.exported')} value={run.exported}
+          note={run.failed > 0 ? <span className={styles.failed}>{t('billing.failedCount', { count: run.failed })}</span> : undefined} />
+      </StatGrid>
 
       {(run.approvals.length > 0 || awaitingApproval) && <ApprovalsPanel run={run} />}
 
-      <div className={catalog.filters}>
-        <SearchBox
-          id="billing-search"
-          className={catalog.search}
-          value={search}
-          onChange={(_, d) => setSearch(d.value)}
-          placeholder={t('billing.searchCustomer')}
-          aria-label={t('billing.searchCustomer')}
+      <Toolbar>
+        <FilterField label={t('billing.searchCustomer')} kind="search">
+          <SearchBox id="billing-search" value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('billing.searchCustomer')} />
+        </FilterField>
+        <FilterChips<'all' | 'anomalies'>
+          label={t('billing.basesFilter')}
+          value={anomaliesOnly ? 'anomalies' : 'all'}
+          options={[
+            { value: 'all', label: t('common.all'), count: run.organizations },
+            { value: 'anomalies', label: t('billing.fields.anomalies'), count: run.withAnomalies, dot: h.saffron },
+          ]}
+          onChange={setFilter}
         />
-        <Switch label={t('billing.anomaliesOnly')} checked={anomaliesOnly} onChange={(_, d) => setFlag(d.checked)} />
-      </div>
+      </Toolbar>
 
       {bases.error ? (
         <ErrorState error={bases.error} onRetry={() => void bases.refetch()} />
+      ) : !bases.isPending && (bases.data ?? []).length === 0 ? (
+        <div className={catalog.tableWrap}>
+          <EmptyState icon={<BuildingMultiple24Regular />} message={t('billing.noBases')} />
+        </div>
       ) : (
         <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('billing.bases')}>
+          <Table className={mergeClasses(catalog.table, flush.cells)} aria-label={t('billing.bases')}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>{t('billing.fields.customer')}</TableHeaderCell>
@@ -331,7 +355,7 @@ export function BillingRunPage() {
               {(bases.data ?? []).map((basis) => (
                 <TableRow key={basis.id}>
                   <TableCell>
-                    <AppLink to={`/billing/bases/${basis.id}`}>{basis.organization.name}</AppLink>
+                    <AppLink to={`/billing/bases/${basis.id}`} className={styles.customer}>{basis.organization.name}</AppLink>
                   </TableCell>
                   <TableCell>
                     <BasisStatusBadge status={basis.status} />
@@ -341,7 +365,7 @@ export function BillingRunPage() {
                     <TableCell className={catalog.number}>
                       {formatMoney(basis.totalExVat)}
                       {(basis.previousPeriodTotal ?? 0) > 0 && (
-                        <div className={styles.change}>{t('billing.previousPeriod', { amount: formatMoney(basis.previousPeriodTotal) })}</div>
+                        <div className={styles.change}>{t('billing.previousPeriodShort', { amount: formatMoney(basis.previousPeriodTotal) })}</div>
                       )}
                     </TableCell>
                   )}
@@ -362,7 +386,7 @@ export function BillingRunPage() {
                   <TableCell>
                     {basis.orderNo ? (
                       <span>
-                        <Badge appearance="outline" color="success">
+                        <Badge appearance="tint" color="success">
                           {basis.orderNo}
                         </Badge>
                         {basis.exportedAt && <div className={styles.change}>{formatDateTime(basis.exportedAt)}</div>}
@@ -375,7 +399,6 @@ export function BillingRunPage() {
               ))}
             </TableBody>
           </Table>
-          {!bases.isPending && (bases.data ?? []).length === 0 && <EmptyState message={t('billing.noBases')} />}
         </ScrollTable>
       )}
 
@@ -383,7 +406,11 @@ export function BillingRunPage() {
         <DialogSurface>
           <DialogBody>
             <DialogTitle>{t('billing.closeTitle')}</DialogTitle>
-            <DialogContent>{t('billing.closeBody')}</DialogContent>
+            <DialogContent>
+              {t('billing.closeBody')}
+              {/* Closing is final: customers this run never sent are named before it, not discovered after. */}
+              {run.failed > 0 && <MessageBar intent="warning" style={{ marginTop: 12 }}><MessageBarBody>{t('billing.closeUnsent', { count: run.failed })}</MessageBarBody></MessageBar>}
+            </DialogContent>
             <DialogActions>
               <Button onClick={() => setClosing(false)}>{t('common.cancel')}</Button>
               <Button
@@ -414,47 +441,68 @@ function latestSetAside(approvals: Approval[]): Approval | undefined {
 /** Which revision waits for approval, who approved it and which earlier approvals were set aside, and why (ADR-012). */
 function ApprovalsPanel({ run }: { run: Run }) {
   const styles = useStyles();
+  const flush = useFlushStyles();
   const { t } = useTranslation();
   const current = run.approvals.filter((a) => a.valid);
   const setAside = run.approvals.filter((a) => !a.valid);
   const released = !['Draft', 'Collected', 'InReview'].includes(run.status);
   // Revision 0 is how runs approved before DEV-02 were sealed: nobody approved a digest of their content.
   const legacy = released && (run.approvedRevision === null || run.approvedRevision === 0);
-  const line = (approval: Approval) =>
-    t('billing.approvals.entry', {
-      kind: t(`billing.approvals.kind.${approval.kind}`),
-      name: approval.approvedBy.name,
-      date: formatDateTime(approval.approvedAt),
-    });
+  // Who approved in which role: the person, the role as a pill, the time under it.
+  const person = (approval: Approval) => (
+    <span className={styles.person}>
+      {approval.approvedBy.name}
+      <Badge appearance="tint" color={approval.kind === 'Second' ? 'important' : 'informative'}>{t(`billing.approvals.kind.${approval.kind}`)}</Badge>
+    </span>
+  );
 
   return (
     <div className={styles.approvals}>
-      <Panel title={t('billing.approvals.title')}>
-        <Text>
-          {legacy
-            ? t('billing.approvals.releasedLegacy')
-            : released
-              ? t('billing.approvals.released', { revision: run.approvedRevision })
-              : `${t('billing.approvals.waiting', { revision: run.contentRevision })} ${
-                  run.requiresSecondApproval ? t('billing.approvals.needsTwo') : t('billing.approvals.needsOne')
-                }`}
-        </Text>
+      <Panel title={t('billing.approvals.title')} icon={<PersonAvailable16Regular />} flush className={flush.panel}>
+        <p className={styles.status}>
+          {legacy ? (
+            <span className={styles.statusLead}>{t('billing.approvals.releasedLegacy')}</span>
+          ) : released ? (
+            <span className={styles.statusLead}>{t('billing.approvals.released', { revision: run.approvedRevision })}</span>
+          ) : (
+            <>
+              <span className={styles.statusLead}>{t('billing.approvals.waiting', { revision: run.contentRevision })}</span>
+              <span className={styles.statusNote}>{run.requiresSecondApproval ? t('billing.approvals.needsTwo') : t('billing.approvals.needsOne')}</span>
+            </>
+          )}
+        </p>
         {current.length > 0 && (
-          <ul className={styles.approvalList} style={{ marginTop: tokens.spacingVerticalS }}>
+          <ul className={flush.list}>
             {current.map((approval) => (
-              <li key={`${approval.kind}-${approval.approvedAt}`}>{line(approval)}</li>
+              <RecordRow
+                key={`${approval.kind}-${approval.approvedAt}`}
+                avatar={<Avatar name={approval.approvedBy.name} size={32} color="colorful" aria-hidden />}
+                title={person(approval)}
+                meta={<RowMeta>{t('billing.approvals.approvedAt', { date: formatDateTime(approval.approvedAt) })}</RowMeta>}
+                end={<span className={styles.approvedMark}><CheckmarkCircle16Regular aria-hidden />{t('billing.approvals.approvedMark')}</span>}
+              />
             ))}
           </ul>
         )}
         {setAside.length > 0 && (
           <>
             <h3 className={styles.subheading}>{t('billing.approvals.setAsideTitle')}</h3>
-            <ul className={`${styles.approvalList} ${styles.setAside}`}>
+            <ul className={mergeClasses(flush.list, styles.setAside)}>
               {setAside.map((approval) => (
-                <li key={`${approval.kind}-${approval.approvedAt}-${approval.contentRevision}`}>
-                  {t('billing.approvals.setAsideEntry', { entry: line(approval), revision: approval.contentRevision })}
-                  {approval.invalidationReason && <> {t(`billing.approvals.reasons.${approval.invalidationReason}`)}</>}
-                </li>
+                <RecordRow
+                  key={`${approval.kind}-${approval.approvedAt}-${approval.contentRevision}`}
+                  avatar={<Avatar name={approval.approvedBy.name} size={32} color="colorful" aria-hidden />}
+                  title={person(approval)}
+                  meta={
+                    <RowMeta>
+                      {[
+                        t('billing.approvals.revisionShort', { revision: approval.contentRevision }),
+                        formatDateTime(approval.approvedAt),
+                        approval.invalidationReason ? t(`billing.approvals.reasons.${approval.invalidationReason}`) : null,
+                      ].filter(Boolean).join(' · ')}
+                    </RowMeta>
+                  }
+                />
               ))}
             </ul>
           </>

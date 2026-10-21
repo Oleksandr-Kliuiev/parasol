@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Crm.Authorization;
 using Crm.Integrations.Core.Parasol;
 using Crm.Integrations.Core.Persistence;
@@ -23,6 +25,7 @@ public sealed class AtlasAttentionApiTests(CrmWebFactory factory)
     private const string Token = "synthetic-attention-personal-token";
     private readonly string key = $"attention-{Guid.NewGuid():N}";
     private HttpClient Admin => factory.ClientAs(CrmRoles.Admin, key);
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private async Task<Guid> Customer(string? name = null)
     {
@@ -108,6 +111,50 @@ public sealed class AtlasAttentionApiTests(CrmWebFactory factory)
         using var outsider = Client(host, userKey: "outsider-" + key); (await outsider.GetFromJsonAsync<AtlasAttentionView>(Endpoint))!.Status.ShouldBe("ACCESS_DENIED");
         using var anonymous = host.CreateClient(); (await anonymous.GetAsync(Endpoint)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         atlas.LogEntries.Count.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task Preview_rows_carry_the_CRM_task_they_already_have_from_one_local_read_without_another_Atlas_call()
+    {
+        var customer = await Customer(); var source = SourceClient(); await Link(customer, source);
+        using var atlas = WireMockServer.Start(); DirectoryResponse(atlas, Directory(source)); Overview(atlas, source);
+        var critical = JsonNode.Parse(Context(source))!["observations"]!["items"]![0]!;
+        critical["id"]!.GetValue<string>().ShouldBe("observation-critical");
+        atlas.Given(Request.Create().WithPath($"/clients/{source}/observations/observation-critical").UsingGet())
+            .RespondWith(Response.Create().WithHeader("Content-Type", "application/json").WithBody(critical.ToJsonString()));
+        await using var host = await Host(atlas); using var client = Client(host);
+        var employee = (await client.GetFromJsonAsync<JsonElement>("/bff/user")).GetProperty("id").GetGuid();
+        var path = $"/api/v1/parasol/customers/{customer}/observations/observation-critical";
+        var preview = (await client.GetFromJsonAsync<AtlasObservationTaskPreview>($"{path}/task-preview", WebJson))!;
+        (await client.PostAsJsonAsync($"{path}/task", new AtlasObservationTaskRequest(employee, null, preview.Sha256!))).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var reads = atlas.LogEntries.Count;
+        var response = await client.GetAsync(Endpoint);
+        var row = (await response.Content.ReadFromJsonAsync<AtlasAttentionView>(WebJson))!.Customers!.Single();
+        row.Preview.Select(o => o.Id).ShouldBe(["observation-critical", "observation-high"]);
+        var link = row.Tasks!.ShouldHaveSingleItem();
+        link.ObservationId.ShouldBe("observation-critical"); link.Task.AssigneeId.ShouldBe(employee); link.Task.Created.ShouldBeFalse();
+        link.Task.OrganizationId.ShouldBe(customer); link.AssigneeName.ShouldNotBeNullOrWhiteSpace();
+        // The snapshot reads the directory and the overview, as before; the tasks come from the CRM's own tables.
+        atlas.LogEntries.Count.ShouldBe(reads + 2);
+        var body = await response.Content.ReadAsStringAsync();
+        foreach (var forbidden in new[] { Token, source, "workspaceId", "clientId" }) body.ShouldNotContain(forbidden);
+    }
+
+    [Fact]
+    public async Task The_observation_queue_is_the_same_bounded_personal_read_behind_the_same_permissions()
+    {
+        var customer = await Customer(); var source = SourceClient(); await Link(customer, source);
+        using var atlas = WireMockServer.Start(); DirectoryResponse(atlas, Directory(source)); Overview(atlas, source);
+        await using var host = await Host(atlas); using var client = Client(host);
+        const string queue = "/api/v1/parasol/observations/urgent";
+        var response = await client.GetAsync(queue + "?limit=1000&customerId=ignored");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK); response.Headers.CacheControl!.NoStore.ShouldBeTrue();
+        var view = (await response.Content.ReadFromJsonAsync<AtlasAttentionView>(WebJson))!;
+        var row = view.Customers!.Single(); row.CustomerId.ShouldBe(customer);
+        row.Preview.Select(o => o.Id).ShouldBe(["observation-critical", "observation-high"]); row.Tasks.ShouldBeEmpty();
+        atlas.LogEntries.Count.ShouldBe(2);
+        using var finance = Client(host, CrmRoles.Finance); (await finance.GetAsync(queue)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        using var anonymous = host.CreateClient(); (await anonymous.GetAsync(queue)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [Theory]

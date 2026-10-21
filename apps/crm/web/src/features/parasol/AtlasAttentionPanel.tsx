@@ -1,15 +1,17 @@
-import { useCallback, useId, useRef, useState } from 'react';
-import { Button, MessageBar, MessageBarBody, Spinner, Text } from '@fluentui/react-components';
-import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
+import { Badge, Button, MessageBar, MessageBarBody, Text, mergeClasses } from '@fluentui/react-components';
+import { ArrowClockwise16Regular, ChevronRight16Regular, Pulse20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
-import { api, ApiError } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
-import { DetailList, Panel } from '../../shared/components/Panel';
-import { formatDateTime } from '../../shared/utils/format';
-import { parseAtlasAttention, type AtlasAttentionCustomer } from './atlasAttentionContract';
+import { Panel } from '../../shared/components/Panel';
+import { formatDateTime, formatReadAt } from '../../shared/utils/format';
+import { attentionLimit, type AtlasAttentionCustomer } from './atlasAttentionContract';
+import { AttentionStatus } from './AttentionStatus';
+import { useAttentionRead } from './useAttentionRead';
+import { useAttentionStyles } from './attentionStyles';
 import { ObservationRows } from './ObservationRows';
-import { useTechnicalStyles } from './technicalStyles';
+import { resourceTone, useTechnicalStyles } from './technicalStyles';
 
 export function AtlasAttentionPanel() {
   const user = useCurrentUser(); const canCustomers = useCan(Permissions.customersRead); const canAtlas = useCan(Permissions.parasolAtlasRead);
@@ -19,89 +21,90 @@ export function AtlasAttentionPanel() {
 }
 
 function PersonalAttention({ employeeId, permissionsKey }: { employeeId: string; permissionsKey: string }) {
-  const { t } = useTranslation(); const styles = useTechnicalStyles();
-  const [check, setCheck] = useState({ pending: false, revision: 0 });
-  const refreshing = useRef(false);
-  const query = useQuery({
-    queryKey: ['parasol', 'atlas-attention', employeeId, permissionsKey],
-    queryFn: async ({ signal }) => parseAtlasAttention((await api.get<unknown>('/api/v1/parasol/my-day/atlas-attention', signal)).data),
-    retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false,
-  });
-  const { refetch } = query;
-  const refresh = useCallback(() => {
-    if (refreshing.current) return;
-    refreshing.current = true;
-    setCheck(s => ({ pending: true, revision: s.revision + 1 }));
-    void refetch().finally(() => { refreshing.current = false; setCheck(s => ({ ...s, pending: false })); });
-  }, [refetch]);
-  const checking = check.pending || query.isFetching;
-  const view = !checking && !query.isError ? query.data : undefined;
-  const data = view && ['READY', 'PARTIAL'].includes(view.status) ? view : null;
+  const { t } = useTranslation(); const styles = useTechnicalStyles(); const own = useAttentionStyles();
+  const read = useAttentionRead('/api/v1/parasol/my-day/atlas-attention', attentionLimit.myDay, ['parasol', 'atlas-attention', employeeId, permissionsKey]);
+  const { data, refresh, checking } = read;
   const urgent = (data?.customers ?? []).filter(c => c.status === 'READY' && c.high! + c.critical! > 0)
     .sort((a, b) => b.critical! - a.critical! || b.high! - a.high!
       || a.customerName.localeCompare(b.customerName, undefined, { sensitivity: 'base' }) || a.customerId.localeCompare(b.customerId));
   const failed = (data?.customers ?? []).filter(c => c.status !== 'READY');
   const other = (data?.customers ?? []).filter(c => c.status === 'READY' && c.high === 0 && c.critical === 0);
-  const error = query.isError ? query.error instanceof ApiError && query.error.status === 403 ? 'ACCESS_DENIED'
-    : query.error instanceof ApiError && query.error.status === 429 ? 'RATE_LIMITED' : 'REQUEST_FAILED'
-    : view && !data ? view.status : null;
-  return <Panel title={t('parasolAttention.title')} actions={<Button size="small" disabled={checking} disabledFocusable={checking} onClick={refresh}>{t('parasolAttention.refresh')}</Button>}>
-    <Text block>{t('parasolAttention.note')}</Text>
-    {checking && <Spinner size="small" label={t('common.loading')} />}
-    {error && <MessageBar intent="warning" layout="multiline"><MessageBarBody><Text role="status">{t(`parasolAttention.status.${error}`)}</Text></MessageBarBody></MessageBar>}
-    {data && data.coverage && data.totals && data.customers && <div key={check.revision}>
-      <Text block>{t('parasolAttention.checkedAt', { time: formatDateTime(data.checkedAt) })}</Text>
-      <Text block weight="semibold">{t('parasolAttention.coverage', { ready: data.coverage.readyCustomers, selected: data.coverage.selectedCustomers })}</Text>
-      <DetailList items={[
-        { label: t('parasolAttention.visible'), value: String(data.coverage.visibleClients) },
-        { label: t('parasolAttention.matched'), value: String(data.coverage.matchedCustomers) },
-        { label: t('parasolAttention.attempted'), value: String(data.coverage.attemptedCustomers) },
-        { label: t('parasolAttention.unmapped'), value: String(data.coverage.unmappedClients) },
-        { label: t('parasolAttention.mappingIssues'), value: String(data.coverage.mappingIssues) },
-        { label: t('parasolAttention.failed'), value: String(data.coverage.failedCustomers) },
-        { label: t('parasolAttention.omitted'), value: String(data.coverage.omittedCustomers) },
-      ]} />
-      {data.status === 'PARTIAL' && <MessageBar intent="warning" layout="multiline"><MessageBarBody>{t('parasolAttention.partial')}</MessageBarBody></MessageBar>}
-      {data.coverage.timedOut && <Text block>{t('parasolAttention.timedOut')}</Text>}
-      {data.coverage.limitReached && <Text block>{t('parasolAttention.limit')}</Text>}
-      <Text block>{t('parasolAttention.totals', { active: data.totals.activeObservations, high: data.totals.high, critical: data.totals.critical })}</Text>
-      <Text block>{t('parasolAttention.previewNote')}</Text>
+  return <Panel title={t('parasolAttention.title')} icon={<Pulse20Regular />} actions={<Button size="small" icon={<ArrowClockwise16Regular />}
+    aria-label={t('parasolAttention.refresh')} disabled={checking} disabledFocusable={checking} onClick={refresh}>{t('common.refresh')}</Button>}>
+    <div className={own.stack}>
+    {/* A new read starts with closed disclosures, as the rows below do. */}
+    <AttentionStatus key={`status-${read.revision}`} read={read} note={t('parasolAttention.note')} previewNote={t('parasolAttention.previewNote')} />
+    {data && data.coverage && data.totals && data.customers && <div key={`rows-${read.revision}`} className={own.stack}>
+      <div className={own.totals}>
+        <Text block className={own.totalsLine}>{t('parasolAttention.totals', { active: data.totals.activeObservations, high: data.totals.high, critical: data.totals.critical })}</Text>
+        <Text block className={own.note}>{t('parasolAttention.previewHint')}</Text>
+      </div>
       {data.customers.length === 0 && <Text block role="status">{t('parasolAttention.empty')}</Text>}
-      <div className={styles.list}>{[...urgent, ...failed].map(customer => <AttentionCustomer key={customer.customerId} customer={customer} onSourceInvalidated={refresh} />)}</div>
-      {other.length > 0 && <details>
-        <summary>{t('parasolAttention.otherCustomers', { count: other.length })}</summary>
-        <div className={styles.list}>{other.map(customer => <AttentionCustomer key={customer.customerId} customer={customer} onSourceInvalidated={refresh} />)}</div>
+      <div className={styles.list}>{[...urgent, ...failed].map(customer => <AttentionCustomer key={customer.customerId} customer={customer} checkedAt={data.checkedAt} onSourceInvalidated={refresh} />)}</div>
+      {other.length > 0 && <details className={own.details}>
+        <summary className={own.summary}>{t('parasolAttention.otherCustomers', { count: other.length })}</summary>
+        {/* Said once for the group, not repeated in every quiet customer. */}
+        <Text block className={own.note}>{t('parasolAttention.noUrgent')}</Text>
+        <div className={styles.list}>{other.map(customer => <AttentionCustomer key={customer.customerId} customer={customer} checkedAt={data.checkedAt} onSourceInvalidated={refresh} />)}</div>
       </details>}
     </div>}
+    </div>
   </Panel>;
 }
 
-function AttentionCustomer({ customer: c, onSourceInvalidated }: { customer: AtlasAttentionCustomer; onSourceInvalidated: () => void }) {
-  const { t } = useTranslation(); const styles = useTechnicalStyles(); const heading = useId();
-  return <section className={styles.row} aria-labelledby={heading}>
-    <h3 id={heading} className={styles.heading}><AppLink to={`/organizations/${c.customerId}`}>{c.customerName}</AppLink></h3>
+function AttentionCustomer({ customer: c, checkedAt, onSourceInvalidated }: {
+  customer: AtlasAttentionCustomer; checkedAt: string; onSourceInvalidated: () => void;
+}) {
+  const { t } = useTranslation(); const styles = useTechnicalStyles(); const own = useAttentionStyles(); const heading = useId();
+  // A customer without urgent observations is one compact row: its name (the way in), what is incomplete, and its sources.
+  const quiet = c.status === 'READY' && c.preview.length === 0;
+  // Times are told only where they add to the read time above: the customer's own read, then its assembly.
+  const readAt = c.retrievedAt ? formatReadAt(c.retrievedAt) : '';
+  const assembledAt = c.generatedAt ? formatReadAt(c.generatedAt) : '';
+  const open = <AppLink className={own.open} to={`/organizations/${c.customerId}`}>{t('parasolAttention.openCustomer')}<ChevronRight16Regular aria-hidden /></AppLink>;
+  return <section className={mergeClasses(styles.row, own.customer, quiet && own.quiet)} aria-labelledby={heading}>
+    <div className={own.customerHead}>
+      <h3 id={heading} className={mergeClasses(styles.heading, own.customerName, quiet && own.quietName)}><AppLink to={`/organizations/${c.customerId}`}>{c.customerName}</AppLink></h3>
+      {c.status === 'READY' && !quiet && <span className={own.counts} aria-hidden>
+        {c.critical! > 0 && <Badge appearance="filled" color="danger">{t('parasolDetails.severity.CRITICAL')} {c.critical}</Badge>}
+        {c.high! > 0 && <Badge appearance="tint" color="danger">{t('parasolDetails.severity.HIGH')} {c.high}</Badge>}
+      </span>}
+    </div>
     {c.status !== 'READY' ? <Text role="status">{t(`parasolAttention.customerStatus.${c.status}`)}</Text> : <>
       {c.mode === 'fixture' && <MessageBar intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
-      <Text block weight="semibold">{t('parasolAttention.customerCounts', { high: c.high, critical: c.critical })}</Text>
-      <Text block>{t('parasolAttention.retrievedAt', { time: formatDateTime(c.retrievedAt!) })}</Text>
-      <Text block>{t('parasol.snapshot', { time: formatDateTime(c.generatedAt!) })}</Text>
-      {c.completeness !== 'COMPLETE' && <Text block>{t('parasolAttention.sourcePartial')}</Text>}
-      <details>
-        <summary>{t('parasolAttention.sources')}</summary>
-        <Text block>{t('parasol.coverage')}</Text>
-        {c.resources?.length === 0 && <Text block>{t('parasol.noSources')}</Text>}
-        <div className={styles.list}>{c.resources?.map((r, i) => <div className={styles.row} key={`${r.source}-${r.resourceType}-${i}`}>
-          <Text weight="semibold">{t(`parasol.sources.${r.source}`)} · {t(`parasol.resources.${r.resourceType}`)}</Text>
-          <Text block>{t(`parasol.resourceStatus.${r.status}`)}</Text>
-          {r.asOf && <Text block>{t('parasol.asOf', { time: formatDateTime(r.asOf) })}</Text>}
-          {r.lastSuccessAt && <Text block>{t('parasol.lastSuccess', { time: formatDateTime(r.lastSuccessAt) })}</Text>}
-          {r.returnedItems !== null && <Text block>{t(r.truncated ? 'parasol.truncated' : 'parasol.returned', { count: r.returnedItems })}</Text>}
-        </div>)}</div>
+      {/* The badges above show the counts; screen readers get them as this sentence. */}
+      <Text block className={own.hidden}>{t('parasolAttention.customerCounts', { high: c.high, critical: c.critical })}</Text>
+      <div className={own.meta}>
+        {readAt !== formatReadAt(checkedAt) && <span>{t('parasolAttention.retrievedAt', { time: readAt })}</span>}
+        {assembledAt !== readAt && <span>{t('parasol.snapshot', { time: assembledAt })}</span>}
+        {c.completeness !== 'COMPLETE' && <span className={own.partial}>{t('parasolAttention.sourcePartial')}</span>}
+      </div>
+      {!quiet && <>
+        <Text block className={own.caption}>{t('parasolAttention.previewCount', { shown: c.preview.length, total: c.high! + c.critical! })}</Text>
+        {/* The tasks came with this read (one request for the whole snapshot); without them the rows say nothing about work. */}
+        <ObservationRows raised items={c.preview} devices={c.devices} customerId={c.customerId} onSourceInvalidated={onSourceInvalidated}
+          links={new Map(c.tasks?.map(link => [link.observationId, { task: link.task, assigneeName: link.assigneeName }]))} />
+        {open}
+      </>}
+      <details className={own.details}>
+        <summary className={own.summary}>{t('parasolAttention.sources')}</summary>
+        <div className={own.sources}>
+          <Text block className={own.note}>{t('parasol.coverage')}</Text>
+          {c.resources?.length === 0 && <Text block className={own.note}>{t('parasol.noSources')}</Text>}
+          {/* Rows, not a list: the customer's list items are its urgent observations. */}
+          <div className={own.sourceRows}>{c.resources?.map((r, i) => <div className={own.sourceRow} key={`${r.source}-${r.resourceType}-${i}`}>
+            <div className={own.sourceHead}>
+              <Text weight="semibold">{t(`parasol.sources.${r.source}`)} · {t(`parasol.resources.${r.resourceType}`)}</Text>
+              <Badge appearance="tint" color={resourceTone[r.status]}>{t(`parasol.resourceStatus.${r.status}`)}</Badge>
+            </div>
+            <div className={own.meta}>
+              {r.asOf && <span>{t('parasol.asOf', { time: formatDateTime(r.asOf) })}</span>}
+              {r.lastSuccessAt && <span>{t('parasol.lastSuccess', { time: formatDateTime(r.lastSuccessAt) })}</span>}
+              {r.returnedItems !== null && <span>{t(r.truncated ? 'parasol.truncated' : 'parasol.returned', { count: r.returnedItems })}</span>}
+            </div>
+          </div>)}</div>
+        </div>
       </details>
-      <Text block>{t('parasolAttention.previewCount', { shown: c.preview.length, total: c.high! + c.critical! })}</Text>
-      {c.preview.length === 0 ? <Text block>{t('parasolAttention.noUrgent')}</Text>
-        : <ObservationRows items={c.preview} devices={c.devices} customerId={c.customerId} onSourceInvalidated={onSourceInvalidated} />}
-      <AppLink to={`/organizations/${c.customerId}`}>{t('parasolAttention.openCustomer')}</AppLink>
     </>}
   </section>;
 }

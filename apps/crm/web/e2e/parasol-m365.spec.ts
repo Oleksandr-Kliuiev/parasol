@@ -53,7 +53,7 @@ test('Microsoft 365 metadata and native disclosures remain accessible on a phone
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     await expect.poll(() => panel.evaluate(el => getComputedStyle(el).getPropertyValue('--colorNeutralBackground1').trim()))
-      .toBe(colorScheme === 'dark' ? '#292929' : '#ffffff');
+      .toBe(colorScheme === 'dark' ? '#1E1B19' : '#FFFDFA');
     await page.waitForLoadState('networkidle');
     await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity)
       .map(a => a.finished.catch(() => undefined))); });

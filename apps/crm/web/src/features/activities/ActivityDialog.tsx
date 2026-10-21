@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -16,9 +15,11 @@ import {
   Switch,
   Textarea,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { UserPicker } from '../../shared/components/UserPicker';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { blankToNull } from '../../shared/utils/format';
@@ -40,9 +41,11 @@ interface ActivityDialogProps {
 
 /** Logs a task, call, meeting or note against a customer (FR-ACT-01). */
 export function ActivityDialog({ open, onClose, ...props }: ActivityDialogProps) {
+  // The form mounts with the surface, once per opening, and keeps its activity while the dialog leaves.
+  const activity = useKeptWhileClosing(props.activity, open);
   return (
     <Dialog open={open} onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>{open && <ActivityForm key={props.activity?.id ?? 'new'} onClose={onClose} {...props} />}</DialogSurface>
+      <DialogSurface><ActivityForm key={activity?.id ?? 'new'} onClose={onClose} {...props} activity={activity} /></DialogSurface>
     </Dialog>
   );
 }

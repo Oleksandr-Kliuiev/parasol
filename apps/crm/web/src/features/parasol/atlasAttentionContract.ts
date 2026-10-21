@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { count, deviceSchema, observationSchema, resourceSchema, time, validTechnicalReferences } from './technicalContract';
+import { taskLinkSchema, taskLinks } from './observationTaskContract';
 
 const coverageSchema = z.strictObject({
   visibleClients: count, matchedCustomers: count, selectedCustomers: count.max(50), attemptedCustomers: count.max(50),
@@ -14,8 +15,11 @@ const customerSchema = z.strictObject({
   mode: z.enum(['db', 'fixture']).nullable(), generatedAt: time.nullable(), retrievedAt: time.nullable(),
   completeness: z.enum(['COMPLETE', 'PARTIAL', 'COMPLETE_FIXTURE']).nullable(),
   activeObservations: count.nullable(), high: count.nullable(), critical: count.nullable(),
-  resources: z.array(resourceSchema).max(100).nullable(), preview: z.array(observationSchema).max(3),
-  devices: z.array(deviceSchema).max(3),
+  // Three urgent rows per customer on My day, up to ten in the observation queue (the caller's limit is checked below).
+  resources: z.array(resourceSchema).max(100).nullable(), preview: z.array(observationSchema).max(10),
+  devices: z.array(deviceSchema).max(10),
+  // The CRM tasks the preview rows already have (UX 2026, В3); null when the read did not include them.
+  tasks: z.array(taskLinkSchema).max(10).nullable(),
 });
 const responseSchema = z.strictObject({
   status: z.enum(['READY', 'PARTIAL', 'NOT_CONFIGURED', 'ACCESS_DENIED', 'UNAVAILABLE', 'INVALID_RESPONSE']),
@@ -30,14 +34,15 @@ const validCoverage = (c: z.infer<typeof coverageSchema>) => c.visibleClients ==
   && c.readyCustomers + c.failedCustomers === c.selectedCustomers && c.readyCustomers <= c.attemptedCustomers
   && c.attemptedCustomers <= c.selectedCustomers && c.limitReached === (c.omittedCustomers > 0);
 
-function validCustomer(c: AtlasAttentionCustomer): boolean {
+function validCustomer(c: AtlasAttentionCustomer, limit: number): boolean {
   if (c.status !== 'READY') return c.mode === null && c.generatedAt === null && c.retrievedAt === null && c.completeness === null
     && c.activeObservations === null && c.high === null && c.critical === null && c.resources === null
-    && c.preview.length === 0 && c.devices.length === 0;
+    && c.preview.length === 0 && c.devices.length === 0 && c.tasks === null;
+  if (c.tasks && !taskLinks(c.tasks, c.customerId, c.preview.map(o => o.id))) return false;
   if (c.mode === null || c.generatedAt === null || c.retrievedAt === null || c.completeness === null
     || c.activeObservations === null || c.high === null || c.critical === null || c.resources === null
     || (c.mode === 'fixture') !== (c.completeness === 'COMPLETE_FIXTURE')
-    || c.activeObservations < c.high + c.critical || c.preview.length !== Math.min(3, c.high + c.critical)
+    || c.activeObservations < c.high + c.critical || c.preview.length !== Math.min(limit, c.high + c.critical)
     || !validTechnicalReferences(c.devices, c.preview, c.resources)) return false;
   if (c.preview.some(o => !['HIGH', 'CRITICAL'].includes(o.severity) || !['OPEN', 'ACKNOWLEDGED'].includes(o.status))
     || c.preview.filter(o => o.severity === 'HIGH').length > c.high || c.preview.filter(o => o.severity === 'CRITICAL').length > c.critical
@@ -46,8 +51,11 @@ function validCustomer(c: AtlasAttentionCustomer): boolean {
   return c.devices.length === referenced.size && c.devices.every(d => referenced.has(d.id));
 }
 
+/** The urgent rows My day shows per customer, and the observation queue's (AtlasAttentionReader.PreviewLimit, QueueLimit). */
+export const attentionLimit = { myDay: 3, queue: 10 } as const;
+
 /** A single personal read: never salvage customer rows from an invalid or denied aggregate. */
-export function parseAtlasAttention(value: unknown): AtlasAttentionView {
+export function parseAtlasAttention(value: unknown, limit: number = attentionLimit.myDay): AtlasAttentionView {
   const invalid: AtlasAttentionView = { status: 'INVALID_RESPONSE', checkedAt: new Date(0).toISOString(), coverage: null, totals: null, customers: null };
   const parsed = responseSchema.safeParse(value);
   if (!parsed.success) return invalid;
@@ -56,7 +64,7 @@ export function parseAtlasAttention(value: unknown): AtlasAttentionView {
   if (view.status !== 'READY' && view.status !== 'PARTIAL') return view.customers === null && view.totals === null ? view : invalid;
   if (!c || !view.totals || !view.customers || view.customers.length !== c.selectedCustomers
     || new Set(view.customers.map(row => row.customerId)).size !== view.customers.length
-    || view.customers.some(row => row.status === 'ACCESS_DENIED' || !validCustomer(row))) return invalid;
+    || view.customers.some(row => row.status === 'ACCESS_DENIED' || !validCustomer(row, limit))) return invalid;
   const ready = view.customers.filter(row => row.status === 'READY');
   if (ready.length !== c.readyCustomers || view.totals.activeObservations !== ready.reduce((n, row) => n + row.activeObservations!, 0)
     || view.totals.high !== ready.reduce((n, row) => n + row.high!, 0) || view.totals.critical !== ready.reduce((n, row) => n + row.critical!, 0)) return invalid;

@@ -173,9 +173,14 @@ test('an integration can be paused from the admin screen during an incident', as
     await expect(card.getByRole('button', { name: 'Pause' })).toBeVisible();
   }
 
-  // The reason is asked for in a prompt and goes into the log.
-  page.once('dialog', (dialog) => void dialog.accept(`${m} incident`));
+  // The reason is asked for in the app's own dialog, which refuses an empty one, and goes into the log.
   await card.getByRole('button', { name: 'Pause' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Pause Atera' });
+  await dialog.getByRole('button', { name: 'Pause' }).click();
+  await expect(dialog.getByText('Write why the integration is being paused.')).toBeVisible();
+  await dialog.getByRole('textbox', { name: 'Reason' }).fill(`${m} incident`);
+  await dialog.getByRole('button', { name: 'Pause' }).click();
+  await expect(dialog).toBeHidden();
   await expect(toast(page, 'The integration is paused')).toBeVisible();
   await expect(card.getByText('Paused', { exact: true })).toBeVisible();
   await expect(card.getByText(`${m} incident`)).toBeVisible();

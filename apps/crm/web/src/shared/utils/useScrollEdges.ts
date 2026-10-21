@@ -17,10 +17,13 @@ export function useScrollEdges<T extends HTMLElement>(ref: RefObject<T | null>, 
     };
     measure();
     element.addEventListener('scroll', measure, { passive: true });
+    // Rows that rise in (h-stagger lists, table rows) are still translated at the first measure, which would leave a fade
+    // on a list that does not scroll: measure again when they land.
+    element.addEventListener('animationend', measure);
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     for (const child of element.children) observer.observe(child);
-    return () => { element.removeEventListener('scroll', measure); observer.disconnect(); };
+    return () => { element.removeEventListener('scroll', measure); element.removeEventListener('animationend', measure); observer.disconnect(); };
   }, [ref, axis, revision]);
   const overflow = edges.before || edges.after;
   const start = edges.before ? `transparent, #000 ${scrollEdgeInset}px` : '#000';

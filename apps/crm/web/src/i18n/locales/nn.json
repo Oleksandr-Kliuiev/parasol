@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "Parasoll",
-    "skipToContent": "Hopp til innhald"
+    "skipToContent": "Hopp til innhald",
+    "tagline": "Vardahei CRM"
   },
   "nav": {
     "connections": "Tilkoplingar",
@@ -46,13 +47,24 @@
     "migration": "Migrering",
     "recordAccess": "Tilgang til postar",
     "privacy": "Personopplysningar",
-    "maintenance": "Vedlikehald"
+    "maintenance": "Vedlikehald",
+    "collapse": "Gjer menyen smal",
+    "expand": "Gjer menyen brei",
+    "mainMenu": "Hovudmeny",
+    "observations": "Observasjonar",
+    "opensNewTab": "(blir opna i ei ny fane)"
   },
   "header": {
     "search": "Søk i organisasjonar",
     "language": "Språk",
     "signOut": "Logg ut",
-    "devMode": "Utviklarpålogging"
+    "devMode": "Utviklarpålogging",
+    "searchButton": "Søk",
+    "themeToDark": "Byt til mørkt tema",
+    "themeToLight": "Byt til lyst tema",
+    "new": "Ny",
+    "newMenu": "Opprett ny",
+    "account": "Konto og språk"
   },
   "common": {
     "scrollableTable": "Rullbar tabell",
@@ -97,7 +109,7 @@
       "TIM_BILLING_SOURCE_CHANGED": "Timegrunnlaget har endra seg. Last inn og samle utkastet på nytt; historiske avvik må kontrollerast av økonomi.",
       "TIM_PERIOD_BUSY": "Denne perioden blir endra no. Oppdater statusen før du prøver igjen.",
       "TIM_WORK_CHANGED": "Timane er flytta til ein annan periode. Oppdater føringane og kontroller endringane dine.",
-      "TIM_PERIOD_CLOSED": "Perioden er stengd. Økonomi må opne den igjen før timar kan endrast.",
+      "TIM_PERIOD_CLOSED": "Perioden er lukka. Økonomi må opne han igjen før timar kan endrast.",
       "TIM_PERIOD_INVALID": "Vel eit gyldig år og ein gyldig månad.",
       "TIM_REASON_TOO_LONG": "Grunngivinga kan vere på høgst 512 teikn.",
       "TIM_CREATE_REQUEST_CONFLICT": "Denne registreringa er allereie send inn med andre opplysningar. Kontroller timeføringane dine før du startar ei ny registrering.",
@@ -196,14 +208,18 @@
       "CUS_MIGRATION_INVALID": "Fila treng ei overskriftsrad med minst ei namnekolonne.",
       "CUS_MIGRATION_TOO_LARGE": "Fila er for stor. Del ho i mindre filer.",
       "CUS_RECONCILIATION_INVALID": "Fila treng ei overskriftsrad med organisasjonsnummer, periode, valuta og beløp.",
-      "CUS_IMPORT_RUN_NOT_FOUND": "Køyringa finst ikkje."
+      "CUS_IMPORT_RUN_NOT_FOUND": "Køyringa finst ikkje.",
+      "TIM_UNAPPROVED_ENTRIES": "Nokre føringar i månaden ventar framleis på godkjenning. Godkjenn dei før du lukkar månaden."
     },
     "rateLimited": "For mange førespurnader. Prøv igjen om {{seconds}} sekund.",
     "rateLimitedNoWait": "For mange førespurnader. Vent litt og prøv igjen.",
     "timeout": "Tenaren brukte for lang tid på å svare. Endringa kan vere lagra; sjekk posten før du prøver igjen.",
     "offline": "Du er fråkopla. Kopl til igjen og prøv på nytt; ingenting vart sendt.",
     "signInLoop": "Innloggingen vart ikkje fullført etter fleire forsøk. Lukk andre faner med CRM og prøv igjen. Viss det held fram, si frå til administrator.",
-    "signInLoopRetry": "Prøv igjen"
+    "signInLoopRetry": "Prøv igjen",
+    "forbiddenTitle": "Ingen tilgang",
+    "forbiddenPage": "Rolla di gjev ikkje tilgang til denne sida. Spør ein administrator om du treng ho.",
+    "forbiddenRead": "Rolla di gjev ikkje tilgang til denne informasjonen. Spør ein administrator om du treng han."
   },
   "status": {
     "Lead": "Lead",
@@ -229,12 +245,15 @@
   },
   "myDay": {
     "sectionsLabel": "Delar av Min dag",
-    "greeting": "Hei, {{name}}",
+    "greeting": {
+      "morning": "God morgon, {{name}}",
+      "afternoon": "God ettermiddag, {{name}}",
+      "evening": "God kveld, {{name}}"
+    },
     "subtitle": "Organisasjonane dine og det som treng merksemd.",
     "subtitleLead": "Timar til godkjenning, teamet ditt og det som treng merksemd.",
     "subtitleFinance": "Fakturering, forfalne fakturaer og det som treng merksemd.",
     "hoursReview": "Timar til gjennomgang",
-    "hoursReviewNote": "Gå gjennom og godkjenn timane til teamet for perioden.",
     "hoursReviewOpen": "Opne timeføring",
     "myOrganizations": "Mine organisasjonar",
     "myOrganizationsEmpty": "Du er ikkje kundeansvarleg for nokon organisasjonar enno.",
@@ -266,7 +285,52 @@
     "moreOpenRuns_other": "{{count}} køyringar til er opne",
     "overdueInvoices": "{{count}} forfalne fakturaer",
     "allStaleDeals": "Alle {{count}} i salstrakta",
-    "allCancellationWindows": "Alle {{count}} med ope oppseiingsvindauge"
+    "allCancellationWindows": "Alle {{count}} med open angrefrist",
+    "kpiLabel": "Nøkkeltal",
+    "loadingValue": "…",
+    "kpi": {
+      "urgent": "Hastar i Atlas",
+      "urgentFoot": "{{critical}} kritiske · {{ready}} av {{selected}} kundar lesne",
+      "urgentUnread": "Ikkje lese enno",
+      "tasks": "Mine opne oppgåver",
+      "tasksFoot": "Tildelte deg, første frist øvst",
+      "hours": "Timar denne veka",
+      "hoursFoot": "{{billable}} fakturerbare · {{fresh}} ikkje godkjende",
+      "reminders": "Påminningar",
+      "remindersFoot": "Avtalar og klippekort",
+      "overdue": "Forfalne fakturaer",
+      "overdueFoot": "{{amount}} forfalle",
+      "overdueOpen": "Følg opp i fakturalista",
+      "registry": "Registervarsel",
+      "registryFoot": "Blant dei {{count}} organisasjonane dine",
+      "hoursValue": "{{hours}} t",
+      "urgentFootPartial": "{{critical}} kritiske · ufullstendig dekning",
+      "urgentNotConfigured": "Atlas er ikkje kopla til",
+      "urgentFailed": "Kunne ikkje lesast"
+    },
+    "tasksReadAt": "Lesen {{time}}",
+    "tasksChanged": "Oppgåvelista kan ha endra seg sidan ho vart lesen. Radene under er frå siste lesing.",
+    "tasksChangedRefresh": "Oppdater no",
+    "taskPeek": {
+      "openNamed": "Detaljar om {{subject}}",
+      "customer": "Kunde",
+      "due": "Frist",
+      "priority": "Prioritet",
+      "contact": "Kontakt",
+      "location": "Stad",
+      "created": "Oppretta",
+      "description": "Skildring",
+      "noDescription": "Inga skildring.",
+      "noDescriptionSource": "Inga skildring: grunnen til arbeidet blir lesen frå Atlas med «Vis Atlas-kjelde», ho blir ikkje kopiert inn i oppgåva.",
+      "openInCard": "Opne i aktivitetane til kunden",
+      "gone": "Oppgåva er ikkje i den opne lista di",
+      "goneNote": "Oppgåva er ikkje blant dei opne oppgåvene dine i siste lesing: ho kan vere fullført, gitt til ein annan eller ikkje lasta enno. Oppdater lista eller opne aktivitetane til kunden.",
+      "noDue": "Ingen frist",
+      "markDone": "Merk som utført"
+    },
+    "hoursReviewNone": "Ingenting ventar på godkjenning i {{year}}.",
+    "hoursReviewMonth_one": "{{month}}: {{count}} føring ventar på godkjenning",
+    "hoursReviewMonth_other": "{{month}}: {{count}} føringar ventar på godkjenning"
   },
   "organizations": {
     "tabsLabel": "Kundeseksjonar",
@@ -297,7 +361,10 @@
       "invoices": "Fakturaer",
       "mail": "E-post",
       "documents": "Dokument",
-      "projects": "Prosjekt"
+      "projects": "Prosjekt",
+      "more": "Meir",
+      "moreNamed_one": "Meir: {{count}} del",
+      "moreNamed_other": "Meir: {{count}} delar"
     },
     "sections": {
       "company": "Selskap",
@@ -305,7 +372,7 @@
       "responsibility": "Ansvar",
       "addresses": "Adresser",
       "invoicing": "Fakturering",
-      "record": "Post",
+      "record": "Oppføring",
       "group": "Konsern"
     },
     "fields": {
@@ -348,7 +415,11 @@
       "created": "Organisasjonen er oppretta",
       "saved": "Endringane er lagra",
       "copyPostal": "Same som postadresse",
-      "useRegistryEntry": "Bruk"
+      "useRegistryEntry": "Bruk",
+      "nameRequired": "Skriv inn namnet på organisasjonen.",
+      "invalidEmail": "Skriv inn ei e-postadresse som post@firma.no.",
+      "invalidCountry": "Skriv inn ein landkode med to bokstavar, som NO.",
+      "invalidDomains": "Skriv inn e-postdomene skilde med komma, som firma.no, firma.com."
     },
     "delete": {
       "title": "Slette {{name}}?",
@@ -376,7 +447,43 @@
       "ownInvoice": "eigen faktura",
       "billingHint": "Frå neste faktureringskøyring kjem desse linjene på fakturaen til {{name}}, merkte med namnet på dette selskapet.",
       "saved": "Konsernet er lagra"
-    }
+    },
+    "subtitle": "Kundar, leads og partnarar, og kven som følgjer dei opp.",
+    "noAccountManager": "Ingen kundeansvarleg",
+    "moreActions": "Fleire handlingar",
+    "missing": "Ikkje fylt ut: {{list}}",
+    "highlights": {
+      "label": "Kunden i korte trekk",
+      "agreement": "Avtale",
+      "active": "Aktiv",
+      "none": "Ingen",
+      "until": "til {{date}}",
+      "noEnd": "utan sluttdato",
+      "more_one": "+{{count}} til",
+      "more_other": "+{{count}} til",
+      "noAgreement": "Ingen aktiv avtale",
+      "hourBank": "Klippekort",
+      "leftOf_one": "att av {{hours}}",
+      "leftOf_other": "att av {{hours}} på {{count}} klippekort",
+      "leftOfLow_one": "att av {{hours}} · snart brukt opp",
+      "leftOfLow_other": "att av {{hours}} på {{count}} klippekort · snart brukt opp",
+      "noHourBank": "Ikkje noko aktivt klippekort",
+      "openWork": "Ope arbeid",
+      "openWorkNote": "Opne oppgåver og møte",
+      "outstanding": "Utestående",
+      "openInvoices_one": "{{count}} open faktura",
+      "openInvoices_other": "{{count}} opne fakturaer",
+      "overdue": "{{amount}} forfalt",
+      "noOverdue": "Ingenting forfalt",
+      "unread": "Kunne ikkje lesast",
+      "firstBanks": "dei første {{shown}} av {{total}} klippekorta",
+      "noOpenInvoices": "Ingen opne fakturaer"
+    },
+    "notChangedYet": "Ikkje endra sidan han vart oppretta",
+    "scopeFilter": "Kven sine kundar",
+    "scopeAll": "Alle",
+    "scopeMine": "Mine",
+    "primaryContact": "Hovudkontakt"
   },
   "contacts": {
     "title": "Kontaktar",
@@ -430,7 +537,13 @@
       "Create": "oppretta",
       "Update": "endra",
       "Delete": "sletta",
-      "Erase": "sletta etter krav"
+      "Erase": "sletta etter krav",
+      "Export": "eksporterte",
+      "Login": "logga inn",
+      "Logout": "logga ut",
+      "Merge": "slo saman",
+      "ParasolIdentityLinked": "kopla kunden til Atlas",
+      "ParasolIdentityUnlinked": "fjerna Atlas-koplinga"
     },
     "fieldsChanged": "{{count}} felt",
     "erased": "Sletta etter krav frå personen; detaljane blir ikkje lenger viste."
@@ -443,7 +556,13 @@
       "entityType": "Posttype",
       "action": "Handling",
       "from": "Frå",
-      "to": "Til"
+      "to": "Til",
+      "label": "Filtrer revisjonsloggen",
+      "all": {
+        "module": "Alle modular",
+        "entityType": "Alle posttypar",
+        "action": "Alle handlingar"
+      }
     },
     "columns": {
       "at": "Tidspunkt",
@@ -452,11 +571,70 @@
       "record": "Post",
       "changes": "Endringar"
     },
-    "empty": "Ingen oppføringar samsvarer med filtera."
+    "empty": "Ingen oppføringar samsvarer med filtera.",
+    "modules": {
+      "customers": "Kundar",
+      "identity": "Brukarar og innlogging",
+      "integration": "Integrasjonar"
+    },
+    "entityTypes": {
+      "Organization": "Organisasjon",
+      "Contact": "Kontakt",
+      "OrganizationContact": "Kontakt i organisasjon",
+      "User": "Brukar",
+      "UserSession": "Innloggingsøkt"
+    },
+    "actions": {
+      "Create": "Oppretta",
+      "Update": "Endra",
+      "Delete": "Sletta",
+      "Erase": "Sletta etter krav",
+      "Export": "Eksportert",
+      "Login": "Logga inn",
+      "Logout": "Logga ut",
+      "Read": "Lesen",
+      "Merge": "Slått saman",
+      "TriggerJob": "Jobb starta",
+      "Replay": "Sendt på nytt",
+      "Cancel": "Trekt tilbake",
+      "Retention": "Lagringstid",
+      "Maintenance": "Vedlikehald",
+      "Reconcile": "Avstemt",
+      "Sign": "Signert",
+      "ParasolIdentityLinked": "Atlas-kopling lagd til",
+      "ParasolIdentityUnlinked": "Atlas-kopling fjerna"
+    },
+    "actor": {
+      "user": "Brukar",
+      "anonymous": "Ikkje innlogga",
+      "system": "System"
+    },
+    "changedTo": "til",
+    "fields": {
+      "lastLoginAt": "Sist innlogga",
+      "rolesVerifiedAt": "Rollar stadfesta",
+      "displayName": "Visingsnamn",
+      "isActive": "Aktiv",
+      "objectId": "Entra-objekt-ID",
+      "roles": "Rollar",
+      "rolesVersion": "Rolleversjon",
+      "tenantId": "Tenant-ID",
+      "userPrincipalName": "Brukarnamn (UPN)",
+      "planSha256": "Fingeravtrykk for planen",
+      "externalLinkId": "Koplings-ID",
+      "billedThroughParent": "Blir fakturert via morselskapet",
+      "registryStatus": "Registerstatus",
+      "case": "Sak",
+      "fields": "Felt",
+      "rows": "Rader",
+      "filters": "Filter",
+      "reason": "Årsak"
+    },
+    "structured": "Vis detaljar ({{count}})"
   },
   "users": {
     "title": "Brukarar",
-    "subtitle": "Personar som har logga inn. Rollar blir styrte i Microsoft Entra ID.",
+    "subtitle": "Personar som har logga inn. Rollar blir tildelte i Microsoft Entra ID og når Parasoll innan nokre minutt; ein ny tilsett blir vist etter første innlogging.",
     "columns": {
       "name": "Namn",
       "email": "E-post",
@@ -464,7 +642,8 @@
     },
     "active": "Aktiv",
     "inactive": "Inaktiv",
-    "search": "Søk etter brukarar"
+    "search": "Søk etter brukarar",
+    "empty": "Ingen brukarar passar til søket."
   },
   "userPicker": {
     "narrow_one": "og {{count}} til – skriv for å snevre inn",
@@ -476,10 +655,13 @@
     "groups": {
       "commands": "Gå til",
       "organizations": "Organisasjonar",
-      "contacts": "Kontaktar"
+      "contacts": "Kontaktar",
+      "products": "Produkt"
     },
     "noResults": "Ingen treff.",
-    "enterHint": "↑↓ for å flytte · Enter for å opne · Enter utan val søkjer i organisasjonar"
+    "enterHint": "↑↓ for å flytte · Enter for å opne · Enter utan val søkjer i organisasjonar",
+    "found_one": "{{count}} treff",
+    "found_other": "{{count}} treff"
   },
   "duplicates": {
     "strongestShown": "Dei {{shown}} sterkaste av {{total}} moglege duplikat blir viste; når du slår saman eller avviser, kjem dei neste.",
@@ -496,12 +678,10 @@
     "keep": "Behald denne",
     "notDuplicates": "Ikkje duplikat",
     "dismissed": "Merkt som ulike organisasjonar",
-    "contacts": "{{count}} kontaktar",
     "created": "Oppretta {{date}}",
     "confirmTitle": "Slå saman {{source}} med {{target}}?",
-    "confirmBody": "Kontaktane blir flytta til {{target}}, tomme felt blir fylte ut frå {{source}}, og {{source}} blir skjult. Du kan angre innan 30 dagar så lenge {{target}} ikkje blir redigert i mellomtida.",
+    "confirmBody": "Kontaktar, salsmoglegheiter og leads, avtalar, aktivitetar, CSP-abonnement, servicesaker, einingar og koplingar til andre system blir flytta til {{target}}; tomme felt blir fylte ut frå {{source}}, og {{source}} blir gøymd. Tilbod, prosjekt, timeføringar, fakturagrunnlag og fakturaer blir verande på {{source}}. Du kan angre innan 30 dagar så lenge {{target}} ikkje er endra i mellomtida.",
     "confirm": "Slå saman",
-    "merged": "Slått saman: {{count}} kontaktar flytta",
     "recent": "Siste samanslåingar",
     "columns": {
       "when": "Når",
@@ -516,7 +696,13 @@
     "undoneToast": "Samanslåinga er angra",
     "banner": "Denne organisasjonen kan vere eit duplikat av {{name}}.",
     "bannerMore": "Samanlikn",
-    "redirected": "Organisasjonen er slått saman. Du vart send til organisasjonen han vart slått saman med."
+    "redirected": "Organisasjonen er slått saman. Du vart send til organisasjonen han vart slått saman med.",
+    "contacts_one": "{{count}} kontakt",
+    "contacts_other": "{{count}} kontaktar",
+    "merged_one": "Slått saman: {{count}} kontakt flytta",
+    "merged_other": "Slått saman: {{count}} kontaktar flytta",
+    "andMore_one": "og {{count}} til",
+    "andMore_other": "og {{count}} til"
   },
   "integrations": {
     "title": "Integrasjonar",
@@ -532,7 +718,7 @@
       "schedule": "Tidsplan",
       "next": "Neste køyring",
       "last": "Siste køyring",
-      "state": "Siste resultat",
+      "state": "Siste køyring av jobben",
       "system": "System",
       "started": "Starta",
       "duration": "Varigheit",
@@ -555,7 +741,27 @@
       "channel-posts": "Kort til Teams-kanalar",
       "outbox-retention": "Rydding av leverte hendingar",
       "quote-documents": "Lagre tilbodsdokument",
-      "quote-document-orphans": "Rydd dokument utan tilknyting"
+      "quote-document-orphans": "Rydd dokument utan tilknyting",
+      "atera-agents": "Einingar (Atera)",
+      "atera-alerts": "Varsel (Atera)",
+      "atera-tickets": "Opne saker (Atera)",
+      "atera-tickets-recent": "Nyleg endra saker (Atera)",
+      "atera-work-hours": "Arbeidstimar (Atera)",
+      "contract-lifecycle": "Avtalepåminningar og fornyingar",
+      "notification-digest": "E-postsamandrag av varsel",
+      "notification-scan": "Sjå etter nye varsel",
+      "partnercenter-billing": "Microsoft-fakturalinjer (Partner Center)",
+      "partnercenter-customers": "Kundar (Partner Center)",
+      "partnercenter-licenses": "Lisenstal (Partner Center)",
+      "partnercenter-subscriptions": "Abonnement (Partner Center)",
+      "poweroffice-customer-ledger": "Kundereskontro (PowerOffice)",
+      "poweroffice-invoice-pdfs": "Faktura-PDF-ar (PowerOffice)",
+      "poweroffice-invoices": "Fakturaer (PowerOffice)",
+      "privacy-replay": "Bruk slettingar på nytt etter gjenoppretting",
+      "privacy-retention": "Lagringstid for personopplysningar",
+      "quote-expiry": "La gamle tilbod gå ut",
+      "reports-snapshot": "Månadlege augneblinksbilete for rapportar",
+      "worker-heartbeat": "Livsteikn frå bakgrunnstenesta"
     },
     "status": {
       "Running": "Køyrer",
@@ -563,7 +769,14 @@
       "Failed": "Feila",
       "Skipped": "Hoppa over"
     },
-    "noJobs": "Ingen planlagde jobbar enno. Dei blir registrerte når crm-worker startar."
+    "noJobs": "Ingen planlagde jobbar enno. Dei blir registrerte når crm-worker startar.",
+    "jobsNote": "Her ser du om kvar planlagd jobb køyrde. Om eit system faktisk vart lese, står under «Overvaking og avvikshandtering» over: ein jobb som hoppar over eit avslått system, køyrer likevel utan feil.",
+    "jobStatus": {
+      "Running": "Køyrer",
+      "Succeeded": "Køyrde utan feil",
+      "Failed": "Feila",
+      "Skipped": "Hoppa over"
+    }
   },
   "systems": {
     "poweroffice": "PowerOffice Go",
@@ -588,7 +801,6 @@
       "Linked": "Kopla"
     },
     "search": "Søk namn, nummer, e-post",
-    "total": "{{unlinked}} av {{total}} ikkje kopla",
     "columns": {
       "external": "I {{system}}",
       "keys": "Org.nr. / e-post",
@@ -622,7 +834,7 @@
     "noSuggestion": "Ingen treff",
     "autoLink": "Kople eksakte treff",
     "importAll": "Importer alle ikkje kopla…",
-    "readOnlyType": "Referansedata for produktkopling i katalogen (sprint 4).",
+    "readOnlyType": "Referansedata for produktkoplinga i katalogen; her er det ingenting å kople.",
     "parentFirst": "Kople eller importer kunden først.",
     "pickTitle": "Kople til ein CRM-organisasjon",
     "pickSearch": "Søk i organisasjonar",
@@ -632,11 +844,15 @@
     "bulkDone": "Kopla {{linked}}, oppretta {{created}}, hoppa over {{skipped}}, feila {{failed}}",
     "autoLinkDone": "Kopla {{linked}}; {{skipped}} utan eksakt treff",
     "empty": "Ingen postar. Dei blir viste etter første synkronisering.",
-    "pickProductTitle": "Kople til eit produkt i CRM"
+    "pickProductTitle": "Kople til eit produkt i CRM",
+    "filtersLabel": "Filtrer postane",
+    "stateLabel": "Koplingsstatus",
+    "pickHint": "Skriv minst to bokstavar for å søkje.",
+    "pickEmpty": "Ingen treff. Prøv eit anna namn eller nummer."
   },
   "systemsPanel": {
     "title": "Tilkopla system",
-    "enabled": "Tilkopla",
+    "enabled": "Slått på",
     "disabled": "Ikkje konfigurert",
     "records": "{{count}} postar",
     "unlinked": "{{count}} ikkje kopla",
@@ -648,10 +864,15 @@
     "paused": "På pause",
     "pause": "Sett på pause",
     "resume": "Start igjen",
-    "pauseReason": "Kvifor blir integrasjonen sett på pause? (hamnar i loggen)",
+    "pauseTitle": "Sett {{system}} på pause",
+    "pauseBody": "Medan han er på pause, hoppar jobbane over køyringane sine, og utgåande endringar ventar i køen til nokon startar han igjen.",
+    "pauseReason": "Grunngjeving",
+    "pauseReasonHint": "Blir ført i loggen og vist på kortet medan integrasjonen er på pause.",
+    "pauseReasonRequired": "Skriv kvifor integrasjonen blir sett på pause.",
     "pausedBy": "Sett på pause av {{who}} {{at}}",
     "pausedNotice": "Integrasjonen er på pause: jobbane hoppar over, og køen ventar.",
-    "resumedNotice": "Integrasjonen køyrer igjen."
+    "resumedNotice": "Integrasjonen køyrer igjen.",
+    "notConfiguredHint": "Ikkje sett opp på denne instansen, så han kan ikkje testast enno."
   },
   "outbound": {
     "title": "Endringar sende til andre system",
@@ -675,13 +896,14 @@
     "operations": {
       "create-customer": "Opprett kunde",
       "update-customer": "Oppdater kunde"
-    }
+    },
+    "selectHint": "Vel mislukka endringar i lista for å prøve dei igjen samla."
   },
   "delivery": {
     "title": "Levering av hendingar",
-    "description": "Hendingar ein modul ikkje fekk levert til ein annan: etter ti mislukka forsøk (daud melding) eller fordi den lagra meldinga ikkje kan lesast (karantene). Rett opp årsaka først, send så på nytt: den lagra meldinga blir levert uendra, og mottakarar som allereie er ferdige, blir hoppa over.",
+    "description": "Hendingar som ikkje vart leverte etter ti forsøk eller ikkje kan lesast. Rett årsaka, send så den lagra meldinga på nytt.",
     "backlog": "Ikkje leverte hendingar per modul",
-    "counts": "{{module}}: {{deadLetter}} daude meldingar, {{quarantined}} i karantene, {{pending}} ventar på levering",
+    "counts": "{{module}}: {{deadLetters}}, {{quarantined}} i karantene, {{pending}} ventar på levering",
     "newestShown": "Dei {{shown}} nyaste av {{total}} ikkje leverte hendingar blir viste; når dei er sende på nytt, kjem dei neste.",
     "empty": "Ingenting ventar på ein person: ingen daude meldingar og ingen hendingar i karantene.",
     "replaySelected": "Send valde på nytt ({{count}})",
@@ -718,7 +940,10 @@
     "reason": "Grunngjeving",
     "reasonHint": "Kva som vart retta — minst {{min}} teikn. Blir ført i revisjonsloggen.",
     "confirm_one": "Send {{count}} melding på nytt",
-    "confirm_other": "Send {{count}} meldingar på nytt"
+    "confirm_other": "Send {{count}} meldingar på nytt",
+    "deadLetters_one": "{{count}} daud melding",
+    "deadLetters_other": "{{count}} daude meldingar",
+    "selectHint": "Vel hendingar i lista for å sende dei på nytt samla."
   },
   "linkedSystems": {
     "title": "Kopla system",
@@ -732,6 +957,7 @@
     "subtitle": "Produkt, prislister og kundekategoriar.",
     "inactive": "Inaktiv",
     "openEnded": "inntil vidare",
+    "from": "Frå {{date}}",
     "openEndedHint": "La stå tomt for ingen sluttdato.",
     "tabs": {
       "products": "Produkt",
@@ -821,6 +1047,8 @@
     "products": {
       "new": "Nytt produkt",
       "search": "Søk i produkt",
+      "filterLabel": "Filtrer produkt",
+      "allTypes": "Alle typar",
       "showInactive": "Vis inaktive",
       "empty": "Ingen produkt passar filteret.",
       "emptyAll": "Katalogen er tom. Legg til produkt eller importer dei frå PowerOffice under Koplingar."
@@ -856,7 +1084,8 @@
       "editTitle": "Rediger prisliste",
       "created": "Prislista er oppretta",
       "saved": "Prislista er lagra",
-      "explainer": "For kvar kundekategori kan berre ei aktiv prisliste gjelde same dag. Eigne prisar i avtalen går føre.",
+      "explainer": "Éi aktiv prisliste per kategori same dag; eigne prisar i avtalen går føre.",
+      "forCategory": "For kategori {{category}}",
       "empty": "Ingen prislister enno. Produkta blir prisa med listepris.",
       "items": "Prisar",
       "itemsExplainer": "Produkt utan pris her bruker listeprisen.",
@@ -893,7 +1122,8 @@
       "new": "Ny kategori",
       "editTitle": "Rediger kundekategori",
       "editNamed": "Rediger {{name}}",
-      "explainer": "Kategorien på ein avtale veljer prisliste; påslaget gjeld prisar på Microsoft-lisensar.",
+      "explainer": "Kategorien til avtalen vel prisliste; påslaget gjeld Microsoft-lisensar.",
+      "empty": "Ingen kundekategoriar enno.",
       "default": "Standard",
       "makeDefault": "Standard for nye avtalar",
       "codeHint": "Kort kode som ikkje kan endrast seinare.",
@@ -922,19 +1152,21 @@
     "subtitle": "Kundeavtalar med prisar, SLA og fornyingar.",
     "new": "Ny avtale",
     "search": "Søk på nummer, tittel eller referanse",
+    "filterLabel": "Filtrer avtalar",
     "empty": "Ingen avtalar passar filteret.",
     "emptyAll": "Ingen avtalar enno.",
     "emptyForOrganization": "Organisasjonen har ingen avtalar.",
     "endingSoon": "Går ut innan 60 dagar",
     "untilFurtherNotice": "inntil vidare",
     "autoRenews": "Blir fornya automatisk",
-    "renewsBy": "Ja, med {{months}} månader",
+    "renewsBy_one": "Ja, med {{count}} månad",
+    "renewsBy_other": "Ja, med {{count}} månader",
     "days": "dagar",
     "months": "månader",
     "hoursShort": "t",
     "daysCount_one": "{{count}} dag",
     "daysCount_other": "{{count}} dagar",
-    "valueExplainer": "Gjeldande linjer omrekna til månadsbeløp, utan MVA og eingongspostar. Linjer per eining og per brukar bruker estimert antal til faktureringa tel dei.",
+    "valueExplainer": "Gjeldande linjer per månad, utan MVA og eingongspostar; estimert antal til fakturering.",
     "deleted": "Avtalen er sletta",
     "deleteTitle": "Slette utkast {{number}}?",
     "deleteBody": "Utkastet og linjene blir sletta. Løpande avtalar blir avslutta i staden.",
@@ -1085,6 +1317,7 @@
       "revised": "Ny pris frå {{date}}; førre versjon blir behaldd.",
       "removed": "Linja er fjerna",
       "empty": "Ingen linjer enno.",
+      "from": "Frå {{date}}",
       "showHistory": "Vis tidlegare versjonar",
       "change": "Endre antal eller pris…",
       "changeTitle": "Endre {{name}}",
@@ -1132,13 +1365,25 @@
       "entryAdded": "Timane er registrerte",
       "lowWarning": "Mindre enn varslingsgrensa er att. Ansvarleg har fått ei påminning.",
       "adjustmentHint": "Positivt gir timar tilbake, negativt trekkjer timar.",
-      "close": "Lukk",
       "closedDone": "Klippekortet er lukka",
       "balance": "Saldo",
-      "balanceDetail": "{{used}} av {{purchased}} t brukt · varsel under {{pct}} %",
-      "overageHours": "Utover klippekortet",
+      "purchased": "Kjøpt",
+      "used": "Brukt",
+      "warnBelow": "Varsel under",
+      "overageHours": "Timar utover klippekortet",
       "ledger": "Rørsler",
-      "by": "Av"
+      "noEntries": "Ingen timar registrerte enno.",
+      "by": "Av",
+      "sources": {
+        "TimeEntry": "Godkjend tid",
+        "TimeEntryReversal": "Godkjenning trekt tilbake",
+        "other": "Automatisk"
+      },
+      "moreActions": "Fleire handlingar for klippekortet",
+      "closeAsk": "Lukk klippekortet…",
+      "closeTitle": "Lukke {{name}}?",
+      "closeBody": "Det er {{hours}} t att. Eit lukka klippekort tek ikkje imot fleire timar og kan ikkje opnast igjen.",
+      "closeConfirm": "Lukk klippekortet"
     },
     "sla": {
       "title": "SLA-avtalar",
@@ -1169,25 +1414,35 @@
     "defaultCategory": "Standard",
     "indexation": {
       "title": "Prisindeksering",
-      "subtitle": "Årleg justering av kontraktprisar med førehandsvising før noko blir endra.",
+      "subtitle": "Årleg justering av avtaleprisar med førehandsvising før noko blir endra.",
+      "setupTitle": "Prisendring",
       "percent": "Prosent",
-      "percentHint": "KPI for dei siste 12 månadene, med mindre anna er avtalt.",
+      "percentHint": "Endring i konsumprisindeksen (KPI) over 12 månader, med mindre avtalen seier noko anna.",
       "effectiveFrom": "Frå dato",
       "preview": "Vis førehandsvising",
-      "empty": "Ingen kontraktar skal indekserast den datoen.",
-      "selected": "{{selected}} av {{total}} kontraktar valde",
+      "previewTitle": "Førehandsvising",
+      "empty": "Ingen avtalar skal regulerast den datoen.",
+      "dueLabel": "Avtalar til regulering",
+      "selectedLabel": "Valde",
+      "selectedValue": "{{selected}} av {{total}}",
       "selectAll": "Vel alle",
-      "monthlyChange": "Alle avtalar som skal indeksregulerast, per månad: {{before}} → {{after}}",
       "due": "Forfall",
       "before": "I dag, per månad",
       "after": "Etter, per månad",
       "lines": "Linjer",
-      "priceListLines": "{{count}} følgjer prislista",
-      "notifyHint": "Kundane må varslast om dei nye prisane; varslingsfristen i kvar kontrakt gjeld framleis.",
-      "apply": "Indekser {{count}} kontraktar",
-      "applied": "Indekserte {{contracts}} kontraktar og {{lines}} linjer",
+      "priceListLines_one": "{{count}} følgjer prislista",
+      "priceListLines_other": "{{count}} følgjer prislista",
+      "notifyHint": "Kundane må varslast om dei nye prisane; varslingsfristen i kvar avtale gjeld framleis.",
+      "apply_one": "Indekser {{count}} avtale",
+      "apply_other": "Indekser {{count}} avtalar",
+      "applied": "Indekserte {{contracts}} og {{lines}}",
       "failed": "Indekseringa kunne ikkje gjennomførast.",
-      "skipped": "{{count}} valde avtalar vart utelatne: ikkje til regulering på datoen eller utan indeksklausul."
+      "skipped_one": "{{count}} vald avtale vart utelaten: ikkje til regulering på datoen eller utan indeksklausul.",
+      "skipped_other": "{{count}} valde avtalar vart utelatne: ikkje til regulering på datoen eller utan indeksklausul.",
+      "contractCount_one": "{{count}} avtale",
+      "contractCount_other": "{{count}} avtalar",
+      "lineCount_one": "{{count}} linje",
+      "lineCount_other": "{{count}} linjer"
     }
   },
   "service": {
@@ -1201,15 +1456,18 @@
     "lastTicketChange": "Siste lagra saksendring: {{at}}",
     "lastTicketChangeUnknown": "Tidspunkt for siste lagra saksendring er ukjent.",
     "deviceTotalsUnknown": "Einingstal er utilgjengelege til den lagra oversikta kan lesast.",
+    "deviceTypesLabel": "Einingar etter type",
     "noRequests": "Ingen lagra saksførespurnader treng oppfølging.",
+    "onlineCount": "{{count}} på nett",
     "openTickets": "Opne saker",
-    "devicesOnline": "Einingar ({{online}} på nett)",
     "criticalAlerts": "Kritiske varsel",
     "warningAlerts": "Åtvaringar",
     "tickets": "Saker",
     "openOnly": "Berre opne",
     "newTicket": "Ny sak",
     "createTicket": "Opprett i Atera",
+    "chooseContact": "Vel ein kontakt",
+    "noContacts": "Kunden har ingen kontaktar enno. Legg til ein på fana Kontaktar først.",
     "ticketQueued": "Saka blir oppretta i Atera",
     "ticketPending": "«{{title}}» blir oppretta i Atera.",
     "ticketFailed": "«{{title}}» vart ikkje oppretta: {{error}}",
@@ -1242,7 +1500,9 @@
       "description": "Skildring",
       "priority": "Prioritet",
       "type": "Type"
-    }
+    },
+    "nothingSaved": "Ingen Atera-data er lagra for denne kunden: han er ikkje kopla til Atera, eller Atera er ikkje lese for han enno. Tala blir viste etter første lesing.",
+    "nothingSavedShort": "Ingen Atera-data er lagra for denne kunden enno."
   },
   "taskTicket": {
     "open": "Servicesak",
@@ -1272,7 +1532,7 @@
     "open": "Økonomikontroll",
     "refresh": "Oppdater lagra opplysningar",
     "noAccess": "Kontrollen krev økonomitilgang og lesetilgang til timar, kundar, avtalar og fakturering.",
-    "scope": "Kontrollerer den valde timeføringa og tilknytte postar. Heile historikken blir ikkje gjennomgått, og ingen verdiar blir endra. Oppdater før du bestemmer tiltak.",
+    "scope": "Kontrollerer berre denne timeføringa og tilknytte postar. Ingenting blir endra; oppdater før du bestemmer tiltak.",
     "checkedAt": "Kontrollert {{at}}",
     "entry": "Lagra timeføring",
     "unknownCustomer": "Kunden er utilgjengeleg",
@@ -1294,8 +1554,10 @@
     "protected": "Verna fakturagrunnlag",
     "versionMatches": "Fordelingsversjonen stemmer.",
     "versionDiffers": "Fordelingsversjonen må kontrollerast.",
-    "matchingParts": "Samsvarande timedelar: {{count}}",
+    "matchingParts_one": "{{count}} samsvarande timedel",
+    "matchingParts_other": "{{count}} samsvarande timedelar",
     "savedOnly": "Berre føringar med lagra kontrollmerknader i perioden",
+    "savedOnlyShort": "Med kontrollmerknad",
     "bankStates": {
       "Active": "Aktiv timebank",
       "Closed": "Lukka timebank",
@@ -1327,41 +1589,52 @@
     "deleted": "Føringa er sletta",
     "newEntry": "Før timar",
     "editEntry": "Rediger føring",
-    "editNamed": "Rediger føringa på {{hours}} timar",
-    "deleteNamed": "Slett føringa på {{hours}} timar",
+    "editNamed": "Rediger {{hours}} t for {{organization}}, {{date}}",
+    "deleteNamed": "Slett {{hours}} t for {{organization}}, {{date}}",
     "noEntriesDay": "Ingen timar førte.",
     "previousWeek": "Førre veke",
     "nextWeek": "Neste veke",
     "thisWeek": "Denne veka",
+    "weekNumber": "Veke {{week}}",
     "weekTotal": "{{hours}} t denne veka",
     "billableTotal": "{{hours}} t fakturerbart",
     "dayTotal": "{{hours}} t",
     "nonBillable": "Ikkje fakturerbar",
     "ticketHint": "Saksnummer i Atera, viss arbeidet høyrer til ei sak.",
     "empty": "Ingen føringar i denne perioden.",
+    "emptyFiltered": "Ingen føringar passar til filtera.",
+    "showAll": "Vis alle føringar",
     "totals": "{{hours}} t totalt · {{approved}} t godkjent · {{pending}} t ventar",
     "amountTotal": "{{amount}} til fakturering",
     "selectAll": "Vel alle føringar som ventar på godkjenning",
     "selectEntry": "Vel føringa {{date}} for {{organization}}",
     "approveSelected": "Godkjenn ({{count}})",
-    "withdrawSelected": "Trekk tilbake godkjenning",
-    "approved": "{{count}} føringar godkjende",
+    "withdrawSelected": "Trekk tilbake godkjenning ({{count}})",
+    "approved_one": "{{count}} føring godkjend",
+    "approved_other": "{{count}} føringar godkjende",
     "withdrawn": "Godkjenninga er trekt tilbake",
     "adjust": "Korriger",
     "adjustNamed": "Korriger føringa {{date}} for {{organization}}",
     "adjustTitle": "Korriger før godkjenning",
-    "adjustBody": "Endre det servicedesken melde, før timane blir fakturerte.",
+    "adjustBody": "Endre arbeidstype eller fakturering før du godkjenner.",
     "adjusted": "Føringa er korrigert",
-    "closePeriod": "Lukk perioden",
+    "closePeriod": "Lukk {{month}}…",
     "periodClosedDone": "Perioden er lukka",
     "periodClosed": "Lukka {{at}} av {{by}}",
     "reopenPeriod": "Opne igjen",
     "reopenTitle": "Opne {{period}} igjen",
     "reopenReason": "Årsak",
-    "reopenHint": "Blir skriven til revisjonsloggen (BR-TIM-05).",
+    "reopenHint": "Blir skriven til revisjonsloggen.",
     "periodReopened": "Perioden er open igjen",
     "periods": "Månader",
+    "figuresLabel": "Timar i månaden",
     "pendingCount": "{{count}} ventar",
+    "entriesCount_one": "{{count}} føring",
+    "entriesCount_other": "{{count}} føringar",
+    "tiles": {
+      "waiting": "Ventar på godkjenning",
+      "toBill": "Til fakturering"
+    },
     "statuses": {
       "New": "Ny",
       "Approved": "Godkjend",
@@ -1394,7 +1667,33 @@
     },
     "closed": "Lukka",
     "noProject": "Utan prosjekt",
-    "noProjects": "Kunden har ingen opne prosjekt."
+    "noProjects": "Kunden har ingen opne prosjekt.",
+    "commonDurations": "Vanlege varigheiter",
+    "minutes": "{{count}} min",
+    "closePeriodTitle": "Lukke {{month}}?",
+    "closePeriodBody": "Timane i {{month}} blir låste: ingen kan registrere, endre eller godkjenne dei før Økonomi opnar månaden igjen med ei grunngjeving.",
+    "closePeriodConfirm": "Lukk {{month}}",
+    "closePeriodWaiting_one": "{{count}} føring i {{month}} ventar framleis på godkjenning. Godkjenn eller rett ho før du lukkar månaden.",
+    "closePeriodWaiting_other": "{{count}} føringar i {{month}} ventar framleis på godkjenning. Godkjenn eller rett dei før du lukkar månaden.",
+    "closePeriodShowWaiting": "Vis ventande føringar",
+    "closePeriodNotEnded": "{{month}} er ikkje over enno. Når han er lukka, kan ingen registrere timar for resten av månaden.",
+    "approveSkipped_one": "{{count}} føring vart ikkje godkjend: ho var alt handsama, eller månaden er lukka.",
+    "approveSkipped_other": "{{count}} føringar vart ikkje godkjende: dei var alt handsama, eller månaden er lukka.",
+    "deleteTitle": "Slette {{hours}} t for {{organization}}, {{date}}?",
+    "deleteBody": "Føringa er ikkje godkjend enno. Slettinga kan ikkje angrast.",
+    "deleteConfirm": "Slett føringa",
+    "hoursRequired": "Skriv inn timane.",
+    "hoursInvalid": "Skriv timar som 1,5, 1:30 eller 45 min.",
+    "hoursPositive": "Skriv inn meir enn 0 timar.",
+    "hoursMax": "Høgst 24 timar i éi føring. For minutt, skriv 45 min eller 0:45.",
+    "hoursEcho": "Blir lagra som {{hours}} t",
+    "ticketInvalid": "Skriv saksnummeret med berre siffer, til dømes 4711.",
+    "descriptionRequired": "Skildre arbeidet.",
+    "adjustEntry": "{{hours}} t for {{organization}}, {{date}} · {{technician}}",
+    "discardTitle": "Forkaste føringa?",
+    "discardBody": "Det du har skrive, er ikkje lagra.",
+    "discard": "Forkast",
+    "keepEditing": "Hald fram med å redigere"
   },
   "technicians": {
     "title": "Teknikarar",
@@ -1437,6 +1736,7 @@
     "subtitle": "Førespurnader som enno ikkje er kvalifiserte som kundar.",
     "new": "Nytt lead",
     "search": "Søk i leads",
+    "filterLabel": "Filtrer leads",
     "mine": "Berre mine",
     "empty": "Ingen leads.",
     "editTitle": "Endre lead",
@@ -1481,9 +1781,11 @@
     "new": "Nytt sal",
     "editTitle": "Endre sal",
     "search": "Søk i sal",
+    "filterLabel": "Filtrer sal",
     "mine": "Berre mine",
     "staleOnly": "Berre utan aktivitet",
     "empty": "Ingen sal.",
+    "columnEmpty": "Ingen sal i dette steget",
     "emptyForOrganization": "Ingen sal for denne kunden.",
     "saved": "Salet er lagra",
     "created": "Salet er oppretta",
@@ -1504,8 +1806,8 @@
     },
     "actionsFor": "Handlingar for {{name}}",
     "forecast": "Vekta prognose",
-    "forecastExplainer": "Eingongsbeløp pluss inntil tolv månader med løpande inntekt, vekta med sannsynet på {{probability}} % i steget.",
-    "closesOn": "Avsluttast {{date}}",
+    "forecastExplainer": "Eingongsbeløp pluss inntil 12 månaders løpande inntekt, vekta med {{probability}} %.",
+    "closesOn": "Venta avslutning {{date}}",
     "mrrShort": "{{amount}}/md",
     "dealCount": "{{count}} sal",
     "stale": "Ingen aktivitet på 30 dagar",
@@ -1514,8 +1816,7 @@
     "termHint": "Talet på månader med løpande inntekt som blir tekne med i prognosen (maks 12).",
     "createContract": "Opprett avtale",
     "sections": {
-      "deal": "Salet",
-      "status": "Status"
+      "deal": "Salet"
     },
     "fields": {
       "name": "Namn",
@@ -1532,7 +1833,6 @@
       "owner": "Ansvarleg",
       "source": "Kjelde",
       "competitor": "Konkurrent",
-      "status": "Status",
       "lostReason": "Tapsårsak",
       "closedOn": "Avslutta",
       "lastActivity": "Siste aktivitet"
@@ -1562,7 +1862,8 @@
       "unassigned": "Ingen ansvarleg",
       "more": "{{count}} fleire opne oppgåver på dette salet",
       "add": "Legg til neste steg"
-    }
+    },
+    "openDraftContract": "Opne utkastet til avtale"
   },
   "quotes": {
     "title": "Tilbod",
@@ -1572,6 +1873,9 @@
     "created": "Tilbodet er oppretta",
     "saved": "Tilbodet er lagra",
     "search": "Søk i tilbod",
+    "filterLabel": "Filtrer tilbod",
+    "searchPlaceholder": "Søk på nummer, tittel eller kunde",
+    "allStatuses": "Alle statusar",
     "mine": "Berre mine",
     "awaitingApproval": "Ventar på godkjenning",
     "awaitingApprovalBody": "Rabatten på {{pct}} % er over grensa på {{limit}} % og må godkjennast av leiinga før tilbodet kan sendast.",
@@ -1582,6 +1886,7 @@
     "empty": "Ingen tilbod.",
     "emptyHere": "Ingen tilbod her enno.",
     "lines": "Postar",
+    "noLines": "Ingen linjer enno.",
     "addLine": "Legg til post",
     "removeLineNamed": "Fjern posten {{name}}",
     "priceFromCatalog": "Frå prisliste",
@@ -1614,6 +1919,7 @@
     "revise": "Ny versjon",
     "revised": "Versjon {{version}} er oppretta",
     "versionLine": "Versjon {{version}} — {{status}}",
+    "versions": "Versjonar",
     "validUntilOn": "Gyldig til {{date}}",
     "openDeal": "Opne salet",
     "perMonthExVat": "Per månad, eks. mva.",
@@ -1705,7 +2011,11 @@
       "leavesScope": "Etterpå ser du ikkje tilbodet lenger.",
       "submit": "Overfør",
       "done": "Tilbodet høyrer no til {{name}}."
-    }
+    },
+    "editReturnsToDraft": "Når du lagrar ei endring, går tilbodet tilbake til utkast: det må klargjerast på nytt før det blir sendt, og ein rabatt over grensa di må godkjennast på nytt.",
+    "pricedOnSave": "Blir prisa ved lagring",
+    "unpricedLines_one": "Ikkje rekna med enno: {{count}} linje blir prisa frå prislista når du lagrar",
+    "unpricedLines_other": "Ikkje rekna med enno: {{count}} linjer blir prisa frå prislista når du lagrar"
   },
   "quoteTemplates": {
     "title": "Tilbodsmalar",
@@ -1819,6 +2129,7 @@
     "title": "Lisensar",
     "subtitle": "Microsoft CSP-abonnement, angrefristar og fornyingar.",
     "search": "Søk etter lisens eller kunde",
+    "filterLabel": "Filtrer abonnement",
     "empty": "Ingen abonnement.",
     "emptyForOrganization": "Ingen abonnement for denne kunden.",
     "import": "Importer frå distributør",
@@ -1840,11 +2151,17 @@
     "noAutoRenew": "Blir avslutta ved periodeslutt",
     "windowUntil": "Kan seiast opp til {{at}}",
     "tiles": {
-      "licenses": "Lisensar i {{subscriptions}} abonnement",
-      "cancellationWindow": "Innanfor angrefristen",
-      "renewingSoon": "Blir fornya innan 30 dagar",
-      "notBilled": "Blir ikkje fakturert",
-      "withoutOrganization": "Utan kunde"
+      "licenses": "Lisensar",
+      "licensesNote_one": "I {{count}} abonnement",
+      "licensesNote_other": "I {{count}} abonnement",
+      "cancellationWindow": "Angrefrist",
+      "cancellationWindowNote": "Kan framleis seiast opp",
+      "renewingSoon": "Fornyast snart",
+      "renewingSoonNote": "Innan 30 dagar",
+      "notBilled": "Ikkje fakturert",
+      "notBilledNote": "Ikkje på nokon avtale",
+      "withoutOrganization": "Utan kunde",
+      "label": "Nøkkeltal"
     },
     "filters": {
       "window": "Angrefrist open",
@@ -1878,7 +2195,8 @@
     },
     "usage": {
       "unusedOnly": "Berre lisensar ubrukte i {{days}} dagar",
-      "unusedSeats": "{{seats}} lisensar har vore ubrukte i {{days}} dagar",
+      "unusedSeats_one": "{{count}} lisens har vore ubrukt i {{days}} dagar",
+      "unusedSeats_other": "{{count}} lisensar har vore ubrukte i {{days}} dagar",
       "sku": "SKU",
       "purchased": "Kjøpt",
       "assigned": "Tildelt",
@@ -1891,7 +2209,9 @@
     "reconciliation": {
       "period": "Månad",
       "import": "Importer Microsoft-faktura",
-      "cost": "Microsoft-kostnad, {{lines}} linjer",
+      "cost": "Microsoft-kostnad",
+      "costLines_one": "{{count}} kostnadslinje",
+      "costLines_other": "{{count}} kostnadslinjer",
       "revenue": "Fakturert kundane",
       "margin": "Margin",
       "costShort": "Kostnad",
@@ -1905,7 +2225,8 @@
       "importHint": "Kolonnar: CustomerId, SubscriptionId, OfferId, Antal, Einingspris, Beløp, Valuta, Fakturanummer, Frå og med, Til og med.",
       "previewResult": "{{created}} nye linjer, {{updated}} endra, {{unchanged}} uendra, {{withoutOrganization}} utan kunde.",
       "imported": "Importerte {{created}} nye og {{updated}} endra kostnadslinjer."
-    }
+    },
+    "readFrom": "Lese frå Partner Center"
   },
   "billing": {
     "title": "Faktureringskøyringar",
@@ -1928,9 +2249,10 @@
       "releasedLegacy": "Godkjend før godkjenningar vart knytte til ein versjon av køyringa.",
       "needsOne": "Éi godkjenning frå økonomi trengst.",
       "needsTwo": "Ein kunde er over terskelen: økonomi og leiinga må godkjenne, to ulike personar, i valfri rekkjefølgje.",
-      "entry": "{{kind}}: {{name}}, {{date}}",
+      "approvedAt": "Godkjend {{date}}",
+      "approvedMark": "Godkjend",
+      "revisionShort": "Versjon {{revision}}",
       "setAsideTitle": "Sett til side",
-      "setAsideEntry": "{{entry}} (versjon {{revision}}).",
       "resetBanner": "Tidlegare godkjenningar gjeld ikkje lenger; versjon {{revision}} må godkjennast på nytt.",
       "otherPerson": "Du har godkjent denne versjonen. Den andre godkjenninga må kome frå ein annan person.",
       "kind": {
@@ -1993,8 +2315,10 @@
     "secondApprovalNeeded": "Ein kunde er over {{amount}}, så leiinga må godkjenne i tillegg.",
     "export": "Send til PowerOffice",
     "exportQueued": "Køyringa blir sendt",
-    "retryFailed": "Send {{count}} på nytt",
-    "failedBases": "{{count}} kundar kunne ikkje sendast; opne kunden for å sjå kvifor.",
+    "failedBases_one": "{{count}} kunde vart ikkje send. Opne han nedanfor for å sjå feilen.",
+    "failedBases_other": "{{count}} kundar vart ikkje sende. Opne ein av dei nedanfor for å sjå feilen.",
+    "failedCount_one": "{{count}} feila",
+    "failedCount_other": "{{count}} feila",
     "close": "Lukk køyringa",
     "closeTitle": "Lukke køyringa?",
     "closeBody": "Ei lukka køyring kan ikkje samlast inn eller sendast på nytt. Grunnlaga blir behaldne som underlag for fakturaene.",
@@ -2002,8 +2326,8 @@
     "bases": "Kundar i denne køyringa",
     "noBases": "Ingenting å fakturere i denne perioden.",
     "searchCustomer": "Søk etter kunde",
-    "anomaliesOnly": "Berre det som må sjåast på",
-    "previousPeriod": "Førre periode: {{amount}}",
+    "basesFilter": "Kundar som blir viste",
+    "previousPeriodShort": "{{amount}} førre periode",
     "lines": "Linjer",
     "noLines": "Ingen linjer.",
     "addLine": "Legg til linje",
@@ -2053,14 +2377,16 @@
     "discount": "{{pct}} % rabatt",
     "productHint": "Produktet bestemmer mva-satsen og produktkoden som blir sendt til PowerOffice.",
     "exVat": "Eks. mva",
+    "toInvoice": "Til fakturering",
     "exportLog": "Utsending",
+    "notSentYet": "Ikkje sendt til PowerOffice enno.",
     "invoices": "Fakturaer",
     "invoiceDates": "Fakturert {{invoiceDate}}, forfall {{dueDate}}",
     "openCustomer": "Opne kunde",
     "retry": "Send på nytt",
     "retried": "Kunden er tilbake i køen",
     "cancelBasis": "Avbryt grunnlaget",
-    "cancelBody": "Kunden blir halden utanfor denne køyringa. Ein ordre som alt ligg i PowerOffice, må krediterast der (BR-BIL-09).",
+    "cancelBody": "Kunden blir halden utanfor denne køyringa. Ein ordre som alt ligg i PowerOffice, må krediterast der.",
     "basisCancelled": "Grunnlaget er avbrote",
     "fields": {
       "period": "Periode",
@@ -2135,18 +2461,28 @@
       "updated": "Oppdatert {{time}}. Du kan forlate sida; sendinga held fram og ingenting blir sendt to gonger.",
       "refresh": "Oppdater no"
     },
-    "refreshFailed": "Kunne ikkje oppdatere køyringa. Viser status frå {{time}} ({{reason}}). Sida prøver igjen automatisk."
+    "refreshFailed": "Kunne ikkje oppdatere køyringa. Viser status frå {{time}} ({{reason}}). Sida prøver igjen automatisk.",
+    "keepBasis": "Behald grunnlaget",
+    "retryFailed_one": "Send den usende kunden på nytt",
+    "retryFailed_other": "Send dei {{count}} usende kundane på nytt",
+    "closeUnsent_one": "{{count}} kunde i køyringa vart ikkje send. Lukk køyringa først når han er handtert på ein annan måte.",
+    "closeUnsent_other": "{{count}} kundar i køyringa vart ikkje sende. Lukk køyringa først når dei er handterte på ein annan måte."
   },
   "invoices": {
     "title": "Fakturaer",
     "subtitle": "Fakturaer og utestående slik PowerOffice rapporterer dei.",
     "empty": "Ingen fakturaer.",
+    "emptyFiltered": "Ingen fakturaer passar til filteret.",
     "emptyForOrganization": "Ingen fakturaer for denne kunden.",
     "outstanding": "Utestående",
     "overdue": "Forfalt",
     "count": "Fakturaer",
-    "openOnly": "Berre med restbeløp",
-    "overdueOnly": "Berre forfalne",
+    "totals": "Fakturasummar",
+    "filter": {
+      "label": "Vis fakturaer",
+      "open": "Med restbeløp",
+      "overdue": "Forfalne"
+    },
     "due": "forfall {{date}}",
     "noCustomer": "Ikkje kopla til kunde",
     "openBasis": "Opne grunnlag",
@@ -2169,7 +2505,8 @@
         "Payment": "Betaling",
         "WriteOff": "Avskriving"
       }
-    }
+    },
+    "totalOf": "av {{amount}} inkl. mva."
   },
   "notifications": {
     "title": "Varsel",
@@ -2192,33 +2529,43 @@
     "emailUnavailable": "E-post er ikkje sett opp for selskapet enno; varsel blir berre viste her.",
     "digestHour": "Oppsummering klokka",
     "digestHourHint": "Éin e-post per dag, på dette klokkeslettet (Europa/Oslo).",
-    "muted": "Sei frå om",
+    "muted": "Send meg e-post om",
     "kindNames": {
       "ContractEnding": "Avtalar som går ut",
       "NoticeDeadline": "Oppseiingsfristar",
-      "HourBankLow": "Timepakkar som går tomme",
+      "HourBankLow": "Klippekort som går tomme",
       "SubscriptionCancellationWindow": "Angrefristar",
       "SubscriptionRenewal": "Lisensfornyingar",
       "StaleOpportunity": "Sal utan aktivitet",
       "InvoiceOverdue": "Forfalne fakturaer"
     },
     "kinds": {
-      "ContractEnding": "Avtale {{number}} for {{organization}} går ut {{date}} (om {{days}} dagar).",
       "NoticeDeadline": "Avtale {{number}} for {{organization}}: siste dag å seie opp er {{date}}.",
-      "HourBankLow": "Timepakka «{{name}}» hos {{organization}} har {{hours}} timar att.",
       "SubscriptionCancellationWindow": "{{offer}} hos {{organization}}: angrefristen går ut {{date}}.",
-      "SubscriptionRenewal": "{{offer}} hos {{organization}} blir fornya {{date}} ({{quantity}} lisensar).",
-      "StaleOpportunity": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dagar.",
-      "InvoiceOverdue": "Faktura {{number}} til {{organization}} forfalt {{date}}: {{amount}} utestående.",
-      "InvoiceOverdueWithoutAmount": "Faktura {{number}} til {{organization}} forfalt {{date}} og er ikkje betalt."
-    }
+      "InvoiceOverdue": "Faktura {{number}} til {{organization}} forfall {{date}}: {{amount}} uteståande.",
+      "InvoiceOverdueWithoutAmount": "Faktura {{number}} til {{organization}} forfall {{date}} og står framleis uteståande.",
+      "ContractEnding_one": "Avtale {{number}} for {{organization}} går ut {{date}} (om {{days}} dag).",
+      "ContractEnding_other": "Avtale {{number}} for {{organization}} går ut {{date}} (om {{days}} dagar).",
+      "HourBankLow_one": "Timepakka «{{name}}» hos {{organization}} har {{hours}} time att.",
+      "HourBankLow_other": "Timepakka «{{name}}» hos {{organization}} har {{hours}} timar att.",
+      "SubscriptionRenewal_one": "{{offer}} hos {{organization}} blir fornya {{date}} ({{quantity}} lisens).",
+      "SubscriptionRenewal_other": "{{offer}} hos {{organization}} blir fornya {{date}} ({{quantity}} lisensar).",
+      "StaleOpportunity_one": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dag.",
+      "StaleOpportunity_other": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dagar."
+    },
+    "emptyUnread": "Ingenting ulese ventar på deg.",
+    "digestOff": "Slå på den daglege oppsummeringa for å velje klokkeslett.",
+    "newCount_one": "{{count}} ny",
+    "newCount_other": "{{count}} nye",
+    "markReadFailed": "Varselet er opna, men kunne ikkje merkast som lese. Det står framleis som nytt i bjølla."
   },
   "dashboard": {
     "title": "Dashbord",
     "subtitle": "Slik står selskapet {{date}}.",
-    "revenue": "Fakturert per månad",
+    "revenue": "Fakturagrunnlag per periode",
     "revenueChartTitle": "Fakturert beløp per månad, eks. mva",
-    "months": "{{count}} månader",
+    "months_one": "{{count}} månad",
+    "months_other": "{{count}} månader",
     "renewals": "Fornyingar innan 90 dagar",
     "noRenewals": "Ingen avtalar går ut dei neste 90 dagane.",
     "utilization": "Timar denne månaden",
@@ -2226,25 +2573,48 @@
     "pipeline": "Salstrakt",
     "pipelineOpen": "Opne sal",
     "pipelineStale": "Utan aktivitet",
-    "pipelineWon": "Vunne, siste 90 dagar",
-    "pipelineWonWithAmount": "Vunne, siste 90 dagar ({{amount}})",
-    "pipelineLost": "Tapt, siste 90 dagar",
+    "pipelineWon": "Vunne, 90 dagar",
+    "pipelineLost": "Tapt, 90 dagar",
     "service": "Service og lisensar",
-    "unassigned": "Tikker utan tekniker",
-    "criticalAlerts": "Kritiske varsel",
-    "devices": "Einingar ({{offline}} offline)",
+    "devices": "Einingar",
+    "offline": "{{count}} offline",
     "cancellationWindow": "Opne angrefristar",
+    "notBilled": "Ikkje fakturert",
+    "notBilledNote": "Ikkje på nokon avtale",
+    "renewingSoon": "Fornyast snart",
+    "renewingSoonNote": "Innan 30 dagar",
+    "withoutCustomer": "Utan kunde",
+    "warnings": "Åtvaringar",
     "autoRenews": "Fornyast automatisk",
-    "inDays": "om {{count}} dagar",
+    "inDays_one": "om {{count}} dag",
+    "inDays_other": "om {{count}} dagar",
     "billedHours": "{{hours}} t etter sats",
     "tiles": {
-      "mrr": "Månadleg løpande inntekt ({{count}} avtalar)",
-      "arr": "Årleg løpande inntekt",
-      "outstanding": "Utestående ({{count}} fakturaer)",
-      "overdue": "Forfalle ({{count}})",
-      "forecast": "Vekta prognose ({{count}} sal)",
-      "licenses": "Lisensar ({{count}} abonnement)",
-      "tickets": "Opne tikker ({{alerts}} kritiske varsel)"
+      "mrr": "Månadleg løpande inntekt",
+      "outstanding": "Utestående",
+      "forecast": "Vekta prognose",
+      "licenses": "Lisensar",
+      "tickets": "Opne tikker"
+    },
+    "foot": {
+      "contracts_one": "avtale",
+      "contracts_other": "avtalar",
+      "perYear": "i året",
+      "invoices_one": "faktura",
+      "invoices_other": "fakturaer",
+      "overdue": "forfalle",
+      "deals_one": "ope sal",
+      "deals_other": "opne sal",
+      "quiet": "utan aktivitet",
+      "unassigned": "utan tekniker",
+      "critical_one": "kritisk varsel",
+      "critical_other": "kritiske varsel",
+      "subscriptions_one": "abonnement",
+      "subscriptions_other": "abonnement",
+      "windows_one": "open angrefrist",
+      "windows_other": "opne angrefristar",
+      "nextEnds": "går ut først",
+      "offline": "offline"
     },
     "fields": {
       "month": "Månad",
@@ -2269,6 +2639,7 @@
     "title": "Prosjekt",
     "subtitle": "Innføringsprosjekt med fasar, oppgåver og timar.",
     "search": "Søk prosjekt eller nummer",
+    "filterLabel": "Filtrer prosjekt",
     "new": "Nytt prosjekt",
     "newTitle": "Nytt prosjekt",
     "editTitle": "Endre prosjekt",
@@ -2284,6 +2655,8 @@
     "addPhase": "Legg til fase",
     "editPhase": "Endre fase",
     "noPhases": "Legg til den første fasen for å planleggje arbeidet.",
+    "noTasks": "Ingen oppgåver i denne fasen enno.",
+    "unassigned": "Ikkje tildelt",
     "phaseAdded": "Fasen er lagd til",
     "phaseUpdated": "Fasen er oppdatert",
     "phaseRemoved": "Fasen er fjerna",
@@ -2360,11 +2733,16 @@
       "Cancelled": "Avbrote"
     },
     "progress": {
-      "hours": "Førte timar av {{budget}}",
+      "hours": "Førte timar",
+      "hoursNote": "Budsjett {{budget}} t",
       "billableHours": "Timar som kan fakturerast",
-      "amount": "Verdi av timane, budsjett {{budget}}",
-      "phaseFees": "Honorar frå fullførte fasar",
-      "phases": "Fullførte fasar, {{tasks}} opne oppgåver"
+      "amount": "Verdi av timane",
+      "amountNote": "Budsjett {{budget}}",
+      "phaseFees": "Fasehonorar",
+      "phaseFeesNote": "Frå fullførte fasar",
+      "phases": "Fullførte fasar",
+      "openTasks_one": "{{count}} open oppgåve",
+      "openTasks_other": "{{count}} opne oppgåver"
     },
     "scopeAssigned": "Prosjekta du er med i: som prosjektleiar, i teamet eller med ei oppgåve.",
     "team": {
@@ -2376,7 +2754,23 @@
       "added": "{{name}} er med i teamet.",
       "remove": "Fjern {{name}} frå teamet",
       "removed": "{{name}} er ikkje lenger med i teamet."
-    }
+    },
+    "filters": {
+      "includeClosed": "Vis avslutta prosjekt"
+    },
+    "moreActions": "Fleire handlingar for prosjektet",
+    "deleteTitle": "Slette {{name}}?",
+    "deleteBody": "Prosjektet forsvinn frå prosjektlista saman med planen (fasar: {{phases}}, oppgåver: {{tasks}}). Berre eit prosjekt som ikkje har starta, kan slettast.",
+    "editPhaseNamed": "Rediger fasen {{name}}",
+    "removePhaseNamed": "Fjern fasen {{name}}",
+    "editTaskNamed": "Rediger oppgåva {{name}}",
+    "removeTaskNamed": "Fjern oppgåva {{name}}",
+    "removePhaseTitle": "Fjerne fasen {{name}}?",
+    "removeTaskTitle": "Fjerne oppgåva {{name}}?",
+    "removePhaseBody": "Fasen og oppgåvene i han blir fjerna frå planen. Dette kan ikkje angrast.",
+    "removeTaskBody": "Oppgåva blir fjerna frå fasen. Dette kan ikkje angrast.",
+    "removePhase": "Fjern fasen",
+    "removeTask": "Fjern oppgåva"
   },
   "sla": {
     "title": "SLA-rapport",
@@ -2384,15 +2778,20 @@
     "period": "Månad",
     "window": "{{from}} – {{to}}",
     "empty": "Ingen saker vart melde denne månaden.",
-    "noPolicy": "Ingen SLA i kontrakten",
+    "noPolicy": "Ingen SLA i avtalen",
     "metOf": "{{pct}} % ({{met}} av {{measured}})",
     "resolvedOf": "{{resolved}} løyste",
     "minutes": "{{minutes}} min",
-    "breachList": "{{count}} brot",
+    "breachList_one": "{{count}} brot",
+    "breachList_other": "{{count}} brot",
     "tiles": {
-      "tickets": "Saker, {{withoutSla}} utan SLA",
+      "tickets": "Saker",
+      "withoutSla": "Utan SLA",
+      "withoutSlaNote": "Saker kontrakten ikkje måler",
       "response": "Respons innanfor mål",
-      "resolution": "Løysing innanfor mål"
+      "resolution": "Løysing innanfor mål",
+      "target": "Mål {{pct}} %",
+      "notMeasured": "Ikkje målt: ingen saker i perioden"
     },
     "fields": {
       "customer": "Kunde",
@@ -2408,16 +2807,21 @@
     "subtitle": "Det som er fakturert, mot det det kosta oss.",
     "period": "Månad",
     "window": "Periode",
-    "windowMonths": "{{count}} månader",
+    "windowMonths_one": "{{count}} månad",
+    "windowMonths_other": "{{count}} månader",
+    "periodRange": "{{from}} – {{to}}",
     "hourlyCost": "Intern timekostnad {{cost}}",
     "empty": "Ingenting er fakturert i denne perioden.",
     "costIncomplete": "Manglar Microsoft-kostnad",
     "hours": "{{hours}} t",
     "tiles": {
-      "revenue": "Fakturert {{from}} – {{to}}",
+      "revenue": "Fakturert",
       "cost": "Lisens- og timekostnad",
-      "margin": "Margin, {{pct}} %",
-      "withoutCost": "Kundar utan lisenskostnad"
+      "margin": "Margin",
+      "marginNote": "{{pct}} % av fakturert",
+      "withoutCost": "Utan lisenskostnad",
+      "customersNote_one": "av {{count}} kunde",
+      "customersNote_other": "av {{count}} kundar"
     },
     "fields": {
       "customer": "Kunde",
@@ -2429,9 +2833,13 @@
     },
     "mart": {
       "title": "Power BI",
-      "body": "Les desse tabellane med Power BIs Web-kopling og ein konto som har mart-løyvet; lenkja blir kopiert som CSV.",
+      "body": "Power BIs Web-kopling les desse tabellane som CSV med ein konto som har mart-tilgang.",
+      "csv": "CSV for Power BI",
+      "copy": "Kopier CSV-lenkja til {{dataset}}",
+      "copyShort": "Kopier lenkje",
       "copied": "Lenkje til «{{dataset}}» er kopiert"
-    }
+    },
+    "notBilledYet": "Ingenting er fakturert for {{month}} enno: talet er berre kostnader."
   },
   "customFields": {
     "title": "Eigne felt",
@@ -2465,7 +2873,7 @@
     "entities": {
       "Organization": "Kunde",
       "Opportunity": "Sak",
-      "Contract": "Kontrakt"
+      "Contract": "Avtale"
     },
     "types": {
       "Text": "Tekst",
@@ -2476,7 +2884,7 @@
     }
   },
   "migration": {
-    "rowsShown": "{{shown}} av {{total}} rader som endrar noko eller treng oppfølging blir viste, konfliktar og feil først; tala over gjeld heile fila.",
+    "rowsShown": "{{shown}} av {{total}} rader blir viste, konfliktar og avvisingar først; tala gjeld heile fila.",
     "title": "Migrering",
     "subtitle": "Kundar og hovudkontakten deira frå dei gamle systema, med førehandsvising før noko blir skrive.",
     "file": "Fil",
@@ -2602,7 +3010,6 @@
     "reasonsTitle": "Kvifor rader ikkje vart importerte eller treng ei avgjerd",
     "warningsTitle": "Åtvaringar",
     "ownersTitle": "Kundeansvarlege",
-    "owners": "{{resolved}} rader oppgir ein kjend ansvarleg, {{empty}} oppgir ingen, {{unknown}} oppgir ein ansvarleg CRM ikkje kjenner.",
     "ownersNone": "Fila har ingen kolonne for kundeansvarleg.",
     "validatedTitle": "Kontrollert, men ikkje importert",
     "validatedHint": "Desse kolonnene er kontrollerte; CRM importerer dei ikkje enno. Rader med verdi:",
@@ -2625,14 +3032,26 @@
       "open": "Opne",
       "openRun": "Opne køyringa frå {{started}}",
       "back": "Attende til køyringar",
-      "counts": "{{created}} nye, {{updated}} oppdatert, {{unchanged}} uendra, {{conflicts}} konfliktar, {{rejected}} avvist",
       "rowsTitle": "Resultat per rad",
       "filterAction": "Filtrer på handling",
-      "noRows": "Ingen rader passar."
+      "noRows": "Ingen rader passar.",
+      "allActions": "Alle handlingar",
+      "outcomes": {
+        "created_one": "{{count}} ny",
+        "created_other": "{{count}} nye",
+        "updated_one": "{{count}} oppdatert",
+        "updated_other": "{{count}} oppdaterte",
+        "unchanged_one": "{{count}} uendra",
+        "unchanged_other": "{{count}} uendra",
+        "conflicts_one": "{{count}} konflikt",
+        "conflicts_other": "{{count}} konfliktar",
+        "rejected_one": "{{count}} avvist",
+        "rejected_other": "{{count}} avviste"
+      }
     },
     "entities": {
       "title": "Batch-merke",
-      "readOnly": "Lista over kva køyringa oppretta eller endra er skrivebeskytta: ho viser kva ein person må gå gjennom for å rulle importen tilbake. CRM rullar ikkje noko tilbake sjølv.",
+      "readOnly": "Lista er skrivebeskytta: ho viser kva som må gåast gjennom for å rulle importen tilbake; CRM rullar ikkje tilbake sjølv.",
       "show": "Vis kva køyringa oppretta eller endra",
       "hide": "Skjul lista",
       "empty": "Køyringa oppretta eller endra ingenting.",
@@ -2650,7 +3069,6 @@
       "paste": "Eller lim inn radene",
       "columns": "Kolonnar: OrgNumber; Period (åååå-mm); Currency; Amount.",
       "compare": "Samanlikn",
-      "summary": "{{rows}} rader i fila, {{customers}} kundar funne i CRM.",
       "noAmounts": "Du kan sjå statusane, men ikkje beløpa.",
       "counts": "Statusar",
       "table": "Avstemmingsresultat",
@@ -2659,7 +3077,13 @@
       "fileAmount": "Gamalt system",
       "crmBilled": "Fakturert i CRM",
       "difference": "Differanse",
-      "line": "rad {{line}}"
+      "line": "Rad {{line}}",
+      "title": "Månadstotalar",
+      "emptyFirst": "Vel ei fil eller lim inn radene for å samanlikne dei.",
+      "readOnly": "Klar til å samanlikne. Ingenting blir skrive.",
+      "resultTitle": "Samanlikning",
+      "fileRows": "Rader i fila",
+      "customersFound": "Kundar funne i CRM"
     },
     "recon": {
       "Matched": "Stemmer",
@@ -2669,6 +3093,16 @@
       "MissingCustomer": "Kunden finst ikkje i CRM",
       "MissingInFile": "Manglar i fila",
       "Rejected": "Avvist"
+    },
+    "importTitle": "Kundefil",
+    "importLead": "Vel eller lim inn radene, førehandsvis dei, og importer så det førehandsvisinga viste.",
+    "emptyFirst": "Vel ei fil eller lim inn radene for å førehandsvise dei.",
+    "resultPreview": "Kva importen ville gjere",
+    "resultImport": "Kva importen gjorde",
+    "ownerCounts": {
+      "resolved": "Kjend ansvarleg",
+      "empty": "Ingen ansvarleg oppgitt",
+      "unknown": "Ansvarleg som CRM ikkje kjenner"
     }
   },
   "appRoles": {
@@ -2693,14 +3127,14 @@
     },
     "seeAll": "Ser alle: {{roles}}",
     "limited": "Berre eigne eller tildelte: {{roles}}",
-    "total": "Totalt: {{value}}",
     "withoutAssignee": "Utan eigar eller tildelt person: {{value}} — berre rollene som ser alle, ser desse.",
     "nobody": "Ingen eig eller er tildelt nokon av dei.",
     "tableLabel": "{{kind}} per person",
     "person": "Person",
     "records": "Postar",
     "inactive": "inaktiv",
-    "unknownUser": "Ukjend brukar"
+    "unknownUser": "Ukjend brukar",
+    "people": "Personar med postar"
   },
   "privacy": {
     "title": "Personopplysningar",
@@ -2864,7 +3298,11 @@
       "receivedHint": "Svarfristen er éin månad etter denne datoen.",
       "noteHint": "Kort og saklig; ingen kopiar av legitimasjon.",
       "submit": "Opprett førespurnaden",
-      "samePerson": "Personen i førespurnad {{number}}"
+      "samePerson": "Personen i førespurnad {{number}}",
+      "pickSubjectTitle": "Start frå personen",
+      "pickSubject": "Ein førespurnad om personopplysningar gjeld éin kontakt eller eitt lead. Opne sida til personen og vel «Førespurnad om personopplysningar» der.",
+      "startFromContact": "Finn kontakten via organisasjonen",
+      "startFromLead": "Gå til leads"
     },
     "holds": {
       "title": "Rettslege hald",
@@ -2979,7 +3417,7 @@
     },
     "inFlight": {
       "title": "Under arbeid",
-      "hint": "Før gjenopprettingspunktet blir teke, må alle tal vere 0 og framleis vere 0 i nokre sekund til (runbook 03).",
+      "hint": "Før gjenopprettingspunktet må kvart tal vere 0 og halde seg på 0 i nokre sekund (runbook 03).",
       "clear": "Ingenting er under arbeid.",
       "area": "Område",
       "count": "Antal"
@@ -3009,11 +3447,13 @@
       "confirmNormalTitle": "Tilbake til normal drift?",
       "confirmNormalBody": "Endringar blir godtekne igjen og workeren held fram med å sende. Etter ei gjenoppretting må avstemminga brukast først.",
       "confirm": "Stadfest",
-      "done": "Avgjerda er registrert."
+      "done": "Avgjerda er registrert.",
+      "needsReason": "Skriv ei årsak på {{min}}–{{max}} teikn først.",
+      "forcedShort": "Skrivebeskytta via konfigurasjon: berre ei ny revisjon avsluttar det."
     },
     "reconcile": {
       "title": "Avstemming etter gjenoppretting",
-      "intro": "Etter ei gjenoppretting blir det som har gått ut frå CRM-et etter gjenopprettingspunktet samanlikna med den gjenoppretta kopien, før sendinga held fram.",
+      "intro": "Før sendinga held fram: samanlikn det som har gått ut frå CRM-et etter gjenopprettingspunktet med den gjenoppretta kopien.",
       "needsReadOnly": "Sett CRM-et til skrivebeskytta først: å avstemme medan workeren sender, ville kappast med han.",
       "restorePoint": "Gjenopprettingspunkt (UTC)",
       "restorePointHint": "Tidspunktet databasen blei gjenoppretta til, i UTC.",
@@ -3022,7 +3462,9 @@
       "apply": "Bruk",
       "applyHint": "«Bruk» blir tilgjengeleg etter ei prøvekøyring for same gjenopprettingspunkt.",
       "confirmTitle": "Bruke avstemminga?",
-      "confirmBody": "Det journalen viser som sendt etter gjenopprettingspunktet, blir halde for ein person: grunnlag ventar på økonomi, utgåande operasjonar blir haldne, innlegg og e-postar som er sende, blir merkte som sende."
+      "confirmBody": "Det journalen viser som sendt etter gjenopprettingspunktet, blir halde for ein person: grunnlag ventar på økonomi, utgåande operasjonar blir haldne, innlegg og e-postar som er sende, blir merkte som sende.",
+      "needsPoint": "Skriv inn gjenopprettingspunktet først.",
+      "readyToApply": "Prøvekøyring gjord for dette gjenopprettingspunktet; Bruk held tilbake det ho viser."
     },
     "report": {
       "title": "Rapport frå {{at}}",
@@ -3062,7 +3504,7 @@
     "sources": "Aktualiteten til dataa",
     "exceptions": "Avvik som ventar på behandling",
     "noSuccess": "Ingen vellukka synkronisering registrert",
-    "age": "Alder: {{age}} min · grense: {{threshold}} min",
+    "age": "Alder: {{age}} · grense: {{threshold}}",
     "all": "Alle",
     "mine": "Tildelt meg",
     "unassigned": "Ikkje tildelt",
@@ -3074,7 +3516,6 @@
     "deleteView": "Slett visning",
     "viewsHint": "Opptil 10 visningar blir lagra for kontoen din i denne nettlesaren. Same namn erstattar filtra.",
     "storageFailed": "Visninga kunne ikkje lagrast i denne nettlesaren. Kontroller lagringsinnstillingane.",
-    "shown": "Viser {{shown}} av {{total}} avvik",
     "empty": "Ingen avvik samsvarer med filtra.",
     "detected": "Oppdaga {{at}}",
     "affected": "Berørte postar: {{count}}",
@@ -3163,9 +3604,7 @@
     "exactSelection": "Nøyaktig utval",
     "retrySelected": "Prøv dei valde igjen ({{count}})",
     "selectOperation": "Vel operasjon {{id}}",
-    "retryTitle": "Prøve {{count}} operasjonar igjen?",
     "retryHint": "Berre operasjonane i lista blir forsøkte igjen. Kontroller først resultatet i det eksterne systemet.",
-    "retryConfirm": "Prøv {{count}} operasjonar igjen",
     "operationStatus": {
       "Requested": "Førespurd",
       "Unavailable": "Utilgjengeleg",
@@ -3176,7 +3615,30 @@
     },
     "recovered": "Kjelda er gjenoppretta — ventar på behandling",
     "resolveAfterRecovery": "Lukk avviket etter at kjelda er gjenoppretta.",
-    "recoveredLimit": "Lista viser dei {{shown}} sist behandla gjenoppretta avvika av {{total}} som ventar på lukking. Filtra gjeld denne lista; lukk ferdige avvik for å sjå eldre saker."
+    "recoveredLimit": "Gjenoppretta avvik: dei {{shown}} sist behandla av {{total}} som ventar på lukking blir viste. Lukk ferdige avvik for å sjå eldre.",
+    "filtersLabel": "Filtrer avvika",
+    "allOf": {
+      "category": "Alle kategoriar",
+      "source": "Alle kjelder",
+      "status": "Alle behandlingsstatusar",
+      "owner": "Alle ansvarlege"
+    },
+    "span": {
+      "minutes_one": "{{count}} min",
+      "minutes_other": "{{count}} min",
+      "hours_one": "{{count}} t",
+      "hours_other": "{{count}} t",
+      "hoursMinutes": "{{hours}} t {{minutes}} min",
+      "days_one": "{{count}} d",
+      "days_other": "{{count}} d",
+      "daysHours": "{{days}} d {{hours}} t"
+    },
+    "shown_one": "Viser {{shown}} av {{total}} avvik",
+    "shown_other": "Viser {{shown}} av {{total}} avvik",
+    "retryTitle_one": "Prøve {{count}} operasjon igjen?",
+    "retryTitle_other": "Prøve {{count}} operasjonar igjen?",
+    "retryConfirm_one": "Prøv {{count}} operasjon igjen",
+    "retryConfirm_other": "Prøv {{count}} operasjonar igjen"
   },
   "reverify": {
     "title": "Stadfest identiteten din for å halde fram",
@@ -3212,6 +3674,7 @@
     "button": "Visningar",
     "none": "Ingen lagra visningar",
     "saveCurrent": "Lagre gjeldande filter…",
+    "saveTitle": "Lagre gjeldande filter",
     "delete": "Slett ei visning",
     "name": "Namn på visninga",
     "hint": "Blir lagra i denne nettlesaren for kontoen din. Berre filter; kva du ser, blir framleis avgjort av tilgangane dine.",
@@ -3290,21 +3753,22 @@
     },
     "trace": {
       "title": "Sporing av køyringa",
-      "hint": "Kvar linje i køyringa med betalar og kunden tenesta er levert til, avgjerda økonomi tok, avvika, ordren og fakturaen. MVA er satsen på linja; ordren som blir send til PowerOffice inneheld berre produktkoden.",
+      "hint": "Kvar linje i køyringa: betalar, levert til, avgjerda til økonomi, avvik, ordre og faktura.",
       "payer": "Betalar",
       "allPayers": "Alle betalarar",
       "group": "Gruppe",
       "allGroups": "Alle grupper",
       "anomaly": "Avvikskode",
+      "anomalyPlaceholder": "Avvikskode, t.d. BIL_STALE_QUANTITY",
       "anomaliesOnly": "Berre linjer med avvik",
       "export": "Eksporter til Excel",
       "exportFailed": "Fila kunne ikkje opprettast",
       "tableLabel": "Linjer i køyringa",
-      "delivered": "Levert til",
+      "deliveredTo": "Levert til {{name}}",
       "product": "Linje og produktkode",
       "quantity": "Antal",
       "unitPrice": "Eininspris",
-      "discount": "Rabatt",
+      "discountShort": "{{pct}} % rabatt",
       "vat": "MVA",
       "total": "Linjesum",
       "decisionColumn": "Opphav og avgjerd",
@@ -3327,6 +3791,8 @@
       "format": "Semikolonseparert, overskriftsrad først:",
       "coverage": "Fila må dekkje alle pilotkundar. Ein betalar i køyringa som fila ikkje nemner, blir rapportert som manglar i fila, og økonomi må forklare han.",
       "file": "Fil med tala (.csv)",
+      "choose": "Vel ei fil",
+      "noFile": "Inga fil vald",
       "paste": "Eller lim inn radene",
       "run": "Samanlikn",
       "done": "Samanlikna: {{number}} å forklare"
@@ -3437,6 +3903,10 @@
       "title": "Prosesstal",
       "from": "Frå månad",
       "to": "Til månad",
+      "fromAny": "Frå første køyring",
+      "toAny": "Fram til no",
+      "fromValue": "Frå {{month}}",
+      "toValue": "Til og med {{month}}",
       "range": "Frå {{from}} til {{to}}, per {{asOf}}.",
       "tableLabel": "Faktureringskøyringar og prosesstal",
       "period": "Månad",
@@ -3450,11 +3920,17 @@
       "manual": "Manuelt",
       "conflicts": "Opne konfliktar",
       "totalsTitle": "Totalar",
-      "totalRuns": "{{runs}} køyringar, {{closed}} lukka.",
-      "totalHours": "Gjennomsnittleg tal timar frå siste innsamling til lukka: {{hours}}.",
-      "totalLines": "{{lines}} linjer, av dei {{manual}} manuelt ({{share}}).",
-      "totalExceptions": "Avvikspostar: {{anomalies}}. Opne konfliktar: {{conflicts}}. Feila grunnlag: {{failed}}. Grunnlag som må avstemmast: {{reconciliation}}.",
-      "overdueReminders": "Forfalne påminningar ingen har kvittert for: {{number}}.",
+      "tiles": {
+        "runs": "Køyringar",
+        "closed_one": "{{count}} lukka",
+        "closed_other": "{{count}} lukka",
+        "hours": "Snitt timar, innsamling til lukka",
+        "lines": "Linjer",
+        "manual_one": "{{count}} manuelt ({{share}})",
+        "manual_other": "{{count}} manuelt ({{share}})",
+        "failed": "Feila grunnlag"
+      },
+      "overdueReminders": "Forfalne påminningar ingen har kvittert for",
       "notMeasuredTitle": "Ikkje målt",
       "notMeasuredIntro": "Desse tala blei etterspurde, men dataa kan ikkje gi dei ærleg. Dei er ikkje anslåtte.",
       "notMeasured": {
@@ -3539,9 +4015,9 @@
   "parasolIdentity": {
     "title": "Kopl Atlas-kundar",
     "subtitle": "Kopl eksisterande Atlas-kundar til kunderegisteret i CRM.",
-    "instructions": "Hent kundane du har tilgang til i Atlas, eller bruk ein identitetseksport. Vel kvar CRM-kunde uttrykkjeleg, og gå gjennom heile planen før du lagrar. Ingen kundar blir oppretta, og tilgangsrettar blir ikkje endra.",
+    "instructions": "Du vel kvar CRM-kunde og går gjennom planen; ingen kundar blir oppretta, ingen tilgangar blir endra.",
     "file": "Atlas-eksport (JSON)",
-    "fileHint": "Identitetseksport versjon 1, opptil 1000 kundar og 1 MiB. Berre arbeidsområde, kunde-ID-ar og namn blir godtekne. Fila blir berre halden i minnet på denne sida.",
+    "fileHint": "Eksport versjon 1: arbeidsområde, kunde-ID-ar og namn; opptil 1000 kundar og 1 MiB.",
     "workspace": "Arbeidsområde i Atlas",
     "atlasClient": "Kunde-ID i Atlas",
     "crmCustomer": "CRM-kunde",
@@ -3591,16 +4067,22 @@
       "sourceRateLimited": "Eksportgrensa er nådd. Vent før du prøver igjen; du kan framleis laste opp ei fil."
     },
     "loadAtlas": "Hent frå Atlas",
-    "sourceHint": "Les berre Atlas-kundar som den personlege tilgangen din tillèt. Du kan òg laste opp ein identitetseksport nedanfor.",
-    "loadedAtlas": "Henta frå Atlas {{time}}. Lista viser kundane medarbeidarkontoen din hadde tilgang til på dette tidspunktet, og kan mangle andre kundar i firmaet.",
-    "loadedFile": "Kjelde: opplasta identitetseksport. Kor oppdatert han er, avheng av når eksporten vart laga.",
+    "sourceHint": "Les berre kundane som den personlege Atlas-tilgangen din tillèt.",
+    "loadedAtlas": "Henta frå Atlas {{time}}",
+    "loadedFile": "Opplasta identitetseksport",
     "atlasStatus": {
       "NOT_CONFIGURED": "Atlas-tilkoplinga er ikkje konfigurert. Du kan laste opp ein identitetseksport i staden.",
       "ACCESS_DENIED": "Den personlege Atlas-tilgangen din manglar eller tillèt ikkje lesing av kunderegisteret.",
       "SOURCE_NOT_FOUND": "Denne Atlas-installasjonen tilbyr ikkje identitetseksporten. Kontroller versjonen eller last opp ei fil.",
       "UNAVAILABLE": "Kunne ikkje nå Atlas. Prøv igjen eller last opp ein identitetseksport.",
       "INVALID_RESPONSE": "Atlas returnerte ei ugyldig eller inkompatibel kundeliste. Ingen kundar vart lasta inn."
-    }
+    },
+    "sourceTitle": "Kjelde for Atlas-kundane",
+    "fromAtlas": "Frå Atlas",
+    "fromFile": "Frå ei eksportfil",
+    "source": "Kjelde",
+    "loadedAtlasNote": "Lista viser det medarbeidarkontoen din hadde tilgang til då, og kan mangle andre kundar i firmaet.",
+    "loadedFileNote": "Kor oppdatert lista er, avheng av når eksporten vart laga."
   },
   "parasolDetails": {
     "scrollList": "Rull i lista for å sjå dei innlasta postane.",
@@ -3625,7 +4107,7 @@
     "statusFilter": "Observasjonsstatus",
     "allSeverities": "Alle alvorsgradar",
     "allStatuses": "Alle aktive statusar",
-    "urgent": "Hastar · HIGH / CRITICAL",
+    "urgent": "Hastar (høg og kritisk)",
     "observationMatches": "Observasjonar som samsvarer: {{matched}} av {{loaded}} innlasta",
     "noSummary": "Observasjonen har inga skildring",
     "confirmedDevice": "Stadfesta eining: {{name}} ({{id}})",
@@ -3660,7 +4142,9 @@
       "HUMAN_REVIEW": "Manuell gjennomgang"
     },
     "deviceObservations": "Vis observasjonar",
-    "deviceObservationsFor": "Vis observasjonar for {{name}}"
+    "deviceObservationsFor": "Vis observasjonar for {{name}}",
+    "occurred": "Skjedde",
+    "updated": "Oppdatert"
   },
   "parasolQueue": {
     "title": "Observasjonskø og historikk",
@@ -3713,28 +4197,28 @@
     "refresh": "Oppdater lokal oversikt",
     "notChecked": "Tilkoplingar og tilgangsopplysningar er ikkje kontrollerte.",
     "checkedAt": "Lokale opplysningar lesne {{time}}",
-    "partial": "Nokre lagra opplysningar kunne ikkje lesast, eller den avgrensa koplingskontrollen er ufullstendig. Dette er ikkje ein kontroll av tilstanden til tilkoplingane.",
+    "partial": "Nokre lagra opplysningar eller koplingskontrollen er ufullstendig. Dette er ikkje ein kontroll av tilkoplingane.",
     "personalTitle": "Personleg Atlas-oppsett",
     "personal": {
       "DISABLED": "Atlas er deaktivert lokalt",
       "PERSONAL_ENTRY_PRESENT": "Personleg oppføring finst",
       "PERSONAL_ENTRY_MISSING": "Personleg oppføring manglar"
     },
-    "personalNote": "At oppsettet finst, stadfestar ikkje gyldige tilgangsopplysningar, noverande Atlas-rettar eller kundedekning. Atlas er ikkje kontakta.",
+    "personalNote": "At oppsettet finst, stadfestar ikkje gyldige tilgangsopplysningar eller dekning. Atlas er ikkje kontakta.",
     "adminTitle": "Lagra administrativ konfigurasjon",
-    "workerNote": "Flagga som er viste her, kjem frå denne Web-instansen. Worker kan ha eigen konfigurasjon. Tilgangsopplysningar for leverandørar høyrer til Worker. At dei manglar i Web, betyr ikkje at Worker manglar dei. Denne sida les eller validerer dei ikkje.",
+    "workerNote": "Passord og nøklar ligg i bakgrunnstenesta, så denne sida kan ikkje sjå om dei er sette.",
     "authMode": "Konfigurert innloggingsmåte",
     "auth": {
       "ENTRA": "Microsoft Entra",
       "DEVELOPMENT": "Lokal utviklingsinnlogging"
     },
-    "entraNote": "Innlogging via Microsoft 365 eller Entra stadfestar ikkje teknisk tenant-overvaking eller at Microsoft Graph-integrasjonen er klar.",
+    "entraNote": "Innlogging via Microsoft 365 eller Entra stadfestar ikkje teknisk tenant-overvaking.",
     "openIntegrations": "Opne integrasjonsadministrasjon",
     "enabled": "Aktivert lokalt",
     "disabled": "Deaktivert lokalt",
     "enabledFlag": "Lokalt aktiveringsflagg",
     "writeFlag": "Lokalt skriveflagg",
-    "flagNote": "Dette er lokale konfigurasjonsflagg, ikkje stadfesta tilkopling eller skrivetilgang hos leverandøren.",
+    "flagNote": "Lokale flagg og lagra postar; tilkopling og skrivetilgang er ikkje kontrollerte.",
     "savedPause": "Lagra pausestatus",
     "savedSuccess": "Lagra siste vellukka synkronisering",
     "storedUnavailable": "Lagra lokal tilstand kunne ikkje lesast. Tidlegare tilstand eller erstatningstal på null blir ikkje viste.",
@@ -3751,13 +4235,13 @@
       "sharePointEnabled": "SharePoint-flagg",
       "teamsEnabled": "Teams-flagg"
     },
-    "graphNote": "Desse flagga er uavhengige av innlogging. Lagra Graph-tidspunkt kan vere historiske og stadfestar ikkje at integrasjonen er aktivert no.",
+    "graphNote": "Uavhengig av innlogging. Lagra Graph-tidspunkt kan vere historiske og stadfestar ikkje at han er på no.",
     "directorySavedAt": "Lagra vellukka katalogsynkronisering",
     "rolesSavedAt": "Lagra vellukka rollesynkronisering",
     "huntressUnknown": "Konfigurasjonen er ukjend her",
-    "huntressNote": "Huntress blir administrert i Atlas. Denne sida les ikkje Atlas-konfigurasjon og kontaktar ikkje Huntress.",
+    "huntressNote": "Huntress blir administrert i Atlas. Denne sida les ikkje Atlas og kontaktar ikkje Huntress.",
     "mappingTitle": "Lagra Atlas-koplingar",
-    "mappingNote": "Kontrollen gjeld berre det lagra lokale CRM-registeret. Atlas-katalogen blir ikkje lesen, og kontrollen stadfestar ikkje kjeldetilgang eller kundedekning.",
+    "mappingNote": "Kontrollerer berre det lagra CRM-registeret; Atlas-katalogen og dekninga blir ikkje kontrollerte.",
     "mappingCoverage": "Lagra koplingar undersøkte: {{examined}} av {{stored}} (grense {{limit}})",
     "omittedLinks": "Lagra koplingar som ikkje er undersøkte",
     "unlinkedReferences": "Lagra referansar utan kopling",
@@ -3791,7 +4275,7 @@
     "title": "Atlas – kundar som krev merksemd",
     "refresh": "Oppdater merksemd",
     "note": "Den personlege Atlas-tilgangen din avgjer kva kundar som kan lesast. Denne visinga er uavhengig av kundeansvaret ditt i CRM.",
-    "checkedAt": "Merksemdslesing fullført {{time}}",
+    "checkedAt": "Lesen {{time}}",
     "coverage": "Kundar lesne utan feil: {{ready}} av {{selected}} valde",
     "visible": "Atlas-kundar du har tilgang til",
     "matched": "Kopla CRM-kundar",
@@ -3800,19 +4284,19 @@
     "mappingIssues": "Synlege Atlas-kundar med koplingsproblem",
     "failed": "Valde kundar som ikkje vart lesne utan feil",
     "omitted": "Kopla kundar utanfor denne oppdateringa",
-    "partial": "Dekninga er ufullstendig. Ulesne, ukopla og utilgjengelege kundar blir ikkje rekna som feilfrie.",
+    "partial": "Dekninga er ufullstendig. Ein kunde utan observasjonar som hastar, er ikkje stadfesta feilfri.",
     "timedOut": "Tidsramma for oppdateringa vart nådd. Nokre kundelesingar kan vere ufullstendige.",
     "limit": "Denne oppdateringa kontrollerer høgst 50 kopla kundar. Fleire kundar er ikkje inkluderte.",
     "totals": "Aktive observasjonar hos kundar lesne utan feil: {{active}} · Høg: {{high}} · Kritisk: {{critical}}",
-    "previewNote": "Kundane blir viste kvar for seg, med høgst tre observasjonar med HØG/KRITISK alvorsgrad per kunde. Dette er ei førehandsvising, ikkje ei fullstendig kø eller samla rangering. Opne ein kunde for å lese heile køen.",
+    "previewNote": "Kundane blir viste kvar for seg, med høgst tre observasjonar med høg eller kritisk alvorsgrad per kunde. Dette er ei førehandsvising, ikkje ei fullstendig kø eller samla rangering. Opne ein kunde for å lese heile køen.",
     "otherCustomers": "Andre kundar utan hasteobservasjonar i denne lesinga ({{count}})",
     "empty": "Ingen kopla kundar vart valde i denne lesinga. Dette stadfestar ikkje tilstanden til kjeldene eller dekning av alle kundane til selskapet.",
     "customerCounts": "Høg: {{high}} · Kritisk: {{critical}}",
     "retrievedAt": "Kunden vart lesen {{time}}",
-    "sourcePartial": "Atlas rapporterer ufullstendig eller syntetisk dekning for denne kunden.",
+    "sourcePartial": "Atlas-kjeldedata er ufullstendige eller syntetiske for denne kunden.",
     "sources": "Kjeldedekning og oppdateringstid",
-    "previewCount": "Hasteførehandsvising: {{shown}} av {{total}} aktive observasjonar med HØG/KRITISK alvorsgrad",
-    "noUrgent": "Ingen aktive observasjonar med HØG/KRITISK alvorsgrad er registrerte for denne kunden. Andre observasjonar eller manglande kjeldedata kan framleis krevje merksemd.",
+    "previewCount": "Viser {{shown}} av {{total}} observasjonar som hastar",
+    "noUrgent": "Desse kundane har ingen aktive observasjonar med høg eller kritisk alvorsgrad i denne lesinga. Andre observasjonar eller manglande kjeldedata kan framleis krevje merksemd.",
     "openCustomer": "Opne arbeidsområdet til kunden",
     "status": {
       "NOT_CONFIGURED": "Atlas-tilkoplinga er ikkje konfigurert.",
@@ -3832,7 +4316,11 @@
       "IDENTITY_CHANGED": "Kundekoplinga vart endra under lesinga. Ingen tidlegare tekniske opplysningar blir viste.",
       "TIMEOUT": "Denne kunden vart ikkje lesen innan tidsramma. Han er utelaten frå observasjonstala.",
       "CUSTOMER_UNAVAILABLE": "CRM-kunden er ikkje lenger tilgjengeleg. Ingen tekniske opplysningar blir viste."
-    }
+    },
+    "about": "Dekning og korleis visinga fungerer",
+    "issues": "Sjekk dekninga: {{list}}",
+    "previewHint": "Høgst tre observasjonar som hastar per kunde. Opne ein kunde for heile køen.",
+    "incompleteSources": "Lesne kundar med ufullstendige eller syntetiske kjelder"
   },
   "parasolWork": {
     "viewWork": "Vis arbeid",
@@ -3848,7 +4336,6 @@
     "subject": "Review technical observation",
     "assignee": "Vel ein aktiv teknisk medarbeidar",
     "due": "Frist (valfritt)",
-    "confirm": "Eg stadfestar ansvarleg og frist",
     "create": "Opprett oppgåve",
     "previewAgain": "Les ny førehandsvising",
     "invalidDue": "Oppgi gyldig dato og klokkeslett.",
@@ -3884,7 +4371,24 @@
       "SOURCE_CHANGED": "Observasjonen vart endra etter førehandsvisinga. Les ei ny førehandsvising før arbeidet blir tildelt.",
       "SOURCE_TERMINAL": "Observasjonen er ikkje lenger aktiv. Les ei ny førehandsvising for å sjå eventuelt kopla arbeid.",
       "ASSIGNEE_INVALID": "Vel ein aktiv medarbeidar med teknisk arbeidsområdetilgang, og les ei ny førehandsvising."
-    }
+    },
+    "assignToMe": "Tildel meg",
+    "dueShortcuts": "Raske fristar",
+    "dueIn": {
+      "today": "I dag 16:00",
+      "tomorrow": "I morgon 16:00",
+      "inThreeDays": "Om 3 dagar",
+      "none": "Ingen frist"
+    },
+    "summaryDue": "Opprettar ei oppgåve for {{name}} med frist {{due}}, prioritet {{priority}}.",
+    "summaryNoDue": "Opprettar ei oppgåve for {{name}} utan frist, prioritet {{priority}}.",
+    "rowTask": {
+      "Open": "Oppgåve open",
+      "Done": "Oppgåve utført",
+      "Cancelled": "Oppgåve avbroten",
+      "Unavailable": "Oppgåva finst ikkje lenger"
+    },
+    "rowTaskDue": "frist {{due}}"
   },
   "parasolM365": {
     "title": "Microsoft 365",
@@ -3937,16 +4441,22 @@
     "paymentsTitle": "Betalingar og postar",
     "invoiceList": "Importerte fakturaer",
     "entriesTitle": "Importerte kundepostar",
+    "entry": "Post",
     "invoiceNumber": "Faktura {{number}}",
     "creditNumber": "Kreditnota {{number}}",
     "openInvoice": "Vis {{number}}",
     "invoiceDetail": "Dokumentdetaljar",
+    "document": "Dokument",
+    "invoiceDate": "Fakturadato",
     "backToList": "Tilbake til fakturaer",
     "accountTotal": "Totalt · rekneskapsvaluta",
+    "totalShort": "Totalt",
     "accountAmount": "Beløp · rekneskapsvaluta",
     "accountBalance": "Restbeløp · rekneskapsvaluta",
-    "accountCurrencyMeaning": "Beløp merkte rekneskapsvaluta er bokførte beløp frå kjelda. Dei kan avvike frå dokumentvalutaen; ukjend valuta blir ikkje føresett.",
-    "currencyAmount": "Kjeldebeløp · {{currency}}",
+    "balanceShort": "Restbeløp",
+    "sourceAmount": "Kjeldebeløp",
+    "relatedInvoices": "Faktura",
+    "accountCurrencyMeaning": "Beløp i rekneskapsvaluta er bokførte kjeldebeløp. Ingen valuta blir føresett.",
     "unknownCurrency": "valuta ikkje oppgitt",
     "documentNet": "Netto · {{currency}}",
     "documentTotal": "Totalt · {{currency}}",
@@ -3959,6 +4469,7 @@
     "relatedNumber": "Kjelda viser til faktura {{number}}. Nummeret åleine stadfestar ikkje ei utjamning.",
     "lines": "Fakturalinjer",
     "lineList": "Importerte fakturalinjer",
+    "line": "Linje",
     "unnamedLine": "Linje utan skildring",
     "product": "Produkt: {{code}}",
     "quantity": "Mengd",
@@ -3968,15 +4479,15 @@
       "RetrievedUnverified": "Dette er leverte linjer. Summane kunne ikkje avstemmast; fullstendigheit er ikkje stadfesta.",
       "Reconciled": "Summen av leverte linjer stemmer med fakturahovudet. Det beviser ikkje at alle opphavlege linjer vart leverte."
     },
-    "paymentMeaning": "Betalingar er bokførte betalingspostar frå PowerOffice, utan uavhengig bankkontroll. Forteikn blir behalde; avskrivingar og observerte saldoendringar er ikkje betalingar.",
-    "relatedMeaning": "Relaterte postar har same bilag eller utjamningsgruppe i kjelda. Ei gruppe kan dekkje fleire fakturaer; beløp per faktura blir ikkje rekna ut.",
+    "paymentMeaning": "Bokførte betalingspostar frå PowerOffice, utan bankkontroll. Forteikn blir behalde; avskrivingar og saldoendringar er ikkje betalingar.",
+    "relatedMeaning": "Relaterte postar deler bilag eller utjamningsgruppe; beløp per faktura blir ikkje rekna ut.",
     "onlyPayments": "Berre bokførte betalingar",
-    "snapshotAt": "Eldste lagra kundeuttrekk: {{date}}",
+    "snapshotAt": "Eldste lagra kundeuttrekk {{date}}",
     "ledgerNotImported": "Ingen fullført kundereskontroimport er tilgjengeleg for dette utvalet.",
     "paymentsEmpty": "Ingen bokførte betalingar i dette utvalet.",
     "entriesEmpty": "Ingen kundepostar i dette utvalet.",
     "inactive": "Manglar i siste uttrekk. Historisk kopi, sist sett {{date}}.",
-    "sourceInvoiceNo": "Fakturareferanse frå kjelda: {{number}}",
+    "sourceInvoiceNo": "fakturaref. {{number}}",
     "unallocated": "Inga stadfesta fakturakopling i dei lokale dataa.",
     "openRelated": "Opne relatert {{number}}",
     "kind": {
@@ -3997,8 +4508,102 @@
     "pdfVersion": "Lagra PDF {{number}}",
     "downloadPdf": "Last ned PDF {{number}}",
     "pdfSaved": "Lagra {{date}} · {{size}} KiB",
-    "pdfIntegrity": "Alle lagra versjonar blir behaldne. Tenaren kontrollerer SHA-256 og filstorleik før nedlasting.",
+    "pdfIntegrity": "Alle lagra versjonar blir behaldne; tenaren kontrollerer SHA-256 og storleik før nedlasting.",
     "downloading": "Klargjer PDF-nedlasting",
     "downloadFailed": "PDF kunne ikkje lastast ned. Fila kan mangle, vere skadd eller utilgjengeleg. Ingen kontrollert PDF vart lasta ned; prøv igjen eller kontakt ein administrator."
+  },
+  "relativeTime": {
+    "justNow": "akkurat no",
+    "minutes_one": "for {{count}} minutt sidan",
+    "minutes_other": "for {{count}} minutt sidan",
+    "hours_one": "for {{count}} time sidan",
+    "hours_other": "for {{count}} timar sidan",
+    "days_one": "for {{count}} dag sidan",
+    "days_other": "for {{count}} dagar sidan",
+    "months_one": "for {{count}} månad sidan",
+    "months_other": "for {{count}} månader sidan",
+    "years_one": "for {{count}} år sidan",
+    "years_other": "for {{count}} år sidan"
+  },
+  "observationQueue": {
+    "title": "Observasjonar som hastar",
+    "subtitle": "Alle observasjonar som hastar hos kundane dine, i éin kø: kritiske først, deretter dei som har venta lengst.",
+    "refresh": "Oppdater observasjonar som hastar",
+    "note": "Den personlege Atlas-tilgangen din avgjer kva kundar som kan lesast. Køen les opptil 50 av dei på éin gong, slik Min dag gjer: han er ikkje ei fullstendig liste over alle observasjonar.",
+    "previewNote": "Høgst ti observasjonar som hastar per kunde. Ein kunde med fleire seier frå under lista, og køen til kunden har resten.",
+    "filters": "Filter for køen",
+    "show": "Vis",
+    "filter": {
+      "open": "Utan oppgåve",
+      "linked": "Med oppgåve",
+      "all": "Alle som hastar"
+    },
+    "shortcuts": "Snøggtastar med éin tast",
+    "keysOn": "På ei rad: J og K eller pilene flyttar, Enter opnar, A tildeler deg, X vel.",
+    "keysOff": "På ei rad: pilene flyttar og Enter opnar.",
+    "assignChosen": "Tildel meg ({{count}})",
+    "confirmTitle_one": "Tildele deg {{count}} observasjon?",
+    "confirmTitle_other": "Tildele deg {{count}} observasjonar?",
+    "confirmBody": "Kvar observasjon blir lesen på nytt først, og det blir oppretta ei oppgåve til deg utan frist. Ein observasjon som har endra seg sidan lista vart lesen, blir liggjande til du opnar han.",
+    "confirm": "Tildel meg",
+    "bulkRunning": "Tildeler {{done}} av {{total}} …",
+    "bulkCreated_one": "{{count}} oppgåve oppretta til deg.",
+    "bulkCreated_other": "{{count}} oppgåver oppretta til deg.",
+    "bulkExisting_one": "{{count}} hadde alt ei oppgåve.",
+    "bulkExisting_other": "{{count}} hadde alt ei oppgåve.",
+    "bulkFailed_one": "{{count}} kunne ikkje tildelast: opne han for å sjå kvifor.",
+    "bulkFailed_other": "{{count}} kunne ikkje tildelast: opne dei for å sjå kvifor.",
+    "empty": "Ingen observasjonar som hastar i denne lesinga.",
+    "emptyFilter": {
+      "open": "Alle observasjonar som hastar i denne lesinga, har ei oppgåve.",
+      "linked": "Ingen observasjonar som hastar i denne lesinga, har oppgåve enno.",
+      "all": "Ingen observasjonar som hastar i denne lesinga."
+    },
+    "showAll": "Vis alle som hastar",
+    "partial": "viser {{shown}} av {{total}} observasjonar som hastar; resten ligg i køen til kunden.",
+    "rowLabel": "{{customer}}: {{summary}}",
+    "select": "Vel {{summary}}"
+  },
+  "customerFacts": {
+    "columns": {
+      "work": "Ope arbeid",
+      "agreement": "Avtale",
+      "hourBank": "Klippekort",
+      "invoices": "Fakturaer"
+    },
+    "unread": "Ikkje lese",
+    "someUnread": "Nokre av tala kunne ikkje lesast; dei cellene viser ein strek.",
+    "noWork": "Ikkje noko ope arbeid",
+    "open_one": "{{count}} open",
+    "open_other": "{{count}} opne",
+    "overdueWork_one": "{{count}} forfallen",
+    "overdueWork_other": "{{count}} forfalne",
+    "noAgreement": "Inga aktiv avtale",
+    "until": "til {{date}}",
+    "noEnd": "Ingen sluttdato",
+    "endsIn_one": "sluttar om {{count}} dag",
+    "endsIn_other": "sluttar om {{count}} dagar",
+    "agreements_one": "{{count}} avtale",
+    "agreements_other": "{{count}} avtalar",
+    "noHourBank": "Ikkje noko klippekort",
+    "hoursLeft": "{{hours}} t att",
+    "low": "snart tomt",
+    "noInvoices": "Ingen opne fakturaer",
+    "overdueAmount": "{{amount}} forfalle",
+    "overdueInvoices_one": "{{count}} faktura forfallen",
+    "overdueInvoices_other": "{{count}} fakturaer forfalne",
+    "outstanding": "{{amount}} uteståande",
+    "openInvoices_one": "{{count}} open faktura",
+    "openInvoices_other": "{{count}} opne fakturaer",
+    "agreementEnds": "avtalen sluttar {{date}}",
+    "hourBankLow": "klippekortet er snart tomt",
+    "attentionTitle": "Treng merksemd ({{count}})",
+    "attentionTitleBare": "Treng merksemd",
+    "attentionUnread": "Kunne ikkje lesast. Lista under verkar framleis.",
+    "attentionNone": "Ingen kundar har noko forfalle, ein avtale som sluttar innan 60 dagar eller eit klippekort som snart er tomt.",
+    "attentionNoneMine": "Ingen av kundane dine har noko forfalle, ein avtale som sluttar innan 60 dagar eller eit klippekort som snart er tomt.",
+    "showAll": "Vis alle {{count}}",
+    "showFewer": "Vis færre",
+    "firstOf": "Dei {{shown}} mest pressande av {{total}}"
   }
 }

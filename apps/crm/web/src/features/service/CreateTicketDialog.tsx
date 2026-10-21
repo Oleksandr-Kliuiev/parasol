@@ -1,6 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Dropdown, Field, Input,
-  MessageBar, MessageBarBody, Option, Spinner, Textarea, makeStyles, tokens } from '@fluentui/react-components';
+import {
+  Button,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Dropdown,
+  Field,
+  Input,
+  MessageBar,
+  MessageBarBody,
+  Option,
+  Spinner,
+  Textarea,
+  makeStyles,
+} from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -9,14 +25,17 @@ import { errorMessage } from '../../shared/utils/errors';
 import { useCreateTicketRequest, useTicketContacts, useTicketOptions } from './api';
 
 const useStyles = makeStyles({
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  // The form grid of the visual system: 14 px between rows, 16 px between the two columns.
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '14px 16px', '& .fui-Dropdown': { minWidth: 0 } },
   wide: { gridColumn: '1 / -1' },
+  error: { marginBottom: '12px' },
 });
 
 /** The existing queued Atera request form, with the customer/employee lifetime owned by its parent. */
 export function CreateTicketDialog({ open, organizationId, owner, onClose, onQueued }: { open: boolean; organizationId: string; owner: string; onClose: () => void; onQueued: () => void }) {
+  // The form mounts with the surface, once per opening, and stays while the dialog leaves.
   return <Dialog open={open} onOpenChange={(_, data) => !data.open && onClose()}>
-    <DialogSurface>{open && <CreateTicketForm organizationId={organizationId} owner={owner} onClose={onClose} onQueued={onQueued} />}</DialogSurface>
+    <DialogSurface><CreateTicketForm organizationId={organizationId} owner={owner} onClose={onClose} onQueued={onQueued} /></DialogSurface>
   </Dialog>;
 }
 
@@ -44,14 +63,16 @@ function CreateTicketForm({ organizationId, owner, onClose, onQueued }: { organi
   return <form onSubmit={event => { event.preventDefault(); void submit(); }}><DialogBody>
     <DialogTitle>{t('service.newTicket')}</DialogTitle>
     <DialogContent>
-      {create.error && !(create.error instanceof ApiError && create.error.status === 400) && <MessageBar intent="error" style={{ marginBottom: 12 }}>
+      {create.error && !(create.error instanceof ApiError && create.error.status === 400) && <MessageBar intent="error" className={styles.error}>
         <MessageBarBody>{errorMessage(create.error, t)}</MessageBarBody></MessageBar>}
       {(contacts.isFetching || options.isFetching) && <Spinner size="small" label={t('common.loading')} />}
       {contacts.isError && <ErrorState error={contacts.error} onRetry={() => void contacts.refetch()} />}
       {options.isError && <ErrorState error={options.error} onRetry={() => void options.refetch()} />}
       <div className={styles.grid}>
-        <Field label={t('service.fields.contact')} required className={styles.wide} validationMessage={errors.contactId}>
+        <Field label={t('service.fields.contact')} required className={styles.wide} validationMessage={errors.contactId}
+          hint={contacts.isSuccess && !contacts.isFetching && contacts.data.length === 0 ? t('service.noContacts') : undefined}>
           <Dropdown disabled={contacts.isFetching || contacts.isError || create.isPending} value={contactName} selectedOptions={contactId ? [contactId] : []}
+            placeholder={t('service.chooseContact')}
             onOptionSelect={(_, data) => setContactId(data.optionValue ?? null)}>
             {!contacts.isFetching && !contacts.isError && (contacts.data ?? []).map(contact => {
               const name = `${contact.firstName} ${contact.lastName}`.trim();

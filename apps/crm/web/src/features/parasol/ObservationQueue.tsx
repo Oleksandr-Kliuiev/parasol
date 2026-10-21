@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button, Field, Input, MessageBar, MessageBarBody, Select, Spinner, Text, mergeClasses } from '@fluentui/react-components';
 import { useQuery } from '@tanstack/react-query';
+import { Search16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError, query as queryString } from '../../api/client';
 import { useCurrentUser } from '../../auth/CurrentUserContext';
@@ -68,9 +69,9 @@ function EmployeeQueue({ customerId, employeeId, onSourceInvalidated, deviceId =
   const clearDevice = () => { clearRequested.current = true; onClearDevice?.(); };
   const selectedDevice = queue?.devices.find(d => d.id === deviceId);
   return <section className={mergeClasses(styles.section, styles.queueSection)} aria-labelledby={heading}>
-    <h3 ref={title} tabIndex={-1} className={styles.heading} id={heading}>{t('parasolQueue.title')}</h3>
-    <Text block>{t('parasolQueue.savedNote')}</Text>
-    {deviceId !== null && <>
+    <h3 ref={title} tabIndex={-1} className={mergeClasses(styles.heading, styles.display)} id={heading}>{t('parasolQueue.title')}</h3>
+    <Text block className={styles.note}>{t('parasolQueue.savedNote')}</Text>
+    {deviceId !== null && <div className={styles.row}>
       <Text block weight="semibold" role="status">{selectedDevice
         ? <code className={styles.identifier}>{t('parasolQueue.selectedDevice', { name: selectedDevice.hostname })}</code>
         : t('parasolQueue.selectingDevice')}</Text>
@@ -78,18 +79,16 @@ function EmployeeQueue({ customerId, employeeId, onSourceInvalidated, deviceId =
         {onClearDevice && <Button tabIndex={0} className={styles.deviceAction} onClick={clearDevice}>{t('parasolQueue.allDevices')}</Button>}
         {onReturnToDevice && <Button tabIndex={0} className={styles.deviceAction} onClick={onReturnToDevice}>{t('parasolQueue.backToDevice')}</Button>}
       </div>
-    </>}
-    <div className={mergeClasses(styles.tools, styles.queueTools)}>
-      <Field label={t('parasolQueue.severityFilter')}><Select value={severity} onChange={(_, d) => setFilter({ severity: d.value as QueueSeverity })}>
+    </div>}
+    <div className={styles.toolbar}>
+      <Field label={{ children: t('parasolQueue.severityFilter'), className: styles.hiddenLabel }}><Select value={severity} onChange={(_, d) => setFilter({ severity: d.value as QueueSeverity })}>
         <option value="ALL">{t('parasolDetails.allSeverities')}</option>
         <option value="URGENT">{t('parasolDetails.urgent')}</option>
         {[...severities].reverse().map(s => <option key={s} value={s}>{t(`parasolDetails.severity.${s}`)}</option>)}
       </Select></Field>
-      <Field label={t('parasolQueue.statusFilter')}><Select value={status} onChange={(_, d) => setFilter({ status: d.value as QueueState })}>
+      <Field label={{ children: t('parasolQueue.statusFilter'), className: styles.hiddenLabel }}><Select value={status} onChange={(_, d) => setFilter({ status: d.value as QueueState })}>
         {queueStates.map(s => <option key={s} value={s}>{t(s === 'ACTIVE' ? 'parasolDetails.allStatuses' : `parasolDetails.status.${s}`)}</option>)}
       </Select></Field>
-    </div>
-    <div className={mergeClasses(styles.footer, styles.queueFooter)}>
       <Button disabled={query.isFetching} disabledFocusable={query.isFetching} onClick={resetPage}>{t('parasolQueue.refresh')}</Button>
       <Button disabled={deviceId === null && severity === 'ALL' && status === 'ACTIVE' && cursor === null && search === ''}
         onClick={() => { setFilter({ severity: 'ALL', status: 'ACTIVE' }); if (deviceId !== null) clearDevice(); }}>{t('parasolQueue.reset')}</Button>
@@ -102,14 +101,15 @@ function EmployeeQueue({ customerId, employeeId, onSourceInvalidated, deviceId =
     </MessageBarBody></MessageBar>}
     {queue && <>
       <ObservationQueueInfo queue={queue} />
-      {queue.items.length === 0 ? <Text block role="status">{t('parasolQueue.empty')}</Text> : <>
-        <Field label={t('parasolQueue.search')}><Input type="search" maxLength={300} value={search} onChange={(_, d) => setSearch(d.value)} /></Field>
-        <Text block>{t('parasolQueue.pageMatches', { matched: matches.length, loaded: queue.items.length })}</Text>
-        {matches.length === 0 && <Text block>{t('parasolDetails.noMatches')}</Text>}
+      {queue.items.length === 0 ? <Text block role="status" className={styles.status}>{t('parasolQueue.empty')}</Text> : <>
+        <Field className={styles.search} label={{ children: t('parasolQueue.search'), className: styles.hiddenLabel }}><Input type="search" maxLength={300} value={search}
+          contentBefore={<Search16Regular />} placeholder={t('parasolQueue.search')} onChange={(_, d) => setSearch(d.value)} /></Field>
+        <Text block className={styles.status}>{t('parasolQueue.pageMatches', { matched: matches.length, loaded: queue.items.length })}</Text>
+        {matches.length === 0 && <Text block className={styles.status}>{t('parasolDetails.noMatches')}</Text>}
         <ObservationRows key={term} items={matches} devices={queue.devices} customerId={customerId}
           onSourceInvalidated={onSourceInvalidated} scrollLabel={t('parasolQueue.title')} scrollHint={t('parasolQueue.scrollList')} />
       </>}
-      <Text block role="status">{t('parasolQueue.page', { page: cursors.length, count: queue.items.length })}</Text>
+      <Text block role="status" className={styles.status}>{t('parasolQueue.page', { page: cursors.length, count: queue.items.length })}</Text>
       <div className={mergeClasses(styles.footer, styles.queueFooter)}>
         <Button disabled={cursors.length === 1} onClick={resetPage}>{t('parasolQueue.first')}</Button>
         <Button disabled={cursors.length === 1} onClick={() => { setSearch(''); setSelection(s => ({ ...s, deviceId, cursors: cursors.slice(0, -1) })); }}>{t('parasolQueue.previous')}</Button>

@@ -44,8 +44,9 @@ test('saved Service data distinguishes unknown summary and a failed list, retrie
     await expect(page.getByRole('region', { name: 'Open alerts', exact: true }).getByText('No open critical alerts or warnings.', { exact: true })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Ticket requests', exact: true }).getByText('No saved ticket requests need attention.', { exact: true })).toBeVisible();
     release(); await finished;
-    await expect(summary.getByText('0', { exact: true })).toHaveCount(4);
-    await expect(page.getByText('Last saved ticket change is unknown.', { exact: true })).toBeVisible();
+    // A customer Atera has never been read for gets no row of zeros: the summary says that nothing is saved yet.
+    await expect(summary.getByText(/^No Atera data is saved for this customer/)).toBeVisible();
+    await expect(summary.getByText('0', { exact: true })).toHaveCount(0);
     failTickets = false; await tickets.getByRole('button', { name: 'Try again', exact: true }).click();
     await expect(tickets.getByText('No open tickets.', { exact: true })).toBeVisible();
     expect(reads).toEqual({ summary: 1, tickets: 2, devices: 1, alerts: 1, requests: 1 });

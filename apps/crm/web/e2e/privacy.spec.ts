@@ -63,7 +63,7 @@ test('a person gets their data, then is erased and stays erased (DEV-11)', { tag
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
   await page.keyboard.press('Control+k');
   await page.keyboard.type(`petra ${m}`);
-  await expect(page.getByText('Nothing found.')).toBeVisible();
+  await expect(page.getByRole('listbox').getByText('Nothing found.')).toBeVisible();
   await page.keyboard.press('Escape');
 
   await page.goto('/admin/privacy');

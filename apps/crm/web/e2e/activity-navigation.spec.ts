@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Activity, ActivityRequest } from '../src/features/activities/types';
-import { api, createOrganization, marker, signIn } from './support';
+import { api, createOrganization, marker, showInMyTasks, signIn } from './support';
 
 type ActivityPage = { items: Activity[]; totalCount: number; nextCursor: string | null };
 const selectedUrl = (organizationId: string, activityId: string) => `/organizations/${organizationId}?tab=activities&activityId=${activityId}`;
@@ -53,8 +53,8 @@ test('a personal task beyond the first fifty opens exactly and preserves edit co
     expect(ordinary.items.some(item => item.id === target.id)).toBe(false); expect(ordinary.nextCursor).not.toBeNull();
     const reads = activityRequests(page);
     await page.goto('/');
-    const personal = page.getByRole('region', { name: 'My tasks', exact: true });
-    const link = personal.getByRole('link', { name: `${subject} · Open activity for ${customer.name}`, exact: true });
+    const link = await showInMyTasks(page, page.getByRole('region', { name: 'My tasks', exact: true })
+      .getByRole('link', { name: `${subject} · Open activity for ${customer.name}`, exact: true }));
     await expect(link).toHaveAttribute('href', selectedUrl(customer.id, target.id)); reads.length = 0;
     await link.focus(); await page.keyboard.press('Enter');
     const timeline = page.getByRole('region', { name: 'Activities', exact: true });
@@ -185,7 +185,8 @@ test('Back discards a delayed real selected read without restoring an old task o
       };
     }, target.id);
     await test.step('open and hold one real selected HTTP response', async () => {
-      await tasks.getByRole('link', { name: `${target.subject} · Open activity for ${customer.name}`, exact: true }).click(); await requested;
+      await (await showInMyTasks(page, tasks.getByRole('link', { name: `${target.subject} · Open activity for ${customer.name}`, exact: true }))).click();
+      await requested;
       expect(realRows.map(row => row.id)).toEqual([target.id]);
       expect(await page.evaluate(() => {
         const probe = (window as typeof window & { __activityReadProbe?: { started: number; aborted: number; signalPresent: boolean } }).__activityReadProbe;

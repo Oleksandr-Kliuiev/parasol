@@ -4,6 +4,14 @@ export const contractTypes = ['Msp', 'Licensing', 'PowerOfficeSupport', 'HourBan
 export type ContractType = (typeof contractTypes)[number];
 export const contractStatuses = ['Draft', 'Active', 'Suspended', 'NoticeGiven', 'Ended'] as const;
 export type ContractStatus = (typeof contractStatuses)[number];
+/** The tint of each contract status (badge colour); the status chips of the contract list take their dot from it. */
+export const contractStatusColor: Record<ContractStatus, 'informative' | 'success' | 'warning' | 'important' | 'subtle'> = {
+  Draft: 'informative',
+  Active: 'success',
+  Suspended: 'warning',
+  NoticeGiven: 'important',
+  Ended: 'subtle',
+};
 export const quantityModels = ['Fixed', 'PerAteraDevice', 'PerM365User', 'PerSubscription', 'Manual'] as const;
 export type QuantityModel = (typeof quantityModels)[number];
 export const deviceFilters = ['All', 'Workstations', 'Servers'] as const;

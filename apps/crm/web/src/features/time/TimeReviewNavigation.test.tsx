@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import { TimeEntriesPage } from './TimeEntriesPage';
@@ -17,9 +17,11 @@ vi.mock('./api', async original => ({ ...(await original<typeof import('./api')>
 it('Finance opens one exact review and the saved-note filter starts a new server filter', async () => {
   const view = renderRoutes([page(<TimeEntriesPage />)], '/time/entries?year=2026&month=10', testUser(financialReviewPermissions));
   expect(screen.getByRole('link', { name: 'Financial review' })).toHaveAttribute('href', '/time/entries/11111111-1111-4111-8111-111111111111/financial-review');
-  await userEvent.click(screen.getByRole('checkbox', { name: 'Only entries with saved review notes in this period' }));
+  const savedNotes = within(screen.getByRole('group', { name: 'Only entries with saved review notes in this period' }));
+  await userEvent.click(savedNotes.getByRole('button', { name: 'With review notes' }));
   await waitFor(() => expect(view.router.state.location.search).toContain('reviewOnly=true'));
   expect(reads).toHaveBeenLastCalledWith(expect.objectContaining({ reviewOnly: true }));
+  expect(savedNotes.getByRole('button', { name: 'With review notes' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('a ServiceLead reading time does not receive the Finance diagnostic link', () => {

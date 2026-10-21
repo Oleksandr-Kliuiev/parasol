@@ -8,6 +8,9 @@ namespace Crm.Integrations.Core.Parasol;
 public sealed class AtlasObservationTaskService(AtlasObservationSourceReader reader, IActivitiesApi activities,
     CustomerIdentityService identities, CustomerIdentityGuard guard, ICurrentUser user)
 {
+    /// <summary>One request answers for one page of a customer's list; the SPA asks page by page.</summary>
+    internal const int LookupPage = 50;
+
     public async Task<Result<AtlasObservationTaskPreview>> PreviewAsync(Guid customerId, string observationId, CancellationToken ct)
     {
         var read = await reader.ReadAsync(customerId, observationId, ct);
@@ -71,6 +74,24 @@ public sealed class AtlasObservationTaskService(AtlasObservationSourceReader rea
         if (current.Value is not { IsAvailable: true } refreshed)
             return new AtlasObservationTaskPreview(task.OrganizationId, "SOURCE_TASK_UNAVAILABLE", Task: current.Value);
         return Preview(task.OrganizationId, source, refreshed) with { CanCreate = false };
+    }
+
+    /// <summary>
+    /// The tasks of the observations a list shows, through the customer's current Atlas mapping. It reads no Atlas data:
+    /// the ids come from the employee's own read, and the answer holds CRM task facts the customer's activities show.
+    /// </summary>
+    public async Task<Result<AtlasObservationTaskLookup>> LookupAsync(Guid customerId, string? ids, CancellationToken ct)
+    {
+        var observationIds = (ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (observationIds.Length is 0 or > LookupPage || !observationIds.All(AtlasObservationSource.ValidId))
+            return Error.Validation("PARASOL_TASK_LOOKUP_INVALID", "Ask for the tasks of up to 50 observations of one customer.");
+        var identity = await identities.GetAsync(customerId, ct);
+        if (!identity.IsSuccess) return identity.Error!;
+        if (identity.Value.Atlas is not { } mapped) return new AtlasObservationTaskLookup(customerId, "NOT_LINKED", []);
+        var found = await activities.FindSourceTasksAsync([new SourceTaskQuery(mapped.WorkspaceId, mapped.ClientId, customerId, observationIds)], ct);
+        if (!found.IsSuccess) return found.Error!;
+        return new AtlasObservationTaskLookup(customerId, "READY",
+            found.Value.Select(f => new AtlasObservationTaskLink(f.ObservationId, f.Task, f.AssigneeName)).ToList());
     }
 
     private AtlasObservationTaskPreview Preview(Guid id, AtlasObservationSource source, SourceTaskRef? task) =>

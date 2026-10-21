@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Activity, ActivityRequest } from '../src/features/activities/types';
-import { api, createOrganization, marker, signIn } from './support';
+import { api, createOrganization, marker, showInMyTasks, signIn } from './support';
 
 type ActivityPage = { items: Activity[]; totalCount: number; nextCursor: string | null };
 const selectedUrl = (organizationId: string, activityId: string) => `/organizations/${organizationId}?tab=activities&activityId=${activityId}`;
@@ -114,7 +114,7 @@ test('personal task completion admits one pending command and sends its displaye
   try {
     await page.goto('/'); const personal = page.getByRole('region', { name: 'My tasks', exact: true });
     const complete = personal.getByRole('button', { name: `Mark ${task.subject} as done`, exact: true });
-    await complete.focus(); await page.keyboard.press('Enter'); await requested;
+    await showInMyTasks(page, complete); await complete.focus(); await page.keyboard.press('Enter'); await requested;
     await expect(complete).toBeDisabled(); await expect(complete).toBeFocused();
     await page.keyboard.press('Enter'); expect(requests).toBe(1);
     release(); await finished;

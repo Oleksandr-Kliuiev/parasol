@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Dialog, DialogSurface, Toaster } from '@fluentui/react-components';
+import { DialogSurface, Toaster } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useQuery } from '@tanstack/react-query';
 import { CurrentUserContext } from '../../auth/CurrentUserContext';
 import { TOASTER_ID } from '../../app/toaster';

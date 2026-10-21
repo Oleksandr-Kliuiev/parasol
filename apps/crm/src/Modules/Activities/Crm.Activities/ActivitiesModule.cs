@@ -25,6 +25,8 @@ public static class ActivitiesModule
         services.AddScoped<ITaskWorkApi, TaskWorkApi>();
         services.AddScoped<OutlookService>();
         services.AddScoped<IActivitiesApi, SourceTaskApi>();
+        // UX 2026, В6: open and overdue work per organization for the customer list.
+        services.AddScoped<IActivityFacts, ActivityFacts>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, ActivitiesRestoreParticipant>();
         // DEV-11: activities with or from a person in subject requests.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ActivitiesPersonalData>();

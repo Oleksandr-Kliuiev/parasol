@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import {
   Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -24,11 +23,15 @@ import {
   TableHeaderCell,
   TableRow,
   Textarea,
+  Tooltip,
   makeStyles,
-  tokens,
+  mergeClasses,
   useRestoreFocusTarget,
+  type BadgeProps,
 } from '@fluentui/react-components';
-import { Add20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { RecordCell } from '../organizations/RecordCell';
+import { Add20Regular, ContactCard24Regular, Edit20Regular, PersonArrowRight20Regular, Prohibited20Regular, ShieldPerson20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
@@ -38,11 +41,13 @@ import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { UserPicker } from '../../shared/components/UserPicker';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { blankToNull, formatDate, parseDecimal, todayIso } from '../../shared/utils/format';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
-import { useCatalogStyles } from '../catalog/styles';
+import { FilterChips, FilterField, Toolbar } from '../../shared/components/Toolbar';
+import { badgeDot, useCatalogStyles } from '../catalog/styles';
 import { useDialogStyles } from '../contracts/dialogStyles';
 import { formatOrgNumber, isValidOrgNumber } from '../../shared/utils/orgNumber';
 import type { UserRef } from '../../api/types';
@@ -51,8 +56,16 @@ import { leadStatuses, type Lead, type LeadStatus } from './types';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  actions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS, justifyContent: 'flex-end' },
+  // Quiet icon buttons: each is named in full for screen readers (tooltip label or aria-label) and shows a tooltip.
+  actions: { display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end', whiteSpace: 'nowrap' },
+  // The fixed columns (content plus 24 px padding) and room for the company: narrower screens scroll the card.
+  table: { minWidth: '1060px' },
+  person: { fontWeight: 500, fontSize: '13px' },
+  // A link in the small line under a name still gets a 24 px tall target (WCAG 2.5.8).
+  metaLink: { display: 'inline-flex', alignItems: 'center', minHeight: '24px' },
 });
+
+const leadColor: Record<LeadStatus, NonNullable<BadgeProps['color']>> = { New: 'brand', Qualified: 'informative', Disqualified: 'subtle', Converted: 'success' };
 
 /** Enquiries before they are customers; converting one creates the organization, its contact and optionally a deal (FR-SAL-01). */
 export function LeadsPage() {
@@ -69,6 +82,7 @@ export function LeadsPage() {
   const leads = useLeads({ status, mine, search: debounced });
   const { items: data, error, isPending, refetch } = leads;
   const [dialog, setDialog] = useState<{ kind: 'edit' | 'convert' | 'disqualify'; lead?: Lead } | null>(null);
+  const shown = useKeptWhileClosing(dialog);
   const restoreFocusTarget = useRestoreFocusTarget();
 
   return (
@@ -84,98 +98,91 @@ export function LeadsPage() {
           )
         }
       />
-      <div className={catalog.filters}>
-        <SearchBox
-          id="leads-search"
-          className={catalog.search}
-          value={search}
-          onChange={(_, d) => setSearch(d.value)}
-          placeholder={t('leads.search')}
-          aria-label={t('leads.search')}
+      <Toolbar label={t('leads.filterLabel')}>
+        <FilterField kind="search" label={t('leads.search')}>
+          <SearchBox id="leads-search" value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('leads.search')} />
+        </FilterField>
+        <FilterChips<LeadStatus | ''>
+          label={t('leads.fields.status')}
+          value={status ?? ''}
+          onChange={(value) => setStatus(value || null)}
+          options={[
+            { value: '', label: t('common.all') },
+            ...leadStatuses.map((value) => ({ value, label: t(`leads.statuses.${value}`), dot: badgeDot[leadColor[value]] })),
+          ]}
         />
-        <Field label={t('leads.fields.status')}>
-          <Dropdown
-            value={status ? t(`leads.statuses.${status}`) : t('common.all')}
-            selectedOptions={[status ?? '']}
-            onOptionSelect={(_, d) => setStatus((d.optionValue as LeadStatus) || null)}
-          >
-            <Option value="">{t('common.all')}</Option>
-            {leadStatuses.map((value) => (
-              <Option key={value} value={value}>
-                {t(`leads.statuses.${value}`)}
-              </Option>
-            ))}
-          </Dropdown>
-        </Field>
-        <Switch label={t('leads.mine')} checked={mine} onChange={(_, d) => setMine(d.checked)} />
-      </div>
+        <Switch className={catalog.toggle} label={t('leads.mine')} checked={mine} onChange={(_, d) => setMine(d.checked)} />
+      </Toolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('leads.title')}>
+          <Table className={mergeClasses(catalog.table, styles.table)} aria-label={t('leads.title')}>
             <TableHeader>
               <TableRow>
+                {/* Content widths: every cell adds 12 px of padding on each side; the company takes the rest. */}
                 <TableHeaderCell>{t('leads.fields.company')}</TableHeaderCell>
-                <TableHeaderCell>{t('leads.fields.contact')}</TableHeaderCell>
-                <TableHeaderCell>{t('leads.fields.source')}</TableHeaderCell>
-                <TableHeaderCell>{t('leads.fields.status')}</TableHeaderCell>
-                <TableHeaderCell>{t('leads.fields.owner')}</TableHeaderCell>
-                <TableHeaderCell>{t('leads.fields.created')}</TableHeaderCell>
-                {(canWrite || canPrivacy) && <TableHeaderCell />}
+                <TableHeaderCell style={{ width: 186 }}>{t('leads.fields.contact')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 96 }}>{t('leads.fields.source')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 106 }}>{t('leads.fields.status')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 136 }}>{t('leads.fields.owner')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 86 }}>{t('leads.fields.created')}</TableHeaderCell>
+                {(canWrite || canPrivacy) && <TableHeaderCell style={{ width: 132 }} />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((lead) => (
                 <TableRow key={lead.id}>
                   <TableCell>
-                    <span className={catalog.name}>{lead.companyName}</span>
-                    {lead.orgNumber && <div className={catalog.sku}>{formatOrgNumber(lead.orgNumber)}</div>}
-                    {lead.organizationId && (
-                      <div className={catalog.sku}>
-                        <AppLink to={`/organizations/${lead.organizationId}`}>{t('leads.openOrganization')}</AppLink>
-                      </div>
-                    )}
+                    <RecordCell
+                      avatarName={lead.companyName}
+                      name={<span className={catalog.name}>{lead.companyName}</span>}
+                      meta={[
+                        lead.orgNumber && formatOrgNumber(lead.orgNumber),
+                        lead.organizationId && <AppLink to={`/organizations/${lead.organizationId}`} className={styles.metaLink}>{t('leads.openOrganization')}</AppLink>,
+                      ]}
+                    />
                   </TableCell>
                   <TableCell>
-                    {lead.contactName}
-                    {lead.email && <div className={catalog.sku}>{lead.email}</div>}
+                    {(lead.contactName || lead.email) && (
+                      <RecordCell avatarName={lead.contactName ?? lead.email ?? ''} size={28} name={<span className={styles.person}>{lead.contactName}</span>} meta={[lead.email]} />
+                    )}
                   </TableCell>
                   <TableCell>{lead.source}</TableCell>
                   <TableCell>
-                    <Badge appearance={lead.status === 'New' ? 'tint' : 'outline'} color={lead.status === 'Converted' ? 'success' : lead.status === 'Disqualified' ? 'subtle' : 'brand'}>
+                    <Badge appearance="tint" color={leadColor[lead.status]}>
                       {t(`leads.statuses.${lead.status}`)}
                     </Badge>
-                    {lead.disqualifyReason && <div className={catalog.sku}>{lead.disqualifyReason}</div>}
+                    {lead.disqualifyReason && <div className={catalog.muted}>{lead.disqualifyReason}</div>}
                   </TableCell>
-                  <TableCell>{lead.owner?.name}</TableCell>
+                  <TableCell>{lead.owner && <RecordCell avatarName={lead.owner.name} size={28} name={<span className={styles.person}>{lead.owner.name}</span>} />}</TableCell>
                   <TableCell className="tabular">{formatDate(lead.createdAt)}</TableCell>
                   {(canWrite || canPrivacy) && (
                     <TableCell>
                       <span className={styles.actions}>
                         {canWrite && lead.status !== 'Converted' && (
                           <>
-                            <Button {...restoreFocusTarget} size="small" onClick={() => setDialog({ kind: 'convert', lead })}>
-                              {t('leads.convert')}
-                            </Button>
-                            <Button {...restoreFocusTarget} size="small" appearance="subtle" onClick={() => setDialog({ kind: 'edit', lead })}
-                              aria-label={t('leads.editNamed', { name: lead.companyName })}>
-                              {t('common.edit')}
-                            </Button>
-                            <Button {...restoreFocusTarget} size="small" appearance="subtle" onClick={() => setDialog({ kind: 'disqualify', lead })}
-                              aria-label={t('leads.disqualifyNamed', { name: lead.companyName })}>
-                              {t('leads.disqualify')}
-                            </Button>
+                            <Tooltip content={t('leads.convert')} relationship="label">
+                              <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<PersonArrowRight20Regular />} onClick={() => setDialog({ kind: 'convert', lead })} />
+                            </Tooltip>
+                            <Tooltip content={t('common.edit')} relationship="description">
+                              <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Edit20Regular />} onClick={() => setDialog({ kind: 'edit', lead })}
+                                aria-label={t('leads.editNamed', { name: lead.companyName })} />
+                            </Tooltip>
+                            <Tooltip content={t('leads.disqualify')} relationship="description">
+                              <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Prohibited20Regular />} onClick={() => setDialog({ kind: 'disqualify', lead })}
+                                aria-label={t('leads.disqualifyNamed', { name: lead.companyName })} />
+                            </Tooltip>
                           </>
                         )}
                         {canPrivacy && (lead.contactName || lead.email) && (
                           // DEV-11: the person's name goes along in the navigation state, not in the address.
-                          <Button size="small" appearance="subtle"
-                            onClick={() => navigate(`/admin/privacy/new?subjectKind=Lead&subjectId=${lead.id}`, { state: { subjectName: lead.contactName ?? lead.companyName } })}
-                            aria-label={t('privacy.new.leadButtonNamed', { name: lead.contactName ?? lead.companyName })}>
-                            {t('privacy.new.leadButton')}
-                          </Button>
+                          <Tooltip content={t('privacy.new.leadButton')} relationship="description">
+                            <Button size="small" appearance="subtle" icon={<ShieldPerson20Regular />}
+                              onClick={() => navigate(`/admin/privacy/new?subjectKind=Lead&subjectId=${lead.id}`, { state: { subjectName: lead.contactName ?? lead.companyName } })}
+                              aria-label={t('privacy.new.leadButtonNamed', { name: lead.contactName ?? lead.companyName })} />
+                          </Tooltip>
                         )}
                       </span>
                     </TableCell>
@@ -184,16 +191,16 @@ export function LeadsPage() {
               ))}
             </TableBody>
           </Table>
-          {!isPending && data.length === 0 && <EmptyState message={t('leads.empty')} />}
+          {!isPending && data.length === 0 && <EmptyState icon={<ContactCard24Regular />} message={t('leads.empty')} />}
           <ListFooter shown={data.length} total={leads.total} hasMore={leads.hasNextPage} loading={leads.isFetchingNextPage} onMore={() => void leads.fetchNextPage()} />
         </ScrollTable>
       )}
 
       <Dialog open={dialog !== null} onOpenChange={(_, d) => !d.open && setDialog(null)}>
         <DialogSurface>
-          {dialog?.kind === 'edit' && <LeadForm lead={dialog.lead} onClose={() => setDialog(null)} />}
-          {dialog?.kind === 'convert' && <ConvertForm lead={dialog.lead!} onClose={() => setDialog(null)} />}
-          {dialog?.kind === 'disqualify' && <DisqualifyForm lead={dialog.lead!} onClose={() => setDialog(null)} />}
+          {shown?.kind === 'edit' && <LeadForm lead={shown.lead} onClose={() => setDialog(null)} />}
+          {shown?.kind === 'convert' && <ConvertForm lead={shown.lead!} onClose={() => setDialog(null)} />}
+          {shown?.kind === 'disqualify' && <DisqualifyForm lead={shown.lead!} onClose={() => setDialog(null)} />}
         </DialogSurface>
       </Dialog>
     </>
@@ -339,7 +346,7 @@ function ConvertForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
               <MessageBarBody>{errorMessage(actions.convert.error, t)}</MessageBarBody>
             </MessageBar>
           )}
-          <p style={{ marginTop: 0 }}>{t('leads.convertBody')}</p>
+          <p className={styles.lead}>{t('leads.convertBody')}</p>
           <div className={styles.grid}>
             <Switch className={styles.wide} label={t('leads.createOpportunity')} checked={createOpportunity} onChange={(_, d) => setCreateOpportunity(d.checked)} />
             {createOpportunity && (

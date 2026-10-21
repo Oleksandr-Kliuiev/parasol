@@ -34,6 +34,8 @@ public static class BillingModule
         services.AddScoped<PilotKpiService>();
         services.AddScoped<IBillingApi, BillingApi>();
         services.AddScoped<ITimeBillingReader, TimeBillingReader>();
+        // UX 2026, В6: open and overdue invoices per organization for the customer list.
+        services.AddScoped<IInvoiceFacts, InvoiceFacts>();
         services.AddScoped<Crm.SharedKernel.Operations.IOperationalSignalSource, BillingOperationalSignals>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, BillingRestoreParticipant>();
         services.AddScoped<IProductUsage, BillingProductUsage>();

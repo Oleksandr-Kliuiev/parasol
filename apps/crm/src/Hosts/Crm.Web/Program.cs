@@ -70,6 +70,8 @@ builder.Services.AddHsts(options =>
 builder.Services.AddSingleton<IConfigureOptions<JsonOptions>, ConfigureJsonOptions>();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddScoped<IRequestContext, HttpRequestContext>();
+// UX 2026, В6: the customer list's facts and attention view, composed from the modules' contracts.
+builder.Services.AddScoped<Crm.Web.CustomerFacts.CustomerFactsService>();
 
 // Modules. Audit is registered first: it owns the audit table that other modules write to.
 builder.Services
@@ -297,6 +299,7 @@ app.MapReportsEndpoints();
 app.MapPrivacyEndpoints();
 app.MapBrregEndpoints();
 app.MapSearchEndpoints();
+Crm.Web.CustomerFacts.CustomerFactsEndpoints.MapCustomerFactsEndpoints(app);
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 Crm.Integrations.Core.Parasol.CustomerIdentityEndpoints.MapParasolCustomerIdentities(app);

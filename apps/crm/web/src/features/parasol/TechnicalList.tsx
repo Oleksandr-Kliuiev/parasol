@@ -10,7 +10,7 @@ export function TechnicalList({ children, label, scrollHint }: { children: React
   const { t } = useTranslation(); const styles = useTechnicalStyles();
   const scroll = useScrollEdges(ref, 'y', children);
   return <>
-    {scroll.overflow && <Text id={hint} block>{scrollHint ?? t('parasolDetails.scrollList')}</Text>}
+    {scroll.overflow && <Text id={hint} block className={styles.status}>{scrollHint ?? t('parasolDetails.scrollList')}</Text>}
     <ul ref={ref} className={mergeClasses(styles.list, styles.scrollList)} style={scroll.style}
       aria-label={label} aria-describedby={scroll.overflow ? hint : undefined}
       tabIndex={Children.count(children) > 0 && scroll.overflow ? 0 : undefined}>

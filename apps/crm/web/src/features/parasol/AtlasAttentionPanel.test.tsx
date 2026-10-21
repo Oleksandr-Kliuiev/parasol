@@ -4,6 +4,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import { atlasAttention, attentionCustomerId } from '../../test/atlasAttention';
+import { atlasTaskPreview, syntheticTask } from '../../test/atlasTask';
 import { invalidTaskPreview } from './observationTaskContract';
 import { CurrentUserContext } from '../../auth/CurrentUserContext';
 import { MyDayPage } from '../dashboard/MyDayPage';
@@ -35,12 +36,23 @@ describe('personal Atlas attention in My day', () => {
     expect(await screen.findByText('Customers read successfully: 1 of 2 selected')).toBeVisible();
     expect(region().getByText('Active observations in successfully read customers: 9 · High: 4 · Critical: 2')).toBeVisible();
     expect(region().getByText(/Coverage is incomplete/)).toBeVisible();
+    // The figures that ask for a look stay in sight while the coverage details are closed.
+    // The read customer's partial sources are the contract's own reason for PARTIAL, so they are named too.
+    expect(region().getByText('Check coverage: Visible Atlas clients without a CRM match: 1 · Visible Atlas clients with a mapping issue: 1 · Selected customers not successfully read: 1 · Customers read with incomplete or synthetic sources: 1')).toBeVisible();
+    expect(region().getByText(/At most three urgent observations per customer/)).toBeVisible();
+    const about = region().getByText('Coverage and how this view works', { exact: true });
+    expect(about.closest('details')).not.toHaveAttribute('open');
+    expect(region().getByText(/not a complete queue or a global ranking/)).not.toBeVisible();
+    await userEvent.click(about);
     expect(region().getByText(/not a complete queue or a global ranking/)).toBeVisible();
+    expect(region().getByText('Matched CRM customers')).toBeVisible();
     const customer = within(region().getByRole('region', { name: 'Synthetic attention customer' }));
-    expect(customer.getByText('Urgent preview: 3 of 6 active HIGH/CRITICAL observations')).toBeVisible();
+    expect(customer.getByText('Showing 3 of 6 urgent observations')).toBeVisible();
     expect(customer.getAllByRole('listitem')).toHaveLength(3);
     expect(within(customer.getAllByRole('listitem')[0]!).getByText('Atlas recommendation: Monitor')).toBeVisible();
-    expect(customer.getAllByText('Urgent · HIGH / CRITICAL')).toHaveLength(3);
+    // One severity badge per row says the urgency; the rows do not repeat it as a second label.
+    for (const row of customer.getAllByRole('listitem')) expect(within(row).getAllByText(/^(High|Critical)$/)).toHaveLength(1);
+    expect(customer.queryByText(/Urgent ·/)).not.toBeInTheDocument();
     expect(customer.getByRole('link', { name: 'Open customer workspace' })).toHaveAttribute('href', `/organizations/${attentionCustomerId}`);
     await userEvent.click(customer.getByText('Source coverage and freshness', { exact: true }));
     expect(customer.getByText('Outdated snapshot')).toBeVisible(); expect(customer.getByText('No snapshot')).toBeVisible();
@@ -75,7 +87,8 @@ describe('personal Atlas attention in My day', () => {
     const customer = within(region().getByRole('region', { name: 'A no-urgent customer' }));
     await userEvent.click(customer.getByText('Source coverage and freshness'));
     expect(customer.getByText('Outdated snapshot')).toBeVisible(); expect(customer.getByText('No snapshot')).toBeVisible();
-    expect(customer.getByText(/Other observations or missing source data may still require attention/)).toBeVisible();
+    // Said once for the group of quiet customers, not in each of them.
+    expect(region().getByText(/Other observations or missing source data may still require attention/)).toBeVisible();
   });
 
   it('orders urgent customers by critical count, then high count, then a stable customer-name tie', async () => {
@@ -240,6 +253,44 @@ describe('personal Atlas attention in My day', () => {
     expect(await screen.findByText('Synthetic replacement source')).toBeVisible();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); expect(screen.queryByText('Synthetic disk capacity used: 97%')).not.toBeInTheDocument();
     expect(attentionReads).toBe(2); expect(fetch.mock.calls.map(([url]) => url).filter(url => url.endsWith('/task-preview'))).toHaveLength(1);
+  });
+
+  it('says which urgent rows already have work, from the same single read', async () => {
+    const value = atlasAttention(); const c = value.customers![0]!;
+    c.tasks = [{ observationId: c.preview[1]!.id, task: { ...syntheticTask, organizationId: attentionCustomerId, dueAt: '2026-10-24T14:00:00Z' }, assigneeName: 'Synthetic technician' }];
+    const fetch = vi.fn(async () => response(value)); vi.stubGlobal('fetch', fetch); render();
+    await screen.findByText('Synthetic disk capacity used: 97%');
+    const rows = within(region().getByRole('region', { name: 'Synthetic attention customer' })).getAllByRole('listitem');
+    expect(within(rows[1]!).getByText(/^Task open · Synthetic technician · due 24\/10\/2026, 16:00$/)).toBeVisible();
+    expect(within(rows[1]!).getByRole('button', { name: 'View linked work' })).toBeVisible();
+    expect(within(rows[0]!).getByRole('button', { name: 'Assign work' })).toBeVisible();
+    // No request per customer: the tasks came with the snapshot.
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a task made from a row in that row at once, without reading the snapshot again', async () => {
+    let attentionReads = 0;
+    const users = { items: [{ id: 'u2', displayName: 'Synthetic technician', email: null, isActive: true }], nextCursor: null, totalCount: 1 };
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/atlas-attention')) { attentionReads++; return response(atlasAttention()); }
+      if (url.startsWith('/api/v1/identity/users')) return response(users);
+      if (init?.method === 'POST') return response({ customerId: attentionCustomerId, status: 'CREATED', task: { ...syntheticTask, organizationId: attentionCustomerId, created: true } });
+      return response({ ...atlasTaskPreview(), customerId: attentionCustomerId });
+    }));
+    render(); await screen.findByText('Synthetic disk capacity used: 97%');
+    const row = () => within(within(region().getByRole('region', { name: 'Synthetic attention customer' })).getAllByRole('listitem')[0]!);
+    await userEvent.click(row().getByRole('button', { name: 'Assign work' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Assign observation work' }));
+    await userEvent.click(await dialog.findByRole('combobox'));
+    await userEvent.click(await screen.findByRole('option', { name: 'Synthetic technician' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Create task' }));
+    expect(await dialog.findByRole('status')).toBeVisible();
+    // The dialog keeps the purpose it was opened for while its receipt shows.
+    expect(screen.getByRole('dialog', { name: 'Assign observation work' })).toBeVisible();
+    await userEvent.click(dialog.getByRole('button', { name: 'Close' }));
+    // Until the dialog has left and the focus trap has let go, the page behind it is hidden from the accessibility tree.
+    await waitFor(() => expect(row().getByText(/^Task open · Synthetic technician$/)).toBeVisible());
+    expect(row().getByRole('button', { name: 'View linked work' })).toBeVisible(); expect(attentionReads).toBe(1);
   });
 
   it('renders technical source text as literal text, without executing markup', async () => {

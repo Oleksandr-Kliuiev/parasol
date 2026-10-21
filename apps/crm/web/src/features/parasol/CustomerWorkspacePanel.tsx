@@ -1,21 +1,26 @@
 import { useCallback, useRef, useState } from 'react';
-import { Button, MessageBar, MessageBarBody, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
+import { Button, MessageBar, MessageBarBody, Spinner, Text, makeStyles } from '@fluentui/react-components';
+import { DesktopPulse16Regular } from '@fluentui/react-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
-import { Panel, DetailList } from '../../shared/components/Panel';
+import { h } from '../../app/hearth';
+import { Panel, FactGrid } from '../../shared/components/Panel';
 import { ErrorState } from '../../shared/components/ErrorState';
-import { formatDateTime } from '../../shared/utils/format';
+import { formatReadAt } from '../../shared/utils/format';
 import { CustomerTechnicalDetails } from './CustomerTechnicalDetails';
+import { SourceFreshnessList } from './SourceFreshness';
 import { parseWorkspace } from './workspaceContract';
 export type { Workspace } from './workspaceContract';
 
 const useStyles = makeStyles({
   container: { minWidth: 0 },
-  list: { padding: 0, listStyle: 'none', display: 'grid', gap: tokens.spacingVerticalM },
-  resource: { paddingTop: tokens.spacingVerticalS, borderTop: `1px solid ${tokens.colorNeutralStroke2}` },
-  note: { marginBlock: tokens.spacingVerticalM },
+  body: { display: 'grid', gap: '12px', minWidth: 0 },
+  note: { color: h.muted, fontSize: '13px', lineHeight: '20px' },
+  // Five counts in one row on a wide card, wrapping by threes and twos on narrower ones.
+  facts: { gridTemplateColumns: 'repeat(auto-fit, minmax(min(112px, 100%), 1fr))', '& dt': { overflowWrap: 'normal' } },
+  coverage: { display: 'grid', gap: '8px', minWidth: 0, '& > ul': { marginTop: 0, marginBottom: 0 } },
 });
 
 export function CustomerWorkspacePanel({ customerId }: { customerId: string }) {
@@ -67,32 +72,26 @@ function AuthorizedWorkspace({ customerId }: { customerId: string }) {
   const summary = data?.status === 'READY' ? data.summary : null;
   return (
     <div className={styles.container} data-technical-layout={query.data?.status === 'READY' && !query.isError ? '' : undefined}>
-    <Panel title={t('parasol.title')} actions={<Button ref={refreshButton} size="small" disabled={checking} disabledFocusable={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
+    <Panel title={t('parasol.title')} icon={<DesktopPulse16Regular />} actions={<Button ref={refreshButton} size="small" disabled={checking} disabledFocusable={checking} onClick={refreshWorkspace}>{t('parasol.refresh')}</Button>}>
       {checking && <Spinner size="small" label={t('common.loading')} />}
       {!checking && query.isError && <ErrorState error={query.error} onRetry={refreshWorkspace} />}
       {data && data.status !== 'READY' && <Text role="status">{t(`parasol.status.${data.status}`)}</Text>}
-      {summary && <>
+      {summary && <div className={styles.body}>
         {summary.mode === 'fixture' && <MessageBar layout="multiline" intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
-        <Text block className={styles.note}>{t('parasol.snapshot', { time: formatDateTime(summary.generatedAt) })}</Text>
-        <DetailList items={[
+        <Text block className={styles.note}>{t('parasol.snapshot', { time: formatReadAt(summary.generatedAt) })}</Text>
+        <FactGrid className={styles.facts} items={[
           { label: t('parasol.devices'), value: String(summary.knownDevices) },
           { label: t('parasol.people'), value: String(summary.knownPeople) },
           { label: t('parasol.observations'), value: String(summary.activeObservations) },
           { label: t('parasol.critical'), value: String(summary.severityCounts.CRITICAL) },
           { label: t('parasol.high'), value: String(summary.severityCounts.HIGH) },
         ]} />
-        <Text block className={styles.note}>{t('parasol.coverage')}</Text>
-        {summary.resources.length === 0 && <Text>{t('parasol.noSources')}</Text>}
-        <ul className={styles.list}>
-          {summary.resources.map((r, i) => <li key={`${r.source}-${r.resourceType}-${i}`} className={styles.resource}>
-            <Text weight="semibold">{t(`parasol.sources.${r.source}`)} · {t(`parasol.resources.${r.resourceType}`)}</Text>
-            <Text block>{t(`parasol.resourceStatus.${r.status}`)}</Text>
-            {r.asOf && <Text block>{t('parasol.asOf', { time: formatDateTime(r.asOf) })}</Text>}
-            {r.lastSuccessAt && <Text block>{t('parasol.lastSuccess', { time: formatDateTime(r.lastSuccessAt) })}</Text>}
-            {r.returnedItems !== null && <Text block>{t(r.truncated ? 'parasol.truncated' : 'parasol.returned', { count: r.returnedItems })}</Text>}
-          </li>)}
-        </ul>
-      </>}
+        <div className={styles.coverage}>
+          <Text block className={styles.note}>{t('parasol.coverage')}</Text>
+          {summary.resources.length === 0 && <Text>{t('parasol.noSources')}</Text>}
+          <SourceFreshnessList resources={summary.resources} />
+        </div>
+      </div>}
       {(summary || (sourceCheck.pending && sourceCheck.keepM365)) && <CustomerTechnicalDetails
         key={`${user.id}:${sourceCheck.revision}`} customerId={customerId} summary={summary} contextChecking={checking}
         onSourceInvalidated={sourceInvalidated} onAccessDenied={recheckAccess} />}

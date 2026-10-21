@@ -175,3 +175,55 @@ it.each([['success', 'employee'], ['failure', 'permissions']])('does not publish
   expect(screen.queryByText('synthetic-prior-scope-error')).not.toBeInTheDocument();
   expect(screen.getByText(second.subject)).toBeVisible(); expect(writes).toBe(1);
 });
+
+it('says the list may have changed on return to the tab, keeps the rows shown and refreshes only on request', async () => {
+  let total = 1;
+  const fetch = vi.fn(async (url: string) => (url.includes('limit=1&') || url.endsWith('limit=1') ? result([first], null, total) : result([first], null, 1)));
+  vi.stubGlobal('fetch', fetch); render(); expect(await screen.findByText(first.subject)).toBeVisible();
+  // Right after a read a return to the tab checks nothing.
+  fireEvent(document, new Event('visibilitychange')); expect(fetch).toHaveBeenCalledTimes(1);
+  const now = Date.now(); const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 31_000);
+  total = 2; fireEvent(document, new Event('visibilitychange'));
+  expect(await screen.findByText(/Your task list may have changed since it was read/)).toBeVisible();
+  expect(fetch).toHaveBeenCalledTimes(2); expect(fetch.mock.calls[1]![0]).toContain('limit=1');
+  // The rows are the last read; nothing was replaced.
+  expect(screen.getByText(first.subject)).toBeVisible();
+  clock.mockRestore();
+  await userEvent.click(screen.getByRole('button', { name: 'Refresh now' }));
+  await waitFor(() => expect(screen.queryByText(/Your task list may have changed/)).not.toBeInTheDocument());
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+it('does not check a list that failed to read, which only the person recovers', async () => {
+  const fetch = vi.fn(async () => response({ detail: 'synthetic-private-error' }, 503));
+  vi.stubGlobal('fetch', fetch); render(); expect(await screen.findByText(failure)).toBeVisible();
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 60_000);
+  fireEvent(document, new Event('visibilitychange')); expect(fetch).toHaveBeenCalledTimes(1);
+  clock.mockRestore();
+});
+
+it('opens a task in a side panel with its own address, with what the row leaves out, and Back closes it', async () => {
+  const described = syntheticActivity('task-three', { body: 'Synthetic note: replace the UPS battery', hasTechnicalSource: false,
+    contactName: 'Synthetic contact', priority: 'High', createdBy: { id: 'u9', name: 'Synthetic lead' } });
+  vi.stubGlobal('fetch', vi.fn(async () => result([described])));
+  const { router } = renderRoutes([page(<MyTasksPanel />)], '/', testUser(permissions));
+  await userEvent.click(await screen.findByRole('button', { name: `Details of ${described.subject}` }));
+  const panel = await screen.findByRole('dialog', { name: described.subject });
+  expect(router.state.location.search).toBe('?task=task-three');
+  expect(within(panel).getByText('Synthetic note: replace the UPS battery')).toBeVisible();
+  expect(within(panel).getByText('Synthetic contact')).toBeVisible();
+  expect(within(panel).getByText('High')).toBeVisible();
+  expect(within(panel).getByRole('link', { name: "Open in the customer's activities" })).toHaveAttribute('href', '/organizations/customer-one?tab=activities&activityId=task-three');
+  expect(within(panel).getByRole('button', { name: `Mark as done: ${described.subject}` })).toBeVisible();
+  await act(async () => { await router.navigate(-1); });
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: described.subject })).not.toBeInTheDocument());
+  expect(router.state.location.search).toBe('');
+});
+
+it('says a task that is not in the open list is not there instead of reading it again', async () => {
+  const fetch = vi.fn(async () => result([first])); vi.stubGlobal('fetch', fetch);
+  renderRoutes([page(<MyTasksPanel />)], '/?task=missing-task', testUser(permissions));
+  const panel = await screen.findByRole('dialog', { name: 'Task not in your open list' });
+  expect(within(panel).getByText(/may be done, reassigned or not loaded yet/)).toBeVisible();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});

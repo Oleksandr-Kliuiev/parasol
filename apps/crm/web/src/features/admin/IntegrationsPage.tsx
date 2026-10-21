@@ -10,12 +10,25 @@ import {
   TableHeader,
   TableHeaderCell,
   TableRow,
+  Spinner,
   Text,
   makeStyles,
+  mergeClasses,
   tokens,
   type BadgeProps,
 } from '@fluentui/react-components';
-import { Play20Regular } from '@fluentui/react-icons';
+import {
+  CalendarClock16Regular,
+  CalendarClock24Regular,
+  History16Regular,
+  History24Regular,
+  LinkDismiss16Regular,
+  Pause16Regular,
+  Play16Regular,
+  PlugConnected16Regular,
+  PlugDisconnected16Regular,
+} from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import { usePagedList } from '../../api/paging';
@@ -28,23 +41,28 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
-import { formatDateTime } from '../../shared/utils/format';
-import { NotFoundPage } from '../errors/NotFoundPage';
+import { formatDateTime, formatNumber } from '../../shared/utils/format';
+import { StatGrid, StatTile } from '../../shared/components/KpiTile';
+import { useIntegrationStatus } from '../integrations/api';
+import { useTableCardStyles } from './tableCard';
+import { ForbiddenPage } from '../errors/ForbiddenPage';
 import { MonitoringPanel } from '../integrations/MonitoringPanel';
 import { DeliveryPanel } from '../integrations/DeliveryPanel';
 import { OutboundPanel, SystemsPanel } from '../integrations/SystemsPanels';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  tableWrap: { overflowX: 'auto' },
-  table: { minWidth: '760px' },
-  mono: { fontFamily: tokens.fontFamilyMonospace, fontSize: tokens.fontSizeBase200 },
-  nowrap: { whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
-  message: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, overflowWrap: 'anywhere' },
+  stack: { display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 },
+  // Four figures that share the row instead of leaving an empty fifth column.
+  stats: { marginBottom: 0, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' },
+  mono: { fontFamily: tokens.fontFamilyMonospace, fontSize: '12px', color: h.muted },
+  // A cron line ("5-59/10 * * * *") and its time zone under it: an equal share of a fixed-layout table is too narrow for either.
+  scheduleCol: { width: '144px' },
+  zone: { display: 'block' },
+  message: { color: h.muted, fontSize: '13px', lineHeight: '18px', overflowWrap: 'anywhere' },
 });
 
-const statusColor: Record<SyncRun['status'], BadgeProps['color']> = { Running: 'informative', Succeeded: 'success', Failed: 'danger', Skipped: 'subtle' };
+const statusColor: Record<string, BadgeProps['color']> = { Running: 'informative', Processing: 'informative', Succeeded: 'success', Failed: 'danger', Skipped: 'subtle' };
 
 function duration(run: SyncRun): string {
   if (!run.finishedAt) return '…';
@@ -54,6 +72,7 @@ function duration(run: SyncRun): string {
 
 export function IntegrationsPage() {
   const styles = useStyles();
+  const table = useTableCardStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const client = useQueryClient();
@@ -64,6 +83,8 @@ export function IntegrationsPage() {
     enabled: allowed,
     queryFn: async ({ signal }) => (await api.get<RecurringJob[]>('/api/v1/integrations/jobs', signal)).data,
   });
+  // The same query as the system cards below (one request): the figures above them.
+  const status = useIntegrationStatus(allowed);
   const runs = usePagedList<SyncRun>(['integrations', 'runs'], '/api/v1/integrations/runs', {}, { enabled: allowed, refetchInterval: 15_000 });
   const trigger = useMutation({
     mutationFn: (jobId: string) => api.post(`/api/v1/integrations/jobs/${encodeURIComponent(jobId)}/trigger`),
@@ -74,36 +95,56 @@ export function IntegrationsPage() {
     onError: (error) => notify(t('errors.generic'), 'error', errorMessage(error, t)),
   });
 
-  if (!allowed) return <NotFoundPage />;
+  if (!allowed) return <ForbiddenPage />;
   const jobsUnavailable = jobs.error instanceof ApiError && jobs.error.status === 503;
   const jobName = (id: string) => t(`integrations.jobNames.${id}`, { defaultValue: id });
+  const systems = status.data ?? [];
+  const count = (test: (s: (typeof systems)[number]) => boolean) => formatNumber(systems.filter(test).length, 0);
 
   return (
     <>
       <PageHeader title={t('integrations.title')} subtitle={t('integrations.subtitle')} />
       <div className={styles.stack}>
-        <MonitoringPanel />
+        {systems.length > 0 && (
+          <StatGrid label={t('systemsPanel.title')} className={styles.stats}>
+            <StatTile icon={<PlugConnected16Regular />} tone="spruce" label={t('systemsPanel.enabled')} value={count((s) => s.enabled)} />
+            <StatTile icon={<PlugDisconnected16Regular />} label={t('systemsPanel.disabled')} value={count((s) => !s.enabled)} />
+            <StatTile icon={<Pause16Regular />} tone="saffron" label={t('systemsPanel.paused')} value={count((s) => s.paused)} />
+            <StatTile
+              icon={<LinkDismiss16Regular />}
+              tone="iris"
+              label={t('mappings.state.Unlinked')}
+              value={formatNumber(systems.reduce((sum, s) => sum + s.unlinked, 0), 0)}
+            />
+          </StatGrid>
+        )}
         <SystemsPanel />
-        <Panel title={t('integrations.jobs')}>
+        <MonitoringPanel />
+        <Panel title={t('integrations.jobs')} icon={<CalendarClock16Regular />}>
           {jobsUnavailable ? (
             <MessageBar intent="info">
               <MessageBarBody>{t('integrations.unavailable')}</MessageBarBody>
             </MessageBar>
           ) : jobs.error ? (
             <ErrorState error={jobs.error} onRetry={() => void jobs.refetch()} />
+          ) : jobs.isPending ? (
+            <Spinner size="small" label={t('common.loading')} />
           ) : jobs.data?.length === 0 ? (
-            <EmptyState message={t('integrations.noJobs')} />
+            <EmptyState message={t('integrations.noJobs')} icon={<CalendarClock24Regular />} />
           ) : (
-            <ScrollTable className={styles.tableWrap}>
-              <Table size="small" className={styles.table} aria-label={t('integrations.jobs')}>
+            <>
+            {/* A job that ran is not a system that was read: a sync that skipped a switched-off system still ran. */}
+            <Text block className={styles.message}>{t('integrations.jobsNote')}</Text>
+            <ScrollTable className={table.inset}>
+              <Table size="small" className={mergeClasses(table.min880, table.roomy)} aria-label={t('integrations.jobs')}>
                 <TableHeader>
                   <TableRow>
                     <TableHeaderCell>{t('integrations.columns.job')}</TableHeaderCell>
-                    <TableHeaderCell>{t('integrations.columns.schedule')}</TableHeaderCell>
-                    <TableHeaderCell>{t('integrations.columns.next')}</TableHeaderCell>
-                    <TableHeaderCell>{t('integrations.columns.last')}</TableHeaderCell>
+                    <TableHeaderCell className={styles.scheduleCol}>{t('integrations.columns.schedule')}</TableHeaderCell>
+                    <TableHeaderCell className={table.dateTimeCol}>{t('integrations.columns.next')}</TableHeaderCell>
+                    <TableHeaderCell className={table.dateTimeCol}>{t('integrations.columns.last')}</TableHeaderCell>
                     <TableHeaderCell>{t('integrations.columns.state')}</TableHeaderCell>
-                    <TableHeaderCell aria-label={t('integrations.runNow')} />
+                    <TableHeaderCell className={table.actionCol} aria-label={t('integrations.runNow')} />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -115,13 +156,21 @@ export function IntegrationsPage() {
                       </TableCell>
                       <TableCell className={styles.mono}>
                         {job.cron}
-                        {job.timeZone ? ` (${job.timeZone})` : ''}
+                        {job.timeZone && <span className={styles.zone}>{job.timeZone}</span>}
                       </TableCell>
-                      <TableCell className={styles.nowrap}>{formatDateTime(job.nextExecution)}</TableCell>
-                      <TableCell className={styles.nowrap}>{formatDateTime(job.lastExecution)}</TableCell>
-                      <TableCell>{job.lastState}</TableCell>
+                      <TableCell className={table.nowrap}>{formatDateTime(job.nextExecution)}</TableCell>
+                      <TableCell className={table.nowrap}>{formatDateTime(job.lastExecution)}</TableCell>
                       <TableCell>
-                        <Button size="small" icon={<Play20Regular />} onClick={() => trigger.mutate(job.id)} disabled={trigger.isPending}>
+                        {job.lastState ? (
+                          <Badge appearance="tint" color={statusColor[job.lastState] ?? 'subtle'}>
+                            {t(`integrations.jobStatus.${job.lastState}`, { defaultValue: job.lastState })}
+                          </Badge>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button size="small" appearance="subtle" icon={<Play16Regular />} onClick={() => trigger.mutate(job.id)} disabled={trigger.isPending}>
                           {t('integrations.runNow')}
                         </Button>
                       </TableCell>
@@ -130,26 +179,29 @@ export function IntegrationsPage() {
                 </TableBody>
               </Table>
             </ScrollTable>
+            </>
           )}
         </Panel>
 
         <DeliveryPanel />
         <OutboundPanel />
-        <Panel title={t('integrations.runs')}>
+        <Panel title={t('integrations.runs')} icon={<History16Regular />}>
           {runs.error ? (
             <ErrorState error={runs.error} onRetry={() => void runs.refetch()} />
-          ) : runs.isSuccess && runs.items.length === 0 ? (
-            <EmptyState message={t('integrations.noRuns')} />
+          ) : runs.isPending ? (
+            <Spinner size="small" label={t('common.loading')} />
+          ) : runs.items.length === 0 ? (
+            <EmptyState message={t('integrations.noRuns')} icon={<History24Regular />} />
           ) : (
-            <ScrollTable className={styles.tableWrap}>
-              <Table size="small" className={styles.table} aria-label={t('integrations.runs')}>
+            <ScrollTable className={table.inset}>
+              <Table size="small" className={mergeClasses(table.min800, table.roomy)} aria-label={t('integrations.runs')}>
                 <TableHeader>
                   <TableRow>
                     <TableHeaderCell>{t('integrations.columns.job')}</TableHeaderCell>
-                    <TableHeaderCell>{t('integrations.columns.started')}</TableHeaderCell>
+                    <TableHeaderCell className={table.dateTimeCol}>{t('integrations.columns.started')}</TableHeaderCell>
                     <TableHeaderCell>{t('integrations.columns.duration')}</TableHeaderCell>
                     <TableHeaderCell>{t('integrations.columns.status')}</TableHeaderCell>
-                    <TableHeaderCell>{t('integrations.columns.counts')}</TableHeaderCell>
+                    <TableHeaderCell className={table.numberHead}>{t('integrations.columns.counts')}</TableHeaderCell>
                     <TableHeaderCell>{t('integrations.columns.message')}</TableHeaderCell>
                   </TableRow>
                 </TableHeader>
@@ -157,14 +209,14 @@ export function IntegrationsPage() {
                   {runs.items.map((run) => (
                     <TableRow key={run.id}>
                       <TableCell>{jobName(run.job)}</TableCell>
-                      <TableCell className={styles.nowrap}>{formatDateTime(run.startedAt)}</TableCell>
-                      <TableCell className={styles.nowrap}>{duration(run)}</TableCell>
+                      <TableCell className={table.nowrap}>{formatDateTime(run.startedAt)}</TableCell>
+                      <TableCell className={table.nowrap}>{duration(run)}</TableCell>
                       <TableCell>
                         <Badge appearance="tint" color={statusColor[run.status]}>
                           {t(`integrations.status.${run.status}`)}
                         </Badge>
                       </TableCell>
-                      <TableCell className={styles.nowrap}>
+                      <TableCell className={mergeClasses(table.nowrap, table.number)}>
                         {run.read} / {run.changed} / {run.failed}
                       </TableCell>
                       <TableCell className={styles.message}>{run.message}</TableCell>

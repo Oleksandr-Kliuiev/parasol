@@ -13,7 +13,7 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { Delete20Regular } from '@fluentui/react-icons';
+import { ArrowSync16Regular, Box16Regular, BoxMultiple20Regular, Cloud16Regular, Delete20Regular, Money16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
@@ -46,12 +46,14 @@ import {
 } from './types';
 
 const useStyles = makeStyles({
-  sections: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL, maxWidth: '960px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  // Cards of a readable width, two columns where they fit; a field across both stays under 700 px.
+  sections: { display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '720px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px 16px', alignItems: 'start', '& .fui-Dropdown, & .fui-Combobox': { minWidth: 0 } },
   wide: { gridColumn: '1 / -1' },
-  actions: { display: 'flex', gap: tokens.spacingHorizontalS, justifyContent: 'flex-end' },
-  component: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 120px auto', gap: tokens.spacingHorizontalS, alignItems: 'end' },
-  messages: { marginBottom: tokens.spacingVerticalL },
+  actions: { display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' },
+  component: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 120px auto', gap: '8px', alignItems: 'end' },
+  messages: { marginBottom: '16px', ':empty': { marginBottom: 0 } },
+  error: { color: tokens.colorPaletteRedForeground1, fontSize: '12px', lineHeight: '17px' },
 });
 
 export function ProductFormPage() {
@@ -248,7 +250,7 @@ function ProductForm({ id, initial, etag, carried, onReload, onKeepMine }: Produ
         )}
       </div>
       <form className={styles.sections} noValidate onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-        <Panel title={t('catalog.sections.product')}>
+        <Panel title={t('catalog.sections.product')} icon={<Box16Regular />}>
           <div className={styles.grid}>
             {text('sku', { required: true, hint: t('catalog.form.skuHint') })}
             {choice('type', productTypes, 'catalog.types')}
@@ -262,7 +264,7 @@ function ProductForm({ id, initial, etag, carried, onReload, onKeepMine }: Produ
           </div>
         </Panel>
 
-        <Panel title={t('catalog.sections.pricing')}>
+        <Panel title={t('catalog.sections.pricing')} icon={<Money16Regular />}>
           <div className={styles.grid}>
             <Field label={t('catalog.fields.listPrice')} required hint={t('catalog.form.listPriceHint')} validationState={errors.listPrice ? 'error' : 'none'} validationMessage={errors.listPrice}>
               <Input inputMode="decimal" value={values.listPrice} onChange={(_, d) => set('listPrice', d.value)} contentAfter="NOK" />
@@ -284,7 +286,7 @@ function ProductForm({ id, initial, etag, carried, onReload, onKeepMine }: Produ
         </Panel>
 
         {values.type === 'MicrosoftLicense' && (
-          <Panel title={t('catalog.sections.microsoft')}>
+          <Panel title={t('catalog.sections.microsoft')} icon={<Cloud16Regular />}>
             <div className={styles.grid}>
               {text('microsoftOfferId', { hint: t('catalog.form.offerIdHint') })}
               {choice('commitmentTerm', commitmentTerms, 'catalog.terms')}
@@ -293,7 +295,7 @@ function ProductForm({ id, initial, etag, carried, onReload, onKeepMine }: Produ
         )}
 
         {values.type === 'Bundle' && (
-          <Panel title={t('catalog.sections.bundle')}>
+          <Panel title={t('catalog.sections.bundle')} icon={<BoxMultiple20Regular />}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {components.map((row, index) => (
                 <div key={row.key} className={styles.component}>
@@ -320,7 +322,7 @@ function ProductForm({ id, initial, etag, carried, onReload, onKeepMine }: Produ
                   />
                 </div>
               ))}
-              {errors.components && <span style={{ color: tokens.colorPaletteRedForeground1 }}>{errors.components}</span>}
+              {errors.components && <span className={styles.error} role="alert">{errors.components}</span>}
               <div>
                 <Button onClick={() => setComponents((rows) => [...rows, { key: Date.now(), product: null, quantity: '1' }])}>{t('catalog.form.addComponent')}</Button>
               </div>
@@ -328,7 +330,7 @@ function ProductForm({ id, initial, etag, carried, onReload, onKeepMine }: Produ
           </Panel>
         )}
 
-        <Panel title={t('catalog.sections.mapping')}>
+        <Panel title={t('catalog.sections.mapping')} icon={<ArrowSync16Regular />}>
           <div className={styles.grid}>
             {text('ateraWorkType', { hint: t('catalog.form.ateraWorkTypeHint') })}
             {text('revenueAccount', { hint: t('catalog.form.revenueAccountHint') })}

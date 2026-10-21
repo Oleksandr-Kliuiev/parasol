@@ -12,6 +12,9 @@ public sealed record AtlasObservationTaskPreview(Guid CustomerId, string Status,
     IReadOnlyList<AtlasDeviceView>? Devices = null, string? Sha256 = null, SourceTaskRef? Task = null,
     bool CanCreate = false, string? Mode = null);
 public sealed record AtlasObservationTaskOutcome(Guid CustomerId, string Status, SourceTaskRef Task);
+/// <summary>The work some visible observations already have (UX 2026 В3); CRM task facts only, no Atlas read.</summary>
+public sealed record AtlasObservationTaskLink(string ObservationId, SourceTaskRef Task, string? AssigneeName);
+public sealed record AtlasObservationTaskLookup(Guid CustomerId, string Status, IReadOnlyList<AtlasObservationTaskLink> Items);
 
 internal sealed record AtlasObservationSource(string Status, CustomerIdentityView? Identity = null,
     AtlasObservationView? Observation = null, IReadOnlyList<AtlasDeviceView>? Devices = null, string? Mode = null, Guid? EmployeeId = null)

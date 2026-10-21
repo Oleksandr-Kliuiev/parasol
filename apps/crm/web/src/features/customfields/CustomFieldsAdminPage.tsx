@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -22,30 +21,43 @@ import {
   TableHeaderCell,
   TableRow,
   Textarea,
+  makeStyles,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular, Delete20Regular, Edit20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { Add20Regular, Delete16Regular, Edit16Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { blankToNull } from '../../shared/utils/format';
-import { useCatalogStyles } from '../catalog/styles';
+import { useTableCardStyles } from '../admin/tableCard';
 import { useDialogStyles } from '../contracts/dialogStyles';
 import { useCustomFieldActions, useCustomFieldDefinitions } from './api';
 import { customFieldEntities, customFieldTypes, type CustomFieldDefinition, type CustomFieldEntity, type CustomFieldType } from './types';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 
+const useStyles = makeStyles({
+  actions: { width: '200px' },
+  // Edit, switch and delete in fixed slots, so the icons line up from row to row whatever the switch says.
+  rowActions: { display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr) 32px', alignItems: 'center', justifyItems: 'start', gap: '4px' },
+  muted: { color: h.muted },
+});
+
 /** Fields a company adds to its records without a code change (FR-ADM-04). */
 export function CustomFieldsAdminPage() {
-  const catalog = useCatalogStyles();
+  const styles = useStyles();
+  const table = useTableCardStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const { data = [], error, isPending, refetch } = useCustomFieldDefinitions(undefined, true);
   const actions = useCustomFieldActions();
   const [editing, setEditing] = useState<CustomFieldDefinition | 'new' | null>(null);
+  const shown = useKeptWhileClosing(editing);
   const restoreFocusTarget = useRestoreFocusTarget();
 
   const run = async (action: () => Promise<unknown>, success: string) => {
@@ -72,8 +84,8 @@ export function CustomFieldsAdminPage() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('customFields.title')}>
+        <ScrollTable>
+          <Table className={table.min800} aria-label={t('customFields.title')}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>{t('customFields.fields.label')}</TableHeaderCell>
@@ -81,41 +93,47 @@ export function CustomFieldsAdminPage() {
                 <TableHeaderCell>{t('customFields.fields.type')}</TableHeaderCell>
                 <TableHeaderCell>{t('customFields.fields.required')}</TableHeaderCell>
                 <TableHeaderCell>{t('customFields.fields.status')}</TableHeaderCell>
-                <TableHeaderCell />
+                <TableHeaderCell className={styles.actions} />
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((field) => (
                 <TableRow key={field.id}>
                   <TableCell>
-                    <span className={catalog.name}>{field.label}</span>
-                    <div className={catalog.sku}>{field.key}</div>
+                    <span className={table.name}>{field.label}</span>
+                    <span className={table.code}>{field.key}</span>
                   </TableCell>
-                  <TableCell>{t(`customFields.entities.${field.entity}`)}</TableCell>
+                  <TableCell>
+                    <Badge appearance="outline">{t(`customFields.entities.${field.entity}`)}</Badge>
+                  </TableCell>
                   <TableCell>
                     {t(`customFields.types.${field.type}`)}
-                    {field.type === 'Select' && <div className={catalog.sku}>{field.options.join(', ')}</div>}
+                    {field.type === 'Select' && <span className={table.sub}>{field.options.join(', ')}</span>}
                   </TableCell>
-                  <TableCell>{field.required ? t('common.yes') : t('common.no')}</TableCell>
+                  <TableCell className={field.required ? undefined : styles.muted}>{field.required ? t('common.yes') : t('common.no')}</TableCell>
                   <TableCell>
-                    <Badge appearance="outline" color={field.isActive ? 'success' : 'subtle'}>
+                    <Badge appearance="tint" color={field.isActive ? 'success' : 'subtle'}>
                       {field.isActive ? t('customFields.active') : t('customFields.inactive')}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Button icon={<Edit20Regular />} appearance="subtle" aria-label={t('common.edit')} onClick={() => setEditing(field)} />
-                    <Button
-                      appearance="subtle"
-                      onClick={() => void run(() => actions.setActive.mutateAsync({ id: field.id, active: !field.isActive }), t('customFields.saved'))}
-                    >
-                      {field.isActive ? t('customFields.deactivate') : t('customFields.activate')}
-                    </Button>
-                    <Button
-                      icon={<Delete20Regular />}
-                      appearance="subtle"
-                      aria-label={t('common.delete')}
-                      onClick={() => void run(() => actions.remove.mutateAsync(field.id), t('customFields.deleted'))}
-                    />
+                  <TableCell className={styles.actions}>
+                    <span className={styles.rowActions}>
+                      <Button {...restoreFocusTarget} size="small" icon={<Edit16Regular />} appearance="subtle" aria-label={t('common.edit')} onClick={() => setEditing(field)} />
+                      <Button
+                        size="small"
+                        appearance="subtle"
+                        onClick={() => void run(() => actions.setActive.mutateAsync({ id: field.id, active: !field.isActive }), t('customFields.saved'))}
+                      >
+                        {field.isActive ? t('customFields.deactivate') : t('customFields.activate')}
+                      </Button>
+                      <Button
+                        size="small"
+                        icon={<Delete16Regular />}
+                        appearance="subtle"
+                        aria-label={t('common.delete')}
+                        onClick={() => void run(() => actions.remove.mutateAsync(field.id), t('customFields.deleted'))}
+                      />
+                    </span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -127,7 +145,7 @@ export function CustomFieldsAdminPage() {
 
       <Dialog open={editing !== null} onOpenChange={(_, d) => !d.open && setEditing(null)}>
         <DialogSurface>
-          {editing !== null && <FieldForm field={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
+          {shown !== null && <FieldForm field={shown === 'new' ? undefined : shown} onClose={() => setEditing(null)} />}
         </DialogSurface>
       </Dialog>
     </>

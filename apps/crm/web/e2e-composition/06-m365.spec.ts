@@ -30,10 +30,16 @@ test('Microsoft 365 metadata crosses the actual scoped bridge without exposing d
     await gaps.focus(); await admin.page.keyboard.press('Enter'); await expect(gaps.locator('..')).toHaveAttribute('open', '');
     await gaps.press('Enter'); await expect(gaps.locator('..')).not.toHaveAttribute('open', '');
     await admin.page.setViewportSize({ width: 390, height: 844 });
+    // The app's theme switch (data-theme on <html>) and Fluent's surface token both follow the scheme. The palette is the
+    // visual system's (app/theme.ts), so the check compares the two modes instead of naming Fluent's default colours.
+    const theme = () => panel.evaluate(el =>
+      [document.documentElement.dataset.theme ?? '', getComputedStyle(el).getPropertyValue('--colorNeutralBackground1').trim()]);
+    let lightSurface = '';
     for (const colorScheme of ['light', 'dark'] as const) {
       await admin.page.emulateMedia({ colorScheme });
-      await expect.poll(() => panel.evaluate(el => getComputedStyle(el).getPropertyValue('--colorNeutralBackground1').trim()))
-        .toBe(colorScheme === 'dark' ? '#292929' : '#ffffff');
+      await expect.poll(async () => { const [mode, surface] = await theme(); return mode === colorScheme && surface !== '' && surface !== lightSurface; })
+        .toBe(true);
+      if (colorScheme === 'light') lightSurface = (await theme())[1]!;
       await admin.page.waitForLoadState('networkidle');
       await admin.page.evaluate(async () => { await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity)
         .map(a => a.finished.catch(() => undefined))); });

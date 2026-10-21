@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -22,12 +21,12 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
-  Textarea,
   makeStyles,
-  tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular, ArrowUpload20Regular, Copy20Regular, Delete20Regular, Edit20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { Add20Regular, ArrowUpload20Regular, Copy20Regular, Delete20Regular, Edit20Regular, Box16Regular, Tag16Regular, Tag24Regular } from '@fluentui/react-icons';
+import { RecordCell } from '../organizations/RecordCell';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
@@ -35,25 +34,32 @@ import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { Panel } from '../../shared/components/Panel';
+import { MetaLine } from '../organizations/RecordCell';
+import { useRecordStyles } from '../organizations/recordStyles';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatMoney, formatNumber, parseDecimal } from '../../shared/utils/format';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { usePriceList, usePriceListActions } from './api';
-import { PriceListDialog, PriceListStatusBadge } from './CatalogPage';
+import { PriceListDialog, PriceListStatusBadge } from './CatalogDialogs';
 import { useCatalogStyles } from './styles';
+import { useDialogStyles } from '../contracts/dialogStyles';
+import { PriceSheetForm } from './PriceSheetForm';
 import { ProductPicker } from './ProductPicker';
-import type { PriceList, PriceListItem, PriceSheetImportResult, ProductListItem } from './types';
+import type { PriceList, PriceListItem, ProductListItem } from './types';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  toolbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
-  rowActions: { display: 'flex', gap: tokens.spacingHorizontalXS, justifyContent: 'flex-end' },
+  productLink: { fontWeight: 700, color: 'inherit' },
+  meta: { fontSize: '13px', lineHeight: '18px' },
 });
 
 export function PriceListPage() {
   const styles = useStyles();
   const catalog = useCatalogStyles();
+  const record = useRecordStyles();
   const { t } = useTranslation();
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -65,6 +71,7 @@ export function PriceListPage() {
   const [editing, setEditing] = useState(false);
   const [copying, setCopying] = useState(false);
   const [item, setItem] = useState<PriceListItem | 'new' | null>(null);
+  const shownItem = useKeptWhileClosing(item);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [importing, setImporting] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -92,10 +99,15 @@ export function PriceListPage() {
         meta={
           <>
             <PriceListStatusBadge status={list.status} />
-            <Text>{t('catalog.fields.category')}: {list.customerCategory}</Text>
-            <Text className="tabular">
-              {formatDate(list.validFrom)} – {list.validTo ? formatDate(list.validTo) : t('catalog.openEnded')}
-            </Text>
+            <MetaLine
+              className={styles.meta}
+              parts={[
+                <span>{t('catalog.priceLists.forCategory', { category: list.customerCategory })}</span>,
+                <span className="tabular">
+                  {list.validTo ? `${formatDate(list.validFrom)} – ${formatDate(list.validTo)}` : t('catalog.from', { date: formatDate(list.validFrom) })}
+                </span>,
+              ]}
+            />
           </>
         }
         actions={
@@ -104,21 +116,22 @@ export function PriceListPage() {
               <Button {...restoreFocusTarget} icon={<Edit20Regular />} onClick={() => setEditing(true)}>
                 {t('common.edit')}
               </Button>
-              {list.status === 'Draft' ? (
-                <Button appearance="primary" onClick={() => void run(() => actions.setActive.mutateAsync(true), t('catalog.priceLists.activated'))}>
-                  {t('catalog.priceLists.activate')}
-                </Button>
-              ) : (
+              <Button {...restoreFocusTarget} icon={<Copy20Regular />} onClick={() => setCopying(true)}>
+                {t('catalog.priceLists.copy')}
+              </Button>
+              {list.status !== 'Draft' && (
                 <Button onClick={() => void run(() => actions.setActive.mutateAsync(false), t('catalog.priceLists.deactivated'))}>
                   {t('catalog.priceLists.deactivate')}
                 </Button>
               )}
-              <Button {...restoreFocusTarget} icon={<Copy20Regular />} onClick={() => setCopying(true)}>
-                {t('catalog.priceLists.copy')}
-              </Button>
               {list.status === 'Draft' && (
                 <Button {...restoreFocusTarget} appearance="subtle" icon={<Delete20Regular />} onClick={() => setConfirmDelete(true)}>
                   {t('common.delete')}
+                </Button>
+              )}
+              {list.status === 'Draft' && (
+                <Button appearance="primary" onClick={() => void run(() => actions.setActive.mutateAsync(true), t('catalog.priceLists.activated'))}>
+                  {t('catalog.priceLists.activate')}
                 </Button>
               )}
             </>
@@ -126,74 +139,87 @@ export function PriceListPage() {
         }
       />
 
-      <div className={styles.toolbar}>
-        <Text className={catalog.muted}>{t('catalog.priceLists.itemsExplainer')}</Text>
-        <div className={styles.rowActions}>
-          {/* FR-CAT-03: partner prices are cost data, and only a draft list may be re-priced. */}
-          {canSeeCost && list.status === 'Draft' && (
-            <Button {...restoreFocusTarget} icon={<ArrowUpload20Regular />} onClick={() => setImporting(true)}>
-              {t('catalog.priceSheet.import')}
-            </Button>
-          )}
-          {canWrite && (
-            <Button {...restoreFocusTarget} icon={<Add20Regular />} onClick={() => setItem('new')}>
-              {t('catalog.priceLists.addPrice')}
-            </Button>
-          )}
-        </div>
-      </div>
-      <ScrollTable className={catalog.tableWrap}>
-        <Table className={catalog.table} aria-label={t('catalog.priceLists.items')}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{t('catalog.fields.product')}</TableHeaderCell>
-              <TableHeaderCell className={catalog.number}>{t('catalog.fields.listPrice')}</TableHeaderCell>
-              <TableHeaderCell className={catalog.number}>{t('catalog.fields.unitPrice')}</TableHeaderCell>
-              {canSeeCost && <TableHeaderCell className={catalog.number}>{t('catalog.fields.unitCost')}</TableHeaderCell>}
-              {canSeeCost && <TableHeaderCell className={catalog.number}>{t('catalog.fields.margin')}</TableHeaderCell>}
-              {canWrite && <TableHeaderCell />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.items.map((i) => (
-              <TableRow key={i.productId}>
-                <TableCell>
-                  <AppLink to={`/catalog/products/${i.productId}`}>{i.productName}</AppLink>
-                  <div className={catalog.sku}>{i.sku}</div>
-                </TableCell>
-                <TableCell className={catalog.number}>{formatMoney(i.listPrice, list.currency)}</TableCell>
-                <TableCell className={catalog.number}>
-                  {formatMoney(i.unitPrice, list.currency)} <span className={catalog.muted}>/ {t(`catalog.units.${i.unit}`)}</span>
-                  {canSeeCost && i.partnerPrice != null && (
-                    <div className={catalog.muted}>
-                      {t('catalog.priceLists.fromPartner', { price: formatMoney(i.partnerPrice, i.partnerCurrency ?? 'USD'), rate: formatNumber(i.exchangeRate, 4) })}
-                    </div>
-                  )}
-                </TableCell>
-                {canSeeCost && <TableCell className={catalog.number}>{formatMoney(i.unitCost, list.currency)}</TableCell>}
-                {canSeeCost && <TableCell className={catalog.number}>{i.marginPct != null ? `${formatNumber(i.marginPct, 1)} %` : ''}</TableCell>}
-                {canWrite && (
-                  <TableCell>
-                    <span className={styles.rowActions}>
-                      <Button {...restoreFocusTarget} size="small" appearance="subtle" aria-label={t('catalog.priceLists.editPriceNamed', { name: i.productName })} onClick={() => setItem(i)}>
-                        {t('common.edit')}
-                      </Button>
-                      <Button
-                        size="small"
-                        appearance="subtle"
-                        icon={<Delete20Regular />}
-                        aria-label={t('catalog.priceLists.removePriceNamed', { name: i.productName })}
-                        onClick={() => void run(() => actions.removeItem.mutateAsync(i.productId), t('catalog.priceLists.priceRemoved'))}
+      <Panel
+        title={t('catalog.priceLists.items')}
+        icon={<Tag16Regular />}
+        actions={
+          <>
+            {/* FR-CAT-03: partner prices are cost data, and only a draft list may be re-priced. */}
+            {canSeeCost && list.status === 'Draft' && (
+              <Button {...restoreFocusTarget} size="small" icon={<ArrowUpload20Regular />} onClick={() => setImporting(true)}>
+                {t('catalog.priceSheet.import')}
+              </Button>
+            )}
+            {canWrite && (
+              <Button {...restoreFocusTarget} size="small" icon={<Add20Regular />} onClick={() => setItem('new')}>
+                {t('catalog.priceLists.addPrice')}
+              </Button>
+            )}
+          </>
+        }
+      >
+        <Text as="p" className={catalog.explainer}>{t('catalog.priceLists.itemsExplainer')}</Text>
+        {list.items.length === 0 ? (
+          <EmptyState icon={<Tag24Regular />} message={t('catalog.priceLists.noItems')} />
+        ) : (
+          <ScrollTable className={record.flatTable}>
+            <Table className={catalog.table} style={{ minWidth: 920 }} aria-label={t('catalog.priceLists.items')}>
+              <TableHeader>
+                <TableRow>
+                  {/* Content widths: every cell adds 12 px of padding on each side; the product takes the rest. */}
+                  <TableHeaderCell>{t('catalog.fields.product')}</TableHeaderCell>
+                  <TableHeaderCell className={catalog.number} style={{ width: 116 }}>{t('catalog.fields.listPrice')}</TableHeaderCell>
+                  <TableHeaderCell className={catalog.number} style={{ width: 166 }}>{t('catalog.fields.unitPrice')}</TableHeaderCell>
+                  {canSeeCost && <TableHeaderCell className={catalog.number} style={{ width: 106 }}>{t('catalog.fields.unitCost')}</TableHeaderCell>}
+                  {canSeeCost && <TableHeaderCell className={catalog.number} style={{ width: 76 }}>{t('catalog.fields.margin')}</TableHeaderCell>}
+                  {canWrite && <TableHeaderCell style={{ width: 132 }} />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {list.items.map((i) => (
+                  <TableRow key={i.productId}>
+                    <TableCell>
+                      <RecordCell
+                        icon={<Box16Regular />}
+                        tone="spruce"
+                        name={<AppLink to={`/catalog/products/${i.productId}`} className={styles.productLink}>{i.productName}</AppLink>}
+                        meta={[<span className={catalog.sku}>{i.sku}</span>]}
                       />
-                    </span>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {list.items.length === 0 && <EmptyState message={t('catalog.priceLists.noItems')} />}
-      </ScrollTable>
+                    </TableCell>
+                    <TableCell className={catalog.number}>{formatMoney(i.listPrice, list.currency)}</TableCell>
+                    <TableCell className={catalog.number}>
+                      {formatMoney(i.unitPrice, list.currency)} <span className={catalog.muted}>/ {t(`catalog.units.${i.unit}`)}</span>
+                      {canSeeCost && i.partnerPrice != null && (
+                        <div className={catalog.muted}>
+                          {t('catalog.priceLists.fromPartner', { price: formatMoney(i.partnerPrice, i.partnerCurrency ?? 'USD'), rate: formatNumber(i.exchangeRate, 4) })}
+                        </div>
+                      )}
+                    </TableCell>
+                    {canSeeCost && <TableCell className={catalog.number}>{formatMoney(i.unitCost, list.currency)}</TableCell>}
+                    {canSeeCost && <TableCell className={catalog.number}>{i.marginPct != null ? `${formatNumber(i.marginPct, 1)} %` : '—'}</TableCell>}
+                    {canWrite && (
+                      <TableCell>
+                        <span className={catalog.rowActions}>
+                          <Button {...restoreFocusTarget} size="small" appearance="subtle" aria-label={t('catalog.priceLists.editPriceNamed', { name: i.productName })} onClick={() => setItem(i)}>
+                            {t('common.edit')}
+                          </Button>
+                          <Button
+                            size="small"
+                            appearance="subtle"
+                            icon={<Delete20Regular />}
+                            aria-label={t('catalog.priceLists.removePriceNamed', { name: i.productName })}
+                            onClick={() => void run(() => actions.removeItem.mutateAsync(i.productId), t('catalog.priceLists.priceRemoved'))}
+                          />
+                        </span>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollTable>
+        )}
+      </Panel>
 
       <PriceListDialog
         open={editing}
@@ -201,13 +227,13 @@ export function PriceListPage() {
         existing={{ id: list.id, name: list.name, customerCategory: list.customerCategory, validFrom: list.validFrom, validTo: list.validTo, currency: list.currency, etag: data.etag }}
       />
       <Dialog open={copying} onOpenChange={(_, d) => !d.open && setCopying(false)}>
-        <DialogSurface>{copying && <CopyForm list={list} onClose={() => setCopying(false)} />}</DialogSurface>
+        <DialogSurface><CopyForm list={list} onClose={() => setCopying(false)} /></DialogSurface>
       </Dialog>
       <Dialog open={item !== null} onOpenChange={(_, d) => !d.open && setItem(null)}>
-        <DialogSurface>{item !== null && <PriceItemForm list={list} existing={item === 'new' ? null : item} onClose={() => setItem(null)} />}</DialogSurface>
+        <DialogSurface>{shownItem !== null && <PriceItemForm list={list} existing={shownItem === 'new' ? null : shownItem} onClose={() => setItem(null)} />}</DialogSurface>
       </Dialog>
       <Dialog open={importing} onOpenChange={(_, d) => !d.open && setImporting(false)}>
-        <DialogSurface>{importing && <PriceSheetForm list={list} onClose={() => setImporting(false)} />}</DialogSurface>
+        <DialogSurface><PriceSheetForm list={list} onClose={() => setImporting(false)} /></DialogSurface>
       </Dialog>
       <Dialog open={confirmDelete} onOpenChange={(_, d) => setConfirmDelete(d.open)}>
         <DialogSurface>
@@ -237,6 +263,7 @@ export function PriceListPage() {
 
 function CopyForm({ list, onClose }: { list: PriceList; onClose: () => void }) {
   const catalog = useCatalogStyles();
+  const dialog = useDialogStyles();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const notify = useNotify();
@@ -265,7 +292,7 @@ function CopyForm({ list, onClose }: { list: PriceList; onClose: () => void }) {
         <DialogTitle>{t('catalog.priceLists.copyTitle', { name: list.name })}</DialogTitle>
         <DialogContent>
           {actions.copy.error && (
-            <MessageBar intent="error" style={{ marginBottom: 12 }}>
+            <MessageBar intent="error" className={dialog.error}>
               <MessageBarBody>{errorMessage(actions.copy.error, t)}</MessageBarBody>
             </MessageBar>
           )}
@@ -297,6 +324,7 @@ function CopyForm({ list, onClose }: { list: PriceList; onClose: () => void }) {
 
 function PriceItemForm({ list, existing, onClose }: { list: PriceList; existing: PriceListItem | null; onClose: () => void }) {
   const catalog = useCatalogStyles();
+  const dialog = useDialogStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const actions = usePriceListActions(list.id);
@@ -341,7 +369,7 @@ function PriceItemForm({ list, existing, onClose }: { list: PriceList; existing:
         <DialogTitle>{existing ? t('catalog.priceLists.editPriceNamed', { name: existing.productName }) : t('catalog.priceLists.addPrice')}</DialogTitle>
         <DialogContent>
           {actions.setItem.error && (
-            <MessageBar intent="error" style={{ marginBottom: 12 }}>
+            <MessageBar intent="error" className={dialog.error}>
               <MessageBarBody>{errorMessage(actions.setItem.error, t)}</MessageBarBody>
             </MessageBar>
           )}
@@ -389,116 +417,5 @@ function PriceItemForm({ list, existing, onClose }: { list: PriceList; existing:
         </DialogActions>
       </DialogBody>
     </form>
-  );
-}
-
-/** Applies Microsoft's NCE price sheet to a draft price list; the preview shows the new prices before anything is written. */
-function PriceSheetForm({ list, onClose }: { list: PriceList; onClose: () => void }) {
-  const catalog = useCatalogStyles();
-  const { t } = useTranslation();
-  const notify = useNotify();
-  const actions = usePriceListActions(list.id);
-  const [csv, setCsv] = useState('');
-  const [exchangeRate, setExchangeRate] = useState('');
-  const [markup, setMarkup] = useState('');
-  const [preview, setPreview] = useState<PriceSheetImportResult | null>(null);
-  const rate = parseDecimal(exchangeRate);
-  const invalid = !csv.trim() || rate === null || rate <= 0;
-
-  const run = async (dryRun: boolean) => {
-    if (invalid) return;
-    try {
-      const result = await actions.importPriceSheet.mutateAsync({ csv, exchangeRate: rate, markupPct: parseDecimal(markup), dryRun });
-      if (dryRun) {
-        setPreview(result);
-      } else {
-        notify(t('catalog.priceSheet.imported', { changed: result.changed, matched: result.matched }));
-        onClose();
-      }
-    } catch (e) {
-      notify(t('catalog.priceSheet.failed'), 'error', errorMessage(e, t));
-    }
-  };
-
-  return (
-    <DialogBody>
-      <DialogTitle>{t('catalog.priceSheet.title', { name: list.name })}</DialogTitle>
-      <DialogContent>
-        <p style={{ marginTop: 0 }}>{t('catalog.priceSheet.body')}</p>
-        <div className={catalog.grid}>
-          <Field label={t('catalog.fields.exchangeRate')} required hint={t('catalog.priceSheet.rateHint')}>
-            <Input inputMode="decimal" value={exchangeRate} onChange={(_, d) => { setExchangeRate(d.value); setPreview(null); }} />
-          </Field>
-          <Field label={t('catalog.priceSheet.markup')} hint={t('catalog.priceSheet.markupHint')}>
-            <Input inputMode="decimal" value={markup} onChange={(_, d) => { setMarkup(d.value); setPreview(null); }} contentAfter="%" />
-          </Field>
-          <Field label={t('licenses.importFile')} className={catalog.wide}>
-            <input
-              type="file"
-              accept=".csv,text/csv,text/plain"
-              aria-label={t('licenses.importFile')}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void file.text().then((text) => { setCsv(text); setPreview(null); });
-              }}
-            />
-          </Field>
-          <Field label={t('licenses.importPaste')} hint={t('catalog.priceSheet.pasteHint')} className={catalog.wide}>
-            <Textarea value={csv} onChange={(_, d) => { setCsv(d.value); setPreview(null); }} resize="vertical" rows={5} />
-          </Field>
-        </div>
-        {preview && (
-          <>
-            <MessageBar intent={preview.withoutProduct > 0 ? 'warning' : 'info'} style={{ marginTop: 12 }}>
-              <MessageBarBody>
-                {t('catalog.priceSheet.previewResult', {
-                  matched: preview.matched,
-                  changed: preview.changed,
-                  withoutProduct: preview.withoutProduct,
-                  markup: formatNumber(preview.markupPct, 1),
-                })}
-              </MessageBarBody>
-            </MessageBar>
-            <Table className={catalog.table} aria-label={t('catalog.priceSheet.preview')} style={{ marginTop: 12 }}>
-              <TableHeader>
-                <TableRow>
-                  <TableHeaderCell>{t('catalog.fields.product')}</TableHeaderCell>
-                  <TableHeaderCell className={catalog.number}>{t('catalog.fields.partnerPrice')}</TableHeaderCell>
-                  <TableHeaderCell className={catalog.number}>{t('catalog.priceSheet.newPrice')}</TableHeaderCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {preview.rows.slice(0, 10).map((row) => (
-                  <TableRow key={row.productId}>
-                    <TableCell>
-                      <span className={catalog.name}>{row.productName}</span>
-                      <div className={catalog.sku}>{row.offerId}</div>
-                    </TableCell>
-                    <TableCell className={catalog.number}>{formatMoney(row.partnerPrice, row.partnerCurrency)}</TableCell>
-                    <TableCell className={catalog.number}>
-                      {formatMoney(row.unitPrice, list.currency)}
-                      {row.previousUnitPrice !== null && <div className={catalog.sku}>{formatMoney(row.previousUnitPrice, list.currency)}</div>}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {/* The answer carries a sample of the rows (changed first); `matched` counts every product the sheet prices (DEV-12). */}
-            {preview.matched > Math.min(preview.rows.length, 10) && (
-              <Text className={catalog.muted}>{t('catalog.priceSheet.more', { rest: preview.matched - Math.min(preview.rows.length, 10) })}</Text>
-            )}
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('common.cancel')}</Button>
-        <Button onClick={() => void run(true)} disabled={invalid || actions.importPriceSheet.isPending}>
-          {t('licenses.preview')}
-        </Button>
-        <Button appearance="primary" onClick={() => void run(false)} disabled={invalid || actions.importPriceSheet.isPending}>
-          {t('catalog.priceSheet.apply')}
-        </Button>
-      </DialogActions>
-    </DialogBody>
   );
 }

@@ -248,4 +248,56 @@ public sealed class AtlasObservationTaskApiTests(CrmWebFactory factory)
         }, default);
         stale.Error!.Code.ShouldBe("PARASOL_TASK_IDENTITY_CHANGED"); called.ShouldBeFalse();
     }
+
+    private static string LookupPath(Guid customer, string ids) => $"/api/v1/parasol/customers/{customer}/observation-tasks?ids={ids}";
+
+    [Fact]
+    public async Task A_visible_page_reads_the_tasks_its_observations_already_have_for_this_customer_only_and_without_an_Atlas_read()
+    {
+        var (customer, sourceClient, employee) = await LinkedCustomer(); using var atlas = WireMockServer.Start(); Answer(atlas, sourceClient);
+        await using var host = Host(atlas, employee); using var client = Client(host);
+        var preview = await Preview(client, customer);
+        var created = await client.PostAsJsonAsync(PathFor(customer, "task"), new AtlasObservationTaskRequest(employee, DateTimeOffset.UtcNow.AddDays(1), preview.Sha256!));
+        var task = (await created.Content.ReadFromJsonAsync<AtlasObservationTaskOutcome>(Json))!.Task;
+        var atlasReads = atlas.LogEntries.Count;
+        var response = await client.GetAsync(LookupPath(customer, $"{ObservationId},observation-without-task"));
+        response.StatusCode.ShouldBe(HttpStatusCode.OK); response.Headers.CacheControl!.NoStore.ShouldBeTrue();
+        var lookup = (await response.Content.ReadFromJsonAsync<AtlasObservationTaskLookup>(Json))!;
+        lookup.Status.ShouldBe("READY");
+        var item = lookup.Items.ShouldHaveSingleItem();
+        item.ObservationId.ShouldBe(ObservationId); item.Task.ActivityId.ShouldBe(task.ActivityId); item.Task.AssigneeId.ShouldBe(employee);
+        item.Task.Status.ShouldBe(Crm.Activities.Contracts.ActivityStatus.Open); item.Task.DueAt.ShouldBe(task.DueAt);
+        item.AssigneeName.ShouldNotBeNullOrWhiteSpace();
+        atlas.LogEntries.Count.ShouldBe(atlasReads, "The lookup answers from CRM tasks; it never reads Atlas.");
+        var body = await response.Content.ReadAsStringAsync();
+        foreach (var excluded in new[] { Token, "workspaceId", "clientId", sourceClient, "confidential" }) body.ShouldNotContain(excluded);
+        // Another customer's mapping never finds this task, even for the same observation identifier.
+        var (other, _, _) = await LinkedCustomer();
+        (await client.GetFromJsonAsync<AtlasObservationTaskLookup>(LookupPath(other, ObservationId), Json))!.Items.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_unmapped_customer_says_so_and_the_lookup_needs_both_Atlas_and_activity_read_access()
+    {
+        var response = await Admin.PostAsJsonAsync("/api/v1/customers/organizations", TestData.Organization($"Unmapped {Guid.NewGuid():N} AS"));
+        var customer = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var lookup = await Admin.GetFromJsonAsync<AtlasObservationTaskLookup>(LookupPath(customer, ObservationId), Json);
+        lookup!.Status.ShouldBe("NOT_LINKED"); lookup.Items.ShouldBeEmpty();
+        using var finance = factory.ClientAs(CrmRoles.Finance, _key + "-finance");
+        (await finance.GetAsync(LookupPath(customer, ObservationId))).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("a/b")]
+    [InlineData("a%3Fother=1")]
+    [InlineData("many")]
+    public async Task The_lookup_takes_only_a_page_of_Atlas_identifiers(string ids)
+    {
+        var (customer, _, _) = await LinkedCustomer();
+        var list = ids == "many" ? string.Join(',', Enumerable.Range(0, 51).Select(i => $"observation-{i}")) : ids;
+        var response = await Admin.GetAsync(LookupPath(customer, list));
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).ShouldContain("PARASOL_TASK_LOOKUP_INVALID");
+    }
 }

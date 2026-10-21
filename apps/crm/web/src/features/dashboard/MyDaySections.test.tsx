@@ -30,7 +30,7 @@ describe('direct access to My day sections', () => {
     [permissions, ['My tasks', 'Technical attention · Atlas']],
   ])('offers only mounted sections for %j', async (allowed, names) => {
     setup(allowed);
-    await screen.findByRole('heading', { name: 'Hello, Kari' });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Kari$/ });
     const nav = screen.queryByRole('navigation', { name: 'My day sections' });
     if (!names.length) expect(nav).not.toBeInTheDocument();
     else expect(within(nav!).getAllByRole('link').map(link => link.textContent)).toEqual(names);
@@ -51,7 +51,7 @@ describe('direct access to My day sections', () => {
 
   it('does not move focus for an unknown or unavailable section', async () => {
     const { router } = setup(['customers.read'], '/?section=tasks');
-    await screen.findByRole('heading', { name: 'Hello, Kari' });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Kari$/ });
     expect(scroll).not.toHaveBeenCalled();
     await act(() => router.navigate('/?section=unknown#my-day-tasks'));
     expect(scroll).not.toHaveBeenCalled();
@@ -75,5 +75,17 @@ describe('direct access to My day sections', () => {
     await act(() => router.navigate('/#main'));
     expect(screen.getByRole('navigation', { name: 'My day sections' })).toHaveFocus();
     expect(fetch).toHaveBeenCalledTimes(reads);
+  });
+});
+
+describe('the urgent Atlas tile', () => {
+  it.each([['NOT_CONFIGURED', 'Atlas not connected'], ['UNAVAILABLE', 'Could not be read']] as const)('says %s instead of waiting for figures', async (status, foot) => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/my-day/atlas-attention')
+      ? { status, checkedAt: '2026-10-16T10:01:01Z', coverage: null, totals: null, customers: null } : { items: [], nextCursor: null, totalCount: 0 })));
+    renderRoutes([page(<MyDayPage />)], '/', testUser(permissions));
+    const tile = await screen.findByRole('link', { name: /^Urgent in Atlas/ });
+    expect(await within(tile).findByText(foot)).toBeVisible();
+    expect(within(tile).getByText('—')).toBeVisible();
+    expect(within(tile).queryByText('Not read yet')).not.toBeInTheDocument();
   });
 });

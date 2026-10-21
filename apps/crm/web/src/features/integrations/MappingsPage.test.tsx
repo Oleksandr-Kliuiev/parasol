@@ -44,7 +44,10 @@ describe('MappingsPage', () => {
 
     const row = (await screen.findByText('Havbris AS')).closest('tr')!;
     expect(within(row).getByText('923 609 016')).toBeInTheDocument();
-    expect(screen.getByText('2 of 3 not linked')).toBeInTheDocument();
+    // The link states are chips with their counts: 2 of the 3 records are not linked.
+    expect(screen.getByRole('button', { name: 'Not linked, 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Linked, 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All, 3' })).toBeInTheDocument();
     expect(fetch.mock.calls.some(([url]) => String(url).startsWith('/api/v1/integrations/records?system=poweroffice&type=Customer&state=Unlinked'))).toBe(true);
 
     await user.click(within(row).getByRole('button', { name: /Link to Havbris · name/ }));

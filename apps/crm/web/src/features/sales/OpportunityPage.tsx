@@ -11,10 +11,10 @@ import {
   Spinner,
   Text,
   makeStyles,
-  tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Edit20Regular, MoreHorizontal20Regular } from '@fluentui/react-icons';
+import { Edit20Regular, Money16Regular, MoreHorizontal20Regular, Target16Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import { CustomFieldsPanel } from '../customfields/CustomFieldsPanel';
 import { ApiError } from '../../api/client';
@@ -30,14 +30,17 @@ import { ActivityTimeline } from '../activities/ActivityTimeline';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { NextStep } from './NextStep';
 import { QuotesPanel } from '../quotes/QuotesPanel';
+import { useQuotes } from '../quotes/api';
 import { useOpportunity, useOpportunityActions, useStages } from './api';
 import { LoseDialog, OpportunityDialog } from './OpportunityDialog';
 
 const useStyles = makeStyles({
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  forecast: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: '16px', alignItems: 'start' },
+  stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  // The weighted forecast as the reference's "estimated payment" block: a soft ember well, the figure in display type.
+  well: { display: 'grid', gap: '4px', marginBottom: '14px', paddingTop: '14px', paddingBottom: '14px', paddingLeft: '16px', paddingRight: '16px', borderRadius: '14px', backgroundColor: h.emberSoft },
+  forecast: { fontFamily: h.display, fontSize: 'clamp(26px, 2.4vw, 34px)', lineHeight: 1.1, fontWeight: 600, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' },
+  muted: { color: h.muted, fontSize: '13px' },
 });
 
 export function OpportunityPage() {
@@ -48,6 +51,9 @@ export function OpportunityPage() {
   const canWrite = useCan(Permissions.salesWrite);
   const canSeeMoney = useCan(Permissions.financeRead);
   const { data: opportunity, error, isPending, refetch } = useOpportunity(id);
+  // The deal's quotes, the same read its quotes panel makes (one cached query): an accepted one has drafted a contract.
+  const quotes = useQuotes({ opportunityId: id }, Boolean(id));
+  const acceptedQuote = quotes.items.find((quote) => quote.status === 'Accepted');
   const stages = useStages();
   const actions = useOpportunityActions();
   const [editing, setEditing] = useState(false);
@@ -106,11 +112,6 @@ export function OpportunityPage() {
                   <Button {...restoreFocusTarget} icon={<Edit20Regular />} onClick={() => setEditing(true)}>
                     {t('common.edit')}
                   </Button>
-                  {wonStage && (
-                    <Button appearance="primary" onClick={() => void move(wonStage.id, t('opportunities.won'))}>
-                      {t('opportunities.markWon')}
-                    </Button>
-                  )}
                   <Menu>
                     <MenuTrigger disableButtonEnhancement>
                       <Button {...restoreFocusTarget} icon={<MoreHorizontal20Regular />} aria-label={t('opportunities.more')} />
@@ -126,9 +127,27 @@ export function OpportunityPage() {
                       </MenuList>
                     </MenuPopover>
                   </Menu>
+                  {wonStage && (
+                    <Button appearance="primary" onClick={() => void move(wonStage.id, t('opportunities.won'))}>
+                      {t('opportunities.markWon')}
+                    </Button>
+                  )}
                 </>
               ) : (
-                <Button onClick={() => void reopen()}>{t('opportunities.reopen')}</Button>
+                <>
+                  <Button onClick={() => void reopen()}>{t('opportunities.reopen')}</Button>
+                  {/* An accepted quote has already drafted its contract (QuoteAcceptedHandler): that draft is the next step, not a
+                      blank contract that would duplicate it. */}
+                  {opportunity.status === 'Won' && (acceptedQuote ? (
+                    <Button as="a" href={`/contracts?search=${encodeURIComponent(acceptedQuote.title)}`} appearance="primary">
+                      {t('opportunities.openDraftContract')}
+                    </Button>
+                  ) : (
+                    <Button as="a" href={`/contracts/new?organizationId=${opportunity.organization.id}`} appearance="primary">
+                      {t('opportunities.createContract')}
+                    </Button>
+                  ))}
+                </>
               )}
             </>
           )
@@ -139,9 +158,11 @@ export function OpportunityPage() {
         <div className={styles.grid}>
           {opportunity.status === 'Open' && <NextStep organizationId={opportunity.organization.id} opportunityId={opportunity.id} />}
           {canSeeMoney && (
-            <Panel title={t('opportunities.fields.forecast')}>
-              <div className={styles.forecast}>{formatMoney(opportunity.forecastAmount ?? 0)}</div>
-              <Text className={styles.muted}>{t('opportunities.forecastExplainer', { probability: opportunity.probability })}</Text>
+            <Panel title={t('opportunities.fields.forecast')} icon={<Money16Regular />}>
+              <div className={styles.well}>
+                <div className={styles.forecast}>{formatMoney(opportunity.forecastAmount ?? 0)}</div>
+                <Text className={styles.muted}>{t('opportunities.forecastExplainer', { probability: opportunity.probability })}</Text>
+              </div>
               <DetailList
                 items={[
                   { label: t('opportunities.fields.oneOffAmount'), value: formatMoney(opportunity.oneOffAmount ?? 0) },
@@ -151,37 +172,26 @@ export function OpportunityPage() {
               />
             </Panel>
           )}
-          <Panel title={t('opportunities.sections.deal')}>
+          <Panel title={t('opportunities.sections.deal')} icon={<Target16Regular />}>
             <DetailList
               items={[
-                { label: t('opportunities.fields.stage'), value: `${opportunity.stageName} · ${opportunity.probability} %` },
+                {
+                  label: t('opportunities.fields.stage'),
+                  value: opportunity.status === 'Open' ? `${opportunity.stageName} · ${opportunity.probability} %` : t(`opportunities.statuses.${opportunity.status}`),
+                },
                 { label: t('opportunities.fields.businessLine'), value: t(`opportunities.businessLines.${opportunity.businessLine}`) },
                 { label: t('opportunities.fields.expectedCloseDate'), value: formatDate(opportunity.expectedCloseDate) },
                 { label: t('opportunities.fields.owner'), value: opportunity.owner?.name },
                 { label: t('opportunities.fields.source'), value: opportunity.source },
                 { label: t('opportunities.fields.competitor'), value: opportunity.competitor },
                 { label: t('opportunities.fields.contact'), value: opportunity.contactName },
-              ]}
-            />
-          </Panel>
-          <Panel title={t('customFields.panelTitle')}>
-            <CustomFieldsPanel entity="Opportunity" entityId={opportunity.id} />
-          </Panel>
-          <Panel title={t('opportunities.sections.status')}>
-            <DetailList
-              items={[
-                { label: t('opportunities.fields.status'), value: t(`opportunities.statuses.${opportunity.status}`) },
-                { label: t('opportunities.fields.lostReason'), value: opportunity.lostReason },
-                { label: t('opportunities.fields.closedOn'), value: opportunity.closedOn ? formatDate(opportunity.closedOn) : null },
+                ...(opportunity.lostReason ? [{ label: t('opportunities.fields.lostReason'), value: opportunity.lostReason }] : []),
+                ...(opportunity.closedOn ? [{ label: t('opportunities.fields.closedOn'), value: formatDate(opportunity.closedOn) }] : []),
                 { label: t('opportunities.fields.lastActivity'), value: formatDateTime(opportunity.lastActivityAt) },
               ]}
             />
-            {opportunity.status === 'Won' && (
-              <Button as="a" href={`/contracts/new?organizationId=${opportunity.organization.id}`} appearance="primary" style={{ marginTop: 12 }}>
-                {t('opportunities.createContract')}
-              </Button>
-            )}
           </Panel>
+          <CustomFieldsPanel framed entity="Opportunity" entityId={opportunity.id} />
         </div>
 
         <QuotesPanel

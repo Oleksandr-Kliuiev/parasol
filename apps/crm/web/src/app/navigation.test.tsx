@@ -70,7 +70,9 @@ describe('selectedNavValue', () => {
     ['/admin/pipeline', 'pipeline-stages'],
     ['/pipeline', 'pipeline'],
     ['/reports/margins', 'margins'],
-    ['/unknown', 'my-day'],
+    ['/sales/opportunities/abc', 'pipeline'],
+    ['/notifications', ''],
+    ['/unknown', ''],
   ])('%s selects %s', (path, value) => {
     expect(selectedNavValue(path)).toBe(value);
   });

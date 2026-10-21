@@ -23,6 +23,12 @@
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.PartnerCenter\Crm.Integrations.PartnerCenter.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- UX 2026, В6: the customer list's ranking, request and response rules live in crm-web, which this project does not reference. -->
+    <Compile Include="..\..\src\Hosts\Crm.Web\CustomerFacts\CustomerAttention.cs" Link="CustomerFacts\CustomerAttention.cs" />
+    <Compile Include="..\..\src\Hosts\Crm.Web\CustomerFacts\CustomerFactsDtos.cs" Link="CustomerFacts\CustomerFactsDtos.cs" />
+    <Compile Include="..\..\src\Hosts\Crm.Web\CustomerFacts\CustomerFactsRequest.cs" Link="CustomerFacts\CustomerFactsRequest.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\..\contracts\customer-identity\atlas-export.v1.example.json" Link="Fixtures\atlas-export.v1.example.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\..\contracts\customer-workspace\atlas-context.v1.example.json" Link="Fixtures\atlas-context.v1.example.json" CopyToOutputDirectory="PreserveNewest" />

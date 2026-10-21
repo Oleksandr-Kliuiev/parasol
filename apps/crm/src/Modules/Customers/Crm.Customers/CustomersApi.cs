@@ -175,6 +175,24 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
             .ToDictionaryAsync(o => o.Id, o => o.AccountManagerId, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, OrganizationRef>> GetOrganizationsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<Guid, OrganizationRef>();
+        foreach (var batch in organizationIds.Distinct().Chunk(1000))
+        {
+            var rows = await db.Organizations.AsNoTracking()
+                .Where(o => batch.Contains(o.Id))
+                .Select(o => new OrganizationRef(o.Id, o.Name, o.OrgNumber, o.Status, o.AccountManagerId))
+                .ToListAsync(cancellationToken);
+            foreach (var row in rows)
+            {
+                result[row.Id] = row;
+            }
+        }
+
+        return result;
+    }
+
     public async Task<IReadOnlyList<OrganizationRef>> GetAllOrganizationsAsync(CancellationToken cancellationToken) =>
         await db.Organizations.AsNoTracking()
             .OrderBy(o => o.Name)

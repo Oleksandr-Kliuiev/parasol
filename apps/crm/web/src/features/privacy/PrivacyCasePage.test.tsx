@@ -127,7 +127,7 @@ describe('Privacy case (DEV-11)', () => {
     vi.stubGlobal('fetch', fetch);
     renderRoutes([{ path: '/admin/privacy/cases/:id', element: <PrivacyCasePage /> }], '/admin/privacy/cases/c1', testUser(['customers.read', 'audit.read']));
 
-    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'No access' })).toBeInTheDocument();
   });
 });
 
@@ -156,11 +156,21 @@ describe('New privacy case (DEV-11)', () => {
     });
   });
 
-  it('refuses an address that does not name a person', async () => {
+  it('refuses an address that does not name a person and says where a request starts', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json([])));
     renderRoutes([{ path: '/admin/privacy/new', element: <NewPrivacyCasePage /> }], '/admin/privacy/new?subjectKind=Organization&subjectId=x', testUser(['privacy.manage']));
 
-    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'New personal data request' })).toBeInTheDocument();
+    expect(screen.getByText('Start from the person')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Go to leads' })).toHaveAttribute('href', '/sales/leads');
+    expect(screen.queryByRole('button', { name: 'Open the request' })).not.toBeInTheDocument();
+  });
+
+  it('is not there for a user without the privacy permission, even without a person', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json([])));
+    renderRoutes([{ path: '/admin/privacy/new', element: <NewPrivacyCasePage /> }], '/admin/privacy/new', testUser(['customers.read']));
+
+    expect(await screen.findByRole('heading', { name: 'No access' })).toBeInTheDocument();
   });
 });
 

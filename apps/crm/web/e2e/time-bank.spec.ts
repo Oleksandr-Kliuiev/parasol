@@ -16,13 +16,13 @@ test('prepaid hours are approved, returned and approved again through the real s
   const saved = async () => (await api.get<{ items: { id: string; status: string; amount?: number; allocations: { classification: string; hours: number }[] }[] }>(
     page, `/api/v1/time/entries?organizationId=${customer.id}`)).items.find(item => item.id === entry.id)!;
   await row.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Approve (1)', exact: true }).click();
-  await expect(toast(page, '1 entries approved')).toBeVisible();
+  await expect(toast(page, '1 entry approved')).toBeVisible();
   await expect(row.getByText('Hour bank 2 h', { exact: true })).toBeVisible();
   expect(await balance()).toBe(8);
   const approved = await saved(); expect(approved.status).toBe('Approved'); expect(approved.amount).toBeUndefined();
   expect(approved.allocations).toMatchObject([{ classification: 'HourBank', hours: 2 }]);
   await expect(row.getByRole('checkbox')).not.toBeChecked(); await row.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Withdraw approval', exact: true }).click();
+  await page.getByRole('button', { name: 'Withdraw approval (1)', exact: true }).click();
   await expect(toast(page, 'Approval withdrawn')).toBeVisible();
   await expect(row.getByText('Hour bank 2 h', { exact: true })).toHaveCount(0);
   expect(await balance()).toBe(10); expect((await saved()).status).toBe('New'); expect((await saved()).allocations).toEqual([]);

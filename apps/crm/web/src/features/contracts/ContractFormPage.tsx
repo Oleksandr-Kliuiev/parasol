@@ -12,8 +12,8 @@ import {
   Switch,
   Textarea,
   makeStyles,
-  tokens,
 } from '@fluentui/react-components';
+import { CalendarLtr16Regular, DocumentText16Regular, Receipt16Regular } from '@fluentui/react-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError, api } from '../../api/client';
@@ -31,15 +31,18 @@ import { errorMessage } from '../../shared/utils/errors';
 import { blankToNull, todayIso } from '../../shared/utils/format';
 import { useCategories } from '../catalog/api';
 import { useContract, useSaveContract, useSlaPolicies } from './api';
+import { controlRow } from './dialogStyles';
 import { OrganizationPicker } from './OrganizationPicker';
 import { contractTypes, invoiceFrequencies, invoiceTimings, type Contract, type ContractType, type InvoiceFrequency, type InvoiceTiming, type Ref } from './types';
 
 const useStyles = makeStyles({
-  sections: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL, maxWidth: '960px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  // Cards of a readable width, two columns where they fit; a field across both stays under 700 px.
+  sections: { display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '720px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px 16px', alignItems: 'start', '& .fui-Dropdown, & .fui-Combobox': { minWidth: 0 } },
   wide: { gridColumn: '1 / -1' },
-  actions: { display: 'flex', gap: tokens.spacingHorizontalS, justifyContent: 'flex-end' },
-  messages: { marginBottom: tokens.spacingVerticalL },
+  controlRow,
+  actions: { display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' },
+  messages: { marginBottom: '16px', ':empty': { marginBottom: 0 } },
 });
 
 export function ContractFormPage() {
@@ -238,7 +241,7 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, carr
         )}
       </div>
       <form className={styles.sections} noValidate onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-        <Panel title={t('contracts.sections.contract')}>
+        <Panel title={t('contracts.sections.contract')} icon={<DocumentText16Regular />}>
           <div className={styles.grid}>
             <Field label={t('contracts.fields.organization')} required className={styles.wide} hint={running ? t('contracts.form.organizationLocked') : undefined} {...error('organizationId')}>
               <OrganizationPicker value={organization} onChange={setOrganization} disabled={running} />
@@ -256,7 +259,7 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, carr
           </div>
         </Panel>
 
-        <Panel title={t('contracts.sections.term')}>
+        <Panel title={t('contracts.sections.term')} icon={<CalendarLtr16Regular />}>
           <div className={styles.grid}>
             <Field label={t('contracts.fields.startDate')} required {...error('startDate')}>
               <Input type="date" value={values.startDate} onChange={(_, d) => set('startDate', d.value)} />
@@ -267,7 +270,7 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, carr
             <Field label={t('contracts.fields.noticePeriodDays')} {...error('noticePeriodDays')}>
               <Input type="number" min={0} value={values.noticePeriodDays} onChange={(_, d) => set('noticePeriodDays', d.value)} contentAfter={t('contracts.days')} />
             </Field>
-            <Switch className={styles.wide} label={t('contracts.fields.autoRenew')} checked={values.autoRenew} onChange={(_, d) => set('autoRenew', d.checked)} />
+            <Switch className={styles.controlRow} label={t('contracts.fields.autoRenew')} checked={values.autoRenew} onChange={(_, d) => set('autoRenew', d.checked)} />
             {values.autoRenew && (
               <Field label={t('contracts.fields.renewalTermMonths')} {...error('renewalTermMonths')}>
                 <Input type="number" min={1} value={values.renewalTermMonths} onChange={(_, d) => set('renewalTermMonths', d.value)} contentAfter={t('contracts.months')} />
@@ -276,7 +279,7 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, carr
           </div>
         </Panel>
 
-        <Panel title={t('contracts.sections.serviceAndBilling')}>
+        <Panel title={t('contracts.sections.serviceAndBilling')} icon={<Receipt16Regular />}>
           <div className={styles.grid}>
             <Field label={t('contracts.fields.sla')}>
               <Dropdown
@@ -310,7 +313,8 @@ function ContractForm({ id, initial, presetOrganization, presetOwner, etag, carr
             </Field>
             {choice('invoiceFrequency', invoiceFrequencies, 'contracts.frequencies')}
             {choice('invoiceTiming', invoiceTimings, 'contracts.timings')}
-            <Switch label={t('contracts.fields.indexation')} checked={values.indexation} onChange={(_, d) => set('indexation', d.checked)} />
+            {/* On the control row of the date that comes with it; alone in its row it needs no room for a label. */}
+            <Switch className={values.indexation ? styles.controlRow : undefined} label={t('contracts.fields.indexation')} checked={values.indexation} onChange={(_, d) => set('indexation', d.checked)} />
             {values.indexation && (
               <Field label={t('contracts.fields.nextIndexationDate')}>
                 <Input type="date" value={values.nextIndexationDate} onChange={(_, d) => set('nextIndexationDate', d.value)} />

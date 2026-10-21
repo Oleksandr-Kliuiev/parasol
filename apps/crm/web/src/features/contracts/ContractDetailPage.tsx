@@ -3,7 +3,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -28,7 +27,14 @@ import {
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular, Delete20Regular, Edit20Regular, MoreHorizontal20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import {
+  Add20Regular, Box16Regular, CalendarLtr16Regular, Delete20Regular, Edit20Regular, HourglassHalf16Regular, Money16Regular, MoreHorizontal20Regular,
+  Note16Regular, Receipt16Regular, TextBulletListLtr16Regular, TextBulletListLtr24Regular,
+} from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
+import { RecordCell } from '../organizations/RecordCell';
+import { useRecordStyles } from '../organizations/recordStyles';
 import { useTranslation } from 'react-i18next';
 import { CustomFieldsPanel } from '../customfields/CustomFieldsPanel';
 import { ApiError } from '../../api/client';
@@ -37,7 +43,9 @@ import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 import { DetailList, Panel } from '../../shared/components/Panel';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatMoney, formatNumber, todayIso } from '../../shared/utils/format';
@@ -52,12 +60,16 @@ import type { Contract, ContractLine } from './types';
 import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  value: { fontSize: tokens.fontSizeHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums', lineHeight: tokens.lineHeightHero700 },
-  lineTools: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
-  past: { color: tokens.colorNeutralForeground3 },
+  tabs: { marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: '16px', alignItems: 'start' },
+  stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  // The monthly value as the reference's "estimated payment" block: a soft ember well with the figure in display type.
+  valueWell: { display: 'grid', gap: '4px', paddingTop: '14px', paddingBottom: '14px', paddingLeft: '16px', paddingRight: '16px', borderRadius: '14px', backgroundColor: h.emberSoft },
+  value: { fontFamily: h.display, fontSize: 'clamp(26px, 2.4vw, 34px)', fontWeight: 600, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1, color: h.text },
+  valueNote: { color: h.muted, fontSize: '13px', lineHeight: '18px' },
+  number: { fontFamily: tokens.fontFamilyMonospace, color: h.muted, fontSize: '13px' },
+  past: { color: h.faint },
+  productLink: { fontWeight: 700, color: 'inherit' },
 });
 
 type Dialogs =
@@ -82,6 +94,7 @@ export function ContractDetailPage() {
   const canWrite = useCan(Permissions.contractsWrite);
   const canSeePrices = useCan(Permissions.financeRead);
   const [dialog, setDialog] = useState<Dialogs | null>(null);
+  const shown = useKeptWhileClosing(dialog);
   const restoreFocusTarget = useRestoreFocusTarget();
 
   if (isPending) return <Spinner label={t('common.loading')} />;
@@ -116,7 +129,7 @@ export function ContractDetailPage() {
         title={c.title}
         meta={
           <>
-            <Text style={{ fontFamily: tokens.fontFamilyMonospace }}>{c.number}</Text>
+            <Text className={styles.number}>{c.number}</Text>
             <ContractStatusBadge status={c.status} />
             <AppLink to={`/organizations/${c.organization.id}?tab=contracts`}>{c.organization.name}</AppLink>
           </>
@@ -128,11 +141,6 @@ export function ContractDetailPage() {
               <Button icon={<Edit20Regular />} onClick={() => navigate(`/contracts/${c.id}/edit`)}>
                 {t('common.edit')}
               </Button>
-              {(c.status === 'Draft' || c.status === 'Suspended') && (
-                <Button appearance="primary" onClick={() => void transition('activate')} disabled={actions.transition.isPending}>
-                  {c.status === 'Draft' ? t('contracts.actions.activate') : t('contracts.actions.resume')}
-                </Button>
-              )}
               {c.status === 'NoticeGiven' && <Button onClick={() => void transition('withdraw-notice')}>{t('contracts.actions.withdrawNotice')}</Button>}
               <Menu>
                 <MenuTrigger disableButtonEnhancement>
@@ -151,6 +159,11 @@ export function ContractDetailPage() {
                   </MenuList>
                 </MenuPopover>
               </Menu>
+              {(c.status === 'Draft' || c.status === 'Suspended') && (
+                <Button appearance="primary" onClick={() => void transition('activate')} disabled={actions.transition.isPending}>
+                  {c.status === 'Draft' ? t('contracts.actions.activate') : t('contracts.actions.resume')}
+                </Button>
+              )}
             </>
           )
         }
@@ -166,20 +179,20 @@ export function ContractDetailPage() {
         <div className={styles.stack}>
           <div className={styles.grid}>
             {canSeePrices && (
-              <Panel title={t('contracts.sections.value')}>
-                <div className={styles.value}>{formatMoney(c.monthlyValue, c.currency)}</div>
-                <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                  {t('contracts.valueExplainer')}
-                </Text>
+              <Panel title={t('contracts.sections.value')} icon={<Money16Regular />}>
+                <div className={styles.valueWell}>
+                  <div className={styles.value}>{formatMoney(c.monthlyValue, c.currency)}</div>
+                  <Text className={styles.valueNote}>{t('contracts.valueExplainer')}</Text>
+                </div>
               </Panel>
             )}
-            <Panel title={t('contracts.sections.term')}>
+            <Panel title={t('contracts.sections.term')} icon={<CalendarLtr16Regular />}>
               <DetailList
                 items={[
                   { label: t('contracts.fields.period'), value: `${formatDate(c.startDate)} – ${c.endDate ? formatDate(c.endDate) : t('contracts.untilFurtherNotice')}` },
                   {
                     label: t('contracts.fields.autoRenew'),
-                    value: c.autoRenew ? t('contracts.renewsBy', { months: c.renewalTermMonths }) : t('common.no'),
+                    value: c.autoRenew ? t('contracts.renewsBy', { count: c.renewalTermMonths }) : t('common.no'),
                   },
                   { label: t('contracts.fields.noticePeriodDays'), value: t('contracts.daysCount', { count: c.noticePeriodDays }) },
                   { label: t('contracts.fields.noticeDeadline'), value: c.noticeDeadline && c.status !== 'Ended' ? formatDate(c.noticeDeadline) : null },
@@ -188,7 +201,7 @@ export function ContractDetailPage() {
                 ]}
               />
             </Panel>
-            <Panel title={t('contracts.sections.serviceAndBilling')}>
+            <Panel title={t('contracts.sections.serviceAndBilling')} icon={<Receipt16Regular />}>
               <DetailList
                 items={[
                   { label: t('contracts.fields.type'), value: t(`contracts.types.${c.type}`) },
@@ -207,6 +220,7 @@ export function ContractDetailPage() {
 
           <Panel
             title={t('contracts.hourBanks.title')}
+            icon={<HourglassHalf16Regular />}
             actions={
               canWrite &&
               c.status !== 'Ended' && (
@@ -219,12 +233,10 @@ export function ContractDetailPage() {
             <HourBankList contractId={c.id} />
           </Panel>
 
-          <Panel title={t('customFields.panelTitle')}>
-            <CustomFieldsPanel entity="Contract" entityId={c.id} />
-          </Panel>
+          <CustomFieldsPanel framed entity="Contract" entityId={c.id} />
 
           {c.notes && (
-            <Panel title={t('contracts.fields.notes')}>
+            <Panel title={t('contracts.fields.notes')} icon={<Note16Regular />}>
               <Text style={{ whiteSpace: 'pre-wrap' }}>{c.notes}</Text>
             </Panel>
           )}
@@ -233,13 +245,13 @@ export function ContractDetailPage() {
 
       <Dialog open={dialog !== null} onOpenChange={(_, d) => !d.open && close()}>
         <DialogSurface>
-          {dialog?.kind === 'line' && <LineForm contract={c} onClose={close} />}
-          {dialog?.kind === 'revise' && <ReviseLineForm contract={c} line={dialog.line} onClose={close} />}
-          {dialog?.kind === 'notice' && <DateActionForm contract={c} kind="notice" onClose={close} />}
-          {dialog?.kind === 'end' && <DateActionForm contract={c} kind="end" onClose={close} />}
-          {dialog?.kind === 'endLine' && <DateActionForm contract={c} kind="endLine" line={dialog.line} onClose={close} />}
-          {dialog?.kind === 'hourBank' && <HourBankForm organizationId={c.organization.id} contractId={c.id} onClose={close} />}
-          {dialog?.kind === 'delete' && (
+          {shown?.kind === 'line' && <LineForm contract={c} onClose={close} />}
+          {shown?.kind === 'revise' && <ReviseLineForm contract={c} line={shown.line} onClose={close} />}
+          {shown?.kind === 'notice' && <DateActionForm contract={c} kind="notice" onClose={close} />}
+          {shown?.kind === 'end' && <DateActionForm contract={c} kind="end" onClose={close} />}
+          {shown?.kind === 'endLine' && <DateActionForm contract={c} kind="endLine" line={shown.line} onClose={close} />}
+          {shown?.kind === 'hourBank' && <HourBankForm organizationId={c.organization.id} contractId={c.id} onClose={close} />}
+          {shown?.kind === 'delete' && (
             <DialogBody>
               <DialogTitle>{t('contracts.deleteTitle', { number: c.number })}</DialogTitle>
               <DialogContent>{t('contracts.deleteBody')}</DialogContent>
@@ -260,6 +272,7 @@ export function ContractDetailPage() {
 function Lines({ contract: c, canWrite, onDialog }: { contract: Contract; canWrite: boolean; onDialog: (d: Dialogs) => void }) {
   const styles = useStyles();
   const catalog = useCatalogStyles();
+  const record = useRecordStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const actions = useContractActions(c.id);
@@ -284,94 +297,110 @@ function Lines({ contract: c, canWrite, onDialog }: { contract: Contract; canWri
   return (
     <Panel
       title={t('contracts.lines.title')}
+      icon={<TextBulletListLtr16Regular />}
       actions={
-        editable && (
-          <Button {...restoreFocusTarget} size="small" icon={<Add20Regular />} onClick={() => onDialog({ kind: 'line' })}>
-            {t('contracts.lines.add')}
-          </Button>
+        (hasHistory || editable) && (
+          <>
+            {hasHistory && <Switch label={t('contracts.lines.showHistory')} checked={showHistory} onChange={(_, d) => setShowHistory(d.checked)} />}
+            {editable && (
+              <Button {...restoreFocusTarget} size="small" icon={<Add20Regular />} onClick={() => onDialog({ kind: 'line' })}>
+                {t('contracts.lines.add')}
+              </Button>
+            )}
+          </>
         )
       }
     >
-      {hasHistory && (
-        <div className={styles.lineTools}>
-          <Switch label={t('contracts.lines.showHistory')} checked={showHistory} onChange={(_, d) => setShowHistory(d.checked)} />
-        </div>
-      )}
-      <div style={{ overflowX: 'auto' }}>
-        <Table aria-label={t('contracts.lines.title')} style={{ minWidth: 760 }}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{t('catalog.fields.product')}</TableHeaderCell>
-              <TableHeaderCell>{t('contracts.fields.quantityModel')}</TableHeaderCell>
-              <TableHeaderCell className={catalog.number}>{t('contracts.fields.quantity')}</TableHeaderCell>
-              {canSeePrices && <TableHeaderCell className={catalog.number}>{t('contracts.fields.unitPrice')}</TableHeaderCell>}
-              {canSeePrices && <TableHeaderCell className={catalog.number}>{t('contracts.fields.amount')}</TableHeaderCell>}
-              <TableHeaderCell>{t('contracts.fields.period')}</TableHeaderCell>
-              {editable && <TableHeaderCell />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lines.map((l) => {
-              const past = isPast(l);
-              return (
-                <TableRow key={l.id} className={past ? styles.past : undefined}>
-                  <TableCell>
-                    <AppLink to={`/catalog/products/${l.productId}`}>{l.productName}</AppLink> {l.version > 1 && <Badge appearance="outline" size="small">v{l.version}</Badge>}
-                    <div className={catalog.sku}>{l.description ?? l.sku}</div>
-                  </TableCell>
-                  <TableCell>
-                    {t(`contracts.quantityModels.${l.quantityModel}`)}
-                    {l.quantityModel === 'PerAteraDevice' && l.deviceFilter !== 'All' && <div className={catalog.muted}>{t(`contracts.deviceFilters.${l.deviceFilter}`)}</div>}
-                  </TableCell>
-                  <TableCell className={catalog.number}>
-                    {formatNumber(l.quantity)} <span className={catalog.muted}>{t(`catalog.units.${l.unit}`)}</span>
-                  </TableCell>
-                  {canSeePrices && (
-                    <TableCell className={catalog.number}>
-                      {formatMoney(l.effectiveUnitPrice)}
-                      <div className={catalog.muted}>
-                        {l.priceSource ? t(`contracts.priceSources.${l.priceSource}`) : ''}
-                        {l.discountPct ? ` · −${formatNumber(l.discountPct)} %` : ''}
-                      </div>
-                    </TableCell>
-                  )}
-                  {canSeePrices && (
-                    <TableCell className={catalog.number}>
-                      {formatMoney(l.amount)}
-                      <div className={catalog.muted}>{t(`catalog.periods.${l.billingPeriod}`)}</div>
-                    </TableCell>
-                  )}
-                  <TableCell className="tabular">
-                    {formatDate(l.validFrom)} – {l.validTo ? formatDate(l.validTo) : ''}
-                  </TableCell>
-                  {editable && (
+      {c.lines.length > 0 && (
+        <ScrollTable className={record.flatTable}>
+          <Table aria-label={t('contracts.lines.title')} style={{ minWidth: 1020 }}>
+            <TableHeader>
+              <TableRow>
+                {/* Content widths: every cell adds 12 px of padding on each side; the product takes the rest. */}
+                <TableHeaderCell>{t('catalog.fields.product')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 146 }}>{t('contracts.fields.quantityModel')}</TableHeaderCell>
+                <TableHeaderCell className={catalog.number} style={{ width: 76 }}>{t('contracts.fields.quantity')}</TableHeaderCell>
+                {canSeePrices && <TableHeaderCell className={catalog.number} style={{ width: 126 }}>{t('contracts.fields.unitPrice')}</TableHeaderCell>}
+                {canSeePrices && <TableHeaderCell className={catalog.number} style={{ width: 116 }}>{t('contracts.fields.amount')}</TableHeaderCell>}
+                <TableHeaderCell style={{ width: 146 }}>{t('contracts.fields.period')}</TableHeaderCell>
+                {editable && <TableHeaderCell style={{ width: 32 }} />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lines.map((l) => {
+                const past = isPast(l);
+                return (
+                  <TableRow key={l.id} className={past ? styles.past : undefined}>
                     <TableCell>
-                      {!past && (
-                        <Menu>
-                          <MenuTrigger disableButtonEnhancement>
-                            <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<MoreHorizontal20Regular />} aria-label={t('contracts.lines.actionsFor', { name: l.productName })} />
-                          </MenuTrigger>
-                          <MenuPopover>
-                            <MenuList>
-                              <MenuItem onClick={() => onDialog({ kind: 'revise', line: l })}>{t('contracts.lines.change')}</MenuItem>
-                              {c.status === 'Draft' ? (
-                                <MenuItem onClick={() => void removeLine(l)}>{t('contracts.lines.remove')}</MenuItem>
-                              ) : (
-                                <MenuItem onClick={() => onDialog({ kind: 'endLine', line: l })}>{t('contracts.lines.end')}</MenuItem>
-                              )}
-                            </MenuList>
-                          </MenuPopover>
-                        </Menu>
-                      )}
+                      <RecordCell
+                        icon={<Box16Regular />}
+                        tone="spruce"
+                        size={28}
+                        name={
+                          <>
+                            <AppLink to={`/catalog/products/${l.productId}`} className={styles.productLink}>{l.productName}</AppLink>{' '}
+                            {l.version > 1 && <Badge appearance="outline" size="small">v{l.version}</Badge>}
+                          </>
+                        }
+                        meta={[l.description ?? l.sku]}
+                      />
                     </TableCell>
-                  )}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      {c.lines.length === 0 && <EmptyState message={t('contracts.lines.empty')} />}
+                    <TableCell>
+                      {t(`contracts.quantityModels.${l.quantityModel}`)}
+                      {l.quantityModel === 'PerAteraDevice' && l.deviceFilter !== 'All' && <div className={catalog.muted}>{t(`contracts.deviceFilters.${l.deviceFilter}`)}</div>}
+                    </TableCell>
+                    <TableCell className={catalog.number}>
+                      {formatNumber(l.quantity)} <span className={catalog.muted}>{t(`catalog.units.${l.unit}`)}</span>
+                    </TableCell>
+                    {canSeePrices && (
+                      <TableCell className={catalog.number}>
+                        {formatMoney(l.effectiveUnitPrice)}
+                        <div className={catalog.muted}>
+                          {l.priceSource ? t(`contracts.priceSources.${l.priceSource}`) : ''}
+                          {l.discountPct ? ` · −${formatNumber(l.discountPct)} %` : ''}
+                        </div>
+                      </TableCell>
+                    )}
+                    {canSeePrices && (
+                      <TableCell className={catalog.number}>
+                        {formatMoney(l.amount)}
+                        <div className={catalog.muted}>{t(`catalog.periods.${l.billingPeriod}`)}</div>
+                      </TableCell>
+                    )}
+                    <TableCell className="tabular">
+                      {l.validTo ? `${formatDate(l.validFrom)} – ${formatDate(l.validTo)}` : t('contracts.lines.from', { date: formatDate(l.validFrom) })}
+                    </TableCell>
+                    {editable && (
+                      <TableCell>
+                        <span className={catalog.rowActions}>
+                          {!past && (
+                            <Menu>
+                              <MenuTrigger disableButtonEnhancement>
+                                <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<MoreHorizontal20Regular />} aria-label={t('contracts.lines.actionsFor', { name: l.productName })} />
+                              </MenuTrigger>
+                              <MenuPopover>
+                                <MenuList>
+                                  <MenuItem onClick={() => onDialog({ kind: 'revise', line: l })}>{t('contracts.lines.change')}</MenuItem>
+                                  {c.status === 'Draft' ? (
+                                    <MenuItem onClick={() => void removeLine(l)}>{t('contracts.lines.remove')}</MenuItem>
+                                  ) : (
+                                    <MenuItem onClick={() => onDialog({ kind: 'endLine', line: l })}>{t('contracts.lines.end')}</MenuItem>
+                                  )}
+                                </MenuList>
+                              </MenuPopover>
+                            </Menu>
+                          )}
+                        </span>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </ScrollTable>
+      )}
+      {c.lines.length === 0 && <EmptyState icon={<TextBulletListLtr24Regular />} message={t('contracts.lines.empty')} />}
     </Panel>
   );
 }

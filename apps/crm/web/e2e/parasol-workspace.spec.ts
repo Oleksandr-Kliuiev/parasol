@@ -11,7 +11,7 @@ test('one sign-in opens the customer workspace and respects employee roles', { t
   await expect(panel.getByText('This customer has not been linked to Atlas.')).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Invoices', exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: customer.name, exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Dev Technician', exact: true }).click();
+  await page.getByRole('button', { name: 'Dev Technician · Account and language', exact: true }).click();
   await expect(page.getByText('Employee roles: Technician', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await signIn(page, 'Crm.Finance', `/organizations/${customer.id}`);

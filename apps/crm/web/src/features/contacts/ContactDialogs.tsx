@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Button,
   Checkbox,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -13,8 +12,8 @@ import {
   MessageBar,
   MessageBarBody,
   makeStyles,
-  tokens,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import type { ContactRole, OrganizationContactItem } from '../../api/types';
@@ -25,7 +24,7 @@ import { useCreateContact, useUpdateAffiliation } from './api';
 import { RolePicker } from './RolePicker';
 
 const useStyles = makeStyles({
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '14px 16px', alignItems: 'start', '& .fui-Dropdown, & .fui-Combobox': { minWidth: 0 } },
   wide: { gridColumn: '1 / -1' },
 });
 
@@ -34,8 +33,8 @@ const emptyPerson = { firstName: '', lastName: '', email: '', phone: '', mobileP
 export function AddContactDialog({ organizationId, open, onClose }: { organizationId: string; open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(_, d) => !d.open && onClose()}>
-      {/* The form mounts per opening, so every dialog starts empty. */}
-      <DialogSurface>{open && <AddContactForm organizationId={organizationId} onClose={onClose} />}</DialogSurface>
+      {/* The form mounts with the surface, once per opening, so every dialog starts empty; it stays while the dialog leaves. */}
+      <DialogSurface><AddContactForm organizationId={organizationId} onClose={onClose} /></DialogSurface>
     </Dialog>
   );
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { atlasAttention } from '../../test/atlasAttention';
+import { atlasAttention, attentionCustomerId } from '../../test/atlasAttention';
+import { syntheticTask } from '../../test/atlasTask';
 import { parseAtlasAttention, type AtlasAttentionView } from './atlasAttentionContract';
+
+const link = (observationId = 'critical-two', task: Partial<typeof syntheticTask> = {}) =>
+  ({ observationId, task: { ...syntheticTask, organizationId: attentionCustomerId, created: false, ...task }, assigneeName: 'Synthetic technician' });
 
 describe('the closed personal attention projection', () => {
   it('accepts bounded previews with full ready-customer counts and explicit failures/gaps', () => {
@@ -43,9 +47,24 @@ describe('the closed personal attention projection', () => {
     ['failed row with old details', (v: AtlasAttentionView) => { v.customers![1]!.preview = v.customers![0]!.preview; }],
     ['denied row salvaged beside ready data', (v: AtlasAttentionView) => { v.customers![1]!.status = 'ACCESS_DENIED'; }],
     ['fatal result retaining totals', (v: AtlasAttentionView) => { v.status = 'ACCESS_DENIED'; v.customers = null; }],
+    // The preview rows' tasks (UX 2026, В3) answer only for those rows, this customer and work it already had.
+    ['task of an observation outside the preview', (v: AtlasAttentionView) => { v.customers![0]!.tasks = [link('observation-elsewhere')]; }],
+    ['two tasks for one row', (v: AtlasAttentionView) => { v.customers![0]!.tasks = [link(), link()]; }],
+    ['task of another customer', (v: AtlasAttentionView) => { v.customers![0]!.tasks = [link('critical-two', { organizationId: v.customers![1]!.customerId })]; }],
+    ['creation receipt as a row hint', (v: AtlasAttentionView) => { v.customers![0]!.tasks = [link('critical-two', { created: true })]; }],
+    ['unavailable task naming someone', (v: AtlasAttentionView) => { v.customers![0]!.tasks = [link('critical-two', { isAvailable: false, assigneeId: null, dueAt: null })]; }],
+    ['tasks on a failed row', (v: AtlasAttentionView) => { v.customers![1]!.tasks = []; }],
   ])('rejects the entire aggregate for %s', (_, mutate) => {
     const value = atlasAttention(); mutate(value); const parsed = parseAtlasAttention(value);
     expect(parsed.status).toBe('INVALID_RESPONSE'); expect(parsed.customers).toBeNull(); expect(parsed.totals).toBeNull();
+  });
+
+  it('accepts the tasks the preview rows already have, and a read that did not include them', () => {
+    const value = atlasAttention(); value.customers![0]!.tasks = [link(), link('critical-one', { isAvailable: false, assigneeId: null, dueAt: null })];
+    value.customers![0]!.tasks[1]!.assigneeName = null;
+    value.customers![0]!.tasks[1]!.observationId = value.customers![0]!.preview[0]!.id;
+    expect(parseAtlasAttention(value)).toEqual(value);
+    value.customers![0]!.tasks = null; expect(parseAtlasAttention(value)).toEqual(value);
   });
 
   it('accepts zero ready customers as an honest partial read rather than healthy coverage', () => {

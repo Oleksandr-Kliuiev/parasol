@@ -1,5 +1,6 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
+import { organizationStatuses } from '../../api/types';
 import type {
   Organization,
   OrganizationListItem,
@@ -39,6 +40,24 @@ export function useOrganizations(filters: OrganizationFilters) {
       ).data,
     getNextPageParam: (last) => last.nextCursor,
   });
+}
+
+/**
+ * How many organizations of each status match the search, for the counts on the status filters: one read per status
+ * that asks for a single row and keeps only the list's total. Null until every count is known.
+ */
+export function useOrganizationCounts(search: string): Record<OrganizationStatus, number> | null {
+  const counts = useQueries({
+    queries: organizationStatuses.map((status) => ({
+      queryKey: [...organizationKeys.all, 'count', { search, status }] as const,
+      queryFn: async ({ signal }: { signal: AbortSignal }) =>
+        (await api.get<PagedResult<OrganizationListItem>>(`${BASE}${query({ search, status, limit: 1 })}`, signal)).data.totalCount ?? null,
+      staleTime: 30_000,
+    })),
+  });
+  const values = counts.map((count) => count.data);
+  if (values.some((value) => typeof value !== 'number')) return null;
+  return Object.fromEntries(organizationStatuses.map((status, i) => [status, values[i]])) as Record<OrganizationStatus, number>;
 }
 
 export function useOrganization(id: string | undefined) {

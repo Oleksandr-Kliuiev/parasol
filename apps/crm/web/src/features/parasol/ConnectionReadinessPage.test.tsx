@@ -35,7 +35,7 @@ describe('read-only Connections page', () => {
   it('separates administrative flags, historical Graph records and Worker credentials from connectivity', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => response(localReadiness()))); render();
     expect(await screen.findByRole('region', { name: 'Saved administrative configuration' })).toBeVisible();
-    expect(screen.getByText(/Their absence in Web does not indicate missing Worker credentials/)).toBeVisible();
+    expect(screen.getByText(/held by the background service, so this page cannot see whether they are set/)).toBeVisible();
     expect(screen.getByText(/Signing in through Microsoft 365 or Entra does not establish technical tenant monitoring/)).toBeVisible();
     expect(within(screen.getByRole('region', { name: 'Microsoft Graph' })).getByText(/may be historical/)).toBeVisible();
     expect(screen.getByText('Configuration unknown here')).toBeVisible(); expect(screen.getByText(/Huntress is managed in Atlas/)).toBeVisible();

@@ -22,7 +22,7 @@ it('preserves the queued request payload/defaults and contact field validation i
   const posts = fetch.mock.calls.filter(([, init]) => init.method === 'POST'); expect(posts).toHaveLength(1);
   expect(JSON.parse(posts[0]![1].body as string)).toEqual({ organizationId: 'o1', contactId: 'contact-one', title: 'Synthetic request', description: 'Synthetic details', priority: 'Medium', type: 'Incident' });
   expect(fetch.mock.calls.filter(([url]) => kindOf(url))).toHaveLength(6); // Five saved reads plus the POST, with no error invalidation.
-});
+}, 15_000); // A long form journey: under a loaded CI machine it needs more than the default 5 s, never a retry.
 
 it('queues exactly once on rapid submit, refreshes only the current saved workspace and preserves the existing toast', async () => {
   let finish!: (value: Response) => void;

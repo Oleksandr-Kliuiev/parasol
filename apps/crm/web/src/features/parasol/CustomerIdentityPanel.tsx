@@ -1,16 +1,36 @@
 import { useState } from 'react';
-import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle,
-  MessageBar, MessageBarBody, Spinner, Text, makeStyles, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
+import {
+  Button,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  MessageBar,
+  MessageBarBody,
+  Spinner,
+  Text,
+  makeStyles,
+  tokens,
+  useRestoreFocusTarget,
+} from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
+import { Link16Regular } from '@fluentui/react-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
+import { h } from '../../app/hearth';
 import { AppLink } from '../../shared/components/AppLink';
 import { Panel, DetailList } from '../../shared/components/Panel';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import type { CustomerIdentity } from './identityImport';
 
 const useStyles = makeStyles({
   actions: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginTop: tokens.spacingVerticalM },
+  // The link to the mapping screen is the panel's action: a 24 px tall target, like the button beside it (WCAG 2.5.8).
+  link: { display: 'inline-flex', alignItems: 'center', minHeight: '24px' },
+  muted: { color: h.muted, fontSize: '13px' },
 });
 
 export function CustomerIdentityPanel({ customerId }: { customerId: string }) {
@@ -24,6 +44,7 @@ function IdentityPanel({ customerId, userId }: { customerId: string; userId: str
   const styles = useStyles();
   const client = useQueryClient();
   const [removing, setRemoving] = useState<CustomerIdentity | null>(null);
+  const shown = useKeptWhileClosing(removing);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const restoreFocus = useRestoreFocusTarget();
@@ -47,7 +68,7 @@ function IdentityPanel({ customerId, userId }: { customerId: string; userId: str
       setBusy(false);
     }
   };
-  return <Panel title={t('parasolIdentity.linkTitle')}>
+  return <Panel title={t('parasolIdentity.linkTitle')} icon={<Link16Regular />}>
     {identity.isFetching && <Spinner size="small" label={t('common.loading')} />}
     {(failed || identity.isError) && <MessageBar layout="multiline" intent="error"><MessageBarBody>{t(failed ? 'parasolIdentity.errors.unlinkFailed' : 'parasolIdentity.errors.identityFailed')}</MessageBarBody></MessageBar>}
     {identity.isError && <Button disabled={busy} onClick={() => void identity.refetch()}>{t('parasol.refresh')}</Button>}
@@ -57,10 +78,10 @@ function IdentityPanel({ customerId, userId }: { customerId: string; userId: str
         { label: t('parasolIdentity.atlasClient'), value: data.atlas.clientId },
       ]} />
     </>}
-    {data && !data.atlas && <Text block>{t('parasol.status.NOT_LINKED')}</Text>}
+    {data && !data.atlas && <Text block className={styles.muted}>{t('parasol.status.NOT_LINKED')}</Text>}
     <div className={styles.actions}>
       {data?.atlas && <Button {...restoreFocus} disabled={busy || !data.linkId} onClick={() => setRemoving(data)}>{t('parasolIdentity.unlink')}</Button>}
-      <AppLink to="/admin/mappings/atlas">{t('parasolIdentity.title')}</AppLink>
+      <AppLink to="/admin/mappings/atlas" className={styles.link}>{t('parasolIdentity.title')}</AppLink>
     </div>
     <Dialog open={removing !== null} onOpenChange={(_, d) => { if (!d.open && !busy) setRemoving(null); }}>
       <DialogSurface><DialogBody>
@@ -68,8 +89,8 @@ function IdentityPanel({ customerId, userId }: { customerId: string; userId: str
         <DialogContent>
           <Text block>{t('parasolIdentity.unlinkDescription')}</Text>
           <DetailList items={[
-            { label: t('parasolIdentity.workspace'), value: removing?.atlas?.workspaceId },
-            { label: t('parasolIdentity.atlasClient'), value: removing?.atlas?.clientId },
+            { label: t('parasolIdentity.workspace'), value: shown?.atlas?.workspaceId },
+            { label: t('parasolIdentity.atlasClient'), value: shown?.atlas?.clientId },
           ]} />
         </DialogContent>
         <DialogActions>

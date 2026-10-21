@@ -42,7 +42,7 @@ describe('My day by role', () => {
   it('puts billing before tasks for someone who runs billing', async () => {
     stubApi();
     renderRoutes([page(<MyDayPage />)], '/', testUser(['billing.read', 'billing.manage', 'finance.read', 'activities.read', 'customers.read']));
-    await screen.findByRole('heading', { name: 'Hello, Kari' });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Kari$/ });
     await screen.findByRole('link', { name: /July 2026/i });
     const list = titles();
     expect(list.indexOf('Billing')).toBeGreaterThanOrEqual(0);
@@ -54,7 +54,7 @@ describe('My day by role', () => {
   it('adds the hours review on the side for someone who approves hours', async () => {
     stubApi();
     renderRoutes([page(<MyDayPage />)], '/', testUser(['time.manage', 'time.read', 'activities.read', 'customers.read']));
-    await screen.findByRole('heading', { name: 'Hello, Kari' });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Kari$/ });
     const list = titles();
     expect(list).toContain('My tasks');
     expect(list).toContain('Hours to review');
@@ -64,7 +64,7 @@ describe('My day by role', () => {
   it('shows no hours review and the default subtitle to everybody else', async () => {
     stubApi();
     renderRoutes([page(<MyDayPage />)], '/', testUser(['activities.read', 'customers.read']));
-    await screen.findByRole('heading', { name: 'Hello, Kari' });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Kari$/ });
     expect(screen.queryByRole('heading', { name: 'Hours to review' })).toBeNull();
     expect(screen.getByText('Your organizations and what needs attention.')).toBeInTheDocument();
   });

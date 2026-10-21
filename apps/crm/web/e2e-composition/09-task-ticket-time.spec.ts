@@ -76,10 +76,18 @@ test('an Atlas observation Task links to a saved ticket and records the current 
     await timeDialog.getByRole('textbox', { name: 'Description', exact: true }).fill('Synthetic reviewed work');
     await accessible(page);
     await page.screenshot({ path: testInfo.outputPath('task-ticket-time-mobile-light-synthetic.png'), fullPage: true });
+    const cancel = timeDialog.getByRole('button', { name: 'Cancel', exact: true });
+    const light = { surface: await timeDialog.evaluate(el => getComputedStyle(el).backgroundColor), text: await cancel.evaluate(el => getComputedStyle(el).color) };
     await page.emulateMedia({ colorScheme: 'dark' });
-    // Media changes notify React asynchronously. Assert the rendered theme before scanning its contrast.
-    await expect(timeDialog).toHaveCSS('background-color', 'rgb(41, 41, 41)');
-    await expect(timeDialog.getByRole('button', { name: 'Cancel', exact: true })).toHaveCSS('color', 'rgb(255, 255, 255)');
+    // Media changes notify React asynchronously. Assert the rendered theme before scanning its contrast: the app's own switch
+    // (data-theme), finished colour transitions, then dark colours that differ from the light ones. The palette is the visual
+    // system's (app/theme.ts), so the check does not name Fluent's default colours.
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
+    await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined)));
+    });
+    await expect(timeDialog).not.toHaveCSS('background-color', light.surface);
+    await expect(cancel).not.toHaveCSS('color', light.text);
     await expect(timeDialog.getByRole('textbox', { name: 'Description', exact: true })).toBeFocused();
     await accessible(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

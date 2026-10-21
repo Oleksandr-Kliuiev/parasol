@@ -22,7 +22,9 @@ test('devices and active observations share the customer card and disappear afte
   await expect(observations.getByRole('listitem')).toHaveCount(3);
   await expect(observations.getByText(/Only the first 3 of 4 active observations are loaded/)).toBeVisible();
   const critical = observations.getByRole('listitem').filter({ hasText: 'Synthetic disk capacity used: 97%' });
-  await expect(critical.getByText('Urgent · HIGH / CRITICAL', { exact: true })).toBeVisible();
+  // The severity badge says the urgency once; the row has no second "urgent" label.
+  await expect(critical.getByText('Critical', { exact: true })).toBeVisible();
+  await expect(critical.getByText(/Urgent/)).toHaveCount(0);
   await expect(critical.getByText('Atlas recommendation: Monitor')).toBeVisible();
   await expect(critical.getByText('Confirmed device: SYNTHETIC-LT-01 (device-0)')).toBeVisible();
   await observations.getByLabel('Observation severity').selectOption('URGENT');

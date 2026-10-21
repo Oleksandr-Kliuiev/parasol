@@ -1,19 +1,29 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { Button, Field, Input, Radio, RadioGroup, Select, Text, Textarea, makeStyles, tokens } from '@fluentui/react-components';
+import { Button, Field, Input, Radio, RadioGroup, Select, Textarea, makeStyles } from '@fluentui/react-components';
+import { PersonInfo16Regular, PersonInfo24Regular } from '@fluentui/react-icons';
+import { AppLink } from '../../shared/components/AppLink';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { todayIso } from '../../shared/utils/format';
-import { NotFoundPage } from '../errors/NotFoundPage';
+import { ForbiddenPage } from '../errors/ForbiddenPage';
+import { PersonCell } from '../admin/settingsUi';
 import { type DataSubjectKind, type PrivacyCaseKind, type RequestChannel, useOpenCase } from './api';
 
 const useStyles = makeStyles({
-  form: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM, maxWidth: '560px' },
-  actions: { display: 'flex', gap: tokens.spacingHorizontalS },
+  panel: { maxWidth: '600px' },
+  form: { display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 },
+  // The person the request is about, in a well above the form.
+  subject: { paddingTop: '10px', paddingBottom: '10px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', backgroundColor: h.well },
+  // The buttons of the form at its foot, on the right: Cancel, then the primary action last.
+  actions: { display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '10px', paddingTop: '14px', borderTop: `1px solid ${h.line}` },
+  startLinks: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 20px', fontWeight: 600 },
 });
 
 const channels: RequestChannel[] = ['Email', 'Letter', 'Phone', 'InPerson', 'Other'];
@@ -42,14 +52,27 @@ export function NewPrivacyCasePage() {
   const subjectId = params.get('subjectId') ?? '';
   const state = location.state as { subjectName?: string; back?: string } | null;
   const subjectName = state?.subjectName;
-  if (!allowed || !subjectKind || !subjectKinds.includes(subjectKind) || !guid.test(subjectId)) return <NotFoundPage />;
+  if (!allowed) return <ForbiddenPage />;
+  // Reached without a person (a bookmark, a typed address): say where a request starts instead of "page not found".
+  if (!subjectKind || !subjectKinds.includes(subjectKind) || !guid.test(subjectId)) return (
+    <>
+      <PageHeader title={t('privacy.new.title')} back={{ to: '/admin/privacy', label: t('privacy.title') }} />
+      <Panel className={styles.panel}>
+        <EmptyState icon={<PersonInfo24Regular />} title={t('privacy.new.pickSubjectTitle')} message={t('privacy.new.pickSubject')}
+          action={<span className={styles.startLinks}>
+            <AppLink to="/organizations">{t('privacy.new.startFromContact')}</AppLink>
+            <AppLink to="/sales/leads">{t('privacy.new.startFromLead')}</AppLink>
+          </span>} />
+      </Panel>
+    </>
+  );
 
   const today = todayIso();
   const back = state?.back ?? (subjectKind === 'Contact' ? `/contacts/${subjectId}` : '/sales/leads');
   return (
     <>
       <PageHeader title={t('privacy.new.title')} back={{ to: back, label: t('common.back') }} />
-      <Panel title={t(`privacy.subjects.${subjectKind}`)}>
+      <Panel title={t(`privacy.subjects.${subjectKind}`)} icon={<PersonInfo16Regular />} className={styles.panel}>
         <form
           className={styles.form}
           onSubmit={(e) => {
@@ -71,7 +94,9 @@ export function NewPrivacyCasePage() {
             );
           }}
         >
-          <Text>{subjectName ?? t('privacy.new.subjectUnnamed')}</Text>
+          <div className={styles.subject}>
+            <PersonCell name={subjectName ?? t('privacy.new.subjectUnnamed')} />
+          </div>
           <Field label={t('privacy.new.kind')} required>
             <RadioGroup value={kind} onChange={(_, d) => setKind(d.value as PrivacyCaseKind)}>
               <Radio value="Access" label={t('privacy.new.kinds.Access')} />
@@ -94,10 +119,10 @@ export function NewPrivacyCasePage() {
             <Textarea value={note} onChange={(_, d) => setNote(d.value)} maxLength={500} />
           </Field>
           <div className={styles.actions}>
+            <Button onClick={() => navigate(back)}>{t('common.cancel')}</Button>
             <Button appearance="primary" type="submit" disabled={open.isPending}>
               {t('privacy.new.submit')}
             </Button>
-            <Button onClick={() => navigate(back)}>{t('common.cancel')}</Button>
           </div>
         </form>
       </Panel>

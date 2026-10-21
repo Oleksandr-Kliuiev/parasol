@@ -29,7 +29,7 @@ test('admin Connections separates historical state from flags and replaces chang
   const mapping = page.getByRole('region', { name: 'Stored Atlas mappings', exact: true });
   await expect(mapping.getByText('Stored links examined: 500 of 501 (limit 500)', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Microsoft Graph', exact: true }).getByText(/may be historical/)).toBeVisible();
-  await expect(page.getByText(/Their absence in Web does not indicate missing Worker credentials/)).toBeVisible();
+  await expect(page.getByText(/held by the background service, so this page cannot see whether they are set/)).toBeVisible();
   await expect(page.getByText(/Signing in through Microsoft 365 or Entra does not establish technical tenant monitoring/)).toBeVisible();
   await expect(page.getByText('Configuration unknown here', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Test connection|Run now|Sync|Pause|Edit/i })).toHaveCount(0);

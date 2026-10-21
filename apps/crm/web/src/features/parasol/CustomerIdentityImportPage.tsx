@@ -1,11 +1,16 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button, Checkbox, Field, MessageBar, MessageBarBody, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
+import { BuildingMultiple24Regular, CloudArrowDown20Regular, Database16Regular, DocumentArrowUp20Regular, LinkMultiple16Regular } from '@fluentui/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError, query } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
+import { h } from '../../app/hearth';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { DetailList, Panel } from '../../shared/components/Panel';
 import { formatDateTime } from '../../shared/utils/format';
+import { IconChip } from '../admin/IconChip';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { IdentityMappingRows } from './IdentityMappingRows';
 import { loadAtlasIdentity } from './atlasIdentitySource';
@@ -13,10 +18,48 @@ import { buildIdentityImport, canConfirmIdentityPlan, IdentityInputError, readId
   type AtlasIdentitySnapshot, type IdentityImport, type IdentityPlan, type SelectedCustomer } from './identityImport';
 
 const useStyles = makeStyles({
-  body: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: tokens.spacingVerticalM, maxWidth: '960px', minWidth: 0 },
-  actions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalM },
+  body: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', minWidth: 0 },
+  card: { display: 'grid', gap: '14px', minWidth: 0 },
+  // The one explaining line under a card title.
+  lead: { margin: '-6px 0 0', color: h.muted, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' },
+  note: { color: h.muted, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' },
+  // The two sources side by side: the Atlas directory (the usual way) and an export file.
+  sources: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '12px', minWidth: 0 },
+  source: {
+    display: 'grid',
+    gridTemplateColumns: '36px minmax(0, 1fr)',
+    alignItems: 'start',
+    columnGap: '12px',
+    rowGap: '10px',
+    paddingTop: '14px',
+    paddingBottom: '16px',
+    paddingLeft: '16px',
+    paddingRight: '16px',
+    borderRadius: '16px',
+    backgroundColor: h.well,
+    minWidth: 0,
+  },
+  sourceBody: { display: 'grid', gap: '10px', minWidth: 0, justifyItems: 'start' },
+  // The title sits on the middle line of its 36 px chip.
+  sourceTitle: { margin: '8px 0 0', fontSize: '14px', lineHeight: '20px', fontWeight: 700 },
+  sourceText: { margin: '-6px 0 0', color: h.muted, fontSize: '13px', lineHeight: '19px' },
+  sourceAction: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' },
+  file: { maxWidth: '100%', minWidth: 0 },
   workspace: { overflowWrap: 'anywhere' },
-  file: { width: '100%', minWidth: 0 },
+  // The foot of the card: what is selected on the left, the buttons in the order of the work on the right.
+  footer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: '16px',
+    rowGap: '12px',
+    paddingTop: '14px',
+    borderTop: `1px solid ${h.line}`,
+  },
+  count: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', color: h.muted, fontSize: '13px', lineHeight: '20px' },
+  actions: { display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: tokens.spacingHorizontalS, marginLeft: 'auto',
+    '@media (max-width: 560px)': { width: '100%', '& > .fui-Button': { flex: '1 1 auto' } } },
 });
 const endpoint = '/api/v1/parasol/customer-identities/import';
 
@@ -112,24 +155,42 @@ function IdentityImportForm() {
     <PageHeader title={t('parasolIdentity.title')} subtitle={t('parasolIdentity.subtitle')}
       back={{ to: '/admin/mappings', label: t('mappings.title') }} />
     <div className={styles.body}>
-      <Text>{t('parasolIdentity.instructions')}</Text>
       {errorKey && <MessageBar layout="multiline" intent="error"><MessageBarBody>{t(`parasolIdentity.errors.${errorKey}`)}</MessageBarBody></MessageBar>}
       {atlasStatus && <MessageBar layout="multiline" intent="warning"><MessageBarBody>{t(`parasolIdentity.atlasStatus.${atlasStatus}`)}</MessageBarBody></MessageBar>}
-      {!snapshot && <>
-        <div className={styles.actions}><Button appearance="primary" disabled={busy} onClick={() => void readAtlas()}>{t('parasolIdentity.loadAtlas')}</Button></div>
-        <Text>{t('parasolIdentity.sourceHint')}</Text>
-        <Field label={{ children: t('parasolIdentity.file'), htmlFor: fileId }}
-        hint={{ children: t('parasolIdentity.fileHint'), id: `${fileId}-hint` }}>
-        <input key={fileVersion} id={fileId} aria-describedby={`${fileId}-hint`} className={styles.file} type="file" accept=".json,application/json" disabled={busy}
-          onChange={e => { const file = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (file) void readFile(file); }} />
-        </Field>
-      </>}
-      {busy && <Spinner size="small" label={t('common.loading')} />}
-      {snapshot && <>
-        <Text>{retrievedAt ? t('parasolIdentity.loadedAtlas', { time: formatDateTime(retrievedAt) }) : t('parasolIdentity.loadedFile')}</Text>
-        <Text className={styles.workspace} weight="semibold">{t('parasolIdentity.workspace')}: {snapshot.workspaceId}</Text>
-        <Text>{t('parasolIdentity.selectionCount', { selected: selected.size, total: snapshot.clients.length, omitted: snapshot.clients.length - selected.size })}</Text>
-        {snapshot.clients.length === 0 && <Text role="status">{t('parasolIdentity.empty')}</Text>}
+      {!snapshot && <Panel title={t('parasolIdentity.sourceTitle')} icon={<Database16Regular />}><div className={styles.card}>
+        <p className={styles.lead}>{t('parasolIdentity.instructions')}</p>
+        <div className={styles.sources}>
+          <div className={styles.source}>
+            <IconChip icon={<CloudArrowDown20Regular />} tone="iris" />
+            <div className={styles.sourceBody}>
+              <h3 className={styles.sourceTitle}>{t('parasolIdentity.fromAtlas')}</h3>
+              <p className={styles.sourceText}>{t('parasolIdentity.sourceHint')}</p>
+              <div className={styles.sourceAction}>
+                <Button appearance="primary" disabled={busy} onClick={() => void readAtlas()}>{t('parasolIdentity.loadAtlas')}</Button>
+                {busy && <Spinner size="tiny" label={t('common.loading')} />}
+              </div>
+            </div>
+          </div>
+          <div className={styles.source}>
+            <IconChip icon={<DocumentArrowUp20Regular />} tone="saffron" />
+            <div className={styles.sourceBody}>
+              <h3 className={styles.sourceTitle}>{t('parasolIdentity.fromFile')}</h3>
+              <Field label={{ children: t('parasolIdentity.file'), htmlFor: fileId }}
+                hint={{ children: t('parasolIdentity.fileHint'), id: `${fileId}-hint` }}>
+                <input key={fileVersion} id={fileId} aria-describedby={`${fileId}-hint`} className={styles.file} type="file" accept=".json,application/json" disabled={busy}
+                  onChange={e => { const file = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (file) void readFile(file); }} />
+              </Field>
+            </div>
+          </div>
+        </div>
+      </div></Panel>}
+      {snapshot && <Panel title={t('parasolIdentity.rows')} icon={<LinkMultiple16Regular />}
+        actions={<Button size="small" disabled={busy} onClick={reset}>{t('parasolIdentity.reset')}</Button>}><div className={styles.card}>
+        <DetailList items={[
+          { label: t('parasolIdentity.source'), value: retrievedAt ? t('parasolIdentity.loadedAtlas', { time: formatDateTime(retrievedAt) }) : t('parasolIdentity.loadedFile') },
+          { label: t('parasolIdentity.workspace'), value: <span className={styles.workspace}>{snapshot.workspaceId}</span> },
+        ]} />
+        <Text className={styles.note}>{retrievedAt ? t('parasolIdentity.loadedAtlasNote') : t('parasolIdentity.loadedFileNote')}</Text>
         {review && <MessageBar layout="multiline" intent={canConfirmIdentityPlan(review.plan) ? 'info' : 'warning'}>
           <MessageBarBody>{t(canConfirmIdentityPlan(review.plan) ? 'parasolIdentity.reviewReady' : 'parasolIdentity.reviewBlocked')}</MessageBarBody>
         </MessageBar>}
@@ -137,21 +198,29 @@ function IdentityImportForm() {
           created: applied.rows.filter(r => r.outcome === 'APPLIED').length,
           existing: applied.rows.filter(r => r.outcome === 'ALREADY_LINKED').length,
         })}</MessageBarBody></MessageBar>}
-        <IdentityMappingRows key={fileVersion} snapshot={snapshot} selected={selected} plan={plan} locked={busy} onSelect={(id, customer) => {
-          clearReview(); setSelected(previous => { const next = new Map(previous); if (customer) next.set(id, customer); else next.delete(id); return next; });
-        }} />
+        {snapshot.clients.length === 0 ? <EmptyState message={t('parasolIdentity.empty')} icon={<BuildingMultiple24Regular />} /> :
+          <IdentityMappingRows key={fileVersion} snapshot={snapshot} selected={selected} plan={plan} locked={busy} onSelect={(id, customer) => {
+            clearReview(); setSelected(previous => { const next = new Map(previous); if (customer) next.set(id, customer); else next.delete(id); return next; });
+          }} />}
         {review && canConfirmIdentityPlan(review.plan) && <Checkbox checked={confirmed} disabled={busy}
           onChange={(_, data) => setConfirmed(data.checked === true)} label={t('parasolIdentity.confirmLabel')} />}
-        <div className={styles.actions}>
-          {!review && !applied && <Button appearance="primary" disabled={busy || selected.size === 0} onClick={() => void preview()}>{t('parasolIdentity.preview')}</Button>}
-          {review && <>
-            <Button disabled={busy} onClick={clearReview}>{t('parasolIdentity.edit')}</Button>
-            <Button appearance="primary" disabled={busy || !confirmed || !canConfirmIdentityPlan(review.plan)} onClick={() => void apply()}>{t('parasolIdentity.apply')}</Button>
-          </>}
-          {applied && <Button disabled={busy} onClick={clearReview}>{t('parasolIdentity.continue')}</Button>}
-          <Button disabled={busy} onClick={reset}>{t('parasolIdentity.reset')}</Button>
+        <div className={styles.footer}>
+          <span className={styles.count} aria-live="polite">
+            {busy && <Spinner size="extra-tiny" aria-label={t('common.loading')} />}
+            <span>{t('parasolIdentity.selectionCount', { selected: selected.size, total: snapshot.clients.length, omitted: snapshot.clients.length - selected.size })}</span>
+            {/* Why "Preview mappings" cannot be used yet. */}
+            {selected.size === 0 && snapshot.clients.length > 0 && <span>{t('parasolIdentity.errors.noSelection')}</span>}
+          </span>
+          <div className={styles.actions}>
+            {!review && !applied && <Button appearance="primary" disabled={busy || selected.size === 0} onClick={() => void preview()}>{t('parasolIdentity.preview')}</Button>}
+            {review && <>
+              <Button disabled={busy} onClick={clearReview}>{t('parasolIdentity.edit')}</Button>
+              <Button appearance="primary" disabled={busy || !confirmed || !canConfirmIdentityPlan(review.plan)} onClick={() => void apply()}>{t('parasolIdentity.apply')}</Button>
+            </>}
+            {applied && <Button disabled={busy} onClick={clearReview}>{t('parasolIdentity.continue')}</Button>}
+          </div>
         </div>
-      </>}
+      </div></Panel>}
     </div>
   </>;
 }

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Button, Checkbox, Field, MessageBar, MessageBarActions, MessageBarBody, Select, Textarea } from '@fluentui/react-components';
+import { Signature16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../../api/client';
 import { useCurrentUser } from '../../../auth/CurrentUserContext';
@@ -10,7 +11,7 @@ import { useNotify } from '../../../shared/components/useNotify';
 import { errorMessage } from '../../../shared/utils/errors';
 import { useSignoff, type ComparisonResult, type PilotOverview, type SignoffResult } from './api';
 import { EXPLANATION_MAX, EXPLANATION_MIN, FALLBACK_MAX, FALLBACK_MIN, ownerRoles } from './constants';
-import { Verdict } from './parts';
+import { KeyText, Verdict } from './parts';
 import { money, usePilotStyles } from './styles';
 
 interface Entry {
@@ -96,9 +97,9 @@ export function SignoffForm({ result, overview, run, onSigned, onReload }: Signo
   };
 
   return (
-    <Panel title={t('pilot.signoff.title')}>
-      <p style={{ marginTop: 0 }}>{t('pilot.signoff.intro', { number: exceptions.length })}</p>
-      <p className={styles.muted}>{t('pilot.signoff.signer', { name: me.displayName })}</p>
+    <Panel title={t('pilot.signoff.title')} icon={<Signature16Regular />}>
+      <p className={styles.intro}>{t('pilot.signoff.intro', { number: exceptions.length })}</p>
+      <p className={styles.lead}>{t('pilot.signoff.signer', { name: me.displayName })}</p>
       {stale && (
         <MessageBar intent="warning" layout="multiline" role="alert" style={{ marginBottom: 12 }}>
           <MessageBarBody>{t('pilot.signoff.stale')}</MessageBarBody>
@@ -106,7 +107,7 @@ export function SignoffForm({ result, overview, run, onSigned, onReload }: Signo
       )}
 
       {exceptions.length === 0 ? (
-        <p>{t('pilot.signoff.nothingToExplain')}</p>
+        <p className={styles.lead}>{t('pilot.signoff.nothingToExplain')}</p>
       ) : (
         <div className={styles.stack}>
           {exceptions.map((item) => {
@@ -114,11 +115,12 @@ export function SignoffForm({ result, overview, run, onSigned, onReload }: Signo
             const short = entry.text !== '' && !lengthOk(entry.text, EXPLANATION_MIN, EXPLANATION_MAX);
             return (
               <fieldset key={item.key} className={styles.group}>
-                <legend style={{ padding: '0 4px', maxWidth: '100%' }}>
-                  <span className={styles.mono}>{item.key}</span> <Verdict status={item.status} />
-                  {item.difference !== null && item.difference !== undefined && ` · ${money(item.difference, item.currency)}`}
+                <legend className={styles.legend}>
+                  <span className={styles.keyText}><KeyText value={item.key} /></span>
+                  <Verdict status={item.status} />
+                  {item.difference !== null && item.difference !== undefined && <span className={styles.muted}>{money(item.difference, item.currency)}</span>}
                 </legend>
-                <div className={styles.stack} style={{ gap: 8 }}>
+                <div className={styles.stack} style={{ gap: 12 }}>
                   <Field
                     label={t('pilot.signoff.explanation')}
                     hint={t('pilot.signoff.counter', { length: entry.text.trim().length, min: EXPLANATION_MIN, max: EXPLANATION_MAX })}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from '@fluentui/react-components';
+import { DialogBody, DialogContent, DialogSurface, DialogTitle } from '@fluentui/react-components';
+import { Dialog } from '../shared/components/Dialog';
 import { createTabster, disposeTabster } from 'tabster';
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen } from '@testing-library/react';

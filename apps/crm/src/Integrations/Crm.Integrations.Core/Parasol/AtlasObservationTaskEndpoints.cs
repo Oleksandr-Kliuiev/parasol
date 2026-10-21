@@ -25,6 +25,12 @@ public static class AtlasObservationTaskEndpoints
                 http.Response.Headers.CacheControl = "no-store";
                 return (await tasks.CreateAsync(customerId, observationId, body, ct)).ToHttpResult(Results.Ok);
             }).RequirePermission(Permissions.ActivitiesWrite).WithMetadata(new RequestSizeLimitAttribute(4096));
+        group.MapGet("/customers/{customerId:guid}/observation-tasks", async
+            (Guid customerId, string? ids, AtlasObservationTaskService tasks, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await tasks.LookupAsync(customerId, ids, ct)).ToHttpResult(Results.Ok);
+            });
         group.MapGet("/activities/{activityId:guid}/atlas-observation", async
             (Guid activityId, AtlasObservationTaskService tasks, HttpContext http, CancellationToken ct) =>
             {

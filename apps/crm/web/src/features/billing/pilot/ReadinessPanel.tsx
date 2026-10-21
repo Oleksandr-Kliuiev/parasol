@@ -1,4 +1,5 @@
-import { Spinner, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components';
+import { Spinner, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, mergeClasses } from '@fluentui/react-components';
+import { CheckmarkCircle20Regular, ShieldError20Regular, ShieldTask16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { Panel } from '../../../shared/components/Panel';
@@ -21,19 +22,18 @@ export function ReadinessView({ readiness }: { readiness: Readiness }) {
   const { t } = useTranslation();
   return (
     <>
-      <p role="status" style={{ margin: 0 }}>
-        <Text className={readiness.safeForParallelRun ? styles.good : styles.bad}>
-          {readiness.safeForParallelRun ? t('pilot.readiness.safe') : t('pilot.readiness.notSafe')}
-        </Text>
+      <p role="status" className={mergeClasses(styles.verdict, readiness.safeForParallelRun ? styles.verdictGood : styles.verdictBad)}>
+        {readiness.safeForParallelRun ? <CheckmarkCircle20Regular aria-hidden /> : <ShieldError20Regular aria-hidden />}
+        <span>{readiness.safeForParallelRun ? t('pilot.readiness.safe') : t('pilot.readiness.notSafe')}</span>
       </p>
-      <p className={styles.muted}>{t('pilot.readiness.source', { source: readiness.source })}</p>
+      <p className={styles.lead}>{t('pilot.readiness.source', { source: readiness.source })}</p>
       <ScrollRegion label={t('pilot.readiness.tableLabel')}>
         <Table className={styles.table} aria-label={t('pilot.readiness.tableLabel')}>
           <TableHeader>
             <TableRow>
-              <TableHeaderCell>{t('pilot.readiness.check')}</TableHeaderCell>
-              <TableHeaderCell>{t('pilot.readiness.value')}</TableHeaderCell>
-              <TableHeaderCell>{t('common.status')}</TableHeaderCell>
+              <TableHeaderCell style={{ width: '28%' }}>{t('pilot.readiness.check')}</TableHeaderCell>
+              <TableHeaderCell style={{ width: 140 }}>{t('pilot.readiness.value')}</TableHeaderCell>
+              <TableHeaderCell style={{ width: 128 }}>{t('common.status')}</TableHeaderCell>
               <TableHeaderCell>{t('pilot.readiness.explanation')}</TableHeaderCell>
             </TableRow>
           </TableHeader>
@@ -41,10 +41,10 @@ export function ReadinessView({ readiness }: { readiness: Readiness }) {
             {readiness.checks.map((check) => (
               <TableRow key={check.check}>
                 <TableCell>
-                  {t(`pilot.readiness.names.${check.check.replace('.', '_')}`, { defaultValue: check.check })}
+                  <span className={styles.neutral}>{t(`pilot.readiness.names.${check.check.replace('.', '_')}`, { defaultValue: check.check })}</span>
                   {check.decisive && <div className={styles.muted}>{t('pilot.readiness.decisive')}</div>}
                 </TableCell>
-                <TableCell className={styles.mono}>{check.state}</TableCell>
+                <TableCell className={styles.key}>{check.state}</TableCell>
                 <TableCell>
                   <CheckState check={check} />
                 </TableCell>
@@ -54,13 +54,15 @@ export function ReadinessView({ readiness }: { readiness: Readiness }) {
           </TableBody>
         </Table>
       </ScrollRegion>
-      <h3 className={styles.heading}>{t('pilot.readiness.caveatsTitle')}</h3>
-      <ul className={styles.list}>
-        <li>{t('pilot.readiness.workerFacts')}</li>
-        {readiness.caveats.map((code) => (
-          <li key={code}>{t(`pilot.readiness.caveats.${code}`, { defaultValue: code })}</li>
-        ))}
-      </ul>
+      <div className={styles.well}>
+        <h3 className={styles.wellHeading}>{t('pilot.readiness.caveatsTitle')}</h3>
+        <ul className={styles.list}>
+          <li>{t('pilot.readiness.workerFacts')}</li>
+          {readiness.caveats.map((code) => (
+            <li key={code}>{t(`pilot.readiness.caveats.${code}`, { defaultValue: code })}</li>
+          ))}
+        </ul>
+      </div>
     </>
   );
 }
@@ -70,9 +72,9 @@ export function ReadinessPanel({ period }: { period: string }) {
   const { t } = useTranslation();
   const readiness = useReadiness(period);
   return (
-    <Panel title={t('pilot.readiness.title')}>
+    <Panel title={t('pilot.readiness.title')} icon={<ShieldTask16Regular />}>
       {readiness.isPending ? (
-        <Spinner label={t('common.loading')} />
+        <Spinner size="small" label={t('common.loading')} />
       ) : readiness.error ? (
         <ErrorState error={readiness.error} onRetry={() => void readiness.refetch()} />
       ) : (

@@ -13,7 +13,8 @@ namespace Crm.TimeTracking.Features;
 /// Work hours coming from the service desk (BR-TIM-01/02). An entry that changed after it was invoiced is flagged for Finance instead of
 /// being rewritten; an approved entry that changed is withdrawn so it is approved again with the new hours.
 /// </summary>
-internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeApprovalService approvals, TimeBankTransaction financial, TimeBillingGuard billing) : ITimeTrackingApi
+internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeApprovalService approvals, TimeBankTransaction financial, TimeBillingGuard billing,
+    IUserDirectory users) : ITimeTrackingApi
 {
     public async Task<IReadOnlyList<BillableTime>> GetBillableTimeAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
     {
@@ -147,22 +148,31 @@ internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeAp
         var pendingByTechnician = unapproved.ToDictionary(e => (e.TechnicianId, e.Name), e => e.Hours);
         var keys = approvedByTechnician.Keys.Concat(pendingByTechnician.Keys).Distinct();
 
-        return keys
+        var rows = keys
             .Select(key =>
             {
                 var mine = approvedByTechnician.GetValueOrDefault(key);
-                var billed = mine?.Billed ?? 0m;
-                var covered = mine?.Covered ?? 0m;
-                var bank = mine?.Bank ?? 0m;
                 var nonBillable = (mine?.NonBillable ?? 0m) + pendingByTechnician.GetValueOrDefault(key);
-                return new TechnicianUtilization(
-                    key.TechnicianId,
-                    key.Name,
-                    decimal.Round(billed, 2),
-                    decimal.Round(covered, 2),
-                    decimal.Round(bank, 2),
-                    decimal.Round(nonBillable, 2),
-                    decimal.Round(billed + covered + bank + nonBillable, 2));
+                return (key.TechnicianId, key.Name, Billed: mine?.Billed ?? 0m, Covered: mine?.Covered ?? 0m, Bank: mine?.Bank ?? 0m, NonBillable: nonBillable);
+            })
+            .ToList();
+        // One person is one row under the name the time-entry list shows: hours entered in the CRM store no name, and hours
+        // imported under a name meet them by the person's id (the dashboard showed "—" for CRM-entered time). Without an id
+        // only the name tells people apart, still compared ordinally. A person the directory does not know keeps the
+        // imported name with the most hours (ties in ordinal order), so the row's name never depends on read order.
+        var ids = rows.Where(r => r.TechnicianId != null).Select(r => r.TechnicianId!.Value).Distinct().ToList();
+        var names = ids.Count == 0 ? new Dictionary<Guid, UserSummary>() : await users.GetUsersAsync(ids, cancellationToken);
+        return rows
+            .GroupBy(r => r.TechnicianId is { } id ? (object)id : r.Name)
+            .Select(g =>
+            {
+                var id = g.First().TechnicianId;
+                var name = id is { } technician && names.TryGetValue(technician, out var user) ? user.DisplayName
+                    : g.Where(r => r.Name != "—").OrderByDescending(r => r.Billed + r.Covered + r.Bank + r.NonBillable)
+                        .ThenBy(r => r.Name, StringComparer.Ordinal).Select(r => r.Name).FirstOrDefault() ?? "—";
+                var billed = g.Sum(r => r.Billed); var covered = g.Sum(r => r.Covered); var bank = g.Sum(r => r.Bank); var nonBillable = g.Sum(r => r.NonBillable);
+                return new TechnicianUtilization(id, name, decimal.Round(billed, 2), decimal.Round(covered, 2), decimal.Round(bank, 2),
+                    decimal.Round(nonBillable, 2), decimal.Round(billed + covered + bank + nonBillable, 2));
             })
             .OrderByDescending(u => u.TotalHours)
             .ToList();

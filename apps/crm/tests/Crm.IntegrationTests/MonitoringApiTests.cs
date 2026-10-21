@@ -143,20 +143,30 @@ public sealed class MonitoringApiTests(CrmWebFactory factory)
                 RequiredPermission = Permissions.FinanceRead, Comment = "947321.87 NOK private financial note", UpdatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync(Ct);
         }
-        await using var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        try
         {
-            services.AddScoped<ICurrentUser, RestrictedOperator>();
-            services.AddSingleton<IOperationalSignalSource>(new SyntheticFinancialSignal(key));
-        }));
-        var client = host.CreateClient();
-        client.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, CrmRoles.Admin);
-        client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "restricted-monitor");
-        var response = await client.GetAsync(Url, Ct);
-        response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var body = await response.Content.ReadAsStringAsync(Ct);
-        body.ShouldNotContain(key);
-        body.ShouldNotContain("947321.87");
-        (await client.GetAsync(Url + "/triage?key=" + Uri.EscapeDataString(key), Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+            await using var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            {
+                services.AddScoped<ICurrentUser, RestrictedOperator>();
+                services.AddSingleton<IOperationalSignalSource>(new SyntheticFinancialSignal(key));
+            }));
+            var client = host.CreateClient();
+            client.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, CrmRoles.Admin);
+            client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "restricted-monitor");
+            var response = await client.GetAsync(Url, Ct);
+            response.StatusCode.ShouldBe(HttpStatusCode.OK);
+            var body = await response.Content.ReadAsStringAsync(Ct);
+            body.ShouldNotContain(key);
+            body.ShouldNotContain("947321.87");
+            (await client.GetAsync(Url + "/triage?key=" + Uri.EscapeDataString(key), Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
+        finally
+        {
+            // A case note with no live signal is still listed as recovered, and an operator with finance.read reads it: leave
+            // none behind, or the redaction checks of the shared snapshot find this note's amount (they run in either order).
+            await using var cleanup = factory.Services.CreateAsyncScope();
+            await cleanup.ServiceProvider.GetRequiredService<IntegrationDbContext>().ExceptionTriages.Where(t => t.Key == key).ExecuteDeleteAsync(Ct);
+        }
     }
 
     [Fact]

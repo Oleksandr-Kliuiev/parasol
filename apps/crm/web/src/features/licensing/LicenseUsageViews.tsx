@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -22,46 +21,44 @@ import {
   Text,
   Textarea,
   makeStyles,
-  tokens,
+  mergeClasses,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { ArrowUpload20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { ArrowTrending16Regular, ArrowUpload20Regular, DataUsage24Regular, Key16Regular, Money16Regular, Receipt16Regular, Receipt24Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
+import { StatGrid, StatTile } from '../../shared/components/KpiTile';
+import { useFlushStyles, useStatFitStyles } from '../billing/flushStyles';
 import { useTranslation } from 'react-i18next';
 import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
+import { FilterField, Toolbar } from '../../shared/components/Toolbar';
+import { RecordCell } from '../organizations/RecordCell';
+import { useRecordStyles } from '../organizations/recordStyles';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatMoney, formatNumber } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
+import { useDialogStyles } from '../contracts/dialogStyles';
 import { useImportMsBilling, useLicenseUsage, useReconciliation, useReconciliationPeriods } from './api';
 import type { ImportResult } from './types';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  bar: { display: 'flex', flexWrap: 'wrap', alignItems: 'end', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
   month: { minWidth: '160px' },
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
-  tile: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXXS,
-    padding: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
-  },
-  value: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
-  label: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  warn: { color: tokens.colorPaletteDarkOrangeForeground1 },
-  good: { color: tokens.colorPaletteGreenForeground1 },
-  note: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
+  // Sits on the line of the 42 px controls next to it.
+  hint: { display: 'inline-flex', alignItems: 'center', minHeight: '42px', fontWeight: 600 },
+  warn: { color: h.emberT },
+  note: { color: h.muted, fontSize: '12.5px', lineHeight: '18px' },
 });
 
 /** FR-LIC-03: what each customer pays for against what is actually handed out in their tenant. */
 export function LicenseUsageView({ organizationId }: { organizationId?: string }) {
   const styles = useStyles();
   const catalog = useCatalogStyles();
+  const record = useRecordStyles();
+  const flush = useFlushStyles();
   const { t } = useTranslation();
   const [unusedOnly, setUnusedOnly] = useState(false);
   const { data = [], error, isPending, refetch } = useLicenseUsage(organizationId, unusedOnly);
@@ -72,21 +69,28 @@ export function LicenseUsageView({ organizationId }: { organizationId?: string }
 
   return (
     <>
-      <div className={styles.bar}>
-        <Switch label={t('licenses.usage.unusedOnly', { days: windowDays })} checked={unusedOnly} onChange={(_, d) => setUnusedOnly(Boolean(d.checked))} />
-        {unusedSeats > 0 && <Text className={styles.warn}>{t('licenses.usage.unusedSeats', { seats: unusedSeats, days: windowDays })}</Text>}
-      </div>
+      <Toolbar
+        label={t('licenses.tabs.usage')}
+        end={
+          unusedSeats > 0 && (
+            <Text className={mergeClasses(styles.warn, styles.hint)}>{t('licenses.usage.unusedSeats', { count: unusedSeats, days: windowDays })}</Text>
+          )
+        }
+      >
+        <Switch className={catalog.toggle} label={t('licenses.usage.unusedOnly', { days: windowDays })} checked={unusedOnly} onChange={(_, d) => setUnusedOnly(Boolean(d.checked))} />
+      </Toolbar>
 
       <ScrollTable className={catalog.tableWrap}>
-        <Table className={catalog.table} aria-label={t('licenses.tabs.usage')}>
+        <Table className={mergeClasses(catalog.table, flush.cells)} style={{ minWidth: organizationId ? 700 : 860 }} aria-label={t('licenses.tabs.usage')}>
           <TableHeader>
             <TableRow>
+              {/* Content widths: every cell adds 12 px of padding on each side; customer and licence share the rest. */}
               {!organizationId && <TableHeaderCell>{t('licenses.fields.customer')}</TableHeaderCell>}
               <TableHeaderCell>{t('licenses.usage.sku')}</TableHeaderCell>
-              <TableHeaderCell className={catalog.number}>{t('licenses.usage.purchased')}</TableHeaderCell>
-              <TableHeaderCell className={catalog.number}>{t('licenses.usage.assigned')}</TableHeaderCell>
-              <TableHeaderCell className={catalog.number}>{t('licenses.usage.unused')}</TableHeaderCell>
-              <TableHeaderCell>{t('licenses.usage.readAt')}</TableHeaderCell>
+              <TableHeaderCell className={catalog.number} style={{ width: 76 }}>{t('licenses.usage.purchased')}</TableHeaderCell>
+              <TableHeaderCell className={catalog.number} style={{ width: 76 }}>{t('licenses.usage.assigned')}</TableHeaderCell>
+              <TableHeaderCell className={catalog.number} style={{ width: 136 }}>{t('licenses.usage.unused')}</TableHeaderCell>
+              <TableHeaderCell style={{ width: 96 }}>{t('licenses.usage.readAt')}</TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -94,12 +98,18 @@ export function LicenseUsageView({ organizationId }: { organizationId?: string }
               <TableRow key={`${row.organizationId}-${row.skuId}`}>
                 {!organizationId && (
                   <TableCell>
-                    <AppLink to={`/organizations/${row.organizationId}?tab=licenses`}>{row.organizationName}</AppLink>
+                    <RecordCell
+                      avatarName={row.organizationName}
+                      size={28}
+                      name={<AppLink to={`/organizations/${row.organizationId}?tab=licenses`} className={record.quietLink}>{row.organizationName}</AppLink>}
+                    />
                   </TableCell>
                 )}
                 <TableCell>
-                  <span className={catalog.name}>{row.skuPartNumber}</span>
-                  <div className={catalog.sku}>{row.skuId}</div>
+                  {/* Microsoft's part number is what people recognise; the SKU id stays in the tooltip for whoever needs it. */}
+                  <span title={row.skuId}>
+                    <RecordCell icon={<Key16Regular />} tone="iris" size={28} name={<span className={catalog.name}>{row.skuPartNumber}</span>} />
+                  </span>
                 </TableCell>
                 <TableCell className={catalog.number}>{formatNumber(row.purchased, 0)}</TableCell>
                 <TableCell className={catalog.number}>{formatNumber(row.assigned, 0)}</TableCell>
@@ -112,7 +122,7 @@ export function LicenseUsageView({ organizationId }: { organizationId?: string }
             ))}
           </TableBody>
         </Table>
-        {!isPending && data.length === 0 && <EmptyState message={t(unusedOnly ? 'licenses.usage.noneUnused' : 'licenses.usage.empty')} />}
+        {!isPending && data.length === 0 && <EmptyState icon={<DataUsage24Regular />} message={t(unusedOnly ? 'licenses.usage.noneUnused' : 'licenses.usage.empty')} />}
       </ScrollTable>
     </>
   );
@@ -121,7 +131,10 @@ export function LicenseUsageView({ organizationId }: { organizationId?: string }
 /** FR-LIC-04: Microsoft's cost against the customer's invoice for the same month. */
 export function ReconciliationView() {
   const styles = useStyles();
+  const stat = useStatFitStyles();
   const catalog = useCatalogStyles();
+  const record = useRecordStyles();
+  const flush = useFlushStyles();
   const { t } = useTranslation();
   const restoreFocusTarget = useRestoreFocusTarget();
   const periods = useReconciliationPeriods();
@@ -141,10 +154,18 @@ export function ReconciliationView() {
 
   return (
     <>
-      <div className={styles.bar}>
-        <Field label={t('licenses.reconciliation.period')} className={styles.month}>
+      <Toolbar
+        label={t('licenses.tabs.reconciliation')}
+        end={
+          <Button {...restoreFocusTarget} icon={<ArrowUpload20Regular />} onClick={() => setImporting(true)}>
+            {t('licenses.reconciliation.import')}
+          </Button>
+        }
+      >
+        <FilterField label={t('licenses.reconciliation.period')}>
           <Dropdown
             id="reconciliation-period"
+            className={styles.month}
             value={formatPeriod(selected)}
             selectedOptions={[selected]}
             onOptionSelect={(_, d) => setPeriod(d.optionValue ?? null)}
@@ -155,33 +176,33 @@ export function ReconciliationView() {
               </Option>
             ))}
           </Dropdown>
-        </Field>
-        <Button {...restoreFocusTarget} icon={<ArrowUpload20Regular />} onClick={() => setImporting(true)}>
-          {t('licenses.reconciliation.import')}
-        </Button>
-      </div>
+        </FilterField>
+      </Toolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <>
-          <div className={styles.tiles}>
-            <div className={styles.tile}>
-              <span className={styles.value}>{formatMoney(data?.microsoftCost ?? 0, data?.currency)}</span>
-              <span className={styles.label}>{t('licenses.reconciliation.cost', { lines: data?.lines ?? 0 })}</span>
-            </div>
-            <div className={styles.tile}>
-              <span className={styles.value}>{formatMoney(data?.billedRevenue ?? 0, data?.currency)}</span>
-              <span className={styles.label}>{t('licenses.reconciliation.revenue')}</span>
-            </div>
-            <div className={styles.tile}>
-              <span className={`${styles.value} ${(data?.margin ?? 0) < 0 ? styles.warn : styles.good}`}>{formatMoney(data?.margin ?? 0, data?.currency)}</span>
-              <span className={styles.label}>{t('licenses.reconciliation.margin')}</span>
-            </div>
-          </div>
+          <StatGrid className={stat.fit}>
+            <StatTile className={stat.money}
+              icon={<Receipt16Regular />}
+              tone="saffron"
+              label={t('licenses.reconciliation.cost')}
+              value={formatMoney(data?.microsoftCost ?? 0, data?.currency)}
+              note={t('licenses.reconciliation.costLines', { count: data?.lines ?? 0 })}
+            />
+            <StatTile className={stat.money} icon={<Money16Regular />} tone="iris" label={t('licenses.reconciliation.revenue')} value={formatMoney(data?.billedRevenue ?? 0, data?.currency)} />
+            <StatTile className={stat.money}
+              icon={<ArrowTrending16Regular />}
+              tone="spruce"
+              label={t('licenses.reconciliation.margin')}
+              value={formatMoney(data?.margin ?? 0, data?.currency)}
+              status={(data?.margin ?? 0) < 0 ? 'bad' : (data?.margin ?? 0) > 0 ? 'good' : undefined}
+            />
+          </StatGrid>
 
           <ScrollTable className={catalog.tableWrap}>
-            <Table className={catalog.table} aria-label={t('licenses.tabs.reconciliation')}>
+            <Table className={mergeClasses(catalog.table, flush.cells)} aria-label={t('licenses.tabs.reconciliation')}>
               <TableHeader>
                 <TableRow>
                   <TableHeaderCell>{t('licenses.fields.customer')}</TableHeaderCell>
@@ -195,11 +216,17 @@ export function ReconciliationView() {
                 {(data?.rows ?? []).map((row) => (
                   <TableRow key={row.organizationId ?? row.organizationName}>
                     <TableCell>
-                      {row.organizationId ? (
-                        <AppLink to={`/organizations/${row.organizationId}?tab=licenses`}>{row.organizationName}</AppLink>
-                      ) : (
-                        <span className={catalog.name}>{row.organizationName}</span>
-                      )}
+                      <RecordCell
+                        avatarName={row.organizationName}
+                        size={28}
+                        name={
+                          row.organizationId ? (
+                            <AppLink to={`/organizations/${row.organizationId}?tab=licenses`} className={record.quietLink}>{row.organizationName}</AppLink>
+                          ) : (
+                            <span className={catalog.name}>{row.organizationName}</span>
+                          )
+                        }
+                      />
                       {row.notBilled && (
                         <div className={styles.note}>
                           <Text className={styles.warn}>{t('licenses.reconciliation.notBilled')}</Text>
@@ -218,13 +245,13 @@ export function ReconciliationView() {
                 ))}
               </TableBody>
             </Table>
-            {!isPending && (data?.rows.length ?? 0) === 0 && <EmptyState message={t('licenses.reconciliation.empty')} />}
+            {!isPending && (data?.rows.length ?? 0) === 0 && <EmptyState icon={<Receipt24Regular />} message={t('licenses.reconciliation.empty')} />}
           </ScrollTable>
         </>
       )}
 
       <Dialog open={importing} onOpenChange={(_, d) => !d.open && setImporting(false)}>
-        <DialogSurface>{importing && <MsBillingImportForm onClose={() => setImporting(false)} />}</DialogSurface>
+        <DialogSurface><MsBillingImportForm onClose={() => setImporting(false)} /></DialogSurface>
       </Dialog>
     </>
   );
@@ -236,6 +263,7 @@ function formatPeriod(period: string): string {
 }
 
 function MsBillingImportForm({ onClose }: { onClose: () => void }) {
+  const dialog = useDialogStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const importLines = useImportMsBilling();
@@ -260,23 +288,25 @@ function MsBillingImportForm({ onClose }: { onClose: () => void }) {
     <DialogBody>
       <DialogTitle>{t('licenses.reconciliation.importTitle')}</DialogTitle>
       <DialogContent>
-        <p style={{ marginTop: 0 }}>{t('licenses.reconciliation.importBody')}</p>
-        <Field label={t('licenses.importFile')}>
-          <input
-            type="file"
-            accept=".csv,text/csv,text/plain"
-            aria-label={t('licenses.importFile')}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void file.text().then((text) => { setCsv(text); setPreview(null); });
-            }}
-          />
-        </Field>
-        <Field label={t('licenses.importPaste')} hint={t('licenses.reconciliation.importHint')}>
-          <Textarea value={csv} onChange={(_, d) => { setCsv(d.value); setPreview(null); }} resize="vertical" rows={6} />
-        </Field>
+        <p className={dialog.lead}>{t('licenses.reconciliation.importBody')}</p>
+        <div className={dialog.grid}>
+          <Field label={t('licenses.importFile')} className={dialog.wide}>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              aria-label={t('licenses.importFile')}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void file.text().then((text) => { setCsv(text); setPreview(null); });
+              }}
+            />
+          </Field>
+          <Field className={dialog.wide} label={t('licenses.importPaste')} hint={t('licenses.reconciliation.importHint')}>
+            <Textarea value={csv} onChange={(_, d) => { setCsv(d.value); setPreview(null); }} resize="vertical" rows={6} />
+          </Field>
+        </div>
         {preview && (
-          <MessageBar intent={preview.warnings.length > 0 ? 'warning' : 'info'} style={{ marginTop: 12 }}>
+          <MessageBar intent={preview.warnings.length > 0 ? 'warning' : 'info'} className={dialog.after}>
             <MessageBarBody>
               {t('licenses.reconciliation.previewResult', {
                 created: preview.created,
@@ -289,7 +319,7 @@ function MsBillingImportForm({ onClose }: { onClose: () => void }) {
           </MessageBar>
         )}
         {importLines.error && (
-          <MessageBar intent="error" style={{ marginTop: 12 }}>
+          <MessageBar intent="error" className={dialog.after}>
             <MessageBarBody>{errorMessage(importLines.error, t)}</MessageBarBody>
           </MessageBar>
         )}

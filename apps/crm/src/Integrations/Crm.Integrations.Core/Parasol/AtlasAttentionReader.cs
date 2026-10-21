@@ -10,20 +10,27 @@ public sealed class AtlasAttentionReader
 {
     internal const int CustomerLimit = 50;
     internal const int Concurrency = 4;
+    /// <summary>My day shows the three most urgent observations of each customer.</summary>
+    internal const int PreviewLimit = 3;
+    /// <summary>The observation queue (UX 2026 В1) shows up to ten per customer and links to the customer's own queue for the rest.</summary>
+    internal const int QueueLimit = 10;
     internal static readonly TimeSpan TotalBudget = TimeSpan.FromSeconds(15);
     internal static readonly TimeSpan CustomerBudget = TimeSpan.FromSeconds(3);
+    internal static readonly TimeSpan TaskBudget = TimeSpan.FromSeconds(2);
     private readonly ICurrentUser user;
     private readonly IAtlasAttentionDirectory directory;
     private readonly IAtlasAttentionMappings mappings;
     private readonly IAtlasAttentionWorkspaces workspaces;
+    private readonly IAtlasAttentionTasks tasks;
     private readonly TimeProvider time;
 
     internal AtlasAttentionReader(ICurrentUser user, IAtlasAttentionDirectory directory, IAtlasAttentionMappings mappings,
-        IAtlasAttentionWorkspaces workspaces, TimeProvider time)
-        => (this.user, this.directory, this.mappings, this.workspaces, this.time) = (user, directory, mappings, workspaces, time);
+        IAtlasAttentionWorkspaces workspaces, IAtlasAttentionTasks tasks, TimeProvider time)
+        => (this.user, this.directory, this.mappings, this.workspaces, this.tasks, this.time) = (user, directory, mappings, workspaces, tasks, time);
 
-    public async Task<Result<AtlasAttentionView>> ReadAsync(CancellationToken ct)
+    public async Task<Result<AtlasAttentionView>> ReadAsync(CancellationToken ct, int previewLimit = PreviewLimit)
     {
+        if (previewLimit is not (PreviewLimit or QueueLimit)) throw new ArgumentOutOfRangeException(nameof(previewLimit));
         if (user.UserId is null || !user.IsAuthenticated || !user.HasPermission(Permissions.CustomersRead)
             || !user.HasPermission(Permissions.ParasolAtlasRead))
             return Error.Forbidden("PARASOL_ATTENTION_FORBIDDEN", "Customer and technical workspace access are required.");
@@ -62,7 +69,7 @@ public sealed class AtlasAttentionReader
                     Interlocked.Increment(ref attempted);
                     var workspace = await workspaces.ReadAsync(selected[index], customerBudget.Token);
                     if (workspace.Status == "ACCESS_DENIED") { Interlocked.Exchange(ref denied, 1); await deniedStop.CancelAsync(); }
-                    rows[index] = Project(selected[index], workspace);
+                    rows[index] = Project(selected[index], workspace, previewLimit);
                 }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                 {
@@ -112,20 +119,37 @@ public sealed class AtlasAttentionReader
         var totals = new AtlasAttentionTotals(ready.Sum(row => (long)row.ActiveObservations!.Value), ready.Sum(row => (long)row.High!.Value), ready.Sum(row => (long)row.Critical!.Value));
         var partial = coverage.UnmappedClients > 0 || coverage.MappingIssues > 0 || coverage.FailedCustomers > 0
             || coverage.LimitReached || coverage.TimedOut || ready.Any(row => row.Completeness != "COMPLETE");
+        if (await TasksAsync(customers, selected, budget.Token, ct) is { } links)
+            customers = customers.Select(row => row.Status == "READY" && links.TryGetValue(row.CustomerId, out var found) ? row with { Tasks = found } : row).ToArray();
         return new AtlasAttentionView(partial ? "PARTIAL" : "READY", time.GetUtcNow(), coverage, totals, customers);
+    }
+
+    // The work the published previews already have (UX 2026 В3). Coverage above describes Atlas only: a slow or failed task
+    // read leaves the rows without the hint and never turns the snapshot partial or unavailable.
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<AtlasObservationTaskLink>>?> TasksAsync(AtlasAttentionCustomer[] customers,
+        AtlasAttentionBinding[] selected, CancellationToken budget, CancellationToken ct)
+    {
+        var previews = customers.Select((row, index) => (Row: row, Binding: selected[index])).Where(x => x.Row.Status == "READY")
+            .Select(x => (x.Binding, (IReadOnlyList<string>)x.Row.Preview.Select(o => o.Id).ToList())).ToList();
+        if (previews.Count == 0) return null;
+        using var deadline = new CancellationTokenSource(TaskBudget, time);
+        using var bounded = CancellationTokenSource.CreateLinkedTokenSource(budget, deadline.Token);
+        try { return await tasks.ReadAsync(previews, bounded.Token); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return null; }
+        catch (Exception exception) when (exception is DbException or IOException) { return null; }
     }
 
     private AtlasAttentionView Fatal(string status) => new(status, time.GetUtcNow());
 
-    private AtlasAttentionCustomer Project(AtlasAttentionBinding binding, AtlasWorkspaceView view)
+    private AtlasAttentionCustomer Project(AtlasAttentionBinding binding, AtlasWorkspaceView view, int previewLimit)
     {
         if (view.CustomerId != binding.CustomerId) return Failure(binding, "INVALID_RESPONSE");
         if (view.Status != "READY" || view.Summary is not { } summary)
             return Failure(binding, view.Status is "NOT_LINKED" or "NOT_CONFIGURED" or "ACCESS_DENIED" or "SOURCE_NOT_FOUND"
                 or "UNAVAILABLE" or "INVALID_RESPONSE" or "IDENTITY_CHANGED" or "CUSTOMER_UNAVAILABLE" ? view.Status : "INVALID_RESPONSE");
         var high = summary.SeverityCounts["HIGH"]; var critical = summary.SeverityCounts["CRITICAL"];
-        var preview = summary.ObservationPage.Items.Where(row => row.Severity is "HIGH" or "CRITICAL").Take(3).ToArray();
-        if (preview.Length != Math.Min(3, (long)high + critical) || preview.Any(row => row.Status is not ("OPEN" or "ACKNOWLEDGED")))
+        var preview = summary.ObservationPage.Items.Where(row => row.Severity is "HIGH" or "CRITICAL").Take(previewLimit).ToArray();
+        if (preview.Length != Math.Min(previewLimit, (long)high + critical) || preview.Any(row => row.Status is not ("OPEN" or "ACKNOWLEDGED")))
             return Failure(binding, "INVALID_RESPONSE");
         var deviceIds = preview.Where(row => row.DeviceStatus == "CONFIRMED").Select(row => row.DeviceId!).ToHashSet(StringComparer.Ordinal);
         var devices = summary.Devices.Where(device => deviceIds.Contains(device.Id)).ToArray();

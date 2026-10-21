@@ -28,9 +28,10 @@ test('an operator assigns and reviews an intentional pause and the signal recove
     expect(violations.violations).toEqual([]);
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.setViewportSize({ width: 360, height: 800 });
-    // Fluent buttons animate their foreground/background when the OS theme changes. Check the settled dark theme.
-    await expect(panel.getByRole('button', { name: 'Refresh' })).toHaveCSS('background-color', 'rgb(41, 41, 41)');
-    await expect(panel.getByRole('button', { name: 'Refresh' })).toHaveCSS('color', 'rgb(255, 255, 255)');
+    // Fluent buttons animate their foreground/background when the OS theme changes. Check the settled dark theme: a
+    // secondary button is the dark card surface (#1E1B19) with the dark theme's main text (#F2EDE6).
+    await expect(panel.getByRole('button', { name: 'Refresh' })).toHaveCSS('background-color', 'rgb(30, 27, 25)');
+    await expect(panel.getByRole('button', { name: 'Refresh' })).toHaveCSS('color', 'rgb(242, 237, 230)');
     const dark = await new AxeBuilder({ page }).include('section:has(table[aria-label="Source freshness"])').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(dark.violations).toEqual([]);
     const overflow = await page.evaluate(() => [...document.body.querySelectorAll('*')].filter(element => {

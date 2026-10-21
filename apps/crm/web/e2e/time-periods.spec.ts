@@ -13,14 +13,25 @@ test('a closed month refuses new hours without losing the form and Finance expli
   await page.goto(`/time/entries?year=${year}&month=${month}`);
   const row = page.getByRole('row').filter({ hasText: customer.name }); await expect(row).toBeVisible();
   const periodRoute = `/api/v1/time/periods/${year}/${month}`;
-  const refused = page.waitForResponse(r => new URL(r.url()).pathname === `${periodRoute}/close` && r.request().method() === 'POST');
-  await page.getByRole('button', { name: 'Close the period', exact: true }).click();
-  const refusal = await refused; expect(refusal.status()).toBe(409); expect((await refusal.json()).code).toBe('TIM_UNAPPROVED_ENTRIES');
+  const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(year, month - 1, 1)));
+  // Closing asks first and names the month; while an entry waits it says so and holds the close back.
+  await page.getByRole('button', { name: `Close ${monthName}…`, exact: true }).click();
+  let confirm = page.getByRole('dialog', { name: `Close ${monthName}?`, exact: true });
+  await expect(confirm.getByText(`1 entry in ${monthName} still waits for approval. Approve or correct it before you close the month.`)).toBeVisible();
+  await expect(confirm.getByRole('button', { name: `Close ${monthName}`, exact: true })).toBeDisabled();
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click(); await expect(confirm).toHaveCount(0);
+  // The server keeps its own rule for any other caller.
+  const refusal = await page.request.post(`${periodRoute}/close`, { headers: { 'X-CSRF': '1' } });
+  expect(refusal.status()).toBe(409); expect((await refusal.json()).code).toBe('TIM_UNAPPROVED_ENTRIES');
   await row.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Approve (1)', exact: true }).click();
-  await expect(toast(page, '1 entries approved')).toBeVisible();
+  await expect(toast(page, '1 entry approved')).toBeVisible();
   const closing = page.waitForResponse(r => new URL(r.url()).pathname === `${periodRoute}/close` && r.request().method() === 'POST');
-  await page.getByRole('button', { name: 'Close the period', exact: true }).click();
+  await page.getByRole('button', { name: `Close ${monthName}…`, exact: true }).click();
+  confirm = page.getByRole('dialog', { name: `Close ${monthName}?`, exact: true });
+  await expect(confirm.getByText(/still waits? for approval/)).toHaveCount(0);
+  await confirm.getByRole('button', { name: `Close ${monthName}`, exact: true }).click();
   const closed = await closing; expect(closed.status()).toBe(200); expect((await closed.json()).isClosed).toBe(true);
+  await expect(toast(page, 'The period is closed')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reopen', exact: true })).toHaveCount(0);
   await page.goto('/time'); await page.getByRole('button', { name: 'Register hours', exact: true }).first().click();
   const dialog = page.getByRole('dialog');

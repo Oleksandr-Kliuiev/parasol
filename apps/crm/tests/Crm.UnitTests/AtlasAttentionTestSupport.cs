@@ -66,8 +66,19 @@ internal static class AtlasAttentionTestSupport
         }
     }
 
-    internal static AtlasAttentionReader Reader(Directory directory, Mappings mappings, Workspaces workspaces, TimeProvider? clock = null, User? user = null) =>
-        new(user ?? new User(Employee), directory, mappings, workspaces, clock ?? TimeProvider.System);
+    internal sealed class Tasks : IAtlasAttentionTasks
+    {
+        internal int Calls;
+        internal IReadOnlyList<(AtlasAttentionBinding Binding, IReadOnlyList<string> ObservationIds)>? Asked;
+        internal Func<CancellationToken, Task<IReadOnlyDictionary<Guid, IReadOnlyList<AtlasObservationTaskLink>>?>> Reply = _ => Task.FromResult<IReadOnlyDictionary<Guid, IReadOnlyList<AtlasObservationTaskLink>>?>(null);
+        public Task<IReadOnlyDictionary<Guid, IReadOnlyList<AtlasObservationTaskLink>>?> ReadAsync(
+            IReadOnlyList<(AtlasAttentionBinding Binding, IReadOnlyList<string> ObservationIds)> previews, CancellationToken ct)
+        { Calls++; Asked = previews; return Reply(ct); }
+    }
+
+    internal static AtlasAttentionReader Reader(Directory directory, Mappings mappings, Workspaces workspaces, TimeProvider? clock = null, User? user = null,
+        Tasks? tasks = null) =>
+        new(user ?? new User(Employee), directory, mappings, workspaces, tasks ?? new Tasks(), clock ?? TimeProvider.System);
 }
 
 /// <summary>Deterministic budget tests advance owned timers without sleeping or changing the process clock.</summary>

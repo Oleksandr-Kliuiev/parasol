@@ -28,6 +28,8 @@ public static class ContractsModule
         services.AddScoped<IndexationService>();
         services.AddScoped<ContractLifecycleJob>();
         services.AddScoped<IContractsApi, ContractsApi>();
+        // UX 2026, В6: active contracts and hour banks per organization for the customer list.
+        services.AddScoped<IContractFacts, ContractFacts>();
         services.AddScoped<IProductUsage, ContractProductUsage>();
         return services;
     }

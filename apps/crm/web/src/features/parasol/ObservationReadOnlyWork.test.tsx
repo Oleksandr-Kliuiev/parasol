@@ -9,6 +9,10 @@ import { ObservationRows } from './ObservationRows';
 
 const read = ['parasol.atlas.read', 'activities.read'];
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
+// The one read a list makes on its own (UX 2026, В3): the work its shown observations already have, never a preview.
+const lookupPath = '/api/v1/parasol/customers/customer-one/observation-tasks?ids=critical-one';
+const isLookup = (url: string) => url.startsWith('/api/v1/parasol/customers/customer-one/observation-tasks?');
+const lookup = (items: unknown[] = []) => response({ customerId: 'customer-one', status: 'READY', items });
 const rows = () => {
   const p = atlasTaskPreview();
   return <ObservationRows items={[p.observation!]} devices={p.devices!} customerId="customer-one" />;
@@ -23,19 +27,43 @@ describe('reading work from active observations', () => {
     ['OPEN', ['parasol.atlas.read', 'activities.write'], null],
     ['OPEN', ['activities.read', 'activities.write'], null],
     ['OPEN', ['parasol.atlas.read'], null], ['OPEN', ['activities.read'], null],
-  ] as const)('offers the appropriate action for %s and %j', (status, allowed, label) => {
-    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  ] as const)('offers the appropriate action for %s and %j', async (status, allowed, label) => {
+    const fetch = vi.fn<(url: string) => Promise<Response>>(async () => lookup()); vi.stubGlobal('fetch', fetch);
     const p = atlasTaskPreview(); p.observation!.status = status;
     renderRoutes([page(<ObservationRows items={[p.observation!]} devices={p.devices!} customerId="customer-one" />)], '/', testUser([...allowed]));
     expect(screen.queryAllByRole('button').map(b => b.textContent)).toEqual(label ? [label] : []);
-    expect(fetch).not.toHaveBeenCalled();
+    // With both read permissions the page reads its tasks once; without them it reads nothing. Never a source preview.
+    const both = allowed.includes('parasol.atlas.read' as never) && allowed.includes('activities.read' as never);
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toEqual(both ? [lookupPath] : []));
+  });
+
+  it('says in the row that the observation already has a task, and opens it to look instead of to assign', async () => {
+    const task = { ...syntheticTask, created: false, dueAt: '2026-10-24T14:00:00Z' };
+    const fetch = vi.fn(async (url: string) => isLookup(url) ? lookup([{ observationId: 'critical-one', task, assigneeName: 'Synthetic technician' }])
+      : response({ ...atlasTaskPreview(), canCreate: false, task }));
+    vi.stubGlobal('fetch', fetch);
+    renderRoutes([page(rows())], '/', testUser([...read, 'activities.write']));
+    expect(await screen.findByText(/^Task open · Synthetic technician · due 24\/10\/2026, 16:00$/)).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'View linked work' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'View observation work' }));
+    expect(await dialog.findByRole('link', { name: 'Open task' })).toBeVisible();
+    expect(dialog.queryByRole('button', { name: 'Create task' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the plain action when the lookup answers for another customer', async () => {
+    const task = { ...syntheticTask, organizationId: 'customer-two', created: false };
+    vi.stubGlobal('fetch', vi.fn(async () => lookup([{ observationId: 'critical-one', task, assigneeName: 'Synthetic technician' }])));
+    renderRoutes([page(rows())], '/', testUser([...read, 'activities.write']));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Assign work' })).toBeVisible());
+    expect(screen.queryByText(/^Task open/)).not.toBeInTheDocument();
   });
 
   it.each([true, false])('opens a fresh read without assignment controls (linked=%s)', async linked => {
     const p = atlasTaskPreview(); p.canCreate = false; p.task = linked ? syntheticTask : null;
-    const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () => response(p)); vi.stubGlobal('fetch', fetch);
+    const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (url) => isLookup(url) ? lookup() : response(p)); vi.stubGlobal('fetch', fetch);
     renderRoutes([page(rows())], '/', testUser(read));
-    expect(fetch).not.toHaveBeenCalled();
+    const previews = () => fetch.mock.calls.filter(([url]) => !isLookup(url));
+    expect(previews()).toHaveLength(0);
     const trigger = screen.getByRole('button', { name: 'View work' });
     await userEvent.click(trigger);
     const dialog = within(await screen.findByRole('dialog', { name: 'View observation work' }));
@@ -48,12 +76,12 @@ describe('reading work from active observations', () => {
     else expect(dialog.getByText('No CRM task is linked to this observation.')).toBeVisible();
     await userEvent.click(dialog.getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(trigger).toBeEnabled());
-    expect(fetch.mock.calls).toHaveLength(1);
-    expect(fetch.mock.calls[0]![0]).toBe('/api/v1/parasol/customers/customer-one/observations/critical-one/task-preview');
+    expect(previews()).toHaveLength(1);
+    expect(previews()[0]![0]).toBe('/api/v1/parasol/customers/customer-one/observations/critical-one/task-preview');
   });
 
   it('does not offer assignment even if the read response wrongly advertises canCreate', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => response(atlasTaskPreview())));
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => isLookup(url) ? lookup() : response(atlasTaskPreview())));
     renderRoutes([page(rows())], '/', testUser(read));
     await userEvent.click(screen.getByRole('button', { name: 'View work' }));
     await screen.findByText('No CRM task is linked to this observation.');
@@ -65,6 +93,7 @@ describe('reading work from active observations', () => {
     const p = atlasTaskPreview(); let finish!: (r: Response) => void, previews = 0;
     const fetch = vi.fn(async (url: string) => {
       if (url.startsWith('/api/v1/identity/users')) return response({ items: [], nextCursor: null, totalCount: 0 });
+      if (isLookup(url)) return lookup();
       previews++;
       return previews === 1 ? response(p) : new Promise<Response>(resolve => { finish = resolve; });
     });

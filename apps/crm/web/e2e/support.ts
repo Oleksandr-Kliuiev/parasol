@@ -1,4 +1,4 @@
-import { expect, type APIResponse, type Page } from '@playwright/test';
+import { expect, type APIResponse, type Locator, type Page } from '@playwright/test';
 
 export type Role = 'Crm.Admin' | 'Crm.Management' | 'Crm.Sales' | 'Crm.Technician' | 'Crm.ServiceLead' | 'Crm.Finance' | 'Crm.ReadOnly';
 
@@ -6,6 +6,23 @@ export type Role = 'Crm.Admin' | 'Crm.Management' | 'Crm.Sales' | 'Crm.Technicia
 export async function signIn(page: Page, role: Role, returnUrl = '/') {
   await page.goto(`/bff/dev-login?role=${role}&returnUrl=${encodeURIComponent(returnUrl)}`);
   await expect(page.getByRole('main')).toBeVisible();
+}
+
+/**
+ * Pages My tasks (Load more) until `target`, a control of this test's own task row, shows. The shared employees of the
+ * development sign-in collect open tasks from every run, and tasks without a due date sort first, so a test's task is
+ * not reliably on the first page of ten.
+ */
+export async function showInMyTasks(page: Page, target: Locator) {
+  const personal = page.getByRole('region', { name: 'My tasks', exact: true });
+  const rows = personal.getByRole('listitem');
+  await expect(rows.first()).toBeVisible();
+  for (let pages = 1; (await target.count()) === 0 && pages < 30; pages++) {
+    const shown = await rows.count();
+    await personal.getByRole('button', { name: 'Load more', exact: true }).click({ timeout: 10_000 });
+    await expect(rows).not.toHaveCount(shown);
+  }
+  return target;
 }
 
 export function marker(prefix: string) {
@@ -63,7 +80,8 @@ export async function createContact(page: Page, organizationId: string, body: Re
 /** API-created runs claim months from here on; later months belong to the test that creates its run through the dialog. */
 export const API_RUNS_FROM_YEAR = 2040;
 export const DIALOG_RUNS_FROM_YEAR = 2080;
-/** The run request accepts years up to 2100 (CreateRunRequestValidator). */
+/** The run request accepts years from 2020 to 2100 (CreateRunRequestValidator). */
+const FIRST_RUN_YEAR = 2020;
 const LAST_RUN_YEAR = 2100;
 
 export type BillingPeriod = { year: number; month: number; start: string };
@@ -101,8 +119,10 @@ export async function* candidatePeriods(page: Page, fromYear: number, toYear = L
  * index), so creating the run is the reservation itself: a month that a parallel worker or another run on the same
  * database claimed first answers BIL_PERIOD_BUSY, and the next month is tried. No month is read and then used later.
  */
-export async function reserveBillingRun(page: Page, notes: string, fromYear = API_RUNS_FROM_YEAR): Promise<BillingPeriod & { id: string }> {
-  for await (const period of candidatePeriods(page, fromYear, DIALOG_RUNS_FROM_YEAR - 1)) {
+export async function reserveBillingRun(
+  page: Page, notes: string, fromYear = API_RUNS_FROM_YEAR, toYear = DIALOG_RUNS_FROM_YEAR - 1,
+): Promise<BillingPeriod & { id: string }> {
+  for await (const period of candidatePeriods(page, fromYear, toYear)) {
     const response = await page.request.post('/api/v1/billing/runs', {
       data: { year: period.year, month: period.month, notes },
       headers: { 'X-CSRF': '1' },
@@ -115,8 +135,16 @@ export async function reserveBillingRun(page: Page, notes: string, fromYear = AP
     throw new Error(`Creating a billing run for ${period.start} failed: ${response.status()} ${text}`);
   }
 
-  throw new Error('No free billing period left in the test database.');
+  throw new Error(`No free billing period from ${fromYear} to ${toYear} is left in the test database.`);
 }
+
+/**
+ * Claims a month two or more years back, for a run that must bill only its own test's work: other specs date hours,
+ * contracts, prepaid hours and pending charges this year or last (time-periods.spec closes months of last year), and a
+ * future month's run also collects all their pending charges. A month stays claimed: twelve per year from 2020 on.
+ */
+export const reservePastBillingRun = (page: Page, notes: string) =>
+  reserveBillingRun(page, notes, FIRST_RUN_YEAR, new Date().getFullYear() - 2);
 
 /** A collected run of this test's own; runs of other tests are never reused, as they may change state meanwhile. */
 export async function collectedBillingRun(page: Page, notes: string): Promise<{ id: string }> {

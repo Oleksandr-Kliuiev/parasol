@@ -34,7 +34,9 @@ describe('Atlas device and observation details', () => {
   it('keeps high source severity urgent even when Atlas recommends monitoring, and resolves devices by ID', async () => {
     render(); const observations = within(await screen.findByRole('region', { name: 'Active Atlas observations' }));
     const rows = observations.getAllByRole('listitem');
-    expect(within(rows[0]!).getByText('Urgent · HIGH / CRITICAL')).toBeVisible();
+    // Urgency is said once, by the severity badge: no second "urgent" label repeats it in the row.
+    expect(within(rows[0]!).getByText('Critical', { exact: true })).toBeVisible();
+    expect(within(rows[0]!).queryByText(/Urgent/)).not.toBeInTheDocument();
     expect(within(rows[0]!).getByText('Atlas recommendation: Monitor')).toBeVisible();
     expect(within(rows[0]!).getByText('Confirmed device: SYNTHETIC-LT-01 (device-0)')).toBeVisible();
     expect(within(rows[1]!).getByText('Device not resolved in Atlas')).toBeVisible();

@@ -15,9 +15,11 @@ public static class AtlasAttentionEndpoints
         services.AddScoped<IAtlasAttentionDirectory, AtlasAttentionDirectory>();
         services.AddScoped<IAtlasAttentionMappings, AtlasAttentionMappings>();
         services.AddScoped<IAtlasAttentionWorkspaces, AtlasAttentionWorkspaces>();
+        services.AddScoped<IAtlasAttentionTasks, AtlasAttentionTasks>();
         services.AddScoped(provider => new AtlasAttentionReader(provider.GetRequiredService<ICurrentUser>(),
             provider.GetRequiredService<IAtlasAttentionDirectory>(), provider.GetRequiredService<IAtlasAttentionMappings>(),
-            provider.GetRequiredService<IAtlasAttentionWorkspaces>(), provider.GetRequiredService<TimeProvider>()));
+            provider.GetRequiredService<IAtlasAttentionWorkspaces>(), provider.GetRequiredService<IAtlasAttentionTasks>(),
+            provider.GetRequiredService<TimeProvider>()));
         return services;
     }
 
@@ -27,6 +29,12 @@ public static class AtlasAttentionEndpoints
             {
                 http.Response.Headers.CacheControl = "no-store";
                 return (await reader.ReadAsync(ct)).ToHttpResult(Results.Ok);
+            }).WithTags("Parasol").RequirePermission(Permissions.CustomersRead).RequirePermission(Permissions.ParasolAtlasRead);
+        // The observation queue (UX 2026 В1): the same bounded personal read, with up to ten urgent rows per customer.
+        app.MapGet("/api/v1/parasol/observations/urgent", async (AtlasAttentionReader reader, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await reader.ReadAsync(ct, AtlasAttentionReader.QueueLimit)).ToHttpResult(Results.Ok);
             }).WithTags("Parasol").RequirePermission(Permissions.CustomersRead).RequirePermission(Permissions.ParasolAtlasRead);
         return app;
     }

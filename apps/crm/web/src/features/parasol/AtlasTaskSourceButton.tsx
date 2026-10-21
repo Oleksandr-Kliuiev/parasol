@@ -1,6 +1,18 @@
 import { useState } from 'react';
-import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, MessageBar, MessageBarBody, Spinner, Text,
-  useRestoreFocusTarget } from '@fluentui/react-components';
+import {
+  Button,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  MessageBar,
+  MessageBarBody,
+  Spinner,
+  Text,
+  useRestoreFocusTarget,
+} from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { ObservationContext } from './ObservationContext';
@@ -33,7 +45,7 @@ function SourceDialog({ activityId, onClose }: { activityId: string; onClose: ()
         {preview.isFetching && <Spinner size="small" label={t('common.loading')} />}
         {view?.mode === 'fixture' && <MessageBar intent="warning"><MessageBarBody>{t('parasol.fixture')}</MessageBarBody></MessageBar>}
         {error && <MessageBar intent="warning"><MessageBarBody>{t(`parasolWork.status.${error}`)}</MessageBarBody></MessageBar>}
-        {ready?.observation && ready.devices && <div className={styles.row}><ObservationContext observation={ready.observation} devices={ready.devices} /></div>}
+        {ready?.observation && ready.devices && <div className={styles.row}><ObservationContext exact observation={ready.observation} devices={ready.devices} /></div>}
         {view?.task && <TechnicalTaskReference task={view.task} onNavigate={onClose} />}
       </DialogContent>
       <DialogActions>

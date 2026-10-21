@@ -29,14 +29,18 @@ test('review assigns work with explicit employee and source confirmation, then a
   const picker = dialog.getByRole('combobox');
   await picker.fill('Dev Admin'); await picker.press('ArrowDown');
   await page.getByRole('option').filter({ hasText: 'Dev Admin' }).click();
-  await dialog.getByRole('checkbox', { name: 'I confirm the assignee and due date' }).check();
+  // No check box: one sentence beside the button names what will be created.
+  await expect(dialog.getByText('Creates a task for Dev Admin with no due date, priority high.', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: 'Create task', exact: true }).click();
   await expect(dialog.getByRole('link', { name: 'Open task', exact: true })).toHaveAttribute('href', `/organizations/${customer.id}?tab=activities&activityId=${task.activityId}`);
   expect(writes).toBe(1); expect(bodies).toEqual([{ assigneeId: employee.id, dueAt: null, expectedSha256: 'a'.repeat(64) }]);
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
-  await row.getByRole('button', { name: 'Assign work', exact: true }).click();
-  await expect(dialog.getByRole('link', { name: 'Open task', exact: true })).toHaveAttribute('href', `/organizations/${customer.id}?tab=activities&activityId=${task.activityId}`);
-  await expect(dialog.getByRole('button', { name: 'Create task', exact: true })).toHaveCount(0);
+  // The row knows of the task at once (UX 2026, В3): it says so and opens the task to look at, not to assign again.
+  await expect(row.getByText(/^Task open · Dev Admin$/)).toBeVisible();
+  await row.getByRole('button', { name: 'View linked work', exact: true }).click();
+  const linkedDialog = page.getByRole('dialog', { name: 'View observation work' });
+  await expect(linkedDialog.getByRole('link', { name: 'Open task', exact: true })).toHaveAttribute('href', `/organizations/${customer.id}?tab=activities&activityId=${task.activityId}`);
+  await expect(linkedDialog.getByRole('button', { name: 'Create task', exact: true })).toHaveCount(0);
   expect(writes).toBe(1);
 });
 
@@ -59,12 +63,13 @@ test('a changed source discards confirmation and requires a new preview before a
   const dialog = page.getByRole('dialog', { name: 'Assign observation work' });
   await dialog.getByRole('combobox').fill('Dev Admin'); await dialog.getByRole('combobox').press('ArrowDown');
   await page.getByRole('option').filter({ hasText: 'Dev Admin' }).click();
-  await dialog.getByRole('checkbox').check(); await dialog.getByRole('button', { name: 'Create task', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Create task', exact: true }).click();
   await expect(dialog.getByText(observation.summary, { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Create task', exact: true })).toBeDisabled();
   await dialog.getByRole('button', { name: 'Read fresh preview', exact: true }).click();
   await expect(dialog.getByText(observation.summary, { exact: true })).toBeVisible();
-  await expect(dialog.getByRole('checkbox')).not.toBeChecked();
+  // The new preview is on screen before another write is possible; nothing was resent.
+  await expect(dialog.getByRole('button', { name: 'Create task', exact: true })).toBeEnabled();
   expect(reads).toBe(2); expect(writes).toBe(1);
 });
 
@@ -88,7 +93,7 @@ test('a source denial during assignment rechecks the whole customer workspace an
   const dialog = page.getByRole('dialog', { name: 'Assign observation work' });
   await dialog.getByRole('combobox').fill('Dev Admin'); await dialog.getByRole('combobox').press('ArrowDown');
   await page.getByRole('option').filter({ hasText: 'Dev Admin' }).click();
-  await dialog.getByRole('checkbox').check(); await dialog.getByRole('button', { name: 'Create task', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Create task', exact: true }).click();
   await expect(panel.getByText('Your Atlas access does not permit reading this customer.')).toBeVisible();
   await expect(page.getByText(observation.summary, { exact: true })).toHaveCount(0);
   await expect(panel.getByRole('tab')).toHaveCount(0);

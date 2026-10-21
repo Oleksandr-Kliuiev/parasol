@@ -1,94 +1,104 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
-import {
-  Avatar,
-  Badge,
-  Button,
-  Menu,
-  MenuDivider,
-  MenuGroup,
-  MenuGroupHeader,
-  MenuItem,
-  MenuItemRadio,
-  MenuList,
-  MenuPopover,
-  MenuTrigger,
-  NavDrawer,
-  NavDrawerBody,
-  NavDrawerHeader,
-  NavItem,
-  NavSectionHeader,
-  FluentProvider,
-  Text,
-  Toaster,
-  makeStyles,
-  mergeClasses,
-  tokens,
-  useRestoreFocusTarget,
-} from '@fluentui/react-components';
-import { Navigation20Regular, SignOut20Regular } from '@fluentui/react-icons';
+import { FluentProvider, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { currentUserQueryKey, useCurrentUser } from '../auth/CurrentUserContext';
-import i18n, { changeLanguage as applyLanguage, languages, type LanguageCode } from '../i18n';
+import { currentUserQueryKey } from '../auth/CurrentUserContext';
+import { changeLanguage as applyLanguage, type LanguageCode } from '../i18n';
 import { ReverifyDialog } from '../auth/ReverifyDialog';
-import { NotificationsBell } from '../features/notifications/NotificationsBell';
 import { MaintenanceBanner } from '../features/operations/MaintenanceBanner';
-import { BottomTabs, TAB_BAR_HEIGHT } from './BottomTabs';
-import { GlobalSearch } from './GlobalSearch';
+import { BottomTabs, TAB_BAR_SPACE } from './BottomTabs';
+import { h } from './hearth';
 import { selectedNavValue, useNavGroups } from './navigation';
-import { usePrefersDark } from './usePrefersDark';
 import { railThemeDarkPage, railThemeLightPage } from './railTheme';
-import { TOASTER_ID } from './toaster';
+import { SIDE_MINI, SIDE_WIDTH, Sidebar } from './Sidebar';
+import { TopBar } from './TopBar';
+import { useThemeMode } from './themeModeContext';
+import { useSearchTypeAhead } from './searchTypeAhead';
+import { toasterLoading } from './toaster';
+import { RevealScopeProvider, ease, motionAllowed, reveal } from './motion';
 import { useMediaQuery } from '../shared/utils/useMediaQuery';
 
+const SearchDialog = lazy(async () => ({ default: (await import('./ShellOverlays')).SearchDialog }));
+const MenuDrawer = lazy(async () => ({ default: (await import('./ShellOverlays')).MenuDrawer }));
+// The toaster is not needed for the first paint: it loads with the overlays right after start-up, and notices raised
+// before it listens wait for it.
+const ShellToaster = lazy(async () => {
+  toasterLoading();
+  return { default: (await import('./ShellToaster')).ShellToaster };
+});
+
 const useStyles = makeStyles({
-  root: { display: 'flex', minHeight: '100vh', backgroundColor: tokens.colorNeutralBackground2 },
-  rail: { position: 'sticky', top: 0, alignSelf: 'flex-start', height: '100vh', flexShrink: 0 },
-  drawer: { height: '100vh' },
-  brand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-    fontWeight: tokens.fontWeightSemibold,
-    fontSize: tokens.fontSizeBase400,
-  },
-  brandMark: {
+  root: {
+    '--gutter': 'clamp(16px, 2vw, 32px)',
     display: 'grid',
-    placeItems: 'center',
-    width: '28px',
-    height: '28px',
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorBrandBackground,
-    color: tokens.colorNeutralForegroundOnBrand,
-    fontWeight: tokens.fontWeightBold,
+    gridTemplateColumns: `${SIDE_WIDTH} minmax(0, 1fr)`,
+    minHeight: '100dvh',
+    // The rail colour runs the full height of the page, also below a short rail.
+    backgroundImage: `linear-gradient(90deg, ${h.sideBg} ${SIDE_WIDTH}, transparent 0)`,
+    '@media (max-width: 1100px) and (min-width: 901px)': {
+      gridTemplateColumns: `232px minmax(0, 1fr)`,
+      backgroundImage: `linear-gradient(90deg, ${h.sideBg} 232px, transparent 0)`,
+    },
+    '@media (max-width: 900px)': { gridTemplateColumns: 'minmax(0, 1fr)', backgroundImage: 'none' },
   },
-  main: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalM,
-    paddingInline: tokens.spacingHorizontalL,
-    height: '52px',
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
+  rootMini: {
+    gridTemplateColumns: `${SIDE_MINI} minmax(0, 1fr)`,
+    backgroundImage: `linear-gradient(90deg, ${h.sideBg} ${SIDE_MINI}, transparent 0)`,
+    '@media (max-width: 1100px) and (min-width: 901px)': {
+      gridTemplateColumns: `${SIDE_MINI} minmax(0, 1fr)`,
+      backgroundImage: `linear-gradient(90deg, ${h.sideBg} ${SIDE_MINI}, transparent 0)`,
+    },
   },
-  spacer: { flex: 1, '@media (max-width: 767px)': { flex: 0 } },
-  avatarButton: { minWidth: '40px', paddingInline: tokens.spacingHorizontalXS },
+  // Two soft glows behind the page, as in the reference; fixed, so they never scroll with long lists. They drift slowly
+  // (16 s and 21 s, back and forth), which keeps the page alive without asking for attention.
+  glow: {
+    position: 'fixed',
+    // A modal's scroll lock widens the window by the scrollbar it hides (scrollLock.ts); the glows stay where they were.
+    inset: '0 var(--h-locked-scrollbar, 0px) 0 0',
+    zIndex: -1,
+    pointerEvents: 'none',
+    overflow: 'hidden',
+    '::before': {
+      animationName: { to: { transform: 'translate(-80px, 60px) scale(1.12)' } },
+      animationDuration: '16s',
+      animationTimingFunction: 'ease-in-out',
+      animationIterationCount: 'infinite',
+      animationDirection: 'alternate',
+      content: '""',
+      position: 'absolute',
+      width: '60vmax',
+      height: '60vmax',
+      top: '-26vmax',
+      right: '-20vmax',
+      borderRadius: '50%',
+      backgroundImage: `radial-gradient(closest-side, ${'var(--h-glow-a)'}, transparent)`,
+    },
+    '::after': {
+      animationName: { to: { transform: 'translate(70px, -50px) scale(0.92)' } },
+      animationDuration: '21s',
+      animationTimingFunction: 'ease-in-out',
+      animationIterationCount: 'infinite',
+      animationDirection: 'alternate',
+      content: '""',
+      position: 'absolute',
+      width: '54vmax',
+      height: '54vmax',
+      bottom: '-30vmax',
+      left: '10vmax',
+      borderRadius: '50%',
+      backgroundImage: `radial-gradient(closest-side, ${'var(--h-glow-b)'}, transparent)`,
+    },
+  },
+  rail: { position: 'sticky', top: 0, height: '100dvh', zIndex: 20, overflow: 'hidden', backgroundColor: h.sideBg },
+  frame: { minWidth: 0, paddingInline: 'var(--gutter)', paddingBottom: '56px', overflowX: 'clip' },
+  frameTabs: { paddingBottom: `calc(${TAB_BAR_SPACE} + env(safe-area-inset-bottom))` },
   content: {
-    scrollMarginBlockStart: '64px',
-    paddingInline: tokens.spacingHorizontalXXL,
-    paddingBlock: tokens.spacingVerticalXL,
-    maxWidth: '1280px',
-    width: '100%',
-    boxSizing: 'border-box',
-    '@media (max-width: 600px)': { paddingInline: tokens.spacingHorizontalL },
+    maxWidth: '1440px',
+    marginInline: 'auto',
+    outline: 'none',
   },
-  contentWithTabs: { paddingBottom: `calc(${TAB_BAR_HEIGHT} + env(safe-area-inset-bottom) + ${tokens.spacingVerticalL})` },
   skip: {
     position: 'fixed',
     left: '-9999px',
@@ -108,39 +118,86 @@ const useStyles = makeStyles({
 const NARROW = '(max-width: 900px)';
 // Below this width the menu moves to bottom tabs; "More" opens the same drawer.
 const PHONE = '(max-width: 767px)';
+const MINI_KEY = 'parasoll-rail';
+
+function readMini() {
+  try {
+    return window.localStorage.getItem(MINI_KEY) === 'mini';
+  } catch {
+    return false;
+  }
+}
 
 export function AppShell() {
   const styles = useStyles();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const user = useCurrentUser();
   const queryClient = useQueryClient();
   const navGroups = useNavGroups();
-  const prefersDark = usePrefersDark();
+  const { dark } = useThemeMode();
+  const narrow = useMediaQuery(NARROW);
   const phone = useMediaQuery(PHONE);
-  const restoreFocusTarget = useRestoreFocusTarget();
-
-  const [isNarrow, setIsNarrow] = useState(() => window.matchMedia(NARROW).matches);
-  const [drawerOpen, setDrawerOpen] = useState(() => !window.matchMedia(NARROW).matches);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [mini, setMini] = useState(readMini);
+  // Loaded on first use and kept mounted afterwards, so closing animates and reopening is instant.
+  const [searchUsed, setSearchUsed] = useState(false);
+  const [drawerUsed, setDrawerUsed] = useState(false);
+  const typeAhead = useSearchTypeAhead(setSearchOpen);
+  const openSearch = useCallback(() => {
+    typeAhead.start();
+    setSearchUsed(true);
+    setSearchOpen(true);
+  }, [typeAhead]);
+  const openDrawer = () => { setDrawerUsed(true); setDrawerOpen(true); };
 
   useEffect(() => {
-    const media = window.matchMedia(NARROW);
-    const onChange = () => {
-      setIsNarrow(media.matches);
-      setDrawerOpen(!media.matches);
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        openSearch();
+      }
     };
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openSearch]);
+
+  // The shell enters once per visit, as in the reference: the glow fades up, the rail slides in with its items one by one,
+  // the top bar drops into place and, on phones, the tab bar rises from the bottom edge.
+  useLayoutEffect(() => {
+    if (!motionAllowed()) return;
+    const all = (selector: string) => document.querySelectorAll(selector);
+    const animations = [
+      ...reveal(document.querySelector('[data-motion="glow"]'), {}, { duration: 1200, easing: ease.outSoft }),
+      ...reveal(document.querySelector('[data-motion="rail"]'), { x: -40 }, { duration: 800 }),
+      ...reveal(all('[data-motion="rail-item"]'), { x: -10 }, { delay: 120, stagger: 25 }),
+      ...reveal(all('[data-motion="top-item"]'), { y: -10 }, { delay: 200, stagger: 40 }),
+      ...reveal(document.querySelector('[data-motion="tabs"]'), { yPercent: 120, opacity: 1 }, { delay: 250, duration: 700 }),
+    ];
+    return () => animations.forEach((animation) => animation.cancel());
   }, []);
 
-
   const selected = selectedNavValue(location.pathname);
+  const group = navGroups.find((g) => g.items.some((item) => item.value === selected));
+  const entry = group?.items.find((item) => item.value === selected);
 
   const go = (path: string) => (event: React.MouseEvent) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
     navigate(path);
-    if (isNarrow) setDrawerOpen(false);
+    setDrawerOpen(false);
+  };
+
+  const toggleMini = () => {
+    setMini((value) => {
+      try {
+        window.localStorage.setItem(MINI_KEY, value ? 'full' : 'mini');
+      } catch {
+        // Storage may be refused; the choice then lasts for this page only.
+      }
+      return !value;
+    });
   };
 
   const changeLanguage = async (code: string) => {
@@ -157,114 +214,68 @@ export function AppShell() {
     window.location.assign(data.signOutUrl);
   };
 
+  const railTheme = dark ? railThemeDarkPage : railThemeLightPage;
+  const sidebar = (inDrawer: boolean) => (
+    <Sidebar
+      selected={selected}
+      mini={!inDrawer && mini}
+      onToggleMini={inDrawer ? undefined : toggleMini}
+      onSearch={() => {
+        setDrawerOpen(false);
+        openSearch();
+      }}
+      onNavigate={go}
+      onLanguage={(code) => void changeLanguage(code)}
+      onSignOut={() => void signOut()}
+    />
+  );
+
   return (
-    <div className={styles.root}>
+    <div className={mergeClasses(styles.root, !narrow && mini && styles.rootMini)}>
+      <div className={styles.glow} aria-hidden data-motion="glow" />
       <a className={styles.skip} href="#main">
         {t('app.skipToContent')}
       </a>
-      <FluentProvider className={styles.rail} theme={prefersDark ? railThemeDarkPage : railThemeLightPage}>
-        <NavDrawer
-          className={styles.drawer}
-          open={drawerOpen}
-          type={isNarrow ? 'overlay' : 'inline'}
-          onOpenChange={(_, data) => setDrawerOpen(data.open)}
-          selectedValue={selected}
-          density="small"
-        >
-          <NavDrawerHeader>
-            <div className={styles.brand}>
-              <span className={styles.brandMark} aria-hidden>
-                P
-              </span>
-              {t('app.name')}
-            </div>
-          </NavDrawerHeader>
-          <NavDrawerBody>
-            {navGroups.map((group) => (
-              <Fragment key={group.key}>
-                <NavSectionHeader>{t(`nav.${group.label}`)}</NavSectionHeader>
-                {group.items.map((item) => (
-                  <NavItem
-                    key={item.value}
-                    href={item.path}
-                    value={item.value}
-                    icon={item.icon}
-                    {...(item.external ? { target: '_blank', rel: 'noopener' } : { onClick: go(item.path) })}
-                  >
-                    {t(`nav.${item.label}`)}
-                  </NavItem>
-                ))}
-              </Fragment>
-            ))}
-          </NavDrawerBody>
-        </NavDrawer>
-      </FluentProvider>
+      {!narrow && (
+        <FluentProvider className={styles.rail} theme={railTheme} data-motion="rail">
+          {sidebar(false)}
+        </FluentProvider>
+      )}
+      {narrow && drawerUsed && (
+        <Suspense fallback={null}>
+          <MenuDrawer open={drawerOpen} onOpenChange={setDrawerOpen} theme={railTheme}>
+            {sidebar(true)}
+          </MenuDrawer>
+        </Suspense>
+      )}
 
-      <div className={styles.main}>
-        <header className={styles.header}>
-          {!phone && (isNarrow || !drawerOpen) && (
-            <Button
-              {...restoreFocusTarget}
-              appearance="subtle"
-              icon={<Navigation20Regular />}
-              aria-label={t('nav.openMenu')}
-              onClick={() => setDrawerOpen(true)}
-            />
-          )}
-          <GlobalSearch />
-          <div className={styles.spacer} />
-          <NotificationsBell />
-          {user.authMode === 'Development' && (
-            <Badge appearance="tint" color="warning" title={t('header.devMode')}>
-              {isNarrow ? 'Dev' : t('header.devMode')}
-            </Badge>
-          )}
-          <Menu>
-            <MenuTrigger disableButtonEnhancement>
-              <Button className={styles.avatarButton} appearance="subtle" aria-label={user.displayName}>
-                <Avatar name={user.displayName} size={28} color="colorful" />
-              </Button>
-            </MenuTrigger>
-            <MenuPopover>
-              <MenuList
-                checkedValues={{ language: [i18n.language] }}
-                onCheckedValueChange={(_, data) => {
-                  const code = data.checkedItems[0];
-                  if (code) void changeLanguage(code);
-                }}
-              >
-                <MenuGroup>
-                  <MenuGroupHeader>
-                    <Text weight="semibold">{user.displayName}</Text>
-                  </MenuGroupHeader>
-                  {user.email && <MenuGroupHeader>{user.email}</MenuGroupHeader>}
-                  <MenuGroupHeader>{t('parasol.employeeRoles')}: {user.roles.map(role => t(`parasol.roles.${role.replace('Crm.', '')}`)).join(', ')}</MenuGroupHeader>
-                </MenuGroup>
-                <MenuDivider />
-                <MenuGroup>
-                  <MenuGroupHeader>{t('header.language')}</MenuGroupHeader>
-                  {languages.map((language) => (
-                    <MenuItemRadio key={language.code} name="language" value={language.code}>
-                      {language.label}
-                    </MenuItemRadio>
-                  ))}
-                </MenuGroup>
-                <MenuDivider />
-                <MenuItem icon={<SignOut20Regular />} onClick={() => void signOut()}>
-                  {t('header.signOut')}
-                </MenuItem>
-              </MenuList>
-            </MenuPopover>
-          </Menu>
-        </header>
-        <main id="main" className={mergeClasses(styles.content, phone && styles.contentWithTabs)} tabIndex={-1}>
+      <div className={mergeClasses(styles.frame, phone && styles.frameTabs)}>
+        <TopBar
+          section={group && entry ? t(`nav.${group.label}`) : undefined}
+          // A known page outside the person's menu is one they may not see: "No access", not "Page not found".
+          page={entry ? t(`nav.${entry.label}`) : location.pathname.startsWith('/notifications') ? t('notifications.title')
+            : selected ? t('errors.forbiddenTitle') : t('errors.notFoundTitle')}
+          onMenu={narrow && !phone ? openDrawer : undefined}
+          onSearch={openSearch}
+        />
+        <main id="main" className={styles.content} tabIndex={-1}>
           <MaintenanceBanner />
           <ReverifyDialog />
-          <Outlet />
+          <RevealScopeProvider value={location.pathname}>
+            <Outlet />
+          </RevealScopeProvider>
         </main>
       </div>
-      {phone && <BottomTabs selected={selected} moreOpen={drawerOpen} onMore={() => setDrawerOpen(true)} />}
-      <Toaster toasterId={TOASTER_ID} position="top-end" />
+      {phone && <BottomTabs selected={selected} moreOpen={narrow && drawerOpen} onMore={openDrawer} />}
+
+      {searchUsed && (
+        <Suspense fallback={null}>
+          <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} typeAhead={typeAhead} />
+        </Suspense>
+      )}
+      <Suspense fallback={null}>
+        <ShellToaster phone={phone} />
+      </Suspense>
       <ScrollRestoration />
     </div>
   );

@@ -1,4 +1,4 @@
-import { Tab, makeStyles, tokens } from '@fluentui/react-components';
+import { Tab, makeStyles } from '@fluentui/react-components';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../shared/components/PageHeader';
@@ -8,7 +8,8 @@ import { RunsPanel } from './migration/RunsPanel';
 import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
+  // The segmented control of the visual system; it scrolls sideways when the labels do not fit a phone.
+  tabs: { marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
 });
 
 type TabKey = 'import' | 'runs' | 'reconcile';
@@ -23,7 +24,11 @@ export function MigrationPage() {
 
   return (
     <>
-      <PageHeader title={t('migration.title')} subtitle={t('migration.subtitle')} />
+      <PageHeader
+        title={t('migration.title')}
+        subtitle={t('migration.subtitle')}
+        back={tab === 'runs' && runId ? { to: '/admin/migration?tab=runs', label: t('migration.runs.back') } : undefined}
+      />
       <ScrollTabList
         className={styles.tabs}
         selectedValue={tab}

@@ -161,6 +161,12 @@ public interface ICustomersApi
     /// <summary>Account managers for only the requested organizations; an empty batch performs no lookup.</summary>
     Task<IReadOnlyDictionary<Guid, Guid?>> GetAccountManagerIdsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The live organizations among the requested ids, with name, status and account manager; a deleted or merged organization
+    /// is absent. One query per thousand ids; an empty batch performs no lookup.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, OrganizationRef>> GetOrganizationsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
+
     /// <summary>Every organization as a flat row, for the reporting mart (FR-RPT-03).</summary>
     Task<IReadOnlyList<OrganizationRef>> GetAllOrganizationsAsync(CancellationToken cancellationToken);
 

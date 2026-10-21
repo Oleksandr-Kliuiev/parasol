@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle } from '@fluentui/react-components';
+import { Button, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle } from '@fluentui/react-components';
+import { Dialog } from '../components/Dialog';
 import { useTranslation } from 'react-i18next';
 import type { useUnsavedChanges } from './useUnsavedChanges';
 

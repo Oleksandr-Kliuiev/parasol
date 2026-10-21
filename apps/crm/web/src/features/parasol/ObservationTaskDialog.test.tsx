@@ -24,27 +24,34 @@ async function selectAndConfirm() {
   const dialog = within(await screen.findByRole('dialog', { name: 'Assign observation work' }));
   await userEvent.click(await dialog.findByRole('combobox'));
   await userEvent.click(await screen.findByRole('option', { name: 'Synthetic technician' }));
-  await userEvent.click(screen.getByRole('checkbox', { name: 'I confirm the assignee and due date' }));
 }
 afterEach(() => vi.unstubAllGlobals());
 
 describe('assigning local CRM work from an Atlas observation', () => {
   it.each([
     [['activities.write'], false], [['parasol.atlas.read'], false], [permissions, true],
-  ])('offers active assignment only with both technical and write permissions (%j)', (allowed, shown) => {
-    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); const p = atlasTaskPreview();
+  ])('offers active assignment only with both technical and write permissions (%j)', async (allowed, shown) => {
+    const fetch = vi.fn<(url: string) => Promise<Response>>(async () => response({ customerId: 'customer-one', status: 'READY', items: [] }));
+    vi.stubGlobal('fetch', fetch); const p = atlasTaskPreview();
     renderRoutes([page(<ObservationRows items={[p.observation!]} devices={p.devices!} customerId="customer-one" />)], '/', testUser(allowed));
-    expect(screen.queryByRole('button', { name: 'Assign work' }) !== null).toBe(shown); expect(fetch).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Assign work' }) !== null).toBe(shown);
+    // Showing the row reads at most the page's task links, never the source preview.
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => String(url)).every(url => url.includes('/observation-tasks?'))).toBe(true));
+    expect(fetch.mock.calls.some(([url]) => String(url).includes('/task-preview'))).toBe(false);
   });
 
-  it('reads an exact preview before writing, requires confirmation and sends only assignment, due and hash', async () => {
+  it('reads an exact preview before writing, names what it creates and sends only assignment, due and hash', async () => {
     const fetch = setup(); await screen.findByText('Synthetic disk capacity used: 97%');
     expect(screen.getByRole('button', { name: 'Create task' })).toBeDisabled();
     expect(screen.getByText('Task subject: Review technical observation')).toBeVisible(); expect(screen.getByText('Task priority: High')).toBeVisible();
+    // No check box: the dialog and one sentence beside the button say exactly what will be created.
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     await selectAndConfirm(); expect(screen.getByRole('button', { name: 'Create task' })).toBeEnabled();
+    expect(screen.getByText('Creates a task for Synthetic technician with no due date, priority high.')).toBeVisible();
     fireEvent.change(screen.getByLabelText('Due date (optional)'), { target: { value: '2026-10-18T10:30' } });
-    expect(screen.getByRole('checkbox')).not.toBeChecked(); expect(screen.getByRole('button', { name: 'Create task' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('checkbox')); await userEvent.click(screen.getByRole('button', { name: 'Create task' }));
+    const summary = screen.getByText(/^Creates a task for Synthetic technician, due 18\/10\/2026, 10:30, priority high\.$/);
+    expect(screen.getByRole('button', { name: 'Create task' })).toHaveAttribute('aria-describedby', summary.id);
+    await userEvent.click(screen.getByRole('button', { name: 'Create task' }));
     expect(await screen.findByText('Task created.')).toBeVisible();
     const writes = fetch.mock.calls.filter(([, init]) => init.method === 'POST'); expect(writes).toHaveLength(1);
     expect(writes[0]![0]).toBe('/api/v1/parasol/customers/customer-one/observations/critical-one/task');
@@ -96,7 +103,7 @@ describe('assigning local CRM work from an Atlas observation', () => {
     expect(screen.queryByRole('button', { name: 'Create task' })).not.toBeInTheDocument();
   });
 
-  it('resets confirmation on a fresh preview and refuses a source that became terminal', async () => {
+  it('offers no creation after a fresh preview finds the source terminal', async () => {
     let terminal = false;
     const fetch = vi.fn(async (url: string) => {
       if (url.startsWith('/api/v1/identity/users')) return response(users);
@@ -106,8 +113,33 @@ describe('assigning local CRM work from an Atlas observation', () => {
     await selectAndConfirm(); expect(screen.getByRole('button', { name: 'Create task' })).toBeEnabled();
     terminal = true; await userEvent.click(screen.getByRole('button', { name: 'Read fresh preview' }));
     expect(await screen.findByText(/No new task can be created from this observation/)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Create task' })).toBeDisabled(); expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create task' })).toBeDisabled();
+    expect(screen.queryByRole('group', { name: 'Quick due dates' })).not.toBeInTheDocument();
     expect(fetch.mock.calls.map(([url]) => url).filter(url => url.endsWith('/task'))).toHaveLength(0);
+  });
+
+  it('assigns to the signed-in employee in one step when the server would accept them', async () => {
+    const fetch = setup(); await screen.findByText('Synthetic disk capacity used: 97%');
+    await userEvent.click(screen.getByRole('button', { name: 'Assign to me' }));
+    expect(screen.getByRole('button', { name: 'Assign to me' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('combobox')).toHaveValue('Kari Nordmann');
+    expect(screen.getByText('Creates a task for Kari Nordmann with no due date, priority high.')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Create task' }));
+    expect(await screen.findByText('Task created.')).toBeVisible();
+    const write = fetch.mock.calls.find(([, init]) => init.method === 'POST')!;
+    expect(JSON.parse(write[1].body as string).assigneeId).toBe('u1');
+  });
+
+  it('fills the due date from a shortcut at the end of the working day and clears it again', async () => {
+    setup(); await screen.findByText('Synthetic disk capacity used: 97%');
+    const shortcuts = within(screen.getByRole('group', { name: 'Quick due dates' }));
+    await userEvent.click(shortcuts.getByRole('button', { name: 'Tomorrow 16:00' }));
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    expect(screen.getByLabelText('Due date (optional)')).toHaveValue(`${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T16:00`);
+    expect(shortcuts.getByRole('button', { name: 'Tomorrow 16:00' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(shortcuts.getByRole('button', { name: 'No due date' }));
+    expect(screen.getByLabelText('Due date (optional)')).toHaveValue('');
   });
 
   it('treats an invalid write response as uncertain and prevents repeated creation', async () => {
@@ -133,6 +165,7 @@ describe('assigning local CRM work from an Atlas observation', () => {
     let signal: AbortSignal | undefined; let finish!: (r: Response) => void; let reads = 0;
     const fetch = vi.fn((url: string, init: RequestInit) => {
       if (url.startsWith('/api/v1/identity/users')) return Promise.resolve(response(users));
+      if (url.includes('/observation-tasks?')) return Promise.resolve(response({ customerId: 'customer-one', status: 'READY', items: [] }));
       if (++reads === 1) { signal = init.signal as AbortSignal; return new Promise<Response>(resolve => { finish = resolve; }); }
       const p = invalidTaskPreview('customer-one'); p.status = 'ACCESS_DENIED'; return Promise.resolve(response(p));
     });

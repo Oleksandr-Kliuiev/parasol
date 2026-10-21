@@ -5,6 +5,7 @@ import {
   Button,
   Field,
   Input,
+  Link,
   MessageBar,
   MessageBarBody,
   Spinner,
@@ -15,8 +16,10 @@ import {
   TableHeaderCell,
   TableRow,
   makeStyles,
-  tokens,
 } from '@fluentui/react-components';
+import { Building16Regular, History16Regular, Person16Regular } from '@fluentui/react-icons';
+import { ProfileHeader } from '../organizations/ProfileHeader';
+import { RecordCell } from '../organizations/RecordCell';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import type { Contact } from '../../api/types';
@@ -24,7 +27,6 @@ import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { errorMessage } from '../../shared/utils/errors';
-import { PageHeader } from '../../shared/components/PageHeader';
 import { ConflictBar } from '../../shared/forms/ConflictBar';
 import { UnsavedChangesDialog } from '../../shared/forms/UnsavedChangesDialog';
 import { useConflictFlow } from '../../shared/forms/useConflictFlow';
@@ -38,10 +40,13 @@ import { useContact, useUpdateContactPerson } from './api';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}` },
-  actions: { display: 'flex', justifyContent: 'flex-end', marginTop: tokens.spacingVerticalM },
-  tableWrap: { overflowX: 'auto' },
+  layout: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: '16px', alignItems: 'start' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '14px 16px', alignItems: 'start', '& .fui-Dropdown, & .fui-Combobox': { minWidth: 0 } },
+  actions: { display: 'flex', justifyContent: 'flex-end', marginTop: '16px' },
+  // The table sits flush in its panel: no second card around it.
+  tableWrap: { border: 'none', borderRadius: 0, boxShadow: 'none', paddingLeft: '8px', paddingRight: '8px' },
+  orgLink: { fontWeight: 700, color: 'inherit' },
+  badges: { display: 'inline-flex', flexWrap: 'wrap', gap: '4px', marginLeft: '6px', verticalAlign: 'middle' },
 });
 
 const fields = ['firstName', 'lastName', 'email', 'phone', 'mobilePhone'] as const;
@@ -75,8 +80,15 @@ export function ContactPage() {
 
   return (
     <>
-      <PageHeader
+      <ProfileHeader
         title={fullName}
+        meta={[
+          contact.email && <Link href={`mailto:${contact.email}`}>{contact.email}</Link>,
+          // A number on the card can be called from a phone, as in the customer's contact list.
+          ...[contact.mobilePhone, contact.phone].filter((phone, i, all): phone is string => Boolean(phone) && all.indexOf(phone) === i)
+            .map((phone) => <Link key={phone} href={`tel:${phone.replace(/\s/g, '')}`}>{phone}</Link>),
+          firstOrganization && <span>{firstOrganization.organizationName}</span>,
+        ]}
         back={firstOrganization ? { to: `/organizations/${firstOrganization.organizationId}?tab=contacts`, label: firstOrganization.organizationName } : undefined}
         actions={
           canPrivacy ? (
@@ -104,12 +116,12 @@ export function ContactPage() {
           }}
         />
 
-        <Panel title={t('contacts.affiliations')}>
+        <Panel title={t('contacts.affiliations')} icon={<Building16Regular />} flush>
           <ScrollTable className={styles.tableWrap}>
             <Table size="small">
               <TableHeader>
                 <TableRow>
-                  <TableHeaderCell>{t('organizations.columns.name')}</TableHeaderCell>
+                  <TableHeaderCell style={{ width: '48%' }}>{t('organizations.columns.name')}</TableHeaderCell>
                   <TableHeaderCell>{t('contacts.columns.title')}</TableHeaderCell>
                   <TableHeaderCell>{t('contacts.columns.roles')}</TableHeaderCell>
                 </TableRow>
@@ -118,17 +130,28 @@ export function ContactPage() {
                 {contact.affiliations.map((a) => (
                   <TableRow key={a.organizationId}>
                     <TableCell>
-                      <AppLink to={`/organizations/${a.organizationId}?tab=contacts`}>{a.organizationName}</AppLink>{' '}
-                      {a.isPrimary && (
-                        <Badge size="small" appearance="tint" color="warning">
-                          {t('contacts.primary')}
-                        </Badge>
-                      )}
-                      {!a.isActive && (
-                        <Badge size="small" appearance="outline" color="informative">
-                          {t('contacts.inactive')}
-                        </Badge>
-                      )}
+                      <RecordCell
+                        avatarName={a.organizationName}
+                        name={
+                          <>
+                            <AppLink to={`/organizations/${a.organizationId}?tab=contacts`} className={styles.orgLink}>{a.organizationName}</AppLink>
+                            {(a.isPrimary || !a.isActive) && (
+                              <span className={styles.badges}>
+                                {a.isPrimary && (
+                                  <Badge size="small" appearance="tint" color="warning">
+                                    {t('contacts.primary')}
+                                  </Badge>
+                                )}
+                                {!a.isActive && (
+                                  <Badge size="small" appearance="outline" color="informative">
+                                    {t('contacts.inactive')}
+                                  </Badge>
+                                )}
+                              </span>
+                            )}
+                          </>
+                        }
+                      />
                     </TableCell>
                     <TableCell>{a.title}</TableCell>
                     <TableCell>{a.roles.map((r) => t(`roles.${r}`)).join(', ')}</TableCell>
@@ -139,7 +162,7 @@ export function ContactPage() {
           </ScrollTable>
         </Panel>
 
-        <Panel title={t('history.title')}>
+        <Panel title={t('history.title')} icon={<History16Regular />}>
           <HistoryList module="customers" entityType="Contact" entityId={contact.id} compact />
         </Panel>
       </div>
@@ -196,7 +219,7 @@ function PersonForm({ contact, etag, carried, onReload, onKeepMine }: PersonForm
   const conflict = conflictError !== null;
 
   return (
-        <Panel title={t('contacts.person')}>
+        <Panel title={t('contacts.person')} icon={<Person16Regular />}>
           <UnsavedChangesDialog blocker={blocker} />
           {conflict && (
             <ConflictBar

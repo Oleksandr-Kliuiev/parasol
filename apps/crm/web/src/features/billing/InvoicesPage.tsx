@@ -1,49 +1,28 @@
 import { useSearchParams } from 'react-router';
-import {
-  Link,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  Text,
-  makeStyles,
-  tokens,
-} from '@fluentui/react-components';
+import { Text, makeStyles } from '@fluentui/react-components';
+import { Receipt16Regular, Receipt24Regular, Wallet16Regular, Warning16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
-import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
-import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { FilterChips, Toolbar } from '../../shared/components/Toolbar';
 import { formatDate, formatMoney } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useInvoicePages } from './api';
-import { InvoiceMovements, InvoiceStatusBadge } from './shared';
+import { InvoiceList } from './InvoiceList';
 import { SavedViews } from '../../shared/views/SavedViews';
-import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { CustomerFinanceTab } from './CustomerFinanceTab';
-import { ScrollTable } from '../../shared/components/ScrollTable';
+import { StatGrid, StatTile } from '../../shared/components/KpiTile';
+import { useStatFitStyles } from './flushStyles';
+import { h } from '../../app/hearth';
 
 const useStyles = makeStyles({
-  tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalL },
-  tile: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXXS,
-    padding: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
-  },
-  value: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
-  scope: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, marginTop: `-${tokens.spacingVerticalM}`, marginBottom: tokens.spacingVerticalL },
-  label: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  warn: { color: tokens.colorPaletteRedForeground1 },
+  // What the tiles add up, on the line of the filters it depends on.
+  scope: { color: h.muted, fontSize: '12.5px', lineHeight: '18px', maxWidth: '62ch' },
 });
+
+type InvoiceFilter = 'all' | 'open' | 'overdue';
 
 /** Invoices as PowerOffice reports them, with what is still outstanding (docs/02 §4.9). */
 export function InvoicesPage() {
@@ -60,105 +39,65 @@ export function InvoicesPage() {
   const invoices = pages.data?.pages.flatMap((p) => p.invoices) ?? [];
   const { error, isPending, refetch } = pages;
 
-  const setFlag = (key: string, value: boolean) => {
+  // Overdue invoices are a part of the outstanding ones, so the two flags are one choice of three.
+  const filter: InvoiceFilter = overdueOnly ? 'overdue' : openOnly ? 'open' : 'all';
+  const setFilter = (value: InvoiceFilter) => {
     const next = new URLSearchParams(params);
-    if (value) next.set(key, 'true');
-    else next.delete(key);
+    next.delete('open');
+    next.delete('overdue');
+    if (value !== 'all') next.set(value, 'true');
     setParams(next, { replace: true });
   };
 
   return (
     <>
-      <PageHeader title={t('invoices.title')} subtitle={t('invoices.subtitle')} />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
-        <SavedViews scope="invoices" keys={['open', 'overdue']} />
-      </div>
+      <PageHeader title={t('invoices.title')} subtitle={t('invoices.subtitle')} actions={<SavedViews scope="invoices" keys={['open', 'overdue']} />} />
 
-      {canSeeMoney && (
-        <div className={styles.tiles}>
-          <div className={styles.tile}>
-            <span className={styles.value}>{formatMoney(data?.outstanding)}</span>
-            <span className={styles.label}>{t('invoices.outstanding')}</span>
-          </div>
-          <div className={styles.tile}>
-            <span className={`${styles.value} ${(data?.overdue ?? 0) > 0 ? styles.warn : ''}`}>{formatMoney(data?.overdue)}</span>
-            <span className={styles.label}>{t('invoices.overdue')}</span>
-          </div>
-          <div className={styles.tile}>
-            <span className={styles.value}>{data?.count ?? 0}</span>
-            <span className={styles.label}>{t('invoices.count')}</span>
-          </div>
-        </div>
-      )}
-      {canSeeMoney && data && <Text block className={styles.scope}>{t('invoices.totalsScope', { count: data.count, date: formatDate(data.asOf) })}</Text>}
+      {canSeeMoney && <InvoiceTotals outstanding={data?.outstanding} overdue={data?.overdue} count={data?.count ?? 0} />}
 
-      <div className={catalog.filters}>
-        <Switch label={t('invoices.openOnly')} checked={openOnly} onChange={(_, d) => setFlag('open', d.checked)} />
-        <Switch label={t('invoices.overdueOnly')} checked={overdueOnly} onChange={(_, d) => setFlag('overdue', d.checked)} />
-      </div>
+      <Toolbar end={canSeeMoney && data && <Text className={styles.scope}>{t('invoices.totalsScope', { count: data.count, date: formatDate(data.asOf) })}</Text>}>
+        <FilterChips<InvoiceFilter>
+          label={t('invoices.filter.label')}
+          value={filter}
+          options={[
+            { value: 'all', label: t('common.all') },
+            { value: 'open', label: t('invoices.filter.open') },
+            { value: 'overdue', label: t('invoices.filter.overdue'), dot: h.ember },
+          ]}
+          onChange={setFilter}
+        />
+      </Toolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
+      ) : !isPending && invoices.length === 0 ? (
+        <div className={catalog.tableWrap}>
+          <EmptyState icon={<Receipt24Regular />} message={filter === 'all' ? t('invoices.empty') : t('invoices.emptyFiltered')} />
+        </div>
       ) : (
-        <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('invoices.title')}>
-            <TableHeader>
-              <TableRow>
-                <TableHeaderCell>{t('invoices.fields.number')}</TableHeaderCell>
-                <TableHeaderCell>{t('invoices.fields.customer')}</TableHeaderCell>
-                <TableHeaderCell>{t('invoices.fields.dates')}</TableHeaderCell>
-                {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('invoices.fields.total')}</TableHeaderCell>}
-                {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('invoices.fields.outstanding')}</TableHeaderCell>}
-                <TableHeaderCell>{t('common.status')}</TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell>
-                    {invoice.url ? (
-                      <Link href={safeHttpUrl(invoice.url)} target="_blank" rel="noopener noreferrer">
-                        {invoice.invoiceNo}
-                      </Link>
-                    ) : (
-                      <Text weight="semibold">{invoice.invoiceNo}</Text>
-                    )}
-                    {invoice.basisId && (
-                      <div className={styles.label}>
-                        <AppLink to={`/billing/bases/${invoice.basisId}`}>{t('invoices.openBasis')}</AppLink>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {invoice.organization ? (
-                      <AppLink to={`/organizations/${invoice.organization.id}?tab=invoices`}>{invoice.organization.name}</AppLink>
-                    ) : (
-                      <span className={styles.label}>{t('invoices.noCustomer')}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="tabular">
-                    {formatDate(invoice.invoiceDate)}
-                    <div className={styles.label}>{invoice.dueDate ? t('invoices.due', { date: formatDate(invoice.dueDate) }) : '—'}</div>
-                  </TableCell>
-                  {canSeeMoney && <TableCell className={catalog.number}>{formatMoney(invoice.totalIncVat)}</TableCell>}
-                  {canSeeMoney && (
-                    <TableCell className={catalog.number}>
-                      <span className={invoice.isOverdue ? styles.warn : undefined}>{formatMoney(invoice.outstanding)}</span>
-                      <InvoiceMovements movements={invoice.movements} canSeeMoney={canSeeMoney} />
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <InvoiceStatusBadge status={invoice.status} isOverdue={invoice.isOverdue} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.empty')} />}
-          <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-        </ScrollTable>
+        <InvoiceList invoices={invoices} canSeeMoney={canSeeMoney} showCustomer total={data?.count} hasMore={pages.hasNextPage}
+          loadingMore={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
       )}
     </>
+  );
+}
+
+/** Outstanding and overdue money (and the number of invoices when given) as the page's key figures. */
+function InvoiceTotals({ outstanding, overdue, count }: { outstanding?: number; overdue?: number; count?: number }) {
+  const { t } = useTranslation();
+  const stat = useStatFitStyles();
+  return (
+    <StatGrid className={stat.fit} label={t('invoices.totals')}>
+      <StatTile className={stat.money} icon={<Wallet16Regular />} tone="iris" label={t('invoices.outstanding')} value={formatMoney(outstanding)} />
+      <StatTile className={stat.money}
+        icon={<Warning16Regular />}
+        tone="ember"
+        label={t('invoices.overdue')}
+        value={formatMoney(overdue)}
+        status={(overdue ?? 0) > 0 ? 'bad' : undefined}
+      />
+      {count !== undefined && <StatTile icon={<Receipt16Regular />} label={t('invoices.count')} value={count} />}
+    </StatGrid>
   );
 }
 
@@ -169,7 +108,6 @@ export function OrganizationInvoicesTab({ organizationId }: { organizationId: st
 }
 
 function OrganizationInvoiceSummary({ organizationId }: { organizationId: string }) {
-  const styles = useStyles();
   const catalog = useCatalogStyles();
   const { t } = useTranslation();
   const canSeeMoney = useCan(Permissions.financeRead);
@@ -182,63 +120,15 @@ function OrganizationInvoiceSummary({ organizationId }: { organizationId: string
 
   return (
     <>
-      {canSeeMoney && (data?.count ?? 0) > 0 && (
-        <div className={styles.tiles}>
-          <div className={styles.tile}>
-            <span className={styles.value}>{formatMoney(data?.outstanding)}</span>
-            <span className={styles.label}>{t('invoices.outstanding')}</span>
-          </div>
-          <div className={styles.tile}>
-            <span className={`${styles.value} ${(data?.overdue ?? 0) > 0 ? styles.warn : ''}`}>{formatMoney(data?.overdue)}</span>
-            <span className={styles.label}>{t('invoices.overdue')}</span>
-          </div>
+      {canSeeMoney && (data?.count ?? 0) > 0 && <InvoiceTotals outstanding={data?.outstanding} overdue={data?.overdue} />}
+      {!isPending && invoices.length === 0 ? (
+        <div className={catalog.tableWrap}>
+          <EmptyState icon={<Receipt24Regular />} message={t('invoices.emptyForOrganization')} />
         </div>
+      ) : (
+        <InvoiceList invoices={invoices} canSeeMoney={canSeeMoney} showCustomer={false} total={data?.count} hasMore={pages.hasNextPage}
+          loadingMore={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
       )}
-      {canSeeMoney && data && data.count > 0 && <Text block className={styles.scope}>{t('invoices.totalsScope', { count: data.count, date: formatDate(data.asOf) })}</Text>}
-      <ScrollTable className={catalog.tableWrap}>
-        <Table className={catalog.table} aria-label={t('invoices.title')}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{t('invoices.fields.number')}</TableHeaderCell>
-              <TableHeaderCell>{t('invoices.fields.dates')}</TableHeaderCell>
-              {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('invoices.fields.total')}</TableHeaderCell>}
-              {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('invoices.fields.outstanding')}</TableHeaderCell>}
-              <TableHeaderCell>{t('common.status')}</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {invoices.map((invoice) => (
-              <TableRow key={invoice.id}>
-                <TableCell>
-                  {invoice.url ? (
-                    <Link href={safeHttpUrl(invoice.url)} target="_blank" rel="noopener noreferrer">
-                      {invoice.invoiceNo}
-                    </Link>
-                  ) : (
-                    <Text weight="semibold">{invoice.invoiceNo}</Text>
-                  )}
-                </TableCell>
-                <TableCell className="tabular">
-                  {formatDate(invoice.invoiceDate)}
-                  <div className={styles.label}>{invoice.dueDate ? t('invoices.due', { date: formatDate(invoice.dueDate) }) : '—'}</div>
-                </TableCell>
-                {canSeeMoney && <TableCell className={catalog.number}>{formatMoney(invoice.totalIncVat)}</TableCell>}
-                {canSeeMoney && (
-                  <TableCell className={catalog.number}>
-                    <span className={invoice.isOverdue ? styles.warn : undefined}>{formatMoney(invoice.outstanding)}</span>
-                    <InvoiceMovements movements={invoice.movements} canSeeMoney={canSeeMoney} />
-                  </TableCell>
-                )}
-                <TableCell>
-                  <InvoiceStatusBadge status={invoice.status} isOverdue={invoice.isOverdue} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {!isPending && invoices.length === 0 && <EmptyState message={t('invoices.emptyForOrganization')} />}
-        <ListFooter shown={invoices.length} total={data?.count} hasMore={pages.hasNextPage} loading={pages.isFetchingNextPage} onMore={() => void pages.fetchNextPage()} />
-      </ScrollTable>
     </>
   );
 }

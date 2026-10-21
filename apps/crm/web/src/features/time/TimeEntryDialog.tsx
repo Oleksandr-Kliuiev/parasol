@@ -6,6 +6,7 @@ import {
   DialogActions,
   DialogBody,
   DialogContent,
+  DialogSurface,
   DialogTitle,
   Dropdown,
   Field,
@@ -16,14 +17,20 @@ import {
   Switch,
   Textarea,
   Text,
+  ToggleButton,
+  makeStyles,
+  mergeClasses,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { Dialog } from '../../shared/components/Dialog';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
-import { blankToNull, parseDecimal, todayIso } from '../../shared/utils/format';
+import { blankToNull, formatNumber, todayIso } from '../../shared/utils/format';
+import { parseHours, roundHours, typedAsMinutes } from './hours';
 import { useDialogStyles } from '../contracts/dialogStyles';
 import { TimeOrganizationPicker } from './TimeOrganizationPicker';
 import type { Ref } from '../contracts/types';
@@ -33,7 +40,72 @@ import type { TicketWorkRef } from '../activities/taskTicketTypes';
 import type { TimeEntry } from './types';
 
 export interface TaskTimeContext { activityId: string; organization: Ref; ticket: TicketWorkRef }
-interface TimeEntryDialogProps { entry?: TimeEntry; defaultDate?: string; taskContext?: TaskTimeContext; onClose: () => void }
+
+const useStyles = makeStyles({
+  // Two columns down to small phones: date and hours, work type and project are short and belong side by side.
+  form: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', '@media (max-width: 359px)': { gridTemplateColumns: 'minmax(0, 1fr)' } },
+  // The three yes/no facts of the work on one row of their own, under the fields and above the description.
+  flags: {
+    gridColumn: '1 / -1',
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: '24px',
+    rowGap: '4px',
+    minHeight: '42px',
+  },
+  hint: { marginBottom: '12px' },
+  // The combobox puts its input in a 1fr grid column: without this the input's own width pushes the chevron out of a
+  // narrow column (two columns on a phone).
+  comboInput: { minWidth: 0, width: '100%' },
+  manual: { alignSelf: 'start', marginTop: '6px' },
+  // The hours field with its usual durations under it, in the same grid cell.
+  hoursCell: { display: 'grid', gap: '8px', minWidth: 0, alignContent: 'start' },
+  durations: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
+});
+
+/** The durations most entries use: one tap instead of typing a decimal on a phone keyboard. */
+const commonDurations = [0.25, 0.5, 0.75, 1, 2] as const;
+
+interface TimeEntryDialogProps {
+  entry?: TimeEntry; defaultDate?: string; taskContext?: TaskTimeContext; onClose: () => void;
+  /** Hears whether the form holds anything the person typed, so its host can ask before Escape or a click outside drops it. */
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+/**
+ * The registration dialog with its draft protected: Escape or a click beside it closes an untouched form at once, and asks
+ * before throwing away what the person typed (the explicit Cancel button still closes without asking).
+ */
+export function TimeEntryDialogHost({ open, onClose, ...props }: Omit<TimeEntryDialogProps, 'onDirtyChange'> & { open: boolean }) {
+  const { t } = useTranslation();
+  const [dirty, setDirty] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const close = () => { setAsking(false); setDirty(false); onClose(); };
+  // "Keep editing" puts the person back in the field they left. Focus re-entering the form is also what makes it the
+  // active dialog again: without it the form stays hidden from screen readers after the question closes (Chromium).
+  const returnTo = useRef<HTMLElement | null>(null);
+  const ask = () => { returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setAsking(true); };
+  const keepEditing = () => {
+    setAsking(false);
+    const field = returnTo.current; returnTo.current = null;
+    if (!field) return;
+    const back = () => { if (field.isConnected && (document.activeElement === document.body || !document.activeElement)) field.focus(); };
+    requestAnimationFrame(() => field.isConnected && field.focus());
+    window.setTimeout(back, 300); // after the question's exit motion, should its own focus return land on the page
+  };
+  // The question is a dialog nested in the form's own surface: when it closes, the form is the active dialog again (in the
+  // accessibility tree and taking input), which a sibling dialog does not give back.
+  return (
+    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) { if (dirty) ask(); else close(); } }}>
+      <DialogSurface>
+        <TimeEntryDialog {...props} onClose={close} onDirtyChange={setDirty} />
+        <ConfirmDialog open={asking} title={t('time.discardTitle')} confirm={t('time.discard')} cancel={t('time.keepEditing')}
+          onConfirm={close} onCancel={keepEditing}>{t('time.discardBody')}</ConfirmDialog>
+      </DialogSurface>
+    </Dialog>
+  );
+}
 
 /** Registers or edits manual CRM hours; task context never determines the hours author. */
 export function TimeEntryDialog(props: TimeEntryDialogProps) {
@@ -44,8 +116,9 @@ export function TimeEntryDialog(props: TimeEntryDialogProps) {
   return <TimeEntryForm key={scope} {...props} scope={scope} />;
 }
 
-function TimeEntryForm({ entry, defaultDate, taskContext, onClose, scope }: TimeEntryDialogProps & { scope: string }) {
+function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange, scope }: TimeEntryDialogProps & { scope: string }) {
   const styles = useDialogStyles();
+  const local = useStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const client = useQueryClient(); const alive = useRef(false); const submitting = useRef(false);
@@ -69,15 +142,27 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, scope }: Time
   const [sourceActivityId, setSourceActivityId] = useState(taskContext?.activityId ?? entry?.sourceActivityId ?? null);
   const [ticketTitle, setTicketTitle] = useState(taskContext?.ticket.title ?? entry?.ticketTitle ?? null);
   const [projectId, setProjectId] = useState(entry?.projectId ?? '');
+  // The form as first shown, to know whether the person has typed anything since.
+  const draft = JSON.stringify([organization?.id ?? null, workDate, hours, workType, billable, onsite, afterHours, description, ticket, projectId]);
+  const [opened] = useState(draft);
+  const dirty = draft !== opened;
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   // Only the customer's own open projects can take hours; the list is empty until a customer is picked.
   const { workTypes, projects: projectOptions } = useTimeFormOptions(scope, organization?.id);
   const projects = projectOptions.isSuccess && !projectOptions.isFetching ? projectOptions.data : [];
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const hoursValue = parseDecimal(hours);
+  const parsedHours = parseHours(hours);
+  const hoursValue = parsedHours === null || Number.isNaN(parsedHours) ? parsedHours : roundHours(parsedHours);
   const ticketValue = ticket.trim() === '' ? null : Number(ticket.trim());
-  const invalid = !organization || hoursValue === null || Number.isNaN(hoursValue) || hoursValue <= 0 || hoursValue > 24
-    || (ticketValue !== null && (!Number.isSafeInteger(ticketValue) || ticketValue <= 0)) || Boolean(taskContext && !description.trim());
+  // Each field says what is wrong with it once the person has left it, instead of only disabling Register (WCAG 3.3.1).
+  const [left, setLeft] = useState<Record<'hours' | 'ticket' | 'description', boolean>>({ hours: false, ticket: false, description: false });
+  const leave = (field: keyof typeof left) => () => setLeft((current) => (current[field] ? current : { ...current, [field]: true }));
+  const hoursProblem = hoursValue === null ? 'time.hoursRequired' : Number.isNaN(hoursValue) ? 'time.hoursInvalid'
+    : hoursValue <= 0 ? 'time.hoursPositive' : hoursValue > 24 ? 'time.hoursMax' : null;
+  const ticketProblem = ticketValue !== null && (!Number.isSafeInteger(ticketValue) || ticketValue <= 0) ? 'time.ticketInvalid' : null;
+  const descriptionProblem = taskContext && !description.trim() ? 'time.descriptionRequired' : null;
+  const invalid = !organization || hoursProblem !== null || ticketProblem !== null || descriptionProblem !== null;
 
   const clearTicketContext = () => { setTicketId(null); setSourceActivityId(null); setTicketTitle(null); };
   const changeOrganization = (value: Ref | null) => {
@@ -128,25 +213,38 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, scope }: Time
       <DialogBody>
         <DialogTitle>{entry ? t('time.editEntry') : t('time.newEntry')}</DialogTitle>
         <DialogContent>
-          {taskContext && <Text block>{t('taskTicket.timeHint')}</Text>}
+          {taskContext && <Text block className={local.hint}>{t('taskTicket.timeHint')}</Text>}
           {failure && (!(failure instanceof ApiError && failure.status === 400) || Object.keys(errors).length === 0) && (
             <MessageBar intent="error" className={styles.error}>
               <MessageBarBody>{errorMessage(failure, t)}</MessageBarBody>
             </MessageBar>
           )}
-          <fieldset disabled={pending} className={styles.grid} style={{ border: 0, margin: 0, padding: 0 }}>
+          <fieldset disabled={pending} className={mergeClasses(styles.grid, local.form)} style={{ border: 0, margin: 0, padding: 0 }}>
             <Field label={t('time.fields.organization')} required className={styles.wide} validationMessage={errors.organizationId}>
               {taskContext ? <Input value={taskContext.organization.name} readOnly /> : <TimeOrganizationPicker value={organization} onChange={changeOrganization} scope={scope} disabled={pending} />}
             </Field>
             <Field label={t('time.fields.workDate')} required validationMessage={errors.workDate}>
               <Input type="date" value={workDate} onChange={(_, d) => setWorkDate(d.value)} />
             </Field>
-            <Field label={t('time.fields.hours')} required validationMessage={errors.hours}>
-              <Input ref={hoursInput} inputMode="decimal" value={hours} onChange={(_, d) => setHours(d.value)} contentAfter={t('contracts.hoursShort')} />
-            </Field>
+            <div className={local.hoursCell}>
+              <Field label={t('time.fields.hours')} required validationMessage={errors.hours ?? (left.hours && hoursProblem ? t(hoursProblem) : undefined)}
+                // Minutes and clock times are saved as hours: the field says how many, before anything is saved.
+                hint={hoursProblem === null && typedAsMinutes(hours) ? t('time.hoursEcho', { hours: formatNumber(hoursValue) }) : undefined}>
+                <Input ref={hoursInput} inputMode="decimal" value={hours} onChange={(_, d) => setHours(d.value)} onBlur={leave('hours')}
+                  contentAfter={t('contracts.hoursShort')} />
+              </Field>
+              <div role="group" aria-label={t('time.commonDurations')} className={local.durations}>
+                {commonDurations.map((value) => {
+                  const label = value < 1 ? t('time.minutes', { count: value * 60 }) : `${formatNumber(value)} ${t('contracts.hoursShort')}`;
+                  return <ToggleButton key={value} size="small" shape="circular" checked={hoursValue === value}
+                    onClick={() => setHours(formatNumber(value))}>{label}</ToggleButton>;
+                })}
+              </div>
+            </div>
             <Field label={t('time.fields.workType')}>
               <Combobox
                 freeform
+                input={{ className: local.comboInput }}
                 value={workType}
                 selectedOptions={workType ? [workType] : []}
                 onInput={(event) => setWorkType((event.target as HTMLInputElement).value)}
@@ -175,16 +273,20 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, scope }: Time
                 ))}
               </Dropdown>
             </Field>
-            <Field label={t('time.fields.ticket')} hint={t(ticketId && !taskContext ? 'taskTicket.savedEntryHint' : 'time.ticketHint')} validationMessage={errors.externalTicketId}>
-              <Input inputMode="numeric" value={taskContext ? `#${ticket} · ${taskContext.ticket.title}` : ticket} readOnly={Boolean(taskContext)}
+            <Field label={t('time.fields.ticket')} className={styles.wide} hint={t(ticketId && !taskContext ? 'taskTicket.savedEntryHint' : 'time.ticketHint')}
+              validationMessage={errors.externalTicketId ?? (left.ticket && ticketProblem ? t(ticketProblem) : undefined)}>
+              <Input inputMode="numeric" value={taskContext ? `#${ticket} · ${taskContext.ticket.title}` : ticket} readOnly={Boolean(taskContext)} onBlur={leave('ticket')}
                 onChange={(_, d) => { clearTicketContext(); setTicket(d.value); }} />
-              {ticketId && !taskContext && <Button size="small" onClick={clearTicketContext}>{t('taskTicket.useManual')}</Button>}
+              {ticketId && !taskContext && <Button size="small" className={local.manual} onClick={clearTicketContext}>{t('taskTicket.useManual')}</Button>}
             </Field>
-            <Switch label={t('time.fields.billable')} checked={billable} onChange={(_, d) => setBillable(d.checked)} />
-            <Switch label={t('time.fields.onsite')} checked={onsite} onChange={(_, d) => setOnsite(d.checked)} />
-            <Switch label={t('time.fields.afterHours')} checked={afterHours} onChange={(_, d) => setAfterHours(d.checked)} />
-            <Field label={t('time.fields.description')} required={Boolean(taskContext)} className={styles.wide} validationMessage={errors.description}>
-              <Textarea value={description} onChange={(_, d) => setDescription(d.value)} resize="vertical" />
+            <div className={local.flags}>
+              <Switch label={t('time.fields.billable')} checked={billable} onChange={(_, d) => setBillable(d.checked)} />
+              <Switch label={t('time.fields.onsite')} checked={onsite} onChange={(_, d) => setOnsite(d.checked)} />
+              <Switch label={t('time.fields.afterHours')} checked={afterHours} onChange={(_, d) => setAfterHours(d.checked)} />
+            </div>
+            <Field label={t('time.fields.description')} required={Boolean(taskContext)} className={styles.wide}
+              validationMessage={errors.description ?? (left.description && descriptionProblem ? t(descriptionProblem) : undefined)}>
+              <Textarea value={description} onChange={(_, d) => setDescription(d.value)} onBlur={leave('description')} resize="vertical" />
             </Field>
           </fieldset>
           {workTypes.error && <ErrorState error={workTypes.error} onRetry={() => void workTypes.refetch()} />}

@@ -87,6 +87,32 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
         return new SourceTaskDetails(link.Source, Ref(task));
     }
 
+    public async Task<Result<IReadOnlyList<SourceTaskLookup>>> FindSourceTasksAsync(IReadOnlyCollection<SourceTaskQuery> queries,
+        CancellationToken cancellationToken)
+    {
+        if (!CanRead) return Forbidden();
+        var asked = (queries ?? []).SelectMany(q => (q.ObservationIds ?? []).Distinct(StringComparer.Ordinal)
+            .Select(id => (q.OrganizationId, Source: new SourceTaskIdentity("Atlas", q.WorkspaceId, q.ClientId, id, "Task")))).ToList();
+        if (asked.Count is 0 or > SourceTaskLookupLimits.MaxObservations || asked.Any(a => a.OrganizationId == Guid.Empty)
+            || !asked.All(a => SourceTaskIdentityRules.IsValid(a.Source)))
+            return Error.Validation("ACT_SOURCE_TASK_INVALID", $"Choose up to {SourceTaskLookupLimits.MaxObservations} technical sources of known customers.");
+        var byKey = asked.ToLookup(a => SourceTaskIdentityRules.Key(a.Source), StringComparer.Ordinal);
+        var keys = byKey.Select(group => group.Key).ToList();
+        var links = await db.SourceTaskLinks.AsNoTracking().Where(l => keys.Contains(l.SourceKey)).ToListAsync(cancellationToken);
+        if (links.Count == 0) return Result<IReadOnlyList<SourceTaskLookup>>.Success([]);
+        var activityIds = links.Select(l => l.ActivityId).ToList();
+        var tasks = await db.Activities.IgnoreQueryFilters().AsNoTracking().Where(a => activityIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, cancellationToken);
+        // Only a task of the customer that asked: one whose customer changed (a merge) or that is missing is explained by the
+        // exact preview of the dialog (FindOwnedAsync), not shown in a list row.
+        var owned = links.SelectMany(l => byKey[l.SourceKey].Select(a => (Asked: a, Link: l)))
+            .Where(o => tasks.TryGetValue(o.Link.ActivityId, out var task) && task.OrganizationId == o.Asked.OrganizationId)
+            .Select(o => (o.Asked, Task: tasks[o.Link.ActivityId])).ToList();
+        var assignees = owned.Where(o => !o.Task.IsDeleted && o.Task.AssigneeId is not null).Select(o => o.Task.AssigneeId!.Value).Distinct().ToList();
+        var names = assignees.Count == 0 ? new Dictionary<Guid, UserSummary>() : await users.GetUsersAsync(assignees, cancellationToken);
+        return owned.Select(o => new SourceTaskLookup(o.Asked.OrganizationId, o.Asked.Source.ObservationId, Ref(o.Task),
+            !o.Task.IsDeleted && o.Task.AssigneeId is { } assignee && names.TryGetValue(assignee, out var user) ? user.DisplayName : null)).ToList();
+    }
+
     private async Task<Result<SourceTaskRef?>> FindOwnedAsync(SourceTaskIdentity source, Guid organizationId, CancellationToken ct)
     {
         var key = SourceTaskIdentityRules.Key(source);

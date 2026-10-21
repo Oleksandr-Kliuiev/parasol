@@ -37,6 +37,8 @@ export default defineConfig({
     timezoneId: 'Europe/Oslo',
     ignoreHTTPSErrors: true,
     serviceWorkers: 'block',
+    // Settled pages only: the CRM animates its entrances unless reduced motion is asked for.
+    contextOptions: { reducedMotion: 'reduce' },
     trace: 'off',
     screenshot: 'only-on-failure',
     video: 'off',

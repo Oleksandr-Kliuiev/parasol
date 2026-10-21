@@ -48,6 +48,9 @@ export function toDraft(line: QuoteLine): LineDraft {
   };
 }
 
+/** A product line without its own price: the server prices it from the price list when the quote is saved. */
+export const pricedOnSave = (line: LineDraft) => Boolean(line.productId) && line.unitPrice.trim() === '';
+
 export function lineAmount(line: LineDraft): number {
   const quantity = parseDecimal(line.quantity) ?? 0;
   const price = parseDecimal(line.unitPrice) ?? 0;

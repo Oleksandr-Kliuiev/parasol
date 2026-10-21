@@ -13,6 +13,7 @@ export const routes: RouteObject[] = [
         children: [
       { index: true, lazy: async () => ({ Component: (await import('../features/dashboard/MyDayPage')).MyDayPage }) },
       { path: 'connections', lazy: async () => ({ Component: (await import('../features/parasol/ConnectionReadinessPage')).ConnectionReadinessPage }) },
+      { path: 'observations', lazy: async () => ({ Component: (await import('../features/parasol/ObservationQueuePage')).ObservationQueuePage }) },
       { path: 'organizations', lazy: async () => ({ Component: (await import('../features/organizations/OrganizationsPage')).OrganizationsPage }) },
       { path: 'organizations/new', lazy: async () => ({ Component: (await import('../features/organizations/OrganizationFormPage')).OrganizationFormPage }) },
       { path: 'organizations/duplicates', lazy: async () => ({ Component: (await import('../features/organizations/DuplicatesPage')).DuplicatesPage }) },

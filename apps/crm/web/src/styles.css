@@ -1,3 +1,124 @@
+/* Self-hosted fonts (SIL Open Font License 1.1, public/fonts/OFL-*.txt): the CSP allows fonts from 'self' only. Latin and
+   Latin Extended cover Bokmål, Nynorsk and English. */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/manrope-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/manrope-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('/fonts/bricolage-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('/fonts/bricolage-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Semantic tones of the visual system (hearth.ts reads them as var(--h-…)). The Fluent theme carries the neutrals; these
+   are the four accents in a strong, a text and a soft step, plus the rail. data-theme is set by App from the chosen theme. */
+:root {
+  color-scheme: light;
+  --h-display: 'Bricolage Grotesque', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --h-bg: #f3efe8;
+  --h-surface: #fffdfa;
+  --h-surface-2: #f7f3ed;
+  --h-float: #fffdfa;
+  --h-backdrop: rgba(20, 16, 12, 0.3);
+  --h-well: rgba(40, 30, 20, 0.055);
+  --h-line: rgba(40, 30, 20, 0.09);
+  --h-line-2: rgba(40, 30, 20, 0.16);
+  /* A field's edge is what shows where to type: at least 3:1 on the card, the well and the page (WCAG 1.4.11). */
+  --h-field-edge: rgba(40, 30, 20, 0.52);
+  --h-field-edge-hover: rgba(40, 30, 20, 0.7);
+  --h-text: #1d1915;
+  --h-muted: #6b645c;
+  /* Quiet text that still reads at 4.5:1 on the card, the well and the page. */
+  --h-faint: #736c63;
+  --h-ink: #1d1915;
+  --h-on-ink: #fbf8f2;
+  --h-ember: #e4572e;
+  --h-ember-t: #b53f19;
+  --h-ember-soft: #fbe6dd;
+  --h-iris: #5b52d6;
+  --h-iris-t: #4a41c4;
+  --h-iris-soft: #e8e6fb;
+  --h-spruce: #0a8f74;
+  --h-spruce-t: #0a7a63;
+  --h-spruce-soft: #dcf2ec;
+  --h-saffron: #c98a12;
+  --h-saffron-t: #8a5c08;
+  --h-saffron-soft: #f8ecd2;
+  --h-bad: #c2401b;
+  --h-glow-a: rgba(228, 87, 46, 0.16);
+  --h-glow-b: rgba(91, 82, 214, 0.12);
+  --h-side-bg: #1b1714;
+  --h-side-text: #efe9e1;
+  --h-side-muted: #a1978d;
+  --h-side-pill: #2e2824;
+  --h-side-line: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --h-bg: #141210;
+  --h-surface: #1e1b19;
+  --h-surface-2: #26221f;
+  --h-float: #2a2622;
+  --h-backdrop: rgba(0, 0, 0, 0.6);
+  --h-well: rgba(255, 255, 255, 0.06);
+  --h-line: rgba(255, 255, 255, 0.086);
+  --h-line-2: rgba(255, 255, 255, 0.16);
+  --h-field-edge: rgba(255, 255, 255, 0.38);
+  --h-field-edge-hover: rgba(255, 255, 255, 0.56);
+  --h-text: #f2ede6;
+  --h-muted: #a9a198;
+  --h-faint: #9a9289;
+  --h-ink: #f2ede6;
+  --h-on-ink: #1d1915;
+  --h-ember: #e15a33;
+  --h-ember-t: #f39a7b;
+  --h-ember-soft: rgba(225, 90, 51, 0.16);
+  --h-iris: #7a72e6;
+  --h-iris-t: #aaa4f5;
+  --h-iris-soft: rgba(122, 114, 230, 0.18);
+  --h-spruce: #1f9e82;
+  --h-spruce-t: #5ccfb1;
+  --h-spruce-soft: rgba(31, 158, 130, 0.17);
+  --h-saffron: #be8a2a;
+  --h-saffron-t: #e2b866;
+  --h-saffron-soft: rgba(190, 138, 42, 0.18);
+  --h-bad: #f39a7b;
+  --h-glow-a: rgba(225, 90, 51, 0.14);
+  --h-glow-b: rgba(122, 114, 230, 0.12);
+  --h-side-bg: #0f0d0c;
+  --h-side-pill: #26211d;
+}
+
 html,
 body,
 #root {
@@ -5,9 +126,29 @@ body,
   min-height: 100%;
 }
 
+/* The sticky top bar (72 px, 64 px on phones) stays over the page: a control that takes focus, or a section a link jumps
+   to, scrolls into view below it, never under it (WCAG 2.4.11). On phones the floating tab bar covers the bottom of the
+   window, so the same holds there. */
+html {
+  scroll-padding-top: 80px;
+}
+@media (max-width: 767px) {
+  html {
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}
+
 body {
-  font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--h-bg);
+  color: var(--h-text);
+  font: 500 14px/1.45 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The Fluent provider paints its own background; the page shows the warm glow behind the cards instead. */
+#root > .fui-FluentProvider {
+  background: transparent;
 }
 
 .tabular {
@@ -19,15 +160,91 @@ main :is(h1, h2, h3, p, li, a, dt, dd, label) {
   overflow-wrap: anywhere;
 }
 
-/* Tables (UX concept §8): quiet small-caps header, roomier rows. The tokens come from the Fluent theme, so light and dark follow it. */
-main .fui-TableHeaderCell {
-  font-size: var(--fontSizeBase200);
-  font-weight: var(--fontWeightSemibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--colorNeutralForeground3);
+main :is(h1, h2, h3) {
+  font-family: var(--h-display);
+  letter-spacing: -0.01em;
 }
 
-main .fui-TableRow {
-  min-height: 48px;
+/* Lists that build up one row after another when they appear (the reference's list entrance): add the class to the list.
+   Tables get the same through the row style hook. */
+@keyframes h-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.h-stagger > * {
+  animation: h-rise 0.55s cubic-bezier(0.33, 1, 0.68, 1) backwards;
+}
+.h-stagger > :nth-child(2) { animation-delay: 45ms; }
+.h-stagger > :nth-child(3) { animation-delay: 90ms; }
+.h-stagger > :nth-child(4) { animation-delay: 135ms; }
+.h-stagger > :nth-child(5) { animation-delay: 180ms; }
+.h-stagger > :nth-child(6) { animation-delay: 225ms; }
+.h-stagger > :nth-child(7) { animation-delay: 270ms; }
+.h-stagger > :nth-child(8) { animation-delay: 315ms; }
+.h-stagger > :nth-child(n + 9) { animation-delay: 360ms; }
+
+/* Native file pickers look like the secondary button of the visual system, the chosen name in quiet text after it. */
+input[type='file'] {
+  max-width: 100%;
+  color: var(--h-muted);
+  font: 500 13px/1.4 'Manrope', ui-sans-serif, system-ui, sans-serif;
+}
+input[type='file']::file-selector-button {
+  height: 36px;
+  margin-right: 12px;
+  padding: 0 13px;
+  border: 1px solid var(--h-line-2);
+  border-radius: 10px;
+  background: var(--h-surface);
+  color: var(--h-text);
+  font: 700 12.5px/1 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+input[type='file']:hover::file-selector-button {
+  background: var(--h-surface-2);
+}
+input[type='file']:focus-visible {
+  outline: 2px solid var(--h-ember);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+input[type='file']:disabled::file-selector-button {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The calendar and clock buttons of date and time fields: quiet until hovered, like the other field icons. */
+input::-webkit-calendar-picker-indicator {
+  padding: 4px;
+  border-radius: 8px;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+input::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+  background-color: var(--h-well);
+}
+
+/* The theme switch cross-fades (TopBar starts a view transition where the browser has them). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.35s;
+}
+
+/* Reduced motion removes CSS animations and transitions instead of shortening them. A near-zero transition still runs
+   for one frame on every style change (the default transition-property is all), so a control that has just taken focus
+   reports where it came from; an animation that starts inside a closed <details> never advances, so it never ends.
+   Every animation here is decorative and fills only backwards, so without it each element shows its final state.
+   Fluent's toast timer is the exception: an invisible CSS animation whose end closes the toast, so it keeps running. */
+@media (prefers-reduced-motion: reduce) {
+  *:not([data-timer-status]),
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
