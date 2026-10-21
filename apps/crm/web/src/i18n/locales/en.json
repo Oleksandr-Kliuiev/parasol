@@ -3979,18 +3979,6 @@
       }
     }
   },
-  "parasol": {
-    "employeeRoles": "Employee roles",
-    "roles": {
-      "Admin": "Administrator",
-      "Management": "Manager",
-      "Sales": "Sales",
-      "Technician": "Technician",
-      "ServiceLead": "Service lead",
-      "Finance": "Finance",
-      "ReadOnly": "Read only"
-    }
-  },
   "connectionStatus": {
     "title": "Connection status",
     "subtitle": "What Parasoll has saved about each integration and its background service. The systems themselves are not contacted.",

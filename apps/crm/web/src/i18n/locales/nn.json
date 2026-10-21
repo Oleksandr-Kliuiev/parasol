@@ -3977,18 +3977,6 @@
       }
     }
   },
-  "parasol": {
-    "employeeRoles": "Rollar for tilsette",
-    "roles": {
-      "Admin": "Administrator",
-      "Management": "Leiar",
-      "Sales": "Sal",
-      "Technician": "Tekniker",
-      "ServiceLead": "Tenesteleiar",
-      "Finance": "Økonomi",
-      "ReadOnly": "Lesetilgang"
-    }
-  },
   "connectionStatus": {
     "title": "Tilkoplingsstatus",
     "subtitle": "Det Parasoll har lagra om kvar integrasjon og bakgrunnstenesta. Sjølve systema blir ikkje kontakta.",
