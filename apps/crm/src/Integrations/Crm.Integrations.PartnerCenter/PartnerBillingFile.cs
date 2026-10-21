@@ -68,8 +68,8 @@ internal static class PartnerBillingFile
     }
 
     /// <summary>
-    /// One line, or nothing when it lacks what the CRM compares: the customer, the product, the start of the charge (made up, it
-    /// would change the line's key on every run) or an amount that is a number.
+    /// One line, or nothing when it lacks what the CRM compares (the customer, the product, the start of the charge: made up, it
+    /// would change the line's key on every run) or carries an amount that is not a number.
     /// </summary>
     internal static ExternalBilledLine? ReadLine(JsonElement e, string invoiceId)
     {
