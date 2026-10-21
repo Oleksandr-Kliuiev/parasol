@@ -208,6 +208,26 @@ public class AteraConversationSyncTests(CrmWebFactory factory)
         await scope.ServiceProvider.GetRequiredService<AteraTicketConversationSyncJob>().RunAsync(Ct);
     }
 
+    [Fact]
+    public async Task Reads_that_save_the_same_new_tickets_at_once_all_succeed_with_one_row_each()
+    {
+        var organizationId = Guid.NewGuid();
+        var numbers = Enumerable.Range(0, 5).Select(_ => Random.Shared.NextInt64(100_000_000, 999_999_999)).Distinct().ToList();
+        var tickets = numbers.Select(n => new ExternalTicket("atera", n, organizationId, null, $"Samtidig {n}", "Open", "Medium", null, "Incident", "Email",
+            null, null, null, null, DateTimeOffset.UtcNow.AddHours(-1), null, null, DateTimeOffset.UtcNow, null)).ToList();
+
+        // Eight reads at once, as the open, recent and conversation reads and a run started by hand can be: none fails.
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(async _ =>
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<IServiceApi>().UpsertTicketsAsync(tickets, Ct);
+        }));
+
+        await using var read = factory.Services.CreateAsyncScope();
+        (await read.ServiceProvider.GetRequiredService<Crm.Service.Persistence.ServiceDbContext>().Tickets.AsNoTracking()
+            .CountAsync(t => t.System == "atera" && numbers.Contains(t.ExternalId), Ct)).ShouldBe(numbers.Count);
+    }
+
     private static async Task<string?> CursorAsync(AteraTicketHost host)
     {
         await using var scope = host.Services.CreateAsyncScope();

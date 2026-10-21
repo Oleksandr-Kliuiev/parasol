@@ -11,23 +11,41 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
 {
     public async Task<int> UpsertTicketsAsync(IReadOnlyCollection<ExternalTicket> tickets, CancellationToken cancellationToken)
     {
+        var changed = 0;
+        foreach (var desk in tickets.GroupBy(t => t.System))
+        {
+            var batch = desk.DistinctBy(t => t.ExternalId).ToList();
+            try
+            {
+                changed += await TicketWriteLock.RunAsync(db, desk.Key, ct => UpsertTicketsOnceAsync(desk.Key, batch, ct), cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // A writer outside the reads (a merge, an erasure) changed one of the tickets in between: read them again, once.
+                db.ChangeTracker.Clear();
+                changed += await TicketWriteLock.RunAsync(db, desk.Key, ct => UpsertTicketsOnceAsync(desk.Key, batch, ct), cancellationToken);
+            }
+        }
+
+        return changed;
+    }
+
+    private async Task<int> UpsertTicketsOnceAsync(string system, IReadOnlyCollection<ExternalTicket> tickets, CancellationToken cancellationToken)
+    {
         var now = time.GetUtcNow();
         var changed = 0;
-        foreach (var system in tickets.GroupBy(t => t.System))
+        var ids = tickets.Select(t => t.ExternalId).ToList();
+        var existing = await db.Tickets.Where(t => t.System == system && ids.Contains(t.ExternalId)).ToDictionaryAsync(t => t.ExternalId, cancellationToken);
+        foreach (var source in tickets)
         {
-            var ids = system.Select(t => t.ExternalId).Distinct().ToList();
-            var existing = await db.Tickets.Where(t => t.System == system.Key && ids.Contains(t.ExternalId)).ToDictionaryAsync(t => t.ExternalId, cancellationToken);
-            foreach (var source in system.DistinctBy(t => t.ExternalId))
+            if (existing.TryGetValue(source.ExternalId, out var ticket))
             {
-                if (existing.TryGetValue(source.ExternalId, out var ticket))
-                {
-                    changed += ticket.Apply(source, now) ? 1 : 0;
-                }
-                else
-                {
-                    db.Tickets.Add(Ticket.From(source, now));
-                    changed++;
-                }
+                changed += ticket.Apply(source, now) ? 1 : 0;
+            }
+            else
+            {
+                db.Tickets.Add(Ticket.From(source, now));
+                changed++;
             }
         }
 

@@ -16,15 +16,16 @@ internal sealed class TicketConversations(ServiceDbContext db, TimeProvider time
     public async Task<TicketConversationResult> ApplyAsync(
         string system, long ticketExternalId, IReadOnlyCollection<ExternalTicketComment> comments, bool withheld, CancellationToken ct)
     {
+        // The ticket reads and every read of a conversation write one at a time (TicketWriteLock).
         try
         {
-            return await ApplyOnceAsync(system, ticketExternalId, comments, withheld, ct);
+            return await TicketWriteLock.RunAsync(db, system, c => ApplyOnceAsync(system, ticketExternalId, comments, withheld, c), ct);
         }
         catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || ex.InnerException is SqlException { Number: 2601 or 2627 })
         {
-            // The ticket sync or another read of the same conversation saved in between: read the stored state again, once.
+            // A writer outside the reads (a merge, an erasure) saved in between: read the stored state again, once.
             db.ChangeTracker.Clear();
-            return await ApplyOnceAsync(system, ticketExternalId, comments, withheld, ct);
+            return await TicketWriteLock.RunAsync(db, system, c => ApplyOnceAsync(system, ticketExternalId, comments, withheld, c), ct);
         }
     }
 
