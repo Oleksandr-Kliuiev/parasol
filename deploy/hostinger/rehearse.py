@@ -11,7 +11,7 @@ import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'tools'))
 from common import Stack, private_path, write_json
 from configure import initialize
-from lifecycle import migrate, start
+from lifecycle import migrate, prepare_files, start
 from recovery import restore
 from snapshot import backup, inventory
 from rehearsal_workload import seed, capture, verify_integrity, mutate_after_backup, verify_restored
@@ -62,6 +62,10 @@ def drill(root, release, build, keep):
         pdf = documents / 'rehearsal/immutable.pdf'
         pdf.write_bytes(b'%PDF-1.4\n% Parasol synthetic recovery document\n' + marker.encode())
         pdf.chmod(0o600)
+        # The application owns every document. One the drill writes here (as root under sudo on Linux) would be unreadable
+        # to it, and the store fails closed when the writers start again after the backup: give it the volume's owner,
+        # as the restore does.
+        prepare_files(source)
         before_documents = inventory(documents)
         before_keys = inventory(source_path / 'data/keyring')
         if not before_keys:
