@@ -10,6 +10,12 @@ from common import WRITERS, run, write_json
 from lifecycle import image_ids
 
 
+# Starts the stopped writers again and waits until they are healthy. `compose start --wait` exists only in newer Compose
+# releases (Ubuntu's runner refuses the flag); `up --no-recreate --no-deps` starts the same containers without rebuilding
+# them or touching the databases.
+RESUME = ('up', '-d', '--no-recreate', '--no-deps', '--wait', '--wait-timeout', '300')
+
+
 def inventory(root):
     files = {}
     for path in sorted(root.rglob('*')):
@@ -83,7 +89,7 @@ def backup(stack):
         capture(stack, staging)
         # Resume service before uploading the already-consistent private staging directory.
         if active:
-            stack.compose('start', '--wait', '--wait-timeout', '300', *reversed(active))
+            stack.compose(*RESUME, *reversed(active))
         quiesced = False
         output = stack.restic('backup', '/snapshot', '--host', stack.project, '--tag', 'parasol-v1', '--json', staging=staging)
         summaries = [json.loads(line) for line in output.decode().splitlines() if line.startswith('{')]
@@ -106,4 +112,4 @@ def backup(stack):
         finally:
             shutil.rmtree(staging)
             if quiesced and active:
-                stack.compose('start', '--wait', '--wait-timeout', '300', *reversed(active))
+                stack.compose(*RESUME, *reversed(active))

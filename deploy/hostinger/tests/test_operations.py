@@ -106,14 +106,14 @@ class OperationsTests(unittest.TestCase):
         stack = FakeStack(self.root)
         with patch('snapshot.capture', side_effect=RuntimeError('synthetic dump failure')):
             with self.assertRaises(RuntimeError): backup(stack)
-        self.assertIn(('start', '--wait', '--wait-timeout', '300', 'crm-web', 'crm-worker', 'atlas'), stack.calls)
+        self.assertIn(('up', '-d', '--no-recreate', '--no-deps', '--wait', '--wait-timeout', '300', 'crm-web', 'crm-worker', 'atlas'), stack.calls)
         self.assertFalse(list(self.root.glob('.snapshot-*')))
         self.assertEqual(json.loads((self.root / 'backup-status.json').read_text())['status'], 'failed')
 
     def test_partial_stop_failure_also_attempts_to_resume(self):
         stack = FakeStack(self.root, fail_stop=True)
         with self.assertRaises(RuntimeError): backup(stack)
-        self.assertTrue(any(call[0] == 'start' for call in stack.calls))
+        self.assertTrue(any(call[:2] == ('up', '-d') for call in stack.calls))
         self.assertFalse(list(self.root.glob('.snapshot-*')))
 
     def test_backup_monitor_rejects_stale_or_failed_runs(self):
