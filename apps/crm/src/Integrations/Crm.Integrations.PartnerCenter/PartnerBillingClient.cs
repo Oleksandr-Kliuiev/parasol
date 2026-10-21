@@ -48,13 +48,25 @@ internal sealed class PartnerBillingClient(
             .ToList();
 
         var lines = new List<ExternalBilledLine>();
+        var unread = 0;
         foreach (var file in files)
         {
             // The SAS in the link is the file's only key: no token goes with it.
             using var request = new HttpRequestMessage(HttpMethod.Get, file);
             using var response = await http.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
-            lines.AddRange(PartnerBillingFile.Read(await response.Content.ReadAsByteArrayAsync(cancellationToken), invoiceId));
+            var read = PartnerBillingFile.Read(await response.Content.ReadAsByteArrayAsync(cancellationToken), invoiceId);
+            lines.AddRange(read.Lines);
+            unread += read.Unread;
+        }
+
+        if (unread > 0)
+        {
+            // A count only: a row carries customers' names and amounts.
+            logger.LogWarning(
+                "Partner billing export for invoice {Invoice}: {Unread} rows were not read (no customer, product or charge start, or an amount that is not a number).",
+                invoiceId,
+                unread);
         }
 
         logger.LogInformation(
@@ -75,22 +87,24 @@ internal sealed class PartnerBillingClient(
             throw new PartnerCenterApiException(HttpStatusCode.OK, "The billing export's manifest is not an object.");
         }
 
+        // A manifest without its list would read as an invoice without lines.
+        if (!manifest.TryGetProperty("blobs", out var blobs) || blobs.ValueKind != JsonValueKind.Array)
+        {
+            throw new PartnerCenterApiException(HttpStatusCode.OK, "The billing export's manifest has no list of files.");
+        }
+
         var root = Text(manifest, "rootDirectory")?.TrimEnd('/');
         var sas = Text(manifest, "sasToken")?.TrimStart('?');
         var links = new List<string>();
-        if (manifest.TryGetProperty("blobs", out var blobs) && blobs.ValueKind == JsonValueKind.Array)
+        foreach (var blob in blobs.EnumerateArray())
         {
-            foreach (var blob in blobs.EnumerateArray())
-            {
-                links.Add(Text(blob, "blobUri") ?? Text(blob, "url")
-                          ?? (Text(blob, "name") is { } name ? FileLink(root, name, sas) : null)
-                          ?? throw new PartnerCenterApiException(HttpStatusCode.OK, "The billing export's manifest names a file without a name."));
-            }
+            links.Add(Text(blob, "blobUri") ?? Text(blob, "url")
+                      ?? (Text(blob, "name") is { } name ? FileLink(root, name, sas) : null)
+                      ?? throw new PartnerCenterApiException(HttpStatusCode.OK, "The billing export's manifest names a file without a name."));
         }
 
         // A short list would read part of the invoice as the whole of it.
-        if (manifest.TryGetProperty("blobCount", out var count) && count.ValueKind == JsonValueKind.Number &&
-            count.TryGetInt32(out var expected) && expected != links.Count)
+        if (Count(manifest, "blobCount") is { } expected && expected != links.Count)
         {
             throw new PartnerCenterApiException(
                 HttpStatusCode.OK,
@@ -211,6 +225,13 @@ internal sealed class PartnerBillingClient(
             response.StatusCode,
             $"Partner billing {(int)response.StatusCode} for {response.RequestMessage?.RequestUri?.AbsolutePath}: {(body.Length > 300 ? body[..300] : body)}");
     }
+
+    /// <summary>A count, written as a number or as text.</summary>
+    private static int? Count(JsonElement e, string name) =>
+        !e.TryGetProperty(name, out var value) ? null
+        : value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number
+        : value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) ? parsed
+        : null;
 
     /// <summary>A non-empty string property of an object, else nothing.</summary>
     private static string? Text(JsonElement e, string name) =>

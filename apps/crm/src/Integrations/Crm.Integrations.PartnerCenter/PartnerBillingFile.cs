@@ -9,13 +9,15 @@ namespace Crm.Integrations.PartnerCenter;
 /// <summary>
 /// One line file of the partner billing export (docs/05 §2.4). Microsoft documents JSON Lines in a gzip file
 /// (<c>dataFormat: compressedJSON</c>) with every attribute capitalised: <c>CustomerId</c>, <c>ProductId</c>, <c>Subtotal</c>, …
-/// (Billed Invoice Reconciliation API v2). Gzip is recognised by its first bytes, not by the file's name or headers, and attribute
-/// names match whatever their case, so a plain file and the camelCase spelling read before still work. Only the fields the CRM
-/// compares are kept.
+/// (Billed Invoice Reconciliation API v2; the fields as the new commerce reconciliation file defines them). Gzip is recognised by
+/// its first bytes, not by the file's name or headers, and attribute names match whatever their case, so a plain file and the
+/// camelCase spelling read before still work. Only the fields the CRM compares are kept; a row that lacks one of them is counted,
+/// not read.
 /// </summary>
 internal static class PartnerBillingFile
 {
-    public static IReadOnlyList<ExternalBilledLine> Read(byte[] content, string invoiceId) => ParseLines(Decode(content), invoiceId);
+    public static (IReadOnlyList<ExternalBilledLine> Lines, int Unread) Read(byte[] content, string invoiceId) =>
+        ParseLines(Decode(content), invoiceId);
 
     /// <summary>The file as text. A gzip file starts with the bytes 1F 8B (RFC 1952); JSON text never does.</summary>
     internal static string Decode(byte[] content)
@@ -28,29 +30,47 @@ internal static class PartnerBillingFile
     }
 
     /// <summary>Microsoft documents JSON Lines; a whole JSON array is read as well.</summary>
-    internal static IReadOnlyList<ExternalBilledLine> ParseLines(string content, string invoiceId)
+    internal static (IReadOnlyList<ExternalBilledLine> Lines, int Unread) ParseLines(string content, string invoiceId)
     {
         var lines = new List<ExternalBilledLine>();
+        var unread = 0;
         var trimmed = content.TrimStart();
         if (trimmed.StartsWith('['))
         {
             using var document = JsonDocument.Parse(trimmed);
-            lines.AddRange(document.RootElement.EnumerateArray().Select(e => ReadLine(e, invoiceId)).OfType<ExternalBilledLine>());
-            return lines;
+            foreach (var row in document.RootElement.EnumerateArray())
+            {
+                Add(row);
+            }
+
+            return (lines, unread);
         }
 
         foreach (var row in content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             using var document = JsonDocument.Parse(row);
-            if (ReadLine(document.RootElement, invoiceId) is { } line)
+            Add(document.RootElement);
+        }
+
+        return (lines, unread);
+
+        void Add(JsonElement row)
+        {
+            if (ReadLine(row, invoiceId) is { } line)
             {
                 lines.Add(line);
             }
+            else
+            {
+                unread++;
+            }
         }
-
-        return lines;
     }
 
+    /// <summary>
+    /// One line, or nothing when it lacks what the CRM compares: the customer, the product, the start of the charge (made up, it
+    /// would change the line's key on every run) or an amount that is a number.
+    /// </summary>
     internal static ExternalBilledLine? ReadLine(JsonElement e, string invoiceId)
     {
         if (e.ValueKind != JsonValueKind.Object)
@@ -62,30 +82,34 @@ internal static class PartnerBillingFile
         // Every line also carries PartnerId, the partner's own tenant: it never stands in for a missing customer.
         var customerId = Text(fields, "CustomerId");
         var offerId = Text(fields, "OfferId") ?? Offer(Text(fields, "ProductId"), Text(fields, "SkuId"));
-        if (customerId is null || offerId is null)
+        var start = Date(fields, "ChargeStartDate", "BillingPeriodStartDate");
+        // Microsoft: "Use BillableQuantity for reconciliation". The unit price is in the pricing currency; the exchange rate
+        // brings it to the billing currency the line is kept in. The cost is before tax, like the revenue it is compared with:
+        // TotalForCustomer (the older file) and Total (v2) include tax and count only when Subtotal is missing.
+        if (customerId is null || offerId is null || start is null ||
+            !TryNumber(fields, out var quantity, "BillableQuantity", "Quantity", "UnitCount") ||
+            !TryNumber(fields, out var price, "EffectiveUnitPrice", "UnitPrice") ||
+            !TryNumber(fields, out var rate, "PCToBCExchangeRate") ||
+            !TryNumber(fields, out var cost, "Subtotal", "TotalForCustomer", "Total"))
         {
             return null;
         }
 
-        var start = Date(fields, "ChargeStartDate", "BillingPeriodStartDate") ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var end = Date(fields, "ChargeEndDate", "BillingPeriodEndDate") ?? start;
-        var quantity = Number(fields, "Quantity", "UnitCount") ?? 0m;
-        var unitPrice = Number(fields, "EffectiveUnitPrice", "UnitPrice") ?? 0m;
-        // Before tax, like the revenue it is compared with: Subtotal in v2 (its Total includes tax), TotalForCustomer before it.
-        var total = Number(fields, "TotalForCustomer", "Subtotal", "Total") ?? decimal.Round(quantity * unitPrice, 2);
+        var units = quantity ?? 0m;
+        var unitPrice = (price ?? 0m) * (rate is > 0m ? rate.Value : 1m);
         return new ExternalBilledLine(
             MsBillingSource.GraphExport,
-            start,
-            end,
+            start.Value,
+            Date(fields, "ChargeEndDate", "BillingPeriodEndDate") ?? start.Value,
             Text(fields, "InvoiceNumber") ?? invoiceId,
             customerId,
             Text(fields, "CustomerName"),
             Text(fields, "SubscriptionId", "EntitlementId"),
             offerId,
             Text(fields, "OfferName", "SkuName", "ProductName"),
-            quantity,
+            units,
             unitPrice,
-            total,
+            cost ?? decimal.Round(units * unitPrice, 2),
             Text(fields, "Currency", "BillingCurrency") ?? "NOK");
     }
 
@@ -120,28 +144,38 @@ internal static class PartnerBillingFile
         return null;
     }
 
-    private static decimal? Number(Dictionary<string, JsonElement> fields, params string[] names)
+    /// <summary>
+    /// The first of <paramref name="names"/> the line carries (null or blank counts as missing), as a number: a JSON number, or
+    /// text in the invariant culture, also with an exponent ("0E-20") and with the apostrophe Microsoft's sample values start
+    /// with ("'8.37"). False when that value is not a number: the line is then not read, rather than taken from the next name.
+    /// </summary>
+    private static bool TryNumber(Dictionary<string, JsonElement> fields, out decimal? value, params string[] names)
     {
+        value = null;
         foreach (var name in names)
         {
-            if (!fields.TryGetValue(name, out var value))
+            if (!fields.TryGetValue(name, out var field) || field.ValueKind == JsonValueKind.Null ||
+                (field.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(field.GetString())))
             {
                 continue;
             }
 
-            if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number))
+            var text = field.ValueKind switch
             {
-                return number;
+                JsonValueKind.Number => field.GetRawText(),
+                JsonValueKind.String => field.GetString()!.Trim().TrimStart('\''),
+                _ => null,
+            };
+            if (decimal.TryParse(text, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var number))
+            {
+                value = number;
+                return true;
             }
 
-            if (value.ValueKind == JsonValueKind.String &&
-                decimal.TryParse(value.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
-            {
-                return parsed;
-            }
+            return false;
         }
 
-        return null;
+        return true;
     }
 
     private static DateOnly? Date(Dictionary<string, JsonElement> fields, params string[] names) =>

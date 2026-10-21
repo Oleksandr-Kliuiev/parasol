@@ -312,17 +312,68 @@ public class PartnerBillingExportTests
         stand.Elsewhere.Requests.ShouldBeEmpty();
     }
 
-    [Fact]
-    public async Task A_manifest_that_lists_fewer_files_than_it_counts_fails_instead_of_reading_part_of_the_invoice()
+    [Theory]
+    [InlineData("""{"rootDirectory":"{storage}export","sasToken":"sig=c2ln"}""", "The billing export's manifest has no list of files.")]
+    [InlineData("""{"value":[{"rootDirectory":"{storage}export","sasToken":"sig=c2ln","blobs":[{"name":"part-1.json.gz"}]}]}""", "The billing export's manifest has no list of files.")]
+    [InlineData("""{"rootDirectory":"{storage}export","sasToken":"sig=c2ln","blobs":[{"partitionValue":"default"}]}""", "The billing export's manifest names a file without a name.")]
+    [InlineData("""{"rootDirectory":"{storage}export","sasToken":"sig=c2ln","blobCount":3,"blobs":[{"name":"part-1.json.gz"},{"name":"part-2.json.gz"}]}""", "The billing export's manifest lists 2 of its 3 files.")]
+    [InlineData("""{"rootDirectory":"{storage}export","sasToken":"sig=c2ln","blobCount":"3","blobs":[{"name":"part-1.json.gz"}]}""", "The billing export's manifest lists 1 of its 3 files.")]
+    public async Task A_manifest_that_does_not_list_every_file_fails_instead_of_reading_part_of_the_invoice(string manifest, string message)
     {
-        await using var stand = await Stand.StartAnsweringAsync(
-            "{graph}" + Operation, Embedding(DocumentedManifest(blobCount: 3)), DocumentedManifest(blobCount: 3));
+        await using var stand = await Stand.StartAnsweringAsync("{graph}" + Operation, Embedding(manifest), manifest);
         await using var services = stand.Services();
 
         var failed = await Should.ThrowAsync<PartnerCenterApiException>(
             () => services.GetRequiredService<IPartnerBillingClient>().GetBilledLinesAsync("G000123", Ct));
 
-        failed.Message.ShouldBe("The billing export's manifest lists 2 of its 3 files.");
+        failed.Message.ShouldBe(message);
+        stand.Storage.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_root_directory_that_ends_in_a_slash_and_a_sas_that_starts_with_a_question_mark_still_give_one_address()
+    {
+        var manifest = DocumentedManifest("{storage}export/", "?" + Sas);
+        await using var stand = await Stand.StartAnsweringAsync("{graph}" + Operation, Embedding(manifest), manifest);
+        await using var services = stand.Services();
+
+        var lines = await services.GetRequiredService<IPartnerBillingClient>().GetBilledLinesAsync("G000123", Ct);
+
+        lines.Count.ShouldBe(3);
+        stand.Storage.Requests.Select(r => r.Path + r.Query).ShouldBe(["/export/part-1.json.gz?" + Sas, "/export/part-2.json.gz?" + Sas]);
+    }
+
+    [Theory]
+    // Whatever a name looks like, it stays a path under the root directory's host: the storage answers 404 here.
+    [InlineData("../part-1.json.gz")]
+    [InlineData("{elsewhere}part-1.json.gz")]
+    [InlineData("@evil.example/part-1.json.gz")]
+    [InlineData("?x=1/part-1.json.gz")]
+    public async Task A_file_name_never_leaves_the_storage_host(string name)
+    {
+        var manifest = $$"""{"rootDirectory":"{storage}export","sasToken":"{{Sas}}","blobCount":1,"blobs":[{"name":"{{name}}"}]}""";
+        await using var stand = await Stand.StartAnsweringAsync("{graph}" + Operation, Embedding(manifest), manifest);
+        await using var services = stand.Services();
+
+        await Should.ThrowAsync<HttpRequestException>(
+            () => services.GetRequiredService<IPartnerBillingClient>().GetBilledLinesAsync("G000123", Ct));
+
+        stand.Storage.Requests.ShouldHaveSingleItem().Headers.ShouldNotContainKey("Authorization");
+        stand.Graph.Requests.Count.ShouldBe(2);
+        stand.Elsewhere.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_file_name_with_a_fragment_mark_loses_its_signature_and_is_refused()
+    {
+        var manifest = $$"""{"rootDirectory":"{storage}export","sasToken":"{{Sas}}","blobCount":1,"blobs":[{"name":"part-1.json.gz#x"}]}""";
+        await using var stand = await Stand.StartAnsweringAsync("{graph}" + Operation, Embedding(manifest), manifest);
+        await using var services = stand.Services();
+
+        var refused = await Should.ThrowAsync<PartnerBillingLinkRefusedException>(
+            () => services.GetRequiredService<IPartnerBillingClient>().GetBilledLinesAsync("G000123", Ct));
+
+        refused.Message.ShouldContain("a storage link without a SAS signature");
         stand.Storage.Requests.ShouldBeEmpty();
     }
 
