@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Crm.Authorization;
 using Crm.Integrations.Core;
+using Crm.Integrations.Core.Actions;
 using Crm.Integrations.Core.Persistence;
 using Crm.Service.Contracts;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -18,7 +19,8 @@ namespace Crm.IntegrationTests;
 /// <summary>
 /// A synthetic contact person with data in every module that can hold it (DEV-11): the contact and an affiliation, a deal, a
 /// quote sent to them (not accepted) and an accepted one, a call and an e-mail saved from them, a mirrored Atera ticket where
-/// they are the end user, a ticket request for them, a linked Atera person record and a queued change for PowerOffice —
+/// they are the end user (with a reply sent to them from the CRM and an internal note still waiting to be sent, M39), a ticket
+/// request for them, a linked Atera person record and a queued change for PowerOffice —
 /// plus a colleague at the same customer whose data must never show up in the person's export or be touched by its erasure.
 /// </summary>
 internal sealed record PrivacyPerson(
@@ -41,7 +43,9 @@ internal sealed record PrivacyPerson(
     Guid TicketRequestId,
     string AteraContactId,
     Guid ExternalRecordId,
-    Guid OutboundId)
+    Guid OutboundId,
+    Guid ReplyActionId,
+    Guid WaitingActionId)
 {
     public IEnumerable<string> PersonalValues => [FirstName, LastName, Email, Phone, "Daglig leder", $"Samtale med {FirstName}", $"Hei fra {FirstName}"];
 }
@@ -147,7 +151,7 @@ internal static class PrivacyTestData
         var ticketRequestId = (await ticketRequest.ReadJsonAsync()).GetProperty("id").GetGuid();
 
         var ateraContactId = Random.Shared.Next(100_000_000, 999_999_999).ToString(CultureInfo.InvariantCulture);
-        Guid recordId, outboundId, ticketId;
+        Guid recordId, outboundId, ticketId, replyActionId, waitingActionId;
         await using (var scope = host.Services.CreateAsyncScope())
         {
             var records = scope.ServiceProvider.GetRequiredService<ExternalRecordStore>();
@@ -173,6 +177,8 @@ internal static class PrivacyTestData
                 LastError = $"PowerOffice refused {email}",
             };
             db.OutboundOperations.Add(operation);
+            replyActionId = AddTicketAction(db, ateraTicketId, organizationId, marker, "ticket.reply", $"Hei {firstName}, ny PC kommer i morgen", VendorActionStatus.Succeeded);
+            waitingActionId = AddTicketAction(db, ateraTicketId, organizationId, marker, "ticket.note", $"{firstName} ringer tilbake etter lunsj", VendorActionStatus.Queued);
             await db.SaveChangesAsync(Ct);
             outboundId = operation.Id;
             ticketId = await scope.ServiceProvider.GetRequiredService<Crm.Service.Persistence.ServiceDbContext>().Tickets
@@ -188,7 +194,54 @@ internal static class PrivacyTestData
 
         return new PrivacyPerson(
             marker, organizationId, contactId, colleagueId, firstName, lastName, email, phone, colleagueEmail, dealId, sentQuoteId, acceptedQuoteId,
-            callId, mailId, ticketId, ateraTicketId, ticketRequestId, ateraContactId, recordId, outboundId);
+            callId, mailId, ticketId, ateraTicketId, ticketRequestId, ateraContactId, recordId, outboundId, replyActionId, waitingActionId);
+    }
+
+    /// <summary>An action asked for the person's ticket, saved with its operation as a command saves it (M39.1).</summary>
+    private static Guid AddTicketAction(IntegrationDbContext db, long ticket, Guid organizationId, string marker, string kind, string text, VendorActionStatus status)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var done = status == VendorActionStatus.Succeeded;
+        var operation = new OutboundOperation
+        {
+            Id = Crm.SharedKernel.Domain.SequentialId.New(),
+            System = "atera",
+            Operation = $"action:{kind}",
+            EntityType = "VendorAction",
+            EntityId = Guid.NewGuid(),
+            IdempotencyKey = $"prv-{marker}-{kind}",
+            Status = done ? OutboundStatus.Succeeded : OutboundStatus.Pending,
+            Attempts = done ? 1 : 0,
+            CreatedAt = now,
+            NextAttemptAt = done ? now : now.AddHours(1),
+            CompletedAt = done ? now : null,
+        };
+        db.OutboundOperations.Add(operation);
+        var action = new VendorAction
+        {
+            Id = operation.EntityId,
+            System = "atera",
+            Kind = kind,
+            Level = VendorActionLevel.Standard,
+            TargetType = VendorActionTargets.Ticket,
+            TargetId = ticket.ToString(CultureInfo.InvariantCulture),
+            TargetName = $"#{ticket} {marker} Skriver virker ikke",
+            OrganizationId = organizationId,
+            Parameters = JsonSerializer.Serialize(new { text }),
+            Fingerprint = new string('0', 64),
+            RequestedBy = Guid.NewGuid(),
+            RequestedAt = now,
+            NotBefore = now,
+            CommandKey = Guid.NewGuid(),
+            OutboundOperationId = operation.Id,
+            Status = status,
+            OutcomeCode = done ? "VND_SENT" : null,
+            Outcome = done ? "Sent." : null,
+            Attempts = done ? 1 : 0,
+            CompletedAt = done ? now : null,
+        };
+        db.VendorActions.Add(action);
+        return action.Id;
     }
 
     /// <summary>

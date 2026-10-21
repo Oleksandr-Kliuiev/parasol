@@ -12,6 +12,16 @@ public enum VendorActionLevel
     Destructive,
 }
 
+/// <summary>Target types that every vendor's handlers share, so other parts of the CRM find the actions about one kind of record.</summary>
+public static class VendorActionTargets
+{
+    /// <summary>A service desk ticket; the target id is the desk's ticket number (Atera now, others later).</summary>
+    public const string Ticket = "ticket";
+
+    /// <summary>What an action's stored parameters become once its words are erased or past their retention (DEV-11).</summary>
+    public const string ErasedParameters = "{}";
+}
+
 /// <summary>Where one action stands. The last six are outcomes; only <see cref="Uncertain"/> waits for a person.</summary>
 public enum VendorActionStatus
 {

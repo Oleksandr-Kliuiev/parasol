@@ -31,6 +31,7 @@ public static class IntegrationsCoreModule
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor>(sp => sp.GetRequiredService<IntegrationPersonalData>());
         services.AddScoped<Crm.Privacy.Contracts.IExternalReferenceSource>(sp => sp.GetRequiredService<IntegrationPersonalData>());
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, ExternalPayloadRetention>();
+        services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, VendorActionTextRetention>();
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, SyncRunRetention>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, IntegrationRestoreParticipant>();
         services.AddScoped<Crm.Infrastructure.Health.IWorkerHeartbeat, WorkerHeartbeatStore>();

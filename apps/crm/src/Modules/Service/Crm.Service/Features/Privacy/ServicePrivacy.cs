@@ -101,13 +101,17 @@ internal sealed class ServicePersonalData(ServiceDbContext db) : IPersonalDataCo
         return applied;
     }
 
-    private IQueryable<Ticket> Tickets(DataSubject subject)
+    private IQueryable<Ticket> Tickets(DataSubject subject) =>
+        TicketsOfPerson(db.Tickets, subject.Kind == DataSubjectKind.Contact ? subject.Id : null, subject.Emails);
+
+    /// <summary>The tickets whose end user is the person: their contact, or one of their addresses (a lead has only addresses).</summary>
+    internal static IQueryable<Ticket> TicketsOfPerson(IQueryable<Ticket> tickets, Guid? contactId, IReadOnlyCollection<string> emails)
     {
-        var emails = subject.Emails.Select(e => e.Trim().ToLowerInvariant()).ToList();
+        var addresses = emails.Select(e => e.Trim().ToLowerInvariant()).ToList();
         // The database compares case-insensitively (default collation), like the addresses Atera sends.
-        return subject.Kind == DataSubjectKind.Contact
-            ? db.Tickets.Where(t => t.ContactId == subject.Id || (t.EndUserEmail != null && emails.Contains(t.EndUserEmail)))
-            : db.Tickets.Where(t => t.EndUserEmail != null && emails.Contains(t.EndUserEmail));
+        return contactId is { } id
+            ? tickets.Where(t => t.ContactId == id || (t.EndUserEmail != null && addresses.Contains(t.EndUserEmail)))
+            : tickets.Where(t => t.EndUserEmail != null && addresses.Contains(t.EndUserEmail));
     }
 
     private IQueryable<TicketRequest> Requests(DataSubject subject) =>

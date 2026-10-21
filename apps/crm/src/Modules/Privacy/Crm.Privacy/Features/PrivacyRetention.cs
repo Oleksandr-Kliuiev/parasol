@@ -42,6 +42,7 @@ public sealed class RetentionOptions
         ["service.tickets"] = 3 * 365,
         ["integration.external-payloads"] = 90,
         ["integration.sync-runs"] = 180,
+        ["integration.vendor-action-texts"] = 90,
         ["identity.sessions"] = 90,
     };
 }

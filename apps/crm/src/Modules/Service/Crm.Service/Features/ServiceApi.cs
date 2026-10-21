@@ -247,6 +247,12 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
 
     public Task<IReadOnlyList<TicketRef>> GetStaleConversationsAsync(string system, DateTimeOffset readBefore, int limit, CancellationToken cancellationToken) =>
         new TicketConversations(db, time).StaleAsync(system, readBefore, limit, cancellationToken);
+
+    public async Task<IReadOnlyList<TicketRef>> GetTicketsOfPersonAsync(Guid? contactId, IReadOnlyCollection<string> emails, CancellationToken cancellationToken) =>
+        await Features.Privacy.ServicePersonalData.TicketsOfPerson(db.Tickets.AsNoTracking(), contactId, emails)
+            .OrderBy(t => t.Id)
+            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status))
+            .ToListAsync(cancellationToken);
 }
 
 /// <summary>

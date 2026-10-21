@@ -3568,7 +3568,8 @@
         "integration": {
           "exception-triage": "Reviews of resolved exceptions",
           "external-payloads": "Copies of external records",
-          "sync-runs": "Synchronization log"
+          "sync-runs": "Synchronization log",
+          "vendor-action-texts": "Texts of actions sent to vendors"
         },
         "identity": {
           "sessions": "Ended sign-in sessions"

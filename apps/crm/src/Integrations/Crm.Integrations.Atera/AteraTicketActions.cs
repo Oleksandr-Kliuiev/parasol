@@ -13,7 +13,7 @@ namespace Crm.Integrations.Atera;
 /// <summary>The ticket actions (M39.2) and the values Atera's standard ticket fields take.</summary>
 public static class AteraTicketKinds
 {
-    public const string TargetType = "ticket";
+    public const string TargetType = VendorActionTargets.Ticket;
     public const string Reply = "ticket.reply";
     public const string Note = "ticket.note";
     public const string Status = "ticket.status";

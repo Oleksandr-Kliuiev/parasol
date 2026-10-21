@@ -169,6 +169,12 @@ public interface IServiceApi
     /// <paramref name="limit"/>: what a conversation read looks at when the desk's list of changes may have missed a comment.
     /// </summary>
     Task<IReadOnlyList<TicketRef>> GetStaleConversationsAsync(string system, DateTimeOffset readBefore, int limit, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The tickets a person is the end user of (DEV-11, M39): their contact, or one of their addresses. A subject request uses it to
+    /// find what other modules keep about those tickets, such as the texts of the actions asked for them.
+    /// </summary>
+    Task<IReadOnlyList<TicketRef>> GetTicketsOfPersonAsync(Guid? contactId, IReadOnlyCollection<string> emails, CancellationToken cancellationToken);
 }
 
 /// <summary>A user asked for a ticket to be created in the service desk.</summary>

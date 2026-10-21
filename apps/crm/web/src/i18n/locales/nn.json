@@ -3566,7 +3566,8 @@
         "integration": {
           "exception-triage": "Behandling av løyste avvik",
           "external-payloads": "Kopiar av eksterne postar",
-          "sync-runs": "Synkroniseringslogg"
+          "sync-runs": "Synkroniseringslogg",
+          "vendor-action-texts": "Tekstar i handlingar sende til leverandørar"
         },
         "identity": {
           "sessions": "Avslutta innloggingsøkter"
