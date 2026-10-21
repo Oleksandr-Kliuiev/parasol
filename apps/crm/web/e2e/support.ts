@@ -25,6 +25,20 @@ export async function showInMyTasks(page: Page, target: Locator) {
   return target;
 }
 
+/**
+ * Pages a list (Load more) until `row`, a row of this test's own record, shows. The e2e database is shared between runs, so a
+ * month of time entries holds more than one page after a day of runs, and a new entry is not reliably on the first page.
+ */
+export async function showRow(page: Page, row: Locator) {
+  const more = page.getByRole('button', { name: 'Load more', exact: true });
+  await expect(row.or(more).first()).toBeVisible();
+  for (let pages = 1; !(await row.isVisible()) && (await more.isVisible()) && pages < 30; pages++) {
+    await more.click(); await page.waitForLoadState('networkidle');
+  }
+  await expect(row).toBeVisible();
+  return row;
+}
+
 export function marker(prefix: string) {
   return `${prefix}${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }
