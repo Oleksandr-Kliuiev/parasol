@@ -135,10 +135,10 @@
 | Проверка | Результат |
 | --- | --- |
 | `dotnet build` (предупреждения — ошибки) | 0 предупреждений, 0 ошибок |
-| Unit, architecture (.NET) | 941/941, 94/94 |
-| SQL-интеграция (Testcontainers SQL Server) | 806/806 без пропусков (итоговый прогон, 6,4 мин). В одном из промежуточных прогонов упал не связанный с M39 `WebHostSecurityTests.Reading_a_mart_dataset_is_audited…`: он берёт самую новую запись аудита любого пользователя, и параллельный тест успевает вставить свою — отдельная задача |
-| Frontend (vitest), lint, типы; `node --test scripts/*.test.mjs` | lint и типы чисто; vitest 85 файлов, 614/614; корневые проверки 2/2 |
-| e2e (Chromium; Firefox и WebKit — `@critical`; телефон; тёмная тема — a11y) | 167/167 за 9,5 мин без повторов и пропусков: Chromium 96, тёмная тема 8, телефон 3, Firefox 30, WebKit 30; новые `tickets.spec` — в трёх браузерах, `tickets-a11y.spec` — в светлой и тёмной теме |
+| Unit, architecture (.NET) | 942/942, 94/94 (итоговый код `951c264`) |
+| SQL-интеграция (Testcontainers SQL Server) | 806/806 без пропусков на `804c26e` (6,4 мин); после правок UX-прохода затронутые классы (`ConnectionStatusApiTests`, `VendorActionApiTests`, `AteraTicketActionTests`, `AteraTimeRecordingTests`) 27/27. В одном из промежуточных прогонов упал не связанный с M39 `WebHostSecurityTests.Reading_a_mart_dataset_is_audited…`: он берёт самую новую запись аудита любого пользователя, и параллельный тест успевает вставить свою — отдельная задача |
+| Frontend (vitest), lint, типы; `node --test scripts/*.test.mjs` | lint и типы чисто; vitest 86 файлов, 615/615; корневые проверки 2/2 |
+| e2e (Chromium; Firefox и WebKit — `@critical`; телефон; тёмная тема — a11y) | 167/167 за 8,1 мин на итоговом коде `951c264`, без повторов и пропусков: Chromium 96, тёмная тема 8, телефон 3, Firefox 30, WebKit 30; новые `tickets.spec` — в трёх браузерах, `tickets-a11y.spec` — в светлой и тёмной теме. В промежуточном прогоне упали два старых нестабильных теста вне M39 (`billing.spec` видит нюнорск, пока `language.spec` переключает язык общего пользователя `Crm.Finance`; `alert-queue` в WebKit читает тон с заменённого узла) — отдельно 3/3 |
 | `ui-layout-audit` (`audit.mjs`): `/tickets`, панель, меню статуса, подтверждение, `/connections`, деталь действия, «Drift», форма часов и её подтверждение × 1440/768/390/320 × светлая/тёмная, reduced motion | 0 ошибок, только info `off-scale-spacing` общей оболочки; скриншоты просмотрены |
 | Первая загрузка SPA (`bundle-budget.mjs`) | 279,7 из 300 КБ (как в M38) |
 
