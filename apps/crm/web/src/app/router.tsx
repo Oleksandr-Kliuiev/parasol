@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from 'react-router';
+import { createBrowserRouter, redirect, type RouteObject } from 'react-router';
 import { AppShell } from './AppShell';
 import { NotFoundPage } from '../features/errors/NotFoundPage';
 import { RouteErrorPage } from '../features/errors/RouteErrorPage';
@@ -13,6 +13,9 @@ export const routes: RouteObject[] = [
         children: [
       { index: true, lazy: async () => ({ Component: (await import('../features/dashboard/MyDayPage')).MyDayPage }) },
       { path: 'connections', lazy: async () => ({ Component: (await import('../features/integrations/ConnectionReadinessPage')).ConnectionReadinessPage }) },
+      { path: 'alerts', lazy: async () => ({ Component: (await import('../features/service/alerts/AlertQueuePage')).AlertQueuePage }) },
+      // The queue was called Observations before M38: an old link lands on the alerts.
+      { path: 'observations', loader: () => redirect('/alerts') },
       { path: 'organizations', lazy: async () => ({ Component: (await import('../features/organizations/OrganizationsPage')).OrganizationsPage }) },
       { path: 'organizations/new', lazy: async () => ({ Component: (await import('../features/organizations/OrganizationFormPage')).OrganizationFormPage }) },
       { path: 'organizations/duplicates', lazy: async () => ({ Component: (await import('../features/organizations/DuplicatesPage')).DuplicatesPage }) },

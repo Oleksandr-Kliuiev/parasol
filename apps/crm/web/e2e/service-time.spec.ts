@@ -55,7 +55,7 @@ test('the service tab offers a ticket and reports that writing to Atera is off',
     firstName: 'Kari', lastName: m, email: `kari.${m.toLowerCase()}@example.no`, roles: ['Technical'], isPrimary: true,
   });
 
-  await page.goto(`/organizations/${organization.id}?tab=service`);
+  await page.goto(`/organizations/${organization.id}?tab=drift`);
   await expect(page.getByText(/^No Atera data is saved for this customer/)).toBeVisible();
   await expect(page.getByText('No open tickets.')).toBeVisible();
 

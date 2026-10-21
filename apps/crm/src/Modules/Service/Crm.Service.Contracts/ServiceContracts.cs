@@ -75,6 +75,9 @@ public interface IServiceApi
     /// <summary>A stored alert by its CRM id, in any state; null when there is none.</summary>
     Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken);
 
+    /// <summary>A stored alert by its source's own id (a task's receipt names it so), in any state; null when there is none.</summary>
+    Task<AlertRef?> GetAlertAsync(string system, string externalId, CancellationToken cancellationToken);
+
     /// <summary>The stored alerts among <paramref name="alertIds"/>, keyed by id; ids without an alert are left out.</summary>
     Task<IReadOnlyDictionary<Guid, AlertRef>> GetAlertsAsync(IReadOnlyCollection<Guid> alertIds, CancellationToken cancellationToken);
 

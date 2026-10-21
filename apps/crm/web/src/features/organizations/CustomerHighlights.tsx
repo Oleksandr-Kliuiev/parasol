@@ -1,5 +1,5 @@
 import { makeStyles, mergeClasses } from '@fluentui/react-components';
-import { Clock20Regular, DocumentText20Regular, Receipt20Regular, TaskListSquareLtr20Regular } from '@fluentui/react-icons';
+import { AlertOn20Regular, Clock20Regular, DocumentText20Regular, Receipt20Regular, TaskListSquareLtr20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { StatGrid, StatTile } from '../../shared/components/KpiTile';
@@ -7,6 +7,7 @@ import { formatDate, formatMoney, formatNumber } from '../../shared/utils/format
 import { useActivities } from '../activities/api';
 import { useInvoices } from '../billing/api';
 import { useContracts, useHourBanks } from '../contracts/api';
+import { useCustomerAlertCounts } from '../service/alerts/useAlertQueue';
 
 /** Router state of a highlight link: the card moves focus to the tab it opened (the link itself unmounts with the overview). */
 const openedTab = { focusTab: true } as const;
@@ -16,6 +17,12 @@ const useStyles = makeStyles({
   grid: { gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', marginBottom: '16px' },
   // Four facts make two rows of two until one row holds all four: never three and one left alone (768 px).
   four: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', '@media (min-width: 1101px)': { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } },
+  // Five make three and two, then one row; on a phone two by two with the last across both columns, never one left alone.
+  five: {
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    '@media (min-width: 1101px)': { gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' },
+    '@media (max-width: 560px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', '& > :last-child': { gridColumn: '1 / -1' } },
+  },
 });
 
 /**
@@ -30,11 +37,13 @@ export function CustomerHighlights({ organizationId }: { organizationId: string 
   const canActivities = useCan(Permissions.activitiesRead);
   const canBilling = useCan(Permissions.billingRead);
   const canMoney = useCan(Permissions.financeRead);
+  const canService = useCan(Permissions.serviceRead);
   const contracts = useContracts({ organizationId, status: 'Active', limit: 5 }, canContracts);
   const banks = useHourBanks({ organizationId }, canContracts);
   const work = useActivities({ organizationId, open: true }, canActivities, 1);
   const money = useInvoices({ organizationId, openOnly: true, limit: 1 }, canBilling);
-  if (!canContracts && !canActivities && !canBilling) return null;
+  const alerts = useCustomerAlertCounts(organizationId, canService);
+  if (!canContracts && !canActivities && !canBilling && !canService) return null;
 
   const pending = t('myDay.loadingValue');
   const unread = t('organizations.highlights.unread');
@@ -58,9 +67,10 @@ export function CustomerHighlights({ organizationId }: { organizationId: string 
     ? t('organizations.highlights.firstBanks', { shown: banks.items.length, total: banks.total }) : null;
 
   const overdue = money.data?.overdue ?? 0;
+  const tiles = (canContracts ? 2 : 0) + (canActivities ? 1 : 0) + (canBilling ? 1 : 0) + (canService ? 1 : 0);
 
   return (
-    <StatGrid label={t('organizations.highlights.label')} className={mergeClasses(styles.grid, canContracts && canActivities && canBilling && styles.four)}>
+    <StatGrid label={t('organizations.highlights.label')} className={mergeClasses(styles.grid, tiles === 4 && styles.four, tiles === 5 && styles.five)}>
       {canContracts && (
         <StatTile
           icon={<DocumentText20Regular />}
@@ -93,6 +103,19 @@ export function CustomerHighlights({ organizationId }: { organizationId: string 
           value={work.isPending ? pending : work.isError ? '—' : formatNumber(work.total ?? 0)}
           note={work.isError ? unread : t('organizations.highlights.openWorkNote')}
           to="?tab=activities" replace state={openedTab}
+        />
+      )}
+      {canService && (
+        <StatTile
+          icon={<AlertOn20Regular />}
+          tone="ember"
+          label={t('alerts.highlight.label')}
+          // A customer without open alerts is said so, not shown a zero; critical ones colour the figure.
+          value={alerts.isPending ? pending : alerts.isError || !alerts.data ? '—' : alerts.data.total === 0 ? t('organizations.highlights.none') : formatNumber(alerts.data.total)}
+          status={alerts.data && alerts.data.critical > 0 ? 'bad' : undefined}
+          note={alerts.isError ? unread : !alerts.data ? undefined : alerts.data.total === 0 ? t('alerts.highlight.none')
+            : alerts.data.critical > 0 ? t('alerts.highlight.critical', { count: alerts.data.critical }) : t('alerts.highlight.noCritical')}
+          to="?tab=drift" replace state={openedTab}
         />
       )}
       {canBilling && (

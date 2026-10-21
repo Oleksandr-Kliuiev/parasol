@@ -15,9 +15,10 @@ const bank = (remainingHours: number, purchasedHours = 40, status = 'Active') =>
   remainingHours, overageHours: 0, lowBalancePct: 20, status,
 });
 
-/** The four reads of the strip, each answered from its own list endpoint. */
-function stubReads(overrides: Partial<Record<'contracts' | 'banks' | 'activities' | 'invoices', () => Response>> = {}) {
+/** The reads of the strip, each answered from its own list endpoint. */
+function stubReads(overrides: Partial<Record<'contracts' | 'banks' | 'activities' | 'invoices' | 'alerts', () => Response>> = {}) {
   const fetch = vi.fn(async (url: string) => {
+    if (url.includes('/service/alerts')) return overrides.alerts?.() ?? json({ items: [], nextCursor: 'next', totalCount: 4, critical: 1, warning: 3 });
     if (url.includes('/hour-banks')) return overrides.banks?.() ?? json({ items: [bank(6), bank(30, 40, 'Closed')], nextCursor: null, totalCount: 2 });
     if (url.includes('/contracts')) return overrides.contracts?.() ?? json({ items: [contract], nextCursor: null, totalCount: 2 });
     if (url.includes('/activities')) return overrides.activities?.() ?? json({ items: [], nextCursor: null, totalCount: 3 });
@@ -81,5 +82,23 @@ describe('customer highlights', () => {
     const fetch = stubReads(); render(['customers.read']);
     expect(screen.queryByRole('group', { name: 'Customer at a glance' })).not.toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('counts the open alerts, colours them when one is critical and opens the Drift tab', async () => {
+    const fetch = stubReads(); render([...all, 'service.read']);
+    const alerts = strip().getByRole('link', { name: /Open alerts/ });
+    expect(await within(alerts).findByText('4')).toBeVisible();
+    expect(within(alerts).getByText('1 critical')).toBeVisible();
+    expect(alerts).toHaveAttribute('href', '/?tab=drift');
+    // The counts come with the list's first answer: one row asked for, none shown.
+    expect(fetch.mock.calls.map(([url]) => String(url))).toContain('/api/v1/service/alerts?organizationId=org-1&limit=1');
+    expect(strip().getAllByRole('link')).toHaveLength(5);
+  });
+
+  it('says a customer has no open alerts instead of a zero', async () => {
+    stubReads({ alerts: () => json({ items: [], nextCursor: null, totalCount: 0, critical: 0, warning: 0 }) }); render(['customers.read', 'service.read']);
+    const alerts = strip().getByRole('link', { name: /Open alerts/ });
+    expect(await within(alerts).findByText('No open alerts')).toBeVisible();
+    expect(within(alerts).getByText('None')).toBeVisible();
   });
 });

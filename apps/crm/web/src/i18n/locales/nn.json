@@ -7,6 +7,7 @@
   "nav": {
     "connections": "Tilkoplingar",
     "myDay": "Min dag",
+    "alerts": "Driftsvarsel",
     "organizations": "Organisasjonar",
     "sectionWork": "Arbeid",
     "sectionCustomers": "Kundar",
@@ -374,7 +375,7 @@
       "contacts": "Kontaktar",
       "history": "Historikk",
       "contracts": "Avtalar",
-      "service": "Service",
+      "drift": "Drift",
       "deals": "Sal",
       "licenses": "Lisensar",
       "activities": "Aktivitetar",
@@ -1480,7 +1481,7 @@
     "noRequests": "Ingen lagra saksførespurnader treng oppfølging.",
     "onlineCount": "{{count}} på nett",
     "openTickets": "Opne saker",
-    "criticalAlerts": "Kritiske varsel",
+    "criticalAlerts": "Kritiske driftsvarsel",
     "warningAlerts": "Åtvaringar",
     "tickets": "Saker",
     "openOnly": "Berre opne",
@@ -1495,10 +1496,12 @@
     "noOpenTickets": "Ingen opne saker.",
     "devices": "Einingar",
     "noDevices": "Ingen einingar frå Atera enno.",
+    "deviceOpenAlerts_one": "{{count}} ope driftsvarsel",
+    "deviceOpenAlerts_other": "{{count}} opne driftsvarsel",
     "online": "på nett",
     "offline": "av nett",
-    "alerts": "Opne varsel",
-    "noAlerts": "Ingen opne kritiske varsel eller åtvaringar.",
+    "alerts": "Opne driftsvarsel",
+    "noAlerts": "Ingen opne kritiske driftsvarsel eller åtvaringar.",
     "lastSynced": "Sist synkronisert {{at}}",
     "deviceTypes": {
       "Workstation": "Arbeidsstasjonar",
@@ -1523,6 +1526,68 @@
     },
     "nothingSaved": "Ingen Atera-data er lagra for denne kunden: han er ikkje kopla til Atera, eller Atera er ikkje lese for han enno. Tala blir viste etter første lesing.",
     "nothingSavedShort": "Ingen Atera-data er lagra for denne kunden enno."
+  },
+  "alerts": {
+    "title": "Driftsvarsel",
+    "subtitle": "Opne driftsvarsel for alle kundar: dei kritiske først, deretter dei som har venta lengst.",
+    "subtitleResolved": "Driftsvarsel som kjelda ikkje lenger melder som opne, dei sist løyste først.",
+    "refresh": "Oppdater driftsvarsel",
+    "filters": "Filter for driftsvarsel",
+    "search": "Søk i tittel eller eining",
+    "stateLabel": "Vis",
+    "show": {
+      "open": "Opne",
+      "resolved": "Løyste"
+    },
+    "severityLabel": "Alvorsgrad",
+    "allSeverities": "Alle gradar",
+    "customerFilter": "Kunde",
+    "anyCustomer": "Alle kundar",
+    "clearFilters": "Fjern filtera",
+    "totals_one": "{{count}} driftsvarsel: {{critical}} kritiske, {{warning}} åtvaringar",
+    "totals_other": "{{count}} driftsvarsel: {{critical}} kritiske, {{warning}} åtvaringar",
+    "list": "Driftsvarsel",
+    "columns": {
+      "severity": "Alvorsgrad",
+      "alert": "Driftsvarsel",
+      "customer": "Kunde",
+      "waiting": "Meldt",
+      "resolved": "Løyst"
+    },
+    "source": "Kjelde: {{name}}",
+    "sourceNames": {
+      "atera": "Atera"
+    },
+    "states": {
+      "Open": "Ope",
+      "Acknowledged": "Sett",
+      "Resolved": "Løyst"
+    },
+    "empty": "Ingen opne driftsvarsel. Nye blir viste her etter neste lesing frå Atera.",
+    "emptyResolved": "Ingen løyste driftsvarsel.",
+    "emptyFiltered": "Ingen driftsvarsel passar med desse filtera.",
+    "detail": {
+      "title": "Driftsvarsel",
+      "loading": "Les driftsvarselet",
+      "severity": "Alvorsgrad",
+      "state": "Status",
+      "customer": "Kunde",
+      "unknownCustomer": "Ukjend kunde",
+      "device": "Eining",
+      "raised": "Meldt",
+      "resolved": "Løyst",
+      "source": "Kjelde",
+      "openInSource": "Opne i {{name}}",
+      "noLink": "Det er ikkje sett opp nokon lenkje til driftsvarsel i {{name}}.",
+      "notFound": "Dette driftsvarselet er ikkje lagra i Parasoll."
+    },
+    "highlight": {
+      "label": "Opne driftsvarsel",
+      "critical_one": "{{count}} kritisk",
+      "critical_other": "{{count}} kritiske",
+      "noCritical": "Ingen kritiske",
+      "none": "Ingen opne driftsvarsel"
+    }
   },
   "taskTicket": {
     "open": "Servicesak",

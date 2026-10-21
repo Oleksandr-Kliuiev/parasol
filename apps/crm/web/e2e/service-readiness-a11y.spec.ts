@@ -20,8 +20,8 @@ async function accessible(page: import('@playwright/test').Page) {
 test('saved Service data and the existing ticket form work on a phone with a keyboard', async ({ page }, testInfo) => {
   await signIn(page, 'Crm.Sales'); const customer = await createOrganization(page, { name: marker('Accessible service ') });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`/organizations/${customer.id}?tab=service`);
-  await expect(page.getByRole('tab', { name: 'Service', exact: true })).toBeInViewport({ ratio: 1 });
+  await page.goto(`/organizations/${customer.id}?tab=drift`);
+  await expect(page.getByRole('tab', { name: 'Operations', exact: true })).toBeInViewport({ ratio: 1 });
   const service = page.getByRole('region', { name: 'Saved service data', exact: true });
   await expect(service.getByText('Saved CRM data from Atera. Refresh rereads this copy; it does not check Atera live.', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Tickets', exact: true }).getByText('No open tickets.', { exact: true })).toBeVisible();

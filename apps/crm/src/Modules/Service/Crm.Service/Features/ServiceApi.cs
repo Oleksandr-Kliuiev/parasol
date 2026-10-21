@@ -67,6 +67,10 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     public async Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken) =>
         await db.Alerts.AsNoTracking().Where(a => a.Id == alertId).Select(AlertQueries.Ref).SingleOrDefaultAsync(cancellationToken);
 
+    public async Task<AlertRef?> GetAlertAsync(string system, string externalId, CancellationToken cancellationToken) =>
+        await db.Alerts.AsNoTracking().Where(a => a.System == system && a.ExternalId == externalId).Select(AlertQueries.Ref)
+            .SingleOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyDictionary<Guid, AlertRef>> GetAlertsAsync(IReadOnlyCollection<Guid> alertIds, CancellationToken cancellationToken)
     {
         var ids = alertIds.Distinct().ToList();

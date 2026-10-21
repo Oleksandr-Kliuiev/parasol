@@ -92,10 +92,42 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
         var byDevice = await factory.ClientAs(CrmRoles.Technician).GetFromJsonAsync<JsonElement>($"{Alerts}?deviceId={server}", Ct);
         byDevice.GetProperty("totalCount").GetInt32().ShouldBe(1);
         byDevice.GetProperty("items")[0].GetProperty("externalId").GetString().ShouldBe("unique");
+
+        // The device list says how many open alerts each device has, counted for the page in one query.
+        var devices = await factory.ClientAs(CrmRoles.Technician).GetFromJsonAsync<JsonElement>($"/api/v1/service/devices?organizationId={organizationId}", Ct);
+        devices.GetProperty("items").EnumerateArray().ToDictionary(d => d.GetProperty("machineName").GetString()!, d => d.GetProperty("openAlerts").GetInt32())
+            .ShouldBe(new Dictionary<string, int> { ["SRV-01"] = 1, ["PC-SAME"] = 0, ["pc-same"] = 0 }, ignoreOrder: true);
+        await ApplyAsync(Complete(system, Source(marker, "twice", organizationId, deviceName: "PC-SAME")));
+        devices = await factory.ClientAs(CrmRoles.Technician).GetFromJsonAsync<JsonElement>($"/api/v1/service/devices?organizationId={organizationId}", Ct);
+        devices.GetProperty("items").EnumerateArray().Single(d => d.GetProperty("machineName").GetString() == "SRV-01")
+            .GetProperty("openAlerts").GetInt32().ShouldBe(0, "a resolved alert is not open");
     }
 
     [Fact]
-    public async Task The_queue_filters_and_counts_before_the_page_and_pages_newest_first_across_customers()
+    public async Task One_alert_is_read_by_id_in_any_state_with_its_customer_and_an_unknown_id_is_not_found()
+    {
+        var (system, organizationId, marker) = await ScenarioAsync();
+        await ApplyAsync(Complete(system, Source(marker, "one", organizationId)));
+        await ApplyAsync(Complete(system));
+        var stored = await StoredAsync(system, "one");
+
+        var reader = factory.ClientAs(CrmRoles.Technician, userKey: "m38-one");
+        var one = await reader.GetFromJsonAsync<JsonElement>($"{Alerts}/{stored.Id}", Ct);
+        (one.GetProperty("id").GetGuid(), one.GetProperty("state").GetString(), one.GetProperty("organizationName").GetString(), one.GetProperty("url").GetString())
+            .ShouldBe((stored.Id, "Resolved", $"{marker} Varsel AS", "https://atera.example/alerts/one"));
+        one.GetProperty("resolvedAt").GetDateTimeOffset().ShouldBe(stored.ResolvedAt!.Value);
+
+        var missing = await reader.GetAsync($"{Alerts}/{Guid.NewGuid()}", Ct);
+        missing.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await missing.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe("SRV_ALERT_NOT_FOUND");
+        (await factory.ClientAs("Crm.Unknown", "m38-one-nobody").GetAsync($"{Alerts}/{stored.Id}", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        await using var scope = factory.Services.CreateAsyncScope();
+        (await scope.ServiceProvider.GetRequiredService<IServiceApi>().GetAlertAsync(system, "one", Ct))!.ResolvedAt.ShouldBe(stored.ResolvedAt);
+        (await scope.ServiceProvider.GetRequiredService<IServiceApi>().GetAlertAsync(system, "none", Ct)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task The_queue_filters_and_counts_before_the_page_and_pages_critical_first_then_oldest_across_customers()
     {
         var (system, organizationId, marker) = await ScenarioAsync();
         var admin = factory.ClientAs(CrmRoles.Admin);
@@ -119,14 +151,28 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
 
         var pages = await AllAsync(reader, $"{Alerts}?organizationId={organizationId}", 4);
         pages.Select(a => a.GetProperty("externalId").GetString()).ShouldBe(
-            mine.Where(a => a.ExternalId is not ("a00" or "a01")).OrderByDescending(a => a.CreatedAt).Select(a => a.ExternalId),
-            ignoreOrder: true);
+            mine.Where(a => a.ExternalId is not ("a00" or "a01")).Select(a => a.ExternalId), ignoreOrder: true);
         pages.Select(a => a.GetProperty("id").GetGuid()).Distinct().Count().ShouldBe(28, "every alert once, ties at an instant included");
-        pages.Zip(pages.Skip(1)).ShouldAllBe(pair => pair.First.GetProperty("createdAt").GetDateTimeOffset() >= pair.Second.GetProperty("createdAt").GetDateTimeOffset());
+        // The order to look at them in, across pages: every critical alert before any warning, and the oldest first within each.
+        pages.Zip(pages.Skip(1)).ShouldAllBe(pair => Rank(pair.First) < Rank(pair.Second) ||
+            (Rank(pair.First) == Rank(pair.Second) && pair.First.GetProperty("createdAt").GetDateTimeOffset() <= pair.Second.GetProperty("createdAt").GetDateTimeOffset()));
+        pages.TakeWhile(a => Rank(a) == 0).Count().ShouldBe(9);
+        first.GetProperty("items")[0].GetProperty("externalId").GetString().ShouldBe("a03", "the oldest open critical alert leads");
 
+        // Resolved alerts newest resolved first: a01 and a00 resolved together (the id breaks the tie), then a later one on top.
+        await ApplyAsync(Complete(system, [.. mine.Where(a => a.ExternalId is not ("a00" or "a01" or "a29")), .. theirs]));
         var resolved = await reader.GetFromJsonAsync<JsonElement>($"{Alerts}?organizationId={organizationId}&state=Resolved", Ct);
-        resolved.GetProperty("items").EnumerateArray().Select(a => a.GetProperty("externalId").GetString()).ShouldBe(["a01", "a00"]);
-        resolved.GetProperty("items")[0].GetProperty("resolvedAt").GetDateTimeOffset().ShouldBeGreaterThan(At);
+        var resolvedIds = resolved.GetProperty("items").EnumerateArray().Select(a => a.GetProperty("externalId").GetString()).ToList();
+        resolvedIds.ShouldBe(["a29", "a01", "a00"]);
+        resolved.GetProperty("items")[0].GetProperty("resolvedAt").GetDateTimeOffset()
+            .ShouldBeGreaterThan(resolved.GetProperty("items")[1].GetProperty("resolvedAt").GetDateTimeOffset());
+        var resolvedPages = await AllAsync(reader, $"{Alerts}?organizationId={organizationId}&state=Resolved", 2);
+        resolvedPages.Select(a => a.GetProperty("externalId").GetString()).ShouldBe(resolvedIds);
+        // A cursor of one order is no page of the other.
+        var openCursor = first.GetProperty("nextCursor").GetString()!;
+        (await reader.GetAsync($"{Alerts}?organizationId={organizationId}&state=Resolved&cursor={Uri.EscapeDataString(openCursor)}", Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        await ApplyAsync(Complete(system, [.. mine.Where(a => a.ExternalId is not ("a00" or "a01")), .. theirs]));
 
         // Across customers, narrowed by the marker in the titles: both customers, each row with its customer's name.
         var across = await AllAsync(reader, $"{Alerts}?q={marker}", 10);

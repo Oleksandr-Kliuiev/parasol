@@ -7,6 +7,7 @@
   "nav": {
     "connections": "Connections",
     "myDay": "My day",
+    "alerts": "Alerts",
     "organizations": "Organizations",
     "sectionWork": "Work",
     "sectionCustomers": "Customers",
@@ -374,7 +375,7 @@
       "contacts": "Contacts",
       "history": "History",
       "contracts": "Contracts",
-      "service": "Service",
+      "drift": "Operations",
       "deals": "Deals",
       "licenses": "Licenses",
       "activities": "Activities",
@@ -1495,6 +1496,8 @@
     "noOpenTickets": "No open tickets.",
     "devices": "Devices",
     "noDevices": "No devices from Atera yet.",
+    "deviceOpenAlerts_one": "{{count}} open alert",
+    "deviceOpenAlerts_other": "{{count}} open alerts",
     "online": "online",
     "offline": "offline",
     "alerts": "Open alerts",
@@ -1523,6 +1526,68 @@
     },
     "nothingSaved": "No Atera data is saved for this customer: it is not linked to Atera, or Atera has not been read for it yet. The figures appear after the first read.",
     "nothingSavedShort": "No Atera data saved for this customer yet."
+  },
+  "alerts": {
+    "title": "Alerts",
+    "subtitle": "Open alerts of every customer: the critical ones first, then the ones that have waited longest.",
+    "subtitleResolved": "Alerts their source no longer reports open, the most recently resolved first.",
+    "refresh": "Refresh alerts",
+    "filters": "Alert filters",
+    "search": "Search title or device",
+    "stateLabel": "Show",
+    "show": {
+      "open": "Open",
+      "resolved": "Resolved"
+    },
+    "severityLabel": "Severity",
+    "allSeverities": "All severities",
+    "customerFilter": "Customer",
+    "anyCustomer": "All customers",
+    "clearFilters": "Clear filters",
+    "totals_one": "{{count}} alert: {{critical}} critical, {{warning}} warnings",
+    "totals_other": "{{count}} alerts: {{critical}} critical, {{warning}} warnings",
+    "list": "Alerts",
+    "columns": {
+      "severity": "Severity",
+      "alert": "Alert",
+      "customer": "Customer",
+      "waiting": "Raised",
+      "resolved": "Resolved"
+    },
+    "source": "Source: {{name}}",
+    "sourceNames": {
+      "atera": "Atera"
+    },
+    "states": {
+      "Open": "Open",
+      "Acknowledged": "Seen",
+      "Resolved": "Resolved"
+    },
+    "empty": "No open alerts. New alerts appear here after the next read from Atera.",
+    "emptyResolved": "No resolved alerts.",
+    "emptyFiltered": "No alerts match these filters.",
+    "detail": {
+      "title": "Alert",
+      "loading": "Reading the alert",
+      "severity": "Severity",
+      "state": "State",
+      "customer": "Customer",
+      "unknownCustomer": "Unknown customer",
+      "device": "Device",
+      "raised": "Raised",
+      "resolved": "Resolved",
+      "source": "Source",
+      "openInSource": "Open in {{name}}",
+      "noLink": "No link to alerts in {{name}} is set up.",
+      "notFound": "This alert is not stored in Parasoll."
+    },
+    "highlight": {
+      "label": "Open alerts",
+      "critical_one": "{{count}} critical",
+      "critical_other": "{{count}} critical",
+      "noCritical": "None critical",
+      "none": "No open alerts"
+    }
   },
   "taskTicket": {
     "open": "Service ticket",

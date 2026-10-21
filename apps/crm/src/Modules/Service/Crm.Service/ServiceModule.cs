@@ -37,7 +37,10 @@ public sealed record TicketItem(
     DateTimeOffset? LastActivityAt,
     string? Url);
 
-public sealed record DeviceItem(Guid Id, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url, DateTimeOffset? RemovedAt);
+/// <summary>A device of a customer; <paramref name="OpenAlerts"/> counts the open alerts matched to it.</summary>
+public sealed record DeviceItem(
+    Guid Id, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url, DateTimeOffset? RemovedAt,
+    int OpenAlerts = 0);
 
 /// <summary>A customer's service at a glance; the alert counts are of open alerts.</summary>
 public sealed record ServiceSummary(
@@ -189,10 +192,17 @@ public static class ServiceModule
 
                 var take = KeysetCursor.ClampLimit(limit);
                 var page = await devices.OrderBy(d => d.MachineName).ThenBy(d => d.Id)
-                    .Select(d => new DeviceItem(d.Id, d.MachineName, d.Type, d.Os, d.Online, d.LastSeenAt, d.Url, d.RemovedAt)).Take(take + 1).ToListAsync(ct);
+                    .Select(d => new DeviceItem(d.Id, d.MachineName, d.Type, d.Os, d.Online, d.LastSeenAt, d.Url, d.RemovedAt, 0)).Take(take + 1).ToListAsync(ct);
                 var rows = page.Take(take).ToList();
+                // The open alerts matched to the page's devices, in one batch for the page (M38).
+                var ids = rows.Select(d => (Guid?)d.Id).ToList();
+                var open = ids.Count == 0
+                    ? new Dictionary<Guid, int>()
+                    : await db.Alerts.AsNoTracking().Where(a => a.State == AlertState.Open && ids.Contains(a.DeviceId))
+                        .GroupBy(a => a.DeviceId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, ct);
                 return Results.Ok(new PagedResult<DeviceItem>(
-                    rows, page.Count > take ? new KeysetCursor(rows[^1].MachineName, rows[^1].Id).Encode() : null, total));
+                    rows.Select(d => d with { OpenAlerts = open.GetValueOrDefault(d.Id) }).ToList(),
+                    page.Count > take ? new KeysetCursor(rows[^1].MachineName, rows[^1].Id).Encode() : null, total));
             })
             .RequirePermission(Permissions.ServiceRead);
 
@@ -205,6 +215,10 @@ public static class ServiceModule
 
         group.MapGet("/alerts/urgent", async (int? limit, AlertQueries alerts, CancellationToken ct) =>
                 Results.Ok(await alerts.UrgentAsync(limit, ct)))
+            .RequirePermission(Permissions.ServiceRead);
+
+        group.MapGet("/alerts/{id:guid}", async (Guid id, AlertQueries alerts, CancellationToken ct) =>
+                (await alerts.GetAsync(id, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ServiceRead);
 
         group.MapGet("/ticket-requests", async (Guid organizationId, bool? attentionOnly, int? limit, string? cursor, ServiceDbContext db, TimeProvider time, CancellationToken ct) =>

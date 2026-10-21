@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Badge, Button, Link, MessageBar, MessageBarBody, Switch, Table, TableBody, TableCell, TableHeader,
   TableHeaderCell, TableRow, Text, makeStyles, mergeClasses, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
 import { Add20Regular, Alert16Regular, AlertOn24Regular, Database16Regular, Desktop16Regular, Desktop24Regular, Headset24Regular, Headset16Regular,
@@ -18,12 +19,13 @@ import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { useAlerts, useDevices, useServiceSummary, useTicketRequests, useTickets } from './api';
 import { CreateTicketDialog } from './CreateTicketDialog';
 import { SavedServiceReadState } from './SavedServiceReadState';
-import { deviceTypes } from './types';
+import { deviceTypes, type Alert } from './types';
+import { AlertAge, AlertFacts, AlertSeverityBadge } from './alerts/AlertBits';
+import { AlertDetailDrawer } from './alerts/AlertDetailDrawer';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
   bad: { color: h.emberT }, warning: { color: h.saffronT },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: '16px', alignItems: 'stretch' },
   row: { display: 'flex', flexWrap: 'wrap', gap: '8px 12px', alignItems: 'center' },
   // The copy's own line, then its figures: one card for what the CRM holds of Atera.
   mirror: { display: 'block', maxWidth: '75ch', marginBottom: '14px', color: h.muted, fontSize: '13px', lineHeight: '20px' },
@@ -50,17 +52,21 @@ const useStyles = makeStyles({
   ticketScroll: { overflowX: 'auto', borderTop: `1px solid ${h.line}`, ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '-2px' },
     '& th': { boxSizing: 'border-box' } },
   requests: { display: 'grid', gap: '8px' },
+  // An alert's title opens its side panel: a button that reads as the row's title, with a 24 px hit box, and wraps like text.
+  alertTitle: { display: 'inline-flex', alignItems: 'center', minHeight: '24px', maxWidth: '100%', textAlign: 'start', fontWeight: 600,
+    fontSize: '14px', lineHeight: '20px', color: h.text, overflowWrap: 'anywhere', textDecorationLine: 'none',
+    ':hover': { color: h.emberT, textDecorationLine: 'underline' } },
 });
 
-/** Saved CRM mirror of Atera, with an employee/customer lifetime independent of other workspace tabs. */
-export function OrganizationServiceTab({ organizationId }: { organizationId: string }) {
+/** The customer's Drift tab (M38): the saved CRM mirror of Atera, with a lifetime per employee, rights and customer. */
+export function OperationsTab({ organizationId }: { organizationId: string }) {
   const user = useCurrentUser();
   if (!user.permissions.includes(Permissions.serviceRead)) return null;
   const owner = JSON.stringify([user.id, [...user.permissions].sort(), organizationId]);
-  return <SavedService key={owner} organizationId={organizationId} owner={owner} canCreate={user.permissions.includes(Permissions.serviceWrite)} />;
+  return <SavedOperations key={owner} organizationId={organizationId} owner={owner} canCreate={user.permissions.includes(Permissions.serviceWrite)} />;
 }
 
-function SavedService({ organizationId, owner, canCreate }: { organizationId: string; owner: string; canCreate: boolean }) {
+function SavedOperations({ organizationId, owner, canCreate }: { organizationId: string; owner: string; canCreate: boolean }) {
   const styles = useStyles(); const flush = useFlushStyles(); const { t } = useTranslation();
   const [openOnly, setOpenOnly] = useState(true); const [creating, setCreating] = useState(false); const [revision, setRevision] = useState(0);
   const refreshing = useRef(false); const restoreFocusTarget = useRestoreFocusTarget(); const scope = { owner, revision };
@@ -81,6 +87,15 @@ function SavedService({ organizationId, owner, canCreate }: { organizationId: st
   const nothingSaved = summaryAvailable && summary.data.lastSyncedAt === null && totalDevices === 0 && summary.data.openTickets === 0
     && summary.data.criticalAlerts === 0 && summary.data.warningAlerts === 0;
 
+  // One alert in a side panel with its own address (?alert=), as in the queue: Back closes it.
+  const [params, setParams] = useSearchParams(); const location = useLocation(); const navigate = useNavigate();
+  const peekId = params.get('alert');
+  const openAlert = (alert: Alert) => { const next = new URLSearchParams(params); next.set('alert', alert.id); setParams(next, { state: { alertPeek: true } }); };
+  const closeAlert = () => {
+    if ((location.state as { alertPeek?: boolean } | null)?.alertPeek) { void navigate(-1); return; }
+    const next = new URLSearchParams(params); next.delete('alert'); setParams(next, { replace: true });
+  };
+
   return <div className={styles.stack}>
     <Panel title={t('service.savedData')} icon={<Database16Regular />}
       actions={<Button size="small" disabled={checking} disabledFocusable={checking} onClick={refresh}>{t('service.refreshSaved')}</Button>}>
@@ -90,10 +105,10 @@ function SavedService({ organizationId, owner, canCreate }: { organizationId: st
         {nothingSaved && <Text block>{t('service.nothingSaved')}</Text>}
         {summaryAvailable && !nothingSaved && <>
           <FigureGrid className={styles.facts} items={[
-            { label: t('service.openTickets'), value: String(summary.data.openTickets) },
-            { label: t('service.devices'), value: String(totalDevices), note: t('service.onlineCount', { count: summary.data.devicesOnline }) },
             { label: t('service.criticalAlerts'), value: count(summary.data.criticalAlerts, 'bad') },
             { label: t('service.warningAlerts'), value: count(summary.data.warningAlerts, 'warning') },
+            { label: t('service.devices'), value: String(totalDevices), note: t('service.onlineCount', { count: summary.data.devicesOnline }) },
+            { label: t('service.openTickets'), value: String(summary.data.openTickets) },
           ]} />
           <Text className={styles.muted}>
             {summary.data.lastSyncedAt ? t('service.lastTicketChange', { at: formatDateTime(summary.data.lastSyncedAt) }) : t('service.lastTicketChangeUnknown')}
@@ -102,16 +117,43 @@ function SavedService({ organizationId, owner, canCreate }: { organizationId: st
       </section>
     </Panel>
 
-    <Panel title={t('service.requests')} icon={<Send16Regular />}>
-      <SavedServiceReadState checking={requests.checking} error={requests.error} onRetry={requests.refresh} />
-      {requests.items.length > 0 && <div className={styles.requests}>
-        {requests.items.map(request => <MessageBar key={request.id} intent={request.status === 'Failed' ? 'error' : 'info'}><MessageBarBody>
-          {request.status === 'Failed' ? t('service.ticketFailed', { title: request.title, error: request.error }) : t('service.ticketPending', { title: request.title })}
-        </MessageBarBody></MessageBar>)}
-      </div>}
-      {requests.available && requests.items.length === 0 && <EmptyState icon={<Send24Regular />} message={t('service.noRequests')} />}
-      <ListFooter shown={requests.items.length} total={requests.hasNextPage ? requests.total : null} hasMore={requests.hasNextPage} loading={requests.isFetchingNextPage}
-        onMore={() => void requests.fetchNextPage()} />
+    {/* Critical first, then the longest waiting: the server's order of open alerts. */}
+    <Panel title={t('service.alerts')} icon={<Alert16Regular />} flush className={flush.panel}>
+      <div className={mergeClasses(styles.pad, !alerts.available && styles.padEnd)}>
+        <SavedServiceReadState checking={alerts.checking} error={alerts.error} onRetry={alerts.refresh} />
+      </div>
+      <ul className={flush.list}>{alerts.items.map(alert => <RecordRow key={alert.id} icon={<Alert16Regular />} tone={alert.severity === 'Critical' ? 'ember' : 'saffron'}
+        title={<Link {...restoreFocusTarget} as="button" className={styles.alertTitle} onClick={() => openAlert(alert)}>{alert.title}</Link>}
+        meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />]} />}
+        end={<AlertSeverityBadge severity={alert.severity} />} />)}</ul>
+      {alerts.available && alerts.items.length === 0 && <EmptyState icon={<AlertOn24Regular />} message={t(nothingSaved ? 'service.nothingSavedShort' : 'service.noAlerts')} />}
+      <ListFooter shown={alerts.items.length} total={alerts.total} hasMore={alerts.hasNextPage} loading={alerts.isFetchingNextPage} onMore={() => void alerts.fetchNextPage()} />
+    </Panel>
+
+    <Panel title={t('service.devices')} icon={<Desktop16Regular />} flush className={flush.panel}>
+      <div className={styles.pad}>
+        {summaryAvailable ? totalDevices > 0 && (
+          <ul className={styles.types} aria-label={t('service.deviceTypesLabel')}>
+            {deviceTypes.filter(type => (devicesByType[type] ?? 0) > 0).map(type => (
+              <li key={type} className={styles.type}>{t(`service.deviceTypes.${type}`)} <b>{formatNumber(devicesByType[type] ?? 0, 0)}</b></li>
+            ))}
+          </ul>
+        ) : <Text block className={mergeClasses(styles.muted, styles.padEnd)}>{t('service.deviceTotalsUnknown')}</Text>}
+      </div>
+      <div className={mergeClasses(styles.pad, !devices.available && styles.padEnd)}>
+        <SavedServiceReadState checking={devices.checking} error={devices.error} onRetry={devices.refresh} />
+      </div>
+      <ul className={flush.list}>{devices.items.map(device => <RecordRow key={device.id} icon={device.type === 'Server' ? <Server16Regular /> : <Desktop16Regular />}
+        tone={device.online ? 'spruce' : 'neutral'}
+        title={device.url ? <Link href={safeHttpUrl(device.url)} target="_blank" rel="noopener noreferrer">{device.machineName}</Link> : <Text weight="semibold">{device.machineName}</Text>}
+        meta={<RowMeta>{t(`service.deviceTypes.${device.type}`)}{device.os ? ` · ${device.os}` : ''}</RowMeta>}
+        end={<>
+          {/* Only a device with something open says so: a column of zeros would hide the ones that matter. */}
+          {device.openAlerts > 0 && <Badge appearance="tint" color="danger">{t('service.deviceOpenAlerts', { count: device.openAlerts })}</Badge>}
+          <Badge appearance="tint" color={device.online ? 'success' : 'subtle'}>{device.online ? t('service.online') : t('service.offline')}</Badge>
+        </>} />)}</ul>
+      {devices.available && devices.items.length === 0 && <EmptyState icon={<Desktop24Regular />} message={t('service.noDevices')} />}
+      <ListFooter shown={devices.items.length} total={devices.total} hasMore={devices.hasNextPage} loading={devices.isFetchingNextPage} onMore={() => void devices.fetchNextPage()} />
     </Panel>
 
     <Panel title={t('service.tickets')} icon={<Headset16Regular />} flush className={flush.panel} actions={<span className={styles.row}>
@@ -148,40 +190,19 @@ function SavedService({ organizationId, owner, canCreate }: { organizationId: st
       <ListFooter shown={tickets.items.length} total={tickets.total} hasMore={tickets.hasNextPage} loading={tickets.isFetchingNextPage} onMore={() => void tickets.fetchNextPage()} />
     </Panel>
 
-    <div className={styles.grid}>
-      <Panel title={t('service.devices')} icon={<Desktop16Regular />} flush className={flush.panel}>
-        <div className={styles.pad}>
-          {summaryAvailable ? totalDevices > 0 && (
-            <ul className={styles.types} aria-label={t('service.deviceTypesLabel')}>
-              {deviceTypes.filter(type => (devicesByType[type] ?? 0) > 0).map(type => (
-                <li key={type} className={styles.type}>{t(`service.deviceTypes.${type}`)} <b>{formatNumber(devicesByType[type] ?? 0, 0)}</b></li>
-              ))}
-            </ul>
-          ) : <Text block className={mergeClasses(styles.muted, styles.padEnd)}>{t('service.deviceTotalsUnknown')}</Text>}
-        </div>
-        <div className={mergeClasses(styles.pad, !devices.available && styles.padEnd)}>
-          <SavedServiceReadState checking={devices.checking} error={devices.error} onRetry={devices.refresh} />
-        </div>
-        <ul className={flush.list}>{devices.items.map(device => <RecordRow key={device.id} icon={device.type === 'Server' ? <Server16Regular /> : <Desktop16Regular />}
-          tone={device.online ? 'spruce' : 'neutral'}
-          title={device.url ? <Link href={safeHttpUrl(device.url)} target="_blank" rel="noopener noreferrer">{device.machineName}</Link> : <Text weight="semibold">{device.machineName}</Text>}
-          meta={<RowMeta>{t(`service.deviceTypes.${device.type}`)}{device.os ? ` · ${device.os}` : ''}</RowMeta>}
-          end={<Badge appearance="tint" color={device.online ? 'success' : 'subtle'}>{device.online ? t('service.online') : t('service.offline')}</Badge>} />)}</ul>
-        {devices.available && devices.items.length === 0 && <EmptyState icon={<Desktop24Regular />} message={t('service.noDevices')} />}
-        <ListFooter shown={devices.items.length} total={devices.total} hasMore={devices.hasNextPage} loading={devices.isFetchingNextPage} onMore={() => void devices.fetchNextPage()} />
-      </Panel>
-      <Panel title={t('service.alerts')} icon={<Alert16Regular />} flush className={flush.panel}>
-        <div className={mergeClasses(styles.pad, !alerts.available && styles.padEnd)}>
-          <SavedServiceReadState checking={alerts.checking} error={alerts.error} onRetry={alerts.refresh} />
-        </div>
-        <ul className={flush.list}>{alerts.items.map(alert => <RecordRow key={alert.id} icon={<Alert16Regular />} tone={alert.severity === 'Critical' ? 'ember' : 'saffron'}
-          title={<Text weight="semibold">{alert.title}</Text>}
-          meta={<RowMeta>{[alert.deviceName, formatDateTime(alert.createdAt)].filter(Boolean).join(' · ')}</RowMeta>}
-          end={<Badge appearance="tint" color={alert.severity === 'Critical' ? 'danger' : 'warning'}>{t(`service.severities.${alert.severity}`)}</Badge>} />)}</ul>
-        {alerts.available && alerts.items.length === 0 && <EmptyState icon={<AlertOn24Regular />} message={t(nothingSaved ? 'service.nothingSavedShort' : 'service.noAlerts')} />}
-        <ListFooter shown={alerts.items.length} total={alerts.total} hasMore={alerts.hasNextPage} loading={alerts.isFetchingNextPage} onMore={() => void alerts.fetchNextPage()} />
-      </Panel>
-    </div>
+    <Panel title={t('service.requests')} icon={<Send16Regular />}>
+      <SavedServiceReadState checking={requests.checking} error={requests.error} onRetry={requests.refresh} />
+      {requests.items.length > 0 && <div className={styles.requests}>
+        {requests.items.map(request => <MessageBar key={request.id} intent={request.status === 'Failed' ? 'error' : 'info'}><MessageBarBody>
+          {request.status === 'Failed' ? t('service.ticketFailed', { title: request.title, error: request.error }) : t('service.ticketPending', { title: request.title })}
+        </MessageBarBody></MessageBar>)}
+      </div>}
+      {requests.available && requests.items.length === 0 && <EmptyState icon={<Send24Regular />} message={t('service.noRequests')} />}
+      <ListFooter shown={requests.items.length} total={requests.hasNextPage ? requests.total : null} hasMore={requests.hasNextPage} loading={requests.isFetchingNextPage}
+        onMore={() => void requests.fetchNextPage()} />
+    </Panel>
     {canCreate && <CreateTicketDialog open={creating} organizationId={organizationId} owner={owner} onClose={() => setCreating(false)} onQueued={() => setRevision(value => value + 1)} />}
+    {/* Mounted for an alert only: the tab keeps no read of its own about a panel nobody opened. */}
+    {peekId !== null && <AlertDetailDrawer alertId={peekId} onClose={closeAlert} />}
   </div>;
 }

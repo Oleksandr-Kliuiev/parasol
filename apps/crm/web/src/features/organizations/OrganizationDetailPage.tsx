@@ -48,7 +48,7 @@ import { useDeleteOrganization, useOrganization } from './api';
 import { useDuplicates } from './duplicatesApi';
 import { LinkedSystemsPanel } from '../integrations/LinkedSystemsPanel';
 import { OrganizationContractsTab } from '../contracts/OrganizationContractsTab';
-import { OrganizationServiceTab } from '../service/OrganizationServiceTab';
+import { OperationsTab } from '../service/OperationsTab';
 import { OrganizationDealsTab } from '../sales/OrganizationDealsTab';
 import { OrganizationMailTab } from '../activities/OrganizationMailTab';
 import { OrganizationDocumentsTab } from '../documents/OrganizationDocumentsTab';
@@ -119,14 +119,14 @@ const useStyles = makeStyles({
 
 /** The value of the "More" tab: it opens the menu of the occasional sections and is never itself selected. */
 const MORE = '__more';
-const dailyTabs = ['overview', 'contacts', 'contracts', 'service', 'invoices', 'activities'] as const;
+const dailyTabs = ['overview', 'contacts', 'contracts', 'drift', 'invoices', 'activities'] as const;
 const occasionalTabs = ['deals', 'licenses', 'projects', 'mail', 'documents', 'history'] as const;
 
 type TabValue =
   | 'overview'
   | 'contacts'
   | 'contracts'
-  | 'service'
+  | 'drift'
   | 'deals'
   | 'licenses'
   | 'projects'
@@ -144,7 +144,9 @@ export function OrganizationDetailPage() {
   const notify = useNotify();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
-  const tab = (params.get('tab') as TabValue | null) ?? 'overview';
+  // The Drift tab was called Service until M38: links to ?tab=service still open it, and the address then says drift.
+  const requestedTab = params.get('tab');
+  const tab = (requestedTab === 'service' ? 'drift' : (requestedTab as TabValue | null)) ?? 'overview';
   const { data, error, isPending, refetch } = useOrganization(id);
   const canEdit = useCan(Permissions.customersWrite);
   const canDelete = useCan(Permissions.customersDelete);
@@ -165,7 +167,7 @@ export function OrganizationDetailPage() {
   const tabs = useCustomerTabVisibility(tab, tabScope, !isPending && !error && !mergedIntoId);
   // Six sections for every day in the row, the rest one step away under "More" (UX 2026, В4); a section opened from there
   // joins the row, so the row always names where you are.
-  const permitted = (value: TabValue) => ({ contracts: canContracts, service: canService, deals: canSales, licenses: canLicensing,
+  const permitted = (value: TabValue) => ({ contracts: canContracts, drift: canService, deals: canSales, licenses: canLicensing,
     projects: canProjects, invoices: canBilling, activities: canActivities, mail: canActivities } as Partial<Record<TabValue, boolean>>)[value] ?? true;
   const rowTabs = [...dailyTabs.filter(permitted), ...occasionalTabs.filter((value) => value === tab && permitted(value))];
   const menuTabs = occasionalTabs.filter((value) => value !== tab && permitted(value));
@@ -182,6 +184,12 @@ export function OrganizationDetailPage() {
     // Compared, not put into a selector: the value comes from the address.
     [...(tabs.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find((el) => el.getAttribute('value') === tab)?.focus();
   }, [focusTab, location.key, tab, tabs]);
+
+  useEffect(() => {
+    if (requestedTab !== 'service') return;
+    const next = new URLSearchParams(params); next.set('tab', 'drift');
+    setParams(next, { replace: true, state: location.state });
+  }, [requestedTab, params, setParams, location.state]);
 
   useEffect(() => {
     if (mergedIntoId) {
@@ -295,7 +303,7 @@ export function OrganizationDetailPage() {
       {tab === 'overview' && <Overview organization={organization} etag={etag} />}
       {tab === 'contacts' && <ContactsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'contracts' && canContracts && <OrganizationContractsTab organizationId={organization.id} />}
-      {tab === 'service' && canService && <OrganizationServiceTab organizationId={organization.id} />}
+      {tab === 'drift' && canService && <OperationsTab organizationId={organization.id} />}
       {tab === 'deals' && canSales && <OrganizationDealsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'licenses' && canLicensing && <OrganizationLicensesTab organizationId={organization.id} />}
       {tab === 'projects' && canProjects && <OrganizationProjectsTab organizationId={organization.id} organizationName={organization.name} />}

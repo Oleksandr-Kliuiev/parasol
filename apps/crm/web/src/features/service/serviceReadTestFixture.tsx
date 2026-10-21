@@ -4,7 +4,8 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { CurrentUserContext } from '../../auth/CurrentUserContext';
 import { TOASTER_ID } from '../../app/toaster';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
-import { OrganizationServiceTab } from './OrganizationServiceTab';
+import { OperationsTab } from './OperationsTab';
+import { syntheticAlert } from '../../test/alerts';
 import type { Alert, Device, ServiceSummary, Ticket, TicketRequest } from './types';
 
 export const kinds = ['summary', 'tickets', 'devices', 'alerts', 'ticket-requests'] as const;
@@ -13,10 +14,10 @@ export const names: Record<Kind, string> = { summary: 'Saved service summary', t
 export const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 export const empty = () => json({ items: [], nextCursor: null, totalCount: 0 });
 export const summary: ServiceSummary = { openTickets: 3, ticketsLast90Days: 8, devices: { Workstation: 2 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 2, lastSyncedAt: '2025-01-02T10:30:00Z' };
-export const device = (id = 'one'): Device => ({ id, machineName: `Synthetic PC ${id}`, type: 'Workstation', os: 'Synthetic OS', online: true, lastSeenAt: null, url: null, removedAt: null });
+export const device = (id = 'one'): Device => ({ id, machineName: `Synthetic PC ${id}`, type: 'Workstation', os: 'Synthetic OS', online: true, lastSeenAt: null, url: null, removedAt: null, openAlerts: 0 });
 export const ticket = (id = 'one'): Ticket => ({ id, title: `Synthetic ticket ${id}`, externalId: 42, organizationId: 'o1', organizationName: null, contactId: null, contactName: null,
   status: 'Open', isOpen: true, priority: null, type: null, technicianName: null, createdAt: '2026-10-16T10:00:00Z', resolvedAt: null, lastActivityAt: null, url: null });
-export const alert = (id = 'one'): Alert => ({ id, title: `Synthetic alert ${id}`, severity: 'Critical', deviceName: 'Synthetic PC', createdAt: '2026-10-16T10:00:00Z' });
+export const alert = (id = 'one'): Alert => syntheticAlert({ id, title: `Synthetic alert ${id}`, deviceName: 'Synthetic PC', createdAt: '2026-10-16T10:00:00Z' });
 export const request = (status: TicketRequest['status'] = 'Failed', id = 'one'): TicketRequest => ({ id, title: `Synthetic request ${id}`, status, externalTicketId: null, url: null, error: 'Synthetic rejection', createdAt: '2026-10-16T10:00:00Z' });
 export const pageResult = (items: unknown[], nextCursor: string | null = null, totalCount = items.length) => json({ items, nextCursor, totalCount });
 export const kindOf = (url: string): Kind | null => {
@@ -40,7 +41,7 @@ export function renderService(permissions = allowed, capture?: (client: QueryCli
       <button onClick={() => setUser({ ...user, permissions: ['service.read'] })}>Drop write</button>
       <button onClick={() => setUser({ ...user, permissions: [] })}>Drop read</button>
       <button onClick={() => setOrganization('o2')}>Change customer</button>
-      <OrganizationServiceTab organizationId={organization} />
+      <OperationsTab organizationId={organization} />
     </CurrentUserContext.Provider>;
   }
   return renderRoutes([page(<Host />)], '/', testUser(permissions));

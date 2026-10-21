@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import {
+  AlertUrgent20Regular,
   ArrowImport20Regular,
   ArrowSwap20Regular,
   Board20Regular,
@@ -64,6 +65,7 @@ const selectedByPrefix: ReadonlyArray<readonly [string, string]> = [
   ['/admin/pipeline', 'pipeline-stages'],
   ['/time/entries', 'time-entries'],
   ['/time', 'timesheet'],
+  ['/alerts', 'alerts'],
   ['/admin/technicians', 'technicians'],
   ['/contracts', 'contracts'],
   ['/catalog', 'catalog'],
@@ -131,6 +133,8 @@ export function useNavGroups(): NavGroup[] {
       label: 'sectionWork',
       items: [
         ...entry(true, 'my-day', '/', 'myDay', <Board20Regular />),
+        // One queue of the open alerts of every customer (M38): critical first, then the longest waiting.
+        ...entry(canService, 'alerts', '/alerts', 'alerts', <AlertUrgent20Regular />),
         ...entry(canTime, 'timesheet', '/time', 'timesheet', <Clock20Regular />),
         ...entry(canTimeAll, 'time-entries', '/time/entries', 'timeEntries', <Clock20Regular />),
       ],

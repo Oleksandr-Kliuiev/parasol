@@ -7,6 +7,7 @@
   "nav": {
     "connections": "Tilkoblinger",
     "myDay": "Min dag",
+    "alerts": "Driftsvarsler",
     "organizations": "Organisasjoner",
     "sectionWork": "Arbeid",
     "sectionCustomers": "Kunder",
@@ -374,7 +375,7 @@
       "contacts": "Kontakter",
       "history": "Historikk",
       "contracts": "Avtaler",
-      "service": "Service",
+      "drift": "Drift",
       "deals": "Salg",
       "licenses": "Lisenser",
       "activities": "Aktiviteter",
@@ -1480,7 +1481,7 @@
     "noRequests": "Ingen lagrede saksforespørsler trenger oppfølging.",
     "onlineCount": "{{count}} på nett",
     "openTickets": "Åpne saker",
-    "criticalAlerts": "Kritiske varsler",
+    "criticalAlerts": "Kritiske driftsvarsler",
     "warningAlerts": "Advarsler",
     "tickets": "Saker",
     "openOnly": "Bare åpne",
@@ -1495,10 +1496,12 @@
     "noOpenTickets": "Ingen åpne saker.",
     "devices": "Enheter",
     "noDevices": "Ingen enheter fra Atera ennå.",
+    "deviceOpenAlerts_one": "{{count}} åpent driftsvarsel",
+    "deviceOpenAlerts_other": "{{count}} åpne driftsvarsler",
     "online": "på nett",
     "offline": "av nett",
-    "alerts": "Åpne varsler",
-    "noAlerts": "Ingen åpne kritiske varsler eller advarsler.",
+    "alerts": "Åpne driftsvarsler",
+    "noAlerts": "Ingen åpne kritiske driftsvarsler eller advarsler.",
     "lastSynced": "Sist synkronisert {{at}}",
     "deviceTypes": {
       "Workstation": "Arbeidsstasjoner",
@@ -1523,6 +1526,68 @@
     },
     "nothingSaved": "Ingen Atera-data er lagret for denne kunden: den er ikke koblet til Atera, eller Atera er ikke lest for den ennå. Tallene vises etter første lesing.",
     "nothingSavedShort": "Ingen Atera-data er lagret for denne kunden ennå."
+  },
+  "alerts": {
+    "title": "Driftsvarsler",
+    "subtitle": "Åpne driftsvarsler for alle kunder: de kritiske først, deretter de som har ventet lengst.",
+    "subtitleResolved": "Driftsvarsler som kilden ikke lenger melder som åpne, de sist løste først.",
+    "refresh": "Oppdater driftsvarsler",
+    "filters": "Filtre for driftsvarsler",
+    "search": "Søk i tittel eller enhet",
+    "stateLabel": "Vis",
+    "show": {
+      "open": "Åpne",
+      "resolved": "Løste"
+    },
+    "severityLabel": "Alvorlighet",
+    "allSeverities": "Alle grader",
+    "customerFilter": "Kunde",
+    "anyCustomer": "Alle kunder",
+    "clearFilters": "Fjern filtre",
+    "totals_one": "{{count}} driftsvarsel: {{critical}} kritiske, {{warning}} advarsler",
+    "totals_other": "{{count}} driftsvarsler: {{critical}} kritiske, {{warning}} advarsler",
+    "list": "Driftsvarsler",
+    "columns": {
+      "severity": "Alvorlighet",
+      "alert": "Driftsvarsel",
+      "customer": "Kunde",
+      "waiting": "Meldt",
+      "resolved": "Løst"
+    },
+    "source": "Kilde: {{name}}",
+    "sourceNames": {
+      "atera": "Atera"
+    },
+    "states": {
+      "Open": "Åpent",
+      "Acknowledged": "Sett",
+      "Resolved": "Løst"
+    },
+    "empty": "Ingen åpne driftsvarsler. Nye vises her etter neste lesing fra Atera.",
+    "emptyResolved": "Ingen løste driftsvarsler.",
+    "emptyFiltered": "Ingen driftsvarsler passer med disse filtrene.",
+    "detail": {
+      "title": "Driftsvarsel",
+      "loading": "Leser driftsvarselet",
+      "severity": "Alvorlighet",
+      "state": "Status",
+      "customer": "Kunde",
+      "unknownCustomer": "Ukjent kunde",
+      "device": "Enhet",
+      "raised": "Meldt",
+      "resolved": "Løst",
+      "source": "Kilde",
+      "openInSource": "Åpne i {{name}}",
+      "noLink": "Det er ikke satt opp noen lenke til driftsvarsler i {{name}}.",
+      "notFound": "Dette driftsvarselet er ikke lagret i Parasoll."
+    },
+    "highlight": {
+      "label": "Åpne driftsvarsler",
+      "critical_one": "{{count}} kritisk",
+      "critical_other": "{{count}} kritiske",
+      "noCritical": "Ingen kritiske",
+      "none": "Ingen åpne driftsvarsler"
+    }
   },
   "taskTicket": {
     "open": "Servicesak",

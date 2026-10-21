@@ -52,7 +52,10 @@ public sealed record AlertSnapshotResult(bool Applied, int Opened, int Reopened,
     public int Changed => Opened + Reopened + Updated + Resolved;
 }
 
-/// <summary>A stored alert for other modules (a task made from it, My day). The id stays the same from one read to the next.</summary>
+/// <summary>
+/// A stored alert for other modules (a task made from it, My day). The id stays the same from one read to the next;
+/// <paramref name="ResolvedAt"/> is when a complete read no longer listed it.
+/// </summary>
 public sealed record AlertRef(
     Guid Id,
     Guid OrganizationId,
@@ -66,4 +69,5 @@ public sealed record AlertRef(
     string? DeviceName,
     Guid? DeviceId,
     DateTimeOffset CreatedAtSource,
-    string? Url);
+    string? Url,
+    DateTimeOffset? ResolvedAt = null);
