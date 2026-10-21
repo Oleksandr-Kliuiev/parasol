@@ -516,12 +516,15 @@ public sealed class WebHostSecurityTests(CrmWebFactory factory) : IDisposable
     {
         var client = factory.ClientAs(CrmRoles.Finance, "dev21-finance");
         (await client.GetAsync("/api/v1/reports/mart/revenue-by-month?from=2024-03-01&to=2024-03-31&format=csv", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var reader = await client.UserIdAsync();
 
+        // This reader's own entry: other classes read the mart at the same time (AnalyticsApiTests asks for "what-ever").
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<Crm.Integrations.Core.Persistence.IntegrationDbContext>();
-        var entry = await db.AuditEntries.AsNoTracking().Where(a => a.Module == "reports" && a.EntityType == "MartExport").OrderByDescending(a => a.Id).FirstAsync(Ct);
+        var entry = await db.AuditEntries.AsNoTracking().Where(a => a.Module == "reports" && a.EntityType == "MartExport" && a.UserId == reader)
+            .OrderByDescending(a => a.Id).FirstOrDefaultAsync(Ct);
+        entry.ShouldNotBeNull("the read is audited under the reader's own id");
         entry.Action.ShouldBe("Export");
-        entry.UserId.ShouldNotBeNull();
         entry.Changes!.ShouldContain("\"dataset\":\"revenue-by-month\"");
         entry.Changes!.ShouldContain("2024-03-01");
         entry.Changes!.ShouldContain("csv");
