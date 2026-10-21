@@ -131,7 +131,9 @@ test('financial views and adjacent customer tabs fit all required widths and bot
       await page.getByRole('region', { name: 'Customer finance', exact: true }).getByRole('tab', { name: 'Payments and entries', exact: true }).click();
       await expect(page.getByText('Posted payment', { exact: true }).first()).toBeVisible();
       await accessible(page, info, `payments-${width}-${theme}`);
-      await page.getByRole('tab', { name: 'Documents', exact: true }).click();
+      // Documents is one of the customer card's tabs under "More" (daily tabs in the row, UX 2026 §7.4): open it from there.
+      await page.getByRole('tab', { name: /^More/ }).click();
+      await page.getByRole('menuitem', { name: 'Documents', exact: true }).click();
       await expect(page.getByText('Customer finance', { exact: true })).toHaveCount(0);
       await accessible(page, info, `documents-${width}-${theme}`);
     }
