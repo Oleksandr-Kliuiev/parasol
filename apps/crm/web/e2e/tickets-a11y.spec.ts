@@ -1,10 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { ateraTicket, customerMessage, fitsWidth, linkedAteraCustomer, seriousViolations, settled, syncTicket, widths, writeAsTechnician } from './atera';
+import {
+  ateraTicket, customerMessage, failAtera, fitsWidth, linkedAteraCustomer, seriousViolations, settleAction, settled, syncTicket, ticketActions, widths,
+  writeAsTechnician,
+} from './atera';
 import { signIn } from './support';
 
 // M39: the Tickets page, a ticket's panel, the action confirmation, the action log on Connections and the time form's Atera step at
 // desktop, tablet and phone widths, in the theme of the project (desktop: light, desktop-dark: dark), against axe's WCAG 2.2 AA
-// rules and with the keyboard alone. Nothing is sent to Atera: every confirmation is left by its way out.
+// rules and with the keyboard alone. One reply is sent and its answer lost, so the confirmation that asks what was found, the row
+// that says a check is needed and the action's card over its ticket are checked too; every other confirmation is left by its way out.
 test('tickets, a ticket panel, the action confirmation, the action log and the Atera step pass axe at every width', async ({ page }, testInfo) => {
   test.setTimeout(480_000);
   const scheme = testInfo.project.use.colorScheme ?? 'light';
@@ -17,6 +21,29 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
   await writeAsTechnician(page);
   const name = `#${ticket.TicketID} ${ticket.TicketTitle}`;
 
+  // A reply whose answer is lost: the confirmation's follow-up asks, there and then, what the person found at Atera.
+  await failAtera(page, 'POST', `/api/v3/tickets/${ticket.TicketID}/comments`, 503, 1);
+  await page.goto('/tickets');
+  await page.getByRole('searchbox', { name: 'Search title or number' }).fill(m);
+  await page.getByRole('button', { name, exact: true }).click();
+  const lostIn = page.getByRole('dialog', { name, exact: true });
+  await lostIn.getByRole('textbox', { name: 'Reply', exact: true }).fill('Vi ser på det nå.');
+  await lostIn.getByRole('button', { name: 'Send the reply', exact: true }).click();
+  const lost = page.getByRole('dialog', { name: `Reply in #${ticket.TicketID}`, exact: true });
+  await lost.getByRole('button', { name: 'Send the reply', exact: true }).click();
+  await expect(lost.getByRole('radiogroup', { name: /Did it happen\?/ })).toBeVisible({ timeout: 30_000 });
+  await expect(lost.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+  await settled(page);
+  expect(await seriousViolations(page), `confirmation asking what was found (${scheme})`).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath(`action-uncertain-confirmation-${scheme}.png`) });
+  await page.keyboard.press('Escape');
+  await expect(lost).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(lostIn).toHaveCount(0);
+  const [uncertain] = await ticketActions(page, ticket, true);
+  expect(uncertain?.ticketId).toBeTruthy();
+
+  try {
   for (const [width, height] of widths) {
     await page.setViewportSize({ width, height });
     await page.goto('/tickets');
@@ -27,6 +54,7 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
     expect(await seriousViolations(page), `tickets at ${width} px (${scheme})`).toEqual([]);
     expect(await fitsWidth(page), `tickets scroll sideways at ${width} px (${scheme})`).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`tickets-${width}-${scheme}.png`), fullPage: true });
+    await expect(open.locator('xpath=ancestor::li[1]').getByText('Check needed', { exact: true })).toBeVisible();
 
     // The keyboard opens the panel from the title and closes it with Escape, focus back where it was.
     await open.focus(); await page.keyboard.press('Enter');
@@ -49,6 +77,22 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
     await expect(confirm).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0); await expect(open).toBeFocused();
+
+    // The notice's address: the action's card over its ticket, with the way to Atera and the verdict; Escape leaves the ticket open.
+    await page.goto(`/tickets?ticket=${uncertain!.ticketId}&action=${uncertain!.id}`);
+    const card = page.getByRole('dialog', { name: `Reply to the customer · ${name}`, exact: true });
+    await expect(card.getByRole('radiogroup', { name: /Did it happen\?/ })).toBeVisible();
+    await expect(card.getByRole('link', { name: 'Check in Atera' })).toBeVisible();
+    // It opens on its way out, not on the link that leaves for Atera.
+    await expect(card.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+    await settled(page);
+    expect(await seriousViolations(page), `action card over its ticket at ${width} px (${scheme})`).toEqual([]);
+    expect(await fitsWidth(page), `action card scrolls sideways at ${width} px (${scheme})`).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`action-card-${width}-${scheme}.png`) });
+    await page.keyboard.press('Escape');
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/\/tickets\?ticket=[0-9a-f-]{36}$/);
+    await expect(page.getByRole('dialog', { name, exact: true })).toBeVisible();
 
     await page.goto('/connections');
     const log = page.getByRole('region', { name: 'Actions at vendors', exact: true });
@@ -80,5 +124,9 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
     await page.screenshot({ path: testInfo.outputPath(`time-atera-confirmation-${width}-${scheme}.png`) });
     await record.getByRole('button', { name: 'Skip', exact: true }).click();
     await expect(record).toHaveCount(0);
+  }
+  } finally {
+    // The shared database keeps no action waiting for a check (Connections would show it as a gap).
+    for (const left of await ticketActions(page, ticket, true)) await settleAction(page, left, 'Failed', 'Accessibility check: nothing was sent.');
   }
 });

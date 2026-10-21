@@ -2731,7 +2731,8 @@
       "SubscriptionCancellationWindow": "Angrefristar",
       "SubscriptionRenewal": "Lisensfornyingar",
       "StaleOpportunity": "Sal utan aktivitet",
-      "InvoiceOverdue": "Forfalne fakturaer"
+      "InvoiceOverdue": "Forfalne fakturaer",
+      "VendorActionUncertain": "Handlingar som må sjekkast"
     },
     "kinds": {
       "NoticeDeadline": "Avtale {{number}} for {{organization}}: siste dag å seie opp er {{date}}.",
@@ -2745,7 +2746,9 @@
       "SubscriptionRenewal_one": "{{offer}} hos {{organization}} blir fornya {{date}} ({{quantity}} lisens).",
       "SubscriptionRenewal_other": "{{offer}} hos {{organization}} blir fornya {{date}} ({{quantity}} lisensar).",
       "StaleOpportunity_one": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dag.",
-      "StaleOpportunity_other": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dagar."
+      "StaleOpportunity_other": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dagar.",
+      "VendorActionUncertain": "{{system}} gav ikkje noko klart svar på «{{action}}» i sak #{{ticket}} ({{organization}}). Sjekk der og registrer kva du fann.",
+      "VendorActionUncertainNoTicket": "{{system}} gav ikkje noko klart svar på «{{action}}». Sjekk der og registrer kva du fann."
     },
     "emptyUnread": "Ingenting ulese ventar på deg.",
     "digestOff": "Slå på den daglege oppsummeringa for å velje klokkeslett.",
@@ -4435,9 +4438,10 @@
       "cancelAction": "Avbryt handlinga",
       "held": "Blir send om {{seconds}} s. Fram til då kan du avbryte henne.",
       "sending": "Sender til {{system}} …",
-      "uncertainNext": "{{system}} gav ikkje noko klart svar, så ingenting blir sendt på nytt. Sjekk i {{system}} om det skjedde, og registrer kva du fann under Handlingar hos leverandørar på sida Tilkoplingar.",
+      "uncertainNext": "{{system}} gav ikkje noko klart svar, så ingenting blir sendt på nytt. Sjekk i {{system}} om det skjedde, og registrer kva du fann – her, eller seinare frå varselet du får.",
       "openAtVendor": "Sjekk i {{system}}",
-      "keepsGoing": "Du kan lukke vindauget; handlinga held fram."
+      "keepsGoing": "Du kan lukke vindauget; handlinga held fram.",
+      "openTicket": "Opne saka"
     },
     "fields": {
       "requestedBy": "Bede om av",

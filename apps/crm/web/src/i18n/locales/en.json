@@ -2733,7 +2733,8 @@
       "SubscriptionCancellationWindow": "Cancellation windows",
       "SubscriptionRenewal": "Licence renewals",
       "StaleOpportunity": "Deals gone quiet",
-      "InvoiceOverdue": "Overdue invoices"
+      "InvoiceOverdue": "Overdue invoices",
+      "VendorActionUncertain": "Actions that need a check"
     },
     "kinds": {
       "NoticeDeadline": "Contract {{number}} for {{organization}}: the last day to give notice is {{date}}.",
@@ -2747,7 +2748,9 @@
       "SubscriptionRenewal_one": "{{offer}} at {{organization}} renews {{date}} ({{quantity}} licence).",
       "SubscriptionRenewal_other": "{{offer}} at {{organization}} renews {{date}} ({{quantity}} licences).",
       "StaleOpportunity_one": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} day.",
-      "StaleOpportunity_other": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} days."
+      "StaleOpportunity_other": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} days.",
+      "VendorActionUncertain": "{{system}} gave no clear answer to “{{action}}” on ticket #{{ticket}} ({{organization}}). Check there and record what you found.",
+      "VendorActionUncertainNoTicket": "{{system}} gave no clear answer to “{{action}}”. Check there and record what you found."
     },
     "emptyUnread": "Nothing unread is waiting for you.",
     "digestOff": "Turn on the daily digest to choose its hour.",
@@ -4437,9 +4440,10 @@
       "cancelAction": "Cancel the action",
       "held": "Sent in {{seconds}} s. Until then you can cancel it.",
       "sending": "Sending to {{system}}…",
-      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened, then record what you found under Actions at vendors on the Connections page.",
+      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened and record what you found — here, or later from the notice you get.",
       "openAtVendor": "Check in {{system}}",
-      "keepsGoing": "You can close this window; the action carries on."
+      "keepsGoing": "You can close this window; the action carries on.",
+      "openTicket": "Open the ticket"
     },
     "fields": {
       "requestedBy": "Asked by",

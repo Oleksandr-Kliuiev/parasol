@@ -134,6 +134,39 @@ describe('tickets (M39.2)', () => {
     expect(items.map((item) => item.firstElementChild?.textContent?.replace(/just now|\d+ \w+ ago|now/g, '').trim())).toEqual(['Customer', 'Message']);
   });
 
+  it('says in its row which ticket has an action to check, from one lookup per page of rows', async () => {
+    const fetch = api((url) => url === '/api/v1/actions/lookup'
+      ? json({ items: [{ targetId: '4711', waiting: 0, done: 1, uncertain: 1, checkId: 'a1' }] })
+      : null);
+    vi.stubGlobal('fetch', fetch);
+    render();
+    const marked = (await screen.findByRole('button', { name: '#4711 Printer is down' })).closest('li')!;
+    expect(await within(marked).findByText('Check needed')).toBeVisible();
+    expect(within(screen.getByRole('button', { name: '#4712 Outlook crashes' }).closest('li')!).queryByText('Check needed')).not.toBeInTheDocument();
+    const lookups = fetch.mock.calls.filter(([url]) => url === '/api/v1/actions/lookup');
+    expect(lookups).toHaveLength(1);
+    expect(JSON.parse(lookups[0]![1]!.body as string)).toEqual({ system: 'atera', targetType: 'ticket', targetIds: ['4711', '4712'] });
+  });
+
+  it('opens a notice\'s ticket with the card of its action over it, and closing the card keeps the ticket', async () => {
+    const uncertain = {
+      id: 'a1', system: 'atera', kind: 'ticket.reply', level: 'Standard', targetType: 'ticket', targetId: '4711', targetName: '#4711 Printer is down',
+      organizationId: 'o1', organizationName: 'Havbris AS', parameters: { text: 'On my way' }, reason: null, status: 'Uncertain', outcomeCode: 'VND_NO_ANSWER',
+      outcome: 'No answer.', reference: null, attempts: 1, requestedBy: 'u1', requestedByName: 'Kari Nordmann', requestedAt: '2026-10-21T10:00:00Z',
+      notBefore: '2026-10-21T10:00:00Z', startedAt: null, completedAt: '2026-10-21T10:00:05Z', closedBy: null, closedByName: null, closedAt: null,
+      closeReason: null, ticketId: 't1', vendorUrl: 'https://atera.example/ticket/4711', etag: '"1"',
+    };
+    vi.stubGlobal('fetch', api((url) => (url === '/api/v1/actions/a1' ? json(uncertain) : null)));
+    const { router } = render('/tickets?ticket=t1&action=a1');
+    const card = await screen.findByRole('dialog', { name: 'Reply to the customer · #4711 Printer is down' });
+    expect(within(card).getByRole('link', { name: 'Check in Atera' })).toHaveAttribute('href', 'https://atera.example/ticket/4711');
+    expect(within(card).queryByRole('link', { name: 'Open the ticket' })).not.toBeInTheDocument();
+    expect(within(card).getByRole('radiogroup', { name: /Did it happen\?/ })).toBeVisible();
+    await userEvent.click(within(card).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?ticket=t1'));
+    expect(screen.getByRole('dialog', { name: '#4711 Printer is down' })).toBeVisible();
+  });
+
   it('offers no changes to someone who only reads service data', async () => {
     vi.stubGlobal('fetch', api());
     render('/tickets?ticket=t1', ['service.read']);

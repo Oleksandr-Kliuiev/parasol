@@ -2731,7 +2731,8 @@
       "SubscriptionCancellationWindow": "Angrefrister",
       "SubscriptionRenewal": "Lisensfornyelser",
       "StaleOpportunity": "Salg uten aktivitet",
-      "InvoiceOverdue": "Forfalte fakturaer"
+      "InvoiceOverdue": "Forfalte fakturaer",
+      "VendorActionUncertain": "Handlinger som må sjekkes"
     },
     "kinds": {
       "NoticeDeadline": "Avtale {{number}} for {{organization}}: siste dag å si opp er {{date}}.",
@@ -2745,7 +2746,9 @@
       "SubscriptionRenewal_one": "{{offer}} hos {{organization}} fornyes {{date}} ({{quantity}} lisens).",
       "SubscriptionRenewal_other": "{{offer}} hos {{organization}} fornyes {{date}} ({{quantity}} lisenser).",
       "StaleOpportunity_one": "Salget «{{name}}» hos {{organization}} har ikke hatt aktivitet i {{days}} dag.",
-      "StaleOpportunity_other": "Salget «{{name}}» hos {{organization}} har ikke hatt aktivitet i {{days}} dager."
+      "StaleOpportunity_other": "Salget «{{name}}» hos {{organization}} har ikke hatt aktivitet i {{days}} dager.",
+      "VendorActionUncertain": "{{system}} ga ikke noe klart svar på «{{action}}» i sak #{{ticket}} ({{organization}}). Sjekk der og registrer hva du fant.",
+      "VendorActionUncertainNoTicket": "{{system}} ga ikke noe klart svar på «{{action}}». Sjekk der og registrer hva du fant."
     },
     "emptyUnread": "Ingenting ulest venter på deg.",
     "digestOff": "Slå på den daglige oppsummeringen for å velge klokkeslett.",
@@ -4435,9 +4438,10 @@
       "cancelAction": "Avbryt handlingen",
       "held": "Sendes om {{seconds}} s. Frem til da kan du avbryte den.",
       "sending": "Sender til {{system}} …",
-      "uncertainNext": "{{system}} ga ikke noe klart svar, så ingenting sendes på nytt. Sjekk i {{system}} om det skjedde, og registrer hva du fant under Handlinger hos leverandører på siden Tilkoblinger.",
+      "uncertainNext": "{{system}} ga ikke noe klart svar, så ingenting sendes på nytt. Sjekk i {{system}} om det skjedde, og registrer hva du fant – her, eller senere fra varselet du får.",
       "openAtVendor": "Sjekk i {{system}}",
-      "keepsGoing": "Du kan lukke vinduet; handlingen fortsetter."
+      "keepsGoing": "Du kan lukke vinduet; handlingen fortsetter.",
+      "openTicket": "Åpne saken"
     },
     "fields": {
       "requestedBy": "Bedt om av",

@@ -192,3 +192,23 @@ export async function writeAsTechnician(page: Page, technician = DEV_TECHNICIAN)
   } while (cursor);
   throw new Error(`Atera technician ${technician} has not been read yet`);
 }
+
+export interface StoredAction { id: string; status: string; outcomeCode: string | null; closeReason: string | null; ticketId: string | null; etag: string }
+
+/** The actions asked of Atera for the ticket, newest first; `attention` narrows them to those waiting for a check. */
+export async function ticketActions(page: Page, ticket: AteraTicket, attention = false) {
+  return (await api.get<{ items: StoredAction[] }>(page,
+    `/api/v1/actions?targetType=ticket&targetId=${ticket.TicketID}${attention ? '&state=attention' : ''}`)).items;
+}
+
+/**
+ * Records what a person found at Atera for an action without a clear answer, as the action's card does. A test settles what it left
+ * uncertain, so the shared database does not keep "check needed" gaps on Connections.
+ */
+export async function settleAction(page: Page, action: StoredAction, outcome: 'Succeeded' | 'Failed', reason: string) {
+  const response = await page.request.post(`/api/v1/actions/${action.id}/settle`, {
+    data: { outcome, reason }, headers: { 'X-CSRF': '1', 'If-Match': action.etag },
+  });
+  expect(response.status(), await response.text()).toBe(200);
+}
+

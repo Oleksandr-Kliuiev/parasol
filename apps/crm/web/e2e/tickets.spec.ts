@@ -1,9 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
-  DEV_TECHNICIAN, ateraTicket, ateraTicketState, customerMessage, failAtera, hoursInAtera, linkedAteraCustomer, syncAtera, syncTicket, writeAsTechnician,
-  type AteraTicket,
+  DEV_TECHNICIAN, ateraTicket, ateraTicketState, customerMessage, failAtera, hoursInAtera, linkedAteraCustomer, syncAtera, syncTicket, ticketActions,
+  writeAsTechnician, type AteraTicket,
 } from './atera';
-import { api, showRow, signIn, toast } from './support';
+import { api, signIn, toast } from './support';
 
 // M39: the tickets of every customer, read from the Atera stand-in by the real worker jobs, and the changes asked of Atera through
 // the one confirmation every vendor action uses. The worker sends an action within seconds (its loop runs every 5 s); the
@@ -25,6 +25,13 @@ async function openTicket(page: Page, ticket: AteraTicket) {
 
 /** The confirmation's follow-up: the badge and the outcome the worker reported. */
 const followUp = (dialog: Locator) => dialog.getByRole('status');
+
+/**
+ * Focus is back in the ticket's panel: on the button that opened the confirmation, or — in browsers that do not focus a clicked
+ * button (WebKit, Firefox on macOS) — on the panel's first change, as the panel falls back to it.
+ */
+const focusBackIn = (page: Page, panel: string) =>
+  expect.poll(() => page.evaluate(() => document.activeElement?.closest('[role="dialog"]')?.getAttribute('aria-label') ?? null)).toBe(panel);
 
 test('a technician answers a ticket and moves it on from its panel, and Atera gets both as their technician', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(300_000);
@@ -72,46 +79,90 @@ test('a technician answers a ticket and moves it on from its panel, and Atera ge
   await expect(conversation.getByText(text, { exact: true })).toBeVisible({ timeout: SENT });
 });
 
-test('a reply without a clear answer is never sent again and waits in the action log until someone records what they found', async ({ page }) => {
-  test.setTimeout(300_000);
+test('a reply without a clear answer is never sent again: its confirmation asks what was found, and so do the ticket row and the notice', { tag: '@critical' }, async ({ page }) => {
+  test.setTimeout(420_000);
   await signIn(page, 'Crm.Admin');
   const customer = await linkedAteraCustomer(page, 'Tu');
   const ticket = await ateraTicket(page, customer, { TicketTitle: `${customer.marker} e-post kommer ikke fram` });
   await syncTicket(page, ticket, 0);
   await writeAsTechnician(page);
 
-  // Atera takes the reply but the answer is lost: the CRM cannot know whether it arrived.
-  await failAtera(page, 'POST', `/api/v3/tickets/${ticket.TicketID}/comments`, 503, 1);
-  const panel = await openTicket(page, ticket);
-  await panel.getByRole('textbox', { name: 'Reply', exact: true }).fill(`Sjekker e-posten (${customer.marker}).`);
-  await panel.getByRole('button', { name: 'Send the reply', exact: true }).click();
-  const reply = page.getByRole('dialog', { name: `Reply in #${ticket.TicketID}`, exact: true });
-  await reply.getByRole('button', { name: 'Send the reply', exact: true }).click();
-  await expect(followUp(reply)).toContainText('Check needed', { timeout: SENT });
-  await expect(reply.getByText(/^Atera gave no clear answer, so nothing is sent again\. Check in Atera whether it happened/)).toBeVisible();
-  await expect(reply.getByRole('link', { name: 'Check in Atera' })).toHaveAttribute('href', new RegExp(`/${ticket.TicketID}$`));
-  await reply.getByRole('button', { name: 'Close', exact: true }).click();
+  // Atera takes a reply but the answer is lost: Parasoll cannot know whether it arrived.
+  const replyLost = async (text: string) => {
+    await failAtera(page, 'POST', `/api/v3/tickets/${ticket.TicketID}/comments`, 503, 1);
+    const panel = await openTicket(page, ticket);
+    await panel.getByRole('textbox', { name: 'Reply', exact: true }).fill(text);
+    await panel.getByRole('button', { name: 'Send the reply', exact: true }).click();
+    const reply = page.getByRole('dialog', { name: `Reply in #${ticket.TicketID}`, exact: true });
+    await reply.getByRole('button', { name: 'Send the reply', exact: true }).click();
+    await expect(followUp(reply)).toContainText('Check needed', { timeout: SENT });
+    await expect(reply.getByText(/^Atera gave no clear answer, so nothing is sent again\. Check in Atera whether it happened/)).toBeVisible();
+    await expect(reply.getByRole('link', { name: 'Check in Atera' })).toHaveAttribute('href', new RegExp(`/${ticket.TicketID}$`));
+    return { panel, reply };
+  };
+
+  // The first time the person checks at once, in the confirmation itself.
+  const first = await replyLost(`Sjekker e-posten (${customer.marker}).`);
+  await first.reply.getByRole('radio', { name: 'It happened in Atera', exact: true }).check();
+  await first.reply.getByRole('textbox', { name: 'What you checked' }).fill('The reply is in the ticket in Atera.');
+  await first.reply.getByRole('button', { name: 'Save what you found', exact: true }).click();
+  await expect(followUp(first.reply)).toContainText('Checked: it happened.');
+  // Escape reaches the panel once the confirmation has gone and focus is back on its launcher.
+  await first.reply.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(first.reply).toHaveCount(0);
+  await focusBackIn(page, `#${ticket.TicketID} ${ticket.TicketTitle}`);
+  await page.keyboard.press('Escape');
+  await expect(first.panel).toHaveCount(0);
+
+  // The second time they leave it: the ticket's row says a check is needed, and they get a notice.
+  const second = await replyLost(`Ser på det i morgen (${customer.marker}).`);
+  await expect(second.reply.getByRole('radiogroup', { name: /Did it happen\?/ })).toBeVisible();
+  await second.reply.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(second.reply).toHaveCount(0);
+  await focusBackIn(page, `#${ticket.TicketID} ${ticket.TicketTitle}`);
+  await page.keyboard.press('Escape');
+  await expect(second.panel).toHaveCount(0);
+  const row = page.getByRole('button', { name: `#${ticket.TicketID} ${ticket.TicketTitle}`, exact: true }).locator('xpath=ancestor::li[1]');
+  await expect(row.getByText('Check needed', { exact: true })).toBeVisible();
   expect((await ateraTicketState(page, ticket)).Comments).toEqual([]);
 
-  // Connections → the action log, narrowed to what needs a check; the verdict is recorded with what was checked.
-  await page.goto('/connections');
-  const log = page.getByRole('region', { name: 'Actions at vendors', exact: true });
-  await log.getByRole('button', { name: /^Check needed/ }).click();
+  // The notice comes after a two-minute pause (the first reply, checked at once, gets none) and opens the ticket with the action's
+  // card, where the verdict is recorded.
+  const notice = `Open: Atera gave no clear answer to “Reply to the customer” on ticket #${ticket.TicketID} (${customer.name}). Check there and record what you found.`;
+  await expect.poll(async () => {
+    await page.goto('/notifications');
+    await page.waitForLoadState('networkidle');
+    return page.getByRole('link', { name: notice, exact: true }).count();
+  }, { timeout: 200_000, intervals: [5_000, 10_000] }).toBe(1);
+  await page.getByRole('link', { name: notice, exact: true }).click();
+  await expect(page).toHaveURL(/\/tickets\?ticket=[0-9a-f-]{36}&action=[0-9a-f-]{36}$/);
   const title = `Reply to the customer · #${ticket.TicketID} ${ticket.TicketTitle}`;
-  const open = await showRow(page, log.getByRole('button', { name: title, exact: true }));
-  await open.click();
-  const detail = page.getByRole('dialog', { name: title, exact: true });
-  await detail.getByRole('radio', { name: 'It did not happen in Atera', exact: true }).check();
-  await detail.getByRole('textbox', { name: 'What you checked' }).fill('No reply in the ticket in Atera at 10:05.');
-  await detail.getByRole('button', { name: 'Save what you found', exact: true }).click();
-  await expect(detail.getByRole('status')).toContainText('Failed');
-  await detail.getByRole('button', { name: 'Close', exact: true }).first().click();
+  const card = page.getByRole('dialog', { name: title, exact: true });
+  await expect(card.getByRole('link', { name: 'Check in Atera' })).toHaveAttribute('href', new RegExp(`/${ticket.TicketID}$`));
+  // The card lies over its own ticket: no way to it is offered.
+  await expect(card.getByRole('link', { name: 'Open the ticket' })).toHaveCount(0);
+  await card.getByRole('radio', { name: 'It did not happen in Atera', exact: true }).check();
+  await card.getByRole('textbox', { name: 'What you checked' }).fill('No reply in the ticket in Atera at 10:05.');
+  await card.getByRole('button', { name: 'Save what you found', exact: true }).click();
+  await expect(card.getByRole('status')).toContainText('Failed');
+  await card.getByRole('button', { name: 'Close', exact: true }).first().click();
+  await expect(card).toHaveCount(0);
+  await expect(page).toHaveURL(/\/tickets\?ticket=[0-9a-f-]{36}$/);
+  const panel = page.getByRole('dialog', { name: `#${ticket.TicketID} ${ticket.TicketTitle}`, exact: true });
+  await expect(panel).toBeVisible();
 
-  const settled = await api.get<{ items: Array<{ status: string; outcomeCode: string; closeReason: string | null }> }>(page,
-    `/api/v1/actions?targetType=ticket&targetId=${ticket.TicketID}`);
-  expect(settled.items).toEqual([expect.objectContaining({ status: 'Failed', outcomeCode: 'VND_SETTLED_NOT_DONE', closeReason: 'No reply in the ticket in Atera at 10:05.' })]);
-  // Nothing was sent again meanwhile.
+  const settled = await ticketActions(page, ticket);
+  expect(settled.map(({ status, outcomeCode, closeReason }) => ({ status, outcomeCode, closeReason }))).toEqual([
+    { status: 'Failed', outcomeCode: 'VND_SETTLED_NOT_DONE', closeReason: 'No reply in the ticket in Atera at 10:05.' },
+    { status: 'Succeeded', outcomeCode: 'VND_SETTLED_DONE', closeReason: 'The reply is in the ticket in Atera.' },
+  ]);
+  // Nothing was sent again meanwhile, and the row no longer asks for a check.
   expect((await ateraTicketState(page, ticket)).Comments).toEqual([]);
+  await panel.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(panel).toHaveCount(0);
+  await page.getByRole('searchbox', { name: 'Search title or number' }).fill(ticket.TicketTitle);
+  await expect(row).toBeVisible();
+  await expect(row.getByText('Check needed', { exact: true })).toHaveCount(0);
 });
 
 test('own hours are recorded on the ticket in Atera from the time form, and the work-hours import never counts them twice', { tag: '@critical' }, async ({ page }) => {

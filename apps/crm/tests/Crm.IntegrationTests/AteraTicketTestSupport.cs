@@ -69,8 +69,8 @@ internal sealed class AteraTicketHost(WebApplicationFactory<Program> host, WireM
         return client;
     }
 
-    /// <summary>A linked organization with one mirrored open ticket; the stub answers the ticket's live read.</summary>
-    public async Task<TestTicket> TicketAsync(string status = "Open", string priority = "Medium", long? technician = 4001)
+    /// <summary>A linked organization with one mirrored open ticket (at <paramref name="url"/> in Atera); the stub answers the ticket's live read.</summary>
+    public async Task<TestTicket> TicketAsync(string status = "Open", string priority = "Medium", long? technician = 4001, string? url = null)
     {
         var admin = Client();
         var organizationId = await admin.CreateOrganizationAsync(new { name = $"Sak {Guid.NewGuid():N}"[..20], status = "Customer" });
@@ -86,7 +86,7 @@ internal sealed class AteraTicketHost(WebApplicationFactory<Program> host, WireM
         var service = scope.ServiceProvider.GetRequiredService<IServiceApi>();
         await service.UpsertTicketsAsync([new ExternalTicket(
             "atera", ticketId, organizationId, null, "Printer is down", status, priority, null, "Incident", "Email", null,
-            technician is null ? null : "Tor Tekniker", "Kari Kunde", "kari@example.no", DateTimeOffset.UtcNow.AddHours(-3), null, null, null, null,
+            technician is null ? null : "Tor Tekniker", "Kari Kunde", "kari@example.no", DateTimeOffset.UtcNow.AddHours(-3), null, null, null, url,
             customerId, link.Id)], Ct);
         var mirror = (await service.GetTicketAsync("atera", ticketId, Ct))!.Id;
         Live(new TestTicket(organizationId, customerId, ticketId, mirror), status, priority, technician);

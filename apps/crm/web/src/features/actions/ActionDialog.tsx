@@ -14,6 +14,8 @@ import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { systemName } from '../integrations/labels';
 import { cancelAction, previewAction, requestAction, useAction, useRefreshActions } from './api';
 import { ActionStatusBadge } from './ActionStatusBadge';
+import { SettleFields } from './ActionSettleForm';
+import { useSettlement, type Settlement } from './settlement';
 import { actionErrorText, blockText, effectText, nameMatches, outcomeText } from './actionText';
 import { isWaiting, type ActionPreview, type ActionRequest, type VendorAction } from './types';
 
@@ -34,8 +36,9 @@ const useStyles = makeStyles({
 /**
  * The one confirmation of every action at a vendor (M39.1). It shows the server's preview — made from saved data: the target, what
  * changes, what blocks it — asks what the action's level asks (one button; a reason; a fresh sign-in, the target's name typed and a
- * reason, then a hold with a way back), and follows the action until the worker has an outcome. Closing it never stops an action:
- * the action log keeps it.
+ * reason, then a hold with a way back), and follows the action until the worker has an outcome. An outcome without a clear answer
+ * asks the person, right there, what they found at the vendor. Closing it never stops an action: the action log keeps it, and the
+ * person who asked gets a notice when it needs a check.
  */
 export function ActionDialog({ request, title, confirm, details, onClose, onAccepted, onFinished }: {
   request: ActionRequest | null; title: string; confirm: string;
@@ -83,6 +86,7 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
   const [reason, setReason] = useState(''); const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const [accepted, setAccepted] = useState<VendorAction | null>(null);
+  const settlement = useSettlement();
   // One key for every press in this dialog: a repeat after a lost answer returns the action already saved, never a second one.
   const commandKey = useRef(crypto.randomUUID());
   const alive = useRef(true); const finished = useRef(false); const cancelRef = useRef<HTMLButtonElement>(null); const closeRef = useRef<HTMLButtonElement>(null);
@@ -123,11 +127,12 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
     }
   };
 
-  const cancel = async () => {
+  // Cancelling during the hold and settling an outcome without an answer change the action the dialog follows.
+  const change = async (run: (action: VendorAction) => Promise<VendorAction>) => {
     if (!live || busy) return;
     setBusy(true); setSubmitError(null);
     try {
-      const action = await cancelAction(live);
+      const action = await run(live);
       if (alive.current) { setAccepted(action); refresh(action); }
     } catch (error) {
       if (alive.current) setSubmitError(error);
@@ -135,11 +140,16 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
       if (alive.current) setBusy(false);
     }
   };
+  const uncertain = live?.status === 'Uncertain';
 
-  return <form onSubmit={(event) => { event.preventDefault(); void submit(); }}><DialogBody>
+  return <form onSubmit={(event) => {
+    event.preventDefault();
+    if (!uncertain) void submit();
+    else if (settlement.ready) void change(settlement.settle);
+  }}><DialogBody>
     <DialogTitle>{title}</DialogTitle>
     <DialogContent className={styles.content}>
-      {live && preview ? <Following action={live} preview={preview} /> : <>
+      {live && preview ? <Following action={live} preview={preview} settlement={settlement} busy={busy} /> : <>
         {!preview && !loadError && <Spinner size="small" label={t('actions.dialog.previewing')} />}
         {loadError !== null && <MessageBar intent="error" layout="multiline"><MessageBarBody>{actionErrorText(t, loadError)}{' '}
           <Link as="button" type="button" onClick={() => void previewQuery.refetch()}>{t('common.retry')}</Link></MessageBarBody></MessageBar>}
@@ -177,8 +187,9 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
     </DialogContent>
     <DialogActions>
       {live ? <>
-        {live.status === 'Scheduled' && <Button onClick={() => void cancel()} disabled={busy}>{t('actions.dialog.cancelAction')}</Button>}
-        <Button ref={closeRef} appearance="primary" onClick={onClose}>{t('common.close')}</Button>
+        {live.status === 'Scheduled' && <Button onClick={() => void change(cancelAction)} disabled={busy}>{t('actions.dialog.cancelAction')}</Button>}
+        <Button ref={closeRef} appearance={uncertain ? 'secondary' : 'primary'} onClick={onClose}>{t('common.close')}</Button>
+        {uncertain && <Button appearance="primary" type="submit" disabled={!settlement.ready || busy}>{t('actions.settle.confirm')}</Button>}
       </> : <>
         <Button ref={cancelRef} onClick={onClose} disabled={busy}>{dismiss ?? t('common.cancel')}</Button>
         <Button appearance="primary" type="submit" disabled={!ready || busy}>{confirm}</Button>
@@ -187,24 +198,31 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
   </DialogBody></form>;
 }
 
-/** The action after it was asked for: held with its countdown, on its way, or its outcome; announced as it changes. */
-function Following({ action, preview }: { action: VendorAction; preview: ActionPreview }) {
+/**
+ * The action after it was asked for: held with its countdown, on its way, or its outcome; announced as it changes. An outcome without a
+ * clear answer brings the way to the vendor and the verdict form, saved by the dialog's button.
+ */
+function Following({ action, preview, settlement, busy }: { action: VendorAction; preview: ActionPreview; settlement: Settlement; busy: boolean }) {
   const { t } = useTranslation(); const styles = useStyles();
   const seconds = useSecondsUntil(action.status === 'Scheduled' ? action.notBefore : null);
   const system = systemName(t, action.system);
   const url = action.status === 'Uncertain' && preview.target.url ? safeHttpUrl(preview.target.url) : undefined;
-  return <div className={styles.content} role="status" aria-live="polite">
-    <div className={styles.status}>
-      <ActionStatusBadge status={action.status} />
-      {(action.status === 'Queued' || action.status === 'Sending') && <Spinner size="extra-tiny" aria-hidden />}
-      <Text>{action.status === 'Scheduled' ? t('actions.dialog.held', { seconds })
-        : isWaiting(action.status) ? t('actions.dialog.sending', { system })
-          : outcomeText(t, action) || t(`actions.status.${action.status}`)}</Text>
+  // The words are announced as they change; the link and the form stay outside the live region.
+  return <div className={styles.content}>
+    <div className={styles.content} role="status" aria-live="polite">
+      <div className={styles.status}>
+        <ActionStatusBadge status={action.status} />
+        {(action.status === 'Queued' || action.status === 'Sending') && <Spinner size="extra-tiny" aria-hidden />}
+        <Text>{action.status === 'Scheduled' ? t('actions.dialog.held', { seconds })
+          : isWaiting(action.status) ? t('actions.dialog.sending', { system })
+            : outcomeText(t, action) || t(`actions.status.${action.status}`)}</Text>
+      </div>
+      {action.status === 'Uncertain' && <Text className={styles.muted}>{t('actions.dialog.uncertainNext', { system })}</Text>}
+      {isWaiting(action.status) && <Text className={styles.muted}>{t('actions.dialog.keepsGoing')}</Text>}
     </div>
-    {action.status === 'Uncertain' && <Text className={styles.muted}>{t('actions.dialog.uncertainNext', { system })}</Text>}
     {url && <Link href={url} target="_blank" rel="noopener noreferrer" className={styles.external}>
       <span>{t('actions.dialog.openAtVendor', { system })}</span><Open16Regular aria-hidden /></Link>}
-    {isWaiting(action.status) && <Text className={styles.muted}>{t('actions.dialog.keepsGoing')}</Text>}
+    {action.status === 'Uncertain' && <SettleFields action={action} settlement={settlement} disabled={busy} />}
   </div>;
 }
 

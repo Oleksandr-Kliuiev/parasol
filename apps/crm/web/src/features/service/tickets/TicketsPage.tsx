@@ -13,6 +13,8 @@ import { Panel } from '../../../shared/components/Panel';
 import { FilterChips, FilterField, Toolbar } from '../../../shared/components/Toolbar';
 import { formatDateTime, formatRelative } from '../../../shared/utils/format';
 import { useDebouncedValue } from '../../../shared/utils/useDebouncedValue';
+import { useActionFacts } from '../../actions/api';
+import { ActionStatusBadge } from '../../actions/ActionStatusBadge';
 import { RecordRow, RowMeta } from '../../billing/RecordRow';
 import { useFlushStyles } from '../../billing/flushStyles';
 import { ForbiddenPage } from '../../errors/ForbiddenPage';
@@ -53,13 +55,19 @@ function Tickets() {
     if (value) next.set(key, value); else next.delete(key);
     setParams(next, { replace: true });
   };
-  // One ticket in a side panel with its own address (?ticket=), so Back closes it and other pages can link to it.
+  // One ticket in a side panel with its own address (?ticket=), so Back closes it and other pages can link to it; a notice adds the
+  // action it is about (&action=), whose card opens over the ticket.
   const peekId = params.get('ticket');
-  const open = (ticket: Ticket) => { const next = new URLSearchParams(params); next.set('ticket', ticket.id); setParams(next, { state: { ticketPeek: true } }); };
+  const actionId = params.get('action');
+  const open = (ticket: Ticket) => {
+    const next = new URLSearchParams(params); next.set('ticket', ticket.id); next.delete('action'); setParams(next, { state: { ticketPeek: true } });
+  };
   const close = () => {
     if ((location.state as { ticketPeek?: boolean } | null)?.ticketPeek) { void navigate(-1); return; }
-    setParam('ticket', null);
+    const next = new URLSearchParams(params); next.delete('ticket'); next.delete('action'); setParams(next, { replace: true });
   };
+  // Which rows wait for someone to check an action at Atera: one lookup per page of rows (tickets come from Atera, M39).
+  const facts = useActionFacts('atera', 'ticket', queue.data?.pages.map((page) => page.items.map((ticket) => String(ticket.externalId))) ?? []);
   const refreshing = queue.isFetching && !queue.isFetchingNextPage;
   const filtered = mine || debounced !== '';
 
@@ -83,19 +91,23 @@ function Tickets() {
         {queue.total !== null && queue.total > 0 && <Text className={styles.totals} role="status">{t(all ? 'tickets.totalsAll' : 'tickets.totals', { count: queue.total })}</Text>}
         <Panel title={t('tickets.listTitle')} icon={<Headset16Regular />} flush className={flush.panel}>
           {queue.items.length > 0
-            ? <ul className={flush.list}>{queue.items.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} onOpen={() => open(ticket)} />)}</ul>
+            ? <ul className={flush.list}>{queue.items.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} onOpen={() => open(ticket)}
+              check={(facts.facts.get(String(ticket.externalId))?.uncertain ?? 0) > 0} />)}</ul>
             : <EmptyState icon={<Headset24Regular />} message={t(filtered ? 'tickets.emptyFiltered' : all ? 'tickets.emptyAll' : 'tickets.empty')}
               action={filtered && <Button onClick={() => { setSearch(''); setParam('mine', null); }}>{t('tickets.clearFilters')}</Button>} />}
           <ListFooter shown={queue.items.length} total={queue.total} hasMore={Boolean(queue.hasNextPage)} loading={queue.isFetchingNextPage}
             onMore={() => void queue.fetchNextPage()} />
         </Panel>
       </>}
-    <TicketPanel ticketId={peekId} onClose={close} />
+    <TicketPanel ticketId={peekId} actionId={actionId} onActionClose={() => setParam('action', null)} onClose={close} />
   </>;
 }
 
-/** One ticket: its number and title open the panel; the customer, the person and the technician under it; status and priority at the end. */
-function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: () => void }) {
+/**
+ * One ticket: its number and title open the panel; the customer, the person and the technician under it; at the end whether an action
+ * asked of Atera needs a check, the priority and the status.
+ */
+function TicketRow({ ticket, onOpen, check }: { ticket: Ticket; onOpen: () => void; check: boolean }) {
   const { t } = useTranslation(); const styles = useStyles(); const restore = useRestoreFocusTarget();
   const at = ticket.lastActivityAt ?? ticket.createdAt;
   return <RecordRow icon={<Headset16Regular />} tone={ticket.isOpen ? 'iris' : 'neutral'}
@@ -105,6 +117,7 @@ function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: () => void }) {
       {' · '}<time dateTime={at} title={formatDateTime(at)}>{formatRelative(at)}</time>
     </RowMeta>}
     end={<span className={styles.end}>
+      {check && <ActionStatusBadge status="Uncertain" />}
       {ticket.priority && <Badge appearance="outline" color={ticket.priority === 'Critical' || ticket.priority === 'High' ? 'danger' : 'informative'}>
         {t(`tickets.priorities.${ticket.priority}`, { defaultValue: ticket.priority })}</Badge>}
       <Badge appearance="tint" color={ticket.isOpen ? 'informative' : 'subtle'}>{t(`tickets.statuses.${ticket.status}`, { defaultValue: ticket.status })}</Badge>

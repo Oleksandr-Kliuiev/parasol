@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.Json;
+
 namespace Crm.Integrations.Core.Actions;
 
 /// <summary>
@@ -20,6 +23,37 @@ public static class VendorActionTargets
 
     /// <summary>What an action's stored parameters become once its words are erased or past their retention (DEV-11).</summary>
     public const string ErasedParameters = "{}";
+
+    /// <summary>
+    /// The parameter that names the desk ticket an action concerns when its target is something else (hours recorded on a ticket), so
+    /// the action's card and its notice lead to that ticket.
+    /// </summary>
+    public const string TicketParameter = "ticket";
+
+    /// <summary>
+    /// The desk ticket an action concerns: its target, or the ticket its parameters name; null when neither (or the parameters were
+    /// already cleared by retention).
+    /// </summary>
+    public static long? TicketOf(VendorAction action)
+    {
+        if (action.TargetType == Ticket)
+        {
+            return long.TryParse(action.TargetId, NumberStyles.None, CultureInfo.InvariantCulture, out var target) ? target : null;
+        }
+
+        try
+        {
+            using var parameters = JsonDocument.Parse(action.Parameters);
+            return parameters.RootElement.ValueKind == JsonValueKind.Object && parameters.RootElement.TryGetProperty(TicketParameter, out var ticket) &&
+                ticket.ValueKind == JsonValueKind.Number && ticket.TryGetInt64(out var number) && number > 0
+                ? number
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 }
 
 /// <summary>Where one action stands. The last six are outcomes; only <see cref="Uncertain"/> waits for a person.</summary>

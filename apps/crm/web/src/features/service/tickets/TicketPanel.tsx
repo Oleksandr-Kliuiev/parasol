@@ -10,6 +10,8 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime, formatRelative } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
+import { useAction } from '../../actions/api';
+import { ActionDetailDialog } from '../../actions/ActionDetailDialog';
 import { ActionDialog } from '../../actions/ActionDialog';
 import { ActionList } from '../../actions/ActionLog';
 import type { VendorAction } from '../../actions/types';
@@ -35,9 +37,12 @@ const useStyles = makeStyles({
 
 /**
  * One ticket in a side panel (M39.2): what Atera said at the last read, how fresh that is, the changes a person can make, the
- * conversation with its answer box, and the actions already asked for this ticket. The address holds the ticket (`?ticket=`).
+ * conversation with its answer box, and the actions already asked for this ticket. The address holds the ticket (`?ticket=`), and a
+ * notice about an action adds it (`&action=`): its card opens over the ticket, where the person records what they found.
  */
-export function TicketPanel({ ticketId, onClose }: { ticketId: string | null; onClose: () => void }) {
+export function TicketPanel({ ticketId, actionId = null, onActionClose, onClose }: {
+  ticketId: string | null; actionId?: string | null; onActionClose?: () => void; onClose: () => void;
+}) {
   const { t } = useTranslation(); const styles = useStyles();
   const read = useTicket(ticketId);
   const ticket = ticketId !== null && !read.isFetching ? read.data : undefined;
@@ -52,13 +57,16 @@ export function TicketPanel({ ticketId, onClose }: { ticketId: string | null; on
       {!read.isFetching && read.isError && (missing
         ? <Text block role="status">{t('tickets.panel.notFound')}</Text>
         : <ErrorState error={read.error} onRetry={() => void read.refetch()} />)}
-      {(ticket ?? read.data) && <TicketBody ticket={(ticket ?? read.data)!} onClose={onClose} />}
+      {(ticket ?? read.data) && <TicketBody ticket={(ticket ?? read.data)!} actionId={actionId} onActionClose={onActionClose} onClose={onClose} />}
     </DrawerBody>
   </OverlayDrawer>;
 }
 
-function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => void }) {
+function TicketBody({ ticket, actionId, onActionClose, onClose }: {
+  ticket: TicketDetail; actionId: string | null; onActionClose?: () => void; onClose: () => void;
+}) {
   const { t } = useTranslation(); const styles = useStyles(); const client = useQueryClient();
+  const linked = useAction(actionId).data ?? null;
   const canWrite = useCan(Permissions.serviceWrite);
   const [ask, setAsk] = useState<TicketActionAsk | null>(null);
   const bar = useRef<HTMLDivElement>(null); const asking = useRef(false);
@@ -110,5 +118,7 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
     </section>
     <ActionDialog request={ask?.request ?? null} title={ask?.title ?? ''} confirm={ask?.confirm ?? ''} details={ask?.details}
       onClose={closeAsk} onAccepted={ask?.onAccepted} onFinished={finished} />
+    <ActionDetailDialog action={actionId !== null && linked?.id === actionId ? linked : null} onClose={() => onActionClose?.()}
+      ticketShown={linked?.ticketId === ticket.id} />
   </>;
 }

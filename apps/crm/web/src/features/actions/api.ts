@@ -1,7 +1,9 @@
 import { useCallback, useMemo } from 'react';
-import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueries, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
-import { isWaiting, type ActionKind, type ActionPage, type ActionPreview, type ActionRequest, type VendorAction } from './types';
+import {
+  isWaiting, type ActionKind, type ActionPage, type ActionPreview, type ActionRequest, type ActionTargetFacts, type VendorAction,
+} from './types';
 
 const BASE = '/api/v1/actions';
 
@@ -11,7 +13,11 @@ export const actionKeys = {
   // The page size is part of the key: the filter counts read one row, and that page must never stand in for the list's.
   log: (filters: ActionLogFilters, limit?: number) => ['actions', 'log', filters, limit ?? null] as const,
   kinds: (system: string) => ['actions', 'kinds', system] as const,
+  facts: (system: string, targetType: string, ids: readonly string[]) => ['actions', 'facts', system, targetType, ids] as const,
 };
+
+/** The targets one lookup carries: a page of a list (the server's limit). */
+export const factsLimit = 50;
 
 export interface ActionLogFilters {
   system?: string;
@@ -90,11 +96,36 @@ export function useActionLog(filters: ActionLogFilters, options: { enabled?: boo
   return { ...result, items, total: last?.totalCount ?? null, uncertain: last?.uncertain ?? 0, waiting: last?.waiting ?? 0 };
 }
 
-/** After an action changed: every log and the action itself are read again. */
+/**
+ * The action facts beside a list's rows (M39): one lookup per page of targets (never one per row), merged into one map by target id.
+ * A page whose lookup failed leaves its rows without facts; nothing is claimed about them.
+ */
+export function useActionFacts(system: string, targetType: string, pages: readonly (readonly string[])[], enabled = true) {
+  return useQueries({
+    queries: pages.filter((ids) => ids.length > 0).flatMap((ids) => chunks(ids, factsLimit)).map((ids) => ({
+      queryKey: actionKeys.facts(system, targetType, ids),
+      enabled,
+      retry: false,
+      staleTime: 30_000,
+      queryFn: async () => (await api.post<{ items: ActionTargetFacts[] }>(`${BASE}/lookup`, { system, targetType, targetIds: ids })).data,
+    })),
+    combine: (results) => {
+      const facts = new Map<string, ActionTargetFacts>();
+      for (const result of results) for (const item of result.data?.items ?? []) facts.set(item.targetId, item);
+      return { facts, loading: results.some((r) => r.isPending && r.fetchStatus !== 'idle'), failed: results.some((r) => r.isError) };
+    },
+  });
+}
+
+const chunks = (ids: readonly string[], size: number) =>
+  Array.from({ length: Math.ceil(ids.length / size) }, (_, index) => ids.slice(index * size, (index + 1) * size));
+
+/** After an action changed: every log, the facts beside list rows and the action itself are read again. */
 export function useRefreshActions() {
   const client = useQueryClient();
   return useCallback((action?: VendorAction) => {
     if (action) client.setQueryData(actionKeys.one(action.id), action);
     void client.invalidateQueries({ queryKey: ['actions', 'log'] });
+    void client.invalidateQueries({ queryKey: ['actions', 'facts'] });
   }, [client]);
 }

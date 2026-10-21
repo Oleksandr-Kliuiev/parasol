@@ -28,7 +28,8 @@ function action(changes: Partial<VendorAction> = {}): VendorAction {
     id: 'a1', system: 'atera', kind: 'ticket.close', level: 'Standard', targetType: 'ticket', targetId: '4711', targetName: '#4711 Printer is down',
     organizationId: 'o1', organizationName: 'Havbris AS', parameters: {}, reason: null, status: 'Queued', outcomeCode: null, outcome: null, reference: null,
     attempts: 0, requestedBy: 'u1', requestedByName: 'Kari Nordmann', requestedAt: '2026-10-21T12:00:00Z', notBefore: '2026-10-21T12:00:00Z',
-    startedAt: null, completedAt: null, closedBy: null, closedByName: null, closedAt: null, closeReason: null, etag: '"v1"', ...changes,
+    startedAt: null, completedAt: null, closedBy: null, closedByName: null, closedAt: null, closeReason: null, ticketId: 't1',
+    vendorUrl: 'https://atera.example/ticket/4711', etag: '"v1"', ...changes,
   };
 }
 
@@ -63,6 +64,39 @@ it('shows the preview, sends one confirmed command with its token and follows th
   expect(await screen.findByText('The vendor accepted the change.', {}, { timeout: 6_000 })).toBeVisible();
   await waitFor(() => expect(finished).toHaveBeenCalledWith(expect.objectContaining({ status: 'Succeeded' })));
   expect(posts(fetch)).toHaveLength(2);
+}, 15_000);
+
+it('asks, right in the confirmation, what the person found when the answer never came, and saves it with the version it read', async () => {
+  const uncertain = action({ status: 'Uncertain', outcomeCode: 'VND_NO_ANSWER', outcome: 'No answer.', completedAt: '2026-10-21T12:00:05Z', etag: '"u1"' });
+  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url === '/api/v1/actions/preview') return json(preview());
+    if (url === '/api/v1/actions' && init?.method === 'POST') return json(action(), 202);
+    if (url === '/api/v1/actions/a1') return json(uncertain);
+    if (url === '/api/v1/actions/a1/settle') return json({ ...uncertain, status: 'Failed', outcomeCode: 'VND_SETTLED_NOT_DONE', closeReason: 'No reply in Atera at 10:05', etag: '"u2"' });
+    return json({}, 404);
+  });
+  vi.stubGlobal('fetch', fetch); const finished = vi.fn(); render(finished);
+  await userEvent.click(await screen.findByRole('button', { name: 'Close ticket' }));
+
+  expect(await screen.findByText(/^Atera gave no clear answer, so nothing is sent again\. Check in Atera whether it happened and record what you found/,
+    {}, { timeout: 6_000 })).toBeVisible();
+  expect(screen.getByRole('status')).toHaveTextContent('Check needed');
+  expect(screen.getByRole('link', { name: 'Check in Atera' })).toHaveAttribute('href', 'https://atera.example/ticket/4711');
+  await waitFor(() => expect(finished).toHaveBeenCalledWith(expect.objectContaining({ status: 'Uncertain' })));
+  // The verdict is the layout's one primary action; Close steps back.
+  const save = screen.getByRole('button', { name: 'Save what you found' });
+  expect(save).toBeDisabled();
+  await userEvent.click(screen.getByRole('radio', { name: 'It did not happen in Atera' }));
+  fireEvent.change(screen.getByRole('textbox', { name: /What you checked/ }), { target: { value: 'No reply in Atera at 10:05' } });
+  await userEvent.click(save);
+
+  expect(await screen.findByText('Checked: it did not happen.')).toBeVisible();
+  const settle = posts(fetch).find(([url]) => url === '/api/v1/actions/a1/settle')!;
+  expect(JSON.parse(settle[1].body as string)).toEqual({ outcome: 'Failed', reason: 'No reply in Atera at 10:05' });
+  expect((settle[1].headers as Record<string, string>)['If-Match']).toBe('"u1"');
+  expect(screen.queryByRole('radio', { name: 'It did not happen in Atera' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Save what you found' })).not.toBeInTheDocument();
+  expect(finished).toHaveBeenCalledTimes(1);
 }, 15_000);
 
 it('names what blocks an action and offers no way to confirm it', async () => {
