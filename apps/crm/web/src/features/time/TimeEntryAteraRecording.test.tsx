@@ -61,7 +61,7 @@ it('goes on from the saved entry into the Atera confirmation and sends the comma
   expect(urls(fetch)).not.toContain('POST /api/v1/actions');
 
   await userEvent.click(within(dialog).getByRole('button', { name: 'Record in Atera' }));
-  expect(await within(dialog).findByText('Done.')).toBeVisible();
+  expect(await within(dialog).findByText('The vendor accepted the change.')).toBeVisible();
   const command = JSON.parse(fetch.mock.calls.find(([url, init]) => url === '/api/v1/actions' && init?.method === 'POST')![1]!.body as string);
   expect(command).toMatchObject({ system: 'atera', kind: 'time.record', targetType: 'time-entry', targetId: 'entry-new', parameters: {}, previewToken: 'token' });
 });

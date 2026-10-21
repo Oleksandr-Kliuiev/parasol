@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button, Field, Radio, RadioGroup, Spinner, Text, Textarea, makeStyles, mergeClasses } from '@fluentui/react-components';
+import { Badge, Button, Field, Radio, RadioGroup, Spinner, Text, Textarea, makeStyles, mergeClasses, useRestoreFocusTarget } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -40,6 +40,7 @@ export function TicketConversation({ ticket, canWrite, onAsk }: { ticket: Ticket
   const shown = [...comments.items].reverse();
   const [mode, setMode] = useState<'reply' | 'note'>('reply');
   const [text, setText] = useState('');
+  const restore = useRestoreFocusTarget();
   const number = `#${ticket.externalId}`;
   const send = () => {
     const trimmed = text.trim();
@@ -75,7 +76,8 @@ export function TicketConversation({ ticket, canWrite, onAsk }: { ticket: Ticket
         hint={t(mode === 'reply' ? 'tickets.composer.replyHint' : 'tickets.composer.noteHint')}>
         <Textarea value={text} onChange={(_, data) => setText(data.value)} maxLength={MAX_TEXT} resize="vertical" rows={4} />
       </Field>
-      <Button className={styles.send} appearance="primary" disabled={!text.trim()} onClick={send}>
+      {/* Focus comes back here when the confirmation closes, also once the sent text has emptied the box. */}
+      <Button {...restore} className={styles.send} appearance="primary" disabled={!text.trim()} disabledFocusable={!text.trim()} onClick={send}>
         {t(mode === 'reply' ? 'tickets.composer.sendReply' : 'tickets.composer.addNote')}</Button>
     </div>}
   </section>;
@@ -83,13 +85,16 @@ export function TicketConversation({ ticket, canWrite, onAsk }: { ticket: Ticket
 
 function Message({ comment }: { comment: TicketComment }) {
   const { t } = useTranslation(); const styles = useStyles();
-  const author = comment.authorName ?? t(`tickets.conversation.authors.${comment.author}`);
+  // The name the desk gave, else the kind of author; the role word only where it adds something (never "Customer Customer").
+  const role = t(`tickets.conversation.roles.${comment.author}`);
+  const author = comment.authorName ?? (comment.author === 'Unknown' ? null : t(`tickets.conversation.authors.${comment.author}`));
+  const showRole = author === null || author.toLocaleLowerCase() !== role.toLocaleLowerCase();
   return <li className={mergeClasses(styles.message, comment.isInternal ? styles.note : comment.author === 'Technician' && styles.reply)}>
     <div className={styles.head}>
-      <span className={styles.author}>{author}</span>
+      {author && <span className={styles.author}>{author}</span>}
       {comment.isInternal
         ? <Badge appearance="tint" color="warning">{t('tickets.conversation.internal')}</Badge>
-        : <span>{t(`tickets.conversation.roles.${comment.author}`)}</span>}
+        : showRole && <span>{role}</span>}
       <time dateTime={comment.createdAt} title={formatDateTime(comment.createdAt)}>{formatRelative(comment.createdAt)}</time>
     </div>
     <p className={styles.text}>{comment.text}</p>

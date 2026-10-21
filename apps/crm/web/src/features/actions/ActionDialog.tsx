@@ -85,13 +85,15 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
   const [accepted, setAccepted] = useState<VendorAction | null>(null);
   // One key for every press in this dialog: a repeat after a lost answer returns the action already saved, never a second one.
   const commandKey = useRef(crypto.randomUUID());
-  const alive = useRef(true); const finished = useRef(false); const cancelRef = useRef<HTMLButtonElement>(null);
+  const alive = useRef(true); const finished = useRef(false); const cancelRef = useRef<HTMLButtonElement>(null); const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   // Nothing to type: the way out takes the focus, so a stray Enter changes nothing (as in ConfirmDialog).
   useEffect(() => { if (preview && !preview.confirmation.reason) cancelRef.current?.focus(); }, [preview]);
 
   const live = useAction(accepted?.id ?? null, accepted ?? undefined).data ?? accepted;
+  // Once asked, the confirm button is gone: focus goes to Close, the way out, never to the page behind (as in AlertTaskDialog).
+  useEffect(() => { if (accepted) closeRef.current?.focus(); }, [accepted]);
   useEffect(() => {
     if (!live || isWaiting(live.status) || finished.current) return;
     finished.current = true; refresh(live); onFinished?.(live);
@@ -176,7 +178,7 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
     <DialogActions>
       {live ? <>
         {live.status === 'Scheduled' && <Button onClick={() => void cancel()} disabled={busy}>{t('actions.dialog.cancelAction')}</Button>}
-        <Button appearance="primary" onClick={onClose}>{t('common.close')}</Button>
+        <Button ref={closeRef} appearance="primary" onClick={onClose}>{t('common.close')}</Button>
       </> : <>
         <Button ref={cancelRef} onClick={onClose} disabled={busy}>{dismiss ?? t('common.cancel')}</Button>
         <Button appearance="primary" type="submit" disabled={!ready || busy}>{confirm}</Button>

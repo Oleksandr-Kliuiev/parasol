@@ -65,8 +65,9 @@ public class AteraTimeRecordingTests(CrmWebFactory factory)
         preview.GetProperty("target").GetProperty("name").GetString().ShouldBe($"1.5 h · #{ticket.TicketId} Printer is down");
         var record = preview.GetProperty("effects")[0];
         record.GetProperty("code").GetString().ShouldBe("VND_EFFECT_TIME_RECORD");
-        // No times on a manual entry: 08:00 on its work date in Oslo, for its duration.
+        // No times on a manual entry: 08:00 on its work date in Oslo, for its duration, and the confirmation says so.
         (record.GetProperty("values").GetProperty("from").GetString(), record.GetProperty("values").GetProperty("to").GetString()).ShouldBe(("08:00", "09:30"));
+        preview.GetProperty("effects")[1].GetProperty("code").GetString().ShouldBe("VND_EFFECT_TIME_DEFAULT_START");
 
         var action = await host.RunAsync(await AskAsync(host, entryId));
         action.Status.ShouldBe(VendorActionStatus.Succeeded, action.Outcome);

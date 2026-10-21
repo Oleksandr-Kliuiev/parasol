@@ -110,6 +110,11 @@ internal sealed class AteraTimeRecordAction(
                 ["hours"] = hours, ["ticket"] = $"#{ticket.ExternalId}", ["date"] = local.Start.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
                 ["from"] = local.Start.ToString("HH:mm", CultureInfo.InvariantCulture), ["to"] = local.End.ToString("HH:mm", CultureInfo.InvariantCulture),
             }),
+            // A start the person did not give is said, not hidden in the times above.
+            .. HasOwnTimes(entry) ? Array.Empty<VendorActionEffect>() : [new VendorActionEffect("VND_EFFECT_TIME_DEFAULT_START", new Dictionary<string, string?>
+            {
+                ["from"] = local.Start.ToString("HH:mm", CultureInfo.InvariantCulture),
+            })],
             new VendorActionEffect(entry.Billable ? "VND_EFFECT_TIME_BILLABLE" : "VND_EFFECT_TIME_NOT_BILLABLE", new Dictionary<string, string?>()),
             new VendorActionEffect("VND_EFFECT_TICKET_AUTHOR", new Dictionary<string, string?> { ["name"] = technician.Name ?? technician.Email ?? technician.ExternalId }),
             new VendorActionEffect("VND_EFFECT_TIME_NO_DOUBLE", new Dictionary<string, string?>()),
@@ -174,12 +179,14 @@ internal sealed class AteraTimeRecordAction(
         }
     }
 
+    private static bool HasOwnTimes(TimeEntryForSending entry) => entry.StartedAt is { } started && entry.EndedAt is { } ended && ended > started;
+
     /// <summary>The entry's own times, or 08:00 on its work date in Oslo for the entry's duration.</summary>
     internal static (DateTimeOffset Start, DateTimeOffset End) Window(TimeEntryForSending entry)
     {
-        if (entry.StartedAt is { } started && entry.EndedAt is { } ended && ended > started)
+        if (HasOwnTimes(entry))
         {
-            return (started, ended);
+            return (entry.StartedAt!.Value, entry.EndedAt!.Value);
         }
 
         var start = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(entry.WorkDate.ToDateTime(new TimeOnly(8, 0)), Oslo), TimeSpan.Zero);

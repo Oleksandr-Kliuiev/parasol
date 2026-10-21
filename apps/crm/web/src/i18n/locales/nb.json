@@ -782,7 +782,8 @@
       "privacy-retention": "Lagringstid for personopplysninger",
       "quote-expiry": "La gamle tilbud utløpe",
       "reports-snapshot": "Månedlige øyeblikksbilder for rapporter",
-      "worker-heartbeat": "Livstegn fra bakgrunnstjenesten"
+      "worker-heartbeat": "Livstegn fra bakgrunnstjenesten",
+      "atera-ticket-conversations": "Meldinger i saker (Atera)"
     },
     "status": {
       "Running": "Kjører",
@@ -4383,7 +4384,7 @@
       "VND_SETTLEMENT_INVALID": "Si om det skjedde og hva du sjekket (10–500 tegn).",
       "VND_STALE": "Handlingen er endret i mellomtiden. Lukk den og åpne den igjen.",
       "VND_NOT_FOUND": "Handlingen ble ikke funnet.",
-      "VND_SENT": "Utført.",
+      "VND_SENT": "Leverandøren tok imot endringen.",
       "VND_ALREADY_DONE": "Det var allerede slik; ingenting ble sendt.",
       "VND_DRY_RUN": "Testmodus (DryRun): ingenting ble sendt.",
       "VND_NO_ANSWER": "Det kom ikke noe klart svar. Sjekk om det skjedde.",
@@ -4487,7 +4488,8 @@
       "VND_EFFECT_TIME_RECORD": "{{hours, number}} t føres på {{ticket}} i Atera, {{date}} {{from}}–{{to}}.",
       "VND_EFFECT_TIME_BILLABLE": "Atera merker dem som fakturerbare.",
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera merker dem som ikke fakturerbare.",
-      "VND_EFFECT_TIME_NO_DOUBLE": "Timeimporten kjenner dem igjen, så de telles aldri to ganger."
+      "VND_EFFECT_TIME_NO_DOUBLE": "Timeimporten kjenner dem igjen, så de telles aldri to ganger.",
+      "VND_EFFECT_TIME_DEFAULT_START": "Føringen har ingen starttid, så timene starter kl. {{from}} på datoen."
     }
   },
   "tickets": {

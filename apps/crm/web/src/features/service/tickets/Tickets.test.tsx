@@ -116,11 +116,21 @@ describe('tickets (M39.2)', () => {
     expect(within(confirm).getByText('It is written in Atera as Tor Tekniker.')).toBeVisible();
     expect(within(confirm).getByText('On my way')).toBeVisible();
     await userEvent.click(within(confirm).getByRole('button', { name: 'Send the reply' }));
-    expect(await within(confirm).findByText('Done.')).toBeVisible();
+    expect(await within(confirm).findByText('The vendor accepted the change.')).toBeVisible();
     expect(saved).toBe(true);
     const command = JSON.parse(fetch.mock.calls.find(([url, init]) => url === '/api/v1/actions' && init?.method === 'POST')![1]!.body as string);
     expect(command).toMatchObject({ system: 'atera', kind: 'ticket.reply', targetType: 'ticket', targetId: '4711', parameters: { text: 'On my way' } });
     expect(box).toHaveValue('');
+  });
+
+  it('names the author of a message once, also when the desk gave no name', async () => {
+    vi.stubGlobal('fetch', api((url) => url.startsWith('/api/v1/service/tickets/t1/comments')
+      ? json({ items: [comment('c5', 'From the portal', { authorName: null, author: 'Unknown' }), comment('c4', 'Still broken', { authorName: null })], nextCursor: null, totalCount: 2 })
+      : null));
+    render('/tickets?ticket=t1');
+    const panel = await screen.findByRole('dialog', { name: '#4711 Printer is down' });
+    const items = await within(within(panel).getByRole('region', { name: 'Conversation' })).findAllByRole('listitem');
+    expect(items.map((item) => item.firstElementChild?.textContent?.replace(/just now|\d+ \w+ ago|now/g, '').trim())).toEqual(['Customer', 'Message']);
   });
 
   it('offers no changes to someone who only reads service data', async () => {

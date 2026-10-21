@@ -782,7 +782,8 @@
       "privacy-retention": "Retention of personal data",
       "quote-expiry": "Expire old quotes",
       "reports-snapshot": "Monthly report snapshots",
-      "worker-heartbeat": "Background service heartbeat"
+      "worker-heartbeat": "Background service heartbeat",
+      "atera-ticket-conversations": "Ticket messages (Atera)"
     },
     "status": {
       "Running": "Running",
@@ -4385,7 +4386,7 @@
       "VND_SETTLEMENT_INVALID": "Say whether it happened and what you checked (10–500 characters).",
       "VND_STALE": "The action changed meanwhile. Close it and open it again.",
       "VND_NOT_FOUND": "The action was not found.",
-      "VND_SENT": "Done.",
+      "VND_SENT": "The vendor accepted the change.",
       "VND_ALREADY_DONE": "It was already so; nothing was sent.",
       "VND_DRY_RUN": "Test mode (DryRun): nothing was sent.",
       "VND_NO_ANSWER": "No clear answer came back. Check whether it happened.",
@@ -4489,7 +4490,8 @@
       "VND_EFFECT_TIME_RECORD": "{{hours, number}} h are recorded on {{ticket}} in Atera, {{date}} {{from}}–{{to}}.",
       "VND_EFFECT_TIME_BILLABLE": "Atera marks them billable.",
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera marks them not billable.",
-      "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice."
+      "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice.",
+      "VND_EFFECT_TIME_DEFAULT_START": "The entry has no start time, so the hours start at {{from}} on its date."
     }
   },
   "tickets": {

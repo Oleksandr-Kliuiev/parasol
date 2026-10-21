@@ -21,6 +21,8 @@ import {
   ToggleButton,
   makeStyles,
   mergeClasses,
+  tokens,
+  useId,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
@@ -62,6 +64,9 @@ const useStyles = makeStyles({
   // narrow column (two columns on a phone).
   comboInput: { minWidth: 0, width: '100%' },
   manual: { alignSelf: 'start', marginTop: '6px' },
+  // The Atera step: the checkbox and its hint, the hint in the tone and size of a field's hint.
+  record: { gridColumn: '1 / -1', display: 'grid', rowGap: '2px', justifyItems: 'start' },
+  recordHint: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, lineHeight: tokens.lineHeightBase200 },
   // The hours field with its usual durations under it, in the same grid cell.
   hoursCell: { display: 'grid', gap: '8px', minWidth: 0, alignContent: 'start' },
   durations: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
@@ -136,6 +141,7 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const [workDate, setWorkDate] = useState(entry?.workDate ?? defaultDate ?? todayIso());
   const [hours, setHours] = useState(entry ? String(entry.hours) : taskContext ? '' : '1');
   const [workType, setWorkType] = useState(entry?.workType ?? '');
+  const workTypeInput = useRef<HTMLInputElement>(null);
   const [billable, setBillable] = useState(entry?.billable ?? true);
   const [onsite, setOnsite] = useState(entry?.onsite ?? false);
   const [afterHours, setAfterHours] = useState(entry?.afterHours ?? false);
@@ -170,6 +176,7 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const ticketProblem = ticketValue !== null && (!Number.isSafeInteger(ticketValue) || ticketValue <= 0) ? 'time.ticketInvalid' : null;
   // Offered only for a new entry with a ticket number, and only while Atera takes recorded hours (its switches and the person's access).
   const canRecord = useActionAvailable('atera', 'time.record', !entry && ticketValue !== null && ticketProblem === null);
+  const recordHint = useId('record-hint');
   const descriptionProblem = taskContext && !description.trim() ? 'time.descriptionRequired' : null;
   const invalid = !organization || hoursProblem !== null || ticketProblem !== null || descriptionProblem !== null;
 
@@ -263,12 +270,16 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
             </div>
             <Field label={t('time.fields.workType')}>
               <Combobox
+                ref={workTypeInput}
                 freeform
                 input={{ className: local.comboInput }}
                 value={workType}
                 selectedOptions={workType ? [workType] : []}
                 onInput={(event) => setWorkType((event.target as HTMLInputElement).value)}
                 onOptionSelect={(_, d) => setWorkType(d.optionValue ?? '')}
+                // Typed text leaves Fluent's matching option as the active descendant after the list closes, naming an option that
+                // is gone (axe aria-valid-attr-value): a closed list names none.
+                onOpenChange={(_, d) => { if (!d.open) queueMicrotask(() => workTypeInput.current?.removeAttribute('aria-activedescendant')); }}
               >
                 {(workTypes.isSuccess && !workTypes.isFetching ? workTypes.data : []).map((type) => (
                   <Option key={type} value={type}>
@@ -299,9 +310,11 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
                 onChange={(_, d) => { clearTicketContext(); setTicket(d.value); }} />
               {ticketId && !taskContext && <Button size="small" className={local.manual} onClick={clearTicketContext}>{t('taskTicket.useManual')}</Button>}
             </Field>
-            {canRecord && <Field className={styles.wide} hint={t('time.recordInAteraHint')}>
-              <Checkbox checked={recordInAtera} onChange={(_, d) => setRecordInAtera(Boolean(d.checked))} label={t('time.recordInAtera')} />
-            </Field>}
+            {canRecord && <div className={local.record}>
+              <Checkbox checked={recordInAtera} onChange={(_, d) => setRecordInAtera(Boolean(d.checked))} label={t('time.recordInAtera')}
+                aria-describedby={recordHint} />
+              <Text id={recordHint} className={local.recordHint}>{t('time.recordInAteraHint')}</Text>
+            </div>}
             <div className={local.flags}>
               <Switch label={t('time.fields.billable')} checked={billable} onChange={(_, d) => setBillable(d.checked)} />
               <Switch label={t('time.fields.onsite')} checked={onsite} onChange={(_, d) => setOnsite(d.checked)} />

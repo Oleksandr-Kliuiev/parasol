@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Badge, Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles } from '@fluentui/react-components';
 import { Dismiss24Regular, Open16Regular } from '@fluentui/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -61,7 +61,18 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
   const { t } = useTranslation(); const styles = useStyles(); const client = useQueryClient();
   const canWrite = useCan(Permissions.serviceWrite);
   const [ask, setAsk] = useState<TicketActionAsk | null>(null);
+  const bar = useRef<HTMLDivElement>(null); const asking = useRef(false);
   const link = ticket.url ? safeHttpUrl(ticket.url) : undefined;
+  const openAsk = (next: TicketActionAsk) => { asking.current = true; setAsk(next); };
+  // The button that asked takes focus back when the confirmation closes. Close ticket is gone once the ticket is closed: then
+  // focus stays in the panel, on the first change it offers, never on the page behind — unless the next confirmation is open.
+  const closeAsk = () => {
+    asking.current = false;
+    setAsk(null);
+    window.setTimeout(() => {
+      if (!asking.current && (document.activeElement === null || document.activeElement === document.body)) bar.current?.querySelector<HTMLElement>('button')?.focus();
+    }, 400);
+  };
   // A changed ticket is read again with its list and the Drift tab behind the panel; the action log reads itself.
   const finished = (action: VendorAction) => {
     ask?.onFinished?.(action);
@@ -88,8 +99,8 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
         <ServiceReadLine reads={[ticket.ticketsRead, ticket.conversationsRead]} />
       </span> },
     ]} />
-    {canWrite && <TicketActionsBar ticket={ticket} onAsk={setAsk} />}
-    <TicketConversation ticket={ticket} canWrite={canWrite} onAsk={setAsk} />
+    {canWrite && <TicketActionsBar ticket={ticket} onAsk={openAsk} groupRef={bar} />}
+    <TicketConversation ticket={ticket} canWrite={canWrite} onAsk={openAsk} />
     <section className={styles.section} aria-labelledby={`ticket-actions-${ticket.id}`}>
       <h3 id={`ticket-actions-${ticket.id}`} className={styles.heading}>{t('tickets.panel.actions')}</h3>
       <div className={styles.log}>
@@ -97,6 +108,6 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
       </div>
     </section>
     <ActionDialog request={ask?.request ?? null} title={ask?.title ?? ''} confirm={ask?.confirm ?? ''} details={ask?.details}
-      onClose={() => setAsk(null)} onAccepted={ask?.onAccepted} onFinished={finished} />
+      onClose={closeAsk} onAccepted={ask?.onAccepted} onFinished={finished} />
   </>;
 }

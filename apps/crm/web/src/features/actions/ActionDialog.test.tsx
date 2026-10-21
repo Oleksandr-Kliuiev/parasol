@@ -60,7 +60,7 @@ it('shows the preview, sends one confirmed command with its token and follows th
   const command = JSON.parse(posts(fetch)[1]![1].body as string);
   expect(command).toMatchObject({ ...request, previewToken: 'signed-token', reason: null, typedName: null });
   expect(command.commandKey).toMatch(/^[0-9a-f-]{36}$/);
-  expect(await screen.findByText('Done.', {}, { timeout: 6_000 })).toBeVisible();
+  expect(await screen.findByText('The vendor accepted the change.', {}, { timeout: 6_000 })).toBeVisible();
   await waitFor(() => expect(finished).toHaveBeenCalledWith(expect.objectContaining({ status: 'Succeeded' })));
   expect(posts(fetch)).toHaveLength(2);
 }, 15_000);
@@ -131,7 +131,7 @@ it('renews an aged preview and repeats the command with the same key, so a lost 
   await screen.findByText('#4711 Printer is down');
   await waitFor(() => expect(screen.getByRole('button', { name: 'Close ticket' })).toBeEnabled());
   await userEvent.click(screen.getByRole('button', { name: 'Close ticket' }));
-  expect(await screen.findByText('Done.')).toBeVisible();
+  expect(await screen.findByText('The vendor accepted the change.')).toBeVisible();
   const [first, second] = posts(fetch).filter(([url]) => url === '/api/v1/actions').map(([, init]) => JSON.parse(init.body as string));
   expect(first.previewToken).toBe('token-1'); expect(second.previewToken).toBe('token-2');
   expect(second.commandKey).toBe(first.commandKey);

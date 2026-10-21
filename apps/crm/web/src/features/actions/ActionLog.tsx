@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Spinner, Text, makeStyles } from '@fluentui/react-components';
+import { Link, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
 import { History16Regular, History24Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
@@ -27,10 +27,10 @@ const useStyles = makeStyles({
 
 /** One action as a row: what and on what, who asked and when; the state on the right. */
 export function ActionRow({ action, onOpen, showTarget = true }: { action: VendorAction; onOpen: () => void; showTarget?: boolean }) {
-  const { t } = useTranslation(); const styles = useStyles();
+  const { t } = useTranslation(); const styles = useStyles(); const restore = useRestoreFocusTarget();
   const title = showTarget ? `${kindName(t, action.system, action.kind)} · ${action.targetName}` : kindName(t, action.system, action.kind);
   return <RecordRow icon={<History16Regular />} tone={action.status === 'Uncertain' || action.status === 'Failed' ? 'ember' : 'neutral'}
-    title={<Link as="button" type="button" className={styles.open} onClick={onOpen}>{title}</Link>}
+    title={<Link {...restore} as="button" type="button" className={styles.open} onClick={onOpen}>{title}</Link>}
     meta={<RowMeta>
       {[action.requestedByName, showTarget ? action.organizationName : null, systemName(t, action.system)].filter(Boolean).join(' · ')}
       {' · '}<time dateTime={action.requestedAt} title={formatDateTime(action.requestedAt)}>{formatRelative(action.requestedAt)}</time>

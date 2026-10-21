@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { Badge, Button, Link, SearchBox, Skeleton, SkeletonItem, Text, makeStyles } from '@fluentui/react-components';
+import { Badge, Button, Link, SearchBox, Skeleton, SkeletonItem, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
 import { ArrowClockwise20Regular, Headset16Regular, Headset24Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
@@ -96,10 +96,10 @@ function Tickets() {
 
 /** One ticket: its number and title open the panel; the customer, the person and the technician under it; status and priority at the end. */
 function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: () => void }) {
-  const { t } = useTranslation(); const styles = useStyles();
+  const { t } = useTranslation(); const styles = useStyles(); const restore = useRestoreFocusTarget();
   const at = ticket.lastActivityAt ?? ticket.createdAt;
   return <RecordRow icon={<Headset16Regular />} tone={ticket.isOpen ? 'iris' : 'neutral'}
-    title={<Link as="button" type="button" className={styles.open} onClick={onOpen}>{`#${ticket.externalId} ${ticket.title}`}</Link>}
+    title={<Link {...restore} as="button" type="button" className={styles.open} onClick={onOpen}>{`#${ticket.externalId} ${ticket.title}`}</Link>}
     meta={<RowMeta>
       {[ticket.organizationName, ticket.contactName, ticket.technicianName ?? t('tickets.fields.noTechnician')].filter(Boolean).join(' · ')}
       {' · '}<time dateTime={at} title={formatDateTime(at)}>{formatRelative(at)}</time>
