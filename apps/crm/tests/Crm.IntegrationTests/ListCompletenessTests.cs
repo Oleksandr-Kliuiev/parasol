@@ -303,7 +303,7 @@ public sealed class ListCompletenessTests(CrmWebFactory factory)
     {
         var admin = factory.ClientAs(CrmRoles.Admin, userKey: "dev12-service");
         var marker = $"V{Guid.NewGuid():N}"[..9];
-        // A system of its own: replacing alerts clears every alert of the system, and other tests mirror "atera".
+        // A system of its own: a complete alert read resolves every other open alert of the system, and other tests mirror "atera".
         var system = $"dev12-{marker}";
         var organizationId = await admin.CreateOrganizationAsync(new { name = $"{marker} Drift AS", status = "Customer" });
         var at = new DateTimeOffset(2026, 9, 1, 9, 0, 0, TimeSpan.Zero);
@@ -320,10 +320,10 @@ public sealed class ListCompletenessTests(CrmWebFactory factory)
         await factory.RunJobAsync<Crm.Service.Contracts.IServiceApi>(api => api.ReplaceDevicesAsync(organizationId, system, devices, CancellationToken.None));
         // 230 alerts (the old cap was 200), critical and warning in turn, ten to an instant.
         var alerts = Enumerable.Range(0, 230).Select(i => new Crm.Service.Contracts.ExternalAlert(
-            $"{marker}-a{i}", i % 2 == 0 ? Crm.Service.Contracts.AlertSeverity.Critical : Crm.Service.Contracts.AlertSeverity.Warning,
+            $"{marker}-a{i}", organizationId, i % 2 == 0 ? Crm.Service.Contracts.AlertSeverity.Critical : Crm.Service.Contracts.AlertSeverity.Warning,
             $"{marker} varsel {i}", null, at.AddMinutes(i / 10))).ToList();
-        await factory.RunJobAsync<Crm.Service.Contracts.IServiceApi>(api => api.ReplaceOpenAlertsAsync(
-            system, new Dictionary<Guid, IReadOnlyCollection<Crm.Service.Contracts.ExternalAlert>> { [organizationId] = alerts }, CancellationToken.None));
+        await factory.RunJobAsync<Crm.Service.Contracts.IServiceApi>(api => api.ApplyAlertSnapshotAsync(new Crm.Service.Contracts.AlertSnapshot(
+            system, Crm.Service.Contracts.AlertKind.Monitoring, alerts, alerts.Select(a => a.ExternalId).ToList(), IsComplete: true), CancellationToken.None));
 
         var listedTickets = await ItemsAsync(admin, $"/api/v1/service/tickets?organizationId={organizationId}", 37);
         listedTickets.Select(t => t.Item.GetProperty("id").GetGuid()).Distinct().Count().ShouldBe(520);
@@ -342,7 +342,13 @@ public sealed class ListCompletenessTests(CrmWebFactory factory)
         listedAlerts.Select(a => a.Item.GetProperty("id").GetGuid()).Distinct().Count().ShouldBe(230);
         listedAlerts.Count.ShouldBe(230);
         listedAlerts[0].Total.ShouldBe(230);
-        listedAlerts.Take(115).ShouldAllBe(a => a.Item.GetProperty("severity").GetString() == "Critical", "critical alerts come first, across pages");
+        // M38: newest first by the source's time, across pages (ten alerts share each instant, the id breaks the tie).
+        listedAlerts.Zip(listedAlerts.Skip(1)).ShouldAllBe(pair =>
+            pair.First.Item.GetProperty("createdAt").GetDateTimeOffset() >= pair.Second.Item.GetProperty("createdAt").GetDateTimeOffset(),
+            "newest alerts come first, across pages");
+        (await ItemsAsync(admin, $"/api/v1/service/alerts?organizationId={organizationId}&severity=Critical", 50)).Count.ShouldBe(115);
+        (await admin.GetFromJsonAsync<JsonElement>($"/api/v1/service/alerts?organizationId={organizationId}&limit=500", Ct))
+            .GetProperty("items").GetArrayLength().ShouldBe(100, "a page holds at most 100 alerts");
     }
 
     [Fact]

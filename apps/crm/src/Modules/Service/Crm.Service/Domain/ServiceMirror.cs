@@ -157,30 +157,6 @@ public sealed class DeviceCountSnapshot : Entity
     public int Count { get; set; }
 }
 
-public sealed class Alert : Entity
-{
-    private Alert() { }
-
-    public Alert(string system, Guid organizationId, ExternalAlert source)
-    {
-        System = system;
-        OrganizationId = organizationId;
-        ExternalId = source.ExternalId;
-        Severity = source.Severity;
-        Title = source.Title.Length > 512 ? source.Title[..512] : source.Title;
-        DeviceName = source.DeviceName;
-        CreatedAtSource = source.CreatedAt;
-    }
-
-    public string System { get; private set; } = string.Empty;
-    public string ExternalId { get; private set; } = string.Empty;
-    public Guid OrganizationId { get; private set; }
-    public AlertSeverity Severity { get; private set; }
-    public string Title { get; private set; } = string.Empty;
-    public string? DeviceName { get; private set; }
-    public DateTimeOffset CreatedAtSource { get; private set; }
-}
-
 /// <summary>A ticket a CRM user asked to create in the service desk (BR-SRV-02). Audited, as it is a user action.</summary>
 public sealed class TicketRequest : AuditableEntity, IErasable
 {

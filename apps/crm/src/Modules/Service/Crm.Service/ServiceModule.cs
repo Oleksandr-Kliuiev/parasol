@@ -39,8 +39,7 @@ public sealed record TicketItem(
 
 public sealed record DeviceItem(Guid Id, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url, DateTimeOffset? RemovedAt);
 
-public sealed record AlertItem(Guid Id, AlertSeverity Severity, string Title, string? DeviceName, DateTimeOffset CreatedAt);
-
+/// <summary>A customer's service at a glance; the alert counts are of open alerts.</summary>
 public sealed record ServiceSummary(
     int OpenTickets,
     int TicketsLast90Days,
@@ -79,6 +78,7 @@ public static class ServiceModule
         services.AddScoped<IServiceApi, ServiceApi>();
         services.AddScoped<ITicketWorkApi, TicketWorkApi>();
         services.AddScoped<SlaReportService>();
+        services.AddScoped<AlertQueries>();
         // DEV-11: tickets and ticket requests of a person in subject requests, and the retention of the ticket mirror.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ServicePersonalData>();
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, Features.Privacy.TicketMirrorRetention>();
@@ -153,7 +153,7 @@ public static class ServiceModule
                 var since = time.GetUtcNow().AddDays(-90);
                 var devices = await db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId && d.RemovedAt == null)
                     .GroupBy(d => d.Type).Select(g => new { g.Key, Count = g.Count(), Online = g.Count(d => d.Online) }).ToListAsync(ct);
-                var alerts = await db.Alerts.AsNoTracking().Where(a => a.OrganizationId == organizationId)
+                var alerts = await db.Alerts.AsNoTracking().Where(a => a.OrganizationId == organizationId && a.State == AlertState.Open)
                     .GroupBy(a => a.Severity).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
                 var tickets = db.Tickets.AsNoTracking().Where(t => t.OrganizationId == organizationId);
                 return Results.Ok(new ServiceSummary(
@@ -196,30 +196,15 @@ public static class ServiceModule
             })
             .RequirePermission(Permissions.ServiceRead);
 
-        group.MapGet("/alerts", async (Guid organizationId, int? limit, string? cursor, ServiceDbContext db, CancellationToken ct) =>
-            {
-                // Critical first, newest first, then id (DEV-12).
-                var alerts = db.Alerts.AsNoTracking().Where(a => a.OrganizationId == organizationId);
-                var total = await alerts.CountAsync(ct);
-                if (KeysetCursor.Decode(cursor) is { } after &&
-                    DateTimeOffset.TryParseExact(after.Then, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
-                {
-                    var rank = after.SortKey == "0" ? 0 : 1;
-                    alerts = alerts.Where(a => (a.Severity == AlertSeverity.Critical ? 0 : 1) > rank ||
-                        ((a.Severity == AlertSeverity.Critical ? 0 : 1) == rank && (a.CreatedAtSource < created || (a.CreatedAtSource == created && a.Id.CompareTo(after.Id) < 0))));
-                }
+        // M38: one list for a customer's tab and the queue across customers; organizationId narrows it to one customer.
+        group.MapGet("/alerts", async (
+                Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? q, string? cursor, int? limit,
+                AlertQueries alerts, CancellationToken ct) =>
+                (await alerts.ListAsync(organizationId, state, severity, deviceId, q, cursor, limit, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.ServiceRead);
 
-                var take = KeysetCursor.ClampLimit(limit);
-                var page = await alerts.OrderBy(a => a.Severity == AlertSeverity.Critical ? 0 : 1).ThenByDescending(a => a.CreatedAtSource).ThenByDescending(a => a.Id)
-                    .Select(a => new AlertItem(a.Id, a.Severity, a.Title, a.DeviceName, a.CreatedAtSource)).Take(take + 1).ToListAsync(ct);
-                var rows = page.Take(take).ToList();
-                return Results.Ok(new PagedResult<AlertItem>(
-                    rows,
-                    page.Count > take
-                        ? new KeysetCursor(rows[^1].Severity == AlertSeverity.Critical ? "0" : "1", rows[^1].Id, rows[^1].CreatedAt.ToString("O", CultureInfo.InvariantCulture)).Encode()
-                        : null,
-                    total));
-            })
+        group.MapGet("/alerts/urgent", async (int? limit, AlertQueries alerts, CancellationToken ct) =>
+                Results.Ok(await alerts.UrgentAsync(limit, ct)))
             .RequirePermission(Permissions.ServiceRead);
 
         group.MapGet("/ticket-requests", async (Guid organizationId, bool? attentionOnly, int? limit, string? cursor, ServiceDbContext db, TimeProvider time, CancellationToken ct) =>

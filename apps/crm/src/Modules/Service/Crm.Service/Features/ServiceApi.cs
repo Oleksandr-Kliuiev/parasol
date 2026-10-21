@@ -61,21 +61,18 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task ReplaceOpenAlertsAsync(string system, IReadOnlyDictionary<Guid, IReadOnlyCollection<ExternalAlert>> alertsByOrganization, CancellationToken cancellationToken)
-    {
-        // Delete and insert must land together, and the SQL Server retry strategy needs the transaction inside it.
-        await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
-        {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            await db.Alerts.Where(a => a.System == system).ExecuteDeleteAsync(ct);
-            foreach (var (organizationId, alerts) in alertsByOrganization)
-            {
-                db.Alerts.AddRange(alerts.DistinctBy(a => a.ExternalId).Select(a => new Alert(system, organizationId, a)));
-            }
+    public Task<AlertSnapshotResult> ApplyAlertSnapshotAsync(AlertSnapshot snapshot, CancellationToken cancellationToken) =>
+        new AlertSnapshots(db, time).ApplyAsync(snapshot, cancellationToken);
 
-            await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-        }, cancellationToken);
+    public async Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken) =>
+        await db.Alerts.AsNoTracking().Where(a => a.Id == alertId).Select(AlertQueries.Ref).SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<Guid, AlertRef>> GetAlertsAsync(IReadOnlyCollection<Guid> alertIds, CancellationToken cancellationToken)
+    {
+        var ids = alertIds.Distinct().ToList();
+        return ids.Count == 0
+            ? new Dictionary<Guid, AlertRef>()
+            : await db.Alerts.AsNoTracking().Where(a => ids.Contains(a.Id)).Select(AlertQueries.Ref).ToDictionaryAsync(a => a.Id, cancellationToken);
     }
 
     public async Task<int> TakeDeviceSnapshotAsync(DateOnly date, CancellationToken cancellationToken)
@@ -116,7 +113,9 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             .GroupBy(t => 1)
             .Select(g => new { Open = g.Count(), Unassigned = g.Count(t => t.TechnicianUserId == null) })
             .SingleOrDefaultAsync(cancellationToken);
+        // Resolved alerts stay as history and acknowledged ones are in hand; only open alerts count.
         var alerts = await db.Alerts.AsNoTracking()
+            .Where(a => a.State == AlertState.Open)
             .GroupBy(a => a.Severity)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
@@ -236,7 +235,10 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     }
 }
 
-/// <summary>Tickets, devices and alerts follow an organization into a merge. The mirror is rebuilt by the next sync, so an undo needs nothing.</summary>
+/// <summary>
+/// Tickets, devices and alerts follow an organization into a merge. The mirror is rebuilt by the next sync, so an undo needs
+/// nothing; an alert keeps its id either way.
+/// </summary>
 internal sealed class ServiceMergeHandler(ServiceDbContext db, ICustomersApi customers) : IDomainEventHandler<OrganizationsMerged>
 {
     public async Task HandleAsync(OrganizationsMerged domainEvent, CancellationToken cancellationToken)

@@ -49,14 +49,12 @@ public sealed record ExternalTicket(
 
 public sealed record ExternalDevice(string ExternalId, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url);
 
-public sealed record ExternalAlert(string ExternalId, AlertSeverity Severity, string Title, string? DeviceName, DateTimeOffset CreatedAt);
-
 public sealed record TicketRef(Guid Id, string System, long ExternalId, Guid OrganizationId, string Title, string Status);
 
 public sealed record TicketRequestView(
     Guid Id, Guid OrganizationId, Guid? ContactId, string Title, string Description, string Priority, string Type, TicketRequestStatus Status, Guid? RequestedBy);
 
-/// <summary>Service load across all customers, for the dashboard (FR-RPT-01).</summary>
+/// <summary>Service load across all customers, for the dashboard (FR-RPT-01). Alerts count while they are open.</summary>
 public sealed record ServiceLoad(int OpenTickets, int UnassignedTickets, int CriticalAlerts, int WarningAlerts, int Devices, int DevicesOffline);
 
 /// <summary>Public API of the Service module: the mirror is written by integrations and read by billing and time tracking.</summary>
@@ -68,8 +66,17 @@ public interface IServiceApi
     /// <summary>Makes the organization's device list equal to <paramref name="devices"/>; devices no longer reported are marked removed.</summary>
     Task ReplaceDevicesAsync(Guid organizationId, string system, IReadOnlyCollection<ExternalDevice> devices, CancellationToken cancellationToken);
 
-    /// <summary>Replaces all open alerts of the system; organizations missing from the map have none.</summary>
-    Task ReplaceOpenAlertsAsync(string system, IReadOnlyDictionary<Guid, IReadOnlyCollection<ExternalAlert>> alertsByOrganization, CancellationToken cancellationToken);
+    /// <summary>
+    /// Applies one read of a source's open alerts (M38): listed alerts are kept open under the id they already have, a stored
+    /// open alert that a complete read no longer lists is resolved, and an incomplete read changes nothing.
+    /// </summary>
+    Task<AlertSnapshotResult> ApplyAlertSnapshotAsync(AlertSnapshot snapshot, CancellationToken cancellationToken);
+
+    /// <summary>A stored alert by its CRM id, in any state; null when there is none.</summary>
+    Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken);
+
+    /// <summary>The stored alerts among <paramref name="alertIds"/>, keyed by id; ids without an alert are left out.</summary>
+    Task<IReadOnlyDictionary<Guid, AlertRef>> GetAlertsAsync(IReadOnlyCollection<Guid> alertIds, CancellationToken cancellationToken);
 
     /// <summary>Stores today's device count per organization and type (BR-SRV-03); safe to repeat on the same day.</summary>
     Task<int> TakeDeviceSnapshotAsync(DateOnly date, CancellationToken cancellationToken);
