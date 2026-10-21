@@ -3989,50 +3989,69 @@
       "ReadOnly": "Lesetilgang"
     }
   },
-  "readiness": {
-    "title": "Tilkoblingsoversikt",
-    "subtitle": "Kun lokal konfigurasjon og lagrede opplysninger.",
-    "refresh": "Oppdater lokal oversikt",
-    "notChecked": "Tilkoblinger og tilgangsopplysninger er ikke kontrollert.",
-    "checkedAt": "Lokale opplysninger lest {{time}}",
-    "partial": "Noen lagrede opplysninger kunne ikke leses. Dette er ikke en kontroll av tilkoblingene.",
-    "adminTitle": "Lagret administrativ konfigurasjon",
-    "workerNote": "Passord og nøkler ligger i bakgrunnstjenesten, så denne siden kan ikke se om de er satt.",
-    "authMode": "Konfigurert innloggingsmåte",
-    "auth": {
-      "ENTRA": "Microsoft Entra",
-      "DEVELOPMENT": "Lokal utviklingsinnlogging"
+  "connectionStatus": {
+    "title": "Tilkoblingsstatus",
+    "subtitle": "Det Parasoll har lagret om hver integrasjon og bakgrunnstjenesten. Selve systemene kontaktes ikke.",
+    "refresh": "Oppdater status",
+    "checkedAt": "Lest {{time}}",
+    "ready": "Alt er oppdatert: alle jobbene i integrasjonene som er slått på, har lest innenfor grensen sin, ingenting venter på å bli sendt, og bakgrunnstjenesten kjører.",
+    "gapsTitle_one": "{{count}} ting trenger oppmerksomhet",
+    "gapsTitle_other": "{{count}} ting trenger oppmerksomhet",
+    "unavailable": "Den lagrede tilstanden kunne ikke leses, så ingenting vises som oppdatert. Oppdater for å prøve igjen.",
+    "gaps": {
+      "Never": "{{job}}: ingen fullstendig lesing ennå",
+      "Stale": "{{job}}: siste fullstendige lesing {{age}}, grense {{limit}}",
+      "Failed": "{{job}}: siste kjøring mislyktes {{age}}",
+      "Paused": "{{system}} er satt på pause: jobbene hoppes over til noen starter den igjen",
+      "OutboundFailed_one": "{{system}}: {{count}} endring kunne ikke sendes",
+      "OutboundFailed_other": "{{system}}: {{count}} endringer kunne ikke sendes",
+      "WorkerLate": "Bakgrunnstjenesten, {{component}}: siste livstegn {{age}}",
+      "WorkerMissing": "Bakgrunnstjenesten, {{component}}: ingen livstegn ennå"
     },
-    "entraNote": "Innlogging via Microsoft 365 eller Entra bekrefter ikke teknisk tenant-overvåking.",
-    "openIntegrations": "Åpne integrasjonsadministrasjon",
-    "enabled": "Aktivert lokalt",
-    "disabled": "Deaktivert lokalt",
-    "enabledFlag": "Lokalt aktiveringsflagg",
-    "writeFlag": "Lokalt skriveflagg",
-    "flagNote": "Lokale flagg og lagrede poster; tilkobling og skrivetilgang er ikke kontrollert.",
-    "savedPause": "Lagret pausestatus",
-    "savedSuccess": "Lagret siste vellykkede synkronisering",
-    "storedUnavailable": "Lagret lokal tilstand kunne ikke leses. Tidligere tilstand eller erstatningstall på null vises ikke.",
-    "stored": {
-      "records": "Lagrede eksterne poster",
-      "unlinkedRecords": "Lagrede ukoblede poster",
-      "pendingOutbound": "Lagrede ventende utgående operasjoner",
-      "failedOutbound": "Lagrede mislykkede utgående operasjoner"
+    "state": {
+      "on": "Oppdatert",
+      "gaps": "Trenger oppmerksomhet",
+      "paused": "På pause",
+      "off": "Slått av"
     },
-    "graph": {
-      "enabled": "Lokalt Graph-aktiveringsflagg",
-      "calendarEnabled": "Kalenderflagg",
-      "mailEnabled": "E-postflagg",
-      "sharePointEnabled": "SharePoint-flagg",
-      "teamsEnabled": "Teams-flagg"
+    "off": "Slått av i innstillingene for denne installasjonen, så jobbene kjører ikke.",
+    "writesOn": "Endringer i Parasoll sendes til {{system}}.",
+    "writesOff": "Endringer i Parasoll sendes ikke til {{system}}.",
+    "failedOutbound_one": "{{count}} endring kunne ikke sendes.",
+    "failedOutbound_other": "{{count}} endringer kunne ikke sendes.",
+    "freshness": {
+      "Fresh": "Oppdatert",
+      "Stale": "Forsinket",
+      "Never": "Aldri lest",
+      "Paused": "På pause",
+      "Disabled": "Av"
     },
-    "graphNote": "Uavhengig av innlogging. Lagrede Graph-tidspunkter kan være historiske og bekrefter ikke at den er på nå.",
-    "directorySavedAt": "Lagret vellykket katalogsynkronisering",
-    "rolesSavedAt": "Lagret vellykket rollesynkronisering",
+    "lastRead": "Siste fullstendige lesing",
+    "notRead": "Ingen fullstendig lesing ennå",
+    "limit": "grense {{limit}}",
+    "lastFailed": "Siste kjøring mislyktes",
+    "unreadState": "Den lagrede tilstanden kunne ikke leses.",
+    "worker": {
+      "title": "Bakgrunnstjeneste",
+      "note": "En del regnes som forsinket etter {{limit}} uten livstegn.",
+      "components": {
+        "outbox": "Levering av endringer",
+        "jobs": "Planlagte jobber"
+      },
+      "state": {
+        "Current": "Kjører",
+        "Late": "Forsinket",
+        "Missing": "Ingen livstegn"
+      },
+      "beat": "Siste livstegn",
+      "noBeat": "Ingen livstegn ennå"
+    },
+    "administrationNote": "Jobber kjøres, settes på pause og testes i integrasjonsadministrasjonen.",
+    "openAdministration": "Åpne integrasjonsadministrasjon",
     "error": {
-      "FORBIDDEN": "Dine nåværende rettigheter tillater ikke lesing av denne lokale oversikten. Tidligere opplysninger er fjernet.",
-      "REQUEST_FAILED": "Den lokale oversikten kunne ikke leses. Tidligere opplysninger vises ikke. Oppdater for å prøve igjen.",
-      "INVALID_RESPONSE": "Den lokale oversikten ga et ugyldig svar. Ingen ubekreftede opplysninger vises."
+      "FORBIDDEN": "Dine nåværende rettigheter tillater ikke lesing av tilkoblingsstatusen. Tidligere opplysninger er fjernet.",
+      "REQUEST_FAILED": "Tilkoblingsstatusen kunne ikke leses. Tidligere opplysninger vises ikke. Oppdater for å prøve igjen.",
+      "INVALID_RESPONSE": "Svaret med tilkoblingsstatusen var ugyldig. Ingen ubekreftede opplysninger vises."
     }
   },
   "customerFinance": {

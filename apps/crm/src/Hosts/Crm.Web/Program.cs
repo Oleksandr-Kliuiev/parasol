@@ -115,8 +115,8 @@ builder.Services.AddSingleton<SessionStateCache>();
 builder.Services.AddScoped<IReportAccessAudit, ReportAccessAudit>();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, CrmAuthorizationResultHandler>();
 builder.AddDataProtection();
-builder.Services.AddScoped<Crm.Integrations.Core.Parasol.ILocalReadinessFlags, Crm.Web.LocalReadinessFlagsReader>();
-Crm.Integrations.Core.Parasol.LocalReadinessEndpoints.AddParasolLocalReadiness(builder.Services);
+builder.Services.AddSingleton<Crm.Integrations.Core.Readiness.IConnectionCatalog, Crm.Web.ConnectionCatalog>();
+Crm.Integrations.Core.Readiness.ConnectionStatusEndpoints.AddConnectionStatus(builder.Services);
 
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);
 if (hangfireEnabled)
@@ -295,7 +295,7 @@ app.MapSearchEndpoints();
 Crm.Web.CustomerFacts.CustomerFactsEndpoints.MapCustomerFactsEndpoints(app);
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
-Crm.Integrations.Core.Parasol.LocalReadinessEndpoints.MapParasolLocalReadiness(app);
+Crm.Integrations.Core.Readiness.ConnectionStatusEndpoints.MapConnectionStatus(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
 app.MapMonitoringEndpoints();

@@ -34,9 +34,11 @@ public sealed record ExceptionTriageItem(Guid? OwnerId, string? OwnerName, strin
     public static ExceptionTriageItem Empty { get; } = new(null, null, "Open", null, "\"new\"");
 }
 
+/// <param name="LastFailedAt">When the latest run that failed or could not read everything ended, whether or not a success followed.</param>
 public sealed record IntegrationFreshnessItem(
     string System, string Job, bool Enabled, bool Paused, DateTimeOffset? LastRunAt, string? LastRunStatus,
-    DateTimeOffset? LastSucceededAt, double? AgeMinutes, string Freshness, int ThresholdMinutes, int FailedOutbound, int Unmapped);
+    DateTimeOffset? LastSucceededAt, double? AgeMinutes, string Freshness, int ThresholdMinutes, int FailedOutbound, int Unmapped,
+    DateTimeOffset? LastFailedAt = null);
 
 public sealed record MonitoringExceptionItem(
     string Key, string Category, string Source, string Kind, DateTimeOffset? DetectedAt, DateTimeOffset? LastSucceededAt,
@@ -53,7 +55,13 @@ public sealed class IntegrationMonitoringReader(
 {
     public const string Runbook = "docs/runbooks/15-monitoring.md";
 
-    public async Task<IntegrationMonitoringSnapshot> ReadAsync(CancellationToken ct)
+    public Task<IntegrationMonitoringSnapshot> ReadAsync(CancellationToken ct) => ReadAsync([], ct);
+
+    /// <summary>
+    /// The snapshot, with <paramref name="expected"/> streams reported even before their first run (the connections page lists
+    /// every job this instance is configured to run).
+    /// </summary>
+    public async Task<IntegrationMonitoringSnapshot> ReadAsync(IEnumerable<(string System, string Job)> expected, CancellationToken ct)
     {
         var now = time.GetUtcNow();
         var latest = await db.SyncRuns.AsNoTracking().Where(r => r.Job != IntegrationConnectionTestHandler.Job)
@@ -86,6 +94,8 @@ public sealed class IntegrationMonitoringReader(
             if (stream["System"] is { } system && stream["Job"] is { } job) streams.Add((system, job));
         }
 
+        streams.UnionWith(expected);
+
         var systems = new List<IntegrationFreshnessItem>();
         var exceptions = new List<MonitoringExceptionItem>();
         foreach (var (system, job) in streams.OrderBy(s => s.System).ThenBy(s => s.Job))
@@ -99,7 +109,7 @@ public sealed class IntegrationMonitoringReader(
             var paused = pauses.ContainsKey(system);
             var freshness = !isEnabled ? "Disabled" : paused ? "Paused" : age is null ? "Never" : age > threshold ? "Stale" : "Fresh";
             systems.Add(new(system, job, isEnabled, paused, last?.StartedAt, last?.Status.ToString(), succeeded, age, freshness, threshold,
-                failed.GetValueOrDefault(system)?.Count ?? 0, unmapped.GetValueOrDefault(system)?.Count ?? 0));
+                failed.GetValueOrDefault(system)?.Count ?? 0, unmapped.GetValueOrDefault(system)?.Count ?? 0, failure?.FinishedAt ?? failure?.StartedAt));
             if (!isEnabled || paused) continue;
             if (freshness is "Never" or "Stale")
                 exceptions.Add(Item($"sync-stale:{system}:{job}", "Integration", system, "SyncStale", succeeded ?? last?.StartedAt, 1, succeeded, age, threshold));

@@ -3,73 +3,108 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
-import { localReadiness } from '../../test/localReadiness';
+import { connectionGaps, connectionStatus } from '../../test/connectionStatus';
 import { CurrentUserContext } from '../../auth/CurrentUserContext';
 import { ConnectionReadinessPage } from './ConnectionReadinessPage';
 
 const permissions = ['integrations.manage'];
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 const render = (allowed = permissions) => renderRoutes([page(<ConnectionReadinessPage />)], '/connections', testUser(allowed));
-const admin = 'Saved administrative configuration';
+const worker = 'Background service';
 afterEach(() => vi.unstubAllGlobals());
 
-describe('read-only Connections page', () => {
+describe('the connections page', () => {
   it.each([[['customers.read']], [['customers.read', 'service.read', 'activities.read']]])(
-    'does not request readiness without integration administration (%j)', async allowed => {
+    'does not ask for the status without integration administration (%j)', async allowed => {
       const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); render(allowed);
       expect(await screen.findByRole('heading', { name: 'No access' })).toBeVisible();
-      expect(screen.queryByRole('heading', { name: 'Connection readiness' })).not.toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();
+      expect(screen.queryByRole('heading', { name: 'Connection status' })).not.toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();
     });
-  it('separates administrative flags, historical Graph records and Worker credentials from connectivity', async () => {
-    const fetch = vi.fn(async () => response(localReadiness())); vi.stubGlobal('fetch', fetch); render();
-    expect(await screen.findByRole('region', { name: admin })).toBeVisible();
-    expect(screen.getByText('Connections and credentials have not been checked.')).toBeVisible();
-    expect(screen.getByText(/held by the background service, so this page cannot see whether they are set/)).toBeVisible();
-    expect(screen.getByText(/Signing in through Microsoft 365 or Entra does not establish technical tenant monitoring/)).toBeVisible();
-    expect(within(screen.getByRole('region', { name: 'Microsoft Graph' })).getByText(/may be historical/)).toBeVisible();
+
+  it('is green for a complete picture and shows each integration, its jobs and the worker without asking again', async () => {
+    const fetch = vi.fn(async () => response(connectionStatus())); vi.stubGlobal('fetch', fetch); render();
+    expect(await screen.findByText(/^Everything is up to date/)).toBeVisible();
+    expect(fetch).toHaveBeenCalledWith('/api/v1/integrations/connections', expect.anything());
+    expect(screen.getByText(/The systems themselves are not contacted/)).toBeVisible();
+    for (const name of [worker, 'Atera', 'PowerOffice Go', 'Brønnøysund Register Centre']) expect(screen.getByRole('region', { name })).toBeVisible();
+    const atera = within(screen.getByRole('region', { name: 'Atera' }));
+    expect(atera.getByText('Changes made in Parasoll are not sent to Atera.')).toBeVisible();
+    const rows = atera.getAllByRole('listitem');
+    expect(rows.map((row) => within(row).getByText(/\(Atera\)$/).textContent)).toEqual(['Alerts (Atera)', 'Open tickets (Atera)']);
+    expect(within(rows[1]!).getByText(/limit 15 min/)).toBeVisible();
+    expect(rows[1]!.querySelector('time')).toHaveAttribute('datetime', '2026-10-16T09:55:00Z');
+    expect(within(rows[1]!).getByText('Up to date')).toBeVisible();
+    const office = within(screen.getByRole('region', { name: 'PowerOffice Go' }));
+    expect(office.getByText("Switched off in this installation's settings, so its jobs do not run.")).toBeVisible();
+    expect(office.queryByRole('listitem')).not.toBeInTheDocument();
+    const service = within(screen.getByRole('region', { name: worker }));
+    expect(service.getAllByRole('listitem').map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs)$/).textContent))
+      .toEqual(['Change delivery', 'Scheduled jobs']);
+    expect(service.getAllByText('Running')).toHaveLength(2);
     expect(screen.getByRole('link', { name: 'Open integration administration' })).toHaveAttribute('href', '/admin/integrations');
-    // The four local cards and nothing else: no section about a system this page does not read.
-    expect(screen.getAllByRole('region')).toHaveLength(4);
-    for (const name of [admin, 'Atera', 'PowerOffice', 'Microsoft Graph']) expect(screen.getByRole('region', { name })).toBeVisible();
-    expect(screen.getAllByRole('button')).toHaveLength(1); expect(screen.getByRole('button', { name: 'Refresh local readiness' })).toBeVisible();
+    expect(screen.getAllByRole('button')).toHaveLength(1); expect(screen.getByRole('button', { name: 'Refresh status' })).toBeVisible();
     fireEvent(document, new Event('visibilitychange')); fireEvent(window, new Event('online')); expect(fetch).toHaveBeenCalledTimes(1);
   });
-  it('labels unavailable saved metadata without substituting healthy zeroes', async () => {
-    const value = localReadiness(); value.status = 'PARTIAL';
-    value.admin.atera.stored = null; value.admin.powerOffice.stored = null; value.admin.microsoftGraph.stored = null;
+
+  it('names every gap in the same box and marks the cards that need attention', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => response(connectionGaps()))); render();
+    const box = (await screen.findByText('6 things need attention')).closest('.fui-MessageBar') as HTMLElement;
+    expect(within(box).getAllByRole('listitem').map((item) => item.textContent?.replace(/ \d+ \w+ ago/, ' …'))).toEqual([
+      'Alerts (Atera): the last run failed …',
+      'Open tickets (Atera): last complete read …, limit 15 min',
+      'Customers (Atera): no complete read yet',
+      'Atera: 2 changes could not be sent',
+      'Brønnøysund Register Centre is paused: its jobs are skipped until someone resumes it',
+      'Background service, Scheduled jobs: last sign of life …',
+    ]);
+    const atera = within(screen.getByRole('region', { name: 'Atera' }));
+    expect(atera.getByText('Needs attention')).toBeVisible();
+    expect(atera.getByText('2 changes could not be sent.')).toBeVisible();
+    expect(atera.getByText('Last run failed')).toBeVisible();
+    expect(atera.getByText('Never read')).toBeVisible();
+    expect(within(screen.getByRole('region', { name: 'Brønnøysund Register Centre' })).getAllByText('Paused')).toHaveLength(2);
+    expect(within(screen.getByRole('region', { name: worker })).getByText('Late')).toBeVisible();
+    expect(screen.queryByText(/^Everything is up to date/)).not.toBeInTheDocument();
+  });
+
+  it('says so when the saved state could not be read, without zeroes or old figures', async () => {
+    const value = connectionStatus(); value.status = 'Unavailable'; value.worker = null; for (const integration of value.integrations) integration.state = null;
     vi.stubGlobal('fetch', vi.fn(async () => response(value))); render();
-    expect(await screen.findByText(/not a connection-health result/)).toBeVisible();
-    for (const name of ['Atera', 'PowerOffice', 'Microsoft Graph'])
-      expect(within(screen.getByRole('region', { name })).getByText(/Saved local state could not be read/)).toBeVisible();
-    expect(screen.queryByText('Stored external records')).not.toBeInTheDocument();
+    expect(await screen.findByText('The saved state could not be read, so nothing is shown as up to date. Refresh to try again.')).toBeVisible();
+    for (const name of [worker, 'Atera', 'PowerOffice Go']) expect(within(screen.getByRole('region', { name })).getByText('Saved state could not be read.')).toBeVisible();
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+    expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
   });
-  it('does not salvage a response with an unexpected section', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => response({ ...localReadiness(), personal: { status: 'PRESENT' } }))); render();
-    expect(await screen.findByText('The local readiness response was invalid. No unverified details are shown.')).toBeVisible();
-    expect(screen.queryByRole('region', { name: admin })).not.toBeInTheDocument(); expect(screen.queryByText('Atera')).not.toBeInTheDocument();
+
+  it('does not salvage a reply with an unexpected section', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => response({ ...connectionStatus(), personal: { status: 'PRESENT' } }))); render();
+    expect(await screen.findByText('The connection status reply was invalid. No unverified details are shown.')).toBeVisible();
+    expect(screen.queryByRole('region', { name: worker })).not.toBeInTheDocument(); expect(screen.queryByText('Atera')).not.toBeInTheDocument();
   });
+
   it('hides old details during a keyboard refresh, keeps focus, and refuses repeated activation', async () => {
     let finish!: (r: Response) => void; let reads = 0;
-    const fetch = vi.fn(async () => ++reads === 1 ? response(localReadiness()) : new Promise<Response>(resolve => { finish = resolve; }));
-    vi.stubGlobal('fetch', fetch); render(); await screen.findByRole('region', { name: admin });
-    const refresh = screen.getByRole('button', { name: 'Refresh local readiness' }); refresh.focus(); await userEvent.keyboard('{Enter}');
-    expect(refresh).toHaveFocus(); expect(refresh).toHaveAttribute('aria-disabled', 'true'); expect(screen.queryByRole('region', { name: admin })).not.toBeInTheDocument();
+    const fetch = vi.fn(async () => ++reads === 1 ? response(connectionStatus()) : new Promise<Response>(resolve => { finish = resolve; }));
+    vi.stubGlobal('fetch', fetch); render(); await screen.findByRole('region', { name: worker });
+    const refresh = screen.getByRole('button', { name: 'Refresh status' }); refresh.focus(); await userEvent.keyboard('{Enter}');
+    expect(refresh).toHaveFocus(); expect(refresh).toHaveAttribute('aria-disabled', 'true'); expect(screen.queryByRole('region', { name: worker })).not.toBeInTheDocument();
     await userEvent.keyboard('{Enter} '); fireEvent.click(refresh); expect(fetch).toHaveBeenCalledTimes(2);
-    await act(async () => finish(response(localReadiness()))); expect(await screen.findByRole('region', { name: admin })).toBeVisible(); expect(refresh).toHaveFocus();
+    await act(async () => finish(response(connectionGaps()))); expect(await screen.findByText('6 things need attention')).toBeVisible(); expect(refresh).toHaveFocus();
   });
+
   it.each([403, 503])('removes previous details after HTTP%s and does not display private error text', async status => {
-    let fail = false; const fetch = vi.fn(async () => fail ? response({ detail: 'synthetic-private-error' }, status) : response(localReadiness()));
-    vi.stubGlobal('fetch', fetch); render(); await screen.findByRole('region', { name: admin }); fail = true;
-    await userEvent.click(screen.getByRole('button', { name: 'Refresh local readiness' })); await screen.findByRole('status');
-    expect(screen.queryByRole('region', { name: admin })).not.toBeInTheDocument(); expect(screen.queryByText('Atera')).not.toBeInTheDocument();
+    let fail = false; const fetch = vi.fn(async () => fail ? response({ detail: 'synthetic-private-error' }, status) : response(connectionStatus()));
+    vi.stubGlobal('fetch', fetch); render(); await screen.findByRole('region', { name: worker }); fail = true;
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh status' })); await screen.findByRole('status');
+    expect(screen.queryByRole('region', { name: worker })).not.toBeInTheDocument(); expect(screen.queryByText('Atera')).not.toBeInTheDocument();
     expect(screen.queryByText(/synthetic-private/)).not.toBeInTheDocument(); expect(fetch).toHaveBeenCalledTimes(2);
   });
+
   it.each(['employee', 'permissions'] as const)('aborts and ignores a late reply after changing %s', async change => {
     let finish!: (r: Response) => void; let signal: AbortSignal | undefined; let reads = 0;
-    const current = localReadiness(); current.admin.authMode = 'DEVELOPMENT';
     vi.stubGlobal('fetch', vi.fn((_: string, init: RequestInit) => {
       if (++reads === 1) { signal = init.signal as AbortSignal; return new Promise<Response>(resolve => { finish = resolve; }); }
-      return Promise.resolve(response(current));
+      return Promise.resolve(response(connectionStatus()));
     }));
     function ChangeAuthority() {
       const [user, setUser] = useState(testUser(permissions));
@@ -78,9 +113,9 @@ describe('read-only Connections page', () => {
     }
     renderRoutes([page(<ChangeAuthority />)], '/connections', testUser(permissions)); await waitFor(() => expect(signal).toBeDefined());
     await userEvent.click(screen.getByRole('button', { name: 'Change authority' })); expect(signal!.aborted).toBe(true);
-    if (change === 'employee') expect(await screen.findByText('Local development sign-in')).toBeVisible();
+    if (change === 'employee') expect(await screen.findByText(/^Everything is up to date/)).toBeVisible();
     else expect(await screen.findByRole('heading', { name: 'No access' })).toBeVisible();
-    await act(async () => finish(response(localReadiness())));
-    expect(screen.queryByText('Microsoft Entra')).not.toBeInTheDocument(); expect(reads).toBe(change === 'employee' ? 2 : 1);
+    await act(async () => finish(response(connectionGaps())));
+    expect(screen.queryByText('6 things need attention')).not.toBeInTheDocument(); expect(reads).toBe(change === 'employee' ? 2 : 1);
   });
 });

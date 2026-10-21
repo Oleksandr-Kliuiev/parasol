@@ -3989,50 +3989,69 @@
       "ReadOnly": "Lesetilgang"
     }
   },
-  "readiness": {
-    "title": "Tilkoplingsoversikt",
-    "subtitle": "Berre lokal konfigurasjon og lagra opplysningar.",
-    "refresh": "Oppdater lokal oversikt",
-    "notChecked": "Tilkoplingar og tilgangsopplysningar er ikkje kontrollerte.",
-    "checkedAt": "Lokale opplysningar lesne {{time}}",
-    "partial": "Nokre lagra opplysningar kunne ikkje lesast. Dette er ikkje ein kontroll av tilkoplingane.",
-    "adminTitle": "Lagra administrativ konfigurasjon",
-    "workerNote": "Passord og nøklar ligg i bakgrunnstenesta, så denne sida kan ikkje sjå om dei er sette.",
-    "authMode": "Konfigurert innloggingsmåte",
-    "auth": {
-      "ENTRA": "Microsoft Entra",
-      "DEVELOPMENT": "Lokal utviklingsinnlogging"
+  "connectionStatus": {
+    "title": "Tilkoplingsstatus",
+    "subtitle": "Det Parasoll har lagra om kvar integrasjon og bakgrunnstenesta. Sjølve systema blir ikkje kontakta.",
+    "refresh": "Oppdater status",
+    "checkedAt": "Lesen {{time}}",
+    "ready": "Alt er oppdatert: alle jobbane i integrasjonane som er slått på, har lese innanfor grensa si, ingenting ventar på å bli sendt, og bakgrunnstenesta køyrer.",
+    "gapsTitle_one": "{{count}} ting treng merksemd",
+    "gapsTitle_other": "{{count}} ting treng merksemd",
+    "unavailable": "Den lagra tilstanden kunne ikkje lesast, så ingenting blir vist som oppdatert. Oppdater for å prøve igjen.",
+    "gaps": {
+      "Never": "{{job}}: inga fullstendig lesing enno",
+      "Stale": "{{job}}: siste fullstendige lesing {{age}}, grense {{limit}}",
+      "Failed": "{{job}}: siste køyring feila {{age}}",
+      "Paused": "{{system}} er sett på pause: jobbane blir hoppa over til nokon startar han att",
+      "OutboundFailed_one": "{{system}}: {{count}} endring kunne ikkje sendast",
+      "OutboundFailed_other": "{{system}}: {{count}} endringar kunne ikkje sendast",
+      "WorkerLate": "Bakgrunnstenesta, {{component}}: siste livsteikn {{age}}",
+      "WorkerMissing": "Bakgrunnstenesta, {{component}}: ingen livsteikn enno"
     },
-    "entraNote": "Innlogging via Microsoft 365 eller Entra stadfestar ikkje teknisk tenant-overvaking.",
-    "openIntegrations": "Opne integrasjonsadministrasjon",
-    "enabled": "Aktivert lokalt",
-    "disabled": "Deaktivert lokalt",
-    "enabledFlag": "Lokalt aktiveringsflagg",
-    "writeFlag": "Lokalt skriveflagg",
-    "flagNote": "Lokale flagg og lagra postar; tilkopling og skrivetilgang er ikkje kontrollerte.",
-    "savedPause": "Lagra pausestatus",
-    "savedSuccess": "Lagra siste vellukka synkronisering",
-    "storedUnavailable": "Lagra lokal tilstand kunne ikkje lesast. Tidlegare tilstand eller erstatningstal på null blir ikkje viste.",
-    "stored": {
-      "records": "Lagra eksterne postar",
-      "unlinkedRecords": "Lagra ukopla postar",
-      "pendingOutbound": "Lagra ventande utgåande operasjonar",
-      "failedOutbound": "Lagra mislykka utgåande operasjonar"
+    "state": {
+      "on": "Oppdatert",
+      "gaps": "Treng merksemd",
+      "paused": "På pause",
+      "off": "Slått av"
     },
-    "graph": {
-      "enabled": "Lokalt Graph-aktiveringsflagg",
-      "calendarEnabled": "Kalenderflagg",
-      "mailEnabled": "E-postflagg",
-      "sharePointEnabled": "SharePoint-flagg",
-      "teamsEnabled": "Teams-flagg"
+    "off": "Slått av i innstillingane for denne installasjonen, så jobbane køyrer ikkje.",
+    "writesOn": "Endringar i Parasoll blir sende til {{system}}.",
+    "writesOff": "Endringar i Parasoll blir ikkje sende til {{system}}.",
+    "failedOutbound_one": "{{count}} endring kunne ikkje sendast.",
+    "failedOutbound_other": "{{count}} endringar kunne ikkje sendast.",
+    "freshness": {
+      "Fresh": "Oppdatert",
+      "Stale": "Forseinka",
+      "Never": "Aldri lesen",
+      "Paused": "På pause",
+      "Disabled": "Av"
     },
-    "graphNote": "Uavhengig av innlogging. Lagra Graph-tidspunkt kan vere historiske og stadfestar ikkje at han er på no.",
-    "directorySavedAt": "Lagra vellukka katalogsynkronisering",
-    "rolesSavedAt": "Lagra vellukka rollesynkronisering",
+    "lastRead": "Siste fullstendige lesing",
+    "notRead": "Inga fullstendig lesing enno",
+    "limit": "grense {{limit}}",
+    "lastFailed": "Siste køyring feila",
+    "unreadState": "Den lagra tilstanden kunne ikkje lesast.",
+    "worker": {
+      "title": "Bakgrunnsteneste",
+      "note": "Ein del blir rekna som forseinka etter {{limit}} utan livsteikn.",
+      "components": {
+        "outbox": "Levering av endringar",
+        "jobs": "Planlagde jobbar"
+      },
+      "state": {
+        "Current": "Køyrer",
+        "Late": "Forseinka",
+        "Missing": "Ingen livsteikn"
+      },
+      "beat": "Siste livsteikn",
+      "noBeat": "Ingen livsteikn enno"
+    },
+    "administrationNote": "Jobbar blir køyrde, sette på pause og testa i integrasjonsadministrasjonen.",
+    "openAdministration": "Opne integrasjonsadministrasjon",
     "error": {
-      "FORBIDDEN": "Dei noverande rettane dine tillèt ikkje lesing av denne lokale oversikta. Tidlegare opplysningar er fjerna.",
-      "REQUEST_FAILED": "Den lokale oversikta kunne ikkje lesast. Tidlegare opplysningar blir ikkje viste. Oppdater for å prøve igjen.",
-      "INVALID_RESPONSE": "Den lokale oversikta gav eit ugyldig svar. Ingen ustadfesta opplysningar blir viste."
+      "FORBIDDEN": "Dei noverande rettane dine tillèt ikkje lesing av tilkoplingsstatusen. Tidlegare opplysningar er fjerna.",
+      "REQUEST_FAILED": "Tilkoplingsstatusen kunne ikkje lesast. Tidlegare opplysningar blir ikkje viste. Oppdater for å prøve igjen.",
+      "INVALID_RESPONSE": "Svaret med tilkoplingsstatusen var ugyldig. Ingen ustadfesta opplysningar blir viste."
     }
   },
   "customerFinance": {

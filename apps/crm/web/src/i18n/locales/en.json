@@ -3991,50 +3991,69 @@
       "ReadOnly": "Read only"
     }
   },
-  "readiness": {
-    "title": "Connection readiness",
-    "subtitle": "Local configuration and saved records only.",
-    "refresh": "Refresh local readiness",
-    "notChecked": "Connections and credentials have not been checked.",
-    "checkedAt": "Local metadata read at {{time}}",
-    "partial": "Some saved metadata could not be read. This is not a connection-health result.",
-    "adminTitle": "Saved administrative configuration",
-    "workerNote": "Passwords and keys are held by the background service, so this page cannot see whether they are set.",
-    "authMode": "Configured sign-in mode",
-    "auth": {
-      "ENTRA": "Microsoft Entra",
-      "DEVELOPMENT": "Local development sign-in"
+  "connectionStatus": {
+    "title": "Connection status",
+    "subtitle": "What Parasoll has saved about each integration and its background service. The systems themselves are not contacted.",
+    "refresh": "Refresh status",
+    "checkedAt": "Read {{time}}",
+    "ready": "Everything is up to date: every job of the switched-on integrations read within its limit, nothing waits to be sent, and the background service is running.",
+    "gapsTitle_one": "{{count}} thing needs attention",
+    "gapsTitle_other": "{{count}} things need attention",
+    "unavailable": "The saved state could not be read, so nothing is shown as up to date. Refresh to try again.",
+    "gaps": {
+      "Never": "{{job}}: no complete read yet",
+      "Stale": "{{job}}: last complete read {{age}}, limit {{limit}}",
+      "Failed": "{{job}}: the last run failed {{age}}",
+      "Paused": "{{system}} is paused: its jobs are skipped until someone resumes it",
+      "OutboundFailed_one": "{{system}}: {{count}} change could not be sent",
+      "OutboundFailed_other": "{{system}}: {{count}} changes could not be sent",
+      "WorkerLate": "Background service, {{component}}: last sign of life {{age}}",
+      "WorkerMissing": "Background service, {{component}}: no sign of life yet"
     },
-    "entraNote": "Signing in through Microsoft 365 or Entra does not establish technical tenant monitoring.",
-    "openIntegrations": "Open integration administration",
-    "enabled": "Enabled locally",
-    "disabled": "Disabled locally",
-    "enabledFlag": "Local enabled flag",
-    "writeFlag": "Local write flag",
-    "flagNote": "Local flags and saved records; connectivity and write permission are not checked.",
-    "savedPause": "Saved pause state",
-    "savedSuccess": "Saved last successful sync",
-    "storedUnavailable": "Saved local state could not be read. No previous state or zero-count substitute is shown.",
-    "stored": {
-      "records": "Stored external records",
-      "unlinkedRecords": "Stored unlinked records",
-      "pendingOutbound": "Saved pending outbound operations",
-      "failedOutbound": "Saved failed outbound operations"
+    "state": {
+      "on": "Up to date",
+      "gaps": "Needs attention",
+      "paused": "Paused",
+      "off": "Switched off"
     },
-    "graph": {
-      "enabled": "Local Graph enabled flag",
-      "calendarEnabled": "Calendar flag",
-      "mailEnabled": "Mail flag",
-      "sharePointEnabled": "SharePoint flag",
-      "teamsEnabled": "Teams flag"
+    "off": "Switched off in this installation's settings, so its jobs do not run.",
+    "writesOn": "Changes made in Parasoll are sent to {{system}}.",
+    "writesOff": "Changes made in Parasoll are not sent to {{system}}.",
+    "failedOutbound_one": "{{count}} change could not be sent.",
+    "failedOutbound_other": "{{count}} changes could not be sent.",
+    "freshness": {
+      "Fresh": "Up to date",
+      "Stale": "Late",
+      "Never": "Never read",
+      "Paused": "Paused",
+      "Disabled": "Off"
     },
-    "graphNote": "Separate from sign-in. Saved Graph times may be historical, not proof it is on now.",
-    "directorySavedAt": "Saved directory sync success",
-    "rolesSavedAt": "Saved role sync success",
+    "lastRead": "Last complete read",
+    "notRead": "No complete read yet",
+    "limit": "limit {{limit}}",
+    "lastFailed": "Last run failed",
+    "unreadState": "Saved state could not be read.",
+    "worker": {
+      "title": "Background service",
+      "note": "A part counts as late after {{limit}} without a sign of life.",
+      "components": {
+        "outbox": "Change delivery",
+        "jobs": "Scheduled jobs"
+      },
+      "state": {
+        "Current": "Running",
+        "Late": "Late",
+        "Missing": "No sign of life"
+      },
+      "beat": "Last sign of life",
+      "noBeat": "No sign of life yet"
+    },
+    "administrationNote": "Jobs are run, paused and tested in integration administration.",
+    "openAdministration": "Open integration administration",
     "error": {
-      "FORBIDDEN": "Your current permissions do not allow reading this local readiness view. Previous details have been removed.",
-      "REQUEST_FAILED": "Local readiness could not be read. No previous details are shown. Refresh to try again.",
-      "INVALID_RESPONSE": "The local readiness response was invalid. No unverified details are shown."
+      "FORBIDDEN": "Your current permissions do not allow reading the connection status. Previous details have been removed.",
+      "REQUEST_FAILED": "The connection status could not be read. No previous details are shown. Refresh to try again.",
+      "INVALID_RESPONSE": "The connection status reply was invalid. No unverified details are shown."
     }
   },
   "customerFinance": {
