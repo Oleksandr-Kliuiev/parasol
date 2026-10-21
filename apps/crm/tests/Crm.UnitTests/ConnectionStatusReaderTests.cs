@@ -39,7 +39,7 @@ public sealed class ConnectionStatusReaderTests
         atera.State.Jobs.Select(j => (j.Job, j.Freshness, j.AgeMinutes)).ShouldBe([("atera-alerts", "Fresh", (int?)5), ("atera-tickets", "Fresh", 3)]);
         view.Integrations[1].WriteEnabled.ShouldBeNull();
         view.Worker!.StaleAfterSeconds.ShouldBe(180);
-        view.Worker.Components.Select(c => (c.Component, c.State, c.AgeSeconds)).ShouldBe([("outbox", "Current", (int?)20), ("jobs", "Current", 40)]);
+        view.Worker.Components.Select(c => (c.Component, c.State, c.AgeSeconds)).ShouldBe([("outbox", "Current", (int?)20), ("jobs", "Current", 40), ("actions", "Current", 10)]);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class ConnectionStatusReaderTests
             Stream("atera", "atera-alerts", Minutes(5), failed: Minutes(1)),
             Stream("atera", "atera-tickets", Minutes(95), failedOutbound: 2),
             Stream("brreg", "brreg-registry-check", null),
-        ], Beat("jobs", 900));
+        ], Beat("jobs", 900), Beat("actions", 5));
 
         var view = ConnectionStatusReader.Compose([Atera, Brreg], state, Now);
 
@@ -63,14 +63,14 @@ public sealed class ConnectionStatusReaderTests
             new ConnectionGap("WorkerMissing", Component: "outbox"), new ConnectionGap("WorkerLate", Component: "jobs"),
         ]);
         view.Integrations[0].State!.Jobs[0].LastFailedAt.ShouldBe(Minutes(1));
-        view.Worker!.Components.Select(c => (c.State, c.BeatAt)).ShouldBe([("Missing", (DateTimeOffset?)null), ("Late", Now.AddSeconds(-900))]);
+        view.Worker!.Components.Select(c => (c.State, c.BeatAt)).ShouldBe([("Missing", (DateTimeOffset?)null), ("Late", Now.AddSeconds(-900)), ("Current", Now.AddSeconds(-5))]);
     }
 
     [Fact]
     public void A_failure_that_a_success_followed_is_reported_but_is_no_gap()
     {
         var state = State([Stream("atera", "atera-alerts", Minutes(2), failed: Minutes(30)), Stream("atera", "atera-tickets", Minutes(3))],
-            Beat("outbox", 5), Beat("jobs", 5));
+            Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5));
 
         var view = ConnectionStatusReader.Compose([Atera], state, Now);
 
@@ -86,7 +86,7 @@ public sealed class ConnectionStatusReaderTests
         [
             Stream("atera", "atera-alerts", Minutes(400), paused: true), Stream("atera", "atera-tickets", null, paused: true),
             Stream("poweroffice", "poweroffice-customers", null),
-        ], Beat("outbox", 5), Beat("jobs", 5));
+        ], Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5));
 
         var view = ConnectionStatusReader.Compose([Atera, office], state, Now);
 
@@ -102,12 +102,13 @@ public sealed class ConnectionStatusReaderTests
     {
         // A replaced container leaves its old row behind for a week; the new instance's beat is what counts.
         var state = State([Stream("brreg", "brreg-registry-check", Minutes(10))],
-            Beat("outbox", 5000, "worker-old"), Beat("outbox", 10, "worker-new"), Beat("jobs", 5000, "worker-old"), Beat("jobs", 30, "worker-new"));
+            Beat("outbox", 5000, "worker-old"), Beat("outbox", 10, "worker-new"), Beat("jobs", 5000, "worker-old"), Beat("jobs", 30, "worker-new"),
+            Beat("actions", 5000, "worker-old"), Beat("actions", 20, "worker-new"));
 
         var view = ConnectionStatusReader.Compose([Brreg], state, Now);
 
         view.Status.ShouldBe("Ready");
-        view.Worker!.Components.Select(c => c.AgeSeconds).ShouldBe([10, 30]);
+        view.Worker!.Components.Select(c => c.AgeSeconds).ShouldBe([10, 30, 20]);
     }
 
     [Fact]

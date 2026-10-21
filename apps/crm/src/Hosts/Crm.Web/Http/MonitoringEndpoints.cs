@@ -122,7 +122,9 @@ public static class MonitoringEndpoints
                 await db.Database.ExecuteSqlRawAsync("DECLARE @result int; EXEC @result = sys.sp_getapplock @Resource=N'crm-monitoring-outbound-retry', @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=10000; IF @result < 0 THROW 51000, 'Retry selection is busy.', 1;", ct);
                 var operations = await db.OutboundOperations.Where(o => ids.Contains(o.Id)).ToListAsync(ct);
                 var versions = selected.ToDictionary(m => m.Id, m => m.Etag);
+                // A vendor action is settled in the action log, never sent again from here (M39.1): it counts as unavailable.
                 var eligible = operations.Where(o => o.Status is OutboundStatus.Failed or OutboundStatus.DeadLetter &&
+                    !o.Operation.StartsWith(Crm.Integrations.Core.Actions.VendorAction.OperationPrefix, StringComparison.Ordinal) &&
                     (o.LockedUntil == null || o.LockedUntil < now) && versions[o.Id] == OutboundOperationItem.Version(o)).ToList();
                 var items = ids.Select(id => new OutboundRetryItem(id, eligible.Any(o => o.Id == id) ? "Available" :
                     operations.Any(o => o.Id == id && versions[id] != OutboundOperationItem.Version(o)) ? "Stale" : "Unavailable")).ToList();

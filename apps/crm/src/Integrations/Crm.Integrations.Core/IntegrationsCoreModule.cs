@@ -37,9 +37,18 @@ public static class IntegrationsCoreModule
         services.AddScoped<WorkerHeartbeatReader>();
         services.AddScoped<WorkerHeartbeatJob>();
         services.AddSingleton<OutboundProcessorJob>();
+        // M39.1: actions at vendors — previewed and asked for in crm-web, sent by the loop of crm-worker.
+        services.AddScoped<Actions.VendorActionService>();
+        services.AddScoped<Actions.VendorActionReader>();
+        services.AddSingleton<Actions.VendorActionRunner>();
+        services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, IntegrationDatabasePermissions>();
         services.AddModuleServices(typeof(IntegrationsCoreModule).Assembly);
         return services;
     }
+
+    /// <summary>The five-second loop that sends vendor actions; crm-worker only, the host with the provider credentials.</summary>
+    public static IServiceCollection AddVendorActionLoop(this IServiceCollection services) =>
+        services.AddHostedService<Actions.VendorActionLoop>();
 
     public static IEndpointRouteBuilder MapIntegrationRunEndpoints(this IEndpointRouteBuilder app)
     {

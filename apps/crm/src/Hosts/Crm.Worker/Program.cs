@@ -68,6 +68,8 @@ builder.Services
 
 // DEV-06: the outbox loop with its liveness (rounds finish) and heartbeat; ready means the database answers.
 builder.Services.AddOutboxProcessing();
+// M39.1: vendor actions are sent every five seconds, with a heartbeat of their own.
+builder.Services.AddVendorActionLoop();
 builder.Services.AddDatabaseReadiness();
 // DEV-17: reads operational state independently of Hangfire, so a stalled job server remains observable.
 builder.Services.AddHostedService<OperationalTelemetry>();

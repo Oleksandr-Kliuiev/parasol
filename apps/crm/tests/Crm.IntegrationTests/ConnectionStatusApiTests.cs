@@ -97,7 +97,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
             ["partnercenter-customers"] = 2175, ["partnercenter-subscriptions"] = 375, ["partnercenter-licenses"] = 2175,
             ["entra-user-sync"] = 105, ["entra-role-sync"] = 18, ["brreg-registry-check"] = 2175,
         }, ignoreOrder: true);
-        view.Worker!.Components.Select(c => c.Component).ShouldBe(["outbox", "jobs"]);
+        view.Worker!.Components.Select(c => c.Component).ShouldBe(["outbox", "jobs", "actions"]);
         (await Writes(host.Services)).ShouldBe(before);
         new[] { factory.Atera.LogEntries.Count, factory.PowerOffice.LogEntries.Count, factory.Graph.LogEntries.Count,
             factory.PartnerCenter.LogEntries.Count, factory.Brreg.LogEntries.Count }.ShouldBe(providerCalls);
@@ -154,7 +154,8 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
             db.OutboundOperations.Add(outbound); ownedOutbound.Add(outbound.Id);
             db.WorkerHeartbeats.AddRange(
                 new WorkerHeartbeat { Component = "outbox", Instance = Instance, BeatAt = now },
-                new WorkerHeartbeat { Component = "jobs", Instance = Instance, BeatAt = now });
+                new WorkerHeartbeat { Component = "jobs", Instance = Instance, BeatAt = now },
+                new WorkerHeartbeat { Component = "actions", Instance = Instance, BeatAt = now });
             await db.SaveChangesAsync(Ct);
         }
 

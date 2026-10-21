@@ -12,8 +12,11 @@ public sealed class ConnectionStatusReader
 {
     internal static readonly TimeSpan Budget = TimeSpan.FromSeconds(5);
 
-    /// <summary>The worker parts that must beat, as <c>/health/details</c> expects them: the outbox loop and the job server.</summary>
-    internal static readonly string[] WorkerComponents = [OutboxProcessor.HeartbeatComponent, WorkerHeartbeatJob.Component];
+    /// <summary>
+    /// The worker parts that must beat: the outbox loop, the job server and the vendor action loop (M39.1), which sends what people
+    /// asked vendors to do.
+    /// </summary>
+    internal static readonly string[] WorkerComponents = [OutboxProcessor.HeartbeatComponent, WorkerHeartbeatJob.Component, Actions.VendorActionLoop.HeartbeatComponent];
 
     private readonly ICurrentUser user;
     private readonly IConnectionCatalog catalog;

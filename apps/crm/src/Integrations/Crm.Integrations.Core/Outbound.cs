@@ -69,7 +69,7 @@ public sealed class OutboundQueue(IntegrationDbContext db, TimeProvider timeProv
 
 /// <summary>
 /// Runs due outbound operations with exponential backoff; after <see cref="OutboundOperation.MaxAttempts"/> they become dead
-/// letters. A run claims an operation with a lease and a token of its own and renews the lease while the handler works; only
+/// letters. Vendor actions (<c>action:*</c>, M39.1) are left to <see cref="Actions.VendorActionRunner"/>, which runs every five seconds. A run claims an operation with a lease and a token of its own and renews the lease while the handler works; only
 /// the holder of the token records the outcome, so a run whose lease was taken over cannot overwrite what the new holder
 /// decided (DEV-07). Repeating an external effect is still possible after an uncertain answer: handlers check the live
 /// external record or hand the case to reconciliation instead of trusting a local flag.
@@ -93,7 +93,7 @@ public sealed class OutboundProcessorJob(
         var paused = await db.IntegrationSwitches.AsNoTracking().Where(s => s.IsPaused).Select(s => s.System).ToListAsync(cancellationToken);
         var due = await db.OutboundOperations.AsNoTracking()
             .Where(o => o.Status == OutboundStatus.Pending && o.NextAttemptAt <= now && (o.LockedUntil == null || o.LockedUntil < now) &&
-                        !paused.Contains(o.System))
+                        !paused.Contains(o.System) && !o.Operation.StartsWith(Actions.VendorAction.OperationPrefix))
             .OrderBy(o => o.CreatedAt)
             .Select(o => o.Id)
             .Take(100)
@@ -144,7 +144,8 @@ public sealed class OutboundProcessorJob(
         var token = Guid.NewGuid();
         var lease = now.Add(Lease);
         var claimed = await db.OutboundOperations
-            .Where(o => o.Id == id && o.Status == OutboundStatus.Pending && (o.LockedUntil == null || o.LockedUntil < now))
+            .Where(o => o.Id == id && o.Status == OutboundStatus.Pending && (o.LockedUntil == null || o.LockedUntil < now) &&
+                        !o.Operation.StartsWith(Actions.VendorAction.OperationPrefix))
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.LockedUntil, lease).SetProperty(o => o.LeaseOwner, token), cancellationToken);
         return claimed == 1 ? token : null;
     }
