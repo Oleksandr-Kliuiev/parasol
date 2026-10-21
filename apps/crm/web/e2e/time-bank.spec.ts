@@ -11,7 +11,14 @@ test('prepaid hours are approved, returned and approved again through the real s
   const entry = await api.post<{ id: string }>(page, '/api/v1/time/entries', { organizationId: customer.id, workDate: date,
     hours: 2, workType: 'Remote', billable: true, onsite: false, afterHours: false, description: `${name} explicit work`, clientRequestId: crypto.randomUUID() });
   await page.goto(`/time/entries?year=${now.getFullYear()}&month=${now.getMonth() + 1}`);
-  const row = page.getByRole('row').filter({ hasText: name }); await expect(row).toBeVisible();
+  const row = page.getByRole('row').filter({ hasText: name });
+  // The shared e2e database collects this month's entries from every run: page on until this test's own row shows.
+  const more = page.getByRole('button', { name: 'Load more', exact: true });
+  await expect(row.or(more).first()).toBeVisible();
+  for (let round = 0; round < 20 && !(await row.isVisible()) && await more.isVisible(); round++) {
+    await more.click(); await page.waitForLoadState('networkidle');
+  }
+  await expect(row).toBeVisible();
   const balance = async () => (await api.get<{ remainingHours: number }>(page, `/api/v1/contracts/hour-banks/${bank.id}`)).remainingHours;
   const saved = async () => (await api.get<{ items: { id: string; status: string; amount?: number; allocations: { classification: string; hours: number }[] }[] }>(
     page, `/api/v1/time/entries?organizationId=${customer.id}`)).items.find(item => item.id === entry.id)!;
