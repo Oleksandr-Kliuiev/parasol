@@ -61,7 +61,7 @@ test('integrated offline rehearsal: all 200 frozen cases, 11 segments, 10 bounda
       i.type(`PAIR ${secretLine!.split(' ')[2]} ${ackLine!.slice('OK PAIR_ACK '.length)}`);
       let generation = '1'; let boundaries = 0; let repairs = 0; let summary = '';
       for (;;) {
-        const m = await i.expect(/NEED_CLOSURE|NEED_REPAIR|SEGMENTS_(?:SUMMARY|FAILED) (.*)/, 1_200_000);
+        const m = await i.expect(/NEED_CLOSURE|NEED_REPAIR|SEGMENTS_(?:SUMMARY|FAILED) (.*)\r?\n/, 1_200_000);
         if (m[0] === 'NEED_REPAIR') { // RS-D-C: a re-pair inside a segment (the pair lives ≤ 10 min; the instrument asks after 7)
           assert.match((await o.type(`end-pair ${pairId}`))[0]!, /^OK PAIR_ACK /);
           [ackLine, secretLine] = await o.type(`pair ${ctl} ${ho}`, 2);

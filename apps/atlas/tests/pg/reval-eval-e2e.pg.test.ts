@@ -61,12 +61,15 @@ async function session() {
   return { dir, o, serverPort };
 }
 const failure = (x: { kind: string; payload: any }) => x.kind === 'FAILURE' ? x.payload.code : `OK ${x.kind}`;
+/** What the test verifier recorded about an unexpected error (V itself answers a bare INTERNAL_FAILURE). */
+const verifierErrors = (dir: string): string => { try { return readFileSync(join(dir, 'verifier-errors.log'), 'utf8'); } catch { return 'no verifier error recorded'; } };
 
 test('one case O → C → S with I and the browser: FIXTURE_CHECK, PAIR (+ secret), PAIR200, PRE, ARM, READY, answer, handoff, journaled observation', skip, async () => {
   const { dir, o, serverPort } = await session();
   let inst: InstrumentProcess | null = null;
   try {
-    assert.match((await o.type('fixture-check'))[0]!, /^OK FIXTURE_CHECK .*"financeUnchanged":true/);
+    const checked = (await o.type('fixture-check'))[0]!;
+    assert.match(checked, /^OK FIXTURE_CHECK .*"financeUnchanged":true/, `${checked}; ${verifierErrors(dir)}`);
     const policyVersion = await revise(owner, WS, { state: 'ACTIVE' });
     const i = await instrument(dir, r); inst = i.inst;
     const [ackLine, secretLine] = await o.type(`pair ${i.controlId} ${i.handoffId}`, 2);
