@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../../test/renderWithProviders';
 import { alertPage, syntheticAlert } from '../../../test/alerts';
@@ -115,6 +115,45 @@ describe('alert queue', () => {
     expect(within(cards[0]!).getByRole('link', { name: 'Fjord IT AS' })).toBeVisible();
     expect(within(cards[1]!).getByRole('button', { name: 'Assign Backup is late' })).toBeVisible();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('keeps the assign dialog and its answer while the list reloads for a new search, then focuses the task in the row', async () => {
+    let release: () => void = () => {};
+    const searched = new Promise<void>((resolve) => { release = resolve; });
+    const made = { ...task, id: 't2', subject: 'Check the backup' };
+    let created = false;
+    stub((url, init) => {
+      if (url.pathname === '/api/v1/activities/source-tasks/preview') return json({ alert: warning, fingerprint: 'b'.repeat(64),
+        subject: 'Backup is late', priority: 'Normal', task: null, canCreate: true });
+      if (url.pathname === '/api/v1/identity/users') return json({ items: [], nextCursor: null, totalCount: 0 });
+      if (url.pathname === '/api/v1/activities/source-tasks' && init?.method === 'POST') { created = true; return json({ status: 'CREATED', task: made }); }
+      if (url.pathname === '/api/v1/activities/source-tasks/lookup') return json({ items: [{ alertId: 'a1', task }, ...(created ? [{ alertId: 'a2', task: made }] : [])] });
+      return undefined;
+    });
+    const fetch = vi.mocked(globalThis.fetch);
+    const answer = fetch.getMockImplementation()!;
+    // The search's page waits, so the list shows its loading state while the dialog is open.
+    fetch.mockImplementation(async (input, init) => {
+      if (new URL(String(input), 'https://parasoll.invalid').searchParams.get('q') === 'Backup') await searched;
+      return answer(input as string, init);
+    });
+    render();
+    await screen.findByRole('table', { name: 'Alerts' });
+    await userEvent.click(screen.getByRole('button', { name: 'Assign Backup is late' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Assign alert' });
+    await waitFor(() => expect(within(dialog).getByRole('textbox', { name: 'Task subject' })).toHaveValue('Backup is late'));
+    // A search typed just before the dialog opened reaches the list while the dialog is open (no click outside the modal).
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search title or device' }), { target: { value: 'Backup' } });
+    // The page behind the modal is hidden from the accessibility tree, so the list is looked up with hidden: true.
+    await waitFor(() => expect(screen.queryByRole('table', { name: 'Alerts', hidden: true })).not.toBeInTheDocument());
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create task' }));
+    expect(await within(dialog).findByText('Task created.')).toBeVisible();
+    release();
+    await waitFor(() => expect(screen.getByRole('table', { name: 'Alerts', hidden: true })).toBeInTheDocument());
+    expect(within(dialog).getByText('Task created.')).toBeVisible();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    const taskLink = await screen.findByRole('link', { name: /Ola Tekniker · due .*: task Check the backup/ });
+    await waitFor(() => expect(taskLink).toHaveFocus());
   });
 
   it('asks no task lookup without activity access and offers no Assign without write access', async () => {

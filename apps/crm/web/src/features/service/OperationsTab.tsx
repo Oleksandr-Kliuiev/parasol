@@ -23,6 +23,7 @@ import { deviceTypes, type Alert } from './types';
 import { AlertAge, AlertFacts, AlertSeverityBadge } from './alerts/AlertBits';
 import { AlertDetailDrawer } from './alerts/AlertDetailDrawer';
 import { AlertTaskCell } from './alerts/AlertTaskCell';
+import { AlertTaskDialogHost } from './alerts/AlertTaskDialogHost';
 import { useAlertTaskLinks } from './alerts/alertTasks';
 
 const useStyles = makeStyles({
@@ -100,7 +101,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
     const next = new URLSearchParams(params); next.delete('alert'); setParams(next, { replace: true });
   };
 
-  return <div className={styles.stack}>
+  return <AlertTaskDialogHost><div className={styles.stack}>
     <Panel title={t('service.savedData')} icon={<Database16Regular />}
       actions={<Button size="small" disabled={checking} disabledFocusable={checking} onClick={refresh}>{t('service.refreshSaved')}</Button>}>
       <Text className={styles.mirror}>{t('service.savedMirror')}</Text>
@@ -208,5 +209,5 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
     {canCreate && <CreateTicketDialog open={creating} organizationId={organizationId} owner={owner} onClose={() => setCreating(false)} onQueued={() => setRevision(value => value + 1)} />}
     {/* Mounted for an alert only: the tab keeps no read of its own about a panel nobody opened. */}
     {peekId !== null && <AlertDetailDrawer alertId={peekId} onClose={closeAlert} />}
-  </div>;
+  </div></AlertTaskDialogHost>;
 }

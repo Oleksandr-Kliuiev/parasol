@@ -15,6 +15,7 @@ import { alertSeverities, type AlertSeverity } from '../types';
 import { AlertCustomerFilter } from './AlertCustomerFilter';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { AlertQueueEmpty, AlertQueueList } from './AlertQueueList';
+import { AlertTaskDialogHost } from './AlertTaskDialogHost';
 import { pageIds, useAlertTaskLinks } from './alertTasks';
 import { useAlertQueue } from './useAlertQueue';
 
@@ -69,7 +70,8 @@ function Queue() {
     message={t(filtered ? 'alerts.emptyFiltered' : state === 'Resolved' ? 'alerts.emptyResolved' : 'alerts.empty')}
     action={filtered && <Button onClick={clear}>{t('alerts.clearFilters')}</Button>} />;
 
-  return <>
+  // The assign dialog is held above the list, which reloads (search, filters) and switches between table and cards.
+  return <AlertTaskDialogHost>
     <PageHeader title={t('alerts.title')} subtitle={t(state === 'Resolved' ? 'alerts.subtitleResolved' : 'alerts.subtitle')}
       actions={<Button icon={<ArrowClockwise20Regular />} aria-label={t('alerts.refresh')} disabled={queue.isFetching} disabledFocusable={queue.isFetching}
         onClick={() => void queue.refetch()}>{t('common.refresh')}</Button>} />
@@ -100,5 +102,5 @@ function Queue() {
             onMore={() => void queue.fetchNextPage()} />} />
       </>}
     <AlertDetailDrawer alertId={peekId} onClose={closePeek} />
-  </>;
+  </AlertTaskDialogHost>;
 }
