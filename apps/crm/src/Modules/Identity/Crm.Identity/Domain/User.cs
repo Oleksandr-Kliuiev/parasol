@@ -17,6 +17,9 @@ public sealed class User : AuditableEntity
     public DateTimeOffset? LastLoginAt { get; private set; }
     public string? PreferredLanguage { get; private set; }
 
+    /// <summary>The My day layout the user chose (M38): work, lead or finance. Null until they choose, which shows work.</summary>
+    public string? MyDayLayout { get; private set; }
+
     /// <summary>
     /// The CRM roles the authority last confirmed (DEV-10), sorted and comma-separated: the directory sync or a sign-in token.
     /// Sessions take their roles from here on every request, never from the cookie.
@@ -50,6 +53,8 @@ public sealed class User : AuditableEntity
     }
 
     public void SetPreferredLanguage(string? language) => PreferredLanguage = language;
+
+    public void SetMyDayLayout(string layout) => MyDayLayout = layout;
 
     /// <summary>
     /// Records the roles a sign-in token carried, issued by the authority for this user at <paramref name="verifiedAt"/> (already

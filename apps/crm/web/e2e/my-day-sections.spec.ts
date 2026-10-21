@@ -29,9 +29,9 @@ test('My day shortcuts reach assigned work and return by keyboard without reread
       if (width > 1100) expect((await taskHeading.boundingBox())!.y, 'Assigned work is on the first screen beside the overview').toBeLessThan(900);
       const before = { ...reads };
       await page.keyboard.press('Tab'); await expect(page.getByRole('link', { name: 'Skip to content', exact: true })).toBeFocused();
-      // The day's own action and its key figures come first; the section links follow them.
+      // The day's own action and its key figures come first; the section links follow them (urgent alerts, then tasks).
       await page.keyboard.press('Enter');
-      for (let stop = 0; stop < 6 && !(await tasksLink.evaluate(el => el === document.activeElement)); stop++) await page.keyboard.press('Tab');
+      for (let stop = 0; stop < 9 && !(await tasksLink.evaluate(el => el === document.activeElement)); stop++) await page.keyboard.press('Tab');
       await expect(tasksLink).toBeFocused();
       await page.keyboard.press('Enter'); await expect(tasks).toBeFocused(); await expect(taskHeading).toBeInViewport({ ratio: 1 });
       expect(await taskHeading.evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(53);
@@ -50,5 +50,48 @@ test('My day shortcuts reach assigned work and return by keyboard without reread
     }
   } finally {
     await page.request.post(`/api/v1/activities/${task.id}/complete`, { headers: { 'X-CSRF': '1', 'If-Match': task.etag } });
+  }
+});
+
+test('urgent alerts are reached from their key figure and their jump link, and come back by keyboard', async ({ page }) => {
+  await signIn(page, 'Crm.Admin', '/organizations');
+  let reads = 0;
+  page.on('request', request => { if (new URL(request.url()).pathname === '/api/v1/service/alerts/urgent') reads++; });
+  await page.goto('/');
+  const alerts = page.locator('#my-day-alerts');
+  const heading = alerts.getByRole('heading', { name: 'Urgent alerts', exact: true });
+  await expect(heading).toBeVisible();
+  // The figure and the panel share one read.
+  await expect(page.getByRole('link', { name: /^Critical alerts/ }).getByText(/warnings?|Not read yet|Could not be read/)).toBeVisible();
+  await page.waitForLoadState('networkidle'); expect(reads).toBe(1);
+  const navigation = page.getByRole('navigation', { name: 'My day sections', exact: true });
+  await navigation.getByRole('link', { name: 'Urgent alerts', exact: true }).click();
+  await expect(alerts).toBeFocused(); await expect(heading).toBeInViewport({ ratio: 1 });
+  await expect(page).toHaveURL(/\?section=alerts#my-day-alerts$/);
+  await page.goBack(); await expect(navigation).toBeFocused();
+  await page.getByRole('link', { name: /^Critical alerts/ }).click();
+  await expect(alerts).toBeFocused();
+});
+
+test('My day keeps the layout each person chooses and the arrow keys change it', async ({ page }) => {
+  // A role of its own: the choice is stored with the person, and the shared administrator's My day must not change under
+  // the other specs.
+  await signIn(page, 'Crm.ServiceLead', '/');
+  const layouts = page.getByRole('radiogroup', { name: 'Show first', exact: true });
+  const billing = layouts.getByRole('radio', { name: 'Billing', exact: true });
+  try {
+    await expect(layouts.getByRole('radio', { name: 'Alerts and tasks', exact: true })).toBeChecked();
+    await billing.check();
+    await expect(page.getByText('Billing, overdue invoices and what needs attention.', { exact: true })).toBeVisible();
+    await expect.poll(async () => (await api.get<{ myDayLayout: string | null }>(page, '/bff/user')).myDayLayout).toBe('finance');
+    await page.reload();
+    await expect(billing).toBeChecked();
+    await billing.focus(); await page.keyboard.press('ArrowLeft');
+    await expect(layouts.getByRole('radio', { name: 'Hours to approve', exact: true })).toBeChecked();
+    await expect(page.getByRole('heading', { name: 'Hours to review', exact: true })).toBeVisible();
+    await expect.poll(async () => (await api.get<{ myDayLayout: string | null }>(page, '/bff/user')).myDayLayout).toBe('lead');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally {
+    await api.put(page, '/api/v1/identity/me/my-day-layout', { layout: 'work' });
   }
 });

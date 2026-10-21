@@ -3,7 +3,9 @@ using Crm.Identity.Contracts;
 using Crm.Identity.Features;
 using Crm.Identity.Persistence;
 using Crm.Infrastructure.DependencyInjection;
+using Crm.Infrastructure.Http;
 using Crm.SharedKernel.Application;
+using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -16,6 +18,9 @@ namespace Crm.Identity;
 public static class IdentityModule
 {
     public static readonly string[] SupportedLanguages = ["nb", "nn", "en"];
+
+    /// <summary>The My day layouts a person may choose (M38); what each one puts first is the interface's business.</summary>
+    public static readonly string[] MyDayLayouts = ["work", "lead", "finance"];
 
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, IConfiguration configuration)
     {
@@ -138,11 +143,37 @@ public static class IdentityModule
                 return Results.NoContent();
             });
 
+        // M38: the person's own choice of what My day puts first. A request of its own, because /me/preferences sets the
+        // language to whatever it is sent, so saving the layout there would reset a chosen language.
+        group.MapPut("/me/my-day-layout", async (MyDayLayoutRequest request, ICurrentUser currentUser, IdentityDbContext db, CancellationToken ct) =>
+            {
+                var user = await db.Users.SingleOrDefaultAsync(u => u.Id == currentUser.UserId, ct);
+                if (user is null)
+                {
+                    return Results.NotFound();
+                }
+
+                user.SetMyDayLayout(request.Layout!);
+                await db.SaveChangesAsync(ct);
+                return Results.NoContent();
+            })
+            .Validate<MyDayLayoutRequest>();
+
         return app;
     }
 }
 
 public sealed record PreferencesRequest(string? Language);
+
+/// <param name="Layout">One of <see cref="IdentityModule.MyDayLayouts"/>.</param>
+public sealed record MyDayLayoutRequest(string? Layout);
+
+internal sealed class MyDayLayoutRequestValidator : AbstractValidator<MyDayLayoutRequest>
+{
+    public MyDayLayoutRequestValidator() => RuleFor(x => x.Layout)
+        .Must(layout => layout is not null && IdentityModule.MyDayLayouts.Contains(layout, StringComparer.Ordinal))
+        .WithMessage($"Supported layouts: {string.Join(", ", IdentityModule.MyDayLayouts)}.");
+}
 
 public sealed record TechnicianMappingRequest(Guid? UserId);
 

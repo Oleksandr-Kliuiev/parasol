@@ -244,6 +244,13 @@
   },
   "myDay": {
     "sectionsLabel": "My day sections",
+    "layout": {
+      "label": "Show first",
+      "work": "Alerts and tasks",
+      "lead": "Hours to approve",
+      "finance": "Billing",
+      "saveFailed": "Your choice could not be saved, so My day shows the previous layout. Try again."
+    },
     "greeting": {
       "morning": "Good morning, {{name}}",
       "afternoon": "Good afternoon, {{name}}",
@@ -273,6 +280,20 @@
     "myTasksEmpty": "Nothing assigned to you right now.",
     "refreshMyTasks": "Refresh my tasks",
     "myTasksReadFailed": "Your tasks could not be read. No previous tasks are shown. Refresh to try again.",
+    "alerts": {
+      "title": "Urgent alerts",
+      "refresh": "Refresh urgent alerts",
+      "readAt": "{{source}} read at {{time}}",
+      "readIncomplete": "{{source}}: the read at {{time}} did not finish",
+      "notRead": "{{source}} not read yet",
+      "shownSome": "{{shown}} of {{total}} open alerts, most severe and oldest first",
+      "shownAll_one": "{{count}} open alert",
+      "shownAll_other": "{{count}} open alerts, most severe and oldest first",
+      "all": "All open alerts ({{count}})",
+      "empty": "No open alerts.",
+      "emptyNotRead": "Alerts appear here after the first read.",
+      "readFailed": "Urgent alerts could not be read. No earlier list is shown. Refresh to try again."
+    },
     "staleDeals": "Deals gone quiet",
     "licensingAttention": "Licenses needing attention",
     "cancellationWindow": "{{name}}: cancellation window closes {{date}}",
@@ -288,6 +309,13 @@
     "kpiLabel": "Key figures",
     "loadingValue": "…",
     "kpi": {
+      "alerts": "Critical alerts",
+      "alertsFoot_one": "{{count}} warning",
+      "alertsFoot_other": "{{count}} warnings",
+      "alertsFootIncomplete_one": "{{count}} warning · last read incomplete",
+      "alertsFootIncomplete_other": "{{count}} warnings · last read incomplete",
+      "alertsNotRead": "Not read yet",
+      "alertsFailed": "Could not be read",
       "tasks": "My open tasks",
       "tasksFoot": "Assigned to you, due first at the top",
       "hours": "Hours this week",

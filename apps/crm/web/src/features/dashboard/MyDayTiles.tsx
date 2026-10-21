@@ -1,4 +1,4 @@
-import { Clock20Regular, CalendarClock20Regular, Receipt20Regular, TaskListSquareLtr20Regular, Warning20Regular } from '@fluentui/react-icons';
+import { AlertUrgent20Regular, Clock20Regular, CalendarClock20Regular, Receipt20Regular, TaskListSquareLtr20Regular, Warning20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import type { PagedResult } from '../../api/types';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
@@ -11,23 +11,25 @@ import { useInvoices } from '../billing/api';
 import { useReminders } from '../contracts/api';
 import { useAllTimeEntries } from '../time/api';
 import type { MyDayProfile } from './myDayProfile';
+import { alertsFreshness, useUrgentAlertsAnswer } from './urgentAlerts';
 
-type Tile = 'tasks' | 'hours' | 'reminders' | 'overdue' | 'registry';
+type Tile = 'alerts' | 'tasks' | 'hours' | 'reminders' | 'overdue' | 'registry';
 
 const order: Record<MyDayProfile, readonly Tile[]> = {
-  work: ['tasks', 'hours', 'reminders', 'registry'],
-  lead: ['tasks', 'hours', 'reminders', 'registry'],
-  finance: ['overdue', 'reminders', 'hours', 'registry'],
+  work: ['alerts', 'tasks', 'hours', 'reminders', 'registry'],
+  lead: ['alerts', 'tasks', 'hours', 'reminders', 'registry'],
+  finance: ['overdue', 'alerts', 'reminders', 'hours', 'registry'],
 };
 
 /**
- * Four key figures above the panels. The task figure reads the panel's own query result from the cache (the panel owns
- * the request, its refresh and its errors), so the tile adds no read and never shows a number the panel does not.
+ * Four key figures above the panels. The alert and task figures read the panels' own query results from the cache (the
+ * panels own the request, its refresh and its errors), so the tiles add no reads and never show a number the panel does not.
  */
 export function MyDayTiles({ profile, organizations, warnings }: { profile: MyDayProfile; organizations: number; warnings: number }) {
   const { t } = useTranslation();
   const user = useCurrentUser();
   const permissionsKey = JSON.stringify([...user.permissions].sort());
+  const canAlerts = useCan(Permissions.serviceRead);
   const canTasks = useCan(Permissions.activitiesRead);
   const canTime = useCan(Permissions.timeOwn);
   const canContracts = useCan(Permissions.contractsRead);
@@ -35,13 +37,29 @@ export function MyDayTiles({ profile, organizations, warnings }: { profile: MyDa
   const canMoney = useCan(Permissions.financeRead);
   const monday = startOfWeek(todayIso());
 
+  const alerts = useUrgentAlertsAnswer(user.id, permissionsKey);
   const tasks = useCachedQueryData<{ page: PagedResult<Activity> }>(['activities', 'personal', user.id, permissionsKey]);
   const week = useAllTimeEntries({ from: monday, to: addDays(monday, 6), mine: true }, canTime);
   const reminders = useReminders({ mine: true }, canContracts);
   const overdue = useInvoices({ overdueOnly: true, limit: 1 }, canBilling);
 
   const pending = t('myDay.loadingValue');
+  // Zero critical alerts means something only once a source has been read; until then, and after a failed read, the tile says so.
+  const alertsRead = alerts.data ? alertsFreshness(alerts.data.reads) : null;
+  const alertsEnded = alerts.failed ? 'myDay.kpi.alertsFailed' : alertsRead === 'notRead' ? 'myDay.kpi.alertsNotRead' : null;
   const tiles: Record<Tile, React.ReactNode> = {
+    alerts: canAlerts && (
+      <KpiTile
+        key="alerts"
+        icon={<AlertUrgent20Regular />}
+        label={t('myDay.kpi.alerts')}
+        value={alertsEnded ? '—' : alerts.data ? formatNumber(alerts.data.critical) : pending}
+        foot={alertsEnded ? t(alertsEnded) : alerts.data
+          ? t(alertsRead === 'incomplete' ? 'myDay.kpi.alertsFootIncomplete' : 'myDay.kpi.alertsFoot', { count: alerts.data.warning })
+          : pending}
+        to="?section=alerts#my-day-alerts"
+      />
+    ),
     tasks: canTasks && (
       <KpiTile
         key="tasks"

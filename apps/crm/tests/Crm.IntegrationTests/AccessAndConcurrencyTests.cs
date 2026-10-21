@@ -36,6 +36,7 @@ public partial class AccessAndConcurrencyTests(CrmWebFactory factory)
         ["GET /api/v1/notifications/preferences"] = "own preferences",
         ["PUT /api/v1/notifications/preferences"] = "own preferences",
         ["PUT /api/v1/identity/me/preferences"] = "own language preference; the value is checked against the supported list",
+        ["PUT /api/v1/identity/me/my-day-layout"] = "own My day layout; the validator accepts only the three layouts",
         ["GET /api/v1/search"] = "every search provider is filtered by its own required permission for the caller",
     };
 

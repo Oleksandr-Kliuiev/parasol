@@ -143,6 +143,10 @@ namespace Crm.Identity.Persistence.Migrations
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("MyDayLayout")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
                     b.Property<string>("ObjectId")
                         .IsRequired()
                         .HasMaxLength(64)

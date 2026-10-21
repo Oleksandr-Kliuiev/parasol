@@ -244,6 +244,13 @@
   },
   "myDay": {
     "sectionsLabel": "Deler av Min dag",
+    "layout": {
+      "label": "Vis først",
+      "work": "Varsler og oppgaver",
+      "lead": "Timer til godkjenning",
+      "finance": "Fakturering",
+      "saveFailed": "Valget ditt ble ikke lagret, så Min dag viser det forrige oppsettet. Prøv igjen."
+    },
     "greeting": {
       "morning": "God morgen, {{name}}",
       "afternoon": "God ettermiddag, {{name}}",
@@ -273,6 +280,20 @@
     "myTasksEmpty": "Ingenting er tildelt deg nå.",
     "refreshMyTasks": "Oppdater mine oppgaver",
     "myTasksReadFailed": "Oppgavene dine kunne ikke leses. Ingen tidligere oppgaver vises. Oppdater for å prøve igjen.",
+    "alerts": {
+      "title": "Varsler som haster",
+      "refresh": "Oppdater varsler som haster",
+      "readAt": "{{source}} lest {{time}}",
+      "readIncomplete": "{{source}}: lesingen {{time}} ble ikke fullført",
+      "notRead": "{{source}} er ikke lest ennå",
+      "shownSome": "{{shown}} av {{total}} åpne varsler, de mest alvorlige og eldste først",
+      "shownAll_one": "{{count}} åpent varsel",
+      "shownAll_other": "{{count}} åpne varsler, de mest alvorlige og eldste først",
+      "all": "Alle åpne varsler ({{count}})",
+      "empty": "Ingen åpne varsler.",
+      "emptyNotRead": "Varslene vises her etter første lesing.",
+      "readFailed": "Varslene som haster kunne ikke leses. Ingen tidligere liste vises. Oppdater for å prøve igjen."
+    },
     "staleDeals": "Salg uten aktivitet",
     "licensingAttention": "Lisenser som trenger tilsyn",
     "cancellationWindow": "{{name}}: angrefristen går ut {{date}}",
@@ -288,6 +309,13 @@
     "kpiLabel": "Nøkkeltall",
     "loadingValue": "…",
     "kpi": {
+      "alerts": "Kritiske varsler",
+      "alertsFoot_one": "{{count}} advarsel",
+      "alertsFoot_other": "{{count}} advarsler",
+      "alertsFootIncomplete_one": "{{count}} advarsel · siste lesing ufullstendig",
+      "alertsFootIncomplete_other": "{{count}} advarsler · siste lesing ufullstendig",
+      "alertsNotRead": "Ikke lest ennå",
+      "alertsFailed": "Kunne ikke leses",
       "tasks": "Mine åpne oppgaver",
       "tasksFoot": "Tildelt deg, førstkommende frist øverst",
       "hours": "Timer denne uka",
