@@ -1,7 +1,7 @@
 """Synthetic persistence exercise only; never authenticate or call a working provider.
 
 Owner-seeded rows exercise native backup/restore, not HTTP admission or replay. The
-actual scoped API workflow is covered separately by tools/composition.
+scoped API workflows are covered separately by the CRM browser suites (apps/crm/web/e2e).
 """
 from dataclasses import dataclass, field
 import hashlib

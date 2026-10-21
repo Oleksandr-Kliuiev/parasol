@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import { mkdir, writeFile, chmod, rm } from 'node:fs/promises';
 import { command, jsonFile, secret, safeEnvironment } from './runtime.mjs';
-import { WORKSPACE } from './plan.mjs';
 
 export async function certificates(state) {
   const directory = join(state.directory, 'private');
@@ -21,11 +20,11 @@ export async function certificates(state) {
 export function connectionString(state, login, password) {
   return `Server=127.0.0.1,${state.ports.sql};Database=${state.sqlDatabase};User ID=${login};Password=${password};Encrypt=True;TrustServerCertificate=True`;
 }
-export function appConfig(state, kind, enabled = false) {
+export function appConfig(state, kind) {
   const owner = kind === 'migrate'; const worker = kind === 'worker';
   const config = {
     AllowedHosts: 'localhost;127.0.0.1',
-    ConnectionStrings: { crm: connectionString(state, owner ? 'sa' : worker ? 'composition_worker' : 'composition_web',
+    ConnectionStrings: { crm: connectionString(state, owner ? 'sa' : worker ? 'harness_worker' : 'harness_web',
       owner ? state.sqlSaPassword : worker ? state.sqlWorkerPassword : state.sqlWebPassword) },
     Auth: { Mode: 'Development', ActiveUserCacheSeconds: 0 },
     Documents: { Provider: 'FileSystem', RootPath: join(state.directory, 'private/documents'), VolumeId: state.documentVolumeId },
@@ -47,14 +46,12 @@ export function appConfig(state, kind, enabled = false) {
   };
   if (!worker) {
     config.DataProtection = { KeyRingPath: join(state.directory, 'private/keyring'), CertificatePath: state.certificatePath, CertificatePassword: state.certificatePassword, BlobUri: '', KeyVaultKeyUri: '' };
-    config.Parasol = { Atlas: { Enabled: enabled, BaseUrl: state.atlasBridgeUrl,
-      Employees: enabled ? Object.fromEntries(state.employees.map(e => [e.id, { WorkspaceId: WORKSPACE, Token: e.token }])) : {} } };
   } else delete config.Auth;
   return config;
 }
-export async function writeAppConfig(state, kind, enabled = false) {
+export async function writeAppConfig(state, kind) {
   const path = join(state.directory, 'private', `${kind}.json`);
-  await jsonFile(path, appConfig(state, kind, enabled)); return path;
+  await jsonFile(path, appConfig(state, kind)); return path;
 }
 export function appEnvironment(configPath, urls) {
   return safeEnvironment({ ASPNETCORE_ENVIRONMENT: 'Development', DOTNET_ENVIRONMENT: 'Development',

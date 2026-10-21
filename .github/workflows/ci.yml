@@ -29,6 +29,7 @@ jobs:
           node-version-file: .nvmrc
       - run: npm run check:history
       - run: node --test scripts/*.test.mjs
+      - run: npm run test:harness:unit
 
   atlas:
     name: Atlas Linux build
@@ -200,53 +201,12 @@ jobs:
       - name: Publish only the secret-free synthetic drill report
         run: sudo cat "$RUNNER_TEMP/parasol-rehearsal/report.json" | tee -a "$GITHUB_STEP_SUMMARY"
 
-  composition:
-    name: Actual local CRM and Atlas workflow
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    needs: [atlas, crm-backend, crm-frontend]
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
-        with:
-          global-json-file: apps/crm/global.json
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: |
-            apps/atlas/package-lock.json
-            apps/crm/web/package-lock.json
-      - run: npm ci --prefix apps/atlas
-      - run: npm ci --prefix apps/crm/web
-      - run: dotnet restore apps/crm/Vardahei.Crm.slnx
-      - run: npx playwright install --with-deps chromium
-        working-directory: apps/crm/web
-      - run: npm run test:composition:unit
-      - name: Cache the existing pinned test database images
-        run: |
-          node --input-type=module <<'JS'
-          import { execFileSync } from 'node:child_process';
-          import { SQL_IMAGE, PG_IMAGE } from './tools/composition/plan.mjs';
-          for (const image of [SQL_IMAGE, PG_IMAGE]) execFileSync('docker', ['pull', image], { stdio: 'inherit' });
-          JS
-      - name: Real applications, restricted databases, synthetic customer workflow
-        run: npm run test:composition -- --directory "$RUNNER_TEMP/parasol-composition"
-      - name: Publish only the secret-free synthetic result
-        if: ${{ always() }}
-        run: |
-          if test -f "$RUNNER_TEMP/parasol-composition/report.json"; then
-            cat "$RUNNER_TEMP/parasol-composition/report.json" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
   required:
     name: Required checks
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: ${{ always() }}
-    needs: [history, atlas, atlas-integration, crm-backend, crm-frontend, crm-e2e, hostinger, composition]
+    needs: [history, atlas, atlas-integration, crm-backend, crm-frontend, crm-e2e, hostinger]
     steps:
       - name: All checks must succeed
         env:
