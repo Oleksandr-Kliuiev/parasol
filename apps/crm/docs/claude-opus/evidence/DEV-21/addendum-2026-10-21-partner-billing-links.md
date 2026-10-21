@@ -1,0 +1,25 @@
+# DEV-21, дополнение 21.10.2026: ссылки экспорта биллинга Partner Center
+
+Дата: 2026-10-21. Самооценка исполнителя (Claude), не независимая проверка. Оценка DEV-21 от 2026-10-05 ([DEV-21.md](../DEV-21.md)), её JSON в `matrix/` и `source-manifest.sha256` не переписывались: это записи того дня.
+
+## Что было не так
+
+Оценка 05.10 закрыла F-G5-12 (токен Graph уходил на любой адрес из `@odata.nextLink`/`deltaLink`) для клиентов `Crm.Integrations.MicrosoftGraph` (`GraphLinks`) и записала в V13.2.4 «Graph same-origin». Клиент экспорта биллинга партнёра через Graph (`Crm.Integrations.PartnerCenter/PartnerBillingClient.cs`, FR-LIC-04, выключен флагом `BillingReconciliationEnabled`) это правило не охватывало: после `POST …/billed/export` он шёл по ссылкам из ответов Microsoft без проверки происхождения.
+
+| Шаг | Откуда ссылка | Что отправлялось до исправления |
+|---|---|---|
+| Опрос операции | `Location` ответа на экспорт (или `id` из тела → путь на Graph) | `GET` с `Authorization: Bearer <токен Graph>` на любой абсолютный адрес |
+| Чтение манифеста | `resourceLocation` операции | `GET` с токеном Graph на любой абсолютный адрес |
+| Файлы строк | `blobs[].blobUri`/`url` манифеста | `GET` без токена на любой адрес, в том числе по http и на внутренние адреса; строки из ответа импортировались как затраты Microsoft |
+
+Редиректы клиент не выполнял уже с M39.0 (`ProviderHttp.NoRedirects`): утечка шла не через 3xx, а через сами ссылки. Подтверждено на исходном коде 21.10.2026 временной пробой на loopback-серверах (в репозиторий не вошла): чужой хост из `Location` и из `resourceLocation` получил `Authorization: Bearer graph-token`, хранилище, где лежал манифест, тоже; чужой адрес файла получил запрос без токена, и его строки вернулись как результат экспорта. Новые тесты `PartnerBillingExportTests` на исходном коде падают в 6 случаях из 7; проходит только законный путь (ссылки на Graph и подписанный файл хранилища).
+
+## Исправление
+
+- `GraphLinks` перенесён в `Crm.Integrations.Core` (public) и используется клиентами Graph и экспортом биллинга.
+- `PartnerBillingLinks` разрешает каждую ссылку относительно `GraphBaseUrl` и решает до запроса: origin Graph (схема, хост, порт, без userinfo) → с токеном; https-файл на хосте из `Integrations:PartnerCenter:BillingStorageHostSuffixes` (по умолчанию `blob.core.windows.net`) с SAS-подписью `sig` → без токена; всё остальное → `PartnerBillingLinkRefusedException` (наследник `InvalidOperationException`; запись запуска хранит только имя типа), текст которой не называет ни одной части ссылки (в ней может быть подпись).
+- Тесты: `PartnerBillingLinksTests` (20 случаев: схема, порт, похожие хосты, userinfo, относительные ссылки, адрес метаданных, хранилище без подписи и по http) и `PartnerBillingExportTests` (7 случаев на настоящих loopback-серверах Graph, хранилища и чужого хоста, который отвечает так же, как настоящие).
+
+## Влияние на матрицу
+
+V13.2.4 остаётся `partial` (исходящий трафик не фильтруется, F-G4-12), но «Graph same-origin» теперь охватывает и экспорт биллинга Partner Center, а файлы экспорта ограничены списком хостов хранилища: пометки с датой в [deferred-and-accepted.md](deferred-and-accepted.md) и [matrix-summary.md](matrix-summary.md). F-G5-12 покрывает и этот клиент. Остаётся расхождение формы ответа Microsoft с тем, что читает код (`resourceLocation` объектом или `@odata.navigationLink`, `rootDirectory` + `sasToken` + `blobs[].name`, gzip JSON Lines): это не вопрос безопасности, см. docs/05 § 2.4; контракт подтверждается на тенанте (EXT-03).
