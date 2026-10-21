@@ -8,7 +8,8 @@ import nb from '../src/i18n/locales/nb.json' with { type: 'json' };
 import nn from '../src/i18n/locales/nn.json' with { type: 'json' };
 
 test('device investigation preserves exact scope, keyboard return and other filters across viewport sizes', { tag: '@critical' }, async ({ page, browser }, testInfo) => {
-  test.setTimeout(180_000);
+  // Eight width and theme passes with an axe scan each: Firefox and WebKit on a CI runner need more than three minutes.
+  test.setTimeout(360_000);
   await signIn(page, 'Crm.Admin', '/organizations');
   const customer = await createOrganization(page, { name: marker('Device history ') });
   const overview = atlasWorkspace(customer.id); const registry = overview.summary!.devices;

@@ -52,6 +52,12 @@ test('technical lists retain every loaded row, scroll by keyboard and do not str
     const records = workspace.getByRole('list', { name: 'Active Atlas observations', exact: true });
     await expect(records.getByRole('listitem')).toHaveCount(3);
     if (width === 1440) {
+      // The client details move beside the workspace once it has read its data (`:has([data-technical-layout])`); a slower
+      // engine can be measured a moment before that, so wait for the settled layout instead of one snapshot.
+      await expect.poll(async () => {
+        const [l, r] = [await workspace.boundingBox(), await contact.boundingBox()];
+        return l && r && r.x > l.x + l.width ? Math.abs(r.y - l.y) : Number.POSITIVE_INFINITY;
+      }, { message: 'The client details stand beside the workspace, tops aligned' }).toBeLessThan(2);
       const left = await workspace.boundingBox(), right = await contact.boundingBox();
       expect(right!.x).toBeGreaterThan(left!.x + left!.width);
       expect(Math.abs(right!.y - left!.y)).toBeLessThan(2);
