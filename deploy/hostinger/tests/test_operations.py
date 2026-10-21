@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
-from common import private_path
+from common import private_path, run
 from configure import initialize
 from snapshot import backup, inventory, verify
 from recovery import restore
@@ -42,6 +42,14 @@ class OperationsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             initialize(self.root, rehearsal=True)
         self.assertEqual((self.root / 'sentinel').read_text(), 'keep')
+
+    def test_failed_command_withholds_output_but_keeps_a_tail_for_the_drill(self):
+        with self.assertRaises(RuntimeError) as caught:
+            run([sys.executable, '-c', 'import sys; sys.stderr.write("synthetic-secret"); sys.exit(3)', '/private/path', 'word'])
+        self.assertNotIn('synthetic-secret', str(caught.exception))
+        self.assertIn('output withheld', str(caught.exception))
+        self.assertEqual(caught.exception.stderr, b'synthetic-secret')
+        self.assertEqual(caught.exception.command, 'word')
 
     def test_state_rejects_relative_symlink_and_repository_paths(self):
         with self.assertRaises(ValueError): private_path('relative')

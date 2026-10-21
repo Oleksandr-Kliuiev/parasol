@@ -194,7 +194,7 @@ jobs:
         run: python3 -m unittest discover -s deploy/hostinger/tests -v
       - name: Build images, migrate both databases, backup and restore into a fresh isolated stack
         run: >-
-          sudo python3 deploy/hostinger/rehearse.py
+          sudo env PARASOL_REHEARSAL_DIAGNOSTICS=1 python3 deploy/hostinger/rehearse.py
           --directory "$RUNNER_TEMP/parasol-rehearsal" --release ci-${{ github.sha }}
       - name: Publish only the secret-free synthetic drill report
         run: sudo cat "$RUNNER_TEMP/parasol-rehearsal/report.json" | tee -a "$GITHUB_STEP_SUMMARY"

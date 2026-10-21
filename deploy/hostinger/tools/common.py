@@ -18,7 +18,12 @@ def run(args, *, data=None, cwd=None, env=None, input_file=None, output_file=Non
                             stderr=subprocess.PIPE, cwd=cwd, env=env)
     if result.returncode:
         # Drivers/Compose errors may include secrets. Do not print args, stdout or stderr.
-        raise RuntimeError(f'{Path(args[0]).name} failed (exit {result.returncode}); output withheld')
+        error = RuntimeError(f'{Path(args[0]).name} failed (exit {result.returncode}); output withheld')
+        # Kept on the exception, never in its message: only the throwaway rehearsal may show them (rehearse.py).
+        # The command keeps plain lowercase words only, so paths, values and options never reach it.
+        error.command = ' '.join(word for word in map(str, args[1:]) if re.fullmatch(r'[a-z][a-z0-9_-]*', word))
+        error.stderr = (result.stderr or b'')[-1500:]
+        raise error
     return result.stdout or b''
 
 

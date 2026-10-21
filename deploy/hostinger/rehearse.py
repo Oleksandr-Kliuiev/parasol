@@ -2,6 +2,7 @@
 """Destructive only to newly created synthetic stacks; local restore drill for CI/operators."""
 import argparse
 import json
+import os
 from pathlib import Path
 import secrets
 import socket
@@ -128,4 +129,8 @@ if __name__ == '__main__':
     try: drill(args.directory, args.release, not args.skip_build, args.keep)
     except Exception as error:
         print(f'{type(error).__name__}: {error}', file=sys.stderr)
+        # Opt-in for the CI drill only: its secrets are generated for this run and destroyed with it. Operators never set it.
+        if os.environ.get('PARASOL_REHEARSAL_DIAGNOSTICS') == '1' and getattr(error, 'stderr', None) is not None:
+            print(f'Failed command: {error.command}', file=sys.stderr)
+            print(error.stderr.decode(errors='replace'), file=sys.stderr)
         raise SystemExit(1)
