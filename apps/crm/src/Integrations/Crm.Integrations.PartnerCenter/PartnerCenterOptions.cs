@@ -52,6 +52,13 @@ public sealed class PartnerCenterOptions
     /// <summary>Graph endpoint of the partner billing export (docs/05 §2.4).</summary>
     public Uri GraphBaseUrl { get; set; } = new("https://graph.microsoft.com/v1.0/");
 
+    /// <summary>
+    /// Hosts where the billing export may keep its files (docs/05 §2.4, a host or any subdomain of it). Microsoft hands the export
+    /// out in Azure Blob Storage with a SAS signature in the link; such a link is fetched without the Graph token, over https, and
+    /// a file link on any other host is refused.
+    /// </summary>
+    public IList<string> BillingStorageHostSuffixes { get; } = ["blob.core.windows.net"];
+
     public string BillingSyncCron { get; set; } = "20 4 * * *";
 
     public Uri EffectiveTokenUrl => TokenUrl ?? new Uri($"https://login.microsoftonline.com/{TenantId}/oauth2/token");
