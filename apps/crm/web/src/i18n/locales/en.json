@@ -1860,7 +1860,13 @@
     "discardTitle": "Discard this entry?",
     "discardBody": "What you typed has not been saved.",
     "discard": "Discard",
-    "keepEditing": "Keep editing"
+    "keepEditing": "Keep editing",
+    "recordInAtera": "Also record in Atera",
+    "recordInAteraHint": "After saving you see what Atera gets, and confirm it.",
+    "recordTitle": "Record on {{number}} in Atera",
+    "recordConfirm": "Record in Atera",
+    "recordSaved": "The hours are saved in Parasoll. Atera gets them only when you confirm.",
+    "recordSkip": "Not now"
   },
   "technicians": {
     "title": "Technicians",
@@ -4398,7 +4404,12 @@
       "VND_TICKET_MOVED": "The ticket belongs to another customer in Atera now; nothing was sent.",
       "VND_TARGET_GONE": "The ticket no longer exists in Atera; nothing was sent.",
       "VND_VENDOR_REFUSED": "Atera refused it; nothing changed.",
-      "VND_VENDOR_BUSY": "Atera could not be read; it is tried again."
+      "VND_VENDOR_BUSY": "Atera could not be read; it is tried again.",
+      "VND_TIME_FROM_ATERA": "These hours came from Atera; they are already there.",
+      "VND_TIME_NOT_OWN": "Only the person whose hours they are records them in Atera.",
+      "VND_TIME_NO_TICKET": "The entry names no Atera ticket of its customer that Parasoll knows.",
+      "VND_CURSOR_INVALID": "The page does not belong to this list; load the list again.",
+      "VND_FILTER_INVALID": "The filter is not valid."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4473,7 +4484,11 @@
       "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_PRIORITY": "Priority: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_TECHNICIAN": "Technician: {{from}} → {{to}}",
-      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera may tell the customer that the ticket is solved."
+      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera may tell the customer that the ticket is solved.",
+      "VND_EFFECT_TIME_RECORD": "{{hours, number}} h are recorded on {{ticket}} in Atera, {{date}} {{from}}–{{to}}.",
+      "VND_EFFECT_TIME_BILLABLE": "Atera marks them billable.",
+      "VND_EFFECT_TIME_NOT_BILLABLE": "Atera marks them not billable.",
+      "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice."
     }
   },
   "tickets": {

@@ -88,6 +88,14 @@ public static class VendorActionEndpoints
             .RequirePermission(RequestPermissions)
             .RequiresFreshRoles();
 
+        // What the caller may ask for now (M39.3), so a form offers a vendor action only where a preview would let it through.
+        group.MapGet("/kinds", (string? system, VendorActionService actions, HttpContext http) =>
+            {
+                NoStore(http);
+                return Results.Ok(actions.Available(system));
+            })
+            .RequirePermission(ReadPermissions);
+
         group.MapGet(string.Empty, async (
                 string? system, string? targetType, string? targetId, Guid? organizationId, string? state, string? cursor, int? limit,
                 VendorActionReader reader, HttpContext http, CancellationToken ct) =>

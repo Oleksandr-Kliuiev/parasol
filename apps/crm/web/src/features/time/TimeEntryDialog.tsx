@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
+  Checkbox,
   Combobox,
   DialogActions,
   DialogBody,
@@ -15,14 +16,16 @@ import {
   MessageBarBody,
   Option,
   Switch,
-  Textarea,
   Text,
+  Textarea,
   ToggleButton,
   makeStyles,
   mergeClasses,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
+import { ActionConfirmation } from '../actions/ActionDialog';
+import { useActionAvailable } from '../actions/api';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Dialog } from '../../shared/components/Dialog';
@@ -142,10 +145,14 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const [sourceActivityId, setSourceActivityId] = useState(taskContext?.activityId ?? entry?.sourceActivityId ?? null);
   const [ticketTitle, setTicketTitle] = useState(taskContext?.ticket.title ?? entry?.ticketTitle ?? null);
   const [projectId, setProjectId] = useState(entry?.projectId ?? '');
+  // M39.3: a new entry on an Atera ticket can also be recorded there; once it is saved, the dialog goes on into that confirmation.
+  const [recordInAtera, setRecordInAtera] = useState(false);
+  const [recording, setRecording] = useState<{ entryId: string; ticket: number } | null>(null);
   // The form as first shown, to know whether the person has typed anything since.
   const draft = JSON.stringify([organization?.id ?? null, workDate, hours, workType, billable, onsite, afterHours, description, ticket, projectId]);
   const [opened] = useState(draft);
-  const dirty = draft !== opened;
+  // A saved entry has nothing left to lose: the Atera step that follows never asks before closing.
+  const dirty = draft !== opened && recording === null;
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   // Only the customer's own open projects can take hours; the list is empty until a customer is picked.
   const { workTypes, projects: projectOptions } = useTimeFormOptions(scope, organization?.id);
@@ -161,6 +168,8 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const hoursProblem = hoursValue === null ? 'time.hoursRequired' : Number.isNaN(hoursValue) ? 'time.hoursInvalid'
     : hoursValue <= 0 ? 'time.hoursPositive' : hoursValue > 24 ? 'time.hoursMax' : null;
   const ticketProblem = ticketValue !== null && (!Number.isSafeInteger(ticketValue) || ticketValue <= 0) ? 'time.ticketInvalid' : null;
+  // Offered only for a new entry with a ticket number, and only while Atera takes recorded hours (its switches and the person's access).
+  const canRecord = useActionAvailable('atera', 'time.record', !entry && ticketValue !== null && ticketProblem === null);
   const descriptionProblem = taskContext && !description.trim() ? 'time.descriptionRequired' : null;
   const invalid = !organization || hoursProblem !== null || ticketProblem !== null || descriptionProblem !== null;
 
@@ -191,11 +200,15 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
       ...(!entry ? { clientRequestId } : {}),
     };
     try {
+      const created = entry ? null : await api.post<{ id: string }>('/api/v1/time/entries', request);
       if (entry) await api.put(`/api/v1/time/entries/${entry.id}`, request, entry.etag);
-      else await api.post('/api/v1/time/entries', request);
       if (!alive.current) return;
       void client.invalidateQueries({ queryKey: timeKeys.all });
       notify(entry ? t('time.saved') : t('time.registered'));
+      if (created?.data?.id && canRecord && recordInAtera && ticketValue !== null) {
+        setRecording({ entryId: created.data.id, ticket: ticketValue });
+        return;
+      }
       onClose();
     } catch (error) {
       if (alive.current) {
@@ -207,6 +220,13 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
       if (alive.current) setPending(false);
     }
   };
+
+  if (recording) {
+    return <ActionConfirmation
+      request={{ system: 'atera', kind: 'time.record', targetType: 'time-entry', targetId: recording.entryId, parameters: {} }}
+      title={t('time.recordTitle', { number: `#${recording.ticket}` })} confirm={t('time.recordConfirm')}
+      details={<Text block>{t('time.recordSaved')}</Text>} dismiss={t('time.recordSkip')} onClose={onClose} />;
+  }
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
@@ -279,6 +299,9 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
                 onChange={(_, d) => { clearTicketContext(); setTicket(d.value); }} />
               {ticketId && !taskContext && <Button size="small" className={local.manual} onClick={clearTicketContext}>{t('taskTicket.useManual')}</Button>}
             </Field>
+            {canRecord && <Field className={styles.wide} hint={t('time.recordInAteraHint')}>
+              <Checkbox checked={recordInAtera} onChange={(_, d) => setRecordInAtera(Boolean(d.checked))} label={t('time.recordInAtera')} />
+            </Field>}
             <div className={local.flags}>
               <Switch label={t('time.fields.billable')} checked={billable} onChange={(_, d) => setBillable(d.checked)} />
               <Switch label={t('time.fields.onsite')} checked={onsite} onChange={(_, d) => setOnsite(d.checked)} />

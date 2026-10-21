@@ -69,6 +69,8 @@ public static class AteraModule
         services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<AteraTicketStatusAction>(sp, true));
         services.AddScoped<IVendorActionHandler, AteraTicketPriorityAction>();
         services.AddScoped<IVendorActionHandler, AteraTicketTechnicianAction>();
+        // M39.3: own time also recorded in Atera, never imported back as a second entry.
+        services.AddScoped<IVendorActionHandler, AteraTimeRecordAction>();
         services.AddScoped<AteraTicketSyncJob>();
         services.AddScoped<AteraWorkHoursSyncJob>();
         services.AddScoped<AteraAgentSyncJob>();

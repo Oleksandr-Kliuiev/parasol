@@ -91,6 +91,16 @@ export interface VendorAction {
 }
 
 /** A page of the log; `uncertain` and `waiting` count the whole filter. */
+/** A kind the person may ask for now (M39.3): the vendor's switches and their access let it through; an allow-list may still refuse a customer. */
+export interface ActionKind {
+  system: string;
+  kind: string;
+  targetType: string;
+  level: ActionLevel;
+  simulated: boolean;
+  limitedToCustomers: boolean;
+}
+
 export interface ActionPage {
   items: VendorAction[];
   nextCursor: string | null;

@@ -405,6 +405,39 @@ public class VendorActionApiTests(CrmWebFactory factory)
         (await readOnly.SendAsync(cancel, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task The_kinds_offered_are_those_the_switches_and_the_role_let_through()
+    {
+        await using var host = VendorActionHost.Start(factory);
+        var allowed = host.Vendor.Switches;
+        async Task<JsonElement> KindsAsync(HttpClient client) =>
+            await (await client.GetAsync($"/api/v1/actions/kinds?system={TestVendor.Name}", Ct)).ReadJsonAsync();
+        static string[] Names(JsonElement kinds) => [.. kinds.EnumerateArray().Select(k => k.GetProperty("kind").GetString()!)];
+
+        var all = await KindsAsync(host.Client());
+        Names(all).ShouldBe(["thing.delete", "thing.pause", "thing.set"]);
+        all[2].GetProperty("level").GetString().ShouldBe("Standard");
+        all[2].GetProperty("simulated").GetBoolean().ShouldBeFalse();
+
+        // The allow-list depends on the target: the kind is offered, and the preview refuses a customer that is not on it.
+        host.Vendor.Switches = allowed with { EnabledActions = ["thing.set"], AllowedCustomerIds = ["another"] };
+        var limited = await KindsAsync(host.Client());
+        Names(limited).ShouldBe(["thing.set"]);
+        limited[0].GetProperty("limitedToCustomers").GetBoolean().ShouldBeTrue();
+
+        host.Vendor.Switches = allowed with { WriteEnabled = false };
+        Names(await KindsAsync(host.Client())).ShouldBeEmpty();
+        host.Vendor.Switches = allowed with { WriteEnabled = false, DryRun = true };
+        (await KindsAsync(host.Client())).EnumerateArray().ShouldAllBe(k => k.GetProperty("simulated").GetBoolean());
+        host.Vendor.Switches = allowed with { Enabled = false };
+        Names(await KindsAsync(host.Client())).ShouldBeEmpty();
+
+        // A role that may read the log but not ask for these kinds is offered none of them.
+        host.Vendor.Switches = allowed;
+        Names(await KindsAsync(host.Client(CrmRoles.ReadOnly))).ShouldBeEmpty();
+        (await factory.ClientAs(CrmRoles.Finance).GetAsync("/api/v1/actions/kinds", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
     private static Task<HttpResponseMessage> SettleAsync(HttpClient client, Guid id, string? etag, string outcome, string reason)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/actions/{id}/settle") { Content = JsonContent.Create(new { outcome, reason }) };

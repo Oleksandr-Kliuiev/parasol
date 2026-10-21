@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
-import { isWaiting, type ActionPage, type ActionPreview, type ActionRequest, type VendorAction } from './types';
+import { isWaiting, type ActionKind, type ActionPage, type ActionPreview, type ActionRequest, type VendorAction } from './types';
 
 const BASE = '/api/v1/actions';
 
@@ -9,6 +9,7 @@ export const actionKeys = {
   all: ['actions'] as const,
   one: (id: string) => ['actions', 'one', id] as const,
   log: (filters: ActionLogFilters) => ['actions', 'log', filters] as const,
+  kinds: (system: string) => ['actions', 'kinds', system] as const,
 };
 
 export interface ActionLogFilters {
@@ -43,6 +44,21 @@ export async function cancelAction(action: VendorAction): Promise<VendorAction> 
 
 export async function settleAction(action: VendorAction, outcome: 'Succeeded' | 'Failed', reason: string): Promise<VendorAction> {
   return (await api.post<VendorAction>(`${BASE}/${action.id}/settle`, { outcome, reason }, action.etag)).data;
+}
+
+/**
+ * Whether the person may ask for this kind now, so a form offers it only where a preview would let it through. Read only once the form
+ * is about to offer it; false while unknown or unreadable.
+ */
+export function useActionAvailable(system: string, kind: string, enabled = true): boolean {
+  const { data } = useQuery({
+    queryKey: actionKeys.kinds(system),
+    enabled,
+    queryFn: async ({ signal }) => (await api.get<ActionKind[]>(`${BASE}/kinds${query({ system })}`, signal)).data,
+    staleTime: 60_000,
+    retry: false,
+  });
+  return enabled && Array.isArray(data) && data.some((item) => item.kind === kind);
 }
 
 /** One action, read again every two seconds while the worker still has it (UX: a page that waits for the worker polls). */

@@ -55,8 +55,19 @@ export function ActionDialog({ request, title, confirm, details, onClose, onAcce
   </Dialog>;
 }
 
-function ActionFlow({ request, title, confirm, details, onClose, onAccepted, onFinished }: {
-  request: ActionRequest; title: string; confirm: string; details?: ReactNode; onClose: () => void;
+/**
+ * The confirmation without a dialog of its own, for a dialog that goes on into it (the time form, once its entry is saved). It renders
+ * the dialog body: title, preview, confirmation and follow-up.
+ */
+export function ActionConfirmation(props: {
+  request: ActionRequest; title: string; confirm: string; details?: ReactNode; dismiss?: string; onClose: () => void;
+  onAccepted?: (action: VendorAction) => void; onFinished?: (action: VendorAction) => void;
+}) {
+  return <ActionFlow {...props} />;
+}
+
+function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAccepted, onFinished }: {
+  request: ActionRequest; title: string; confirm: string; details?: ReactNode; dismiss?: string; onClose: () => void;
   onAccepted?: (action: VendorAction) => void; onFinished?: (action: VendorAction) => void;
 }) {
   const { t } = useTranslation(); const styles = useStyles(); const refresh = useRefreshActions();
@@ -167,7 +178,7 @@ function ActionFlow({ request, title, confirm, details, onClose, onAccepted, onF
         {live.status === 'Scheduled' && <Button onClick={() => void cancel()} disabled={busy}>{t('actions.dialog.cancelAction')}</Button>}
         <Button appearance="primary" onClick={onClose}>{t('common.close')}</Button>
       </> : <>
-        <Button ref={cancelRef} onClick={onClose} disabled={busy}>{t('common.cancel')}</Button>
+        <Button ref={cancelRef} onClick={onClose} disabled={busy}>{dismiss ?? t('common.cancel')}</Button>
         <Button appearance="primary" type="submit" disabled={!ready || busy}>{confirm}</Button>
       </>}
     </DialogActions>

@@ -86,7 +86,7 @@ internal sealed partial class AteraClient
             Bool(e, "Billable", "IsBillable") ?? true,
             onsite,
             Text(e, "WorkType", "ActivityType") ?? (onsite ? "Onsite" : "Remote"),
-            Text(e, "Description", "Comment", "WorkHoursDescription"));
+            Text(e, "Description", "Comment", "Comments", "WorkHoursDescription"));
     }
 
     internal static AteraAgent? ReadAgent(JsonElement e) =>

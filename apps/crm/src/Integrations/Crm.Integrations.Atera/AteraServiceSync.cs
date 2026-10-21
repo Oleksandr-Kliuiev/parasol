@@ -2,6 +2,7 @@ using System.Globalization;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Integrations.Core;
+using Crm.Integrations.Core.Actions;
 using Crm.Integrations.Core.Persistence;
 using Crm.Privacy.Contracts;
 using Crm.Service.Contracts;
@@ -159,7 +160,8 @@ public sealed class AteraWorkHoursSyncJob(
     SyncRunner runner,
     TimeProvider time,
     IOptions<AteraOptions> options,
-    ILogger<AteraWorkHoursSyncJob> logger)
+    ILogger<AteraWorkHoursSyncJob> logger,
+    IntegrationDbContext db)
 {
     public const string JobId = "atera-work-hours";
 
@@ -179,6 +181,14 @@ public sealed class AteraWorkHoursSyncJob(
             var since = time.GetUtcNow().AddDays(-options.Value.RecentTicketDays);
             var tickets = await service.GetActiveTicketsAsync(AteraTypes.System, since, ct);
             var records = new List<(AteraWorkHours Hours, TicketRef Ticket)>();
+            // M39.3: hours the CRM recorded in Atera come back carrying their entry's marker (or the id Atera answered with); the
+            // CRM entry is the one that counts, so such a row is never imported as a second entry.
+            var recordedIds = (await db.VendorActions.AsNoTracking()
+                    .Where(a => a.System == AteraTypes.System && a.Kind == AteraTimeRecordAction.KindName && a.Reference != null &&
+                                (a.Status == VendorActionStatus.Succeeded || a.Status == VendorActionStatus.Skipped))
+                    .Select(a => a.Reference!).ToListAsync(ct))
+                .ToHashSet(StringComparer.Ordinal);
+            var fromCrm = 0;
             var consecutiveFailures = 0;
             var dropped = 0;
             var unreadable = 0;
@@ -211,6 +221,12 @@ public sealed class AteraWorkHoursSyncJob(
                 foreach (var hours in fetched.Records)
                 {
                     progress.Read++;
+                    if (AteraTimeMarker.Read(hours.Description) is not null || recordedIds.Contains(hours.Id))
+                    {
+                        fromCrm++;
+                        continue;
+                    }
+
                     records.Add((hours, ticket));
                 }
             }
@@ -246,7 +262,7 @@ public sealed class AteraWorkHoursSyncJob(
             var result = await timeTracking.ImportAsync(entries, ct);
             progress.Changed = result.Created + result.Updated;
             progress.Message = $"tickets {tickets.Count}, new {result.Created}, updated {result.Updated}, unchanged {result.Unchanged}, needs review {result.NeedsReview}, " +
-                               $"tickets unreadable {unreadable}, rows without duration {dropped}";
+                               $"recorded from the CRM {fromCrm}, tickets unreadable {unreadable}, rows without duration {dropped}";
             if (unreadable > 0 && unreadable >= tickets.Count)
             {
                 throw new AteraApiException(System.Net.HttpStatusCode.BadGateway, "No ticket's work hours could be read.");

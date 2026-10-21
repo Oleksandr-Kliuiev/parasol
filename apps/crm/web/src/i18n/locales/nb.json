@@ -1860,7 +1860,13 @@
     "discardTitle": "Forkaste føringen?",
     "discardBody": "Det du har skrevet, er ikke lagret.",
     "discard": "Forkast",
-    "keepEditing": "Fortsett å redigere"
+    "keepEditing": "Fortsett å redigere",
+    "recordInAtera": "Før også i Atera",
+    "recordInAteraHint": "Når timene er lagret, ser du hva Atera får, og bekrefter det.",
+    "recordTitle": "Før på {{number}} i Atera",
+    "recordConfirm": "Før i Atera",
+    "recordSaved": "Timene er lagret i Parasoll. Atera får dem først når du bekrefter.",
+    "recordSkip": "Ikke nå"
   },
   "technicians": {
     "title": "Teknikere",
@@ -4396,7 +4402,12 @@
       "VND_TICKET_MOVED": "Saken tilhører en annen kunde i Atera nå; ingenting ble sendt.",
       "VND_TARGET_GONE": "Saken finnes ikke lenger i Atera; ingenting ble sendt.",
       "VND_VENDOR_REFUSED": "Atera avviste det; ingenting ble endret.",
-      "VND_VENDOR_BUSY": "Atera kunne ikke leses; det prøves igjen."
+      "VND_VENDOR_BUSY": "Atera kunne ikke leses; det prøves igjen.",
+      "VND_TIME_FROM_ATERA": "Timene kom fra Atera; de er der allerede.",
+      "VND_TIME_NOT_OWN": "Bare den som har jobbet timene, fører dem i Atera.",
+      "VND_TIME_NO_TICKET": "Føringen viser ikke til en Atera-sak hos kunden som Parasoll kjenner.",
+      "VND_CURSOR_INVALID": "Siden hører ikke til denne listen; last inn listen på nytt.",
+      "VND_FILTER_INVALID": "Filteret er ikke gyldig."
     },
     "dialog": {
       "previewing": "Sjekker hva handlingen vil gjøre …",
@@ -4471,7 +4482,11 @@
       "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_PRIORITY": "Prioritet: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_TECHNICIAN": "Tekniker: {{from}} → {{to}}",
-      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera kan si fra til kunden at saken er løst."
+      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera kan si fra til kunden at saken er løst.",
+      "VND_EFFECT_TIME_RECORD": "{{hours, number}} t føres på {{ticket}} i Atera, {{date}} {{from}}–{{to}}.",
+      "VND_EFFECT_TIME_BILLABLE": "Atera merker dem som fakturerbare.",
+      "VND_EFFECT_TIME_NOT_BILLABLE": "Atera merker dem som ikke fakturerbare.",
+      "VND_EFFECT_TIME_NO_DOUBLE": "Timeimporten kjenner dem igjen, så de telles aldri to ganger."
     }
   },
   "tickets": {

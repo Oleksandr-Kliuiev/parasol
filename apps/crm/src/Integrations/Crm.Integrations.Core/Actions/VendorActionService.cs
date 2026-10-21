@@ -41,6 +41,13 @@ public sealed record VendorActionPreview(
     bool Simulated,
     bool Paused);
 
+/// <summary>
+/// A kind the caller may ask for now (M39.3): its handler is registered, the caller holds its permission and the vendor's switches let
+/// it through. <paramref name="Simulated"/>: the vendor is in DryRun. <paramref name="LimitedToCustomers"/>: an allow-list may still
+/// refuse the customer, which the preview says.
+/// </summary>
+public sealed record VendorActionKindItem(string System, string Kind, string TargetType, VendorActionLevel Level, bool Simulated, bool LimitedToCustomers);
+
 public sealed record VendorActionCommand(
     string? PreviewToken, string? System, string? Kind, string? TargetType, string? TargetId, JsonElement Parameters, Guid CommandKey,
     string? Reason, string? TypedName);
@@ -67,6 +74,21 @@ public sealed class VendorActionService(
 
     public IVendorActionHandler? Find(string? system, string? kind, string? targetType) =>
         handlers.SingleOrDefault(h => h.System == system && h.Kind == kind && h.TargetType == targetType);
+
+    /// <summary>
+    /// The kinds the caller may ask for now, so a form offers a vendor action only where a preview would let it through. The customer
+    /// allow-list depends on the target, so it is left to the preview.
+    /// </summary>
+    public IReadOnlyList<VendorActionKindItem> Available(string? system) =>
+    [
+        .. handlers
+            .Where(h => (system is null || h.System == system) && user.HasPermission(h.Permission))
+            .Select(h => (Handler: h, Switches: Switches(h.System)))
+            .Where(x => x.Switches is { } s && VendorActionRules.CheckSwitches(s with { AllowedCustomerIds = [] }, x.Handler.Kind, null, credentials: false) is null)
+            .OrderBy(x => x.Handler.System, StringComparer.Ordinal).ThenBy(x => x.Handler.Kind, StringComparer.Ordinal)
+            .Select(x => new VendorActionKindItem(
+                x.Handler.System, x.Handler.Kind, x.Handler.TargetType, x.Handler.Level, x.Switches!.DryRun, x.Switches.AllowedCustomerIds.Count > 0)),
+    ];
 
     public async Task<Result<VendorActionPreview>> PreviewAsync(VendorActionPreviewRequest body, IDataProtectionProvider protection, CancellationToken ct)
     {
