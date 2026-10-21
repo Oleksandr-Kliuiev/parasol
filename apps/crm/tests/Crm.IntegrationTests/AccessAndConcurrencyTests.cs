@@ -36,7 +36,6 @@ public partial class AccessAndConcurrencyTests(CrmWebFactory factory)
         ["GET /api/v1/notifications/preferences"] = "own preferences",
         ["PUT /api/v1/notifications/preferences"] = "own preferences",
         ["PUT /api/v1/identity/me/preferences"] = "own language preference; the value is checked against the supported list",
-        ["GET /api/v1/parasol/local-readiness"] = "the reader allows parasol.atlas.read or integrations.manage, then shows each section only with its own permission",
         ["GET /api/v1/search"] = "every search provider is filtered by its own required permission for the caller",
     };
 

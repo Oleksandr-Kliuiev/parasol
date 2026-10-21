@@ -23,7 +23,6 @@ function preserved(activity: Activity) {
 test('status commands use the displayed version and retain another employee’s assignment and exact due instant', { tag: '@critical' }, async ({ page, browser }) => {
   await signIn(page, 'Crm.Sales');
   const employee = await api.get<{ id: string; permissions: string[] }>(page, '/bff/user');
-  expect(employee.permissions).not.toContain('parasol.atlas.read');
   const customer = await createOrganization(page, { name: marker('Versioned status ') });
   const task = await api.post<Activity>(page, '/api/v1/activities/', { type: 'Task', organizationId: customer.id,
     subject: marker('Synthetic status task '), body: 'Synthetic status details', priority: 'Normal',

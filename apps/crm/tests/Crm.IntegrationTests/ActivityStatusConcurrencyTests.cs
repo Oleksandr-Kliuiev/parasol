@@ -26,7 +26,6 @@ public sealed class ActivityStatusConcurrencyTests(CrmWebFactory factory)
         using var second = factory.ClientAs(CrmRoles.Finance, "status-second-" + Guid.NewGuid().ToString("N"));
         var actor = (await first.GetFromJsonAsync<JsonElement>("/bff/user", Ct)).GetProperty("id").GetGuid();
         var reviewer = (await second.GetFromJsonAsync<JsonElement>("/bff/user", Ct)).GetProperty("id").GetGuid();
-        Permissions.ForRoles([CrmRoles.Finance]).ShouldNotContain(Permissions.ParasolAtlasRead);
         var task = await SourceTask(actor);
         var initial = await Read(first, task); var oldEtag = Etag(initial);
         var due = DateTimeOffset.Parse("2090-07-01T08:15:43.456Z");

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { createRequire } from 'node:module';
 import { expect, it, vi } from 'vitest';
 

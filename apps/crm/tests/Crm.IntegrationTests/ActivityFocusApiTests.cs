@@ -47,8 +47,6 @@ public sealed class ActivityFocusApiTests(CrmWebFactory factory)
         ordinary.GetProperty("items").EnumerateArray().ShouldNotContain(row => row.GetProperty("id").GetGuid() == created.ActivityId);
         var cursor = ordinary.GetProperty("nextCursor").GetString(); cursor.ShouldNotBeNullOrEmpty();
 
-        // No personal Atlas entry or Atlas permission is needed for the ordinary CRM edit DTO.
-        Permissions.ForRoles([CrmRoles.Finance]).ShouldNotContain(Permissions.ParasolAtlasRead);
         using var finance = factory.ClientAs(CrmRoles.Finance, "activity-focus-finance-" + Guid.NewGuid().ToString("N"));
         var selected = await Page(finance, Focus(organization, created.ActivityId));
         selected.GetProperty("totalCount").GetInt32().ShouldBe(1);

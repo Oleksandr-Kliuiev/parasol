@@ -6,7 +6,6 @@
  */
 export { Add20Regular } from '@fluentui/react-icons/svg/add';
 export { Alert20Regular } from '@fluentui/react-icons/svg/alert';
-export { AlertUrgent20Regular } from '@fluentui/react-icons/svg/alert-urgent';
 export { ArrowImport20Regular } from '@fluentui/react-icons/svg/arrow-import';
 export { ArrowSwap20Regular } from '@fluentui/react-icons/svg/arrow-swap';
 export { Board20Regular } from '@fluentui/react-icons/svg/board';

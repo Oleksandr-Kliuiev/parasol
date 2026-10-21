@@ -44,9 +44,9 @@ public sealed class SourceTaskTests
 
     [Theory]
     [InlineData(CrmRoles.Admin, true)][InlineData(CrmRoles.Management, true)][InlineData(CrmRoles.Technician, true)]
-    [InlineData(CrmRoles.ServiceLead, true)][InlineData(CrmRoles.ReadOnly, false)][InlineData(CrmRoles.Finance, false)]
-    [InlineData(CrmRoles.Sales, false)][InlineData("Unknown", false)]
-    public void Assignees_must_be_active_technical_employees(string role, bool allowed)
+    [InlineData(CrmRoles.ServiceLead, true)][InlineData(CrmRoles.ReadOnly, false)][InlineData(CrmRoles.Finance, true)]
+    [InlineData(CrmRoles.Sales, true)][InlineData("Unknown", false)]
+    public void Assignees_must_be_active_employees_who_can_work_on_tasks_and_read_service_data(string role, bool allowed)
     {
         var profile = new UserProfile(Guid.NewGuid(), "Synthetic employee", null, null, true, [role]);
         SourceTaskApi.IsEligibleAssignee(profile).ShouldBe(allowed);
@@ -56,9 +56,9 @@ public sealed class SourceTaskTests
 
     [Theory]
     [InlineData(false, true, true)][InlineData(true, false, true)][InlineData(true, true, false)]
-    public async Task All_permissions_are_required_before_a_source_task_can_be_created(bool atlas, bool read, bool write)
+    public async Task All_permissions_are_required_before_a_source_task_can_be_created(bool service, bool read, bool write)
     {
-        var api = new SourceTaskApi(null!, null!, null!, new User(Guid.NewGuid(), atlas, read, write), TimeProvider.System);
+        var api = new SourceTaskApi(null!, null!, null!, new User(Guid.NewGuid(), service, read, write), TimeProvider.System);
         var draft = new SourceTaskDraft(Source, Guid.NewGuid(), Guid.NewGuid(), null, ActivityPriority.High);
         (await api.CreateTaskOnceAsync(draft, default)).Error!.Code.ShouldBe("ACT_SOURCE_TASK_FORBIDDEN");
     }
@@ -66,7 +66,7 @@ public sealed class SourceTaskTests
     [Fact]
     public async Task Background_jobs_and_readers_without_both_permissions_cannot_read_source_references()
     {
-        foreach (var user in new[] { new User(null), new User(Guid.NewGuid(), atlas: false), new User(Guid.NewGuid(), read: false) })
+        foreach (var user in new[] { new User(null), new User(Guid.NewGuid(), service: false), new User(Guid.NewGuid(), read: false) })
         {
             var api = new SourceTaskApi(null!, null!, null!, user, TimeProvider.System);
             (await api.FindSourceTaskAsync(Source, Guid.NewGuid(), default)).Error!.Code.ShouldBe("ACT_SOURCE_TASK_FORBIDDEN");
@@ -89,14 +89,14 @@ public sealed class SourceTaskTests
         (await api.CreateTaskOnceAsync(draft, default)).Error!.Code.ShouldBe("ACT_SOURCE_TASK_INVALID");
     }
 
-    private sealed class User(Guid? id, bool atlas = true, bool read = true, bool write = true) : ICurrentUser
+    private sealed class User(Guid? id, bool service = true, bool read = true, bool write = true) : ICurrentUser
     {
         public Guid? UserId => id;
         public string DisplayName => "Synthetic employee";
         public bool IsAuthenticated => id is not null;
         public bool HasPermission(string permission) => permission switch
         {
-            Permissions.ParasolAtlasRead => atlas, Permissions.ActivitiesRead => read, Permissions.ActivitiesWrite => write, _ => false,
+            Permissions.ServiceRead => service, Permissions.ActivitiesRead => read, Permissions.ActivitiesWrite => write, _ => false,
         };
     }
 }

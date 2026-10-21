@@ -25,7 +25,7 @@ function stubApi() {
 describe('myDayProfile', () => {
   it.each([
     [[], 'work'],
-    [['activities.read', 'time.own', 'parasol.atlas.read'], 'work'],
+    [['activities.read', 'time.own', 'service.read'], 'work'],
     [['billing.read', 'finance.read', 'sales.write'], 'work'],
     [['time.manage', 'time.read'], 'lead'],
     [['billing.manage'], 'finance'],

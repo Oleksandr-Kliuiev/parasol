@@ -60,8 +60,6 @@ import { ActivityTimeline } from '../activities/ActivityTimeline';
 import { activitySelection } from '../activities/activityNavigation';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
-import { CustomerWorkspacePanel } from '../parasol/CustomerWorkspacePanel';
-import { CustomerIdentityPanel } from '../parasol/CustomerIdentityPanel';
 import { useCustomerTabVisibility } from './useCustomerTabVisibility';
 import { useScrollEdges } from '../../shared/utils/useScrollEdges';
 import { h } from '../../app/hearth';
@@ -74,18 +72,7 @@ import { useOrganizationContacts } from '../contacts/api';
 const useStyles = makeStyles({
   // The tab bar scrolls sideways without widening a phone; URL-selected tabs are revealed too.
   tabs: { marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
-  // The technical workspace is the work of the page and takes the wide column; the customer's records sit beside it in
-  // one card (the reference's profile page), not in nine small ones.
-  overview: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0,
-    '@media (min-width: 1100px)': { ':has([data-technical-layout])': { gridTemplateColumns: 'minmax(0, 1.6fr) minmax(320px, 1fr)' } } },
   stack: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
-    gap: '16px',
-    alignItems: 'start',
-  },
-  aside: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 },
   // The records card: sections under one hairline each; every section stays its own region with its own heading.
   records: {
     backgroundColor: h.surface,
@@ -382,7 +369,6 @@ function RecordFacts({ items }: { items: Array<{ label: string; value: React.Rea
 function Overview({ organization: o, etag }: { organization: Organization; etag: string | null }) {
   const styles = useStyles();
   const { t } = useTranslation();
-  const technical = useCan(Permissions.parasolAtlasRead);
   // Who to call first: the primary contact and their number, on the first screen (the contacts tab reads the same list).
   const contacts = useOrganizationContacts(o.id, false);
   const primary = contacts.data?.find((contact) => contact.isPrimary);
@@ -394,12 +380,7 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
   return (
     <>
     <CustomerHighlights organizationId={o.id} />
-    <div className={technical ? styles.overview : styles.stack}>
-      <div className={technical ? styles.stack : styles.grid}>
-        <CustomerWorkspacePanel customerId={o.id} />
-        <CustomerIdentityPanel customerId={o.id} />
-      </div>
-      <div className={styles.aside}>
+    <div className={styles.stack}>
       <div ref={records} className={styles.records}>
       <RecordSection title={t('organizations.sections.contactInfo')} icon={<ContactCard16Regular />}>
         <RecordFacts
@@ -466,7 +447,6 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
       </Panel>
       <LinkedSystemsPanel entityId={o.id} />
       <CustomFieldsPanel framed entity="Organization" entityId={o.id} />
-      </div>
     </div>
     </>
   );

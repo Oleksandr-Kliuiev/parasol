@@ -115,13 +115,6 @@ builder.Services.AddSingleton<SessionStateCache>();
 builder.Services.AddScoped<IReportAccessAudit, ReportAccessAudit>();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, CrmAuthorizationResultHandler>();
 builder.AddDataProtection();
-// Protected browser continuations belong to the web host; the worker has no data-protection key ring.
-builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationQueueReader>();
-builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationSourceReader>();
-builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationTaskService>();
-builder.Services.AddScoped<Crm.Integrations.Core.Parasol.CustomerIdentityGuard>();
-builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationCursor>();
-Crm.Integrations.Core.Parasol.AtlasAttentionEndpoints.AddParasolAtlasAttention(builder.Services);
 builder.Services.AddScoped<Crm.Integrations.Core.Parasol.ILocalReadinessFlags, Crm.Web.LocalReadinessFlagsReader>();
 Crm.Integrations.Core.Parasol.LocalReadinessEndpoints.AddParasolLocalReadiness(builder.Services);
 
@@ -302,9 +295,6 @@ app.MapSearchEndpoints();
 Crm.Web.CustomerFacts.CustomerFactsEndpoints.MapCustomerFactsEndpoints(app);
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
-Crm.Integrations.Core.Parasol.CustomerIdentityEndpoints.MapParasolCustomerIdentities(app);
-Crm.Integrations.Core.Parasol.AtlasObservationTaskEndpoints.MapParasolObservationTasks(app);
-Crm.Integrations.Core.Parasol.AtlasAttentionEndpoints.MapParasolAtlasAttention(app);
 Crm.Integrations.Core.Parasol.LocalReadinessEndpoints.MapParasolLocalReadiness(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();

@@ -24,8 +24,6 @@ public static class IntegrationsCoreModule
         services.AddScoped<ExternalRecordStore>();
         services.AddScoped<ExternalLinkService>();
         services.AddScoped<Crm.Service.Contracts.ITicketOwnershipApi, AteraTicketOwnershipReader>();
-        services.AddScoped<Parasol.CustomerIdentityService>();
-        Parasol.AtlasWorkspaceRegistration.AddAtlasWorkspace(services, configuration);
         services.AddScoped<OutboundQueue>();
         services.AddScoped<ExternalImportService>();
         // DEV-11: links, mirrored person records and queued changes in subject requests; retention of payloads and the run log.

@@ -1,6 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { atlasWorkspace } from '../src/test/atlasWorkspace';
 import { createOrganization, marker, signIn } from './support';
 
 async function accessible(page: Page) {
@@ -12,10 +11,7 @@ async function accessible(page: Page) {
 
 async function customer(page: Page) {
   await signIn(page, 'Crm.Admin', '/organizations');
-  const organization = await createOrganization(page, { name: marker('Navigation ') });
-  const workspace = atlasWorkspace(organization.id);
-  await page.route(`**/api/v1/parasol/customers/${organization.id}/workspace`, route => route.fulfill({ json: workspace }));
-  return organization;
+  return createOrganization(page, { name: marker('Navigation ') });
 }
 
 test('browser titles follow the page and the skip link remains readable above the sticky header', { tag: '@critical' }, async ({ page }, testInfo) => {
@@ -41,24 +37,13 @@ test('browser titles follow the page and the skip link remains readable above th
   }
 });
 
-test('technical lists retain every loaded row, scroll by keyboard and do not stretch the client details', { tag: '@critical' }, async ({ page }) => {
+test('customer sections stay reachable on narrow screens, the overview stays accessible and wide tables scroll by keyboard', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(180_000);
   const organization = await customer(page);
   for (const width of [1440, 768, 390, 320]) for (const colorScheme of ['light', 'dark'] as const) {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme });
     await page.goto(`/organizations/${organization.id}`);
-    const workspace = page.getByRole('region', { name: 'Technical workspace · Atlas' });
-    const contact = page.getByRole('region', { name: 'Contact information', exact: true });
-    const records = workspace.getByRole('list', { name: 'Active Atlas observations', exact: true });
-    await expect(records.getByRole('listitem')).toHaveCount(3);
-    if (width === 1440) {
-      const left = await workspace.boundingBox(), right = await contact.boundingBox();
-      expect(right!.x).toBeGreaterThan(left!.x + left!.width);
-      expect(Math.abs(right!.y - left!.y)).toBeLessThan(2);
-      const company = await page.getByRole('region', { name: 'Company', exact: true }).boundingBox();
-      expect(company!.x).toBeGreaterThan(left!.x + left!.width);
-      expect(company!.y - right!.y, 'Client records must not wait for the whole observation list row').toBeLessThan(400);
-    }
+    await expect(page.getByRole('region', { name: 'Contact information', exact: true })).toBeVisible();
     const tabs = page.getByRole('tablist', { name: 'Customer sections', exact: true });
     if (width < 1440) {
       // A phone still scrolls the shorter row, with a fading edge.
@@ -69,25 +54,9 @@ test('technical lists retain every loaded row, scroll by keyboard and do not str
       const history = tabs.getByRole('tab', { name: 'History', exact: true });
       await expect(history).toHaveAttribute('aria-selected', 'true'); await expect(history).toBeInViewport();
       await tabs.getByRole('tab', { name: 'Overview', exact: true }).click();
+      await expect(page.getByRole('region', { name: 'Contact information', exact: true })).toBeVisible();
     }
-    await workspace.getByRole('tab', { name: 'Atlas devices', exact: true }).click();
-    const devices = workspace.getByRole('list', { name: 'Atlas devices', exact: true });
-    await expect(devices.getByRole('listitem')).toHaveCount(25);
-    const size = await devices.evaluate(el => ({ box: el.clientHeight, all: el.scrollHeight }));
-    expect(size.box).toBeLessThanOrEqual(480); expect(size.all).toBeGreaterThan(size.box);
-    await devices.focus(); await page.keyboard.press('End');
-    await expect.poll(() => devices.evaluate(el => el.scrollTop + el.clientHeight >= el.scrollHeight - 2)).toBe(true);
-    await workspace.getByRole('button', { name: 'Show more loaded devices', exact: true }).click();
-    await expect(devices.getByRole('listitem')).toHaveCount(42);
-    // On a phone the client cards stack under the workspace (about 4 000 px at 320 px); the 42 devices stacked
-    // instead of scrolled in their box would add some 6 000 px on their own.
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(4500);
-    await devices.focus(); await page.keyboard.press('End');
-    await expect.poll(() => devices.evaluate(el => el.scrollTop + el.clientHeight >= el.scrollHeight - 2)).toBe(true);
-    await workspace.getByRole('searchbox', { name: 'Search loaded devices', exact: true }).fill('device-41');
-    await expect(workspace.getByRole('list', { name: 'Atlas devices', exact: true }).getByRole('listitem')).toHaveCount(1);
     await accessible(page);
-    expect(await page.evaluate(() => document.documentElement.scrollHeight), 'The overview must not become a many-screen observation column').toBeLessThan(4500);
   }
   await page.setViewportSize({ width: 768, height: 900 }); await page.goto('/organizations');
   const table = page.getByRole('region', { name: 'Scrollable organizations table', exact: true });

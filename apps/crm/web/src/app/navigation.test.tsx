@@ -40,11 +40,16 @@ describe('navigation groups', () => {
     ]);
   });
 
-  it('lists Connections under System for an Atlas member or an integration manager, without the other administration entries', () => {
-    expect(groupsFor(['parasol.atlas.read'])).toEqual([
+  it('lists Connections under System first, and only for an integration manager', () => {
+    expect(groupsFor(['integrations.manage'])).toEqual([
       ['work', ['my-day']],
       ['customers', ['organizations']],
-      ['system', ['connections']],
+      ['system', ['connections', 'integrations', 'technicians', 'mappings', 'jobs']],
+    ]);
+    expect(groupsFor(['customers.read', 'service.read', 'activities.read'])).toEqual([
+      ['work', ['my-day']],
+      ['customers', ['organizations']],
+      ['finance', ['sla']],
     ]);
   });
 

@@ -98,8 +98,8 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
     }
 
     [Theory]
-    [InlineData("unknown")][InlineData("inactive")][InlineData(CrmRoles.ReadOnly)][InlineData(CrmRoles.Finance)][InlineData(CrmRoles.Sales)]
-    public async Task A_new_task_requires_an_active_eligible_technical_assignee(string scenario)
+    [InlineData("unknown")][InlineData("inactive")][InlineData(CrmRoles.ReadOnly)]
+    public async Task A_new_task_requires_an_active_eligible_assignee(string scenario)
     {
         var organization = await Organization(factory); var actor = await Employee(factory, CrmRoles.Technician);
         var assignee = scenario == "unknown" ? Guid.NewGuid() : await Employee(factory, scenario == "inactive" ? CrmRoles.Technician : scenario);
@@ -113,21 +113,21 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
         (await Find(host, source, organization)).Value.ShouldBeNull();
     }
 
-    [Theory]
-    [InlineData(CrmRoles.ReadOnly)][InlineData(CrmRoles.Finance)][InlineData(CrmRoles.Sales)]
-    public async Task Direct_module_calls_enforce_the_intersection_of_permissions(string role)
+    [Fact]
+    public async Task Direct_module_calls_enforce_the_intersection_of_permissions()
     {
-        var organization = await Organization(factory); var actor = await Employee(factory, role); await using var host = Host(factory, actor, role);
+        // Every role that reads activities also reads service data, so a reader without activities.write is the one to refuse.
+        var organization = await Organization(factory); var actor = await Employee(factory, CrmRoles.ReadOnly);
+        await using var host = Host(factory, actor, CrmRoles.ReadOnly);
         (await Create(host, new(Source(), organization, actor, null, ActivityPriority.Normal))).Error!.Code.ShouldBe("ACT_SOURCE_TASK_FORBIDDEN");
-        if (role != CrmRoles.ReadOnly)
-            (await Find(host, Source(), organization)).Error!.Code.ShouldBe("ACT_SOURCE_TASK_FORBIDDEN");
+        (await Find(host, Source(), organization)).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
     public async Task Ordinary_updates_preserve_source_Task_identity_and_only_validate_changed_assignees()
     {
         var organization = await Organization(factory); var other = await Organization(factory); var actor = await Employee(factory, CrmRoles.Technician);
-        var finance = await Employee(factory, CrmRoles.Finance); await using var host = Host(factory, actor);
+        var reader = await Employee(factory, CrmRoles.ReadOnly); await using var host = Host(factory, actor);
         var created = (await Create(host, new(Source(), organization, actor, null, ActivityPriority.Normal))).Value;
         using var client = factory.ClientAs(CrmRoles.Technician);
         var rows = await client.GetFromJsonAsync<JsonElement>($"/api/v1/activities?organizationId={organization}");
@@ -143,7 +143,7 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
         }
         (await Update("Note", organization, actor)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await Update("Task", other, actor)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        var invalid = await Update("Task", organization, finance); invalid.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var invalid = await Update("Task", organization, reader); invalid.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await invalid.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().ShouldBe("ACT_SOURCE_TASK_ASSIGNEE_INVALID");
         await using (var scope = factory.Services.CreateAsyncScope())
         {

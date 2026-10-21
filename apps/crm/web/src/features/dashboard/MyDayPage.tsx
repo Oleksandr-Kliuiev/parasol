@@ -18,7 +18,6 @@ import { RemindersPanel } from '../contracts/RemindersPanel';
 import { MyTasksPanel } from '../activities/MyTasksPanel';
 import { TimeEntryDialogHost } from '../time/TimeEntryDialog';
 import { todayIso } from '../../shared/utils/format';
-import { AtlasAttentionPanel } from '../parasol/AtlasAttentionPanel';
 import { MyDaySection, MyDaySectionLinks } from './MyDaySections';
 import { MyDayTiles } from './MyDayTiles';
 import { h } from '../../app/hearth';
@@ -31,7 +30,7 @@ import { mainOrder, myDayProfile, sideOrder, type MainSection, type SideSection 
 const WIDE_MY_DAY = '(min-width: 1101px)';
 
 const useStyles = makeStyles({
-  // The side column holds the personal list beside the technical one, so it is wider than a column of notes.
+  // The side column holds the personal task list beside the main panels, so it is wider than a column of notes.
   grid: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.75fr) minmax(320px, 1fr)',
@@ -75,9 +74,6 @@ export function MyDayPage() {
   const user = useCurrentUser();
   const canContracts = useCan(Permissions.contractsRead);
   const canActivities = useCan(Permissions.activitiesRead);
-  const canCustomers = useCan(Permissions.customersRead);
-  const canAtlas = useCan(Permissions.parasolAtlasRead);
-  const canAttention = canCustomers && canAtlas;
   const canSales = useCan(Permissions.salesRead);
   const canLicensing = useCan(Permissions.licensingRead);
   const canBilling = useCan(Permissions.billingRead);
@@ -87,8 +83,8 @@ export function MyDayPage() {
   const [registering, setRegistering] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
   const profile = myDayProfile(user.permissions);
-  // One screen in the morning (UX concept §3): on a wide screen the short personal task list stands beside the long
-  // technical list instead of under it; one column keeps attention, then tasks. The DOM follows what is shown, so the
+  // One screen in the morning (UX concept §3): on a wide screen the short personal task list stands beside the main
+  // panels instead of under them; one column shows it in the profile's order. The DOM follows what is shown, so the
   // reading and focus order is the visual order at every width.
   const wide = useMediaQuery(WIDE_MY_DAY);
   const mainSections = wide ? mainOrder[profile].filter((name) => name !== 'tasks') : mainOrder[profile];
@@ -103,7 +99,6 @@ export function MyDayPage() {
   const partOfDay = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 18 ? 'afternoon' : 'evening';
 
   const main: Record<MainSection, ReactNode> = {
-    attention: canAttention && <MyDaySection name="attention"><AtlasAttentionPanel /></MyDaySection>,
     tasks: canActivities && <MyDaySection name="tasks"><MyTasksPanel /></MyDaySection>,
     deals: canSales && <StaleDealsPanel />,
     licensing: canLicensing && <LicensingAttentionPanel />,
@@ -200,7 +195,7 @@ export function MyDayPage() {
         <TimeEntryDialogHost open={registering} defaultDate={todayIso()} onClose={() => setRegistering(false)} />
       )}
       <MyDayTiles profile={profile} organizations={organizations.length} warnings={warnings.length} />
-      <MyDaySectionLinks tasks={canActivities} attention={canAttention} />
+      <MyDaySectionLinks tasks={canActivities} />
       <div className={styles.grid}>
         <div className={styles.side}>
           {mainSections.map((name) => <Fragment key={name}>{main[name]}</Fragment>)}

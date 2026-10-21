@@ -7,7 +7,6 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../shared/utils/format';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
-import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 import type { Activity, ActivityType } from './types';
 import { ActivityStatusFeedback } from './ActivityStatusFeedback';
 import type { StatusFocusRequest } from './useActivityStatusCommands';
@@ -84,7 +83,7 @@ export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPen
           {t('activities.openInOutlook')}<Open16Regular aria-hidden style={{ marginInlineStart: 4 }} />
         </Link>}
       </span>
-      {selected && <div className={styles.meta}>{t('activities.selectedStatus', { state: t(`parasolWork.taskStatus.${activity.status}`) })}</div>}
+      {selected && <div className={styles.meta}>{t('activities.selectedStatus', { state: t(`activities.taskStatus.${activity.status}`) })}</div>}
       {activity.body && <div className={styles.body}>{activity.body}</div>}
       {activity.fromAddress && <div className={styles.meta}>{activity.fromAddress}</div>}
       <div className={activity.isOverdue ? styles.overdue : styles.meta}>
@@ -93,7 +92,6 @@ export function ActivityTimelineItem({ activity, canWrite, calendar, calendarPen
         {activity.assignee ? ` · ${activity.assignee.name}` : ''}
         {activity.status === 'Done' && activity.completedAt ? ` · ${t('activities.doneAt', { at: formatDateTime(activity.completedAt) })}` : ''}
       </div>
-      {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
       <TaskTicketButton activity={activity} onCloseAfterChange={onTicketChanged} />
       {statusStale && <ActivityStatusFeedback activity={activity} />}
     </span>

@@ -15,17 +15,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Crm.IntegrationTests;
 
 /// <summary>
-/// The view counts the whole Atlas registry and all stored provider evidence, and the tests compare table totals and provider
-/// calls before and after a read, so the class runs alone (it also stages concurrent changes as the administrator) and every
-/// test starts without the rows those counts read.
+/// The view counts all stored provider evidence, and the tests compare table totals and provider calls before and after a
+/// read, so the class runs alone (it also stages concurrent changes as the administrator) and every test starts without the
+/// rows those counts read.
 /// </summary>
 [Collection(DatabaseAdministrationCollection.Name)]
 public sealed class LocalReadinessApiTests(CrmWebFactory factory) : IAsyncLifetime
 {
     private const string Endpoint = "/api/v1/parasol/local-readiness";
-    private const string Workspace = "synthetic-readiness-workspace";
     private readonly string userKey = "readiness-" + Guid.NewGuid().ToString("N");
-    private readonly List<Guid> ownedLinks = []; private readonly List<Guid> ownedRecords = []; private readonly List<Guid> ownedOutbound = [];
+    private readonly List<Guid> ownedRecords = []; private readonly List<Guid> ownedOutbound = [];
     private readonly List<(string System, string Job)> ownedSuccesses = [];
     private HttpClient Admin => factory.ClientAs(CrmRoles.Admin, userKey);
     public async ValueTask InitializeAsync()
@@ -33,57 +32,23 @@ public sealed class LocalReadinessApiTests(CrmWebFactory factory) : IAsyncLifeti
         // Rows other classes left behind. The collation ignores case, so this also takes differently-cased rows: the view skips
         // them, but they would still collide with the sync-success keys used here.
         await using var scope = factory.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-        await db.ExternalLinks.Where(row => row.System == CustomerIdentityContract.System && row.ExternalType == CustomerIdentityContract.ExternalType).ExecuteDeleteAsync();
-        await db.ExternalRecords.Where(row => (row.System == CustomerIdentityContract.System && row.ExternalType == CustomerIdentityContract.ExternalType)
-            || row.System == "atera").ExecuteDeleteAsync();
+        await db.ExternalRecords.Where(row => row.System == "atera").ExecuteDeleteAsync();
         await db.OutboundOperations.Where(row => row.System == "atera").ExecuteDeleteAsync();
         await db.SyncSuccesses.Where(row => row.System == "atera" || row.System == "poweroffice" || row.System == "microsoft-graph").ExecuteDeleteAsync();
     }
     public async ValueTask DisposeAsync()
     {
         await using var scope = factory.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-        await db.ExternalLinks.Where(row => ownedLinks.Contains(row.Id)).ExecuteDeleteAsync();
         await db.ExternalRecords.Where(row => ownedRecords.Contains(row.Id)).ExecuteDeleteAsync();
         await db.OutboundOperations.Where(row => ownedOutbound.Contains(row.Id)).ExecuteDeleteAsync();
         foreach (var (system, job) in ownedSuccesses)
             await db.SyncSuccesses.Where(row => row.System == system && row.Job == job).ExecuteDeleteAsync();
     }
-    private async Task<Guid> Customer()
+    private async Task<WebApplicationFactory<Program>> Host(Action<IWebHostBuilder>? configure = null)
     {
-        var response = await Admin.PostAsJsonAsync("/api/v1/customers/organizations", new { name = "Synthetic private customer " + Guid.NewGuid().ToString("N"), status = "Customer" });
-        response.StatusCode.ShouldBe(HttpStatusCode.Created);
-        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
-    }
-    private async Task<(Guid Link, Guid Record)> Mapping(Guid customer, string? issue = null)
-    {
-        await using var scope = factory.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-        var client = "synthetic-client-" + Guid.NewGuid().ToString("N"); var key = CustomerIdentityContract.ExternalId(Workspace, client);
-        var link = new ExternalLink { Id = Guid.NewGuid(), System = "Atlas", ExternalType = "Client", ExternalId = issue == "uppercase-key" ? key.ToUpperInvariant() : key,
-            EntityType = issue == "wrong-entity" ? "Contact" : "Organization", EntityId = customer, Method = LinkMethod.Manual, LinkedAt = DateTimeOffset.UtcNow };
-        var record = new ExternalRecord { Id = Guid.NewGuid(), System = "Atlas", ExternalType = "Client", ExternalId = issue is "uppercase-key" or "uppercase-reference" ? key.ToUpperInvariant() : key,
-            DisplayName = "synthetic-private-source-name", Hash = "fixture", Payload = JsonSerializer.Serialize(new AtlasCustomerReference(issue == "foreign-tuple" ? "foreign" : Workspace, client), CustomerIdentityContract.JsonOptions),
-            FirstSeenAt = DateTimeOffset.UtcNow, LastSeenAt = DateTimeOffset.UtcNow, IsGone = issue == "gone" };
-        if (issue == "oversized") record.Payload += new string(' ', 4100) + "synthetic-private-trailing-value";
-        if (issue != "unlinked") { db.ExternalLinks.Add(link); ownedLinks.Add(link.Id); }
-        if (issue != "missing-reference") { db.ExternalRecords.Add(record); ownedRecords.Add(record.Id); }
-        await db.SaveChangesAsync(); return (link.Id, record.Id);
-    }
-    private async Task<WebApplicationFactory<Program>> Host(Action<IWebHostBuilder>? configure = null, Func<ILocalMappingSource, ILocalMappingSource>? mappingSource = null)
-    {
-        var employee = (await Admin.GetFromJsonAsync<JsonElement>("/bff/user")).GetProperty("id").GetGuid();
-        return factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseSetting("Parasol:Atlas:Enabled", "true"); builder.UseSetting("Parasol:Atlas:BaseUrl", "http://127.0.0.1:1/");
-            builder.UseSetting($"Parasol:Atlas:Employees:{employee}:WorkspaceId", Workspace);
-            builder.UseSetting($"Parasol:Atlas:Employees:{employee}:Token", "synthetic-private-personal-token");
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddHttpClient(AtlasWorkspaceRegistration.ClientName).ConfigurePrimaryHttpMessageHandler(() => new RefuseHttp());
-                if (mappingSource is not null) services.AddScoped<ILocalMappingSource>(provider => mappingSource(new LocalReadinessMappingSource(
-                    provider.GetRequiredService<IntegrationDbContext>(), provider.GetRequiredService<Crm.Customers.Contracts.ICustomersApi>())));
-            });
-            configure?.Invoke(builder);
-        });
+        // Provision the signed-in administrator first: a first sign-in writes audit rows the read-only checks must not count.
+        _ = await Admin.GetFromJsonAsync<JsonElement>("/bff/user");
+        return factory.WithWebHostBuilder(builder => configure?.Invoke(builder));
     }
     private HttpClient Client(WebApplicationFactory<Program> host, string role = CrmRoles.Admin, string? key = null)
     {
@@ -99,105 +64,25 @@ public sealed class LocalReadinessApiTests(CrmWebFactory factory) : IAsyncLifeti
     }
 
     [Fact]
-    public async Task Technical_employees_receive_only_own_presence_admins_receive_flags_and_history_and_other_roles_are_denied_without_HTTP()
+    public async Task Admins_receive_flags_and_history_and_other_roles_are_denied_without_HTTP()
     {
         await using var host = await Host(); using var admin = Client(host); var before = await Writes(host.Services);
         var providerCalls = new[] { factory.Atera.LogEntries.Count, factory.PowerOffice.LogEntries.Count, factory.Graph.LogEntries.Count, factory.PartnerCenter.LogEntries.Count };
         var response = await admin.GetAsync(Endpoint); response.StatusCode.ShouldBe(HttpStatusCode.OK); response.Headers.CacheControl!.NoStore.ShouldBeTrue();
         var view = (await response.Content.ReadFromJsonAsync<LocalReadinessView>())!;
-        view.PersonalAtlas!.Status.ShouldBe("PERSONAL_ENTRY_PRESENT"); view.Admin.ShouldNotBeNull(); view.Admin.AuthMode.ShouldBe("ENTRA");
+        view.Admin.ShouldNotBeNull(); view.Admin.AuthMode.ShouldBe("ENTRA"); view.Connectivity.ShouldBe("NOT_CHECKED");
         view.Admin.Atera.Enabled.ShouldBeTrue(); view.Admin.PowerOffice.WriteEnabled.ShouldBeTrue(); view.Admin.MicrosoftGraph.SharePointEnabled.ShouldBeTrue();
         (await Writes(host.Services)).ShouldBe(before);
         (await admin.GetAsync(Endpoint)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await Writes(host.Services)).ShouldBe(before); // Isolate endpoint reads from legitimate first-sign-in user provisioning.
-        foreach (var role in new[] { CrmRoles.Technician, CrmRoles.ServiceLead, CrmRoles.ReadOnly })
+        foreach (var role in new[] { CrmRoles.Technician, CrmRoles.ServiceLead, CrmRoles.ReadOnly, CrmRoles.Management, CrmRoles.Finance, CrmRoles.Sales })
         {
-            using var technician = Client(host, role); var personal = (await technician.GetFromJsonAsync<LocalReadinessView>(Endpoint))!;
-            personal.Admin.ShouldBeNull(); personal.PersonalAtlas!.Status.ShouldBe("PERSONAL_ENTRY_PRESENT");
+            using var other = Client(host, role, $"readiness-{role}-" + userKey); (await other.GetAsync(Endpoint)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         }
-        using var other = Client(host, CrmRoles.Technician, "other-" + userKey);
-        (await other.GetFromJsonAsync<LocalReadinessView>(Endpoint))!.PersonalAtlas!.Status.ShouldBe("PERSONAL_ENTRY_MISSING");
-        using var finance = Client(host, CrmRoles.Finance); (await finance.GetAsync(Endpoint)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        using var sales = Client(host, CrmRoles.Sales); (await sales.GetAsync(Endpoint)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         using var anonymous = host.CreateClient(); (await anonymous.GetAsync(Endpoint)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         new[] { factory.Atera.LogEntries.Count, factory.PowerOffice.LogEntries.Count, factory.Graph.LogEntries.Count, factory.PartnerCenter.LogEntries.Count }.ShouldBe(providerCalls);
         var body = await response.Content.ReadAsStringAsync();
         foreach (var forbidden in new[] { "synthetic-private", "http:", "https:", "workspaceId", "clientId", "token", "ApiKey", "Certificate", "PauseReason" }) body.ShouldNotContain(forbidden);
-    }
-
-    [Theory]
-    [InlineData("missing-reference", 0, 1, 0, 0, 0)]
-    [InlineData("gone", 0, 0, 1, 0, 0)]
-    [InlineData("uppercase-key", 1, 0, 0, 0, 0)]
-    [InlineData("wrong-entity", 1, 0, 0, 0, 0)]
-    [InlineData("uppercase-reference", 0, 0, 0, 1, 0)]
-    [InlineData("foreign-tuple", 0, 0, 0, 1, 0)]
-    [InlineData("oversized", 0, 0, 0, 1, 0)]
-    [InlineData("deleted-customer", 0, 0, 0, 0, 1)]
-    [InlineData("missing-customer", 0, 0, 0, 0, 1)]
-    public async Task Real_SQL_mapping_issues_are_classified_without_leaking_payloads(string issue, int invalidIdentity, int missing, int gone, int invalid, int unavailable)
-    {
-        var customer = issue == "missing-customer" ? Guid.NewGuid() : await Customer(); await Mapping(customer, issue);
-        if (issue == "deleted-customer") await factory.AdminSqlAsync($"UPDATE customers.Organizations SET IsDeleted=1 WHERE Id='{customer:D}';");
-        await using var host = await Host(); var response = await Client(host).GetAsync(Endpoint);
-        var view = (await response.Content.ReadFromJsonAsync<LocalReadinessView>())!; var mapping = view.Admin!.AtlasMappings!;
-        view.Status.ShouldBe("LOCAL_SNAPSHOT"); mapping.Status.ShouldBe("CHECKED"); mapping.ReviewStatus.ShouldBe("REQUIRED");
-        mapping.Coverage.ShouldBe(new(1, 1, 0, 0)); mapping.Counts.ShouldBe(new(0, invalidIdentity, missing, gone, invalid, unavailable));
-        (await response.Content.ReadAsStringAsync()).ShouldNotContain("synthetic-private");
-    }
-
-    [Fact]
-    public async Task Valid_live_links_and_unlinked_local_references_are_distinct_and_no_source_coverage_is_claimed()
-    {
-        await Mapping(await Customer()); await Mapping(Guid.NewGuid(), "unlinked");
-        await using var host = await Host(); var view = (await Client(host).GetFromJsonAsync<LocalReadinessView>(Endpoint))!;
-        view.Status.ShouldBe("LOCAL_SNAPSHOT"); view.Admin!.AtlasMappings!.Status.ShouldBe("CHECKED");
-        view.Admin.AtlasMappings.ReviewStatus.ShouldBe("REQUIRED"); view.Admin.AtlasMappings.Coverage.ShouldBe(new(1, 1, 0, 1));
-        view.Admin.AtlasMappings.Counts.ShouldBe(new(1, 0, 0, 0, 0, 0)); view.Connectivity.ShouldBe("NOT_CHECKED");
-    }
-
-    [Fact]
-    public async Task More_than_500_stored_links_are_honestly_incomplete_and_global_duplicate_counts_are_not_sample_counts()
-    {
-        await using (var scope = factory.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-            for (var index = 0; index < 501; index++)
-            {
-                var key = CustomerIdentityContract.ExternalId(Workspace, "cap-" + index);
-                var link = new ExternalLink { Id = Guid.NewGuid(), System = "Atlas", ExternalType = "Client", ExternalId = key,
-                    EntityType = "Organization", EntityId = Guid.NewGuid(), Method = LinkMethod.Manual, LinkedAt = DateTimeOffset.UtcNow };
-                ownedLinks.Add(link.Id); db.ExternalLinks.Add(link);
-            }
-            await db.SaveChangesAsync();
-        }
-        await using var host = await Host(); var view = (await Client(host).GetFromJsonAsync<LocalReadinessView>(Endpoint))!;
-        view.Status.ShouldBe("PARTIAL"); view.Admin!.AtlasMappings!.Status.ShouldBe("INCOMPLETE");
-        view.Admin.AtlasMappings.Coverage.ShouldBe(new(501, 500, 1, 0)); view.Admin.AtlasMappings.Counts.ShouldBe(new(0, 0, 500, 0, 0, 0));
-        await using var read = host.Services.CreateAsyncScope(); var snapshot = await read.ServiceProvider.GetRequiredService<ILocalMappingSource>().ReadAsync(default);
-        snapshot.Links.Count.ShouldBe(500); snapshot.Links.All(link => link.IdentityMatches == 1 && link.CustomerMatches == 1).ShouldBeTrue();
-    }
-
-    [Theory]
-    [InlineData("link")]
-    [InlineData("reference")]
-    [InlineData("customer")]
-    public async Task A_real_registry_or_live_customer_change_during_the_read_is_fenced_before_counts_are_published(string change)
-    {
-        var customer = await Customer(); var ids = await Mapping(customer);
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var host = await Host(mappingSource: inner => new PauseAfterRead(inner, entered, release));
-        using var client = Client(host); var pending = client.GetAsync(Endpoint);
-        try
-        {
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            if (change == "link") await factory.AdminSqlAsync($"UPDATE integration.ExternalLinks SET LinkedAt=SYSUTCDATETIME(),EntityId='{Guid.NewGuid():D}' WHERE Id='{ids.Link:D}';");
-            if (change == "reference") await factory.AdminSqlAsync($"UPDATE integration.ExternalRecords SET IsGone=1 WHERE Id='{ids.Record:D}';");
-            if (change == "customer") await factory.AdminSqlAsync($"UPDATE customers.Organizations SET IsDeleted=1 WHERE Id='{customer:D}';");
-        }
-        finally { release.TrySetResult(); }
-        var view = (await (await pending).Content.ReadFromJsonAsync<LocalReadinessView>())!;
-        view.Status.ShouldBe("PARTIAL"); view.Admin!.AtlasMappings!.Status.ShouldBe("CHANGED"); view.Admin.AtlasMappings.Counts.ShouldBeNull(); view.Admin.AtlasMappings.Coverage.ShouldBeNull();
     }
 
     [Fact]
@@ -265,22 +150,6 @@ public sealed class LocalReadinessApiTests(CrmWebFactory factory) : IAsyncLifeti
                     && command.CommandText.Contains("GROUP BY", StringComparison.Ordinal);
                 if (Interlocked.Exchange(ref inserted, 1) == 0) await insert();
             }
-            return result;
-        }
-    }
-
-    private sealed class RefuseHttp : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            throw new InvalidOperationException("Local readiness must not call Atlas.");
-    }
-    private sealed class PauseAfterRead(ILocalMappingSource inner, TaskCompletionSource entered, TaskCompletionSource release) : ILocalMappingSource
-    {
-        private int calls;
-        public async Task<LocalMappingSnapshot> ReadAsync(CancellationToken ct)
-        {
-            var result = await inner.ReadAsync(ct);
-            if (Interlocked.Increment(ref calls) == 1) { entered.TrySetResult(); await release.Task.WaitAsync(ct); }
             return result;
         }
     }

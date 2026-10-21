@@ -7,7 +7,7 @@ import { maintainSectionPosition } from './maintainSectionPosition';
 import { h } from '../../app/hearth';
 import { useReveal } from '../../app/motion';
 
-const ids = { tasks: 'my-day-tasks', attention: 'my-day-attention' } as const;
+const ids = { tasks: 'my-day-tasks' } as const;
 const useStyles = makeStyles({
   links: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px',
     marginBottom: '16px', borderRadius: '12px',
@@ -21,11 +21,11 @@ const useStyles = makeStyles({
 });
 
 /** Keep the section in the query string, which the existing sign-in return path preserves. */
-export function MyDaySectionLinks({ tasks, attention }: { tasks: boolean; attention: boolean }) {
+export function MyDaySectionLinks({ tasks }: { tasks: boolean }) {
   const { t } = useTranslation(); const styles = useStyles(); const { search, hash, key } = useLocation();
   const navigate = useNavigate();
   const value = new URLSearchParams(search).get('section');
-  const section = value === 'tasks' || value === 'attention' ? value : null;
+  const section = value === 'tasks' ? value : null;
   const url = search + hash;
   const links = useRef<HTMLElement>(null);
   // The jumps rise with the rest of the page instead of standing there before the header has landed.
@@ -55,10 +55,9 @@ export function MyDaySectionLinks({ tasks, attention }: { tasks: boolean; attent
     const parameters = new URLSearchParams(search); parameters.set('section', name);
     return `?${parameters}#${ids[name]}`;
   };
-  if (!tasks && !attention) return null;
+  if (!tasks) return null;
   return <nav ref={links} tabIndex={-1} className={styles.links} aria-label={t('myDay.sectionsLabel')}>
-    {tasks && <AppLink className={styles.link} to={to('tasks')}>{t('myDay.myTasks')}</AppLink>}
-    {attention && <AppLink className={styles.link} to={to('attention')}>{t('parasolAttention.title')}</AppLink>}
+    <AppLink className={styles.link} to={to('tasks')}>{t('myDay.myTasks')}</AppLink>
   </nav>;
 }
 

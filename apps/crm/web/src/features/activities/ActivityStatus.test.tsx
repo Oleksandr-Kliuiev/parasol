@@ -12,11 +12,10 @@ const writes = (fetch: ReturnType<typeof vi.fn>) => fetch.mock.calls.filter(([, 
 const reads = (fetch: ReturnType<typeof vi.fn>) => fetch.mock.calls.filter(([url]) => isActivityRead(url as string));
 const timelinePath = `/organizations/${organizationId}?tab=activities`;
 
-it.each(['Task', 'Call', 'Meeting'] as const)('reopens a Done %s with its displayed ETag without Atlas access', async type => {
+it.each(['Task', 'Call', 'Meeting'] as const)('reopens a Done %s with its displayed ETag', async type => {
   const done = { ...first, type, status: 'Done' as const, etag: '"done-version"' };
   const fetch = vi.fn(async (url: string, init: RequestInit) => auxiliary(url) ?? (init.method === 'POST' ? response(done) : result([done])));
   vi.stubGlobal('fetch', fetch); renderSelection(selectedPath(), ['activities.read', 'activities.write']); await screen.findByText(first.subject);
-  expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
   await userEvent.click(reopen()); await waitFor(() => expect(writes(fetch)).toHaveLength(1));
   expect(writes(fetch)[0]).toEqual([`/api/v1/activities/${first.id}/reopen`, expect.objectContaining({ method: 'POST', headers: expect.objectContaining({ 'If-Match': done.etag }), body: undefined })]);
 });
@@ -61,7 +60,7 @@ it.each(['selected', 'ordinary'])('keeps the %s displayed row on 412 with no ret
   expect(alert).toHaveTextContent('Refresh or review the current record before trying again.');
   expect(screen.getByRole('link', { name: 'Review current activity' })).toHaveAttribute('href', activityUrl(first.organizationId, first.id));
   expect(screen.getByText(original.body)).toBeVisible(); expect(screen.getByText(/Kari Nordmann/)).toBeVisible();
-  expect(screen.getByRole('button', { name: 'View Atlas source' })).toBeVisible(); expect(complete()).toHaveAttribute('aria-disabled', 'true');
+  expect(complete()).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(complete()); fireEvent(document, new Event('visibilitychange')); fireEvent(window, new Event('online'));
   expect(writes(fetch)).toHaveLength(1); expect(reads(fetch)).toHaveLength(1);
 });

@@ -27,7 +27,7 @@ it('retains the exact edit draft, due instant and captured ETag when the selecte
   expect(JSON.parse(writes[0]![1].body as string)).toMatchObject({ subject: 'Synthetic retained draft', dueAt: original.dueAt });
 });
 
-it('hides a selected record and its source controls on a failed refresh and does not restore an old draft after retry', async () => {
+it('hides a selected record and its controls on a failed refresh and does not restore an old draft after retry', async () => {
   let failed = false;
   const fetch = vi.fn(async (url: string) => auxiliary(url) ?? (failed ? response({ detail: 'Synthetic read failure' }, 503) : result()));
   vi.stubGlobal('fetch', fetch); renderSelection(); await screen.findByText(first.subject);
@@ -37,7 +37,6 @@ it('hides a selected record and its source controls on a failed refresh and does
   failed = true; fireEvent.click(screen.getByText('Refresh current query'));
   expect(await screen.findByText('Something went wrong')).toBeVisible();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); expect(screen.queryByText(first.subject)).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
   failed = false; await userEvent.click(await screen.findByRole('button', { name: 'Try again' }));
   expect(await screen.findByText(first.subject)).toBeVisible(); expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
@@ -67,7 +66,7 @@ it('explicit keyboard refresh reads the current version once, retains focus and 
   vi.stubGlobal('fetch', fetch); renderSelection(); await screen.findByText(first.subject);
   const refresh = screen.getByRole('button', { name: 'Refresh activity' }); refresh.focus(); await userEvent.keyboard('{Enter}');
   expect(refresh).toHaveFocus(); expect(refresh).toHaveAttribute('aria-disabled', 'true');
-  expect(screen.queryByText(first.subject)).not.toBeInTheDocument(); expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
+  expect(screen.queryByText(first.subject)).not.toBeInTheDocument();
   await userEvent.keyboard('{Enter} '); fireEvent.click(refresh); expect(reads).toBe(2);
   await act(async () => finish(result([fresh]))); expect(await screen.findByText(fresh.subject)).toBeVisible(); expect(refresh).toHaveFocus();
   await userEvent.click(screen.getByRole('button', { name: `Edit ${fresh.subject}` })); await screen.findByRole('dialog');

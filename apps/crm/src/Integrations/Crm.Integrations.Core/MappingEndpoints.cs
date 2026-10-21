@@ -307,14 +307,8 @@ public static class MappingEndpoints
             .Validate<CreateLinkRequest>()
             .RequirePermission(Permissions.IntegrationsManage);
 
-        group.MapDelete("/links/{id:guid}", async (Guid id, ExternalLinkService links, IntegrationDbContext db,
-                Parasol.CustomerIdentityService identities, CancellationToken ct) =>
-            {
-                var isAtlas = await db.ExternalLinks.AsNoTracking().AnyAsync(l => l.Id == id && l.System == Parasol.CustomerIdentityContract.System
-                    && l.ExternalType == Parasol.CustomerIdentityContract.ExternalType, ct);
-                if (isAtlas) return (await identities.UnlinkAsync(id, ct)).ToHttpResult(removed => removed ? Results.NoContent() : NotFound(id.ToString()));
-                return await links.UnlinkAsync(id, ct) ? Results.NoContent() : NotFound(id.ToString());
-            })
+        group.MapDelete("/links/{id:guid}", async (Guid id, ExternalLinkService links, CancellationToken ct) =>
+                await links.UnlinkAsync(id, ct) ? Results.NoContent() : NotFound(id.ToString()))
             .RequirePermission(Permissions.IntegrationsManage);
 
         group.MapPost("/records/{system}/{type}/{externalId}/import", async (

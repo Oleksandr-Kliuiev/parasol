@@ -12,8 +12,7 @@ export const routes: RouteObject[] = [
         errorElement: <RouteErrorPage />,
         children: [
       { index: true, lazy: async () => ({ Component: (await import('../features/dashboard/MyDayPage')).MyDayPage }) },
-      { path: 'connections', lazy: async () => ({ Component: (await import('../features/parasol/ConnectionReadinessPage')).ConnectionReadinessPage }) },
-      { path: 'observations', lazy: async () => ({ Component: (await import('../features/parasol/ObservationQueuePage')).ObservationQueuePage }) },
+      { path: 'connections', lazy: async () => ({ Component: (await import('../features/integrations/ConnectionReadinessPage')).ConnectionReadinessPage }) },
       { path: 'organizations', lazy: async () => ({ Component: (await import('../features/organizations/OrganizationsPage')).OrganizationsPage }) },
       { path: 'organizations/new', lazy: async () => ({ Component: (await import('../features/organizations/OrganizationFormPage')).OrganizationFormPage }) },
       { path: 'organizations/duplicates', lazy: async () => ({ Component: (await import('../features/organizations/DuplicatesPage')).DuplicatesPage }) },
@@ -63,7 +62,6 @@ export const routes: RouteObject[] = [
       { path: 'admin/users', lazy: async () => ({ Component: (await import('../features/admin/UsersPage')).UsersPage }) },
       { path: 'admin/integrations', lazy: async () => ({ Component: (await import('../features/admin/IntegrationsPage')).IntegrationsPage }) },
       { path: 'admin/mappings', lazy: async () => ({ Component: (await import('../features/integrations/MappingsPage')).MappingsPage }) },
-      { path: 'admin/mappings/atlas', lazy: async () => ({ Component: (await import('../features/parasol/CustomerIdentityImportPage')).CustomerIdentityImportPage }) },
       { path: 'admin/privacy', lazy: async () => ({ Component: (await import('../features/privacy/PrivacyPage')).PrivacyPage }) },
       { path: 'admin/privacy/new', lazy: async () => ({ Component: (await import('../features/privacy/NewPrivacyCasePage')).NewPrivacyCasePage }) },
       { path: 'admin/privacy/cases/:id', lazy: async () => ({ Component: (await import('../features/privacy/PrivacyCasePage')).PrivacyCasePage }) },

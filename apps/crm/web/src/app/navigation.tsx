@@ -1,6 +1,5 @@
 import type { ReactElement } from 'react';
 import {
-  AlertUrgent20Regular,
   ArrowImport20Regular,
   ArrowSwap20Regular,
   Board20Regular,
@@ -65,7 +64,6 @@ const selectedByPrefix: ReadonlyArray<readonly [string, string]> = [
   ['/admin/pipeline', 'pipeline-stages'],
   ['/time/entries', 'time-entries'],
   ['/time', 'timesheet'],
-  ['/observations', 'observations'],
   ['/admin/technicians', 'technicians'],
   ['/contracts', 'contracts'],
   ['/catalog', 'catalog'],
@@ -96,8 +94,6 @@ export function useNavGroups(): NavGroup[] {
   const canAudit = useCan(Permissions.auditRead);
   const canUsers = useCan(Permissions.usersRead);
   const canJobs = useCan(Permissions.integrationsManage);
-  const canAtlas = useCan(Permissions.parasolAtlasRead);
-  const canCustomers = useCan(Permissions.customersRead);
   const canCatalog = useCan(Permissions.catalogRead);
   const canContracts = useCan(Permissions.contractsRead);
   const canOwnTime = useCan(Permissions.timeOwn);
@@ -117,8 +113,6 @@ export function useNavGroups(): NavGroup[] {
   const canMaintenance = useCan(Permissions.operationsMaintenance);
   const canTime = canOwnTime || canReadTime;
   // As before the regrouping, the administration entries appear only for someone who holds one of these six rights.
-  // Stored readiness of Atlas and the integrations (M-series connections page): Atlas members or integration managers.
-  const canConnections = canAtlas || canJobs;
   const canSystem = canAudit || canUsers || canJobs || canSalesWrite || canPrivacy || canMaintenance;
   const canTimeAll = canReadTime || canManageTime;
 
@@ -137,8 +131,6 @@ export function useNavGroups(): NavGroup[] {
       label: 'sectionWork',
       items: [
         ...entry(true, 'my-day', '/', 'myDay', <Board20Regular />),
-        // One queue of every urgent Atlas observation of the person's customers (UX 2026, В1).
-        ...entry(canCustomers && canAtlas, 'observations', '/observations', 'observations', <AlertUrgent20Regular />),
         ...entry(canTime, 'timesheet', '/time', 'timesheet', <Clock20Regular />),
         ...entry(canTimeAll, 'time-entries', '/time/entries', 'timeEntries', <Clock20Regular />),
       ],
@@ -172,7 +164,8 @@ export function useNavGroups(): NavGroup[] {
       key: 'system',
       label: 'sectionSystem',
       items: [
-        ...entry(canConnections, 'connections', '/connections', 'connections', <PlugConnected20Regular />),
+        // Stored readiness of the integrations (the connections page): integration managers only.
+        ...entry(canJobs, 'connections', '/connections', 'connections', <PlugConnected20Regular />),
         ...entry(canSystem && canAudit, 'audit', '/admin/audit', 'audit', <DocumentSearch20Regular />),
         ...entry(canSystem && canAudit, 'record-access', '/admin/record-access', 'recordAccess', <LockClosed20Regular />),
         ...entry(canSystem && canUsers, 'users', '/admin/users', 'users', <People20Regular />),

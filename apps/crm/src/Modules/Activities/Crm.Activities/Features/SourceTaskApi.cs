@@ -15,7 +15,7 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
     ICurrentUser currentUser, TimeProvider time) : IActivitiesApi
 {
     private bool CanRead => currentUser.UserId is not null && currentUser.HasPermission(Permissions.ActivitiesRead)
-        && currentUser.HasPermission(Permissions.ParasolAtlasRead);
+        && currentUser.HasPermission(Permissions.ServiceRead);
 
     public async Task<Result<SourceTaskRef>> CreateTaskOnceAsync(SourceTaskDraft draft, CancellationToken cancellationToken)
     {
@@ -129,10 +129,10 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
     internal static bool IsEligibleAssignee(UserProfile profile)
     {
         var permissions = Permissions.ForRoles(profile.Roles ?? []);
-        return profile.IsActive && permissions.Contains(Permissions.ActivitiesWrite) && permissions.Contains(Permissions.ParasolAtlasRead);
+        return profile.IsActive && permissions.Contains(Permissions.ActivitiesWrite) && permissions.Contains(Permissions.ServiceRead);
     }
 
     private static SourceTaskRef Ref(Activity task, bool created = false) => new(task.Id, task.OrganizationId, task.Status,
         task.IsDeleted ? null : task.AssigneeId, task.IsDeleted ? null : task.DueAt, created, !task.IsDeleted);
-    private static Error Forbidden() => Error.Forbidden("ACT_SOURCE_TASK_FORBIDDEN", "Technical workspace and CRM activity access are required.");
+    private static Error Forbidden() => Error.Forbidden("ACT_SOURCE_TASK_FORBIDDEN", "Service and CRM activity access are required.");
 }

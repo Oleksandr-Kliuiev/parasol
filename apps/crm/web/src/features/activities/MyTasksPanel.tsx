@@ -11,7 +11,6 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime, formatReadAt } from '../../shared/utils/format';
 import { useActivityActions } from './api';
-import { AtlasTaskSourceButton } from '../parasol/AtlasTaskSourceButton';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { usePersonalTasks } from './usePersonalTasks';
 import { activityUrl } from './activityNavigation';
@@ -88,10 +87,9 @@ function PersonalTasks({ employeeId, permissionsKey, canWrite }: { employeeId: s
     else if (outcome.kind === 'error') notify(t('errors.generic'), 'error', errorMessage(outcome.error, t));
   };
 
-  // The same actions in the row and in the side panel: the source, the ticket and its hours, done.
+  // The same actions in the row and in the side panel: the ticket and its hours, done.
   // In the side panel there is room for the word next to the done mark.
   const actionsOf = (activity: Activity, labelled = false) => <>
-    {activity.hasTechnicalSource && <AtlasTaskSourceButton activityId={activity.id} />}
     <TaskTicketButton activity={activity} onCloseAfterChange={refreshAfterTicket} />
     {canWrite && <Button
       size="small"

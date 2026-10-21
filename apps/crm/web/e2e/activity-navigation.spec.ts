@@ -32,10 +32,10 @@ function activityRequests(page: Page) {
   return reads;
 }
 
-test('a personal task beyond the first fifty opens exactly and preserves edit concurrency without Atlas', { tag: '@critical' }, async ({ page, browser }) => {
+test('a personal task beyond the first fifty opens exactly and preserves edit concurrency', { tag: '@critical' }, async ({ page, browser }) => {
   await signIn(page, 'Crm.Sales');
   const employee = await api.get<{ id: string; permissions: string[] }>(page, '/bff/user');
-  expect(employee.permissions).toContain('activities.write'); expect(employee.permissions).not.toContain('parasol.atlas.read');
+  expect(employee.permissions).toContain('activities.write');
   const adminContext = await browser.newContext({ baseURL: new URL(page.url()).origin, ignoreHTTPSErrors: true });
   try {
     const admin = await adminContext.newPage(); await signIn(admin, 'Crm.Admin');
@@ -61,7 +61,6 @@ test('a personal task beyond the first fifty opens exactly and preserves edit co
     await expect(timeline.getByRole('heading', { name: 'Selected activity', exact: true })).toBeFocused();
     await expect(timeline.getByRole('listitem')).toHaveCount(1);
     await expect(timeline.getByText(target.body!, { exact: true })).toBeVisible();
-    await expect(timeline.getByRole('button', { name: 'View Atlas source', exact: true })).toHaveCount(0);
     expect(reads).toHaveLength(1);
     expect(reads[0]!.searchParams.get('activityId')).toBe(target.id);
     expect(reads[0]!.searchParams.get('organizationId')).toBe(customer.id);

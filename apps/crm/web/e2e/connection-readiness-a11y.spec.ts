@@ -8,16 +8,13 @@ test('local Connections is usable on a narrow screen and retains keyboard focus 
   await page.route('**/api/v1/parasol/local-readiness', route => route.fulfill({ json: localReadiness() }));
   await page.setViewportSize({ width: 390, height: 844 }); await signIn(page, 'Crm.Admin', '/connections');
   await expect(page.getByText('Connections and credentials have not been checked.', { exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Stored Atlas mappings', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Microsoft Graph', exact: true })).toBeVisible();
   await page.waitForLoadState('networkidle');
   await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))); });
   const expectedStatuses = [
-    ['Personal Atlas configuration', ['Personal entry present']],
     ['Atera', ['Disabled locally', 'Disabled locally']],
     ['PowerOffice', ['Enabled locally', 'Disabled locally']],
     ['Microsoft Graph', ['Disabled locally', 'Disabled locally', 'Disabled locally', 'Disabled locally', 'Disabled locally']],
-    ['Huntress', ['Configuration unknown here']],
-    ['Stored Atlas mappings', ['Local review completed']],
   ] as const;
   // Axe reports exactly 1:1 contrast as incomplete, so violation-only checks miss
   // white-on-white text. These assertions measure every status's rendered colors.
@@ -39,5 +36,5 @@ test('local Connections is usable on a narrow screen and retains keyboard focus 
   const theme = testInfo.project.use.colorScheme; expect(['light', 'dark']).toContain(theme);
   await page.screenshot({ path: testInfo.outputPath(`local-readiness-${theme}-synthetic.png`), fullPage: true, animations: 'disabled' });
   await refresh.focus(); await page.keyboard.press('Enter');
-  await expect(page.getByText('Personal entry present', { exact: true })).toBeVisible(); await expect(refresh).toBeFocused();
+  await expect(page.getByRole('region', { name: 'Atera', exact: true })).toBeVisible(); await expect(refresh).toBeFocused();
 });
