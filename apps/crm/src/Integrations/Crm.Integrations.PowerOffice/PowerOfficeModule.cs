@@ -27,6 +27,7 @@ public static class PowerOfficeModule
         services.AddSingleton<PowerOfficeTokenProvider>();
         services.AddTransient<PowerOfficeAuthHandler>();
         services.AddHttpClient(PowerOfficeTokenProvider.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects)
             .AddStandardResilienceHandler();
 
         services.AddHttpClient<IPowerOfficeClient, PowerOfficeClient>((sp, client) =>
@@ -38,6 +39,7 @@ public static class PowerOfficeModule
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent);
             })
             .AddHttpMessageHandler<PowerOfficeAuthHandler>()
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects)
             .AddResilienceHandler("poweroffice", (pipeline, context) =>
             {
                 var options = context.ServiceProvider.GetRequiredService<IOptions<PowerOfficeOptions>>().Value;

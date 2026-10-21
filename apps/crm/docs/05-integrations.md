@@ -133,7 +133,8 @@ GET  /reports/partners/billing/operations/{id}  (опрос до status = succee
 ## 3. Atera
 
 ### 3.1 Доступ
-- Базовый URL: `https://app.atera.com/api/v3`, заголовок `X-API-KEY`.
+- Базовый URL: `https://app.atera.com/api/v3`, заголовок `X-API-KEY`. Если Atera переведёт аккаунт на токены, `Integrations:Atera:Authentication=Bearer` отправляет тот же секрет (`ApiKey`) как `Authorization: Bearer <JWT>`; всегда ровно один из двух заголовков (M39.0).
+- Клиент не следует перенаправлениям (как клиенты PowerOffice и Partner Center): ответ 3xx — ошибка, `X-API-KEY` не уходит на адрес из `Location` (M39.0, `Crm.Integrations.Core/ProviderHttp.cs`).
 - Ключ API — один на аккаунт Atera с широкими правами: хранится только в Key Vault, ротация раз в 6 месяцев и при увольнении администратора Atera.
 - Лимит: **700 запросов/мин** на аккаунт — CRM ограничивает себя 600/мин, чтобы оставить запас для других интеграций Atera.
 - Пагинация: `page` (с 1) + `itemsInPage` (максимум 50); ответ содержит `totalPages`, `totalItemCount`, `nextLink`.

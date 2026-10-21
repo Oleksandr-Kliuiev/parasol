@@ -1,4 +1,16 @@
+using System.Net.Http.Headers;
+
 namespace Crm.Integrations.Atera;
+
+/// <summary>How crm-worker signs its calls to Atera (M39.0).</summary>
+public enum AteraAuthenticationScheme
+{
+    /// <summary>The account's v3 API key in the <c>X-API-KEY</c> header.</summary>
+    ApiKey,
+
+    /// <summary>A token Atera issued (a JWT) in <c>Authorization: Bearer</c>, for an account Atera has moved to tokens.</summary>
+    Bearer,
+}
 
 /// <summary>Atera API v3 settings (docs/05-integrations.md §3). The API key is account-wide: Key Vault / user secrets only.</summary>
 public sealed class AteraOptions
@@ -7,7 +19,14 @@ public sealed class AteraOptions
 
     public bool Enabled { get; set; }
 
+    /// <summary>The secret crm-worker signs with: the API key, or with <see cref="Authentication"/> <c>Bearer</c> the token itself.</summary>
     public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Whether <see cref="ApiKey"/> travels as <c>X-API-KEY</c> (default) or as <c>Authorization: Bearer</c>. The date Atera moves
+    /// accounts to tokens is not confirmed (M38 risks), so both stay possible and the switch is configuration only.
+    /// </summary>
+    public AteraAuthenticationScheme Authentication { get; set; } = AteraAuthenticationScheme.ApiKey;
 
     public Uri BaseUrl { get; set; } = new("https://app.atera.com/api/v3/");
 
@@ -76,4 +95,28 @@ public sealed class AteraOptions
     public string ContactSyncCron { get; set; } = "20 * * * *";
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey);
+}
+
+/// <summary>Puts the secret on the client's default headers in the configured scheme; one header, never both.</summary>
+internal static class AteraAuthentication
+{
+    public const string ApiKeyHeader = "X-API-KEY";
+
+    public static void Apply(HttpRequestHeaders headers, AteraOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            return;
+        }
+
+        var secret = options.ApiKey.Trim();
+        if (options.Authentication == AteraAuthenticationScheme.Bearer)
+        {
+            headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+        }
+        else
+        {
+            headers.Add(ApiKeyHeader, secret);
+        }
+    }
 }

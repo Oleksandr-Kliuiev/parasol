@@ -23,11 +23,9 @@ public static class AteraModule
                 client.BaseAddress = options.BaseUrl;
                 client.Timeout = TimeSpan.FromMinutes(2);
                 client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
-                if (!string.IsNullOrWhiteSpace(options.ApiKey))
-                {
-                    client.DefaultRequestHeaders.Add("X-API-KEY", options.ApiKey);
-                }
+                AteraAuthentication.Apply(client.DefaultRequestHeaders, options);
             })
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects)
             .AddResilienceHandler("atera", (pipeline, context) =>
             {
                 var options = context.ServiceProvider.GetRequiredService<IOptions<AteraOptions>>().Value;
