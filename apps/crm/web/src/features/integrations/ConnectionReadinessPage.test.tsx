@@ -11,6 +11,10 @@ const permissions = ['integrations.manage'];
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 const render = (allowed = permissions) => renderRoutes([page(<ConnectionReadinessPage />)], '/connections', testUser(allowed));
 const worker = 'Background service';
+const emptyLog = { items: [], nextCursor: null, totalCount: 0, uncertain: 0, waiting: 0 };
+/** The action log under the cards (M39.1) reads on its own; these tests count the reads of the status only. */
+const withLog = (status: (url: string, init: RequestInit) => Promise<Response>) => vi.fn((url: string, init: RequestInit) =>
+  url.startsWith('/api/v1/actions') ? Promise.resolve(response(emptyLog)) : status(url, init));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('the connections page', () => {
@@ -22,7 +26,7 @@ describe('the connections page', () => {
     });
 
   it('is green for a complete picture and shows each integration, its jobs and the worker without asking again', async () => {
-    const fetch = vi.fn(async () => response(connectionStatus())); vi.stubGlobal('fetch', fetch); render();
+    const fetch = vi.fn(async () => response(connectionStatus())); vi.stubGlobal('fetch', withLog(fetch)); render();
     expect(await screen.findByText(/^Everything is up to date/)).toBeVisible();
     expect(fetch).toHaveBeenCalledWith('/api/v1/integrations/connections', expect.anything());
     expect(screen.getByText(/The systems themselves are not contacted/)).toBeVisible();
@@ -39,17 +43,20 @@ describe('the connections page', () => {
     expect(office.getByText("Switched off in this installation's settings, so its jobs do not run.")).toBeVisible();
     expect(office.queryByRole('listitem')).not.toBeInTheDocument();
     const service = within(screen.getByRole('region', { name: worker }));
-    expect(service.getAllByRole('listitem').map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs)$/).textContent))
-      .toEqual(['Change delivery', 'Scheduled jobs']);
-    expect(service.getAllByText('Running')).toHaveLength(2);
-    // Nothing needs attention: the way to administration stays in the note at the end only.
+    expect(service.getAllByRole('listitem').map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs|Actions at vendors)$/).textContent))
+      .toEqual(['Change delivery', 'Scheduled jobs', 'Actions at vendors']);
+    expect(service.getAllByText('Running')).toHaveLength(3);
+    // Nothing needs attention: the way to administration stays in the note at the end only; the action log has only its filters.
     expect(screen.getByRole('link', { name: 'Open integration administration' })).toHaveAttribute('href', '/admin/integrations');
-    expect(screen.getAllByRole('button')).toHaveLength(1); expect(screen.getByRole('button', { name: 'Refresh status' })).toBeVisible();
+    const log = screen.getByRole('region', { name: 'Actions at vendors' });
+    expect(await within(log).findByText('No actions yet.')).toBeVisible();
+    expect(screen.getAllByRole('button').filter((button) => !log.contains(button))).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Refresh status' })).toBeVisible();
     fireEvent(document, new Event('visibilitychange')); fireEvent(window, new Event('online')); expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it('names every gap in the same box and marks the cards that need attention', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => response(connectionGaps()))); render();
+    vi.stubGlobal('fetch', withLog(vi.fn(async () => response(connectionGaps())))); render();
     const box = (await screen.findByText('6 things need attention')).closest('.fui-MessageBar') as HTMLElement;
     expect(within(box).getAllByRole('listitem').map((item) => item.textContent?.replace(/ \d+ \w+ ago/, ' …'))).toEqual([
       'Alerts (Atera): the last run failed …',
@@ -74,7 +81,7 @@ describe('the connections page', () => {
 
   it('says so when the saved state could not be read, without zeroes or old figures', async () => {
     const value = connectionStatus(); value.status = 'Unavailable'; value.worker = null; for (const integration of value.integrations) integration.state = null;
-    vi.stubGlobal('fetch', vi.fn(async () => response(value))); render();
+    vi.stubGlobal('fetch', withLog(vi.fn(async () => response(value)))); render();
     expect(await screen.findByText('The saved state could not be read, so nothing is shown as up to date. Refresh to try again.')).toBeVisible();
     for (const name of [worker, 'Atera', 'PowerOffice Go']) expect(within(screen.getByRole('region', { name })).getByText('Saved state could not be read.')).toBeVisible();
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
@@ -82,7 +89,7 @@ describe('the connections page', () => {
   });
 
   it('does not salvage a reply with an unexpected section', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => response({ ...connectionStatus(), personal: { status: 'PRESENT' } }))); render();
+    vi.stubGlobal('fetch', withLog(vi.fn(async () => response({ ...connectionStatus(), personal: { status: 'PRESENT' } })))); render();
     expect(await screen.findByText('The connection status reply was invalid. No unverified details are shown.')).toBeVisible();
     expect(screen.queryByRole('region', { name: worker })).not.toBeInTheDocument(); expect(screen.queryByText('Atera')).not.toBeInTheDocument();
   });
@@ -90,7 +97,7 @@ describe('the connections page', () => {
   it('hides old details during a keyboard refresh, keeps focus, and refuses repeated activation', async () => {
     let finish!: (r: Response) => void; let reads = 0;
     const fetch = vi.fn(async () => ++reads === 1 ? response(connectionStatus()) : new Promise<Response>(resolve => { finish = resolve; }));
-    vi.stubGlobal('fetch', fetch); render(); await screen.findByRole('region', { name: worker });
+    vi.stubGlobal('fetch', withLog(fetch)); render(); await screen.findByRole('region', { name: worker });
     const refresh = screen.getByRole('button', { name: 'Refresh status' }); refresh.focus(); await userEvent.keyboard('{Enter}');
     expect(refresh).toHaveFocus(); expect(refresh).toHaveAttribute('aria-disabled', 'true'); expect(screen.queryByRole('region', { name: worker })).not.toBeInTheDocument();
     await userEvent.keyboard('{Enter} '); fireEvent.click(refresh); expect(fetch).toHaveBeenCalledTimes(2);
@@ -99,7 +106,7 @@ describe('the connections page', () => {
 
   it.each([403, 503])('removes previous details after HTTP%s and does not display private error text', async status => {
     let fail = false; const fetch = vi.fn(async () => fail ? response({ detail: 'synthetic-private-error' }, status) : response(connectionStatus()));
-    vi.stubGlobal('fetch', fetch); render(); await screen.findByRole('region', { name: worker }); fail = true;
+    vi.stubGlobal('fetch', withLog(fetch)); render(); await screen.findByRole('region', { name: worker }); fail = true;
     await userEvent.click(screen.getByRole('button', { name: 'Refresh status' })); await screen.findByRole('status');
     expect(screen.queryByRole('region', { name: worker })).not.toBeInTheDocument(); expect(screen.queryByText('Atera')).not.toBeInTheDocument();
     expect(screen.queryByText(/synthetic-private/)).not.toBeInTheDocument(); expect(fetch).toHaveBeenCalledTimes(2);
@@ -107,7 +114,7 @@ describe('the connections page', () => {
 
   it.each(['employee', 'permissions'] as const)('aborts and ignores a late reply after changing %s', async change => {
     let finish!: (r: Response) => void; let signal: AbortSignal | undefined; let reads = 0;
-    vi.stubGlobal('fetch', vi.fn((_: string, init: RequestInit) => {
+    vi.stubGlobal('fetch', withLog((_: string, init: RequestInit) => {
       if (++reads === 1) { signal = init.signal as AbortSignal; return new Promise<Response>(resolve => { finish = resolve; }); }
       return Promise.resolve(response(connectionStatus()));
     }));

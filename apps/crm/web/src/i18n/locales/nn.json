@@ -4176,7 +4176,8 @@
       "note": "Ein del blir rekna som forseinka etter {{limit}} utan livsteikn.",
       "components": {
         "outbox": "Levering av endringar",
-        "jobs": "Planlagde jobbar"
+        "jobs": "Planlagde jobbar",
+        "actions": "Handlingar hos leverandørar"
       },
       "state": {
         "Current": "Køyrer",
@@ -4330,5 +4331,102 @@
     "showAll": "Vis alle {{count}}",
     "showFewer": "Vis færre",
     "firstOf": "Dei {{shown}} mest pressande av {{total}}"
+  },
+  "actions": {
+    "status": {
+      "Scheduled": "Ventar",
+      "Queued": "I kø",
+      "Sending": "Blir sendt",
+      "Succeeded": "Utført",
+      "Simulated": "Simulert",
+      "Skipped": "Allereie gjort",
+      "Rejected": "Ikkje tillate",
+      "Failed": "Mislukka",
+      "Uncertain": "Må sjekkast",
+      "Cancelled": "Avbroten"
+    },
+    "codes": {
+      "VND_INTEGRATION_OFF": "Tilkoplinga til dette systemet er slått av.",
+      "VND_INTEGRATION_NOT_CONFIGURED": "Bakgrunnstenesta har ingen nøkkel for dette systemet.",
+      "VND_KIND_DISABLED": "Denne typen handling er ikkje slått på enno.",
+      "VND_WRITE_DISABLED": "Endringar i dette systemet er slått av.",
+      "VND_CUSTOMER_NOT_ALLOWED": "Endringar er førebels berre tillatne for testkundane.",
+      "VND_UNKNOWN_KIND": "Denne handlinga finst ikkje.",
+      "VND_KIND_UNKNOWN": "CRM kjenner ikkje lenger denne typen handling; ingenting vart sendt.",
+      "VND_TARGET_NOT_FOUND": "CRM har inga lagra kopi av denne posten.",
+      "VND_FORBIDDEN": "Tilgangen din omfattar ikkje denne handlinga.",
+      "VND_PREVIEW_EXPIRED": "Førehandsvisinga er eldre enn ti minutt; sjå på henne igjen.",
+      "VND_PREVIEW_STALE": "Handlinga er ikkje den førehandsvisinga viste; sjå på henne igjen.",
+      "VND_COMMAND_KEY_REUSED": "Denne stadfestinga er allereie brukt for ei anna handling. Opne dialogen på nytt.",
+      "VND_REASON_REQUIRED": "Oppgje ei grunngjeving på 10–500 teikn.",
+      "VND_NAME_MISMATCH": "Skriv namnet nøyaktig slik det blir vist.",
+      "VND_WRONG_ENDPOINT": "Handlinga vart send feil veg. Last inn sida på nytt og prøv igjen.",
+      "VND_NOT_CANCELLABLE": "Handlinga er allereie på veg og kan ikkje avbrytast lenger.",
+      "VND_SENDING": "Handlinga blir send akkurat no og kan ikkje avbrytast lenger.",
+      "VND_NOT_UNCERTAIN": "Denne handlinga har allereie eit utfall.",
+      "VND_SETTLEMENT_INVALID": "Sei om det skjedde og kva du sjekka (10–500 teikn).",
+      "VND_STALE": "Handlinga er endra i mellomtida. Lukk henne og opne henne igjen.",
+      "VND_NOT_FOUND": "Fann ikkje handlinga.",
+      "VND_SENT": "Utført.",
+      "VND_ALREADY_DONE": "Det var allereie slik; ingenting vart sendt.",
+      "VND_DRY_RUN": "Testmodus (DryRun): ingenting vart sendt.",
+      "VND_NO_ANSWER": "Det kom ikkje noko klart svar. Sjekk om det skjedde.",
+      "VND_EARLIER_ATTEMPT": "Eit tidlegare forsøk kan ha gått gjennom utan svar. Sjekk før du ber om det igjen.",
+      "VND_VENDOR_UNAVAILABLE": "Systemet kunne ikkje nåast etter fleire forsøk; ingenting vart sendt.",
+      "VND_WAITING": "Ventar: CRM kunne ikkje registrere forsøket enno.",
+      "VND_CANCELLED": "Avbroten før ho vart send.",
+      "VND_SETTLED_DONE": "Sjekka: det skjedde.",
+      "VND_SETTLED_NOT_DONE": "Sjekka: det skjedde ikkje.",
+      "VND_HELD_AFTER_RESTORE": "Halden tilbake etter ei gjenoppretting av databasen: ho kan ha gått gjennom. Sjekk og registrer kva du fann."
+    },
+    "dialog": {
+      "previewing": "Sjekkar kva handlinga vil gjere …",
+      "source": "Kjelde: {{system}}",
+      "effects": "Dette skjer",
+      "simulated": "{{system}} er i testmodus (DryRun): ingenting blir sendt, og resultatet seier kva som ville ha skjedd.",
+      "paused": "Tilkoplinga til {{system}} er sett på pause: handlinga ventar til ho blir teken opp att.",
+      "destructive": "Dette kan ikkje angrast. Du stadfestar innlogginga, og handlinga blir send {{seconds}} sekund etter at du stadfestar; fram til då kan du avbryte henne.",
+      "typeName": "Skriv «{{name}}» for å stadfeste",
+      "typeNameMismatch": "Namnet stemmer ikkje.",
+      "reason": "Grunngjeving",
+      "reasonHint": "{{min}}–{{max}} teikn, blir lagra med handlinga.",
+      "reverify": "Stadfest innlogginga i vindauget som opna seg, og trykk «{{confirm}}» igjen.",
+      "renewed": "Førehandsvisinga vart fornya: ho var eldre enn ti minutt, eller posten vart endra. Sjekk henne og trykk «{{confirm}}» igjen.",
+      "cancelAction": "Avbryt handlinga",
+      "held": "Blir send om {{seconds}} s. Fram til då kan du avbryte henne.",
+      "sending": "Sender til {{system}} …",
+      "uncertainNext": "{{system}} gav ikkje noko klart svar. Sjekk der om det skjedde, og registrer kva du fann i handlingsloggen under Tilkoplingar.",
+      "openAtVendor": "Sjekk i {{system}}",
+      "keepsGoing": "Du kan lukke vindauget; handlinga held fram."
+    },
+    "fields": {
+      "requestedBy": "Bede om av",
+      "requestedAt": "Bede om",
+      "source": "Kjelde",
+      "customer": "Kunde",
+      "reason": "Grunngjeving",
+      "completedAt": "Ferdig",
+      "attempts": "Forsøk",
+      "closedBy": "Avbroten eller sjekka av"
+    },
+    "settle": {
+      "intro": "{{system}} gav ikkje noko klart svar. Sjekk der om det skjedde, og registrer kva du fann; ingenting blir sendt på nytt.",
+      "question": "Skjedde det?",
+      "done": "Det skjedde i {{system}}",
+      "notDone": "Det skjedde ikkje i {{system}}",
+      "reason": "Kva du sjekka",
+      "confirm": "Registrer"
+    },
+    "log": {
+      "title": "Handlingar hos leverandørar",
+      "note": "Alt CRM har bede leverandørane om, nyaste først. Ei handling utan klart svar ventar til nokon sjekkar hos leverandøren.",
+      "filter": "Vis handlingar",
+      "all": "Alle",
+      "attention": "Må sjekkast",
+      "waiting": "Ventar",
+      "none": "Ingen handlingar enno.",
+      "noneUncertain": "Ingen handlingar må sjekkast.",
+      "noneWaiting": "Ingenting ventar på å bli sendt."
+    }
   }
 }

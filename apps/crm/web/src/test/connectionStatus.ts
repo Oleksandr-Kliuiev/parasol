@@ -23,6 +23,7 @@ export function connectionStatus(): ConnectionStatusView {
     worker: { staleAfterSeconds: 180, components: [
       { component: 'outbox', state: 'Current', beatAt: '2026-10-16T09:59:40Z', ageSeconds: 20 },
       { component: 'jobs', state: 'Current', beatAt: '2026-10-16T09:59:20Z', ageSeconds: 40 },
+      { component: 'actions', state: 'Current', beatAt: '2026-10-16T09:59:50Z', ageSeconds: 10 },
     ] },
     gaps: [],
   };
