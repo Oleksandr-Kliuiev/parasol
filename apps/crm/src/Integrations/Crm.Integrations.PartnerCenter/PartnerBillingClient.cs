@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -14,15 +15,16 @@ public interface IPartnerBillingClient
 
     /// <summary>
     /// What Microsoft charged the partner on one invoice (FR-LIC-04). The export is asynchronous: it is requested, polled
-    /// until it succeeds, and then read from the manifest's blobs.
+    /// until it succeeds, and then read from the files its manifest names.
     /// </summary>
     Task<IReadOnlyList<ExternalBilledLine>> GetBilledLinesAsync(string invoiceId, CancellationToken cancellationToken);
 }
 
 /// <summary>
 /// Microsoft partner billing reconciliation through Graph (docs/05 §2.4): <c>POST …/billed/export</c> → poll the operation →
-/// read the manifest → download the line files. Only the fields the CRM compares are kept. Every link after the first request
-/// comes from Microsoft's answers and goes through <see cref="PartnerBillingLinks"/>: the Graph token only to the Graph origin.
+/// read the manifest → download the line files (<see cref="PartnerBillingFile"/>). Every link after the first request comes
+/// from Microsoft's answers and goes through <see cref="PartnerBillingLinks"/>: the Graph token only to the Graph origin, the
+/// files only from the signed export storage.
 /// </summary>
 internal sealed class PartnerBillingClient(
     HttpClient http,
@@ -39,21 +41,69 @@ internal sealed class PartnerBillingClient(
     public async Task<IReadOnlyList<ExternalBilledLine>> GetBilledLinesAsync(string invoiceId, CancellationToken cancellationToken)
     {
         var operationUrl = await StartExportAsync(invoiceId, cancellationToken);
-        var manifestUrl = await WaitForManifestAsync(operationUrl, cancellationToken);
-        var blobs = await ReadManifestAsync(manifestUrl, cancellationToken);
+        var manifest = await WaitForManifestAsync(operationUrl, cancellationToken);
+        // Every file is checked before the first one is read, so a manifest that names one wrong link reads nothing.
+        var files = FileLinks(manifest)
+            .Select(link => PartnerBillingLinks.ClassifyFile(options.Value.GraphBaseUrl, link, options.Value.EffectiveBillingStorageHostSuffixes))
+            .ToList();
 
         var lines = new List<ExternalBilledLine>();
-        foreach (var blob in blobs)
+        foreach (var file in files)
         {
-            using var response = await GetLinkAsync(blob, cancellationToken);
+            // The SAS in the link is the file's only key: no token goes with it.
+            using var request = new HttpRequestMessage(HttpMethod.Get, file);
+            using var response = await http.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            lines.AddRange(ParseLines(content, invoiceId));
+            lines.AddRange(PartnerBillingFile.Read(await response.Content.ReadAsByteArrayAsync(cancellationToken), invoiceId));
         }
 
-        logger.LogInformation("Partner billing export for invoice {Invoice} returned {Count} lines.", invoiceId, lines.Count);
+        logger.LogInformation(
+            "Partner billing export for invoice {Invoice} returned {Count} lines in {Files} files.", invoiceId, lines.Count, files.Count);
         return lines;
     }
+
+    /// <summary>
+    /// The line files a manifest names, as links. Microsoft documents a directory, its SAS and the file names: a file is
+    /// <c>{rootDirectory}/{name}?{sasToken}</c>, built here as one absolute address. A <c>blobUri</c>/<c>url</c> per file (the shape
+    /// read before) is taken as it stands. A manifest without its root directory gives a path that would resolve onto Graph;
+    /// <see cref="PartnerBillingLinks.ClassifyFile"/> refuses it rather than send the token with it.
+    /// </summary>
+    internal static IReadOnlyList<string> FileLinks(JsonElement manifest)
+    {
+        if (manifest.ValueKind != JsonValueKind.Object)
+        {
+            throw new PartnerCenterApiException(HttpStatusCode.OK, "The billing export's manifest is not an object.");
+        }
+
+        var root = Text(manifest, "rootDirectory")?.TrimEnd('/');
+        var sas = Text(manifest, "sasToken")?.TrimStart('?');
+        var links = new List<string>();
+        if (manifest.TryGetProperty("blobs", out var blobs) && blobs.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var blob in blobs.EnumerateArray())
+            {
+                links.Add(Text(blob, "blobUri") ?? Text(blob, "url")
+                          ?? (Text(blob, "name") is { } name ? FileLink(root, name, sas) : null)
+                          ?? throw new PartnerCenterApiException(HttpStatusCode.OK, "The billing export's manifest names a file without a name."));
+            }
+        }
+
+        // A short list would read part of the invoice as the whole of it.
+        if (manifest.TryGetProperty("blobCount", out var count) && count.ValueKind == JsonValueKind.Number &&
+            count.TryGetInt32(out var expected) && expected != links.Count)
+        {
+            throw new PartnerCenterApiException(
+                HttpStatusCode.OK,
+                string.Create(CultureInfo.InvariantCulture, $"The billing export's manifest lists {links.Count} of its {expected} files."));
+        }
+
+        return links;
+    }
+
+    /// <summary><c>{rootDirectory}/{name}?{sasToken}</c>: the address of one file as Microsoft's manifest describes it.</summary>
+    private static string FileLink(string? rootDirectory, string name, string? sasToken) => string.IsNullOrEmpty(sasToken)
+        ? $"{rootDirectory}/{name.TrimStart('/')}"
+        : $"{rootDirectory}/{name.TrimStart('/')}?{sasToken}";
 
     private async Task<string> StartExportAsync(string invoiceId, CancellationToken cancellationToken)
     {
@@ -69,7 +119,7 @@ internal sealed class PartnerBillingClient(
                ?? throw new PartnerCenterApiException(response.StatusCode, "The billing export did not return an operation link.");
     }
 
-    private async Task<string> WaitForManifestAsync(string operationUrl, CancellationToken cancellationToken)
+    private async Task<JsonElement> WaitForManifestAsync(string operationUrl, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < MaxPolls; attempt++)
         {
@@ -79,91 +129,38 @@ internal sealed class PartnerBillingClient(
             var status = document.RootElement.TryGetProperty("status", out var value) ? value.GetString() : null;
             if (string.Equals(status, "succeeded", StringComparison.OrdinalIgnoreCase))
             {
-                return document.RootElement.TryGetProperty("resourceLocation", out var location) && location.GetString() is { Length: > 0 } url
-                    ? url
-                    : throw new PartnerCenterApiException(
-                        System.Net.HttpStatusCode.OK, "The billing export succeeded but returned no manifest.");
+                return await ReadManifestAsync(document.RootElement, cancellationToken);
             }
 
             if (string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase))
             {
-                throw new PartnerCenterApiException(System.Net.HttpStatusCode.OK, "Microsoft reported that the billing export failed.");
+                throw new PartnerCenterApiException(HttpStatusCode.OK, "Microsoft reported that the billing export failed.");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(attempt == 0 ? 2 : 5), time, cancellationToken);
         }
 
-        throw new PartnerCenterApiException(System.Net.HttpStatusCode.RequestTimeout, "The billing export did not finish in time.");
+        throw new PartnerCenterApiException(HttpStatusCode.RequestTimeout, "The billing export did not finish in time.");
     }
 
-    private async Task<IReadOnlyList<string>> ReadManifestAsync(string manifestUrl, CancellationToken cancellationToken)
+    /// <summary>
+    /// The manifest of a finished export. Graph v1.0 links it (<c>resourceLocation@odata.navigationLink</c>, a manifest on Graph),
+    /// Partner Center's v2 example embeds it (<c>resourceLocation</c> as an object), and a link in <c>resourceLocation</c> is read
+    /// as before.
+    /// </summary>
+    private async Task<JsonElement> ReadManifestAsync(JsonElement operation, CancellationToken cancellationToken)
     {
-        using var response = await GetLinkAsync(manifestUrl, cancellationToken);
+        if (operation.TryGetProperty("resourceLocation", out var embedded) && embedded.ValueKind == JsonValueKind.Object)
+        {
+            return embedded.Clone();
+        }
+
+        var link = Text(operation, "resourceLocation@odata.navigationLink") ?? Text(operation, "resourceLocation")
+                   ?? throw new PartnerCenterApiException(HttpStatusCode.OK, "The billing export succeeded but returned no manifest.");
+        using var response = await GetLinkAsync(link, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-        if (!document.RootElement.TryGetProperty("blobs", out var blobs) || blobs.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        return blobs.EnumerateArray()
-            .Select(blob => blob.TryGetProperty("blobUri", out var uri) || blob.TryGetProperty("url", out uri) ? uri.GetString() : null)
-            .OfType<string>()
-            .ToList();
-    }
-
-    /// <summary>The export is JSON lines; a whole array is accepted as well, because the shape differs between attribute sets.</summary>
-    internal static IReadOnlyList<ExternalBilledLine> ParseLines(string content, string invoiceId)
-    {
-        var lines = new List<ExternalBilledLine>();
-        var trimmed = content.TrimStart();
-        if (trimmed.StartsWith('['))
-        {
-            using var document = JsonDocument.Parse(trimmed);
-            lines.AddRange(document.RootElement.EnumerateArray().Select(e => ReadLine(e, invoiceId)).OfType<ExternalBilledLine>());
-            return lines;
-        }
-
-        foreach (var row in content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            using var document = JsonDocument.Parse(row);
-            if (ReadLine(document.RootElement, invoiceId) is { } line)
-            {
-                lines.Add(line);
-            }
-        }
-
-        return lines;
-    }
-
-    internal static ExternalBilledLine? ReadLine(JsonElement e, string invoiceId)
-    {
-        var customerId = Text(e, "customerId", "partnerId");
-        var offerId = Text(e, "offerId", "productId", "skuId");
-        if (customerId is null || offerId is null)
-        {
-            return null;
-        }
-
-        var start = Date(e, "chargeStartDate", "billingPeriodStartDate") ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var end = Date(e, "chargeEndDate", "billingPeriodEndDate") ?? start;
-        var quantity = Number(e, "quantity", "unitCount") ?? 0m;
-        var unitPrice = Number(e, "effectiveUnitPrice", "unitPrice") ?? 0m;
-        var total = Number(e, "totalForCustomer", "subtotal", "total") ?? decimal.Round(quantity * unitPrice, 2);
-        return new ExternalBilledLine(
-            MsBillingSource.GraphExport,
-            start,
-            end,
-            Text(e, "invoiceNumber") ?? invoiceId,
-            customerId,
-            Text(e, "customerName"),
-            Text(e, "subscriptionId", "entitlementId"),
-            offerId,
-            Text(e, "offerName", "skuName", "productName"),
-            quantity,
-            unitPrice,
-            total,
-            Text(e, "currency", "billingCurrency") ?? "NOK");
+        return document.RootElement.Clone();
     }
 
     /// <summary>
@@ -215,46 +212,10 @@ internal sealed class PartnerBillingClient(
             $"Partner billing {(int)response.StatusCode} for {response.RequestMessage?.RequestUri?.AbsolutePath}: {(body.Length > 300 ? body[..300] : body)}");
     }
 
-    private static string? Text(JsonElement e, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String &&
-                value.GetString() is { Length: > 0 } text)
-            {
-                return text.Trim();
-            }
-        }
-
-        return null;
-    }
-
-    private static decimal? Number(JsonElement e, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty(name, out var value))
-            {
-                continue;
-            }
-
-            if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number))
-            {
-                return number;
-            }
-
-            if (value.ValueKind == JsonValueKind.String &&
-                decimal.TryParse(value.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
-            {
-                return parsed;
-            }
-        }
-
-        return null;
-    }
-
-    private static DateOnly? Date(JsonElement e, params string[] names) =>
-        Text(e, names) is { } text && DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
-            ? DateOnly.FromDateTime(parsed.UtcDateTime)
+    /// <summary>A non-empty string property of an object, else nothing.</summary>
+    private static string? Text(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String &&
+        value.GetString() is { } text && !string.IsNullOrWhiteSpace(text)
+            ? text.Trim()
             : null;
 }
