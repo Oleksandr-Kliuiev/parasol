@@ -90,13 +90,35 @@ describe('My day by the layout each person chooses', () => {
     expect(within(layouts()).getByRole('radio', { name: 'Billing' })).toBeChecked();
   });
 
-  it('adds the hours review on the side for someone who chose hours to approve', async () => {
+  it.each([['one column', false], ['two columns', true]])(
+    'puts the hours to approve first, their panel and their key figure, for someone who chose them (%s)', async (_, wide) => {
+      // Two columns from 1101 px: the main column comes first in the reading order, so the hours lead it.
+      if (wide) {
+        vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(min-width: 1101px)', media: query,
+          addEventListener: () => {}, removeEventListener: () => {} }));
+      }
+      stubApi();
+      // Full access holds the own-hours permission the key figure needs too.
+      renderRoutes([page(<MyDayPage />)], '/', user([...everything, 'time.own'], 'lead'));
+      await greeting();
+      expect(await screen.findByRole('heading', { name: 'Hours to review' })).toBeVisible();
+      expect(titles()[0]).toBe('Hours to review');
+      expect(titles().indexOf('Urgent alerts')).toBeGreaterThan(0);
+      expect(screen.getByRole('region', { name: 'Key figures' }).firstElementChild).toHaveTextContent(/^Hours this week/);
+      expect(screen.getByRole('link', { name: 'Open time entries' })).toHaveAttribute('href', '/time/entries');
+      expect(screen.getByText('Hours to approve, your team and what needs attention.')).toBeInTheDocument();
+      expect(within(layouts()).getByRole('radio', { name: 'Hours to approve' })).toBeChecked();
+    });
+
+  it('keeps urgent alerts first among the key figures of the work layout and billing first in the finance one', async () => {
     stubApi();
-    renderRoutes([page(<MyDayPage />)], '/', user(everything, 'lead'));
+    const { unmount } = renderRoutes([page(<MyDayPage />)], '/', user(everything));
     await greeting();
-    expect(await screen.findByRole('heading', { name: 'Hours to review' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Open time entries' })).toHaveAttribute('href', '/time/entries');
-    expect(screen.getByText('Hours to approve, your team and what needs attention.')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Key figures' }).firstElementChild).toHaveTextContent(/^Critical alerts/);
+    unmount();
+    renderRoutes([page(<MyDayPage />)], '/', user(everything, 'finance'));
+    await greeting();
+    expect(screen.getByRole('region', { name: 'Key figures' }).firstElementChild).toHaveTextContent(/^Overdue invoices/);
   });
 
   it('follows a new choice at once and saves it on its own request, one after another', async () => {

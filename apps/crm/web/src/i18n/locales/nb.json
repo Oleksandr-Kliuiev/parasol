@@ -1478,7 +1478,7 @@
     "deviceTotalsUnknown": "Enhetstall er utilgjengelige til den lagrede oversikten kan leses.",
     "deviceTypesLabel": "Enheter etter type",
     "noRequests": "Ingen lagrede saksforespørsler trenger oppfølging.",
-    "onlineCount": "{{count}} på nett",
+    "onlineCount": "{{count}} på nett ved siste lesing",
     "openTickets": "Åpne saker",
     "criticalAlerts": "Kritiske driftsvarsler",
     "warningAlerts": "Advarsler",
@@ -1497,8 +1497,10 @@
     "noDevices": "Ingen enheter fra Atera ennå.",
     "deviceOpenAlerts_one": "{{count}} åpent driftsvarsel",
     "deviceOpenAlerts_other": "{{count}} åpne driftsvarsler",
-    "online": "på nett",
-    "offline": "av nett",
+    "lastSeen": "sist sett",
+    "onlineAtRead": "på nett ved siste lesing",
+    "offlineAtRead": "av nett ved siste lesing",
+    "deviceOpen": "{{name}}, åpne i {{source}}",
     "alerts": "Åpne driftsvarsler",
     "noAlerts": "Ingen åpne kritiske driftsvarsler eller advarsler.",
     "lastSynced": "Sist synkronisert {{at}}",
@@ -1507,6 +1509,12 @@
       "Server": "Servere",
       "Network": "Nettverk",
       "Other": "Annet"
+    },
+    "deviceType": {
+      "Workstation": "Arbeidsstasjon",
+      "Server": "Server",
+      "Network": "Nettverksenhet",
+      "Other": "Annen enhet"
     },
     "severities": {
       "Critical": "Kritisk",
@@ -2253,14 +2261,14 @@
       "Cancelled": "Avbrutt"
     },
     "source": {
-      "open": "Kilde",
-      "openNamed": "Kilde for {{subject}}",
-      "title": "Kilden til oppgaven",
+      "open": "Driftsvarsel",
+      "openNamed": "Driftsvarsel for {{subject}}",
+      "title": "Driftsvarselet bak oppgaven",
       "note": "Driftsvarselet slik Parasoll lagrer det nå.",
       "gone": "Driftsvarselet er ikke lenger lagret for denne kunden.",
       "unsupported": "Denne oppgaven ble laget fra en kilde Parasoll ikke lenger leser.",
       "openInAlerts": "Åpne i Driftsvarsler",
-      "noDescription": "Ingen beskrivelse. Kilde viser driftsvarselet oppgaven ble laget fra."
+      "noDescription": "Ingen beskrivelse. Knappen Driftsvarsel viser driftsvarselet oppgaven ble laget fra."
     }
   },
   "mail": {
@@ -4132,7 +4140,7 @@
     "unavailable": "Den lagrede tilstanden kunne ikke leses, så ingenting vises som oppdatert. Oppdater for å prøve igjen.",
     "gaps": {
       "Never": "{{job}}: ingen fullstendig lesing ennå",
-      "Stale": "{{job}}: siste fullstendige lesing {{age}}, grense {{limit}}",
+      "Stale": "{{job}}: siste fullstendige lesing {{age}}, forsinket etter {{limit}}",
       "Failed": "{{job}}: siste kjøring mislyktes {{age}}",
       "Paused": "{{system}} er satt på pause: jobbene hoppes over til noen starter den igjen",
       "OutboundFailed_one": "{{system}}: {{count}} endring kunne ikke sendes",
@@ -4160,7 +4168,7 @@
     },
     "lastRead": "Siste fullstendige lesing",
     "notRead": "Ingen fullstendig lesing ennå",
-    "limit": "grense {{limit}}",
+    "limit": "forsinket etter {{limit}}",
     "lastFailed": "Siste kjøring mislyktes",
     "unreadState": "Den lagrede tilstanden kunne ikke leses.",
     "worker": {

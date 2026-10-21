@@ -42,10 +42,10 @@ describe('task source', () => {
     const fetch = stub(); render();
     expect(fetch).not.toHaveBeenCalled();
     // The visible word says what opens; the subject tells one task's button from another's.
-    const button = screen.getByRole('button', { name: 'Source of Free disk space on SRV-01' });
-    expect(button).toHaveTextContent(/^Source$/);
+    const button = screen.getByRole('button', { name: 'Alert for Free disk space on SRV-01' });
+    expect(button).toHaveTextContent(/^Alert$/);
     await userEvent.click(button);
-    const dialog = await screen.findByRole('dialog', { name: 'Source of the task' });
+    const dialog = await screen.findByRole('dialog', { name: 'Alert behind this task' });
     expect(await within(dialog).findByText('Disk almost full on SRV-01')).toBeVisible();
     expect(within(dialog).getByText('Critical')).toBeVisible();
     // Resolved since the task was made: the read is fresh, not what the task was made from.
@@ -62,38 +62,38 @@ describe('task source', () => {
   it('says a read that did not finish in the warning tone, with the way to the connections page for whoever may open it', async () => {
     stub(undefined, () => json(alertPage([], null, 0, [alertRead({ complete: false })])));
     const { unmount } = render(task, [...readers, 'integrations.manage']);
-    await userEvent.click(screen.getByRole('button', { name: /^Source/ }));
-    const dialog = await screen.findByRole('dialog', { name: 'Source of the task' });
+    await userEvent.click(screen.getByRole('button', { name: /^Alert for/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Alert behind this task' });
     // The dot before the link is bound to the sentence (a no-break space, read as a space).
     expect(await within(dialog).findByText(`Atera: the read at ${readAt} did not finish ·`)).toBeVisible();
     expect(within(dialog).getByRole('link', { name: 'Connection status' })).toHaveAttribute('href', '/connections');
     unmount();
 
     render();
-    await userEvent.click(screen.getByRole('button', { name: /^Source/ }));
-    const again = await screen.findByRole('dialog', { name: 'Source of the task' });
+    await userEvent.click(screen.getByRole('button', { name: /^Alert for/ }));
+    const again = await screen.findByRole('dialog', { name: 'Alert behind this task' });
     expect(await within(again).findByText(`Atera: the read at ${readAt} did not finish`)).toBeVisible();
     expect(within(again).queryByRole('link', { name: 'Connection status' })).not.toBeInTheDocument();
   });
 
   it('says the alert is no longer stored for the customer', async () => {
     stub(() => json({ ...source, alert: null })); render();
-    await userEvent.click(screen.getByRole('button', { name: /^Source/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^Alert for/ }));
     expect(await screen.findByText('The alert is no longer stored for this customer.')).toBeVisible();
   });
 
   it('says a task of a source no longer read has nothing to open', async () => {
     stub(() => json({ code: 'ACT_SOURCE_UNSUPPORTED', status: 404 }, 404)); render();
-    await userEvent.click(screen.getByRole('button', { name: /^Source/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^Alert for/ }));
     expect(await screen.findByText('This task was made from a source Parasoll no longer reads.')).toBeVisible();
   });
 
   it('shows no button for an ordinary task or for someone who cannot read both', () => {
     stub();
     const { unmount } = render({ ...task, hasTechnicalSource: false });
-    expect(screen.queryByRole('button', { name: /^Source/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Alert for/ })).not.toBeInTheDocument();
     unmount();
     render(task, ['activities.read']);
-    expect(screen.queryByRole('button', { name: /^Source/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Alert for/ })).not.toBeInTheDocument();
   });
 });

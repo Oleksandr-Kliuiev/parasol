@@ -3,7 +3,7 @@ import { ateraAlert, closeAteraAlert, linkedAteraCustomer, storedAlerts, syncAle
 import { api, showInMyTasks, signIn } from './support';
 
 // M38: an alert becomes one task (subject from its title, the employee chooses who and when); a colleague sees that task instead
-// of making a second one; the task's Source reads the alert again and shows it resolved once Atera closed it.
+// of making a second one; the task's Alert button reads the alert again and shows it resolved once Atera closed it.
 test('an alert is assigned as one task and the task opens its alert as it is now', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(300_000);
   await signIn(page, 'Crm.Admin');
@@ -52,14 +52,14 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   await expect(panel.getByText(`${m} free disk space on SRV-${m}`)).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Assign', exact: true })).toHaveCount(0);
 
-  // The task's Source reads the alert now: open, then resolved once Atera closed it.
+  // The task's Alert button reads the alert now, with the time Atera was read: open, then resolved once Atera closed it.
   await signIn(page, 'Crm.Admin');
   const mine = page.getByRole('region', { name: 'My tasks', exact: true }).getByRole('listitem').filter({ hasText: `${m} free disk space` });
-  const source = await showInMyTasks(page, mine.getByRole('button', { name: `Source of ${m} free disk space on SRV-${m}`, exact: true }));
+  const source = await showInMyTasks(page, mine.getByRole('button', { name: `Alert for ${m} free disk space on SRV-${m}`, exact: true }));
   // Opened from the keyboard: WebKit and Firefox on macOS do not focus a button on a click, so a mouse opening has no place
   // to give focus back to; the keyboard path is the one the return of focus is for.
   await source.focus(); await page.keyboard.press('Enter');
-  const sourceDialog = page.getByRole('dialog', { name: 'Source of the task', exact: true });
+  const sourceDialog = page.getByRole('dialog', { name: 'Alert behind this task', exact: true });
   await expect(sourceDialog.getByText(`${m} disk almost full`)).toBeVisible();
   await expect(sourceDialog.getByText('Open', { exact: true })).toBeVisible();
   // When Atera was last read, apart from when the alert was raised (a read another spec held with a pause says it did not finish).

@@ -14,18 +14,19 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { Panel } from '../../shared/components/Panel';
 import { FigureGrid } from '../reports/FigureGrid';
-import { formatDate, formatDateTime, formatNumber } from '../../shared/utils/format';
+import { formatDate, formatDateTime, formatNumber, formatRelative } from '../../shared/utils/format';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { useAlerts, useDevices, useServiceSummary, useTicketRequests, useTickets } from './api';
 import { CreateTicketDialog } from './CreateTicketDialog';
 import { SavedServiceReadState } from './SavedServiceReadState';
-import { deviceTypes, type Alert, type AlertPage } from './types';
-import { AlertAge, AlertFacts, AlertSeverityBadge } from './alerts/AlertBits';
+import { deviceTypes, type Alert, type AlertPage, type Device } from './types';
+import { AlertAge, AlertFacts, AlertSeverityBadge, AlertTitle } from './alerts/AlertBits';
 import { AlertDetailDrawer } from './alerts/AlertDetailDrawer';
 import { AlertReadLine } from './alerts/AlertReadLine';
 import { AlertTaskCell } from './alerts/AlertTaskCell';
 import { AlertTaskDialogHost } from './alerts/AlertTaskDialogHost';
 import { useAlertTaskLinks } from './alerts/alertTasks';
+import { sourceName } from './alerts/alertText';
 
 const useStyles = makeStyles({
   stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -47,8 +48,10 @@ const useStyles = makeStyles({
     '& b': { color: h.text, fontVariantNumeric: 'tabular-nums' },
   },
   ticket: { fontWeight: 600 },
-  // The external-link mark stays beside the title, also when the title wraps.
-  ticketLink: { display: 'inline-flex', alignItems: 'center', gap: '4px', '& svg': { flexShrink: 0 } },
+  // A link that opens Atera in a new tab (a ticket, a device): its mark stays beside the name, also when the name wraps; a 24 px
+  // hit box (WCAG 2.5.8).
+  external: { display: 'inline-flex', alignItems: 'center', gap: '4px', minHeight: '24px', '& svg': { flexShrink: 0 } },
+  seen: { color: h.muted, fontSize: '12.5px', lineHeight: '18px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
   statusColumn: { width: '136px' },
   personColumn: { width: '22%' },
   createdColumn: { width: '120px' },
@@ -56,10 +59,6 @@ const useStyles = makeStyles({
   ticketScroll: { overflowX: 'auto', borderTop: `1px solid ${h.line}`, ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '-2px' },
     '& th': { boxSizing: 'border-box' } },
   requests: { display: 'grid', gap: '8px' },
-  // An alert's title opens its side panel: a button that reads as the row's title, with a 24 px hit box, and wraps like text.
-  alertTitle: { display: 'inline-flex', alignItems: 'center', minHeight: '24px', maxWidth: '100%', textAlign: 'start', fontWeight: 600,
-    fontSize: '14px', lineHeight: '20px', color: h.text, overflowWrap: 'anywhere', textDecorationLine: 'none',
-    ':hover': { color: h.emberT, textDecorationLine: 'underline' } },
 });
 
 /** The customer's Drift tab (M38): the saved CRM mirror of Atera, with a lifetime per employee, rights and customer. */
@@ -115,6 +114,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
           <FigureGrid className={styles.facts} items={[
             { label: t('service.criticalAlerts'), value: count(summary.data.criticalAlerts, 'bad') },
             { label: t('service.warningAlerts'), value: count(summary.data.warningAlerts, 'warning') },
+            // Devices are read nightly: how many were online then, not now.
             { label: t('service.devices'), value: String(totalDevices), note: t('service.onlineCount', { count: summary.data.devicesOnline }) },
             { label: t('service.openTickets'), value: String(summary.data.openTickets) },
           ]} />
@@ -131,7 +131,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
         <SavedServiceReadState checking={alerts.checking} error={alerts.error} onRetry={alerts.refresh} />
       </div>
       <ul className={flush.list}>{alerts.items.map(alert => <RecordRow key={alert.id} icon={<Alert16Regular />} tone={alert.severity === 'Critical' ? 'ember' : 'saffron'}
-        title={<Link {...restoreFocusTarget} as="button" className={styles.alertTitle} onClick={() => openAlert(alert)}>{alert.title}</Link>}
+        title={<AlertTitle title={alert.title} onOpen={() => openAlert(alert)} />}
         meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />]} />}
         end={<><AlertSeverityBadge severity={alert.severity} /><AlertTaskCell alert={alert} task={alertTasks.links.get(alert.id)} /></>} />)}</ul>
       {alerts.available && alerts.items.length === 0 && <EmptyState icon={<AlertOn24Regular />} message={t(nothingSaved ? 'service.nothingSavedShort' : 'service.noAlerts')} />}
@@ -151,15 +151,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
       <div className={mergeClasses(styles.pad, !devices.available && styles.padEnd)}>
         <SavedServiceReadState checking={devices.checking} error={devices.error} onRetry={devices.refresh} />
       </div>
-      <ul className={flush.list}>{devices.items.map(device => <RecordRow key={device.id} icon={device.type === 'Server' ? <Server16Regular /> : <Desktop16Regular />}
-        tone={device.online ? 'spruce' : 'neutral'}
-        title={device.url ? <Link href={safeHttpUrl(device.url)} target="_blank" rel="noopener noreferrer">{device.machineName}</Link> : <Text weight="semibold">{device.machineName}</Text>}
-        meta={<RowMeta>{t(`service.deviceTypes.${device.type}`)}{device.os ? ` · ${device.os}` : ''}</RowMeta>}
-        end={<>
-          {/* Only a device with something open says so: a column of zeros would hide the ones that matter. */}
-          {device.openAlerts > 0 && <Badge appearance="tint" color="danger">{t('service.deviceOpenAlerts', { count: device.openAlerts })}</Badge>}
-          <Badge appearance="tint" color={device.online ? 'success' : 'subtle'}>{device.online ? t('service.online') : t('service.offline')}</Badge>
-        </>} />)}</ul>
+      <ul className={flush.list}>{devices.items.map(device => <DeviceRow key={device.id} device={device} />)}</ul>
       {devices.available && devices.items.length === 0 && <EmptyState icon={<Desktop24Regular />} message={t('service.noDevices')} />}
       <ListFooter shown={devices.items.length} total={devices.total} hasMore={devices.hasNextPage} loading={devices.isFetchingNextPage} onMore={() => void devices.fetchNextPage()} />
     </Panel>
@@ -183,7 +175,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
           <TableBody>{tickets.items.map(ticket => <TableRow key={ticket.id}>
             <TableCell>
               {ticket.url
-                ? <Link href={safeHttpUrl(ticket.url)} target="_blank" rel="noopener noreferrer" className={mergeClasses(styles.ticket, styles.ticketLink)}><span>{ticket.title}</span><Open16Regular aria-hidden /></Link>
+                ? <Link href={safeHttpUrl(ticket.url)} target="_blank" rel="noopener noreferrer" className={mergeClasses(styles.ticket, styles.external)}><span>{ticket.title}</span><Open16Regular aria-hidden /></Link>
                 : <span className={styles.ticket}>{ticket.title}</span>}
               <div className={styles.ticketMeta}>{[`#${ticket.externalId}`, ticket.priority].filter(Boolean).join(' · ')}</div>
             </TableCell>
@@ -213,4 +205,28 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
     {/* Mounted for an alert only: the tab keeps no read of its own about a panel nobody opened. */}
     {peekId !== null && <AlertDetailDrawer alertId={peekId} onClose={closeAlert} />}
   </div></AlertTaskDialogHost>;
+}
+
+/**
+ * One device as Atera reported it at the last read, which is nightly: its kind in the singular, when Atera last saw it (a bare
+ * "online" would claim more than that read can), and the way to it in Atera when a link is set up.
+ */
+function DeviceRow({ device }: { device: Device }) {
+  const styles = useStyles(); const { t } = useTranslation();
+  const href = device.url ? safeHttpUrl(device.url) : undefined;
+  return <RecordRow icon={device.type === 'Server' ? <Server16Regular /> : <Desktop16Regular />} tone={device.online ? 'spruce' : 'neutral'}
+    title={href
+      // The visible name starts the accessible name (WCAG 2.5.3); the rest says where the link leads.
+      ? <Link href={href} target="_blank" rel="noopener noreferrer" className={styles.external}
+        aria-label={t('service.deviceOpen', { name: device.machineName, source: sourceName(t, 'atera') })}>
+        <span>{device.machineName}</span><Open16Regular aria-hidden /></Link>
+      : <Text weight="semibold">{device.machineName}</Text>}
+    meta={<RowMeta>{t(`service.deviceType.${device.type}`)}{device.os ? ` · ${device.os}` : ''}</RowMeta>}
+    end={<>
+      {/* Only a device with something open says so: a column of zeros would hide the ones that matter. */}
+      {device.openAlerts > 0 && <Badge appearance="tint" color="danger">{t('service.deviceOpenAlerts', { count: device.openAlerts })}</Badge>}
+      <Text className={styles.seen}>{device.lastSeenAt
+        ? <>{t('service.lastSeen')} <time dateTime={device.lastSeenAt} title={formatDateTime(device.lastSeenAt)}>{formatRelative(device.lastSeenAt)}</time></>
+        : t(device.online ? 'service.onlineAtRead' : 'service.offlineAtRead')}</Text>
+    </>} />;
 }

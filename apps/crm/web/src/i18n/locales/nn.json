@@ -1478,7 +1478,7 @@
     "deviceTotalsUnknown": "Einingstal er utilgjengelege til den lagra oversikta kan lesast.",
     "deviceTypesLabel": "Einingar etter type",
     "noRequests": "Ingen lagra saksførespurnader treng oppfølging.",
-    "onlineCount": "{{count}} på nett",
+    "onlineCount": "{{count}} på nett ved siste lesing",
     "openTickets": "Opne saker",
     "criticalAlerts": "Kritiske driftsvarsel",
     "warningAlerts": "Åtvaringar",
@@ -1497,8 +1497,10 @@
     "noDevices": "Ingen einingar frå Atera enno.",
     "deviceOpenAlerts_one": "{{count}} ope driftsvarsel",
     "deviceOpenAlerts_other": "{{count}} opne driftsvarsel",
-    "online": "på nett",
-    "offline": "av nett",
+    "lastSeen": "sist sett",
+    "onlineAtRead": "på nett ved siste lesing",
+    "offlineAtRead": "av nett ved siste lesing",
+    "deviceOpen": "{{name}}, opne i {{source}}",
     "alerts": "Opne driftsvarsel",
     "noAlerts": "Ingen opne kritiske driftsvarsel eller åtvaringar.",
     "lastSynced": "Sist synkronisert {{at}}",
@@ -1507,6 +1509,12 @@
       "Server": "Serverar",
       "Network": "Nettverk",
       "Other": "Anna"
+    },
+    "deviceType": {
+      "Workstation": "Arbeidsstasjon",
+      "Server": "Server",
+      "Network": "Nettverkseining",
+      "Other": "Anna eining"
     },
     "severities": {
       "Critical": "Kritisk",
@@ -2253,14 +2261,14 @@
       "Cancelled": "Avbroten"
     },
     "source": {
-      "open": "Kjelde",
-      "openNamed": "Kjelde for {{subject}}",
-      "title": "Kjelda til oppgåva",
+      "open": "Driftsvarsel",
+      "openNamed": "Driftsvarsel for {{subject}}",
+      "title": "Driftsvarselet bak oppgåva",
       "note": "Driftsvarselet slik Parasoll lagrar det no.",
       "gone": "Driftsvarselet er ikkje lenger lagra for denne kunden.",
       "unsupported": "Denne oppgåva vart laga frå ei kjelde Parasoll ikkje lenger les.",
       "openInAlerts": "Opne i Driftsvarsel",
-      "noDescription": "Inga skildring. Kjelde viser driftsvarselet oppgåva vart laga frå."
+      "noDescription": "Inga skildring. Knappen Driftsvarsel viser driftsvarselet oppgåva vart laga frå."
     }
   },
   "mail": {
@@ -4132,7 +4140,7 @@
     "unavailable": "Den lagra tilstanden kunne ikkje lesast, så ingenting blir vist som oppdatert. Oppdater for å prøve igjen.",
     "gaps": {
       "Never": "{{job}}: inga fullstendig lesing enno",
-      "Stale": "{{job}}: siste fullstendige lesing {{age}}, grense {{limit}}",
+      "Stale": "{{job}}: siste fullstendige lesing {{age}}, forseinka etter {{limit}}",
       "Failed": "{{job}}: siste køyring feila {{age}}",
       "Paused": "{{system}} er sett på pause: jobbane blir hoppa over til nokon startar han att",
       "OutboundFailed_one": "{{system}}: {{count}} endring kunne ikkje sendast",
@@ -4160,7 +4168,7 @@
     },
     "lastRead": "Siste fullstendige lesing",
     "notRead": "Inga fullstendig lesing enno",
-    "limit": "grense {{limit}}",
+    "limit": "forseinka etter {{limit}}",
     "lastFailed": "Siste køyring feila",
     "unreadState": "Den lagra tilstanden kunne ikkje lesast.",
     "worker": {

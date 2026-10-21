@@ -31,7 +31,8 @@ describe('the connections page', () => {
     expect(atera.getByText('Changes made in Parasoll are not sent to Atera.')).toBeVisible();
     const rows = atera.getAllByRole('listitem');
     expect(rows.map((row) => within(row).getByText(/\(Atera\)$/).textContent)).toEqual(['Alerts (Atera)', 'Open tickets (Atera)']);
-    expect(within(rows[1]!).getByText(/limit 15 min/)).toBeVisible();
+    // The limit says what it is for: the job counts as late after it.
+    expect(within(rows[1]!).getByText(/late after 15 min/)).toBeVisible();
     expect(rows[1]!.querySelector('time')).toHaveAttribute('datetime', '2026-10-16T09:55:00Z');
     expect(within(rows[1]!).getByText('Up to date')).toBeVisible();
     const office = within(screen.getByRole('region', { name: 'PowerOffice Go' }));
@@ -41,6 +42,7 @@ describe('the connections page', () => {
     expect(service.getAllByRole('listitem').map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs)$/).textContent))
       .toEqual(['Change delivery', 'Scheduled jobs']);
     expect(service.getAllByText('Running')).toHaveLength(2);
+    // Nothing needs attention: the way to administration stays in the note at the end only.
     expect(screen.getByRole('link', { name: 'Open integration administration' })).toHaveAttribute('href', '/admin/integrations');
     expect(screen.getAllByRole('button')).toHaveLength(1); expect(screen.getByRole('button', { name: 'Refresh status' })).toBeVisible();
     fireEvent(document, new Event('visibilitychange')); fireEvent(window, new Event('online')); expect(fetch).toHaveBeenCalledTimes(1);
@@ -51,12 +53,15 @@ describe('the connections page', () => {
     const box = (await screen.findByText('6 things need attention')).closest('.fui-MessageBar') as HTMLElement;
     expect(within(box).getAllByRole('listitem').map((item) => item.textContent?.replace(/ \d+ \w+ ago/, ' …'))).toEqual([
       'Alerts (Atera): the last run failed …',
-      'Open tickets (Atera): last complete read …, limit 15 min',
+      'Open tickets (Atera): last complete read …, late after 15 min',
       'Customers (Atera): no complete read yet',
       'Atera: 2 changes could not be sent',
       'Brønnøysund Register Centre is paused: its jobs are skipped until someone resumes it',
       'Background service, Scheduled jobs: last sign of life …',
     ]);
+    // The way to act on the gaps is in the box that names them, not only at the end of the page.
+    expect(within(box).getByRole('link', { name: 'Open integration administration' })).toHaveAttribute('href', '/admin/integrations');
+    expect(screen.getAllByRole('link', { name: 'Open integration administration' })).toHaveLength(2);
     const atera = within(screen.getByRole('region', { name: 'Atera' }));
     expect(atera.getByText('Needs attention')).toBeVisible();
     expect(atera.getByText('2 changes could not be sent.')).toBeVisible();

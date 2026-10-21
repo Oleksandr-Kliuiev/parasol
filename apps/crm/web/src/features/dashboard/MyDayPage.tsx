@@ -107,6 +107,7 @@ export function MyDayPage() {
   const partOfDay = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 18 ? 'afternoon' : 'evening';
 
   const main: Record<MainSection, ReactNode> = {
+    hours: canApproveHours && <HoursReviewPanel />,
     alerts: canService && <MyDaySection name="alerts"><UrgentAlertsPanel /></MyDaySection>,
     tasks: canActivities && <MyDaySection name="tasks"><MyTasksPanel /></MyDaySection>,
     deals: canSales && <StaleDealsPanel />,
@@ -149,7 +150,6 @@ export function MyDayPage() {
   };
 
   const side: Record<SideSection, ReactNode> = {
-    hours: canApproveHours && <HoursReviewPanel />,
     reminders: canContracts && <RemindersPanel />,
     registry: (
       <Panel title={t('myDay.registryWarnings')} icon={<Warning16Regular />}>

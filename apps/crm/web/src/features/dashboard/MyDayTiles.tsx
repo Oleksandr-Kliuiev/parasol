@@ -10,17 +10,9 @@ import type { Activity } from '../activities/types';
 import { useInvoices } from '../billing/api';
 import { useReminders } from '../contracts/api';
 import { useAllTimeEntries } from '../time/api';
-import type { MyDayProfile } from './myDayProfile';
 import { alertsFreshness } from '../service/alerts/alertReads';
+import { tileOrder, type MyDayProfile, type Tile } from './myDayProfile';
 import { useUrgentAlertsAnswer } from './urgentAlerts';
-
-type Tile = 'alerts' | 'tasks' | 'hours' | 'reminders' | 'overdue' | 'registry';
-
-const order: Record<MyDayProfile, readonly Tile[]> = {
-  work: ['alerts', 'tasks', 'hours', 'reminders', 'registry'],
-  lead: ['alerts', 'tasks', 'hours', 'reminders', 'registry'],
-  finance: ['overdue', 'alerts', 'reminders', 'hours', 'registry'],
-};
 
 /**
  * Four key figures above the panels. The alert and task figures read the panels' own query results from the cache (the
@@ -116,7 +108,7 @@ export function MyDayTiles({ profile, organizations, warnings }: { profile: MyDa
       />
     ),
   };
-  const shown = order[profile].map((name) => tiles[name]).filter(Boolean).slice(0, 4);
+  const shown = tileOrder[profile].map((name) => tiles[name]).filter(Boolean).slice(0, 4);
   if (shown.length === 0) return null;
   return <KpiRow label={t('myDay.kpiLabel')}>{shown}</KpiRow>;
 }

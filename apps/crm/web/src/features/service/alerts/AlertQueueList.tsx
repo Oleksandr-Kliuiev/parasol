@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react';
-import { Link, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, makeStyles } from '@fluentui/react-components';
 import { AlertOn24Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
@@ -10,16 +10,11 @@ import { useContainerWidth } from '../../../shared/utils/useContainerWidth';
 import { NARROW_SCREEN, useMediaQuery } from '../../../shared/utils/useMediaQuery';
 import { useCatalogStyles } from '../../catalog/styles';
 import type { Alert } from '../types';
-import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource } from './AlertBits';
+import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource, AlertTitle } from './AlertBits';
 import { AlertTaskCell } from './AlertTaskCell';
 import type { AlertTask } from './alertTasks';
 
 const useStyles = makeStyles({
-  // The title opens the alert's side panel: a link-styled button with a 24 px hit box (WCAG 2.5.8) that wraps like text.
-  title: {
-    display: 'inline-flex', alignItems: 'center', minHeight: '24px', maxWidth: '100%', textAlign: 'start', fontWeight: 700, fontSize: '14px',
-    lineHeight: '20px', overflowWrap: 'anywhere', color: h.text, textDecorationLine: 'none', ':hover': { color: h.emberT, textDecorationLine: 'underline' },
-  },
   cell: { display: 'grid', gap: '2px', minWidth: 0, paddingTop: '8px', paddingBottom: '8px' },
   age: { color: h.muted, fontSize: '13px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
   customer: { fontWeight: 600, overflowWrap: 'anywhere' },
@@ -51,10 +46,9 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
 }) {
   const { t } = useTranslation(); const styles = useStyles(); const list = useCatalogStyles();
   const box = useRef<HTMLDivElement>(null); const width = useContainerWidth(box);
-  const narrow = useMediaQuery(NARROW_SCREEN) || (width > 0 && width < tableWidth); const restore = useRestoreFocusTarget();
+  const narrow = useMediaQuery(NARROW_SCREEN) || (width > 0 && width < tableWidth);
   const age = (alert: Alert) => <AlertAge at={resolved && alert.resolvedAt ? alert.resolvedAt : alert.createdAt} />;
-  // The side panel gives focus back to the title that opened it (Fluent's restore target), also after Back closed it.
-  const title = (alert: Alert) => <Link {...restore} as="button" className={styles.title} onClick={() => onOpen(alert)}>{alert.title}</Link>;
+  const title = (alert: Alert) => <AlertTitle title={alert.title} onOpen={() => onOpen(alert)} />;
   const customer = (alert: Alert) => <AppLink className={styles.customer} to={`/organizations/${alert.organizationId}?tab=drift`}>
     {alert.organizationName ?? t('alerts.detail.unknownCustomer')}</AppLink>;
   const source = (alert: Alert) => <AlertSource system={alert.system} />;

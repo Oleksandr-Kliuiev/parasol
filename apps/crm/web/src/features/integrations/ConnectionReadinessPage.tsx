@@ -27,6 +27,8 @@ const useStyles = makeStyles({
   cards: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(420px, 100%), 1fr))', gap: '16px', alignItems: 'start', minWidth: 0 },
   checked: { color: h.muted, fontSize: '13px', lineHeight: '20px', fontVariantNumeric: 'tabular-nums' },
   gaps: { margin: 0, marginTop: '4px', paddingLeft: '18px', display: 'grid', gap: '2px' },
+  // The way to act on the gaps, in the box that names them; a 24 px hit box (WCAG 2.5.8).
+  act: { display: 'inline-flex', alignItems: 'center', minHeight: '24px', marginTop: '6px' },
   // A line inside a flush card keeps the card's side padding and a bottom edge.
   pad: { margin: 0, paddingLeft: '20px', paddingRight: '20px', paddingBottom: '16px', color: h.muted, fontSize: '13px', lineHeight: '20px',
     '@media (max-width: 600px)': { paddingLeft: '16px', paddingRight: '16px' } },
@@ -88,7 +90,7 @@ function ConnectionStatus({ employeeId, permissionsKey }: { employeeId: string; 
   </>;
 }
 
-/** One status line: green only for a complete picture, otherwise every gap in the same box (UX 2026). */
+/** One status line: green only for a complete picture, otherwise every gap in the same box with the way to act on them (UX 2026). */
 function Summary({ view }: { view: ConnectionStatusView }) {
   const { t } = useTranslation(); const styles = useStyles();
   if (view.status === 'Unavailable') {
@@ -100,6 +102,7 @@ function Summary({ view }: { view: ConnectionStatusView }) {
   return <MessageBar intent="warning" layout="multiline"><MessageBarBody>
     <MessageBarTitle>{t('connectionStatus.gapsTitle', { count: view.gaps.length })}</MessageBarTitle>
     <ul className={styles.gaps}>{view.gaps.map((gap, index) => <li key={`${gap.kind}:${gap.system ?? gap.component}:${gap.job ?? index}`}>{gapText(t, gap, view)}</li>)}</ul>
+    <AppLink className={styles.act} to="/admin/integrations">{t('connectionStatus.openAdministration')}</AppLink>
   </MessageBarBody></MessageBar>;
 }
 

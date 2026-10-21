@@ -83,4 +83,39 @@ describe('Customer Drift tab (DEV-12)', () => {
     // How fresh the stored alerts are, beside the list, from the same answer as the rows.
     expect(panel.getByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}`)).toBeVisible();
   });
+
+  it('says when Atera last saw each device and how many were online at the last read, and opens a device in Atera', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('/summary')) {
+        return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Server: 1, Workstation: 1 }, devicesOnline: 1, criticalAlerts: 0, warningAlerts: 0,
+          lastSyncedAt: '2026-10-21T08:00:00Z' });
+      }
+      if (url.includes('/service/devices')) {
+        return json({ items: [
+          { ...device(1), machineName: 'SRV-01', type: 'Server', os: 'Windows Server 2022', lastSeenAt: '2026-10-21T01:30:00Z', url: 'https://app.atera.com/new/device/1' },
+          { ...device(2), online: false }], nextCursor: null, totalCount: 2 });
+      }
+      if (url.includes('/service/alerts')) return json(alertPage([]));
+      return json(empty);
+    }));
+    renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/', testUser(['service.read']));
+    // Devices are read nightly: the count is of the last read, not of now.
+    expect(await screen.findByText('1 online at the last read')).toBeVisible();
+    const devices = within(screen.getByRole('region', { name: 'Devices' }));
+    // The visible name starts the link's name, the rest says where it leads; the mark is the one the ticket links carry.
+    const server = await devices.findByRole('link', { name: 'SRV-01, open in Atera' });
+    expect(server).toHaveAttribute('href', 'https://app.atera.com/new/device/1');
+    expect(server).toHaveAttribute('target', '_blank');
+    expect(server.querySelector('svg')).not.toBeNull();
+    const row = within(server.closest('li')!);
+    expect(row.getByText('Server · Windows Server 2022')).toBeVisible();
+    expect(row.getByText(/^last seen/)).toBeVisible();
+    expect(server.closest('li')!.querySelector('time')).toHaveAttribute('dateTime', '2026-10-21T01:30:00Z');
+    expect(row.queryByText(/^(online|offline)$/)).not.toBeInTheDocument();
+    // Without a time from Atera the row says what the last read found, not what is true now.
+    const pc = within(devices.getByText('PC-0002').closest('li')!);
+    expect(pc.getByText('Workstation · Windows 11')).toBeVisible();
+    expect(pc.getByText('offline at the last read')).toBeVisible();
+    expect(pc.queryByRole('link')).not.toBeInTheDocument();
+  });
 });

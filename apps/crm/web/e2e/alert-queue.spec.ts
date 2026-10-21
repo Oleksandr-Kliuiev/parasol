@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { ateraAlert, closeAteraAlert, fitsWidth, linkedAteraCustomer, settled, storedAlerts, syncAlerts, syncAtera } from './atera';
 import { signIn } from './support';
 
@@ -29,6 +29,10 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
   await expect(rows).toHaveText([new RegExp(`Critical.*${m} disk almost full.*${first.name}`), new RegExp(`Critical.*${m} firewall down.*${second.name}`),
     new RegExp(`Warning.*${m} backup is late.*${first.name}`)]);
   await expect(rows.first()).toContainText('Source: Atera');
+  // A title that opens the alert looks like the link it is: the tone of the customer link beside it, not plain text until hovered.
+  const tone = (element: Locator) => element.evaluate((el) => getComputedStyle(el).color);
+  expect(await tone(rows.first().getByRole('button', { name: `${m} disk almost full`, exact: true })))
+    .toBe(await tone(rows.first().getByRole('link', { name: first.name, exact: true })));
   await expect(page.getByRole('status').filter({ hasText: /alerts:/ })).toHaveText('3 alerts: 2 critical, 1 warnings');
   // How fresh the stored alerts are, under the page title (a read another spec held with a pause says it did not finish).
   await expect(page.getByRole('main').getByText(/^Atera:? (the )?read at /)).toBeVisible();

@@ -91,6 +91,8 @@ test('My day keeps the layout each person chooses and the arrow keys change it',
     await billing.focus(); await page.keyboard.press('ArrowLeft');
     await expect(layouts.getByRole('radio', { name: 'Hours to approve', exact: true })).toBeChecked();
     await expect(page.getByRole('heading', { name: 'Hours to review', exact: true })).toBeVisible();
+    // What the choice says comes first: the hours to approve lead the panels (the main column is read first).
+    await expect(page.getByRole('main').getByRole('heading', { level: 2 }).first()).toHaveText('Hours to review');
     await expect.poll(async () => (await api.get<{ myDayLayout: string | null }>(page, '/bff/user')).myDayLayout).toBe('lead');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   } finally {

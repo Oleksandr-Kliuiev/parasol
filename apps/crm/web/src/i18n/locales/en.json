@@ -1479,7 +1479,7 @@
     "deviceTotalsUnknown": "Device totals are unavailable until the saved summary can be read.",
     "deviceTypesLabel": "Devices by type",
     "noRequests": "No saved ticket requests need attention.",
-    "onlineCount": "{{count}} online",
+    "onlineCount": "{{count}} online at the last read",
     "criticalAlerts": "Critical alerts",
     "warningAlerts": "Warnings",
     "tickets": "Tickets",
@@ -1497,8 +1497,10 @@
     "noDevices": "No devices from Atera yet.",
     "deviceOpenAlerts_one": "{{count}} open alert",
     "deviceOpenAlerts_other": "{{count}} open alerts",
-    "online": "online",
-    "offline": "offline",
+    "lastSeen": "last seen",
+    "onlineAtRead": "online at the last read",
+    "offlineAtRead": "offline at the last read",
+    "deviceOpen": "{{name}}, open in {{source}}",
     "alerts": "Open alerts",
     "noAlerts": "No open critical alerts or warnings.",
     "lastSynced": "Last synced {{at}}",
@@ -1507,6 +1509,12 @@
       "Server": "Servers",
       "Network": "Network",
       "Other": "Other"
+    },
+    "deviceType": {
+      "Workstation": "Workstation",
+      "Server": "Server",
+      "Network": "Network device",
+      "Other": "Other device"
     },
     "severities": {
       "Critical": "Critical",
@@ -2255,14 +2263,14 @@
       "Cancelled": "Cancelled"
     },
     "source": {
-      "open": "Source",
-      "openNamed": "Source of {{subject}}",
-      "title": "Source of the task",
+      "open": "Alert",
+      "openNamed": "Alert for {{subject}}",
+      "title": "Alert behind this task",
       "note": "The alert as Parasoll stores it now.",
       "gone": "The alert is no longer stored for this customer.",
       "unsupported": "This task was made from a source Parasoll no longer reads.",
       "openInAlerts": "Open in Alerts",
-      "noDescription": "No description. Source shows the alert the task was made from."
+      "noDescription": "No description. The Alert button shows the alert the task was made from."
     }
   },
   "mail": {
@@ -4134,7 +4142,7 @@
     "unavailable": "The saved state could not be read, so nothing is shown as up to date. Refresh to try again.",
     "gaps": {
       "Never": "{{job}}: no complete read yet",
-      "Stale": "{{job}}: last complete read {{age}}, limit {{limit}}",
+      "Stale": "{{job}}: last complete read {{age}}, late after {{limit}}",
       "Failed": "{{job}}: the last run failed {{age}}",
       "Paused": "{{system}} is paused: its jobs are skipped until someone resumes it",
       "OutboundFailed_one": "{{system}}: {{count}} change could not be sent",
@@ -4162,7 +4170,7 @@
     },
     "lastRead": "Last complete read",
     "notRead": "No complete read yet",
-    "limit": "limit {{limit}}",
+    "limit": "late after {{limit}}",
     "lastFailed": "Last run failed",
     "unreadState": "Saved state could not be read.",
     "worker": {

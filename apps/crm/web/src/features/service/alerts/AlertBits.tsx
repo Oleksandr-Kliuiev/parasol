@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
-import { Badge, makeStyles } from '@fluentui/react-components';
+import { Badge, Link, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
 import { formatDateTime, formatRelative } from '../../../shared/utils/format';
@@ -11,7 +11,21 @@ const useStyles = makeStyles({
   facts: { color: h.muted, fontSize: '12.5px', lineHeight: '18px', overflowWrap: 'anywhere', fontVariantNumeric: 'tabular-nums' },
   // A short fact stays on one line ("Source: Atera", "3 hours ago"); only names and device names may break.
   keep: { whiteSpace: 'nowrap' },
+  // The link tone of every other link (My day's urgent rows), at rest as on hover; a 24 px hit box (WCAG 2.5.8) that wraps like text.
+  title: {
+    display: 'inline-flex', alignItems: 'center', minHeight: '24px', maxWidth: '100%', textAlign: 'start', fontSize: '14px', lineHeight: '20px',
+    overflowWrap: 'anywhere',
+  },
 });
+
+/**
+ * An alert's title, which opens its side panel (the queue and the Drift tab): it looks like the link it is, as the urgent rows of
+ * My day do. Fluent's restore target gives focus back to it when the panel closes, also after Back closed it.
+ */
+export function AlertTitle({ title, onOpen }: { title: string; onOpen: () => void }) {
+  const styles = useStyles(); const restore = useRestoreFocusTarget();
+  return <Link {...restore} as="button" className={styles.title} onClick={onOpen}>{title}</Link>;
+}
 
 /**
  * The facts of an alert row in one muted line. The dot is bound to the fact before it, so a line that wraps ends with a dot and

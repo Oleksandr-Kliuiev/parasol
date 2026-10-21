@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { ateraAgent, ateraAlert, fitsWidth, linkedAteraCustomer, settled, syncAlerts, syncDevices, widths } from './atera';
 import { signIn } from './support';
 
@@ -35,6 +35,16 @@ test('the Drift tab lists a customer’s open alerts first, then its devices wit
   const devices = page.getByRole('region', { name: 'Devices', exact: true });
   await expect(devices.getByRole('listitem').filter({ hasText: server }).getByText('3 open alerts', { exact: true })).toBeVisible();
   await expect(devices.getByRole('listitem').filter({ hasText: `PC-${customer.marker}` }).getByText(/open alert/)).toHaveCount(0);
+  // Devices are read nightly: each row says when Atera last saw the device, its kind in the singular, and opens it in Atera.
+  const serverRow = devices.getByRole('listitem').filter({ hasText: server });
+  await expect(serverRow.getByRole('link', { name: `${server}, open in Atera`, exact: true })).toHaveAttribute('target', '_blank');
+  await expect(serverRow.getByText('Server · Windows Server 2022', { exact: true })).toBeVisible();
+  await expect(serverRow.getByText(/^last seen/)).toBeVisible();
+  // The alert titles look like links, in the tone of the device link, as in the queue.
+  const tone = (element: Locator) => element.evaluate((el) => getComputedStyle(el).color);
+  expect(await tone(alerts.getByRole('button', { name: `${customer.marker} disk almost full`, exact: true })))
+    .toBe(await tone(serverRow.getByRole('link', { name: `${server}, open in Atera`, exact: true })));
+  await expect(page.getByText(/^\d+ online at the last read$/)).toBeVisible();
   // How fresh the stored alerts are, beside them (a read another spec held with a pause says it did not finish).
   await expect(alerts.getByText(/^Atera:? (the )?read at /)).toBeVisible();
 
