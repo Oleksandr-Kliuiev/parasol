@@ -6,6 +6,9 @@ import { REQUIRED_ARTIFACTS } from './plan.mjs';
 export async function buildApplications(state, skipBuild = false, signal) {
   if (!skipBuild) {
     const steps = [
+      // A fresh install has no generated Prisma client, and the API does not compile without it (npm run build:atlas
+      // generates it first too); an older client left in node_modules would hide a schema change.
+      ['Atlas database client', 'npm', ['run', 'db:generate'], 'apps/atlas'],
       ['Atlas API and console build', 'npm', ['run', 'api:build'], 'apps/atlas'],
       ['CRM SPA build', 'npm', ['run', 'build'], 'apps/crm/web'],
       ['CRM Web build', 'dotnet', ['build', 'src/Hosts/Crm.Web/Crm.Web.csproj', '-c', 'Release', '--no-restore', '-m:1', '-p:UseSharedCompilation=false'], 'apps/crm'],
