@@ -9,6 +9,10 @@ export const useTechnicalStyles = makeStyles({
   queueSection: { marginTop: tokens.spacingVerticalM },
   section: { marginTop: '20px', minWidth: 0, overflowWrap: 'anywhere' },
   identifier: { fontFamily: 'inherit', fontSize: 'inherit' },
+  // A long host name in the selected-device line takes two lines at most: on a 320 px phone it wrapped into six and pushed
+  // the first observation off the first screen after the jump. The whole name stays in the text (screen readers, find)
+  // and in the title.
+  twoLines: { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
   queueFacts: { display: 'grid', gap: tokens.spacingVerticalXS, marginBlock: tokens.spacingVerticalS },
   queueTools: { gap: tokens.spacingHorizontalS, marginBlock: tokens.spacingVerticalS },
   queueFooter: { gap: tokens.spacingHorizontalS, marginBlock: tokens.spacingVerticalS },

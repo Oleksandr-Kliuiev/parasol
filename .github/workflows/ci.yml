@@ -152,7 +152,8 @@ jobs:
   crm-e2e:
     name: CRM browser workflows
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Three engines with one retry ran 28 minutes in October 2026; the job was cancelled at 30 just after the last test.
+    timeout-minutes: 45
     needs: [crm-backend, crm-frontend]
     services:
       sql:

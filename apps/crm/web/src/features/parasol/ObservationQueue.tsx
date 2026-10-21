@@ -72,7 +72,7 @@ function EmployeeQueue({ customerId, employeeId, onSourceInvalidated, deviceId =
     <h3 ref={title} tabIndex={-1} className={mergeClasses(styles.heading, styles.display)} id={heading}>{t('parasolQueue.title')}</h3>
     <Text block className={styles.note}>{t('parasolQueue.savedNote')}</Text>
     {deviceId !== null && <div className={styles.row}>
-      <Text block weight="semibold" role="status">{selectedDevice
+      <Text block weight="semibold" role="status" className={styles.twoLines} title={selectedDevice?.hostname}>{selectedDevice
         ? <code className={styles.identifier}>{t('parasolQueue.selectedDevice', { name: selectedDevice.hostname })}</code>
         : t('parasolQueue.selectingDevice')}</Text>
       <div className={mergeClasses(styles.footer, styles.queueFooter)}>
