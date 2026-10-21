@@ -58,20 +58,25 @@ public static class BffEndpoints
             })
             .AllowAnonymous();
 
-        group.MapGet("/dev-login", async (HttpContext context, string role, string? returnUrl, CrmAuthOptions options, IHostEnvironment env) =>
+        group.MapGet("/dev-login", async (
+                HttpContext context, string role, string? user, string? returnUrl, CrmAuthOptions options, IHostEnvironment env) =>
             {
-                if (options.Mode != AuthMode.Development || !env.IsDevelopment() || !CrmRoles.All.Contains(role))
+                if (options.Mode != AuthMode.Development || !env.IsDevelopment() || !CrmRoles.All.Contains(role) ||
+                    (user is not null && (user.Length is 0 or > 24 || !user.All(char.IsAsciiLetter))))
                 {
                     return Results.NotFound();
                 }
 
-                var slug = role.Replace("Crm.", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
+                // One development user per role. A test that changes the user's own settings (the language) names a user of its own
+                // with that role (user=Language: "Dev Language"), so the tests signed in with the role in parallel never see the change.
+                var roleName = role.Replace("Crm.", string.Empty, StringComparison.Ordinal);
+                var slug = (user is null ? roleName : $"{roleName}-{user}").ToLowerInvariant();
                 var identity = new ClaimsIdentity(
                 [
                     new Claim(CrmClaimTypes.TenantId, "00000000-0000-0000-0000-00000000dev0"),
                     new Claim(CrmClaimTypes.ObjectId, $"dev-{slug}"),
                     new Claim("preferred_username", $"{slug}@dev.local"),
-                    new Claim("name", $"Dev {role.Replace("Crm.", string.Empty, StringComparison.Ordinal)}"),
+                    new Claim("name", $"Dev {user ?? roleName}"),
                     new Claim(ClaimTypes.Role, role),
                     // The development sign-in is an interactive authentication: now.
                     new Claim("auth_time", context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds()
