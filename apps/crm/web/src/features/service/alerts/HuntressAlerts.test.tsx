@@ -158,9 +158,10 @@ describe('The coverage gaps of M41 in the reader’s language', () => {
   });
 
   it('knows the key of every rule’s words, and none for a rule it does not know', () => {
+    // One table holds every rule, M42's backup rules beside M41's.
     expect(['atera.agent-silent', 'huntress.agent-missing', 'atera.agent-missing', 'huntress.agent-silent', 'huntress.agent-outdated', 'huntress.defender-off',
-      'cloudally.backup-failed'].map(gapKey))
-      .toEqual(['ateraAgentSilent', 'huntressAgentMissing', 'ateraAgentMissing', 'huntressAgentSilent', 'huntressAgentOutdated', 'defenderOff', null]);
+      'cloudally.backup-failed', 'synthetic.unknown-rule'].map(gapKey))
+      .toEqual(['ateraAgentSilent', 'huntressAgentMissing', 'ateraAgentMissing', 'huntressAgentSilent', 'huntressAgentOutdated', 'defenderOff', 'backupFailed', null]);
   });
 });
 

@@ -87,7 +87,7 @@ export function CoverageRulesDialog({ onClose }: { onClose: () => void }) {
             {key && <Text block className={styles.muted}>{t(`coverage.rules.${key}.description`)} {t(`coverage.rules.${key}.when`)}</Text>}
             <Switch checked={d.enabled} disabled={!canWrite || busy} label={t('coverage.enabled')}
               onChange={(_, data) => setDraft(rule, { ...d, enabled: data.checked })} />
-            {/* M41: a rule whose limit is not a silence (the days a machine may lack its second agent) names it itself. */}
+            {/* M41/M42: a rule whose limit is not a silence (the days a device may lack its second agent, a backup's age) names it itself. */}
             {rule.threshold && range && <Field label={key ? t(`coverage.rules.${key}.limit`, { defaultValue: t(`coverage.limit.${rule.threshold.unit}`) })
               : t(`coverage.limit.${rule.threshold.unit}`)} hint={t('coverage.limitHint', range)}
               validationMessage={touched && !limitOk(rule) ? t('coverage.limitInvalid', range) : undefined}>

@@ -101,6 +101,7 @@ public static class ServiceModule
         services.AddScoped<Features.Coverage.CoverageChecks>();
         services.AddScoped<ICoverageCheck>(sp => sp.GetRequiredService<Features.Coverage.CoverageChecks>());
         services.AddScoped<Features.Coverage.CoverageSettings>();
+        services.AddScoped<ICoverageLimits>(sp => sp.GetRequiredService<Features.Coverage.CoverageSettings>());
         // DEV-11: tickets and ticket requests of a person in subject requests, and the retention of the ticket mirror and (M40) of
         // resolved alerts.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ServicePersonalData>();

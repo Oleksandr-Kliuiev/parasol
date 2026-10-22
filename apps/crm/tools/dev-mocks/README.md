@@ -69,15 +69,29 @@ Like Atera's: not part of Huntress's API and not behind its key; bodies are JSON
 | `POST /_mock/huntress/escalations/{id}`, `…/platform-actions/{id}`, `GET` of both | any fields | The fields merged (`status: "resolved"` sets `resolved_at`); or the notice as held now with `posted` (the last `resolution` body). |
 | `POST /_mock/huntress/faults` | `method`, `path` (exact, or a prefix ending in `*`, e.g. `/huntress/v1/agents*`), `status`, `count` (1) | `204`: the next `count` Huntress requests with that method and path answer `status` and change nothing. |
 
-## CloudAlly stub (M40.S)
+An unknown `CustomerID` or a body that is not a JSON object answers `400`. The organization numbers are unique within one start of the mock; a database shared between runs (end-to-end tests) may still hold an organization with the same number from an earlier run, so a test that must be sure passes its own `BusinessNumber`.
 
-`cloudally.mjs` stands in for the next integration before any code reads it (CloudAlly in M42). It holds synthetic data only and is deliberately small: what public sources agree on, with the rest left for M42 to confirm against the vendor's own reference.
+## CloudAlly partner API v2 (M42)
+
+`cloudally.mjs` follows CloudAlly's own reference (api.cloudally.com/documentation, "Authentication v2" and "Management v2"; M42 document, § API). Set `Integrations:CloudAlly:BaseUrl` to `http://localhost:5299/cloudally/` with any `ClientId`, `ClientSecret`, `Email` and `Password`. It starts with two accounts — "Fjord IT AS" (a mailbox whose backup failed, a user not in the backup) and "Havbris Test AS" (a paused SharePoint backup) — that link to customers on the mapping screen like any CloudAlly account.
 
 | Route | Answer |
 |-------|--------|
-| `POST /cloudally/auth/partner` (`clientId`, `clientSecret`), `POST /cloudally/auth/refresh` | `200` with a synthetic `accessToken`; `400` without the client's id and secret. |
-| `GET /cloudally/v1/partners/tasks` | Bearer token required (`401` otherwise); three Microsoft 365 backup tasks: one succeeded, one failed, one paused. |
+| `POST /cloudally/v2/auth/partner` (headers `client-id`, `client-secret`; `{email, password}`), `POST /cloudally/v2/auth/refresh` (`{refreshToken}`) | `200` with `accessToken`, `expiresIn` 3600, `refreshToken`, `refreshTokenExpiresIn`; `401 {errorMessage}` without the headers or credentials. |
+| `GET /cloudally/v2/resellers/details`, `/accounts`, `/accounts/backup-tasks`, `/accounts/backup-statuses`, `/bills` | Bearer token required (`403` with an empty body otherwise, as CloudAlly answers); pages `{page, totalPages, total, nextPageToken, data}` from `page` 1 with `pageSize` (20 by default); the statuses also follow `nextPageToken`. Statuses carry `yyyyMMddHHmmss` texts; a failed backup has a last attempt after its last success and an error with a help link. |
+| `GET /cloudally/v2/resellers/accounts/{account}/backup-tasks/{task}` | The task with its `entities` (mailboxes, OneDrives, sites, teams), `NOTACTIVE` ones too. |
+| `POST …/backup-tasks/{task}/backupNow`, `…/entities/{entity}/backupNow` | `{success: true}`; the entities are backed up "now". |
+| `POST …/backup-tasks/{task}/pause`, `…/activate`, `…/entities/{entity}/activate` | `{success: true}`; the task is paused or active again, the entity is added (waiting for its first backup). |
+| `POST /cloudally/v2/resellers/accounts/{account}/recovery/restore`, `/export` | `400` without `taskId`, `account`, `source`, `date`; else `{needRedirect: false, …}` (restore; `needRedirect: true` for an account made with `restoreNeedsSignIn`) or `{}` (export). |
+| `DELETE /cloudally/v2/resellers/accounts/{account}` | `{success: true}`; the account is deleted and no longer listed. |
 
-An unknown `CustomerID` or a body that is not a JSON object answers `400`. The organization numbers are unique within one start of the mock; a database shared between runs (end-to-end tests) may still hold an organization with the same number from an earlier run, so a test that must be sure passes its own `BusinessNumber`.
+Control routes for tests (not CloudAlly's API, no token):
+
+| Route | Body | Answer |
+|-------|------|--------|
+| `POST /_mock/cloudally/accounts` | `name`, `domain`, `region` (`EU`), `users` (`[{email, fullName, state, error, onedrive}]`; `state` `ok`, `failed`, `late`, `paused` or `notactive`), `sites`, `teams` (`[{name, state}]`), `services` (sources; all four by default), `pausedServices`, `restoreNeedsSignIn` | `201` with the account, its tasks and their entities (ids for links and actions). |
+| `GET /_mock/cloudally/accounts/{account}` | — | `200` with the account as "CloudAlly" holds it now. |
+| `POST /_mock/cloudally/entities/{entity}` | `state`, `error` | `200`: the entity's backup is now in that state. |
+| `GET /_mock/cloudally/log` | — | `200`: every change the CRM asked for (method, path, body), oldest first. |
 
 Data lives in memory and resets on restart. Never point test or production hosts at it.

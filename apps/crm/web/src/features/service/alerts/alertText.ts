@@ -10,9 +10,12 @@ export function sourceName(t: TFunction, system: string): string {
 /** Defender's status as Huntress words it, in the reader's language; a word the interface does not know is shown as Huntress wrote it. */
 export const defenderStatus = (t: TFunction, status: string) => t(`machines.protection.defenderStatuses.${status}`, { defaultValue: status });
 
+/** A backup gap's service in the reader's words (M42: "E-post", "OneDrive"). */
+const service = (t: TFunction, facts: Record<string, string>) => t(`backup.services.${facts.service}`, { defaultValue: facts.service });
+
 type GapWords = (t: TFunction, facts: Record<string, string>) => string | null;
 
-/** Parasoll's own coverage rules (M40, M41) by their codes: the key of their words, and the words of each gap they find. */
+/** Parasoll's own coverage rules (M40, M41, M42) by their codes: the key of their words, and the words of each gap they find. */
 const gapRules: Record<string, { key: string; title: GapWords }> = {
   'atera.agent-silent': {
     key: 'ateraAgentSilent',
@@ -50,10 +53,37 @@ const gapRules: Record<string, { key: string; title: GapWords }> = {
       ? t('alerts.gaps.defenderOff.title', { device: facts.device, status: defenderStatus(t, facts.status) })
       : null,
   },
+  'cloudally.backup-failed': {
+    key: 'backupFailed',
+    title: (t, facts) => facts.service && facts.failed && facts.total
+      ? t('alerts.gaps.backupFailed.title', { service: service(t, facts), failed: facts.failed, total: facts.total, account: facts.account })
+      : null,
+  },
+  'cloudally.backup-late': {
+    key: 'backupLate',
+    title: (t, facts) => facts.service && facts.late && facts.total && facts.hours
+      ? t('alerts.gaps.backupLate.title', { service: service(t, facts), late: facts.late, total: facts.total, hours: facts.hours, account: facts.account })
+      : null,
+  },
+  'cloudally.backup-paused': {
+    key: 'backupPaused',
+    title: (t, facts) => !facts.service ? null : facts.whole === 'true'
+      ? t('alerts.gaps.backupPaused.whole', { service: service(t, facts), account: facts.account })
+      : t('alerts.gaps.backupPaused.some', { service: service(t, facts), paused: facts.paused, total: facts.total, account: facts.account }),
+  },
+  'cloudally.user-not-backed-up': {
+    key: 'userNotBackedUp',
+    title: (t, facts) => facts.missing && facts.licensed && facts.backedUp
+      ? t('alerts.gaps.userNotBackedUp.title', { count: Number(facts.missing), licensed: facts.licensed, backedUp: facts.backedUp })
+      : null,
+  },
 };
 
 /** The key of a rule's words (`alerts.gaps.{key}`, `coverage.rules.{key}`); none for a rule this interface does not know. */
 export const gapKey = (rule: string | null | undefined) => (rule ? gapRules[rule]?.key ?? null : null);
+
+/** A gap about backups (M42) leads to the customer's Sikkerhetskopi tab, where the users and the actions are. */
+export const isBackupGap = (rule: string | null | undefined) => rule?.startsWith('cloudally.') === true;
 
 /**
  * An alert's title in the reader's language: a gap Parasoll found (M40) is worded from its rule and facts; any other alert, and a

@@ -28,6 +28,8 @@ using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Crm.Integrations.Atera;
 using Crm.Integrations.Huntress;
+
+using Crm.Integrations.CloudAlly;
 using Microsoft.Extensions.Options;
 using Crm.SharedKernel.Application;
 using Crm.Worker;
@@ -53,7 +55,7 @@ builder.Services
     .AddCatalogModule(builder.Configuration)
     .AddContractsModule(builder.Configuration)
     .AddServiceModule(builder.Configuration)
-    // M40.S: empty until Huntress (M41) and CloudAlly (M42) fill them.
+    // M40.S: Security fills with Huntress (M41); Backup holds CloudAlly's backups (M42).
     .AddSecurityModule(builder.Configuration)
     .AddBackupModule(builder.Configuration)
     .AddTimeTrackingModule(builder.Configuration)
@@ -71,6 +73,8 @@ builder.Services
     .AddPowerOfficeIntegration(builder.Configuration)
     .AddAteraIntegration(builder.Configuration)
     .AddHuntressIntegration(builder.Configuration)
+
+    .AddCloudAllyIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
 // DEV-06: the outbox loop with its liveness (rounds finish) and heartbeat; ready means the database answers.
@@ -194,5 +198,11 @@ jobs.AddOrUpdate<HuntressOrganizationSyncJob>(HuntressOrganizationSyncJob.JobId,
 jobs.AddOrUpdate<HuntressAgentSyncJob>(HuntressAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<HuntressAlertSyncJob>(HuntressAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<HuntressReportSyncJob>(HuntressReportSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.ReportSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
+// M42: CloudAlly's accounts (for the mapping), the backups with the coverage check after a complete read, and the bills.
+var cloudAlly = app.Services.GetRequiredService<IOptions<CloudAllyOptions>>().Value;
+jobs.AddOrUpdate<CloudAllyAccountSyncJob>(CloudAllyAccountSyncJob.JobId, job => job.RunAsync(CancellationToken.None), cloudAlly.AccountSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<CloudAllyBackupSyncJob>(CloudAllyBackupSyncJob.JobId, job => job.RunAsync(CancellationToken.None), cloudAlly.BackupSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<CloudAllyBillSyncJob>(CloudAllyBillSyncJob.JobId, job => job.RunAsync(CancellationToken.None), cloudAlly.BillSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
 await app.RunAsync();

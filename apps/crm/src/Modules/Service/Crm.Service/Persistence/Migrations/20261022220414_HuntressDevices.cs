@@ -88,11 +88,11 @@ namespace Crm.Service.Persistence.Migrations
                 columns: new[] { "Id", "Code", "CreatedAt", "CreatedBy", "Enabled", "IsDeleted", "ModifiedAt", "ModifiedBy", "Threshold" },
                 values: new object[,]
                 {
-                    { new Guid("0199f1a0-4000-7000-8000-000000004101"), "huntress.agent-missing", new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
-                    { new Guid("0199f1a0-4000-7000-8000-000000004102"), "atera.agent-missing", new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
-                    { new Guid("0199f1a0-4000-7000-8000-000000004103"), "huntress.agent-silent", new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
-                    { new Guid("0199f1a0-4000-7000-8000-000000004104"), "huntress.agent-outdated", new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
-                    { new Guid("0199f1a0-4000-7000-8000-000000004105"), "huntress.defender-off", new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null }
+                    { new Guid("0199f1a0-4000-7000-8000-000000004101"), "huntress.agent-missing", new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
+                    { new Guid("0199f1a0-4000-7000-8000-000000004102"), "atera.agent-missing", new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
+                    { new Guid("0199f1a0-4000-7000-8000-000000004103"), "huntress.agent-silent", new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
+                    { new Guid("0199f1a0-4000-7000-8000-000000004104"), "huntress.agent-outdated", new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null },
+                    { new Guid("0199f1a0-4000-7000-8000-000000004105"), "huntress.defender-off", new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, false, null, null, null }
                 });
         }
 

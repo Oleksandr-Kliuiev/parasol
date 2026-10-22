@@ -449,7 +449,7 @@ namespace Crm.Service.Persistence.Migrations
                         {
                             Id = new Guid("0199f1a0-4000-7000-8000-000000004101"),
                             Code = "huntress.agent-missing",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Enabled = true,
                             IsDeleted = false
                         },
@@ -457,7 +457,7 @@ namespace Crm.Service.Persistence.Migrations
                         {
                             Id = new Guid("0199f1a0-4000-7000-8000-000000004102"),
                             Code = "atera.agent-missing",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Enabled = true,
                             IsDeleted = false
                         },
@@ -465,7 +465,7 @@ namespace Crm.Service.Persistence.Migrations
                         {
                             Id = new Guid("0199f1a0-4000-7000-8000-000000004103"),
                             Code = "huntress.agent-silent",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Enabled = true,
                             IsDeleted = false
                         },
@@ -473,7 +473,7 @@ namespace Crm.Service.Persistence.Migrations
                         {
                             Id = new Guid("0199f1a0-4000-7000-8000-000000004104"),
                             Code = "huntress.agent-outdated",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Enabled = true,
                             IsDeleted = false
                         },
@@ -481,7 +481,39 @@ namespace Crm.Service.Persistence.Migrations
                         {
                             Id = new Guid("0199f1a0-4000-7000-8000-000000004105"),
                             Code = "huntress.defender-off",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004201"),
+                            Code = "cloudally.backup-failed",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004202"),
+                            Code = "cloudally.backup-late",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004203"),
+                            Code = "cloudally.backup-paused",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004204"),
+                            Code = "cloudally.user-not-backed-up",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Enabled = true,
                             IsDeleted = false
                         });

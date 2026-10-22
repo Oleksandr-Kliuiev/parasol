@@ -6,6 +6,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Crm.Backup.Contracts\Crm.Backup.Contracts.csproj" />
+    <ProjectReference Include="..\..\Licensing\Crm.Licensing.Contracts\Crm.Licensing.Contracts.csproj" />
+    <ProjectReference Include="..\..\Service\Crm.Service.Contracts\Crm.Service.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Crm.Infrastructure\Crm.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

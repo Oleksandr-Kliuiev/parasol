@@ -1,5 +1,6 @@
 using Crm.Integrations.Atera;
 using Crm.Integrations.Brreg;
+using Crm.Integrations.CloudAlly;
 using Crm.Integrations.Core;
 using Crm.Integrations.Huntress;
 using Crm.Integrations.MicrosoftGraph;
@@ -30,6 +31,9 @@ public class FreshnessLimitsTests
         (HuntressAgentSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.AgentSyncCron)), new HuntressOptions().AgentSyncCron),
         (HuntressAlertSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.AlertSyncCron)), new HuntressOptions().AlertSyncCron),
         (HuntressReportSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.ReportSyncCron)), new HuntressOptions().ReportSyncCron),
+        (CloudAllyAccountSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.AccountSyncCron)), new CloudAllyOptions().AccountSyncCron),
+        (CloudAllyBackupSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BackupSyncCron)), new CloudAllyOptions().BackupSyncCron),
+        (CloudAllyBillSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BillSyncCron)), new CloudAllyOptions().BillSyncCron),
         (PowerOfficeCustomerSyncJob.JobId, Key(PowerOfficeOptions.SectionName, nameof(PowerOfficeOptions.CustomerSyncCron)), new PowerOfficeOptions().CustomerSyncCron),
         (PowerOfficeContactPersonSyncJob.JobId, Key(PowerOfficeOptions.SectionName, nameof(PowerOfficeOptions.ContactPersonSyncCron)),
             new PowerOfficeOptions().ContactPersonSyncCron),

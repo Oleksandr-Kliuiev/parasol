@@ -224,11 +224,16 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasData(
                 Setting("0199f1a0-4000-7000-8000-000000004001", "atera.agent-silent", 22),
                 // M41: the rules that compare Atera and Huntress and read Huntress's agents.
-                Setting("0199f1a0-4000-7000-8000-000000004101", "huntress.agent-missing", 23),
-                Setting("0199f1a0-4000-7000-8000-000000004102", "atera.agent-missing", 23),
-                Setting("0199f1a0-4000-7000-8000-000000004103", "huntress.agent-silent", 23),
-                Setting("0199f1a0-4000-7000-8000-000000004104", "huntress.agent-outdated", 23),
-                Setting("0199f1a0-4000-7000-8000-000000004105", "huntress.defender-off", 23));
+                Setting("0199f1a0-4000-7000-8000-000000004101", "huntress.agent-missing", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004102", "atera.agent-missing", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004103", "huntress.agent-silent", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004104", "huntress.agent-outdated", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004105", "huntress.defender-off", 22),
+                // M42: the backup rules of the Backup module (CloudAlly), on and with their own limits.
+                Setting("0199f1a0-4000-7000-8000-000000004201", "cloudally.backup-failed", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004202", "cloudally.backup-late", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004203", "cloudally.backup-paused", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004204", "cloudally.user-not-backed-up", 22));
         });
 
         modelBuilder.Entity<AlertTransition>(b =>

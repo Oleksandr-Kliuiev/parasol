@@ -4,7 +4,7 @@
 //   Atera API v3           — atera.mjs with its seed data in atera-data.mjs, plus test-only control routes under /_mock/atera
 //   Enhetsregisteret       — brreg.mjs (/enhetsregisteret/api/enheter)
 //   Huntress API v1        — huntress.mjs with its seed data in huntress-data.mjs (M41), test-only control routes under /_mock/huntress
-//   CloudAlly              — cloudally.mjs (/cloudally): a stub until M42 (M40.S)
+//   CloudAlly partner v2   — cloudally.mjs (/cloudally/v2, M42), plus test-only control routes under /_mock/cloudally
 // Run: node tools/dev-mocks/external-apis.mjs [port]   (default 5299). Data is in memory and new on every start.
 import http from 'node:http';
 import { createAtera } from './atera.mjs';

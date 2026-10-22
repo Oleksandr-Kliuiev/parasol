@@ -396,6 +396,20 @@ internal sealed class LicensingService(
     public Task<IReadOnlyList<AssignedLicenses>> GetAssignedLicensesAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken) =>
         AssignedLicensesAsync(organizationIds, date, cancellationToken);
 
+    public async Task<IReadOnlyList<LicenseReading>> GetLicenseReadingsAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken)
+    {
+        if (organizationIds.Count == 0) return [];
+        var from = date.AddDays(-14);
+        var snapshots = await db.LicenseSnapshots.AsNoTracking()
+            .Where(s => s.SnapshotDate <= date && s.SnapshotDate >= from && organizationIds.Contains(s.OrganizationId))
+            .GroupBy(s => new { s.OrganizationId, s.SkuId })
+            .Select(g => g.OrderByDescending(s => s.SnapshotDate).First())
+            .ToListAsync(cancellationToken);
+        return snapshots.OrderBy(s => s.OrganizationId).ThenBy(s => s.SkuPartNumber, StringComparer.Ordinal)
+            .Select(s => new LicenseReading(s.OrganizationId, s.SkuId, s.SkuPartNumber, s.Purchased, s.Assigned, s.SnapshotDate))
+            .ToList();
+    }
+
     private async Task<IReadOnlyList<AssignedLicenses>> AssignedLicensesAsync(IReadOnlyCollection<Guid>? organizationIds, DateOnly date, CancellationToken cancellationToken)
     {
         if (organizationIds is { Count: 0 }) return [];

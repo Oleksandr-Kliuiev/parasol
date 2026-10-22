@@ -49,6 +49,7 @@ import { useDuplicates } from './duplicatesApi';
 import { LinkedSystemsPanel } from '../integrations/LinkedSystemsPanel';
 import { OrganizationContractsTab } from '../contracts/OrganizationContractsTab';
 import { OperationsTab } from '../service/OperationsTab';
+import { BackupTab } from '../backup/BackupTab';
 import { OrganizationDealsTab } from '../sales/OrganizationDealsTab';
 import { OrganizationMailTab } from '../activities/OrganizationMailTab';
 import { OrganizationDocumentsTab } from '../documents/OrganizationDocumentsTab';
@@ -120,13 +121,14 @@ const useStyles = makeStyles({
 /** The value of the "More" tab: it opens the menu of the occasional sections and is never itself selected. */
 const MORE = '__more';
 const dailyTabs = ['overview', 'contacts', 'contracts', 'drift', 'invoices', 'activities'] as const;
-const occasionalTabs = ['deals', 'licenses', 'projects', 'mail', 'documents', 'history'] as const;
+const occasionalTabs = ['backup', 'deals', 'licenses', 'projects', 'mail', 'documents', 'history'] as const;
 
 type TabValue =
   | 'overview'
   | 'contacts'
   | 'contracts'
   | 'drift'
+  | 'backup'
   | 'deals'
   | 'licenses'
   | 'projects'
@@ -167,7 +169,7 @@ export function OrganizationDetailPage() {
   const tabs = useCustomerTabVisibility(tab, tabScope, !isPending && !error && !mergedIntoId);
   // Six sections for every day in the row, the rest one step away under "More" (UX 2026, В4); a section opened from there
   // joins the row, so the row always names where you are.
-  const permitted = (value: TabValue) => ({ contracts: canContracts, drift: canService, deals: canSales, licenses: canLicensing,
+  const permitted = (value: TabValue) => ({ contracts: canContracts, drift: canService, backup: canService, deals: canSales, licenses: canLicensing,
     projects: canProjects, invoices: canBilling, activities: canActivities, mail: canActivities } as Partial<Record<TabValue, boolean>>)[value] ?? true;
   const rowTabs = [...dailyTabs.filter(permitted), ...occasionalTabs.filter((value) => value === tab && permitted(value))];
   const menuTabs = occasionalTabs.filter((value) => value !== tab && permitted(value));
@@ -304,6 +306,8 @@ export function OrganizationDetailPage() {
       {tab === 'contacts' && <ContactsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'contracts' && canContracts && <OrganizationContractsTab organizationId={organization.id} />}
       {tab === 'drift' && canService && <OperationsTab organizationId={organization.id} />}
+      {/* M42: the customer's Microsoft 365 backups at CloudAlly, one step away under "More" until it is opened. */}
+      {tab === 'backup' && canService && <BackupTab organizationId={organization.id} />}
       {tab === 'deals' && canSales && <OrganizationDealsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'licenses' && canLicensing && <OrganizationLicensesTab organizationId={organization.id} />}
       {tab === 'projects' && canProjects && <OrganizationProjectsTab organizationId={organization.id} organizationName={organization.name} />}

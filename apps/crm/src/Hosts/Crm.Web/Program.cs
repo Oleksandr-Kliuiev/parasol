@@ -27,6 +27,7 @@ using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Crm.Integrations.Atera;
 using Crm.Integrations.Huntress;
+using Crm.Integrations.CloudAlly;
 using Crm.SharedKernel.Application;
 using Crm.Authorization;
 using Crm.Web.Auth;
@@ -86,7 +87,7 @@ builder.Services
     .AddCatalogModule(builder.Configuration)
     .AddContractsModule(builder.Configuration)
     .AddServiceModule(builder.Configuration)
-    // M40.S: empty until Huntress (M41) and CloudAlly (M42) fill them.
+    // M40.S: Security fills with Huntress (M41); Backup holds CloudAlly's backups (M42).
     .AddSecurityModule(builder.Configuration)
     .AddBackupModule(builder.Configuration)
     .AddTimeTrackingModule(builder.Configuration)
@@ -104,6 +105,7 @@ builder.Services
     .AddPowerOfficeIntegration(builder.Configuration)
     .AddAteraIntegration(builder.Configuration)
     .AddHuntressIntegration(builder.Configuration)
+    .AddCloudAllyIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
 builder.Services.AddMemoryCache();
@@ -306,6 +308,7 @@ app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 app.MapVendorActionEndpoints();
 app.MapAteraEndpoints();
+app.MapBackupEndpoints();
 Crm.Integrations.Core.Readiness.ConnectionStatusEndpoints.MapConnectionStatus(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();

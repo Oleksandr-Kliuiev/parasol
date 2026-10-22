@@ -60,6 +60,13 @@ const hostArgs = [
   ...['incident.approve', 'incident.reject', 'incident.step', 'incident.resolve', 'incident.comment', 'escalation.resolve', 'agent.isolate', 'agent.release',
     'agent.uninstall'].map((kind, index) => `--Integrations:Huntress:EnabledActions:${index}=${kind}`),
   ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
+  // M42: CloudAlly's partner API on the stand-in; every kind of action on, the schedules off (tests start the reads).
+  '--Integrations:CloudAlly:Enabled=true',
+  `--Integrations:CloudAlly:BaseUrl=${mock}/cloudally/`,
+  '--Integrations:CloudAlly:WriteEnabled=true',
+  ...['backup.run', 'backup.activate', 'backup.pause', 'backup.resume', 'account.deactivate', 'restore.export', 'restore.other', 'restore.in-place']
+    .map((kind, index) => `--Integrations:CloudAlly:EnabledActions:${index}=${kind}`),
+  ...['AccountSyncCron', 'BackupSyncCron', 'BillSyncCron'].map((cron) => `--Integrations:CloudAlly:${cron}="0 0 31 2 *"`),
   '--RateLimits:ApiPerMinute=100000',
   // Every test signs in through the development entry point from one address; the real budget has its own integration test.
   '--RateLimits:SignInPerMinute=100000',
@@ -81,6 +88,10 @@ const providerKeys = [
   '--Integrations:Atera:ApiKey=mock',
   '--Integrations:Huntress:ApiKey=mock',
   '--Integrations:Huntress:ApiSecret=mock',
+  '--Integrations:CloudAlly:ClientId=mock',
+  '--Integrations:CloudAlly:ClientSecret=mock',
+  '--Integrations:CloudAlly:Email=api@parasoll.example',
+  '--Integrations:CloudAlly:Password=mock',
 ].join(' ');
 
 // Hosts that are already running are reused only on request: they may be connected to another database than E2E_SQL.

@@ -78,7 +78,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         response.StatusCode.ShouldBe(HttpStatusCode.OK); response.Headers.CacheControl!.NoStore.ShouldBeTrue();
         var view = (await response.Content.ReadFromJsonAsync<ConnectionStatusView>(Ct))!;
         view.Status.ShouldBeOneOf("Ready", "Gaps");
-        view.Integrations.Select(i => i.System).ShouldBe(["atera", "huntress", "poweroffice", "partnercenter", "microsoft-graph", "brreg"]);
+        view.Integrations.Select(i => i.System).ShouldBe(["atera", "huntress", "poweroffice", "cloudally", "partnercenter", "microsoft-graph", "brreg"]);
         var integrations = view.Integrations.ToDictionary(i => i.System);
         var atera = integrations["atera"];
         (atera.Enabled, atera.WriteEnabled).ShouldBe((true, (bool?)false));
@@ -91,6 +91,10 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         huntress.State!.Jobs.Select(j => j.Job).ShouldBe(["huntress-organizations", "huntress-agents", "huntress-alerts", "huntress-reports"]);
         huntress.State.Jobs.ShouldAllBe(job => job.Freshness == "Disabled");
         integrations["poweroffice"].WriteEnabled.ShouldBe(true);
+        // M42: CloudAlly is listed with its three reads, switched off in this installation.
+        var cloudAlly = integrations["cloudally"];
+        (cloudAlly.Enabled, cloudAlly.WriteEnabled).ShouldBe((false, (bool?)false));
+        cloudAlly.State!.Jobs.Select(j => (j.Job, j.Freshness)).ShouldBe([("cloudally-accounts", "Disabled"), ("cloudally-backups", "Disabled"), ("cloudally-bills", "Disabled")]);
         integrations["partnercenter"].State!.Jobs.Select(j => j.Job).ShouldBe(["partnercenter-customers", "partnercenter-subscriptions", "partnercenter-licenses"]);
         integrations["microsoft-graph"].State!.Jobs.Select(j => j.Job).ShouldBe(["entra-user-sync", "entra-role-sync"]);
         integrations["brreg"].WriteEnabled.ShouldBeNull();
@@ -102,6 +106,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
             ["atera-agents"] = 2175, ["atera-patches"] = 2175, ["atera-alerts"] = 60, ["atera-ticket-conversations"] = 22,
             ["huntress-organizations"] = 105, ["huntress-agents"] = 105, ["huntress-alerts"] = 22, ["huntress-reports"] = 2175,
             ["poweroffice-customers"] = 37, ["poweroffice-contact-persons"] = 60, ["poweroffice-products"] = 2175, ["poweroffice-invoices"] = 90,
+            ["cloudally-accounts"] = 105, ["cloudally-backups"] = 195, ["cloudally-bills"] = 2175,
             ["partnercenter-customers"] = 2175, ["partnercenter-subscriptions"] = 375, ["partnercenter-licenses"] = 2175,
             ["entra-user-sync"] = 105, ["entra-role-sync"] = 18, ["brreg-registry-check"] = 2175,
         }, ignoreOrder: true);
