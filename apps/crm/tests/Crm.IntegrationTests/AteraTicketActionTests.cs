@@ -212,7 +212,7 @@ public class AteraConversationSyncTests(CrmWebFactory factory)
     public async Task Reads_that_save_the_same_new_tickets_at_once_all_succeed_with_one_row_each()
     {
         var organizationId = Guid.NewGuid();
-        var numbers = Enumerable.Range(0, 5).Select(_ => Random.Shared.NextInt64(100_000_000, 999_999_999)).Distinct().ToList();
+        var numbers = Enumerable.Range(0, 5).Select(_ => TestData.AteraId()).ToList();
         var tickets = numbers.Select(n => new ExternalTicket("atera", n, organizationId, null, $"Samtidig {n}", "Open", "Medium", null, "Incident", "Email",
             null, null, null, null, DateTimeOffset.UtcNow.AddHours(-1), null, null, DateTimeOffset.UtcNow, null)).ToList();
 

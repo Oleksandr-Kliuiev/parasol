@@ -20,7 +20,7 @@ public class ServiceAndTimeTests(CrmWebFactory factory)
     private async Task<(Guid OrganizationId, long CustomerId)> LinkedOrganizationAsync(HttpClient admin, string name)
     {
         var organizationId = await admin.CreateOrganizationAsync(new { name, status = "Customer" });
-        var customerId = Random.Shared.NextInt64(500_000, 599_999);
+        var customerId = TestData.AteraId();
         (await admin.PostAsJsonAsync("/api/v1/integrations/links", new
         {
             system = "atera", externalType = "Customer", externalId = customerId.ToString(CultureInfo.InvariantCulture), entityId = organizationId,
@@ -34,8 +34,8 @@ public class ServiceAndTimeTests(CrmWebFactory factory)
         var admin = factory.ClientAs(CrmRoles.Admin);
         var atera = factory.Atera;
         var (organizationId, customerId) = await LinkedOrganizationAsync(admin, $"Atera Speil {Guid.NewGuid():N}"[..28]);
-        var ticketId = Random.Shared.NextInt64(9_000, 9_999);
-        var technicianId = Random.Shared.NextInt64(70, 99);
+        var ticketId = TestData.AteraId();
+        var technicianId = TestData.AteraId();
 
         atera.Given(Request.Create().WithPath("/api/v3/tickets").UsingGet().WithParam("page", "1").WithParam("ticketStatus", "Open")).AtPriority(5)
             .RespondWith(JsonReply(new

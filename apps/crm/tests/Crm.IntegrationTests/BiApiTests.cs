@@ -560,8 +560,8 @@ public class BiApiTests(CrmWebFactory factory)
             }, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
             (await admin.PostAsync($"/api/v1/contracts/{contractId}/activate", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
             BillingApiTests.StubToken(factory);
-            await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", Random.Shared.NextInt64(700_000, 799_999).ToString(CultureInfo.InvariantCulture));
-            await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", Random.Shared.NextInt64(10_000, 99_999).ToString(CultureInfo.InvariantCulture));
+            await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
+            await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
 
             // The approved March basis is sent to PowerOffice by whichever class drains the queue. BillingApiTests answers every order
             // request with its own order number at a lower priority; this customer's order gets a number of its own, or its basis would

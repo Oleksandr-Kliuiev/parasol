@@ -384,6 +384,30 @@ public sealed class RecordingEventHandler : IDomainEventHandler<OrganizationCrea
 
 public static class TestData
 {
+    // One counter for the ids of every external system, so they repeat neither within a system nor across systems. It starts at a
+    // random point between 1 000 000 000 and 1 900 000 000: above the ranges the PowerOffice classes still draw their own ids from,
+    // and below int.MaxValue, as PowerOffice and Atera keep some ids as 32-bit numbers. A run takes a few thousand.
+    private static long externalId = 1_000_000_000 + Random.Shared.NextInt64(0, 900_000) * 1_000;
+
+    /// <summary>
+    /// A PowerOffice id (customer, product) that no other test of this run uses. The database is shared and classes run in
+    /// parallel: a random number from a narrow range was sometimes an id another test had already linked, and the second link was
+    /// refused (409 INT_EXTERNAL_ALREADY_LINKED). A counter cannot repeat itself.
+    /// </summary>
+    public static long PowerOfficeId() => Interlocked.Increment(ref externalId);
+
+    /// <summary>The first of <paramref name="count"/> consecutive PowerOffice ids that no other test of this run uses.</summary>
+    public static long PowerOfficeIds(int count) => Interlocked.Add(ref externalId, count) - count + 1;
+
+    /// <summary>
+    /// An Atera id (customer, contact, ticket, technician) that no other test of this run uses, for the same reason as
+    /// <see cref="PowerOfficeId"/>. A technician maps to the first user it is seen with, and a ticket number to one mirror row.
+    /// </summary>
+    public static long AteraId() => Interlocked.Increment(ref externalId);
+
+    /// <summary>The first of <paramref name="count"/> consecutive Atera ids that no other test of this run uses.</summary>
+    public static long AteraIds(int count) => Interlocked.Add(ref externalId, count) - count + 1;
+
     /// <summary>Random organization number with a valid MOD11 check digit.</summary>
     public static string OrgNumber()
     {
