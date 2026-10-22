@@ -27,6 +27,7 @@ using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Huntress;
 using Microsoft.Extensions.Options;
 using Crm.SharedKernel.Application;
 using Crm.Worker;
@@ -69,6 +70,7 @@ builder.Services
     .AddMicrosoftGraphIntegration(builder.Configuration)
     .AddPowerOfficeIntegration(builder.Configuration)
     .AddAteraIntegration(builder.Configuration)
+    .AddHuntressIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
 // DEV-06: the outbox loop with its liveness (rounds finish) and heartbeat; ready means the database answers.
@@ -185,5 +187,12 @@ jobs.AddOrUpdate<AteraWorkHoursSyncJob>(AteraWorkHoursSyncJob.JobId, job => job.
 jobs.AddOrUpdate<AteraAgentSyncJob>(AteraAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraPatchSyncJob>(AteraPatchSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.PatchSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAlertSyncJob>(AteraAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
+// M41: Huntress — organizations and their usage, agents (machines and coverage), incidents/escalations/platform actions, reports.
+var huntress = app.Services.GetRequiredService<IOptions<HuntressOptions>>().Value;
+jobs.AddOrUpdate<HuntressOrganizationSyncJob>(HuntressOrganizationSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.OrganizationSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<HuntressAgentSyncJob>(HuntressAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<HuntressAlertSyncJob>(HuntressAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<HuntressReportSyncJob>(HuntressReportSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.ReportSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
 await app.RunAsync();

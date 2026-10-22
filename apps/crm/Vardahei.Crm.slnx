@@ -15,6 +15,7 @@
     <Project Path="src/Integrations/Crm.Integrations.Atera/Crm.Integrations.Atera.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.Brreg/Crm.Integrations.Brreg.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.Core/Crm.Integrations.Core.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.Huntress/Crm.Integrations.Huntress.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.MicrosoftGraph/Crm.Integrations.MicrosoftGraph.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.PartnerCenter/Crm.Integrations.PartnerCenter.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.PowerOffice/Crm.Integrations.PowerOffice.csproj" />

@@ -24,6 +24,9 @@ public static class VendorActionTargets
     /// <summary>An alert of a monitoring source (M40); the target id is the source's own alert id, as the mirror stores it.</summary>
     public const string Alert = "alert";
 
+    /// <summary>An agent of a source on a customer's computer (M41: isolate, release, uninstall); the target id is the source's agent id.</summary>
+    public const string Device = "device";
+
     /// <summary>What an action's stored parameters become once its words are erased or past their retention (DEV-11).</summary>
     public const string ErasedParameters = "{}";
 

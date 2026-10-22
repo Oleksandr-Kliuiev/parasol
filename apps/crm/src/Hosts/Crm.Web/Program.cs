@@ -26,6 +26,7 @@ using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Huntress;
 using Crm.SharedKernel.Application;
 using Crm.Authorization;
 using Crm.Web.Auth;
@@ -102,6 +103,7 @@ builder.Services
     .AddMicrosoftGraphIntegration(builder.Configuration)
     .AddPowerOfficeIntegration(builder.Configuration)
     .AddAteraIntegration(builder.Configuration)
+    .AddHuntressIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
 builder.Services.AddMemoryCache();

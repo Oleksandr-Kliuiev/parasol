@@ -39,6 +39,7 @@
     <ProjectReference Include="..\..\Integrations\Crm.Integrations.MicrosoftGraph\Crm.Integrations.MicrosoftGraph.csproj" />
     <ProjectReference Include="..\..\Integrations\Crm.Integrations.PowerOffice\Crm.Integrations.PowerOffice.csproj" />
     <ProjectReference Include="..\..\Integrations\Crm.Integrations.Atera\Crm.Integrations.Atera.csproj" />
+    <ProjectReference Include="..\..\Integrations\Crm.Integrations.Huntress\Crm.Integrations.Huntress.csproj" />
     <ProjectReference Include="..\..\Integrations\Crm.Integrations.PartnerCenter\Crm.Integrations.PartnerCenter.csproj" />
   </ItemGroup>
 </Project>
