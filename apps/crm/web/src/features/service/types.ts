@@ -40,6 +40,123 @@ export interface Device {
   openAlerts: number;
 }
 
+/** One agent of a machine in a list row (M40): its source, its last contact and its link there. */
+export interface MachineSource {
+  deviceId: string;
+  system: string;
+  online: boolean;
+  lastSeenAt: string | null;
+  url: string | null;
+}
+
+/** One computer of a customer (M40), whichever sources watch it. */
+export interface Machine {
+  id: string;
+  organizationId: string;
+  name: string;
+  type: DeviceType;
+  os: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+  removedAt: string | null;
+  sources: MachineSource[];
+  openAlerts: number;
+  /** Other machines of the customer a person should compare this one with. */
+  proposals: number;
+}
+
+export interface DeviceDisk {
+  drive: string | null;
+  free: number | null;
+  used: number | null;
+  total: number | null;
+}
+
+/** What one source says about the computer (M40); memory and disks come without a unit in Atera's API. */
+export interface DeviceInventory {
+  vendor: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  motherboard: string | null;
+  processor: string | null;
+  processorCores: number | null;
+  processorClock: string | null;
+  memory: number | null;
+  biosVersion: string | null;
+  osVersion: string | null;
+  osBuild: string | null;
+  lastRebootAt: string | null;
+  ipAddresses: string[];
+  publicIp: string | null;
+  macAddresses: string[];
+  domainName: string | null;
+  loggedInUsers: string | null;
+  lastLoginUser: string | null;
+  disks: DeviceDisk[];
+  agentVersion: string | null;
+}
+
+export interface DevicePatch {
+  kbId: string | null;
+  name: string;
+  class: string | null;
+  installedAt: string | null;
+  status: string | null;
+}
+
+/** A device's Windows updates at the last complete read; `readAt` is null while they were never read. */
+export interface DevicePatches {
+  readAt: string | null;
+  collectedAt: string | null;
+  installedCount: number;
+  available: DevicePatch[];
+  latestInstalled: DevicePatch[];
+}
+
+export interface MachineDevice {
+  id: string;
+  system: string;
+  externalId: string;
+  machineName: string;
+  type: DeviceType;
+  os: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+  firstSeenAt: string;
+  removedAt: string | null;
+  url: string | null;
+  inventory: DeviceInventory;
+  patches: DevicePatches;
+}
+
+/** Why two machines may be one computer. */
+export type MachineEvidence = 'serial' | 'mac' | 'name' | 'serialConflict';
+
+export interface MachineProposal {
+  otherMachineId: string;
+  otherName: string;
+  evidence: MachineEvidence[];
+  foundAt: string;
+}
+
+/** A machine's card (M40); `etag` goes with a person's decision about it. */
+export interface MachineDetail {
+  id: string;
+  organizationId: string;
+  organizationName: string | null;
+  name: string;
+  type: DeviceType;
+  os: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+  removedAt: string | null;
+  devices: MachineDevice[];
+  proposals: MachineProposal[];
+  openAlerts: number;
+  reads: ServiceSourceRead[];
+  etag: string;
+}
+
 /** A stored alert (M38). `createdAt` is the source's time; `url` is set only when a link to the source is configured. */
 export interface Alert {
   id: string;
@@ -85,7 +202,7 @@ export interface AlertPage {
  * a read that did not finish or whose successor is overdue is said so.
  */
 export interface ServiceSourceRead extends AlertSourceRead {
-  source: 'tickets' | 'conversations' | 'alerts' | 'devices';
+  source: 'tickets' | 'conversations' | 'alerts' | 'devices' | 'patches';
 }
 
 export interface ServiceSummary {
