@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import time
 from datetime import datetime, timezone
-from common import WRITERS, run, write_json
+from common import WRITERS, run, write_json, writers_up
 from lifecycle import image_ids
 
 
@@ -69,18 +69,19 @@ def capture(stack, staging):
 def backup(stack):
     started = time.monotonic()
     write_json(stack.path / 'backup-status.json', {'status': 'running', 'startedAt': datetime.now(timezone.utc).isoformat()})
-    running = set(stack.compose('ps', '--status', 'running', '--services').decode().split())
-    active = [name for name in WRITERS if name in running]
+    active = writers_up(stack)
     quiesced = False
     staging = Path(tempfile.mkdtemp(prefix='.snapshot-', dir=stack.path))
     staging.chmod(0o700)
     try:
         quiesced = True
-        if active:
-            stack.compose('stop', *active)
+        # Every writer, not only the listed ones: stopping a stopped one changes nothing, and one Docker was about to
+        # restart stays down instead of coming back during the capture.
+        stack.compose('stop', *WRITERS)
         # Verify nobody restarted during quiescence (all deployment tools share the operation lock).
-        if set(stack.compose('ps', '--status', 'running', '--services').decode().split()) & set(WRITERS):
-            raise RuntimeError('A writer is still running')
+        running = writers_up(stack)
+        if running:
+            raise RuntimeError(f'A writer is still running: {", ".join(running)}')
         capture(stack, staging)
         # Resume service before uploading the already-consistent private staging directory.
         if active:
