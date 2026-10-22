@@ -38,7 +38,8 @@ async function trigger(page: import('@playwright/test').Page, jobId: string) {
 }
 
 test('a monthly run is collected, approved and sent to PowerOffice', { tag: '@critical' }, async ({ page }) => {
-  test.setTimeout(180_000);
+  // Room for the job to be triggered again, both for the order and for the invoice, while the worker is busy.
+  test.setTimeout(300_000);
   const m = marker('Fak');
   await signIn(page, 'Crm.Admin');
 
@@ -101,14 +102,19 @@ test('a monthly run is collected, approved and sent to PowerOffice', { tag: '@cr
   await expect(toast(page, 'The run is approved')).toBeVisible();
   await expect(page.getByText('Approved', { exact: true }).first()).toBeVisible();
 
-  await signIn(page, 'Crm.Admin');
-  await trigger(page, 'outbound-operations');
-
-  await signIn(page, 'Crm.Finance');
-  await page.goto(runUrl);
-  // The worker sends the order within a minute; the page is polled until the customer shows the order status.
+  // The job sends the order once the approval's outbox message has queued it, and the page is polled until the customer shows
+  // the order status. The job is triggered again while it does not: a trigger that ran before the order was queued sent
+  // nothing, and the worker may be busy with other tests' work.
   const basisRow = page.getByRole('row').filter({ hasText: `${m} Faktura AS` });
-  await expect(basisRow.getByText('Sent', { exact: true })).toBeVisible({ timeout: 90_000 });
+  const sent = basisRow.getByText('Sent', { exact: true });
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await signIn(page, 'Crm.Admin');
+    await trigger(page, 'outbound-operations');
+    await signIn(page, 'Crm.Finance');
+    await page.goto(runUrl);
+    if (await sent.waitFor({ timeout: 30_000 }).then(() => true, () => false)) break;
+  }
+  await expect(sent).toBeVisible();
 
   // PowerOffice invoices the order right away in the mock: 12 500 + 25 % MVA. Invoices are synced hourly, so the job is
   // triggered and the page reloaded until the mirror has caught up — the worker may be busy with other tests' work.
