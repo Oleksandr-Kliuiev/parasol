@@ -30,11 +30,12 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
     new RegExp(`Warning.*${m} backup is late.*${first.name}`)]);
   await expect(rows.first()).toContainText('Source: Atera');
   // A title that opens the alert looks like the link it is: the tone of the customer link beside it, not plain text until hovered.
-  // Polled, with both tones read in the same pass: the row is drawn again when its task lookup arrives, and WebKit reads no style
-  // from the node it replaced. Equal tones collapse into one.
+  // Polled as one comparison: a row drawn again between two reads gives no style for the node it replaced.
   const tone = (element: Locator) => element.evaluate((el) => getComputedStyle(el).color);
-  await expect.poll(async () => [...new Set([await tone(rows.first().getByRole('button', { name: `${m} disk almost full`, exact: true })),
-    await tone(rows.first().getByRole('link', { name: first.name, exact: true }))])]).toEqual([expect.stringMatching(/^rgb/)]);
+  await expect.poll(async () => {
+    const title = await tone(rows.first().getByRole('button', { name: `${m} disk almost full`, exact: true }));
+    return title !== '' && title === await tone(rows.first().getByRole('link', { name: first.name, exact: true }));
+  }, { message: 'The alert title has the tone of the customer link beside it' }).toBe(true);
   await expect(page.getByRole('status').filter({ hasText: /alerts:/ })).toHaveText('3 alerts: 2 critical, 1 warnings');
   // How fresh the stored alerts are, under the page title (a read another spec held with a pause says it did not finish).
   await expect(page.getByRole('main').getByText(/^Atera:? (the )?read at /)).toBeVisible();
