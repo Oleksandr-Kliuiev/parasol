@@ -65,7 +65,7 @@ public class VendorActionAttentionTests(CrmWebFactory factory)
         item.GetProperty("vendorUrl").GetString().ShouldBe("https://atera.example/new/ticket/4711");
 
         // The ticket's row says a check is needed; a ticket without actions is left out of the answer.
-        var other = Random.Shared.NextInt64(20_000_000, 29_999_999).ToString(CultureInfo.InvariantCulture);
+        var other = TestData.AteraId().ToString(CultureInfo.InvariantCulture);
         var facts = await LookupAsync(host.Client(), "ticket", ticket.TicketId.ToString(CultureInfo.InvariantCulture), other);
         var fact = facts.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         fact.GetProperty("targetId").GetString().ShouldBe(ticket.TicketId.ToString(CultureInfo.InvariantCulture));
