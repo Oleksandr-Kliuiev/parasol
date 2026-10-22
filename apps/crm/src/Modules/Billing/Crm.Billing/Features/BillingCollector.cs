@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Crm.Backup.Contracts;
 using Crm.Billing.Contracts;
 using Crm.Billing.Domain;
 using Crm.Billing.Persistence;
@@ -7,6 +8,7 @@ using Crm.Catalog.Contracts;
 using Crm.Contracts.Contracts;
 using Crm.Customers.Contracts;
 using Crm.Licensing.Contracts;
+using Crm.Security.Contracts;
 using Crm.Service.Contracts;
 using Crm.SharedKernel.Operations;
 using Crm.TimeTracking.Contracts;
@@ -32,6 +34,8 @@ internal sealed class BillingCollector(
     ILicensingApi licensing,
     ITimeTrackingApi timeTracking,
     IServiceApi service,
+    ISecurityApi security,
+    IBackupApi backup,
     IEnumerable<IBillingTargetSystem> targets,
     ChargeLedger ledger,
     TimeProvider time,
@@ -100,7 +104,7 @@ internal sealed class BillingCollector(
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Oslo).DateTime);
         var readingReference = periodEnd < today ? periodEnd : today;
         var quantities = await BillingQuantities.ReadAsync(
-            contractLines, subscriptions, periodEnd, readingReference, settings.StaleQuantityDays, licensing, service, ct);
+            contractLines, subscriptions, periodEnd, readingReference, settings.StaleQuantityDays, licensing, service, security, backup, ct);
         var hoursRun = await LatestHoursRunAsync(settings, ct);
         var previousTotals = await PreviousTotalsAsync(run, portfolioOrganizations, ct);
         var existing = await db.BillingBases

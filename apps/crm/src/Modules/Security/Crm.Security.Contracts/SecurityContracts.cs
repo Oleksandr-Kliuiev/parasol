@@ -111,6 +111,19 @@ public sealed record ExternalUsage(
     int? SatLearners,
     int? BillableLogSources);
 
+/// <summary>The security sources the CRM reads (M41), by the system name their records carry.</summary>
+public static class SecuritySources
+{
+    public const string Huntress = "huntress";
+}
+
+/// <summary>
+/// The agents a security source bills for one CRM customer on a day (M43): the sum over the customer's source organizations of the last
+/// day read on or before the date asked. <paramref name="BillableAgents"/> is null when the source did not count them for one of those
+/// organizations; <paramref name="Day"/> is the day read.
+/// </summary>
+public sealed record AgentCountReading(int? BillableAgents, DateOnly Day, int Organizations);
+
 /// <summary>A step of a stored plan, as an action plans from it.</summary>
 public sealed record RemediationView(long ExternalId, string Type, string? Action, string Status, DateTimeOffset? CompletedAt);
 
@@ -197,6 +210,16 @@ public interface ISecurityApi
     /// <summary>Stores the summary reports read; a report read again replaces its figures.</summary>
     Task<SecurityApplyResult> ApplyReportsAsync(IReadOnlyCollection<ExternalReport> reports, CancellationToken cancellationToken);
 
-    /// <summary>Stores what the source counts for its organizations now, one row per source organization.</summary>
+    /// <summary>
+    /// Stores what one complete read of the source counts for its linked organizations now: one row per source organization, and the
+    /// day's row (M43) — an organization the read no longer names (unlinked, unknown to the source) drops out of that day.
+    /// </summary>
     Task<SecurityApplyResult> ApplyUsageAsync(IReadOnlyCollection<ExternalUsage> usages, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The agents the source billed for each customer on <paramref name="date"/> or the last day before it that was read (M43, for the
+    /// price per agent); a customer never read is left out.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, AgentCountReading>> GetAgentCountReadingsAsync(
+        string system, IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
 }

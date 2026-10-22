@@ -641,6 +641,49 @@ namespace Crm.Security.Persistence.Migrations
                     b.ToTable("SummaryReports", "security");
                 });
 
+            modelBuilder.Entity("Crm.Security.Domain.UsageDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("AgentsCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BillableAgents")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<long>("ExternalOrganizationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ReadAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("System")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Day");
+
+                    b.HasIndex("System", "ExternalOrganizationId", "Day")
+                        .IsUnique();
+
+                    b.ToTable("UsageDays", "security");
+                });
+
             modelBuilder.Entity("Crm.Security.Domain.IncidentComment", b =>
                 {
                     b.HasOne("Crm.Security.Domain.Incident", null)

@@ -101,6 +101,18 @@ public sealed record ExternalBackupBillLine(
     string? PaymentType,
     DateTimeOffset? NextPaymentAt);
 
+/// <summary>
+/// The seats a backup source bills for one CRM customer on a day (M43): the bill lines of the last day read on or before the date asked.
+/// A person is billed once for every service of an account, so an account counts its largest line (seats, or accounts where the source
+/// gave no seats); the customer's accounts add up. <paramref name="Seats"/> is null when an account's lines carry no count at all.
+/// </summary>
+public sealed record SeatCountReading(int? Seats, DateOnly Day, int Accounts);
+
+/// <summary>One stored bill line as the reconciliation shows it (M43); price and total are cost data.</summary>
+public sealed record BackupBillLineView(
+    DateOnly Day, string AccountExternalId, string Type, string Source, string? Service, int? Accounts, int? Seats, decimal? Price, decimal? Total,
+    string? Currency, string? PaymentType, DateTimeOffset? NextPaymentAt);
+
 /// <summary>A stored account as an action's preview names it.</summary>
 public sealed record BackupAccountRef(Guid Id, string System, string ExternalId, Guid OrganizationId, string Name, string? Email, string? Status, string? Region);
 
@@ -144,4 +156,14 @@ public interface IBackupApi
     Task<BackupTaskRef?> GetTaskAsync(string system, string externalId, CancellationToken cancellationToken);
 
     Task<BackupEntityRef?> GetEntityAsync(string system, string taskExternalId, string entityExternalId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The seats the source billed for each customer on <paramref name="date"/> or the last day before it whose bills were read (M43, for
+    /// the price per seat); a customer without a bill line is left out.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, SeatCountReading>> GetSeatCountReadingsAsync(
+        string system, IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
+
+    /// <summary>The bill lines of one customer's last day read on or before <paramref name="date"/> (M43); empty when none.</summary>
+    Task<IReadOnlyList<BackupBillLineView>> GetBillLinesAsync(string system, Guid organizationId, DateOnly date, CancellationToken cancellationToken);
 }

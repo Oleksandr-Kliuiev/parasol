@@ -10,8 +10,12 @@ namespace Crm.Billing.Features;
 /// <summary>Aggregate finance warnings, without amounts, customer names or descriptions.</summary>
 public sealed class BillingOperationalSignals(BillingDbContext db, TimeProvider time) : IOperationalSignalSource
 {
-    /// <summary>The anomaly codes of a basis built from a stale reading, no daily device count or an incomplete hours import.</summary>
-    private static readonly string[] EstimatedCodes = ["BIL_STALE_QUANTITY", "BIL_NO_DEVICE_SNAPSHOT", "BIL_INCOMPLETE_HOURS"];
+    /// <summary>
+    /// The anomaly codes of a basis built from a stale reading, no daily device count, an incomplete hours import, or (M43) no count of
+    /// Huntress agents or CloudAlly seats. Matched as text in the stored anomalies, so no code may contain another.
+    /// </summary>
+    private static readonly string[] EstimatedCodes =
+        ["BIL_STALE_QUANTITY", "BIL_NO_DEVICE_SNAPSHOT", "BIL_INCOMPLETE_HOURS", "BIL_NO_AGENT_READING", "BIL_NO_SEAT_READING"];
 
     public async Task<IReadOnlyList<OperationalSignal>> ReadAsync(CancellationToken cancellationToken)
     {
@@ -34,10 +38,11 @@ public sealed class BillingOperationalSignals(BillingDbContext db, TimeProvider 
         // Open bases that are to be billed from a quantity or hours that may be stale or incomplete (DEV-19). A count only: Finance
         // decides whether such a basis may be billed, the signal just makes sure nobody overlooks it. It clears when the basis is
         // exported or cancelled, or a re-collect finds fresh readings.
-        var (stale, noSnapshot, hours) = (EstimatedCodes[0], EstimatedCodes[1], EstimatedCodes[2]);
+        var (stale, noSnapshot, hours, noAgents, noSeats) = (EstimatedCodes[0], EstimatedCodes[1], EstimatedCodes[2], EstimatedCodes[3], EstimatedCodes[4]);
         var estimated = db.BillingBases.AsNoTracking().Where(b =>
             b.Status != BillingBasisStatus.Exported && b.Status != BillingBasisStatus.Cancelled && b.AnomaliesJson != null &&
-            (b.AnomaliesJson.Contains(stale) || b.AnomaliesJson.Contains(noSnapshot) || b.AnomaliesJson.Contains(hours)));
+            (b.AnomaliesJson.Contains(stale) || b.AnomaliesJson.Contains(noSnapshot) || b.AnomaliesJson.Contains(hours) ||
+             b.AnomaliesJson.Contains(noAgents) || b.AnomaliesJson.Contains(noSeats)));
         var estimatedCount = await estimated.CountAsync(cancellationToken);
         var estimatedSince = await estimated.Select(b => (DateTimeOffset?)b.CreatedAt).MinAsync(cancellationToken);
         return

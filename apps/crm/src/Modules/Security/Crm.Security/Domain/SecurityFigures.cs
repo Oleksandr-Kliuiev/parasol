@@ -117,3 +117,36 @@ public sealed class ProductUsage : Entity
             BillableLogSources);
     }
 }
+
+/// <summary>
+/// What a security source counted for one of its organizations on a day (M43): the last complete read of that day (Oslo), kept, so a
+/// billing run of a past period bills the agents of the period's last day read — as Atera's daily device counts do — instead of today's.
+/// </summary>
+public sealed class UsageDay : Entity
+{
+    private UsageDay() { }
+
+    public string System { get; private set; } = string.Empty;
+    public long ExternalOrganizationId { get; private set; }
+    public Guid OrganizationId { get; private set; }
+    public DateOnly Day { get; private set; }
+    public int? AgentsCount { get; private set; }
+    public int? BillableAgents { get; private set; }
+    public DateTimeOffset ReadAt { get; private set; }
+
+    public static UsageDay From(ExternalUsage source, DateOnly day, DateTimeOffset now)
+    {
+        var usage = new UsageDay { System = source.System, ExternalOrganizationId = source.ExternalOrganizationId, Day = day };
+        usage.Apply(source, now);
+        return usage;
+    }
+
+    /// <summary>A later read of the same day replaces the counts.</summary>
+    public void Apply(ExternalUsage s, DateTimeOffset now)
+    {
+        OrganizationId = s.OrganizationId;
+        AgentsCount = s.AgentsCount;
+        BillableAgents = s.BillableAgents;
+        ReadAt = now;
+    }
+}
