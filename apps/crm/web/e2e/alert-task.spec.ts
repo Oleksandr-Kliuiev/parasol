@@ -49,7 +49,9 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   expect(again).toMatchObject({ status: 'EXISTING', task: { id: preview.task!.id } });
 
   // A colleague sees the task, not the way to a second one.
-  await signIn(page, 'Crm.Technician', `/alerts?alert=${alert!.id}`);
+  // Signed in on the queue first: a panel opened by the sign-in's own return address hides the page the sign-in waits for.
+  await signIn(page, 'Crm.Technician', '/alerts');
+  await page.goto(`/alerts?alert=${alert!.id}`);
   const panel = page.getByRole('dialog', { name: `${m} disk almost full`, exact: true });
   await expect(panel.getByText(`${m} free disk space on SRV-${m}`)).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Assign', exact: true })).toHaveCount(0);
