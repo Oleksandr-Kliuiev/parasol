@@ -1837,7 +1837,7 @@
       "delete": "Slett i Atera",
       "deleteItem": "Slett i Atera …",
       "deleteTitle": "Slett driftsvarselet i Atera",
-      "none": "Ingenting er bede om i Atera for dette driftsvarselet."
+      "none": "Ingenting er bede om i {{source}} for dette driftsvarselet."
     },
     "hide": {
       "heading": "I Parasoll",

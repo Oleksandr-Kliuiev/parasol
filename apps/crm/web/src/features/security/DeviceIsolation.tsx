@@ -32,9 +32,9 @@ const isolationColor = (isolation: string | null) =>
 /**
  * What Huntress says about a computer's protection (M41): Microsoft Defender's status as Huntress words it and when Huntress last
  * heard it, whether the computer is isolated from the network, and the Huntress agent's version. Nothing is said that Huntress did
- * not report.
+ * not report, and nothing twice: the version is left to the machine's inventory where that inventory is this agent's (`version`).
  */
-export function ProtectionFacts({ device }: { device: MachineDevice }) {
+export function ProtectionFacts({ device, version = true }: { device: MachineDevice; version?: boolean }) {
   const { t } = useTranslation(); const styles = useStyles();
   const p = device.protection;
   if (!p) return null;
@@ -48,7 +48,7 @@ export function ProtectionFacts({ device }: { device: MachineDevice }) {
     {p.isolation && <span className={styles.line}>
       <Badge appearance="tint" color={isolationColor(p.isolation)}>{t(`machines.protection.isolation.${p.isolation}`, { defaultValue: p.isolation })}</Badge>
     </span>}
-    {device.inventory.agentVersion && <Text size={200} className={styles.muted}>{t('machines.protection.agentVersion', { version: device.inventory.agentVersion })}</Text>}
+    {version && device.inventory.agentVersion && <Text size={200} className={styles.muted}>{t('machines.protection.agentVersion', { version: device.inventory.agentVersion })}</Text>}
   </>;
 }
 

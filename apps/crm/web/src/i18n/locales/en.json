@@ -1837,7 +1837,7 @@
       "delete": "Delete in Atera",
       "deleteItem": "Delete in Atera…",
       "deleteTitle": "Delete the alert in Atera",
-      "none": "Nothing has been asked of Atera for this alert."
+      "none": "Nothing has been asked of {{source}} for this alert."
     },
     "hide": {
       "heading": "In Parasoll",

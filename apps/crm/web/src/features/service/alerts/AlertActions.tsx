@@ -143,7 +143,7 @@ export function AlertSourceSection({ alert }: { alert: AlertLike }) {
         {kinds.includes('alert.delete') && <Button {...restore} size="small" appearance="subtle" onClick={() => setKind('alert.delete')}>{t('alerts.actions.deleteItem')}</Button>}
       </span>}
       <div className={styles.log}>
-        <ActionList filters={{ targetType: 'alert', targetId: alert.externalId }} showTarget={false} limit={5} empty={t('alerts.actions.none')} />
+        <ActionList filters={{ targetType: 'alert', targetId: alert.externalId }} showTarget={false} limit={5} empty={t('alerts.actions.none', { source })} />
       </div>
     </section>}
     <ActionDialog request={kind ? alertRequest(alert, kind) : null}
