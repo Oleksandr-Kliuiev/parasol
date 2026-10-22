@@ -64,7 +64,9 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
   await expect(tabs.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
   await tabs.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('link', { name: 'Leads' }).click();
+  // The full menu is a drawer loaded on first use: Leads is looked up in it, by its exact name, as a customer behind it may be
+  // called "LeadS5N0ZL Nykunde AS" (a leads test's marker) and was clicked instead while the drawer was still loading.
+  await page.getByRole('dialog', { name: 'Main menu' }).getByRole('link', { name: 'Leads', exact: true }).click();
   await expect(page).toHaveURL(/\/sales\/leads/);
 
   // Search is a dialog (the command palette), opened from the top bar on a phone.
