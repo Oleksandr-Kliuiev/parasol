@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { api, createOrganization, marker, reservePastBillingRun, signIn, toast } from './support';
 
 test('approved billing explains why hours cannot be refunded and Finance cancellation releases them', { tag: '@critical' }, async ({ page }) => {
+  // Room for the cancellation to be read again and repeated below.
+  test.setTimeout(180_000);
   const name = marker('Committed hours ');
   // The run claims a free month before anything is dated in it, so engines and reruns on one database never share a month.
   await signIn(page, 'Crm.Finance'); const run = await reservePastBillingRun(page, name); const { year, month } = run;
@@ -50,10 +52,21 @@ test('approved billing explains why hours cannot be refunded and Finance cancell
   await expect(page.getByText('Approved or exported billing protects this work. Use Finance cancellation for an unsent basis, or a later-period correction.', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Hour bank comparison', exact: true }).getByRole('link', { name, exact: true })).toHaveAttribute('href', `/contracts/hour-banks/${bank.id}`);
   await page.getByRole('link', { name: 'Open billing record', exact: true }).click();
-  await page.getByRole('button', { name: 'Cancel basis', exact: true }).click();
-  const cancel = page.getByRole('dialog');
-  await cancel.getByRole('textbox', { name: /^Reason\s*\*?$/ }).fill('Synthetic reviewed customer correction');
-  await cancel.getByRole('button', { name: 'Cancel basis', exact: true }).click();
+  // The approved run's export may still write the basis after this page has read it (the worker records its attempt). The
+  // cancellation goes with the version on screen and then answers 412, as it would to a person: the page is read again and
+  // the cancellation repeated. Any other answer fails at once with its status. A cancellation waiting behind another test's
+  // financial lock gets a minute.
+  for (let attempt = 0; ; attempt++) {
+    await page.getByRole('button', { name: 'Cancel basis', exact: true }).click();
+    const cancel = page.getByRole('dialog');
+    await cancel.getByRole('textbox', { name: /^Reason\s*\*?$/ }).fill('Synthetic reviewed customer correction');
+    const answer = page.waitForResponse((r) => r.request().method() === 'POST'
+      && /^\/api\/v1\/billing\/bases\/[^/]+\/cancel$/.test(new URL(r.url()).pathname), { timeout: 60_000 });
+    await cancel.getByRole('button', { name: 'Cancel basis', exact: true }).click();
+    const status = (await answer).status();
+    if (status !== 412 || attempt === 2) { expect(status, 'the basis cancellation is accepted').toBe(200); break; }
+    await page.reload();
+  }
   await expect(toast(page, 'The basis is cancelled')).toBeVisible();
 
   await signIn(page, 'Crm.ServiceLead', `/time/entries?year=${year}&month=${month}`);
