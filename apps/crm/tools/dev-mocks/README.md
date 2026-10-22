@@ -59,6 +59,7 @@ Like Atera's: not part of Huntress's API and not behind its key; bodies are JSON
 | Route | Body | Answer |
 |-------|------|--------|
 | `POST /_mock/huntress/organizations` | any organization field | `201` with a new organization (a unique name unless given). |
+| `POST /_mock/huntress/reports` | `organization_id` (required), `period_start` (the first day of the month, last month by default), any report field | `201` with a monthly summary report of the organization. |
 | `POST /_mock/huntress/agents` | `organization_id` (required), any agent field | `201` with the agent: healthy, current, calling back now unless the body says otherwise. |
 | `POST /_mock/huntress/agents/{id}`, `DELETE /_mock/huntress/agents/{id}`, `GET /_mock/huntress/agents/{id}` | any agent fields | The fields merged (it goes silent, Defender off, another organization); gone; or the agent as held now with `pending_firewall_status` and `posted` (the last `isolation` body, `release`, `uninstalled`) — an uninstalled agent answers `404` with `posted`. |
 | `POST /_mock/huntress/incidents` | `organization_id` (required), `agent_id`, `severity` (`high`), `status` (`sent`), `subject`, `summary`, `remediations: [{ type, action, status, parameters }]` (one assisted and one manual, unapproved) | `201` with the report and every step. |

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { huntressAlerts, huntressIncident, linkedHuntressCustomer, syncHuntress } from './huntress';
 import { collectedBillingRun, createContact, createOrganization, marker, signIn } from './support';
 
 const createContactForMobile = (page: Page, organizationId: string, m: string) =>
@@ -104,4 +105,29 @@ test('the pilot reconciliation page fits a phone screen', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Pilot reconciliation' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Lines of the run' })).toBeVisible();
   await expectNoHorizontalScroll(page, 'Pilot reconciliation');
+});
+
+// M41: a Huntress incident is answered on a phone too: its panel, plan and comment box fit the screen, and approving the plan goes
+// through the one confirmation.
+test('a Huntress incident is read and answered on a phone', async ({ page }) => {
+  test.setTimeout(240_000);
+  await signIn(page, 'Crm.Admin');
+  const customer = await linkedHuntressCustomer(page, 'Mob');
+  const m = customer.marker;
+  await huntressIncident(page, customer, { subject: `LOW - Incident ${m} on a phone`, remediations: [{ type: 'assisted', action: 'Delete scheduled task' }] });
+  await syncHuntress(page, ['huntress-alerts'], async () => (await huntressAlerts(page, customer.organizationId)).length === 1, `the incident of ${customer.name}`);
+
+  await page.goto('/alerts');
+  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(m);
+  await page.getByRole('button', { name: `LOW - Incident ${m} on a phone`, exact: true }).click();
+  const panel = page.getByRole('dialog', { name: `LOW - Incident ${m} on a phone`, exact: true });
+  const incident = panel.getByRole('region', { name: 'Security incident', exact: true });
+  await expect(incident.getByText('Waiting for you', { exact: true })).toBeVisible();
+  await expect(incident.getByRole('textbox', { name: 'New comment' })).toBeVisible();
+  await expectNoHorizontalScroll(page, 'Incident panel');
+  await incident.getByRole('button', { name: 'Approve plan', exact: true }).click();
+  const confirm = page.getByRole('dialog', { name: 'Approve the remediation plan in Huntress', exact: true });
+  await confirm.getByRole('button', { name: 'Approve plan', exact: true }).click();
+  await expect(confirm.getByRole('status')).toContainText('Done', { timeout: 30_000 });
+  await expectNoHorizontalScroll(page, 'Action confirmation');
 });

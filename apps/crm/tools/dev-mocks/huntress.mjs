@@ -308,8 +308,10 @@ export function createHuntress({ base, run, send }) {
       const escalation = escalations.find((n) => n.id === Number(id));
       if (!escalation) return fail(res, 404, 'Not found');
       const asked = parse(body);
+      // As Huntress's reference says: the revoke flag can only be included beside the determination "unauthorized".
       if (!asked || (asked.determination !== undefined && !['expected', 'unauthorized'].includes(asked.determination))
-        || (asked.scope !== undefined && !['account', 'organization', 'identity'].includes(asked.scope))) {
+        || (asked.scope !== undefined && !['account', 'organization', 'identity'].includes(asked.scope))
+        || (asked.revoke_and_disable_identities !== undefined && asked.determination !== 'unauthorized')) {
         return fail(res, 400, 'Invalid resolution parameters');
       }
       if (escalation.status === 'resolved') return fail(res, 409, 'Escalation has already been resolved');
@@ -380,6 +382,24 @@ export function createHuntress({ base, run, send }) {
       };
       organizations.push(organization);
       return send(res, 201, organizationView(organization));
+    }
+    if (path === 'reports' && req.method === 'POST') {
+      if (!organizationOf(fields.organization_id)) return fail(res, 400, 'organization_id must name an organization of the mock');
+      // Last month unless the body names the first day of another.
+      const now = new Date();
+      const first = fields.period_start ? new Date(`${fields.period_start}T00:00:00Z`) : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+      const next = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 1));
+      const created = newId();
+      const { period_start: _start, ...rest } = fields;
+      const report = {
+        type: 'monthly_summary', period: `${first.toISOString().slice(0, 10)}...${next.toISOString().slice(0, 10)}`,
+        agents_count: agents.filter((a) => a.organization_id === Number(fields.organization_id)).length, incidents_reported: 0, incidents_resolved: 0,
+        signals_detected: 0, signals_investigated: 0, events_analyzed: 0, analyst_note: 'Synthetic report of the stand-in.',
+        url: `https://reports.example.invalid/huntress/${created}.pdf`, created_at: next.toISOString(), updated_at: next.toISOString(),
+        ...rest, id: created, organization_id: Number(fields.organization_id),
+      };
+      reports.push(report);
+      return send(res, 201, report);
     }
     if (path === 'agents' && req.method === 'POST') {
       if (!organizationOf(fields.organization_id)) return fail(res, 400, 'organization_id must name an organization of the mock');
