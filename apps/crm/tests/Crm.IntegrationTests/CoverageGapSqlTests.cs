@@ -45,6 +45,7 @@ public sealed class CoverageGapSqlTests(CrmWebFactory factory)
         gap.GetProperty("facts").GetProperty("device").GetString().ShouldBe($"{marker}-SRV");
         gap.GetProperty("title").GetString().ShouldStartWith($"The Atera agent on {marker}-SRV has not reported since ");
         gap.GetProperty("deviceId").GetGuid().ShouldNotBe(Guid.Empty);
+        gap.GetProperty("machineId").GetGuid().ShouldNotBe(Guid.Empty, "the panel leads to the device's card");
         var summary = await (await admin.GetAsync($"/api/v1/service/organizations/{organizationId}/summary", Ct)).ReadJsonAsync();
         summary.GetProperty("criticalAlerts").GetInt32().ShouldBe(1, "a gap alarms like any alert");
 

@@ -36,7 +36,8 @@ public sealed record AlertListItem(
     AlertHoldItem? Hidden = null,
     string? Etag = null,
     string? Rule = null,
-    IReadOnlyDictionary<string, string>? Facts = null);
+    IReadOnlyDictionary<string, string>? Facts = null,
+    Guid? MachineId = null);
 
 /// <summary>An alert hidden in Parasoll (M40): until when, why, and by whom.</summary>
 public sealed record AlertHoldItem(DateTimeOffset Until, string? Reason, string? ByName, DateTimeOffset? At);
@@ -188,10 +189,15 @@ internal sealed class AlertQueries(
 
     private async Task<IReadOnlyList<AlertListItem>> ItemsAsync(List<Alert> rows, CancellationToken ct)
     {
-        // One batch for the page's customer names, and one for the people who hid alerts, never a lookup per row.
+        // One batch each for the page's customer names, the machines of its devices (M40: the device's card) and the people who hid
+        // alerts, never a lookup per row.
         var names = rows.Count == 0
             ? new Dictionary<Guid, string>()
             : await customers.GetOrganizationNamesAsync(rows.Select(a => a.OrganizationId).Distinct().ToList(), ct);
+        var deviceIds = rows.Select(a => a.DeviceId).OfType<Guid>().Distinct().ToList();
+        var machines = deviceIds.Count == 0
+            ? new Dictionary<Guid, Guid?>()
+            : await db.Devices.AsNoTracking().Where(d => deviceIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.MachineId, ct);
         var now = time.GetUtcNow();
         var hiders = rows.Where(a => a.IsHidden(now)).Select(a => a.Hold?.By).OfType<Guid>().Distinct().ToList();
         var people = hiders.Count == 0 ? new Dictionary<Guid, UserSummary>() : await users.GetUsersAsync(hiders, ct);
@@ -201,7 +207,8 @@ internal sealed class AlertQueries(
             a.IsHidden(now) && a.Hold is { Until: { } until } hold
                 ? new AlertHoldItem(until, hold.Reason, hold.By is { } by ? people.GetValueOrDefault(by)?.DisplayName : null, hold.At)
                 : null,
-            Rule: a.Rule, Facts: CoverageGaps.ReadFacts(a.Facts))).ToList();
+            Rule: a.Rule, Facts: CoverageGaps.ReadFacts(a.Facts),
+            MachineId: a.DeviceId is { } device ? machines.GetValueOrDefault(device) : null)).ToList();
     }
 }
 

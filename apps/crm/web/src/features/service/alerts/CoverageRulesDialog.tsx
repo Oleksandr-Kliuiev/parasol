@@ -84,7 +84,7 @@ export function CoverageRulesDialog({ onClose }: { onClose: () => void }) {
           const range = rule.threshold && { min: rule.threshold.min, max: rule.threshold.max };
           return <section key={rule.code} className={styles.rule} aria-labelledby={heading}>
             <h3 id={heading} className={styles.name}>{key ? t(`coverage.rules.${key}.name`) : rule.code}</h3>
-            {key && <Text block className={styles.muted}>{t(`coverage.rules.${key}.description`)}</Text>}
+            {key && <Text block className={styles.muted}>{t(`coverage.rules.${key}.description`)} {t(`coverage.rules.${key}.when`)}</Text>}
             <Switch checked={d.enabled} disabled={!canWrite || busy} label={t('coverage.enabled')}
               onChange={(_, data) => setDraft(rule, { ...d, enabled: data.checked })} />
             {rule.threshold && range && <Field label={t(`coverage.limit.${rule.threshold.unit}`)} hint={t('coverage.limitHint', range)}

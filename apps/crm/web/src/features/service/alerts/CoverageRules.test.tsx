@@ -12,7 +12,7 @@ const empty = { items: [], nextCursor: null, totalCount: 0 };
 
 const gap = syntheticAlert({
   id: 'g1', system: 'parasoll', externalId: 'atera.agent-silent:d1', title: 'The Atera agent on SRV-01 has not reported since 2026-10-12',
-  rule: 'atera.agent-silent', facts: { device: 'SRV-01', lastSeenAt: '2026-10-12T08:00:00+00:00' },
+  rule: 'atera.agent-silent', facts: { device: 'SRV-01', lastSeenAt: '2026-10-12T08:00:00+00:00' }, machineId: 'm1',
 });
 
 const rule = (overrides: Partial<CoverageRule> = {}): CoverageRule => ({
@@ -53,12 +53,17 @@ describe('Coverage gaps Parasoll finds (M40)', () => {
   });
 
   it('says in the panel that Parasoll found the gap and how it closes, with no source to act at', async () => {
+    const user = userEvent.setup();
     stub();
     renderRoutes([page(<AlertDetailDrawer alertId="g1" onClose={() => {}} />)], '/', testUser(['service.read', 'service.write']));
     expect(await screen.findByText(/Found by Parasoll’s own check\. It closes by itself once two checks in a row no longer find it\./)).toBeVisible();
     const own = within(screen.getByRole('region', { name: 'In Parasoll' }));
-    expect(own.getByText(/the gap is still checked/)).toBeVisible();
+    expect(own.getByText(/Hiding a gap does not stop the check/)).toBeVisible();
     expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-labelledby'))).not.toContain('alert-source-g1');
+    // The device leads to its card, and the gap to the setting of the check that found it.
+    expect(screen.getByRole('link', { name: 'SRV-01' })).toHaveAttribute('href', '/organizations/o1?tab=drift&device=m1');
+    await user.click(screen.getByRole('button', { name: 'Change the check' }));
+    expect(await screen.findByRole('dialog', { name: 'Coverage checks' })).toBeVisible();
   });
 
   it('changes the limit of a check with the ETag it read, and refuses a limit out of its range', async () => {
@@ -95,7 +100,7 @@ describe('Coverage gaps Parasoll finds (M40)', () => {
     await user.click(await screen.findByRole('button', { name: 'Coverage checks' }));
     const dialog = await screen.findByRole('dialog', { name: 'Coverage checks' });
     await user.click(await within(dialog).findByRole('switch', { name: 'Raise alerts' }));
-    expect(within(dialog).getByText('Switched off, the check closes its open alerts at once.')).toBeVisible();
+    expect(within(dialog).getByText('Switching it off closes its open alerts at once.')).toBeVisible();
     unmount();
 
     stub([rule({ changedAt: '2026-10-21T09:00:00Z', changedByName: 'Ola Nordmann', value: 10 })]);

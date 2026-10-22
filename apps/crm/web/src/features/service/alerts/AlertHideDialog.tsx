@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Button, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Field, Input, MessageBar, MessageBarBody, Spinner, Text,
   Textarea, ToggleButton, makeStyles,
@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../../api/client';
 import { h } from '../../../app/hearth';
+import { ConfirmDialog } from '../../../shared/components/ConfirmDialog';
 import { Dialog } from '../../../shared/components/Dialog';
 import { useNotify } from '../../../shared/components/useNotify';
 import { errorMessage } from '../../../shared/utils/errors';
@@ -26,7 +27,8 @@ const reasonLength = 500;
 /**
  * Hides one alert in Parasoll until a day, with the reason (M40). The source cannot snooze an alert through its API, so the
  * dialog says the alert stays open there; here it leaves every open list until the start of the chosen day and comes back by
- * itself. The alert is read when the dialog opens: the change goes with the ETag of that read.
+ * itself. The alert is read when the dialog opens: the change goes with the ETag of that read. A reason being typed survives
+ * Escape and a click beside the dialog: it asks before throwing it away (Cancel still closes at once).
  */
 export function AlertHideDialog({ alertId, onClose, onHidden }: { alertId: string; onClose: () => void; onHidden?: () => void }) {
   const { t } = useTranslation(); const styles = useStyles(); const client = useQueryClient(); const notify = useNotify();
@@ -36,6 +38,9 @@ export function AlertHideDialog({ alertId, onClose, onHidden }: { alertId: strin
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
+  const [asking, setAsking] = useState(false); const reasonField = useRef<HTMLTextAreaElement>(null);
+  const leave = () => { if (busy) return; if (reason.trim()) setAsking(true); else onClose(); };
+  const keepEditing = () => { setAsking(false); requestAnimationFrame(() => reasonField.current?.focus()); };
   const dayOk = validHideDay(until);
   const reasonOk = reason.trim().length > 0;
 
@@ -58,7 +63,7 @@ export function AlertHideDialog({ alertId, onClose, onHidden }: { alertId: strin
     }
   };
 
-  return <Dialog open onOpenChange={(_, d) => { if (!d.open && !busy) onClose(); }}>
+  return <Dialog open onOpenChange={(_, d) => { if (!d.open) leave(); }}>
     <DialogSurface><DialogBody>
       <DialogTitle>{t('alerts.hide.title')}</DialogTitle>
       <DialogContent className={styles.content}>
@@ -79,7 +84,7 @@ export function AlertHideDialog({ alertId, onClose, onHidden }: { alertId: strin
           </div>
           <Field required label={t('alerts.hide.reason')} hint={t('alerts.hide.reasonHint')}
             validationMessage={touched && !reasonOk ? t('alerts.hide.reasonRequired') : undefined}>
-            <Textarea value={reason} maxLength={reasonLength} disabled={busy} resize="vertical" onChange={(_, d) => setReason(d.value)} />
+            <Textarea ref={reasonField} value={reason} maxLength={reasonLength} disabled={busy} resize="vertical" onChange={(_, d) => setReason(d.value)} />
           </Field>
           {dayOk && <Text block role="status" className={styles.muted}>{t('alerts.hide.summary', { date: formatDate(until) })}</Text>}
         </>}
@@ -91,6 +96,10 @@ export function AlertHideDialog({ alertId, onClose, onHidden }: { alertId: strin
         <Button appearance="primary" disabled={!alert?.etag} disabledFocusable={busy} onClick={() => void hide()}>
           {busy ? t('alerts.hide.hiding') : t('alerts.hide.confirm')}</Button>
       </DialogActions>
-    </DialogBody></DialogSurface>
+    </DialogBody>
+    {/* Nested in the surface, so the form is the active dialog again once the question closes. */}
+    <ConfirmDialog open={asking} title={t('alerts.hide.discardTitle')} confirm={t('alerts.hide.discard')} cancel={t('alerts.hide.keepEditing')}
+      onConfirm={onClose} onCancel={keepEditing}>{t('alerts.hide.discardBody')}</ConfirmDialog>
+    </DialogSurface>
   </Dialog>;
 }

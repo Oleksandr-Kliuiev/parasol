@@ -1641,7 +1641,7 @@
     "title": "Driftsvarsler",
     "subtitle": "Åpne driftsvarsler for alle kunder: de kritiske først, deretter de som har ventet lengst.",
     "subtitleResolved": "Driftsvarsler som kilden ikke lenger melder som åpne, de sist løste først.",
-    "subtitleHidden": "Driftsvarsler som er skjult i Parasoll til en dag; de er fortsatt åpne i kilden.",
+    "subtitleHidden": "Driftsvarsler som er skjult i Parasoll til en dato; de er fortsatt åpne i kilden.",
     "refresh": "Oppdater driftsvarsler",
     "filters": "Filtre for driftsvarsler",
     "search": "Søk i tittel eller enhet",
@@ -1675,6 +1675,7 @@
     },
     "gaps": {
       "found": "Funnet av Parasolls egen kontroll. Det lukkes av seg selv når to kontroller på rad ikke lenger finner det.",
+      "changeCheck": "Endre kontrollen",
       "ateraAgentSilent": {
         "title": "Atera-agenten på {{device}} har ikke meldt seg siden {{date}}"
       }
@@ -1789,9 +1790,9 @@
       "heading": "I Parasoll",
       "open": "Skjul til …",
       "show": "Vis igjen",
-      "title": "Skjul driftsvarselet til en dag",
+      "title": "Skjul driftsvarselet til en dato",
       "sourceStays": "API-et til {{source}} kan ikke utsette et driftsvarsel, så det forblir åpent der; Parasoll skjuler det til dagen du velger.",
-      "gapStays": "Mens det er skjult, kontrolleres hullet fortsatt: det kommer tilbake på dagen, eller lukkes når kontrollene ikke lenger finner det.",
+      "gapStays": "Å skjule et dekningshull stopper ikke kontrollen: det kommer tilbake på dagen du velger, eller lukkes når kontrollene ikke lenger finner det.",
       "until": "Skjul til",
       "untilHint": "Det kommer tilbake ved starten av denne dagen.",
       "shortcuts": "Raske valg",
@@ -1809,6 +1810,10 @@
       "hiding": "Skjuler …",
       "changed": "Driftsvarselet ble endret mens du så på det. Her er det slik det er nå – bestem på nytt.",
       "done": "Skjult til {{date}}.",
+      "discardTitle": "Forkaste begrunnelsen?",
+      "discardBody": "Driftsvarselet er ikke skjult, og det du har skrevet, er ikke lagret.",
+      "discard": "Forkast",
+      "keepEditing": "Fortsett å redigere",
       "shown": "Driftsvarselet vises igjen.",
       "hiddenSince": "Skjult til {{date}} av {{name}}: «{{reason}}»",
       "someone": "noen",
@@ -1818,12 +1823,13 @@
   "coverage": {
     "open": "Dekningskontroller",
     "title": "Dekningskontroller",
-    "intro": "Parasoll kontrollerer om hver kundeenhet blir overvåket, og varsler om det som mangler. En kontroll kjøres etter hver fullstendige lesing av kilden.",
+    "intro": "Parasoll kontrollerer om hver kundeenhet blir overvåket, og varsler om det som mangler.",
     "readOnly": "Du kan se kontrollene, men ikke endre dem.",
     "rules": {
       "ateraAgentSilent": {
         "name": "Atera-agent som ikke melder seg",
-        "description": "Et driftsvarsel når Atera-agenten på en enhet ikke har meldt seg på lenger enn grensen. En server er kritisk, andre enheter en advarsel."
+        "description": "Et driftsvarsel når Atera-agenten på en enhet ikke har meldt seg på lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
+        "when": "Kontrolleres etter hver fullstendige lesing av Atera-agentene, om natten."
       }
     },
     "enabled": "Varsle",
@@ -1833,7 +1839,7 @@
     },
     "limitHint": "Fra {{min}} til {{max}}. Gjelder fra neste kontroll.",
     "limitInvalid": "Skriv et helt tall fra {{min}} til {{max}}.",
-    "offNote": "Når kontrollen slås av, lukkes de åpne driftsvarslene dens med en gang.",
+    "offNote": "Når du slår den av, lukkes de åpne driftsvarslene dens med en gang.",
     "openGaps_one": "{{count}} åpent driftsvarsel",
     "openGaps_other": "{{count}} åpne driftsvarsler",
     "changed": "Endret {{date}} av {{name}}",

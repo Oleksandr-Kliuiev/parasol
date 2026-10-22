@@ -65,7 +65,7 @@ test('an alert is hidden in Parasoll until a day with a reason and shown again',
   await searchAlerts(page, m);
   await page.getByRole('button', { name: `Actions for ${m} printer offline`, exact: true }).click();
   await page.getByRole('menuitem', { name: 'Hide until…', exact: true }).click();
-  const hide = page.getByRole('dialog', { name: 'Hide the alert until a day', exact: true });
+  const hide = page.getByRole('dialog', { name: 'Hide the alert until a date', exact: true });
   await hide.getByRole('button', { name: 'In a week', exact: true }).click();
   await hide.getByRole('textbox', { name: /Reason/ }).fill('The printer is sent for repair');
   await hide.getByRole('button', { name: 'Hide', exact: true }).click();

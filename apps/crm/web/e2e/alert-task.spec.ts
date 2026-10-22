@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ateraAlert, closeAteraAlert, linkedAteraCustomer, storedAlerts, syncAlerts, syncAtera } from './atera';
+import { ateraAlert, closeAteraAlert, linkedAteraCustomer, searchAlerts, storedAlerts, syncAlerts, syncAtera } from './atera';
 import { api, showInMyTasks, signIn } from './support';
 
 // M38: an alert becomes one task (subject from its title, the employee chooses who and when); a colleague sees that task instead
@@ -14,7 +14,8 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   const me = await api.get<{ displayName: string }>(page, '/bff/user');
 
   await page.goto('/alerts');
-  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(m);
+  // The filtered read first: a button focused in the list before it would be drawn again under the keyboard.
+  await searchAlerts(page, m);
   const row = page.getByRole('table', { name: 'Alerts' }).getByRole('row').filter({ hasText: m });
   const assign = row.getByRole('button', { name: `Assign ${m} disk almost full`, exact: true });
   await assign.focus(); await page.keyboard.press('Enter');

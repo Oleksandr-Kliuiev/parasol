@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles } from '@fluentui/react-components';
+import { useState } from 'react';
+import { Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
 import { Dismiss24Regular, Open16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../../api/client';
@@ -11,6 +11,7 @@ import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
 import { AlertSourceSection } from './AlertActions';
 import { alertTitle } from './alertText';
+import { CoverageRulesDialog } from './CoverageRulesDialog';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
 import { AlertReadLine } from './AlertReadLine';
 import { useAlertReads } from './alertReads';
@@ -35,17 +36,12 @@ const useStyles = makeStyles({
 export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null; onClose: () => void }) {
   const { t } = useTranslation(); const styles = useStyles();
   const read = useAlert(alertId);
-  // Read with the alert: how fresh the stored copy is now, not when the list behind the panel was read.
+  // Read with the alert: how fresh the stored copy is now, not when the list behind the panel was read. Once read, the panel keeps
+  // what it shows while a change reads the alert again (M40): a dialog opened from the panel, and the focus in it, stay put.
   const reads = useAlertReads(alertId !== null);
-  const alert = alertId !== null && !read.isFetching ? read.data : undefined;
-  // M40: hiding or showing the alert reads it again, and the panel draws it anew; once that read is in, focus goes back to the
-  // section that says what is now true instead of being lost with the button that did it.
-  const focusAfter = useRef<number | null>(null);
-  useEffect(() => {
-    if (focusAfter.current === null || !alert || read.dataUpdatedAt <= focusAfter.current) return;
-    document.getElementById(`alert-own-${alert.id}`)?.focus();
-    focusAfter.current = null;
-  }, [alert, read.dataUpdatedAt]);
+  const alert = alertId !== null && read.isFetchedAfterMount ? read.data : undefined;
+  // M40: a gap's panel leads to the setting of the check that found it.
+  const [checks, setChecks] = useState(false); const restore = useRestoreFocusTarget();
   const sourceReads = alert && !reads.isFetching ? reads.data?.filter((r) => r.system === alert.system) : undefined;
   const title = alert ? alertTitle(t, alert) : t('alerts.detail.title');
   const link = alert?.url ? safeHttpUrl(alert.url) : undefined;
@@ -59,7 +55,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
       </DrawerHeaderTitle>
     </DrawerHeader>
     <DrawerBody className={styles.body}>
-      {read.isFetching && <Spinner size="small" label={t('alerts.detail.loading')} />}
+      {read.isFetching && !alert && <Spinner size="small" label={t('alerts.detail.loading')} />}
       {!read.isFetching && read.isError && (missing
         ? <Text block role="status">{t('alerts.detail.notFound')}</Text>
         : <ErrorState error={read.error} onRetry={() => void read.refetch()} />)}
@@ -70,7 +66,11 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
           { label: t('alerts.detail.state'), value: t(`alerts.states.${alert.state}`) },
           { label: t('alerts.detail.customer'), value: <AppLink to={`/organizations/${alert.organizationId}?tab=drift`} onClick={onClose}>
             {alert.organizationName ?? t('alerts.detail.unknownCustomer')}</AppLink> },
-          ...(alert.deviceName ? [{ label: t('alerts.detail.device'), value: alert.deviceName }] : []),
+          // M40: the device leads to its card in the customer's Drift tab (sources, "Open in Atera", inventory), once matched.
+          ...(alert.deviceName ? [{ label: t('alerts.detail.device'), value: alert.machineId
+            ? <AppLink to={`/organizations/${alert.organizationId}?tab=drift&device=${encodeURIComponent(alert.machineId)}`} onClick={onClose}>
+              {alert.deviceName}</AppLink>
+            : alert.deviceName }] : []),
           { label: t('alerts.detail.raised'), value: <>{formatDateTime(alert.createdAt)} · <AlertAge at={alert.createdAt} /></> },
           ...(alert.resolvedAt ? [{ label: t('alerts.detail.resolved'), value: formatDateTime(alert.resolvedAt) }] : []),
           { label: t('alerts.detail.source'), value: <span className={styles.source}>
@@ -79,14 +79,18 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
               ? <Link href={link} target="_blank" rel="noopener noreferrer" className={styles.external}>
                 {t('alerts.detail.openInSource', { name: sourceName(t, alert.system) })}<Open16Regular aria-hidden /></Link>
               // M40: a gap is found by Parasoll's own check, which also says how it closes.
-              : alert.rule ? <Text size={200} className={styles.muted}>{t('alerts.gaps.found')}</Text>
+              : alert.rule ? <>
+                <Text size={200} className={styles.muted}>{t('alerts.gaps.found')}</Text>
+                <Link {...restore} as="button" className={styles.external} onClick={() => setChecks(true)}>{t('alerts.gaps.changeCheck')}</Link>
+              </>
               : <Text size={200} className={styles.muted}>{t('alerts.detail.noLink', { name: sourceName(t, alert.system) })}</Text>}
             {sourceReads && sourceReads.length > 0 && <AlertReadLine reads={sourceReads} />}
           </span> },
         ]} />
         <AlertTaskSection alert={alert} onNavigate={onClose} />
-        <AlertSourceSection alert={alert} onChanged={() => { focusAfter.current = read.dataUpdatedAt; }} />
+        <AlertSourceSection alert={alert} />
       </>}
+      {checks && <CoverageRulesDialog onClose={() => setChecks(false)} />}
     </DrawerBody>
   </OverlayDrawer>;
 }

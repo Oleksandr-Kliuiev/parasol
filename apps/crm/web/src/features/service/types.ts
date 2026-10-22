@@ -181,6 +181,8 @@ export interface Alert {
   /** A coverage gap Parasoll found (M40): the rule that found it and its facts, worded in the reader's language. */
   rule?: string | null;
   facts?: Record<string, string> | null;
+  /** The machine the alert's device belongs to (M40): its card in the customer's Drift tab. */
+  machineId?: string | null;
 }
 
 /** A rule's limit (M40): its default and the range a person may choose from. */

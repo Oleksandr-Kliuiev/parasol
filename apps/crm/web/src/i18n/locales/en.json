@@ -1641,7 +1641,7 @@
     "title": "Alerts",
     "subtitle": "Open alerts of every customer: the critical ones first, then the ones that have waited longest.",
     "subtitleResolved": "Alerts their source no longer reports open, the most recently resolved first.",
-    "subtitleHidden": "Alerts hidden in Parasoll until a day; they are still open in their source.",
+    "subtitleHidden": "Alerts hidden in Parasoll until a date; they are still open in their source.",
     "refresh": "Refresh alerts",
     "filters": "Alert filters",
     "search": "Search title or device",
@@ -1675,6 +1675,7 @@
     },
     "gaps": {
       "found": "Found by Parasoll’s own check. It closes by itself once two checks in a row no longer find it.",
+      "changeCheck": "Change the check",
       "ateraAgentSilent": {
         "title": "The Atera agent on {{device}} has not reported since {{date}}"
       }
@@ -1789,9 +1790,9 @@
       "heading": "In Parasoll",
       "open": "Hide until…",
       "show": "Show again",
-      "title": "Hide the alert until a day",
+      "title": "Hide the alert until a date",
       "sourceStays": "{{source}}’s API cannot snooze an alert, so it stays open there; Parasoll hides it until the day you choose.",
-      "gapStays": "Hidden, the gap is still checked: it comes back on its day, or closes when the checks no longer find it.",
+      "gapStays": "Hiding a gap does not stop the check: it comes back on the day you choose, or closes once the checks no longer find it.",
       "until": "Hide until",
       "untilHint": "It comes back at the start of this day.",
       "shortcuts": "Quick days",
@@ -1809,6 +1810,10 @@
       "hiding": "Hiding…",
       "changed": "The alert changed while you looked at it. Here it is as it is now: decide again.",
       "done": "Hidden until {{date}}.",
+      "discardTitle": "Discard the reason?",
+      "discardBody": "The alert is not hidden, and what you typed has not been saved.",
+      "discard": "Discard",
+      "keepEditing": "Keep editing",
       "shown": "The alert is shown again.",
       "hiddenSince": "Hidden until {{date}} by {{name}}: “{{reason}}”",
       "someone": "someone",
@@ -1818,12 +1823,13 @@
   "coverage": {
     "open": "Coverage checks",
     "title": "Coverage checks",
-    "intro": "Parasoll checks whether every customer device is watched, and raises an alert for what is missing. A check runs after each complete read of its source.",
+    "intro": "Parasoll checks whether every customer device is watched, and raises an alert for what is missing.",
     "readOnly": "You can see the checks, but not change them.",
     "rules": {
       "ateraAgentSilent": {
         "name": "Silent Atera agent",
-        "description": "An alert when the Atera agent on a device has not reported for longer than the limit. A server is critical, any other device a warning."
+        "description": "An alert when the Atera agent on a device has not reported for longer than the limit. A server is critical, any other device a warning.",
+        "when": "Checked after each complete read of Atera’s agents, at night."
       }
     },
     "enabled": "Raise alerts",
@@ -1833,7 +1839,7 @@
     },
     "limitHint": "From {{min}} to {{max}}. Applies from the next check.",
     "limitInvalid": "Enter a whole number from {{min}} to {{max}}.",
-    "offNote": "Switched off, the check closes its open alerts at once.",
+    "offNote": "Switching it off closes its open alerts at once.",
     "openGaps_one": "{{count}} open alert",
     "openGaps_other": "{{count}} open alerts",
     "changed": "Changed {{date}} by {{name}}",

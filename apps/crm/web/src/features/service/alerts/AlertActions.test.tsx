@@ -75,7 +75,7 @@ describe('Alert actions at the source (M40)', () => {
     renderRoutes([page(<AlertQueuePage />)], '/alerts', testUser(['service.read', 'service.write']));
     await user.click(await screen.findByRole('button', { name: 'Actions for Disk almost full on SRV-01' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Hide until…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Hide the alert until a day' });
+    const dialog = await screen.findByRole('dialog', { name: 'Hide the alert until a date' });
     expect(within(dialog).getByText(/API cannot snooze an alert, so it stays open there/)).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'In a week' }));
     await user.click(within(dialog).getByRole('button', { name: 'Hide' }));
@@ -89,7 +89,7 @@ describe('Alert actions at the source (M40)', () => {
     const body = JSON.parse(String(init!.body)) as { until: string; reason: string };
     expect(body.reason).toBe('Disk ordered');
     expect(body.until).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Hide the alert until a day' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Hide the alert until a date' })).not.toBeInTheDocument());
     // The row leaves the open list with its menu: focus goes to the list, not to the page behind it.
     await waitFor(() => expect(document.querySelector('[data-alert-list]')).toHaveFocus());
   });
@@ -116,6 +116,67 @@ describe('Alert actions at the source (M40)', () => {
     // The panel reads the alert again and draws it anew: focus lands on the section that now says it is not hidden.
     await waitFor(() => expect(screen.getByRole('heading', { name: 'In Parasoll' })).toHaveFocus());
     expect(within(screen.getByRole('region', { name: 'In Parasoll' })).getByRole('button', { name: 'Hide until…' })).toBeVisible();
+  });
+
+  it('hides an alert from its panel: the dialog stays while it reads the alert, and focus lands on the section after it', async () => {
+    const user = userEvent.setup();
+    const { alert, fetch } = stub([]);
+    let reads = 0;
+    let hidden: Alert['hidden'] = null;
+    fetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === '/api/v1/service/alerts/a1/hide' && init?.method === 'POST') {
+        hidden = { until: '2026-10-29T23:00:00Z', reason: 'Disk ordered', byName: 'Kari Nordmann', at: '2026-10-22T08:00:00Z' };
+        return json({ ...alert, hidden });
+      }
+      if (url === '/api/v1/service/alerts/a1') { reads++; return json({ ...alert, hidden, etag: `"AAAAAAAAB9${reads}="` }); }
+      if (url.startsWith('/api/v1/actions/kinds')) return json([]);
+      if (url.startsWith('/api/v1/actions?')) return json({ ...empty, uncertain: 0, waiting: 0 });
+      return json(empty);
+    });
+    renderRoutes([page(<AlertDetailDrawer alertId="a1" onClose={() => {}} />)], '/', testUser(['service.read', 'service.write']));
+    await user.click(await within(await screen.findByRole('region', { name: 'In Parasoll' })).findByRole('button', { name: 'Hide until…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hide the alert until a date' });
+    // The dialog reads the alert for its ETag; the panel keeps what it shows, so the dialog stays open meanwhile.
+    await waitFor(() => expect(reads).toBeGreaterThanOrEqual(2));
+    expect(dialog).toBeInTheDocument();
+    await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Disk ordered');
+    await user.click(within(dialog).getByRole('button', { name: 'Hide' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Hide the alert until a date' })).not.toBeInTheDocument());
+    expect(await screen.findByText(/^Hidden until .* by Kari Nordmann: “Disk ordered”$/)).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'In Parasoll' })).toHaveFocus());
+  });
+
+  it('keeps a typed reason through Escape and asks before discarding it; an untouched dialog closes at once', async () => {
+    const user = userEvent.setup();
+    const { alert, fetch } = stub([]);
+    fetch.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/service/alerts/a1') return json({ ...alert, etag: '"AAAAAAAAB9E="' });
+      if (url.startsWith('/api/v1/actions/kinds')) return json([]);
+      if (url.startsWith('/api/v1/service/alerts')) return json(alertPage([alert]));
+      return json(empty);
+    });
+    renderRoutes([page(<AlertQueuePage />)], '/alerts', testUser(['service.read', 'service.write']));
+    const open = async () => {
+      await user.click(await screen.findByRole('button', { name: 'Actions for Disk almost full on SRV-01' }));
+      await user.click(await screen.findByRole('menuitem', { name: 'Hide until…' }));
+      return screen.findByRole('dialog', { name: 'Hide the alert until a date' });
+    };
+    await open();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Hide the alert until a date' })).not.toBeInTheDocument());
+
+    const dialog = await open();
+    await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Disk ordered');
+    await user.keyboard('{Escape}');
+    const question = await screen.findByRole('dialog', { name: 'Discard the reason?' });
+    await user.click(within(question).getByRole('button', { name: 'Keep editing' }));
+    await waitFor(() => expect(within(dialog).getByRole('textbox', { name: /Reason/ })).toHaveFocus());
+    expect(within(dialog).getByRole('textbox', { name: /Reason/ })).toHaveValue('Disk ordered');
+    await user.keyboard('{Escape}');
+    await user.click(within(await screen.findByRole('dialog', { name: 'Discard the reason?' })).getByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Hide the alert until a date' })).not.toBeInTheDocument());
+    expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/hide'))).toBe(false);
   });
 
   it('gives the alert panel its actions in Atera and the log of what was asked', async () => {

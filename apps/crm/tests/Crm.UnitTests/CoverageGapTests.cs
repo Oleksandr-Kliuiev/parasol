@@ -31,6 +31,11 @@ public sealed class CoverageGapTests
         again.ShouldBeEmpty();
         second.ShouldBe(new CoverageCheckResult(1, 1, 0, 0, 0));
         (gap.State, gap.CreatedAtSource, gap.LastSeenAt).ShouldBe((AlertState.Open, Now, (DateTimeOffset?)Now.AddDays(1)), "found when it began, seen at every check");
+
+        // A merge moved the device to another organization: the gap follows it and keeps the customer id a task names it by.
+        var merged = Guid.Parse("44444444-0000-0000-0000-000000000002");
+        Check([Finding() with { OrganizationId = merged }], [gap], Now.AddDays(2));
+        (gap.OrganizationId, gap.ExternalCustomerId).ShouldBe((merged, Customer.ToString("N")));
     }
 
     [Fact]
