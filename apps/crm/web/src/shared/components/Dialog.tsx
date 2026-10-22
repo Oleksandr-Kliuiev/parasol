@@ -1,4 +1,5 @@
 // The one place that wraps Fluent's Dialog; everything else imports this one (eslint no-restricted-imports).
+// A dialog may open on a date or time field: the focusin Safari leaves out for those is sent app-wide (app/focusin.ts).
 // eslint-disable-next-line no-restricted-imports
 import { Dialog as FluentDialog, createPresenceComponent, type DialogProps } from '@fluentui/react-components';
 import { backOut, ease } from '../../app/motion';
