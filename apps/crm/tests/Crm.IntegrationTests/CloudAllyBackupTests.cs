@@ -185,6 +185,24 @@ public sealed class CloudAllyBackupTests(CrmWebFactory factory)
             .ShouldBe((0, "NoAccount"), "an account CloudAlly no longer lists is forgotten with its tasks");
     }
 
+    [Fact]
+    public async Task A_customer_whose_account_was_unlinked_forgets_its_backups_at_the_next_read()
+    {
+        await using var host = Start(factory);
+        var account = await host.LinkedAccountAsync("Unlinked", ("MS365", "ACTIVE", [Entity("a@unlinked.test")]));
+        host.Publish();
+        await host.SyncAsync();
+        (await EntitiesAsync(host, account, string.Empty)).ShouldHaveSingleItem();
+
+        var links = await (await host.Client().GetAsync($"/api/v1/integrations/links?entityType=Organization&entityId={account.OrganizationId}", Ct)).ReadJsonAsync();
+        var link = links.EnumerateArray().Single(l => l.GetProperty("system").GetString() == CloudAllyTypes.System);
+        (await host.Client().DeleteAsync($"/api/v1/integrations/links/{link.GetProperty("id").GetGuid()}", Ct)).IsSuccessStatusCode.ShouldBeTrue();
+        await host.SyncAsync();
+
+        (await EntitiesAsync(host, account, string.Empty)).ShouldBeEmpty("the users of an unlinked customer are personal data nobody reads any more");
+        (await OverviewAsync(host, account)).GetProperty("accounts").GetArrayLength().ShouldBe(0);
+    }
+
     private static async Task<JsonElement> OverviewAsync(CloudAllyHost host, TestAccount account)
     {
         var response = await host.Client().GetAsync($"/api/v1/backup/organizations/{account.OrganizationId}", Ct);

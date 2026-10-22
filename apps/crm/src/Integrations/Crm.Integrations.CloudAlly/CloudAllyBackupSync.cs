@@ -165,8 +165,10 @@ public sealed class CloudAllyBackupSyncJob(
                 byAccount[task.UserId!].Add(CloudAllyBackupMapping.Task(detail with { Source = detail.Source ?? task.Source, Status = detail.Status ?? task.Status }, index));
             }
 
-            // Every linked organization is covered, so an account CloudAlly no longer lists is forgotten there too.
-            var organizations = linked.Values.Distinct().ToDictionary(id => id, _ => new List<ExternalBackupAccount>());
+            // Every linked organization is covered, so an account CloudAlly no longer lists is forgotten there too; so is every
+            // organization with stored backups, so one whose account was unlinked forgets them now.
+            var organizations = linked.Values.Concat(await backups.GetOrganizationsAsync(CloudAllyTypes.System, ct)).Distinct()
+                .ToDictionary(id => id, _ => new List<ExternalBackupAccount>());
             foreach (var (accountId, organizationId) in linked)
             {
                 if (!accounts.TryGetValue(accountId, out var account))

@@ -26,7 +26,8 @@ public sealed class CloudAllyActionTests(CrmWebFactory factory)
     public async Task Taking_a_backup_now_posts_once_and_stores_what_cloudally_shows_afterwards()
     {
         await using var host = Start(factory);
-        var account = await StoredAsync(host, ("MS365", "ACTIVE", [Entity("kari@run.test", successHoursAgo: 40)]));
+        var ola = Entity("ola@run.test", successHoursAgo: 30, attemptHoursAgo: 2, error: "Mailbox is full");
+        var account = await StoredAsync(host, ("MS365", "ACTIVE", [Entity("kari@run.test", successHoursAgo: 40), ola]));
         var task = account.Tasks[0];
         host.Publish();
         host.On("POST", $"/v2/resellers/accounts/{account.Id}/backup-tasks/{task.Id}/backupNow").RespondWith(JsonReply(new { success = true, status = "OK", statusCode = 200 }));
@@ -41,6 +42,10 @@ public sealed class CloudAllyActionTests(CrmWebFactory factory)
         host.Count("POST", $"/v2/resellers/accounts/{account.Id}/backup-tasks/{task.Id}/backupNow").ShouldBe(1);
         host.Headers("POST", $"/v2/resellers/accounts/{account.Id}/backup-tasks/{task.Id}/backupNow")["Authorization"].ShouldBe("Bearer test-token");
         host.Count("GET", $"/v2/resellers/accounts/{account.Id}/backup-tasks/{task.Id}").ShouldBe(2, "read before sending and again after");
+        // The read of the task alone carries no statuses: Ola's failure stays until a complete read says otherwise.
+        await using var scope = host.Services.CreateAsyncScope();
+        (await scope.ServiceProvider.GetRequiredService<BackupDbContext>().Entities.AsNoTracking().SingleAsync(e => e.ExternalId == ola.Id, Ct)).Error
+            .ShouldBe("Mailbox is full");
     }
 
     [Fact]

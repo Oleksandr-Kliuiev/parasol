@@ -149,6 +149,22 @@ public sealed class BackupEntity : Entity
         SizeBytes = s.SizeBytes;
         LastSeenAt = now;
     }
+
+    /// <summary>
+    /// What a read of the task alone says, after an action: the state, whether a backup runs and a newer last backup. The last
+    /// attempt, the error and the licensing come only with the status list of a complete read, so they stay as they were.
+    /// </summary>
+    public void ApplyLive(ExternalBackupEntity s, DateTimeOffset now)
+    {
+        Status = Text.Code(s.Status);
+        Running = s.Running;
+        if (s.LastBackupAt is { } last && (LastBackupAt is not { } stored || last > stored))
+        {
+            LastBackupAt = last;
+        }
+
+        LastSeenAt = now;
+    }
 }
 
 /// <summary>

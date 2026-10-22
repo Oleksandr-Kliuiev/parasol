@@ -104,7 +104,7 @@ public sealed record ExternalBackupBillLine(
 /// <summary>A stored account as an action's preview names it.</summary>
 public sealed record BackupAccountRef(Guid Id, string System, string ExternalId, Guid OrganizationId, string Name, string? Email, string? Status, string? Region);
 
-/// <summary>A stored task as an action's preview names it, with its account.</summary>
+/// <summary>A stored task as an action's preview names it, with its account; <paramref name="Entities"/> counts those it backs up.</summary>
 public sealed record BackupTaskRef(
     Guid Id, string ExternalId, BackupService Service, string Source, string? Alias, string? Status, bool Running, DateTimeOffset? LastBackupAt,
     int Entities, BackupAccountRef Account);
@@ -124,13 +124,20 @@ public interface IBackupApi
     Task<BackupSnapshotResult> ApplySnapshotAsync(BackupSnapshot snapshot, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Stores what a live read of one task found (after an action): its state and its entities' states. A task the CRM has not stored
-    /// is left alone, and entities the read does not name stay as they are until the next complete read.
+    /// Stores what a live read of one task found (after an action): its state and its entities' states and newer last backups. The
+    /// last attempts, errors and licensing come only with a complete read and stay as they were; a task the CRM has not stored is
+    /// left alone, and entities the read does not name stay as they are until the next complete read.
     /// </summary>
     Task ApplyTaskAsync(string system, ExternalBackupTask task, CancellationToken cancellationToken);
 
     /// <summary>Stores the bill lines read on <paramref name="day"/>; reading the same day again replaces that day's lines of the accounts read.</summary>
     Task<int> ApplyBillsAsync(string system, DateOnly day, IReadOnlyCollection<ExternalBackupBillLine> lines, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The organizations that have stored backups of the source: a read covers them too, so a customer whose account was unlinked is
+    /// forgotten at the next complete read instead of keeping its copy for good.
+    /// </summary>
+    Task<IReadOnlyCollection<Guid>> GetOrganizationsAsync(string system, CancellationToken cancellationToken);
 
     Task<BackupAccountRef?> GetAccountAsync(string system, string externalId, CancellationToken cancellationToken);
 

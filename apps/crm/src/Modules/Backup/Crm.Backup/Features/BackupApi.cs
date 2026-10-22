@@ -83,7 +83,7 @@ internal sealed class BackupApi(BackupDbContext db, TimeProvider time) : IBackup
             {
                 if (stored.Entities.FirstOrDefault(e => e.ExternalId == source.ExternalId) is { } entity)
                 {
-                    entity.Apply(source, now);
+                    entity.ApplyLive(source, now);
                 }
                 else
                 {
@@ -125,6 +125,9 @@ internal sealed class BackupApi(BackupDbContext db, TimeProvider time) : IBackup
             return keys.Count;
         }, cancellationToken);
 
+    public async Task<IReadOnlyCollection<Guid>> GetOrganizationsAsync(string system, CancellationToken cancellationToken) =>
+        await db.Accounts.AsNoTracking().Where(a => a.System == system).Select(a => a.OrganizationId).Distinct().ToListAsync(cancellationToken);
+
     public async Task<BackupAccountRef?> GetAccountAsync(string system, string externalId, CancellationToken cancellationToken) =>
         await db.Accounts.AsNoTracking().Where(a => a.System == system && a.ExternalId == externalId)
             .Select(a => new BackupAccountRef(a.Id, a.System, a.ExternalId, a.OrganizationId, a.Name, a.Email, a.Status, a.Region))
@@ -134,7 +137,7 @@ internal sealed class BackupApi(BackupDbContext db, TimeProvider time) : IBackup
         await (from t in db.Tasks.AsNoTracking()
                join a in db.Accounts.AsNoTracking() on t.AccountId equals a.Id
                where a.System == system && t.ExternalId == externalId
-               select new BackupTaskRef(t.Id, t.ExternalId, t.Service, t.Source, t.Alias, t.Status, t.Running, t.LastBackupAt, t.Entities.Count,
+               select new BackupTaskRef(t.Id, t.ExternalId, t.Service, t.Source, t.Alias, t.Status, t.Running, t.LastBackupAt, t.Entities.Count(e => e.Status != "NOTACTIVE"),
                    new BackupAccountRef(a.Id, a.System, a.ExternalId, a.OrganizationId, a.Name, a.Email, a.Status, a.Region)))
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -144,7 +147,7 @@ internal sealed class BackupApi(BackupDbContext db, TimeProvider time) : IBackup
                join a in db.Accounts.AsNoTracking() on t.AccountId equals a.Id
                where a.System == system && t.ExternalId == taskExternalId && e.ExternalId == entityExternalId
                select new BackupEntityRef(e.Id, e.ExternalId, e.Name, e.FullName, e.ExtId, e.Status, e.LastBackupAt, e.FirstSeenAt,
-                   new BackupTaskRef(t.Id, t.ExternalId, t.Service, t.Source, t.Alias, t.Status, t.Running, t.LastBackupAt, t.Entities.Count,
+                   new BackupTaskRef(t.Id, t.ExternalId, t.Service, t.Source, t.Alias, t.Status, t.Running, t.LastBackupAt, t.Entities.Count(e => e.Status != "NOTACTIVE"),
                        new BackupAccountRef(a.Id, a.System, a.ExternalId, a.OrganizationId, a.Name, a.Email, a.Status, a.Region))))
             .FirstOrDefaultAsync(cancellationToken);
 
