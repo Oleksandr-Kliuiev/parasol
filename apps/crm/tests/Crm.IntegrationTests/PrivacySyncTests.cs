@@ -35,7 +35,7 @@ public sealed class PrivacySyncTests(CrmWebFactory factory)
         (await PrivacyTests.ExecuteRawAsync(admin, caseId, plan.Etag, plan.Digest, number)).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         // Atera still has the person — and a stranger at the same customer, who is synchronized as usual.
-        var strangerId = Random.Shared.Next(100_000_000, 999_999_999);
+        var strangerId = TestData.AteraId();
         var strangerEmail = $"fremmed.{person.Marker.ToLowerInvariant()}@example.no";
         ContactsInAtera(person, strangerId, strangerEmail);
         await factory.RunJobAsync<AteraContactSyncJob>(j => j.RunAsync(CancellationToken.None));
@@ -99,14 +99,14 @@ public sealed class PrivacySyncTests(CrmWebFactory factory)
         }
     }
 
-    private void ContactsInAtera(PrivacyPerson person, int strangerId, string strangerEmail) =>
+    private void ContactsInAtera(PrivacyPerson person, long strangerId, string strangerEmail) =>
         factory.Atera.Given(Request.Create().WithPath("/api/v3/contacts").UsingGet().WithParam("page", "1"))
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBodyAsJson(new
             {
                 items = new object[]
                 {
                     new { EndUserID = long.Parse(person.AteraContactId, System.Globalization.CultureInfo.InvariantCulture), CustomerID = 1, Firstname = person.FirstName, Lastname = person.LastName, Email = person.Email },
-                    new { EndUserID = (long)strangerId, CustomerID = 1, Firstname = "Fremmed", Lastname = person.Marker, Email = strangerEmail },
+                    new { EndUserID = strangerId, CustomerID = 1, Firstname = "Fremmed", Lastname = person.Marker, Email = strangerEmail },
                 },
                 totalItemCount = 2, page = 1, itemsInPage = 2, totalPages = 1,
             }));
