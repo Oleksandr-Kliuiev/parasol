@@ -384,6 +384,20 @@ public sealed class RecordingEventHandler : IDomainEventHandler<OrganizationCrea
 
 public static class TestData
 {
+    // Starts at a random point between 1 000 000 000 and 2 000 000 000: above the ranges the PowerOffice classes still draw their
+    // own ids from, and below int.MaxValue, as PowerOffice ids are 32-bit numbers in some of its records.
+    private static long powerOfficeId = 1_000_000_000 + Random.Shared.NextInt64(0, 1_000_000) * 1_000;
+
+    /// <summary>
+    /// A PowerOffice id (customer, product) that no other test of this run uses. The database is shared and classes run in
+    /// parallel: a random number from a narrow range was sometimes an id another test had already linked, and the second link was
+    /// refused (409 INT_EXTERNAL_ALREADY_LINKED). A counter cannot repeat itself.
+    /// </summary>
+    public static long PowerOfficeId() => Interlocked.Increment(ref powerOfficeId);
+
+    /// <summary>The first of <paramref name="count"/> consecutive PowerOffice ids that no other test of this run uses.</summary>
+    public static long PowerOfficeIds(int count) => Interlocked.Add(ref powerOfficeId, count) - count + 1;
+
     /// <summary>Random organization number with a valid MOD11 check digit.</summary>
     public static string OrgNumber()
     {
