@@ -105,7 +105,8 @@ public sealed record MachineDetail(
     string Etag);
 
 /// <summary>The machines of a customer and one machine's card (M40).</summary>
-internal sealed class MachineQueries(ServiceDbContext db, ICustomersApi customers, IEnumerable<Crm.SharedKernel.Operations.ISyncCompletenessSource> completeness)
+internal sealed class MachineQueries(
+    ServiceDbContext db, ICustomersApi customers, IEnumerable<Crm.SharedKernel.Operations.ISyncCompletenessSource> completeness, TimeProvider time)
 {
     public const int DefaultLimit = 25;
     public const int MaxLimit = 100;
@@ -271,13 +272,16 @@ internal sealed class MachineQueries(ServiceDbContext db, ICustomersApi customer
         return devices.GroupBy(d => d.MachineId).ToDictionary(g => g.Key, g => (IReadOnlyList<MachineSourceItem>)g.Select(d => d.Item).ToList());
     }
 
-    /// <summary>Open alerts of the machines' devices, current or not: an alert of a device no longer reported is still open.</summary>
+    /// <summary>
+    /// Open alerts of the machines' devices, current or not: an alert of a device no longer reported is still open. One hidden in
+    /// Parasoll for now does not count.
+    /// </summary>
     private async Task<Dictionary<Guid, int>> OpenAlertsAsync(List<Guid> machineIds, CancellationToken ct) =>
         machineIds.Count == 0
             ? []
-            : await (from alert in db.Alerts.AsNoTracking()
+            : await (from alert in db.Alerts.AsNoTracking().Where(AlertVisibility.OpenNow(time.GetUtcNow()))
                      join device in db.Devices.AsNoTracking() on alert.DeviceId equals device.Id
-                     where alert.State == AlertState.Open && device.MachineId != null && machineIds.Contains(device.MachineId.Value)
+                     where device.MachineId != null && machineIds.Contains(device.MachineId.Value)
                      group alert by device.MachineId!.Value into g
                      select new { g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.Key, g => g.Count, ct);

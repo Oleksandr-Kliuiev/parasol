@@ -174,6 +174,18 @@ export interface Alert {
   lastSeenAt: string | null;
   resolvedAt: string | null;
   url: string | null;
+  /** Hidden in Parasoll until a day (M40): the source still has it open. */
+  hidden?: AlertHold | null;
+  /** Read with one alert only: the ETag a change of its status in Parasoll sends. */
+  etag?: string | null;
+}
+
+/** An alert hidden in Parasoll (M40): until when, why, by whom and when. */
+export interface AlertHold {
+  until: string;
+  reason: string | null;
+  byName: string | null;
+  at: string | null;
 }
 
 /**

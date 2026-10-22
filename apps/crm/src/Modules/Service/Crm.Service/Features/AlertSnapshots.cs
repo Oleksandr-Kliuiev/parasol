@@ -86,6 +86,8 @@ internal static class AlertSnapshotRules
             var deviceId = devices.Find(source);
             if (byExternalId.TryGetValue(source.ExternalId, out var alert))
             {
+                // Loaded with its hold: one an earlier release stored without a hold gets it now (M40).
+                alert.EnsureHold();
                 switch (alert.Observe(snapshot.Kind, source, deviceId, now))
                 {
                     case AlertChange.Reopened:
@@ -173,8 +175,9 @@ internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
                 DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000;
                 IF @r < 0 THROW 51000, 'Another read of these alerts is being stored.', 1;
                 """, ct);
-            // Resolved alerts stay as history; only those the read lists again are loaded, to be opened again.
-            var stored = await db.Alerts
+            // Resolved alerts stay as history; only those the read lists again are loaded, to be opened again (with their hold,
+            // which a new occurrence clears).
+            var stored = await db.Alerts.Include(a => a.Hold)
                 .Where(a => a.System == snapshot.System && (a.State != AlertState.Resolved || listed.Contains(a.ExternalId)))
                 .ToListAsync(ct);
             var devices = organizations.Count == 0

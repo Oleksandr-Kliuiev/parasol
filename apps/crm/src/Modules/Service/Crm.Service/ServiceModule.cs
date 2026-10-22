@@ -89,6 +89,7 @@ public static class ServiceModule
         services.AddScoped<AlertQueries>();
         services.AddScoped<MachineQueries>();
         services.AddScoped<MachineDecisions>();
+        services.AddScoped<AlertHiding>();
         // DEV-11: tickets and ticket requests of a person in subject requests, and the retention of the ticket mirror.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ServicePersonalData>();
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, Features.Privacy.TicketMirrorRetention>();
@@ -176,7 +177,8 @@ public static class ServiceModule
                 // One computer is one machine, whichever sources watch it (M40).
                 var devices = await db.Machines.AsNoTracking().Where(m => m.OrganizationId == organizationId && m.RemovedAt == null)
                     .GroupBy(m => m.Type).Select(g => new { g.Key, Count = g.Count(), Online = g.Count(m => m.Online) }).ToListAsync(ct);
-                var alerts = await db.Alerts.AsNoTracking().Where(a => a.OrganizationId == organizationId && a.State == AlertState.Open)
+                // Open in the source and not hidden in Parasoll now (M40).
+                var alerts = await db.Alerts.AsNoTracking().Where(AlertVisibility.OpenNow(time.GetUtcNow())).Where(a => a.OrganizationId == organizationId)
                     .GroupBy(a => a.Severity).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
                 var tickets = db.Tickets.AsNoTracking().Where(t => t.OrganizationId == organizationId);
                 return Results.Ok(new ServiceSummary(
@@ -198,7 +200,8 @@ public static class ServiceModule
         group.MapTicketEndpoints();
         group.MapMachineEndpoints();
 
-        group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, int? limit, string? cursor, ServiceDbContext db, CancellationToken ct) =>
+        group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, int? limit, string? cursor, ServiceDbContext db, TimeProvider time,
+                CancellationToken ct) =>
             {
                 var devices = db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId);
                 if (includeRemoved != true)
@@ -226,7 +229,7 @@ public static class ServiceModule
                 var ids = rows.Select(d => (Guid?)d.Id).ToList();
                 var open = ids.Count == 0
                     ? new Dictionary<Guid, int>()
-                    : await db.Alerts.AsNoTracking().Where(a => a.State == AlertState.Open && ids.Contains(a.DeviceId))
+                    : await db.Alerts.AsNoTracking().Where(AlertVisibility.OpenNow(time.GetUtcNow())).Where(a => ids.Contains(a.DeviceId))
                         .GroupBy(a => a.DeviceId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, ct);
                 return Results.Ok(new PagedResult<DeviceItem>(
                     rows.Select(d => d with { OpenAlerts = open.GetValueOrDefault(d.Id) }).ToList(),
@@ -236,10 +239,20 @@ public static class ServiceModule
 
         // M38: one list for a customer's tab and the queue across customers; organizationId narrows it to one customer.
         group.MapGet("/alerts", async (
-                Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? q, string? cursor, int? limit,
+                Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? q, string? cursor, int? limit, bool? hidden,
                 AlertQueries alerts, CancellationToken ct) =>
-                (await alerts.ListAsync(organizationId, state, severity, deviceId, q, cursor, limit, ct)).ToHttpResult(Results.Ok))
+                (await alerts.ListAsync(organizationId, state, severity, deviceId, q, cursor, limit, ct, hidden == true)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ServiceRead);
+
+        // M40: hidden in Parasoll until a day, with a reason, and shown again; the source is never asked (it cannot snooze).
+        group.MapPost("/alerts/{id:guid}/hide", (Guid id, HideAlertRequest request, HttpRequest http, AlertHiding hiding, AlertQueries alerts,
+                    CancellationToken ct) => ChangeAlert(http, alerts, ifMatch => hiding.HideAsync(id, request, ifMatch, ct), ct))
+            .Validate<HideAlertRequest>()
+            .RequirePermission(Permissions.ServiceWrite);
+
+        group.MapPost("/alerts/{id:guid}/show", (Guid id, HttpRequest http, AlertHiding hiding, AlertQueries alerts, CancellationToken ct) =>
+                ChangeAlert(http, alerts, ifMatch => hiding.ShowAsync(id, ifMatch, ct), ct))
+            .RequirePermission(Permissions.ServiceWrite);
 
         group.MapGet("/alerts/urgent", async (int? limit, AlertQueries alerts, CancellationToken ct) =>
                 Results.Ok(await alerts.UrgentAsync(limit, ct)))
@@ -309,5 +322,18 @@ public static class ServiceModule
             .RequirePermission(Permissions.ServiceRead);
 
         return app;
+    }
+
+    /// <summary>A change of an alert's status in Parasoll: the ETag the person saw, then the alert as it is now.</summary>
+    private static async Task<IResult> ChangeAlert(
+        HttpRequest http, AlertQueries alerts, Func<string, Task<Result<Guid>>> change, CancellationToken ct)
+    {
+        if (http.GetIfMatch() is not { } ifMatch)
+        {
+            return HeaderExtensions.PreconditionRequired();
+        }
+
+        var changed = await change(ifMatch);
+        return changed.IsSuccess ? (await alerts.GetAsync(changed.Value, ct)).ToHttpResult(Results.Ok) : changed.Error!.ToProblem();
     }
 }

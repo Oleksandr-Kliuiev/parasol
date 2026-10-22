@@ -192,9 +192,9 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             .GroupBy(t => 1)
             .Select(g => new { Open = g.Count(), Unassigned = g.Count(t => t.TechnicianUserId == null) })
             .SingleOrDefaultAsync(cancellationToken);
-        // Resolved alerts stay as history and acknowledged ones are in hand; only open alerts count.
+        // Resolved alerts stay as history and acknowledged ones are in hand; only open alerts count, not those hidden for now (M40).
         var alerts = await db.Alerts.AsNoTracking()
-            .Where(a => a.State == AlertState.Open)
+            .Where(AlertVisibility.OpenNow(time.GetUtcNow()))
             .GroupBy(a => a.Severity)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);

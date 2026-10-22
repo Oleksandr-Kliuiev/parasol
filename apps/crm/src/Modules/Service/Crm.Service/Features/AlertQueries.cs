@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Linq.Expressions;
 using Crm.Customers.Contracts;
+using Crm.Identity.Contracts;
+using Crm.Infrastructure.Persistence;
 using Crm.Service.Contracts;
 using Crm.Service.Domain;
 using Crm.Service.Persistence;
@@ -27,7 +29,12 @@ public sealed record AlertListItem(
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastSeenAt,
     DateTimeOffset? ResolvedAt,
-    string? Url);
+    string? Url,
+    AlertHoldItem? Hidden = null,
+    string? Etag = null);
+
+/// <summary>An alert hidden in Parasoll (M40): until when, why, and by whom.</summary>
+public sealed record AlertHoldItem(DateTimeOffset Until, string? Reason, string? ByName, DateTimeOffset? At);
 
 /// <summary>A page of alerts. The counts cover the whole filter, not the page (DEV-12); the reads say how fresh the stored alerts are.</summary>
 public sealed record AlertPage(
@@ -44,7 +51,8 @@ public sealed record AlertSourceRead(string System, DateTimeOffset? StartedAt, b
 public sealed record UrgentAlerts(IReadOnlyList<AlertListItem> Items, int TotalCount, int Critical, int Warning, IReadOnlyList<AlertSourceRead> Reads);
 
 /// <summary>Alerts across customers (M38): the queue with its filters and the short urgent list for My day.</summary>
-internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers, IEnumerable<ISyncCompletenessSource> completeness)
+internal sealed class AlertQueries(
+    ServiceDbContext db, ICustomersApi customers, IUserDirectory users, IEnumerable<ISyncCompletenessSource> completeness, TimeProvider time)
 {
     public const int DefaultLimit = 25;
     public const int MaxLimit = 100;
@@ -61,14 +69,15 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
 
     /// <summary>
     /// Alerts in one state (open unless asked otherwise). Open ones come in the order they should be looked at: critical first, and
-    /// within a severity the oldest first; resolved ones newest resolved first. Filters narrow the totals as well as the page; the
+    /// within a severity the oldest first; resolved ones newest resolved first. An open list leaves out what is hidden in Parasoll
+    /// now (M40); <paramref name="hidden"/> lists just those, in the open order. Filters narrow the totals as well as the page; the
     /// cursor carries every sort value, so a cursor of one order is refused by the other.
     /// </summary>
     public async Task<Result<AlertPage>> ListAsync(
         Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? search, string? cursor, int? limit,
-        CancellationToken ct)
+        CancellationToken ct, bool hidden = false)
     {
-        if ((state is { } s && !Enum.IsDefined(s)) || (severity is { } v && !Enum.IsDefined(v)))
+        if ((state is { } s && !Enum.IsDefined(s)) || (severity is { } v && !Enum.IsDefined(v)) || (hidden && state == AlertState.Resolved))
         {
             return Error.Validation("SRV_ALERT_FILTER_INVALID", "Unknown alert state or severity.");
         }
@@ -81,7 +90,11 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
             return Error.Validation("SRV_ALERT_CURSOR_INVALID", "The alert page does not belong to this list.");
         }
 
-        var alerts = db.Alerts.AsNoTracking().Where(a => a.State == wanted);
+        var now = time.GetUtcNow();
+        var stored = db.Alerts.AsNoTracking().Include(a => a.Hold);
+        var alerts = hidden ? stored.Where(AlertVisibility.HiddenNow(now))
+            : wanted == AlertState.Open ? stored.Where(AlertVisibility.OpenNow(now))
+            : stored.Where(a => a.State == wanted);
         if (organizationId is { } organization)
         {
             alerts = alerts.Where(a => a.OrganizationId == organization);
@@ -110,13 +123,16 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
         return new AlertPage(await ItemsAsync(rows, ct), next, counts.Total, counts.Critical, counts.Warning, await ReadsAsync(ct));
     }
 
-    /// <summary>One stored alert in any state, with its customer's name: the queue's side panel and a link from My day.</summary>
+    /// <summary>
+    /// One stored alert in any state, with its customer's name: the queue's side panel and a link from My day. The ETag is the one
+    /// a person's change of its status in Parasoll must send (M40).
+    /// </summary>
     public async Task<Result<AlertListItem>> GetAsync(Guid id, CancellationToken ct)
     {
-        var alert = await db.Alerts.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, ct);
+        var alert = await db.Alerts.Include(a => a.Hold).SingleOrDefaultAsync(a => a.Id == id, ct);
         return alert is null
             ? Error.NotFound("SRV_ALERT_NOT_FOUND", "The alert is not stored in the CRM.")
-            : (await ItemsAsync([alert], ct))[0];
+            : (await ItemsAsync([alert], ct))[0] with { Etag = db.GetETag((object?)alert.Hold ?? alert) };
     }
 
     /// <summary>
@@ -125,7 +141,7 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
     /// </summary>
     public async Task<UrgentAlerts> UrgentAsync(int? limit, CancellationToken ct)
     {
-        var open = db.Alerts.AsNoTracking().Where(a => a.State == AlertState.Open);
+        var open = db.Alerts.AsNoTracking().Include(a => a.Hold).Where(AlertVisibility.OpenNow(time.GetUtcNow()));
         var counts = await CountAsync(open, ct);
         var take = Math.Clamp(limit ?? UrgentDefaultLimit, 1, UrgentMaxLimit);
         var rows = await AlertOrder.Open(open, null).Take(take).ToListAsync(ct);
@@ -167,13 +183,19 @@ internal sealed class AlertQueries(ServiceDbContext db, ICustomersApi customers,
 
     private async Task<IReadOnlyList<AlertListItem>> ItemsAsync(List<Alert> rows, CancellationToken ct)
     {
-        // One batch for the page's customer names, never a lookup per row.
+        // One batch for the page's customer names, and one for the people who hid alerts, never a lookup per row.
         var names = rows.Count == 0
             ? new Dictionary<Guid, string>()
             : await customers.GetOrganizationNamesAsync(rows.Select(a => a.OrganizationId).Distinct().ToList(), ct);
+        var now = time.GetUtcNow();
+        var hiders = rows.Where(a => a.IsHidden(now)).Select(a => a.Hold?.By).OfType<Guid>().Distinct().ToList();
+        var people = hiders.Count == 0 ? new Dictionary<Guid, UserSummary>() : await users.GetUsersAsync(hiders, ct);
         return rows.Select(a => new AlertListItem(
             a.Id, a.OrganizationId, names.GetValueOrDefault(a.OrganizationId), a.System, a.Kind, a.ExternalId, a.Severity, a.State, a.Title,
-            a.DeviceName, a.DeviceId, a.CreatedAtSource, a.LastSeenAt, a.ResolvedAt, a.Url)).ToList();
+            a.DeviceName, a.DeviceId, a.CreatedAtSource, a.LastSeenAt, a.ResolvedAt, a.Url,
+            a.IsHidden(now) && a.Hold is { Until: { } until } hold
+                ? new AlertHoldItem(until, hold.Reason, hold.By is { } by ? people.GetValueOrDefault(by)?.DisplayName : null, hold.At)
+                : null)).ToList();
     }
 }
 

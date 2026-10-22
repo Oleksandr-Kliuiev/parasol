@@ -1641,12 +1641,14 @@
     "title": "Driftsvarsler",
     "subtitle": "Åpne driftsvarsler for alle kunder: de kritiske først, deretter de som har ventet lengst.",
     "subtitleResolved": "Driftsvarsler som kilden ikke lenger melder som åpne, de sist løste først.",
+    "subtitleHidden": "Driftsvarsler som er skjult i Parasoll til en dag; de er fortsatt åpne i kilden.",
     "refresh": "Oppdater driftsvarsler",
     "filters": "Filtre for driftsvarsler",
     "search": "Søk i tittel eller enhet",
     "stateLabel": "Vis",
     "show": {
       "open": "Åpne",
+      "hidden": "Skjult",
       "resolved": "Løste"
     },
     "severityLabel": "Alvorlighet",
@@ -1684,6 +1686,7 @@
     },
     "empty": "Ingen åpne driftsvarsler. Nye vises her etter neste lesing fra Atera.",
     "emptyResolved": "Ingen løste driftsvarsler.",
+    "emptyHidden": "Ingen driftsvarsler er skjult.",
     "emptyFiltered": "Ingen driftsvarsler passer med disse filtrene.",
     "detail": {
       "title": "Driftsvarsel",
@@ -1774,6 +1777,34 @@
       "deleteItem": "Slett i Atera …",
       "deleteTitle": "Slett driftsvarselet i Atera",
       "none": "Ingenting er bedt om i Atera for dette driftsvarselet."
+    },
+    "hide": {
+      "heading": "I Parasoll",
+      "open": "Skjul til …",
+      "show": "Vis igjen",
+      "title": "Skjul driftsvarselet til en dag",
+      "sourceStays": "API-et til {{source}} kan ikke utsette et driftsvarsel, så det forblir åpent der; Parasoll skjuler det til dagen du velger.",
+      "until": "Skjul til",
+      "untilHint": "Det kommer tilbake ved starten av denne dagen.",
+      "shortcuts": "Raske valg",
+      "in": {
+        "tomorrow": "I morgen",
+        "inAWeek": "Om en uke",
+        "inAMonth": "Om en måned"
+      },
+      "invalidDay": "Velg en dag etter i dag, høyst {{days}} dager frem.",
+      "reason": "Begrunnelse",
+      "reasonHint": "Vises for alle sammen med det skjulte driftsvarselet.",
+      "reasonRequired": "Skriv hvorfor driftsvarselet skjules.",
+      "summary": "Skjult for alle til {{date}}; det kommer tilbake av seg selv.",
+      "confirm": "Skjul",
+      "hiding": "Skjuler …",
+      "changed": "Driftsvarselet ble endret mens du så på det. Her er det slik det er nå – bestem på nytt.",
+      "done": "Skjult til {{date}}.",
+      "shown": "Driftsvarselet vises igjen.",
+      "hiddenSince": "Skjult til {{date}} av {{name}}: «{{reason}}»",
+      "someone": "noen",
+      "untilFact": "skjult til {{date}}"
     }
   },
   "taskTicket": {

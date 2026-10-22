@@ -19,6 +19,9 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
 
     public DbSet<Alert> Alerts => Set<Alert>();
 
+    public DbSet<AlertHold> AlertHolds => Set<AlertHold>();
+    public DbSet<AlertTransition> AlertTransitions => Set<AlertTransition>();
+
     public DbSet<TicketRequest> TicketRequests => Set<TicketRequest>();
 
     public DbSet<TicketComment> TicketComments => Set<TicketComment>();
@@ -187,6 +190,29 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
             // The cross-customer queue and the urgent list read open alerts by severity and age.
             b.HasIndex(x => new { x.State, x.Severity, x.CreatedAtSource }).IncludeProperties(x => x.OrganizationId);
+            // M40: the CRM's own status, one row per alert with the alert's id, so a read never changes its version.
+            b.HasOne(x => x.Hold).WithOne().HasForeignKey<AlertHold>(x => x.Id).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AlertHold>(b =>
+        {
+            b.ToTable("AlertHolds");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Reason).HasMaxLength(AlertHold.ReasonLength);
+            // Hidden in Parasoll until a date: the open lists leave such alerts out until then.
+            b.HasIndex(x => x.Until).HasFilter("[Until] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<AlertTransition>(b =>
+        {
+            b.ToTable("AlertTransitions");
+            b.ConfigureAuditable();
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Reason).HasMaxLength(AlertHold.ReasonLength);
+            // M40: what people did with an alert goes with it when retention removes it.
+            b.HasOne<Alert>().WithMany().HasForeignKey(x => x.AlertId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.AlertId, x.CreatedAt });
         });
 
         modelBuilder.Entity<TicketRequest>(b =>

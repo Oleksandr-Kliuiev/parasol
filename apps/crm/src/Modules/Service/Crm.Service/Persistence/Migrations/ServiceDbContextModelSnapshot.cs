@@ -298,6 +298,84 @@ namespace Crm.Service.Persistence.Migrations
                     b.ToTable("Alerts", "service");
                 });
 
+            modelBuilder.Entity("Crm.Service.Domain.AlertHold", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("At")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("By")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset?>("Until")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Until")
+                        .HasFilter("[Until] IS NOT NULL");
+
+                    b.ToTable("AlertHolds", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.AlertTransition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AlertId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset?>("Until")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlertId", "CreatedAt");
+
+                    b.ToTable("AlertTransitions", "service");
+                });
+
             modelBuilder.Entity("Crm.Service.Domain.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -921,6 +999,24 @@ namespace Crm.Service.Persistence.Migrations
                     b.ToTable("TicketRequests", "service");
                 });
 
+            modelBuilder.Entity("Crm.Service.Domain.AlertHold", b =>
+                {
+                    b.HasOne("Crm.Service.Domain.Alert", null)
+                        .WithOne("Hold")
+                        .HasForeignKey("Crm.Service.Domain.AlertHold", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.AlertTransition", b =>
+                {
+                    b.HasOne("Crm.Service.Domain.Alert", null)
+                        .WithMany()
+                        .HasForeignKey("AlertId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Crm.Service.Domain.Device", b =>
                 {
                     b.HasOne("Crm.Service.Domain.Machine", null)
@@ -945,6 +1041,11 @@ namespace Crm.Service.Persistence.Migrations
                         .HasForeignKey("TicketId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.Alert", b =>
+                {
+                    b.Navigation("Hold");
                 });
 #pragma warning restore 612, 618
         }

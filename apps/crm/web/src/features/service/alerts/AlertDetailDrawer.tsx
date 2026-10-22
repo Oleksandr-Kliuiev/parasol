@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles } from '@fluentui/react-components';
 import { Dismiss24Regular, Open16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +37,14 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
   // Read with the alert: how fresh the stored copy is now, not when the list behind the panel was read.
   const reads = useAlertReads(alertId !== null);
   const alert = alertId !== null && !read.isFetching ? read.data : undefined;
+  // M40: hiding or showing the alert reads it again, and the panel draws it anew; once that read is in, focus goes back to the
+  // section that says what is now true instead of being lost with the button that did it.
+  const focusAfter = useRef<number | null>(null);
+  useEffect(() => {
+    if (focusAfter.current === null || !alert || read.dataUpdatedAt <= focusAfter.current) return;
+    document.getElementById(`alert-own-${alert.id}`)?.focus();
+    focusAfter.current = null;
+  }, [alert, read.dataUpdatedAt]);
   const sourceReads = alert && !reads.isFetching ? reads.data?.filter((r) => r.system === alert.system) : undefined;
   const title = alert?.title ?? t('alerts.detail.title');
   const link = alert?.url ? safeHttpUrl(alert.url) : undefined;
@@ -73,7 +82,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
           </span> },
         ]} />
         <AlertTaskSection alert={alert} onNavigate={onClose} />
-        <AlertSourceSection alert={alert} />
+        <AlertSourceSection alert={alert} onChanged={() => { focusAfter.current = read.dataUpdatedAt; }} />
       </>}
     </DrawerBody>
   </OverlayDrawer>;

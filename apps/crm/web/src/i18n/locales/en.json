@@ -1641,12 +1641,14 @@
     "title": "Alerts",
     "subtitle": "Open alerts of every customer: the critical ones first, then the ones that have waited longest.",
     "subtitleResolved": "Alerts their source no longer reports open, the most recently resolved first.",
+    "subtitleHidden": "Alerts hidden in Parasoll until a day; they are still open in their source.",
     "refresh": "Refresh alerts",
     "filters": "Alert filters",
     "search": "Search title or device",
     "stateLabel": "Show",
     "show": {
       "open": "Open",
+      "hidden": "Hidden",
       "resolved": "Resolved"
     },
     "severityLabel": "Severity",
@@ -1684,6 +1686,7 @@
     },
     "empty": "No open alerts. New alerts appear here after the next read from Atera.",
     "emptyResolved": "No resolved alerts.",
+    "emptyHidden": "No alert is hidden.",
     "emptyFiltered": "No alerts match these filters.",
     "detail": {
       "title": "Alert",
@@ -1774,6 +1777,34 @@
       "deleteItem": "Delete in Atera…",
       "deleteTitle": "Delete the alert in Atera",
       "none": "Nothing has been asked of Atera for this alert."
+    },
+    "hide": {
+      "heading": "In Parasoll",
+      "open": "Hide until…",
+      "show": "Show again",
+      "title": "Hide the alert until a day",
+      "sourceStays": "{{source}}’s API cannot snooze an alert, so it stays open there; Parasoll hides it until the day you choose.",
+      "until": "Hide until",
+      "untilHint": "It comes back at the start of this day.",
+      "shortcuts": "Quick days",
+      "in": {
+        "tomorrow": "Tomorrow",
+        "inAWeek": "In a week",
+        "inAMonth": "In a month"
+      },
+      "invalidDay": "Choose a day after today, at most {{days}} days ahead.",
+      "reason": "Reason",
+      "reasonHint": "Shown to everyone with the hidden alert.",
+      "reasonRequired": "Say why the alert is hidden.",
+      "summary": "Hidden for everyone until {{date}}; it comes back by itself.",
+      "confirm": "Hide",
+      "hiding": "Hiding…",
+      "changed": "The alert changed while you looked at it. Here it is as it is now: decide again.",
+      "done": "Hidden until {{date}}.",
+      "shown": "The alert is shown again.",
+      "hiddenSince": "Hidden until {{date}} by {{name}}: “{{reason}}”",
+      "someone": "someone",
+      "untilFact": "hidden until {{date}}"
     }
   },
   "taskTicket": {
