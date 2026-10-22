@@ -61,6 +61,8 @@ export function BackupEntityRow({ entity }: { entity: BackupEntity }) {
           {t('backup.errorHelp')}<Open16Regular aria-hidden /></Link></>}</RowMeta>}
     </>}
     end={<>
+      {/* After "back up now" the read of the task says a backup runs; its result comes with the next read. */}
+      {entity.running && <Badge appearance="tint" color="informative">{t('backup.running')}</Badge>}
       <Badge appearance="tint" color={stateColor(entity.state)}>{stateName(t, entity.state)}</Badge>
       {(run || add || restores) && <Menu positioning="below-end">
         <MenuTrigger disableButtonEnhancement>
@@ -93,9 +95,11 @@ export function BackupTaskRow({ task, showAccount }: { task: BackupTask; showAcc
     end={<>
       {task.paused && <Badge appearance="tint" color="warning">{t('backup.states.Paused')}</Badge>}
       {task.running && <Badge appearance="tint" color="informative">{t('backup.running')}</Badge>}
-      {run && <Button {...restore} size="small" icon={<ArrowSync16Regular />} onClick={() => actions.ask(taskRequest(task, 'backup.run'))}>
-        {t('backup.actions.backup.run.button')}</Button>}
-      {resume && <Button {...restore} size="small" onClick={() => actions.ask(taskRequest(task, 'backup.resume'))}>{t('backup.actions.backup.resume.item')}</Button>}
+      {/* Several tasks have the same button: the task is in its name, the visible words first (WCAG 2.5.3). */}
+      {run && <Button {...restore} size="small" icon={<ArrowSync16Regular />} aria-label={t('backup.actions.backup.run.named', { name: label })}
+        onClick={() => actions.ask(taskRequest(task, 'backup.run'))}>{t('backup.actions.backup.run.button')}</Button>}
+      {resume && <Button {...restore} size="small" aria-label={t('backup.actions.backup.resume.named', { name: label })}
+        onClick={() => actions.ask(taskRequest(task, 'backup.resume'))}>{t('backup.actions.backup.resume.item')}</Button>}
       {pause && <Menu positioning="below-end">
         <MenuTrigger disableButtonEnhancement>
           <Button {...restore} size="small" appearance="subtle" icon={<MoreHorizontal20Regular />} aria-label={t('backup.taskMenu', { name: label })} />

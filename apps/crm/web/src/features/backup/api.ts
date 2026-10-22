@@ -22,6 +22,21 @@ export function useBackupOverview(organizationId: string, scope: SavedServiceSco
   });
 }
 
+/**
+ * Whether the customer has a CloudAlly account linked: with a link and nothing stored yet, the tab says the backups come with the
+ * next read instead of saying no account is linked.
+ */
+export function useCloudAllyLinked(organizationId: string, scope: SavedServiceScope) {
+  return useQuery({
+    ...savedServicePolicy, queryKey: ['backup', 'linked', organizationId, scope.owner, scope.revision],
+    queryFn: async ({ signal }) => {
+      const answer = await api.get<Array<{ system: string }>>(
+        `/api/v1/integrations/links?entityType=Organization&entityId=${encodeURIComponent(organizationId)}`, signal);
+      signal.throwIfAborted(); return answer.data.some((link) => link.system === 'cloudally');
+    },
+  });
+}
+
 export interface BackupEntityFilters {
   service?: BackupService;
   /** `problems` keeps failed, late, paused and not backed up; a state's name keeps that state. */

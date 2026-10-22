@@ -76,10 +76,8 @@ export function RestoreDialog({ entity, kinds, onClose, onContinue }: {
           {t('backup.restore.what', { service: serviceName(t, entity.service) })}{' '}
           {entity.lastBackupAt ? t('backup.restore.lastBackup', { time: formatDateTime(entity.lastBackupAt) }) : ''}
         </Text>
-        <Field required label={t('backup.restore.day')} hint={t('backup.restore.dayHint')}
-          validationMessage={touched && !dayOk ? t('backup.restore.dayInvalid') : undefined}>
-          <Input type="date" value={day} max={dayIn(0)} onChange={(_, d) => setDay(d.value)} />
-        </Field>
+        {/* The way comes before the day: the dialog opens on its first field, and WebKit sends no focusin when a date field
+            takes focus, so tabster would never see focus enter the dialog and would leave it aria-hidden (found by the M42 e2e). */}
         <Field label={t('backup.restore.where')}>
           <RadioGroup value={kind} onChange={(_, d) => setKind(d.value as RestoreKind)}>
             {kinds.map(way)}
@@ -89,6 +87,10 @@ export function RestoreDialog({ entity, kinds, onClose, onContinue }: {
           validationMessage={targetMessage}>
           <Input type="email" value={target} autoComplete="off" onChange={(_, d) => setTarget(d.value)} />
         </Field>}
+        <Field required label={t('backup.restore.day')} hint={t('backup.restore.dayHint')}
+          validationMessage={touched && !dayOk ? t('backup.restore.dayInvalid') : undefined}>
+          <Input type="date" value={day} max={dayIn(0)} onChange={(_, d) => setDay(d.value)} />
+        </Field>
         <Checkbox checked={deleted} onChange={(_, d) => setDeleted(d.checked === true)} label={t('backup.restore.includeDeleted')} />
         <Text block className={styles.muted}>{t('backup.restore.wholeOnly')}</Text>
       </DialogContent>

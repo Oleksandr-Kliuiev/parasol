@@ -45,9 +45,10 @@ const entities = [
 
 const allKinds = ['backup.run', 'backup.activate', 'backup.pause', 'backup.resume', 'account.deactivate', 'restore.export', 'restore.other', 'restore.in-place'];
 
-function stub(body: BackupOverview = overview(), kinds: string[] = allKinds) {
+function stub(body: BackupOverview = overview(), kinds: string[] = allKinds, linked = true) {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/v1/backup/organizations/o1') return json(body);
+    if (url.startsWith('/api/v1/integrations/links')) return json(linked ? [{ id: 'l1', system: 'cloudally', externalType: 'Customer', externalId: 'acc-1' }] : []);
     if (url.startsWith('/api/v1/backup/organizations/o1/entities')) return json({ items: entities, nextCursor: null, totalCount: entities.length });
     if (url.startsWith('/api/v1/actions/kinds')) return json(kinds.map((kind) => ({ system: 'cloudally', kind, targetType: 'backup-entity', level: 'Standard' })));
     if (url === '/api/v1/actions/preview' && init?.method === 'POST') {
@@ -86,8 +87,16 @@ describe('The Sikkerhetskopi tab (M42)', () => {
     expect(within(rows[0]!).getByRole('link', { name: /CloudAlly’s help/ })).toHaveAttribute('href', 'https://support.cloudally.test/faq');
     expect(within(rows[1]!).getByText('Not in backup')).toBeVisible();
     const services = within(screen.getByRole('region', { name: 'Services in CloudAlly' }));
-    expect(services.getByRole('button', { name: 'Back up now' })).toBeVisible();
-    expect(services.getByRole('button', { name: 'Resume' })).toBeVisible();
+    expect(services.getByRole('button', { name: 'Back up now: Mail' })).toBeVisible();
+    expect(services.getByRole('button', { name: 'Resume: OneDrive' })).toBeVisible();
+  });
+
+  it('says so when the installation keeps CloudAlly read-only, instead of leaving the actions to be looked for', async () => {
+    stub(overview(), []);
+    render();
+    expect(await screen.findByText('Changes at CloudAlly are switched off in this installation, so the tab only shows the backups.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^Back up now/ })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Actions at CloudAlly' })).toBeVisible();
   });
 
   it('offers a person without the right to change no action at all', async () => {
@@ -95,17 +104,23 @@ describe('The Sikkerhetskopi tab (M42)', () => {
     render(['service.read']);
     await screen.findByRole('region', { name: 'Users and sites' });
     await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(3));
-    expect(screen.queryByRole('button', { name: 'Back up now' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Back up now/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull();
   });
 
-  it('says when Partner Center has no licence data, and when no CloudAlly account is linked', async () => {
+  it('says when Partner Center has no licence data, when a linked account was not read yet, and when none is linked', async () => {
     stub(overview({ licences: { state: 'NoData', licensed: null, backedUp: 2, missing: null, readOn: null } }));
     const first = render();
     expect(await screen.findByText(/Partner Center has no licence data for this customer/)).toBeVisible();
     first.unmount();
 
-    stub(overview({ accounts: [], services: [], tasks: [], licences: { state: 'NoAccount', licensed: null, backedUp: 0, missing: null, readOn: null } }));
+    const nothing = overview({ accounts: [], services: [], tasks: [], licences: { state: 'NoAccount', licensed: null, backedUp: 0, missing: null, readOn: null } });
+    stub(nothing);
+    const second = renderRoutes([page(<BackupTab organizationId="o1" />)], '/', testUser(['service.read', 'integrations.manage']));
+    expect(await screen.findByText('A CloudAlly account is linked to this customer; its backups appear after the next read of CloudAlly.')).toBeVisible();
+    second.unmount();
+
+    stub(nothing, allKinds, false);
     renderRoutes([page(<BackupTab organizationId="o1" />)], '/', testUser(['service.read', 'integrations.manage']));
     expect(await screen.findByText('No CloudAlly account is linked to this customer.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Link a CloudAlly account' })).toHaveAttribute('href', '/admin/mappings?system=cloudally&type=Customer');
@@ -118,7 +133,7 @@ describe('The Sikkerhetskopi tab (M42)', () => {
     render();
     const kari = (await within(await screen.findByRole('region', { name: 'Users and sites' })).findAllByRole('listitem'))[2]!;
     await user.click(within(kari).getByRole('button', { name: 'Actions for Kari Nordmann (kari@fjord.test)' }));
-    expect(within(await screen.findByRole('menu')).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Take a backup now', 'Restore …']);
+    expect(within(await screen.findByRole('menu')).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Back up now', 'Restore …']);
     await user.click(screen.getByRole('menuitem', { name: 'Restore …' }));
     const wizard = within(await screen.findByRole('dialog', { name: 'Restore Kari Nordmann (kari@fjord.test)' }));
     expect(wizard.getByRole('radio', { name: 'Download as PST' })).toBeChecked();

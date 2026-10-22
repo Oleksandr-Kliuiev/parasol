@@ -1690,7 +1690,7 @@
         "title": "{{service}}: the CloudAlly backup failed for {{failed}} of {{total}} ({{account}})"
       },
       "backupLate": {
-        "title": "{{service}}: no CloudAlly backup for over {{hours}} hours for {{late}} of {{total}} ({{account}})"
+        "title": "{{service}}: {{late}} of {{total}} not backed up by CloudAlly for over {{hours}} hours ({{account}})"
       },
       "backupPaused": {
         "whole": "{{service}}: the CloudAlly backup is paused ({{account}})",
@@ -1858,7 +1858,7 @@
         "when": "Checked after each complete read of CloudAlly, every second hour."
       },
       "backupLate": {
-        "name": "Backup too old (CloudAlly)",
+        "name": "Overdue backup (CloudAlly)",
         "description": "An alert when the last successful backup is older than the limit while nothing reports a failure: the backup did not run.",
         "when": "Checked after each complete read of CloudAlly, every second hour.",
         "limit": "Hours since the last backup"
@@ -1901,8 +1901,8 @@
     "problems": {
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
-      "late_one": "{{count}} too old",
-      "late_other": "{{count}} too old",
+      "late_one": "{{count}} overdue",
+      "late_other": "{{count}} overdue",
       "paused_one": "{{count}} paused",
       "paused_other": "{{count}} paused",
       "notInBackup_one": "{{count}} not in backup",
@@ -1917,12 +1917,12 @@
     },
     "states": {
       "Failed": "Failed",
-      "Late": "Too old",
+      "Late": "Overdue",
       "Paused": "Paused",
       "NotInBackup": "Not in backup",
       "Waiting": "Waiting for its first backup",
       "Ok": "Backed up",
-      "Aside": "Not watched here"
+      "Aside": "Outside this backup"
     },
     "lastBackup": "last backup",
     "neverBackedUp": "never backed up",
@@ -1940,7 +1940,7 @@
     "region": "data center {{region}}",
     "outsideRegion": "Outside the EU",
     "licences": {
-      "noData": "Partner Center has no licence data for this customer, so Parasoll cannot tell whether every licensed user is in the backup.",
+      "noData": "Partner Center has no licence data for this customer, so Parasoll cannot tell whether every licensed user is in the backup. Link the customer to Partner Center to check it.",
       "noMailboxLicences": "Partner Center lists no licence with a mailbox for this customer ({{date}}).",
       "missing_one": "{{count}} licensed user has no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
       "missing_other": "{{count}} licensed users have no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
@@ -1966,25 +1966,27 @@
     "actions": {
       "backup": {
         "run": {
-          "title": "Take a backup now",
-          "confirm": "Start the backup",
-          "item": "Take a backup now",
-          "button": "Back up now"
+          "title": "Back up now",
+          "confirm": "Back up now",
+          "item": "Back up now",
+          "button": "Back up now",
+          "named": "Back up now: {{name}}"
         },
         "activate": {
           "title": "Add to the backup",
-          "confirm": "Add",
+          "confirm": "Add to the backup",
           "item": "Add to the backup"
         },
         "pause": {
           "title": "Pause the backup",
-          "confirm": "Pause",
+          "confirm": "Pause the backup",
           "item": "Pause …"
         },
         "resume": {
           "title": "Resume the backup",
-          "confirm": "Resume",
-          "item": "Resume"
+          "confirm": "Resume the backup",
+          "item": "Resume",
+          "named": "Resume: {{name}}"
         }
       },
       "account": {
@@ -1997,15 +1999,15 @@
       "restore": {
         "export": {
           "title": "Export a backup",
-          "confirm": "Export"
+          "confirm": "Export the backup"
         },
         "other": {
           "title": "Restore elsewhere",
-          "confirm": "Restore"
+          "confirm": "Restore elsewhere"
         },
         "in-place": {
           "title": "Restore in place",
-          "confirm": "Restore"
+          "confirm": "Restore in place"
         }
       }
     },
@@ -2048,6 +2050,12 @@
       "includeDeleted": "Include deleted items",
       "wholeOnly": "Parasoll restores the whole mailbox, OneDrive or site. A single e-mail or file is restored in CloudAlly.",
       "continue": "Continue"
+    },
+    "notReadYet": "A CloudAlly account is linked to this customer; its backups appear after the next read of CloudAlly.",
+    "actionsOff": "Changes at CloudAlly are switched off in this installation, so the tab only shows the backups.",
+    "actionsLog": {
+      "title": "Actions at CloudAlly",
+      "none": "Nothing has been asked of CloudAlly for this customer yet."
     }
   },
   "taskTicket": {
@@ -4897,7 +4905,7 @@
       },
       "cloudally": {
         "backup": {
-          "run": "Take a backup now",
+          "run": "Back up now",
           "activate": "Add to the backup",
           "pause": "Pause the backup",
           "resume": "Resume the backup"
@@ -4933,11 +4941,13 @@
       "VND_EFFECT_ALERT_DELETE": "Atera deletes “{{title}}” ({{device}}).",
       "VND_EFFECT_ALERT_DELETE_HISTORY": "It is gone from Atera’s history too; Parasoll keeps it as closed.",
       "VND_EFFECT_BACKUP_RUN": "CloudAlly backs up {{name}} ({{service}}) now.",
-      "VND_EFFECT_BACKUP_RUN_ALL": "CloudAlly backs up {{service}} at {{account}} now: {{count}} users or sites.",
+      "VND_EFFECT_BACKUP_RUN_ALL_one": "CloudAlly backs up {{service}} at {{account}} now: {{count}} user or site.",
+      "VND_EFFECT_BACKUP_RUN_ALL_other": "CloudAlly backs up {{service}} at {{account}} now: {{count}} users or sites.",
       "VND_EFFECT_BACKUP_QUEUE": "It starts when one of CloudAlly’s backup machines is free, which can take minutes.",
       "VND_EFFECT_BACKUP_ACTIVATE": "CloudAlly adds {{name}} to the {{service}} backup and backs it up from the next run on.",
       "VND_EFFECT_BACKUP_BILLED": "CloudAlly bills one more user or site from then on.",
-      "VND_EFFECT_BACKUP_PAUSE": "CloudAlly stops the scheduled backups of {{service}} at {{account}} ({{count}} users or sites) until someone resumes them.",
+      "VND_EFFECT_BACKUP_PAUSE_one": "CloudAlly stops the scheduled backups of {{service}} at {{account}} ({{count}} user or site) until someone resumes them.",
+      "VND_EFFECT_BACKUP_PAUSE_other": "CloudAlly stops the scheduled backups of {{service}} at {{account}} ({{count}} users or sites) until someone resumes them.",
       "VND_EFFECT_BACKUP_PAUSE_GAP": "Parasoll shows the pause as a coverage gap until then.",
       "VND_EFFECT_BACKUP_RESUME": "CloudAlly backs up {{service}} at {{account}} on its schedule again.",
       "VND_EFFECT_ACCOUNT_DEACTIVATE": "CloudAlly cancels the subscription of {{account}} and deletes the CloudAlly account.",

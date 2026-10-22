@@ -64,11 +64,13 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
         <DetailList className={styles.facts} items={[
           { label: t('alerts.detail.severity'), value: <AlertSeverityBadge severity={alert.severity} /> },
           { label: t('alerts.detail.state'), value: t(`alerts.states.${alert.state}`) },
-          { label: t('alerts.detail.customer'), value: <AppLink to={`/organizations/${alert.organizationId}?tab=drift`} onClick={onClose}>
+          // Links that leave the panel do not close it themselves: the new address drops ?alert=, and closing would go Back
+          // (when the panel was opened from a row) and undo the link's own navigation (found by the M42 e2e).
+          { label: t('alerts.detail.customer'), value: <AppLink to={`/organizations/${alert.organizationId}?tab=drift`}>
             {alert.organizationName ?? t('alerts.detail.unknownCustomer')}</AppLink> },
           // M40: the device leads to its card in the customer's Drift tab (sources, "Open in Atera", inventory), once matched.
           ...(alert.deviceName ? [{ label: t('alerts.detail.device'), value: alert.machineId
-            ? <AppLink to={`/organizations/${alert.organizationId}?tab=drift&device=${encodeURIComponent(alert.machineId)}`} onClick={onClose}>
+            ? <AppLink to={`/organizations/${alert.organizationId}?tab=drift&device=${encodeURIComponent(alert.machineId)}`}>
               {alert.deviceName}</AppLink>
             : alert.deviceName }] : []),
           { label: t('alerts.detail.raised'), value: <>{formatDateTime(alert.createdAt)} · <AlertAge at={alert.createdAt} /></> },
@@ -82,7 +84,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
               : alert.rule ? <>
                 <Text size={200} className={styles.muted}>{t('alerts.gaps.found')}</Text>
                 {/* M42: a backup gap leads to the customer's backups, where its users and the actions are. */}
-                {isBackupGap(alert.rule) && <AppLink to={`/organizations/${alert.organizationId}?tab=backup`} onClick={onClose}>
+                {isBackupGap(alert.rule) && <AppLink to={`/organizations/${alert.organizationId}?tab=backup`}>
                   {t('alerts.gaps.openBackup')}</AppLink>}
                 <Link {...restore} as="button" className={styles.external} onClick={() => setChecks(true)}>{t('alerts.gaps.changeCheck')}</Link>
               </>

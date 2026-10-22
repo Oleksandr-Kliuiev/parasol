@@ -1690,7 +1690,7 @@
         "title": "{{service}}: sikkerhetskopien i CloudAlly feilet for {{failed}} av {{total}} ({{account}})"
       },
       "backupLate": {
-        "title": "{{service}}: ingen sikkerhetskopi i CloudAlly på over {{hours}} timer for {{late}} av {{total}} ({{account}})"
+        "title": "{{service}}: {{late}} av {{total}} uten sikkerhetskopi i CloudAlly på over {{hours}} timer ({{account}})"
       },
       "backupPaused": {
         "whole": "{{service}}: sikkerhetskopien i CloudAlly står på pause ({{account}})",
@@ -1858,7 +1858,7 @@
         "when": "Kontrolleres etter hver fullstendige lesing av CloudAlly, hver andre time."
       },
       "backupLate": {
-        "name": "For gammel sikkerhetskopi (CloudAlly)",
+        "name": "Forsinket sikkerhetskopi (CloudAlly)",
         "description": "Et driftsvarsel når siste vellykkede sikkerhetskopi er eldre enn grensen uten at noe har feilet: kopien har ikke kjørt.",
         "when": "Kontrolleres etter hver fullstendige lesing av CloudAlly, hver andre time.",
         "limit": "Timer siden siste kopi"
@@ -1901,8 +1901,8 @@
     "problems": {
       "failed_one": "{{count}} feilet",
       "failed_other": "{{count}} feilet",
-      "late_one": "{{count}} for gammel",
-      "late_other": "{{count}} for gamle",
+      "late_one": "{{count}} forsinket",
+      "late_other": "{{count}} forsinket",
       "paused_one": "{{count}} på pause",
       "paused_other": "{{count}} på pause",
       "notInBackup_one": "{{count}} ikke i kopi",
@@ -1917,12 +1917,12 @@
     },
     "states": {
       "Failed": "Feilet",
-      "Late": "For gammel",
+      "Late": "Forsinket",
       "Paused": "På pause",
       "NotInBackup": "Ikke i kopi",
       "Waiting": "Venter på første kopi",
       "Ok": "I kopi",
-      "Aside": "Følges ikke her"
+      "Aside": "Utenfor denne kopien"
     },
     "lastBackup": "siste kopi",
     "neverBackedUp": "aldri kopiert",
@@ -1940,7 +1940,7 @@
     "region": "datasenter {{region}}",
     "outsideRegion": "Utenfor EU",
     "licences": {
-      "noData": "Partner Center har ingen lisensdata for denne kunden, så Parasoll kan ikke se om alle lisensierte brukere er i sikkerhetskopien.",
+      "noData": "Partner Center har ingen lisensdata for denne kunden, så Parasoll kan ikke se om alle lisensierte brukere er i sikkerhetskopien. Koble kunden til Partner Center for å kontrollere det.",
       "noMailboxLicences": "Partner Center viser ingen lisens med postboks for denne kunden ({{date}}).",
       "missing_one": "{{count}} lisensiert bruker har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
       "missing_other": "{{count}} lisensierte brukere har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
@@ -1966,15 +1966,16 @@
     "actions": {
       "backup": {
         "run": {
-          "title": "Ta sikkerhetskopi nå",
-          "confirm": "Start kopieringen",
-          "item": "Ta sikkerhetskopi nå",
-          "button": "Kopier nå"
+          "title": "Sikkerhetskopier nå",
+          "confirm": "Sikkerhetskopier nå",
+          "item": "Sikkerhetskopier nå",
+          "button": "Sikkerhetskopier nå",
+          "named": "Sikkerhetskopier nå: {{name}}"
         },
         "activate": {
           "title": "Ta med i sikkerhetskopien",
-          "confirm": "Ta med",
-          "item": "Ta med i kopi"
+          "confirm": "Ta med i sikkerhetskopien",
+          "item": "Ta med i sikkerhetskopien"
         },
         "pause": {
           "title": "Sett sikkerhetskopien på pause",
@@ -1983,8 +1984,9 @@
         },
         "resume": {
           "title": "Fortsett sikkerhetskopien",
-          "confirm": "Fortsett",
-          "item": "Fortsett"
+          "confirm": "Fortsett sikkerhetskopien",
+          "item": "Fortsett",
+          "named": "Fortsett: {{name}}"
         }
       },
       "account": {
@@ -2001,11 +2003,11 @@
         },
         "other": {
           "title": "Gjenopprett et annet sted",
-          "confirm": "Gjenopprett"
+          "confirm": "Gjenopprett et annet sted"
         },
         "in-place": {
           "title": "Gjenopprett på samme sted",
-          "confirm": "Gjenopprett"
+          "confirm": "Gjenopprett på samme sted"
         }
       }
     },
@@ -2048,6 +2050,12 @@
       "includeDeleted": "Ta med slettede elementer",
       "wholeOnly": "Parasoll gjenoppretter hele postboksen, OneDrive eller området. En enkelt e-post eller fil gjenopprettes i CloudAlly.",
       "continue": "Fortsett"
+    },
+    "notReadYet": "En CloudAlly-konto er koblet til kunden; sikkerhetskopiene vises etter neste lesing av CloudAlly.",
+    "actionsOff": "Endringer i CloudAlly er slått av i denne installasjonen, så fanen viser bare sikkerhetskopiene.",
+    "actionsLog": {
+      "title": "Handlinger i CloudAlly",
+      "none": "Ingenting er bedt om i CloudAlly for denne kunden ennå."
     }
   },
   "taskTicket": {
@@ -4895,7 +4903,7 @@
       },
       "cloudally": {
         "backup": {
-          "run": "Ta sikkerhetskopi nå",
+          "run": "Sikkerhetskopier nå",
           "activate": "Ta med i sikkerhetskopien",
           "pause": "Sett sikkerhetskopien på pause",
           "resume": "Fortsett sikkerhetskopien"
@@ -4931,11 +4939,13 @@
       "VND_EFFECT_ALERT_DELETE": "Atera sletter «{{title}}» ({{device}}).",
       "VND_EFFECT_ALERT_DELETE_HISTORY": "Det forsvinner også fra historikken i Atera; Parasoll beholder det som lukket.",
       "VND_EFFECT_BACKUP_RUN": "CloudAlly tar sikkerhetskopi av {{name}} ({{service}}) nå.",
-      "VND_EFFECT_BACKUP_RUN_ALL": "CloudAlly tar sikkerhetskopi av {{service}} hos {{account}} nå: {{count}} brukere eller områder.",
+      "VND_EFFECT_BACKUP_RUN_ALL_one": "CloudAlly tar sikkerhetskopi av {{service}} hos {{account}} nå: {{count}} bruker eller område.",
+      "VND_EFFECT_BACKUP_RUN_ALL_other": "CloudAlly tar sikkerhetskopi av {{service}} hos {{account}} nå: {{count}} brukere eller områder.",
       "VND_EFFECT_BACKUP_QUEUE": "Den starter når en av CloudAllys kopimaskiner er ledig, og det kan ta noen minutter.",
       "VND_EFFECT_BACKUP_ACTIVATE": "CloudAlly tar med {{name}} i sikkerhetskopien av {{service}} og kopierer fra neste kjøring.",
       "VND_EFFECT_BACKUP_BILLED": "CloudAlly fakturerer én bruker eller ett område mer fra da av.",
-      "VND_EFFECT_BACKUP_PAUSE": "CloudAlly stanser de planlagte kopiene av {{service}} hos {{account}} ({{count}} brukere eller områder) til noen fortsetter dem.",
+      "VND_EFFECT_BACKUP_PAUSE_one": "CloudAlly stanser de planlagte kopiene av {{service}} hos {{account}} ({{count}} bruker eller område) til noen fortsetter dem.",
+      "VND_EFFECT_BACKUP_PAUSE_other": "CloudAlly stanser de planlagte kopiene av {{service}} hos {{account}} ({{count}} brukere eller områder) til noen fortsetter dem.",
       "VND_EFFECT_BACKUP_PAUSE_GAP": "Parasoll viser pausen som et dekningshull til da.",
       "VND_EFFECT_BACKUP_RESUME": "CloudAlly kopierer {{service}} hos {{account}} etter planen igjen.",
       "VND_EFFECT_ACCOUNT_DEACTIVATE": "CloudAlly sier opp abonnementet til {{account}} og sletter CloudAlly-kontoen.",
