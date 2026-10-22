@@ -448,7 +448,7 @@ public sealed class PrivacyTests(CrmWebFactory factory)
 
         var report = await factory.ClientAs(CrmRoles.Admin).GetFromJsonAsync<JsonElement>($"{Privacy}/retention", Ct);
         report.GetProperty("mode").GetString().ShouldBe("DryRun");
-        report.GetProperty("lastRun").GetProperty("classes").GetArrayLength().ShouldBe(9);
+        report.GetProperty("lastRun").GetProperty("classes").GetArrayLength().ShouldBe(10);
     }
 
     private static async Task<List<Guid>> ActivityIdsAsync(HttpClient client, Guid organizationId) =>

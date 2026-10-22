@@ -295,10 +295,11 @@ public class AteraConversationSyncTests(CrmWebFactory factory)
         var ticket = await host.TicketAsync();
         var summary = await (await host.Client().GetAsync($"/api/v1/service/organizations/{ticket.OrganizationId}/summary", Ct)).ReadJsonAsync();
         var reads = summary.GetProperty("reads").EnumerateArray().ToDictionary(r => r.GetProperty("source").GetString()!);
-        reads.Keys.ShouldBe(["tickets", "alerts", "devices"], ignoreOrder: true);
-        foreach (var read in reads.Values)
+        // Atera's reads always; Huntress's (M41) once Huntress is switched on or was read, as its own tests do in the shared database.
+        reads.Keys.Except(["security-alerts", "security-devices"]).ShouldBe(["tickets", "alerts", "devices"], ignoreOrder: true);
+        foreach (var (source, read) in reads)
         {
-            read.GetProperty("system").GetString().ShouldBe("atera");
+            read.GetProperty("system").GetString().ShouldBe(source.StartsWith("security-", StringComparison.Ordinal) ? "huntress" : "atera");
             read.TryGetProperty("startedAt", out _).ShouldBeTrue();
             read.TryGetProperty("complete", out _).ShouldBeTrue();
         }
