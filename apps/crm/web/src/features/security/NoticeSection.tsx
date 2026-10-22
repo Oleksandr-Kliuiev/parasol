@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Badge, Button, Radio, RadioGroup, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Badge, Button, Field, Radio, RadioGroup, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
@@ -61,11 +61,17 @@ function NoticeBody({ alert, notice, onAsk }: { alert: Alert; notice: Notice; on
   const escalation = notice.kind === 'Escalation';
   const resolve = useActionAvailable(alert.system, 'escalation.resolve', canWrite && escalation && notice.isOpen);
   const access = isAccessEscalation(notice.typeCode);
-  const [answer, setAnswer] = useState<Answer>(access ? 'expected' : 'close');
-  const close = () => onAsk({
-    request: alertActionRequest(alert, 'escalation.resolve', { answer }),
-    title: t('security.notice.resolveTitle'), confirm: t(`security.notice.answers.${answer}.confirm`),
-  });
+  // An access escalation's answer stays with Huntress for good (allowed, or unauthorised from now on): none is chosen for the person.
+  const [answer, setAnswer] = useState<Answer | null>(access ? null : 'close');
+  const [touched, setTouched] = useState(false);
+  const close = () => {
+    setTouched(true);
+    if (!answer) return;
+    onAsk({
+      request: alertActionRequest(alert, 'escalation.resolve', { answer }),
+      title: t('security.notice.resolveTitle'), confirm: t(`security.notice.answers.${answer}.confirm`),
+    });
+  };
   return <>
     <span className={styles.status}>
       <Badge appearance="tint" color={notice.status === 'overdue' ? 'danger' : notice.isOpen ? 'warning' : 'subtle'}>{noticeStatus(t, notice.status)}</Badge>
@@ -80,13 +86,16 @@ function NoticeBody({ alert, notice, onAsk }: { alert: Alert; notice: Notice; on
     </>}
     {!escalation && notice.isOpen && <Text block className={styles.muted}>{t('security.notice.platformActionNote')}</Text>}
     {escalation && resolve && <div className={styles.form}>
-      {access && <RadioGroup value={answer} onChange={(_, data) => setAnswer(data.value as Answer)} aria-label={t('security.notice.answer')}>
-        <Radio value="expected" label={t('security.notice.answers.expected.label')} />
-        <Radio value="unauthorized" label={t('security.notice.answers.unauthorized.label')} />
-        <Radio value="close" label={t('security.notice.answers.close.label')} />
-      </RadioGroup>}
-      <Text block className={styles.muted}>{t(`security.notice.answers.${answer}.hint`)}</Text>
-      <Button {...restore} className={styles.send} size="small" onClick={close}>{t(`security.notice.answers.${answer}.confirm`)}</Button>
+      {access && <Field label={t('security.notice.answer')} validationMessage={touched && !answer ? t('security.notice.answerMissing') : undefined}>
+        <RadioGroup value={answer ?? ''} onChange={(_, data) => setAnswer(data.value as Answer)}>
+          <Radio value="expected" label={t('security.notice.answers.expected.label')} />
+          <Radio value="unauthorized" label={t('security.notice.answers.unauthorized.label')} />
+          <Radio value="close" label={t('security.notice.answers.close.label')} />
+        </RadioGroup>
+      </Field>}
+      {/* Only an access escalation comes back when it is closed without an answer; any other one is simply closed. */}
+      {answer && <Text block className={styles.muted}>{t(access ? `security.notice.answers.${answer}.hint` : 'security.notice.answers.close.hintPlain')}</Text>}
+      <Button {...restore} className={styles.send} size="small" onClick={close}>{t(`security.notice.answers.${answer ?? 'close'}.confirm`)}</Button>
     </div>}
   </>;
 }

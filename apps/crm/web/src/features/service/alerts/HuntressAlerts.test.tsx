@@ -5,7 +5,7 @@ import i18n from '../../../i18n';
 import { page, renderRoutes, testUser } from '../../../test/renderWithProviders';
 import { alertPage, alertRead, syntheticAlert } from '../../../test/alerts';
 import { urgentAlert, urgentAlerts } from '../../../test/urgentAlerts';
-import { formatDate, formatDateTime } from '../../../shared/utils/format';
+import { formatDate, formatDateTime, formatRelative } from '../../../shared/utils/format';
 import { UrgentAlertsPanel } from '../../dashboard/UrgentAlertsPanel';
 import type { Alert, CoverageRule } from '../types';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
@@ -29,7 +29,10 @@ const closedIncident = {
   platform: 'windows', indicators: [], sentAt: '2026-10-21T06:00:00Z', closedAt, updatedAt: closedAt, url: null, readAt: '2026-10-22T07:05:00Z',
   remediationsReadAt: null, commentsReadAt: null, remediations: [], comments: [],
 };
-const closedFact = `Closed in Huntress ${formatDateTime(closedAt)} – needs confirming`;
+/** The list fact says the closing's age as lists say ages, the exact moment in the title of its <time>. */
+const closedFact = `Closed in Huntress ${formatRelative(closedAt)} – needs confirming`;
+/** The fact's element: its words around the <time> of the closing. */
+const isClosedFact = (_: string, element: Element | null) => element?.textContent === closedFact && element.querySelector('time') !== null;
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -52,7 +55,7 @@ describe('An urgent alert its source closed waits for a person (M41)', () => {
     vi.stubGlobal('fetch', fetch);
     renderRoutes([page(<AlertDetailDrawer alertId="h1" onClose={() => {}} />)], '/', testUser(['service.read', 'service.write']));
     const own = within(await screen.findByRole('region', { name: 'In Parasoll' }));
-    expect(own.getByText(`Huntress closed it ${formatDateTime(closedAt)}. As an urgent alert it stays open in Parasoll until someone confirms it is done with.`))
+    expect(own.getByText(`Huntress closed it ${formatDateTime(closedAt)}. Because it is urgent, it stays open in Parasoll until someone confirms it is dealt with.`))
       .toBeVisible();
     // What was asked of the source is named after the alert's own source, never Atera's.
     expect(await within(screen.getByRole('region', { name: 'In Huntress' })).findByText('Nothing has been asked of Huntress for this alert.')).toBeVisible();
@@ -63,6 +66,8 @@ describe('An urgent alert its source closed waits for a person (M41)', () => {
     expect(new Headers(init!.headers).get('If-Match')).toBe('"AAAAAAAAH2E="');
     // The panel reads the alert again: it is resolved, nothing waits, and focus lands on the section that says what is true now.
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Confirm closing' })).not.toBeInTheDocument());
+    // Its own section is gone with the confirmation: focus is on the source's section, which stays.
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'In Huntress' })).toHaveFocus());
     expect(screen.queryByText(/stays open in Parasoll until someone confirms/)).not.toBeInTheDocument();
   });
 
@@ -81,7 +86,8 @@ describe('An urgent alert its source closed waits for a person (M41)', () => {
     renderRoutes([page(<AlertQueuePage />, '/alerts')], '/alerts', testUser(['service.read', 'service.write']));
     const table = await screen.findByRole('table', { name: 'Alerts' });
     const row = within(within(table).getAllByRole('row')[1]!);
-    expect(row.getByText(closedFact)).toBeVisible();
+    expect(row.getByText(isClosedFact)).toBeVisible();
+    expect(row.getByTitle(formatDateTime(closedAt))).toHaveAttribute('dateTime', closedAt);
     expect(row.getByText('Source: Huntress')).toBeVisible();
 
     await user.click(row.getByRole('button', { name: 'Actions for HIGH - Incident on PC-17 (Fjord IT AS)' }));
@@ -101,7 +107,7 @@ describe('An urgent alert its source closed waits for a person (M41)', () => {
     renderRoutes([page(<UrgentAlertsPanel />)], '/', testUser(['service.read']));
     const panel = within(await screen.findByRole('region', { name: 'Urgent alerts' }));
     const rows = await panel.findAllByRole('listitem');
-    expect(within(rows[0]!).getByText(closedFact)).toBeVisible();
+    expect(within(rows[0]!).getByText(isClosedFact)).toBeVisible();
     expect(within(rows[1]!).queryByText(/needs confirming/)).not.toBeInTheDocument();
   });
 
@@ -125,7 +131,7 @@ describe('An urgent alert its source closed waits for a person (M41)', () => {
     vi.stubGlobal('fetch', answer(waiting));
     renderRoutes([page(<AlertDetailDrawer alertId="h1" onClose={() => {}} />)], '/', testUser(['service.read']));
     const own = within(await screen.findByRole('region', { name: 'In Parasoll' }));
-    expect(own.getByText(/stays open in Parasoll until someone confirms it is done with/)).toBeVisible();
+    expect(own.getByText(/stays open in Parasoll until someone confirms it is dealt with/)).toBeVisible();
     expect(own.queryByRole('button', { name: 'Confirm closing' })).not.toBeInTheDocument();
   });
 });
@@ -141,7 +147,7 @@ describe('The coverage gaps of M41 in the reader’s language', () => {
     expect(gap('huntress.agent-silent', { device: 'LAPTOP-09', lastSeenAt: '2026-10-12T08:00:00Z' }))
       .toBe(`The Huntress agent on LAPTOP-09 has not reported since ${formatDate('2026-10-12T08:00:00Z')}`);
     expect(gap('huntress.agent-outdated', { device: 'PC-22', version: '0.13.100', newest: '0.13.140', since: '2026-10-01T08:00:00Z' }))
-      .toBe(`The Huntress agent on PC-22 runs version 0.13.100; 0.13.140 has run on other machines since ${formatDate('2026-10-01T08:00:00Z')}`);
+      .toBe(`The Huntress agent on PC-22 runs version 0.13.100; 0.13.140 has run on other devices since ${formatDate('2026-10-01T08:00:00Z')}`);
     expect(gap('huntress.defender-off', { device: 'PC-17', status: 'Unmanaged' })).toBe('Microsoft Defender does not protect PC-17: Another antivirus is in charge');
   });
 
@@ -176,13 +182,13 @@ describe('The coverage checks dialog with the rules of M41', () => {
     const dialog = within(await screen.findByRole('dialog', { name: 'Coverage checks' }));
     const limitOf = async (name: string) => within(await dialog.findByRole('region', { name })).queryByRole('spinbutton');
 
-    expect(await limitOf('Machine without Atera')).toHaveAccessibleName(expect.stringContaining('Days before an alert'));
-    expect(await limitOf('Machine without Huntress')).toHaveAccessibleName(expect.stringContaining('Days before an alert'));
-    expect(await limitOf('Outdated Huntress agent')).toHaveAccessibleName(expect.stringContaining('Days behind'));
+    expect(await limitOf('Device without Atera')).toHaveAccessibleName(expect.stringContaining('Days before an alert'));
+    expect(await limitOf('Device without Huntress')).toHaveAccessibleName(expect.stringContaining('Days before an alert'));
+    expect(await limitOf('Outdated Huntress agent')).toHaveAccessibleName(expect.stringContaining('Days on an older version'));
     expect(await limitOf('Silent Huntress agent')).toHaveAccessibleName(expect.stringContaining('Days without contact'));
     expect(await limitOf('Silent Atera agent')).toHaveAccessibleName(expect.stringContaining('Days without contact'));
     expect(await limitOf('Defender does not protect')).toBeNull();
-    expect(within(dialog.getByRole('region', { name: 'Machine without Huntress' }))
+    expect(within(dialog.getByRole('region', { name: 'Device without Huntress' }))
       .getByText(/for customers linked to a Huntress organization\./)).toBeVisible();
     expect(within(dialog.getByRole('region', { name: 'Outdated Huntress agent' })).getByRole('spinbutton')).toHaveValue(14);
   });

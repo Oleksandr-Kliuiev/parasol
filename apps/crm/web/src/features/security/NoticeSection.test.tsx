@@ -66,15 +66,22 @@ describe('A Huntress escalation or platform action in its alert’s panel (M41)'
     expect(await section.findByText('Open')).toBeVisible();
     expect(section.getByText('Unwanted Access')).toBeVisible();
     const about = section.getAllByRole('listitem').map((item) => item.textContent);
-    expect(about).toEqual(['kari@fjordit.example (account)', 'PC-17 (machine)']);
+    expect(about).toEqual(['kari@fjordit.example (account)', 'PC-17 (device)']);
 
     const answers = within(await section.findByRole('radiogroup', { name: 'Answer' }));
     expect(answers.getAllByRole('radio').map((radio) => radio.closest('span')?.textContent ?? radio.getAttribute('value')))
-      .toEqual(['The access was expected', 'The access was not expected', 'Just close it']);
-    expect(answers.getByRole('radio', { name: 'The access was expected' })).toBeChecked();
-    expect(section.getByText('Huntress allows the same access for these accounts from now on.')).toBeVisible();
+      .toEqual(['The access was expected', 'The access was unauthorised', 'Just close it']);
+    // The answer stays with Huntress for good: none is chosen for the person, and closing asks for one first.
+    for (const radio of answers.getAllByRole('radio')) expect(radio).not.toBeChecked();
+    await user.click(section.getByRole('button', { name: 'Close the escalation' }));
+    expect(await section.findByText('Choose an answer first.')).toBeVisible();
+    expect(fetch.mock.calls.some(([url]) => url === '/api/v1/actions/preview')).toBe(false);
 
-    await user.click(answers.getByRole('radio', { name: 'The access was not expected' }));
+    await user.click(answers.getByRole('radio', { name: 'The access was expected' }));
+    expect(section.getByText('Huntress allows the same access for these accounts from now on.')).toBeVisible();
+    await user.click(answers.getByRole('radio', { name: 'Just close it' }));
+    expect(section.getByText('Huntress only sets it aside: it opens again the next time the same access happens.')).toBeVisible();
+    await user.click(answers.getByRole('radio', { name: 'The access was unauthorised' }));
     expect(section.getByText(/Block or disable the accounts in Huntress or Microsoft 365\./)).toBeVisible();
     await user.click(section.getByRole('button', { name: 'Close as unauthorised' }));
     expect(await screen.findByRole('dialog', { name: 'Close the escalation in Huntress' })).toBeVisible();
@@ -89,7 +96,8 @@ describe('A Huntress escalation or platform action in its alert’s panel (M41)'
     const section = within(await screen.findByRole('region', { name: 'Escalation' }));
     const close = await section.findByRole('button', { name: 'Close the escalation' });
     expect(section.queryByRole('radiogroup')).not.toBeInTheDocument();
-    expect(section.getByText('Closes it without an answer; an access escalation opens again the next time.')).toBeVisible();
+    // Only an access escalation comes back after a closing without an answer: this one is simply closed.
+    expect(section.getByText('Closes the escalation in Huntress; its alert closes here once Huntress shows it closed.')).toBeVisible();
     await user.click(close);
     expect((await previewed(fetch)).parameters).toEqual({ answer: 'close' });
   });
@@ -99,7 +107,7 @@ describe('A Huntress escalation or platform action in its alert’s panel (M41)'
       entities: [{ type: 'Agent', id: '4711', name: 'SRV-01' }] }), ['escalation.resolve']);
     const section = within(await screen.findByRole('region', { name: 'Platform action' }));
     expect(await section.findByText(/It closes in Huntress by itself once what it reports is put right/)).toBeVisible();
-    expect(section.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['SRV-01 (machine)']);
+    expect(section.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['SRV-01 (device)']);
     expect(section.queryByRole('button')).not.toBeInTheDocument();
   });
 
@@ -113,7 +121,7 @@ describe('A Huntress escalation or platform action in its alert’s panel (M41)'
 
     show(escalationAlert, notice({ status: 'resolved', isOpen: false, resolvedAt: '2026-10-22T07:00:00Z' }));
     section = within(await screen.findByRole('region', { name: 'Escalation' }));
-    expect(await section.findByText('Resolved')).toBeVisible();
+    expect(await section.findByText('Closed')).toBeVisible();
     expect(section.queryByRole('button', { name: /Close/ })).not.toBeInTheDocument();
     document.body.innerHTML = '';
 

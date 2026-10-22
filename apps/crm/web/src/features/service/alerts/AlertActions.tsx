@@ -111,7 +111,7 @@ export function AlertSourceSection({ alert }: { alert: AlertLike }) {
   const changed = useAlertsChanged(); const showAgain = useShowAgain(); const confirm = useConfirmClosed();
   const kinds = useAlertSourceKinds(alert); const own = useAlertParasollKinds(alert);
   const [kind, setKind] = useState<AlertSourceKind | null>(null);
-  const [hiding, setHiding] = useState(false);
+  const [hiding, setHiding] = useState(false); const [confirming, setConfirming] = useState(false);
   const ownHeading = useRef<HTMLHeadingElement>(null); const sourceHeading = useRef<HTMLHeadingElement>(null);
   const done = useRef(false);
   const source = sourceName(t, alert.system);
@@ -126,10 +126,15 @@ export function AlertSourceSection({ alert }: { alert: AlertLike }) {
         ? <Text block>{t('alerts.hide.hiddenSince', {
           date: formatDate(alert.hidden.until), name: alert.hidden.byName ?? t('alerts.hide.someone'), reason: alert.hidden.reason ?? '',
         })}</Text>
-        : <Text block className={styles.muted}>{alert.rule ? t('alerts.hide.gapStays') : t('alerts.hide.sourceStays', { source })}</Text>}
+        : alert.rule ? <Text block className={styles.muted}>{t('alerts.hide.gapStays')}</Text>
+          // What hiding does is said only where hiding is offered, and never of an alert its source has closed.
+          : own.includes('hide') && !alert.sourceClosedAt && <Text block className={styles.muted}>{t('alerts.hide.sourceStays', { source })}</Text>}
       {own.length > 0 && <span className={styles.buttons}>
-        {own.includes('confirm') && <Button size="small" onClick={() => void confirm(alert).then((done) => { if (done) focusHeading(ownHeading); })}>
-          {t('alerts.closedAtSource.confirm')}</Button>}
+        {/* Confirmed, the alert is resolved and this section goes: focus moves to the source's section, which stays. */}
+        {own.includes('confirm') && <Button size="small" disabled={confirming} disabledFocusable={confirming} onClick={() => {
+          setConfirming(true);
+          void confirm(alert).then((done) => { setConfirming(false); if (done) focusHeading(sourceHeading); });
+        }}>{t('alerts.closedAtSource.confirm')}</Button>}
         {own.includes('hide') && <Button {...restore} size="small" onClick={() => setHiding(true)}>{t('alerts.hide.open')}</Button>}
         {own.includes('show') && <Button size="small" onClick={() => void showAgain(alert).then((shown) => { if (shown) focusHeading(ownHeading); })}>
           {t('alerts.hide.show')}</Button>}

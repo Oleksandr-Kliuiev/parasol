@@ -786,7 +786,7 @@
       "worker-heartbeat": "Background service heartbeat",
       "atera-ticket-conversations": "Ticket messages (Atera)",
       "huntress-organizations": "Organizations and usage (Huntress)",
-      "huntress-agents": "Agents (Huntress)",
+      "huntress-agents": "Devices (Huntress)",
       "huntress-alerts": "Incidents and escalations (Huntress)",
       "huntress-reports": "Monthly reports (Huntress)"
     },
@@ -1550,8 +1550,8 @@
       "alerts": "Alerts ({{system}})",
       "devices": "Devices ({{system}})",
       "patches": "Windows updates ({{system}})",
-      "security-alerts": "Security alerts ({{system}})",
-      "security-devices": "Agents ({{system}})"
+      "security-alerts": "Alerts ({{system}})",
+      "security-devices": "Devices ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} not read yet",
@@ -1658,11 +1658,11 @@
         "Pending Isolation": "Being isolated",
         "Pending Release": "Isolation being lifted",
         "Disabled": "Not isolated",
-        "Enabled": "Huntress firewall on"
+        "Enabled": "Not isolated (firewall on)"
       },
       "agentVersion": "Huntress agent {{version}}",
-      "machine": "Machine {{name}}",
-      "isolateItem": "Isolate machine…",
+      "machine": "Device {{name}}",
+      "isolateItem": "Isolate device…",
       "isolate": "Isolate",
       "isolateTitle": "Isolate {{name}} from the network",
       "releaseItem": "Lift isolation…",
@@ -1671,7 +1671,7 @@
       "uninstallItem": "Remove Huntress agent…",
       "uninstall": "Remove agent",
       "uninstallTitle": "Remove the Huntress agent from {{name}}",
-      "noActions": "Nothing asked of Huntress for this machine yet."
+      "noActions": "Nothing asked of Huntress for this device yet."
     }
   },
   "alerts": {
@@ -1727,7 +1727,7 @@
         "title": "The Huntress agent on {{device}} has not reported since {{date}}"
       },
       "huntressAgentOutdated": {
-        "title": "The Huntress agent on {{device}} runs version {{version}}; {{newest}} has run on other machines since {{date}}"
+        "title": "The Huntress agent on {{device}} runs version {{version}}; {{newest}} has run on other devices since {{date}}"
       },
       "defenderOff": {
         "title": "Microsoft Defender does not protect {{device}}: {{status}}"
@@ -1873,10 +1873,11 @@
       "untilFact": "hidden until {{date}}"
     },
     "closedAtSource": {
-      "fact": "Closed in {{source}} {{date}} – needs confirming",
-      "explain": "{{source}} closed it {{date}}. As an urgent alert it stays open in Parasoll until someone confirms it is done with.",
+      "fact": "Closed in {{source}}",
+      "explain": "{{source}} closed it {{date}}. Because it is urgent, it stays open in Parasoll until someone confirms it is dealt with.",
       "confirm": "Confirm closing",
-      "confirmed": "The closing is confirmed"
+      "confirmed": "The closing is confirmed",
+      "needsConfirming": "needs confirming"
     }
   },
   "coverage": {
@@ -1891,31 +1892,31 @@
         "when": "Checked after each complete read of Atera’s agents, at night."
       },
       "huntressAgentMissing": {
-        "name": "Machine without Huntress",
-        "description": "An alert when a computer Atera watches has had no Huntress agent for longer than the limit. A server is critical, any other computer a warning.",
+        "name": "Device without Huntress",
+        "description": "An alert when a device Atera watches has had no Huntress agent for longer than the limit. A server is critical, any other device a warning.",
         "when": "Checked after each complete read of Huntress’s agents, every hour, for customers linked to a Huntress organization.",
         "limit": "Days before an alert"
       },
       "ateraAgentMissing": {
-        "name": "Machine without Atera",
-        "description": "An alert when a computer Huntress watches has had no Atera agent for longer than the limit. A server is critical, any other computer a warning.",
+        "name": "Device without Atera",
+        "description": "An alert when a device Huntress watches has had no Atera agent for longer than the limit. A server is critical, any other device a warning.",
         "when": "Checked after each complete read of Atera’s agents, at night.",
         "limit": "Days before an alert"
       },
       "huntressAgentSilent": {
         "name": "Silent Huntress agent",
-        "description": "An alert when the Huntress agent on a computer has not reported for longer than the limit. A server is critical, any other computer a warning.",
+        "description": "An alert when the Huntress agent on a device has not reported for longer than the limit. A server is critical, any other device a warning.",
         "when": "Checked after each complete read of Huntress’s agents, every hour."
       },
       "huntressAgentOutdated": {
         "name": "Outdated Huntress agent",
-        "description": "An alert when a Huntress agent stays on an older version while a newer one has run on other machines for longer than the limit. Huntress does not say which agents are outdated, so Parasoll compares their versions.",
+        "description": "An alert when a Huntress agent stays on an older version while a newer one has run on other devices for longer than the limit. Huntress does not say which agents are outdated, so Parasoll compares their versions.",
         "when": "Checked after each complete read of Huntress’s agents, every hour.",
-        "limit": "Days behind"
+        "limit": "Days on an older version"
       },
       "defenderOff": {
         "name": "Defender does not protect",
-        "description": "An alert when Huntress reports Microsoft Defender on a Windows computer as unhealthy or disabled. A server is critical, any other computer a warning.",
+        "description": "An alert when Huntress reports Microsoft Defender on a Windows device as unhealthy or disabled. A server is critical, any other device a warning.",
         "when": "Checked after each complete read of Huntress’s agents, every hour."
       }
     },
@@ -4701,14 +4702,14 @@
       "VND_STEP_UNKNOWN": "The incident has no such remediation step.",
       "VND_STEP_NOT_MANUAL": "Huntress carries out this step itself; only a manual step is marked.",
       "VND_STEP_ALREADY": "The step is already marked that way.",
-      "VND_INCIDENT_UNAPPROVED": "Approve or send back the remediation steps first: Huntress resolves only an approved plan.",
+      "VND_INCIDENT_UNAPPROVED": "Approve the plan first: Huntress closes an incident only when no step waits for approval.",
       "VND_INCIDENT_MOVED": "The incident belongs to another Huntress organization now; nothing was sent.",
-      "VND_ESCALATION_RESOLVED": "Huntress has resolved the escalation.",
+      "VND_ESCALATION_RESOLVED": "Huntress has closed the escalation.",
       "VND_ANSWER_INVALID": "Choose an answer this escalation takes.",
       "VND_ESCALATION_MOVED": "The escalation no longer names the customer’s Huntress organization; nothing was sent.",
       "VND_AGENT_MOVED": "The agent belongs to another Huntress organization now; nothing was sent.",
-      "VND_ALREADY_ISOLATED": "The machine is isolated, or about to be.",
-      "VND_NOT_ISOLATED": "The machine is not isolated."
+      "VND_ALREADY_ISOLATED": "The device is isolated, or about to be.",
+      "VND_NOT_ISOLATED": "The device is not isolated."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4780,17 +4781,17 @@
       },
       "huntress": {
         "incident": {
-          "approve": "Approve remediations",
+          "approve": "Approve the plan",
           "reject": "Send the plan back",
           "step": "Mark a manual step",
-          "resolve": "Resolve the incident",
+          "resolve": "Close the incident",
           "comment": "Comment on the incident"
         },
         "escalation": {
           "resolve": "Close the escalation"
         },
         "agent": {
-          "isolate": "Isolate the machine",
+          "isolate": "Isolate the device",
           "release": "Lift the isolation",
           "uninstall": "Remove the Huntress agent"
         }
@@ -4823,21 +4824,21 @@
       "VND_EFFECT_HUNTRESS_BACK_TO_SOC": "The SOC revises the plan and sends the incident again; until then it does not wait for you.",
       "VND_EFFECT_HUNTRESS_STEP_DONE": "Marks the step “{{step}}” as done in Huntress.",
       "VND_EFFECT_HUNTRESS_STEP_UNDONE": "Marks the step “{{step}}” as not done in Huntress.",
-      "VND_EFFECT_HUNTRESS_STEP_LAST": "Marking a step does not approve it; when it is the last open step, Huntress may resolve the incident.",
-      "VND_EFFECT_HUNTRESS_RESOLVE": "Resolves the incident in Huntress; its alert closes here once Huntress shows it resolved.",
+      "VND_EFFECT_HUNTRESS_STEP_LAST": "Marking a step does not approve it; when it is the last open step, Huntress may close the incident.",
+      "VND_EFFECT_HUNTRESS_RESOLVE": "Closes the incident in Huntress; its alert closes here once Huntress shows it closed.",
       "VND_EFFECT_HUNTRESS_RESOLVE_MANUAL": "Manual steps not marked as done still wait for you afterwards.",
       "VND_EFFECT_HUNTRESS_COMMENT": "Adds the comment to the incident in Huntress; everyone in your Huntress account who sees the incident can read it.",
       "VND_EFFECT_HUNTRESS_COMMENT_SOC": "Huntress’s SOC is not told about comments and does not answer them.",
-      "VND_EFFECT_HUNTRESS_ESCALATION_CLOSE": "Closes the escalation in Huntress.",
+      "VND_EFFECT_HUNTRESS_ESCALATION_CLOSE": "Closes the escalation in Huntress; its alert closes here once Huntress shows it closed.",
       "VND_EFFECT_HUNTRESS_DISMISSED": "Without an answer Huntress only sets it aside: it opens again the next time the same access happens.",
       "VND_EFFECT_HUNTRESS_EXPECTED": "Tells Huntress the access was expected: it is allowed for these accounts from now on.",
-      "VND_EFFECT_HUNTRESS_UNAUTHORIZED": "Tells Huntress the access was not authorised: later logins like it count as unauthorised. Parasoll blocks and disables no account; do that in Huntress or Microsoft 365.",
-      "VND_EFFECT_HUNTRESS_ISOLATE": "Cuts {{device}} off from the network; only Huntress can still reach it. Whoever works on the machine loses network access.",
-      "VND_EFFECT_HUNTRESS_ISOLATE_CONFIRM": "Huntress isolates it the next time the machine calls in; until then it shows as being isolated.",
+      "VND_EFFECT_HUNTRESS_UNAUTHORIZED": "Tells Huntress the access was unauthorised: later logins like it count as unauthorised too. Parasoll does not block or disable any account; do that in Huntress or Microsoft 365.",
+      "VND_EFFECT_HUNTRESS_ISOLATE": "Isolates {{device}} from the network: only Huntress can still reach it, and whoever works on it loses network access. Your reason is saved in Huntress with the isolation.",
+      "VND_EFFECT_HUNTRESS_ISOLATE_CONFIRM": "Huntress isolates it the next time the device calls in; until then it shows as being isolated.",
       "VND_EFFECT_HUNTRESS_RELEASE": "Gives {{device}} its network back.",
-      "VND_EFFECT_HUNTRESS_RELEASE_CONFIRM": "Huntress lifts the isolation the next time the machine calls in; until then it shows as being lifted.",
-      "VND_EFFECT_HUNTRESS_UNINSTALL": "Removes the Huntress agent from {{device}}: the agent leaves your Huntress account at once and the machine is no longer protected by Huntress.",
-      "VND_EFFECT_HUNTRESS_UNINSTALL_GAP": "If Atera watches {{device}}, Parasoll raises “Machine without Huntress” once the grace period has passed."
+      "VND_EFFECT_HUNTRESS_RELEASE_CONFIRM": "Huntress lifts the isolation the next time the device calls in; until then it shows as being lifted.",
+      "VND_EFFECT_HUNTRESS_UNINSTALL": "Removes the Huntress agent from {{device}}: the agent leaves your Huntress account at once and the device is no longer protected by Huntress.",
+      "VND_EFFECT_HUNTRESS_UNINSTALL_GAP": "If Atera watches {{device}}, Parasoll raises “Device without Huntress” once the rule’s limit is reached."
     }
   },
   "tickets": {
@@ -4954,7 +4955,7 @@
   "security": {
     "panel": {
       "title": "Security",
-      "notLinked": "No Huntress organization is linked to this customer. Link one under Integrations → Mappings.",
+      "notLinked": "Huntress has given no figures for this customer yet. If its Huntress organization is not linked, link it under Mappings; the figures come with the next read (hourly).",
       "notRead": "Huntress has not been read yet.",
       "organization": "{{name}} ({{source}})",
       "usageOf": "What Huntress counts for {{name}}"
@@ -4977,22 +4978,24 @@
       "title": "Monthly reports",
       "period": "Month",
       "incidents": "Incidents",
-      "incidentsValue": "{{reported}} reported, {{resolved}} resolved",
+      "incidentsValue": "{{reported}} reported, {{resolved}} closed",
       "signals": "Signals",
       "agents": "Agents",
       "pdf": "Report",
       "openPdf": "Open the report for {{period}} in {{source}}",
       "shown": "The latest {{shown}} of {{total}} reports.",
-      "none": "No monthly reports from Huntress in the last 13 months."
+      "none": "No monthly reports from Huntress in the last 13 months.",
+      "notRead": "Monthly reports have not been read yet.",
+      "incidentsReported": "{{reported}} reported"
     },
     "incident": {
       "heading": "Security incident",
-      "loading": "Reading the incident…",
+      "loading": "Loading the incident…",
       "readAt": "Read from Huntress",
       "statuses": {
         "sent": "Waiting for you",
-        "auto_remediating": "Huntress is remediating",
-        "draft": "Back with Huntress’s SOC",
+        "auto_remediating": "Huntress is carrying out the steps",
+        "draft": "Back with the SOC",
         "closed": "Closed in Huntress",
         "dismissed": "Dismissed in Huntress",
         "partner_dismissed": "Dismissed by you",
@@ -5000,8 +5003,8 @@
         "deleted": "No longer in Huntress"
       },
       "indicators": "Indicators",
-      "resolve": "Resolve in Huntress",
-      "resolveTitle": "Resolve the incident in Huntress",
+      "resolve": "Close in Huntress",
+      "resolveTitle": "Close the incident in Huntress",
       "draftNote": "Huntress’s SOC is revising the plan after it was sent back. It comes back here when the SOC sends it again.",
       "showDetails": "Show Huntress’s details",
       "hideDetails": "Hide Huntress’s details",
@@ -5045,12 +5048,12 @@
       "unmark": "Mark as not done",
       "markTitle": "Mark the step as done in Huntress",
       "unmarkTitle": "Mark the step as not done in Huntress",
-      "approve": "Approve remediations",
+      "approve": "Approve plan",
       "approveTitle": "Approve the remediation plan in Huntress",
       "reject": "Send plan back…",
       "rejectTitle": "Send the plan back to Huntress’s SOC",
       "rejectConfirm": "Send back",
-      "rejectContinue": "Continue",
+      "rejectContinue": "Send back…",
       "reason": "Why",
       "rejectComment": "What should the SOC know?",
       "rejectHint": "Huntress’s SOC reads this when it revises the plan. Up to 2,048 characters.",
@@ -5059,7 +5062,7 @@
       "reasons": {
         "approved_application": "The application is approved",
         "manually_remediated": "Already fixed by hand",
-        "host_reimaged": "The machine was reinstalled",
+        "host_reimaged": "The device was reinstalled",
         "testing_security_controls": "We were testing the security controls",
         "other": "Something else",
         "approved_user_login_location_m365": "The login location is approved",
@@ -5069,7 +5072,9 @@
         "testing_security_controls_m365": "We were testing the security controls",
         "approved_vpn_or_proxy_usage_m365": "The VPN or proxy is approved",
         "other_m365": "Something else"
-      }
+      },
+      "reasonChoose": "Choose a reason",
+      "reasonMissing": "Choose why the plan goes back."
     },
     "comments": {
       "heading": "Comments",
@@ -5085,16 +5090,16 @@
     "notice": {
       "escalation": "Escalation",
       "platformAction": "Platform action",
-      "loading": "Reading from Huntress…",
+      "loading": "Loading…",
       "readAt": "Read from Huntress",
       "statuses": {
         "open": "Open",
         "overdue": "Overdue",
-        "resolved": "Resolved"
+        "resolved": "Closed"
       },
       "about": "About",
       "entityTypes": {
-        "Agent": "machine",
+        "Agent": "device",
         "Identity": "account",
         "User": "account",
         "Mailbox": "mailbox"
@@ -5110,16 +5115,18 @@
           "confirm": "Close as expected"
         },
         "unauthorized": {
-          "label": "The access was not expected",
+          "label": "The access was unauthorised",
           "hint": "Later logins like it count as unauthorised. Block or disable the accounts in Huntress or Microsoft 365.",
           "confirm": "Close as unauthorised"
         },
         "close": {
           "label": "Just close it",
-          "hint": "Closes it without an answer; an access escalation opens again the next time.",
-          "confirm": "Close the escalation"
+          "hint": "Huntress only sets it aside: it opens again the next time the same access happens.",
+          "confirm": "Close the escalation",
+          "hintPlain": "Closes the escalation in Huntress; its alert closes here once Huntress shows it closed."
         }
-      }
+      },
+      "answerMissing": "Choose an answer first."
     }
   }
 }

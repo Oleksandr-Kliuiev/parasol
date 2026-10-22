@@ -107,7 +107,7 @@ describe('Protection on the device card (M41)', () => {
     const user = userEvent.setup();
     const fetch = show(card([atera, huntress()]), ['agent.isolate', 'agent.release', 'agent.uninstall']);
     const item = await huntressItem();
-    expect(await item.findByRole('button', { name: 'Isolate machine…' })).toBeVisible();
+    expect(await item.findByRole('button', { name: 'Isolate device…' })).toBeVisible();
     expect(item.getByRole('button', { name: 'Remove Huntress agent…' })).toBeVisible();
     expect(item.queryByRole('button', { name: 'Lift isolation…' })).not.toBeInTheDocument();
 
@@ -122,7 +122,7 @@ describe('Protection on the device card (M41)', () => {
     show(card([atera, huntress({}, { isolation: 'Isolated' })]), ['agent.release']);
     const item = await huntressItem();
     expect(await item.findByRole('button', { name: 'Lift isolation…' })).toBeVisible();
-    expect(item.queryByRole('button', { name: 'Isolate machine…' })).not.toBeInTheDocument();
+    expect(item.queryByRole('button', { name: 'Isolate device…' })).not.toBeInTheDocument();
     expect(item.queryByRole('button', { name: 'Remove Huntress agent…' })).not.toBeInTheDocument();
   });
 
@@ -130,14 +130,14 @@ describe('Protection on the device card (M41)', () => {
     show(card([atera, huntress({ removedAt: '2026-10-21T00:00:00Z' })]), ['agent.isolate', 'agent.uninstall']);
     let item = await huntressItem();
     await item.findByText('Huntress agent 0.13.140');
-    expect(item.queryByRole('button', { name: 'Isolate machine…' })).not.toBeInTheDocument();
+    expect(item.queryByRole('button', { name: 'Isolate device…' })).not.toBeInTheDocument();
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
 
     show(card([atera, huntress()]), ['agent.isolate', 'agent.uninstall'], ['service.read']);
     item = await huntressItem();
     await item.findByText('Huntress agent 0.13.140');
-    expect(item.queryByRole('button', { name: 'Isolate machine…' })).not.toBeInTheDocument();
+    expect(item.queryByRole('button', { name: 'Isolate device…' })).not.toBeInTheDocument();
     expect(item.queryByRole('button', { name: 'Remove Huntress agent…' })).not.toBeInTheDocument();
   });
 });

@@ -57,7 +57,11 @@ export function ProtectionFacts({ device, version = true }: { device: MachineDev
  * (destructive: a fresh sign-in, the machine's name typed, a reason and a minute to change one's mind). Each is offered only when it
  * is switched on and fits the host's state; the confirmation then says exactly what happens.
  */
-export function ProtectionActions({ device, withUninstall = true }: { device: MachineDevice; withUninstall?: boolean }) {
+export function ProtectionActions({ device, withUninstall = true, onClosed }: {
+  device: MachineDevice; withUninstall?: boolean;
+  /** Where focus goes when the confirmation closes: the change swaps the button that opened it (isolate, lift), or removes it. */
+  onClosed?: () => void;
+}) {
   const { t } = useTranslation(); const styles = useStyles(); const client = useQueryClient(); const restore = useRestoreFocusTarget();
   const canWrite = useCan(Permissions.serviceWrite) && device.removedAt === null && device.system === 'huntress';
   const isolate = useActionAvailable(device.system, 'agent.isolate', canWrite);
@@ -83,28 +87,32 @@ export function ProtectionActions({ device, withUninstall = true }: { device: Ma
         offer('agent.uninstall', t('machines.protection.uninstallTitle', { name: device.machineName }), t('machines.protection.uninstall'))}>
         {t('machines.protection.uninstallItem')}</Button>}
     </span>}
-    <ActionDialog request={ask?.request ?? null} title={ask?.title ?? ''} confirm={ask?.confirm ?? ''} onClose={() => setAsk(null)} onFinished={finished} />
+    <ActionDialog request={ask?.request ?? null} title={ask?.title ?? ''} confirm={ask?.confirm ?? ''} onFinished={finished}
+      onClose={() => { setAsk(null); if (onClosed) window.setTimeout(onClosed, 0); }} />
   </>;
 }
 
 /**
- * The machine of an incident (M41), in the incident's panel: whether Huntress has it isolated, and the way to isolate it or release
- * it from there. The machine's card has the rest.
+ * The device of an incident (M41), in the incident's panel: whether Huntress has it isolated, and the way to isolate it or release
+ * it from there. It is the incident's own agent (or the alert's device), never another agent the machine has had: a reinstalled
+ * computer keeps its old, silent agent beside the new one. The device's card has the rest.
  */
-export function DeviceIsolation({ machineId }: { machineId: string }) {
+export function DeviceIsolation({ machineId, agentExternalId, deviceId }: { machineId: string; agentExternalId: string | null; deviceId: string | null }) {
   const { t } = useTranslation(); const styles = useStyles();
   const read = useMachine(machineId);
   const heading = useRef<HTMLHeadingElement>(null);
-  const device = read.data?.devices.find((d) => d.system === 'huntress' && d.removedAt === null);
+  const huntress = (read.data?.devices ?? []).filter((d) => d.system === 'huntress');
+  const device = agentExternalId ? huntress.find((d) => d.externalId === agentExternalId) : huntress.find((d) => d.id === deviceId);
   if (read.isPending) return <Spinner size="small" label={t('machines.loading')} />;
-  if (!device) return null;
+  if (!device || device.removedAt !== null) return null;
+  const isolation = device.protection?.isolation ?? null;
   return <section className={styles.section} aria-labelledby={`isolation-${machineId}`}>
     <h4 id={`isolation-${machineId}`} ref={heading} tabIndex={-1} className={styles.subheading}>{t('machines.protection.machine', { name: device.machineName })}</h4>
-    <span className={styles.line}>
-      <Badge appearance="tint" color={isolationColor(device.protection?.isolation ?? null)}>
-        {t(`machines.protection.isolation.${device.protection?.isolation ?? 'Disabled'}`, { defaultValue: device.protection?.isolation ?? '' })}</Badge>
-    </span>
-    <ProtectionActions device={device} withUninstall={false} />
+    {/* An isolation Huntress did not report is not said at all, rather than as "not isolated". */}
+    {isolation && <span className={styles.line}>
+      <Badge appearance="tint" color={isolationColor(isolation)}>{t(`machines.protection.isolation.${isolation}`, { defaultValue: isolation })}</Badge>
+    </span>}
+    <ProtectionActions device={device} withUninstall={false} onClosed={() => heading.current?.focus()} />
     <div className={styles.log}>
       <ActionList filters={{ targetType: 'device', targetId: device.externalId }} showTarget={false} limit={3} empty={t('machines.protection.noActions')} />
     </div>

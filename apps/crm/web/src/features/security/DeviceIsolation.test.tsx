@@ -29,7 +29,7 @@ const machine = (devices: MachineDevice[]): MachineDetail => ({
 
 afterEach(() => vi.unstubAllGlobals());
 
-function show(detail: MachineDetail, kinds: string[], permissions = ['service.read', 'service.write']) {
+function show(detail: MachineDetail, kinds: string[], permissions = ['service.read', 'service.write'], agent: string | null = '4711') {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.startsWith('/api/v1/actions/kinds')) return json(kinds.map((kind) => ({ system: 'huntress', kind, targetType: 'device',
       level: kind === 'agent.uninstall' ? 'Destructive' : 'Disruptive', simulated: false, limitedToCustomers: false })));
@@ -39,7 +39,7 @@ function show(detail: MachineDetail, kinds: string[], permissions = ['service.re
     return json(empty);
   });
   vi.stubGlobal('fetch', fetch);
-  renderRoutes([page(<DeviceIsolation machineId="m1" />)], '/', testUser(permissions));
+  renderRoutes([page(<DeviceIsolation machineId="m1" agentExternalId={agent} deviceId={null} />)], '/', testUser(permissions));
   return fetch;
 }
 
@@ -47,13 +47,13 @@ describe('The machine of an incident (M41)', () => {
   it('says the machine is not isolated and offers isolating it, through the one confirmation with the agent as the target', async () => {
     const user = userEvent.setup();
     const fetch = show(machine([huntress('Disabled')]), ['agent.isolate', 'agent.release', 'agent.uninstall']);
-    const section = within(await screen.findByRole('region', { name: 'Machine PC-17' }));
+    const section = within(await screen.findByRole('region', { name: 'Device PC-17' }));
     expect(section.getByText('Not isolated')).toBeVisible();
-    const isolate = await section.findByRole('button', { name: 'Isolate machine…' });
+    const isolate = await section.findByRole('button', { name: 'Isolate device…' });
     expect(section.queryByRole('button', { name: 'Lift isolation…' })).not.toBeInTheDocument();
     // Uninstalling belongs to the machine's card, never to an incident.
     expect(section.queryByRole('button', { name: 'Remove Huntress agent…' })).not.toBeInTheDocument();
-    expect(await section.findByText('Nothing asked of Huntress for this machine yet.')).toBeVisible();
+    expect(await section.findByText('Nothing asked of Huntress for this device yet.')).toBeVisible();
 
     await user.click(isolate);
     expect(await screen.findByRole('dialog', { name: 'Isolate PC-17 from the network' })).toBeVisible();
@@ -68,10 +68,10 @@ describe('The machine of an incident (M41)', () => {
     const states: [string, string][] = [['Isolated', 'Isolated from the network'], ['Pending Isolation', 'Being isolated'], ['Pending Release', 'Isolation being lifted']];
     for (const [isolation, badge] of states) {
       show(machine([huntress(isolation)]), ['agent.isolate', 'agent.release']);
-      const section = within(await screen.findByRole('region', { name: 'Machine PC-17' }));
+      const section = within(await screen.findByRole('region', { name: 'Device PC-17' }));
       expect(section.getByText(badge)).toBeVisible();
       expect(await section.findByRole('button', { name: 'Lift isolation…' })).toBeVisible();
-      expect(section.queryByRole('button', { name: 'Isolate machine…' })).not.toBeInTheDocument();
+      expect(section.queryByRole('button', { name: 'Isolate device…' })).not.toBeInTheDocument();
       document.body.innerHTML = '';
       vi.unstubAllGlobals();
     }
@@ -79,15 +79,15 @@ describe('The machine of an incident (M41)', () => {
 
   it('offers nothing while the kinds are off or to a person who may only read, and stays away from a machine Huntress does not watch', async () => {
     show(machine([huntress('Disabled')]), []);
-    let section = within(await screen.findByRole('region', { name: 'Machine PC-17' }));
-    await section.findByText('Nothing asked of Huntress for this machine yet.');
-    expect(section.queryByRole('button', { name: 'Isolate machine…' })).not.toBeInTheDocument();
+    let section = within(await screen.findByRole('region', { name: 'Device PC-17' }));
+    await section.findByText('Nothing asked of Huntress for this device yet.');
+    expect(section.queryByRole('button', { name: 'Isolate device…' })).not.toBeInTheDocument();
     document.body.innerHTML = '';
 
     show(machine([huntress('Disabled')]), ['agent.isolate'], ['service.read']);
-    section = within(await screen.findByRole('region', { name: 'Machine PC-17' }));
-    await section.findByText('Nothing asked of Huntress for this machine yet.');
-    expect(section.queryByRole('button', { name: 'Isolate machine…' })).not.toBeInTheDocument();
+    section = within(await screen.findByRole('region', { name: 'Device PC-17' }));
+    await section.findByText('Nothing asked of Huntress for this device yet.');
+    expect(section.queryByRole('button', { name: 'Isolate device…' })).not.toBeInTheDocument();
     document.body.innerHTML = '';
 
     // A machine with only an Atera agent, or a Huntress agent no longer reported, has no isolation to show.
@@ -95,6 +95,27 @@ describe('The machine of an incident (M41)', () => {
       ['agent.isolate']);
     await waitFor(() => expect(fetch.mock.calls.some(([url]) => url === '/api/v1/service/machines/m1')).toBe(true));
     await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
-    expect(screen.queryByRole('region', { name: 'Machine PC-17' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Device PC-17' })).not.toBeInTheDocument();
+  });
+
+  it('acts on the incident’s own agent, never on an older one a reinstalled computer still has', async () => {
+    const user = userEvent.setup();
+    // The old agent (silent since the reinstall) came first; the incident names the new one.
+    const old = huntress('Disabled', { id: 'dev-old', externalId: '4700', online: false, firstSeenAt: '2025-01-01T08:00:00Z' });
+    const fetch = show(machine([old, huntress('Isolated')]), ['agent.isolate', 'agent.release']);
+    const section = within(await screen.findByRole('region', { name: 'Device PC-17' }));
+    expect(section.getByText('Isolated from the network')).toBeVisible();
+    await user.click(await section.findByRole('button', { name: 'Lift isolation…' }));
+    await waitFor(() => expect(fetch.mock.calls.some(([url]) => url === '/api/v1/actions/preview')).toBe(true));
+    const [, init] = fetch.mock.calls.find(([url]) => url === '/api/v1/actions/preview')!;
+    expect(JSON.parse(String(init!.body))).toMatchObject({ kind: 'agent.release', targetId: '4711' });
+  });
+
+  it('says nothing about an isolation Huntress did not report, rather than "not isolated"', async () => {
+    show(machine([huntress(null)]), ['agent.isolate']);
+    const section = within(await screen.findByRole('region', { name: 'Device PC-17' }));
+    expect(await section.findByRole('button', { name: 'Isolate device…' })).toBeVisible();
+    expect(section.queryByText('Not isolated')).not.toBeInTheDocument();
+    expect(section.queryByText('Not isolated (firewall on)')).not.toBeInTheDocument();
   });
 });

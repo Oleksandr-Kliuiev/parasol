@@ -128,22 +128,22 @@ describe('A Huntress incident in its alert’s panel (M41)', () => {
     expect(incidentSection.getByText('We are looking at it.')).toBeVisible();
     expect(incidentSection.getByText('Huntress SOC')).toBeVisible();
     // The machine's isolation is part of the incident: its card is read for it.
-    expect(await incidentSection.findByRole('heading', { name: 'Machine PC-17' })).toBeVisible();
+    expect(await incidentSection.findByRole('heading', { name: 'Device PC-17' })).toBeVisible();
   });
 
   it('offers approving and sending back only while Huntress waits for an answer to the plan and the kinds are switched on', async () => {
     show({ kinds: ['incident.approve', 'incident.reject', 'incident.resolve'] });
     let incidentSection = await section();
-    expect(await incidentSection.findByRole('button', { name: 'Approve remediations' })).toBeVisible();
+    expect(await incidentSection.findByRole('button', { name: 'Approve plan' })).toBeVisible();
     expect(incidentSection.getByRole('button', { name: 'Send plan back…' })).toBeVisible();
     // Something still waits for approval: Huntress resolves only an approved plan.
-    expect(incidentSection.queryByRole('button', { name: 'Resolve in Huntress' })).not.toBeInTheDocument();
+    expect(incidentSection.queryByRole('button', { name: 'Close in Huntress' })).not.toBeInTheDocument();
     document.body.innerHTML = '';
 
     show({ kinds: [] });
     incidentSection = await section();
     await incidentSection.findByText('Huntress detected a malicious scheduled task on PC-17.');
-    expect(incidentSection.queryByRole('button', { name: 'Approve remediations' })).not.toBeInTheDocument();
+    expect(incidentSection.queryByRole('button', { name: 'Approve plan' })).not.toBeInTheDocument();
     expect(incidentSection.queryByRole('button', { name: 'Send plan back…' })).not.toBeInTheDocument();
   });
 
@@ -152,15 +152,15 @@ describe('A Huntress incident in its alert’s panel (M41)', () => {
     show({ kinds: all, incident: incident({ status: 'draft' }) });
     let incidentSection = await section();
     expect(await incidentSection.findByText(/Huntress’s SOC is revising the plan after it was sent back/)).toBeVisible();
-    expect(incidentSection.getByText('Back with Huntress’s SOC')).toBeVisible();
-    expect(incidentSection.queryByRole('button', { name: 'Approve remediations' })).not.toBeInTheDocument();
+    expect(incidentSection.getByText('Back with the SOC')).toBeVisible();
+    expect(incidentSection.queryByRole('button', { name: 'Approve plan' })).not.toBeInTheDocument();
     expect(incidentSection.queryByRole('button', { name: 'Send plan back…' })).not.toBeInTheDocument();
     document.body.innerHTML = '';
 
     show({ kinds: all, incident: incident({ status: 'closed', isOpen: false, closedAt: '2026-10-22T07:00:00Z' }) });
     incidentSection = await section();
     expect(await incidentSection.findByText('Closed in Huntress')).toBeVisible();
-    for (const name of ['Approve remediations', 'Send plan back…', 'Resolve in Huntress', 'Mark as done']) {
+    for (const name of ['Approve plan', 'Send plan back…', 'Close in Huntress', 'Mark as done']) {
       expect(incidentSection.queryByRole('button', { name })).not.toBeInTheDocument();
     }
   });
@@ -173,15 +173,15 @@ describe('A Huntress incident in its alert’s panel (M41)', () => {
     });
     const incidentSection = await section();
     expect(await incidentSection.findByText(/^Approved by Kari Nordmann .* · Done /)).toBeVisible();
-    expect(incidentSection.queryByRole('button', { name: 'Approve remediations' })).not.toBeInTheDocument();
-    await userEvent.click(await incidentSection.findByRole('button', { name: 'Resolve in Huntress' }));
-    expect(await screen.findByRole('dialog', { name: 'Resolve the incident in Huntress' })).toBeVisible();
+    expect(incidentSection.queryByRole('button', { name: 'Approve plan' })).not.toBeInTheDocument();
+    await userEvent.click(await incidentSection.findByRole('button', { name: 'Close in Huntress' }));
+    expect(await screen.findByRole('dialog', { name: 'Close the incident in Huntress' })).toBeVisible();
     expect(await previewed(fetch)).toEqual({ system: 'huntress', kind: 'incident.resolve', targetType: 'alert', targetId: 'incident:7001', parameters: {} });
   });
 
   it('approves the plan as it stands, with the incident’s alert as the target', async () => {
     const fetch = show({ kinds: ['incident.approve'] });
-    await userEvent.click(await (await section()).findByRole('button', { name: 'Approve remediations' }));
+    await userEvent.click(await (await section()).findByRole('button', { name: 'Approve plan' }));
     expect(await screen.findByRole('dialog', { name: 'Approve the remediation plan in Huntress' })).toBeVisible();
     expect(await previewed(fetch)).toEqual({ system: 'huntress', kind: 'incident.approve', targetType: 'alert', targetId: 'incident:7001', parameters: {} });
   });
@@ -189,20 +189,28 @@ describe('A Huntress incident in its alert’s panel (M41)', () => {
   it('sends a plan back only with an explanation, a reason of Huntress’s list and whether it helped', async () => {
     const user = userEvent.setup();
     const fetch = show({ kinds: ['incident.reject'] });
-    await user.click(await (await section()).findByRole('button', { name: 'Send plan back…' }));
+    const toggle = await (await section()).findByRole('button', { name: 'Send plan back…' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await user.click(toggle);
     const form = within(screen.getByRole('group', { name: 'Send plan back…' }));
     const reasons = form.getByRole('combobox', { name: 'Why' });
+    // A disclosure: it stays, says it is open, and focus moves into the form's first field.
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(() => expect(reasons).toHaveFocus());
+    // No reason is chosen for the person: the list starts with a prompt that cannot be sent.
     expect(within(reasons).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'The application is approved', 'Already fixed by hand', 'The machine was reinstalled', 'We were testing the security controls', 'Something else']);
+      'Choose a reason', 'The application is approved', 'Already fixed by hand', 'The device was reinstalled', 'We were testing the security controls', 'Something else']);
+    expect(reasons).toHaveValue('');
 
-    await user.click(form.getByRole('button', { name: 'Continue' }));
-    expect(await form.findByText('Write what the SOC should know.')).toBeVisible();
+    await user.click(form.getByRole('button', { name: 'Send back…' }));
+    expect(await form.findByText('Choose why the plan goes back.')).toBeVisible();
+    expect(form.getByText('Write what the SOC should know.')).toBeVisible();
     expect(fetch.mock.calls.some(([url]) => url === '/api/v1/actions/preview')).toBe(false);
 
     await user.selectOptions(reasons, 'Already fixed by hand');
     await user.type(form.getByRole('textbox', { name: /What should the SOC know\?/ }), 'The task was removed by hand yesterday.');
     await user.click(form.getByRole('checkbox', { name: 'The plan was useful' }));
-    await user.click(form.getByRole('button', { name: 'Continue' }));
+    await user.click(form.getByRole('button', { name: 'Send back…' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Send the plan back to Huntress’s SOC' });
     expect(within(dialog).getByText(/Already fixed by hand\s+The task was removed by hand yesterday\./)).toBeVisible();
@@ -218,8 +226,15 @@ describe('A Huntress incident in its alert’s panel (M41)', () => {
     await user.click(await (await section()).findByRole('button', { name: 'Send plan back…' }));
     const reasons = within(screen.getByRole('group', { name: 'Send plan back…' })).getByRole('combobox', { name: 'Why' });
     expect(within(reasons).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'The login location is approved', 'The forwarding rule is approved', 'The application is approved', 'Already fixed by hand',
+      'Choose a reason', 'The login location is approved', 'The forwarding rule is approved', 'The application is approved', 'Already fixed by hand',
       'We were testing the security controls', 'The VPN or proxy is approved', 'Something else']);
+
+    // Cancel closes the form and gives focus back to the button that opened it.
+    await user.click(within(screen.getByRole('group', { name: 'Send plan back…' })).getByRole('button', { name: 'Cancel' }));
+    const toggle = (await section()).getByRole('button', { name: 'Send plan back…' });
+    expect(screen.queryByRole('group', { name: 'Send plan back…' })).not.toBeInTheDocument();
+    await waitFor(() => expect(toggle).toHaveFocus());
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('marks a manual step done, or not done again, and offers no mark for a step Huntress carries out', async () => {
@@ -281,7 +296,7 @@ describe('A Huntress incident in its alert’s panel (M41)', () => {
     show({ kinds: ['incident.approve', 'incident.reject', 'incident.step', 'incident.comment'], permissions: ['service.read'] });
     const incidentSection = await section();
     await incidentSection.findByText('Huntress detected a malicious scheduled task on PC-17.');
-    expect(incidentSection.queryByRole('button', { name: 'Approve remediations' })).not.toBeInTheDocument();
+    expect(incidentSection.queryByRole('button', { name: 'Approve plan' })).not.toBeInTheDocument();
     expect(incidentSection.queryByRole('button', { name: 'Mark as done' })).not.toBeInTheDocument();
     expect(incidentSection.queryByRole('textbox', { name: 'New comment' })).not.toBeInTheDocument();
   });

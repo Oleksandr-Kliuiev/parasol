@@ -786,7 +786,7 @@
       "worker-heartbeat": "Livstegn fra bakgrunnstjenesten",
       "atera-ticket-conversations": "Meldinger i saker (Atera)",
       "huntress-organizations": "Organisasjoner og forbruk (Huntress)",
-      "huntress-agents": "Agenter (Huntress)",
+      "huntress-agents": "Enheter (Huntress)",
       "huntress-alerts": "Hendelser og eskaleringer (Huntress)",
       "huntress-reports": "Månedsrapporter (Huntress)"
     },
@@ -1550,8 +1550,8 @@
       "alerts": "Driftsvarsler ({{system}})",
       "devices": "Enheter ({{system}})",
       "patches": "Windows-oppdateringer ({{system}})",
-      "security-alerts": "Sikkerhetsvarsler ({{system}})",
-      "security-devices": "Agenter ({{system}})"
+      "security-alerts": "Driftsvarsler ({{system}})",
+      "security-devices": "Enheter ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} er ikke lest ennå",
@@ -1658,11 +1658,11 @@
         "Pending Isolation": "Blir isolert",
         "Pending Release": "Isoleringen oppheves",
         "Disabled": "Ikke isolert",
-        "Enabled": "Huntress-brannmur på"
+        "Enabled": "Ikke isolert (brannmur på)"
       },
       "agentVersion": "Huntress-agent {{version}}",
-      "machine": "Maskinen {{name}}",
-      "isolateItem": "Isoler maskinen …",
+      "machine": "Enheten {{name}}",
+      "isolateItem": "Isoler enheten …",
       "isolate": "Isoler",
       "isolateTitle": "Isoler {{name}} fra nettverket",
       "releaseItem": "Opphev isoleringen …",
@@ -1671,7 +1671,7 @@
       "uninstallItem": "Fjern Huntress-agenten …",
       "uninstall": "Fjern agenten",
       "uninstallTitle": "Fjern Huntress-agenten fra {{name}}",
-      "noActions": "Ingenting er bedt om i Huntress for denne maskinen ennå."
+      "noActions": "Ingenting er bedt om i Huntress for denne enheten ennå."
     }
   },
   "alerts": {
@@ -1727,7 +1727,7 @@
         "title": "Huntress-agenten på {{device}} har ikke meldt seg siden {{date}}"
       },
       "huntressAgentOutdated": {
-        "title": "Huntress-agenten på {{device}} kjører versjon {{version}}; {{newest}} har kjørt på andre maskiner siden {{date}}"
+        "title": "Huntress-agenten på {{device}} kjører versjon {{version}}; {{newest}} har kjørt på andre enheter siden {{date}}"
       },
       "defenderOff": {
         "title": "Microsoft Defender beskytter ikke {{device}}: {{status}}"
@@ -1873,10 +1873,11 @@
       "untilFact": "skjult til {{date}}"
     },
     "closedAtSource": {
-      "fact": "Lukket i {{source}} {{date}} – må bekreftes",
-      "explain": "{{source}} lukket det {{date}}. Som hastevarsel står det åpent i Parasoll til noen bekrefter at det er ferdig.",
+      "fact": "Lukket i {{source}}",
+      "explain": "{{source}} lukket det {{date}}. Fordi det haster, står det åpent i Parasoll til noen bekrefter at det er ferdig.",
       "confirm": "Bekreft lukking",
-      "confirmed": "Lukkingen er bekreftet"
+      "confirmed": "Lukkingen er bekreftet",
+      "needsConfirming": "må bekreftes"
     }
   },
   "coverage": {
@@ -1891,31 +1892,31 @@
         "when": "Kontrolleres etter hver fullstendige lesing av Atera-agentene, om natten."
       },
       "huntressAgentMissing": {
-        "name": "Maskin uten Huntress",
-        "description": "Et driftsvarsel når en datamaskin Atera overvåker, har vært uten Huntress-agent lenger enn grensen. En server er kritisk, andre maskiner en advarsel.",
+        "name": "Enhet uten Huntress",
+        "description": "Et driftsvarsel når en enhet Atera overvåker, har vært uten Huntress-agent lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
         "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time, for kunder som er koblet til en Huntress-organisasjon.",
-        "limit": "Dager før varsel"
+        "limit": "Dager før driftsvarsel"
       },
       "ateraAgentMissing": {
-        "name": "Maskin uten Atera",
-        "description": "Et driftsvarsel når en datamaskin Huntress overvåker, har vært uten Atera-agent lenger enn grensen. En server er kritisk, andre maskiner en advarsel.",
+        "name": "Enhet uten Atera",
+        "description": "Et driftsvarsel når en enhet Huntress overvåker, har vært uten Atera-agent lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
         "when": "Kontrolleres etter hver fullstendige lesing av Atera-agentene, om natten.",
-        "limit": "Dager før varsel"
+        "limit": "Dager før driftsvarsel"
       },
       "huntressAgentSilent": {
         "name": "Huntress-agent som ikke melder seg",
-        "description": "Et driftsvarsel når Huntress-agenten på en maskin ikke har meldt seg på lenger enn grensen. En server er kritisk, andre maskiner en advarsel.",
+        "description": "Et driftsvarsel når Huntress-agenten på en enhet ikke har meldt seg på lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
         "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time."
       },
       "huntressAgentOutdated": {
         "name": "Utdatert Huntress-agent",
-        "description": "Et driftsvarsel når en Huntress-agent blir stående på en eldre versjon mens en nyere har kjørt på andre maskiner lenger enn grensen. Huntress sier ikke hvilke agenter som er utdatert, så Parasoll sammenligner versjonene.",
+        "description": "Et driftsvarsel når en Huntress-agent blir stående på en eldre versjon mens en nyere har kjørt på andre enheter lenger enn grensen. Huntress sier ikke hvilke agenter som er utdatert, så Parasoll sammenligner versjonene.",
         "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time.",
         "limit": "Dager på eldre versjon"
       },
       "defenderOff": {
         "name": "Defender beskytter ikke",
-        "description": "Et driftsvarsel når Huntress melder at Microsoft Defender på en Windows-maskin ikke er i orden eller er slått av. En server er kritisk, andre maskiner en advarsel.",
+        "description": "Et driftsvarsel når Huntress melder at Microsoft Defender på en Windows-enhet ikke er i orden eller er slått av. En server er kritisk, andre enheter en advarsel.",
         "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time."
       }
     },
@@ -4699,14 +4700,14 @@
       "VND_STEP_UNKNOWN": "Hendelsen har ikke et slikt tiltak.",
       "VND_STEP_NOT_MANUAL": "Huntress utfører dette tiltaket selv; bare manuelle tiltak merkes.",
       "VND_STEP_ALREADY": "Tiltaket er allerede merket slik.",
-      "VND_INCIDENT_UNAPPROVED": "Godkjenn tiltakene eller send dem tilbake først: Huntress lukker bare en godkjent plan.",
+      "VND_INCIDENT_UNAPPROVED": "Godkjenn planen først: Huntress lukker en hendelse bare når ingen tiltak venter på godkjenning.",
       "VND_INCIDENT_MOVED": "Hendelsen hører til en annen Huntress-organisasjon nå; ingenting ble sendt.",
       "VND_ESCALATION_RESOLVED": "Huntress har lukket eskaleringen.",
       "VND_ANSWER_INVALID": "Velg et svar denne eskaleringen tar imot.",
       "VND_ESCALATION_MOVED": "Eskaleringen nevner ikke lenger kundens Huntress-organisasjon; ingenting ble sendt.",
       "VND_AGENT_MOVED": "Agenten hører til en annen Huntress-organisasjon nå; ingenting ble sendt.",
-      "VND_ALREADY_ISOLATED": "Maskinen er isolert, eller blir det snart.",
-      "VND_NOT_ISOLATED": "Maskinen er ikke isolert."
+      "VND_ALREADY_ISOLATED": "Enheten er isolert, eller blir det snart.",
+      "VND_NOT_ISOLATED": "Enheten er ikke isolert."
     },
     "dialog": {
       "previewing": "Sjekker hva handlingen vil gjøre …",
@@ -4778,7 +4779,7 @@
       },
       "huntress": {
         "incident": {
-          "approve": "Godkjenn tiltakene",
+          "approve": "Godkjenn planen",
           "reject": "Send planen tilbake",
           "step": "Merk et manuelt tiltak",
           "resolve": "Lukk hendelsen",
@@ -4788,7 +4789,7 @@
           "resolve": "Lukk eskaleringen"
         },
         "agent": {
-          "isolate": "Isoler maskinen",
+          "isolate": "Isoler enheten",
           "release": "Opphev isoleringen",
           "uninstall": "Fjern Huntress-agenten"
         }
@@ -4826,16 +4827,16 @@
       "VND_EFFECT_HUNTRESS_RESOLVE_MANUAL": "Manuelle tiltak som ikke er merket utført, venter fortsatt på deg etterpå.",
       "VND_EFFECT_HUNTRESS_COMMENT": "Legger kommentaren til hendelsen i Huntress; alle i Huntress-kontoen deres som ser hendelsen, kan lese den.",
       "VND_EFFECT_HUNTRESS_COMMENT_SOC": "SOC-en hos Huntress får ikke beskjed om kommentarer og svarer ikke på dem.",
-      "VND_EFFECT_HUNTRESS_ESCALATION_CLOSE": "Lukker eskaleringen i Huntress.",
+      "VND_EFFECT_HUNTRESS_ESCALATION_CLOSE": "Lukker eskaleringen i Huntress; driftsvarselet lukkes her når Huntress viser den lukket.",
       "VND_EFFECT_HUNTRESS_DISMISSED": "Uten svar legger Huntress den bare til side: den åpnes igjen neste gang den samme tilgangen skjer.",
       "VND_EFFECT_HUNTRESS_EXPECTED": "Sier til Huntress at tilgangen var ventet: den tillates for disse kontoene fra nå av.",
-      "VND_EFFECT_HUNTRESS_UNAUTHORIZED": "Sier til Huntress at tilgangen ikke var tillatt: senere innlogginger av samme slag regnes som uautoriserte. Parasoll sperrer og deaktiverer ingen kontoer; gjør det i Huntress eller Microsoft 365.",
-      "VND_EFFECT_HUNTRESS_ISOLATE": "Kobler {{device}} fra nettverket; bare Huntress når den fortsatt. Den som jobber på maskinen, mister nettverkstilgangen.",
-      "VND_EFFECT_HUNTRESS_ISOLATE_CONFIRM": "Huntress isolerer den neste gang maskinen tar kontakt; til da vises den som «Blir isolert».",
+      "VND_EFFECT_HUNTRESS_UNAUTHORIZED": "Sier til Huntress at tilgangen var uautorisert: senere innlogginger av samme slag regnes også som uautoriserte. Parasoll verken sperrer eller deaktiverer kontoer; gjør det i Huntress eller Microsoft 365.",
+      "VND_EFFECT_HUNTRESS_ISOLATE": "Isolerer {{device}} fra nettverket: bare Huntress når den fortsatt, og den som jobber på enheten, mister nettverkstilgangen. Begrunnelsen din lagres i Huntress sammen med isoleringen.",
+      "VND_EFFECT_HUNTRESS_ISOLATE_CONFIRM": "Huntress isolerer den neste gang enheten tar kontakt; til da vises den som «Blir isolert».",
       "VND_EFFECT_HUNTRESS_RELEASE": "Gir {{device}} nettverket tilbake.",
-      "VND_EFFECT_HUNTRESS_RELEASE_CONFIRM": "Huntress opphever isoleringen neste gang maskinen tar kontakt; til da vises den som «Isoleringen oppheves».",
-      "VND_EFFECT_HUNTRESS_UNINSTALL": "Fjerner Huntress-agenten fra {{device}}: agenten forsvinner fra Huntress-kontoen deres med en gang, og maskinen er ikke lenger beskyttet av Huntress.",
-      "VND_EFFECT_HUNTRESS_UNINSTALL_GAP": "Hvis Atera overvåker {{device}}, varsler Parasoll «Maskin uten Huntress» når fristen er ute."
+      "VND_EFFECT_HUNTRESS_RELEASE_CONFIRM": "Huntress opphever isoleringen neste gang enheten tar kontakt; til da vises den som «Isoleringen oppheves».",
+      "VND_EFFECT_HUNTRESS_UNINSTALL": "Fjerner Huntress-agenten fra {{device}}: agenten forsvinner fra Huntress-kontoen deres med en gang, og enheten er ikke lenger beskyttet av Huntress.",
+      "VND_EFFECT_HUNTRESS_UNINSTALL_GAP": "Hvis Atera overvåker {{device}}, varsler Parasoll «Enhet uten Huntress» når grensen i regelen er nådd."
     }
   },
   "tickets": {
@@ -4952,7 +4953,7 @@
   "security": {
     "panel": {
       "title": "Sikkerhet",
-      "notLinked": "Ingen Huntress-organisasjon er koblet til kunden. Koble en under Integrasjoner → Koblinger.",
+      "notLinked": "Huntress har ikke gitt tall for kunden ennå. Er ikke Huntress-organisasjonen koblet, kobler du den under Koblinger; tallene kommer ved neste lesing (hver time).",
       "notRead": "Huntress er ikke lest ennå.",
       "organization": "{{name}} ({{source}})",
       "usageOf": "Det Huntress teller for {{name}}"
@@ -4981,16 +4982,18 @@
       "pdf": "Rapport",
       "openPdf": "Åpne rapporten for {{period}} i {{source}}",
       "shown": "De {{shown}} siste av {{total}} rapporter.",
-      "none": "Ingen månedsrapporter fra Huntress de siste 13 månedene."
+      "none": "Ingen månedsrapporter fra Huntress de siste 13 månedene.",
+      "notRead": "Månedsrapportene er ikke lest ennå.",
+      "incidentsReported": "{{reported}} meldt"
     },
     "incident": {
       "heading": "Sikkerhetshendelse",
-      "loading": "Leser hendelsen …",
+      "loading": "Henter hendelsen …",
       "readAt": "Lest fra Huntress",
       "statuses": {
         "sent": "Venter på deg",
-        "auto_remediating": "Huntress utbedrer",
-        "draft": "Tilbake hos SOC-en til Huntress",
+        "auto_remediating": "Huntress utfører tiltakene",
+        "draft": "Tilbake hos SOC-en",
         "closed": "Lukket i Huntress",
         "dismissed": "Avvist i Huntress",
         "partner_dismissed": "Avvist av dere",
@@ -5034,7 +5037,7 @@
         "unapproved": "Venter på godkjenning",
         "approved": "Godkjent",
         "completed": "Utført",
-        "failed": "Feilet",
+        "failed": "Mislyktes",
         "cancelled": "Avbrutt"
       },
       "approvedBy": "Godkjent av {{name}} {{date}}",
@@ -5043,12 +5046,12 @@
       "unmark": "Merk som ikke utført",
       "markTitle": "Merk tiltaket som utført i Huntress",
       "unmarkTitle": "Merk tiltaket som ikke utført i Huntress",
-      "approve": "Godkjenn tiltakene",
+      "approve": "Godkjenn planen",
       "approveTitle": "Godkjenn utbedringsplanen i Huntress",
       "reject": "Send planen tilbake …",
       "rejectTitle": "Send planen tilbake til SOC-en hos Huntress",
       "rejectConfirm": "Send tilbake",
-      "rejectContinue": "Fortsett",
+      "rejectContinue": "Send tilbake …",
       "reason": "Hvorfor",
       "rejectComment": "Hva bør SOC-en vite?",
       "rejectHint": "SOC-en hos Huntress leser dette når den reviderer planen. Opptil 2048 tegn.",
@@ -5057,7 +5060,7 @@
       "reasons": {
         "approved_application": "Programmet er godkjent",
         "manually_remediated": "Allerede rettet for hånd",
-        "host_reimaged": "Maskinen ble installert på nytt",
+        "host_reimaged": "Enheten ble installert på nytt",
         "testing_security_controls": "Vi testet sikkerhetskontrollene",
         "other": "Noe annet",
         "approved_user_login_location_m365": "Innloggingsstedet er godkjent",
@@ -5067,7 +5070,9 @@
         "testing_security_controls_m365": "Vi testet sikkerhetskontrollene",
         "approved_vpn_or_proxy_usage_m365": "VPN-en eller proxyen er godkjent",
         "other_m365": "Noe annet"
-      }
+      },
+      "reasonChoose": "Velg en grunn",
+      "reasonMissing": "Velg hvorfor planen sendes tilbake."
     },
     "comments": {
       "heading": "Kommentarer",
@@ -5083,16 +5088,16 @@
     "notice": {
       "escalation": "Eskalering",
       "platformAction": "Plattformhandling",
-      "loading": "Leser fra Huntress …",
+      "loading": "Henter …",
       "readAt": "Lest fra Huntress",
       "statuses": {
         "open": "Åpen",
-        "overdue": "Forfalt",
+        "overdue": "Over fristen",
         "resolved": "Lukket"
       },
       "about": "Gjelder",
       "entityTypes": {
-        "Agent": "maskin",
+        "Agent": "enhet",
         "Identity": "konto",
         "User": "konto",
         "Mailbox": "postkasse"
@@ -5108,16 +5113,18 @@
           "confirm": "Lukk som ventet"
         },
         "unauthorized": {
-          "label": "Tilgangen var ikke ventet",
+          "label": "Tilgangen var uautorisert",
           "hint": "Senere innlogginger av samme slag regnes som uautoriserte. Sperr eller deaktiver kontoene i Huntress eller Microsoft 365.",
           "confirm": "Lukk som uautorisert"
         },
         "close": {
           "label": "Bare lukk den",
-          "hint": "Lukker den uten svar; en tilgangseskalering åpnes igjen neste gang.",
-          "confirm": "Lukk eskaleringen"
+          "hint": "Huntress legger den bare til side: den åpnes igjen neste gang den samme tilgangen skjer.",
+          "confirm": "Lukk eskaleringen",
+          "hintPlain": "Lukker eskaleringen i Huntress; driftsvarselet lukkes her når Huntress viser den lukket."
         }
-      }
+      },
+      "answerMissing": "Velg et svar først."
     }
   }
 }

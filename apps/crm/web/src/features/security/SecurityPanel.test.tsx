@@ -65,7 +65,7 @@ describe('Security in the Drift tab (M41)', () => {
     });
     const table = await screen.findByRole('table', { name: 'Monthly reports' });
     const rows = within(table).getAllByRole('row').slice(1);
-    expect(within(rows[0]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['September 2026', '3 reported, 2 resolved', '1,250', '14', 'Huntress']);
+    expect(within(rows[0]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['September 2026', '3 reported, 2 closed', '1,250', '14', 'Huntress']);
     const pdf = within(rows[0]!).getByRole('link', { name: 'Open the report for September 2026 in Huntress' });
     expect(pdf).toHaveAttribute('href', 'https://huntress.example.invalid/rails/active_storage/blobs/redirect/synthetic.pdf?disposition=download');
     expect(pdf).toHaveAttribute('target', '_blank');
@@ -79,7 +79,7 @@ describe('Security in the Drift tab (M41)', () => {
   it('says no organization is linked once Huntress was read, and that Huntress was never read otherwise — never zero agents', async () => {
     show({ reads: [read('huntress-organizations'), read('huntress-reports', { startedAt: null, complete: false })] });
     const panel = within(await screen.findByRole('region', { name: 'Security' }));
-    expect(await panel.findByText('No Huntress organization is linked to this customer. Link one under Integrations → Mappings.')).toBeVisible();
+    expect(await panel.findByText('Huntress has given no figures for this customer yet. If its Huntress organization is not linked, link it under Mappings; the figures come with the next read (hourly).')).toBeVisible();
     expect(panel.queryByText('Agents billed')).not.toBeInTheDocument();
     expect(panel.queryByRole('table')).not.toBeInTheDocument();
     document.body.innerHTML = '';
@@ -91,9 +91,22 @@ describe('Security in the Drift tab (M41)', () => {
     expect(unread.getByText('Organizations and usage (Huntress) not read yet · Monthly reports (Huntress) not read yet')).toBeVisible();
   });
 
-  it('says a linked organization has no reports yet', async () => {
+  it('says a linked organization has no reports yet, and that the reports were not read before their first read', async () => {
     show({ usage: [usage()], reads: [read('huntress-organizations'), read('huntress-reports')] });
     expect(await screen.findByText('No monthly reports from Huntress in the last 13 months.')).toBeVisible();
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+
+    // The organizations were read but the daily reports job never ran: "none" would be a claim no read made.
+    show({ usage: [usage()], reads: [read('huntress-organizations'), read('huntress-reports', { startedAt: null, complete: false })] });
+    expect(await screen.findByText('Monthly reports have not been read yet.')).toBeVisible();
+    expect(screen.queryByText('No monthly reports from Huntress in the last 13 months.')).not.toBeInTheDocument();
+  });
+
+  it('names only the reported incidents of a report Huntress gave no closed count for, never a zero', async () => {
+    show({ usage: [usage()], reports: [report({ incidentsResolved: null })], reportsTotal: 1, reads: [read('huntress-organizations'), read('huntress-reports')] });
+    const table = within(await screen.findByRole('table', { name: 'Monthly reports' }));
+    expect(table.getByRole('cell', { name: '3 reported' })).toBeVisible();
   });
 
   it('is left out where Huntress is switched off and was never read, instead of saying "not read yet" for good', async () => {

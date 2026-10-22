@@ -165,7 +165,8 @@ function MachineBody({ machine, onClose, onChanged, reread }: {
           {/* M41: what Huntress says about Defender and isolation, and the actions at Huntress on this agent; its version only where
               the inventory below is another source's. */}
           <ProtectionFacts device={device} version={described?.id !== device.id} />
-          {device.system === 'huntress' && device.removedAt === null && <ProtectionActions device={device} />}
+          {/* Mounted for a removed agent too: removing it ends here, and its confirmation stays open to say how it went. */}
+          {device.system === 'huntress' && <ProtectionActions device={device} onClosed={() => sourcesHeading.current?.focus()} />}
           <span className={styles.buttons}>
             {href && <Link href={href} target="_blank" rel="noopener noreferrer" className={styles.external}>
               {t('machines.openIn', { source: sourceName(t, device.system) })}<Open16Regular aria-hidden /></Link>}

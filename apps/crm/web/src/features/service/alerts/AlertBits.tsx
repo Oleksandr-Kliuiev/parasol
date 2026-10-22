@@ -57,12 +57,15 @@ export function AlertSource({ system }: { system: string }) {
 
 /**
  * An urgent alert its source closed (M41: a Huntress incident): it stays open in Parasoll until a person confirms, and says so in the
- * warning tone beside its other facts.
+ * warning tone beside its other facts, with the age of the closing as lists say ages (the exact moment in the title).
  */
 export function ClosedAtSource({ alert }: { alert: Pick<Alert, 'system' | 'sourceClosedAt'> }) {
   const { t } = useTranslation(); const styles = useClosedStyles();
   if (!alert.sourceClosedAt) return null;
-  return <span className={styles.closed}>{t('alerts.closedAtSource.fact', { source: sourceName(t, alert.system), date: formatDateTime(alert.sourceClosedAt) })}</span>;
+  return <span className={styles.closed}>
+    {t('alerts.closedAtSource.fact', { source: sourceName(t, alert.system) })}{' '}
+    <time dateTime={alert.sourceClosedAt} title={formatDateTime(alert.sourceClosedAt)}>{formatRelative(alert.sourceClosedAt)}</time>
+    {' – '}{t('alerts.closedAtSource.needsConfirming')}</span>;
 }
 
 const useClosedStyles = makeStyles({ closed: { color: h.saffronT, fontWeight: 600 } });

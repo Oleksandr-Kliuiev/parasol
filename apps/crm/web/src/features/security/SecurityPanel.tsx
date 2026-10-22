@@ -47,6 +47,7 @@ export function SecurityPanel({ organizationId, scope }: { organizationId: strin
   // Lists a read did not carry are empty, as the summary's reads are: nothing is claimed about them.
   const reads = overview?.reads ?? []; const usages = overview?.usage ?? []; const reports = overview?.reports ?? [];
   const organizationsRead = reads.find((r) => r.job === 'huntress-organizations');
+  const reportsRead = reads.find((r) => r.job === 'huntress-reports');
   // No security source is switched on or was ever read: the panel would have nothing to say, so it is left out.
   if (overview && reads.length === 0 && usages.length === 0 && reports.length === 0) return null;
   return <Panel title={t('security.panel.title')} icon={<Shield16Regular />}
@@ -71,7 +72,8 @@ export function SecurityPanel({ organizationId, scope }: { organizationId: strin
             return <TableRow key={`${report.system}-${report.externalId}`}>
               <TableCell>{name}</TableCell>
               <TableCell className={styles.number}>{report.incidentsReported === null ? '—'
-                : t('security.reports.incidentsValue', { reported: report.incidentsReported, resolved: report.incidentsResolved ?? 0 })}</TableCell>
+                : report.incidentsResolved === null ? t('security.reports.incidentsReported', { reported: report.incidentsReported })
+                  : t('security.reports.incidentsValue', { reported: report.incidentsReported, resolved: report.incidentsResolved })}</TableCell>
               <TableCell className={styles.number}>{report.signalsDetected === null ? '—' : formatNumber(report.signalsDetected, 0)}</TableCell>
               <TableCell className={styles.number}>{report.agentsCount === null ? '—' : formatNumber(report.agentsCount, 0)}</TableCell>
               <TableCell>{href
@@ -85,7 +87,9 @@ export function SecurityPanel({ organizationId, scope }: { organizationId: strin
       </div>}
       {overview && reports.length > 0 && overview.reportsTotal > reports.length && <Text block className={styles.muted}>
         {t('security.reports.shown', { shown: reports.length, total: overview.reportsTotal })}</Text>}
-      {usages.length > 0 && reports.length === 0 && <Text block className={styles.muted}>{t('security.reports.none')}</Text>}
+      {/* No report is "none" only once the reports were read; before that it is not known. */}
+      {usages.length > 0 && reports.length === 0 && <Text block className={styles.muted}>
+        {t(reportsRead?.startedAt ? 'security.reports.none' : 'security.reports.notRead')}</Text>}
     </div>
   </Panel>;
 }

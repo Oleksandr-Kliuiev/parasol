@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Badge, Button, Checkbox, Field, Select, Spinner, Text, Textarea, makeStyles, useRestoreFocusTarget,
 } from '@fluentui/react-components';
@@ -95,9 +95,11 @@ function IncidentBody({ alert, incident, onAsk }: { alert: Alert; incident: Inci
   const reject = useActionAvailable(alert.system, 'incident.reject', open);
   const resolve = useActionAvailable(alert.system, 'incident.resolve', open);
   const step = useActionAvailable(alert.system, 'incident.step', open);
-  const comment = useActionAvailable(alert.system, 'incident.comment', canWrite);
+  // Huntress takes no comment on a report it no longer knows.
+  const comment = useActionAvailable(alert.system, 'incident.comment', canWrite && incident.status !== 'deleted');
   const [showBody, setShowBody] = useState(false); const [rejecting, setRejecting] = useState(false);
-  const restore = useRestoreFocusTarget();
+  const restore = useRestoreFocusTarget(); const rejectButton = useRef<HTMLButtonElement>(null);
+  const closeReject = () => { setRejecting(false); window.setTimeout(() => rejectButton.current?.focus(), 0); };
   const waiting = incident.remediations.filter((r) => r.status === 'unapproved');
   // Huntress takes an answer to the plan only while the report waits for the partner (`sent`).
   const answerable = incident.status === 'sent' && waiting.length > 0;
@@ -129,16 +131,18 @@ function IncidentBody({ alert, incident, onAsk }: { alert: Alert; incident: Inci
       {answerable && approve && <Button {...restore} size="small" onClick={() => onAsk({
         request: alertActionRequest(alert, 'incident.approve'), title: t('security.remediation.approveTitle'), confirm: t('security.remediation.approve'),
       })}>{t('security.remediation.approve')}</Button>}
-      {answerable && reject && !rejecting && <Button size="small" onClick={() => setRejecting(true)}>{t('security.remediation.reject')}</Button>}
+      {/* A disclosure: the form opens under it with focus in its first field, and closing it brings focus back here. */}
+      {answerable && reject && <Button ref={rejectButton} size="small" aria-expanded={rejecting}
+        onClick={() => (rejecting ? closeReject() : setRejecting(true))}>{t('security.remediation.reject')}</Button>}
       {resolvable && resolve && <Button {...restore} size="small" onClick={() => onAsk({
         request: alertActionRequest(alert, 'incident.resolve'), title: t('security.incident.resolveTitle'), confirm: t('security.incident.resolve'),
       })}>{t('security.incident.resolve')}</Button>}
     </span> : null}
-    {answerable && reject && rejecting && <RejectForm alert={alert} incident={incident} onCancel={() => setRejecting(false)}
+    {answerable && reject && rejecting && <RejectForm alert={alert} incident={incident} onCancel={closeReject}
       onAsk={(next) => onAsk({ ...next, onAccepted: () => setRejecting(false) })} />}
     {incident.isOpen && incident.status === 'draft' && <Text block className={styles.muted}>{t('security.incident.draftNote')}</Text>}
 
-    {alert.machineId && <DeviceIsolation machineId={alert.machineId} />}
+    {alert.machineId && <DeviceIsolation machineId={alert.machineId} agentExternalId={incident.agentExternalId} deviceId={alert.deviceId} />}
 
     <Comments alert={alert} incident={incident} canComment={comment} onAsk={onAsk} />
 
@@ -177,12 +181,15 @@ function RemediationItem({ remediation, canMark, onMark }: { remediation: Remedi
 function RejectForm({ alert, incident, onCancel, onAsk }: { alert: Alert; incident: Incident; onCancel: () => void; onAsk: (ask: Ask) => void }) {
   const { t } = useTranslation(); const styles = useStyles(); const restore = useRestoreFocusTarget();
   const reasons = incident.platform === 'microsoft_365' ? rejectionReasons.m365 : rejectionReasons.endpoint;
-  const [reason, setReason] = useState<string>(reasons[0]);
+  // No reason is chosen for the person: a preselected one would go to Huntress's SOC unread.
+  const [reason, setReason] = useState('');
   const [comment, setComment] = useState(''); const [useful, setUseful] = useState(false); const [touched, setTouched] = useState(false);
+  const first = useRef<HTMLSelectElement>(null);
+  useEffect(() => { first.current?.focus(); }, []);
   const text = comment.trim();
   const go = () => {
     setTouched(true);
-    if (!text) return;
+    if (!reason || !text) return;
     onAsk({
       request: alertActionRequest(alert, 'incident.reject', { reason, comment: text, useful }),
       title: t('security.remediation.rejectTitle'), confirm: t('security.remediation.rejectConfirm'),
@@ -190,8 +197,9 @@ function RejectForm({ alert, incident, onCancel, onAsk }: { alert: Alert; incide
     });
   };
   return <div className={styles.form} role="group" aria-label={t('security.remediation.reject')}>
-    <Field label={t('security.remediation.reason')}>
-      <Select value={reason} onChange={(_, data) => setReason(data.value)}>
+    <Field label={t('security.remediation.reason')} required validationMessage={touched && !reason ? t('security.remediation.reasonMissing') : undefined}>
+      <Select ref={first} value={reason} onChange={(_, data) => setReason(data.value)}>
+        <option value="" disabled>{t('security.remediation.reasonChoose')}</option>
         {reasons.map((code) => <option key={code} value={code}>{t(`security.remediation.reasons.${code}`)}</option>)}
       </Select>
     </Field>
