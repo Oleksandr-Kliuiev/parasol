@@ -277,7 +277,10 @@ Playwright.
   приложения. WebKit 26.6 не шлёт его для `date`, `time` и `datetime-local` (при `focus()` и Tab, `time` и при клике),
   Chromium и Firefox шлют всегда. Сплошная проверка диалогов: на дате открываются только диалог даты договора (уведомление,
   завершение договора, завершение строки; `ContractDialogs.tsx:276`, `:285`) и «Скрыть до…» из боковой панели оповещения
-  (`AlertHideDialog.tsx:78`); `PriceListPage.tsx:301` и `ProjectPhaseForms.tsx:69` открываются на поле «Name». Все четыре
-  проверяет WebKit e2e `dialog-date-focus.spec.ts`. (2) `tickets.spec.ts` (M39) кликает строку, пока
+  (`AlertHideDialog.tsx:78`); `PriceListPage.tsx:301` и `ProjectPhaseForms.tsx:69` открываются на поле «Name». Там же
+  найдено и исправлено: после Escape из поля фокус возвращался на кнопку диалога только в Chromium (он шлёт `blur` при
+  удалении поля, Firefox и Safari — нет, а Safari ещё и не фокусирует кнопку по клику); теперь это делает общий `Dialog`
+  (`app/usedControls.ts` помнит и клики). Всё проверяет e2e `dialog-focus.spec.ts` в Chromium, Firefox и WebKit.
+  (2) `tickets.spec.ts` (M39) кликает строку, пока
   отложенный поиск подменяет список заглушкой загрузки, и клик теряется (Firefox, первый прогон M42). Тесту стоит ждать
   сужения списка, странице — держать прежний список, пока грузится новый.

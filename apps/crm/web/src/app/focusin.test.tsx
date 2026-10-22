@@ -135,8 +135,7 @@ describe('a dialog that opens on a date field in Safari', () => {
     </>)], '/');
   }
 
-  // Focus going back to the button on close is checked in WebKit (e2e/dialog-date-focus.spec.ts): jsdom's Fluent never
-  // gives it back, whatever field the dialog opens on.
+  // Focus going back to the button on close is the shared Dialog's (Dialog.test.tsx, e2e/dialog-focus.spec.ts).
   it('becomes the active modal on its first field and hides the page behind it', async () => {
     vi.useFakeTimers();
     likeSafari();
