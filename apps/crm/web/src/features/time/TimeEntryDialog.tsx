@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -87,9 +87,12 @@ interface TimeEntryDialogProps {
  */
 export function TimeEntryDialogHost({ open, onClose, ...props }: Omit<TimeEntryDialogProps, 'onDirtyChange'> & { open: boolean }) {
   const { t } = useTranslation();
-  const [dirty, setDirty] = useState(false);
+  // Read when Escape or a click beside the form arrives, not from state: a state change made after the keystroke that typed
+  // the text is drawn a task later, and an Escape right behind it closed the form as untouched, dropping what was typed.
+  const dirty = useRef(false);
+  const reportDirty = useCallback((value: boolean) => { dirty.current = value; }, []);
   const [asking, setAsking] = useState(false);
-  const close = () => { setAsking(false); setDirty(false); onClose(); };
+  const close = () => { setAsking(false); dirty.current = false; onClose(); };
   // "Keep editing" puts the person back in the field they left. Focus re-entering the form is also what makes it the
   // active dialog again: without it the form stays hidden from screen readers after the question closes (Chromium).
   const returnTo = useRef<HTMLElement | null>(null);
@@ -105,9 +108,9 @@ export function TimeEntryDialogHost({ open, onClose, ...props }: Omit<TimeEntryD
   // The question is a dialog nested in the form's own surface: when it closes, the form is the active dialog again (in the
   // accessibility tree and taking input), which a sibling dialog does not give back.
   return (
-    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) { if (dirty) ask(); else close(); } }}>
+    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) { if (dirty.current) ask(); else close(); } }}>
       <DialogSurface>
-        <TimeEntryDialog {...props} onClose={close} onDirtyChange={setDirty} />
+        <TimeEntryDialog {...props} onClose={close} onDirtyChange={reportDirty} />
         <ConfirmDialog open={asking} title={t('time.discardTitle')} confirm={t('time.discard')} cancel={t('time.keepEditing')}
           onConfirm={close} onCancel={keepEditing}>{t('time.discardBody')}</ConfirmDialog>
       </DialogSurface>
@@ -159,7 +162,8 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const [opened] = useState(draft);
   // A saved entry has nothing left to lose: the Atera step that follows never asks before closing.
   const dirty = draft !== opened && recording === null;
-  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  // In the commit of the keystroke itself, so the host knows before the next key (Escape) arrives.
+  useLayoutEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   // Only the customer's own open projects can take hours; the list is empty until a customer is picked.
   const { workTypes, projects: projectOptions } = useTimeFormOptions(scope, organization?.id);
   const projects = projectOptions.isSuccess && !projectOptions.isFetching ? projectOptions.data : [];
