@@ -20,7 +20,8 @@ import {
 import type { Incident, Remediation } from './types';
 
 const useStyles = makeStyles({
-  section: { display: 'grid', gap: '12px', minWidth: 0 },
+  // One column that may shrink: a long option of a select or a long word never widens the panel past a phone's screen.
+  section: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '12px', minWidth: 0 },
   heading: { margin: 0, fontSize: '15px', lineHeight: '22px', fontWeight: 700 },
   subheading: { margin: 0, fontSize: '14px', lineHeight: '20px', fontWeight: 700 },
   muted: { color: h.muted, fontSize: '13px', lineHeight: '20px' },
@@ -39,7 +40,7 @@ const useStyles = makeStyles({
   detailName: { color: h.muted },
   detailValue: { margin: 0, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', overflowWrap: 'anywhere' },
   buttons: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-  form: { display: 'grid', gap: '10px', padding: '12px', borderRadius: '12px', backgroundColor: h.surface2 },
+  form: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px', padding: '12px', borderRadius: '12px', backgroundColor: h.surface2 },
   quote: { margin: 0, paddingLeft: '12px', borderLeft: `3px solid ${h.line2}`, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '30vh', overflowY: 'auto' },
   comment: { display: 'grid', gap: '4px', padding: '10px 12px', borderRadius: '12px', border: `1px solid ${h.line}`, minWidth: 0 },
   commentHead: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', fontSize: '12.5px', lineHeight: '18px', color: h.muted },

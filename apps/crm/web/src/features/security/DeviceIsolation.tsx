@@ -15,7 +15,7 @@ import type { MachineDevice } from '../service/types';
 import { deviceActionRequest, isIsolated } from './securityText';
 
 const useStyles = makeStyles({
-  section: { display: 'grid', gap: '8px', minWidth: 0 },
+  section: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '8px', minWidth: 0 },
   subheading: { margin: 0, fontSize: '14px', lineHeight: '20px', fontWeight: 700 },
   line: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' },
   muted: { color: h.muted, fontSize: '13px', lineHeight: '20px' },

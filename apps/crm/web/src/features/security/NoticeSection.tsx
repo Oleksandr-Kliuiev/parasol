@@ -15,12 +15,13 @@ import { alertActionRequest, isAccessEscalation, noticeStatus } from './security
 import type { Notice } from './types';
 
 const useStyles = makeStyles({
-  section: { display: 'grid', gap: '12px', minWidth: 0 },
+  // One column that may shrink: a long option of a select or a long word never widens the panel past a phone's screen.
+  section: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '12px', minWidth: 0 },
   heading: { margin: 0, fontSize: '15px', lineHeight: '22px', fontWeight: 700 },
   muted: { color: h.muted, fontSize: '13px', lineHeight: '20px' },
   status: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' },
   entities: { margin: 0, paddingLeft: '20px', display: 'grid', gap: '2px', overflowWrap: 'anywhere' },
-  form: { display: 'grid', gap: '10px', padding: '12px', borderRadius: '12px', backgroundColor: h.surface2 },
+  form: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px', padding: '12px', borderRadius: '12px', backgroundColor: h.surface2 },
   send: { justifySelf: 'start' },
 });
 
