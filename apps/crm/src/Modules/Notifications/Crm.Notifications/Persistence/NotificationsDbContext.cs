@@ -42,9 +42,14 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
             b.Property(x => x.Channel).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.CardJson).HasMaxLength(8000);
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
+            b.Property(x => x.ParametersJson).HasMaxLength(ChannelPost.ParametersLength);
+            b.Property(x => x.DedupeKey).HasMaxLength(ChannelPost.DedupeKeyLength);
             b.Property(x => x.LastError).HasMaxLength(512);
             b.Ignore(x => x.Card);
+            b.Ignore(x => x.Parameters);
             b.HasIndex(x => new { x.Status, x.NextAttemptAt });
+            b.HasIndex(x => x.DedupeKey).IsUnique().HasFilter("[DedupeKey] IS NOT NULL");
         });
 
         modelBuilder.Entity<NotificationPreference>(b =>

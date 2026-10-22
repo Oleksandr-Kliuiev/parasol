@@ -73,7 +73,7 @@ internal sealed class AlertQueries(
     /// <summary>The shape other modules read through <see cref="IServiceApi"/>.</summary>
     internal static readonly Expression<Func<Alert, AlertRef>> Ref = a => new AlertRef(
         a.Id, a.OrganizationId, a.System, a.Kind, a.ExternalId, a.ExternalCustomerId, a.Title, a.Severity, a.State, a.DeviceName, a.DeviceId,
-        a.CreatedAtSource, a.Url, a.ResolvedAt, a.Rule, a.Facts, a.SourceClosedAt);
+        a.CreatedAtSource, a.Url, a.ResolvedAt, a.Rule, a.Facts, a.SourceClosedAt, a.Hold != null ? a.Hold.Until : null);
 
     /// <summary>
     /// Alerts in one state (open unless asked otherwise). Open ones come in the order they should be looked at: critical first, and
