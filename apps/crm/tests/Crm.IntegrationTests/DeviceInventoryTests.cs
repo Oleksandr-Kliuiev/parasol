@@ -116,7 +116,7 @@ public sealed class DeviceInventoryTests(CrmWebFactory factory)
     private static async Task<(Guid OrganizationId, string Guid)> AgentAsync(AteraTicketHost host)
     {
         var organizationId = await host.Client().CreateOrganizationAsync(new { name = $"Inventar {Guid.NewGuid():N}"[..20], status = "Customer" });
-        var agentId = Random.Shared.NextInt64(80_000_000, 89_999_999);
+        var agentId = TestData.AteraId();
         var guid = $"5369e175-0000-4000-8000-{agentId:D12}";
         var agent = AteraClient.ReadAgent(JsonDocument.Parse(JsonSerializer.Serialize(new
         {
