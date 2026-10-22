@@ -206,9 +206,13 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
   await expectNoSeriousViolations(page, 'New billing run dialog');
 
   // E-mail is off in this environment, so Send is switched off on the page; the dialog is checked as it appears once it is on.
+  // The page shows Send only once the worker has stored the version's document, which a busy worker may not do while this
+  // long test still has time: the latest document is shown as stored, as the dialog is what is checked here.
   await page.route(`**/api/v1/sales/quotes/${quote.id}`, async route => {
     const response = await route.fetch();
-    return route.fulfill({ response, json: { ...(await response.json()), canSendByEmail: true } });
+    const body = await response.json() as { documents: { status: string }[] };
+    const documents = body.documents.map((document, index) => index === body.documents.length - 1 ? { ...document, status: 'Ready' } : document);
+    return route.fulfill({ response, json: { ...body, canSendByEmail: true, documents } });
   });
   await page.goto(`/quotes/${quote.id}`);
   await page.getByRole('button', { name: 'Send', exact: true }).click();
