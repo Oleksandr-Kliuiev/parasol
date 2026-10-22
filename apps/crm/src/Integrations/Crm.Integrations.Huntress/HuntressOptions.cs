@@ -22,6 +22,12 @@ public sealed class HuntressOptions
     public Uri BaseUrl { get; set; } = new("https://api.huntress.io/v1/");
 
     /// <summary>
+    /// What the account may ask a minute: Huntress allows 60 on a sliding minute, and the two budgets below share it. Only a stand-in
+    /// without a limit (the e2e suite) is given more; Huntress's own address never is.
+    /// </summary>
+    public int AccountRequestsPerMinute { get; set; } = 60;
+
+    /// <summary>
     /// Requests per minute of the reads (organizations, agents, incidents, reports). Huntress allows 60 per account on a sliding
     /// minute; reads and actions share it, 45 to 15 (M38), and two budgets that add up to more would be refused with 429.
     /// </summary>

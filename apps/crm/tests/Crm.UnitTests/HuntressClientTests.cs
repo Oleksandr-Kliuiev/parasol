@@ -422,6 +422,37 @@ public sealed class HuntressClientTests
         Should.Throw<OptionsValidationException>(() => services.GetRequiredService<IOptions<HuntressOptions>>().Value);
     }
 
+    [Theory]
+    [InlineData("https://api.huntress.io/v1/", "120", "60", "60")]
+    [InlineData("https://eu.api.huntress.io/v1/", "120", "60", "60")]
+    [InlineData("http://127.0.0.1:5299/huntress/v1/", "100", "60", "60")]
+    public void Only_a_stand_in_may_be_given_more_than_huntress_s_sixty_and_the_budgets_still_fit_in_it(string baseUrl, string account, string reads, string actions)
+    {
+        using var services = Providers(new Uri("http://127.0.0.1:1/"), settings: new()
+        {
+            ["Integrations:Huntress:BaseUrl"] = baseUrl,
+            ["Integrations:Huntress:AccountRequestsPerMinute"] = account,
+            ["Integrations:Huntress:ReadRequestsPerMinute"] = reads,
+            ["Integrations:Huntress:ActionRequestsPerMinute"] = actions,
+        });
+
+        Should.Throw<OptionsValidationException>(() => services.GetRequiredService<IOptions<HuntressOptions>>().Value);
+    }
+
+    [Fact]
+    public void A_stand_in_without_a_limit_may_have_wider_budgets()
+    {
+        using var services = Providers(new Uri("http://127.0.0.1:1/"), settings: new()
+        {
+            ["Integrations:Huntress:BaseUrl"] = "http://127.0.0.1:5299/huntress/v1/",
+            ["Integrations:Huntress:AccountRequestsPerMinute"] = "1200",
+            ["Integrations:Huntress:ReadRequestsPerMinute"] = "600",
+            ["Integrations:Huntress:ActionRequestsPerMinute"] = "600",
+        });
+
+        services.GetRequiredService<IOptions<HuntressOptions>>().Value.ActionRequestsPerMinute.ShouldBe(600);
+    }
+
     [Fact]
     public void The_defaults_are_valid_off_and_closed()
     {
@@ -429,8 +460,8 @@ public sealed class HuntressClientTests
         using var services = new ServiceCollection().AddLogging().AddSingleton(TimeProvider.System).AddSingleton<IConfiguration>(configuration)
             .AddHuntressIntegration(configuration).BuildServiceProvider();
         var options = services.GetRequiredService<IOptions<HuntressOptions>>().Value;
-        (options.BaseUrl, options.ReadRequestsPerMinute, options.ActionRequestsPerMinute, options.PageSize)
-            .ShouldBe((new Uri("https://api.huntress.io/v1/"), 45, 15, 500));
+        (options.BaseUrl, options.AccountRequestsPerMinute, options.ReadRequestsPerMinute, options.ActionRequestsPerMinute, options.PageSize)
+            .ShouldBe((new Uri("https://api.huntress.io/v1/"), 60, 45, 15, 500));
         (options.Enabled, options.IsConfigured, options.WriteEnabled, options.DryRun).ShouldBe((false, false, false, false));
         options.EnabledActions.ShouldBeEmpty("every kind of action is off until it is listed");
         options.WriteAllowedCustomerIds.ShouldBeEmpty();

@@ -38,11 +38,11 @@ public sealed class HuntressReadBack(
     ILogger<HuntressReadBack> logger)
 {
     /// <summary>
-    /// The incident again, with its plan and comments. When a person closed it from Parasoll and Huntress shows it closed (or accepted
+    /// The incident again, with its plan (and its comments after a comment). When a person closed it from Parasoll and Huntress shows it closed (or accepted
     /// the close), its alert is resolved: nothing waits for another confirmation. Any other action leaves the alert to the scheduled
     /// read, so an urgent incident Huntress closed by itself still waits for a person.
     /// </summary>
-    public async Task IncidentAsync(long id, IncidentClosing closing, CancellationToken ct)
+    public async Task IncidentAsync(long id, IncidentClosing closing, CancellationToken ct, bool withComments = false)
     {
         var alertId = HuntressMapping.IncidentAlertId(id);
         try
@@ -66,7 +66,8 @@ public sealed class HuntressReadBack(
             }
 
             var remediations = incident.AllRemediations ? incident.Remediations : await client.GetRemediationsAsync(id, ct);
-            var comments = await client.GetCommentsAsync(id, ct);
+            // The comments only after a comment: no other action changes them, and each read spends the actions' small budget.
+            var comments = withComments ? await client.GetCommentsAsync(id, ct) : null;
             var host = (await security.GetIncidentAsync(HuntressTypes.System, id, ct))?.DeviceName;
             await security.ApplyIncidentsAsync([HuntressMapping.Reading(incident, organizationId, host, options.Value.IncidentUrlTemplate, remediations, comments)], ct);
             if (!HuntressMapping.IsOpen(incident.Status) && closing != IncidentClosing.NotAsked)

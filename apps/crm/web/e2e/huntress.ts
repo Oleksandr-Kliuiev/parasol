@@ -60,7 +60,7 @@ export const huntressEscalation = (page: Page, customer: HuntressCustomer, field
 export async function huntressIncidentState(page: Page, id: number) {
   const response = await page.request.get(`${control}/incidents/${id}`);
   expect(response.status()).toBe(200);
-  return (await response.json()) as { status: string; posted?: Record<string, unknown>; remediations: Array<{ type: string; status: string }> };
+  return (await response.json()) as { status: string; posted?: Record<string, unknown>; remediations: { items: Array<{ type: string; status: string }> } };
 }
 
 /** What "Huntress" holds of an escalation now, with the resolution the CRM sent (`posted`). */

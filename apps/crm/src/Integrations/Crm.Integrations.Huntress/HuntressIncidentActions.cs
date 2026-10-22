@@ -77,6 +77,9 @@ internal abstract class HuntressIncidentAction(
     /// </summary>
     protected virtual IncidentClosing Closing(bool sent) => IncidentClosing.NotAsked;
 
+    /// <summary>Whether the read after the action reads the comments too: only an action that writes one changes them.</summary>
+    protected virtual bool ChangesComments => false;
+
     protected IHuntressActionClient Client => client;
 
     public async Task<VendorActionPlan> PlanAsync(VendorActionRequest request, CancellationToken cancellationToken)
@@ -151,7 +154,7 @@ internal abstract class HuntressIncidentAction(
             return VendorActionResult.Later("VND_VENDOR_BUSY", "Huntress's request limit was reached; nothing was sent.");
         }
 
-        await readBack.IncidentAsync(id, Closing(sent: true), cancellationToken);
+        await readBack.IncidentAsync(id, Closing(sent: true), cancellationToken, ChangesComments);
         return result;
     }
 
@@ -426,6 +429,8 @@ internal sealed class HuntressCommentAction(ISecurityApi security, ICustomersApi
     public override string Kind => HuntressActionKinds.Comment;
 
     public override bool IsRepeatable => false;
+
+    protected override bool ChangesComments => true;
 
     protected override VendorActionPlan Plan(IncidentView incident, VendorActionTarget target, JsonElement parameters)
     {

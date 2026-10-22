@@ -67,7 +67,7 @@ test('an incident is answered from its alert: the plan approved, the manual step
   await expect(panel.getByText('Resolved', { exact: true }).first()).toBeVisible({ timeout: SENT });
   const state = await huntressIncidentState(page, incident.id);
   expect(state.status).toBe('closed');
-  expect(state.remediations.map((r) => r.status)).toEqual(['approved', 'completed']);
+  expect(state.remediations.items.map((r) => r.status)).toEqual(['approved', 'completed']);
   expect((await huntressAlerts(page, customer.organizationId)).length).toBe(0);
 });
 

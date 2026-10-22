@@ -52,6 +52,11 @@ const hostArgs = [
   '--Integrations:Huntress:Enabled=true',
   `--Integrations:Huntress:BaseUrl=${mock}/huntress/v1/`,
   '--Integrations:Huntress:WriteEnabled=true',
+  // Huntress allows an account 60 requests a minute and Parasoll keeps 15 of them for people's actions; the stand-in has no limit,
+  // and three browsers answering incidents at once would wait out that minute, so it is given more (never Huntress's own address).
+  '--Integrations:Huntress:AccountRequestsPerMinute=1200',
+  '--Integrations:Huntress:ReadRequestsPerMinute=600',
+  '--Integrations:Huntress:ActionRequestsPerMinute=600',
   ...['incident.approve', 'incident.reject', 'incident.step', 'incident.resolve', 'incident.comment', 'escalation.resolve', 'agent.isolate', 'agent.release',
     'agent.uninstall'].map((kind, index) => `--Integrations:Huntress:EnabledActions:${index}=${kind}`),
   ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),

@@ -25,8 +25,10 @@ public static class HuntressModule
         services.AddOptions<HuntressOptions>().Bind(configuration.GetSection(HuntressOptions.SectionName))
             .Validate(options => Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.BaseUrl), "Integrations:Huntress:BaseUrl must be an https address (the API key travels with every call).")
             .Validate(options => options.ReadRequestsPerMinute >= 1 && options.ActionRequestsPerMinute >= 1 &&
-                                 options.ReadRequestsPerMinute + options.ActionRequestsPerMinute <= 60,
-                "Integrations:Huntress: the read and action budgets are at least 1 each and together at most Huntress's 60 requests a minute.")
+                                 options.ReadRequestsPerMinute + options.ActionRequestsPerMinute <= options.AccountRequestsPerMinute,
+                "Integrations:Huntress: the read and action budgets are at least 1 each and together at most the account's requests a minute.")
+            .Validate(options => options.AccountRequestsPerMinute <= 60 || !options.BaseUrl.Host.EndsWith("huntress.io", StringComparison.OrdinalIgnoreCase),
+                "Integrations:Huntress: Huntress allows an account 60 requests a minute; only a stand-in may be given more.")
             .ValidateOnStart();
 
         // M41: one client, two budgets. The scheduled reads spend 45 requests a minute, the actions people ask for 15 (M38), each

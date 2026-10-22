@@ -12,6 +12,16 @@ async function expectNoHorizontalScroll(page: Page, name: string) {
   expect(overflow, `${name} scrolls horizontally by ${overflow}px`).toBeLessThanOrEqual(1);
 }
 
+/** The same for an open dialog: a modal hides <main> from the accessibility tree, so the dialog itself and the page are measured. */
+async function expectDialogFits(page: Page, dialog: ReturnType<Page['getByRole']>, name: string) {
+  await expect(dialog).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow, `${name}: the page scrolls horizontally by ${overflow}px`).toBeLessThanOrEqual(1);
+  const inside = await dialog.evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(inside, `${name} scrolls sideways by ${inside}px`).toBeLessThanOrEqual(1);
+}
+
 test('pages fit a phone screen and navigation works', async ({ page }) => {
   await signIn(page, 'Crm.Sales');
   const m = marker('Mob');
@@ -124,10 +134,10 @@ test('a Huntress incident is read and answered on a phone', async ({ page }) => 
   const incident = panel.getByRole('region', { name: 'Security incident', exact: true });
   await expect(incident.getByText('Waiting for you', { exact: true })).toBeVisible();
   await expect(incident.getByRole('textbox', { name: 'New comment' })).toBeVisible();
-  await expectNoHorizontalScroll(page, 'Incident panel');
+  await expectDialogFits(page, panel, 'Incident panel');
   await incident.getByRole('button', { name: 'Approve plan', exact: true }).click();
   const confirm = page.getByRole('dialog', { name: 'Approve the remediation plan in Huntress', exact: true });
   await confirm.getByRole('button', { name: 'Approve plan', exact: true }).click();
   await expect(confirm.getByRole('status')).toContainText('Done', { timeout: 30_000 });
-  await expectNoHorizontalScroll(page, 'Action confirmation');
+  await expectDialogFits(page, confirm, 'Action confirmation');
 });
