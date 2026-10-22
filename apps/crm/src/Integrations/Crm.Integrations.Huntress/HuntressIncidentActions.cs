@@ -21,7 +21,10 @@ public static class HuntressActionKinds
     public const string Release = "agent.release";
     public const string Uninstall = "agent.uninstall";
 
-    public static readonly string[] All = [Approve, Reject, Step, Resolve, Comment, EscalationResolve, Isolate, Release, Uninstall];
+    /// <summary>M43: the customer's organization created from the "Connect services" wizard.</summary>
+    public const string OrganizationCreate = "organization.create";
+
+    public static readonly string[] All = [Approve, Reject, Step, Resolve, Comment, EscalationResolve, Isolate, Release, Uninstall, OrganizationCreate];
 
     /// <summary>Huntress caps a comment, and a rejection's explanation, at 2048 characters.</summary>
     public const int MaxTextLength = 2048;

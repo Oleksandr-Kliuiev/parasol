@@ -58,6 +58,8 @@ public static class HuntressModule
         services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<HuntressIsolationAction>(sp, true));
         services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<HuntressIsolationAction>(sp, false));
         services.AddScoped<IVendorActionHandler, HuntressUninstallAction>();
+        // M43: the customer's organization created from the "Connect services" wizard, found by its key before and after.
+        services.AddScoped<IVendorActionHandler, HuntressCreateOrganizationAction>();
         services.AddModuleServices(typeof(HuntressModule).Assembly);
         return services;
     }

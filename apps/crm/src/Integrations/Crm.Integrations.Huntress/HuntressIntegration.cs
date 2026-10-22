@@ -13,7 +13,8 @@ namespace Crm.Integrations.Huntress;
 /// <summary>
 /// Huntress in the CRM's list of integrations (M41): its organizations are external records a person links to CRM organizations on
 /// the mapping screen. Huntress keeps no organization number, so nothing links by itself: the screen suggests names, a person
-/// decides. Creating an organization in Huntress comes with M43.
+/// decides. An organization is created in Huntress from the "Connect services" wizard (M43), as a vendor action
+/// (<see cref="HuntressCreateOrganizationAction"/>), not as the mapping screen's export.
 /// </summary>
 internal sealed class HuntressAdapter(IOptions<HuntressOptions> options, IServiceProvider services) : IIntegrationAdapter
 {

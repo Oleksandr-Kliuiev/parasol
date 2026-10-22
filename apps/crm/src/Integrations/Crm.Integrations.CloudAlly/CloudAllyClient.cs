@@ -47,6 +47,13 @@ public interface ICloudAllyClient
     /// <summary>Cancels the account's subscription and deletes the CloudAlly account (<c>DELETE v2/resellers/accounts/{id}</c>).</summary>
     Task<CaResult> CloseAccountAsync(string accountId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Creates a customer account of the partner (<c>POST v2/resellers/accounts</c>, M43) in the given data center; CloudAlly opens it
+    /// as a trial. The account answered with, or null when the answer has none. CloudAlly requires a password: a random one is made for
+    /// the request and kept nowhere — the partner reaches the account through the partner portal.
+    /// </summary>
+    Task<CaAccount?> CreateAccountAsync(string email, string displayName, string region, CancellationToken cancellationToken);
+
     Task<CaRestoreResult> RestoreAsync(string accountId, CaRecoveryRequest request, CancellationToken cancellationToken);
 
     Task ExportAsync(string accountId, CaRecoveryRequest request, CancellationToken cancellationToken);
@@ -115,6 +122,25 @@ internal sealed class CloudAllyClient(HttpClient http, IOptions<CloudAllyOptions
         using var response = await http.SendAsync(request, cancellationToken);
         EnsureSuccess(response, "close the account");
         return await ReadAsync<CaResult>(response, cancellationToken) ?? new CaResult(true, null, (int)response.StatusCode);
+    }
+
+    public async Task<CaAccount?> CreateAccountAsync(string email, string displayName, string region, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "v2/resellers/accounts")
+        {
+            Content = JsonContent.Create(new Dictionary<string, object?>
+            {
+                ["email"] = email,
+                ["password"] = CloudAllyAccountPassword.New(),
+                ["displayName"] = displayName,
+                ["region"] = region,
+            }, options: Json),
+        };
+        // The reference lists the application's id and secret as required headers of this call, beside the token.
+        CloudAllyTokenProvider.AddApplication(request.Headers, options.Value);
+        using var response = await http.SendAsync(request, cancellationToken);
+        EnsureSuccess(response, "create the account");
+        return await ReadAsync<CaAccount>(response, cancellationToken);
     }
 
     public async Task<CaRestoreResult> RestoreAsync(string accountId, CaRecoveryRequest request, CancellationToken cancellationToken)

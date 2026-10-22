@@ -148,6 +148,23 @@ export function createHuntress({ base, run, send }) {
       const o = organizationOf(id);
       return o ? send(res, 200, { organization: { ...organizationView(o), actual_usages: usageOf(o) } }) : fail(res, 404, 'Organization not found');
     }],
+    // M43: an organization created from Parasoll's wizard. Name and key are required (≤ 256 characters); the stand-in keeps keys unique.
+    ['POST', /^organizations$/, (req, res, url, body) => {
+      const asked = parse(body);
+      const name = typeof asked?.name === 'string' ? asked.name.trim() : '';
+      const key = typeof asked?.key === 'string' ? asked.key.trim() : '';
+      if (!name || !key || name.length > 256 || key.length > 256) return fail(res, 422, 'Invalid creation parameters.');
+      if (organizations.some((o) => o.key === key)) return fail(res, 422, 'Key has already been taken');
+      const created = newId();
+      const now = stamp();
+      const organization = {
+        account_id: base, name, key, billable_identity_count: 0, sat_learner_count: 0, logs_sources_count: 0, identity_provider_tenant_id: null,
+        report_recipients: [], created_at: now, updated_at: now, id: created,
+      };
+      organizations.push(organization);
+      remember(`organization:${created}`, 'created', { name, key });
+      return send(res, 201, { organization: organizationView(organization) });
+    }],
     ['GET', /^agents$/, (req, res, url) => {
       const p = url.searchParams;
       return page(req, res, url, 'agents', agents.filter((a) =>
@@ -372,6 +389,11 @@ export function createHuntress({ base, run, send }) {
       if (!fields.method || !fields.path || !fields.status) return fail(res, 400, 'method, path and status are required');
       faults.push({ method: fields.method, path: fields.path, status: fields.status, count: fields.count ?? 1 });
       return send(res, 204);
+    }
+    if (path === 'organizations' && req.method === 'GET') {
+      // M43: the organizations with a key (or all), and what the CRM sent to create them.
+      const key = url.searchParams.get('key');
+      return send(res, 200, organizations.filter((o) => !key || o.key === key).map((o) => ({ ...organizationView(o), posted: posted.get(`organization:${o.id}`) ?? {} })));
     }
     if (path === 'organizations' && req.method === 'POST') {
       const created = newId();

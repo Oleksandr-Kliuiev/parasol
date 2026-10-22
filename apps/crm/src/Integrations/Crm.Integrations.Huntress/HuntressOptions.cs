@@ -75,9 +75,15 @@ public sealed class HuntressOptions
     /// <summary>
     /// The kinds of action people may ask of Huntress: <c>incident.approve</c>, <c>incident.reject</c>, <c>incident.step</c>,
     /// <c>incident.resolve</c>, <c>incident.comment</c>, <c>escalation.resolve</c>, <c>agent.isolate</c>, <c>agent.release</c>,
-    /// <c>agent.uninstall</c>. Empty by default: a kind is off until it is listed.
+    /// <c>agent.uninstall</c>; M43 adds <c>organization.create</c>. Empty by default: a kind is off until it is listed.
     /// </summary>
     public List<string> EnabledActions { get; set; } = [];
+
+    /// <summary>
+    /// Huntress's portal (its sign-in page; an account may have its own address), which the "Connect services" wizard (M43) leads to for
+    /// what the API cannot do — the account key of the install script. Empty: the wizard names the step without a link.
+    /// </summary>
+    public string? ConsoleUrl { get; set; } = "https://huntress.io/";
 
     /// <summary>
     /// Links to Huntress's pages, <c>{0}</c> being the id. Empty by default: the format of Huntress's direct links is not confirmed

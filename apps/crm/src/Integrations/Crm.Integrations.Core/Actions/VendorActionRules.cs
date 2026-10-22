@@ -19,9 +19,11 @@ public static class VendorActionRules
     /// <summary>
     /// What the vendor's switches say about this kind for this customer, or null when they allow it. The worker asks again before
     /// sending, with <paramref name="credentials"/> because only it holds them. DryRun allows the action with writing off: it is then
-    /// simulated and nothing is sent.
+    /// simulated and nothing is sent. <paramref name="organizationId"/> is the CRM organization of the target, which the allow-list
+    /// may name instead of a vendor id that does not exist yet (<see cref="IsAllowed"/>).
     /// </summary>
-    public static VendorActionBlock? CheckSwitches(VendorActionSwitches? switches, string kind, string? externalCustomerId, bool credentials)
+    public static VendorActionBlock? CheckSwitches(
+        VendorActionSwitches? switches, string kind, string? externalCustomerId, bool credentials, Guid? organizationId = null)
     {
         if (switches is null || !switches.Enabled)
         {
@@ -43,10 +45,20 @@ public static class VendorActionRules
             return new("VND_WRITE_DISABLED", "Writing to the vendor is switched off (WriteEnabled).");
         }
 
-        return switches.AllowedCustomerIds.Count > 0 && (externalCustomerId is null || !switches.AllowedCustomerIds.Contains(externalCustomerId, StringComparer.Ordinal))
+        return switches.AllowedCustomerIds.Count > 0 && !IsAllowed(switches.AllowedCustomerIds, externalCustomerId, organizationId)
             ? new("VND_CUSTOMER_NOT_ALLOWED", "The customer is not on the vendor's allow-list (WriteAllowedCustomerIds).")
             : null;
     }
+
+    /// <summary>
+    /// Whether a non-empty allow-list lets the target's customer through. The list names the vendor's customer ids; a target whose
+    /// customer has no id at the vendor yet (M43: the customer is being created there) passes only when the list names the id of its
+    /// CRM organization, so a test customer can be created while every other customer stays closed.
+    /// </summary>
+    public static bool IsAllowed(IReadOnlyCollection<string> allowed, string? externalCustomerId, Guid? organizationId) =>
+        externalCustomerId is not null
+            ? allowed.Contains(externalCustomerId, StringComparer.Ordinal)
+            : organizationId is { } id && allowed.Contains(id.ToString("D"), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>A disruptive or destructive action needs a reason; a destructive one also the target's name, typed.</summary>
     public static VendorActionBlock? CheckConfirmation(VendorActionLevel level, string? reason, string? typedName, string targetName)
