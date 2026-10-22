@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Button, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Field, Input, Link, MessageBar, MessageBarBody, Spinner, Text, Textarea,
-  makeStyles,
+  makeStyles, mergeClasses, tokens,
 } from '@fluentui/react-components';
 import { Open16Regular } from '@fluentui/react-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import { h } from '../../app/hearth';
 import { Dialog } from '../../shared/components/Dialog';
 import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { useScrollEdges } from '../../shared/utils/useScrollEdges';
 import { systemName } from '../integrations/labels';
 import { cancelAction, previewAction, requestAction, useAction, useRefreshActions } from './api';
 import { ActionStatusBadge } from './ActionStatusBadge';
@@ -24,6 +25,10 @@ const REASON_MAX = 500;
 
 const useStyles = makeStyles({
   content: { display: 'grid', gap: '14px', gridTemplateColumns: 'minmax(0, 1fr)', overflowWrap: 'anywhere' },
+  // The ring of the scrolling part once it is a focusable region (longhands: Fluent's own outline rules are longhands too).
+  scroll: {
+    ':focus-visible': { outlineWidth: '2px', outlineStyle: 'solid', outlineColor: tokens.colorStrokeFocus2, outlineOffset: '2px' },
+  },
   target: { display: 'grid', gap: '2px' },
   targetName: { fontWeight: 600 },
   muted: { color: h.muted, fontSize: '13px', lineHeight: '20px' },
@@ -102,6 +107,11 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
     if (!live || isWaiting(live.status) || finished.current) return;
     finished.current = true; refresh(live); onFinished?.(live);
   }, [live, onFinished, refresh]);
+  // A preview taller than the dialog scrolls (a phone, a long reply): the scrolling part then becomes a focusable, labelled region
+  // whose hidden edge fades, so the keyboard reaches all of it (WCAG 2.1.1), as in ScrollTable. Content that fits stays a block.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges(contentRef, 'y',
+    `${preview?.previewToken ?? ''}:${live?.status ?? ''}:${note ?? ''}:${submitError === null ? 0 : 1}:${loadError === null ? 0 : 1}`);
 
   const confirmation = preview?.confirmation;
   const reasonValid = !confirmation?.reason || (reason.trim().length >= REASON_MIN && reason.trim().length <= REASON_MAX);
@@ -148,7 +158,8 @@ function ActionFlow({ request, title, confirm, details, dismiss, onClose, onAcce
     else if (settlement.ready) void change(settlement.settle);
   }}><DialogBody>
     <DialogTitle>{title}</DialogTitle>
-    <DialogContent className={styles.content}>
+    <DialogContent ref={contentRef} className={mergeClasses(styles.content, styles.scroll)} style={edges.style}
+      role={edges.overflow ? 'region' : undefined} aria-label={edges.overflow ? title : undefined} tabIndex={edges.overflow ? 0 : undefined}>
       {live && preview ? <Following action={live} preview={preview} settlement={settlement} busy={busy} /> : <>
         {!preview && !loadError && <Spinner size="small" label={t('actions.dialog.previewing')} />}
         {loadError !== null && <MessageBar intent="error" layout="multiline"><MessageBarBody>{actionErrorText(t, loadError)}{' '}

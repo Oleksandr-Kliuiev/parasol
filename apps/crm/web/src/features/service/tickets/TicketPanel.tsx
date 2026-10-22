@@ -22,6 +22,7 @@ import { sourceName } from '../alerts/alertText';
 import { ServiceReadLine } from '../ServiceReadLine';
 import type { TicketDetail } from '../types';
 import { useTicket } from './api';
+import { keepFocusInPanel } from './panelFocus';
 import { TicketActionsBar } from './TicketActionsBar';
 import { TicketConversation } from './TicketConversation';
 import type { TicketActionAsk } from './ticketActions';
@@ -87,9 +88,7 @@ function TicketBody({ ticket, actionId, onActionClose, onClose }: {
   const closeAsk = () => {
     asking.current = false;
     setAsk(null);
-    window.setTimeout(() => {
-      if (!asking.current && (document.activeElement === null || document.activeElement === document.body)) bar.current?.querySelector<HTMLElement>('button')?.focus();
-    }, 400);
+    window.setTimeout(() => keepFocusInPanel(bar, asking), 400);
   };
   // A changed ticket is read again with its list and the Drift tab behind the panel; the action log reads itself.
   const finished = (action: VendorAction) => {

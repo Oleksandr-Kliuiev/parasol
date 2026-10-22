@@ -184,3 +184,25 @@ it('keeps the form and explains the next step when the server asks for a fresh s
   expect(announced).toHaveBeenCalledTimes(1);
   window.removeEventListener(REVERIFY_EVENT, announced);
 });
+
+it('makes a preview taller than the dialog a focusable region named like the dialog, so the keyboard can scroll it', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => url === '/api/v1/actions/preview' ? json(preview()) : json({}, 404)));
+  // jsdom has no layout: the dialog's scrolling part is given a content taller than its box.
+  const content = (element: Element, value: number) => element.classList.contains('fui-DialogContent') ? value : 0;
+  const tall = vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function (this: Element) { return content(this, 900); });
+  const box = vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) { return content(this, 400); });
+  try {
+    render();
+    expect(await screen.findByText('#4711 Printer is down')).toBeVisible();
+    expect(await screen.findByRole('region', { name: 'Close ticket #4711' })).toHaveAttribute('tabindex', '0');
+  } finally {
+    tall.mockRestore(); box.mockRestore();
+  }
+});
+
+it('leaves a preview that fits the dialog an ordinary block without a tab stop', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => url === '/api/v1/actions/preview' ? json(preview()) : json({}, 404)));
+  render();
+  expect(await screen.findByText('#4711 Printer is down')).toBeVisible();
+  expect(screen.queryByRole('region', { name: 'Close ticket #4711' })).toBeNull();
+});
