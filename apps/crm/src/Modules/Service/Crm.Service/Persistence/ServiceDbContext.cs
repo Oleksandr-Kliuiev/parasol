@@ -23,6 +23,12 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
 
     public DbSet<TicketComment> TicketComments => Set<TicketComment>();
 
+    public DbSet<Machine> Machines => Set<Machine>();
+
+    public DbSet<MachineLinkDecision> MachineLinkDecisions => Set<MachineLinkDecision>();
+
+    public DbSet<MachineProposal> MachineProposals => Set<MachineProposal>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Ticket>(b =>
@@ -77,8 +83,46 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.Type).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.Os).HasMaxLength(256);
             b.Property(x => x.Url).HasMaxLength(512);
+            b.Property(x => x.SerialNumber).HasMaxLength(Device.SerialNumberLength);
+            b.Property(x => x.MacAddresses).HasMaxLength(Device.MacAddressesLength);
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.RemovedAt });
+            // M40: a machine is its devices; it is removed only once no device names it.
+            b.HasOne<Machine>().WithMany().HasForeignKey(x => x.MachineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => x.MachineId).HasFilter("[MachineId] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<Machine>(b =>
+        {
+            b.ToTable("Machines");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Name).HasMaxLength(256);
+            b.Property(x => x.Type).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Os).HasMaxLength(256);
+            // A customer's machines by name (the Drift tab), current ones first.
+            b.HasIndex(x => new { x.OrganizationId, x.RemovedAt, x.Name });
+        });
+
+        modelBuilder.Entity<MachineLinkDecision>(b =>
+        {
+            b.ToTable("MachineLinkDecisions");
+            b.ConfigureAuditable();
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            // One decision per pair of devices; the matcher reads a customer's decisions.
+            b.HasIndex(x => new { x.DeviceId, x.OtherDeviceId }).IsUnique();
+            b.HasIndex(x => x.OrganizationId);
+        });
+
+        modelBuilder.Entity<MachineProposal>(b =>
+        {
+            b.ToTable("MachineProposals");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Evidence).HasConversion<int>();
+            b.HasIndex(x => new { x.MachineId, x.OtherMachineId }).IsUnique();
+            b.HasIndex(x => x.OtherMachineId);
+            b.HasIndex(x => x.OrganizationId);
         });
 
         modelBuilder.Entity<DeviceCountSnapshot>(b =>

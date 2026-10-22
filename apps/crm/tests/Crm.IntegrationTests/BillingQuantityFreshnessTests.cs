@@ -101,10 +101,10 @@ public sealed class BillingQuantityFreshnessTests(CrmWebFactory factory)
         var live = await DeviceCustomerAsync(admin, productId, "L");
         await SnapshotAsync(stale.OrganizationId, PeriodEnd.AddDays(-10));
         await SnapshotAsync(fresh.OrganizationId, PeriodEnd.AddDays(-1));
-        // No snapshot for the third customer: the devices listed now are counted.
-        var system = $"fresh-{Guid.NewGuid():N}"[..14];
+        // No snapshot for the third customer: the Atera devices listed now are counted (M40: only Atera's agents are billed per device).
         await factory.RunJobAsync<IServiceApi>(api => api.ReplaceDevicesAsync(
-            live.OrganizationId, system, [new ExternalDevice($"{live.Marker}-1", "PC-1", DeviceType.Workstation, null, true, DateTimeOffset.UtcNow, null)], CancellationToken.None));
+            live.OrganizationId, Crm.Integrations.Atera.AteraTypes.System,
+            [new ExternalDevice($"{live.Marker}-1", "PC-1", DeviceType.Workstation, null, true, DateTimeOffset.UtcNow, null)], CancellationToken.None));
         await HoursRunAsync(complete: false);
         var before = await SignalAsync();
 

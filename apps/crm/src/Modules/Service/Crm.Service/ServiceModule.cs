@@ -87,6 +87,8 @@ public static class ServiceModule
         services.AddScoped<ITicketWorkApi, TicketWorkApi>();
         services.AddScoped<SlaReportService>();
         services.AddScoped<AlertQueries>();
+        services.AddScoped<MachineQueries>();
+        services.AddScoped<MachineDecisions>();
         // DEV-11: tickets and ticket requests of a person in subject requests, and the retention of the ticket mirror.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ServicePersonalData>();
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, Features.Privacy.TicketMirrorRetention>();
@@ -171,8 +173,9 @@ public static class ServiceModule
                 Guid organizationId, ServiceDbContext db, IEnumerable<ISyncCompletenessSource> completeness, TimeProvider time, CancellationToken ct) =>
             {
                 var since = time.GetUtcNow().AddDays(-90);
-                var devices = await db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId && d.RemovedAt == null)
-                    .GroupBy(d => d.Type).Select(g => new { g.Key, Count = g.Count(), Online = g.Count(d => d.Online) }).ToListAsync(ct);
+                // One computer is one machine, whichever sources watch it (M40).
+                var devices = await db.Machines.AsNoTracking().Where(m => m.OrganizationId == organizationId && m.RemovedAt == null)
+                    .GroupBy(m => m.Type).Select(g => new { g.Key, Count = g.Count(), Online = g.Count(m => m.Online) }).ToListAsync(ct);
                 var alerts = await db.Alerts.AsNoTracking().Where(a => a.OrganizationId == organizationId && a.State == AlertState.Open)
                     .GroupBy(a => a.Severity).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
                 var tickets = db.Tickets.AsNoTracking().Where(t => t.OrganizationId == organizationId);
@@ -193,6 +196,7 @@ public static class ServiceModule
             .RequirePermission(Permissions.ServiceRead);
 
         group.MapTicketEndpoints();
+        group.MapMachineEndpoints();
 
         group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, int? limit, string? cursor, ServiceDbContext db, CancellationToken ct) =>
             {

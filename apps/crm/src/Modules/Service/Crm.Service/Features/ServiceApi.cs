@@ -55,28 +55,40 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
 
     public async Task ReplaceDevicesAsync(Guid organizationId, string system, IReadOnlyCollection<ExternalDevice> devices, CancellationToken cancellationToken)
     {
-        var now = time.GetUtcNow();
-        var ids = devices.Select(d => d.ExternalId).ToList();
-        var known = await db.Devices.Where(d => d.System == system && (d.OrganizationId == organizationId || ids.Contains(d.ExternalId))).ToListAsync(cancellationToken);
-        var byId = known.ToDictionary(d => d.ExternalId, StringComparer.Ordinal);
-        foreach (var source in devices.DistinctBy(d => d.ExternalId))
+        var moved = new HashSet<Guid>();
+        // The devices and the machines they make land together (M40), under the customer's lock.
+        await new MachineLinks(db, time).RunAsync(organizationId, async ct =>
         {
-            if (byId.TryGetValue(source.ExternalId, out var device))
+            moved.Clear();
+            var now = time.GetUtcNow();
+            var ids = devices.Select(d => d.ExternalId).ToList();
+            var known = await db.Devices.Where(d => d.System == system && (d.OrganizationId == organizationId || ids.Contains(d.ExternalId))).ToListAsync(ct);
+            var byId = known.ToDictionary(d => d.ExternalId, StringComparer.Ordinal);
+            foreach (var source in devices.DistinctBy(d => d.ExternalId))
             {
-                device.Apply(organizationId, source);
+                if (byId.TryGetValue(source.ExternalId, out var device))
+                {
+                    if (device.OrganizationId != organizationId)
+                    {
+                        moved.Add(device.OrganizationId);
+                    }
+
+                    device.Apply(organizationId, source);
+                }
+                else
+                {
+                    db.Devices.Add(Device.From(system, organizationId, source, now));
+                }
             }
-            else
+
+            foreach (var gone in known.Where(d => d.OrganizationId == organizationId && !ids.Contains(d.ExternalId)))
             {
-                db.Devices.Add(Device.From(system, organizationId, source, now));
+                gone.MarkRemoved(now);
             }
-        }
+        }, cancellationToken);
 
-        foreach (var gone in known.Where(d => d.OrganizationId == organizationId && !ids.Contains(d.ExternalId)))
-        {
-            gone.MarkRemoved(now);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
+        // A device that moved from another customer leaves a machine there that has to be matched again.
+        await new MachineLinks(db, time).RelinkAsync(moved, cancellationToken);
     }
 
     public Task<AlertSnapshotResult> ApplyAlertSnapshotAsync(AlertSnapshot snapshot, CancellationToken cancellationToken) =>
@@ -100,7 +112,7 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     public async Task<int> TakeDeviceSnapshotAsync(DateOnly date, CancellationToken cancellationToken)
     {
         var counts = await db.Devices.AsNoTracking()
-            .Where(d => d.RemovedAt == null)
+            .Where(d => d.System == DeviceCounting.BilledSystem && d.RemovedAt == null)
             .GroupBy(d => new { d.OrganizationId, d.Type })
             .Select(g => new { g.Key.OrganizationId, g.Key.Type, Count = g.Count() })
             .ToListAsync(cancellationToken);
@@ -141,9 +153,10 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             .GroupBy(a => a.Severity)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
-        var devices = await db.Devices.AsNoTracking()
-            .Where(d => d.RemovedAt == null)
-            .GroupBy(d => d.Online)
+        // One computer is one machine, however many sources watch it (M40).
+        var devices = await db.Machines.AsNoTracking()
+            .Where(m => m.RemovedAt == null)
+            .GroupBy(m => m.Online)
             .Select(g => new { Online = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
 
@@ -169,7 +182,7 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
         }
 
         return await db.Devices.AsNoTracking()
-            .Where(d => d.OrganizationId == organizationId && d.RemovedAt == null)
+            .Where(d => d.OrganizationId == organizationId && d.System == DeviceCounting.BilledSystem && d.RemovedAt == null)
             .GroupBy(d => d.Type)
             .ToDictionaryAsync(g => g.Key, g => g.Count(), cancellationToken);
     }
@@ -203,7 +216,7 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
         if (withoutSnapshot.Count > 0)
         {
             var live = await db.Devices.AsNoTracking()
-                .Where(d => withoutSnapshot.Contains(d.OrganizationId) && d.RemovedAt == null)
+                .Where(d => withoutSnapshot.Contains(d.OrganizationId) && d.System == DeviceCounting.BilledSystem && d.RemovedAt == null)
                 .GroupBy(d => new { d.OrganizationId, d.Type })
                 .Select(g => new { g.Key.OrganizationId, g.Key.Type, Count = g.Count() })
                 .ToListAsync(cancellationToken);
@@ -292,10 +305,26 @@ internal sealed class ServiceMergeHandler(ServiceDbContext db, ICustomersApi cus
             .ExecuteUpdateAsync(u => u.SetProperty(t => t.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
         await db.Devices.Where(d => d.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(d => d.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
+        // M40: the machines go with their devices; the next device read matches the two customers' machines as one customer's.
+        await db.Machines.Where(m => m.OrganizationId == domainEvent.SourceOrganizationId)
+            .ExecuteUpdateAsync(u => u.SetProperty(m => m.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
+        await db.MachineLinkDecisions.IgnoreQueryFilters().Where(d => d.OrganizationId == domainEvent.SourceOrganizationId)
+            .ExecuteUpdateAsync(u => u.SetProperty(d => d.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
+        await db.MachineProposals.Where(p => p.OrganizationId == domainEvent.SourceOrganizationId)
+            .ExecuteUpdateAsync(u => u.SetProperty(p => p.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
         await db.Alerts.Where(a => a.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(a => a.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
         await db.TicketRequests.Where(r => r.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(r => r.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
     }
 
+}
+
+/// <summary>
+/// Which devices a bill counts (M40). A contract line priced per Atera device (<c>PerAteraDevice</c>) and the daily count it reads
+/// take only Atera's agents: the Huntress agent on the same computer (M41) is the same machine, not another device to bill.
+/// </summary>
+internal static class DeviceCounting
+{
+    public const string BilledSystem = "atera";
 }

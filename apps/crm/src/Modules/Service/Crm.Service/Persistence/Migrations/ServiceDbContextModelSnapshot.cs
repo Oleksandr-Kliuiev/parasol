@@ -314,6 +314,13 @@ namespace Crm.Service.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LastSeenAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("MacAddresses")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<Guid?>("MachineId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("MachineName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -337,6 +344,10 @@ namespace Crm.Service.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<string>("System")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -352,6 +363,9 @@ namespace Crm.Service.Persistence.Migrations
                         .HasColumnType("nvarchar(512)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MachineId")
+                        .HasFilter("[MachineId] IS NOT NULL");
 
                     b.HasIndex("OrganizationId", "RemovedAt");
 
@@ -391,6 +405,144 @@ namespace Crm.Service.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("DeviceCountSnapshots", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.Machine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("Online")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Os")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "RemovedAt", "Name");
+
+                    b.ToTable("Machines", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.MachineLinkDecision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OtherDeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("DeviceId", "OtherDeviceId")
+                        .IsUnique();
+
+                    b.ToTable("MachineLinkDecisions", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.MachineProposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Evidence")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("FoundAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("MachineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OtherDeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OtherMachineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OtherMachineId");
+
+                    b.HasIndex("MachineId", "OtherMachineId")
+                        .IsUnique();
+
+                    b.ToTable("MachineProposals", "service");
                 });
 
             modelBuilder.Entity("Crm.Service.Domain.Ticket", b =>
@@ -645,6 +797,14 @@ namespace Crm.Service.Persistence.Migrations
                     b.HasIndex("OrganizationId", "Status");
 
                     b.ToTable("TicketRequests", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.Device", b =>
+                {
+                    b.HasOne("Crm.Service.Domain.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Crm.Service.Domain.TicketComment", b =>

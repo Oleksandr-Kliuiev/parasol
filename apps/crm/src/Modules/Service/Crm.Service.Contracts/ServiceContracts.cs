@@ -47,7 +47,20 @@ public sealed record ExternalTicket(
     long? OwnerCustomerId = null,
     Guid? OwnerLinkId = null);
 
-public sealed record ExternalDevice(string ExternalId, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url);
+/// <summary>
+/// An agent as read from its source. <paramref name="SerialNumber"/> and <paramref name="MacAddresses"/> are as the source reports
+/// them: with the host name they tell one customer's machines apart (M40).
+/// </summary>
+public sealed record ExternalDevice(
+    string ExternalId,
+    string MachineName,
+    DeviceType Type,
+    string? Os,
+    bool Online,
+    DateTimeOffset? LastSeenAt,
+    string? Url,
+    string? SerialNumber = null,
+    IReadOnlyList<string>? MacAddresses = null);
 
 /// <summary>Who wrote a comment of a ticket: a technician, the customer's end user, or the service desk does not say.</summary>
 public enum TicketCommentAuthor

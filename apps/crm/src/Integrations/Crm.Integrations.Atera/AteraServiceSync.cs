@@ -310,7 +310,7 @@ public sealed class AteraAgentSyncJob(
                 byOrganization.TryAdd(organizationId, []);
                 byOrganization[organizationId].Add(new ExternalDevice(
                     agent.AgentId, agent.MachineName, AteraServiceMapping.DeviceTypeOf(agent.OsType, agent.Os), agent.Os, agent.Online, agent.LastSeenAt,
-                    AteraServiceMapping.Url(options.Value.DeviceUrlTemplate, agent.AgentId)));
+                    AteraServiceMapping.Url(options.Value.DeviceUrlTemplate, agent.AgentId), agent.SerialNumber, agent.MacAddresses));
             }
 
             // Linked organizations without agents lose their devices too.

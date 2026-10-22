@@ -99,7 +99,25 @@ internal sealed partial class AteraClient
                 Text(e, "OS", "OperatingSystem"),
                 Bool(e, "Online", "IsOnline") ?? false,
                 Date(e, "LastSeen", "LastSeenDate", "LastRebootTime", "Modified"))
+            {
+                SerialNumber = Text(e, "VendorSerialNumber", "SerialNumber"),
+                MacAddresses = Texts(e, "MacAddresses", "MacAddress"),
+            }
             : null;
+
+    /// <summary>A list of values: a JSON array of texts, or one text that lists them separated by commas or semicolons.</summary>
+    private static List<string> Texts(JsonElement e, params string[] names)
+    {
+        if (!TryGet(e, out var v, names))
+        {
+            return [];
+        }
+
+        var values = v.ValueKind == JsonValueKind.Array
+            ? v.EnumerateArray().Select(item => item.ValueKind == JsonValueKind.String ? item.GetString() : null)
+            : v.ValueKind == JsonValueKind.String ? (v.GetString() ?? string.Empty).Split([',', ';']) : [];
+        return values.Select(s => s?.Trim()).OfType<string>().Where(s => s.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
 
     internal static AteraAlert? ReadAlert(JsonElement e) =>
         Text(e, "AlertID", "AlertId", "Id") is { } alertId

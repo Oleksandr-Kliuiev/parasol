@@ -77,7 +77,16 @@ public sealed record AteraWorkHours(
 /// <summary>All work-hour rows of one ticket; <paramref name="Dropped"/> counts rows that could not be used (no id, no or empty duration).</summary>
 public sealed record AteraWorkHoursResult(IReadOnlyList<AteraWorkHours> Records, int Dropped);
 
-public sealed record AteraAgent(string AgentId, long CustomerId, string MachineName, string? OsType, string? Os, bool Online, DateTimeOffset? LastSeenAt);
+/// <summary>
+/// An Atera agent. <see cref="SerialNumber"/> (<c>VendorSerialNumber</c>) and <see cref="MacAddresses"/> tell a customer's machines
+/// apart (M40); both are as Atera reports them.
+/// </summary>
+public sealed record AteraAgent(string AgentId, long CustomerId, string MachineName, string? OsType, string? Os, bool Online, DateTimeOffset? LastSeenAt)
+{
+    public string? SerialNumber { get; init; }
+
+    public IReadOnlyList<string> MacAddresses { get; init; } = [];
+}
 
 public sealed record AteraAlert(string AlertId, long? CustomerId, string Title, string Severity, string? DeviceName, DateTimeOffset CreatedAt);
 
