@@ -96,16 +96,11 @@ internal sealed class BillingCollector(
         var subscriptions = await licensing.GetSubscriptionQuantitiesAsync(portfolioOrganizations, periodEnd, ct);
         var contractedProducts = await contracts.GetContractedProductsAsync(portfolioOrganizations, periodEnd, ct);
         var unmappedOffers = await licensing.GetUnmappedOfferNamesAsync(portfolioOrganizations, periodEnd, ct);
-        // Assigned readings are needed only for contract lines using the Microsoft 365 quantity model.
-        var assignedOrganizations = contractLines.Where(l => l.QuantityModel == QuantityModel.PerM365User).Select(l => l.OrganizationId).Distinct().ToArray();
-        var assigned = (await licensing.GetAssignedLicensesAsync(assignedOrganizations, periodEnd, ct))
-            .ToDictionary(a => (a.OrganizationId, a.ProductId), a => a);
-
-        var deviceOrganizations = contractLines.Where(l => l.QuantityModel == QuantityModel.PerAteraDevice).Select(l => l.OrganizationId).Distinct().ToArray();
-        var deviceReadings = await service.GetDeviceCountReadingsAsync(deviceOrganizations, periodEnd, ct);
         // A reading is as old as the day it was taken, measured from the end of the period, or from today when the period is not over yet.
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Oslo).DateTime);
         var readingReference = periodEnd < today ? periodEnd : today;
+        var quantities = await BillingQuantities.ReadAsync(
+            contractLines, subscriptions, periodEnd, readingReference, settings.StaleQuantityDays, licensing, service, ct);
         var hoursRun = await LatestHoursRunAsync(settings, ct);
         var previousTotals = await PreviousTotalsAsync(run, portfolioOrganizations, ct);
         var existing = await db.BillingBases
@@ -133,8 +128,6 @@ internal sealed class BillingCollector(
             var anomalies = new List<BillingAnomaly>();
             var organizationLines = contractLinesByOrganization[organizationId].ToList();
             var customerReference = organizationLines.Select(l => l.CustomerReference).FirstOrDefault(r => !string.IsNullOrWhiteSpace(r));
-            var deviceReading = deviceReadings.GetValueOrDefault(organizationId);
-            var deviceCounts = deviceReading?.Counts ?? new Dictionary<DeviceType, int>();
 
             foreach (var line in organizationLines)
             {
@@ -174,23 +167,17 @@ internal sealed class BillingCollector(
                     continue;
                 }
 
-                var quantity = QuantityOf(
-                    line, subscriptionsByOrganization.GetValueOrDefault(organizationId), deviceCounts, anomalies, product,
-                    assigned.GetValueOrDefault((organizationId, line.ProductId)));
+                var quantity = quantities.QuantityOf(line, product, anomalies);
                 if (quantity <= 0)
                 {
                     continue;
                 }
 
-                AddReadingAnomalies(
-                    anomalies, line, product, assigned.GetValueOrDefault((organizationId, line.ProductId)), deviceReading,
-                    readingReference, settings.StaleQuantityDays);
+                quantities.AddReadingAnomalies(line, product, anomalies);
 
                 var prices = pricesByCategory[line.PriceCategory ?? defaultCategory];
                 var fullPrice = line.UnitPrice ?? (prices.TryGetValue(line.ProductId, out var resolved) ? resolved.UnitPrice : 0m);
-                var subscriptionIds = line.QuantityModel == QuantityModel.PerSubscription
-                    ? subscriptionsByOrganization.GetValueOrDefault(organizationId)?.FirstOrDefault(s => s.ProductId == line.ProductId)?.SubscriptionIds
-                    : null;
+                var subscriptionIds = quantities.SubscriptionIdsOf(line);
 
                 foreach (var (from, to) in pieces)
                 {
@@ -434,38 +421,6 @@ internal sealed class BillingCollector(
         }
     }
 
-    private static decimal QuantityOf(
-        BillableContractLine line,
-        List<SubscriptionQuantity>? subscriptions,
-        IReadOnlyDictionary<DeviceType, int> deviceCounts,
-        List<BillingAnomaly> anomalies,
-        ProductRef? product,
-        AssignedLicenses? assigned) => line.QuantityModel switch
-    {
-        QuantityModel.PerSubscription => SubscriptionQuantityOf(line, subscriptions, anomalies, product),
-        QuantityModel.PerAteraDevice => line.DeviceFilter switch
-        {
-            DeviceFilter.Workstations => deviceCounts.GetValueOrDefault(DeviceType.Workstation),
-            DeviceFilter.Servers => deviceCounts.GetValueOrDefault(DeviceType.Server),
-            _ => deviceCounts.Values.Sum(),
-        },
-        QuantityModel.PerM365User => M365UserQuantity(line, anomalies, product, assigned),
-        _ => line.Quantity,
-    };
-
-    private static decimal SubscriptionQuantityOf(
-        BillableContractLine line, List<SubscriptionQuantity>? subscriptions, List<BillingAnomaly> anomalies, ProductRef? product)
-    {
-        if (subscriptions?.FirstOrDefault(s => s.ProductId == line.ProductId) is { } match)
-        {
-            return match.Quantity;
-        }
-
-        anomalies.Add(new BillingAnomaly(
-            "BIL_NO_SUBSCRIPTION", $"{product?.Name ?? "Product"} is billed per subscription, but the customer has none; the contract quantity is used."));
-        return line.Quantity;
-    }
-
     /// <summary>The latest finished run of the work-hours import, or null when no source answers or it never ran (nothing to judge).</summary>
     private async Task<SyncCompleteness?> LatestHoursRunAsync(BillingOptions settings, CancellationToken ct)
     {
@@ -478,76 +433,6 @@ internal sealed class BillingCollector(
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// DEV-19: a quantity read long before the period ended, or counted from live devices because no snapshot exists, is billed
-    /// as it is but says so on the basis. Finance decides whether such a basis may be billed; nothing here blocks it.
-    /// </summary>
-    private static void AddReadingAnomalies(
-        List<BillingAnomaly> anomalies, BillableContractLine line, ProductRef? product, AssignedLicenses? assigned,
-        DeviceCountReading? devices, DateOnly reference, int staleDays)
-    {
-        var name = product?.Name ?? "Product";
-        if (line.QuantityModel == QuantityModel.PerM365User && assigned is { Assigned: > 0 } && reference.DayNumber - assigned.SnapshotDate.DayNumber > staleDays)
-        {
-            AddOnce(anomalies, "BIL_STALE_QUANTITY", name, assigned.SnapshotDate,
-                $"{name} is billed from a Microsoft 365 licence reading of {assigned.SnapshotDate:dd.MM.yyyy}, which is older than {staleDays} days.");
-        }
-
-        if (line.QuantityModel != QuantityModel.PerAteraDevice)
-        {
-            return;
-        }
-
-        if (devices?.SnapshotDate is not { } snapshot)
-        {
-            AddOnce(anomalies, "BIL_NO_DEVICE_SNAPSHOT", name, null,
-                $"{name} is billed per device, but no daily device count exists; the devices listed now are counted.");
-        }
-        else if (reference.DayNumber - snapshot.DayNumber > staleDays)
-        {
-            AddOnce(anomalies, "BIL_STALE_QUANTITY", name, snapshot,
-                $"{name} is billed from a device count of {snapshot:dd.MM.yyyy}, which is older than {staleDays} days.");
-        }
-    }
-
-    private static void AddOnce(List<BillingAnomaly> anomalies, string code, string product, DateOnly? date, string message)
-    {
-        var args = new Dictionary<string, string> { ["product"] = product };
-        if (date is { } day)
-        {
-            args["date"] = day.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
-        }
-
-        if (!anomalies.Any(a => a.Code == code && a.Message == message))
-        {
-            anomalies.Add(new BillingAnomaly(code, message, args));
-        }
-    }
-
-    /// <summary>
-    /// BR-CON-02: the number of assigned licences in the customer's tenant (FR-LIC-03). Without a reading the contract's
-    /// estimate is billed and the basis says so, so nobody silently invoices a guess.
-    /// </summary>
-    private static decimal M365UserQuantity(
-        BillableContractLine line, List<BillingAnomaly> anomalies, ProductRef? product, AssignedLicenses? assigned)
-    {
-        if (assigned is null)
-        {
-            anomalies.Add(new BillingAnomaly(
-                "BIL_ESTIMATED_QUANTITY", $"{product?.Name ?? "Product"} is billed per Microsoft 365 user; the contract estimate is used until the tenant is read."));
-            return line.Quantity;
-        }
-
-        if (assigned.Assigned == 0)
-        {
-            anomalies.Add(new BillingAnomaly(
-                "BIL_NO_ASSIGNED_LICENCES", $"{product?.Name ?? "Product"} is billed per Microsoft 365 user, but the tenant has none assigned ({assigned.SnapshotDate:dd.MM.yyyy})."));
-            return line.Quantity;
-        }
-
-        return assigned.Assigned;
     }
 
     private static void AddHourlyLines(
