@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { OrganizationListItem, PagedResult } from '../../api/types';
 import { renderRoutes, testUser } from '../../test/renderWithProviders';
@@ -126,5 +126,34 @@ describe('whom to attend to (UX 2026, В6)', () => {
     expect(screen.queryByRole('columnheader', { name: 'Open work' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: /^Needs attention/ })).not.toBeInTheDocument();
     expect(fetch.mock.calls.some(([url]) => String(url).includes('/facts') || String(url).includes('/attention'))).toBe(false);
+  });
+});
+
+/** What the list and the count reads of a search answer when it finds `items`. */
+const answerTo = (url: string, items: OrganizationListItem[]) => {
+  const params = new URL(url, 'http://localhost').searchParams;
+  return params.get('limit') === '1' ? { items: [], nextCursor: null, totalCount: items.filter((row) => row.status === params.get('status')).length }
+    : { items, nextCursor: null };
+};
+
+describe('the search box', () => {
+  it('keeps what is being typed when the address takes up the search before it only afterwards', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(answerTo(url, rows.items)))));
+    const { router } = renderRoutes([{ path: '/organizations', element: <OrganizationsPage /> }], '/organizations', testUser(['customers.read']));
+    await screen.findByRole('link', { name: 'Fjord IT AS' });
+    // The address follows the search in a router transition, which can land after the next keystroke: held back here to be sure.
+    const navigate = router.navigate.bind(router);
+    const late: Array<() => void> = [];
+    router.navigate = ((...args: Parameters<typeof navigate>) => new Promise<void>((resolve) => { late.push(() => resolve(navigate(...args))); })) as typeof navigate;
+    const search = screen.getByRole('searchbox', { name: 'Name, org. number, e-mail or domain' });
+    fireEvent.change(search, { target: { value: 'Nothing' } });
+    await waitFor(() => expect(late).toHaveLength(1));
+    fireEvent.change(search, { target: { value: 'Fjord' } });
+    router.navigate = navigate;
+    await act(async () => late.splice(0).forEach((go) => go()));
+    expect(router.state.location.search).toBe('?search=Nothing');
+    expect(search).toHaveValue('Fjord');
+    await waitFor(() => expect(router.state.location.search).toBe('?search=Fjord'));
+    expect(search).toHaveValue('Fjord');
   });
 });

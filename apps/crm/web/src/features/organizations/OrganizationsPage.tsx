@@ -103,10 +103,12 @@ export function OrganizationsPage() {
   const mine = params.get('mine') === '1';
   const debouncedSearch = useDebouncedValue(search.trim());
 
-  // The global header search changes the URL while this page is open: adopt it (React "adjust state on prop change").
+  // The global header search changes the URL while this page is open: adopt it (React "adjust state on prop change"). The page's own
+  // search reaches the URL too, in a router transition that can land after the next keystroke: that echo is not adopted, or what was
+  // typed meanwhile would be replaced by the search before it.
   if (urlSearch !== previousUrlSearch) {
     setPreviousUrlSearch(urlSearch);
-    if (urlSearch !== search.trim()) setSearch(urlSearch);
+    if (urlSearch !== search.trim() && urlSearch !== debouncedSearch) setSearch(urlSearch);
   }
 
   useEffect(() => {
