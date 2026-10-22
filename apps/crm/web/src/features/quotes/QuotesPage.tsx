@@ -65,13 +65,18 @@ export function QuotesPage() {
     mine: mine || undefined,
     awaitingApproval: awaitingApproval || undefined,
   };
-  const quotes = useQuotes(filters);
+  const quotes = useQuotes(filters, true, { keepPrevious: true });
   const { items: data, error, isPending, refetch } = quotes;
-  const empty = !isPending && data.length === 0 && (
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the end of the list says it is loading, and no count or empty answer is claimed for them.
+  const stale = quotes.isPlaceholderData;
+  const reading = isPending || (stale && data.length === 0);
+  const empty = !reading && data.length === 0 && (
     <EmptyState icon={<DocumentBulletList24Regular />} message={t('quotes.empty')} />
   );
-  const footer = <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />;
-  const loading = isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>;
+  const footer = <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()}
+    stale={stale} />;
+  const loading = reading && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>;
 
   return (
     <>
@@ -115,7 +120,7 @@ export function QuotesPage() {
       ) : isPhone ? (
         <>
           {data.length > 0 && (
-            <ul className={record.cards} aria-label={t('quotes.title')}>
+            <ul className={record.cards} aria-label={t('quotes.title')} aria-busy={stale || undefined}>
               {data.map((quote) => (
                 <li key={quote.id} className={record.card}>
                   <span className={record.cardMain}>
@@ -145,7 +150,7 @@ export function QuotesPage() {
         </>
       ) : (
         <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} style={{ minWidth: 1060 }} aria-label={t('quotes.title')}>
+          <Table className={catalog.table} style={{ minWidth: 1060 }} aria-label={t('quotes.title')} aria-busy={stale || undefined}>
             <TableHeader>
               <TableRow>
                 {/* Content widths: every cell adds 12 px of padding on each side; number and customer share the rest. */}

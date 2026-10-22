@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
 import { postCsv } from '../licensing/api';
 import type {
@@ -33,9 +33,14 @@ export interface ProductFilters {
   limit?: number;
 }
 
+/**
+ * Products page by page for the catalog, searched as people type: the rows of the previous search or filter stay until the new answer
+ * is there (isPlaceholderData), so a row someone is clicking does not vanish.
+ */
 export function useProducts(filters: ProductFilters) {
   return useInfiniteQuery({
     queryKey: catalogKeys.products(filters),
+    placeholderData: keepPreviousData,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam, signal }) =>
       (await api.get<ProductPage>(`${BASE}/products${query({ search: filters.search, type: filters.type, active: filters.active, limit: filters.limit, cursor: pageParam })}`, signal)).data,

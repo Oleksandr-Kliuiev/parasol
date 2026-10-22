@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { OrganizationListItem, PagedResult } from '../../api/types';
+import { holdSearch } from '../../test/heldSearch';
 import { renderRoutes, testUser } from '../../test/renderWithProviders';
 import { OrganizationsPage } from './OrganizationsPage';
 
@@ -135,6 +136,42 @@ const answerTo = (url: string, items: OrganizationListItem[]) => {
   return params.get('limit') === '1' ? { items: [], nextCursor: null, totalCount: items.filter((row) => row.status === params.get('status')).length }
     : { items, nextCursor: null };
 };
+
+// The search is read after a pause in typing; a click on a row must not get lost while its answer is on the way (M42 e2e).
+describe('the list while a search is read', () => {
+  it('keeps the rows and the size of the status counts in place, so a click still lands, and claims no count or empty answer', async () => {
+    const { fetch, requested, answer } = holdSearch((url) => /search=Fjor/.test(url),
+      (url) => new Response(JSON.stringify(answerTo(url, url.includes('search=Nothing') ? [] : rows.items))));
+    vi.stubGlobal('fetch', fetch);
+    renderRoutes([{ path: '/organizations', element: <OrganizationsPage /> }, { path: '/organizations/:id', element: <p>Organization page</p> }],
+      '/organizations', testUser(['customers.read']));
+    await screen.findByRole('link', { name: 'Fjord IT AS' });
+    const statuses = within(screen.getByRole('group', { name: 'Status' }));
+    expect(await statuses.findByRole('button', { name: 'Customer, 1' })).toBeVisible();
+    const search = screen.getByRole('searchbox', { name: 'Name, org. number, e-mail or domain' });
+
+    // An empty answer is not repeated while another search is read: the placeholder rows show, as before.
+    fireEvent.change(search, { target: { value: 'Nothing' } });
+    expect(await screen.findByText('No organizations match your search.')).toBeVisible();
+    fireEvent.change(search, { target: { value: 'Fjord' } });
+    await requested();
+    expect(screen.queryByText('No organizations match your search.')).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText('Loading…').length).toBeGreaterThan(0);
+    await answer((url: string) => answerTo(url, [rows.items[0]!]));
+    const row = await screen.findByRole('link', { name: 'Fjord IT AS' });
+    expect(await statuses.findByRole('button', { name: 'Customer, 1' })).toBeVisible();
+
+    // The same row, not a placeholder in its place. The counts of the earlier search keep their room unseen until the new ones come.
+    fireEvent.change(search, { target: { value: 'Fjor' } });
+    await requested();
+    expect(screen.getByRole('link', { name: 'Fjord IT AS' })).toBe(row);
+    expect(screen.getByRole('table', { name: 'Organizations' })).toHaveAttribute('aria-busy', 'true');
+    const customer = statuses.getByRole('button', { name: 'Customer' });
+    expect(within(customer).getByText('1')).not.toBeVisible();
+    await userEvent.click(row);
+    expect(screen.getByText('Organization page')).toBeVisible();
+  }, 15_000);
+});
 
 describe('the search box', () => {
   it('keeps what is being typed when the address takes up the search before it only afterwards', async () => {

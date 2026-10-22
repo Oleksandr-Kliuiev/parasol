@@ -1,4 +1,5 @@
-import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
 import { organizationStatuses } from '../../api/types';
 import type {
@@ -27,9 +28,14 @@ export interface OrganizationFilters {
   limit?: number;
 }
 
-export function useOrganizations(filters: OrganizationFilters) {
+/**
+ * Organizations page by page. `keepPrevious`: the list searched as people type keeps the rows of the previous search or filter until
+ * the new answer is there (isPlaceholderData), so a row someone is clicking does not vanish; other lists of organizations start empty.
+ */
+export function useOrganizations(filters: OrganizationFilters, options: { keepPrevious?: boolean } = {}) {
   return useInfiniteQuery({
     queryKey: organizationKeys.list(filters),
+    placeholderData: options.keepPrevious ? keepPreviousData : undefined,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam, signal }) =>
       (
@@ -44,10 +50,11 @@ export function useOrganizations(filters: OrganizationFilters) {
 
 /**
  * How many organizations of each status match the search, for the counts on the status filters: one read per status
- * that asks for a single row and keeps only the list's total. Null until every count is known.
+ * that asks for a single row and keeps only the list's total. Null until every count is known. While another search is
+ * counted, the counts of the previous one are returned as `pending`: the filters keep their size without showing them.
  */
-export function useOrganizationCounts(search: string): Record<OrganizationStatus, number> | null {
-  const counts = useQueries({
+export function useOrganizationCounts(search: string): { counts: Record<OrganizationStatus, number>; pending: boolean } | null {
+  const reads = useQueries({
     queries: organizationStatuses.map((status) => ({
       queryKey: [...organizationKeys.all, 'count', { search, status }] as const,
       queryFn: async ({ signal }: { signal: AbortSignal }) =>
@@ -55,9 +62,15 @@ export function useOrganizationCounts(search: string): Record<OrganizationStatus
       staleTime: 30_000,
     })),
   });
-  const values = counts.map((count) => count.data);
-  if (values.some((value) => typeof value !== 'number')) return null;
-  return Object.fromEntries(organizationStatuses.map((status, i) => [status, values[i]])) as Record<OrganizationStatus, number>;
+  const values = reads.map((read) => read.data);
+  const counts = values.every((value) => typeof value === 'number')
+    ? Object.fromEntries(organizationStatuses.map((status, i) => [status, values[i]])) as Record<OrganizationStatus, number>
+    : null;
+  // A new search is counted by new reads, which start empty (useQueries keeps no previous data): the last full set stands in, unless
+  // a read failed and no count will come.
+  const [last, setLast] = useState(counts);
+  if (counts && organizationStatuses.some((status) => counts[status] !== last?.[status])) setLast(counts);
+  return counts ? { counts, pending: false } : last && !reads.some((read) => read.isError) ? { counts: last, pending: true } : null;
 }
 
 export function useOrganization(id: string | undefined) {
