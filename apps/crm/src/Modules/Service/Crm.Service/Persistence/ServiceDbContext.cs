@@ -220,6 +220,12 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
                 Id = Guid.Parse("0199f1a0-4000-7000-8000-000000004001"), Code = "atera.agent-silent", Enabled = true, Threshold = (int?)null,
                 CreatedAt = new DateTimeOffset(2026, 10, 22, 0, 0, 0, TimeSpan.Zero), IsDeleted = false,
             });
+            // M42: the backup rules of the Backup module (CloudAlly), on and with their own limits.
+            b.HasData(
+                BackupRuleSetting("0199f1a0-4000-7000-8000-000000004201", "cloudally.backup-failed"),
+                BackupRuleSetting("0199f1a0-4000-7000-8000-000000004202", "cloudally.backup-late"),
+                BackupRuleSetting("0199f1a0-4000-7000-8000-000000004203", "cloudally.backup-paused"),
+                BackupRuleSetting("0199f1a0-4000-7000-8000-000000004204", "cloudally.user-not-backed-up"));
         });
 
         modelBuilder.Entity<AlertTransition>(b =>
@@ -247,6 +253,13 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasIndex(x => new { x.OrganizationId, x.Status });
         });
     }
+
+    /// <summary>The setting a coverage rule comes with: on, with the rule's own limit (M42's rules of the Backup module).</summary>
+    private static object BackupRuleSetting(string id, string code) => new
+    {
+        Id = Guid.Parse(id), Code = code, Enabled = true, Threshold = (int?)null,
+        CreatedAt = new DateTimeOffset(2026, 10, 22, 0, 0, 0, TimeSpan.Zero), IsDeleted = false,
+    };
 }
 
 internal sealed class ServiceDesignTimeFactory() : ModuleDesignTimeFactory<ServiceDbContext>(ServiceDbContext.SchemaName);

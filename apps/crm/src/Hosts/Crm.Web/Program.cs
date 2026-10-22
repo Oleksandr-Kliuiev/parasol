@@ -85,7 +85,7 @@ builder.Services
     .AddCatalogModule(builder.Configuration)
     .AddContractsModule(builder.Configuration)
     .AddServiceModule(builder.Configuration)
-    // M40.S: empty until Huntress (M41) and CloudAlly (M42) fill them.
+    // M40.S: Security fills with Huntress (M41); Backup holds CloudAlly's backups (M42).
     .AddSecurityModule(builder.Configuration)
     .AddBackupModule(builder.Configuration)
     .AddTimeTrackingModule(builder.Configuration)
@@ -303,6 +303,7 @@ app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 app.MapVendorActionEndpoints();
 app.MapAteraEndpoints();
+app.MapBackupEndpoints();
 Crm.Integrations.Core.Readiness.ConnectionStatusEndpoints.MapConnectionStatus(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();

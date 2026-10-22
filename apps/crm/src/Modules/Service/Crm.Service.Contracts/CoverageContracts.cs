@@ -40,6 +40,15 @@ public interface ICoverageCheck
     Task<CoverageCheckResult> CheckAsync(string system, IReadOnlyCollection<Guid> organizations, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// The limit in force of a coverage rule (M42): what a person set, else the rule's default; null for a rule without a limit or one
+/// this installation does not know. A module that shows the data a rule watches says "late" by the same limit as the rule.
+/// </summary>
+public interface ICoverageLimits
+{
+    Task<int?> LimitAsync(string rule, CancellationToken cancellationToken);
+}
+
 public enum CoverageUnit
 {
     Days,

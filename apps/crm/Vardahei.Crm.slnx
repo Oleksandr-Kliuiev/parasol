@@ -36,6 +36,7 @@
     <Project Path="src/Modules/Contracts/Crm.Contracts/Crm.Contracts.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Backup/">
+    <Project Path="src/Modules/Backup/Crm.Backup.Contracts/Crm.Backup.Contracts.csproj" />
     <Project Path="src/Modules/Backup/Crm.Backup/Crm.Backup.csproj" />
   </Folder>
   <Folder Name="/src/Modules/CustomFields/">

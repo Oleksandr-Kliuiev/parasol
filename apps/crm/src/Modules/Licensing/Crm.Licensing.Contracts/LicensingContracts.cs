@@ -112,6 +112,12 @@ public interface ILicensingApi
     /// <summary>Latest licence readings for only the selected customers, selected on the database before materialization.</summary>
     Task<IReadOnlyList<AssignedLicenses>> GetAssignedLicensesAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The newest reading of every SKU of the selected customers on or before the date, a fortnight back at most, whether or not a
+    /// catalog product sells it (M42: the backup's check of licensed users needs every SKU that gives a mailbox).
+    /// </summary>
+    Task<IReadOnlyList<LicenseReading>> GetLicenseReadingsAsync(IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken);
+
     /// <summary>Microsoft's cost per customer for a period, from the imported billing lines (FR-RPT-02).</summary>
     Task<IReadOnlyList<MsCostByOrganization>> GetMsCostsAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);
 
@@ -122,6 +128,9 @@ public interface ILicensingApi
 
 /// <summary>What one tenant has bought and assigned of a SKU, as GDAP reports it (FR-LIC-03).</summary>
 public sealed record LicenseUsageReading(Guid OrganizationId, string SkuId, string SkuPartNumber, int Purchased, int Assigned);
+
+/// <summary>The newest reading of one SKU of one organization (FR-LIC-03), as <see cref="ILicensingApi.GetLicenseReadingsAsync"/> answers it.</summary>
+public sealed record LicenseReading(Guid OrganizationId, string SkuId, string SkuPartNumber, int Purchased, int Assigned, DateOnly SnapshotDate);
 
 /// <summary>Assigned Microsoft 365 licences of one organization and catalog product, for the `PerM365User` quantity model (BR-CON-02).</summary>
 public sealed record AssignedLicenses(Guid OrganizationId, Guid ProductId, string SkuPartNumber, int Assigned, int Purchased, DateOnly SnapshotDate);
