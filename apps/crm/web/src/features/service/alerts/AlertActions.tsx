@@ -16,7 +16,7 @@ import {
   AlertActionsContext, alertRequest, useAlertActions, useAlertParasollKinds, useAlertSourceKinds, type AlertLike, type AlertParasollKind,
   type AlertSourceKind,
 } from './alertSourceActions';
-import { sourceName } from './alertText';
+import { alertTitle, sourceName } from './alertText';
 
 const useStyles = makeStyles({
   section: { display: 'grid', gap: '8px', minWidth: 0 },
@@ -100,14 +100,15 @@ export function AlertSourceSection({ alert, onChanged }: { alert: AlertLike; onC
         ? <Text block>{t('alerts.hide.hiddenSince', {
           date: formatDate(alert.hidden.until), name: alert.hidden.byName ?? t('alerts.hide.someone'), reason: alert.hidden.reason ?? '',
         })}</Text>
-        : <Text block className={styles.muted}>{t('alerts.hide.sourceStays', { source })}</Text>}
+        : <Text block className={styles.muted}>{alert.rule ? t('alerts.hide.gapStays') : t('alerts.hide.sourceStays', { source })}</Text>}
       {own.length > 0 && <span className={styles.buttons}>
         {own.includes('hide') && <Button {...restore} size="small" onClick={() => setHiding(true)}>{t('alerts.hide.open')}</Button>}
         {own.includes('show') && <Button size="small" onClick={() => void showAgain(alert).then((shown) => { if (shown) onChanged?.(); })}>
           {t('alerts.hide.show')}</Button>}
       </span>}
     </section>}
-    <section className={styles.section} aria-labelledby={`alert-source-${alert.id}`}>
+    {/* A gap Parasoll found (M40) has no source to act at: what there is to do with it is above. */}
+    {!alert.rule && <section className={styles.section} aria-labelledby={`alert-source-${alert.id}`}>
       <h3 id={`alert-source-${alert.id}`} className={styles.heading}>{t('alerts.actions.heading', { source })}</h3>
       {kinds.length > 0 && <span className={styles.buttons}>
         {kinds.includes('alert.resolve') && <Button {...restore} size="small" onClick={() => setKind('alert.resolve')}>{t('alerts.actions.resolve')}</Button>}
@@ -116,7 +117,7 @@ export function AlertSourceSection({ alert, onChanged }: { alert: AlertLike; onC
       <div className={styles.log}>
         <ActionList filters={{ targetType: 'alert', targetId: alert.externalId }} showTarget={false} limit={5} empty={t('alerts.actions.none')} />
       </div>
-    </section>
+    </section>}
     <ActionDialog request={kind ? alertRequest(alert, kind) : null}
       title={kind ? t(kind === 'alert.delete' ? 'alerts.actions.deleteTitle' : 'alerts.actions.resolveTitle') : ''}
       confirm={kind ? t(kind === 'alert.delete' ? 'alerts.actions.delete' : 'alerts.actions.resolve') : ''}
@@ -133,7 +134,7 @@ export function AlertActionsMenu({ alert }: { alert: AlertLike }) {
   if (kinds.length === 0 && own.length === 0) return null;
   return <Menu positioning="below-end">
     <MenuTrigger disableButtonEnhancement>
-      <Button {...restore} size="small" appearance="subtle" icon={<MoreHorizontal20Regular />} aria-label={t('alerts.actions.menu', { title: alert.title })} />
+      <Button {...restore} size="small" appearance="subtle" icon={<MoreHorizontal20Regular />} aria-label={t('alerts.actions.menu', { title: alertTitle(t, alert) })} />
     </MenuTrigger>
     <MenuPopover><MenuList>
       {own.includes('hide') && <MenuItem onClick={() => ask(alert, 'hide')}>{t('alerts.hide.open')}</MenuItem>}

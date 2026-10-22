@@ -20,6 +20,7 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
     public DbSet<Alert> Alerts => Set<Alert>();
 
     public DbSet<AlertHold> AlertHolds => Set<AlertHold>();
+    public DbSet<CoverageRuleSetting> CoverageRuleSettings => Set<CoverageRuleSetting>();
     public DbSet<AlertTransition> AlertTransitions => Set<AlertTransition>();
 
     public DbSet<TicketRequest> TicketRequests => Set<TicketRequest>();
@@ -185,6 +186,9 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.Title).HasMaxLength(Alert.TitleLength);
             b.Property(x => x.DeviceName).HasMaxLength(Alert.DeviceNameLength);
             b.Property(x => x.Url).HasMaxLength(Alert.UrlLength);
+            // M40: a coverage gap names the CRM rule that found it and its facts; a source's alert has neither.
+            b.Property(x => x.Rule).HasMaxLength(Alert.RuleLength);
+            b.Property(x => x.Facts).HasMaxLength(Alert.FactsLength);
             b.HasIndex(x => new { x.System, x.OrganizationId });
             // One row per alert of a source, so the id survives every read (alert → task links need it).
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
@@ -202,6 +206,20 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.Reason).HasMaxLength(AlertHold.ReasonLength);
             // Hidden in Parasoll until a date: the open lists leave such alerts out until then.
             b.HasIndex(x => x.Until).HasFilter("[Until] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<CoverageRuleSetting>(b =>
+        {
+            b.ToTable("CoverageRuleSettings");
+            b.ConfigureAuditable();
+            b.Property(x => x.Code).HasMaxLength(CoverageRuleSetting.CodeLength);
+            b.HasIndex(x => x.Code).IsUnique();
+            // Every rule comes with its setting, on and with the rule's own limit, so a person's first change has an ETag too.
+            b.HasData(new
+            {
+                Id = Guid.Parse("0199f1a0-4000-7000-8000-000000004001"), Code = "atera.agent-silent", Enabled = true, Threshold = (int?)null,
+                CreatedAt = new DateTimeOffset(2026, 10, 22, 0, 0, 0, TimeSpan.Zero), IsDeleted = false,
+            });
         });
 
         modelBuilder.Entity<AlertTransition>(b =>

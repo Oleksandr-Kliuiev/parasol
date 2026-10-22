@@ -1670,7 +1670,14 @@
     },
     "source": "Kjelde: {{name}}",
     "sourceNames": {
-      "atera": "Atera"
+      "atera": "Atera",
+      "parasoll": "Parasoll"
+    },
+    "gaps": {
+      "found": "Funne av Parasoll sin eigen kontroll. Det blir lukka av seg sjølv når to kontrollar på rad ikkje lenger finn det.",
+      "ateraAgentSilent": {
+        "title": "Atera-agenten på {{device}} har ikkje meldt seg sidan {{date}}"
+      }
     },
     "reads": {
       "readAt": "{{source}} lesen {{time}}",
@@ -1784,6 +1791,7 @@
       "show": "Vis att",
       "title": "Skjul driftsvarselet til ein dag",
       "sourceStays": "API-et til {{source}} kan ikkje utsetje eit driftsvarsel, så det er ope der; Parasoll skjuler det til dagen du vel.",
+      "gapStays": "Medan det er skjult, blir holet framleis kontrollert: det kjem tilbake på dagen, eller blir lukka når kontrollane ikkje lenger finn det.",
       "until": "Skjul til",
       "untilHint": "Det kjem attende ved starten av denne dagen.",
       "shortcuts": "Raske val",
@@ -1806,6 +1814,33 @@
       "someone": "nokon",
       "untilFact": "skjult til {{date}}"
     }
+  },
+  "coverage": {
+    "open": "Dekningskontrollar",
+    "title": "Dekningskontrollar",
+    "intro": "Parasoll kontrollerer om kvar kundeeining blir overvaka, og varslar om det som manglar. Ein kontroll køyrer etter kvar fullstendige lesing av kjelda.",
+    "readOnly": "Du kan sjå kontrollane, men ikkje endre dei.",
+    "rules": {
+      "ateraAgentSilent": {
+        "name": "Atera-agent som ikkje melder seg",
+        "description": "Eit driftsvarsel når Atera-agenten på ei eining ikkje har meldt seg på lenger enn grensa. Ein server er kritisk, andre einingar ei åtvaring."
+      }
+    },
+    "enabled": "Varsle",
+    "limit": {
+      "Days": "Dagar utan kontakt",
+      "Hours": "Timar utan kontakt"
+    },
+    "limitHint": "Frå {{min}} til {{max}}. Gjeld frå neste kontroll.",
+    "limitInvalid": "Skriv eit heilt tal frå {{min}} til {{max}}.",
+    "offNote": "Når kontrollen blir slått av, blir dei opne driftsvarsla hans lukka med ein gong.",
+    "openGaps_one": "{{count}} ope driftsvarsel",
+    "openGaps_other": "{{count}} opne driftsvarsel",
+    "changed": "Endra {{date}} av {{name}}",
+    "never": "Ikkje endra enno: standardverdien gjeld",
+    "saving": "Lagrar …",
+    "saved": "Dekningskontrollane er lagra",
+    "conflict": "Nokon endra ein kontroll medan du såg på han. Her er han slik han er no: avgjer på nytt."
   },
   "taskTicket": {
     "open": "Servicesak",

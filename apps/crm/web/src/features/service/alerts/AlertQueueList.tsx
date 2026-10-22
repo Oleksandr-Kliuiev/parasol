@@ -14,6 +14,7 @@ import type { Alert } from '../types';
 import { AlertActionsMenu } from './AlertActions';
 import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource, AlertTitle } from './AlertBits';
 import { AlertTaskCell } from './AlertTaskCell';
+import { alertTitle } from './alertText';
 import type { AlertTask } from './alertTasks';
 
 const useStyles = makeStyles({
@@ -57,7 +58,7 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
   const box = useRef<HTMLDivElement>(null); const width = useContainerWidth(box);
   const narrow = useMediaQuery(NARROW_SCREEN) || (width > 0 && width < tableWidth);
   const age = (alert: Alert) => <AlertAge at={resolved && alert.resolvedAt ? alert.resolvedAt : alert.createdAt} />;
-  const title = (alert: Alert) => <AlertTitle title={alert.title} onOpen={() => onOpen(alert)} />;
+  const title = (alert: Alert) => <AlertTitle title={alertTitle(t, alert)} onOpen={() => onOpen(alert)} />;
   const customer = (alert: Alert) => <AppLink className={styles.customer} to={`/organizations/${alert.organizationId}?tab=drift`}>
     {alert.organizationName ?? t('alerts.detail.unknownCustomer')}</AppLink>;
   const source = (alert: Alert) => <AlertSource system={alert.system} />;

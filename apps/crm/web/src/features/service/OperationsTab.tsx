@@ -28,7 +28,7 @@ import { AlertReadLine } from './alerts/AlertReadLine';
 import { AlertTaskCell } from './alerts/AlertTaskCell';
 import { AlertTaskDialogHost } from './alerts/AlertTaskDialogHost';
 import { useAlertTaskLinks } from './alerts/alertTasks';
-import { sourceName } from './alerts/alertText';
+import { alertTitle, sourceName } from './alerts/alertText';
 import { ServiceReadLine } from './ServiceReadLine';
 import { TicketPanel } from './tickets/TicketPanel';
 
@@ -158,7 +158,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
         <SavedServiceReadState checking={alerts.checking} error={alerts.error} onRetry={alerts.refresh} />
       </div>
       <ul className={flush.list}>{alerts.items.map(alert => <RecordRow key={alert.id} icon={<Alert16Regular />} tone={alert.severity === 'Critical' ? 'ember' : 'saffron'}
-        title={<AlertTitle title={alert.title} onOpen={() => openAlert(alert)} />}
+        title={<AlertTitle title={alertTitle(t, alert)} onOpen={() => openAlert(alert)} />}
         meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />]} />}
         end={<><AlertSeverityBadge severity={alert.severity} /><AlertTaskCell alert={alert} task={alertTasks.links.get(alert.id)} /></>} />)}</ul>
       {alerts.available && alerts.items.length === 0 && <EmptyState icon={<AlertOn24Regular />} message={t(nothingSaved ? 'service.nothingSavedShort' : 'service.noAlerts')} />}

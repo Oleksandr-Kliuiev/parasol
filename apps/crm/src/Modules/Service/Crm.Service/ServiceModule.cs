@@ -90,6 +90,11 @@ public static class ServiceModule
         services.AddScoped<MachineQueries>();
         services.AddScoped<MachineDecisions>();
         services.AddScoped<AlertHiding>();
+        // M40: the CRM's own coverage rules, checked after a complete read of their source, and their settings.
+        services.AddScoped<ICoverageRule, Features.Coverage.AteraAgentSilentRule>();
+        services.AddScoped<Features.Coverage.CoverageChecks>();
+        services.AddScoped<ICoverageCheck>(sp => sp.GetRequiredService<Features.Coverage.CoverageChecks>());
+        services.AddScoped<Features.Coverage.CoverageSettings>();
         // DEV-11: tickets and ticket requests of a person in subject requests, and the retention of the ticket mirror.
         services.AddScoped<Crm.Privacy.Contracts.IPersonalDataContributor, Features.Privacy.ServicePersonalData>();
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, Features.Privacy.TicketMirrorRetention>();
@@ -199,6 +204,7 @@ public static class ServiceModule
 
         group.MapTicketEndpoints();
         group.MapMachineEndpoints();
+        group.MapCoverageEndpoints();
 
         group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, int? limit, string? cursor, ServiceDbContext db, TimeProvider time,
                 CancellationToken ct) =>

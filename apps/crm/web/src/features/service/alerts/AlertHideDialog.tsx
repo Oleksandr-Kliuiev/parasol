@@ -11,7 +11,7 @@ import { Dialog } from '../../../shared/components/Dialog';
 import { useNotify } from '../../../shared/components/useNotify';
 import { errorMessage } from '../../../shared/utils/errors';
 import { formatDate } from '../../../shared/utils/format';
-import { sourceName } from './alertText';
+import { alertTitle, sourceName } from './alertText';
 import { dayIn, hideAlert, hideMaxDays, hideShortcuts, validHideDay } from './alertHiding';
 import { useAlert } from './useAlertQueue';
 
@@ -64,8 +64,9 @@ export function AlertHideDialog({ alertId, onClose, onHidden }: { alertId: strin
       <DialogContent className={styles.content}>
         {read.isFetching && !alert && <Spinner size="small" label={t('alerts.detail.loading')} />}
         {alert && <>
-          <Text block weight="semibold">{alert.title}</Text>
-          <Text block className={styles.muted}>{t('alerts.hide.sourceStays', { source: sourceName(t, alert.system) })}</Text>
+          <Text block weight="semibold">{alertTitle(t, alert)}</Text>
+          <Text block className={styles.muted}>
+            {alert.rule ? t('alerts.hide.gapStays') : t('alerts.hide.sourceStays', { source: sourceName(t, alert.system) })}</Text>
           <div>
             <Field required label={t('alerts.hide.until')} hint={t('alerts.hide.untilHint')}
               validationMessage={touched && !dayOk ? t('alerts.hide.invalidDay', { days: hideMaxDays }) : undefined}>

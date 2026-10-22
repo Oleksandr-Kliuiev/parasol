@@ -57,7 +57,8 @@ public sealed record AlertSnapshotResult(bool Applied, int Opened, int Reopened,
 
 /// <summary>
 /// A stored alert for other modules (a task made from it, My day). The id stays the same from one read to the next;
-/// <paramref name="ResolvedAt"/> is when a complete read no longer listed it.
+/// <paramref name="ResolvedAt"/> is when a complete read no longer listed it. A coverage gap (M40) names its <paramref name="Rule"/>
+/// and its <paramref name="Facts"/> as one JSON object (<see cref="CoverageGaps.ReadFacts"/>).
 /// </summary>
 public sealed record AlertRef(
     Guid Id,
@@ -73,4 +74,6 @@ public sealed record AlertRef(
     Guid? DeviceId,
     DateTimeOffset CreatedAtSource,
     string? Url,
-    DateTimeOffset? ResolvedAt = null);
+    DateTimeOffset? ResolvedAt = null,
+    string? Rule = null,
+    string? Facts = null);

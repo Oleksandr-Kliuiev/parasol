@@ -178,6 +178,31 @@ export interface Alert {
   hidden?: AlertHold | null;
   /** Read with one alert only: the ETag a change of its status in Parasoll sends. */
   etag?: string | null;
+  /** A coverage gap Parasoll found (M40): the rule that found it and its facts, worded in the reader's language. */
+  rule?: string | null;
+  facts?: Record<string, string> | null;
+}
+
+/** A rule's limit (M40): its default and the range a person may choose from. */
+export interface CoverageThreshold {
+  default: number;
+  min: number;
+  max: number;
+  unit: 'Days' | 'Hours';
+}
+
+/** One of Parasoll's own coverage rules with its setting (M40); `etag` goes with a change. */
+export interface CoverageRule {
+  code: string;
+  system: string;
+  kind: AlertKind;
+  threshold: CoverageThreshold | null;
+  enabled: boolean;
+  value: number | null;
+  openGaps: number;
+  changedAt: string | null;
+  changedByName: string | null;
+  etag: string | null;
 }
 
 /** An alert hidden in Parasoll (M40): until when, why, by whom and when. */

@@ -218,6 +218,9 @@ namespace Crm.Service.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("CleanChecks")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAtSource")
                         .HasColumnType("datetimeoffset");
 
@@ -236,6 +239,10 @@ namespace Crm.Service.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Facts")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -257,6 +264,10 @@ namespace Crm.Service.Persistence.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("Rule")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Severity")
                         .IsRequired()
@@ -374,6 +385,60 @@ namespace Crm.Service.Persistence.Migrations
                     b.HasIndex("AlertId", "CreatedAt");
 
                     b.ToTable("AlertTransitions", "service");
+                });
+
+            modelBuilder.Entity("Crm.Service.Domain.CoverageRuleSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("Threshold")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("CoverageRuleSettings", "service");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004001"),
+                            Code = "atera.agent-silent",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        });
                 });
 
             modelBuilder.Entity("Crm.Service.Domain.Device", b =>

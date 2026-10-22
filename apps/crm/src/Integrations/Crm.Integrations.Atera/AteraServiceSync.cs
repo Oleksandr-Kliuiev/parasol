@@ -292,11 +292,15 @@ public sealed class AteraWorkHoursSyncJob(
     }
 }
 
-/// <summary>Nightly agent snapshot: the device list per organization and the daily counts used to bill per-device contract lines (BR-SRV-03).</summary>
+/// <summary>
+/// Nightly agent snapshot: the device list per organization and the daily counts used to bill per-device contract lines (BR-SRV-03).
+/// A complete read then lets the CRM's coverage rules of Atera check the customers it covered (M40: an agent gone silent).
+/// </summary>
 public sealed class AteraAgentSyncJob(
     IAteraClient client,
     AteraLinkIndex links,
     IServiceApi service,
+    ICoverageCheck coverage,
     SyncRunner runner,
     TimeProvider time,
     IOptions<AteraOptions> options,
@@ -346,7 +350,9 @@ public sealed class AteraAgentSyncJob(
 
             var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), Oslo).DateTime);
             var organizations = await service.TakeDeviceSnapshotAsync(today, ct);
-            progress.Message = $"devices {progress.Changed} in {byOrganization.Count} organizations, snapshot for {organizations}, skipped (customer not linked) {skipped}";
+            var gaps = await coverage.CheckAsync(AteraTypes.System, byOrganization.Keys.ToList(), ct);
+            progress.Message = $"devices {progress.Changed} in {byOrganization.Count} organizations, snapshot for {organizations}, skipped (customer not linked) {skipped}; "
+                + $"coverage gaps {gaps.Found} found, {gaps.Opened} new, {gaps.Reopened} again, {gaps.Resolved} closed";
         }, cancellationToken);
     }
 }

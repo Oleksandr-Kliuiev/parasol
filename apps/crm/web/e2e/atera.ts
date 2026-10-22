@@ -84,6 +84,13 @@ export async function syncDevices(page: Page, customer: AteraCustomer, count: nu
   `${count} devices of ${customer.name}`);
 }
 
+/** Narrows the queue to the test's own alerts and waits for that read: a row menu opened before it would close as the list redraws. */
+export async function searchAlerts(page: Page, marker: string) {
+  const read = page.waitForResponse((r) => r.url().includes('/api/v1/service/alerts?') && new URL(r.url()).searchParams.get('q') === marker);
+  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(marker);
+  await read;
+}
+
 /** What "Atera" holds of an alert now (M40): archived after a resolve, null once deleted. */
 export async function ateraAlertState(page: Page, alert: AteraAlert): Promise<{ Archived?: boolean } | null> {
   const response = await page.request.get(`${control}/alerts/${alert.AlertID}`);

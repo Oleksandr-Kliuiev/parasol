@@ -7,7 +7,7 @@ import type { Alert } from '../types';
 /** What can be asked of an alert's source (M40): Atera's API resolves and deletes alerts, and nothing else. */
 export type AlertSourceKind = 'alert.resolve' | 'alert.delete';
 
-export type AlertLike = Pick<Alert, 'id' | 'system' | 'externalId' | 'title' | 'state' | 'hidden'>;
+export type AlertLike = Pick<Alert, 'id' | 'system' | 'externalId' | 'title' | 'state' | 'hidden' | 'rule' | 'facts'>;
 
 /** What a person can do with an alert in Parasoll itself (M40): hide it until a day, or show it again. */
 export type AlertParasollKind = 'hide' | 'show';

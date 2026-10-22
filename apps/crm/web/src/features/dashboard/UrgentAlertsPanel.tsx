@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Badge, Button, MessageBar, MessageBarBody, Spinner, Text, makeStyles, mergeClasses } from '@fluentui/react-components';
 import { Alert16Regular, AlertOn24Regular, AlertUrgent16Regular, ArrowClockwise16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { alertTitle } from '../service/alerts/alertText';
 import { h } from '../../app/hearth';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
@@ -88,7 +89,7 @@ function AlertRow({ alert }: { alert: UrgentAlerts['items'][number] }) {
       icon={<Alert16Regular />}
       tone={critical ? 'ember' : 'saffron'}
       title={<AppLink to={`/alerts?alert=${encodeURIComponent(alert.id)}`}>
-        {alert.title}
+        {alertTitle(t, alert)}
         {/* Alerts of the same kind share a title; the customer tells the links apart for a screen reader. */}
         {alert.organizationName && <span className={styles.context}>{` · ${alert.organizationName}`}</span>}
       </AppLink>}

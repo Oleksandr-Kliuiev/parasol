@@ -48,6 +48,18 @@ test('alerts, their side panel, the assign dialog and the Drift tab pass axe at 
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0); await expect(assign).toBeFocused();
 
+    // M40: Parasoll's own coverage checks, from the queue's header; Escape gives focus back to the button.
+    const checks = page.getByRole('button', { name: 'Coverage checks', exact: true });
+    await checks.focus(); await page.keyboard.press('Enter');
+    const coverage = page.getByRole('dialog', { name: 'Coverage checks', exact: true });
+    await expect(coverage.getByRole('switch', { name: 'Raise alerts' })).toBeVisible();
+    await settled(page);
+    expect(await seriousViolations(page), `coverage checks at ${width} px (${scheme})`).toEqual([]);
+    expect(await fitsWidth(page), `coverage checks scroll sideways at ${width} px (${scheme})`).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`coverage-checks-${width}-${scheme}.png`) });
+    await page.keyboard.press('Escape');
+    await expect(coverage).toHaveCount(0); await expect(checks).toBeFocused();
+
     await page.goto(`/organizations/${customer.organizationId}?tab=drift`);
     await expect(page.getByRole('region', { name: 'Open alerts', exact: true }).getByRole('listitem')).toHaveCount(2);
     await expect(page.getByRole('tab', { name: 'Operations', exact: true })).toBeInViewport({ ratio: 1 });

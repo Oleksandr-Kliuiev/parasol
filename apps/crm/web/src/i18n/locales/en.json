@@ -1670,7 +1670,14 @@
     },
     "source": "Source: {{name}}",
     "sourceNames": {
-      "atera": "Atera"
+      "atera": "Atera",
+      "parasoll": "Parasoll"
+    },
+    "gaps": {
+      "found": "Found by Parasoll’s own check. It closes by itself once two checks in a row no longer find it.",
+      "ateraAgentSilent": {
+        "title": "The Atera agent on {{device}} has not reported since {{date}}"
+      }
     },
     "reads": {
       "readAt": "{{source}} read at {{time}}",
@@ -1784,6 +1791,7 @@
       "show": "Show again",
       "title": "Hide the alert until a day",
       "sourceStays": "{{source}}’s API cannot snooze an alert, so it stays open there; Parasoll hides it until the day you choose.",
+      "gapStays": "Hidden, the gap is still checked: it comes back on its day, or closes when the checks no longer find it.",
       "until": "Hide until",
       "untilHint": "It comes back at the start of this day.",
       "shortcuts": "Quick days",
@@ -1806,6 +1814,33 @@
       "someone": "someone",
       "untilFact": "hidden until {{date}}"
     }
+  },
+  "coverage": {
+    "open": "Coverage checks",
+    "title": "Coverage checks",
+    "intro": "Parasoll checks whether every customer device is watched, and raises an alert for what is missing. A check runs after each complete read of its source.",
+    "readOnly": "You can see the checks, but not change them.",
+    "rules": {
+      "ateraAgentSilent": {
+        "name": "Silent Atera agent",
+        "description": "An alert when the Atera agent on a device has not reported for longer than the limit. A server is critical, any other device a warning."
+      }
+    },
+    "enabled": "Raise alerts",
+    "limit": {
+      "Days": "Days without contact",
+      "Hours": "Hours without contact"
+    },
+    "limitHint": "From {{min}} to {{max}}. Applies from the next check.",
+    "limitInvalid": "Enter a whole number from {{min}} to {{max}}.",
+    "offNote": "Switched off, the check closes its open alerts at once.",
+    "openGaps_one": "{{count}} open alert",
+    "openGaps_other": "{{count}} open alerts",
+    "changed": "Changed {{date}} by {{name}}",
+    "never": "Not changed yet: the default applies",
+    "saving": "Saving…",
+    "saved": "Coverage checks saved",
+    "conflict": "Someone changed a check while you looked at it. Here it is as it is now: decide again."
   },
   "taskTicket": {
     "open": "Service ticket",

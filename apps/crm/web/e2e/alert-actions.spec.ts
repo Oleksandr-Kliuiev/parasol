@@ -1,5 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { ateraAlert, ateraAlertState, linkedAteraCustomer, storedAlerts, syncAlerts } from './atera';
+import { expect, test, type Locator } from '@playwright/test';
+import { ateraAlert, ateraAlertState, linkedAteraCustomer, searchAlerts, storedAlerts, syncAlerts } from './atera';
 import { signIn } from './support';
 
 // M40: an Atera alert is closed in Atera from the queue's row, through the one confirmation every vendor action uses; the worker
@@ -7,13 +7,6 @@ import { signIn } from './support';
 // it. Deleting is destructive: the title is typed, a reason given, and the action waits a minute, in which it can be cancelled.
 const SENT = 30_000;
 const followUp = (dialog: Locator) => dialog.getByRole('status');
-
-/** Narrows the queue to the test's own alerts and waits for that read: a row menu opened before it would close as the list redraws. */
-async function searchAlerts(page: Page, marker: string) {
-  const read = page.waitForResponse((r) => r.url().includes('/api/v1/service/alerts?') && new URL(r.url()).searchParams.get('q') === marker);
-  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(marker);
-  await read;
-}
 
 test('an alert is closed in Atera from the queue and deleting one waits for its hold and can be cancelled', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(240_000);

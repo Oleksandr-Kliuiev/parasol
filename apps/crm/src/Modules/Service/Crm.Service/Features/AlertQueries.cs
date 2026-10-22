@@ -13,7 +13,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Service.Features;
 
-/// <summary>One alert in a list, with its customer's name and the device it was matched to. <c>CreatedAt</c> is the source's time.</summary>
+/// <summary>
+/// One alert in a list, with its customer's name and the device it was matched to. <c>CreatedAt</c> is the source's time. A coverage
+/// gap the CRM found (M40) names its rule and facts, which the interface words in the reader's language.
+/// </summary>
 public sealed record AlertListItem(
     Guid Id,
     Guid OrganizationId,
@@ -31,7 +34,9 @@ public sealed record AlertListItem(
     DateTimeOffset? ResolvedAt,
     string? Url,
     AlertHoldItem? Hidden = null,
-    string? Etag = null);
+    string? Etag = null,
+    string? Rule = null,
+    IReadOnlyDictionary<string, string>? Facts = null);
 
 /// <summary>An alert hidden in Parasoll (M40): until when, why, and by whom.</summary>
 public sealed record AlertHoldItem(DateTimeOffset Until, string? Reason, string? ByName, DateTimeOffset? At);
@@ -65,7 +70,7 @@ internal sealed class AlertQueries(
     /// <summary>The shape other modules read through <see cref="IServiceApi"/>.</summary>
     internal static readonly Expression<Func<Alert, AlertRef>> Ref = a => new AlertRef(
         a.Id, a.OrganizationId, a.System, a.Kind, a.ExternalId, a.ExternalCustomerId, a.Title, a.Severity, a.State, a.DeviceName, a.DeviceId,
-        a.CreatedAtSource, a.Url, a.ResolvedAt);
+        a.CreatedAtSource, a.Url, a.ResolvedAt, a.Rule, a.Facts);
 
     /// <summary>
     /// Alerts in one state (open unless asked otherwise). Open ones come in the order they should be looked at: critical first, and
@@ -195,7 +200,8 @@ internal sealed class AlertQueries(
             a.DeviceName, a.DeviceId, a.CreatedAtSource, a.LastSeenAt, a.ResolvedAt, a.Url,
             a.IsHidden(now) && a.Hold is { Until: { } until } hold
                 ? new AlertHoldItem(until, hold.Reason, hold.By is { } by ? people.GetValueOrDefault(by)?.DisplayName : null, hold.At)
-                : null)).ToList();
+                : null,
+            Rule: a.Rule, Facts: CoverageGaps.ReadFacts(a.Facts))).ToList();
     }
 }
 

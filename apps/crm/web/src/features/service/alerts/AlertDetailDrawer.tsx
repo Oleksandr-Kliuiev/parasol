@@ -10,6 +10,7 @@ import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
 import { AlertSourceSection } from './AlertActions';
+import { alertTitle } from './alertText';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
 import { AlertReadLine } from './AlertReadLine';
 import { useAlertReads } from './alertReads';
@@ -46,7 +47,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
     focusAfter.current = null;
   }, [alert, read.dataUpdatedAt]);
   const sourceReads = alert && !reads.isFetching ? reads.data?.filter((r) => r.system === alert.system) : undefined;
-  const title = alert?.title ?? t('alerts.detail.title');
+  const title = alert ? alertTitle(t, alert) : t('alerts.detail.title');
   const link = alert?.url ? safeHttpUrl(alert.url) : undefined;
   const missing = read.error instanceof ApiError && read.error.status === 404;
 
@@ -77,6 +78,8 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
             {link
               ? <Link href={link} target="_blank" rel="noopener noreferrer" className={styles.external}>
                 {t('alerts.detail.openInSource', { name: sourceName(t, alert.system) })}<Open16Regular aria-hidden /></Link>
+              // M40: a gap is found by Parasoll's own check, which also says how it closes.
+              : alert.rule ? <Text size={200} className={styles.muted}>{t('alerts.gaps.found')}</Text>
               : <Text size={200} className={styles.muted}>{t('alerts.detail.noLink', { name: sourceName(t, alert.system) })}</Text>}
             {sourceReads && sourceReads.length > 0 && <AlertReadLine reads={sourceReads} />}
           </span> },

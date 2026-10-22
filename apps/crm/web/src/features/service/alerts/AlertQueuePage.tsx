@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { Button, SearchBox, Skeleton, SkeletonItem, Text, makeStyles } from '@fluentui/react-components';
-import { ArrowClockwise20Regular } from '@fluentui/react-icons';
+import { Button, SearchBox, Skeleton, SkeletonItem, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { ArrowClockwise20Regular, ShieldTask20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
 import { Permissions, useCan, useCurrentUser } from '../../../auth/CurrentUserContext';
@@ -18,6 +18,7 @@ import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { AlertReadLine } from './AlertReadLine';
 import { AlertQueueEmpty, AlertQueueList } from './AlertQueueList';
 import { AlertTaskDialogHost } from './AlertTaskDialogHost';
+import { CoverageRulesDialog } from './CoverageRulesDialog';
 import { pageIds, useAlertTaskLinks } from './alertTasks';
 import { useAlertQueue } from './useAlertQueue';
 
@@ -40,6 +41,7 @@ function Queue() {
   const { t } = useTranslation(); const styles = useStyles();
   const [params, setParams] = useSearchParams(); const location = useLocation(); const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [checks, setChecks] = useState(false); const restore = useRestoreFocusTarget();
   const debounced = useDebouncedValue(search.trim());
   const state = params.get('state') === 'resolved' ? 'Resolved' : params.get('state') === 'hidden' ? 'Hidden' : 'Open';
   const severity = severityParam[params.get('severity') ?? ''] ?? null;
@@ -78,8 +80,12 @@ function Queue() {
     <PageHeader title={t('alerts.title')} subtitle={t(state === 'Resolved' ? 'alerts.subtitleResolved' : state === 'Hidden' ? 'alerts.subtitleHidden' : 'alerts.subtitle')}
       // How fresh the stored alerts are, from the same answer as the rows: no time is shown while a new read is under way.
       meta={queue.reads && !queue.error && !(queue.isFetching && !queue.isFetchingNextPage) && <AlertReadLine reads={queue.reads} />}
-      actions={<Button icon={<ArrowClockwise20Regular />} aria-label={t('alerts.refresh')} disabled={queue.isFetching} disabledFocusable={queue.isFetching}
-        onClick={() => void queue.refetch()}>{t('common.refresh')}</Button>} />
+      actions={<>
+        {/* M40: Parasoll's own coverage checks, whose gaps are listed here among the alerts. */}
+        <Button {...restore} icon={<ShieldTask20Regular />} onClick={() => setChecks(true)}>{t('coverage.open')}</Button>
+        <Button icon={<ArrowClockwise20Regular />} aria-label={t('alerts.refresh')} disabled={queue.isFetching} disabledFocusable={queue.isFetching}
+          onClick={() => void queue.refetch()}>{t('common.refresh')}</Button>
+      </>} />
     <Toolbar label={t('alerts.filters')}>
       <FilterField kind="search" label={t('alerts.search')}>
         <SearchBox value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('alerts.search')} />
@@ -108,5 +114,6 @@ function Queue() {
             onMore={() => void queue.fetchNextPage()} />} />
       </>}
     <AlertDetailDrawer alertId={peekId} onClose={closePeek} />
+    {checks && <CoverageRulesDialog onClose={() => setChecks(false)} />}
   </AlertActionsHost></AlertTaskDialogHost>;
 }
