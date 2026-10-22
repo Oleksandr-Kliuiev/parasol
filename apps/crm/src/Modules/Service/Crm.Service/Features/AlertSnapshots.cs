@@ -5,21 +5,35 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Service.Features;
 
-/// <summary>A device an alert may name: its id, its customer and its machine name.</summary>
-internal sealed record AlertDeviceCandidate(Guid Id, Guid OrganizationId, string MachineName);
+/// <summary>A device an alert may name: its id, its customer, its machine name and the source's ids of it.</summary>
+internal sealed record AlertDeviceCandidate(Guid Id, Guid OrganizationId, string MachineName, string? ExternalId = null, string? AlternateId = null);
 
 /// <summary>
-/// Finds the CRM device an alert is about. A name counts only when exactly one current device of the same customer and source
-/// carries it, ignoring case; two devices with one name, or none, leave the alert without a device rather than with a guess.
+/// Finds the CRM device an alert is about. An alert that names the source's agent (M40: Atera's AgentId or DeviceGuid) gets that
+/// agent when it is a current device of the same customer. Otherwise a name counts only when exactly one current device of the
+/// same customer and source carries it, ignoring case; two devices with one name, or none, leave the alert without a device
+/// rather than with a guess.
 /// </summary>
 internal sealed class AlertDeviceIndex
 {
     private readonly Dictionary<Guid, Dictionary<string, Guid?>> byOrganization = [];
+    private readonly Dictionary<(Guid, string), Guid> byExternalId = [];
+    private readonly Dictionary<(Guid, string), Guid> byAlternateId = [];
 
     public AlertDeviceIndex(IEnumerable<AlertDeviceCandidate> devices)
     {
         foreach (var device in devices)
         {
+            if (device.ExternalId is { Length: > 0 } externalId)
+            {
+                byExternalId[(device.OrganizationId, externalId)] = device.Id;
+            }
+
+            if (device.AlternateId is { Length: > 0 } alternateId)
+            {
+                byAlternateId[(device.OrganizationId, alternateId.ToUpperInvariant())] = device.Id;
+            }
+
             var name = device.MachineName.Trim();
             if (name.Length == 0)
             {
@@ -40,6 +54,12 @@ internal sealed class AlertDeviceIndex
         deviceName?.Trim() is { Length: > 0 } name && byOrganization.TryGetValue(organizationId, out var names) && names.TryGetValue(name, out var id)
             ? id
             : null;
+
+    /// <summary>The device an alert is about: the agent it names, else the one device of the customer with its name.</summary>
+    public Guid? Find(ExternalAlert alert) =>
+        alert.DeviceExternalId is { Length: > 0 } externalId && byExternalId.TryGetValue((alert.OrganizationId, externalId), out var byAgent) ? byAgent
+        : alert.DeviceAlternateId is { Length: > 0 } alternateId && byAlternateId.TryGetValue((alert.OrganizationId, alternateId.ToUpperInvariant()), out var byGuid) ? byGuid
+        : Find(alert.OrganizationId, alert.DeviceName);
 }
 
 /// <summary>The rules of one alert read (M38), kept apart from the database so they can be checked on their own.</summary>
@@ -63,7 +83,7 @@ internal static class AlertSnapshotRules
         int opened = 0, reopened = 0, updated = 0, resolved = 0;
         foreach (var source in snapshot.Alerts.DistinctBy(a => a.ExternalId, StringComparer.Ordinal))
         {
-            var deviceId = devices.Find(source.OrganizationId, source.DeviceName);
+            var deviceId = devices.Find(source);
             if (byExternalId.TryGetValue(source.ExternalId, out var alert))
             {
                 switch (alert.Observe(snapshot.Kind, source, deviceId, now))
@@ -107,7 +127,9 @@ internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
 
         var now = time.GetUtcNow();
         var listed = snapshot.Alerts.Select(a => a.ExternalId).Distinct(StringComparer.Ordinal).ToList();
-        var organizations = snapshot.Alerts.Where(a => !string.IsNullOrWhiteSpace(a.DeviceName)).Select(a => a.OrganizationId).Distinct().ToList();
+        var organizations = snapshot.Alerts
+            .Where(a => !string.IsNullOrWhiteSpace(a.DeviceName) || a.DeviceExternalId is not null || a.DeviceAlternateId is not null)
+            .Select(a => a.OrganizationId).Distinct().ToList();
         var resource = "service-alerts:" + snapshot.System;
         // The reads, the lock and the writes land together, and the SQL Server retry strategy needs the transaction inside it.
         return await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
@@ -132,7 +154,7 @@ internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
                 ? []
                 : await db.Devices.AsNoTracking()
                     .Where(d => d.System == snapshot.System && d.RemovedAt == null && organizations.Contains(d.OrganizationId))
-                    .Select(d => new AlertDeviceCandidate(d.Id, d.OrganizationId, d.MachineName))
+                    .Select(d => new AlertDeviceCandidate(d.Id, d.OrganizationId, d.MachineName, d.ExternalId, d.AlternateId))
                     .ToListAsync(ct);
             var (added, result) = AlertSnapshotRules.Apply(snapshot, stored, new AlertDeviceIndex(devices), now);
             db.Alerts.AddRange(added);

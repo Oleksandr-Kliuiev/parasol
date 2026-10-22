@@ -18,7 +18,8 @@ public enum AlertKind
 
 /// <summary>
 /// An open alert as read from its source, with the CRM organization its customer is linked to. <paramref name="Url"/> comes from
-/// the integration's configuration only, never from a guess about the provider's addresses.
+/// the integration's configuration only, never from a guess about the provider's addresses. <paramref name="DeviceExternalId"/> and
+/// <paramref name="DeviceAlternateId"/> name the source's agent exactly when the source says which (M40).
 /// </summary>
 public sealed record ExternalAlert(
     string ExternalId,
@@ -28,7 +29,9 @@ public sealed record ExternalAlert(
     string? DeviceName,
     DateTimeOffset CreatedAt,
     string? ExternalCustomerId = null,
-    string? Url = null);
+    string? Url = null,
+    string? DeviceExternalId = null,
+    string? DeviceAlternateId = null);
 
 /// <summary>
 /// One read of the open alerts of a source (<paramref name="System"/> and <paramref name="Kind"/>). <paramref name="Alerts"/> are

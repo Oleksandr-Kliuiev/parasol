@@ -74,6 +74,7 @@ public static class AteraModule
         services.AddScoped<AteraTicketSyncJob>();
         services.AddScoped<AteraWorkHoursSyncJob>();
         services.AddScoped<AteraAgentSyncJob>();
+        services.AddScoped<AteraPatchSyncJob>();
         services.AddScoped<AteraAlertSyncJob>();
         services.AddScoped<AteraCustomerSyncJob>();
         services.AddScoped<AteraContactSyncJob>();

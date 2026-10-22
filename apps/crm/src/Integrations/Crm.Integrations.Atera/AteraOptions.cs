@@ -74,6 +74,9 @@ public sealed class AteraOptions
 
     public string AgentSyncCron { get; set; } = "30 1 * * *";
 
+    /// <summary>The nightly read of every Windows agent's updates (M40), after the agent read that names the agents.</summary>
+    public string PatchSyncCron { get; set; } = "15 2 * * *";
+
     public string AlertSyncCron { get; set; } = "5,35 * * * *";
 
     /// <summary>How far back the recent pass and the work-hours pass look.</summary>

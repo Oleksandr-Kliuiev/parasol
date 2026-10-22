@@ -764,6 +764,7 @@
       "quote-documents": "Store quote documents",
       "quote-document-orphans": "Clean up unreferenced documents",
       "atera-agents": "Devices (Atera)",
+      "atera-patches": "Windows updates (Atera)",
       "atera-alerts": "Alerts (Atera)",
       "atera-tickets": "Open tickets (Atera)",
       "atera-tickets-recent": "Recently changed tickets (Atera)",
@@ -1541,7 +1542,8 @@
       "tickets": "Open tickets ({{system}})",
       "conversations": "Ticket messages ({{system}})",
       "alerts": "Alerts ({{system}})",
-      "devices": "Devices ({{system}})"
+      "devices": "Devices ({{system}})",
+      "patches": "Windows updates ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} not read yet",

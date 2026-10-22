@@ -25,6 +25,8 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
 
     public DbSet<Machine> Machines => Set<Machine>();
 
+    public DbSet<DevicePatch> DevicePatches => Set<DevicePatch>();
+
     public DbSet<MachineLinkDecision> MachineLinkDecisions => Set<MachineLinkDecision>();
 
     public DbSet<MachineProposal> MachineProposals => Set<MachineProposal>();
@@ -85,11 +87,42 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.Url).HasMaxLength(512);
             b.Property(x => x.SerialNumber).HasMaxLength(Device.SerialNumberLength);
             b.Property(x => x.MacAddresses).HasMaxLength(Device.MacAddressesLength);
+            // M40: the computer as its source describes it (lengths as Device.Apply cuts them).
+            b.Property(x => x.AlternateId).HasMaxLength(128);
+            b.Property(x => x.Vendor).HasMaxLength(128);
+            b.Property(x => x.Model).HasMaxLength(256);
+            b.Property(x => x.Motherboard).HasMaxLength(256);
+            b.Property(x => x.Processor).HasMaxLength(256);
+            b.Property(x => x.ProcessorClock).HasMaxLength(32);
+            b.Property(x => x.BiosVersion).HasMaxLength(128);
+            b.Property(x => x.OsVersion).HasMaxLength(64);
+            b.Property(x => x.OsBuild).HasMaxLength(64);
+            b.Property(x => x.IpAddresses).HasMaxLength(1024);
+            b.Property(x => x.PublicIp).HasMaxLength(64);
+            b.Property(x => x.DomainName).HasMaxLength(256);
+            b.Property(x => x.LoggedInUsers).HasMaxLength(512);
+            b.Property(x => x.LastLoginUser).HasMaxLength(256);
+            b.Property(x => x.Disks).HasMaxLength(DeviceDisks.Length);
+            b.Property(x => x.AgentVersion).HasMaxLength(64);
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.RemovedAt });
             // M40: a machine is its devices; it is removed only once no device names it.
             b.HasOne<Machine>().WithMany().HasForeignKey(x => x.MachineId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => x.MachineId).HasFilter("[MachineId] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<DevicePatch>(b =>
+        {
+            b.ToTable("DevicePatches");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.KbId).HasMaxLength(32);
+            b.Property(x => x.Name).HasMaxLength(DevicePatch.NameLength);
+            b.Property(x => x.Class).HasMaxLength(128);
+            b.Property(x => x.Status).HasMaxLength(64);
+            // M40: a device's updates go with it; a read replaces them as a whole.
+            b.HasOne<Device>().WithMany().HasForeignKey(x => x.DeviceId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.DeviceId, x.Installed });
         });
 
         modelBuilder.Entity<Machine>(b =>

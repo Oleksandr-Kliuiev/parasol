@@ -98,12 +98,59 @@ internal sealed partial class AteraClient
                 Text(e, "OSType", "DeviceType", "MachineRole"),
                 Text(e, "OS", "OperatingSystem"),
                 Bool(e, "Online", "IsOnline") ?? false,
-                Date(e, "LastSeen", "LastSeenDate", "LastRebootTime", "Modified"))
+                // M40: a reboot or a change of the item is no contact; an agent without LastSeen has no last contact.
+                Date(e, "LastSeen", "LastSeenDate"))
             {
-                SerialNumber = Text(e, "VendorSerialNumber", "SerialNumber"),
-                MacAddresses = Texts(e, "MacAddresses", "MacAddress"),
+                SerialNumber = Text(e, "VendorSerialNumber"),
+                MacAddresses = Texts(e, "MacAddresses"),
+                DeviceGuid = Text(e, "DeviceGuid"),
+                AppViewUrl = Text(e, "AppViewUrl"),
+                Inventory = new AteraAgentInventory(
+                    Text(e, "Vendor"),
+                    Text(e, "VendorBrandModel", "ProductName"),
+                    Text(e, "Motherboard"),
+                    Text(e, "Processor"),
+                    Int(e, "ProcessorCoresCount"),
+                    Text(e, "ProcessorClock"),
+                    Int(e, "Memory"),
+                    Text(e, "BiosVersion"),
+                    Text(e, "OSVersion"),
+                    Text(e, "OSBuild"),
+                    Texts(e, "IpAddresses"),
+                    Text(e, "ReportedFromIP"),
+                    Text(e, "DomainName"),
+                    Text(e, "CurrentLoggedUsers"),
+                    Text(e, "LastLoginUser"),
+                    Date(e, "LastRebootTime"),
+                    Disks(e),
+                    Text(e, "AgentVersion")),
             }
             : null;
+
+    /// <summary>The disks of an agent (<c>HardwareDisks</c>); an entry that is not an object is left out.</summary>
+    private static List<AteraDisk> Disks(JsonElement e) =>
+        TryGet(e, out var v, "HardwareDisks") && v.ValueKind == JsonValueKind.Array
+            ? v.EnumerateArray().Where(d => d.ValueKind == JsonValueKind.Object)
+                .Select(d => new AteraDisk(Text(d, "Drive"), Double(d, "Free"), Double(d, "Used"), Double(d, "Total"))).ToList()
+            : [];
+
+    /// <summary>
+    /// One patch list of an agent (M40). The OpenAPI file names the fields in camel case and older copies in Pascal case, so both
+    /// are read; an entry without a name is no update and is left out.
+    /// </summary>
+    internal static AteraPatchList ReadPatches(JsonElement e, bool installed)
+    {
+        var list = installed ? new[] { "installedUpdates", "InstalledUpdates" } : ["availableUpdates", "AvailableUpdates"];
+        var patches = TryGet(e, out var v, list) && v.ValueKind == JsonValueKind.Array
+            ? v.EnumerateArray().Where(p => p.ValueKind == JsonValueKind.Object)
+                .Select(p => Text(p, "name", "Name") is { } name
+                    ? new AteraPatch(Text(p, "kbId", "KBId", "KbId"), name, Text(p, "class", "Class"),
+                        installed ? Date(p, "installDate", "InstallDate") : null, installed ? null : Text(p, "status", "Status"))
+                    : null)
+                .OfType<AteraPatch>().ToList()
+            : [];
+        return new AteraPatchList(Date(e, "timestamp", "Timestamp"), patches);
+    }
 
     /// <summary>A list of values: a JSON array of texts, or one text that lists them separated by commas or semicolons.</summary>
     private static List<string> Texts(JsonElement e, params string[] names)
@@ -128,6 +175,10 @@ internal sealed partial class AteraClient
                 Text(e, "Severity", "AlertSeverity") ?? "Information",
                 Text(e, "DeviceName", "MachineName"),
                 Date(e, "Created", "CreatedDate", "AlertCreated") ?? DateTimeOffset.MinValue)
+            {
+                AgentId = Text(e, "AgentId", "AgentID"),
+                DeviceGuid = Text(e, "DeviceGuid"),
+            }
             : null;
 
     /// <summary>
@@ -190,6 +241,14 @@ internal sealed partial class AteraClient
 
     private static string? Text(JsonElement e, params string[] names) =>
         TryGet(e, out var v, names) ? (v.ValueKind == JsonValueKind.String ? v.GetString() : v.GetRawText()) is { Length: > 0 } s ? s.Trim() : null : null;
+
+    private static int? Int(JsonElement e, params string[] names) => Long(e, names) is { } n && n is >= int.MinValue and <= int.MaxValue ? (int)n : null;
+
+    private static double? Double(JsonElement e, params string[] names) =>
+        TryGet(e, out var v, names)
+            ? v.ValueKind == JsonValueKind.Number && v.TryGetDouble(out var n) ? n
+            : v.ValueKind == JsonValueKind.String && double.TryParse(v.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var p) ? p : null
+            : null;
 
     private static long? Long(JsonElement e, params string[] names) =>
         TryGet(e, out var v, names)

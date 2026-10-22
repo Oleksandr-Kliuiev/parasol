@@ -28,6 +28,7 @@ public sealed record ServiceSourceRead(string Source, string System, DateTimeOff
         ("conversations", "atera", "atera-ticket-conversations"),
         ("alerts", "atera", "atera-alerts"),
         ("devices", "atera", "atera-agents"),
+        ("patches", "atera", "atera-patches"),
     ];
 
     internal static async Task<ServiceSourceRead> LatestAsync(IEnumerable<ISyncCompletenessSource> completeness, string source, CancellationToken ct)

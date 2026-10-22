@@ -226,6 +226,7 @@ public sealed class AteraAlertSyncTests(CrmWebFactory factory)
         public Task<AteraWorkHoursResult> GetWorkHoursAsync(long id, CancellationToken ct) => throw new NotSupportedException();
         public IAsyncEnumerable<AteraTicket> GetCustomerTicketsAsync(long id, CancellationToken ct) => throw new NotSupportedException();
         public IAsyncEnumerable<AteraAgent> GetAgentsAsync(CancellationToken ct) => throw new NotSupportedException();
+        public Task<AteraPatchList?> GetPatchesAsync(string deviceGuid, bool installed, CancellationToken ct) => throw new NotSupportedException();
         public Task<long> CreateTicketAsync(AteraTicketWrite ticket, CancellationToken ct) => throw new NotSupportedException();
         public Task<long> CreateContactAsync(AteraContactWrite contact, CancellationToken ct) => throw new NotSupportedException();
     }

@@ -1,6 +1,9 @@
+using System.Net;
+using System.Text.Json;
+
 namespace Crm.Integrations.Atera;
 
-/// <summary>Agents (devices) and alerts.</summary>
+/// <summary>Agents (devices), their Windows updates and alerts.</summary>
 internal sealed partial class AteraClient
 {
     /// <summary>
@@ -17,4 +20,21 @@ internal sealed partial class AteraClient
     /// </summary>
     public IAsyncEnumerable<AteraAlert> GetAlertsAsync(string? status, CancellationToken cancellationToken) =>
         GetPagedAsync("alerts", ReadAlert, cancellationToken, status is null ? null : $"alertStatus={Uri.EscapeDataString(status)}", a => a.AlertId, strict: true);
+
+    /// <summary>
+    /// The installed or the available Windows updates of an agent (M40): <c>GET agents/{DeviceGuid}/installed-patches</c> or
+    /// <c>available-patches</c>, one object per agent. Null when Atera does not know the device (404).
+    /// </summary>
+    public async Task<AteraPatchList?> GetPatchesAsync(string deviceGuid, bool installed, CancellationToken cancellationToken)
+    {
+        using var response = await http.GetAsync($"agents/{Uri.EscapeDataString(deviceGuid)}/{(installed ? "installed-patches" : "available-patches")}", cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureSuccessAsync(response, cancellationToken);
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+        return ReadPatches(document.RootElement, installed);
+    }
 }

@@ -48,6 +48,8 @@ public sealed class MachineTests(CrmWebFactory factory)
     {
         var (system, organizationId, _) = await ScenarioAsync();
         var admin = factory.ClientAs(CrmRoles.Admin);
+        // PC-07 is seen first, so its machine is the older one.
+        await DevicesAsync(organizationId, system, Agent("pc", "PC-07", "MXL1122334"));
         await DevicesAsync(organizationId, system, Agent("pc", "PC-07", "MXL1122334"), Agent("renamed", "ACCOUNTS-7", "MXL1122334"));
         var machines = await ListAsync(admin, organizationId);
         machines.Count.ShouldBe(2, "a serial number alone joins nothing: the name differs");

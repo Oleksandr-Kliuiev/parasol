@@ -25,7 +25,7 @@ internal sealed class ConnectionCatalog(
             new(AteraTypes.System, atera.Value.Enabled, atera.Value.WriteEnabled,
             [
                 AteraCustomerSyncJob.JobId, AteraContactSyncJob.JobId, AteraTicketSyncJob.OpenJobId, AteraTicketSyncJob.RecentJobId,
-                AteraWorkHoursSyncJob.JobId, AteraAgentSyncJob.JobId, AteraAlertSyncJob.JobId, AteraTicketConversationSyncJob.JobId,
+                AteraWorkHoursSyncJob.JobId, AteraAgentSyncJob.JobId, AteraPatchSyncJob.JobId, AteraAlertSyncJob.JobId, AteraTicketConversationSyncJob.JobId,
             ]),
             new(PowerOfficeTypes.System, office.Enabled, office.WriteEnabled,
             [

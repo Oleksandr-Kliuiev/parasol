@@ -81,14 +81,56 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
                 }
             }
 
-            foreach (var gone in known.Where(d => d.OrganizationId == organizationId && !ids.Contains(d.ExternalId)))
+            var gone = known.Where(d => d.OrganizationId == organizationId && !ids.Contains(d.ExternalId) && d.RemovedAt == null).ToList();
+            foreach (var device in gone)
             {
-                gone.MarkRemoved(now);
+                device.MarkRemoved(now);
+            }
+
+            // M40: the updates of a device no longer reported tell nothing any more.
+            var goneIds = gone.Select(d => d.Id).ToList();
+            if (goneIds.Count > 0)
+            {
+                await db.DevicePatches.Where(p => goneIds.Contains(p.DeviceId)).ExecuteDeleteAsync(ct);
             }
         }, cancellationToken);
 
         // A device that moved from another customer leaves a machine there that has to be matched again.
         await new MachineLinks(db, time).RelinkAsync(moved, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<DeviceRef>> GetCurrentDevicesAsync(string system, CancellationToken cancellationToken) =>
+        await db.Devices.AsNoTracking().Where(d => d.System == system && d.RemovedAt == null)
+            .OrderBy(d => d.FirstSeenAt).ThenBy(d => d.Id)
+            .Select(d => new DeviceRef(d.Id, d.OrganizationId, d.ExternalId, d.AlternateId, d.MachineName, d.Os))
+            .ToListAsync(cancellationToken);
+
+    public async Task<bool> ApplyDevicePatchesAsync(Guid deviceId, DevicePatchSnapshot snapshot, CancellationToken cancellationToken)
+    {
+        // The delete, the inserts and the read time land together, and the SQL Server retry strategy needs the transaction inside it.
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
+        {
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            if (await db.Devices.SingleOrDefaultAsync(d => d.Id == deviceId && d.RemovedAt == null, ct) is not { } device)
+            {
+                return false;
+            }
+
+            await db.DevicePatches.Where(p => p.DeviceId == deviceId).ExecuteDeleteAsync(ct);
+            db.DevicePatches.AddRange(Patches(deviceId, true, snapshot.Installed).Concat(Patches(deviceId, false, snapshot.Available)));
+            device.PatchesRead(time.GetUtcNow(), snapshot.CollectedAt);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return true;
+        }, cancellationToken);
+
+        // The newest installed first: a card shows what changed lately, and the cap keeps those.
+        static IEnumerable<DevicePatch> Patches(Guid deviceId, bool installed, IReadOnlyList<DevicePatchReading> readings) =>
+            readings.Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .OrderByDescending(r => r.InstalledAt ?? DateTimeOffset.MinValue).ThenBy(r => r.KbId, StringComparer.Ordinal)
+                .Take(DevicePatch.MaxPerKind)
+                .Select(r => DevicePatch.From(deviceId, installed, r));
     }
 
     public Task<AlertSnapshotResult> ApplyAlertSnapshotAsync(AlertSnapshot snapshot, CancellationToken cancellationToken) =>

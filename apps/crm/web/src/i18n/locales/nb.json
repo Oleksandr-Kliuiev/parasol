@@ -764,6 +764,7 @@
       "quote-documents": "Lagre tilbudsdokumenter",
       "quote-document-orphans": "Rydd dokumenter uten tilknytning",
       "atera-agents": "Enheter (Atera)",
+      "atera-patches": "Windows-oppdateringer (Atera)",
       "atera-alerts": "Driftsvarsler (Atera)",
       "atera-tickets": "Åpne saker (Atera)",
       "atera-tickets-recent": "Nylig endrede saker (Atera)",
@@ -1541,7 +1542,8 @@
       "tickets": "Åpne saker ({{system}})",
       "conversations": "Meldinger i saker ({{system}})",
       "alerts": "Driftsvarsler ({{system}})",
-      "devices": "Enheter ({{system}})"
+      "devices": "Enheter ({{system}})",
+      "patches": "Windows-oppdateringer ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} er ikke lest ennå",

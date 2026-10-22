@@ -178,6 +178,7 @@ jobs.AddOrUpdate<AteraTicketSyncJob>(AteraTicketSyncJob.RecentJobId, job => job.
 jobs.AddOrUpdate<AteraTicketConversationSyncJob>(AteraTicketConversationSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.TicketConversationSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraWorkHoursSyncJob>(AteraWorkHoursSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.WorkHoursSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAgentSyncJob>(AteraAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraPatchSyncJob>(AteraPatchSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.PatchSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAlertSyncJob>(AteraAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
 await app.RunAsync();

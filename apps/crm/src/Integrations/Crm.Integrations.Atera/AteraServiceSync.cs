@@ -49,6 +49,27 @@ internal static class AteraServiceMapping
     public static string? Url(string? template, object id) =>
         string.IsNullOrWhiteSpace(template) ? null : string.Format(CultureInfo.InvariantCulture, template, id);
 
+    /// <summary>
+    /// An agent as a device of the mirror (M40): its keys, Atera's DeviceGuid, the inventory, and Atera's own link to it
+    /// (<c>AppViewUrl</c>) before the configured template, which only guesses Atera's addresses.
+    /// </summary>
+    public static ExternalDevice Device(AteraAgent agent, string? urlTemplate) => new(
+        agent.AgentId, agent.MachineName, DeviceTypeOf(agent.OsType, agent.Os), agent.Os, agent.Online, agent.LastSeenAt,
+        AppLink(agent.AppViewUrl) ?? Url(urlTemplate, agent.AgentId), agent.SerialNumber, agent.MacAddresses, agent.DeviceGuid,
+        agent.Inventory is { } i
+            ? new DeviceInventoryReading(
+                i.Vendor, i.Model, i.Motherboard, i.Processor, i.ProcessorCores, i.ProcessorClock, i.Memory, i.BiosVersion, i.OsVersion, i.OsBuild,
+                i.IpAddresses, i.PublicIp, i.DomainName, i.LoggedInUsers, i.LastLoginUser, i.LastRebootAt,
+                i.Disks.Select(d => new DeviceDisk(d.Drive, d.Free, d.Used, d.Total)).ToList(), i.AgentVersion)
+            : null);
+
+    /// <summary>A link Atera gave for a record: kept only when it is an absolute https address that fits the column.</summary>
+    public static string? AppLink(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && url!.Length <= 512 ? url : null;
+
+    /// <summary>Atera's updates are Windows updates (they carry KB numbers): only a Windows agent is asked for them (M40).</summary>
+    public static bool HasWindowsUpdates(string? os) => os?.Contains("windows", StringComparison.OrdinalIgnoreCase) == true;
+
     public static TechnicianRef? Technician(string? externalId, string? email, string? name) =>
         string.IsNullOrWhiteSpace(externalId) && string.IsNullOrWhiteSpace(email)
             ? null
@@ -308,9 +329,7 @@ public sealed class AteraAgentSyncJob(
                 }
 
                 byOrganization.TryAdd(organizationId, []);
-                byOrganization[organizationId].Add(new ExternalDevice(
-                    agent.AgentId, agent.MachineName, AteraServiceMapping.DeviceTypeOf(agent.OsType, agent.Os), agent.Os, agent.Online, agent.LastSeenAt,
-                    AteraServiceMapping.Url(options.Value.DeviceUrlTemplate, agent.AgentId), agent.SerialNumber, agent.MacAddresses));
+                byOrganization[organizationId].Add(AteraServiceMapping.Device(agent, options.Value.DeviceUrlTemplate));
             }
 
             // Linked organizations without agents lose their devices too.
@@ -379,7 +398,8 @@ public sealed class AteraAlertSyncJob(
 
                 alerts.Add(new ExternalAlert(
                     alert.AlertId, organizationId, severity, alert.Title, alert.DeviceName, alert.CreatedAt,
-                    customerId.ToString(CultureInfo.InvariantCulture), AteraServiceMapping.Url(options.Value.AlertUrlTemplate, alert.AlertId)));
+                    customerId.ToString(CultureInfo.InvariantCulture), AteraServiceMapping.Url(options.Value.AlertUrlTemplate, alert.AlertId),
+                    alert.AgentId, alert.DeviceGuid));
             }
 
             // The enumeration throws on any page it cannot read, so arriving here means every page was read.

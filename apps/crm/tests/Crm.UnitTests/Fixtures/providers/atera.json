@@ -19,6 +19,12 @@
     { "WorkHoursID": "w-2", "TicketID": 9001, "TimeSpentInMinutes": 0 }
   ],
   "agents": [
-    { "AgentID": "a-1", "CustomerID": 101, "MachineName": "PC-ALFA-01", "OSType": "Workstation", "OS": "Windows 11", "Online": true, "LastSeen": "2026-10-01T06:00:00Z" }
-  ]
+    { "AgentID": "a-1", "CustomerID": 101, "MachineName": "PC-ALFA-01", "OSType": "Workstation", "OS": "Windows 11", "Online": true, "LastSeen": "2026-10-01T06:00:00Z" },
+    { "AgentID": 1201, "DeviceGuid": "5369e175-0000-4000-8000-000000001201", "FolderID": 1, "CustomerID": 101, "CustomerName": "Testfirma Alfa AS", "AgentName": "PC-ALFA-02", "MachineName": "PC-ALFA-02", "DomainName": "ALFA", "CurrentLoggedUsers": "ALFA\\testbruker", "LastLoginUser": "testbruker", "Monitored": true, "Online": false, "LastSeen": "2026-10-20T07:30:00Z", "LastRebootTime": "2026-10-19T05:00:00Z", "Modified": "2026-10-21T07:30:00Z", "ReportedFromIP": "203.0.113.10", "AppViewUrl": "https://atera.example.invalid/Admin#/rmm/device/5369e175-0000-4000-8000-000000001201/agent", "Vendor": "Dell Inc.", "VendorBrandModel": "Latitude 5440", "VendorSerialNumber": "5CG1234ABC", "Motherboard": "Dell Inc. 0XYZ12", "Processor": "13th Gen Intel(R) Core(TM) i5-1345U", "ProcessorCoresCount": 10, "ProcessorClock": "1.6", "Memory": 16384, "BiosVersion": "1.15.0", "OS": "Microsoft Windows 11 Pro", "OSType": "Work Station", "OSVersion": "23H2", "OSBuild": "22631.4317", "WindowsSerialNumber": "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX", "MacAddresses": ["00:1A:2B:3C:4D:5E", "02:42:AC:11:00:02"], "IpAddresses": ["10.0.0.21"], "HardwareDisks": [{ "Drive": "C:", "Free": 120.5, "Used": 355.4, "Total": 475.9 }], "AgentVersion": "1.8.7.4" }
+  ],
+  "alerts": [
+    { "AlertID": 255, "Code": 1, "Source": "Agent", "Title": "Disk usage", "Severity": "Warning", "Created": "2026-10-20T08:00:00Z", "DeviceGuid": "5369e175-0000-4000-8000-000000001201", "AgentId": 1201, "Archived": false, "AlertCategoryID": "Disk", "AlertMessage": "Disk C: is almost full", "DeviceName": "PC-ALFA-02", "CustomerID": 101, "CustomerName": "Testfirma Alfa AS" }
+  ],
+  "installedPatches": { "deviceGuid": "5369e175-0000-4000-8000-000000001201", "timestamp": "2026-10-21T06:00:00Z", "installedUpdates": [{ "name": "2026-10 Cumulative Update for Windows 11 Version 23H2 (KB5044284)", "class": "Security Updates", "kbId": "KB5044284", "installDate": "2026-10-16T03:00:00Z" }, { "class": "Updates" }] },
+  "availablePatches": { "DeviceGuid": "5369e175-0000-4000-8000-000000001201", "Timestamp": "2026-10-21T06:00:00Z", "AvailableUpdates": [{ "Name": "2026-10 .NET 8.0.11 Security Update (KB5045993)", "Class": "Security Updates", "KBId": "KB5045993", "Status": "Pending" }] }
 }

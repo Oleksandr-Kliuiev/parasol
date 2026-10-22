@@ -141,5 +141,6 @@ internal static class AteraTicketPrivacySupport
         public Task<AteraWorkHoursResult> GetWorkHoursAsync(long id, CancellationToken ct) => throw new NotSupportedException();
         public IAsyncEnumerable<AteraAgent> GetAgentsAsync(CancellationToken ct) => throw new NotSupportedException();
         public IAsyncEnumerable<AteraAlert> GetAlertsAsync(string? status, CancellationToken ct) => throw new NotSupportedException();
+        public Task<AteraPatchList?> GetPatchesAsync(string deviceGuid, bool installed, CancellationToken ct) => throw new NotSupportedException();
     }
 }

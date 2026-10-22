@@ -30,6 +30,9 @@ public interface IAteraClient
 
     IAsyncEnumerable<AteraAlert> GetAlertsAsync(string? status, CancellationToken cancellationToken);
 
+    /// <summary>The installed or available Windows updates of an agent by its DeviceGuid (M40); null when Atera does not know it.</summary>
+    Task<AteraPatchList?> GetPatchesAsync(string deviceGuid, bool installed, CancellationToken cancellationToken);
+
     Task<long> CreateTicketAsync(AteraTicketWrite ticket, CancellationToken cancellationToken);
 
     Task<long> CreateContactAsync(AteraContactWrite contact, CancellationToken cancellationToken);

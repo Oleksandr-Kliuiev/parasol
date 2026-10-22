@@ -764,6 +764,7 @@
       "quote-documents": "Lagre tilbodsdokument",
       "quote-document-orphans": "Rydd dokument utan tilknyting",
       "atera-agents": "Einingar (Atera)",
+      "atera-patches": "Windows-oppdateringar (Atera)",
       "atera-alerts": "Driftsvarsel (Atera)",
       "atera-tickets": "Opne saker (Atera)",
       "atera-tickets-recent": "Nyleg endra saker (Atera)",
@@ -1541,7 +1542,8 @@
       "tickets": "Opne saker ({{system}})",
       "conversations": "Meldingar i saker ({{system}})",
       "alerts": "Driftsvarsel ({{system}})",
-      "devices": "Einingar ({{system}})"
+      "devices": "Einingar ({{system}})",
+      "patches": "Windows-oppdateringar ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} er ikkje lesne enno",

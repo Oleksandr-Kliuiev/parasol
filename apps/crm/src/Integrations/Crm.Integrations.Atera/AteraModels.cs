@@ -79,16 +79,69 @@ public sealed record AteraWorkHoursResult(IReadOnlyList<AteraWorkHours> Records,
 
 /// <summary>
 /// An Atera agent. <see cref="SerialNumber"/> (<c>VendorSerialNumber</c>) and <see cref="MacAddresses"/> tell a customer's machines
-/// apart (M40); both are as Atera reports them.
+/// apart (M40); both are as Atera reports them. <see cref="DeviceGuid"/> names the agent in the patch routes and in alerts,
+/// <see cref="AppViewUrl"/> is Atera's own link to the device.
 /// </summary>
 public sealed record AteraAgent(string AgentId, long CustomerId, string MachineName, string? OsType, string? Os, bool Online, DateTimeOffset? LastSeenAt)
 {
     public string? SerialNumber { get; init; }
 
     public IReadOnlyList<string> MacAddresses { get; init; } = [];
+
+    public string? DeviceGuid { get; init; }
+
+    public string? AppViewUrl { get; init; }
+
+    public AteraAgentInventory? Inventory { get; init; }
 }
 
-public sealed record AteraAlert(string AlertId, long? CustomerId, string Title, string Severity, string? DeviceName, DateTimeOffset CreatedAt);
+/// <summary>
+/// What an agent item of Atera's API v3 says about the computer (M40), field by field as v3 names it. Licence keys
+/// (<c>WindowsSerialNumber</c>, <c>OfficeSerialNumber</c>) are left out on purpose. <see cref="Memory"/> and the disks' figures
+/// come without units in the API.
+/// </summary>
+public sealed record AteraAgentInventory(
+    string? Vendor,
+    string? Model,
+    string? Motherboard,
+    string? Processor,
+    int? ProcessorCores,
+    string? ProcessorClock,
+    int? Memory,
+    string? BiosVersion,
+    string? OsVersion,
+    string? OsBuild,
+    IReadOnlyList<string> IpAddresses,
+    string? PublicIp,
+    string? DomainName,
+    string? LoggedInUsers,
+    string? LastLoginUser,
+    DateTimeOffset? LastRebootAt,
+    IReadOnlyList<AteraDisk> Disks,
+    string? AgentVersion);
+
+/// <summary>One disk of an agent (<c>HardwareDisks</c>).</summary>
+public sealed record AteraDisk(string? Drive, double? Free, double? Used, double? Total);
+
+/// <summary>
+/// One Windows update of an agent: installed (<c>installed-patches</c>, with the time it was installed) or available
+/// (<c>available-patches</c>, with Atera's status of it).
+/// </summary>
+public sealed record AteraPatch(string? KbId, string Name, string? Class, DateTimeOffset? InstalledAt, string? Status);
+
+/// <summary>The updates Atera reports for an agent, and when Atera collected them (<c>timestamp</c>).</summary>
+public sealed record AteraPatchList(DateTimeOffset? CollectedAt, IReadOnlyList<AteraPatch> Patches);
+
+/// <summary>
+/// An Atera alert. <see cref="AgentId"/> (since 2026) and <see cref="DeviceGuid"/> name the agent it is about exactly; a monitor
+/// that is no agent (SNMP, HTTP) has a DeviceGuid no agent carries.
+/// </summary>
+public sealed record AteraAlert(string AlertId, long? CustomerId, string Title, string Severity, string? DeviceName, DateTimeOffset CreatedAt)
+{
+    public string? AgentId { get; init; }
+
+    public string? DeviceGuid { get; init; }
+}
 
 public sealed record AteraTicketWrite(
     string TicketTitle,

@@ -141,6 +141,49 @@ public sealed class Device : Entity
     /// <summary>The reported MAC addresses one by one.</summary>
     public IReadOnlyList<string> MacAddressList => MacAddresses is { Length: > 0 } list ? list.Split(',') : [];
 
+    /// <summary>The source's second id of the agent (Atera's DeviceGuid: its patch routes and alerts name the agent by it).</summary>
+    public string? AlternateId { get; private set; }
+
+    // What the source says about the computer (M40), as of the last read of the device.
+    public string? Vendor { get; private set; }
+    public string? Model { get; private set; }
+    public string? Motherboard { get; private set; }
+    public string? Processor { get; private set; }
+    public int? ProcessorCores { get; private set; }
+    public string? ProcessorClock { get; private set; }
+
+    /// <summary>The memory as the source reports it; Atera's API gives no unit.</summary>
+    public int? Memory { get; private set; }
+
+    public string? BiosVersion { get; private set; }
+    public string? OsVersion { get; private set; }
+    public string? OsBuild { get; private set; }
+
+    /// <summary>The computer's own IP addresses, comma-separated.</summary>
+    public string? IpAddresses { get; private set; }
+
+    /// <summary>The address the source last heard the agent from.</summary>
+    public string? PublicIp { get; private set; }
+
+    public string? DomainName { get; private set; }
+
+    /// <summary>Who is logged in, as the source writes it: personal data of the customer's staff, kept only while it is reported.</summary>
+    public string? LoggedInUsers { get; private set; }
+
+    public string? LastLoginUser { get; private set; }
+    public DateTimeOffset? LastRebootAt { get; private set; }
+
+    /// <summary>The disks as JSON (<c>drive</c>, <c>free</c>, <c>used</c>, <c>total</c>), figures without a unit.</summary>
+    public string? Disks { get; private set; }
+
+    public string? AgentVersion { get; private set; }
+
+    /// <summary>When the Windows updates were last read completely; null until they have been.</summary>
+    public DateTimeOffset? PatchesReadAt { get; private set; }
+
+    /// <summary>When the source collected the updates of that read.</summary>
+    public DateTimeOffset? PatchesCollectedAt { get; private set; }
+
     public static Device From(string system, Guid organizationId, ExternalDevice source, DateTimeOffset now)
     {
         var device = new Device { System = system, ExternalId = source.ExternalId, FirstSeenAt = now };
@@ -158,11 +201,49 @@ public sealed class Device : Entity
         LastSeenAt = s.LastSeenAt;
         Url = s.Url;
         RemovedAt = null;
-        SerialNumber = s.SerialNumber?.Trim() is { Length: > 0 } serial ? Cut(serial, SerialNumberLength) : null;
+        SerialNumber = Clean(s.SerialNumber, SerialNumberLength);
         MacAddresses = JoinWithin(s.MacAddresses ?? [], MacAddressesLength);
+        AlternateId = Clean(s.AlternateId, 128);
+        var i = s.Inventory;
+        Vendor = Clean(i?.Vendor, 128);
+        Model = Clean(i?.Model, 256);
+        Motherboard = Clean(i?.Motherboard, 256);
+        Processor = Clean(i?.Processor, 256);
+        ProcessorCores = i?.ProcessorCores is > 0 and var cores ? cores : null;
+        ProcessorClock = Clean(i?.ProcessorClock, 32);
+        Memory = i?.Memory is > 0 and var memory ? memory : null;
+        BiosVersion = Clean(i?.BiosVersion, 128);
+        OsVersion = Clean(i?.OsVersion, 64);
+        OsBuild = Clean(i?.OsBuild, 64);
+        IpAddresses = JoinWithin(i?.IpAddresses ?? [], 1024);
+        PublicIp = Clean(i?.PublicIp, 64);
+        DomainName = Clean(i?.DomainName, 256);
+        LoggedInUsers = Clean(i?.LoggedInUsers, 512);
+        LastLoginUser = Clean(i?.LastLoginUser, 256);
+        LastRebootAt = i?.LastRebootAt;
+        Disks = DeviceDisks.Write(i?.Disks ?? []);
+        AgentVersion = Clean(i?.AgentVersion, 64);
     }
 
-    public void MarkRemoved(DateTimeOffset now) => RemovedAt ??= now;
+    /// <summary>
+    /// The device is no longer reported: it stops counting from now on, and who was logged in on it is forgotten at once (M40),
+    /// as nothing reports it any more.
+    /// </summary>
+    public void MarkRemoved(DateTimeOffset now)
+    {
+        RemovedAt ??= now;
+        LoggedInUsers = null;
+        LastLoginUser = null;
+    }
+
+    /// <summary>A complete read of the device's Windows updates was stored.</summary>
+    public void PatchesRead(DateTimeOffset now, DateTimeOffset? collectedAt)
+    {
+        PatchesReadAt = now;
+        PatchesCollectedAt = collectedAt;
+    }
+
+    private static string? Clean(string? value, int length) => value?.Trim() is { Length: > 0 } text ? Cut(text, length) : null;
 
     /// <summary>Puts the device on a machine, or takes it off one (a device that moved to another customer).</summary>
     public void BelongTo(Guid? machineId) => MachineId = machineId;

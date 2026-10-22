@@ -29,7 +29,7 @@ public sealed record MachineItem(
     int OpenAlerts,
     int Proposals);
 
-/// <summary>One agent of a machine in its card, with the keys that tell machines apart.</summary>
+/// <summary>One agent of a machine in its card: what its source says about the computer and about its Windows updates.</summary>
 public sealed record MachineDeviceItem(
     Guid Id,
     string System,
@@ -42,8 +42,41 @@ public sealed record MachineDeviceItem(
     DateTimeOffset FirstSeenAt,
     DateTimeOffset? RemovedAt,
     string? Url,
+    DeviceInventoryItem Inventory,
+    DevicePatchesItem Patches);
+
+/// <summary>The computer as one source describes it (M40); a field the source does not report is null.</summary>
+public sealed record DeviceInventoryItem(
+    string? Vendor,
+    string? Model,
     string? SerialNumber,
-    IReadOnlyList<string> MacAddresses);
+    string? Motherboard,
+    string? Processor,
+    int? ProcessorCores,
+    string? ProcessorClock,
+    int? Memory,
+    string? BiosVersion,
+    string? OsVersion,
+    string? OsBuild,
+    DateTimeOffset? LastRebootAt,
+    IReadOnlyList<string> IpAddresses,
+    string? PublicIp,
+    IReadOnlyList<string> MacAddresses,
+    string? DomainName,
+    string? LoggedInUsers,
+    string? LastLoginUser,
+    IReadOnlyList<DeviceDisk> Disks,
+    string? AgentVersion);
+
+/// <summary>One Windows update in a card.</summary>
+public sealed record DevicePatchItem(string? KbId, string Name, string? Class, DateTimeOffset? InstalledAt, string? Status);
+
+/// <summary>
+/// A device's Windows updates at the last complete read: every available one, the count of installed ones and the latest of them.
+/// <paramref name="ReadAt"/> is null while they have never been read.
+/// </summary>
+public sealed record DevicePatchesItem(
+    DateTimeOffset? ReadAt, DateTimeOffset? CollectedAt, int InstalledCount, IReadOnlyList<DevicePatchItem> Available, IReadOnlyList<DevicePatchItem> LatestInstalled);
 
 /// <summary>
 /// Another machine of the customer that may be the same computer, and why: <c>serial</c>, <c>mac</c>, <c>name</c>, and
@@ -51,7 +84,10 @@ public sealed record MachineDeviceItem(
 /// </summary>
 public sealed record MachineProposalItem(Guid OtherMachineId, string OtherName, IReadOnlyList<string> Evidence, DateTimeOffset FoundAt);
 
-/// <summary>A machine's card: its devices (current ones first), the proposals about it and its open alerts.</summary>
+/// <summary>
+/// A machine's card: its devices (current ones first), the proposals about it, its open alerts, and how fresh the device and update
+/// reads are that it shows.
+/// </summary>
 public sealed record MachineDetail(
     Guid Id,
     Guid OrganizationId,
@@ -65,13 +101,17 @@ public sealed record MachineDetail(
     IReadOnlyList<MachineDeviceItem> Devices,
     IReadOnlyList<MachineProposalItem> Proposals,
     int OpenAlerts,
+    IReadOnlyList<ServiceSourceRead> Reads,
     string Etag);
 
 /// <summary>The machines of a customer and one machine's card (M40).</summary>
-internal sealed class MachineQueries(ServiceDbContext db, ICustomersApi customers)
+internal sealed class MachineQueries(ServiceDbContext db, ICustomersApi customers, IEnumerable<Crm.SharedKernel.Operations.ISyncCompletenessSource> completeness)
 {
     public const int DefaultLimit = 25;
     public const int MaxLimit = 100;
+
+    /// <summary>The installed updates a card lists; the rest are counted.</summary>
+    public const int LatestInstalled = 10;
 
     /// <summary>
     /// A customer's machines by name, then id, current ones unless asked otherwise; facts about the page's machines are read in one
@@ -143,18 +183,51 @@ internal sealed class MachineQueries(ServiceDbContext db, ICustomersApi customer
         var names = await db.Machines.AsNoTracking().Where(m => otherIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.Name, ct);
         var organization = await customers.GetOrganizationNamesAsync([machine.OrganizationId], ct);
         var alerts = await OpenAlertsAsync([id], ct);
+        var patches = await PatchesAsync(devices, ct);
         return new MachineDetail(
             machine.Id, machine.OrganizationId, organization.GetValueOrDefault(machine.OrganizationId), machine.Name, machine.Type, machine.Os,
             machine.Online, machine.LastSeenAt, machine.RemovedAt,
             devices.Select(d => new MachineDeviceItem(
                 d.Id, d.System, d.ExternalId, d.MachineName, d.Type, d.Os, d.Online, d.LastSeenAt, d.FirstSeenAt, d.RemovedAt, d.Url,
-                d.SerialNumber, d.MacAddressList)).ToList(),
+                Inventory(d), patches[d.Id])).ToList(),
             proposals.Select(p => (Proposal: p, Other: p.MachineId == id ? p.OtherMachineId : p.MachineId))
                 .Where(p => names.ContainsKey(p.Other))
                 .OrderBy(p => p.Proposal.FoundAt).ThenBy(p => p.Other)
                 .Select(p => new MachineProposalItem(p.Other, names[p.Other], Evidence(p.Proposal.Evidence), p.Proposal.FoundAt)).ToList(),
             alerts.GetValueOrDefault(id),
+            [await ServiceSourceRead.LatestAsync(completeness, "devices", ct), await ServiceSourceRead.LatestAsync(completeness, "patches", ct)],
             db.GetETag(machine));
+    }
+
+    private static DeviceInventoryItem Inventory(Device d) => new(
+        d.Vendor, d.Model, d.SerialNumber, d.Motherboard, d.Processor, d.ProcessorCores, d.ProcessorClock, d.Memory, d.BiosVersion,
+        d.OsVersion, d.OsBuild, d.LastRebootAt, d.IpAddresses is { Length: > 0 } ips ? ips.Split(',') : [], d.PublicIp, d.MacAddressList,
+        d.DomainName, d.LoggedInUsers, d.LastLoginUser, DeviceDisks.Read(d.Disks), d.AgentVersion);
+
+    /// <summary>The updates of the card's devices: one read for the available ones, one for the latest installed, one count.</summary>
+    private async Task<Dictionary<Guid, DevicePatchesItem>> PatchesAsync(List<Device> devices, CancellationToken ct)
+    {
+        var ids = devices.Select(d => d.Id).ToList();
+        var available = await db.DevicePatches.AsNoTracking().Where(p => ids.Contains(p.DeviceId) && !p.Installed)
+            .OrderBy(p => p.KbId).ThenBy(p => p.Name).ToListAsync(ct);
+        var counts = await db.DevicePatches.AsNoTracking().Where(p => ids.Contains(p.DeviceId) && p.Installed)
+            .GroupBy(p => p.DeviceId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, ct);
+        // The latest few of each device in one query: a correlated subquery per device, which SQL Server runs as an APPLY.
+        var latest = (await db.Devices.AsNoTracking().Where(d => ids.Contains(d.Id))
+                .Select(d => new
+                {
+                    d.Id,
+                    Patches = db.DevicePatches.Where(p => p.DeviceId == d.Id && p.Installed)
+                        .OrderByDescending(p => p.InstalledAt).ThenBy(p => p.KbId).Take(LatestInstalled).ToList(),
+                })
+                .ToListAsync(ct))
+            .ToDictionary(d => d.Id, d => d.Patches);
+        return devices.ToDictionary(d => d.Id, d => new DevicePatchesItem(
+            d.PatchesReadAt, d.PatchesCollectedAt, counts.GetValueOrDefault(d.Id),
+            available.Where(p => p.DeviceId == d.Id).Select(Item).ToList(),
+            (latest.GetValueOrDefault(d.Id) ?? []).Select(Item).ToList()));
+
+        static DevicePatchItem Item(DevicePatch p) => new(p.KbId, p.Name, p.Class, p.InstalledAt, p.Status);
     }
 
     /// <summary>The words of the evidence, strongest first.</summary>
