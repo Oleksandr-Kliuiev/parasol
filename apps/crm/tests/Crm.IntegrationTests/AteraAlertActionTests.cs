@@ -146,7 +146,7 @@ public sealed class AteraAlertActionTests(CrmWebFactory factory)
     {
         var organizationId = await host.Client().CreateOrganizationAsync(new { name = $"Varsel {Guid.NewGuid():N}"[..20], status = "Customer" });
         var alert = new TestAlert(
-            Random.Shared.NextInt64(50_000_000, 59_999_999).ToString(CultureInfo.InvariantCulture), Random.Shared.NextInt64(800_000, 899_999),
+            TestData.AteraId().ToString(CultureInfo.InvariantCulture), TestData.AteraId(),
             organizationId, $"Disk almost full {Guid.NewGuid():N}"[..28]);
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();

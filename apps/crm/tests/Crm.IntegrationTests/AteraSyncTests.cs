@@ -82,7 +82,7 @@ public class AteraSyncTests(CrmWebFactory factory)
     {
         var admin = factory.ClientAs(CrmRoles.Admin);
         var atera = factory.Atera;
-        var customerId = Random.Shared.Next(700_000, 799_999);
+        var customerId = TestData.AteraId();
         var organizationId = await admin.CreateOrganizationAsync(TestData.Organization("Atera SLA Kunde AS"));
         (await admin.PostAsJsonAsync("/api/v1/integrations/links", new { system = "atera", externalType = "Customer", externalId = customerId.ToString(System.Globalization.CultureInfo.InvariantCulture), entityId = organizationId }))
             .StatusCode.ShouldBe(HttpStatusCode.OK);

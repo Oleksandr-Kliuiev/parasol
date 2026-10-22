@@ -244,7 +244,7 @@ public sealed class ListCompletenessTests(CrmWebFactory factory)
         (await admin.PostAsync($"/api/v1/contracts/{contract.GetProperty("id").GetGuid()}/activate", null, Ct)).StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
 
         // 5100 tickets in August — more than the old cap of 5000 — fifteen of them answered after two hours against a one-hour P1 target.
-        var first = Random.Shared.NextInt64(10_000_000, 90_000_000);
+        var first = TestData.AteraIds(5100);
         var tickets = Enumerable.Range(0, 5100).Select(i =>
         {
             var created = new DateTimeOffset(2026, 8, 1 + i % 28, 9, 0, 0, TimeSpan.Zero).AddMinutes(i % 60);
