@@ -186,7 +186,8 @@ describe('tickets (M39.2)', () => {
     expect(within(card).getByRole('radiogroup', { name: /Did it happen\?/ })).toBeVisible();
     await userEvent.click(within(card).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(router.state.location.search).toBe('?ticket=t1'));
-    expect(screen.getByRole('dialog', { name: '#4711 Printer is down' })).toBeVisible();
+    // The card's modal hides the rest of the page until it has finished closing: the panel comes back a moment later.
+    expect(await screen.findByRole('dialog', { name: '#4711 Printer is down' })).toBeVisible();
   });
 
   it('registers hours on the ticket from its panel, with its customer and number filled in and the number found', async () => {

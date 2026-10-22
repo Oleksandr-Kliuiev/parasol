@@ -5,6 +5,16 @@ import { AlertTaskDialogContext } from './alertTaskDialogs';
 import type { AlertTask } from './alertTasks';
 
 /**
+ * Puts focus on the task link that replaced a row's Assign button. The dialog's own focus restore runs while it closes and looks
+ * for that button, so one focus() can be undone a moment later: it is repeated for a few frames until the link keeps it.
+ */
+function focusMadeTask(alertId: string, frames = 10) {
+  const link = document.querySelector<HTMLElement>(`[data-alert-task="${alertId}"] a`);
+  if (link && document.activeElement !== link) link.focus();
+  if (frames > 0) requestAnimationFrame(() => focusMadeTask(alertId, frames - 1));
+}
+
+/**
  * Holds the assign dialog of a list of alerts outside its rows. A row is drawn again when the list reloads for a new search or
  * filter, or switches between table and cards, and a dialog inside it would vanish with its answer ("Task created.") while the
  * task was being made. The rows only ask the host to open it (useAlertTaskDialogs).
@@ -19,7 +29,7 @@ export function AlertTaskDialogHost({ children }: { children: ReactNode }) {
     const id = madeFor.current;
     setAlertId(null);
     // The Assign button is gone once the task exists: focus moves to the task that replaced it, not to the page.
-    if (id) queueMicrotask(() => document.querySelector<HTMLElement>(`[data-alert-task="${id}"] a`)?.focus());
+    if (id) focusMadeTask(id);
   };
   const value = useMemo(() => ({ open, made }), [open, made]);
   return <AlertTaskDialogContext.Provider value={value}>

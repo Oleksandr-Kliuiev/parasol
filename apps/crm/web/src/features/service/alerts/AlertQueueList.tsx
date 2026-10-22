@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
 import { AlertOn24Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
@@ -21,8 +21,9 @@ const useStyles = makeStyles({
   cell: { display: 'grid', gap: '2px', minWidth: 0, paddingTop: '8px', paddingBottom: '8px' },
   age: { color: h.muted, fontSize: '13px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
   customer: { fontWeight: 600, overflowWrap: 'anywhere' },
-  // A phone card: the severity and the title, the facts in one muted line, the task under them.
+  // A phone card: the severity and the title, the facts in one muted line, the task and the row's menu under them.
   cardHead: { display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0 },
+  cardFoot: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '4px' },
   // Fixed columns for the short facts; the alert's title takes what is left (Fluent's table is table-layout: fixed).
   severity: { width: '112px' },
   customerColumn: { width: '18%' },
@@ -35,11 +36,19 @@ const useStyles = makeStyles({
   cardsFocus: { ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px', borderRadius: '12px' } },
   tableFocus: { ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '-2px' } },
   srOnly: { position: 'absolute', width: '1px', height: '1px', margin: '-1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0, padding: 0 },
-  cardFoot: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '4px' },
 });
 
-/** Below this width of its own the table would squeeze the titles into a word per line: the list shows cards instead. */
-const tableWidth = 960;
+/**
+ * Below this width of its own the table would squeeze the titles into a word per line: the list shows cards instead. At 900 px
+ * the title column keeps about 230 px beside the actions column (M40); a 1280 px window with the side menu leaves 950–970 px,
+ * scrollbar or not, so every engine shows the table there, while 1100 px and narrower show cards.
+ */
+const tableWidth = 900;
+/**
+ * Cards go back to the table only this much above the threshold. Switching changes the page's height, and with it whether the
+ * window shows a scrollbar (about 15 px in Firefox and WebKit): without the margin a width near 960 px would switch back and forth.
+ */
+const switchBackMargin = 24;
 
 /**
  * The alerts of the queue: a table where it has room, cards on a phone and in a narrow content column (UX concept §8). Each row
@@ -55,8 +64,12 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
   onOpen: (alert: Alert) => void;
 }) {
   const { t } = useTranslation(); const styles = useStyles(); const list = useCatalogStyles();
+  // One box around every branch: the width is read from the element on the page, never from a branch that was replaced.
   const box = useRef<HTMLDivElement>(null); const width = useContainerWidth(box);
-  const narrow = useMediaQuery(NARROW_SCREEN) || (width > 0 && width < tableWidth);
+  const [cards, setCards] = useState(false);
+  const wantCards = width > 0 && width < (cards ? tableWidth + switchBackMargin : tableWidth);
+  if (wantCards !== cards) setCards(wantCards);
+  const narrow = useMediaQuery(NARROW_SCREEN) || wantCards;
   const age = (alert: Alert) => <AlertAge at={resolved && alert.resolvedAt ? alert.resolvedAt : alert.createdAt} />;
   const title = (alert: Alert) => <AlertTitle title={alertTitle(t, alert)} onOpen={() => onOpen(alert)} />;
   const customer = (alert: Alert) => <AppLink className={styles.customer} to={`/organizations/${alert.organizationId}?tab=drift`}>
@@ -65,11 +78,12 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
   // M40: a hidden alert says until when, beside its other facts.
   const hiddenUntil = (alert: Alert) => alert.hidden && t('alerts.hide.untilFact', { date: formatDate(alert.hidden.until) });
 
-  // An empty list is the empty state in the card the rows would have had: no column headers over nothing.
-  if (alerts.length === 0) return <div ref={box}><div className={list.emptyCard}>{empty}</div>{footer}</div>;
-
-  if (narrow) {
-    return <div ref={box}>
+  let body: ReactNode;
+  if (alerts.length === 0) {
+    // An empty list is the empty state in the card the rows would have had: no column headers over nothing.
+    body = <><div className={list.emptyCard}>{empty}</div>{footer}</>;
+  } else if (narrow) {
+    body = <>
       <ul data-alert-list tabIndex={-1} className={mergeClasses(list.cards, styles.cardsFocus)} aria-label={t('alerts.list')}>
         {alerts.map((alert) => <li key={alert.id} className={list.card}>
           <span className={styles.cardHead}><AlertSeverityBadge severity={alert.severity} />{title(alert)}</span>
@@ -78,30 +92,31 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
         </li>)}
       </ul>
       {footer}
-    </div>;
+    </>;
+  } else {
+    body = <ScrollTable className={list.tableWrap}>
+      <Table data-alert-list tabIndex={-1} className={mergeClasses(list.table, styles.tableFocus)} style={{ minWidth: 760 }} aria-label={t('alerts.list')}>
+        <TableHeader><TableRow>
+          <TableHeaderCell className={styles.severity}>{t('alerts.columns.severity')}</TableHeaderCell>
+          <TableHeaderCell>{t('alerts.columns.alert')}</TableHeaderCell>
+          <TableHeaderCell className={styles.customerColumn}>{t('alerts.columns.customer')}</TableHeaderCell>
+          <TableHeaderCell className={styles.waiting}>{t(resolved ? 'alerts.columns.resolved' : 'alerts.columns.waiting')}</TableHeaderCell>
+          <TableHeaderCell className={styles.task}>{t('alerts.columns.task')}</TableHeaderCell>
+          <TableHeaderCell className={styles.more}><span className={styles.srOnly}>{t('alerts.columns.actions')}</span></TableHeaderCell>
+        </TableRow></TableHeader>
+        <TableBody>{alerts.map((alert) => <TableRow key={alert.id}>
+          <TableCell><AlertSeverityBadge severity={alert.severity} /></TableCell>
+          <TableCell><span className={styles.cell}>{title(alert)}<AlertFacts parts={[alert.deviceName, source(alert), hiddenUntil(alert)]} /></span></TableCell>
+          <TableCell>{customer(alert)}</TableCell>
+          <TableCell className={styles.age}>{age(alert)}</TableCell>
+          <TableCell><AlertTaskCell alert={alert} task={tasks.get(alert.id)} /></TableCell>
+          <TableCell><AlertActionsMenu alert={alert} /></TableCell>
+        </TableRow>)}</TableBody>
+      </Table>
+      {footer}
+    </ScrollTable>;
   }
-
-  return <div ref={box}><ScrollTable className={list.tableWrap}>
-    <Table data-alert-list tabIndex={-1} className={mergeClasses(list.table, styles.tableFocus)} style={{ minWidth: 760 }} aria-label={t('alerts.list')}>
-      <TableHeader><TableRow>
-        <TableHeaderCell className={styles.severity}>{t('alerts.columns.severity')}</TableHeaderCell>
-        <TableHeaderCell>{t('alerts.columns.alert')}</TableHeaderCell>
-        <TableHeaderCell className={styles.customerColumn}>{t('alerts.columns.customer')}</TableHeaderCell>
-        <TableHeaderCell className={styles.waiting}>{t(resolved ? 'alerts.columns.resolved' : 'alerts.columns.waiting')}</TableHeaderCell>
-        <TableHeaderCell className={styles.task}>{t('alerts.columns.task')}</TableHeaderCell>
-        <TableHeaderCell className={styles.more}><span className={styles.srOnly}>{t('alerts.columns.actions')}</span></TableHeaderCell>
-      </TableRow></TableHeader>
-      <TableBody>{alerts.map((alert) => <TableRow key={alert.id}>
-        <TableCell><AlertSeverityBadge severity={alert.severity} /></TableCell>
-        <TableCell><span className={styles.cell}>{title(alert)}<AlertFacts parts={[alert.deviceName, source(alert), hiddenUntil(alert)]} /></span></TableCell>
-        <TableCell>{customer(alert)}</TableCell>
-        <TableCell className={styles.age}>{age(alert)}</TableCell>
-        <TableCell><AlertTaskCell alert={alert} task={tasks.get(alert.id)} /></TableCell>
-        <TableCell><AlertActionsMenu alert={alert} /></TableCell>
-      </TableRow>)}</TableBody>
-    </Table>
-    {footer}
-  </ScrollTable></div>;
+  return <div ref={box}>{body}</div>;
 }
 
 /** The empty list of the queue: what there is to know, and the way back to everything when a filter hid it. */

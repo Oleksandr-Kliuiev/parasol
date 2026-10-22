@@ -14,8 +14,9 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   const me = await api.get<{ displayName: string }>(page, '/bff/user');
 
   await page.goto('/alerts');
-  // The filtered read first: a button focused in the list before it would be drawn again under the keyboard.
+  // The search applies after a short pause: wait for its one result, or a row of the earlier list is focused and then redrawn.
   await searchAlerts(page, m);
+  await expect(page.getByRole('status').filter({ hasText: /alerts?:/ })).toHaveText('1 alert: 1 critical, 0 warnings');
   const row = page.getByRole('table', { name: 'Alerts' }).getByRole('row').filter({ hasText: m });
   const assign = row.getByRole('button', { name: `Assign ${m} disk almost full`, exact: true });
   await assign.focus(); await page.keyboard.press('Enter');
