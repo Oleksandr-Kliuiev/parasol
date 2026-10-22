@@ -47,6 +47,8 @@ const useStyles = makeStyles({
   author: { fontWeight: 600, color: h.text },
   body: { maxHeight: '40vh', overflowY: 'auto', padding: '10px 12px', borderRadius: '12px', backgroundColor: h.surface2 },
   send: { justifySelf: 'start' },
+  // A native select is as wide as its longest option unless it may shrink: the reasons list fits a 320 px screen this way.
+  shrink: { minWidth: 0 },
 });
 
 type Ask = { request: ActionRequest; title: string; confirm: string; details?: ReactNode; onAccepted?: () => void };
@@ -198,8 +200,9 @@ function RejectForm({ alert, incident, onCancel, onAsk }: { alert: Alert; incide
     });
   };
   return <div className={styles.form} role="group" aria-label={t('security.remediation.reject')}>
-    <Field label={t('security.remediation.reason')} required validationMessage={touched && !reason ? t('security.remediation.reasonMissing') : undefined}>
-      <Select ref={first} value={reason} onChange={(_, data) => setReason(data.value)}>
+    <Field className={styles.shrink} label={t('security.remediation.reason')} required
+      validationMessage={touched && !reason ? t('security.remediation.reasonMissing') : undefined}>
+      <Select ref={first} className={styles.shrink} select={{ className: styles.shrink }} value={reason} onChange={(_, data) => setReason(data.value)}>
         <option value="" disabled>{t('security.remediation.reasonChoose')}</option>
         {reasons.map((code) => <option key={code} value={code}>{t(`security.remediation.reasons.${code}`)}</option>)}
       </Select>
