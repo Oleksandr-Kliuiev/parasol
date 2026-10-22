@@ -213,12 +213,26 @@ internal sealed class MachineQueries(
                 .OrderBy(p => p.Proposal.FoundAt).ThenBy(p => p.Other)
                 .Select(p => new MachineProposalItem(p.Other, names[p.Other], Evidence(p.Proposal.Evidence), p.Proposal.FoundAt)).ToList(),
             alerts.GetValueOrDefault(id),
-            [
-                await ServiceSourceRead.LatestAsync(completeness, "devices", ct), await ServiceSourceRead.LatestAsync(completeness, "patches", ct),
-                // M41: a machine Huntress watches also says how fresh Huntress's agents are.
-                .. devices.Any(d => d.System == "huntress") ? [await ServiceSourceRead.LatestAsync(completeness, "security-devices", ct)] : Array.Empty<ServiceSourceRead>(),
-            ],
+            await ReadsAsync(devices.Any(d => d.System == "huntress"), ct),
             db.GetETag(machine));
+    }
+
+    /// <summary>
+    /// How fresh the machine's sources are: Atera's agents and patches, and Huntress's agents for a machine Huntress watches (M41); a
+    /// source switched off and never read is left out.
+    /// </summary>
+    private async Task<IReadOnlyList<ServiceSourceRead>> ReadsAsync(bool huntress, CancellationToken ct)
+    {
+        var reads = new List<ServiceSourceRead>();
+        foreach (var source in huntress ? (string[])["devices", "patches", "security-devices"] : ["devices", "patches"])
+        {
+            if (await ServiceSourceRead.ShownAsync(completeness, source, ct) is { } read)
+            {
+                reads.Add(read);
+            }
+        }
+
+        return reads;
     }
 
     /// <summary>A device's protection as its source reports it; none for a source that says nothing about it (Atera).</summary>

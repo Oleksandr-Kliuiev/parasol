@@ -15,8 +15,11 @@ const device = (n: number): Machine => ({
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 const empty = { items: [], nextCursor: null, totalCount: 0 };
-/** What the security panel reads (M41) when no Huntress organization is linked: no usage, no reports, Huntress never read. */
-const noSecurity = { usage: [], reports: [], reportsTotal: 0, reads: [] };
+/** What the security panel reads (M41) with Huntress switched on but never read: no usage, no reports, its reads not run yet. */
+const noSecurity = {
+  usage: [], reports: [], reportsTotal: 0,
+  reads: ['huntress-organizations', 'huntress-reports'].map((job) => ({ system: 'huntress', job, startedAt: null, complete: false, late: false })),
+};
 /** The empty answer of any other read of the tab: a page, or the security overview. */
 const rest = (url: string) => json(url.includes('/security/') ? noSecurity : empty);
 /** Every kind of service data read completely at the summary's time (M39.2). */
@@ -61,6 +64,17 @@ describe('Customer Drift tab (DEV-12)', () => {
       .toEqual(['Saved service data', 'Open alerts', 'Devices', 'Security', 'Tickets', 'Ticket requests']);
     // M41: with nothing read from Huntress the security panel says so, never "0 agents".
     expect(within(screen.getByRole('region', { name: 'Security' })).getByText('Huntress has not been read yet.')).toBeVisible();
+  });
+
+  it('leaves the security section out where Huntress is switched off and was never read', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (url.includes('/summary')
+      ? json({ openTickets: 0, ticketsLast90Days: 0, devices: {}, devicesOnline: 0, criticalAlerts: 0, warningAlerts: 0, lastSyncedAt: null, reads: complete })
+      : json(url.includes('/security/') ? { usage: [], reports: [], reportsTotal: 0, reads: [] } : empty))));
+    renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/', testUser(['service.read']));
+    await screen.findByText('No open tickets.');
+    await waitFor(() => expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent))
+      .toEqual(['Saved service data', 'Open alerts', 'Devices', 'Tickets', 'Ticket requests']));
+    expect(screen.queryByText('Huntress has not been read yet.')).not.toBeInTheDocument();
   });
 
   it('lists open alerts with severity, device, age and task, asks one task lookup per page and counts alerts per device', async () => {

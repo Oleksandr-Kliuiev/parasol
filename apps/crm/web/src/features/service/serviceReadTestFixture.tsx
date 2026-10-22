@@ -32,8 +32,11 @@ export const kindOf = (url: string): Kind | null => {
   const path = new URL(url, 'https://synthetic.invalid').pathname;
   return kinds.find(kind => path.endsWith(`/${paths[kind]}`)) ?? null;
 };
-/** What the security panel reads (M41): no Huntress organization linked, Huntress never read. */
-export const overview = { usage: [], reports: [], reportsTotal: 0, reads: [] };
+/** What the security panel reads (M41): Huntress switched on but never read, no Huntress organization linked. */
+export const overview = {
+  usage: [], reports: [], reportsTotal: 0,
+  reads: ['huntress-organizations', 'huntress-reports'].map((job) => ({ system: 'huntress', job, startedAt: null, complete: false, late: false })),
+};
 export function answer(kind: Kind, populated = true): Response {
   if (kind === 'summary') return json(summary);
   if (kind === 'security') return json(overview);

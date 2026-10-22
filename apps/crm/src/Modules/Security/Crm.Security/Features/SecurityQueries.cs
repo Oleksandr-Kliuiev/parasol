@@ -182,10 +182,15 @@ internal sealed class SecurityQueries(SecurityDbContext db, ICustomersApi custom
             .Select(r => new ReportItem(r.System, r.ExternalId, r.Type, r.PeriodStart, r.PeriodEnd, r.AgentsCount, r.IncidentsReported, r.IncidentsResolved,
                 r.SignalsDetected, r.SignalsInvestigated, r.Url))
             .ToListAsync(ct);
+        // A source switched off and never read has said nothing, so its reads are left out and the panel has nothing to show.
         var reads = new List<SecurityRead>(OverviewSources.Length);
         foreach (var (system, job) in OverviewSources)
         {
-            reads.Add(await LatestReadAsync(system, job, ct));
+            var read = await LatestReadAsync(system, job, ct);
+            if (read.StartedAt is not null || completeness.Any(c => c.IsConnected(system)))
+            {
+                reads.Add(read);
+            }
         }
 
         return new SecurityOverview(usage, latest, total, reads);

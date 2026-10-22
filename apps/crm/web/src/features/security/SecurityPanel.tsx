@@ -38,7 +38,7 @@ function period(report: SummaryReport, locale: string) {
  * The customer's security at a glance in the Drift tab (M41): what Huntress counts for the customer's Huntress organizations — the
  * agents it bills and among them those it calls unresponsive, outdated or isolated — and its monthly summary reports with a link to
  * the PDF in Huntress. Incidents, escalations and platform actions are alerts: they stand in the alert list above. A figure Huntress
- * did not give, or a read that never ran, is said as such, never as zero.
+ * did not give, or a read that never ran, is said as such, never as zero; with Huntress switched off and never read there is no panel.
  */
 export function SecurityPanel({ organizationId, scope }: { organizationId: string; scope: { owner: string; revision: number } }) {
   const { t, i18n } = useTranslation(); const styles = useStyles();
@@ -47,6 +47,8 @@ export function SecurityPanel({ organizationId, scope }: { organizationId: strin
   // Lists a read did not carry are empty, as the summary's reads are: nothing is claimed about them.
   const reads = overview?.reads ?? []; const usages = overview?.usage ?? []; const reports = overview?.reports ?? [];
   const organizationsRead = reads.find((r) => r.job === 'huntress-organizations');
+  // No security source is switched on or was ever read: the panel would have nothing to say, so it is left out.
+  if (overview && reads.length === 0 && usages.length === 0 && reports.length === 0) return null;
   return <Panel title={t('security.panel.title')} icon={<Shield16Regular />}
     actions={reads.length > 0 && <AlertReadLine reads={reads} texts="service.readLine" label={(r) => t(`security.reads.${r.job}`, { system: sourceName(t, r.system) })} />}>
     <div className={styles.body}>

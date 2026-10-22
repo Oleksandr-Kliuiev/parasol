@@ -164,13 +164,20 @@ internal sealed class AlertQueries(
             bySeverity.Where(c => c.Severity == AlertSeverity.Warning).Sum(c => c.Count));
     }
 
-    /// <summary>The latest finished read of every alert source, one question per source: the same for any filter or page.</summary>
+    /// <summary>
+    /// The latest finished read of every alert source, one question per source: the same for any filter or page. A source switched
+    /// off and never read is left out (M41): it has said nothing about the alerts; one read before and switched off since stays.
+    /// </summary>
     private async Task<IReadOnlyList<AlertSourceRead>> ReadsAsync(CancellationToken ct)
     {
         var reads = new List<AlertSourceRead>(Sources.Length);
         foreach (var (system, job) in Sources)
         {
-            reads.Add(await LatestReadAsync(system, job, ct));
+            var read = await LatestReadAsync(system, job, ct);
+            if (read.StartedAt is not null || completeness.Any(c => c.IsConnected(system)))
+            {
+                reads.Add(read);
+            }
         }
 
         return reads;
