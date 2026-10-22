@@ -124,7 +124,16 @@ jobs:
           cache: npm
           cache-dependency-path: apps/crm/web/package-lock.json
       - run: npm ci --prefix apps/crm/web
-      - run: npx playwright install --with-deps chromium firefox webkit
+      # The browsers' system packages come from the runner's Ubuntu mirror. A healthy run fetches them (119 MB) in seconds,
+      # but twice on 22.10.2026 the mirror sent them at 45 kB/s: the install took 40 of the job's 45 minutes and the job was
+      # cancelled as the tests began. Each part has its own bound, so a slow source fails here within minutes, by name.
+      - name: System packages for the browsers (Ubuntu mirror)
+        timeout-minutes: 8
+        run: npx playwright install-deps chromium firefox webkit
+        working-directory: apps/crm/web
+      - name: Browsers (Playwright CDN)
+        timeout-minutes: 5
+        run: npx playwright install chromium firefox webkit
         working-directory: apps/crm/web
       - run: dotnet dev-certs https
       - run: npm run test:crm:e2e
