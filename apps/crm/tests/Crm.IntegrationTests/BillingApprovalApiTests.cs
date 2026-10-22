@@ -350,9 +350,9 @@ public class BillingApprovalApiTests(CrmWebFactory factory)
         var period = new DateOnly(2031, 8, 1);
         BillingApiTests.StubToken(factory);
         var customer = await CustomerAsync(admin, finance, "G", period, 7_000m);
-        var customerNo = TestExternalIds.Number(700_000, 799_999);
+        var customerNo = TestData.PowerOfficeId();
         await BillingApiTests.LinkAsync(admin, "Organization", customer.OrganizationId, "Customer", customerNo.ToString(CultureInfo.InvariantCulture));
-        await BillingApiTests.LinkAsync(admin, "Product", customer.ProductId, "Product", TestExternalIds.Next(10_000, 99_999));
+        await BillingApiTests.LinkAsync(admin, "Product", customer.ProductId, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
         var orderMatcher = new WildcardMatcher($"*{customer.OrganizationId:N}*");
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/SalesOrders").UsingPost().WithBody(orderMatcher))
             .AtPriority(1)

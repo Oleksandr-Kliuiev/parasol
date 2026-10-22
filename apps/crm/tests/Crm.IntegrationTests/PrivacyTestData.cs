@@ -126,7 +126,7 @@ internal static class PrivacyTestData
         mail.StatusCode.ShouldBe(HttpStatusCode.Created, await mail.Content.ReadAsStringAsync(Ct));
         var mailId = (await mail.ReadJsonAsync()).GetProperty("id").GetGuid();
 
-        var ateraTicketId = Random.Shared.NextInt64(10_000_000, 99_999_999);
+        var ateraTicketId = TestData.AteraId();
         await using (var scope = host.Services.CreateAsyncScope())
         {
             await scope.ServiceProvider.GetRequiredService<IServiceApi>().UpsertTicketsAsync(
@@ -150,7 +150,7 @@ internal static class PrivacyTestData
         ticketRequest.IsSuccessStatusCode.ShouldBeTrue(await ticketRequest.Content.ReadAsStringAsync(Ct));
         var ticketRequestId = (await ticketRequest.ReadJsonAsync()).GetProperty("id").GetGuid();
 
-        var ateraContactId = Random.Shared.Next(100_000_000, 999_999_999).ToString(CultureInfo.InvariantCulture);
+        var ateraContactId = TestData.AteraId().ToString(CultureInfo.InvariantCulture);
         Guid recordId, outboundId, ticketId, replyActionId, waitingActionId;
         await using (var scope = host.Services.CreateAsyncScope())
         {

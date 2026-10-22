@@ -69,10 +69,10 @@ public class PilotScenariosTests(CrmWebFactory factory) : IAsyncDisposable
         if (link)
         {
             BillingApiTests.StubToken(factory);
-            await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", TestExternalIds.Next(900_000, 999_999));
+            await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
             foreach (var (productId, _) in products)
             {
-                await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestExternalIds.Next(10_000, 99_999));
+                await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
             }
         }
 

@@ -108,8 +108,8 @@ public class DatabasePermissionTests(CrmWebFactory factory)
             .StatusCode.ShouldBe(HttpStatusCode.OK);
         (await admin.PostAsync($"{Contracts}/{contractId}/activate", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
         BillingApiTests.StubToken(factory);
-        await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", TestExternalIds.Next(700_000, 799_999));
-        await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestExternalIds.Next(10_000, 99_999));
+        await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
+        await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
         return new Customer(organizationId, contractId, productId, marker);
     }
 

@@ -42,7 +42,7 @@ public sealed class AteraAlertSyncTests(CrmWebFactory factory)
             Reported($"{marker}-A1", customerId, "Critical", $"srv-{marker}"),
             Reported($"{marker}-A2", customerId, "Warning"),
             Reported($"{marker}-INFO", customerId, "Information"),
-            Reported($"{marker}-NOLINK", Random.Shared.NextInt64(1_000_000_000, 1_999_999_999), "Critical"));
+            Reported($"{marker}-NOLINK", TestData.AteraId(), "Critical"));
         await RunAsync(provider);
 
         // Information alerts and alerts of customers without a link stay in Atera.
@@ -136,7 +136,7 @@ public sealed class AteraAlertSyncTests(CrmWebFactory factory)
     {
         var marker = $"AL{Guid.NewGuid():N}"[..10];
         var organizationId = await factory.ClientAs(CrmRoles.Admin).CreateOrganizationAsync(new { name = $"{marker} Drift AS", status = "Customer" });
-        var customerId = Random.Shared.NextInt64(2_000_000_000, 2_999_999_999);
+        var customerId = TestData.AteraId();
         await using var scope = factory.Services.CreateAsyncScope();
         var links = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
         links.ExternalLinks.Add(WorkTicketTestSupport.Link(organizationId, customerId));

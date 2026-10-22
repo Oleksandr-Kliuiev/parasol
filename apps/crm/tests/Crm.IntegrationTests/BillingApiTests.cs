@@ -67,7 +67,7 @@ public class BillingApiTests(CrmWebFactory factory)
 
         var orgNumber = TestData.OrgNumber();
         var organizationId = await admin.CreateOrganizationAsync(new { name = $"{marker} Faktura AS", status = "Customer", orgNumber });
-        var customerId = TestExternalIds.Next(700_000, 799_999);
+        var customerId = TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture);
         await LinkAsync(admin, "Organization", organizationId, "Customer", customerId);
 
         // Catalog: a monthly managed service, a Microsoft licence tied to an offer id and an hourly product.
@@ -91,7 +91,7 @@ public class BillingApiTests(CrmWebFactory factory)
         // The link says the product exists in PowerOffice; the order line carries the SKU, which is the product code there (docs/05 §4.2).
         foreach (var productId in new[] { serviceProduct, licenceProduct, hourProduct })
         {
-            await LinkAsync(admin, "Product", productId, "Product", TestExternalIds.Next(10_000, 99_999));
+            await LinkAsync(admin, "Product", productId, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
         }
 
         // A contract billed monthly in advance: a fixed fee and a licence line counted from the CSP subscriptions.
