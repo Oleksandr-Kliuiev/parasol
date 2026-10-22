@@ -15,6 +15,10 @@ const device = (n: number): Machine => ({
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 const empty = { items: [], nextCursor: null, totalCount: 0 };
+/** What the security panel reads (M41) when no Huntress organization is linked: no usage, no reports, Huntress never read. */
+const noSecurity = { usage: [], reports: [], reportsTotal: 0, reads: [] };
+/** The empty answer of any other read of the tab: a page, or the security overview. */
+const rest = (url: string) => json(url.includes('/security/') ? noSecurity : empty);
 /** Every kind of service data read completely at the summary's time (M39.2). */
 const complete = (['tickets', 'alerts', 'devices'] as const).map((source) => ({ source, system: 'atera', startedAt: '2026-10-21T08:00:00Z', complete: true, late: false }));
 
@@ -30,7 +34,7 @@ describe('Customer Drift tab (DEV-12)', () => {
         const second = url.includes('cursor=c1');
         return json({ items: Array.from({ length: 25 }, (_, i) => device((second ? 25 : 0) + i)), nextCursor: second ? 'c2' : 'c1', totalCount: 1100 });
       }
-      return json(empty);
+      return rest(url);
     });
     vi.stubGlobal('fetch', fetch);
     const user = userEvent.setup();
@@ -47,14 +51,16 @@ describe('Customer Drift tab (DEV-12)', () => {
     expect(screen.getByText('PC-0049')).toBeInTheDocument();
   });
 
-  it('shows the sections in the order of the work: summary, alerts, devices, tickets, requests', async () => {
+  it('shows the sections in the order of the work: summary, alerts, devices, security, tickets, requests', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => (url.includes('/summary')
       ? json({ openTickets: 0, ticketsLast90Days: 0, devices: {}, devicesOnline: 0, criticalAlerts: 0, warningAlerts: 0, lastSyncedAt: null })
-      : json(empty))));
+      : rest(url))));
     renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/', testUser(['service.read']));
     await screen.findByText('No open tickets.');
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent))
-      .toEqual(['Saved service data', 'Open alerts', 'Devices', 'Tickets', 'Ticket requests']);
+      .toEqual(['Saved service data', 'Open alerts', 'Devices', 'Security', 'Tickets', 'Ticket requests']);
+    // M41: with nothing read from Huntress the security panel says so, never "0 agents".
+    expect(within(screen.getByRole('region', { name: 'Security' })).getByText('Huntress has not been read yet.')).toBeVisible();
   });
 
   it('lists open alerts with severity, device, age and task, asks one task lookup per page and counts alerts per device', async () => {
@@ -65,7 +71,7 @@ describe('Customer Drift tab (DEV-12)', () => {
       if (url.includes('/service/machines')) return json({ items: [{ ...device(1), name: 'SRV-01', type: 'Server', openAlerts: 2 }, device(2)], nextCursor: null, totalCount: 2 });
       if (url.endsWith('/source-tasks/lookup') && init?.method === 'POST') return json({ items: [{ alertId: 'a1', task: {
         id: 't1', organizationId: 'o1', subject: 'Free disk space', status: 'Open', assignee: { id: 'u2', name: 'Ola Tekniker' }, dueAt: null, isAvailable: true } }] });
-      return json(empty);
+      return rest(url);
     });
     vi.stubGlobal('fetch', fetch);
     renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/',
@@ -101,7 +107,7 @@ describe('Customer Drift tab (DEV-12)', () => {
           { ...device(2), online: false }], nextCursor: null, totalCount: 2 });
       }
       if (url.includes('/service/alerts')) return json(alertPage([]));
-      return json(empty);
+      return rest(url);
     }));
     renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/', testUser(['service.read']));
     // Devices are read nightly: the count is of the last read, not of now.

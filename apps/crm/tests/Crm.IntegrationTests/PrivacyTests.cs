@@ -407,7 +407,7 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         leads.Due.ShouldBeGreaterThanOrEqualTo(1);
         dryRun.Classes.Select(c => c.DataClass).ShouldBe(
             ["customers.former-contacts", "identity.sessions", "integration.exception-triage", "integration.external-payloads", "integration.sync-runs",
-                "integration.vendor-action-texts", "sales.unconverted-leads", "service.resolved-alerts", "service.tickets"]);
+                "integration.vendor-action-texts", "sales.unconverted-leads", "security.closed-incidents", "service.resolved-alerts", "service.tickets"]);
         (await LeadContactAsync(leadId)).ShouldNotBeNull();
 
         // Apply mode without an approved policy still removes nothing.

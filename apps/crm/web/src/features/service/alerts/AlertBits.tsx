@@ -3,7 +3,7 @@ import { Badge, Link, makeStyles, useRestoreFocusTarget } from '@fluentui/react-
 import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
 import { formatDateTime, formatRelative } from '../../../shared/utils/format';
-import type { AlertSeverity } from '../types';
+import type { Alert, AlertSeverity } from '../types';
 import { sourceName } from './alertText';
 
 const useStyles = makeStyles({
@@ -54,3 +54,15 @@ export function AlertSource({ system }: { system: string }) {
   const { t } = useTranslation(); const styles = useStyles();
   return <span className={styles.keep}>{t('alerts.source', { name: sourceName(t, system) })}</span>;
 }
+
+/**
+ * An urgent alert its source closed (M41: a Huntress incident): it stays open in Parasoll until a person confirms, and says so in the
+ * warning tone beside its other facts.
+ */
+export function ClosedAtSource({ alert }: { alert: Pick<Alert, 'system' | 'sourceClosedAt'> }) {
+  const { t } = useTranslation(); const styles = useClosedStyles();
+  if (!alert.sourceClosedAt) return null;
+  return <span className={styles.closed}>{t('alerts.closedAtSource.fact', { source: sourceName(t, alert.system), date: formatDateTime(alert.sourceClosedAt) })}</span>;
+}
+
+const useClosedStyles = makeStyles({ closed: { color: h.saffronT, fontWeight: 600 } });

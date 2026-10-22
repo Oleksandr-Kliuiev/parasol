@@ -6,10 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
 import { useNotify } from '../../../shared/components/useNotify';
 import { errorMessage } from '../../../shared/utils/errors';
-import { formatDate } from '../../../shared/utils/format';
+import { formatDate, formatDateTime } from '../../../shared/utils/format';
 import { ActionDialog } from '../../actions/ActionDialog';
 import { ActionList } from '../../actions/ActionLog';
 import type { VendorAction } from '../../actions/types';
+import { confirmClosed } from '../../security/api';
 import { AlertHideDialog } from './AlertHideDialog';
 import { showAlert } from './alertHiding';
 import {
@@ -48,6 +49,22 @@ function useShowAgain() {
   }, [changed, notify, t]);
 }
 
+/** Confirms the closing of an urgent alert its source closed (M41), at once, and says so; true when it went through. */
+function useConfirmClosed() {
+  const { t } = useTranslation(); const notify = useNotify(); const changed = useAlertsChanged();
+  return useCallback(async (alert: AlertLike) => {
+    try {
+      await confirmClosed(alert);
+      changed();
+      notify(t('alerts.closedAtSource.confirmed'));
+      return true;
+    } catch (failure) {
+      notify(errorMessage(failure, t), 'error');
+      return false;
+    }
+  }, [changed, notify, t]);
+}
+
 /**
  * A hidden or shown alert leaves the list it was in, with the button that changed it: focus goes to the list (data-alert-list),
  * never to the page behind it.
@@ -59,14 +76,15 @@ const focusList = () => window.setTimeout(() => document.querySelector<HTMLEleme
  * assign dialog: a row is drawn again when the list reloads, and a dialog inside it would vanish while it is in use.
  */
 export function AlertActionsHost({ children }: { children: ReactNode }) {
-  const { t } = useTranslation(); const changed = useAlertsChanged(); const showAgain = useShowAgain();
+  const { t } = useTranslation(); const changed = useAlertsChanged(); const showAgain = useShowAgain(); const confirm = useConfirmClosed();
   const [asked, setAsked] = useState<{ alert: AlertLike; kind: AlertSourceKind } | null>(null);
   const [hiding, setHiding] = useState<string | null>(null);
   const ask = useCallback((alert: AlertLike, kind: AlertSourceKind | AlertParasollKind) => {
     if (kind === 'hide') setHiding(alert.id);
     else if (kind === 'show') void showAgain(alert).then((shown) => { if (shown) focusList(); });
+    else if (kind === 'confirm') void confirm(alert).then((done) => { if (done) focusList(); });
     else setAsked({ alert, kind });
-  }, [showAgain]);
+  }, [confirm, showAgain]);
   const value = useMemo(() => ({ ask }), [ask]);
   const finished = (action: VendorAction) => { if (action.status === 'Succeeded' || action.status === 'Skipped') changed(); };
   return <AlertActionsContext.Provider value={value}>
@@ -90,7 +108,7 @@ const focusHeading = (heading: RefObject<HTMLHeadingElement | null>) => window.s
  */
 export function AlertSourceSection({ alert }: { alert: AlertLike }) {
   const { t } = useTranslation(); const styles = useStyles(); const restore = useRestoreFocusTarget();
-  const changed = useAlertsChanged(); const showAgain = useShowAgain();
+  const changed = useAlertsChanged(); const showAgain = useShowAgain(); const confirm = useConfirmClosed();
   const kinds = useAlertSourceKinds(alert); const own = useAlertParasollKinds(alert);
   const [kind, setKind] = useState<AlertSourceKind | null>(null);
   const [hiding, setHiding] = useState(false);
@@ -99,14 +117,19 @@ export function AlertSourceSection({ alert }: { alert: AlertLike }) {
   const source = sourceName(t, alert.system);
   const finished = (action: VendorAction) => { if (action.status === 'Succeeded' || action.status === 'Skipped') { done.current = true; changed(); } };
   return <>
-    {(alert.hidden || own.length > 0) && <section className={styles.section} aria-labelledby={`alert-own-${alert.id}`}>
+    {(alert.hidden || own.length > 0 || alert.sourceClosedAt) && <section className={styles.section} aria-labelledby={`alert-own-${alert.id}`}>
       <h3 id={`alert-own-${alert.id}`} ref={ownHeading} tabIndex={-1} className={styles.heading}>{t('alerts.hide.heading')}</h3>
+      {/* M41: an urgent alert its source closed stays open here until a person confirms the closing. */}
+      {alert.sourceClosedAt && alert.state !== 'Resolved' && <Text block>
+        {t('alerts.closedAtSource.explain', { source, date: formatDateTime(alert.sourceClosedAt) })}</Text>}
       {alert.hidden
         ? <Text block>{t('alerts.hide.hiddenSince', {
           date: formatDate(alert.hidden.until), name: alert.hidden.byName ?? t('alerts.hide.someone'), reason: alert.hidden.reason ?? '',
         })}</Text>
         : <Text block className={styles.muted}>{alert.rule ? t('alerts.hide.gapStays') : t('alerts.hide.sourceStays', { source })}</Text>}
       {own.length > 0 && <span className={styles.buttons}>
+        {own.includes('confirm') && <Button size="small" onClick={() => void confirm(alert).then((done) => { if (done) focusHeading(ownHeading); })}>
+          {t('alerts.closedAtSource.confirm')}</Button>}
         {own.includes('hide') && <Button {...restore} size="small" onClick={() => setHiding(true)}>{t('alerts.hide.open')}</Button>}
         {own.includes('show') && <Button size="small" onClick={() => void showAgain(alert).then((shown) => { if (shown) focusHeading(ownHeading); })}>
           {t('alerts.hide.show')}</Button>}
@@ -142,6 +165,7 @@ export function AlertActionsMenu({ alert }: { alert: AlertLike }) {
       <Button {...restore} size="small" appearance="subtle" icon={<MoreHorizontal20Regular />} aria-label={t('alerts.actions.menu', { title: alertTitle(t, alert) })} />
     </MenuTrigger>
     <MenuPopover><MenuList>
+      {own.includes('confirm') && <MenuItem onClick={() => ask(alert, 'confirm')}>{t('alerts.closedAtSource.confirm')}</MenuItem>}
       {own.includes('hide') && <MenuItem onClick={() => ask(alert, 'hide')}>{t('alerts.hide.open')}</MenuItem>}
       {own.includes('show') && <MenuItem onClick={() => ask(alert, 'show')}>{t('alerts.hide.show')}</MenuItem>}
       {kinds.includes('alert.resolve') && <MenuItem onClick={() => ask(alert, 'alert.resolve')}>{t('alerts.actions.resolve')}</MenuItem>}

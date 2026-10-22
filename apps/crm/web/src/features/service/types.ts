@@ -113,6 +113,20 @@ export interface DevicePatches {
   latestInstalled: DevicePatch[];
 }
 
+/**
+ * What a security source says about the computer's protection (M41, Huntress): Defender's status as Huntress words it, when Huntress
+ * last heard it, and whether the computer is cut off from the network (`Isolated`, `Pending Isolation`, `Pending Release`).
+ */
+export interface DeviceProtection {
+  platform: string | null;
+  antivirusStatus: string | null;
+  antivirusSubstatus: string | null;
+  antivirusPolicyStatus: string | null;
+  antivirusReportedAt: string | null;
+  isolation: string | null;
+  agentVersionSince: string | null;
+}
+
 export interface MachineDevice {
   id: string;
   system: string;
@@ -127,6 +141,8 @@ export interface MachineDevice {
   url: string | null;
   inventory: DeviceInventory;
   patches: DevicePatches;
+  /** Only for a security source (M41); none for Atera. */
+  protection?: DeviceProtection | null;
 }
 
 /** Why two machines may be one computer. */
@@ -183,6 +199,8 @@ export interface Alert {
   facts?: Record<string, string> | null;
   /** The machine the alert's device belongs to (M40): its card in the customer's Drift tab. */
   machineId?: string | null;
+  /** When the source closed an urgent alert that waits for a person to confirm it (M41: a Huntress incident). */
+  sourceClosedAt?: string | null;
 }
 
 /** A rule's limit (M40): its default and the range a person may choose from. */
@@ -241,7 +259,7 @@ export interface AlertPage {
  * a read that did not finish or whose successor is overdue is said so.
  */
 export interface ServiceSourceRead extends AlertSourceRead {
-  source: 'tickets' | 'conversations' | 'alerts' | 'devices' | 'patches';
+  source: 'tickets' | 'conversations' | 'alerts' | 'devices' | 'patches' | 'security-alerts' | 'security-devices';
 }
 
 export interface ServiceSummary {
