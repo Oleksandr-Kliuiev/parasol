@@ -1,5 +1,6 @@
 using System.Net;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Huntress;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Microsoft.AspNetCore.Builder;
@@ -16,6 +17,7 @@ namespace Crm.UnitTests;
 /// <summary>
 /// M39.0: provider clients never follow a redirect (CLAUDE.md, DEV-21). Following one would repeat the request, with its
 /// <c>X-API-KEY</c> or subscription key, at whatever address the answer names. Atera also signs with a bearer token on request.
+/// M41: both Huntress clients (reads and actions) end in the same handler, so Huntress's Basic credentials stay with Huntress.
 /// </summary>
 public class ProviderRedirectTests
 {
@@ -76,12 +78,15 @@ public class ProviderRedirectTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection().AddLogging().AddSingleton(TimeProvider.System).AddSingleton<IConfiguration>(configuration);
-        services.AddAteraIntegration(configuration).AddPowerOfficeIntegration(configuration).AddPartnerCenterIntegration(configuration);
+        services.AddAteraIntegration(configuration).AddHuntressIntegration(configuration).AddPowerOfficeIntegration(configuration)
+            .AddPartnerCenterIntegration(configuration);
         return services.BuildServiceProvider();
     }
 
     [Theory]
     [InlineData("IAteraClient")]
+    [InlineData("IHuntressClient")]
+    [InlineData("IHuntressActionClient")]
     [InlineData("IPowerOfficeClient")]
     [InlineData(PowerOfficeTokenProvider.HttpClientName)]
     [InlineData("IPartnerCenterClient")]
@@ -121,6 +126,26 @@ public class ProviderRedirectTests
         refused.Status.ShouldBe(HttpStatusCode.Found);
         atera.Requests.Count.ShouldBe(1);
         atera.Requests[0].Headers["X-API-KEY"].ShouldBe("atera-secret");
+        elsewhere.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task The_huntress_credentials_never_reach_the_address_a_redirect_names()
+    {
+        await using var elsewhere = await Loopback.StartAsync(_ => Task.CompletedTask);
+        await using var huntress = await Loopback.StartAsync(RedirectTo(elsewhere));
+        using var services = Providers(new()
+        {
+            ["Integrations:Huntress:Enabled"] = "true",
+            ["Integrations:Huntress:ApiKey"] = "huntress-key",
+            ["Integrations:Huntress:ApiSecret"] = "huntress-secret",
+            ["Integrations:Huntress:BaseUrl"] = new Uri(huntress.Address, "v1/").ToString(),
+        });
+
+        var refused = await Should.ThrowAsync<HuntressApiException>(() => services.GetRequiredService<IHuntressActionClient>().GetAccountAsync(Ct));
+
+        refused.Status.ShouldBe(HttpStatusCode.Found);
+        huntress.Requests.ShouldHaveSingleItem().Headers["Authorization"].ShouldStartWith("Basic ");
         elsewhere.Requests.ShouldBeEmpty();
     }
 
