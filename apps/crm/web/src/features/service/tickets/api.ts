@@ -23,13 +23,14 @@ export interface TicketQueueFilters {
 
 /**
  * Tickets across customers (M39.2): open first, then the most recently active, a page at a time with the count of all (DEV-12). The
- * search finds a title, a number or the contact; a customer narrows the queue to its tickets.
+ * search finds a title, a number or the contact; a customer narrows the queue to its tickets. A new search or filter is read with the
+ * previous rows kept in place, so a row someone is clicking does not vanish while the answer is on its way.
  */
 export function useTicketQueue(filters: TicketQueueFilters) {
   return usePagedList<Ticket>(ticketKeys.queue(filters), `${BASE}/tickets`, {
     openOnly: filters.openOnly || undefined, mine: filters.mine || undefined, search: filters.search || undefined,
     organizationId: filters.organizationId || undefined,
-  }, { limit: 25 });
+  }, { limit: 25, keepPrevious: true });
 }
 
 /** How fresh each kind of service data is; read with the list it stands beside. */
