@@ -108,6 +108,12 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.LastLoginUser).HasMaxLength(256);
             b.Property(x => x.Disks).HasMaxLength(DeviceDisks.Length);
             b.Property(x => x.AgentVersion).HasMaxLength(64);
+            // M41: what a security source says about the computer's protection.
+            b.Property(x => x.Platform).HasMaxLength(16);
+            b.Property(x => x.AntivirusStatus).HasMaxLength(64);
+            b.Property(x => x.AntivirusSubstatus).HasMaxLength(128);
+            b.Property(x => x.AntivirusPolicyStatus).HasMaxLength(64);
+            b.Property(x => x.Isolation).HasMaxLength(32);
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.RemovedAt });
             // M40: a machine is its devices; it is removed only once no device names it.
@@ -215,11 +221,14 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.Code).HasMaxLength(CoverageRuleSetting.CodeLength);
             b.HasIndex(x => x.Code).IsUnique();
             // Every rule comes with its setting, on and with the rule's own limit, so a person's first change has an ETag too.
-            b.HasData(new
-            {
-                Id = Guid.Parse("0199f1a0-4000-7000-8000-000000004001"), Code = "atera.agent-silent", Enabled = true, Threshold = (int?)null,
-                CreatedAt = new DateTimeOffset(2026, 10, 22, 0, 0, 0, TimeSpan.Zero), IsDeleted = false,
-            });
+            b.HasData(
+                Setting("0199f1a0-4000-7000-8000-000000004001", "atera.agent-silent", 22),
+                // M41: the rules that compare Atera and Huntress and read Huntress's agents.
+                Setting("0199f1a0-4000-7000-8000-000000004101", "huntress.agent-missing", 23),
+                Setting("0199f1a0-4000-7000-8000-000000004102", "atera.agent-missing", 23),
+                Setting("0199f1a0-4000-7000-8000-000000004103", "huntress.agent-silent", 23),
+                Setting("0199f1a0-4000-7000-8000-000000004104", "huntress.agent-outdated", 23),
+                Setting("0199f1a0-4000-7000-8000-000000004105", "huntress.defender-off", 23));
         });
 
         modelBuilder.Entity<AlertTransition>(b =>
@@ -247,6 +256,13 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasIndex(x => new { x.OrganizationId, x.Status });
         });
     }
+
+    /// <summary>A coverage rule's setting as its migration brings it: on, with the rule's own limit, stamped with the day it came.</summary>
+    private static object Setting(string id, string code, int day) => new
+    {
+        Id = Guid.Parse(id), Code = code, Enabled = true, Threshold = (int?)null,
+        CreatedAt = new DateTimeOffset(2026, 10, day, 0, 0, 0, TimeSpan.Zero), IsDeleted = false,
+    };
 }
 
 internal sealed class ServiceDesignTimeFactory() : ModuleDesignTimeFactory<ServiceDbContext>(ServiceDbContext.SchemaName);

@@ -29,6 +29,9 @@ public sealed record ServiceSourceRead(string Source, string System, DateTimeOff
         ("alerts", "atera", "atera-alerts"),
         ("devices", "atera", "atera-agents"),
         ("patches", "atera", "atera-patches"),
+        // M41: Huntress's agents (machines, Defender, isolation) and its incidents, escalations and platform actions.
+        ("security-devices", "huntress", "huntress-agents"),
+        ("security-alerts", "huntress", "huntress-alerts"),
     ];
 
     internal static async Task<ServiceSourceRead> LatestAsync(IEnumerable<ISyncCompletenessSource> completeness, string source, CancellationToken ct)

@@ -96,6 +96,50 @@ internal sealed class AlertHiding(ServiceDbContext db, TimeProvider time, ICurre
         return await SaveAsync(alert, ct);
     }
 
+    /// <summary>
+    /// A person confirms that an urgent alert its source closed is done with (M41): it is resolved here, and the transition records
+    /// who. Under the source's lock, so the confirmation never crosses a read of that source being stored; a read that lists the alert
+    /// again before it clears the mark, and the confirmation is then refused.
+    /// </summary>
+    public async Task<Result<Guid>> ConfirmClosedAsync(Guid id, string ifMatch, CancellationToken ct)
+    {
+        if (await db.Alerts.AsNoTracking().Where(a => a.Id == id).Select(a => a.System).SingleOrDefaultAsync(ct) is not { } system)
+        {
+            return Error.NotFound("SRV_ALERT_NOT_FOUND", "The alert is not stored in the CRM.");
+        }
+
+        var resource = "service-alerts:" + system;
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async c =>
+        {
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(c);
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000;
+                IF @r < 0 THROW 51000, 'A read of these alerts is being stored.', 1;
+                """, c);
+            var loaded = await LoadAsync(id, ifMatch, c);
+            if (!loaded.IsSuccess)
+            {
+                return loaded.Error!;
+            }
+
+            var alert = loaded.Value;
+            if (!alert.ConfirmClosed(time.GetUtcNow()))
+            {
+                return Error.Validation("SRV_ALERT_NOT_CLOSED_AT_SOURCE", "The source has not closed this alert, or it is closed already.");
+            }
+
+            db.AlertTransitions.Add(AlertTransition.Confirmed(alert.Id));
+            var saved = await SaveAsync(alert, c);
+            if (saved.IsSuccess)
+            {
+                await transaction.CommitAsync(c);
+            }
+
+            return saved;
+        }, ct);
+    }
+
     private async Task<Result<Guid>> SaveAsync(Alert alert, CancellationToken ct)
     {
         try

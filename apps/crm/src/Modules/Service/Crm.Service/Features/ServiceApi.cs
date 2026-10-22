@@ -73,7 +73,7 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
                         moved.Add(device.OrganizationId);
                     }
 
-                    device.Apply(organizationId, source);
+                    device.Apply(organizationId, source, now);
                 }
                 else
                 {
@@ -102,8 +102,13 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     public async Task<IReadOnlyList<DeviceRef>> GetCurrentDevicesAsync(string system, CancellationToken cancellationToken) =>
         await db.Devices.AsNoTracking().Where(d => d.System == system && d.RemovedAt == null)
             .OrderBy(d => d.FirstSeenAt).ThenBy(d => d.Id)
-            .Select(d => new DeviceRef(d.Id, d.OrganizationId, d.ExternalId, d.AlternateId, d.MachineName, d.Os))
+            .Select(d => new DeviceRef(d.Id, d.OrganizationId, d.ExternalId, d.AlternateId, d.MachineName, d.Os, d.Isolation))
             .ToListAsync(cancellationToken);
+
+    public async Task<DeviceRef?> GetDeviceAsync(string system, string externalId, CancellationToken cancellationToken) =>
+        await db.Devices.AsNoTracking().Where(d => d.System == system && d.ExternalId == externalId && d.RemovedAt == null)
+            .Select(d => new DeviceRef(d.Id, d.OrganizationId, d.ExternalId, d.AlternateId, d.MachineName, d.Os, d.Isolation))
+            .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<bool> ApplyDevicePatchesAsync(Guid deviceId, DevicePatchSnapshot snapshot, CancellationToken cancellationToken)
     {
@@ -138,6 +143,44 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
 
     public Task<bool> ResolveAlertAsync(string system, string externalId, CancellationToken cancellationToken) =>
         new AlertSnapshots(db, time).ResolveOneAsync(system, externalId, cancellationToken);
+
+    public async Task<bool> ApplyDeviceAsync(Guid organizationId, string system, ExternalDevice device, CancellationToken cancellationToken)
+    {
+        var applied = false;
+        // The customer's lock, as for a whole read: the device's fields and its machine's facts land together.
+        await new MachineLinks(db, time).RunAsync(organizationId, async ct =>
+        {
+            var stored = await db.Devices.SingleOrDefaultAsync(
+                d => d.System == system && d.ExternalId == device.ExternalId && d.OrganizationId == organizationId && d.RemovedAt == null, ct);
+            stored?.Apply(organizationId, device, time.GetUtcNow());
+            applied = stored is not null;
+        }, cancellationToken);
+        return applied;
+    }
+
+    public async Task<bool> RemoveDeviceAsync(string system, string externalId, CancellationToken cancellationToken)
+    {
+        if (await db.Devices.AsNoTracking().Where(d => d.System == system && d.ExternalId == externalId && d.RemovedAt == null)
+                .Select(d => (Guid?)d.OrganizationId).SingleOrDefaultAsync(cancellationToken) is not { } organizationId)
+        {
+            return false;
+        }
+
+        var removed = false;
+        await new MachineLinks(db, time).RunAsync(organizationId, async ct =>
+        {
+            var stored = await db.Devices.SingleOrDefaultAsync(d => d.System == system && d.ExternalId == externalId && d.RemovedAt == null, ct);
+            if (stored is not null)
+            {
+                // As a complete read that no longer lists it: it stops counting, and its updates tell nothing any more.
+                stored.MarkRemoved(time.GetUtcNow());
+                await db.DevicePatches.Where(p => p.DeviceId == stored.Id).ExecuteDeleteAsync(ct);
+            }
+
+            removed = stored is not null;
+        }, cancellationToken);
+        return removed;
+    }
 
     public async Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken) =>
         await db.Alerts.AsNoTracking().Where(a => a.Id == alertId).Select(AlertQueries.Ref).SingleOrDefaultAsync(cancellationToken);

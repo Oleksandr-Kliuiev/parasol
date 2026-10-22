@@ -286,6 +286,7 @@ app.MapCustomFieldsEndpoints();
 app.MapCatalogEndpoints();
 app.MapContractsEndpoints();
 app.MapServiceEndpoints();
+app.MapSecurityEndpoints();
 app.MapTimeTrackingEndpoints();
 app.MapSalesEndpoints();
 app.MapProjectsEndpoints();

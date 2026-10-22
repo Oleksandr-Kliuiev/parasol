@@ -78,6 +78,7 @@
   </Folder>
   <Folder Name="/src/Modules/Security/">
     <Project Path="src/Modules/Security/Crm.Security/Crm.Security.csproj" />
+    <Project Path="src/Modules/Security/Crm.Security.Contracts/Crm.Security.Contracts.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Service/">
     <Project Path="src/Modules/Service/Crm.Service.Contracts/Crm.Service.Contracts.csproj" />

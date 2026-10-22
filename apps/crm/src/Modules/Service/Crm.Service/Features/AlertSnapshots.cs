@@ -80,7 +80,7 @@ internal static class AlertSnapshotRules
 
         var byExternalId = stored.ToDictionary(a => a.ExternalId, StringComparer.Ordinal);
         var added = new List<Alert>();
-        int opened = 0, reopened = 0, updated = 0, resolved = 0;
+        int opened = 0, reopened = 0, updated = 0, resolved = 0, awaiting = 0;
         foreach (var source in snapshot.Alerts.DistinctBy(a => a.ExternalId, StringComparer.Ordinal))
         {
             var deviceId = devices.Find(source);
@@ -106,14 +106,22 @@ internal static class AlertSnapshotRules
         }
 
         // Not listed by a complete read: no longer open in the source. An alert the source still reports open but the read could
-        // not map (its customer lost the link to the organization) is in OpenExternalIds and stays exactly as it is.
+        // not map (its customer lost the link to the organization) is in OpenExternalIds and stays exactly as it is. An urgent alert of
+        // a source that asks for it (M41: a critical Huntress incident) waits for a person instead of closing by itself.
         var open = snapshot.OpenExternalIds.Concat(snapshot.Alerts.Select(a => a.ExternalId)).ToHashSet(StringComparer.Ordinal);
         foreach (var alert in stored.Where(a => a.Kind == snapshot.Kind && a.State != AlertState.Resolved && !open.Contains(a.ExternalId)))
         {
-            resolved += alert.Resolve(now) ? 1 : 0;
+            if (alert.NeedsConfirmedClose)
+            {
+                awaiting += alert.ClosedAtSource(now) ? 1 : 0;
+            }
+            else
+            {
+                resolved += alert.Resolve(now) ? 1 : 0;
+            }
         }
 
-        return (added, new AlertSnapshotResult(true, opened, reopened, updated, resolved));
+        return (added, new AlertSnapshotResult(true, opened, reopened, updated, resolved, awaiting));
     }
 }
 

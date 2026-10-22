@@ -15,7 +15,8 @@ namespace Crm.Service.Features;
 
 /// <summary>
 /// One alert in a list, with its customer's name and the device it was matched to. <c>CreatedAt</c> is the source's time. A coverage
-/// gap the CRM found (M40) names its rule and facts, which the interface words in the reader's language.
+/// gap the CRM found (M40) names its rule and facts, which the interface words in the reader's language. <c>SourceClosedAt</c> is when
+/// the source closed an urgent alert that waits for a person to confirm it (M41).
 /// </summary>
 public sealed record AlertListItem(
     Guid Id,
@@ -37,7 +38,8 @@ public sealed record AlertListItem(
     string? Etag = null,
     string? Rule = null,
     IReadOnlyDictionary<string, string>? Facts = null,
-    Guid? MachineId = null);
+    Guid? MachineId = null,
+    DateTimeOffset? SourceClosedAt = null);
 
 /// <summary>An alert hidden in Parasoll (M40): until when, why, and by whom.</summary>
 public sealed record AlertHoldItem(DateTimeOffset Until, string? Reason, string? ByName, DateTimeOffset? At);
@@ -66,12 +68,12 @@ internal sealed class AlertQueries(
     public const int UrgentMaxLimit = 25;
 
     /// <summary>The runs that read alerts into the CRM, named as the integrations record them (system, job).</summary>
-    private static readonly (string System, string Job)[] Sources = [("atera", "atera-alerts")];
+    private static readonly (string System, string Job)[] Sources = [("atera", "atera-alerts"), ("huntress", "huntress-alerts")];
 
     /// <summary>The shape other modules read through <see cref="IServiceApi"/>.</summary>
     internal static readonly Expression<Func<Alert, AlertRef>> Ref = a => new AlertRef(
         a.Id, a.OrganizationId, a.System, a.Kind, a.ExternalId, a.ExternalCustomerId, a.Title, a.Severity, a.State, a.DeviceName, a.DeviceId,
-        a.CreatedAtSource, a.Url, a.ResolvedAt, a.Rule, a.Facts);
+        a.CreatedAtSource, a.Url, a.ResolvedAt, a.Rule, a.Facts, a.SourceClosedAt);
 
     /// <summary>
     /// Alerts in one state (open unless asked otherwise). Open ones come in the order they should be looked at: critical first, and
@@ -208,7 +210,8 @@ internal sealed class AlertQueries(
                 ? new AlertHoldItem(until, hold.Reason, hold.By is { } by ? people.GetValueOrDefault(by)?.DisplayName : null, hold.At)
                 : null,
             Rule: a.Rule, Facts: CoverageGaps.ReadFacts(a.Facts),
-            MachineId: a.DeviceId is { } device ? machines.GetValueOrDefault(device) : null)).ToList();
+            MachineId: a.DeviceId is { } device ? machines.GetValueOrDefault(device) : null,
+            SourceClosedAt: a.SourceClosedAt)).ToList();
     }
 }
 

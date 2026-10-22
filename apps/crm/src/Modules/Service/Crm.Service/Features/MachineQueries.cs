@@ -29,7 +29,10 @@ public sealed record MachineItem(
     int OpenAlerts,
     int Proposals);
 
-/// <summary>One agent of a machine in its card: what its source says about the computer and about its Windows updates.</summary>
+/// <summary>
+/// One agent of a machine in its card: what its source says about the computer and about its Windows updates, and for a security
+/// source (M41) about its protection.
+/// </summary>
 public sealed record MachineDeviceItem(
     Guid Id,
     string System,
@@ -43,7 +46,21 @@ public sealed record MachineDeviceItem(
     DateTimeOffset? RemovedAt,
     string? Url,
     DeviceInventoryItem Inventory,
-    DevicePatchesItem Patches);
+    DevicePatchesItem Patches,
+    DeviceProtectionItem? Protection = null);
+
+/// <summary>
+/// What a security source says about the computer's protection (M41): the system family, Microsoft Defender's status, sub-status and
+/// policy as the source words them and when it last heard them, and whether the computer is isolated from the network.
+/// </summary>
+public sealed record DeviceProtectionItem(
+    string? Platform,
+    string? AntivirusStatus,
+    string? AntivirusSubstatus,
+    string? AntivirusPolicyStatus,
+    DateTimeOffset? AntivirusReportedAt,
+    string? Isolation,
+    DateTimeOffset? AgentVersionSince);
 
 /// <summary>The computer as one source describes it (M40); a field the source does not report is null.</summary>
 public sealed record DeviceInventoryItem(
@@ -190,15 +207,26 @@ internal sealed class MachineQueries(
             machine.Online, machine.LastSeenAt, machine.RemovedAt,
             devices.Select(d => new MachineDeviceItem(
                 d.Id, d.System, d.ExternalId, d.MachineName, d.Type, d.Os, d.Online, d.LastSeenAt, d.FirstSeenAt, d.RemovedAt, d.Url,
-                Inventory(d), patches[d.Id])).ToList(),
+                Inventory(d), patches[d.Id], Protection(d))).ToList(),
             proposals.Select(p => (Proposal: p, Other: p.MachineId == id ? p.OtherMachineId : p.MachineId))
                 .Where(p => names.ContainsKey(p.Other))
                 .OrderBy(p => p.Proposal.FoundAt).ThenBy(p => p.Other)
                 .Select(p => new MachineProposalItem(p.Other, names[p.Other], Evidence(p.Proposal.Evidence), p.Proposal.FoundAt)).ToList(),
             alerts.GetValueOrDefault(id),
-            [await ServiceSourceRead.LatestAsync(completeness, "devices", ct), await ServiceSourceRead.LatestAsync(completeness, "patches", ct)],
+            [
+                await ServiceSourceRead.LatestAsync(completeness, "devices", ct), await ServiceSourceRead.LatestAsync(completeness, "patches", ct),
+                // M41: a machine Huntress watches also says how fresh Huntress's agents are.
+                .. devices.Any(d => d.System == "huntress") ? [await ServiceSourceRead.LatestAsync(completeness, "security-devices", ct)] : Array.Empty<ServiceSourceRead>(),
+            ],
             db.GetETag(machine));
     }
+
+    /// <summary>A device's protection as its source reports it; none for a source that says nothing about it (Atera).</summary>
+    private static DeviceProtectionItem? Protection(Device d) =>
+        d.AntivirusStatus is null && d.AntivirusSubstatus is null && d.AntivirusPolicyStatus is null && d.Isolation is null && d.Platform is null
+            ? null
+            : new DeviceProtectionItem(d.Platform, d.AntivirusStatus, d.AntivirusSubstatus, d.AntivirusPolicyStatus, d.AntivirusReportedAt, d.Isolation,
+                d.AgentVersionSince);
 
     private static DeviceInventoryItem Inventory(Device d) => new(
         d.Vendor, d.Model, d.SerialNumber, d.Motherboard, d.Processor, d.ProcessorCores, d.ProcessorClock, d.Memory, d.BiosVersion,
