@@ -211,7 +211,7 @@ public class PowerOfficeResilienceTests(CrmWebFactory factory)
         await using var host = HostFor(po);
         var start = DateTimeOffset.Parse("2036-05-01T10:00:00+00:00");
         await SetCursorAsync(host, PowerOfficeCursor.Format(start));
-        var first = Random.Shared.NextInt64(7_000_000, 7_900_000);
+        var first = TestData.PowerOfficeIds(3);
         po.Given(Request.Create().WithPath("/v2/Products").UsingGet().WithParam("PageNumber", "1"))
             .RespondWith(JsonReply(new[] { Product(first, "A", "2036-05-02T10:00:00+00:00"), Product(first + 1, "B", "2036-05-03T10:00:00+00:00") }));
         po.Given(Request.Create().WithPath("/v2/Products").UsingGet().WithParam("PageNumber", "2")).RespondWith(Response.Create().WithStatusCode(500));
@@ -243,7 +243,7 @@ public class PowerOfficeResilienceTests(CrmWebFactory factory)
         using var po = StartPowerOffice();
         await using var host = HostFor(po);
         await SetCursorAsync(host, null);
-        var id = Random.Shared.NextInt64(7_000_000, 7_900_000);
+        var id = TestData.PowerOfficeId();
         var externalId = id.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         void Stub(string name)

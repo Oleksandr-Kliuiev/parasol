@@ -184,11 +184,11 @@ public class BillingRegressionApiTests(CrmWebFactory factory)
         })).StatusCode.ShouldBe(HttpStatusCode.Created);
 
         // The order can reach PowerOffice: the customer and both products are linked, and this stub answers for this customer only.
-        var customerNo = Random.Shared.NextInt64(800_000, 899_999);
+        var customerNo = TestData.PowerOfficeId();
         await BillingApiTests.LinkAsync(admin, "Organization", customer.OrganizationId, "Customer", customerNo.ToString(CultureInfo.InvariantCulture));
         foreach (var productId in new[] { customer.ProductId, hourBankProduct })
         {
-            await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", Random.Shared.NextInt64(10_000, 99_999).ToString(CultureInfo.InvariantCulture));
+            await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
         }
 
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/SalesOrders").UsingPost()
