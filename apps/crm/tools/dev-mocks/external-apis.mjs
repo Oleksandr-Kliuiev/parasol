@@ -3,7 +3,8 @@
 //   PowerOffice Go API v2  — poweroffice.mjs (token, customers, contact persons, products, sales orders, outgoing invoices)
 //   Atera API v3           — atera.mjs with its seed data in atera-data.mjs, plus test-only control routes under /_mock/atera
 //   Enhetsregisteret       — brreg.mjs (/enhetsregisteret/api/enheter)
-//   Huntress, CloudAlly    — huntress.mjs (/huntress/v1) and cloudally.mjs (/cloudally): stubs until M41/M42 (M40.S)
+//   Huntress               — huntress.mjs (/huntress/v1): a stub until M41 (M40.S)
+//   CloudAlly partner v2   — cloudally.mjs (/cloudally/v2, M42), plus test-only control routes under /_mock/cloudally
 // Run: node tools/dev-mocks/external-apis.mjs [port]   (default 5299). Data is in memory and new on every start.
 import http from 'node:http';
 import { createAtera } from './atera.mjs';
