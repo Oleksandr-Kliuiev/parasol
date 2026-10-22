@@ -2,9 +2,12 @@ import { expect, type APIResponse, type Locator, type Page } from '@playwright/t
 
 export type Role = 'Crm.Admin' | 'Crm.Management' | 'Crm.Sales' | 'Crm.Technician' | 'Crm.ServiceLead' | 'Crm.Finance' | 'Crm.ReadOnly';
 
-/** Development sign-in (Auth:Mode=Development): one user per role. */
-export async function signIn(page: Page, role: Role, returnUrl = '/') {
-  await page.goto(`/bff/dev-login?role=${role}&returnUrl=${encodeURIComponent(returnUrl)}`);
+/**
+ * Development sign-in (Auth:Mode=Development): one user per role. A test that changes the user's own settings names a `user` of
+ * its own (letters only, "Language" signs in as "Dev Language"): the specs that sign in with the same role run in parallel.
+ */
+export async function signIn(page: Page, role: Role, returnUrl = '/', user?: string) {
+  await page.goto(`/bff/dev-login?role=${role}${user ? `&user=${user}` : ''}&returnUrl=${encodeURIComponent(returnUrl)}`);
   await expect(page.getByRole('main')).toBeVisible();
 }
 
