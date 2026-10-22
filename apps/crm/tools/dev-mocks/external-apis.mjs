@@ -53,7 +53,7 @@ http
       if (process.env.MOCK_LOG) console.log(new Date().toISOString(), req.method, url.pathname + url.search, body.slice(0, 300));
 
       if (url.pathname === '/health') return send(res, 200, { status: 'ok', run });
-      if (brreg(req, res, url, body) || atera(req, res, url, body) || huntress(req, res, url) || cloudAlly(req, res, url, body)
+      if (brreg(req, res, url, body) || atera(req, res, url, body) || huntress(req, res, url, body) || cloudAlly(req, res, url, body)
         || powerOffice.handle(req, res, url, body)) return;
       send(res, 404, { title: 'Unknown mock route' });
     });
