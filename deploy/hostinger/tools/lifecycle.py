@@ -1,7 +1,7 @@
 """Explicit migrations, restricted SQL logins and application readiness."""
 import json
 import re
-from common import WRITERS, run
+from common import run, writers_up
 
 
 def prepare_files(stack):
@@ -35,7 +35,7 @@ REVERT;""", 'Crm')
 
 
 def migrate(stack):
-    if set(stack.compose('ps', '--status', 'running', '--services').decode().split()) & set(WRITERS):
+    if writers_up(stack):
         raise ValueError('Stop application services before running migrations')
     print('Starting the private database', flush=True)
     stack.compose('up', '-d', '--wait', '--wait-timeout', '300', 'sql')
