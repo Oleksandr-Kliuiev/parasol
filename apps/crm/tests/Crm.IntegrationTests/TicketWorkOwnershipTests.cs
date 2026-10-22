@@ -73,11 +73,11 @@ public sealed class TicketWorkOwnershipTests(CrmWebFactory factory)
         var org = await SourceTaskTestSupport.Organization(factory);
         await using var scope = factory.Services.CreateAsyncScope();
         var links = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-        var customerId = Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var customerId = TestData.AteraId();
         var link = new ExternalLink { Id = Guid.NewGuid(), EntityId = org, EntityType = entityType,
             System = system, ExternalType = externalType, ExternalId = customerId.ToString(CultureInfo.InvariantCulture) };
         links.ExternalLinks.Add(link); await links.SaveChangesAsync();
-        var externalId = Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var externalId = TestData.AteraId();
         await Import(factory, Source(org, externalId, link.Id, customerId));
         var db = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
         var ticket = await db.Tickets.AsNoTracking().SingleAsync(row => row.ExternalId == externalId && row.System == "atera");
