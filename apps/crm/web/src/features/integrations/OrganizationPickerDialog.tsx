@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   Button,
   DialogActions,
@@ -69,12 +69,15 @@ function PickerBody({ group = 'organizations', initialSearch, onPick, onClose }:
   const { t } = useTranslation();
   const [text, setText] = useState(initialSearch);
   const term = useDebouncedValue(text.trim(), 250);
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isPlaceholderData } = useQuery({
     queryKey: ['search', 'picker', group, term],
     enabled: term.length >= 2,
+    // While another search is read, the hits of the previous one stay, so the Link button under the pointer still takes the click.
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => (await api.get<SearchResponse>(`/api/v1/search${query({ q: term, take: 10 })}`, signal)).data,
   });
-  const organizations = data?.groups.find((g) => g.group === group)?.items ?? [];
+  // Under two letters nothing is searched, and no hits of an earlier search stay under the hint.
+  const organizations = term.length >= 2 ? (data?.groups.find((g) => g.group === group)?.items ?? []) : [];
 
   return (
     <DialogBody>
@@ -93,7 +96,7 @@ function PickerBody({ group = 'organizations', initialSearch, onPick, onClose }:
         ) : (
           !isFetching && organizations.length === 0 && <EmptyState message={t('mappings.pickEmpty')} icon={group === 'products' ? <Box24Regular /> : <Building24Regular />} />
         )}
-        <ul className={styles.list}>
+        <ul className={styles.list} aria-busy={isPlaceholderData || undefined}>
           {organizations.map((o) => (
             <li key={o.id} className={styles.item}>
               <IconChip icon={group === 'products' ? <Box16Regular /> : <Building16Regular />} tone={group === 'products' ? 'saffron' : 'iris'} small />
