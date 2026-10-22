@@ -79,10 +79,18 @@ public sealed class HuntressAlertSyncJob(
 
             var readings = new List<IncidentReading>();
             var unlinked = 0;
+            var storedById = storedIncidents.ToDictionary(s => s.ExternalId);
             foreach (var incident in open.Values.Concat(closedIncidents))
             {
                 if (!organizations.TryGetValue(incident.OrganizationId, out var organizationId))
                 {
+                    // A closed report of an organization no longer linked is written closed under the customer it was stored for, its plan
+                    // and comments as last read; left open, it would be read again by id on every run.
+                    if (!HuntressMapping.IsOpen(incident.Status) && storedById.TryGetValue(incident.Id, out var known))
+                    {
+                        readings.Add(HuntressMapping.Reading(incident, known.OrganizationId, known.DeviceName, o.IncidentUrlTemplate, null, null) with { ReadAt = now });
+                    }
+
                     unlinked++;
                     continue;
                 }
@@ -91,7 +99,7 @@ public sealed class HuntressAlertSyncJob(
                 // says nothing about a new comment on the report itself.
                 var remediations = incident.AllRemediations ? incident.Remediations : await client.GetRemediationsAsync(incident.Id, ct);
                 var comments = await client.GetCommentsAsync(incident.Id, ct);
-                readings.Add(HuntressMapping.Reading(incident, organizationId, Host(hosts, incident.AgentId), o.IncidentUrlTemplate, remediations, comments));
+                readings.Add(HuntressMapping.Reading(incident, organizationId, Host(hosts, incident.AgentId), o.IncidentUrlTemplate, remediations, comments) with { ReadAt = now });
             }
 
             // Escalations and platform actions: every open or overdue one; the entities of one that is new or changed since they were read.
@@ -150,7 +158,8 @@ public sealed class HuntressAlertSyncJob(
                     // The first organization it names that is linked: a notice about the whole account belongs to no customer.
                     var organization = notice.OrganizationIds.Where(organizations.ContainsKey).Select(id => ((Guid Id, long ExternalId)?)(organizations[id], id))
                         .FirstOrDefault();
-                    notices.Add(HuntressMapping.Notice(kept.Contains(notice.Id) ? notice with { Entities = null } : notice, organization?.Id, NoticeUrl(o, kind, notice.Id)));
+                    notices.Add(HuntressMapping.Notice(kept.Contains(notice.Id) ? notice with { Entities = null } : notice, organization?.Id, NoticeUrl(o, kind, notice.Id))
+                        with { ReadAt = now });
                     if (OpenNoticeStatuses.Contains(notice.Status))
                     {
                         openNotices.Add((notice, organization));
@@ -187,7 +196,9 @@ public sealed class HuntressAlertSyncJob(
                 }
             }
 
-            var result = await service.ApplyAlertSnapshotAsync(new AlertSnapshot(HuntressTypes.System, AlertKind.Security, alerts, openIds, IsComplete: true), ct);
+            // The read began at `now`: an alert a person's action resolved since then stays resolved (M41).
+            var result = await service.ApplyAlertSnapshotAsync(
+                new AlertSnapshot(HuntressTypes.System, AlertKind.Security, alerts, openIds, IsComplete: true, ReadStartedAt: now), ct);
             progress.Changed = incidents.Changed + noticesStored.Changed + result.Changed;
             progress.Message = string.Create(CultureInfo.InvariantCulture,
                 $"incidents open {open.Count}, closed {closedIncidents.Count}, gone {goneIncidents.Count}; notices open {openNotices.Count}; " +

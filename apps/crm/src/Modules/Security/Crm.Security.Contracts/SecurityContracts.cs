@@ -35,10 +35,12 @@ public sealed record ExternalIncidentComment(long ExternalId, string Body, strin
 
 /// <summary>
 /// One read of an incident: the report, and its plan and comments when this read included them. A list that is null was not read
-/// this time and stays as stored; an empty list says the source has none.
+/// this time and stays as stored; an empty list says the source has none. <paramref name="ReadAt"/> is when the read began (null:
+/// now): a reading older than the stored one (a scheduled read that began before an action's read-back) is not applied.
 /// </summary>
 public sealed record IncidentReading(
-    ExternalIncident Incident, IReadOnlyList<ExternalRemediation>? Remediations, IReadOnlyList<ExternalIncidentComment>? Comments);
+    ExternalIncident Incident, IReadOnlyList<ExternalRemediation>? Remediations, IReadOnlyList<ExternalIncidentComment>? Comments,
+    DateTimeOffset? ReadAt = null);
 
 /// <summary>Escalations ask the partner to decide; platform actions report what keeps the source from protecting a customer.</summary>
 public enum NoticeKind
@@ -53,7 +55,8 @@ public sealed record NoticeEntity(string Type, string? Id, string? Name);
 /// <summary>
 /// An escalation or a platform action as read (<c>open</c>, <c>overdue</c>, <c>resolved</c>). <paramref name="OrganizationId"/> is the
 /// CRM organization of the first linked source organization, null when none is linked (an account-wide notice).
-/// <paramref name="Entities"/> null means they were not read this time and stay as stored.
+/// <paramref name="Entities"/> null means they were not read this time and stay as stored. <paramref name="ReadAt"/> is when the read
+/// began (null: now): a reading older than the stored one is not applied.
 /// </summary>
 public sealed record ExternalNotice(
     string System,
@@ -72,7 +75,8 @@ public sealed record ExternalNotice(
     DateTimeOffset CreatedAt,
     DateTimeOffset? ResolvedAt,
     DateTimeOffset? UpdatedAt,
-    string? Url);
+    string? Url,
+    DateTimeOffset? ReadAt = null);
 
 /// <summary>A summary report of one customer's period, read only: the PDF stays with the source (M43 files it).</summary>
 public sealed record ExternalReport(

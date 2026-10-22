@@ -131,6 +131,10 @@ internal sealed class HuntressEscalationResolveAction(
         {
             return VendorActionResult.Failed("VND_VENDOR_REFUSED", $"Huntress refused it ({(int)refused.Status}); nothing changed.");
         }
+        catch (HuntressApiException busy) when (HuntressFailures.IsBusy(busy.Status))
+        {
+            return VendorActionResult.Later("VND_VENDOR_BUSY", "Huntress's request limit was reached; nothing was sent.");
+        }
 
         await readBack.NoticeAsync(HuntressNoticeKind.Escalation, id, cancellationToken);
         return VendorActionResult.Succeeded("VND_SENT", "Huntress resolved the escalation.");
@@ -221,6 +225,10 @@ internal abstract class HuntressAgentAction(IServiceApi service, ICustomersApi c
         catch (HuntressApiException refused) when (HuntressFailures.IsRejection(refused.Status))
         {
             return VendorActionResult.Failed("VND_VENDOR_REFUSED", $"Huntress refused it ({(int)refused.Status}); nothing changed.");
+        }
+        catch (HuntressApiException busy) when (HuntressFailures.IsBusy(busy.Status))
+        {
+            return VendorActionResult.Later("VND_VENDOR_BUSY", "Huntress's request limit was reached; nothing was sent.");
         }
 
         await ReadBackAsync(context, id, cancellationToken);

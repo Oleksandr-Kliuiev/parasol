@@ -30,6 +30,13 @@ internal sealed class SecurityMirror(SecurityDbContext db, TimeProvider time) : 
                 foreach (var reading in bySource)
                 {
                     var isNew = !stored.TryGetValue(reading.Incident.ExternalId, out var incident);
+                    // A read that began before the stored one (a scheduled read under way while an action read the incident back) knows
+                    // less than the mirror does: it is left out, and the next read brings what is new.
+                    if (incident is not null && reading.ReadAt is { } readAt && incident.ReadAt > readAt)
+                    {
+                        continue;
+                    }
+
                     if (incident is null)
                     {
                         incident = Incident.From(reading.Incident, now);
@@ -104,7 +111,13 @@ internal sealed class SecurityMirror(SecurityDbContext db, TimeProvider time) : 
                 int added = 0, updated = 0;
                 foreach (var source in bySource)
                 {
-                    if (stored.TryGetValue(source.ExternalId, out var notice))
+                    if (stored.TryGetValue(source.ExternalId, out var notice) && source.ReadAt is { } readAt && notice.ReadAt > readAt)
+                    {
+                        // Read before the stored reading (see the incidents above): left out.
+                        continue;
+                    }
+
+                    if (notice is not null)
                     {
                         updated += notice.Apply(source, now) ? 1 : 0;
                     }

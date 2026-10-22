@@ -68,7 +68,8 @@ internal static class AlertSnapshotRules
     /// <summary>
     /// Applies <paramref name="snapshot"/> to the alerts stored for its source: every alert the read lists and every alert of the
     /// source that is not resolved. Changes the stored alerts in place and returns the new ones. An incomplete snapshot changes
-    /// nothing: an alert it does not list may be on a page that was never read.
+    /// nothing: an alert it does not list may be on a page that was never read. A listed alert resolved after the read began stays
+    /// resolved (M41).
     /// </summary>
     public static (IReadOnlyList<Alert> Added, AlertSnapshotResult Result) Apply(
         AlertSnapshot snapshot, IReadOnlyCollection<Alert> stored, AlertDeviceIndex devices, DateTimeOffset now)
@@ -86,6 +87,13 @@ internal static class AlertSnapshotRules
             var deviceId = devices.Find(source);
             if (byExternalId.TryGetValue(source.ExternalId, out var alert))
             {
+                // Resolved after this read began (M41: a person's action read the record back meanwhile): the read knows less than
+                // that resolution, so it neither reopens nor changes the alert; the next read decides.
+                if (alert.State == AlertState.Resolved && snapshot.ReadStartedAt is { } started && alert.ResolvedAt >= started)
+                {
+                    continue;
+                }
+
                 // Loaded with its hold: one an earlier release stored without a hold gets it now (M40).
                 alert.EnsureHold();
                 switch (alert.Observe(snapshot.Kind, source, deviceId, now))

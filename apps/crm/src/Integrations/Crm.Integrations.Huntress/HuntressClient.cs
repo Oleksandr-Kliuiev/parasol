@@ -133,9 +133,18 @@ internal sealed partial class HuntressClient(HttpClient http, IOptions<HuntressO
     public async Task ResolveEscalationAsync(long escalationId, HuntressEscalationAnswer answer, CancellationToken cancellationToken)
     {
         // A determination is given for the identity only and never revokes or disables it: that stays a decision made in Huntress.
-        var body = answer.Determination is { } determination
-            ? new Dictionary<string, object?> { ["determination"] = determination, ["scope"] = "identity", ["revoke_and_disable_identities"] = false }
-            : new Dictionary<string, object?>();
+        // Huntress takes the revoke flag only beside "unauthorized" (where it defaults to true), so it is sent, as false, only there.
+        var body = new Dictionary<string, object?>();
+        if (answer.Determination is { } determination)
+        {
+            body["determination"] = determination;
+            body["scope"] = "identity";
+            if (determination == "unauthorized")
+            {
+                body["revoke_and_disable_identities"] = false;
+            }
+        }
+
         using var response = await http.PostAsJsonAsync($"escalations/{escalationId.ToString(CultureInfo.InvariantCulture)}/resolution", body, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
     }

@@ -346,6 +346,10 @@ public sealed class HuntressClientTests
         (huntress.Requests[^1].Path, answer.GetProperty("determination").GetString(), answer.GetProperty("scope").GetString(),
                 answer.GetProperty("revoke_and_disable_identities").GetBoolean())
             .ShouldBe(("/v1/escalations/4470/resolution", "unauthorized", "identity", false));
+
+        // Huntress takes the revoke flag only beside "unauthorized": an expected access goes without it.
+        await client.ResolveEscalationAsync(4470, new HuntressEscalationAnswer("expected"), Ct);
+        JsonDocument.Parse(huntress.Requests[^1].Body).RootElement.EnumerateObject().Select(p => p.Name).ShouldBe(["determination", "scope"]);
     }
 
     [Fact]

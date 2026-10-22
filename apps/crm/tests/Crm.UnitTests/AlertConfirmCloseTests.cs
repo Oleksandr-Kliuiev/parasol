@@ -50,6 +50,23 @@ public sealed class AlertConfirmCloseTests
     }
 
     [Fact]
+    public void A_read_that_began_before_an_alert_was_resolved_does_not_open_it_again_and_a_later_read_does()
+    {
+        // A person's close was read back and resolved the alert at +7 min; a read that began at +5 min still lists it.
+        var alert = Stored("incident:1", AlertSeverity.Critical);
+        alert.Resolve(First.AddMinutes(7)).ShouldBeTrue();
+
+        var (_, stale) = Apply(Complete([Source("incident:1", AlertSeverity.Critical)]) with { ReadStartedAt = First.AddMinutes(5) }, [alert], First.AddMinutes(8));
+        stale.ShouldBe(new AlertSnapshotResult(true, 0, 0, 0, 0, 0), "the read knew less than the resolution");
+        (alert.State, alert.ResolvedAt).ShouldBe((AlertState.Resolved, (DateTimeOffset?)First.AddMinutes(7)));
+
+        // A read that began after the resolution and still lists it is newer knowledge: the alert opens again, as always.
+        var (_, later) = Apply(Complete([Source("incident:1", AlertSeverity.Critical)]) with { ReadStartedAt = First.AddMinutes(9) }, [alert], First.AddMinutes(10));
+        later.Reopened.ShouldBe(1);
+        alert.State.ShouldBe(AlertState.Open);
+    }
+
+    [Fact]
     public void A_warning_or_an_alert_that_does_not_ask_closes_by_itself_as_before()
     {
         var warning = Stored("incident:2", AlertSeverity.Warning);

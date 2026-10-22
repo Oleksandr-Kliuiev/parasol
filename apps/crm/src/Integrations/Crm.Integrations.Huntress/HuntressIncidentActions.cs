@@ -71,6 +71,12 @@ internal abstract class HuntressIncidentAction(
     /// <summary>Repeatable unless a kind says otherwise: the attempt reads the report first and skips what is already so.</summary>
     public virtual bool IsRepeatable => true;
 
+    /// <summary>
+    /// What the action says about the incident's closing for the read after it: most actions close nothing, so an urgent incident
+    /// Huntress closes meanwhile still waits for a person (<paramref name="sent"/>: Huntress accepted the request).
+    /// </summary>
+    protected virtual IncidentClosing Closing(bool sent) => IncidentClosing.NotAsked;
+
     protected IHuntressActionClient Client => client;
 
     public async Task<VendorActionPlan> PlanAsync(VendorActionRequest request, CancellationToken cancellationToken)
@@ -110,7 +116,7 @@ internal abstract class HuntressIncidentAction(
 
         if (live is null)
         {
-            await readBack.IncidentAsync(id, cancellationToken);
+            await readBack.IncidentAsync(id, Closing(sent: false), cancellationToken);
             return VendorActionResult.Failed("VND_TARGET_GONE", "Huntress no longer knows the incident; nothing was sent.");
         }
 
@@ -121,7 +127,7 @@ internal abstract class HuntressIncidentAction(
 
         if (Check(live, plan, context.Parameters) is { } outcome)
         {
-            await readBack.IncidentAsync(id, cancellationToken);
+            await readBack.IncidentAsync(id, Closing(sent: false), cancellationToken);
             return outcome;
         }
 
@@ -140,8 +146,12 @@ internal abstract class HuntressIncidentAction(
             // Huntress answered and refused: nothing changed. Timeouts and 5xx prove nothing and stay with the runner.
             return VendorActionResult.Failed("VND_VENDOR_REFUSED", $"Huntress refused it ({(int)refused.Status}); nothing changed.");
         }
+        catch (HuntressApiException busy) when (HuntressFailures.IsBusy(busy.Status))
+        {
+            return VendorActionResult.Later("VND_VENDOR_BUSY", "Huntress's request limit was reached; nothing was sent.");
+        }
 
-        await readBack.IncidentAsync(id, cancellationToken);
+        await readBack.IncidentAsync(id, Closing(sent: true), cancellationToken);
         return result;
     }
 
@@ -300,6 +310,9 @@ internal sealed class HuntressStepAction(ISecurityApi security, ICustomersApi cu
 {
     public override string Kind => HuntressActionKinds.Step;
 
+    /// <summary>The last manual step marked done may close the incident in Huntress: then a person closed it, and nothing waits.</summary>
+    protected override IncidentClosing Closing(bool sent) => sent ? IncidentClosing.MayClose : IncidentClosing.NotAsked;
+
     protected override VendorActionPlan Plan(IncidentView incident, VendorActionTarget target, JsonElement parameters)
     {
         if (!incident.IsOpen)
@@ -366,6 +379,9 @@ internal sealed class HuntressIncidentResolveAction(ISecurityApi security, ICust
     : HuntressIncidentAction(security, customers, client, readBack)
 {
     public override string Kind => HuntressActionKinds.Resolve;
+
+    /// <summary>A person asked to close it: once Huntress accepted, or shows it closed already, nothing waits for another confirmation.</summary>
+    protected override IncidentClosing Closing(bool sent) => sent ? IncidentClosing.Closed : IncidentClosing.MayClose;
 
     protected override VendorActionPlan Plan(IncidentView incident, VendorActionTarget target, JsonElement parameters)
     {

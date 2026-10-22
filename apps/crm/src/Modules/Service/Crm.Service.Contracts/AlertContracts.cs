@@ -47,7 +47,8 @@ public sealed record AlertSnapshot(
     AlertKind Kind,
     IReadOnlyCollection<ExternalAlert> Alerts,
     IReadOnlyCollection<string> OpenExternalIds,
-    bool IsComplete);
+    bool IsComplete,
+    DateTimeOffset? ReadStartedAt = null);
 
 /// <summary>
 /// What applying a snapshot changed. A refreshed last-seen time alone is not a change. <paramref name="AwaitingConfirmation"/> counts
