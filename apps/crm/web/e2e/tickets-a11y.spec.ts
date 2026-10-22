@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
-  ateraTicket, customerMessage, failAtera, fitsWidth, linkedAteraCustomer, seriousViolations, settleAction, settled, syncTicket, ticketActions, widths,
-  writeAsTechnician,
+  ateraTicket, customerMessage, failAtera, fitsWidth, linkedAteraCustomer, searchTickets, seriousViolations, settleAction, settled, syncTicket,
+  ticketActions, widths, writeAsTechnician,
 } from './atera';
 import { signIn } from './support';
 
@@ -24,7 +24,7 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
   // A reply whose answer is lost: the confirmation's follow-up asks, there and then, what the person found at Atera.
   await failAtera(page, 'POST', `/api/v3/tickets/${ticket.TicketID}/comments`, 503, 1);
   await page.goto('/tickets');
-  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(m);
+  await searchTickets(page, m);
   await page.getByRole('button', { name, exact: true }).click();
   const lostIn = page.getByRole('dialog', { name, exact: true });
   await lostIn.getByRole('textbox', { name: 'Reply', exact: true }).fill('Vi ser på det nå.');
@@ -47,7 +47,7 @@ test('tickets, a ticket panel, the action confirmation, the action log and the A
   for (const [width, height] of widths) {
     await page.setViewportSize({ width, height });
     await page.goto('/tickets');
-    await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(m);
+    await searchTickets(page, m);
     const open = page.getByRole('button', { name, exact: true });
     await expect(open).toBeVisible();
     await settled(page);
