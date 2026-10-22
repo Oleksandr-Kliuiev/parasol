@@ -34,8 +34,8 @@ public class EndedContractBillingTests(CrmWebFactory factory)
         }, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await admin.PostAsync($"/api/v1/contracts/{contractId}/activate", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         BillingApiTests.StubToken(factory);
-        await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", Random.Shared.NextInt64(800_000, 899_999).ToString(System.Globalization.CultureInfo.InvariantCulture));
-        await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", Random.Shared.NextInt64(100_000, 199_999).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", TestData.PowerOfficeId().ToString(System.Globalization.CultureInfo.InvariantCulture));
+        await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestData.PowerOfficeId().ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         // The contract ends on the last day of the period it is about to be billed for.
         var ended = await admin.PostAsJsonAsync($"/api/v1/contracts/{contractId}/end", new { endDate = "2047-03-31" }, Ct);

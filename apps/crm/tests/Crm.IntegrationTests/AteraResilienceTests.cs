@@ -62,7 +62,7 @@ public class AteraResilienceTests(CrmWebFactory factory)
     private async Task<(Guid OrganizationId, long CustomerId)> LinkedOrganizationAsync(HttpClient admin, string name, string? orgNumber = null)
     {
         var organizationId = await admin.CreateOrganizationAsync(new { name, orgNumber, status = "Customer" });
-        var customerId = Random.Shared.NextInt64(800_000, 899_999);
+        var customerId = TestData.AteraId();
         (await admin.PostAsJsonAsync("/api/v1/integrations/links", new
         {
             system = "atera", externalType = "Customer", externalId = customerId.ToString(CultureInfo.InvariantCulture), entityId = organizationId,
@@ -116,7 +116,7 @@ public class AteraResilienceTests(CrmWebFactory factory)
         var admin = factory.ClientAs(CrmRoles.Admin);
         var (organizationId, customerId) = await LinkedOrganizationAsync(admin, $"Tikett {Guid.NewGuid():N}"[..24]);
         var contactId = await CreateContactAsync(admin, organizationId, $"kari.{Guid.NewGuid():N}"[..20] + "@example.no");
-        var ateraContactId = Random.Shared.NextInt64(30_000, 39_999);
+        var ateraContactId = TestData.AteraId();
         (await admin.PostAsJsonAsync("/api/v1/integrations/links", new
         {
             system = "atera", externalType = "Contact", externalId = ateraContactId.ToString(CultureInfo.InvariantCulture), entityId = contactId,
@@ -284,7 +284,7 @@ public class AteraResilienceTests(CrmWebFactory factory)
         var admin = factory.ClientAs(CrmRoles.Admin);
         var orgNumber = TestData.OrgNumber();
         var organizationId = await admin.CreateOrganizationAsync(new { name = $"Ny kunde {Guid.NewGuid():N}"[..24], orgNumber, status = "Customer" });
-        var ateraId = Random.Shared.NextInt64(900_000, 999_999);
+        var ateraId = TestData.AteraId();
         host.Atera.Given(Request.Create().WithPath("/api/v3/customers").UsingPost()).RespondWith(Response.Create().WithFault(FaultType.EMPTY_RESPONSE));
 
         await Should.ThrowAsync<Exception>(() => RunCreateCustomerAsync(host, organizationId));
@@ -391,8 +391,7 @@ public class AteraResilienceTests(CrmWebFactory factory)
         await using var host = Host();
         var admin = factory.ClientAs(CrmRoles.Admin);
         var (organizationId, customerId) = await LinkedOrganizationAsync(admin, $"Timer {Guid.NewGuid():N}"[..24]);
-        long Id() => Random.Shared.NextInt64(1_000_000, 8_999_999);
-        long good = Id(), broken = good + 1;
+        long good = TestData.AteraIds(2), broken = good + 1;
         host.Atera.Given(Request.Create().WithPath("/api/v3/tickets").UsingGet().WithParam("ticketStatus", "Open")).RespondWith(JsonReply(new
         {
             items = new object[]
@@ -457,7 +456,7 @@ public class AteraResilienceTests(CrmWebFactory factory)
         await using var host = Host();
         var admin = factory.ClientAs(CrmRoles.Admin);
         var (_, customerId) = await LinkedOrganizationAsync(admin, $"Siste {Guid.NewGuid():N}"[..24]);
-        var baseId = Random.Shared.NextInt64(2_000_000, 2_900_000);
+        var baseId = TestData.AteraIds(12);
         object Ticket(long id, int daysOld, int activityDaysOld) => new
         {
             TicketID = id, CustomerID = customerId, TicketTitle = $"T{id}", TicketStatus = "Closed",
