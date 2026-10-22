@@ -31,7 +31,7 @@ internal sealed record TestTicket(Guid OrganizationId, long CustomerId, long Tic
 internal sealed class AteraTicketHost(WebApplicationFactory<Program> host, WireMockServer atera, string user) : IAsyncDisposable
 {
     /// <summary>The Atera technician this host's user writes as; one per host, because a technician maps to the first user it is seen with.</summary>
-    public long Technician { get; } = Random.Shared.NextInt64(5_000_000, 5_999_999);
+    public long Technician { get; } = TestData.AteraId();
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -74,12 +74,12 @@ internal sealed class AteraTicketHost(WebApplicationFactory<Program> host, WireM
     {
         var admin = Client();
         var organizationId = await admin.CreateOrganizationAsync(new { name = $"Sak {Guid.NewGuid():N}"[..20], status = "Customer" });
-        var customerId = Random.Shared.NextInt64(700_000, 799_999);
+        var customerId = TestData.AteraId();
         (await admin.PostAsJsonAsync("/api/v1/integrations/links", new
         {
             system = "atera", externalType = "Customer", externalId = customerId.ToString(CultureInfo.InvariantCulture), entityId = organizationId,
         }, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        var ticketId = Random.Shared.NextInt64(10_000_000, 19_999_999);
+        var ticketId = TestData.AteraId();
         await using var scope = host.Services.CreateAsyncScope();
         var link = await scope.ServiceProvider.GetRequiredService<IntegrationDbContext>().ExternalLinks.AsNoTracking()
             .SingleAsync(l => l.System == "atera" && l.ExternalType == "Customer" && l.ExternalId == customerId.ToString(CultureInfo.InvariantCulture), Ct);
