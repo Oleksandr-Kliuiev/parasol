@@ -168,8 +168,10 @@ function Accounts({ overview }: { overview: BackupOverview }) {
   const actions = useBackupActions();
   const close = actions.kinds.has('account.deactivate');
   return <>{overview.accounts.map((account) => <div key={account.id} className={styles.account}>
-    <span>{t('backup.account')} <span className={styles.accountName}>{account.name}</span></span>
-    {account.region && <span>· {t('backup.region', { region: account.region })}</span>}
+    {/* The data center follows the name in the same words, the dot kept on the name's line by a no-break space: as an item of
+        its own it wrapped on a phone and started a line with "·". */}
+    <span>{t('backup.account')} <span className={styles.accountName}>{account.name}</span>
+      {account.region && <>{' · '}{t('backup.region', { region: account.region })}</>}</span>
     {account.outsideRegion && <Badge appearance="tint" color="warning" icon={<Warning16Regular />}>{t('backup.outsideRegion')}</Badge>}
     {close && <Menu positioning="below-end">
       <MenuTrigger disableButtonEnhancement>
