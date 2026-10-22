@@ -10,7 +10,7 @@ import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
 import { AlertSourceSection } from './AlertActions';
-import { alertTitle } from './alertText';
+import { alertTitle, isBackupGap } from './alertText';
 import { CoverageRulesDialog } from './CoverageRulesDialog';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
 import { AlertReadLine } from './AlertReadLine';
@@ -81,6 +81,9 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
               // M40: a gap is found by Parasoll's own check, which also says how it closes.
               : alert.rule ? <>
                 <Text size={200} className={styles.muted}>{t('alerts.gaps.found')}</Text>
+                {/* M42: a backup gap leads to the customer's backups, where its users and the actions are. */}
+                {isBackupGap(alert.rule) && <AppLink to={`/organizations/${alert.organizationId}?tab=backup`} onClick={onClose}>
+                  {t('alerts.gaps.openBackup')}</AppLink>}
                 <Link {...restore} as="button" className={styles.external} onClick={() => setChecks(true)}>{t('alerts.gaps.changeCheck')}</Link>
               </>
               : <Text size={200} className={styles.muted}>{t('alerts.detail.noLink', { name: sourceName(t, alert.system) })}</Text>}

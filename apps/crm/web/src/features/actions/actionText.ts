@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import { ApiError } from '../../api/client';
 import { errorMessage } from '../../shared/utils/errors';
+import { formatDate } from '../../shared/utils/format';
 import type { ActionBlock, ActionEffect, VendorAction } from './types';
 
 /** The kind as people say it ("Reply to the customer"); a kind the interface does not know yet keeps its code. */
@@ -21,7 +22,12 @@ const effectValues = (t: TFunction, effect: ActionEffect): Record<string, string
     case 'VND_EFFECT_TICKET_TECHNICIAN':
       return { ...values, from: values.from || t('tickets.fields.noTechnician') };
     default:
-      return values;
+      // M42: a backup's service is CloudAlly's word for it ("Mail"), said the way the backup tab says it; a restore's day as days are.
+      return {
+        ...values,
+        ...(values.service ? { service: t(`backup.services.${values.service}`, { defaultValue: values.service }) } : {}),
+        ...(effect.code.startsWith('VND_EFFECT_RESTORE_') && values.date ? { date: formatDate(values.date) } : {}),
+      };
   }
 };
 

@@ -385,7 +385,8 @@
       "projects": "Projects",
       "more": "More",
       "moreNamed_one": "More: {{count}} section",
-      "moreNamed_other": "More: {{count}} sections"
+      "moreNamed_other": "More: {{count}} sections",
+      "backup": "Backup"
     },
     "sections": {
       "company": "Company",
@@ -784,7 +785,10 @@
       "quote-expiry": "Expire old quotes",
       "reports-snapshot": "Monthly report snapshots",
       "worker-heartbeat": "Background service heartbeat",
-      "atera-ticket-conversations": "Ticket messages (Atera)"
+      "atera-ticket-conversations": "Ticket messages (Atera)",
+      "cloudally-accounts": "Customer accounts (CloudAlly)",
+      "cloudally-backups": "Backups (CloudAlly)",
+      "cloudally-bills": "Billing (CloudAlly)"
     },
     "status": {
       "Running": "Running",
@@ -806,7 +810,8 @@
     "atera": "Atera",
     "microsoft-graph": "Microsoft Entra ID",
     "brreg": "Brønnøysund Register Centre",
-    "partnercenter": "Microsoft Partner Center"
+    "partnercenter": "Microsoft Partner Center",
+    "cloudally": "CloudAlly"
   },
   "externalTypes": {
     "Customer": "Customers",
@@ -1671,13 +1676,29 @@
     "source": "Source: {{name}}",
     "sourceNames": {
       "atera": "Atera",
-      "parasoll": "Parasoll"
+      "parasoll": "Parasoll",
+      "cloudally": "CloudAlly"
     },
     "gaps": {
       "found": "Found by Parasoll’s own check. It closes by itself once two checks in a row no longer find it.",
       "changeCheck": "Change the check",
       "ateraAgentSilent": {
         "title": "The Atera agent on {{device}} has not reported since {{date}}"
+      },
+      "openBackup": "Open the customer’s backup",
+      "backupFailed": {
+        "title": "{{service}}: the CloudAlly backup failed for {{failed}} of {{total}} ({{account}})"
+      },
+      "backupLate": {
+        "title": "{{service}}: no CloudAlly backup for over {{hours}} hours for {{late}} of {{total}} ({{account}})"
+      },
+      "backupPaused": {
+        "whole": "{{service}}: the CloudAlly backup is paused ({{account}})",
+        "some": "{{service}}: the CloudAlly backup is paused for {{paused}} of {{total}} ({{account}})"
+      },
+      "userNotBackedUp": {
+        "title_one": "{{count}} licensed Microsoft 365 user has no mailbox backup ({{licensed}} licensed, {{backedUp}} in backup)",
+        "title_other": "{{count}} licensed Microsoft 365 users have no mailbox backup ({{licensed}} licensed, {{backedUp}} in backup)"
       }
     },
     "reads": {
@@ -1823,13 +1844,34 @@
   "coverage": {
     "open": "Coverage checks",
     "title": "Coverage checks",
-    "intro": "Parasoll checks whether every customer device is watched, and raises an alert for what is missing.",
+    "intro": "Parasoll checks whether every customer device is watched and every backup runs, and raises an alert for what is missing.",
     "readOnly": "You can see the checks, but not change them.",
     "rules": {
       "ateraAgentSilent": {
         "name": "Silent Atera agent",
         "description": "An alert when the Atera agent on a device has not reported for longer than the limit. A server is critical, any other device a warning.",
         "when": "Checked after each complete read of Atera’s agents, at night."
+      },
+      "backupFailed": {
+        "name": "Failed backup (CloudAlly)",
+        "description": "An alert when CloudAlly’s last backup of a mailbox, OneDrive, site or team failed. Critical when the whole service failed, otherwise a warning.",
+        "when": "Checked after each complete read of CloudAlly, every second hour."
+      },
+      "backupLate": {
+        "name": "Backup too old (CloudAlly)",
+        "description": "An alert when the last successful backup is older than the limit while nothing reports a failure: the backup did not run.",
+        "when": "Checked after each complete read of CloudAlly, every second hour.",
+        "limit": "Hours since the last backup"
+      },
+      "backupPaused": {
+        "name": "Paused backup (CloudAlly)",
+        "description": "A warning when a backup is paused in CloudAlly: nothing of it is backed up until someone resumes it.",
+        "when": "Checked after each complete read of CloudAlly, every second hour."
+      },
+      "userNotBackedUp": {
+        "name": "Licensed user without backup",
+        "description": "A warning when more of the customer’s users hold a Microsoft 365 licence with a mailbox (Partner Center) than there are mailboxes in the CloudAlly backup. Customers without licence data are not checked, and their Backup tab says so.",
+        "when": "Checked after each complete read of CloudAlly, every second hour."
       }
     },
     "enabled": "Raise alerts",
@@ -1847,6 +1889,166 @@
     "saving": "Saving…",
     "saved": "Coverage checks saved",
     "conflict": "Someone changed a check while you looked at it. Here it is as it is now: decide again."
+  },
+  "backup": {
+    "title": "Backup",
+    "mirror": "What Parasoll saved of the customer’s Microsoft 365 backups at CloudAlly. The tab does not ask CloudAlly live.",
+    "summary": "Backup at a glance",
+    "noAccount": "No CloudAlly account is linked to this customer.",
+    "linkAccount": "Link a CloudAlly account",
+    "noTasks": "CloudAlly backs up nothing for this customer yet.",
+    "allOk": "All good",
+    "problems": {
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "late_one": "{{count}} too old",
+      "late_other": "{{count}} too old",
+      "paused_one": "{{count}} paused",
+      "paused_other": "{{count}} paused",
+      "notInBackup_one": "{{count}} not in backup",
+      "notInBackup_other": "{{count}} not in backup"
+    },
+    "services": {
+      "Mail": "Mail",
+      "OneDrive": "OneDrive",
+      "SharePoint": "SharePoint",
+      "Teams": "Teams and groups",
+      "Other": "Other"
+    },
+    "states": {
+      "Failed": "Failed",
+      "Late": "Too old",
+      "Paused": "Paused",
+      "NotInBackup": "Not in backup",
+      "Waiting": "Waiting for its first backup",
+      "Ok": "Backed up",
+      "Aside": "Not watched here"
+    },
+    "lastBackup": "last backup",
+    "neverBackedUp": "never backed up",
+    "error": "CloudAlly: {{error}}",
+    "errorHelp": "CloudAlly’s help",
+    "entityMenu": "Actions for {{name}}",
+    "taskMenu": "More actions for {{name}}",
+    "accountMenu": "Actions for the CloudAlly account {{name}}",
+    "running": "Running",
+    "taskEntities_one": "{{count}} user or site",
+    "taskEntities_other": "{{count}} users or sites",
+    "taskProblems_one": "{{count}} needs attention",
+    "taskProblems_other": "{{count}} need attention",
+    "account": "CloudAlly account:",
+    "region": "data center {{region}}",
+    "outsideRegion": "Outside the EU",
+    "licences": {
+      "noData": "Partner Center has no licence data for this customer, so Parasoll cannot tell whether every licensed user is in the backup.",
+      "noMailboxLicences": "Partner Center lists no licence with a mailbox for this customer ({{date}}).",
+      "missing_one": "{{count}} licensed user has no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
+      "missing_other": "{{count}} licensed users have no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
+      "allIn_one": "The licensed user has their mailbox in the backup (Partner Center, {{date}}).",
+      "allIn_other": "All {{count}} licensed users have their mailbox in the backup (Partner Center, {{date}})."
+    },
+    "tasks": {
+      "title": "Services in CloudAlly"
+    },
+    "entities": {
+      "title": "Users and sites",
+      "filters": "Filter users and sites",
+      "search": "Search name or address",
+      "stateLabel": "Which ones",
+      "all": "All",
+      "problems": "Need attention",
+      "serviceLabel": "Service",
+      "allServices": "All services",
+      "none": "CloudAlly lists no users or sites for this customer.",
+      "noProblems": "Nothing needs attention: every user and site is backed up.",
+      "noMatch": "No users or sites match these filters."
+    },
+    "actions": {
+      "backup": {
+        "run": {
+          "title": "Take a backup now",
+          "confirm": "Start the backup",
+          "item": "Take a backup now",
+          "button": "Back up now"
+        },
+        "activate": {
+          "title": "Add to the backup",
+          "confirm": "Add",
+          "item": "Add to the backup"
+        },
+        "pause": {
+          "title": "Pause the backup",
+          "confirm": "Pause",
+          "item": "Pause …"
+        },
+        "resume": {
+          "title": "Resume the backup",
+          "confirm": "Resume",
+          "item": "Resume"
+        }
+      },
+      "account": {
+        "deactivate": {
+          "title": "Close the CloudAlly account",
+          "confirm": "Close the account",
+          "item": "Close the CloudAlly account …"
+        }
+      },
+      "restore": {
+        "export": {
+          "title": "Export a backup",
+          "confirm": "Export"
+        },
+        "other": {
+          "title": "Restore elsewhere",
+          "confirm": "Restore"
+        },
+        "in-place": {
+          "title": "Restore in place",
+          "confirm": "Restore"
+        }
+      }
+    },
+    "restore": {
+      "item": "Restore …",
+      "title": "Restore {{name}}",
+      "what": "{{service}}, as it was at the end of a day.",
+      "lastBackup": "Last backup {{time}}.",
+      "day": "Day",
+      "dayHint": "The backup as it was at the end of this day.",
+      "dayInvalid": "Choose a day in the past, today at the latest.",
+      "where": "Where to",
+      "ways": {
+        "exportPst": {
+          "label": "Download as PST",
+          "note": "CloudAlly e-mails a download link when the file is ready. Nothing changes at the customer."
+        },
+        "exportZip": {
+          "label": "Download as ZIP",
+          "note": "CloudAlly e-mails a download link when the file is ready. Nothing changes at the customer."
+        },
+        "other": {
+          "label": "Into another account of the same domain",
+          "note": "The other user finds the content in their own mailbox or OneDrive. The original user notices nothing."
+        },
+        "newSite": {
+          "label": "As a new site",
+          "note": "CloudAlly creates a new site with the content; the site in use is not touched."
+        },
+        "inPlace": {
+          "label": "Back where it was",
+          "note": "Writes into the data the user works with now. You confirm your sign-in, type the name and give a reason, and it can be cancelled for a minute."
+        }
+      },
+      "target": "Account to restore into",
+      "targetHint": "An address in {{domain}}.",
+      "targetInvalid": "Enter an e-mail address.",
+      "targetSame": "That is the same account: choose “Back where it was” instead.",
+      "targetDomain": "CloudAlly restores only into an account in {{domain}}.",
+      "includeDeleted": "Include deleted items",
+      "wholeOnly": "Parasoll restores the whole mailbox, OneDrive or site. A single e-mail or file is restored in CloudAlly.",
+      "continue": "Continue"
+    }
   },
   "taskTicket": {
     "open": "Service ticket",
@@ -4603,7 +4805,27 @@
       "VND_CURSOR_INVALID": "The page does not belong to this list; load the list again.",
       "VND_FILTER_INVALID": "The filter is not valid.",
       "VND_ALERT_MOVED": "The alert belongs to another customer in Atera now; nothing was sent.",
-      "VND_ALERT_RESOLVED": "The alert is no longer open in Atera."
+      "VND_ALERT_RESOLVED": "The alert is no longer open in Atera.",
+      "VND_BACKUP_BUSY": "CloudAlly could not be read; it is tried again.",
+      "VND_BACKUP_GONE": "CloudAlly no longer has this backup; nothing was sent.",
+      "VND_BACKUP_REFUSED": "CloudAlly refused it; nothing changed.",
+      "VND_BACKUP_PAUSED": "The backup is paused; resume it first.",
+      "VND_BACKUP_NOT_IN_BACKUP": "This user or site is not in the backup; add it first.",
+      "VND_BACKUP_ALREADY_ACTIVE": "This user or site is already in the backup.",
+      "VND_BACKUP_ALREADY_PAUSED": "The backup is already paused.",
+      "VND_BACKUP_NOT_PAUSED": "The backup is not paused.",
+      "VND_BACKUP_RUNNING": "A backup was already running at CloudAlly; nothing was sent.",
+      "VND_BACKUP_STARTED": "CloudAlly took the backup; it starts when a backup machine is free.",
+      "VND_ACCOUNT_CLOSED": "The CloudAlly account is already closed.",
+      "VND_RESTORE_SERVICE": "Parasoll restores mailboxes, OneDrive and SharePoint sites; restore this in CloudAlly.",
+      "VND_RESTORE_NO_BACKUP": "There is no backup of this user or site to restore from.",
+      "VND_RESTORE_DATE": "Choose a day in the past, today at the latest.",
+      "VND_RESTORE_TARGET": "Give the address of the account to restore into.",
+      "VND_RESTORE_TARGET_SAME": "That is the same account: restore it in place instead.",
+      "VND_RESTORE_TARGET_DOMAIN": "CloudAlly restores into an account of the same domain only.",
+      "VND_RESTORE_STARTED": "CloudAlly took the restore; it runs as a job at CloudAlly.",
+      "VND_EXPORT_STARTED": "CloudAlly took the export; it e-mails the download link when the file is ready.",
+      "VND_RESTORE_SIGN_IN": "CloudAlly wants a sign-in to the customer’s Microsoft 365 before it restores. Check in CloudAlly whether the restore started."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4672,6 +4894,22 @@
           "resolve": "Close the alert",
           "delete": "Delete the alert"
         }
+      },
+      "cloudally": {
+        "backup": {
+          "run": "Take a backup now",
+          "activate": "Add to the backup",
+          "pause": "Pause the backup",
+          "resume": "Resume the backup"
+        },
+        "account": {
+          "deactivate": "Close the CloudAlly account"
+        },
+        "restore": {
+          "export": "Export a backup",
+          "other": "Restore elsewhere",
+          "in-place": "Restore in place"
+        }
       }
     },
     "effects": {
@@ -4693,7 +4931,24 @@
       "VND_EFFECT_ALERT_RESOLVE": "Atera closes “{{title}}” ({{device}}): it leaves the open alerts in Atera.",
       "VND_EFFECT_ALERT_CONFIRM": "Parasoll reads the alert again afterwards and shows it closed once Atera does.",
       "VND_EFFECT_ALERT_DELETE": "Atera deletes “{{title}}” ({{device}}).",
-      "VND_EFFECT_ALERT_DELETE_HISTORY": "It is gone from Atera’s history too; Parasoll keeps it as closed."
+      "VND_EFFECT_ALERT_DELETE_HISTORY": "It is gone from Atera’s history too; Parasoll keeps it as closed.",
+      "VND_EFFECT_BACKUP_RUN": "CloudAlly backs up {{name}} ({{service}}) now.",
+      "VND_EFFECT_BACKUP_RUN_ALL": "CloudAlly backs up {{service}} at {{account}} now: {{count}} users or sites.",
+      "VND_EFFECT_BACKUP_QUEUE": "It starts when one of CloudAlly’s backup machines is free, which can take minutes.",
+      "VND_EFFECT_BACKUP_ACTIVATE": "CloudAlly adds {{name}} to the {{service}} backup and backs it up from the next run on.",
+      "VND_EFFECT_BACKUP_BILLED": "CloudAlly bills one more user or site from then on.",
+      "VND_EFFECT_BACKUP_PAUSE": "CloudAlly stops the scheduled backups of {{service}} at {{account}} ({{count}} users or sites) until someone resumes them.",
+      "VND_EFFECT_BACKUP_PAUSE_GAP": "Parasoll shows the pause as a coverage gap until then.",
+      "VND_EFFECT_BACKUP_RESUME": "CloudAlly backs up {{service}} at {{account}} on its schedule again.",
+      "VND_EFFECT_ACCOUNT_DEACTIVATE": "CloudAlly cancels the subscription of {{account}} and deletes the CloudAlly account.",
+      "VND_EFFECT_ACCOUNT_DEACTIVATE_DATA": "Its backups go with it. Whether CloudAlly keeps them for a while after a deletion through the API is not confirmed.",
+      "VND_EFFECT_RESTORE_EXPORT": "CloudAlly exports {{service}} of {{name}} as it was at the end of {{date}}, as {{format}}.",
+      "VND_EFFECT_RESTORE_OTHER": "CloudAlly restores {{service}} of {{name}} as it was at the end of {{date}} into {{target}}.",
+      "VND_EFFECT_RESTORE_NEW_SITE": "CloudAlly restores the site {{name}} as it was at the end of {{date}} as a new site; the site in use is not touched.",
+      "VND_EFFECT_RESTORE_IN_PLACE": "CloudAlly restores {{service}} of {{name}} as it was at the end of {{date}} into the same place, beside what the user works with now.",
+      "VND_EFFECT_RESTORE_DELETED": "Items deleted since are restored too.",
+      "VND_EFFECT_RESTORE_LINK": "CloudAlly e-mails the download link when the file is ready; Parasoll does not get it.",
+      "VND_EFFECT_RESTORE_JOB": "CloudAlly runs it as a job of its own; how it ends is seen in CloudAlly."
     }
   },
   "tickets": {
