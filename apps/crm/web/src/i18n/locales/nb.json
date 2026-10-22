@@ -3743,7 +3743,8 @@
           "unconverted-leads": "Leads som aldri ble kunder"
         },
         "service": {
-          "tickets": "Lukkede saker"
+          "tickets": "Lukkede saker",
+          "resolved-alerts": "Løste driftsvarsler"
         },
         "integration": {
           "exception-triage": "Behandling av løste avvik",

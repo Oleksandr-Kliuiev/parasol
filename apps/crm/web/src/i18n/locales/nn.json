@@ -3743,7 +3743,8 @@
           "unconverted-leads": "Leads som aldri vart kundar"
         },
         "service": {
-          "tickets": "Lukka saker"
+          "tickets": "Lukka saker",
+          "resolved-alerts": "Løyste driftsvarsel"
         },
         "integration": {
           "exception-triage": "Behandling av løyste avvik",

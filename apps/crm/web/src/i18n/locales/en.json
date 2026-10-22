@@ -3745,7 +3745,8 @@
           "unconverted-leads": "Leads that never became customers"
         },
         "service": {
-          "tickets": "Closed tickets"
+          "tickets": "Closed tickets",
+          "resolved-alerts": "Resolved alerts"
         },
         "integration": {
           "exception-triage": "Reviews of resolved exceptions",
