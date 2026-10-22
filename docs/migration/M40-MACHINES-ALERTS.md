@@ -113,6 +113,15 @@ BIOS, версия и сборка ОС, IP-адреса и внешний IP, �
 - `UrgentAlertsPanel` берёт задачи своих строк одним запросом `source-tasks/lookup` и держит диалог назначения в
   `AlertTaskDialogHost` вне строк (новое чтение панели прячет строки).
 
+### M40.S
+
+Пустые модули `Crm.Security` (схема `security`) и `Crm.Backup` (схема `backup`): контекст, начальная миграция (только
+outbox, как у каждого модуля), регистрация в crm-web и crm-worker; права по схеме выдаёт мигратор. Архитектурные тесты
+`CoverageModulesTests`: модуль на месте со своей схемой, ссылаются на него только хосты. Заглушки
+`tools/dev-mocks/huntress.mjs` (`/huntress/v1`: account, organizations, agents; Basic auth) и `cloudally.mjs`
+(`/cloudally`: `auth/partner`, `auth/refresh`, `v1/partners/tasks`; Bearer) — только синтетика; пути и поля, в которых
+открытые источники расходятся, M41/M42 сверяют с документацией поставщиков.
+
 ## Проверка
 
 Итоговые прогоны — в разделе «Итоговая проверка» ниже (дописывается последним коммитом этапа).

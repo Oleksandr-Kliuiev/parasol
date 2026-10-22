@@ -35,6 +35,9 @@
     <Project Path="src/Modules/Contracts/Crm.Contracts.Contracts/Crm.Contracts.Contracts.csproj" />
     <Project Path="src/Modules/Contracts/Crm.Contracts/Crm.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Backup/">
+    <Project Path="src/Modules/Backup/Crm.Backup/Crm.Backup.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/CustomFields/">
     <Project Path="src/Modules/CustomFields/Crm.CustomFields/Crm.CustomFields.csproj" />
   </Folder>
@@ -72,6 +75,9 @@
   <Folder Name="/src/Modules/Sales/">
     <Project Path="src/Modules/Sales/Crm.Sales.Contracts/Crm.Sales.Contracts.csproj" />
     <Project Path="src/Modules/Sales/Crm.Sales/Crm.Sales.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Security/">
+    <Project Path="src/Modules/Security/Crm.Security/Crm.Security.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Service/">
     <Project Path="src/Modules/Service/Crm.Service.Contracts/Crm.Service.Contracts.csproj" />

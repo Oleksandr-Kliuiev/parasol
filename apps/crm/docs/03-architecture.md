@@ -132,7 +132,9 @@ flowchart TB
 | Catalog | `catalog` | Продукты, прайс-листы, сопоставления | `PriceListActivated` |
 | Contracts | `contracts` | Контракты, позиции, SLA, пакеты часов | `ContractActivated`, `ContractEnding`, `HourBankLow` |
 | Licensing | `licensing` | CSP-клиенты, подписки, снимки «куплено/назначено», строки затрат Microsoft | `SubscriptionChanged`, `RenewalApproaching` |
-| Service | `service` | Зеркало тикетов, агентов, алертов | `TicketSynced`, `DeviceCountSnapshotTaken` |
+| Service | `service` | Зеркало тикетов, агентов, алертов; машины, статус оповещений в Parasoll и пробелы покрытия (M40) | `TicketSynced`, `DeviceCountSnapshotTaken` |
+| Security | `security` | Пока пусто (M40.S); с M41 — Huntress: агенты, инциденты, правила покрытия | — |
+| Backup | `backup` | Пока пусто (M40.S); с M42 — CloudAlly: копии Microsoft 365, правила покрытия | — |
 | TimeTracking | `time` | Записи времени, согласования, правила тарификации | `TimeEntriesApproved`, `PeriodClosed` |
 | Billing | `billing` | Прогоны, основания, выгрузки, зеркало счетов | `BillingRunApproved`, `InvoiceSynced` |
 | Projects | `projects` | Проекты, этапы, задачи | `ProjectPhaseBillable`, `ProjectPhaseBillingCancelled` |

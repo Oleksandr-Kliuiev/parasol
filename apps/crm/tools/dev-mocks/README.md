@@ -35,6 +35,16 @@ A test can give the Atera stand-in data of its own and take an alert away again,
 
 The ticket routes themselves (`/api/v3/tickets/{id}` GET and POST, `/tickets/{id}/comments` GET and POST, `/tickets/lastmodified`, `POST /tickets/{id}/workhours`) are in `atera-tickets.mjs`; a comment or a change moves the ticket's `TicketLastModified`. The agents with their inventory and the Windows updates (`GET /agents/{DeviceGuid}/installed-patches` and `/available-patches`, camel case as Atera's OpenAPI file has it; `404` for an unknown DeviceGuid) are in `atera-devices.mjs`. The alert list honours `alertStatus` (`Open`: not archived, `Resolved`: archived), and an alert can be read (`GET /alerts/{id}`), resolved (`PUT /alerts/{id}`, no body: it is archived) and deleted (`DELETE /alerts/{id}`), as Atera's API v3 describes them (M40).
 
+## Huntress and CloudAlly stubs (M40.S)
+
+`huntress.mjs` and `cloudally.mjs` stand in for the next integrations before any code reads them (Huntress in M41, CloudAlly in M42). They hold synthetic data only and are deliberately small: what public sources agree on, with the rest left for M41/M42 to confirm against each vendor's own reference.
+
+| Route | Answer |
+|-------|--------|
+| `GET /huntress/v1/account`, `/huntress/v1/organizations`, `/huntress/v1/agents` (`organization_id`, `limit` ≤ 500, `page` or `page_token`), `/huntress/v1/agents/{id}` | HTTP Basic auth required (`401` without it); lists answer `{ <items>, pagination }` with both `next_page` and `next_page_token`, since sources disagree on Huntress's paging. Two organizations, three agents. |
+| `POST /cloudally/auth/partner` (`clientId`, `clientSecret`), `POST /cloudally/auth/refresh` | `200` with a synthetic `accessToken`; `400` without the client's id and secret. |
+| `GET /cloudally/v1/partners/tasks` | Bearer token required (`401` otherwise); three Microsoft 365 backup tasks: one succeeded, one failed, one paused. |
+
 An unknown `CustomerID` or a body that is not a JSON object answers `400`. The organization numbers are unique within one start of the mock; a database shared between runs (end-to-end tests) may still hold an organization with the same number from an earlier run, so a test that must be sure passes its own `BusinessNumber`.
 
 Data lives in memory and resets on restart. Never point test or production hosts at it.
