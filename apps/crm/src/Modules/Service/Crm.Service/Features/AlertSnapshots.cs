@@ -118,6 +118,33 @@ internal static class AlertSnapshotRules
 /// <summary>Stores an alert read: one transaction per snapshot, and one snapshot of a source at a time.</summary>
 internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
 {
+    /// <summary>
+    /// A read of one alert proved it is no longer open at its source (M40): it is resolved under the source's lock, so it never
+    /// crosses a snapshot being stored. A later read that lists it opens it again, as always.
+    /// </summary>
+    public async Task<bool> ResolveOneAsync(string system, string externalId, CancellationToken cancellationToken)
+    {
+        var resource = "service-alerts:" + system;
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
+        {
+            foreach (var entry in db.ChangeTracker.Entries<Alert>().ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000;
+                IF @r < 0 THROW 51000, 'Another read of these alerts is being stored.', 1;
+                """, ct);
+            var alert = await db.Alerts.SingleOrDefaultAsync(a => a.System == system && a.ExternalId == externalId, ct);
+            var resolved = alert is not null && alert.Resolve(time.GetUtcNow());
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return resolved;
+        }, cancellationToken);
+    }
+
     public async Task<AlertSnapshotResult> ApplyAsync(AlertSnapshot snapshot, CancellationToken cancellationToken)
     {
         if (!snapshot.IsComplete)

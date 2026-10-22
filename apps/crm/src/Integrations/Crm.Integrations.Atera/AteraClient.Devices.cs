@@ -21,6 +21,35 @@ internal sealed partial class AteraClient
     public IAsyncEnumerable<AteraAlert> GetAlertsAsync(string? status, CancellationToken cancellationToken) =>
         GetPagedAsync("alerts", ReadAlert, cancellationToken, status is null ? null : $"alertStatus={Uri.EscapeDataString(status)}", a => a.AlertId, strict: true);
 
+    /// <summary>One alert as Atera has it now (M40), open or archived; null when Atera does not know it (404).</summary>
+    public async Task<AteraAlert?> GetAlertAsync(string alertId, CancellationToken cancellationToken)
+    {
+        using var response = await http.GetAsync($"alerts/{Uri.EscapeDataString(alertId)}", cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureSuccessAsync(response, cancellationToken);
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+        return ReadAlert(document.RootElement)
+               ?? throw new AteraApiException(response.StatusCode, $"Atera answered for alert {alertId} without an alert id.");
+    }
+
+    /// <summary>Resolves an alert (M40): <c>PUT alerts/{id}</c> without a body, as Atera's API v3 describes it ("Resolve specified alert").</summary>
+    public async Task ResolveAlertAsync(string alertId, CancellationToken cancellationToken)
+    {
+        using var response = await http.PutAsync($"alerts/{Uri.EscapeDataString(alertId)}", content: null, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    /// <summary>Deletes an alert in Atera (M40): <c>DELETE alerts/{id}</c>. It is gone from Atera's history too.</summary>
+    public async Task DeleteAlertAsync(string alertId, CancellationToken cancellationToken)
+    {
+        using var response = await http.DeleteAsync($"alerts/{Uri.EscapeDataString(alertId)}", cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     /// <summary>
     /// The installed or the available Windows updates of an agent (M40): <c>GET agents/{DeviceGuid}/installed-patches</c> or
     /// <c>available-patches</c>, one object per agent. Null when Atera does not know the device (404).

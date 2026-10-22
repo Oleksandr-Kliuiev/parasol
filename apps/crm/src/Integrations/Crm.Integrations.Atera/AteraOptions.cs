@@ -104,9 +104,10 @@ public sealed class AteraOptions
     public bool DryRun { get; set; }
 
     /// <summary>
-    /// The kinds of action people may ask of Atera (M39.1/M39.2): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
-    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>. Empty by default: a kind is off until
-    /// it is listed, and a kind added in a later release stays off until someone lists it.
+    /// The kinds of action people may ask of Atera (M39.1/M39.2, M40): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
+    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>, <c>alert.resolve</c>,
+    /// <c>alert.delete</c>. Empty by default: a kind is off until it is listed, and a kind added in a later release stays off until
+    /// someone lists it.
     /// </summary>
     public List<string> EnabledActions { get; set; } = [];
 

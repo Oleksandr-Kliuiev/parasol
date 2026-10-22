@@ -136,6 +136,9 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     public Task<AlertSnapshotResult> ApplyAlertSnapshotAsync(AlertSnapshot snapshot, CancellationToken cancellationToken) =>
         new AlertSnapshots(db, time).ApplyAsync(snapshot, cancellationToken);
 
+    public Task<bool> ResolveAlertAsync(string system, string externalId, CancellationToken cancellationToken) =>
+        new AlertSnapshots(db, time).ResolveOneAsync(system, externalId, cancellationToken);
+
     public async Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken) =>
         await db.Alerts.AsNoTracking().Where(a => a.Id == alertId).Select(AlertQueries.Ref).SingleOrDefaultAsync(cancellationToken);
 

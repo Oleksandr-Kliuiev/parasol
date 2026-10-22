@@ -1663,7 +1663,8 @@
       "customer": "Kunde",
       "waiting": "Meldt",
       "resolved": "Løyst",
-      "task": "Oppgåve"
+      "task": "Oppgåve",
+      "actions": "Handlingar"
     },
     "source": "Kjelde: {{name}}",
     "sourceNames": {
@@ -1763,6 +1764,16 @@
       "refused": "Oppgåva vart ikkje oppretta. Les driftsvarselet på nytt og sjå over vala dine.",
       "readAgain": "Les på nytt",
       "cannotCreate": "Du kan sjå dette driftsvarselet, men ikkje tildele det."
+    },
+    "actions": {
+      "heading": "I {{source}}",
+      "menu": "Handlingar for {{title}}",
+      "resolve": "Lukk i Atera",
+      "resolveTitle": "Lukk driftsvarselet i Atera",
+      "delete": "Slett i Atera",
+      "deleteItem": "Slett i Atera …",
+      "deleteTitle": "Slett driftsvarselet i Atera",
+      "none": "Ingenting er bede om i Atera for dette driftsvarselet."
     }
   },
   "taskTicket": {
@@ -4515,7 +4526,9 @@
       "VND_TIME_NOT_OWN": "Berre den som har arbeidd timane, fører dei i Atera.",
       "VND_TIME_NO_TICKET": "Føringa viser ikkje til ei Atera-sak hjå kunden som Parasoll kjenner.",
       "VND_CURSOR_INVALID": "Sida høyrer ikkje til denne lista; last inn lista på nytt.",
-      "VND_FILTER_INVALID": "Filteret er ikkje gyldig."
+      "VND_FILTER_INVALID": "Filteret er ikkje gyldig.",
+      "VND_ALERT_MOVED": "Driftsvarselet høyrer til ein annan kunde i Atera no; ingenting vart sendt.",
+      "VND_ALERT_RESOLVED": "Driftsvarselet er ikkje lenger ope i Atera."
     },
     "dialog": {
       "previewing": "Sjekkar kva handlinga vil gjere …",
@@ -4579,6 +4592,10 @@
         },
         "time": {
           "record": "Før tid i Atera"
+        },
+        "alert": {
+          "resolve": "Lukk driftsvarselet",
+          "delete": "Slett driftsvarselet"
         }
       }
     },
@@ -4597,7 +4614,11 @@
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera merkjer dei som ikkje fakturerbare.",
       "VND_EFFECT_TIME_NO_DOUBLE": "Timeimporten kjenner dei att, så dei blir aldri talde to gonger.",
       "VND_EFFECT_TIME_DEFAULT_START": "Føringa har inga starttid, så timane startar kl. {{from}} på datoen.",
-      "VND_EFFECT_TIME_AUTHOR": "Atera viser dei som førte av {{name}}."
+      "VND_EFFECT_TIME_AUTHOR": "Atera viser dei som førte av {{name}}.",
+      "VND_EFFECT_ALERT_RESOLVE": "Atera lukkar «{{title}}» ({{device}}): det forsvinn frå dei opne driftsvarsla i Atera.",
+      "VND_EFFECT_ALERT_CONFIRM": "Parasoll les driftsvarselet på nytt etterpå og viser det lukka når Atera gjer det.",
+      "VND_EFFECT_ALERT_DELETE": "Atera slettar «{{title}}» ({{device}}).",
+      "VND_EFFECT_ALERT_DELETE_HISTORY": "Det forsvinn òg frå historikken i Atera; Parasoll held på det som lukka."
     }
   },
   "tickets": {

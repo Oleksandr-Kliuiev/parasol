@@ -73,6 +73,9 @@ public sealed class AteraTicketOwnerImportTests(CrmWebFactory factory)
         public IAsyncEnumerable<AteraAgent> GetAgentsAsync(CancellationToken ct) => throw new NotSupportedException();
         public IAsyncEnumerable<AteraAlert> GetAlertsAsync(string? status, CancellationToken ct) => throw new NotSupportedException();
         public Task<AteraPatchList?> GetPatchesAsync(string deviceGuid, bool installed, CancellationToken ct) => throw new NotSupportedException();
+        public Task<AteraAlert?> GetAlertAsync(string alertId, CancellationToken ct) => throw new NotSupportedException();
+        public Task ResolveAlertAsync(string alertId, CancellationToken ct) => throw new NotSupportedException();
+        public Task DeleteAlertAsync(string alertId, CancellationToken ct) => throw new NotSupportedException();
         public Task<long> CreateTicketAsync(AteraTicketWrite ticket, CancellationToken ct) => throw new NotSupportedException();
         public Task<long> CreateContactAsync(AteraContactWrite contact, CancellationToken ct) => throw new NotSupportedException();
         public Task<AteraTicket?> GetTicketAsync(long ticketId, CancellationToken ct) => throw new NotSupportedException();

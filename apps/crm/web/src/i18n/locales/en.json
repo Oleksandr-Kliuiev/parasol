@@ -1663,7 +1663,8 @@
       "customer": "Customer",
       "waiting": "Raised",
       "resolved": "Resolved",
-      "task": "Task"
+      "task": "Task",
+      "actions": "Actions"
     },
     "source": "Source: {{name}}",
     "sourceNames": {
@@ -1763,6 +1764,16 @@
       "refused": "The task was not created. Read the alert again and check your choices.",
       "readAgain": "Read again",
       "cannotCreate": "You can see this alert, but you cannot assign it."
+    },
+    "actions": {
+      "heading": "In {{source}}",
+      "menu": "Actions for {{title}}",
+      "resolve": "Close in Atera",
+      "resolveTitle": "Close the alert in Atera",
+      "delete": "Delete in Atera",
+      "deleteItem": "Delete in Atera…",
+      "deleteTitle": "Delete the alert in Atera",
+      "none": "Nothing has been asked of Atera for this alert."
     }
   },
   "taskTicket": {
@@ -4517,7 +4528,9 @@
       "VND_TIME_NOT_OWN": "Only the person whose hours they are records them in Atera.",
       "VND_TIME_NO_TICKET": "The entry names no Atera ticket of its customer that Parasoll knows.",
       "VND_CURSOR_INVALID": "The page does not belong to this list; load the list again.",
-      "VND_FILTER_INVALID": "The filter is not valid."
+      "VND_FILTER_INVALID": "The filter is not valid.",
+      "VND_ALERT_MOVED": "The alert belongs to another customer in Atera now; nothing was sent.",
+      "VND_ALERT_RESOLVED": "The alert is no longer open in Atera."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4581,6 +4594,10 @@
         },
         "time": {
           "record": "Record time in Atera"
+        },
+        "alert": {
+          "resolve": "Close the alert",
+          "delete": "Delete the alert"
         }
       }
     },
@@ -4599,7 +4616,11 @@
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera marks them not billable.",
       "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice.",
       "VND_EFFECT_TIME_DEFAULT_START": "The entry has no start time, so the hours start at {{from}} on its date.",
-      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}."
+      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}.",
+      "VND_EFFECT_ALERT_RESOLVE": "Atera closes “{{title}}” ({{device}}): it leaves the open alerts in Atera.",
+      "VND_EFFECT_ALERT_CONFIRM": "Parasoll reads the alert again afterwards and shows it closed once Atera does.",
+      "VND_EFFECT_ALERT_DELETE": "Atera deletes “{{title}}” ({{device}}).",
+      "VND_EFFECT_ALERT_DELETE_HISTORY": "It is gone from Atera’s history too; Parasoll keeps it as closed."
     }
   },
   "tickets": {

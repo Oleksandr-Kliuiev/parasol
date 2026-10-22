@@ -42,7 +42,7 @@ const hostArgs = [
   `--Integrations:Atera:BaseUrl=${mock}/api/v3/`,
   // M39: the ticket and time actions write to the stand-in only (it keeps what it got); a real account is never configured here.
   '--Integrations:Atera:WriteEnabled=true',
-  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record']
+  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record', 'alert.resolve', 'alert.delete']
     .map((kind, index) => `--Integrations:Atera:EnabledActions:${index}=${kind}`),
   '--Integrations:Atera:AlertUrlTemplate=https://atera.example.invalid/alerts/{0}',
   ...['CustomerSyncCron', 'ContactSyncCron', 'TicketSyncCron', 'RecentTicketSyncCron', 'WorkHoursSyncCron', 'AgentSyncCron', 'PatchSyncCron',

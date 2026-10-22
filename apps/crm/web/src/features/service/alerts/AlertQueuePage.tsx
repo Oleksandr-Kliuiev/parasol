@@ -13,6 +13,7 @@ import { useDebouncedValue } from '../../../shared/utils/useDebouncedValue';
 import { ForbiddenPage } from '../../errors/ForbiddenPage';
 import { alertSeverities, type AlertSeverity } from '../types';
 import { CustomerFilter } from '../CustomerFilter';
+import { AlertActionsHost } from './AlertActions';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { AlertReadLine } from './AlertReadLine';
 import { AlertQueueEmpty, AlertQueueList } from './AlertQueueList';
@@ -71,8 +72,9 @@ function Queue() {
     message={t(filtered ? 'alerts.emptyFiltered' : state === 'Resolved' ? 'alerts.emptyResolved' : 'alerts.empty')}
     action={filtered && <Button onClick={clear}>{t('alerts.clearFilters')}</Button>} />;
 
-  // The assign dialog is held above the list, which reloads (search, filters) and switches between table and cards.
-  return <AlertTaskDialogHost>
+  // The assign dialog and the action confirmation are held above the list, which reloads (search, filters) and switches between
+  // table and cards.
+  return <AlertTaskDialogHost><AlertActionsHost>
     <PageHeader title={t('alerts.title')} subtitle={t(state === 'Resolved' ? 'alerts.subtitleResolved' : 'alerts.subtitle')}
       // How fresh the stored alerts are, from the same answer as the rows: no time is shown while a new read is under way.
       meta={queue.reads && !queue.error && !(queue.isFetching && !queue.isFetchingNextPage) && <AlertReadLine reads={queue.reads} />}
@@ -105,5 +107,5 @@ function Queue() {
             onMore={() => void queue.fetchNextPage()} />} />
       </>}
     <AlertDetailDrawer alertId={peekId} onClose={closePeek} />
-  </AlertTaskDialogHost>;
+  </AlertActionsHost></AlertTaskDialogHost>;
 }

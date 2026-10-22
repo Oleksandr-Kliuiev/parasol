@@ -8,6 +8,7 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
+import { AlertSourceSection } from './AlertActions';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
 import { AlertReadLine } from './AlertReadLine';
 import { useAlertReads } from './alertReads';
@@ -72,6 +73,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
           </span> },
         ]} />
         <AlertTaskSection alert={alert} onNavigate={onClose} />
+        <AlertSourceSection alert={alert} />
       </>}
     </DrawerBody>
   </OverlayDrawer>;

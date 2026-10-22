@@ -384,6 +384,12 @@ public sealed class AteraAlertSyncJob(
             await foreach (var alert in client.GetAlertsAsync("Open", ct))
             {
                 progress.Read++;
+                // An archived alert is resolved in Atera, whatever list it came with (M40).
+                if (alert.Archived)
+                {
+                    continue;
+                }
+
                 open.Add(alert.AlertId);
                 if (AteraServiceMapping.SeverityOf(alert.Severity) is not { } severity)
                 {

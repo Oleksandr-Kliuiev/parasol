@@ -54,6 +54,11 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     if (ticketRoutes.control(req, res, path, body)) return;
     if (deviceRoutes.control(req, res, path, body)) return;
     const removeAlert = path.match(/^alerts\/([^/]+)$/);
+    if (removeAlert && req.method === 'GET') {
+      // What "Atera" holds of an alert now (M40): archived after a resolve, gone after a delete.
+      const found = ateraAlerts.find((a) => String(a.AlertID) === decodeURIComponent(removeAlert[1]));
+      return found ? send(res, 200, found) : send(res, 404, { message: 'No such alert' });
+    }
     if (removeAlert && req.method === 'DELETE') {
       // Closing an alert in Atera takes it off the open list; the CRM's next complete read resolves it.
       const index = ateraAlerts.findIndex((a) => String(a.AlertID) === decodeURIComponent(removeAlert[1]));
@@ -109,7 +114,26 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     }
     const workHours = path.match(/^tickets\/(\d+)\/workhoursrecords$/);
     if (workHours) return send(res, 200, ateraWorkHours.get(Number(workHours[1])) ?? []);
-    if (path === 'alerts') return ateraPage(res, url, ateraAlerts);
+    if (path === 'alerts') {
+      // alertStatus=Open lists what is not archived, Resolved what is (M40); without it, every alert.
+      const status = url.searchParams.get('alertStatus');
+      return ateraPage(res, url, status === 'Open' ? ateraAlerts.filter((a) => !a.Archived) : status === 'Resolved' ? ateraAlerts.filter((a) => a.Archived) : ateraAlerts);
+    }
+    const alert = path.match(/^alerts\/([^/]+)$/);
+    if (alert) {
+      // M40: one alert (GET), resolved (PUT, no body: it is archived) or deleted (DELETE), as Atera's API v3 describes them.
+      const index = ateraAlerts.findIndex((a) => String(a.AlertID) === decodeURIComponent(alert[1]));
+      if (index < 0) return send(res, 404, { title: 'Not Found', status: 404 });
+      if (req.method === 'GET') return send(res, 200, ateraAlerts[index]);
+      if (req.method === 'PUT') {
+        ateraAlerts[index] = { ...ateraAlerts[index], Archived: true, ArchivedDate: new Date().toISOString() };
+        return send(res, 204);
+      }
+      if (req.method === 'DELETE') {
+        ateraAlerts.splice(index, 1);
+        return send(res, 204);
+      }
+    }
     const customValue = path.match(/^customvalues\/customerfield\/(\d+)\/(.+)$/);
     if (customValue) {
       const key = `${customValue[1]}/${decodeURIComponent(customValue[2])}`;

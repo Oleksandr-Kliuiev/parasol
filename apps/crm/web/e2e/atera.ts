@@ -84,6 +84,14 @@ export async function syncDevices(page: Page, customer: AteraCustomer, count: nu
   `${count} devices of ${customer.name}`);
 }
 
+/** What "Atera" holds of an alert now (M40): archived after a resolve, null once deleted. */
+export async function ateraAlertState(page: Page, alert: AteraAlert): Promise<{ Archived?: boolean } | null> {
+  const response = await page.request.get(`${control}/alerts/${alert.AlertID}`);
+  if (response.status() === 404) return null;
+  expect(response.status()).toBe(200);
+  return (await response.json()) as { Archived?: boolean };
+}
+
 /** Changes an agent in "Atera" (M40): it goes silent, is renamed, reports other keys; the next agent read sees it. */
 export async function changeAteraAgent(page: Page, agentId: string, fields: Record<string, unknown>) {
   const response = await page.request.post(`${control}/agents/${encodeURIComponent(agentId)}`, { data: fields });

@@ -179,6 +179,12 @@ public interface IServiceApi
     /// </summary>
     Task<AlertSnapshotResult> ApplyAlertSnapshotAsync(AlertSnapshot snapshot, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// A read of one alert at its source says it is no longer open (M40: resolved there, or deleted, after an action asked for it):
+    /// the stored alert is resolved as a complete read would resolve it. False when no such alert is open in the CRM.
+    /// </summary>
+    Task<bool> ResolveAlertAsync(string system, string externalId, CancellationToken cancellationToken);
+
     /// <summary>A stored alert by its CRM id, in any state; null when there is none.</summary>
     Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken);
 

@@ -178,6 +178,7 @@ internal sealed partial class AteraClient
             {
                 AgentId = Text(e, "AgentId", "AgentID"),
                 DeviceGuid = Text(e, "DeviceGuid"),
+                Archived = Bool(e, "Archived") ?? false,
             }
             : null;
 

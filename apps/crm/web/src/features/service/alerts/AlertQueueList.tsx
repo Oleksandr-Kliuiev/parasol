@@ -10,6 +10,7 @@ import { useContainerWidth } from '../../../shared/utils/useContainerWidth';
 import { NARROW_SCREEN, useMediaQuery } from '../../../shared/utils/useMediaQuery';
 import { useCatalogStyles } from '../../catalog/styles';
 import type { Alert } from '../types';
+import { AlertActionsMenu } from './AlertActions';
 import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource, AlertTitle } from './AlertBits';
 import { AlertTaskCell } from './AlertTaskCell';
 import type { AlertTask } from './alertTasks';
@@ -20,12 +21,15 @@ const useStyles = makeStyles({
   customer: { fontWeight: 600, overflowWrap: 'anywhere' },
   // A phone card: the severity and the title, the facts in one muted line, the task under them.
   cardHead: { display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0 },
-  cardTask: { paddingTop: '4px' },
   // Fixed columns for the short facts; the alert's title takes what is left (Fluent's table is table-layout: fixed).
   severity: { width: '112px' },
   customerColumn: { width: '18%' },
   waiting: { width: '128px' },
   task: { width: '24%' },
+  // M40: what can be done with the alert at its source, behind one button; the column has a name for screen readers only.
+  more: { width: '52px' },
+  srOnly: { position: 'absolute', width: '1px', height: '1px', margin: '-1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0, padding: 0 },
+  cardFoot: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '4px' },
 });
 
 /** Below this width of its own the table would squeeze the titles into a word per line: the list shows cards instead. */
@@ -62,7 +66,7 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
         {alerts.map((alert) => <li key={alert.id} className={list.card}>
           <span className={styles.cardHead}><AlertSeverityBadge severity={alert.severity} />{title(alert)}</span>
           <AlertFacts parts={[customer(alert), alert.deviceName, age(alert), source(alert)]} />
-          <span className={styles.cardTask}><AlertTaskCell alert={alert} task={tasks.get(alert.id)} /></span>
+          <span className={styles.cardFoot}><AlertTaskCell alert={alert} task={tasks.get(alert.id)} /><AlertActionsMenu alert={alert} /></span>
         </li>)}
       </ul>
       {footer}
@@ -77,6 +81,7 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
         <TableHeaderCell className={styles.customerColumn}>{t('alerts.columns.customer')}</TableHeaderCell>
         <TableHeaderCell className={styles.waiting}>{t(resolved ? 'alerts.columns.resolved' : 'alerts.columns.waiting')}</TableHeaderCell>
         <TableHeaderCell className={styles.task}>{t('alerts.columns.task')}</TableHeaderCell>
+        <TableHeaderCell className={styles.more}><span className={styles.srOnly}>{t('alerts.columns.actions')}</span></TableHeaderCell>
       </TableRow></TableHeader>
       <TableBody>{alerts.map((alert) => <TableRow key={alert.id}>
         <TableCell><AlertSeverityBadge severity={alert.severity} /></TableCell>
@@ -84,6 +89,7 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
         <TableCell>{customer(alert)}</TableCell>
         <TableCell className={styles.age}>{age(alert)}</TableCell>
         <TableCell><AlertTaskCell alert={alert} task={tasks.get(alert.id)} /></TableCell>
+        <TableCell><AlertActionsMenu alert={alert} /></TableCell>
       </TableRow>)}</TableBody>
     </Table>
     {footer}

@@ -141,6 +141,9 @@ public sealed record AteraAlert(string AlertId, long? CustomerId, string Title, 
     public string? AgentId { get; init; }
 
     public string? DeviceGuid { get; init; }
+
+    /// <summary>Resolved in Atera: the alert left the open list and sits in its archive (M40).</summary>
+    public bool Archived { get; init; }
 }
 
 public sealed record AteraTicketWrite(

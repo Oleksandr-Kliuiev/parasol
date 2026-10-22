@@ -30,6 +30,15 @@ public interface IAteraClient
 
     IAsyncEnumerable<AteraAlert> GetAlertsAsync(string? status, CancellationToken cancellationToken);
 
+    /// <summary>One alert as Atera has it now (M40), open or archived; null when Atera does not know it.</summary>
+    Task<AteraAlert?> GetAlertAsync(string alertId, CancellationToken cancellationToken);
+
+    /// <summary>Resolves an alert in Atera (M40): it leaves the open list and is archived there.</summary>
+    Task ResolveAlertAsync(string alertId, CancellationToken cancellationToken);
+
+    /// <summary>Deletes an alert in Atera (M40), its history with it.</summary>
+    Task DeleteAlertAsync(string alertId, CancellationToken cancellationToken);
+
     /// <summary>The installed or available Windows updates of an agent by its DeviceGuid (M40); null when Atera does not know it.</summary>
     Task<AteraPatchList?> GetPatchesAsync(string deviceGuid, bool installed, CancellationToken cancellationToken);
 
