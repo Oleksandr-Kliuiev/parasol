@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { api, createOrganization, marker, orgNumber, signIn, toast } from './support';
+import { api, createOrganization, marker, orgNumber, searchList, signIn, toast } from './support';
 
 /**
  * Sets the phase's status from its row. The project is read again after a task is added or changed, which draws the phase row
@@ -153,7 +153,8 @@ test('a technician sees a project once on its team, and a project they are not o
   // DEV-09: the list says whose projects it holds; a saved link to someone else's project is a page that does not exist.
   await signIn(page, 'Crm.Technician', '/projects');
   await expect(page.getByText('The projects you are on: as manager, team member or task assignee.')).toBeVisible();
-  await page.getByRole('searchbox', { name: 'Search project or number' }).fill(m);
+  // The answer to this very search: until it is there, the list is the technician's projects before the search.
+  await searchList(page, page.getByRole('searchbox', { name: 'Search project or number' }), '/api/v1/projects', m);
   await expect(page.getByText('No projects yet.')).toBeVisible();
   await page.goto(`/projects/${project.id}`);
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();

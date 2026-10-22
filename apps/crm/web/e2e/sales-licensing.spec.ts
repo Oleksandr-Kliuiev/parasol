@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { api, createOrganization, marker, orgNumber, signIn, toast } from './support';
+import { api, createOrganization, marker, orgNumber, searchList, signIn, toast } from './support';
 
 test('a lead becomes a customer with a deal, and the deal is won', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(120_000);
@@ -132,8 +132,8 @@ test('a distributor file is previewed before the subscriptions are imported', as
   await dialog.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(toast(page, 'Created 2 and updated 0 subscriptions')).toBeVisible();
 
-  // The e2e database is shared between runs, so the table is narrowed to this run's customer.
-  await page.getByRole('searchbox', { name: 'Search offer or customer' }).fill(m);
+  // The e2e database is shared between runs, so the table is narrowed to this run's customer, and read once that search is answered.
+  await searchList(page, page.getByRole('searchbox', { name: 'Search offer or customer' }), '/api/v1/licensing/subscriptions', m);
   const row = page.getByRole('row').filter({ hasText: `${m} Lisens AS` }).filter({ hasText: 'Microsoft 365 Business Premium' });
   await expect(row).toBeVisible();
   // Linked by organisation number, and with no contract line the subscription is flagged as unbilled (BR-LIC-03).
