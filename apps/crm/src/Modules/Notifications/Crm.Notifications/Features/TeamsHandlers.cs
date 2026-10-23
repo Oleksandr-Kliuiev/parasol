@@ -241,6 +241,8 @@ public sealed class ChannelPostJob(
                 .SetProperty(p => p.NextAttemptAt, p => next ?? p.NextAttemptAt)
                 .SetProperty(p => p.SentAt, p => status == ChannelPostStatus.Sent ? now : p.SentAt)
                 .SetProperty(p => p.LastError, lastError)
+                // A skipped notice sent no card: it gives its day back, so the alert can still be posted if it turns urgent again.
+                .SetProperty(p => p.DedupeKey, p => status == ChannelPostStatus.Skipped ? null : p.DedupeKey)
                 .SetProperty(p => p.LockedUntil, (DateTimeOffset?)null)
                 .SetProperty(p => p.LeaseOwner, (Guid?)null));
         if (updated == 0)

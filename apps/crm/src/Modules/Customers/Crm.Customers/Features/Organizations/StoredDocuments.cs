@@ -32,7 +32,7 @@ internal sealed class CustomerDocuments(CustomersDbContext db, IDocumentStore st
         var document = StoredDocument.Create(filing, time.GetUtcNow());
         if (!await db.Organizations.AsNoTracking().AnyAsync(o => o.Id == filing.OrganizationId, cancellationToken))
         {
-            throw new InvalidOperationException("The organization of a stored document does not exist.");
+            throw new StoredDocumentOrganizationMissingException();
         }
 
         if (await FindAsync(document, cancellationToken) is { } earlier)

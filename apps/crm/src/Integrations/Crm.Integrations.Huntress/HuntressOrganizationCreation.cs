@@ -121,11 +121,21 @@ internal sealed class HuntressCreateOrganizationAction(
             return Record(created);
         }
 
-        // Huntress answered without the organization: it is found by its key, the way a later attempt would find it.
-        var found = await client.FindOrganizationsByKeyAsync(key, ct);
+        // Huntress answered without the organization: it is found by its key, the way a later attempt would find it. Whatever goes
+        // wrong in that read, the create was taken, so the attempt stays open and the next one looks again.
+        IReadOnlyList<HuntressOrganization> found;
+        try
+        {
+            found = await client.FindOrganizationsByKeyAsync(key, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            throw new CustomerCreatedUnreadException("Huntress took the organization, but it could not be read back; it is looked for again.", ex);
+        }
+
         return found.Count == 1
             ? Record(found[0])
-            : throw new HuntressApiException(HttpStatusCode.OK, "Huntress created the organization without saying which; it is looked for again.");
+            : throw new CustomerCreatedUnreadException("Huntress created the organization without saying which; it is looked for again.");
     }
 
     protected override VendorFailure Classify(Exception exception, CancellationToken ct) => exception switch

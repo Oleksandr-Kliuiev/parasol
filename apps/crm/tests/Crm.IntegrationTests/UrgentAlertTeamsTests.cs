@@ -132,6 +132,7 @@ public sealed class UrgentAlertTeamsTests(CrmWebFactory factory)
         var skipped = (await PostsAsync(alert)).ShouldHaveSingleItem();
         skipped.Status.ShouldBe(ChannelPostStatus.Skipped);
         skipped.LastError.ShouldNotBeNull().ShouldContain("no longer urgent");
+        skipped.DedupeKey.ShouldBeNull("a notice that sent no card gives its day back: the alert may still be posted if it turns urgent again");
         Cards(marker).ShouldBeEmpty();
     }
 
@@ -170,13 +171,13 @@ public sealed class UrgentAlertTeamsTests(CrmWebFactory factory)
             .Where(m => m.Type.Contains(nameof(AlertBecameUrgent)) && m.Payload.Contains(alertId.ToString())).ToListAsync(Ct);
     }
 
-    /// <summary>The notices about one alert, whatever their day.</summary>
+    /// <summary>The notices about one alert, whatever their day (a skipped one gave its day's key back, so they are found by the alert).</summary>
     private async Task<List<ChannelPost>> PostsAsync(Guid alertId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
-        var prefix = $"urgent-alert:{alertId:N}:";
+        var id = alertId.ToString("D");
         return await scope.ServiceProvider.GetRequiredService<NotificationsDbContext>().ChannelPosts.AsNoTracking()
-            .Where(p => p.DedupeKey != null && p.DedupeKey.StartsWith(prefix)).ToListAsync(Ct);
+            .Where(p => p.Kind == ChannelPostKind.UrgentAlert && p.ParametersJson != null && p.ParametersJson.Contains(id)).ToListAsync(Ct);
     }
 
     /// <summary>The cards the operations channel received about this test's customer, read from the adaptive card.</summary>

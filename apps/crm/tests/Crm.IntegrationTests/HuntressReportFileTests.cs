@@ -88,6 +88,33 @@ public sealed class HuntressReportFileTests(CrmWebFactory factory)
     }
 
     [Fact]
+    public async Task A_report_of_a_customer_deleted_in_the_crm_is_passed_over_and_the_others_are_filed()
+    {
+        await using var host = Start(factory);
+        var (gone, kept) = (await host.CustomerAsync(), await host.CustomerAsync());
+        var (goneReport, keptReport) = (Id(), Id());
+        var month = LastMonth();
+        // The deleted customer's report comes first in the run (an earlier month); its Huntress link is still there.
+        host.List("/v1/reports", "reports", [
+            Report(goneReport, gone.HuntressOrganizationId, $"{host.Huntress.Url}/files/{goneReport}.pdf", month.AddMonths(-1)),
+            Report(keptReport, kept.HuntressOrganizationId, $"{host.Huntress.Url}/files/{keptReport}.pdf", month),
+        ]);
+        foreach (var id in new[] { goneReport, keptReport })
+        {
+            host.Huntress.Given(Request.Create().WithPath($"/files/{id}.pdf").UsingGet())
+                .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/pdf").WithBody(StoredDocumentTests.Pdf($"Report {id}")));
+        }
+
+        await host.RunJobAsync<HuntressReportSyncJob>(job => job.RunAsync(Ct));
+        (await host.Client().DeleteAsync($"/api/v1/customers/organizations/{gone.OrganizationId}", Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        await host.RunJobAsync<HuntressReportFileJob>(job => job.RunAsync(Ct));
+
+        (await host.LatestRunAsync(HuntressReportFileJob.JobId)).Status.ShouldBe(SyncRunStatus.Succeeded, "one report that cannot be filed stops nothing");
+        var list = await (await host.Client().GetAsync($"/api/v1/customers/organizations/{kept.OrganizationId}/stored-documents", Ct)).ReadJsonAsync();
+        list.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("sourceKey").GetString()!).ShouldBe([$"huntress:report:{keptReport}"]);
+    }
+
+    [Fact]
     public async Task A_file_off_the_allowed_hosts_or_a_sign_in_page_is_refused_and_the_run_is_not_complete_until_it_is_filed()
     {
         await using var host = Start(factory);

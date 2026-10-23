@@ -105,6 +105,26 @@ public sealed class AteraCustomerCreationTests(CrmWebFactory factory)
         host.Count("POST", "/api/v3/customers").ShouldBe(1);
     }
 
+    [Fact]
+    public async Task A_customer_someone_made_in_atera_without_the_organization_number_is_not_created_again()
+    {
+        await using var host = AteraTicketHost.Start(factory, kinds: AteraCustomerKinds.All);
+        var admin = host.Client();
+        var (organizationId, name, _) = await NewCustomerAsync(admin);
+        // Made by hand in Atera, named like the customer but without the number, so the key search does not find it; a namesake
+        // with another number is another company and stands in nobody's way.
+        Customers(host, [
+            new { CustomerID = TestData.AteraId(), CustomerName = name.ToLowerInvariant(), BusinessNumber = (string?)null },
+            new { CustomerID = TestData.AteraId(), CustomerName = name, BusinessNumber = TestData.OrgNumber() },
+        ]);
+
+        var action = await host.RunAsync(await admin.AskCreateAsync(AteraTypes.System, Kind, organizationId));
+
+        (action.Status, action.OutcomeCode).ShouldBe((VendorActionStatus.Rejected, "VND_EXISTS_AT_VENDOR"));
+        host.Count("POST", "/api/v3/customers").ShouldBe(0);
+        (await LinkAsync(host.Services, organizationId, AteraTypes.System)).ShouldBeNull("a person links it on the mapping screen");
+    }
+
     private static void Customers(AteraTicketHost host, object[] customers) =>
         host.Atera.Given(Request.Create().WithPath("/api/v3/customers").UsingGet().WithParam("page", "1"))
             .RespondWith(JsonReply(new { items = customers, totalPages = 1 }));

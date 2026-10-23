@@ -13,6 +13,12 @@ public sealed record VendorCustomerRecord(string ExternalId, string Name, Extern
 /// <summary>What the kind's parameters come to: canonical, with the effects the preview shows, or the reason they do not do.</summary>
 public sealed record CustomerCreationPlan(string CanonicalParameters, IReadOnlyList<VendorActionEffect> Effects, VendorActionBlock? Block = null);
 
+/// <summary>
+/// The vendor took the create but its record could not be read back (the answer named none, and the search that followed failed or
+/// found no single record). Nothing about the outcome is known: the attempt stays open, and the next one finds the record by our key.
+/// </summary>
+public sealed class CustomerCreatedUnreadException(string message, Exception? inner = null) : Exception(message, inner);
+
 /// <summary>How a failed request to the vendor ends: refused (nothing was made), busy (asked again later), or unknown (rethrown).</summary>
 public enum VendorFailure
 {
@@ -75,6 +81,14 @@ public abstract class CustomerCreationAction(
     /// <summary>The vendor's live records that carry our key; a read that fails throws.</summary>
     protected abstract Task<IReadOnlyList<VendorCustomerRecord>> FindAsync(OrganizationSyncView organization, JsonElement parameters, CancellationToken ct);
 
+    /// <summary>
+    /// The vendor's live records named exactly like the customer, for a vendor whose search lists its records anyway (Atera, CloudAlly):
+    /// a record someone made in the console with another key is not created a second time. None by default (Huntress: the saved records
+    /// the preview reads).
+    /// </summary>
+    protected virtual Task<IReadOnlyList<VendorCustomerRecord>> FindByNameAsync(OrganizationSyncView organization, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<VendorCustomerRecord>>([]);
+
     /// <summary>Sends the create; the record the vendor answers with. A failure is classified by <see cref="Classify"/>.</summary>
     protected abstract Task<VendorCustomerRecord> CreateAsync(OrganizationSyncView organization, JsonElement parameters, CancellationToken ct);
 
@@ -115,15 +129,87 @@ public abstract class CustomerCreationAction(
                 $"{VendorName} already has a record with this key ({existing}); link it on the mapping screen if it is this customer."), plan.CanonicalParameters);
         }
 
+        // A record someone made in the console under another key, named like the customer, is not created a second time either.
+        if (await NamesakeAsync(organization, cancellationToken) is { } namesake)
+        {
+            return new VendorActionPlan(target, [], new VendorActionBlock("VND_EXISTS_AT_VENDOR",
+                $"{VendorName} already has a record named {namesake}; link it on the mapping screen if it is this customer."), plan.CanonicalParameters);
+        }
+
+        if ((await EarlierAttemptsAsync(id, null, plan.CanonicalParameters, cancellationToken)).OtherOpen)
+        {
+            return new VendorActionPlan(target, [], new VendorActionBlock("VND_EARLIER_ATTEMPT_OPEN", EarlierOpen), plan.CanonicalParameters);
+        }
+
         return new VendorActionPlan(target, plan.Effects, null, plan.CanonicalParameters);
     }
+
+    private string EarlierOpen =>
+        $"An earlier request to create the customer in {VendorName} has no outcome yet; settle it in the action log first. Nothing was sent.";
+
+    /// <summary>The name of an unlinked saved record of the vendor named exactly like the customer (SQL Server compares without case).</summary>
+    private async Task<string?> NamesakeAsync(OrganizationSyncView organization, CancellationToken ct)
+    {
+        var name = organization.Name.Trim();
+        return await db.ExternalRecords.AsNoTracking()
+            .Where(r => r.System == System && r.ExternalType == ExternalType && !r.IsGone && r.DisplayName == name)
+            .Where(r => !db.ExternalLinks.Any(l => l.System == r.System && l.ExternalType == r.ExternalType && l.ExternalId == r.ExternalId))
+            .Select(r => r.DisplayName)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
+    /// The journal's earlier create attempts for the customer that count for this request (DEV-19): this action's own, those of the
+    /// mapping screen's export (no action of their own), and those of another request with the same parameters (the same key) that a
+    /// person did not settle as not done. Another request that has no outcome yet makes <c>OtherOpen</c>: nothing is created while it
+    /// may still be, and an attempt with another key is never taken for ours.
+    /// </summary>
+    private async Task<(List<ExternalEffectEntry> Counted, bool OtherOpen)> EarlierAttemptsAsync(
+        Guid organizationId, Guid? operationId, string parameters, CancellationToken ct)
+    {
+        var entries = (await journal.ForEntityAsync(EntityTypes.Organization, organizationId, ct)).Where(e => e.System == System && e.Kind == EffectKind).ToList();
+        var others = entries.Select(e => e.OperationId).OfType<Guid>().Where(o => o != operationId).Distinct().ToList();
+        var actions = others.Count == 0
+            ? []
+            : await db.VendorActions.AsNoTracking()
+                .Where(a => others.Contains(a.OutboundOperationId))
+                .Select(a => new { a.OutboundOperationId, a.Parameters, a.Status, a.OutcomeCode })
+                .ToListAsync(ct);
+        var counted = new List<ExternalEffectEntry>();
+        var otherOpen = false;
+        foreach (var entry in entries)
+        {
+            var action = entry.OperationId is { } op && op != operationId ? actions.FirstOrDefault(a => a.OutboundOperationId == op) : null;
+            if (action is null)
+            {
+                counted.Add(entry);
+            }
+            else if (action.OutcomeCode == SettledNotDone)
+            {
+                // A person checked at the vendor: that attempt created nothing.
+            }
+            else if (action.Status is VendorActionStatus.Scheduled or VendorActionStatus.Queued or VendorActionStatus.Sending or VendorActionStatus.Uncertain)
+            {
+                otherOpen = true;
+            }
+            else if (string.Equals(action.Parameters, parameters, StringComparison.Ordinal))
+            {
+                counted.Add(entry);
+            }
+        }
+
+        return (counted, otherOpen);
+    }
+
+    /// <summary>The outcome code of an action a person settled as not done (<see cref="VendorActionService"/>).</summary>
+    private const string SettledNotDone = "VND_SETTLED_NOT_DONE";
 
     public async Task<VendorActionResult> ExecuteAsync(VendorActionContext context, CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(context.Action.TargetId, out var id) ||
             await customers.GetOrganizationForSyncAsync(id, cancellationToken) is not { IsDeleted: false } organization)
         {
-            return VendorActionResult.Rejected("VND_TARGET_GONE", "The organization no longer exists in the CRM; nothing was sent.");
+            return VendorActionResult.Rejected("VND_CUSTOMER_GONE", "The customer no longer exists in the CRM; nothing was sent.");
         }
 
         if (await links.FindByEntityAsync(EntityTypes.Organization, id, System, ExternalType, cancellationToken) is { } link)
@@ -137,8 +223,12 @@ public abstract class CustomerCreationAction(
             return VendorActionResult.Rejected(invalid.Code, invalid.Message + " Nothing was sent.");
         }
 
-        var earlier = (await journal.ForEntityAsync(EntityTypes.Organization, id, cancellationToken))
-            .Where(e => e.System == System && e.Kind == EffectKind).ToList();
+        var (earlier, otherOpen) = await EarlierAttemptsAsync(id, context.Action.OutboundOperationId, context.Action.Parameters, cancellationToken);
+        if (otherOpen)
+        {
+            return VendorActionResult.Rejected("VND_EARLIER_ATTEMPT_OPEN", EarlierOpen);
+        }
+
         var mayExist = ExternalEffects.MayExist(earlier);
         IReadOnlyList<VendorCustomerRecord> found;
         try
@@ -161,6 +251,26 @@ public abstract class CustomerCreationAction(
                 $"An earlier attempt got no answer and {VendorName} shows no record with our key; check there before asking again.");
         }
 
+        // Not ours (no attempt of ours may have made it), but named like the customer: someone made it in the console.
+        IReadOnlyList<VendorCustomerRecord> namesakes;
+        try
+        {
+            namesakes = await FindByNameAsync(organization, cancellationToken);
+        }
+        catch (Exception ex) when (IsReadFailure(ex, cancellationToken))
+        {
+            return VendorActionResult.Later("VND_VENDOR_BUSY", $"{VendorName} could not be searched before creating; nothing was sent.");
+        }
+
+        foreach (var namesake in namesakes)
+        {
+            if (await links.FindByExternalAsync(System, ExternalType, namesake.ExternalId, cancellationToken) is null)
+            {
+                return VendorActionResult.Rejected("VND_EXISTS_AT_VENDOR",
+                    $"{VendorName} already has a record named {namesake.Name} ({namesake.ExternalId}); link it on the mapping screen if it is this customer. Nothing was sent.");
+            }
+        }
+
         if (context.Simulate)
         {
             return VendorActionResult.Simulated("VND_DRY_RUN", $"Test mode: {VendorName} was searched, nothing was created.");
@@ -172,7 +282,7 @@ public abstract class CustomerCreationAction(
         {
             created = await CreateAsync(organization, context.Parameters, cancellationToken);
         }
-        catch (Exception ex) when (Classify(ex, cancellationToken) is not VendorFailure.Unknown)
+        catch (Exception ex) when (ex is not CustomerCreatedUnreadException && Classify(ex, cancellationToken) is not VendorFailure.Unknown)
         {
             // The vendor answered and made nothing: the attempt is closed, so the next one may create.
             await journal.CompleteAsync(effect, EffectPhase.Failed, null, cancellationToken);

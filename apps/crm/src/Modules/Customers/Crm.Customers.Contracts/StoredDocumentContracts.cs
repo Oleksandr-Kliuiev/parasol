@@ -48,6 +48,9 @@ public sealed record StoredDocumentFiling(
 /// <summary>What filing did: the document's id, and whether it was new (false: these bytes of this source were filed before).</summary>
 public sealed record StoredDocumentFiled(Guid DocumentId, bool Created);
 
+/// <summary>The organization of a filing is not in the CRM (deleted, or merged into another): nothing was stored.</summary>
+public sealed class StoredDocumentOrganizationMissingException() : InvalidOperationException("The organization of a stored document does not exist.");
+
 /// <summary>A source already filed for a customer, whatever its bytes.</summary>
 public sealed record FiledSource(Guid OrganizationId, string SourceKey);
 
@@ -60,7 +63,7 @@ public interface ICustomerDocuments
 {
     /// <summary>
     /// Files a document. Idempotent per organization, source key and content: filing the same bytes again returns the stored row. The
-    /// content must be a whole PDF; an organization the CRM does not have is refused.
+    /// content must be a whole PDF; an organization the CRM does not have is refused with <see cref="StoredDocumentOrganizationMissingException"/>.
     /// </summary>
     Task<StoredDocumentFiled> FileAsync(StoredDocumentFiling filing, CancellationToken cancellationToken);
 

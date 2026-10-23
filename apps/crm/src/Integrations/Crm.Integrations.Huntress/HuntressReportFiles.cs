@@ -173,7 +173,7 @@ public sealed class HuntressReportFileJob(
             var linked = await links.OrganizationsAsync(ct);
             var filed = (await documents.FiledAsync(StoredDocumentKinds.HuntressMonthly, stored.Select(r => StoredDocumentKinds.HuntressReport(r.ExternalId)).ToList(), ct))
                 .Select(f => f.SourceKey).ToHashSet(StringComparer.Ordinal);
-            int before = 0, noLink = 0, notLinked = 0, refused = 0, failed = 0;
+            int before = 0, noLink = 0, notLinked = 0, refused = 0, failed = 0, gone = 0;
             var refusedHosts = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var report in stored)
             {
@@ -220,9 +220,28 @@ public sealed class HuntressReportFileJob(
                 }
 
                 var end = report.PeriodEnd is { } last && last >= start ? last : new DateOnly(start.Year, start.Month, 1).AddMonths(1).AddDays(-1);
-                var outcome = await documents.FileAsync(new StoredDocumentFiling(
-                    organizationId, StoredDocumentKinds.HuntressMonthly, key, start, end, FileName(report.ExternalId, start), content,
-                    StoredDocumentProvenance.Source), ct);
+                StoredDocumentFiled outcome;
+                try
+                {
+                    outcome = await documents.FileAsync(new StoredDocumentFiling(
+                        organizationId, StoredDocumentKinds.HuntressMonthly, key, start, end, FileName(report.ExternalId, start), content,
+                        StoredDocumentProvenance.Source), ct);
+                }
+                catch (StoredDocumentOrganizationMissingException)
+                {
+                    // A deleted or merged-away customer keeps its Huntress link until someone removes it: there is no one to file for.
+                    gone++;
+                    continue;
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    // One report that cannot be filed does not hold back the others; the read is incomplete and tried again.
+                    failed++;
+                    progress.Failed++;
+                    logger.LogWarning("Huntress report {Report} could not be filed ({ErrorType})", report.ExternalId, ex.GetType().Name);
+                    continue;
+                }
+
                 if (outcome.Created)
                 {
                     progress.Changed++;
@@ -234,7 +253,7 @@ public sealed class HuntressReportFileJob(
             }
 
             progress.Message = string.Create(CultureInfo.InvariantCulture,
-                $"reports {stored.Count} since {from:yyyy-MM-dd}: filed {progress.Changed}, filed before {before}, without a link {noLink}, organization not linked {notLinked}, refused {refused}{(refusedHosts.Count > 0 ? $" (hosts {string.Join(", ", refusedHosts)})" : string.Empty)}, could not be fetched {failed}");
+                $"reports {stored.Count} since {from:yyyy-MM-dd}: filed {progress.Changed}, filed before {before}, without a link {noLink}, organization not linked {notLinked}, customer gone {gone}, refused {refused}{(refusedHosts.Count > 0 ? $" (hosts {string.Join(", ", refusedHosts)})" : string.Empty)}, could not be fetched or filed {failed}");
         }, cancellationToken);
     }
 

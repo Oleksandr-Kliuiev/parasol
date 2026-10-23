@@ -83,11 +83,17 @@ internal sealed class CustomerMonthReports(
         var key = StoredDocumentKinds.ParasollSummary(first);
         List<Guid> candidates;
         HashSet<Guid> filed;
+        MonthShared shared;
         await using (var scope = scopes.CreateAsyncScope())
         {
             candidates = (await CandidatesAsync(scope.ServiceProvider, first, last, from, to, ct)).Where(id => only is null || only.Contains(id)).ToList();
             filed = (await scope.ServiceProvider.GetRequiredService<ICustomerDocuments>().FiledAsync(StoredDocumentKinds.ParasollMonthly, [key], ct))
                 .Select(f => f.OrganizationId).ToHashSet();
+            // What every customer's summary reads of the whole month is read once for the round.
+            shared = new MonthShared(
+                (await scope.ServiceProvider.GetRequiredService<IBackupApi>().GetOrganizationsAsync("cloudally", ct)).ToHashSet(),
+                (await scope.ServiceProvider.GetRequiredService<ITimeTrackingApi>().GetHoursByOrganizationAsync(first, last, ct))
+                    .GroupBy(h => h.OrganizationId).ToDictionary(g => g.Key, g => g.First()));
         }
 
         int created = 0, before = 0, failed = 0;
@@ -104,7 +110,7 @@ internal sealed class CustomerMonthReports(
             var documents = scope.ServiceProvider.GetRequiredService<ICustomerDocuments>();
             try
             {
-                var snapshot = await ComposeAsync(scope.ServiceProvider, organizationId, first, last, from, to, today, ct);
+                var snapshot = await ComposeAsync(scope.ServiceProvider, organizationId, first, last, from, to, today, shared, ct);
                 if (snapshot is null)
                 {
                     continue;
@@ -134,8 +140,9 @@ internal sealed class CustomerMonthReports(
     }
 
     /// <summary>Gathers one customer's month; null when the customer is no longer there.</summary>
-    public async Task<CustomerMonthSnapshot?> ComposeAsync(
-        IServiceProvider services, Guid organizationId, DateOnly first, DateOnly last, DateTimeOffset from, DateTimeOffset to, DateOnly today, CancellationToken ct)
+    private async Task<CustomerMonthSnapshot?> ComposeAsync(
+        IServiceProvider services, Guid organizationId, DateOnly first, DateOnly last, DateTimeOffset from, DateTimeOffset to, DateOnly today, MonthShared shared,
+        CancellationToken ct)
     {
         var customers = services.GetRequiredService<ICustomersApi>();
         if (await customers.GetOrganizationAsync(organizationId, ct) is not { } organization)
@@ -149,10 +156,8 @@ internal sealed class CustomerMonthReports(
         var security = reports.Where(r => r.PeriodStart is { } start && start <= last)
             .Select(r => new SecurityMonth(r.System, r.IncidentsReported, r.IncidentsResolved, r.SignalsDetected, r.SignalsInvestigated, r.AgentsCount))
             .ToList();
-        var backupSystems = await services.GetRequiredService<IBackupApi>().GetOrganizationsAsync("cloudally", ct);
-        var backup = backupSystems.Contains(organizationId) ? await services.GetRequiredService<IBackupFacts>().GetStateAsync(organizationId, ct) : null;
-        var hours = (await services.GetRequiredService<ITimeTrackingApi>().GetHoursByOrganizationAsync(first, last, ct))
-            .FirstOrDefault(h => h.OrganizationId == organizationId);
+        var backup = shared.BackedUp.Contains(organizationId) ? await services.GetRequiredService<IBackupFacts>().GetStateAsync(organizationId, ct) : null;
+        var hours = shared.Hours.GetValueOrDefault(organizationId);
         var provenance = BiSnapshotService.ProvenanceOf(today, last, options.Value.SnapshotTimelyDays) == "Captured"
             ? StoredDocumentProvenance.Captured
             : StoredDocumentProvenance.Reconstructed;
@@ -161,6 +166,9 @@ internal sealed class CustomerMonthReports(
             service, devices is null || devices.Counts.Count == 0 ? null : new DeviceMonth(devices.Counts, devices.SnapshotDate), security, backup,
             hours?.Hours, hours?.BilledHours);
     }
+
+    /// <summary>The month's facts of every customer at once: who has a CloudAlly account, and the hours per customer.</summary>
+    private sealed record MonthShared(HashSet<Guid> BackedUp, Dictionary<Guid, HoursByOrganization> Hours);
 
     public static string FileName(DateOnly monthStart) => string.Create(CultureInfo.InvariantCulture, $"parasoll-{monthStart:yyyy-MM}.pdf");
 

@@ -78,18 +78,43 @@ internal sealed class AteraCreateCustomerAction(
         return found;
     }
 
+    /// <summary>
+    /// A customer someone made in Atera without an organization number, named like ours: the key search cannot find it, and it is not
+    /// created a second time. A namesake with another organization number is another company.
+    /// </summary>
+    protected override async Task<IReadOnlyList<VendorCustomerRecord>> FindByNameAsync(OrganizationSyncView organization, CancellationToken ct)
+    {
+        if (AteraMapping.OrgNumber(organization.OrgNumber) is null)
+        {
+            return [];
+        }
+
+        var name = organization.Name.Trim();
+        var found = new List<VendorCustomerRecord>();
+        await foreach (var customer in client.GetCustomersAsync(ct))
+        {
+            if (AteraMapping.OrgNumber(customer.BusinessNumber) is null && string.Equals(customer.Name.Trim(), name, StringComparison.OrdinalIgnoreCase))
+            {
+                found.Add(Record(customer));
+            }
+        }
+
+        return found;
+    }
+
     protected override async Task<VendorCustomerRecord> CreateAsync(OrganizationSyncView organization, JsonElement parameters, CancellationToken ct)
     {
         var write = AteraMapping.ToWrite(organization);
         var id = await client.CreateCustomerAsync(write, ct);
-        // Atera answers a create with the new id only. The record is read back for the mapping screen; when that read fails, what was
-        // sent stands in until the next customer read stores Atera's own copy.
+        // Atera answers a create with the new id only. The record is read back for the mapping screen; when that read fails in any way
+        // (a 404 while Atera has not listed it yet), what was sent stands in until the next customer read stores Atera's own copy: the
+        // id is known, so the read never decides the create's outcome.
         AteraCustomer? created = null;
         try
         {
             created = await client.GetCustomerAsync(id, ct);
         }
-        catch (Exception ex) when (AteraConversationReader.IsReadFailure(ex, ct))
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
         }
 

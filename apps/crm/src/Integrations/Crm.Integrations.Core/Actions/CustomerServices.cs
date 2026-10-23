@@ -20,9 +20,10 @@ public sealed record CustomerServiceLink(string ExternalId, string? Name, DateTi
 /// <summary>
 /// One vendor the customer can be connected to (M43, the "Connect services" wizard): whether its integration is on here, the record the
 /// customer is linked to, and otherwise whether this person may create it now. <paramref name="Block"/> is the code of what refuses the
-/// creation (the integration is off, creating is not switched on, the allow-list, no access) — the same codes the preview gives.
-/// <paramref name="Defaults"/> are the parameters the wizard starts from; <paramref name="ConsoleUrl"/> leads to the vendor's console for
-/// what its API cannot do, when configured.
+/// creation (the integration is off, creating is not switched on, the allow-list, no access, a record named like the customer that no
+/// customer is linked to, an earlier request without an outcome) — the same codes the preview gives; <paramref name="Existing"/> names
+/// that record. <paramref name="Defaults"/> are the parameters the wizard starts from; <paramref name="ConsoleUrl"/> leads to the vendor's
+/// console for what its API cannot do, when configured.
 /// </summary>
 public sealed record CustomerService(
     string System,
@@ -32,7 +33,8 @@ public sealed record CustomerService(
     string? Block,
     bool Simulated,
     IReadOnlyDictionary<string, string?> Defaults,
-    string? ConsoleUrl);
+    string? ConsoleUrl,
+    string? Existing = null);
 
 public sealed record CustomerServices(Guid OrganizationId, string Name, IReadOnlyList<CustomerService> Services);
 
@@ -69,6 +71,23 @@ public sealed class CustomerServiceReader(
             .Where(r => linkedIds.Contains(r.ExternalId))
             .Select(r => new { r.System, r.ExternalType, r.ExternalId, r.DisplayName })
             .ToListAsync(ct);
+        // Records named like the customer that no customer is linked to (SQL Server compares without case): someone made them in the
+        // console, and the wizard offers the mapping screen instead of a second record.
+        var name = organization.Name.Trim();
+        var namesakes = await db.ExternalRecords.AsNoTracking()
+            .Where(r => !r.IsGone && r.DisplayName == name)
+            .Where(r => !db.ExternalLinks.Any(l => l.System == r.System && l.ExternalType == r.ExternalType && l.ExternalId == r.ExternalId))
+            .Select(r => new { r.System, r.ExternalType, r.DisplayName })
+            .ToListAsync(ct);
+        // A creation asked earlier that has no outcome yet: nothing more is asked until a person settles it.
+        var target = organizationId.ToString("D");
+        var kinds = creators.Select(c => c.Kind).ToList();
+        var open = await db.VendorActions.AsNoTracking()
+            .Where(a => a.TargetType == VendorActionTargets.Organization && a.TargetId == target && kinds.Contains(a.Kind))
+            .Where(a => a.Status == VendorActionStatus.Scheduled || a.Status == VendorActionStatus.Queued || a.Status == VendorActionStatus.Sending ||
+                        a.Status == VendorActionStatus.Uncertain)
+            .Select(a => new { a.System, a.Kind })
+            .ToListAsync(ct);
 
         var services = new List<CustomerService>();
         foreach (var creator in creators)
@@ -80,12 +99,18 @@ public sealed class CustomerServiceReader(
                 : new CustomerServiceLink(link.ExternalId,
                     names.FirstOrDefault(n => n.System == link.System && n.ExternalType == link.ExternalType && n.ExternalId == link.ExternalId)?.DisplayName,
                     link.LinkedAt, link.Method);
+            var existing = linked is null
+                ? namesakes.FirstOrDefault(n => n.System == creator.System && n.ExternalType == creator.ExternalType)?.DisplayName
+                : null;
             var block = linked is not null ? null
                 : !user.HasPermission(creator.Permission) ? "VND_FORBIDDEN"
-                : VendorActionRules.CheckSwitches(switches, creator.Kind, null, credentials: false, organizationId)?.Code;
+                : VendorActionRules.CheckSwitches(switches, creator.Kind, null, credentials: false, organizationId)?.Code
+                  ?? (open.Any(a => a.System == creator.System && a.Kind == creator.Kind) ? "VND_EARLIER_ATTEMPT_OPEN"
+                      : existing is not null ? "VND_EXISTS_AT_VENDOR"
+                      : null);
             services.Add(new CustomerService(
                 creator.System, creator.Kind, switches?.Enabled == true, linked, block, switches?.DryRun == true, creator.Defaults(organization),
-                creator.ConsoleUrl));
+                creator.ConsoleUrl, block == "VND_EXISTS_AT_VENDOR" ? existing : null));
         }
 
         return new CustomerServices(organization.Id, organization.Name, services);

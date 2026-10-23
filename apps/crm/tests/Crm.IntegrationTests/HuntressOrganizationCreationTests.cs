@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Crm.Authorization;
 using Crm.Integrations.Core.Actions;
@@ -126,6 +128,109 @@ public sealed class HuntressOrganizationCreationTests(CrmWebFactory factory)
     }
 
     [Fact]
+    public async Task An_unanswered_request_holds_back_the_next_until_a_person_settles_it_and_not_done_frees_the_way()
+    {
+        await using var host = HuntressHost.Start(factory, kinds: [Kind]);
+        var admin = host.Client();
+        var (organizationId, name) = await NewCustomerAsync(admin, "Snøtind");
+        var key = $"snotind-{Guid.NewGuid():N}"[..18];
+        var id = TestData.AteraId();
+        host.List("/v1/organizations", "organizations", [], ("key", key));
+        // The first POST gets no answer and Huntress made nothing; the next one is answered.
+        var post = Request.Create().WithPath("/v1/organizations").UsingPost();
+        host.Huntress.Given(post).InScenario(key).WillSetStateTo("answered").RespondWith(Response.Create().WithStatusCode(502));
+        host.Huntress.Given(post).InScenario(key).WhenStateIs("answered").RespondWith(JsonReply(new { organization = Organization(id, name, key) }, 201));
+
+        var firstId = await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key });
+        await host.RunActionAsync(firstId);
+        await DueNowAsync(host.Services, firstId);
+        (await host.RunActionAsync(firstId)).OutcomeCode.ShouldBe("VND_CREATE_NOT_FOUND");
+
+        // Until a person settles it, the wizard and the preview say so, whatever key is asked for.
+        (await admin.ServicesAsync(organizationId))[HuntressTypes.System].GetProperty("block").GetString().ShouldBe("VND_EARLIER_ATTEMPT_OPEN");
+        (await admin.PreviewCreateAsync(HuntressTypes.System, Kind, organizationId, new { key })).BlockCode().ShouldBe("VND_EARLIER_ATTEMPT_OPEN");
+        (await admin.PreviewCreateAsync(HuntressTypes.System, Kind, organizationId, new { key = key + "-2" })).BlockCode().ShouldBe("VND_EARLIER_ATTEMPT_OPEN");
+
+        // A person checked in Huntress: nothing was made. The next request creates the organization.
+        await SettleAsync(admin, firstId, "Failed", "Checked in Huntress: no organization with the key.");
+        (await admin.ServicesAsync(organizationId))[HuntressTypes.System].GetProperty("block").ValueKind.ShouldBe(JsonValueKind.Null);
+        var second = await host.RunActionAsync(await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key }));
+
+        (second.Status, second.OutcomeCode).ShouldBe((VendorActionStatus.Succeeded, "VND_CREATED"));
+        host.Count("POST", "/v1/organizations").ShouldBe(2);
+        (await LinkAsync(host.Services, organizationId, HuntressTypes.System))!.ExternalId.ShouldBe(id.ToString(CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public async Task An_earlier_attempt_with_another_key_never_makes_an_organization_with_the_new_key_ours()
+    {
+        await using var host = HuntressHost.Start(factory, kinds: [Kind]);
+        var admin = host.Client();
+        var (organizationId, _) = await NewCustomerAsync(admin, "Varden");
+        var (first, other) = ($"varden-{Guid.NewGuid():N}"[..17], $"varden-{Guid.NewGuid():N}"[..17]);
+        host.List("/v1/organizations", "organizations", [], ("key", first));
+        // Another technician made an organization with the second key for another customer; no read has stored it yet.
+        host.List("/v1/organizations", "organizations", [Organization(TestData.AteraId(), "Varden Sør AS", other)], ("key", other));
+        host.On("POST", "/v1/organizations").RespondWith(Response.Create().WithStatusCode(502));
+
+        var firstId = await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key = first });
+        await host.RunActionAsync(firstId);
+        await DueNowAsync(host.Services, firstId);
+        (await host.RunActionAsync(firstId)).OutcomeCode.ShouldBe("VND_CREATE_NOT_FOUND");
+        // The person says the first one happened after all; the next request asks for the other key.
+        await SettleAsync(admin, firstId, "Succeeded", "Made in Huntress under the first key, it seems.");
+
+        var second = await host.RunActionAsync(await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key = other }));
+
+        (second.Status, second.OutcomeCode).ShouldBe((VendorActionStatus.Rejected, "VND_EXISTS_AT_VENDOR"), "an attempt with another key made nothing with this one");
+        host.Count("POST", "/v1/organizations").ShouldBe(1);
+        (await LinkAsync(host.Services, organizationId, HuntressTypes.System)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_create_that_cannot_be_read_back_stays_open_and_the_next_attempt_links_it()
+    {
+        await using var host = HuntressHost.Start(factory, kinds: [Kind]);
+        var admin = host.Client();
+        var (organizationId, name) = await NewCustomerAsync(admin, "Bølgen");
+        var key = $"bolgen-{Guid.NewGuid():N}"[..17];
+        var id = TestData.AteraId();
+        // Huntress answers the POST without the organization, and the read that follows is refused once.
+        var search = Request.Create().WithPath("/v1/organizations").UsingGet().WithParam("key", key);
+        host.Huntress.Given(search).InScenario(key).RespondWith(Page([]));
+        host.Huntress.Given(Request.Create().WithPath("/v1/organizations").UsingPost()).InScenario(key).WillSetStateTo("made")
+            .RespondWith(JsonReply(new { }, 201));
+        host.Huntress.Given(search).InScenario(key).WhenStateIs("made").WillSetStateTo("readable").RespondWith(Response.Create().WithStatusCode(404));
+        host.Huntress.Given(search).InScenario(key).WhenStateIs("readable").RespondWith(Page([Organization(id, name, key)]));
+
+        var actionId = await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key });
+        var first = await host.RunActionAsync(actionId);
+        (first.Status, first.MayHaveSent).ShouldBe((VendorActionStatus.Queued, true), "a 404 after the create is not a refusal of it");
+        await DueNowAsync(host.Services, actionId);
+        var second = await host.RunActionAsync(actionId);
+
+        (second.Status, second.OutcomeCode).ShouldBe((VendorActionStatus.Succeeded, "VND_CREATED_EARLIER"));
+        host.Count("POST", "/v1/organizations").ShouldBe(1);
+        (await LinkAsync(host.Services, organizationId, HuntressTypes.System))!.ExternalId.ShouldBe(id.ToString(CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public async Task An_organization_named_like_the_customer_that_nobody_linked_is_offered_for_linking_instead()
+    {
+        await using var host = HuntressHost.Start(factory, kinds: [Kind]);
+        var admin = host.Client();
+        var (organizationId, name) = await NewCustomerAsync(admin, "Skogly");
+        // Someone made it in Huntress's console under a key of their own; the last read stored it.
+        host.List("/v1/organizations", "organizations", [Organization(TestData.AteraId(), name.ToUpperInvariant(), "skogly-by-hand")]);
+        await host.RunJobAsync<HuntressOrganizationSyncJob>(job => job.RunAsync(Ct));
+
+        var huntress = (await admin.ServicesAsync(organizationId))[HuntressTypes.System];
+        (huntress.GetProperty("block").GetString(), huntress.GetProperty("existing").GetString()).ShouldBe(("VND_EXISTS_AT_VENDOR", name.ToUpperInvariant()));
+        (await admin.PreviewCreateAsync(HuntressTypes.System, Kind, organizationId, new { key = $"skogly-{Guid.NewGuid():N}"[..17] }))
+            .BlockCode().ShouldBe("VND_EXISTS_AT_VENDOR");
+    }
+
+    [Fact]
     public async Task A_refusal_creates_nothing_and_a_later_request_may_try_again()
     {
         await using var host = HuntressHost.Start(factory, kinds: [Kind]);
@@ -206,6 +311,16 @@ public sealed class HuntressOrganizationCreationTests(CrmWebFactory factory)
 
         (await admin.ServicesAsync(organizationId))[HuntressTypes.System].GetProperty("block").GetString().ShouldBe("VND_KIND_DISABLED");
         (await admin.PreviewCreateAsync(HuntressTypes.System, Kind, organizationId, new { key = "avslatt" })).BlockCode().ShouldBe("VND_KIND_DISABLED");
+    }
+
+    /// <summary>A person's word on an uncertain action, as the action log sends it.</summary>
+    private static async Task SettleAsync(HttpClient admin, Guid actionId, string outcome, string reason)
+    {
+        var action = await admin.GetFromJsonAsync<JsonElement>($"/api/v1/actions/{actionId}", Ct);
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/actions/{actionId}/settle") { Content = JsonContent.Create(new { outcome, reason }) };
+        request.Headers.TryAddWithoutValidation("If-Match", action.GetProperty("etag").GetString());
+        var response = await admin.SendAsync(request, Ct);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
     }
 
     private static async Task<(Guid Id, string Name)> NewCustomerAsync(HttpClient admin, string prefix)

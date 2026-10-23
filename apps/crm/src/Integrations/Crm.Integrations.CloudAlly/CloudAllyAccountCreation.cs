@@ -124,6 +124,22 @@ internal sealed class CloudAllyCreateAccountAction(
         return found;
     }
 
+    /// <summary>An open account someone made in CloudAlly with another address, named like the customer: not created a second time.</summary>
+    protected override async Task<IReadOnlyList<VendorCustomerRecord>> FindByNameAsync(OrganizationSyncView organization, CancellationToken ct)
+    {
+        var name = organization.Name.Trim();
+        var found = new List<VendorCustomerRecord>();
+        await foreach (var account in client.GetAccountsAsync(ct))
+        {
+            if (!Closed(account.Status) && string.Equals(CloudAllyMapping.Name(account).Trim(), name, StringComparison.OrdinalIgnoreCase))
+            {
+                found.Add(Record(account));
+            }
+        }
+
+        return found;
+    }
+
     protected override async Task<VendorCustomerRecord> CreateAsync(OrganizationSyncView organization, JsonElement parameters, CancellationToken ct)
     {
         var email = Email(parameters)!;
@@ -133,11 +149,21 @@ internal sealed class CloudAllyCreateAccountAction(
             return Record(created);
         }
 
-        // CloudAlly answered without the account: it is found by its address, the way a later attempt would find it.
-        var found = await FindAsync(organization, parameters, ct);
+        // CloudAlly answered without the account: it is found by its address, the way a later attempt would find it. Whatever goes
+        // wrong in that read, the create was taken, so the attempt stays open and the next one looks again.
+        IReadOnlyList<VendorCustomerRecord> found;
+        try
+        {
+            found = await FindAsync(organization, parameters, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            throw new CustomerCreatedUnreadException("CloudAlly took the account, but it could not be read back; it is looked for again.", ex);
+        }
+
         return found.Count == 1
             ? found[0]
-            : throw new CloudAllyApiException(HttpStatusCode.OK, "CloudAlly created the account without saying which; it is looked for again.");
+            : throw new CustomerCreatedUnreadException("CloudAlly created the account without saying which; it is looked for again.");
     }
 
     protected override VendorFailure Classify(Exception exception, CancellationToken ct) => exception switch
