@@ -8,6 +8,7 @@ using Crm.Billing.Persistence;
 using Crm.Security.Contracts;
 using Crm.Security.Domain;
 using Crm.Security.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static Crm.IntegrationTests.IntegrationTestHelpers;
 
@@ -70,7 +71,13 @@ public sealed class ServiceQuantityBillingTests(CrmWebFactory factory)
         missingAnomalies.Select(a => a.Code).ShouldContain("BIL_NO_SEAT_READING");
         missingAnomalies.Single(a => a.Code == "BIL_NO_AGENT_READING").Product.ShouldBe("Huntress per agent");
 
-        (await SignalAsync()).ShouldBe(before + 2, "the stale and the missing basis are estimated; the counted one is not");
+        // The run bills every customer whose contract covers the month, another class's too, so the signal is compared with the
+        // run's own estimated bases: the stale and the missing one are among them, the counted one is not.
+        var estimated = await EstimatedBasesAsync(runId);
+        estimated.ShouldContain(stale.OrganizationId);
+        estimated.ShouldContain(missing.OrganizationId);
+        estimated.ShouldNotContain(counted.OrganizationId);
+        (await SignalAsync()).ShouldBe(before + estimated.Count, "every estimated basis of the run counts once, a missing count among them");
     }
 
     [Fact]
@@ -153,6 +160,18 @@ public sealed class ServiceQuantityBillingTests(CrmWebFactory factory)
         factory.RunJobAsync<IBackupApi>(api => api.ApplyBillsAsync(BackupSources.CloudAlly, day,
             [.. lines.Select(l => new ExternalBackupBillLine(l.Account, organizationId, "BACKUP", l.Source, l.Source == "MS365" ? "Exchange" : "OneDrive", l.Seats,
                 l.Seats, 2.5m, 2.5m * l.Seats, "EUR", "MONTHLY", null))], Ct));
+
+    /// <summary>The customers of the run whose basis carries a code of an estimated quantity, the way the signal reads them.</summary>
+    private async Task<List<Guid>> EstimatedBasesAsync(Guid runId)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var bases = await scope.ServiceProvider.GetRequiredService<BillingDbContext>().BillingBases.AsNoTracking()
+            .Where(b => b.RunId == runId)
+            .Select(b => new { b.OrganizationId, b.AnomaliesJson })
+            .ToListAsync(Ct);
+        return [.. bases.Where(b => b.AnomaliesJson is { } json && BillingOperationalSignals.EstimatedCodes.Any(code => json.Contains(code, StringComparison.Ordinal)))
+            .Select(b => b.OrganizationId)];
+    }
 
     private async Task<int> SignalAsync()
     {

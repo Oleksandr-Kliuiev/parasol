@@ -14,7 +14,7 @@ public sealed class BillingOperationalSignals(BillingDbContext db, TimeProvider 
     /// The anomaly codes of a basis built from a stale reading, no daily device count, an incomplete hours import, or (M43) no count of
     /// Huntress agents or CloudAlly seats. Matched as text in the stored anomalies, so no code may contain another.
     /// </summary>
-    private static readonly string[] EstimatedCodes =
+    internal static readonly string[] EstimatedCodes =
         ["BIL_STALE_QUANTITY", "BIL_NO_DEVICE_SNAPSHOT", "BIL_INCOMPLETE_HOURS", "BIL_NO_AGENT_READING", "BIL_NO_SEAT_READING"];
 
     public async Task<IReadOnlyList<OperationalSignal>> ReadAsync(CancellationToken cancellationToken)
