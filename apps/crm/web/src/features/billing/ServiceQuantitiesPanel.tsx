@@ -28,8 +28,9 @@ const useStyles = makeStyles({
     whiteSpace: 'nowrap',
     '& .fui-TableHeaderCell__button': { justifyContent: 'flex-end' },
   },
-  seatsColumn: { width: '72px' },
-  moneyColumn: { width: '96px' },
+  // Narrow enough to leave a phone's name column room for "SharePoint" in one piece, wide enough for a four-figure total.
+  seatsColumn: { width: '64px' },
+  moneyColumn: { width: '88px' },
   skeleton: { display: 'grid', gap: '8px' },
 });
 

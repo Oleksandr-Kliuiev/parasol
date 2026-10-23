@@ -162,12 +162,21 @@ public abstract class CustomerCreationAction(
     /// The journal's earlier create attempts for the customer that count for this request (DEV-19): this action's own, those of the
     /// mapping screen's export (no action of their own), and those of another request with the same parameters (the same key) that a
     /// person did not settle as not done. Another request that has no outcome yet makes <c>OtherOpen</c>: nothing is created while it
-    /// may still be, and an attempt with another key is never taken for ours.
+    /// may still be, and an attempt with another key is never taken for ours. Attempts before a person last settled a request of this
+    /// kind for the customer as not done count no more: that person checked the vendor after them (a record removed at the vendor
+    /// after its link was taken off can be created again).
     /// </summary>
     private async Task<(List<ExternalEffectEntry> Counted, bool OtherOpen)> EarlierAttemptsAsync(
         Guid organizationId, Guid? operationId, string parameters, CancellationToken ct)
     {
-        var entries = (await journal.ForEntityAsync(EntityTypes.Organization, organizationId, ct)).Where(e => e.System == System && e.Kind == EffectKind).ToList();
+        var target = organizationId.ToString("D");
+        var checkedAt = await db.VendorActions.AsNoTracking()
+            .Where(a => a.TargetType == VendorActionTargets.Organization && a.TargetId == target && a.System == System && a.Kind == Kind &&
+                        a.OutcomeCode == SettledNotDone)
+            .MaxAsync(a => a.ClosedAt, ct);
+        var entries = (await journal.ForEntityAsync(EntityTypes.Organization, organizationId, ct))
+            .Where(e => e.System == System && e.Kind == EffectKind && (checkedAt is null || e.At > checkedAt))
+            .ToList();
         var others = entries.Select(e => e.OperationId).OfType<Guid>().Where(o => o != operationId).Distinct().ToList();
         var actions = others.Count == 0
             ? []

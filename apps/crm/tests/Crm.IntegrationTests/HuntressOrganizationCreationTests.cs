@@ -162,6 +162,32 @@ public sealed class HuntressOrganizationCreationTests(CrmWebFactory factory)
     }
 
     [Fact]
+    public async Task An_organization_removed_in_huntress_after_its_link_was_taken_off_is_created_again_once_a_person_says_so()
+    {
+        await using var host = HuntressHost.Start(factory, kinds: [Kind]);
+        var admin = host.Client();
+        var (organizationId, name) = await NewCustomerAsync(admin, "Furulund");
+        var key = $"furulund-{Guid.NewGuid():N}"[..19];
+        var id = TestData.AteraId();
+        host.List("/v1/organizations", "organizations", [], ("key", key));
+        host.On("POST", "/v1/organizations").RespondWith(JsonReply(new { organization = Organization(id, name, key) }, 201));
+        (await host.RunActionAsync(await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key }))).OutcomeCode.ShouldBe("VND_CREATED");
+
+        // The organization was removed in Huntress and its link taken off: the created attempt still says it may exist.
+        var link = (await LinkAsync(host.Services, organizationId, HuntressTypes.System))!;
+        (await admin.DeleteAsync($"/api/v1/integrations/links/{link.Id}", Ct)).IsSuccessStatusCode.ShouldBeTrue();
+        var waiting = await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key });
+        (await host.RunActionAsync(waiting)).OutcomeCode.ShouldBe("VND_CREATE_NOT_FOUND");
+
+        // A person checked Huntress after it: nothing there. The attempts before that check count no more.
+        await SettleAsync(admin, waiting, "Failed", "Checked in Huntress: the organization was removed.");
+        var again = await host.RunActionAsync(await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key }));
+
+        (again.Status, again.OutcomeCode).ShouldBe((VendorActionStatus.Succeeded, "VND_CREATED"));
+        host.Count("POST", "/v1/organizations").ShouldBe(2);
+    }
+
+    [Fact]
     public async Task An_earlier_attempt_with_another_key_never_makes_an_organization_with_the_new_key_ours()
     {
         await using var host = HuntressHost.Start(factory, kinds: [Kind]);
