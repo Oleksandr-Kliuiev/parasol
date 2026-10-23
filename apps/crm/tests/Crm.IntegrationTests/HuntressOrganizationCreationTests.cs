@@ -173,9 +173,12 @@ public sealed class HuntressOrganizationCreationTests(CrmWebFactory factory)
         host.On("POST", "/v1/organizations").RespondWith(JsonReply(new { organization = Organization(id, name, key) }, 201));
         (await host.RunActionAsync(await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key }))).OutcomeCode.ShouldBe("VND_CREATED");
 
-        // The organization was removed in Huntress and its link taken off: the created attempt still says it may exist.
+        // The organization was removed in Huntress, the next read of its organizations saw it gone, and its link was taken off:
+        // the created attempt still says it may exist.
         var link = (await LinkAsync(host.Services, organizationId, HuntressTypes.System))!;
         (await admin.DeleteAsync($"/api/v1/integrations/links/{link.Id}", Ct)).IsSuccessStatusCode.ShouldBeTrue();
+        host.List("/v1/organizations", "organizations", []);
+        await host.RunJobAsync<HuntressOrganizationSyncJob>(job => job.RunAsync(Ct));
         var waiting = await admin.AskCreateAsync(HuntressTypes.System, Kind, organizationId, new { key });
         (await host.RunActionAsync(waiting)).OutcomeCode.ShouldBe("VND_CREATE_NOT_FOUND");
 
