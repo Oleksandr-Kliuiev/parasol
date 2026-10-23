@@ -97,4 +97,8 @@ Control routes for tests (not CloudAlly's API, no token):
 | `POST /_mock/cloudally/entities/{entity}` | `state`, `error` | `200`: the entity's backup is now in that state. |
 | `GET /_mock/cloudally/log` | — | `200`: every change the CRM asked for (method, path, body), oldest first. |
 
+## Teams channels (M43)
+
+`teams.mjs` stands in for the Power Automate Workflows webhooks of the team channels: `POST /teams/{channel}` (`sales`, `finance`, `operations`) takes the message the CRM posts — `{type: "message", attachments: [{contentType: "application/vnd.microsoft.card.adaptive", content}]}` — and answers `202`; anything else `400`. Start crm-worker with `--Integrations:MicrosoftGraph:Teams:Enabled=true --Integrations:MicrosoftGraph:Teams:Channels:Operations=http://localhost:5299/teams/operations` (a loopback `http` address is the only one allowed outside the Workflows hosts) to see urgent alerts arrive. `GET /_mock/teams/posts?channel=operations` lists the cards received, oldest first, flattened to `{channel, at, title, text, facts: [{title, value}], link, linkText}`; `DELETE /_mock/teams/posts` empties the list.
+
 Data lives in memory and resets on restart. Never point test or production hosts at it.

@@ -5,6 +5,7 @@ using Crm.Notifications.Contracts;
 using Crm.Notifications.Domain;
 using Crm.Notifications.Persistence;
 using Crm.Sales.Contracts;
+using Crm.Service.Contracts;
 using Crm.SharedKernel.Domain;
 using Crm.SharedKernel.Operations;
 using Microsoft.EntityFrameworkCore;
@@ -105,10 +106,12 @@ internal sealed class BillingRunTeamsHandler(
 /// outcome only while it still holds the card; a failed send is tried again later with a growing pause and given up after
 /// <see cref="ChannelPost.MaxAttempts"/> attempts. A webhook has no idempotency key, so a send that timed out after Teams
 /// had taken it can still appear twice — the one duplicate left, and only for a notice; the event itself is never sent twice.
+/// A notice (M43) gets its card here, from what the CRM knows when it is sent; one whose subject is no longer so is skipped
+/// before anything is journaled or sent.
 /// </summary>
 public sealed class ChannelPostJob(
-    NotificationsDbContext db, ITeamsChannelSender teams, TimeProvider time, IMaintenanceGate maintenance, IExternalEffectJournal journal,
-    ILogger<ChannelPostJob> logger)
+    NotificationsDbContext db, ITeamsChannelSender teams, ChannelNotices notices, TimeProvider time, IMaintenanceGate maintenance,
+    IExternalEffectJournal journal, ILogger<ChannelPostJob> logger)
 {
     /// <summary>Journal kind and record type of a channel post (DEV-13).</summary>
     public const string EffectKind = "channel-post";
@@ -157,6 +160,26 @@ public sealed class ChannelPostJob(
                 continue;
             }
 
+            NoticeCard card;
+            try
+            {
+                card = await notices.CardAsync(post, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                // The CRM could not be read for the card: nothing was sent, so the post waits like a failed send.
+                logger.LogWarning("Channel post {PostId}: its card could not be made ({ErrorType})", id, ex.GetType().Name);
+                await SettleAsync(id, token, attempts >= ChannelPost.MaxAttempts ? ChannelPostStatus.Failed : ChannelPostStatus.Pending, attempts,
+                    time.GetUtcNow().AddMinutes(Math.Min(60, Math.Pow(2, attempts - 1))), "The card could not be made: " + ex.GetType().Name);
+                continue;
+            }
+
+            if (card.Card is null)
+            {
+                await SettleAsync(id, token, ChannelPostStatus.Skipped, attempts, null, card.Skipped);
+                continue;
+            }
+
             ExternalEffectEntry effect;
             try
             {
@@ -172,7 +195,7 @@ public sealed class ChannelPostJob(
 
             try
             {
-                await teams.SendAsync(post.Channel, post.Card, cancellationToken);
+                await teams.SendAsync(post.Channel, card.Card, cancellationToken);
                 await journal.CompleteAsync(effect, EffectPhase.Sent, null, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
@@ -235,4 +258,24 @@ public sealed class TeamsNotificationOptions
     public const string SectionName = "Integrations:MicrosoftGraph:Teams";
 
     public decimal WonDealThreshold { get; set; } = 100_000m;
+
+    /// <summary>
+    /// The language of the cards whose words are made when they are sent (M43: urgent alerts): <c>nb</c> or <c>en</c>; a nynorsk
+    /// channel gets bokmål, as the digest does.
+    /// </summary>
+    public string Language { get; set; } = "nb";
+
+    /// <summary>Urgent alerts in the operations channel (M43); the channel itself is <c>Channels:Operations</c>.</summary>
+    public UrgentAlertOptions UrgentAlerts { get; set; } = new();
+}
+
+/// <summary>Which urgent alerts reach the operations channel (M43): on by default once the channel has a webhook.</summary>
+public sealed class UrgentAlertOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>The kinds of alert announced (<c>Monitoring</c>, <c>Security</c>, <c>Backup</c>); empty, every kind.</summary>
+    public List<AlertKind> Kinds { get; set; } = [];
+
+    public bool Covers(AlertKind kind) => Kinds.Count == 0 || Kinds.Contains(kind);
 }
