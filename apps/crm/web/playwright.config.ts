@@ -72,6 +72,10 @@ const hostArgs = [
     'account.create']
     .map((kind, index) => `--Integrations:CloudAlly:EnabledActions:${index}=${kind}`),
   ...['AccountSyncCron', 'BackupSyncCron', 'BillSyncCron'].map((cron) => `--Integrations:CloudAlly:${cron}="0 0 31 2 *"`),
+  // CloudAlly publishes no limit and Parasoll keeps to 120 requests a minute. A backups read asks for every linked account's tasks,
+  // the stand-in gathers the accounts of every engine's tests, and three browsers wait on one read, so by the last engine a read
+  // outlasted a test's wait (M43): the stand-in is given more, as Huntress's is (never CloudAlly's own address).
+  '--Integrations:CloudAlly:RequestsPerMinute=1200',
   '--RateLimits:ApiPerMinute=100000',
   // Every test signs in through the development entry point from one address; the real budget has its own integration test.
   '--RateLimits:SignInPerMinute=100000',
