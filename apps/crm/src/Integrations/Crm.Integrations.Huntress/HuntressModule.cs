@@ -46,6 +46,15 @@ public static class HuntressModule
         services.AddScoped<HuntressAgentSyncJob>();
         services.AddScoped<HuntressAlertSyncJob>();
         services.AddScoped<HuntressReportSyncJob>();
+        // M43: the reports' PDFs among the customer's documents, through a client of their own without the API's credentials and
+        // without automatic redirects (each hop is checked by the client itself).
+        services.AddHttpClient<HuntressReportFileClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromMinutes(2);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Parasoll/1.0");
+            })
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects);
+        services.AddScoped<HuntressReportFileJob>();
         services.AddScoped<HuntressReadBack>();
         // The actions (M41) on the one action path of M39.1, behind Huntress's own switches.
         services.AddScoped<IVendorActionGate, HuntressActionGate>();

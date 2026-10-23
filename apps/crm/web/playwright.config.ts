@@ -59,7 +59,9 @@ const hostArgs = [
   '--Integrations:Huntress:ActionRequestsPerMinute=600',
   ...['incident.approve', 'incident.reject', 'incident.step', 'incident.resolve', 'incident.comment', 'escalation.resolve', 'agent.isolate', 'agent.release',
     'agent.uninstall'].map((kind, index) => `--Integrations:Huntress:EnabledActions:${index}=${kind}`),
-  ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
+  ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron', 'ReportFileSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
+  // M43: the stand-in serves the reports' PDFs itself, on the loopback host the CRM reaches it on.
+  '--Integrations:Huntress:ReportFileHosts:0=localhost',
   // M42: CloudAlly's partner API on the stand-in; every kind of action on, the schedules off (tests start the reads).
   '--Integrations:CloudAlly:Enabled=true',
   `--Integrations:CloudAlly:BaseUrl=${mock}/cloudally/`,

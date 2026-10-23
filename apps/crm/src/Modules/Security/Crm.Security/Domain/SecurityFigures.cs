@@ -5,7 +5,7 @@ namespace Crm.Security.Domain;
 
 /// <summary>
 /// A summary report of one customer's period (M41), read only: its period, a few figures and the source's link to the PDF. M43 files
-/// the PDF among the customer's documents.
+/// the PDF among the customer's documents (<c>huntress-report-files</c>).
 /// </summary>
 public sealed class SummaryReport : Entity
 {
@@ -47,8 +47,11 @@ public sealed class SummaryReport : Entity
         Type = Incident.Cut(s.Type, 32) ?? "monthly_summary";
         PeriodStart = s.PeriodStart;
         PeriodEnd = s.PeriodEnd;
-        // Only an https link that fits is kept: anything else would lead somewhere else.
-        Url = Uri.TryCreate(s.Url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && s.Url!.Length <= Incident.UrlLength ? s.Url : null;
+        // Only an https link that fits is kept (http only to a loopback stand-in in development and tests): anything else would lead
+        // somewhere else, and the PDF behind it is fetched (M43).
+        Url = Uri.TryCreate(s.Url, UriKind.Absolute, out var uri) && Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(uri) && s.Url!.Length <= Incident.UrlLength
+            ? s.Url
+            : null;
         AgentsCount = s.AgentsCount;
         IncidentsReported = s.IncidentsReported;
         IncidentsResolved = s.IncidentsResolved;

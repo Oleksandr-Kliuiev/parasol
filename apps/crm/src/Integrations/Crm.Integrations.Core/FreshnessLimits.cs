@@ -27,6 +27,7 @@ public static class FreshnessLimits
         ["huntress-agents"] = ("Integrations:Huntress:AgentSyncCron", "35 * * * *"),
         ["huntress-alerts"] = ("Integrations:Huntress:AlertSyncCron", "*/5 * * * *"),
         ["huntress-reports"] = ("Integrations:Huntress:ReportSyncCron", "45 4 * * *"),
+        ["huntress-report-files"] = ("Integrations:Huntress:ReportFileSyncCron", "55 4 * * *"),
         ["cloudally-accounts"] = ("Integrations:CloudAlly:AccountSyncCron", "15 * * * *"),
         ["cloudally-backups"] = ("Integrations:CloudAlly:BackupSyncCron", "25 */2 * * *"),
         ["cloudally-bills"] = ("Integrations:CloudAlly:BillSyncCron", "40 4 * * *"),
