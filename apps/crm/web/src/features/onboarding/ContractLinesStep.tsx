@@ -12,14 +12,16 @@ const useStyles = makeStyles({
   content: { display: 'grid', gap: '14px', gridTemplateColumns: 'minmax(0, 1fr)' },
   muted: { color: h.muted, fontSize: '13px', lineHeight: '20px' },
   line: { display: 'grid', gap: '8px', paddingTop: '12px', borderTop: `1px solid ${h.line}` },
+  // One field under the other: a product's name (SKU and name) needs the width, and two labels side by side wrap unevenly and put
+  // their inputs out of line.
   fields: {
     display: 'grid',
     gap: '12px',
     paddingLeft: '32px',
-    gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-    alignItems: 'start',
-    '@media (max-width: 560px)': { gridTemplateColumns: 'minmax(0, 1fr)', paddingLeft: 0 },
+    gridTemplateColumns: 'minmax(0, 1fr)',
+    '@media (max-width: 560px)': { paddingLeft: 0 },
   },
+  quantity: { maxWidth: '160px' },
 });
 
 /**
@@ -73,8 +75,9 @@ export function ContractLinesStep({ contracts, loading, error, onRetry, contract
             const model = name.charAt(0).toLowerCase() + name.slice(1);
             const already = existing.some((l) => l.isCurrent && l.quantityModel === line.model);
             const productId = `contract-line-${line.system}-product`;
+            // Each line is a named group: its fields share their labels (Product, Quantity) with the other lines' fields.
             return (
-              <div key={line.system} className={styles.line}>
+              <div key={line.system} className={styles.line} role="group" aria-label={name}>
                 <Checkbox checked={line.add} label={t('onboarding.contract.add', { model })}
                   onChange={(_, d) => onLine({ ...line, add: d.checked === true, decided: true })} />
                 {already && <Text className={styles.muted}>{t('onboarding.contract.already', { model })}</Text>}
@@ -86,7 +89,7 @@ export function ContractLinesStep({ contracts, loading, error, onRetry, contract
                     </Field>
                     <Field label={t('onboarding.contract.estimate')} required hint={t('onboarding.contract.estimateHint')}
                       validationMessage={touched && !estimateValid(line.estimate) ? t('onboarding.contract.estimateInvalid') : undefined}>
-                      <Input inputMode="numeric" value={line.estimate} onChange={(_, d) => onLine({ ...line, estimate: d.value })} />
+                      <Input className={styles.quantity} inputMode="numeric" value={line.estimate} onChange={(_, d) => onLine({ ...line, estimate: d.value })} />
                     </Field>
                   </div>
                 )}

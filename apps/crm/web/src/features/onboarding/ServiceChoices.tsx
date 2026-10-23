@@ -2,7 +2,7 @@ import { Badge, Checkbox, Field, Input, Select, Text, makeStyles } from '@fluent
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
 import { AppLink } from '../../shared/components/AppLink';
-import { systemName } from '../integrations/labels';
+import { shortKey, systemName } from '../integrations/labels';
 import { choiceValid, emailValid, euRegions, keyValid, type CreateChoice, type CustomerService } from './connectServices';
 
 const useStyles = makeStyles({
@@ -55,7 +55,11 @@ export function ServiceChoices({ services, choices, touched, onChange }: {
               {service.link && <Badge appearance="tint" color="success">{t('onboarding.linkedBadge')}</Badge>}
             </div>
             {service.link ? (
-              <Text className={styles.muted}>{t('onboarding.linked', { name: service.link.name })}</Text>
+              <Text className={styles.muted}>
+                {service.link.name
+                  ? t('onboarding.linked', { name: service.link.name })
+                  : t('onboarding.linkedId', { id: shortKey(service.link.externalId), system })}
+              </Text>
             ) : service.block ? (
               <>
                 <Text className={styles.muted}>{t(`onboarding.blocks.${service.block}`, { system, defaultValue: t(`actions.codes.${service.block}`) })}</Text>

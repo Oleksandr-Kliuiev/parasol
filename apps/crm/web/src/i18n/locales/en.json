@@ -3020,6 +3020,7 @@
       "bill": {
         "title": "What CloudAlly bills",
         "day": "Bill of {{date}}",
+        "dayAccount": "Bill of {{date}} for the account {{account}}",
         "account": "Account",
         "service": "Service",
         "seats": "Users",
@@ -5495,6 +5496,7 @@
     "loadError": "The services could not be read.",
     "noneEnabled": "None of Atera, Huntress or CloudAlly is connected to Parasoll in this installation.",
     "linked": "Linked to “{{name}}”",
+    "linkedId": "Linked to #{{id}}; its name comes with the next read of {{system}}.",
     "linkedBadge": "Linked",
     "create": "Create in {{system}}",
     "simulated": "Test mode: {{system}} is read, nothing is created.",
@@ -5547,8 +5549,8 @@
       "priceNote": "The price follows the price list; change it on the contract."
     },
     "review": {
-      "creates": "Created in the systems",
-      "lines": "Added to contract {{number}}",
+      "creates": "To be created in the systems",
+      "lines": "To be added to contract {{number}}",
       "line": "{{product}} – {{model}}, {{quantity}} until the first count, from {{date}}",
       "blocked": "Untick what cannot be created, or correct its field, before you go on.",
       "previewError": "The preview could not be made."

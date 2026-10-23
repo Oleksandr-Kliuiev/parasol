@@ -39,9 +39,23 @@ describe('ServiceQuantitiesPanel (M43)', () => {
     expect(within(panel).getByText('No contract line bills it')).toBeInTheDocument();
     expect(within(panel).getByText(/older than 3 days/)).toBeInTheDocument();
     expect(within(panel).getByText(/Workstations 6 · Servers 1/)).toBeInTheDocument();
+    // One account: named once above the table, not in every row.
+    expect(within(panel).getByText('Bill of 18/10/2026 for the account Fjord IT AS')).toBeInTheDocument();
     const bill = within(panel).getByRole('table', { name: 'What CloudAlly bills' });
-    expect(within(bill).getByText('Fjord IT AS')).toBeInTheDocument();
+    expect(within(bill).queryByRole('columnheader', { name: 'Account' })).toBeNull();
     expect(within(bill).getByRole('columnheader', { name: 'Total' })).toBeInTheDocument();
+  });
+
+  it('names the account in each row when the customer has more than one', async () => {
+    const two = quantities(true);
+    const backup = two.services[2]!;
+    two.services[2] = { ...backup, billLines: [...backup.billLines, { ...backup.billLines[0]!, account: 'acc-2', accountName: 'Fjord IT Bergen' }] };
+    vi.stubGlobal('fetch', vi.fn(async () => json(two)));
+    renderRoutes([page(<ServiceQuantitiesPanel organizationId="o1" />)], '/', testUser(['billing.read', 'finance.cost.read']));
+    const bill = await screen.findByRole('table', { name: 'What CloudAlly bills' });
+    expect(within(bill).getByRole('columnheader', { name: 'Account' })).toBeInTheDocument();
+    expect(within(bill).getByText('Fjord IT Bergen')).toBeInTheDocument();
+    expect(screen.getByText('Bill of 18/10/2026')).toBeInTheDocument();
   });
 
   it('leaves out the money of the bill for a reader without purchase prices, and says so', async () => {

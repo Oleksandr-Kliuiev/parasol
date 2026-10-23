@@ -19,7 +19,17 @@ const useStyles = makeStyles({
   warn: { color: h.emberT },
   bill: { display: 'grid', gap: '4px', paddingTop: '16px', borderTop: `1px solid ${h.line}` },
   billHeading: { margin: 0, fontSize: '14px', lineHeight: '20px', fontWeight: 600 },
-  number: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
+  // The table lays its columns out fixed: the figures get narrow columns of their own (border-box, so a header's padding does not
+  // widen them), the names share the rest, and a narrow phone scrolls the table sideways rather than squeezing a name into letters.
+  billTable: { minWidth: '340px', '& th': { boxSizing: 'border-box' }, '& td': { overflowWrap: 'break-word' } },
+  number: {
+    textAlign: 'end',
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap',
+    '& .fui-TableHeaderCell__button': { justifyContent: 'flex-end' },
+  },
+  seatsColumn: { width: '72px' },
+  moneyColumn: { width: '96px' },
   skeleton: { display: 'grid', gap: '8px' },
 });
 
@@ -114,27 +124,32 @@ function BillLines({ lines }: { lines: ServiceBillLine[] }) {
   const flush = useFlushStyles();
   const canSeeCost = useCan(Permissions.financeCostRead);
   const title = t('billing.serviceQuantities.bill.title');
+  // Most customers have one account: it is named once above the table instead of in every row.
+  const accounts = [...new Set(lines.map((line) => line.accountName ?? line.account))];
+  const day = formatDate(lines[0]!.day);
   return (
     <div className={styles.bill}>
       <div className={flush.body}>
         <h3 className={styles.billHeading}>{title}</h3>
         <Text block className={flush.muted}>
-          {t('billing.serviceQuantities.bill.day', { date: formatDate(lines[0]!.day) })}
+          {accounts.length === 1
+            ? t('billing.serviceQuantities.bill.dayAccount', { date: day, account: accounts[0] })
+            : t('billing.serviceQuantities.bill.day', { date: day })}
           {!canSeeCost && ` ${t('billing.serviceQuantities.bill.noMoney')}`}
         </Text>
       </div>
       <ScrollTable className={flush.scroll} label={title}>
-        <Table aria-label={title} size="small" className={flush.table}>
+        <Table aria-label={title} size="small" className={mergeClasses(flush.table, styles.billTable)}>
           <TableHeader><TableRow>
-            <TableHeaderCell>{t('billing.serviceQuantities.bill.account')}</TableHeaderCell>
+            {accounts.length > 1 && <TableHeaderCell>{t('billing.serviceQuantities.bill.account')}</TableHeaderCell>}
             <TableHeaderCell>{t('billing.serviceQuantities.bill.service')}</TableHeaderCell>
-            <TableHeaderCell className={styles.number}>{t('billing.serviceQuantities.bill.seats')}</TableHeaderCell>
-            {canSeeCost && <TableHeaderCell className={styles.number}>{t('billing.serviceQuantities.bill.price')}</TableHeaderCell>}
-            {canSeeCost && <TableHeaderCell className={styles.number}>{t('billing.serviceQuantities.bill.total')}</TableHeaderCell>}
+            <TableHeaderCell className={mergeClasses(styles.number, styles.seatsColumn)}>{t('billing.serviceQuantities.bill.seats')}</TableHeaderCell>
+            {canSeeCost && <TableHeaderCell className={mergeClasses(styles.number, styles.moneyColumn)}>{t('billing.serviceQuantities.bill.price')}</TableHeaderCell>}
+            {canSeeCost && <TableHeaderCell className={mergeClasses(styles.number, styles.moneyColumn)}>{t('billing.serviceQuantities.bill.total')}</TableHeaderCell>}
           </TableRow></TableHeader>
           <TableBody>{lines.map((line, index) => (
             <TableRow key={`${line.account}-${line.source}-${line.service ?? ''}-${index}`}>
-              <TableCell>{line.accountName ?? line.account}</TableCell>
+              {accounts.length > 1 && <TableCell>{line.accountName ?? line.account}</TableCell>}
               <TableCell>{line.service ?? line.source}</TableCell>
               <TableCell className={styles.number}>{line.seats ?? line.accounts ?? '—'}</TableCell>
               {canSeeCost && <TableCell className={styles.number}>{line.price == null ? '—' : formatMoney(line.price, line.currency ?? undefined)}</TableCell>}

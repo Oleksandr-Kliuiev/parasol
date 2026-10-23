@@ -11,8 +11,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Integrations.Core.Actions;
 
-/// <summary>The record of a vendor the customer is linked to: its id and name there, and when and how the link was made.</summary>
-public sealed record CustomerServiceLink(string ExternalId, string Name, DateTimeOffset LinkedAt, LinkMethod Method);
+/// <summary>
+/// The record of a vendor the customer is linked to: its id, its name there once a read stored the record (a link made before the
+/// vendor's records were read has none yet), and when and how the link was made.
+/// </summary>
+public sealed record CustomerServiceLink(string ExternalId, string? Name, DateTimeOffset LinkedAt, LinkMethod Method);
 
 /// <summary>
 /// One vendor the customer can be connected to (M43, the "Connect services" wizard): whether its integration is on here, the record the
@@ -75,8 +78,7 @@ public sealed class CustomerServiceReader(
             CustomerServiceLink? linked = link is null
                 ? null
                 : new CustomerServiceLink(link.ExternalId,
-                    names.FirstOrDefault(n => n.System == link.System && n.ExternalType == link.ExternalType && n.ExternalId == link.ExternalId)?.DisplayName
-                    ?? link.ExternalId,
+                    names.FirstOrDefault(n => n.System == link.System && n.ExternalType == link.ExternalType && n.ExternalId == link.ExternalId)?.DisplayName,
                     link.LinkedAt, link.Method);
             var block = linked is not null ? null
                 : !user.HasPermission(creator.Permission) ? "VND_FORBIDDEN"

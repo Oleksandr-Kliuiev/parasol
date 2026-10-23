@@ -21,6 +21,8 @@ export const entityRoute = (externalType: string, entityId: string): string | nu
         : null;
 };
 
+/** An external id for people: numbers and short codes as they are, a hash or a GUID by its first characters. */
+export const shortKey = (key: string) => (key.length > 16 ? `${key.slice(0, 8)}…` : key);
 export const systemName = (t: TFunction, system: string) => t(`systems.${system}`, { defaultValue: system });
 export const typeName = (t: TFunction, type: string) => t(`externalTypes.${type}`, { defaultValue: type });
 export const jobName = (t: TFunction, job: string) => t(`integrations.jobNames.${job}`, { defaultValue: job });

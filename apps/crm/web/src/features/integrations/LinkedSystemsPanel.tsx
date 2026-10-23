@@ -10,7 +10,7 @@ import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { useCustomerServices } from '../onboarding/connectServices';
 import { useCapabilities, useEntityLinks, useIntegrationActions } from './api';
-import { systemName, typeName } from './labels';
+import { shortKey, systemName, typeName } from './labels';
 
 const ConnectServicesDialog = lazy(() => import('../onboarding/ConnectServicesDialog').then((m) => ({ default: m.ConnectServicesDialog })));
 
@@ -38,9 +38,6 @@ const useStyles = makeStyles({
   key: { fontVariantNumeric: 'tabular-nums' },
   buttons: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${h.line}` },
 });
-
-/** Numbers and short codes as they are; a hash or a GUID by its first characters. */
-const shortKey = (key: string) => (key.length > 16 ? `${key.slice(0, 8)}…` : key);
 
 interface LinkedSystemsPanelProps {
   entityId: string;

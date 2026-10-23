@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link, Spinner, Text, makeStyles } from '@fluentui/react-components';
 import { Open16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
@@ -38,12 +39,14 @@ export interface LineOutcome {
  * The last step (M43): each creation followed until the worker has its outcome (the action log keeps it too), the contract lines added,
  * and what the vendors' APIs cannot do — named, with the way to the console where one is configured.
  */
-export function ConnectResult({ creates, lines, contractNumber, choices, services }: {
+export function ConnectResult({ creates, lines, contractNumber, choices, services, onSettled }: {
   creates: CreateOutcome[];
   lines: LineOutcome[];
   contractNumber: string | null;
   choices: CreateChoice[];
   services: CustomerService[];
+  /** Called when the worker has an outcome for a creation: the card behind the wizard reads its links again. */
+  onSettled: () => void;
 }) {
   const { t } = useTranslation();
   const styles = useStyles();
@@ -54,7 +57,7 @@ export function ConnectResult({ creates, lines, contractNumber, choices, service
       {creates.length > 0 && (
         <section className={styles.section} aria-labelledby="connect-result-creates">
           <h3 id="connect-result-creates" className={styles.heading}>{t('onboarding.result.creates')}</h3>
-          {creates.map((outcome) => <CreateLine key={outcome.system} outcome={outcome} />)}
+          {creates.map((outcome) => <CreateLine key={outcome.system} outcome={outcome} onSettled={onSettled} />)}
         </section>
       )}
       {lines.length > 0 && contractNumber && (
@@ -97,11 +100,14 @@ export function ConnectResult({ creates, lines, contractNumber, choices, service
 }
 
 /** One creation: its status while the worker has it, then its outcome; announced as it changes. */
-function CreateLine({ outcome }: { outcome: CreateOutcome }) {
+function CreateLine({ outcome, onSettled }: { outcome: CreateOutcome; onSettled: () => void }) {
   const { t } = useTranslation();
   const styles = useStyles();
   const live = useAction(outcome.action?.id ?? null, outcome.action ?? undefined).data ?? outcome.action;
   const system = systemName(t, outcome.system);
+  const settled = live !== null && !isWaiting(live.status);
+  // The worker links the customer when it creates it, after the command returned: the links are read again once it has.
+  useEffect(() => { if (settled) onSettled(); }, [settled, onSettled]);
   return (
     <div className={styles.row} role="status" aria-live="polite">
       <Text className={styles.name}>{system}</Text>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, MessageBar, MessageBarBody, Spinner, Text, makeStyles, mergeClasses, tokens,
 } from '@fluentui/react-components';
@@ -110,6 +110,12 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
       go('review');
     }
   };
+  /** The customer's links, services and counts, read again when something was asked and again when the worker linked it. */
+  const refreshCustomer = useCallback(() => {
+    void client.invalidateQueries({ queryKey: ['integrations', 'links'] });
+    void client.invalidateQueries({ queryKey: onboardingKeys.services(organizationId) });
+    void client.invalidateQueries({ queryKey: serviceQuantityKeys.one(organizationId) });
+  }, [client, organizationId]);
   const addedLines = open.length > 0 && contractId ? lines.filter((l) => l.add) : [];
   const previewsReady = previews.every((p) => p.data && p.data.block === null && p.data.previewToken !== null);
   const anyBlocked = previews.some((p) => p.data?.block || p.error);
@@ -147,9 +153,7 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
     setCreates(outcomes);
     setLineOutcomes(added);
     refreshActions();
-    void client.invalidateQueries({ queryKey: ['integrations', 'links'] });
-    void client.invalidateQueries({ queryKey: onboardingKeys.services(organizationId) });
-    void client.invalidateQueries({ queryKey: serviceQuantityKeys.one(organizationId) });
+    refreshCustomer();
     void client.invalidateQueries({ queryKey: contractKeys.all });
     setBusy(false);
     go('result');
@@ -188,7 +192,8 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
               </>
             )}
             {step === 'result' && (
-              <ConnectResult creates={creates} lines={lineOutcomes} contractNumber={contractNumber} choices={choices ?? []} services={list} />
+              <ConnectResult creates={creates} lines={lineOutcomes} contractNumber={contractNumber} choices={choices ?? []} services={list}
+                onSettled={refreshCustomer} />
             )}
           </DialogContent>
           <DialogActions>

@@ -6,7 +6,8 @@ import type { ContractListItem, QuantityModel } from '../contracts/types';
 /** The record of a vendor the customer is linked to. */
 export interface CustomerServiceLink {
   externalId: string;
-  name: string;
+  /** Null until a read of the vendor stored the record. */
+  name: string | null;
   linkedAt: string;
   method: string;
 }

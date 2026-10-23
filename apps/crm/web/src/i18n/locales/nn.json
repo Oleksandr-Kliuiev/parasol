@@ -3018,6 +3018,7 @@
       "bill": {
         "title": "Det CloudAlly fakturerer",
         "day": "Faktura per {{date}}",
+        "dayAccount": "Faktura per {{date}} for kontoen {{account}}",
         "account": "Konto",
         "service": "Teneste",
         "seats": "Brukarar",
@@ -5493,6 +5494,7 @@
     "loadError": "Tenestene kunne ikkje lesast.",
     "noneEnabled": "Verken Atera, Huntress eller CloudAlly er kopla til Parasoll i denne installasjonen.",
     "linked": "Kopla til «{{name}}»",
+    "linkedId": "Kopla til #{{id}}; namnet kjem ved neste lesing av {{system}}.",
     "linkedBadge": "Kopla",
     "create": "Opprett i {{system}}",
     "simulated": "Testmodus: {{system}} blir lesen, ingenting blir oppretta.",

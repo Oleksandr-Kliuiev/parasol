@@ -3018,6 +3018,7 @@
       "bill": {
         "title": "Det CloudAlly fakturerer",
         "day": "Faktura per {{date}}",
+        "dayAccount": "Faktura per {{date}} for kontoen {{account}}",
         "account": "Konto",
         "service": "Tjeneste",
         "seats": "Brukere",
@@ -5493,6 +5494,7 @@
     "loadError": "Tjenestene kunne ikke leses.",
     "noneEnabled": "Verken Atera, Huntress eller CloudAlly er koblet til Parasoll i denne installasjonen.",
     "linked": "Koblet til «{{name}}»",
+    "linkedId": "Koblet til #{{id}}; navnet kommer ved neste lesing av {{system}}.",
     "linkedBadge": "Koblet",
     "create": "Opprett i {{system}}",
     "simulated": "Testmodus: {{system}} leses, ingenting opprettes.",
