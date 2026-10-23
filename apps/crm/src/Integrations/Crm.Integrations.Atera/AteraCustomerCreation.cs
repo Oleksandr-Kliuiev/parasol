@@ -42,12 +42,12 @@ internal sealed class AteraCreateCustomerAction(
     protected override CustomerCreationPlan Prepare(OrganizationSyncView organization, JsonElement parameters)
     {
         var write = AteraMapping.ToWrite(organization);
-        var place = string.Join(", ", new[] { write.Address, write.ZipCode is null ? write.City : $"{write.ZipCode} {write.City}" }
-            .Where(p => !string.IsNullOrWhiteSpace(p)));
+        // Without an organization number, the exact name is our key at Atera, which the preview says.
         return new CustomerCreationPlan("{}",
         [
-            Effect("VND_EFFECT_ATERA_CUSTOMER_CREATE", ("name", write.CustomerName), ("orgNumber", AteraMapping.OrgNumber(write.BusinessNumber)),
-                ("domain", write.Domain), ("address", place.Length == 0 ? null : place)),
+            AteraMapping.OrgNumber(write.BusinessNumber) is { } number
+                ? Effect("VND_EFFECT_ATERA_CUSTOMER_CREATE", ("name", write.CustomerName), ("orgNumber", number))
+                : Effect("VND_EFFECT_ATERA_CUSTOMER_CREATE_BY_NAME", ("name", write.CustomerName)),
             Effect("VND_EFFECT_CUSTOMER_LINKED", ("vendor", "Atera")),
         ]);
     }
