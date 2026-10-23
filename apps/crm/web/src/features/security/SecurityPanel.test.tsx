@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import { formatReadAt } from '../../shared/utils/format';
 import { SecurityPanel } from './SecurityPanel';
@@ -107,6 +108,29 @@ describe('Security in the Drift tab (M41)', () => {
     show({ usage: [usage()], reports: [report({ incidentsResolved: null })], reportsTotal: 1, reads: [read('huntress-organizations'), read('huntress-reports')] });
     const table = within(await screen.findByRole('table', { name: 'Monthly reports' }));
     expect(table.getByRole('cell', { name: '3 reported' })).toBeVisible();
+  });
+
+  it('offers the copy Parasoll keeps of a report beside Huntress\'s link, to those who may read the customer\'s documents (M43)', async () => {
+    const overview = { usage: [usage()], reports: [report(), report({ externalId: 9002, periodStart: '2026-08-01', periodEnd: '2026-08-31' })],
+      reportsTotal: 2, reads: [read('huntress-organizations'), read('huntress-reports')] };
+    const copy = { id: 'doc-9001', kind: 'huntress-monthly', sourceKey: 'huntress:report:9001', periodStart: '2026-09-01', periodEnd: '2026-09-30',
+      fileName: 'huntress-2026-09-9001.pdf', length: 4096, provenance: 'Source', storedAt: '2026-10-01T03:55:00Z' };
+    const summary = { ...copy, id: 'doc-sum', kind: 'parasoll-monthly', sourceKey: 'parasoll:summary:2026-09' };
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:synthetic-pdf');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const fetch = vi.fn(async (url: string) => url.endsWith('/download') ? new Response(new Blob(['%PDF-1.4']), { status: 200 })
+      : url.includes('/stored-documents') ? json({ items: [summary, copy], nextCursor: null, totalCount: 2 }) : json(overview));
+    vi.stubGlobal('fetch', fetch);
+    renderRoutes([page(<SecurityPanel organizationId="o1" scope={{ owner: 'u1', revision: 0 }} />)], '/', testUser(['service.read', 'customers.read']));
+
+    const table = await screen.findByRole('table', { name: 'Monthly reports' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    const button = await within(rows[0]!).findByRole('button', { name: 'Download the copy kept in Parasoll of the report for September 2026' });
+    // The August report was not filed: only Huntress's link, and Parasoll's own summary is not a Huntress report's copy.
+    expect(within(rows[1]!).queryByRole('button')).not.toBeInTheDocument();
+    await userEvent.click(button);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/customers/organizations/o1/stored-documents/doc-9001/download', expect.anything());
+    vi.restoreAllMocks();
   });
 
   it('is left out where Huntress is switched off and was never read, instead of saying "not read yet" for good', async () => {
