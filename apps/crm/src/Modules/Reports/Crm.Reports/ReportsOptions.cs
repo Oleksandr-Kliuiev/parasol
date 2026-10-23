@@ -15,6 +15,12 @@ public sealed class ReportsOptions
 
     /// <summary>A month's snapshot made later than this many days after the month ended is labelled Reconstructed (DEV-14).</summary>
     public int SnapshotTimelyDays { get; set; } = 5;
+
+    /// <summary>
+    /// The language of Parasoll's monthly summary of a customer (M43): <c>nb</c> or <c>en</c> (Nynorsk reads the Bokmål summary). A
+    /// customer has no language of its own in the CRM, so one is set for all.
+    /// </summary>
+    public string CustomerMonthLanguage { get; set; } = "nb";
 }
 
 /// <summary>

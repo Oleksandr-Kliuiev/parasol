@@ -45,11 +45,14 @@ internal sealed class HuntressHost(WebApplicationFactory<Program> host, WireMock
 
     public WireMockServer Huntress => huntress;
 
-    public static HuntressHost Start(CrmWebFactory factory, bool write = true, bool dryRun = false, string[]? kinds = null, string[]? allowed = null)
+    public static HuntressHost Start(
+        CrmWebFactory factory, bool write = true, bool dryRun = false, string[]? kinds = null, string[]? allowed = null,
+        Action<IWebHostBuilder, WireMockServer>? configure = null)
     {
         var huntress = WireMockServer.Start();
         var host = factory.WithWebHostBuilder(builder =>
         {
+            configure?.Invoke(builder, huntress);
             builder.UseSetting("Integrations:Huntress:Enabled", "true");
             builder.UseSetting("Integrations:Huntress:ApiKey", "test-huntress-key");
             builder.UseSetting("Integrations:Huntress:ApiSecret", "test-huntress-secret");

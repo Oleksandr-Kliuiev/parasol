@@ -84,6 +84,7 @@ public static class ServiceModule
         services.AddModuleDbContext<ServiceDbContext>(configuration);
         services.AddModuleServices(typeof(ServiceModule).Assembly);
         services.AddScoped<IServiceApi, ServiceApi>();
+        services.AddScoped<IServiceMonthFacts, ServiceMonthFacts>();
         services.AddScoped<ITicketWorkApi, TicketWorkApi>();
         services.AddScoped<SlaReportService>();
         services.AddScoped<AlertQueries>();

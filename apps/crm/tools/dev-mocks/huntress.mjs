@@ -346,13 +346,59 @@ export function createHuntress({ base, run, send }) {
       const start = (r) => r.period.slice(0, 10);
       return page(req, res, url, 'reports', reports.filter((r) => (!p.get('type') || r.type === p.get('type'))
         && (!p.get('organization_id') || r.organization_id === Number(p.get('organization_id')))
-        && (!p.get('period_min') || start(r) >= p.get('period_min').slice(0, 10)) && (!p.get('period_max') || start(r) <= p.get('period_max').slice(0, 10))));
+        && (!p.get('period_min') || start(r) >= p.get('period_min').slice(0, 10)) && (!p.get('period_max') || start(r) <= p.get('period_max').slice(0, 10)))
+        .map((r) => reportView(req, r)));
     }],
     ['GET', /^reports\/(\d+)$/, (req, res, url, body, [id]) => {
       const report = reports.find((r) => r.id === Number(id));
-      return report ? send(res, 200, { report }) : fail(res, 404, 'Report not found');
+      return report ? send(res, 200, { report: reportView(req, report) }) : fail(res, 404, 'Report not found');
     }],
   ];
+
+  // M43: a report's link leads to the stand-in's own "web site", which redirects to its "file storage", as Huntress's
+  // huntress.io link redirects to a signed blob; neither needs the API key. A report created with a `url` keeps it.
+  const reportView = (req, report) => (report.url ? report : { ...report, url: `http://${req.headers.host ?? 'localhost'}/huntress-files/reports/${report.id}.pdf` });
+
+  /** A small but whole PDF of one page naming the report, so a browser opens it and the CRM's envelope check passes. */
+  function reportPdf(id) {
+    const text = `Huntress monthly summary ${id} (stand-in, synthetic)`;
+    const stream = `BT /F1 14 Tf 72 760 Td (${text}) Tj ET`;
+    const objects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    ];
+    let pdf = '%PDF-1.4\n';
+    const offsets = objects.map((object, index) => {
+      const at = pdf.length;
+      pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+      return at;
+    });
+    const xref = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    return Buffer.from(pdf, 'latin1');
+  }
+
+  function files(req, res, url) {
+    const failed = fault(req.method, url.pathname);
+    if (failed) return fail(res, failed, 'Synthetic failure');
+    const link = /^\/huntress-files\/reports\/(\d+)\.pdf$/.exec(url.pathname);
+    if (link && req.method === 'GET') {
+      if (!reports.some((r) => r.id === Number(link[1]))) return fail(res, 404, 'Report not found');
+      res.writeHead(302, { Location: `/huntress-blobs/${link[1]}.pdf?disposition=download` });
+      return res.end();
+    }
+    const blob = /^\/huntress-blobs\/(\d+)\.pdf$/.exec(url.pathname);
+    if (blob && req.method === 'GET') {
+      const content = reportPdf(blob[1]);
+      res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Length': content.length });
+      return res.end(content);
+    }
+    return fail(res, 404, 'Unknown Huntress file');
+  }
 
   function api(req, res, url, body) {
     // HTTP Basic: Base64 of "<api key>:<api secret>", as Huntress asks on every request.
@@ -417,7 +463,7 @@ export function createHuntress({ base, run, send }) {
         type: 'monthly_summary', period: `${first.toISOString().slice(0, 10)}...${next.toISOString().slice(0, 10)}`,
         agents_count: agents.filter((a) => a.organization_id === Number(fields.organization_id)).length, incidents_reported: 0, incidents_resolved: 0,
         signals_detected: 0, signals_investigated: 0, events_analyzed: 0, analyst_note: 'Synthetic report of the stand-in.',
-        url: `https://reports.example.invalid/huntress/${created}.pdf`, created_at: next.toISOString(), updated_at: next.toISOString(),
+        created_at: next.toISOString(), updated_at: next.toISOString(),
         ...rest, id: created, organization_id: Number(fields.organization_id),
       };
       reports.push(report);
@@ -542,6 +588,10 @@ export function createHuntress({ base, run, send }) {
     }
     if (url.pathname.startsWith('/huntress/v1/')) {
       api(req, res, url, body);
+      return true;
+    }
+    if (url.pathname.startsWith('/huntress-files/') || url.pathname.startsWith('/huntress-blobs/')) {
+      files(req, res, url);
       return true;
     }
     return false;

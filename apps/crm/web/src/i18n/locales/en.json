@@ -784,12 +784,14 @@
       "privacy-retention": "Retention of personal data",
       "quote-expiry": "Expire old quotes",
       "reports-snapshot": "Monthly report snapshots",
+      "reports-customer-months": "Monthly summaries of customers",
       "worker-heartbeat": "Background service heartbeat",
       "atera-ticket-conversations": "Ticket messages (Atera)",
       "huntress-organizations": "Organizations and usage (Huntress)",
       "huntress-agents": "Devices (Huntress)",
       "huntress-alerts": "Incidents and escalations (Huntress)",
       "huntress-reports": "Monthly reports (Huntress)",
+      "huntress-report-files": "Monthly report files (Huntress)",
       "cloudally-accounts": "Customer accounts (CloudAlly)",
       "cloudally-backups": "Backups (CloudAlly)",
       "cloudally-bills": "Billing (CloudAlly)"
@@ -2631,6 +2633,24 @@
       "name": "Name",
       "size": "Size",
       "modified": "Last modified"
+    },
+    "stored": {
+      "title": "Monthly reports",
+      "intro": "Parasoll files these after each month: Huntress's own report and Parasoll's summary of the customer. They are never changed.",
+      "empty": "No monthly reports are filed yet. They appear here after the first month Parasoll has read.",
+      "kinds": {
+        "huntress-monthly": "Huntress report",
+        "parasoll-monthly": "Parasoll summary"
+      },
+      "name": "{{kind}} · {{month}}",
+      "stored": "Filed {{date}} · {{size}}",
+      "reconstructed": "Reconstructed",
+      "reconstructedHint": "Made after the month had closed, from what Parasoll held then.",
+      "download": "Download",
+      "downloadLabel": "Download {{name}}",
+      "downloading": "Downloading…",
+      "downloadFailed": "The file could not be downloaded. Try again; if it keeps failing, the stored copy may be damaged.",
+      "integrity": "Each file is checked against the fingerprint it was filed with before it is downloaded."
     }
   },
   "licenses": {
@@ -5147,7 +5167,9 @@
       "shown": "The latest {{shown}} of {{total}} reports.",
       "none": "No monthly reports from Huntress in the last 13 months.",
       "notRead": "Monthly reports have not been read yet.",
-      "incidentsReported": "{{reported}} reported"
+      "incidentsReported": "{{reported}} reported",
+      "storedCopy": "Copy in Parasoll",
+      "downloadCopy": "Download the copy kept in Parasoll of the report for {{period}}"
     },
     "incident": {
       "heading": "Security incident",

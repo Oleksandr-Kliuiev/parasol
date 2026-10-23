@@ -784,12 +784,14 @@
       "privacy-retention": "Lagringstid for personopplysninger",
       "quote-expiry": "La gamle tilbud utløpe",
       "reports-snapshot": "Månedlige øyeblikksbilder for rapporter",
+      "reports-customer-months": "Månedsoppsummering per kunde",
       "worker-heartbeat": "Livstegn fra bakgrunnstjenesten",
       "atera-ticket-conversations": "Meldinger i saker (Atera)",
       "huntress-organizations": "Organisasjoner og forbruk (Huntress)",
       "huntress-agents": "Enheter (Huntress)",
       "huntress-alerts": "Hendelser og eskaleringer (Huntress)",
       "huntress-reports": "Månedsrapporter (Huntress)",
+      "huntress-report-files": "Månedsrapporter som filer (Huntress)",
       "cloudally-accounts": "Kundekontoer (CloudAlly)",
       "cloudally-backups": "Sikkerhetskopier (CloudAlly)",
       "cloudally-bills": "Fakturering (CloudAlly)"
@@ -2629,6 +2631,24 @@
       "name": "Navn",
       "size": "Størrelse",
       "modified": "Sist endret"
+    },
+    "stored": {
+      "title": "Månedsrapporter",
+      "intro": "Parasoll legger dem her etter hver måned: Huntress' egen rapport og Parasolls oppsummering av kunden. De blir aldri endret.",
+      "empty": "Ingen månedsrapporter er lagret ennå. De kommer her etter den første måneden Parasoll har lest.",
+      "kinds": {
+        "huntress-monthly": "Huntress-rapport",
+        "parasoll-monthly": "Parasoll-oppsummering"
+      },
+      "name": "{{kind}} · {{month}}",
+      "stored": "Lagret {{date}} · {{size}}",
+      "reconstructed": "Rekonstruert",
+      "reconstructedHint": "Laget etter at måneden var over, av det Parasoll hadde da.",
+      "download": "Last ned",
+      "downloadLabel": "Last ned {{name}}",
+      "downloading": "Laster ned …",
+      "downloadFailed": "Filen kunne ikke lastes ned. Prøv igjen; feiler det igjen, kan den lagrede kopien være skadet.",
+      "integrity": "Hver fil sjekkes mot fingeravtrykket den ble lagret med, før den lastes ned."
     }
   },
   "licenses": {
@@ -5145,7 +5165,9 @@
       "shown": "De {{shown}} siste av {{total}} rapporter.",
       "none": "Ingen månedsrapporter fra Huntress de siste 13 månedene.",
       "notRead": "Månedsrapportene er ikke lest ennå.",
-      "incidentsReported": "{{reported}} meldt"
+      "incidentsReported": "{{reported}} meldt",
+      "storedCopy": "Kopi i Parasoll",
+      "downloadCopy": "Last ned kopien i Parasoll av rapporten for {{period}}"
     },
     "incident": {
       "heading": "Sikkerhetshendelse",
