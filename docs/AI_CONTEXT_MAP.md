@@ -1,5 +1,6 @@
 # Parasol context map
 
+- UX concept and clickable demo: `docs/ux/UX-CONCEPT.md`, `docs/ux/demo` (static, synthetic data, RU/EN/NB, no backend change); checks `docs/ux/demo/tools/check-locales.mjs` and `smoke.mjs`.
 - Scope and local commands: `README.md`.
 - M01–M03 implementation and follow-up: `docs/migration/M01-M03.md`.
 - Customer identity / M04: `docs/migration/M04-CUSTOMER-IDENTITY.md`; Atlas `apps/api/src/db/clients.ts`, CRM `src/Integrations/Crm.Integrations.Core/Parasol`, shared fixture `contracts/customer-identity`.

@@ -6,12 +6,22 @@
   "nav": {
     "myDay": "Мой день",
     "organizations": "Организации",
-    "admin": "Администрирование",
+    "sectionWork": "Работа",
+    "sectionCustomers": "Клиенты",
+    "sectionFinance": "Финансы",
+    "sectionSystem": "Система",
     "audit": "Журнал аудита",
     "users": "Пользователи",
     "jobs": "Фоновые задачи",
     "openMenu": "Открыть меню",
     "closeMenu": "Закрыть меню",
+    "tabs": "Основные разделы",
+    "more": "Ещё",
+    "tabLabels": {
+      "my-day": "День",
+      "organizations": "Клиенты",
+      "timesheet": "Время"
+    },
     "integrations": "Интеграции",
     "mappings": "Сопоставления",
     "catalog": "Каталог",
@@ -439,6 +449,7 @@
   },
   "search": {
     "groups": {
+      "commands": "Перейти",
       "organizations": "Организации",
       "contacts": "Контакты"
     },
@@ -1395,6 +1406,11 @@
     "reopened": "Сделка открыта заново",
     "loseTitle": "Почему сделка «{{name}}» проиграна?",
     "more": "Ещё",
+    "tabLabels": {
+      "my-day": "День",
+      "organizations": "Клиенты",
+      "timesheet": "Время"
+    },
     "actionsFor": "Действия для «{{name}}»",
     "forecast": "Взвешенный прогноз",
     "forecastExplainer": "Разовая сумма плюс до двенадцати месяцев регулярной выручки, взвешенные на вероятность этапа {{probability}} %.",

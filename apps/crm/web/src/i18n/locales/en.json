@@ -6,12 +6,22 @@
   "nav": {
     "myDay": "My day",
     "organizations": "Organizations",
-    "admin": "Administration",
+    "sectionWork": "Work",
+    "sectionCustomers": "Customers",
+    "sectionFinance": "Finance",
+    "sectionSystem": "System",
     "audit": "Audit log",
     "users": "Users",
     "jobs": "Background jobs",
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
+    "tabs": "Main sections",
+    "more": "More",
+    "tabLabels": {
+      "my-day": "My day",
+      "organizations": "Customers",
+      "timesheet": "Time"
+    },
     "integrations": "Integrations",
     "mappings": "Mappings",
     "catalog": "Catalog",
@@ -435,6 +445,7 @@
   },
   "search": {
     "groups": {
+      "commands": "Go to",
       "organizations": "Organizations",
       "contacts": "Contacts"
     },
@@ -1375,6 +1386,11 @@
     "reopened": "Deal reopened",
     "loseTitle": "Why was {{name}} lost?",
     "more": "More",
+    "tabLabels": {
+      "my-day": "My day",
+      "organizations": "Customers",
+      "timesheet": "Time"
+    },
     "actionsFor": "Actions for {{name}}",
     "forecast": "Weighted forecast",
     "forecastExplainer": "One-off amount plus up to twelve months of recurring revenue, weighted by the stage probability of {{probability}} %.",

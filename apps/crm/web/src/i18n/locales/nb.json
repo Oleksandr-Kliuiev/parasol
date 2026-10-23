@@ -6,12 +6,22 @@
   "nav": {
     "myDay": "Min dag",
     "organizations": "Organisasjoner",
-    "admin": "Administrasjon",
+    "sectionWork": "Arbeid",
+    "sectionCustomers": "Kunder",
+    "sectionFinance": "Økonomi",
+    "sectionSystem": "System",
     "audit": "Revisjonslogg",
     "users": "Brukere",
     "jobs": "Bakgrunnsjobber",
     "openMenu": "Åpne navigasjon",
     "closeMenu": "Lukk navigasjon",
+    "tabs": "Hovedseksjoner",
+    "more": "Mer",
+    "tabLabels": {
+      "my-day": "Min dag",
+      "organizations": "Kunder",
+      "timesheet": "Tid"
+    },
     "integrations": "Integrasjoner",
     "mappings": "Koblinger",
     "catalog": "Katalog",
@@ -435,6 +445,7 @@
   },
   "search": {
     "groups": {
+      "commands": "Gå til",
       "organizations": "Organisasjoner",
       "contacts": "Kontakter"
     },
@@ -1375,6 +1386,11 @@
     "reopened": "Salget er åpnet igjen",
     "loseTitle": "Hvorfor ble {{name}} tapt?",
     "more": "Mer",
+    "tabLabels": {
+      "my-day": "Min dag",
+      "organizations": "Kunder",
+      "timesheet": "Tid"
+    },
     "actionsFor": "Handlinger for {{name}}",
     "forecast": "Vektet prognose",
     "forecastExplainer": "Engangsbeløp pluss inntil tolv måneder med løpende inntekt, vektet med sannsynligheten på {{probability}} % i steget.",
