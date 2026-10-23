@@ -1,12 +1,13 @@
-import { MessageBar, MessageBarBody, Spinner, Text, makeStyles } from '@fluentui/react-components';
+import { Button, MessageBar, MessageBarActions, MessageBarBody, Spinner, Text, makeStyles } from '@fluentui/react-components';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
+import { AppLink } from '../../shared/components/AppLink';
 import { formatDate } from '../../shared/utils/format';
 import { actionErrorText, blockText, effectText } from '../actions/actionText';
 import type { ActionPreview } from '../actions/types';
 import { systemName } from '../integrations/labels';
-import type { CreateChoice, LineChoice } from './connectServices';
+import { mappingsOf, type CreateChoice, type LineChoice } from './connectServices';
 
 const useStyles = makeStyles({
   content: { display: 'grid', gap: '16px', gridTemplateColumns: 'minmax(0, 1fr)' },
@@ -16,7 +17,11 @@ const useStyles = makeStyles({
   name: { fontWeight: 600 },
   muted: { color: h.muted, fontSize: '13px', lineHeight: '20px' },
   effects: { margin: 0, paddingLeft: '20px', display: 'grid', gap: '4px' },
+  link: { display: 'inline-flex', alignItems: 'center', minHeight: '24px' },
 });
+
+/** Blocks a person fixes on the mapping screen: a record that is there already. */
+const linkable = ['VND_EXISTS_AT_VENDOR', 'VND_AMBIGUOUS_AT_VENDOR'];
 
 /**
  * The third step (M43): what will happen, before anything is sent. Each creation shows the server's preview — made from saved data,
@@ -40,18 +45,35 @@ export function ConnectReview({ creates, previews, lines, contractNumber, from }
           <h3 id="connect-review-creates" className={styles.heading}>{t('onboarding.review.creates')}</h3>
           {creates.map((choice, index) => {
             const preview = previews[index];
+            const system = systemName(t, choice.system);
+            const block = preview?.data?.block;
+            // The preview comes after focus moved to the step's name: its outcome is announced, so a screen reader hears a block too.
             return (
-              <div key={choice.system} className={styles.service}>
-                <Text className={styles.name}>{systemName(t, choice.system)}</Text>
+              <div key={choice.system} className={styles.service} role="status" aria-live="polite">
+                <Text className={styles.name}>{system}</Text>
                 {!preview || preview.isPending ? <Spinner size="extra-small" label={t('actions.dialog.previewing')} labelPosition="after" />
                   : preview.error ? (
-                    <MessageBar intent="error" layout="multiline"><MessageBarBody>{actionErrorText(t, preview.error)}</MessageBarBody></MessageBar>
+                    <MessageBar intent="error" layout="multiline">
+                      <MessageBarBody>{actionErrorText(t, preview.error)}</MessageBarBody>
+                      <MessageBarActions><Button size="small" onClick={() => void preview.refetch()}>{t('common.retry')}</Button></MessageBarActions>
+                    </MessageBar>
                   ) : preview.data && <>
-                    <ul className={styles.effects} aria-label={t('actions.dialog.effects')}>
-                      {preview.data.effects.map((effect, i) => <li key={`${effect.code}:${i}`}>{effectText(t, effect)}</li>)}
-                    </ul>
-                    {preview.data.block && <MessageBar intent="warning" layout="multiline"><MessageBarBody>{blockText(t, preview.data.block)}</MessageBarBody></MessageBar>}
-                    {!preview.data.block && preview.data.simulated && <Text className={styles.muted}>{t('onboarding.simulated', { system: systemName(t, choice.system) })}</Text>}
+                    {preview.data.effects.length > 0 && (
+                      <ul className={styles.effects} aria-label={t('onboarding.review.effects', { system })}>
+                        {preview.data.effects.map((effect, i) => <li key={`${effect.code}:${i}`}>{effectText(t, effect)}</li>)}
+                      </ul>
+                    )}
+                    {block && (
+                      <MessageBar intent="warning" layout="multiline">
+                        <MessageBarBody>
+                          {t(`onboarding.review.blocks.${block.code}`, { system, defaultValue: blockText(t, block) })}
+                          {linkable.includes(block.code) && mappingsOf[choice.system] && <>
+                            {' '}<AppLink to={mappingsOf[choice.system]!} className={styles.link}>{t('onboarding.mapExisting')}</AppLink>
+                          </>}
+                        </MessageBarBody>
+                      </MessageBar>
+                    )}
+                    {!block && preview.data.simulated && <Text className={styles.muted}>{t('onboarding.simulated', { system })}</Text>}
                   </>}
               </div>
             );

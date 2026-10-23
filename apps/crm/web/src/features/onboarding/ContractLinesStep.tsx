@@ -1,12 +1,11 @@
 import { Checkbox, Field, Input, Select, Spinner, Text, makeStyles } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
-import { AppLink } from '../../shared/components/AppLink';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { formatDate } from '../../shared/utils/format';
 import { ProductPicker } from '../catalog/ProductPicker';
-import type { ContractListItem, ContractLine } from '../contracts/types';
-import { estimateValid, openContract, type LineChoice } from './connectServices';
+import type { ContractListItem } from '../contracts/types';
+import { billedBy, estimateValid, openContract, type BilledLine, type LineChoice } from './connectServices';
 
 const useStyles = makeStyles({
   content: { display: 'grid', gap: '14px', gridTemplateColumns: 'minmax(0, 1fr)' },
@@ -30,9 +29,10 @@ const useStyles = makeStyles({
 /**
  * The second step of the wizard (M43): the services go into the customer's contract as lines billed by what the service counts
  * (per Atera device, per Huntress agent, per backup user). Each line needs a product; its quantity is billed until the service has
- * counted, and the price follows the price list. A contract that already bills a service per unit says so, and its box starts empty.
+ * counted, and the price follows the price list. A service one of the customer's open contracts already bills from the line's day on
+ * says which contract, and its box starts empty: a second line would bill the same agents or users twice.
  */
-export function ContractLinesStep({ contracts, loading, error, onRetry, contractId, onContract, lines, existing, from, onFrom, minFrom, touched, onLine, organizationId }: {
+export function ContractLinesStep({ contracts, loading, error, onRetry, contractId, onContract, lines, billed, from, onFrom, minFrom, touched, onLine }: {
   contracts: ContractListItem[];
   loading: boolean;
   error: unknown;
@@ -40,13 +40,12 @@ export function ContractLinesStep({ contracts, loading, error, onRetry, contract
   contractId: string | null;
   onContract: (id: string) => void;
   lines: LineChoice[];
-  existing: ContractLine[];
+  billed: BilledLine[];
   from: string;
   onFrom: (day: string) => void;
   minFrom: string | null;
   touched: boolean;
   onLine: (line: LineChoice) => void;
-  organizationId: string;
 }) {
   const { t } = useTranslation();
   const styles = useStyles();
@@ -58,10 +57,7 @@ export function ContractLinesStep({ contracts, loading, error, onRetry, contract
     <div className={styles.content}>
       <Text block className={styles.muted}>{t('onboarding.contract.intro')}</Text>
       {open.length === 0 ? (
-        <>
-          <Text block>{t('onboarding.contract.none')}</Text>
-          <AppLink to={`/contracts/new?organizationId=${organizationId}`}>{t('onboarding.contract.newContract')}</AppLink>
-        </>
+        <Text block>{t('onboarding.contract.none')}</Text>
       ) : (
         <>
           <Field label={t('onboarding.contract.contract')} className={styles.shrink}>
@@ -76,14 +72,21 @@ export function ContractLinesStep({ contracts, loading, error, onRetry, contract
           {lines.map((line) => {
             const name = t(`contracts.quantityModels.${line.model}`);
             const model = name.charAt(0).toLowerCase() + name.slice(1);
-            const already = existing.some((l) => l.isCurrent && l.quantityModel === line.model);
+            const already = billedBy(billed, line.model, from);
+            const noteId = `contract-line-${line.system}-already`;
             const productId = `contract-line-${line.system}-product`;
             // Each line is a named group: its fields share their labels (Product, Quantity) with the other lines' fields.
             return (
               <div key={line.system} className={styles.line} role="group" aria-label={name}>
-                <Checkbox checked={line.add} label={t('onboarding.contract.add', { model })}
+                <Checkbox checked={line.add} label={t('onboarding.contract.add', { model })} aria-describedby={already ? noteId : undefined}
                   onChange={(_, d) => onLine({ ...line, add: d.checked === true, decided: true })} />
-                {already && <Text className={styles.muted}>{t('onboarding.contract.already', { model })}</Text>}
+                {already && (
+                  <Text id={noteId} className={styles.muted}>
+                    {already.contractId === contractId
+                      ? t('onboarding.contract.already', { model })
+                      : t('onboarding.contract.alreadyIn', { model, number: already.contractNumber })}
+                  </Text>
+                )}
                 {line.add && (
                   <div className={styles.fields}>
                     <Field label={t('onboarding.contract.product')} required

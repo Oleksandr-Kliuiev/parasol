@@ -2897,8 +2897,8 @@
       "BIL_STALE_QUANTITY": "{{product}}: antallet er hentet fra en avlesning {{date}}, som er eldre enn grensen.",
       "BIL_NO_DEVICE_SNAPSHOT": "{{product}} faktureres per enhet, men det finnes ingen daglig enhetstelling; enhetene som er registrert nå telles.",
       "BIL_INCOMPLETE_HOURS": "Siste import av arbeidstimer ({{date}}) ble ikke fullført; timer kan mangle i dette grunnlaget.",
-      "BIL_NO_AGENT_READING": "{{product}} faktureres per agent i Huntress, men Huntress har ikke talt dem for kunden ennå; avtalens anslag faktureres.",
-      "BIL_NO_SEAT_READING": "{{product}} faktureres per bruker med sikkerhetskopi, men ingen faktura fra CloudAlly teller dem for kunden ennå; avtalens anslag faktureres."
+      "BIL_NO_AGENT_READING": "{{product}} faktureres per agent i Huntress, men Huntress har ikke talt dem for kunden ennå; det estimerte antallet i avtalen faktureres.",
+      "BIL_NO_SEAT_READING": "{{product}} faktureres per bruker med sikkerhetskopi, men ingen faktura fra CloudAlly teller dem for kunden ennå; det estimerte antallet i avtalen faktureres."
     },
     "conflictsCount_one": "{{count}} linje trenger en avgjørelse",
     "conflictsCount_other": "{{count}} linjer trenger en avgjørelse",
@@ -3009,12 +3009,14 @@
       "notRead": "Ikke talt ennå",
       "status": {
         "Counted": "Faktureres etter antallet",
-        "NoReading": "Ikke talt ennå: anslaget faktureres",
+        "NoReading": "Ikke talt ennå: det estimerte antallet faktureres",
         "NotOnContract": "Ingen avtalelinje fakturerer det",
-        "None": "Ingenting å telle"
+        "None": "Ingenting å telle",
+        "CountedZero": "Talt 0: ingenting faktureres",
+        "CountedStale": "Faktureres etter gammelt antall"
       },
       "notOnContract": "Er det med i en fast pris, er alt i orden; ellers legger du til en linje i avtalen.",
-      "line": "{{product}} · avtale {{contract}}: anslaget er {{estimate}}, neste grunnlag fakturerer {{billed}}",
+      "line": "{{product}} · avtale {{contract}}: estimert {{estimate}}, neste grunnlag fakturerer {{billed}}",
       "bill": {
         "title": "Det CloudAlly fakturerer",
         "day": "Faktura per {{date}}",
@@ -3024,7 +3026,8 @@
         "seats": "Brukere",
         "price": "Pris",
         "total": "Sum",
-        "noMoney": "Beløpene vises for dem som ser innkjøpspriser."
+        "noMoney": "Beløpene vises for dem som ser innkjøpspriser.",
+        "rule": "Parasoll fakturerer det høyeste antallet brukere på én linje per konto, til sammen {{count}}."
       },
       "error": "Antallene kunne ikke leses."
     }
@@ -4768,7 +4771,7 @@
       "VND_NOT_FOUND": "Handlingen ble ikke funnet.",
       "VND_SENT": "Leverandøren tok imot endringen.",
       "VND_ALREADY_DONE": "Det var allerede slik; ingenting ble sendt.",
-      "VND_DRY_RUN": "Testmodus (DryRun): ingenting ble sendt.",
+      "VND_DRY_RUN": "Testmodus: ingenting ble sendt.",
       "VND_NO_ANSWER": "Det kom ikke noe klart svar. Sjekk om det skjedde.",
       "VND_EARLIER_ATTEMPT": "Et tidligere forsøk kan ha gått gjennom uten svar. Sjekk før du ber om det igjen.",
       "VND_VENDOR_UNAVAILABLE": "Systemet kunne ikke nås etter flere forsøk; ingenting ble sendt.",
@@ -4832,14 +4835,16 @@
       "VND_ALREADY_CONNECTED": "Kunden er allerede koblet til en post i dette systemet.",
       "VND_EXISTS_AT_VENDOR": "Systemet har allerede en post med denne nøkkelen. Er det denne kunden, kobler du den under Koblinger; ingenting ble sendt.",
       "VND_AMBIGUOUS_AT_VENDOR": "Systemet har flere poster med denne nøkkelen. Koble den riktige under Koblinger; ingenting ble sendt.",
-      "VND_CREATE_NOT_FOUND": "Et tidligere forsøk fikk ikke svar, og systemet har ingen post med nøkkelen vår. Sjekk der før du ber om det igjen.",
+      "VND_CREATE_NOT_FOUND": "Et tidligere forsøk fikk ikke svar, og ingen post med nøkkelen vår er funnet. Sjekk hos leverandøren og avklar handlingen: ble ingenting opprettet, oppretter neste forespørsel kunden.",
       "VND_CREATED": "Opprettet og koblet til kunden.",
       "VND_CREATED_EARLIER": "Et tidligere forsøk hadde opprettet den; den er koblet til kunden nå.",
       "VND_CREATED_NOT_LINKED": "Opprettet, men den kunne ikke kobles. Koble den under Koblinger.",
       "VND_LINKED_ELSEWHERE": "Posten med nøkkelen vår er koblet til en annen kunde i Parasoll; ingenting ble endret.",
       "VND_KEY_INVALID": "Skriv organisasjonsnøkkelen med små bokstaver, tall og bindestrek (høyst 64 tegn).",
       "VND_EMAIL_INVALID": "Skriv e-postadressen kontoen skal logge inn med.",
-      "VND_REGION_INVALID": "Velg et av datasentrene til CloudAlly i EU."
+      "VND_REGION_INVALID": "Velg et av datasentrene til CloudAlly i EU.",
+      "VND_CUSTOMER_GONE": "Kunden finnes ikke lenger i Parasoll; ingenting ble sendt.",
+      "VND_EARLIER_ATTEMPT_OPEN": "En tidligere forespørsel om å opprette kunden har ikke fått noe utfall ennå. Avklar den i handlingsloggen først; ingenting ble sendt."
     },
     "dialog": {
       "previewing": "Sjekker hva handlingen vil gjøre …",
@@ -5168,7 +5173,7 @@
       "notRead": "Månedsrapportene er ikke lest ennå.",
       "incidentsReported": "{{reported}} meldt",
       "storedCopy": "Kopi i Parasoll",
-      "downloadCopy": "Last ned kopien i Parasoll av rapporten for {{period}}"
+      "downloadCopy": "Kopi i Parasoll: last ned rapporten for {{period}}"
     },
     "incident": {
       "heading": "Sikkerhetshendelse",
@@ -5504,7 +5509,9 @@
       "VND_KIND_DISABLED": "Å opprette kunder i {{system}} er ikke slått på i denne installasjonen.",
       "VND_WRITE_DISABLED": "Endringer i {{system}} er slått av i denne installasjonen.",
       "VND_CUSTOMER_NOT_ALLOWED": "{{system}} tar foreløpig bare imot endringer for testkundene.",
-      "VND_FORBIDDEN": "Tilgangen din omfatter ikke å opprette kunder i {{system}}."
+      "VND_FORBIDDEN": "Tilgangen din omfatter ikke å opprette kunder i {{system}}.",
+      "VND_EXISTS_AT_VENDOR": "{{system}} har allerede «{{name}}», som ikke er koblet til noen kunde. Koble den under Koblinger i stedet.",
+      "VND_EARLIER_ATTEMPT_OPEN": "En tidligere forespørsel om å opprette kunden i {{system}} har ikke fått noe utfall ennå. Avklar den i handlingsloggen først."
     },
     "atera": {
       "note": "Navn, organisasjonsnummer og kontaktopplysninger hentes fra kundekortet."
@@ -5516,7 +5523,7 @@
     },
     "cloudally": {
       "email": "E-post for kontoen",
-      "emailHint": "Kontoen logger inn med denne adressen, og CloudAlly sender rapportene dit. Bruk en adresse firmaet ditt styrer.",
+      "emailHint": "CloudAlly sender rapportene for kontoen hit. Én konto per adresse: bruk en egen adresse for hver kunde, som firmaet ditt styrer.",
       "emailInvalid": "Skriv en e-postadresse.",
       "region": "Datasenter"
     },
@@ -5532,40 +5539,53 @@
       "intro": "Legg tjenestene inn i avtalen til kunden, så faktureres de etter det tjenesten teller.",
       "contract": "Avtale",
       "option": "{{number}} {{title}} ({{status}})",
-      "none": "Kunden har ingen avtale ennå. Opprett en etterpå og legg til linjene der.",
-      "newContract": "Ny avtale",
+      "none": "Kunden har ingen avtale ennå. Fortsett uten avtalelinjer, og legg dem til når avtalen finnes.",
       "loadError": "Avtalene kunne ikke leses.",
       "add": "Fakturer {{model}}",
       "product": "Produkt",
       "productRequired": "Velg produktet linjen fakturerer.",
-      "estimate": "Antall til første telling",
+      "estimate": "Estimert antall",
       "estimateHint": "Faktureres til tjenesten har talt; deretter teller Parasoll selv.",
       "estimateInvalid": "Skriv et helt tall fra 0.",
-      "from": "Fra og med",
+      "from": "Linjene gjelder fra og med",
       "fromInvalid": "Velg en dag fra avtalens start ({{date}}) eller senere.",
-      "already": "Avtalen har allerede en linje {{model}}.",
-      "priceNote": "Prisen følger prislisten; endre den på avtalen."
+      "already": "Avtalen fakturerer allerede {{model}}.",
+      "priceNote": "Prisen følger prislisten; endre den på avtalen.",
+      "alreadyIn": "Avtale {{number}} fakturerer allerede {{model}}."
     },
     "review": {
-      "creates": "Opprettes i systemene",
+      "creates": "Opprettes i tjenestene",
       "lines": "Legges til i avtale {{number}}",
-      "line": "{{product}} – {{model}}, {{quantity}} til første telling, fra {{date}}",
+      "line": "{{product}} – {{model}}, estimert {{quantity}}, fra {{date}}",
       "blocked": "Fjern haken for det som ikke kan opprettes, eller rett feltet, før du går videre.",
-      "previewError": "Forhåndsvisningen kunne ikke lages."
+      "previewError": "Forhåndsvisningen kunne ikke lages.",
+      "effects": "Dette får {{system}}",
+      "backToServices": "Tilbake til Tjenester",
+      "blocks": {
+        "VND_EXISTS_AT_VENDOR": "{{system}} har allerede en post for denne kunden som ingen kunde er koblet til. Er det denne, kobler du den under Koblinger.",
+        "VND_AMBIGUOUS_AT_VENDOR": "{{system}} har flere poster som kan være denne kunden. Koble den riktige under Koblinger.",
+        "VND_EARLIER_ATTEMPT_OPEN": "En tidligere forespørsel om å opprette kunden i {{system}} har ikke fått noe utfall ennå. Avklar den i handlingsloggen først.",
+        "VND_ALREADY_CONNECTED": "Kunden er allerede koblet til {{system}}."
+      }
     },
     "result": {
-      "creates": "I systemene",
+      "creates": "I tjenestene",
       "lines": "Avtale {{number}}",
       "lineAdded": "{{product}} er lagt til",
       "lineFailed": "{{product}} ble ikke lagt til: {{error}}",
       "next": "Gjenstår utenfor Parasoll",
       "steps": {
-        "atera": "Installer Atera-agenten på maskinene til kunden (i Atera).",
+        "atera": "Installer Atera-agenten på kundens enheter (i Atera).",
         "huntress": "Installer Huntress-agenten med organisasjonsnøkkelen {{key}}: legg skriptet til Huntress i kundens profil i Atera. Kontonøkkelen står i Huntress.",
-        "cloudally": "Gi CloudAlly tilgang til kundens Microsoft 365 og sett opp oppgavene for sikkerhetskopi (i partnerportalen til CloudAlly)."
+        "cloudally": "Gjør prøvekontoen om til betalt konto, gi CloudAlly tilgang til kundens Microsoft 365 og sett opp oppgavene for sikkerhetskopi (i partnerportalen til CloudAlly)."
       },
       "open": "Åpne {{system}}",
-      "keepsGoing": "Du kan lukke vinduet: systemene jobber videre, og handlingsloggen på siden for tilkoblinger tar vare på resultatet."
+      "keepsGoing": "Du kan lukke vinduet: tjenestene jobber videre, og handlingsloggen tar vare på utfallet.",
+      "notCreated": "Ikke opprettet",
+      "lineSkipped": "{{product}} ble ikke lagt til: {{system}} tok ikke imot forespørselen.",
+      "lineWithoutService": "Linjen for {{system}} er lagt til i avtalen, men {{system}} ble ikke opprettet. Fjern linjen i avtalen hvis tjenesten ikke settes opp.",
+      "logged": "Handlingsloggen tar vare på alle utfall.",
+      "openLog": "Åpne handlingsloggen"
     },
     "continue": "Fortsett",
     "confirm": "Opprett og koble til",

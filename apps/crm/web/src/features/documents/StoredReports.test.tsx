@@ -43,7 +43,9 @@ describe('Monthly reports among the customer\'s documents (M43)', () => {
     expect(list.getByText(/240 KB/)).toBeVisible();
     // Only the summary made after the month had closed says so, with why.
     const reconstructed = list.getByText('Reconstructed');
-    expect(reconstructed).toHaveAttribute('title', 'Made after the month had closed, from what Parasoll held then.');
+    expect(reconstructed).toBeVisible();
+    // The reason is said in words beside it, not in a tooltip keyboard and touch never get.
+    expect(list.getByText('Made after the month had closed, from what Parasoll held then.')).toBeVisible();
     expect(list.getAllByText('Reconstructed')).toHaveLength(1);
     expect(screen.getByText('Each file is checked against the fingerprint it was filed with before it is downloaded.')).toBeVisible();
   });

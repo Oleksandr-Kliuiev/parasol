@@ -14,6 +14,7 @@ import { fileSize, reportMonth, useStoredDownload } from './storedFiles';
 const useStyles = makeStyles({
   body: { display: 'grid', gap: '12px' },
   intro: { color: h.muted, fontSize: '13px', lineHeight: '18px' },
+  hint: { color: h.muted, fontSize: '12px', lineHeight: '16px' },
   // The reports as rows in one frame: what it is and for which month, when it was filed, and its download.
   frame: { listStyleType: 'none', margin: 0, padding: 0, border: `1px solid ${h.line}`, borderRadius: '14px', overflow: 'hidden' },
   row: {
@@ -71,11 +72,11 @@ export function StoredReports({ organizationId }: { organizationId: string }) {
                           {t('documents.stored.stored', { date: formatDate(document.storedAt), size: fileSize(document.length) })}
                         </time>
                         {document.provenance === 'Reconstructed' && (
-                          <Badge appearance="tint" color="warning" title={t('documents.stored.reconstructedHint')}>
-                            {t('documents.stored.reconstructed')}
-                          </Badge>
+                          <Badge appearance="tint" color="warning">{t('documents.stored.reconstructed')}</Badge>
                         )}
                       </span>
+                      {/* Said in words, not in a tooltip keyboard and touch never get. */}
+                      {document.provenance === 'Reconstructed' && <Text className={styles.hint}>{t('documents.stored.reconstructedHint')}</Text>}
                     </span>
                     <Button size="small" icon={<ArrowDownload16Regular />} disabled={busy !== null} onClick={() => void save(document.id)}
                       aria-label={t('documents.stored.downloadLabel', { name })}>

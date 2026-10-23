@@ -34,8 +34,10 @@ describe('ServiceQuantitiesPanel (M43)', () => {
     render(['billing.read', 'finance.cost.read'], true);
     const panel = await screen.findByRole('region', { name: 'Counted by the services' });
     expect(await within(panel).findByText('Agents in Huntress')).toBeInTheDocument();
-    expect(within(panel).getByText('Huntress per agent · contract K-1001: the estimate is 3, the next basis bills 21')).toBeInTheDocument();
+    expect(within(panel).getByText('Huntress per agent · contract K-1001: estimated 3, the next basis bills 21')).toBeInTheDocument();
     expect(within(panel).getByText('Billed by the count')).toBeInTheDocument();
+    // The count above the bill is not the sum of its rows: the rule is said under it.
+    expect(within(panel).getByText('Parasoll bills the highest number of users on one line per account: 14 in all.')).toBeInTheDocument();
     expect(within(panel).getByText('No contract line bills it')).toBeInTheDocument();
     expect(within(panel).getByText(/older than 3 days/)).toBeInTheDocument();
     expect(within(panel).getByText(/Workstations 6 · Servers 1/)).toBeInTheDocument();
@@ -69,7 +71,7 @@ describe('ServiceQuantitiesPanel (M43)', () => {
   it('words a missing Huntress or CloudAlly count in the reader’s language', () => {
     const t = i18n.getFixedT('en');
     expect(anomalyText(t, { code: 'BIL_NO_AGENT_READING', message: 'x', args: { product: 'Huntress per agent' } }))
-      .toBe('Huntress per agent is billed per Huntress agent, but Huntress has not counted them for the customer yet; the contract’s estimate is billed.');
+      .toBe('Huntress per agent is billed per Huntress agent, but Huntress has not counted them for the customer yet; the contract’s estimated quantity is billed.');
     expect(anomalyText(t, { code: 'BIL_NO_SEAT_READING', message: 'x', args: { product: 'Backup', subsidiary: 'Datter AS' } })).toMatch(/^Datter AS: Backup is billed per backup user/);
   });
 });

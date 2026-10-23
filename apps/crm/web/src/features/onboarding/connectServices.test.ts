@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  choiceValid, createRequest, emailValid, estimateValid, initialChoice, keyValid, lineStart, lineValid, openContract, withContract,
-  type CustomerService, type LineChoice,
+  billedBy, choiceValid, createRequest, emailValid, estimateValid, initialChoice, keyValid, lineStart, lineValid, openContract, withContract,
+  type BilledLine, type CustomerService, type LineChoice,
 } from './connectServices';
 import { entityTypeOf } from '../integrations/labels';
 
@@ -41,12 +41,16 @@ describe('connect services (M43)', () => {
     expect(createRequest({ ...base, system: 'cloudally', kind: 'account.create' }, 'o1').parameters).toEqual({ email: 'backup@fjordit.no', region: 'EU_PARIS' });
   });
 
-  it('adds a line the contract lacks until the person decides, and checks what a line needs', () => {
+  it('adds a line no open contract bills from its day on, until the person decides, and checks what a line needs', () => {
     const line: LineChoice = { system: 'huntress', model: 'PerHuntressAgent', add: true, product: null, estimate: '0' };
-    const existing = [{ isCurrent: true, quantityModel: 'PerHuntressAgent' }];
-    expect(withContract([line], existing)[0]!.add).toBe(false);
-    expect(withContract([line], [{ isCurrent: false, quantityModel: 'PerHuntressAgent' }])[0]!.add).toBe(true);
-    expect(withContract([{ ...line, decided: true }], existing)[0]!.add).toBe(true);
+    const billed: BilledLine[] = [{ contractId: 'c2', contractNumber: 'K-1002', quantityModel: 'PerHuntressAgent', validTo: null }];
+    // Another contract's line bills the agents too, also one that starts later: a second line would bill them twice.
+    expect(withContract([line], billed, '2026-11-01')[0]!.add).toBe(false);
+    expect(billedBy(billed, 'PerHuntressAgent', '2026-11-01')?.contractNumber).toBe('K-1002');
+    // A line that ended before the day leaves room for a new one.
+    expect(withContract([line], [{ ...billed[0]!, validTo: '2026-10-31' }], '2026-11-01')[0]!.add).toBe(true);
+    expect(withContract([line], [{ ...billed[0]!, validTo: '2026-11-01' }], '2026-11-01')[0]!.add).toBe(false);
+    expect(withContract([{ ...line, decided: true }], billed, '2026-11-01')[0]!.add).toBe(true);
     expect(lineValid(line)).toBe(false);
     expect(lineValid({ ...line, product: { id: 'p1', sku: 'HNT', name: 'Huntress' } })).toBe(true);
     expect(lineValid({ ...line, add: false })).toBe(true);

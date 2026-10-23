@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Button, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, MessageBar, MessageBarBody, Spinner, Text, makeStyles, mergeClasses, tokens,
+  Button, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, MessageBar, MessageBarActions, MessageBarBody, Spinner, Text, makeStyles,
+  mergeClasses, tokens,
 } from '@fluentui/react-components';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +14,7 @@ import { previewAction, requestAction, useRefreshActions } from '../actions/api'
 import type { ActionPreview } from '../actions/types';
 import { serviceQuantityKeys, useServiceQuantities } from '../billing/serviceQuantities';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
-import { contractKeys, useContract, useContracts } from '../contracts/api';
+import { contractKeys, contractQuery, useContracts } from '../contracts/api';
 import type { LineRequest } from '../contracts/types';
 import { dayIn } from '../service/alerts/alertHiding';
 import { ConnectResult, type CreateOutcome, type LineOutcome } from './ConnectResult';
@@ -21,13 +22,16 @@ import { ConnectReview } from './ConnectReview';
 import { ContractLinesStep } from './ContractLinesStep';
 import {
   choiceValid, createRequest, initialChoice, lineStart, lineValid, modelOf, onboardingKeys, openContract, useCustomerServices, withContract,
-  type CreateChoice, type LineChoice,
+  type BilledLine, type CreateChoice, type LineChoice,
 } from './connectServices';
 import { ServiceChoices } from './ServiceChoices';
 
 type Step = 'services' | 'contract' | 'review' | 'result';
 
 const steps: Step[] = ['services', 'contract', 'review', 'result'];
+
+/** A preview's token lives ten minutes: a wizard left open on its confirmation reads the previews again well before that. */
+const PreviewRefresh = 4 * 60_000;
 
 const useStyles = makeStyles({
   content: { display: 'grid', gap: '14px', gridTemplateColumns: 'minmax(0, 1fr)' },
@@ -71,10 +75,16 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
   const choices = useMemo(() => edited ?? (services.data ? services.data.services.map(initialChoice) : null), [edited, services.data]);
   const open = (contracts.data?.pages.flatMap((p) => p.items) ?? []).filter(openContract);
   const contractId = pickedContract ?? (open.find((c) => c.status === 'Active') ?? open[0])?.id ?? null;
-  const contract = useContract(contractId ?? undefined).data?.data;
+  // Every open contract's lines: a service one of them bills already must not get a second line in another (the collector bills both).
+  const details = useQueries({ queries: open.map((c) => contractQuery(c.id)) });
+  const contract = details.find((d) => d.data?.data.id === contractId)?.data?.data;
+  const billed = details.flatMap((d) => {
+    const c = d.data?.data;
+    return c ? c.lines.map((l): BilledLine => ({ contractId: c.id, contractNumber: c.number, quantityModel: l.quantityModel, validTo: l.validTo })) : [];
+  });
   const minFrom = contract?.startDate ?? null;
   const from = pickedFrom ?? (contract ? lineStart(contract, dayIn(0)) : dayIn(0));
-  const lines = withContract(chosenLines, contract?.lines ?? []);
+  const lines = withContract(chosenLines, billed, from);
   // Each step announces itself: focus goes to its name, so a screen reader hears where it is and Tab goes on from there.
   useEffect(() => { stepRef.current?.focus(); }, [step]);
 
@@ -86,7 +96,7 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
     queries: requests.map((request) => ({
       queryKey: ['onboarding', 'preview', request] as const,
       queryFn: () => previewAction(request),
-      retry: false, staleTime: Infinity, gcTime: 0, refetchOnWindowFocus: false,
+      retry: false, staleTime: PreviewRefresh, refetchInterval: PreviewRefresh, gcTime: 0, refetchOnWindowFocus: false,
     })),
   });
 
@@ -99,14 +109,22 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
     });
 
   const go = (next: Step) => { setTouched(false); setStep(next); };
+  /** After a Continue the fields refused, focus goes to the first field that says why (WCAG 3.3.1). */
+  const showFirstError = () => requestAnimationFrame(() => contentRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
   const forward = () => {
     setTouched(true);
     if (step === 'services') {
-      if (!(choices ?? []).every(choiceValid)) return;
+      if (!(choices ?? []).every(choiceValid)) {
+        showFirstError();
+        return;
+      }
       setLines(linesFor(choices ?? []));
       go('contract');
     } else if (step === 'contract') {
-      if (open.length > 0 && (!lines.every(lineValid) || (minFrom !== null && lines.some((l) => l.add) && from < minFrom))) return;
+      if (open.length > 0 && (!lines.every(lineValid) || (minFrom !== null && lines.some((l) => l.add) && from < minFrom))) {
+        showFirstError();
+        return;
+      }
       go('review');
     }
   };
@@ -136,17 +154,23 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
       }
     }
 
+    // A line is added for a service the customer has, or one whose creation was taken; a refused request adds no line for it.
     const added: LineOutcome[] = [];
     for (const line of addedLines) {
+      const refused = outcomes.find((o) => o.system === line.system && o.action === null);
+      if (refused) {
+        added.push({ line, error: refused.error, skipped: true });
+        continue;
+      }
       const body: LineRequest = {
         productId: line.product!.id, description: null, quantityModel: line.model, deviceFilter: line.model === 'PerAteraDevice' ? 'All' : null,
         quantity: Number(line.estimate.trim()), unitPrice: null, discountPct: null, validFrom: from, validTo: null,
       };
       try {
         await api.post(`/api/v1/contracts/${contractId}/lines`, body);
-        added.push({ line, error: null });
+        added.push({ line, error: null, skipped: false });
       } catch (error) {
-        added.push({ line, error });
+        added.push({ line, error, skipped: false });
       }
     }
 
@@ -162,7 +186,8 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
   const position = steps.indexOf(step) + 1;
   const contractNumber = contract?.number ?? null;
   return (
-    <Dialog open onOpenChange={(_, d) => { if (!d.open) onClose(); }}>
+    // Closing while the requests go out would hide their outcome: Escape and a click beside it wait until they are sent.
+    <Dialog open onOpenChange={(_, d) => { if (!d.open && !busy) onClose(); }}>
       <DialogSurface>
         <DialogBody>
           <DialogTitle>{t('onboarding.title')}</DialogTitle>
@@ -182,18 +207,25 @@ export function ConnectServicesDialog({ organizationId, onClose }: { organizatio
             {step === 'contract' && (
               <ContractLinesStep contracts={open} loading={contracts.isPending} error={contracts.error} onRetry={() => void contracts.refetch()}
                 contractId={contractId} onContract={(id) => { setPickedContract(id); setPickedFrom(null); setLines(linesFor(choices ?? [], [])); }}
-                lines={lines} existing={contract?.lines ?? []} from={from} onFrom={setPickedFrom} minFrom={minFrom} touched={touched}
-                onLine={(line) => setLines((current) => current.map((l) => (l.system === line.system ? line : l)))} organizationId={organizationId} />
+                lines={lines} billed={billed} from={from} onFrom={setPickedFrom} minFrom={minFrom} touched={touched}
+                onLine={(line) => setLines((current) => current.map((l) => (l.system === line.system ? line : l)))} />
             )}
             {step === 'review' && (
               <>
                 <ConnectReview creates={chosen} previews={previews} lines={addedLines} contractNumber={contractNumber} from={from} />
-                {anyBlocked && <MessageBar intent="warning" layout="multiline"><MessageBarBody>{t('onboarding.review.blocked')}</MessageBarBody></MessageBar>}
+                {anyBlocked && (
+                  <MessageBar intent="warning" layout="multiline">
+                    <MessageBarBody>{t('onboarding.review.blocked')}</MessageBarBody>
+                    <MessageBarActions>
+                      <Button size="small" onClick={() => go('services')}>{t('onboarding.review.backToServices')}</Button>
+                    </MessageBarActions>
+                  </MessageBar>
+                )}
               </>
             )}
             {step === 'result' && (
-              <ConnectResult creates={creates} lines={lineOutcomes} contractNumber={contractNumber} choices={choices ?? []} services={list}
-                onSettled={refreshCustomer} />
+              <ConnectResult creates={creates} lines={lineOutcomes} contractId={contractId} contractNumber={contractNumber} choices={choices ?? []}
+                services={list} onSettled={refreshCustomer} />
             )}
           </DialogContent>
           <DialogActions>

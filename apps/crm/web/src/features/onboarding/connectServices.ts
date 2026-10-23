@@ -25,6 +25,8 @@ export interface CustomerService {
   simulated: boolean;
   defaults: Record<string, string | null>;
   consoleUrl: string | null;
+  /** The name of a record at the vendor, named like the customer and linked to nobody, that blocks creating it (VND_EXISTS_AT_VENDOR). */
+  existing?: string | null;
 }
 
 export interface CustomerServices {
@@ -94,6 +96,13 @@ export function initialChoice(service: CustomerService): CreateChoice {
   };
 }
 
+/** The mapping screen's list of a vendor's customers, where an existing record is linked by hand. */
+export const mappingsOf: Record<string, string> = {
+  atera: '/admin/mappings?system=atera&type=Customer',
+  huntress: '/admin/mappings?system=huntress&type=Organization',
+  cloudally: '/admin/mappings?system=cloudally&type=Customer',
+};
+
 /** The vendor action that creates the customer (M39.1 path): its target is the CRM organization. */
 export function createRequest(choice: CreateChoice, organizationId: string): ActionRequest {
   const parameters: Record<string, unknown> = choice.system === 'huntress' ? { key: choice.key.trim() }
@@ -104,7 +113,7 @@ export function createRequest(choice: CreateChoice, organizationId: string): Act
 
 /**
  * A contract line the wizard adds for one vendor's service. Until the person ticks or unticks it (<c>decided</c>), it is added
- * unless the chosen contract already bills the service per unit.
+ * unless one of the customer's open contracts already bills the service per unit from the line's first day on.
  */
 export interface LineChoice {
   system: string;
@@ -115,9 +124,24 @@ export interface LineChoice {
   estimate: string;
 }
 
-/** The lines with their boxes as the chosen contract leaves them: one the person has not decided follows what the contract lacks. */
-export const withContract = (lines: LineChoice[], existing: { isCurrent: boolean; quantityModel: string }[]) =>
-  lines.map((line) => (line.decided ? line : { ...line, add: !existing.some((e) => e.isCurrent && e.quantityModel === line.model) }));
+/** A contract's line as far as billing the same service twice goes. */
+export interface BilledLine {
+  contractId: string;
+  contractNumber: string;
+  quantityModel: string;
+  validTo: string | null;
+}
+
+/**
+ * The open contract that already bills a price kind on or after <paramref name="from"/>: a line of the kind without an end, or one that
+ * ends on that day or later — a line that starts later counts too, so a second line never doubles what the collector bills.
+ */
+export const billedBy = (lines: BilledLine[], model: string, from: string) =>
+  lines.find((l) => l.quantityModel === model && (l.validTo === null || l.validTo >= from)) ?? null;
+
+/** The lines with their boxes as the customer's contracts leave them: one the person has not decided follows what none bills yet. */
+export const withContract = (lines: LineChoice[], billed: BilledLine[], from: string) =>
+  lines.map((line) => (line.decided ? line : { ...line, add: billedBy(billed, line.model, from) === null }));
 
 /** A contract lines can be added to: anything but an ended one. */
 export const openContract = (contract: Pick<ContractListItem, 'status'>) => contract.status !== 'Ended';

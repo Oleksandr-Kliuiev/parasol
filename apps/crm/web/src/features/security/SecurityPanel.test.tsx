@@ -125,7 +125,7 @@ describe('Security in the Drift tab (M41)', () => {
 
     const table = await screen.findByRole('table', { name: 'Monthly reports' });
     const rows = within(table).getAllByRole('row').slice(1);
-    const button = await within(rows[0]!).findByRole('button', { name: 'Download the copy kept in Parasoll of the report for September 2026' });
+    const button = await within(rows[0]!).findByRole('button', { name: 'Copy in Parasoll: download the report for September 2026' });
     // The August report was not filed: only Huntress's link, and Parasoll's own summary is not a Huntress report's copy.
     expect(within(rows[1]!).queryByRole('button')).not.toBeInTheDocument();
     await userEvent.click(button);

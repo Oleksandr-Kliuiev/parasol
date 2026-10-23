@@ -2899,8 +2899,8 @@
       "BIL_STALE_QUANTITY": "{{product}}: the quantity comes from a reading of {{date}}, which is older than the limit.",
       "BIL_NO_DEVICE_SNAPSHOT": "{{product}} is billed per device, but no daily device count exists; the devices listed now are counted.",
       "BIL_INCOMPLETE_HOURS": "The latest import of work hours ({{date}}) did not finish completely; hours may be missing from this basis.",
-      "BIL_NO_AGENT_READING": "{{product}} is billed per Huntress agent, but Huntress has not counted them for the customer yet; the contract’s estimate is billed.",
-      "BIL_NO_SEAT_READING": "{{product}} is billed per backup user, but no CloudAlly bill counts them for the customer yet; the contract’s estimate is billed."
+      "BIL_NO_AGENT_READING": "{{product}} is billed per Huntress agent, but Huntress has not counted them for the customer yet; the contract’s estimated quantity is billed.",
+      "BIL_NO_SEAT_READING": "{{product}} is billed per backup user, but no CloudAlly bill counts them for the customer yet; the contract’s estimated quantity is billed."
     },
     "conflictsCount_one": "{{count}} line needs a decision",
     "conflictsCount_other": "{{count}} lines need a decision",
@@ -3011,12 +3011,14 @@
       "notRead": "Not counted yet",
       "status": {
         "Counted": "Billed by the count",
-        "NoReading": "No count yet: the estimate is billed",
+        "NoReading": "No count yet: the estimated quantity is billed",
         "NotOnContract": "No contract line bills it",
-        "None": "Nothing to count"
+        "None": "Nothing to count",
+        "CountedZero": "Counted 0: nothing is billed",
+        "CountedStale": "Billed by an old count"
       },
       "notOnContract": "If it is part of a fixed price, all is well; otherwise add a line to the contract.",
-      "line": "{{product}} · contract {{contract}}: the estimate is {{estimate}}, the next basis bills {{billed}}",
+      "line": "{{product}} · contract {{contract}}: estimated {{estimate}}, the next basis bills {{billed}}",
       "bill": {
         "title": "What CloudAlly bills",
         "day": "Bill of {{date}}",
@@ -3026,7 +3028,8 @@
         "seats": "Users",
         "price": "Price",
         "total": "Total",
-        "noMoney": "The amounts are shown to those who see purchase prices."
+        "noMoney": "The amounts are shown to those who see purchase prices.",
+        "rule": "Parasoll bills the highest number of users on one line per account: {{count}} in all."
       },
       "error": "The counts could not be read."
     }
@@ -4770,7 +4773,7 @@
       "VND_NOT_FOUND": "The action was not found.",
       "VND_SENT": "The vendor accepted the change.",
       "VND_ALREADY_DONE": "It was already so; nothing was sent.",
-      "VND_DRY_RUN": "Test mode (DryRun): nothing was sent.",
+      "VND_DRY_RUN": "Test mode: nothing was sent.",
       "VND_NO_ANSWER": "No clear answer came back. Check whether it happened.",
       "VND_EARLIER_ATTEMPT": "An earlier attempt may have got through without an answer. Check before asking again.",
       "VND_VENDOR_UNAVAILABLE": "The system could not be reached after several attempts; nothing was sent.",
@@ -4834,14 +4837,16 @@
       "VND_ALREADY_CONNECTED": "The customer is already linked to a record in this system.",
       "VND_EXISTS_AT_VENDOR": "The system already has a record with this key. If it is this customer, link it under Mappings; nothing was sent.",
       "VND_AMBIGUOUS_AT_VENDOR": "The system has several records with this key. Link the right one under Mappings; nothing was sent.",
-      "VND_CREATE_NOT_FOUND": "An earlier attempt got no answer, and the system has no record with our key. Check there before asking again.",
+      "VND_CREATE_NOT_FOUND": "An earlier attempt got no answer, and no record with our key was found. Check at the vendor and settle this action: if nothing was made, the next request creates the customer.",
       "VND_CREATED": "Created and linked to the customer.",
       "VND_CREATED_EARLIER": "An earlier attempt had created it; it is linked to the customer now.",
       "VND_CREATED_NOT_LINKED": "Created, but it could not be linked. Link it under Mappings.",
       "VND_LINKED_ELSEWHERE": "The record with our key is linked to another customer in Parasoll; nothing was changed.",
       "VND_KEY_INVALID": "Write the organization key with lower-case letters, digits and hyphens (at most 64 characters).",
       "VND_EMAIL_INVALID": "Enter the e-mail address the account signs in with.",
-      "VND_REGION_INVALID": "Choose one of CloudAlly’s data centers in the EU."
+      "VND_REGION_INVALID": "Choose one of CloudAlly’s data centers in the EU.",
+      "VND_CUSTOMER_GONE": "The customer no longer exists in Parasoll; nothing was sent.",
+      "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer has no outcome yet. Settle it in the action log first; nothing was sent."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -5170,7 +5175,7 @@
       "notRead": "Monthly reports have not been read yet.",
       "incidentsReported": "{{reported}} reported",
       "storedCopy": "Copy in Parasoll",
-      "downloadCopy": "Download the copy kept in Parasoll of the report for {{period}}"
+      "downloadCopy": "Copy in Parasoll: download the report for {{period}}"
     },
     "incident": {
       "heading": "Security incident",
@@ -5506,7 +5511,9 @@
       "VND_KIND_DISABLED": "Creating customers in {{system}} is not switched on in this installation.",
       "VND_WRITE_DISABLED": "Changes in {{system}} are switched off in this installation.",
       "VND_CUSTOMER_NOT_ALLOWED": "{{system}} only takes changes for the test customers for now.",
-      "VND_FORBIDDEN": "Your access does not include creating customers in {{system}}."
+      "VND_FORBIDDEN": "Your access does not include creating customers in {{system}}.",
+      "VND_EXISTS_AT_VENDOR": "{{system}} already has “{{name}}”, not linked to any customer. Link it under Mappings instead.",
+      "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer in {{system}} has no outcome yet. Settle it in the action log first."
     },
     "atera": {
       "note": "Name, organization number and contact details come from the customer card."
@@ -5518,7 +5525,7 @@
     },
     "cloudally": {
       "email": "E-mail of the account",
-      "emailHint": "The account signs in with this address, and CloudAlly sends its reports there. Use an address your firm controls.",
+      "emailHint": "CloudAlly sends the account’s reports to this address. One account per address: use a separate address for each customer, one your firm controls.",
       "emailInvalid": "Enter an e-mail address.",
       "region": "Data center"
     },
@@ -5534,40 +5541,53 @@
       "intro": "Add the services to the customer’s contract, so they are billed by what the service counts.",
       "contract": "Contract",
       "option": "{{number}} {{title}} ({{status}})",
-      "none": "The customer has no contract yet. Create one afterwards and add the lines there.",
-      "newContract": "New contract",
+      "none": "The customer has no contract yet. Continue without contract lines and add them once the contract exists.",
       "loadError": "The contracts could not be read.",
       "add": "Bill {{model}}",
       "product": "Product",
       "productRequired": "Choose the product the line bills.",
-      "estimate": "Quantity until the first count",
+      "estimate": "Estimated quantity",
       "estimateHint": "Billed until the service has counted; from then on Parasoll counts.",
       "estimateInvalid": "Enter a whole number from 0.",
-      "from": "From",
+      "from": "Lines apply from",
       "fromInvalid": "Choose a day on or after the contract’s start ({{date}}).",
-      "already": "The contract already has a line {{model}}.",
-      "priceNote": "The price follows the price list; change it on the contract."
+      "already": "The contract already bills {{model}}.",
+      "priceNote": "The price follows the price list; change it on the contract.",
+      "alreadyIn": "Contract {{number}} already bills {{model}}."
     },
     "review": {
-      "creates": "To be created in the systems",
+      "creates": "To be created in the services",
       "lines": "To be added to contract {{number}}",
-      "line": "{{product}} – {{model}}, {{quantity}} until the first count, from {{date}}",
+      "line": "{{product}} – {{model}}, estimated {{quantity}}, from {{date}}",
       "blocked": "Untick what cannot be created, or correct its field, before you go on.",
-      "previewError": "The preview could not be made."
+      "previewError": "The preview could not be made.",
+      "effects": "What {{system}} gets",
+      "backToServices": "Back to Services",
+      "blocks": {
+        "VND_EXISTS_AT_VENDOR": "{{system}} already has a record for this customer that no customer is linked to. If it is this one, link it under Mappings.",
+        "VND_AMBIGUOUS_AT_VENDOR": "{{system}} has several records that could be this customer. Link the right one under Mappings.",
+        "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer in {{system}} has no outcome yet. Settle it in the action log first.",
+        "VND_ALREADY_CONNECTED": "The customer is already linked to {{system}}."
+      }
     },
     "result": {
-      "creates": "In the systems",
+      "creates": "In the services",
       "lines": "Contract {{number}}",
       "lineAdded": "{{product}} added",
       "lineFailed": "{{product}} was not added: {{error}}",
       "next": "Left to do outside Parasoll",
       "steps": {
-        "atera": "Install the Atera agent on the customer’s machines (in Atera).",
+        "atera": "Install the Atera agent on the customer’s devices (in Atera).",
         "huntress": "Install the Huntress agent with the organization key {{key}}: add Huntress’s script to the customer’s profile in Atera. The account key is in Huntress.",
-        "cloudally": "Give CloudAlly access to the customer’s Microsoft 365 and set up the backup tasks (in CloudAlly’s partner portal)."
+        "cloudally": "Convert the trial account to a paid one, give CloudAlly access to the customer’s Microsoft 365 and set up the backup tasks (in CloudAlly’s partner portal)."
       },
       "open": "Open {{system}}",
-      "keepsGoing": "You can close the window: the systems keep working, and the action log on the connections page keeps the outcome."
+      "keepsGoing": "You can close the window: the services keep working, and the action log keeps the outcome.",
+      "notCreated": "Not created",
+      "lineSkipped": "{{product}} was not added: {{system}} did not take the request.",
+      "lineWithoutService": "The {{system}} line was added to the contract, but {{system}} was not created. Remove the line on the contract unless the service is set up.",
+      "logged": "The action log keeps every outcome.",
+      "openLog": "Open the action log"
     },
     "continue": "Continue",
     "confirm": "Create and link",

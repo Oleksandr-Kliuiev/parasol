@@ -42,7 +42,7 @@ test('connecting a customer creates it in Atera, Huntress and CloudAlly and adds
     const line = wizard.getByRole('group', { name: group, exact: true });
     await line.getByRole('combobox', { name: /^Product/ }).pressSequentially(product.sku);
     await page.getByRole('option', { name: new RegExp(product.sku, 'i') }).click();
-    await line.getByRole('textbox', { name: /^Quantity until the first count/ }).fill(estimate);
+    await line.getByRole('textbox', { name: /^Estimated quantity/ }).fill(estimate);
   }
   await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
 
@@ -52,7 +52,7 @@ test('connecting a customer creates it in Atera, Huntress and CloudAlly and adds
   await expect(wizard.getByText(`Huntress gets the organization “${customer.name}” with the organization key ${customer.key}.`, { exact: true })).toBeVisible();
   await expect(wizard.getByText(`CloudAlly gets the account “${customer.name}” for ${email} in the data center EU, opened as a trial account.`, { exact: true }))
     .toBeVisible();
-  await expect(wizard.getByText(new RegExp(`^${customer.agent.name} – Per Huntress agent, 5 until the first count`))).toBeVisible();
+  await expect(wizard.getByText(new RegExp(`^${customer.agent.name} – Per Huntress agent, estimated 5`))).toBeVisible();
   await wizard.getByRole('button', { name: 'Create and link', exact: true }).click();
 
   // Step 4: each creation is followed until the worker has linked it, and what the APIs cannot do is named with the way to the console.
@@ -62,7 +62,7 @@ test('connecting a customer creates it in Atera, Huntress and CloudAlly and adds
   await expect(wizard.getByText(`${customer.seat.name} added`, { exact: true })).toBeVisible();
   const next = wizard.getByRole('region', { name: 'Left to do outside Parasoll', exact: true });
   await expect(next.getByText(new RegExp(`organization key ${customer.key}: add Huntress’s script`))).toBeVisible();
-  await expect(next.getByText(/Give CloudAlly access to the customer’s Microsoft 365/)).toBeVisible();
+  await expect(next.getByText(/give CloudAlly access to the customer’s Microsoft 365/)).toBeVisible();
   await expect(next.getByRole('link', { name: 'Open Atera', exact: true })).toHaveAttribute('href', 'https://app.atera.com/');
   await wizard.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -110,10 +110,10 @@ test('the contracts tab shows what Huntress and CloudAlly count against the line
   await page.goto(`/organizations/${customer.organizationId}?tab=contracts`);
   const panel = page.getByRole('region', { name: 'Counted by the services', exact: true });
   const agents = panel.getByRole('listitem').filter({ hasText: 'Agents in Huntress' });
-  await expect(agents).toContainText(`${agent.name} · contract ${contract.number}: the estimate is 1, the next basis bills 2`);
+  await expect(agents).toContainText(`${agent.name} · contract ${contract.number}: estimated 1, the next basis bills 2`);
   await expect(agents).toContainText('Billed by the count');
   const users = panel.getByRole('listitem').filter({ hasText: 'Backup users in CloudAlly' });
-  await expect(users).toContainText(`${seat.name} · contract ${contract.number}: the estimate is 1, the next basis bills 2`);
+  await expect(users).toContainText(`${seat.name} · contract ${contract.number}: estimated 1, the next basis bills 2`);
   // The customer has no Atera devices and no line bills them: the row says so without calling it unbilled.
   await expect(panel.getByRole('listitem').filter({ hasText: 'Devices in Atera' })).toContainText('Nothing to count');
 

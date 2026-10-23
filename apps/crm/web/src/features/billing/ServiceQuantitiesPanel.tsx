@@ -35,12 +35,20 @@ const useStyles = makeStyles({
 
 const icons = { PerAteraDevice: <Desktop16Regular />, PerHuntressAgent: <Shield16Regular />, PerBackupSeat: <CloudArrowUp16Regular /> };
 
-const statusLook: Record<ServiceQuantityStatus, { tone: Tone; color: 'success' | 'warning' | 'informative' | 'subtle' }> = {
+/** A count of 0 and an old count are billed as they are, but neither is green: the first bills nothing, the second may be wrong. */
+type Look = ServiceQuantityStatus | 'CountedZero' | 'CountedStale';
+
+const statusLook: Record<Look, { tone: Tone; color: 'success' | 'warning' | 'informative' | 'subtle' }> = {
   Counted: { tone: 'spruce', color: 'success' },
+  CountedZero: { tone: 'saffron', color: 'warning' },
+  CountedStale: { tone: 'saffron', color: 'warning' },
   NoReading: { tone: 'saffron', color: 'warning' },
   NotOnContract: { tone: 'iris', color: 'informative' },
   None: { tone: 'neutral', color: 'subtle' },
 };
+
+const lookOf = (service: ServiceQuantity): Look =>
+  service.status !== 'Counted' ? service.status : service.count === 0 ? 'CountedZero' : service.stale ? 'CountedStale' : 'Counted';
 
 /** When and how the count was read, in the reader's words. */
 function readingText(t: TFunction, service: ServiceQuantity) {
@@ -61,7 +69,8 @@ export function ServiceQuantitiesPanel({ organizationId }: { organizationId: str
   const flush = useFlushStyles();
   const read = useServiceQuantities(organizationId);
   const services = read.data?.services ?? [];
-  const bills = services.find((s) => s.model === 'PerBackupSeat')?.billLines ?? [];
+  const backup = services.find((s) => s.model === 'PerBackupSeat');
+  const bills = backup?.billLines ?? [];
 
   return (
     <Panel flush className={flush.panel} title={t('billing.serviceQuantities.title')} icon={<DataBarVertical16Regular />}>
@@ -77,7 +86,7 @@ export function ServiceQuantitiesPanel({ organizationId }: { organizationId: str
           ))}
         </ul>
       )}
-      {bills.length > 0 && <BillLines lines={bills} />}
+      {bills.length > 0 && <BillLines lines={bills} counted={backup?.count ?? null} />}
     </Panel>
   );
 }
@@ -85,7 +94,8 @@ export function ServiceQuantitiesPanel({ organizationId }: { organizationId: str
 function ServiceRow({ service, staleDays }: { service: ServiceQuantity; staleDays: number }) {
   const { t } = useTranslation();
   const styles = useStyles();
-  const look = statusLook[service.status];
+  const status = lookOf(service);
+  const look = statusLook[status];
   const detail = service.detail ? Object.entries(service.detail) : [];
   return (
     <RecordRow
@@ -111,14 +121,14 @@ function ServiceRow({ service, staleDays }: { service: ServiceQuantity; staleDay
       </>}
       end={<>
         <span className={styles.count}>{service.count === null ? '—' : formatNumber(service.count, 0)}</span>
-        <Badge appearance="tint" color={look.color}>{t(`billing.serviceQuantities.status.${service.status}`)}</Badge>
+        <Badge appearance="tint" color={look.color}>{t(`billing.serviceQuantities.status.${status}`)}</Badge>
       </>}
     />
   );
 }
 
 /** What CloudAlly bills the partner for the customer's accounts, as its nightly bill read stored it. */
-function BillLines({ lines }: { lines: ServiceBillLine[] }) {
+function BillLines({ lines, counted }: { lines: ServiceBillLine[]; counted: number | null }) {
   const { t } = useTranslation();
   const styles = useStyles();
   const flush = useFlushStyles();
@@ -158,6 +168,8 @@ function BillLines({ lines }: { lines: ServiceBillLine[] }) {
           ))}</TableBody>
         </Table>
       </ScrollTable>
+      {/* The count above is not the sum of these rows: say the rule, so the two can be matched. */}
+      {counted !== null && <Text block className={mergeClasses(flush.body, flush.muted)}>{t('billing.serviceQuantities.bill.rule', { count: counted })}</Text>}
     </div>
   );
 }

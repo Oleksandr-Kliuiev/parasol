@@ -26,7 +26,7 @@ test('the "Connect services" wizard and the counts fit a phone screen', async ({
   await line.getByRole('combobox', { name: /^Product/ }).pressSequentially(customer.agent.sku);
   await page.getByRole('option', { name: new RegExp(customer.agent.sku, 'i') }).click();
   const product = await line.getByRole('combobox', { name: /^Product/ }).boundingBox();
-  const estimate = await line.getByRole('textbox', { name: /^Quantity until the first count/ }).boundingBox();
+  const estimate = await line.getByRole('textbox', { name: /^Estimated quantity/ }).boundingBox();
   expect(estimate!.y, 'the quantity stacks under the product on a phone').toBeGreaterThan(product!.y + product!.height);
   expect(await overflow(), 'the contract step scrolls sideways').toBeLessThanOrEqual(1);
   await wizard.getByRole('button', { name: 'Continue', exact: true }).click();

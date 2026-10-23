@@ -47,7 +47,7 @@ test('a customer\'s monthly reports are filed among its documents and downloaded
   const row = security.getByRole('row').filter({ hasText: '2 reported, 2 closed' });
   await expect(row.getByRole('link', { name: /^Open the report for .* in Huntress$/ })).toBeVisible();
   const copy = page.waitForEvent('download');
-  await row.getByRole('button', { name: /^Download the copy kept in Parasoll of the report for / }).click();
+  await row.getByRole('button', { name: /^Copy in Parasoll: download the report for / }).click();
   expect((await copy).suggestedFilename()).toBe(`huntress-${month}-${report.id}.pdf`);
 });
 
