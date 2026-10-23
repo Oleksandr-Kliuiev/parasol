@@ -22,6 +22,9 @@ const useStyles = makeStyles({
     '@media (max-width: 560px)': { paddingLeft: 0 },
   },
   quantity: { maxWidth: '160px' },
+  // A native select is as wide as its longest option ("K-2026-0011 Fjord IT Drift (Active)"): the field's own grid column must
+  // not grow with it, or the dialog's body scrolls sideways on a narrow phone.
+  shrink: { gridTemplateColumns: 'minmax(0, 1fr)' },
 });
 
 /**
@@ -61,7 +64,7 @@ export function ContractLinesStep({ contracts, loading, error, onRetry, contract
         </>
       ) : (
         <>
-          <Field label={t('onboarding.contract.contract')}>
+          <Field label={t('onboarding.contract.contract')} className={styles.shrink}>
             <Select value={contractId ?? ''} onChange={(_, d) => onContract(d.value)}>
               {open.map((c) => (
                 <option key={c.id} value={c.id}>
