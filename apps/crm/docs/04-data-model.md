@@ -241,7 +241,7 @@ erDiagram
   CONTRACT_LINE {
     uuid Id
     uuid ProductId
-    string QuantityModel "Fixed|PerAteraDevice|PerM365User|PerSubscription|Manual"
+    string QuantityModel "Fixed|PerAteraDevice|PerM365User|PerSubscription|Manual|PerHuntressAgent|PerBackupSeat"
     string QuantityFilter "JSON: deviceType=Workstation, sku=…"
     decimal FixedQuantity
     money UnitPrice
@@ -619,6 +619,7 @@ erDiagram
 | `time.TimeEntry` (проект) | INDEX (`ProjectId`) WHERE `ProjectId IS NOT NULL` |
 | `customers.Organization` (группа) | INDEX (`ParentId`) WHERE `ParentId IS NOT NULL` |
 | `customers.StoredDocuments` (M43) | UNIQUE (`OrganizationId`, `SourceKey`, `ContentSha256`); INDEX (`Kind`, `SourceKey`); INDEX (`OrganizationId`, `PeriodStart`); `DENY UPDATE, DELETE` для `crm_runtime` |
+| `security.UsageDays` (M43) | UNIQUE (`System`, `ExternalOrganizationId`, `Day`); INDEX (`OrganizationId`, `Day`) — дневной снимок агентов Huntress на связанную организацию, из него `PerHuntressAgent` выставляет прошлый период по его последнему дню |
 | `licensing.LicenseSnapshot` | UNIQUE (`OrganizationId`, `SnapshotDate`, `SkuId`); INDEX (`SnapshotDate`) |
 | `licensing.MsBilledLine` | UNIQUE (`LineKey`); INDEX (`PeriodStart`, `OrganizationId`) |
 | `billing.BillingBasis` | UNIQUE (`IdempotencyKey`) |
