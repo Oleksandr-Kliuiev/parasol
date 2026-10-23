@@ -161,11 +161,12 @@ internal sealed class BackupApi(BackupDbContext db, TimeProvider time) : IBackup
             .MaxAsync(b => (DateOnly?)b.Day, cancellationToken);
         return day is null
             ? []
-            : await db.BillLines.AsNoTracking()
-                .Where(b => b.System == system && b.OrganizationId == organizationId && b.Day == day)
-                .OrderBy(b => b.AccountExternalId).ThenBy(b => b.Service).ThenBy(b => b.Source)
-                .Select(b => new BackupBillLineView(b.Day, b.AccountExternalId, b.Type, b.Source, b.Service, b.Accounts, b.Seats, b.Price, b.Total, b.Currency,
-                    b.PaymentType, b.NextPaymentAt))
+            : await (from b in db.BillLines.AsNoTracking()
+                     where b.System == system && b.OrganizationId == organizationId && b.Day == day
+                     orderby b.AccountExternalId, b.Service, b.Source
+                     select new BackupBillLineView(b.Day, b.AccountExternalId,
+                         db.Accounts.Where(a => a.System == system && a.ExternalId == b.AccountExternalId).Select(a => a.Name).FirstOrDefault(),
+                         b.Type, b.Source, b.Service, b.Accounts, b.Seats, b.Price, b.Total, b.Currency, b.PaymentType, b.NextPaymentAt))
                 .ToListAsync(cancellationToken);
     }
 

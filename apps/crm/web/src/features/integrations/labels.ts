@@ -1,7 +1,8 @@
 import type { TFunction } from 'i18next';
 
+/** The CRM record an external type maps to: a customer of Atera, PowerOffice or CloudAlly, and Huntress's organization (M41). */
 export const entityTypeOf = (externalType: string): 'Organization' | 'Contact' | 'Product' | null =>
-  externalType === 'Customer'
+  externalType === 'Customer' || externalType === 'Organization'
     ? 'Organization'
     : externalType === 'Contact' || externalType === 'ContactPerson'
       ? 'Contact'

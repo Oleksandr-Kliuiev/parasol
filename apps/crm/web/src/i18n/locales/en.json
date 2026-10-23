@@ -1237,14 +1237,18 @@
       "PerAteraDevice": "Per Atera device",
       "PerM365User": "Per Microsoft 365 user",
       "PerSubscription": "Per subscription",
-      "Manual": "Entered each period"
+      "Manual": "Entered each period",
+      "PerHuntressAgent": "Per Huntress agent",
+      "PerBackupSeat": "Per backup user (CloudAlly)"
     },
     "quantityModelHints": {
       "Fixed": "The quantity below is billed every period.",
       "PerAteraDevice": "Counted from Atera agents on the last day of the period.",
       "PerM365User": "Assigned licences in the customer's tenant, read through GDAP the night before the run.",
       "PerSubscription": "Taken from the customer's CSP subscriptions.",
-      "Manual": "Someone enters the quantity before each billing run."
+      "Manual": "Someone enters the quantity before each billing run.",
+      "PerHuntressAgent": "The agents Huntress bills for the customer on the last day of the period.",
+      "PerBackupSeat": "The users CloudAlly bills for the customer’s backups on the last day of the period."
     },
     "deviceFilters": {
       "All": "All devices",
@@ -2874,7 +2878,9 @@
     "anomalyTexts": {
       "BIL_STALE_QUANTITY": "{{product}}: the quantity comes from a reading of {{date}}, which is older than the limit.",
       "BIL_NO_DEVICE_SNAPSHOT": "{{product}} is billed per device, but no daily device count exists; the devices listed now are counted.",
-      "BIL_INCOMPLETE_HOURS": "The latest import of work hours ({{date}}) did not finish completely; hours may be missing from this basis."
+      "BIL_INCOMPLETE_HOURS": "The latest import of work hours ({{date}}) did not finish completely; hours may be missing from this basis.",
+      "BIL_NO_AGENT_READING": "{{product}} is billed per Huntress agent, but Huntress has not counted them for the customer yet; the contract’s estimate is billed.",
+      "BIL_NO_SEAT_READING": "{{product}} is billed per backup user, but no CloudAlly bill counts them for the customer yet; the contract’s estimate is billed."
     },
     "conflictsCount_one": "{{count}} line needs a decision",
     "conflictsCount_other": "{{count}} lines need a decision",
@@ -2970,7 +2976,39 @@
     "retryFailed_one": "Send the unsent customer again",
     "retryFailed_other": "Send the {{count}} unsent customers again",
     "closeUnsent_one": "{{count}} customer in this run was not sent. Close the run only when it is handled another way.",
-    "closeUnsent_other": "{{count}} customers in this run were not sent. Close the run only when they are handled another way."
+    "closeUnsent_other": "{{count}} customers in this run were not sent. Close the run only when they are handled another way.",
+    "serviceQuantities": {
+      "title": "Counted by the services",
+      "intro": "What Atera, Huntress and CloudAlly count for the customer, against the contract’s lines. The next billing basis takes the count of the last day read.",
+      "sources": {
+        "PerAteraDevice": "Devices in Atera",
+        "PerHuntressAgent": "Agents in Huntress",
+        "PerBackupSeat": "Backup users in CloudAlly"
+      },
+      "readOn": "read {{date}}",
+      "live": "counted from the devices listed now",
+      "stale": "older than {{count}} days",
+      "notRead": "Not counted yet",
+      "status": {
+        "Counted": "Billed by the count",
+        "NoReading": "No count yet: the estimate is billed",
+        "NotOnContract": "No contract line bills it",
+        "None": "Nothing to count"
+      },
+      "notOnContract": "If it is part of a fixed price, all is well; otherwise add a line to the contract.",
+      "line": "{{product}} · contract {{contract}}: the estimate is {{estimate}}, the next basis bills {{billed}}",
+      "bill": {
+        "title": "What CloudAlly bills",
+        "day": "Bill of {{date}}",
+        "account": "Account",
+        "service": "Service",
+        "seats": "Users",
+        "price": "Price",
+        "total": "Total",
+        "noMoney": "The amounts are shown to those who see purchase prices."
+      },
+      "error": "The counts could not be read."
+    }
   },
   "invoices": {
     "title": "Invoices",
@@ -4728,8 +4766,8 @@
       "VND_TECHNICIAN_UNKNOWN": "Choose a technician Atera knows.",
       "VND_TICKET_MOVED": "The ticket belongs to another customer in Atera now; nothing was sent.",
       "VND_TARGET_GONE": "The ticket no longer exists in Atera; nothing was sent.",
-      "VND_VENDOR_REFUSED": "Atera refused it; nothing changed.",
-      "VND_VENDOR_BUSY": "Atera could not be read; it is tried again.",
+      "VND_VENDOR_REFUSED": "The vendor refused it; nothing changed.",
+      "VND_VENDOR_BUSY": "The vendor could not be read; it is tried again.",
       "VND_TIME_FROM_ATERA": "These hours came from Atera; they are already there.",
       "VND_TIME_NOT_OWN": "Only the person whose hours they are records them in Atera.",
       "VND_TIME_NO_TICKET": "The entry names no Atera ticket of its customer that Parasoll knows.",
@@ -4771,7 +4809,18 @@
       "VND_RESTORE_TARGET_DOMAIN": "CloudAlly restores into an account of the same domain only.",
       "VND_RESTORE_STARTED": "CloudAlly took the restore; it runs as a job at CloudAlly.",
       "VND_EXPORT_STARTED": "CloudAlly took the export; it e-mails the download link when the file is ready.",
-      "VND_RESTORE_SIGN_IN": "CloudAlly wants a sign-in to the customer’s Microsoft 365 before it restores. Check in CloudAlly whether the restore started."
+      "VND_RESTORE_SIGN_IN": "CloudAlly wants a sign-in to the customer’s Microsoft 365 before it restores. Check in CloudAlly whether the restore started.",
+      "VND_ALREADY_CONNECTED": "The customer is already linked to a record in this system.",
+      "VND_EXISTS_AT_VENDOR": "The system already has a record with this key. If it is this customer, link it under Mappings; nothing was sent.",
+      "VND_AMBIGUOUS_AT_VENDOR": "The system has several records with this key. Link the right one under Mappings; nothing was sent.",
+      "VND_CREATE_NOT_FOUND": "An earlier attempt got no answer, and the system has no record with our key. Check there before asking again.",
+      "VND_CREATED": "Created and linked to the customer.",
+      "VND_CREATED_EARLIER": "An earlier attempt had created it; it is linked to the customer now.",
+      "VND_CREATED_NOT_LINKED": "Created, but it could not be linked. Link it under Mappings.",
+      "VND_LINKED_ELSEWHERE": "The record with our key is linked to another customer in Parasoll; nothing was changed.",
+      "VND_KEY_INVALID": "Write the organization key with lower-case letters, digits and hyphens (at most 64 characters).",
+      "VND_EMAIL_INVALID": "Enter the e-mail address the account signs in with.",
+      "VND_REGION_INVALID": "Choose one of CloudAlly’s data centers in the EU."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4839,6 +4888,9 @@
         "alert": {
           "resolve": "Close the alert",
           "delete": "Delete the alert"
+        },
+        "customer": {
+          "create": "Create the customer in Atera"
         }
       },
       "huntress": {
@@ -4856,6 +4908,9 @@
           "isolate": "Isolate the device",
           "release": "Lift the isolation",
           "uninstall": "Remove the Huntress agent"
+        },
+        "organization": {
+          "create": "Create the organization in Huntress"
         }
       },
       "cloudally": {
@@ -4866,7 +4921,8 @@
           "resume": "Resume the backup"
         },
         "account": {
-          "deactivate": "Close the CloudAlly account"
+          "deactivate": "Close the CloudAlly account",
+          "create": "Create the account in CloudAlly"
         },
         "restore": {
           "export": "Export a backup",
@@ -4935,7 +4991,15 @@
       "VND_EFFECT_RESTORE_IN_PLACE": "CloudAlly restores {{service}} of {{name}} as it was at the end of {{date}} into the same place, beside what the user works with now.",
       "VND_EFFECT_RESTORE_DELETED": "Items deleted since are restored too.",
       "VND_EFFECT_RESTORE_LINK": "CloudAlly e-mails the download link when the file is ready; Parasoll does not get it.",
-      "VND_EFFECT_RESTORE_JOB": "CloudAlly runs it as a job of its own; how it ends is seen in CloudAlly."
+      "VND_EFFECT_RESTORE_JOB": "CloudAlly runs it as a job of its own; how it ends is seen in CloudAlly.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE": "Atera gets the customer “{{name}}” (organization number {{orgNumber}}) with the contact details of the customer card.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE_BY_NAME": "Atera gets the customer “{{name}}” with the contact details of the customer card. The card has no organization number, so Parasoll recognises the customer in Atera by its exact name.",
+      "VND_EFFECT_CUSTOMER_LINKED": "Parasoll links it to this customer at once.",
+      "VND_EFFECT_HUNTRESS_ORGANIZATION_CREATE": "Huntress gets the organization “{{name}}” with the organization key {{key}}.",
+      "VND_EFFECT_HUNTRESS_AGENTS_LATER": "Machines appear only once the Huntress agent is installed with the key {{key}} — that is done in Atera, outside Parasoll.",
+      "VND_EFFECT_CLOUDALLY_ACCOUNT_CREATE": "CloudAlly gets the account “{{name}}” for {{email}} in the data center {{region}}, opened as a trial account.",
+      "VND_EFFECT_CLOUDALLY_PASSWORD": "CloudAlly requires a password: Parasoll makes a random one and keeps it nowhere. You reach the account through CloudAlly’s partner portal; the customer can set their own with “Forgot password”.",
+      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Backups start only once the customer has given CloudAlly access to Microsoft 365 and the backup tasks are set up — that is done in CloudAlly, outside Parasoll."
     }
   },
   "tickets": {
@@ -5393,5 +5457,97 @@
       "title": "Actions at CloudAlly",
       "none": "Nothing has been asked of CloudAlly for this customer yet."
     }
+  },
+  "onboarding": {
+    "open": "Connect services…",
+    "title": "Connect the customer to the services",
+    "step": "Step {{current}} of {{total}}: {{name}}",
+    "steps": {
+      "services": "Services",
+      "contract": "Contract",
+      "review": "Confirm",
+      "result": "Result"
+    },
+    "intro": "Choose what Parasoll creates for {{customer}}. Each service is linked to the customer at once; what the vendors’ APIs cannot do is listed at the end.",
+    "loading": "Reading the customer’s services…",
+    "loadError": "The services could not be read.",
+    "noneEnabled": "None of Atera, Huntress or CloudAlly is connected to Parasoll in this installation.",
+    "linked": "Linked to “{{name}}”",
+    "linkedBadge": "Linked",
+    "create": "Create in {{system}}",
+    "simulated": "Test mode: {{system}} is read, nothing is created.",
+    "mapExisting": "Link an existing record under Mappings",
+    "blocks": {
+      "VND_INTEGRATION_OFF": "{{system}} is not connected to Parasoll in this installation.",
+      "VND_KIND_DISABLED": "Creating customers in {{system}} is not switched on in this installation.",
+      "VND_WRITE_DISABLED": "Changes in {{system}} are switched off in this installation.",
+      "VND_CUSTOMER_NOT_ALLOWED": "{{system}} only takes changes for the test customers for now.",
+      "VND_FORBIDDEN": "Your access does not include creating customers in {{system}}."
+    },
+    "atera": {
+      "note": "Name, organization number and contact details come from the customer card."
+    },
+    "huntress": {
+      "key": "Organization key",
+      "keyHint": "Huntress places the agents in the organization with this key. Lower-case letters, digits and hyphens.",
+      "keyInvalid": "Use lower-case letters, digits and hyphens (at most 64 characters)."
+    },
+    "cloudally": {
+      "email": "E-mail of the account",
+      "emailHint": "The account signs in with this address, and CloudAlly sends its reports there. Use an address your firm controls.",
+      "emailInvalid": "Enter an e-mail address.",
+      "region": "Data center"
+    },
+    "regions": {
+      "EU": "EU",
+      "EU_FRANKFURT": "EU – Frankfurt",
+      "EU_PARIS": "EU – Paris",
+      "EU_STOCKHOLM": "EU – Stockholm",
+      "EU_ZURICH": "EU – Zürich"
+    },
+    "nothingChosen": "Choose at least one service to create, or a contract line to add.",
+    "contract": {
+      "intro": "Add the services to the customer’s contract, so they are billed by what the service counts.",
+      "contract": "Contract",
+      "option": "{{number}} {{title}} ({{status}})",
+      "none": "The customer has no contract yet. Create one afterwards and add the lines there.",
+      "newContract": "New contract",
+      "loadError": "The contracts could not be read.",
+      "add": "Bill {{model}}",
+      "product": "Product",
+      "productRequired": "Choose the product the line bills.",
+      "estimate": "Quantity until the first count",
+      "estimateHint": "Billed until the service has counted; from then on Parasoll counts.",
+      "estimateInvalid": "Enter a whole number from 0.",
+      "from": "From",
+      "fromInvalid": "Choose a day on or after the contract’s start ({{date}}).",
+      "already": "The contract already has a line {{model}}.",
+      "priceNote": "The price follows the price list; change it on the contract."
+    },
+    "review": {
+      "creates": "Created in the systems",
+      "lines": "Added to contract {{number}}",
+      "line": "{{product}} – {{model}}, {{quantity}} until the first count, from {{date}}",
+      "blocked": "Untick what cannot be created, or correct its field, before you go on.",
+      "previewError": "The preview could not be made."
+    },
+    "result": {
+      "creates": "In the systems",
+      "lines": "Contract {{number}}",
+      "lineAdded": "{{product}} added",
+      "lineFailed": "{{product}} was not added: {{error}}",
+      "next": "Left to do outside Parasoll",
+      "steps": {
+        "atera": "Install the Atera agent on the customer’s machines (in Atera).",
+        "huntress": "Install the Huntress agent with the organization key {{key}}: add Huntress’s script to the customer’s profile in Atera. The account key is in Huntress.",
+        "cloudally": "Give CloudAlly access to the customer’s Microsoft 365 and set up the backup tasks (in CloudAlly’s partner portal)."
+      },
+      "open": "Open {{system}}",
+      "keepsGoing": "You can close the window: the systems keep working, and the action log on the connections page keeps the outcome."
+    },
+    "continue": "Continue",
+    "confirm": "Create and link",
+    "confirmLinesOnly": "Add to the contract",
+    "busy": "Sending…"
   }
 }

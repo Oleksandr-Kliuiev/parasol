@@ -33,6 +33,7 @@ public sealed record ServiceQuantityLine(
 public sealed record ServiceBillLine(
     DateOnly Day,
     string Account,
+    string? AccountName,
     string? Service,
     string Source,
     int? Seats,
@@ -117,7 +118,7 @@ internal sealed class ServiceQuantityReader(
                     l.QuantityModel == QuantityModel.PerAteraDevice ? l.DeviceFilter.ToString() : null, l.Quantity,
                     quantities.QuantityOf(l, products.GetValueOrDefault(l.ProductId), []), l.LineValidFrom, l.LineValidTo))],
                 model == QuantityModel.PerBackupSeat
-                    ? [.. bills.Select(b => new ServiceBillLine(b.Day, b.AccountExternalId, b.Service, b.Source, b.Seats, b.Accounts, b.Price, b.Total, b.Currency))]
+                    ? [.. bills.Select(b => new ServiceBillLine(b.Day, b.AccountExternalId, b.AccountName, b.Service, b.Source, b.Seats, b.Accounts, b.Price, b.Total, b.Currency))]
                     : []));
         }
 

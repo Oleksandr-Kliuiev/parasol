@@ -27,6 +27,8 @@ const effectValues = (t: TFunction, effect: ActionEffect): Record<string, string
         ...values,
         ...(values.service ? { service: t(`backup.services.${values.service}`, { defaultValue: values.service }) } : {}),
         ...(effect.code.startsWith('VND_EFFECT_RESTORE_') && values.date ? { date: formatDate(values.date) } : {}),
+        // M43: a CloudAlly data center by the words the wizard offers it with.
+        ...(values.region ? { region: t(`onboarding.regions.${values.region}`, { defaultValue: values.region }) } : {}),
         // A count chooses the plural form of the sentence, which i18next does for a number only.
         ...(values.count && /^\d+$/.test(values.count) ? { count: Number(values.count) } : {}),
       };

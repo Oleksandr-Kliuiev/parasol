@@ -108,10 +108,13 @@ public sealed record ExternalBackupBillLine(
 /// </summary>
 public sealed record SeatCountReading(int? Seats, DateOnly Day, int Accounts);
 
-/// <summary>One stored bill line as the reconciliation shows it (M43); price and total are cost data.</summary>
+/// <summary>
+/// One stored bill line as the reconciliation shows it (M43), with the account's name where the backups of the account are stored;
+/// price and total are cost data.
+/// </summary>
 public sealed record BackupBillLineView(
-    DateOnly Day, string AccountExternalId, string Type, string Source, string? Service, int? Accounts, int? Seats, decimal? Price, decimal? Total,
-    string? Currency, string? PaymentType, DateTimeOffset? NextPaymentAt);
+    DateOnly Day, string AccountExternalId, string? AccountName, string Type, string Source, string? Service, int? Accounts, int? Seats, decimal? Price,
+    decimal? Total, string? Currency, string? PaymentType, DateTimeOffset? NextPaymentAt);
 
 /// <summary>A stored account as an action's preview names it.</summary>
 public sealed record BackupAccountRef(Guid Id, string System, string ExternalId, Guid OrganizationId, string Name, string? Email, string? Status, string? Region);

@@ -1237,14 +1237,18 @@
       "PerAteraDevice": "Per eining i Atera",
       "PerM365User": "Per Microsoft 365-brukar",
       "PerSubscription": "Per abonnement",
-      "Manual": "Blir registrert kvar periode"
+      "Manual": "Blir registrert kvar periode",
+      "PerHuntressAgent": "Per agent i Huntress",
+      "PerBackupSeat": "Per brukar med tryggingskopi (CloudAlly)"
     },
     "quantityModelHints": {
       "Fixed": "Antalet under blir fakturert kvar periode.",
       "PerAteraDevice": "Blir talt frå Atera-agentar siste dag i perioden.",
       "PerM365User": "Tildelte lisensar i tenanten til kunden, lesne gjennom GDAP natta før køyringa.",
       "PerSubscription": "Blir henta frå CSP-abonnementa til kunden.",
-      "Manual": "Nokon registrerer antalet før kvar faktureringskøyring."
+      "Manual": "Nokon registrerer antalet før kvar faktureringskøyring.",
+      "PerHuntressAgent": "Agentane Huntress fakturerer for kunden siste dag i perioden.",
+      "PerBackupSeat": "Brukarane CloudAlly fakturerer for tryggingskopiane til kunden siste dag i perioden."
     },
     "deviceFilters": {
       "All": "Alle einingar",
@@ -2872,7 +2876,9 @@
     "anomalyTexts": {
       "BIL_STALE_QUANTITY": "{{product}}: talet er henta frå ei avlesing {{date}}, som er eldre enn grensa.",
       "BIL_NO_DEVICE_SNAPSHOT": "{{product}} blir fakturert per eining, men det finst inga dagleg teljing av einingar; einingane som er registrerte no, blir telte.",
-      "BIL_INCOMPLETE_HOURS": "Siste import av arbeidstimar ({{date}}) vart ikkje fullført; timar kan mangle i dette grunnlaget."
+      "BIL_INCOMPLETE_HOURS": "Siste import av arbeidstimar ({{date}}) vart ikkje fullført; timar kan mangle i dette grunnlaget.",
+      "BIL_NO_AGENT_READING": "{{product}} blir fakturert per agent i Huntress, men Huntress har ikkje talt dei for kunden enno; anslaget i avtalen blir fakturert.",
+      "BIL_NO_SEAT_READING": "{{product}} blir fakturert per brukar med tryggingskopi, men ingen faktura frå CloudAlly tel dei for kunden enno; anslaget i avtalen blir fakturert."
     },
     "conflictsCount_one": "{{count}} linje treng ei avgjerd",
     "conflictsCount_other": "{{count}} linjer treng ei avgjerd",
@@ -2968,7 +2974,39 @@
     "retryFailed_one": "Send den usende kunden på nytt",
     "retryFailed_other": "Send dei {{count}} usende kundane på nytt",
     "closeUnsent_one": "{{count}} kunde i køyringa vart ikkje send. Lukk køyringa først når han er handtert på ein annan måte.",
-    "closeUnsent_other": "{{count}} kundar i køyringa vart ikkje sende. Lukk køyringa først når dei er handterte på ein annan måte."
+    "closeUnsent_other": "{{count}} kundar i køyringa vart ikkje sende. Lukk køyringa først når dei er handterte på ein annan måte.",
+    "serviceQuantities": {
+      "title": "Tal frå tenestene",
+      "intro": "Det Atera, Huntress og CloudAlly tel for kunden, mot linjene i avtalen. Neste fakturagrunnlag tek talet frå siste dag som er lesen.",
+      "sources": {
+        "PerAteraDevice": "Einingar i Atera",
+        "PerHuntressAgent": "Agentar i Huntress",
+        "PerBackupSeat": "Brukarar med tryggingskopi i CloudAlly"
+      },
+      "readOn": "lesen {{date}}",
+      "live": "talt frå einingane som er registrerte no",
+      "stale": "eldre enn {{count}} dagar",
+      "notRead": "Ikkje talt enno",
+      "status": {
+        "Counted": "Blir fakturert etter talet",
+        "NoReading": "Ikkje talt enno: anslaget blir fakturert",
+        "NotOnContract": "Inga avtalelinje fakturerer det",
+        "None": "Ingenting å telje"
+      },
+      "notOnContract": "Er det med i ein fast pris, er alt i orden; elles legg du til ei linje i avtalen.",
+      "line": "{{product}} · avtale {{contract}}: anslaget er {{estimate}}, neste grunnlag fakturerer {{billed}}",
+      "bill": {
+        "title": "Det CloudAlly fakturerer",
+        "day": "Faktura per {{date}}",
+        "account": "Konto",
+        "service": "Teneste",
+        "seats": "Brukarar",
+        "price": "Pris",
+        "total": "Sum",
+        "noMoney": "Beløpa blir viste for dei som ser innkjøpsprisar."
+      },
+      "error": "Tala kunne ikkje lesast."
+    }
   },
   "invoices": {
     "title": "Fakturaer",
@@ -4726,8 +4764,8 @@
       "VND_TECHNICIAN_UNKNOWN": "Vel ein teknikar Atera kjenner.",
       "VND_TICKET_MOVED": "Saka høyrer til ein annan kunde i Atera no; ingenting vart sendt.",
       "VND_TARGET_GONE": "Saka finst ikkje lenger i Atera; ingenting vart sendt.",
-      "VND_VENDOR_REFUSED": "Atera avviste det; ingenting vart endra.",
-      "VND_VENDOR_BUSY": "Atera kunne ikkje lesast; det blir prøvd igjen.",
+      "VND_VENDOR_REFUSED": "Leverandøren avviste det; ingenting vart endra.",
+      "VND_VENDOR_BUSY": "Leverandøren kunne ikkje lesast; det blir prøvd igjen.",
       "VND_TIME_FROM_ATERA": "Timane kom frå Atera; dei er der alt.",
       "VND_TIME_NOT_OWN": "Berre den som har arbeidd timane, fører dei i Atera.",
       "VND_TIME_NO_TICKET": "Føringa viser ikkje til ei Atera-sak hjå kunden som Parasoll kjenner.",
@@ -4769,7 +4807,18 @@
       "VND_RESTORE_TARGET_DOMAIN": "CloudAlly gjenopprettar berre til ein konto i same domene.",
       "VND_RESTORE_STARTED": "CloudAlly tok imot gjenopprettinga; ho køyrer som ein jobb i CloudAlly.",
       "VND_EXPORT_STARTED": "CloudAlly tok imot eksporten; han sender nedlastingslenkja på e-post når fila er klar.",
-      "VND_RESTORE_SIGN_IN": "CloudAlly vil ha ei innlogging i Microsoft 365 hos kunden før gjenopprettinga. Sjekk i CloudAlly om ho starta."
+      "VND_RESTORE_SIGN_IN": "CloudAlly vil ha ei innlogging i Microsoft 365 hos kunden før gjenopprettinga. Sjekk i CloudAlly om ho starta.",
+      "VND_ALREADY_CONNECTED": "Kunden er allereie kopla til ein post i dette systemet.",
+      "VND_EXISTS_AT_VENDOR": "Systemet har allereie ein post med denne nøkkelen. Er det denne kunden, koplar du han under Koplingar; ingenting vart sendt.",
+      "VND_AMBIGUOUS_AT_VENDOR": "Systemet har fleire postar med denne nøkkelen. Kopla den rette under Koplingar; ingenting vart sendt.",
+      "VND_CREATE_NOT_FOUND": "Eit tidlegare forsøk fekk ikkje svar, og systemet har ingen post med nøkkelen vår. Sjekk der før du ber om det igjen.",
+      "VND_CREATED": "Oppretta og kopla til kunden.",
+      "VND_CREATED_EARLIER": "Eit tidlegare forsøk hadde oppretta han; han er kopla til kunden no.",
+      "VND_CREATED_NOT_LINKED": "Oppretta, men han kunne ikkje koplast. Kopla han under Koplingar.",
+      "VND_LINKED_ELSEWHERE": "Posten med nøkkelen vår er kopla til ein annan kunde i Parasoll; ingenting vart endra.",
+      "VND_KEY_INVALID": "Skriv organisasjonsnøkkelen med små bokstavar, tal og bindestrek (høgst 64 teikn).",
+      "VND_EMAIL_INVALID": "Skriv e-postadressa kontoen skal logge inn med.",
+      "VND_REGION_INVALID": "Vel eitt av datasentera til CloudAlly i EU."
     },
     "dialog": {
       "previewing": "Sjekkar kva handlinga vil gjere …",
@@ -4837,6 +4886,9 @@
         "alert": {
           "resolve": "Lukk driftsvarselet",
           "delete": "Slett driftsvarselet"
+        },
+        "customer": {
+          "create": "Opprett kunden i Atera"
         }
       },
       "huntress": {
@@ -4854,6 +4906,9 @@
           "isolate": "Isoler eininga",
           "release": "Opphev isoleringa",
           "uninstall": "Fjern Huntress-agenten"
+        },
+        "organization": {
+          "create": "Opprett organisasjonen i Huntress"
         }
       },
       "cloudally": {
@@ -4864,7 +4919,8 @@
           "resume": "Hald fram med tryggingskopien"
         },
         "account": {
-          "deactivate": "Avslutt CloudAlly-kontoen"
+          "deactivate": "Avslutt CloudAlly-kontoen",
+          "create": "Opprett kontoen i CloudAlly"
         },
         "restore": {
           "export": "Eksporter tryggingskopi",
@@ -4933,7 +4989,15 @@
       "VND_EFFECT_RESTORE_IN_PLACE": "CloudAlly gjenopprettar {{service}} for {{name}} slik det var ved slutten av {{date}}, på same staden – ved sida av det brukaren arbeider med no.",
       "VND_EFFECT_RESTORE_DELETED": "Element som er sletta sidan, blir òg gjenoppretta.",
       "VND_EFFECT_RESTORE_LINK": "CloudAlly sender nedlastingslenkja på e-post når fila er klar; Parasoll får henne ikkje.",
-      "VND_EFFECT_RESTORE_JOB": "CloudAlly køyrer det som ein eigen jobb; korleis han endar, ser ein i CloudAlly."
+      "VND_EFFECT_RESTORE_JOB": "CloudAlly køyrer det som ein eigen jobb; korleis han endar, ser ein i CloudAlly.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE": "Atera får kunden «{{name}}» (organisasjonsnummer {{orgNumber}}) med kontaktopplysningane frå kundekortet.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE_BY_NAME": "Atera får kunden «{{name}}» med kontaktopplysningane frå kundekortet. Kundekortet har ikkje organisasjonsnummer, så Parasoll kjenner att kunden i Atera på det nøyaktige namnet.",
+      "VND_EFFECT_CUSTOMER_LINKED": "Parasoll koplar han til denne kunden med ein gong.",
+      "VND_EFFECT_HUNTRESS_ORGANIZATION_CREATE": "Huntress får organisasjonen «{{name}}» med organisasjonsnøkkelen {{key}}.",
+      "VND_EFFECT_HUNTRESS_AGENTS_LATER": "Maskinene kjem først når Huntress-agenten er installert med nøkkelen {{key}} – det blir gjort i Atera, utanfor Parasoll.",
+      "VND_EFFECT_CLOUDALLY_ACCOUNT_CREATE": "CloudAlly får kontoen «{{name}}» for {{email}} i datasenteret {{region}}, opna som prøvekonto.",
+      "VND_EFFECT_CLOUDALLY_PASSWORD": "CloudAlly krev eit passord: Parasoll lagar eit tilfeldig og lagrar det ingen stader. De når kontoen gjennom partnarportalen til CloudAlly; kunden kan lage sitt eige med «Gløymt passord».",
+      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Tryggingskopiane startar først når kunden har gitt CloudAlly tilgang til Microsoft 365 og oppgåvene er sette opp – det blir gjort i CloudAlly, utanfor Parasoll."
     }
   },
   "tickets": {
@@ -5391,5 +5455,97 @@
       "title": "Handlingar i CloudAlly",
       "none": "Ingenting er bede om i CloudAlly for denne kunden enno."
     }
+  },
+  "onboarding": {
+    "open": "Kopla til tenester …",
+    "title": "Kopla kunden til tenestene",
+    "step": "Steg {{current}} av {{total}}: {{name}}",
+    "steps": {
+      "services": "Tenester",
+      "contract": "Avtale",
+      "review": "Stadfest",
+      "result": "Resultat"
+    },
+    "intro": "Vel kva Parasoll skal opprette for {{customer}}. Kvar teneste blir kopla til kunden med ein gong; det API-a til leverandørane ikkje kan gjere, står til slutt.",
+    "loading": "Les tenestene til kunden …",
+    "loadError": "Tenestene kunne ikkje lesast.",
+    "noneEnabled": "Verken Atera, Huntress eller CloudAlly er kopla til Parasoll i denne installasjonen.",
+    "linked": "Kopla til «{{name}}»",
+    "linkedBadge": "Kopla",
+    "create": "Opprett i {{system}}",
+    "simulated": "Testmodus: {{system}} blir lesen, ingenting blir oppretta.",
+    "mapExisting": "Kopla til ein som finst, under Koplingar",
+    "blocks": {
+      "VND_INTEGRATION_OFF": "{{system}} er ikkje kopla til Parasoll i denne installasjonen.",
+      "VND_KIND_DISABLED": "Å opprette kundar i {{system}} er ikkje slått på i denne installasjonen.",
+      "VND_WRITE_DISABLED": "Endringar i {{system}} er slått av i denne installasjonen.",
+      "VND_CUSTOMER_NOT_ALLOWED": "{{system}} tek førebels berre imot endringar for testkundane.",
+      "VND_FORBIDDEN": "Tilgangen din omfattar ikkje å opprette kundar i {{system}}."
+    },
+    "atera": {
+      "note": "Namn, organisasjonsnummer og kontaktopplysningar blir henta frå kundekortet."
+    },
+    "huntress": {
+      "key": "Organisasjonsnøkkel",
+      "keyHint": "Huntress legg agentane i organisasjonen med denne nøkkelen. Små bokstavar, tal og bindestrek.",
+      "keyInvalid": "Bruk små bokstavar, tal og bindestrek (høgst 64 teikn)."
+    },
+    "cloudally": {
+      "email": "E-post for kontoen",
+      "emailHint": "Kontoen loggar inn med denne adressa, og CloudAlly sender rapportane dit. Bruk ei adresse firmaet ditt styrer.",
+      "emailInvalid": "Skriv ei e-postadresse.",
+      "region": "Datasenter"
+    },
+    "regions": {
+      "EU": "EU",
+      "EU_FRANKFURT": "EU – Frankfurt",
+      "EU_PARIS": "EU – Paris",
+      "EU_STOCKHOLM": "EU – Stockholm",
+      "EU_ZURICH": "EU – Zürich"
+    },
+    "nothingChosen": "Vel minst éi teneste å opprette eller éi avtalelinje å leggje til.",
+    "contract": {
+      "intro": "Legg tenestene inn i avtalen til kunden, så blir dei fakturerte etter det tenesta tel.",
+      "contract": "Avtale",
+      "option": "{{number}} {{title}} ({{status}})",
+      "none": "Kunden har inga avtale enno. Opprett ei etterpå og legg til linjene der.",
+      "newContract": "Ny avtale",
+      "loadError": "Avtalane kunne ikkje lesast.",
+      "add": "Fakturer {{model}}",
+      "product": "Produkt",
+      "productRequired": "Vel produktet linja fakturerer.",
+      "estimate": "Tal til første teljing",
+      "estimateHint": "Blir fakturert til tenesta har talt; deretter tel Parasoll sjølv.",
+      "estimateInvalid": "Skriv eit heilt tal frå 0.",
+      "from": "Frå og med",
+      "fromInvalid": "Vel ein dag frå starten av avtalen ({{date}}) eller seinare.",
+      "already": "Avtalen har allereie ei linje {{model}}.",
+      "priceNote": "Prisen følgjer prislista; endra han på avtalen."
+    },
+    "review": {
+      "creates": "Blir oppretta i systema",
+      "lines": "Blir lagt til i avtale {{number}}",
+      "line": "{{product}} – {{model}}, {{quantity}} til første teljing, frå {{date}}",
+      "blocked": "Fjern haken for det som ikkje kan opprettast, eller rett feltet, før du går vidare.",
+      "previewError": "Førehandsvisinga kunne ikkje lagast."
+    },
+    "result": {
+      "creates": "I systema",
+      "lines": "Avtale {{number}}",
+      "lineAdded": "{{product}} er lagt til",
+      "lineFailed": "{{product}} vart ikkje lagt til: {{error}}",
+      "next": "Står att utanfor Parasoll",
+      "steps": {
+        "atera": "Installer Atera-agenten på maskinene til kunden (i Atera).",
+        "huntress": "Installer Huntress-agenten med organisasjonsnøkkelen {{key}}: legg skriptet til Huntress i profilen til kunden i Atera. Kontonøkkelen står i Huntress.",
+        "cloudally": "Gi CloudAlly tilgang til Microsoft 365 hos kunden og set opp oppgåvene for tryggingskopi (i partnarportalen til CloudAlly)."
+      },
+      "open": "Opne {{system}}",
+      "keepsGoing": "Du kan lukke vindauget: systema jobbar vidare, og handlingsloggen på sida for tilkoplingar tek vare på resultatet."
+    },
+    "continue": "Hald fram",
+    "confirm": "Opprett og kopla til",
+    "confirmLinesOnly": "Legg til i avtalen",
+    "busy": "Sender …"
   }
 }

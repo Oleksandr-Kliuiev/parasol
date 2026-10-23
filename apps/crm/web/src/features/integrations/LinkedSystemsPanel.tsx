@@ -1,5 +1,6 @@
-import { Badge, Button, Skeleton, SkeletonItem, Text, makeStyles } from '@fluentui/react-components';
-import { Link16Regular, LinkDismiss24Regular } from '@fluentui/react-icons';
+import { lazy, Suspense, useRef, useState } from 'react';
+import { Badge, Button, Skeleton, SkeletonItem, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Link16Regular, LinkDismiss24Regular, PlugConnected20Regular } from '@fluentui/react-icons';
 import { h } from '../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
@@ -7,8 +8,11 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
+import { useCustomerServices } from '../onboarding/connectServices';
 import { useCapabilities, useEntityLinks, useIntegrationActions } from './api';
 import { systemName, typeName } from './labels';
+
+const ConnectServicesDialog = lazy(() => import('../onboarding/ConnectServicesDialog').then((m) => ({ default: m.ConnectServicesDialog })));
 
 const useStyles = makeStyles({
   // One line per linked record: system pill, the record and its number, separated by hairlines. The rows share their
@@ -45,7 +49,11 @@ interface LinkedSystemsPanelProps {
   emptyHint?: string;
 }
 
-/** Which records in PowerOffice, Atera… belong to this organization or product, and creating an organization there when allowed. */
+/**
+ * Which records in PowerOffice, Atera… belong to this organization or product, and creating an organization there when allowed. For a
+ * customer, "Connect services" (M43) creates it in Atera, Huntress and CloudAlly on the vendor action path and adds the contract lines;
+ * where the wizard can create a customer, the older one-click export to that system is not offered beside it.
+ */
 export function LinkedSystemsPanel({ entityId, entityType = 'Organization', emptyHint }: LinkedSystemsPanelProps) {
   const organizationId = entityId;
   const styles = useStyles();
@@ -55,9 +63,22 @@ export function LinkedSystemsPanel({ entityId, entityType = 'Organization', empt
   const links = useEntityLinks(entityType, entityId);
   const capabilities = useCapabilities();
   const actions = useIntegrationActions();
+  const canConnect = useCan(Permissions.integrationsManage) && entityType === 'Organization';
+  const connectable = useCustomerServices(organizationId, canConnect).data?.services ?? [];
+  const [connecting, setConnecting] = useState(false);
+  const connectButton = useRef<HTMLButtonElement>(null);
+  const restoreFocus = useRestoreFocusTarget();
 
   const linkedSystems = new Set((links.data ?? []).map((l) => l.system));
-  const creatable = entityType !== 'Organization' ? [] : (capabilities.data ?? []).filter((c) => c.canCreateOrganization && !linkedSystems.has(c.system));
+  const byWizard = new Set(connectable.filter((s) => s.link === null && s.block === null).map((s) => s.system));
+  const creatable = entityType !== 'Organization' ? []
+    : (capabilities.data ?? []).filter((c) => c.canCreateOrganization && !linkedSystems.has(c.system) && !byWizard.has(c.system));
+  const offerConnect = canConnect && connectable.some((s) => s.enabled);
+  const closeConnect = () => {
+    setConnecting(false);
+    // The wizard comes from a lazy chunk, and WebKit and Firefox then leave focus on the page when it closes: it goes back here.
+    requestAnimationFrame(() => { if (document.activeElement === document.body) connectButton.current?.focus(); });
+  };
 
   const create = async (system: string) => {
     try {
@@ -93,14 +114,24 @@ export function LinkedSystemsPanel({ entityId, entityType = 'Organization', empt
           </li>
         ))}
       </ul>
-      {canWrite && creatable.length > 0 && (
+      {((canWrite && creatable.length > 0) || offerConnect) && (
         <div className={styles.buttons}>
-          {creatable.map((c) => (
+          {offerConnect && (
+            <Button {...restoreFocus} ref={connectButton} size="small" icon={<PlugConnected20Regular />} onClick={() => setConnecting(true)}>
+              {t('onboarding.open')}
+            </Button>
+          )}
+          {canWrite && creatable.map((c) => (
             <Button key={c.system} size="small" onClick={() => void create(c.system)} disabled={actions.exportOrganization.isPending}>
               {t('linkedSystems.create', { system: systemName(t, c.system) })}
             </Button>
           ))}
         </div>
+      )}
+      {connecting && (
+        <Suspense fallback={<Spinner size="small" label={t('common.loading')} />}>
+          <ConnectServicesDialog organizationId={organizationId} onClose={closeConnect} />
+        </Suspense>
       )}
     </Panel>
   );
