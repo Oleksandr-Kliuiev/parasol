@@ -124,7 +124,35 @@ jobs:
           cache: npm
           cache-dependency-path: apps/crm/web/package-lock.json
       - run: npm ci --prefix apps/crm/web
-      - run: npx playwright install --with-deps chromium firefox webkit
+      # The browsers' system packages (~115 MB) no longer depend on the runner's Ubuntu mirror. On 22.10.2026 it sent them at
+      # 45 kB/s three times, and the job lost up to 40 of its 45 minutes. They are kept between runs (apt checks each one
+      # against the signed archive index), and what is missing comes from the runner's mirror, or from archive.ubuntu.com once
+      # that has taken 4 minutes (apps/crm/tools/testing/browser-packages.sh). The key follows the runner image and the
+      # Playwright version, which decide the package list; an older key still gives most packages.
+      - name: Key of the browsers' system packages
+        id: browser-packages
+        run: |
+          echo "key=browser-packages-$ImageOS-$ImageVersion-${{ hashFiles('apps/crm/web/package-lock.json') }}" >> "$GITHUB_OUTPUT"
+          echo "prefix=browser-packages-$ImageOS-" >> "$GITHUB_OUTPUT"
+      - name: Restore the browsers' system packages
+        id: browser-packages-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/browser-packages
+          key: ${{ steps.browser-packages.outputs.key }}
+          restore-keys: ${{ steps.browser-packages.outputs.prefix }}
+      - name: System packages for the browsers (cache, then the Ubuntu mirrors)
+        timeout-minutes: 15
+        run: bash apps/crm/tools/testing/browser-packages.sh "$RUNNER_TEMP/browser-packages"
+      - name: Keep the browsers' system packages for the next run
+        if: steps.browser-packages-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/browser-packages
+          key: ${{ steps.browser-packages.outputs.key }}
+      - name: Browsers (Playwright CDN)
+        timeout-minutes: 5
+        run: npx playwright install chromium firefox webkit
         working-directory: apps/crm/web
       - run: dotnet dev-certs https
       - run: npm run test:crm:e2e
