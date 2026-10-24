@@ -217,6 +217,19 @@ export async function syncTicket(page: Page, ticket: AteraTicket, messages: numb
 }
 
 /**
+ * Narrows the Tickets page to the one open ticket `term` finds and waits until the list shows that answer. The search is read after a
+ * pause in typing and its answer redraws the list, so a click before it can land while the rows change and open nothing (Firefox,
+ * 22.10.2026). The count alone is not enough: where this is the only open ticket, it says 1 before the search is read too.
+ */
+export async function searchTickets(page: Page, term: string) {
+  const answered = page.waitForResponse((response) => response.url().includes('/api/v1/service/tickets?')
+    && new URL(response.url()).searchParams.get('search') === term);
+  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(term);
+  await answered;
+  await expect(page.getByRole('status').filter({ hasText: /open ticket/ })).toHaveText('1 open ticket');
+}
+
+/**
  * Makes sure the signed-in employee writes in Atera as `technician`. The ticket read maps the development technician by e-mail;
  * a mapping an earlier run of the shared database left without a person is set here, as an administrator does under Technicians.
  */

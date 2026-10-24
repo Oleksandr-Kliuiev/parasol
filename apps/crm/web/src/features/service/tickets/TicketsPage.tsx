@@ -70,7 +70,11 @@ function Tickets() {
   };
   // Which rows wait for someone to check an action at Atera: one lookup per page of rows (tickets come from Atera, M39).
   const facts = useActionFacts('atera', 'ticket', queue.data?.pages.map((page) => page.items.map((ticket) => String(ticket.externalId))) ?? []);
-  const refreshing = queue.isFetching && !queue.isFetchingNextPage;
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the count line says the list is loading, and no count, end of list or empty answer is claimed for them.
+  const stale = queue.isPlaceholderData;
+  // A refresh re-reads the rows on screen; reading another search is not one, so the read line stays put above the list.
+  const refreshing = queue.isFetching && !queue.isFetchingNextPage && !stale;
   const filtered = mine || debounced !== '' || customer !== null;
 
   return <>
@@ -90,20 +94,21 @@ function Tickets() {
       <FilterChips<'everyone' | 'mine'> label={t('tickets.whoLabel')} value={mine ? 'mine' : 'everyone'} onChange={(value) => setParam('mine', value === 'mine' ? '1' : null)}
         options={[{ value: 'everyone', label: t('tickets.who.everyone') }, { value: 'mine', label: t('tickets.who.mine') }]} />
     </Toolbar>
-    {queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : queue.isPending
+    {queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : queue.isPending || (stale && queue.items.length === 0)
       ? <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>
       : <>
-        {queue.total !== null && queue.total > 0 && <Text className={styles.totals} role="status">{t(all ? 'tickets.totalsAll' : 'tickets.totals', { count: queue.total })}</Text>}
+        {queue.total !== null && queue.total > 0 && <Text className={styles.totals} role="status">
+          {stale ? t('common.loading') : t(all ? 'tickets.totalsAll' : 'tickets.totals', { count: queue.total })}</Text>}
         <Panel title={t('tickets.listTitle')} icon={<Headset16Regular />} flush className={flush.panel}>
           {queue.items.length > 0
-            ? <ul className={flush.list}>{queue.items.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} onOpen={() => open(ticket)}
+            ? <ul className={flush.list} aria-busy={stale || undefined}>{queue.items.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} onOpen={() => open(ticket)}
               check={(facts.facts.get(String(ticket.externalId))?.uncertain ?? 0) > 0} />)}</ul>
             : <EmptyState icon={<Headset24Regular />} message={t(filtered ? 'tickets.emptyFiltered' : all ? 'tickets.emptyAll' : 'tickets.empty')}
               action={filtered && <Button onClick={() => {
                 setSearch('');
                 const next = new URLSearchParams(params); next.delete('mine'); next.delete('customer'); setParams(next, { replace: true });
               }}>{t('tickets.clearFilters')}</Button>} />}
-          <ListFooter shown={queue.items.length} total={queue.total} hasMore={Boolean(queue.hasNextPage)} loading={queue.isFetchingNextPage}
+          <ListFooter shown={queue.items.length} total={stale ? null : queue.total} hasMore={Boolean(queue.hasNextPage)} loading={queue.isFetchingNextPage}
             onMore={() => void queue.fetchNextPage()} />
         </Panel>
       </>}
