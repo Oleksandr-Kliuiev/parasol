@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Button, Field, Input, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { Search16Regular, Search20Regular } from '@fluentui/react-icons';
 import { h } from '../../app/hearth';
@@ -38,10 +38,13 @@ export function RegistryLookup({ onSelect }: { onSelect: (organization: Registry
   const [text, setText] = useState('');
   const term = useDebouncedValue(text.trim(), 400);
 
-  const { data, isFetching } = useQuery({
+  const { data: found, isFetching, isPlaceholderData } = useQuery({
     queryKey: ['brreg', term],
     enabled: term.length >= 2,
     staleTime: 24 * 60 * 60_000,
+    // While another search is read, the entries of the previous one stay, so the button under the pointer still takes the click and
+    // the form below does not move.
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       if (looksLikeOrgNumber(term)) {
         const lookup = await lookupRegistry(normalizeOrgNumber(term), signal);
@@ -50,6 +53,8 @@ export function RegistryLookup({ onSelect }: { onSelect: (organization: Registry
       return searchRegistry(term, signal);
     },
   });
+  // Under two letters nothing is searched, and no entries of an earlier search stay.
+  const data = term.length >= 2 ? found : undefined;
 
   return (
     <Panel title={t('organizations.form.registryTitle')} icon={<Search16Regular />}>
@@ -68,7 +73,7 @@ export function RegistryLookup({ onSelect }: { onSelect: (organization: Registry
         </Text>
       )}
       {data && data.length > 0 && (
-        <ul className={styles.results}>
+        <ul className={styles.results} aria-busy={isPlaceholderData || undefined}>
           {data.map((organization) => (
             <li key={organization.orgNumber} className={styles.result}>
               <div className={styles.resultText}>

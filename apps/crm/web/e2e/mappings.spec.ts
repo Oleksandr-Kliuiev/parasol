@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { api, signIn, toast } from './support';
+import { api, searchList, signIn, toast } from './support';
 
 test('an administrator imports a PowerOffice customer from the mapping screen', async ({ page, request }) => {
   const { run } = (await (await request.get('http://localhost:5299/health')).json()) as { run: string };
@@ -16,8 +16,8 @@ test('an administrator imports a PowerOffice customer from the mapping screen', 
     .toBe(3);
 
   await page.goto('/admin/mappings?system=poweroffice&type=Customer&state=Unlinked');
-  await page.getByRole('searchbox', { name: 'Search name, number, e-mail' }).fill(run);
-  // The search is debounced: wait until only this run's three customers are listed before clicking.
+  // The search is read after a pause in typing: the click waits for its answer, which lists only this run's three customers.
+  await searchList(page, page.getByRole('searchbox', { name: 'Search name, number, e-mail' }), '/api/v1/integrations/records', run);
   await expect(page.locator('tbody tr')).toHaveCount(3);
   const row = page.getByRole('row').filter({ hasText: customerName });
   await row.getByRole('button', { name: 'Create in CRM' }).click();

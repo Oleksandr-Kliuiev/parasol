@@ -44,11 +44,13 @@ const switchBackMargin = 24;
  * The alerts of the queue: a table where it has room, cards on a phone and in a narrow content column (UX concept §8). Each row
  * says how severe, what, where, how long it has waited and who has it; the title opens the alert.
  */
-export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen }: {
+export function AlertQueueList({ alerts, tasks, resolved, busy, empty, footer, onOpen }: {
   alerts: readonly Alert[];
   tasks: ReadonlyMap<string, AlertTask>;
   /** The list shows resolved alerts: the age is how long ago they were resolved. */
   resolved: boolean;
+  /** The rows are those of an earlier search or filter while its answer is read. */
+  busy?: boolean;
   empty: ReactNode;
   footer: ReactNode;
   onOpen: (alert: Alert) => void;
@@ -102,7 +104,7 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
       {footer}
     </ScrollTable>;
   }
-  return <div ref={box}>{body}</div>;
+  return <div ref={box} aria-busy={busy || undefined}>{body}</div>;
 }
 
 /** The empty list of the queue: what there is to know, and the way back to everything when a filter hid it. */

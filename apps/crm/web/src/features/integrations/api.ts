@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryKey } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
 import { usePagedList } from '../../api/paging';
 import type {
@@ -72,9 +72,18 @@ export interface RecordFilters {
   search: string;
 }
 
+/**
+ * External records of one system and kind, page by page. Another search or state of them is read with the previous rows kept in place,
+ * so a row someone is clicking does not vanish; another system or kind of record is another list, whose buttons would act on these
+ * rows with the wrong system, so it starts empty.
+ */
 export function useRecords(filters: RecordFilters) {
-  return useInfiniteQuery({
+  return useInfiniteQuery<RecordPage, Error, InfiniteData<RecordPage, string | null>, QueryKey, string | null>({
     queryKey: ['integrations', 'records', filters],
+    placeholderData: (previous, previousQuery) => {
+      const shown = previousQuery?.queryKey[2] as RecordFilters | undefined;
+      return shown?.system === filters.system && shown.type === filters.type ? previous : undefined;
+    },
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam, signal }) =>
       (await api.get<RecordPage>(`${BASE}/records${query({ ...filters, search: filters.search || undefined, cursor: pageParam, limit: 50 })}`, signal)).data,

@@ -130,6 +130,10 @@ export function MappingsPage() {
   const entityType = entityTypeOf(type);
   const rows = records.data?.pages.flatMap((p) => p.items) ?? [];
   const first = records.data?.pages[0];
+  // While another search or state of the same records is read, the previous rows stay where they are, so a click on one still lands.
+  // They are not its answer: the counts on the states keep their room unseen, and no empty answer is claimed for them.
+  const stale = records.isPlaceholderData;
+  const loading = records.isPending || (stale && rows.length === 0);
 
   const openBulk = async () => {
     setBulk({ preview: null });
@@ -186,6 +190,7 @@ export function MappingsPage() {
           label={t('mappings.stateLabel')}
           value={state}
           onChange={(value) => set({ state: value })}
+          countsPending={stale}
           options={(['Unlinked', 'Linked', 'All'] as const).map((value) => ({
             value,
             label: t(`mappings.state.${value}`),
@@ -207,7 +212,7 @@ export function MappingsPage() {
         <ErrorState error={records.error} onRetry={() => void records.refetch()} />
       ) : (
         <ScrollTable>
-          <Table className={mergeClasses(table.min880, table.roomy)} aria-label={t('mappings.title')}>
+          <Table className={mergeClasses(table.min880, table.roomy)} aria-label={t('mappings.title')} aria-busy={stale || undefined}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>{t('mappings.columns.external', { system: systemName(t, system) })}</TableHeaderCell>
@@ -310,8 +315,8 @@ export function MappingsPage() {
               })}
             </TableBody>
           </Table>
-          {records.isPending && <Spinner className={styles.more} />}
-          {!records.isPending && rows.length === 0 && <EmptyState message={t('mappings.empty')} icon={<PlugDisconnected24Regular />} />}
+          {loading && <Spinner className={styles.more} />}
+          {!loading && rows.length === 0 && <EmptyState message={t('mappings.empty')} icon={<PlugDisconnected24Regular />} />}
           {records.hasNextPage && (
             <div className={styles.more}>
               <Button onClick={() => void records.fetchNextPage()} disabled={records.isFetchingNextPage}>

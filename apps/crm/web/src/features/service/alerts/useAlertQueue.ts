@@ -16,7 +16,8 @@ export const queuePageSize = 25;
 /**
  * Alerts across customers (M38): open ones critical first and the longest waiting first, resolved ones newest resolved first,
  * both in the server's order. The counts are of the whole filter, and the reads say how fresh the stored alerts are, both from the
- * newest answer (DEV-12).
+ * newest answer (DEV-12). A new search or filter is read with the previous rows kept in place, so a row someone is clicking does not
+ * vanish while the answer is on its way.
  */
 export function useAlertQueue(filters: AlertQueueFilters) {
   const list = usePagedList<Alert>(['service', 'alerts', 'queue', filters], '/api/v1/service/alerts', {
@@ -24,11 +25,14 @@ export function useAlertQueue(filters: AlertQueueFilters) {
     severity: filters.severity ?? undefined,
     organizationId: filters.organizationId ?? undefined,
     q: filters.search || undefined,
-  }, { limit: queuePageSize });
+  }, { limit: queuePageSize, keepPrevious: true });
   // The queue's answer is a page with its severity counts; the generic list reader types only the paging part of it.
   const pages = list.data?.pages as AlertPage[] | undefined;
   const latest = pages?.at(-1);
-  return { ...list, pages, critical: latest?.critical ?? null, warning: latest?.warning ?? null, reads: latest?.reads ?? null };
+  // Reading another search or filter with the previous rows on screen is not a read of those rows again (isFetching): their read
+  // line stays above the queue and Refresh stays usable, as in the ticket queue.
+  return { ...list, isFetching: list.isFetching && !list.isPlaceholderData, pages, critical: latest?.critical ?? null, warning: latest?.warning ?? null,
+    reads: latest?.reads ?? null };
 }
 
 /** One alert as stored now, in any state (the side panel; a link from My day names it by id). Never served from a cache. */

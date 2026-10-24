@@ -81,6 +81,9 @@ export function LeadsPage() {
   const debounced = useDebouncedValue(search.trim());
   const leads = useLeads({ status, mine, search: debounced });
   const { items: data, error, isPending, refetch } = leads;
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the end of the list says it is loading, and no count or empty answer is claimed for them.
+  const stale = leads.isPlaceholderData;
   const [dialog, setDialog] = useState<{ kind: 'edit' | 'convert' | 'disqualify'; lead?: Lead } | null>(null);
   const shown = useKeptWhileClosing(dialog);
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -118,7 +121,7 @@ export function LeadsPage() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <ScrollTable className={catalog.tableWrap}>
-          <Table className={mergeClasses(catalog.table, styles.table)} aria-label={t('leads.title')}>
+          <Table className={mergeClasses(catalog.table, styles.table)} aria-label={t('leads.title')} aria-busy={stale || undefined}>
             <TableHeader>
               <TableRow>
                 {/* Content widths: every cell adds 12 px of padding on each side; the company takes the rest. */}
@@ -191,8 +194,9 @@ export function LeadsPage() {
               ))}
             </TableBody>
           </Table>
-          {!isPending && data.length === 0 && <EmptyState icon={<ContactCard24Regular />} message={t('leads.empty')} />}
-          <ListFooter shown={data.length} total={leads.total} hasMore={leads.hasNextPage} loading={leads.isFetchingNextPage} onMore={() => void leads.fetchNextPage()} />
+          {!isPending && !stale && data.length === 0 && <EmptyState icon={<ContactCard24Regular />} message={t('leads.empty')} />}
+          <ListFooter shown={data.length} total={leads.total} hasMore={leads.hasNextPage} loading={leads.isFetchingNextPage} onMore={() => void leads.fetchNextPage()}
+            stale={stale} />
         </ScrollTable>
       )}
 

@@ -47,6 +47,9 @@ function Queue() {
   const queue = useAlertQueue(filters);
   const links = useAlertTaskLinks(pageIds(queue.pages));
   const filtered = severity !== null || organizationId !== null || debounced !== '';
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the count line says the queue is loading, and no count, end of list or empty answer is claimed for them.
+  const stale = queue.isPlaceholderData;
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
@@ -93,15 +96,17 @@ function Queue() {
         <CustomerFilter value={organizationId} onChange={(id) => setParam('customer', id)} placeholder={t('alerts.anyCustomer')} />
       </FilterField>
     </Toolbar>
-    {queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : queue.isPending
+    {queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : queue.isPending || (stale && queue.items.length === 0)
       ? <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>
       : <>
         {/* The counts are of everything the filters match, read with the list (DEV-12). */}
         {total !== null && total > 0 && <Text className={styles.totals} role="status">
-          {t('alerts.totals', { count: total, critical: queue.critical ?? 0, warning: queue.warning ?? 0 })}
+          {stale ? t('common.loading') : t('alerts.totals', { count: total, critical: queue.critical ?? 0, warning: queue.warning ?? 0 })}
         </Text>}
-        <AlertQueueList alerts={queue.items} tasks={links.links} resolved={state === 'Resolved'} empty={empty} onOpen={(alert) => openPeek(alert.id)}
-          footer={<ListFooter shown={queue.items.length} total={total} hasMore={Boolean(queue.hasNextPage)} loading={queue.isFetchingNextPage}
+        {/* The headings and ages are those of the rows on screen: while another state is read, they are still of the earlier one. */}
+        <AlertQueueList alerts={queue.items} tasks={links.links} resolved={(stale ? queue.items[0]?.state : state) === 'Resolved'} busy={stale}
+          empty={empty} onOpen={(alert) => openPeek(alert.id)}
+          footer={<ListFooter shown={queue.items.length} total={stale ? null : total} hasMore={Boolean(queue.hasNextPage)} loading={queue.isFetchingNextPage}
             onMore={() => void queue.fetchNextPage()} />} />
       </>}
     <AlertDetailDrawer alertId={peekId} onClose={closePeek} />

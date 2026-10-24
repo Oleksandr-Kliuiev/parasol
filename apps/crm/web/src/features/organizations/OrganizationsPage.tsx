@@ -103,10 +103,12 @@ export function OrganizationsPage() {
   const mine = params.get('mine') === '1';
   const debouncedSearch = useDebouncedValue(search.trim());
 
-  // The global header search changes the URL while this page is open: adopt it (React "adjust state on prop change").
+  // The global header search changes the URL while this page is open: adopt it (React "adjust state on prop change"). The page's own
+  // search reaches the URL too, in a router transition that can land after the next keystroke: that echo is not adopted, or what was
+  // typed meanwhile would be replaced by the search before it.
   if (urlSearch !== previousUrlSearch) {
     setPreviousUrlSearch(urlSearch);
-    if (urlSearch !== search.trim()) setSearch(urlSearch);
+    if (urlSearch !== search.trim() && urlSearch !== debouncedSearch) setSearch(urlSearch);
   }
 
   useEffect(() => {
@@ -117,12 +119,16 @@ export function OrganizationsPage() {
     setParams(next, { replace: true });
   }, [debouncedSearch, params, setParams]);
 
-  const { data, error, isPending, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useOrganizations({
+  const { data, error, isPending, isPlaceholderData, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useOrganizations({
     search: debouncedSearch,
     status,
     accountManagerId: mine ? user.id : null,
-  });
+  }, { keepPrevious: true });
   const rows = data?.pages.flatMap((page) => page.items) ?? [];
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the list is marked busy and no empty answer is claimed for them; with no previous rows, the placeholder shows as before.
+  const stale = isPlaceholderData;
+  const loading = isPending || (stale && rows.length === 0);
   // One read of facts per loaded page of the list (at most 50 ids), never one per row.
   const facts = useCustomerFacts(withFacts ? (data?.pages ?? []).map((page) => page.items.map((row) => row.id)) : []);
   const counts = useOrganizationCounts(debouncedSearch);
@@ -199,9 +205,10 @@ export function OrganizationsPage() {
           value={status ?? ''}
           onChange={(value) => setStatus(value || undefined)}
           options={[
-            { value: '', label: t('common.all'), count: counts ? organizationStatuses.reduce((sum, s) => sum + counts[s], 0) : undefined },
-            ...organizationStatuses.map((s) => ({ value: s, label: t(`status.${s}`), dot: statusDot[s], count: counts?.[s] })),
+            { value: '', label: t('common.all'), count: counts ? organizationStatuses.reduce((sum, s) => sum + counts.counts[s], 0) : undefined },
+            ...organizationStatuses.map((s) => ({ value: s, label: t(`status.${s}`), dot: statusDot[s], count: counts?.counts[s] })),
           ]}
+          countsPending={counts?.pending}
         />
       </Toolbar>
 
@@ -211,7 +218,7 @@ export function OrganizationsPage() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : narrow ? (
         <>
-          <ul className={record.cards} aria-label={t('organizations.title')}>
+          <ul className={record.cards} aria-label={t('organizations.title')} aria-busy={stale || undefined}>
             {rows.map((row) => (
               <li key={row.id} className={record.card}>
                 <span className={record.cardMain}>
@@ -233,8 +240,8 @@ export function OrganizationsPage() {
               </li>
             ))}
           </ul>
-          {isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
-          {!isPending && rows.length === 0 && (
+          {loading && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
+          {!loading && rows.length === 0 && (
             <EmptyState icon={<Building24Regular />} message={debouncedSearch || status ? t('organizations.empty') : t('organizations.emptyAll')} />
           )}
           {hasNextPage && (
@@ -249,7 +256,7 @@ export function OrganizationsPage() {
         <div ref={table} className={styles.tableWrap} style={tableEdges.style} role="region"
           aria-label={t(tableEdges.overflow ? 'organizations.scrollableTable' : 'organizations.title')} tabIndex={tableEdges.overflow ? 0 : undefined}
           onKeyDown={scrollTableOnKeyDown}>
-          <Table className={mergeClasses(styles.table, withFacts && styles.wideTable)} aria-label={t('organizations.title')}>
+          <Table className={mergeClasses(styles.table, withFacts && styles.wideTable)} aria-label={t('organizations.title')} aria-busy={stale || undefined}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell style={{ width: 300 }}>{t('organizations.columns.name')}</TableHeaderCell>
@@ -262,7 +269,7 @@ export function OrganizationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isPending &&
+              {loading &&
                 Array.from({ length: 5 }, (_, i) => (
                   <TableRow key={`skeleton-${i}`}>
                     {Array.from({ length: 3 + Number(canWork) + 2 * Number(canAgreements) + Number(canInvoices) }, (_, j) => (
@@ -309,7 +316,7 @@ export function OrganizationsPage() {
             </TableBody>
           </Table>
           {facts.failed && <Text block className={styles.factsNote}>{t('customerFacts.someUnread')}</Text>}
-          {!isPending && rows.length === 0 && (
+          {!loading && rows.length === 0 && (
             <EmptyState icon={<Building24Regular />} message={debouncedSearch || status ? t('organizations.empty') : t('organizations.emptyAll')} />
           )}
           {hasNextPage && (

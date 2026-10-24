@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ateraAgent, ateraAlert, fitsWidth, linkedAteraCustomer, seriousViolations, settled, syncAlerts, syncDevices, widths } from './atera';
-import { signIn } from './support';
+import { searchList, signIn } from './support';
 
 // M38: the queue, its side panel, the assign dialog and the Drift tab at desktop, tablet and phone widths, in the theme of the
 // project (desktop: light, desktop-dark: dark), against axe's WCAG 2.2 AA rules and with the keyboard alone.
@@ -20,7 +20,7 @@ test('alerts, their side panel, the assign dialog and the Drift tab pass axe at 
     await page.setViewportSize({ width, height });
     await page.goto('/alerts');
     const search = page.getByRole('searchbox', { name: 'Search title or device' });
-    await search.fill(m);
+    await searchList(page, search, '/api/v1/service/alerts', m, 'q');
     await expect(page.getByRole('status').filter({ hasText: /alerts:/ })).toHaveText('2 alerts: 1 critical, 1 warnings');
     await settled(page);
     expect(await seriousViolations(page), `queue at ${width} px (${scheme})`).toEqual([]);

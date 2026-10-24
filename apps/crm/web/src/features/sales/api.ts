@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
 import { usePagedList } from '../../api/paging';
 import type { PagedResult } from '../../api/types';
@@ -32,9 +32,12 @@ export function useSaveStage() {
   });
 }
 
-/** Leads page by page, newest first, with how many the filter matches (DEV-12). */
+/**
+ * Leads page by page, newest first, with how many the filter matches (DEV-12). A new search or filter is read with the previous rows
+ * kept in place, so a row someone is clicking does not vanish while the answer is on its way.
+ */
 export function useLeads(filters: { status?: LeadStatus | null; mine?: boolean; search?: string }) {
-  return usePagedList<Lead>(salesKeys.leads(filters), `${BASE}/leads`, filters);
+  return usePagedList<Lead>(salesKeys.leads(filters), `${BASE}/leads`, filters, { keepPrevious: true });
 }
 
 export function useLeadActions() {
@@ -83,9 +86,11 @@ export async function fetchOpportunityPage(filters: OpportunityFilters, cursor: 
   return (await api.get<PagedResult<Opportunity>>(`${BASE}/opportunities${query({ ...filters, limit: 50, cursor })}`)).data;
 }
 
+/** The deal board. A new search or filter is read with the previous board kept in place (isPlaceholderData), cards and all. */
 export function usePipeline(filters: OpportunityFilters) {
   return useQuery({
     queryKey: salesKeys.pipeline(filters),
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => (await api.get<PipelineView>(`${BASE}/pipeline${query(filters)}`, signal)).data,
   });
 }

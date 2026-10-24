@@ -46,8 +46,11 @@ export function ContractsPage() {
   const debounced = useDebouncedValue(search.trim());
   const status = (params.get('status') as ContractStatus | null) ?? null;
   const ending = params.get('ending') === '60';
-  const contracts = useContracts({ search: debounced, status, endingWithinDays: ending ? 60 : null });
+  const contracts = useContracts({ search: debounced, status, endingWithinDays: ending ? 60 : null }, true, { keepPrevious: true });
   const rows = contracts.data?.pages.flatMap((p) => p.items) ?? [];
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the end of the list says it is loading, and no count or empty answer is claimed for them.
+  const stale = contracts.isPlaceholderData;
   const filterValue: StatusFilter = ending ? 'ending' : (status ?? '');
   const filtered = Boolean(debounced || filterValue);
 
@@ -104,7 +107,8 @@ export function ContractsPage() {
       ) : (
         <ContractList
           rows={rows}
-          loading={contracts.isPending}
+          loading={contracts.isPending || (stale && rows.length === 0)}
+          stale={stale}
           empty={filtered ? t('contracts.empty') : t('contracts.emptyAll')}
           showOrganization
           footer={
@@ -114,6 +118,7 @@ export function ContractsPage() {
               hasMore={Boolean(contracts.hasNextPage)}
               loading={contracts.isFetchingNextPage}
               onMore={() => void contracts.fetchNextPage()}
+              stale={stale}
             />
           }
         />
@@ -131,9 +136,12 @@ export function ContractList({
   showOrganization,
   inPanel,
   footer,
+  stale,
 }: {
   rows: ContractListItem[];
   loading: boolean;
+  /** The rows are those of an earlier search while its answer is read: the list is marked busy. */
+  stale?: boolean;
   empty: string;
   emptyIcon?: ReactElement;
   /** The end of a paged list, inside the card. */
@@ -157,7 +165,7 @@ export function ContractList({
     return (
       <>
         {rows.length > 0 && (
-          <ul className={record.cards} aria-label={t('contracts.title')}>
+          <ul className={record.cards} aria-label={t('contracts.title')} aria-busy={stale || undefined}>
             {rows.map((c) => (
               <li key={c.id} className={record.card}>
                 <span className={record.cardMain}>
@@ -185,7 +193,7 @@ export function ContractList({
 
   return (
     <ScrollTable className={mergeClasses(styles.tableWrap, inPanel && record.flatTable)}>
-      <Table className={styles.table} style={{ minWidth: showOrganization ? 1060 : 880 }} aria-label={t('contracts.title')}>
+      <Table className={styles.table} style={{ minWidth: showOrganization ? 1060 : 880 }} aria-label={t('contracts.title')} aria-busy={stale || undefined}>
         <TableHeader>
           <TableRow>
             {/* Content widths: every cell adds 12 px of padding on each side; the organization takes the rest. */}

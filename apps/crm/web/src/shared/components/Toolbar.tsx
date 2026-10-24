@@ -63,6 +63,8 @@ const useStyles = makeStyles({
     '& b': { color: 'inherit' },
   },
   dot: { width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0 },
+  // A count of an earlier filter keeps its place while the new one is read, unseen, so the chips do not change size.
+  pending: { visibility: 'hidden' },
 });
 
 /** A row of filters above a list: search first, then filters, `end` for actions that belong to the list. */
@@ -100,17 +102,22 @@ export interface FilterChipOption<T extends string> {
   dot?: string;
 }
 
-/** Status filters as chips with their counts (the reference's list filters); the pressed chip is the active filter. */
+/**
+ * Status filters as chips with their counts (the reference's list filters); the pressed chip is the active filter.
+ * `countsPending`: the counts are those of an earlier search while the new ones are read; they are not shown, but keep their room.
+ */
 export function FilterChips<T extends string>({
   label,
   value,
   options,
   onChange,
+  countsPending = false,
 }: {
   label: string;
   value: T;
   options: Array<FilterChipOption<T>>;
   onChange: (value: T) => void;
+  countsPending?: boolean;
 }) {
   const styles = useStyles();
   return (
@@ -125,8 +132,12 @@ export function FilterChips<T extends string>({
         >
           {option.dot && <span className={styles.dot} style={{ backgroundColor: option.dot }} aria-hidden />}
           {option.label}
-          {/* A hidden comma keeps the label and its count apart for screen readers ("Not linked, 17"). */}
-          {option.count !== undefined && <><span className={styles.hidden}>,</span>{' '}<b>{option.count}</b></>}
+          {/* A hidden comma keeps the label and its count apart for screen readers ("Not linked, 17"). A pending count keeps all of its
+              parts, unseen and unread: without one of them the chip is narrower and the row of filters can wrap anew. */}
+          {option.count !== undefined && <>
+            <span className={styles.hidden} aria-hidden={countsPending || undefined}>,</span>{' '}
+            <b className={countsPending ? styles.pending : undefined} aria-hidden={countsPending || undefined}>{option.count}</b>
+          </>}
         </button>
       ))}
     </div>
