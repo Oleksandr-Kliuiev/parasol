@@ -21,7 +21,8 @@ public interface IPartnerBillingClient
 
 /// <summary>
 /// Microsoft partner billing reconciliation through Graph (docs/05 §2.4): <c>POST …/billed/export</c> → poll the operation →
-/// read the manifest → download the line files. Only the fields the CRM compares are kept.
+/// read the manifest → download the line files. Only the fields the CRM compares are kept. Every link after the first request
+/// comes from Microsoft's answers and goes through <see cref="PartnerBillingLinks"/>: the Graph token only to the Graph origin.
 /// </summary>
 internal sealed class PartnerBillingClient(
     HttpClient http,
@@ -44,7 +45,7 @@ internal sealed class PartnerBillingClient(
         var lines = new List<ExternalBilledLine>();
         foreach (var blob in blobs)
         {
-            using var response = await http.GetAsync(blob, cancellationToken);
+            using var response = await GetLinkAsync(blob, cancellationToken);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             lines.AddRange(ParseLines(content, invoiceId));
@@ -72,9 +73,7 @@ internal sealed class PartnerBillingClient(
     {
         for (var attempt = 0; attempt < MaxPolls; attempt++)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, operationUrl);
-            await AuthorizeAsync(request, cancellationToken);
-            using var response = await http.SendAsync(request, cancellationToken);
+            using var response = await GetLinkAsync(operationUrl, cancellationToken);
             await EnsureSuccessAsync(response, cancellationToken);
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
             var status = document.RootElement.TryGetProperty("status", out var value) ? value.GetString() : null;
@@ -99,9 +98,7 @@ internal sealed class PartnerBillingClient(
 
     private async Task<IReadOnlyList<string>> ReadManifestAsync(string manifestUrl, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, manifestUrl);
-        await AuthorizeAsync(request, cancellationToken);
-        using var response = await http.SendAsync(request, cancellationToken);
+        using var response = await GetLinkAsync(manifestUrl, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         if (!document.RootElement.TryGetProperty("blobs", out var blobs) || blobs.ValueKind != JsonValueKind.Array)
@@ -167,6 +164,22 @@ internal sealed class PartnerBillingClient(
             unitPrice,
             total,
             Text(e, "currency", "billingCurrency") ?? "NOK");
+    }
+
+    /// <summary>
+    /// A GET of a link the export named (DEV-21): the Graph token goes only with a link on the configured Graph origin, a signed
+    /// storage link is sent without it, and any other link fails before a request is made (<see cref="PartnerBillingLinks"/>).
+    /// </summary>
+    private async Task<HttpResponseMessage> GetLinkAsync(string link, CancellationToken cancellationToken)
+    {
+        var (uri, destination) = PartnerBillingLinks.Classify(options.Value.GraphBaseUrl, link, options.Value.EffectiveBillingStorageHostSuffixes);
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        if (destination == PartnerBillingLinks.Destination.Graph)
+        {
+            await AuthorizeAsync(request, cancellationToken);
+        }
+
+        return await http.SendAsync(request, cancellationToken);
     }
 
     private async Task AuthorizeAsync(HttpRequestMessage request, CancellationToken cancellationToken)

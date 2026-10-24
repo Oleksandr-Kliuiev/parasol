@@ -52,9 +52,21 @@ public sealed class PartnerCenterOptions
     /// <summary>Graph endpoint of the partner billing export (docs/05 §2.4).</summary>
     public Uri GraphBaseUrl { get; set; } = new("https://graph.microsoft.com/v1.0/");
 
+    /// <summary>
+    /// Hosts where the billing export may keep its files (docs/05 §2.4, a host or any subdomain of it). Microsoft hands the export
+    /// out in Azure Blob Storage with a SAS signature in the link; such a link is fetched without the Graph token, over https, and
+    /// a file link on any other host is refused. Unset means all of Azure Blob Storage; a configured list replaces that, so it can
+    /// be narrowed to the export's own storage accounts once the partner tenant shows them (EXT-03).
+    /// </summary>
+    public IList<string> BillingStorageHostSuffixes { get; } = [];
+
     public string BillingSyncCron { get; set; } = "20 4 * * *";
 
     public Uri EffectiveTokenUrl => TokenUrl ?? new Uri($"https://login.microsoftonline.com/{TenantId}/oauth2/token");
+
+    /// <summary>The configured list, or Azure Blob Storage when none is set (the binder adds to a default instead of replacing it).</summary>
+    public IReadOnlyList<string> EffectiveBillingStorageHostSuffixes =>
+        BillingStorageHostSuffixes.Any(s => !string.IsNullOrWhiteSpace(s)) ? [.. BillingStorageHostSuffixes] : ["blob.core.windows.net"];
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(RefreshToken) && !string.IsNullOrWhiteSpace(TenantId);
 }

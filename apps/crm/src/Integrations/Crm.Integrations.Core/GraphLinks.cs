@@ -1,11 +1,12 @@
-namespace Crm.Integrations.MicrosoftGraph;
+namespace Crm.Integrations.Core;
 
 /// <summary>
 /// An app-only Graph token is valid for the whole directory, so it goes only to the configured Graph address (F-G5-12). The
-/// links a response names (<c>@odata.nextLink</c>, <c>@odata.deltaLink</c>) and the stored delta cursor are data from outside the
-/// code: they are followed only when scheme, host and port are those of that address.
+/// links a response names (<c>@odata.nextLink</c>, <c>@odata.deltaLink</c>, the operation and manifest of the Partner Center
+/// billing export) and the stored delta cursor are data from outside the code: they are followed only when scheme, host and
+/// port are those of that address.
 /// </summary>
-internal static class GraphLinks
+public static class GraphLinks
 {
     public static bool IsSameOrigin(Uri? baseAddress, Uri? uri) =>
         baseAddress is not null && uri is { IsAbsoluteUri: true } && string.IsNullOrEmpty(uri.UserInfo)
