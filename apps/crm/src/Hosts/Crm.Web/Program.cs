@@ -26,6 +26,7 @@ using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Huntress;
 using Crm.Integrations.CloudAlly;
 using Crm.SharedKernel.Application;
 using Crm.Authorization;
@@ -103,6 +104,7 @@ builder.Services
     .AddMicrosoftGraphIntegration(builder.Configuration)
     .AddPowerOfficeIntegration(builder.Configuration)
     .AddAteraIntegration(builder.Configuration)
+    .AddHuntressIntegration(builder.Configuration)
     .AddCloudAllyIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
@@ -288,6 +290,7 @@ app.MapCustomFieldsEndpoints();
 app.MapCatalogEndpoints();
 app.MapContractsEndpoints();
 app.MapServiceEndpoints();
+app.MapSecurityEndpoints();
 app.MapTimeTrackingEndpoints();
 app.MapSalesEndpoints();
 app.MapProjectsEndpoints();

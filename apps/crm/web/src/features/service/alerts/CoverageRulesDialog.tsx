@@ -27,8 +27,8 @@ const useStyles = makeStyles({
 interface Draft { enabled: boolean; limit: string }
 
 /**
- * Parasoll's own coverage checks (M40), opened from the alert queue: each rule says what it watches, whether it raises alerts and
- * its limit (the days an Atera agent may be silent). A change goes with the ETag of the rule as read; switching a rule off closes
+ * Parasoll's own coverage checks (M40, M41), opened from the alert queue: each rule says what it watches, whether it raises alerts and
+ * its limit (the days an agent may be silent, a machine may lack its second agent or an agent may stay behind). A change goes with the ETag of the rule as read; switching a rule off closes
  * its open alerts at once, and a new limit applies from the next check. A person who may only read sees the settings, unchangeable.
  */
 export function CoverageRulesDialog({ onClose }: { onClose: () => void }) {
@@ -87,7 +87,9 @@ export function CoverageRulesDialog({ onClose }: { onClose: () => void }) {
             {key && <Text block className={styles.muted}>{t(`coverage.rules.${key}.description`)} {t(`coverage.rules.${key}.when`)}</Text>}
             <Switch checked={d.enabled} disabled={!canWrite || busy} label={t('coverage.enabled')}
               onChange={(_, data) => setDraft(rule, { ...d, enabled: data.checked })} />
-            {rule.threshold && range && <Field label={key ? t(`coverage.rules.${key}.limit`, { defaultValue: t(`coverage.limit.${rule.threshold.unit}`) }) : t(`coverage.limit.${rule.threshold.unit}`)} hint={t('coverage.limitHint', range)}
+            {/* M41/M42: a rule whose limit is not a silence (the days a device may lack its second agent, a backup's age) names it itself. */}
+            {rule.threshold && range && <Field label={key ? t(`coverage.rules.${key}.limit`, { defaultValue: t(`coverage.limit.${rule.threshold.unit}`) })
+              : t(`coverage.limit.${rule.threshold.unit}`)} hint={t('coverage.limitHint', range)}
               validationMessage={touched && !limitOk(rule) ? t('coverage.limitInvalid', range) : undefined}>
               <Input className={styles.limit} type="number" inputMode="numeric" min={range.min} max={range.max} value={d.limit}
                 disabled={!canWrite || busy} onChange={(_, data) => setDraft(rule, { ...d, limit: data.value })} />

@@ -5,8 +5,9 @@ namespace Crm.ArchitectureTests;
 
 /// <summary>
 /// M40.S: the security and backup modules stand before their integrations (Huntress in M41, CloudAlly in M42) bring their data.
-/// Each is a module of the usual shape with a schema of its own, registered by both hosts, and nothing else reaches into it yet:
-/// when M41/M42 add contracts, the other modules call those, as the module rules require.
+/// Each is a module of the usual shape with a schema of its own, registered by both hosts, and nothing else reaches into its
+/// implementation: since M41 the Huntress integration writes the security module through <c>Crm.Security.Contracts</c>, as the module
+/// rules require.
 /// </summary>
 public class CoverageModulesTests
 {

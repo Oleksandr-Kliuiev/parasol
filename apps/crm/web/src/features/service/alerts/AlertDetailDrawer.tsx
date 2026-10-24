@@ -9,6 +9,8 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
+import { IncidentSection } from '../../security/IncidentSection';
+import { NoticeSection } from '../../security/NoticeSection';
 import { AlertSourceSection } from './AlertActions';
 import { alertTitle, isBackupGap } from './alertText';
 import { CoverageRulesDialog } from './CoverageRulesDialog';
@@ -92,6 +94,9 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
             {sourceReads && sourceReads.length > 0 && <AlertReadLine reads={sourceReads} />}
           </span> },
         ]} />
+        {/* M41: the Huntress record behind the alert — the incident's plan and comments, or the escalation and its answer. */}
+        <IncidentSection alert={alert} />
+        <NoticeSection alert={alert} />
         <AlertTaskSection alert={alert} onNavigate={onClose} />
         <AlertSourceSection alert={alert} />
       </>}

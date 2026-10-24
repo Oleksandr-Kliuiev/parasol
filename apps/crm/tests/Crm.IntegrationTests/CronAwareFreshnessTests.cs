@@ -56,7 +56,9 @@ public class CronAwareFreshnessTests(CrmWebFactory factory)
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
         var runner = new SyncRunner(db, time, NullLogger<SyncRunner>.Instance);
-        var reads = new SyncCompletenessReader(db, new ConfigurationBuilder().Build(), time);
+        var reads = new SyncCompletenessReader(db, new ConfigurationBuilder().Build(), time, scope.ServiceProvider.GetServices<IIntegrationAdapter>());
+        // Switched on is the adapter's answer (M41): Atera is on in the shared host, Huntress off, a system without an adapter never on.
+        (reads.IsConnected("atera"), reads.IsConnected("huntress"), reads.IsConnected(system)).ShouldBe((true, false, false));
         await runner.RunAsync(system, "atera-alerts", (_, _) => Task.CompletedTask, Ct);
         try
         {

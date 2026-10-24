@@ -48,7 +48,7 @@ public sealed class SourceTaskTests
         {
             // The retired technical workspace wrote receipts under its own name; they stay as history and do nothing.
             "retired" => new SourceTaskIdentity(RetiredSystem, "synthetic-workspace", "synthetic-client", "observation-one", "Task"),
-            "unknown" => Source with { System = "huntress" }, "case" => Source with { System = "Atera" },
+            "unknown" => Source with { System = "cloudally" }, "case" => Source with { System = "Atera" },
             "kind" => Source with { SourceKind = "observation" }, "target" => Source with { TargetKind = "Ticket" },
             "empty" => Source with { ExternalId = "" }, "whitespace" => Source with { ExternalCustomerId = " " },
             "control" => Source with { ExternalCustomerId = "900\n" }, "url" => Source with { ExternalId = "https://example.invalid" },
@@ -63,8 +63,10 @@ public sealed class SourceTaskTests
     public void The_supported_systems_decide_which_receipts_are_live()
     {
         SourceTaskIdentityRules.IsValid(Source).ShouldBeTrue();
-        SourceTaskIdentityRules.SupportedSystems.ShouldBe(["atera", "parasoll"], ignoreOrder: true);
+        SourceTaskIdentityRules.SupportedSystems.ShouldBe(["atera", "huntress", "parasoll"], ignoreOrder: true);
         SourceTaskIdentityRules.IsSupported("atera").ShouldBeTrue();
+        // M41: an incident, escalation or platform action of Huntress becomes a task like an Atera alert.
+        SourceTaskIdentityRules.IsValid(Source with { System = "huntress", ExternalId = "incident:7001" }).ShouldBeTrue();
         // M40: a coverage gap Parasoll found becomes a task like an alert of a source.
         SourceTaskIdentityRules.IsValid(Source with { System = "parasoll", ExternalId = "atera.agent-silent:0199f1a0400070008000000000004001" }).ShouldBeTrue();
         SourceTaskIdentityRules.IsSupported(RetiredSystem).ShouldBeFalse();

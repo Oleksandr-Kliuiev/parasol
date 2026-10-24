@@ -19,6 +19,7 @@ import { sourceName } from '../alerts/alertText';
 import { decideMachine, serviceKeys, useMachine, type MachineDecision } from '../api';
 import { ServiceReadLine } from '../ServiceReadLine';
 import type { MachineDetail, MachineDevice, MachineProposal } from '../types';
+import { ProtectionActions, ProtectionFacts } from '../../security/DeviceIsolation';
 import { MachineInventory } from './MachineInventory';
 import { evidenceOrder, leadDevice } from './machineFormat';
 
@@ -81,7 +82,11 @@ function MachineBody({ machine, onClose, onChanged, reread }: {
   const sourcesHeading = useRef<HTMLHeadingElement>(null);
   const lead = leadDevice(machine.devices);
   const current = machine.devices.filter((d) => d.removedAt === null);
-  const link = lead?.url ? safeHttpUrl(lead.url) : undefined;
+  // M41: Huntress reports little about the hardware, so the card describes the computer from its Atera agent when it has one, and
+  // the console section is Atera's: what Atera's API cannot do is done there.
+  const described = current.find((d) => d.system === 'atera') ?? lead;
+  const atConsole = current.find((d) => d.system === 'atera') ?? (lead?.system === 'atera' ? lead : undefined);
+  const link = atConsole?.url ? safeHttpUrl(atConsole.url) : undefined;
 
   const decide = async (decision: MachineDecision) => {
     setBusy(true); setError(null); setDone(null);
@@ -157,6 +162,11 @@ function MachineBody({ machine, onClose, onChanged, reread }: {
           <Text size={200} className={styles.muted}>{device.lastSeenAt
             ? <>{t('service.lastSeen')} <time dateTime={device.lastSeenAt} title={formatDateTime(device.lastSeenAt)}>{formatRelative(device.lastSeenAt)}</time></>
             : t('machines.neverSeen')}</Text>
+          {/* M41: what Huntress says about Defender and isolation, and the actions at Huntress on this agent; its version only where
+              the inventory below is another source's. */}
+          <ProtectionFacts device={device} version={described?.id !== device.id} />
+          {/* Mounted for a removed agent too: removing it ends here, and its confirmation stays open to say how it went. */}
+          {device.system === 'huntress' && <ProtectionActions device={device} onClosed={() => sourcesHeading.current?.focus()} />}
           <span className={styles.buttons}>
             {href && <Link href={href} target="_blank" rel="noopener noreferrer" className={styles.external}>
               {t('machines.openIn', { source: sourceName(t, device.system) })}<Open16Regular aria-hidden /></Link>}
@@ -167,15 +177,15 @@ function MachineBody({ machine, onClose, onChanged, reread }: {
       })}</ul>
     </section>
 
-    {lead && <MachineInventory device={lead} />}
+    {described && <MachineInventory device={described} />}
 
     {/* What Atera's API cannot do is one link away: the person does it in Atera itself. */}
-    <section className={styles.section} aria-labelledby={`machine-console-${machine.id}`}>
-      <h3 id={`machine-console-${machine.id}`} className={styles.heading}>{t('machines.inConsole', { source: sourceName(t, lead?.system ?? 'atera') })}</h3>
-      <Text block className={styles.muted}>{t('machines.consoleOnly', { source: sourceName(t, lead?.system ?? 'atera') })}</Text>
+    {atConsole && <section className={styles.section} aria-labelledby={`machine-console-${machine.id}`}>
+      <h3 id={`machine-console-${machine.id}`} className={styles.heading}>{t('machines.inConsole', { source: sourceName(t, atConsole.system) })}</h3>
+      <Text block className={styles.muted}>{t('machines.consoleOnly', { source: sourceName(t, atConsole.system) })}</Text>
       {link && <Link href={link} target="_blank" rel="noopener noreferrer" className={styles.external}>
-        {t('machines.openIn', { source: sourceName(t, lead?.system ?? 'atera') })}<Open16Regular aria-hidden /></Link>}
-    </section>
+        {t('machines.openIn', { source: sourceName(t, atConsole.system) })}<Open16Regular aria-hidden /></Link>}
+    </section>}
 
     <ConfirmDialog open={asking !== null} title={asking?.title ?? ''} confirm={asking?.confirm ?? ''} busy={busy} error={asking ? error : null}
       onConfirm={() => { if (asking) void decide(asking.decision); }} onCancel={() => { setAsking(null); setError(null); }}>

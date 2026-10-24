@@ -45,6 +45,8 @@ public sealed class RetentionOptions
         ["integration.sync-runs"] = 180,
         ["integration.vendor-action-texts"] = 90,
         ["identity.sessions"] = 90,
+        // M41: closed Huntress incidents with their plans and comments, and resolved escalations and platform actions.
+        ["security.closed-incidents"] = 365,
     };
 }
 

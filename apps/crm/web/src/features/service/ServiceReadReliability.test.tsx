@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { answer, device, empty, failure, json, kindOf, kinds, names, pageResult, refreshName, renderService, request, summary } from './serviceReadTestFixture';
+import { answer, device, emptyFor, failure, json, kindOf, kinds, names, pageResult, refreshName, renderService, request, summary } from './serviceReadTestFixture';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 const region = (kind: typeof kinds[number]) => within(screen.getByRole('region', { name: names[kind] }));
@@ -14,7 +14,7 @@ it.each(kinds)('shows %s loading independently without claiming a zero or empty 
   expect(region(kind).queryByText(/^No /)).not.toBeInTheDocument(); expect(region(kind).queryByText('0')).not.toBeInTheDocument();
   if (kind === 'summary') { expect(await screen.findByText('Synthetic ticket one')).toBeVisible(); expect(screen.getByText(/Device totals are unavailable/)).toBeVisible(); }
   else expect(await screen.findByText('Open tickets', { exact: true })).toBeVisible();
-  await act(async () => finish(answer(kind))); await waitFor(() => expect(region(kind).queryByText('Loading saved data')).not.toBeInTheDocument()); expect(fetch).toHaveBeenCalledTimes(5);
+  await act(async () => finish(answer(kind))); await waitFor(() => expect(region(kind).queryByText('Loading saved data')).not.toBeInTheDocument()); expect(fetch).toHaveBeenCalledTimes(kinds.length);
 });
 
 it.each(kinds)('shows a %s read error, leaves other resources usable and retries only that resource explicitly', async kind => {
@@ -24,14 +24,14 @@ it.each(kinds)('shows a %s read error, leaves other resources usable and retries
   if (kind !== 'devices') expect(await screen.findByText('Synthetic PC one')).toBeVisible();
   if (kind !== 'tickets') expect(await screen.findByText('Synthetic ticket one')).toBeVisible();
   fireEvent(window, new Event('focus')); fireEvent(window, new Event('online')); fireEvent(document, new Event('visibilitychange'));
-  expect(fetch).toHaveBeenCalledTimes(5); failed = false;
+  expect(fetch).toHaveBeenCalledTimes(kinds.length); failed = false;
   await userEvent.click(region(kind).getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(region(kind).queryByText(failure)).not.toBeInTheDocument());
-  expect(fetch).toHaveBeenCalledTimes(6); expect(kindOf(fetch.mock.calls.at(-1)![0])).toBe(kind);
+  expect(fetch).toHaveBeenCalledTimes(kinds.length + 1); expect(kindOf(fetch.mock.calls.at(-1)![0])).toBe(kind);
 });
 
 it('renders zero counts and empty states only after successful saved reads and says when each kind of data was read', async () => {
-  const fetch = vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, openTickets: 0, devices: {}, devicesOnline: 0, criticalAlerts: 0, warningAlerts: 0 }) : empty());
+  const fetch = vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, openTickets: 0, devices: {}, devicesOnline: 0, criticalAlerts: 0, warningAlerts: 0 }) : emptyFor(url));
   vi.stubGlobal('fetch', fetch); renderService(); expect(await screen.findByText('No open tickets.')).toBeVisible();
   expect(region('summary').getAllByText('0')).toHaveLength(4); expect(screen.getByText('No devices from Atera yet.')).toBeVisible();
   expect(screen.getByText('No saved ticket requests need attention.')).toBeVisible();
@@ -43,7 +43,7 @@ it('renders zero counts and empty states only after successful saved reads and s
 
 it('shows a kind of data that was never read as not read, never as a zero (M38 UX finding)', async () => {
   const reads = summary.reads.map((read) => read.source === 'tickets' ? { ...read, startedAt: null, complete: false } : read);
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, openTickets: 0, reads }) : empty()));
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, openTickets: 0, reads }) : emptyFor(url)));
   renderService();
   expect(await region('summary').findByText(/Open tickets \(Atera\) not read yet/)).toBeVisible();
   const tickets = region('summary').getByText('Open tickets').parentElement!;
@@ -52,7 +52,7 @@ it('shows a kind of data that was never read as not read, never as a zero (M38 U
   expect(screen.queryByText(/^Last synced/)).not.toBeInTheDocument();
 });
 
-it('refreshes all five first pages, cancels a held continuation, clears old rows and refuses duplicate keyboard activation', async () => {
+it('refreshes every first page, cancels a held continuation, clears old rows and refuses duplicate keyboard activation', async () => {
   let finishPage!: (value: Response) => void; let pageSignal!: AbortSignal; let refreshing = false;
   const replies: { kind: typeof kinds[number]; finish: (value: Response) => void }[] = [];
   const fetch = vi.fn(async (url: string, init: RequestInit) => {
@@ -65,10 +65,10 @@ it('refreshes all five first pages, cancels a held continuation, clears old rows
   refreshing = true; const refresh = screen.getByRole('button', { name: refreshName }); refresh.focus(); await userEvent.keyboard('{Enter}');
   expect(pageSignal.aborted).toBe(true); expect(refresh).toHaveFocus(); expect(refresh).toHaveAttribute('aria-disabled', 'true');
   expect(screen.queryByText('Synthetic PC one')).not.toBeInTheDocument(); expect(screen.queryByText('Synthetic ticket one')).not.toBeInTheDocument();
-  await userEvent.keyboard('{Enter} '); fireEvent.click(refresh); await waitFor(() => expect(replies).toHaveLength(5)); expect(fetch).toHaveBeenCalledTimes(11);
-  expect(fetch.mock.calls.slice(-5).map(([url]) => kindOf(url)).sort()).toEqual([...kinds].sort());
-  expect(fetch.mock.calls.slice(-5).every(([url, init]) => !url.includes('cursor=') && init.method === 'GET')).toBe(true);
-  await act(async () => { replies.forEach(reply => reply.finish(reply.kind === 'summary' ? json(summary) : empty())); finishPage(pageResult([device('late')])); });
+  await userEvent.keyboard('{Enter} '); fireEvent.click(refresh); await waitFor(() => expect(replies).toHaveLength(kinds.length)); expect(fetch).toHaveBeenCalledTimes(2 * kinds.length + 1);
+  expect(fetch.mock.calls.slice(-kinds.length).map(([url]) => kindOf(url)).sort()).toEqual([...kinds].sort());
+  expect(fetch.mock.calls.slice(-kinds.length).every(([url, init]) => !url.includes('cursor=') && init.method === 'GET')).toBe(true);
+  await act(async () => { replies.forEach(reply => reply.finish(reply.kind === 'summary' ? json(summary) : reply.kind === 'security' ? answer('security') : json({ items: [], nextCursor: null, totalCount: 0 }))); finishPage(pageResult([device('late')])); });
   expect(await screen.findByText('No open tickets.')).toBeVisible(); expect(screen.queryByText('Synthetic PC late')).not.toBeInTheDocument(); expect(refresh).toHaveFocus();
 });
 
@@ -81,7 +81,7 @@ it('recovers from a failed continuation at page one and preserves the Open only 
   await userEvent.click(region('devices').getByRole('button', { name: 'Try again' })); await screen.findByText('Synthetic PC one'); expect(fetch.mock.calls.at(-1)![0]).not.toContain('cursor=');
   await userEvent.click(screen.getByRole('switch', { name: 'Open only' })); await waitFor(() => expect(fetch.mock.calls.at(-1)![0]).toBe('/api/v1/service/tickets?organizationId=o1&limit=25'));
   await userEvent.click(screen.getByRole('button', { name: refreshName })); await screen.findByText('Synthetic ticket one');
-  expect(screen.getByRole('switch', { name: 'Open only' })).not.toBeChecked(); expect(fetch.mock.calls.slice(-5).find(([url]) => kindOf(url) === 'tickets')![0]).not.toContain('openOnly=');
+  expect(screen.getByRole('switch', { name: 'Open only' })).not.toBeChecked(); expect(fetch.mock.calls.slice(-kinds.length).find(([url]) => kindOf(url) === 'tickets')![0]).not.toContain('openOnly=');
 });
 
 it('polls saved Pending requests every five seconds until Failed and does not poll other saved resources', async () => {
@@ -90,7 +90,7 @@ it('polls saved Pending requests every five seconds until Failed and does not po
   vi.stubGlobal('fetch', fetch); renderService(); await screen.findByText(/Synthetic request one.*is being created/);
   await act(async () => { await vi.advanceTimersByTimeAsync(4_999); }); expect(requests).toBe(1);
   await act(async () => { await vi.advanceTimersByTimeAsync(1); }); expect(await screen.findByText(/Synthetic request one.*was not created/)).toBeVisible();
-  await act(async () => { await vi.advanceTimersByTimeAsync(10_000); }); expect(requests).toBe(2); expect(fetch).toHaveBeenCalledTimes(6);
+  await act(async () => { await vi.advanceTimersByTimeAsync(10_000); }); expect(requests).toBe(2); expect(fetch).toHaveBeenCalledTimes(kinds.length + 1);
 });
 
 it('stops after a failed Pending poll, hides stale Pending rows and resumes only after an explicit successful retry', async () => {

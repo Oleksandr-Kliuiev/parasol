@@ -275,7 +275,8 @@ public sealed class ListCompletenessTests(CrmWebFactory factory)
         var technician = factory.ClientAs(CrmRoles.Technician, userKey: $"dev12-tech-{Guid.NewGuid():N}"[..24]);
         var sales = factory.ClientAs(CrmRoles.Sales, userKey: $"dev12-sale-{Guid.NewGuid():N}"[..24]);
         var marker = $"N{Guid.NewGuid():N}"[..9];
-        var dueDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-20);
+        // Days overdue count from Oslo's today, as the notice job does: a UTC date is a day behind it between midnight and two at night.
+        var dueDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo")).DateTime).AddDays(-20);
         var notices = new List<(HttpClient Reader, string Number)>();
         foreach (var (reader, role) in new[] { (technician, "tech"), (sales, "sale") })
         {

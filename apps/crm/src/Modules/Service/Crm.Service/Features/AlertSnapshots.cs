@@ -68,7 +68,8 @@ internal static class AlertSnapshotRules
     /// <summary>
     /// Applies <paramref name="snapshot"/> to the alerts stored for its source: every alert the read lists and every alert of the
     /// source that is not resolved. Changes the stored alerts in place and returns the new ones. An incomplete snapshot changes
-    /// nothing: an alert it does not list may be on a page that was never read.
+    /// nothing: an alert it does not list may be on a page that was never read. A listed alert resolved after the read began stays
+    /// resolved (M41).
     /// </summary>
     public static (IReadOnlyList<Alert> Added, AlertSnapshotResult Result) Apply(
         AlertSnapshot snapshot, IReadOnlyCollection<Alert> stored, AlertDeviceIndex devices, DateTimeOffset now)
@@ -80,12 +81,19 @@ internal static class AlertSnapshotRules
 
         var byExternalId = stored.ToDictionary(a => a.ExternalId, StringComparer.Ordinal);
         var added = new List<Alert>();
-        int opened = 0, reopened = 0, updated = 0, resolved = 0;
+        int opened = 0, reopened = 0, updated = 0, resolved = 0, awaiting = 0;
         foreach (var source in snapshot.Alerts.DistinctBy(a => a.ExternalId, StringComparer.Ordinal))
         {
             var deviceId = devices.Find(source);
             if (byExternalId.TryGetValue(source.ExternalId, out var alert))
             {
+                // Resolved after this read began (M41: a person's action read the record back meanwhile): the read knows less than
+                // that resolution, so it neither reopens nor changes the alert; the next read decides.
+                if (alert.State == AlertState.Resolved && snapshot.ReadStartedAt is { } started && alert.ResolvedAt >= started)
+                {
+                    continue;
+                }
+
                 // Loaded with its hold: one an earlier release stored without a hold gets it now (M40).
                 alert.EnsureHold();
                 switch (alert.Observe(snapshot.Kind, source, deviceId, now))
@@ -106,14 +114,22 @@ internal static class AlertSnapshotRules
         }
 
         // Not listed by a complete read: no longer open in the source. An alert the source still reports open but the read could
-        // not map (its customer lost the link to the organization) is in OpenExternalIds and stays exactly as it is.
+        // not map (its customer lost the link to the organization) is in OpenExternalIds and stays exactly as it is. An urgent alert of
+        // a source that asks for it (M41: a critical Huntress incident) waits for a person instead of closing by itself.
         var open = snapshot.OpenExternalIds.Concat(snapshot.Alerts.Select(a => a.ExternalId)).ToHashSet(StringComparer.Ordinal);
         foreach (var alert in stored.Where(a => a.Kind == snapshot.Kind && a.State != AlertState.Resolved && !open.Contains(a.ExternalId)))
         {
-            resolved += alert.Resolve(now) ? 1 : 0;
+            if (alert.NeedsConfirmedClose)
+            {
+                awaiting += alert.ClosedAtSource(now) ? 1 : 0;
+            }
+            else
+            {
+                resolved += alert.Resolve(now) ? 1 : 0;
+            }
         }
 
-        return (added, new AlertSnapshotResult(true, opened, reopened, updated, resolved));
+        return (added, new AlertSnapshotResult(true, opened, reopened, updated, resolved, awaiting));
     }
 }
 

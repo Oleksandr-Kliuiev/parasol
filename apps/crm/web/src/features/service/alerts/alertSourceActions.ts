@@ -7,10 +7,13 @@ import type { Alert } from '../types';
 /** What can be asked of an alert's source (M40): Atera's API resolves and deletes alerts, and nothing else. */
 export type AlertSourceKind = 'alert.resolve' | 'alert.delete';
 
-export type AlertLike = Pick<Alert, 'id' | 'system' | 'externalId' | 'title' | 'state' | 'hidden' | 'rule' | 'facts'>;
+export type AlertLike = Pick<Alert, 'id' | 'system' | 'externalId' | 'title' | 'state' | 'hidden' | 'rule' | 'facts' | 'sourceClosedAt'>;
 
-/** What a person can do with an alert in Parasoll itself (M40): hide it until a day, or show it again. */
-export type AlertParasollKind = 'hide' | 'show';
+/**
+ * What a person can do with an alert in Parasoll itself: hide it until a day, or show it again (M40); confirm the closing of an urgent
+ * alert its source closed (M41).
+ */
+export type AlertParasollKind = 'hide' | 'show' | 'confirm';
 
 export const alertRequest = (alert: Pick<Alert, 'system' | 'externalId'>, kind: AlertSourceKind): ActionRequest =>
   ({ system: alert.system, kind, targetType: 'alert', targetId: alert.externalId, parameters: {} });
@@ -29,11 +32,11 @@ export function useAlertActions(): AlertActionsValue {
   return value;
 }
 
-/** What a person may do with an alert in Parasoll now: hide an open one, or show a hidden one again. */
-export function useAlertParasollKinds(alert: Pick<Alert, 'state' | 'hidden'>): AlertParasollKind[] {
+/** What a person may do with an alert in Parasoll now: confirm a closing its source made, hide an open one, or show a hidden one again. */
+export function useAlertParasollKinds(alert: Pick<Alert, 'state' | 'hidden' | 'sourceClosedAt'>): AlertParasollKind[] {
   const canWrite = useCan(Permissions.serviceWrite);
   if (!canWrite || alert.state === 'Resolved') return [];
-  return alert.hidden ? ['show'] : ['hide'];
+  return [...(alert.sourceClosedAt ? ['confirm' as const] : []), alert.hidden ? 'show' as const : 'hide' as const];
 }
 
 /** Which source actions a person may ask for an alert now: their right, the kinds switched on, and an alert still open. */

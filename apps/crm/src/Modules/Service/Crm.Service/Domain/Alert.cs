@@ -54,6 +54,18 @@ public sealed class Alert : Entity
     public int CleanChecks { get; private set; }
 
     /// <summary>
+    /// The source asks that a critical alert it closes wait for a person (M41: an urgent Huntress incident): a complete read that no
+    /// longer lists it marks it <see cref="SourceClosedAt"/> and leaves it open until someone confirms.
+    /// </summary>
+    public bool ConfirmClose { get; private set; }
+
+    /// <summary>When the source closed the alert that now waits for a person to confirm it; null while the source has it open.</summary>
+    public DateTimeOffset? SourceClosedAt { get; private set; }
+
+    /// <summary>A critical alert of a source that asks for it: closing it at the source does not close it here.</summary>
+    public bool NeedsConfirmedClose => ConfirmClose && Severity == AlertSeverity.Critical;
+
+    /// <summary>
     /// The CRM's own status (M40): hidden in Parasoll until a time; the alert stays as it is in its source and comes back by itself.
     /// Loaded with the alert wherever a read may open it again or a person decides about it. Empty only for an alert an earlier
     /// release stored on this schema (a rollback in between): the next read that lists it, or the first decision about it, adds it.
@@ -94,7 +106,10 @@ public sealed class Alert : Entity
         // A link that does not fit is left out rather than cut into an address that leads somewhere else.
         Url = source.Url is { Length: <= UrlLength } url ? url : null;
         CreatedAtSource = source.CreatedAt;
+        ConfirmClose = source.ConfirmClose;
         LastSeenAt = now;
+        // Listed open again: the source reopened what it had closed, so there is nothing left to confirm.
+        SourceClosedAt = null;
         if (State == AlertState.Resolved)
         {
             // A new occurrence: what someone decided about the last one does not hide it.
@@ -106,6 +121,24 @@ public sealed class Alert : Entity
 
         return before == Signature() ? AlertChange.None : AlertChange.Updated;
     }
+
+    /// <summary>
+    /// A complete read no longer lists an alert that waits for a person when its source closes it (M41): it stays open, marked closed
+    /// at the source. Returns false when it was marked already or is resolved.
+    /// </summary>
+    public bool ClosedAtSource(DateTimeOffset now)
+    {
+        if (State == AlertState.Resolved || SourceClosedAt is not null)
+        {
+            return false;
+        }
+
+        SourceClosedAt = now;
+        return true;
+    }
+
+    /// <summary>A person confirms the closing of an alert its source closed (M41). Returns false when nothing waits for that.</summary>
+    public bool ConfirmClosed(DateTimeOffset now) => SourceClosedAt is not null && Resolve(now);
 
     /// <summary>A coverage gap the CRM found (M40), open from now on, of the kind of watching that is missing.</summary>
     public static Alert Gap(string rule, AlertKind kind, CoverageFinding finding, string? facts, DateTimeOffset now)
@@ -174,13 +207,14 @@ public sealed class Alert : Entity
 
         State = AlertState.Resolved;
         ResolvedAt = now;
+        SourceClosedAt = null;
         return true;
     }
 
     private static string? Cut(string? value, int length) => value is { } text && text.Length > length ? text[..length] : value;
 
     private string Signature() => string.Join('|', Kind, OrganizationId, ExternalCustomerId, Severity, Title, DeviceName, DeviceId, Url,
-        CreatedAtSource.ToUnixTimeSeconds());
+        CreatedAtSource.ToUnixTimeSeconds(), ConfirmClose, SourceClosedAt?.ToUnixTimeSeconds());
 }
 
 /// <summary>What a read that lists an alert did to it.</summary>
