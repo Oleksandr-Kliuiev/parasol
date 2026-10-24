@@ -26,7 +26,6 @@ public sealed class ActivityStatusConcurrencyTests(CrmWebFactory factory)
         using var second = factory.ClientAs(CrmRoles.Finance, "status-second-" + Guid.NewGuid().ToString("N"));
         var actor = (await first.GetFromJsonAsync<JsonElement>("/bff/user", Ct)).GetProperty("id").GetGuid();
         var reviewer = (await second.GetFromJsonAsync<JsonElement>("/bff/user", Ct)).GetProperty("id").GetGuid();
-        Permissions.ForRoles([CrmRoles.Finance]).ShouldNotContain(Permissions.ParasolAtlasRead);
         var task = await SourceTask(actor);
         var initial = await Read(first, task); var oldEtag = Etag(initial);
         var due = DateTimeOffset.Parse("2090-07-01T08:15:43.456Z");
@@ -185,7 +184,7 @@ public sealed class ActivityStatusConcurrencyTests(CrmWebFactory factory)
     {
         var organization = await Organization(factory); var employee = actor ?? await Employee(factory, CrmRoles.Technician);
         await using var host = Host(factory, employee);
-        var task = (await Create(host, new(Source(), organization, employee, DateTimeOffset.Parse("2090-01-01T10:30:45.123Z"), ActivityPriority.Normal))).Value;
+        var task = (await Create(host, new(Source(), organization, employee, DateTimeOffset.Parse("2090-01-01T10:30:45.123Z"), ActivityPriority.Normal, Subject))).Value;
         return new(organization, task.ActivityId);
     }
     private static HttpClient Client(WebApplicationFactory<Program> host, string role)

@@ -97,11 +97,12 @@ gh variable set CRM_ENTRA_CLIENT_ID_PROD --env prod --body <app-id prod>
 ## 7. Домен и вход
 1. Container Apps → `ca-crm-web-test` → Custom domains: добавить `crm-test.<домен>`, управляемый сертификат.
 2. Повторить шаг 3 с итоговым адресом (обновит Redirect URI).
-3. Conditional Access (Entra ID → Protection): политика для приложения «Vardahei CRM (test)» — MFA для всех; phishing-resistant MFA для групп `CRM-Admin-*` и `CRM-Finance-*`; при необходимости — только совместимые устройства.
-4. Добавить сотрудников в группы `CRM-<Role>-test`; группу `CRM-Admin-test` вести через PIM.
+3. Conditional Access (Entra ID → Protection, нужен Entra ID P1): политика для приложения «Vardahei CRM (test)» — MFA для всех; phishing-resistant MFA для групп `CRM-Admin-*` и `CRM-Finance-*`, а в Parasol — для группы «Parasoll – full tilgang»; при необходимости — только совместимые устройства. Без P1 — security defaults tenant: MFA регистрируют все, а запрашивается она по правилам Microsoft, не на каждом входе (проверить на tenant, EXT-02).
+4. **Parasol ([ADR-030](../adr/ADR-030-full-access-group.md)):** создать группу «Parasoll – full tilgang (test)», назначить её роли `Crm.Admin` и добавить трёх сотрудников прямыми членами; группы `CRM-<Role>-test` оставить пустыми, PIM не включать. Без Entra ID P1 назначить `Crm.Admin` трём пользователям напрямую. Команды и проверка — [runbook 12 §1а](12-roles-and-sessions.md#1а-полный-доступ-через-одну-группу).
+   Общая модель CRM (если роли разделяются): добавить сотрудников в группы `CRM-<Role>-test`; группу `CRM-Admin-test` вести через PIM.
 
 ## 8. Проверка
-- Вход сотрудником каждой роли; `/bff/user` возвращает ожидаемые `roles` и `permissions`.
+- Вход сотрудником каждой роли; `/bff/user` возвращает ожидаемые `roles` и `permissions`. В Parasol — вход каждым из трёх сотрудников: `roles: ["Crm.Admin"]` и полный список `permissions`.
 - Создать организацию через поиск в Brreg → запись в журнале аудита.
 - Application Insights: запросы видны, ошибок 5xx нет.
 - Hangfire (`/admin/jobs`, роль Admin): задача `brreg-registry-check` запланирована на 02:00 Europe/Oslo.

@@ -1,4 +1,0 @@
-
-> vardahei-atlas-stage1-reference@1.1.3 ui:typecheck
-> tsc --noEmit -p apps/operator/tsconfig.json
-

@@ -734,22 +734,25 @@ public class OutboxDeliveryTests(CrmWebFactory factory)
         const string personal = "ola.nordmann@example.com";
         var probe = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
+        // A round takes the oldest due messages of the shared outbox. Dated before anything the other classes of this run
+        // left pending, the three below are in that first batch however many messages those classes wrote.
+        var past = now.AddHours(-3);
         var probeType = $"{typeof(DeliveryProbe).FullName}, {typeof(DeliveryProbe).Assembly.GetName().Name}";
         var corrupt = new OutboxMessage
         {
             Id = SequentialId.New(now),
             Type = probeType,
             Payload = $$"""{"probeId":"{{personal}}","note":"{{personal}}"}""",
-            OccurredAt = now.AddMinutes(-10),
+            OccurredAt = past.AddMinutes(-10),
         };
         var unknown = new OutboxMessage
         {
             Id = SequentialId.New(now),
             Type = "Crm.Nowhere.RemovedEvent, Crm.Nowhere",
             Payload = $$"""{"email":"{{personal}}"}""",
-            OccurredAt = now.AddMinutes(-9),
+            OccurredAt = past.AddMinutes(-9),
         };
-        var healthy = OutboxMessage.For(new DeliveryProbe(probe, "healthy"), now, null);
+        var healthy = OutboxMessage.For(new DeliveryProbe(probe, "healthy") { OccurredAt = past }, now, null);
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CustomersDbContext>();

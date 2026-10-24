@@ -11,12 +11,12 @@
   var UI = P.ui$;
 
   P.nav = function () {
-    var urgent = P.can('atlas') ? M.urgentUnassigned().length : 0;
+    var urgent = P.can('service') ? M.urgentUnassigned().length : 0;
     var today = M.openTasks().filter(function (x) { return x.due && (x.due < P.NOW || P.sameDay(x.due, P.NOW)); }).length;
     var sections = [
       { label: 'nav.work', items: [
         { id: 'day', icon: 'sun', label: 'nav.day' },
-        { id: 'observations', icon: 'pulse', label: 'nav.observations', perm: 'atlas', count: urgent, hot: true, hint: 'nav.observationsHint' },
+        { id: 'alerts', icon: 'pulse', label: 'nav.alerts', perm: 'service', count: urgent, hot: true, hint: 'nav.alertsHint' },
         { id: 'tasks', icon: 'tasks', label: 'nav.tasks', perm: 'activities', count: today, hint: 'nav.tasksHint' },
         { id: 'time', icon: 'clock', label: 'nav.time', perm: 'time.own' }
       ] },
@@ -32,7 +32,7 @@
         { id: 'reports', icon: 'chart', label: 'nav.reports', perm: 'reports' }
       ] },
       { label: 'nav.system', items: [
-        { id: 'connections', icon: 'plug', label: 'nav.connections', perm: 'atlas' },
+        { id: 'connections', icon: 'plug', label: 'nav.connections', perm: 'service' },
         { id: 'admin', icon: 'sliders', label: 'nav.admin', perm: 'admin' }
       ] }
     ];
@@ -80,7 +80,7 @@
   P.renderTabbar = function (route) {
     var current = P.navId(route);
     var nav = [].concat.apply([], P.nav().map(function (s) { return s.items; }));
-    var want = ['day', 'observations', 'customers', 'time'].map(function (id) {
+    var want = ['day', 'alerts', 'customers', 'time'].map(function (id) {
       return nav.filter(function (i) { return i.id === id; })[0];
     }).filter(Boolean);
     var inMore = want.every(function (i) { return i.id !== current; });

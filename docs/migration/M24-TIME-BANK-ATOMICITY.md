@@ -47,7 +47,8 @@ allocations; уже полностью возвращённое корректн
 
 ## Локальная приёмка
 
-[Безопасное свидетельство](../testing/evidence/time-bank-M24-2026-10-17.json):
+Безопасное свидетельство (удалено в M38:
+`git show 73c0158:docs/testing/evidence/time-bank-M24-2026-10-17.json`):
 919/919 CRM unit, 94/94 architecture, 118/118 затронутых SQL integration;
 562/562 frontend в 64 файлах. ESLint, app/E2E/composition TypeScript, production SPA
 и бюджет 291.7/300 KB проходят. Это не полный SQL-набор CRM.
@@ -64,11 +65,12 @@ SQL проверяет общий откат после нескольких б�
 CRM browser — 73/73 без retries/skips/flaky, включая новый реальный staff workflow
 в Chromium/Firefox/WebKit: банк 10 → approve 2h → 8 → withdraw → 10 → reapprove → 8.
 ServiceLead не получает закрытые финансовые поля. Полный совместный source-build — 9/9,
-571 Atlas requests, 0 mutating requests; подтверждены restricted SQL/PostgreSQL roles,
+571 запрос к прежнему сервису интеграций (удалён в [M38](M38-OPERATIONS-IN-CRM.md)),
+0 mutating requests; подтверждены restricted SQL/PostgreSQL roles,
 точные Task/ticket/time/receipt/privacy facts и очистка. Все 2644 входа совпадают до и
-после; 833 backend/build и 390 web inputs остаются неизменными. Atlas не менялся:
+после; 833 backend/build и 390 web inputs остаются неизменными. Прежний сервис не менялся:
 его строгие 711 unit / 789 PostgreSQL / 90 browser поддержаны 1421 неизменным входом,
-повторного полного Atlas-прогона не было.
+повторного полного прогона прежнего сервиса не было.
 
 ## Дальнейшая работа
 
@@ -84,5 +86,6 @@ ServiceLead не получает закрытые финансовые поля
 
 [M25](M25-TIME-BILLING-ADMISSION.md) добавляет допуск к точной Billing revision и
 поэлементную финализацию, сохраняя M24 Time/HourBank transaction. Исторический M24 run
-сохранён в [архивном composition](../testing/evidence/composition-M24-2026-10-17.json).
+сохранён в архивном composition (свидетельство удалено в M38:
+`git show 73c0158:docs/testing/evidence/composition-M24-2026-10-17.json`).
 Сверка старой финансовой истории и рабочая приёмка остаются отдельными воротами.

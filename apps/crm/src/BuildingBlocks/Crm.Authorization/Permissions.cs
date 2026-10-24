@@ -10,8 +10,6 @@ namespace Crm.Authorization;
 public static class Permissions
 {
     public const string CustomersRead = "customers.read";
-    /// <summary>Read Atlas through the customer workspace; Atlas independently checks the employee's client membership.</summary>
-    public const string ParasolAtlasRead = "parasol.atlas.read";
     public const string CustomersWrite = "customers.write";
     public const string CustomersDelete = "customers.delete";
     public const string ContactsWrite = "contacts.write";
@@ -125,7 +123,7 @@ public static class Permissions
 
     private static readonly string[] Everything =
     [
-        CustomersRead, CustomersWrite, CustomersDelete, ContactsWrite, ParasolAtlasRead,
+        CustomersRead, CustomersWrite, CustomersDelete, ContactsWrite,
         CatalogRead, CatalogWrite, ContractsRead, ContractsWrite,
         SalesRead, SalesWrite, SalesDiscountApprove, QuotesAll, LicensingRead, LicensingManage, ActivitiesRead, ActivitiesWrite,
         ServiceRead, ServiceWrite, TimeOwn, TimeRead, TimeManage, TimeUnlock,
@@ -142,7 +140,6 @@ public static class Permissions
         [CrmRoles.Admin] = Everything.ToFrozenSet(),
         [CrmRoles.Management] = new[]
         {
-            ParasolAtlasRead,
             CustomersRead, CustomersWrite, CustomersDelete, ContactsWrite, CatalogRead, ContractsRead, ContractsWrite,
             SalesRead, SalesWrite, SalesDiscountApprove, QuotesAll, LicensingRead, ActivitiesRead, ActivitiesWrite,
             ServiceRead, TimeRead, BillingRead, BillingApproveSecond, ReportsRead, ReportsMart, ProjectsRead, ProjectsWrite, ProjectsAll,
@@ -156,13 +153,11 @@ public static class Permissions
         }.ToFrozenSet(),
         [CrmRoles.Technician] = new[]
         {
-            ParasolAtlasRead,
             CustomersRead, ContactsWrite, CatalogRead, ContractsRead, SalesRead, LicensingRead, ActivitiesRead, ActivitiesWrite,
             ServiceRead, ServiceWrite, TimeOwn, ProjectsRead, UsersRead,
         }.ToFrozenSet(),
         [CrmRoles.ServiceLead] = new[]
         {
-            ParasolAtlasRead,
             CustomersRead, ContactsWrite, CatalogRead, ContractsRead, SalesRead, LicensingRead, ActivitiesRead, ActivitiesWrite,
             ServiceRead, ServiceWrite, TimeOwn, TimeRead, TimeManage, BillingRead, ReportsRead, ProjectsRead, ProjectsWrite, ProjectsAll, UsersRead,
         }.ToFrozenSet(),
@@ -174,7 +169,6 @@ public static class Permissions
         }.ToFrozenSet(),
         [CrmRoles.ReadOnly] = new[]
         {
-            ParasolAtlasRead,
             CustomersRead, CatalogRead, ContractsRead, SalesRead, LicensingRead, ActivitiesRead, ServiceRead, ProjectsRead, ProjectsAll,
         }.ToFrozenSet(),
     }.ToFrozenDictionary(StringComparer.Ordinal);

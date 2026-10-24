@@ -20,7 +20,8 @@ public sealed record BffUser(
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Permissions,
     AuthMode AuthMode,
-    BffRecordScope RecordScope);
+    BffRecordScope RecordScope,
+    string? MyDayLayout);
 
 /// <summary>What the user sees of the scoped records (DEV-09), so a list can say "the quotes you own" instead of looking incomplete.</summary>
 public sealed record BffRecordScope(RecordScopeMode Mode, bool AllQuotes, bool AllProjects);
@@ -57,20 +58,25 @@ public static class BffEndpoints
             })
             .AllowAnonymous();
 
-        group.MapGet("/dev-login", async (HttpContext context, string role, string? returnUrl, CrmAuthOptions options, IHostEnvironment env) =>
+        group.MapGet("/dev-login", async (
+                HttpContext context, string role, string? user, string? returnUrl, CrmAuthOptions options, IHostEnvironment env) =>
             {
-                if (options.Mode != AuthMode.Development || !env.IsDevelopment() || !CrmRoles.All.Contains(role))
+                if (options.Mode != AuthMode.Development || !env.IsDevelopment() || !CrmRoles.All.Contains(role) ||
+                    (user is not null && (user.Length is 0 or > 24 || !user.All(char.IsAsciiLetter))))
                 {
                     return Results.NotFound();
                 }
 
-                var slug = role.Replace("Crm.", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
+                // One development user per role. A test that changes the user's own settings (the language) names a user of its own
+                // with that role (user=Language: "Dev Language"), so the tests signed in with the role in parallel never see the change.
+                var roleName = role.Replace("Crm.", string.Empty, StringComparison.Ordinal);
+                var slug = (user is null ? roleName : $"{roleName}-{user}").ToLowerInvariant();
                 var identity = new ClaimsIdentity(
                 [
                     new Claim(CrmClaimTypes.TenantId, "00000000-0000-0000-0000-00000000dev0"),
                     new Claim(CrmClaimTypes.ObjectId, $"dev-{slug}"),
                     new Claim("preferred_username", $"{slug}@dev.local"),
-                    new Claim("name", $"Dev {role.Replace("Crm.", string.Empty, StringComparison.Ordinal)}"),
+                    new Claim("name", $"Dev {user ?? roleName}"),
                     new Claim(ClaimTypes.Role, role),
                     // The development sign-in is an interactive authentication: now.
                     new Claim("auth_time", context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds()
@@ -144,7 +150,8 @@ public static class BffEndpoints
                     new BffRecordScope(
                         scope.Mode,
                         scope.LimitedTo(Crm.Authorization.Permissions.QuotesAll) is null,
-                        scope.LimitedTo(Crm.Authorization.Permissions.ProjectsAll) is null)));
+                        scope.LimitedTo(Crm.Authorization.Permissions.ProjectsAll) is null),
+                    profile.MyDayLayout));
             });
 
         return app;
@@ -172,17 +179,25 @@ public static class BffEndpoints
 
     internal static string SafeReturnUrl(string? returnUrl) => ReturnUrl.Safe(returnUrl);
 
+    /// <summary>
+    /// M38: every employee has full access (the Entra group that gives Crm.Admin), so the sign-in that stands for them comes
+    /// first; the narrower roles stay below it for testing the permission checks the code keeps.
+    /// </summary>
     private static string DevLoginPage(string returnUrl)
     {
-        var buttons = string.Join("\n", CrmRoles.All.Select(role =>
-            $"<a href=\"/bff/dev-login?role={WebUtility.UrlEncode(role)}&amp;returnUrl={WebUtility.UrlEncode(returnUrl)}\">{WebUtility.HtmlEncode(role)}</a>"));
+        string Link(string role, string label) =>
+            $"<a href=\"/bff/dev-login?role={WebUtility.UrlEncode(role)}&amp;returnUrl={WebUtility.UrlEncode(returnUrl)}\">{label}</a>";
+        var employee = Link(CrmRoles.Admin, $"Employee (full access) <small>{WebUtility.HtmlEncode(CrmRoles.Admin)}</small>");
+        var others = string.Join("\n", CrmRoles.All.Where(role => role != CrmRoles.Admin).Select(role => Link(role, WebUtility.HtmlEncode(role))));
         return $$"""
             <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Development sign-in</title>
             <style>html{color-scheme:light}body{background:#f3f5f6;font-family:system-ui;max-width:420px;margin:64px auto;padding:0 16px;color:#15212a}
             a{display:block;padding:10px 14px;margin:6px 0;border:1px solid #d9e0e4;border-radius:6px;text-decoration:none;color:#0a6b73}
-            a:hover{background:#ddeff0}p{color:#5a6a74}</style></head><body>
-            <h1>Development sign-in</h1><p>Entra ID is disabled (Auth:Mode=Development). Choose a role:</p>
-            {{buttons}}
+            a:hover{background:#ddeff0}p,small{color:#5a6a74}h2{font-size:16px;margin-top:28px}</style></head><body>
+            <h1>Development sign-in</h1><p>Entra ID is disabled (Auth:Mode=Development). Every employee signs in with full access:</p>
+            {{employee}}
+            <h2>Other roles</h2><p>Only for testing the permission checks; no employee is given them.</p>
+            {{others}}
             </body></html>
             """;
     }

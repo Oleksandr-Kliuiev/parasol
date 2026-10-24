@@ -7,6 +7,7 @@
   "nav": {
     "connections": "Connections",
     "myDay": "My day",
+    "alerts": "Alerts",
     "organizations": "Organizations",
     "sectionWork": "Work",
     "sectionCustomers": "Customers",
@@ -51,7 +52,6 @@
     "collapse": "Collapse menu",
     "expand": "Expand menu",
     "mainMenu": "Main menu",
-    "observations": "Observations",
     "opensNewTab": "(opens in a new tab)"
   },
   "header": {
@@ -97,7 +97,7 @@
     "notFoundTitle": "Page not found",
     "notFoundBody": "The page or record does not exist, or it has been deleted.",
     "noAccessTitle": "You don't have access to Parasoll",
-    "noAccessBody": "Your Microsoft account is signed in, but no CRM role is assigned to it. Ask an administrator to add you to one of the CRM groups in Entra ID.",
+    "noAccessBody": "You are signed in with your Microsoft account, but you are not in the Parasoll group yet. Ask an administrator to add you to the group “Parasoll – full tilgang” in Entra ID.",
     "forbidden": "You don't have permission to do this.",
     "concurrency": "Someone else changed this record while you were editing. Reload to see their changes, then apply yours again.",
     "validation": "Check the highlighted fields.",
@@ -218,8 +218,8 @@
     "signInLoop": "Signing in did not complete after several attempts. Close other tabs of the CRM and try again; if it keeps happening, tell the administrator.",
     "signInLoopRetry": "Try again",
     "forbiddenTitle": "No access",
-    "forbiddenPage": "Your role does not open this page. Ask an administrator if you need it.",
-    "forbiddenRead": "Your role does not give access to this information. Ask an administrator if you need it."
+    "forbiddenPage": "You don't have access to this page. Ask an administrator if you need it.",
+    "forbiddenRead": "You don't have access to this information. Ask an administrator if you need it."
   },
   "status": {
     "Lead": "Lead",
@@ -245,6 +245,13 @@
   },
   "myDay": {
     "sectionsLabel": "My day sections",
+    "layout": {
+      "label": "Show first",
+      "work": "Alerts and tasks",
+      "lead": "Hours to approve",
+      "finance": "Billing",
+      "saveFailed": "Your choice could not be saved, so My day shows the previous layout. Try again."
+    },
     "greeting": {
       "morning": "Good morning, {{name}}",
       "afternoon": "Good afternoon, {{name}}",
@@ -274,6 +281,17 @@
     "myTasksEmpty": "Nothing assigned to you right now.",
     "refreshMyTasks": "Refresh my tasks",
     "myTasksReadFailed": "Your tasks could not be read. No previous tasks are shown. Refresh to try again.",
+    "alerts": {
+      "title": "Urgent alerts",
+      "refresh": "Refresh urgent alerts",
+      "shownSome": "{{shown}} of {{total}} open alerts, most severe and oldest first",
+      "shownAll_one": "{{count}} open alert",
+      "shownAll_other": "{{count}} open alerts, most severe and oldest first",
+      "all": "All open alerts ({{count}})",
+      "empty": "No open alerts.",
+      "emptyNotRead": "Alerts appear here after the first read.",
+      "readFailed": "Urgent alerts could not be read. No earlier list is shown. Refresh to try again."
+    },
     "staleDeals": "Deals gone quiet",
     "licensingAttention": "Licenses needing attention",
     "cancellationWindow": "{{name}}: cancellation window closes {{date}}",
@@ -289,9 +307,15 @@
     "kpiLabel": "Key figures",
     "loadingValue": "…",
     "kpi": {
-      "urgent": "Urgent in Atlas",
-      "urgentFoot": "{{critical}} critical · {{ready}} of {{selected}} customers read",
-      "urgentUnread": "Not read yet",
+      "alerts": "Critical alerts",
+      "alertsFoot_one": "{{count}} warning",
+      "alertsFoot_other": "{{count}} warnings",
+      "alertsFootIncomplete_one": "{{count}} warning · last read incomplete",
+      "alertsFootIncomplete_other": "{{count}} warnings · last read incomplete",
+      "alertsFootLate_one": "{{count}} warning · next read late",
+      "alertsFootLate_other": "{{count}} warnings · next read late",
+      "alertsNotRead": "Not read yet",
+      "alertsFailed": "Could not be read",
       "tasks": "My open tasks",
       "tasksFoot": "Assigned to you, due first at the top",
       "hours": "Hours this week",
@@ -303,10 +327,7 @@
       "overdueOpen": "Follow up in the invoice list",
       "registry": "Registry warnings",
       "registryFoot": "Among your {{count}} organizations",
-      "hoursValue": "{{hours}} h",
-      "urgentFootPartial": "{{critical}} critical · coverage incomplete",
-      "urgentNotConfigured": "Atlas not connected",
-      "urgentFailed": "Could not be read"
+      "hoursValue": "{{hours}} h"
     },
     "tasksReadAt": "Read at {{time}}",
     "tasksChanged": "Your task list may have changed since it was read. The rows below are the last read.",
@@ -321,7 +342,6 @@
       "created": "Created",
       "description": "Description",
       "noDescription": "No description.",
-      "noDescriptionSource": "No description: the reason for the work is read from Atlas with “View Atlas source”, it is not copied into the task.",
       "openInCard": "Open in the customer's activities",
       "gone": "Task not in your open list",
       "goneNote": "This task is not among your open tasks as last read: it may be done, reassigned or not loaded yet. Refresh the list or open the customer's activities.",
@@ -354,7 +374,7 @@
       "contacts": "Contacts",
       "history": "History",
       "contracts": "Contracts",
-      "service": "Service",
+      "drift": "Operations",
       "deals": "Deals",
       "licenses": "Licenses",
       "activities": "Activities",
@@ -542,8 +562,8 @@
       "Login": "signed in",
       "Logout": "signed out",
       "Merge": "merged",
-      "ParasolIdentityLinked": "linked the customer to Atlas",
-      "ParasolIdentityUnlinked": "removed the Atlas link"
+      "ParasolIdentityLinked": "added an external customer link",
+      "ParasolIdentityUnlinked": "removed an external customer link"
     },
     "fieldsChanged": "{{count}} fields",
     "erased": "Erased on a personal data request; the details are no longer shown."
@@ -601,8 +621,8 @@
       "Maintenance": "Maintenance",
       "Reconcile": "Reconciled",
       "Sign": "Signed",
-      "ParasolIdentityLinked": "Atlas link added",
-      "ParasolIdentityUnlinked": "Atlas link removed"
+      "ParasolIdentityLinked": "External customer link added",
+      "ParasolIdentityUnlinked": "External customer link removed"
     },
     "actor": {
       "user": "User",
@@ -634,7 +654,7 @@
   },
   "users": {
     "title": "Users",
-    "subtitle": "People who have signed in. Roles are assigned in Microsoft Entra ID and reach Parasoll within a few minutes; a new employee appears after the first sign-in.",
+    "subtitle": "People who have signed in. Access is given in Microsoft Entra ID, normally through the group “Parasoll – full tilgang”, and reaches Parasoll within a few minutes; a new employee appears after the first sign-in.",
     "columns": {
       "name": "Name",
       "email": "E-mail",
@@ -1459,7 +1479,7 @@
     "deviceTotalsUnknown": "Device totals are unavailable until the saved summary can be read.",
     "deviceTypesLabel": "Devices by type",
     "noRequests": "No saved ticket requests need attention.",
-    "onlineCount": "{{count}} online",
+    "onlineCount": "{{count}} online at the last read",
     "criticalAlerts": "Critical alerts",
     "warningAlerts": "Warnings",
     "tickets": "Tickets",
@@ -1475,8 +1495,12 @@
     "noOpenTickets": "No open tickets.",
     "devices": "Devices",
     "noDevices": "No devices from Atera yet.",
-    "online": "online",
-    "offline": "offline",
+    "deviceOpenAlerts_one": "{{count}} open alert",
+    "deviceOpenAlerts_other": "{{count}} open alerts",
+    "lastSeen": "last seen",
+    "onlineAtRead": "online at the last read",
+    "offlineAtRead": "offline at the last read",
+    "deviceOpen": "{{name}}, open in {{source}}",
     "alerts": "Open alerts",
     "noAlerts": "No open critical alerts or warnings.",
     "lastSynced": "Last synced {{at}}",
@@ -1485,6 +1509,12 @@
       "Server": "Servers",
       "Network": "Network",
       "Other": "Other"
+    },
+    "deviceType": {
+      "Workstation": "Workstation",
+      "Server": "Server",
+      "Network": "Network device",
+      "Other": "Other device"
     },
     "severities": {
       "Critical": "Critical",
@@ -1503,6 +1533,134 @@
     },
     "nothingSaved": "No Atera data is saved for this customer: it is not linked to Atera, or Atera has not been read for it yet. The figures appear after the first read.",
     "nothingSavedShort": "No Atera data saved for this customer yet."
+  },
+  "alerts": {
+    "title": "Alerts",
+    "subtitle": "Open alerts of every customer: the critical ones first, then the ones that have waited longest.",
+    "subtitleResolved": "Alerts their source no longer reports open, the most recently resolved first.",
+    "refresh": "Refresh alerts",
+    "filters": "Alert filters",
+    "search": "Search title or device",
+    "stateLabel": "Show",
+    "show": {
+      "open": "Open",
+      "resolved": "Resolved"
+    },
+    "severityLabel": "Severity",
+    "allSeverities": "All severities",
+    "customerFilter": "Customer",
+    "anyCustomer": "All customers",
+    "clearFilters": "Clear filters",
+    "totals_one": "{{count}} alert: {{critical}} critical, {{warning}} warnings",
+    "totals_other": "{{count}} alerts: {{critical}} critical, {{warning}} warnings",
+    "list": "Alerts",
+    "columns": {
+      "severity": "Severity",
+      "alert": "Alert",
+      "customer": "Customer",
+      "waiting": "Raised",
+      "resolved": "Resolved",
+      "task": "Task"
+    },
+    "source": "Source: {{name}}",
+    "sourceNames": {
+      "atera": "Atera"
+    },
+    "reads": {
+      "readAt": "{{source}} read at {{time}}",
+      "incomplete": "{{source}}: the read at {{time}} did not finish",
+      "late": "{{source}} read at {{time}}: the next read is late",
+      "notRead": "{{source}} not read yet",
+      "connections": "Connection status"
+    },
+    "states": {
+      "Open": "Open",
+      "Acknowledged": "Seen",
+      "Resolved": "Resolved"
+    },
+    "empty": "No open alerts. New alerts appear here after the next read from Atera.",
+    "emptyResolved": "No resolved alerts.",
+    "emptyFiltered": "No alerts match these filters.",
+    "detail": {
+      "title": "Alert",
+      "loading": "Reading the alert",
+      "severity": "Severity",
+      "state": "State",
+      "customer": "Customer",
+      "unknownCustomer": "Unknown customer",
+      "device": "Device",
+      "raised": "Raised",
+      "resolved": "Resolved",
+      "source": "Source",
+      "openInSource": "Open in {{name}}",
+      "noLink": "No link to alerts in {{name}} is set up.",
+      "notFound": "This alert is not stored in Parasoll.",
+      "unsupported": "Parasoll does not create tasks from this source.",
+      "task": "Task",
+      "noTaskResolved": "No task. The alert is resolved."
+    },
+    "highlight": {
+      "label": "Open alerts",
+      "critical_one": "{{count}} critical",
+      "critical_other": "{{count}} critical",
+      "noCritical": "None critical",
+      "none": "No open alerts"
+    },
+    "task": {
+      "assign": "Assign",
+      "assignNamed": "Assign {{title}}",
+      "assigned": "Assigned",
+      "unassigned": "Unassigned",
+      "due": "due {{due}}",
+      "noDue": "no due date",
+      "open": "Open task",
+      "openNamed": "{{facts}}: task {{subject}}",
+      "deleted": "Task deleted",
+      "status": {
+        "Open": "Open",
+        "Done": "Done",
+        "Cancelled": "Cancelled"
+      }
+    },
+    "dialog": {
+      "title": "Assign alert",
+      "subject": "Task subject",
+      "subjectHint": "Starts as the alert's title. Edit it if another wording is clearer.",
+      "subjectRequired": "Write a subject.",
+      "subjectTooLong": "Use at most 256 characters.",
+      "subjectInvalid": "Write a subject on one line, at most 256 characters.",
+      "assignee": "Assignee",
+      "assignToMe": "Me",
+      "assigneeRequired": "Choose who gets the task.",
+      "assigneeInvalid": "This person cannot get tasks from alerts. Choose someone else.",
+      "due": "Due (optional)",
+      "dueShortcuts": "Quick due dates",
+      "dueIn": {
+        "today": "Today 16:00",
+        "tomorrow": "Tomorrow 16:00",
+        "inThreeDays": "In 3 days",
+        "none": "No due date"
+      },
+      "invalidDue": "Enter a valid date and time.",
+      "priorityFrom": {
+        "Critical": "Priority: High, as the alert is critical.",
+        "Warning": "Priority: Normal, as the alert is a warning."
+      },
+      "summaryDue": "Creates a task for {{name}}, due {{due}}.",
+      "summaryNoDue": "Creates a task for {{name}} with no due date.",
+      "create": "Create task",
+      "creating": "Creating task…",
+      "created": "Task created.",
+      "existing": "This alert already had a task, so no new task was created.",
+      "hasTask": "This alert already has a task.",
+      "changed": "The alert changed after you opened it. Check it, then create the task.",
+      "resolved": "The alert is resolved, so no task can be created from it.",
+      "customerChanged": "The alert's task now belongs to another customer. Open that customer's activities to review it.",
+      "uncertain": "Parasoll could not confirm whether the task was created. Read the alert again to check before you try again.",
+      "refused": "The task was not created. Read the alert again and check your choices.",
+      "readAgain": "Read again",
+      "cannotCreate": "You can see this alert, but you cannot assign it."
+    }
   },
   "taskTicket": {
     "open": "Service ticket",
@@ -2043,7 +2201,6 @@
     "newTitle": "New activity",
     "editTitle": "Edit activity",
     "editNamed": "Edit {{subject}}",
-    "openTask": "Open task",
     "openForCustomer": "Open activity for {{customer}}",
     "selected": "Selected activity",
     "refresh": "Refresh activity",
@@ -2053,7 +2210,7 @@
     "selectedMissing": "This activity was not found for this customer. It may have been removed or moved.",
     "empty": "Nothing logged yet.",
     "saved": "Activity saved",
-    "saveSourceAssignee": "This employee cannot be assigned to a technical task. Choose an active employee with technical access. Your draft has been kept.",
+    "saveSourceAssignee": "This employee cannot be given a task made from an alert. Choose an active employee who can see service data. Your draft has been kept.",
     "saveConflict": "This activity changed or can no longer be edited as requested. Your draft has been kept. Close and reopen it to review the current record before saving again.",
     "saveFailed": "Saving was not confirmed. Your draft has been kept.",
     "invalidDue": "Enter a valid date and time.",
@@ -2099,7 +2256,22 @@
     "syncCalendar": "Read changes from Outlook",
     "calendarSynced": "Read from Outlook: {{updated}} meetings updated",
     "addToCalendarNamed": "Add {{subject}} to the calendar",
-    "removeFromCalendarNamed": "Remove {{subject}} from the calendar"
+    "removeFromCalendarNamed": "Remove {{subject}} from the calendar",
+    "taskStatus": {
+      "Open": "Open",
+      "Done": "Done",
+      "Cancelled": "Cancelled"
+    },
+    "source": {
+      "open": "Alert",
+      "openNamed": "Alert for {{subject}}",
+      "title": "Alert behind this task",
+      "note": "The alert as Parasoll stores it now.",
+      "gone": "The alert is no longer stored for this customer.",
+      "unsupported": "This task was made from a source Parasoll no longer reads.",
+      "openInAlerts": "Open in Alerts",
+      "noDescription": "No description. The Alert button shows the alert the task was made from."
+    }
   },
   "mail": {
     "partialSearch_one": "Searched for {{searched}}; {{count}} more address was not searched. Add the customer's e-mail domain to find all of them.",
@@ -3364,6 +3536,9 @@
       "days_other": "{{count}} days",
       "approved": "Approved ({{reference}})",
       "proposal": "Proposal, not approved",
+      "noPeriod": "No period",
+      "noProposal": "None proposed or approved",
+      "notCounted": "Not counted",
       "error": "Failed: {{error}}",
       "classes": {
         "customers": {
@@ -3376,6 +3551,7 @@
           "tickets": "Closed tickets"
         },
         "integration": {
+          "exception-triage": "Reviews of resolved exceptions",
           "external-payloads": "Copies of external records",
           "sync-runs": "Synchronization log"
         },
@@ -3955,481 +4131,69 @@
       }
     }
   },
-  "parasol": {
-    "title": "Technical workspace · Atlas",
-    "refresh": "Refresh",
-    "noPermission": "Your role does not include the technical workspace.",
-    "employeeRoles": "Employee roles",
-    "fixture": "Synthetic demonstration data. This is not a live customer snapshot.",
-    "snapshot": "View assembled at {{time}}",
-    "devices": "Known devices",
-    "people": "Known people",
-    "observations": "Active observations",
-    "critical": "Critical",
-    "high": "High severity",
-    "coverage": "Counts cover records stored in Atlas. Source coverage and freshness are shown below; this is not a count of all customer machines.",
-    "noSources": "No source snapshots are available.",
-    "asOf": "Snapshot: {{time}}",
-    "lastSuccess": "Last successful refresh: {{time}}",
-    "returned": "Records in snapshot: {{count}}",
-    "truncated": "Records in snapshot: {{count}} (partial list)",
-    "status": {
-      "NOT_LINKED": "This customer has not been linked to Atlas.",
-      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
-      "ACCESS_DENIED": "Your Atlas access does not permit reading this customer.",
-      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas. Ask an administrator to review the link.",
-      "UNAVAILABLE": "Atlas is unavailable. CRM information remains available.",
-      "INVALID_RESPONSE": "Atlas returned an unexpected response. No technical data is shown.",
-      "IDENTITY_CHANGED": "The customer link changed. Refresh to load current data."
+  "connectionStatus": {
+    "title": "Connection status",
+    "subtitle": "What Parasoll has saved about each integration and its background service. The systems themselves are not contacted.",
+    "refresh": "Refresh status",
+    "checkedAt": "Read {{time}}",
+    "ready": "Everything is up to date: every job of the switched-on integrations read within its limit, nothing waits to be sent, and the background service is running.",
+    "gapsTitle_one": "{{count}} thing needs attention",
+    "gapsTitle_other": "{{count}} things need attention",
+    "unavailable": "The saved state could not be read, so nothing is shown as up to date. Refresh to try again.",
+    "gaps": {
+      "Never": "{{job}}: no complete read yet",
+      "Stale": "{{job}}: last complete read {{age}}, late after {{limit}}",
+      "Failed": "{{job}}: the last run failed {{age}}",
+      "Paused": "{{system}} is paused: its jobs are skipped until someone resumes it",
+      "OutboundFailed_one": "{{system}}: {{count}} change could not be sent",
+      "OutboundFailed_other": "{{system}}: {{count}} changes could not be sent",
+      "WorkerLate": "Background service, {{component}}: last sign of life {{age}}",
+      "WorkerMissing": "Background service, {{component}}: no sign of life yet"
     },
-    "sources": {
-      "atera": "Atera",
-      "huntress": "Huntress",
-      "microsoft365": "Microsoft 365",
-      "poweroffice": "PowerOffice"
+    "state": {
+      "on": "Up to date",
+      "gaps": "Needs attention",
+      "paused": "Paused",
+      "off": "Switched off"
     },
-    "resources": {
-      "customer": "Customers",
-      "organization": "Organizations",
-      "agent": "Devices",
-      "contact": "Contacts",
-      "alert": "Alerts",
-      "ticket": "Tickets",
-      "incident": "Incidents"
+    "off": "Switched off in this installation's settings, so its jobs do not run.",
+    "writesOn": "Changes made in Parasoll are sent to {{system}}.",
+    "writesOff": "Changes made in Parasoll are not sent to {{system}}.",
+    "failedOutbound_one": "{{count}} change could not be sent.",
+    "failedOutbound_other": "{{count}} changes could not be sent.",
+    "freshness": {
+      "Fresh": "Up to date",
+      "Stale": "Late",
+      "Never": "Never read",
+      "Paused": "Paused",
+      "Disabled": "Off"
     },
-    "resourceStatus": {
-      "OK": "Current snapshot",
-      "STALE": "Outdated snapshot",
-      "ERROR": "Source error; data unavailable",
-      "MISSING": "No snapshot",
-      "FIXTURE": "Synthetic data"
+    "lastRead": "Last complete read",
+    "notRead": "No complete read yet",
+    "limit": "late after {{limit}}",
+    "lastFailed": "Last run failed",
+    "unreadState": "Saved state could not be read.",
+    "worker": {
+      "title": "Background service",
+      "note": "A part counts as late after {{limit}} without a sign of life.",
+      "components": {
+        "outbox": "Change delivery",
+        "jobs": "Scheduled jobs"
+      },
+      "state": {
+        "Current": "Running",
+        "Late": "Late",
+        "Missing": "No sign of life"
+      },
+      "beat": "Last sign of life",
+      "noBeat": "No sign of life yet"
     },
-    "roles": {
-      "Admin": "Administrator",
-      "Management": "Manager",
-      "Sales": "Sales",
-      "Technician": "Technician",
-      "ServiceLead": "Service lead",
-      "Finance": "Finance",
-      "ReadOnly": "Read only"
-    }
-  },
-  "parasolIdentity": {
-    "title": "Link Atlas customers",
-    "subtitle": "Connect existing Atlas clients to the CRM customer directory.",
-    "instructions": "You pick each CRM customer and review the plan; no customer is created, no access changes.",
-    "file": "Atlas export (JSON)",
-    "fileHint": "Version 1 export: workspace, client IDs and names; up to 1000 clients and 1 MiB.",
-    "workspace": "Atlas workspace",
-    "atlasClient": "Atlas client ID",
-    "crmCustomer": "CRM customer",
-    "rows": "Customer mappings",
-    "notSelected": "Not selected — this client will be left unchanged.",
-    "choose": "Choose CRM customer",
-    "change": "Change CRM customer",
-    "clearSelection": "Clear selection",
-    "visibleRows": "Showing {{shown}} of {{total}} rows",
-    "selectionCount": "Selected: {{selected}} of {{total}}. Left unchanged: {{omitted}}.",
-    "empty": "The export contains no clients.",
-    "preview": "Preview mappings",
-    "edit": "Edit selection",
-    "apply": "Apply reviewed mappings",
-    "reset": "Choose another source",
-    "continue": "Continue with this export",
-    "reviewReady": "Preview only: no links have been saved. Check every selected pair below. Unselected clients will be left unchanged.",
-    "reviewBlocked": "No links have been saved. Resolve every conflict and preview again. Existing links can be reviewed in the CRM customer card.",
-    "confirmLabel": "I have checked the selected customer pairs and want to save these links.",
-    "applied": "Links saved: {{created}} new, {{existing}} already present.",
-    "linkTitle": "Customer link · Atlas",
-    "unlink": "Remove Atlas link",
-    "unlinkTitle": "Remove this Atlas link?",
-    "unlinkDescription": "The technical workspace will no longer use this link. CRM and Atlas customer records remain intact. You can then review and apply the correct mapping.",
-    "outcomes": {
-      "READY": "Ready to link",
-      "ALREADY_LINKED": "Already linked to this customer",
-      "APPLIED": "Link saved",
-      "ATLAS_ALREADY_LINKED": "Conflict: Atlas client is linked to another CRM customer",
-      "CUSTOMER_ALREADY_LINKED": "Conflict: CRM customer already has another Atlas link",
-      "CUSTOMER_UNAVAILABLE": "CRM customer is unavailable",
-      "IDENTITY_INCONSISTENT": "Stored link needs review",
-      "UNKNOWN": "Unknown result — preview again"
-    },
-    "errors": {
-      "invalidFile": "This is not a valid version 1 Atlas identity export. Check its format, duplicate IDs and extra fields.",
-      "tooLarge": "The file or complete request exceeds 1 MiB. Use a smaller export.",
-      "noSelection": "Choose at least one CRM customer.",
-      "duplicateCustomer": "One CRM customer was selected more than once. Each customer can have only one Atlas link.",
-      "forbidden": "This action is not permitted or requires a fresh sign-in.",
-      "previewFailed": "Could not build the preview. Try again before applying any links.",
-      "conflict": "The stored links changed. Nothing from this request was saved. Preview again to review the current conflicts.",
-      "applyUncertain": "The result could not be confirmed. Preview again to check which links already exist before trying to apply.",
-      "identityFailed": "Could not read this Atlas link. Refresh to check its current state.",
-      "unlinkFailed": "Removal could not be confirmed. Check the refreshed link before trying again.",
-      "sourceFailed": "Could not load the Atlas directory. Try again; no links have been changed.",
-      "sourceRateLimited": "The export limit has been reached. Wait before trying again; you can still upload a file."
-    },
-    "loadAtlas": "Load from Atlas",
-    "sourceHint": "Reads only the clients your personal Atlas access permits.",
-    "loadedAtlas": "Loaded from Atlas at {{time}}",
-    "loadedFile": "Uploaded identity export",
-    "atlasStatus": {
-      "NOT_CONFIGURED": "The Atlas connection has not been configured. You can upload an identity export instead.",
-      "ACCESS_DENIED": "Your personal Atlas access is missing or does not permit reading the customer directory.",
-      "SOURCE_NOT_FOUND": "This Atlas installation does not provide the identity export. Check its version or upload a file.",
-      "UNAVAILABLE": "Atlas could not be reached. Try again or upload an identity export.",
-      "INVALID_RESPONSE": "Atlas returned an invalid or incompatible customer list. No clients were loaded."
-    },
-    "sourceTitle": "Source of the Atlas clients",
-    "fromAtlas": "From Atlas",
-    "fromFile": "From an export file",
-    "source": "Source",
-    "loadedAtlasNote": "It is the list your employee account could see then; it may not contain every company customer.",
-    "loadedFileNote": "How fresh the list is depends on when the export was made."
-  },
-  "parasolDetails": {
-    "scrollList": "Scroll within the list to view the loaded records.",
-    "lists": "Technical lists",
-    "devices": "Atlas devices",
-    "deviceNote": "Devices recorded in the Atlas registry. Confirmed source links identify their origin; this list does not report online status or a complete fleet inventory.",
-    "noDevices": "No devices are recorded in this Atlas registry. Source snapshots may still be missing or incomplete.",
-    "searchDevices": "Search loaded devices",
-    "deviceMatches": "Matching devices: {{matched}} of {{loaded}} loaded",
-    "noMatches": "No matching records in the loaded list.",
-    "deviceId": "Atlas device ID",
-    "deviceSources": "Confirmed sources: {{sources}}",
-    "noDeviceSources": "No confirmed source link",
-    "visible": "Showing {{shown}} of {{total}} matching records",
-    "moreDevices": "Show more loaded devices",
-    "observations": "Active Atlas observations",
-    "observationNote": "Stored open and acknowledged observations, with the highest source severity first. Event times describe the observation; source snapshot freshness is shown above.",
-    "partialObservations": "Only the first {{loaded}} of {{total}} active observations are loaded. Search and filters apply to this page only; open the full queue to read the remaining observations.",
-    "noObservations": "No active observations are recorded in Atlas. This does not confirm that every source is current or that the customer has no issues.",
-    "searchObservations": "Search loaded observations",
-    "severityFilter": "Observation severity",
-    "statusFilter": "Observation state",
-    "allSeverities": "All severities",
-    "allStatuses": "All active states",
-    "urgent": "Urgent (high and critical)",
-    "observationMatches": "Matching observations: {{matched}} of {{loaded}} loaded",
-    "noSummary": "No observation summary",
-    "confirmedDevice": "Confirmed device: {{name}} ({{id}})",
-    "deviceStatus": {
-      "UNRESOLVED": "Device not resolved in Atlas",
-      "UNAVAILABLE": "No confirmed device for this source in the current registry"
-    },
-    "route": "Atlas recommendation",
-    "occurredAt": "Event occurred: {{time}}",
-    "updatedAt": "Observation updated: {{time}}",
-    "moreObservations": "Show more loaded observations",
-    "severity": {
-      "INFO": "Information",
-      "LOW": "Low",
-      "MEDIUM": "Medium",
-      "HIGH": "High",
-      "CRITICAL": "Critical"
-    },
-    "status": {
-      "OPEN": "Open",
-      "ACKNOWLEDGED": "Acknowledged",
-      "RESOLVED": "Resolved",
-      "SUPPRESSED": "Suppressed"
-    },
-    "kind": {
-      "DISK_CAPACITY": "Disk capacity",
-      "SECURITY_INCIDENT": "Security incident"
-    },
-    "routes": {
-      "MONITOR": "Monitor",
-      "INVESTIGATE": "Investigate",
-      "HUMAN_REVIEW": "Human review"
-    },
-    "deviceObservations": "View observations",
-    "deviceObservationsFor": "View observations for {{name}}",
-    "occurred": "Occurred",
-    "updated": "Updated"
-  },
-  "parasolQueue": {
-    "title": "Observation queue and history",
-    "open": "Open full observation queue",
-    "note": "Read-only observations stored in Atlas, including resolved and suppressed history. Severity and state filters apply to the full queue.",
-    "severityFilter": "Queue severity",
-    "statusFilter": "Queue state",
-    "refresh": "Refresh queue",
-    "reset": "Reset filters",
-    "total": "Matches across pages: {{total}}",
-    "countNote": "Counts reflect this page request and can change as Atlas updates. Refresh restarts at the first page so newly added observations can be seen.",
-    "retrievedAt": "Queue read at {{time}}",
-    "sources": "Source coverage and freshness for this read",
-    "empty": "No observations on this page for the selected filters. This does not confirm that every source is current or that the customer has no issues.",
-    "search": "Search this queue page",
-    "searchNote": "Search covers this page only. Severity and state filters apply to the full Atlas queue.",
-    "page": "Page {{page}} · {{count}} records loaded",
-    "first": "First page",
-    "previous": "Previous page",
-    "next": "Next page",
-    "status": {
-      "NOT_LINKED": "This customer has not been linked to Atlas.",
-      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
-      "ACCESS_DENIED": "Your Atlas access does not permit reading this customer.",
-      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas. Ask an administrator to review the link.",
-      "UNAVAILABLE": "Atlas is unavailable. No previous queue page is shown.",
-      "INVALID_RESPONSE": "Atlas returned an unexpected response. No queue data is shown.",
-      "IDENTITY_CHANGED": "The customer link changed. Restart from the first page to read the current link.",
-      "INVALID_CURSOR": "This page reference is no longer valid. Restart from the first page.",
-      "QUEUE_NOT_SUPPORTED": "Queue and history are not available in this Atlas mode. The active observations tab remains available.",
-      "REQUEST_FAILED": "The queue could not be read. No previous page is shown. Refresh to try again.",
-      "DEVICE_NOT_AVAILABLE": "This device is no longer in the current Atlas registry. Refresh the customer workspace before choosing a device again."
-    },
-    "selectedDevice": "Selected device: {{name}}",
-    "selectingDevice": "Reading observations for the selected device.",
-    "deviceHistoryNote": "This history uses the exact device recorded by Atlas. Current source confirmation is shown for each observation. An empty result does not prove the device or sources are healthy.",
-    "allDevices": "All devices · keep other filters",
-    "backToDevice": "Back to device",
-    "savedNote": "Saved Atlas observations; source freshness varies.",
-    "readDetails": "Data details",
-    "reviewNeeded": "Sources to review: {{count}}",
-    "about": "About this queue",
-    "pageMatches": "This page: {{matched}} of {{loaded}} shown",
-    "scrollList": "Scroll the list for more records",
-    "missingFreshness": "Snapshot or last-success time is unavailable."
-  },
-  "readiness": {
-    "title": "Connection readiness",
-    "subtitle": "Local configuration and saved records only.",
-    "refresh": "Refresh local readiness",
-    "notChecked": "Connections and credentials have not been checked.",
-    "checkedAt": "Local metadata read at {{time}}",
-    "partial": "Some saved metadata or the mapping review is incomplete. This is not a connection-health result.",
-    "personalTitle": "Personal Atlas configuration",
-    "personal": {
-      "DISABLED": "Atlas disabled locally",
-      "PERSONAL_ENTRY_PRESENT": "Personal entry present",
-      "PERSONAL_ENTRY_MISSING": "Personal entry missing"
-    },
-    "personalNote": "Presence does not confirm credential validity or coverage. Atlas was not contacted.",
-    "adminTitle": "Saved administrative configuration",
-    "workerNote": "Passwords and keys are held by the background service, so this page cannot see whether they are set.",
-    "authMode": "Configured sign-in mode",
-    "auth": {
-      "ENTRA": "Microsoft Entra",
-      "DEVELOPMENT": "Local development sign-in"
-    },
-    "entraNote": "Signing in through Microsoft 365 or Entra does not establish technical tenant monitoring.",
-    "openIntegrations": "Open integration administration",
-    "enabled": "Enabled locally",
-    "disabled": "Disabled locally",
-    "enabledFlag": "Local enabled flag",
-    "writeFlag": "Local write flag",
-    "flagNote": "Local flags and saved records; connectivity and write permission are not checked.",
-    "savedPause": "Saved pause state",
-    "savedSuccess": "Saved last successful sync",
-    "storedUnavailable": "Saved local state could not be read. No previous state or zero-count substitute is shown.",
-    "stored": {
-      "records": "Stored external records",
-      "unlinkedRecords": "Stored unlinked records",
-      "pendingOutbound": "Saved pending outbound operations",
-      "failedOutbound": "Saved failed outbound operations"
-    },
-    "graph": {
-      "enabled": "Local Graph enabled flag",
-      "calendarEnabled": "Calendar flag",
-      "mailEnabled": "Mail flag",
-      "sharePointEnabled": "SharePoint flag",
-      "teamsEnabled": "Teams flag"
-    },
-    "graphNote": "Separate from sign-in. Saved Graph times may be historical, not proof it is on now.",
-    "directorySavedAt": "Saved directory sync success",
-    "rolesSavedAt": "Saved role sync success",
-    "huntressUnknown": "Configuration unknown here",
-    "huntressNote": "Huntress is managed in Atlas. This page does not read Atlas or contact Huntress.",
-    "mappingTitle": "Stored Atlas mappings",
-    "mappingNote": "Reviews the saved CRM registry only; the Atlas directory and coverage are not checked.",
-    "mappingCoverage": "Stored links examined: {{examined}} of {{stored}} (limit {{limit}})",
-    "omittedLinks": "Stored links not examined",
-    "unlinkedReferences": "Stored references without a link",
-    "mappingStatus": {
-      "CHECKED": "Local review completed",
-      "INCOMPLETE": "Local review incomplete",
-      "CHANGED": "Registry changed during review",
-      "UNAVAILABLE": "Local registry unavailable"
-    },
-    "review": {
-      "NO_LOCAL_ISSUES_FOUND": "No issues found in the complete local registry review. Source validity has not been checked.",
-      "REQUIRED": "Stored mappings need review. Unexamined links and unlinked references remain explicit gaps.",
-      "UNKNOWN": "Mapping review is unknown. No previous counts are shown."
-    },
-    "mappingCounts": {
-      "validLinks": "Valid stored links",
-      "invalidIdentities": "Invalid stored identities",
-      "missingReferences": "Missing stored references",
-      "goneReferences": "Unavailable stored references",
-      "invalidReferences": "Invalid stored references",
-      "unavailableCustomers": "Unavailable CRM customers"
-    },
-    "openMappings": "Review stored Atlas mappings",
+    "administrationNote": "Jobs are run, paused and tested in integration administration.",
+    "openAdministration": "Open integration administration",
     "error": {
-      "FORBIDDEN": "Your current permissions do not allow reading this local readiness view. Previous details have been removed.",
-      "REQUEST_FAILED": "Local readiness could not be read. No previous details are shown. Refresh to try again.",
-      "INVALID_RESPONSE": "The local readiness response was invalid. No unverified details are shown."
-    }
-  },
-  "parasolAttention": {
-    "title": "Technical attention · Atlas",
-    "refresh": "Refresh technical attention",
-    "note": "Personal Atlas access determines which customers can be read. This view is independent of your CRM account-manager assignments.",
-    "checkedAt": "Read at {{time}}",
-    "coverage": "Customers read successfully: {{ready}} of {{selected}} selected",
-    "visible": "Atlas clients visible to you",
-    "matched": "Matched CRM customers",
-    "attempted": "Customer reads attempted",
-    "unmapped": "Visible Atlas clients without a CRM match",
-    "mappingIssues": "Visible Atlas clients with a mapping issue",
-    "failed": "Selected customers not successfully read",
-    "omitted": "Matched customers outside this refresh",
-    "partial": "Coverage is incomplete. A customer without urgent observations is not confirmed healthy.",
-    "timedOut": "The refresh time budget was reached. Some customer reads may be incomplete.",
-    "limit": "This refresh checks at most 50 matched customers. Additional customers are not included.",
-    "totals": "Active observations in successfully read customers: {{active}} · High: {{high}} · Critical: {{critical}}",
-    "previewNote": "Customers are grouped separately, with at most three high or critical observations each. This is a preview, not a complete queue or a global ranking. Open a customer to read its full queue.",
-    "otherCustomers": "Other customers with no urgent observations in this read ({{count}})",
-    "empty": "No matched customers were selected for this read. This does not establish source health or coverage of every company customer.",
-    "customerCounts": "High: {{high}} · Critical: {{critical}}",
-    "retrievedAt": "Customer read at {{time}}",
-    "sourcePartial": "Atlas source data is incomplete or synthetic for this customer.",
-    "sources": "Source coverage and freshness",
-    "previewCount": "Showing {{shown}} of {{total}} urgent observations",
-    "noUrgent": "These customers have no active high or critical observations in this read. Other observations or missing source data may still require attention.",
-    "openCustomer": "Open customer workspace",
-    "status": {
-      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
-      "ACCESS_DENIED": "Your current access does not permit this Atlas attention read. Previous customer details have been removed.",
-      "UNAVAILABLE": "Atlas attention is unavailable. No previous customer details are shown.",
-      "INVALID_RESPONSE": "The attention response was invalid. No unverified customer details are shown.",
-      "REQUEST_FAILED": "The attention read failed. No previous customer details are shown. Refresh to try again.",
-      "RATE_LIMITED": "The refresh limit has been reached. Wait before refreshing again; no previous customer details are shown."
-    },
-    "customerStatus": {
-      "NOT_LINKED": "The customer link changed or is missing. No technical details are shown.",
-      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
-      "ACCESS_DENIED": "Your current access does not permit reading this customer.",
-      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas. Its mapping needs review.",
-      "UNAVAILABLE": "Atlas could not read this customer. It is excluded from the observation totals.",
-      "INVALID_RESPONSE": "This customer returned an invalid response. It is excluded from the observation totals.",
-      "IDENTITY_CHANGED": "The customer mapping changed during this read. No previous technical details are shown.",
-      "TIMEOUT": "This customer was not read within the refresh budget. It is excluded from the observation totals.",
-      "CUSTOMER_UNAVAILABLE": "The CRM customer is no longer available. No technical details are shown."
-    },
-    "about": "Coverage and how this view works",
-    "issues": "Check coverage: {{list}}",
-    "previewHint": "At most three urgent observations per customer. Open a customer for its full queue.",
-    "incompleteSources": "Customers read with incomplete or synthetic sources"
-  },
-  "parasolWork": {
-    "viewWork": "View work",
-    "viewTitle": "View observation work",
-    "noLinkedWork": "No CRM task is linked to this observation.",
-    "assign": "Assign work",
-    "viewLinked": "View linked work",
-    "title": "Assign observation work",
-    "source": "View Atlas source",
-    "privacy": "The task stores a general subject, assignee, due date and priority. Observation summaries and device names stay in this personal Atlas view and are not copied into the task.",
-    "sourceNote": "This is a fresh read through your personal Atlas access. The CRM task contains no saved observation summary or device name to fall back on.",
-    "persistedSubject": "Task subject",
-    "subject": "Review technical observation",
-    "assignee": "Choose an active technical employee",
-    "due": "Due date (optional)",
-    "create": "Create task",
-    "previewAgain": "Read fresh preview",
-    "invalidDue": "Enter a valid date and time.",
-    "priority": "Task priority: {{priority}}",
-    "existingKept": "A linked task already exists. Its assignment, due date and state are kept.",
-    "taskUnavailable": "The linked task is no longer available. It will not be recreated automatically.",
-    "taskState": "Task state: {{state}}",
-    "taskStatus": {
-      "Open": "Open",
-      "Done": "Done",
-      "Cancelled": "Cancelled"
-    },
-    "assigned": "An employee is assigned. Open customer activities to see the current assignment.",
-    "unassigned": "No employee is assigned.",
-    "noDue": "No due date.",
-    "openActivities": "Open customer activities",
-    "cannotCreate": "No new task can be created from this observation. Existing linked work can still be reviewed.",
-    "status": {
-      "CREATED": "Task created.",
-      "EXISTING": "Existing linked task returned; no assignment or due date was changed.",
-      "NOT_LINKED": "This customer has not been linked to Atlas.",
-      "NOT_CONFIGURED": "The Atlas connection has not been configured.",
-      "ACCESS_DENIED": "Your access does not permit reading this Atlas source.",
-      "SOURCE_NOT_FOUND": "The linked customer was not found in Atlas.",
-      "UNAVAILABLE": "Atlas is unavailable. No previous observation context is shown.",
-      "INVALID_RESPONSE": "The source returned an unexpected response. No unverified task or observation details are shown.",
-      "IDENTITY_CHANGED": "The customer link changed. Read the current source before assigning work.",
-      "OBSERVATION_NOT_FOUND": "This observation was not found in the current Atlas customer.",
-      "SOURCE_TASK_UNAVAILABLE": "The source task is no longer available for this customer link.",
-      "REQUEST_FAILED": "The source could not be read. No previous observation context is shown.",
-      "UNCERTAIN": "The task outcome is uncertain. Do not submit again yet. Read a fresh preview to find any task that was already created.",
-      "REVIEW_REQUIRED": "The task was not confirmed. Read a fresh preview and review your selection before trying again.",
-      "SOURCE_CHANGED": "The observation changed after the preview. Read a fresh preview before assigning work.",
-      "SOURCE_TERMINAL": "This observation is no longer active. Read a fresh preview to see any linked work.",
-      "ASSIGNEE_INVALID": "Choose an active employee with technical workspace access, then read a fresh preview."
-    },
-    "assignToMe": "Assign to me",
-    "dueShortcuts": "Quick due dates",
-    "dueIn": {
-      "today": "Today 16:00",
-      "tomorrow": "Tomorrow 16:00",
-      "inThreeDays": "In 3 days",
-      "none": "No due date"
-    },
-    "summaryDue": "Creates a task for {{name}}, due {{due}}, priority {{priority}}.",
-    "summaryNoDue": "Creates a task for {{name}} with no due date, priority {{priority}}.",
-    "rowTask": {
-      "Open": "Task open",
-      "Done": "Task done",
-      "Cancelled": "Task cancelled",
-      "Unavailable": "Task no longer available"
-    },
-    "rowTaskDue": "due {{due}}"
-  },
-  "parasolM365": {
-    "title": "Microsoft 365",
-    "noPermission": "Your role does not include customer technical data.",
-    "savedNote": "Saved Atlas data. Refresh reads stored snapshots; it does not synchronize Microsoft 365.",
-    "refresh": "Refresh Microsoft 365",
-    "accessDenied": "Your Atlas access does not permit reading this customer’s Microsoft 365 data.",
-    "notSupported": "This Atlas instance does not support the Microsoft 365 overview.",
-    "assessed": "Assessed at {{time}} UTC",
-    "window": "Sign-in collection: 24 complete UTC hours, {{from}} – {{to}} UTC",
-    "countNote": "Counts are imported directory records. Device registrations are separate from machine inventory and licensed seats.",
-    "partial": "Showing {{shown}} of {{total}} active connections. This overview is incomplete.",
-    "noConnections": "No active Microsoft 365 connection is available. This does not establish the state of the tenant.",
-    "coverageNote": "Coverage describes traversal of the source response, not every real-world sign-in or a security verdict.",
-    "connection": "Microsoft 365 connection {{index}}",
-    "m365_user": "Directory user records",
-    "m365_device": "Directory device registrations",
-    "records": "Records in snapshot",
-    "unavailable": "Unavailable",
-    "state": "Saved state",
-    "asOf": "Snapshot at {{time}} UTC",
-    "lastSuccess": "Last successful collection: {{time}} UTC",
-    "signIns": "Sign-in collection",
-    "coverage": "Traversal coverage",
-    "freshness": "Retrieval freshness",
-    "oldest": "Oldest contributing retrieval: {{time}} UTC",
-    "newest": "Newest contributing retrieval: {{time}} UTC",
-    "gaps": "Intervals without coverage: {{count}}",
-    "reference": "Atlas connection reference",
-    "coverageState": {
-      "COMPLETE": "Complete traversal",
-      "PARTIAL": "Partial traversal",
-      "UNAVAILABLE": "No usable coverage"
-    },
-    "freshnessState": {
-      "FRESH": "Fresh",
-      "STALE": "Outdated",
-      "MIXED": "Fresh and outdated portions",
-      "UNKNOWN": "Unknown"
+      "FORBIDDEN": "Your current permissions do not allow reading the connection status. Previous details have been removed.",
+      "REQUEST_FAILED": "The connection status could not be read. No previous details are shown. Refresh to try again.",
+      "INVALID_RESPONSE": "The connection status reply was invalid. No unverified details are shown."
     }
   },
   "customerFinance": {
@@ -4526,45 +4290,6 @@
     "months_other": "{{count}} months ago",
     "years_one": "{{count}} year ago",
     "years_other": "{{count}} years ago"
-  },
-  "observationQueue": {
-    "title": "Urgent observations",
-    "subtitle": "Every urgent Atlas observation of your customers in one queue: critical first, then the longest waiting.",
-    "refresh": "Refresh urgent observations",
-    "note": "Your personal Atlas access decides which customers can be read. The queue reads up to 50 of them in one go, as My day does: it is not a complete list of every observation.",
-    "previewNote": "At most ten urgent observations per customer. A customer with more says so under the list, and its own queue has the rest.",
-    "filters": "Queue filters",
-    "show": "Show",
-    "filter": {
-      "open": "Without task",
-      "linked": "With task",
-      "all": "All urgent"
-    },
-    "shortcuts": "Single-key shortcuts",
-    "keysOn": "On a row: J and K or the arrows move, Enter opens, A assigns to you, X selects.",
-    "keysOff": "On a row: the arrows move and Enter opens.",
-    "assignChosen": "Assign to me ({{count}})",
-    "confirmTitle_one": "Assign {{count}} observation to you?",
-    "confirmTitle_other": "Assign {{count}} observations to you?",
-    "confirmBody": "Each observation is read again first, and a task is created for you without a due date. One that changed since this list was read is left for you to open.",
-    "confirm": "Assign to me",
-    "bulkRunning": "Assigning {{done}} of {{total}}…",
-    "bulkCreated_one": "{{count}} task created for you.",
-    "bulkCreated_other": "{{count}} tasks created for you.",
-    "bulkExisting_one": "{{count}} already had a task.",
-    "bulkExisting_other": "{{count}} already had a task.",
-    "bulkFailed_one": "{{count}} could not be assigned: open it to see why.",
-    "bulkFailed_other": "{{count}} could not be assigned: open them to see why.",
-    "empty": "No urgent observations in this read.",
-    "emptyFilter": {
-      "open": "Every urgent observation in this read has a task.",
-      "linked": "No urgent observation in this read has a task yet.",
-      "all": "No urgent observations in this read."
-    },
-    "showAll": "Show all urgent",
-    "partial": "showing {{shown}} of {{total}} urgent observations; the customer's own queue has the rest.",
-    "rowLabel": "{{customer}}: {{summary}}",
-    "select": "Select {{summary}}"
   },
   "customerFacts": {
     "columns": {

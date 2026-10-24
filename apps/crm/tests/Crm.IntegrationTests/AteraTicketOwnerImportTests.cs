@@ -16,8 +16,8 @@ public sealed class AteraTicketOwnerImportTests(CrmWebFactory factory)
     public async Task Atera_job_persists_exact_owner_tuple_and_an_inflight_rebind_stays_unavailable_until_a_later_import()
     {
         var org = await SourceTaskTestSupport.Organization(factory);
-        var customerId = Random.Shared.NextInt64(100_000_000, 999_999_999);
-        var externalId = Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var customerId = TestData.AteraId();
+        var externalId = TestData.AteraId();
         await using var scope = factory.Services.CreateAsyncScope();
         var links = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
         var original = Link(org, customerId); links.ExternalLinks.Add(original); await links.SaveChangesAsync();

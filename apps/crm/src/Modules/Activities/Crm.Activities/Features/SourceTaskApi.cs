@@ -15,16 +15,16 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
     ICurrentUser currentUser, TimeProvider time) : IActivitiesApi
 {
     private bool CanRead => currentUser.UserId is not null && currentUser.HasPermission(Permissions.ActivitiesRead)
-        && currentUser.HasPermission(Permissions.ParasolAtlasRead);
+        && currentUser.HasPermission(Permissions.ServiceRead);
 
     public async Task<Result<SourceTaskRef>> CreateTaskOnceAsync(SourceTaskDraft draft, CancellationToken cancellationToken)
     {
         if (!CanRead || !currentUser.HasPermission(Permissions.ActivitiesWrite)) return Forbidden();
         if (draft is null || !SourceTaskIdentityRules.IsValid(draft.Source) || draft.OrganizationId == Guid.Empty
             || draft.AssigneeId == Guid.Empty || draft.Priority is not (ActivityPriority.Normal or ActivityPriority.High)
-            || draft.DueAt is { Year: < 2000 or > 2100 })
-            return Error.Validation("ACT_SOURCE_TASK_INVALID", "Choose a supported technical source, employee, priority and due date.");
-        // Lock order: Parasol's identity guard (caller), this Customers read-only lease, Activities write.
+            || draft.DueAt is { Year: < 2000 or > 2100 } || SourceTaskIdentityRules.Subject(draft.Subject) is null)
+            return Error.Validation("ACT_SOURCE_TASK_INVALID", "Choose a supported source, subject, employee, priority and due date.");
+        // Lock order: this Customers read-only lease, then the Activities write.
         // A read-only lease failing after the Activities commit is harmless: a retry adopts the permanent receipt.
         return await customers.WithUsableOrganizationAsync(draft.OrganizationId, async (_, ct) =>
             await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
@@ -51,17 +51,17 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
         if (existing.Value is { } known) return known;
         if (await users.GetProfileAsync(draft.AssigneeId, ct) is not { IsActive: true } assignee
             || !IsEligibleAssignee(assignee))
-            return Error.Validation("ACT_SOURCE_TASK_ASSIGNEE_INVALID", "Choose an active technical employee.");
+            return Error.Validation("ACT_SOURCE_TASK_ASSIGNEE_INVALID", "Choose an active employee who works on tasks and service data.");
         var created = Activity.Create(new(ActivityType.Task, draft.OrganizationId, null, null, null,
-            SourceTaskIdentityRules.Subject, null, draft.DueAt, draft.Priority, draft.AssigneeId), time.GetUtcNow());
+            SourceTaskIdentityRules.Subject(draft.Subject)!, null, draft.DueAt, draft.Priority, draft.AssigneeId), time.GetUtcNow());
         if (!created.IsSuccess) return created.Error!;
         var task = created.Value;
         db.Activities.Add(task);
         db.SourceTaskLinks.Add(new()
         {
             SourceKey = SourceTaskIdentityRules.Key(draft.Source), ActivityId = task.Id,
-            System = draft.Source.System, WorkspaceId = draft.Source.WorkspaceId, ClientId = draft.Source.ClientId,
-            ObservationId = draft.Source.ObservationId, TargetKind = draft.Source.TargetKind,
+            System = draft.Source.System, SourceKind = draft.Source.SourceKind, ExternalCustomerId = draft.Source.ExternalCustomerId,
+            ExternalId = draft.Source.ExternalId, TargetKind = draft.Source.TargetKind,
             CreatedAt = time.GetUtcNow(), CreatedBy = currentUser.UserId!.Value,
         });
         await db.SaveChangesAsync(ct);
@@ -73,7 +73,7 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
     {
         if (!CanRead) return Forbidden();
         if (!SourceTaskIdentityRules.IsValid(source) || organizationId == Guid.Empty)
-            return Error.Validation("ACT_SOURCE_TASK_INVALID", "Choose a supported technical source and customer.");
+            return Error.Validation("ACT_SOURCE_TASK_INVALID", "Choose a supported source and customer.");
         return await FindOwnedAsync(source, organizationId, cancellationToken);
     }
 
@@ -81,9 +81,11 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
     {
         if (!CanRead) return Forbidden();
         var link = await db.SourceTaskLinks.AsNoTracking().SingleOrDefaultAsync(l => l.ActivityId == activityId, cancellationToken);
-        if (link is null) return Error.NotFound("ACT_SOURCE_TASK_NOT_FOUND", "The technical task source is unavailable.");
+        if (link is null) return Error.NotFound("ACT_SOURCE_TASK_NOT_FOUND", "The task source is unavailable.");
+        // A receipt of a system the CRM no longer reads (the retired workspace) is history only: nothing behind it can be opened.
+        if (!SourceTaskIdentityRules.IsSupported(link.System)) return Unsupported();
         var task = await db.Activities.IgnoreQueryFilters().AsNoTracking().SingleOrDefaultAsync(a => a.Id == activityId, cancellationToken);
-        if (task is null) return Error.Conflict("ACT_SOURCE_TASK_INCONSISTENT", "The technical task needs review.");
+        if (task is null) return Error.Conflict("ACT_SOURCE_TASK_INCONSISTENT", "The task needs review.");
         return new SourceTaskDetails(link.Source, Ref(task));
     }
 
@@ -91,11 +93,10 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
         CancellationToken cancellationToken)
     {
         if (!CanRead) return Forbidden();
-        var asked = (queries ?? []).SelectMany(q => (q.ObservationIds ?? []).Distinct(StringComparer.Ordinal)
-            .Select(id => (q.OrganizationId, Source: new SourceTaskIdentity("Atlas", q.WorkspaceId, q.ClientId, id, "Task")))).ToList();
-        if (asked.Count is 0 or > SourceTaskLookupLimits.MaxObservations || asked.Any(a => a.OrganizationId == Guid.Empty)
+        var asked = (queries ?? []).SelectMany(q => (q.Sources ?? []).Distinct().Select(source => (q.OrganizationId, Source: source))).ToList();
+        if (asked.Count is 0 or > SourceTaskLookupLimits.MaxSources || asked.Any(a => a.OrganizationId == Guid.Empty)
             || !asked.All(a => SourceTaskIdentityRules.IsValid(a.Source)))
-            return Error.Validation("ACT_SOURCE_TASK_INVALID", $"Choose up to {SourceTaskLookupLimits.MaxObservations} technical sources of known customers.");
+            return Error.Validation("ACT_SOURCE_TASK_INVALID", $"Choose up to {SourceTaskLookupLimits.MaxSources} supported sources of known customers.");
         var byKey = asked.ToLookup(a => SourceTaskIdentityRules.Key(a.Source), StringComparer.Ordinal);
         var keys = byKey.Select(group => group.Key).ToList();
         var links = await db.SourceTaskLinks.AsNoTracking().Where(l => keys.Contains(l.SourceKey)).ToListAsync(cancellationToken);
@@ -109,7 +110,7 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
             .Select(o => (o.Asked, Task: tasks[o.Link.ActivityId])).ToList();
         var assignees = owned.Where(o => !o.Task.IsDeleted && o.Task.AssigneeId is not null).Select(o => o.Task.AssigneeId!.Value).Distinct().ToList();
         var names = assignees.Count == 0 ? new Dictionary<Guid, UserSummary>() : await users.GetUsersAsync(assignees, cancellationToken);
-        return owned.Select(o => new SourceTaskLookup(o.Asked.OrganizationId, o.Asked.Source.ObservationId, Ref(o.Task),
+        return owned.Select(o => new SourceTaskLookup(o.Asked.OrganizationId, o.Asked.Source, Ref(o.Task),
             !o.Task.IsDeleted && o.Task.AssigneeId is { } assignee && names.TryGetValue(assignee, out var user) ? user.DisplayName : null)).ToList();
     }
 
@@ -119,20 +120,23 @@ internal sealed class SourceTaskApi(ActivitiesDbContext db, ICustomersApi custom
         var link = await db.SourceTaskLinks.AsNoTracking().SingleOrDefaultAsync(l => l.SourceKey == key, ct);
         if (link is null) return Result<SourceTaskRef?>.Success(null);
         var task = await db.Activities.IgnoreQueryFilters().AsNoTracking().SingleOrDefaultAsync(a => a.Id == link.ActivityId, ct);
-        if (task is null) return Error.Conflict("ACT_SOURCE_TASK_INCONSISTENT", "The technical task needs review.");
+        if (task is null) return Error.Conflict("ACT_SOURCE_TASK_INCONSISTENT", "The task needs review.");
         // Ownership follows the Activity's current customer after a merge, never a stale receipt customer snapshot.
         if (task.OrganizationId != organizationId)
-            return Error.Conflict("ACT_SOURCE_TASK_CUSTOMER_CHANGED", "This observation already has a task whose customer needs review.");
+            return Error.Conflict("ACT_SOURCE_TASK_CUSTOMER_CHANGED", "This alert already has a task whose customer needs review.");
         return Ref(task);
     }
 
     internal static bool IsEligibleAssignee(UserProfile profile)
     {
         var permissions = Permissions.ForRoles(profile.Roles ?? []);
-        return profile.IsActive && permissions.Contains(Permissions.ActivitiesWrite) && permissions.Contains(Permissions.ParasolAtlasRead);
+        return profile.IsActive && permissions.Contains(Permissions.ActivitiesWrite) && permissions.Contains(Permissions.ServiceRead);
     }
 
+    internal static Error Unsupported() =>
+        Error.NotFound("ACT_SOURCE_UNSUPPORTED", "This task was made from a source the CRM no longer reads.");
+
     private static SourceTaskRef Ref(Activity task, bool created = false) => new(task.Id, task.OrganizationId, task.Status,
-        task.IsDeleted ? null : task.AssigneeId, task.IsDeleted ? null : task.DueAt, created, !task.IsDeleted);
-    private static Error Forbidden() => Error.Forbidden("ACT_SOURCE_TASK_FORBIDDEN", "Technical workspace and CRM activity access are required.");
+        task.IsDeleted ? null : task.AssigneeId, task.IsDeleted ? null : task.DueAt, created, !task.IsDeleted, task.IsDeleted ? null : task.Subject);
+    private static Error Forbidden() => Error.Forbidden("ACT_SOURCE_TASK_FORBIDDEN", "Service and CRM activity access are required.");
 }

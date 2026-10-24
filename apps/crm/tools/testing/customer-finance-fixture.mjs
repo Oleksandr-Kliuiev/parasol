@@ -2,7 +2,7 @@
 import { readFile, writeFile, mkdir, stat, realpath } from 'node:fs/promises';
 import { randomUUID, createHash } from 'node:crypto';
 import { join, resolve, dirname } from 'node:path';
-import { sql } from '../../../../tools/composition/database.mjs';
+import { sql } from './harness/database.mjs';
 
 const statePath = process.env.PARASOL_FINANCE_STATE;
 if (!statePath) throw new Error('An owned local finance fixture is required.');

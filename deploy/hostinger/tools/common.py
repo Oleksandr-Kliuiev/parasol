@@ -10,11 +10,18 @@ import secrets
 
 BUNDLE = Path(__file__).resolve().parents[1]
 RESTIC = 'restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510'
-WRITERS = ('caddy', 'atlas', 'crm-worker', 'crm-web')
+WRITERS = ('caddy', 'crm-worker', 'crm-web')
 
 
-def run(args, *, data=None, cwd=None, env=None, input_file=None, output_file=None):
-    result = subprocess.run([str(a) for a in args], input=data, stdin=input_file, stdout=output_file or subprocess.PIPE,
+def writers_up(stack):
+    # A writer Docker is restarting after a crash runs again a moment later, but `ps --status running` does not list it:
+    # the backup then left it out of the stop, and it came back during the capture (CI, 22.10.2026).
+    up = set(stack.compose('ps', '--status', 'running', '--status', 'restarting', '--services').decode().split())
+    return [name for name in WRITERS if name in up]
+
+
+def run(args, *, data=None, cwd=None, env=None):
+    result = subprocess.run([str(a) for a in args], input=data, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, cwd=cwd, env=env)
     if result.returncode:
         # Drivers/Compose errors may include secrets. Do not print args, stdout or stderr.
@@ -57,9 +64,9 @@ class Stack:
         self.env['STATE_DIR'] = str(self.path)
         self.env['COMPOSE_PROFILES'] = ''
 
-    def compose(self, *args, data=None, input_file=None, output_file=None):
+    def compose(self, *args, data=None):
         return run(['docker', 'compose', '--env-file', '/dev/null', '-p', self.project,
-                    '-f', BUNDLE / 'compose.yaml', *args], data=data, env=self.env, input_file=input_file, output_file=output_file)
+                    '-f', BUNDLE / 'compose.yaml', *args], data=data, env=self.env)
 
     def cid(self, service):
         value = self.compose('ps', '-a', '-q', service).decode().strip()
@@ -72,10 +79,6 @@ class Stack:
             'export SQLCMDPASSWORD="$(cat /run/secrets/sql-sa-password)"; '
             'exec /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -b -r 1 -h -1 -W -d "$1"',
             'sql', database, data=query.encode())
-
-    def pg(self, query):
-        return self.compose('exec', '-T', 'postgres', 'psql', '-X', '-U', 'postgres', '-d', 'atlas',
-                            '-v', 'ON_ERROR_STOP=1', '-tA', data=query.encode())
 
     @contextlib.contextmanager
     def lock(self):

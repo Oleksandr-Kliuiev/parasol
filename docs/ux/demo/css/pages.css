@@ -132,6 +132,50 @@
   padding: 0 var(--s-4) var(--s-3);
 }
 
+/* Operations summary: four facts (4 or 2 per row, never one alone), the source list folds out underneath */
+.ops-facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 899px) {
+  .ops-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.ops-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-2);
+}
+
+.ops-summary .source-strip {
+  margin: var(--s-4) calc(-1 * var(--s-5)) calc(-1 * var(--s-5));
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  background: transparent;
+}
+
+.ops-summary .source-strip > summary {
+  padding: var(--s-2) var(--s-5);
+}
+
+.ops-summary .source-strip .rows,
+.ops-summary .source-strip > p {
+  padding: 0 var(--s-5) var(--s-3);
+}
+
+/* Connections: one row per sync, the time of the last success on the right */
+.sync-list .item {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sync-list .crit-text {
+  color: var(--crit-ink);
+}
+
 .device-box {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -159,7 +203,8 @@
 }
 
 .fin-facts .fact-big,
-.run-facts .fact-big {
+.run-facts .fact-big,
+.ops-facts .fact-big {
   font-size: var(--fs-20);
   line-height: 28px;
   font-weight: 800;
@@ -359,11 +404,16 @@
 
 /* ---------- Card grids (connections, admin) ---------- */
 
+/* Connection cards differ a lot in height: columns let a short card sit under a short one instead of
+   leaving a hole next to the tallest card of a grid row. Reading order stays the source order, column by column. */
 .grid-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-  gap: var(--gap);
-  align-items: start;
+  columns: 3 340px;
+  column-gap: var(--gap);
+}
+
+.grid-cards > .card {
+  break-inside: avoid;
+  margin-bottom: var(--gap);
 }
 
 .admin-group {

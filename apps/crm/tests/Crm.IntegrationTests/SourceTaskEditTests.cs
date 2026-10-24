@@ -25,7 +25,7 @@ public sealed class SourceTaskEditTests(CrmWebFactory factory)
         var originalDue = DateTimeOffset.Parse("2027-01-10T10:30:45.123Z");
         var editedDue = DateTimeOffset.Parse("2027-07-10T08:15:43.456Z");
         await using var host = Host(factory, employeeA);
-        var task = (await Create(host, new(source, organization, employeeA, originalDue, ActivityPriority.Normal))).Value;
+        var task = (await Create(host, new(source, organization, employeeA, originalDue, ActivityPriority.Normal, Subject))).Value;
         var url = $"/api/v1/activities/{task.ActivityId}";
         var original = await Read(first, organization, task.ActivityId);
         original.GetProperty("assignee").GetProperty("id").GetGuid().ShouldBe(employeeA);
@@ -81,7 +81,7 @@ public sealed class SourceTaskEditTests(CrmWebFactory factory)
         using var request = new HttpRequestMessage(HttpMethod.Put, url)
         {
             Content = JsonContent.Create(new { type = "Task", organizationId = organization,
-                subject = "Review technical observation", body = (string?)null, priority = "Normal", assigneeId = assignee, dueAt = due }),
+                subject = Subject, body = (string?)null, priority = "Normal", assigneeId = assignee, dueAt = due }),
         };
         if (etag is not null) request.Headers.TryAddWithoutValidation("If-Match", etag);
         return await client.SendAsync(request);

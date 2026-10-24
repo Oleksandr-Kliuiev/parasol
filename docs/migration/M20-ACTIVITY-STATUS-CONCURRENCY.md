@@ -40,7 +40,8 @@ reopen может вернуть прежний ETag без записи/audit/o
 
 ## Локальные проверки, 17 октября 2026
 
-- SQL: 38/38, 0 failed/skipped; восемь новых и 30 существующих SourceTask/Atlas/Sales API.
+- SQL: 38/38, 0 failed/skipped; восемь новых и 30 существующих SourceTask API, API прежнего
+  сервиса интеграций (удалён в [M38](M38-OPERATIONS-IN-CRM.md)) и Sales API.
   Два реальных конкурентных Complete проходят чтение E0 до записи: один успех и один 412.
   Свежий/устаревший no-op reopen, удаление и malformed/missing заголовки проверены отдельно.
 - Общая pre-mutation проверка также защищает PUT до Outlook effects: синтетический stale
@@ -58,10 +59,12 @@ reopen может вернуть прежний ETag без записи/audit/o
   после активаций в одном act. Первоначальный диагностический отказ сохранён.
 - Полный ESLint, app/E2E/composition TypeScript и SPA 290,5/300 KB проходят. SHA256 всех
   361 текущего web input совпадает до и после итоговых проверок.
-- Полный [composition M20](../testing/evidence/composition-M20-2026-10-17.json) с новой
-  сборкой текущих CRM/Atlas прошёл 8/8: exact recipient ETag, одна Task/receipt/create audit,
-  два ActivityLogged, прежние privacy assertions, restricted roles и cleanup. Recorder
-  переслал 563 Atlas requests, mutating requests — 0. Web/Worker Release — 0 warnings/errors.
+- Полный composition M20 (свидетельство удалено в M38:
+  `git show 73c0158:docs/testing/evidence/composition-M20-2026-10-17.json`) с новой
+  сборкой текущих CRM и прежнего сервиса прошёл 8/8: exact recipient ETag, одна
+  Task/receipt/create audit, два ActivityLogged, прежние privacy assertions, restricted roles
+  и cleanup. Recorder переслал 563 запроса к прежнему сервису, mutating requests — 0.
+  Web/Worker Release — 0 warnings/errors.
 - Итоговый browser-набор: 55/55, 0 skipped/unexpected/flaky; cleanup подтверждён. Обе
   ранее упавшие phone keyboard проверки проходят с прежними assertions и таймаутами.
   Реальный API проверяет stale/fresh Complete и Reopen, независимую чужую правку,

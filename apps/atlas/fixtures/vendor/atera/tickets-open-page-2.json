@@ -1,4 +1,0 @@
-{ "items": [
-    { "TicketID": 30002, "TicketTitle": "Printer queue (synthetic)", "TicketNumber": "30002", "TicketPriority": "Low", "TicketStatus": "Open",
-      "TicketCreatedDate": "2026-10-05T09:00:00", "CustomerID": 5001, "EndUserEmail": "ola@example.invalid" } ],
-  "page": 2, "itemsInPage": 50, "totalPages": 2, "totalItemCount": 2, "prevLink": "https://app.atera.com/api/v3/tickets?customerId=5001&ticketStatus=Open&page=1&itemsInPage=50", "nextLink": null }

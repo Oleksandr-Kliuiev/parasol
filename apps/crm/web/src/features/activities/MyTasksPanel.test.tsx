@@ -9,7 +9,7 @@ import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import { syntheticActivity } from '../../test/activities';
 import { MyTasksPanel } from './MyTasksPanel';
 
-const permissions = ['activities.read', 'activities.write', 'parasol.atlas.read'];
+const permissions = ['activities.read', 'activities.write'];
 const first = syntheticActivity(); const second = syntheticActivity('task-two');
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
 const result = (items = [first], nextCursor: string | null = null, totalCount = items.length) => response({ items, nextCursor, totalCount });
@@ -19,7 +19,7 @@ const failure = 'Your tasks could not be read. No previous tasks are shown. Refr
 afterEach(() => vi.unstubAllGlobals());
 
 it('does not request or show personal tasks without activities.read', () => {
-  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); render(['parasol.atlas.read']);
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); render(['activities.write']);
   expect(screen.queryByRole('region', { name: 'My tasks' })).not.toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();
 });
 
@@ -33,22 +33,21 @@ it('shows an initial read error instead of no tasks, and recovers only on explic
   expect(await screen.findByText(first.subject)).toBeVisible(); expect(refresh()).toHaveFocus(); expect(fetch).toHaveBeenCalledTimes(2);
 });
 
-it('clears source controls while a refresh waits, retains focus and refuses repeated activation', async () => {
+it('clears the rows while a refresh waits, retains focus and refuses repeated activation', async () => {
   let finish!: (value: Response) => void; let reads = 0;
   const fetch = vi.fn(async () => ++reads === 1 ? result() : new Promise<Response>(resolve => { finish = resolve; }));
   vi.stubGlobal('fetch', fetch); render(); await screen.findByText(first.subject);
   refresh().focus(); await userEvent.keyboard('{Enter}');
   expect(refresh()).toHaveFocus(); expect(refresh()).toHaveAttribute('aria-disabled', 'true');
-  expect(screen.queryByText(first.subject)).not.toBeInTheDocument(); expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
+  expect(screen.queryByText(first.subject)).not.toBeInTheDocument();
   await userEvent.keyboard('{Enter} '); fireEvent.click(refresh()); expect(fetch).toHaveBeenCalledTimes(2);
   await act(async () => finish(result([second]))); expect(await screen.findByText(second.subject)).toBeVisible(); expect(refresh()).toHaveFocus();
 });
 
-it('removes old tasks and source controls after a failed refresh', async () => {
+it('removes old tasks after a failed refresh', async () => {
   let failed = false; vi.stubGlobal('fetch', vi.fn(async () => failed ? response({}, 403) : result()));
   render(); await screen.findByText(first.subject); failed = true; await userEvent.click(refresh());
   expect(await screen.findByText(failure)).toBeVisible(); expect(screen.queryByText(first.subject)).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
   expect(screen.queryByText('Nothing assigned to you right now.')).not.toBeInTheDocument();
 });
 
@@ -111,14 +110,13 @@ it.each(['employee', 'permissions', 'revoked'])('aborts an old read and drops it
   await userEvent.click(screen.getByRole('button', { name: 'Change scope' })); expect(signal.aborted).toBe(true);
   if (change !== 'revoked') expect(await screen.findByText(second.subject)).toBeVisible();
   await act(async () => finish(result([first]))); expect(screen.queryByText(first.subject)).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /^Mark .* as done$/ })).not.toBeInTheDocument();
   expect(fetch).toHaveBeenCalledTimes(change === 'revoked' ? 1 : 2);
 });
 
-it('allows a read-only Atlas user to read source without offering completion', async () => {
-  const fetch = vi.fn(async () => result()); vi.stubGlobal('fetch', fetch); render(['activities.read', 'parasol.atlas.read']);
-  await screen.findByText(first.subject); expect(screen.getByRole('button', { name: 'View Atlas source' })).toBeVisible();
+it('allows a read-only employee to read tasks without offering completion', async () => {
+  const fetch = vi.fn(async () => result()); vi.stubGlobal('fetch', fetch); render(['activities.read']);
+  await screen.findByText(first.subject);
   expect(screen.queryByRole('button', { name: /^Mark .* as done$/ })).not.toBeInTheDocument(); expect(fetch).toHaveBeenCalledTimes(1);
 });
 

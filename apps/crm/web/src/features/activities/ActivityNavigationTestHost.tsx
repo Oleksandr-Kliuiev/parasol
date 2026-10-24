@@ -23,7 +23,7 @@ export function ActivityNavigationTestHost({ allowed, otherActivityId, otherOrga
     <button onClick={() => navigate(activityUrl(id, otherActivityId))}>Change selection</button>
     <button onClick={() => navigate(activityUrl(otherOrganizationId, activityId))}>Change customer</button>
     <button onClick={() => setUser({ ...user, id: 'employee-two' })}>Change employee</button>
-    <button onClick={() => setUser({ ...user, permissions: ['activities.read'] })}>Drop write and Atlas</button>
+    <button onClick={() => setUser({ ...user, permissions: ['activities.read'] })}>Drop write</button>
     <button onClick={() => setUser({ ...user, permissions: [] })}>Drop read</button>
     <button onClick={() => void client.invalidateQueries({ queryKey: ['activities'] })}>Refresh current query</button>
     <ActivityTimeline organizationId={id} selection={activitySelection(params)} navigationKey={location.key}

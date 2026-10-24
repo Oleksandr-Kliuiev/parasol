@@ -36,7 +36,7 @@ export interface Activity {
   createdAt: string;
   createdBy: ActivityRef | null;
   etag: string;
-  /** Presence only: source context is read separately through the employee's Atlas access. */
+  /** The task was made from an alert of a source the CRM reads (M38): its Source button reads the alert as it is now. */
   hasTechnicalSource?: boolean;
 }
 

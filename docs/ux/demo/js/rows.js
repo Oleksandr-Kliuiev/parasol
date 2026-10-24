@@ -1,4 +1,4 @@
-/* Parasoll UX demo: rows shared by My day, the observation queue, tasks and the customer card.
+/* Parasoll UX demo: rows shared by My day, the alert queue, tasks and the customer card.
    A row shows what it is, whose it is and the one next step, in the same place every time. */
 (function () {
   'use strict';
@@ -11,43 +11,43 @@
   var UI = P.ui$;
   var R = (P.rows = {});
 
-  R.deviceOf = function (o) {
-    return o.device ? D.devices.filter(function (d) { return d.id === o.device; })[0] : null;
+  R.deviceOf = function (a) {
+    return a.device ? D.devices.filter(function (d) { return d.id === a.device; })[0] : null;
   };
 
-  /* "Ingrid · today 12:00" chip for an observation that already has work */
+  /* "Ingrid · today 12:00" chip for an alert that already has work */
   R.taskChip = function (task, focusKey) {
     var who = D.staff[task.assignee];
     var due = task.due ? (P.sameDay(task.due, P.NOW) ? t('when.today') + ' ' + P.fmt.time(task.due) : P.fmt.when(task.due)) : t('task.noDue');
     var late = task.status === 'Open' && task.due && task.due < P.NOW;
-    return h`<button class="tag is-link ${late ? 'is-late' : ''}" type="button" data-action="open-task" data-id="${task.id}" title="${t('obs.openTask')}" ${focusKey ? P.raw('data-focus="' + P.escape(focusKey) + '"') : ''}>
+    return h`<button class="tag is-link ${late ? 'is-late' : ''}" type="button" data-action="open-task" data-id="${task.id}" title="${t('alert.openTask')}" ${focusKey ? P.raw('data-focus="' + P.escape(focusKey) + '"') : ''}>
       ${UI.avatar(task.assignee, 'is-sm')}<span>${who.first} · ${task.status === 'Done' ? t('taskStatus.Done') : due}</span></button>`;
   };
 
-  R.workCell = function (o) {
-    var task = M.taskOf(o);
-    if (task) return R.taskChip(task, 'assign-' + o.id);
-    if (!D.isActive(o)) return h`<span class="muted small">${t('obs.noWork')}</span>`;
-    if (!P.can('activities')) return h`<button class="btn btn-sm" type="button" data-action="open-observation" data-id="${o.id}">${t('obs.viewWork')}</button>`;
-    return h`<button class="btn btn-sm" type="button" data-action="assign" data-id="${o.id}" data-focus="assign-${o.id}" aria-haspopup="dialog">${P.icon('user', 'ic-16')}${t('obs.assign')}</button>`;
+  R.workCell = function (a) {
+    var task = M.taskOf(a);
+    if (task) return R.taskChip(task, 'assign-' + a.id);
+    if (!D.isOpen(a)) return h`<span class="muted small">${t('alert.noWork')}</span>`;
+    if (!P.can('activities')) return h`<button class="btn btn-sm" type="button" data-action="open-alert" data-id="${a.id}">${t('alert.viewWork')}</button>`;
+    return h`<button class="btn btn-sm" type="button" data-action="assign" data-id="${a.id}" data-focus="assign-${a.id}" aria-haspopup="dialog">${P.icon('user', 'ic-16')}${t('alert.assign')}</button>`;
   };
 
-  R.obsRow = function (o, opts) {
+  R.alertRow = function (a, opts) {
     opts = opts || {};
-    var dev = R.deviceOf(o);
-    var c = D.customer(o.customer);
-    return h`<div class="item obs-item">
-      <span class="sev-rail ${UI.SEV[o.severity].rail}" aria-hidden="true"></span>
+    var dev = R.deviceOf(a);
+    var c = D.customer(a.customer);
+    return h`<div class="item alert-item">
+      <span class="sev-rail ${UI.SEV[a.severity].rail}" aria-hidden="true"></span>
       <div class="item-main">
-        <button class="item-title linklike" type="button" data-action="open-observation" data-id="${o.id}">${o.summary}</button>
+        <button class="item-title linklike" type="button" data-action="open-alert" data-id="${a.id}">${a.title}</button>
         <div class="item-meta">
-          ${UI.sev(o.severity)}
+          ${UI.sev(a.severity)}
           ${opts.hideCustomer ? '' : h`<span>${c.name}</span>`}
-          <span class="break">${dev ? dev.host : t('deviceStatus.' + o.deviceStatus)}</span>
-          <span>${UI.sourceName(o.source)} · ${P.fmt.ago(o.occurredAt)}</span>
+          <span class="break">${dev ? dev.host : t('deviceStatus.' + a.deviceStatus)}</span>
+          <span>${t('src.label', { source: UI.sourceName(a.source) })} · ${P.fmt.ago(a.occurredAt)}</span>
         </div>
       </div>
-      <div class="item-side">${R.workCell(o)}</div>
+      <div class="item-side">${R.workCell(a)}</div>
     </div>`;
   };
 
@@ -95,7 +95,7 @@
     var who = f.who === 'system' ? t('feed.system') : D.staff[f.who].name;
     var c = f.customer ? D.customer(f.customer).name : '';
     var text = t('feed.' + f.kind, { customer: c, n: f.count || 0, week: f.week || '', target: f.target ? D.staff[f.target].name : '' });
-    var icon = { taskFromObs: 'pulse', taskDone: 'circleCheck', ateraImport: 'download', assignedTo: 'user', approved: 'listChecks' }[f.kind] || 'note';
+    var icon = { taskFromAlert: 'pulse', taskDone: 'circleCheck', ateraImport: 'download', assignedTo: 'user', approved: 'listChecks' }[f.kind] || 'note';
     return h`<li class="tl-item"><span class="tl-icon">${P.icon(icon, 'ic-16')}</span>
       <div class="tl-text"><p><strong>${who}</strong> · ${text}</p><p class="muted">${P.fmt.when(f.at)}</p></div></li>`;
   };

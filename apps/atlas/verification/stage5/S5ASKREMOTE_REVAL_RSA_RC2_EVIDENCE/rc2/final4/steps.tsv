@@ -1,7 +1,0 @@
-typecheck	0	9s	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	npm run -s typecheck
-ui-typecheck	0	0s	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	npm run -s ui:typecheck
-db-generate	0	1s	bd6822287992145125784821004fade8b051e83201711a06a7596760e59824e7	npm run -s db:generate
-schema-validate	0	1s	1fa1e06af31f866d939dcbc2f900483ed3ca80ed28d58c5071c0556790d7092f	npm run -s schema:validate
-db-drift	0	1s	892b13f6d8d0c9be510e7746fe0a02fbdcdeb853749096fa335597962305d6a2	npm run -s db:check:drift
-db-pg17	0	1s	3ba8dd0aae637f81e7e201c4b7ebb3b77e3928839ed2b161906033bb0c720919	npm run -s db:check:pg17
-api-build	0	4s	a6aa931089b464f4c65e4a923b0460b903968733081bc2b5d7806e5f32081592	npm run -s api:build

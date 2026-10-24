@@ -18,20 +18,22 @@ import { RemindersPanel } from '../contracts/RemindersPanel';
 import { MyTasksPanel } from '../activities/MyTasksPanel';
 import { TimeEntryDialogHost } from '../time/TimeEntryDialog';
 import { todayIso } from '../../shared/utils/format';
-import { AtlasAttentionPanel } from '../parasol/AtlasAttentionPanel';
 import { MyDaySection, MyDaySectionLinks } from './MyDaySections';
 import { MyDayTiles } from './MyDayTiles';
+import { MyDayLayoutSwitch } from './MyDayLayoutSwitch';
+import { UrgentAlertsPanel } from './UrgentAlertsPanel';
+import { useMyDayLayout } from './myDayLayout';
 import { h } from '../../app/hearth';
 import { BillingPanel, HoursReviewPanel, LicensingAttentionPanel, StaleDealsPanel } from './MyDayPanels';
 import { useMyDayStyles } from './myDayStyles';
 import { useMediaQuery } from '../../shared/utils/useMediaQuery';
-import { mainOrder, myDayProfile, sideOrder, type MainSection, type SideSection } from './myDayProfile';
+import { mainOrder, sideOrder, type MainSection, type SideSection } from './myDayProfile';
 
 /** Where the page grid has two columns (see `grid`). */
 const WIDE_MY_DAY = '(min-width: 1101px)';
 
 const useStyles = makeStyles({
-  // The side column holds the personal list beside the technical one, so it is wider than a column of notes.
+  // The side column holds the personal task list beside the main panels, so it is wider than a column of notes.
   grid: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.75fr) minmax(320px, 1fr)',
@@ -40,6 +42,8 @@ const useStyles = makeStyles({
     '@media (max-width: 1100px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
   },
   side: { display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 },
+  // Jumps to a section on the left, what comes first on the right; on a phone the choice takes its own row.
+  toolbar: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: '16px', rowGap: '10px', marginBottom: '16px' },
   // On tablets the side panels sit in two columns under the main ones instead of one long column.
   aside: {
     display: 'flex',
@@ -75,9 +79,7 @@ export function MyDayPage() {
   const user = useCurrentUser();
   const canContracts = useCan(Permissions.contractsRead);
   const canActivities = useCan(Permissions.activitiesRead);
-  const canCustomers = useCan(Permissions.customersRead);
-  const canAtlas = useCan(Permissions.parasolAtlasRead);
-  const canAttention = canCustomers && canAtlas;
+  const canService = useCan(Permissions.serviceRead);
   const canSales = useCan(Permissions.salesRead);
   const canLicensing = useCan(Permissions.licensingRead);
   const canBilling = useCan(Permissions.billingRead);
@@ -86,9 +88,11 @@ export function MyDayPage() {
   // The day's most frequent entry, as the reference puts its main action in the page header.
   const [registering, setRegistering] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
-  const profile = myDayProfile(user.permissions);
-  // One screen in the morning (UX concept §3): on a wide screen the short personal task list stands beside the long
-  // technical list instead of under it; one column keeps attention, then tasks. The DOM follows what is shown, so the
+  // The person's own choice (M38): with full access for everybody, a layout by permissions would show everybody billing first.
+  const layout = useMyDayLayout();
+  const profile = layout.layout;
+  // One screen in the morning (UX concept §3): on a wide screen the short personal task list stands beside the main
+  // panels instead of under them; one column shows it in the profile's order. The DOM follows what is shown, so the
   // reading and focus order is the visual order at every width.
   const wide = useMediaQuery(WIDE_MY_DAY);
   const mainSections = wide ? mainOrder[profile].filter((name) => name !== 'tasks') : mainOrder[profile];
@@ -103,7 +107,8 @@ export function MyDayPage() {
   const partOfDay = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 18 ? 'afternoon' : 'evening';
 
   const main: Record<MainSection, ReactNode> = {
-    attention: canAttention && <MyDaySection name="attention"><AtlasAttentionPanel /></MyDaySection>,
+    hours: canApproveHours && <HoursReviewPanel />,
+    alerts: canService && <MyDaySection name="alerts"><UrgentAlertsPanel /></MyDaySection>,
     tasks: canActivities && <MyDaySection name="tasks"><MyTasksPanel /></MyDaySection>,
     deals: canSales && <StaleDealsPanel />,
     licensing: canLicensing && <LicensingAttentionPanel />,
@@ -145,7 +150,6 @@ export function MyDayPage() {
   };
 
   const side: Record<SideSection, ReactNode> = {
-    hours: canApproveHours && <HoursReviewPanel />,
     reminders: canContracts && <RemindersPanel />,
     registry: (
       <Panel title={t('myDay.registryWarnings')} icon={<Warning16Regular />}>
@@ -200,7 +204,10 @@ export function MyDayPage() {
         <TimeEntryDialogHost open={registering} defaultDate={todayIso()} onClose={() => setRegistering(false)} />
       )}
       <MyDayTiles profile={profile} organizations={organizations.length} warnings={warnings.length} />
-      <MyDaySectionLinks tasks={canActivities} attention={canAttention} />
+      {(canService || canActivities || layout.options.length > 1) && <div className={styles.toolbar}>
+        <MyDaySectionLinks alerts={canService} tasks={canActivities} />
+        <MyDayLayoutSwitch options={layout.options} value={profile} onChange={layout.choose} failed={layout.failed} />
+      </div>}
       <div className={styles.grid}>
         <div className={styles.side}>
           {mainSections.map((name) => <Fragment key={name}>{main[name]}</Fragment>)}

@@ -250,7 +250,7 @@ const useStyles = makeStyles({
   },
   who: { flex: 1, minWidth: 0 },
   whoName: { display: 'block', fontSize: '13.5px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  whoRole: { display: 'block', fontSize: '12px', color: h.sideMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  whoMeta: { display: 'block', fontSize: '12px', color: h.sideMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   chevron: { color: h.sideMuted, flexShrink: 0 },
   // The account menu opens over the page, so it wears the page's theme (as the reference's pop-up does), not the rail's.
   menuTheme: { backgroundColor: 'transparent', color: 'inherit' },
@@ -363,7 +363,6 @@ export function Sidebar({ selected, mini, onToggleMini, onSearch, onNavigate, on
     else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight + 8;
   }, [selected]);
   const edges = useScrollEdges(navRef, 'y', `${navGroups.length}-${mini}`);
-  const roles = user.roles.map((role) => t(`parasol.roles.${role.replace('Crm.', '')}`)).join(', ');
   // In the narrow menu the label is hidden visually but stays the link's name; the browser tooltip shows it on hover.
   const tip = (label: string, child: React.ReactElement<{ title?: string }>) =>
     mini ? cloneElement(child, { title: label }) : child;
@@ -453,7 +452,7 @@ export function Sidebar({ selected, mini, onToggleMini, onSearch, onNavigate, on
               <>
                 <span className={styles.who}>
                   <span className={styles.whoName}>{user.displayName}</span>
-                  <span className={styles.whoRole}>{roles}</span>
+                  {user.email && <span className={styles.whoMeta}>{user.email}</span>}
                 </span>
                 <ChevronUpDown16Regular className={styles.chevron} aria-hidden />
               </>
@@ -474,9 +473,6 @@ export function Sidebar({ selected, mini, onToggleMini, onSearch, onNavigate, on
                 <Text weight="semibold" className={styles.menuName}>{user.displayName}</Text>
               </MenuGroupHeader>
               {user.email && <MenuGroupHeader>{user.email}</MenuGroupHeader>}
-              <MenuGroupHeader>
-                {t('parasol.employeeRoles')}: {roles}
-              </MenuGroupHeader>
             </MenuGroup>
             <MenuDivider />
             <MenuGroup>

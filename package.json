@@ -9,22 +9,14 @@
   "scripts": {
     "bootstrap": "node scripts/tasks.mjs bootstrap",
     "build": "node scripts/tasks.mjs build",
-    "build:atlas": "node scripts/tasks.mjs build:atlas",
     "build:crm": "node scripts/tasks.mjs build:crm",
     "check": "node scripts/tasks.mjs check",
     "check:history": "node scripts/verify-history.mjs",
-    "check:atlas": "node scripts/tasks.mjs check:atlas",
     "check:crm": "node scripts/tasks.mjs check:crm",
-    "test:atlas": "node scripts/atlas-tests.mjs",
-    "test:atlas:strict": "node scripts/atlas-tests.mjs",
-    "test:atlas:pg": "node scripts/atlas-tests.mjs pg",
-    "test:atlas:ui": "node scripts/tasks.mjs test:atlas:ui",
     "test:crm:unit": "node scripts/tasks.mjs test:crm:unit",
     "test:crm:architecture": "node scripts/tasks.mjs test:crm:architecture",
     "test:crm:integration": "node scripts/tasks.mjs test:crm:integration",
     "test:crm:e2e": "node scripts/tasks.mjs test:crm:e2e",
-    "test:composition": "node tools/composition/run.mjs",
-    "test:composition:unit": "node --test tools/composition/*.test.mjs tools/demo/*.test.mjs",
-    "demo:local": "node tools/demo/run.mjs"
+    "test:harness:unit": "node --test apps/crm/tools/testing/harness/*.test.mjs"
   }
 }

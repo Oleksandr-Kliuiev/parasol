@@ -36,6 +36,14 @@ const hostArgs = [
   `--Integrations:PowerOffice:BaseUrl=${mock}/v2/`,
   `--Integrations:PowerOffice:TokenUrl=${mock}/OAuth/Token`,
   '--Integrations:PowerOffice:WriteEnabled=true',
+  // M38: Atera against the stand-in, read only. Its syncs run when a test starts them (POST /api/v1/integrations/jobs/{id}/trigger):
+  // the crons are Hangfire's "never" (31 February), so no scheduled read resolves another test's alerts in between.
+  '--Integrations:Atera:Enabled=true',
+  `--Integrations:Atera:BaseUrl=${mock}/api/v3/`,
+  '--Integrations:Atera:WriteEnabled=false',
+  '--Integrations:Atera:AlertUrlTemplate=https://atera.example.invalid/alerts/{0}',
+  ...['CustomerSyncCron', 'ContactSyncCron', 'TicketSyncCron', 'RecentTicketSyncCron', 'WorkHoursSyncCron', 'AgentSyncCron', 'AlertSyncCron']
+    .map((cron) => `--Integrations:Atera:${cron}="0 0 31 2 *"`),
   '--RateLimits:ApiPerMinute=100000',
   // Every test signs in through the development entry point from one address; the real budget has its own integration test.
   '--RateLimits:SignInPerMinute=100000',
@@ -54,6 +62,7 @@ const providerKeys = [
   '--Integrations:PowerOffice:ApplicationKey=mock',
   '--Integrations:PowerOffice:ClientKey=mock',
   '--Integrations:PowerOffice:SubscriptionKey=mock',
+  '--Integrations:Atera:ApiKey=mock',
 ].join(' ');
 
 // Hosts that are already running are reused only on request: they may be connected to another database than E2E_SQL.

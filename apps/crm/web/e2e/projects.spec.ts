@@ -1,5 +1,16 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { api, createOrganization, marker, orgNumber, signIn, toast } from './support';
+
+/**
+ * Sets the phase's status from its row. The project is read again after a task is added or changed, which draws the phase row
+ * anew, and a list opened just before closes with it: the choice is made again until the option could be picked.
+ */
+async function setPhaseStatus(page: Page, status: string) {
+  await expect(async () => {
+    await page.getByRole('combobox', { name: 'Status' }).first().click();
+    await page.getByRole('option', { name: status }).click({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
 
 test('a project is planned in phases and a completed phase queues its fee', async ({ page }) => {
   test.setTimeout(120_000);
@@ -35,8 +46,7 @@ test('a project is planned in phases and a completed phase queues its fee', asyn
   await expect(toast(page, 'Task added')).toBeVisible();
 
   // An open task keeps the phase — and its fee — from being completed.
-  await page.getByRole('combobox', { name: 'Status' }).first().click();
-  await page.getByRole('option', { name: 'Completed' }).click();
+  await setPhaseStatus(page, 'Completed');
   await expect(page.locator('.fui-ToastBody').filter({ hasText: 'The phase still has open tasks' })).toBeVisible();
 
   await page.getByRole('row').filter({ hasText: 'Migrate mailboxes' }).getByRole('button', { name: 'Edit' }).click();
@@ -46,8 +56,7 @@ test('a project is planned in phases and a completed phase queues its fee', asyn
   await editTask.getByRole('button', { name: 'Save' }).click();
   await expect(toast(page, 'Task updated')).toBeVisible();
 
-  await page.getByRole('combobox', { name: 'Status' }).first().click();
-  await page.getByRole('option', { name: 'Completed' }).click();
+  await setPhaseStatus(page, 'Completed');
   await expect(toast(page, 'Phase completed; the fee is waiting for the next billing run')).toBeVisible();
 
   // The fee is queued as a one-time charge, and the project shows it (FR-PRJ-01).

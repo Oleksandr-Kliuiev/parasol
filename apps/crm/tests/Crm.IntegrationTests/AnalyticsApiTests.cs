@@ -61,7 +61,7 @@ public class AnalyticsApiTests(CrmWebFactory factory)
         var friday = new DateTimeOffset(new DateTime(2026, 9, 25, 16, 30, 0), TimeSpan.Zero);
         // Wednesday 09:00 → 11:00 is two hours: past the one-hour P1 target.
         var wednesday = new DateTimeOffset(new DateTime(2026, 9, 23, 9, 0, 0), TimeSpan.Zero);
-        var ticketBase = Random.Shared.NextInt64(500_000, 900_000);
+        var ticketBase = TestData.AteraIds(2);
         await factory.RunJobAsync<IServiceApi>(api => api.UpsertTicketsAsync(
             [
                 new ExternalTicket("atera", ticketBase, organizationId, null, $"{marker} weekend", "Closed", "High", null, null, null, null, null, null, null,

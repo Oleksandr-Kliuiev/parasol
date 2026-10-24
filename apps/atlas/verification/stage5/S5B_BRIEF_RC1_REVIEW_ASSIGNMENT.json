@@ -1,9 +1,0 @@
-{
-  "reviewer": "/root/astra_s5b_brief_rc1",
-  "runtime": "native spawn_agent fresh fork_turns none",
-  "requestedModel": "gpt-6-astra",
-  "effectiveEffort": "xhigh",
-  "packageHash": "ef0d78ed5f2d10e658ca59f397d5225a7b37be63ffe167e0e171827aca056963",
-  "startedUtc": "2026-10-10T14:29:29.314948+00:00",
-  "identityQualification": "Explicit native runtime assignment; underlying model/provider/billing telemetry not exposed; no CLI/API fallback."
-}

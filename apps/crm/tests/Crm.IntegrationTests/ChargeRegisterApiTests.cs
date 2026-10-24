@@ -50,8 +50,8 @@ public partial class ChargeRegisterApiTests(CrmWebFactory factory)
         if (link)
         {
             BillingApiTests.StubToken(factory);
-            await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", Random.Shared.NextInt64(600_000, 699_999).ToString(CultureInfo.InvariantCulture));
-            await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", Random.Shared.NextInt64(10_000, 99_999).ToString(CultureInfo.InvariantCulture));
+            await BillingApiTests.LinkAsync(admin, "Organization", organizationId, "Customer", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
+            await BillingApiTests.LinkAsync(admin, "Product", productId, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
         }
 
         return new Customer(organizationId, contractId, lineId, productId, marker);
@@ -138,7 +138,7 @@ public partial class ChargeRegisterApiTests(CrmWebFactory factory)
             sku = CatalogApiTests.Sku("HRS"), name = "Support hour", type = "HourlyService", businessLine = "Consulting", unit = "Hour",
             billingPeriod = "OneTime", vatRate = 25m, listPrice = 1_000m, unitCost = 400m, ateraWorkType = workType,
         });
-        await BillingApiTests.LinkAsync(admin, "Product", hourProduct, "Product", Random.Shared.NextInt64(10_000, 99_999).ToString(CultureInfo.InvariantCulture));
+        await BillingApiTests.LinkAsync(admin, "Product", hourProduct, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
         await ApprovedTimeAsync(technician, lead, customer.OrganizationId, new DateOnly(2032, 1, 12), 3m, workType);
 
         // 1. The month is billed, exported and closed: 5 000 + 3 h × 1 000.
@@ -406,7 +406,7 @@ public partial class ChargeRegisterApiTests(CrmWebFactory factory)
         StubOrders(customer, 32_007);
         var hourBankProduct = await CatalogApiTests.CreateProductAsync(finance, CatalogApiTests.Product(
             CatalogApiTests.Sku("KLIPP"), "Klippekort", 1_000m, 400m, type: "HourBank", billingPeriod: "OneTime"));
-        await BillingApiTests.LinkAsync(admin, "Product", hourBankProduct, "Product", Random.Shared.NextInt64(10_000, 99_999).ToString(CultureInfo.InvariantCulture));
+        await BillingApiTests.LinkAsync(admin, "Product", hourBankProduct, "Product", TestData.PowerOfficeId().ToString(CultureInfo.InvariantCulture));
         (await admin.PostAsJsonAsync($"{Contracts}/{customer.ContractId}/lines", new
         {
             productId = hourBankProduct, quantityModel = "Fixed", quantity = 1m, unitPrice = 1_000m, validFrom = period,

@@ -1,6 +1,0 @@
-{
-  "path": "docs/stage5/ask/remote/execution/ACCEPTANCE_STATUS.md",
-  "beforeSha256": "4a4ae2c4afc1d74f69144d1502d33759d9ff45fa19762a7ac146d293ee7f2329",
-  "afterSha256": "7d0c920d3d4eec1669c342faa89e2fe37844bcb06252e0c4d66d2b4f6ca148c8",
-  "scope": "Correct misleading current-status label; preserve original historical RC3 facts; no runtime change"
-}

@@ -41,7 +41,6 @@ public class RequestHardeningTests(CrmWebFactory factory)
         ["POST /api/v1/integrations/outbound/{id:guid}/retry"] = "reason 10-500 is checked in the handler",
         ["POST /api/v1/integrations/outbox/replay"] = "reason 10-500, at most 100 messages and the confirmed count are checked in the handler",
         ["POST /api/v1/operations/restore/reconcile"] = "a timestamp and a boolean",
-        ["POST /api/v1/parasol/customers/{customerId:guid}/observations/{observationId}/task"] = "an employee id, a due date and the preview hash; the service refuses an empty id, a date outside 2000-2100 or a hash that is not 64 lower-case hex digits (PARASOL_TASK_INVALID)",
         ["POST /api/v1/projects/{id:guid}/phases/{phaseId:guid}/status"] = "an enum; the project domain refuses a transition it does not know",
         ["POST /api/v1/projects/{id:guid}/status"] = "an enum; the project domain refuses a transition it does not know",
         ["PUT /api/v1/activities/{id:guid}/ticket"] = "two ids; the ticket service checks the customer and that the ticket belongs to it",

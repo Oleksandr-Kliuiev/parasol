@@ -1,4 +1,4 @@
-"""Consistent native database dumps plus documents/keyring, encrypted in restic."""
+"""A consistent native SQL Server backup plus documents/keyring, encrypted in restic."""
 import hashlib
 import json
 from pathlib import Path
@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import time
 from datetime import datetime, timezone
-from common import WRITERS, run, write_json
+from common import WRITERS, run, write_json, writers_up
 from lifecycle import image_ids
 
 
@@ -36,10 +36,9 @@ def verify(root):
     manifest = json.loads((root / 'manifest.json').read_text())
     if manifest.get('format') != 1 or manifest.get('files') != inventory(root):
         raise ValueError('Snapshot inventory does not match; restore refused')
-    required = {'crm.bak', 'atlas.dump', 'roles.sql', 'config/web.json', 'config/worker.json',
-                'config/migrate.json', 'config/dp.pfx', 'config/oidc.pfx', 'config/sql-logins.json',
-                'config/sql-sa-password', 'config/pg-password', 'config/atlas-admin.json',
-                'config/atlas-runtime.json', 'data/documents/.parasol-volume', 'stack.json'}
+    required = {'crm.bak', 'config/web.json', 'config/worker.json', 'config/migrate.json', 'config/dp.pfx',
+                'config/oidc.pfx', 'config/sql-logins.json', 'config/sql-sa-password',
+                'data/documents/.parasol-volume', 'stack.json'}
     if not required.issubset(manifest['files']) or not any(
             name.startswith('data/keyring/key-') and name.endswith('.xml') for name in manifest['files']):
         raise ValueError('Snapshot is incomplete')
@@ -53,14 +52,10 @@ def verify(root):
 
 def capture(stack, staging):
     stack.compose('exec', '-T', 'sql', 'mkdir', '-p', '/var/opt/mssql/backup')
+    # COPY_ONLY avoids disturbing other backup chains. No compression: Express supports this path.
     stack.sql("BACKUP DATABASE [Crm] TO DISK=N'/var/opt/mssql/backup/parasol.bak' WITH COPY_ONLY, INIT, CHECKSUM;")
     stack.sql("RESTORE VERIFYONLY FROM DISK=N'/var/opt/mssql/backup/parasol.bak' WITH CHECKSUM;")
     run(['docker', 'cp', f'{stack.cid("sql")}:/var/opt/mssql/backup/parasol.bak', staging / 'crm.bak'])
-    # COPY_ONLY avoids disturbing other backup chains. No compression: Express supports this path.
-    with (staging / 'atlas.dump').open('wb') as dump:
-        stack.compose('exec', '-T', 'postgres', 'pg_dump', '-U', 'postgres', '-d', 'atlas', '--format=custom', output_file=dump)
-    roles = stack.compose('exec', '-T', 'postgres', 'pg_dumpall', '-U', 'postgres', '--globals-only')
-    (staging / 'roles.sql').write_bytes(roles)
     for name in ('config', 'data'):
         # Check links before copying: shutil would otherwise dereference them.
         inventory(stack.path / name)
@@ -74,18 +69,19 @@ def capture(stack, staging):
 def backup(stack):
     started = time.monotonic()
     write_json(stack.path / 'backup-status.json', {'status': 'running', 'startedAt': datetime.now(timezone.utc).isoformat()})
-    running = set(stack.compose('ps', '--status', 'running', '--services').decode().split())
-    active = [name for name in WRITERS if name in running]
+    active = writers_up(stack)
     quiesced = False
     staging = Path(tempfile.mkdtemp(prefix='.snapshot-', dir=stack.path))
     staging.chmod(0o700)
     try:
         quiesced = True
-        if active:
-            stack.compose('stop', *active)
+        # Every writer, not only the listed ones: stopping a stopped one changes nothing, and one Docker was about to
+        # restart stays down instead of coming back during the capture.
+        stack.compose('stop', *WRITERS)
         # Verify nobody restarted during quiescence (all deployment tools share the operation lock).
-        if set(stack.compose('ps', '--status', 'running', '--services').decode().split()) & set(WRITERS):
-            raise RuntimeError('A writer is still running')
+        running = writers_up(stack)
+        if running:
+            raise RuntimeError(f'A writer is still running: {", ".join(running)}')
         capture(stack, staging)
         # Resume service before uploading the already-consistent private staging directory.
         if active:

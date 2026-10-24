@@ -63,7 +63,8 @@ History, PDF list и download принимают дополнительный `o
 ## Локальная проверка
 
 Предварительно нужны обычные зависимости проекта, восстановленные .NET assets,
-Chromium Playwright и закешированный SQL image из `tools/composition/plan.mjs`.
+Chromium Playwright и закешированный SQL image из `apps/crm/tools/testing/harness/plan.mjs`
+(до M38 — `tools/composition/plan.mjs`).
 Из `apps/crm/web`:
 
 ```sh
@@ -87,5 +88,5 @@ Launcher собирает текущую SPA, web и worker, поднимает 
 измеримый layout audit установленного skill; Axe, отсутствие горизонтального
 переполнения и скриншоты выполняются всегда.
 
-Фактические результаты и границы проверки:
-`docs/testing/evidence/customer-finance-card-M37-2026-10-18.json`.
+Фактические результаты и границы проверки (свидетельство удалено в M38):
+`git show 73c0158:docs/testing/evidence/customer-finance-card-M37-2026-10-18.json`.

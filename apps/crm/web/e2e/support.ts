@@ -2,9 +2,12 @@ import { expect, type APIResponse, type Locator, type Page } from '@playwright/t
 
 export type Role = 'Crm.Admin' | 'Crm.Management' | 'Crm.Sales' | 'Crm.Technician' | 'Crm.ServiceLead' | 'Crm.Finance' | 'Crm.ReadOnly';
 
-/** Development sign-in (Auth:Mode=Development): one user per role. */
-export async function signIn(page: Page, role: Role, returnUrl = '/') {
-  await page.goto(`/bff/dev-login?role=${role}&returnUrl=${encodeURIComponent(returnUrl)}`);
+/**
+ * Development sign-in (Auth:Mode=Development): one user per role. A test that changes the user's own settings names a `user` of
+ * its own (letters only, "Language" signs in as "Dev Language"): the specs that sign in with the same role run in parallel.
+ */
+export async function signIn(page: Page, role: Role, returnUrl = '/', user?: string) {
+  await page.goto(`/bff/dev-login?role=${role}${user ? `&user=${user}` : ''}&returnUrl=${encodeURIComponent(returnUrl)}`);
   await expect(page.getByRole('main')).toBeVisible();
 }
 
@@ -23,6 +26,20 @@ export async function showInMyTasks(page: Page, target: Locator) {
     await expect(rows).not.toHaveCount(shown);
   }
   return target;
+}
+
+/**
+ * Pages a list (Load more) until `row`, a row of this test's own record, shows. The e2e database is shared between runs, so a
+ * month of time entries holds more than one page after a day of runs, and a new entry is not reliably on the first page.
+ */
+export async function showRow(page: Page, row: Locator) {
+  const more = page.getByRole('button', { name: 'Load more', exact: true });
+  await expect(row.or(more).first()).toBeVisible();
+  for (let pages = 1; !(await row.isVisible()) && (await more.isVisible()) && pages < 30; pages++) {
+    await more.click(); await page.waitForLoadState('networkidle');
+  }
+  await expect(row).toBeVisible();
+  return row;
 }
 
 export function marker(prefix: string) {

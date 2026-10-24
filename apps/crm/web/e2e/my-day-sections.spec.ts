@@ -1,6 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { atlasAttention } from '../src/test/atlasAttention';
 import { api, createOrganization, marker, signIn } from './support';
 
 test('My day shortcuts reach assigned work and return by keyboard without rereading panels', { tag: '@critical' }, async ({ page }, testInfo) => {
@@ -13,34 +12,26 @@ test('My day shortcuts reach assigned work and return by keyboard without reread
   // the newest of them leads, so this task stays on the first page of ten. It is closed at the end, adding none to the pile.
   const task = await api.post<{ id: string; etag: string }>(page, '/api/v1/activities/', { type: 'Task', organizationId: customer.id, subject,
     body: null, priority: 'Normal', assigneeId: employee.id, dueAt: null, addToCalendar: false });
-  const attention = atlasAttention(customer.id); attention.customers![0]!.customerName = customer.name;
-  const reads = { tasks: 0, attention: 0 };
+  const reads = { tasks: 0 };
   page.on('request', request => {
     const url = new URL(request.url());
     if (request.method() === 'GET' && url.pathname === '/api/v1/activities/' && url.searchParams.get('mine') === 'true') reads.tasks++;
-  });
-  await page.route('**/api/v1/parasol/my-day/atlas-attention', route => {
-    reads.attention++; return route.fulfill({ json: attention });
   });
   try {
     for (const width of [1440, 768, 390, 320]) for (const colorScheme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme }); await page.goto('/');
       const navigation = page.getByRole('navigation', { name: 'My day sections', exact: true });
       const tasksLink = navigation.getByRole('link', { name: 'My tasks', exact: true });
-      const attentionLink = navigation.getByRole('link', { name: 'Technical attention · Atlas', exact: true });
       const tasks = page.locator('#my-day-tasks'); const taskHeading = tasks.getByRole('heading', { name: 'My tasks', exact: true });
       await expect(tasks.getByText(subject, { exact: true })).toBeVisible();
-      await expect(page.getByText('Customers read successfully: 1 of 2 selected', { exact: true })).toBeVisible();
-      await expect(tasksLink).toBeInViewport({ ratio: 1 }); await expect(attentionLink).toBeInViewport({ ratio: 1 });
-      // Two columns (from 1101 px) put the personal task list beside the overview, on the first screen (UX 2026 §4.1);
-      // in one column the fixture must still put assigned work below the long overview, so the jump is exercised.
+      await expect(tasksLink).toBeInViewport({ ratio: 1 });
+      // Two columns (from 1101 px) put the personal task list beside the overview, on the first screen (UX 2026 §4.1).
       if (width > 1100) expect((await taskHeading.boundingBox())!.y, 'Assigned work is on the first screen beside the overview').toBeLessThan(900);
-      else expect((await taskHeading.boundingBox())!.y, 'The fixture must actually put assigned work below the long overview').toBeGreaterThan(900);
       const before = { ...reads };
       await page.keyboard.press('Tab'); await expect(page.getByRole('link', { name: 'Skip to content', exact: true })).toBeFocused();
-      // The day's own action and its key figures come first; the section links follow them.
+      // The day's own action and its key figures come first; the section links follow them (urgent alerts, then tasks).
       await page.keyboard.press('Enter');
-      for (let stop = 0; stop < 6 && !(await tasksLink.evaluate(el => el === document.activeElement)); stop++) await page.keyboard.press('Tab');
+      for (let stop = 0; stop < 9 && !(await tasksLink.evaluate(el => el === document.activeElement)); stop++) await page.keyboard.press('Tab');
       await expect(tasksLink).toBeFocused();
       await page.keyboard.press('Enter'); await expect(tasks).toBeFocused(); await expect(taskHeading).toBeInViewport({ ratio: 1 });
       expect(await taskHeading.evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(53);
@@ -50,11 +41,9 @@ test('My day shortcuts reach assigned work and return by keyboard without reread
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`tasks-${width}-${colorScheme}.png`) });
       await page.goBack(); await expect(navigation).toBeFocused();
-      await page.keyboard.press('Tab'); await expect(tasksLink).toBeFocused();
-      await page.keyboard.press('Tab'); await expect(attentionLink).toBeFocused();
-      await page.keyboard.press('Enter'); await expect(page.locator('#my-day-attention')).toBeFocused();
-      await expect(page.getByRole('heading', { name: 'Technical attention · Atlas', exact: true })).toBeInViewport({ ratio: 1 });
-      await page.goBack(); await expect(navigation).toBeFocused(); await page.waitForLoadState('networkidle');
+      // Back returns to the section links, which start with urgent alerts; the tasks link is the next stop.
+      await page.keyboard.press('Tab'); await expect(navigation.getByRole('link', { name: 'Urgent alerts', exact: true })).toBeFocused();
+      await page.keyboard.press('Tab'); await expect(tasksLink).toBeFocused(); await page.waitForLoadState('networkidle');
       expect(reads, 'Section navigation must not create extra data reads').toEqual(before);
       if (width === 1440 && colorScheme === 'light') await signIn(page, 'Crm.Admin', '/?section=tasks');
       else await page.goto('/?section=tasks');
@@ -63,5 +52,50 @@ test('My day shortcuts reach assigned work and return by keyboard without reread
     }
   } finally {
     await page.request.post(`/api/v1/activities/${task.id}/complete`, { headers: { 'X-CSRF': '1', 'If-Match': task.etag } });
+  }
+});
+
+test('urgent alerts are reached from their key figure and their jump link, and come back by keyboard', async ({ page }) => {
+  await signIn(page, 'Crm.Admin', '/organizations');
+  let reads = 0;
+  page.on('request', request => { if (new URL(request.url()).pathname === '/api/v1/service/alerts/urgent') reads++; });
+  await page.goto('/');
+  const alerts = page.locator('#my-day-alerts');
+  const heading = alerts.getByRole('heading', { name: 'Urgent alerts', exact: true });
+  await expect(heading).toBeVisible();
+  // The figure and the panel share one read.
+  await expect(page.getByRole('link', { name: /^Critical alerts/ }).getByText(/warnings?|Not read yet|Could not be read/)).toBeVisible();
+  await page.waitForLoadState('networkidle'); expect(reads).toBe(1);
+  const navigation = page.getByRole('navigation', { name: 'My day sections', exact: true });
+  await navigation.getByRole('link', { name: 'Urgent alerts', exact: true }).click();
+  await expect(alerts).toBeFocused(); await expect(heading).toBeInViewport({ ratio: 1 });
+  await expect(page).toHaveURL(/\?section=alerts#my-day-alerts$/);
+  await page.goBack(); await expect(navigation).toBeFocused();
+  await page.getByRole('link', { name: /^Critical alerts/ }).click();
+  await expect(alerts).toBeFocused();
+});
+
+test('My day keeps the layout each person chooses and the arrow keys change it', async ({ page }) => {
+  // A role of its own: the choice is stored with the person, and the shared administrator's My day must not change under
+  // the other specs.
+  await signIn(page, 'Crm.ServiceLead', '/');
+  const layouts = page.getByRole('radiogroup', { name: 'Show first', exact: true });
+  const billing = layouts.getByRole('radio', { name: 'Billing', exact: true });
+  try {
+    await expect(layouts.getByRole('radio', { name: 'Alerts and tasks', exact: true })).toBeChecked();
+    await billing.check();
+    await expect(page.getByText('Billing, overdue invoices and what needs attention.', { exact: true })).toBeVisible();
+    await expect.poll(async () => (await api.get<{ myDayLayout: string | null }>(page, '/bff/user')).myDayLayout).toBe('finance');
+    await page.reload();
+    await expect(billing).toBeChecked();
+    await billing.focus(); await page.keyboard.press('ArrowLeft');
+    await expect(layouts.getByRole('radio', { name: 'Hours to approve', exact: true })).toBeChecked();
+    await expect(page.getByRole('heading', { name: 'Hours to review', exact: true })).toBeVisible();
+    // What the choice says comes first: the hours to approve lead the panels (the main column is read first).
+    await expect(page.getByRole('main').getByRole('heading', { level: 2 }).first()).toHaveText('Hours to review');
+    await expect.poll(async () => (await api.get<{ myDayLayout: string | null }>(page, '/bff/user')).myDayLayout).toBe('lead');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally {
+    await api.put(page, '/api/v1/identity/me/my-day-layout', { layout: 'work' });
   }
 });

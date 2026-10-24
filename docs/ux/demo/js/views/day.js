@@ -18,7 +18,7 @@
 
   function summary() {
     var parts = [];
-    var u = P.can('atlas') ? M.urgentUnassigned().length : 0;
+    var u = P.can('service') ? M.urgentUnassigned().length : 0;
     if (u) parts.push(t('day.sumUrgent', { n: u }));
     var today = M.openTasks().filter(function (x) { return x.due && (x.due < P.NOW || P.sameDay(x.due, P.NOW)); });
     var late = M.overdue();
@@ -36,9 +36,9 @@
 
   function kpiUrgent() {
     var list = M.urgentUnassigned();
-    var crit = list.filter(function (o) { return o.severity === 'CRITICAL'; }).length;
-    return UI.kpi({ href: '#/observations', icon: 'pulse', tone: list.length ? 'is-crit' : 'is-good', label: t('day.kUrgent'), value: P.fmt.num(list.length),
-      foot: h`<span>${crit ? h`<strong>${t('day.kUrgentCrit', { n: crit })}</strong> · ` : ''}${t('day.kAtlasRead', { time: P.fmt.time(D.atlasReadAt) })}</span>` });
+    var crit = list.filter(function (a) { return a.severity === 'CRITICAL'; }).length;
+    return UI.kpi({ href: '#/alerts', icon: 'pulse', tone: list.length ? 'is-crit' : 'is-good', label: t('day.kUrgent'), value: P.fmt.num(list.length),
+      foot: h`<span>${crit ? h`<strong>${t('day.kUrgentCrit', { n: crit })}</strong> · ` : ''}${t('sync.at', { time: P.fmt.time(D.syncedAt) })}</span>` });
   }
   function kpiTasks() {
     var today = M.todayTasks();
@@ -99,24 +99,23 @@
   /* The five most severe and most recent; the queue holds the rest, so the card never outgrows the plan */
   var URGENT_ROWS = 5;
   function urgentCard(cls) {
-    var all = M.sortObs(M.urgent());
+    var all = M.sortAlerts(M.urgent());
     var list = all.slice(0, URGENT_ROWS);
     var byCustomer = {};
-    list.forEach(function (o) { (byCustomer[o.customer] = byCustomer[o.customer] || []).push(o); });
+    list.forEach(function (a) { (byCustomer[a.customer] = byCustomer[a.customer] || []).push(a); });
     var keys = Object.keys(byCustomer).sort(function (a, b) {
       return D.SEV_ORDER[byCustomer[a][0].severity] - D.SEV_ORDER[byCustomer[b][0].severity] || byCustomer[b].length - byCustomer[a].length;
     });
-    var cov = M.coverage();
     var body = keys.length ? keys.map(function (k) {
       var items = byCustomer[k];
-      return h`<div class="obs-group"><p class="group-label small"><a class="link-plain" href="#/customers/${k}/technical">${D.customer(k).name}</a></p>
-        <div class="rows">${items.map(function (o) { return R.obsRow(o, { hideCustomer: true }); })}</div></div>`;
+      return h`<div class="alert-group"><p class="group-label small"><a class="link-plain" href="#/customers/${k}/operations">${D.customer(k).name}</a></p>
+        <div class="rows">${items.map(function (a) { return R.alertRow(a, { hideCustomer: true }); })}</div></div>`;
     }) : UI.empty('shieldCheck', t('day.urgentEmpty'), t('day.urgentEmptyText'));
-    var foot = h`<span class="row-wrap">${all.length > list.length ? h`<strong>${t('day.shownOf', { shown: list.length, n: all.length })}</strong> · ` : ''}${t('day.coverage', { read: cov.read, n: cov.total })}
-      ${cov.timeout.length ? h`<span class="pill pill-warn">${P.icon('clock', 'ic-14')}${t('day.timeout', { customer: cov.timeout[0].name })}</span>` : ''}</span>`;
+    var foot = h`<span class="row-wrap">${all.length > list.length ? h`<strong>${t('day.shownOf', { shown: list.length, n: all.length })}</strong> · ` : ''}${t('sync.at', { time: P.fmt.time(D.syncedAt) })}
+      ${D.unmatchedAlerts ? h`<span class="pill pill-warn">${P.icon('link', 'ic-14')}${t('day.unmatched', { n: D.unmatchedAlerts })}</span>` : ''}</span>`;
     return UI.card({ cls: cls || 'w-5', title: t('day.urgent'), icon: 'pulse', titleId: 'c-urgent', count: all.length, body: body, foot: foot,
-      tools: h`<a class="btn btn-link" href="#/observations">${t('day.allObservations')}</a>
-        <button class="icon-btn is-sm" type="button" data-action="refresh-atlas" aria-label="${t('day.refreshAtlas')}" title="${t('day.refreshAtlas')}">${P.icon('refresh', 'ic-16')}</button>` });
+      tools: h`<a class="btn btn-link" href="#/alerts">${t('day.allAlerts')}</a>
+        <button class="icon-btn is-sm" type="button" data-action="reread-saved" aria-label="${t('day.reread')}" title="${t('day.reread')}">${P.icon('refresh', 'ic-16')}</button>` });
   }
 
   function weekCard(cls) {
@@ -150,9 +149,9 @@
     return UI.card({ cls: cls || 'w-4', title: t('day.sources'), icon: 'database', titleId: 'c-sources',
       tools: h`<a class="btn btn-link" href="#/connections">${t('nav.connections')}</a>`,
       body: h`<ul class="rows">${D.sources.map(function (s) {
-        return h`<li class="item source-item"><span class="tl-icon">${P.icon(s.source === 'huntress' ? 'shield' : s.source === 'microsoft365' ? 'cloud' : 'server', 'ic-16')}</span>
+        return h`<li class="item source-item"><span class="tl-icon">${P.icon(UI.sourceIcon(s.source), 'ic-16')}</span>
           <div class="item-main"><span class="item-title">${t(s.label)}</span><span>${UI.fresh(s.status, s.asOf)}</span>
-            ${s.status === 'UNAVAILABLE' ? h`<span class="small muted">${t('source.ateraAlertsWhy')}</span>` : ''}</div></li>`;
+            ${s.why ? h`<span class="small muted">${t(s.why)}</span>` : ''}</div></li>`;
       })}</ul>`,
       foot: h`<span>${t('day.sourcesFoot')}</span>` });
   }
@@ -266,7 +265,8 @@
     }
   };
 
-  P.on('refresh-atlas', function () {
+  /* Re-reads what the CRM has saved; syncing from Atera and Huntress is the background worker's job */
+  P.on('reread-saved', function () {
     P.toast(t('day.refreshed', { time: P.fmt.time(P.NOW) }));
   });
   P.on('ack-reminder', function (el) {

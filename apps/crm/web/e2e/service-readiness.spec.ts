@@ -33,7 +33,7 @@ test('saved Service data distinguishes unknown summary and a failed list, retrie
     try { await route.fulfill({ response }); } finally { settled(); }
   });
   try {
-    await page.goto(`/organizations/${customer.id}?tab=service`); await pending;
+    await page.goto(`/organizations/${customer.id}?tab=drift`); await pending;
     const summary = page.getByRole('region', { name: 'Saved service summary', exact: true });
     const tickets = page.getByRole('region', { name: 'Tickets', exact: true });
     await expect(summary.getByText(loading, { exact: true })).toBeVisible();
@@ -96,7 +96,7 @@ test('leaving Service cancels a held real request list and cannot restore the pr
   });
   try {
     await test.step('hold the customer’s real durable request list', async () => {
-      await page.goto(`/organizations/${customer.id}?tab=service`); await pending;
+      await page.goto(`/organizations/${customer.id}?tab=drift`); await pending;
       await expect(page.getByRole('region', { name: 'Ticket requests', exact: true }).getByText(loading, { exact: true })).toBeVisible();
     });
     await test.step('leave through the application while the read is held', async () => {

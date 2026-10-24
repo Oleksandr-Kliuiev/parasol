@@ -57,7 +57,8 @@ export function TaskPeek({ activity, open, onClose, actions }: {
             <h3 className={styles.sectionTitle}>{t('myDay.taskPeek.description')}</h3>
             {activity.body
               ? <p className={styles.description}>{activity.body}</p>
-              : <p className={`${styles.description} ${styles.none}`}>{t(activity.hasTechnicalSource ? 'myDay.taskPeek.noDescriptionSource' : 'myDay.taskPeek.noDescription')}</p>}
+              // A task made from an alert has no description of its own: its Source shows the alert as it is now.
+              : <p className={`${styles.description} ${styles.none}`}>{t(activity.hasTechnicalSource ? 'activities.source.noDescription' : 'myDay.taskPeek.noDescription')}</p>}
           </section>
           {actions && <div className={styles.actions}>{actions}</div>}
           <AppLink className={styles.open} to={activityUrl(activity.organizationId, activity.id)}>

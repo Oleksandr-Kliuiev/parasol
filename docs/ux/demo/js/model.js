@@ -1,5 +1,5 @@
-/* Parasoll UX demo: derived reads and the few writes the demo simulates (assign, complete, log time, approve).
-   Writes mirror the real rules: one task per observation, explicit separate lifecycles, no silent overwrite. */
+/* Parasoll UX demo: derived reads and the few writes the demo simulates (assign, close, complete, log time, approve).
+   Writes mirror the real rules: one task per alert, separate lifecycles for the task and the alert, no silent overwrite. */
 (function () {
   'use strict';
 
@@ -7,29 +7,23 @@
   var D = P.data;
   var M = (P.model = {});
 
-  var revealed = {}; /* observations whose fresh preview already showed a colleague's task */
+  var revealed = {}; /* alerts whose fresh preview already showed a colleague's task */
 
-  /* The task linked to an observation, as the current list read knows it */
-  M.taskOf = function (o) {
-    if (o.task) return D.task(o.task);
-    if (o.race && (revealed[o.id] || D.task(o.race).assignee === P.me().id || P.state.role !== 'technician')) return D.task(o.race);
+  /* The task linked to an alert, as the current list read knows it */
+  M.taskOf = function (a) {
+    if (a.task) return D.task(a.task);
+    if (a.race && (revealed[a.id] || D.task(a.race).assignee === P.me().id || P.state.role !== 'technician')) return D.task(a.race);
     return null;
   };
-  M.reveal = function (o) { revealed[o.id] = true; };
+  M.reveal = function (a) { revealed[a.id] = true; };
 
-  M.activeObs = function () { return D.visibleObservations().filter(D.isActive); };
-  M.urgent = function () { return M.activeObs().filter(D.isUrgent); };
-  M.urgentUnassigned = function () { return M.urgent().filter(function (o) { return !M.taskOf(o); }); };
-  M.sortObs = function (list) {
+  M.openAlerts = function () { return D.alerts.filter(D.isOpen); };
+  M.urgent = function () { return M.openAlerts().filter(D.isUrgent); };
+  M.urgentUnassigned = function () { return M.urgent().filter(function (a) { return !M.taskOf(a); }); };
+  M.sortAlerts = function (list) {
     return list.slice().sort(function (a, b) {
       return D.SEV_ORDER[a.severity] - D.SEV_ORDER[b.severity] || b.occurredAt - a.occurredAt;
     });
-  };
-
-  M.coverage = function () {
-    var mine = D.customers.filter(function (c) { return c.members.indexOf(P.me().id) !== -1; });
-    var timeout = mine.filter(function (c) { return c.readStatus === 'TIMEOUT'; });
-    return { total: mine.length, read: mine.length - timeout.length, timeout: timeout, readAt: D.atlasReadAt };
   };
 
   M.myTasks = function (staff) {
@@ -104,16 +98,21 @@
 
   /* ---------- Simulated writes ---------- */
 
+  /* The subject starts as the alert title; the person may have edited it before assigning */
   var taskSeq = 100;
-  M.assign = function (o, assignee, due) {
+  M.assign = function (a, assignee, due, subject) {
     taskSeq += 1;
-    var task = { id: 'n' + taskSeq, customer: o.customer, type: 'Task', subject: 'generic', source: o.id, ticket: null,
-      assignee: assignee, due: due, priority: D.isUrgent(o) ? 'High' : 'Normal', createdBy: P.me().id, createdAt: new Date(P.NOW), version: 1, status: 'Open' };
+    var task = { id: 'n' + taskSeq, customer: a.customer, type: 'Task', subject: subject || a.title, source: a.id, ticket: null,
+      assignee: assignee, due: due, priority: D.isUrgent(a) ? 'High' : 'Normal', createdBy: P.me().id, createdAt: new Date(P.NOW), version: 1, status: 'Open' };
     D.tasks.push(task);
-    o.task = task.id;
-    D.feed.unshift({ who: P.me().id, kind: 'taskFromObs', customer: o.customer, at: new Date(P.NOW) });
+    a.task = task.id;
+    D.feed.unshift({ who: P.me().id, kind: 'taskFromAlert', customer: a.customer, at: new Date(P.NOW) });
     return task;
   };
+
+  /* Closing an alert in the CRM leaves its task alone, and completing the task leaves the alert alone */
+  M.closeAlert = function (a) { a.status = 'CLOSED'; a.closedAt = new Date(P.NOW); a.closedBy = P.me().id; a.updatedAt = new Date(P.NOW); };
+  M.reopenAlert = function (a) { a.status = 'OPEN'; a.closedAt = null; a.closedBy = null; };
 
   M.complete = function (task) { task.status = 'Done'; task.completedAt = new Date(P.NOW); task.version += 1; };
   M.reopen = function (task) { task.status = 'Open'; task.completedAt = null; task.version += 1; };

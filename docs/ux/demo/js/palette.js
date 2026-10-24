@@ -1,5 +1,5 @@
-/* Parasoll UX demo: command palette (Ctrl/Cmd+K). One box finds customers, machines and tasks and runs
-   frequent actions. Machines always show their customer, because hostnames repeat across customers. */
+/* Parasoll UX demo: command palette (Ctrl/Cmd+K). One box finds customers, devices and tasks and runs
+   frequent actions. Devices always show their customer, because hostnames repeat across customers. */
 (function () {
   'use strict';
 
@@ -20,7 +20,7 @@
     var actions = [
       P.can('activities') && { kind: 'action', icon: 'tasks', label: t('create.task'), hint: 'N', run: function () { P.actions['new-task'](); } },
       P.can('time.own') && { kind: 'action', icon: 'timer', label: t('create.time'), hint: 'T', run: function () { P.actions['log-time'](); } },
-      P.can('atlas') && { kind: 'action', icon: 'pulse', label: t('palette.urgentQueue'), hint: 'G O', run: function () { P.state.ui.obsFilter = { sev: 'URGENT', work: 'none' }; P.go('/observations'); } },
+      P.can('service') && { kind: 'action', icon: 'pulse', label: t('palette.urgentQueue'), hint: 'G A', run: function () { P.state.ui.alertFilter = { sev: 'URGENT', work: 'none' }; P.go('/alerts'); } },
       { kind: 'action', icon: 'sun', label: t('nav.day'), hint: 'G D', run: function () { P.go('/day'); } }
     ].filter(Boolean).filter(function (a) { return !q || norm(a.label).indexOf(q) !== -1; });
     if (actions.length) groups.push({ label: t('palette.actions'), items: actions });
@@ -32,11 +32,11 @@
         });
       if (customers.length) groups.push({ label: t('nav.customers'), items: customers });
 
-      if (P.can('atlas')) {
-        var devices = D.devices.filter(function (d) { return D.canSee(d.customer) && norm(d.host).indexOf(q) !== -1; }).slice(0, 6).map(function (d) {
+      if (P.can('service')) {
+        var devices = D.devices.filter(function (d) { return norm(d.host).indexOf(q) !== -1; }).slice(0, 6).map(function (d) {
           var c = D.customer(d.customer);
           return { kind: 'device', icon: d.kind === 'server' ? 'server' : d.kind === 'laptop' ? 'laptop' : 'monitor', label: d.host, sub: c.name,
-            run: function () { P.go('/customers/' + c.id + '/technical'); setTimeout(function () { P.actions['open-device']({ dataset: { id: d.id } }); }, 0); } };
+            run: function () { P.go('/customers/' + c.id + '/operations'); setTimeout(function () { P.actions['open-device']({ dataset: { id: d.id } }); }, 0); } };
         });
         if (devices.length) groups.push({ label: t('palette.devices'), items: devices });
       }

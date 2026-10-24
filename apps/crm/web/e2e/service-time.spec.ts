@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { api, createOrganization, marker, signIn, toast } from './support';
+import { api, createOrganization, marker, showRow, signIn, toast } from './support';
 
 test('a technician books hours and the service lead approves them', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(120_000);
@@ -34,8 +34,7 @@ test('a technician books hours and the service lead approves them', { tag: '@cri
 
   await signIn(page, 'Crm.ServiceLead');
   await page.goto('/time/entries');
-  const row = page.getByRole('row').filter({ hasText: `${m} Timer AS` });
-  await expect(row).toBeVisible();
+  const row = await showRow(page, page.getByRole('row').filter({ hasText: `${m} Timer AS` }));
   await row.getByRole('checkbox').check();
   await page.getByRole('button', { name: /Approve \(1\)/ }).click();
   await expect(toast(page, '1 entry approved')).toBeVisible();
@@ -44,7 +43,7 @@ test('a technician books hours and the service lead approves them', { tag: '@cri
   // Finance sees the amount: 2.5 h at the catalog rate.
   await signIn(page, 'Crm.Finance');
   await page.goto('/time/entries');
-  await expect(page.getByRole('row').filter({ hasText: `${m} Timer AS` }).getByText('NOK 2,875.00')).toBeVisible();
+  await expect((await showRow(page, page.getByRole('row').filter({ hasText: `${m} Timer AS` }))).getByText('NOK 2,875.00')).toBeVisible();
 });
 
 test('the service tab offers a ticket and reports that writing to Atera is off', async ({ page }) => {
@@ -55,7 +54,7 @@ test('the service tab offers a ticket and reports that writing to Atera is off',
     firstName: 'Kari', lastName: m, email: `kari.${m.toLowerCase()}@example.no`, roles: ['Technical'], isPrimary: true,
   });
 
-  await page.goto(`/organizations/${organization.id}?tab=service`);
+  await page.goto(`/organizations/${organization.id}?tab=drift`);
   await expect(page.getByText(/^No Atera data is saved for this customer/)).toBeVisible();
   await expect(page.getByText('No open tickets.')).toBeVisible();
 

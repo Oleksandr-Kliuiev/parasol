@@ -201,6 +201,8 @@ const useField = makeStyles({
   validation: { marginTop: 0 },
   // The open/close chevron of a combobox is its own click target: at least 24 × 24 (WCAG 2.5.8).
   expandIcon: { minWidth: '24px', minHeight: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: h.muted },
+  // So is the clear button of a search box, which Fluent draws as a bare 20 px icon.
+  dismiss: { minWidth: '24px', minHeight: '24px', alignItems: 'center', justifyContent: 'center' },
 });
 
 function useStyleControl(state: unknown, kind: 'input' | 'textarea' | 'picker' = 'input') {
@@ -304,7 +306,12 @@ export const controlStyleHooks: FluentProviderCustomStyleHooks = {
   useMenuButtonStyles_unstable: (state) => useStyleButton(state, false),
   useInputStyles_unstable: (state) => useStyleControl(state),
   // SearchBox runs Input's style hook directly, not the custom one, so it needs its own entry.
-  useSearchBoxStyles_unstable: (state) => useStyleControl(state),
+  useSearchBoxStyles_unstable: (state) => {
+    useStyleControl(state);
+    const s = state as { dismiss?: Slot };
+    const styles = useField();
+    if (s.dismiss) s.dismiss.className = mergeClasses(s.dismiss.className, styles.dismiss);
+  },
   useComboboxStyles_unstable: (state) => {
     useStyleControl(state, 'picker');
     const s = state as { expandIcon?: Slot };

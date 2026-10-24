@@ -1,6 +1,11 @@
 export const deviceTypes = ['Workstation', 'Server', 'Network', 'Other'] as const;
 export type DeviceType = (typeof deviceTypes)[number];
 export type AlertSeverity = 'Critical' | 'Warning';
+export const alertSeverities = ['Critical', 'Warning'] as const satisfies readonly AlertSeverity[];
+/** Open in its source; seen by someone in the CRM (still open); no longer reported open. */
+export type AlertState = 'Open' | 'Acknowledged' | 'Resolved';
+/** What watches the customer: device monitoring (Atera), security (Huntress) or backup (CloudAlly). */
+export type AlertKind = 'Monitoring' | 'Security' | 'Backup';
 export type TicketRequestStatus = 'Pending' | 'Created' | 'Failed';
 
 export interface Ticket {
@@ -31,14 +36,48 @@ export interface Device {
   lastSeenAt: string | null;
   url: string | null;
   removedAt: string | null;
+  /** Open alerts matched to this device (M38). */
+  openAlerts: number;
 }
 
+/** A stored alert (M38). `createdAt` is the source's time; `url` is set only when a link to the source is configured. */
 export interface Alert {
   id: string;
+  organizationId: string;
+  organizationName: string | null;
+  system: string;
+  kind: AlertKind;
+  externalId: string;
   severity: AlertSeverity;
+  state: AlertState;
   title: string;
   deviceName: string | null;
+  deviceId: string | null;
   createdAt: string;
+  lastSeenAt: string | null;
+  resolvedAt: string | null;
+  url: string | null;
+}
+
+/**
+ * The latest finished read of one alert source (M38). One that did not finish (failed, stopped part-way, held by a pause) left
+ * the alerts of an earlier read in place; a late one ended longer ago than its job's freshness limit, so the next is overdue.
+ */
+export interface AlertSourceRead {
+  system: string;
+  startedAt: string | null;
+  complete: boolean;
+  late: boolean;
+}
+
+/** A page of alerts; the counts cover the whole filter, not the page (DEV-12); the reads say how fresh the stored alerts are. */
+export interface AlertPage {
+  items: Alert[];
+  nextCursor: string | null;
+  totalCount: number;
+  critical: number;
+  warning: number;
+  reads: AlertSourceRead[];
 }
 
 export interface ServiceSummary {
