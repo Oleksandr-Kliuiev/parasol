@@ -11,7 +11,7 @@ const action = (n: number): VendorAction => ({
   id: `a${n}`, system: 'atera', kind: 'ticket.reply', level: 'Standard', targetType: 'ticket', targetId: String(4700 + n), targetName: `#${4700 + n} Ticket ${n}`,
   organizationId: 'o1', organizationName: 'Havbris AS', parameters: {}, reason: null, status: 'Succeeded', outcomeCode: 'VND_SENT', outcome: 'Sent',
   reference: null, attempts: 1, requestedBy: 'u1', requestedByName: 'Kari Nordmann', requestedAt: '2026-10-21T10:00:00Z', notBefore: '2026-10-21T10:00:00Z',
-  startedAt: null, completedAt: null, closedBy: null, closedByName: null, closedAt: null, closeReason: null, etag: '"1"',
+  startedAt: null, completedAt: null, closedBy: null, closedByName: null, closedAt: null, closeReason: null, ticketId: null, vendorUrl: null, etag: '"1"',
 });
 
 // M39: the filter counts read the log one row at a time; that page must never stand in for the list under All.

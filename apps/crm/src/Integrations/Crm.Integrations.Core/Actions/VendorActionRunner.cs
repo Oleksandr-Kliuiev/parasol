@@ -242,6 +242,12 @@ public sealed class VendorActionRunner(
             {
                 action.Status = outcome.Status;
                 action.CompletedAt = now;
+                if (outcome.Status == VendorActionStatus.Uncertain)
+                {
+                    // The person who asked hears of it: the outbox carries the notice with this outcome, or neither is saved.
+                    db.OutboxMessages.Add(VendorActionNotices.Message(action.Id, now));
+                }
+
                 final = outcome.Status switch
                 {
                     VendorActionStatus.Succeeded or VendorActionStatus.Simulated or VendorActionStatus.Skipped => OutboundStatus.Succeeded,

@@ -1,12 +1,16 @@
 import { useId } from 'react';
-import { Badge, Button, Text, makeStyles, mergeClasses, tokens, useRestoreFocusTarget, type BadgeProps } from '@fluentui/react-components';
-import { Add20Regular, Delete20Regular, Edit20Regular } from '@fluentui/react-icons';
+import {
+  Badge, Button, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Text, makeStyles, mergeClasses, tokens, useRestoreFocusTarget, type BadgeProps,
+} from '@fluentui/react-components';
+import { Add20Regular, Delete20Regular, Edit20Regular, MoreHorizontal20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
 import { CompactControls } from '../../app/hearthStyles';
 import { localeOf } from '../../i18n';
 import { AppLink } from '../../shared/components/AppLink';
 import { formatDate, formatNumber } from '../../shared/utils/format';
+import { ActionStatusBadge } from '../actions/ActionStatusBadge';
+import type { ActionTargetFacts } from '../actions/types';
 import type { TimeEntry, TimeEntryStatus } from './types';
 
 const useStyles = makeStyles({
@@ -99,18 +103,30 @@ const statusColor: Record<TimeEntryStatus, BadgeProps['color']> = { New: 'inform
 const weekdayOf = (iso: string, language: string, weekday: 'short' | 'long') =>
   new Intl.DateTimeFormat(localeOf(language), { weekday, timeZone: 'UTC' }).format(new Date(`${iso}T12:00:00Z`));
 
+/**
+ * What the row knows of an entry's way to Atera (M39): the facts of its recording, read for the whole week at once, and whether Atera
+ * takes recorded hours now. Only the person's own Parasoll entries on a ticket have any.
+ */
+export interface AteraRecording {
+  facts: ReadonlyMap<string, ActionTargetFacts>;
+  available: boolean;
+  onRecord: (entry: TimeEntry) => void;
+  onCheck: (actionId: string) => void;
+}
+
 interface TimesheetDayProps {
   day: string;
   today: boolean;
   entries: TimeEntry[];
   loading: boolean;
+  atera?: AteraRecording;
   onRegister: (date: string) => void;
   onEdit: (entry: TimeEntry) => void;
   onRemove: (entry: TimeEntry) => void;
 }
 
 /** A day of the timesheet; a day without hours is one quiet line with its register action. */
-export function TimesheetDay({ day, today, entries, loading, onRegister, onEdit, onRemove }: TimesheetDayProps) {
+export function TimesheetDay({ day, today, entries, loading, atera, onRegister, onEdit, onRemove }: TimesheetDayProps) {
   const styles = useStyles();
   const { t, i18n } = useTranslation();
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -139,8 +155,14 @@ export function TimesheetDay({ day, today, entries, loading, onRegister, onEdit,
       </div>
       {entries.length > 0 && (
         <ul className={styles.list}>
-          {entries.map((entry) => (
-            <li key={entry.id} className={styles.entry}>
+          {entries.map((entry) => {
+            const recording = entry.source === 'Crm' && entry.externalTicketId !== null ? atera?.facts.get(entry.id) : undefined;
+            const inAtera = (recording?.done ?? 0) > 0;
+            const checkId = recording?.uncertain ? recording.checkId : null;
+            const canRecord = Boolean(atera?.available) && entry.source === 'Crm' && entry.externalTicketId !== null && !inAtera && !checkId &&
+              !recording?.waiting;
+            const named = { hours: formatNumber(entry.hours), organization: entry.organizationName, date: formatDate(day) };
+            return <li key={entry.id} className={styles.entry}>
               <span className={styles.hours}>{formatNumber(entry.hours)} {t('contracts.hoursShort')}</span>
               <span className={styles.work}>
                 <AppLink to={`/organizations/${entry.organizationId}`} className={styles.org}>{entry.organizationName}</AppLink>
@@ -150,18 +172,32 @@ export function TimesheetDay({ day, today, entries, loading, onRegister, onEdit,
                 {entry.workType && <Badge appearance="outline">{entry.workType}</Badge>}
                 {!entry.billable && entry.status !== 'NonBillable' && <Badge appearance="tint" color="subtle">{t('time.nonBillable')}</Badge>}
                 {entry.source === 'Atera' && <Badge appearance="tint" color="informative">Atera</Badge>}
+                {inAtera && <Badge appearance="tint" color="informative">{t('time.recordedInAtera')}</Badge>}
+                {checkId && <ActionStatusBadge status="Uncertain" />}
                 <Badge appearance="tint" color={statusColor[entry.status]}>{t(`time.statuses.${entry.status}`)}</Badge>
-                {entry.source === 'Crm' && entry.status === 'New' && !entry.isLocked && (
+                {((entry.source === 'Crm' && entry.status === 'New' && !entry.isLocked) || canRecord || checkId) && (
                   <span className={styles.actions}>
-                    <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Edit20Regular />}
-                      aria-label={t('time.editNamed', { hours: formatNumber(entry.hours), organization: entry.organizationName, date: formatDate(day) })} onClick={() => onEdit(entry)} />
-                    <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Delete20Regular />}
-                      aria-label={t('time.deleteNamed', { hours: formatNumber(entry.hours), organization: entry.organizationName, date: formatDate(day) })} onClick={() => onRemove(entry)} />
+                    {entry.source === 'Crm' && entry.status === 'New' && !entry.isLocked && <>
+                      <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Edit20Regular />}
+                        aria-label={t('time.editNamed', named)} onClick={() => onEdit(entry)} />
+                      <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Delete20Regular />}
+                        aria-label={t('time.deleteNamed', named)} onClick={() => onRemove(entry)} />
+                    </>}
+                    {/* The way to Atera for hours saved without it, or the check of a recording without a clear answer. */}
+                    {(canRecord || checkId) && <Menu positioning="below-end">
+                      <MenuTrigger disableButtonEnhancement>
+                        <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<MoreHorizontal20Regular />} aria-label={t('time.moreNamed', named)} />
+                      </MenuTrigger>
+                      <MenuPopover><MenuList>
+                        {canRecord && <MenuItem onClick={() => atera?.onRecord(entry)}>{t('time.recordInAteraItem')}</MenuItem>}
+                        {checkId && <MenuItem onClick={() => atera?.onCheck(checkId)}>{t('time.checkRecording')}</MenuItem>}
+                      </MenuList></MenuPopover>
+                    </Menu>}
                   </span>
                 )}
               </span>
-            </li>
-          ))}
+            </li>;
+          })}
         </ul>
       )}
     </section>

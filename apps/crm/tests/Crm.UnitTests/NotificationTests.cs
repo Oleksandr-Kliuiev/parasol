@@ -83,6 +83,20 @@ public class NotificationTests
         line.ShouldContain("K-2026-0007");
     }
 
+    [Theory]
+    [InlineData("nb", "Atera ga ikke noe klart svar på en handling på sak #4711 (Havbris AS). Sjekk der og registrer hva du fant.")]
+    [InlineData("en", "Atera gave no clear answer to an action on ticket #4711 (Havbris AS). Check there and record what you found.")]
+    public void An_action_without_a_clear_answer_names_its_vendor_and_ticket_in_the_digest(string language, string expected) =>
+        NotificationTexts.Line(
+            NotificationKind.VendorActionUncertain,
+            new Dictionary<string, string> { ["system"] = "atera", ["kind"] = "ticket.reply", ["ticket"] = "4711", ["organization"] = "Havbris AS" },
+            language).ShouldBe(expected);
+
+    [Fact]
+    public void An_action_without_a_ticket_is_said_without_one() =>
+        NotificationTexts.Line(NotificationKind.VendorActionUncertain, new Dictionary<string, string> { ["system"] = "atera", ["kind"] = "agent.isolate" }, "en")
+            .ShouldBe("Atera gave no clear answer to an action. Check there and record what you found.");
+
     [Fact]
     public void A_missing_parameter_becomes_a_dash_instead_of_an_empty_sentence()
     {

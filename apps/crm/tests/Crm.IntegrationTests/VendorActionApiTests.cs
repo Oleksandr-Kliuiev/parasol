@@ -386,6 +386,10 @@ public class VendorActionApiTests(CrmWebFactory factory)
         held.Status.ShouldBe(VendorActionStatus.Uncertain);
         held.OutcomeCode.ShouldBe("VND_HELD_AFTER_RESTORE");
         (await host.OperationAsync(id)).Status.ShouldBe(OutboundStatus.Failed);
+        // The person who asked hears of it once the outbox runs again after the maintenance.
+        await using var check = host.Services.CreateAsyncScope();
+        (await check.ServiceProvider.GetRequiredService<IntegrationDbContext>().OutboxMessages.AsNoTracking()
+            .CountAsync(m => m.Type.StartsWith(typeof(VendorActionNeedsCheck).FullName!) && m.Payload.Contains(id.ToString()), Ct)).ShouldBe(1);
     }
 
     [Fact]
