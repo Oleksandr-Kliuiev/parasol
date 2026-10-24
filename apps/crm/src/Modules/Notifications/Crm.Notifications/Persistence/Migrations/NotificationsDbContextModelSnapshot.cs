@@ -234,6 +234,14 @@ namespace Crm.Notifications.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("DedupeKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("LastError")
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
@@ -247,6 +255,10 @@ namespace Crm.Notifications.Persistence.Migrations
                     b.Property<DateTimeOffset>("NextAttemptAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("ParametersJson")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
                     b.Property<DateTimeOffset?>("SentAt")
                         .HasColumnType("datetimeoffset");
 
@@ -256,6 +268,10 @@ namespace Crm.Notifications.Persistence.Migrations
                         .HasColumnType("nvarchar(16)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DedupeKey")
+                        .IsUnique()
+                        .HasFilter("[DedupeKey] IS NOT NULL");
 
                     b.HasIndex("Status", "NextAttemptAt");
 

@@ -62,10 +62,22 @@ public sealed class CloudAllyOptions
 
     /// <summary>
     /// The kinds of action people may ask of CloudAlly (M42): <c>backup.run</c>, <c>backup.activate</c>, <c>backup.pause</c>,
-    /// <c>backup.resume</c>, <c>account.deactivate</c>, <c>restore.export</c>, <c>restore.other</c>, <c>restore.in-place</c>. Empty by
-    /// default: a kind is off until it is listed.
+    /// <c>backup.resume</c>, <c>account.deactivate</c>, <c>restore.export</c>, <c>restore.other</c>, <c>restore.in-place</c>; M43 adds
+    /// <c>account.create</c>. Empty by default: a kind is off until it is listed.
     /// </summary>
     public List<string> EnabledActions { get; set; } = [];
+
+    /// <summary>
+    /// The data center the wizard proposes for a new account (M43); one of the EU's (<c>EU</c>, <c>EU_FRANKFURT</c>, <c>EU_PARIS</c>,
+    /// <c>EU_STOCKHOLM</c>, <c>EU_ZURICH</c>). Unset, it follows <c>Backup:Region</c>, the data center the backup tab expects.
+    /// </summary>
+    public string? AccountRegion { get; set; }
+
+    /// <summary>
+    /// CloudAlly's partner portal, which the "Connect services" wizard (M43) leads to for the customer's Microsoft 365 consent and the backup
+    /// tasks. Empty by default: the portal's address is not in CloudAlly's API reference, and a guessed one would lead somewhere else.
+    /// </summary>
+    public string? ConsoleUrl { get; set; }
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret)
         && !string.IsNullOrWhiteSpace(Email) && !string.IsNullOrWhiteSpace(Password);

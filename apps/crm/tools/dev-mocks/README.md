@@ -33,7 +33,7 @@ A test can give the Atera stand-in data of its own and take an alert away again,
 | `POST /_mock/atera/technicians` | `FullName` (required), `Email`, `TechnicianContactID` | `201` with the technician; tickets can be given to it. Known from the start: 4001 Tor Tekniker, 4002 Nina Nett and 4003 Dev Admin (`admin@dev.local`, the development sign-in's employee, so they can write as it once the ticket sync has mapped it). |
 | `POST /_mock/atera/faults` | `method`, `path` (exact, or a prefix ending in `*`), `status`, `count` (1) | `204`: the next `count` Atera requests with that method and path answer `status` and change nothing — a lost answer for the action tests. |
 
-The ticket routes themselves (`/api/v3/tickets/{id}` GET and POST, `/tickets/{id}/comments` GET and POST, `/tickets/lastmodified`, `POST /tickets/{id}/workhours`) are in `atera-tickets.mjs`; a comment or a change moves the ticket's `TicketLastModified`. The agents with their inventory and the Windows updates (`GET /agents/{DeviceGuid}/installed-patches` and `/available-patches`, camel case as Atera's OpenAPI file has it; `404` for an unknown DeviceGuid) are in `atera-devices.mjs`. The alert list honours `alertStatus` (`Open`: not archived, `Resolved`: archived), and an alert can be read (`GET /alerts/{id}`), resolved (`PUT /alerts/{id}`, no body: it is archived) and deleted (`DELETE /alerts/{id}`), as Atera's API v3 describes them (M40).
+The ticket routes themselves (`/api/v3/tickets/{id}` GET and POST, `/tickets/{id}/comments` GET and POST, `/tickets/lastmodified`, `POST /tickets/{id}/workhours`) are in `atera-tickets.mjs`; a comment or a change moves the ticket's `TicketLastModified`. The agents with their inventory and the Windows updates (`GET /agents/{DeviceGuid}/installed-patches` and `/available-patches`, camel case as Atera's OpenAPI file has it; `404` for an unknown DeviceGuid) are in `atera-devices.mjs`. The alert list honours `alertStatus` (`Open`: not archived, `Resolved`: archived), and an alert can be read (`GET /alerts/{id}`), resolved (`PUT /alerts/{id}`, no body: it is archived) and deleted (`DELETE /alerts/{id}`), as Atera's API v3 describes them (M40). `POST /api/v3/customers` creates a customer (M43, the "Connect services" wizard, and the mapping screen's export): `CustomerName` is required, field names in any case, and the answer is `{ ActionID }`, Atera's way of naming the new id; the customer is listed and readable from then on.
 
 ## Huntress (M41)
 
@@ -41,6 +41,7 @@ The ticket routes themselves (`/api/v3/tickets/{id}` GET and POST, `/tickets/{id
 
 | Route | Answer |
 |-------|--------|
+| `POST /organizations` (`name`, `key`; M43) | `201 { organization }`; `422` without a name or key, with one longer than 256 characters, or with a key another organization has. |
 | `GET /account`, `GET /organizations` (`name`, `key`), `GET /organizations/{id}` | The account; the organizations with `agents_count` and `incident_reports_count` counted from the stand-in's records; one organization with `actual_usages`: `edr` (billable agents, unresponsive — no callback for 7 days —, outdated — below the newest version of its platform in the account —, isolated), `itdr`, `sat`. |
 | `GET /agents` (`organization_id`, `platform`, `hostname`, `os`, `version`), `GET /agents/{id}`, `DELETE /agents/{id}` | Agents with every field the reference names (`defender_status`, `defender_substatus`, `defender_policy_status`, `last_survey_at`, `firewall_status`, `version`, `serial_number`, `mac_addresses`, …). Uninstall answers `204` and the agent is gone at once (`404` afterwards). |
 | `POST /agents/{id}/isolation` (`reason`, `strict_isolation`), `DELETE /agents/{id}/isolation` | `201 { agent }` with `firewall_status` `Pending Isolation`, or `200` with the bare agent `Pending Release` (as the reference answers it); the next read of the agent shows `Isolated` or `Disabled`. `409` when the host is isolated (or about to be) already, or is not isolated for a release. |
@@ -50,7 +51,8 @@ The ticket routes themselves (`/api/v3/tickets/{id}` GET and POST, `/tickets/{id
 | `POST /incident_reports/{id}/resolution`, `GET` and `POST /incident_reports/{id}/comments` (`body`) | Resolution: `closed` with `closed_at`, `201 { incident_report }`; `409` unless the report is `sent` and no step waits for approval. A comment (≤ 2048, `422` otherwise) is signed by the key's user. The stand-in never closes a report by itself. |
 | `GET /escalations`, `GET /platform_actions` (`status`, `severity`, `subtype`, `organization_id`), `GET /escalations/{id}`, `GET /platform_actions/{id}` | Lists without entities; a single one with `entities: { total_count, has_more, items }` (`Agent` with `details.hostname`, `Identity` with `display_name`). |
 | `POST /escalations/{id}/resolution` (`determination`, `scope`, …) | `resolved` with `resolved_at`, `201 { escalation, resolution_method }` (`rule` with a determination, `dismiss` for an unwanted-access escalation without one, `direct` otherwise); `409` when resolved already, `400` for a determination or scope Huntress does not know. |
-| `GET /reports` (`type`, `period_min`, `period_max`, `organization_id`), `GET /reports/{id}` | Monthly summaries with `period` `YYYY-MM-DD...YYYY-MM-DD`, a few figures and a PDF `url` on `reports.example.invalid`. |
+| `GET /reports` (`type`, `period_min`, `period_max`, `organization_id`), `GET /reports/{id}` | Monthly summaries with `period` `YYYY-MM-DD...YYYY-MM-DD`, a few figures and a PDF `url` on the stand-in itself (`/huntress-files/reports/{id}.pdf` on the host asked; a report created with a `url` keeps it). |
+| `GET /huntress-files/reports/{id}.pdf` → `GET /huntress-blobs/{id}.pdf` (M43, no key) | The report's link answers `302` to its "file storage", as Huntress's huntress.io link redirects to a signed blob; the blob is a small, whole one-page PDF (`application/pdf`). A fault on either path (`/_mock/huntress/faults`) makes it answer that status instead. |
 
 ### Huntress control routes (tests only)
 
@@ -59,6 +61,7 @@ Like Atera's: not part of Huntress's API and not behind its key; bodies are JSON
 | Route | Body | Answer |
 |-------|------|--------|
 | `POST /_mock/huntress/organizations` | any organization field | `201` with a new organization (a unique name unless given). |
+| `GET /_mock/huntress/organizations` (`key`) | — | `200`: the organizations (with the key), each with `posted.created` — the name and key the CRM sent when it created it (M43). |
 | `POST /_mock/huntress/reports` | `organization_id` (required), `period_start` (the first day of the month, last month by default), any report field | `201` with a monthly summary report of the organization. |
 | `POST /_mock/huntress/agents` | `organization_id` (required), any agent field | `201` with the agent: healthy, current, calling back now unless the body says otherwise. |
 | `POST /_mock/huntress/agents/{id}`, `DELETE /_mock/huntress/agents/{id}`, `GET /_mock/huntress/agents/{id}` | any agent fields | The fields merged (it goes silent, Defender off, another organization); gone; or the agent as held now with `pending_firewall_status` and `posted` (the last `isolation` body, `release`, `uninstalled`) — an uninstalled agent answers `404` with `posted`. |
@@ -84,6 +87,7 @@ An unknown `CustomerID` or a body that is not a JSON object answers `400`. The o
 | `POST …/backup-tasks/{task}/pause`, `…/activate`, `…/entities/{entity}/activate` | `{success: true}`; the task is paused or active again, the entity is added (waiting for its first backup). |
 | `POST /cloudally/v2/resellers/accounts/{account}/recovery/restore`, `/export` | `400` without `taskId`, `account`, `source`, `date`; else `{needRedirect: false, …}` (restore; `needRedirect: true` for an account made with `restoreNeedsSignIn`) or `{}` (export). |
 | `DELETE /cloudally/v2/resellers/accounts/{account}` | `{success: true}`; the account is deleted and no longer listed. |
+| `POST /cloudally/v2/resellers/accounts` (headers `client-id`, `client-secret`; `{email, password, displayName, region}`; M43) | `200` with the new account (`TRIAL`, no backup tasks until the customer's Microsoft 365 consent in CloudAlly); `401` without the headers, `400` without an address or password, with a region CloudAlly does not know, or with an address another account has. The log keeps that a password came, never the password. |
 
 Control routes for tests (not CloudAlly's API, no token):
 
@@ -93,5 +97,9 @@ Control routes for tests (not CloudAlly's API, no token):
 | `GET /_mock/cloudally/accounts/{account}` | — | `200` with the account as "CloudAlly" holds it now. |
 | `POST /_mock/cloudally/entities/{entity}` | `state`, `error` | `200`: the entity's backup is now in that state. |
 | `GET /_mock/cloudally/log` | — | `200`: every change the CRM asked for (method, path, body), oldest first. |
+
+## Teams channels (M43)
+
+`teams.mjs` stands in for the Power Automate Workflows webhooks of the team channels: `POST /teams/{channel}` (`sales`, `finance`, `operations`) takes the message the CRM posts — `{type: "message", attachments: [{contentType: "application/vnd.microsoft.card.adaptive", content}]}` — and answers `202`; anything else `400`. Start crm-worker with `--Integrations:MicrosoftGraph:Teams:Enabled=true --Integrations:MicrosoftGraph:Teams:Channels:Operations=http://localhost:5299/teams/operations` (a loopback `http` address is the only one allowed outside the Workflows hosts) to see urgent alerts arrive. `GET /_mock/teams/posts?channel=operations` lists the cards received, oldest first, flattened to `{channel, at, title, text, facts: [{title, value}], link, linkText}`; `DELETE /_mock/teams/posts` empties the list.
 
 Data lives in memory and resets on restart. Never point test or production hosts at it.

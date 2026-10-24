@@ -125,6 +125,51 @@ internal sealed class BackupApi(BackupDbContext db, TimeProvider time) : IBackup
             return keys.Count;
         }, cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, SeatCountReading>> GetSeatCountReadingsAsync(
+        string system, IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken)
+    {
+        if (organizationIds.Count == 0)
+        {
+            return new Dictionary<Guid, SeatCountReading>();
+        }
+
+        var ids = organizationIds.Distinct().Select(id => (Guid?)id).ToList();
+        var latest = await db.BillLines.AsNoTracking()
+            .Where(b => b.System == system && ids.Contains(b.OrganizationId) && b.Day <= date)
+            .GroupBy(b => b.OrganizationId)
+            .Select(g => new { OrganizationId = g.Key!.Value, Day = g.Max(b => b.Day) })
+            .ToListAsync(cancellationToken);
+        var days = latest.Select(l => l.Day).Distinct().ToList();
+        var lines = await db.BillLines.AsNoTracking()
+            .Where(b => b.System == system && ids.Contains(b.OrganizationId) && days.Contains(b.Day))
+            .Select(b => new { OrganizationId = b.OrganizationId!.Value, b.Day, b.AccountExternalId, b.Seats, b.Accounts })
+            .ToListAsync(cancellationToken);
+        return latest.ToDictionary(l => l.OrganizationId, l =>
+        {
+            var accounts = lines.Where(b => b.OrganizationId == l.OrganizationId && b.Day == l.Day)
+                .GroupBy(b => b.AccountExternalId, StringComparer.Ordinal)
+                .Select(g => g.Max(b => b.Seats ?? b.Accounts))
+                .ToList();
+            return new SeatCountReading(accounts.Any(seats => seats is null) ? null : accounts.Sum(seats => seats!.Value), l.Day, accounts.Count);
+        });
+    }
+
+    public async Task<IReadOnlyList<BackupBillLineView>> GetBillLinesAsync(string system, Guid organizationId, DateOnly date, CancellationToken cancellationToken)
+    {
+        var day = await db.BillLines.AsNoTracking()
+            .Where(b => b.System == system && b.OrganizationId == organizationId && b.Day <= date)
+            .MaxAsync(b => (DateOnly?)b.Day, cancellationToken);
+        return day is null
+            ? []
+            : await (from b in db.BillLines.AsNoTracking()
+                     where b.System == system && b.OrganizationId == organizationId && b.Day == day
+                     orderby b.AccountExternalId, b.Service, b.Source
+                     select new BackupBillLineView(b.Day, b.AccountExternalId,
+                         db.Accounts.Where(a => a.System == system && a.ExternalId == b.AccountExternalId).Select(a => a.Name).FirstOrDefault(),
+                         b.Type, b.Source, b.Service, b.Accounts, b.Seats, b.Price, b.Total, b.Currency, b.PaymentType, b.NextPaymentAt))
+                .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<Guid>> GetOrganizationsAsync(string system, CancellationToken cancellationToken) =>
         await db.Accounts.AsNoTracking().Where(a => a.System == system).Select(a => a.OrganizationId).Distinct().ToListAsync(cancellationToken);
 

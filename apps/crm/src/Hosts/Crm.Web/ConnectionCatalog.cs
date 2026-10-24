@@ -32,6 +32,7 @@ internal sealed class ConnectionCatalog(
             new(HuntressTypes.System, huntress.Value.Enabled, huntress.Value.WriteEnabled,
             [
                 HuntressOrganizationSyncJob.JobId, HuntressAgentSyncJob.JobId, HuntressAlertSyncJob.JobId, HuntressReportSyncJob.JobId,
+                HuntressReportFileJob.JobId,
             ]),
             new(PowerOfficeTypes.System, office.Enabled, office.WriteEnabled,
             [

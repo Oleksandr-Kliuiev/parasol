@@ -1,0 +1,120 @@
+import { Badge, Checkbox, Field, Input, Select, Text, makeStyles } from '@fluentui/react-components';
+import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
+import { AppLink } from '../../shared/components/AppLink';
+import { shortKey, systemName } from '../integrations/labels';
+import { choiceValid, emailValid, euRegions, keyValid, mappingsOf, type CreateChoice, type CustomerService } from './connectServices';
+
+const useStyles = makeStyles({
+  list: { listStyleType: 'none', margin: 0, padding: 0, display: 'grid', gap: '0' },
+  item: {
+    display: 'grid',
+    gap: '8px',
+    paddingTop: '14px',
+    paddingBottom: '14px',
+    borderTop: `1px solid ${h.line}`,
+    ':first-child': { borderTop: 'none', paddingTop: '4px' },
+  },
+  head: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '8px', rowGap: '4px' },
+  name: { margin: 0, fontSize: '15px', lineHeight: '22px', fontWeight: 600 },
+  muted: { color: h.muted, fontSize: '13px', lineHeight: '20px' },
+  fields: { display: 'grid', gap: '12px', paddingLeft: '32px', '@media (max-width: 480px)': { paddingLeft: 0 } },
+  link: { display: 'inline-flex', alignItems: 'center', minHeight: '24px' },
+});
+
+
+/**
+ * The first step of the "Connect services" wizard (M43): one entry per vendor. A linked one says what it is linked to; one that
+ * cannot be created here says why, in words of this installation (switched off, not switched on, test customers only), and leads to
+ * the mapping screen; the others offer to be created, with the fields their creation takes.
+ */
+export function ServiceChoices({ services, choices, touched, onChange }: {
+  services: CustomerService[];
+  choices: CreateChoice[];
+  touched: boolean;
+  onChange: (choice: CreateChoice) => void;
+}) {
+  const { t } = useTranslation();
+  const styles = useStyles();
+  return (
+    <ul className={styles.list}>
+      {services.map((service) => {
+        const system = systemName(t, service.system);
+        const choice = choices.find((c) => c.system === service.system)!;
+        const headingId = `connect-${service.system}`;
+        return (
+          <li key={service.system} className={styles.item} aria-labelledby={headingId}>
+            <div className={styles.head}>
+              <h3 id={headingId} className={styles.name}>{system}</h3>
+              {service.link && <Badge appearance="tint" color="success">{t('onboarding.linkedBadge')}</Badge>}
+            </div>
+            {service.link ? (
+              <Text className={styles.muted}>
+                {service.link.name
+                  ? t('onboarding.linked', { name: service.link.name })
+                  : t('onboarding.linkedId', { id: shortKey(service.link.externalId), system })}
+              </Text>
+            ) : service.block ? (
+              <>
+                <Text className={styles.muted}>
+                  {t(`onboarding.blocks.${service.block}`, { system, name: service.existing ?? '', defaultValue: t(`actions.codes.${service.block}`) })}
+                </Text>
+                {/* An earlier request without an outcome is settled in the action log; anything else is linked by hand. */}
+                {service.block === 'VND_EARLIER_ATTEMPT_OPEN' ? (
+                  <AppLink to="/connections" className={styles.link}>{t('onboarding.result.openLog')}</AppLink>
+                ) : mappingsOf[service.system] && (
+                  <AppLink to={mappingsOf[service.system]!} className={styles.link}>{t('onboarding.mapExisting')}</AppLink>
+                )}
+              </>
+            ) : (
+              <CreateFields service={service} choice={choice} touched={touched} onChange={onChange} />
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function CreateFields({ service, choice, touched, onChange }: {
+  service: CustomerService; choice: CreateChoice; touched: boolean; onChange: (choice: CreateChoice) => void;
+}) {
+  const { t } = useTranslation();
+  const styles = useStyles();
+  const system = systemName(t, service.system);
+  const showErrors = touched && choice.create && !choiceValid(choice);
+  const noteId = `connect-${service.system}-note`;
+  const hasNote = choice.create && (service.system === 'atera' || service.simulated);
+  return (
+    <>
+      <Checkbox checked={choice.create} label={t('onboarding.create', { system })} aria-describedby={hasNote ? noteId : undefined}
+        onChange={(_, d) => onChange({ ...choice, create: d.checked === true })} />
+      {choice.create && (
+        <div className={styles.fields}>
+          {service.system === 'atera' && <Text id={noteId} className={styles.muted}>{t('onboarding.atera.note')}</Text>}
+          {service.system === 'huntress' && (
+            <Field label={t('onboarding.huntress.key')} required hint={t('onboarding.huntress.keyHint')}
+              validationMessage={showErrors && !keyValid(choice.key) ? t('onboarding.huntress.keyInvalid') : undefined}>
+              <Input value={choice.key} autoComplete="off" spellCheck={false} maxLength={64}
+                onChange={(_, d) => onChange({ ...choice, key: d.value.toLowerCase() })} />
+            </Field>
+          )}
+          {service.system === 'cloudally' && (
+            <>
+              <Field label={t('onboarding.cloudally.email')} required hint={t('onboarding.cloudally.emailHint')}
+                validationMessage={showErrors && !emailValid(choice.email) ? t('onboarding.cloudally.emailInvalid') : undefined}>
+                <Input type="email" value={choice.email} autoComplete="off" onChange={(_, d) => onChange({ ...choice, email: d.value })} />
+              </Field>
+              <Field label={t('onboarding.cloudally.region')}>
+                <Select value={choice.region} onChange={(_, d) => onChange({ ...choice, region: d.value })}>
+                  {euRegions.map((region) => <option key={region} value={region}>{t(`onboarding.regions.${region}`)}</option>)}
+                </Select>
+              </Field>
+            </>
+          )}
+          {service.simulated && <Text id={service.system === 'atera' ? undefined : noteId} className={styles.muted}>{t('onboarding.simulated', { system })}</Text>}
+        </div>
+      )}
+    </>
+  );
+}

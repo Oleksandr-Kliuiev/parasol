@@ -25,6 +25,8 @@ public static class SecurityModule
         services.AddModuleServices(typeof(SecurityModule).Assembly);
         services.AddScoped<ISecurityApi, SecurityMirror>();
         services.AddScoped<SecurityQueries>();
+        // M43: the monthly reports for the filing of their PDFs and the CRM's monthly summary.
+        services.AddScoped<ISecurityReports, SecurityReports>();
         // DEV-11: closed incidents and resolved notices name the customer's staff; they go after the approved period.
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, SecurityRetention>();
         return services;

@@ -31,6 +31,7 @@ public class FreshnessLimitsTests
         (HuntressAgentSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.AgentSyncCron)), new HuntressOptions().AgentSyncCron),
         (HuntressAlertSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.AlertSyncCron)), new HuntressOptions().AlertSyncCron),
         (HuntressReportSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.ReportSyncCron)), new HuntressOptions().ReportSyncCron),
+        (HuntressReportFileJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.ReportFileSyncCron)), new HuntressOptions().ReportFileSyncCron),
         (CloudAllyAccountSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.AccountSyncCron)), new CloudAllyOptions().AccountSyncCron),
         (CloudAllyBackupSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BackupSyncCron)), new CloudAllyOptions().BackupSyncCron),
         (CloudAllyBillSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BillSyncCron)), new CloudAllyOptions().BillSyncCron),

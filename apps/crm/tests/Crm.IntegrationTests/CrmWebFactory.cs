@@ -76,6 +76,10 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
     public async ValueTask InitializeAsync()
     {
+        // M43: every test's critical alert can queue a notice for the operations channel; the channel takes them, so they are sent
+        // and leave the queue instead of coming back with a growing pause in front of other tests' cards.
+        Graph.Given(WireMock.RequestBuilders.Request.Create().WithPath("/teams/operations").UsingPost())
+            .RespondWith(WireMock.ResponseBuilders.Response.Create().WithStatusCode(202));
         await _sql.StartAsync();
         // The migrator: schema, Hangfire, roles and grants, as the administrator.
         await using (var migrator = new CrmMigrationFactory(this))
@@ -191,6 +195,8 @@ public sealed class CrmWebFactory : WebApplicationFactory<Program>, IAsyncLifeti
             ["Integrations:MicrosoftGraph:Teams:WonDealThreshold"] = "100000",
             ["Integrations:MicrosoftGraph:Teams:Channels:Sales"] = Graph.Url + "/teams/sales",
             ["Integrations:MicrosoftGraph:Teams:Channels:Finance"] = Graph.Url + "/teams/finance",
+            // M43: urgent alerts go to the operations channel; every test's critical alert can queue a notice there.
+            ["Integrations:MicrosoftGraph:Teams:Channels:Operations"] = Graph.Url + "/teams/operations",
             ["Integrations:PowerOffice:Enabled"] = "true",
             ["Integrations:PowerOffice:ApplicationKey"] = "test-application-key",
             ["Integrations:PowerOffice:ClientKey"] = "test-client-key",

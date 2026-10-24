@@ -109,7 +109,7 @@ public sealed class VendorActionService(
         }
 
         var switches = Switches(handler.System);
-        var block = plan.Block ?? VendorActionRules.CheckSwitches(switches, handler.Kind, target.ExternalCustomerId, credentials: false);
+        var block = plan.Block ?? VendorActionRules.CheckSwitches(switches, handler.Kind, target.ExternalCustomerId, credentials: false, target.OrganizationId);
         var paused = await db.IntegrationSwitches.AsNoTracking().AnyAsync(s => s.System == handler.System && s.IsPaused, ct);
         string? token = null;
         DateTimeOffset? expires = null;
@@ -181,7 +181,7 @@ public sealed class VendorActionService(
             return Error.Validation(unconfirmed.Code, unconfirmed.Message);
         }
 
-        if (VendorActionRules.CheckSwitches(Switches(handler.System), handler.Kind, target.ExternalCustomerId, credentials: false) is { } off)
+        if (VendorActionRules.CheckSwitches(Switches(handler.System), handler.Kind, target.ExternalCustomerId, credentials: false, target.OrganizationId) is { } off)
         {
             return Error.Conflict(off.Code, off.Message);
         }

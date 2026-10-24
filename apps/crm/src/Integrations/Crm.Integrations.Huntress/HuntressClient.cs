@@ -25,6 +25,29 @@ internal sealed partial class HuntressClient(HttpClient http, IOptions<HuntressO
     public IAsyncEnumerable<HuntressOrganization> GetOrganizationsAsync(CancellationToken cancellationToken) =>
         GetPagedAsync("organizations", "organizations", ReadOrganization, null, o => o.Id, cancellationToken);
 
+    public async Task<IReadOnlyList<HuntressOrganization>> FindOrganizationsByKeyAsync(string key, CancellationToken cancellationToken)
+    {
+        var found = new List<HuntressOrganization>();
+        await foreach (var organization in GetPagedAsync("organizations", "organizations", ReadOrganization, "key=" + Uri.EscapeDataString(key), o => o.Id, cancellationToken))
+        {
+            // The reference calls it a filter without saying how it compares: only the exact key is ours.
+            if (string.Equals(organization.Key, key, StringComparison.Ordinal))
+            {
+                found.Add(organization);
+            }
+        }
+
+        return found;
+    }
+
+    public async Task<HuntressOrganization?> CreateOrganizationAsync(string name, string key, CancellationToken cancellationToken)
+    {
+        using var response = await http.PostAsJsonAsync("organizations", new Dictionary<string, object?> { ["name"] = name, ["key"] = key }, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        using var document = await ParseAsync(response, cancellationToken);
+        return document is null ? null : ReadOrganization(Single(document.RootElement, "organization"));
+    }
+
     public async Task<HuntressUsage?> GetUsageAsync(long organizationId, CancellationToken cancellationToken)
     {
         using var document = await GetAsync($"organizations/{organizationId.ToString(CultureInfo.InvariantCulture)}", cancellationToken);

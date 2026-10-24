@@ -88,7 +88,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         // M41: Huntress is switched off in this host; its jobs are named all the same, switched off.
         var huntress = integrations["huntress"];
         (huntress.Enabled, huntress.WriteEnabled).ShouldBe((false, (bool?)false));
-        huntress.State!.Jobs.Select(j => j.Job).ShouldBe(["huntress-organizations", "huntress-agents", "huntress-alerts", "huntress-reports"]);
+        huntress.State!.Jobs.Select(j => j.Job).ShouldBe(["huntress-organizations", "huntress-agents", "huntress-alerts", "huntress-reports", "huntress-report-files"]);
         huntress.State.Jobs.ShouldAllBe(job => job.Freshness == "Disabled");
         integrations["poweroffice"].WriteEnabled.ShouldBe(true);
         // M42: CloudAlly is listed with its three reads, switched off in this installation.
@@ -104,7 +104,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         {
             ["atera-customers"] = 60, ["atera-contacts"] = 105, ["atera-tickets"] = 15, ["atera-tickets-recent"] = 15, ["atera-work-hours"] = 60,
             ["atera-agents"] = 2175, ["atera-patches"] = 2175, ["atera-alerts"] = 60, ["atera-ticket-conversations"] = 22,
-            ["huntress-organizations"] = 105, ["huntress-agents"] = 105, ["huntress-alerts"] = 22, ["huntress-reports"] = 2175,
+            ["huntress-organizations"] = 105, ["huntress-agents"] = 105, ["huntress-alerts"] = 22, ["huntress-reports"] = 2175, ["huntress-report-files"] = 2175,
             ["poweroffice-customers"] = 37, ["poweroffice-contact-persons"] = 60, ["poweroffice-products"] = 2175, ["poweroffice-invoices"] = 90,
             ["cloudally-accounts"] = 105, ["cloudally-backups"] = 195, ["cloudally-bills"] = 2175,
             ["partnercenter-customers"] = 2175, ["partnercenter-subscriptions"] = 375, ["partnercenter-licenses"] = 2175,

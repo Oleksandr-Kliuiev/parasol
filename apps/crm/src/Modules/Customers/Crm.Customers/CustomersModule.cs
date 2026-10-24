@@ -27,6 +27,10 @@ public static class CustomersModule
         services.AddOptions<CustomersOptions>().Bind(configuration.GetSection(CustomersOptions.SectionName));
         services.AddModuleServices(typeof(CustomersModule).Assembly);
         services.AddScoped<OrganizationDocumentsService>();
+        // M43: monthly reports the CRM files for a customer itself, insert-only, checked on every download and after a restore.
+        services.AddScoped<ICustomerDocuments, CustomerDocuments>();
+        services.AddScoped<StoredDocumentReader>();
+        services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, StoredDocumentRestore>();
         services.AddScoped<MigrationImportService>();
         services.AddScoped<MigrationRunReader>();
         services.AddScoped<MigrationReconciliationService>();
@@ -192,6 +196,25 @@ public static class CustomersModule
         group.MapPost("/organizations/{id:guid}/documents/folder", async (Guid id, OrganizationDocumentsService service, CancellationToken ct) =>
                 (await service.CreateFolderAsync(id, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.CustomersWrite);
+
+        // M43: the monthly reports the CRM filed itself. They describe the customer's IT (devices, incidents, backups), so reading
+        // them takes the Drift right as well as the customer's (two calls: both are required).
+        group.MapGet("/organizations/{id:guid}/stored-documents", async (Guid id, string? cursor, int? limit, StoredDocumentReader reader, CancellationToken ct) =>
+                (await reader.ListAsync(id, cursor, limit, ct)).ToHttpResult(Results.Ok))
+            .RequirePermission(Permissions.CustomersRead)
+            .RequirePermission(Permissions.ServiceRead);
+
+        group.MapGet("/organizations/{id:guid}/stored-documents/{documentId:guid}/download", async (
+                Guid id, Guid documentId, StoredDocumentReader reader, HttpResponse response, CancellationToken ct) =>
+                (await reader.DownloadAsync(id, documentId, ct)).ToHttpResult(file =>
+                {
+                    response.Headers.CacheControl = "no-store";
+                    response.Headers["X-Content-Type-Options"] = "nosniff";
+                    response.Headers["X-Document-Sha256"] = file.Sha256;
+                    return Results.File(file.Content, "application/pdf", file.FileName);
+                }))
+            .RequirePermission(Permissions.CustomersRead)
+            .RequirePermission(Permissions.ServiceRead);
     }
 
     private static void MapContacts(RouteGroupBuilder group)

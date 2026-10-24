@@ -152,7 +152,8 @@ export function seedHuntress({ base, run }) {
         agents_count: fleet, windows_agent_count: fleet, macos_agent_count: 0, servers_agent_count: organization === fjord ? 1 : 0,
         incidents_reported: back === 1 && organization === fjord ? 1 : 0, incidents_resolved: 0,
         signals_detected: 40 * back + fleet, signals_investigated: 12 * back, events_analyzed: 150_000 * back + 1_000 * fleet,
-        analyst_note: 'Synthetic report of the stand-in.', url: `https://reports.example.invalid/huntress/${id}.pdf`,
+        // No `url`: the stand-in answers with a link to its own report file (M43), on the host the request came to.
+        analyst_note: 'Synthetic report of the stand-in.',
         created_at: end.toISOString(), updated_at: end.toISOString(),
       });
     }

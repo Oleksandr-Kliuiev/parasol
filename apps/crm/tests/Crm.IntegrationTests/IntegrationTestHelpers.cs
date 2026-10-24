@@ -25,6 +25,19 @@ internal static class IntegrationTestHelpers
         await run(scope.ServiceProvider.GetRequiredService<TJob>());
     }
 
+    /// <summary>
+    /// Sends the queued channel cards (as crm-worker's <c>channel-posts</c> does every minute) until <paramref name="done"/> holds:
+    /// other classes queue cards too (M43: every critical alert queues a notice for the operations channel), and one run of the job
+    /// takes the 50 oldest due cards only.
+    /// </summary>
+    public static async Task SendChannelPostsUntilAsync(this CrmWebFactory factory, Func<Task<bool>> done, int runs = 20)
+    {
+        for (var run = 0; run < runs && !await done(); run++)
+        {
+            await factory.RunJobAsync<Crm.Notifications.Features.ChannelPostJob>(job => job.RunAsync(CancellationToken.None));
+        }
+    }
+
     /// <summary>Dispatches domain events of every module (as crm-worker does).</summary>
     public static async Task ProcessEventsAsync(this CrmWebFactory factory)
     {

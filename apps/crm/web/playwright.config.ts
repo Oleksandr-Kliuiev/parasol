@@ -42,7 +42,9 @@ const hostArgs = [
   `--Integrations:Atera:BaseUrl=${mock}/api/v3/`,
   // M39: the ticket and time actions write to the stand-in only (it keeps what it got); a real account is never configured here.
   '--Integrations:Atera:WriteEnabled=true',
-  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record', 'alert.resolve', 'alert.delete']
+  // M43: customer.create — the "Connect services" wizard creates the customer in the stand-in.
+  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record', 'alert.resolve', 'alert.delete',
+    'customer.create']
     .map((kind, index) => `--Integrations:Atera:EnabledActions:${index}=${kind}`),
   '--Integrations:Atera:AlertUrlTemplate=https://atera.example.invalid/alerts/{0}',
   ...['CustomerSyncCron', 'ContactSyncCron', 'TicketSyncCron', 'RecentTicketSyncCron', 'WorkHoursSyncCron', 'AgentSyncCron', 'PatchSyncCron',
@@ -58,15 +60,22 @@ const hostArgs = [
   '--Integrations:Huntress:ReadRequestsPerMinute=600',
   '--Integrations:Huntress:ActionRequestsPerMinute=600',
   ...['incident.approve', 'incident.reject', 'incident.step', 'incident.resolve', 'incident.comment', 'escalation.resolve', 'agent.isolate', 'agent.release',
-    'agent.uninstall'].map((kind, index) => `--Integrations:Huntress:EnabledActions:${index}=${kind}`),
-  ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
+    'agent.uninstall', 'organization.create'].map((kind, index) => `--Integrations:Huntress:EnabledActions:${index}=${kind}`),
+  ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron', 'ReportFileSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
+  // M43: the stand-in serves the reports' PDFs itself, on the loopback host the CRM reaches it on.
+  '--Integrations:Huntress:ReportFileHosts:0=localhost',
   // M42: CloudAlly's partner API on the stand-in; every kind of action on, the schedules off (tests start the reads).
   '--Integrations:CloudAlly:Enabled=true',
   `--Integrations:CloudAlly:BaseUrl=${mock}/cloudally/`,
   '--Integrations:CloudAlly:WriteEnabled=true',
-  ...['backup.run', 'backup.activate', 'backup.pause', 'backup.resume', 'account.deactivate', 'restore.export', 'restore.other', 'restore.in-place']
+  ...['backup.run', 'backup.activate', 'backup.pause', 'backup.resume', 'account.deactivate', 'restore.export', 'restore.other', 'restore.in-place',
+    'account.create']
     .map((kind, index) => `--Integrations:CloudAlly:EnabledActions:${index}=${kind}`),
   ...['AccountSyncCron', 'BackupSyncCron', 'BillSyncCron'].map((cron) => `--Integrations:CloudAlly:${cron}="0 0 31 2 *"`),
+  // CloudAlly publishes no limit and Parasoll keeps to 120 requests a minute. A backups read asks for every linked account's tasks,
+  // the stand-in gathers the accounts of every engine's tests, and three browsers wait on one read, so by the last engine a read
+  // outlasted a test's wait (M43): the stand-in is given more, as Huntress's is (never CloudAlly's own address).
+  '--Integrations:CloudAlly:RequestsPerMinute=1200',
   '--RateLimits:ApiPerMinute=100000',
   // Every test signs in through the development entry point from one address; the real budget has its own integration test.
   '--RateLimits:SignInPerMinute=100000',
