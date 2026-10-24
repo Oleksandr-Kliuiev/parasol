@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../../test/renderWithProviders';
 import type { ServiceSourceRead, Ticket, TicketComment, TicketDetail } from '../types';
@@ -86,6 +86,59 @@ describe('tickets (M39.2)', () => {
     expect(await screen.findByText(/the most recently active first/)).toBeVisible();
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search title, number or contact' }), { target: { value: 'Kari' } });
     await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?openOnly=true&search=Kari&limit=25'));
+  });
+
+  // The search is read after a pause in typing; a click on a row must not get lost while its answer is on the way (M42 e2e, Firefox).
+  const holdSearch = (term: string, overrides?: Parameters<typeof api>[0]) => {
+    const held: Array<(response: Response) => void> = [];
+    const base = api(overrides);
+    const fetch = vi.fn((url: string, init?: RequestInit) => url.includes(`search=${term}`)
+      ? new Promise<Response>((resolve) => { held.push(resolve); }) : base(url, init));
+    const answer = (items: Ticket[]) => act(async () => held.forEach((resolve) => resolve(json({ items, nextCursor: null, totalCount: items.length }))));
+    return { fetch, answer };
+  };
+
+  it('keeps the rows in place while a search is read, so a click on one still opens it, and claims no count for them', async () => {
+    const { fetch, answer } = holdSearch('Printer'); vi.stubGlobal('fetch', fetch);
+    const { router } = render();
+    const row = await screen.findByRole('button', { name: '#4711 Printer is down' });
+    expect(screen.getByText('2 open tickets')).toBeVisible();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search title, number or contact' }), { target: { value: 'Printer' } });
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?openOnly=true&search=Printer&limit=25'));
+
+    // The same rows, not a loading placeholder in their place, and the read line above them stays, so nothing moves under the pointer.
+    expect(screen.getByRole('button', { name: '#4711 Printer is down' })).toBe(row);
+    expect(row.closest('ul')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText(/^Open tickets \(Atera\) read at /)).toBeVisible();
+    // They are not the answer to the new search: no count and no end of the list is said for them.
+    expect(screen.getByText('Loading…')).toHaveAttribute('role', 'status');
+    expect(screen.queryByText('2 open tickets')).not.toBeInTheDocument();
+    expect(screen.queryByText('Showing 2 of 2')).not.toBeInTheDocument();
+
+    await userEvent.click(row);
+    expect(router.state.location.search).toBe('?ticket=t1');
+    expect(await screen.findByRole('dialog', { name: '#4711 Printer is down' })).toBeVisible();
+    await answer([ticket('t1')]);
+    expect(await screen.findByText('1 open ticket')).toBeVisible();
+    expect(screen.getByText('Showing 1 of 1')).toBeVisible();
+    expect(screen.queryByText('#4712 Outlook crashes')).not.toBeInTheDocument();
+  });
+
+  it('does not repeat an empty answer while another search is read', async () => {
+    const { fetch, answer } = holdSearch('Printer', (url) => url.includes('search=Nothing') ? json({ items: [], nextCursor: null, totalCount: 0 }) : null);
+    vi.stubGlobal('fetch', fetch);
+    render();
+    await screen.findByRole('button', { name: '#4711 Printer is down' });
+    const search = screen.getByRole('searchbox', { name: 'Search title, number or contact' });
+    fireEvent.change(search, { target: { value: 'Nothing' } });
+    expect(await screen.findByText('No ticket matches the filter.')).toBeVisible();
+    fireEvent.change(search, { target: { value: 'Printer' } });
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/tickets?openOnly=true&search=Printer&limit=25'));
+    expect(screen.queryByText('No ticket matches the filter.')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Loading…')).toBeInTheDocument();
+    await answer([ticket('t1')]);
+    expect(await screen.findByRole('button', { name: '#4711 Printer is down' })).toBeVisible();
+    expect(screen.getByText('1 open ticket')).toBeVisible();
   });
 
   it('opens a ticket in its own panel with its facts, both read times and the conversation oldest first', async () => {

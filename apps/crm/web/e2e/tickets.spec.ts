@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
-  DEV_TECHNICIAN, ateraTicket, ateraTicketState, customerMessage, failAtera, hoursInAtera, linkedAteraCustomer, syncAtera, syncTicket, ticketActions,
-  writeAsTechnician, type AteraTicket,
+  DEV_TECHNICIAN, ateraTicket, ateraTicketState, customerMessage, failAtera, hoursInAtera, linkedAteraCustomer, searchTickets, syncAtera, syncTicket,
+  ticketActions, writeAsTechnician, type AteraTicket,
 } from './atera';
 import { api, signIn, toast } from './support';
 
@@ -15,7 +15,7 @@ const SENT = 30_000;
 /** Opens the ticket's panel from the Tickets page, narrowed to its title. */
 async function openTicket(page: Page, ticket: AteraTicket) {
   await page.goto('/tickets');
-  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(ticket.TicketTitle);
+  await searchTickets(page, ticket.TicketTitle);
   const name = `#${ticket.TicketID} ${ticket.TicketTitle}`;
   await page.getByRole('button', { name, exact: true }).click();
   const panel = page.getByRole('dialog', { name, exact: true });
@@ -160,7 +160,7 @@ test('a reply without a clear answer is never sent again: its confirmation asks 
   expect((await ateraTicketState(page, ticket)).Comments).toEqual([]);
   await panel.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(panel).toHaveCount(0);
-  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(ticket.TicketTitle);
+  await searchTickets(page, ticket.TicketTitle);
   await expect(row).toBeVisible();
   await expect(row.getByText('Check needed', { exact: true })).toHaveCount(0);
 });
@@ -291,10 +291,10 @@ test('the queue finds a ticket by its contact, narrows to one customer and puts 
 
   // The contact as Atera names them finds their ticket, also without the customer.
   await page.goto('/tickets');
-  await page.getByRole('searchbox', { name: 'Search title, number or contact', exact: true }).fill(`Kontakt${m}`);
-  await expect(page.getByText('1 open ticket', { exact: true })).toBeVisible();
+  await searchTickets(page, `Kontakt${m}`);
   await expect(list.getByRole('button', { name: /^#\d+ / })).toHaveText([`#${older.TicketID} ${older.TicketTitle}`]);
-  await page.getByRole('searchbox', { name: 'Search title, number or contact', exact: true }).fill(`solveig.${m.toLowerCase()}@`);
+  // Until the e-mail is answered, the list still shows the answer to the name: wait for that very search.
+  await searchTickets(page, `solveig.${m.toLowerCase()}@`);
   await expect(list.getByRole('button', { name: /^#\d+ / })).toHaveText([`#${older.TicketID} ${older.TicketTitle}`]);
 });
 

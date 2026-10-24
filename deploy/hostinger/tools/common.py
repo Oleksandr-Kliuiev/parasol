@@ -13,6 +13,13 @@ RESTIC = 'restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de
 WRITERS = ('caddy', 'crm-worker', 'crm-web')
 
 
+def writers_up(stack):
+    # A writer Docker is restarting after a crash runs again a moment later, but `ps --status running` does not list it:
+    # the backup then left it out of the stop, and it came back during the capture (CI, 22.10.2026).
+    up = set(stack.compose('ps', '--status', 'running', '--status', 'restarting', '--services').decode().split())
+    return [name for name in WRITERS if name in up]
+
+
 def run(args, *, data=None, cwd=None, env=None):
     result = subprocess.run([str(a) for a in args], input=data, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, cwd=cwd, env=env)
