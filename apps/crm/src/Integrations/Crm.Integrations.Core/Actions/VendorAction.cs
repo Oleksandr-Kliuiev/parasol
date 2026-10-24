@@ -21,6 +21,9 @@ public static class VendorActionTargets
     /// <summary>A service desk ticket; the target id is the desk's ticket number (Atera now, others later).</summary>
     public const string Ticket = "ticket";
 
+    /// <summary>An alert of a monitoring source (M40); the target id is the source's own alert id, as the mirror stores it.</summary>
+    public const string Alert = "alert";
+
     /// <summary>What an action's stored parameters become once its words are erased or past their retention (DEV-11).</summary>
     public const string ErasedParameters = "{}";
 

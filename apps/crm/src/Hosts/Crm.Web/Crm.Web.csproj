@@ -25,6 +25,8 @@
     <ProjectReference Include="..\..\Modules\Identity\Crm.Identity\Crm.Identity.csproj" />
     <ProjectReference Include="..\..\Modules\Customers\Crm.Customers\Crm.Customers.csproj" />
     <ProjectReference Include="..\..\Modules\CustomFields\Crm.CustomFields\Crm.CustomFields.csproj" />
+    <ProjectReference Include="..\..\Modules\Security\Crm.Security\Crm.Security.csproj" />
+    <ProjectReference Include="..\..\Modules\Backup\Crm.Backup\Crm.Backup.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\Crm.Catalog\Crm.Catalog.csproj" />
     <ProjectReference Include="..\..\Modules\Contracts\Crm.Contracts\Crm.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Service\Crm.Service\Crm.Service.csproj" />

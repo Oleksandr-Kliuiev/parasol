@@ -10,10 +10,12 @@ using Crm.Licensing;
 using Crm.Privacy;
 using Crm.Projects;
 using Crm.Sales;
+using Crm.Security;
 using Crm.Service;
 using Crm.TimeTracking;
 using Crm.Contracts.Features;
 using Crm.Sales.Features;
+using Crm.Backup;
 using Crm.CustomFields;
 using Crm.Customers;
 using Crm.Identity;
@@ -50,6 +52,9 @@ builder.Services
     .AddCatalogModule(builder.Configuration)
     .AddContractsModule(builder.Configuration)
     .AddServiceModule(builder.Configuration)
+    // M40.S: empty until Huntress (M41) and CloudAlly (M42) fill them.
+    .AddSecurityModule(builder.Configuration)
+    .AddBackupModule(builder.Configuration)
     .AddTimeTrackingModule(builder.Configuration)
     .AddSalesModule(builder.Configuration)
     .AddProjectsModule(builder.Configuration)
@@ -178,6 +183,7 @@ jobs.AddOrUpdate<AteraTicketSyncJob>(AteraTicketSyncJob.RecentJobId, job => job.
 jobs.AddOrUpdate<AteraTicketConversationSyncJob>(AteraTicketConversationSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.TicketConversationSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraWorkHoursSyncJob>(AteraWorkHoursSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.WorkHoursSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAgentSyncJob>(AteraAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraPatchSyncJob>(AteraPatchSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.PatchSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAlertSyncJob>(AteraAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
 await app.RunAsync();

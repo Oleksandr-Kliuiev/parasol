@@ -63,8 +63,10 @@ public sealed class SourceTaskTests
     public void The_supported_systems_decide_which_receipts_are_live()
     {
         SourceTaskIdentityRules.IsValid(Source).ShouldBeTrue();
-        SourceTaskIdentityRules.SupportedSystems.ShouldBe(["atera"]);
+        SourceTaskIdentityRules.SupportedSystems.ShouldBe(["atera", "parasoll"], ignoreOrder: true);
         SourceTaskIdentityRules.IsSupported("atera").ShouldBeTrue();
+        // M40: a coverage gap Parasoll found becomes a task like an alert of a source.
+        SourceTaskIdentityRules.IsValid(Source with { System = "parasoll", ExternalId = "atera.agent-silent:0199f1a0400070008000000000004001" }).ShouldBeTrue();
         SourceTaskIdentityRules.IsSupported(RetiredSystem).ShouldBeFalse();
         SourceTaskIdentityRules.IsSupported(null).ShouldBeFalse();
         // A system joins by being listed, nothing else (M41 adds Huntress this way).

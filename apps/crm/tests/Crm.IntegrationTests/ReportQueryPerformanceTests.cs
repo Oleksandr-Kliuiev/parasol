@@ -218,7 +218,8 @@ public sealed class ReportQueryPerformanceTests(CrmWebFactory factory)
 
         var fallback = Guid.NewGuid();
         var empty = Guid.NewGuid();
-        seed.Devices.Add(Device.From("perf", fallback, new(Guid.NewGuid().ToString(), "Synthetic device", DeviceType.Workstation, null, true, null, null), DateTimeOffset.UtcNow));
+        // Billed per device are Atera's agents only (M40), so the live fallback counts an Atera device.
+        seed.Devices.Add(Device.From("atera", fallback, new(Guid.NewGuid().ToString(), "Synthetic device", DeviceType.Workstation, null, true, null, null), DateTimeOffset.UtcNow));
         ids.AddRange([fallback, empty]);
         await seed.SaveChangesAsync(Ct);
         var probe = new QueryProbe();

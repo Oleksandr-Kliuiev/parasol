@@ -21,6 +21,7 @@ public class FreshnessLimitsTests
         (AteraContactSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.ContactSyncCron)), new AteraOptions().ContactSyncCron),
         (AteraWorkHoursSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.WorkHoursSyncCron)), new AteraOptions().WorkHoursSyncCron),
         (AteraAgentSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.AgentSyncCron)), new AteraOptions().AgentSyncCron),
+        (AteraPatchSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.PatchSyncCron)), new AteraOptions().PatchSyncCron),
         (AteraAlertSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.AlertSyncCron)), new AteraOptions().AlertSyncCron),
         (AteraTicketConversationSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.TicketConversationSyncCron)),
             new AteraOptions().TicketConversationSyncCron),

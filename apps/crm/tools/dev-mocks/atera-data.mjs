@@ -1,6 +1,8 @@
 // Seed data of the Atera stand-in (atera.mjs): customers that mirror the PowerOffice ones (same organization numbers), a contact
 // and two tickets per customer with one work-hour row each, three agents per customer and two open alerts. New on every start.
 
+import { agentDefaults } from './atera-devices.mjs';
+
 export const hoursAgo = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString();
 
 export function seedAtera({ customers, base, run }) {
@@ -91,6 +93,8 @@ export function seedAtera({ customers, base, run }) {
       OS: agent.OS,
       Online: agent.Online,
       LastSeen: hoursAgo(n),
+      // M40: what Atera says about the computer, and its Windows updates.
+      ...agentDefaults(`agent-${c.CustomerID}-${n}`, `${agent.suffix}-${index + 1}${n}`, agent.OS),
     })),
   );
   const ateraAlerts = ateraCustomers.slice(0, 2).map((c, index) => ({

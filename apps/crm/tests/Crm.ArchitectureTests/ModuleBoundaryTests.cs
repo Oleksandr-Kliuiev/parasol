@@ -18,6 +18,9 @@ public class ModuleBoundaryTests
         "Crm.Audit",
         // Composes other modules' contracts and owns no schema (CLAUDE.md, DEV-14).
         "Crm.Reports",
+        // M40.S: registered with their schemas, empty until Huntress (M41) and CloudAlly (M42) bring their domains.
+        "Crm.Security",
+        "Crm.Backup",
     };
 
     public static TheoryData<string> ModuleNames => new(Production.ModuleNames);
