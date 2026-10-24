@@ -37,13 +37,16 @@ test('machine rows and the device card pass axe at every width and work from the
     expect(await card.evaluate((element) => element.contains(document.activeElement))).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`device-card-${width}-${scheme}.png`), fullPage: true });
 
-    // Keeping two machines apart asks first, and Escape leaves the question with nothing decided.
-    await card.getByRole('button', { name: 'Different devices', exact: true }).click();
+    // Keeping two machines apart asks first, and Escape leaves the question with nothing decided, back on its button in the
+    // card (focus used to land on the row behind the open card, which then stayed open, hidden from screen readers).
+    const keepApart = card.getByRole('button', { name: 'Different devices', exact: true });
+    await keepApart.click();
     const ask = page.getByRole('dialog', { name: `Keep SRV2-${id} and SRV-${id} apart?`, exact: true });
     await expect(ask.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
     expect(await seriousViolations(page), `keep-apart question at ${width} px (${scheme})`).toEqual([]);
     await page.keyboard.press('Escape');
     await expect(ask).toHaveCount(0);
+    await expect(keepApart).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(card).toHaveCount(0); await expect(name).toBeFocused();
   }
