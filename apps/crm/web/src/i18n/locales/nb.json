@@ -385,7 +385,8 @@
       "projects": "Prosjekter",
       "more": "Mer",
       "moreNamed_one": "Mer: {{count}} del",
-      "moreNamed_other": "Mer: {{count}} deler"
+      "moreNamed_other": "Mer: {{count}} deler",
+      "backup": "Sikkerhetskopi"
     },
     "sections": {
       "company": "Selskap",
@@ -784,7 +785,10 @@
       "quote-expiry": "La gamle tilbud utløpe",
       "reports-snapshot": "Månedlige øyeblikksbilder for rapporter",
       "worker-heartbeat": "Livstegn fra bakgrunnstjenesten",
-      "atera-ticket-conversations": "Meldinger i saker (Atera)"
+      "atera-ticket-conversations": "Meldinger i saker (Atera)",
+      "cloudally-accounts": "Kundekontoer (CloudAlly)",
+      "cloudally-backups": "Sikkerhetskopier (CloudAlly)",
+      "cloudally-bills": "Fakturering (CloudAlly)"
     },
     "status": {
       "Running": "Kjører",
@@ -806,7 +810,8 @@
     "atera": "Atera",
     "microsoft-graph": "Microsoft Entra ID",
     "brreg": "Brønnøysundregistrene",
-    "partnercenter": "Microsoft Partner Center"
+    "partnercenter": "Microsoft Partner Center",
+    "cloudally": "CloudAlly"
   },
   "externalTypes": {
     "Customer": "Kunder",
@@ -1671,13 +1676,29 @@
     "source": "Kilde: {{name}}",
     "sourceNames": {
       "atera": "Atera",
-      "parasoll": "Parasoll"
+      "parasoll": "Parasoll",
+      "cloudally": "CloudAlly"
     },
     "gaps": {
       "found": "Funnet av Parasolls egen kontroll. Det lukkes av seg selv når to kontroller på rad ikke lenger finner det.",
       "changeCheck": "Endre kontrollen",
       "ateraAgentSilent": {
         "title": "Atera-agenten på {{device}} har ikke meldt seg siden {{date}}"
+      },
+      "openBackup": "Åpne kundens sikkerhetskopi",
+      "backupFailed": {
+        "title": "{{service}}: sikkerhetskopien i CloudAlly feilet for {{failed}} av {{total}} ({{account}})"
+      },
+      "backupLate": {
+        "title": "{{service}}: {{late}} av {{total}} uten sikkerhetskopi i CloudAlly på over {{hours}} timer ({{account}})"
+      },
+      "backupPaused": {
+        "whole": "{{service}}: sikkerhetskopien i CloudAlly står på pause ({{account}})",
+        "some": "{{service}}: sikkerhetskopien i CloudAlly står på pause for {{paused}} av {{total}} ({{account}})"
+      },
+      "userNotBackedUp": {
+        "title_one": "{{count}} lisensiert Microsoft 365-bruker har ikke e-posten i sikkerhetskopi ({{licensed}} lisensierte, {{backedUp}} i kopi)",
+        "title_other": "{{count}} lisensierte Microsoft 365-brukere har ikke e-posten i sikkerhetskopi ({{licensed}} lisensierte, {{backedUp}} i kopi)"
       }
     },
     "reads": {
@@ -1823,13 +1844,34 @@
   "coverage": {
     "open": "Dekningskontroller",
     "title": "Dekningskontroller",
-    "intro": "Parasoll kontrollerer om hver kundeenhet blir overvåket, og varsler om det som mangler.",
+    "intro": "Parasoll kontrollerer om hver kundeenhet blir overvåket og hver sikkerhetskopi går, og varsler om det som mangler.",
     "readOnly": "Du kan se kontrollene, men ikke endre dem.",
     "rules": {
       "ateraAgentSilent": {
         "name": "Atera-agent som ikke melder seg",
         "description": "Et driftsvarsel når Atera-agenten på en enhet ikke har meldt seg på lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
         "when": "Kontrolleres etter hver fullstendige lesing av Atera-agentene, om natten."
+      },
+      "backupFailed": {
+        "name": "Sikkerhetskopi som feilet (CloudAlly)",
+        "description": "Et driftsvarsel når CloudAllys siste sikkerhetskopi av en postboks, OneDrive, et område eller et team feilet. Kritisk når hele tjenesten feilet, ellers en advarsel.",
+        "when": "Kontrolleres etter hver fullstendige lesing av CloudAlly, hver andre time."
+      },
+      "backupLate": {
+        "name": "Forsinket sikkerhetskopi (CloudAlly)",
+        "description": "Et driftsvarsel når siste vellykkede sikkerhetskopi er eldre enn grensen uten at noe har feilet: kopien har ikke kjørt.",
+        "when": "Kontrolleres etter hver fullstendige lesing av CloudAlly, hver andre time.",
+        "limit": "Timer siden siste kopi"
+      },
+      "backupPaused": {
+        "name": "Sikkerhetskopi på pause (CloudAlly)",
+        "description": "En advarsel når en sikkerhetskopi står på pause i CloudAlly: ingenting av den kopieres før noen fortsetter den.",
+        "when": "Kontrolleres etter hver fullstendige lesing av CloudAlly, hver andre time."
+      },
+      "userNotBackedUp": {
+        "name": "Lisensiert bruker uten sikkerhetskopi",
+        "description": "En advarsel når flere av kundens brukere har en Microsoft 365-lisens med postboks (Partner Center) enn det er postbokser i sikkerhetskopien i CloudAlly. Kunder uten lisensdata kontrolleres ikke, og fanen Sikkerhetskopi sier det.",
+        "when": "Kontrolleres etter hver fullstendige lesing av CloudAlly, hver andre time."
       }
     },
     "enabled": "Varsle",
@@ -1847,6 +1889,174 @@
     "saving": "Lagrer …",
     "saved": "Dekningskontrollene er lagret",
     "conflict": "Noen endret en kontroll mens du så på den. Her er den slik den er nå: bestem på nytt."
+  },
+  "backup": {
+    "title": "Sikkerhetskopi",
+    "mirror": "Det Parasoll har lagret om kundens Microsoft 365-sikkerhetskopier i CloudAlly. Fanen spør ikke CloudAlly direkte.",
+    "summary": "Oversikt over sikkerhetskopien",
+    "noAccount": "Ingen CloudAlly-konto er koblet til denne kunden.",
+    "linkAccount": "Koble en CloudAlly-konto",
+    "noTasks": "CloudAlly tar ikke sikkerhetskopi av noe for denne kunden ennå.",
+    "allOk": "Alt i orden",
+    "problems": {
+      "failed_one": "{{count}} feilet",
+      "failed_other": "{{count}} feilet",
+      "late_one": "{{count}} forsinket",
+      "late_other": "{{count}} forsinket",
+      "paused_one": "{{count}} på pause",
+      "paused_other": "{{count}} på pause",
+      "notInBackup_one": "{{count}} ikke i kopi",
+      "notInBackup_other": "{{count}} ikke i kopi"
+    },
+    "services": {
+      "Mail": "E-post",
+      "OneDrive": "OneDrive",
+      "SharePoint": "SharePoint",
+      "Teams": "Teams og grupper",
+      "Other": "Annet"
+    },
+    "states": {
+      "Failed": "Feilet",
+      "Late": "Forsinket",
+      "Paused": "På pause",
+      "NotInBackup": "Ikke i kopi",
+      "Waiting": "Venter på første kopi",
+      "Ok": "I kopi",
+      "Aside": "Utenfor denne kopien"
+    },
+    "lastBackup": "siste kopi",
+    "neverBackedUp": "aldri kopiert",
+    "error": "CloudAlly: {{error}}",
+    "errorHelp": "Hjelp fra CloudAlly",
+    "entityMenu": "Handlinger for {{name}}",
+    "taskMenu": "Flere handlinger for {{name}}",
+    "accountMenu": "Handlinger for CloudAlly-kontoen {{name}}",
+    "running": "Kjører",
+    "taskEntities_one": "{{count}} bruker eller område",
+    "taskEntities_other": "{{count}} brukere eller områder",
+    "taskProblems_one": "{{count}} trenger tiltak",
+    "taskProblems_other": "{{count}} trenger tiltak",
+    "account": "CloudAlly-konto:",
+    "region": "datasenter {{region}}",
+    "outsideRegion": "Utenfor EU",
+    "licences": {
+      "noData": "Partner Center har ingen lisensdata for denne kunden, så Parasoll kan ikke se om alle lisensierte brukere er i sikkerhetskopien. Koble kunden til Partner Center for å kontrollere det.",
+      "noMailboxLicences": "Partner Center viser ingen lisens med postboks for denne kunden ({{date}}).",
+      "missing_one": "{{count}} lisensiert bruker har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
+      "missing_other": "{{count}} lisensierte brukere har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
+      "allIn_one": "Den lisensierte brukeren har e-posten i sikkerhetskopien (Partner Center, {{date}}).",
+      "allIn_other": "Alle {{count}} lisensierte brukere har e-posten i sikkerhetskopien (Partner Center, {{date}})."
+    },
+    "tasks": {
+      "title": "Tjenester i CloudAlly"
+    },
+    "entities": {
+      "title": "Brukere og områder",
+      "filters": "Filtrer brukere og områder",
+      "search": "Søk navn eller adresse",
+      "stateLabel": "Hvilke",
+      "all": "Alle",
+      "problems": "Trenger tiltak",
+      "serviceLabel": "Tjeneste",
+      "allServices": "Alle tjenester",
+      "none": "CloudAlly viser ingen brukere eller områder for denne kunden.",
+      "noProblems": "Ingenting trenger tiltak: alle brukere og områder er i kopi.",
+      "noMatch": "Ingen brukere eller områder passer med filtrene."
+    },
+    "actions": {
+      "backup": {
+        "run": {
+          "title": "Sikkerhetskopier nå",
+          "confirm": "Sikkerhetskopier nå",
+          "item": "Sikkerhetskopier nå",
+          "button": "Sikkerhetskopier nå",
+          "named": "Sikkerhetskopier nå: {{name}}"
+        },
+        "activate": {
+          "title": "Ta med i sikkerhetskopien",
+          "confirm": "Ta med i sikkerhetskopien",
+          "item": "Ta med i sikkerhetskopien"
+        },
+        "pause": {
+          "title": "Sett sikkerhetskopien på pause",
+          "confirm": "Sett på pause",
+          "item": "Sett på pause …"
+        },
+        "resume": {
+          "title": "Fortsett sikkerhetskopien",
+          "confirm": "Fortsett sikkerhetskopien",
+          "item": "Fortsett",
+          "named": "Fortsett: {{name}}"
+        }
+      },
+      "account": {
+        "deactivate": {
+          "title": "Avslutt CloudAlly-kontoen",
+          "confirm": "Avslutt kontoen",
+          "item": "Avslutt CloudAlly-kontoen …"
+        }
+      },
+      "restore": {
+        "export": {
+          "title": "Eksporter sikkerhetskopi",
+          "confirm": "Eksporter"
+        },
+        "other": {
+          "title": "Gjenopprett et annet sted",
+          "confirm": "Gjenopprett et annet sted"
+        },
+        "in-place": {
+          "title": "Gjenopprett på samme sted",
+          "confirm": "Gjenopprett på samme sted"
+        }
+      }
+    },
+    "restore": {
+      "item": "Gjenopprett …",
+      "title": "Gjenopprett {{name}}",
+      "what": "{{service}}, slik det var ved slutten av en dag.",
+      "lastBackup": "Siste kopi {{time}}.",
+      "day": "Dag",
+      "dayHint": "Sikkerhetskopien slik den var ved slutten av denne dagen.",
+      "dayInvalid": "Velg en dag som har vært, senest i dag.",
+      "where": "Hvor",
+      "ways": {
+        "exportPst": {
+          "label": "Last ned som PST",
+          "note": "CloudAlly sender en nedlastingslenke på e-post når filen er klar. Ingenting endres hos kunden."
+        },
+        "exportZip": {
+          "label": "Last ned som ZIP",
+          "note": "CloudAlly sender en nedlastingslenke på e-post når filen er klar. Ingenting endres hos kunden."
+        },
+        "other": {
+          "label": "Til en annen konto i samme domene",
+          "note": "Den andre brukeren finner innholdet i sin egen postboks eller OneDrive. Den opprinnelige brukeren merker ingenting."
+        },
+        "newSite": {
+          "label": "Som et nytt område",
+          "note": "CloudAlly lager et nytt område med innholdet; området som er i bruk, røres ikke."
+        },
+        "inPlace": {
+          "label": "Tilbake på samme sted",
+          "note": "Skriver inn i dataene brukeren jobber med nå. Du bekrefter innloggingen, skriver navnet og gir en grunn, og den kan avbrytes i ett minutt."
+        }
+      },
+      "target": "Konto det skal gjenopprettes til",
+      "targetHint": "En adresse i {{domain}}.",
+      "targetInvalid": "Skriv en e-postadresse.",
+      "targetSame": "Det er samme konto: velg «Tilbake på samme sted» i stedet.",
+      "targetDomain": "CloudAlly gjenoppretter bare til en konto i {{domain}}.",
+      "includeDeleted": "Ta med slettede elementer",
+      "wholeOnly": "Parasoll gjenoppretter hele postboksen, OneDrive eller området. En enkelt e-post eller fil gjenopprettes i CloudAlly.",
+      "continue": "Fortsett"
+    },
+    "notReadYet": "En CloudAlly-konto er koblet til kunden; sikkerhetskopiene vises etter neste lesing av CloudAlly.",
+    "actionsOff": "Endringer i CloudAlly er slått av i denne installasjonen, så fanen viser bare sikkerhetskopiene.",
+    "actionsLog": {
+      "title": "Handlinger i CloudAlly",
+      "none": "Ingenting er bedt om i CloudAlly for denne kunden ennå."
+    }
   },
   "taskTicket": {
     "open": "Servicesak",
@@ -4601,7 +4811,27 @@
       "VND_CURSOR_INVALID": "Siden hører ikke til denne listen; last inn listen på nytt.",
       "VND_FILTER_INVALID": "Filteret er ikke gyldig.",
       "VND_ALERT_MOVED": "Driftsvarselet tilhører en annen kunde i Atera nå; ingenting ble sendt.",
-      "VND_ALERT_RESOLVED": "Driftsvarselet er ikke lenger åpent i Atera."
+      "VND_ALERT_RESOLVED": "Driftsvarselet er ikke lenger åpent i Atera.",
+      "VND_BACKUP_BUSY": "CloudAlly kunne ikke leses; det prøves igjen.",
+      "VND_BACKUP_GONE": "CloudAlly har ikke denne sikkerhetskopien lenger; ingenting ble sendt.",
+      "VND_BACKUP_REFUSED": "CloudAlly avviste det; ingenting ble endret.",
+      "VND_BACKUP_PAUSED": "Sikkerhetskopien står på pause; fortsett den først.",
+      "VND_BACKUP_NOT_IN_BACKUP": "Denne brukeren eller dette området er ikke i sikkerhetskopien; ta det med først.",
+      "VND_BACKUP_ALREADY_ACTIVE": "Denne brukeren eller dette området er allerede i sikkerhetskopien.",
+      "VND_BACKUP_ALREADY_PAUSED": "Sikkerhetskopien står allerede på pause.",
+      "VND_BACKUP_NOT_PAUSED": "Sikkerhetskopien står ikke på pause.",
+      "VND_BACKUP_RUNNING": "En sikkerhetskopi kjørte allerede i CloudAlly; ingenting ble sendt.",
+      "VND_BACKUP_STARTED": "CloudAlly tok imot sikkerhetskopien; den starter når en kopimaskin er ledig.",
+      "VND_ACCOUNT_CLOSED": "CloudAlly-kontoen er allerede avsluttet.",
+      "VND_RESTORE_SERVICE": "Parasoll gjenoppretter postbokser, OneDrive og SharePoint-områder; gjenopprett dette i CloudAlly.",
+      "VND_RESTORE_NO_BACKUP": "Det finnes ingen sikkerhetskopi av denne brukeren eller dette området å gjenopprette fra.",
+      "VND_RESTORE_DATE": "Velg en dag som har vært, senest i dag.",
+      "VND_RESTORE_TARGET": "Skriv adressen til kontoen det skal gjenopprettes til.",
+      "VND_RESTORE_TARGET_SAME": "Det er samme konto: gjenopprett på samme sted i stedet.",
+      "VND_RESTORE_TARGET_DOMAIN": "CloudAlly gjenoppretter bare til en konto i samme domene.",
+      "VND_RESTORE_STARTED": "CloudAlly tok imot gjenopprettingen; den kjører som en jobb i CloudAlly.",
+      "VND_EXPORT_STARTED": "CloudAlly tok imot eksporten; den sender nedlastingslenken på e-post når filen er klar.",
+      "VND_RESTORE_SIGN_IN": "CloudAlly vil ha en innlogging i kundens Microsoft 365 før gjenopprettingen. Sjekk i CloudAlly om den startet."
     },
     "dialog": {
       "previewing": "Sjekker hva handlingen vil gjøre …",
@@ -4670,6 +4900,22 @@
           "resolve": "Lukk driftsvarselet",
           "delete": "Slett driftsvarselet"
         }
+      },
+      "cloudally": {
+        "backup": {
+          "run": "Sikkerhetskopier nå",
+          "activate": "Ta med i sikkerhetskopien",
+          "pause": "Sett sikkerhetskopien på pause",
+          "resume": "Fortsett sikkerhetskopien"
+        },
+        "account": {
+          "deactivate": "Avslutt CloudAlly-kontoen"
+        },
+        "restore": {
+          "export": "Eksporter sikkerhetskopi",
+          "other": "Gjenopprett et annet sted",
+          "in-place": "Gjenopprett på samme sted"
+        }
       }
     },
     "effects": {
@@ -4691,7 +4937,26 @@
       "VND_EFFECT_ALERT_RESOLVE": "Atera lukker «{{title}}» ({{device}}): det forsvinner fra de åpne driftsvarslene i Atera.",
       "VND_EFFECT_ALERT_CONFIRM": "Parasoll leser driftsvarselet på nytt etterpå og viser det lukket når Atera gjør det.",
       "VND_EFFECT_ALERT_DELETE": "Atera sletter «{{title}}» ({{device}}).",
-      "VND_EFFECT_ALERT_DELETE_HISTORY": "Det forsvinner også fra historikken i Atera; Parasoll beholder det som lukket."
+      "VND_EFFECT_ALERT_DELETE_HISTORY": "Det forsvinner også fra historikken i Atera; Parasoll beholder det som lukket.",
+      "VND_EFFECT_BACKUP_RUN": "CloudAlly tar sikkerhetskopi av {{name}} ({{service}}) nå.",
+      "VND_EFFECT_BACKUP_RUN_ALL_one": "CloudAlly tar sikkerhetskopi av {{service}} hos {{account}} nå: {{count}} bruker eller område.",
+      "VND_EFFECT_BACKUP_RUN_ALL_other": "CloudAlly tar sikkerhetskopi av {{service}} hos {{account}} nå: {{count}} brukere eller områder.",
+      "VND_EFFECT_BACKUP_QUEUE": "Den starter når en av CloudAllys kopimaskiner er ledig, og det kan ta noen minutter.",
+      "VND_EFFECT_BACKUP_ACTIVATE": "CloudAlly tar med {{name}} i sikkerhetskopien av {{service}} og kopierer fra neste kjøring.",
+      "VND_EFFECT_BACKUP_BILLED": "CloudAlly fakturerer én bruker eller ett område mer fra da av.",
+      "VND_EFFECT_BACKUP_PAUSE_one": "CloudAlly stanser de planlagte kopiene av {{service}} hos {{account}} ({{count}} bruker eller område) til noen fortsetter dem.",
+      "VND_EFFECT_BACKUP_PAUSE_other": "CloudAlly stanser de planlagte kopiene av {{service}} hos {{account}} ({{count}} brukere eller områder) til noen fortsetter dem.",
+      "VND_EFFECT_BACKUP_PAUSE_GAP": "Parasoll viser pausen som et dekningshull til da.",
+      "VND_EFFECT_BACKUP_RESUME": "CloudAlly kopierer {{service}} hos {{account}} etter planen igjen.",
+      "VND_EFFECT_ACCOUNT_DEACTIVATE": "CloudAlly sier opp abonnementet til {{account}} og sletter CloudAlly-kontoen.",
+      "VND_EFFECT_ACCOUNT_DEACTIVATE_DATA": "Sikkerhetskopiene forsvinner med den. Det er ikke bekreftet om CloudAlly tar vare på dem en stund etter en sletting via API-et.",
+      "VND_EFFECT_RESTORE_EXPORT": "CloudAlly eksporterer {{service}} for {{name}} slik det var ved slutten av {{date}}, som {{format}}.",
+      "VND_EFFECT_RESTORE_OTHER": "CloudAlly gjenoppretter {{service}} for {{name}} slik det var ved slutten av {{date}}, til {{target}}.",
+      "VND_EFFECT_RESTORE_NEW_SITE": "CloudAlly gjenoppretter området {{name}} slik det var ved slutten av {{date}}, som et nytt område; området som er i bruk, røres ikke.",
+      "VND_EFFECT_RESTORE_IN_PLACE": "CloudAlly gjenoppretter {{service}} for {{name}} slik det var ved slutten av {{date}}, på samme sted – ved siden av det brukeren jobber med nå.",
+      "VND_EFFECT_RESTORE_DELETED": "Elementer som er slettet siden, gjenopprettes også.",
+      "VND_EFFECT_RESTORE_LINK": "CloudAlly sender nedlastingslenken på e-post når filen er klar; Parasoll får den ikke.",
+      "VND_EFFECT_RESTORE_JOB": "CloudAlly kjører det som en egen jobb; hvordan den ender, ses i CloudAlly."
     }
   },
   "tickets": {

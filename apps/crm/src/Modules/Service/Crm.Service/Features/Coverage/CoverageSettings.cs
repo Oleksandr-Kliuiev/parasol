@@ -40,7 +40,19 @@ public sealed record CoverageRuleItem(
 /// take, so no check stores a gap of a rule that is off.
 /// </summary>
 internal sealed class CoverageSettings(ServiceDbContext db, IEnumerable<ICoverageRule> rules, CoverageChecks checks, IUserDirectory users, TimeProvider time)
+    : ICoverageLimits
 {
+    public async Task<int?> LimitAsync(string rule, CancellationToken cancellationToken)
+    {
+        if (rules.FirstOrDefault(r => r.Code == rule)?.Threshold is not { } limit)
+        {
+            return null;
+        }
+
+        var set = await db.CoverageRuleSettings.AsNoTracking().Where(s => s.Code == rule).Select(s => s.Threshold).SingleOrDefaultAsync(cancellationToken);
+        return set ?? limit.Default;
+    }
+
     public async Task<IReadOnlyList<CoverageRuleItem>> ListAsync(CancellationToken ct)
     {
         // Tracked: each ETag comes from its setting's row version.

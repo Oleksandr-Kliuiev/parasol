@@ -87,7 +87,7 @@ export function CoverageRulesDialog({ onClose }: { onClose: () => void }) {
             {key && <Text block className={styles.muted}>{t(`coverage.rules.${key}.description`)} {t(`coverage.rules.${key}.when`)}</Text>}
             <Switch checked={d.enabled} disabled={!canWrite || busy} label={t('coverage.enabled')}
               onChange={(_, data) => setDraft(rule, { ...d, enabled: data.checked })} />
-            {rule.threshold && range && <Field label={t(`coverage.limit.${rule.threshold.unit}`)} hint={t('coverage.limitHint', range)}
+            {rule.threshold && range && <Field label={key ? t(`coverage.rules.${key}.limit`, { defaultValue: t(`coverage.limit.${rule.threshold.unit}`) }) : t(`coverage.limit.${rule.threshold.unit}`)} hint={t('coverage.limitHint', range)}
               validationMessage={touched && !limitOk(rule) ? t('coverage.limitInvalid', range) : undefined}>
               <Input className={styles.limit} type="number" inputMode="numeric" min={range.min} max={range.max} value={d.limit}
                 disabled={!canWrite || busy} onChange={(_, data) => setDraft(rule, { ...d, limit: data.value })} />

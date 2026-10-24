@@ -1,5 +1,6 @@
 using System.Net;
 using Crm.Integrations.Atera;
+using Crm.Integrations.CloudAlly;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Microsoft.AspNetCore.Builder;
@@ -76,7 +77,8 @@ public class ProviderRedirectTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection().AddLogging().AddSingleton(TimeProvider.System).AddSingleton<IConfiguration>(configuration);
-        services.AddAteraIntegration(configuration).AddPowerOfficeIntegration(configuration).AddPartnerCenterIntegration(configuration);
+        services.AddAteraIntegration(configuration).AddPowerOfficeIntegration(configuration).AddPartnerCenterIntegration(configuration)
+            .AddCloudAllyIntegration(configuration);
         return services.BuildServiceProvider();
     }
 
@@ -87,6 +89,8 @@ public class ProviderRedirectTests
     [InlineData("IPartnerCenterClient")]
     [InlineData("IPartnerBillingClient")]
     [InlineData("PartnerCenterTokenProvider")]
+    [InlineData("ICloudAllyClient")]
+    [InlineData(CloudAllyTokenProvider.HttpClientName)]
     public void Every_provider_client_ends_in_a_handler_that_does_not_follow_redirects(string client)
     {
         using var services = Providers([]);
@@ -143,6 +147,28 @@ public class ProviderRedirectTests
 
         refused.StatusCode.ShouldBe(HttpStatusCode.Found);
         powerOffice.Requests.ShouldHaveSingleItem().Headers["Ocp-Apim-Subscription-Key"].ShouldBe("subscription-secret");
+        elsewhere.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task The_cloudally_secret_never_reaches_the_address_a_redirect_names()
+    {
+        await using var elsewhere = await Loopback.StartAsync(_ => Task.CompletedTask);
+        await using var cloudAlly = await Loopback.StartAsync(RedirectTo(elsewhere));
+        using var services = Providers(new()
+        {
+            ["Integrations:CloudAlly:Enabled"] = "true",
+            ["Integrations:CloudAlly:ClientId"] = "client",
+            ["Integrations:CloudAlly:ClientSecret"] = "cloudally-secret",
+            ["Integrations:CloudAlly:Email"] = "api@firm.test",
+            ["Integrations:CloudAlly:Password"] = "password",
+            ["Integrations:CloudAlly:BaseUrl"] = cloudAlly.Address.ToString(),
+        });
+
+        var refused = await Should.ThrowAsync<HttpRequestException>(() => services.GetRequiredService<CloudAllyTokenProvider>().GetTokenAsync(Ct));
+
+        refused.StatusCode.ShouldBe(HttpStatusCode.Found);
+        cloudAlly.Requests.ShouldHaveSingleItem().Headers["client-secret"].ShouldBe("cloudally-secret");
         elsewhere.Requests.ShouldBeEmpty();
     }
 
