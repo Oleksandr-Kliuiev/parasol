@@ -1,0 +1,58 @@
+{
+  "recordedAt": "2026-10-17T17:52:50.635423+00:00",
+  "scope": "local synthetic regression, not live-provider, Entra or deployment acceptance",
+  "sourceInputFiles": 1426,
+  "sourceFreezeSha256": "8054d4d39b0506a9529217565dce0958591f5a5daf28846a41b7692b446fe860",
+  "allCurrentInputHashesVerified": true,
+  "unit": {
+    "phase": "unit",
+    "passed": 714,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "inputsUnchanged": 1426,
+    "exitCode": 0,
+    "logSha256": "a140cac222434a2d6ceece3adf0e726cbca5befabea416937b53bba96e016452"
+  },
+  "postgresql": {
+    "phase": "pg",
+    "passed": 797,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "inputsUnchanged": 1426,
+    "exitCode": 0,
+    "logSha256": "07a4786abd2976d0599de22ad366afbee52954066130348bc8cca866abbf8cb2"
+  },
+  "browser": {
+    "phase": "browser",
+    "passed": 90,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "inputsUnchanged": 1426,
+    "exitCode": 0,
+    "logSha256": "2d898c7cad55a33fbfedbe255061b78b28628b31b508bd0c5455f678205f6334"
+  },
+  "cleanup": {
+    "strictRunnerExited": true,
+    "clusters": [
+      {
+        "ownedClusterDirectoryRemoved": true,
+        "loopbackPortClosed": true
+      },
+      {
+        "ownedClusterDirectoryRemoved": true,
+        "loopbackPortClosed": true
+      },
+      {
+        "ownedClusterDirectoryRemoved": true,
+        "loopbackPortClosed": true
+      }
+    ],
+    "ownedRuntimePrefixRemoved": true,
+    "privateEnvironmentFilesRemoved": true,
+    "cachedRuntimeProcessesRemaining": 0
+  },
+  "historicalSealsAndFixturesChanged": false
+}

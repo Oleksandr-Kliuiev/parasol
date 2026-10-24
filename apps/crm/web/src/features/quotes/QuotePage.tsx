@@ -2,16 +2,9 @@ import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Dropdown,
   Field,
   Input,
-  Link,
   MessageBar,
   MessageBarActions,
   MessageBarBody,
@@ -20,10 +13,10 @@ import {
   Text,
   Textarea,
   makeStyles,
-  tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { ArrowDownload20Regular, Send20Regular } from '@fluentui/react-icons';
+import { ArrowDownload20Regular, DocumentBulletList16Regular, Money16Regular, Send20Regular, TextAlignLeft16Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
@@ -34,25 +27,39 @@ import { DetailList, Panel } from '../../shared/components/Panel';
 import { UserPicker } from '../../shared/components/UserPicker';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
-import { blankToNull, formatDate, formatDateTime, formatMoney, parseDecimal } from '../../shared/utils/format';
+import { blankToNull, formatDate, formatMoney, parseDecimal } from '../../shared/utils/format';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { OrganizationPicker } from '../contracts/OrganizationPicker';
 import { useOrganizationContacts, useQuote, useQuoteActions, useQuoteTemplates, quotePdfUrl } from './api';
 import { QuoteLinesEditor, QuoteLinesTable } from './QuoteLines';
-import { emptyLine, lineAmount, toDraft, type LineDraft } from './lineDraft';
+import { emptyLine, lineAmount, toDraft, type LineDraft, pricedOnSave } from './lineDraft';
 import { QuoteStatusBadge } from './shared';
 import type { Quote, QuoteRequest } from './types';
+import { ReasonDialog, SendQuoteDialog, TransferQuoteDialog } from './QuoteDialogs';
+import { QuoteHistoryPanel } from './QuoteHistoryPanel';
 
 const useStyles = makeStyles({
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
-  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: tokens.spacingHorizontalM },
+  stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '16px', alignItems: 'start' },
+  editGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)',
+    gap: '16px',
+    alignItems: 'start',
+    '@media (max-width: 1100px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
+  },
+  side: { display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 },
+  contents: { display: 'contents' },
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px 16px', alignItems: 'start', '& .fui-Dropdown, & .fui-Combobox': { minWidth: 0 } },
   wide: { gridColumn: '1 / -1' },
-  total: { fontSize: tokens.fontSizeHero700, lineHeight: tokens.lineHeightHero700, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  versions: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
-  actions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS },
-  texts: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM, maxWidth: '68ch' },
+  // The monthly sum as the reference's "estimated payment" block: a soft ember well, the figure in display type.
+  well: { display: 'grid', gap: '4px', marginBottom: '14px', paddingTop: '14px', paddingBottom: '14px', paddingLeft: '16px', paddingRight: '16px', borderRadius: '14px', backgroundColor: h.emberSoft },
+  total: { fontFamily: h.display, fontSize: 'clamp(26px, 2.4vw, 34px)', lineHeight: 1.1, fontWeight: 600, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' },
+  muted: { color: h.muted, fontSize: '12px' },
+  texts: { display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '75ch' },
+  text: { display: 'grid', gap: '4px', whiteSpace: 'pre-wrap' },
+  textLabel: { color: h.muted, fontSize: '12px', fontWeight: 700, lineHeight: '16px' },
+  message: { marginBottom: '12px' },
 });
 
 interface FormState {
@@ -181,6 +188,8 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
   const monthly = form.lines.filter((line) => line.recurrence === 'Monthly').reduce((sum, line) => sum + lineAmount(line), 0);
   const oneTime = form.lines.filter((line) => line.recurrence === 'OneTime').reduce((sum, line) => sum + lineAmount(line), 0);
   const term = Number(form.termMonths) || 0;
+  // Lines the price list prices on saving are not in the sums yet: the figures say so instead of counting them as zero.
+  const unpriced = form.lines.filter(pricedOnSave).length;
 
   const run = async (label: string, action: () => Promise<unknown>) => {
     try {
@@ -257,24 +266,15 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
           )
         }
         actions={
-          <div className={styles.actions}>
-            {editable && (
-              <Button appearance="primary" disabled={actions.create.isPending || actions.update.isPending} onClick={() => void save()}>
-                {isNew ? t('quotes.create') : t('common.save')}
-              </Button>
-            )}
-            {!isNew && editable && quote!.lines.length > 0 && (
+          <>
+            {/* Releasing is a draft's step; a version already released is sent or revised, not released again. */}
+            {!isNew && editable && quote!.status === 'Draft' && quote!.lines.length > 0 && (
               <Button onClick={() => void run(t('quotes.submitted'), () => actions.submit.mutateAsync())}>{t('quotes.submit')}</Button>
             )}
             {!isNew && quote!.status === 'PendingApproval' && canApproveDiscount && (
-              <>
-                <Button appearance="primary" onClick={() => void run(t('quotes.approved'), () => actions.approve.mutateAsync())}>
-                  {t('quotes.approve')}
-                </Button>
-                <Button {...restoreFocusTarget} onClick={() => setDialog('reject')}>
-                  {t('quotes.reject')}
-                </Button>
-              </>
+              <Button {...restoreFocusTarget} onClick={() => setDialog('reject')}>
+                {t('quotes.reject')}
+              </Button>
             )}
             {!isNew && quote!.status === 'PendingApproval' && canWrite && (
               <Button appearance="subtle" onClick={() => void run(t('quotes.withdrawn'), () => actions.withdraw.mutateAsync())}>
@@ -288,11 +288,10 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
             )}
             {!isNew && canWrite && (quote!.status === 'Ready' || quote!.status === 'Sent') && (
               <>
-                <Button {...restoreFocusTarget} icon={<Send20Regular />} disabled={documentPreparing} onClick={() => setDialog('send')}>
+                {/* With e-mail switched off the server refuses to send: the button is off and the banner below says why. */}
+                <Button {...restoreFocusTarget} icon={<Send20Regular />} disabled={documentPreparing || !quote!.canSendByEmail}
+                  disabledFocusable={!quote!.canSendByEmail} onClick={() => setDialog('send')}>
                   {t('quotes.send')}
-                </Button>
-                <Button appearance="primary" onClick={() => void run(t('quotes.accepted'), () => actions.accept.mutateAsync())}>
-                  {t('quotes.accept')}
                 </Button>
                 <Button {...restoreFocusTarget} onClick={() => setDialog('decline')}>
                   {t('quotes.decline')}
@@ -309,44 +308,66 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
                 {t('quotes.transfer.action')}
               </Button>
             )}
-          </div>
+            {/* The page's one primary action comes last: save a draft, approve a discount or record the customer's yes. A
+                released version can still be edited, but saving it is then the quieter step (it returns it to draft). */}
+            {editable && (
+              <Button appearance={isNew || quote!.status === 'Draft' ? 'primary' : 'secondary'} disabled={actions.create.isPending || actions.update.isPending} onClick={() => void save()}>
+                {isNew ? t('quotes.create') : t('common.save')}
+              </Button>
+            )}
+            {!isNew && quote!.status === 'PendingApproval' && canApproveDiscount && (
+              <Button appearance="primary" onClick={() => void run(t('quotes.approved'), () => actions.approve.mutateAsync())}>
+                  {t('quotes.approve')}
+                </Button>
+            )}
+            {!isNew && canWrite && (quote!.status === 'Ready' || quote!.status === 'Sent') && (
+                <Button appearance="primary" onClick={() => void run(t('quotes.accepted'), () => actions.accept.mutateAsync())}>
+                  {t('quotes.accept')}
+                </Button>
+            )}
+          </>
         }
       />
 
       {!isNew && documentPreparing && (
-        <MessageBar intent="info" style={{ marginBottom: tokens.spacingVerticalM }}>
+        <MessageBar intent="info" className={styles.message}>
           <MessageBarBody>{t('quotes.document.preparingBody')}</MessageBarBody>
         </MessageBar>
       )}
       {!isNew && quote!.status === 'PendingApproval' && (
-        <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
+        <MessageBar intent="warning" className={styles.message}>
           <MessageBarBody>
             {t('quotes.awaitingApprovalBody', { pct: quote!.maxDiscountPct, limit: quote!.discountLimitPct })}
           </MessageBarBody>
         </MessageBar>
       )}
       {!isNew && quote!.rejectedReason && quote!.status === 'Draft' && (
-        <MessageBar intent="error" style={{ marginBottom: tokens.spacingVerticalM }}>
+        <MessageBar intent="error" className={styles.message}>
           <MessageBarBody>{t('quotes.rejectedBody', { reason: quote!.rejectedReason })}</MessageBarBody>
         </MessageBar>
       )}
       {!isNew && quote!.status === 'Accepted' && (
-        <MessageBar intent="success" style={{ marginBottom: tokens.spacingVerticalM }}>
+        <MessageBar intent="success" className={styles.message}>
           <MessageBarBody>{t('quotes.acceptedBody', { date: formatDate(quote!.decidedOn) })}</MessageBarBody>
           <MessageBarActions>
             <AppLink to={`/contracts?search=${encodeURIComponent(quote!.title)}`}>{t('quotes.openDraftContract')}</AppLink>
           </MessageBarActions>
         </MessageBar>
       )}
-      {!isNew && quote!.status === 'Ready' && !quote!.canSendByEmail && (
-        <MessageBar intent="info" style={{ marginBottom: tokens.spacingVerticalM }}>
+      {!isNew && editable && quote!.status !== 'Draft' && (
+        <MessageBar intent="info" className={styles.message}>
+          <MessageBarBody>{t('quotes.editReturnsToDraft')}</MessageBarBody>
+        </MessageBar>
+      )}
+      {!isNew && (quote!.status === 'Ready' || quote!.status === 'Sent') && !quote!.canSendByEmail && (
+        <MessageBar intent="info" className={styles.message}>
           <MessageBarBody>{t('quotes.emailDisabled')}</MessageBarBody>
         </MessageBar>
       )}
 
       <div className={styles.stack}>
-        <div className={styles.grid}>
-          <Panel title={t('quotes.sections.quote')}>
+        <div className={editable ? styles.editGrid : styles.grid}>
+          <Panel title={t('quotes.sections.quote')} icon={<DocumentBulletList16Regular />}>
             {editable ? (
               <div className={styles.formGrid}>
                 <Field label={t('quotes.fields.organization')} required className={styles.wide}>
@@ -366,7 +387,7 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
                     value={
                       (contacts.data ?? []).find((c) => c.id === form.contactId)
                         ? `${(contacts.data ?? []).find((c) => c.id === form.contactId)!.firstName} ${(contacts.data ?? []).find((c) => c.id === form.contactId)!.lastName}`
-                        : (quote?.contactName ?? '')
+                        : (quote?.contactName || t('common.none'))
                     }
                     onOptionSelect={(_, d) => setForm({ ...form, contactId: d.optionValue ?? '' })}
                   >
@@ -460,86 +481,30 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
             )}
           </Panel>
 
-          {canSeeMoney && (
-            <Panel title={t('quotes.sections.sum')}>
-              <div className={styles.total}>{formatMoney(monthly)}</div>
-              <Text className={styles.muted}>{t('quotes.perMonthExVat')}</Text>
-              <DetailList
-                items={[
-                  { label: t('quotes.fields.oneTime'), value: formatMoney(oneTime) },
-                  { label: t('quotes.fields.contractValue'), value: formatMoney(oneTime + monthly * term) },
-                  {
-                    label: t('quotes.fields.maxDiscount'),
-                    value: isNew ? null : t('quotes.discountOf', { pct: quote!.maxDiscountPct }),
-                  },
-                ]}
-              />
-            </Panel>
-          )}
+          {/* While the quote is edited the form takes the wide column, the figures and history stack beside it. */}
+          <div className={editable ? styles.side : styles.contents}>
+            {canSeeMoney && (
+              <Panel title={t('quotes.sections.sum')} icon={<Money16Regular />}>
+                <div className={styles.well}>
+                  <div className={styles.total}>{formatMoney(monthly)}</div>
+                  <Text className={styles.muted}>{t('quotes.perMonthExVat')}</Text>
+                  {unpriced > 0 && <Text className={styles.muted}>{t('quotes.unpricedLines', { count: unpriced })}</Text>}
+                </div>
+                <DetailList
+                  items={[
+                    { label: t('quotes.fields.oneTime'), value: formatMoney(oneTime) },
+                    { label: t('quotes.fields.contractValue'), value: formatMoney(oneTime + monthly * term) },
+                    {
+                      label: t('quotes.fields.maxDiscount'),
+                      value: isNew ? null : t('quotes.discountOf', { pct: quote!.maxDiscountPct }),
+                    },
+                  ]}
+                />
+              </Panel>
+            )}
 
-          {!isNew && (
-            <Panel title={t('quotes.sections.history')}>
-              <DetailList
-                items={[
-                  { label: t('quotes.fields.issuedOn'), value: formatDate(quote!.issuedOn) },
-                  { label: t('quotes.fields.approvedBy'), value: quote!.approvedBy?.name },
-                  { label: t('quotes.fields.sentTo'), value: quote!.sentTo },
-                  { label: t('quotes.fields.sentAt'), value: quote!.sentAt ? formatDateTime(quote!.sentAt) : null },
-                  { label: t('quotes.fields.declineReason'), value: quote!.declineReason },
-                ]}
-              />
-              {quote!.documents.length > 0 && (
-                <section aria-label={t('quotes.document.title')} style={{ marginTop: tokens.spacingVerticalS }}>
-                  <Text weight="semibold">{t('quotes.document.title')}</Text>
-                  <ul className={styles.versions}>
-                    {quote!.documents.map((document) => (
-                      <li key={document.revision}>
-                        <Text block>
-                          {t('quotes.document.line', {
-                            revision: document.revision,
-                            origin: t(`quotes.document.origin.${document.origin}`),
-                            status: t(`quotes.document.status.${document.status}`),
-                            at: formatDateTime(document.readyAt ?? document.createdAt),
-                          })}
-                          {document.status === 'Ready' && canSeeMoney && (
-                            <>
-                              {' · '}
-                              <Link href={quotePdfUrl(quote!.id, document.revision)} target="_blank" rel="noopener noreferrer">
-                                {t('quotes.document.download', { revision: document.revision })}
-                              </Link>
-                            </>
-                          )}
-                        </Text>
-                        {document.sha256 && (
-                          <Text block className={styles.muted} style={{ fontFamily: tokens.fontFamilyMonospace }}>
-                            SHA-256 {document.sha256.slice(0, 16)}…
-                          </Text>
-                        )}
-                        {document.origin === 'Reconstructed' && (
-                          <Text block style={{ color: tokens.colorPaletteDarkOrangeForeground1 }}>
-                            {t('quotes.document.reconstructedNote')}
-                          </Text>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-              <ul className={styles.versions} style={{ marginTop: tokens.spacingVerticalS }}>
-                {quote!.versions.map((version) => (
-                  <li key={version.id}>
-                    {version.id === quote!.id ? (
-                      <Text weight="semibold">{t('quotes.versionLine', { version: version.versionNo, status: t(`quotes.status.${version.status}`) })}</Text>
-                    ) : (
-                      <AppLink to={`/quotes/${version.id}`}>
-                        {t('quotes.versionLine', { version: version.versionNo, status: t(`quotes.status.${version.status}`) })}
-                      </AppLink>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
+            {!isNew && <QuoteHistoryPanel quote={quote!} canSeeMoney={canSeeMoney} />}
+          </div>
         </div>
 
         {editable ? (
@@ -553,7 +518,7 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
           <QuoteLinesTable lines={quote!.lines} canSeeMoney={canSeeMoney} />
         )}
 
-        <Panel title={t('quotes.sections.texts')}>
+        <Panel title={t('quotes.sections.texts')} icon={<TextAlignLeft16Regular />}>
           {editable ? (
             <div className={styles.formGrid}>
               <Field label={t('quotes.fields.introText')} className={styles.wide}>
@@ -565,8 +530,14 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
             </div>
           ) : (
             <div className={styles.texts}>
-              <Text>{quote!.introText}</Text>
-              <Text className={styles.muted}>{quote!.termsText}</Text>
+              <div className={styles.text}>
+                <Text className={styles.textLabel}>{t('quotes.fields.introText')}</Text>
+                <Text>{quote!.introText || t('common.none')}</Text>
+              </div>
+              <div className={styles.text}>
+                <Text className={styles.textLabel}>{t('quotes.fields.termsText')}</Text>
+                <Text>{quote!.termsText || t('common.none')}</Text>
+              </div>
             </div>
           )}
         </Panel>
@@ -611,164 +582,5 @@ function QuoteEditor({ quote }: { quote: Quote | null }) {
         />
       )}
     </>
-  );
-}
-
-/** Hands the quote, with its earlier versions, to another person (DEV-09). */
-function TransferQuoteDialog({
-  quote,
-  leavesScope,
-  pending,
-  onClose,
-  onTransfer,
-}: {
-  quote: Quote;
-  leavesScope: boolean;
-  pending: boolean;
-  onClose: () => void;
-  onTransfer: (owner: { id: string; displayName: string }) => void;
-}) {
-  const { t } = useTranslation();
-  const [owner, setOwner] = useState<{ id: string; displayName: string } | null>(null);
-  const unchanged = owner !== null && owner.id === quote.owner?.id;
-
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t('quotes.transfer.title', { number: quote.number })}</DialogTitle>
-          <DialogContent>
-            <Field label={t('quotes.transfer.owner')} required>
-              <UserPicker value={owner} onChange={setOwner} />
-            </Field>
-            <p>{t('quotes.transfer.body')}</p>
-            {leavesScope && <p>{t('quotes.transfer.leavesScope')}</p>}
-          </DialogContent>
-          <DialogActions>
-            <Button appearance="secondary" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
-            <Button appearance="primary" disabled={pending || owner === null || unchanged} onClick={() => owner && onTransfer(owner)}>
-              {t('quotes.transfer.submit')}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
-function SendQuoteDialog({
-  quote,
-  contactEmail,
-  contactName,
-  onClose,
-  onSend,
-  pending,
-}: {
-  quote: Quote;
-  contactEmail: string;
-  contactName: string;
-  onClose: () => void;
-  onSend: (request: { toAddress: string; toName: string | null; cc: string[]; subject: string | null; message: string | null }) => Promise<void>;
-  pending: boolean;
-}) {
-  const styles = useStyles();
-  const { t } = useTranslation();
-  const [toAddress, setToAddress] = useState(contactEmail);
-  const [cc, setCc] = useState('');
-  const [subject, setSubject] = useState(t('quotes.mailSubject', { number: quote.number, title: quote.title }));
-  const [message, setMessage] = useState('');
-
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t('quotes.sendTitle', { number: quote.number })}</DialogTitle>
-          <DialogContent>
-            <div className={styles.formGrid}>
-              <Field label={t('quotes.fields.toAddress')} required className={styles.wide}>
-                <Input type="email" value={toAddress} onChange={(_, d) => setToAddress(d.value)} />
-              </Field>
-              <Field label={t('quotes.fields.cc')} hint={t('quotes.ccHint')} className={styles.wide}>
-                <Input value={cc} onChange={(_, d) => setCc(d.value)} />
-              </Field>
-              <Field label={t('quotes.fields.subject')} className={styles.wide}>
-                <Input value={subject} onChange={(_, d) => setSubject(d.value)} />
-              </Field>
-              <Field label={t('quotes.fields.message')} className={styles.wide}>
-                <Textarea rows={4} value={message} onChange={(_, d) => setMessage(d.value)} />
-              </Field>
-            </div>
-            <Text className={styles.muted}>{t('quotes.sendExplainer')}</Text>
-          </DialogContent>
-          <DialogActions>
-            <Button appearance="secondary" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              appearance="primary"
-              disabled={pending || toAddress.trim() === ''}
-              onClick={() =>
-                void onSend({
-                  toAddress: toAddress.trim(),
-                  toName: blankToNull(contactName),
-                  cc: cc
-                    .split(/[,;]/)
-                    .map((part) => part.trim())
-                    .filter((part) => part !== ''),
-                  subject: blankToNull(subject),
-                  message: blankToNull(message),
-                })
-              }
-            >
-              {t('quotes.send')}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
-function ReasonDialog({
-  title,
-  label,
-  confirmLabel,
-  required,
-  onClose,
-  onSubmit,
-}: {
-  title: string;
-  label: string;
-  confirmLabel: string;
-  required: boolean;
-  onClose: () => void;
-  onSubmit: (reason: string) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [reason, setReason] = useState('');
-
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogContent>
-            <Field label={label} required={required}>
-              <Textarea rows={3} value={reason} onChange={(_, d) => setReason(d.value)} />
-            </Field>
-          </DialogContent>
-          <DialogActions>
-            <Button appearance="secondary" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
-            <Button appearance="primary" disabled={required && reason.trim() === ''} onClick={() => void onSubmit(reason)}>
-              {confirmLabel}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
   );
 }

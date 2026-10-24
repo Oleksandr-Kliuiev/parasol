@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Field, Input, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
-import { Search20Regular } from '@fluentui/react-icons';
+import { Search16Regular, Search20Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import type { RegistryOrganization } from '../../api/types';
 import { Panel } from '../../shared/components/Panel';
@@ -12,20 +13,23 @@ import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { lookupRegistry, searchRegistry } from './api';
 
 const useStyles = makeStyles({
-  results: { listStyle: 'none', margin: `${tokens.spacingVerticalM} 0 0`, padding: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
+  results: { listStyle: 'none', margin: `${tokens.spacingVerticalM} 0 0`, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' },
   result: {
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: tokens.spacingHorizontalM,
-    paddingBlock: tokens.spacingVerticalS,
-    paddingInline: tokens.spacingHorizontalM,
-    borderRadius: tokens.borderRadiusMedium,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    paddingTop: '10px',
+    paddingBottom: '10px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    borderRadius: '12px',
+    border: `1px solid ${h.line}`,
+    backgroundColor: h.surface2,
   },
-  resultText: { display: 'flex', flexDirection: 'column', minWidth: 0 },
-  muted: { color: tokens.colorNeutralForeground3 },
+  resultText: { display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 },
+  muted: { color: h.muted },
 });
 
 export function RegistryLookup({ onSelect }: { onSelect: (organization: RegistryOrganization) => void }) {
@@ -48,7 +52,7 @@ export function RegistryLookup({ onSelect }: { onSelect: (organization: Registry
   });
 
   return (
-    <Panel title={t('organizations.form.registryTitle')}>
+    <Panel title={t('organizations.form.registryTitle')} icon={<Search16Regular />}>
       <Field label={t('organizations.form.registrySearch')} hint={t('organizations.form.registryHint')}>
         <Input
           value={text}

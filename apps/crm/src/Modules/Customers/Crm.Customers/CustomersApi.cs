@@ -1,4 +1,6 @@
 using Crm.Customers.Contracts;
+using System.Data;
+using Crm.SharedKernel.Results;
 using Crm.Customers.Domain;
 using Crm.Customers.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +11,19 @@ namespace Crm.Customers;
 internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOptions> options) : ICustomersApi
 {
     public BillingDetailsMaster BillingDetailsMaster => options.Value.BillingDetailsMaster;
+
+    public Task<Result<T>> WithUsableOrganizationAsync<T>(Guid organizationId,
+        Func<OrganizationRef, CancellationToken, Task<Result<T>>> action, CancellationToken cancellationToken) =>
+        db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            // No Customers writes: only the organization row stays stable until the owning module finishes its commit.
+            await using var lease = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            if (await GetOrganizationAsync(organizationId, cancellationToken) is not { } organization)
+                return (Result<T>)Error.NotFound("CUS_ORGANIZATION_UNAVAILABLE", "The customer is unavailable.");
+            var result = await action(organization, cancellationToken);
+            await lease.CommitAsync(cancellationToken);
+            return result;
+        });
 
     public Task<bool> IsMergeUndoneAsync(Guid mergeId, CancellationToken cancellationToken) =>
         db.OrganizationMerges.AsNoTracking().AnyAsync(m => m.Id == mergeId && m.UndoneAt != null, cancellationToken);
@@ -50,6 +65,12 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
 
     public async Task<ImportOrganizationResult> ImportOrganizationAsync(ExternalOrganizationData data, OrganizationStatus status, CancellationToken cancellationToken)
     {
+        if (data.SourceRecordId is { } sourceId &&
+            await db.Organizations.IgnoreQueryFilters().AsNoTracking().SingleOrDefaultAsync(o => o.Id == sourceId, cancellationToken) is { } saved)
+        {
+            if (saved.IsDeleted) throw new InvalidOperationException("The previously imported organization is unavailable.");
+            return new ImportOrganizationResult(saved.Id, Created: false);
+        }
         var orgNumber = OrgNumber.IsValid(data.OrgNumber) ? OrgNumber.Normalize(data.OrgNumber!) : null;
         if (orgNumber is not null &&
             await db.Organizations.AsNoTracking().Where(o => o.OrgNumber == orgNumber).Select(o => (Guid?)o.Id).FirstOrDefaultAsync(cancellationToken) is { } existingId)
@@ -61,12 +82,13 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
             data.Name.Trim(), orgNumber, null, status, null, data.Website, data.Phone, ValidEmail(data.Email), ValidEmail(data.Billing?.InvoiceEmail),
             data.Billing?.EhfEnabled ?? false, null, null, ToAddress(data.PostalAddress), ToAddress(data.VisitAddress), ToAddress(data.Billing?.Address),
             data.Domains);
-        var created = Organization.Create(details);
+        var created = Organization.Create(details, data.SourceRecordId);
         if (!created.IsSuccess)
         {
             throw new InvalidOperationException($"Cannot import organization: {created.Error!.Code}.");
         }
 
+        if (data.PreviewOnly) return new ImportOrganizationResult(created.Value.Id, Created: true);
         db.Organizations.Add(created.Value);
         await SaveOrDiscardAsync(cancellationToken);
         return new ImportOrganizationResult(created.Value.Id, Created: true);
@@ -153,6 +175,24 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
             .ToDictionaryAsync(o => o.Id, o => o.AccountManagerId, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, OrganizationRef>> GetOrganizationsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<Guid, OrganizationRef>();
+        foreach (var batch in organizationIds.Distinct().Chunk(1000))
+        {
+            var rows = await db.Organizations.AsNoTracking()
+                .Where(o => batch.Contains(o.Id))
+                .Select(o => new OrganizationRef(o.Id, o.Name, o.OrgNumber, o.Status, o.AccountManagerId))
+                .ToListAsync(cancellationToken);
+            foreach (var row in rows)
+            {
+                result[row.Id] = row;
+            }
+        }
+
+        return result;
+    }
+
     public async Task<IReadOnlyList<OrganizationRef>> GetAllOrganizationsAsync(CancellationToken cancellationToken) =>
         await db.Organizations.AsNoTracking()
             .OrderBy(o => o.Name)
@@ -228,6 +268,14 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
 
     public async Task<ImportContactResult> ImportContactAsync(Guid organizationId, ExternalContactData data, CancellationToken cancellationToken)
     {
+        if (data.SourceRecordId is { } sourceId &&
+            await db.Contacts.IgnoreQueryFilters().AsNoTracking().Include(c => c.Affiliations).SingleOrDefaultAsync(c => c.Id == sourceId, cancellationToken) is { } saved)
+        {
+            if (saved.IsDeleted || saved.ErasureReference is not null) throw new InvalidOperationException("The previously imported contact is unavailable.");
+            if (!saved.Affiliations.Any(a => a.OrganizationId == organizationId && a.IsActive && !a.IsDeleted))
+                throw new InvalidOperationException("The previously imported contact's affiliation needs review.");
+            return new ImportContactResult(saved.Id, Created: false);
+        }
         var email = Contact.NormalizeEmail(ValidEmail(data.Email));
         var contact = email is null
             ? null
@@ -237,16 +285,17 @@ internal sealed class CustomersApi(CustomersDbContext db, IOptions<CustomersOpti
         {
             var result = Contact.Create(new ContactDetails(
                 string.IsNullOrWhiteSpace(data.FirstName) && string.IsNullOrWhiteSpace(data.LastName) ? (email ?? "?") : data.FirstName,
-                data.LastName, email, data.Phone, data.MobilePhone, null));
+                data.LastName, email, data.Phone, data.MobilePhone, null), data.SourceRecordId);
             if (!result.IsSuccess)
             {
                 throw new InvalidOperationException($"Cannot import contact: {result.Error!.Code}.");
             }
 
             contact = result.Value;
-            db.Contacts.Add(contact);
+            if (!data.PreviewOnly) db.Contacts.Add(contact);
         }
 
+        if (data.PreviewOnly) return new ImportContactResult(contact.Id, created);
         if (!contact.Affiliations.Any(a => a.OrganizationId == organizationId && a.IsActive))
         {
             contact.Affiliate(organizationId, new AffiliationDetails(data.Title, ContactRoles.None, IsPrimary: false));

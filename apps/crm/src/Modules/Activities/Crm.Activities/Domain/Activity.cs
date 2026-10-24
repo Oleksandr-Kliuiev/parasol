@@ -75,6 +75,9 @@ public sealed class Activity : AuditableEntity, IErasable
     public DateTimeOffset? CompletedAt { get; private set; }
     public Guid? CompletedBy { get; private set; }
 
+    /// <summary>Exact local saved-ticket identity; many Tasks may refer to the same ticket.</summary>
+    public Guid? LinkedTicketId { get; private set; }
+
     /// <inheritdoc />
     public string? ErasureReference { get; private set; }
 
@@ -86,7 +89,7 @@ public sealed class Activity : AuditableEntity, IErasable
     {
         const string erased = "—";
         if (IsDeleted && Subject == erased && Body is null && Location is null && WebLink is null && ExternalMessageId is null &&
-            FromAddress is null && ContactId is null)
+            FromAddress is null && ContactId is null && LinkedTicketId is null)
         {
             return false;
         }
@@ -99,6 +102,7 @@ public sealed class Activity : AuditableEntity, IErasable
         ExternalMessageId = null;
         FromAddress = null;
         ContactId = null;
+        LinkedTicketId = null;
         MarkDeleted();
         return true;
     }
@@ -253,6 +257,18 @@ public sealed class Activity : AuditableEntity, IErasable
         CompletedAt = null;
     }
 
+    public Result LinkTicket(Guid? ticketId)
+    {
+        if (Type != ActivityType.Task || IsDeleted)
+            return Error.NotFound("ACT_TASK_UNAVAILABLE", "The task is unavailable.");
+        if (ticketId == Guid.Empty)
+            return Error.Validation("ACT_TICKET_INVALID", "Choose a saved ticket.");
+        if (LinkedTicketId == ticketId) return Result.Success();
+        // Association metadata is audited, but it is not customer contact or completed work.
+        LinkedTicketId = ticketId;
+        return Result.Success();
+    }
+
     public void MoveToOrganization(Guid targetOrganizationId) => OrganizationId = targetOrganizationId;
 
     public bool IsOverdue(DateTimeOffset now) => Status == ActivityStatus.Open && DueAt is { } due && due < now;
@@ -269,6 +285,7 @@ public sealed class Activity : AuditableEntity, IErasable
             return Error.Validation("ACT_ORGANIZATION_REQUIRED", "Choose the customer the activity belongs to.");
         }
 
+        if (Type != d.Type || OrganizationId != d.OrganizationId) LinkedTicketId = null;
         Type = d.Type;
         OrganizationId = d.OrganizationId;
         OpportunityId = d.OpportunityId;

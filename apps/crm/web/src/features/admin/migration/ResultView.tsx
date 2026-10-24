@@ -11,24 +11,23 @@ import {
   TableRow,
   Text,
   makeStyles,
-  tokens,
+  mergeClasses,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
+import { FactGrid } from '../../../shared/components/Panel';
 import { AppLink } from '../../../shared/components/AppLink';
-import { useCatalogStyles } from '../../catalog/styles';
+import { ScrollRegion } from '../ScrollRegion';
+import { useTableCardStyles } from '../tableCard';
 import type { MigrationResult } from './api';
 import { StatusText } from './parts';
+import { useMigrationStyles } from './styles';
 import { columnText, fieldText, reasonText } from './text';
 
 const useStyles = makeStyles({
-  tiles: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalL, marginBottom: tokens.spacingVerticalM },
-  tile: { display: 'flex', flexDirection: 'column', minWidth: '88px' },
-  tileValue: { fontSize: tokens.fontSizeHero700, fontWeight: tokens.fontWeightSemibold, lineHeight: tokens.lineHeightHero700, fontVariantNumeric: 'tabular-nums' },
-  section: { marginBlock: tokens.spacingVerticalM },
-  heading: { margin: `0 0 ${tokens.spacingVerticalXS}`, fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold },
-  list: { margin: 0, paddingInlineStart: tokens.spacingHorizontalXL },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS, marginBottom: tokens.spacingVerticalM },
+  // Seven counts: a tile row that keeps two or more tiles per line on a phone.
+  tiles: { gridTemplateColumns: 'repeat(auto-fit, minmax(min(120px, 100%), 1fr))' },
+  kind: { fontWeight: 700, color: 'inherit' },
+  footnote: { display: 'block', marginTop: '8px', maxWidth: '75ch' },
 });
 
 const WARNING_PREFIXES = /^(Row \d+: |Column '.*': |File: )/;
@@ -42,10 +41,30 @@ interface Props {
   continuing?: boolean;
 }
 
+/** A small breakdown: what each row says on the left, how many rows on the right. */
+function Breakdown({ label, hint, rows }: { label: string; hint?: string; rows: Array<[string, number]> }) {
+  const m = useMigrationStyles();
+  return (
+    <section className={m.well} aria-label={label}>
+      <h3 className={m.wellTitle}>{label}</h3>
+      {hint && <p className={m.wellHint}>{hint}</p>}
+      <ul className={m.counts}>
+        {rows.map(([text, count], index) => (
+          <li key={`${index}-${text}`} className={m.countRow}>
+            <span>{text}</span>
+            <span className={m.countValue}>{count}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** What a preview, an import or a stored run says: counts, why rows were refused, owner coverage and the sample. */
 export function ResultView({ result, showSample = true, onContinue, continuing }: Props) {
   const styles = useStyles();
-  const catalog = useCatalogStyles();
+  const m = useMigrationStyles();
+  const table = useTableCardStyles();
   const { t } = useTranslation();
   const isReal = result.mode === 'Real';
   const rejected = result.rejected ?? result.failed;
@@ -74,21 +93,25 @@ export function ResultView({ result, showSample = true, onContinue, continuing }
   const listable = result.created + result.updated + result.conflicts + rejected;
 
   return (
-    <div>
-      <p className={styles.muted} style={{ margin: '0 0 8px' }}>
-        {isReal ? t('migration.runKindReal') : t('migration.runKindPreview')} · <StatusText kind="status" value={result.status} /> ·{' '}
-        <span title={result.sourceSha256}>{t('migration.fileHash', { hash: result.sourceSha256.slice(0, 12) })}</span> ·{' '}
-        {t('migration.mapping', { version: result.mappingVersion })}
-      </p>
+    <div className={m.stack}>
+      <div className={m.meta}>
+        <span className={styles.kind}>{isReal ? t('migration.runKindReal') : t('migration.runKindPreview')}</span>
+        {' · '}
+        <StatusText kind="status" value={result.status} />
+        {' · '}
+        <span title={result.sourceSha256}>{t('migration.fileHash', { hash: result.sourceSha256.slice(0, 12) })}</span>
+        {' · '}
+        <span>{t('migration.mapping', { version: result.mappingVersion })}</span>
+      </div>
 
       {isReal && result.repeated && (
-        <MessageBar intent="info" className={styles.section}>
+        <MessageBar intent="info">
           <MessageBarBody>{t('migration.repeated')}</MessageBarBody>
         </MessageBar>
       )}
 
       {isReal && result.status === 'Partial' && (
-        <MessageBar intent="warning" className={styles.section}>
+        <MessageBar intent="warning" layout="multiline">
           <MessageBarBody>
             {t('migration.partial', { line: result.lastCommittedLine })}{' '}
             {result.failedFromLine != null && result.failedToLine != null && t('migration.partialRange', { from: result.failedFromLine, to: result.failedToLine })}{' '}
@@ -105,7 +128,7 @@ export function ResultView({ result, showSample = true, onContinue, continuing }
       )}
 
       {isReal && result.status === 'Failed' && (
-        <MessageBar intent="error" className={styles.section}>
+        <MessageBar intent="error" layout="multiline">
           <MessageBarBody>
             {t('migration.runFailed', { line: result.lastCommittedLine })} {result.failureCode && reasonText(t, result.failureCode)}
           </MessageBarBody>
@@ -119,81 +142,46 @@ export function ResultView({ result, showSample = true, onContinue, continuing }
         </MessageBar>
       )}
 
-      <dl className={styles.tiles} aria-label={t('migration.counts.title')} style={{ margin: 0 }}>
-        {tiles.map(([label, value]) => (
-          <div key={label} className={styles.tile}>
-            <dt className={styles.muted}>{label}</dt>
-            <dd className={styles.tileValue} style={{ margin: 0 }}>
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      {reasons.length > 0 && (
-        <section className={styles.section} aria-label={t('migration.reasonsTitle')}>
-          <h3 className={styles.heading}>{t('migration.reasonsTitle')}</h3>
-          <ul className={styles.list}>
-            {reasons.map(([code, count]) => (
-              <li key={code}>
-                {reasonText(t, code)}: <strong>{count}</strong>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {warningCounts.length > 0 && (
-        <section className={styles.section} aria-label={t('migration.warningsTitle')}>
-          <h3 className={styles.heading}>{t('migration.warningsTitle')}</h3>
-          <ul className={styles.list}>
-            {warningCounts.map(([code, count]) => (
-              <li key={code}>
-                {reasonText(t, code)}: <strong>{count}</strong>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <div role="group" aria-label={t('migration.counts.title')}>
+        <FactGrid className={styles.tiles} items={tiles.map(([label, value]) => ({ label, value: String(value) }))} />
+      </div>
 
       {fileNotes.length > 0 && (
-        <MessageBar intent="warning" className={styles.section}>
+        <MessageBar intent="warning" layout="multiline">
           <MessageBarBody>{fileNotes.join(' ')}</MessageBarBody>
         </MessageBar>
       )}
 
-      <section className={styles.section} aria-label={t('migration.ownersTitle')}>
-        <h3 className={styles.heading}>{t('migration.ownersTitle')}</h3>
+      <div className={m.sections}>
+        {reasons.length > 0 && <Breakdown label={t('migration.reasonsTitle')} rows={reasons.map(([code, count]) => [reasonText(t, code), count])} />}
+        {warningCounts.length > 0 && <Breakdown label={t('migration.warningsTitle')} rows={warningCounts.map(([code, count]) => [reasonText(t, code), count])} />}
         {owners?.columnPresent ? (
-          <Text>{t('migration.owners', { resolved: owners.resolved, empty: owners.empty, unknown: owners.unknown })}</Text>
+          <Breakdown
+            label={t('migration.ownersTitle')}
+            rows={[
+              [t('migration.ownerCounts.resolved'), owners.resolved],
+              [t('migration.ownerCounts.empty'), owners.empty],
+              [t('migration.ownerCounts.unknown'), owners.unknown],
+            ]}
+          />
         ) : (
-          <Text>{t('migration.ownersNone')}</Text>
+          <section className={m.well} aria-label={t('migration.ownersTitle')}>
+            <h3 className={m.wellTitle}>{t('migration.ownersTitle')}</h3>
+            <p className={m.wellHint}>{t('migration.ownersNone')}</p>
+          </section>
         )}
-      </section>
-
-      {validated.length > 0 && (
-        <section className={styles.section} aria-label={t('migration.validatedTitle')}>
-          <h3 className={styles.heading}>{t('migration.validatedTitle')}</h3>
-          <p className={styles.muted} style={{ margin: '0 0 4px' }}>
-            {t('migration.validatedHint')}
-          </p>
-          <ul className={styles.list}>
-            {validated.map(([column, count]) => (
-              <li key={column}>
-                {columnText(t, column)}: <strong>{count}</strong>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {validated.length > 0 && (
+          <Breakdown label={t('migration.validatedTitle')} hint={t('migration.validatedHint')} rows={validated.map(([column, count]) => [columnText(t, column), count])} />
+        )}
+      </div>
 
       {showSample && listed > 0 && (
-        <>
-          <div className={catalog.tableWrap} tabIndex={0} role="region" aria-label={t('migration.sampleTitle')}>
-            <Table className={catalog.table} aria-label={t('migration.sampleTitle')}>
+        <div>
+          <ScrollRegion className={table.inset} label={t('migration.sampleTitle')}>
+            <Table className={table.min720} aria-label={t('migration.sampleTitle')}>
               <TableHeader>
                 <TableRow>
-                  <TableHeaderCell className={catalog.number}>{t('migration.fields.line')}</TableHeaderCell>
+                  <TableHeaderCell className={mergeClasses(table.numberHead, table.lineCol)}>{t('migration.fields.line')}</TableHeaderCell>
                   <TableHeaderCell>{t('migration.fields.customer')}</TableHeaderCell>
                   <TableHeaderCell>{t('migration.fields.action')}</TableHeaderCell>
                   <TableHeaderCell>{t('migration.fields.reason')}</TableHeaderCell>
@@ -203,25 +191,25 @@ export function ResultView({ result, showSample = true, onContinue, continuing }
               <TableBody>
                 {result.rows.map((row) => (
                   <TableRow key={`${row.line}-${row.action}`}>
-                    <TableCell className={catalog.number}>{row.line}</TableCell>
+                    <TableCell className={table.number}>{row.line}</TableCell>
                     <TableCell>
                       {row.organizationId && isReal ? (
                         <AppLink to={`/organizations/${row.organizationId}`}>{row.name ?? t('migration.openCustomer')}</AppLink>
                       ) : (
-                        <span className={catalog.name}>{row.name ?? '—'}</span>
+                        <span className={table.name}>{row.name ?? '—'}</span>
                       )}
-                      {row.orgNumber && <div className={catalog.sku}>{row.orgNumber}</div>}
+                      {row.orgNumber && <div className={table.code}>{row.orgNumber}</div>}
                     </TableCell>
                     <TableCell>
                       <StatusText kind="actions" value={row.action} />
                     </TableCell>
-                    <TableCell className={catalog.muted}>
-                      {(row.reasonCode ?? row.detail) ? reasonText(t, (row.reasonCode ?? row.detail)!) : '—'}
+                    <TableCell className={table.muted}>
+                      {(row.reasonCode ?? row.detail) ? reasonText(t, (row.reasonCode ?? row.detail)!) : !row.warnings?.length && '—'}
                       {(row.warnings ?? []).map((code) => (
                         <div key={code}>{reasonText(t, code)}</div>
                       ))}
                     </TableCell>
-                    <TableCell className={catalog.muted}>
+                    <TableCell className={table.muted}>
                       {row.conflictFields && row.conflictFields.length > 0 && (
                         <div>{t('migration.conflictFields', { fields: row.conflictFields.map((f) => fieldText(t, f)).join(', ') })}</div>
                       )}
@@ -234,11 +222,11 @@ export function ResultView({ result, showSample = true, onContinue, continuing }
                 ))}
               </TableBody>
             </Table>
-          </div>
-          <Text className={styles.muted} aria-live="polite">
+          </ScrollRegion>
+          <Text className={mergeClasses(m.note, styles.footnote)} aria-live="polite">
             {t('migration.rowsShown', { shown: listed, total: Math.max(listable, listed) })}
           </Text>
-        </>
+        </div>
       )}
     </div>
   );

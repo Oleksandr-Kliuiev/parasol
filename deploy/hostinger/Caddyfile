@@ -1,0 +1,22 @@
+{
+	admin off
+	email {$TLS_EMAIL}
+	log {
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
+}
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	# Health remains available only inside the private application network.
+	@health path /health /health/*
+	respond @health 404
+	reverse_proxy crm-web:8080
+	header -Server
+	# No access logs: URLs can contain customer identifiers and OIDC parameters.
+}

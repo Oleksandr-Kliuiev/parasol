@@ -1,0 +1,118 @@
+{
+  "format": 1,
+  "milestone": "M27",
+  "date": "2026-10-17",
+  "acceptedLocally": true,
+  "scope": "Reuse the existing saved-ticket dialog and explicit own-time form directly from a personal Task in My Day.",
+  "changedProductFiles": 3,
+  "verification": {
+    "focusedFrontend": {
+      "passed": 49,
+      "failed": 0,
+      "skipped": 0
+    },
+    "fullFrontend": {
+      "passed": 576,
+      "files": 67,
+      "failed": 0,
+      "skipped": 0
+    },
+    "static": [
+      "ESLint",
+      "app TypeScript",
+      "E2E TypeScript",
+      "composition TypeScript",
+      "SPA build",
+      "SPA budget"
+    ],
+    "bundleBudgetResult": "291.8 KB  initial total (budget 300 KB)",
+    "actualComposition": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "retries": 0,
+      "builtInThisRun": true,
+      "runId": "714cd28c1d20",
+      "atlasRequests": 567,
+      "atlasMutatingRequests": 0,
+      "cleanup": true,
+      "clients": 40,
+      "devices": 400,
+      "employees": 3
+    },
+    "newPath": "The actual assigned Technician opens the ticket association from My Day in light/dark at 390px, reads the real API, retains the URL and returns keyboard focus; scoped Axe and horizontal width assertions pass.",
+    "verifiedInputHashes": {
+      "sqlBackendReused": 850,
+      "web": 399,
+      "atlasReused": 1421,
+      "compositionUnion": 2670
+    },
+    "reusedChecks": {
+      "crmUnit": 939,
+      "crmArchitecture": 94,
+      "affectedCrmSql": 208,
+      "atlasUnit": 711,
+      "atlasPostgresql": 789,
+      "atlasBrowser": 90,
+      "reason": "All accepted backend and Atlas inputs are byte-identical; no backend/Atlas edits. Not rerun for the UI-only change.",
+      "evidence": [
+        "time-financial-review-M26-2026-10-17.json",
+        "atlas-strict-current-2026-10-16.json"
+      ]
+    },
+    "previousCrmBrowser": {
+      "passed": 78,
+      "milestone": "M26",
+      "rerunForM27": false,
+      "note": "M27 changes are verified by the full new source-build composition and frontend suites, not represented as a new 78-case run."
+    }
+  },
+  "workflowComparison": {
+    "start": "My Day already shows the assigned open Task; a verified saved ticket is already linked.",
+    "end": "The existing empty Register hours form is open; no hours submitted.",
+    "beforeActions": [
+      "Open Task in customer activity",
+      "Open Service ticket",
+      "Register hours"
+    ],
+    "afterActions": [
+      "Open Service ticket from personal Task",
+      "Register hours"
+    ],
+    "beforePageNavigations": 1,
+    "afterPageNavigations": 0,
+    "timeSavingsMeasured": false,
+    "interpretation": "One action and one page navigation are removed. This is a structural UI comparison, not measured human productivity."
+  },
+  "invariants": [
+    "No eager ticket or provider request per task row.",
+    "Existing Activity, Service and Time permission gates and fresh association ETag handling remain unchanged.",
+    "Read-only Service access offers no link mutation or time registration.",
+    "Refreshing the task list aborts a pending ticket read, removes its modal and ignores the late reply.",
+    "Hours and description remain empty until manually entered.",
+    "No new endpoint, schema, migration, dependency, telemetry or external call."
+  ],
+  "retainedDiagnostic": {
+    "stage": "first static check",
+    "fullFrontendPassed": 576,
+    "failure": "TS2769: Testing Library role query does not accept the Playwright exact option.",
+    "resolution": "Use anchored accessible-name expressions; assertions, types and compiler settings preserved."
+  },
+  "visualDiagnostic": {
+    "initialCompositionRun": "f2960ac9535c",
+    "automatedPassed": 9,
+    "visualAccepted": false,
+    "finding": "Buttons squeezed a short Task title into a narrow column at 390px in both themes despite passing Axe/overflow.",
+    "resolution": "Group row actions and allow them to wrap below the text. Added a real text-line check retaining a readable short title in at most two lines."
+  },
+  "limits": [
+    "Human staff feedback and task time measurements remain open.",
+    "No real provider/Entra account or VPS acceptance is established.",
+    "Saved data is not a live Atera status check."
+  ],
+  "originalRepositoriesPreserved": true,
+  "published": false,
+  "deployed": false,
+  "goal": "active"
+}

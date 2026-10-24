@@ -1,73 +1,88 @@
 import { useState } from 'react';
-import { Badge, Button, Dialog, DialogSurface, Text, makeStyles, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
-import { Add20Regular, ChevronLeft20Regular, ChevronRight20Regular, Delete20Regular, Edit20Regular } from '@fluentui/react-icons';
+import { Button, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Add20Regular, CheckmarkCircle20Regular, ChevronLeft20Regular, ChevronRight20Regular, Clock20Regular, MoneyOff20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { cardSurface, h } from '../../app/hearth';
+import { localeOf } from '../../i18n';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { StatGrid, StatTile } from '../../shared/components/KpiTile';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { Panel } from '../../shared/components/Panel';
+import { Toolbar } from '../../shared/components/Toolbar';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDate, formatNumber, todayIso } from '../../shared/utils/format';
-import { AppLink } from '../../shared/components/AppLink';
+import { addDays, startOfWeek } from '../../shared/utils/week';
 import { useAllTimeEntries, useTimeActions } from './api';
-import { TimeEntryDialog } from './TimeEntryDialog';
+import { TimeEntryDialogHost } from './TimeEntryDialog';
+import { TimesheetDay } from './TimesheetDay';
 import type { TimeEntry } from './types';
 
 const useStyles = makeStyles({
-  toolbar: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
-  week: { fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums' },
-  spacer: { flex: 1 },
-  days: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM },
-  dayHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: tokens.spacingHorizontalM },
-  entry: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-    paddingBlock: tokens.spacingVerticalS,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
-    ':last-child': { borderBottom: 'none' },
+  // The week switcher of the reference calendar: arrows around the week, then "This week". The week is named by its
+  // number (how Norwegian offices talk about it) with its days under it, so the bar stays one line on a phone.
+  toolbar: { flexWrap: 'nowrap' },
+  range: {
+    display: 'grid',
+    justifyItems: 'center',
+    minWidth: '168px',
+    '@media (max-width: 480px)': { minWidth: 0, flex: '1 1 0' },
   },
-  hours: { fontVariantNumeric: 'tabular-nums', fontWeight: tokens.fontWeightSemibold, minWidth: '56px' },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  list: { listStyle: 'none', margin: 0, padding: 0 },
-  actions: { display: 'flex', gap: tokens.spacingHorizontalXS, marginInlineStart: 'auto' },
+  weekNumber: { fontFamily: h.display, fontSize: '16px', lineHeight: '20px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
+  days: { color: h.muted, fontSize: '12.5px', lineHeight: '18px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  // Three figures of the week in one row; on a phone the third takes the whole second row instead of half of it.
+  stats: {
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    '@media (max-width: 560px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', '& > :nth-child(3)': { gridColumn: '1 / -1' } },
+  },
+  week: { ...cardSurface, overflow: 'hidden', minWidth: 0 },
 });
 
-function startOfWeek(iso: string): string {
-  const date = new Date(`${iso}T12:00:00Z`);
-  const weekday = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - weekday);
-  return date.toISOString().slice(0, 10);
+/** The ISO week number of a Monday (YYYY-MM-DD): the week that holds that year's 4 January is week 1. */
+function isoWeek(monday: string): number {
+  const thursday = new Date(`${monday}T12:00:00Z`);
+  thursday.setUTCDate(thursday.getUTCDate() + 3);
+  const firstThursday = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 4, 12));
+  firstThursday.setUTCDate(firstThursday.getUTCDate() + 3 - ((firstThursday.getUTCDay() + 6) % 7));
+  return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
 }
 
-function addDays(iso: string, days: number): string {
-  const date = new Date(`${iso}T12:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
+/** "19–25 Oct 2026" in the interface language. */
+const weekDays = (monday: string, sunday: string, language: string) =>
+  new Intl.DateTimeFormat(localeOf(language), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+    .formatRange(new Date(`${monday}T12:00:00Z`), new Date(`${sunday}T12:00:00Z`));
 
 /** The week a technician books their own hours in (FR-TIM-02). */
 export function TimesheetPage() {
   const styles = useStyles();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const notify = useNotify();
   const actions = useTimeActions();
   const [monday, setMonday] = useState(() => startOfWeek(todayIso()));
   const [dialog, setDialog] = useState<{ entry?: TimeEntry; date?: string } | null>(null);
+  const shown = useKeptWhileClosing(dialog);
+  const [removing, setRemoving] = useState<TimeEntry | null>(null);
+  const shownRemoval = useKeptWhileClosing(removing);
   const restoreFocusTarget = useRestoreFocusTarget();
   const sunday = addDays(monday, 6);
   // A week is short: all of it is loaded, page after page, so no day misses an entry (DEV-12).
   const { data, error, isPending, refetch } = useAllTimeEntries({ from: monday, to: sunday, mine: true });
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const today = todayIso();
+  const waiting = (data?.items ?? []).filter((e) => e.status === 'New').length;
+  const hoursText = (hours: number | undefined) => (hours === undefined ? t('myDay.loadingValue') : t('myDay.kpi.hoursValue', { hours: formatNumber(hours) }));
 
-  const remove = async (entry: TimeEntry) => {
+  // Deleting an entry cannot be undone, so it asks first; the day's register button then takes the focus the row had.
+  const remove = async () => {
+    if (!removing) return;
     try {
-      await actions.remove.mutateAsync(entry.id);
+      await actions.remove.mutateAsync(removing.id);
+      setRemoving(null);
       notify(t('time.deleted'));
-    } catch (e) {
-      notify(t('errors.generic'), 'error', errorMessage(e, t));
+      document.getElementById(`register-${removing.workDate}`)?.focus();
+    } catch {
+      // The dialog stays and says why.
     }
   };
 
@@ -82,65 +97,44 @@ export function TimesheetPage() {
           </Button>
         }
       />
-      <div className={styles.toolbar}>
+      <Toolbar className={styles.toolbar}>
         <Button icon={<ChevronLeft20Regular />} aria-label={t('time.previousWeek')} onClick={() => setMonday(addDays(monday, -7))} />
-        <span className={styles.week}>
-          {formatDate(monday)} – {formatDate(sunday)}
+        <span className={styles.range}>
+          <span className={styles.weekNumber}>{t('time.weekNumber', { week: isoWeek(monday) })}</span>
+          <span className={styles.days}>{weekDays(monday, sunday, i18n.language)}</span>
         </span>
         <Button icon={<ChevronRight20Regular />} aria-label={t('time.nextWeek')} onClick={() => setMonday(addDays(monday, 7))} />
         <Button onClick={() => setMonday(startOfWeek(todayIso()))}>{t('time.thisWeek')}</Button>
-        <span className={styles.spacer} />
-        <Text className={styles.muted}>
-          {t('time.weekTotal', { hours: formatNumber(data?.summary.hours ?? 0) })} · {t('time.billableTotal', { hours: formatNumber(data?.summary.billableHours ?? 0) })}
-        </Text>
-      </div>
+      </Toolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={styles.days}>
-          {days.map((day) => {
-            const entries = (data?.items ?? []).filter((e) => e.workDate === day);
-            const total = entries.reduce((sum, e) => sum + e.hours, 0);
-            return (
-              <Panel key={day} title={formatDate(day)}>
-                <div className={styles.dayHead}>
-                  <Text className={styles.muted}>{t('time.dayTotal', { hours: formatNumber(total) })}</Text>
-                  <Button size="small" icon={<Add20Regular />} appearance="subtle" onClick={() => setDialog({ date: day })} aria-label={t('time.registerOn', { date: formatDate(day) })}>
-                    {t('time.register')}
-                  </Button>
-                </div>
-                <ul className={styles.list}>
-                  {entries.map((entry) => (
-                    <li key={entry.id} className={styles.entry}>
-                      <span className={styles.hours}>{formatNumber(entry.hours)} {t('contracts.hoursShort')}</span>
-                      <AppLink to={`/organizations/${entry.organizationId}`}>{entry.organizationName}</AppLink>
-                      <span>{entry.description ?? entry.ticketTitle}</span>
-                      {entry.workType && <Badge appearance="outline">{entry.workType}</Badge>}
-                      {!entry.billable && <Badge appearance="tint" color="subtle">{t('time.nonBillable')}</Badge>}
-                      {entry.source === 'Atera' && <Badge appearance="tint" color="informative">Atera</Badge>}
-                      <Badge appearance="outline" color={entry.status === 'New' ? 'brand' : 'success'}>
-                        {t(`time.statuses.${entry.status}`)}
-                      </Badge>
-                      {entry.source === 'Crm' && entry.status === 'New' && !entry.isLocked && (
-                        <span className={styles.actions}>
-                          <Button {...restoreFocusTarget} size="small" appearance="subtle" icon={<Edit20Regular />} aria-label={t('time.editNamed', { hours: formatNumber(entry.hours) })} onClick={() => setDialog({ entry })} />
-                          <Button size="small" appearance="subtle" icon={<Delete20Regular />} aria-label={t('time.deleteNamed', { hours: formatNumber(entry.hours) })} onClick={() => void remove(entry)} />
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                {entries.length === 0 && !isPending && <EmptyState message={t('time.noEntriesDay')} />}
-              </Panel>
-            );
-          })}
-        </div>
+        <>
+          <StatGrid className={styles.stats}>
+            <StatTile icon={<Clock20Regular />} tone="ember" label={t('time.fields.hours')} value={hoursText(data?.summary.hours)}
+              note={t('time.billableTotal', { hours: formatNumber(data?.summary.billableHours ?? 0) })} />
+            <StatTile icon={<CheckmarkCircle20Regular />} tone="spruce" label={t('time.statuses.Approved')} value={hoursText(data?.summary.approvedHours)}
+              note={t('time.pendingCount', { count: waiting })} />
+            <StatTile icon={<MoneyOff20Regular />} label={t('time.nonBillable')}
+              value={hoursText(data ? data.summary.hours - data.summary.billableHours : undefined)} />
+          </StatGrid>
+          <div className={styles.week}>
+            {days.map((day) => (
+              <TimesheetDay key={day} day={day} today={day === today} entries={(data?.items ?? []).filter((e) => e.workDate === day)}
+                loading={isPending} onRegister={(date) => setDialog({ date })} onEdit={(entry) => setDialog({ entry })} onRemove={setRemoving} />
+            ))}
+          </div>
+        </>
       )}
 
-      <Dialog open={dialog !== null} onOpenChange={(_, d) => !d.open && setDialog(null)}>
-        <DialogSurface>{dialog !== null && <TimeEntryDialog entry={dialog.entry} defaultDate={dialog.date} onClose={() => setDialog(null)} />}</DialogSurface>
-      </Dialog>
+      <ConfirmDialog open={removing !== null} busy={actions.remove.isPending}
+        title={t('time.deleteTitle', { hours: formatNumber(shownRemoval?.hours ?? 0), organization: shownRemoval?.organizationName ?? '', date: formatDate(shownRemoval?.workDate) })}
+        confirm={t('time.deleteConfirm')} error={actions.remove.error ? errorMessage(actions.remove.error, t) : null}
+        onConfirm={() => void remove()} onCancel={() => { setRemoving(null); actions.remove.reset(); }}>
+        {t('time.deleteBody')}
+      </ConfirmDialog>
+      <TimeEntryDialogHost open={dialog !== null} entry={shown?.entry} defaultDate={shown?.date} onClose={() => setDialog(null)} />
     </>
   );
 }

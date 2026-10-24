@@ -72,7 +72,7 @@ test('D1/D2: one run crosses a fixture-segment boundary with S and C up — clos
       const resumed = await h.withOwner(c => revise(c, WS, { state: 'ACTIVE' }));
       [ackLine, secretLine] = await o.type(`pair ${ctl} ${ho}`, 2);
       i.type(`RESUMED ${secretLine!.split(' ')[2]} ${resumed} ${ackLine!.slice('OK PAIR_ACK '.length)}`);
-      const [, summary] = await i.expect(/SEGMENTS_(?:SUMMARY|FAILED) (.*)/, 240_000);
+      const [, summary] = await i.expect(/SEGMENTS_(?:SUMMARY|FAILED) (.*)\r?\n/, 240_000);
       assert.ok(!i.transcript.includes('SEGMENTS_FAILED'), i.transcript.slice(-600));
       const s = JSON.parse(summary!.slice(summary!.indexOf('{'))) as { segments: { fixtureId: string; cases: string[] }[]; refusals: string[]; drains: string[];
         proofs: string[]; finalDrain: string };

@@ -92,7 +92,7 @@ test('leaving a form with unsaved changes asks first and returns focus when the 
 test('a form that was saved leaves without asking', async ({ page }) => {
   await signIn(page, 'Crm.Sales', '/organizations/new');
   await page.getByRole('textbox', { name: 'Name', exact: true }).fill(`${marker('Saved')} AS`);
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(toast(page, 'Organization created')).toBeVisible();
   await expect(page).toHaveURL(/\/organizations\/[0-9a-f-]{36}$/);
   await expect(page.getByText('Leave without saving?')).toHaveCount(0);
@@ -100,10 +100,11 @@ test('a form that was saved leaves without asking', async ({ page }) => {
 
 test('a missing name is announced and tied to its field', async ({ page }) => {
   await signIn(page, 'Crm.Sales', '/organizations/new');
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
   const name = page.getByRole('textbox', { name: 'Name', exact: true });
   await expect(name).toHaveAttribute('aria-invalid', 'true');
-  await expect(name).toHaveAccessibleDescription(/Check the highlighted fields/);
+  // The field says what it wants; the summary above the form says that something needs a look.
+  await expect(name).toHaveAccessibleDescription(/Enter the organization's name/);
   await expect(page.getByRole('alert').or(page.locator('[aria-live]').filter({ hasText: 'Check the highlighted fields' })).first()).toContainText('Check the highlighted fields');
 });
 
@@ -111,7 +112,7 @@ test('a double click on Create makes one organization', async ({ page }) => {
   const m = marker('Dbl');
   await signIn(page, 'Crm.Sales', '/organizations/new');
   await page.getByRole('textbox', { name: 'Name', exact: true }).fill(`${m} AS`);
-  await page.getByRole('button', { name: 'Create' }).dblclick();
+  await page.getByRole('button', { name: 'Create', exact: true }).dblclick();
   await expect(toast(page, 'Organization created')).toBeVisible();
   const found = await api.get<{ items: unknown[] }>(page, `/api/v1/customers/organizations?search=${m}`);
   expect(found.items).toHaveLength(1);
@@ -213,7 +214,7 @@ test('a record is created and then corrected with the keyboard alone', async ({ 
   await page.keyboard.type(`${m} AS`);
 
   // Tab until the Create button has focus, then press it: no pointer anywhere in this flow.
-  const create = page.getByRole('button', { name: 'Create' });
+  const create = page.getByRole('button', { name: 'Create', exact: true });
   for (let i = 0; i < 60 && !(await create.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
   await expect(create).toBeFocused();
   await page.keyboard.press('Enter');
@@ -228,7 +229,7 @@ test('a record is created and then corrected with the keyboard alone', async ({ 
   await page.keyboard.type('not-an-address');
   await page.keyboard.press('Tab');
   await expect(email).toHaveAttribute('aria-invalid', 'true');
-  await expect(email).toHaveAccessibleDescription(/Check the highlighted fields/);
+  await expect(email).toHaveAccessibleDescription(/Enter an e-mail address like post@firma\.no/);
   await email.focus();
   await page.keyboard.press('Home');
   await page.keyboard.press('Shift+End');

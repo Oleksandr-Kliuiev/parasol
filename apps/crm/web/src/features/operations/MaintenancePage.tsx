@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
+  Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -20,13 +20,17 @@ import {
   Text,
   Textarea,
   makeStyles,
+  mergeClasses,
   tokens,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
+import { ArrowSync16Regular, CheckmarkCircle16Regular, CheckmarkCircle24Regular, Gauge16Regular, History16Regular, History24Regular, Info16Regular, LockClosed16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { DetailList, Panel } from '../../shared/components/Panel';
+import { DetailList, FactGrid, Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
@@ -41,22 +45,63 @@ import {
   type RestoreLine,
   type RestoreReport,
 } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
+import { PersonCell, useSettingsStyles } from '../admin/settingsUi';
+import { useTableCardStyles } from '../admin/tableCard';
 
 const MIN_REASON = 10;
 const MAX_REASON = 500;
 
 const useStyles = makeStyles({
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  form: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM, maxWidth: '640px' },
-  actions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'center' },
-  readOnly: { color: tokens.colorPaletteDarkOrangeForeground1, fontWeight: tokens.fontWeightSemibold },
-  needsPerson: { color: tokens.colorPaletteDarkOrangeForeground1, fontWeight: tokens.fontWeightSemibold },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  tableWrap: { overflowX: 'auto' },
+  // The state and the switch side by side on a wide screen; reconciliation and its reports below at full width.
+  top: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(420px, 100%), 1fr))',
+    gap: '16px',
+    alignItems: 'start',
+    minWidth: 0,
+  },
+  form: { display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 },
+  // The fields of a card's form: up to three columns on a wide card, one on a phone.
+  fields: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', columnGap: '16px', rowGap: '14px', minWidth: 0 },
+  // The one explaining line under a card title.
+  lead: { margin: '-6px 0 0', color: h.muted, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' },
+  // The foot of a form: why its button cannot be used yet on the left, the buttons in the order of the work on the right.
+  footer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: '16px',
+    rowGap: '12px',
+    paddingTop: '16px',
+    borderTop: `1px solid ${h.line}`,
+  },
+  reason: { display: 'flex', alignItems: 'flex-start', gap: '8px', flex: '1 1 240px', minWidth: 0, margin: 0, color: h.muted, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' },
+  reasonIcon: { display: 'inline-flex', flexShrink: 0, marginTop: '2px', color: h.faint, '& svg': { width: '16px', height: '16px' } },
+  ready: { color: h.spruceT },
+  actions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginLeft: 'auto',
+    '@media (max-width: 560px)': { width: '100%', '& > .fui-Button': { flex: '1 1 0' } },
+  },
+  needsPerson: { color: h.saffronT, fontWeight: tokens.fontWeightSemibold },
   table: { minWidth: '640px' },
-  number: { textAlign: 'end', fontVariantNumeric: 'tabular-nums' },
-  nowrap: { whiteSpace: 'nowrap' },
-  section: { marginTop: tokens.spacingVerticalL },
+  reportsTable: { minWidth: '900px' },
+  // The header's sort button is a flex box, so its label is pushed to the end like the numbers below it.
+  number: { textAlign: 'end', fontVariantNumeric: 'tabular-nums', '& .fui-TableHeaderCell__button': { justifyContent: 'flex-end' } },
+  nowrap: { whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
+  muted: { color: h.muted, fontSize: '13px' },
+  // A titled part inside a card: display type, a hairline above it.
+  part: { display: 'grid', gap: '8px', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${h.line}`, minWidth: 0 },
+  subhead: { margin: 0, fontFamily: h.display, fontSize: '15px', lineHeight: '20px', fontWeight: 600, letterSpacing: '-0.01em' },
+  minor: { margin: 0, marginTop: '8px', fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: h.muted },
+  clear: { display: 'flex', alignItems: 'center', gap: '8px', color: h.spruceT, fontSize: '14px' },
+  forced: { marginBottom: '12px' },
 });
 
 /**
@@ -65,6 +110,7 @@ const useStyles = makeStyles({
  */
 export function MaintenancePage() {
   const styles = useStyles();
+  const settings = useSettingsStyles();
   const { t } = useTranslation();
   const status = useMaintenanceStatus();
   const [reportId, setReportId] = useState<string | null>(null);
@@ -74,9 +120,11 @@ export function MaintenancePage() {
       <PageHeader title={t('maintenance.title')} subtitle={t('maintenance.subtitle')} />
       {status.error && <ErrorState error={status.error} onRetry={() => void status.refetch()} />}
       {status.data && (
-        <div className={styles.stack}>
-          <StatePanel status={status.data} />
-          <SwitchPanel status={status.data} />
+        <div className={settings.stack}>
+          <div className={styles.top}>
+            <StatePanel status={status.data} />
+            <SwitchPanel status={status.data} />
+          </div>
           <ReconcilePanel readOnly={status.data.mode === 'ReadOnly'} />
           <ReportsPanel selected={reportId} onSelect={setReportId} />
         </div>
@@ -87,13 +135,14 @@ export function MaintenancePage() {
 
 function StatePanel({ status }: { status: MaintenanceStatus }) {
   const styles = useStyles();
+  const settings = useSettingsStyles();
   const { t } = useTranslation();
   const underWay = status.inFlight.reduce((sum, c) => sum + c.count, 0);
 
   return (
-    <Panel title={t('maintenance.state.title')}>
+    <Panel title={t('maintenance.state.title')} icon={<Gauge16Regular />}>
       {status.forced && (
-        <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+        <MessageBar intent="warning" className={styles.forced}>
           <MessageBarBody>{t('maintenance.state.forced')}</MessageBarBody>
         </MessageBar>
       )}
@@ -101,38 +150,31 @@ function StatePanel({ status }: { status: MaintenanceStatus }) {
         items={[
           {
             label: t('maintenance.state.mode'),
-            value: <span className={status.mode === 'ReadOnly' ? styles.readOnly : undefined}>{t(`maintenance.state.modes.${status.mode}`)}</span>,
+            value: (
+              <Badge appearance="tint" color={status.mode === 'ReadOnly' ? 'warning' : 'success'}>
+                {t(`maintenance.state.modes.${status.mode}`)}
+              </Badge>
+            ),
           },
           { label: t('maintenance.state.since'), value: formatDateTime(status.since) },
-          { label: t('maintenance.state.setBy'), value: status.setBy },
+          { label: t('maintenance.state.setBy'), value: status.setBy && <PersonCell name={status.setBy} size={24} /> },
           { label: t('maintenance.state.reason'), value: status.reason },
           { label: t('maintenance.state.reference'), value: status.reference },
         ]}
       />
-      <h3 className={styles.section}>{t('maintenance.inFlight.title')}</h3>
-      <Text block className={styles.muted}>
-        {t('maintenance.inFlight.hint')}
-      </Text>
-      {underWay === 0 ? (
-        <Text block>{t('maintenance.inFlight.clear')}</Text>
-      ) : (
-        <Table size="small" aria-label={t('maintenance.inFlight.title')} style={{ maxWidth: 480 }}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{t('maintenance.inFlight.area')}</TableHeaderCell>
-              <TableHeaderCell className={styles.number}>{t('maintenance.inFlight.count')}</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {status.inFlight.map((c) => (
-              <TableRow key={c.area}>
-                <TableCell>{t(`maintenance.areas.${c.area}`, { defaultValue: c.area })}</TableCell>
-                <TableCell className={styles.number}>{c.count}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <section className={styles.part} aria-label={t('maintenance.inFlight.title')}>
+        <h3 className={styles.subhead}>{t('maintenance.inFlight.title')}</h3>
+        <p className={settings.note}>{t('maintenance.inFlight.hint')}</p>
+        {underWay === 0 ? (
+          <span className={styles.clear}>
+            <CheckmarkCircle16Regular aria-hidden />
+            <Text>{t('maintenance.inFlight.clear')}</Text>
+          </span>
+        ) : (
+          // Counts are read at a glance: every one must be 0 before the restore point is taken.
+          <FactGrid items={status.inFlight.map((c) => ({ label: t(`maintenance.areas.${c.area}`, { defaultValue: c.area }), value: String(c.count) }))} />
+        )}
+      </section>
     </Panel>
   );
 }
@@ -161,7 +203,7 @@ function SwitchPanel({ status }: { status: MaintenanceStatus }) {
   };
 
   return (
-    <Panel title={t('maintenance.switch.title')}>
+    <Panel title={t('maintenance.switch.title')} icon={<LockClosed16Regular />}>
       <form
         className={styles.form}
         onSubmit={(event) => {
@@ -180,10 +222,23 @@ function SwitchPanel({ status }: { status: MaintenanceStatus }) {
         <Field label={t('maintenance.switch.reference')} hint={t('maintenance.switch.referenceHint')}>
           <Input value={reference} maxLength={100} onChange={(_, d) => setReference(d.value)} disabled={status.forced} />
         </Field>
-        <div className={styles.actions}>
-          <Button appearance="primary" type="submit" disabled={!valid || status.forced || setMaintenance.isPending}>
-            {target === 'ReadOnly' ? t('maintenance.switch.toReadOnly') : t('maintenance.switch.toNormal')}
-          </Button>
+        <div className={styles.footer}>
+          {/* Why the switch cannot be used yet: a forced deployment, or a reason still to write. */}
+          {(status.forced || !valid) && (
+            <p className={styles.reason}>
+              <span className={styles.reasonIcon} aria-hidden>
+                <Info16Regular />
+              </span>
+              {status.forced ? t('maintenance.switch.forcedShort') : t('maintenance.switch.needsReason', { min: MIN_REASON, max: MAX_REASON })}
+            </p>
+          )}
+          <div className={styles.actions}>
+            {/* One primary step on the page at a time: switching to read-only first; once read-only, the reconciliation below
+                leads, and returning to normal is the quiet last step. */}
+            <Button appearance={target === 'ReadOnly' ? 'primary' : 'secondary'} type="submit" disabled={!valid || status.forced || setMaintenance.isPending}>
+              {target === 'ReadOnly' ? t('maintenance.switch.toReadOnly') : t('maintenance.switch.toNormal')}
+            </Button>
+          </div>
         </div>
       </form>
       <Dialog open={confirming} onOpenChange={(_, d) => !d.open && setConfirming(false)}>
@@ -234,43 +289,61 @@ function ReconcilePanel({ readOnly }: { readOnly: boolean }) {
   };
 
   return (
-    <Panel title={t('maintenance.reconcile.title')}>
+    <Panel title={t('maintenance.reconcile.title')} icon={<ArrowSync16Regular />}>
       <div className={styles.form}>
-        <Text block>{t('maintenance.reconcile.intro')}</Text>
+        <p className={styles.lead}>{t('maintenance.reconcile.intro')}</p>
         {!readOnly && (
           <MessageBar intent="info">
             <MessageBarBody>{t('maintenance.reconcile.needsReadOnly')}</MessageBarBody>
           </MessageBar>
         )}
-        <Field
-          label={t('maintenance.reconcile.restorePoint')}
-          hint={t('maintenance.reconcile.restorePointHint')}
-          validationMessage={point && !inPast ? t('maintenance.reconcile.invalidPoint') : undefined}
-        >
-          <Input
-            type="datetime-local"
-            step={1}
-            value={point}
-            onChange={(_, d) => {
-              const instant = utcInstant(d.value);
-              setPoint(d.value);
-              setFuture(instant !== null && new Date(instant).getTime() > Date.now());
-            }}
-          />
-        </Field>
+        <div className={styles.fields}>
+          <Field
+            label={t('maintenance.reconcile.restorePoint')}
+            hint={t('maintenance.reconcile.restorePointHint')}
+            validationMessage={point && !inPast ? t('maintenance.reconcile.invalidPoint') : undefined}
+          >
+            <Input
+              type="datetime-local"
+              step={1}
+              value={point}
+              onChange={(_, d) => {
+                const instant = utcInstant(d.value);
+                setPoint(d.value);
+                setFuture(instant !== null && new Date(instant).getTime() > Date.now());
+              }}
+            />
+          </Field>
+        </div>
         {reconcile.error && (
           <MessageBar intent="error">
             <MessageBarBody>{errorMessage(reconcile.error, t)}</MessageBarBody>
           </MessageBar>
         )}
-        <div className={styles.actions}>
-          <Button disabled={!readOnly || !inPast || reconcile.isPending} onClick={() => void run(false)}>
-            {t('maintenance.reconcile.dryRun')}
-          </Button>
-          <Button appearance="primary" disabled={!readOnly || !previewed || reconcile.isPending} onClick={() => setConfirming(true)}>
-            {t('maintenance.reconcile.apply')}
-          </Button>
-          <Text className={styles.muted}>{t('maintenance.reconcile.applyHint')}</Text>
+        <div className={styles.footer}>
+          {/* In normal operation the notice above says why; in read-only mode the next step is named here. */}
+          {readOnly && (
+            <p className={mergeClasses(styles.reason, previewed && styles.ready)}>
+              <span className={mergeClasses(styles.reasonIcon, previewed && styles.ready)} aria-hidden>
+                {previewed ? <CheckmarkCircle16Regular /> : <Info16Regular />}
+              </span>
+              {!point
+                ? t('maintenance.reconcile.needsPoint')
+                : !inPast
+                  ? t('maintenance.reconcile.invalidPoint')
+                  : previewed
+                    ? t('maintenance.reconcile.readyToApply')
+                    : t('maintenance.reconcile.applyHint')}
+            </p>
+          )}
+          <div className={styles.actions}>
+            <Button appearance={readOnly && !previewed ? 'primary' : 'secondary'} disabled={!readOnly || !inPast || reconcile.isPending} onClick={() => void run(false)}>
+              {t('maintenance.reconcile.dryRun')}
+            </Button>
+            <Button appearance={readOnly && previewed ? 'primary' : 'secondary'} disabled={!readOnly || !previewed || reconcile.isPending} onClick={() => setConfirming(true)}>
+              {t('maintenance.reconcile.apply')}
+            </Button>
+          </div>
         </div>
       </div>
       {report && <ReportView report={report} />}
@@ -298,20 +371,20 @@ function ReportView({ report }: { report: RestoreReport }) {
   const needsPerson = report.checks.concat(report.reconciliation).filter((l) => l.needsPerson).length;
 
   return (
-    <section className={styles.section} aria-label={t('maintenance.report.title', { at: formatDateTime(report.at) })}>
-      <h3>{t('maintenance.report.title', { at: formatDateTime(report.at) })}</h3>
+    <section className={styles.part} aria-label={t('maintenance.report.title', { at: formatDateTime(report.at) })}>
+      <h3 className={styles.subhead}>{t('maintenance.report.title', { at: formatDateTime(report.at) })}</h3>
       <DetailList
         items={[
-          { label: t('maintenance.report.kind'), value: report.applied ? t('maintenance.report.applied') : t('maintenance.report.dryRun') },
+          { label: t('maintenance.report.kind'), value: <KindBadge applied={report.applied} /> },
           { label: t('maintenance.report.restorePoint'), value: formatDateTime(report.restorePoint) },
-          { label: t('maintenance.report.by'), value: report.by },
+          { label: t('maintenance.report.by'), value: <PersonCell name={report.by} size={24} /> },
           { label: t('maintenance.report.effects'), value: String(report.effects) },
           { label: t('maintenance.report.needsPerson'), value: <span className={needsPerson > 0 ? styles.needsPerson : undefined}>{needsPerson}</span> },
         ]}
       />
-      <h4>{t('maintenance.report.reconciliation')}</h4>
-      {report.reconciliation.length === 0 ? <EmptyState message={t('maintenance.report.nothing')} /> : <Lines lines={report.reconciliation} />}
-      <h4>{t('maintenance.report.checks')}</h4>
+      <h4 className={styles.minor}>{t('maintenance.report.reconciliation')}</h4>
+      {report.reconciliation.length === 0 ? <EmptyState message={t('maintenance.report.nothing')} icon={<CheckmarkCircle24Regular />} /> : <Lines lines={report.reconciliation} />}
+      <h4 className={styles.minor}>{t('maintenance.report.checks')}</h4>
       <Lines lines={report.checks} />
     </section>
   );
@@ -319,9 +392,10 @@ function ReportView({ report }: { report: RestoreReport }) {
 
 function Lines({ lines }: { lines: RestoreLine[] }) {
   const styles = useStyles();
+  const table = useTableCardStyles();
   const { t } = useTranslation();
   return (
-    <div className={styles.tableWrap}>
+    <ScrollTable className={table.inset}>
       <Table size="small" className={styles.table}>
         <TableHeader>
           <TableRow>
@@ -345,27 +419,28 @@ function Lines({ lines }: { lines: RestoreLine[] }) {
           ))}
         </TableBody>
       </Table>
-    </div>
+    </ScrollTable>
   );
 }
 
 function ReportsPanel({ selected, onSelect }: { selected: string | null; onSelect: (id: string | null) => void }) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const table = useTableCardStyles();
   const reports = useRestoreReports();
   const report = useRestoreReport(selected);
 
   return (
-    <Panel title={t('maintenance.reports.title')}>
+    <Panel title={t('maintenance.reports.title')} icon={<History16Regular />}>
       {reports.error && <ErrorState error={reports.error} onRetry={() => void reports.refetch()} />}
-      {reports.data && reports.data.length === 0 && <EmptyState message={t('maintenance.reports.empty')} />}
+      {reports.data && reports.data.length === 0 && <EmptyState message={t('maintenance.reports.empty')} icon={<History24Regular />} />}
       {reports.data && reports.data.length > 0 && (
-        <div className={styles.tableWrap}>
-          <Table size="small" className={styles.table} aria-label={t('maintenance.reports.title')}>
+        <ScrollTable className={table.inset}>
+          <Table size="small" className={styles.reportsTable} aria-label={t('maintenance.reports.title')}>
             <TableHeader>
               <TableRow>
-                <TableHeaderCell>{t('maintenance.reports.at')}</TableHeaderCell>
-                <TableHeaderCell>{t('maintenance.reports.restorePoint')}</TableHeaderCell>
+                <TableHeaderCell className={table.dateTimeCol}>{t('maintenance.reports.at')}</TableHeaderCell>
+                <TableHeaderCell className={table.dateTimeCol}>{t('maintenance.reports.restorePoint')}</TableHeaderCell>
                 <TableHeaderCell>{t('maintenance.reports.kind')}</TableHeaderCell>
                 <TableHeaderCell>{t('maintenance.reports.by')}</TableHeaderCell>
                 <TableHeaderCell className={styles.number}>{t('maintenance.reports.effects')}</TableHeaderCell>
@@ -378,8 +453,8 @@ function ReportsPanel({ selected, onSelect }: { selected: string | null; onSelec
                 <TableRow key={r.id}>
                   <TableCell className={styles.nowrap}>{formatDateTime(r.at)}</TableCell>
                   <TableCell className={styles.nowrap}>{formatDateTime(r.restorePoint)}</TableCell>
-                  <TableCell>{r.applied ? t('maintenance.report.applied') : t('maintenance.report.dryRun')}</TableCell>
-                  <TableCell>{r.by}</TableCell>
+                  <TableCell><KindBadge applied={r.applied} /></TableCell>
+                  <TableCell className={styles.nowrap}><PersonCell name={r.by} size={24} /></TableCell>
                   <TableCell className={styles.number}>{r.effects}</TableCell>
                   <TableCell className={styles.number}>
                     <span className={r.needsPerson > 0 ? styles.needsPerson : undefined}>{r.needsPerson}</span>
@@ -393,10 +468,20 @@ function ReportsPanel({ selected, onSelect }: { selected: string | null; onSelec
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ScrollTable>
       )}
       {report.error && <ErrorState error={report.error} />}
       {report.data && <ReportView report={report.data} />}
     </Panel>
+  );
+}
+
+/** A dry run only reads; an applied reconciliation changed the restored copy. */
+function KindBadge({ applied }: { applied: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <Badge appearance="tint" color={applied ? 'success' : 'subtle'}>
+      {applied ? t('maintenance.report.applied') : t('maintenance.report.dryRun')}
+    </Badge>
   );
 }

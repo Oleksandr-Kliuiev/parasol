@@ -8,6 +8,7 @@ import { withScope } from '../graph/scoped-db.ts';
 import { callProvider, decisionRunData } from './decision.ts';
 import type { RunDraft } from './decision.ts';
 import { assertStorableEvent } from './inbox.ts';
+import { queueClock } from './clock.ts';
 
 /**
  * Shadow jobs (task 1.7, docs/04): the AI call of shadow mode, apart from the baseline. A job is created in the final
@@ -28,26 +29,27 @@ interface ClaimedJob { eventId: string; attempts: number; claimToken: string }
 const defaults = { leaseMs: 60_000, batchSize: 10, retryDelayMs: (attempt: number) => Math.min(15 * 60_000, 30_000 * 2 ** (attempt - 1)) };
 const ids = (scope: Scope) => ({ workspaceId: scope.workspaceId, clientId: scope.clientId });
 
-async function claimJobs(db: PrismaClient, actor: Actor, scope: Scope, options: ShadowOptions, now: Date) {
+async function claimJobs(db: PrismaClient, actor: Actor, scope: Scope, options: ShadowOptions, now?: Date) {
   const maxAttempts = options.config.budget.maxProviderCallsPerEvent;
   const limit = options.batchSize ?? defaults.batchSize;
-  const until = new Date(now.getTime() + (options.leaseMs ?? defaults.leaseMs));
   return withScope(db, actor, [scope.clientId], async tx => {
+    const instant = await queueClock(tx, now);
+    const until = new Date(instant.getTime() + (options.leaseMs ?? defaults.leaseMs));
     const exhausted = await tx.$queryRaw<{ eventId: string }[]>`
       WITH picked AS MATERIALIZED (
         SELECT "workspaceId", "clientId", "eventId" FROM "ShadowJob"
         WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND status IN ('PENDING', 'RETRY') AND attempts >= ${maxAttempts}
-          AND "nextAttemptAt" <= ${now} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${now})
+          AND "nextAttemptAt" <= ${instant} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${instant})
         ORDER BY "nextAttemptAt", "eventId" LIMIT ${limit} FOR UPDATE SKIP LOCKED)
       UPDATE "ShadowJob" j SET status = 'FAILED', "lastErrorCode" = 'ATTEMPTS_EXHAUSTED', "leaseOwner" = NULL, "leaseExpiresAt" = NULL, "claimToken" = NULL,
-        "finishedAt" = ${now}
+        "finishedAt" = ${instant}
       FROM picked p WHERE j."workspaceId" = p."workspaceId" AND j."clientId" = p."clientId" AND j."eventId" = p."eventId"
       RETURNING j."eventId"`;
     const claimed = await tx.$queryRaw<ClaimedJob[]>`
       WITH picked AS MATERIALIZED (
         SELECT "workspaceId", "clientId", "eventId" FROM "ShadowJob"
         WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND status IN ('PENDING', 'RETRY') AND attempts < ${maxAttempts}
-          AND "nextAttemptAt" <= ${now} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${now})
+          AND "nextAttemptAt" <= ${instant} AND ("leaseExpiresAt" IS NULL OR "leaseExpiresAt" < ${instant})
         ORDER BY "nextAttemptAt", "eventId" LIMIT ${limit} FOR UPDATE SKIP LOCKED)
       UPDATE "ShadowJob" j SET "leaseOwner" = ${options.workerId}, "leaseExpiresAt" = ${until}, "claimToken" = gen_random_uuid(), attempts = j.attempts + 1
       FROM picked p WHERE j."workspaceId" = p."workspaceId" AND j."clientId" = p."clientId" AND j."eventId" = p."eventId"
@@ -67,8 +69,9 @@ async function finishJob(tx: Prisma.TransactionClient, scope: Scope, job: Claime
   return updated.count === 1;
 }
 
-async function processJob(db: PrismaClient, actor: Actor, scope: Scope, job: ClaimedJob, normalized: unknown, options: ShadowOptions, now: Date): Promise<ShadowOutcome> {
-  const end = (status: 'FAILED' | 'SKIPPED', code: string) => withScope(db, actor, [scope.clientId], tx => finishJob(tx, scope, job, status, code, null, now))
+async function processJob(db: PrismaClient, actor: Actor, scope: Scope, job: ClaimedJob, normalized: unknown, options: ShadowOptions, now?: Date): Promise<ShadowOutcome> {
+  const end = (status: 'FAILED' | 'SKIPPED', code: string) => withScope(db, actor, [scope.clientId], async tx =>
+    finishJob(tx, scope, job, status, code, null, await queueClock(tx, now)))
     .then(ok => ({ eventId: job.eventId, status: ok ? status : 'CLAIM_LOST' as const, safeErrorCode: code }));
   try { assertStorableEvent(normalized); } catch { return end('FAILED', 'INVALID_EVENT'); }
   const event = normalized;
@@ -78,7 +81,6 @@ async function processJob(db: PrismaClient, actor: Actor, scope: Scope, job: Cla
   options.guard?.record(call.error);
   const maxAttempts = options.config.budget.maxProviderCallsPerEvent;
   const status = call.result ? 'DONE' : call.kind === 'TRANSIENT' && job.attempts < maxAttempts ? 'RETRY' : 'FAILED';
-  const nextAttemptAt = status === 'RETRY' ? new Date(now.getTime() + (options.retryDelayMs ?? defaults.retryDelayMs)(job.attempts)) : null;
   const run: RunDraft = { provider: options.provider.provider, mode: 'shadow', result: call.result, error: call.error, latencyMs: call.latencyMs, details: call.details };
   const recorded = await withScope(db, actor, [scope.clientId], async tx => {
     // The run is stored only by the current claim, together with the job's outcome
@@ -86,14 +88,16 @@ async function processJob(db: PrismaClient, actor: Actor, scope: Scope, job: Cla
       WHERE "workspaceId" = ${scope.workspaceId} AND "clientId" = ${scope.clientId} AND "eventId" = ${job.eventId}
         AND "claimToken" = ${job.claimToken}::uuid AND status IN ('PENDING', 'RETRY') FOR UPDATE`;
     if (!held) return false;
+    const instant = await queueClock(tx, now);
+    const nextAttemptAt = status === 'RETRY' ? new Date(instant.getTime() + (options.retryDelayMs ?? defaults.retryDelayMs)(job.attempts)) : null;
     await tx.decisionRun.create({ data: decisionRunData(scope, job.eventId, event, run, options.config, randomUUID()), select: { id: true } });
-    return finishJob(tx, scope, job, status, call.error, nextAttemptAt, now);
+    return finishJob(tx, scope, job, status, call.error, nextAttemptAt, instant);
   });
   return { eventId: job.eventId, status: recorded ? status : 'CLAIM_LOST', safeErrorCode: call.error };
 }
 
 /** One pass of the shadow runner over a client: fail exhausted jobs, claim due ones, make each call once. */
-export async function processShadowJobs(db: PrismaClient, actor: Actor, scope: Scope, options: ShadowOptions, now: Date = new Date()): Promise<ShadowOutcome[]> {
+export async function processShadowJobs(db: PrismaClient, actor: Actor, scope: Scope, options: ShadowOptions, now?: Date): Promise<ShadowOutcome[]> {
   assertPermission(actor, scope, 'events:ingest');
   if (options.provider.mode !== 'shadow') throw new AtlasError('SHADOW_PROVIDER_REQUIRED', 'PERMANENT');
   const { exhausted, claimed, events } = await claimJobs(db, actor, scope, options, now);

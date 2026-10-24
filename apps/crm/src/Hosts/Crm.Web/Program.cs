@@ -37,7 +37,14 @@ using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
 using Crm.Infrastructure.Http;
 
+if (args.Contains("--health-probe", StringComparer.Ordinal))
+{
+    Environment.Exit(await VpsHostConfiguration.HealthProbeAsync());
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.AddVpsConfiguration(args);
 
 builder.AddServiceDefaults();
 // DEV-06: ready means the database answers and has this build's schema; external systems never decide readiness.
@@ -63,6 +70,8 @@ builder.Services.AddHsts(options =>
 builder.Services.AddSingleton<IConfigureOptions<JsonOptions>, ConfigureJsonOptions>();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddScoped<IRequestContext, HttpRequestContext>();
+// UX 2026, В6: the customer list's facts and attention view, composed from the modules' contracts.
+builder.Services.AddScoped<Crm.Web.CustomerFacts.CustomerFactsService>();
 
 // Modules. Audit is registered first: it owns the audit table that other modules write to.
 builder.Services
@@ -106,6 +115,15 @@ builder.Services.AddSingleton<SessionStateCache>();
 builder.Services.AddScoped<IReportAccessAudit, ReportAccessAudit>();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, CrmAuthorizationResultHandler>();
 builder.AddDataProtection();
+// Protected browser continuations belong to the web host; the worker has no data-protection key ring.
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationQueueReader>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationSourceReader>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationTaskService>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.CustomerIdentityGuard>();
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.AtlasObservationCursor>();
+Crm.Integrations.Core.Parasol.AtlasAttentionEndpoints.AddParasolAtlasAttention(builder.Services);
+builder.Services.AddScoped<Crm.Integrations.Core.Parasol.ILocalReadinessFlags, Crm.Web.LocalReadinessFlagsReader>();
+Crm.Integrations.Core.Parasol.LocalReadinessEndpoints.AddParasolLocalReadiness(builder.Services);
 
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:DashboardEnabled", true);
 if (hangfireEnabled)
@@ -281,9 +299,13 @@ app.MapReportsEndpoints();
 app.MapPrivacyEndpoints();
 app.MapBrregEndpoints();
 app.MapSearchEndpoints();
+Crm.Web.CustomerFacts.CustomerFactsEndpoints.MapCustomerFactsEndpoints(app);
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 Crm.Integrations.Core.Parasol.CustomerIdentityEndpoints.MapParasolCustomerIdentities(app);
+Crm.Integrations.Core.Parasol.AtlasObservationTaskEndpoints.MapParasolObservationTasks(app);
+Crm.Integrations.Core.Parasol.AtlasAttentionEndpoints.MapParasolAtlasAttention(app);
+Crm.Integrations.Core.Parasol.LocalReadinessEndpoints.MapParasolLocalReadiness(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
 app.MapMonitoringEndpoints();

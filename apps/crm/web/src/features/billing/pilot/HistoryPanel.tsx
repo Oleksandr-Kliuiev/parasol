@@ -1,4 +1,5 @@
-import { Spinner, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components';
+import { Badge, Spinner, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow } from '@fluentui/react-components';
+import { History16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { Panel } from '../../../shared/components/Panel';
@@ -9,12 +10,23 @@ import { usePilotStyles } from './styles';
 
 const short = (sha: string) => sha.slice(0, 12);
 
+/** Current or out of date, as a pill: the run changed after the comparison was made. */
+function Freshness({ stale }: { stale: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <Badge appearance="tint" color={stale ? 'warning' : 'success'}>
+      {stale ? t('pilot.history.stale') : t('pilot.history.current')}
+    </Badge>
+  );
+}
+
 /** Metadata only: who, when, hashes and counts. The explanations and amounts stay in the stored documents. */
 export function HistoryView({ overview }: { overview: PilotOverview }) {
   const styles = usePilotStyles();
   const { t } = useTranslation();
   return (
     <>
+      <p className={styles.lead}>{t('pilot.history.staleHint')}</p>
       <h3 className={styles.heading} style={{ marginTop: 0 }}>
         {t('pilot.history.comparisons')}
       </h3>
@@ -37,16 +49,16 @@ export function HistoryView({ overview }: { overview: PilotOverview }) {
             <TableBody>
               {overview.comparisons.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell>{formatDateTime(c.at)}</TableCell>
+                  <TableCell className="tabular">{formatDateTime(c.at)}</TableCell>
                   <TableCell>{c.createdBy.name}</TableCell>
-                  <TableCell className={styles.mono} title={c.fileSha256}>
+                  <TableCell className={styles.key} title={c.fileSha256}>
                     {short(c.fileSha256)}
                   </TableCell>
                   <TableCell className={styles.number}>{c.fileRows}</TableCell>
                   <TableCell className={styles.number}>{c.exceptionCount}</TableCell>
                   <TableCell className={styles.number}>{c.signoffs}</TableCell>
                   <TableCell>
-                    <Text className={c.stale ? styles.warn : styles.good}>{c.stale ? t('pilot.history.stale') : t('pilot.history.current')}</Text>
+                    <Freshness stale={c.stale} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -73,17 +85,17 @@ export function HistoryView({ overview }: { overview: PilotOverview }) {
             <TableBody>
               {overview.signoffs.map((s) => (
                 <TableRow key={s.id}>
-                  <TableCell>{formatDateTime(s.signedAt)}</TableCell>
+                  <TableCell className="tabular">{formatDateTime(s.signedAt)}</TableCell>
                   <TableCell>{s.signedBy.name}</TableCell>
-                  <TableCell className={styles.mono} title={s.comparisonId}>
+                  <TableCell className={styles.key} title={s.comparisonId}>
                     {short(s.comparisonSha256)}
                   </TableCell>
                   <TableCell className={styles.number}>{s.exceptionCount}</TableCell>
-                  <TableCell className={styles.mono} title={s.documentSha256}>
+                  <TableCell className={styles.key} title={s.documentSha256}>
                     {short(s.documentSha256)}
                   </TableCell>
                   <TableCell>
-                    <Text className={s.stale ? styles.warn : styles.good}>{s.stale ? t('pilot.history.stale') : t('pilot.history.current')}</Text>
+                    <Freshness stale={s.stale} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -91,7 +103,6 @@ export function HistoryView({ overview }: { overview: PilotOverview }) {
           </Table>
         </ScrollRegion>
       )}
-      <p className={styles.muted}>{t('pilot.history.staleHint')}</p>
     </>
   );
 }
@@ -100,9 +111,9 @@ export function HistoryPanel({ runId }: { runId: string }) {
   const { t } = useTranslation();
   const overview = useOverview(runId);
   return (
-    <Panel title={t('pilot.history.title')}>
+    <Panel title={t('pilot.history.title')} icon={<History16Regular />}>
       {overview.isPending ? (
-        <Spinner label={t('common.loading')} />
+        <Spinner size="small" label={t('common.loading')} />
       ) : overview.error ? (
         <ErrorState error={overview.error} onRetry={() => void overview.refetch()} />
       ) : (

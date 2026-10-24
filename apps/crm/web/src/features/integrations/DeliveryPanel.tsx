@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   Button,
   Checkbox,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -19,9 +18,16 @@ import {
   TableRow,
   Text,
   Textarea,
+  Badge,
   makeStyles,
+  mergeClasses,
   tokens,
+  useRestoreFocusTarget,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
+import { Send16Regular, Send24Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
+import { useTableCardStyles } from '../admin/tableCard';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import type { OperationResult } from './monitoringApi';
@@ -29,25 +35,27 @@ import type { OutboxMessageItem } from '../../api/types';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { Panel } from '../../shared/components/Panel';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { useIntegrationActions, useOutbox } from './api';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 /** The server's limits (OutboxEndpoints): a replay names at most this many messages and says why in this many characters. */
 export const MAX_REPLAY = 100;
 export const MIN_REASON = 10;
 
 const useStyles = makeStyles({
-  stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM },
-  toolbar: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalM },
-  tableWrap: { overflowX: 'auto' },
-  table: { minWidth: '880px' },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, overflowWrap: 'anywhere' },
-  error: { color: tokens.colorPaletteRedForeground1, fontSize: tokens.fontSizeBase200, overflowWrap: 'anywhere' },
-  dead: { color: tokens.colorPaletteRedForeground1, fontWeight: tokens.fontWeightSemibold },
-  quarantined: { color: tokens.colorPaletteDarkOrangeForeground1, fontWeight: tokens.fontWeightSemibold },
-  nowrap: { whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
+  stack: { display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 },
+  toolbar: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' },
+  muted: { color: h.muted, fontSize: '13px', lineHeight: '18px', overflowWrap: 'anywhere' },
+  note: { color: h.muted, fontSize: '13px', lineHeight: '20px', margin: 0, maxWidth: '90ch' },
+  // The backlog per module: quiet lines in a well, read before the list.
+  backlog: { margin: 0, paddingTop: '10px', paddingBottom: '10px', paddingLeft: '32px', paddingRight: '16px', borderRadius: '12px', backgroundColor: h.well, color: h.muted, fontSize: '13px', lineHeight: '20px' },
+  results: { margin: 0, paddingLeft: '18px', fontSize: '13px', lineHeight: '20px' },
+  error: { color: tokens.colorPaletteRedForeground1, fontSize: '13px', lineHeight: '18px', overflowWrap: 'anywhere' },
+  cellLine: { display: 'block', marginTop: '4px' },
 });
 
 const key = (m: Pick<OutboxMessageItem, 'module' | 'id'>) => `${m.module}/${m.id}`;
@@ -59,11 +67,14 @@ const key = (m: Pick<OutboxMessageItem, 'module' | 'id'>) => `${m.module}/${m.id
  */
 export function DeliveryPanel() {
   const styles = useStyles();
+  const table = useTableCardStyles();
   const { t } = useTranslation();
   const outbox = useOutbox();
   const [results, setResults] = useState<OperationResult[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState<OutboxMessageItem[] | null>(null);
+  const shown = useKeptWhileClosing(confirming);
+  const restoreFocusTarget = useRestoreFocusTarget();
 
   const items = useMemo(() => outbox.data?.items ?? [], [outbox.data]);
   const replayable = items.filter((m) => !m.replayRequested);
@@ -82,15 +93,20 @@ export function DeliveryPanel() {
     });
 
   return (
-    <Panel title={t('delivery.title')}>
+    <Panel title={t('delivery.title')} icon={<Send16Regular />}>
       <div className={styles.stack}>
-        <Text className={styles.muted}>{t('delivery.description')}</Text>
-        {results.length > 0 && <ul aria-label={t('monitoring.operationResults')} aria-live="polite">{results.map((r) => <li key={`${r.module}/${r.id}`}>{r.module} / {r.id}: {t(`monitoring.operationStatus.${r.status}`)}</li>)}</ul>}
+        <p className={styles.note}>{t('delivery.description')}</p>
+        {results.length > 0 && <ul className={styles.results} aria-label={t('monitoring.operationResults')} aria-live="polite">{results.map((r) => <li key={`${r.module}/${r.id}`}>{r.module} / {r.id}: {t(`monitoring.operationStatus.${r.status}`)}</li>)}</ul>}
         {waiting.length > 0 && (
-          <ul className={styles.muted} aria-label={t('delivery.backlog')} style={{ margin: 0, paddingInlineStart: 18 }}>
+          <ul className={styles.backlog} aria-label={t('delivery.backlog')}>
             {waiting.map((c) => (
               <li key={c.module}>
-                {t('delivery.counts', { module: c.module, deadLetter: c.deadLetter, quarantined: c.quarantined, pending: c.pending + c.processing })}
+                {t('delivery.counts', {
+                  module: c.module,
+                  deadLetters: t('delivery.deadLetters', { count: c.deadLetter }),
+                  quarantined: c.quarantined,
+                  pending: c.pending + c.processing,
+                })}
               </li>
             ))}
           </ul>
@@ -98,20 +114,23 @@ export function DeliveryPanel() {
         {outbox.error ? (
           <ErrorState error={outbox.error} onRetry={() => void outbox.refetch()} />
         ) : items.length === 0 ? (
-          <EmptyState message={t('delivery.empty')} />
+          <EmptyState message={t('delivery.empty')} icon={<Send24Regular />} />
         ) : (
           <>
-            <div className={styles.toolbar}>
-              <Button appearance="primary" disabled={chosen.length === 0 || chosen.length > MAX_REPLAY} onClick={() => setConfirming(chosen)}>
-                {t('delivery.replaySelected', { count: chosen.length })}
-              </Button>
-              {chosen.length >= MAX_REPLAY && <Text className={styles.muted}>{t('delivery.limit', { max: MAX_REPLAY })}</Text>}
-            </div>
-            <div className={styles.tableWrap}>
-              <Table size="small" className={styles.table} aria-label={t('delivery.title')}>
+            {replayable.length > 0 && (
+              <div className={styles.toolbar}>
+                <Button {...restoreFocusTarget} appearance="primary" disabled={chosen.length === 0 || chosen.length > MAX_REPLAY} onClick={() => setConfirming(chosen)}>
+                  {t('delivery.replaySelected', { count: chosen.length })}
+                </Button>
+                {chosen.length === 0 && <Text className={styles.muted}>{t('delivery.selectHint')}</Text>}
+                {chosen.length >= MAX_REPLAY && <Text className={styles.muted}>{t('delivery.limit', { max: MAX_REPLAY })}</Text>}
+              </div>
+            )}
+            <ScrollTable className={table.inset}>
+              <Table size="small" className={mergeClasses(table.min880, table.roomy)} aria-label={t('delivery.title')}>
                 <TableHeader>
                   <TableRow>
-                    <TableHeaderCell>
+                    <TableHeaderCell className={table.checkCol}>
                       <Checkbox
                         aria-label={t('delivery.selectAll')}
                         checked={allSelected ? true : chosen.length > 0 ? 'mixed' : false}
@@ -119,13 +138,13 @@ export function DeliveryPanel() {
                         onChange={(_, d) => setSelected(d.checked === true ? new Set(replayable.slice(0, MAX_REPLAY).map(key)) : new Set())}
                       />
                     </TableHeaderCell>
-                    <TableHeaderCell>{t('delivery.columns.occurred')}</TableHeaderCell>
+                    <TableHeaderCell className={table.dateTimeCol}>{t('delivery.columns.occurred')}</TableHeaderCell>
                     <TableHeaderCell>{t('delivery.columns.event')}</TableHeaderCell>
                     <TableHeaderCell>{t('delivery.columns.status')}</TableHeaderCell>
                     <TableHeaderCell>{t('delivery.columns.attempts')}</TableHeaderCell>
                     <TableHeaderCell>{t('delivery.columns.handlers')}</TableHeaderCell>
                     <TableHeaderCell>{t('delivery.columns.error')}</TableHeaderCell>
-                    <TableHeaderCell aria-label={t('delivery.replay')} />
+                    <TableHeaderCell className={table.actionCol} aria-label={t('delivery.replay')} />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -139,7 +158,7 @@ export function DeliveryPanel() {
                           onChange={(_, d) => toggle(m, d.checked === true)}
                         />
                       </TableCell>
-                      <TableCell className={styles.nowrap}>{formatDateTime(m.occurredAt)}</TableCell>
+                      <TableCell className={table.nowrap}>{formatDateTime(m.occurredAt)}</TableCell>
                       <TableCell>
                         <Text weight="semibold">{m.eventType}</Text>
                         <Text block className={styles.muted}>
@@ -147,17 +166,17 @@ export function DeliveryPanel() {
                         </Text>
                       </TableCell>
                       <TableCell>
-                        <span className={m.status === 'Quarantined' ? styles.quarantined : styles.dead}>{t(`delivery.status.${m.status}`)}</span>
-                        {m.replays > 0 && <Text block className={styles.muted}>{t('delivery.replayed', { count: m.replays })}</Text>}
+                        <Badge appearance="tint" color={m.status === 'Quarantined' ? 'warning' : 'danger'}>{t(`delivery.status.${m.status}`)}</Badge>
+                        {m.replays > 0 && <Text block className={mergeClasses(styles.muted, styles.cellLine)}>{t('delivery.replayed', { count: m.replays })}</Text>}
                       </TableCell>
-                      <TableCell className={styles.nowrap}>{m.attempts}</TableCell>
+                      <TableCell className={table.nowrap}>{m.attempts}</TableCell>
                       <TableCell className={styles.muted}>{m.deliveredHandlers.join(', ') || '—'}</TableCell>
                       <TableCell>{m.lastError ? <span className={styles.error}>{m.lastError}</span> : '—'}</TableCell>
                       <TableCell>
                         {m.replayRequested ? (
                           <Text className={styles.muted}>{t('delivery.requested')}</Text>
                         ) : (
-                          <Button size="small" onClick={() => setConfirming([m])}>
+                          <Button {...restoreFocusTarget} size="small" onClick={() => setConfirming([m])}>
                             {t('delivery.replay')}
                           </Button>
                         )}
@@ -166,16 +185,16 @@ export function DeliveryPanel() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollTable>
             {stuck > items.length && <Text className={styles.muted}>{t('delivery.newestShown', { shown: items.length, total: stuck })}</Text>}
           </>
         )}
       </div>
       <Dialog open={confirming !== null} onOpenChange={(_, d) => !d.open && setConfirming(null)}>
         <DialogSurface>
-          {confirming && (
+          {shown && (
             <ReplayForm
-              messages={confirming}
+              messages={shown}
               onResults={setResults}
               onClose={(done) => {
                 setConfirming(null);

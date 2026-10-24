@@ -153,7 +153,9 @@ test('content reflows at 320 px and survives text-spacing overrides', async ({ p
         .filter((el) => {
           const style = getComputedStyle(el);
           const rect = el.getBoundingClientRect();
-          return rect.width > 0 && style.overflow !== 'visible' && style.textOverflow !== 'ellipsis' && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
+          // A visually hidden label (a 1×1 px box read only by screen readers) shows no text that spacing could cut off.
+          const shown = rect.width > 1 && rect.height > 1;
+          return shown && style.overflow !== 'visible' && style.textOverflow !== 'ellipsis' && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
         })
         .map((el) => `${el.tagName.toLowerCase()}[${el.textContent?.trim().slice(0, 30)}]`),
     );
@@ -171,13 +173,14 @@ test('the page is usable at 200 % browser zoom and on a long name', async ({ pag
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow, `scrolls by ${overflow}px: ${(await stickingOut(page)).join(' | ')}`).toBeLessThanOrEqual(1);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: /Open navigation/ }).click();
-  await expect(page.getByRole('navigation').getByRole('link', { name: 'Organizations' })).toBeVisible();
+  // 640 px is a phone layout: the full menu opens from "More" in the bottom tabs.
+  await page.getByRole('navigation', { name: 'Main sections' }).getByRole('button', { name: 'More' }).click();
+  await expect(page.getByRole('navigation', { name: 'Main menu' }).getByRole('link', { name: 'Organizations' })).toBeVisible();
 });
 
-// DEV-18 item 5: the same pages in Norwegian and Russian, on a phone, with a long customer name — no missing text, nothing
+// DEV-18 item 5: the same pages in Bokmål and Nynorsk, on a phone, with a long customer name — no missing text, nothing
 // cut off. (The language comes from the browser; no profile is changed.)
-for (const [label, locale] of [['Norwegian', 'nb-NO'], ['Russian', 'ru-RU']] as const) {
+for (const [label, locale] of [['Norwegian', 'nb-NO'], ['Nynorsk', 'nn-NO']] as const) {
   test.describe(`${label} on a phone`, () => {
     test.use({ locale, viewport: { width: 360, height: 740 } });
 
@@ -186,7 +189,7 @@ for (const [label, locale] of [['Norwegian', 'nb-NO'], ['Russian', 'ru-RU']] as 
       await signIn(page, 'Crm.Admin');
       const organization = await createOrganization(page, { name: `${marker('Lang')} Svært Langt Selskapsnavn Utenfor Det Vanlige Teknologi og Rådgivning AS` });
       await page.goto('/organizations');
-      await expect(page.getByRole('heading', { level: 1, name: label === 'Norwegian' ? 'Organisasjoner' : 'Организации' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: label === 'Norwegian' ? 'Organisasjoner' : 'Organisasjonar' })).toBeVisible();
       for (const [name, path] of pages(organization.id)) {
         await page.goto(path);
         await ready(page);

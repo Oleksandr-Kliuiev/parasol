@@ -3,7 +3,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -11,20 +10,22 @@ import {
   DialogTitle,
   Spinner,
   Tab,
-  TabList,
   Text,
   makeStyles,
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Delete20Regular, Edit20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { ArrowSync16Regular, Box16Regular, BoxMultiple20Regular, Clock16Regular, Delete20Regular, Edit20Regular, Money16Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
+import { RecordCell } from '../organizations/RecordCell';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { DetailList, Panel } from '../../shared/components/Panel';
+import { DetailList, FactGrid, Panel } from '../../shared/components/Panel';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime, formatMoney, formatNumber } from '../../shared/utils/format';
@@ -32,12 +33,14 @@ import { HistoryList } from '../audit/HistoryList';
 import { NotFoundPage } from '../errors/NotFoundPage';
 import { LinkedSystemsPanel } from '../integrations/LinkedSystemsPanel';
 import { useProduct, useProductActions } from './api';
+import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: tokens.spacingHorizontalL, alignItems: 'start' },
-  sku: { fontFamily: tokens.fontFamilyMonospace, color: tokens.colorNeutralForeground3 },
-  components: { margin: 0, paddingInlineStart: tokens.spacingHorizontalL },
+  tabs: { marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '16px', alignItems: 'start' },
+  sku: { fontFamily: tokens.fontFamilyMonospace, color: h.muted, fontSize: '13px' },
+  components: { margin: 0, padding: 0, listStyleType: 'none', display: 'grid', gap: '8px' },
+  error: { color: tokens.colorPaletteRedForeground1, marginTop: '8px' },
 });
 
 export function ProductDetailPage() {
@@ -91,7 +94,7 @@ export function ProductDetailPage() {
           <>
             <Text className={styles.sku}>{p.sku}</Text>
             <Badge appearance="tint" color="brand">{t(`catalog.types.${p.type}`)}</Badge>
-            {!p.isActive && <Badge appearance="outline" color="subtle">{t('catalog.inactive')}</Badge>}
+            {!p.isActive && <Badge appearance="tint" color="subtle">{t('catalog.inactive')}</Badge>}
           </>
         }
         actions={
@@ -110,19 +113,20 @@ export function ProductDetailPage() {
           )
         }
       />
-      <TabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}>
+      <ScrollTabList className={styles.tabs} selectedValue={tab} onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}>
         <Tab value="overview">{t('organizations.tabs.overview')}</Tab>
         <Tab value="history">{t('organizations.tabs.history')}</Tab>
-      </TabList>
+      </ScrollTabList>
 
       {tab === 'history' ? (
         <HistoryList module="catalog" entityType="Product" entityId={p.id} />
       ) : (
         <div className={styles.grid}>
-          <Panel title={t('catalog.sections.pricing')}>
-            <DetailList
+          <Panel title={t('catalog.sections.pricing')} icon={<Money16Regular />}>
+            <FactGrid
               items={[
-                { label: t('catalog.fields.listPrice'), value: `${formatMoney(p.listPrice, p.currency)} / ${t(`catalog.units.${p.unit}`)}` },
+                // The unit goes with the label, so the price itself keeps to one line in its tile.
+                { label: `${t('catalog.fields.listPrice')} / ${t(`catalog.units.${p.unit}`)}`, value: formatMoney(p.listPrice, p.currency) },
                 ...(canSeeCost
                   ? [
                       { label: t('catalog.fields.unitCost'), value: formatMoney(p.unitCost, p.currency) },
@@ -130,11 +134,11 @@ export function ProductDetailPage() {
                     ]
                   : []),
                 { label: t('catalog.fields.billingPeriod'), value: t(`catalog.periods.${p.billingPeriod}`) },
-                { label: t('catalog.fields.vatRate'), value: `${p.vatRate} %` },
+                { label: t('catalog.fields.vatRate'), value: `${formatNumber(p.vatRate, 0)} %` },
               ]}
             />
           </Panel>
-          <Panel title={t('catalog.sections.product')}>
+          <Panel title={t('catalog.sections.product')} icon={<Box16Regular />}>
             <DetailList
               items={[
                 { label: t('catalog.fields.businessLine'), value: t(`catalog.businessLines.${p.businessLine}`) },
@@ -150,17 +154,22 @@ export function ProductDetailPage() {
             />
           </Panel>
           {p.type === 'Bundle' && (
-            <Panel title={t('catalog.sections.bundle')}>
+            <Panel title={t('catalog.sections.bundle')} icon={<BoxMultiple20Regular />}>
               <ul className={styles.components}>
                 {p.components.map((c) => (
                   <li key={c.productId}>
-                    {formatNumber(c.quantity)} × <AppLink to={`/catalog/products/${c.productId}`}>{c.name ?? c.productId}</AppLink>
+                    <RecordCell
+                      icon={<Box16Regular />}
+                      tone="spruce"
+                      size={28}
+                      name={<>{formatNumber(c.quantity)} × <AppLink to={`/catalog/products/${c.productId}`}>{c.name ?? c.productId}</AppLink></>}
+                    />
                   </li>
                 ))}
               </ul>
             </Panel>
           )}
-          <Panel title={t('catalog.sections.mapping')}>
+          <Panel title={t('catalog.sections.mapping')} icon={<ArrowSync16Regular />}>
             <DetailList
               items={[
                 { label: t('catalog.fields.ateraWorkType'), value: p.ateraWorkType },
@@ -169,7 +178,7 @@ export function ProductDetailPage() {
             />
           </Panel>
           <LinkedSystemsPanel entityType="Product" entityId={p.id} emptyHint={t('catalog.detail.notLinked')} />
-          <Panel title={t('organizations.sections.record')}>
+          <Panel title={t('organizations.sections.record')} icon={<Clock16Regular />}>
             <DetailList
               items={[
                 { label: t('organizations.fields.createdAt'), value: formatDateTime(p.createdAt) },
@@ -186,7 +195,7 @@ export function ProductDetailPage() {
             <DialogTitle>{t('catalog.detail.deleteTitle', { name: p.name })}</DialogTitle>
             <DialogContent>
               {inUse ? t('catalog.detail.inUse') : t('catalog.detail.deleteBody')}
-              {actions.remove.error && !inUse && <Text block style={{ color: tokens.colorPaletteRedForeground1, marginTop: 8 }}>{errorMessage(actions.remove.error, t)}</Text>}
+              {actions.remove.error && !inUse && <Text block className={styles.error}>{errorMessage(actions.remove.error, t)}</Text>}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setConfirmDelete(false)}>{inUse ? t('common.close') : t('common.cancel')}</Button>

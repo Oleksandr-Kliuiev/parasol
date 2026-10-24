@@ -1,0 +1,565 @@
+# Local CRM–Atlas composition
+
+This gate starts the compiled CRM Web, CRM Worker and Atlas API against fresh SQL Server
+and PostgreSQL databases. Browser requests reach the actual CRM BFF, personal Atlas
+credentials and restricted PostgreSQL runtime. Technical responses are not intercepted.
+All data is synthetic; no working provider account, deployment or publication is involved.
+
+## Run
+
+Install the repository's existing Atlas/web dependencies, restore the CRM solution and
+install Playwright Chromium. Node, .NET, Docker and OpenSSL must be available on PATH.
+The SQL Server and PostgreSQL image digests are pinned in `tools/composition/plan.mjs`;
+cache those images explicitly before running. The launcher uses `--pull=never`.
+
+```sh
+npm run test:composition:unit
+npm run test:composition -- --directory /absolute/path/to/a/new/private/run-directory
+```
+
+The directory must be new, absolute, normalized and have no symlinked parents. The full
+command builds Atlas, the SPA, CRM Web and Worker from the current local source. It then
+migrates its owned databases, provisions restricted logins, bootstraps the Development
+identities and confirms the customer mappings through the real preview/apply endpoints.
+It does not reuse an existing application or database.
+
+`--skip-build` and `--skip-browser` are diagnostic options. Their reports always have
+`accepted: false`, even when the selected diagnostic stages succeed.
+
+## Synthetic workflow
+
+- Forty mapped CRM/Atlas clients, ten devices per client and three distinct employees.
+  Admin sees all forty clients; Technician and ServiceLead each see a different twenty.
+  All 120 employee/client access decisions are read through the actual application chain.
+- One client has 126 active observations, including an older Critical, a Low observation
+  beyond the first 100, acknowledged records, and separate resolved/suppressed history.
+  Six real cursor pages must contain 126 distinct IDs and the exact severity histogram.
+- Duplicate hostnames do not substitute for identity. A positive confirmed Huntress link
+  resolves the exact device; an Atera-only device cannot confirm a Huntress association.
+  Stale, missing and synthetic source provenance remains visible.
+- Two employees assign the same observation concurrently through the UI. SQL must retain
+  one Task, one permanent source receipt, one create audit and one creation outbox event.
+  Personal Tasks completes that Task, adding the completion event. Replay preserves the
+  completed Task, original assignee and due instant without another create or provider write.
+- Membership/token revocation clears old technical content while an independently
+  authorized employee continues to work. Finance cannot gain Atlas source authority through
+  a generic Task; ReadOnly cannot create technical work. A ReadOnly employee may read an
+  authorized source with its own configured Atlas credential and existing read permissions.
+- A foreign-workspace collision fails closed. Replacing a mapping with the same source
+  pair changes its LinkId and invalidates old confirmation hashes and queue cursors.
+- My Day attention independently reads the forty/twenty/twenty customer sets, reports exact
+  active/High/Critical totals and retains partial source coverage. The urgent preview opens
+  the existing fresh M12 confirmation without creating another Task or writing to a provider.
+- Local connection readiness reads real configuration/SQL for Admin and personal configuration
+  for the technical employees and ReadOnly. Its local mapping review detects the intentionally
+  retained unlinked collision reference. Opening and refreshing the page must leave the Atlas
+  HTTP request counter and durable Task evidence unchanged; Finance receives no access.
+
+- The actual observation Task from the handoff is linked through the UI to a synthetic saved
+  ticket with exact accepted Atera customer/LinkId provenance. Another employee explicitly
+  records 0.75 own hours; an identical request adopts the same time entry. Exact SQL requires
+  one time row, receipt and create audit, unchanged Task assignment/status, and only the
+  original two ActivityLogged events (creation and completion). The mobile dialog is tested
+  in both themes with keyboard, active-modal Axe and full-page checks before/after closing.
+- One active, bound synthetic Microsoft 365 connection has a published user count and an
+  outdated cloud-registration count, without adding canonical machines or people. Admin
+  reads metadata through the real BFF and restricted Atlas API; context-only Technician
+  receives an M365 denial, then a fresh authorized Stage 1 read before devices return.
+  Missing sign-in traversal remains unavailable with an explicit whole-window gap. Neither
+  directory DTOs nor sign-in rows reach the browser; no sync or durable work is created.
+
+The ten scenarios form one synthetic workflow. A failed earlier action can also fail later
+durability assertions; the first failure is retained rather than retried or hidden by skips.
+
+## Ownership and retained evidence
+
+Every run has new credentials, loopback ports and Docker ownership labels. Database
+commands verify the container label and loopback binding before use; destructive cleanup
+uses the verified immutable container ID. The owner-only fixture control is a local CLI
+with an operation allowlist, never a product endpoint or arbitrary SQL interface.
+
+CRM Web and Worker use separate restricted SQL roles. Atlas uses the existing confined
+runtime role, without superuser, bypass-RLS, role membership or relation ownership. The
+gate verifies these facts before browser acceptance and again with durable evidence.
+
+The transparent Atlas recorder counts forwarded Atlas requests and mutating HTTP methods.
+The retained `providerWrites` field describes that counter; it is not a traffic monitor for
+every external provider. Atera, PowerOffice, Graph and PartnerCenter are explicitly disabled
+in this synthetic fixture and their endpoints are confined to an unused loopback address.
+
+Application subprocess groups are owned and bounded. CRM readiness uses a newly generated,
+run-specific certificate trusted only by the launcher; no system trust/keychain change is
+made. Private credentials, cookies, documents and Data Protection keys are removed only
+after owned resources are confirmed stopped. Unrelated processes and containers are untouched.
+
+`report.json` contains bounded synthetic counts, fixed failure classifications and cleanup
+status. Acceptance requires a build in the same invocation, all ten browser scenarios with
+zero failures/skips/retries, exact durable/privacy evidence and confirmed cleanup. Stage logs
+are private and redacted; browser artifacts contain synthetic fixture data. CI publishes only
+the compact report, never the private state, logs, screenshots or traces.
+
+## Limits
+
+This gate verifies the joined local application. It does not establish working Atera,
+Huntress, PowerOffice or Microsoft 365 account compatibility, Entra consent, production
+traffic capacity, external backup access or VPS readiness. The strict Atlas unit/PostgreSQL/
+browser gates and the CRM's existing unit, SQL, architecture and multi-browser checks remain
+separate required checks. Composition does not replace or waive them.
+
+## Local verification, 16 October 2026
+
+The [full-build run](evidence/composition-2026-10-16.json) passed six of six browser scenarios,
+with exact durable/privacy evidence, restricted runtime roles and confirmed cleanup. Eleven
+launcher unit tests, composition TypeScript/ESLint, YAML parsing, history and secret checks
+also passed locally. The new GitHub job has not been published or executed.
+
+Final review strengthened the access oracle: the browser now independently requires the
+Technician's first twenty and ServiceLead's last twenty clients, instead of deriving expected
+access from the same manifest used to seed memberships. A subsequent
+[diagnostic run](evidence/composition-acl-diagnostic-2026-10-16.json) passed all six strengthened
+scenarios on the unchanged compiled applications, with exact evidence and cleanup. Its
+`accepted: false` correctly records `--skip-build`; it is not another full-build acceptance.
+M14 adds the seventh attention scenario. Its
+[diagnostic run](evidence/composition-attention-diagnostic-2026-10-16.json) passed all seven
+scenarios against the actual compiled applications, including personal 40/20/20 attention,
+exact urgent counts and fresh M12 preview, with the same durable/privacy evidence and cleanup.
+It also correctly records `accepted: false` because it used `--skip-build` during the strict
+Atlas compiled-artifact freeze. M15 adds the eighth local-readiness scenario. Its first full
+run exposed an incorrect auth-mode projection (7/8); the adapter now reads the actual auth
+singleton and both mode regressions pass. Two later complete runs passed all eight scenarios.
+
+The [previous full-build run](evidence/composition-current-2026-10-16.json) includes M17/M18
+and the final customer-card/queue keyboard-refresh correction. It passed 8/8 with `accepted: true`, fresh
+builds of both applications, zero skipped/unexpected/flaky tests, exact Task/receipt/audit/
+outbox/privacy evidence, 555 forwarded Atlas requests, all restricted runtime roles and
+confirmed cleanup. The frontend passed the full 415/415 unit suite after M17, then the affected
+56/56 after the last refresh correction; these are separate runs. Current related
+mock-BFF browser regressions passed 38/38. Readiness screenshots in both themes and from the actual
+composition were inspected; neutral status labels are readable.
+
+Separate complete strict Atlas unit 711/711, PostgreSQL 789/789 and browser 90/90 pass
+without exceptions. [Safe evidence](evidence/atlas-strict-current-2026-10-16.json) confirms
+cleanup and all 1,421 frozen source/input hashes plus exact inventory unchanged.
+Composition does not substitute for these gates.
+No code or workflow has been published, and the new GitHub job remains unexecuted.
+
+M17 strengthens the accepted handoff scenario: the recipient is already on My Day before
+creation and uses the explicit personal-task refresh to receive and complete the task.
+The compact report above refers to that M17/M18 invocation; earlier diagnostics and
+the auth-mode failure remain retained separately. Real provider accounts are unverified.
+
+## M19 local verification, 17 October 2026
+
+The [M19 full-build run](evidence/composition-M19-2026-10-17.json) includes M19 exact
+Activity navigation and the mobile Panel header correction. It passed 8/8 with `accepted: true`,
+zero skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles
+and confirmed cleanup. The recorder forwarded 564 Atlas requests and no mutating requests.
+The handoff now opens the exact Task and requires focus on its selected heading.
+
+The separate full frontend suite passed 456/456 in 53 files; ESLint, app/E2E/composition
+TypeScript and the 290.5/300 KB SPA budget pass. CRM browser regressions passed 49/49,
+including actual SQL-backed exact-selection, concurrent edit, missing/wrong customer and
+delayed-read cancellation in three engines, plus phone keyboard/Axe checks in both themes.
+Existing technical BFF mocks remain explicitly synthetic; they do not replace this full
+composition. SQL exact-selection/SourceTask tests passed 39/39 and architecture 94/94.
+
+The initial browser run's 48/49 timeout remains retained. The final cancellation assertion
+observes the real fetch AbortSignal before releasing the real API response, without changing
+the request or its promise. A separate 3/3 diagnostic and the final 49/49 pass establish that
+invariant; the original timeout cause is unproven. No retries, skips or failure exceptions
+were introduced. Atlas strict source/input hashes remain unchanged from the separate
+711/789/90 acceptance. No publication, deployment or live provider call occurred.
+
+## M20 local verification, 17 October 2026
+
+The [M20 full-build run](evidence/composition-M20-2026-10-17.json) includes versioned
+complete/reopen and the native editor-close focus correction. It passed 8/8 with zero
+skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles and
+confirmed cleanup. The recorder forwarded 563 Atlas requests and no mutating requests.
+Completion now explicitly carries the recipient's actual displayed ETag.
+
+The [M20 acceptance summary](evidence/activity-status-M20-2026-10-17.json) records full
+frontend 484/484, 56 files, SQL 38/38, architecture 94/94, all static gates, the 290.5/300 KB
+SPA budget and final CRM browser 55/55 with cleanup. All 361 tested web inputs still match.
+Actual two-employee browser tests cover stale/fresh complete and reopen, pending duplicate
+admission, permissions and exact assignment/due/body/priority/version preservation.
+
+The initial browser 53/55 and separate native focus diagnostic remain retained. A closed
+editor left an empty, visibly animating DialogSurface in the DOM; the old raw-role gate
+mistook it for an open editor and did not capture focus ownership. The correction uses
+the actual editor lifecycle and keeps input/modal/hidden/inert fences. The unchanged phone
+assertions now pass in both themes, including keyboard focus and Axe. No timeout increase,
+retry, skip or failure exception was introduced. No live provider account or VPS was used.
+
+## M21 local verification, 17 October 2026
+
+The [M21 full-build run](evidence/composition-M21-2026-10-17.json) includes scoped
+saved Service reads and mobile customer tab visibility. It passed 8/8, zero
+skipped/unexpected/flaky cases, exact durable/privacy evidence, restricted runtime roles
+and confirmed cleanup. The recorder forwarded 564 Atlas requests and no mutating requests.
+
+The [M21 acceptance summary](evidence/saved-service-M21-2026-10-17.json) records 513/513
+frontend tests in 59 files, all static gates, 371 unchanged web inputs and the 290.5/300 KB
+SPA budget. CRM browser regressions passed 67/67 without retries, skips or exceptions,
+including real API independent read failures, GET-only refresh and native cancellation in
+three engines, existing time approval and disabled-Atera request handling, plus phone
+keyboard/Axe checks in both themes. Previous SQL/architecture and Atlas strict evidence
+are retained separately; their 775/1421 inputs still match and were not rerun in M21.
+
+The initial 63/67 browser report remains retained. Axe exposed an unfocusable Tickets
+scroll container; it now has a named keyboard target, visible focus and native ArrowRight
+coverage. Both initial WebKit sign-in failures showed Too many requests in AuthGate.
+Only the owned browser fixture API budget was aligned with existing E2E configuration;
+production and composition settings remain unchanged. Raw HTTP traces of that initial
+429 were not retained. No timeout increase or assertion exclusion was introduced.
+No publication, deployment or live provider call occurred.
+
+## M22 local verification, 17 October 2026
+
+The [M22 source-build run](evidence/composition-M22-2026-10-17.json) passed all nine
+scenarios, including actual Atlas observation → assigned Task → verified saved ticket →
+current employee time and exact retry. It retained one time row, receipt and create audit,
+the unchanged Task and precisely two ActivityLogged events; provider writes were zero.
+The recorder forwarded 554 Atlas requests. Restricted roles, privacy and cleanup passed.
+
+The [M22 summary](evidence/task-ticket-time-M22-2026-10-17.json) records CRM 911 unit,
+94 architecture and 63 affected SQL tests, 559 frontend tests, static/build gates, the
+291.7/300 KB budget and 67 CRM browser regressions in three engines. All passed with
+zero skips/retries/exceptions. SQL uses exact current sources with only an owned loopback
+fixture adapter. The 811 backend/build and 387 web inputs still match their tested hashes.
+Atlas strict 711/789/90 is retained with all 1421 unchanged inputs, not rerun in M22.
+
+Earlier seed, modal-oracle and excess-contact-event failures remain retained and are
+described in M22. The first real-chain invocation passed 9/9 browser cases but was correctly
+rejected by durable evidence: linking emitted a third ActivityLogged. The domain now
+audits association metadata without a customer-contact event, and current SQL/domain
+regressions verify that contract. No acceptance threshold was relaxed.
+Concurrent period closure across all Time writers remains M23; already-closed refusal
+does not prove that race resolved. No publication, deployment or live provider call occurred.
+
+## M23 local verification, 17 October 2026
+
+The [M23 source-build run](evidence/composition-M23-2026-10-17.json) passed 9/9
+with month admission active in the actual Task → ticket → own time chain. Exact durable
+evidence, restricted roles, privacy and cleanup passed; 577 Atlas requests, zero
+mutating requests. There were no skips, retries or flaky cases.
+
+The [M23 summary](evidence/time-period-M23-2026-10-17.json) records 917 unit, 94 architecture,
+102 affected SQL, 562 frontend and 70 CRM browser cases, all passing. The three new
+real-API browser cases check closing refusal, approval, closing, a retained refused time
+form, ServiceLead permissions and explicit Finance reopening. Existing 67 regressions
+remain included. 824 backend/build and 389 web inputs match; all 2634 composition inputs
+were unchanged through the invocation. Atlas strict 711/789/90 remains supported by its
+1421 frozen inputs and exact inventory; it was not rerun. Static gates and 291.7/300 KB pass.
+
+The first 100/101 SQL result remains retained: canceling a SQL-confirmed application-lock
+wait raised SqlException. The helper now normalizes it to cancellation only for a canceled
+caller token, keeping the original assertion, rollback and lock-release checks. All 102
+pass after the correction. Cross-module HourBank recovery and asynchronous invoice
+finalization are not established by period locks. Nothing was published or deployed.
+
+One independent CRM browser test was corrected after composition: Date's required marker
+is accepted and the submitted date is asserted. This file is not compiled into the SPA
+or imported by composition. All application/composition inputs still match the accepted
+run; the original 2634-input manifest was unchanged during it. The subsequent oracle
+hashes are recorded separately and verified by current static/frontend and 70/70 browser
+checks. Both earlier 67/70 browser reports remain retained, first for opening the customer
+picker and then for the required Date label. Neither is accepted.
+
+## M24 local verification, 17 October 2026
+
+The [M24 source-build run](evidence/composition-M24-2026-10-17.json) passes 9/9
+with Time/bank atomic commands in the compiled application. The same actual Task →
+ticket → own time chain, restricted roles, exact durable/privacy facts and cleanup pass;
+571 forwarded Atlas requests, zero mutating requests. No skips, retries or flaky cases.
+All 2644 source/build inputs still match their before/after hashes.
+
+The [M24 summary](evidence/time-bank-M24-2026-10-17.json) records 919 unit, 94 architecture,
+118 affected SQL, 562 frontend and 73 CRM browser cases, all passing. The new real-API
+workflow approves 2h from a 10h bank, withdraws, then reapproves in Chromium/Firefox/WebKit.
+Existing 70 browser regressions remain included. Static gates and 291.7/300 KB pass;
+833 backend/build and 390 web inputs match. Atlas strict 711/789/90 is retained against
+1421 unchanged inputs, not rerun in M24. Original repositories and imported history remain.
+
+Before the fix, three controlled real-SQL failures contradicted the same desired bank/
+allocation assertions (0/3). After the one-DB transaction fix, those assertions pass 3/3.
+The first prototype had CS8604, fixed without suppression. The extended SQL gate proves
+whole-batch rollback, read-own-writes, lost commit acknowledgement, imported implicit
+withdrawal rollback, old receipt refusal, exact transaction ownership and retry refusal.
+These are affected SQL tests, not the complete CRM integration suite. Historical Finance
+reconciliation and asynchronous export/invoiced admission remain required before a
+financial pilot; real providers, Entra and VPS remain separate. Nothing was published.
+
+## Current M25 local verification, 17 October 2026
+
+The [M25 full-build run](evidence/composition-M25-2026-10-17.json) passes 9/9
+with exact Time/Billing admission in the compiled application. Restricted roles, exact
+Task/ticket/time/privacy facts and cleanup pass: 572 Atlas requests, zero mutating requests.
+All 2657 source/build inputs still match their before/after hashes.
+
+The [M25 summary](evidence/time-billing-M25-2026-10-17.json) records 925 unit, 94 architecture,
+195 affected SQL, 562 frontend and 76 CRM browser cases, all passing without exceptions.
+The new real-API UI case proves a clear committed-billing refusal, Finance cancellation
+with a reason and successful bank refund in Chromium/Firefox/WebKit. Existing 73 cases
+remain included. Static gates and 291.7/300 KB pass; 845 backend/build and 391 web inputs
+match. Atlas strict 711/789/90 is reused against 1421 unchanged inputs, not rerun.
+
+The four original red SQL assertions pass unchanged in substance. Extended coverage
+proves save/rollback/lost-ack ownership, cancellation and the actual supplementary
+collector retaining excluded Rate after exported Info. Delayed-delivery tests are isolated
+from other classes' shared outbox drainers; the 194/195 diagnostic remains retained.
+Historical financial reconciliation, live accounts and VPS acceptance remain separate.
+Nothing was published or deployed.
+
+
+## M26 local verification, 17 October 2026
+
+The [M26 full-build run](evidence/composition-M26-2026-10-17.json),
+`cacf315c9c43`, passes all nine scenarios with exact durable/privacy evidence,
+572 Atlas requests, zero mutating Atlas requests, restricted runtime roles and confirmed
+cleanup. Full before/after repository snapshots and all 2,669 accepted backend/web/Atlas
+input hashes match. This is the same invocation used for the current unified customer-card
+verification; it is not counted as a second run. The previous M25 report is archived
+[byte for byte](evidence/composition-M25-2026-10-17.json).
+
+Separate M26 verification passes 939 CRM unit, 94 architecture, 208 affected SQL,
+572 frontend and 78 CRM browser regressions. The finance review workflow uses its real
+API in three engines. Two new phone accessibility cases use a controlled synthetic
+report; they initially exposed long MessageBar text overflow (76/78), fixed in the
+product with multiline layout while retaining the same 390px viewport, width oracle,
+Axe and contrast thresholds. Final results have zero skips/retries/flaky cases.
+See [M26 evidence](evidence/time-financial-review-M26-2026-10-17.json) for scopes and limits.
+The unchanged 1,421 Atlas inputs reuse the separate strict 711/789/90 acceptance.
+Human time savings, working provider accounts and VPS acceptance remain unverified.
+Nothing was published or deployed.
+
+
+## M27 local verification, 17 October 2026
+
+The [M27 full-build run](evidence/composition-M27-2026-10-17.json),
+`714cd28c1d20`, passes 9/9 with zero skips/retries/flaky cases and confirmed cleanup.
+The real recipient opens the saved-ticket association directly from its My Day task at
+390px in both themes. Its real GET succeeds, the URL stays unchanged, Escape restores
+focus, scoped Axe reports no serious/critical violations and the page has no horizontal
+overflow. Existing source permissions, handoff, completion, privacy/durability and the
+separate actual ticket-to-own-time scenario retain all assertions.
+
+Full frontend 576/576 in 67 files and focused 49/49 pass; ESLint, all TypeScript targets,
+SPA build and budget pass. All 2,670 backend/web/Atlas input hashes match before/after the
+invocation. The unchanged backend and Atlas reuse the exact M26/strict inputs; no new
+78-case CRM browser run is claimed. See [M27 evidence](evidence/my-day-ticket-M27-2026-10-17.json)
+for that distinction and the structural action count. Human time savings remain unmeasured.
+The previous M26 report is [archived byte for byte](evidence/composition-M26-2026-10-17.json).
+Nothing was published, deployed or connected to a working provider account.
+
+
+## M28 local demo and workflow verification, 17 October 2026
+
+The [M28 full-build run](evidence/composition-M28-2026-10-17.json),
+`f5b4e79986ca`, passes all nine scenarios with zero skips/retries/flaky cases,
+exact durable/privacy checks, restricted runtimes and confirmed cleanup. M28 adds an
+onReady lifecycle to the shared launcher for a bounded [human demo](LOCAL-DEMO.md).
+That mode always builds, excludes acceptance browser actions, and is diagnostic /
+accepted:false. Its CLI accepts only a fresh absolute path and 1–120 minutes.
+
+Separate actual held sessions prove expiry and SIGINT cleanup, public descriptor privacy,
+40/20/20 source scopes, removed owned containers/private material and a closed app port.
+The full manual-guide reproduction exposed stale parent Activity versions after linking.
+The UI now preserves the ticket/time flow, restores its trigger before parent teardown,
+rereads all current Activity fields and requires a new explicit status action. Final
+Chromium/Firefox/WebKit guide runs assign, read source, link ticket, record 0.25 own hours
+and complete the refreshed Task while the Atlas observation remains OPEN.
+
+Current tooling 22/22, focused frontend 53/53, full frontend 580/580 and all static/build
+checks pass. 2698 final application/tool hashes match before/after. The 31 root
+launcher inputs also match the earlier two lifecycle tests; their pre-fix UI scope is
+explicit in [M28 evidence](evidence/local-demo-M28-2026-10-17.json). Unchanged backend and
+Atlas reuse prior exact-input acceptance. No new 78-case CRM regression run is claimed.
+The M27 report is [archived byte for byte](evidence/composition-M27-2026-10-17.json).
+Human time savings, staff feedback and working-account/VPS acceptance remain open.
+Nothing was published or deployed.
+
+
+## M30 workspace same-pair fence, 17 October 2026
+
+The [current source-build run](evidence/composition-current-2026-10-17.json),
+`211f41d30ea5`, passes 9/9 with zero skipped/unexpected/flaky cases, exact durable/privacy
+facts, restricted runtimes and confirmed cleanup. It forwards 564 Atlas requests and
+zero mutating requests. All 2698 application/tool inputs match before/after.
+The previous M28 report is [archived byte for byte](evidence/composition-M28-2026-10-17.json).
+
+M30 separately proves the workspace's replaced-same-pair race on real SQL with a controlled
+outbound handler. Before the fix, one of 23 workspace cases returned READY instead of
+IDENTITY_CHANGED; final affected SQL passes 80/80, including unlink/same-pair/different-pair/
+unchanged and explicit fresh GET. Frontend checks old registry removal and explicit Refresh.
+Composition is independent actual joined-app evidence, not a claim that it orchestrates
+that exact delayed-response race. See [M30 evidence](evidence/workspace-link-M30-2026-10-17.json).
+
+Current separate CRM unit 939, architecture 94, frontend 581 and tooling 22 pass, as do
+all static/build gates and the 291.8/300 KB budget. Atlas strict 711/789/90 is reused with
+1421 unchanged inputs; M26's wider 78 browser/208 financial SQL and M29's native recovery
+are not new runs here. Human convenience/time savings and live-account/VPS acceptance
+remain unproven. Nothing was published, deployed or connected to a working account.
+
+
+## M31 saved Microsoft 365 overview, 17 October 2026
+
+The [archived M31 source-build report](evidence/composition-M31-2026-10-17.json),
+`606c5c54e347`, passes 10/10 with a build in the same invocation, zero skipped/
+unexpected/flaky cases, exact durable/privacy evidence, restricted runtimes and cleanup.
+It forwards 570 Atlas GETs and zero mutating Atlas requests. All 2717 application/tool
+inputs match before/after. The prior M30 report is [archived byte for byte](evidence/composition-M30-2026-10-17.json).
+
+The M365 scenario reads saved metadata through the actual BFF: one fresh user record,
+one outdated cloud registration and unavailable sign-in coverage with a whole-window gap.
+It checks native keyboard disclosures, 390px/light/dark/Axe, private-field absence, a
+context-only employee's M365 denial followed by fresh authorized Stage 1, and unchanged
+Task/ticket/time evidence. There are still 40 clients, 400 canonical devices and 3 employees.
+
+The earlier [diagnostic](evidence/composition-M31-diagnostic-2026-10-17.json) remains
+`accepted: false` because it reused artifacts while the strict Atlas gate was live.
+Its two failed seed predecessors were cleaned; the fixed synthetic seed follows the
+normal retry-budget/publication/retention constraints without disabling triggers.
+
+Separate current gates pass: CRM unit963/architecture94/affected SQL93, frontend614,
+CRM browser87, tooling22, Atlas strict714/797/90 and all static/build checks (292.2/300KB).
+See [M31 evidence](evidence/customer-m365-M31-2026-10-17.json). M26 financial SQL208 and
+M29 native recovery remain historical, not new M31 runs. Staff feedback, measured human
+time savings and working-account/VPS acceptance are still open. Nothing was published
+or deployed.
+
+
+## M32 compact customer card and navigation, 17 October 2026
+
+The [archived M32 source-build report](evidence/composition-M32-2026-10-17.json), also
+[stored immutably for M32](evidence/composition-M32-2026-10-17.json), `ff17fd2db426`,
+passes 10/10 with a fresh build, zero skipped/unexpected/flaky cases, exact durable/privacy
+facts, restricted runtimes and confirmed cleanup. It forwards 561 Atlas GETs and no
+mutating Atlas requests. All 2721 application/tool inputs match before/after. The
+[previous M31 report](evidence/composition-M31-2026-10-17.json) is archived byte for byte.
+
+Separate current gates pass: frontend110 affected/620 full, 93 CRM browser cases across
+Chromium/Firefox/WebKit, tooling22, TypeScript/ESLint/build and 292.4/300KB. The Chromium
+layout matrix checks 8 states × 4 widths × 2 themes = 64 views; no errors, warnings or
+duplicate page titles remain. All full-page screenshots were reviewed. Eight focused
+skip-link checks leave H1 below the sticky header. The diagnostic layout fixture remains
+accepted:false; normal composition alone provides joined-app acceptance.
+
+Backend/SQL/Atlas code is unchanged: exact 804/856/1426-input checks reuse M31's
+963/94/93 and 714/797/90 server acceptance, not new server runs. Historical M26 financial
+SQL208 and M29 native restore are not repeated. See [M32 evidence](evidence/ui-layout-M32-2026-10-17.json)
+for the measured page-height change and limits. Staff feedback/time savings and live-account/
+VPS acceptance remain open. Nothing was published or deployed.
+
+
+## M33 read-only observation work discovery, 17 October 2026
+
+The [archived M33 source-build report](evidence/composition-M33-2026-10-17.json), also
+[stored immutably for M33](evidence/composition-M33-2026-10-17.json), `d25a7dc41b53`, passes
+10/10 with a fresh build, zero skipped/unexpected/flaky cases, restricted runtimes,
+exact durable/privacy facts and confirmed cleanup. It forwards 575 Atlas GETs and no
+mutating Atlas requests. All 2723 current application/tool inputs match before/after.
+The [M32 report](evidence/composition-M32-2026-10-17.json) remains byte-for-byte unchanged.
+
+Separate current gates pass: frontend 102 affected/633 full (72 files, two workers),
+96 CRM browser cases across Chromium/Firefox/WebKit, tooling 22 and static/build checks
+(292.4/300KB). Two E2E animation synchronizations and one composition expectation update followed full unit; every
+unit/application input byte remains unchanged, and final browser lint/types and the entire
+browser set were rerun for its two changes. The later composition-only expectation edit
+leaves ordinary browser inputs unchanged and is checked by scoped lint/types and the fresh
+10-case composition run. A separate installed measurable audit reviews 16 dialog views,
+no errors/warnings, all screenshots inspected. Existing contrast rules remain enabled.
+
+The new reader browser scenario uses an actual ReadOnly CRM session, a real saved SQL Task
+and the unchanged server's HTTP403 write denial; its Atlas preview is a controlled BFF
+fixture. It checks lazy GET, absent assignment controls, keyboard dismissal/focus and exact
+Activity navigation without UI writes. That scenario is not represented as an additional
+ReadOnly Atlas membership in this three-employee joined-app fixture.
+
+No backend/Atlas contracts or permissions changed: exact804/856/1426-input hashes reuse
+M31's963/94/93 and714/797/90 server gates, not new full server runs. M32 visual64, M26
+financialSQL208 and M29 native restore remain historical. See [M33 evidence](evidence/readonly-work-M33-2026-10-17.json).
+Staff feedback, human time savings, working-account and VPS acceptance remain open.
+Nothing was published, deployed or connected to a working provider.
+
+
+## M34 direct My day sections, 17 October 2026
+
+The [archived M34 source-build report](evidence/composition-M34-2026-10-17.json), also
+[stored immutably for M34](evidence/composition-M34-2026-10-17.json), `adc00205be7b`, passes
+10/10 with a build in the same invocation, zero skipped/unexpected/flaky cases, restricted
+runtimes, exact durable/privacy facts, 548 Atlas GETs, no mutating Atlas requests and cleanup.
+All 2728 application/tool inputs match before/after. M33 is retained byte-for-byte.
+The existing actual recipient handoff now uses the section link before personal refresh,
+then exercises its original assignment, source, saved-ticket, own-time and completion flow.
+
+Separate current checks: frontend42 affected/650 full(74files,2workers), browser focused3
+then full99, tooling22 and all types/lint/build gates (292.4/300KB). The focused three-engine
+case checks one-action section selection, keyboard Back, unchanged Task/Atlas request counts,
+local Development sign-in return and visibility after late sibling data loads. It uses
+real CRM SQL Task data and a controlled attention BFF fixture; no working provider is contacted.
+
+The installed Chromium audit covers32 views: overview/tasks/attention/returned navigation,
+four widths and both themes. All screenshots reviewed, no errors/warnings. The diagnostic
+fixture does not replace normal joined-app acceptance; no skips/allowlists/retries were added.
+See [M34 evidence](evidence/my-day-M34-2026-10-17.json).
+
+Unchanged backend804/SQL856/Atlas1426 inputs reuse M31's963/94/93 and714/797/90 server gates,
+not new full server runs. M26 financial SQL208/M29 native restore and other full visual
+matrices remain historical. The original M33 demo's394 artifacts/source2723 were isolated
+from development; its30-minute timeout cleanup passed. Staff feedback/time savings and
+real Entra/provider/VPS gates remain open. Nothing was published or deployed.
+
+
+## M35 exact device observation history, 17 October 2026
+
+The [current source-build report](evidence/composition-current-2026-10-17.json), also
+[stored immutably for M35](evidence/composition-M35-2026-10-17.json), `96e64f797635`, passes
+11/11 with a new build, restricted runtimes, exact durable/privacy facts, 578 Atlas
+GETs, no mutating Atlas requests and cleanup. All2735 application/tool inputs match
+before/after and across both isolated checkouts; M34 is retained byte-for-byte.
+
+The eleventh case opens one exact registry device, reads125 observations on five pages
+including Low beyond100, rejects another device's protected continuation, reads resolved
+history, returns to the original button, and opens the same-name unconfirmed-source
+device without inventing current confirmation. Clearing restores the full126. A foreign
+registry ID is refused. The original ten scenarios and their assertions still run.
+
+Separate current gates pass CRM970unit/94architecture/99affectedSQL, frontend60affected/
+658full(75files,2workers), tooling22, focused3 and wide102 CRM browser cases, all static
+checks/build/budget(292.3/300KB), and strict Atlas717/802/90. The installed Chromium
+audit covers44 views with all screenshots reviewed and no error/warn: five states,
+four widths, both themes plus four NB/RU320px views. Controlled technical BFF UI QA
+is explicitly separate from this actual joined-app invocation.
+
+See [M35 evidence](evidence/device-history-M35-2026-10-17.json). No skips, allowlists,
+retries or production dependencies were added. Staff usability/time savings, working
+Entra/provider accounts, historical financial review and target VPS/offsite remain open.
+M26 financial SQL208 and M29 native recovery are historical. Nothing was published or deployed.
+
+
+## M36 queue clarity and document language, 18 October 2026
+
+The [current day18 source-build report](evidence/composition-current-2026-10-18.json), also
+[stored immutably for M36](evidence/composition-M36-2026-10-18.json), `ae3e3488af13`, passes
+11/11 with a fresh build, restricted runtimes, exact privacy/durable SQL facts, 563
+Atlas GETs, no mutating Atlas requests and cleanup. All2738 application/tool inputs
+match before/after. Day17 current/M35 reports are retained byte-for-byte.
+
+Current UI checks pass68affected/666full(77files,2workers), focused3/wide102, a separate
+saved-profile language/reload case1, receipt entrance/contrast subset2, tooling22 and lint/types/build/budget(291.9/300KB).
+The wide run completes before the profile-mutating Finance case, so it cannot change
+another parallel case's language. Initial EN/NB/RU and shared document language are
+verified in three engines; profile switching/reload is verified separately in Chromium.
+
+The installed diagnostic audit covers60 current views: seven states, four widths,
+both themes plus four NB/RU320px views. All screenshots reviewed, no error/warn.
+The first observation title in the main EN scenario is fully visible after the real product transition, including
+the long duplicate-hostname fixture. Expanded counts/evidence and help are keyboard
+accessible, preserve source uncertainty and issue no extra requests. Only those two
+expanded diagnostic captures receive a QA scroll for inspection; the entry assertion does not.
+
+See [M36 evidence](evidence/queue-clarity-M36-2026-10-18.json). Server805/SQL857/Atlas1428
+bytes match M35 exactly; its970/94/99 and717/802/90 gates are reused, not rerun. M26SQL208,
+M29native recovery and other full visual matrices remain historical. Staff workflow/time,
+working Entra/providers, historical finance and target VPS/offsite remain open. No publication/deployment.

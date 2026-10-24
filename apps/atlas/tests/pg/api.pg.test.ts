@@ -1,7 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import type { ClientContextV1, ObservationPage, ResourceView, AuditRecord, SecurityAuditRecord } from '../../packages/core/contracts.ts';
+import type { ClientContextV1, ObservationPage, ObservationSummary, ResourceView, AuditRecord, SecurityAuditRecord } from '../../packages/core/contracts.ts';
 import { generateToken, hashToken } from '../../packages/auth/token.ts';
 import { createTestDatabase, runSeed } from '../support/pg-harness.ts';
 import { startApi, startApiExpectingRefusal } from '../support/api-process.ts';
@@ -194,4 +194,49 @@ test('observations over HTTP (task 1.8): status and severity filters, keyset pag
     'status=OPEN&status=RESOLVED', 'limit=0']) {
     assert.equal((await call(`/clients/demo-gasta/observations?${bad}`, tech)).status, 400, bad);
   }
+});
+
+test('exact observation read finds an item outside the overview page and retains each lifecycle state and stored evidence', async () => {
+  const id = 'obs-m-101'; const path = `/clients/demo-gasta/observations/${id}`;
+  const overview = await json<ClientContextV1>('/clients/demo-gasta/overview', tech);
+  assert.ok(!overview.observations.items.some(o => o.id === id), 'the record is outside the first 100 active observations');
+  const initial = await json<ObservationSummary>(path, tech);
+  assert.deepEqual([initial.id, initial.workspaceId, initial.clientId, initial.externalEventId, initial.summary, initial.status],
+    [id, 'demo-vardahei', 'demo-gasta', 'demo-alert-101', 'Disk usage high (synthetic) #101', 'OPEN']);
+  assert.equal((await call(path, tech)).headers.get('cache-control'), 'no-store');
+  const countBefore = Number((await pgdb.owner.query('SELECT count(*)::int AS n FROM "AuditEvent"')).rows[0].n);
+  for (const [status, assignments] of [
+    ['ACKNOWLEDGED', `"acknowledgedAt"=now(),"acknowledgedBy"='demo-technician'`],
+    ['RESOLVED', `"resolvedAt"=now(),"resolvedBy"='demo-technician'`],
+    ['OPEN', `"acknowledgedAt"=NULL,"acknowledgedBy"=NULL,"resolvedAt"=NULL,"resolvedBy"=NULL`],
+    ['SUPPRESSED', `"resolvedAt"=now(),"resolvedBy"='demo-technician'`],
+  ] as const) {
+    await pgdb.owner.query(`UPDATE "Observation" SET status=$1,${assignments},"updatedAt"=now() WHERE "workspaceId"='demo-vardahei' AND "clientId"='demo-gasta' AND id=$2`, [status, id]);
+    const current = await json<ObservationSummary>(path, tech);
+    assert.equal(current.status, status);
+    for (const key of ['workspaceId', 'clientId', 'id', 'eventKey', 'externalEventId', 'connectionId', 'resourceType', 'revision', 'entityId',
+      'domain', 'kind', 'severity', 'priority', 'route', 'provider', 'summary', 'occurredAt', 'createdAt'] as const)
+      assert.deepEqual(current[key], initial[key], key);
+  }
+  assert.equal(Number((await pgdb.owner.query('SELECT count(*)::int AS n FROM "AuditEvent"')).rows[0].n), countBefore, 'exact reads create no client writes');
+});
+
+test('exact observation read never reveals a different client and checks access before malformed record input', async () => {
+  const prefix = '/clients/demo-gasta/observations/';
+  for (const token of [null, revoked]) assert.equal((await call(prefix + 'obs-m-1', token)).status, 401);
+  assert.equal((await call(prefix + 'obs-m-1', ingestOnly)).status, 403);
+  for (const clientId of ['demo-other', 'no-such-client', 'bad%00client'])
+    assert.equal((await call(`/clients/${clientId}/observations/bad%00id`, tech)).status, 403);
+  for (const id of ['bad%00id', 'bad%0Aid', 'bad%2Fid', 'x'.repeat(101)]) assert.equal((await call(prefix + id, tech)).status, 400);
+  for (const id of ['missing-observation', 'obs-o-1']) {
+    const response = await call(prefix + id, tech);
+    assert.equal(response.status, 404);
+    const body = await response.text();
+    for (const forbidden of [id, 'Other client', 'demo-other', 'secretRef', tech]) assert.ok(!body.includes(forbidden));
+  }
+  const raw = await (await call(prefix + 'obs-m-1', tech)).text();
+  for (const forbidden of ['payloadHash', 'normalized', 'tokenHash', 'secretRef', 'fixture://', tech]) assert.ok(!raw.includes(forbidden));
+  const rows = await securityRows();
+  assert.ok(rows.includes('demo-technician|client.observation_denied|demo-other|SCOPE_DENIED'));
+  assert.ok(rows.includes('demo-ingest-only|client.observation_denied|demo-gasta|PERMISSION_DENIED'));
 });

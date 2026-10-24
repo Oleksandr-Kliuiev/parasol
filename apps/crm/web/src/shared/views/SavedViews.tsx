@@ -1,9 +1,25 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
-  Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, Input,
-  Menu, MenuDivider, MenuItem, MenuList, MenuPopover, MenuTrigger, MessageBar, MessageBarBody,
+  Button,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
+  Field,
+  Input,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  MenuList,
+  MenuPopover,
+  MenuTrigger,
+  MessageBar,
+  MessageBarBody,
 } from '@fluentui/react-components';
+import { Dialog } from '../components/Dialog';
 import { Bookmark20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { useCurrentUser } from '../../auth/CurrentUserContext';
@@ -114,7 +130,7 @@ function SavedViewsFor({ userId, scope, keys }: SavedViewsProps & { userId: stri
             }}
           >
             <DialogBody>
-              <DialogTitle>{t('views.saveCurrent')}</DialogTitle>
+              <DialogTitle>{t('views.saveTitle')}</DialogTitle>
               <DialogContent>
                 <Field label={t('views.name')} hint={t('views.hint')} required>
                   <Input value={name} maxLength={MAX_NAME} onChange={(_, d) => setName(d.value)} />

@@ -93,7 +93,10 @@ public sealed record ExternalInvoice(
     decimal TotalIncVat,
     decimal Outstanding,
     InvoiceStatus Status,
-    string? Url);
+    string? Url)
+{
+    public ExternalInvoiceHistory? History { get; init; }
+}
 
 public sealed record InvoiceSyncResult(int Created, int Updated, int Unchanged, int Unmatched);
 
@@ -134,6 +137,10 @@ public sealed record BilledPeriodTotal(
 /// <summary>Public API of the Billing module for integrations.</summary>
 public interface IBillingApi
 {
+    Task<IReadOnlyList<InvoiceDocumentSource>> GetInvoiceDocumentSourcesAsync(string system, int offset, int limit, CancellationToken cancellationToken);
+    Task<InvoiceDocumentImportResult> ImportInvoiceDocumentsAsync(string system, InvoiceDocumentSource source, bool? hasPdf,
+        IReadOnlyList<ExternalInvoicePdf> files, CancellationToken cancellationToken);
+
     /// <summary>
     /// The basis if it is approved and waiting to be sent; null once it is exported or cancelled, so a repeated delivery of
     /// <see cref="BillingBasisApproved"/> sends nothing a second time.
@@ -167,6 +174,14 @@ public interface IBillingApi
 
     /// <summary>Inserts or updates invoices and their outstanding amounts (BR-BIL-08).</summary>
     Task<InvoiceSyncResult> UpsertInvoicesAsync(IReadOnlyCollection<ExternalInvoice> invoices, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<InvoiceCustomerBinding>> GetInvoiceCustomerBindingsAsync(string system, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<string?>> GetCustomerLedgerSourcesAsync(string system, CancellationToken cancellationToken);
+
+    Task<CustomerLedgerImportResult> ImportCustomerLedgerAsync(CustomerLedgerBatch batch, CancellationToken cancellationToken);
+
+    Task BindHistoricalInvoiceAsync(Guid invoiceId, string expectedExternalCustomerId, Guid? organizationId, CancellationToken cancellationToken);
 
     /// <summary>What was billed per month, from the bases of the runs in the window (closed or not).</summary>
     Task<IReadOnlyList<RevenueByMonth>> GetRevenueAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);

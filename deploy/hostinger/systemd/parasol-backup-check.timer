@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Parasol full backup read
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00
+RandomizedDelaySec=15m
+Persistent=true
+Unit=parasol-backup-check.service
+
+[Install]
+WantedBy=timers.target

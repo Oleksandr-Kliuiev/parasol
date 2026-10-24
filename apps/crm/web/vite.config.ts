@@ -6,6 +6,10 @@ import react from '@vitejs/plugin-react';
 const backend = process.env.CRM_BACKEND_URL ?? 'http://localhost:5180';
 const proxied = ['/api', '/bff', '/signin-oidc', '/signout-callback-oidc', '/openapi', '/health', '/admin/jobs'];
 
+// Unit tests run in the product's time zone: the app shows times in Europe/Oslo (shared/utils/format.ts) while a
+// datetime-local field reads the machine's zone, so a CI runner on UTC must see what a developer in Norway sees.
+if (process.env.VITEST) process.env.TZ = 'Europe/Oslo';
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -28,6 +32,6 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,
-    exclude: ['e2e/**', 'node_modules/**'],
+    exclude: ['e2e/**', 'e2e-composition/**', 'e2e-finance/**', 'node_modules/**'],
   },
 });

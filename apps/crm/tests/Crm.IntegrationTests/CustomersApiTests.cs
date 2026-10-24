@@ -183,6 +183,8 @@ public class CustomersApiTests(CrmWebFactory factory)
 
         var page1 = await sales.GetFromJsonAsync<JsonElement>($"{Organizations}?search={Uri.EscapeDataString(marker)}&limit=2");
         page1.GetProperty("items").GetArrayLength().ShouldBe(2);
+        // The total is the whole filter's, not the page's (DEV-12): the list's status filters show it.
+        page1.GetProperty("totalCount").GetInt32().ShouldBe(3);
         var cursor = page1.GetProperty("nextCursor").GetString();
         cursor.ShouldNotBeNullOrEmpty();
 
@@ -190,6 +192,7 @@ public class CustomersApiTests(CrmWebFactory factory)
         var last = page2.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         last.GetProperty("name").GetString().ShouldBe($"{marker} C AS");
         page2.GetProperty("nextCursor").ValueKind.ShouldBe(JsonValueKind.Null);
+        page2.GetProperty("totalCount").GetInt32().ShouldBe(3);
     }
 
     [Fact]
@@ -228,6 +231,8 @@ public class CustomersApiTests(CrmWebFactory factory)
             "/api/v1/identity/me/preferences", "/api/v1/search", "/api/v1/audit/entities/{module}/{entityType}/{entityId:guid}", "/api/{**path}",
             // Notifications belong to the signed-in user and authorize by ownership.
             "/api/v1/notifications/", "/api/v1/notifications/{id:guid}/read", "/api/v1/notifications/read-all", "/api/v1/notifications/preferences",
+            // Local readiness allows Atlas readers or integration managers (an OR the reader enforces), then each section's own permission.
+            "/api/v1/parasol/local-readiness",
         ];
         var dataSource = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>();
 

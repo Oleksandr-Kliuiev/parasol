@@ -36,6 +36,7 @@ export interface ContractFilters {
   status?: ContractStatus | null;
   ownerId?: string | null;
   endingWithinDays?: number | null;
+  limit?: number;
 }
 
 export function useContracts(filters: ContractFilters, enabled = true) {
@@ -115,8 +116,8 @@ export function useSaveSlaPolicy() {
 }
 
 /** Newest first, a page at a time with the count of all (DEV-12). */
-export function useHourBanks(filters: { organizationId?: string; contractId?: string; includeClosed?: boolean }) {
-  return usePagedList<HourBank>(contractKeys.hourBanks(filters), `${BASE}/hour-banks`, filters, { limit: 25 });
+export function useHourBanks(filters: { organizationId?: string; contractId?: string; includeClosed?: boolean }, enabled = true) {
+  return usePagedList<HourBank>(contractKeys.hourBanks(filters), `${BASE}/hour-banks`, filters, { limit: 25, enabled });
 }
 
 export function useHourBank(id: string) {

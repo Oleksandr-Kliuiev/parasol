@@ -12,7 +12,7 @@ test('finance adds a product and prices it in a price list', async ({ page }) =>
   await page.getByRole('textbox', { name: 'Name', exact: true }).fill(`${m} Managed workstation`);
   await page.getByRole('textbox', { name: 'List price' }).fill('450');
   await page.getByRole('textbox', { name: 'Cost' }).fill('180');
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
 
   await expect(toast(page, 'Product created')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: `${m} Managed workstation` })).toBeVisible();
@@ -66,7 +66,7 @@ test('sales sets up a contract, gives notice and warns on a low hour bank', asyn
   await page.getByRole('textbox', { name: 'Title' }).fill('Driftsavtale');
   await page.getByRole('textbox', { name: 'Start date' }).fill('2026-01-01');
   await page.getByRole('textbox', { name: 'End date' }).fill('2027-12-31');
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
 
   await expect(toast(page, /Contract K-\d{4}-\d{4} created as a draft/)).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Driftsavtale' })).toBeVisible();

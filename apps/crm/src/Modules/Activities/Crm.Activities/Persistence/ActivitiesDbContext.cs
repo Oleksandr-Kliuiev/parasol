@@ -11,9 +11,24 @@ public sealed class ActivitiesDbContext(DbContextOptions<ActivitiesDbContext> op
     public override string Schema => SchemaName;
 
     public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<SourceTaskLink> SourceTaskLinks => Set<SourceTaskLink>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<SourceTaskLink>(b =>
+        {
+            b.ToTable("SourceTaskLinks");
+            b.HasKey(x => x.SourceKey);
+            b.Property(x => x.SourceKey).HasMaxLength(64).IsUnicode(false);
+            b.Property(x => x.System).HasMaxLength(32);
+            b.Property(x => x.WorkspaceId).HasMaxLength(128);
+            b.Property(x => x.ClientId).HasMaxLength(128);
+            b.Property(x => x.ObservationId).HasMaxLength(256);
+            b.Property(x => x.TargetKind).HasMaxLength(16);
+            b.HasIndex(x => x.ActivityId).IsUnique();
+            b.HasOne<Activity>().WithMany().HasForeignKey(x => x.ActivityId).OnDelete(DeleteBehavior.Restrict);
+            b.Ignore(x => x.Source);
+        });
         modelBuilder.Entity<Activity>(b =>
         {
             b.ToTable("Activities");

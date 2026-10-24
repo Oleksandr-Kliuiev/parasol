@@ -1,4 +1,5 @@
 import {
+  Avatar,
   Badge,
   Button,
   Link,
@@ -6,9 +7,11 @@ import {
   Text,
   makeStyles,
   tokens,
+  mergeClasses,
 } from '@fluentui/react-components';
-import { Attach16Regular, Open16Regular, Save20Regular } from '@fluentui/react-icons';
+import { Attach16Regular, Mail16Regular, Mail24Regular, MailOff24Regular, Open16Regular, Save20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { Panel } from '../../shared/components/Panel';
@@ -22,21 +25,26 @@ import { safeHttpUrl } from '../../shared/utils/safeUrl';
 
 const useStyles = makeStyles({
   list: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
+  // A message as a quiet row: the sender's avatar, subject and muted meta, the state or the save action on the right.
   item: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: tokens.spacingHorizontalM,
-    paddingInline: tokens.spacingHorizontalM,
-    paddingBlock: tokens.spacingVerticalS,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
+    display: 'grid',
+    gridTemplateColumns: '32px minmax(0, 1fr) auto',
+    alignItems: 'start',
+    columnGap: '12px',
+    rowGap: '8px',
+    paddingTop: '12px',
+    paddingBottom: '12px',
+    paddingLeft: '14px',
+    paddingRight: '14px',
+    backgroundColor: h.well,
+    borderRadius: '14px',
+    overflowWrap: 'anywhere',
+    '@media (max-width: 560px)': { gridTemplateColumns: '32px minmax(0, 1fr)', '& > :last-child': { gridColumn: '2' } },
   },
+  side: { display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' },
   text: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, flexGrow: 1 },
   subject: { fontWeight: tokens.fontWeightSemibold },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
+  muted: { color: h.muted, fontSize: '12.5px', lineHeight: '18px' },
   note: { marginBottom: tokens.spacingVerticalM },
 });
 
@@ -57,7 +65,8 @@ export function OrganizationMailTab({ organizationId }: { organizationId: string
   const actions = useActivityActions();
 
   if (outlook.isPending) return <Spinner label={t('common.loading')} />;
-  if (!connected) return <EmptyState message={t('mail.notConnected')} />;
+  // Not connected is said in the card where the mail would be, not on the bare page.
+  if (!connected) return <Panel title={t('mail.title')} icon={<Mail16Regular />}><EmptyState icon={<MailOff24Regular />} message={t('mail.notConnected')} /></Panel>;
   if (isPending) return <Spinner label={t('common.loading')} />;
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
@@ -84,21 +93,22 @@ export function OrganizationMailTab({ organizationId }: { organizationId: string
   };
 
   return (
-    <Panel title={t('mail.title')}>
-      <Text block className={`${styles.muted} ${styles.note}`}>
+    <Panel title={t('mail.title')} icon={<Mail16Regular />}>
+      <Text block className={mergeClasses(styles.muted, styles.note)}>
         {t('mail.explainer')}
       </Text>
       {mail.data && mail.data.notSearched > 0 && (
-        <Text block className={`${styles.muted} ${styles.note}`}>
+        <Text block className={mergeClasses(styles.muted, styles.note)}>
           {t('mail.partialSearch', { searched: mail.data.searched.join(', '), count: mail.data.notSearched })}
         </Text>
       )}
       {data.length === 0 ? (
-        <EmptyState message={t('mail.empty')} />
+        <EmptyState icon={<Mail24Regular />} message={t('mail.empty')} />
       ) : (
         <ul className={styles.list}>
           {data.map((message) => (
             <li key={message.messageId} className={styles.item}>
+              <Avatar name={message.fromName ?? message.fromAddress} size={32} color="colorful" aria-hidden />
               <span className={styles.text}>
                 <span className={styles.subject}>
                   {message.webLink ? (
@@ -117,14 +127,14 @@ export function OrganizationMailTab({ organizationId }: { organizationId: string
                 </span>
                 {message.preview && <span className={styles.muted}>{message.preview}</span>}
               </span>
-              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span className={styles.side}>
                 {message.hasAttachments && (
                   <Badge appearance="outline" color="informative" icon={<Attach16Regular />}>
                     {t('mail.attachments')}
                   </Badge>
                 )}
                 {message.isSaved ? (
-                  <Badge appearance="outline" color="success">
+                  <Badge appearance="tint" color="success">
                     {t('mail.savedBadge')}
                   </Badge>
                 ) : (

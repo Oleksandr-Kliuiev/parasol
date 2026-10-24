@@ -39,6 +39,11 @@ const hostArgs = [
   '--RateLimits:ApiPerMinute=100000',
   // Every test signs in through the development entry point from one address; the real budget has its own integration test.
   '--RateLimits:SignInPerMinute=100000',
+  // One development user per role runs the scenarios of every engine within the hour, so the per-user hourly budgets for
+  // exports (10) and imports/migration (60) would refuse the engines that run last. The budgets have integration tests
+  // (ExportApiTests; RequestHardeningTests checks that every import and export carries its policy).
+  '--RateLimits:ExportsPerHour=100000',
+  '--RateLimits:MigrationPerHour=100000',
   '--Auth:ActiveUserCacheSeconds=0',
   // Issued quote documents belong to the database that references them (DEV-08): the e2e database gets its own folder,
   // otherwise the orphan cleanup of either worker would remove the other database's documents.
@@ -72,6 +77,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     ignoreHTTPSErrors: true,
+    // The interface animates its entrances (app/motion.ts); tests measure the settled page, as a person with reduced
+    // motion sees it, so geometry and contrast checks never catch a card mid-flight.
+    contextOptions: { reducedMotion: 'reduce' },
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], colorScheme: 'light' }, testIgnore: /mobile\.spec\.ts/ },

@@ -10,10 +10,12 @@ import {
   TableRow,
   Text,
   makeStyles,
+  mergeClasses,
   tokens,
 } from '@fluentui/react-components';
-import { FolderAdd20Regular, Folder20Regular, Document20Regular, Open16Regular } from '@fluentui/react-icons';
+import { Document20Regular, Folder16Regular, Folder20Regular, Folder24Regular, FolderAdd20Regular, FolderProhibited24Regular, Open16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -24,16 +26,41 @@ import { formatDateTime } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useCreateDocumentFolder, useOrganizationDocuments } from './api';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { ScrollTable } from '../../shared/components/ScrollTable';
+import { IconChip, PersonCell, useSettingsStyles } from '../admin/settingsUi';
 
 const useStyles = makeStyles({
-  head: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalM },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  name: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS },
+  // The customer's folder as a row of the integrations reference: chip, name and where it lives, the link on the right.
+  head: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: '12px',
+    rowGap: '8px',
+    marginBottom: '16px',
+    paddingTop: '12px',
+    paddingBottom: '12px',
+    paddingLeft: '12px',
+    paddingRight: '16px',
+    borderRadius: '14px',
+    backgroundColor: h.well,
+    minWidth: 0,
+  },
+  folder: { display: 'grid', gap: '2px', minWidth: 0, flex: '1 1 200px', overflowWrap: 'anywhere' },
+  folderName: { fontWeight: tokens.fontWeightSemibold, fontSize: '14px', lineHeight: '20px' },
+  link: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: tokens.fontWeightSemibold },
+  table: { minWidth: '560px' },
+  sizeHead: { '& .fui-TableHeaderCell__button': { justifyContent: 'flex-end' } },
+  name: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, overflowWrap: 'anywhere' },
+  fileLink: { fontWeight: tokens.fontWeightSemibold },
+  muted: { color: h.muted, fontSize: '13px', fontVariantNumeric: 'tabular-nums' },
+  // Not set up: the chip says "no connection", the empty state below says why.
 });
 
 /** The customer's folder in SharePoint: the CRM shows what is in it and links into Microsoft 365 (FR-DOC-01). */
 export function OrganizationDocumentsTab({ organizationId }: { organizationId: string }) {
   const styles = useStyles();
+  const settings = useSettingsStyles();
   const catalog = useCatalogStyles();
   const { t } = useTranslation();
   const notify = useNotify();
@@ -43,7 +70,13 @@ export function OrganizationDocumentsTab({ organizationId }: { organizationId: s
 
   if (isPending) return <Spinner label={t('common.loading')} />;
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
-  if (!data.available) return <EmptyState message={t('documents.notConfigured')} />;
+  if (!data.available)
+    return (
+      <Panel title={t('documents.title')} icon={<Folder16Regular />}>
+        {/* One picture for one state: the empty state's own icon says it. */}
+        <EmptyState icon={<FolderProhibited24Regular />} message={t('documents.notConfigured')} />
+      </Panel>
+    );
 
   const create = async () => {
     try {
@@ -55,21 +88,25 @@ export function OrganizationDocumentsTab({ organizationId }: { organizationId: s
   };
 
   return (
-    <Panel title={t('documents.title')}>
+    <Panel title={t('documents.title')} icon={<Folder16Regular />}>
       <div className={styles.head}>
         {data.folder ? (
           <>
-            <Text className={styles.name}>
-              <Folder20Regular aria-hidden />
-              {data.folder.name}
-            </Text>
-            <Link href={safeHttpUrl(data.folder.webUrl)} target="_blank" rel="noopener noreferrer">
+            <IconChip icon={<Folder20Regular />} tone="saffron" />
+            <span className={styles.folder}>
+              <Text className={styles.folderName}>{data.folder.name}</Text>
+            </span>
+            <Link className={styles.link} href={safeHttpUrl(data.folder.webUrl)} target="_blank" rel="noopener noreferrer">
               {t('documents.openInSharePoint')}
+              <Open16Regular aria-hidden />
             </Link>
           </>
         ) : (
           <>
-            <Text className={styles.muted}>{t('documents.noFolder')}</Text>
+            <IconChip icon={<FolderAdd20Regular />} />
+            <span className={styles.folder}>
+              <Text className={settings.note}>{t('documents.noFolder')}</Text>
+            </span>
             {canWrite && (
               <Button icon={<FolderAdd20Regular />} disabled={createFolder.isPending} onClick={() => void create()}>
                 {t('documents.createFolder')}
@@ -80,15 +117,15 @@ export function OrganizationDocumentsTab({ organizationId }: { organizationId: s
       </div>
 
       {data.folder && data.items.length === 0 ? (
-        <EmptyState message={t('documents.empty')} />
+        <EmptyState icon={<Folder24Regular />} message={t('documents.empty')} />
       ) : (
         data.items.length > 0 && (
-          <div style={{ overflowX: 'auto' }}>
-            <Table aria-label={t('documents.title')} style={{ minWidth: 520 }}>
+          <ScrollTable>
+            <Table aria-label={t('documents.title')} className={styles.table}>
               <TableHeader>
                 <TableRow>
                   <TableHeaderCell>{t('documents.fields.name')}</TableHeaderCell>
-                  <TableHeaderCell className={catalog.number}>{t('documents.fields.size')}</TableHeaderCell>
+                  <TableHeaderCell className={mergeClasses(catalog.number, styles.sizeHead)}>{t('documents.fields.size')}</TableHeaderCell>
                   <TableHeaderCell>{t('documents.fields.modified')}</TableHeaderCell>
                 </TableRow>
               </TableHeader>
@@ -97,23 +134,26 @@ export function OrganizationDocumentsTab({ organizationId }: { organizationId: s
                   <TableRow key={item.id}>
                     <TableCell>
                       <span className={styles.name}>
-                        {item.isFolder ? <Folder20Regular aria-hidden /> : <Document20Regular aria-hidden />}
-                        <Link href={safeHttpUrl(item.webUrl)} target="_blank" rel="noopener noreferrer">
+                        <IconChip icon={item.isFolder ? <Folder20Regular /> : <Document20Regular />} tone={item.isFolder ? 'saffron' : 'iris'} small />
+                        <Link className={styles.fileLink} href={safeHttpUrl(item.webUrl)} target="_blank" rel="noopener noreferrer">
                           {item.name}
                           <Open16Regular aria-hidden style={{ marginInlineStart: 4 }} />
                         </Link>
                       </span>
                     </TableCell>
-                    <TableCell className={catalog.number}>{item.size === null ? '—' : formatSize(item.size)}</TableCell>
+                    <TableCell className={mergeClasses(catalog.number, styles.muted)}>{item.size === null ? '—' : formatSize(item.size)}</TableCell>
                     <TableCell>
-                      {item.modifiedAt ? formatDateTime(item.modifiedAt) : '—'}
-                      {item.modifiedBy && <div className={styles.muted}>{item.modifiedBy}</div>}
+                      {item.modifiedBy ? (
+                        <PersonCell name={item.modifiedBy} detail={item.modifiedAt ? formatDateTime(item.modifiedAt) : undefined} size={28} />
+                      ) : (
+                        <span className={styles.muted}>{item.modifiedAt ? formatDateTime(item.modifiedAt) : '—'}</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollTable>
         )
       )}
     </Panel>

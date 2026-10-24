@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
   DialogSurface,
   DialogTitle,
   Link,
+  Menu,
+  MenuItem,
+  MenuList,
+  MenuPopover,
+  MenuTrigger,
   MessageBar,
   MessageBarActions,
   MessageBarBody,
@@ -20,18 +24,22 @@ import {
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Delete20Regular, Edit20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import {
+  Building16Regular, ChevronDown16Regular, Clock16Regular, ContactCard16Regular, Delete20Regular, Edit20Regular, Location16Regular, MoreHorizontal20Regular,
+  PeopleTeam16Regular, Person16Regular, Receipt16Regular,
+} from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import type { Organization } from '../../api/types';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { errorMessage } from '../../shared/utils/errors';
-import { PageHeader } from '../../shared/components/PageHeader';
 import { DetailList, Panel } from '../../shared/components/Panel';
 import { OrganizationStatusBadge, RegistryStatusBadge } from '../../shared/components/StatusBadges';
 import { useNotify } from '../../shared/components/useNotify';
 import { formatAddress, formatDate, formatDateTime } from '../../shared/utils/format';
+import { localeOf } from '../../i18n';
 import { formatOrgNumber } from '../../shared/utils/orgNumber';
 import { HistoryList } from '../audit/HistoryList';
 import { ContactsTab } from '../contacts/ContactsTab';
@@ -49,22 +57,83 @@ import { OrganizationProjectsTab } from '../projects/OrganizationProjectsTab';
 import { OrganizationGroupPanel } from './OrganizationGroupPanel';
 import { CustomFieldsPanel } from '../customfields/CustomFieldsPanel';
 import { ActivityTimeline } from '../activities/ActivityTimeline';
+import { activitySelection } from '../activities/activityNavigation';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { CustomerWorkspacePanel } from '../parasol/CustomerWorkspacePanel';
+import { CustomerIdentityPanel } from '../parasol/CustomerIdentityPanel';
+import { useCustomerTabVisibility } from './useCustomerTabVisibility';
+import { useScrollEdges } from '../../shared/utils/useScrollEdges';
+import { h } from '../../app/hearth';
+import { useReveal } from '../../app/motion';
+import { ProfileHeader } from './ProfileHeader';
+import { AppLink } from '../../shared/components/AppLink';
+import { CustomerHighlights } from './CustomerHighlights';
+import { useOrganizationContacts } from '../contacts/api';
 
 const useStyles = makeStyles({
-  // Eleven tabs do not fit a phone: the bar scrolls sideways (a focused tab scrolls into view) instead of widening the page.
-  tabs: { marginBottom: tokens.spacingVerticalL, borderBottom: `1px solid ${tokens.colorNeutralStroke2}`, overflowX: 'auto', overflowY: 'hidden' },
+  // The tab bar scrolls sideways without widening a phone; URL-selected tabs are revealed too.
+  tabs: { marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
+  // The technical workspace is the work of the page and takes the wide column; the customer's records sit beside it in
+  // one card (the reference's profile page), not in nine small ones.
+  overview: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0,
+    '@media (min-width: 1100px)': { ':has([data-technical-layout])': { gridTemplateColumns: 'minmax(0, 1.6fr) minmax(320px, 1fr)' } } },
+  stack: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
-    gap: tokens.spacingHorizontalL,
+    gap: '16px',
     alignItems: 'start',
   },
-  orgNumber: { fontVariantNumeric: 'tabular-nums', color: tokens.colorNeutralForeground3 },
+  aside: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 },
+  // The records card: sections under one hairline each; every section stays its own region with its own heading.
+  records: {
+    backgroundColor: h.surface,
+    border: `1px solid ${h.line}`,
+    borderRadius: '20px',
+    boxShadow: tokens.shadow4,
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  section: {
+    paddingTop: '16px',
+    paddingBottom: '16px',
+    paddingLeft: '20px',
+    paddingRight: '20px',
+    borderTop: `1px solid ${h.line}`,
+    ':first-child': { borderTop: 'none', paddingTop: '18px' },
+    ':last-child': { paddingBottom: '20px' },
+    '@media (max-width: 600px)': { paddingLeft: '16px', paddingRight: '16px' },
+  },
+  // One label column for the whole card, so the values of all sections start on the same line.
+  facts: { gridTemplateColumns: 'minmax(0, 150px) minmax(0, 1fr)', '@media (max-width: 400px)': { gridTemplateColumns: 'minmax(0, 1fr)', rowGap: '2px' } },
+  sectionTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    margin: 0,
+    marginBottom: '12px',
+    fontFamily: h.display,
+    fontSize: '15px',
+    lineHeight: '20px',
+    fontWeight: 600,
+    letterSpacing: '-0.01em',
+    '& svg': { width: '16px', height: '16px', color: h.faint },
+  },
+  orgNumber: { fontVariantNumeric: 'tabular-nums', color: 'inherit', fontSize: 'inherit' },
+  // "More" reads like the other sections, its chevron after the word as on any menu button.
+  more: { display: 'inline-flex', alignItems: 'center', gap: '4px' },
+  // The fields nobody filled in, named in one quiet line under the filled ones instead of a column of dashes.
+  recordFacts: { display: 'grid', gap: '10px', minWidth: 0 },
+  missing: { color: h.muted, fontSize: '13px', lineHeight: '19px' },
+  strong: { color: h.text, fontWeight: 600 },
   domains: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS },
 });
+
+/** The value of the "More" tab: it opens the menu of the occasional sections and is never itself selected. */
+const MORE = '__more';
+const dailyTabs = ['overview', 'contacts', 'contracts', 'service', 'invoices', 'activities'] as const;
+const occasionalTabs = ['deals', 'licenses', 'projects', 'mail', 'documents', 'history'] as const;
 
 type TabValue =
   | 'overview'
@@ -82,11 +151,12 @@ type TabValue =
 
 export function OrganizationDetailPage() {
   const styles = useStyles();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const notify = useNotify();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const tab = (params.get('tab') as TabValue | null) ?? 'overview';
   const { data, error, isPending, refetch } = useOrganization(id);
   const canEdit = useCan(Permissions.customersWrite);
@@ -103,6 +173,28 @@ export function OrganizationDetailPage() {
   const restoreFocusTarget = useRestoreFocusTarget();
   const duplicates = useDuplicates(id);
   const mergedIntoId = error instanceof ApiError && error.code === 'CUS_ORGANIZATION_MERGED' ? String(error.problem.mergedIntoId) : null;
+  const tabScope = JSON.stringify([id, i18n.resolvedLanguage, canContracts, canService, canSales,
+    canLicensing, canProjects, canBilling, canActivities]);
+  const tabs = useCustomerTabVisibility(tab, tabScope, !isPending && !error && !mergedIntoId);
+  // Six sections for every day in the row, the rest one step away under "More" (UX 2026, В4); a section opened from there
+  // joins the row, so the row always names where you are.
+  const permitted = (value: TabValue) => ({ contracts: canContracts, service: canService, deals: canSales, licenses: canLicensing,
+    projects: canProjects, invoices: canBilling, activities: canActivities, mail: canActivities } as Partial<Record<TabValue, boolean>>)[value] ?? true;
+  const rowTabs = [...dailyTabs.filter(permitted), ...occasionalTabs.filter((value) => value === tab && permitted(value))];
+  const menuTabs = occasionalTabs.filter((value) => value !== tab && permitted(value));
+  const openTab = (value: TabValue) => setParams(value === 'overview' ? {} : { tab: value }, { replace: true });
+  const tabEdges = useScrollEdges(tabs, 'x', `${tabScope}:${tab}:${isPending}:${Boolean(error)}:${mergedIntoId}`);
+  // The sections rise after the profile card, once the record has loaded.
+  useReveal(tabs as React.RefObject<HTMLElement | null>, 'item', Boolean(data));
+
+  // A highlight tile opened a tab: the tile has gone with the overview, so focus moves to the tab it opened (WCAG 2.4.3).
+  const focusTab = (location.state as { focusTab?: boolean } | null)?.focusTab === true;
+  // By value, not aria-selected: Fluent marks the newly selected tab one render later than this effect runs.
+  useEffect(() => {
+    if (!focusTab) return;
+    // Compared, not put into a selector: the value comes from the address.
+    [...(tabs.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find((el) => el.getAttribute('value') === tab)?.focus();
+  }, [focusTab, location.key, tab, tabs]);
 
   useEffect(() => {
     if (mergedIntoId) {
@@ -117,6 +209,7 @@ export function OrganizationDetailPage() {
 
   const organization = data.data;
   const etag = data.etag;
+  const city = organization.visitAddress?.city ?? organization.postalAddress?.city ?? null;
 
   const onDelete = async () => {
     await remove.mutateAsync(organization.id);
@@ -126,16 +219,25 @@ export function OrganizationDetailPage() {
 
   return (
     <>
-      <PageHeader
+      <ProfileHeader
         back={{ to: '/organizations', label: t('organizations.title') }}
         title={organization.name}
-        meta={
+        section={tab === 'overview' ? undefined : t(`organizations.tabs.${tab}`)}
+        pills={
           <>
-            {organization.orgNumber && <Text className={styles.orgNumber}>{formatOrgNumber(organization.orgNumber)}</Text>}
             <OrganizationStatusBadge status={organization.status} />
             <RegistryStatusBadge status={organization.registryStatus} checkedAt={organization.registryCheckedAt} />
           </>
         }
+        meta={[
+          organization.orgNumber && <Text className={styles.orgNumber}>{formatOrgNumber(organization.orgNumber)}</Text>,
+          city && <span>{city}</span>,
+          organization.accountManager && (
+            <span>
+              {t('organizations.fields.accountManager')} <span className={styles.strong}>{organization.accountManager.displayName}</span>
+            </span>
+          ),
+        ]}
         actions={
           <>
             {canEdit && (
@@ -143,20 +245,31 @@ export function OrganizationDetailPage() {
                 {t('common.edit')}
               </Button>
             )}
+            {/* A rare, destructive action is one step away from the everyday ones, not beside Edit (it still asks first). */}
             {canDelete && (
-              <Button {...restoreFocusTarget} icon={<Delete20Regular />} appearance="subtle" onClick={() => setConfirmOpen(true)}>
-                {t('common.delete')}
-              </Button>
+              <Menu positioning="below-end">
+                <MenuTrigger disableButtonEnhancement>
+                  <Button {...restoreFocusTarget} icon={<MoreHorizontal20Regular />} aria-label={t('organizations.moreActions')} />
+                </MenuTrigger>
+                <MenuPopover>
+                  <MenuList>
+                    <MenuItem icon={<Delete20Regular />} onClick={() => setConfirmOpen(true)}>{t('organizations.delete.confirm')}</MenuItem>
+                  </MenuList>
+                </MenuPopover>
+              </Menu>
             )}
           </>
         }
       />
 
-      {duplicates.data && duplicates.data.items.length > 0 && (
+      {/* Only for someone who can merge (customers.delete): a warning a reader can neither act on nor dismiss is noise.
+          Two names and a count, not a list that fills a phone screen. */}
+      {canDelete && duplicates.data && duplicates.data.items.length > 0 && (
         <MessageBar intent="warning" style={{ marginBottom: tokens.spacingVerticalM }}>
           <MessageBarBody>
             {t('duplicates.banner', {
-              name: duplicates.data.items.map((p) => (p.first.id === organization.id ? p.second.name : p.first.name)).join(', '),
+              name: [duplicates.data.items.slice(0, 2).map((p) => (p.first.id === organization.id ? p.second.name : p.first.name)).join(', '),
+                duplicates.data.items.length > 2 ? t('duplicates.andMore', { count: duplicates.data.items.length - 2 }) : null].filter(Boolean).join(' '),
             })}
           </MessageBarBody>
           <MessageBarActions>
@@ -168,22 +281,28 @@ export function OrganizationDetailPage() {
       )}
 
       <TabList
+        ref={tabs}
         className={styles.tabs}
+        style={tabEdges.style}
+        aria-label={t('organizations.tabsLabel')}
         selectedValue={tab}
-        onTabSelect={(_, d) => setParams(d.value === 'overview' ? {} : { tab: String(d.value) }, { replace: true })}
+        onTabSelect={(_, d) => { if (d.value !== MORE) openTab(d.value as TabValue); }}
       >
-        <Tab value="overview">{t('organizations.tabs.overview')}</Tab>
-        <Tab value="contacts">{t('organizations.tabs.contacts')}</Tab>
-        {canContracts && <Tab value="contracts">{t('organizations.tabs.contracts')}</Tab>}
-        {canService && <Tab value="service">{t('organizations.tabs.service')}</Tab>}
-        {canSales && <Tab value="deals">{t('organizations.tabs.deals')}</Tab>}
-        {canLicensing && <Tab value="licenses">{t('organizations.tabs.licenses')}</Tab>}
-        {canProjects && <Tab value="projects">{t('organizations.tabs.projects')}</Tab>}
-        {canBilling && <Tab value="invoices">{t('organizations.tabs.invoices')}</Tab>}
-        {canActivities && <Tab value="activities">{t('organizations.tabs.activities')}</Tab>}
-        {canActivities && <Tab value="mail">{t('organizations.tabs.mail')}</Tab>}
-        <Tab value="documents">{t('organizations.tabs.documents')}</Tab>
-        <Tab value="history">{t('organizations.tabs.history')}</Tab>
+        {rowTabs.map((value) => <Tab key={value} value={value}>{t(`organizations.tabs.${value}`)}</Tab>)}
+        {menuTabs.length > 0 && (
+          <Menu positioning="below-end">
+            <MenuTrigger disableButtonEnhancement>
+              <Tab value={MORE} aria-label={t('organizations.tabs.moreNamed', { count: menuTabs.length })}>
+                <span className={styles.more}>{t('organizations.tabs.more')}<ChevronDown16Regular aria-hidden /></span>
+              </Tab>
+            </MenuTrigger>
+            <MenuPopover>
+              <MenuList>
+                {menuTabs.map((value) => <MenuItem key={value} onClick={() => openTab(value)}>{t(`organizations.tabs.${value}`)}</MenuItem>)}
+              </MenuList>
+            </MenuPopover>
+          </Menu>
+        )}
       </TabList>
 
       {tab === 'overview' && <Overview organization={organization} etag={etag} />}
@@ -194,7 +313,11 @@ export function OrganizationDetailPage() {
       {tab === 'licenses' && canLicensing && <OrganizationLicensesTab organizationId={organization.id} />}
       {tab === 'projects' && canProjects && <OrganizationProjectsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'invoices' && canBilling && <OrganizationInvoicesTab organizationId={organization.id} />}
-      {tab === 'activities' && canActivities && <ActivityTimeline organizationId={organization.id} />}
+      {tab === 'activities' && canActivities && <ActivityTimeline organizationId={organization.id}
+        selection={activitySelection(params)} navigationKey={location.key} onShowAll={() => {
+          const next = new URLSearchParams(params); next.delete('activityId'); next.set('tab', 'activities');
+          setParams(next, { replace: true });
+        }} />}
       {tab === 'mail' && canActivities && <OrganizationMailTab organizationId={organization.id} />}
       {tab === 'documents' && <OrganizationDocumentsTab organizationId={organization.id} />}
       {tab === 'history' && <HistoryList module="customers" entityType="Organization" entityId={organization.id} />}
@@ -220,26 +343,81 @@ export function OrganizationDetailPage() {
   );
 }
 
+/** One section of the records card: a region named by its heading, like the cards it replaces. */
+function RecordSection({ title, icon, children }: { title: string; icon: React.ReactElement; children: React.ReactNode }) {
+  const styles = useStyles();
+  const id = useId();
+  return (
+    <section className={styles.section} aria-labelledby={id}>
+      <h2 id={id} className={styles.sectionTitle}>
+        <span aria-hidden style={{ display: 'inline-flex' }}>{icon}</span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/** The filled facts of a section as a list; the empty ones as one line that names them, so the gap reads as a to-do. */
+function RecordFacts({ items }: { items: Array<{ label: string; value: React.ReactNode }> }) {
+  const styles = useStyles();
+  const { t, i18n } = useTranslation();
+  const locale = localeOf(i18n.language);
+  const filled = items.filter((item) => item.value);
+  // Field names inside a sentence: lower case ("e-post, telefon og nettside"), but never an abbreviation ("NACE …").
+  const missing = items.filter((item) => !item.value).map(({ label }) =>
+    /^\p{Lu}\p{Lu}/u.test(label) ? label : label.charAt(0).toLocaleLowerCase(locale) + label.slice(1));
+  return (
+    <div className={styles.recordFacts}>
+      {filled.length > 0 && <DetailList className={styles.facts} items={filled} />}
+      {missing.length > 0 && (
+        <Text block className={styles.missing}>
+          {t('organizations.missing', { list: new Intl.ListFormat(locale, { type: 'conjunction' }).format(missing) })}
+        </Text>
+      )}
+    </div>
+  );
+}
+
 function Overview({ organization: o, etag }: { organization: Organization; etag: string | null }) {
   const styles = useStyles();
   const { t } = useTranslation();
+  const technical = useCan(Permissions.parasolAtlasRead);
+  // Who to call first: the primary contact and their number, on the first screen (the contacts tab reads the same list).
+  const contacts = useOrganizationContacts(o.id, false);
+  const primary = contacts.data?.find((contact) => contact.isPrimary);
+  const primaryPhone = primary ? primary.mobilePhone ?? primary.phone : null;
   const f = (key: string) => t(`organizations.fields.${key}`);
+  const records = useRef<HTMLDivElement>(null);
+  useReveal(records, 'card');
 
   return (
-    <div className={styles.grid}>
-      <CustomerWorkspacePanel customerId={o.id} />
-      <Panel title={t('organizations.sections.contactInfo')}>
-        <DetailList
+    <>
+    <CustomerHighlights organizationId={o.id} />
+    <div className={technical ? styles.overview : styles.stack}>
+      <div className={technical ? styles.stack : styles.grid}>
+        <CustomerWorkspacePanel customerId={o.id} />
+        <CustomerIdentityPanel customerId={o.id} />
+      </div>
+      <div className={styles.aside}>
+      <div ref={records} className={styles.records}>
+      <RecordSection title={t('organizations.sections.contactInfo')} icon={<ContactCard16Regular />}>
+        <RecordFacts
           items={[
+            { label: t('organizations.primaryContact'), value: primary && <span className={styles.domains}>
+              <AppLink to={`/contacts/${primary.contactId}`}>{`${primary.firstName} ${primary.lastName}`.trim()}</AppLink>
+              {primaryPhone && <> · <Link href={`tel:${primaryPhone.replace(/\s/g, '')}`}>{primaryPhone}</Link></>}
+              {primary.email && <> · <Link href={`mailto:${primary.email}`}>{primary.email}</Link></>}
+            </span> },
             { label: f('email'), value: o.email && <Link href={`mailto:${o.email}`}>{o.email}</Link> },
             { label: f('phone'), value: o.phone && <Link href={`tel:${o.phone.replace(/\s/g, '')}`}>{o.phone}</Link> },
             { label: f('website'), value: o.website && <Link href={safeHttpUrl(o.website)} target="_blank" rel="noopener noreferrer">{o.website}</Link> },
             { label: f('domains'), value: o.domains.length > 0 && <span className={styles.domains}>{o.domains.join(', ')}</span> },
           ]}
         />
-      </Panel>
-      <Panel title={t('organizations.sections.company')}>
-        <DetailList
+      </RecordSection>
+      <RecordSection title={t('organizations.sections.company')} icon={<Building16Regular />}>
+        <RecordFacts
           items={[
             { label: f('orgNumber'), value: formatOrgNumber(o.orgNumber) },
             { label: f('legalForm'), value: o.legalForm },
@@ -247,47 +425,49 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
             { label: t('organizations.columns.registry'), value: o.registryCheckedAt && `${t(`registry.${o.registryStatus}`)} · ${formatDate(o.registryCheckedAt)}` },
           ]}
         />
-      </Panel>
-      <Panel title={t('organizations.sections.responsibility')}>
-        <DetailList
+      </RecordSection>
+      <RecordSection title={t('organizations.sections.responsibility')} icon={<Person16Regular />}>
+        <RecordFacts
           items={[
             { label: f('accountManager'), value: o.accountManager?.displayName },
             { label: f('primaryTechnician'), value: o.primaryTechnician?.displayName },
           ]}
         />
-      </Panel>
-      <Panel title={t('organizations.sections.addresses')}>
-        <DetailList
+      </RecordSection>
+      <RecordSection title={t('organizations.sections.addresses')} icon={<Location16Regular />}>
+        <RecordFacts
           items={[
             { label: f('visitAddress'), value: formatAddress(o.visitAddress) },
             { label: f('postalAddress'), value: formatAddress(o.postalAddress) },
             { label: f('billingAddress'), value: formatAddress(o.billingAddress) },
           ]}
         />
-      </Panel>
-      <Panel title={t('organizations.sections.invoicing')}>
-        <DetailList
+      </RecordSection>
+      <RecordSection title={t('organizations.sections.invoicing')} icon={<Receipt16Regular />}>
+        <RecordFacts
           items={[
             { label: f('invoiceEmail'), value: o.invoiceEmail },
             { label: f('ehfEnabled'), value: o.ehfEnabled ? t('common.yes') : t('common.no') },
           ]}
         />
-      </Panel>
-      <Panel title={t('customFields.panelTitle')}>
-        <CustomFieldsPanel entity="Organization" entityId={o.id} />
-      </Panel>
-      <Panel title={t('organizations.sections.group')}>
+      </RecordSection>
+      <RecordSection title={t('organizations.sections.record')} icon={<Clock16Regular />}>
+        <DetailList
+          className={styles.facts}
+          items={[
+            { label: f('createdAt'), value: formatDateTime(o.createdAt) },
+            { label: f('modifiedAt'), value: o.modifiedAt ? formatDateTime(o.modifiedAt) : t('organizations.notChangedYet') },
+          ]}
+        />
+      </RecordSection>
+      </div>
+      <Panel title={t('organizations.sections.group')} icon={<PeopleTeam16Regular />}>
         <OrganizationGroupPanel organization={o} etag={etag} />
       </Panel>
       <LinkedSystemsPanel entityId={o.id} />
-      <Panel title={t('organizations.sections.record')}>
-        <DetailList
-          items={[
-            { label: f('createdAt'), value: formatDateTime(o.createdAt) },
-            { label: f('modifiedAt'), value: formatDateTime(o.modifiedAt) },
-          ]}
-        />
-      </Panel>
+      <CustomFieldsPanel framed entity="Organization" entityId={o.id} />
+      </div>
     </div>
+    </>
   );
 }

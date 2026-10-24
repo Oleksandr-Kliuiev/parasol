@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Parasoll</title>
+  <meta name="description" content="Parasoll UX demo: My day, observations, customers, tasks, time and finance on synthetic data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/shell.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/lists.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <link rel="stylesheet" href="css/overlays.css">
+  <link rel="stylesheet" href="css/views.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <script>
+    /* Apply the saved theme before first paint so dark-mode viewers never see a light flash */
+    (function () {
+      try {
+        var p = JSON.parse(localStorage.getItem('parasol-ux-demo') || '{}');
+        if (p.theme === 'dark' || p.theme === 'light') document.documentElement.setAttribute('data-theme', p.theme);
+        if (p.density === 'compact') document.documentElement.setAttribute('data-density', 'compact');
+        if (p.lang) document.documentElement.lang = p.lang;
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip-link" id="skip-link" href="#view" data-action="skip-to-main">Hopp til innhaldet</a>
+  <div class="app" data-rail="full">
+    <aside class="rail" id="rail" aria-label="Parasoll"></aside>
+    <div class="rail-scrim" data-action="close-rail"></div>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <main class="view" id="view" tabindex="-1"></main>
+    </div>
+  </div>
+  <nav class="tabbar" id="tabbar" aria-label="Parasoll"></nav>
+  <dialog class="drawer" id="drawer"></dialog>
+  <dialog class="modal" id="modal"></dialog>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <noscript><p style="padding:24px">Parasoll UX demo needs JavaScript.</p></noscript>
+
+  <script src="js/core.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/locales/en-core.js"></script>
+  <script src="js/locales/en-pages.js"></script>
+  <script src="js/locales/en-more.js"></script>
+  <script src="js/locales/nb-core.js"></script>
+  <script src="js/locales/nb-pages.js"></script>
+  <script src="js/locales/nb-more.js"></script>
+  <script src="js/locales/nn-core.js"></script>
+  <script src="js/locales/nn-pages.js"></script>
+  <script src="js/locales/nn-more.js"></script>
+  <script src="js/data-core.js"></script>
+  <script src="js/data-work.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/overlays.js"></script>
+  <script src="js/rows.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/palette.js"></script>
+  <script src="js/flow-observation.js"></script>
+  <script src="js/flow-task.js"></script>
+  <script src="js/flow-time.js"></script>
+  <script src="js/views/day.js"></script>
+  <script src="js/views/observations.js"></script>
+  <script src="js/views/customers.js"></script>
+  <script src="js/views/customer.js"></script>
+  <script src="js/views/customer-tabs.js"></script>
+  <script src="js/views/tasks.js"></script>
+  <script src="js/views/time.js"></script>
+  <script src="js/views/finance.js"></script>
+  <script src="js/views/system.js"></script>
+  <script src="js/views/more.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

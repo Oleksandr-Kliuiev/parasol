@@ -38,7 +38,7 @@ test('a technician books hours and the service lead approves them', { tag: '@cri
   await expect(row).toBeVisible();
   await row.getByRole('checkbox').check();
   await page.getByRole('button', { name: /Approve \(1\)/ }).click();
-  await expect(toast(page, '1 entries approved')).toBeVisible();
+  await expect(toast(page, '1 entry approved')).toBeVisible();
   await expect(row.getByText('By rate 2.5 h')).toBeVisible();
 
   // Finance sees the amount: 2.5 h at the catalog rate.
@@ -56,7 +56,7 @@ test('the service tab offers a ticket and reports that writing to Atera is off',
   });
 
   await page.goto(`/organizations/${organization.id}?tab=service`);
-  await expect(page.getByText('Open tickets', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^No Atera data is saved for this customer/)).toBeVisible();
   await expect(page.getByText('No open tickets.')).toBeVisible();
 
   await page.getByRole('button', { name: 'New ticket' }).click();

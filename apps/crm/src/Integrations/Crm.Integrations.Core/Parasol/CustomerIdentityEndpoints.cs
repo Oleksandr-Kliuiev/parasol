@@ -12,6 +12,14 @@ public static class CustomerIdentityEndpoints
     public static IEndpointRouteBuilder MapParasolCustomerIdentities(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/parasol").WithTags("Parasol");
+        group.MapGet("/customer-identities/atlas-export", async (AtlasIdentityReader reader, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await reader.ReadAsync(ct)).ToHttpResult(Results.Ok);
+            })
+            .RequirePermission(Permissions.IntegrationsManage)
+            .ExportsData()
+            .RequireRateLimiting(RateLimitPolicies.Export);
         group.MapGet("/customers/{customerId:guid}/workspace", async (Guid customerId, AtlasWorkspaceReader reader,
                 HttpContext http, CancellationToken ct) =>
             {
@@ -19,15 +27,38 @@ public static class CustomerIdentityEndpoints
                 return (await reader.ReadAsync(customerId, ct)).ToHttpResult(Results.Ok);
             })
             .RequirePermission(Permissions.ParasolAtlasRead);
+        group.MapGet("/customers/{customerId:guid}/observations", async (Guid customerId, string? severity, string? status,
+                string? cursor, string? deviceId, AtlasObservationQueueReader reader, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                var selection = AtlasObservationSelection.Parse(severity, status, deviceId);
+                if (selection is null || http.Request.Query.TryGetValue("deviceId", out var deviceValues)
+                    && (deviceValues.Count != 1 || string.IsNullOrEmpty(deviceValues[0])))
+                    return Crm.SharedKernel.Results.Error.Validation("PARASOL_ATLAS_QUEUE_FILTER_INVALID", "Choose supported observation filters.")
+                        .ToProblem();
+                return (await reader.ReadAsync(customerId, selection, cursor, ct)).ToHttpResult(Results.Ok);
+            })
+            .RequirePermission(Permissions.ParasolAtlasRead);
+        group.MapGet("/customers/{customerId:guid}/m365", async (Guid customerId, AtlasM365Reader reader, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await reader.ReadAsync(customerId, ct)).ToHttpResult(Results.Ok);
+            }).RequirePermission(Permissions.CustomersRead).RequirePermission(Permissions.ParasolAtlasRead);
         group.MapPost("/customer-identities/import", async (CustomerIdentityImport body, bool? dryRun, string? expectedSha256,
-                CustomerIdentityService service, CancellationToken ct) =>
-                (await service.ImportAsync(body, dryRun ?? true, expectedSha256, ct)).ToHttpResult(Results.Ok))
+                CustomerIdentityService service, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await service.ImportAsync(body, dryRun ?? true, expectedSha256, ct)).ToHttpResult(Results.Ok);
+            })
             .Validate<CustomerIdentityImport>()
             .RequirePermission(Permissions.IntegrationsManage)
             .RequireRateLimiting(RateLimitPolicies.Migration)
             .WithMetadata(new RequestSizeLimitAttribute(1_048_576));
-        group.MapGet("/customers/{customerId:guid}/identity", async (Guid customerId, CustomerIdentityService service, CancellationToken ct) =>
-                (await service.GetAsync(customerId, ct)).ToHttpResult(Results.Ok))
+        group.MapGet("/customers/{customerId:guid}/identity", async (Guid customerId, CustomerIdentityService service, HttpContext http, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return (await service.GetAsync(customerId, ct)).ToHttpResult(Results.Ok);
+            })
             .RequirePermission(Permissions.CustomersRead);
         return app;
     }

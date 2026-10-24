@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Button,
-  Checkbox,
   Dropdown,
-  Field,
-  Input,
   Option,
-  Spinner,
+  SearchBox,
+  Skeleton,
+  SkeletonItem,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -16,9 +16,11 @@ import {
   TableRow,
   Text,
   makeStyles,
-  tokens,
 } from '@fluentui/react-components';
-import { Add20Regular } from '@fluentui/react-icons';
+import { Add20Regular, DocumentBulletList16Regular, DocumentBulletList24Regular } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
+import { RecordCell } from '../organizations/RecordCell';
+import { useRecordStyles } from '../organizations/recordStyles';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
@@ -26,6 +28,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { FilterField, Toolbar } from '../../shared/components/Toolbar';
 import { formatDate, formatMoney } from '../../shared/utils/format';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { useMediaQuery } from '../../shared/utils/useMediaQuery';
@@ -33,16 +36,18 @@ import { useCatalogStyles } from '../catalog/styles';
 import { useQuotes } from './api';
 import { QuoteStatusBadge } from './shared';
 import { quoteStatuses, type QuoteStatus } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  discount: { color: tokens.colorPaletteDarkOrangeForeground1 },
+  muted: { color: h.muted, fontSize: '12px' },
+  status: { minWidth: '190px' },
 });
 
-/** Every quote, newest number first; the approval queue is one checkbox away (FR-SAL-03..05). */
+/** Every quote, newest number first; the approval queue is one switch away (FR-SAL-03..05). */
 export function QuotesPage() {
   const styles = useStyles();
   const catalog = useCatalogStyles();
+  const record = useRecordStyles();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const canWrite = useCan(Permissions.salesWrite);
@@ -62,6 +67,11 @@ export function QuotesPage() {
   };
   const quotes = useQuotes(filters);
   const { items: data, error, isPending, refetch } = quotes;
+  const empty = !isPending && data.length === 0 && (
+    <EmptyState icon={<DocumentBulletList24Regular />} message={t('quotes.empty')} />
+  );
+  const footer = <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />;
+  const loading = isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>;
 
   return (
     <>
@@ -77,105 +87,125 @@ export function QuotesPage() {
         }
       />
 
-      <div className={catalog.filters}>
-        <Field label={t('quotes.search')}>
-          <Input className={catalog.search} value={search} onChange={(_, d) => setSearch(d.value)} />
-        </Field>
-        <Field label={t('common.status')}>
+      <Toolbar label={t('quotes.filterLabel')}>
+        <FilterField kind="search" label={t('quotes.search')}>
+          <SearchBox id="quotes-search" value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('quotes.searchPlaceholder')} />
+        </FilterField>
+        <FilterField label={t('common.status')}>
           <Dropdown
+            className={styles.status}
             selectedOptions={[status]}
-            value={status === '' ? t('common.all') : t(`quotes.status.${status}`)}
+            value={status === '' ? t('quotes.allStatuses') : t(`quotes.status.${status}`)}
             onOptionSelect={(_, d) => setStatus((d.optionValue ?? '') as QuoteStatus | '')}
           >
-            <Option value="">{t('common.all')}</Option>
+            <Option value="">{t('quotes.allStatuses')}</Option>
             {quoteStatuses.map((value) => (
               <Option key={value} value={value}>
                 {t(`quotes.status.${value}`)}
               </Option>
             ))}
           </Dropdown>
-        </Field>
-        {allQuotes && <Checkbox label={t('quotes.mine')} checked={mine} onChange={(_, d) => setMine(Boolean(d.checked))} />}
-        <Checkbox
-          label={t('quotes.awaitingApproval')}
-          checked={awaitingApproval}
-          onChange={(_, d) => setAwaitingApproval(Boolean(d.checked))}
-        />
-      </div>
+        </FilterField>
+        {allQuotes && <Switch className={catalog.toggle} label={t('quotes.mine')} checked={mine} onChange={(_, d) => setMine(d.checked)} />}
+        <Switch className={catalog.toggle} label={t('quotes.awaitingApproval')} checked={awaitingApproval} onChange={(_, d) => setAwaitingApproval(d.checked)} />
+      </Toolbar>
 
-      {isPending ? (
-        <Spinner label={t('common.loading')} />
-      ) : error ? (
+      {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : data.length === 0 ? (
-        <EmptyState message={t('quotes.empty')} />
       ) : isPhone ? (
         <>
-          <ul className={catalog.cards}>
-            {data.map((quote) => (
-              <li key={quote.id} className={catalog.card}>
-                <AppLink to={`/quotes/${quote.id}`} className={catalog.name}>
-                  {quote.number}
-                  {quote.versionNo > 1 ? ` · v${quote.versionNo}` : ''} — {quote.title}
-                </AppLink>
-                <span className={catalog.cardMeta}>
-                  <QuoteStatusBadge status={quote.status} />
-                  <span>{quote.organization.name}</span>
-                  {canSeeMoney && <span>{formatMoney(quote.contractValue)}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />
+          {data.length > 0 && (
+            <ul className={record.cards} aria-label={t('quotes.title')}>
+              {data.map((quote) => (
+                <li key={quote.id} className={record.card}>
+                  <span className={record.cardMain}>
+                    <RecordCell
+                      icon={<DocumentBulletList16Regular />}
+                      tone="saffron"
+                      size={36}
+                      name={
+                        <AppLink to={`/quotes/${quote.id}`} className={catalog.name}>
+                          {quote.number}
+                          {quote.versionNo > 1 ? ` · v${quote.versionNo}` : ''} — {quote.title}
+                        </AppLink>
+                      }
+                      meta={[quote.organization.name, canSeeMoney && formatMoney(quote.contractValue)]}
+                    />
+                  </span>
+                  <span className={record.cardEnd}>
+                    <QuoteStatusBadge status={quote.status} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {loading}
+          {empty && <div className={catalog.emptyCard}>{empty}</div>}
+          {footer}
         </>
       ) : (
-        <div className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('quotes.title')}>
+        <ScrollTable className={catalog.tableWrap}>
+          <Table className={catalog.table} style={{ minWidth: 1060 }} aria-label={t('quotes.title')}>
             <TableHeader>
               <TableRow>
+                {/* Content widths: every cell adds 12 px of padding on each side; number and customer share the rest. */}
                 <TableHeaderCell>{t('quotes.fields.number')}</TableHeaderCell>
                 <TableHeaderCell>{t('quotes.fields.organization')}</TableHeaderCell>
-                <TableHeaderCell>{t('common.status')}</TableHeaderCell>
-                <TableHeaderCell>{t('quotes.fields.validUntil')}</TableHeaderCell>
-                {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('quotes.fields.perMonth')}</TableHeaderCell>}
-                {canSeeMoney && <TableHeaderCell className={catalog.number}>{t('quotes.fields.contractValue')}</TableHeaderCell>}
-                <TableHeaderCell>{t('quotes.fields.owner')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 136 }}>{t('common.status')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 86 }}>{t('quotes.fields.validUntil')}</TableHeaderCell>
+                {canSeeMoney && <TableHeaderCell className={catalog.number} style={{ width: 106 }}>{t('quotes.fields.perMonth')}</TableHeaderCell>}
+                {canSeeMoney && <TableHeaderCell className={catalog.number} style={{ width: 116 }}>{t('quotes.fields.contractValue')}</TableHeaderCell>}
+                <TableHeaderCell style={{ width: 136 }}>{t('quotes.fields.owner')}</TableHeaderCell>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((quote) => (
                 <TableRow key={quote.id}>
                   <TableCell>
-                    <AppLink to={`/quotes/${quote.id}`} className={catalog.name}>
-                      {quote.number}
-                      {quote.versionNo > 1 ? ` · v${quote.versionNo}` : ''}
-                    </AppLink>
-                    <div className={styles.muted}>{quote.title}</div>
+                    <RecordCell
+                      icon={<DocumentBulletList16Regular />}
+                      tone="saffron"
+                      name={
+                        <AppLink to={`/quotes/${quote.id}`} className={catalog.name}>
+                          {quote.number}
+                          {quote.versionNo > 1 ? ` · v${quote.versionNo}` : ''}
+                        </AppLink>
+                      }
+                      meta={[quote.title]}
+                    />
                   </TableCell>
                   <TableCell>
-                    <AppLink to={`/organizations/${quote.organization.id}`}>{quote.organization.name}</AppLink>
+                    <RecordCell
+                      avatarName={quote.organization.name}
+                      size={28}
+                      name={<AppLink to={`/organizations/${quote.organization.id}`} className={record.quietLink}>{quote.organization.name}</AppLink>}
+                    />
                   </TableCell>
                   <TableCell>
                     <QuoteStatusBadge status={quote.status} />
-                    {quote.maxDiscountPct > 0 && (
-                      <div className={styles.muted}>{t('quotes.discountOf', { pct: quote.maxDiscountPct })}</div>
-                    )}
+                    {quote.maxDiscountPct > 0 && <div className={styles.muted}>{t('quotes.discountOf', { pct: quote.maxDiscountPct })}</div>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="tabular">
                     {formatDate(quote.validUntil)}
                     {!quote.isLatestVersion && <div className={styles.muted}>{t('quotes.olderVersion')}</div>}
                   </TableCell>
                   {canSeeMoney && <TableCell className={catalog.number}>{formatMoney(quote.monthlyExVat)}</TableCell>}
                   {canSeeMoney && <TableCell className={catalog.number}>{formatMoney(quote.contractValue)}</TableCell>}
                   <TableCell>
-                    <Text>{quote.owner?.name ?? '—'}</Text>
+                    {quote.owner ? (
+                      <RecordCell avatarName={quote.owner.name} size={28} name={<span className={record.person}>{quote.owner.name}</span>} />
+                    ) : (
+                      <Text className={styles.muted}>—</Text>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <ListFooter shown={data.length} total={quotes.total} hasMore={quotes.hasNextPage} loading={quotes.isFetchingNextPage} onMore={() => void quotes.fetchNextPage()} />
-        </div>
+          {loading}
+          {empty}
+          {footer}
+        </ScrollTable>
       )}
     </>
   );

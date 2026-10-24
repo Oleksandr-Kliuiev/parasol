@@ -16,6 +16,7 @@ const BASE = '/api/v1/activities';
 export interface ActivityFilters {
   [key: string]: string | number | boolean | null | undefined;
   organizationId?: string;
+  activityId?: string;
   opportunityId?: string;
   contractId?: string;
   type?: ActivityType | null;
@@ -50,8 +51,8 @@ export function useCustomerMail(organizationId: string, enabled: boolean) {
 }
 
 /** The timeline page by page — open items first by due date — with how many the filter matches (DEV-12). */
-export function useActivities(filters: ActivityFilters, enabled = true, limit?: number) {
-  return usePagedList<Activity>([...activityKeys.list(filters), limit], `${BASE}/`, filters, { enabled, limit });
+export function useActivities(filters: ActivityFilters, enabled = true, limit?: number, scopeKey?: string) {
+  return usePagedList<Activity>([...activityKeys.list(filters), limit, scopeKey], `${BASE}/`, filters, { enabled, limit });
 }
 
 export function useActivityActions() {
@@ -67,8 +68,8 @@ export function useActivityActions() {
       mutationFn: ({ id, request, etag }: { id: string; request: ActivityRequest; etag: string }) => api.put<Activity>(`${BASE}/${id}`, request, etag),
       onSuccess: refresh,
     }),
-    complete: useMutation({ mutationFn: (id: string) => api.post<Activity>(`${BASE}/${id}/complete`), onSuccess: refresh }),
-    reopen: useMutation({ mutationFn: (id: string) => api.post<Activity>(`${BASE}/${id}/reopen`), onSuccess: refresh }),
+    complete: useMutation({ mutationFn: ({ id, etag }: Pick<Activity, 'id' | 'etag'>) => api.post<Activity>(`${BASE}/${id}/complete`, undefined, etag), onSuccess: refresh }),
+    reopen: useMutation({ mutationFn: ({ id, etag }: Pick<Activity, 'id' | 'etag'>) => api.post<Activity>(`${BASE}/${id}/reopen`, undefined, etag), onSuccess: refresh }),
     remove: useMutation({ mutationFn: (id: string) => api.delete(`${BASE}/${id}`), onSuccess: refresh }),
     addToCalendar: useMutation({ mutationFn: (id: string) => api.post<Activity>(`${BASE}/${id}/calendar`), onSuccess: refresh }),
     removeFromCalendar: useMutation({ mutationFn: (id: string) => api.delete(`${BASE}/${id}/calendar`), onSuccess: refresh }),

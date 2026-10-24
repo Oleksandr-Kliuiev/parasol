@@ -5,3 +5,6 @@ node_modules/
 !.env.*.example
 .DS_Store
 /reports/
+
+__pycache__/
+*.pyc

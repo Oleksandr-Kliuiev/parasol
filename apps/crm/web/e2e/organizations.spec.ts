@@ -11,7 +11,7 @@ test('sales creates an organization from the registry, adds a contact, edits it 
   await page.getByRole('listitem').filter({ hasText: name }).getByRole('button', { name: 'Use' }).click();
   await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(name);
   await expect(page.getByRole('textbox', { name: 'Organization number', exact: true })).toHaveValue(formatOrgNumber(number));
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
 
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
   await expect(toast(page, 'Organization created')).toBeVisible();
@@ -34,7 +34,8 @@ test('sales creates an organization from the registry, adds a contact, edits it 
   await expect(toast(page, 'Changes saved')).toBeVisible();
   await expect(page.getByRole('link', { name: '22 33 44 55' })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'History' }).click();
+  // History is an occasional section, under "More".
+  await page.getByRole('tab', { name: /^More/ }).click(); await page.getByRole('menuitem', { name: 'History', exact: true }).click();
   await expect(page.getByText('Dev Sales').first()).toBeVisible();
   await expect(page.getByText('changed', { exact: true })).toBeVisible();
 });

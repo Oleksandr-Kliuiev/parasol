@@ -1,0 +1,120 @@
+{
+  "recordedAt": "2026-10-17T20:14:33.165591+00:00",
+  "scope": "M34 local My day section navigation acceptance; product goal remains open",
+  "status": "locally-verified",
+  "frontend": {
+    "affected": 42,
+    "unit": 650,
+    "files": 74,
+    "maxWorkers": 2,
+    "fullBrowser": 99,
+    "focusedBrowserSubset": 3,
+    "newUniqueBrowserCases": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "tooling": 22,
+    "initialGzipKb": 292.4,
+    "budgetKb": 300,
+    "eslint": true,
+    "types": true,
+    "build": true
+  },
+  "navigation": {
+    "urls": [
+      "/?section=tasks",
+      "/?section=attention"
+    ],
+    "existingQueryParametersPreserved": true,
+    "unknownSectionsIgnored": true,
+    "permissionGatedTargets": true,
+    "noExtraTaskOrAttentionReads": true,
+    "directLocalDevelopmentLoginReturn": true,
+    "realEntraLoginVerified": false,
+    "keyboardBackRestoresOriginNavigation": true,
+    "lateLayoutAlignmentWhileTargetFocused": true,
+    "userInputOrFocusChangeStopsAlignment": true,
+    "observerAndListenersCleaned": true,
+    "nativeFragmentAlignedWithScrollRestoration": true,
+    "freshEntryHistoryKey": true
+  },
+  "visual": {
+    "engine": "Chromium",
+    "views": 32,
+    "widths": [
+      1440,
+      768,
+      390,
+      320
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "states": [
+      "overview",
+      "tasks",
+      "attention",
+      "returned-navigation"
+    ],
+    "errors": 0,
+    "warnings": 0,
+    "screenshotsReviewed": 32,
+    "keyboardAxeEngines": [
+      "Chromium",
+      "Firefox",
+      "WebKit"
+    ],
+    "informationalSpacing": "Existing Fluent and badge spacing reviewed; no new visual defect found"
+  },
+  "composition": {
+    "report": "composition-M34-2026-10-17.json",
+    "reportSha256": "d45e19c2215629a4b70d6f19648412a2f53c1a81a90b0c8c6e1c49db84ae9449",
+    "runId": "adc00205be7b",
+    "accepted": true,
+    "diagnostic": false,
+    "builtInThisRun": true,
+    "browser": 10,
+    "atlasRequests": 548,
+    "mutatingAtlasRequests": 0,
+    "cleanup": true,
+    "scope": "Existing actual recipient handoff also enters personal work using the new section link"
+  },
+  "inputChecks": {
+    "frontend": 418,
+    "crmBackendReused": 804,
+    "crmSqlBuildFixtureReused": 856,
+    "atlasReused": 1426,
+    "rootTooling": 32,
+    "compositionUnion": 2728,
+    "allCurrentBytesMatch": true
+  },
+  "unchangedServerAcceptance": {
+    "source": "customer-m365-M31-2026-10-17.json",
+    "crmUnit": 963,
+    "crmArchitecture": 94,
+    "crmAffectedSql": 93,
+    "atlasUnit": 714,
+    "atlasPostgres": 797,
+    "atlasBrowser": 90,
+    "newFullServerRunsForM34": false
+  },
+  "isolation": {
+    "separateDevelopmentCheckout": true,
+    "originalDemoBuildFilesUnchanged": 394,
+    "originalDemoSourceInputsProtectedDuringDevelopment": 2723,
+    "oldDemoStopReason": "timeout",
+    "oldDemoCleanup": true,
+    "manualDemoOpenedConfirmedByUser": true,
+    "staffWorkflowFeedbackReceived": false
+  },
+  "limitations": [
+    "Synthetic data; the new browser/layout attention panel uses a controlled BFF fixture, with separate actual joined-app acceptance",
+    "Local Development sign-in return is verified; working Entra and provider accounts are not connected",
+    "Other pages do not have a new complete visual matrix; their existing browser regressions pass",
+    "Human usability/time savings, historical financial review, target VPS and offsite acceptance remain open",
+    "M26 financial SQL208 and M29 native restore are historical, not new M34 runs"
+  ],
+  "published": false,
+  "deployed": false
+}

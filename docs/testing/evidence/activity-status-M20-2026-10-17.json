@@ -1,0 +1,69 @@
+{
+  "milestone": "M20",
+  "localDate": "2026-10-17",
+  "syntheticOnly": true,
+  "frontend": {
+    "passed": 484,
+    "files": 56,
+    "failed": 0,
+    "skipped": 0,
+    "warnings": 0,
+    "errors": 0
+  },
+  "webInputHashesUnchanged": 361,
+  "static": {
+    "eslint": true,
+    "appTypescript": true,
+    "e2eTypescript": true,
+    "compositionTypescript": true
+  },
+  "spaKB": 290.5,
+  "spaBudgetKB": 300,
+  "sql": {
+    "passed": 38,
+    "failed": 0,
+    "skipped": 0,
+    "sourceInputs": 775,
+    "inputsStillMatch": true,
+    "ownedContainerAbsent": true,
+    "privateRuntimeRemoved": true
+  },
+  "architecture": {
+    "passed": 94,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "expected": 55,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "browserCleanup": true,
+  "composition": {
+    "accepted": true,
+    "builtInThisRun": true,
+    "passed": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "atlasRequests": 563,
+    "providerWrites": 0,
+    "cleanup": true
+  },
+  "review": "clear",
+  "diagnosticsRetained": {
+    "initialBrowser": {
+      "passed": 53,
+      "total": 55
+    },
+    "nativeFocusDiagnostic": "confirmed closing DialogSurface blocks raw-presence focus gate; unchanged browser assertions pass after lifecycle correction"
+  },
+  "limits": [
+    "Successful already-open reopen is a read-time no-op: it retains its ETag and does not provide a post-read SQL CAS.",
+    "Actual transitions retain SQL rowversion protection through SaveChanges.",
+    "Calendar positive control uses an in-process fake; remaining provider data uses local synthetic fixtures."
+  ],
+  "published": false,
+  "deployed": false
+}

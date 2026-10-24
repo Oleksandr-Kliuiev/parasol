@@ -1,0 +1,124 @@
+import { AlertUrgent20Regular, Clock20Regular, CalendarClock20Regular, Receipt20Regular, TaskListSquareLtr20Regular, Warning20Regular } from '@fluentui/react-icons';
+import { useTranslation } from 'react-i18next';
+import type { PagedResult } from '../../api/types';
+import { Permissions, useCan, useCurrentUser } from '../../auth/CurrentUserContext';
+import { KpiRow, KpiTile } from '../../shared/components/KpiTile';
+import { formatMoney, formatNumber, todayIso } from '../../shared/utils/format';
+import { addDays, startOfWeek } from '../../shared/utils/week';
+import { useCachedQueryData } from '../../shared/utils/useCachedQueryData';
+import type { Activity } from '../activities/types';
+import { useInvoices } from '../billing/api';
+import { useReminders } from '../contracts/api';
+import type { AtlasAttentionView } from '../parasol/atlasAttentionContract';
+import { useAllTimeEntries } from '../time/api';
+import type { MyDayProfile } from './myDayProfile';
+
+type Tile = 'urgent' | 'tasks' | 'hours' | 'reminders' | 'overdue' | 'registry';
+
+const order: Record<MyDayProfile, readonly Tile[]> = {
+  work: ['urgent', 'tasks', 'hours', 'reminders', 'registry'],
+  lead: ['urgent', 'tasks', 'hours', 'reminders', 'registry'],
+  finance: ['overdue', 'urgent', 'reminders', 'hours', 'registry'],
+};
+
+/**
+ * Four key figures above the panels. The Atlas and task figures read the panels' own query results from the cache (the
+ * panels own the request, its refresh and its errors), so the tiles add no reads and never show a number the panel does not.
+ */
+export function MyDayTiles({ profile, organizations, warnings }: { profile: MyDayProfile; organizations: number; warnings: number }) {
+  const { t } = useTranslation();
+  const user = useCurrentUser();
+  const permissionsKey = JSON.stringify([...user.permissions].sort());
+  const canCustomers = useCan(Permissions.customersRead);
+  const canAtlas = useCan(Permissions.parasolAtlasRead);
+  const canAttention = canCustomers && canAtlas;
+  const canTasks = useCan(Permissions.activitiesRead);
+  const canTime = useCan(Permissions.timeOwn);
+  const canContracts = useCan(Permissions.contractsRead);
+  const canBilling = useCan(Permissions.billingRead);
+  const canMoney = useCan(Permissions.financeRead);
+  const monday = startOfWeek(todayIso());
+
+  const attention = useCachedQueryData<AtlasAttentionView>(['parasol', 'atlas-attention', user.id, permissionsKey]);
+  const tasks = useCachedQueryData<{ page: PagedResult<Activity> }>(['activities', 'personal', user.id, permissionsKey]);
+  const week = useAllTimeEntries({ from: monday, to: addDays(monday, 6), mine: true }, canTime);
+  const reminders = useReminders({ mine: true }, canContracts);
+  const overdue = useInvoices({ overdueOnly: true, limit: 1 }, canBilling);
+
+  const pending = t('myDay.loadingValue');
+  const view = attention && ['READY', 'PARTIAL'].includes(attention.status) ? attention : null;
+  // A read that ended without figures says how, instead of waiting for figures that will not come.
+  const attentionEnded = attention && !view ? (attention.status === 'NOT_CONFIGURED' ? 'myDay.kpi.urgentNotConfigured' : 'myDay.kpi.urgentFailed') : null;
+  const tiles: Record<Tile, React.ReactNode> = {
+    urgent: canAttention && (
+      <KpiTile
+        key="urgent"
+        icon={<AlertUrgent20Regular />}
+        label={t('myDay.kpi.urgent')}
+        value={view?.totals ? formatNumber(view.totals.high + view.totals.critical) : attentionEnded ? '—' : pending}
+        // A partial read says so here too, not only "20 of 20 read" (the panel names what is incomplete).
+        foot={view?.totals && view.coverage
+          ? view.status === 'PARTIAL' ? t('myDay.kpi.urgentFootPartial', { critical: view.totals.critical })
+            : t('myDay.kpi.urgentFoot', { critical: view.totals.critical, ready: view.coverage.readyCustomers, selected: view.coverage.selectedCustomers })
+          : t(attentionEnded ?? 'myDay.kpi.urgentUnread')}
+        to="?section=attention#my-day-attention"
+      />
+    ),
+    tasks: canTasks && (
+      <KpiTile
+        key="tasks"
+        tone="iris"
+        icon={<TaskListSquareLtr20Regular />}
+        label={t('myDay.kpi.tasks')}
+        value={tasks ? formatNumber(tasks.page.totalCount) : pending}
+        foot={t('myDay.kpi.tasksFoot')}
+        to="?section=tasks#my-day-tasks"
+      />
+    ),
+    hours: canTime && (
+      <KpiTile
+        key="hours"
+        tone="spruce"
+        icon={<Clock20Regular />}
+        label={t('myDay.kpi.hours')}
+        value={week.data ? t('myDay.kpi.hoursValue', { hours: formatNumber(week.data.summary.hours) }) : pending}
+        foot={week.data ? t('myDay.kpi.hoursFoot', { billable: formatNumber(week.data.summary.billableHours), fresh: formatNumber(week.data.summary.newHours) }) : pending}
+        to="/time"
+      />
+    ),
+    reminders: canContracts && (
+      <KpiTile
+        key="reminders"
+        tone="saffron"
+        icon={<CalendarClock20Regular />}
+        label={t('myDay.kpi.reminders')}
+        value={reminders.total !== null ? formatNumber(reminders.total) : pending}
+        foot={t('myDay.kpi.remindersFoot')}
+        to="/contracts"
+      />
+    ),
+    overdue: canBilling && (
+      <KpiTile
+        key="overdue"
+        icon={<Receipt20Regular />}
+        label={t('myDay.kpi.overdue')}
+        value={overdue.data ? formatNumber(overdue.data.count) : pending}
+        foot={overdue.data && canMoney ? t('myDay.kpi.overdueFoot', { amount: formatMoney(overdue.data.overdue) }) : t('myDay.kpi.overdueOpen')}
+        to="/billing/invoices?overdue=true"
+      />
+    ),
+    registry: (
+      <KpiTile
+        key="registry"
+        tone="neutral"
+        icon={<Warning20Regular />}
+        label={t('myDay.kpi.registry')}
+        value={formatNumber(warnings)}
+        foot={t('myDay.kpi.registryFoot', { count: organizations })}
+      />
+    ),
+  };
+  const shown = order[profile].map((name) => tiles[name]).filter(Boolean).slice(0, 4);
+  if (shown.length === 0) return null;
+  return <KpiRow label={t('myDay.kpiLabel')}>{shown}</KpiRow>;
+}

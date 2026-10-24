@@ -44,6 +44,7 @@ public static class ModuleRegistration
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddScoped<IRequestContext, NullRequestContext>();
         services.TryAddScoped<MessageHandlingContext>();
+        services.TryAddScoped<TimeBankTransaction>();
         services.TryAddScoped<AuditingInterceptor>();
         services.TryAddSingleton(new ModuleDbContextRegistry());
         services.TryAddSingleton<OutboxEventTypeResolver>();

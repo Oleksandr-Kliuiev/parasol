@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "runId": "e7a6344fa5d4",
+  "accepted": false,
+  "diagnostic": true,
+  "build": {
+    "builtInThisRun": false,
+    "diagnostic": true
+  },
+  "browser": {
+    "startTime": "2026-10-16T18:14:50.854Z",
+    "duration": 24426.257,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "evidence": {
+    "taskCount": 1,
+    "receiptCount": 1,
+    "createAuditCount": 1,
+    "totalActivityLoggedCount": 2,
+    "bodyIsNull": true,
+    "genericSubject": true,
+    "sourceTextAbsentFromTask": true,
+    "sourceTextAbsentFromAudit": true,
+    "providerWrites": 0,
+    "actualScale": {
+      "clients": 40,
+      "devices": 400,
+      "employees": 3
+    },
+    "privileges": {
+      "crmWebRestricted": true,
+      "crmWorkerRestricted": true,
+      "atlasRuntimeRestricted": true
+    }
+  },
+  "cleanup": true
+}

@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
-  Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -15,70 +13,53 @@ import {
   SearchBox,
   Switch,
   Tab,
-  TabList,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  Text,
   Textarea,
   makeStyles,
-  tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { ArrowUpload20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import {
+  ArrowRepeatAll16Regular,
+  ArrowUpload20Regular,
+  CalendarCancel16Regular,
+  Key16Regular,
+  KeyMultiple16Regular,
+  KeyMultiple24Regular,
+  LinkDismiss16Regular,
+  Receipt16Regular,
+} from '@fluentui/react-icons';
+import { StatGrid, StatTile } from '../../shared/components/KpiTile';
+import { useStatFitStyles } from '../billing/flushStyles';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
-import { AppLink } from '../../shared/components/AppLink';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { Panel } from '../../shared/components/Panel';
+import { FilterField, Toolbar } from '../../shared/components/Toolbar';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
-import { formatDate, formatDateTime, formatMoney, formatNumber } from '../../shared/utils/format';
+import { formatNumber } from '../../shared/utils/format';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
 import { useCatalogStyles } from '../catalog/styles';
+import { useDialogStyles } from '../contracts/dialogStyles';
 import { LicenseUsageView, ReconciliationView } from './LicenseUsageViews';
 import { useImportSubscriptions, useLicensingAttention, useSubscriptions } from './api';
-import type { ImportResult, Subscription } from './types';
+import { LicenceReadAt } from './LicenceReadAt';
+import { SubscriptionTable } from './SubscriptionTable';
+import type { ImportResult } from './types';
 import { SavedViews } from '../../shared/views/SavedViews';
+import { ScrollTabList } from '../../shared/components/ScrollTabList';
 
 const useStyles = makeStyles({
-  tiles: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))',
-    gap: tokens.spacingHorizontalM,
-    marginBottom: tokens.spacingVerticalL,
-  },
-  tile: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXXS,
-    padding: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
-  },
-  value: {
-    fontSize: tokens.fontSizeHero700,
-    lineHeight: tokens.lineHeightHero700,
-    fontWeight: tokens.fontWeightSemibold,
-    fontVariantNumeric: 'tabular-nums',
-  },
-  label: {
-    color: tokens.colorNeutralForeground3,
-    fontSize: tokens.fontSizeBase200,
-  },
-  warn: { color: tokens.colorPaletteDarkOrangeForeground1 },
-  tabs: { marginBottom: tokens.spacingVerticalM },
+  tabs: { marginBottom: '16px', overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
 });
 
 /** CSP subscriptions across customers, with the two things that cost money if missed: cancellation windows and renewals. */
 export function LicensesPage() {
   const styles = useStyles();
+  const stat = useStatFitStyles();
   const catalog = useCatalogStyles();
   const { t } = useTranslation();
   const canManage = useCan(Permissions.licensingManage);
@@ -115,19 +96,18 @@ export function LicensesPage() {
         title={t('licenses.title')}
         subtitle={t('licenses.subtitle')}
         actions={
-          canManage &&
-          onSubscriptions && (
-            <Button {...restoreFocusTarget} appearance="primary" icon={<ArrowUpload20Regular />} onClick={() => setImporting(true)}>
-              {t('licenses.import')}
-            </Button>
-          )
+          <>
+            <SavedViews scope="licenses" keys={['view', 'renewing', 'window', 'notBilled', 'unlinked']} />
+            {canManage && onSubscriptions && (
+              <Button {...restoreFocusTarget} appearance="primary" icon={<ArrowUpload20Regular />} onClick={() => setImporting(true)}>
+                {t('licenses.import')}
+              </Button>
+            )}
+          </>
         }
       />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
-        <SavedViews scope="licenses" keys={['view', 'renewing', 'window', 'notBilled', 'unlinked']} />
-      </div>
 
-      <TabList
+      <ScrollTabList
         className={styles.tabs}
         selectedValue={view}
         onTabSelect={(_, d) => {
@@ -140,143 +120,88 @@ export function LicensesPage() {
         <Tab value="subscriptions">{t('licenses.tabs.subscriptions')}</Tab>
         <Tab value="usage">{t('licenses.tabs.usage')}</Tab>
         {canSeeCost && <Tab value="reconciliation">{t('licenses.tabs.reconciliation')}</Tab>}
-      </TabList>
+      </ScrollTabList>
 
       {view === 'usage' && <LicenseUsageView />}
       {view === 'reconciliation' && canSeeCost && <ReconciliationView />}
 
       {onSubscriptions && (
         <>
-          <div className={styles.tiles}>
-            <div className={styles.tile}>
-              <span className={styles.value}>{formatNumber(summary?.licenses ?? 0, 0)}</span>
-              <span className={styles.label}>
-                {t('licenses.tiles.licenses', {
-                  subscriptions: summary?.subscriptions ?? 0,
-                })}
-              </span>
-            </div>
-            <div className={styles.tile}>
-              <span className={`${styles.value} ${(summary?.cancellationWindowOpen ?? 0) > 0 ? styles.warn : ''}`}>{summary?.cancellationWindowOpen ?? 0}</span>
-              <span className={styles.label}>{t('licenses.tiles.cancellationWindow')}</span>
-            </div>
-            <div className={styles.tile}>
-              <span className={styles.value}>{summary?.renewingSoon ?? 0}</span>
-              <span className={styles.label}>{t('licenses.tiles.renewingSoon')}</span>
-            </div>
-            <div className={styles.tile}>
-              <span className={`${styles.value} ${(summary?.notBilled ?? 0) > 0 ? styles.warn : ''}`}>{summary?.notBilled ?? 0}</span>
-              <span className={styles.label}>{t('licenses.tiles.notBilled')}</span>
-            </div>
-            <div className={styles.tile}>
-              <span className={styles.value}>{summary?.withoutOrganization ?? 0}</span>
-              <span className={styles.label}>{t('licenses.tiles.withoutOrganization')}</span>
-            </div>
-          </div>
-
-          <div className={catalog.filters}>
-            <SearchBox
-              id="licenses-search"
-              className={catalog.search}
-              value={search}
-              onChange={(_, d) => setSearch(d.value)}
-              placeholder={t('licenses.search')}
-              aria-label={t('licenses.search')}
+          <StatGrid className={stat.fit} label={t('licenses.tiles.label')}>
+            <StatTile
+              icon={<Key16Regular />}
+              tone="iris"
+              label={t('licenses.tiles.licenses')}
+              value={formatNumber(summary?.licenses ?? 0, 0)}
+              note={t('licenses.tiles.licensesNote', { count: summary?.subscriptions ?? 0 })}
             />
-            <Switch label={t('licenses.filters.window')} checked={filters.cancellationWindowOpen} onChange={(_, d) => setFlag('window', d.checked)} />
-            <Switch label={t('licenses.filters.renewing')} checked={filters.renewingSoon} onChange={(_, d) => setFlag('renewing', d.checked)} />
-            <Switch label={t('licenses.filters.notBilled')} checked={filters.notBilled} onChange={(_, d) => setFlag('notBilled', d.checked)} />
-            <Switch label={t('licenses.filters.unlinked')} checked={filters.withoutOrganization} onChange={(_, d) => setFlag('unlinked', d.checked)} />
-          </div>
+            <StatTile
+              icon={<CalendarCancel16Regular />}
+              tone="ember"
+              label={t('licenses.tiles.cancellationWindow')}
+              value={summary?.cancellationWindowOpen ?? 0}
+              status={(summary?.cancellationWindowOpen ?? 0) > 0 ? 'bad' : undefined}
+              note={t('licenses.tiles.cancellationWindowNote')}
+            />
+            <StatTile
+              icon={<ArrowRepeatAll16Regular />}
+              tone="spruce"
+              label={t('licenses.tiles.renewingSoon')}
+              value={summary?.renewingSoon ?? 0}
+              note={t('licenses.tiles.renewingSoonNote')}
+            />
+            <StatTile
+              icon={<Receipt16Regular />}
+              tone="saffron"
+              label={t('licenses.tiles.notBilled')}
+              value={summary?.notBilled ?? 0}
+              status={(summary?.notBilled ?? 0) > 0 ? 'bad' : undefined}
+              note={t('licenses.tiles.notBilledNote')}
+            />
+            <StatTile
+              icon={<LinkDismiss16Regular />}
+              label={t('licenses.tiles.withoutOrganization')}
+              value={summary?.withoutOrganization ?? 0}
+              note={t('licenses.notLinked')}
+            />
+          </StatGrid>
+
+          <Toolbar label={t('licenses.filterLabel')}>
+            <FilterField kind="search" label={t('licenses.search')}>
+              <SearchBox id="licenses-search" value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('licenses.search')} />
+            </FilterField>
+            <Switch className={catalog.toggle} label={t('licenses.filters.window')} checked={filters.cancellationWindowOpen} onChange={(_, d) => setFlag('window', d.checked)} />
+            <Switch className={catalog.toggle} label={t('licenses.filters.renewing')} checked={filters.renewingSoon} onChange={(_, d) => setFlag('renewing', d.checked)} />
+            <Switch className={catalog.toggle} label={t('licenses.filters.notBilled')} checked={filters.notBilled} onChange={(_, d) => setFlag('notBilled', d.checked)} />
+            <Switch className={catalog.toggle} label={t('licenses.filters.unlinked')} checked={filters.withoutOrganization} onChange={(_, d) => setFlag('unlinked', d.checked)} />
+          </Toolbar>
 
           {error ? (
             <ErrorState error={error} onRetry={() => void refetch()} />
           ) : (
-            <div className={catalog.tableWrap}>
-              <Table className={catalog.table} aria-label={t('licenses.title')}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHeaderCell>{t('licenses.fields.offer')}</TableHeaderCell>
-                    <TableHeaderCell>{t('licenses.fields.customer')}</TableHeaderCell>
-                    <TableHeaderCell className={catalog.number}>{t('licenses.fields.quantity')}</TableHeaderCell>
-                    <TableHeaderCell>{t('licenses.fields.term')}</TableHeaderCell>
-                    <TableHeaderCell>{t('licenses.fields.renewal')}</TableHeaderCell>
-                    {canSeeCost && <TableHeaderCell className={catalog.number}>{t('licenses.fields.partnerPrice')}</TableHeaderCell>}
-                    <TableHeaderCell>{t('licenses.fields.billing')}</TableHeaderCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.map((subscription) => (
-                    <TableRow key={subscription.id}>
-                      <TableCell>
-                        <span className={catalog.name}>{subscription.offerName ?? subscription.offerId}</span>
-                        <div className={catalog.sku}>
-                          {subscription.offerId}
-                          {subscription.source === 'Distributor' ? ` · ${t('licenses.sources.Distributor')}` : ''}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {subscription.organizationId ? (
-                          <AppLink to={`/organizations/${subscription.organizationId}?tab=licenses`}>{subscription.organizationName}</AppLink>
-                        ) : (
-                          <span>
-                            {subscription.cspCustomerName}
-                            <div className={catalog.sku}>{t('licenses.notLinked')}</div>
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className={catalog.number}>{subscription.quantity}</TableCell>
-                      <TableCell>
-                        {subscription.term === 'Unknown' ? '—' : t(`licenses.terms.${subscription.term}`)}
-                        <div className={catalog.sku}>{subscription.autoRenew ? t('licenses.autoRenews') : t('licenses.noAutoRenew')}</div>
-                      </TableCell>
-                      <TableCell className="tabular">
-                        {subscription.renewalDate
-                          ? formatDate(subscription.renewalDate)
-                          : subscription.commitmentEndDate
-                            ? formatDate(subscription.commitmentEndDate)
-                            : '—'}
-                        {subscription.cancellationWindowOpen && subscription.cancellationWindowEndsAt && (
-                          <div>
-                            <Badge appearance="tint" color="warning">
-                              {t('licenses.windowUntil', {
-                                at: formatDateTime(subscription.cancellationWindowEndsAt),
-                              })}
-                            </Badge>
-                          </div>
-                        )}
-                      </TableCell>
-                      {canSeeCost && <TableCell className={catalog.number}>{formatMoney(subscription.partnerUnitPrice)}</TableCell>}
-                      <TableCell>
-                        {subscription.isBilled ? (
-                          <Badge appearance="tint" color="success">
-                            {t('licenses.billed')}
-                          </Badge>
-                        ) : (
-                          <Badge appearance="tint" color="warning">
-                            {subscription.productId ? t('licenses.noContractLine') : t('licenses.noProduct')}
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {!isPending && data.length === 0 && <EmptyState message={t('licenses.empty')} />}
-              <ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />
-            </div>
+            <>
+            <LicenceReadAt rows={data} />
+            <SubscriptionTable
+              rows={data}
+              showCustomer
+              canSeeCost={canSeeCost}
+              empty={!isPending && <EmptyState icon={<KeyMultiple24Regular />} message={t('licenses.empty')} />}
+              footer={<ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />}
+            />
+            </>
           )}
         </>
       )}
 
       <Dialog open={importing} onOpenChange={(_, d) => !d.open && setImporting(false)}>
-        <DialogSurface>{importing && <ImportForm onClose={() => setImporting(false)} />}</DialogSurface>
+        <DialogSurface><ImportForm onClose={() => setImporting(false)} /></DialogSurface>
       </Dialog>
     </>
   );
 }
 
 function ImportForm({ onClose }: { onClose: () => void }) {
+  const dialog = useDialogStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const importSubscriptions = useImportSubscriptions();
@@ -311,31 +236,33 @@ function ImportForm({ onClose }: { onClose: () => void }) {
     <DialogBody>
       <DialogTitle>{t('licenses.importTitle')}</DialogTitle>
       <DialogContent>
-        <p style={{ marginTop: 0 }}>{t('licenses.importBody')}</p>
-        <Field label={t('licenses.importFile')}>
-          <input
-            type="file"
-            accept=".csv,text/csv,text/plain"
-            aria-label={t('licenses.importFile')}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void onFile(file);
-            }}
-          />
-        </Field>
-        <Field label={t('licenses.importPaste')} hint={t('licenses.importHint')}>
-          <Textarea
-            value={csv}
-            onChange={(_, d) => {
-              setCsv(d.value);
-              setPreview(null);
-            }}
-            resize="vertical"
-            rows={6}
-          />
-        </Field>
+        <p className={dialog.lead}>{t('licenses.importBody')}</p>
+        <div className={dialog.grid}>
+          <Field label={t('licenses.importFile')} className={dialog.wide}>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              aria-label={t('licenses.importFile')}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void onFile(file);
+              }}
+            />
+          </Field>
+          <Field className={dialog.wide} label={t('licenses.importPaste')} hint={t('licenses.importHint')}>
+            <Textarea
+              value={csv}
+              onChange={(_, d) => {
+                setCsv(d.value);
+                setPreview(null);
+              }}
+              resize="vertical"
+              rows={6}
+            />
+          </Field>
+        </div>
         {preview && (
-          <MessageBar intent={preview.warnings.length > 0 ? 'warning' : 'info'} style={{ marginTop: 12 }}>
+          <MessageBar intent={preview.warnings.length > 0 ? 'warning' : 'info'} className={dialog.after}>
             <MessageBarBody>
               {t('licenses.previewResult', {
                 created: preview.created,
@@ -347,7 +274,7 @@ function ImportForm({ onClose }: { onClose: () => void }) {
           </MessageBar>
         )}
         {importSubscriptions.error && (
-          <MessageBar intent="error" style={{ marginTop: 12 }}>
+          <MessageBar intent="error" className={dialog.after}>
             <MessageBarBody>{errorMessage(importSubscriptions.error, t)}</MessageBarBody>
           </MessageBar>
         )}
@@ -365,66 +292,28 @@ function ImportForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** CSP subscriptions of one customer (docs/02 §4.2, tab "Licenses"). */
+/** CSP subscriptions of one customer (docs/02 §4.2, tab "Licenses"), in the card every list of the customer's tabs has. */
 export function OrganizationLicensesTab({ organizationId }: { organizationId: string }) {
-  const catalog = useCatalogStyles();
   const { t } = useTranslation();
   const canSeeCost = useCan(Permissions.financeCostRead);
   const subscriptions = useSubscriptions({ organizationId });
   const { items: data, error, isPending, refetch } = subscriptions;
 
-  if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
-
   return (
-    <div className={catalog.tableWrap}>
-      <Table className={catalog.table} aria-label={t('licenses.title')}>
-        <TableHeader>
-          <TableRow>
-            <TableHeaderCell>{t('licenses.fields.offer')}</TableHeaderCell>
-            <TableHeaderCell className={catalog.number}>{t('licenses.fields.quantity')}</TableHeaderCell>
-            <TableHeaderCell>{t('licenses.fields.term')}</TableHeaderCell>
-            <TableHeaderCell>{t('licenses.fields.renewal')}</TableHeaderCell>
-            {canSeeCost && <TableHeaderCell className={catalog.number}>{t('licenses.fields.partnerPrice')}</TableHeaderCell>}
-            <TableHeaderCell>{t('licenses.fields.billing')}</TableHeaderCell>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((subscription: Subscription) => (
-            <TableRow key={subscription.id}>
-              <TableCell>
-                <span className={catalog.name}>{subscription.offerName ?? subscription.offerId}</span>
-                <div className={catalog.sku}>{subscription.productName ?? subscription.offerId}</div>
-              </TableCell>
-              <TableCell className={catalog.number}>{subscription.quantity}</TableCell>
-              <TableCell>{subscription.term === 'Unknown' ? '—' : t(`licenses.terms.${subscription.term}`)}</TableCell>
-              <TableCell className="tabular">
-                {subscription.renewalDate ? formatDate(subscription.renewalDate) : subscription.commitmentEndDate ? formatDate(subscription.commitmentEndDate) : '—'}
-                {subscription.cancellationWindowOpen && subscription.cancellationWindowEndsAt && (
-                  <div>
-                    <Badge appearance="tint" color="warning">
-                      {t('licenses.windowUntil', {
-                        at: formatDateTime(subscription.cancellationWindowEndsAt),
-                      })}
-                    </Badge>
-                  </div>
-                )}
-              </TableCell>
-              {canSeeCost && <TableCell className={catalog.number}>{formatMoney(subscription.partnerUnitPrice)}</TableCell>}
-              <TableCell>
-                {subscription.isBilled ? (
-                  <Text>{t('licenses.billed')}</Text>
-                ) : (
-                  <Badge appearance="tint" color="warning">
-                    {subscription.productId ? t('licenses.noContractLine') : t('licenses.noProduct')}
-                  </Badge>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      {!isPending && data.length === 0 && <EmptyState message={t('licenses.emptyForOrganization')} />}
-      <ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />
-    </div>
+    <Panel title={t('licenses.title')} icon={<KeyMultiple16Regular />} actions={<LicenceReadAt rows={data} />}>
+      {error ? (
+        <ErrorState error={error} onRetry={() => void refetch()} />
+      ) : isPending ? null : data.length === 0 ? (
+        <EmptyState icon={<KeyMultiple24Regular />} message={t('licenses.emptyForOrganization')} />
+      ) : (
+        <SubscriptionTable
+          rows={data}
+          showCustomer={false}
+          canSeeCost={canSeeCost}
+          inPanel
+          footer={<ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />}
+        />
+      )}
+    </Panel>
   );
 }

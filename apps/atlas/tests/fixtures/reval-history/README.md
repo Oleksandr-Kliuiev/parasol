@@ -2,8 +2,16 @@
 
 `rsdc.json.gz` is gzip-compressed canonical JSON (`version`, `view`, `provenance`,
 `files`). `files` maps repository-relative paths to base64-encoded historical bytes.
-The test reader uses these bytes for frozen sources/build outputs and reads unchanged
-historical verification metadata from the repository. It never writes production files.
+The test reader uses these bytes for frozen sources/build outputs. It never writes production files.
+
+`rsdc-supplement.json.gz` adds the original `docs/AI_CONTEXT_MAP.md` from the exact commit
+below and 907 SHA-256 references recovered from that same commit. These references admit
+unchanged historical metadata/configuration/migrations in the repository only at their
+original hashes. The reader has no unrestricted current-checkout fallback or Git-history
+dependency at runtime. The two archives cover all 2,101 requested identity inputs;
+unknown, missing or mismatched referenced bytes return `null`. The supplementary archive
+and original archive digest are pinned and tested. The original archive, manifests and
+approval seals were not regenerated or edited.
 
 Provenance: Atlas commit `459b1de0f2edd0a6870d12a19af20191d30db9c2`, the committed
 verification ZIPs, and the deterministic API/operator builds of that commit with its

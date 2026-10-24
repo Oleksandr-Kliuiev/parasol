@@ -5,12 +5,13 @@ namespace Crm.Notifications.Features;
 
 /// <summary>
 /// The wording of the digest e-mail. The interface renders the same notices through i18n; e-mail leaves the browser behind,
-/// so the two languages of the company (bokmål, English) live here, keyed by kind.
+/// so the two languages of the company (Norwegian, English) live here, keyed by kind; a nynorsk reader gets the bokmål text.
 /// </summary>
 internal static class NotificationTexts
 {
     public static bool IsNorwegian(string? language) =>
-        language is null || language.StartsWith("nb", StringComparison.OrdinalIgnoreCase) || language.StartsWith("no", StringComparison.OrdinalIgnoreCase);
+        language is null || language.StartsWith("nb", StringComparison.OrdinalIgnoreCase) || language.StartsWith("nn", StringComparison.OrdinalIgnoreCase)
+        || language.StartsWith("no", StringComparison.OrdinalIgnoreCase);
 
     public static string Subject(string? language, int count) => IsNorwegian(language)
         ? count == 1 ? "Vardahei CRM: 1 sak venter" : $"Vardahei CRM: {count} saker venter"

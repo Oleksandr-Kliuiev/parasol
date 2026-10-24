@@ -1,0 +1,137 @@
+{
+  "format": 1,
+  "milestone": "M26",
+  "date": "2026-10-17",
+  "acceptedLocally": true,
+  "scope": "Read-only financial source review of one saved Time entry and a server-side filter for saved review notes.",
+  "verification": {
+    "crmUnit": {
+      "passed": 939,
+      "failed": 0,
+      "skipped": 0
+    },
+    "crmArchitecture": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0
+    },
+    "crmSql": {
+      "passed": 208,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "Affected Time, Billing and PowerOffice test classes, including the 13 new financial-review cases; not all CRM integration tests."
+    },
+    "crmSqlNewFocused": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "includedInAffectedTotal": true
+    },
+    "frontend": {
+      "passed": 572,
+      "files": 66,
+      "failed": 0,
+      "skipped": 0
+    },
+    "crmBrowser": {
+      "passed": 78,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "retries": 0,
+      "scope": "Current Time/Service/Activities/Parasol regressions. Critical finance source-review workflow uses the real SQL-backed API in Chromium, Firefox and WebKit; two new phone accessibility cases use a controlled synthetic report in Chromium light/dark."
+    },
+    "actualComposition": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "retries": 0,
+      "runId": "cacf315c9c43",
+      "builtInThisRun": true,
+      "atlasRequests": 572,
+      "atlasMutatingRequests": 0,
+      "cleanup": true,
+      "clients": 40,
+      "devices": 400,
+      "employees": 3
+    },
+    "static": [
+      "ESLint",
+      "app TypeScript",
+      "E2E TypeScript",
+      "composition TypeScript",
+      "Release backend builds",
+      "SPA build",
+      "SPA gzip budget"
+    ],
+    "initialBundleKB": 291.8,
+    "bundleBudgetKB": 300,
+    "verifiedInputHashes": {
+      "sql": 850,
+      "web": 398,
+      "atlas": 1421,
+      "compositionUnion": 2669
+    },
+    "atlasStrictReused": {
+      "unit": 711,
+      "postgresql": 789,
+      "browser": 90,
+      "sourceInputsUnchanged": 1421,
+      "fullTreeUnchanged": true,
+      "evidence": "atlas-strict-current-2026-10-16.json",
+      "rerunForM26": false
+    }
+  },
+  "invariants": [
+    "Five read permissions are all required before lookup; no role gains this screen through a single permission.",
+    "Repeated GET preserves Time/Contracts/Billing row versions, balances, audit and outbox.",
+    "Cancellation releases the actual SQL row/month read lease.",
+    "Saved-note filtering precedes totals and cursor paging and retains existing employee scope.",
+    "Closed, deleted and foreign bank references cannot become a false clean result or leak a foreign bank name.",
+    "Old fully returned receipts and exported allocation revisions are interpreted explicitly.",
+    "Refresh, failure, permission loss and entry changes remove previous facts; text is not rendered as HTML.",
+    "No financial repair, approval, withdrawal, schema migration, production dependency or provider call is added."
+  ],
+  "retainedDiagnostics": [
+    {
+      "stage": "initial focused frontend",
+      "passed": 7,
+      "total": 9,
+      "resolution": "Fixture object was imported as a function; corrected the adapter without weakening assertions."
+    },
+    {
+      "stage": "DTO GUID review",
+      "resolution": "Validated the existing SQL-sortable SequentialId GUID shape; added a non-RFC GUID regression instead of assuming UUID version/variant markers."
+    },
+    {
+      "stage": "initial full frontend",
+      "passed": 572,
+      "staticFailure": "TS6142",
+      "resolution": "Extracted UI permission imports from the shared DTO parser. Compiler settings and assertions unchanged."
+    },
+    {
+      "stage": "first browser invocation",
+      "passed": 76,
+      "total": 78,
+      "failed": 2,
+      "skipped": 0,
+      "flaky": 0,
+      "cleanup": true,
+      "resolution": "Long finding text overflowed on a 390px phone in both themes. Set the real Fluent MessageBar layout to multiline; kept viewport, width assertion, Axe and contrast thresholds."
+    }
+  ],
+  "limits": [
+    "Review reports observed related facts for one selected entry; it is not a global serializable snapshot or an audit of all historical finance data.",
+    "The saved-note checkbox is not a detector of all unflagged historical discrepancies.",
+    "Historical repairs need an explicit audited Finance decision; existing M23-M25 command guards remain in force.",
+    "Human usability feedback and measured staff time savings remain unverified.",
+    "Working Entra/provider accounts and Hostinger VPS acceptance remain separate authorized gates."
+  ],
+  "originalRepositoriesPreserved": true,
+  "localChangesPreserved": true,
+  "published": false,
+  "deployed": false,
+  "liveProviderCalls": false,
+  "goal": "active"
+}

@@ -14,16 +14,18 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableCellLayout,
   TableHeader,
   TableHeaderCell,
   TableRow,
-  Tooltip,
   makeStyles,
+  mergeClasses,
   tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular, MoreHorizontal20Regular, Star16Filled } from '@fluentui/react-icons';
+import { h } from '../../app/hearth';
+import { RecordCell } from '../organizations/RecordCell';
+import { useRecordStyles } from '../organizations/recordStyles';
+import { Add20Regular, MoreHorizontal20Regular, PeopleTeam24Regular, Star16Filled } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import type { OrganizationContactItem } from '../../api/types';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
@@ -34,32 +36,39 @@ import { useNotify } from '../../shared/components/useNotify';
 import { NARROW_SCREEN, useMediaQuery } from '../../shared/utils/useMediaQuery';
 import { useOrganizationContacts, useUpdateAffiliation } from './api';
 import { AddContactDialog, EditAffiliationDialog } from './ContactDialogs';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  toolbar: { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: tokens.spacingHorizontalM, marginBottom: tokens.spacingVerticalM },
-  tableWrap: { overflowX: 'auto', backgroundColor: tokens.colorNeutralBackground1, borderRadius: tokens.borderRadiusLarge, border: `1px solid ${tokens.colorNeutralStroke2}` },
+  toolbar: { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px' },
+  tableWrap: { borderRadius: '20px', border: `1px solid ${h.line}`, paddingLeft: '8px', paddingRight: '8px' },
   table: { minWidth: '720px' },
-  name: { display: 'inline-flex', alignItems: 'center', gap: tokens.spacingHorizontalXS, fontWeight: tokens.fontWeightSemibold, whiteSpace: 'nowrap' },
-  star: { color: tokens.colorPaletteMarigoldForeground1 },
-  roles: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXXS },
-  inactive: { color: tokens.colorNeutralForegroundDisabled },
-  cards: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
+  name: { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' },
+  nameLink: { fontWeight: 700, color: 'inherit' },
+  roles: { display: 'flex', flexWrap: 'wrap', gap: '4px' },
+  // A former contact reads quieter but stays legible (4.5:1); the "Former" pill carries the state.
+  inactive: { color: h.muted },
   card: {
     display: 'grid',
-    gridTemplateColumns: '1fr auto',
-    gap: tokens.spacingVerticalXS,
-    padding: tokens.spacingHorizontalM,
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    alignItems: 'start',
+    gap: '8px',
+    paddingTop: '12px',
+    paddingBottom: '14px',
+    paddingLeft: '14px',
+    paddingRight: '8px',
     backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
+    border: `1px solid ${h.line}`,
+    borderRadius: '16px',
+    boxShadow: tokens.shadow4,
   },
-  cardBody: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, minWidth: 0 },
-  cardLinks: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, overflowWrap: 'anywhere' },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
+  cardBody: { display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 },
+  cardLinks: { display: 'flex', flexDirection: 'column', gap: '4px', overflowWrap: 'anywhere', paddingLeft: '46px', fontSize: '13px' },
+  cardRoles: { paddingLeft: '46px' },
 });
 
 export function ContactsTab({ organizationId, organizationName }: { organizationId: string; organizationName: string }) {
   const styles = useStyles();
+  const record = useRecordStyles();
   const { t } = useTranslation();
   const notify = useNotify();
   const canWrite = useCan(Permissions.contactsWrite);
@@ -102,6 +111,31 @@ export function ContactsTab({ organizationId, organizationName }: { organization
   );
 
   const fullName = (contact: OrganizationContactItem) => `${contact.firstName} ${contact.lastName}`.trim();
+  const nameNode = (contact: OrganizationContactItem) => (
+    <span className={styles.name}>
+      <AppLink to={`/contacts/${contact.contactId}`} className={styles.nameLink}>{fullName(contact)}</AppLink>
+      {/* The word, not a star with a tooltip that only a mouse can reach. */}
+      {contact.isPrimary && (
+        <Badge appearance="tint" color="brand" size="small" icon={<Star16Filled />}>
+          {t('contacts.primary')}
+        </Badge>
+      )}
+      {!contact.isActive && (
+        <Badge appearance="outline" color="informative" size="small">
+          {t('contacts.inactive')}
+        </Badge>
+      )}
+    </span>
+  );
+  const roleBadges = (contact: OrganizationContactItem, className?: string) => (
+    <span className={mergeClasses(styles.roles, className)}>
+      {contact.roles.map((role) => (
+        <Badge key={role} appearance="tint" color="informative" size="small">
+          {t(`roles.${role}`)}
+        </Badge>
+      ))}
+    </span>
+  );
 
   return (
     <>
@@ -118,55 +152,35 @@ export function ContactsTab({ organizationId, organizationName }: { organization
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : narrow ? (
         <>
-          <ul className={styles.cards} aria-label={t('contacts.title')}>
+          <ul className={record.cards} aria-label={t('contacts.title')}>
             {data?.map((contact) => (
               <li key={contact.contactId} className={styles.card}>
                 <div className={styles.cardBody}>
-                  <span className={styles.name}>
-                    <AppLink to={`/contacts/${contact.contactId}`}>{fullName(contact)}</AppLink>
-                    {contact.isPrimary && (
-                      <Tooltip content={t('contacts.primary')} relationship="label">
-                        <Star16Filled className={styles.star} />
-                      </Tooltip>
-                    )}
-                    {!contact.isActive && (
-                      <Badge appearance="outline" color="subtle" size="small">
-                        {t('contacts.inactive')}
-                      </Badge>
-                    )}
-                  </span>
-                  {contact.title && <span className={styles.muted}>{contact.title}</span>}
-                  {contact.roles.length > 0 && (
-                    <span className={styles.roles}>
-                      {contact.roles.map((role) => (
-                        <Badge key={role} appearance="tint" color="informative" size="small">
-                          {t(`roles.${role}`)}
-                        </Badge>
+                  <RecordCell avatarName={fullName(contact)} size={36} name={nameNode(contact)} meta={[contact.title]} />
+                  {contact.roles.length > 0 && roleBadges(contact, styles.cardRoles)}
+                  {(contact.email || contact.phone || contact.mobilePhone) && (
+                    <span className={styles.cardLinks}>
+                      {contact.email && <Link href={`mailto:${contact.email}`}>{contact.email}</Link>}
+                      {[contact.phone, contact.mobilePhone].filter(Boolean).map((phone) => (
+                        <Link key={phone} href={`tel:${phone!.replace(/\s/g, '')}`}>
+                          {phone}
+                        </Link>
                       ))}
                     </span>
                   )}
-                  <span className={styles.cardLinks}>
-                    {contact.email && <Link href={`mailto:${contact.email}`}>{contact.email}</Link>}
-                    {[contact.phone, contact.mobilePhone].filter(Boolean).map((phone) => (
-                      <Link key={phone} href={`tel:${phone!.replace(/\s/g, '')}`}>
-                        {phone}
-                      </Link>
-                    ))}
-                  </span>
                 </div>
                 {canWrite && actionsMenu(contact)}
               </li>
             ))}
           </ul>
-          {data && data.length === 0 && <EmptyState message={t('contacts.empty')} />}
+          {data && data.length === 0 && <EmptyState icon={<PeopleTeam24Regular />} message={t('contacts.empty')} />}
         </>
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable className={styles.tableWrap}>
           <Table className={styles.table} aria-label={t('contacts.title')}>
             <TableHeader>
               <TableRow>
-                <TableHeaderCell>{t('contacts.columns.name')}</TableHeaderCell>
-                <TableHeaderCell>{t('contacts.columns.title')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 260 }}>{t('contacts.columns.name')}</TableHeaderCell>
                 <TableHeaderCell>{t('contacts.columns.roles')}</TableHeaderCell>
                 <TableHeaderCell>{t('contacts.columns.email')}</TableHeaderCell>
                 <TableHeaderCell>{t('contacts.columns.phone')}</TableHeaderCell>
@@ -186,32 +200,9 @@ export function ContactsTab({ organizationId, organizationName }: { organization
               {data?.map((contact) => (
                 <TableRow key={contact.contactId} className={contact.isActive ? undefined : styles.inactive}>
                   <TableCell>
-                    <TableCellLayout>
-                      <span className={styles.name}>
-                        <AppLink to={`/contacts/${contact.contactId}`}>{fullName(contact)}</AppLink>
-                        {contact.isPrimary && (
-                          <Tooltip content={t('contacts.primary')} relationship="label">
-                            <Star16Filled className={styles.star} />
-                          </Tooltip>
-                        )}
-                        {!contact.isActive && (
-                          <Badge appearance="outline" color="subtle" size="small">
-                            {t('contacts.inactive')}
-                          </Badge>
-                        )}
-                      </span>
-                    </TableCellLayout>
+                    <RecordCell avatarName={fullName(contact)} name={nameNode(contact)} meta={[contact.title]} />
                   </TableCell>
-                  <TableCell>{contact.title}</TableCell>
-                  <TableCell>
-                    <span className={styles.roles}>
-                      {contact.roles.map((role) => (
-                        <Badge key={role} appearance="tint" color="informative" size="small">
-                          {t(`roles.${role}`)}
-                        </Badge>
-                      ))}
-                    </span>
-                  </TableCell>
+                  <TableCell>{roleBadges(contact)}</TableCell>
                   <TableCell>{contact.email && <Link href={`mailto:${contact.email}`}>{contact.email}</Link>}</TableCell>
                   <TableCell>
                     {[contact.phone, contact.mobilePhone].filter(Boolean).map((phone) => (
@@ -229,8 +220,8 @@ export function ContactsTab({ organizationId, organizationName }: { organization
               ))}
             </TableBody>
           </Table>
-          {data && data.length === 0 && <EmptyState message={t('contacts.empty')} />}
-        </div>
+          {data && data.length === 0 && <EmptyState icon={<PeopleTeam24Regular />} message={t('contacts.empty')} />}
+        </ScrollTable>
       )}
 
       <AddContactDialog organizationId={organizationId} open={adding} onClose={() => setAdding(false)} />
