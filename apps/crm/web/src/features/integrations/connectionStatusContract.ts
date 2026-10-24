@@ -15,7 +15,7 @@ const integrationSchema = z.strictObject({
 });
 const heartbeatSchema = z.strictObject({ component: name, state: z.enum(['Current', 'Late', 'Missing']), beatAt: time.nullable(), ageSeconds: count.nullable() });
 const gapSchema = z.strictObject({
-  kind: z.enum(['Never', 'Stale', 'Failed', 'Paused', 'OutboundFailed', 'WorkerLate', 'WorkerMissing']),
+  kind: z.enum(['Never', 'Stale', 'Failed', 'Paused', 'OutboundFailed', 'ActionsUncertain', 'WorkerLate', 'WorkerMissing']),
   system: name.nullable(), job: name.nullable(), component: name.nullable(), count: count.nullable(),
 });
 const schema = z.strictObject({

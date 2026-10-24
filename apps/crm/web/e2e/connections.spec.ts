@@ -13,7 +13,7 @@ test('an integration manager sees the CRM\'s own integration state, its gaps in 
   await expect(page.getByText(/The systems themselves are not contacted/)).toBeVisible();
   const atera = page.getByRole('region', { name: 'Atera', exact: true });
   await expect(atera.getByText('Alerts (Atera)', { exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Background service', exact: true }).getByText('Running')).toHaveCount(2);
+  await expect(page.getByRole('region', { name: 'Background service', exact: true }).getByText('Running')).toHaveCount(3);
   await expect(page.getByRole('button', { name: /Test connection|Run now|Sync|Pause|Edit/i })).toHaveCount(0);
   expect(reads).toBe(1);
   gaps = true; const refresh = page.getByRole('button', { name: 'Refresh status', exact: true });

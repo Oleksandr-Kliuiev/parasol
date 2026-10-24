@@ -51,6 +51,25 @@ public sealed record ExternalTimeEntry(
 public sealed record TimeImportResult(int Created, int Updated, int Unchanged, int NeedsReview);
 
 /// <summary>
+/// One entry as it would be recorded at the service desk (M39.3: own time also recorded in Atera). Only an entry the CRM made
+/// (<paramref name="Source"/> <see cref="TimeSource.Crm"/>) is ever sent; an imported one came from the desk.
+/// </summary>
+public sealed record TimeEntryForSending(
+    Guid Id,
+    TimeSource Source,
+    Guid OrganizationId,
+    Guid? TechnicianId,
+    long? ExternalTicketId,
+    string? TicketTitle,
+    DateOnly WorkDate,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? EndedAt,
+    decimal Hours,
+    bool Billable,
+    bool Onsite,
+    string? Description);
+
+/// <summary>
 /// One approved allocation of an entry, as billing reads it (BR-TIM-03). <paramref name="Invoiced"/>: the entry already left
 /// with an exported order; billing never collects it again, also where its charge predates the charge register (ADR-013).
 /// </summary>
@@ -82,6 +101,9 @@ public sealed record TechnicianUtilization(
 public interface ITimeTrackingApi
 {
     Task<TimeImportResult> ImportAsync(IReadOnlyCollection<ExternalTimeEntry> entries, CancellationToken cancellationToken);
+
+    /// <summary>A live (not deleted) entry for recording at the service desk (M39.3); null when there is none.</summary>
+    Task<TimeEntryForSending?> GetEntryForSendingAsync(Guid entryId, CancellationToken cancellationToken);
 
     /// <summary>Approved allocations with a work date in the period, including the covered and hour-bank ones billing shows for information.</summary>
     Task<IReadOnlyList<BillableTime>> GetBillableTimeAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);

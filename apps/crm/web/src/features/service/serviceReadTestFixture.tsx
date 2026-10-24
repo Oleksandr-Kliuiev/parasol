@@ -13,7 +13,8 @@ export type Kind = typeof kinds[number];
 export const names: Record<Kind, string> = { summary: 'Saved service summary', tickets: 'Tickets', devices: 'Devices', alerts: 'Open alerts', 'ticket-requests': 'Ticket requests' };
 export const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 export const empty = () => json({ items: [], nextCursor: null, totalCount: 0 });
-export const summary: ServiceSummary = { openTickets: 3, ticketsLast90Days: 8, devices: { Workstation: 2 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 2, lastSyncedAt: '2025-01-02T10:30:00Z' };
+export const summary: ServiceSummary = { openTickets: 3, ticketsLast90Days: 8, devices: { Workstation: 2 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 2, lastSyncedAt: '2025-01-02T10:30:00Z',
+  reads: (['tickets', 'alerts', 'devices'] as const).map((source) => ({ source, system: 'atera', startedAt: '2025-01-02T10:30:00Z', complete: true, late: false })) };
 export const device = (id = 'one'): Device => ({ id, machineName: `Synthetic PC ${id}`, type: 'Workstation', os: 'Synthetic OS', online: true, lastSeenAt: null, url: null, removedAt: null, openAlerts: 0 });
 export const ticket = (id = 'one'): Ticket => ({ id, title: `Synthetic ticket ${id}`, externalId: 42, organizationId: 'o1', organizationName: null, contactId: null, contactName: null,
   status: 'Open', isOpen: true, priority: null, type: null, technicianName: null, createdAt: '2026-10-16T10:00:00Z', resolvedAt: null, lastActivityAt: null, url: null });

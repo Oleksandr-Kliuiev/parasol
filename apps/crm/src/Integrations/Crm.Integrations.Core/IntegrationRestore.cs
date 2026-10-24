@@ -91,6 +91,7 @@ internal sealed class IntegrationRestoreParticipant(IntegrationDbContext db, Tim
                 operation.LockedUntil = null;
                 operation.LeaseOwner = null;
                 operation.CompletedAt = time.GetUtcNow();
+                await HoldActionAsync(operation, cancellationToken);
             }
 
             lines.Add(new RestoreLine(Area, $"{operation.System}/{operation.Operation} {operation.EntityType} {operation.EntityId}",
@@ -103,6 +104,25 @@ internal sealed class IntegrationRestoreParticipant(IntegrationDbContext db, Tim
         }
 
         return lines;
+    }
+
+    /// <summary>
+    /// A vendor action whose operation is held may have reached the vendor (M39.1): it becomes uncertain, so a person checks there and
+    /// settles it in the action log instead of anything sending it again.
+    /// </summary>
+    private async Task HoldActionAsync(OutboundOperation operation, CancellationToken cancellationToken)
+    {
+        if (operation.EntityType != Actions.VendorAction.EntityType ||
+            await db.VendorActions.SingleOrDefaultAsync(a => a.Id == operation.EntityId, cancellationToken) is not { IsFinished: false } action)
+        {
+            return;
+        }
+
+        action.Status = Actions.VendorActionStatus.Uncertain;
+        action.MayHaveSent = true;
+        action.OutcomeCode = "VND_HELD_AFTER_RESTORE";
+        action.Outcome = "Held after a database restore: it may have reached the vendor; check there and settle it.";
+        action.CompletedAt = time.GetUtcNow();
     }
 
     private static string Describe(IEnumerable<ExternalEffectEntry> entries, string what)

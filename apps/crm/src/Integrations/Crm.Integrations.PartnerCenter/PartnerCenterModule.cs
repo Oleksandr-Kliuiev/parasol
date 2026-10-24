@@ -18,7 +18,7 @@ public static class PartnerCenterModule
                            && Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.EffectiveTokenUrl),
                 "Integrations:PartnerCenter:BaseUrl, GraphBaseUrl and TokenUrl must be https addresses.")
             .ValidateOnStart();
-        services.AddHttpClient<PartnerCenterTokenProvider>();
+        services.AddHttpClient<PartnerCenterTokenProvider>().ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects);
         services.AddSingleton<PartnerCenterTokenProvider>(sp => new PartnerCenterTokenProvider(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(PartnerCenterTokenProvider)),
             sp.GetRequiredService<IOptions<PartnerCenterOptions>>(),
@@ -32,6 +32,7 @@ public static class PartnerCenterModule
                 client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             })
             .AddHttpMessageHandler<PartnerCenterAuthHandler>()
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects)
             .AddResilienceHandler("partnercenter", Configure);
 
         services.AddHttpClient<IPartnerBillingClient, PartnerBillingClient>((sp, client) =>
@@ -40,6 +41,7 @@ public static class PartnerCenterModule
                 client.BaseAddress = options.GraphBaseUrl;
                 client.Timeout = options.TotalTimeout + TimeSpan.FromSeconds(30);
             })
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects)
             .AddResilienceHandler("partnercenter-billing", Configure);
 
         services.AddScoped<IIntegrationAdapter, PartnerCenterAdapter>();

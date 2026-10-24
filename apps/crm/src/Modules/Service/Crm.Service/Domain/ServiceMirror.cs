@@ -37,6 +37,11 @@ public sealed class Ticket : Entity
     /// <summary>Local time the last payload was accepted. Never a provider observation or successful sync claim.</summary>
     public DateTimeOffset? ImportedAt { get; private set; }
 
+    /// <summary>When the whole conversation was last read from the desk (M39.2); null until it has been read once.</summary>
+    public DateTimeOffset? CommentsReadAt { get; private set; }
+
+    public void ConversationRead(DateTimeOffset now) => CommentsReadAt = now;
+
     public static Ticket From(ExternalTicket source, DateTimeOffset now)
     {
         var ticket = new Ticket { System = source.System, ExternalId = source.ExternalId };

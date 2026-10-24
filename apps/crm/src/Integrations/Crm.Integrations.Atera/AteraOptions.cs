@@ -1,4 +1,16 @@
+using System.Net.Http.Headers;
+
 namespace Crm.Integrations.Atera;
+
+/// <summary>How crm-worker signs its calls to Atera (M39.0).</summary>
+public enum AteraAuthenticationScheme
+{
+    /// <summary>The account's v3 API key in the <c>X-API-KEY</c> header.</summary>
+    ApiKey,
+
+    /// <summary>A token Atera issued (a JWT) in <c>Authorization: Bearer</c>, for an account Atera has moved to tokens.</summary>
+    Bearer,
+}
 
 /// <summary>Atera API v3 settings (docs/05-integrations.md §3). The API key is account-wide: Key Vault / user secrets only.</summary>
 public sealed class AteraOptions
@@ -7,7 +19,14 @@ public sealed class AteraOptions
 
     public bool Enabled { get; set; }
 
+    /// <summary>The secret crm-worker signs with: the API key, or with <see cref="Authentication"/> <c>Bearer</c> the token itself.</summary>
     public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Whether <see cref="ApiKey"/> travels as <c>X-API-KEY</c> (default) or as <c>Authorization: Bearer</c>. The date Atera moves
+    /// accounts to tokens is not confirmed (M38 risks), so both stay possible and the switch is configuration only.
+    /// </summary>
+    public AteraAuthenticationScheme Authentication { get; set; } = AteraAuthenticationScheme.ApiKey;
 
     public Uri BaseUrl { get; set; } = new("https://app.atera.com/api/v3/");
 
@@ -75,5 +94,54 @@ public sealed class AteraOptions
 
     public string ContactSyncCron { get; set; } = "20 * * * *";
 
+    /// <summary>
+    /// Actions are simulated (M39.1): the worker reads the live ticket and says what it would send, and sends nothing. With writing
+    /// off and DryRun on, the whole action path can be tried against the live account without a single write.
+    /// </summary>
+    public bool DryRun { get; set; }
+
+    /// <summary>
+    /// The kinds of action people may ask of Atera (M39.1/M39.2): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
+    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>. Empty by default: a kind is off until
+    /// it is listed, and a kind added in a later release stays off until someone lists it.
+    /// </summary>
+    public List<string> EnabledActions { get; set; } = [];
+
+    /// <summary>Tickets' conversations (M39.2, <c>atera-ticket-conversations</c>).</summary>
+    public string TicketConversationSyncCron { get; set; } = "*/5 * * * *";
+
+    /// <summary>An open ticket whose conversation is older than this is read again even when Atera's list of changes did not name it.</summary>
+    public int ConversationRefreshMinutes { get; set; } = 60;
+
+    /// <summary>At most this many such tickets per run, the longest unread first.</summary>
+    public int ConversationRefreshBatch { get; set; } = 25;
+
+    /// <summary>The first run, without a cursor, reads the tickets changed in this many days.</summary>
+    public int ConversationBackfillDays { get; set; } = 14;
+
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey);
+}
+
+/// <summary>Puts the secret on the client's default headers in the configured scheme; one header, never both.</summary>
+internal static class AteraAuthentication
+{
+    public const string ApiKeyHeader = "X-API-KEY";
+
+    public static void Apply(HttpRequestHeaders headers, AteraOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            return;
+        }
+
+        var secret = options.ApiKey.Trim();
+        if (options.Authentication == AteraAuthenticationScheme.Bearer)
+        {
+            headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+        }
+        else
+        {
+            headers.Add(ApiKeyHeader, secret);
+        }
+    }
 }

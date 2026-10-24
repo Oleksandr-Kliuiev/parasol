@@ -51,8 +51,13 @@ public interface IConnectionCatalog
 }
 
 /// <summary>What the saved state holds: monitoring's judgement of the jobs and the worker heartbeats.</summary>
+/// <summary>
+/// What the page is composed from; <paramref name="UncertainActions"/> counts, per system, the actions without a clear answer that
+/// wait for a person to check at the vendor (M39).
+/// </summary>
 internal sealed record ConnectionStoredState(
-    IntegrationMonitoringSnapshot Monitoring, IReadOnlyList<WorkerHeartbeatStatus> Heartbeats, TimeSpan HeartbeatStaleAfter);
+    IntegrationMonitoringSnapshot Monitoring, IReadOnlyList<WorkerHeartbeatStatus> Heartbeats, TimeSpan HeartbeatStaleAfter,
+    IReadOnlyDictionary<string, int>? UncertainActions = null);
 
 internal interface IConnectionStatusStore
 {

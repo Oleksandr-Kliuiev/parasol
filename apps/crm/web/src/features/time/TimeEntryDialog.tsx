@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
+  Checkbox,
   Combobox,
   DialogActions,
   DialogBody,
@@ -15,14 +16,18 @@ import {
   MessageBarBody,
   Option,
   Switch,
-  Textarea,
   Text,
+  Textarea,
   ToggleButton,
   makeStyles,
   mergeClasses,
+  tokens,
+  useId,
 } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
+import { ActionConfirmation } from '../actions/ActionDialog';
+import { useActionAvailable } from '../actions/api';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Dialog } from '../../shared/components/Dialog';
@@ -59,6 +64,9 @@ const useStyles = makeStyles({
   // narrow column (two columns on a phone).
   comboInput: { minWidth: 0, width: '100%' },
   manual: { alignSelf: 'start', marginTop: '6px' },
+  // The Atera step: the checkbox and its hint, the hint in the tone and size of a field's hint.
+  record: { gridColumn: '1 / -1', display: 'grid', rowGap: '2px', justifyItems: 'start' },
+  recordHint: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, lineHeight: tokens.lineHeightBase200 },
   // The hours field with its usual durations under it, in the same grid cell.
   hoursCell: { display: 'grid', gap: '8px', minWidth: 0, alignContent: 'start' },
   durations: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
@@ -136,6 +144,7 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const [workDate, setWorkDate] = useState(entry?.workDate ?? defaultDate ?? todayIso());
   const [hours, setHours] = useState(entry ? String(entry.hours) : taskContext ? '' : '1');
   const [workType, setWorkType] = useState(entry?.workType ?? '');
+  const workTypeInput = useRef<HTMLInputElement>(null);
   const [billable, setBillable] = useState(entry?.billable ?? true);
   const [onsite, setOnsite] = useState(entry?.onsite ?? false);
   const [afterHours, setAfterHours] = useState(entry?.afterHours ?? false);
@@ -145,10 +154,14 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const [sourceActivityId, setSourceActivityId] = useState(taskContext?.activityId ?? entry?.sourceActivityId ?? null);
   const [ticketTitle, setTicketTitle] = useState(taskContext?.ticket.title ?? entry?.ticketTitle ?? null);
   const [projectId, setProjectId] = useState(entry?.projectId ?? '');
+  // M39.3: a new entry on an Atera ticket can also be recorded there; once it is saved, the dialog goes on into that confirmation.
+  const [recordInAtera, setRecordInAtera] = useState(false);
+  const [recording, setRecording] = useState<{ entryId: string; ticket: number } | null>(null);
   // The form as first shown, to know whether the person has typed anything since.
   const draft = JSON.stringify([organization?.id ?? null, workDate, hours, workType, billable, onsite, afterHours, description, ticket, projectId]);
   const [opened] = useState(draft);
-  const dirty = draft !== opened;
+  // A saved entry has nothing left to lose: the Atera step that follows never asks before closing.
+  const dirty = draft !== opened && recording === null;
   // In the commit of the keystroke itself, so the host knows before the next key (Escape) arrives.
   useLayoutEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   // Only the customer's own open projects can take hours; the list is empty until a customer is picked.
@@ -165,6 +178,9 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const hoursProblem = hoursValue === null ? 'time.hoursRequired' : Number.isNaN(hoursValue) ? 'time.hoursInvalid'
     : hoursValue <= 0 ? 'time.hoursPositive' : hoursValue > 24 ? 'time.hoursMax' : null;
   const ticketProblem = ticketValue !== null && (!Number.isSafeInteger(ticketValue) || ticketValue <= 0) ? 'time.ticketInvalid' : null;
+  // Offered only for a new entry with a ticket number, and only while Atera takes recorded hours (its switches and the person's access).
+  const canRecord = useActionAvailable('atera', 'time.record', !entry && ticketValue !== null && ticketProblem === null);
+  const recordHint = useId('record-hint');
   const descriptionProblem = taskContext && !description.trim() ? 'time.descriptionRequired' : null;
   const invalid = !organization || hoursProblem !== null || ticketProblem !== null || descriptionProblem !== null;
 
@@ -195,11 +211,15 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
       ...(!entry ? { clientRequestId } : {}),
     };
     try {
+      const created = entry ? null : await api.post<{ id: string }>('/api/v1/time/entries', request);
       if (entry) await api.put(`/api/v1/time/entries/${entry.id}`, request, entry.etag);
-      else await api.post('/api/v1/time/entries', request);
       if (!alive.current) return;
       void client.invalidateQueries({ queryKey: timeKeys.all });
       notify(entry ? t('time.saved') : t('time.registered'));
+      if (created?.data?.id && canRecord && recordInAtera && ticketValue !== null) {
+        setRecording({ entryId: created.data.id, ticket: ticketValue });
+        return;
+      }
       onClose();
     } catch (error) {
       if (alive.current) {
@@ -211,6 +231,13 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
       if (alive.current) setPending(false);
     }
   };
+
+  if (recording) {
+    return <ActionConfirmation
+      request={{ system: 'atera', kind: 'time.record', targetType: 'time-entry', targetId: recording.entryId, parameters: {} }}
+      title={t('time.recordTitle', { number: `#${recording.ticket}` })} confirm={t('time.recordConfirm')}
+      details={<Text block>{t('time.recordSaved')}</Text>} dismiss={t('time.recordSkip')} onClose={onClose} />;
+  }
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
@@ -247,12 +274,16 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
             </div>
             <Field label={t('time.fields.workType')}>
               <Combobox
+                ref={workTypeInput}
                 freeform
                 input={{ className: local.comboInput }}
                 value={workType}
                 selectedOptions={workType ? [workType] : []}
                 onInput={(event) => setWorkType((event.target as HTMLInputElement).value)}
                 onOptionSelect={(_, d) => setWorkType(d.optionValue ?? '')}
+                // Typed text leaves Fluent's matching option as the active descendant after the list closes, naming an option that
+                // is gone (axe aria-valid-attr-value): a closed list names none.
+                onOpenChange={(_, d) => { if (!d.open) queueMicrotask(() => workTypeInput.current?.removeAttribute('aria-activedescendant')); }}
               >
                 {(workTypes.isSuccess && !workTypes.isFetching ? workTypes.data : []).map((type) => (
                   <Option key={type} value={type}>
@@ -283,6 +314,11 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
                 onChange={(_, d) => { clearTicketContext(); setTicket(d.value); }} />
               {ticketId && !taskContext && <Button size="small" className={local.manual} onClick={clearTicketContext}>{t('taskTicket.useManual')}</Button>}
             </Field>
+            {canRecord && <div className={local.record}>
+              <Checkbox checked={recordInAtera} onChange={(_, d) => setRecordInAtera(Boolean(d.checked))} label={t('time.recordInAtera')}
+                aria-describedby={recordHint} />
+              <Text id={recordHint} className={local.recordHint}>{t('time.recordInAteraHint')}</Text>
+            </div>}
             <div className={local.flags}>
               <Switch label={t('time.fields.billable')} checked={billable} onChange={(_, d) => setBillable(d.checked)} />
               <Switch label={t('time.fields.onsite')} checked={onsite} onChange={(_, d) => setOnsite(d.checked)} />

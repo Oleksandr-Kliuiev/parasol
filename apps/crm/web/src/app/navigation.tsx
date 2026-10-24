@@ -15,6 +15,7 @@ import {
   DocumentBulletList20Regular,
   DocumentSearch20Regular,
   DocumentText20Regular,
+  Headset20Regular,
   KeyMultiple20Regular,
   LockClosed20Regular,
   People20Regular,
@@ -66,6 +67,7 @@ const selectedByPrefix: ReadonlyArray<readonly [string, string]> = [
   ['/time/entries', 'time-entries'],
   ['/time', 'timesheet'],
   ['/alerts', 'alerts'],
+  ['/tickets', 'tickets'],
   ['/admin/technicians', 'technicians'],
   ['/contracts', 'contracts'],
   ['/catalog', 'catalog'],
@@ -135,6 +137,8 @@ export function useNavGroups(): NavGroup[] {
         ...entry(true, 'my-day', '/', 'myDay', <Board20Regular />),
         // One queue of the open alerts of every customer (M38): critical first, then the longest waiting.
         ...entry(canService, 'alerts', '/alerts', 'alerts', <AlertUrgent20Regular />),
+        // Atera's tickets worked from the CRM (M39.2): the conversation, the answer and the changes.
+        ...entry(canService, 'tickets', '/tickets', 'tickets', <Headset20Regular />),
         ...entry(canTime, 'timesheet', '/time', 'timesheet', <Clock20Regular />),
         ...entry(canTimeAll, 'time-entries', '/time/entries', 'timeEntries', <Clock20Regular />),
       ],

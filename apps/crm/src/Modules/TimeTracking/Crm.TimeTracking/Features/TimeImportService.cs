@@ -95,6 +95,12 @@ internal sealed partial class TimeImportService(TimeTrackingDbContext db, TimeAp
             .ToList();
     }
 
+    public async Task<TimeEntryForSending?> GetEntryForSendingAsync(Guid entryId, CancellationToken cancellationToken) =>
+        await db.TimeEntries.AsNoTracking().Where(e => e.Id == entryId)
+            .Select(e => new TimeEntryForSending(e.Id, e.Source, e.OrganizationId, e.TechnicianId, e.ExternalTicketId, e.TicketTitle, e.WorkDate,
+                e.StartedAt, e.EndedAt, e.Hours, e.Billable, e.Onsite, e.Description))
+            .SingleOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<ProjectHours>> GetProjectHoursAsync(IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken)
     {
         if (projectIds.Count == 0)

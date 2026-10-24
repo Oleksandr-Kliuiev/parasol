@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Crm.Authorization;
+using Crm.Integrations.Core.Actions;
 using Crm.Integrations.Core.Persistence;
 using Crm.Privacy.Contracts;
 using Crm.Privacy.Features;
@@ -52,11 +53,18 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         Items(sections["sales"], "quote").ShouldAllBe(q => q.GetProperty("fields").GetProperty("sentTo").GetString() == person.Email);
         Items(sections["activities"], "activity").Select(a => a.GetProperty("recordId").GetGuid()).ShouldBe([person.CallId, person.MailId], ignoreOrder: true);
         Items(sections["service"], "ticket").ShouldHaveSingleItem().GetProperty("fields").GetProperty("endUserEmail").GetString().ShouldBe(person.Email);
+        Items(sections["service"], "ticketComment").Select(c => c.GetProperty("fields").GetProperty("text").GetString())
+            .ShouldBe([$"{person.FirstName} sin skriver svarer ikke", $"Hei {person.FirstName}, vi ser på det"]);
         Items(sections["service"], "ticketRequest").ShouldHaveSingleItem().GetProperty("recordId").GetGuid().ShouldBe(person.TicketRequestId);
         Items(sections["integration"], "externalLink").Select(l => l.GetProperty("fields").GetProperty("externalId").GetString()).ShouldContain(person.AteraContactId);
         Items(sections["integration"], "externalRecord").Select(r => r.GetProperty("recordId").GetGuid()).ShouldContain(person.ExternalRecordId);
         // The outbox may have queued a real PowerOffice update for the person by now, next to the seeded one.
         Items(sections["integration"], "outboundOperation").Select(o => o.GetProperty("recordId").GetGuid()).ShouldContain(person.OutboundId);
+        // What was asked of Atera for the person's ticket, with its words (M39).
+        var actions = Items(sections["integration"], "vendorAction");
+        actions.Select(a => a.GetProperty("recordId").GetGuid()).ShouldBe([person.ReplyActionId, person.WaitingActionId], ignoreOrder: true);
+        actions.Single(a => a.GetProperty("recordId").GetGuid() == person.ReplyActionId).GetProperty("fields").GetProperty("parameters").GetString()!
+            .ShouldContain($"Hei {person.FirstName}, ny PC kommer i morgen");
         var history = Items(sections["audit"], "history");
         history.Count.ShouldBeGreaterThanOrEqualTo(3, "the contact's creation and change, the affiliation's creation");
         // The serializer writes '+' as \u002B, so the number is matched without it.
@@ -97,6 +105,8 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         Action(plan, "service", "Ticket", person.TicketId).ShouldBe("Pseudonymize");
         Action(plan, "integration", "ExternalRecord", person.ExternalRecordId).ShouldBe("Pseudonymize");
         Action(plan, "integration", "OutboundOperation", person.OutboundId).ShouldBe("Pseudonymize");
+        Action(plan, "integration", "VendorAction", person.ReplyActionId).ShouldBe("Pseudonymize");
+        Action(plan, "integration", "VendorAction", person.WaitingActionId).ShouldBe("Pseudonymize");
 
         (await ExecuteRawAsync(admin, caseId, etag, plan.Digest, "PRV-0000-0000")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         var stale = await ExecuteRawAsync(admin, caseId, etag, new string('0', 64), number);
@@ -130,6 +140,11 @@ public sealed class PrivacyTests(CrmWebFactory factory)
             ticket.EndUserName.ShouldBeNull();
             ticket.EndUserEmail.ShouldBeNull();
             ticket.ContactId.ShouldBeNull();
+            // The conversation keeps its shape, not its words or authors (M39.2).
+            var comments = await scope.ServiceProvider.GetRequiredService<ServiceDbContext>().TicketComments.AsNoTracking()
+                .Where(c => c.TicketId == person.TicketId).ToListAsync(Ct);
+            comments.Count.ShouldBe(2);
+            comments.ShouldAllBe(c => c.Text == "—" && c.AuthorName == null);
             var integration = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
             var record = await integration.ExternalRecords.AsNoTracking().SingleAsync(r => r.Id == person.ExternalRecordId, Ct);
             record.DisplayName.ShouldBe("—");
@@ -140,6 +155,12 @@ public sealed class PrivacyTests(CrmWebFactory factory)
             var outbound = await integration.OutboundOperations.AsNoTracking().SingleAsync(o => o.Id == person.OutboundId, Ct);
             outbound.Status.ShouldBe(OutboundStatus.Cancelled);
             outbound.LastError.ShouldBeNull();
+            // The actions for the person's ticket keep their shape without their words; the one still waiting is withdrawn (M39).
+            var reply = await integration.VendorActions.AsNoTracking().SingleAsync(a => a.Id == person.ReplyActionId, Ct);
+            (reply.Status, reply.Parameters, reply.Kind).ShouldBe((VendorActionStatus.Succeeded, "{}", "ticket.reply"));
+            var waiting = await integration.VendorActions.AsNoTracking().SingleAsync(a => a.Id == person.WaitingActionId, Ct);
+            (waiting.Status, waiting.OutcomeCode, waiting.Parameters).ShouldBe((VendorActionStatus.Cancelled, "VND_ERASED", "{}"));
+            (await integration.OutboundOperations.AsNoTracking().SingleAsync(o => o.Id == waiting.OutboundOperationId, Ct)).Status.ShouldBe(OutboundStatus.Cancelled);
         }
 
         // The history: the fact of each action stays, what changed is not shown; the erasure names the case and the fields only.
@@ -385,7 +406,8 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         (leads.Approved, leads.Proposal, leads.Days, leads.Removed).ShouldBe((false, true, 730, 0));
         leads.Due.ShouldBeGreaterThanOrEqualTo(1);
         dryRun.Classes.Select(c => c.DataClass).ShouldBe(
-            ["customers.former-contacts", "identity.sessions", "integration.exception-triage", "integration.external-payloads", "integration.sync-runs", "sales.unconverted-leads", "service.tickets"]);
+            ["customers.former-contacts", "identity.sessions", "integration.exception-triage", "integration.external-payloads", "integration.sync-runs",
+                "integration.vendor-action-texts", "sales.unconverted-leads", "service.tickets"]);
         (await LeadContactAsync(leadId)).ShouldNotBeNull();
 
         // Apply mode without an approved policy still removes nothing.
@@ -426,7 +448,7 @@ public sealed class PrivacyTests(CrmWebFactory factory)
 
         var report = await factory.ClientAs(CrmRoles.Admin).GetFromJsonAsync<JsonElement>($"{Privacy}/retention", Ct);
         report.GetProperty("mode").GetString().ShouldBe("DryRun");
-        report.GetProperty("lastRun").GetProperty("classes").GetArrayLength().ShouldBe(7);
+        report.GetProperty("lastRun").GetProperty("classes").GetArrayLength().ShouldBe(8);
     }
 
     private static async Task<List<Guid>> ActivityIdsAsync(HttpClient client, Guid organizationId) =>

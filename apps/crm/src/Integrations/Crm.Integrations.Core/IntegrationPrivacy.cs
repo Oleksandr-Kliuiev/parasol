@@ -1,6 +1,8 @@
 using System.Globalization;
+using Crm.Integrations.Core.Actions;
 using Crm.Integrations.Core.Persistence;
 using Crm.Privacy.Contracts;
+using Crm.Service.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Integrations.Core;
@@ -9,13 +11,16 @@ namespace Crm.Integrations.Core;
 /// The integrations' part in subject requests (DEV-11) for a contact person: the links to Atera and PowerOffice, the mirrored
 /// person records (linked, or carrying the person's address) and the changes queued for those systems. Erasure removes the
 /// links, leaves each mirrored record as a bare key, and withdraws what was still to be sent. The external systems keep
-/// their own records: the receipt names them, and erasing there is their owners' step.
+/// their own records: the receipt names them, and erasing there is their owners' step. The actions asked for the tickets the
+/// person is the end user of (M39), for a contact or a lead, keep their shape (kind, ticket, outcome) without their words; one
+/// still waiting is withdrawn.
 /// </summary>
-internal sealed class IntegrationPersonalData(IntegrationDbContext db) : IPersonalDataContributor, IExternalReferenceSource
+internal sealed class IntegrationPersonalData(IntegrationDbContext db, IServiceApi service, TimeProvider time) : IPersonalDataContributor, IExternalReferenceSource
 {
     public const string LinkClass = "integration.link";
     public const string RecordClass = "integration.external-record";
     public const string OutboundClass = "integration.outbound";
+    public const string ActionClass = "integration.vendor-action";
 
     public string Module => IntegrationDbContext.SchemaName;
 
@@ -29,9 +34,18 @@ internal sealed class IntegrationPersonalData(IntegrationDbContext db) : IPerson
 
     public async Task<PersonalDataSection> ExportAsync(DataSubject subject, CancellationToken cancellationToken)
     {
+        var actions = (await ActionsAsync(subject, cancellationToken)).Select(a => new PersonalDataItem("vendorAction", a.Id, new Dictionary<string, string?>
+        {
+            ["system"] = a.System,
+            ["kind"] = a.Kind,
+            ["ticket"] = a.TargetId,
+            ["status"] = a.Status.ToString(),
+            ["requestedAt"] = a.RequestedAt.ToString("O", CultureInfo.InvariantCulture),
+            ["parameters"] = a.Parameters,
+        })).ToList();
         if (subject.Kind != DataSubjectKind.Contact)
         {
-            return new PersonalDataSection(Module, [], ["A lead is not linked to external systems."]);
+            return new PersonalDataSection(Module, actions, ["A lead is not linked to external systems."]);
         }
 
         var items = (await LinksAsync(subject, cancellationToken)).Select(l => new PersonalDataItem("externalLink", l.Id, new Dictionary<string, string?>
@@ -59,14 +73,17 @@ internal sealed class IntegrationPersonalData(IntegrationDbContext db) : IPerson
             ["status"] = o.Status.ToString(),
             ["createdAt"] = o.CreatedAt.ToString("O", CultureInfo.InvariantCulture),
         })));
+        items.AddRange(actions);
         return new PersonalDataSection(Module, items, ["Atera and PowerOffice hold their own records of the person; ask their owners for them."]);
     }
 
     public async Task<IReadOnlyList<PlannedErasure>> PlanAsync(DataSubject subject, CancellationToken cancellationToken)
     {
+        var actions = (await ActionsAsync(subject, cancellationToken))
+            .Select(a => new PlannedErasure(new RecordRef(Module, nameof(VendorAction), a.Id), ErasureAction.Pseudonymize, ActionClass)).ToList();
         if (subject.Kind != DataSubjectKind.Contact)
         {
-            return [];
+            return actions;
         }
 
         var plan = (await LinksAsync(subject, cancellationToken))
@@ -75,6 +92,7 @@ internal sealed class IntegrationPersonalData(IntegrationDbContext db) : IPerson
             .Select(r => new PlannedErasure(new RecordRef(Module, nameof(ExternalRecord), r.Id), ErasureAction.Pseudonymize, RecordClass)));
         plan.AddRange((await OutboundAsync(subject, cancellationToken))
             .Select(o => new PlannedErasure(new RecordRef(Module, nameof(OutboundOperation), o.Id), ErasureAction.Pseudonymize, OutboundClass)));
+        plan.AddRange(actions);
         return plan;
     }
 
@@ -123,7 +141,46 @@ internal sealed class IntegrationPersonalData(IntegrationDbContext db) : IPerson
             applied += changed ? 1 : 0;
         }
 
+        applied += await ForgetActionsAsync(Ids(records, nameof(VendorAction)), ct);
         await db.SaveChangesAsync(ct);
+        return applied;
+    }
+
+    /// <summary>
+    /// The actions keep their shape (kind, ticket, outcome) without their words: the parameters and the note of whoever checked an
+    /// unclear outcome. One the worker has not taken yet is withdrawn, as a waiting change is; one being sent right now keeps its
+    /// words until its attempt ends, and the manifest's replay clears them then.
+    /// </summary>
+    private async Task<int> ForgetActionsAsync(List<Guid> actionIds, CancellationToken ct)
+    {
+        var applied = 0;
+        var now = time.GetUtcNow();
+        foreach (var action in await db.VendorActions.Where(a => actionIds.Contains(a.Id)).ToListAsync(ct))
+        {
+            var changed = false;
+            if (action.Status is VendorActionStatus.Scheduled or VendorActionStatus.Queued &&
+                await db.OutboundOperations
+                    .Where(o => o.Id == action.OutboundOperationId && o.Status == OutboundStatus.Pending && (o.LockedUntil == null || o.LockedUntil < now))
+                    .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OutboundStatus.Cancelled).SetProperty(o => o.CompletedAt, now), ct) > 0)
+            {
+                action.Status = VendorActionStatus.Cancelled;
+                action.OutcomeCode = "VND_ERASED";
+                action.Outcome = "Withdrawn before it was sent: the person it was about asked to be forgotten.";
+                action.CompletedAt = now;
+                changed = true;
+            }
+
+            if (action.Status is not (VendorActionStatus.Scheduled or VendorActionStatus.Queued or VendorActionStatus.Sending) &&
+                (action.Parameters != VendorActionTargets.ErasedParameters || action.CloseReason is not null))
+            {
+                action.Parameters = VendorActionTargets.ErasedParameters;
+                action.CloseReason = null;
+                changed = true;
+            }
+
+            applied += changed ? 1 : 0;
+        }
+
         return applied;
     }
 
@@ -161,6 +218,50 @@ internal sealed class IntegrationPersonalData(IntegrationDbContext db) : IPerson
 
     private Task<List<OutboundOperation>> OutboundAsync(DataSubject subject, CancellationToken ct) =>
         db.OutboundOperations.AsNoTracking().Where(o => o.EntityType == EntityTypes.Contact && o.EntityId == subject.Id).ToListAsync(ct);
+
+    /// <summary>The actions asked for the tickets the person is the end user of, per desk (the target id is the ticket number).</summary>
+    private async Task<List<VendorAction>> ActionsAsync(DataSubject subject, CancellationToken ct)
+    {
+        var tickets = await service.GetTicketsOfPersonAsync(subject.Kind == DataSubjectKind.Contact ? subject.Id : null, subject.Emails, ct);
+        var actions = new List<VendorAction>();
+        foreach (var desk in tickets.GroupBy(t => t.System))
+        {
+            var numbers = desk.Select(t => t.ExternalId.ToString(CultureInfo.InvariantCulture)).Distinct().ToList();
+            actions.AddRange(await db.VendorActions.AsNoTracking()
+                .Where(a => a.System == desk.Key && a.TargetType == VendorActionTargets.Ticket && numbers.Contains(a.TargetId))
+                .OrderBy(a => a.RequestedAt).ToListAsync(ct));
+        }
+
+        return actions;
+    }
+}
+
+/// <summary>
+/// The words of actions asked of vendors (M39: reply and note texts, a checker's note): cleared once an action is finished and
+/// older than the approved period, keeping its shape. An action without a clear outcome keeps them until someone checks it.
+/// </summary>
+internal sealed class VendorActionTextRetention(IntegrationDbContext db) : IRetentionContributor
+{
+    public const string Class = "integration.vendor-action-texts";
+
+    public string DataClass => Class;
+
+    public Task<int> CountAsync(DateTimeOffset olderThan, CancellationToken cancellationToken) => Due(olderThan).CountAsync(cancellationToken);
+
+    public async Task<int> ApplyAsync(DateTimeOffset olderThan, int batchSize, CancellationToken cancellationToken)
+    {
+        var ids = await Due(olderThan).OrderBy(a => a.CompletedAt).ThenBy(a => a.Id).Select(a => a.Id).Take(batchSize).ToListAsync(cancellationToken);
+        return ids.Count == 0
+            ? 0
+            : await db.VendorActions.Where(a => ids.Contains(a.Id)).ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.Parameters, VendorActionTargets.ErasedParameters)
+                .SetProperty(a => a.CloseReason, (string?)null), cancellationToken);
+    }
+
+    private IQueryable<VendorAction> Due(DateTimeOffset olderThan) =>
+        db.VendorActions.Where(a => a.CompletedAt != null && a.CompletedAt < olderThan &&
+                                    a.Status != VendorActionStatus.Uncertain && a.Status != VendorActionStatus.Sending &&
+                                    (a.Parameters != VendorActionTargets.ErasedParameters || a.CloseReason != null));
 }
 
 /// <summary>Raw payloads of mirrored records (docs/04 §8: kept for troubleshooting): cleared once older than the approved period.</summary>

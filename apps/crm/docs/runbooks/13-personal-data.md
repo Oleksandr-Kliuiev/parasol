@@ -99,7 +99,7 @@ EXEC sales.ClearErasedDocuments @DryRun = 0; -- снимок → {}, объек�
    INSERT INTO privacy.RetentionPolicies (DataClass, RetainDays, ApprovedBy, ApprovedAt, Reference)
    VALUES (N'sales.unconverted-leads', 730, N'<ответственный>', SYSDATETIMEOFFSET(), N'EXT-07 <ссылка на решение>');
    ```
-   Классы: `customers.former-contacts`, `sales.unconverted-leads`, `service.tickets`, `integration.external-payloads`, `integration.sync-runs`, `identity.sessions`. Что делает каждый — 04 § 9.
+   Классы: `customers.former-contacts`, `sales.unconverted-leads`, `service.tickets`, `integration.external-payloads`, `integration.sync-runs`, `integration.vendor-action-texts`, `identity.sessions`. Что делает каждый — 04 § 9.
 3. **Включение.** `Privacy__Retention__Mode=Apply` в настройках crm-worker — новая ревизия. Класс без утверждённого срока и в Apply только считается.
 4. **Объём.** За ночь на класс не больше 500 × 20 записей (`Privacy:Retention:BatchSize`, `MaxBatchesPerRun`); накопившееся доделывается за несколько ночей. Ошибка класса видна в отчёте, остальные классы продолжают работу.
 5. **Откат.** Вернуть `Mode=DryRun` (новая ревизия) или удалить строку политики (DBA). Удалённое не возвращается.

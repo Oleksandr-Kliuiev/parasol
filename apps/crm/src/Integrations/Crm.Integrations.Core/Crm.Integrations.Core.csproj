@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\Modules\Customers\Crm.Customers.Contracts\Crm.Customers.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Activities\Crm.Activities.Contracts\Crm.Activities.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\Crm.Catalog.Contracts\Crm.Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\Crm.Identity.Contracts\Crm.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Privacy\Crm.Privacy.Contracts\Crm.Privacy.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Service\Crm.Service.Contracts\Crm.Service.Contracts.csproj" />
   </ItemGroup>

@@ -68,6 +68,8 @@ builder.Services
 
 // DEV-06: the outbox loop with its liveness (rounds finish) and heartbeat; ready means the database answers.
 builder.Services.AddOutboxProcessing();
+// M39.1: vendor actions are sent every five seconds, with a heartbeat of their own.
+builder.Services.AddVendorActionLoop();
 builder.Services.AddDatabaseReadiness();
 // DEV-17: reads operational state independently of Hangfire, so a stalled job server remains observable.
 builder.Services.AddHostedService<OperationalTelemetry>();
@@ -173,6 +175,7 @@ jobs.AddOrUpdate<AteraCustomerSyncJob>(AteraCustomerSyncJob.JobId, job => job.Ru
 jobs.AddOrUpdate<AteraContactSyncJob>(AteraContactSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.ContactSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraTicketSyncJob>(AteraTicketSyncJob.OpenJobId, job => job.RunAsync(false, CancellationToken.None), atera.TicketSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraTicketSyncJob>(AteraTicketSyncJob.RecentJobId, job => job.RunAsync(true, CancellationToken.None), atera.RecentTicketSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<AteraTicketConversationSyncJob>(AteraTicketConversationSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.TicketConversationSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraWorkHoursSyncJob>(AteraWorkHoursSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.WorkHoursSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAgentSyncJob>(AteraAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAlertSyncJob>(AteraAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
