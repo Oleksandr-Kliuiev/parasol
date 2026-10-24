@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useInfiniteQuery, type InfiniteData, type QueryKey } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, type InfiniteData, type QueryKey } from '@tanstack/react-query';
 import { api, query } from './client';
 import type { PagedResult } from './types';
 
@@ -13,12 +13,15 @@ export function usePagedList<T>(
   key: QueryKey,
   url: string,
   filters: Filters,
-  options: { enabled?: boolean; limit?: number; refetchInterval?: number; refetchWhile?: (item: T) => boolean } = {},
+  options: { enabled?: boolean; limit?: number; refetchInterval?: number; refetchWhile?: (item: T) => boolean; keepPrevious?: boolean } = {},
 ) {
   const { refetchWhile } = options;
   const result = useInfiniteQuery<PagedResult<T>, Error, InfiniteData<PagedResult<T>, string | null>, QueryKey, string | null>({
     queryKey: key,
     enabled: options.enabled ?? true,
+    // A list searched as people type can keep the rows of the previous filter until the new answer is there (isPlaceholderData),
+    // instead of a loading placeholder that takes them away from under the pointer.
+    placeholderData: options.keepPrevious ? keepPreviousData : undefined,
     // A page that waits for the worker polls every loaded page while any row is still in that state.
     refetchInterval: refetchWhile
       ? ({ state }) => (state.data?.pages.some((page) => page.items.some(refetchWhile)) ? 5_000 : false)
