@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Crm.Integrations.Core;
 
 namespace Crm.Integrations.MicrosoftGraph;
 

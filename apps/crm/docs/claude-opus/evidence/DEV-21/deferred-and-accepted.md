@@ -63,7 +63,7 @@
 | V12.1.2 | external | — | Cipher suites on the public endpoint are chosen by the Azure Container Apps ingress and cannot be configured from this repository; Kestrel only listens on plain HTTP 8080 behind it. Needs an external scan of the real FQDN. | infra | EXT-06 |
 | V12.3.3 | partial | low | peerTrafficConfiguration encryption not enabled in apps.bicep; platform hop is an accepted risk not yet recorded in docs/03 | Operations / PO | — |
 | V13.1.1 | partial | low | No communication matrix added to docs/03; ADR-024 and docs/06 section 5/6 cover keys and secrets only | Dev team | — |
-| V13.2.4 | partial | low | https-only validated, Teams host allowlist, redirects off, Graph same-origin; no per-integration host allowlist or egress filtering (F-G4-12 open) | Operations / PO | — |
+| V13.2.4 | partial | low | https-only validated, Teams host allowlist, redirects off, Graph same-origin (2026-10-21: also the Partner Center billing export; its storage files only https with a SAS signature on `BillingStorageHostSuffixes`, without the token, [addendum](addendum-2026-10-21-partner-billing-links.md)); no general per-integration host allowlist or egress filtering (F-G4-12 open) | Operations / PO | — |
 | V13.2.5 | partial | low | Server egress still unfiltered (F-G4-12 open, owner decision recorded in docs/06 section 6) | Operations / PO | — |
 | V13.3.2 | partial | low | crm-web still has vault-wide Reader and a storage-account-wide blob role; Key Vault bypass AzureServices kept unverified (F-G4-12) | Operations | — |
 | V13.4.4 | partial | low | TRACE check not added to tools/release/smoke.sh | Operations | — |
