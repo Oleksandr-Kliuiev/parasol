@@ -22,7 +22,7 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
         await using var firstHost = Host(factory, firstEmployee); await using var secondHost = Host(factory, secondEmployee);
         // Start both hosts before the competing transactions, with separate request scopes/connections.
         _ = firstHost.Services; _ = secondHost.Services;
-        var first = new SourceTaskDraft(source, organization, firstEmployee, DateTimeOffset.Parse("2027-01-10T10:00:00Z"), ActivityPriority.High);
+        var first = new SourceTaskDraft(source, organization, firstEmployee, DateTimeOffset.Parse("2027-01-10T10:00:00Z"), ActivityPriority.High, Subject);
         var second = first with { AssigneeId = secondEmployee, DueAt = first.DueAt!.Value.AddDays(1) };
         var results = await Task.WhenAll(Create(firstHost, first), Create(secondHost, second));
         results.All(r => r.IsSuccess).ShouldBeTrue(); results.Select(r => r.Value.ActivityId).Distinct().Count().ShouldBe(1);
@@ -34,16 +34,16 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
         (await db.Activities.CountAsync(a => a.Id == winner.ActivityId)).ShouldBe(1);
         (await db.SourceTaskLinks.CountAsync(l => l.ActivityId == winner.ActivityId)).ShouldBe(1);
         var task = await db.Activities.AsNoTracking().SingleAsync(a => a.Id == winner.ActivityId);
-        task.Type.ShouldBe(ActivityType.Task); task.Subject.ShouldBe("Review technical observation"); task.Body.ShouldBeNull(); task.Priority.ShouldBe(ActivityPriority.High);
+        task.Type.ShouldBe(ActivityType.Task); task.Subject.ShouldBe(Subject); task.Body.ShouldBeNull(); task.Priority.ShouldBe(ActivityPriority.High);
         var audit = await db.AuditEntries.AsNoTracking().Where(a => a.EntityType == nameof(Activity) && a.EntityId == task.Id).ToListAsync();
         audit.Count.ShouldBe(1); audit[0].UserId.ShouldBe(winner.AssigneeId);
         (await db.OutboxMessages.CountAsync(m => m.Type.Contains(nameof(ActivityLogged)) && m.Payload.Contains(task.Id.ToString()))).ShouldBe(1);
         audit[0].Changes.ShouldNotBeNull();
-        foreach (var excluded in new[] { source.WorkspaceId, source.ClientId, source.ObservationId }) audit[0].Changes!.ShouldNotContain(excluded);
+        foreach (var excluded in new[] { source.ExternalCustomerId, source.ExternalId }) audit[0].Changes!.ShouldNotContain(excluded);
         using var client = factory.ClientAs(CrmRoles.Technician);
         var timeline = await client.GetFromJsonAsync<JsonElement>($"/api/v1/activities?organizationId={organization}");
         var dto = timeline.GetProperty("items").EnumerateArray().Single(a => a.GetProperty("id").GetGuid() == task.Id);
-        dto.GetProperty("hasTechnicalSource").GetBoolean().ShouldBeTrue(); dto.ToString().ShouldNotContain(source.ObservationId);
+        dto.GetProperty("hasTechnicalSource").GetBoolean().ShouldBeTrue(); dto.ToString().ShouldNotContain(source.ExternalId);
     }
 
     [Theory]
@@ -53,7 +53,7 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
     {
         var organization = await Organization(factory); var employee = await Employee(factory, CrmRoles.Technician); var source = Source();
         await using var host = Host(factory, employee);
-        var draft = new SourceTaskDraft(source, organization, employee, null, ActivityPriority.Normal);
+        var draft = new SourceTaskDraft(source, organization, employee, null, ActivityPriority.Normal, Subject);
         var created = (await Create(host, draft)).Value;
         await using (var scope = factory.Services.CreateAsyncScope())
         {
@@ -80,7 +80,7 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
     {
         var organization = await Organization(factory); var other = await Organization(factory); var employee = await Employee(factory, CrmRoles.Technician);
         await using var host = Host(factory, employee); var source = Source();
-        var draft = new SourceTaskDraft(source, organization, employee, null, ActivityPriority.Normal);
+        var draft = new SourceTaskDraft(source, organization, employee, null, ActivityPriority.Normal, Subject);
         var created = (await Create(host, draft)).Value;
         var wrong = await Find(host, source, other); wrong.Error!.Code.ShouldBe("ACT_SOURCE_TASK_CUSTOMER_CHANGED");
         (await Create(host, draft with { OrganizationId = other })).Error!.Code.ShouldBe("ACT_SOURCE_TASK_CUSTOMER_CHANGED");
@@ -98,8 +98,8 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
     }
 
     [Theory]
-    [InlineData("unknown")][InlineData("inactive")][InlineData(CrmRoles.ReadOnly)][InlineData(CrmRoles.Finance)][InlineData(CrmRoles.Sales)]
-    public async Task A_new_task_requires_an_active_eligible_technical_assignee(string scenario)
+    [InlineData("unknown")][InlineData("inactive")][InlineData(CrmRoles.ReadOnly)]
+    public async Task A_new_task_requires_an_active_eligible_assignee(string scenario)
     {
         var organization = await Organization(factory); var actor = await Employee(factory, CrmRoles.Technician);
         var assignee = scenario == "unknown" ? Guid.NewGuid() : await Employee(factory, scenario == "inactive" ? CrmRoles.Technician : scenario);
@@ -109,26 +109,26 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
             (await identity.Users.SingleAsync(u => u.Id == assignee)).Deactivate(); await identity.SaveChangesAsync();
         }
         await using var host = Host(factory, actor); var source = Source();
-        (await Create(host, new(source, organization, assignee, null, ActivityPriority.Normal))).Error!.Code.ShouldBe("ACT_SOURCE_TASK_ASSIGNEE_INVALID");
+        (await Create(host, new(source, organization, assignee, null, ActivityPriority.Normal, Subject))).Error!.Code.ShouldBe("ACT_SOURCE_TASK_ASSIGNEE_INVALID");
         (await Find(host, source, organization)).Value.ShouldBeNull();
     }
 
-    [Theory]
-    [InlineData(CrmRoles.ReadOnly)][InlineData(CrmRoles.Finance)][InlineData(CrmRoles.Sales)]
-    public async Task Direct_module_calls_enforce_the_intersection_of_permissions(string role)
+    [Fact]
+    public async Task Direct_module_calls_enforce_the_intersection_of_permissions()
     {
-        var organization = await Organization(factory); var actor = await Employee(factory, role); await using var host = Host(factory, actor, role);
-        (await Create(host, new(Source(), organization, actor, null, ActivityPriority.Normal))).Error!.Code.ShouldBe("ACT_SOURCE_TASK_FORBIDDEN");
-        if (role != CrmRoles.ReadOnly)
-            (await Find(host, Source(), organization)).Error!.Code.ShouldBe("ACT_SOURCE_TASK_FORBIDDEN");
+        // Every role that reads activities also reads service data, so a reader without activities.write is the one to refuse.
+        var organization = await Organization(factory); var actor = await Employee(factory, CrmRoles.ReadOnly);
+        await using var host = Host(factory, actor, CrmRoles.ReadOnly);
+        (await Create(host, new(Source(), organization, actor, null, ActivityPriority.Normal, Subject))).Error!.Code.ShouldBe("ACT_SOURCE_TASK_FORBIDDEN");
+        (await Find(host, Source(), organization)).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
     public async Task Ordinary_updates_preserve_source_Task_identity_and_only_validate_changed_assignees()
     {
         var organization = await Organization(factory); var other = await Organization(factory); var actor = await Employee(factory, CrmRoles.Technician);
-        var finance = await Employee(factory, CrmRoles.Finance); await using var host = Host(factory, actor);
-        var created = (await Create(host, new(Source(), organization, actor, null, ActivityPriority.Normal))).Value;
+        var reader = await Employee(factory, CrmRoles.ReadOnly); await using var host = Host(factory, actor);
+        var created = (await Create(host, new(Source(), organization, actor, null, ActivityPriority.Normal, Subject))).Value;
         using var client = factory.ClientAs(CrmRoles.Technician);
         var rows = await client.GetFromJsonAsync<JsonElement>($"/api/v1/activities?organizationId={organization}");
         var dto = rows.GetProperty("items").EnumerateArray().Single(a => a.GetProperty("id").GetGuid() == created.ActivityId);
@@ -143,7 +143,7 @@ public sealed class SourceTaskApiTests(CrmWebFactory factory)
         }
         (await Update("Note", organization, actor)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await Update("Task", other, actor)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        var invalid = await Update("Task", organization, finance); invalid.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var invalid = await Update("Task", organization, reader); invalid.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await invalid.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().ShouldBe("ACT_SOURCE_TASK_ASSIGNEE_INVALID");
         await using (var scope = factory.Services.CreateAsyncScope())
         {

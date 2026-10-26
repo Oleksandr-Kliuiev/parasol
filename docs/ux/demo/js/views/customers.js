@@ -1,5 +1,5 @@
-/* Parasoll UX demo: customer list. One row joins CRM, Atlas and PowerOffice facts the person may see;
-   what a role may not see is marked, not silently empty. */
+/* Parasoll UX demo: customer list. One row joins CRM, Atera and PowerOffice facts;
+   what is missing (no Atera link) or hidden from a role (amounts) is marked, not silently empty. */
 (function () {
   'use strict';
 
@@ -15,7 +15,7 @@
   }
 
   function urgentFor(c) {
-    return D.observations.filter(function (o) { return o.customer === c.id && D.isActive(o) && D.isUrgent(o); });
+    return D.alerts.filter(function (a) { return a.customer === c.id && D.isOpen(a) && D.isUrgent(a); });
   }
   function outstandingFor(c) {
     return D.invoices.filter(function (x) { return x.customer === c.id; }).reduce(function (s, x) { return s + x.outstanding; }, 0);
@@ -24,9 +24,9 @@
   var CHIPS = {
     all: function () { return true; },
     mine: function (c) { return c.am === P.me().id || c.tech === P.me().id; },
-    urgent: function (c) { return D.canSee(c.id) && urgentFor(c).length > 0; },
+    urgent: function (c) { return urgentFor(c).length > 0; },
     bank: function (c) { return c.hourBank && c.hourBank.left / c.hourBank.size < 0.2; },
-    unlinked: function (c) { return c.atlas !== 'READY'; },
+    unlinked: function (c) { return c.atera !== 'LINKED'; },
     prospect: function (c) { return c.status === 'prospect'; }
   };
 
@@ -40,11 +40,10 @@
   }
 
   function urgentCell(c) {
-    if (c.atlas !== 'READY') return h`<span class="pill pill-outline">${P.icon('link', 'ic-14')}${t('cust.noAtlas')}</span>`;
-    if (!D.canSee(c.id)) return h`<span class="locked" title="${t('perm.atlasHint')}">${P.icon('lock', 'ic-14')}${t('perm.noAtlas')}</span>`;
+    if (c.atera !== 'LINKED') return h`<span class="pill pill-outline">${P.icon('link', 'ic-14')}${t('cust.noAtera')}</span>`;
     var u = urgentFor(c);
     if (!u.length) return h`<span class="muted small">${t('cust.noUrgent')}</span>`;
-    var crit = u.filter(function (o) { return o.severity === 'CRITICAL'; }).length;
+    var crit = u.filter(function (a) { return a.severity === 'CRITICAL'; }).length;
     return h`<span class="row-wrap">${crit ? h`<span class="pill pill-crit">${P.icon('octagon', 'ic-14')}${P.fmt.num(crit)}</span>` : ''}${u.length - crit ? h`<span class="pill pill-high">${P.icon('triangle', 'ic-14')}${P.fmt.num(u.length - crit)}</span>` : ''}</span>`;
   }
 
@@ -63,7 +62,7 @@
             <td><div class="row">${UI.custAvatar(c)}<div class="cell-main"><a class="cell-title" href="#/customers/${c.id}">${c.name}</a>
               <span class="cell-sub num">${t('customer.orgnr')} ${c.orgnr} · ${c.city}${c.status === 'prospect' ? ' · ' + t('status.prospect') : ''}</span></div></div></td>
             <td>${urgentCell(c)}</td>
-            <td class="t-num">${c.atlas === 'READY' && D.canSee(c.id) ? P.fmt.num(D.devicesOf(c.id).length) : h`<span class="muted">—</span>`}</td>
+            <td class="t-num">${c.atera === 'LINKED' ? P.fmt.num(D.devicesOf(c.id).length) : h`<span class="muted">—</span>`}</td>
             <td>${UI.bank(c.hourBank, true)}</td>
             <td>${k ? h`<div class="cell-main"><span class="num">${k.id}</span><span class="cell-sub">${k.name}</span></div>` : h`<span class="muted">—</span>`}</td>
             <td>${UI.person(c.am)}</td>
@@ -80,7 +79,7 @@
   P.views.customers = {
     render: function () {
       var f = filterState();
-      var linked = D.customers.filter(function (c) { return c.atlas === 'READY'; }).length;
+      var linked = D.customers.filter(function (c) { return c.atera === 'LINKED'; }).length;
       var count = function (k) { return D.customers.filter(CHIPS[k]).length; };
       var chips = ['all', 'mine', 'urgent', 'bank', 'unlinked', 'prospect'];
       var body = h`${UI.pageHead({ title: t('nav.customers'), sub: t('cust.sub', { n: D.customers.length, linked: linked }) })}

@@ -70,7 +70,8 @@ M26 помогает проверить факты, но не принимает
 
 ## Итоговая локальная приёмка, 17 октября 2026
 
-[Безопасное свидетельство](../testing/evidence/time-financial-review-M26-2026-10-17.json):
+Безопасное свидетельство (удалено в M38:
+`git show 73c0158:docs/testing/evidence/time-financial-review-M26-2026-10-17.json`):
 
 | Проверка | Результат |
 | --- | --- |
@@ -78,7 +79,7 @@ M26 помогает проверить факты, но не принимает
 | Затронутые SQL Time/Billing/PowerOffice | 208/208, включая 13 новых; не весь CRM SQL-набор |
 | Frontend, полный Vitest | 572/572 в 66 файлах |
 | CRM browser regression | 78/78, без skips/retries/flaky |
-| Настоящий CRM Web/Worker → Atlas → SQL/PostgreSQL | 9/9 с новой сборкой |
+| Настоящий CRM Web/Worker → прежний сервис интеграций (удалён в [M38](M38-OPERATIONS-IN-CRM.md)) → SQL/PostgreSQL | 9/9 с новой сборкой |
 | ESLint, app/E2E/composition TypeScript, Release и SPA | Пройдены |
 | Начальная загрузка SPA | 291,8 КБ gzip при бюджете 300 КБ |
 
@@ -91,14 +92,15 @@ M26 помогает проверить факты, но не принимает
 экрана, проверка overflow, Axe, contrast и keyboard assertions сохранены. Итог — 78/78.
 
 Текущий полный composition имеет run ID `cacf315c9c43`: 40 клиентов, 400 устройств,
-3 сотрудника, 572 Atlas HTTP-запроса, ни одного mutating request; точные durable/privacy
-проверки и restricted роли проходят. До/после запуска совпадают все 2669 принятых input
-hashes (850 SQL/backend + 398 web + 1421 Atlas) и полный снимок репозиториев. Это тот же
-успешный запуск, использованный для свежей проверки единой карточки клиента, а не
-дополнительная неподтверждённая приёмка. Backend/SQL не менялся после своих проверок.
+3 сотрудника, 572 HTTP-запроса к прежнему сервису, ни одного mutating request; точные
+durable/privacy проверки и restricted роли проходят. До/после запуска совпадают все 2669
+принятых input hashes (850 SQL/backend + 398 web + 1421 прежнего сервиса) и полный снимок
+репозиториев. Это тот же успешный запуск, использованный для свежей проверки единой карточки
+клиента, а не дополнительная неподтверждённая приёмка. Backend/SQL не менялся после своих проверок.
 
-Строгие Atlas 711/789/90 повторно не запускались: полный source tree, inventory и 1421
-input hashes совпадают с [отдельной строгой приёмкой](../testing/evidence/atlas-strict-current-2026-10-16.json).
+Строгие наборы прежнего сервиса 711/789/90 повторно не запускались: полный source tree,
+inventory и 1421 input hashes совпадают с отдельной строгой приёмкой (строгое свидетельство
+прежнего сервиса удалено в M38).
 Все шесть owned SQL/app/browser fixtures завершены с cleanup; private runtime data удалены.
 Исходные checkout сохранены по HEAD, refs, status; для текущей проверки карточки также
 сравнены хеши файлов. Git history, diff и secret scan проверяются перед локальным checkpoint.
@@ -107,5 +109,5 @@ input hashes совпадают с [отдельной строгой приём
 
 M27 добавил [прямой путь к заявке из личной задачи](M27-MY-DAY-TICKET-SHORTCUT.md).
 Backend/SQL M26 не менялись и повторно не запускались; текущий composition указатель
-обновлён после свежей сборки. Исходный M26 report `cacf315c9c43` сохранён
-[без изменения байтов](../testing/evidence/composition-M26-2026-10-17.json).
+обновлён после свежей сборки. Исходный M26 report `cacf315c9c43` сохранён без изменения
+байтов (удалён в M38: `git show 73c0158:docs/testing/evidence/composition-M26-2026-10-17.json`).

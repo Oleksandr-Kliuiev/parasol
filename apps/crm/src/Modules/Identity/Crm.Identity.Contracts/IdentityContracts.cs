@@ -17,7 +17,9 @@ public sealed record ExternalIdentity(
 public sealed record UserSummary(Guid Id, string DisplayName, string? Email, bool IsActive);
 
 /// <summary>A CRM user; <paramref name="Roles"/> are the roles the directory last confirmed (DEV-10), for decisions made on their behalf.</summary>
-public sealed record UserProfile(Guid Id, string DisplayName, string? Email, string? PreferredLanguage, bool IsActive, IReadOnlyList<string>? Roles = null);
+/// <param name="MyDayLayout">The My day layout the user chose (work, lead or finance), or null before they choose.</param>
+public sealed record UserProfile(
+    Guid Id, string DisplayName, string? Email, string? PreferredLanguage, bool IsActive, IReadOnlyList<string>? Roles = null, string? MyDayLayout = null);
 
 public interface IUserProvisioning
 {

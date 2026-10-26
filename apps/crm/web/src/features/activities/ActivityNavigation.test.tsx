@@ -68,19 +68,19 @@ it('shows the ordinary timeline only after an explicit All customer activities a
   expect(screen.queryByRole('heading', { name: 'Selected activity' })).not.toBeInTheDocument();
 });
 
-it('allows a generic technical task to be read without Atlas or write access', async () => {
+it('allows a generic technical task to be read without write access', async () => {
   const fetch = vi.fn(async (url: string) => auxiliary(url) ?? result()); vi.stubGlobal('fetch', fetch); renderSelection(selectedPath(), ['activities.read']);
-  expect(await screen.findByText(first.subject)).toBeVisible(); expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
+  expect(await screen.findByText(first.subject)).toBeVisible();
   expect(screen.queryByRole('button', { name: /Edit Synthetic/ })).not.toBeInTheDocument(); expect(screen.queryByRole('button', { name: /^Mark .* as done$/ })).not.toBeInTheDocument();
   expect(readCalls(fetch)).toHaveLength(1);
 });
 
 it('does not read or reveal an activity without activities.read', () => {
-  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); renderSelection(selectedPath(), ['activities.write', 'parasol.atlas.read']);
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); renderSelection(selectedPath(), ['activities.write']);
   expect(screen.queryByRole('region', { name: 'Activities' })).not.toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();
 });
 
-it.each(['Change selection', 'Change customer', 'Change employee', 'Drop write and Atlas', 'Replace URL', 'Drop read'])(
+it.each(['Change selection', 'Change customer', 'Change employee', 'Drop write', 'Replace URL', 'Drop read'])(
   'aborts a previous exact read and ignores its late reply after %s', async change => {
     let finish!: (value: Response) => void; let signal!: AbortSignal; let reads = 0;
     const fetch = vi.fn(async (url: string, init: RequestInit) => {
@@ -93,12 +93,11 @@ it.each(['Change selection', 'Change customer', 'Change employee', 'Drop write a
     if (change === 'Change selection') expect(await screen.findByText(second.subject)).toBeVisible();
     else if (change !== 'Drop read') expect(await screen.findByText(missing)).toBeVisible();
     await act(async () => finish(result())); expect(screen.queryByText(first.subject)).not.toBeInTheDocument();
-    if (change !== 'Change selection') expect(screen.queryByRole('button', { name: 'View Atlas source' })).not.toBeInTheDocument();
     expect(reads).toBe(change === 'Drop read' ? 1 : 2);
   },
 );
 
-it.each(['Change selection', 'Change customer', 'Change employee', 'Drop write and Atlas', 'Replace URL', 'Drop read'])(
+it.each(['Change selection', 'Change customer', 'Change employee', 'Drop write', 'Replace URL', 'Drop read'])(
   'unmounts a selected edit draft after %s', async change => {
     const fetch = vi.fn(async (url: string) => auxiliary(url) ?? (url.includes(otherActivityId) ? result([second]) : url.includes(otherOrganizationId) ? result([]) : result()));
     vi.stubGlobal('fetch', fetch); renderSelection(); await screen.findByText(first.subject);

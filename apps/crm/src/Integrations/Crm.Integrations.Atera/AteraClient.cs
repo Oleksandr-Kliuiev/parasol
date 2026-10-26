@@ -178,10 +178,12 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
     }
 
     public IAsyncEnumerable<AteraTicket> GetTicketsAsync(string? status, CancellationToken cancellationToken) =>
-        GetPagedAsync("tickets", ReadTicket, cancellationToken, status is null ? null : $"ticketStatus={Uri.EscapeDataString(status)}", t => t.TicketId);
+        GetPagedAsync("tickets", ReadTicket, cancellationToken, status is null ? null : $"ticketStatus={Uri.EscapeDataString(status)}", TicketKey);
 
     public IAsyncEnumerable<AteraTicket> GetCustomerTicketsAsync(long customerId, CancellationToken cancellationToken) =>
-        GetPagedAsync($"tickets/customer/{customerId}", ReadTicket, cancellationToken, null, t => t.TicketId);
+        GetPagedAsync($"tickets/customer/{customerId}", ReadTicket, cancellationToken, null, TicketKey);
+
+    private static string TicketKey(AteraTicket ticket) => ticket.TicketId.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Upper bound for one ticket's work-hour pages; reaching it is an error, not the end of the list.</summary>
     private const int MaxWorkHourPages = 200;
@@ -261,8 +263,12 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
     public IAsyncEnumerable<AteraAgent> GetAgentsAsync(CancellationToken cancellationToken) =>
         GetPagedAsync("agents", ReadAgent, cancellationToken);
 
+    /// <summary>
+    /// The alert mirror resolves what a complete read no longer lists (M38), so this read must not lose anything quietly: the
+    /// previous page is read again for alerts that moved across the boundary, and an alert without an id fails the read.
+    /// </summary>
     public IAsyncEnumerable<AteraAlert> GetAlertsAsync(string? status, CancellationToken cancellationToken) =>
-        GetPagedAsync("alerts", ReadAlert, cancellationToken, status is null ? null : $"alertStatus={Uri.EscapeDataString(status)}");
+        GetPagedAsync("alerts", ReadAlert, cancellationToken, status is null ? null : $"alertStatus={Uri.EscapeDataString(status)}", a => a.AlertId, strict: true);
 
     public async Task<long> CreateTicketAsync(AteraTicketWrite ticket, CancellationToken cancellationToken)
     {
@@ -307,21 +313,23 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
     /// <summary>
     /// Reads a paged list. With <paramref name="key"/> the previous page is read once more after the next one: a list that changes
     /// while it is read (a ticket closing leaves a status-filtered list, a new one pushes the rest down) shifts items across the
-    /// page boundary, and the overlap catches what moved to the tail of the page already read. Items are yielded once.
+    /// page boundary, and the overlap catches what moved to the tail of the page already read. Items are yielded once. A
+    /// <paramref name="strict"/> read fails on an item it cannot understand instead of leaving it out.
     /// </summary>
     private async IAsyncEnumerable<T> GetPagedAsync<T>(
         string resource,
         Func<JsonElement, T?> read,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken,
         string? filter = null,
-        Func<T, long>? key = null)
+        Func<T, string>? key = null,
+        bool strict = false)
         where T : class
     {
         var size = Math.Clamp(options.Value.ItemsInPage, 1, 50);
-        var seen = key is null ? null : new HashSet<long>();
+        var seen = key is null ? null : new HashSet<string>(StringComparer.Ordinal);
         for (int page = 1; page <= 100_000; page++)
         {
-            var (items, last) = await ReadPageAsync(resource, page, size, filter, read, cancellationToken);
+            var (items, last) = await ReadPageAsync(resource, page, size, filter, read, strict, cancellationToken);
             foreach (var item in items)
             {
                 if (seen is null || seen.Add(key!(item)))
@@ -332,7 +340,7 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
 
             if (key is not null && page > 1)
             {
-                var (previous, _) = await ReadPageAsync(resource, page - 1, size, filter, read, cancellationToken);
+                var (previous, _) = await ReadPageAsync(resource, page - 1, size, filter, read, strict, cancellationToken);
                 foreach (var item in previous)
                 {
                     if (seen!.Add(key(item)))
@@ -352,7 +360,7 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
     }
 
     private async Task<(List<T> Items, bool Last)> ReadPageAsync<T>(
-        string resource, int page, int size, string? filter, Func<JsonElement, T?> read, CancellationToken cancellationToken)
+        string resource, int page, int size, string? filter, Func<JsonElement, T?> read, bool strict, CancellationToken cancellationToken)
         where T : class
     {
         using var response = await http.GetAsync($"{resource}?page={page}&itemsInPage={size}{(filter is null ? string.Empty : "&" + filter)}", cancellationToken);
@@ -370,6 +378,10 @@ internal sealed class AteraClient(HttpClient http, IOptions<AteraOptions> option
             if (read(element) is { } item)
             {
                 result.Add(item);
+            }
+            else if (strict)
+            {
+                throw new AteraApiException(response.StatusCode, $"Atera {resource} page {page} holds an item that cannot be read.");
             }
         }
 

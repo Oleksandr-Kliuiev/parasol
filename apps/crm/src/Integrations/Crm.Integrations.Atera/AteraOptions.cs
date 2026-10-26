@@ -67,6 +67,12 @@ public sealed class AteraOptions
 
     public string DeviceUrlTemplate { get; set; } = "https://app.atera.com/new/device/{0}";
 
+    /// <summary>
+    /// Link to an alert in Atera, <c>{0}</c> being the alert id. Empty by default: the address of an alert page is not confirmed,
+    /// and a guessed one would send people somewhere else, so alerts carry no link until it is set (M38).
+    /// </summary>
+    public string? AlertUrlTemplate { get; set; }
+
     public string ContactSyncCron { get; set; } = "20 * * * *";
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey);

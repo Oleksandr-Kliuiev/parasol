@@ -22,7 +22,7 @@ describe('navigation groups', () => {
 
   it('keeps each entry behind the permission it had before the regrouping', () => {
     expect(groupsFor(['time.own', 'contracts.read', 'billing.read', 'reports.read', 'finance.cost.read', 'service.read'])).toEqual([
-      ['work', ['my-day', 'timesheet']],
+      ['work', ['my-day', 'alerts', 'timesheet']],
       ['customers', ['organizations', 'contracts']],
       ['finance', ['billing', 'invoices', 'dashboard', 'margins', 'sla']],
     ]);
@@ -40,12 +40,24 @@ describe('navigation groups', () => {
     ]);
   });
 
-  it('lists Connections under System for an Atlas member or an integration manager, without the other administration entries', () => {
-    expect(groupsFor(['parasol.atlas.read'])).toEqual([
+  it('lists Connections under System first, and only for an integration manager', () => {
+    expect(groupsFor(['integrations.manage'])).toEqual([
       ['work', ['my-day']],
       ['customers', ['organizations']],
-      ['system', ['connections']],
+      ['system', ['connections', 'integrations', 'technicians', 'mappings', 'jobs']],
     ]);
+    expect(groupsFor(['customers.read', 'service.read', 'activities.read'])).toEqual([
+      ['work', ['my-day', 'alerts']],
+      ['customers', ['organizations']],
+      ['finance', ['sla']],
+    ]);
+  });
+
+  it('lists Alerts under Work, right after My day, for anyone who reads service data, and marks it on the queue', () => {
+    expect(groupsFor(['service.read'])[0]).toEqual(['work', ['my-day', 'alerts']]);
+    expect(groupsFor(['customers.read'])[0]).toEqual(['work', ['my-day']]);
+    expect(selectedNavValue('/alerts')).toBe('alerts');
+    expect(selectedNavValue('/organizations/o1')).toBe('organizations');
   });
 
   it('marks the Hangfire dashboard as an external page', () => {

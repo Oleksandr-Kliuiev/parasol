@@ -1,5 +1,5 @@
 /* Parasoll UX demo: synthetic tasks, saved Atera tickets, time, contracts, PowerOffice finance,
-   billing runs, reminders, notifications and connection readiness. */
+   billing runs, reminders, notifications and the state of the CRM integrations. */
 (function () {
   'use strict';
 
@@ -9,31 +9,29 @@
   var rnd = D.rnd;
   var S = function (nb, en, nn) { return { nb: nb, en: en, nn: nn }; };
 
-  /* ---------- Tasks (CRM activities). A task made from an observation keeps the generic subject;
-     the observation summary is never copied into it (privacy rule from M12). ---------- */
+  /* ---------- Tasks (CRM activities). "Assign" on an alert starts the subject from the alert title,
+     which people may edit (t1, t3); source keeps the link back to the alert. ---------- */
 
-  var GENERIC = 'generic';
   D.tasks = [
-    { id: 't1', customer: 'kvamme', type: 'Task', subject: GENERIC, source: 'o5', ticket: '910219', assignee: 'ingrid', due: at(-3, 15, 0), priority: 'High', createdBy: 'jonas', createdAt: at(-4, 10, 30), version: 3 },
-    { id: 't2', customer: 'fjordlys', type: 'Task', subject: GENERIC, source: 'o2', ticket: '910231', assignee: 'ingrid', due: at(0, 12, 0), priority: 'High', createdBy: 'ingrid', createdAt: at(0, 7, 40), version: 2 },
-    { id: 't3', customer: 'nordlys', type: 'Task', subject: GENERIC, source: 'o4', ticket: null, assignee: 'ingrid', due: at(0, 14, 0), priority: 'High', createdBy: 'anna', createdAt: at(-1, 9, 10), version: 1, conflict: true },
+    { id: 't1', customer: 'kvamme', type: 'Task', subject: S('Rydd disken på KVS-LT-04', 'Clean up the disk on KVS-LT-04', 'Rydd disken på KVS-LT-04'), source: 'al5', ticket: '910219', assignee: 'ingrid', due: at(-3, 15, 0), priority: 'High', createdBy: 'jonas', createdAt: at(-4, 10, 30), version: 3 },
+    { id: 't2', customer: 'fjordlys', type: 'Task', subject: 'Disk capacity used: 97% (C:)', source: 'al2', ticket: '910231', assignee: 'ingrid', due: at(0, 12, 0), priority: 'High', createdBy: 'ingrid', createdAt: at(0, 7, 40), version: 2 },
+    { id: 't3', customer: 'nordlys', type: 'Task', subject: S('Gå gjennom sikkerhetshendelsen på NLD-LT-14', 'Review the security incident on NLD-LT-14', 'Gå gjennom tryggleikshendinga på NLD-LT-14'), source: 'al4', ticket: null, assignee: 'ingrid', due: at(0, 14, 0), priority: 'High', createdBy: 'anna', createdAt: at(-1, 9, 10), version: 1, conflict: true },
     { id: 't4', customer: 'bergvik', type: 'Task', subject: S('Ny ansatt: klargjør PC og Microsoft 365-konto', 'New employee: prepare PC and Microsoft 365 account', 'Ny tilsett: gjer klar PC og Microsoft 365-konto'), ticket: '910225', assignee: 'ingrid', due: at(0, 15, 30), priority: 'Normal', createdBy: 'anna', createdAt: at(-4, 13, 0), version: 1 },
     { id: 't5', customer: 'eikeli', type: 'Meeting', subject: S('Planlagt besøk: gjennomgang av sikkerhetskopi', 'Scheduled visit: backup review', 'Planlagt besøk: gjennomgang av tryggingskopi'), assignee: 'ingrid', due: at(1, 9, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-7, 11, 0), version: 1, onsite: true },
     { id: 't6', customer: 'skarvoy', type: 'Call', subject: S('Ring: VPN faller ut hjemmefra', 'Call: VPN drops when working from home', 'Ring: VPN fell ut heimanfrå'), ticket: '910228', assignee: 'ingrid', due: at(2, 10, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-5, 9, 0), version: 1 },
     { id: 't7', customer: 'aerlige', type: 'Task', subject: S('Bytt UPS-batteri i serverrommet', 'Replace the UPS battery in the server room', 'Byt UPS-batteri i serverrommet'), assignee: 'ingrid', due: null, priority: 'Low', createdBy: 'jonas', createdAt: at(-9, 14, 0), version: 1 },
     { id: 't0', customer: 'fjordlys', type: 'Task', subject: S('Tilbakestill MFA for brukerens nye telefon', "Reset MFA for a user's new phone", 'Tilbakestill MFA for den nye telefonen til brukaren'), assignee: 'ingrid', due: at(0, 9, 0), priority: 'Normal', createdBy: 'ingrid', createdAt: at(-1, 16, 0), version: 2, status: 'Done', completedAt: at(0, 8, 15) },
-    { id: 'j1', customer: 'havbris', type: 'Task', subject: GENERIC, source: 'o7', assignee: 'jonas', due: at(1, 12, 0), priority: 'High', createdBy: 'jonas', createdAt: at(-1, 15, 0), version: 1 },
+    { id: 'j1', customer: 'havbris', type: 'Task', subject: 'Disk capacity used: 95% (D:)', source: 'al7', assignee: 'jonas', due: at(1, 12, 0), priority: 'High', createdBy: 'jonas', createdAt: at(-1, 15, 0), version: 1 },
     { id: 'j2', customer: 'granlund', type: 'Task', subject: S('Oppdater fastvaren på brannmuren', 'Update the firewall firmware', 'Oppdater fastvara på brannmuren'), assignee: 'jonas', due: at(0, 16, 0), priority: 'Normal', createdBy: 'jonas', createdAt: at(-3, 9, 0), version: 1 },
     { id: 'j3', customer: 'vestbris', type: 'Task', subject: S('Skriveren på lageret skriver ikke ut', 'Warehouse printer does not print', 'Skrivaren på lageret skriv ikkje ut'), ticket: '910233', assignee: 'jonas', due: at(0, 11, 0), priority: 'Normal', createdBy: 'jonas', createdAt: at(-2, 13, 0), version: 1 },
     { id: 'j4', customer: 'lindas', type: 'Call', subject: S('Diskuter overgang til Microsoft 365 Business Premium', 'Discuss moving to Microsoft 365 Business Premium', 'Diskuter overgang til Microsoft 365 Business Premium'), assignee: 'jonas', due: at(4, 13, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-6, 10, 0), version: 1 },
-    { id: 'j5', customer: 'eikeli', type: 'Task', subject: GENERIC, source: 'o6', assignee: 'jonas', due: at(0, 13, 0), priority: 'High', createdBy: 'jonas', createdAt: at(0, 8, 38), version: 1 },
+    { id: 'j5', customer: 'eikeli', type: 'Task', subject: 'Security incident awaiting review', source: 'al6', assignee: 'jonas', due: at(0, 13, 0), priority: 'High', createdBy: 'jonas', createdAt: at(0, 8, 38), version: 1 },
     { id: 'a1', customer: 'fjordlys', type: 'Task', subject: S('Fornyelse av avtale K-2026-0001: lag tilbud', 'Contract K-2026-0001 renewal: prepare a quote', 'Fornying av avtale K-2026-0001: lag tilbod'), assignee: 'anna', due: at(4, 12, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-2, 9, 0), version: 1 },
     { id: 'a2', customer: 'fjordlys', type: 'Call', subject: S('Påminn kunden om faktura 10118', 'Remind the customer about invoice 10118', 'Påminn kunden om faktura 10118'), assignee: 'anna', due: at(0, 10, 0), priority: 'High', createdBy: 'anna', createdAt: at(0, 8, 0), version: 1 },
     { id: 'a3', customer: 'c17', type: 'Task', subject: S('Signer avstemmingen av pilotfaktureringen for september', 'Sign the September pilot billing reconciliation', 'Signer avstemminga av pilotfaktureringa for september'), assignee: 'anna', due: at(1, 15, 0), priority: 'Normal', createdBy: 'anna', createdAt: at(-5, 9, 0), version: 1 }
   ];
   D.tasks.forEach(function (t) { t.status = t.status || 'Open'; });
   D.task = function (id) { return D.tasks.filter(function (t) { return t.id === id; })[0]; };
-  D.observation = function (id) { return D.observations.filter(function (o) { return o.id === id; })[0]; };
 
   /* ---------- Saved Atera tickets (a mirror: the status is the saved value, not live) ---------- */
 
@@ -63,7 +61,7 @@
     disk: W('Diskopprydding og flytting av arkiv', 'Disk clean-up and archive move', 'Diskopprydding og flytting av arkiv'),
     vpn: W('Feilsøking av VPN-klient', 'VPN client troubleshooting', 'Feilsøking av VPN-klient'),
     onboard: W('Klargjøring av PC for ny ansatt', 'New employee PC preparation', 'Klargjering av PC for ny tilsett'),
-    m365: W('Microsoft 365-lisenser og postkasser', 'Microsoft 365 licences and mailboxes', 'Microsoft 365-lisensar og postkassar'),
+    mailboxes: W('Microsoft 365-lisenser og postkasser', 'Microsoft 365 licences and mailboxes', 'Microsoft 365-lisensar og postkassar'),
     router: W('Bytte av ruter i havna', 'Router replacement at the marina', 'Bytte av ruter i hamna'),
     remote: W('Fjernøkt (import fra Atera)', 'Remote session (Atera import)', 'Fjernøkt (import frå Atera)'),
     patch: W('Oppdatering av server', 'Server patching', 'Oppdatering av server')
@@ -81,8 +79,8 @@
     te('ingrid', null, -7, 1.0, 'learning', { billable: false }),
     te('ingrid', 'kvamme', -6, 2.25, 'disk'),
     te('ingrid', 'skarvoy', -6, 1.75, 'vpn', { ticket: '910228' }),
-    te('ingrid', 'eikeli', -6, 3.0, 'm365'),
-    te('ingrid', 'fjordlys', -5, 2.5, 'm365'),
+    te('ingrid', 'eikeli', -6, 3.0, 'mailboxes'),
+    te('ingrid', 'fjordlys', -5, 2.5, 'mailboxes'),
     te('ingrid', 'nordlys', -5, 3.0, 'patch'),
     te('ingrid', 'bergvik', -5, 0.75, 'onboard', { ticket: '910225' }),
     te('ingrid', 'aerlige', -5, 1.5, 'remote', { source: 'atera' }),
@@ -245,25 +243,30 @@
     ]
   };
 
-  /* ---------- Team activity (no Atlas summaries: the feed is visible to every role) ---------- */
+  /* ---------- Team activity (short generic lines, the same for every reader) ---------- */
 
   D.feed = [
-    { who: 'jonas', kind: 'taskFromObs', customer: 'eikeli', at: at(0, 8, 38) },
+    { who: 'jonas', kind: 'taskFromAlert', customer: 'eikeli', at: at(0, 8, 38) },
     { who: 'ingrid', kind: 'taskDone', customer: 'fjordlys', task: 't0', at: at(0, 8, 15) },
     { who: 'system', kind: 'ateraImport', count: 3, at: at(0, 7, 30) },
-    { who: 'ingrid', kind: 'taskFromObs', customer: 'fjordlys', at: at(0, 7, 40) },
+    { who: 'ingrid', kind: 'taskFromAlert', customer: 'fjordlys', at: at(0, 7, 40) },
     { who: 'anna', kind: 'assignedTo', target: 'ingrid', customer: 'nordlys', at: at(-1, 9, 10) },
     { who: 'jonas', kind: 'approved', count: 41, week: 41, at: at(-3, 16, 40) }
   ];
 
-  /* ---------- Connection readiness (saved facts only; nothing here was checked live) ---------- */
+  /* ---------- CRM integrations (saved run facts only; nothing here was checked live).
+     A job that finished is not proof that the data is complete: missing links are counted next to it. ---------- */
 
   D.connections = {
     authMode: 'ENTRA',
-    atlasPersonal: 'PERSONAL_ENTRY_PRESENT',
-    mappings: { state: 'CHECKED', checked: 38, limit: 500, review: 'NO_LOCAL_ISSUES_FOUND', unlinked: 2 },
-    atera: { enabled: true, write: false, paused: false, lastSuccess: at(0, 8, 30), records: 1284, unlinked: 3, pending: 0, failed: 0 },
-    poweroffice: { enabled: true, write: true, paused: false, lastSuccess: at(0, 8, 0), records: 4512, unlinked: 1, pending: 0, failed: 1 },
+    heartbeat: at(0, 8, 39),
+    atera: { enabled: true, write: false, paused: false, records: 1284, unlinkedCrm: 2, unlinked: 3, pending: 0, failed: 0,
+      syncs: [{ id: 'ateraAgents', ok: at(0, 8, 30) }, { id: 'ateraAlerts', ok: at(0, 8, 30) }, { id: 'ateraTickets', ok: at(0, 8, 30) }, { id: 'ateraTime', ok: at(0, 7, 40), failedAt: at(0, 8, 10) }] },
+    poweroffice: { enabled: true, write: true, paused: false, records: 4512, unlinkedCrm: 1, unlinked: 0, pending: 0, failed: 1,
+      syncs: [{ id: 'poCustomers', ok: at(0, 6, 0) }, { id: 'poInvoices', ok: at(0, 8, 0) }, { id: 'poLedger', ok: at(0, 8, 0) }] },
+    huntress: { enabled: true, write: null, paused: false, records: 431, unlinkedCrm: 2, unlinked: 0,
+      syncs: [{ id: 'huntressIncidents', ok: at(0, 8, 35) }, { id: 'huntressAgents', ok: at(0, 8, 35) }] },
+    cloudally: { enabled: false, planned: true },
     graph: { calendar: true, mail: true, sharepoint: true, teams: false, directorySync: at(0, 8, 32), roleSync: at(0, 8, 38) }
   };
 })();

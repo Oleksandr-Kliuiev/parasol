@@ -1,8 +1,0 @@
-{
-  "artifact": "S5ASKREMOTE-REVAL-PREP-rc5",
-  "packageHash": "983fd57185042cdce4d7a1d5980e07a0a173f071fc102d144483666266400285",
-  "hashMismatches": [],
-  "scope": "Static preparation docs only; no runtime tests/live eval claimed",
-  "paidProductCalls": 0,
-  "dataBudget": "NOT_ADMITTED"
-}

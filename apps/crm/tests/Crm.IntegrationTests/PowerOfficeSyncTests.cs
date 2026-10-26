@@ -150,7 +150,7 @@ public class PowerOfficeSyncTests(CrmWebFactory factory)
     {
         var po = factory.PowerOffice;
         var admin = factory.ClientAs(CrmRoles.Admin);
-        var customerId = Random.Shared.Next(800_000, 899_999);
+        var customerId = TestData.PowerOfficeId();
         var marker = $"cp{Guid.NewGuid():N}"[..10];
         var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes("test-application-key:test-client-key"));
         po.Given(Request.Create().WithPath("/OAuth/Token").UsingPost().WithHeader("Authorization", $"Basic {basic}"))

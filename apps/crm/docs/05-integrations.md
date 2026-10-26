@@ -148,7 +148,7 @@ GET  /reports/partners/billing/operations/{id}  (опрос до status = succee
 | Tickets | GET (`ticketStatus`), POST | `service.Ticket` (зеркало, не редактируется в CRM) | Открытые — каждые 10 мин; проход по недавним (60 дней) — каждый час |
 | Ticket work hours / billable durations | GET `/tickets/{id}/workhoursrecords` | `time.TimeEntry` (Source = Atera), техник — через `identity.TechnicianMapping` | Каждые 30 мин по тикетам, открытым или изменённым за 60 дней |
 | Agents | GET | `service.Device` + ежедневный `DeviceCountSnapshot` по типам (Workstation/Server/Network/Other из `OSType`/`OS`) | Ночью (01:30) |
-| Alerts | GET (`alertStatus=Open`) | Открытые Critical/Warning по клиенту (полная замена набора) | Каждые 30 мин |
+| Alerts | GET (`alertStatus=Open`), все клиенты одним постраничным списком | `service.Alerts` с жизненным циклом ([§3.5](#35-оповещения-жизненный-цикл-m38)): Critical/Warning сопоставленных клиентов, постоянный id, закрытие только по полному чтению | Каждые 30 мин (`AlertSyncCron`, `5,35 * * * *`) |
 | Custom values (customer) | GET, PUT `/customvalues/customerfield/{customerId}/{fieldName}` | Уровень SLA активного контракта (поле из `Integrations:Atera:SlaCustomFieldName`; реализовано, запись выключена до PoC); номер контракта и менеджер — позже | При активации, приостановке, завершении контракта и смене SLA |
 | Contracts (Atera) | GET | Только для первичной миграции | Однократно |
 
@@ -165,6 +165,19 @@ POST /tickets { TicketTitle, Description, TicketPriority, TicketImpact, TicketSt
                 TicketType, EndUserID (Atera contact), TechnicianContactID? }
 ```
 Если контакт не связан с Atera — сначала `POST /contacts` с `CustomerID` клиента. Операция идёт через `OutboundOperation` с ключом идемпотентности; ответ сохраняется в `ExternalLink`.
+
+### 3.5 Оповещения: жизненный цикл (M38)
+До M38 каждое чтение удаляло открытые оповещения клиента и вставляло их заново. Теперь оповещение живёт в `service.Alerts` от чтения к чтению (миграция `20261021102012_AlertLifecycle`; подробности — [M38](../../../docs/migration/M38-OPERATIONS-IN-CRM.md#оповещения-atera-жизненный-цикл-c4)):
+- Строка: постоянный CRM-id, уникальность `System` + `ExternalId`; `State` — `Open`, `Acknowledged` или `Resolved`; `Kind` — `Monitoring` (Atera), `Security` (Huntress), `Backup` (CloudAlly); внешний id клиента, имя и id устройства, ссылка, время у источника, `LastSeenAt`, `ResolvedAt`. Аудита нет: система учёта — источник.
+- Задание `atera-alerts` читает открытые оповещения **всех** клиентов одним постраничным списком и передаёт снимок в `IServiceApi.ApplyAlertSnapshotAsync`. Перечисленные оповещения записываются как открытые; закрытое ранее открывается снова, отметка `Acknowledged` сохраняется. Хранимое `Open`/`Acknowledged` становится `Resolved` только тогда, когда **полное** чтение его больше не перечисляет.
+- Неполное или упавшее чтение ничего не меняет. Поэтому чтение падает целиком: на странице, которую не удалось прочитать или разобрать, и на оповещении без id; соседняя предыдущая страница перечитывается, чтобы сдвиг списка ничего не потерял.
+- Оповещение клиента Atera без связи с организацией не записывается и не трогается: открытое у Atera, но не сопоставленное, не считается решённым. Счётчик пропущенных — в сообщении прогона.
+- Устройство ставится, только если ровно одно текущее устройство того же клиента и источника носит это имя (без учёта регистра); иначе оповещение остаётся без устройства.
+- Ссылка в Atera строится только по `Integrations:Atera:AlertUrlTemplate` (`{0}` — id оповещения; по умолчанию пусто, адрес страницы оповещения не подтверждён).
+- Запись снимка — одна транзакция под app lock `service-alerts:<system>`: ручной запуск рядом с плановым ждёт, а не вставляет то же оповещение дважды.
+- Чтение (`service.read`): `GET /api/v1/service/alerts?organizationId&state&severity&deviceId&q&cursor&limit` → `{items, nextCursor, totalCount, critical, warning}` — открытые по умолчанию, новые первыми, keyset-курсор, 25 по умолчанию и до 100, итоги по всему фильтру; `GET /api/v1/service/alerts/urgent?limit=5` → `{items, totalCount, critical, warning, reads: [{system, startedAt, complete}]}` — самые важные, среди них самые старые; `reads` говорит, полным ли было последнее чтение источника.
+- Макет Atera (`tools/dev-mocks/atera.mjs`) даёт тестам свои клиенты, агенты и оповещения и закрывает оповещение маршрутами `/_mock/atera/*` ([README макетов](../tools/dev-mocks/README.md)).
+- Закрытие оповещения в Atera, скрытие до даты, пробелы покрытия и чистка решённых — этап M40.
 
 ## 4. PowerOffice Go
 

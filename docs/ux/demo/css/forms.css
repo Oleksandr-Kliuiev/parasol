@@ -42,13 +42,21 @@
   font-weight: 600;
 }
 
+/* A refused field keeps a red edge out of focus, next to its message */
+.input[aria-invalid="true"],
+.input[aria-invalid="true"]:hover,
+.textarea[aria-invalid="true"],
+.textarea[aria-invalid="true"]:hover {
+  border-color: var(--crit);
+}
+
 .input,
 .select,
 .textarea {
   width: 100%;
   min-height: var(--ctl-h);
   padding: 0 var(--s-3);
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--field-edge);
   border-radius: var(--r-ctl);
   background: var(--surface);
   color: var(--ink);
@@ -64,15 +72,16 @@
 .input:hover,
 .select:hover,
 .textarea:hover {
-  border-color: var(--faint);
+  border-color: var(--muted);
 }
 
+/* The edge takes the ring colour too, so a focused field keeps a visible edge of its own */
 .input:focus-visible,
 .select:focus-visible,
 .textarea:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 0;
-  border-color: transparent;
+  border-color: var(--focus);
 }
 
 .select {

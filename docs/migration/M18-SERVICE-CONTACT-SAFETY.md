@@ -1,9 +1,10 @@
 # M18 — проверка контакта перед Atera-заявкой
 
 Это локальное исправление существующего Service/Atera пути, выявленное при read-only аудите
-следующего рабочего сценария. Новая функция создания заявок из Atlas, provider API,
-production dependencies, credentials и deployment не добавляются. Проверки используют
-только синтетические контакты и собственные fake/loopback fixtures.
+следующего рабочего сценария. Новая функция создания заявок из прежнего сервиса интеграций
+(удалён в [M38](M38-OPERATIONS-IN-CRM.md)), provider API, production dependencies, credentials
+и deployment не добавляются. Проверки используют только синтетические контакты и собственные
+fake/loopback fixtures.
 
 ## Выявленная граница
 
@@ -77,6 +78,7 @@ Customers `WithUsableOrganizationAsync` использует повторяем�
 и форма показывает его рядом с выбором контакта вместо скрытого generic400.
 
 Реальные Atera schema/account/eventual consistency не проверены. После M17/M18 текущий
-CRM browser-набор прошёл 38/38, а полный [composition](../testing/evidence/composition-current-2026-10-16.json)
+CRM browser-набор прошёл 38/38, а полный composition (свидетельство удалено в M38:
+`git show 73c0158:docs/testing/evidence/composition-current-2026-10-16.json`)
 со сборкой обоих приложений — 8/8, без пропусков/retries и с очисткой. Эти наборы не
 заменяют указанные targeted provider-safety проверки.

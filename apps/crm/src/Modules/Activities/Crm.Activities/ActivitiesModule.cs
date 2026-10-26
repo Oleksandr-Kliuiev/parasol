@@ -25,6 +25,9 @@ public static class ActivitiesModule
         services.AddScoped<ITaskWorkApi, TaskWorkApi>();
         services.AddScoped<OutlookService>();
         services.AddScoped<IActivitiesApi, SourceTaskApi>();
+        // M38: an alert of the Service mirror made into a task, and a task's alert read again.
+        services.AddScoped<AlertTaskService>();
+        services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, Persistence.ActivitiesDatabasePermissions>();
         // UX 2026, В6: open and overdue work per organization for the customer list.
         services.AddScoped<IActivityFacts, ActivityFacts>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, ActivitiesRestoreParticipant>();
@@ -75,6 +78,8 @@ public static class ActivitiesModule
         group.MapGet("/{id:guid}/ticket", async (Guid id, Guid organizationId, ActivityTicketService service, CancellationToken ct) =>
                 (await service.GetAsync(id, organizationId, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ActivitiesRead).RequirePermission(Permissions.ServiceRead);
+
+        group.MapSourceTaskEndpoints();
 
         group.MapPut("/{id:guid}/ticket", async (Guid id, ActivityTicketRequest request, ActivityTicketService service, HttpRequest http, CancellationToken ct) =>
                 http.GetIfMatch() is not { } ifMatch

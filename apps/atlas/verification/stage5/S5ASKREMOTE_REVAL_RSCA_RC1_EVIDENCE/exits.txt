@@ -1,8 +1,0 @@
-typecheck=0
-schema=0
-build=0
-smoke=0
-unit=1
-test-pg=0
-pg17=0
-drift=0

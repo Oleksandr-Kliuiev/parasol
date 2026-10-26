@@ -1,1 +1,0 @@
-PASS: API auth, ClientContextV1 overview, client isolation, read tool resource view, write denial, DTO validation, client audit without payload, workspace security audit of denials.

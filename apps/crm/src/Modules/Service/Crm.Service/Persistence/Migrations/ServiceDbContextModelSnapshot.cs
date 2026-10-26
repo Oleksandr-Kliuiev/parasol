@@ -221,17 +221,37 @@ namespace Crm.Service.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAtSource")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("DeviceName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ExternalCustomerId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("Monitoring");
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -243,6 +263,13 @@ namespace Crm.Service.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("Open");
+
                     b.Property<string>("System")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -253,9 +280,20 @@ namespace Crm.Service.Persistence.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
+                    b.Property<string>("Url")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("System", "ExternalId")
+                        .IsUnique();
+
                     b.HasIndex("System", "OrganizationId");
+
+                    b.HasIndex("State", "Severity", "CreatedAtSource");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("State", "Severity", "CreatedAtSource"), new[] { "OrganizationId" });
 
                     b.ToTable("Alerts", "service");
                 });
@@ -457,8 +495,9 @@ namespace Crm.Service.Persistence.Migrations
                         .HasFilter("[ContactId] IS NOT NULL");
 
                     b.HasIndex("IsOpen")
-                        .HasFilter("[IsOpen] = 1")
-                        .HasAnnotation("SqlServer:Include", new[] { "TechnicianUserId" });
+                        .HasFilter("[IsOpen] = 1");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("IsOpen"), new[] { "TechnicianUserId" });
 
                     b.HasIndex("System", "ExternalId")
                         .IsUnique();

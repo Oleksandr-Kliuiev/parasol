@@ -1,9 +1,0 @@
-rc2 mutation results (implementer, in place, each file restored and compared with cmp; written before the full run started):
-M1 403 does not block pairing (eval-controller forbidden): tests/operator-eval-{errors,controller} fail 2
-M2 409 ASK_REMOTE_POLICY_CHANGED not handled: fail 1
-M3 PAIR 401 does not disconnect: fail 1
-M4 local refusal clears the eligible send: fail 1
-M5 pair-revoking RESPONSE codes keep the pair: fail 1
-M6 503 NOT_ADMITTED refusal hidden: fail 2
-M7 C build manifest without dist/operator-measured (launch.ts): tests/reval-measured-build fail 1
-M8 console boundary only on /operator (evaluation.ts, rebuilt): tests/pg/reval-eval-console fail 1 (then restored and rebuilt)

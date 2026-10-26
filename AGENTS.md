@@ -8,5 +8,6 @@
 - Keep secrets out of Git, logs, fixtures and reports. Use synthetic data for CI.
 - Keep independent concerns in cohesive files; aim near 500 lines and split before 700 where practical.
 - Run the smallest relevant checks. For root tooling use `node --test scripts/*.test.mjs`; for builds/tests see README.
-- Atlas acceptance is strict: every unit, PostgreSQL and browser test must pass, with no skips or failure allowlist. Historical manifests are immutable test inputs, not approval for current code.
+- CRM acceptance is strict: every unit, architecture, SQL integration and browser test must pass, with no skips or failure allowlist. Historical evidence and manifests are records, not approval for current code.
+- The separate integration service retired in M38 (`docs/migration/M38-OPERATIONS-IN-CRM.md`) must not return: integrations live in `apps/crm/src/Integrations`, with no second service, database, personal provider tokens or JSON identity import. Its name stays only in the import records and the M38 document.
 - Ask before adding production dependencies, deploying, changing credentials or contacting people. Repository creation and the initial private push are already authorized for M01–M03.

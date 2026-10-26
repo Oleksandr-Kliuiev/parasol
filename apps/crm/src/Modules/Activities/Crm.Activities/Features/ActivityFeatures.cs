@@ -226,11 +226,11 @@ internal sealed class ActivityService(
             && await db.Activities.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, ct) is { } sourceTask)
         {
             if (request.Type != ActivityType.Task || request.OrganizationId != sourceTask.OrganizationId)
-                return Error.Conflict("ACT_SOURCE_TASK_IDENTITY_LOCKED", "A technical task keeps its type and customer.");
+                return Error.Conflict("ACT_SOURCE_TASK_IDENTITY_LOCKED", "A task made from an alert keeps its type and customer.");
             var assigneeId = request.AssigneeId ?? sourceTask.AssigneeId;
             if (assigneeId != sourceTask.AssigneeId && (assigneeId is null
                 || await users.GetProfileAsync(assigneeId.Value, ct) is not { } assignee || !SourceTaskApi.IsEligibleAssignee(assignee)))
-                return Error.Validation("ACT_SOURCE_TASK_ASSIGNEE_INVALID", "Choose an active technical employee.");
+                return Error.Validation("ACT_SOURCE_TASK_ASSIGNEE_INVALID", "Choose an active employee who works on tasks and service data.");
         }
         return await MutateAsync(
             id,
@@ -338,7 +338,10 @@ internal sealed class ActivityService(
         var userIds = activities.SelectMany(a => new[] { a.AssigneeId, a.CreatedBy }).OfType<Guid>().Distinct().ToList();
         var people = await users.GetUsersAsync(userIds, ct);
         var activityIds = activities.Select(a => a.Id).ToList();
-        var sourceIds = (await db.SourceTaskLinks.AsNoTracking().Where(l => activityIds.Contains(l.ActivityId)).Select(l => l.ActivityId).ToListAsync(ct)).ToHashSet();
+        // A receipt of a system the CRM no longer reads keeps its task's type and customer but offers no source to open.
+        var supported = SourceTaskIdentityRules.SupportedSystems.ToList();
+        var sourceIds = (await db.SourceTaskLinks.AsNoTracking().Where(l => activityIds.Contains(l.ActivityId) && supported.Contains(l.System))
+            .Select(l => l.ActivityId).ToListAsync(ct)).ToHashSet();
         var now = time.GetUtcNow();
         RefDto? Person(Guid? id) => id is { } value && people.TryGetValue(value, out var user) ? new RefDto(user.Id, user.DisplayName) : null;
 

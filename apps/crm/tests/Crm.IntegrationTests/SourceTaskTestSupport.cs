@@ -12,8 +12,12 @@ namespace Crm.IntegrationTests;
 
 internal static class SourceTaskTestSupport
 {
-    internal static SourceTaskIdentity Source() => new("Atlas", "synthetic-workspace", "synthetic-client",
-        "observation-" + Guid.NewGuid().ToString("N"), "Task");
+    /// <summary>The subject the tests' tasks are made with: an alert title an employee confirmed.</summary>
+    internal const string Subject = "Synthetic disk almost full";
+
+    /// <summary>A fresh Atera alert as a receipt names it: the source's customer and alert ids, never a CRM row.</summary>
+    internal static SourceTaskIdentity Source() => new("atera", "alert", "atera-customer-" + Guid.NewGuid().ToString("N")[..8],
+        "alert-" + Guid.NewGuid().ToString("N"), "Task");
     internal static async Task<Guid> Employee(CrmWebFactory factory, string role)
     {
         using var client = factory.ClientAs(role, "source-task-" + Guid.NewGuid().ToString("N"));

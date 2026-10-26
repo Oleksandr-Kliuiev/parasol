@@ -1,9 +1,0 @@
-{
-  "type": "object",
-  "properties": {
-    "version": { "type": "string", "enum": ["AskRemoteIntentV1"] },
-    "intent": { "type": "string", "enum": ["SUMMARY", "WHY_URGENT", "SOURCE_STATE", "ENTITY", "UNSUPPORTED"] }
-  },
-  "required": ["version", "intent"],
-  "additionalProperties": false
-}

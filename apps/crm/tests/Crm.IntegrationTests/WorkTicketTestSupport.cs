@@ -17,10 +17,10 @@ internal static class WorkTicketTestSupport
             row.EntityId == organizationId && row.System == "atera" && row.ExternalType == "Customer");
         if (link is null)
         {
-            link = Link(organizationId, Random.Shared.NextInt64(100_000_000, 999_999_999));
+            link = Link(organizationId, TestData.AteraId());
             db.ExternalLinks.Add(link); await db.SaveChangesAsync();
         }
-        var number = externalId ?? Random.Shared.NextInt64(100_000_000, 999_999_999);
+        var number = externalId ?? TestData.AteraId();
         await scope.ServiceProvider.GetRequiredService<IServiceApi>().UpsertTicketsAsync([
             Source(organizationId, number, link.Id, long.Parse(link.ExternalId, CultureInfo.InvariantCulture))], default);
         return (await scope.ServiceProvider.GetRequiredService<ITicketWorkApi>().ListAsync(organizationId, 100, null, default))

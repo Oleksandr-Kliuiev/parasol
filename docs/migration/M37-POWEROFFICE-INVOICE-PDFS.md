@@ -94,5 +94,5 @@ PowerOffice API не предоставляет независимую цифр�
 
 ## Проверки
 
-Сводка текущих локальных проверок и точные входные хеши:
-`docs/testing/evidence/poweroffice-invoice-pdfs-M37-2026-10-18.json`.
+Сводка текущих локальных проверок и точные входные хеши (свидетельство удалено в M38):
+`git show 73c0158:docs/testing/evidence/poweroffice-invoice-pdfs-M37-2026-10-18.json`.

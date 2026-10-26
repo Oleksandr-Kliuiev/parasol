@@ -21,9 +21,10 @@ public sealed class ActivitiesDbContext(DbContextOptions<ActivitiesDbContext> op
             b.HasKey(x => x.SourceKey);
             b.Property(x => x.SourceKey).HasMaxLength(64).IsUnicode(false);
             b.Property(x => x.System).HasMaxLength(32);
-            b.Property(x => x.WorkspaceId).HasMaxLength(128);
-            b.Property(x => x.ClientId).HasMaxLength(128);
-            b.Property(x => x.ObservationId).HasMaxLength(256);
+            // The columns keep the names of their first use (M12); renaming them would be a migration for no stored difference.
+            b.Property(x => x.SourceKind).HasColumnName("WorkspaceId").HasMaxLength(128);
+            b.Property(x => x.ExternalCustomerId).HasColumnName("ClientId").HasMaxLength(128);
+            b.Property(x => x.ExternalId).HasColumnName("ObservationId").HasMaxLength(256);
             b.Property(x => x.TargetKind).HasMaxLength(16);
             b.HasIndex(x => x.ActivityId).IsUnique();
             b.HasOne<Activity>().WithMany().HasForeignKey(x => x.ActivityId).OnDelete(DeleteBehavior.Restrict);

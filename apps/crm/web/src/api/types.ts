@@ -229,6 +229,8 @@ export interface CurrentUser {
   authMode: AuthMode;
   /** What the user sees of the scoped records (DEV-09): every quote or project, or only their own / assigned ones. */
   recordScope: RecordScope;
+  /** The My day layout the user chose (M38), or null before they choose; read it through `myDayProfile`. */
+  myDayLayout?: string | null;
 }
 
 export interface RecordScope {

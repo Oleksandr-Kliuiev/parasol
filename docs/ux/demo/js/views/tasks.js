@@ -36,7 +36,7 @@
       var team = P.can('time.manage');
       var base = s.scope === 'team' && team ? D.tasks.slice() : M.myTasks();
       var all = base.filter(function (x) {
-        if (s.kind === 'obs') return !!x.source;
+        if (s.kind === 'alert') return !!x.source;
         if (s.kind === 'ticket') return !!x.ticket;
         if (s.kind === 'nodue') return !x.due && x.status === 'Open';
         return true;
@@ -47,7 +47,7 @@
       var icons = { late: 'alert', today: 'calendar', tomorrow: 'calendar', week: 'calendar', later: 'calendar', none: 'circleDashed' };
       var count = function (k) {
         return base.filter(function (x) {
-          if (k === 'obs') return !!x.source && x.status === 'Open';
+          if (k === 'alert') return !!x.source && x.status === 'Open';
           if (k === 'ticket') return !!x.ticket && x.status === 'Open';
           if (k === 'nodue') return !x.due && x.status === 'Open';
           return x.status === 'Open';
@@ -57,7 +57,7 @@
           actions: h`<button class="btn btn-primary" type="button" data-action="new-task">${P.icon('plus', 'ic-16')}${t('create.task')}</button>` })}
         <div class="toolbar">
           ${team ? UI.seg('tasks-scope', [{ value: 'mine', label: t('tasks.mine') }, { value: 'team', label: t('tasks.team') }], s.scope, t('tasks.scope')) : ''}
-          <div class="chips" role="group" aria-label="${t('tasks.filter')}">${['all', 'obs', 'ticket', 'nodue'].map(function (k) {
+          <div class="chips" role="group" aria-label="${t('tasks.filter')}">${['all', 'alert', 'ticket', 'nodue'].map(function (k) {
             return UI.chip('tasks-kind', k, t('tasks.kind.' + k), count(k), s.kind === k);
           })}</div>
         </div>

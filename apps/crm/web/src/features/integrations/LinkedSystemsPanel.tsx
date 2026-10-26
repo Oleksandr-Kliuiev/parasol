@@ -86,7 +86,7 @@ export function LinkedSystemsPanel({ entityId, entityType = 'Organization', empt
             <span className={styles.record}>
               <Text className={styles.name}>{l.displayName ?? typeName(t, l.externalType)}</Text>
               <Text className={styles.muted}>
-                {/* A long key (an Atlas hash, a GUID) is shortened for people; the whole value stays in the tooltip. */}
+                {/* A long key (a hash, a GUID) is shortened for people; the whole value stays in the tooltip. */}
                 <span className={styles.key} title={l.externalId}>#{shortKey(l.externalId)}</span> · {t(`mappings.methods.${l.method}`)}
               </Text>
             </span>

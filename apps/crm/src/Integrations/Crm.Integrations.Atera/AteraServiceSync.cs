@@ -349,7 +349,11 @@ public sealed class AteraAgentSyncJob(
     }
 }
 
-/// <summary>Open Critical and Warning alerts per organization (BR-SRV-04).</summary>
+/// <summary>
+/// Open Critical and Warning alerts per organization (BR-SRV-04), kept with a lifecycle (M38): an alert keeps its CRM id from one
+/// read to the next and is resolved when a complete read no longer lists it. Only a read of every page is a snapshot; a page
+/// that cannot be read fails the run before anything is stored.
+/// </summary>
 public sealed class AteraAlertSyncJob(
     IAteraClient client,
     AteraLinkIndex links,
@@ -371,23 +375,35 @@ public sealed class AteraAlertSyncJob(
         await runner.RunAsync(AteraTypes.System, JobId, async (progress, ct) =>
         {
             var customers = await links.CustomersAsync(ct);
-            var byOrganization = new Dictionary<Guid, List<ExternalAlert>>();
+            var alerts = new List<ExternalAlert>();
+            // Every alert Atera reports open, linked or not: one whose customer lost its link is still open, not resolved.
+            var open = new HashSet<string>(StringComparer.Ordinal);
+            var unlinked = 0;
             await foreach (var alert in client.GetAlertsAsync("Open", ct))
             {
                 progress.Read++;
-                if (AteraServiceMapping.SeverityOf(alert.Severity) is not { } severity ||
-                    alert.CustomerId is not { } customerId || !customers.TryGetValue(customerId, out var organizationId))
+                open.Add(alert.AlertId);
+                if (AteraServiceMapping.SeverityOf(alert.Severity) is not { } severity)
                 {
                     continue;
                 }
 
-                byOrganization.TryAdd(organizationId, []);
-                byOrganization[organizationId].Add(new ExternalAlert(alert.AlertId, severity, alert.Title, alert.DeviceName, alert.CreatedAt));
+                if (alert.CustomerId is not { } customerId || !customers.TryGetValue(customerId, out var organizationId))
+                {
+                    unlinked++;
+                    continue;
+                }
+
+                alerts.Add(new ExternalAlert(
+                    alert.AlertId, organizationId, severity, alert.Title, alert.DeviceName, alert.CreatedAt,
+                    customerId.ToString(CultureInfo.InvariantCulture), AteraServiceMapping.Url(options.Value.AlertUrlTemplate, alert.AlertId)));
             }
 
-            await service.ReplaceOpenAlertsAsync(AteraTypes.System, byOrganization.ToDictionary(x => x.Key, x => (IReadOnlyCollection<ExternalAlert>)x.Value), ct);
-            progress.Changed = byOrganization.Sum(x => x.Value.Count);
-            progress.Message = $"open alerts {progress.Changed} in {byOrganization.Count} organizations";
+            // The enumeration throws on any page it cannot read, so arriving here means every page was read.
+            var result = await service.ApplyAlertSnapshotAsync(new AlertSnapshot(AteraTypes.System, AlertKind.Monitoring, alerts, open, IsComplete: true), ct);
+            progress.Changed = result.Changed;
+            progress.Message = $"open alerts {alerts.Count}: new {result.Opened}, reopened {result.Reopened}, changed {result.Updated}, " +
+                               $"resolved {result.Resolved}; skipped (customer not linked) {unlinked}";
         }, cancellationToken);
     }
 }

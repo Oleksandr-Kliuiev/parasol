@@ -2,21 +2,21 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { writeFile, chmod, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createStateDirectory, secret, sqlPassword, freePort, jsonFile, command, startProcess, waitReady, pause, safeEnvironment } from '../../../../tools/composition/runtime.mjs';
-import { certificates, writeAppConfig, appEnvironment, connectionString } from '../../../../tools/composition/config.mjs';
-import { docker, sql, prepareSqlLogins, removeOwnedContainer } from '../../../../tools/composition/database.mjs';
-import { SQL_IMAGE } from '../../../../tools/composition/plan.mjs';
+import { createStateDirectory, sqlPassword, freePort, jsonFile, command, startProcess, waitReady, pause, safeEnvironment } from './harness/runtime.mjs';
+import { certificates, writeAppConfig, appEnvironment, connectionString } from './harness/config.mjs';
+import { docker, sql, prepareSqlLogins, removeOwnedContainer } from './harness/database.mjs';
+import { SQL_IMAGE, CONTAINER_LABEL } from './harness/plan.mjs';
 import { requireBrowserPass } from '../../../../scripts/test-result.mjs';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url)).replace(/\/$/, '');
 const directory = process.argv[2];
 await createStateDirectory(directory);
 const runId = randomBytes(6).toString('hex');
-const state = { root, directory, runId, sqlContainer: `parasol-composition-${runId}-sql`, pgContainer: `parasol-composition-${runId}-pg`,
+const state = { root, directory, runId, sqlContainer: `parasol-harness-${runId}-sql`,
   sqlDatabase: `crm_e2e_readiness_${runId}`, sqlSaPassword: sqlPassword(), sqlWebPassword: sqlPassword(), sqlWorkerPassword: sqlPassword(), documentVolumeId: randomUUID(), ports: {} };
 for (const kind of ['sql', 'web', 'worker']) state.ports[kind] = await freePort();
 if (new Set(Object.values(state.ports)).size !== 3) throw new Error('Distinct fixture ports are required.');
-state.baseUrl = `https://localhost:${state.ports.web}`; state.atlasBridgeUrl = 'http://127.0.0.1:1/disabled/';
+state.baseUrl = `https://localhost:${state.ports.web}`;
 async function sourceHashes() {
   const names = (await command('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', 'apps/crm/src', 'apps/crm/web', 'apps/crm/tools/testing'],
     { cwd: root, label: 'Finance verification inputs' })).split('\0').filter(Boolean).sort();
@@ -46,7 +46,7 @@ try {
   const secretPath = join(directory, 'private/sql-password');
   await writeFile(secretPath, state.sqlSaPassword, { mode: 0o600 }); await chmod(secretPath, 0o444);
   await docker(['run', '--detach', '--pull=never', '--platform', 'linux/amd64', '--name', state.sqlContainer,
-    '--label', `parasol.composition.run=${runId}`, '--publish', `127.0.0.1:${state.ports.sql}:1433`,
+    '--label', `${CONTAINER_LABEL}=${runId}`, '--publish', `127.0.0.1:${state.ports.sql}:1433`,
     '--env', 'ACCEPT_EULA=Y', '--env', 'MSSQL_PID=Express', '--env', 'MSSQL_MEMORY_LIMIT_MB=2048',
     '--mount', `type=bind,src=${secretPath},dst=/run/secrets/sql-sa-password,readonly`,
     '--mount', `type=bind,src=${join(root, 'deploy/hostinger/sql-entrypoint.sh')},dst=/opt/parasol/sql-entrypoint.sh,readonly`,
@@ -68,7 +68,7 @@ try {
     const config = await writeAppConfig(state, kind);
     const handle = startProcess('dotnet', [join(root, `apps/crm/src/Hosts/${host}/bin/Release/net10.0/${host}.dll`),
       // This owned 67-case fixture shares durable development users across all engines.
-      // Match the existing E2E-only budget; production and composition limits stay unchanged.
+      // Match the existing E2E-only budget; production and the harness defaults stay unchanged.
       ...(kind === 'web' ? ['--RateLimits:ApiPerMinute=100000'] : [])], {
       cwd: join(root, `apps/crm/src/Hosts/${host}`), env: appEnvironment(config, url), label: host });
     processes.push(handle);
@@ -87,7 +87,7 @@ export default defineConfig({ ...base, testDir: ${JSON.stringify(join(root, 'app
   await writeFile(configPath, config, { mode: 0o600 });
   await command(process.execPath, [join(root, 'apps/crm/web/node_modules/@playwright/test/cli.js'), 'test', '-c', configPath,
 ] , {
-    cwd: join(root, 'apps/crm/web'), env: safeEnvironment({ E2E_SQL: connectionString(state, 'composition_web', state.sqlWebPassword), PARASOL_FINANCE_STATE: join(directory, 'private/finance-state.json'), UI_LAYOUT_AUDIT_MODULE: process.env.UI_LAYOUT_AUDIT_MODULE ?? '' }),
+    cwd: join(root, 'apps/crm/web'), env: safeEnvironment({ E2E_SQL: connectionString(state, 'harness_web', state.sqlWebPassword), PARASOL_FINANCE_STATE: join(directory, 'private/finance-state.json'), UI_LAYOUT_AUDIT_MODULE: process.env.UI_LAYOUT_AUDIT_MODULE ?? '' }),
     label: 'Customer finance real API, role and layout browser checks', timeout: 600_000, logPath: join(directory, 'logs/browser.log'), secrets: allSecrets, signal: controller.signal,
   });
   browser = requireBrowserPass(JSON.parse(await readFile(join(directory, 'browser-artifacts/report.json'), 'utf8')), 0);

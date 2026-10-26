@@ -44,8 +44,8 @@ const focusId = (page) => page.evaluate(() => document.activeElement && document
 
 /* ---------- Flows ---------- */
 
-let { ctx, page } = await open('technician', '/observations');
-await page.focus('.obs-table button[data-action="assign"]');
+let { ctx, page } = await open('technician', '/alerts');
+await page.focus('.alert-table button[data-action="assign"]');
 await page.keyboard.press('Enter');
 await page.waitForTimeout(200);
 ok(await page.evaluate(() => document.querySelector('.popover') && document.querySelector('.popover').contains(document.activeElement)), 'assign popover opens with focus inside');
@@ -56,7 +56,8 @@ await page.keyboard.press('Enter');
 await page.click('.popover [data-action="assign-confirm"]');
 await page.waitForTimeout(250);
 ok((await toast(page)).length > 0 && (await page.evaluate(() => document.activeElement.matches('[data-action="open-task"]'))), 'assigning shows a receipt and focuses the new task chip');
-const raceRow = page.locator('.obs-table tr', { hasText: 'Eikeli' }).first();
+ok(await page.evaluate(() => { const task = P.data.tasks[P.data.tasks.length - 1]; return task.subject === P.data.alert(task.source).title; }), 'the new task takes the alert title as its subject');
+const raceRow = page.locator('.alert-table tr', { hasText: 'Eikeli' }).first();
 await raceRow.locator('[data-action="assign"]').click();
 await page.waitForTimeout(200);
 ok(await page.locator('.popover').textContent().then((s) => s.includes('Jonas')), 'a colleague’s task is shown instead of a duplicate');
@@ -106,27 +107,44 @@ await ctx.close();
 await page.keyboard.press('Control+k');
 await page.keyboard.type('reception');
 await page.waitForTimeout(200);
-ok((await page.locator('.palette-item', { hasText: 'RECEPTION-PC' }).count()) === 2, 'the palette shows both machines named RECEPTION-PC with their customers');
+ok((await page.locator('.palette-item', { hasText: 'RECEPTION-PC' }).count()) === 2, 'the palette shows both devices named RECEPTION-PC with their customers');
 await page.keyboard.press('Escape');
 await page.reload({ waitUntil: 'networkidle' });
 await page.keyboard.press('Tab');
 await page.keyboard.press('Enter');
 await page.waitForTimeout(150);
 ok((await focusId(page)) === 'view' && (await page.evaluate(() => location.hash)) === '#/day', 'the skip link focuses the content and keeps the route');
-await page.keyboard.press('g'); await page.keyboard.press('o');
+await page.keyboard.press('g'); await page.keyboard.press('a');
 await page.waitForTimeout(200);
-ok((await page.evaluate(() => location.hash)) === '#/observations', 'g then o opens the observation queue');
+ok((await page.evaluate(() => location.hash)) === '#/alerts', 'g then a opens the alert queue');
 await ctx.close();
 
-({ ctx, page } = await open('technician', '/observations'));
-await page.locator('.obs-table button[data-action="open-observation"]').first().click();
+({ ctx, page } = await open('technician', '/alerts'));
+await page.locator('.alert-table button[data-action="open-alert"]').first().click();
 await page.waitForTimeout(250);
 await page.locator('#drawer a[href^="#/customers/"]').click();
 await page.waitForTimeout(300);
 ok((await page.evaluate(() => location.hash.startsWith('#/customers/') && !document.getElementById('drawer').open)), 'a link inside the drawer navigates and closes the drawer');
 await page.goBack();
 await page.waitForTimeout(300);
-ok((await page.evaluate(() => location.hash)) === '#/observations', 'Back returns to the queue');
+ok((await page.evaluate(() => location.hash)) === '#/alerts', 'Back returns to the queue');
+await ctx.close();
+
+({ ctx, page } = await open('technician', '/customers/fjordlys/technical'));
+ok((await page.evaluate(() => location.hash)) === '#/customers/fjordlys/operations' && (await page.locator('.tab[aria-current="page"]').textContent()).includes('Drift'),
+  'the old technical address opens the Drift tab');
+await ctx.close();
+
+({ ctx, page } = await open('technician', '/tasks'));
+const sourceBtn = page.locator('.task-source [data-action="open-alert"]').first();
+const alertId = await sourceBtn.getAttribute('data-id');
+await sourceBtn.click();
+await page.waitForTimeout(250);
+await page.click('#drawer [data-action="close-alert"]');
+await page.waitForTimeout(250);
+ok(await page.evaluate((id) => { const a = P.data.alert(id); const task = P.data.tasks.filter((x) => x.source === id)[0];
+  return a.status === 'CLOSED' && task.status === 'Open' && document.activeElement.id === 'alert-status'; }, alertId),
+  'the Source button opens the alert, and closing the alert leaves its task open');
 await ctx.close();
 
 ({ ctx, page } = await open('technician', '/day', { width: 390 }));
@@ -139,8 +157,8 @@ await ctx.close();
 
 /* ---------- axe ---------- */
 
-const AXE = [['/day', 'technician'], ['/day', 'admin'], ['/observations', 'technician'], ['/tasks', 'servicelead'], ['/time/approve', 'admin'],
-  ['/customers', 'technician'], ['/customers/fjordlys/technical', 'technician'], ['/customers/fjordlys/finance', 'admin'],
+const AXE = [['/day', 'technician'], ['/day', 'admin'], ['/alerts', 'technician'], ['/tasks', 'servicelead'], ['/time/approve', 'admin'],
+  ['/customers', 'technician'], ['/customers/fjordlys/operations', 'technician'], ['/customers/fjordlys/finance', 'admin'],
   ['/billing', 'admin'], ['/invoices', 'admin'], ['/connections', 'admin'], ['/admin', 'admin']];
 for (const theme of ['light', 'dark']) {
   for (const [route, role] of AXE) {

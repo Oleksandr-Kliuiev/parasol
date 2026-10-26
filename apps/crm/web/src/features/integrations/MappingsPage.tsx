@@ -48,33 +48,13 @@ import { OrganizationPickerDialog } from './OrganizationPickerDialog';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 import { ScrollTabList } from '../../shared/components/ScrollTabList';
 import { FilterChips, FilterField, Toolbar } from '../../shared/components/Toolbar';
-import { LinkMultiple16Regular, PlugDisconnected24Regular } from '@fluentui/react-icons';
+import { PlugDisconnected24Regular } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
   // Which system on the left, which kind of record on the right: two switches of their own, never read as one row of tabs.
   tabs: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px 16px', marginBottom: '16px', minWidth: 0 },
   // On a phone a tab row longer than the screen scrolls sideways (ScrollTabList fades the hidden edge).
   tabList: { overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px', maxWidth: '100%' },
-  // The way to the Atlas links: a secondary button of the header, drawn on a link because it opens another page.
-  atlas: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    minHeight: '42px',
-    paddingLeft: '16px',
-    paddingRight: '16px',
-    borderRadius: '12px',
-    border: `1px solid ${h.line2}`,
-    backgroundColor: h.surface,
-    color: h.text,
-    fontSize: '13.5px',
-    fontWeight: tokens.fontWeightSemibold,
-    whiteSpace: 'nowrap',
-    textDecorationLine: 'none',
-    ':hover': { backgroundColor: h.surface2, color: h.text, textDecorationLine: 'none' },
-    ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px' },
-    '& svg': { width: '16px', height: '16px', color: h.muted },
-  },
   muted: { color: h.muted, fontSize: '13px', lineHeight: '18px' },
   name: { display: 'block', fontWeight: tokens.fontWeightSemibold, overflowWrap: 'anywhere' },
   meta: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', marginTop: '2px' },
@@ -164,8 +144,7 @@ export function MappingsPage() {
 
   return (
     <>
-      <PageHeader title={t('mappings.title')} subtitle={t('mappings.subtitle')}
-        actions={<AppLink to="/admin/mappings/atlas" className={styles.atlas}><LinkMultiple16Regular aria-hidden />{t('parasolIdentity.title')}</AppLink>} />
+      <PageHeader title={t('mappings.title')} subtitle={t('mappings.subtitle')} />
       {status.error && <ErrorState error={status.error} onRetry={() => void status.refetch()} />}
 
       <div className={styles.tabs}>

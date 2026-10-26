@@ -17,6 +17,9 @@ public sealed class BrregRegistryCheckJob(
 {
     public const string JobId = "brreg-registry-check";
     public const string System = "brreg";
+
+    /// <summary>Every night at two, Oslo time; the connections page calls the check late after its gap (FreshnessLimits).</summary>
+    public const string Cron = "0 2 * * *";
     private const int BatchSize = 200;
 
     public Task RunAsync(CancellationToken cancellationToken) =>

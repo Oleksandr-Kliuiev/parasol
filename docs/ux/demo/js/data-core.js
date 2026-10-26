@@ -1,4 +1,4 @@
-/* Parasoll UX demo: synthetic staff, roles, customers, devices and Atlas observations.
+/* Parasoll UX demo: synthetic staff, roles, customers, devices and alerts.
    Everything here is invented for the demo; any resemblance to real companies is accidental. */
 (function () {
   'use strict';
@@ -30,7 +30,7 @@
       if (check === 10) continue;
       if (check === 11) check = 0;
       var s = digits.join('') + check;
-      return s.slice(0, 3) + ' ' + s.slice(3, 6) + ' ' + s.slice(6);
+      return s.slice(0, 3) + ' ' + s.slice(3, 6) + ' ' + s.slice(6);
     }
   }
 
@@ -42,19 +42,20 @@
     anna: { id: 'anna', name: 'Anna Dahl', first: 'Anna', initials: 'AD', av: 3 }
   };
 
-  /* Permission names mirror the CRM (Permissions.cs); money follows finance.read */
+  /* Permission names mirror the CRM (Permissions.cs); money follows finance.read.
+     Everyone reads Operations (service.read): devices and alerts have no per-customer membership. */
   D.roles = {
     technician: {
       staff: 'ingrid', label: 'role.technician', entra: 'Technician',
-      perms: ['atlas', 'activities', 'time.own', 'service', 'contracts', 'projects']
+      perms: ['activities', 'time.own', 'service', 'contracts', 'projects']
     },
     servicelead: {
       staff: 'jonas', label: 'role.servicelead', entra: 'ServiceLead',
-      perms: ['atlas', 'activities', 'time.own', 'time.manage', 'service', 'sla', 'billing', 'contracts', 'projects']
+      perms: ['activities', 'time.own', 'time.manage', 'service', 'sla', 'billing', 'contracts', 'projects']
     },
     admin: {
       staff: 'anna', label: 'role.admin', entra: 'Admin · Finance',
-      perms: ['atlas', 'activities', 'time.own', 'time.manage', 'service', 'sla', 'billing', 'finance', 'contracts',
+      perms: ['activities', 'time.own', 'time.manage', 'service', 'sla', 'billing', 'finance', 'contracts',
         'sales', 'projects', 'reports', 'admin', 'integrations', 'licensing']
     }
   };
@@ -87,20 +88,20 @@
   };
 
   var HAND = [
-    ['fjordlys', 'Fjordlys Regnskap AS', 'FJL', 'Bergen', 'accounting', 23, 'anna', 'ingrid', ['ingrid', 'jonas'], [20, 4.5]],
-    ['havbris', 'Havbris Eiendom AS', 'HVB', 'Stavanger', 'estate', 14, 'anna', 'jonas', ['jonas'], [10, 1.75]],
-    ['nordlys', 'Nordlys Drift AS', 'NLD', 'Tromsø', 'facility', 31, 'anna', 'ingrid', ['ingrid'], [40, 26.5]],
-    ['bergvik', 'Bergvik Tannklinikk AS', 'BVT', 'Bergen', 'dental', 12, 'anna', 'ingrid', ['ingrid', 'jonas'], [15, 11.25]],
-    ['solsiden', 'Solsiden Barnehage SA', 'SOL', 'Trondheim', 'kindergarten', 6, 'jonas', 'jonas', ['jonas'], null],
-    ['kvamme', 'Kvamme & Sønn Advokatfirma DA', 'KVS', 'Oslo', 'law', 18, 'anna', 'ingrid', ['ingrid'], [30, 14]],
-    ['lindas', 'Lindås Elektro AS', 'LIN', 'Lindås', 'electric', 9, 'jonas', 'jonas', ['jonas'], null],
-    ['trollvik', 'Trollvik Bakeri AS', 'TRB', 'Ålesund', 'bakery', 5, 'jonas', 'jonas', [], null],
-    ['granlund', 'Granlund Arkitekter AS', 'GRA', 'Oslo', 'architects', 16, 'anna', 'jonas', ['jonas'], [20, 12.5]],
-    ['skarvoy', 'Skarvøy Sjømat AS', 'SKS', 'Bodø', 'seafood', 22, 'anna', 'ingrid', ['ingrid'], [20, 9]],
-    ['eikeli', 'Eikeli Legesenter AS', 'EIK', 'Bærum', 'medical', 19, 'anna', 'ingrid', ['ingrid', 'jonas'], [25, 3.75]],
-    ['vestbris', 'Vestbris Logistikk AS', 'VBL', 'Drammen', 'logistics', 27, 'jonas', 'jonas', ['jonas'], [30, 21]],
-    ['aerlige', 'Ærlige Bygg AS', 'AEB', 'Kristiansand', 'construction', 11, 'jonas', 'ingrid', ['ingrid'], null],
-    ['havnelys', 'Havnelys AS', 'HNL', 'Haugesund', 'marina', 7, 'jonas', 'ingrid', ['ingrid'], null]
+    ['fjordlys', 'Fjordlys Regnskap AS', 'FJL', 'Bergen', 'accounting', 23, 'anna', 'ingrid', [20, 4.5]],
+    ['havbris', 'Havbris Eiendom AS', 'HVB', 'Stavanger', 'estate', 14, 'anna', 'jonas', [10, 1.75]],
+    ['nordlys', 'Nordlys Drift AS', 'NLD', 'Tromsø', 'facility', 31, 'anna', 'ingrid', [40, 26.5]],
+    ['bergvik', 'Bergvik Tannklinikk AS', 'BVT', 'Bergen', 'dental', 12, 'anna', 'ingrid', [15, 11.25]],
+    ['solsiden', 'Solsiden Barnehage SA', 'SOL', 'Trondheim', 'kindergarten', 6, 'jonas', 'jonas', null],
+    ['kvamme', 'Kvamme & Sønn Advokatfirma DA', 'KVS', 'Oslo', 'law', 18, 'anna', 'ingrid', [30, 14]],
+    ['lindas', 'Lindås Elektro AS', 'LIN', 'Lindås', 'electric', 9, 'jonas', 'jonas', null],
+    ['trollvik', 'Trollvik Bakeri AS', 'TRB', 'Ålesund', 'bakery', 5, 'jonas', 'jonas', null],
+    ['granlund', 'Granlund Arkitekter AS', 'GRA', 'Oslo', 'architects', 16, 'anna', 'jonas', [20, 12.5]],
+    ['skarvoy', 'Skarvøy Sjømat AS', 'SKS', 'Bodø', 'seafood', 22, 'anna', 'ingrid', [20, 9]],
+    ['eikeli', 'Eikeli Legesenter AS', 'EIK', 'Bærum', 'medical', 19, 'anna', 'ingrid', [25, 3.75]],
+    ['vestbris', 'Vestbris Logistikk AS', 'VBL', 'Drammen', 'logistics', 27, 'jonas', 'jonas', [30, 21]],
+    ['aerlige', 'Ærlige Bygg AS', 'AEB', 'Kristiansand', 'construction', 11, 'jonas', 'ingrid', null],
+    ['havnelys', 'Havnelys AS', 'HNL', 'Haugesund', 'marina', 7, 'jonas', 'ingrid', null]
   ];
 
   var GEN = [
@@ -121,7 +122,7 @@
   HAND.forEach(function (h, i) {
     D.customers.push({
       id: h[0], name: h[1], prefix: h[2], city: h[3], sector: SECT[h[4]], devicesN: h[5],
-      am: h[6], tech: h[7], members: h[8].length ? h[8].concat(['anna']) : [], hourBank: h[9] ? { size: h[9][0], left: h[9][1] } : null,
+      am: h[6], tech: h[7], hourBank: h[8] ? { size: h[8][0], left: h[8][1] } : null,
       orgnr: orgnr(9), status: 'customer', av: (i % 6) + 1, featured: true
     });
   });
@@ -133,26 +134,25 @@
     D.customers.push({
       id: 'c' + (i + 15), name: g[0], prefix: prefix, city: pick(CITIES), sector: SECT[g[1]], devicesN: int(4, 14),
       am: pick(['anna', 'jonas']), tech: techOwner,
-      members: i < 24 ? [techOwner, 'anna'] : i === 24 ? ['anna'] : [],
       hourBank: size ? { size: size, left: Math.round(size * (0.25 + rnd() * 0.7) * 4) / 4 } : null,
       orgnr: orgnr(pick([8, 9])), status: i === 22 ? 'prospect' : 'customer', av: ((i + 2) % 6) + 1, featured: false
     });
   });
-  /* Two customers are not linked to Atlas: Trollvik (mapping missing) and the last generated one */
-  D.customers.forEach(function (c) {
-    c.atlas = c.members.length ? 'READY' : 'NOT_LINKED';
-    if (c.atlas === 'NOT_LINKED') c.members = [];
+  /* Atera alerts and devices reach a customer only through a confirmed Atera customer mapping.
+     Two customers have none yet: Trollvik and the last generated one. */
+  var NO_ATERA = ['trollvik', 'c40'];
+  D.customers.forEach(function (c, i) {
+    c.atera = NO_ATERA.indexOf(c.id) === -1 ? 'LINKED' : 'NOT_LINKED';
+    c.ateraId = c.atera === 'LINKED' ? 4101 + i : null;
   });
   D.customer = function (id) { return D.customers.filter(function (c) { return c.id === id; })[0]; };
-  /* Havnelys did not answer within the per-customer time budget in the last attention read */
-  D.customer('havnelys').readStatus = 'TIMEOUT';
 
-  /* ---------- Devices (Atlas registry + saved Atera inventory where a link is confirmed) ---------- */
+  /* ---------- Devices: Atera agents and Huntress agents of the same customer in one row ---------- */
 
   var OS_WS = ['Windows 11 Pro 24H2', 'Windows 11 Pro 24H2', 'Windows 11 Pro 23H2', 'Windows 11 Business', 'macOS 15'];
   D.devices = [];
   D.customers.forEach(function (c) {
-    if (c.atlas !== 'READY') return;
+    if (c.atera !== 'LINKED') return;
     var servers = c.devicesN >= 15 ? 2 : c.devicesN >= 9 ? 1 : 0;
     for (var n = 1; n <= c.devicesN; n++) {
       var isServer = n <= servers;
@@ -173,7 +173,7 @@
     D.devices.push(d);
     return d;
   }
-  /* The same hostname exists at two customers: names alone never identify a machine */
+  /* The same hostname exists at two customers: names alone never identify a device */
   addDevice('bergvik', 'RECEPTION-PC', 'desktop', 'Windows 11 Pro 23H2');
   addDevice('eikeli', 'RECEPTION-PC', 'desktop', 'Windows 11 Pro 24H2');
   addDevice('nordlys', 'NLD-HYPERV-HOST-01.drift.nordlys-intern.local', 'server', 'Windows Server 2022');
@@ -182,62 +182,61 @@
   };
   D.devicesOf = function (customer) { return D.devices.filter(function (d) { return d.customer === customer; }); };
 
-  /* ---------- Atlas observations ---------- */
+  /* ---------- Alerts: Atera reads one list for every customer and the CRM matches each alert by its
+     Atera customer ID; Huntress incidents arrive per Huntress organisation (target state) ---------- */
 
-  var obsSeq = 0;
-  D.observations = [];
-  function obs(o) {
-    obsSeq += 1;
+  var alertSeq = 0;
+  D.alerts = [];
+  function addAlert(o) {
+    alertSeq += 1;
     var dev = o.host ? D.device(o.customer, o.host) : null;
     var rec = {
-      id: 'o' + obsSeq, customer: o.customer, severity: o.sev, kind: o.kind,
-      route: o.route || (o.kind === 'SECURITY_INCIDENT' ? 'HUMAN_REVIEW' : (o.sev === 'HIGH' || o.sev === 'CRITICAL' ? 'INVESTIGATE' : 'MONITOR')),
-      status: o.status || 'OPEN', summary: o.summary, source: o.source || (o.kind === 'SECURITY_INCIDENT' ? 'huntress' : 'atera'),
+      id: 'al' + alertSeq, customer: o.customer, severity: o.sev, kind: o.kind,
+      status: o.status || 'OPEN', title: o.title, source: o.source || (o.kind === 'SECURITY_INCIDENT' ? 'huntress' : 'atera'),
       device: dev ? dev.id : null, deviceStatus: dev ? 'CONFIRMED' : (o.deviceStatus || 'UNAVAILABLE'),
-      occurredAt: o.occurredAt, updatedAt: o.updatedAt || o.occurredAt, task: o.task || null, race: o.race || null,
-      detail: o.detail || null, resolvedAt: o.resolvedAt || null
+      occurredAt: o.occurredAt, updatedAt: o.updatedAt || o.closedAt || o.occurredAt, task: o.task || null, race: o.race || null,
+      detail: o.detail || null, closedAt: o.closedAt || null, closedBy: o.closedBy || null, reason: o.reason || null
     };
-    D.observations.push(rec);
+    D.alerts.push(rec);
     return rec;
   }
-  D.obs = obs;
 
-  var SEC = S;
-  obs({ customer: 'fjordlys', sev: 'CRITICAL', kind: 'SECURITY_INCIDENT', summary: 'Possible credential theft on FJL-LT-07', host: 'FJL-LT-07',
+  addAlert({ customer: 'fjordlys', sev: 'CRITICAL', kind: 'SECURITY_INCIDENT', title: 'Possible credential theft on FJL-LT-07', host: 'FJL-LT-07',
     occurredAt: at(0, 7, 52), updatedAt: at(0, 8, 31),
-    detail: SEC('Huntress melder om et verktøy som leser LSASS-minnet for å hente påloggingsdata. Hendelsesrapporten er sendt og venter på gjennomgang.',
+    detail: S('Huntress melder om et verktøy som leser LSASS-minnet for å hente påloggingsdata. Hendelsesrapporten er sendt og venter på gjennomgang.',
       'Huntress reports a credential dumping tool reading LSASS memory. The incident report was sent and awaits review.',
       'Huntress melder om eit verktøy som les LSASS-minnet for å hente påloggingsdata. Hendingsrapporten er send og ventar på gjennomgang.') });
-  obs({ customer: 'fjordlys', sev: 'HIGH', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 97% (C:)', host: 'FJL-SRV-01',
+  addAlert({ customer: 'fjordlys', sev: 'HIGH', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 97% (C:)', host: 'FJL-SRV-01',
     occurredAt: at(-1, 23, 10), task: 't2' });
-  obs({ customer: 'bergvik', sev: 'HIGH', kind: 'SECURITY_INCIDENT', summary: 'Mailbox rule review', deviceStatus: 'UNAVAILABLE',
+  addAlert({ customer: 'bergvik', sev: 'HIGH', kind: 'SECURITY_INCIDENT', title: 'Mailbox rule review', deviceStatus: 'UNAVAILABLE',
     occurredAt: at(-1, 21, 40),
-    detail: SEC('En ny videresendingsregel til en ekstern postkasse for resepsjon@. Ingen enhet: hendelsen gjelder en postkasse.',
+    detail: S('En ny videresendingsregel til en ekstern postkasse for resepsjon@. Ingen enhet: hendelsen gjelder en postkasse.',
       'A new forwarding rule to an external mailbox for resepsjon@. No device: the event belongs to a mailbox.',
       'Ei ny vidaresendingsregel til ei ekstern postkasse for resepsjon@. Inga eining: hendinga gjeld ei postkasse.') });
-  obs({ customer: 'nordlys', sev: 'HIGH', kind: 'SECURITY_INCIDENT', summary: 'Security incident awaiting review', host: 'NLD-LT-14',
-    status: 'ACKNOWLEDGED', occurredAt: at(-2, 15, 20), updatedAt: at(-1, 9, 5), task: 't3' });
-  obs({ customer: 'kvamme', sev: 'HIGH', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 96% (C:)', host: 'KVS-LT-04',
+  addAlert({ customer: 'nordlys', sev: 'HIGH', kind: 'SECURITY_INCIDENT', title: 'Security incident awaiting review', host: 'NLD-LT-14',
+    occurredAt: at(-2, 15, 20), updatedAt: at(-1, 9, 5), task: 't3' });
+  addAlert({ customer: 'kvamme', sev: 'HIGH', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 96% (C:)', host: 'KVS-LT-04',
     occurredAt: at(-4, 10, 5), task: 't1' });
-  obs({ customer: 'eikeli', sev: 'HIGH', kind: 'SECURITY_INCIDENT', summary: 'Security incident awaiting review', host: 'RECEPTION-PC',
+  addAlert({ customer: 'eikeli', sev: 'HIGH', kind: 'SECURITY_INCIDENT', title: 'Security incident awaiting review', host: 'RECEPTION-PC',
     occurredAt: at(0, 6, 58), race: 'j5' });
-  obs({ customer: 'havbris', sev: 'HIGH', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 95% (D:)', host: 'HVB-PC-03',
+  addAlert({ customer: 'havbris', sev: 'HIGH', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 95% (D:)', host: 'HVB-PC-03',
     occurredAt: at(-1, 14, 30), task: 'j1' });
-  obs({ customer: 'vestbris', sev: 'CRITICAL', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 99% (C:)', host: 'VBL-SRV-02',
+  addAlert({ customer: 'vestbris', sev: 'CRITICAL', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 99% (C:)', host: 'VBL-SRV-02',
     occurredAt: at(0, 5, 12) });
-  obs({ customer: 'c15', sev: 'HIGH', kind: 'SECURITY_INCIDENT', summary: 'Security incident awaiting review', host: D.devicesOf('c15')[1].host,
+  addAlert({ customer: 'c15', sev: 'HIGH', kind: 'SECURITY_INCIDENT', title: 'Security incident awaiting review', host: D.devicesOf('c15')[1].host,
     occurredAt: at(-1, 18, 2) });
-  obs({ customer: 'bergvik', sev: 'LOW', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 72% (C:)', host: 'RECEPTION-PC', occurredAt: at(-6, 11, 0) });
-  obs({ customer: 'nordlys', sev: 'MEDIUM', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 86% (E:)', host: 'NLD-HYPERV-HOST-01.drift.nordlys-intern.local', occurredAt: at(-3, 4, 40) });
+  addAlert({ customer: 'bergvik', sev: 'LOW', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 72% (C:)', host: 'RECEPTION-PC', occurredAt: at(-6, 11, 0) });
+  addAlert({ customer: 'nordlys', sev: 'MEDIUM', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 86% (E:)', host: 'NLD-HYPERV-HOST-01.drift.nordlys-intern.local', occurredAt: at(-3, 4, 40) });
 
-  /* Resolved history for device timelines */
-  obs({ customer: 'fjordlys', sev: 'MEDIUM', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 91% (C:)', host: 'FJL-SRV-01', status: 'RESOLVED', occurredAt: at(-21, 2, 15), resolvedAt: at(-20, 10, 0) });
-  obs({ customer: 'fjordlys', sev: 'HIGH', kind: 'DISK_CAPACITY', summary: 'Disk capacity used: 95% (C:)', host: 'FJL-SRV-01', status: 'RESOLVED', occurredAt: at(-9, 22, 50), resolvedAt: at(-8, 13, 20) });
-  obs({ customer: 'fjordlys', sev: 'LOW', kind: 'SECURITY_INCIDENT', summary: 'Security incident awaiting review', host: 'FJL-LT-07', status: 'SUPPRESSED', occurredAt: at(-30, 12, 0), resolvedAt: at(-30, 15, 0) });
+  /* History for device timelines: closed at the source, closed in the CRM, hidden with a reason */
+  addAlert({ customer: 'fjordlys', sev: 'MEDIUM', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 91% (C:)', host: 'FJL-SRV-01', status: 'CLOSED_AT_SOURCE', occurredAt: at(-21, 2, 15), closedAt: at(-20, 10, 0) });
+  addAlert({ customer: 'fjordlys', sev: 'HIGH', kind: 'DISK_CAPACITY', title: 'Disk capacity used: 95% (C:)', host: 'FJL-SRV-01', status: 'CLOSED', occurredAt: at(-9, 22, 50), closedAt: at(-8, 13, 20), closedBy: 'ingrid' });
+  addAlert({ customer: 'fjordlys', sev: 'LOW', kind: 'SECURITY_INCIDENT', title: 'Security incident awaiting review', host: 'FJL-LT-07', status: 'HIDDEN', occurredAt: at(-30, 12, 0), closedAt: at(-30, 15, 0), closedBy: 'jonas',
+    reason: S('Kjent testverktøy fra leverandøren', 'A known test tool from the vendor', 'Kjent testverktøy frå leverandøren') });
 
-  /* Routine disk observations everywhere Atlas is linked */
+  /* Routine disk alerts everywhere Atera is linked */
   D.customers.forEach(function (c) {
-    if (c.atlas !== 'READY') return;
+    if (c.atera !== 'LINKED') return;
     var devs = D.devicesOf(c.id);
     var count = c.featured ? int(3, 7) : int(1, 4);
     for (var k = 0; k < count; k++) {
@@ -245,46 +244,36 @@
       var sev = used >= 85 ? 'MEDIUM' : used >= 76 ? 'LOW' : 'INFO';
       var when = at(-int(0, 12), int(0, 23), int(0, 59));
       if (when > P.NOW) when = new Date(when.getTime() - 86400000); /* an event never lies in the future */
-      obs({ customer: c.id, sev: sev, kind: 'DISK_CAPACITY', summary: 'Disk capacity used: ' + used + '% (' + pick(['C:', 'C:', 'D:']) + ')',
-        host: pick(devs).host, status: rnd() > 0.85 ? 'ACKNOWLEDGED' : 'OPEN', occurredAt: when });
+      addAlert({ customer: c.id, sev: sev, kind: 'DISK_CAPACITY', title: 'Disk capacity used: ' + used + '% (' + pick(['C:', 'C:', 'D:']) + ')',
+        host: pick(devs).host, occurredAt: when });
+      rnd(); /* one more draw per alert keeps every later synthetic value (invoices, hours) unchanged */
     }
   });
 
   D.SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
-  D.isUrgent = function (o) { return o.severity === 'CRITICAL' || o.severity === 'HIGH'; };
-  D.isActive = function (o) { return o.status === 'OPEN' || o.status === 'ACKNOWLEDGED'; };
-  D.canSee = function (customerId) {
-    var c = D.customer(customerId);
-    return !!c && c.members.indexOf(P.me().id) !== -1;
-  };
-  D.visibleObservations = function () {
-    return D.observations.filter(function (o) { return D.canSee(o.customer); });
-  };
+  D.isUrgent = function (a) { return a.severity === 'CRITICAL' || a.severity === 'HIGH'; };
+  D.isOpen = function (a) { return a.status === 'OPEN'; };
+  D.alert = function (id) { return D.alerts.filter(function (a) { return a.id === id; })[0]; };
+  D.alertsOf = function (customer) { return D.alerts.filter(function (a) { return a.customer === customer; }); };
 
-  /* ---------- Source freshness (per Atlas read) ---------- */
+  /* Atera alerts of Atera customers without a confirmed CRM link cannot be attributed: counted, never hidden */
+  D.unmatchedAlerts = 2;
 
-  D.atlasReadAt = at(0, 8, 37);
+  /* ---------- Saved data per source (the background worker syncs it; pages only read what is saved) ---------- */
+
+  D.syncedAt = at(0, 8, 30);
   D.sources = [
     { id: 'atera-agents', source: 'atera', label: 'source.ateraAgents', status: 'OK', asOf: at(0, 8, 30) },
+    { id: 'atera-alerts', source: 'atera', label: 'source.ateraAlerts', status: 'OK', asOf: at(0, 8, 30) },
     { id: 'atera-tickets', source: 'atera', label: 'source.ateraTickets', status: 'OK', asOf: at(0, 8, 30) },
-    { id: 'atera-alerts', source: 'atera', label: 'source.ateraAlerts', status: 'UNAVAILABLE', asOf: null },
     { id: 'huntress-incidents', source: 'huntress', label: 'source.huntressIncidents', status: 'OK', asOf: at(0, 8, 35) },
     { id: 'huntress-agents', source: 'huntress', label: 'source.huntressAgents', status: 'OK', asOf: at(0, 8, 35) },
-    { id: 'm365', source: 'microsoft365', label: 'source.m365', status: 'STALE', asOf: at(-1, 6, 0) }
+    { id: 'cloudally-backups', source: 'cloudally', label: 'source.cloudallyBackups', status: 'NOT_CONNECTED', asOf: null, why: 'source.cloudallyWhy' }
   ];
   /* Per-customer exceptions */
   D.sourceOverrides = { skarvoy: { 'huntress-incidents': { status: 'STALE', asOf: at(-3, 22, 0) } } };
   D.sourcesFor = function (customerId) {
     var o = D.sourceOverrides[customerId] || {};
     return D.sources.map(function (s) { return o[s.id] ? Object.assign({}, s, o[s.id]) : s; });
-  };
-
-  /* Microsoft 365 saved counts (not licences, not machines) */
-  D.m365 = {
-    fjordlys: { users: 27, registrations: 25, coverage: 'COMPLETE', asOf: at(0, 6, 0) },
-    nordlys: { users: 44, registrations: 38, coverage: 'PARTIAL', asOf: at(0, 6, 0), gap: [at(-1, 2, 0), at(-1, 5, 0)] },
-    bergvik: { users: 14, registrations: 12, coverage: 'COMPLETE', asOf: at(0, 6, 0) },
-    eikeli: { users: 31, registrations: 22, coverage: 'UNAVAILABLE', asOf: at(-2, 6, 0) },
-    kvamme: { users: 21, registrations: 19, coverage: 'COMPLETE', asOf: at(0, 6, 0) }
   };
 })();

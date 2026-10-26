@@ -88,7 +88,7 @@ dotnet user-secrets set "Integrations:Atera:ApiKey" "<api key>" --project src/Ho
 - [ ] часы: `GET /tickets/{id}/workhoursrecords` возвращает длительность, признак «оплачиваемая» и техника; записи появляются в «Учёте времени» со статусом «Новая»;
 - [ ] техники: в «Администрирование → Техники» появились записи; сопоставить их с пользователями CRM (по e-mail сопоставляются автоматически);
 - [ ] устройства: задача «Устройства (Atera)» разносит агентов по клиентам, типы (рабочая станция/сервер/сеть) определяются верно;
-- [ ] алерты: `GET /alerts?alertStatus=Open` — в карточке видны только Critical и Warning;
+- [ ] алерты: `GET /alerts?alertStatus=Open` читает все страницы; во вкладке «Drift» и очереди `/alerts` видны только Critical и Warning сопоставленных клиентов; оповещение, закрытое в Atera, после следующего полного чтения становится решённым ([05 §3.5](../05-integrations.md#35-оповещения-жизненный-цикл-m38)); ссылку на оповещение включать (`AlertUrlTemplate`) только после проверки адреса страницы в Atera;
 - [ ] создание тикета: из карточки клиента (`POST /tickets`, при необходимости `POST /contacts`) — сначала на тестовом клиенте из `WriteAllowedCustomerIds`;
 - [ ] уровень SLA: создать в Atera поле клиента (Admin → Custom fields → Customer), указать его имя в `Integrations:Atera:SlaCustomFieldName`, активировать контракт с SLA у тестового клиента — значение появляется в поле (`GET/PUT /customvalues/customerfield/{customerId}/{fieldName}`, тело `{"Value": "..."}`).
 

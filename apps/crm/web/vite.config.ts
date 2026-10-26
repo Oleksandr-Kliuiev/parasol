@@ -32,6 +32,6 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,
-    exclude: ['e2e/**', 'e2e-composition/**', 'e2e-finance/**', 'node_modules/**'],
+    exclude: ['e2e/**', 'e2e-finance/**', 'node_modules/**'],
   },
 });

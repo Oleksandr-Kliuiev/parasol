@@ -37,7 +37,7 @@ def main():
         return
     stack = Stack(args.state)
     with stack.lock():
-        if args.command == 'build': stack.compose('build', 'crm-web', 'crm-worker', 'atlas', 'atlas-migrate')
+        if args.command == 'build': stack.compose('build', 'crm-web', 'crm-worker')
         elif args.command == 'migrate':
             if stack.meta['kind'] == 'restore': raise ValueError('Do not migrate a quarantined recovery')
             migrate(stack)

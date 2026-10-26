@@ -32,6 +32,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             b.Property(x => x.Department).HasMaxLength(128);
             b.Property(x => x.JobTitle).HasMaxLength(128);
             b.Property(x => x.PreferredLanguage).HasMaxLength(8);
+            b.Property(x => x.MyDayLayout).HasMaxLength(16);
             // DEV-10: seven roles at most, comma-separated; existing users start with none until their next confirmation.
             b.Property(x => x.Roles).HasMaxLength(256).HasDefaultValue(string.Empty);
             b.Ignore(x => x.RoleList);

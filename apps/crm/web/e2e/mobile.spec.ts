@@ -28,7 +28,8 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
     ['Organization contracts', `/organizations/${organization.id}?tab=contracts`],
     ['New contract', `/contracts/new?organizationId=${organization.id}`],
     ['My timesheet', '/time'],
-    ['Organization service', `/organizations/${organization.id}?tab=service`],
+    ['Organization operations', `/organizations/${organization.id}?tab=drift`],
+    ['Alerts', '/alerts'],
     ['Pipeline', '/pipeline'],
     ['Leads', '/sales/leads'],
     ['Projects', '/projects'],
@@ -63,7 +64,9 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
   await expect(tabs.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
   await tabs.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('link', { name: 'Leads' }).click();
+  // Exactly "Leads": a customer converted from a lead may be called "LeadS… Nykunde AS", and until the menu's panel has loaded
+  // (on first use) that row of the list behind it is the only match and takes the click.
+  await page.getByRole('link', { name: 'Leads', exact: true }).click();
   await expect(page).toHaveURL(/\/sales\/leads/);
 
   // Search is a dialog (the command palette), opened from the top bar on a phone.

@@ -30,7 +30,7 @@ public sealed class ActivityFocusApiTests(CrmWebFactory factory)
         var source = Source();
         var due = DateTimeOffset.Parse("2090-01-01T10:30:45.123Z");
         await using var host = Host(factory, employee);
-        var created = (await Create(host, new(source, organization, employee, due.AddDays(100), ActivityPriority.High))).Value;
+        var created = (await Create(host, new(source, organization, employee, due.AddDays(100), ActivityPriority.High, Subject))).Value;
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ActivitiesDbContext>();
@@ -47,8 +47,6 @@ public sealed class ActivityFocusApiTests(CrmWebFactory factory)
         ordinary.GetProperty("items").EnumerateArray().ShouldNotContain(row => row.GetProperty("id").GetGuid() == created.ActivityId);
         var cursor = ordinary.GetProperty("nextCursor").GetString(); cursor.ShouldNotBeNullOrEmpty();
 
-        // No personal Atlas entry or Atlas permission is needed for the ordinary CRM edit DTO.
-        Permissions.ForRoles([CrmRoles.Finance]).ShouldNotContain(Permissions.ParasolAtlasRead);
         using var finance = factory.ClientAs(CrmRoles.Finance, "activity-focus-finance-" + Guid.NewGuid().ToString("N"));
         var selected = await Page(finance, Focus(organization, created.ActivityId));
         selected.GetProperty("totalCount").GetInt32().ShouldBe(1);
@@ -56,13 +54,13 @@ public sealed class ActivityFocusApiTests(CrmWebFactory factory)
         var dto = selected.GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
         dto.GetProperty("id").GetGuid().ShouldBe(created.ActivityId);
         dto.GetProperty("organizationId").GetGuid().ShouldBe(organization);
-        dto.GetProperty("subject").GetString().ShouldBe("Review technical observation");
+        dto.GetProperty("subject").GetString().ShouldBe(Subject);
         dto.GetProperty("body").ValueKind.ShouldBe(JsonValueKind.Null);
         dto.GetProperty("hasTechnicalSource").GetBoolean().ShouldBeTrue();
         dto.GetProperty("dueAt").GetDateTimeOffset().ShouldBe(due.AddDays(100));
         dto.GetProperty("assignee").GetProperty("id").GetGuid().ShouldBe(employee);
         dto.GetProperty("etag").GetString().ShouldNotBeNullOrEmpty();
-        foreach (var value in new[] { source.WorkspaceId, source.ClientId, source.ObservationId })
+        foreach (var value in new[] { source.ExternalCustomerId, source.ExternalId })
             dto.GetRawText().ShouldNotContain(value);
 
         // Ordinary continuation still has its prior shape and returns the same persisted DTO/ETag.

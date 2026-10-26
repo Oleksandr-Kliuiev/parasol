@@ -48,7 +48,7 @@ import { useDeleteOrganization, useOrganization } from './api';
 import { useDuplicates } from './duplicatesApi';
 import { LinkedSystemsPanel } from '../integrations/LinkedSystemsPanel';
 import { OrganizationContractsTab } from '../contracts/OrganizationContractsTab';
-import { OrganizationServiceTab } from '../service/OrganizationServiceTab';
+import { OperationsTab } from '../service/OperationsTab';
 import { OrganizationDealsTab } from '../sales/OrganizationDealsTab';
 import { OrganizationMailTab } from '../activities/OrganizationMailTab';
 import { OrganizationDocumentsTab } from '../documents/OrganizationDocumentsTab';
@@ -60,8 +60,6 @@ import { ActivityTimeline } from '../activities/ActivityTimeline';
 import { activitySelection } from '../activities/activityNavigation';
 import { OrganizationInvoicesTab } from '../billing/InvoicesPage';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
-import { CustomerWorkspacePanel } from '../parasol/CustomerWorkspacePanel';
-import { CustomerIdentityPanel } from '../parasol/CustomerIdentityPanel';
 import { useCustomerTabVisibility } from './useCustomerTabVisibility';
 import { useScrollEdges } from '../../shared/utils/useScrollEdges';
 import { h } from '../../app/hearth';
@@ -74,18 +72,7 @@ import { useOrganizationContacts } from '../contacts/api';
 const useStyles = makeStyles({
   // The tab bar scrolls sideways without widening a phone; URL-selected tabs are revealed too.
   tabs: { marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden', scrollPaddingInline: '16px' },
-  // The technical workspace is the work of the page and takes the wide column; the customer's records sit beside it in
-  // one card (the reference's profile page), not in nine small ones.
-  overview: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0,
-    '@media (min-width: 1100px)': { ':has([data-technical-layout])': { gridTemplateColumns: 'minmax(0, 1.6fr) minmax(320px, 1fr)' } } },
   stack: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
-    gap: '16px',
-    alignItems: 'start',
-  },
-  aside: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 },
   // The records card: sections under one hairline each; every section stays its own region with its own heading.
   records: {
     backgroundColor: h.surface,
@@ -132,14 +119,14 @@ const useStyles = makeStyles({
 
 /** The value of the "More" tab: it opens the menu of the occasional sections and is never itself selected. */
 const MORE = '__more';
-const dailyTabs = ['overview', 'contacts', 'contracts', 'service', 'invoices', 'activities'] as const;
+const dailyTabs = ['overview', 'contacts', 'contracts', 'drift', 'invoices', 'activities'] as const;
 const occasionalTabs = ['deals', 'licenses', 'projects', 'mail', 'documents', 'history'] as const;
 
 type TabValue =
   | 'overview'
   | 'contacts'
   | 'contracts'
-  | 'service'
+  | 'drift'
   | 'deals'
   | 'licenses'
   | 'projects'
@@ -157,7 +144,9 @@ export function OrganizationDetailPage() {
   const notify = useNotify();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
-  const tab = (params.get('tab') as TabValue | null) ?? 'overview';
+  // The Drift tab was called Service until M38: links to ?tab=service still open it, and the address then says drift.
+  const requestedTab = params.get('tab');
+  const tab = (requestedTab === 'service' ? 'drift' : (requestedTab as TabValue | null)) ?? 'overview';
   const { data, error, isPending, refetch } = useOrganization(id);
   const canEdit = useCan(Permissions.customersWrite);
   const canDelete = useCan(Permissions.customersDelete);
@@ -178,7 +167,7 @@ export function OrganizationDetailPage() {
   const tabs = useCustomerTabVisibility(tab, tabScope, !isPending && !error && !mergedIntoId);
   // Six sections for every day in the row, the rest one step away under "More" (UX 2026, В4); a section opened from there
   // joins the row, so the row always names where you are.
-  const permitted = (value: TabValue) => ({ contracts: canContracts, service: canService, deals: canSales, licenses: canLicensing,
+  const permitted = (value: TabValue) => ({ contracts: canContracts, drift: canService, deals: canSales, licenses: canLicensing,
     projects: canProjects, invoices: canBilling, activities: canActivities, mail: canActivities } as Partial<Record<TabValue, boolean>>)[value] ?? true;
   const rowTabs = [...dailyTabs.filter(permitted), ...occasionalTabs.filter((value) => value === tab && permitted(value))];
   const menuTabs = occasionalTabs.filter((value) => value !== tab && permitted(value));
@@ -195,6 +184,12 @@ export function OrganizationDetailPage() {
     // Compared, not put into a selector: the value comes from the address.
     [...(tabs.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find((el) => el.getAttribute('value') === tab)?.focus();
   }, [focusTab, location.key, tab, tabs]);
+
+  useEffect(() => {
+    if (requestedTab !== 'service') return;
+    const next = new URLSearchParams(params); next.set('tab', 'drift');
+    setParams(next, { replace: true, state: location.state });
+  }, [requestedTab, params, setParams, location.state]);
 
   useEffect(() => {
     if (mergedIntoId) {
@@ -308,7 +303,7 @@ export function OrganizationDetailPage() {
       {tab === 'overview' && <Overview organization={organization} etag={etag} />}
       {tab === 'contacts' && <ContactsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'contracts' && canContracts && <OrganizationContractsTab organizationId={organization.id} />}
-      {tab === 'service' && canService && <OrganizationServiceTab organizationId={organization.id} />}
+      {tab === 'drift' && canService && <OperationsTab organizationId={organization.id} />}
       {tab === 'deals' && canSales && <OrganizationDealsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'licenses' && canLicensing && <OrganizationLicensesTab organizationId={organization.id} />}
       {tab === 'projects' && canProjects && <OrganizationProjectsTab organizationId={organization.id} organizationName={organization.name} />}
@@ -382,7 +377,6 @@ function RecordFacts({ items }: { items: Array<{ label: string; value: React.Rea
 function Overview({ organization: o, etag }: { organization: Organization; etag: string | null }) {
   const styles = useStyles();
   const { t } = useTranslation();
-  const technical = useCan(Permissions.parasolAtlasRead);
   // Who to call first: the primary contact and their number, on the first screen (the contacts tab reads the same list).
   const contacts = useOrganizationContacts(o.id, false);
   const primary = contacts.data?.find((contact) => contact.isPrimary);
@@ -394,12 +388,7 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
   return (
     <>
     <CustomerHighlights organizationId={o.id} />
-    <div className={technical ? styles.overview : styles.stack}>
-      <div className={technical ? styles.stack : styles.grid}>
-        <CustomerWorkspacePanel customerId={o.id} />
-        <CustomerIdentityPanel customerId={o.id} />
-      </div>
-      <div className={styles.aside}>
+    <div className={styles.stack}>
       <div ref={records} className={styles.records}>
       <RecordSection title={t('organizations.sections.contactInfo')} icon={<ContactCard16Regular />}>
         <RecordFacts
@@ -466,7 +455,6 @@ function Overview({ organization: o, etag }: { organization: Organization; etag:
       </Panel>
       <LinkedSystemsPanel entityId={o.id} />
       <CustomFieldsPanel framed entity="Organization" entityId={o.id} />
-      </div>
     </div>
     </>
   );

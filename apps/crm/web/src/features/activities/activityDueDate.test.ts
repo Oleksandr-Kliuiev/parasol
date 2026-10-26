@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { spawnSync } from 'node:child_process';
 import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
 import { expect, it } from 'vitest';

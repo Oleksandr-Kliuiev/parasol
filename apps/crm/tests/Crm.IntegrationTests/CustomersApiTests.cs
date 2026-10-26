@@ -228,11 +228,9 @@ public class CustomersApiTests(CrmWebFactory factory)
         // Endpoints that authorize by other means (own user, per-record checks) or intentionally only need sign-in.
         string[] allowed =
         [
-            "/api/v1/identity/me/preferences", "/api/v1/search", "/api/v1/audit/entities/{module}/{entityType}/{entityId:guid}", "/api/{**path}",
+            "/api/v1/identity/me/preferences", "/api/v1/identity/me/my-day-layout", "/api/v1/search", "/api/v1/audit/entities/{module}/{entityType}/{entityId:guid}", "/api/{**path}",
             // Notifications belong to the signed-in user and authorize by ownership.
             "/api/v1/notifications/", "/api/v1/notifications/{id:guid}/read", "/api/v1/notifications/read-all", "/api/v1/notifications/preferences",
-            // Local readiness allows Atlas readers or integration managers (an OR the reader enforces), then each section's own permission.
-            "/api/v1/parasol/local-readiness",
         ];
         var dataSource = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>();
 

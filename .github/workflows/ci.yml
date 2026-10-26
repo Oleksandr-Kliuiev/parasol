@@ -29,61 +29,7 @@ jobs:
           node-version-file: .nvmrc
       - run: npm run check:history
       - run: node --test scripts/*.test.mjs
-
-  atlas:
-    name: Atlas Linux build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/unused
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: apps/atlas/package-lock.json
-      - run: npm ci --prefix apps/atlas
-      - run: npm run build:atlas
-      - run: npm run check:atlas
-
-  atlas-integration:
-    name: Atlas complete tests (no skips)
-    # The inherited peer-credential and F_FULLFSYNC contracts require native Darwin/arm64.
-    # Linux production builds are validated independently by the atlas job above.
-    runs-on: macos-15
-    timeout-minutes: 150
-    env:
-      DATABASE_URL: postgresql://test:test@127.0.0.1:5432/unused
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: apps/atlas/package-lock.json
-      - run: npm ci --prefix apps/atlas
-      - run: npm run build:atlas
-      - run: npm run test:atlas
-      - name: Install test database runtime
-        run: brew install postgresql@17
-      - name: Start disposable native PostgreSQL
-        run: node scripts/atlas-postgres.mjs start
-      - run: npm run db:check:pg17 --prefix apps/atlas
-      - run: npm run db:check:drift --prefix apps/atlas
-      - name: Every PostgreSQL test, including native chain and paced 200-case rehearsal
-        run: npm run test:atlas:pg
-      - run: npx playwright install chromium
-        working-directory: apps/atlas
-      - name: Every browser test, including the paced 200-case journey
-        run: npm run test:atlas:ui
-      - name: Stop disposable PostgreSQL
-        if: ${{ always() }}
-        run: node scripts/atlas-postgres.mjs stop
+      - run: npm run test:harness:unit
 
   crm-backend:
     name: CRM backend and SQL integration
@@ -178,7 +124,35 @@ jobs:
           cache: npm
           cache-dependency-path: apps/crm/web/package-lock.json
       - run: npm ci --prefix apps/crm/web
-      - run: npx playwright install --with-deps chromium firefox webkit
+      # The browsers' system packages (~115 MB) no longer depend on the runner's Ubuntu mirror. On 22.10.2026 it sent them at
+      # 45 kB/s three times, and the job lost up to 40 of its 45 minutes. They are kept between runs (apt checks each one
+      # against the signed archive index), and what is missing comes from the runner's mirror, or from archive.ubuntu.com once
+      # that has taken 4 minutes (apps/crm/tools/testing/browser-packages.sh). The key follows the runner image and the
+      # Playwright version, which decide the package list; an older key still gives most packages.
+      - name: Key of the browsers' system packages
+        id: browser-packages
+        run: |
+          echo "key=browser-packages-$ImageOS-$ImageVersion-${{ hashFiles('apps/crm/web/package-lock.json') }}" >> "$GITHUB_OUTPUT"
+          echo "prefix=browser-packages-$ImageOS-" >> "$GITHUB_OUTPUT"
+      - name: Restore the browsers' system packages
+        id: browser-packages-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/browser-packages
+          key: ${{ steps.browser-packages.outputs.key }}
+          restore-keys: ${{ steps.browser-packages.outputs.prefix }}
+      - name: System packages for the browsers (cache, then the Ubuntu mirrors)
+        timeout-minutes: 15
+        run: bash apps/crm/tools/testing/browser-packages.sh "$RUNNER_TEMP/browser-packages"
+      - name: Keep the browsers' system packages for the next run
+        if: steps.browser-packages-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/browser-packages
+          key: ${{ steps.browser-packages.outputs.key }}
+      - name: Browsers (Playwright CDN)
+        timeout-minutes: 5
+        run: npx playwright install chromium firefox webkit
         working-directory: apps/crm/web
       - run: dotnet dev-certs https
       - run: npm run test:crm:e2e
@@ -201,60 +175,19 @@ jobs:
           persist-credentials: false
       - name: Deployment failure and isolation tests
         run: python3 -m unittest discover -s deploy/hostinger/tests -v
-      - name: Build images, migrate both databases, backup and restore into a fresh isolated stack
+      - name: Build images, migrate the database, backup and restore into a fresh isolated stack
         run: >-
           sudo env PARASOL_REHEARSAL_DIAGNOSTICS=1 python3 deploy/hostinger/rehearse.py
           --directory "$RUNNER_TEMP/parasol-rehearsal" --release ci-${{ github.sha }}
       - name: Publish only the secret-free synthetic drill report
         run: sudo cat "$RUNNER_TEMP/parasol-rehearsal/report.json" | tee -a "$GITHUB_STEP_SUMMARY"
 
-  composition:
-    name: Actual local CRM and Atlas workflow
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    needs: [atlas, crm-backend, crm-frontend]
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
-        with:
-          global-json-file: apps/crm/global.json
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: |
-            apps/atlas/package-lock.json
-            apps/crm/web/package-lock.json
-      - run: npm ci --prefix apps/atlas
-      - run: npm ci --prefix apps/crm/web
-      - run: dotnet restore apps/crm/Vardahei.Crm.slnx
-      - run: npx playwright install --with-deps chromium
-        working-directory: apps/crm/web
-      - run: npm run test:composition:unit
-      - name: Cache the existing pinned test database images
-        run: |
-          node --input-type=module <<'JS'
-          import { execFileSync } from 'node:child_process';
-          import { SQL_IMAGE, PG_IMAGE } from './tools/composition/plan.mjs';
-          for (const image of [SQL_IMAGE, PG_IMAGE]) execFileSync('docker', ['pull', image], { stdio: 'inherit' });
-          JS
-      - name: Real applications, restricted databases, synthetic customer workflow
-        run: npm run test:composition -- --directory "$RUNNER_TEMP/parasol-composition"
-      - name: Publish only the secret-free synthetic result
-        if: ${{ always() }}
-        run: |
-          if test -f "$RUNNER_TEMP/parasol-composition/report.json"; then
-            cat "$RUNNER_TEMP/parasol-composition/report.json" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
   required:
     name: Required checks
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: ${{ always() }}
-    needs: [history, atlas, atlas-integration, crm-backend, crm-frontend, crm-e2e, hostinger, composition]
+    needs: [history, crm-backend, crm-frontend, crm-e2e, hostinger]
     steps:
       - name: All checks must succeed
         env:
@@ -266,5 +199,5 @@ jobs:
           failures = [name for name, job in results.items() if job['result'] != 'success']
           if failures:
               raise SystemExit('Unsuccessful checks: ' + ', '.join(failures))
-          print('All Parasol checks passed, including complete Atlas suites with no failure or skip exceptions.')
+          print('All Parasol checks passed: history, CRM backend, frontend and browser workflows, Hostinger restore drill.')
           PY

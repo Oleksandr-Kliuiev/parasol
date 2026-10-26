@@ -23,7 +23,7 @@
     return new Date(p[0], p[1] - 1, p[2], q[0], q[1]);
   }
 
-  /* ---------- Complete / reopen: separate from the observation and from saved hours ---------- */
+  /* ---------- Complete / reopen: separate from the alert and from saved hours ---------- */
 
   P.on('complete-task', function (el) {
     var task = D.task(el.dataset.id);
@@ -31,8 +31,8 @@
     P.app.refresh();
     P.toast(t('task.completed', { title: UI.taskSubject(task) }), { action: { label: t('task.undo'), fn: function () { M.reopen(task); P.app.refresh(); } } });
     if (task.source) {
-      var o = D.observation(task.source);
-      if (o && D.isActive(o)) setTimeout(function () { P.toast(t('task.obsStillOpen'), { tone: 'warn' }); }, 400);
+      var a = D.alert(task.source);
+      if (a && D.isOpen(a)) setTimeout(function () { P.toast(t('task.alertStillOpen'), { tone: 'warn' }); }, 400);
     }
   });
   P.on('reopen-task', function (el) {
@@ -68,7 +68,8 @@
 
   function taskBody(task) {
     var c = D.customer(task.customer);
-    var o = task.source ? D.observation(task.source) : null;
+    var a = task.source ? D.alert(task.source) : null;
+    var dev = a ? R.deviceOf(a) : null;
     var tk = task.ticket ? D.ticket(task.ticket) : null;
     var entries = D.time.filter(function (e) { return e.task === task.id || (tk && e.ticket === tk.id && e.staff === task.assignee); });
     var staff = Object.keys(D.staff);
@@ -88,11 +89,13 @@
         </div>
         <p class="small muted">${t('task.zoneNote')}</p>
       </section>
-      ${o ? h`<section class="sheet-section"><h3>${t('task.source')}</h3>
+      ${a ? h`<section class="sheet-section"><h3>${t('task.source')}</h3>
         <div class="device-box"><span class="tl-icon">${P.icon('pulse', 'ic-16')}</span>
-          <div class="item-main">${UI.taskSource(task)}<span class="small muted">${UI.obsStatus(o.status)} ${t('task.sourceRead', { time: P.fmt.time(P.state.ui['fresh-' + task.id] || D.atlasReadAt) })}</span></div>
-          ${P.can('atlas') && D.canSee(task.customer) ? h`<button class="btn btn-sm" type="button" data-action="reread-source" data-id="${task.id}">${P.icon('refresh', 'ic-16')}${t('task.reread')}</button>` : ''}</div>
-        <p class="small muted">${t('obs.lifecycle')}</p></section>` : ''}
+          <div class="item-main"><span class="item-title break">${a.title}</span>
+            <span class="row-wrap small muted">${UI.sev(a.severity)}${UI.alertStatus(a.status)}<span class="break">${t('src.label', { source: UI.sourceName(a.source) })}${dev ? ' · ' + dev.host : ''}</span></span>
+            <span class="small muted">${t('sync.at', { time: P.fmt.time(D.syncedAt) })}</span></div>
+          ${P.can('service') ? h`<button class="btn btn-sm" type="button" data-action="open-alert" data-id="${a.id}">${t('task.openAlert')}</button>` : ''}</div>
+        <p class="small muted">${t('alert.lifecycle')}</p></section>` : ''}
       <section class="sheet-section"><h3>${t('task.ticket')}</h3>
         ${tk ? h`<div class="device-box"><span class="tl-icon">${P.icon('ticket', 'ic-16')}</span>
             <div class="item-main"><span class="item-title">#${tk.id} · ${tk.title}</span><span class="small muted">${t('ticketStatus.' + tk.status)} · ${t('ticket.savedAt', { time: P.fmt.time(D.ticketsReadAt) })}</span></div>
@@ -161,11 +164,6 @@
   P.on('open-task', function (el) { openTask(el.dataset.id); });
   P.on('drawer-complete', function (el) { P.drawer.close(); P.actions['complete-task'](el); });
   P.on('drawer-reopen', function (el) { var task = D.task(el.dataset.id); M.reopen(task); startEdit(task); P.drawer.refresh(); P.app.refresh(); });
-  P.on('reread-source', function (el) {
-    P.state.ui['fresh-' + el.dataset.id] = new Date(P.NOW);
-    P.drawer.refresh();
-    P.toast(t('task.reread.done'));
-  });
   P.on('choose-ticket', function (el) { P.state.ui['choose-' + el.dataset.id] = true; P.drawer.refresh(); });
   P.on('pick-ticket', function (el) {
     var task = D.task(el.dataset.id);
