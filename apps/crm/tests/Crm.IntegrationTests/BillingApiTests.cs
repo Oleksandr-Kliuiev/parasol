@@ -229,24 +229,33 @@ public class BillingApiTests(CrmWebFactory factory)
         order.ShouldContain("Onboarding, fast pris");
 
         // 4. The invoice comes back from PowerOffice and lands on the basis and the customer.
-        var invoiceNo = $"INV-{marker}";
-        var creditedNo = $"CRN-{marker}";
+        var invoiceNumber = Random.Shared.NextInt64(810000000, 819999999);
+        var creditedNumber = invoiceNumber + 1;
+        var invoiceNo = invoiceNumber.ToString(CultureInfo.InvariantCulture);
+        var creditedNo = creditedNumber.ToString(CultureInfo.InvariantCulture);
+        var sourceId = Guid.NewGuid();
+        var reversedId = Guid.NewGuid();
+        foreach (var source in new[] { sourceId, reversedId })
+            factory.PowerOffice.Given(Request.Create().WithPath($"/v2/OutgoingInvoices/{source:D}/Lines").UsingGet())
+                .RespondWith(Response.Create().WithStatusCode(204));
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/OutgoingInvoices").UsingGet().WithParam("PageNumber", "1")).AtPriority(5)
             .RespondWith(JsonReply(new object[]
             {
                 new
                 {
-                    Id = 9_001, InvoiceNo = invoiceNo, OrderNo = 5_042, CustomerId = long.Parse(customerId, CultureInfo.InvariantCulture),
-                    InvoiceDate = "2027-03-31T00:00:00+00:00", DueDate = "2027-04-14T00:00:00+00:00",
-                    TotalAmount = 23_750m, RemainingAmount = 23_750m, Status = "Sent", IsCredited = false,
-                    PdfUrl = "https://go.poweroffice.net/invoice/9001", LastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00",
+                    Id = sourceId, InvoiceNo = invoiceNumber, OrderNo = 5_042, CustomerId = long.Parse(customerId, CultureInfo.InvariantCulture),
+                    VoucherDate = "2027-03-31", DueDate = "2027-04-14", CurrencyCode = "NOK",
+                    NetAmount = 19_000m, TotalAmount = 23_750m, NetPostedAmount = 19_000m, TotalPostedAmount = 23_750m,
+                    Balance = 23_750m, VoucherType = "OutgoingInvoice", IsReversed = false,
+                    LastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00", BalanceLastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00",
                 },
                 new
                 {
-                    Id = 9_002, InvoiceNo = creditedNo, OrderNo = (int?)null, CustomerId = (long?)null,
-                    InvoiceDate = "2099-01-01T00:00:00+00:00", DueDate = "2099-01-15T00:00:00+00:00",
-                    TotalAmount = 5_000m, RemainingAmount = 5_000m, Status = "Sent", IsCredited = false,
-                    PdfUrl = (string?)null, LastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00",
+                    Id = reversedId, InvoiceNo = creditedNumber, OrderNo = (int?)null, CustomerId = (long?)null,
+                    VoucherDate = "2099-01-01", DueDate = "2099-01-15", CurrencyCode = "NOK",
+                    NetAmount = 4_000m, TotalAmount = 5_000m, NetPostedAmount = 4_000m, TotalPostedAmount = 5_000m,
+                    Balance = 5_000m, VoucherType = "OutgoingInvoice", IsReversed = false,
+                    LastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00", BalanceLastChangedDateTimeOffset = "2027-03-31T10:00:00+00:00",
                 },
             }));
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/OutgoingInvoices").UsingGet().WithParam("PageNumber", "2")).AtPriority(5)
@@ -267,13 +276,19 @@ public class BillingApiTests(CrmWebFactory factory)
             {
                 new
                 {
-                    Id = 9_001, InvoiceNo = invoiceNo, OrderNo = 5_042, InvoiceDate = "2027-03-31T00:00:00+00:00", DueDate = "2027-04-14T00:00:00+00:00",
-                    TotalAmount = 23_750m, RemainingAmount = 0m, Status = "Paid", IsCredited = false, LastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00",
+                    Id = sourceId, InvoiceNo = invoiceNumber, OrderNo = 5_042, CustomerId = long.Parse(customerId, CultureInfo.InvariantCulture),
+                    VoucherDate = "2027-03-31", DueDate = "2027-04-14", CurrencyCode = "NOK",
+                    NetAmount = 19_000m, TotalAmount = 23_750m, NetPostedAmount = 19_000m, TotalPostedAmount = 23_750m,
+                    Balance = 0m, VoucherType = "OutgoingInvoice", IsReversed = false,
+                    LastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00", BalanceLastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00",
                 },
                 new
                 {
-                    Id = 9_002, InvoiceNo = creditedNo, OrderNo = (int?)null, InvoiceDate = "2099-01-01T00:00:00+00:00", DueDate = "2099-01-15T00:00:00+00:00",
-                    TotalAmount = 5_000m, RemainingAmount = 2_000m, Status = "Sent", IsCredited = true, LastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00",
+                    Id = reversedId, InvoiceNo = creditedNumber, OrderNo = (int?)null, CustomerId = (long?)null,
+                    VoucherDate = "2099-01-01", DueDate = "2099-01-15", CurrencyCode = "NOK",
+                    NetAmount = 4_000m, TotalAmount = 5_000m, NetPostedAmount = 4_000m, TotalPostedAmount = 5_000m,
+                    Balance = 2_000m, VoucherType = "OutgoingInvoice", IsReversed = true,
+                    LastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00", BalanceLastChangedDateTimeOffset = "2027-04-10T10:00:00+00:00",
                 },
             }));
         factory.PowerOffice.Given(Request.Create().WithPath("/v2/OutgoingInvoices").UsingGet().WithParam("PageNumber", "2")).AtPriority(2)
@@ -292,7 +307,7 @@ public class BillingApiTests(CrmWebFactory factory)
         decrease.GetProperty("observedOn").GetString().ShouldNotBeNullOrEmpty();
         decrease.GetProperty("source").GetString().ShouldNotBeNullOrEmpty();
 
-        // An invoice the accounting system credits is a credit note, even though its remaining amount only went down.
+        // A reversal is retained separately from an outgoing credit-note document; the observed movement keeps its legacy kind.
         var all = await finance.GetFromJsonAsync<JsonElement>($"{Billing}/invoices?limit=50");
         var credited = all.GetProperty("invoices").EnumerateArray().Single(i => i.GetProperty("invoiceNo").GetString() == creditedNo);
         credited.GetProperty("status").GetString().ShouldBe("Credited");

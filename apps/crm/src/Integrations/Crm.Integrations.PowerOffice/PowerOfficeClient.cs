@@ -123,9 +123,15 @@ public interface IPowerOfficeClient
     Task<PoSalesOrder> CreateSalesOrderAsync(PoSalesOrderPost order, CancellationToken cancellationToken);
 
     IAsyncEnumerable<PoOutgoingInvoice> GetOutgoingInvoicesAsync(DateTimeOffset? changedSince, CancellationToken cancellationToken);
+
+    IAsyncEnumerable<PoOutgoingInvoiceLine> GetOutgoingInvoiceLinesAsync(Guid invoiceId, CancellationToken cancellationToken);
+
+    IAsyncEnumerable<PoCustomerLedgerEntry> GetCustomerLedgerAsync(CancellationToken cancellationToken);
+    IAsyncEnumerable<PoVoucherDocumentation> GetVoucherDocumentationAsync(Guid voucherId, CancellationToken cancellationToken);
+    Task<byte[]> DownloadVoucherPdfArchiveAsync(Guid voucherId, CancellationToken cancellationToken);
 }
 
-internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOptions> options) : IPowerOfficeClient
+internal sealed partial class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOptions> options) : IPowerOfficeClient
 {
     private const int MaxPages = 10_000;
 
@@ -257,22 +263,31 @@ internal sealed class PowerOfficeClient(HttpClient http, IOptions<PowerOfficeOpt
     }
 
     public IAsyncEnumerable<PoOutgoingInvoice> GetOutgoingInvoicesAsync(DateTimeOffset? changedSince, CancellationToken cancellationToken) =>
-        GetPagedAsync<PoOutgoingInvoice>("OutgoingInvoices", changedSince, cancellationToken);
+        GetPagedAsync<PoOutgoingInvoice>("OutgoingInvoices", changedSince, cancellationToken, "balanceLastChangedDateTimeOffsetGreaterThan");
 
-    private async IAsyncEnumerable<T> GetPagedAsync<T>(string resource, DateTimeOffset? changedSince, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    public IAsyncEnumerable<PoOutgoingInvoiceLine> GetOutgoingInvoiceLinesAsync(Guid invoiceId, CancellationToken cancellationToken) =>
+        GetPagedAsync<PoOutgoingInvoiceLine>($"OutgoingInvoices/{invoiceId:D}/Lines", null, cancellationToken);
+
+    // Full posting-date coverage also catches old manual matching/unmatching and future-posted entries.
+    public IAsyncEnumerable<PoCustomerLedgerEntry> GetCustomerLedgerAsync(CancellationToken cancellationToken) =>
+        GetPagedAsync<PoCustomerLedgerEntry>("Customerledger/Statement?fromDate=0001-01-01&toDate=9999-12-31&OrderBy=Id%20asc", null, cancellationToken);
+
+    private async IAsyncEnumerable<T> GetPagedAsync<T>(string resource, DateTimeOffset? changedSince, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken,
+        string changedFilter = "lastChangedDateTimeOffsetGreaterThan")
     {
         var pageSize = Math.Clamp(options.Value.PageSize, 1, 20_000);
-        var filter = changedSince is { } since ? $"&lastChangedDateTimeOffsetGreaterThan={Uri.EscapeDataString(since.ToString("O"))}" : string.Empty;
+        var filter = changedSince is { } since ? $"&{changedFilter}={Uri.EscapeDataString(since.ToString("O"))}" : string.Empty;
         for (int page = 1; page <= MaxPages; page++)
         {
-            using var response = await http.GetAsync($"{resource}?PageNumber={page}&PageSize={pageSize}{filter}", cancellationToken);
+            using var response = await http.GetAsync($"{resource}{(resource.Contains('?') ? '&' : '?')}PageNumber={page}&PageSize={pageSize}{filter}", cancellationToken);
             if (response.StatusCode == HttpStatusCode.NoContent)
             {
                 yield break;
             }
 
             await EnsureSuccessAsync(response, cancellationToken);
-            var items = await response.Content.ReadFromJsonAsync<List<T>>(PoJson.Options, cancellationToken) ?? [];
+            var items = await response.Content.ReadFromJsonAsync<List<T>>(PoJson.Options, cancellationToken)
+                ?? throw new JsonException("PowerOffice returned a null page instead of a record array.");
             // The server may cap the page size below what was asked for, so a short page does not mean the last one: only 204
             // or an empty page ends the enumeration.
             if (items.Count == 0)

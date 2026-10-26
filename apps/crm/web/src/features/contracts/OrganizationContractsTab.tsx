@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, Dialog, DialogSurface, makeStyles, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
-import { Add20Regular } from '@fluentui/react-icons';
+import { Button, DialogSurface, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
+import { Add20Regular, DocumentText16Regular, HourglassHalf16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -11,7 +12,7 @@ import { HourBankForm } from './ContractDialogs';
 import { ContractList } from './ContractsPage';
 import { HourBankList } from './HourBankList';
 
-const useStyles = makeStyles({ stack: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL } });
+const useStyles = makeStyles({ stack: { display: 'flex', flexDirection: 'column', gap: '16px' } });
 
 export function OrganizationContractsTab({ organizationId }: { organizationId: string }) {
   const styles = useStyles();
@@ -27,6 +28,7 @@ export function OrganizationContractsTab({ organizationId }: { organizationId: s
     <div className={styles.stack}>
       <Panel
         title={t('contracts.title')}
+        icon={<DocumentText16Regular />}
         actions={
           canWrite && (
             <Button size="small" icon={<Add20Regular />} onClick={() => navigate(`/contracts/new?organizationId=${organizationId}`)}>
@@ -38,11 +40,12 @@ export function OrganizationContractsTab({ organizationId }: { organizationId: s
         {contracts.error ? (
           <ErrorState error={contracts.error} onRetry={() => void contracts.refetch()} />
         ) : (
-          <ContractList rows={rows} loading={contracts.isPending} empty={t('contracts.emptyForOrganization')} showOrganization={false} />
+          <ContractList rows={rows} loading={contracts.isPending} empty={t('contracts.emptyForOrganization')} showOrganization={false} inPanel />
         )}
       </Panel>
       <Panel
         title={t('contracts.hourBanks.title')}
+        icon={<HourglassHalf16Regular />}
         actions={
           canWrite && (
             <Button {...restoreFocusTarget} size="small" icon={<Add20Regular />} onClick={() => setAddingBank(true)}>
@@ -54,7 +57,7 @@ export function OrganizationContractsTab({ organizationId }: { organizationId: s
         <HourBankList organizationId={organizationId} />
       </Panel>
       <Dialog open={addingBank} onOpenChange={(_, d) => !d.open && setAddingBank(false)}>
-        <DialogSurface>{addingBank && <HourBankForm organizationId={organizationId} contractId={null} onClose={() => setAddingBank(false)} />}</DialogSurface>
+        <DialogSurface><HourBankForm organizationId={organizationId} contractId={null} onClose={() => setAddingBank(false)} /></DialogSurface>
       </Dialog>
     </div>
   );

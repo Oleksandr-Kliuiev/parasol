@@ -22,7 +22,6 @@
     <!-- Documents -->
     <PackageVersion Include="ClosedXML" Version="0.105.1" />
     <!-- Observability -->
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
@@ -32,6 +31,8 @@
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
     <!-- Transitive pins -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+    <!-- Aspire's StreamJsonRpc brings MessagePack 2.5.302 (GHSA-qhrr-8q5h-9q3h, nested arrays past buffer limits). -->
+    <PackageVersion Include="MessagePack" Version="2.5.303" />
     <!-- Existing transitive crypto libraries: October 2026 security fixes. -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.13" />

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { configure, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from '@fluentui/react-components';
 import { TOASTER_ID } from '../../app/toaster';
@@ -25,19 +25,17 @@ function stub(data: Quote) {
     if (url.startsWith('/api/v1/identity/users')) {
       return new Response(JSON.stringify({ items: [{ id: 'u2', displayName: 'Per Hansen', email: 'per@example.no', isActive: true }], nextCursor: null, totalCount: 1 }), { status: 200 });
     }
+    // Lists answer as the paged lists they are; everything else the page reads is empty.
+    if (url.startsWith('/api/v1/sales/quotes?') || url === '/api/v1/sales/quotes') {
+      return new Response(JSON.stringify({ items: [], nextCursor: null, totalCount: 0 }), { status: 200 });
+    }
     return new Response(JSON.stringify(url === '/api/v1/sales/quotes/q1' ? data : []), { status: 200 });
   });
   vi.stubGlobal('fetch', fetch);
   return fetch;
 }
 
-async function openedDialog(title: string) {
-  const heading = await screen.findByText(title, undefined, { timeout: 5_000 });
-  return heading.closest<HTMLElement>('[role="dialog"]')!;
-}
-
-// Fluent's modal handling may hide the open dialog itself in jsdom (see DeliveryPanel.test); accessibility is checked in the browser.
-configure({ defaultHidden: true });
+const openedDialog = (title: string) => screen.findByRole('dialog', { name: title });
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -87,19 +85,19 @@ describe('Quotes and record scope (DEV-09)', () => {
     expect(screen.getAllByText('Kari Nordmann').length).toBeGreaterThan(0);
   });
 
-  it('tells a salesperson the list holds the quotes they own, without an "only mine" filter that would change nothing', async () => {
+  it('tells a salesperson the list holds the quotes they own, without a "mine only" filter that would change nothing', async () => {
     stub(quote());
     renderRoutes([{ path: '/quotes', element: <QuotesPage /> }], '/quotes', testUser(['sales.read', 'sales.write']));
 
     expect(await screen.findByText('The quotes you own. To pass one on, hand it over from the quote.')).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: 'Only mine' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Mine only' })).not.toBeInTheDocument();
   });
 
-  it('keeps "only mine" for those who see every quote', async () => {
+  it('keeps "mine only" for those who see every quote', async () => {
     stub(quote());
     renderRoutes([{ path: '/quotes', element: <QuotesPage /> }], '/quotes', testUser(['sales.read', 'sales.quotes.all']));
 
-    expect(await screen.findByRole('checkbox', { name: 'Only mine' })).toBeInTheDocument();
+    expect(await screen.findByRole('switch', { name: 'Mine only' })).toBeInTheDocument();
     expect(screen.queryByText('The quotes you own. To pass one on, hand it over from the quote.')).not.toBeInTheDocument();
   });
 });

@@ -18,6 +18,7 @@ import { askPath, browserHeaders, handoffPath, post } from '../support/reval-eva
 import { ACTOR, CLIENT, WS, install, ownerTx, pidOf, provisionSandbox, q, registration } from '../support/reval-fixture-pg.ts';
 import { nonsuperDatabase } from '../support/reval-nonsuper.ts';
 import { dockerPhysical, NODE_REALPATH, privateDir, writeOwnerConfig, writePrivate } from '../support/reval-test-deps.ts';
+import { freePort } from '../support/api-process.ts';
 
 // R-EVAL RS-C-B process E2E on darwin/arm64 + Docker PG17 (rs-c brief B §7): the REAL instrument revision CLI under a live PTY
 // drives the unchanged RC5 ExecutionSession with measured inputs against O (live PTY) → C → S (BUILT bridge server, scripted
@@ -31,7 +32,16 @@ const ctx = bindCorpus(verifyTestRevision().snapshot);
 const CASE = 'RE-UNS-051'; const question = ctx.corpus.cases.get(CASE)!.question;
 const ns = await nonsuperDatabase();
 const { db } = ns; const owner = db.owner;
-after(async () => { await ns.cleanup(); });
+type OwnedSession = { o: LiveOwner; i?: LiveTty };
+const ownedSessions = new Set<OwnedSession>();
+async function stopSession(session: OwnedSession): Promise<void> {
+  const instrument = await session.i?.stop();
+  const controller = await session.o.stop();
+  ownedSessions.delete(session);
+  assert.deepEqual(instrument?.forced ?? [], [], 'no instrument process survives');
+  assert.deepEqual(controller.forced, [], 'no O/C/S process survives');
+}
+after(async () => { try { for (const session of ownedSessions) await stopSession(session); } finally { await ns.cleanup(); } });
 const physical = await dockerPhysical(ns.admin);
 await ns.admin.end();
 const helper = buildPeer(`${await privateDir('rscb-e2e')}/peer`);
@@ -46,38 +56,48 @@ await ownerTx(owner, () => owner.query(`INSERT INTO "ApiToken" ("workspaceId", i
 const u = new URL(db.ownerUrl); const tcp = { host: u.hostname, port: Number(u.port || 5432) };
 const ownerEntry = fileURLToPath(new URL('../support/reval-test-owner-entry.ts', import.meta.url));
 const cli = fileURLToPath(new URL('../support/reval-instrument-cli.ts', import.meta.url));
-let n = 0; let port = 4900 + Math.floor(Math.random() * 300);
+let n = 0;
 
-async function session() {
+async function session(testOptions: { noSandbox?: boolean } = {}) {
   await revise(owner, WS, { state: 'PAUSED' });
-  const dir = await privateDir(`rscb${++n}`); const serverPort = ++port;
+  const dir = await privateDir(`rscb${++n}`); const serverPort = await freePort();
   const { path } = await writeOwnerConfig(dir, { contractVersion: 'RevalOwnerConfigV1', registrationId: r.registrationId, databaseInstanceId: r.databaseInstanceId,
     workspaceId: WS, clientId: CLIENT, actorId: ACTOR, admissionId, approvedPriceRevision: PRICE, nativePeerHelper: helper.path, nativePeerHelperSha256: helper.sha256,
     endpoint: { socketDir: '/docker-test-only', port: tcp.port, database: db.name }, roles: { reader: db.revalReaderRole, runtime: db.runtimeRole, owner: ns.ownerRole },
     physical, server: { mode: 'LAUNCH', apiEntry: realpathSync(`${PROJECT_ROOT}/dist/apps/api/src/main.js`), port: serverPort } } as never,
   { reader: db.revalReaderPassword, runtime: new URL(db.runtimeUrl).password, owner: ns.ownerPassword });
-  await writePrivate(dir, 'test.json', JSON.stringify({ ...tcp, provider: { intent: 'UNSUPPORTED' } }));
+  await writePrivate(dir, 'test.json', JSON.stringify({ ...tcp, ...testOptions, provider: { intent: 'UNSUPPORTED' }, exitCodeFile: join(dir, 'controller-exit-code') }));
   const o = new LiveOwner(dir, ownerEntry, ['--config', path]);
-  await o.prompt();
-  assert.match((await o.type('snapshot'))[0]!, /^OK SNAPSHOT /);
-  assert.match((await o.type('fixture-check'))[0]!, /^OK FIXTURE_CHECK .*"allFiveIntents":true/);
-  const policyVersion = await revise(owner, WS, { state: 'ACTIVE' });
-  const receipts = join(dir, 'receipts'); mkdirSync(receipts, { mode: 0o700 });
-  const i = new LiveTty(dir, cli, ['session', '--owner-config', path, '--receipt-dir', receipts], 'instrument');
-  await i.expect(/ARTIFACT VERIFIED/, 30000);
-  i.type('connect');
-  const [, ctl, ho] = await i.expect(/CONNECTED ([0-9a-f-]{36}) ([0-9a-f-]{36})/);
-  const [ackLine, secretLine] = await o.type(`pair ${ctl} ${ho}`, 2);
-  const pairId = JSON.parse(ackLine!.slice('OK PAIR_ACK '.length)).pairId as string;
-  const p = await post(serverPort, handoffPath, JSON.stringify({ contractVersion: 'RevalBrowserHandoffV1', operation: 'PAIR', pairingNonce: secretLine!.split(' ')[2] }),
-    browserHeaders(serverPort, bearer));
-  assert.equal(p.status, 200, p.body);
-  const sessionToken = JSON.parse(p.body).sessionToken as string;
-  const now = Date.now();
-  i.type('admission');
-  for (const v of [admissionId, new Date(now - 60_000).toISOString(), new Date(now + 2 * 3_600_000).toISOString(), '2000000', '10000000', String(await fenceOf(owner, WS)), '10']) i.type(v);
-  await i.expect(/ADMISSION_RECORDED_ATTESTED_SNAPSHOT_CROSSCHECKED/);
-  return { dir, o, i, serverPort, pairId, ack: ackLine!.slice('OK PAIR_ACK '.length), sessionToken, policyVersion, receipts };
+  // Setup can fail before the test obtains its session. Own both processes before the first awaited startup step.
+  const owned: OwnedSession = { o }; ownedSessions.add(owned);
+  try {
+    await o.prompt();
+    assert.match((await o.type('snapshot'))[0]!, /^OK SNAPSHOT /);
+    assert.match((await o.type('fixture-check'))[0]!, /^OK FIXTURE_CHECK .*"allFiveIntents":true/);
+    // FIXTURE_CHECK proves stored data, not S's readiness. IDENTITY waits for the measured server handshake once.
+    assert.match((await o.type('identity'))[0]!, /^OK IDENTITY /);
+    const policyVersion = await revise(owner, WS, { state: 'ACTIVE' });
+    const receipts = join(dir, 'receipts'); mkdirSync(receipts, { mode: 0o700 });
+    const i = new LiveTty(dir, cli, ['session', '--owner-config', path, '--receipt-dir', receipts], 'instrument');
+    owned.i = i;
+    await i.expect(/ARTIFACT VERIFIED/, 30000);
+    i.type('connect');
+    const [, ctl, ho] = await i.expect(/CONNECTED ([0-9a-f-]{36}) ([0-9a-f-]{36})/);
+    const [ackLine, secretLine] = await o.type(`pair ${ctl} ${ho}`, 2);
+    const pairId = JSON.parse(ackLine!.slice('OK PAIR_ACK '.length)).pairId as string;
+    const p = await post(serverPort, handoffPath, JSON.stringify({ contractVersion: 'RevalBrowserHandoffV1', operation: 'PAIR', pairingNonce: secretLine!.split(' ')[2] }),
+      browserHeaders(serverPort, bearer));
+    assert.equal(p.status, 200, p.body);
+    const sessionToken = JSON.parse(p.body).sessionToken as string;
+    const now = Date.now();
+    i.type('admission');
+    for (const v of [admissionId, new Date(now - 60_000).toISOString(), new Date(now + 2 * 3_600_000).toISOString(), '2000000', '10000000', String(await fenceOf(owner, WS)), '10']) i.type(v);
+    await i.expect(/ADMISSION_RECORDED_ATTESTED_SNAPSHOT_CROSSCHECKED/);
+    return { dir, o, i, serverPort, pairId, ack: ackLine!.slice('OK PAIR_ACK '.length), sessionToken, policyVersion, receipts, owned };
+  } catch (error) {
+    try { await stopSession(owned); } catch (cleanup) { throw new AggregateError([error, cleanup], 'Session startup and cleanup failed'); }
+    throw error;
+  }
 }
 type S = Awaited<ReturnType<typeof session>>;
 async function prepare(s: S, policyVersion: string) {
@@ -91,6 +111,11 @@ async function prepare(s: S, policyVersion: string) {
   s.i.type(nonce!); s.i.type('YES'); await s.i.expect(/\nCONSENTED/);
 }
 const receiptOf = (s: S) => JSON.parse(readFileSync(join(s.receipts, readdirSync(s.receipts).find(f => f.startsWith('REVAL_INSTRUMENT_') && f.endsWith('.json'))!), 'utf8'));
+
+test('an unready server is rejected during session setup and all owned processes are cleaned before the failure escapes', skip, async () => {
+  await assert.rejects(session({ noSandbox: true }), /OK IDENTITY/);
+  assert.equal(ownedSessions.size, 0, 'setup failure cannot leave O/C/S or an instrument for the test teardown to discover');
+});
 
 test('instrument revision: GO (PRE census → PRE → consume → ARM → READY) → answer → handoff COMMITTED → finish (POST census) → receipt v4', skip, async () => {
   const s = await session();
@@ -129,7 +154,7 @@ test('instrument revision: GO (PRE census → PRE → consume → ARM → READY)
     for (const secret of [question, s.sessionToken, bearer, String(qres.headers['x-atlas-evaluation-receipt'])]) assert.ok(!JSON.stringify(rec).includes(secret), 'no raw value or secret');
     assert.ok(!s.i.transcript.includes(question.slice(0, 40)), 'the pasted question is never echoed (raw mode for the whole session)');
   } finally {
-    assert.deepEqual((await s.i.stop()).forced, []); assert.deepEqual((await s.o.stop()).forced, [], 'no O/C/S process survives');
+    await stopSession(s.owned);
   }
 });
 
@@ -154,7 +179,7 @@ test('GO failures: a PRE tuple change refuses BEFORE consumption (case still nex
     assert.equal(rec.cases[CASE].armIssued, true, 'the consumption and the armIssued marker were persisted before the ARM');
     assert.equal(rec.base.cases.find((x: { caseId: string }) => x.caseId === CASE).outcome, 'ABANDONED_IN_FLIGHT', 'consumed, never re-armed');
   } finally {
-    assert.deepEqual((await s.i.stop()).forced, []); assert.deepEqual((await s.o.stop()).forced, []);
+    await stopSession(s.owned);
   }
 });
 
@@ -182,6 +207,6 @@ test('no browser handoff: abandon-handoff → finish records UNVERIFIED (TIMEOUT
     assert.equal(record.casePass, false, 'no credit without a verified handoff');
     console.log(`# REVAL_EVIDENCE RS-C-B unverified handoff: run ${state}, outcome ${record.outcome}, reply ${record.reply}`);
   } finally {
-    assert.deepEqual((await s.i.stop()).forced, []); assert.deepEqual((await s.o.stop()).forced, []);
+    await stopSession(s.owned);
   }
 });

@@ -122,7 +122,8 @@ public sealed class ReportQueryPerformanceTests(CrmWebFactory factory)
         var probe = new QueryProbe();
         await using var db = new TimeTrackingDbContext(new DbContextOptionsBuilder<TimeTrackingDbContext>()
             .UseSqlServer(factory.RuntimeConnectionString).AddInterceptors(probe).Options);
-        var api = new TimeImportService(db, scope.ServiceProvider.GetRequiredService<TimeApprovalService>());
+        var api = new TimeImportService(db, scope.ServiceProvider.GetRequiredService<TimeApprovalService>(), scope.ServiceProvider.GetRequiredService<Crm.Infrastructure.Persistence.TimeBankTransaction>(), scope.ServiceProvider.GetRequiredService<TimeBillingGuard>(),
+            scope.ServiceProvider.GetRequiredService<Crm.Identity.Contracts.IUserDirectory>());
         var utilization = (await api.GetUtilizationAsync(year, 2, Ct)).Single(row => row.TechnicianId == technician);
         utilization.BilledHours.ShouldBe(entries * 1.25m);
         utilization.CoveredHours.ShouldBe(entries * 2m);
@@ -148,25 +149,30 @@ public sealed class ReportQueryPerformanceTests(CrmWebFactory factory)
     }
 
     [Fact]
-    public async Task Sql_technician_groups_preserve_ordinal_names_and_null_placeholder()
+    public async Task Sql_technician_groups_are_one_row_per_person_and_keep_ordinal_names_without_an_id()
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TimeTrackingDbContext>();
-        var technician = Guid.NewGuid();
-        foreach (var name in new string?[] { "Tech", "tech", "Tech ", null, "—" })
-        {
-            db.TimeEntries.Add(TimeEntry.FromSource(new("atera", Guid.NewGuid().ToString(), Guid.NewGuid(), null, null, null,
-                technician, null, name, new DateOnly(2062, 3, 5), null, null, 1m, null, true, false, null)));
-        }
+        var technician = Guid.NewGuid(); var unnamed = Guid.NewGuid(); var tag = Guid.NewGuid().ToString("N")[..8];
+        void Add(Guid? id, string? name) => db.TimeEntries.Add(TimeEntry.FromSource(new("atera", Guid.NewGuid().ToString(), Guid.NewGuid(), null, null, null,
+            id, null, name, new DateOnly(2062, 3, 5), null, null, 1m, null, true, false, null)));
+        foreach (var name in new string?[] { "Tech", "tech", "Tech ", null, "—" }) Add(technician, name);
+        foreach (var name in new string?[] { null, "—" }) Add(unnamed, name);
+        foreach (var name in new[] { $"Tech {tag}", $"tech {tag}", $"Tech {tag} " }) Add(null, name);
 
         await db.SaveChangesAsync(Ct);
-        var rows = (await scope.ServiceProvider.GetRequiredService<ITimeTrackingApi>().GetUtilizationAsync(2062, 3, Ct))
-            .Where(row => row.TechnicianId == technician).ToDictionary(row => row.TechnicianName);
-        rows.Count.ShouldBe(4);
-        rows["Tech"].TotalHours.ShouldBe(1m);
-        rows["tech"].TotalHours.ShouldBe(1m);
-        rows["Tech "].TotalHours.ShouldBe(1m);
-        rows["—"].TotalHours.ShouldBe(2m);
+        var rows = await scope.ServiceProvider.GetRequiredService<ITimeTrackingApi>().GetUtilizationAsync(2062, 3, Ct);
+        // Name variants and nameless hours of one person meet by the id; the name is the ordinal first of the busiest.
+        var person = rows.Where(row => row.TechnicianId == technician).ShouldHaveSingleItem();
+        person.TechnicianName.ShouldBe("Tech");
+        person.TotalHours.ShouldBe(5m);
+        var placeholder = rows.Where(row => row.TechnicianId == unnamed).ShouldHaveSingleItem();
+        placeholder.TechnicianName.ShouldBe("—");
+        placeholder.TotalHours.ShouldBe(2m);
+        // Without an id the SQL grouping still matches the old ordinal one, case and trailing spaces included.
+        var byName = rows.Where(row => row.TechnicianId == null && row.TechnicianName.Contains(tag, StringComparison.Ordinal)).ToDictionary(row => row.TechnicianName);
+        byName.Keys.Order(StringComparer.Ordinal).ShouldBe([$"Tech {tag}", $"Tech {tag} ", $"tech {tag}"]);
+        byName.Values.ShouldAllBe(row => row.TotalHours == 1m);
     }
 
     [Fact]

@@ -31,7 +31,8 @@ test('the dashboard adds up contracts, renewals and hours', async ({ page }) => 
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   // 4 × 2 500 of this contract is part of the monthly recurring revenue.
   await expect(page.getByText(/Monthly recurring revenue/)).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Invoiced amount per month, excluding VAT' })).toBeVisible();
+  // The bars are drawn for the eye only; screen readers read the same months from the table the chart carries.
+  await expect(page.getByRole('table', { name: 'Invoiced amount per month, excluding VAT' })).toBeAttached();
 
   // The renewal list shows the twenty contracts that end first, and the shared database keeps filling up with runs:
   // this contract ends in two days, so it is at the top of the list whatever else is in there.

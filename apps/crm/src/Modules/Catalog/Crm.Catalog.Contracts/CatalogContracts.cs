@@ -67,7 +67,14 @@ public sealed record ProductRef(
 public sealed record ResolvedPrice(Guid ProductId, decimal UnitPrice, decimal? UnitCost, string Currency, Guid? PriceListId, string? PriceListName);
 
 /// <summary>Product data from an external system (PowerOffice products) for the first-load import.</summary>
-public sealed record ExternalProductData(string? Code, string Name, string? Description, string? UnitCode, decimal? UnitPrice, decimal? UnitCost);
+public sealed record ExternalProductData(string? Code, string Name, string? Description, string? UnitCode, decimal? UnitPrice, decimal? UnitCost)
+{
+    /// <summary>Stable local external-record key for resuming creation before its integration link is committed.</summary>
+    public Guid? SourceRecordId { get; init; }
+
+    /// <summary>Calculate the same import decision without saving entities, affiliations or events.</summary>
+    public bool PreviewOnly { get; init; }
+}
 
 public sealed record ImportProductResult(Guid ProductId, bool Created);
 

@@ -1,13 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Crm.Authorization;
 using Crm.Integrations.Core.Parasol;
-using Crm.Integrations.Core.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -29,13 +28,18 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var customerId = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
         var clientId = $"client-{Guid.NewGuid():N}";
+        await Link(customerId, clientId);
+        return (customerId, clientId);
+    }
+
+    private async Task Link(Guid customerId, string clientId)
+    {
         var input = new CustomerIdentityImport(new(1, "atlas", Workspace, [new(clientId, "Synthetic")]), [new(clientId, customerId)]);
         var path = "/api/v1/parasol/customer-identities/import";
         var preview = await Admin.PostAsJsonAsync(path, input);
         preview.StatusCode.ShouldBe(HttpStatusCode.OK);
         var hash = (await preview.Content.ReadFromJsonAsync<CustomerIdentityPlan>())!.Sha256;
         (await Admin.PostAsJsonAsync($"{path}?dryRun=false&expectedSha256={hash}", input)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        return (customerId, clientId);
     }
 
     private async Task<WebApplicationFactory<Program>> Host(WireMockServer atlas, string? credentialWorkspace = Workspace, HttpMessageHandler? handler = null)
@@ -64,18 +68,9 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
         return client;
     }
 
-    internal static object Context(string clientId, string workspace = Workspace) => new
-    {
-        contractVersion = "ClientContextV1", workspaceId = workspace, clientId, mode = "db", completeness = "PARTIAL",
-        generatedAt = "2026-10-16T10:00:00Z", clientName = "Synthetic private customer name",
-        devices = new[] { new { name = "private-device" } }, people = new[] { new { email = "synthetic-private@example.invalid" } },
-        observations = new { total = 3, counts = new { INFO = 0, LOW = 0, MEDIUM = 1, HIGH = 1, CRITICAL = 1 } },
-        resources = new object[]
-        {
-            new { source = "atera", resourceType = "agent", status = "STALE", asOf = "2026-10-15T10:00:00Z", lastSuccessAt = "2026-10-15T10:00:00Z", items = new[] { new { secret = "synthetic-private-payload" } }, truncated = true },
-            new { source = "huntress", resourceType = "incident", status = "MISSING", asOf = (string?)null, lastSuccessAt = (string?)null, items = (object?)null, truncated = false },
-        },
-    };
+    internal static object Context(string clientId, string workspace = Workspace) => JsonSerializer.Deserialize<JsonElement>(
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "atlas-context.v1.example.json"))
+            .Replace("synthetic-client", clientId, StringComparison.Ordinal).Replace("synthetic-workspace", workspace, StringComparison.Ordinal));
 
     [Fact]
     public async Task One_BFF_session_reads_only_a_linked_customer_with_its_employees_Atlas_token()
@@ -91,7 +86,15 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
         response.Headers.CacheControl!.NoStore.ShouldBeTrue();
         var view = (await response.Content.ReadFromJsonAsync<AtlasWorkspaceView>())!;
         view.Status.ShouldBe("READY"); view.CustomerId.ShouldBe(id);
-        view.Summary!.KnownDevices.ShouldBe(1); view.Summary.ActiveObservations.ShouldBe(3);
+        view.Summary!.KnownDevices.ShouldBe(2); view.Summary.ActiveObservations.ShouldBe(3);
+        view.Summary.Devices[0].Hostname.ShouldBe("SYNTHETIC-LT-01");
+        view.Summary.Devices[0].Sources.ShouldBe(["atera", "huntress"]);
+        view.Summary.ObservationPage.Items[0].Severity.ShouldBe("CRITICAL");
+        view.Summary.ObservationPage.Items[0].Priority.ShouldBe("URGENT");
+        view.Summary.ObservationPage.Items[0].Route.ShouldBe("MONITOR");
+        view.Summary.ObservationPage.Items[0].DeviceId.ShouldBe("device-one");
+        view.Summary.ObservationPage.Items[1].DeviceStatus.ShouldBe("UNRESOLVED");
+        view.Summary.ObservationPage.Items[2].DeviceStatus.ShouldBe("UNAVAILABLE");
         view.Summary.Resources[0].Status.ShouldBe("STALE"); view.Summary.Resources[0].Truncated.ShouldBeTrue();
         view.Summary.Resources[1].ReturnedItems.ShouldBeNull();
         var body = await response.Content.ReadAsStringAsync();
@@ -134,6 +137,11 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
     [InlineData("invalid-json")]
     [InlineData("too-large")]
     [InlineData("negative-count")]
+    [InlineData("nested-device")]
+    [InlineData("nested-person")]
+    [InlineData("nested-link")]
+    [InlineData("nested-observation")]
+    [InlineData("priority-floor")]
     public async Task Untrusted_or_mismatched_responses_are_rejected(string scenario)
     {
         var (id, clientId) = await LinkedCustomer();
@@ -146,6 +154,19 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
             "too-large" => new string('x', 2 * 1024 * 1024 + 1),
             _ => JsonSerializer.Serialize(Context(clientId)).Replace("\"total\":3", "\"total\":-1", StringComparison.Ordinal),
         };
+        if (scenario.StartsWith("nested-", StringComparison.Ordinal) || scenario == "priority-floor")
+        {
+            var node = JsonNode.Parse(JsonSerializer.Serialize(Context(clientId)))!;
+            switch (scenario)
+            {
+                case "nested-device": node["devices"]![0]!["clientId"] = "other-customer"; break;
+                case "nested-person": node["people"]![0]!["workspaceId"] = "other-workspace"; break;
+                case "nested-link": node["links"]![0]!["clientId"] = "other-customer"; break;
+                case "nested-observation": node["observations"]!["items"]![0]!["clientId"] = "other-customer"; break;
+                case "priority-floor": node["observations"]!["items"]![0]!["priority"] = "NORMAL"; break;
+            }
+            body = node.ToJsonString();
+        }
         atlas.Given(Request.Create().WithPath($"/clients/{clientId}/overview").UsingGet())
             .RespondWith(Response.Create().WithHeader("Content-Type", "application/json").WithBody(body));
         await using var host = await Host(atlas);
@@ -154,33 +175,79 @@ public sealed class AtlasWorkspaceTests(CrmWebFactory factory)
     }
 
     [Fact]
-    public async Task Unlinking_while_Atlas_is_answering_discards_the_old_customer_snapshot()
+    public async Task Revoking_personal_access_does_not_return_previous_devices_or_observations()
+    {
+        var (id, clientId) = await LinkedCustomer();
+        using var atlas = WireMockServer.Start();
+        atlas.Given(Request.Create().WithPath($"/clients/{clientId}/overview").UsingGet())
+            .RespondWith(Response.Create().WithHeader("Content-Type", "application/json").WithBody(JsonSerializer.Serialize(Context(clientId))));
+        await using var host = await Host(atlas); using var client = Client(host);
+        var first = (await client.GetFromJsonAsync<AtlasWorkspaceView>(PathFor(id)))!;
+        first.Summary!.Devices.Count.ShouldBe(2); first.Summary.ObservationPage.Items.Count.ShouldBe(3);
+        atlas.Reset();
+        atlas.Given(Request.Create().WithPath($"/clients/{clientId}/overview")).RespondWith(Response.Create().WithStatusCode(403).WithBody("synthetic-private"));
+        var response = await client.GetAsync(PathFor(id));
+        response.Headers.CacheControl!.NoStore.ShouldBeTrue();
+        var denied = (await response.Content.ReadFromJsonAsync<AtlasWorkspaceView>())!;
+        denied.Status.ShouldBe("ACCESS_DENIED"); denied.Summary.ShouldBeNull();
+        var body = await response.Content.ReadAsStringAsync(); body.ShouldNotContain("SYNTHETIC-LT"); body.ShouldNotContain("synthetic-private");
+    }
+
+    [Theory]
+    [InlineData("unlink")]
+    [InlineData("same-pair")]
+    [InlineData("different-pair")]
+    [InlineData("unchanged")]
+    public async Task Source_read_is_bound_to_the_original_LinkId_and_requires_a_fresh_read_after_relink(string change)
     {
         var (id, clientId) = await LinkedCustomer();
         using var atlas = WireMockServer.Start();
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var handler = new DelayedResponse(entered, resume, clientId);
+        using var handler = new DelayedResponse(entered, resume);
         await using var host = await Host(atlas, handler: handler);
         using var client = Client(host);
+        var identityPath = $"/api/v1/parasol/customers/{id}/identity";
+        var original = (await Admin.GetFromJsonAsync<CustomerIdentityView>(identityPath))!;
+        var currentClient = change == "different-pair" ? $"client-{Guid.NewGuid():N}" : clientId;
         var pending = client.GetFromJsonAsync<AtlasWorkspaceView>(PathFor(id));
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         try
         {
-            using var scope = factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
-            var link = await db.ExternalLinks.AsNoTracking().SingleAsync(l => l.System == "Atlas" && l.EntityId == id);
-            (await Admin.DeleteAsync($"/api/v1/integrations/links/{link.Id}")).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+            if (change != "unchanged")
+            {
+                (await Admin.DeleteAsync($"/api/v1/integrations/links/{original.LinkId}")).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+                if (change != "unlink") await Link(id, currentClient);
+            }
         }
         finally { resume.TrySetResult(); }
         var result = await pending;
+        handler.Calls.ShouldBe(1); // No automatic replay against a new mapping.
+        if (change == "unchanged")
+        {
+            result!.Status.ShouldBe("READY"); result.Summary!.KnownDevices.ShouldBe(2);
+            return;
+        }
         result!.Status.ShouldBe("IDENTITY_CHANGED"); result.Summary.ShouldBeNull();
+        JsonSerializer.Serialize(result).ShouldNotContain("SYNTHETIC-LT");
+        var freshIdentity = (await Admin.GetFromJsonAsync<CustomerIdentityView>(identityPath))!;
+        freshIdentity.LinkId.ShouldNotBe(original.LinkId);
+        if (change != "unlink") freshIdentity.Atlas!.ClientId.ShouldBe(currentClient);
+        var fresh = (await client.GetFromJsonAsync<AtlasWorkspaceView>(PathFor(id)))!;
+        fresh.Status.ShouldBe(change == "unlink" ? "NOT_LINKED" : "READY");
+        if (change == "unlink") fresh.Summary.ShouldBeNull();
+        else fresh.Summary!.KnownDevices.ShouldBe(2);
+        handler.Calls.ShouldBe(change == "unlink" ? 1 : 2);
     }
 
-    private sealed class DelayedResponse(TaskCompletionSource entered, TaskCompletionSource resume, string clientId) : HttpMessageHandler
+    private sealed class DelayedResponse(TaskCompletionSource entered, TaskCompletionSource resume) : HttpMessageHandler
     {
+        private int calls;
+        public int Calls => Volatile.Read(ref calls);
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref calls);
+            var clientId = request.RequestUri!.Segments[2].TrimEnd('/');
             entered.TrySetResult();
             await resume.Task.WaitAsync(cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)

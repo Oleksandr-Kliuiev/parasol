@@ -23,6 +23,7 @@ public static class IntegrationsCoreModule
         services.AddScoped<Crm.Privacy.Contracts.IRetentionContributor, ExceptionTriageRetention>();
         services.AddScoped<ExternalRecordStore>();
         services.AddScoped<ExternalLinkService>();
+        services.AddScoped<Crm.Service.Contracts.ITicketOwnershipApi, AteraTicketOwnershipReader>();
         services.AddScoped<Parasol.CustomerIdentityService>();
         Parasol.AtlasWorkspaceRegistration.AddAtlasWorkspace(services, configuration);
         services.AddScoped<OutboundQueue>();

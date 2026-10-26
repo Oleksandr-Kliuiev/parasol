@@ -1,63 +1,93 @@
-import { useId } from 'react';
-import { makeStyles, tokens } from '@fluentui/react-components';
+import { makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
-import { formatMoney, formatNumber } from '../../shared/utils/format';
+import { h } from '../../app/hearth';
+import { ease } from '../../app/motion';
+import { formatMoney } from '../../shared/utils/format';
 import type { RevenueMonth } from './types';
 
 const useStyles = makeStyles({
-  wrap: { overflowX: 'auto' },
-  chart: { display: 'block', minWidth: '320px', width: '100%', height: 'auto' },
-  bar: { fill: tokens.colorBrandBackground },
-  axis: { stroke: tokens.colorNeutralStroke2 },
-  label: { fill: tokens.colorNeutralForeground3, fontSize: '10px' },
-  value: { fill: tokens.colorNeutralForeground1, fontSize: '10px', fontWeight: tokens.fontWeightSemibold },
+  // The sr-only table is absolutely positioned: the wrapper holds it, so it never lengthens the page.
+  wrap: { position: 'relative' },
+  // Chunky columns on a quiet track, the latest month in ember (the production chart of the visual system).
+  bars: { display: 'flex', alignItems: 'stretch', gap: '8px', height: '210px', '@media (max-width: 560px)': { gap: '4px', height: '170px' } },
+  col: { position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 0', minWidth: 0, outline: 'none',
+    ':focus-visible .bar-track': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px' },
+    '&:hover .bar-tip, &:focus-visible .bar-tip': { opacity: 1, transform: 'translate(-50%, -4px)' } },
+  track: { position: 'relative', display: 'flex', alignItems: 'flex-end', flex: '1 1 auto', borderRadius: '10px', backgroundColor: h.well, overflow: 'hidden' },
+  // Bars grow from the baseline one after another when the chart appears, and glide when the period changes.
+  bar: {
+    width: '100%',
+    minHeight: '4px',
+    borderRadius: '4px 4px 0 0',
+    backgroundColor: h.ink,
+    opacity: 0.85,
+    transformOrigin: '50% 100%',
+    animationName: { from: { transform: 'scaleY(0)' } },
+    animationDuration: '0.9s',
+    animationTimingFunction: ease.out,
+    animationFillMode: 'backwards',
+    transitionProperty: 'height',
+    transitionDuration: '0.7s',
+    transitionTimingFunction: ease.inOut,
+  },
+  current: { backgroundColor: h.ember, opacity: 1 },
+  label: { textAlign: 'center', color: h.muted, fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  tip: {
+    position: 'absolute',
+    left: '50%',
+    bottom: 'calc(100% - 8px)',
+    zIndex: 1,
+    paddingTop: '6px', paddingBottom: '6px', paddingLeft: '10px', paddingRight: '10px',
+    borderRadius: '10px',
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${h.line}`,
+    boxShadow: tokens.shadow16,
+    fontSize: '12.5px',
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
+    pointerEvents: 'none',
+    opacity: 0,
+    transform: 'translate(-50%, 0)',
+    transitionProperty: 'opacity, transform',
+    transitionDuration: '0.15s',
+  },
   table: { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' },
 });
 
 /**
- * Invoiced amount per month. Drawn by hand: a chart library would cost more than the picture is worth, and the same numbers
- * are also in a table for screen readers.
+ * Invoiced amount per month. Drawn with plain elements: a chart library would cost more than the picture is worth. The
+ * picture is hidden from screen readers, which read the same numbers from the table; the hover/focus tip shows each value.
  */
 export function RevenueChart({ months }: { months: RevenueMonth[] }) {
   const styles = useStyles();
   const { t, i18n } = useTranslation();
-  const titleId = useId();
-  const width = 640;
-  const height = 200;
-  const padding = { top: 16, right: 8, bottom: 28, left: 8 };
-  const plotWidth = width - padding.left - padding.right;
-  const plotHeight = height - padding.top - padding.bottom;
   const max = Math.max(1, ...months.map((month) => month.totalExVat ?? 0));
-  const slot = months.length > 0 ? plotWidth / months.length : plotWidth;
-  const barWidth = Math.max(8, Math.min(56, slot * 0.6));
   const monthLabel = (month: RevenueMonth) =>
-    new Intl.DateTimeFormat(i18n.language, { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(Date.UTC(month.year, month.month - 1, 1)));
+    new Intl.DateTimeFormat(i18n.language, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(month.year, month.month - 1, 1)));
+  const fullLabel = (month: RevenueMonth) =>
+    new Intl.DateTimeFormat(i18n.language, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(month.year, month.month - 1, 1)));
 
   return (
     <div className={styles.wrap}>
-      <svg className={styles.chart} viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={titleId}>
-        <title id={titleId}>{t('dashboard.revenueChartTitle')}</title>
-        <line className={styles.axis} x1={padding.left} y1={height - padding.bottom} x2={width - padding.right} y2={height - padding.bottom} />
+      <div className={styles.bars} aria-hidden>
         {months.map((month, index) => {
           const value = month.totalExVat ?? 0;
-          const barHeight = max === 0 ? 0 : (value / max) * plotHeight;
-          const x = padding.left + (index * slot) + ((slot - barWidth) / 2);
-          const y = height - padding.bottom - barHeight;
           return (
-            <g key={`${month.year}-${month.month}`}>
-              <rect className={styles.bar} x={x} y={y} width={barWidth} height={Math.max(barHeight, value > 0 ? 2 : 0)} rx={2} />
-              {value > 0 && (
-                <text className={styles.value} x={x + (barWidth / 2)} y={Math.max(y - 4, 10)} textAnchor="middle">
-                  {formatNumber(value, 0)}
-                </text>
-              )}
-              <text className={styles.label} x={x + (barWidth / 2)} y={height - padding.bottom + 14} textAnchor="middle">
-                {monthLabel(month)}
-              </text>
-            </g>
+            <div key={`${month.year}-${month.month}`} className={styles.col}>
+              <span className={mergeClasses(styles.tip, 'bar-tip')}>
+                {fullLabel(month)} · {formatMoney(value)}
+              </span>
+              <div className={mergeClasses(styles.track, 'bar-track')}>
+                <span
+                  className={mergeClasses(styles.bar, index === months.length - 1 && styles.current)}
+                  style={{ height: `${Math.round((value / max) * 100)}%`, animationDelay: `${200 + index * 35}ms` }}
+                />
+              </div>
+              <span className={styles.label}>{monthLabel(month)}</span>
+            </div>
           );
         })}
-      </svg>
+      </div>
       <table className={styles.table}>
         <caption>{t('dashboard.revenueChartTitle')}</caption>
         <thead>
@@ -69,7 +99,7 @@ export function RevenueChart({ months }: { months: RevenueMonth[] }) {
         <tbody>
           {months.map((month) => (
             <tr key={`${month.year}-${month.month}`}>
-              <th scope="row">{monthLabel(month)}</th>
+              <th scope="row">{fullLabel(month)}</th>
               <td>{formatMoney(month.totalExVat)}</td>
             </tr>
           ))}

@@ -1,22 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  MessageBar,
-  MessageBarBody,
-} from '@fluentui/react-components';
-import { useTranslation } from 'react-i18next';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { REVERIFY_EVENT, reverifyHref } from '../api/client';
 import { hasUnsavedChanges } from '../shared/forms/useUnsavedChanges';
 
 const FAILED_PARAMETER = 'reverify';
 
 type Mode = { kind: 'closed' } | { kind: 'required'; url: unknown } | { kind: 'failed' };
+
+const ReverifyDialogView = lazy(async () => ({ default: (await import('./ReverifyDialogView')).ReverifyDialogView }));
 
 /**
  * "Confirm your identity to continue" (F-G2-08). A privileged action the server refused with AUTH_REVERIFY_REQUIRED opens it;
@@ -26,11 +16,12 @@ type Mode = { kind: 'closed' } | { kind: 'required'; url: unknown } | { kind: 'f
  * (`?reverify=failed`), with another try.
  */
 export function ReverifyDialog() {
-  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>(() =>
     new URLSearchParams(window.location.search).get(FAILED_PARAMETER) === 'failed' ? { kind: 'failed' } : { kind: 'closed' },
   );
   const [unsaved, setUnsaved] = useState(false);
+  // The dialog itself is loaded the first time it is needed: it is rare, and the shell's first download has a budget.
+  const [loaded, setLoaded] = useState(() => mode.kind !== 'closed');
   // The dialog is opened by an event, not by a trigger, so it cannot return focus by itself: remember where it was.
   const origin = useRef<HTMLElement | null>(null);
 
@@ -48,6 +39,7 @@ export function ReverifyDialog() {
     const open = (event: Event) => {
       origin.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setUnsaved(hasUnsavedChanges());
+      setLoaded(true);
       setMode({
         kind: 'required',
         url: (event as CustomEvent<{ url?: unknown }>).detail?.url,
@@ -63,27 +55,9 @@ export function ReverifyDialog() {
   };
   const confirm = () => window.location.assign(reverifyHref(mode.kind === 'required' ? mode.url : undefined));
 
-  return (
-    <Dialog open={mode.kind !== 'closed'} modalType="alert" onOpenChange={(_, data) => !data.open && close()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{mode.kind === 'failed' ? t('reverify.failedTitle') : t('reverify.title')}</DialogTitle>
-          <DialogContent>
-            <p>{mode.kind === 'failed' ? t('reverify.failedBody') : t('reverify.body')}</p>
-            {mode.kind === 'required' && unsaved && (
-              <MessageBar intent="warning" layout="multiline">
-                <MessageBarBody>{t('reverify.unsaved')}</MessageBarBody>
-              </MessageBar>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button appearance="primary" onClick={confirm}>
-              {mode.kind === 'failed' ? t('reverify.tryAgain') : unsaved ? t('reverify.continueAnyway') : t('reverify.confirm')}
-            </Button>
-            <Button onClick={close}>{mode.kind === 'required' && unsaved ? t('reverify.stay') : t('reverify.cancel')}</Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
-  );
+  return loaded ? (
+    <Suspense fallback={null}>
+      <ReverifyDialogView mode={mode.kind} unsaved={unsaved} onClose={close} onConfirm={confirm} />
+    </Suspense>
+  ) : null;
 }

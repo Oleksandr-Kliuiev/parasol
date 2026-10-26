@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Button, Field, Input, Select, Switch, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components';
-import { ArrowDownload20Regular } from '@fluentui/react-icons';
+import { Button, Input, Select, Spinner, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, makeStyles, mergeClasses } from '@fluentui/react-components';
+import { ArrowDownload20Regular, DocumentSearch24Regular, TextBulletListSquare16Regular } from '@fluentui/react-icons';
 import { useMutation } from '@tanstack/react-query';
+import { h } from '../../../app/hearth';
 import { useTranslation } from 'react-i18next';
 import { download } from '../../../api/client';
 import { Permissions, useCan } from '../../../auth/CurrentUserContext';
@@ -9,6 +10,7 @@ import { EmptyState } from '../../../shared/components/EmptyState';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { ListFooter } from '../../../shared/components/ListFooter';
 import { Panel } from '../../../shared/components/Panel';
+import { FilterChips, FilterField, Toolbar } from '../../../shared/components/Toolbar';
 import { useNotify } from '../../../shared/components/useNotify';
 import { errorMessage } from '../../../shared/utils/errors';
 import { formatNumber } from '../../../shared/utils/format';
@@ -18,8 +20,27 @@ import { traceExportUrl, useTrace, type TraceFilters, type TraceRow } from './ap
 import { ScrollRegion } from './parts';
 import { money, usePilotStyles } from './styles';
 
+const useStyles = makeStyles({
+  // Figures get fixed columns; the payer and the line take what is left.
+  quantity: { width: '84px' },
+  price: { width: '120px' },
+  vat: { width: '68px' },
+  total: { width: '124px' },
+  decision: { width: '136px' },
+  anomalies: { width: '164px' },
+  followed: { width: '120px' },
+  name: { fontWeight: 600 },
+  stack: { display: 'grid', gap: '2px', minWidth: 0 },
+  nowrap: { whiteSpace: 'nowrap' },
+  // Anomaly codes as small code chips that wrap between codes, never inside one.
+  codes: { display: 'flex', flexWrap: 'wrap', gap: '4px' },
+  code: { whiteSpace: 'nowrap', paddingLeft: '6px', paddingRight: '6px', borderRadius: '6px', backgroundColor: h.saffronSoft, color: h.saffronT },
+  anomaly: { minWidth: 'min(240px, 100%)' },
+});
+
 function Decision({ row }: { row: TraceRow }) {
   const { t } = useTranslation();
+  const styles = usePilotStyles();
   const parts = [
     row.origin === 'Manual' ? t('pilot.trace.originManual') : null,
     row.decision !== 'None' ? t(`pilot.trace.decision.${row.decision}`) : null,
@@ -28,7 +49,7 @@ function Decision({ row }: { row: TraceRow }) {
   return (
     <>
       {parts.length === 0 ? '—' : parts.join(' · ')}
-      {row.changeReason && <div style={{ fontSize: 12 }}>{row.changeReason}</div>}
+      {row.changeReason && <div className={styles.muted}>{row.changeReason}</div>}
     </>
   );
 }
@@ -36,6 +57,7 @@ function Decision({ row }: { row: TraceRow }) {
 /** One run's lines with where they came from and where they went; money columns only when the API returns them. */
 export function TracePanel({ runId }: { runId: string }) {
   const styles = usePilotStyles();
+  const local = useStyles();
   const { t, i18n } = useTranslation();
   const notify = useNotify();
   const canSeeMoney = useCan(Permissions.financeRead);
@@ -55,17 +77,16 @@ export function TracePanel({ runId }: { runId: string }) {
   return (
     <Panel
       title={t('pilot.trace.title')}
+      icon={<TextBulletListSquare16Regular />}
       actions={
         <Button icon={<ArrowDownload20Regular />} disabled={exportFile.isPending} onClick={() => exportFile.mutate()}>
           {t('pilot.trace.export')}
         </Button>
       }
     >
-      <p className={styles.muted} style={{ marginTop: 0 }}>
-        {t('pilot.trace.hint')}
-      </p>
-      <div className={styles.filters}>
-        <Field label={t('pilot.trace.payer')}>
+      <p className={styles.lead}>{t('pilot.trace.hint')}</p>
+      <Toolbar>
+        <FilterField label={t('pilot.trace.payer')}>
           <Select value={payerId} onChange={(_, d) => setPayerId(d.value)}>
             <option value="">{t('pilot.trace.allPayers')}</option>
             {(payers.data ?? []).map((basis) => (
@@ -74,8 +95,8 @@ export function TracePanel({ runId }: { runId: string }) {
               </option>
             ))}
           </Select>
-        </Field>
-        <Field label={t('pilot.trace.group')}>
+        </FilterField>
+        <FilterField label={t('pilot.trace.group')}>
           <Select value={group} onChange={(_, d) => setGroup(d.value)}>
             <option value="">{t('pilot.trace.allGroups')}</option>
             {billingGroups.map((g) => (
@@ -84,58 +105,76 @@ export function TracePanel({ runId }: { runId: string }) {
               </option>
             ))}
           </Select>
-        </Field>
-        <Field label={t('pilot.trace.anomaly')}>
-          <Input value={anomaly} onChange={(_, d) => setAnomaly(d.value)} placeholder="BIL_STALE_QUANTITY" />
-        </Field>
-        <Switch label={t('pilot.trace.anomaliesOnly')} checked={anomaliesOnly} onChange={(_, d) => setAnomaliesOnly(d.checked)} />
-      </div>
+        </FilterField>
+        <FilterField label={t('pilot.trace.anomaly')}>
+          <Input className={local.anomaly} value={anomaly} onChange={(_, d) => setAnomaly(d.value)} placeholder={t('pilot.trace.anomalyPlaceholder')} />
+        </FilterField>
+        <FilterChips
+          label={t('pilot.trace.anomaliesOnly')}
+          value={anomaliesOnly ? 'on' : ''}
+          options={[{ value: 'on', label: t('pilot.trace.anomaliesOnly') }]}
+          onChange={() => setAnomaliesOnly(!anomaliesOnly)}
+        />
+      </Toolbar>
 
       {trace.error ? (
         <ErrorState error={trace.error} onRetry={() => void trace.refetch()} />
+      ) : trace.isPending ? (
+        <Spinner size="small" label={t('common.loading')} />
+      ) : trace.items.length === 0 ? (
+        <EmptyState icon={<DocumentSearch24Regular />} message={t('pilot.trace.empty')} />
       ) : (
         <>
           <ScrollRegion label={t('pilot.trace.tableLabel')}>
-            <Table className={styles.table} style={{ minWidth: 1100 }} aria-label={t('pilot.trace.tableLabel')}>
+            <Table className={styles.table} style={{ minWidth: 1180 }} aria-label={t('pilot.trace.tableLabel')}>
               <TableHeader>
                 <TableRow>
                   <TableHeaderCell>{t('pilot.trace.payer')}</TableHeaderCell>
-                  <TableHeaderCell>{t('pilot.trace.delivered')}</TableHeaderCell>
-                  <TableHeaderCell>{t('pilot.trace.group')}</TableHeaderCell>
                   <TableHeaderCell>{t('pilot.trace.product')}</TableHeaderCell>
-                  <TableHeaderCell className={styles.number}>{t('pilot.trace.quantity')}</TableHeaderCell>
-                  {showMoney && <TableHeaderCell className={styles.number}>{t('pilot.trace.unitPrice')}</TableHeaderCell>}
-                  {showMoney && <TableHeaderCell className={styles.number}>{t('pilot.trace.discount')}</TableHeaderCell>}
-                  <TableHeaderCell className={styles.number}>{t('pilot.trace.vat')}</TableHeaderCell>
-                  {showMoney && <TableHeaderCell className={styles.number}>{t('pilot.trace.total')}</TableHeaderCell>}
-                  <TableHeaderCell>{t('pilot.trace.decisionColumn')}</TableHeaderCell>
-                  <TableHeaderCell>{t('pilot.trace.anomalies')}</TableHeaderCell>
-                  <TableHeaderCell>{t('pilot.trace.followed')}</TableHeaderCell>
+                  <TableHeaderCell className={mergeClasses(styles.number, local.quantity)}>{t('pilot.trace.quantity')}</TableHeaderCell>
+                  {showMoney && <TableHeaderCell className={mergeClasses(styles.number, local.price)}>{t('pilot.trace.unitPrice')}</TableHeaderCell>}
+                  <TableHeaderCell className={mergeClasses(styles.number, local.vat)}>{t('pilot.trace.vat')}</TableHeaderCell>
+                  {showMoney && <TableHeaderCell className={mergeClasses(styles.number, local.total)}>{t('pilot.trace.total')}</TableHeaderCell>}
+                  <TableHeaderCell className={local.decision}>{t('pilot.trace.decisionColumn')}</TableHeaderCell>
+                  <TableHeaderCell className={local.anomalies}>{t('pilot.trace.anomalies')}</TableHeaderCell>
+                  <TableHeaderCell className={local.followed}>{t('pilot.trace.followed')}</TableHeaderCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {trace.items.map((row) => (
                   <TableRow key={row.lineId}>
                     <TableCell>
-                      {row.payer.name}
-                      <div className={styles.muted}>{row.payerOrgNumber ?? '—'}</div>
+                      <span className={local.stack}>
+                        <span className={local.name}>{row.payer.name}</span>
+                        <span className={mergeClasses(styles.key, local.nowrap)}>{row.payerOrgNumber ?? '—'}</span>
+                        {row.sourceOrganization && <span className={styles.muted}>{t('pilot.trace.deliveredTo', { name: row.sourceOrganization.name })}</span>}
+                      </span>
                     </TableCell>
-                    <TableCell>{row.sourceOrganization?.name ?? '—'}</TableCell>
-                    <TableCell>{t(`billing.groups.${row.group}`, { defaultValue: row.group })}</TableCell>
                     <TableCell>
-                      {row.description}
-                      <div className={styles.mono}>{row.productCode ?? '—'}</div>
-                      {row.sourceKey && <div className={`${styles.mono} ${styles.muted}`}>{row.sourceKey}</div>}
+                      <span className={local.stack}>
+                        <span>{row.description}</span>
+                        <span className={styles.muted}>{t(`billing.groups.${row.group}`, { defaultValue: row.group })}</span>
+                        <span className={styles.key}>{[row.productCode, row.sourceKey].filter(Boolean).join(' · ') || '—'}</span>
+                      </span>
                     </TableCell>
                     <TableCell className={styles.number}>{formatNumber(row.quantity)}</TableCell>
-                    {showMoney && <TableCell className={styles.number}>{money(row.unitPrice)}</TableCell>}
-                    {showMoney && <TableCell className={styles.number}>{row.discountPct === null || row.discountPct === undefined ? '—' : `${formatNumber(row.discountPct)} %`}</TableCell>}
+                    {showMoney && (
+                      <TableCell className={styles.number}>
+                        {money(row.unitPrice)}
+                        {/* A discount is rare: it is told under the price instead of in a column of zeros. */}
+                        {(row.discountPct ?? 0) > 0 && <div className={styles.muted}>{t('pilot.trace.discountShort', { pct: formatNumber(row.discountPct) })}</div>}
+                      </TableCell>
+                    )}
                     <TableCell className={styles.number}>{formatNumber(row.vatRate)} %</TableCell>
                     {showMoney && <TableCell className={styles.number}>{money(row.lineTotal)}</TableCell>}
                     <TableCell>
                       <Decision row={row} />
                     </TableCell>
-                    <TableCell>{row.anomalyCodes.length === 0 ? '—' : <span className={styles.mono}>{row.anomalyCodes.join(', ')}</span>}</TableCell>
+                    <TableCell>
+                      {row.anomalyCodes.length === 0 ? '—' : (
+                        <span className={local.codes}>{row.anomalyCodes.map((code) => <span key={code} className={mergeClasses(styles.mono, local.code)}>{code}</span>)}</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {row.orderNo ?? '—'}
                       {row.invoiceNo && (
@@ -149,12 +188,10 @@ export function TracePanel({ runId }: { runId: string }) {
                 ))}
               </TableBody>
             </Table>
-            {!trace.isPending && trace.items.length === 0 && <EmptyState message={t('pilot.trace.empty')} />}
           </ScrollRegion>
           <ListFooter shown={trace.items.length} total={trace.total} hasMore={trace.hasNextPage} loading={trace.isFetchingNextPage} onMore={() => void trace.fetchNextPage()} />
         </>
       )}
-      {trace.isPending && <Text>{t('common.loading')}</Text>}
     </Panel>
   );
 }

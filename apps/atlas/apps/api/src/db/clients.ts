@@ -1,7 +1,7 @@
-import { Controller, Get, Header, Inject, Module, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Inject, Module, NotFoundException, Param, Query, UseGuards } from '@nestjs/common';
 import type { PrismaClient } from '@prisma/client';
 import type { Actor } from '../../../../packages/core/contracts.ts';
-import { getClientContext, getObservationPage, listClients, CONTEXT_OBSERVATION_LIMIT } from '../../../../packages/graph/prisma-context.ts';
+import { getClientContext, getObservationPage, getObservationSummary, listClients, CONTEXT_OBSERVATION_LIMIT } from '../../../../packages/graph/prisma-context.ts';
 import { listClientAudit, AUDIT_PAGE_LIMIT } from '../../../../packages/audit/prisma.ts';
 import { toHttp, parseLimit, parseObservationQuery } from '../http-boundary.ts';
 import { PRISMA } from './database.ts';
@@ -32,10 +32,20 @@ export class ClientsController {
     try { return await getClientContext(this.db, actor, scope); } catch (error) { toHttp(error); }
   }
   @Get(':id/observations') async observations(@CurrentActor() actor: Actor, @Param('id') id: string, @Query('limit') limit?: unknown,
-    @Query('status') status?: unknown, @Query('severity') severity?: unknown, @Query('cursor') cursor?: unknown) {
+    @Query('status') status?: unknown, @Query('severity') severity?: unknown, @Query('cursor') cursor?: unknown,
+    @Query('deviceId') deviceId?: unknown) {
     const scope = await this.access.requireClient(actor, id, 'context:read', 'client.observations_denied');
-    const query = parseObservationQuery({ limit, status, severity, cursor }, CONTEXT_OBSERVATION_LIMIT);
+    const query = parseObservationQuery({ limit, status, severity, cursor, deviceId }, CONTEXT_OBSERVATION_LIMIT);
     try { return await getObservationPage(this.db, actor, scope, query); } catch (error) { toHttp(error); }
+  }
+  @Get(':id/observations/:observationId') @Header('Cache-Control', 'no-store') async observation(@CurrentActor() actor: Actor,
+    @Param('id') id: string, @Param('observationId') observationId: string) {
+    const scope = await this.access.requireClient(actor, id, 'context:read', 'client.observation_denied');
+    try {
+      const observation = await getObservationSummary(this.db, actor, scope, observationId);
+      if (!observation) throw new NotFoundException();
+      return observation;
+    } catch (error) { toHttp(error); }
   }
   @Get(':id/audit') async audit(@CurrentActor() actor: Actor, @Param('id') id: string, @Query('limit') limit?: unknown) {
     const scope = await this.access.requireClient(actor, id, 'context:read', 'client.audit_denied');

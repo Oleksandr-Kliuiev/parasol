@@ -204,6 +204,11 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
   await expect(page.getByRole('dialog')).toBeVisible();
   await expectNoSeriousViolations(page, 'New billing run dialog');
 
+  // E-mail is off in this environment, so Send is switched off on the page; the dialog is checked as it appears once it is on.
+  await page.route(`**/api/v1/sales/quotes/${quote.id}`, async route => {
+    const response = await route.fetch();
+    return route.fulfill({ response, json: { ...(await response.json()), canSendByEmail: true } });
+  });
   await page.goto(`/quotes/${quote.id}`);
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();

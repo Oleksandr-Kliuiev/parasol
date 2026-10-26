@@ -1,0 +1,112 @@
+{
+  "format": 1,
+  "milestone": "M30",
+  "verifiedAt": "2026-10-17",
+  "problem": "An in-flight customer workspace read accepted a deleted/recreated same-pair link",
+  "behavior": "Compare both source pair and original LinkId; discard all technical fields and require explicit fresh read",
+  "redRegression": {
+    "workspacePassed": 22,
+    "workspaceFailed": 1,
+    "skipped": 0,
+    "case": "same-pair",
+    "expectedStatus": "IDENTITY_CHANGED",
+    "actualStatusBeforeFix": "READY",
+    "retainedPrivately": true
+  },
+  "newChecks": {
+    "crmUnitPassed": 939,
+    "crmArchitecturePassed": 94,
+    "affectedSqlPassed": 80,
+    "deterministicWorkspaceCases": [
+      "unlink",
+      "same-pair",
+      "different-pair",
+      "unchanged"
+    ],
+    "sqlSkipped": 0,
+    "frontendFocusedPassed": 57,
+    "frontendFullPassed": 581,
+    "frontendFiles": 68,
+    "rootCompositionDemoTestsPassed": 22,
+    "static": [
+      "ESLint",
+      "app TypeScript",
+      "E2E TypeScript",
+      "composition TypeScript",
+      "SPA build",
+      "bundle budget"
+    ],
+    "initialBundleGzipKB": 291.8,
+    "bundleBudgetKB": 300,
+    "composition": {
+      "runId": "211f41d30ea5",
+      "accepted": true,
+      "builtInThisRun": true,
+      "passed": 9,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0,
+      "atlasRequests": 564,
+      "mutatingAtlasRequests": 0,
+      "restrictedRuntimeRoles": true,
+      "syntheticScale": {
+        "clients": 40,
+        "devices": 400,
+        "employees": 3
+      },
+      "cleanup": true
+    }
+  },
+  "inputHashesUnchanged": {
+    "sql": 850,
+    "web": 400,
+    "atlas": 1421,
+    "tooling": 31,
+    "composition": 2698
+  },
+  "reused": {
+    "atlasStrict": {
+      "unit": 711,
+      "postgres": 789,
+      "browser": 90,
+      "rerun": false,
+      "sourceInputHashesUnchanged": 1421
+    },
+    "priorFinanceSql": {
+      "milestone": "M26",
+      "passed": 208,
+      "rerunForM30": false,
+      "note": "Not a new full CRM SQL run; M30 runs the affected 80 technical identity tests"
+    },
+    "priorCrmBrowser": {
+      "milestone": "M26",
+      "passed": 78,
+      "rerunForM30": false
+    },
+    "nativeRecovery": {
+      "milestone": "M29",
+      "rerunForM30": false,
+      "note": "Storage/schema/recovery tooling unchanged; M29 images predate the M30 HTTP fence"
+    }
+  },
+  "cleanup": {
+    "ownedRuns": 3,
+    "containersAbsent": true,
+    "fixturePortsClosed": true,
+    "generatedPrivateStateRemoved": true,
+    "unrelatedResourcesUntouched": true
+  },
+  "preservation": {
+    "originalRepositoryHeadRefsAndStatusUnchanged": true,
+    "originalRepositories": 2,
+    "previousCompositionArchivedByteForByte": true
+  },
+  "limits": [
+    "SQL uses real restricted CRM/SQL and a controlled outbound Atlas handler; not a working provider",
+    "Composition independently builds real CRM Web/Worker and Atlas against SQL/PostgreSQL",
+    "No fresh full three-engine CRM browser or native restore run is claimed",
+    "Human usability, time savings and separately authorized live-account/VPS gates remain unproven"
+  ],
+  "published": false,
+  "deployed": false
+}

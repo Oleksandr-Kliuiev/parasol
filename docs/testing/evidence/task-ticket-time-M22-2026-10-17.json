@@ -1,0 +1,91 @@
+{
+  "milestone": "M22",
+  "localDate": "2026-10-17",
+  "syntheticOnly": true,
+  "crm": {
+    "unit": {
+      "passed": 911,
+      "failed": 0,
+      "skipped": 0
+    },
+    "architecture": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0
+    },
+    "affectedSql": {
+      "passed": 63,
+      "failed": 0,
+      "skipped": 0,
+      "buildExit": 0,
+      "testExit": 0,
+      "cleanup": true,
+      "exactSourceInputs": 811,
+      "onlyFixtureAdapted": true
+    }
+  },
+  "frontend": {
+    "passed": 559,
+    "files": 63,
+    "failed": 0,
+    "skipped": 0,
+    "inputHashesUnchanged": 387,
+    "eslint": true,
+    "appTypescript": true,
+    "e2eTypescript": true,
+    "compositionTypescript": true,
+    "spaBuild": true,
+    "spaKB": 291.7,
+    "spaBudgetKB": 300
+  },
+  "browser": {
+    "expected": 67,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "cleanup": true
+  },
+  "composition": {
+    "accepted": true,
+    "builtInThisRun": true,
+    "passed": 9,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "atlasRequests": 554,
+    "providerWrites": 0,
+    "cleanup": true,
+    "ticketWork": {
+      "timeCount": 1,
+      "matchingTimeCount": 1,
+      "timeCreateAuditCount": 1,
+      "receiptCount": 1,
+      "taskPreserved": true
+    },
+    "totalActivityLoggedCount": 2
+  },
+  "previousAtlasStrictEvidence": {
+    "unit": 711,
+    "postgresql": 789,
+    "browser": 90,
+    "inputsStillMatch": 1421,
+    "rerunInM22": false
+  },
+  "diagnosticsRetained": {
+    "seed": "First run failed SQL QUOTED_IDENTIFIER at synthetic seeding; fixture-only SET corrected.",
+    "modalScan": "Two full 8/9 runs and one single-case diagnostic scanned an inaccessible dimmed background button during the dark modal. Captured focus remained inside textarea and background ancestor was aria-hidden. All Axe rules now scan the active modal; full page before and after, theme focus, Escape focus restoration and overflow are checked. No production ARIA/inert change or rule disable.",
+    "themeRender": "The next run exposed an asynchronous theme-render race: Axe sampled interpolated Cancel colors while the later diagnostic had final white-on-dark values. The test now asserts the rendered dark surface and button foreground before scanning, with no rule exclusions or timeout changes.",
+    "contactEvent": "First actual Atlas chain passed 9/9 browser cases but failed durable acceptance with three ActivityLogged events instead of two. Ticket association raised contact event. Removed that side effect, preserved audit/rowversion and strengthened SQL/domain tests for link/change/unlink and concurrent linking.",
+    "compile": "An initial receipt local-variable collision and later test constructor call sites were corrected; build failures retained separately."
+  },
+  "limits": [
+    "Saved tickets are not a live Atera check. Legacy unproven tickets need an accepted owner import.",
+    "Concurrent period closure is not yet atomic with all Time writers; M23 is required before a financial pilot.",
+    "HourBank and asynchronous invoice finalization retain separate consistency boundaries.",
+    "Live providers, Entra and Hostinger VPS remain unverified."
+  ],
+  "published": false,
+  "deployed": false
+}

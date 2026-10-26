@@ -1,32 +1,22 @@
 import { useState } from 'react';
-import {
-  Avatar,
-  Badge,
-  SearchBox,
-  Table,
-  TableBody,
-  TableCell,
-  TableCellLayout,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  makeStyles,
-  tokens,
-} from '@fluentui/react-components';
+import { Badge, SearchBox, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, makeStyles } from '@fluentui/react-components';
+import { PeopleSearch24Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { usePagedList } from '../../api/paging';
 import type { UserSummary } from '../../api/types';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { PageHeader } from '../../shared/components/PageHeader';
+import { ScrollTable } from '../../shared/components/ScrollTable';
+import { FilterField, Toolbar } from '../../shared/components/Toolbar';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
-import { NotFoundPage } from '../errors/NotFoundPage';
+import { ForbiddenPage } from '../errors/ForbiddenPage';
+import { PersonCell } from './settingsUi';
 
-const useStyles = makeStyles({
-  search: { maxWidth: '360px', marginBottom: tokens.spacingVerticalM },
-  tableWrap: { overflowX: 'auto', backgroundColor: tokens.colorNeutralBackground1, borderRadius: tokens.borderRadiusLarge, border: `1px solid ${tokens.colorNeutralStroke2}` },
-});
+// The status pill needs little room: the person cell keeps the rest, so names and e-mails do not break on a phone.
+const useStyles = makeStyles({ status: { width: '128px' } });
 
 export function UsersPage() {
   const styles = useStyles();
@@ -36,31 +26,33 @@ export function UsersPage() {
   const term = useDebouncedValue(search);
   const users = usePagedList<UserSummary>(['identity', 'users', 'admin', term], '/api/v1/identity/users', { search: term, includeInactive: true }, { enabled: allowed });
   const { items: data, error, refetch } = users;
-  if (!allowed) return <NotFoundPage />;
+  if (!allowed) return <ForbiddenPage />;
 
   return (
     <>
       <PageHeader title={t('users.title')} subtitle={t('users.subtitle')} />
-      <SearchBox id="users-search" className={styles.search} value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('users.search')} />
+      <Toolbar>
+        <FilterField label={t('users.search')} kind="search">
+          <SearchBox id="users-search" value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('users.search')} />
+        </FilterField>
+      </Toolbar>
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className={styles.tableWrap}>
+        <ScrollTable>
           <Table aria-label={t('users.title')}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>{t('users.columns.name')}</TableHeaderCell>
-                <TableHeaderCell>{t('users.columns.email')}</TableHeaderCell>
-                <TableHeaderCell>{t('users.columns.status')}</TableHeaderCell>
+                <TableHeaderCell className={styles.status}>{t('users.columns.status')}</TableHeaderCell>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
-                    <TableCellLayout media={<Avatar name={user.displayName} size={24} color="colorful" />}>{user.displayName}</TableCellLayout>
+                    <PersonCell name={user.displayName} detail={user.email} />
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge appearance="tint" color={user.isActive ? 'success' : 'subtle'}>
                       {user.isActive ? t('users.active') : t('users.inactive')}
@@ -70,8 +62,9 @@ export function UsersPage() {
               ))}
             </TableBody>
           </Table>
+          {!users.isPending && data.length === 0 && <EmptyState message={t('users.empty')} icon={<PeopleSearch24Regular />} />}
           <ListFooter shown={data.length} total={users.total} hasMore={users.hasNextPage} loading={users.isFetchingNextPage} onMore={() => void users.fetchNextPage()} />
-        </div>
+        </ScrollTable>
       )}
     </>
   );

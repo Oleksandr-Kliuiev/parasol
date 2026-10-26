@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { configure, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderRoutes, testUser } from '../../test/renderWithProviders';
 import { MonitoringPanel } from './MonitoringPanel';
 import { OutboundPanel } from './SystemsPanels';
 import type { MonitoringOverview } from './monitoringApi';
 
-configure({ defaultHidden: true });
 const base = '/api/v1/integrations/monitoring';
 const overview: MonitoringOverview = {
   recoveredTotalCount: 0,
@@ -98,7 +97,7 @@ describe('Monitoring workbench', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(limited))));
     renderMonitoring();
     expect(await screen.findByText('1 of 250 exceptions shown')).toBeInTheDocument();
-    expect(screen.getByText(/The list includes the 1 most recently reviewed recovered exceptions out of 250/)).toBeInTheDocument();
+    expect(screen.getByText(/Recovered exceptions: the 1 most recently reviewed of 250 awaiting closure are listed/)).toBeInTheDocument();
   });
 
   it('does not request monitoring for a user without permission', () => {
@@ -122,12 +121,12 @@ describe('Monitoring workbench', () => {
     renderRoutes([{ path: '/admin', element: <OutboundPanel /> }], '/admin', testUser(['integrations.manage']));
     await user.click(await screen.findByRole('checkbox', { name: 'Select operation o1' }));
     await user.click(screen.getByRole('button', { name: 'Retry selected (1)' }));
-    const dialog = (await screen.findByText('Retry 1 operations?')).closest<HTMLElement>('[role="dialog"]')!;
+    const dialog = (await screen.findByText('Retry 1 operation?')).closest<HTMLElement>('[role="dialog"]')!;
     expect(within(dialog).getByRole('list', { name: 'Exact selection' })).toHaveTextContent('o1');
-    expect(within(dialog).getByRole('button', { name: 'Retry 1 operations' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Retry 1 operation' })).toBeDisabled();
     await user.click(within(dialog).getByRole('textbox', { name: /Reason/ }));
     await user.paste('External outcome verified');
-    await user.click(within(dialog).getByRole('button', { name: 'Retry 1 operations' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Retry 1 operation' }));
     await waitFor(() => expect(body).toEqual({ messages: [{ id: 'o1', etag: '"v1"' }], expected: 1, reason: 'External outcome verified' }));
     expect(await screen.findByText('o1: Requested')).toBeInTheDocument();
   }, 20_000);
@@ -141,10 +140,10 @@ it('shows stale outbound results inside the open confirmation dialog', async () 
   const user = userEvent.setup();
   renderRoutes([{ path: '/admin', element: <OutboundPanel /> }], '/admin', testUser(['integrations.manage']));
   await user.click(await screen.findByRole('button', { name: 'Retry' }));
-  const dialog = (await screen.findByText('Retry 1 operations?')).closest<HTMLElement>('[role="dialog"]')!;
+  const dialog = (await screen.findByText('Retry 1 operation?')).closest<HTMLElement>('[role="dialog"]')!;
   await user.click(within(dialog).getByRole('textbox', { name: /Reason/ }));
   await user.paste('External outcome verified');
-  await user.click(within(dialog).getByRole('button', { name: 'Retry 1 operations' }));
+  await user.click(within(dialog).getByRole('button', { name: 'Retry 1 operation' }));
   expect(await within(dialog).findByRole('list', { name: 'Results by operation' })).toHaveTextContent('o1: Changed since selection');
   expect(within(dialog).getByRole('textbox', { name: /Reason/ })).toHaveValue('External outcome verified');
 }, 20_000);

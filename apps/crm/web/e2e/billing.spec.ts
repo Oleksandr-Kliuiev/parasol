@@ -122,7 +122,9 @@ test('a monthly run is collected, approved and sent to PowerOffice', { tag: '@cr
         async () => {
           await page.goto(`/organizations/${organization.id}?tab=invoices`);
           await page.waitForLoadState('networkidle');
-          return page.getByText('NOK 15,625.00').first().isVisible();
+          // The card lists the imported copy in the accounting currency (M37): total and balance, no currency assumed.
+          const invoices = page.getByRole('table', { name: 'Imported invoice list' });
+          return invoices.getByRole('row').filter({ hasText: '15,625' }).first().isVisible();
         },
         { timeout: 30_000, intervals: [2_000, 3_000, 5_000] },
       )
@@ -275,7 +277,7 @@ test('an approval belongs to the revision on screen and a change sets it aside w
   await expect(toast(page, 'Your approval is recorded')).toBeVisible();
   await expect(page.getByText('The other approval has to come from someone else.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
-  await expect(approvals.getByRole('listitem').filter({ hasText: 'Finance:' })).toBeVisible();
+  await expect(approvals.getByRole('listitem').filter({ hasText: 'Finance' })).toBeVisible();
 
   // A line changes on the basis: the approval no longer counts, and the run page says why.
   const bases = await api.get<Array<{ id: string; organization: { id: string } }>>(page, `/api/v1/billing/runs/${run.id}/bases?search=${m}`);

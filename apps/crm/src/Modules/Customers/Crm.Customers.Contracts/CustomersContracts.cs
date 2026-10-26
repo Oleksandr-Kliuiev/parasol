@@ -1,4 +1,5 @@
 using Crm.SharedKernel.Domain;
+using Crm.SharedKernel.Results;
 
 namespace Crm.Customers.Contracts;
 
@@ -45,7 +46,14 @@ public sealed record ExternalOrganizationData(
     IReadOnlyCollection<string> Domains,
     AddressData? VisitAddress,
     AddressData? PostalAddress,
-    BillingData? Billing);
+    BillingData? Billing)
+{
+    /// <summary>Stable local external-record key for crash-safe creation; never a user-supplied customer number.</summary>
+    public Guid? SourceRecordId { get; init; }
+
+    /// <summary>Calculate the same import decision without saving entities, affiliations or events.</summary>
+    public bool PreviewOnly { get; init; }
+}
 
 public enum MatchReason
 {
@@ -85,7 +93,14 @@ public sealed record OrganizationSyncView(
     BillingData Billing,
     bool IsDeleted);
 
-public sealed record ExternalContactData(string FirstName, string LastName, string? Email, string? Phone, string? MobilePhone, string? Title);
+public sealed record ExternalContactData(string FirstName, string LastName, string? Email, string? Phone, string? MobilePhone, string? Title)
+{
+    /// <summary>Stable local external-record key; allows resuming contacts that have no e-mail address.</summary>
+    public Guid? SourceRecordId { get; init; }
+
+    /// <summary>Calculate the same import decision without saving entities, affiliations or events.</summary>
+    public bool PreviewOnly { get; init; }
+}
 
 public sealed record ImportContactResult(Guid ContactId, bool Created);
 
@@ -100,11 +115,18 @@ public sealed record ContactSyncView(
     string? Phone,
     string? MobilePhone,
     bool IsDeleted,
-    IReadOnlyList<ContactAffiliationView> Affiliations);
+    IReadOnlyList<ContactAffiliationView> Affiliations)
+{
+    /// <summary>Sync views contain only nondeleted affiliations; exporting also requires an active exact customer affiliation.</summary>
+    public bool IsUsableFor(Guid organizationId) => !IsDeleted && Affiliations.Any(a => a.OrganizationId == organizationId && a.IsActive);
+}
 
 /// <summary>Public API of the Customers module for other modules and integrations.</summary>
 public interface ICustomersApi
 {
+    /// <summary>Holds a read-only row lease while a different module commits its own operation; merge/delete waits for release.</summary>
+    Task<Result<T>> WithUsableOrganizationAsync<T>(Guid organizationId,
+        Func<OrganizationRef, CancellationToken, Task<Result<T>>> action, CancellationToken cancellationToken);
     Task<OrganizationRef?> GetOrganizationAsync(Guid organizationId, CancellationToken cancellationToken);
 
     /// <summary>Organizations with an org number whose registry status was last checked before <paramref name="checkedBefore"/>.</summary>
@@ -138,6 +160,12 @@ public interface ICustomersApi
 
     /// <summary>Account managers for only the requested organizations; an empty batch performs no lookup.</summary>
     Task<IReadOnlyDictionary<Guid, Guid?>> GetAccountManagerIdsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The live organizations among the requested ids, with name, status and account manager; a deleted or merged organization
+    /// is absent. One query per thousand ids; an empty batch performs no lookup.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, OrganizationRef>> GetOrganizationsAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken cancellationToken);
 
     /// <summary>Every organization as a flat row, for the reporting mart (FR-RPT-03).</summary>
     Task<IReadOnlyList<OrganizationRef>> GetAllOrganizationsAsync(CancellationToken cancellationToken);

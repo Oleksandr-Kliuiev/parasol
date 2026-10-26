@@ -594,6 +594,127 @@ namespace Crm.Billing.Persistence.Migrations
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
+            modelBuilder.Entity("Crm.Billing.Domain.CustomerLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CustomerKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("ExternalId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<DateTimeOffset>("LastChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("LastSeenScanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("MatchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateOnly>("PostingDate")
+                        .HasColumnType("date");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("System")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("System", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("System", "VoucherId");
+
+                    b.HasIndex("System", "CustomerKey", "LastSeenScanId", "MatchId");
+
+                    b.ToTable("CustomerLedgerEntries", "billing");
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.CustomerLedgerSnapshot", b =>
+                {
+                    b.Property<string>("System")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("CustomerKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ReadStartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("SavedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ScanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("System", "CustomerKey");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("CustomerLedgerSnapshots", "billing");
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.CustomerLedgerVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ObservedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("SourceChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntryId", "ObservedAt");
+
+                    b.ToTable("CustomerLedgerVersions", "billing");
+                });
+
             modelBuilder.Entity("Crm.Billing.Domain.Invoice", b =>
                 {
                     b.Property<Guid>("Id")
@@ -608,12 +729,26 @@ namespace Crm.Billing.Persistence.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DocumentKind")
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
                     b.Property<DateOnly?>("DueDate")
                         .HasColumnType("date");
+
+                    b.Property<string>("ExternalCustomerId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid?>("ExternalId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ExternalReference")
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("HistoryJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateOnly>("InvoiceDate")
                         .HasColumnType("date");
@@ -675,12 +810,76 @@ namespace Crm.Billing.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "InvoiceDate");
 
+                    b.HasIndex("System", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("[ExternalId] IS NOT NULL");
+
                     b.HasIndex("System", "InvoiceNo")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ExternalId] IS NULL");
 
                     b.HasIndex("InvoiceDate", "InvoiceNo", "Id");
 
                     b.ToTable("Invoices", "billing");
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Length")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId", "SourceName", "ContentSha256")
+                        .IsUnique();
+
+                    b.ToTable("InvoiceDocuments", "billing");
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocumentCheck", b =>
+                {
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CheckedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool?>("HasPdf")
+                        .HasColumnType("bit");
+
+                    b.HasKey("InvoiceId");
+
+                    b.ToTable("InvoiceDocumentChecks", "billing");
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.InvoicePayment", b =>
@@ -1046,6 +1245,42 @@ namespace Crm.Billing.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Crm.Billing.Domain.CustomerLedgerEntry", b =>
+                {
+                    b.HasOne("Crm.Billing.Domain.CustomerLedgerSnapshot", null)
+                        .WithMany()
+                        .HasForeignKey("System", "CustomerKey")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.CustomerLedgerVersion", b =>
+                {
+                    b.HasOne("Crm.Billing.Domain.CustomerLedgerEntry", null)
+                        .WithMany("Versions")
+                        .HasForeignKey("EntryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocument", b =>
+                {
+                    b.HasOne("Crm.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.InvoiceDocumentCheck", b =>
+                {
+                    b.HasOne("Crm.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Crm.Billing.Domain.InvoicePayment", b =>
                 {
                     b.HasOne("Crm.Billing.Domain.Invoice", null)
@@ -1065,6 +1300,11 @@ namespace Crm.Billing.Persistence.Migrations
             modelBuilder.Entity("Crm.Billing.Domain.BillingRun", b =>
                 {
                     b.Navigation("Approvals");
+                });
+
+            modelBuilder.Entity("Crm.Billing.Domain.CustomerLedgerEntry", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("Crm.Billing.Domain.Invoice", b =>

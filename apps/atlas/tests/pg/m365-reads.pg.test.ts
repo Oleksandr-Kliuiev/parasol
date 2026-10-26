@@ -84,11 +84,14 @@ test('permissions: each single permission and split clients are denied with exac
         'correlation.read_denied']);
   }
   for (const [actor, call, event] of cases) {
-    const before = (await q(`SELECT count(*)::int AS n FROM "SecurityAuditEvent" WHERE "actorId" = $1`, [actor.id]))[0].n;
+    const before = await q(`SELECT id FROM "SecurityAuditEvent" WHERE "workspaceId" = $1 AND "actorId" = $2`, [WS, actor.id]);
     await assert.rejects(call(), fails('PERMISSION_DENIED'));
-    assert.deepEqual((await q(`SELECT "eventType", metadata FROM "SecurityAuditEvent" WHERE "actorId" = $1 ORDER BY "recordedAt" DESC LIMIT 1`, [actor.id]))[0],
-      { eventType: event, metadata: {} });
-    assert.equal((await q(`SELECT count(*)::int AS n FROM "SecurityAuditEvent" WHERE "actorId" = $1`, [actor.id]))[0].n, before + 1, 'exactly one denial');
+    const after = await q(`SELECT id, "eventType", metadata FROM "SecurityAuditEvent" WHERE "workspaceId" = $1 AND "actorId" = $2`, [WS, actor.id]);
+    const existingIds = new Set(before.map(row => row.id));
+    // recordedAt has millisecond precision: consecutive calls can tie, and UUID order does not establish chronology.
+    const inserted = after.filter(row => !existingIds.has(row.id));
+    assert.deepEqual(inserted.map(({ eventType, metadata }) => ({ eventType, metadata })), [{ eventType: event, metadata: {} }]);
+    assert.equal(after.length, before.length + 1, 'exactly one denial');
   }
   assert.equal((await q(`SELECT count(*)::int AS n FROM "AuditEvent" WHERE "actorId" = ANY($1)`, [[contextOnly.id, m365Only.id, split.id]]))[0].n, 0);
   await assert.rejects(readDirectory(db, split, { workspaceId: WS, clientId: 'demo-other' }, { connectionId: M365_CONNECTION, resourceType: 'm365_user' }, readDeps()),

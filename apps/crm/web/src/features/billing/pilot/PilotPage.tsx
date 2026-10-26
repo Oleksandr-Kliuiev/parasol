@@ -91,7 +91,7 @@ export function PilotPage() {
             )}
           </>
         ) : (
-          <MessageBar intent="info">
+          <MessageBar intent="info" layout="multiline">
             <MessageBarBody>{t('pilot.noReconcile')}</MessageBarBody>
           </MessageBar>
         )}

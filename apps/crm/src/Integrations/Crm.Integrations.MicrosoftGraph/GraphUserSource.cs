@@ -19,7 +19,13 @@ public sealed class GraphOptions
 
     public Uri BaseUrl { get; set; } = new("https://graph.microsoft.com/v1.0/");
 
-    /// <summary>Client id of the user-assigned managed identity that holds the Graph <c>User.Read.All</c> app role.</summary>
+    public string? ClientId { get; set; }
+
+    public string? CertificatePath { get; set; }
+
+    public string? CertificatePassword { get; set; }
+
+    /// <summary>Retained only to reject obsolete Azure deployment configuration.</summary>
     public string? ManagedIdentityClientId { get; set; }
 
     public string UserSyncCron { get; set; } = "15 * * * *";

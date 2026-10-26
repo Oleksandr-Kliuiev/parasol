@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -13,9 +12,11 @@ import {
   Switch,
   Text,
   makeStyles,
-  tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
+import { h } from '../../app/hearth';
+import { RecordCell } from './RecordCell';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { AppLink } from '../../shared/components/AppLink';
@@ -27,10 +28,11 @@ import type { Ref } from '../contracts/types';
 import { useSetOrganizationParent } from './api';
 
 const useStyles = makeStyles({
-  list: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
-  row: { display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: tokens.spacingHorizontalS },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
-  actions: { marginTop: tokens.spacingVerticalS },
+  list: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  label: { color: h.muted, fontSize: '12px', fontWeight: 600, lineHeight: '16px' },
+  muted: { color: h.muted, fontSize: '13px' },
+  link: { fontWeight: 700, color: 'inherit' },
+  actions: { marginTop: '12px' },
 });
 
 /** The group a customer belongs to, and whether its invoice goes to the parent (FR-CUS-07). */
@@ -45,27 +47,28 @@ export function OrganizationGroupPanel({ organization, etag }: { organization: O
     <>
       <div className={styles.list}>
         {organization.parent ? (
-          <div className={styles.row}>
-            <Text>{t('organizations.group.parent')}:</Text>
-            <AppLink to={`/organizations/${organization.parent.id}`}>{organization.parent.name}</AppLink>
-            <Text className={styles.muted}>
-              {organization.billedThroughParent ? t('organizations.group.billedThroughParent') : t('organizations.group.billedItself')}
-            </Text>
-          </div>
+          <>
+            <Text className={styles.label}>{t('organizations.group.parent')}:</Text>
+            <RecordCell
+              avatarName={organization.parent.name}
+              name={<AppLink to={`/organizations/${organization.parent.id}`} className={styles.link}>{organization.parent.name}</AppLink>}
+              meta={[organization.billedThroughParent ? t('organizations.group.billedThroughParent') : t('organizations.group.billedItself')]}
+            />
+          </>
         ) : (
           <Text className={styles.muted}>{t('organizations.group.noParent')}</Text>
         )}
 
         {organization.children.length > 0 && (
           <>
-            <Text>{t('organizations.group.subsidiaries', { count: organization.children.length })}</Text>
+            <Text className={styles.label}>{t('organizations.group.subsidiaries', { count: organization.children.length })}</Text>
             {organization.children.map((child) => (
-              <div key={child.id} className={styles.row}>
-                <AppLink to={`/organizations/${child.id}`}>{child.name}</AppLink>
-                <Text className={styles.muted}>
-                  {child.billedThroughParent ? t('organizations.group.onOurInvoice') : t('organizations.group.ownInvoice')}
-                </Text>
-              </div>
+              <RecordCell
+                key={child.id}
+                avatarName={child.name}
+                name={<AppLink to={`/organizations/${child.id}`} className={styles.link}>{child.name}</AppLink>}
+                meta={[child.billedThroughParent ? t('organizations.group.onOurInvoice') : t('organizations.group.ownInvoice')]}
+              />
             ))}
           </>
         )}
@@ -73,7 +76,7 @@ export function OrganizationGroupPanel({ organization, etag }: { organization: O
 
       {canEdit && (
         <div className={styles.actions}>
-          <Button {...restoreFocusTarget} appearance="subtle" size="small" onClick={() => setEditing(true)}>
+          <Button {...restoreFocusTarget} size="small" onClick={() => setEditing(true)}>
             {organization.parent ? t('organizations.group.change') : t('organizations.group.add')}
           </Button>
         </div>
@@ -81,7 +84,7 @@ export function OrganizationGroupPanel({ organization, etag }: { organization: O
 
       <Dialog open={editing} onOpenChange={(_, d) => !d.open && setEditing(false)}>
         <DialogSurface>
-          {editing && <GroupForm organization={organization} etag={etag} onClose={() => setEditing(false)} />}
+          <GroupForm organization={organization} etag={etag} onClose={() => setEditing(false)} />
         </DialogSurface>
       </Dialog>
     </>

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -14,10 +13,12 @@ import {
   MessageBarBody,
   Option,
 } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { UserPicker } from '../../shared/components/UserPicker';
+import { useKeptWhileClosing } from '../../shared/components/useKeptWhileClosing';
 import { useNotify } from '../../shared/components/useNotify';
 import { errorMessage } from '../../shared/utils/errors';
 import { blankToNull, parseDecimal, todayIso } from '../../shared/utils/format';
@@ -37,9 +38,11 @@ interface OpportunityDialogProps {
 }
 
 export function OpportunityDialog({ open, onClose, ...props }: OpportunityDialogProps) {
+  // The form mounts with the surface, once per opening, and keeps its deal while the dialog leaves.
+  const opportunity = useKeptWhileClosing(props.opportunity, open);
   return (
     <Dialog open={open} onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>{open && <OpportunityForm onClose={onClose} {...props} />}</DialogSurface>
+      <DialogSurface><OpportunityForm onClose={onClose} {...props} opportunity={opportunity} /></DialogSurface>
     </Dialog>
   );
 }
@@ -183,6 +186,7 @@ export function LoseDialog({ open, opportunity, stageId, onClose }: { open: bool
   const actions = useOpportunityActions();
   const [reason, setReason] = useState('');
   const reasons = ['Price', 'Competitor', 'NoDecision', 'Timing', 'Other'];
+  const shown = useKeptWhileClosing(opportunity, open);
 
   const submit = async () => {
     if (!opportunity || !reason) return;
@@ -200,7 +204,7 @@ export function LoseDialog({ open, opportunity, stageId, onClose }: { open: bool
       <DialogSurface>
         <form onSubmit={(e) => { e.preventDefault(); void submit(); }}>
           <DialogBody>
-            <DialogTitle>{t('opportunities.loseTitle', { name: opportunity?.name ?? '' })}</DialogTitle>
+            <DialogTitle>{t('opportunities.loseTitle', { name: shown?.name ?? '' })}</DialogTitle>
             <DialogContent>
               <Field label={t('opportunities.fields.lostReason')} required className={styles.wide}>
                 <Dropdown value={reason ? t(`opportunities.lostReasons.${reason}`) : ''} selectedOptions={reason ? [reason] : []} onOptionSelect={(_, d) => setReason(d.optionValue ?? '')}>

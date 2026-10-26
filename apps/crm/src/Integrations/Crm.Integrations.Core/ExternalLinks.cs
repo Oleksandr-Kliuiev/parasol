@@ -15,7 +15,7 @@ public static class EntityTypes
     public const string TicketRequest = "TicketRequest";
 }
 
-public sealed class ExternalLinkService(IntegrationDbContext db, TimeProvider timeProvider)
+public sealed partial class ExternalLinkService(IntegrationDbContext db, TimeProvider timeProvider)
 {
     public Task<ExternalLink?> FindByExternalAsync(string system, string externalType, string externalId, CancellationToken cancellationToken) =>
         db.ExternalLinks.AsNoTracking()

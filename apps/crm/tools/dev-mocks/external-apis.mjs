@@ -1,9 +1,11 @@
 // Local stand-ins for external APIs, for demos, UI work and end-to-end tests without keys or internet:
 //   PowerOffice Go API v2  — /OAuth/Token, /v2/Customers, /v2/ContactPersons (list, create, patch), /v2/Products,
-//                             /v2/SalesOrders (find by reference, create), /v2/OutgoingInvoices (an order becomes an invoice) (shapes from swagger.poweroffice.net)
+//                             /v2/SalesOrders (find by reference, create), /v2/OutgoingInvoices (+ /{id}/Lines; an order becomes an invoice)
+//                             (shapes from swagger.poweroffice.net)
 //   Atera API v3 — /api/v3/customers, /contacts, /tickets (+ workhoursrecords), /agents, /alerts, /customvalues (shapes from the Atera docs)
 //   Enhetsregisteret (Brreg) — /enhetsregisteret/api/enheter
 // Run: node tools/dev-mocks/external-apis.mjs [port]   (default 5299). Data is in memory and new on every start.
+import { randomUUID } from 'node:crypto';
 import http from 'node:http';
 
 const port = Number(process.argv[2] ?? process.env.MOCK_PORT ?? 5299);
@@ -47,10 +49,17 @@ const products = [
   { Id: 2, Code: 'TIME', Name: 'Konsulenttime', ProductType: 'Service', UnitPrice: 1250, IsArchived: false, LastChangedDateTimeOffset: startedAt },
 ];
 let nextId = base + 100;
-// Sales orders the CRM exports, and the invoices PowerOffice would make of them.
+// Sales orders the CRM exports, and the invoices PowerOffice would make of them (v2 OutgoingInvoices: a UUID, the
+// voucher date, net/total/posted amounts and the balance, with the lines under /OutgoingInvoices/{id}/Lines).
 const salesOrders = [];
 const outgoingInvoices = [];
+const outgoingInvoiceLines = new Map();
 let nextOrderNo = 5000 + Math.floor(Math.random() * 900);
+let nextInvoiceNo = 20000 + Math.floor(Math.random() * 900);
+// Change times only ever grow, so a sync cursor at one invoice's time never hides another invoice made in the same ms.
+let lastStamp = 0;
+const stamp = () => new Date((lastStamp = Math.max(Date.now(), lastStamp + 1))).toISOString();
+const cents = (value) => Math.round(value * 100) / 100;
 
 // ---------------- Atera ----------------
 // Customers mirror the PowerOffice ones (same organization numbers), so the mapping screen links them by org number.
@@ -192,9 +201,11 @@ const send = (res, status, body) => {
   res.end(body === undefined ? '' : JSON.stringify(body));
 };
 const page = (res, url, items) => {
-  if (url.searchParams.has('lastChangedDateTimeOffsetGreaterThan')) {
-    const since = new Date(url.searchParams.get('lastChangedDateTimeOffsetGreaterThan'));
-    items = items.filter((i) => new Date(i.LastChangedDateTimeOffset) > since);
+  // Invoices are read by the time their balance changed, everything else by the time the record changed.
+  for (const [parameter, field] of [['lastChangedDateTimeOffsetGreaterThan', 'LastChangedDateTimeOffset'], ['balanceLastChangedDateTimeOffsetGreaterThan', 'BalanceLastChangedDateTimeOffset']]) {
+    if (!url.searchParams.has(parameter)) continue;
+    const since = new Date(url.searchParams.get(parameter));
+    items = items.filter((i) => new Date(i[field]) > since);
   }
   const size = Number(url.searchParams.get('PageSize') ?? 5000);
   const number = Number(url.searchParams.get('PageNumber') ?? 1);
@@ -338,17 +349,33 @@ http
           OrderDate: posted.OrderDate, Status: 'Draft', TotalAmount: total, LastChangedDateTimeOffset: new Date().toISOString(),
         };
         salesOrders.push(order);
-        // Finance invoices the order in Go; the mock does it right away so the CRM can mirror the invoice back.
+        // Finance invoices the order in Go; the mock does it right away so the CRM can mirror the invoice back, 25 % VAT.
+        const id = randomUUID();
+        const lines = (posted.Lines ?? []).map((l, index) => {
+          const net = cents(l.Quantity * l.UnitPrice * (1 - (l.DiscountPercent ?? 0) / 100));
+          const gross = cents(net * 1.25);
+          return {
+            Id: nextId++, SortOrder: l.SortOrder ?? index, LineType: 'Normal', Description: l.Description, ProductCode: l.ProductCode ?? null,
+            Quantity: l.Quantity, ProductUnitPrice: l.UnitPrice, VatRate: 0.25, NetAmount: net, VatAmount: cents(gross - net),
+            TotalAmount: gross, NetPostedAmount: net, TotalPostedAmount: gross,
+          };
+        });
+        const net = cents(lines.reduce((sum, l) => sum + l.NetAmount, 0));
+        const gross = cents(lines.reduce((sum, l) => sum + l.TotalAmount, 0));
+        const changed = stamp();
+        outgoingInvoiceLines.set(id, lines);
         outgoingInvoices.push({
-          Id: nextId++, InvoiceNo: `F${orderNo}`, OrderNo: orderNo, CustomerId: posted.CustomerId,
-          ExternalImportReference: posted.ExternalImportReference, InvoiceDate: new Date().toISOString(),
-          DueDate: new Date(Date.now() + 14 * 86_400_000).toISOString(), TotalAmount: Math.round(total * 1.25 * 100) / 100,
-          RemainingAmount: Math.round(total * 1.25 * 100) / 100, Status: 'Sent', IsCredited: false,
-          PdfUrl: `https://go.poweroffice.net/invoice/${orderNo}`, LastChangedDateTimeOffset: new Date().toISOString(),
+          Id: id, InvoiceNo: nextInvoiceNo++, OrderNo: orderNo, CustomerId: Number(posted.CustomerId),
+          ExternalImportReference: posted.ExternalImportReference, VoucherType: 'OutgoingInvoice', VoucherDate: changed.slice(0, 10),
+          DueDate: new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10), CurrencyCode: 'NOK',
+          NetAmount: net, TotalAmount: gross, NetPostedAmount: net, TotalPostedAmount: gross, Balance: gross, IsReversed: false,
+          LastChangedDateTimeOffset: changed, BalanceLastChangedDateTimeOffset: changed,
         });
         return send(res, 201, order);
       }
       if (url.pathname === '/v2/OutgoingInvoices') return page(res, url, outgoingInvoices);
+      const invoiceLines = url.pathname.match(/^\/v2\/OutgoingInvoices\/([0-9a-f-]{36})\/Lines$/i);
+      if (invoiceLines) return page(res, url, outgoingInvoiceLines.get(invoiceLines[1].toLowerCase()) ?? []);
       send(res, 404, { title: 'Unknown mock route' });
     });
   })

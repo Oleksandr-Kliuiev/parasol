@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
+  Badge,
   Button,
-  Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
@@ -19,13 +19,13 @@ import {
   TableHeader,
   TableHeaderCell,
   TableRow,
-  Text,
   Textarea,
   makeStyles,
-  tokens,
   useRestoreFocusTarget,
 } from '@fluentui/react-components';
-import { Add20Regular, Edit20Regular } from '@fluentui/react-icons';
+import { Dialog } from '../../shared/components/Dialog';
+import { Add20Regular, DocumentBulletList16Regular, DocumentBulletList24Regular, Edit20Regular } from '@fluentui/react-icons';
+import { RecordCell } from '../organizations/RecordCell';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ErrorState } from '../../shared/components/ErrorState';
@@ -36,11 +36,15 @@ import { blankToNull } from '../../shared/utils/format';
 import { useCatalogStyles } from '../catalog/styles';
 import { useQuoteTemplates, useSaveQuoteTemplate } from './api';
 import type { QuoteTemplate } from './types';
+import { ScrollTable } from '../../shared/components/ScrollTable';
 
 const useStyles = makeStyles({
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: tokens.spacingHorizontalM },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px 16px', alignItems: 'start', '& .fui-Dropdown, & .fui-Combobox': { minWidth: 0 } },
   wide: { gridColumn: '1 / -1' },
-  muted: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200 },
+  switches: { gridColumn: '1 / -1', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 24px' },
+  // The introduction is a preview in the list: one line, the full text is in the template.
+  intro: { display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', maxWidth: '60ch' },
+  badges: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
 });
 
 /** The wording of the quote document, per language; a quote copies the texts when it is created (BR-SAL-06). */
@@ -68,51 +72,58 @@ export function QuoteTemplatesPage() {
         <Spinner label={t('common.loading')} />
       ) : error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : data.length === 0 ? (
-        <EmptyState message={t('quoteTemplates.empty')} />
       ) : (
-        <div className={catalog.tableWrap}>
-          <Table className={catalog.table} aria-label={t('quoteTemplates.title')}>
+        <ScrollTable className={catalog.tableWrap}>
+          <Table className={catalog.table} style={{ minWidth: 780 }} aria-label={t('quoteTemplates.title')}>
             <TableHeader>
               <TableRow>
+                {/* Content widths: every cell adds 12 px of padding on each side; the name takes the rest. */}
                 <TableHeaderCell>{t('quoteTemplates.fields.name')}</TableHeaderCell>
-                <TableHeaderCell>{t('quoteTemplates.fields.language')}</TableHeaderCell>
-                <TableHeaderCell className={catalog.number}>{t('quoteTemplates.fields.validityDays')}</TableHeaderCell>
-                <TableHeaderCell>{t('common.status')}</TableHeaderCell>
-                <TableHeaderCell />
+                <TableHeaderCell style={{ width: 126 }}>{t('quoteTemplates.fields.language')}</TableHeaderCell>
+                <TableHeaderCell className={catalog.number} style={{ width: 106 }}>{t('quoteTemplates.fields.validityDays')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 176 }}>{t('common.status')}</TableHeaderCell>
+                <TableHeaderCell style={{ width: 40 }} />
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell>
-                    <Text weight="semibold">{template.name}</Text>
-                    <div className={styles.muted}>{template.introText}</div>
+                    <RecordCell
+                      icon={<DocumentBulletList16Regular />}
+                      tone="saffron"
+                      name={template.name}
+                      meta={[template.introText && <span className={styles.intro}>{template.introText}</span>]}
+                    />
                   </TableCell>
                   <TableCell>{t(`quotes.languages.${template.language}`)}</TableCell>
                   <TableCell className={catalog.number}>{template.validityDays}</TableCell>
                   <TableCell>
-                    {[
-                      template.isDefault ? t('quoteTemplates.isDefault') : null,
-                      template.isActive ? t('common.active') : t('common.inactive'),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+                    <span className={styles.badges}>
+                      {template.isDefault && <Badge appearance="tint" color="brand">{t('quoteTemplates.isDefault')}</Badge>}
+                      <Badge appearance="tint" color={template.isActive ? 'success' : 'subtle'}>
+                        {template.isActive ? t('common.active') : t('common.inactive')}
+                      </Badge>
+                    </span>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      {...restoreFocusTarget}
-                      appearance="subtle"
-                      icon={<Edit20Regular />}
-                      aria-label={t('quoteTemplates.editNamed', { name: template.name })}
-                      onClick={() => setEditing(template)}
-                    />
+                    <span className={catalog.rowActions}>
+                      <Button
+                        {...restoreFocusTarget}
+                        size="small"
+                        appearance="subtle"
+                        icon={<Edit20Regular />}
+                        aria-label={t('quoteTemplates.editNamed', { name: template.name })}
+                        onClick={() => setEditing(template)}
+                      />
+                    </span>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
+          {data.length === 0 && <EmptyState icon={<DocumentBulletList24Regular />} message={t('quoteTemplates.empty')} />}
+        </ScrollTable>
       )}
 
       {editing && <TemplateDialog template={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
@@ -187,12 +198,10 @@ function TemplateDialog({ template, onClose }: { template: QuoteTemplate | null;
               <Field label={t('quoteTemplates.fields.termsText')} className={styles.wide}>
                 <Textarea rows={4} value={termsText} onChange={(_, d) => setTermsText(d.value)} />
               </Field>
-              <Switch
-                label={t('quoteTemplates.isDefault')}
-                checked={isDefault}
-                onChange={(_, d) => setIsDefault(Boolean(d.checked))}
-              />
-              <Switch label={t('common.active')} checked={isActive} onChange={(_, d) => setIsActive(Boolean(d.checked))} />
+              <div className={styles.switches}>
+                <Switch label={t('quoteTemplates.isDefault')} checked={isDefault} onChange={(_, d) => setIsDefault(Boolean(d.checked))} />
+                <Switch label={t('common.active')} checked={isActive} onChange={(_, d) => setIsActive(Boolean(d.checked))} />
+              </div>
             </div>
           </DialogContent>
           <DialogActions>

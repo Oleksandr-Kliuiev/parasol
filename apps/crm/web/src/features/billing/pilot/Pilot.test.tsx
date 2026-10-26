@@ -341,7 +341,8 @@ describe('KPI', () => {
     expect(list).toHaveTextContent('is not marked as missed anywhere');
     // An unknown figure falls back to the server's own text instead of a raw key.
     expect(list).toHaveTextContent('Server reason for a figure the interface does not know');
-    expect(screen.getByText('Overdue reminders nobody has acknowledged: 3.')).toBeInTheDocument();
+    // The totals are tiles: the label and its figure in one tile.
+    expect(screen.getByText('Overdue reminders nobody has acknowledged').closest('div')).toHaveTextContent('3');
   });
 });
 

@@ -48,7 +48,8 @@ export class LiveTty {
   type(text: string): void { this.child.stdin!.write(`${text}\r`); }
   /** One paste ended by Ctrl-D. */
   paste(text: string): void { this.child.stdin!.write(`${text}\x04`); }
-  /** The next match of `re` after the previous match; advances past it. */
+  /** The next match of `re` after the previous match; advances past it. Output arrives in chunks: a pattern that captures
+   *  a whole line (a JSON summary) must end in `\r?\n`, or it can match while the rest of the line is still on its way. */
   async expect(re: RegExp, ms = 20000): Promise<RegExpMatchArray> {
     const t = performance.now();
     for (;;) {

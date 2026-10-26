@@ -1,5 +1,6 @@
 using Crm.Catalog.Contracts;
 using Crm.Contracts.Contracts;
+using Crm.Infrastructure.Persistence;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using Crm.TimeTracking.Contracts;
@@ -12,23 +13,30 @@ namespace Crm.TimeTracking.Features;
 
 public sealed record ApprovalSummary(int Approved, int Skipped, decimal Amount, IReadOnlyList<string> SkippedReasons);
 
-internal sealed class TimeApprovalService(
+internal sealed partial class TimeApprovalService(
     TimeTrackingDbContext db,
     IContractsApi contracts,
     ICatalogApi catalog,
     ICurrentUser currentUser,
     TimeProvider time,
-    IOptions<TimeTrackingOptions> options)
+    IOptions<TimeTrackingOptions> options,
+    TimeBankTransaction financial,
+    TimeBillingGuard billing)
 {
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
 
     public async Task<Result<ApprovalSummary>> ApproveAsync(IReadOnlyCollection<Guid> entryIds, CancellationToken cancellationToken)
     {
-        var entries = await db.TimeEntries.Include(e => e.Allocations)
-            .Where(e => entryIds.Contains(e.Id))
-            .OrderBy(e => e.WorkDate).ThenBy(e => e.Id)
-            .ToListAsync(cancellationToken);
-        var closed = await ClosedPeriodsAsync(cancellationToken);
+        await using var mutation = await TimeMutationScope.OpenAsync(db, cancellationToken); var write = mutation.Db;
+        mutation.RequireFinancialOwner();
+        var admission = await TimeRowAdmission.DiscoverAsync(write, entryIds, MonthMode.Exclusive, [], cancellationToken);
+        if (!admission.IsSuccess) return admission.Error!;
+        if (await MonthAdmission.FinancialAsync(write, cancellationToken) is { } busy) return busy;
+        using var local = financial.Bind(write);
+        var current = await TimeRowAdmission.ReadAsync(write, entryIds, admission.Value, cancellationToken);
+        if (!current.IsSuccess) return current.Error!;
+        var entries = current.Value.OrderBy(e => e.WorkDate).ThenBy(e => e.Id).ToList();
+        var closed = await MonthAdmission.ClosedAsync(write, admission.Value, cancellationToken);
         var now = time.GetUtcNow();
         var coveredUsed = new Dictionary<(Guid Organization, int Year, int Month), decimal>();
         var skipped = new List<string>();
@@ -43,17 +51,19 @@ internal sealed class TimeApprovalService(
                 continue;
             }
 
-            if (closed.Contains((entry.Year, entry.Month)))
+            if (closed.Contains(TimeMonth.Of(entry.WorkDate)))
             {
                 skipped.Add($"{entry.WorkDate:yyyy-MM-dd}: the period is closed.");
                 continue;
             }
 
+            if (await billing.CheckAsync([entry], cancellationToken) is { } committed) return committed;
+            if (await CheckNewApprovalAsync(entry, cancellationToken) is { } review) return review;
             var terms = await contracts.GetBillingTermsAsync(entry.OrganizationId, entry.WorkDate, cancellationToken);
             var key = (entry.OrganizationId, entry.Year, entry.Month);
             if (!coveredUsed.TryGetValue(key, out var used))
             {
-                used = await CoveredHoursAsync(entry.OrganizationId, entry.Year, entry.Month, cancellationToken);
+                used = await CoveredHoursAsync(write, entry.OrganizationId, entry.Year, entry.Month, cancellationToken);
                 coveredUsed[key] = used;
             }
 
@@ -102,58 +112,61 @@ internal sealed class TimeApprovalService(
 
             entry.Approve(currentUser.UserId, now, terms.Contract?.ContractId, allocations);
             entry.ClearReview();
-            db.TimeAllocations.AddRange(allocations);
+            write.TimeAllocations.AddRange(allocations);
             coveredUsed[key] = used + allocations.Where(a => a.Classification == TimeClassification.Covered).Sum(a => a.Hours);
             amount += entry.Amount ?? 0;
             approved++;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        await write.SaveChangesAsync(cancellationToken);
+        await mutation.CommitAsync(cancellationToken);
         return new ApprovalSummary(approved, skipped.Count, decimal.Round(amount, 2), skipped);
     }
 
     public async Task<Result<int>> WithdrawAsync(IReadOnlyCollection<Guid> entryIds, CancellationToken cancellationToken)
     {
-        var entries = await db.TimeEntries.Include(e => e.Allocations).Where(e => entryIds.Contains(e.Id)).ToListAsync(cancellationToken);
-        var closed = await ClosedPeriodsAsync(cancellationToken);
-        var withdrawn = 0;
-        foreach (var entry in entries.Where(e => e.Status is TimeEntryStatus.Approved or TimeEntryStatus.NonBillable))
+        await using var mutation = await TimeMutationScope.OpenAsync(db, cancellationToken); var write = mutation.Db;
+        mutation.RequireFinancialOwner();
+        var admission = await TimeRowAdmission.DiscoverAsync(write, entryIds, MonthMode.Exclusive, [], cancellationToken);
+        if (!admission.IsSuccess) return admission.Error!;
+        if (await MonthAdmission.FinancialAsync(write, cancellationToken) is { } busy) return busy;
+        using var local = financial.Bind(write);
+        var current = await TimeRowAdmission.ReadAsync(write, entryIds, admission.Value, cancellationToken);
+        if (!current.IsSuccess) return current.Error!;
+        var entries = current.Value.Where(e => e.Status is TimeEntryStatus.Approved or TimeEntryStatus.NonBillable).ToList();
+        var closed = await MonthAdmission.ClosedAsync(write, admission.Value, cancellationToken);
+        // Validate the entire batch before reversing ANY hour-bank consumption.
+        if (entries.Any(e => closed.Contains(TimeMonth.Of(e.WorkDate)))) return TimeErrors.PeriodClosed;
+        if (await billing.CheckAsync(entries, cancellationToken) is { } committed) return committed;
+        foreach (var entry in entries)
         {
-            if (closed.Contains((entry.Year, entry.Month)))
-            {
-                return Error.Conflict("TIM_PERIOD_CLOSED", "The period is closed; Finance must reopen it first (BR-TIM-05).");
-            }
-
-            await WithdrawAsync(entry, cancellationToken);
-            withdrawn++;
+            var result = await WithdrawAdmittedAsync(entry, admission.Value, cancellationToken);
+            if (!result.IsSuccess) return result.Error!;
         }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return withdrawn;
+        await write.SaveChangesAsync(cancellationToken); await mutation.CommitAsync(cancellationToken);
+        return entries.Count;
     }
 
     /// <summary>Withdraws one approval and gives back the hours it took from hour banks.</summary>
-    public async Task WithdrawAsync(TimeEntry entry, CancellationToken cancellationToken)
+    internal async Task<Result> WithdrawAdmittedAsync(TimeEntry entry, MonthAdmission admission, CancellationToken cancellationToken)
     {
+        if (!admission.Covers(entry.WorkDate)) throw new TimeAdmissionException(MonthAdmission.Changed.Code);
+        if (await CheckWithdrawalAsync(entry, cancellationToken) is { } review) return review;
         foreach (var allocation in entry.CurrentAllocations.Where(a => a.HourBankId is not null).ToList())
         {
             await contracts.ReverseConsumptionAsync("TimeEntry", $"{entry.Id}:{entry.ApprovalCount}:{allocation.HourBankId}", cancellationToken);
         }
 
-        entry.Withdraw();
+        return entry.Withdraw();
     }
 
-    private async Task<HashSet<(int Year, int Month)>> ClosedPeriodsAsync(CancellationToken cancellationToken) =>
-        (await db.TimePeriods.AsNoTracking().Where(p => p.IsClosed).Select(p => new { p.Year, p.Month }).ToListAsync(cancellationToken))
-        .Select(p => (p.Year, p.Month)).ToHashSet();
-
-    private async Task<decimal> CoveredHoursAsync(Guid organizationId, int year, int month, CancellationToken cancellationToken)
+    private static async Task<decimal> CoveredHoursAsync(TimeTrackingDbContext write, Guid organizationId, int year, int month, CancellationToken cancellationToken)
     {
         var from = new DateOnly(year, month, 1);
-        var to = from.AddMonths(1);
-        return await db.TimeAllocations.AsNoTracking()
+        var to = new TimeMonth(year, month).End;
+        return await write.TimeAllocations.AsNoTracking()
             .Where(a => a.Classification == TimeClassification.Covered)
-            .Join(db.TimeEntries.AsNoTracking().Where(e => e.OrganizationId == organizationId && e.WorkDate >= from && e.WorkDate < to),
+            .Join(write.TimeEntries.AsNoTracking().Where(e => e.OrganizationId == organizationId && e.WorkDate >= from && e.WorkDate <= to),
                 a => a.TimeEntryId, e => e.Id, (a, _) => a.Hours)
             .SumAsync(cancellationToken);
     }

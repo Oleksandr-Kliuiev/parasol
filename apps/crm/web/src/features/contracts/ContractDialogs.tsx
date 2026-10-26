@@ -269,7 +269,7 @@ export function DateActionForm({
         <DialogTitle>{t(`contracts.dateActions.${kind}.title`, { name: line?.productName ?? contract.number })}</DialogTitle>
         <DialogContent>
           {!serverTooShort && <ServerError error={mutation.error} />}
-          <p style={{ marginTop: 0 }}>{t(`contracts.dateActions.${kind}.body`, { days: contract.noticePeriodDays })}</p>
+          <p className={styles.lead}>{t(`contracts.dateActions.${kind}.body`, { days: contract.noticePeriodDays })}</p>
           <div className={styles.grid}>
             {kind === 'notice' && (
               <Field label={t('contracts.fields.noticeDate')} required>

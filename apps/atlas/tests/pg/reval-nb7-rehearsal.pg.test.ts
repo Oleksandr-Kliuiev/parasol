@@ -69,7 +69,7 @@ test('NB7: consecutive ARM/READY cycles on the target platform with injected fai
       const [, ctl, ho] = await i.expect(/CONNECTED ([0-9a-f-]{36}) ([0-9a-f-]{36})/, 60_000);
       const [ackLine, secretLine] = await o.type(`pair ${ctl} ${ho}`, 2);
       i.type(`PAIR ${secretLine!.split(' ')[2]} ${ackLine!.slice('OK PAIR_ACK '.length)}`);
-      const [, summary] = await i.expect(/NB7_(?:SUMMARY|FAILED) (.*)/, 400_000);
+      const [, summary] = await i.expect(/NB7_(?:SUMMARY|FAILED) (.*)\r?\n/, 400_000);
       const s = JSON.parse(summary!.slice(summary!.indexOf('{'))) as { attempted: number; succeeded: number; failedBeforeConsumption: number; failedAfterConsumption: number;
         consumed: number; preToArmMs: number[]; armMs: number[]; readyMs: number[]; goToCommitMs: number[] };
       assert.ok(!i.transcript.includes('NB7_FAILED'), i.transcript.slice(-400));

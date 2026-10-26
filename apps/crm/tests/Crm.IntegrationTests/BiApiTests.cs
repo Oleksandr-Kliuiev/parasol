@@ -6,10 +6,12 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Crm.Authorization;
 using Crm.Billing.Contracts;
+using Crm.Customers.Persistence;
 using Crm.Reports;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -318,11 +320,23 @@ public class BiApiTests(CrmWebFactory factory)
         // The watermark is the moment the refresh began, the same on every page.
         firstRefresh.Last.GetProperty("watermark").GetDateTimeOffset().ShouldBe(firstRefresh.First.GetProperty("asOf").GetDateTimeOffset());
 
-        // The same read in one page agrees with the pages: everything the pages had, in the same order. Classes running beside this
-        // one create organizations too, so the one-page read may hold more, never less.
+        // Classes running beside this one create organizations and delete some of theirs: a later read may hold more, and it may
+        // lack a row the pages had only when that organization was deleted meanwhile (never one of this test's).
+        async Task GoneOnlyByDeletionAsync(IEnumerable<Guid> missing)
+        {
+            var gone = missing.ToList();
+            if (gone.Count == 0) return;
+            gone.ShouldNotContain(id => created.Contains(id));
+            await using var scope = factory.Services.CreateAsyncScope();
+            (await scope.ServiceProvider.GetRequiredService<CustomersDbContext>().Organizations.IgnoreQueryFilters()
+                .CountAsync(o => gone.Contains(o.Id) && !o.IsDeleted, Ct)).ShouldBe(0, "a row leaves a later read only by a deletion");
+        }
+
+        // The same read in one page agrees with the pages: everything the pages had, in the same order.
         var whole = await reader.GetFromJsonAsync<JsonElement>($"{Bi}/datasets/organizations?pageSize=5000", Ct);
         var wholeIds = whole.GetProperty("rows").EnumerateArray().Select(r => r[0].GetGuid()).ToList();
-        wholeIds.Where(ids.Contains).ToList().ShouldBe(ids);
+        await GoneOnlyByDeletionAsync(ids.Except(wholeIds));
+        wholeIds.Where(ids.Contains).ToList().ShouldBe(ids.Where(wholeIds.Contains).ToList());
         wholeIds.ShouldBe(wholeIds.OrderBy(i => i.ToString(), StringComparer.Ordinal).ToList());
 
         // A change at the boundary: an organization appears after the refresh began. This refresh may or may not hold it; the
@@ -331,7 +345,8 @@ public class BiApiTests(CrmWebFactory factory)
         var secondRefresh = await RefreshAsync();
         var secondIds = secondRefresh.Rows.Select(r => r[0].GetGuid()).ToList();
         secondIds.ShouldContain(late);
-        ids.ShouldBeSubsetOf(secondIds);
+        created.ShouldBeSubsetOf(secondIds);
+        await GoneOnlyByDeletionAsync(ids.Except(secondIds));
         secondRefresh.Last.GetProperty("watermark").GetDateTimeOffset().ShouldBeGreaterThan(firstRefresh.Last.GetProperty("watermark").GetDateTimeOffset());
 
         // A cursor of nobody's is refused; page size is bounded.

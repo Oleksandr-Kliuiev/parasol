@@ -126,8 +126,8 @@ test('finance previews the yearly indexation before the prices change', async ({
 
   // The preview wrote nothing until a contract is picked and the change applied.
   await row.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Index 1 contracts' }).click();
-  await expect(toast(page, 'Indexed 1 contracts and 1 lines')).toBeVisible();
+  await page.getByRole('button', { name: 'Index 1 contract' }).click();
+  await expect(toast(page, 'Indexed 1 contract and 1 line')).toBeVisible();
 
   await page.goto(`/contracts/${contract.id}`);
   await expect(page.getByText('NOK 1,035.00').first()).toBeVisible();

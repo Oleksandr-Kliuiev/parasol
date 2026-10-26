@@ -80,7 +80,7 @@ public sealed class CustomerIdentityService(
         if (link is null) return new CustomerIdentityView(customerId, null);
         var reference = await ReadReferenceAsync(link, ct);
         if (reference is null) return Error.Conflict("PARASOL_IDENTITY_INCONSISTENT", "The stored identity needs review.");
-        return new CustomerIdentityView(customerId, reference);
+        return new CustomerIdentityView(customerId, reference, link.Id);
     }
 
     private async Task<AtlasCustomerReference?> ReadReferenceAsync(ExternalLink link, CancellationToken ct)

@@ -62,10 +62,12 @@ public class ProviderContractFixtureTests
     }
 
     [Fact]
-    public void Poweroffice_invoices_deserialize_with_the_credit_flag_and_remaining_amount()
+    public void Poweroffice_invoices_deserialize_with_uuid_credit_note_kind_and_client_balance()
     {
         var invoice = JsonSerializer.Deserialize<PoOutgoingInvoice>(Load("poweroffice").GetProperty("invoices")[0].GetRawText(), PoJson.Options);
-        Assert.Equal((5000m, 2000m, true), (invoice!.TotalAmount, invoice.RemainingAmount, invoice.IsCredited));
+        Assert.Equal((-5000m, -2000m, "OutgoingCreditNote"), (invoice!.TotalAmount, invoice.Balance, invoice.VoucherType));
+        Assert.Equal(Guid.Parse("11111111-2222-4333-8444-555555555555"), invoice.Id);
+        Assert.Equal(new DateOnly(2026, 9, 30), invoice.VoucherDate);
     }
 
     [Theory]

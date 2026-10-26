@@ -181,9 +181,21 @@ public class NotificationsAndReportsTests(CrmWebFactory factory)
         months.Select(m => (m.GetProperty("year").GetInt32(), m.GetProperty("month").GetInt32()))
             .ShouldBe(months.Select(m => (m.GetProperty("year").GetInt32(), m.GetProperty("month").GetInt32())).Order().ToList());
 
-        dashboard.GetProperty("renewals").EnumerateArray()
-            .Any(r => r.GetProperty("contractId").GetGuid() == contractId && r.GetProperty("organization").GetString() == $"{marker} Dashbord AS")
-            .ShouldBeTrue();
+        // The panel lists the soonest renewals and says how many there are (DEV-12). Other classes add contracts ending sooner
+        // to the shared database, so this one may be past the shown part: then the panel must be full of earlier ends.
+        var renewals = dashboard.GetProperty("renewals").EnumerateArray().ToList();
+        var ours = renewals.Where(r => r.GetProperty("contractId").GetGuid() == contractId).ToList();
+        if (ours.Count == 1)
+        {
+            ours[0].GetProperty("organization").GetString().ShouldBe($"{marker} Dashbord AS");
+        }
+        else
+        {
+            ours.ShouldBeEmpty();
+            dashboard.GetProperty("renewalsTotal").GetInt32().ShouldBeGreaterThan(renewals.Count);
+            renewals.ShouldAllBe(r => DateOnly.Parse(r.GetProperty("endDate").GetString()!, CultureInfo.InvariantCulture) <= Today.AddDays(45));
+        }
+        renewals.ShouldAllBe(r => !string.IsNullOrWhiteSpace(r.GetProperty("organization").GetString()));
         dashboard.GetProperty("licenses").GetProperty("subscriptions").GetInt32().ShouldBeGreaterThanOrEqualTo(0);
         dashboard.GetProperty("service").GetProperty("openTickets").GetInt32().ShouldBeGreaterThanOrEqualTo(0);
         dashboard.GetProperty("pipeline").GetProperty("open").GetInt32().ShouldBeGreaterThanOrEqualTo(0);

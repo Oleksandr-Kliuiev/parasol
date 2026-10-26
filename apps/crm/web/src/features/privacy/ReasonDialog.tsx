@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Field, Text, Textarea, tokens } from '@fluentui/react-components';
+import { Button, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Field, Text, Textarea, tokens } from '@fluentui/react-components';
+import { Dialog } from '../../shared/components/Dialog';
 import { useTranslation } from 'react-i18next';
 
 /** Asks for the reason a privacy decision needs (rejecting a request, releasing a hold, lifting a suppression). */

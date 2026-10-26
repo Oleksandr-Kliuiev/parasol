@@ -82,6 +82,12 @@ internal sealed class CatalogApi(CatalogDbContext db, PriceListService priceList
 
     public async Task<ImportProductResult> ImportProductAsync(ExternalProductData data, CancellationToken cancellationToken)
     {
+        if (data.SourceRecordId is { } sourceId &&
+            await db.Products.IgnoreQueryFilters().AsNoTracking().SingleOrDefaultAsync(p => p.Id == sourceId, cancellationToken) is { } saved)
+        {
+            if (saved.IsDeleted) throw new InvalidOperationException("The previously imported product is unavailable.");
+            return new ImportProductResult(saved.Id, Created: false);
+        }
         var sku = Product.NormalizeSku(string.IsNullOrWhiteSpace(data.Code) ? data.Name : data.Code);
         if (sku.Length > 64)
         {
@@ -103,12 +109,13 @@ internal sealed class CatalogApi(CatalogDbContext db, PriceListService priceList
             sku, data.Name, null, data.Description,
             unit == ProductUnit.Hour ? ProductType.HourlyService : ProductType.PowerOfficeService,
             BusinessLine.Other, unit, unit == ProductUnit.Month ? BillingPeriod.Monthly : BillingPeriod.OneTime,
-            25m, Math.Max(0, data.UnitPrice ?? 0), data.UnitCost is > 0 ? data.UnitCost : null, "NOK", null, CommitmentTerm.None, null, null, null));
+            25m, Math.Max(0, data.UnitPrice ?? 0), data.UnitCost is > 0 ? data.UnitCost : null, "NOK", null, CommitmentTerm.None, null, null, null), data.SourceRecordId);
         if (!created.IsSuccess)
         {
             throw new InvalidOperationException($"Cannot import product: {created.Error!.Code}.");
         }
 
+        if (data.PreviewOnly) return new ImportProductResult(created.Value.Id, true);
         db.Products.Add(created.Value);
         try
         {

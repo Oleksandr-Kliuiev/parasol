@@ -3,18 +3,9 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import { CustomerWorkspacePanel, type Workspace } from './CustomerWorkspacePanel';
+import { atlasWorkspace } from '../../test/atlasWorkspace';
 
-const ready: Workspace = {
-  customerId: 'customer-one', status: 'READY', summary: {
-    mode: 'db', generatedAt: '2026-10-16T10:00:00Z', completeness: 'PARTIAL',
-    knownDevices: 42, knownPeople: 11, activeObservations: 3,
-    severityCounts: { INFO: 0, LOW: 0, MEDIUM: 1, HIGH: 1, CRITICAL: 1 },
-    resources: [
-      { source: 'atera', resourceType: 'agent', status: 'STALE', asOf: '2026-10-15T10:00:00Z', lastSuccessAt: '2026-10-15T10:00:00Z', returnedItems: 25, truncated: true },
-      { source: 'huntress', resourceType: 'incident', status: 'MISSING', asOf: null, lastSuccessAt: null, returnedItems: null, truncated: false },
-    ],
-  },
-};
+const ready = atlasWorkspace();
 const render = (permissions = ['parasol.atlas.read']) => renderRoutes(
   [page(<CustomerWorkspacePanel customerId="customer-one" />)], '/', testUser(permissions));
 const response = (data: Workspace) => new Response(JSON.stringify(data), { status: 200 });
@@ -52,6 +43,35 @@ describe('the unified customer workspace', () => {
     render(); expect(await screen.findByText('42')).toBeVisible(); failed = true;
     await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     await waitFor(() => expect(screen.queryByText('42')).not.toBeInTheDocument());
+  });
+
+  it('clears the old registry on a changed link and requires an explicit fresh read', async () => {
+    let finish!: (value: Response) => void;
+    const fresh = atlasWorkspace();
+    const device = fresh.summary!.devices[0];
+    const observation = fresh.summary!.observationPage.items[0];
+    if (!device || !observation) throw new Error('Synthetic workspace fixture must contain a device and observation.');
+    device.hostname = 'SYNTHETIC-FRESH-LINK';
+    observation.summary = 'Synthetic fresh source review';
+    const fetch = vi.fn().mockResolvedValueOnce(response(ready))
+      .mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }))
+      .mockResolvedValueOnce(response(fresh));
+    vi.stubGlobal('fetch', fetch); render();
+    await userEvent.click(await screen.findByRole('tab', { name: 'Atlas devices' }));
+    expect(screen.getByText('SYNTHETIC-LT-01')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(screen.queryByText('SYNTHETIC-LT-01')).not.toBeInTheDocument();
+    finish(response({ customerId: 'customer-one', status: 'IDENTITY_CHANGED', summary: null }));
+    expect(await screen.findByText('The customer link changed. Refresh to load current data.')).toBeVisible();
+    expect(screen.queryByRole('tab', { name: 'Atlas devices' })).not.toBeInTheDocument();
+    expect(screen.queryByText('42')).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByText('Synthetic fresh source review')).toBeVisible();
+    await userEvent.click(screen.getByRole('tab', { name: 'Atlas devices' }));
+    expect(screen.getByText('SYNTHETIC-FRESH-LINK')).toBeVisible();
+    expect(screen.queryByText('SYNTHETIC-LT-01')).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it('labels synthetic data visibly', async () => {
