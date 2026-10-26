@@ -14,6 +14,11 @@ interface ListFooterProps {
   hasMore: boolean;
   loading: boolean;
   onMore: () => void;
+  /**
+   * The rows on screen are those of an earlier search or filter while its own answer is read (`isPlaceholderData`): they are not
+   * counted, the footer says the list is loading, and the same live region announces the count when it comes.
+   */
+  stale?: boolean;
 }
 
 /**
@@ -21,15 +26,16 @@ interface ListFooterProps {
  * The total is that of the latest answer — records added or changed meanwhile show up on a reload, nothing is promised as a
  * frozen snapshot.
  */
-export function ListFooter({ shown, total, hasMore, loading, onMore }: ListFooterProps) {
+export function ListFooter({ shown, total, hasMore, loading, onMore, stale = false }: ListFooterProps) {
   const styles = useStyles();
   const { t } = useTranslation();
-  if (!hasMore && (total == null || shown === 0)) return null;
+  const count = stale ? t('common.loading') : total != null ? t('common.shownOf', { shown, total: Math.max(total, shown) }) : null;
+  if (!hasMore && (count === null || shown === 0)) return null;
   return (
     <div className={styles.root}>
-      {total != null && (
+      {count !== null && (
         <Text className={styles.count} aria-live="polite">
-          {t('common.shownOf', { shown, total: Math.max(total, shown) })}
+          {count}
         </Text>
       )}
       {hasMore && (

@@ -24,8 +24,12 @@ export function UsersPage() {
   const allowed = useCan(Permissions.usersRead);
   const [search, setSearch] = useState('');
   const term = useDebouncedValue(search);
-  const users = usePagedList<UserSummary>(['identity', 'users', 'admin', term], '/api/v1/identity/users', { search: term, includeInactive: true }, { enabled: allowed });
+  // A new search is read with the previous rows kept in place: the end of the list says it is loading, and no count or empty answer
+  // is claimed for them, so the table does not empty and refill as people type.
+  const users = usePagedList<UserSummary>(['identity', 'users', 'admin', term], '/api/v1/identity/users', { search: term, includeInactive: true },
+    { enabled: allowed, keepPrevious: true });
   const { items: data, error, refetch } = users;
+  const stale = users.isPlaceholderData;
   if (!allowed) return <ForbiddenPage />;
 
   return (
@@ -40,7 +44,7 @@ export function UsersPage() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <ScrollTable>
-          <Table aria-label={t('users.title')}>
+          <Table aria-label={t('users.title')} aria-busy={stale || undefined}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>{t('users.columns.name')}</TableHeaderCell>
@@ -62,8 +66,9 @@ export function UsersPage() {
               ))}
             </TableBody>
           </Table>
-          {!users.isPending && data.length === 0 && <EmptyState message={t('users.empty')} icon={<PeopleSearch24Regular />} />}
-          <ListFooter shown={data.length} total={users.total} hasMore={users.hasNextPage} loading={users.isFetchingNextPage} onMore={() => void users.fetchNextPage()} />
+          {!users.isPending && !stale && data.length === 0 && <EmptyState message={t('users.empty')} icon={<PeopleSearch24Regular />} />}
+          <ListFooter shown={data.length} total={users.total} hasMore={users.hasNextPage} loading={users.isFetchingNextPage} onMore={() => void users.fetchNextPage()}
+            stale={stale} />
         </ScrollTable>
       )}
     </>

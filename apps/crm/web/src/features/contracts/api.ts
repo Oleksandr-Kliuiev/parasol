@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, query } from '../../api/client';
 import { usePagedList } from '../../api/paging';
 import type { PagedResult } from '../../api/types';
@@ -39,10 +39,16 @@ export interface ContractFilters {
   limit?: number;
 }
 
-export function useContracts(filters: ContractFilters, enabled = true) {
+/**
+ * Contracts page by page. `keepPrevious`: the list searched as people type keeps the rows of the previous search or filter until
+ * the new answer is there, so a row someone is clicking does not vanish; a customer's own tab starts empty and never shows another
+ * customer's rows.
+ */
+export function useContracts(filters: ContractFilters, enabled = true, options: { keepPrevious?: boolean } = {}) {
   return useInfiniteQuery({
     queryKey: contractKeys.list(filters),
     enabled,
+    placeholderData: options.keepPrevious ? keepPreviousData : undefined,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam, signal }) =>
       (await api.get<PagedResult<ContractListItem>>(`${BASE}${query({ ...filters, cursor: pageParam })}`, signal)).data,

@@ -39,10 +39,12 @@ interface SubscriptionTableProps {
   footer?: ReactNode;
   /** The table sits in a Panel, which is already the card. */
   inPanel?: boolean;
+  /** The rows are those of an earlier search while its answer is read: the table is marked busy. */
+  stale?: boolean;
 }
 
 /** CSP subscriptions with the two things that cost money if missed: the cancellation window and the renewal (BR-LIC-02/03). */
-export function SubscriptionTable({ rows, showCustomer, canSeeCost, empty, footer, inPanel }: SubscriptionTableProps) {
+export function SubscriptionTable({ rows, showCustomer, canSeeCost, empty, footer, inPanel, stale }: SubscriptionTableProps) {
   const styles = useStyles();
   const catalog = useCatalogStyles();
   const flush = useFlushStyles();
@@ -51,7 +53,8 @@ export function SubscriptionTable({ rows, showCustomer, canSeeCost, empty, foote
 
   return (
     <ScrollTable className={mergeClasses(catalog.tableWrap, inPanel && record.flatTable)}>
-      <Table className={mergeClasses(catalog.table, flush.cells)} style={{ minWidth: showCustomer ? 1080 : 920 }} aria-label={t('licenses.title')}>
+      <Table className={mergeClasses(catalog.table, flush.cells)} style={{ minWidth: showCustomer ? 1080 : 920 }} aria-label={t('licenses.title')}
+        aria-busy={stale || undefined}>
         <TableHeader>
           <TableRow>
             {/* Content widths: every cell adds 12 px of padding on each side; offer and customer share the rest. */}

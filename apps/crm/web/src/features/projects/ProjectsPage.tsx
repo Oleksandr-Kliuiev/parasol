@@ -62,8 +62,12 @@ export function ProjectsPage() {
   const debounced = useDebouncedValue(search.trim());
   const restoreFocusTarget = useRestoreFocusTarget();
   const openOnly = params.get('all') !== 'true';
-  const projects = useProjects({ search: debounced, openOnly });
+  const projects = useProjects({ search: debounced, openOnly }, true, { keepPrevious: true });
   const { items: data, error, isPending, refetch } = projects;
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the end of the list says it is loading, and no count or empty answer is claimed for them.
+  const stale = projects.isPlaceholderData;
+  const loading = isPending || (stale && data.length === 0);
 
   return (
     <>
@@ -103,7 +107,7 @@ export function ProjectsPage() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <ScrollTable className={catalog.tableWrap}>
-          <Table className={catalog.table} style={{ minWidth: 1060 }} aria-label={t('projects.title')}>
+          <Table className={catalog.table} style={{ minWidth: 1060 }} aria-label={t('projects.title')} aria-busy={stale || undefined}>
             <TableHeader>
               <TableRow>
                 {/* Content widths: every cell adds 12 px of padding on each side; project and customer share the rest. */}
@@ -167,9 +171,10 @@ export function ProjectsPage() {
               ))}
             </TableBody>
           </Table>
-          {isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
-          {!isPending && data.length === 0 && <EmptyState icon={<Briefcase24Regular />} message={t('projects.empty')} />}
-          <ListFooter shown={data.length} total={projects.total} hasMore={projects.hasNextPage} loading={projects.isFetchingNextPage} onMore={() => void projects.fetchNextPage()} />
+          {loading && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>}
+          {!loading && data.length === 0 && <EmptyState icon={<Briefcase24Regular />} message={t('projects.empty')} />}
+          <ListFooter shown={data.length} total={projects.total} hasMore={projects.hasNextPage} loading={projects.isFetchingNextPage} onMore={() => void projects.fetchNextPage()}
+            stale={stale} />
         </ScrollTable>
       )}
 

@@ -25,9 +25,14 @@ export const licensingKeys = {
   periods: ['licensing', 'reconciliation', 'periods'] as const,
 };
 
-/** Subscriptions page by page, with how many the filter matches (DEV-12). */
-export function useSubscriptions(filters: SubscriptionFilters, enabled = true) {
-  return usePagedList<Subscription>(licensingKeys.subscriptions(filters), `${BASE}/subscriptions`, filters, { enabled });
+/**
+ * Subscriptions page by page, with how many the filter matches (DEV-12). `keepPrevious`: the list searched as people type keeps
+ * the rows of the previous search or filter until the new answer is there, so a row someone is clicking does not vanish; a
+ * customer's own tab starts empty and never shows another customer's rows.
+ */
+export function useSubscriptions(filters: SubscriptionFilters, enabled = true, options: { keepPrevious?: boolean } = {}) {
+  return usePagedList<Subscription>(licensingKeys.subscriptions(filters), `${BASE}/subscriptions`, filters,
+    { enabled, keepPrevious: options.keepPrevious });
 }
 
 export function useLicensingAttention(enabled = true) {

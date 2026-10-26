@@ -22,9 +22,13 @@ export interface QuoteFilters {
   awaitingApproval?: boolean;
 }
 
-/** Quote versions page by page, with how many the filter matches (DEV-12). */
-export function useQuotes(filters: QuoteFilters, enabled = true) {
-  return usePagedList<QuoteListItem>(quoteKeys.list(filters), `${BASE}/quotes`, filters, { enabled });
+/**
+ * Quote versions page by page, with how many the filter matches (DEV-12). `keepPrevious`: the list searched as people type keeps
+ * the rows of the previous search or filter until the new answer is there, so a row someone is clicking does not vanish; the
+ * quotes of a customer or a deal start empty and never show another's.
+ */
+export function useQuotes(filters: QuoteFilters, enabled = true, options: { keepPrevious?: boolean } = {}) {
+  return usePagedList<QuoteListItem>(quoteKeys.list(filters), `${BASE}/quotes`, filters, { enabled, keepPrevious: options.keepPrevious });
 }
 
 export function useQuote(id: string | undefined) {

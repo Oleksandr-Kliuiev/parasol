@@ -1,6 +1,6 @@
 import { expect, test, type Locator } from '@playwright/test';
 import { ateraAlert, closeAteraAlert, fitsWidth, linkedAteraCustomer, settled, storedAlerts, syncAlerts, syncAtera } from './atera';
-import { signIn } from './support';
+import { searchList, signIn } from './support';
 
 // M38: Work → Alerts lists the open alerts of every customer, critical first and the longest waiting first, with filters, honest
 // totals and each alert's side panel. The e2e database is shared, so the list is narrowed by this test's marker first.
@@ -21,8 +21,10 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
   await expect(page.getByRole('heading', { level: 1, name: 'Alerts' })).toBeVisible();
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Alerts', exact: true }).first()).toHaveAttribute('aria-current', 'page');
 
+  // The list is narrowed to this test's alerts and read once that very search is answered: until then it shows the queue before it.
   const search = page.getByRole('searchbox', { name: 'Search title or device' });
-  await search.fill(m);
+  const narrow = () => searchList(page, search, '/api/v1/service/alerts', m, 'q');
+  await narrow();
   const table = page.getByRole('table', { name: 'Alerts' });
   const rows = table.getByRole('row').filter({ hasText: m });
   // Critical first, the longest waiting first within a severity, across customers.
@@ -53,7 +55,7 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
   // Closed in Atera: the next complete read resolves it; it leaves the open list and is found among the resolved.
   await closeAteraAlert(page, closing);
   await syncAtera(page, ['atera-alerts'], async () => (await storedAlerts(page, second.organizationId, 'Resolved')).length === 1, 'the resolved alert');
-  await page.reload(); await search.fill(m);
+  await page.reload(); await narrow();
   await expect(page.getByText('No alerts match these filters.')).toBeVisible();
   await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: 'Resolved', exact: true }).click();
   await expect(rows).toHaveText([new RegExp(`${m} firewall down`)]);
@@ -71,7 +73,7 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
 
   // A phone shows cards with the same facts and actions, and nothing scrolls sideways.
   await page.setViewportSize({ width: 390, height: 844 });
-  await search.fill(m);
+  await narrow();
   const cards = page.getByRole('list', { name: 'Alerts' }).getByRole('listitem').filter({ hasText: m });
   await expect(cards).toHaveCount(2);
   await expect(cards.first().getByRole('button', { name: `Assign ${m} disk almost full`, exact: true })).toBeVisible();

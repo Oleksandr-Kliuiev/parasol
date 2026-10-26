@@ -102,19 +102,24 @@ function ProductsTab() {
   const [type, setType] = useState<ProductType | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const debounced = useDebouncedValue(search.trim());
-  const { data, error, isPending, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = useProducts({
+  const { data, error, isPending, isPlaceholderData, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = useProducts({
     search: debounced,
     type,
     active: showInactive ? null : true,
   });
   const rows = data?.pages.flatMap((p) => p.items) ?? [];
   const filtered = Boolean(debounced || type);
-  const empty = !isPending && rows.length === 0 && (
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the end of the list says it is loading, and no count or empty answer is claimed for them.
+  const stale = isPlaceholderData;
+  const reading = isPending || (stale && rows.length === 0);
+  const empty = !reading && rows.length === 0 && (
     <EmptyState icon={<Box24Regular />} message={filtered ? t('catalog.products.empty') : t('catalog.products.emptyAll')} />
   );
-  const loading = isPending && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>;
+  const loading = reading && <Skeleton aria-label={t('common.loading')}><SkeletonItem size={48} /></Skeleton>;
   const footer = (
-    <ListFooter shown={rows.length} total={data?.pages.at(-1)?.totalCount ?? null} hasMore={Boolean(hasNextPage)} loading={isFetchingNextPage} onMore={() => void fetchNextPage()} />
+    <ListFooter shown={rows.length} total={data?.pages.at(-1)?.totalCount ?? null} hasMore={Boolean(hasNextPage)} loading={isFetchingNextPage} onMore={() => void fetchNextPage()}
+      stale={stale} />
   );
 
   return (
@@ -145,7 +150,7 @@ function ProductsTab() {
       ) : narrow ? (
         <>
           {rows.length > 0 && (
-            <ul className={record.cards} aria-label={t('catalog.tabs.products')}>
+            <ul className={record.cards} aria-label={t('catalog.tabs.products')} aria-busy={stale || undefined}>
               {rows.map((p) => (
                 <li key={p.id} className={record.card}>
                   <span className={record.cardMain}>
@@ -176,7 +181,7 @@ function ProductsTab() {
         </>
       ) : (
         <ScrollTable className={styles.tableWrap}>
-          <Table className={styles.table} style={{ minWidth: 900 }} aria-label={t('catalog.tabs.products')}>
+          <Table className={styles.table} style={{ minWidth: 900 }} aria-label={t('catalog.tabs.products')} aria-busy={stale || undefined}>
             <TableHeader>
               <TableRow>
                 {/* Content widths: every cell adds 12 px of padding on each side; the name takes the rest. */}

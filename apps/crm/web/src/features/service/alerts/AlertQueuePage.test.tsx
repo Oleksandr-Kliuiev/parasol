@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { holdSearch } from '../../../test/heldSearch';
 import { page, renderRoutes, testUser } from '../../../test/renderWithProviders';
 import { alertPage, alertRead, syntheticAlert } from '../../../test/alerts';
 import { formatReadAt } from '../../../shared/utils/format';
@@ -14,15 +15,17 @@ const warning = syntheticAlert({ id: 'a2', severity: 'Warning', title: 'Backup i
 const task = { id: 't1', organizationId: 'o1', subject: 'Free disk space on SRV-01', status: 'Open', assignee: { id: 'u2', name: 'Ola Tekniker' },
   dueAt: '2026-10-22T14:00:00Z', isAvailable: true };
 
+/** What the server answers unless a test says otherwise. */
+function served(url: URL) {
+  if (url.pathname === '/api/v1/service/alerts') return json(alertPage([critical, warning], 'next', 30));
+  if (url.pathname === '/api/v1/activities/source-tasks/lookup') return json({ items: [{ alertId: 'a1', task }] });
+  if (url.pathname === '/api/v1/service/alerts/a2') return json(warning);
+  return json({}, 404);
+}
 function stub(answer: (url: URL, init?: RequestInit) => Response | undefined = () => undefined) {
   const fetch = vi.fn(async (input: string, init?: RequestInit) => {
     const url = new URL(input, 'https://parasoll.invalid');
-    const own = answer(url, init);
-    if (own) return own;
-    if (url.pathname === '/api/v1/service/alerts') return json(alertPage([critical, warning], 'next', 30));
-    if (url.pathname === '/api/v1/activities/source-tasks/lookup') return json({ items: [{ alertId: 'a1', task }] });
-    if (url.pathname === '/api/v1/service/alerts/a2') return json(warning);
-    return json({}, 404);
+    return answer(url, init) ?? served(url);
   });
   vi.stubGlobal('fetch', fetch);
   return fetch;
@@ -80,6 +83,56 @@ describe('alert queue', () => {
     await waitFor(() => expect(router.state.location.search).toBe('?state=resolved'));
     expect(screen.getByRole('searchbox', { name: 'Search title or device' })).toHaveValue('');
   });
+
+  // The search is read after a pause in typing; a click on a row must not get lost while its answer is on the way (M42 e2e, Firefox).
+  it('keeps the rows in place while a search is read, so a click on one still opens it, and claims no count for them', async () => {
+    const { fetch, requested, answer } = holdSearch((url) => url.includes('q=Backup'), (url) => served(new URL(url, 'https://parasoll.invalid')));
+    vi.stubGlobal('fetch', fetch);
+    const { router } = render();
+    const row = await screen.findByRole('button', { name: 'Backup is late' });
+    expect(screen.getByRole('status')).toHaveTextContent('30 alerts: 1 critical, 1 warnings');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search title or device' }), { target: { value: 'Backup' } });
+    await requested();
+
+    // The same rows, not a loading placeholder, and the read line above them stays, so nothing moves under the pointer.
+    expect(screen.getByRole('button', { name: 'Backup is late' })).toBe(row);
+    expect(row.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}`)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Refresh alerts' })).toBeEnabled();
+    // They are not the answer to the new search: no count and no end of the list is said for them.
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+    expect(screen.queryByText('Showing 2 of 30')).not.toBeInTheDocument();
+
+    await userEvent.click(row);
+    expect(router.state.location.search).toBe('?alert=a2');
+    expect(await screen.findByRole('dialog', { name: 'Backup is late' })).toBeVisible();
+    await answer(alertPage([warning]));
+    expect(await screen.findByText('1 alert: 0 critical, 1 warnings')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Disk almost full on SRV-01', hidden: true })).not.toBeInTheDocument();
+  }, 15_000);
+
+  it('keeps the headings of the rows on screen while another state is read, and does not repeat an empty answer', async () => {
+    const { fetch, requested, answer } = holdSearch((url) => url.includes('state=Resolved'),
+      (url) => url.includes('q=nothing') ? json(alertPage([])) : served(new URL(url, 'https://parasoll.invalid')));
+    vi.stubGlobal('fetch', fetch);
+    render();
+    const row = await screen.findByRole('button', { name: 'Backup is late' });
+    await userEvent.click(screen.getByRole('button', { name: 'Resolved' }));
+    await requested();
+    // Still the open alerts, raised when they were: the column says so until the resolved ones are there.
+    expect(screen.getByRole('button', { name: 'Backup is late' })).toBe(row);
+    expect(screen.getByRole('columnheader', { name: 'Raised' })).toBeVisible();
+    await answer(alertPage([{ ...warning, state: 'Resolved', resolvedAt: '2026-10-21T07:00:00Z' }]));
+    expect(await screen.findByRole('columnheader', { name: 'Resolved' })).toBeVisible();
+
+    await userEvent.click(within(screen.getByRole('group', { name: 'Show' })).getByRole('button', { name: 'Open' }));
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search title or device' }), 'nothing');
+    expect(await screen.findByText('No alerts match these filters.')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Resolved' }));
+    await requested();
+    expect(screen.queryByText('No alerts match these filters.')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Loading…')).toBeInTheDocument();
+  }, 15_000);
 
   it('opens the alert named by the address in a side panel with its fields, its source and its task part', async () => {
     stub((url) => url.pathname === '/api/v1/service/alerts/a2'
@@ -154,7 +207,7 @@ describe('alert queue', () => {
     });
     const fetch = vi.mocked(globalThis.fetch);
     const answer = fetch.getMockImplementation()!;
-    // The search's page waits, so the list shows its loading state while the dialog is open.
+    // The search's page waits, so the list is read again while the dialog is open.
     fetch.mockImplementation(async (input, init) => {
       if (new URL(String(input), 'https://parasoll.invalid').searchParams.get('q') === 'Backup') await searched;
       return answer(input as string, init);
@@ -168,11 +221,12 @@ describe('alert queue', () => {
     // modal hides the page from the accessibility tree a moment after it opens, so a slow run finds the box only with hidden: true.
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search title or device', hidden: true }), { target: { value: 'Backup' } });
     // The page behind the modal is hidden from the accessibility tree, so the list is looked up with hidden: true.
-    await waitFor(() => expect(screen.queryByRole('table', { name: 'Alerts', hidden: true })).not.toBeInTheDocument());
+    // It keeps its rows, marked busy, until the search's answer is there.
+    await waitFor(() => expect(screen.getByRole('table', { name: 'Alerts', hidden: true }).closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true'));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create task' }));
     expect(await within(dialog).findByText('Task created.')).toBeVisible();
     release();
-    await waitFor(() => expect(screen.getByRole('table', { name: 'Alerts', hidden: true })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('table', { name: 'Alerts', hidden: true }).closest('[aria-busy]')).toBeNull());
     expect(within(dialog).getByText('Task created.')).toBeVisible();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
     const taskLink = await screen.findByRole('link', { name: /Ola Tekniker · due .*: task Check the backup/ });

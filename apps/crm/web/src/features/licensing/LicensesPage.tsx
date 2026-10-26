@@ -76,8 +76,12 @@ export function LicensesPage() {
     withoutOrganization: params.get('unlinked') === 'true',
   };
   const onSubscriptions = view === 'subscriptions';
-  const subscriptions = useSubscriptions(filters, onSubscriptions);
+  const subscriptions = useSubscriptions(filters, onSubscriptions, { keepPrevious: true });
   const { items: data, error, isPending, refetch } = subscriptions;
+  // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
+  // answer: the end of the list says it is loading, and no count or empty answer is claimed for them.
+  // The read time above the table is that of the rows on screen, so it stays with them and nothing above the table moves.
+  const stale = subscriptions.isPlaceholderData;
   const attention = useLicensingAttention(onSubscriptions);
   const [importing, setImporting] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -185,8 +189,10 @@ export function LicensesPage() {
               rows={data}
               showCustomer
               canSeeCost={canSeeCost}
-              empty={!isPending && <EmptyState icon={<KeyMultiple24Regular />} message={t('licenses.empty')} />}
-              footer={<ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()} />}
+              stale={stale}
+              empty={!isPending && !stale && <EmptyState icon={<KeyMultiple24Regular />} message={t('licenses.empty')} />}
+              footer={<ListFooter shown={data.length} total={subscriptions.total} hasMore={subscriptions.hasNextPage} loading={subscriptions.isFetchingNextPage} onMore={() => void subscriptions.fetchNextPage()}
+                stale={stale} />}
             />
             </>
           )}
