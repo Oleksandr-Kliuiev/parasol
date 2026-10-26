@@ -78,6 +78,6 @@ export function ActionList({ filters, empty, showTarget = true, limit }: { filte
       <ActionRow key={action.id} action={action} showTarget={showTarget} onOpen={() => setOpen(action)} />)}</ul>}
     {log.isSuccess && log.items.length === 0 && <div className={styles.pad}><EmptyState compact icon={<History24Regular />} message={empty} /></div>}
     <ListFooter shown={log.items.length} total={log.total} hasMore={log.hasNextPage} loading={log.isFetchingNextPage} onMore={() => void log.fetchNextPage()} />
-    <ActionDetailDialog action={open} onClose={() => setOpen(null)} />
+    <ActionDetailDialog action={open} onClose={() => setOpen(null)} ticketShown={!showTarget} />
   </>;
 }

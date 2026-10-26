@@ -739,6 +739,88 @@ namespace Crm.Integrations.Core.Persistence.Migrations
                     b.ToTable("SyncSuccesses", "integration");
                 });
 
+            modelBuilder.Entity("Crm.Integrations.Core.Webhooks.EarlyReadRequest", b =>
+                {
+                    b.Property<string>("System")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Job")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("Requests")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("ServedUpTo")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("TriggeredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("WaitingSince")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("System", "Job");
+
+                    b.ToTable("EarlyReadRequests", "integration");
+                });
+
+            modelBuilder.Entity("Crm.Integrations.Core.Webhooks.EarlyReadTarget", b =>
+                {
+                    b.Property<string>("System")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Job")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("System", "Job", "ExternalId");
+
+                    b.HasIndex("System", "Job", "RequestedAt");
+
+                    b.ToTable("EarlyReadTargets", "integration");
+                });
+
+            modelBuilder.Entity("Crm.Integrations.Core.Webhooks.WebhookState", b =>
+                {
+                    b.Property<string>("System")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("LastEventType")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("LastReceivedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastRefusal")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset?>("LastRefusedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("Received")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("System");
+
+                    b.ToTable("WebhookStates", "integration");
+                });
+
             modelBuilder.Entity("Crm.Integrations.Core.WorkerHeartbeat", b =>
                 {
                     b.Property<string>("Component")

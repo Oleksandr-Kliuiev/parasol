@@ -40,6 +40,139 @@ export interface Device {
   openAlerts: number;
 }
 
+/** One agent of a machine in a list row (M40): its source, its last contact and its link there. */
+export interface MachineSource {
+  deviceId: string;
+  system: string;
+  online: boolean;
+  lastSeenAt: string | null;
+  url: string | null;
+}
+
+/** One computer of a customer (M40), whichever sources watch it. */
+export interface Machine {
+  id: string;
+  organizationId: string;
+  name: string;
+  type: DeviceType;
+  os: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+  removedAt: string | null;
+  sources: MachineSource[];
+  openAlerts: number;
+  /** Other machines of the customer a person should compare this one with. */
+  proposals: number;
+}
+
+export interface DeviceDisk {
+  drive: string | null;
+  free: number | null;
+  used: number | null;
+  total: number | null;
+}
+
+/** What one source says about the computer (M40); memory and disks come without a unit in Atera's API. */
+export interface DeviceInventory {
+  vendor: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  motherboard: string | null;
+  processor: string | null;
+  processorCores: number | null;
+  processorClock: string | null;
+  memory: number | null;
+  biosVersion: string | null;
+  osVersion: string | null;
+  osBuild: string | null;
+  lastRebootAt: string | null;
+  ipAddresses: string[];
+  publicIp: string | null;
+  macAddresses: string[];
+  domainName: string | null;
+  loggedInUsers: string | null;
+  lastLoginUser: string | null;
+  disks: DeviceDisk[];
+  agentVersion: string | null;
+}
+
+export interface DevicePatch {
+  kbId: string | null;
+  name: string;
+  class: string | null;
+  installedAt: string | null;
+  status: string | null;
+}
+
+/** A device's Windows updates at the last complete read; `readAt` is null while they were never read. */
+export interface DevicePatches {
+  readAt: string | null;
+  collectedAt: string | null;
+  installedCount: number;
+  available: DevicePatch[];
+  latestInstalled: DevicePatch[];
+}
+
+/**
+ * What a security source says about the computer's protection (M41, Huntress): Defender's status as Huntress words it, when Huntress
+ * last heard it, and whether the computer is cut off from the network (`Isolated`, `Pending Isolation`, `Pending Release`).
+ */
+export interface DeviceProtection {
+  platform: string | null;
+  antivirusStatus: string | null;
+  antivirusSubstatus: string | null;
+  antivirusPolicyStatus: string | null;
+  antivirusReportedAt: string | null;
+  isolation: string | null;
+  agentVersionSince: string | null;
+}
+
+export interface MachineDevice {
+  id: string;
+  system: string;
+  externalId: string;
+  machineName: string;
+  type: DeviceType;
+  os: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+  firstSeenAt: string;
+  removedAt: string | null;
+  url: string | null;
+  inventory: DeviceInventory;
+  patches: DevicePatches;
+  /** Only for a security source (M41); none for Atera. */
+  protection?: DeviceProtection | null;
+}
+
+/** Why two machines may be one computer. */
+export type MachineEvidence = 'serial' | 'mac' | 'name' | 'serialConflict';
+
+export interface MachineProposal {
+  otherMachineId: string;
+  otherName: string;
+  evidence: MachineEvidence[];
+  foundAt: string;
+}
+
+/** A machine's card (M40); `etag` goes with a person's decision about it. */
+export interface MachineDetail {
+  id: string;
+  organizationId: string;
+  organizationName: string | null;
+  name: string;
+  type: DeviceType;
+  os: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+  removedAt: string | null;
+  devices: MachineDevice[];
+  proposals: MachineProposal[];
+  openAlerts: number;
+  reads: ServiceSourceRead[];
+  etag: string;
+}
+
 /** A stored alert (M38). `createdAt` is the source's time; `url` is set only when a link to the source is configured. */
 export interface Alert {
   id: string;
@@ -57,6 +190,47 @@ export interface Alert {
   lastSeenAt: string | null;
   resolvedAt: string | null;
   url: string | null;
+  /** Hidden in Parasoll until a day (M40): the source still has it open. */
+  hidden?: AlertHold | null;
+  /** Read with one alert only: the ETag a change of its status in Parasoll sends. */
+  etag?: string | null;
+  /** A coverage gap Parasoll found (M40): the rule that found it and its facts, worded in the reader's language. */
+  rule?: string | null;
+  facts?: Record<string, string> | null;
+  /** The machine the alert's device belongs to (M40): its card in the customer's Drift tab. */
+  machineId?: string | null;
+  /** When the source closed an urgent alert that waits for a person to confirm it (M41: a Huntress incident). */
+  sourceClosedAt?: string | null;
+}
+
+/** A rule's limit (M40): its default and the range a person may choose from. */
+export interface CoverageThreshold {
+  default: number;
+  min: number;
+  max: number;
+  unit: 'Days' | 'Hours';
+}
+
+/** One of Parasoll's own coverage rules with its setting (M40); `etag` goes with a change. */
+export interface CoverageRule {
+  code: string;
+  system: string;
+  kind: AlertKind;
+  threshold: CoverageThreshold | null;
+  enabled: boolean;
+  value: number | null;
+  openGaps: number;
+  changedAt: string | null;
+  changedByName: string | null;
+  etag: string | null;
+}
+
+/** An alert hidden in Parasoll (M40): until when, why, by whom and when. */
+export interface AlertHold {
+  until: string;
+  reason: string | null;
+  byName: string | null;
+  at: string | null;
 }
 
 /**
@@ -85,7 +259,7 @@ export interface AlertPage {
  * a read that did not finish or whose successor is overdue is said so.
  */
 export interface ServiceSourceRead extends AlertSourceRead {
-  source: 'tickets' | 'conversations' | 'alerts' | 'devices';
+  source: 'tickets' | 'conversations' | 'alerts' | 'devices' | 'patches' | 'security-alerts' | 'security-devices';
 }
 
 export interface ServiceSummary {

@@ -61,9 +61,26 @@ internal static class NotificationTexts
             NotificationKind.InvoiceOverdue => nb
                 ? $"Faktura {Value("number")} til {Value("organization")} forfalt {Value("date")}: {Value("amount")} utestående."
                 : $"Invoice {Value("number")} to {Value("organization")} was due {Value("date")}: {Value("amount")} outstanding.",
+            // The interface names the action; the digest says "an action", so it needs no list of every vendor's kinds.
+            NotificationKind.VendorActionUncertain when p.ContainsKey("ticket") => nb
+                ? $"{SystemName(p)} ga ikke noe klart svar på en handling på sak #{Value("ticket")} ({Value("organization")}). Sjekk der og registrer hva du fant."
+                : $"{SystemName(p)} gave no clear answer to an action on ticket #{Value("ticket")} ({Value("organization")}). Check there and record what you found.",
+            NotificationKind.VendorActionUncertain => nb
+                ? $"{SystemName(p)} ga ikke noe klart svar på en handling. Sjekk der og registrer hva du fant."
+                : $"{SystemName(p)} gave no clear answer to an action. Check there and record what you found.",
             _ => nb ? "Noe venter på deg i CRM." : "Something is waiting for you in the CRM.",
         };
     }
+
+    /// <summary>A vendor as people write it; the notice stores the integration's code (<c>atera</c>).</summary>
+    private static string SystemName(IReadOnlyDictionary<string, string> p) => p.GetValueOrDefault("system") switch
+    {
+        "atera" => "Atera",
+        "poweroffice" => "PowerOffice",
+        "partnercenter" => "Partner Center",
+        { Length: > 0 } other => other,
+        _ => "—",
+    };
 
     public static string Money(decimal amount) => amount.ToString("N0", CultureInfo.GetCultureInfo("nb-NO")) + " NOK";
 

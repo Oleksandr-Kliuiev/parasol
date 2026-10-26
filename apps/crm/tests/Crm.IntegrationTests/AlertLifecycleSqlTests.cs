@@ -145,9 +145,11 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
         first.GetProperty("items").GetArrayLength().ShouldBe(25, "25 by default");
         first.GetProperty("nextCursor").GetString().ShouldNotBeNullOrEmpty();
         (first.GetProperty("totalCount").GetInt32(), first.GetProperty("critical").GetInt32(), first.GetProperty("warning").GetInt32()).ShouldBe((28, 9, 19));
-        // The page says how fresh the stored alerts are, as the urgent list does: one read per source, the same for any filter.
-        var read = first.GetProperty("reads").EnumerateArray().ShouldHaveSingleItem();
-        read.GetProperty("system").GetString().ShouldBe("atera");
+        // The page says how fresh the stored alerts are, as the urgent list does: one read per source, the same for any filter. Huntress
+        // is switched off in this host, so its read is named only once its own tests have read it into the shared database (M41).
+        var reads = first.GetProperty("reads").EnumerateArray().ToList();
+        reads.Select(r => r.GetProperty("system").GetString()).ShouldBeSubsetOf(["atera", "huntress"]);
+        var read = reads.Single(r => r.GetProperty("system").GetString() == "atera");
         read.EnumerateObject().Select(p => p.Name).ShouldBe(["system", "startedAt", "complete", "late"]);
         var item = first.GetProperty("items")[0];
         (item.GetProperty("organizationName").GetString(), item.GetProperty("state").GetString(), item.GetProperty("kind").GetString())
@@ -218,8 +220,9 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
         urgent.GetProperty("items")[0].GetProperty("organizationName").GetString().ShouldBe($"{marker} Varsel AS");
         urgent.GetProperty("totalCount").GetInt32().ShouldBeGreaterThanOrEqualTo(6);
         (urgent.GetProperty("critical").GetInt32() + urgent.GetProperty("warning").GetInt32()).ShouldBe(urgent.GetProperty("totalCount").GetInt32());
-        var read = urgent.GetProperty("reads").EnumerateArray().ShouldHaveSingleItem();
-        read.GetProperty("system").GetString().ShouldBe("atera");
+        var reads = urgent.GetProperty("reads").EnumerateArray().Select(r => r.GetProperty("system").GetString()).ToList();
+        reads.ShouldContain("atera");
+        reads.ShouldBeSubsetOf(["atera", "huntress"]);
 
         var five = await reader.GetFromJsonAsync<JsonElement>($"{Alerts}/urgent", Ct);
         var items = five.GetProperty("items").EnumerateArray().ToList();

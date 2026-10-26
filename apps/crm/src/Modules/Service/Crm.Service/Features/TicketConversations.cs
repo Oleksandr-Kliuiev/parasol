@@ -65,7 +65,7 @@ internal sealed class TicketConversations(ServiceDbContext db, TimeProvider time
             .Where(t => t.System == system && t.IsOpen && (t.CommentsReadAt == null || t.CommentsReadAt < readBefore))
             .OrderBy(t => t.CommentsReadAt == null ? 0 : 1).ThenBy(t => t.CommentsReadAt).ThenBy(t => t.Id)
             .Take(Math.Clamp(limit, 1, 500))
-            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status))
+            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status, t.Url))
             .ToListAsync(ct);
 
     public async Task<TicketView?> GetAsync(string system, long externalId, CancellationToken ct) =>

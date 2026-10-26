@@ -1,13 +1,14 @@
 import type { TFunction } from 'i18next';
 import { ApiError } from '../../api/client';
 import { errorMessage } from '../../shared/utils/errors';
+import { formatDate } from '../../shared/utils/format';
 import type { ActionBlock, ActionEffect, VendorAction } from './types';
 
 /** The kind as people say it ("Reply to the customer"); a kind the interface does not know yet keeps its code. */
 export const kindName = (t: TFunction, system: string, kind: string) => t(`actions.kinds.${system}.${kind}`, { defaultValue: kind });
 
 /** Values that are Atera's own words (a status, a priority) or empty, said the way the rest of the interface says them. */
-const effectValues = (t: TFunction, effect: ActionEffect): Record<string, string | null> => {
+const effectValues = (t: TFunction, effect: ActionEffect): Record<string, string | number | null> => {
   const values = { ...effect.values };
   const word = (group: 'statuses' | 'priorities', value: string | null | undefined, empty: string) =>
     value ? t(`tickets.${group}.${value}`, { defaultValue: value }) : t(empty);
@@ -21,7 +22,16 @@ const effectValues = (t: TFunction, effect: ActionEffect): Record<string, string
     case 'VND_EFFECT_TICKET_TECHNICIAN':
       return { ...values, from: values.from || t('tickets.fields.noTechnician') };
     default:
-      return values;
+      // M42: a backup's service is CloudAlly's word for it ("Mail"), said the way the backup tab says it; a restore's day as days are.
+      return {
+        ...values,
+        ...(values.service ? { service: t(`backup.services.${values.service}`, { defaultValue: values.service }) } : {}),
+        ...(effect.code.startsWith('VND_EFFECT_RESTORE_') && values.date ? { date: formatDate(values.date) } : {}),
+        // M43: a CloudAlly data center by the words the wizard offers it with.
+        ...(values.region ? { region: t(`onboarding.regions.${values.region}`, { defaultValue: values.region }) } : {}),
+        // A count chooses the plural form of the sentence, which i18next does for a number only.
+        ...(values.count && /^\d+$/.test(values.count) ? { count: Number(values.count) } : {}),
+      };
   }
 };
 

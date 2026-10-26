@@ -12,8 +12,8 @@ test('Connections is usable on a narrow screen, its states are readable text and
   await page.waitForLoadState('networkidle');
   await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))); });
   const expectedStatuses = [
-    ['Background service', ['Running', 'Late', 'Running']],
-    ['Atera', ['Needs attention', 'Up to date', 'Late', 'Never read']],
+    ['Background service', ['Running', 'Late', 'Running', 'Running']],
+    ['Atera', ['Needs attention', 'Up to date', 'Late', 'Never read', 'On']],
     ['PowerOffice Go', ['Switched off']],
     ['Brønnøysund Register Centre', ['Paused', 'Paused']],
   ] as const;

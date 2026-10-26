@@ -11,7 +11,8 @@
 | Partner Center API | Secure Application Model, App+User | ← | Подписки — каждые 4 ч; клиенты — ночью | Фон |
 | Graph Partner Billing | Application, `PartnerBilling.Read.All` | ← | После выхода инвойса Microsoft (ежемесячно) + unbilled — ежедневно (R2) | Фон, асинхронный экспорт |
 | Graph в тенантах клиентов (GDAP) | App+User через GDAP-группу | ← | Ночью (R2) | Фон |
-| Atera API v3 | Заголовок `X-API-KEY` | ↔ | Тикеты — каждые 10 мин; время — каждые 30 мин; агенты — ночью; вебхуки — мгновенный триггер | Фон + вебхуки |
+| Atera API v3 | Заголовок `X-API-KEY` | ↔ | Тикеты — каждые 10 мин; время — каждые 30 мин; агенты — ночью; вебхуки заявок — раннее чтение переписки (M44, [§ 3.7](#37-вебхуки-m44)) | Фон + вебхуки |
+| Huntress API v1 | HTTP Basic (ключ и секрет API) | ↔ | Инциденты, эскалации, platform actions — каждые 5 мин; вебхуки (подпись Svix) — раннее чтение (M44) | Фон + вебхуки |
 | PowerOffice Go API v2 | OAuth 2.0 client credentials (Application Key + Client Key) + `Ocp-Apim-Subscription-Key` | ↔ | Счета/оплаты — каждый час; клиенты — каждые 15 мин; заказы — при выгрузке | Фон |
 | Brreg Enhetsregisteret | Открытый API без аутентификации | ← | При вводе оргномера; ночью — лента изменений | Онлайн + фон |
 
@@ -158,9 +159,10 @@ GET  /reports/partners/billing/operations/{id}  (опрос до status = succee
 | Contacts | GET, POST | `Contact` + `OrganizationContact` | Каждые 15 мин + при создании тикета |
 | Tickets | GET (`ticketStatus`), POST; POST `/tickets/{id}` (статус, приоритет, техник) — действием (M39) | `service.Ticket` (зеркало; меняется только через действие у Atera и последующее чтение) | Открытые — каждые 10 мин; проход по недавним (60 дней) — каждый час |
 | Ticket comments | GET `/tickets/lastmodified?includeComments`, GET/POST `/tickets/{id}/comments` — ответ и внутренняя заметка действием (M39) | `service.TicketComments` (переписка, [§3.6](#36-действия-и-переписка-m39)) | Каждые 5 мин (`TicketConversationSyncCron`) + перечитывание открытых |
-| Ticket work hours / billable durations | GET `/tickets/{id}/workhoursrecords`; POST `/tickets/{id}/workhours` — собственные часы из CRM действием `time.record` (M39.3) | `time.TimeEntry` (Source = Atera), техник — через `identity.TechnicianMapping`; строки с маркером CRM не импортируются | Каждые 30 мин по тикетам, открытым или изменённым за 60 дней |
-| Agents | GET | `service.Device` + ежедневный `DeviceCountSnapshot` по типам (Workstation/Server/Network/Other из `OSType`/`OS`) | Ночью (01:30) |
-| Alerts | GET (`alertStatus=Open`), все клиенты одним постраничным списком | `service.Alerts` с жизненным циклом ([§3.5](#35-оповещения-жизненный-цикл-m38)): Critical/Warning сопоставленных клиентов, постоянный id, закрытие только по полному чтению | Каждые 30 мин (`AlertSyncCron`, `5,35 * * * *`) |
+| Ticket work hours / billable durations | GET `/tickets/{id}/workhoursrecords`; POST `/tickets/{id}/workhours` — собственные часы из CRM действием `time.record` (M39.3; сразу после сохранения или позже — из правки записи и меню строки «Timelisten min», M39.5) | `time.TimeEntry` (Source = Atera), техник — через `identity.TechnicianMapping`; строки с маркером CRM не импортируются | Каждые 30 мин по тикетам, открытым или изменённым за 60 дней |
+| Agents | GET (строгое чтение: агент без id или клиента роняет прогон) | `service.Device` с инвентарём (серийник, MAC, `DeviceGuid`, `AppViewUrl`, железо, ОС, сеть, пользователи, диски; M40) → `service.Machines` (одна машина на компьютер, сопоставитель M40) + ежедневный `DeviceCountSnapshot` по типам (Workstation/Server/Network/Other из `OSType`/`OS`); после полного чтения — правила покрытия ([§3.5](#35-оповещения-жизненный-цикл-m38)) | Ночью (01:30) |
+| Agent patches | GET `agents/{DeviceGuid}/installed-patches`, `available-patches` (M40) | `service.DevicePatches` (не больше 500 каждого вида на устройство) | Ночью (02:15, `PatchSyncCron`) |
+| Alerts | GET (`alertStatus=Open`), все клиенты одним постраничным списком; GET/PUT/DELETE `/alerts/{id}` — действиями `alert.resolve` и `alert.delete` (M40) | `service.Alerts` с жизненным циклом ([§3.5](#35-оповещения-жизненный-цикл-m38)): Critical/Warning сопоставленных клиентов, постоянный id, закрытие только по полному чтению | Каждые 30 мин (`AlertSyncCron`, `5,35 * * * *`) |
 | Custom values (customer) | GET, PUT `/customvalues/customerfield/{customerId}/{fieldName}` | Уровень SLA активного контракта (поле из `Integrations:Atera:SlaCustomFieldName`; реализовано, запись выключена до PoC); номер контракта и менеджер — позже | При активации, приостановке, завершении контракта и смене SLA |
 | Contracts (Atera) | GET | Только для первичной миграции | Однократно |
 
@@ -169,7 +171,7 @@ GET  /reports/partners/billing/operations/{id}  (опрос до status = succee
 2. Запросить тикеты, отсортированные по дате изменения/создания, до достижения курсора `lastSyncedAt − 1 ч` (перекрытие окна защищает от гонок) **[PoC: доступность сортировки/фильтра по дате изменения; при отсутствии — ночной полный проход за 60 дней]**.
 3. Для каждого изменённого тикета — запросить рабочие часы; сравнить хэш с `ExternalRecord`; изменения → команда `ImportTimeEntries`.
 4. Техник Atera → пользователь CRM по сопоставлению (`identity.TechnicianMapping`); не сопоставленные → запись с флагом и уведомление Admin.
-5. Вебхук (тарифы Atera Enterprise/Superpower, настраивается правилом автоматизации тикетов на создание/обновление/закрытие): `POST /webhooks/atera/{secret}` с `TicketID` → внеочередная синхронизация этого тикета.
+5. Вебхук (тарифы Atera Enterprise/Superpower, настраивается правилом автоматизации тикетов на создание/обновление/закрытие): `POST /webhooks/atera/{secret}` с `TicketID` → внеочередная синхронизация этого тикета. Сделано в M44 ([§ 3.7](#37-вебхуки-m44)): вебхук запускает `atera-ticket-conversations` раньше расписания, а заявку из тела оно читает и по номеру.
 
 ### 3.4 Создание тикета из CRM
 ```
@@ -189,14 +191,37 @@ POST /tickets { TicketTitle, Description, TicketPriority, TicketImpact, TicketSt
 - Запись снимка — одна транзакция под app lock `service-alerts:<system>`: ручной запуск рядом с плановым ждёт, а не вставляет то же оповещение дважды.
 - Чтение (`service.read`): `GET /api/v1/service/alerts?organizationId&state&severity&deviceId&q&cursor&limit` → `{items, nextCursor, totalCount, critical, warning}` — открытые по умолчанию, новые первыми, keyset-курсор, 25 по умолчанию и до 100, итоги по всему фильтру; `GET /api/v1/service/alerts/urgent?limit=5` → `{items, totalCount, critical, warning, reads: [{system, startedAt, complete}]}` — самые важные, среди них самые старые; `reads` говорит, полным ли было последнее чтение источника.
 - Макет Atera (`tools/dev-mocks/atera.mjs`) даёт тестам свои клиенты, агенты и оповещения и закрывает оповещение маршрутами `/_mock/atera/*` ([README макетов](../tools/dev-mocks/README.md)).
-- Закрытие оповещения в Atera, скрытие до даты, пробелы покрытия и чистка решённых — этап M40.
+- M40 ([документ этапа](../../../docs/migration/M40-MACHINES-ALERTS.md)): оповещение закрывается (`PUT /alerts/{id}`) или удаляется (`DELETE /alerts/{id}`, Destructive) действием у поставщика и решается в CRM, только когда следующее чтение этого оповещения подтвердило итог; архивные Atera-оповещения чтение пропускает. «Скрыть до дня» — статус самой CRM в `service.AlertHolds` со своей версией строки (чтение источника её не меняет), история — `service.AlertTransitions`.
+- Пробелы покрытия (M40): после полного чтения агентов задание `atera-agents` вызывает `ICoverageCheck.CheckAsync("atera", охваченные организации)`; правила `ICoverageRule` (сейчас `atera.agent-silent`: агент молчит дольше порога, по умолчанию 7 дней) пишут оповещения системы `parasoll`, которые закрываются после двух чистых проверок подряд. Порог и выключатель — `service.CoverageRuleSettings` (`/api/v1/service/coverage/rules`).
+- M41 ([документ этапа](../../../docs/migration/M41-HUNTRESS.md)): инциденты, эскалации и platform actions Huntress — оповещения вида `Security` (`incident:{id}`, `escalation:{id}`, `platform-action:{id}`), задание `huntress-alerts` каждые 5 минут. Критичное оповещение источника, который просит подтверждения (`ExternalAlert.ConfirmClose`), полное чтение без него не закрывает, а помечает `SourceClosedAt`; закрывает человек: `POST /api/v1/service/alerts/{id}/confirm-closed` (If-Match статуса в Parasoll). Источник, выключенный и ни разу не читавшийся, в строке чтений не называется (`ISyncCompletenessSource.IsConnected`).
+- Решённые оповещения удаляются по классу хранения `service.resolved-alerts` (предложение — год после решения, до утверждения только счёт).
+- Закрытые инциденты и решённые уведомления Huntress — класс `security.closed-incidents` (M41, предложение — год после закрытия, до утверждения только счёт).
 
 ### 3.6 Действия и переписка (M39)
 Подробности — [M39](../../../docs/migration/M39-VENDOR-ACTIONS-TICKETS.md).
-- Любое изменение в Atera из CRM — действие (`integration.VendorActions`): предпросмотр из сохранённых данных с подписанным токеном (10 мин), подтверждение по уровню, команда с ключом идемпотентности, отправка Worker'ом (цикл 5 с) после повторного чтения переключателей и живого состояния. Неповторяемое действие без ясного ответа (`Uncertain`) не отправляется снова — человек проверяет у Atera и записывает итог в журнале на `/connections`.
+- Любое изменение в Atera из CRM — действие (`integration.VendorActions`): предпросмотр из сохранённых данных с подписанным токеном (10 мин), подтверждение по уровню, команда с ключом идемпотентности, отправка Worker'ом (цикл 5 с) после повторного чтения переключателей и живого состояния. Неповторяемое действие без ясного ответа (`Uncertain`) не отправляется снова — человек проверяет у Atera и записывает итог: в самом подтверждении, из уведомления, которое получает тот, кто спросил (заявка с карточкой действия), или в журнале на `/connections`; строка заявки в `/tickets` несёт «Нужна проверка» (M39.4).
 - Виды Atera: `ticket.reply`, `ticket.note`, `ticket.status`, `ticket.priority`, `ticket.technician`, `ticket.close`, `time.record`. Пишутся от имени техника, сопоставленного человеку (`identity.TechnicianMappings`); заявка, ушедшая к другому клиенту, — `VND_TICKET_MOVED`. Включение: `WriteEnabled` (или `DryRun`) и вид в `EnabledActions`; `WriteAllowedCustomerIds` ограничивает клиентов.
+- Создание клиента (M43, [документ этапа](../../../docs/migration/M43-ONBOARDING-MONEY.md)): мастер «Koble til tjenester» просит `customer.create` (Atera), `organization.create` (Huntress) и `account.create` (CloudAlly) с целью `organization` (CRM-организация); общее правило — `CustomerCreationAction`: наш ключ (оргномер или точное имя; ключ организации; адрес аккаунта) ищется у поставщика до создания и после попытки без ясного ответа, найденное без нашей попытки не присваивается (`VND_EXISTS_AT_VENDOR`, связывает человек), id поставщика пишется в журнал до локальной связи. У создаваемого клиента id поставщика нет, поэтому `WriteAllowedCustomerIds` может назвать id CRM-организации. Пароль, которого требует CloudAlly, создаётся на запрос и нигде не хранится.
 - Переписка: задание `atera-ticket-conversations` читает `/tickets/lastmodified` от курсора (перекрытие 5 мин, первый проход 14 дней) и перечитывает до 25 открытых заявок, чья переписка старше 60 мин; курсор двигается только после полного прогона.
 - Часы из CRM: `POST /tickets/{id}/workhours` с маркером `[CRM-TE:<id записи>]` в комментарии; повтор находит строку по маркеру (`Skipped`), импорт часов пропускает строки с маркером и квитанции действий — часы не считаются дважды.
+
+### 3.7 Вебхуки (M44)
+Подробности — [M44](../../../docs/migration/M44-WEBHOOKS.md), настройка — [runbook 02 § 6](runbooks/02-integrations.md#6-вебхуки-huntress-и-atera-m44).
+- Вебхук не несёт данных в CRM: он доказывает, что пришёл от поставщика, и просит задание прочитать раньше расписания. Тело не
+  хранится и не журналируется; остаются имя события (идентификатор) и, у Atera, номер заявки.
+- Huntress (все аккаунты): `POST /webhooks/huntress`, подпись Svix (HMAC-SHA256 по `{id}.{timestamp}.{тело}`, ключ из `whsec_…`,
+  любая `v1`, ±5 минут). События отчётов, эскалаций и platform actions запускают `huntress-alerts`; уведомления и «Send Test» только
+  считаются.
+- Atera (Superpower, Enterprise): `POST /webhooks/atera/{WebhookKey}` из правила автоматизации заявок (новая, статус, исполнитель,
+  закрытие). Подписи у Atera нет, поэтому ключ — в адресе. Любая доставка запускает `atera-ticket-conversations`; заявку из тела
+  (`TicketID`) задание читает по номеру, даже если `/tickets/lastmodified` её не назвал, и снимает номер после полного прогона.
+  Вебхуков на комментарии и оповещения у Atera нет — они приходят по расписанию.
+- Цикл раннего чтения в crm-worker (`integration.EarlyReadRequests`, каждые 5 с): запрос обслужен любым чтением, начавшимся после
+  него; задание запускается после 3 с тишины (не дольше 15 с), не раньше чем через минуту после начала предыдущего чтения и никогда
+  поверх идущего.
+- Выключенный вебхук — `404`; недоказанный отправитель — `401` и строка `Crm.Security`; тело больше 64 КБ — `413`; свой лимит
+  600 запросов в минуту на адрес отправителя; во время обслуживания — `503`. `/connections` показывает строку «Webhook» у Atera и
+  Huntress. У CloudAlly вебхуков нет.
 
 ## 4. PowerOffice Go
 

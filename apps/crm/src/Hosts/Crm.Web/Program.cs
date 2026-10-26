@@ -9,8 +9,10 @@ using Crm.Licensing;
 using Crm.Privacy;
 using Crm.Projects;
 using Crm.Sales;
+using Crm.Security;
 using Crm.Service;
 using Crm.TimeTracking;
+using Crm.Backup;
 using Crm.CustomFields;
 using Crm.Customers;
 using Crm.Identity;
@@ -24,6 +26,8 @@ using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Huntress;
+using Crm.Integrations.CloudAlly;
 using Crm.SharedKernel.Application;
 using Crm.Authorization;
 using Crm.Web.Auth;
@@ -83,6 +87,9 @@ builder.Services
     .AddCatalogModule(builder.Configuration)
     .AddContractsModule(builder.Configuration)
     .AddServiceModule(builder.Configuration)
+    // M40.S: Security fills with Huntress (M41); Backup holds CloudAlly's backups (M42).
+    .AddSecurityModule(builder.Configuration)
+    .AddBackupModule(builder.Configuration)
     .AddTimeTrackingModule(builder.Configuration)
     .AddSalesModule(builder.Configuration)
     .AddProjectsModule(builder.Configuration)
@@ -97,6 +104,8 @@ builder.Services
     .AddMicrosoftGraphIntegration(builder.Configuration)
     .AddPowerOfficeIntegration(builder.Configuration)
     .AddAteraIntegration(builder.Configuration)
+    .AddHuntressIntegration(builder.Configuration)
+    .AddCloudAllyIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
 builder.Services.AddMemoryCache();
@@ -166,6 +175,16 @@ builder.Services.AddRateLimiter(options =>
             });
         }
 
+        // M44: vendors' webhooks have no user; their budget is per sending address, and a refused delivery costs it too.
+        if (path.StartsWithSegments(WebhookEndpoints.PathPrefix))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter("webhooks:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"), _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue("RateLimits:WebhooksPerMinute", 600),
+                Window = TimeSpan.FromMinutes(1),
+            });
+        }
+
         return IsSignInPath(path)
             ? RateLimitPartition.GetFixedWindowLimiter("sign-in:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"), _ => new FixedWindowRateLimiterOptions
             {
@@ -228,6 +247,15 @@ static bool IsSignInPath(PathString path) =>
 
 var app = builder.Build();
 
+// M44: a vendor's webhook switched on without its secret would answer 404 while the connections page calls it on.
+foreach (var webhook in app.Services.GetServices<Crm.Integrations.Core.Webhooks.IWebhookSource>())
+{
+    if (webhook.ConfigurationProblem is { } webhookProblem)
+    {
+        throw new InvalidOperationException(webhookProblem);
+    }
+}
+
 // DEV-09: an environment that opens record scope says so on every start (ADR-018, runbook 11).
 if (app.Services.GetRequiredService<IOptions<Crm.Infrastructure.Security.RecordScopeOptions>>().Value.RecordScope == RecordScopeMode.Open)
 {
@@ -281,6 +309,7 @@ app.MapCustomFieldsEndpoints();
 app.MapCatalogEndpoints();
 app.MapContractsEndpoints();
 app.MapServiceEndpoints();
+app.MapSecurityEndpoints();
 app.MapTimeTrackingEndpoints();
 app.MapSalesEndpoints();
 app.MapProjectsEndpoints();
@@ -297,7 +326,9 @@ Crm.Web.CustomerFacts.CustomerFactsEndpoints.MapCustomerFactsEndpoints(app);
 app.MapIntegrationRunEndpoints();
 app.MapIntegrationMappingEndpoints();
 app.MapVendorActionEndpoints();
+app.MapCustomerServiceEndpoints();
 app.MapAteraEndpoints();
+app.MapBackupEndpoints();
 Crm.Integrations.Core.Readiness.ConnectionStatusEndpoints.MapConnectionStatus(app);
 app.MapJobEndpoints();
 app.MapOutboxEndpoints();
@@ -305,6 +336,7 @@ app.MapMonitoringEndpoints();
 app.MapRecordScopeEndpoints();
 app.MapOperationsEndpoints();
 app.MapHealthDetails();
+app.MapWebhookEndpoints();
 
 if (hangfireEnabled)
 {

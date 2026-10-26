@@ -19,9 +19,21 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
 
     public DbSet<Alert> Alerts => Set<Alert>();
 
+    public DbSet<AlertHold> AlertHolds => Set<AlertHold>();
+    public DbSet<CoverageRuleSetting> CoverageRuleSettings => Set<CoverageRuleSetting>();
+    public DbSet<AlertTransition> AlertTransitions => Set<AlertTransition>();
+
     public DbSet<TicketRequest> TicketRequests => Set<TicketRequest>();
 
     public DbSet<TicketComment> TicketComments => Set<TicketComment>();
+
+    public DbSet<Machine> Machines => Set<Machine>();
+
+    public DbSet<DevicePatch> DevicePatches => Set<DevicePatch>();
+
+    public DbSet<MachineLinkDecision> MachineLinkDecisions => Set<MachineLinkDecision>();
+
+    public DbSet<MachineProposal> MachineProposals => Set<MachineProposal>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
@@ -77,8 +89,83 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.Type).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.Os).HasMaxLength(256);
             b.Property(x => x.Url).HasMaxLength(512);
+            b.Property(x => x.SerialNumber).HasMaxLength(Device.SerialNumberLength);
+            b.Property(x => x.MacAddresses).HasMaxLength(Device.MacAddressesLength);
+            // M40: the computer as its source describes it (lengths as Device.Apply cuts them).
+            b.Property(x => x.AlternateId).HasMaxLength(128);
+            b.Property(x => x.Vendor).HasMaxLength(128);
+            b.Property(x => x.Model).HasMaxLength(256);
+            b.Property(x => x.Motherboard).HasMaxLength(256);
+            b.Property(x => x.Processor).HasMaxLength(256);
+            b.Property(x => x.ProcessorClock).HasMaxLength(32);
+            b.Property(x => x.BiosVersion).HasMaxLength(128);
+            b.Property(x => x.OsVersion).HasMaxLength(64);
+            b.Property(x => x.OsBuild).HasMaxLength(64);
+            b.Property(x => x.IpAddresses).HasMaxLength(1024);
+            b.Property(x => x.PublicIp).HasMaxLength(64);
+            b.Property(x => x.DomainName).HasMaxLength(256);
+            b.Property(x => x.LoggedInUsers).HasMaxLength(512);
+            b.Property(x => x.LastLoginUser).HasMaxLength(256);
+            b.Property(x => x.Disks).HasMaxLength(DeviceDisks.Length);
+            b.Property(x => x.AgentVersion).HasMaxLength(64);
+            // M41: what a security source says about the computer's protection.
+            b.Property(x => x.Platform).HasMaxLength(16);
+            b.Property(x => x.AntivirusStatus).HasMaxLength(64);
+            b.Property(x => x.AntivirusSubstatus).HasMaxLength(128);
+            b.Property(x => x.AntivirusPolicyStatus).HasMaxLength(64);
+            b.Property(x => x.Isolation).HasMaxLength(32);
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.RemovedAt });
+            // M40: a machine is its devices; it is removed only once no device names it.
+            b.HasOne<Machine>().WithMany().HasForeignKey(x => x.MachineId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => x.MachineId).HasFilter("[MachineId] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<DevicePatch>(b =>
+        {
+            b.ToTable("DevicePatches");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.KbId).HasMaxLength(32);
+            b.Property(x => x.Name).HasMaxLength(DevicePatch.NameLength);
+            b.Property(x => x.Class).HasMaxLength(128);
+            b.Property(x => x.Status).HasMaxLength(64);
+            // M40: a device's updates go with it; a read replaces them as a whole.
+            b.HasOne<Device>().WithMany().HasForeignKey(x => x.DeviceId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.DeviceId, x.Installed });
+        });
+
+        modelBuilder.Entity<Machine>(b =>
+        {
+            b.ToTable("Machines");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Name).HasMaxLength(256);
+            b.Property(x => x.Type).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Os).HasMaxLength(256);
+            // A customer's machines by name (the Drift tab), current ones first.
+            b.HasIndex(x => new { x.OrganizationId, x.RemovedAt, x.Name });
+        });
+
+        modelBuilder.Entity<MachineLinkDecision>(b =>
+        {
+            b.ToTable("MachineLinkDecisions");
+            b.ConfigureAuditable();
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            // One decision per pair of devices; the matcher reads a customer's decisions.
+            b.HasIndex(x => new { x.DeviceId, x.OtherDeviceId }).IsUnique();
+            b.HasIndex(x => x.OrganizationId);
+        });
+
+        modelBuilder.Entity<MachineProposal>(b =>
+        {
+            b.ToTable("MachineProposals");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Evidence).HasConversion<int>();
+            b.HasIndex(x => new { x.MachineId, x.OtherMachineId }).IsUnique();
+            b.HasIndex(x => x.OtherMachineId);
+            b.HasIndex(x => x.OrganizationId);
         });
 
         modelBuilder.Entity<DeviceCountSnapshot>(b =>
@@ -105,11 +192,59 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.Property(x => x.Title).HasMaxLength(Alert.TitleLength);
             b.Property(x => x.DeviceName).HasMaxLength(Alert.DeviceNameLength);
             b.Property(x => x.Url).HasMaxLength(Alert.UrlLength);
+            // M40: a coverage gap names the CRM rule that found it and its facts; a source's alert has neither.
+            b.Property(x => x.Rule).HasMaxLength(Alert.RuleLength);
+            b.Property(x => x.Facts).HasMaxLength(Alert.FactsLength);
             b.HasIndex(x => new { x.System, x.OrganizationId });
             // One row per alert of a source, so the id survives every read (alert → task links need it).
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
             // The cross-customer queue and the urgent list read open alerts by severity and age.
             b.HasIndex(x => new { x.State, x.Severity, x.CreatedAtSource }).IncludeProperties(x => x.OrganizationId);
+            // M40: the CRM's own status, one row per alert with the alert's id, so a read never changes its version.
+            b.HasOne(x => x.Hold).WithOne().HasForeignKey<AlertHold>(x => x.Id).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AlertHold>(b =>
+        {
+            b.ToTable("AlertHolds");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Reason).HasMaxLength(AlertHold.ReasonLength);
+            // Hidden in Parasoll until a date: the open lists leave such alerts out until then.
+            b.HasIndex(x => x.Until).HasFilter("[Until] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<CoverageRuleSetting>(b =>
+        {
+            b.ToTable("CoverageRuleSettings");
+            b.ConfigureAuditable();
+            b.Property(x => x.Code).HasMaxLength(CoverageRuleSetting.CodeLength);
+            b.HasIndex(x => x.Code).IsUnique();
+            // Every rule comes with its setting, on and with the rule's own limit, so a person's first change has an ETag too.
+            b.HasData(
+                Setting("0199f1a0-4000-7000-8000-000000004001", "atera.agent-silent", 22),
+                // M41: the rules that compare Atera and Huntress and read Huntress's agents.
+                Setting("0199f1a0-4000-7000-8000-000000004101", "huntress.agent-missing", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004102", "atera.agent-missing", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004103", "huntress.agent-silent", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004104", "huntress.agent-outdated", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004105", "huntress.defender-off", 22),
+                // M42: the backup rules of the Backup module (CloudAlly), on and with their own limits.
+                Setting("0199f1a0-4000-7000-8000-000000004201", "cloudally.backup-failed", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004202", "cloudally.backup-late", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004203", "cloudally.backup-paused", 22),
+                Setting("0199f1a0-4000-7000-8000-000000004204", "cloudally.user-not-backed-up", 22));
+        });
+
+        modelBuilder.Entity<AlertTransition>(b =>
+        {
+            b.ToTable("AlertTransitions");
+            b.ConfigureAuditable();
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.Reason).HasMaxLength(AlertHold.ReasonLength);
+            // M40: what people did with an alert goes with it when retention removes it.
+            b.HasOne<Alert>().WithMany().HasForeignKey(x => x.AlertId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.AlertId, x.CreatedAt });
         });
 
         modelBuilder.Entity<TicketRequest>(b =>
@@ -126,6 +261,13 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasIndex(x => new { x.OrganizationId, x.Status });
         });
     }
+
+    /// <summary>A coverage rule's setting as its migration brings it: on, with the rule's own limit, stamped with the day it came.</summary>
+    private static object Setting(string id, string code, int day) => new
+    {
+        Id = Guid.Parse(id), Code = code, Enabled = true, Threshold = (int?)null,
+        CreatedAt = new DateTimeOffset(2026, 10, day, 0, 0, 0, TimeSpan.Zero), IsDeleted = false,
+    };
 }
 
 internal sealed class ServiceDesignTimeFactory() : ModuleDesignTimeFactory<ServiceDbContext>(ServiceDbContext.SchemaName);

@@ -1,0 +1,139 @@
+import { useMemo } from 'react';
+import { Button, Link, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, makeStyles } from '@fluentui/react-components';
+import { ArrowDownload16Regular, DocumentPdf16Regular, Open16Regular, Shield16Regular } from '@fluentui/react-icons';
+import { useTranslation } from 'react-i18next';
+import { h } from '../../app/hearth';
+import { Permissions, useCan } from '../../auth/CurrentUserContext';
+import { Panel } from '../../shared/components/Panel';
+import { ScrollTable } from '../../shared/components/ScrollTable';
+import { formatDate, formatNumber } from '../../shared/utils/format';
+import { safeHttpUrl } from '../../shared/utils/safeUrl';
+import { useTableCardStyles } from '../admin/tableCard';
+import { useStoredDocuments } from '../documents/api';
+import { useStoredDownload } from '../documents/storedFiles';
+import { FigureGrid } from '../reports/FigureGrid';
+import { AlertReadLine } from '../service/alerts/AlertReadLine';
+import { sourceName } from '../service/alerts/alertText';
+import { SavedServiceReadState } from '../service/SavedServiceReadState';
+import { useSecurityOverview } from './api';
+import type { SummaryReport, Usage } from './types';
+
+const useStyles = makeStyles({
+  body: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '14px', minWidth: 0 },
+  muted: { color: h.muted, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' },
+  usage: { display: 'grid', gap: '8px', minWidth: 0 },
+  name: { margin: 0, fontSize: '14px', lineHeight: '20px', fontWeight: 700, overflowWrap: 'anywhere' },
+  facts: { gridTemplateColumns: 'repeat(auto-fit, minmax(min(132px, 100%), 1fr))' },
+  bad: { color: h.emberT }, warning: { color: h.saffronT },
+  // Fluent's table is fixed-layout: the period and the incident counts get their room, the rest share what is left, and below 600 px
+  // the table scrolls inside its frame with a fading edge (ScrollTable) instead of running one cell into the next.
+  reports: { minWidth: '600px' },
+  periodCol: { width: '150px' },
+  incidentsCol: { width: '170px' },
+  external: { display: 'inline-flex', alignItems: 'center', gap: '4px', minHeight: '24px', '& svg': { flexShrink: 0 } },
+  number: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  // Huntress's link and Parasoll's own copy (M43) side by side, one under the other when the column is narrow.
+  files: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', minWidth: 0 },
+  error: { color: h.emberT, margin: 0, fontSize: '12.5px', lineHeight: '18px' },
+});
+
+/** The stored copies of a customer's Huntress reports (M43): a year and some months of both kinds of report fit one page. */
+const COPY_PAGE = 60;
+
+/** The period of a report as people say it: the month of a monthly report, else its first and last day. */
+function period(report: SummaryReport, locale: string) {
+  if (!report.periodStart) return '—';
+  if (report.type === 'monthly_summary') {
+    return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${report.periodStart}T00:00:00Z`));
+  }
+
+  return `${formatDate(report.periodStart)} – ${report.periodEnd ? formatDate(report.periodEnd) : '…'}`;
+}
+
+/**
+ * The customer's security at a glance in the Drift tab (M41): what Huntress counts for the customer's Huntress organizations — the
+ * agents it bills and among them those it calls unresponsive, outdated or isolated — and its monthly summary reports with a link to
+ * the PDF in Huntress. Incidents, escalations and platform actions are alerts: they stand in the alert list above. A figure Huntress
+ * did not give, or a read that never ran, is said as such, never as zero; with Huntress switched off and never read there is no panel.
+ */
+export function SecurityPanel({ organizationId, scope }: { organizationId: string; scope: { owner: string; revision: number } }) {
+  const { t, i18n } = useTranslation(); const styles = useStyles(); const table = useTableCardStyles();
+  const read = useSecurityOverview(organizationId, scope);
+  const overview = read.isSuccess && !read.isFetching ? read.data : undefined;
+  // Lists a read did not carry are empty, as the summary's reads are: nothing is claimed about them.
+  const reads = overview?.reads ?? []; const usages = overview?.usage ?? []; const reports = overview?.reports ?? [];
+  const organizationsRead = reads.find((r) => r.job === 'huntress-organizations');
+  const reportsRead = reads.find((r) => r.job === 'huntress-reports');
+  // M43: the copy Parasoll keeps of a report, for those who may read the customer's documents.
+  const canCopies = useCan(Permissions.customersRead);
+  const stored = useStoredDocuments(organizationId, { enabled: canCopies && reports.length > 0, limit: COPY_PAGE });
+  const copies = useMemo(() => new Map(stored.items.filter((d) => d.kind === 'huntress-monthly').map((d) => [d.sourceKey, d])), [stored.items]);
+  const copy = useStoredDownload(organizationId);
+  // No security source is switched on or was ever read: the panel would have nothing to say, so it is left out.
+  if (overview && reads.length === 0 && usages.length === 0 && reports.length === 0) return null;
+  return <Panel title={t('security.panel.title')} icon={<Shield16Regular />}
+    actions={reads.length > 0 && <AlertReadLine reads={reads} texts="service.readLine" label={(r) => t(`security.reads.${r.job}`, { system: sourceName(t, r.system) })} />}>
+    <div className={styles.body}>
+      <SavedServiceReadState checking={read.isFetching} error={read.error} onRetry={() => void read.refetch()} />
+      {overview && usages.length === 0 && <Text block className={styles.muted}>
+        {organizationsRead?.startedAt ? t('security.panel.notLinked') : t('security.panel.notRead')}</Text>}
+      {usages.map((usage) => <UsageBlock key={`${usage.system}-${usage.externalOrganizationId}`} usage={usage} />)}
+      {reports.length > 0 && <ScrollTable className={table.inset} label={t('security.reports.title')}>
+        <Table aria-label={t('security.reports.title')} size="small" className={styles.reports}>
+          <TableHeader><TableRow>
+            <TableHeaderCell className={styles.periodCol}>{t('security.reports.period')}</TableHeaderCell>
+            <TableHeaderCell className={styles.incidentsCol}>{t('security.reports.incidents')}</TableHeaderCell>
+            <TableHeaderCell>{t('security.reports.signals')}</TableHeaderCell>
+            <TableHeaderCell>{t('security.reports.agents')}</TableHeaderCell>
+            <TableHeaderCell>{t('security.reports.pdf')}</TableHeaderCell>
+          </TableRow></TableHeader>
+          <TableBody>{reports.map((report) => {
+            const href = report.url ? safeHttpUrl(report.url) : undefined;
+            const name = period(report, i18n.language);
+            const kept = report.system === 'huntress' ? copies.get(`huntress:report:${report.externalId}`) : undefined;
+            return <TableRow key={`${report.system}-${report.externalId}`}>
+              <TableCell>{name}</TableCell>
+              <TableCell className={styles.number}>{report.incidentsReported === null ? '—'
+                : report.incidentsResolved === null ? t('security.reports.incidentsReported', { reported: report.incidentsReported })
+                  : t('security.reports.incidentsValue', { reported: report.incidentsReported, resolved: report.incidentsResolved })}</TableCell>
+              <TableCell className={styles.number}>{report.signalsDetected === null ? '—' : formatNumber(report.signalsDetected, 0)}</TableCell>
+              <TableCell className={styles.number}>{report.agentsCount === null ? '—' : formatNumber(report.agentsCount, 0)}</TableCell>
+              <TableCell>{href || kept ? <span className={styles.files}>
+                {href && <Link href={href} target="_blank" rel="noopener noreferrer" className={styles.external}
+                  aria-label={t('security.reports.openPdf', { period: name, source: sourceName(t, report.system) })}>
+                  <DocumentPdf16Regular aria-hidden />{sourceName(t, report.system)}<Open16Regular aria-hidden /></Link>}
+                {kept && <Button size="small" appearance="subtle" icon={<ArrowDownload16Regular />} disabled={copy.busy !== null}
+                  onClick={() => void copy.save(kept.id)} aria-label={t('security.reports.downloadCopy', { period: name })}>
+                  {t('security.reports.storedCopy')}</Button>}
+              </span> : '—'}</TableCell>
+            </TableRow>;
+          })}</TableBody>
+        </Table>
+      </ScrollTable>}
+      {overview && reports.length > 0 && overview.reportsTotal > reports.length && <Text block className={styles.muted}>
+        {t('security.reports.shown', { shown: reports.length, total: overview.reportsTotal })}</Text>}
+      {copy.failed && <p role="alert" className={styles.error}>{t('documents.stored.downloadFailed')}</p>}
+      {/* No report is "none" only once the reports were read; before that it is not known. */}
+      {usages.length > 0 && reports.length === 0 && <Text block className={styles.muted}>
+        {t(reportsRead?.startedAt ? 'security.reports.none' : 'security.reports.notRead')}</Text>}
+    </div>
+  </Panel>;
+}
+
+function UsageBlock({ usage }: { usage: Usage }) {
+  const { t } = useTranslation(); const styles = useStyles();
+  const figure = (value: number | null, tone?: 'bad' | 'warning') =>
+    value === null ? '—' : tone && value > 0 ? <span className={styles[tone]}>{formatNumber(value, 0)}</span> : formatNumber(value, 0);
+  return <section className={styles.usage} aria-label={t('security.panel.usageOf', { name: usage.name })}>
+    <h3 className={styles.name}>{t('security.panel.organization', { name: usage.name, source: sourceName(t, usage.system) })}</h3>
+    <FigureGrid className={styles.facts} items={[
+      { label: t('security.usage.billableAgents'), value: figure(usage.billableAgents),
+        note: usage.agentsCount === null ? undefined : t('security.usage.allAgents', { count: usage.agentsCount }) },
+      { label: t('security.usage.unresponsive'), value: figure(usage.unresponsiveAgents, 'warning') },
+      { label: t('security.usage.outdated'), value: figure(usage.outdatedAgents, 'warning') },
+      { label: t('security.usage.isolated'), value: figure(usage.isolatedAgents, 'bad') },
+      ...(usage.billableIdentities !== null ? [{ label: t('security.usage.identities'), value: figure(usage.billableIdentities) }] : []),
+      ...(usage.satLearners !== null ? [{ label: t('security.usage.learners'), value: figure(usage.satLearners) }] : []),
+    ]} />
+  </section>;
+}

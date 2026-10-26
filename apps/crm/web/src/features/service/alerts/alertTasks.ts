@@ -22,6 +22,9 @@ export interface AlertTaskSource {
   createdAt: string;
   url: string | null;
   resolvedAt: string | null;
+  /** A coverage gap Parasoll found (M40). */
+  rule?: string | null;
+  facts?: Record<string, string> | null;
 }
 
 /** The task an alert has; subject, assignee and due date are empty once the task was deleted. */

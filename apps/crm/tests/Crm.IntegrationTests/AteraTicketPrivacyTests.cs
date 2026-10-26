@@ -33,7 +33,8 @@ public class AteraTicketPrivacyTests(CrmWebFactory factory)
         (await admin.GetAsync("/bff/user", Ct)).EnsureSuccessStatusCode();
         await using var scope = host.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<ServiceDbContext>();
         var requests = await db.TicketRequests.CountAsync(r => r.OrganizationId == f.OrganizationId, Ct);
-        var events = await db.OutboxMessages.CountAsync(Ct);
+        // This customer's events only: other classes store alerts at the same time, and an urgent one queues an event too (M43).
+        var events = await db.OutboxMessages.CountAsync(m => m.Payload.Contains(f.OrganizationId.ToString()), Ct);
         var result = await admin.PostAsJsonAsync("/api/v1/service/ticket-requests", new
         { organizationId = f.OrganizationId, contactId = kind == "missing-contact" ? Guid.NewGuid() : f.ContactId,
           title = "Refused request", description = "Synthetic description", priority = "High", type = "Incident" }, Ct);
@@ -44,7 +45,7 @@ public class AteraTicketPrivacyTests(CrmWebFactory factory)
             body.GetProperty("errors").GetProperty("ContactId").EnumerateArray().ShouldHaveSingleItem().GetString()
                 .ShouldBe("Choose an active contact of this customer.");
         (await db.TicketRequests.CountAsync(r => r.OrganizationId == f.OrganizationId, Ct)).ShouldBe(requests);
-        (await db.OutboxMessages.CountAsync(Ct)).ShouldBe(events);
+        (await db.OutboxMessages.CountAsync(m => m.Payload.Contains(f.OrganizationId.ToString()), Ct)).ShouldBe(events);
         provider.ContactWrites.ShouldBeEmpty(); provider.TicketWrites.ShouldBeEmpty();
     }
 

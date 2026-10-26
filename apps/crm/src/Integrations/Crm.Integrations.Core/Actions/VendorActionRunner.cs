@@ -136,7 +136,7 @@ public sealed class VendorActionRunner(
             return VendorActionResult.Failed("VND_KIND_UNKNOWN", "This kind of action is no longer known to the CRM; nothing was sent.");
         }
 
-        if (VendorActionRules.CheckSwitches(switches, action.Kind, action.ExternalCustomerId, credentials: true) is { } block)
+        if (VendorActionRules.CheckSwitches(switches, action.Kind, action.ExternalCustomerId, credentials: true, action.OrganizationId) is { } block)
         {
             return VendorActionResult.Rejected(block.Code, block.Message);
         }
@@ -242,6 +242,12 @@ public sealed class VendorActionRunner(
             {
                 action.Status = outcome.Status;
                 action.CompletedAt = now;
+                if (outcome.Status == VendorActionStatus.Uncertain)
+                {
+                    // The person who asked hears of it: the outbox carries the notice with this outcome, or neither is saved.
+                    db.OutboxMessages.Add(VendorActionNotices.Message(action.Id, now));
+                }
+
                 final = outcome.Status switch
                 {
                     VendorActionStatus.Succeeded or VendorActionStatus.Simulated or VendorActionStatus.Skipped => OutboundStatus.Succeeded,

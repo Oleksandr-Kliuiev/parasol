@@ -7,10 +7,14 @@ namespace Crm.Integrations.Core;
 
 /// <summary>
 /// Answers core modules whether the latest run of a job read everything it should (DEV-19), and whether it ended longer ago
-/// than the job's freshness limit, the one the connections page uses (DEV-17); a run still in progress is ignored.
+/// than the job's freshness limit, the one the connections page uses (DEV-17); a run still in progress is ignored. Whether a system
+/// is switched on is its adapter's answer, the one the connections page shows (M41).
 /// </summary>
-public sealed class SyncCompletenessReader(IntegrationDbContext db, IConfiguration configuration, TimeProvider time) : ISyncCompletenessSource
+public sealed class SyncCompletenessReader(
+    IntegrationDbContext db, IConfiguration configuration, TimeProvider time, IEnumerable<IIntegrationAdapter> adapters) : ISyncCompletenessSource
 {
+    public bool IsConnected(string system) => adapters.Any(a => a.System == system && a.IsEnabled);
+
     public async Task<SyncCompleteness?> LatestAsync(string system, string job, CancellationToken cancellationToken)
     {
         var latest = await db.SyncRuns.AsNoTracking()

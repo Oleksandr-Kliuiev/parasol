@@ -11,6 +11,21 @@ public class VendorActionRulesTests
         bool enabled = true, bool configured = true, bool write = true, bool dryRun = false, string[]? allowed = null, string[]? kinds = null) =>
         new(enabled, configured, write, dryRun, allowed ?? [], kinds ?? ["ticket.reply"]);
 
+    private static VendorAction Action(string targetType, string targetId, string parameters) => new()
+    {
+        System = "atera", Kind = "k", TargetType = targetType, TargetId = targetId, TargetName = "n", Parameters = parameters, Fingerprint = "f",
+    };
+
+    [Theory]
+    [InlineData("ticket", "4711", "{}", 4711L)]
+    [InlineData("ticket", "not-a-number", "{}", null)]
+    [InlineData("time-entry", "5f0c9a1e-0000-0000-0000-000000000001", "{\"ticket\":4711,\"billable\":true}", 4711L)]
+    [InlineData("time-entry", "5f0c9a1e-0000-0000-0000-000000000001", "{}", null)]
+    [InlineData("time-entry", "5f0c9a1e-0000-0000-0000-000000000001", "{\"ticket\":\"4711\"}", null)]
+    [InlineData("device", "d-1", "not json", null)]
+    public void An_action_names_the_ticket_it_concerns_by_its_target_or_its_ticket_parameter(string targetType, string targetId, string parameters, long? ticket) =>
+        VendorActionTargets.TicketOf(Action(targetType, targetId, parameters)).ShouldBe(ticket);
+
     [Fact]
     public void Switches_that_allow_the_kind_for_the_customer_block_nothing() =>
         VendorActionRules.CheckSwitches(Switches(), "ticket.reply", "17", credentials: true).ShouldBeNull();

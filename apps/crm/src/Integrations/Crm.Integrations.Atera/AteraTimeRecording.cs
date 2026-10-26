@@ -96,7 +96,7 @@ internal sealed class AteraTimeRecordAction(
         var local = (Start: TimeZoneInfo.ConvertTime(start, Oslo), End: TimeZoneInfo.ConvertTime(end, Oslo));
         var parameters = VendorActionRules.Canonical(new Dictionary<string, object?>
         {
-            ["ticket"] = ticket.ExternalId,
+            [VendorActionTargets.TicketParameter] = ticket.ExternalId,
             ["start"] = start.ToString("O", CultureInfo.InvariantCulture),
             ["end"] = end.ToString("O", CultureInfo.InvariantCulture),
             ["billable"] = entry.Billable,
@@ -124,7 +124,7 @@ internal sealed class AteraTimeRecordAction(
     public async Task<VendorActionResult> ExecuteAsync(VendorActionContext context, CancellationToken ct)
     {
         var entryId = Guid.Parse(context.Action.TargetId);
-        var ticketId = context.Parameters.GetProperty("ticket").GetInt64();
+        var ticketId = context.Parameters.GetProperty(VendorActionTargets.TicketParameter).GetInt64();
         AteraTicket? live;
         AteraWorkHoursResult recorded;
         try

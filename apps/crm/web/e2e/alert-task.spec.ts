@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ateraAlert, closeAteraAlert, linkedAteraCustomer, storedAlerts, syncAlerts, syncAtera } from './atera';
+import { ateraAlert, closeAteraAlert, linkedAteraCustomer, searchAlerts, storedAlerts, syncAlerts, syncAtera } from './atera';
 import { api, showInMyTasks, signIn } from './support';
 
 // M38: an alert becomes one task (subject from its title, the employee chooses who and when); a colleague sees that task instead
@@ -14,8 +14,8 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   const me = await api.get<{ displayName: string }>(page, '/bff/user');
 
   await page.goto('/alerts');
-  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(m);
   // The search applies after a short pause: wait for its one result, or a row of the earlier list is focused and then redrawn.
+  await searchAlerts(page, m);
   await expect(page.getByRole('status').filter({ hasText: /alerts?:/ })).toHaveText('1 alert: 1 critical, 0 warnings');
   const row = page.getByRole('table', { name: 'Alerts' }).getByRole('row').filter({ hasText: m });
   const assign = row.getByRole('button', { name: `Assign ${m} disk almost full`, exact: true });
@@ -49,7 +49,9 @@ test('an alert is assigned as one task and the task opens its alert as it is now
   expect(again).toMatchObject({ status: 'EXISTING', task: { id: preview.task!.id } });
 
   // A colleague sees the task, not the way to a second one.
-  await signIn(page, 'Crm.Technician', `/alerts?alert=${alert!.id}`);
+  // Signed in on the queue first: a panel opened by the sign-in's own return address hides the page the sign-in waits for.
+  await signIn(page, 'Crm.Technician', '/alerts');
+  await page.goto(`/alerts?alert=${alert!.id}`);
   const panel = page.getByRole('dialog', { name: `${m} disk almost full`, exact: true });
   await expect(panel.getByText(`${m} free disk space on SRV-${m}`)).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Assign', exact: true })).toHaveCount(0);

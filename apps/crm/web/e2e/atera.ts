@@ -84,6 +84,44 @@ export async function syncDevices(page: Page, customer: AteraCustomer, count: nu
   `${count} devices of ${customer.name}`);
 }
 
+/** Narrows the queue to the test's own alerts and waits for that read: a row menu opened before it would close as the list redraws. */
+export async function searchAlerts(page: Page, marker: string) {
+  const read = page.waitForResponse((r) => r.url().includes('/api/v1/service/alerts?') && new URL(r.url()).searchParams.get('q') === marker);
+  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(marker);
+  await read;
+}
+
+/** What "Atera" holds of an alert now (M40): archived after a resolve, null once deleted. */
+export async function ateraAlertState(page: Page, alert: AteraAlert): Promise<{ Archived?: boolean } | null> {
+  const response = await page.request.get(`${control}/alerts/${alert.AlertID}`);
+  if (response.status() === 404) return null;
+  expect(response.status()).toBe(200);
+  return (await response.json()) as { Archived?: boolean };
+}
+
+/** Changes an agent in "Atera" (M40): it goes silent, is renamed, reports other keys; the next agent read sees it. */
+export async function changeAteraAgent(page: Page, agentId: string, fields: Record<string, unknown>) {
+  const response = await page.request.post(`${control}/agents/${encodeURIComponent(agentId)}`, { data: fields });
+  expect(response.status(), await response.text()).toBe(200);
+}
+
+export interface StoredMachine { id: string; name: string; proposals: number; sources: Array<{ system: string }> }
+
+/** The customer's machines as the Drift tab lists them (M40). */
+export async function storedMachines(page: Page, organizationId: string) {
+  return (await api.get<{ items: StoredMachine[] }>(page, `/api/v1/service/machines?organizationId=${organizationId}&limit=100`)).items;
+}
+
+/** Reads the Windows updates of every agent until the customer's first machine carries a complete read of them (M40). */
+export async function syncPatches(page: Page, customer: AteraCustomer) {
+  await syncAtera(page, ['atera-patches'], async () => {
+    const [machine] = await storedMachines(page, customer.organizationId);
+    if (!machine) return false;
+    const card = await api.get<{ devices: Array<{ patches: { readAt: string | null } }> }>(page, `/api/v1/service/machines/${machine.id}`);
+    return card.devices.every((device) => device.patches.readAt !== null);
+  }, `the Windows updates of ${customer.name}`);
+}
+
 /** Reads the alerts into the CRM until the customer has `count` open alerts. */
 export async function syncAlerts(page: Page, customer: AteraCustomer, count: number) {
   await syncAtera(page, ['atera-alerts'], async () => (await storedAlerts(page, customer.organizationId)).length === count,
@@ -99,10 +137,13 @@ export async function settled(page: Page) {
   });
 }
 
-/** Serious or critical axe findings under WCAG 2.2 AA; Tabster's focus sentinels are skipped (see a11y.spec.ts). */
-export async function seriousViolations(page: Page) {
-  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
-    .exclude('[data-tabster-dummy]').analyze();
+/**
+ * Serious or critical axe findings under WCAG 2.2 AA; Tabster's focus sentinels are skipped (see a11y.spec.ts). `include` narrows the
+ * scan to a popup (an open menu): over the page, its layer would count as covering the controls under it.
+ */
+export async function seriousViolations(page: Page, include?: string) {
+  const builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).exclude('[data-tabster-dummy]');
+  const result = await (include ? builder.include(include) : builder).analyze();
   return result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
     .map((v) => ({ id: v.id, nodes: v.nodes.slice(0, 3).map((n) => n.target.join(' ')) }));
 }
@@ -126,7 +167,9 @@ export interface AteraTicketState extends AteraTicket {
 }
 
 /** A ticket of the customer in Atera, given to the development sign-in's technician unless the fields say otherwise. */
-export const ateraTicket = (page: Page, customer: AteraCustomer, fields: { TicketTitle: string; TechnicianContactID?: number }) =>
+export const ateraTicket = (page: Page, customer: AteraCustomer, fields: {
+  TicketTitle: string; TechnicianContactID?: number; EndUserFirstName?: string; EndUserLastName?: string; EndUserEmail?: string;
+}) =>
   controlPost<AteraTicket>(page, 'tickets', { CustomerID: customer.customerId, TechnicianContactID: DEV_TECHNICIAN, ...fields });
 
 /** A message from the customer's end user, as if written in Atera's portal or by e-mail. */
@@ -174,6 +217,19 @@ export async function syncTicket(page: Page, ticket: AteraTicket, messages: numb
 }
 
 /**
+ * Narrows the Tickets page to the one open ticket `term` finds and waits until the list shows that answer. The search is read after a
+ * pause in typing and its answer redraws the list, so a click before it can land while the rows change and open nothing (Firefox,
+ * 22.10.2026). The count alone is not enough: where this is the only open ticket, it says 1 before the search is read too.
+ */
+export async function searchTickets(page: Page, term: string) {
+  const answered = page.waitForResponse((response) => response.url().includes('/api/v1/service/tickets?')
+    && new URL(response.url()).searchParams.get('search') === term);
+  await page.getByRole('searchbox', { name: 'Search title, number or contact' }).fill(term);
+  await answered;
+  await expect(page.getByRole('status').filter({ hasText: /open ticket/ })).toHaveText('1 open ticket');
+}
+
+/**
  * Makes sure the signed-in employee writes in Atera as `technician`. The ticket read maps the development technician by e-mail;
  * a mapping an earlier run of the shared database left without a person is set here, as an administrator does under Technicians.
  */
@@ -192,3 +248,23 @@ export async function writeAsTechnician(page: Page, technician = DEV_TECHNICIAN)
   } while (cursor);
   throw new Error(`Atera technician ${technician} has not been read yet`);
 }
+
+export interface StoredAction { id: string; status: string; outcomeCode: string | null; closeReason: string | null; ticketId: string | null; etag: string }
+
+/** The actions asked of Atera for the ticket, newest first; `attention` narrows them to those waiting for a check. */
+export async function ticketActions(page: Page, ticket: AteraTicket, attention = false) {
+  return (await api.get<{ items: StoredAction[] }>(page,
+    `/api/v1/actions?targetType=ticket&targetId=${ticket.TicketID}${attention ? '&state=attention' : ''}`)).items;
+}
+
+/**
+ * Records what a person found at Atera for an action without a clear answer, as the action's card does. A test settles what it left
+ * uncertain, so the shared database does not keep "check needed" gaps on Connections.
+ */
+export async function settleAction(page: Page, action: StoredAction, outcome: 'Succeeded' | 'Failed', reason: string) {
+  const response = await page.request.post(`/api/v1/actions/${action.id}/settle`, {
+    data: { outcome, reason }, headers: { 'X-CSRF': '1', 'If-Match': action.etag },
+  });
+  expect(response.status(), await response.text()).toBe(200);
+}
+

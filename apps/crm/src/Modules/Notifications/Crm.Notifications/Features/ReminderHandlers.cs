@@ -71,3 +71,13 @@ internal sealed class ReminderRaisedHandler(INotificationsApi notifications, ICu
             cancellationToken);
     }
 }
+
+/// <summary>
+/// A notice another module's handler asked for through the outbox (M39: an action at a vendor without a clear answer). Enqueued as it
+/// came; its dedupe key makes a second delivery add nothing.
+/// </summary>
+internal sealed class NotificationRequestedHandler(INotificationsApi notifications) : IDomainEventHandler<NotificationRequested>
+{
+    public Task HandleAsync(NotificationRequested domainEvent, CancellationToken cancellationToken) =>
+        notifications.EnqueueAsync(domainEvent.Request, cancellationToken);
+}

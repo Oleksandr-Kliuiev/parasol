@@ -54,13 +54,15 @@ public class ServiceAndTimeTests(CrmWebFactory factory)
             }));
         atera.Given(Request.Create().WithPath("/api/v3/tickets").UsingGet().WithParam("ticketStatus", "Pending")).AtPriority(5)
             .RespondWith(JsonReply(new { items = Array.Empty<object>(), totalPages = 1 }));
+        var recently = DateTimeOffset.UtcNow.AddMinutes(-30).ToString("O", CultureInfo.InvariantCulture);
         atera.Given(Request.Create().WithPath("/api/v3/agents").UsingGet().WithParam("page", "1")).AtPriority(5)
             .RespondWith(JsonReply(new
             {
                 items = new object[]
                 {
-                    new { AgentID = $"a{customerId}-1", CustomerID = customerId, MachineName = "PC-01", OSType = "Work Station", OS = "Windows 11 Pro", Online = true, LastSeen = "2026-09-16T06:00:00Z" },
-                    new { AgentID = $"a{customerId}-2", CustomerID = customerId, MachineName = "SRV-01", OSType = "Server", OS = "Windows Server 2022", Online = false, LastSeen = "2026-09-16T05:00:00Z" },
+                    // Seen within the hour: an agent silent past the limit would be a coverage gap of the CRM as well (M40).
+                    new { AgentID = $"a{customerId}-1", CustomerID = customerId, MachineName = "PC-01", OSType = "Work Station", OS = "Windows 11 Pro", Online = true, LastSeen = recently },
+                    new { AgentID = $"a{customerId}-2", CustomerID = customerId, MachineName = "SRV-01", OSType = "Server", OS = "Windows Server 2022", Online = false, LastSeen = recently },
                 },
                 totalPages = 1,
             }));

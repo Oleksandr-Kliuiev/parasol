@@ -26,6 +26,7 @@ public static class BillingModule
         services.AddModuleServices(typeof(BillingModule).Assembly);
         services.AddScoped<ChargeLedger>();
         services.AddScoped<BillingCollector>();
+        services.AddScoped<ServiceQuantityReader>();
         services.AddScoped<BillingService>();
         services.AddScoped<InvoiceDocumentReader>();
         services.AddScoped<Crm.SharedKernel.Operations.IRestoreParticipant, InvoiceDocumentRestore>();
@@ -192,6 +193,11 @@ public static class BillingModule
 
         group.MapGet("/invoices", async ([AsParameters] InvoiceParameters p, BillingService service, CancellationToken ct) =>
                 Results.Ok(await service.ListInvoicesAsync(new InvoiceQuery(p.OrganizationId, p.OpenOnly ?? false, p.OverdueOnly ?? false, p.Limit, p.Cursor), ct)))
+            .RequirePermission(Permissions.BillingRead);
+
+        // M43: what the customer's services count against its contract, and CloudAlly's bill lines (their money only for cost readers).
+        group.MapGet("/organizations/{organizationId:guid}/service-quantities", async (Guid organizationId, ServiceQuantityReader reader, CancellationToken ct) =>
+                Results.Ok(await reader.ReadAsync(organizationId, ct)))
             .RequirePermission(Permissions.BillingRead);
 
         group.MapGet("/invoices/{id:guid}/history", async (Guid id, Guid? organizationId, BillingService service, CancellationToken ct) =>
