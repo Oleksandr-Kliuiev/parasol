@@ -20,9 +20,13 @@ export const projectKeys = {
   detail: (id: string) => ['projects', 'detail', id] as const,
 };
 
-/** Projects page by page, with how many the filter matches (DEV-12). */
-export function useProjects(filters: ProjectFilters, enabled = true) {
-  return usePagedList<ProjectListItem>(projectKeys.list(filters), BASE, filters, { enabled });
+/**
+ * Projects page by page, with how many the filter matches (DEV-12). `keepPrevious`: the list searched as people type keeps the
+ * rows of the previous search or filter until the new answer is there, so a row someone is clicking does not vanish; a customer's
+ * own tab starts empty and never shows another customer's rows.
+ */
+export function useProjects(filters: ProjectFilters, enabled = true, options: { keepPrevious?: boolean } = {}) {
+  return usePagedList<ProjectListItem>(projectKeys.list(filters), BASE, filters, { enabled, keepPrevious: options.keepPrevious });
 }
 
 /** Every project of a filter, for a picker that must offer all of them (an organization's open projects). */

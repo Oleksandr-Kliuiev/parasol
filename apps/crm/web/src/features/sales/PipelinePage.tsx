@@ -142,6 +142,8 @@ const useStyles = makeStyles({
     fontSize: '12.5px',
     textAlign: 'center',
   },
+  // A figure of an earlier search keeps its place, unseen, while the board of the new one is read.
+  pending: { visibility: 'hidden' },
 });
 
 const stageTones = [h.iris, h.saffron, h.spruce, h.ember, h.irisT, h.saffronT];
@@ -160,16 +162,23 @@ export function PipelinePage() {
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim());
   const filters: OpportunityFilters = { mine, stale, search: debounced };
-  const { data, error, refetch, dataUpdatedAt } = usePipeline(filters);
+  const { data, error, refetch, dataUpdatedAt, isPlaceholderData: held } = usePipeline(filters);
   const stages = useStages();
   const actions = useOpportunityActions();
   const [dialog, setDialog] = useState<{ stageId?: string; opportunity?: Opportunity } | null>(null);
   const [losing, setLosing] = useState<Opportunity | null>(null);
   const restoreFocusTarget = useRestoreFocusTarget();
   const board = useRef<HTMLDivElement>(null);
-  const boardEdges = useScrollEdges(board, 'x', `${narrow}:${data?.columns.length ?? 0}:${dataUpdatedAt}`);
+  // When the board on screen was read. A held board has no read time of its own (0): it keeps the one it had, so its columns, and the
+  // cards they loaded beyond the first, stay as they are until the new board comes.
+  const [boardAt, setBoardAt] = useState(dataUpdatedAt);
+  if (!held && dataUpdatedAt !== boardAt) setBoardAt(dataUpdatedAt);
+  const boardEdges = useScrollEdges(board, 'x', `${narrow}:${data?.columns.length ?? 0}:${boardAt}`);
   const wonStage = stages.data?.find((s) => s.isWon);
   const lostStage = stages.data?.find((s) => s.isLost);
+  // While another search or filter is read, the board of the previous one stays where it is, so a click on a card still lands. Its
+  // figures are not the new answer: counts, sums, the forecast and "no deals" keep their places unseen, and no more cards are read.
+  const figure = (content: ReactNode) => (held ? <span className={styles.pending}>{content}</span> : content);
 
   const card = (opportunity: Opportunity) => (
     <div key={opportunity.id} className={styles.card}>
@@ -273,7 +282,7 @@ export function PipelinePage() {
         end={
           (data?.stale ?? 0) > 0 && (
             <Badge appearance="tint" color="warning">
-              {t('opportunities.staleCount', { count: data!.stale })}
+              {figure(t('opportunities.staleCount', { count: data!.stale }))}
             </Badge>
           )
         }
@@ -298,8 +307,8 @@ export function PipelinePage() {
                 icon={<CalendarLtr16Regular />}
                 tone="iris"
                 label={monthName(month.year, month.month)}
-                value={formatMoney(month.weighted ?? 0)}
-                note={t('opportunities.dealCount', { count: month.count })}
+                value={figure(formatMoney(month.weighted ?? 0))}
+                note={figure(t('opportunities.dealCount', { count: month.count }))}
               />
             ))}
           </StatGrid>
@@ -315,29 +324,30 @@ export function PipelinePage() {
         </div>
       ) : (
         <div ref={board} className={mergeClasses(styles.board, narrow && styles.boardNarrow)} style={narrow ? undefined : boardEdges.style}
-          {...(!narrow && boardEdges.overflow ? { role: 'region', 'aria-label': t('opportunities.title'), tabIndex: 0 } : {})}>
+          aria-busy={held || undefined} {...(!narrow && boardEdges.overflow ? { role: 'region', 'aria-label': t('opportunities.title'), tabIndex: 0 } : {})}>
           {(data?.columns ?? []).map((column, index) => (
             <section key={column.stageId} className={styles.column} aria-label={column.stageName}>
               <div className={styles.columnHead}>
                 <span className={styles.columnTitle}>
                   <span className={styles.dot} style={{ backgroundColor: stageTones[index % stageTones.length] }} aria-hidden />
                   <Text className={styles.stage}>{column.stageName}</Text>
-                  <Text className={styles.count}>{column.count}</Text>
+                  <Text className={styles.count}>{figure(column.count)}</Text>
                 </span>
-                {canSeeMoney && <Text className={styles.sum}>{formatMoney(column.forecast ?? 0)}</Text>}
+                {canSeeMoney && <Text className={styles.sum}>{figure(formatMoney(column.forecast ?? 0))}</Text>}
                 <span className={styles.share} aria-hidden>
                   <span className={styles.shareFill} style={{ width: `${maxCount ? (column.count / maxCount) * 100 : 0}%`, backgroundColor: stageTones[index % stageTones.length] }} />
                 </span>
               </div>
-              {column.count === 0 && <div className={styles.columnEmpty}>{t('opportunities.columnEmpty')}</div>}
+              {column.count === 0 && <div className={mergeClasses(styles.columnEmpty, held && styles.pending)}>{t('opportunities.columnEmpty')}</div>}
               {column.opportunities.map(card)}
               <MoreCards
-                key={`${column.stageId}-${dataUpdatedAt}`}
+                key={`${column.stageId}-${boardAt}`}
                 filters={{ ...filters, stageId: column.stageId, status: 'Open' }}
                 cursor={column.nextCursor}
                 shown={column.opportunities.length}
                 total={column.count}
                 card={card}
+                held={held}
               />
             </section>
           ))}
@@ -352,9 +362,12 @@ export function PipelinePage() {
 
 /**
  * The rest of one board column (DEV-12): the column arrives with its first cards and the count of all of them; the next cards
- * come from the deals list with the board's filters and the column's cursor. A reload of the board starts over (new key).
+ * come from the deals list with the board's filters and the column's cursor. A reload of the board starts over (new key). While the
+ * board of another search is read (`held`), the cursor is not of its filters: the end of the column says it is loading, and waits.
  */
-function MoreCards({ filters, cursor, shown, total, card }: { filters: OpportunityFilters; cursor: string | null; shown: number; total: number; card: (opportunity: Opportunity) => ReactNode }) {
+function MoreCards({ filters, cursor, shown, total, card, held }: {
+  filters: OpportunityFilters; cursor: string | null; shown: number; total: number; card: (opportunity: Opportunity) => ReactNode; held: boolean;
+}) {
   const { t } = useTranslation();
   const notify = useNotify();
   const [extra, setExtra] = useState<Opportunity[]>([]);
@@ -376,7 +389,7 @@ function MoreCards({ filters, cursor, shown, total, card }: { filters: Opportuni
   return (
     <>
       {extra.map(card)}
-      {total > shown && <ListFooter shown={shown + extra.length} total={total} hasMore={Boolean(next)} loading={loading} onMore={() => void more()} />}
+      {total > shown && <ListFooter shown={shown + extra.length} total={total} hasMore={Boolean(next)} loading={loading || held} stale={held} onMore={() => void more()} />}
     </>
   );
 }

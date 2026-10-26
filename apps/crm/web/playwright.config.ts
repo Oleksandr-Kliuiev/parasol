@@ -42,19 +42,42 @@ const hostArgs = [
   `--Integrations:Atera:BaseUrl=${mock}/api/v3/`,
   // M39: the ticket and time actions write to the stand-in only (it keeps what it got); a real account is never configured here.
   '--Integrations:Atera:WriteEnabled=true',
-  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record', 'alert.resolve', 'alert.delete']
+  // M43: customer.create — the "Connect services" wizard creates the customer in the stand-in.
+  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record', 'alert.resolve', 'alert.delete',
+    'customer.create']
     .map((kind, index) => `--Integrations:Atera:EnabledActions:${index}=${kind}`),
   '--Integrations:Atera:AlertUrlTemplate=https://atera.example.invalid/alerts/{0}',
   ...['CustomerSyncCron', 'ContactSyncCron', 'TicketSyncCron', 'RecentTicketSyncCron', 'WorkHoursSyncCron', 'AgentSyncCron', 'PatchSyncCron',
     'AlertSyncCron', 'TicketConversationSyncCron']
     .map((cron) => `--Integrations:Atera:${cron}="0 0 31 2 *"`),
+  // M41: Huntress against its stand-in, the same way: reads on request only, actions to the stand-in only.
+  '--Integrations:Huntress:Enabled=true',
+  `--Integrations:Huntress:BaseUrl=${mock}/huntress/v1/`,
+  '--Integrations:Huntress:WriteEnabled=true',
+  // Huntress allows an account 60 requests a minute and Parasoll keeps 15 of them for people's actions; the stand-in has no limit,
+  // and three browsers answering incidents at once would wait out that minute, so it is given more (never Huntress's own address).
+  '--Integrations:Huntress:AccountRequestsPerMinute=1200',
+  '--Integrations:Huntress:ReadRequestsPerMinute=600',
+  '--Integrations:Huntress:ActionRequestsPerMinute=600',
+  ...['incident.approve', 'incident.reject', 'incident.step', 'incident.resolve', 'incident.comment', 'escalation.resolve', 'agent.isolate', 'agent.release',
+    'agent.uninstall', 'organization.create'].map((kind, index) => `--Integrations:Huntress:EnabledActions:${index}=${kind}`),
+  ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron', 'ReportFileSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
+  // M43: the stand-in serves the reports' PDFs itself, on the loopback host the CRM reaches it on.
+  '--Integrations:Huntress:ReportFileHosts:0=localhost',
+  // M44: a webhook's early read starts within seconds; the suite's own manual reads would otherwise hold it for a minute.
+  '--Integrations:EarlyReads:MinimumGap=00:00:05',
   // M42: CloudAlly's partner API on the stand-in; every kind of action on, the schedules off (tests start the reads).
   '--Integrations:CloudAlly:Enabled=true',
   `--Integrations:CloudAlly:BaseUrl=${mock}/cloudally/`,
   '--Integrations:CloudAlly:WriteEnabled=true',
-  ...['backup.run', 'backup.activate', 'backup.pause', 'backup.resume', 'account.deactivate', 'restore.export', 'restore.other', 'restore.in-place']
+  ...['backup.run', 'backup.activate', 'backup.pause', 'backup.resume', 'account.deactivate', 'restore.export', 'restore.other', 'restore.in-place',
+    'account.create']
     .map((kind, index) => `--Integrations:CloudAlly:EnabledActions:${index}=${kind}`),
   ...['AccountSyncCron', 'BackupSyncCron', 'BillSyncCron'].map((cron) => `--Integrations:CloudAlly:${cron}="0 0 31 2 *"`),
+  // CloudAlly publishes no limit and Parasoll keeps to 120 requests a minute. A backups read asks for every linked account's tasks,
+  // the stand-in gathers the accounts of every engine's tests, and three browsers wait on one read, so by the last engine a read
+  // outlasted a test's wait (M43): the stand-in is given more, as Huntress's is (never CloudAlly's own address).
+  '--Integrations:CloudAlly:RequestsPerMinute=1200',
   '--RateLimits:ApiPerMinute=100000',
   // Every test signs in through the development entry point from one address; the real budget has its own integration test.
   '--RateLimits:SignInPerMinute=100000',
@@ -74,10 +97,21 @@ const providerKeys = [
   '--Integrations:PowerOffice:ClientKey=mock',
   '--Integrations:PowerOffice:SubscriptionKey=mock',
   '--Integrations:Atera:ApiKey=mock',
+  '--Integrations:Huntress:ApiKey=mock',
+  '--Integrations:Huntress:ApiSecret=mock',
   '--Integrations:CloudAlly:ClientId=mock',
   '--Integrations:CloudAlly:ClientSecret=mock',
   '--Integrations:CloudAlly:Email=api@parasoll.example',
   '--Integrations:CloudAlly:Password=mock',
+].join(' ');
+
+// M44: crm-web receives the vendors' webhooks, so only it gets their synthetic secret and key (tools/dev-mocks/webhooks.mjs signs with the
+// same); the worker starts the reads they ask for.
+const webhookKeys = [
+  '--Integrations:Huntress:WebhookEnabled=true',
+  '--Integrations:Huntress:WebhookSecret=whsec_c3ludGhldGljLWUyZS1odW50cmVzcy1zZWNyZXQ=',
+  '--Integrations:Atera:WebhookEnabled=true',
+  '--Integrations:Atera:WebhookKey=synthetic-e2e-atera-webhook-key-0123456789',
 ].join(' ');
 
 // Hosts that are already running are reused only on request: they may be connected to another database than E2E_SQL.
@@ -117,7 +151,7 @@ export default defineConfig({
   webServer: [
     { command: 'node ../tools/dev-mocks/external-apis.mjs 5299', url: `${mock}/health`, reuseExistingServer: false },
     {
-      command: `${dotnet} run --project ../src/Hosts/Crm.Web --launch-profile http -- --urls ${webUrl} --Database:MigrateOnStartup=true ${hostArgs}`,
+      command: `${dotnet} run --project ../src/Hosts/Crm.Web --launch-profile http -- --urls ${webUrl} --Database:MigrateOnStartup=true ${hostArgs} ${webhookKeys}`,
       url: `${webUrl}/health/ready`,
       ignoreHTTPSErrors: true,
       timeout: 300_000,

@@ -119,14 +119,20 @@ internal sealed partial class ContractsApi(ContractsDbContext db, HourBankServic
             banks.Where(b => b.RemainingHours > 0).Select(b => new HourBankBalance(b.Id, b.Name, b.RemainingHours, b.OverageRate, b.ValidFrom, b.ValidTo)).ToList());
     }
 
-    public async Task<IReadOnlyList<BillableContractLine>> GetBillableLinesAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<BillableContractLine>> GetBillableLinesAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken) =>
+        BillableLinesAsync(null, periodStart, periodEnd, cancellationToken);
+
+    public Task<IReadOnlyList<BillableContractLine>> GetBillableLinesAsync(Guid organizationId, DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken) =>
+        BillableLinesAsync(organizationId, periodStart, periodEnd, cancellationToken);
+
+    private async Task<IReadOnlyList<BillableContractLine>> BillableLinesAsync(Guid? organizationId, DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken)
     {
         var rows = await (
                 from line in db.ContractLines.AsNoTracking()
                 join contract in db.Contracts.AsNoTracking() on line.ContractId equals contract.Id
                 // An ended contract still owes what it delivered until its end date: the monthly job that marks it Ended runs before the
                 // run for its last period is collected, and dropping it then would lose the final invoice. The date window below bounds it.
-                where contract.Status != ContractStatus.Draft &&
+                where contract.Status != ContractStatus.Draft && (organizationId == null || contract.OrganizationId == organizationId) &&
                       contract.StartDate <= periodEnd && (contract.EndDate == null || contract.EndDate >= periodStart) &&
                       line.ValidFrom <= periodEnd && (line.ValidTo == null || line.ValidTo >= periodStart)
                 select new

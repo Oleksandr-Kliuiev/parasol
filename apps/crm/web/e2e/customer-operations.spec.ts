@@ -25,7 +25,8 @@ test('the Drift tab lists a customer’s open alerts first, then its devices wit
   await expect(page.getByRole('tab', { name: 'Service', exact: true })).toHaveCount(0);
 
   const main = page.getByRole('main');
-  await expect(main.getByRole('heading', { level: 2 })).toHaveText(['Saved service data', 'Open alerts', 'Devices', 'Tickets', 'Ticket requests']);
+  // Huntress is switched on in e2e, so the security panel (M41) stands between the devices and the tickets.
+  await expect(main.getByRole('heading', { level: 2 })).toHaveText(['Saved service data', 'Open alerts', 'Devices', 'Security', 'Tickets', 'Ticket requests']);
   const alerts = page.getByRole('region', { name: 'Open alerts', exact: true });
   await expect(alerts.getByRole('listitem')).toHaveText([
     new RegExp(`${customer.marker} service stopped.*Critical`), new RegExp(`${customer.marker} disk almost full.*Critical`),

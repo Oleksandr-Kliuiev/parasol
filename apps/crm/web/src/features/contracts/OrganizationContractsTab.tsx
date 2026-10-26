@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { ErrorState } from '../../shared/components/ErrorState';
 import { Panel } from '../../shared/components/Panel';
+import { ServiceQuantitiesPanel } from '../billing/ServiceQuantitiesPanel';
 import { useContracts } from './api';
 import { HourBankForm } from './ContractDialogs';
 import { ContractList } from './ContractsPage';
@@ -19,6 +20,7 @@ export function OrganizationContractsTab({ organizationId }: { organizationId: s
   const { t } = useTranslation();
   const navigate = useNavigate();
   const canWrite = useCan(Permissions.contractsWrite);
+  const canSeeBilling = useCan(Permissions.billingRead);
   const contracts = useContracts({ organizationId });
   const [addingBank, setAddingBank] = useState(false);
   const restoreFocusTarget = useRestoreFocusTarget();
@@ -43,6 +45,8 @@ export function OrganizationContractsTab({ organizationId }: { organizationId: s
           <ContractList rows={rows} loading={contracts.isPending} empty={t('contracts.emptyForOrganization')} showOrganization={false} inPanel />
         )}
       </Panel>
+      {/* M43: what Atera, Huntress and CloudAlly count against these contracts, as the next billing basis takes it. */}
+      {canSeeBilling && <ServiceQuantitiesPanel organizationId={organizationId} />}
       <Panel
         title={t('contracts.hourBanks.title')}
         icon={<HourglassHalf16Regular />}

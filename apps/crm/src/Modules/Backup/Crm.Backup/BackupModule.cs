@@ -28,6 +28,7 @@ public static class BackupModule
         services.AddOptions<BackupOptions>().Bind(configuration.GetSection(BackupOptions.SectionName));
         services.AddScoped<IBackupApi, BackupApi>();
         services.AddScoped<BackupQueries>();
+        services.AddScoped<IBackupFacts, BackupFacts>();
         services.AddScoped<LicensedUsers>();
         // M42: the coverage rules of backups, checked by the Service module after each complete read of CloudAlly.
         services.AddScoped<ICoverageRule, BackupFailedRule>();

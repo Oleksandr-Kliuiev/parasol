@@ -29,10 +29,13 @@ public static class CloudAllyActionKinds
     public const string RestoreOther = "restore.other";
     public const string RestoreInPlace = "restore.in-place";
 
+    /// <summary>M43: the customer's account created from the "Connect services" wizard.</summary>
+    public const string AccountCreate = "account.create";
+
     /// <summary>The parameter that names an entity's task: CloudAlly addresses an entity through its task.</summary>
     public const string TaskParameter = "task";
 
-    public static readonly string[] All = [Run, Activate, Pause, Resume, Deactivate, Export, RestoreOther, RestoreInPlace];
+    public static readonly string[] All = [Run, Activate, Pause, Resume, Deactivate, Export, RestoreOther, RestoreInPlace, AccountCreate];
 }
 
 /// <summary>CloudAlly's own write switches (M42), read again for every preview, request and attempt.</summary>

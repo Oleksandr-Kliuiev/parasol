@@ -27,6 +27,8 @@ using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Huntress;
+
 using Crm.Integrations.CloudAlly;
 using Microsoft.Extensions.Options;
 using Crm.SharedKernel.Application;
@@ -70,6 +72,8 @@ builder.Services
     .AddMicrosoftGraphIntegration(builder.Configuration)
     .AddPowerOfficeIntegration(builder.Configuration)
     .AddAteraIntegration(builder.Configuration)
+    .AddHuntressIntegration(builder.Configuration)
+
     .AddCloudAllyIntegration(builder.Configuration)
     .AddPartnerCenterIntegration(builder.Configuration);
 
@@ -77,6 +81,8 @@ builder.Services
 builder.Services.AddOutboxProcessing();
 // M39.1: vendor actions are sent every five seconds, with a heartbeat of their own.
 builder.Services.AddVendorActionLoop();
+// M44: the reads vendors' webhooks asked for start within seconds, through the job server.
+builder.Services.AddEarlyReadLoop<HangfireJobTrigger>();
 builder.Services.AddDatabaseReadiness();
 // DEV-17: reads operational state independently of Hangfire, so a stalled job server remains observable.
 builder.Services.AddHostedService<OperationalTelemetry>();
@@ -141,6 +147,8 @@ jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditI
 jobs.AddOrUpdate<Crm.Audit.Features.AuditIntegrityJob>(Crm.Audit.Features.AuditIntegrityJob.FullJobId, job => job.VerifyAllAsync(CancellationToken.None), Cron.Never(), new RecurringJobOptions { TimeZone = oslo });
 // DEV-14: the closed month's figures are kept once the month is over (daily; takes only what is missing).
 jobs.AddOrUpdate<Crm.Reports.BiSnapshotJob>(Crm.Reports.BiSnapshotJob.JobId, job => job.RunAsync(CancellationToken.None), "10 5 * * *", new RecurringJobOptions { TimeZone = oslo });
+// M43: last month's summary of every serviced customer, after the night's reads (Huntress reports and their files at 04:45/04:55).
+jobs.AddOrUpdate<Crm.Reports.CustomerMonthReportJob>(Crm.Reports.CustomerMonthReportJob.JobId, job => job.RunAsync(CancellationToken.None), "20 5 * * *", new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<QuoteExpiryJob>(QuoteExpiryJob.JobId, job => job.RunAsync(CancellationToken.None), "0 6 * * *", new RecurringJobOptions { TimeZone = oslo });
 // DEV-08: quote documents that storage could not take at release are stored as soon as it can; orphaned objects expire.
 jobs.AddOrUpdate<QuoteDocumentJob>(QuoteDocumentJob.JobId, job => job.RunAsync(CancellationToken.None), "* * * * *");
@@ -187,6 +195,14 @@ jobs.AddOrUpdate<AteraWorkHoursSyncJob>(AteraWorkHoursSyncJob.JobId, job => job.
 jobs.AddOrUpdate<AteraAgentSyncJob>(AteraAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraPatchSyncJob>(AteraPatchSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.PatchSyncCron, new RecurringJobOptions { TimeZone = oslo });
 jobs.AddOrUpdate<AteraAlertSyncJob>(AteraAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), atera.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
+
+// M41: Huntress — organizations and their usage, agents (machines and coverage), incidents/escalations/platform actions, reports.
+var huntress = app.Services.GetRequiredService<IOptions<HuntressOptions>>().Value;
+jobs.AddOrUpdate<HuntressOrganizationSyncJob>(HuntressOrganizationSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.OrganizationSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<HuntressAgentSyncJob>(HuntressAgentSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.AgentSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<HuntressAlertSyncJob>(HuntressAlertSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.AlertSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<HuntressReportSyncJob>(HuntressReportSyncJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.ReportSyncCron, new RecurringJobOptions { TimeZone = oslo });
+jobs.AddOrUpdate<HuntressReportFileJob>(HuntressReportFileJob.JobId, job => job.RunAsync(CancellationToken.None), huntress.ReportFileSyncCron, new RecurringJobOptions { TimeZone = oslo });
 
 // M42: CloudAlly's accounts (for the mapping), the backups with the coverage check after a complete read, and the bills.
 var cloudAlly = app.Services.GetRequiredService<IOptions<CloudAllyOptions>>().Value;

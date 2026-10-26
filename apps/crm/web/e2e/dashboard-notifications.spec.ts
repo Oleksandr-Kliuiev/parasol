@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { api, createOrganization, marker, signIn, toast } from './support';
 
 /** The company's own date, the way the CRM computes it. */
@@ -6,6 +6,16 @@ function today(offsetDays = 0) {
   const oslo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Oslo' }));
   oslo.setDate(oslo.getDate() + offsetDays);
   return `${oslo.getFullYear()}-${String(oslo.getMonth() + 1).padStart(2, '0')}-${String(oslo.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Ends a contract the test made. The dashboard lists the twenty live contracts that end first and the e2e database keeps
+ * every run's contracts, so a contract left live takes a place in that list from the runs that follow. The answer is not
+ * checked: a contract that never became active cannot be ended and is in no list, and a failed clean-up must not hide why
+ * the test failed.
+ */
+function endContract(page: Page, contractId: string) {
+  return page.request.post(`/api/v1/contracts/${contractId}/end`, { data: {}, headers: { 'X-CSRF': '1' } });
 }
 
 test('the dashboard adds up contracts, renewals and hours', async ({ page }) => {
@@ -17,30 +27,36 @@ test('the dashboard adds up contracts, renewals and hours', async ({ page }) => 
     sku: `${m}-MSP`, name: `${m} Drift`, type: 'ManagedService', businessLine: 'Atera', unit: 'Device',
     billingPeriod: 'Monthly', vatRate: 25, listPrice: 2500, unitCost: 1000,
   });
+  // The renewal list holds the twenty contracts that end first, and of those that end on the same day the ones made first.
+  // Ending today, this contract comes before every contract that ends later: only live contracts that end today and were
+  // made before it can push it out of the list.
   const contract = await api.post<{ id: string; number: string }>(page, '/api/v1/contracts', {
-    organizationId: organization.id, title: `${m} Drift`, type: 'Msp', startDate: today(-30), endDate: today(2),
+    organizationId: organization.id, title: `${m} Drift`, type: 'Msp', startDate: today(-30), endDate: today(),
     autoRenew: false, renewalTermMonths: 0, noticePeriodDays: 0, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance', indexation: false,
   });
-  await api.post(page, `/api/v1/contracts/${contract.id}/lines`, {
-    productId: product.id, quantityModel: 'Fixed', quantity: 4, unitPrice: 2500, validFrom: today(-30),
-  });
-  await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
+  try {
+    await api.post(page, `/api/v1/contracts/${contract.id}/lines`, {
+      productId: product.id, quantityModel: 'Fixed', quantity: 4, unitPrice: 2500, validFrom: today(-30),
+    });
+    await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
 
-  await signIn(page, 'Crm.Management');
-  await page.goto('/dashboard');
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
-  // 4 × 2 500 of this contract is part of the monthly recurring revenue.
-  await expect(page.getByText(/Monthly recurring revenue/)).toBeVisible();
-  // The bars are drawn for the eye only; screen readers read the same months from the table the chart carries.
-  await expect(page.getByRole('table', { name: 'Invoiced amount per month, excluding VAT' })).toBeAttached();
+    await signIn(page, 'Crm.Management');
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    // 4 × 2 500 of this contract is part of the monthly recurring revenue.
+    await expect(page.getByText(/Monthly recurring revenue/)).toBeVisible();
+    // The bars are drawn for the eye only; screen readers read the same months from the table the chart carries.
+    await expect(page.getByRole('table', { name: 'Invoiced amount per month, excluding VAT' })).toBeAttached();
 
-  // The renewal list shows the twenty contracts that end first, and the shared database keeps filling up with runs:
-  // this contract ends in two days, so it is at the top of the list whatever else is in there.
-  const renewalRow = page.getByRole('row').filter({ hasText: contract.number });
-  await expect(renewalRow).toBeVisible();
-  await expect(renewalRow.getByText(`${m} Dashbord AS`)).toBeVisible();
-  await renewalRow.getByRole('link', { name: contract.number }).click();
-  await expect(page.getByRole('heading', { level: 1, name: `${m} Drift` })).toBeVisible();
+    const renewalRow = page.getByRole('row').filter({ hasText: contract.number });
+    await expect(renewalRow).toBeVisible();
+    await expect(renewalRow.getByText(`${m} Dashbord AS`)).toBeVisible();
+    await renewalRow.getByRole('link', { name: contract.number }).click();
+    await expect(page.getByRole('heading', { level: 1, name: `${m} Drift` })).toBeVisible();
+  } finally {
+    // Admin or Management is signed in here, and both may end contracts.
+    await endContract(page, contract.id);
+  }
 
   // A technician has no dashboard.
   await signIn(page, 'Crm.Technician');
@@ -59,46 +75,51 @@ test('a contract reminder reaches the bell and can be muted', async ({ page }) =
     autoRenew: false, renewalTermMonths: 0, noticePeriodDays: 30, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance',
     indexation: false, ownerId,
   });
-  await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
+  try {
+    await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
 
-  // The nightly lifecycle job creates the 30-day reminder, and notifications turn it into a notice.
-  await signIn(page, 'Crm.Admin');
-  await api.post(page, '/api/v1/integrations/jobs/contract-lifecycle/trigger');
+    // The nightly lifecycle job creates the 30-day reminder, and notifications turn it into a notice.
+    await signIn(page, 'Crm.Admin');
+    await api.post(page, '/api/v1/integrations/jobs/contract-lifecycle/trigger');
 
-  await signIn(page, 'Crm.Sales');
-  await expect
-    .poll(
-      async () => {
-        await page.goto('/notifications');
-        await page.waitForLoadState('networkidle');
-        return page.getByText(`Contract ${contract.number} for ${m} Varsel AS ends`).first().isVisible();
-      },
-      { timeout: 90_000, intervals: [3_000, 5_000] },
-    )
-    .toBeTruthy();
+    await signIn(page, 'Crm.Sales');
+    await expect
+      .poll(
+        async () => {
+          await page.goto('/notifications');
+          await page.waitForLoadState('networkidle');
+          return page.getByText(`Contract ${contract.number} for ${m} Varsel AS ends`).first().isVisible();
+        },
+        { timeout: 90_000, intervals: [3_000, 5_000] },
+      )
+      .toBeTruthy();
 
-  // The bell counts it, and reading it clears the count.
-  const bell = page.getByRole('button', { name: /^Notifications, \d+ unread$/ });
-  await expect(bell).toBeVisible();
-  await bell.click();
-  await expect(page.getByText(`Contract ${contract.number}`).first()).toBeVisible();
-  await page.keyboard.press('Escape');
+    // The bell counts it, and reading it clears the count.
+    const bell = page.getByRole('button', { name: /^Notifications, \d+ unread$/ });
+    await expect(bell).toBeVisible();
+    await bell.click();
+    await expect(page.getByText(`Contract ${contract.number}`).first()).toBeVisible();
+    await page.keyboard.press('Escape');
 
-  // The development user keeps their settings between runs, so the test starts from a known state.
-  await api.put(page, '/api/v1/notifications/preferences', { emailEnabled: true, digestHour: 7, mutedKinds: [] });
-  await page.reload();
+    // The development user keeps their settings between runs, so the test starts from a known state.
+    await api.put(page, '/api/v1/notifications/preferences', { emailEnabled: true, digestHour: 7, mutedKinds: [] });
+    await page.reload();
 
-  const row = page.getByRole('listitem').filter({ hasText: `Contract ${contract.number}` });
-  await row.getByRole('button', { name: /Mark as read/ }).click();
-  await expect(row.getByText('New', { exact: true })).toBeHidden();
+    const row = page.getByRole('listitem').filter({ hasText: `Contract ${contract.number}` });
+    await row.getByRole('button', { name: /Mark as read/ }).click();
+    await expect(row.getByText('New', { exact: true })).toBeHidden();
 
-  // Muting a kind is remembered and the digest leaves it out.
-  const contractsEnding = page.getByRole('checkbox', { name: 'Contracts ending' });
-  await contractsEnding.uncheck();
-  await expect(contractsEnding).not.toBeChecked();
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(toast(page, 'Your notification settings are saved')).toBeVisible();
-  // Read it back from the API: other specs sign in as the same development user, so the stored value is what matters.
-  const preferences = await api.get<{ mutedKinds: string[] }>(page, '/api/v1/notifications/preferences');
-  expect(preferences.mutedKinds).toContain('ContractEnding');
+    // Muting a kind is remembered and the digest leaves it out.
+    const contractsEnding = page.getByRole('checkbox', { name: 'Contracts ending' });
+    await contractsEnding.uncheck();
+    await expect(contractsEnding).not.toBeChecked();
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(toast(page, 'Your notification settings are saved')).toBeVisible();
+    // Read it back from the API: other specs sign in as the same development user, so the stored value is what matters.
+    const preferences = await api.get<{ mutedKinds: string[] }>(page, '/api/v1/notifications/preferences');
+    expect(preferences.mutedKinds).toContain('ContractEnding');
+  } finally {
+    // Left live, it would be among the first renewals on the dashboard in 25 days. Sales and Admin may both end contracts.
+    await endContract(page, contract.id);
+  }
 });

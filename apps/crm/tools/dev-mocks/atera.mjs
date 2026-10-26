@@ -89,6 +89,20 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     const path = url.pathname.slice('/api/v3/'.length);
     if (ticketRoutes.api(req, res, url, body, path)) return;
     if (deviceRoutes.api(req, res, url, path)) return;
+    if (path === 'customers' && req.method === 'POST') {
+      // M43 (and the mapping screen's export): Atera answers a create with the new id as ActionID. Its model binding ignores the case
+      // of field names (the CRM's client writes camel case); the stand-in keeps Atera's own spelling for later reads.
+      const fields = parse(body);
+      const field = (name) => fields?.[name] ?? fields?.[name[0].toLowerCase() + name.slice(1)] ?? null;
+      if (!fields || typeof field('CustomerName') !== 'string' || !field('CustomerName').trim()) return send(res, 400, { message: 'CustomerName is required' });
+      const id = newId();
+      const now = new Date().toISOString();
+      ateraCustomers.push({
+        CustomerID: id, CustomerName: field('CustomerName'), BusinessNumber: field('BusinessNumber'), Domain: field('Domain'), Address: field('Address'),
+        City: field('City'), ZipCodeStr: field('ZipCode'), Country: field('Country'), Phone: field('Phone'), Website: field('Website'), CreatedOn: now, LastModified: now,
+      });
+      return send(res, 200, { ActionID: id });
+    }
     if (path === 'customers') return ateraPage(res, url, ateraCustomers);
     if (path === 'contacts' && req.method === 'GET') return ateraPage(res, url, ateraContacts);
     if (path === 'contacts' && req.method === 'POST') {

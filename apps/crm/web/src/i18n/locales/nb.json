@@ -784,8 +784,14 @@
       "privacy-retention": "Lagringstid for personopplysninger",
       "quote-expiry": "La gamle tilbud utløpe",
       "reports-snapshot": "Månedlige øyeblikksbilder for rapporter",
+      "reports-customer-months": "Månedsoppsummering per kunde",
       "worker-heartbeat": "Livstegn fra bakgrunnstjenesten",
       "atera-ticket-conversations": "Meldinger i saker (Atera)",
+      "huntress-organizations": "Organisasjoner og forbruk (Huntress)",
+      "huntress-agents": "Enheter (Huntress)",
+      "huntress-alerts": "Hendelser og eskaleringer (Huntress)",
+      "huntress-reports": "Månedsrapporter (Huntress)",
+      "huntress-report-files": "Månedsrapporter som filer (Huntress)",
       "cloudally-accounts": "Kundekontoer (CloudAlly)",
       "cloudally-backups": "Sikkerhetskopier (CloudAlly)",
       "cloudally-bills": "Fakturering (CloudAlly)"
@@ -811,13 +817,15 @@
     "microsoft-graph": "Microsoft Entra ID",
     "brreg": "Brønnøysundregistrene",
     "partnercenter": "Microsoft Partner Center",
+    "huntress": "Huntress",
     "cloudally": "CloudAlly"
   },
   "externalTypes": {
     "Customer": "Kunder",
     "ContactPerson": "Kontaktpersoner",
     "Contact": "Kontakter",
-    "Product": "Produkter"
+    "Product": "Produkter",
+    "Organization": "Organisasjoner"
   },
   "mappings": {
     "title": "Koblinger",
@@ -1231,14 +1239,18 @@
       "PerAteraDevice": "Per enhet i Atera",
       "PerM365User": "Per Microsoft 365-bruker",
       "PerSubscription": "Per abonnement",
-      "Manual": "Registreres hver periode"
+      "Manual": "Registreres hver periode",
+      "PerHuntressAgent": "Per agent i Huntress",
+      "PerBackupSeat": "Per bruker med sikkerhetskopi (CloudAlly)"
     },
     "quantityModelHints": {
       "Fixed": "Antallet under faktureres hver periode.",
       "PerAteraDevice": "Telles fra Atera-agenter siste dag i perioden.",
       "PerM365User": "Tildelte lisenser i kundens tenant, lest gjennom GDAP natten før kjøringen.",
       "PerSubscription": "Hentes fra kundens CSP-abonnementer.",
-      "Manual": "Noen registrerer antallet før hver faktureringskjøring."
+      "Manual": "Noen registrerer antallet før hver faktureringskjøring.",
+      "PerHuntressAgent": "Agentene Huntress fakturerer for kunden siste dag i perioden.",
+      "PerBackupSeat": "Brukerne CloudAlly fakturerer for kundens sikkerhetskopier siste dag i perioden."
     },
     "deviceFilters": {
       "All": "Alle enheter",
@@ -1548,7 +1560,9 @@
       "conversations": "Meldinger i saker ({{system}})",
       "alerts": "Driftsvarsler ({{system}})",
       "devices": "Enheter ({{system}})",
-      "patches": "Windows-oppdateringer ({{system}})"
+      "patches": "Windows-oppdateringer ({{system}})",
+      "security-alerts": "Driftsvarsler ({{system}})",
+      "security-devices": "Enheter ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} er ikke lest ennå",
@@ -1640,7 +1654,36 @@
     "consoleOnly": "Fjerntilkobling, skript, installering av oppdateringer og omstart gjøres i {{source}}: API-et tilbyr dem ikke.",
     "from": "fra {{sources}}",
     "proposalBadge_one": "Sjekk: mulig duplikat",
-    "proposalBadge_other": "Sjekk: {{count}} mulige duplikater"
+    "proposalBadge_other": "Sjekk: {{count}} mulige duplikater",
+    "protection": {
+      "defender": "Defender: {{status}}",
+      "reported": "meldt",
+      "defenderStatuses": {
+        "Healthy": "I orden",
+        "Unhealthy": "Ikke i orden",
+        "Unmanaged": "Et annet antivirus styrer",
+        "Disabled": "Slått av"
+      },
+      "isolation": {
+        "Isolated": "Isolert fra nettverket",
+        "Pending Isolation": "Blir isolert",
+        "Pending Release": "Isoleringen oppheves",
+        "Disabled": "Ikke isolert",
+        "Enabled": "Ikke isolert (brannmur på)"
+      },
+      "agentVersion": "Huntress-agent {{version}}",
+      "machine": "Enheten {{name}}",
+      "isolateItem": "Isoler enheten …",
+      "isolate": "Isoler",
+      "isolateTitle": "Isoler {{name}} fra nettverket",
+      "releaseItem": "Opphev isoleringen …",
+      "release": "Opphev isoleringen",
+      "releaseTitle": "Opphev isoleringen av {{name}}",
+      "uninstallItem": "Fjern Huntress-agenten …",
+      "uninstall": "Fjern agenten",
+      "uninstallTitle": "Fjern Huntress-agenten fra {{name}}",
+      "noActions": "Ingenting er bedt om i Huntress for denne enheten ennå."
+    }
   },
   "alerts": {
     "title": "Driftsvarsler",
@@ -1677,6 +1720,7 @@
     "sourceNames": {
       "atera": "Atera",
       "parasoll": "Parasoll",
+      "huntress": "Huntress",
       "cloudally": "CloudAlly"
     },
     "gaps": {
@@ -1684,6 +1728,21 @@
       "changeCheck": "Endre kontrollen",
       "ateraAgentSilent": {
         "title": "Atera-agenten på {{device}} har ikke meldt seg siden {{date}}"
+      },
+      "huntressAgentMissing": {
+        "title": "{{device}} har hatt Atera-agenten siden {{date}}, men ingen Huntress-agent"
+      },
+      "ateraAgentMissing": {
+        "title": "{{device}} har hatt Huntress-agenten siden {{date}}, men ingen Atera-agent"
+      },
+      "huntressAgentSilent": {
+        "title": "Huntress-agenten på {{device}} har ikke meldt seg siden {{date}}"
+      },
+      "huntressAgentOutdated": {
+        "title": "Huntress-agenten på {{device}} kjører versjon {{version}}; {{newest}} har kjørt på andre enheter siden {{date}}"
+      },
+      "defenderOff": {
+        "title": "Microsoft Defender beskytter ikke {{device}}: {{status}}"
       },
       "openBackup": "Åpne kundens sikkerhetskopi",
       "backupFailed": {
@@ -1805,7 +1864,7 @@
       "delete": "Slett i Atera",
       "deleteItem": "Slett i Atera …",
       "deleteTitle": "Slett driftsvarselet i Atera",
-      "none": "Ingenting er bedt om i Atera for dette driftsvarselet."
+      "none": "Ingenting er bedt om i {{source}} for dette driftsvarselet."
     },
     "hide": {
       "heading": "I Parasoll",
@@ -1839,6 +1898,13 @@
       "hiddenSince": "Skjult til {{date}} av {{name}}: «{{reason}}»",
       "someone": "noen",
       "untilFact": "skjult til {{date}}"
+    },
+    "closedAtSource": {
+      "fact": "Lukket i {{source}}",
+      "explain": "{{source}} lukket det {{date}}. Fordi det haster, står det åpent i Parasoll til noen bekrefter at det er ferdig.",
+      "confirm": "Bekreft lukking",
+      "confirmed": "Lukkingen er bekreftet",
+      "needsConfirming": "må bekreftes"
     }
   },
   "coverage": {
@@ -1851,6 +1917,34 @@
         "name": "Atera-agent som ikke melder seg",
         "description": "Et driftsvarsel når Atera-agenten på en enhet ikke har meldt seg på lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
         "when": "Kontrolleres etter hver fullstendige lesing av Atera-agentene, om natten."
+      },
+      "huntressAgentMissing": {
+        "name": "Enhet uten Huntress",
+        "description": "Et driftsvarsel når en enhet Atera overvåker, har vært uten Huntress-agent lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
+        "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time, for kunder som er koblet til en Huntress-organisasjon.",
+        "limit": "Dager før driftsvarsel"
+      },
+      "ateraAgentMissing": {
+        "name": "Enhet uten Atera",
+        "description": "Et driftsvarsel når en enhet Huntress overvåker, har vært uten Atera-agent lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
+        "when": "Kontrolleres etter hver fullstendige lesing av Atera-agentene, om natten.",
+        "limit": "Dager før driftsvarsel"
+      },
+      "huntressAgentSilent": {
+        "name": "Huntress-agent som ikke melder seg",
+        "description": "Et driftsvarsel når Huntress-agenten på en enhet ikke har meldt seg på lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
+        "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time."
+      },
+      "huntressAgentOutdated": {
+        "name": "Utdatert Huntress-agent",
+        "description": "Et driftsvarsel når en Huntress-agent blir stående på en eldre versjon mens en nyere har kjørt på andre enheter lenger enn grensen. Huntress sier ikke hvilke agenter som er utdatert, så Parasoll sammenligner versjonene.",
+        "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time.",
+        "limit": "Dager på eldre versjon"
+      },
+      "defenderOff": {
+        "name": "Defender beskytter ikke",
+        "description": "Et driftsvarsel når Huntress melder at Microsoft Defender på en Windows-enhet ikke er i orden eller er slått av. En server er kritisk, andre enheter en advarsel.",
+        "when": "Kontrolleres etter hver fullstendige lesing av Huntress-agentene, hver time."
       },
       "backupFailed": {
         "name": "Sikkerhetskopi som feilet (CloudAlly)",
@@ -1889,174 +1983,6 @@
     "saving": "Lagrer …",
     "saved": "Dekningskontrollene er lagret",
     "conflict": "Noen endret en kontroll mens du så på den. Her er den slik den er nå: bestem på nytt."
-  },
-  "backup": {
-    "title": "Sikkerhetskopi",
-    "mirror": "Det Parasoll har lagret om kundens Microsoft 365-sikkerhetskopier i CloudAlly. Fanen spør ikke CloudAlly direkte.",
-    "summary": "Oversikt over sikkerhetskopien",
-    "noAccount": "Ingen CloudAlly-konto er koblet til denne kunden.",
-    "linkAccount": "Koble en CloudAlly-konto",
-    "noTasks": "CloudAlly tar ikke sikkerhetskopi av noe for denne kunden ennå.",
-    "allOk": "Alt i orden",
-    "problems": {
-      "failed_one": "{{count}} feilet",
-      "failed_other": "{{count}} feilet",
-      "late_one": "{{count}} forsinket",
-      "late_other": "{{count}} forsinket",
-      "paused_one": "{{count}} på pause",
-      "paused_other": "{{count}} på pause",
-      "notInBackup_one": "{{count}} ikke i kopi",
-      "notInBackup_other": "{{count}} ikke i kopi"
-    },
-    "services": {
-      "Mail": "E-post",
-      "OneDrive": "OneDrive",
-      "SharePoint": "SharePoint",
-      "Teams": "Teams og grupper",
-      "Other": "Annet"
-    },
-    "states": {
-      "Failed": "Feilet",
-      "Late": "Forsinket",
-      "Paused": "På pause",
-      "NotInBackup": "Ikke i kopi",
-      "Waiting": "Venter på første kopi",
-      "Ok": "I kopi",
-      "Aside": "Utenfor denne kopien"
-    },
-    "lastBackup": "siste kopi",
-    "neverBackedUp": "aldri kopiert",
-    "error": "CloudAlly: {{error}}",
-    "errorHelp": "Hjelp fra CloudAlly",
-    "entityMenu": "Handlinger for {{name}}",
-    "taskMenu": "Flere handlinger for {{name}}",
-    "accountMenu": "Handlinger for CloudAlly-kontoen {{name}}",
-    "running": "Kjører",
-    "taskEntities_one": "{{count}} bruker eller område",
-    "taskEntities_other": "{{count}} brukere eller områder",
-    "taskProblems_one": "{{count}} trenger tiltak",
-    "taskProblems_other": "{{count}} trenger tiltak",
-    "account": "CloudAlly-konto:",
-    "region": "datasenter {{region}}",
-    "outsideRegion": "Utenfor EU",
-    "licences": {
-      "noData": "Partner Center har ingen lisensdata for denne kunden, så Parasoll kan ikke se om alle lisensierte brukere er i sikkerhetskopien. Koble kunden til Partner Center for å kontrollere det.",
-      "noMailboxLicences": "Partner Center viser ingen lisens med postboks for denne kunden ({{date}}).",
-      "missing_one": "{{count}} lisensiert bruker har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
-      "missing_other": "{{count}} lisensierte brukere har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
-      "allIn_one": "Den lisensierte brukeren har e-posten i sikkerhetskopien (Partner Center, {{date}}).",
-      "allIn_other": "Alle {{count}} lisensierte brukere har e-posten i sikkerhetskopien (Partner Center, {{date}})."
-    },
-    "tasks": {
-      "title": "Tjenester i CloudAlly"
-    },
-    "entities": {
-      "title": "Brukere og områder",
-      "filters": "Filtrer brukere og områder",
-      "search": "Søk navn eller adresse",
-      "stateLabel": "Hvilke",
-      "all": "Alle",
-      "problems": "Trenger tiltak",
-      "serviceLabel": "Tjeneste",
-      "allServices": "Alle tjenester",
-      "none": "CloudAlly viser ingen brukere eller områder for denne kunden.",
-      "noProblems": "Ingenting trenger tiltak: alle brukere og områder er i kopi.",
-      "noMatch": "Ingen brukere eller områder passer med filtrene."
-    },
-    "actions": {
-      "backup": {
-        "run": {
-          "title": "Sikkerhetskopier nå",
-          "confirm": "Sikkerhetskopier nå",
-          "item": "Sikkerhetskopier nå",
-          "button": "Sikkerhetskopier nå",
-          "named": "Sikkerhetskopier nå: {{name}}"
-        },
-        "activate": {
-          "title": "Ta med i sikkerhetskopien",
-          "confirm": "Ta med i sikkerhetskopien",
-          "item": "Ta med i sikkerhetskopien"
-        },
-        "pause": {
-          "title": "Sett sikkerhetskopien på pause",
-          "confirm": "Sett på pause",
-          "item": "Sett på pause …"
-        },
-        "resume": {
-          "title": "Fortsett sikkerhetskopien",
-          "confirm": "Fortsett sikkerhetskopien",
-          "item": "Fortsett",
-          "named": "Fortsett: {{name}}"
-        }
-      },
-      "account": {
-        "deactivate": {
-          "title": "Avslutt CloudAlly-kontoen",
-          "confirm": "Avslutt kontoen",
-          "item": "Avslutt CloudAlly-kontoen …"
-        }
-      },
-      "restore": {
-        "export": {
-          "title": "Eksporter sikkerhetskopi",
-          "confirm": "Eksporter"
-        },
-        "other": {
-          "title": "Gjenopprett et annet sted",
-          "confirm": "Gjenopprett et annet sted"
-        },
-        "in-place": {
-          "title": "Gjenopprett på samme sted",
-          "confirm": "Gjenopprett på samme sted"
-        }
-      }
-    },
-    "restore": {
-      "item": "Gjenopprett …",
-      "title": "Gjenopprett {{name}}",
-      "what": "{{service}}, slik det var ved slutten av en dag.",
-      "lastBackup": "Siste kopi {{time}}.",
-      "day": "Dag",
-      "dayHint": "Sikkerhetskopien slik den var ved slutten av denne dagen.",
-      "dayInvalid": "Velg en dag som har vært, senest i dag.",
-      "where": "Hvor",
-      "ways": {
-        "exportPst": {
-          "label": "Last ned som PST",
-          "note": "CloudAlly sender en nedlastingslenke på e-post når filen er klar. Ingenting endres hos kunden."
-        },
-        "exportZip": {
-          "label": "Last ned som ZIP",
-          "note": "CloudAlly sender en nedlastingslenke på e-post når filen er klar. Ingenting endres hos kunden."
-        },
-        "other": {
-          "label": "Til en annen konto i samme domene",
-          "note": "Den andre brukeren finner innholdet i sin egen postboks eller OneDrive. Den opprinnelige brukeren merker ingenting."
-        },
-        "newSite": {
-          "label": "Som et nytt område",
-          "note": "CloudAlly lager et nytt område med innholdet; området som er i bruk, røres ikke."
-        },
-        "inPlace": {
-          "label": "Tilbake på samme sted",
-          "note": "Skriver inn i dataene brukeren jobber med nå. Du bekrefter innloggingen, skriver navnet og gir en grunn, og den kan avbrytes i ett minutt."
-        }
-      },
-      "target": "Konto det skal gjenopprettes til",
-      "targetHint": "En adresse i {{domain}}.",
-      "targetInvalid": "Skriv en e-postadresse.",
-      "targetSame": "Det er samme konto: velg «Tilbake på samme sted» i stedet.",
-      "targetDomain": "CloudAlly gjenoppretter bare til en konto i {{domain}}.",
-      "includeDeleted": "Ta med slettede elementer",
-      "wholeOnly": "Parasoll gjenoppretter hele postboksen, OneDrive eller området. En enkelt e-post eller fil gjenopprettes i CloudAlly.",
-      "continue": "Fortsett"
-    },
-    "notReadYet": "En CloudAlly-konto er koblet til kunden; sikkerhetskopiene vises etter neste lesing av CloudAlly.",
-    "actionsOff": "Endringer i CloudAlly er slått av i denne installasjonen, så fanen viser bare sikkerhetskopiene.",
-    "actionsLog": {
-      "title": "Handlinger i CloudAlly",
-      "none": "Ingenting er bedt om i CloudAlly for denne kunden ennå."
-    }
   },
   "taskTicket": {
     "open": "Servicesak",
@@ -2705,6 +2631,24 @@
       "name": "Navn",
       "size": "Størrelse",
       "modified": "Sist endret"
+    },
+    "stored": {
+      "title": "Månedsrapporter",
+      "intro": "Parasoll legger dem her etter hver måned: Huntress' egen rapport og Parasolls oppsummering av kunden. De blir aldri endret.",
+      "empty": "Ingen månedsrapporter er lagret ennå. De kommer her etter den første måneden Parasoll har lest.",
+      "kinds": {
+        "huntress-monthly": "Huntress-rapport",
+        "parasoll-monthly": "Parasoll-oppsummering"
+      },
+      "name": "{{kind}} · {{month}}",
+      "stored": "Lagret {{date}} · {{size}}",
+      "reconstructed": "Rekonstruert",
+      "reconstructedHint": "Laget etter at måneden var over, av det Parasoll hadde da.",
+      "download": "Last ned",
+      "downloadLabel": "Last ned {{name}}",
+      "downloading": "Laster ned …",
+      "downloadFailed": "Filen kunne ikke lastes ned. Prøv igjen; feiler det igjen, kan den lagrede kopien være skadet.",
+      "integrity": "Hver fil sjekkes mot fingeravtrykket den ble lagret med, før den lastes ned."
     }
   },
   "licenses": {
@@ -2952,7 +2896,9 @@
     "anomalyTexts": {
       "BIL_STALE_QUANTITY": "{{product}}: antallet er hentet fra en avlesning {{date}}, som er eldre enn grensen.",
       "BIL_NO_DEVICE_SNAPSHOT": "{{product}} faktureres per enhet, men det finnes ingen daglig enhetstelling; enhetene som er registrert nå telles.",
-      "BIL_INCOMPLETE_HOURS": "Siste import av arbeidstimer ({{date}}) ble ikke fullført; timer kan mangle i dette grunnlaget."
+      "BIL_INCOMPLETE_HOURS": "Siste import av arbeidstimer ({{date}}) ble ikke fullført; timer kan mangle i dette grunnlaget.",
+      "BIL_NO_AGENT_READING": "{{product}} faktureres per agent i Huntress, men Huntress har ikke talt dem for kunden ennå; det estimerte antallet i avtalen faktureres.",
+      "BIL_NO_SEAT_READING": "{{product}} faktureres per bruker med sikkerhetskopi, men ingen faktura fra CloudAlly teller dem for kunden ennå; det estimerte antallet i avtalen faktureres."
     },
     "conflictsCount_one": "{{count}} linje trenger en avgjørelse",
     "conflictsCount_other": "{{count}} linjer trenger en avgjørelse",
@@ -3048,7 +2994,43 @@
     "retryFailed_one": "Send den usendte kunden på nytt",
     "retryFailed_other": "Send de {{count}} usendte kundene på nytt",
     "closeUnsent_one": "{{count}} kunde i kjøringen ble ikke sendt. Lukk kjøringen først når den er håndtert på en annen måte.",
-    "closeUnsent_other": "{{count}} kunder i kjøringen ble ikke sendt. Lukk kjøringen først når de er håndtert på en annen måte."
+    "closeUnsent_other": "{{count}} kunder i kjøringen ble ikke sendt. Lukk kjøringen først når de er håndtert på en annen måte.",
+    "serviceQuantities": {
+      "title": "Antall fra tjenestene",
+      "intro": "Det Atera, Huntress og CloudAlly teller for kunden, mot linjene i avtalen. Neste fakturagrunnlag tar antallet fra siste dag som er lest.",
+      "sources": {
+        "PerAteraDevice": "Enheter i Atera",
+        "PerHuntressAgent": "Agenter i Huntress",
+        "PerBackupSeat": "Brukere med sikkerhetskopi i CloudAlly"
+      },
+      "readOn": "lest {{date}}",
+      "live": "telt fra enhetene som er registrert nå",
+      "stale": "eldre enn {{count}} dager",
+      "notRead": "Ikke talt ennå",
+      "status": {
+        "Counted": "Faktureres etter antallet",
+        "NoReading": "Ikke talt ennå: det estimerte antallet faktureres",
+        "NotOnContract": "Ingen avtalelinje fakturerer det",
+        "None": "Ingenting å telle",
+        "CountedZero": "Talt 0: ingenting faktureres",
+        "CountedStale": "Faktureres etter gammelt antall"
+      },
+      "notOnContract": "Er det med i en fast pris, er alt i orden; ellers legger du til en linje i avtalen.",
+      "line": "{{product}} · avtale {{contract}}: estimert {{estimate}}, neste grunnlag fakturerer {{billed}}",
+      "bill": {
+        "title": "Det CloudAlly fakturerer",
+        "day": "Faktura per {{date}}",
+        "dayAccount": "Faktura per {{date}} for kontoen {{account}}",
+        "account": "Konto",
+        "service": "Tjeneste",
+        "seats": "Brukere",
+        "price": "Pris",
+        "total": "Sum",
+        "noMoney": "Beløpene vises for dem som ser innkjøpspriser.",
+        "rule": "Parasoll fakturerer det høyeste antallet brukere på én linje per konto, til sammen {{count}}."
+      },
+      "error": "Antallene kunne ikke leses."
+    }
   },
   "invoices": {
     "title": "Fakturaer",
@@ -3970,6 +3952,9 @@
         },
         "identity": {
           "sessions": "Avsluttede innloggingsøkter"
+        },
+        "security": {
+          "closed-incidents": "Lukkede sikkerhetshendelser og eskaleringer"
         }
       }
     }
@@ -4588,13 +4573,54 @@
     "limit": "forsinket etter {{limit}}",
     "lastFailed": "Siste kjøring mislyktes",
     "unreadState": "Den lagrede tilstanden kunne ikke leses.",
+    "webhook": {
+      "title": "Webhook",
+      "on": "På",
+      "off": "Av",
+      "refusing": "Trenger oppfølging",
+      "offNote": "Endringer kommer med de planlagte lesingene.",
+      "lastEvent": "Siste hendelse",
+      "noEvent": "Ingen hendelse mottatt ennå",
+      "received": "mottatte leveringer: {{count}}",
+      "earlyRead": "Siste tidlige lesing",
+      "refused": "Siste avviste levering",
+      "events": {
+        "incident_report": {
+          "created": "ny sikkerhetshendelse",
+          "comment_added": "kommentar på en sikkerhetshendelse",
+          "closed": "sikkerhetshendelse lukket"
+        },
+        "escalation": {
+          "created": "ny eskalering",
+          "overdue": "eskalering forfalt",
+          "closed": "eskalering lukket"
+        },
+        "platform_action": {
+          "created": "ny plattformhandling",
+          "overdue": "plattformhandling forfalt",
+          "closed": "plattformhandling lukket",
+          "notification": "melding om en plattformhandling"
+        },
+        "account_notice": {
+          "notification": "kontovarsel"
+        },
+        "ticket": "sak endret",
+        "unknown": "en hendelse Parasoll ikke kjenner"
+      },
+      "refusal": {
+        "Unsigned": "uten signatur eller nøkkel",
+        "Stale": "signert for lenge siden",
+        "BadSignature": "signaturen eller nøkkelen stemmer ikke med den som er satt i Parasoll"
+      }
+    },
     "worker": {
       "title": "Bakgrunnstjeneste",
       "note": "En del regnes som forsinket etter {{limit}} uten livstegn.",
       "components": {
         "outbox": "Levering av endringer",
         "jobs": "Planlagte jobber",
-        "actions": "Levering av handlinger til leverandører"
+        "actions": "Levering av handlinger til leverandører",
+        "early-reads": "Tidlige lesinger fra webhooks"
       },
       "state": {
         "Current": "Kjører",
@@ -4786,7 +4812,7 @@
       "VND_NOT_FOUND": "Handlingen ble ikke funnet.",
       "VND_SENT": "Leverandøren tok imot endringen.",
       "VND_ALREADY_DONE": "Det var allerede slik; ingenting ble sendt.",
-      "VND_DRY_RUN": "Testmodus (DryRun): ingenting ble sendt.",
+      "VND_DRY_RUN": "Testmodus: ingenting ble sendt.",
       "VND_NO_ANSWER": "Det kom ikke noe klart svar. Sjekk om det skjedde.",
       "VND_EARLIER_ATTEMPT": "Et tidligere forsøk kan ha gått gjennom uten svar. Sjekk før du ber om det igjen.",
       "VND_VENDOR_UNAVAILABLE": "Systemet kunne ikke nås etter flere forsøk; ingenting ble sendt.",
@@ -4803,8 +4829,8 @@
       "VND_TECHNICIAN_UNKNOWN": "Velg en tekniker Atera kjenner.",
       "VND_TICKET_MOVED": "Saken tilhører en annen kunde i Atera nå; ingenting ble sendt.",
       "VND_TARGET_GONE": "Saken finnes ikke lenger i Atera; ingenting ble sendt.",
-      "VND_VENDOR_REFUSED": "Atera avviste det; ingenting ble endret.",
-      "VND_VENDOR_BUSY": "Atera kunne ikke leses; det prøves igjen.",
+      "VND_VENDOR_REFUSED": "Leverandøren avviste det; ingenting ble endret.",
+      "VND_VENDOR_BUSY": "Leverandøren kunne ikke leses; det prøves igjen.",
       "VND_TIME_FROM_ATERA": "Timene kom fra Atera; de er der allerede.",
       "VND_TIME_NOT_OWN": "Bare den som har jobbet timene, fører dem i Atera.",
       "VND_TIME_NO_TICKET": "Føringen viser ikke til en Atera-sak hos kunden som Parasoll kjenner.",
@@ -4812,6 +4838,21 @@
       "VND_FILTER_INVALID": "Filteret er ikke gyldig.",
       "VND_ALERT_MOVED": "Driftsvarselet tilhører en annen kunde i Atera nå; ingenting ble sendt.",
       "VND_ALERT_RESOLVED": "Driftsvarselet er ikke lenger åpent i Atera.",
+      "VND_INCIDENT_CLOSED": "Huntress har lukket hendelsen.",
+      "VND_INCIDENT_NOT_SENT": "Hendelsen ligger hos SOC-en eller automatikken til Huntress nå og venter ikke på deg.",
+      "VND_NOTHING_TO_APPROVE": "Ingen tiltak venter på godkjenning.",
+      "VND_REASON_INVALID": "Velg hvorfor planen sendes tilbake.",
+      "VND_STEP_UNKNOWN": "Hendelsen har ikke et slikt tiltak.",
+      "VND_STEP_NOT_MANUAL": "Huntress utfører dette tiltaket selv; bare manuelle tiltak merkes.",
+      "VND_STEP_ALREADY": "Tiltaket er allerede merket slik.",
+      "VND_INCIDENT_UNAPPROVED": "Godkjenn planen først: Huntress lukker en hendelse bare når ingen tiltak venter på godkjenning.",
+      "VND_INCIDENT_MOVED": "Hendelsen hører til en annen Huntress-organisasjon nå; ingenting ble sendt.",
+      "VND_ESCALATION_RESOLVED": "Huntress har lukket eskaleringen.",
+      "VND_ANSWER_INVALID": "Velg et svar denne eskaleringen tar imot.",
+      "VND_ESCALATION_MOVED": "Eskaleringen nevner ikke lenger kundens Huntress-organisasjon; ingenting ble sendt.",
+      "VND_AGENT_MOVED": "Agenten hører til en annen Huntress-organisasjon nå; ingenting ble sendt.",
+      "VND_ALREADY_ISOLATED": "Enheten er isolert, eller blir det snart.",
+      "VND_NOT_ISOLATED": "Enheten er ikke isolert.",
       "VND_BACKUP_BUSY": "CloudAlly kunne ikke leses; det prøves igjen.",
       "VND_BACKUP_GONE": "CloudAlly har ikke denne sikkerhetskopien lenger; ingenting ble sendt.",
       "VND_BACKUP_REFUSED": "CloudAlly avviste det; ingenting ble endret.",
@@ -4831,7 +4872,20 @@
       "VND_RESTORE_TARGET_DOMAIN": "CloudAlly gjenoppretter bare til en konto i samme domene.",
       "VND_RESTORE_STARTED": "CloudAlly tok imot gjenopprettingen; den kjører som en jobb i CloudAlly.",
       "VND_EXPORT_STARTED": "CloudAlly tok imot eksporten; den sender nedlastingslenken på e-post når filen er klar.",
-      "VND_RESTORE_SIGN_IN": "CloudAlly vil ha en innlogging i kundens Microsoft 365 før gjenopprettingen. Sjekk i CloudAlly om den startet."
+      "VND_RESTORE_SIGN_IN": "CloudAlly vil ha en innlogging i kundens Microsoft 365 før gjenopprettingen. Sjekk i CloudAlly om den startet.",
+      "VND_ALREADY_CONNECTED": "Kunden er allerede koblet til en post i dette systemet.",
+      "VND_EXISTS_AT_VENDOR": "Systemet har allerede en post med denne nøkkelen. Er det denne kunden, kobler du den under Koblinger; ingenting ble sendt.",
+      "VND_AMBIGUOUS_AT_VENDOR": "Systemet har flere poster med denne nøkkelen. Koble den riktige under Koblinger; ingenting ble sendt.",
+      "VND_CREATE_NOT_FOUND": "Et tidligere forsøk fikk ikke svar, og ingen post med nøkkelen vår er funnet. Sjekk hos leverandøren og avklar handlingen: ble ingenting opprettet, oppretter neste forespørsel kunden.",
+      "VND_CREATED": "Opprettet og koblet til kunden.",
+      "VND_CREATED_EARLIER": "Et tidligere forsøk hadde opprettet den; den er koblet til kunden nå.",
+      "VND_CREATED_NOT_LINKED": "Opprettet, men den kunne ikke kobles. Koble den under Koblinger.",
+      "VND_LINKED_ELSEWHERE": "Posten med nøkkelen vår er koblet til en annen kunde i Parasoll; ingenting ble endret.",
+      "VND_KEY_INVALID": "Skriv organisasjonsnøkkelen med små bokstaver, tall og bindestrek (høyst 64 tegn).",
+      "VND_EMAIL_INVALID": "Skriv e-postadressen kontoen skal logge inn med.",
+      "VND_REGION_INVALID": "Velg et av datasentrene til CloudAlly i EU.",
+      "VND_CUSTOMER_GONE": "Kunden finnes ikke lenger i Parasoll; ingenting ble sendt.",
+      "VND_EARLIER_ATTEMPT_OPEN": "En tidligere forespørsel om å opprette kunden har ikke fått noe utfall ennå. Avklar den i handlingsloggen først; ingenting ble sendt."
     },
     "dialog": {
       "previewing": "Sjekker hva handlingen vil gjøre …",
@@ -4899,6 +4953,29 @@
         "alert": {
           "resolve": "Lukk driftsvarselet",
           "delete": "Slett driftsvarselet"
+        },
+        "customer": {
+          "create": "Opprett kunden i Atera"
+        }
+      },
+      "huntress": {
+        "incident": {
+          "approve": "Godkjenn planen",
+          "reject": "Send planen tilbake",
+          "step": "Merk et manuelt tiltak",
+          "resolve": "Lukk hendelsen",
+          "comment": "Kommenter hendelsen"
+        },
+        "escalation": {
+          "resolve": "Lukk eskaleringen"
+        },
+        "agent": {
+          "isolate": "Isoler enheten",
+          "release": "Opphev isoleringen",
+          "uninstall": "Fjern Huntress-agenten"
+        },
+        "organization": {
+          "create": "Opprett organisasjonen i Huntress"
         }
       },
       "cloudally": {
@@ -4909,7 +4986,8 @@
           "resume": "Fortsett sikkerhetskopien"
         },
         "account": {
-          "deactivate": "Avslutt CloudAlly-kontoen"
+          "deactivate": "Avslutt CloudAlly-kontoen",
+          "create": "Opprett kontoen i CloudAlly"
         },
         "restore": {
           "export": "Eksporter sikkerhetskopi",
@@ -4938,6 +5016,28 @@
       "VND_EFFECT_ALERT_CONFIRM": "Parasoll leser driftsvarselet på nytt etterpå og viser det lukket når Atera gjør det.",
       "VND_EFFECT_ALERT_DELETE": "Atera sletter «{{title}}» ({{device}}).",
       "VND_EFFECT_ALERT_DELETE_HISTORY": "Det forsvinner også fra historikken i Atera; Parasoll beholder det som lukket.",
+      "VND_EFFECT_HUNTRESS_APPROVE": "Godkjenner tiltakene som venter i Huntress ({{count}}).",
+      "VND_EFFECT_HUNTRESS_APPROVE_ASSISTED": "Huntress utfører sine egne tiltak ({{count}}) med en gang.",
+      "VND_EFFECT_HUNTRESS_APPROVE_MANUAL": "De manuelle tiltakene ({{count}}) gjør du selv og merker som utført.",
+      "VND_EFFECT_HUNTRESS_REJECT": "Sender tiltakene som venter ({{count}}), tilbake til SOC-en hos Huntress med begrunnelsen og forklaringen din.",
+      "VND_EFFECT_HUNTRESS_BACK_TO_SOC": "SOC-en reviderer planen og sender hendelsen på nytt; til da venter den ikke på deg.",
+      "VND_EFFECT_HUNTRESS_STEP_DONE": "Merker tiltaket «{{step}}» som utført i Huntress.",
+      "VND_EFFECT_HUNTRESS_STEP_UNDONE": "Merker tiltaket «{{step}}» som ikke utført i Huntress.",
+      "VND_EFFECT_HUNTRESS_STEP_LAST": "Å merke et tiltak godkjenner det ikke; er det det siste åpne tiltaket, kan Huntress lukke hendelsen.",
+      "VND_EFFECT_HUNTRESS_RESOLVE": "Lukker hendelsen i Huntress; driftsvarselet lukkes her når Huntress viser den lukket.",
+      "VND_EFFECT_HUNTRESS_RESOLVE_MANUAL": "Manuelle tiltak som ikke er merket utført, venter fortsatt på deg etterpå.",
+      "VND_EFFECT_HUNTRESS_COMMENT": "Legger kommentaren til hendelsen i Huntress; alle i Huntress-kontoen deres som ser hendelsen, kan lese den.",
+      "VND_EFFECT_HUNTRESS_COMMENT_SOC": "SOC-en hos Huntress får ikke beskjed om kommentarer og svarer ikke på dem.",
+      "VND_EFFECT_HUNTRESS_ESCALATION_CLOSE": "Lukker eskaleringen i Huntress; driftsvarselet lukkes her når Huntress viser den lukket.",
+      "VND_EFFECT_HUNTRESS_DISMISSED": "Uten svar legger Huntress den bare til side: den åpnes igjen neste gang den samme tilgangen skjer.",
+      "VND_EFFECT_HUNTRESS_EXPECTED": "Sier til Huntress at tilgangen var ventet: den tillates for disse kontoene fra nå av.",
+      "VND_EFFECT_HUNTRESS_UNAUTHORIZED": "Sier til Huntress at tilgangen var uautorisert: senere innlogginger av samme slag regnes også som uautoriserte. Parasoll verken sperrer eller deaktiverer kontoer; gjør det i Huntress eller Microsoft 365.",
+      "VND_EFFECT_HUNTRESS_ISOLATE": "Isolerer {{device}} fra nettverket: bare Huntress når den fortsatt, og den som jobber på enheten, mister nettverkstilgangen. Begrunnelsen din lagres i Huntress sammen med isoleringen.",
+      "VND_EFFECT_HUNTRESS_ISOLATE_CONFIRM": "Huntress isolerer den neste gang enheten tar kontakt; til da vises den som «Blir isolert».",
+      "VND_EFFECT_HUNTRESS_RELEASE": "Gir {{device}} nettverket tilbake.",
+      "VND_EFFECT_HUNTRESS_RELEASE_CONFIRM": "Huntress opphever isoleringen neste gang enheten tar kontakt; til da vises den som «Isoleringen oppheves».",
+      "VND_EFFECT_HUNTRESS_UNINSTALL": "Fjerner Huntress-agenten fra {{device}}: agenten forsvinner fra Huntress-kontoen deres med en gang, og enheten er ikke lenger beskyttet av Huntress.",
+      "VND_EFFECT_HUNTRESS_UNINSTALL_GAP": "Hvis Atera overvåker {{device}}, varsler Parasoll «Enhet uten Huntress» når grensen i regelen er nådd.",
       "VND_EFFECT_BACKUP_RUN": "CloudAlly tar sikkerhetskopi av {{name}} ({{service}}) nå.",
       "VND_EFFECT_BACKUP_RUN_ALL_one": "CloudAlly tar sikkerhetskopi av {{service}} hos {{account}} nå: {{count}} bruker eller område.",
       "VND_EFFECT_BACKUP_RUN_ALL_other": "CloudAlly tar sikkerhetskopi av {{service}} hos {{account}} nå: {{count}} brukere eller områder.",
@@ -4956,7 +5056,15 @@
       "VND_EFFECT_RESTORE_IN_PLACE": "CloudAlly gjenoppretter {{service}} for {{name}} slik det var ved slutten av {{date}}, på samme sted – ved siden av det brukeren jobber med nå.",
       "VND_EFFECT_RESTORE_DELETED": "Elementer som er slettet siden, gjenopprettes også.",
       "VND_EFFECT_RESTORE_LINK": "CloudAlly sender nedlastingslenken på e-post når filen er klar; Parasoll får den ikke.",
-      "VND_EFFECT_RESTORE_JOB": "CloudAlly kjører det som en egen jobb; hvordan den ender, ses i CloudAlly."
+      "VND_EFFECT_RESTORE_JOB": "CloudAlly kjører det som en egen jobb; hvordan den ender, ses i CloudAlly.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE": "Atera får kunden «{{name}}» (organisasjonsnummer {{orgNumber}}) med kontaktopplysningene fra kundekortet.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE_BY_NAME": "Atera får kunden «{{name}}» med kontaktopplysningene fra kundekortet. Kundekortet har ikke organisasjonsnummer, så Parasoll kjenner igjen kunden i Atera på det nøyaktige navnet.",
+      "VND_EFFECT_CUSTOMER_LINKED": "Parasoll kobler den til denne kunden med en gang.",
+      "VND_EFFECT_HUNTRESS_ORGANIZATION_CREATE": "Huntress får organisasjonen «{{name}}» med organisasjonsnøkkelen {{key}}.",
+      "VND_EFFECT_HUNTRESS_AGENTS_LATER": "Maskinene kommer først når Huntress-agenten er installert med nøkkelen {{key}} – det gjøres i Atera, utenfor Parasoll.",
+      "VND_EFFECT_CLOUDALLY_ACCOUNT_CREATE": "CloudAlly får kontoen «{{name}}» for {{email}} i datasenteret {{region}}, åpnet som prøvekonto.",
+      "VND_EFFECT_CLOUDALLY_PASSWORD": "CloudAlly krever et passord: Parasoll lager et tilfeldig og lagrer det ingen steder. Dere når kontoen gjennom partnerportalen til CloudAlly; kunden kan lage sitt eget med «Glemt passord».",
+      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Sikkerhetskopiene starter først når kunden har gitt CloudAlly tilgang til Microsoft 365 og oppgavene er satt opp – det gjøres i CloudAlly, utenfor Parasoll."
     }
   },
   "tickets": {
@@ -5069,5 +5177,460 @@
     },
     "customerFilter": "Kunde",
     "anyCustomer": "Alle kunder"
+  },
+  "security": {
+    "panel": {
+      "title": "Sikkerhet",
+      "notLinked": "Huntress har ikke gitt tall for kunden ennå. Er ikke Huntress-organisasjonen koblet, kobler du den under Koblinger; tallene kommer ved neste lesing (hver time).",
+      "notRead": "Huntress er ikke lest ennå.",
+      "organization": "{{name}} ({{source}})",
+      "usageOf": "Det Huntress teller for {{name}}"
+    },
+    "usage": {
+      "billableAgents": "Fakturerte agenter",
+      "allAgents_one": "{{count}} agent i alt",
+      "allAgents_other": "{{count}} agenter i alt",
+      "unresponsive": "Svarer ikke",
+      "outdated": "Utdatert",
+      "isolated": "Isolert",
+      "identities": "Fakturerte identiteter",
+      "learners": "Opplæringsbrukere"
+    },
+    "reads": {
+      "huntress-organizations": "Organisasjoner og forbruk ({{system}})",
+      "huntress-reports": "Månedsrapporter ({{system}})"
+    },
+    "reports": {
+      "title": "Månedsrapporter",
+      "period": "Måned",
+      "incidents": "Hendelser",
+      "incidentsValue": "{{reported}} meldt, {{resolved}} lukket",
+      "signals": "Signaler",
+      "agents": "Agenter",
+      "pdf": "Rapport",
+      "openPdf": "Åpne rapporten for {{period}} i {{source}}",
+      "shown": "De {{shown}} siste av {{total}} rapporter.",
+      "none": "Ingen månedsrapporter fra Huntress de siste 13 månedene.",
+      "notRead": "Månedsrapportene er ikke lest ennå.",
+      "incidentsReported": "{{reported}} meldt",
+      "storedCopy": "Kopi i Parasoll",
+      "downloadCopy": "Kopi i Parasoll: last ned rapporten for {{period}}"
+    },
+    "incident": {
+      "heading": "Sikkerhetshendelse",
+      "loading": "Henter hendelsen …",
+      "readAt": "Lest fra Huntress",
+      "statuses": {
+        "sent": "Venter på deg",
+        "auto_remediating": "Huntress utfører tiltakene",
+        "draft": "Tilbake hos SOC-en",
+        "closed": "Lukket i Huntress",
+        "dismissed": "Avvist i Huntress",
+        "partner_dismissed": "Avvist av dere",
+        "deleting": "Slettes i Huntress",
+        "deleted": "Ikke lenger i Huntress"
+      },
+      "indicators": "Indikatorer",
+      "resolve": "Lukk i Huntress",
+      "resolveTitle": "Lukk hendelsen i Huntress",
+      "draftNote": "SOC-en hos Huntress reviderer planen etter at den ble sendt tilbake. Hendelsen kommer tilbake hit når SOC-en sender den på nytt.",
+      "showDetails": "Vis detaljene fra Huntress",
+      "hideDetails": "Skjul detaljene fra Huntress",
+      "details": "Detaljene fra Huntress om hendelsen"
+    },
+    "indicators": {
+      "footholds": "Fotfester",
+      "monitored_files": "Overvåkede filer",
+      "ransomware_canaries": "Løsepengevirus-feller",
+      "antivirus_detections": "Antivirusfunn",
+      "process_detections": "Prosessfunn",
+      "managed_identity": "Identitet",
+      "mde_detections": "Defender for Endpoint",
+      "siem_detections": "SIEM",
+      "favicon_detections": "Favicon-funn",
+      "behavioral_detections": "Atferd",
+      "email_security_detections": "E-postsikkerhet",
+      "app_control": "Programkontroll",
+      "ai_misuse": "Misbruk av KI"
+    },
+    "remediation": {
+      "heading": "Utbedringsplan",
+      "none": "Huntress har ingen tiltak for denne hendelsen.",
+      "unnamed": "Tiltak uten navn",
+      "someone": "noen",
+      "types": {
+        "assisted": "Huntress gjør det",
+        "manual": "Du gjør det",
+        "containment": "Isolering"
+      },
+      "statuses": {
+        "unapproved": "Venter på godkjenning",
+        "approved": "Godkjent",
+        "completed": "Utført",
+        "failed": "Mislyktes",
+        "cancelled": "Avbrutt"
+      },
+      "approvedBy": "Godkjent av {{name}} {{date}}",
+      "completedAt": "Utført {{date}}",
+      "mark": "Merk som utført",
+      "unmark": "Merk som ikke utført",
+      "markTitle": "Merk tiltaket som utført i Huntress",
+      "unmarkTitle": "Merk tiltaket som ikke utført i Huntress",
+      "approve": "Godkjenn planen",
+      "approveTitle": "Godkjenn utbedringsplanen i Huntress",
+      "reject": "Send planen tilbake …",
+      "rejectTitle": "Send planen tilbake til SOC-en hos Huntress",
+      "rejectConfirm": "Send tilbake",
+      "rejectContinue": "Send tilbake …",
+      "reason": "Hvorfor",
+      "rejectComment": "Hva bør SOC-en vite?",
+      "rejectHint": "SOC-en hos Huntress leser dette når den reviderer planen. Opptil 2048 tegn.",
+      "rejectCommentMissing": "Skriv hva SOC-en bør vite.",
+      "useful": "Planen var nyttig",
+      "reasons": {
+        "approved_application": "Programmet er godkjent",
+        "manually_remediated": "Allerede rettet for hånd",
+        "host_reimaged": "Enheten ble installert på nytt",
+        "testing_security_controls": "Vi testet sikkerhetskontrollene",
+        "other": "Noe annet",
+        "approved_user_login_location_m365": "Innloggingsstedet er godkjent",
+        "approved_user_email_forwarding_rule_m365": "Videresendingsregelen er godkjent",
+        "approved_application_m365": "Programmet er godkjent",
+        "manually_remediated_m365": "Allerede rettet for hånd",
+        "testing_security_controls_m365": "Vi testet sikkerhetskontrollene",
+        "approved_vpn_or_proxy_usage_m365": "VPN-en eller proxyen er godkjent",
+        "other_m365": "Noe annet"
+      },
+      "reasonChoose": "Velg en grunn",
+      "reasonMissing": "Velg hvorfor planen sendes tilbake."
+    },
+    "comments": {
+      "heading": "Kommentarer",
+      "readAt": "Lest fra Huntress",
+      "notRead": "Kommentarene er ikke lest ennå.",
+      "none": "Ingen kommentarer.",
+      "unknownAuthor": "Ukjent forfatter",
+      "label": "Ny kommentar",
+      "hint": "Alle i Huntress-kontoen deres som ser hendelsen, kan lese den. SOC-en hos Huntress får ikke beskjed.",
+      "add": "Legg til kommentar",
+      "addTitle": "Legg til en kommentar på hendelsen i Huntress"
+    },
+    "notice": {
+      "escalation": "Eskalering",
+      "platformAction": "Plattformhandling",
+      "loading": "Henter …",
+      "readAt": "Lest fra Huntress",
+      "statuses": {
+        "open": "Åpen",
+        "overdue": "Over fristen",
+        "resolved": "Lukket"
+      },
+      "about": "Gjelder",
+      "entityTypes": {
+        "Agent": "enhet",
+        "Identity": "konto",
+        "User": "konto",
+        "Mailbox": "postkasse"
+      },
+      "moreEntities": "Huntress nevner flere enn de som vises her.",
+      "platformActionNote": "Den lukkes av seg selv i Huntress når det den melder om, er rettet; det er ingenting å sende herfra.",
+      "answer": "Svar",
+      "resolveTitle": "Lukk eskaleringen i Huntress",
+      "answers": {
+        "expected": {
+          "label": "Tilgangen var ventet",
+          "hint": "Huntress tillater den samme tilgangen for disse kontoene fra nå av.",
+          "confirm": "Lukk som ventet"
+        },
+        "unauthorized": {
+          "label": "Tilgangen var uautorisert",
+          "hint": "Senere innlogginger av samme slag regnes som uautoriserte. Sperr eller deaktiver kontoene i Huntress eller Microsoft 365.",
+          "confirm": "Lukk som uautorisert"
+        },
+        "close": {
+          "label": "Bare lukk den",
+          "hint": "Huntress legger den bare til side: den åpnes igjen neste gang den samme tilgangen skjer.",
+          "confirm": "Lukk eskaleringen",
+          "hintPlain": "Lukker eskaleringen i Huntress; driftsvarselet lukkes her når Huntress viser den lukket."
+        }
+      },
+      "answerMissing": "Velg et svar først."
+    }
+  },
+  "backup": {
+    "title": "Sikkerhetskopi",
+    "mirror": "Det Parasoll har lagret om kundens Microsoft 365-sikkerhetskopier i CloudAlly. Fanen spør ikke CloudAlly direkte.",
+    "summary": "Oversikt over sikkerhetskopien",
+    "noAccount": "Ingen CloudAlly-konto er koblet til denne kunden.",
+    "linkAccount": "Koble en CloudAlly-konto",
+    "noTasks": "CloudAlly tar ikke sikkerhetskopi av noe for denne kunden ennå.",
+    "allOk": "Alt i orden",
+    "problems": {
+      "failed_one": "{{count}} feilet",
+      "failed_other": "{{count}} feilet",
+      "late_one": "{{count}} forsinket",
+      "late_other": "{{count}} forsinket",
+      "paused_one": "{{count}} på pause",
+      "paused_other": "{{count}} på pause",
+      "notInBackup_one": "{{count}} ikke i kopi",
+      "notInBackup_other": "{{count}} ikke i kopi"
+    },
+    "services": {
+      "Mail": "E-post",
+      "OneDrive": "OneDrive",
+      "SharePoint": "SharePoint",
+      "Teams": "Teams og grupper",
+      "Other": "Annet"
+    },
+    "states": {
+      "Failed": "Feilet",
+      "Late": "Forsinket",
+      "Paused": "På pause",
+      "NotInBackup": "Ikke i kopi",
+      "Waiting": "Venter på første kopi",
+      "Ok": "I kopi",
+      "Aside": "Utenfor denne kopien"
+    },
+    "lastBackup": "siste kopi",
+    "neverBackedUp": "aldri kopiert",
+    "error": "CloudAlly: {{error}}",
+    "errorHelp": "Hjelp fra CloudAlly",
+    "entityMenu": "Handlinger for {{name}}",
+    "taskMenu": "Flere handlinger for {{name}}",
+    "accountMenu": "Handlinger for CloudAlly-kontoen {{name}}",
+    "running": "Kjører",
+    "taskEntities_one": "{{count}} bruker eller område",
+    "taskEntities_other": "{{count}} brukere eller områder",
+    "taskProblems_one": "{{count}} trenger tiltak",
+    "taskProblems_other": "{{count}} trenger tiltak",
+    "account": "CloudAlly-konto:",
+    "region": "datasenter {{region}}",
+    "outsideRegion": "Utenfor EU",
+    "licences": {
+      "noData": "Partner Center har ingen lisensdata for denne kunden, så Parasoll kan ikke se om alle lisensierte brukere er i sikkerhetskopien. Koble kunden til Partner Center for å kontrollere det.",
+      "noMailboxLicences": "Partner Center viser ingen lisens med postboks for denne kunden ({{date}}).",
+      "missing_one": "{{count}} lisensiert bruker har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
+      "missing_other": "{{count}} lisensierte brukere har ikke e-posten i sikkerhetskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
+      "allIn_one": "Den lisensierte brukeren har e-posten i sikkerhetskopien (Partner Center, {{date}}).",
+      "allIn_other": "Alle {{count}} lisensierte brukere har e-posten i sikkerhetskopien (Partner Center, {{date}})."
+    },
+    "tasks": {
+      "title": "Tjenester i CloudAlly"
+    },
+    "entities": {
+      "title": "Brukere og områder",
+      "filters": "Filtrer brukere og områder",
+      "search": "Søk navn eller adresse",
+      "stateLabel": "Hvilke",
+      "all": "Alle",
+      "problems": "Trenger tiltak",
+      "serviceLabel": "Tjeneste",
+      "allServices": "Alle tjenester",
+      "none": "CloudAlly viser ingen brukere eller områder for denne kunden.",
+      "noProblems": "Ingenting trenger tiltak: alle brukere og områder er i kopi.",
+      "noMatch": "Ingen brukere eller områder passer med filtrene."
+    },
+    "actions": {
+      "backup": {
+        "run": {
+          "title": "Sikkerhetskopier nå",
+          "confirm": "Sikkerhetskopier nå",
+          "item": "Sikkerhetskopier nå",
+          "button": "Sikkerhetskopier nå",
+          "named": "Sikkerhetskopier nå: {{name}}"
+        },
+        "activate": {
+          "title": "Ta med i sikkerhetskopien",
+          "confirm": "Ta med i sikkerhetskopien",
+          "item": "Ta med i sikkerhetskopien"
+        },
+        "pause": {
+          "title": "Sett sikkerhetskopien på pause",
+          "confirm": "Sett på pause",
+          "item": "Sett på pause …"
+        },
+        "resume": {
+          "title": "Fortsett sikkerhetskopien",
+          "confirm": "Fortsett sikkerhetskopien",
+          "item": "Fortsett",
+          "named": "Fortsett: {{name}}"
+        }
+      },
+      "account": {
+        "deactivate": {
+          "title": "Avslutt CloudAlly-kontoen",
+          "confirm": "Avslutt kontoen",
+          "item": "Avslutt CloudAlly-kontoen …"
+        }
+      },
+      "restore": {
+        "export": {
+          "title": "Eksporter sikkerhetskopi",
+          "confirm": "Eksporter"
+        },
+        "other": {
+          "title": "Gjenopprett et annet sted",
+          "confirm": "Gjenopprett et annet sted"
+        },
+        "in-place": {
+          "title": "Gjenopprett på samme sted",
+          "confirm": "Gjenopprett på samme sted"
+        }
+      }
+    },
+    "restore": {
+      "item": "Gjenopprett …",
+      "title": "Gjenopprett {{name}}",
+      "what": "{{service}}, slik det var ved slutten av en dag.",
+      "lastBackup": "Siste kopi {{time}}.",
+      "day": "Dag",
+      "dayHint": "Sikkerhetskopien slik den var ved slutten av denne dagen.",
+      "dayInvalid": "Velg en dag som har vært, senest i dag.",
+      "where": "Hvor",
+      "ways": {
+        "exportPst": {
+          "label": "Last ned som PST",
+          "note": "CloudAlly sender en nedlastingslenke på e-post når filen er klar. Ingenting endres hos kunden."
+        },
+        "exportZip": {
+          "label": "Last ned som ZIP",
+          "note": "CloudAlly sender en nedlastingslenke på e-post når filen er klar. Ingenting endres hos kunden."
+        },
+        "other": {
+          "label": "Til en annen konto i samme domene",
+          "note": "Den andre brukeren finner innholdet i sin egen postboks eller OneDrive. Den opprinnelige brukeren merker ingenting."
+        },
+        "newSite": {
+          "label": "Som et nytt område",
+          "note": "CloudAlly lager et nytt område med innholdet; området som er i bruk, røres ikke."
+        },
+        "inPlace": {
+          "label": "Tilbake på samme sted",
+          "note": "Skriver inn i dataene brukeren jobber med nå. Du bekrefter innloggingen, skriver navnet og gir en grunn, og den kan avbrytes i ett minutt."
+        }
+      },
+      "target": "Konto det skal gjenopprettes til",
+      "targetHint": "En adresse i {{domain}}.",
+      "targetInvalid": "Skriv en e-postadresse.",
+      "targetSame": "Det er samme konto: velg «Tilbake på samme sted» i stedet.",
+      "targetDomain": "CloudAlly gjenoppretter bare til en konto i {{domain}}.",
+      "includeDeleted": "Ta med slettede elementer",
+      "wholeOnly": "Parasoll gjenoppretter hele postboksen, OneDrive eller området. En enkelt e-post eller fil gjenopprettes i CloudAlly.",
+      "continue": "Fortsett"
+    },
+    "notReadYet": "En CloudAlly-konto er koblet til kunden; sikkerhetskopiene vises etter neste lesing av CloudAlly.",
+    "actionsOff": "Endringer i CloudAlly er slått av i denne installasjonen, så fanen viser bare sikkerhetskopiene.",
+    "actionsLog": {
+      "title": "Handlinger i CloudAlly",
+      "none": "Ingenting er bedt om i CloudAlly for denne kunden ennå."
+    }
+  },
+  "onboarding": {
+    "open": "Koble til tjenester …",
+    "title": "Koble kunden til tjenestene",
+    "step": "Steg {{current}} av {{total}}: {{name}}",
+    "steps": {
+      "services": "Tjenester",
+      "contract": "Avtale",
+      "review": "Bekreft",
+      "result": "Resultat"
+    },
+    "intro": "Velg hva Parasoll skal opprette for {{customer}}. Hver tjeneste kobles til kunden med en gang; det API-ene til leverandørene ikke kan gjøre, står til slutt.",
+    "loading": "Leser tjenestene til kunden …",
+    "loadError": "Tjenestene kunne ikke leses.",
+    "noneEnabled": "Verken Atera, Huntress eller CloudAlly er koblet til Parasoll i denne installasjonen.",
+    "linked": "Koblet til «{{name}}»",
+    "linkedId": "Koblet til #{{id}}; navnet kommer ved neste lesing av {{system}}.",
+    "linkedBadge": "Koblet",
+    "create": "Opprett i {{system}}",
+    "simulated": "Testmodus: {{system}} leses, ingenting opprettes.",
+    "mapExisting": "Koble til en som finnes, under Koblinger",
+    "blocks": {
+      "VND_INTEGRATION_OFF": "{{system}} er ikke koblet til Parasoll i denne installasjonen.",
+      "VND_KIND_DISABLED": "Å opprette kunder i {{system}} er ikke slått på i denne installasjonen.",
+      "VND_WRITE_DISABLED": "Endringer i {{system}} er slått av i denne installasjonen.",
+      "VND_CUSTOMER_NOT_ALLOWED": "{{system}} tar foreløpig bare imot endringer for testkundene.",
+      "VND_FORBIDDEN": "Tilgangen din omfatter ikke å opprette kunder i {{system}}.",
+      "VND_EXISTS_AT_VENDOR": "{{system}} har allerede «{{name}}», som ikke er koblet til noen kunde. Koble den under Koblinger i stedet.",
+      "VND_EARLIER_ATTEMPT_OPEN": "En tidligere forespørsel om å opprette kunden i {{system}} har ikke fått noe utfall ennå. Avklar den i handlingsloggen først."
+    },
+    "atera": {
+      "note": "Navn, organisasjonsnummer og kontaktopplysninger hentes fra kundekortet."
+    },
+    "huntress": {
+      "key": "Organisasjonsnøkkel",
+      "keyHint": "Huntress legger agentene i organisasjonen med denne nøkkelen. Små bokstaver, tall og bindestrek.",
+      "keyInvalid": "Bruk små bokstaver, tall og bindestrek (høyst 64 tegn)."
+    },
+    "cloudally": {
+      "email": "E-post for kontoen",
+      "emailHint": "CloudAlly sender rapportene for kontoen hit. Én konto per adresse: bruk en egen adresse for hver kunde, som firmaet ditt styrer.",
+      "emailInvalid": "Skriv en e-postadresse.",
+      "region": "Datasenter"
+    },
+    "regions": {
+      "EU": "EU",
+      "EU_FRANKFURT": "EU – Frankfurt",
+      "EU_PARIS": "EU – Paris",
+      "EU_STOCKHOLM": "EU – Stockholm",
+      "EU_ZURICH": "EU – Zürich"
+    },
+    "nothingChosen": "Velg minst én tjeneste å opprette eller én avtalelinje å legge til.",
+    "contract": {
+      "intro": "Legg tjenestene inn i avtalen til kunden, så faktureres de etter det tjenesten teller.",
+      "contract": "Avtale",
+      "option": "{{number}} {{title}} ({{status}})",
+      "none": "Kunden har ingen avtale ennå. Fortsett uten avtalelinjer, og legg dem til når avtalen finnes.",
+      "loadError": "Avtalene kunne ikke leses.",
+      "add": "Fakturer {{model}}",
+      "product": "Produkt",
+      "productRequired": "Velg produktet linjen fakturerer.",
+      "estimate": "Estimert antall",
+      "estimateHint": "Faktureres til tjenesten har talt; deretter teller Parasoll selv.",
+      "estimateInvalid": "Skriv et helt tall fra 0.",
+      "from": "Linjene gjelder fra og med",
+      "fromInvalid": "Velg en dag fra avtalens start ({{date}}) eller senere.",
+      "already": "Avtalen fakturerer allerede {{model}}.",
+      "priceNote": "Prisen følger prislisten; endre den på avtalen.",
+      "alreadyIn": "Avtale {{number}} fakturerer allerede {{model}}."
+    },
+    "review": {
+      "creates": "Opprettes i tjenestene",
+      "lines": "Legges til i avtale {{number}}",
+      "line": "{{product}} – {{model}}, estimert {{quantity}}, fra {{date}}",
+      "blocked": "Fjern haken for det som ikke kan opprettes, eller rett feltet, før du går videre.",
+      "previewError": "Forhåndsvisningen kunne ikke lages.",
+      "effects": "Dette får {{system}}",
+      "backToServices": "Tilbake til Tjenester",
+      "blocks": {
+        "VND_EXISTS_AT_VENDOR": "{{system}} har allerede en post for denne kunden som ingen kunde er koblet til. Er det denne, kobler du den under Koblinger.",
+        "VND_AMBIGUOUS_AT_VENDOR": "{{system}} har flere poster som kan være denne kunden. Koble den riktige under Koblinger.",
+        "VND_EARLIER_ATTEMPT_OPEN": "En tidligere forespørsel om å opprette kunden i {{system}} har ikke fått noe utfall ennå. Avklar den i handlingsloggen først.",
+        "VND_ALREADY_CONNECTED": "Kunden er allerede koblet til {{system}}."
+      }
+    },
+    "result": {
+      "creates": "I tjenestene",
+      "lines": "Avtale {{number}}",
+      "lineAdded": "{{product}} er lagt til",
+      "lineFailed": "{{product}} ble ikke lagt til: {{error}}",
+      "next": "Gjenstår utenfor Parasoll",
+      "steps": {
+        "atera": "Installer Atera-agenten på kundens enheter (i Atera).",
+        "huntress": "Installer Huntress-agenten med organisasjonsnøkkelen {{key}}: legg skriptet til Huntress i kundens profil i Atera. Kontonøkkelen står i Huntress.",
+        "cloudally": "Gjør prøvekontoen om til betalt konto, gi CloudAlly tilgang til kundens Microsoft 365 og sett opp oppgavene for sikkerhetskopi (i partnerportalen til CloudAlly)."
+      },
+      "open": "Åpne {{system}}",
+      "keepsGoing": "Du kan lukke vinduet: tjenestene jobber videre, og handlingsloggen tar vare på utfallet.",
+      "notCreated": "Ikke opprettet",
+      "lineSkipped": "{{product}} ble ikke lagt til: {{system}} tok ikke imot forespørselen.",
+      "lineWithoutService": "Linjen for {{system}} er lagt til i avtalen, men {{system}} ble ikke opprettet. Fjern linjen i avtalen hvis tjenesten ikke settes opp.",
+      "logged": "Handlingsloggen tar vare på alle utfall.",
+      "openLog": "Åpne handlingsloggen"
+    },
+    "continue": "Fortsett",
+    "confirm": "Opprett og koble til",
+    "confirmLinesOnly": "Legg til i avtalen",
+    "busy": "Sender …"
   }
 }

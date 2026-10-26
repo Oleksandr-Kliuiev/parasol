@@ -29,6 +29,9 @@ public sealed record ServiceSourceRead(string Source, string System, DateTimeOff
         ("alerts", "atera", "atera-alerts"),
         ("devices", "atera", "atera-agents"),
         ("patches", "atera", "atera-patches"),
+        // M41: Huntress's agents (machines, Defender, isolation) and its incidents, escalations and platform actions.
+        ("security-devices", "huntress", "huntress-agents"),
+        ("security-alerts", "huntress", "huntress-alerts"),
     ];
 
     internal static async Task<ServiceSourceRead> LatestAsync(IEnumerable<ISyncCompletenessSource> completeness, string source, CancellationToken ct)
@@ -43,6 +46,16 @@ public sealed record ServiceSourceRead(string Source, string System, DateTimeOff
         }
 
         return new ServiceSourceRead(source, system, null, false, false);
+    }
+
+    /// <summary>
+    /// The read of <paramref name="source"/> for a status line, or null when its system is switched off and was never read (M41): it
+    /// has said nothing about the data. A system read before and switched off since stays, late, because what it brought is still shown.
+    /// </summary>
+    internal static async Task<ServiceSourceRead?> ShownAsync(IEnumerable<ISyncCompletenessSource> completeness, string source, CancellationToken ct)
+    {
+        var read = await LatestAsync(completeness, source, ct);
+        return read.StartedAt is null && !completeness.Any(c => c.IsConnected(read.System)) ? null : read;
     }
 }
 

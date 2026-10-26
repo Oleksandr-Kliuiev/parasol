@@ -42,6 +42,20 @@ export async function showRow(page: Page, row: Locator) {
   return row;
 }
 
+/**
+ * Types `term` into a list's search `box` and waits for the answer to that very search: the read of `path` whose `param` is the term.
+ * The search is read after a pause in typing and its answer redraws the list, so a test acts on a row, or says what the list holds,
+ * only once that answer is there; until then the list shows the rows of the search before (`searchTickets` in `atera.ts` likewise).
+ */
+export async function searchList(page: Page, box: Locator, path: string, term: string, param = 'search') {
+  const answered = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === path && url.searchParams.get(param) === term;
+  });
+  await box.fill(term);
+  await answered;
+}
+
 export function marker(prefix: string) {
   return `${prefix}${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }

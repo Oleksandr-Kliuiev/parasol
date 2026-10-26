@@ -110,7 +110,9 @@ internal sealed class CoverageChecks(ServiceDbContext db, IEnumerable<ICoverageR
     public async Task<T> LockedAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken) =>
         await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
         {
-            foreach (var entry in db.ChangeTracker.Entries().Where(e => e.Entity is Alert or AlertHold or CoverageRuleSetting).ToList())
+            // Also the events a failed attempt queued (M43: a gap that became urgent): the new attempt raises its own.
+            foreach (var entry in db.ChangeTracker.Entries()
+                         .Where(e => e.Entity is Alert or AlertHold or CoverageRuleSetting or Crm.Infrastructure.Persistence.OutboxMessage).ToList())
             {
                 entry.State = EntityState.Detached;
             }

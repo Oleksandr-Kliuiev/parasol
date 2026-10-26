@@ -54,6 +54,18 @@ public sealed class Alert : Entity
     public int CleanChecks { get; private set; }
 
     /// <summary>
+    /// The source asks that a critical alert it closes wait for a person (M41: an urgent Huntress incident): a complete read that no
+    /// longer lists it marks it <see cref="SourceClosedAt"/> and leaves it open until someone confirms.
+    /// </summary>
+    public bool ConfirmClose { get; private set; }
+
+    /// <summary>When the source closed the alert that now waits for a person to confirm it; null while the source has it open.</summary>
+    public DateTimeOffset? SourceClosedAt { get; private set; }
+
+    /// <summary>A critical alert of a source that asks for it: closing it at the source does not close it here.</summary>
+    public bool NeedsConfirmedClose => ConfirmClose && Severity == AlertSeverity.Critical;
+
+    /// <summary>
     /// The CRM's own status (M40): hidden in Parasoll until a time; the alert stays as it is in its source and comes back by itself.
     /// Loaded with the alert wherever a read may open it again or a person decides about it. Empty only for an alert an earlier
     /// release stored on this schema (a rollback in between): the next read that lists it, or the first decision about it, adds it.
@@ -69,19 +81,42 @@ public sealed class Alert : Entity
     /// </summary>
     public AlertHold EnsureHold() => Hold ??= new AlertHold(Id);
 
+    /// <summary>Open in its source and critical (M43): what <see cref="AlertBecameUrgent"/> announces when an alert becomes it.</summary>
+    public bool IsUrgent => State == AlertState.Open && Severity == AlertSeverity.Critical;
+
     public static Alert Open(string system, AlertKind kind, ExternalAlert source, Guid? deviceId, DateTimeOffset now)
     {
         var alert = new Alert { System = system, ExternalId = source.ExternalId, State = AlertState.Open };
         alert.Hold = new AlertHold(alert.Id);
-        alert.Observe(kind, source, deviceId, now);
+        alert.Observe(kind, source, deviceId, now, isNew: true);
         return alert;
     }
 
     /// <summary>
     /// A read lists the alert as open: its fields follow the source, a resolved alert opens again and an acknowledged one keeps
-    /// its acknowledgement. The last-seen time always moves; it alone is not reported as a change.
+    /// its acknowledgement. The last-seen time always moves; it alone is not reported as a change. An alert that becomes urgent
+    /// here — opened again as critical, or a warning turned critical — raises <see cref="AlertBecameUrgent"/> (M43).
     /// </summary>
-    public AlertChange Observe(AlertKind kind, ExternalAlert source, Guid? deviceId, DateTimeOffset now)
+    public AlertChange Observe(AlertKind kind, ExternalAlert source, Guid? deviceId, DateTimeOffset now) =>
+        Observe(kind, source, deviceId, now, isNew: false);
+
+    /// <summary>
+    /// The read of <see cref="Observe(AlertKind, ExternalAlert, Guid?, DateTimeOffset)"/>; <paramref name="isNew"/> for an alert being
+    /// created, which was never urgent before, whatever its fields held until now.
+    /// </summary>
+    private AlertChange Observe(AlertKind kind, ExternalAlert source, Guid? deviceId, DateTimeOffset now, bool isNew)
+    {
+        var wasUrgent = !isNew && IsUrgent;
+        var change = Apply(kind, source, deviceId, now);
+        if (!wasUrgent && IsUrgent)
+        {
+            Raise(new AlertBecameUrgent(Id));
+        }
+
+        return change;
+    }
+
+    private AlertChange Apply(AlertKind kind, ExternalAlert source, Guid? deviceId, DateTimeOffset now)
     {
         var before = Signature();
         Kind = kind;
@@ -94,7 +129,10 @@ public sealed class Alert : Entity
         // A link that does not fit is left out rather than cut into an address that leads somewhere else.
         Url = source.Url is { Length: <= UrlLength } url ? url : null;
         CreatedAtSource = source.CreatedAt;
+        ConfirmClose = source.ConfirmClose;
         LastSeenAt = now;
+        // Listed open again: the source reopened what it had closed, so there is nothing left to confirm.
+        SourceClosedAt = null;
         if (State == AlertState.Resolved)
         {
             // A new occurrence: what someone decided about the last one does not hide it.
@@ -107,12 +145,30 @@ public sealed class Alert : Entity
         return before == Signature() ? AlertChange.None : AlertChange.Updated;
     }
 
+    /// <summary>
+    /// A complete read no longer lists an alert that waits for a person when its source closes it (M41): it stays open, marked closed
+    /// at the source. Returns false when it was marked already or is resolved.
+    /// </summary>
+    public bool ClosedAtSource(DateTimeOffset now)
+    {
+        if (State == AlertState.Resolved || SourceClosedAt is not null)
+        {
+            return false;
+        }
+
+        SourceClosedAt = now;
+        return true;
+    }
+
+    /// <summary>A person confirms the closing of an alert its source closed (M41). Returns false when nothing waits for that.</summary>
+    public bool ConfirmClosed(DateTimeOffset now) => SourceClosedAt is not null && Resolve(now);
+
     /// <summary>A coverage gap the CRM found (M40), open from now on, of the kind of watching that is missing.</summary>
     public static Alert Gap(string rule, AlertKind kind, CoverageFinding finding, string? facts, DateTimeOffset now)
     {
         var alert = new Alert { System = CoverageGaps.System, ExternalId = GapId(rule, finding.Subject), State = AlertState.Open, Rule = rule };
         alert.Hold = new AlertHold(alert.Id);
-        alert.Found(kind, finding, facts, now);
+        alert.Found(kind, finding, facts, now, isNew: true);
         return alert;
     }
 
@@ -125,12 +181,15 @@ public sealed class Alert : Entity
     /// The customer's id at the source is the id of the organization the gap was first found for, and stays: a task made from the
     /// gap names it, and still names the same gap after a merge moved the gap to another organization.
     /// </summary>
-    public AlertChange Found(AlertKind kind, CoverageFinding finding, string? facts, DateTimeOffset now)
+    public AlertChange Found(AlertKind kind, CoverageFinding finding, string? facts, DateTimeOffset now) =>
+        Found(kind, finding, facts, now, isNew: false);
+
+    private AlertChange Found(AlertKind kind, CoverageFinding finding, string? facts, DateTimeOffset now, bool isNew)
     {
         var since = State == AlertState.Resolved || LastSeenAt is null ? now : CreatedAtSource;
         var observed = Observe(kind, new ExternalAlert(
             ExternalId, finding.OrganizationId, finding.Severity, finding.Title, finding.DeviceName, since,
-            ExternalCustomerId ?? finding.OrganizationId.ToString("N")), finding.DeviceId, now);
+            ExternalCustomerId ?? finding.OrganizationId.ToString("N")), finding.DeviceId, now, isNew);
         var changed = Facts != facts || CleanChecks != 0;
         Facts = facts;
         CleanChecks = 0;
@@ -174,13 +233,14 @@ public sealed class Alert : Entity
 
         State = AlertState.Resolved;
         ResolvedAt = now;
+        SourceClosedAt = null;
         return true;
     }
 
     private static string? Cut(string? value, int length) => value is { } text && text.Length > length ? text[..length] : value;
 
     private string Signature() => string.Join('|', Kind, OrganizationId, ExternalCustomerId, Severity, Title, DeviceName, DeviceId, Url,
-        CreatedAtSource.ToUnixTimeSeconds());
+        CreatedAtSource.ToUnixTimeSeconds(), ConfirmClose, SourceClosedAt?.ToUnixTimeSeconds());
 }
 
 /// <summary>What a read that lists an alert did to it.</summary>

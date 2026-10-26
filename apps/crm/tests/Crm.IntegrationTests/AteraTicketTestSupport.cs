@@ -41,11 +41,13 @@ internal sealed class AteraTicketHost(WebApplicationFactory<Program> host, WireM
 
     public string User => user;
 
-    public static AteraTicketHost Start(CrmWebFactory factory, bool write = true, bool dryRun = false, string[]? kinds = null)
+    public static AteraTicketHost Start(
+        CrmWebFactory factory, bool write = true, bool dryRun = false, string[]? kinds = null, Action<IWebHostBuilder>? configure = null)
     {
         var atera = WireMockServer.Start();
         var host = factory.WithWebHostBuilder(builder =>
         {
+            configure?.Invoke(builder);
             builder.UseSetting("Integrations:Atera:BaseUrl", atera.Url + "/api/v3/");
             builder.UseSetting("Integrations:Atera:WriteEnabled", write ? "true" : "false");
             builder.UseSetting("Integrations:Atera:DryRun", dryRun ? "true" : "false");

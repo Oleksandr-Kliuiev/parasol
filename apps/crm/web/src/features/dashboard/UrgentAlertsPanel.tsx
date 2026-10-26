@@ -11,6 +11,7 @@ import { Panel } from '../../shared/components/Panel';
 import { formatDateTime, formatRelative } from '../../shared/utils/format';
 import { useFlushStyles } from '../billing/flushStyles';
 import { RecordRow, RowMeta } from '../billing/RecordRow';
+import { ClosedAtSource } from '../service/alerts/AlertBits';
 import { AlertReadLine } from '../service/alerts/AlertReadLine';
 import { AlertTaskCell } from '../service/alerts/AlertTaskCell';
 import { AlertTaskDialogHost } from '../service/alerts/AlertTaskDialogHost';
@@ -104,6 +105,8 @@ function AlertRow({ alert, task }: { alert: UrgentAlerts['items'][number]; task:
       meta={<RowMeta>
         {where && `${where} · `}
         <time dateTime={alert.createdAt} title={formatDateTime(alert.createdAt)}>{formatRelative(alert.createdAt)}</time>
+        {/* M41: an urgent alert its source closed waits here until someone confirms it. */}
+        {alert.sourceClosedAt && <>{' · '}<ClosedAtSource alert={alert} /></>}
       </RowMeta>}
       end={<>
         <Badge appearance="tint" color={critical ? 'danger' : 'warning'}>{t(`service.severities.${alert.severity}`)}</Badge>
