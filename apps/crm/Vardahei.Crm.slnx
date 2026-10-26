@@ -16,6 +16,7 @@
     <Project Path="src/Integrations/Crm.Integrations.Brreg/Crm.Integrations.Brreg.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.CloudAlly/Crm.Integrations.CloudAlly.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.Core/Crm.Integrations.Core.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.Huntress/Crm.Integrations.Huntress.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.MicrosoftGraph/Crm.Integrations.MicrosoftGraph.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.PartnerCenter/Crm.Integrations.PartnerCenter.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.PowerOffice/Crm.Integrations.PowerOffice.csproj" />
@@ -80,6 +81,7 @@
   </Folder>
   <Folder Name="/src/Modules/Security/">
     <Project Path="src/Modules/Security/Crm.Security/Crm.Security.csproj" />
+    <Project Path="src/Modules/Security/Crm.Security.Contracts/Crm.Security.Contracts.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Service/">
     <Project Path="src/Modules/Service/Crm.Service.Contracts/Crm.Service.Contracts.csproj" />

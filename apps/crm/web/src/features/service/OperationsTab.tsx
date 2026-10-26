@@ -10,6 +10,7 @@ import { RecordRow } from '../billing/RecordRow';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { useScrollEdges } from '../../shared/utils/useScrollEdges';
+import { SecurityPanel } from '../security/SecurityPanel';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { Panel } from '../../shared/components/Panel';
@@ -22,7 +23,7 @@ import { SavedServiceReadState } from './SavedServiceReadState';
 import { deviceTypes, type Alert, type AlertPage, type Machine } from './types';
 import { MachineDrawer } from './machines/MachineDrawer';
 import { MachineRow } from './machines/MachineRow';
-import { AlertAge, AlertFacts, AlertSeverityBadge, AlertTitle } from './alerts/AlertBits';
+import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource, AlertTitle, ClosedAtSource } from './alerts/AlertBits';
 import { AlertDetailDrawer } from './alerts/AlertDetailDrawer';
 import { AlertReadLine } from './alerts/AlertReadLine';
 import { AlertTaskCell } from './alerts/AlertTaskCell';
@@ -159,7 +160,8 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
       </div>
       <ul className={flush.list}>{alerts.items.map(alert => <RecordRow key={alert.id} icon={<Alert16Regular />} tone={alert.severity === 'Critical' ? 'ember' : 'saffron'}
         title={<AlertTitle title={alertTitle(t, alert)} onOpen={() => openAlert(alert)} />}
-        meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />]} />}
+        meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />, <AlertSource key="source" system={alert.system} />,
+          alert.sourceClosedAt && alert.state !== 'Resolved' && <ClosedAtSource key="closed" alert={alert} />]} />}
         end={<><AlertSeverityBadge severity={alert.severity} /><AlertTaskCell alert={alert} task={alertTasks.links.get(alert.id)} /></>} />)}</ul>
       {alerts.available && alerts.items.length === 0 && <EmptyState icon={<AlertOn24Regular />} message={t(nothingSaved ? 'service.nothingSavedShort' : 'service.noAlerts')} />}
       <ListFooter shown={alerts.items.length} total={alerts.total} hasMore={alerts.hasNextPage} loading={alerts.isFetchingNextPage} onMore={() => void alerts.fetchNextPage()} />
@@ -182,6 +184,9 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
       {devices.available && devices.items.length === 0 && <EmptyState icon={<Desktop24Regular />} message={t('service.noDevices')} />}
       <ListFooter shown={devices.items.length} total={devices.total} hasMore={devices.hasNextPage} loading={devices.isFetchingNextPage} onMore={() => void devices.fetchNextPage()} />
     </Panel>
+
+    {/* M41: what Huntress counts for the customer and its monthly reports; its incidents are alerts in the list above. */}
+    <SecurityPanel organizationId={organizationId} scope={scope} />
 
     <Panel title={t('service.tickets')} icon={<Headset16Regular />} flush className={flush.panel} actions={<span className={styles.row}>
       <Switch label={t('service.openOnly')} checked={openOnly} onChange={(_, data) => setOpenOnly(data.checked)} />

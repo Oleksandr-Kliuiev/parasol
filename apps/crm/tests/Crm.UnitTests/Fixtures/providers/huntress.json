@@ -1,0 +1,126 @@
+{
+  "provider": "huntress",
+  "source": "synthetic",
+  "capturedAt": null,
+  "note": "Shapes as the examples of Huntress's own reference (OpenAPI /v1/swagger_doc.json, read 22.10.2026). Replace with sanitized captures of a working account (M41 risks), then set source and capturedAt.",
+  "account": {
+    "account": { "id": 4401, "name": "Vardahei Test", "subdomain": "vardahei-test", "status": "enabled", "support_type": "not_applicable" }
+  },
+  "organizations": {
+    "organizations": [
+      {
+        "id": 4410, "account_id": 4401, "name": "Fjord IT AS", "key": "fjord-it", "agents_count": 3, "incident_reports_count": 2,
+        "billable_identity_count": 12, "sat_learner_count": 9, "logs_sources_count": 1,
+        "identity_provider_tenant_id": "00000000-0000-4000-8000-000000004410", "report_recipients": ["drift@fjord.example.invalid"],
+        "created_at": "2026-01-05T08:00:00Z", "updated_at": "2026-10-20T08:00:00Z"
+      },
+      { "id": 4411, "account_id": 4401, "key": "nameless", "created_at": "2026-02-11T08:00:00Z" },
+      { "name": "No id AS" }
+    ],
+    "pagination": { "next_page_token": null }
+  },
+  "organization": {
+    "organization": {
+      "id": 4410, "account_id": 4401, "name": "Fjord IT AS", "agents_count": 3, "billable_identity_count": 12, "sat_learner_count": 9, "logs_sources_count": 1,
+      "actual_usages": {
+        "siem": { "billable_log_sources_count": 5, "retention": "90/7" },
+        "edr": { "billable_agents_count": 42, "unresponsive_agents_count": 2, "outdated_agents_count": 1, "isolated_agents_count": 0 },
+        "sat": { "learners_count": 25 },
+        "itdr": [
+          { "type": "microsoft", "identity_provider_tenant_id": "abcd-1234", "billable_identities_count": 100, "total_identities_count": 150 },
+          { "type": "google", "identity_provider_tenant_id": "efgh-5678", "billable_identities_count": 50, "total_identities_count": 75 }
+        ]
+      }
+    }
+  },
+  "organizationUsageAsText": {
+    "organization": {
+      "id": 4411, "name": "Havbris Test AS", "billable_identity_count": 7, "sat_learner_count": 3, "logs_sources_count": 2,
+      "actual_usages": "{\"edr\":{\"billable_agents_count\":3,\"unresponsive_agents_count\":1,\"outdated_agents_count\":0,\"isolated_agents_count\":1}}"
+    }
+  },
+  "agents": [
+    {
+      "id": 4420, "account_id": 4401, "organization_id": 4410, "hostname": "SRV-01", "platform": "Windows", "os": "Windows Server 2022 Standard",
+      "arch": "x86_64", "version": "0.13.140", "edr_version": "0.3.20", "serial_number": "VMW-4C4C4544-0042",
+      "mac_addresses": ["00:15:5d:01:02:03", "00:15:5D:01:02:03", "00:15:5d:0a:0b:0c"],
+      "ipv4_address": "10.0.0.10", "ipv4_addresses": ["10.0.0.10", "172.27.240.1"], "external_ip": "198.51.100.10", "domain_name": "FJORD",
+      "os_build_version": "20348", "defender_status": "Unhealthy", "defender_substatus": "Real-time protection off", "defender_policy_status": "Compliant",
+      "last_survey_at": "2026-10-22T05:00:00Z", "firewall_status": "Disabled", "tamper_protection_configured": true, "tamper_protection_actual": true,
+      "tags": ["Production"], "last_callback_at": "2026-10-22T07:55:00Z", "created_at": "2026-03-01T08:00:00Z", "updated_at": "2026-10-22T07:55:00Z"
+    },
+    {
+      "id": 4421, "account_id": 4401, "organization_id": 4411, "hostname": "MAC-03", "platform": "darwin", "os": "macOS 15.1", "version": "1.2.0",
+      "mac_addresses": [], "last_callback_at": "2026-10-12T07:55:00Z", "firewall_status": "Isolated"
+    },
+    { "id": 4422, "account_id": 4401, "hostname": "NO-ORG", "platform": "windows" }
+  ],
+  "incidentReport": {
+    "id": 4430, "account_id": 4401, "organization_id": 4410, "agent_id": 4420, "status": "Sent", "severity": "high",
+    "subject": "HIGH - Incident on SRV-01 (Fjord IT AS)", "summary": "Huntress detected a malicious scheduled task on this host.",
+    "body": "<Content>", "platform": "windows", "indicator_types": ["footholds", "process_detections"],
+    "indicator_counts": { "footholds": 1, "process_detections": 2, "monitored_files": 0, "ransomware_canaries": "n/a" },
+    "psa_ticket_eids": ["T-1696"], "sent_at": "2026-10-22T06:00:00Z", "status_updated_at": "2026-10-22T06:00:00Z", "updated_at": "2026-10-22T06:30:00Z",
+    "remediations": {
+      "total_count": 2, "has_more": false,
+      "items": [
+        {
+          "id": 4441, "type": "manual", "action": "Delete File", "status": "unapproved",
+          "parameters": [{ "name": "path", "description": "c:\\windows\\system32\\tasks\\synthetic_task" }]
+        },
+        {
+          "id": 4440, "type": "assisted", "action": "Remove Scheduled Task", "status": "approved", "approved_at": "2026-10-22T06:10:00Z",
+          "approved_by": { "id": 77, "email": "tekniker@vardahei.example.invalid", "name": "Tor Tekniker" }, "parameters": "synthetic_task"
+        }
+      ]
+    }
+  },
+  "incidentReportWithMore": {
+    "id": 4431, "organization_id": 4410, "status": "auto_remediating", "subject": "Incident on PC-17",
+    "remediations": { "total_count": 11, "has_more": true, "items": [{ "id": 4450, "type": "assisted", "status": "approved", "approved_by": { "email": "only@vardahei.example.invalid" } }] }
+  },
+  "remediations": {
+    "remediations": [
+      { "id": 4451, "type": "Containment", "action": "Isolate Host", "parameters": "PC-17", "status": "Completed", "completed_at": "2026-10-22T06:40:00Z" },
+      { "id": 4452 }
+    ],
+    "pagination": {}
+  },
+  "comments": {
+    "comments": [
+      { "id": 4460, "body": "We have already rebuilt this host.", "author": "Tor Tekniker", "created_at": "2026-10-22T07:00:00Z", "updated_at": "2026-10-22T07:05:00Z" },
+      { "id": 4461, "author": "Huntress SOC", "created_at": "2026-10-22T07:10:00Z" },
+      { "id": 4462, "body": "No time" }
+    ],
+    "pagination": {}
+  },
+  "escalation": {
+    "escalation": {
+      "id": 4470, "account": { "id": 4401, "name": "Vardahei Test" }, "organizations": [{ "id": 4410, "name": "Fjord IT AS" }, 4411],
+      "created_at": "2026-10-21T18:20:34Z", "resolved_at": null, "severity": "critical", "status": "Overdue", "subject": "Unexpected login from US",
+      "subtype": "US", "type": "Unexpected Country Access", "type_code": "unexpected_country_access", "updated_at": "2026-10-22T06:00:00Z",
+      "entities": {
+        "total_count": 4, "has_more": true,
+        "items": [
+          { "id": 4420, "type": "Agent", "details": { "hostname": "SRV-01", "platform": "windows", "os": "Windows Server 2022", "last_callback_at": "2026-10-22T07:55:00Z" } },
+          { "id": "id-1", "type": "Identity", "details": { "display_name": "Kari Test", "email": "kari@fjord.example.invalid" } },
+          { "id": "id-2", "type": "Identity", "details": { "email": "ola@fjord.example.invalid", "username": "ola" } },
+          { "id": "mb-1", "type": "Mailbox", "name": "Postmottak" }
+        ]
+      }
+    }
+  },
+  "platformAction": {
+    "platform_action": {
+      "id": 4480, "organizations": [{ "id": 4410, "name": "Fjord IT AS" }], "severity": "high", "status": "open", "subject": "Defender Disabled",
+      "type": "Environmental Issue", "type_code": "managed_antivirus", "updated_at": "2026-10-22T06:00:00Z",
+      "entities": { "total_count": 1, "has_more": false, "items": [{ "id": 4420, "type": "Agent", "details": { "hostname": "SRV-01" } }] }
+    }
+  },
+  "report": {
+    "id": 4490, "organization_id": 4410, "type": "Monthly_Summary", "period": "2026-09-01...2026-09-30",
+    "url": "https://huntress.example.invalid/reports/4490.pdf?disposition=download", "agents_count": 3, "incidents_reported": 2, "incidents_resolved": 1,
+    "signals_detected": 120, "signals_investigated": 118, "events_analyzed": 9876543210, "analyst_name": "Synthetic Analyst",
+    "created_at": "2026-10-01T03:00:00Z", "updated_at": "2026-10-01T03:00:00Z"
+  }
+}

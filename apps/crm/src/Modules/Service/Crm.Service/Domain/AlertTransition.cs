@@ -10,6 +10,9 @@ public enum AlertTransitionKind
 
     /// <summary>Shown again before the date it was hidden until.</summary>
     Shown,
+
+    /// <summary>The source closed an urgent alert, and a person confirmed the closing here (M41).</summary>
+    Confirmed,
 }
 
 /// <summary>
@@ -32,4 +35,6 @@ public sealed class AlertTransition : AuditableEntity
         new() { AlertId = alertId, Kind = AlertTransitionKind.Hidden, Until = until, Reason = reason };
 
     public static AlertTransition Shown(Guid alertId) => new() { AlertId = alertId, Kind = AlertTransitionKind.Shown };
+
+    public static AlertTransition Confirmed(Guid alertId) => new() { AlertId = alertId, Kind = AlertTransitionKind.Confirmed };
 }

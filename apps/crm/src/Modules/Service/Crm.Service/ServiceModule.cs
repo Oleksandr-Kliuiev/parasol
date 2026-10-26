@@ -92,6 +92,12 @@ public static class ServiceModule
         services.AddScoped<AlertHiding>();
         // M40: the CRM's own coverage rules, checked after a complete read of their source, and their settings.
         services.AddScoped<ICoverageRule, Features.Coverage.AteraAgentSilentRule>();
+        // M41: Atera and Huntress compared, and what Huntress says about its agents and Defender.
+        services.AddScoped<ICoverageRule, Features.Coverage.HuntressAgentMissingRule>();
+        services.AddScoped<ICoverageRule, Features.Coverage.AteraAgentMissingRule>();
+        services.AddScoped<ICoverageRule, Features.Coverage.HuntressAgentSilentRule>();
+        services.AddScoped<ICoverageRule, Features.Coverage.HuntressAgentOutdatedRule>();
+        services.AddScoped<ICoverageRule, Features.Coverage.DefenderOffRule>();
         services.AddScoped<Features.Coverage.CoverageChecks>();
         services.AddScoped<ICoverageCheck>(sp => sp.GetRequiredService<Features.Coverage.CoverageChecks>());
         services.AddScoped<Features.Coverage.CoverageSettings>();
@@ -189,6 +195,17 @@ public static class ServiceModule
                 var alerts = await db.Alerts.AsNoTracking().Where(AlertVisibility.OpenNow(time.GetUtcNow())).Where(a => a.OrganizationId == organizationId)
                     .GroupBy(a => a.Severity).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
                 var tickets = db.Tickets.AsNoTracking().Where(t => t.OrganizationId == organizationId);
+                // Every source's read, Huntress's alerts and agents beside Atera's because they are counted above too (M41); a source
+                // switched off and never read is left out.
+                var reads = new List<ServiceSourceRead>();
+                foreach (var source in (string[])["tickets", "alerts", "devices", "security-alerts", "security-devices"])
+                {
+                    if (await ServiceSourceRead.ShownAsync(completeness, source, ct) is { } read)
+                    {
+                        reads.Add(read);
+                    }
+                }
+
                 return Results.Ok(new ServiceSummary(
                     await tickets.CountAsync(t => t.IsOpen, ct),
                     await tickets.CountAsync(t => t.CreatedAtSource >= since, ct),
@@ -197,11 +214,7 @@ public static class ServiceModule
                     alerts.FirstOrDefault(a => a.Key == AlertSeverity.Critical)?.Count ?? 0,
                     alerts.FirstOrDefault(a => a.Key == AlertSeverity.Warning)?.Count ?? 0,
                     await tickets.MaxAsync(t => (DateTimeOffset?)t.SyncedAt, ct),
-                    [
-                        await ServiceSourceRead.LatestAsync(completeness, "tickets", ct),
-                        await ServiceSourceRead.LatestAsync(completeness, "alerts", ct),
-                        await ServiceSourceRead.LatestAsync(completeness, "devices", ct),
-                    ]));
+                    reads));
             })
             .RequirePermission(Permissions.ServiceRead);
 
@@ -261,6 +274,11 @@ public static class ServiceModule
 
         group.MapPost("/alerts/{id:guid}/show", (Guid id, HttpRequest http, AlertHiding hiding, AlertQueries alerts, CancellationToken ct) =>
                 ChangeAlert(http, alerts, ifMatch => hiding.ShowAsync(id, ifMatch, ct), ct))
+            .RequirePermission(Permissions.ServiceWrite);
+
+        // M41: an urgent alert its source closed waits for a person; this confirms the closing, with the hold's ETag.
+        group.MapPost("/alerts/{id:guid}/confirm-closed", (Guid id, HttpRequest http, AlertHiding hiding, AlertQueries alerts, CancellationToken ct) =>
+                ChangeAlert(http, alerts, ifMatch => hiding.ConfirmClosedAsync(id, ifMatch, ct), ct))
             .RequirePermission(Permissions.ServiceWrite);
 
         group.MapGet("/alerts/urgent", async (int? limit, AlertQueries alerts, CancellationToken ct) =>

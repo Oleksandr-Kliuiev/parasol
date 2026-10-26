@@ -178,6 +178,31 @@ public sealed class Device : Entity
 
     public string? AgentVersion { get; private set; }
 
+    /// <summary>
+    /// When the device was first read with its current agent version (M41): an agent that stays on an old version while a newer one
+    /// runs elsewhere has been behind since the newer one's earliest such time.
+    /// </summary>
+    public DateTimeOffset? AgentVersionSince { get; private set; }
+
+    /// <summary>The system family as the source words it (<c>windows</c>, <c>darwin</c>, <c>linux</c>), M41; null when it does not say.</summary>
+    public string? Platform { get; private set; }
+
+    /// <summary>Microsoft Defender's status as a security source words it (M41: <c>Healthy</c>, <c>Unhealthy</c>, <c>Unmanaged</c>…).</summary>
+    public string? AntivirusStatus { get; private set; }
+
+    public string? AntivirusSubstatus { get; private set; }
+
+    public string? AntivirusPolicyStatus { get; private set; }
+
+    /// <summary>When the source last heard Defender's status from the computer.</summary>
+    public DateTimeOffset? AntivirusReportedAt { get; private set; }
+
+    /// <summary>
+    /// Whether the computer is cut off from the network (M41): <c>Isolated</c>, <c>Pending Isolation</c>, <c>Pending Release</c>, or the
+    /// source's word for not isolated (<c>Disabled</c>); null when the source does not isolate.
+    /// </summary>
+    public string? Isolation { get; private set; }
+
     /// <summary>When the Windows updates were last read completely; null until they have been.</summary>
     public DateTimeOffset? PatchesReadAt { get; private set; }
 
@@ -187,11 +212,11 @@ public sealed class Device : Entity
     public static Device From(string system, Guid organizationId, ExternalDevice source, DateTimeOffset now)
     {
         var device = new Device { System = system, ExternalId = source.ExternalId, FirstSeenAt = now };
-        device.Apply(organizationId, source);
+        device.Apply(organizationId, source, now);
         return device;
     }
 
-    public void Apply(Guid organizationId, ExternalDevice s)
+    public void Apply(Guid organizationId, ExternalDevice s, DateTimeOffset now)
     {
         OrganizationId = organizationId;
         MachineName = s.MachineName;
@@ -222,7 +247,20 @@ public sealed class Device : Entity
         LastLoginUser = Clean(i?.LastLoginUser, 256);
         LastRebootAt = i?.LastRebootAt;
         Disks = DeviceDisks.Write(i?.Disks ?? []);
-        AgentVersion = Clean(i?.AgentVersion, 64);
+        var version = Clean(i?.AgentVersion, 64);
+        if (version != AgentVersion || (version is not null && AgentVersionSince is null))
+        {
+            AgentVersionSince = version is null ? null : now;
+        }
+
+        AgentVersion = version;
+        Platform = Clean(s.Platform, 16)?.ToLowerInvariant();
+        var p = s.Protection;
+        AntivirusStatus = Clean(p?.AntivirusStatus, 64);
+        AntivirusSubstatus = Clean(p?.AntivirusSubstatus, 128);
+        AntivirusPolicyStatus = Clean(p?.AntivirusPolicyStatus, 64);
+        AntivirusReportedAt = p?.AntivirusReportedAt;
+        Isolation = Clean(p?.Isolation, 32);
     }
 
     /// <summary>

@@ -48,6 +48,18 @@ const hostArgs = [
   ...['CustomerSyncCron', 'ContactSyncCron', 'TicketSyncCron', 'RecentTicketSyncCron', 'WorkHoursSyncCron', 'AgentSyncCron', 'PatchSyncCron',
     'AlertSyncCron', 'TicketConversationSyncCron']
     .map((cron) => `--Integrations:Atera:${cron}="0 0 31 2 *"`),
+  // M41: Huntress against its stand-in, the same way: reads on request only, actions to the stand-in only.
+  '--Integrations:Huntress:Enabled=true',
+  `--Integrations:Huntress:BaseUrl=${mock}/huntress/v1/`,
+  '--Integrations:Huntress:WriteEnabled=true',
+  // Huntress allows an account 60 requests a minute and Parasoll keeps 15 of them for people's actions; the stand-in has no limit,
+  // and three browsers answering incidents at once would wait out that minute, so it is given more (never Huntress's own address).
+  '--Integrations:Huntress:AccountRequestsPerMinute=1200',
+  '--Integrations:Huntress:ReadRequestsPerMinute=600',
+  '--Integrations:Huntress:ActionRequestsPerMinute=600',
+  ...['incident.approve', 'incident.reject', 'incident.step', 'incident.resolve', 'incident.comment', 'escalation.resolve', 'agent.isolate', 'agent.release',
+    'agent.uninstall'].map((kind, index) => `--Integrations:Huntress:EnabledActions:${index}=${kind}`),
+  ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
   // M42: CloudAlly's partner API on the stand-in; every kind of action on, the schedules off (tests start the reads).
   '--Integrations:CloudAlly:Enabled=true',
   `--Integrations:CloudAlly:BaseUrl=${mock}/cloudally/`,
@@ -74,6 +86,8 @@ const providerKeys = [
   '--Integrations:PowerOffice:ClientKey=mock',
   '--Integrations:PowerOffice:SubscriptionKey=mock',
   '--Integrations:Atera:ApiKey=mock',
+  '--Integrations:Huntress:ApiKey=mock',
+  '--Integrations:Huntress:ApiSecret=mock',
   '--Integrations:CloudAlly:ClientId=mock',
   '--Integrations:CloudAlly:ClientSecret=mock',
   '--Integrations:CloudAlly:Email=api@parasoll.example',

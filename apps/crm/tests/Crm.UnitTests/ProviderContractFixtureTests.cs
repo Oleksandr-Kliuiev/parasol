@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Huntress;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
 
@@ -38,6 +39,27 @@ public class ProviderContractFixtureTests
 
         var agent = AteraClient.ReadAgent(f.GetProperty("agents")[0]);
         Assert.Equal("PC-ALFA-01", agent!.MachineName);
+    }
+
+    [Fact]
+    public void Huntress_responses_are_understood_by_the_readers()
+    {
+        var f = Load("huntress");
+        Assert.Equal(4401, HuntressClient.ReadAccount(f.GetProperty("account").GetProperty("account"))!.Id);
+        Assert.Equal("Fjord IT AS", HuntressClient.ReadOrganization(f.GetProperty("organizations").GetProperty("organizations")[0])!.Name);
+        Assert.Equal(42, HuntressClient.ReadUsage(f.GetProperty("organization").GetProperty("organization"))!.BillableAgents);
+
+        var agent = HuntressClient.ReadAgent(f.GetProperty("agents")[0])!;
+        Assert.Equal(("SRV-01", 4410L, "Unhealthy", "Disabled"), (agent.Hostname, agent.OrganizationId, agent.DefenderStatus, agent.FirewallStatus));
+
+        var incident = HuntressClient.ReadIncident(f.GetProperty("incidentReport"))!;
+        Assert.Equal(("sent", 2), (incident.Status, incident.Remediations.Count));
+        Assert.Equal(2, f.GetProperty("comments").GetProperty("comments").EnumerateArray().Count(c => HuntressClient.ReadComment(c) is not null));
+
+        var escalation = HuntressClient.ReadNotice(HuntressNoticeKind.Escalation, f.GetProperty("escalation").GetProperty("escalation"))!;
+        Assert.Equal(("unexpected_country_access", 4), (escalation.TypeCode, escalation.Entities!.Count));
+        Assert.Equal("Defender Disabled", HuntressClient.ReadNotice(HuntressNoticeKind.PlatformAction, f.GetProperty("platformAction").GetProperty("platform_action"))!.Subject);
+        Assert.Equal(new DateOnly(2026, 9, 1), HuntressClient.ReadReport(f.GetProperty("report"))!.PeriodStart);
     }
 
     [Fact]

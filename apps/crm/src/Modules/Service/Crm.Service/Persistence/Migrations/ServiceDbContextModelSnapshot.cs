@@ -221,6 +221,9 @@ namespace Crm.Service.Persistence.Migrations
                     b.Property<int>("CleanChecks")
                         .HasColumnType("int");
 
+                    b.Property<bool>("ConfirmClose")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset>("CreatedAtSource")
                         .HasColumnType("datetimeoffset");
 
@@ -273,6 +276,9 @@ namespace Crm.Service.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset?>("SourceClosedAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("State")
                         .IsRequired()
@@ -441,6 +447,46 @@ namespace Crm.Service.Persistence.Migrations
                         },
                         new
                         {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004101"),
+                            Code = "huntress.agent-missing",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004102"),
+                            Code = "atera.agent-missing",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004103"),
+                            Code = "huntress.agent-silent",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004104"),
+                            Code = "huntress.agent-outdated",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004105"),
+                            Code = "huntress.defender-off",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
                             Id = new Guid("0199f1a0-4000-7000-8000-000000004201"),
                             Code = "cloudally.backup-failed",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
@@ -482,7 +528,25 @@ namespace Crm.Service.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<DateTimeOffset?>("AgentVersionSince")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("AlternateId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("AntivirusPolicyStatus")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("AntivirusReportedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("AntivirusStatus")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("AntivirusSubstatus")
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
@@ -509,6 +573,10 @@ namespace Crm.Service.Persistence.Migrations
                     b.Property<string>("IpAddresses")
                         .HasMaxLength(1024)
                         .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("Isolation")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<string>("LastLoginUser")
                         .HasMaxLength(256)
@@ -570,6 +638,10 @@ namespace Crm.Service.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("PatchesReadAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Platform")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.Property<string>("Processor")
                         .HasMaxLength(256)

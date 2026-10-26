@@ -78,26 +78,33 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         response.StatusCode.ShouldBe(HttpStatusCode.OK); response.Headers.CacheControl!.NoStore.ShouldBeTrue();
         var view = (await response.Content.ReadFromJsonAsync<ConnectionStatusView>(Ct))!;
         view.Status.ShouldBeOneOf("Ready", "Gaps");
-        view.Integrations.Select(i => i.System).ShouldBe(["atera", "poweroffice", "cloudally", "partnercenter", "microsoft-graph", "brreg"]);
-        var atera = view.Integrations[0];
+        view.Integrations.Select(i => i.System).ShouldBe(["atera", "huntress", "poweroffice", "cloudally", "partnercenter", "microsoft-graph", "brreg"]);
+        var integrations = view.Integrations.ToDictionary(i => i.System);
+        var atera = integrations["atera"];
         (atera.Enabled, atera.WriteEnabled).ShouldBe((true, (bool?)false));
         atera.State!.Jobs.Select(j => j.Job).ShouldBe(
             ["atera-customers", "atera-contacts", "atera-tickets", "atera-tickets-recent", "atera-work-hours", "atera-agents", "atera-patches", "atera-alerts",
                 "atera-ticket-conversations"]);
-        view.Integrations[1].WriteEnabled.ShouldBe(true);
+        // M41: Huntress is switched off in this host; its jobs are named all the same, switched off.
+        var huntress = integrations["huntress"];
+        (huntress.Enabled, huntress.WriteEnabled).ShouldBe((false, (bool?)false));
+        huntress.State!.Jobs.Select(j => j.Job).ShouldBe(["huntress-organizations", "huntress-agents", "huntress-alerts", "huntress-reports"]);
+        huntress.State.Jobs.ShouldAllBe(job => job.Freshness == "Disabled");
+        integrations["poweroffice"].WriteEnabled.ShouldBe(true);
         // M42: CloudAlly is listed with its three reads, switched off in this installation.
-        var cloudAlly = view.Integrations[2];
+        var cloudAlly = integrations["cloudally"];
         (cloudAlly.Enabled, cloudAlly.WriteEnabled).ShouldBe((false, (bool?)false));
         cloudAlly.State!.Jobs.Select(j => (j.Job, j.Freshness)).ShouldBe([("cloudally-accounts", "Disabled"), ("cloudally-backups", "Disabled"), ("cloudally-bills", "Disabled")]);
-        view.Integrations[3].State!.Jobs.Select(j => j.Job).ShouldBe(["partnercenter-customers", "partnercenter-subscriptions", "partnercenter-licenses"]);
-        view.Integrations[4].State!.Jobs.Select(j => j.Job).ShouldBe(["entra-user-sync", "entra-role-sync"]);
-        view.Integrations[5].WriteEnabled.ShouldBeNull();
+        integrations["partnercenter"].State!.Jobs.Select(j => j.Job).ShouldBe(["partnercenter-customers", "partnercenter-subscriptions", "partnercenter-licenses"]);
+        integrations["microsoft-graph"].State!.Jobs.Select(j => j.Job).ShouldBe(["entra-user-sync", "entra-role-sync"]);
+        integrations["brreg"].WriteEnabled.ShouldBeNull();
         // Each job is late after its own schedule (or its specification limit), none after the general day: alerts read twice an
         // hour are late after an hour, not up to date for a day.
         view.Integrations.SelectMany(i => i.State!.Jobs).ToDictionary(j => j.Job, j => j.ThresholdMinutes).ShouldBe(new Dictionary<string, int>
         {
             ["atera-customers"] = 60, ["atera-contacts"] = 105, ["atera-tickets"] = 15, ["atera-tickets-recent"] = 15, ["atera-work-hours"] = 60,
             ["atera-agents"] = 2175, ["atera-patches"] = 2175, ["atera-alerts"] = 60, ["atera-ticket-conversations"] = 22,
+            ["huntress-organizations"] = 105, ["huntress-agents"] = 105, ["huntress-alerts"] = 22, ["huntress-reports"] = 2175,
             ["poweroffice-customers"] = 37, ["poweroffice-contact-persons"] = 60, ["poweroffice-products"] = 2175, ["poweroffice-invoices"] = 90,
             ["cloudally-accounts"] = 105, ["cloudally-backups"] = 195, ["cloudally-bills"] = 2175,
             ["partnercenter-customers"] = 2175, ["partnercenter-subscriptions"] = 375, ["partnercenter-licenses"] = 2175,

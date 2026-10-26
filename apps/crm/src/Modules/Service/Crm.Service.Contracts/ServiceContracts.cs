@@ -51,7 +51,9 @@ public sealed record ExternalTicket(
 /// An agent as read from its source. <paramref name="SerialNumber"/> and <paramref name="MacAddresses"/> are as the source reports
 /// them: with the host name they tell one customer's machines apart (M40). <paramref name="AlternateId"/> is the source's second id
 /// of the agent (Atera's DeviceGuid, which its patch routes and alerts use); <paramref name="Inventory"/> is what the source says
-/// about the computer.
+/// about the computer. <paramref name="Platform"/> is the source's word for the system family (<c>windows</c>, <c>darwin</c>,
+/// <c>linux</c>) and <paramref name="Protection"/> what a security source says about the computer's protection (M41); Huntress's
+/// <paramref name="AlternateId"/> is the organization the agent reports under, which its actions are allowed for.
 /// </summary>
 public sealed record ExternalDevice(
     string ExternalId,
@@ -64,7 +66,21 @@ public sealed record ExternalDevice(
     string? SerialNumber = null,
     IReadOnlyList<string>? MacAddresses = null,
     string? AlternateId = null,
-    DeviceInventoryReading? Inventory = null);
+    DeviceInventoryReading? Inventory = null,
+    string? Platform = null,
+    DeviceProtectionReading? Protection = null);
+
+/// <summary>
+/// What a security source says about a computer's protection (M41, Huntress): Microsoft Defender's status, sub-status and policy
+/// as the source words them, when the source last heard them from the computer, and whether the computer is cut off from the
+/// network (<c>Isolated</c>, <c>Pending Isolation</c>, <c>Pending Release</c>; <c>Disabled</c> when it is not).
+/// </summary>
+public sealed record DeviceProtectionReading(
+    string? AntivirusStatus,
+    string? AntivirusSubstatus,
+    string? AntivirusPolicyStatus,
+    DateTimeOffset? AntivirusReportedAt,
+    string? Isolation);
 
 /// <summary>
 /// What a source says about the computer an agent runs on (M40): hardware, system, network, who is logged in and the last
@@ -93,8 +109,11 @@ public sealed record DeviceInventoryReading(
 /// <summary>One disk of a computer as its source reports it.</summary>
 public sealed record DeviceDisk(string? Drive, double? Free, double? Used, double? Total);
 
-/// <summary>A current device of a source, for a read that asks the source about each device (M40: its Windows updates).</summary>
-public sealed record DeviceRef(Guid Id, Guid OrganizationId, string ExternalId, string? AlternateId, string MachineName, string? Os);
+/// <summary>
+/// A current device of a source, for a read that asks the source about each device (M40: its Windows updates) and for an action at
+/// it (M41: <paramref name="Isolation"/> says whether the computer is isolated now).
+/// </summary>
+public sealed record DeviceRef(Guid Id, Guid OrganizationId, string ExternalId, string? AlternateId, string MachineName, string? Os, string? Isolation = null);
 
 /// <summary>One Windows update of a device: installed (with the time) or available (with the source's status of it).</summary>
 public sealed record DevicePatchReading(string? KbId, string Name, string? Class, DateTimeOffset? InstalledAt, string? Status);
@@ -167,6 +186,9 @@ public interface IServiceApi
     /// <summary>The devices of a source that are reported now, oldest first (M40).</summary>
     Task<IReadOnlyList<DeviceRef>> GetCurrentDevicesAsync(string system, CancellationToken cancellationToken);
 
+    /// <summary>A current device of a source by the source's id of it (M41: the target of an action); null when there is none.</summary>
+    Task<DeviceRef?> GetDeviceAsync(string system, string externalId, CancellationToken cancellationToken);
+
     /// <summary>
     /// Stores one complete read of a device's Windows updates in place of the last one (M40). False when the CRM has no such current
     /// device (it was removed in between).
@@ -184,6 +206,18 @@ public interface IServiceApi
     /// the stored alert is resolved as a complete read would resolve it. False when no such alert is open in the CRM.
     /// </summary>
     Task<bool> ResolveAlertAsync(string system, string externalId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// One device as its source has it now (M41: the read after an action changed it), the customer's other devices as they are. The
+    /// device keeps its machine. False when the CRM has no current device of the source with that id for the customer.
+    /// </summary>
+    Task<bool> ApplyDeviceAsync(Guid organizationId, string system, ExternalDevice device, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The source no longer has the device (M41: its agent was uninstalled from the CRM): it is marked removed and its machine matched
+    /// again, as a complete read would. False when no such device is current.
+    /// </summary>
+    Task<bool> RemoveDeviceAsync(string system, string externalId, CancellationToken cancellationToken);
 
     /// <summary>A stored alert by its CRM id, in any state; null when there is none.</summary>
     Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken);

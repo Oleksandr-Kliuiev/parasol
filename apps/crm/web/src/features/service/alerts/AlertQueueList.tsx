@@ -12,7 +12,7 @@ import { formatDate } from '../../../shared/utils/format';
 import { useCatalogStyles } from '../../catalog/styles';
 import type { Alert } from '../types';
 import { AlertActionsMenu } from './AlertActions';
-import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource, AlertTitle } from './AlertBits';
+import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource, AlertTitle, ClosedAtSource } from './AlertBits';
 import { AlertTaskCell } from './AlertTaskCell';
 import { alertTitle } from './alertText';
 import type { AlertTask } from './alertTasks';
@@ -75,8 +75,9 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
   const customer = (alert: Alert) => <AppLink className={styles.customer} to={`/organizations/${alert.organizationId}?tab=drift`}>
     {alert.organizationName ?? t('alerts.detail.unknownCustomer')}</AppLink>;
   const source = (alert: Alert) => <AlertSource system={alert.system} />;
-  // M40: a hidden alert says until when, beside its other facts.
+  // M40: a hidden alert says until when, beside its other facts; M41: an urgent one its source closed waits for a person.
   const hiddenUntil = (alert: Alert) => alert.hidden && t('alerts.hide.untilFact', { date: formatDate(alert.hidden.until) });
+  const closedAtSource = (alert: Alert) => alert.sourceClosedAt && alert.state !== 'Resolved' && <ClosedAtSource alert={alert} />;
 
   let body: ReactNode;
   if (alerts.length === 0) {
@@ -87,7 +88,7 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
       <ul data-alert-list tabIndex={-1} className={mergeClasses(list.cards, styles.cardsFocus)} aria-label={t('alerts.list')}>
         {alerts.map((alert) => <li key={alert.id} className={list.card}>
           <span className={styles.cardHead}><AlertSeverityBadge severity={alert.severity} />{title(alert)}</span>
-          <AlertFacts parts={[customer(alert), alert.deviceName, age(alert), source(alert), hiddenUntil(alert)]} />
+          <AlertFacts parts={[customer(alert), alert.deviceName, age(alert), source(alert), hiddenUntil(alert), closedAtSource(alert)]} />
           <span className={styles.cardFoot}><AlertTaskCell alert={alert} task={tasks.get(alert.id)} /><AlertActionsMenu alert={alert} /></span>
         </li>)}
       </ul>
@@ -106,7 +107,7 @@ export function AlertQueueList({ alerts, tasks, resolved, empty, footer, onOpen 
         </TableRow></TableHeader>
         <TableBody>{alerts.map((alert) => <TableRow key={alert.id}>
           <TableCell><AlertSeverityBadge severity={alert.severity} /></TableCell>
-          <TableCell><span className={styles.cell}>{title(alert)}<AlertFacts parts={[alert.deviceName, source(alert), hiddenUntil(alert)]} /></span></TableCell>
+          <TableCell><span className={styles.cell}>{title(alert)}<AlertFacts parts={[alert.deviceName, source(alert), hiddenUntil(alert), closedAtSource(alert)]} /></span></TableCell>
           <TableCell>{customer(alert)}</TableCell>
           <TableCell className={styles.age}>{age(alert)}</TableCell>
           <TableCell><AlertTaskCell alert={alert} task={tasks.get(alert.id)} /></TableCell>

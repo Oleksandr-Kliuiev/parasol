@@ -21,7 +21,7 @@ it('preserves the queued request payload/defaults and contact field validation i
   expect(await screen.findByText('Synthetic contact is no longer active')).toBeVisible(); expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeVisible();
   const posts = fetch.mock.calls.filter(([, init]) => init.method === 'POST'); expect(posts).toHaveLength(1);
   expect(JSON.parse(posts[0]![1].body as string)).toEqual({ organizationId: 'o1', contactId: 'contact-one', title: 'Synthetic request', description: 'Synthetic details', priority: 'Medium', type: 'Incident' });
-  expect(fetch.mock.calls.filter(([url]) => kindOf(url))).toHaveLength(6); // Five saved reads plus the POST, with no error invalidation.
+  expect(fetch.mock.calls.filter(([url]) => kindOf(url))).toHaveLength(7); // Six saved reads plus the POST, with no error invalidation.
 }, 15_000); // A long form journey: under a loaded CI machine it needs more than the default 5 s, never a retry.
 
 it('queues exactly once on rapid submit, refreshes only the current saved workspace and preserves the existing toast', async () => {
@@ -31,7 +31,7 @@ it('queues exactly once on rapid submit, refreshes only the current saved worksp
   act(() => { fireEvent.click(submit); fireEvent.click(submit); }); await waitFor(() => expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(1));
   await act(async () => finish(json({ id: 'request-created', status: 'Pending' })));
   expect(await screen.findByText('The ticket is being created in Atera')).toBeVisible(); expect(screen.queryByRole('dialog', { name: 'New ticket' })).not.toBeInTheDocument();
-  await waitFor(() => expect(fetch.mock.calls.filter(([url, init]) => kindOf(url) && init.method === 'GET')).toHaveLength(10));
+  await waitFor(() => expect(fetch.mock.calls.filter(([url, init]) => kindOf(url) && init.method === 'GET')).toHaveLength(12));
 });
 
 it.each(['Change customer', 'Change employee', 'Drop write'])('does not invalidate the new workspace, close a new form or publish late success after %s', async change => {
