@@ -27,7 +27,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import { ActionConfirmation } from '../actions/ActionDialog';
-import { useActionAvailable } from '../actions/api';
+import { useActionAvailable, useActionFacts } from '../actions/api';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Dialog } from '../../shared/components/Dialog';
@@ -40,11 +40,15 @@ import { useDialogStyles } from '../contracts/dialogStyles';
 import { TimeOrganizationPicker } from './TimeOrganizationPicker';
 import type { Ref } from '../contracts/types';
 import { timeKeys } from './api';
+import { useTicketCheck } from './ticketCheck';
 import { useTimeFormOptions } from './useTimeFormOptions';
 import type { TicketWorkRef } from '../activities/taskTicketTypes';
 import type { TimeEntry } from './types';
 
 export interface TaskTimeContext { activityId: string; organization: Ref; ticket: TicketWorkRef }
+
+/** Hours registered from a ticket's panel (M39): its customer and number filled in, both still the person's to change. */
+export interface TicketTimeContext { organization: Ref; ticket: { externalId: number; title: string } }
 
 const useStyles = makeStyles({
   // Two columns down to small phones: date and hours, work type and project are short and belong side by side.
@@ -76,7 +80,7 @@ const useStyles = makeStyles({
 const commonDurations = [0.25, 0.5, 0.75, 1, 2] as const;
 
 interface TimeEntryDialogProps {
-  entry?: TimeEntry; defaultDate?: string; taskContext?: TaskTimeContext; onClose: () => void;
+  entry?: TimeEntry; defaultDate?: string; taskContext?: TaskTimeContext; ticketContext?: TicketTimeContext; onClose: () => void;
   /** Hears whether the form holds anything the person typed, so its host can ask before Escape or a click outside drops it. */
   onDirtyChange?: (dirty: boolean) => void;
 }
@@ -123,23 +127,30 @@ export function TimeEntryDialog(props: TimeEntryDialogProps) {
   const user = useCurrentUser();
   if (!user.permissions.includes(Permissions.timeOwn) && !user.permissions.includes(Permissions.timeManage)) return null;
   if (props.taskContext && (!user.permissions.includes(Permissions.activitiesRead) || !user.permissions.includes(Permissions.serviceRead))) return null;
-  const scope = JSON.stringify([user.id, [...user.permissions].sort(), props.entry?.id, props.entry?.etag, props.defaultDate, props.taskContext]);
+  const scope = JSON.stringify([user.id, [...user.permissions].sort(), props.entry?.id, props.entry?.etag, props.defaultDate, props.taskContext, props.ticketContext]);
   return <TimeEntryForm key={scope} {...props} scope={scope} />;
 }
 
-function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange, scope }: TimeEntryDialogProps & { scope: string }) {
+function TimeEntryForm({ entry, defaultDate, taskContext, ticketContext, onClose, onDirtyChange, scope }: TimeEntryDialogProps & { scope: string }) {
   const styles = useDialogStyles();
   const local = useStyles();
   const { t } = useTranslation();
+  const user = useCurrentUser();
   const notify = useNotify();
   const client = useQueryClient(); const alive = useRef(false); const submitting = useRef(false);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const [pending, setPending] = useState(false); const [failure, setFailure] = useState<unknown>(null);
   const [clientRequestId] = useState(() => entry ? null : crypto.randomUUID());
-  const hoursInput = useRef<HTMLInputElement>(null); const fromTask = Boolean(taskContext);
-  useEffect(() => { if (fromTask) hoursInput.current?.focus(); }, [fromTask]);
+  // Opened from a task or a ticket, the customer and the ticket are filled in: the hours come next.
+  // A frame later than the dialog's own first focus, which lands on the first field.
+  const hoursInput = useRef<HTMLInputElement>(null); const prefilled = Boolean(taskContext || ticketContext);
+  useEffect(() => {
+    if (!prefilled) return;
+    const frame = requestAnimationFrame(() => hoursInput.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [prefilled]);
   const [organization, setOrganization] = useState<Ref | null>(
-    taskContext?.organization ?? (entry ? { id: entry.organizationId, name: entry.organizationName ?? '' } : null),
+    taskContext?.organization ?? ticketContext?.organization ?? (entry ? { id: entry.organizationId, name: entry.organizationName ?? '' } : null),
   );
   const [workDate, setWorkDate] = useState(entry?.workDate ?? defaultDate ?? todayIso());
   const [hours, setHours] = useState(entry ? String(entry.hours) : taskContext ? '' : '1');
@@ -149,12 +160,14 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const [onsite, setOnsite] = useState(entry?.onsite ?? false);
   const [afterHours, setAfterHours] = useState(entry?.afterHours ?? false);
   const [description, setDescription] = useState(entry?.description ?? '');
-  const [ticket, setTicket] = useState(taskContext ? String(taskContext.ticket.externalId) : entry?.externalTicketId ? String(entry.externalTicketId) : '');
+  const [ticket, setTicket] = useState(taskContext ? String(taskContext.ticket.externalId)
+    : ticketContext ? String(ticketContext.ticket.externalId) : entry?.externalTicketId ? String(entry.externalTicketId) : '');
   const [ticketId, setTicketId] = useState(taskContext?.ticket.id ?? entry?.ticketId ?? null);
   const [sourceActivityId, setSourceActivityId] = useState(taskContext?.activityId ?? entry?.sourceActivityId ?? null);
-  const [ticketTitle, setTicketTitle] = useState(taskContext?.ticket.title ?? entry?.ticketTitle ?? null);
+  const [ticketTitle, setTicketTitle] = useState(taskContext?.ticket.title ?? ticketContext?.ticket.title ?? entry?.ticketTitle ?? null);
   const [projectId, setProjectId] = useState(entry?.projectId ?? '');
-  // M39.3: a new entry on an Atera ticket can also be recorded there; once it is saved, the dialog goes on into that confirmation.
+  // M39.3: an entry on an Atera ticket can also be recorded there; once it is saved, the dialog goes on into that confirmation. A saved
+  // entry can take that step later, until Atera has its hours (M39).
   const [recordInAtera, setRecordInAtera] = useState(false);
   const [recording, setRecording] = useState<{ entryId: string; ticket: number } | null>(null);
   // The form as first shown, to know whether the person has typed anything since.
@@ -178,8 +191,24 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
   const hoursProblem = hoursValue === null ? 'time.hoursRequired' : Number.isNaN(hoursValue) ? 'time.hoursInvalid'
     : hoursValue <= 0 ? 'time.hoursPositive' : hoursValue > 24 ? 'time.hoursMax' : null;
   const ticketProblem = ticketValue !== null && (!Number.isSafeInteger(ticketValue) || ticketValue <= 0) ? 'time.ticketInvalid' : null;
-  // Offered only for a new entry with a ticket number, and only while Atera takes recorded hours (its switches and the person's access).
-  const canRecord = useActionAvailable('atera', 'time.record', !entry && ticketValue !== null && ticketProblem === null);
+  const ticketNumber = ticketValue !== null && ticketProblem === null ? ticketValue : null;
+  // The number is checked against the customer's saved tickets before anything is saved; a task's ticket is already its own.
+  const check = useTicketCheck(organization?.id ?? null, ticketNumber, !taskContext);
+  // A saved entry: what Atera already has of it, from the action path (one read, the entry's own).
+  const own = !entry || (entry.source === 'Crm' && entry.technicianId === user.id);
+  const recordFacts = useActionFacts('atera', 'time-entry', entry && own && entry.externalTicketId !== null ? [[entry.id]] : []);
+  const recorded = entry ? recordFacts.facts.get(entry.id) : undefined;
+  const inAtera = (recorded?.done ?? 0) > 0;
+  const onItsWay = (recorded?.waiting ?? 0) > 0 || (recorded?.uncertain ?? 0) > 0;
+  const factsKnown = !entry || (!recordFacts.loading && !recordFacts.failed);
+  // Offered for the person's own entry on a ticket Parasoll knows for the customer, not yet in Atera, and only while Atera takes
+  // recorded hours (its switches and the person's access).
+  const canRecord = useActionAvailable('atera', 'time.record', ticketNumber !== null && check.state === 'found' && own && factsKnown && !inAtera && !onItsWay);
+  const checkMessage = check.state === 'found'
+    ? t('time.ticketFound', { number: check.ticket.externalId, title: check.ticket.title,
+      status: t(`tickets.statuses.${check.ticket.status}`, { defaultValue: check.ticket.status }) })
+    : check.state === 'missing' ? t('time.ticketMissing', { number: ticketNumber, organization: organization?.name ?? '' }) : undefined;
+  const ticketError = errors.externalTicketId ?? (left.ticket && ticketProblem ? t(ticketProblem) : undefined);
   const recordHint = useId('record-hint');
   const descriptionProblem = taskContext && !description.trim() ? 'time.descriptionRequired' : null;
   const invalid = !organization || hoursProblem !== null || ticketProblem !== null || descriptionProblem !== null;
@@ -216,8 +245,9 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
       if (!alive.current) return;
       void client.invalidateQueries({ queryKey: timeKeys.all });
       notify(entry ? t('time.saved') : t('time.registered'));
-      if (created?.data?.id && canRecord && recordInAtera && ticketValue !== null) {
-        setRecording({ entryId: created.data.id, ticket: ticketValue });
+      const saved = created?.data?.id ?? entry?.id;
+      if (saved && canRecord && recordInAtera && ticketValue !== null) {
+        setRecording({ entryId: saved, ticket: ticketValue });
         return;
       }
       onClose();
@@ -309,7 +339,8 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
               </Dropdown>
             </Field>
             <Field label={t('time.fields.ticket')} className={styles.wide} hint={t(ticketId && !taskContext ? 'taskTicket.savedEntryHint' : 'time.ticketHint')}
-              validationMessage={errors.externalTicketId ?? (left.ticket && ticketProblem ? t(ticketProblem) : undefined)}>
+              validationState={ticketError ? 'error' : check.state === 'found' ? 'success' : check.state === 'missing' ? 'warning' : 'none'}
+              validationMessage={ticketError ?? checkMessage}>
               <Input inputMode="numeric" value={taskContext ? `#${ticket} · ${taskContext.ticket.title}` : ticket} readOnly={Boolean(taskContext)} onBlur={leave('ticket')}
                 onChange={(_, d) => { clearTicketContext(); setTicket(d.value); }} />
               {ticketId && !taskContext && <Button size="small" className={local.manual} onClick={clearTicketContext}>{t('taskTicket.useManual')}</Button>}
@@ -319,6 +350,7 @@ function TimeEntryForm({ entry, defaultDate, taskContext, onClose, onDirtyChange
                 aria-describedby={recordHint} />
               <Text id={recordHint} className={local.recordHint}>{t('time.recordInAteraHint')}</Text>
             </div>}
+            {inAtera && <Text className={mergeClasses(local.record, local.recordHint)}>{t('time.alreadyRecorded')}</Text>}
             <div className={local.flags}>
               <Switch label={t('time.fields.billable')} checked={billable} onChange={(_, d) => setBillable(d.checked)} />
               <Switch label={t('time.fields.onsite')} checked={onsite} onChange={(_, d) => setOnsite(d.checked)} />

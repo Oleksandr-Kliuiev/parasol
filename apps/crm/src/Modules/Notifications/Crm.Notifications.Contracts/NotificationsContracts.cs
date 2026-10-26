@@ -1,3 +1,5 @@
+using Crm.SharedKernel.Domain;
+
 namespace Crm.Notifications.Contracts;
 
 /// <summary>What a notification is about. The text is rendered from the kind and its parameters, so it follows the reader's language.</summary>
@@ -10,6 +12,9 @@ public enum NotificationKind
     SubscriptionRenewal,
     StaleOpportunity,
     InvoiceOverdue,
+
+    /// <summary>An action the person asked of a vendor got no clear answer (M39): they check at the vendor and record what they found.</summary>
+    VendorActionUncertain,
 }
 
 /// <summary>
@@ -32,6 +37,13 @@ public interface INotificationsApi
     /// <summary>Returns false when the notice already existed (same dedupe key).</summary>
     Task<bool> EnqueueAsync(NotificationRequest request, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// A notice asked for through the outbox (M39). A domain event handler changes its own module only (DEV-07), so a handler elsewhere
+/// that decides a person should hear of something raises this instead of calling <see cref="INotificationsApi"/>, and the
+/// Notifications module enqueues it; the dedupe key keeps a repeated delivery from adding a second notice.
+/// </summary>
+public sealed record NotificationRequested(NotificationRequest Request) : DomainEvent;
 
 /// <summary>One e-mail, already rendered in the reader's language.</summary>
 public sealed record NotificationEmail(string ToAddress, string? ToName, string Subject, string HtmlBody, string TextBody);

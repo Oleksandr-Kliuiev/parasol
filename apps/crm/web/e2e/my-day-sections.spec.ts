@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { api, createOrganization, marker, signIn } from './support';
+import { ateraAlert, linkedAteraCustomer, syncAlerts } from './atera';
+import { api, createOrganization, marker, showInMyTasks, signIn } from './support';
 
 test('My day shortcuts reach assigned work and return by keyboard without rereading panels', { tag: '@critical' }, async ({ page }, testInfo) => {
   test.setTimeout(180_000);
@@ -73,6 +74,39 @@ test('urgent alerts are reached from their key figure and their jump link, and c
   await page.goBack(); await expect(navigation).toBeFocused();
   await page.getByRole('link', { name: /^Critical alerts/ }).click();
   await expect(alerts).toBeFocused();
+});
+
+// M40 (M38's deferred hand-over): an urgent alert is assigned from My day itself, in the dialog the queue uses, and its row then
+// says who has the task. The alert is a year old, so it is among the oldest critical ones the panel shows first.
+test('an urgent alert is handed over from My day without going to the queue', { tag: '@critical' }, async ({ page }) => {
+  test.setTimeout(240_000);
+  await signIn(page, 'Crm.Admin');
+  const customer = await linkedAteraCustomer(page, 'Day');
+  const m = customer.marker;
+  await ateraAlert(page, customer, { Title: `${m} firewall down`, Severity: 'Critical', hoursAgo: 24 * 365 });
+  await syncAlerts(page, customer, 1);
+  const me = await api.get<{ displayName: string }>(page, '/bff/user');
+
+  await page.goto('/');
+  const row = page.locator('#my-day-alerts').getByRole('listitem').filter({ hasText: `${m} firewall down` });
+  const assign = row.getByRole('button', { name: `Assign ${m} firewall down`, exact: true });
+  await assign.focus(); await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Assign alert', exact: true });
+  await expect(dialog.getByRole('textbox', { name: 'Task subject' })).toHaveValue(`${m} firewall down`);
+  await expect(dialog.getByRole('combobox', { name: 'Assignee' })).toHaveValue(me.displayName);
+  await dialog.getByRole('button', { name: 'Create task', exact: true }).click();
+  await expect(dialog.getByText('Task created.', { exact: true })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/\/$/);
+  // The row names the task in place of Assign, and focus moved to it.
+  const taskLink = row.getByRole('link', { name: new RegExp(`^${me.displayName}.*: task ${m} firewall down`) });
+  await expect(taskLink).toBeVisible(); await expect(taskLink).toBeFocused();
+
+  // The shared sign-in users collect open tasks from every run: this one is done before the test ends.
+  const mine = page.getByRole('region', { name: 'My tasks', exact: true }).getByRole('listitem').filter({ hasText: `${m} firewall down` });
+  await (await showInMyTasks(page, mine.getByRole('button', { name: `Mark ${m} firewall down as done`, exact: true }))).click();
+  await expect(mine).toHaveCount(0);
 });
 
 test('My day keeps the layout each person chooses and the arrow keys change it', async ({ page }) => {

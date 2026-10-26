@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { huntressAlerts, huntressIncident, linkedHuntressCustomer, syncHuntress } from './huntress';
 import { collectedBillingRun, createContact, createOrganization, marker, signIn } from './support';
 
 const createContactForMobile = (page: Page, organizationId: string, m: string) =>
@@ -9,6 +10,16 @@ async function expectNoHorizontalScroll(page: Page, name: string) {
   await page.waitForLoadState('networkidle');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow, `${name} scrolls horizontally by ${overflow}px`).toBeLessThanOrEqual(1);
+}
+
+/** The same for an open dialog: a modal hides <main> from the accessibility tree, so the dialog itself and the page are measured. */
+async function expectDialogFits(page: Page, dialog: ReturnType<Page['getByRole']>, name: string) {
+  await expect(dialog).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow, `${name}: the page scrolls horizontally by ${overflow}px`).toBeLessThanOrEqual(1);
+  const inside = await dialog.evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(inside, `${name} scrolls sideways by ${inside}px`).toBeLessThanOrEqual(1);
 }
 
 test('pages fit a phone screen and navigation works', async ({ page }) => {
@@ -64,9 +75,9 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Organizations' })).toBeVisible();
   await expect(tabs.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
   await tabs.getByRole('button', { name: 'More' }).click();
-  // Exactly "Leads": a customer converted from a lead may be called "LeadS… Nykunde AS", and until the menu's panel has loaded
-  // (on first use) that row of the list behind it is the only match and takes the click.
-  await page.getByRole('link', { name: 'Leads', exact: true }).click();
+  // The full menu is a drawer loaded on first use: Leads is looked up in it, by its exact name, as a customer behind it may be
+  // called "LeadS5N0ZL Nykunde AS" (a leads test's marker) and was clicked instead while the drawer was still loading.
+  await page.getByRole('dialog', { name: 'Main menu' }).getByRole('link', { name: 'Leads', exact: true }).click();
   await expect(page).toHaveURL(/\/sales\/leads/);
 
   // Search is a dialog (the command palette), opened from the top bar on a phone.
@@ -106,4 +117,29 @@ test('the pilot reconciliation page fits a phone screen', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Pilot reconciliation' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Lines of the run' })).toBeVisible();
   await expectNoHorizontalScroll(page, 'Pilot reconciliation');
+});
+
+// M41: a Huntress incident is answered on a phone too: its panel, plan and comment box fit the screen, and approving the plan goes
+// through the one confirmation.
+test('a Huntress incident is read and answered on a phone', async ({ page }) => {
+  test.setTimeout(240_000);
+  await signIn(page, 'Crm.Admin');
+  const customer = await linkedHuntressCustomer(page, 'Mob');
+  const m = customer.marker;
+  await huntressIncident(page, customer, { subject: `LOW - Incident ${m} on a phone`, remediations: [{ type: 'assisted', action: 'Delete scheduled task' }] });
+  await syncHuntress(page, ['huntress-alerts'], async () => (await huntressAlerts(page, customer.organizationId)).length === 1, `the incident of ${customer.name}`);
+
+  await page.goto('/alerts');
+  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(m);
+  await page.getByRole('button', { name: `LOW - Incident ${m} on a phone`, exact: true }).click();
+  const panel = page.getByRole('dialog', { name: `LOW - Incident ${m} on a phone`, exact: true });
+  const incident = panel.getByRole('region', { name: 'Security incident', exact: true });
+  await expect(incident.getByText('Waiting for you', { exact: true })).toBeVisible();
+  await expect(incident.getByRole('textbox', { name: 'New comment' })).toBeVisible();
+  await expectDialogFits(page, panel, 'Incident panel');
+  await incident.getByRole('button', { name: 'Approve plan', exact: true }).click();
+  const confirm = page.getByRole('dialog', { name: 'Approve the remediation plan in Huntress', exact: true });
+  await confirm.getByRole('button', { name: 'Approve plan', exact: true }).click();
+  await expect(confirm.getByRole('status')).toContainText('Done', { timeout: 30_000 });
+  await expectDialogFits(page, confirm, 'Action confirmation');
 });

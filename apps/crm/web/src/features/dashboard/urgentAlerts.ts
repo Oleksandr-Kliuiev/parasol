@@ -20,6 +20,11 @@ export interface UrgentAlert {
   lastSeenAt: string | null;
   resolvedAt: string | null;
   url: string | null;
+  /** A coverage gap Parasoll found (M40): worded from its rule and facts. */
+  rule?: string | null;
+  facts?: Record<string, string> | null;
+  /** When the source closed an urgent alert that waits for a person to confirm it (M41). */
+  sourceClosedAt?: string | null;
 }
 
 /** The most severe open alerts, oldest first, out of `totalCount` open ones; the counts cover every open alert. */

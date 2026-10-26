@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Crm.Activities.Contracts;
+using Crm.Service.Contracts;
 
 namespace Crm.Activities.Domain;
 
@@ -27,8 +28,11 @@ public sealed class SourceTaskLink
 
 internal static class SourceTaskIdentityRules
 {
-    /// <summary>The systems whose items become tasks today, spelled as their mirrors spell them (M38: Atera alerts).</summary>
-    internal static readonly FrozenSet<string> SupportedSystems = new[] { "atera" }.ToFrozenSet(StringComparer.Ordinal);
+    /// <summary>
+    /// The systems whose items become tasks today, spelled as their mirrors spell them (M38: Atera alerts; M40: the coverage gaps
+    /// the CRM itself finds; M41: Huntress's incidents, escalations and platform actions).
+    /// </summary>
+    internal static readonly FrozenSet<string> SupportedSystems = new[] { "atera", "huntress", CoverageGaps.System }.ToFrozenSet(StringComparer.Ordinal);
 
     internal const string AlertKind = "alert";
     internal const string TaskTarget = "Task";

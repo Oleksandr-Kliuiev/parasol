@@ -164,8 +164,9 @@ describe('alert queue', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Assign Backup is late' }));
     const dialog = await screen.findByRole('dialog', { name: 'Assign alert' });
     await waitFor(() => expect(within(dialog).getByRole('textbox', { name: 'Task subject' })).toHaveValue('Backup is late'));
-    // A search typed just before the dialog opened reaches the list while the dialog is open (no click outside the modal).
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Search title or device' }), { target: { value: 'Backup' } });
+    // A search typed just before the dialog opened reaches the list while the dialog is open (no click outside the modal). The
+    // modal hides the page from the accessibility tree a moment after it opens, so a slow run finds the box only with hidden: true.
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search title or device', hidden: true }), { target: { value: 'Backup' } });
     // The page behind the modal is hidden from the accessibility tree, so the list is looked up with hidden: true.
     await waitFor(() => expect(screen.queryByRole('table', { name: 'Alerts', hidden: true })).not.toBeInTheDocument());
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create task' }));

@@ -24,7 +24,7 @@ it('prefills only customer and saved ticket; requires explicit hours/notes and r
   expect(screen.getByRole('textbox', { name: 'Ticket' })).toHaveValue('#701 · Synthetic saved ticket');
   expect(screen.getByRole('textbox', { name: 'Ticket' })).toHaveAttribute('readonly');
   expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue(''); expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue('');
-  expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveFocus();
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveFocus());
   expect(screen.getByLabelText(/^Date/)).not.toHaveValue(task.dueAt!.slice(0, 10));
   expect(screen.getByRole('button', { name: 'Register hours' })).toBeDisabled(); fillTime('0.75', ''); expect(screen.getByRole('button', { name: 'Register hours' })).toBeDisabled();
   fillTime(); const submit = screen.getByRole('button', { name: 'Register hours' }); act(() => { fireEvent.click(submit); fireEvent.click(submit); });

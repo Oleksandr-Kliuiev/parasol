@@ -1,6 +1,8 @@
 using Crm.Integrations.Atera;
 using Crm.Integrations.Brreg;
+using Crm.Integrations.CloudAlly;
 using Crm.Integrations.Core;
+using Crm.Integrations.Huntress;
 using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
@@ -21,9 +23,18 @@ public class FreshnessLimitsTests
         (AteraContactSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.ContactSyncCron)), new AteraOptions().ContactSyncCron),
         (AteraWorkHoursSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.WorkHoursSyncCron)), new AteraOptions().WorkHoursSyncCron),
         (AteraAgentSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.AgentSyncCron)), new AteraOptions().AgentSyncCron),
+        (AteraPatchSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.PatchSyncCron)), new AteraOptions().PatchSyncCron),
         (AteraAlertSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.AlertSyncCron)), new AteraOptions().AlertSyncCron),
         (AteraTicketConversationSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.TicketConversationSyncCron)),
             new AteraOptions().TicketConversationSyncCron),
+        (HuntressOrganizationSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.OrganizationSyncCron)), new HuntressOptions().OrganizationSyncCron),
+        (HuntressAgentSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.AgentSyncCron)), new HuntressOptions().AgentSyncCron),
+        (HuntressAlertSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.AlertSyncCron)), new HuntressOptions().AlertSyncCron),
+        (HuntressReportSyncJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.ReportSyncCron)), new HuntressOptions().ReportSyncCron),
+        (HuntressReportFileJob.JobId, Key(HuntressOptions.SectionName, nameof(HuntressOptions.ReportFileSyncCron)), new HuntressOptions().ReportFileSyncCron),
+        (CloudAllyAccountSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.AccountSyncCron)), new CloudAllyOptions().AccountSyncCron),
+        (CloudAllyBackupSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BackupSyncCron)), new CloudAllyOptions().BackupSyncCron),
+        (CloudAllyBillSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BillSyncCron)), new CloudAllyOptions().BillSyncCron),
         (PowerOfficeCustomerSyncJob.JobId, Key(PowerOfficeOptions.SectionName, nameof(PowerOfficeOptions.CustomerSyncCron)), new PowerOfficeOptions().CustomerSyncCron),
         (PowerOfficeContactPersonSyncJob.JobId, Key(PowerOfficeOptions.SectionName, nameof(PowerOfficeOptions.ContactPersonSyncCron)),
             new PowerOfficeOptions().ContactPersonSyncCron),
@@ -68,6 +79,8 @@ public class FreshnessLimitsTests
         FreshnessLimits.ScheduledJobs.ShouldBe(Scheduled.Select(s => s.Job), ignoreOrder: true);
         // Twice an hour (5 and 35): late after a gap and a half and a quarter of an hour, not after a day.
         FreshnessLimits.Minutes(Configuration(), AteraAlertSyncJob.JobId).ShouldBe(60);
+        // M41: Huntress's incidents are read every five minutes, so they are late after a quarter of an hour and a little.
+        FreshnessLimits.Minutes(Configuration(), HuntressAlertSyncJob.JobId).ShouldBe(22);
         FreshnessLimits.Minutes(Configuration(), EntraRoleSyncJob.JobId).ShouldBe(18);
         FreshnessLimits.Minutes(Configuration(), BrregRegistryCheckJob.JobId).ShouldBe(2175);
     }

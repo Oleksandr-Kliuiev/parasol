@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\Identity\Crm.Identity.Contracts\Crm.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\Licensing\Crm.Licensing.Contracts\Crm.Licensing.Contracts.csproj" />
     <ProjectReference Include="..\..\Sales\Crm.Sales.Contracts\Crm.Sales.Contracts.csproj" />
+    <ProjectReference Include="..\..\Service\Crm.Service.Contracts\Crm.Service.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Crm.Infrastructure\Crm.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

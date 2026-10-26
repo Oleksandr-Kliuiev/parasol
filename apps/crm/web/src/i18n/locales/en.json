@@ -385,7 +385,8 @@
       "projects": "Projects",
       "more": "More",
       "moreNamed_one": "More: {{count}} section",
-      "moreNamed_other": "More: {{count}} sections"
+      "moreNamed_other": "More: {{count}} sections",
+      "backup": "Backup"
     },
     "sections": {
       "company": "Company",
@@ -764,6 +765,7 @@
       "quote-documents": "Store quote documents",
       "quote-document-orphans": "Clean up unreferenced documents",
       "atera-agents": "Devices (Atera)",
+      "atera-patches": "Windows updates (Atera)",
       "atera-alerts": "Alerts (Atera)",
       "atera-tickets": "Open tickets (Atera)",
       "atera-tickets-recent": "Recently changed tickets (Atera)",
@@ -782,8 +784,17 @@
       "privacy-retention": "Retention of personal data",
       "quote-expiry": "Expire old quotes",
       "reports-snapshot": "Monthly report snapshots",
+      "reports-customer-months": "Monthly summaries of customers",
       "worker-heartbeat": "Background service heartbeat",
-      "atera-ticket-conversations": "Ticket messages (Atera)"
+      "atera-ticket-conversations": "Ticket messages (Atera)",
+      "huntress-organizations": "Organizations and usage (Huntress)",
+      "huntress-agents": "Devices (Huntress)",
+      "huntress-alerts": "Incidents and escalations (Huntress)",
+      "huntress-reports": "Monthly reports (Huntress)",
+      "huntress-report-files": "Monthly report files (Huntress)",
+      "cloudally-accounts": "Customer accounts (CloudAlly)",
+      "cloudally-backups": "Backups (CloudAlly)",
+      "cloudally-bills": "Billing (CloudAlly)"
     },
     "status": {
       "Running": "Running",
@@ -805,13 +816,16 @@
     "atera": "Atera",
     "microsoft-graph": "Microsoft Entra ID",
     "brreg": "Brønnøysund Register Centre",
-    "partnercenter": "Microsoft Partner Center"
+    "partnercenter": "Microsoft Partner Center",
+    "huntress": "Huntress",
+    "cloudally": "CloudAlly"
   },
   "externalTypes": {
     "Customer": "Customers",
     "ContactPerson": "Contact persons",
     "Contact": "Contacts",
-    "Product": "Products"
+    "Product": "Products",
+    "Organization": "Organizations"
   },
   "mappings": {
     "title": "Mappings",
@@ -1225,14 +1239,18 @@
       "PerAteraDevice": "Per Atera device",
       "PerM365User": "Per Microsoft 365 user",
       "PerSubscription": "Per subscription",
-      "Manual": "Entered each period"
+      "Manual": "Entered each period",
+      "PerHuntressAgent": "Per Huntress agent",
+      "PerBackupSeat": "Per backup user (CloudAlly)"
     },
     "quantityModelHints": {
       "Fixed": "The quantity below is billed every period.",
       "PerAteraDevice": "Counted from Atera agents on the last day of the period.",
       "PerM365User": "Assigned licences in the customer's tenant, read through GDAP the night before the run.",
       "PerSubscription": "Taken from the customer's CSP subscriptions.",
-      "Manual": "Someone enters the quantity before each billing run."
+      "Manual": "Someone enters the quantity before each billing run.",
+      "PerHuntressAgent": "The agents Huntress bills for the customer on the last day of the period.",
+      "PerBackupSeat": "The users CloudAlly bills for the customer’s backups on the last day of the period."
     },
     "deviceFilters": {
       "All": "All devices",
@@ -1541,7 +1559,10 @@
       "tickets": "Open tickets ({{system}})",
       "conversations": "Ticket messages ({{system}})",
       "alerts": "Alerts ({{system}})",
-      "devices": "Devices ({{system}})"
+      "devices": "Devices ({{system}})",
+      "patches": "Windows updates ({{system}})",
+      "security-alerts": "Alerts ({{system}})",
+      "security-devices": "Devices ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} not read yet",
@@ -1550,16 +1571,132 @@
       "readAt": "{{source}} read at {{time}}"
     }
   },
+  "machines": {
+    "title": "Device",
+    "loading": "Loading the device…",
+    "notFound": "This device is not stored in Parasoll.",
+    "changed": "The device changed while you looked at it. Here it is as it is now: decide again.",
+    "online": "Online at the last read",
+    "offline": "Offline at the last read",
+    "removed": "No longer reported",
+    "removedSince": "No source has reported this device since {{date}}.",
+    "fields": {
+      "state": "Status",
+      "type": "Type",
+      "customer": "Customer",
+      "alerts": "Alerts",
+      "model": "Model",
+      "serialNumber": "Serial number",
+      "processor": "Processor",
+      "memory": "Memory",
+      "disks": "Disks",
+      "motherboard": "Mainboard",
+      "bios": "BIOS",
+      "os": "Operating system",
+      "lastReboot": "Last restart",
+      "domain": "Domain",
+      "agentVersion": "Agent",
+      "ipAddresses": "IP addresses",
+      "publicIp": "Seen from",
+      "macAddresses": "MAC addresses",
+      "loggedIn": "Logged in at the read",
+      "lastLogin": "Last logged in"
+    },
+    "processorCores_one": "{{processor}} · {{count}} core",
+    "processorCores_other": "{{processor}} · {{count}} cores",
+    "diskFree": "{{drive}} {{share}} % free ({{free}} of {{total}})",
+    "build": "build {{build}}",
+    "agentVersion": "{{source}} agent {{version}}",
+    "hardware": "Hardware",
+    "system": "System",
+    "network": "Network",
+    "users": "Users",
+    "updates": "Windows updates",
+    "nothingReported": "{{source}} reports nothing about this.",
+    "notReported": "{{source}} does not report: {{fields}}.",
+    "updatesWindowsOnly": "{{source}} reports Windows updates only.",
+    "updatesNotRead": "The updates have not been read yet.",
+    "updatesRead": "Read {{read}}; {{source}} collected them {{collected}}.",
+    "unknownTime": "at an unknown time",
+    "available_one": "{{count}} update available",
+    "available_other": "{{count}} updates available",
+    "installed_one": "{{count}} update installed",
+    "installed_other": "{{count}} updates installed",
+    "installedShown": "The latest {{shown}} of {{count}}.",
+    "updateStatus": {
+      "Pending": "Waiting"
+    },
+    "proposals": "May be the same device",
+    "proposalsHint": "Parasoll joins two devices only when it is sure. Check these and decide.",
+    "maybeSame": "May be {{other}}",
+    "evidence": {
+      "serial": "same serial number",
+      "mac": "a shared MAC address",
+      "name": "the same name",
+      "serialConflict": "but the serial numbers differ"
+    },
+    "join": "Same device",
+    "keepApart": "Different devices",
+    "keepApartTitle": "Keep {{name}} and {{other}} apart?",
+    "keepApartBody": "Parasoll will treat {{name}} and {{other}} as two devices from now on and will not suggest joining them again.",
+    "detach": "Not this device",
+    "detachTitle": "Take {{device}} ({{source}}) off this device?",
+    "detachBody": "{{device}} becomes a device of its own, and Parasoll will not join it with {{name}} again.",
+    "decided": {
+      "join": "The two are one device now.",
+      "keep-apart": "Kept apart: Parasoll will not suggest joining them again.",
+      "detach": "Taken off: it is a device of its own now."
+    },
+    "sources": "Sources",
+    "neverSeen": "No last contact reported",
+    "openIn": "Open in {{source}}",
+    "inConsole": "In {{source}}",
+    "consoleOnly": "Remote connection, scripts, installing updates and restarting are done in {{source}}: its API does not offer them.",
+    "from": "from {{sources}}",
+    "proposalBadge_one": "Check: may be a duplicate",
+    "proposalBadge_other": "Check: {{count}} possible duplicates",
+    "protection": {
+      "defender": "Defender: {{status}}",
+      "reported": "reported",
+      "defenderStatuses": {
+        "Healthy": "Healthy",
+        "Unhealthy": "Unhealthy",
+        "Unmanaged": "Another antivirus is in charge",
+        "Disabled": "Disabled"
+      },
+      "isolation": {
+        "Isolated": "Isolated from the network",
+        "Pending Isolation": "Being isolated",
+        "Pending Release": "Isolation being lifted",
+        "Disabled": "Not isolated",
+        "Enabled": "Not isolated (firewall on)"
+      },
+      "agentVersion": "Huntress agent {{version}}",
+      "machine": "Device {{name}}",
+      "isolateItem": "Isolate device…",
+      "isolate": "Isolate",
+      "isolateTitle": "Isolate {{name}} from the network",
+      "releaseItem": "Lift isolation…",
+      "release": "Lift isolation",
+      "releaseTitle": "Lift the isolation of {{name}}",
+      "uninstallItem": "Remove Huntress agent…",
+      "uninstall": "Remove agent",
+      "uninstallTitle": "Remove the Huntress agent from {{name}}",
+      "noActions": "Nothing asked of Huntress for this device yet."
+    }
+  },
   "alerts": {
     "title": "Alerts",
     "subtitle": "Open alerts of every customer: the critical ones first, then the ones that have waited longest.",
     "subtitleResolved": "Alerts their source no longer reports open, the most recently resolved first.",
+    "subtitleHidden": "Alerts hidden in Parasoll until a date; they are still open in their source.",
     "refresh": "Refresh alerts",
     "filters": "Alert filters",
     "search": "Search title or device",
     "stateLabel": "Show",
     "show": {
       "open": "Open",
+      "hidden": "Hidden",
       "resolved": "Resolved"
     },
     "severityLabel": "Severity",
@@ -1576,11 +1713,52 @@
       "customer": "Customer",
       "waiting": "Raised",
       "resolved": "Resolved",
-      "task": "Task"
+      "task": "Task",
+      "actions": "Actions"
     },
     "source": "Source: {{name}}",
     "sourceNames": {
-      "atera": "Atera"
+      "atera": "Atera",
+      "parasoll": "Parasoll",
+      "huntress": "Huntress",
+      "cloudally": "CloudAlly"
+    },
+    "gaps": {
+      "found": "Found by Parasoll’s own check. It closes by itself once two checks in a row no longer find it.",
+      "changeCheck": "Change the check",
+      "ateraAgentSilent": {
+        "title": "The Atera agent on {{device}} has not reported since {{date}}"
+      },
+      "huntressAgentMissing": {
+        "title": "{{device}} has had the Atera agent since {{date}} but no Huntress agent"
+      },
+      "ateraAgentMissing": {
+        "title": "{{device}} has had the Huntress agent since {{date}} but no Atera agent"
+      },
+      "huntressAgentSilent": {
+        "title": "The Huntress agent on {{device}} has not reported since {{date}}"
+      },
+      "huntressAgentOutdated": {
+        "title": "The Huntress agent on {{device}} runs version {{version}}; {{newest}} has run on other devices since {{date}}"
+      },
+      "defenderOff": {
+        "title": "Microsoft Defender does not protect {{device}}: {{status}}"
+      },
+      "openBackup": "Open the customer’s backup",
+      "backupFailed": {
+        "title": "{{service}}: the CloudAlly backup failed for {{failed}} of {{total}} ({{account}})"
+      },
+      "backupLate": {
+        "title": "{{service}}: {{late}} of {{total}} not backed up by CloudAlly for over {{hours}} hours ({{account}})"
+      },
+      "backupPaused": {
+        "whole": "{{service}}: the CloudAlly backup is paused ({{account}})",
+        "some": "{{service}}: the CloudAlly backup is paused for {{paused}} of {{total}} ({{account}})"
+      },
+      "userNotBackedUp": {
+        "title_one": "{{count}} licensed Microsoft 365 user has no mailbox backup ({{licensed}} licensed, {{backedUp}} in backup)",
+        "title_other": "{{count}} licensed Microsoft 365 users have no mailbox backup ({{licensed}} licensed, {{backedUp}} in backup)"
+      }
     },
     "reads": {
       "readAt": "{{source}} read at {{time}}",
@@ -1596,6 +1774,7 @@
     },
     "empty": "No open alerts. New alerts appear here after the next read from Atera.",
     "emptyResolved": "No resolved alerts.",
+    "emptyHidden": "No alert is hidden.",
     "emptyFiltered": "No alerts match these filters.",
     "detail": {
       "title": "Alert",
@@ -1676,7 +1855,134 @@
       "refused": "The task was not created. Read the alert again and check your choices.",
       "readAgain": "Read again",
       "cannotCreate": "You can see this alert, but you cannot assign it."
+    },
+    "actions": {
+      "heading": "In {{source}}",
+      "menu": "Actions for {{title}}",
+      "resolve": "Close in Atera",
+      "resolveTitle": "Close the alert in Atera",
+      "delete": "Delete in Atera",
+      "deleteItem": "Delete in Atera…",
+      "deleteTitle": "Delete the alert in Atera",
+      "none": "Nothing has been asked of {{source}} for this alert."
+    },
+    "hide": {
+      "heading": "In Parasoll",
+      "open": "Hide until…",
+      "show": "Show again",
+      "title": "Hide the alert until a date",
+      "sourceStays": "{{source}}’s API cannot snooze an alert, so it stays open there; Parasoll hides it until the day you choose.",
+      "gapStays": "Hiding a gap does not stop the check: it comes back on the day you choose, or closes once the checks no longer find it.",
+      "until": "Hide until",
+      "untilHint": "It comes back at the start of this day.",
+      "shortcuts": "Quick days",
+      "in": {
+        "tomorrow": "Tomorrow",
+        "inAWeek": "In a week",
+        "inAMonth": "In a month"
+      },
+      "invalidDay": "Choose a day after today, at most {{days}} days ahead.",
+      "reason": "Reason",
+      "reasonHint": "Shown to everyone with the hidden alert.",
+      "reasonRequired": "Say why the alert is hidden.",
+      "summary": "Hidden for everyone until {{date}}; it comes back by itself.",
+      "confirm": "Hide",
+      "hiding": "Hiding…",
+      "changed": "The alert changed while you looked at it. Here it is as it is now: decide again.",
+      "done": "Hidden until {{date}}.",
+      "discardTitle": "Discard the reason?",
+      "discardBody": "The alert is not hidden, and what you typed has not been saved.",
+      "discard": "Discard",
+      "keepEditing": "Keep editing",
+      "shown": "The alert is shown again.",
+      "hiddenSince": "Hidden until {{date}} by {{name}}: “{{reason}}”",
+      "someone": "someone",
+      "untilFact": "hidden until {{date}}"
+    },
+    "closedAtSource": {
+      "fact": "Closed in {{source}}",
+      "explain": "{{source}} closed it {{date}}. Because it is urgent, it stays open in Parasoll until someone confirms it is dealt with.",
+      "confirm": "Confirm closing",
+      "confirmed": "The closing is confirmed",
+      "needsConfirming": "needs confirming"
     }
+  },
+  "coverage": {
+    "open": "Coverage checks",
+    "title": "Coverage checks",
+    "intro": "Parasoll checks whether every customer device is watched and every backup runs, and raises an alert for what is missing.",
+    "readOnly": "You can see the checks, but not change them.",
+    "rules": {
+      "ateraAgentSilent": {
+        "name": "Silent Atera agent",
+        "description": "An alert when the Atera agent on a device has not reported for longer than the limit. A server is critical, any other device a warning.",
+        "when": "Checked after each complete read of Atera’s agents, at night."
+      },
+      "huntressAgentMissing": {
+        "name": "Device without Huntress",
+        "description": "An alert when a device Atera watches has had no Huntress agent for longer than the limit. A server is critical, any other device a warning.",
+        "when": "Checked after each complete read of Huntress’s agents, every hour, for customers linked to a Huntress organization.",
+        "limit": "Days before an alert"
+      },
+      "ateraAgentMissing": {
+        "name": "Device without Atera",
+        "description": "An alert when a device Huntress watches has had no Atera agent for longer than the limit. A server is critical, any other device a warning.",
+        "when": "Checked after each complete read of Atera’s agents, at night.",
+        "limit": "Days before an alert"
+      },
+      "huntressAgentSilent": {
+        "name": "Silent Huntress agent",
+        "description": "An alert when the Huntress agent on a device has not reported for longer than the limit. A server is critical, any other device a warning.",
+        "when": "Checked after each complete read of Huntress’s agents, every hour."
+      },
+      "huntressAgentOutdated": {
+        "name": "Outdated Huntress agent",
+        "description": "An alert when a Huntress agent stays on an older version while a newer one has run on other devices for longer than the limit. Huntress does not say which agents are outdated, so Parasoll compares their versions.",
+        "when": "Checked after each complete read of Huntress’s agents, every hour.",
+        "limit": "Days on an older version"
+      },
+      "defenderOff": {
+        "name": "Defender does not protect",
+        "description": "An alert when Huntress reports Microsoft Defender on a Windows device as unhealthy or disabled. A server is critical, any other device a warning.",
+        "when": "Checked after each complete read of Huntress’s agents, every hour."
+      },
+      "backupFailed": {
+        "name": "Failed backup (CloudAlly)",
+        "description": "An alert when CloudAlly’s last backup of a mailbox, OneDrive, site or team failed. Critical when the whole service failed, otherwise a warning.",
+        "when": "Checked after each complete read of CloudAlly, every second hour."
+      },
+      "backupLate": {
+        "name": "Overdue backup (CloudAlly)",
+        "description": "An alert when the last successful backup is older than the limit while nothing reports a failure: the backup did not run.",
+        "when": "Checked after each complete read of CloudAlly, every second hour.",
+        "limit": "Hours since the last backup"
+      },
+      "backupPaused": {
+        "name": "Paused backup (CloudAlly)",
+        "description": "A warning when a backup is paused in CloudAlly: nothing of it is backed up until someone resumes it.",
+        "when": "Checked after each complete read of CloudAlly, every second hour."
+      },
+      "userNotBackedUp": {
+        "name": "Licensed user without backup",
+        "description": "A warning when more of the customer’s users hold a Microsoft 365 licence with a mailbox (Partner Center) than there are mailboxes in the CloudAlly backup. Customers without licence data are not checked, and their Backup tab says so.",
+        "when": "Checked after each complete read of CloudAlly, every second hour."
+      }
+    },
+    "enabled": "Raise alerts",
+    "limit": {
+      "Days": "Days without contact",
+      "Hours": "Hours without contact"
+    },
+    "limitHint": "From {{min}} to {{max}}. Applies from the next check.",
+    "limitInvalid": "Enter a whole number from {{min}} to {{max}}.",
+    "offNote": "Switching it off closes its open alerts at once.",
+    "openGaps_one": "{{count}} open alert",
+    "openGaps_other": "{{count}} open alerts",
+    "changed": "Changed {{date}} by {{name}}",
+    "never": "Not changed yet: the default applies",
+    "saving": "Saving…",
+    "saved": "Coverage checks saved",
+    "conflict": "Someone changed a check while you looked at it. Here it is as it is now: decide again."
   },
   "taskTicket": {
     "open": "Service ticket",
@@ -1872,8 +2178,16 @@
     "recordInAteraHint": "After saving you see what Atera gets, and confirm it.",
     "recordTitle": "Record on {{number}} in Atera",
     "recordConfirm": "Record in Atera",
-    "recordSaved": "The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.",
-    "recordSkip": "Skip"
+    "recordSaved": "The hours are saved in Parasoll. Atera gets them when you confirm, now or later from My timesheet; do not also add them in Atera by hand, or they are counted twice.",
+    "recordSkip": "Record later",
+    "recordLater": "Atera gets these hours only when you confirm; do not also add them in Atera by hand, or they are counted twice.",
+    "recordedInAtera": "In Atera",
+    "alreadyRecorded": "These hours are already recorded in Atera. A change here does not reach Atera.",
+    "recordInAteraItem": "Record in Atera",
+    "checkRecording": "Check the recording in Atera",
+    "moreNamed": "More for {{hours}} h for {{organization}}, {{date}}",
+    "ticketFound": "#{{number}} {{title}} · {{status}}",
+    "ticketMissing": "No ticket #{{number}} for {{organization}} in Parasoll"
   },
   "technicians": {
     "title": "Technicians",
@@ -2319,6 +2633,24 @@
       "name": "Name",
       "size": "Size",
       "modified": "Last modified"
+    },
+    "stored": {
+      "title": "Monthly reports",
+      "intro": "Parasoll files these after each month: Huntress's own report and Parasoll's summary of the customer. They are never changed.",
+      "empty": "No monthly reports are filed yet. They appear here after the first month Parasoll has read.",
+      "kinds": {
+        "huntress-monthly": "Huntress report",
+        "parasoll-monthly": "Parasoll summary"
+      },
+      "name": "{{kind}} · {{month}}",
+      "stored": "Filed {{date}} · {{size}}",
+      "reconstructed": "Reconstructed",
+      "reconstructedHint": "Made after the month had closed, from what Parasoll held then.",
+      "download": "Download",
+      "downloadLabel": "Download {{name}}",
+      "downloading": "Downloading…",
+      "downloadFailed": "The file could not be downloaded. Try again; if it keeps failing, the stored copy may be damaged.",
+      "integrity": "Each file is checked against the fingerprint it was filed with before it is downloaded."
     }
   },
   "licenses": {
@@ -2566,7 +2898,9 @@
     "anomalyTexts": {
       "BIL_STALE_QUANTITY": "{{product}}: the quantity comes from a reading of {{date}}, which is older than the limit.",
       "BIL_NO_DEVICE_SNAPSHOT": "{{product}} is billed per device, but no daily device count exists; the devices listed now are counted.",
-      "BIL_INCOMPLETE_HOURS": "The latest import of work hours ({{date}}) did not finish completely; hours may be missing from this basis."
+      "BIL_INCOMPLETE_HOURS": "The latest import of work hours ({{date}}) did not finish completely; hours may be missing from this basis.",
+      "BIL_NO_AGENT_READING": "{{product}} is billed per Huntress agent, but Huntress has not counted them for the customer yet; the contract’s estimated quantity is billed.",
+      "BIL_NO_SEAT_READING": "{{product}} is billed per backup user, but no CloudAlly bill counts them for the customer yet; the contract’s estimated quantity is billed."
     },
     "conflictsCount_one": "{{count}} line needs a decision",
     "conflictsCount_other": "{{count}} lines need a decision",
@@ -2662,7 +2996,43 @@
     "retryFailed_one": "Send the unsent customer again",
     "retryFailed_other": "Send the {{count}} unsent customers again",
     "closeUnsent_one": "{{count}} customer in this run was not sent. Close the run only when it is handled another way.",
-    "closeUnsent_other": "{{count}} customers in this run were not sent. Close the run only when they are handled another way."
+    "closeUnsent_other": "{{count}} customers in this run were not sent. Close the run only when they are handled another way.",
+    "serviceQuantities": {
+      "title": "Counted by the services",
+      "intro": "What Atera, Huntress and CloudAlly count for the customer, against the contract’s lines. The next billing basis takes the count of the last day read.",
+      "sources": {
+        "PerAteraDevice": "Devices in Atera",
+        "PerHuntressAgent": "Agents in Huntress",
+        "PerBackupSeat": "Backup users in CloudAlly"
+      },
+      "readOn": "read {{date}}",
+      "live": "counted from the devices listed now",
+      "stale": "older than {{count}} days",
+      "notRead": "Not counted yet",
+      "status": {
+        "Counted": "Billed by the count",
+        "NoReading": "No count yet: the estimated quantity is billed",
+        "NotOnContract": "No contract line bills it",
+        "None": "Nothing to count",
+        "CountedZero": "Counted 0: nothing is billed",
+        "CountedStale": "Billed by an old count"
+      },
+      "notOnContract": "If it is part of a fixed price, all is well; otherwise add a line to the contract.",
+      "line": "{{product}} · contract {{contract}}: estimated {{estimate}}, the next basis bills {{billed}}",
+      "bill": {
+        "title": "What CloudAlly bills",
+        "day": "Bill of {{date}}",
+        "dayAccount": "Bill of {{date}} for the account {{account}}",
+        "account": "Account",
+        "service": "Service",
+        "seats": "Users",
+        "price": "Price",
+        "total": "Total",
+        "noMoney": "The amounts are shown to those who see purchase prices.",
+        "rule": "Parasoll bills the highest number of users on one line per account: {{count}} in all."
+      },
+      "error": "The counts could not be read."
+    }
   },
   "invoices": {
     "title": "Invoices",
@@ -2733,7 +3103,8 @@
       "SubscriptionCancellationWindow": "Cancellation windows",
       "SubscriptionRenewal": "Licence renewals",
       "StaleOpportunity": "Deals gone quiet",
-      "InvoiceOverdue": "Overdue invoices"
+      "InvoiceOverdue": "Overdue invoices",
+      "VendorActionUncertain": "Actions that need a check"
     },
     "kinds": {
       "NoticeDeadline": "Contract {{number}} for {{organization}}: the last day to give notice is {{date}}.",
@@ -2747,7 +3118,9 @@
       "SubscriptionRenewal_one": "{{offer}} at {{organization}} renews {{date}} ({{quantity}} licence).",
       "SubscriptionRenewal_other": "{{offer}} at {{organization}} renews {{date}} ({{quantity}} licences).",
       "StaleOpportunity_one": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} day.",
-      "StaleOpportunity_other": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} days."
+      "StaleOpportunity_other": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} days.",
+      "VendorActionUncertain": "{{system}} gave no clear answer to “{{action}}” on ticket #{{ticket}} ({{organization}}). Check there and record what you found.",
+      "VendorActionUncertainNoTicket": "{{system}} gave no clear answer to “{{action}}”. Check there and record what you found."
     },
     "emptyUnread": "Nothing unread is waiting for you.",
     "digestOff": "Turn on the daily digest to choose its hour.",
@@ -3570,7 +3943,8 @@
           "unconverted-leads": "Leads that never became customers"
         },
         "service": {
-          "tickets": "Closed tickets"
+          "tickets": "Closed tickets",
+          "resolved-alerts": "Resolved alerts"
         },
         "integration": {
           "exception-triage": "Reviews of resolved exceptions",
@@ -3580,6 +3954,9 @@
         },
         "identity": {
           "sessions": "Ended sign-in sessions"
+        },
+        "security": {
+          "closed-incidents": "Closed security incidents and escalations"
         }
       }
     }
@@ -4198,13 +4575,54 @@
     "limit": "late after {{limit}}",
     "lastFailed": "Last run failed",
     "unreadState": "Saved state could not be read.",
+    "webhook": {
+      "title": "Webhook",
+      "on": "On",
+      "off": "Off",
+      "refusing": "Needs attention",
+      "offNote": "Changes arrive with the scheduled reads.",
+      "lastEvent": "Last event",
+      "noEvent": "No event received yet",
+      "received": "deliveries received: {{count}}",
+      "earlyRead": "Last early read",
+      "refused": "Last refused delivery",
+      "events": {
+        "incident_report": {
+          "created": "new security incident",
+          "comment_added": "comment on a security incident",
+          "closed": "security incident closed"
+        },
+        "escalation": {
+          "created": "new escalation",
+          "overdue": "escalation overdue",
+          "closed": "escalation closed"
+        },
+        "platform_action": {
+          "created": "new platform action",
+          "overdue": "platform action overdue",
+          "closed": "platform action closed",
+          "notification": "notice about a platform action"
+        },
+        "account_notice": {
+          "notification": "account notice"
+        },
+        "ticket": "ticket changed",
+        "unknown": "an event Parasoll does not know"
+      },
+      "refusal": {
+        "Unsigned": "no signature or key",
+        "Stale": "signed too long ago",
+        "BadSignature": "the signature or key does not match the one set in Parasoll"
+      }
+    },
     "worker": {
       "title": "Background service",
       "note": "A part counts as late after {{limit}} without a sign of life.",
       "components": {
         "outbox": "Change delivery",
         "jobs": "Scheduled jobs",
-        "actions": "Action delivery to vendors"
+        "actions": "Action delivery to vendors",
+        "early-reads": "Early reads from webhooks"
       },
       "state": {
         "Current": "Running",
@@ -4396,7 +4814,7 @@
       "VND_NOT_FOUND": "The action was not found.",
       "VND_SENT": "The vendor accepted the change.",
       "VND_ALREADY_DONE": "It was already so; nothing was sent.",
-      "VND_DRY_RUN": "Test mode (DryRun): nothing was sent.",
+      "VND_DRY_RUN": "Test mode: nothing was sent.",
       "VND_NO_ANSWER": "No clear answer came back. Check whether it happened.",
       "VND_EARLIER_ATTEMPT": "An earlier attempt may have got through without an answer. Check before asking again.",
       "VND_VENDOR_UNAVAILABLE": "The system could not be reached after several attempts; nothing was sent.",
@@ -4413,13 +4831,63 @@
       "VND_TECHNICIAN_UNKNOWN": "Choose a technician Atera knows.",
       "VND_TICKET_MOVED": "The ticket belongs to another customer in Atera now; nothing was sent.",
       "VND_TARGET_GONE": "The ticket no longer exists in Atera; nothing was sent.",
-      "VND_VENDOR_REFUSED": "Atera refused it; nothing changed.",
-      "VND_VENDOR_BUSY": "Atera could not be read; it is tried again.",
+      "VND_VENDOR_REFUSED": "The vendor refused it; nothing changed.",
+      "VND_VENDOR_BUSY": "The vendor could not be read; it is tried again.",
       "VND_TIME_FROM_ATERA": "These hours came from Atera; they are already there.",
       "VND_TIME_NOT_OWN": "Only the person whose hours they are records them in Atera.",
       "VND_TIME_NO_TICKET": "The entry names no Atera ticket of its customer that Parasoll knows.",
       "VND_CURSOR_INVALID": "The page does not belong to this list; load the list again.",
-      "VND_FILTER_INVALID": "The filter is not valid."
+      "VND_FILTER_INVALID": "The filter is not valid.",
+      "VND_ALERT_MOVED": "The alert belongs to another customer in Atera now; nothing was sent.",
+      "VND_ALERT_RESOLVED": "The alert is no longer open in Atera.",
+      "VND_INCIDENT_CLOSED": "Huntress has closed the incident.",
+      "VND_INCIDENT_NOT_SENT": "The incident is with Huntress’s SOC or its automation now, not waiting for you.",
+      "VND_NOTHING_TO_APPROVE": "No remediation step waits for approval.",
+      "VND_REASON_INVALID": "Choose why the plan is sent back.",
+      "VND_STEP_UNKNOWN": "The incident has no such remediation step.",
+      "VND_STEP_NOT_MANUAL": "Huntress carries out this step itself; only a manual step is marked.",
+      "VND_STEP_ALREADY": "The step is already marked that way.",
+      "VND_INCIDENT_UNAPPROVED": "Approve the plan first: Huntress closes an incident only when no step waits for approval.",
+      "VND_INCIDENT_MOVED": "The incident belongs to another Huntress organization now; nothing was sent.",
+      "VND_ESCALATION_RESOLVED": "Huntress has closed the escalation.",
+      "VND_ANSWER_INVALID": "Choose an answer this escalation takes.",
+      "VND_ESCALATION_MOVED": "The escalation no longer names the customer’s Huntress organization; nothing was sent.",
+      "VND_AGENT_MOVED": "The agent belongs to another Huntress organization now; nothing was sent.",
+      "VND_ALREADY_ISOLATED": "The device is isolated, or about to be.",
+      "VND_NOT_ISOLATED": "The device is not isolated.",
+      "VND_BACKUP_BUSY": "CloudAlly could not be read; it is tried again.",
+      "VND_BACKUP_GONE": "CloudAlly no longer has this backup; nothing was sent.",
+      "VND_BACKUP_REFUSED": "CloudAlly refused it; nothing changed.",
+      "VND_BACKUP_PAUSED": "The backup is paused; resume it first.",
+      "VND_BACKUP_NOT_IN_BACKUP": "This user or site is not in the backup; add it first.",
+      "VND_BACKUP_ALREADY_ACTIVE": "This user or site is already in the backup.",
+      "VND_BACKUP_ALREADY_PAUSED": "The backup is already paused.",
+      "VND_BACKUP_NOT_PAUSED": "The backup is not paused.",
+      "VND_BACKUP_RUNNING": "A backup was already running at CloudAlly; nothing was sent.",
+      "VND_BACKUP_STARTED": "CloudAlly took the backup; it starts when a backup machine is free.",
+      "VND_ACCOUNT_CLOSED": "The CloudAlly account is already closed.",
+      "VND_RESTORE_SERVICE": "Parasoll restores mailboxes, OneDrive and SharePoint sites; restore this in CloudAlly.",
+      "VND_RESTORE_NO_BACKUP": "There is no backup of this user or site to restore from.",
+      "VND_RESTORE_DATE": "Choose a day in the past, today at the latest.",
+      "VND_RESTORE_TARGET": "Give the address of the account to restore into.",
+      "VND_RESTORE_TARGET_SAME": "That is the same account: restore it in place instead.",
+      "VND_RESTORE_TARGET_DOMAIN": "CloudAlly restores into an account of the same domain only.",
+      "VND_RESTORE_STARTED": "CloudAlly took the restore; it runs as a job at CloudAlly.",
+      "VND_EXPORT_STARTED": "CloudAlly took the export; it e-mails the download link when the file is ready.",
+      "VND_RESTORE_SIGN_IN": "CloudAlly wants a sign-in to the customer’s Microsoft 365 before it restores. Check in CloudAlly whether the restore started.",
+      "VND_ALREADY_CONNECTED": "The customer is already linked to a record in this system.",
+      "VND_EXISTS_AT_VENDOR": "The system already has a record with this key. If it is this customer, link it under Mappings; nothing was sent.",
+      "VND_AMBIGUOUS_AT_VENDOR": "The system has several records with this key. Link the right one under Mappings; nothing was sent.",
+      "VND_CREATE_NOT_FOUND": "An earlier attempt got no answer, and no record with our key was found. Check at the vendor and settle this action: if nothing was made, the next request creates the customer.",
+      "VND_CREATED": "Created and linked to the customer.",
+      "VND_CREATED_EARLIER": "An earlier attempt had created it; it is linked to the customer now.",
+      "VND_CREATED_NOT_LINKED": "Created, but it could not be linked. Link it under Mappings.",
+      "VND_LINKED_ELSEWHERE": "The record with our key is linked to another customer in Parasoll; nothing was changed.",
+      "VND_KEY_INVALID": "Write the organization key with lower-case letters, digits and hyphens (at most 64 characters).",
+      "VND_EMAIL_INVALID": "Enter the e-mail address the account signs in with.",
+      "VND_REGION_INVALID": "Choose one of CloudAlly’s data centers in the EU.",
+      "VND_CUSTOMER_GONE": "The customer no longer exists in Parasoll; nothing was sent.",
+      "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer has no outcome yet. Settle it in the action log first; nothing was sent."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4437,9 +4905,10 @@
       "cancelAction": "Cancel the action",
       "held": "Sent in {{seconds}} s. Until then you can cancel it.",
       "sending": "Sending to {{system}}…",
-      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened, then record what you found under Actions at vendors on the Connections page.",
+      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened and record what you found — here, or later from the notice you get.",
       "openAtVendor": "Check in {{system}}",
-      "keepsGoing": "You can close this window; the action carries on."
+      "keepsGoing": "You can close this window; the action carries on.",
+      "openTicket": "Open the ticket"
     },
     "fields": {
       "requestedBy": "Asked by",
@@ -4482,6 +4951,50 @@
         },
         "time": {
           "record": "Record time in Atera"
+        },
+        "alert": {
+          "resolve": "Close the alert",
+          "delete": "Delete the alert"
+        },
+        "customer": {
+          "create": "Create the customer in Atera"
+        }
+      },
+      "huntress": {
+        "incident": {
+          "approve": "Approve the plan",
+          "reject": "Send the plan back",
+          "step": "Mark a manual step",
+          "resolve": "Close the incident",
+          "comment": "Comment on the incident"
+        },
+        "escalation": {
+          "resolve": "Close the escalation"
+        },
+        "agent": {
+          "isolate": "Isolate the device",
+          "release": "Lift the isolation",
+          "uninstall": "Remove the Huntress agent"
+        },
+        "organization": {
+          "create": "Create the organization in Huntress"
+        }
+      },
+      "cloudally": {
+        "backup": {
+          "run": "Back up now",
+          "activate": "Add to the backup",
+          "pause": "Pause the backup",
+          "resume": "Resume the backup"
+        },
+        "account": {
+          "deactivate": "Close the CloudAlly account",
+          "create": "Create the account in CloudAlly"
+        },
+        "restore": {
+          "export": "Export a backup",
+          "other": "Restore elsewhere",
+          "in-place": "Restore in place"
         }
       }
     },
@@ -4500,16 +5013,69 @@
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera marks them not billable.",
       "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice.",
       "VND_EFFECT_TIME_DEFAULT_START": "The entry has no start time, so the hours start at {{from}} on its date.",
-      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}."
+      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}.",
+      "VND_EFFECT_ALERT_RESOLVE": "Atera closes “{{title}}” ({{device}}): it leaves the open alerts in Atera.",
+      "VND_EFFECT_ALERT_CONFIRM": "Parasoll reads the alert again afterwards and shows it closed once Atera does.",
+      "VND_EFFECT_ALERT_DELETE": "Atera deletes “{{title}}” ({{device}}).",
+      "VND_EFFECT_ALERT_DELETE_HISTORY": "It is gone from Atera’s history too; Parasoll keeps it as closed.",
+      "VND_EFFECT_HUNTRESS_APPROVE": "Approves the remediation steps waiting in Huntress ({{count}}).",
+      "VND_EFFECT_HUNTRESS_APPROVE_ASSISTED": "Huntress carries out its own steps ({{count}}) straight away.",
+      "VND_EFFECT_HUNTRESS_APPROVE_MANUAL": "The manual steps ({{count}}) are yours to carry out and mark as done.",
+      "VND_EFFECT_HUNTRESS_REJECT": "Sends the waiting remediation steps ({{count}}) back to Huntress’s SOC with your reason and explanation.",
+      "VND_EFFECT_HUNTRESS_BACK_TO_SOC": "The SOC revises the plan and sends the incident again; until then it does not wait for you.",
+      "VND_EFFECT_HUNTRESS_STEP_DONE": "Marks the step “{{step}}” as done in Huntress.",
+      "VND_EFFECT_HUNTRESS_STEP_UNDONE": "Marks the step “{{step}}” as not done in Huntress.",
+      "VND_EFFECT_HUNTRESS_STEP_LAST": "Marking a step does not approve it; when it is the last open step, Huntress may close the incident.",
+      "VND_EFFECT_HUNTRESS_RESOLVE": "Closes the incident in Huntress; its alert closes here once Huntress shows it closed.",
+      "VND_EFFECT_HUNTRESS_RESOLVE_MANUAL": "Manual steps not marked as done still wait for you afterwards.",
+      "VND_EFFECT_HUNTRESS_COMMENT": "Adds the comment to the incident in Huntress; everyone in your Huntress account who sees the incident can read it.",
+      "VND_EFFECT_HUNTRESS_COMMENT_SOC": "Huntress’s SOC is not told about comments and does not answer them.",
+      "VND_EFFECT_HUNTRESS_ESCALATION_CLOSE": "Closes the escalation in Huntress; its alert closes here once Huntress shows it closed.",
+      "VND_EFFECT_HUNTRESS_DISMISSED": "Without an answer Huntress only sets it aside: it opens again the next time the same access happens.",
+      "VND_EFFECT_HUNTRESS_EXPECTED": "Tells Huntress the access was expected: it is allowed for these accounts from now on.",
+      "VND_EFFECT_HUNTRESS_UNAUTHORIZED": "Tells Huntress the access was unauthorised: later logins like it count as unauthorised too. Parasoll does not block or disable any account; do that in Huntress or Microsoft 365.",
+      "VND_EFFECT_HUNTRESS_ISOLATE": "Isolates {{device}} from the network: only Huntress can still reach it, and whoever works on it loses network access. Your reason is saved in Huntress with the isolation.",
+      "VND_EFFECT_HUNTRESS_ISOLATE_CONFIRM": "Huntress isolates it the next time the device calls in; until then it shows as being isolated.",
+      "VND_EFFECT_HUNTRESS_RELEASE": "Gives {{device}} its network back.",
+      "VND_EFFECT_HUNTRESS_RELEASE_CONFIRM": "Huntress lifts the isolation the next time the device calls in; until then it shows as being lifted.",
+      "VND_EFFECT_HUNTRESS_UNINSTALL": "Removes the Huntress agent from {{device}}: the agent leaves your Huntress account at once and the device is no longer protected by Huntress.",
+      "VND_EFFECT_HUNTRESS_UNINSTALL_GAP": "If Atera watches {{device}}, Parasoll raises “Device without Huntress” once the rule’s limit is reached.",
+      "VND_EFFECT_BACKUP_RUN": "CloudAlly backs up {{name}} ({{service}}) now.",
+      "VND_EFFECT_BACKUP_RUN_ALL_one": "CloudAlly backs up {{service}} at {{account}} now: {{count}} user or site.",
+      "VND_EFFECT_BACKUP_RUN_ALL_other": "CloudAlly backs up {{service}} at {{account}} now: {{count}} users or sites.",
+      "VND_EFFECT_BACKUP_QUEUE": "It starts when one of CloudAlly’s backup machines is free, which can take minutes.",
+      "VND_EFFECT_BACKUP_ACTIVATE": "CloudAlly adds {{name}} to the {{service}} backup and backs it up from the next run on.",
+      "VND_EFFECT_BACKUP_BILLED": "CloudAlly bills one more user or site from then on.",
+      "VND_EFFECT_BACKUP_PAUSE_one": "CloudAlly stops the scheduled backups of {{service}} at {{account}} ({{count}} user or site) until someone resumes them.",
+      "VND_EFFECT_BACKUP_PAUSE_other": "CloudAlly stops the scheduled backups of {{service}} at {{account}} ({{count}} users or sites) until someone resumes them.",
+      "VND_EFFECT_BACKUP_PAUSE_GAP": "Parasoll shows the pause as a coverage gap until then.",
+      "VND_EFFECT_BACKUP_RESUME": "CloudAlly backs up {{service}} at {{account}} on its schedule again.",
+      "VND_EFFECT_ACCOUNT_DEACTIVATE": "CloudAlly cancels the subscription of {{account}} and deletes the CloudAlly account.",
+      "VND_EFFECT_ACCOUNT_DEACTIVATE_DATA": "Its backups go with it. Whether CloudAlly keeps them for a while after a deletion through the API is not confirmed.",
+      "VND_EFFECT_RESTORE_EXPORT": "CloudAlly exports {{service}} of {{name}} as it was at the end of {{date}}, as {{format}}.",
+      "VND_EFFECT_RESTORE_OTHER": "CloudAlly restores {{service}} of {{name}} as it was at the end of {{date}} into {{target}}.",
+      "VND_EFFECT_RESTORE_NEW_SITE": "CloudAlly restores the site {{name}} as it was at the end of {{date}} as a new site; the site in use is not touched.",
+      "VND_EFFECT_RESTORE_IN_PLACE": "CloudAlly restores {{service}} of {{name}} as it was at the end of {{date}} into the same place, beside what the user works with now.",
+      "VND_EFFECT_RESTORE_DELETED": "Items deleted since are restored too.",
+      "VND_EFFECT_RESTORE_LINK": "CloudAlly e-mails the download link when the file is ready; Parasoll does not get it.",
+      "VND_EFFECT_RESTORE_JOB": "CloudAlly runs it as a job of its own; how it ends is seen in CloudAlly.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE": "Atera gets the customer “{{name}}” (organization number {{orgNumber}}) with the contact details of the customer card.",
+      "VND_EFFECT_ATERA_CUSTOMER_CREATE_BY_NAME": "Atera gets the customer “{{name}}” with the contact details of the customer card. The card has no organization number, so Parasoll recognises the customer in Atera by its exact name.",
+      "VND_EFFECT_CUSTOMER_LINKED": "Parasoll links it to this customer at once.",
+      "VND_EFFECT_HUNTRESS_ORGANIZATION_CREATE": "Huntress gets the organization “{{name}}” with the organization key {{key}}.",
+      "VND_EFFECT_HUNTRESS_AGENTS_LATER": "Machines appear only once the Huntress agent is installed with the key {{key}} — that is done in Atera, outside Parasoll.",
+      "VND_EFFECT_CLOUDALLY_ACCOUNT_CREATE": "CloudAlly gets the account “{{name}}” for {{email}} in the data center {{region}}, opened as a trial account.",
+      "VND_EFFECT_CLOUDALLY_PASSWORD": "CloudAlly requires a password: Parasoll makes a random one and keeps it nowhere. You reach the account through CloudAlly’s partner portal; the customer can set their own with “Forgot password”.",
+      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Backups start only once the customer has given CloudAlly access to Microsoft 365 and the backup tasks are set up — that is done in CloudAlly, outside Parasoll."
     }
   },
   "tickets": {
     "title": "Tickets",
-    "subtitle": "Open tickets of every customer, newest first. They live in Atera; you answer and change them here.",
-    "subtitleAll": "Every open ticket and every ticket of the last 90 days, newest first.",
+    "subtitle": "Open tickets of every customer, the most recently active first. They live in Atera; you answer and change them here.",
+    "subtitleAll": "Every open ticket and every ticket of the last 90 days, the most recently active first.",
     "refresh": "Refresh tickets",
     "filters": "Filter tickets",
-    "search": "Search title or number",
+    "search": "Search title, number or contact",
     "stateLabel": "Which tickets",
     "show": {
       "open": "Open",
@@ -4610,6 +5176,463 @@
       "addNote": "Add the note",
       "replyTitle": "Reply in {{number}}",
       "noteTitle": "Internal note in {{number}}"
+    },
+    "customerFilter": "Customer",
+    "anyCustomer": "All customers"
+  },
+  "security": {
+    "panel": {
+      "title": "Security",
+      "notLinked": "Huntress has given no figures for this customer yet. If its Huntress organization is not linked, link it under Mappings; the figures come with the next read (hourly).",
+      "notRead": "Huntress has not been read yet.",
+      "organization": "{{name}} ({{source}})",
+      "usageOf": "What Huntress counts for {{name}}"
+    },
+    "usage": {
+      "billableAgents": "Agents billed",
+      "allAgents_one": "{{count}} agent in all",
+      "allAgents_other": "{{count}} agents in all",
+      "unresponsive": "Not responding",
+      "outdated": "Outdated",
+      "isolated": "Isolated",
+      "identities": "Identities billed",
+      "learners": "Training users"
+    },
+    "reads": {
+      "huntress-organizations": "Organizations and usage ({{system}})",
+      "huntress-reports": "Monthly reports ({{system}})"
+    },
+    "reports": {
+      "title": "Monthly reports",
+      "period": "Month",
+      "incidents": "Incidents",
+      "incidentsValue": "{{reported}} reported, {{resolved}} closed",
+      "signals": "Signals",
+      "agents": "Agents",
+      "pdf": "Report",
+      "openPdf": "Open the report for {{period}} in {{source}}",
+      "shown": "The latest {{shown}} of {{total}} reports.",
+      "none": "No monthly reports from Huntress in the last 13 months.",
+      "notRead": "Monthly reports have not been read yet.",
+      "incidentsReported": "{{reported}} reported",
+      "storedCopy": "Copy in Parasoll",
+      "downloadCopy": "Copy in Parasoll: download the report for {{period}}"
+    },
+    "incident": {
+      "heading": "Security incident",
+      "loading": "Loading the incident…",
+      "readAt": "Read from Huntress",
+      "statuses": {
+        "sent": "Waiting for you",
+        "auto_remediating": "Huntress is carrying out the steps",
+        "draft": "Back with the SOC",
+        "closed": "Closed in Huntress",
+        "dismissed": "Dismissed in Huntress",
+        "partner_dismissed": "Dismissed by you",
+        "deleting": "Being deleted in Huntress",
+        "deleted": "No longer in Huntress"
+      },
+      "indicators": "Indicators",
+      "resolve": "Close in Huntress",
+      "resolveTitle": "Close the incident in Huntress",
+      "draftNote": "Huntress’s SOC is revising the plan after it was sent back. It comes back here when the SOC sends it again.",
+      "showDetails": "Show Huntress’s details",
+      "hideDetails": "Hide Huntress’s details",
+      "details": "Huntress’s details of the incident"
+    },
+    "indicators": {
+      "footholds": "Footholds",
+      "monitored_files": "Monitored files",
+      "ransomware_canaries": "Ransomware canaries",
+      "antivirus_detections": "Antivirus detections",
+      "process_detections": "Process detections",
+      "managed_identity": "Identity",
+      "mde_detections": "Defender for Endpoint",
+      "siem_detections": "SIEM",
+      "favicon_detections": "Favicon detections",
+      "behavioral_detections": "Behaviour",
+      "email_security_detections": "E-mail security",
+      "app_control": "Application control",
+      "ai_misuse": "AI misuse"
+    },
+    "remediation": {
+      "heading": "Remediation plan",
+      "none": "Huntress has no remediation steps for this incident.",
+      "unnamed": "Step without a name",
+      "someone": "someone",
+      "types": {
+        "assisted": "Huntress does it",
+        "manual": "You do it",
+        "containment": "Containment"
+      },
+      "statuses": {
+        "unapproved": "Waiting for approval",
+        "approved": "Approved",
+        "completed": "Done",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "approvedBy": "Approved by {{name}} {{date}}",
+      "completedAt": "Done {{date}}",
+      "mark": "Mark as done",
+      "unmark": "Mark as not done",
+      "markTitle": "Mark the step as done in Huntress",
+      "unmarkTitle": "Mark the step as not done in Huntress",
+      "approve": "Approve plan",
+      "approveTitle": "Approve the remediation plan in Huntress",
+      "reject": "Send plan back…",
+      "rejectTitle": "Send the plan back to Huntress’s SOC",
+      "rejectConfirm": "Send back",
+      "rejectContinue": "Send back…",
+      "reason": "Why",
+      "rejectComment": "What should the SOC know?",
+      "rejectHint": "Huntress’s SOC reads this when it revises the plan. Up to 2,048 characters.",
+      "rejectCommentMissing": "Write what the SOC should know.",
+      "useful": "The plan was useful",
+      "reasons": {
+        "approved_application": "The application is approved",
+        "manually_remediated": "Already fixed by hand",
+        "host_reimaged": "The device was reinstalled",
+        "testing_security_controls": "We were testing the security controls",
+        "other": "Something else",
+        "approved_user_login_location_m365": "The login location is approved",
+        "approved_user_email_forwarding_rule_m365": "The forwarding rule is approved",
+        "approved_application_m365": "The application is approved",
+        "manually_remediated_m365": "Already fixed by hand",
+        "testing_security_controls_m365": "We were testing the security controls",
+        "approved_vpn_or_proxy_usage_m365": "The VPN or proxy is approved",
+        "other_m365": "Something else"
+      },
+      "reasonChoose": "Choose a reason",
+      "reasonMissing": "Choose why the plan goes back."
+    },
+    "comments": {
+      "heading": "Comments",
+      "readAt": "Read from Huntress",
+      "notRead": "The comments have not been read yet.",
+      "none": "No comments.",
+      "unknownAuthor": "Unknown author",
+      "label": "New comment",
+      "hint": "Everyone in your Huntress account who sees the incident can read it. Huntress’s SOC is not told.",
+      "add": "Add comment",
+      "addTitle": "Add a comment to the incident in Huntress"
+    },
+    "notice": {
+      "escalation": "Escalation",
+      "platformAction": "Platform action",
+      "loading": "Loading…",
+      "readAt": "Read from Huntress",
+      "statuses": {
+        "open": "Open",
+        "overdue": "Overdue",
+        "resolved": "Closed"
+      },
+      "about": "About",
+      "entityTypes": {
+        "Agent": "device",
+        "Identity": "account",
+        "User": "account",
+        "Mailbox": "mailbox"
+      },
+      "moreEntities": "Huntress names more than are shown here.",
+      "platformActionNote": "It closes in Huntress by itself once what it reports is put right; there is nothing to send from here.",
+      "answer": "Answer",
+      "resolveTitle": "Close the escalation in Huntress",
+      "answers": {
+        "expected": {
+          "label": "The access was expected",
+          "hint": "Huntress allows the same access for these accounts from now on.",
+          "confirm": "Close as expected"
+        },
+        "unauthorized": {
+          "label": "The access was unauthorised",
+          "hint": "Later logins like it count as unauthorised. Block or disable the accounts in Huntress or Microsoft 365.",
+          "confirm": "Close as unauthorised"
+        },
+        "close": {
+          "label": "Just close it",
+          "hint": "Huntress only sets it aside: it opens again the next time the same access happens.",
+          "confirm": "Close the escalation",
+          "hintPlain": "Closes the escalation in Huntress; its alert closes here once Huntress shows it closed."
+        }
+      },
+      "answerMissing": "Choose an answer first."
     }
+  },
+  "backup": {
+    "title": "Backup",
+    "mirror": "What Parasoll saved of the customer’s Microsoft 365 backups at CloudAlly. The tab does not ask CloudAlly live.",
+    "summary": "Backup at a glance",
+    "noAccount": "No CloudAlly account is linked to this customer.",
+    "linkAccount": "Link a CloudAlly account",
+    "noTasks": "CloudAlly backs up nothing for this customer yet.",
+    "allOk": "All good",
+    "problems": {
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "late_one": "{{count}} overdue",
+      "late_other": "{{count}} overdue",
+      "paused_one": "{{count}} paused",
+      "paused_other": "{{count}} paused",
+      "notInBackup_one": "{{count}} not in backup",
+      "notInBackup_other": "{{count}} not in backup"
+    },
+    "services": {
+      "Mail": "Mail",
+      "OneDrive": "OneDrive",
+      "SharePoint": "SharePoint",
+      "Teams": "Teams and groups",
+      "Other": "Other"
+    },
+    "states": {
+      "Failed": "Failed",
+      "Late": "Overdue",
+      "Paused": "Paused",
+      "NotInBackup": "Not in backup",
+      "Waiting": "Waiting for its first backup",
+      "Ok": "Backed up",
+      "Aside": "Outside this backup"
+    },
+    "lastBackup": "last backup",
+    "neverBackedUp": "never backed up",
+    "error": "CloudAlly: {{error}}",
+    "errorHelp": "CloudAlly’s help",
+    "entityMenu": "Actions for {{name}}",
+    "taskMenu": "More actions for {{name}}",
+    "accountMenu": "Actions for the CloudAlly account {{name}}",
+    "running": "Running",
+    "taskEntities_one": "{{count}} user or site",
+    "taskEntities_other": "{{count}} users or sites",
+    "taskProblems_one": "{{count}} needs attention",
+    "taskProblems_other": "{{count}} need attention",
+    "account": "CloudAlly account:",
+    "region": "data center {{region}}",
+    "outsideRegion": "Outside the EU",
+    "licences": {
+      "noData": "Partner Center has no licence data for this customer, so Parasoll cannot tell whether every licensed user is in the backup. Link the customer to Partner Center to check it.",
+      "noMailboxLicences": "Partner Center lists no licence with a mailbox for this customer ({{date}}).",
+      "missing_one": "{{count}} licensed user has no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
+      "missing_other": "{{count}} licensed users have no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
+      "allIn_one": "The licensed user has their mailbox in the backup (Partner Center, {{date}}).",
+      "allIn_other": "All {{count}} licensed users have their mailbox in the backup (Partner Center, {{date}})."
+    },
+    "tasks": {
+      "title": "Services in CloudAlly"
+    },
+    "entities": {
+      "title": "Users and sites",
+      "filters": "Filter users and sites",
+      "search": "Search name or address",
+      "stateLabel": "Which ones",
+      "all": "All",
+      "problems": "Need attention",
+      "serviceLabel": "Service",
+      "allServices": "All services",
+      "none": "CloudAlly lists no users or sites for this customer.",
+      "noProblems": "Nothing needs attention: every user and site is backed up.",
+      "noMatch": "No users or sites match these filters."
+    },
+    "actions": {
+      "backup": {
+        "run": {
+          "title": "Back up now",
+          "confirm": "Back up now",
+          "item": "Back up now",
+          "button": "Back up now",
+          "named": "Back up now: {{name}}"
+        },
+        "activate": {
+          "title": "Add to the backup",
+          "confirm": "Add to the backup",
+          "item": "Add to the backup"
+        },
+        "pause": {
+          "title": "Pause the backup",
+          "confirm": "Pause the backup",
+          "item": "Pause …"
+        },
+        "resume": {
+          "title": "Resume the backup",
+          "confirm": "Resume the backup",
+          "item": "Resume",
+          "named": "Resume: {{name}}"
+        }
+      },
+      "account": {
+        "deactivate": {
+          "title": "Close the CloudAlly account",
+          "confirm": "Close the account",
+          "item": "Close the CloudAlly account …"
+        }
+      },
+      "restore": {
+        "export": {
+          "title": "Export a backup",
+          "confirm": "Export the backup"
+        },
+        "other": {
+          "title": "Restore elsewhere",
+          "confirm": "Restore elsewhere"
+        },
+        "in-place": {
+          "title": "Restore in place",
+          "confirm": "Restore in place"
+        }
+      }
+    },
+    "restore": {
+      "item": "Restore …",
+      "title": "Restore {{name}}",
+      "what": "{{service}}, as it was at the end of a day.",
+      "lastBackup": "Last backup {{time}}.",
+      "day": "Day",
+      "dayHint": "The backup as it was at the end of this day.",
+      "dayInvalid": "Choose a day in the past, today at the latest.",
+      "where": "Where to",
+      "ways": {
+        "exportPst": {
+          "label": "Download as PST",
+          "note": "CloudAlly e-mails a download link when the file is ready. Nothing changes at the customer."
+        },
+        "exportZip": {
+          "label": "Download as ZIP",
+          "note": "CloudAlly e-mails a download link when the file is ready. Nothing changes at the customer."
+        },
+        "other": {
+          "label": "Into another account of the same domain",
+          "note": "The other user finds the content in their own mailbox or OneDrive. The original user notices nothing."
+        },
+        "newSite": {
+          "label": "As a new site",
+          "note": "CloudAlly creates a new site with the content; the site in use is not touched."
+        },
+        "inPlace": {
+          "label": "Back where it was",
+          "note": "Writes into the data the user works with now. You confirm your sign-in, type the name and give a reason, and it can be cancelled for a minute."
+        }
+      },
+      "target": "Account to restore into",
+      "targetHint": "An address in {{domain}}.",
+      "targetInvalid": "Enter an e-mail address.",
+      "targetSame": "That is the same account: choose “Back where it was” instead.",
+      "targetDomain": "CloudAlly restores only into an account in {{domain}}.",
+      "includeDeleted": "Include deleted items",
+      "wholeOnly": "Parasoll restores the whole mailbox, OneDrive or site. A single e-mail or file is restored in CloudAlly.",
+      "continue": "Continue"
+    },
+    "notReadYet": "A CloudAlly account is linked to this customer; its backups appear after the next read of CloudAlly.",
+    "actionsOff": "Changes at CloudAlly are switched off in this installation, so the tab only shows the backups.",
+    "actionsLog": {
+      "title": "Actions at CloudAlly",
+      "none": "Nothing has been asked of CloudAlly for this customer yet."
+    }
+  },
+  "onboarding": {
+    "open": "Connect services…",
+    "title": "Connect the customer to the services",
+    "step": "Step {{current}} of {{total}}: {{name}}",
+    "steps": {
+      "services": "Services",
+      "contract": "Contract",
+      "review": "Confirm",
+      "result": "Result"
+    },
+    "intro": "Choose what Parasoll creates for {{customer}}. Each service is linked to the customer at once; what the vendors’ APIs cannot do is listed at the end.",
+    "loading": "Reading the customer’s services…",
+    "loadError": "The services could not be read.",
+    "noneEnabled": "None of Atera, Huntress or CloudAlly is connected to Parasoll in this installation.",
+    "linked": "Linked to “{{name}}”",
+    "linkedId": "Linked to #{{id}}; its name comes with the next read of {{system}}.",
+    "linkedBadge": "Linked",
+    "create": "Create in {{system}}",
+    "simulated": "Test mode: {{system}} is read, nothing is created.",
+    "mapExisting": "Link an existing record under Mappings",
+    "blocks": {
+      "VND_INTEGRATION_OFF": "{{system}} is not connected to Parasoll in this installation.",
+      "VND_KIND_DISABLED": "Creating customers in {{system}} is not switched on in this installation.",
+      "VND_WRITE_DISABLED": "Changes in {{system}} are switched off in this installation.",
+      "VND_CUSTOMER_NOT_ALLOWED": "{{system}} only takes changes for the test customers for now.",
+      "VND_FORBIDDEN": "Your access does not include creating customers in {{system}}.",
+      "VND_EXISTS_AT_VENDOR": "{{system}} already has “{{name}}”, not linked to any customer. Link it under Mappings instead.",
+      "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer in {{system}} has no outcome yet. Settle it in the action log first."
+    },
+    "atera": {
+      "note": "Name, organization number and contact details come from the customer card."
+    },
+    "huntress": {
+      "key": "Organization key",
+      "keyHint": "Huntress places the agents in the organization with this key. Lower-case letters, digits and hyphens.",
+      "keyInvalid": "Use lower-case letters, digits and hyphens (at most 64 characters)."
+    },
+    "cloudally": {
+      "email": "E-mail of the account",
+      "emailHint": "CloudAlly sends the account’s reports to this address. One account per address: use a separate address for each customer, one your firm controls.",
+      "emailInvalid": "Enter an e-mail address.",
+      "region": "Data center"
+    },
+    "regions": {
+      "EU": "EU",
+      "EU_FRANKFURT": "EU – Frankfurt",
+      "EU_PARIS": "EU – Paris",
+      "EU_STOCKHOLM": "EU – Stockholm",
+      "EU_ZURICH": "EU – Zürich"
+    },
+    "nothingChosen": "Choose at least one service to create, or a contract line to add.",
+    "contract": {
+      "intro": "Add the services to the customer’s contract, so they are billed by what the service counts.",
+      "contract": "Contract",
+      "option": "{{number}} {{title}} ({{status}})",
+      "none": "The customer has no contract yet. Continue without contract lines and add them once the contract exists.",
+      "loadError": "The contracts could not be read.",
+      "add": "Bill {{model}}",
+      "product": "Product",
+      "productRequired": "Choose the product the line bills.",
+      "estimate": "Estimated quantity",
+      "estimateHint": "Billed until the service has counted; from then on Parasoll counts.",
+      "estimateInvalid": "Enter a whole number from 0.",
+      "from": "Lines apply from",
+      "fromInvalid": "Choose a day on or after the contract’s start ({{date}}).",
+      "already": "The contract already bills {{model}}.",
+      "priceNote": "The price follows the price list; change it on the contract.",
+      "alreadyIn": "Contract {{number}} already bills {{model}}."
+    },
+    "review": {
+      "creates": "To be created in the services",
+      "lines": "To be added to contract {{number}}",
+      "line": "{{product}} – {{model}}, estimated {{quantity}}, from {{date}}",
+      "blocked": "Untick what cannot be created, or correct its field, before you go on.",
+      "previewError": "The preview could not be made.",
+      "effects": "What {{system}} gets",
+      "backToServices": "Back to Services",
+      "blocks": {
+        "VND_EXISTS_AT_VENDOR": "{{system}} already has a record for this customer that no customer is linked to. If it is this one, link it under Mappings.",
+        "VND_AMBIGUOUS_AT_VENDOR": "{{system}} has several records that could be this customer. Link the right one under Mappings.",
+        "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer in {{system}} has no outcome yet. Settle it in the action log first.",
+        "VND_ALREADY_CONNECTED": "The customer is already linked to {{system}}."
+      }
+    },
+    "result": {
+      "creates": "In the services",
+      "lines": "Contract {{number}}",
+      "lineAdded": "{{product}} added",
+      "lineFailed": "{{product}} was not added: {{error}}",
+      "next": "Left to do outside Parasoll",
+      "steps": {
+        "atera": "Install the Atera agent on the customer’s devices (in Atera).",
+        "huntress": "Install the Huntress agent with the organization key {{key}}: add Huntress’s script to the customer’s profile in Atera. The account key is in Huntress.",
+        "cloudally": "Convert the trial account to a paid one, give CloudAlly access to the customer’s Microsoft 365 and set up the backup tasks (in CloudAlly’s partner portal)."
+      },
+      "open": "Open {{system}}",
+      "keepsGoing": "You can close the window: the services keep working, and the action log keeps the outcome.",
+      "notCreated": "Not created",
+      "lineSkipped": "{{product}} was not added: {{system}} did not take the request.",
+      "lineWithoutService": "The {{system}} line was added to the contract, but {{system}} was not created. Remove the line on the contract unless the service is set up.",
+      "logged": "The action log keeps every outcome.",
+      "openLog": "Open the action log"
+    },
+    "continue": "Continue",
+    "confirm": "Create and link",
+    "confirmLinesOnly": "Add to the contract",
+    "busy": "Sending…"
   }
 }

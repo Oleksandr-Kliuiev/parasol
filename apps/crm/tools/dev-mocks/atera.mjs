@@ -3,7 +3,8 @@
 // test-only control routes under /_mock/atera that add a customer with a fresh organization number, its agents, alerts and
 // tickets, and close an alert again (README). Data is in memory and new on every start.
 
-import { hoursAgo, seedAtera } from './atera-data.mjs';
+import { seedAtera } from './atera-data.mjs';
+import { createAteraDevices } from './atera-devices.mjs';
 import { createAteraTickets } from './atera-tickets.mjs';
 
 export function createAtera({ customers, base, run, orgNumber, newId, send }) {
@@ -45,12 +46,19 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
   const ticketRoutes = createAteraTickets({
     tickets: ateraTickets, workHours: ateraWorkHours, contacts: ateraContacts, customerOf, newId, send, page: ateraPage, parse,
   });
+  const deviceRoutes = createAteraDevices({ agents: ateraAgents, customerOf, newId, send, page: ateraPage, parse });
 
   // Test-only control routes: never part of Atera's API, never behind its key.
   function control(req, res, url, body) {
     const path = url.pathname.slice('/_mock/atera/'.length);
     if (ticketRoutes.control(req, res, path, body)) return;
+    if (deviceRoutes.control(req, res, path, body)) return;
     const removeAlert = path.match(/^alerts\/([^/]+)$/);
+    if (removeAlert && req.method === 'GET') {
+      // What "Atera" holds of an alert now (M40): archived after a resolve, gone after a delete.
+      const found = ateraAlerts.find((a) => String(a.AlertID) === decodeURIComponent(removeAlert[1]));
+      return found ? send(res, 200, found) : send(res, 404, { message: 'No such alert' });
+    }
     if (removeAlert && req.method === 'DELETE') {
       // Closing an alert in Atera takes it off the open list; the CRM's next complete read resolves it.
       const index = ateraAlerts.findIndex((a) => String(a.AlertID) === decodeURIComponent(removeAlert[1]));
@@ -58,7 +66,7 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
       ateraAlerts.splice(index, 1);
       return send(res, 204);
     }
-    if (req.method !== 'POST' || !['customers', 'agents', 'alerts'].includes(path)) return send(res, 404, { message: 'Unknown Atera control route' });
+    if (req.method !== 'POST' || !['customers', 'alerts'].includes(path)) return send(res, 404, { message: 'Unknown Atera control route' });
     const fields = parse(body);
     if (!fields) return send(res, 400, { message: 'The body must be a JSON object' });
     if (path === 'customers') {
@@ -69,12 +77,6 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
       return send(res, 201, customer);
     }
     if (!customerOf(fields.CustomerID)) return send(res, 400, { message: 'CustomerID must name a customer of the mock' });
-    if (path === 'agents') {
-      const id = newId();
-      const agent = { MachineName: `PC-${id}`, OSType: 'Work Station', OS: 'Windows 11 Pro', Online: true, LastSeen: hoursAgo(0), ...fields, AgentID: `agent-${id}`, CustomerID: Number(fields.CustomerID) };
-      ateraAgents.push(agent);
-      return send(res, 201, agent);
-    }
     // Atera's alert ids are numbers; newest first, like Atera's list.
     const alert = { Title: 'Testvarsel', Severity: 'Critical', Created: new Date().toISOString(), ...fields, AlertID: newId(), CustomerID: Number(fields.CustomerID) };
     ateraAlerts.unshift(alert);
@@ -86,6 +88,21 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     if (!req.headers['x-api-key'] && !/^Bearer \S+$/.test(req.headers.authorization ?? '')) return send(res, 401, { message: 'Missing X-API-KEY or bearer token' });
     const path = url.pathname.slice('/api/v3/'.length);
     if (ticketRoutes.api(req, res, url, body, path)) return;
+    if (deviceRoutes.api(req, res, url, path)) return;
+    if (path === 'customers' && req.method === 'POST') {
+      // M43 (and the mapping screen's export): Atera answers a create with the new id as ActionID. Its model binding ignores the case
+      // of field names (the CRM's client writes camel case); the stand-in keeps Atera's own spelling for later reads.
+      const fields = parse(body);
+      const field = (name) => fields?.[name] ?? fields?.[name[0].toLowerCase() + name.slice(1)] ?? null;
+      if (!fields || typeof field('CustomerName') !== 'string' || !field('CustomerName').trim()) return send(res, 400, { message: 'CustomerName is required' });
+      const id = newId();
+      const now = new Date().toISOString();
+      ateraCustomers.push({
+        CustomerID: id, CustomerName: field('CustomerName'), BusinessNumber: field('BusinessNumber'), Domain: field('Domain'), Address: field('Address'),
+        City: field('City'), ZipCodeStr: field('ZipCode'), Country: field('Country'), Phone: field('Phone'), Website: field('Website'), CreatedOn: now, LastModified: now,
+      });
+      return send(res, 200, { ActionID: id });
+    }
     if (path === 'customers') return ateraPage(res, url, ateraCustomers);
     if (path === 'contacts' && req.method === 'GET') return ateraPage(res, url, ateraContacts);
     if (path === 'contacts' && req.method === 'POST') {
@@ -111,8 +128,26 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     }
     const workHours = path.match(/^tickets\/(\d+)\/workhoursrecords$/);
     if (workHours) return send(res, 200, ateraWorkHours.get(Number(workHours[1])) ?? []);
-    if (path === 'agents') return ateraPage(res, url, ateraAgents);
-    if (path === 'alerts') return ateraPage(res, url, ateraAlerts);
+    if (path === 'alerts') {
+      // alertStatus=Open lists what is not archived, Resolved what is (M40); without it, every alert.
+      const status = url.searchParams.get('alertStatus');
+      return ateraPage(res, url, status === 'Open' ? ateraAlerts.filter((a) => !a.Archived) : status === 'Resolved' ? ateraAlerts.filter((a) => a.Archived) : ateraAlerts);
+    }
+    const alert = path.match(/^alerts\/([^/]+)$/);
+    if (alert) {
+      // M40: one alert (GET), resolved (PUT, no body: it is archived) or deleted (DELETE), as Atera's API v3 describes them.
+      const index = ateraAlerts.findIndex((a) => String(a.AlertID) === decodeURIComponent(alert[1]));
+      if (index < 0) return send(res, 404, { title: 'Not Found', status: 404 });
+      if (req.method === 'GET') return send(res, 200, ateraAlerts[index]);
+      if (req.method === 'PUT') {
+        ateraAlerts[index] = { ...ateraAlerts[index], Archived: true, ArchivedDate: new Date().toISOString() };
+        return send(res, 204);
+      }
+      if (req.method === 'DELETE') {
+        ateraAlerts.splice(index, 1);
+        return send(res, 204);
+      }
+    }
     const customValue = path.match(/^customvalues\/customerfield\/(\d+)\/(.+)$/);
     if (customValue) {
       const key = `${customValue[1]}/${decodeURIComponent(customValue[2])}`;

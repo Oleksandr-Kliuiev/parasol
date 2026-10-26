@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
-import { Badge, Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles } from '@fluentui/react-components';
-import { Dismiss24Regular, Open16Regular } from '@fluentui/react-icons';
+import {
+  Badge, Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles, useRestoreFocusTarget,
+} from '@fluentui/react-components';
+import { Clock16Regular, Dismiss24Regular, Open16Regular } from '@fluentui/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../../api/client';
@@ -8,15 +10,19 @@ import { Permissions, useCan } from '../../../auth/CurrentUserContext';
 import { AppLink } from '../../../shared/components/AppLink';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { DetailList } from '../../../shared/components/Panel';
-import { formatDateTime, formatRelative } from '../../../shared/utils/format';
+import { formatDateTime, formatRelative, todayIso } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
+import { useAction } from '../../actions/api';
+import { ActionDetailDialog } from '../../actions/ActionDetailDialog';
 import { ActionDialog } from '../../actions/ActionDialog';
 import { ActionList } from '../../actions/ActionLog';
 import type { VendorAction } from '../../actions/types';
+import { TimeEntryDialogHost } from '../../time/TimeEntryDialog';
 import { sourceName } from '../alerts/alertText';
 import { ServiceReadLine } from '../ServiceReadLine';
 import type { TicketDetail } from '../types';
 import { useTicket } from './api';
+import { keepFocusInPanel } from './panelFocus';
 import { TicketActionsBar } from './TicketActionsBar';
 import { TicketConversation } from './TicketConversation';
 import type { TicketActionAsk } from './ticketActions';
@@ -31,13 +37,18 @@ const useStyles = makeStyles({
   section: { display: 'grid', gap: '8px', minWidth: 0 },
   heading: { margin: 0, fontSize: '15px', lineHeight: '22px', fontWeight: 700 },
   log: { marginLeft: '-20px', marginRight: '-20px', '@media (max-width: 600px)': { marginLeft: '-16px', marginRight: '-16px' } },
+  // Work on the ticket recorded in Parasoll, apart from the changes asked of Atera below it.
+  work: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
 });
 
 /**
  * One ticket in a side panel (M39.2): what Atera said at the last read, how fresh that is, the changes a person can make, the
- * conversation with its answer box, and the actions already asked for this ticket. The address holds the ticket (`?ticket=`).
+ * conversation with its answer box, and the actions already asked for this ticket. The address holds the ticket (`?ticket=`), and a
+ * notice about an action adds it (`&action=`): its card opens over the ticket, where the person records what they found.
  */
-export function TicketPanel({ ticketId, onClose }: { ticketId: string | null; onClose: () => void }) {
+export function TicketPanel({ ticketId, actionId = null, onActionClose, onClose }: {
+  ticketId: string | null; actionId?: string | null; onActionClose?: () => void; onClose: () => void;
+}) {
   const { t } = useTranslation(); const styles = useStyles();
   const read = useTicket(ticketId);
   const ticket = ticketId !== null && !read.isFetching ? read.data : undefined;
@@ -52,14 +63,22 @@ export function TicketPanel({ ticketId, onClose }: { ticketId: string | null; on
       {!read.isFetching && read.isError && (missing
         ? <Text block role="status">{t('tickets.panel.notFound')}</Text>
         : <ErrorState error={read.error} onRetry={() => void read.refetch()} />)}
-      {(ticket ?? read.data) && <TicketBody ticket={(ticket ?? read.data)!} onClose={onClose} />}
+      {(ticket ?? read.data) && <TicketBody ticket={(ticket ?? read.data)!} actionId={actionId} onActionClose={onActionClose} onClose={onClose} />}
     </DrawerBody>
   </OverlayDrawer>;
 }
 
-function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => void }) {
+function TicketBody({ ticket, actionId, onActionClose, onClose }: {
+  ticket: TicketDetail; actionId: string | null; onActionClose?: () => void; onClose: () => void;
+}) {
   const { t } = useTranslation(); const styles = useStyles(); const client = useQueryClient();
+  const linked = useAction(actionId).data ?? null;
   const canWrite = useCan(Permissions.serviceWrite);
+  // Hours on this ticket: the time form with its customer and number filled in (M39).
+  const timeOwn = useCan(Permissions.timeOwn); const timeManage = useCan(Permissions.timeManage);
+  const canTime = timeOwn || timeManage;
+  const [registering, setRegistering] = useState(false);
+  const restore = useRestoreFocusTarget();
   const [ask, setAsk] = useState<TicketActionAsk | null>(null);
   const bar = useRef<HTMLDivElement>(null); const asking = useRef(false);
   const link = ticket.url ? safeHttpUrl(ticket.url) : undefined;
@@ -69,9 +88,7 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
   const closeAsk = () => {
     asking.current = false;
     setAsk(null);
-    window.setTimeout(() => {
-      if (!asking.current && (document.activeElement === null || document.activeElement === document.body)) bar.current?.querySelector<HTMLElement>('button')?.focus();
-    }, 400);
+    window.setTimeout(() => keepFocusInPanel(bar, asking), 400);
   };
   // A changed ticket is read again with its list and the Drift tab behind the panel; the action log reads itself.
   const finished = (action: VendorAction) => {
@@ -100,6 +117,9 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
         <ServiceReadLine reads={[ticket.ticketsRead]} />
       </span> },
     ]} />
+    {canTime && <div className={styles.work}>
+      <Button {...restore} size="small" icon={<Clock16Regular />} onClick={() => setRegistering(true)}>{t('time.register')}</Button>
+    </div>}
     {canWrite && <TicketActionsBar ticket={ticket} onAsk={openAsk} groupRef={bar} />}
     <TicketConversation ticket={ticket} canWrite={canWrite} onAsk={openAsk} />
     <section className={styles.section} aria-labelledby={`ticket-actions-${ticket.id}`}>
@@ -110,5 +130,9 @@ function TicketBody({ ticket, onClose }: { ticket: TicketDetail; onClose: () => 
     </section>
     <ActionDialog request={ask?.request ?? null} title={ask?.title ?? ''} confirm={ask?.confirm ?? ''} details={ask?.details}
       onClose={closeAsk} onAccepted={ask?.onAccepted} onFinished={finished} />
+    <ActionDetailDialog action={actionId !== null && linked?.id === actionId ? linked : null} onClose={() => onActionClose?.()}
+      ticketShown={linked?.ticketId === ticket.id} />
+    {canTime && <TimeEntryDialogHost open={registering} defaultDate={todayIso()} onClose={() => setRegistering(false)}
+      ticketContext={{ organization: { id: ticket.organizationId, name: ticket.organizationName ?? '' }, ticket: { externalId: ticket.externalId, title: ticket.title } }} />}
   </>;
 }

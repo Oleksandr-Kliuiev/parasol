@@ -12,7 +12,7 @@ export const contractStatusColor: Record<ContractStatus, 'informative' | 'succes
   NoticeGiven: 'important',
   Ended: 'subtle',
 };
-export const quantityModels = ['Fixed', 'PerAteraDevice', 'PerM365User', 'PerSubscription', 'Manual'] as const;
+export const quantityModels = ['Fixed', 'PerAteraDevice', 'PerHuntressAgent', 'PerBackupSeat', 'PerM365User', 'PerSubscription', 'Manual'] as const;
 export type QuantityModel = (typeof quantityModels)[number];
 export const deviceFilters = ['All', 'Workstations', 'Servers'] as const;
 export type DeviceFilter = (typeof deviceFilters)[number];

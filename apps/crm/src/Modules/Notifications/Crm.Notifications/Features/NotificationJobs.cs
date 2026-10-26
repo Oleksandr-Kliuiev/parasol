@@ -369,4 +369,8 @@ internal static class OsloTime
     public static DateOnly Today(DateTimeOffset now) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Oslo).DateTime);
 
     public static int Hour(DateTimeOffset now) => TimeZoneInfo.ConvertTime(now, Oslo).Hour;
+
+    /// <summary>A moment as the company's clock shows it, <c>dd.MM.yyyy HH:mm</c> (M43: when an urgent alert opened).</summary>
+    public static string Moment(DateTimeOffset at) =>
+        TimeZoneInfo.ConvertTime(at, Oslo).ToString("dd.MM.yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
 }

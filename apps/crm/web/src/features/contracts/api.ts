@@ -50,12 +50,14 @@ export function useContracts(filters: ContractFilters, enabled = true) {
   });
 }
 
+/** One contract with its lines and ETag; shared by the contract page and the lists that need several contracts' lines. */
+export const contractQuery = (id: string) => ({
+  queryKey: contractKeys.detail(id),
+  queryFn: async ({ signal }: { signal: AbortSignal }) => api.get<Contract>(`${BASE}/${id}`, signal),
+});
+
 export function useContract(id: string | undefined) {
-  return useQuery({
-    queryKey: contractKeys.detail(id ?? ''),
-    enabled: Boolean(id),
-    queryFn: async ({ signal }) => api.get<Contract>(`${BASE}/${id}`, signal),
-  });
+  return useQuery({ ...contractQuery(id ?? ''), enabled: Boolean(id) });
 }
 
 export function useSaveContract(id?: string) {

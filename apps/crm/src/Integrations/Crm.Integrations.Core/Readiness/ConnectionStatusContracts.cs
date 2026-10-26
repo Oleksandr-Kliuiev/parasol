@@ -13,7 +13,17 @@ public sealed record ConnectionStatusView(
 
 /// <param name="WriteEnabled">Whether the CRM may send changes to the system, or null for a system it only reads.</param>
 /// <param name="State">What the CRM saved about it, or null when the saved state could not be read.</param>
-public sealed record ConnectionIntegration(string System, bool Enabled, bool? WriteEnabled, ConnectionIntegrationState? State);
+/// <param name="Webhook">The system's webhook (M44), or null for a system without one, or when the saved state could not be read.</param>
+public sealed record ConnectionIntegration(string System, bool Enabled, bool? WriteEnabled, ConnectionIntegrationState? State, ConnectionWebhook? Webhook = null);
+
+/// <summary>
+/// A vendor's webhook as the CRM heard it (M44): whether it is switched on, the last delivery it accepted and the name of its event,
+/// how many it accepted, the last one it refused and why (<c>Unsigned</c>, <c>Stale</c>, <c>BadSignature</c>), and when a webhook last
+/// started a read early. A refusal is not a gap: the scheduled reads go on, only sooner reads stop.
+/// </summary>
+public sealed record ConnectionWebhook(
+    bool Enabled, DateTimeOffset? LastReceivedAt, string? LastEventType, long Received, DateTimeOffset? LastRefusedAt, string? LastRefusal,
+    DateTimeOffset? LastEarlyReadAt);
 
 /// <param name="FailedOutbound">Changes for the system that could not be sent (failed or dead-lettered).</param>
 public sealed record ConnectionIntegrationState(bool Paused, int FailedOutbound, IReadOnlyList<ConnectionJob> Jobs);
@@ -39,10 +49,11 @@ public sealed record ConnectionHeartbeat(string Component, string State, DateTim
 public sealed record ConnectionGap(string Kind, string? System = null, string? Job = null, string? Component = null, int? Count = null);
 
 /// <summary>
-/// An integration as this instance is configured: whether it is on, whether it may write, and the recurring jobs that read it.
-/// Crm.Web builds the list from the integrations' options and job ids (it references them all; this project cannot).
+/// An integration as this instance is configured: whether it is on, whether it may write, the recurring jobs that read it, and
+/// whether its webhook is switched on (null for a system without webhooks, M44). Crm.Web builds the list from the integrations'
+/// options and job ids (it references them all; this project cannot).
 /// </summary>
-public sealed record ConnectionDefinition(string System, bool Enabled, bool? WriteEnabled, IReadOnlyList<string> Jobs);
+public sealed record ConnectionDefinition(string System, bool Enabled, bool? WriteEnabled, IReadOnlyList<string> Jobs, bool? WebhookEnabled = null);
 
 /// <summary>Only configuration switches and job names cross the host boundary: never credentials, endpoints or their presence.</summary>
 public interface IConnectionCatalog
@@ -57,7 +68,11 @@ public interface IConnectionCatalog
 /// </summary>
 internal sealed record ConnectionStoredState(
     IntegrationMonitoringSnapshot Monitoring, IReadOnlyList<WorkerHeartbeatStatus> Heartbeats, TimeSpan HeartbeatStaleAfter,
-    IReadOnlyDictionary<string, int>? UncertainActions = null);
+    IReadOnlyDictionary<string, int>? UncertainActions = null, IReadOnlyDictionary<string, StoredWebhook>? Webhooks = null);
+
+/// <summary>What was saved about a system's webhook (M44): <c>integration.WebhookStates</c> and the latest early start of its jobs.</summary>
+internal sealed record StoredWebhook(
+    DateTimeOffset? LastReceivedAt, string? LastEventType, long Received, DateTimeOffset? LastRefusedAt, string? LastRefusal, DateTimeOffset? LastEarlyReadAt);
 
 internal interface IConnectionStatusStore
 {

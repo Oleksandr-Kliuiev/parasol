@@ -1,18 +1,16 @@
 import { useState } from 'react';
 import { Combobox, Option } from '@fluentui/react-components';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { api, query } from '../../../api/client';
-import type { OrganizationListItem, PagedResult } from '../../../api/types';
-import { useDebouncedValue } from '../../../shared/utils/useDebouncedValue';
-import { useOrganization } from '../../organizations/api';
+import { api, query } from '../../api/client';
+import type { OrganizationListItem, PagedResult } from '../../api/types';
+import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
+import { useOrganization } from '../organizations/api';
 
 /**
- * The customer filter of the alert queue: a search over customers that can be cleared. The address holds only the id; the name of
- * a customer chosen elsewhere (a link) is read once to show it.
+ * The customer filter of the queues across customers (alerts, tickets): a search over customers that can be cleared. The address
+ * holds only the id; the name of a customer chosen elsewhere (a link) is read once to show it.
  */
-export function AlertCustomerFilter({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
-  const { t } = useTranslation();
+export function CustomerFilter({ value, onChange, placeholder }: { value: string | null; onChange: (id: string | null) => void; placeholder: string }) {
   const chosen = useOrganization(value ?? undefined);
   const chosenName = value && chosen.data ? chosen.data.data.name : '';
   const [text, setText] = useState(chosenName);
@@ -32,7 +30,7 @@ export function AlertCustomerFilter({ value, onChange }: { value: string | null;
     <Combobox
       clearable
       freeform={false}
-      placeholder={t('alerts.anyCustomer')}
+      placeholder={placeholder}
       value={text}
       selectedOptions={value ? [value] : []}
       onInput={(event) => setText((event.target as HTMLInputElement).value)}

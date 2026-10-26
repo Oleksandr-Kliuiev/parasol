@@ -74,6 +74,9 @@ public sealed class AteraOptions
 
     public string AgentSyncCron { get; set; } = "30 1 * * *";
 
+    /// <summary>The nightly read of every Windows agent's updates (M40), after the agent read that names the agents.</summary>
+    public string PatchSyncCron { get; set; } = "15 2 * * *";
+
     public string AlertSyncCron { get; set; } = "5,35 * * * *";
 
     /// <summary>How far back the recent pass and the work-hours pass look.</summary>
@@ -101,11 +104,18 @@ public sealed class AteraOptions
     public bool DryRun { get; set; }
 
     /// <summary>
-    /// The kinds of action people may ask of Atera (M39.1/M39.2): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
-    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>. Empty by default: a kind is off until
-    /// it is listed, and a kind added in a later release stays off until someone lists it.
+    /// The kinds of action people may ask of Atera (M39.1/M39.2, M40, M43): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
+    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>, <c>alert.resolve</c>,
+    /// <c>alert.delete</c>, <c>customer.create</c>. Empty by default: a kind is off until it is listed, and a kind added in a later release
+    /// stays off until someone lists it.
     /// </summary>
     public List<string> EnabledActions { get; set; } = [];
+
+    /// <summary>
+    /// Atera's own web console, which the "Connect services" wizard (M43) leads to for what Atera's API cannot do — installing the agents.
+    /// Empty: the wizard names the step without a link.
+    /// </summary>
+    public string? ConsoleUrl { get; set; } = "https://app.atera.com/";
 
     /// <summary>Tickets' conversations (M39.2, <c>atera-ticket-conversations</c>).</summary>
     public string TicketConversationSyncCron { get; set; } = "*/5 * * * *";
@@ -118,6 +128,20 @@ public sealed class AteraOptions
 
     /// <summary>The first run, without a cursor, reads the tickets changed in this many days.</summary>
     public int ConversationBackfillDays { get; set; } = 14;
+
+    /// <summary>
+    /// Atera's webhooks (M44; Atera offers them on Superpower and Enterprise): a ticket automation rule calls
+    /// <c>/webhooks/atera/{WebhookKey}</c> when a ticket is created, changes status or assignee, or is closed, and the conversation read
+    /// then starts within a minute and reads that ticket by its id. Off by default; it needs <see cref="WebhookKey"/>, and crm-web
+    /// refuses to start without one.
+    /// </summary>
+    public bool WebhookEnabled { get; set; }
+
+    /// <summary>
+    /// The secret part of the address Atera calls: Atera's webhooks can neither sign nor carry a header, so the address is the secret.
+    /// At least 32 characters of letters, digits, <c>-</c> and <c>_</c> (<c>secrets.token_urlsafe(32)</c>); crm-web's configuration only.
+    /// </summary>
+    public string? WebhookKey { get; set; }
 
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey);
 }

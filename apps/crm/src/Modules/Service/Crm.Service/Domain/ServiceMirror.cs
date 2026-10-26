@@ -104,8 +104,15 @@ public sealed class Ticket : Entity
         EndUserName, EndUserEmail, CreatedAtSource.ToUnixTimeSeconds(), FirstResponseAt?.ToUnixTimeSeconds(), ResolvedAt?.ToUnixTimeSeconds(), LastActivityAt?.ToUnixTimeSeconds(), Url);
 }
 
+/// <summary>
+/// One agent of a source on a customer's computer (an Atera agent; a Huntress agent from M41). Billing counts the devices of the
+/// source it bills for; people see machines, which group the devices of one computer (M40).
+/// </summary>
 public sealed class Device : Entity
 {
+    public const int SerialNumberLength = 128;
+    public const int MacAddressesLength = 1024;
+
     private Device() { }
 
     public string System { get; private set; } = string.Empty;
@@ -122,14 +129,94 @@ public sealed class Device : Entity
     /// <summary>Set when the device is no longer reported; it stops counting from then on.</summary>
     public DateTimeOffset? RemovedAt { get; private set; }
 
+    /// <summary>The machine the device belongs to (M40); set by the machine matcher, null until it has matched the customer.</summary>
+    public Guid? MachineId { get; private set; }
+
+    /// <summary>The serial number as the source reported it; the matcher leaves out placeholders.</summary>
+    public string? SerialNumber { get; private set; }
+
+    /// <summary>The MAC addresses of the device's network adapters as the source reported them, comma-separated.</summary>
+    public string? MacAddresses { get; private set; }
+
+    /// <summary>The reported MAC addresses one by one.</summary>
+    public IReadOnlyList<string> MacAddressList => MacAddresses is { Length: > 0 } list ? list.Split(',') : [];
+
+    /// <summary>The source's second id of the agent (Atera's DeviceGuid: its patch routes and alerts name the agent by it).</summary>
+    public string? AlternateId { get; private set; }
+
+    // What the source says about the computer (M40), as of the last read of the device.
+    public string? Vendor { get; private set; }
+    public string? Model { get; private set; }
+    public string? Motherboard { get; private set; }
+    public string? Processor { get; private set; }
+    public int? ProcessorCores { get; private set; }
+    public string? ProcessorClock { get; private set; }
+
+    /// <summary>The memory as the source reports it; Atera's API gives no unit.</summary>
+    public int? Memory { get; private set; }
+
+    public string? BiosVersion { get; private set; }
+    public string? OsVersion { get; private set; }
+    public string? OsBuild { get; private set; }
+
+    /// <summary>The computer's own IP addresses, comma-separated.</summary>
+    public string? IpAddresses { get; private set; }
+
+    /// <summary>The address the source last heard the agent from.</summary>
+    public string? PublicIp { get; private set; }
+
+    public string? DomainName { get; private set; }
+
+    /// <summary>Who is logged in, as the source writes it: personal data of the customer's staff, kept only while it is reported.</summary>
+    public string? LoggedInUsers { get; private set; }
+
+    public string? LastLoginUser { get; private set; }
+    public DateTimeOffset? LastRebootAt { get; private set; }
+
+    /// <summary>The disks as JSON (<c>drive</c>, <c>free</c>, <c>used</c>, <c>total</c>), figures without a unit.</summary>
+    public string? Disks { get; private set; }
+
+    public string? AgentVersion { get; private set; }
+
+    /// <summary>
+    /// When the device was first read with its current agent version (M41): an agent that stays on an old version while a newer one
+    /// runs elsewhere has been behind since the newer one's earliest such time.
+    /// </summary>
+    public DateTimeOffset? AgentVersionSince { get; private set; }
+
+    /// <summary>The system family as the source words it (<c>windows</c>, <c>darwin</c>, <c>linux</c>), M41; null when it does not say.</summary>
+    public string? Platform { get; private set; }
+
+    /// <summary>Microsoft Defender's status as a security source words it (M41: <c>Healthy</c>, <c>Unhealthy</c>, <c>Unmanaged</c>…).</summary>
+    public string? AntivirusStatus { get; private set; }
+
+    public string? AntivirusSubstatus { get; private set; }
+
+    public string? AntivirusPolicyStatus { get; private set; }
+
+    /// <summary>When the source last heard Defender's status from the computer.</summary>
+    public DateTimeOffset? AntivirusReportedAt { get; private set; }
+
+    /// <summary>
+    /// Whether the computer is cut off from the network (M41): <c>Isolated</c>, <c>Pending Isolation</c>, <c>Pending Release</c>, or the
+    /// source's word for not isolated (<c>Disabled</c>); null when the source does not isolate.
+    /// </summary>
+    public string? Isolation { get; private set; }
+
+    /// <summary>When the Windows updates were last read completely; null until they have been.</summary>
+    public DateTimeOffset? PatchesReadAt { get; private set; }
+
+    /// <summary>When the source collected the updates of that read.</summary>
+    public DateTimeOffset? PatchesCollectedAt { get; private set; }
+
     public static Device From(string system, Guid organizationId, ExternalDevice source, DateTimeOffset now)
     {
         var device = new Device { System = system, ExternalId = source.ExternalId, FirstSeenAt = now };
-        device.Apply(organizationId, source);
+        device.Apply(organizationId, source, now);
         return device;
     }
 
-    public void Apply(Guid organizationId, ExternalDevice s)
+    public void Apply(Guid organizationId, ExternalDevice s, DateTimeOffset now)
     {
         OrganizationId = organizationId;
         MachineName = s.MachineName;
@@ -139,9 +226,87 @@ public sealed class Device : Entity
         LastSeenAt = s.LastSeenAt;
         Url = s.Url;
         RemovedAt = null;
+        SerialNumber = Clean(s.SerialNumber, SerialNumberLength);
+        MacAddresses = JoinWithin(s.MacAddresses ?? [], MacAddressesLength);
+        AlternateId = Clean(s.AlternateId, 128);
+        var i = s.Inventory;
+        Vendor = Clean(i?.Vendor, 128);
+        Model = Clean(i?.Model, 256);
+        Motherboard = Clean(i?.Motherboard, 256);
+        Processor = Clean(i?.Processor, 256);
+        ProcessorCores = i?.ProcessorCores is > 0 and var cores ? cores : null;
+        ProcessorClock = Clean(i?.ProcessorClock, 32);
+        Memory = i?.Memory is > 0 and var memory ? memory : null;
+        BiosVersion = Clean(i?.BiosVersion, 128);
+        OsVersion = Clean(i?.OsVersion, 64);
+        OsBuild = Clean(i?.OsBuild, 64);
+        IpAddresses = JoinWithin(i?.IpAddresses ?? [], 1024);
+        PublicIp = Clean(i?.PublicIp, 64);
+        DomainName = Clean(i?.DomainName, 256);
+        LoggedInUsers = Clean(i?.LoggedInUsers, 512);
+        LastLoginUser = Clean(i?.LastLoginUser, 256);
+        LastRebootAt = i?.LastRebootAt;
+        Disks = DeviceDisks.Write(i?.Disks ?? []);
+        var version = Clean(i?.AgentVersion, 64);
+        if (version != AgentVersion || (version is not null && AgentVersionSince is null))
+        {
+            AgentVersionSince = version is null ? null : now;
+        }
+
+        AgentVersion = version;
+        Platform = Clean(s.Platform, 16)?.ToLowerInvariant();
+        var p = s.Protection;
+        AntivirusStatus = Clean(p?.AntivirusStatus, 64);
+        AntivirusSubstatus = Clean(p?.AntivirusSubstatus, 128);
+        AntivirusPolicyStatus = Clean(p?.AntivirusPolicyStatus, 64);
+        AntivirusReportedAt = p?.AntivirusReportedAt;
+        Isolation = Clean(p?.Isolation, 32);
     }
 
-    public void MarkRemoved(DateTimeOffset now) => RemovedAt ??= now;
+    /// <summary>
+    /// The device is no longer reported: it stops counting from now on, and who was logged in on it is forgotten at once (M40),
+    /// as nothing reports it any more.
+    /// </summary>
+    public void MarkRemoved(DateTimeOffset now)
+    {
+        RemovedAt ??= now;
+        LoggedInUsers = null;
+        LastLoginUser = null;
+    }
+
+    /// <summary>A complete read of the device's Windows updates was stored.</summary>
+    public void PatchesRead(DateTimeOffset now, DateTimeOffset? collectedAt)
+    {
+        PatchesReadAt = now;
+        PatchesCollectedAt = collectedAt;
+    }
+
+    private static string? Clean(string? value, int length) => value?.Trim() is { Length: > 0 } text ? Cut(text, length) : null;
+
+    /// <summary>Puts the device on a machine, or takes it off one (a device that moved to another customer).</summary>
+    public void BelongTo(Guid? machineId) => MachineId = machineId;
+
+    private static string Cut(string value, int length) => value.Length > length ? value[..length] : value;
+
+    /// <summary>The distinct values, comma-separated, as many whole ones as fit: a cut address would be another address.</summary>
+    private static string? JoinWithin(IEnumerable<string> values, int length)
+    {
+        var kept = new List<string>();
+        var used = 0;
+        foreach (var value in values.Select(v => v.Trim()).Where(v => v.Length > 0 && !v.Contains(',')).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var needed = value.Length + (kept.Count > 0 ? 1 : 0);
+            if (used + needed > length)
+            {
+                break;
+            }
+
+            kept.Add(value);
+            used += needed;
+        }
+
+        return kept.Count == 0 ? null : string.Join(',', kept);
+    }
 }
 
 public sealed class DeviceCountSnapshot : Entity

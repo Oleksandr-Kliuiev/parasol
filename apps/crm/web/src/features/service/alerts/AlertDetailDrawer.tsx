@@ -1,4 +1,5 @@
-import { Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles } from '@fluentui/react-components';
+import { useState } from 'react';
+import { Button, DrawerBody, DrawerHeader, DrawerHeaderTitle, Link, OverlayDrawer, Spinner, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
 import { Dismiss24Regular, Open16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../../api/client';
@@ -8,6 +9,11 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { DetailList } from '../../../shared/components/Panel';
 import { formatDateTime } from '../../../shared/utils/format';
 import { safeHttpUrl } from '../../../shared/utils/safeUrl';
+import { IncidentSection } from '../../security/IncidentSection';
+import { NoticeSection } from '../../security/NoticeSection';
+import { AlertSourceSection } from './AlertActions';
+import { alertTitle, isBackupGap } from './alertText';
+import { CoverageRulesDialog } from './CoverageRulesDialog';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
 import { AlertReadLine } from './AlertReadLine';
 import { useAlertReads } from './alertReads';
@@ -32,11 +38,14 @@ const useStyles = makeStyles({
 export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null; onClose: () => void }) {
   const { t } = useTranslation(); const styles = useStyles();
   const read = useAlert(alertId);
-  // Read with the alert: how fresh the stored copy is now, not when the list behind the panel was read.
+  // Read with the alert: how fresh the stored copy is now, not when the list behind the panel was read. Once read, the panel keeps
+  // what it shows while a change reads the alert again (M40): a dialog opened from the panel, and the focus in it, stay put.
   const reads = useAlertReads(alertId !== null);
-  const alert = alertId !== null && !read.isFetching ? read.data : undefined;
+  const alert = alertId !== null && read.isFetchedAfterMount ? read.data : undefined;
+  // M40: a gap's panel leads to the setting of the check that found it.
+  const [checks, setChecks] = useState(false); const restore = useRestoreFocusTarget();
   const sourceReads = alert && !reads.isFetching ? reads.data?.filter((r) => r.system === alert.system) : undefined;
-  const title = alert?.title ?? t('alerts.detail.title');
+  const title = alert ? alertTitle(t, alert) : t('alerts.detail.title');
   const link = alert?.url ? safeHttpUrl(alert.url) : undefined;
   const missing = read.error instanceof ApiError && read.error.status === 404;
 
@@ -48,7 +57,7 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
       </DrawerHeaderTitle>
     </DrawerHeader>
     <DrawerBody className={styles.body}>
-      {read.isFetching && <Spinner size="small" label={t('alerts.detail.loading')} />}
+      {read.isFetching && !alert && <Spinner size="small" label={t('alerts.detail.loading')} />}
       {!read.isFetching && read.isError && (missing
         ? <Text block role="status">{t('alerts.detail.notFound')}</Text>
         : <ErrorState error={read.error} onRetry={() => void read.refetch()} />)}
@@ -57,9 +66,15 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
         <DetailList className={styles.facts} items={[
           { label: t('alerts.detail.severity'), value: <AlertSeverityBadge severity={alert.severity} /> },
           { label: t('alerts.detail.state'), value: t(`alerts.states.${alert.state}`) },
-          { label: t('alerts.detail.customer'), value: <AppLink to={`/organizations/${alert.organizationId}?tab=drift`} onClick={onClose}>
+          // Links that leave the panel do not close it themselves: the new address drops ?alert=, and closing would go Back
+          // (when the panel was opened from a row) and undo the link's own navigation (found by the M42 e2e).
+          { label: t('alerts.detail.customer'), value: <AppLink to={`/organizations/${alert.organizationId}?tab=drift`}>
             {alert.organizationName ?? t('alerts.detail.unknownCustomer')}</AppLink> },
-          ...(alert.deviceName ? [{ label: t('alerts.detail.device'), value: alert.deviceName }] : []),
+          // M40: the device leads to its card in the customer's Drift tab (sources, "Open in Atera", inventory), once matched.
+          ...(alert.deviceName ? [{ label: t('alerts.detail.device'), value: alert.machineId
+            ? <AppLink to={`/organizations/${alert.organizationId}?tab=drift&device=${encodeURIComponent(alert.machineId)}`}>
+              {alert.deviceName}</AppLink>
+            : alert.deviceName }] : []),
           { label: t('alerts.detail.raised'), value: <>{formatDateTime(alert.createdAt)} · <AlertAge at={alert.createdAt} /></> },
           ...(alert.resolvedAt ? [{ label: t('alerts.detail.resolved'), value: formatDateTime(alert.resolvedAt) }] : []),
           { label: t('alerts.detail.source'), value: <span className={styles.source}>
@@ -67,12 +82,25 @@ export function AlertDetailDrawer({ alertId, onClose }: { alertId: string | null
             {link
               ? <Link href={link} target="_blank" rel="noopener noreferrer" className={styles.external}>
                 {t('alerts.detail.openInSource', { name: sourceName(t, alert.system) })}<Open16Regular aria-hidden /></Link>
+              // M40: a gap is found by Parasoll's own check, which also says how it closes.
+              : alert.rule ? <>
+                <Text size={200} className={styles.muted}>{t('alerts.gaps.found')}</Text>
+                {/* M42: a backup gap leads to the customer's backups, where its users and the actions are. */}
+                {isBackupGap(alert.rule) && <AppLink to={`/organizations/${alert.organizationId}?tab=backup`}>
+                  {t('alerts.gaps.openBackup')}</AppLink>}
+                <Link {...restore} as="button" className={styles.external} onClick={() => setChecks(true)}>{t('alerts.gaps.changeCheck')}</Link>
+              </>
               : <Text size={200} className={styles.muted}>{t('alerts.detail.noLink', { name: sourceName(t, alert.system) })}</Text>}
             {sourceReads && sourceReads.length > 0 && <AlertReadLine reads={sourceReads} />}
           </span> },
         ]} />
+        {/* M41: the Huntress record behind the alert — the incident's plan and comments, or the escalation and its answer. */}
+        <IncidentSection alert={alert} />
+        <NoticeSection alert={alert} />
         <AlertTaskSection alert={alert} onNavigate={onClose} />
+        <AlertSourceSection alert={alert} />
       </>}
+      {checks && <CoverageRulesDialog onClose={() => setChecks(false)} />}
     </DrawerBody>
   </OverlayDrawer>;
 }

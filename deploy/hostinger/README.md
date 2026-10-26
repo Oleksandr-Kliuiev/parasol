@@ -102,6 +102,18 @@ SQL TLS внутри закрытой bridge-сети использует `Trus
 Delegated календарь/почта продолжают использовать сессию вошедшего сотрудника.
 Provisioning не создаёт реальные фирмы/пользователей автоматически.
 
+CloudAlly (M42, `docs/migration/M42-CLOUDALLY.md`) — только в private JSON **worker** `Integrations:CloudAlly`:
+`Enabled=true`, `ClientId`, `ClientSecret` (ключ портала, Integrations → API), `Email` и `Password` партнёрского
+пользователя, заведённого для Parasoll с ролью `custom` (не личный вход сотрудника). В web — только `Enabled` и
+переключатели записи (`WriteEnabled`, `DryRun`, `WriteAllowedCustomerIds`, `EnabledActions`; по умолчанию всё выключено).
+Если в аккаунте CloudAlly включены ограничения по IP, адрес VPS нужно разрешить там до первого запуска.
+
+Вебхуки Huntress и Atera (M44, `docs/migration/M44-WEBHOOKS.md`) принимает crm-web, поэтому их секреты — только в private JSON
+**web**: `Integrations:Huntress:WebhookEnabled`/`WebhookSecret` (`whsec_…` из портала Huntress) и
+`Integrations:Atera:WebhookEnabled`/`WebhookKey` (ключ в адресе, не короче 32 символов). Включённый вебхук без секрета не даёт web
+стартовать. Caddy уже передаёт `/webhooks/*` в crm-web и не пишет журнал доступа (ключ Atera — часть адреса). Регистрация адреса у
+поставщика — отдельное разрешение владельца; порядок — runbook 02 § 6 в `apps/crm/docs/runbooks`.
+
 Сертификаты ротировать отдельной согласованной операцией. Для DP сохранить старые PFX в
 `PreviousCertificatePaths`, пока существуют зашифрованные ими ключи; включить дополнительные
 mounts и backup. Для входа сначала добавить новый публичный сертификат в Entra, затем заменить

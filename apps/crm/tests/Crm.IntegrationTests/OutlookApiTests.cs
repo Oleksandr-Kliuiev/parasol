@@ -263,8 +263,8 @@ public class OutlookApiTests(CrmWebFactory factory)
         var big = await WinAsync($"{marker} Stor avtale", 50_000m, 10_000m);
         await WinAsync($"{marker} Liten avtale", 5_000m, 0m);
         await factory.ProcessEventsAsync();
-        // The handler queues the card; crm-worker sends the queue every minute (DEV-07).
-        await factory.RunJobAsync<ChannelPostJob>(job => job.RunAsync(CancellationToken.None));
+        // The handler queues the card; crm-worker sends the queue every minute (DEV-07), the oldest cards first.
+        await factory.SendChannelPostsUntilAsync(() => Task.FromResult(Cards().Count > 0));
 
         List<string> Cards() => factory.Graph.LogEntries
             .Select(e => e.RequestMessage)

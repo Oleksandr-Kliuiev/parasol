@@ -31,7 +31,7 @@ internal static class ConnectionStatusTestSupport
         internal int Calls;
         internal Func<CancellationToken, Task<ConnectionStoredState>> Reply = _ => Task.FromResult(State(
             [Stream("atera", "atera-alerts", Minutes(5)), Stream("atera", "atera-tickets", Minutes(3)), Stream("brreg", "brreg-registry-check", Minutes(45))],
-            Beat("outbox", 20), Beat("jobs", 40), Beat("actions", 10)));
+            Beat("outbox", 20), Beat("jobs", 40), Beat("actions", 10), Beat("early-reads", 5)));
         public Task<ConnectionStoredState> ReadAsync(IReadOnlyList<ConnectionDefinition> connections, CancellationToken ct) { Calls++; return Reply(ct); }
     }
 

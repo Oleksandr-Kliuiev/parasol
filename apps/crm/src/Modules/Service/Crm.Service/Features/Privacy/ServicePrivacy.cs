@@ -1,5 +1,6 @@
 using System.Globalization;
 using Crm.Privacy.Contracts;
+using Crm.Service.Contracts;
 using Crm.Service.Domain;
 using Crm.Service.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -135,4 +136,27 @@ internal sealed class TicketMirrorRetention(ServiceDbContext db) : IRetentionCon
 
     private IQueryable<Ticket> Due(DateTimeOffset olderThan) =>
         db.Tickets.Where(t => !t.IsOpen && (t.ResolvedAt ?? t.LastActivityAt ?? t.CreatedAtSource) < olderThan);
+}
+
+/// <summary>
+/// Resolved alerts (M40, docs/04 §8): an alert resolved longer ago than the approved period is removed, with its status in Parasoll
+/// and the history of what people did with it; its source keeps its own. Open, acknowledged and hidden alerts never are, and an
+/// alert a later read lists again simply opens as a new one. A task made from a removed alert keeps its own words.
+/// </summary>
+internal sealed class ResolvedAlertsRetention(ServiceDbContext db) : IRetentionContributor
+{
+    public const string Class = "service.resolved-alerts";
+
+    public string DataClass => Class;
+
+    public Task<int> CountAsync(DateTimeOffset olderThan, CancellationToken cancellationToken) => Due(olderThan).CountAsync(cancellationToken);
+
+    public async Task<int> ApplyAsync(DateTimeOffset olderThan, int batchSize, CancellationToken cancellationToken)
+    {
+        var ids = await Due(olderThan).OrderBy(a => a.Id).Select(a => a.Id).Take(batchSize).ToListAsync(cancellationToken);
+        // The alert's hold and transitions go with it (cascade).
+        return ids.Count == 0 ? 0 : await db.Alerts.Where(a => ids.Contains(a.Id) && a.State == AlertState.Resolved).ExecuteDeleteAsync(cancellationToken);
+    }
+
+    private IQueryable<Alert> Due(DateTimeOffset olderThan) => db.Alerts.Where(a => a.State == AlertState.Resolved && a.ResolvedAt < olderThan);
 }

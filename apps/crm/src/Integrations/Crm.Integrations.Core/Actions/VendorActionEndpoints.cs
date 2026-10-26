@@ -5,6 +5,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Crm.Integrations.Core.Actions;
@@ -47,15 +48,31 @@ internal sealed class VendorActionSettlementValidator : AbstractValidator<Vendor
     }
 }
 
+internal sealed class VendorActionLookupRequestValidator : AbstractValidator<VendorActionLookupRequest>
+{
+    public VendorActionLookupRequestValidator()
+    {
+        RuleFor(x => x.System).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.TargetType).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.TargetIds).NotNull()
+            .Must(ids => ids is { Count: > 0 and <= VendorActionReader.LookupLimit })
+            .WithMessage($"Ask for the actions of 1 to {VendorActionReader.LookupLimit} targets.");
+        RuleForEach(x => x.TargetIds).NotEmpty().MaximumLength(128);
+    }
+}
+
 /// <summary>
 /// <c>/api/v1/actions</c> (M39.1): preview, command (a destructive action through its own endpoint, which demands a fresh sign-in),
-/// the log, cancel during the hold and settle an uncertain outcome. Each endpoint lets in the holders of any kind's permission; the
+/// the log and the facts beside a list's rows, cancel during the hold and settle an uncertain outcome. Each endpoint lets in the holders of any kind's permission; the
 /// service then checks the permission of the kind asked for.
 /// </summary>
 public static class VendorActionEndpoints
 {
-    /// <summary>The permissions of the registered kinds (Atera ticket actions, own time); a test keeps the list complete.</summary>
-    public static readonly string[] RequestPermissions = [Permissions.ServiceWrite, Permissions.TimeOwn];
+    /// <summary>
+    /// The permissions of the registered kinds (Atera ticket actions, own time; M43: creating a customer at a vendor, which links it);
+    /// a test keeps the list complete.
+    /// </summary>
+    public static readonly string[] RequestPermissions = [Permissions.ServiceWrite, Permissions.TimeOwn, Permissions.IntegrationsManage];
 
     public static readonly string[] ReadPermissions = [Permissions.ServiceRead, Permissions.TimeOwn, Permissions.IntegrationsManage];
 
@@ -104,6 +121,17 @@ public static class VendorActionEndpoints
                 return (await reader.ListAsync(system, targetType, targetId, organizationId, state, cursor, limit, ct)).ToHttpResult(Results.Ok);
             })
             .RequirePermission(ReadPermissions);
+
+        // The facts a list shows beside its rows (M39): one read per page of targets, never one per row. A read, so it works in maintenance.
+        group.MapPost("/lookup", async (VendorActionLookupRequest body, VendorActionReader reader, HttpContext http, CancellationToken ct) =>
+            {
+                NoStore(http);
+                return Results.Ok(await reader.LookupAsync(body, ct));
+            })
+            .Validate<VendorActionLookupRequest>()
+            .RequirePermission(ReadPermissions)
+            .WithMetadata(new RequestSizeLimitAttribute(16 * 1024))
+            .AllowedInMaintenance();
 
         group.MapGet("/{id:guid}", async (Guid id, VendorActionReader reader, HttpContext http, CancellationToken ct) =>
             {

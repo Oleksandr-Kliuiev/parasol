@@ -4,13 +4,17 @@ using Crm.Authorization;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Integrations.Core.Persistence;
+using Crm.Service.Contracts;
 using Crm.SharedKernel.Application;
 using Crm.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Integrations.Core.Actions;
 
-/// <summary>One action in the log, with the names of its customer and of the people who asked for and closed it.</summary>
+/// <summary>
+/// One action in the log, with the names of its customer and of the people who asked for and closed it. <c>TicketId</c> is Parasoll's
+/// ticket the action concerns (its target, or the ticket its hours were recorded on) and <c>VendorUrl</c> where to check it at the vendor.
+/// </summary>
 public sealed record VendorActionItem(
     Guid Id,
     string System,
@@ -38,6 +42,8 @@ public sealed record VendorActionItem(
     string? ClosedByName,
     DateTimeOffset? ClosedAt,
     string? CloseReason,
+    Guid? TicketId,
+    string? VendorUrl,
     string Etag);
 
 /// <summary>A page of the log; <c>Uncertain</c> and <c>Waiting</c> count the whole filter, as the log's header says them.</summary>
@@ -45,11 +51,15 @@ public sealed record VendorActionPage(IReadOnlyList<VendorActionItem> Items, str
 
 /// <summary>
 /// The action log (M39.1): newest first, for <c>/connections</c> (every action, <c>integrations.manage</c>) and for a target's own
-/// panel (the kinds whose read permission the caller holds). Names come in one batch per page.
+/// panel (the kinds whose read permission the caller holds). Names and tickets come in one batch per page, and so do the facts a list
+/// shows beside its rows (<see cref="LookupAsync"/>).
 /// </summary>
 public sealed class VendorActionReader(
-    IntegrationDbContext db, IEnumerable<IVendorActionHandler> handlers, IUserDirectory users, ICustomersApi customers, ICurrentUser user)
+    IntegrationDbContext db, IEnumerable<IVendorActionHandler> handlers, IUserDirectory users, ICustomersApi customers, IServiceApi service, ICurrentUser user)
 {
+    /// <summary>The targets one lookup may carry: a page of a list.</summary>
+    public const int LookupLimit = 50;
+
     public const int DefaultLimit = 25;
     public const int MaxLimit = 100;
 
@@ -121,6 +131,28 @@ public sealed class VendorActionReader(
 
     public async Task<VendorActionItem> ItemAsync(VendorAction action, CancellationToken ct) => (await ItemsAsync([action], ct))[0];
 
+    /// <summary>
+    /// The action facts of one page of targets, read at once (M39): how many actions on each wait for the worker, were done or need a
+    /// check, and the newest that needs one. Only the kinds the caller may read count; a target without any is left out.
+    /// </summary>
+    public async Task<VendorActionLookup> LookupAsync(VendorActionLookupRequest request, CancellationToken ct)
+    {
+        var ids = request.TargetIds!.Distinct(StringComparer.Ordinal).ToList();
+        var actions = Visible().Where(a => a.System == request.System && a.TargetType == request.TargetType && ids.Contains(a.TargetId));
+        var counts = await actions.GroupBy(a => new { a.TargetId, a.Status }).Select(g => new { g.Key.TargetId, g.Key.Status, Count = g.Count() }).ToListAsync(ct);
+        // Actions that wait for a person are few: the newest per target is picked here, not in SQL.
+        var checks = await actions.Where(a => a.Status == VendorActionStatus.Uncertain)
+            .OrderByDescending(a => a.RequestedAt).ThenByDescending(a => a.Id).Select(a => new { a.TargetId, a.Id }).ToListAsync(ct);
+        return new VendorActionLookup([
+            .. counts.GroupBy(c => c.TargetId, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => new VendorActionTargetFacts(
+                g.Key,
+                g.Where(c => Waiting.Contains(c.Status)).Sum(c => c.Count),
+                g.Where(c => c.Status is VendorActionStatus.Succeeded or VendorActionStatus.Skipped).Sum(c => c.Count),
+                g.Where(c => c.Status == VendorActionStatus.Uncertain).Sum(c => c.Count),
+                checks.FirstOrDefault(c => string.Equals(c.TargetId, g.Key, StringComparison.Ordinal))?.Id)),
+        ]);
+    }
+
     /// <summary>Every action for the integrations administrators; for others only the kinds whose read permission they hold.</summary>
     private IQueryable<VendorAction> Visible()
     {
@@ -144,11 +176,33 @@ public sealed class VendorActionReader(
         var people = await users.GetUsersAsync(rows.Select(r => r.RequestedBy).Concat(rows.Where(r => r.ClosedBy != null).Select(r => r.ClosedBy!.Value))
             .Distinct().ToList(), ct);
         var organizations = await customers.GetOrganizationNamesAsync(rows.Where(r => r.OrganizationId != null).Select(r => r.OrganizationId!.Value).Distinct().ToList(), ct);
+        var tickets = await TicketsAsync(rows, ct);
         return rows.Select(a => new VendorActionItem(
             a.Id, a.System, a.Kind, a.Level, a.TargetType, a.TargetId, a.TargetName, a.OrganizationId,
             a.OrganizationId is { } organization ? organizations.GetValueOrDefault(organization) : null,
             JsonDocument.Parse(a.Parameters).RootElement.Clone(), a.Reason, a.Status, a.OutcomeCode, a.Outcome, a.Reference, a.Attempts,
             a.RequestedBy, people.GetValueOrDefault(a.RequestedBy)?.DisplayName, a.RequestedAt, a.NotBefore, a.StartedAt, a.CompletedAt,
-            a.ClosedBy, a.ClosedBy is { } closer ? people.GetValueOrDefault(closer)?.DisplayName : null, a.ClosedAt, a.CloseReason, Etag(a))).ToList();
+            a.ClosedBy, a.ClosedBy is { } closer ? people.GetValueOrDefault(closer)?.DisplayName : null, a.ClosedAt, a.CloseReason,
+            tickets.GetValueOrDefault(a.Id)?.Id, tickets.GetValueOrDefault(a.Id)?.Url, Etag(a))).ToList();
+    }
+
+    /// <summary>The saved ticket each action concerns, read per vendor in one batch for the page.</summary>
+    private async Task<Dictionary<Guid, TicketRef>> TicketsAsync(List<VendorAction> rows, CancellationToken ct)
+    {
+        var concerned = rows.Select(a => (Action: a, Number: VendorActionTargets.TicketOf(a))).Where(x => x.Number is not null).ToList();
+        var tickets = new Dictionary<Guid, TicketRef>();
+        foreach (var system in concerned.GroupBy(x => x.Action.System, StringComparer.Ordinal))
+        {
+            var saved = await service.GetTicketsAsync(system.Key, system.Select(x => x.Number!.Value).Distinct().ToList(), ct);
+            foreach (var (action, number) in system)
+            {
+                if (saved.TryGetValue(number!.Value, out var ticket))
+                {
+                    tickets[action.Id] = ticket;
+                }
+            }
+        }
+
+        return tickets;
     }
 }
