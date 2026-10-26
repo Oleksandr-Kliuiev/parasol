@@ -188,6 +188,12 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
 
     public DbSet<VendorAction> VendorActions => Set<VendorAction>();
 
+    public DbSet<Webhooks.WebhookState> WebhookStates => Set<Webhooks.WebhookState>();
+
+    public DbSet<Webhooks.EarlyReadRequest> EarlyReadRequests => Set<Webhooks.EarlyReadRequest>();
+
+    public DbSet<Webhooks.EarlyReadTarget> EarlyReadTargets => Set<Webhooks.EarlyReadTarget>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SyncSuccess>(b =>
@@ -328,6 +334,34 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
             b.HasKey(x => new { x.System, x.Stream });
             b.Property(x => x.System).HasMaxLength(64);
             b.Property(x => x.Stream).HasMaxLength(128);
+        });
+
+        // M44: webhooks only ask for early reads; these rows are written by raw MERGE statements (WebhookInbox).
+        modelBuilder.Entity<Webhooks.WebhookState>(b =>
+        {
+            b.ToTable("WebhookStates");
+            b.HasKey(x => x.System);
+            b.Property(x => x.System).HasMaxLength(64);
+            b.Property(x => x.LastEventType).HasMaxLength(64);
+            b.Property(x => x.LastRefusal).HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<Webhooks.EarlyReadRequest>(b =>
+        {
+            b.ToTable("EarlyReadRequests");
+            b.HasKey(x => new { x.System, x.Job });
+            b.Property(x => x.System).HasMaxLength(64);
+            b.Property(x => x.Job).HasMaxLength(128);
+        });
+
+        modelBuilder.Entity<Webhooks.EarlyReadTarget>(b =>
+        {
+            b.ToTable("EarlyReadTargets");
+            b.HasKey(x => new { x.System, x.Job, x.ExternalId });
+            b.Property(x => x.System).HasMaxLength(64);
+            b.Property(x => x.Job).HasMaxLength(128);
+            b.Property(x => x.ExternalId).HasMaxLength(Webhooks.WebhookInbox.MaxTargetLength);
+            b.HasIndex(x => new { x.System, x.Job, x.RequestedAt });
         });
     }
 }

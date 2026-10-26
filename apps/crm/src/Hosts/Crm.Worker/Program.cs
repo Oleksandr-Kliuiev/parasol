@@ -81,6 +81,8 @@ builder.Services
 builder.Services.AddOutboxProcessing();
 // M39.1: vendor actions are sent every five seconds, with a heartbeat of their own.
 builder.Services.AddVendorActionLoop();
+// M44: the reads vendors' webhooks asked for start within seconds, through the job server.
+builder.Services.AddEarlyReadLoop<HangfireJobTrigger>();
 builder.Services.AddDatabaseReadiness();
 // DEV-17: reads operational state independently of Hangfire, so a stalled job server remains observable.
 builder.Services.AddHostedService<OperationalTelemetry>();
