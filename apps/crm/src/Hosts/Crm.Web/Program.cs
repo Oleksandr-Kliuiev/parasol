@@ -175,6 +175,16 @@ builder.Services.AddRateLimiter(options =>
             });
         }
 
+        // M44: vendors' webhooks have no user; their budget is per sending address, and a refused delivery costs it too.
+        if (path.StartsWithSegments(WebhookEndpoints.PathPrefix))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter("webhooks:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"), _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue("RateLimits:WebhooksPerMinute", 600),
+                Window = TimeSpan.FromMinutes(1),
+            });
+        }
+
         return IsSignInPath(path)
             ? RateLimitPartition.GetFixedWindowLimiter("sign-in:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"), _ => new FixedWindowRateLimiterOptions
             {
@@ -236,6 +246,15 @@ static bool IsSignInPath(PathString path) =>
     path.StartsWithSegments("/signin-oidc") || path.StartsWithSegments("/signout-oidc") || path.StartsWithSegments("/signout-callback-oidc");
 
 var app = builder.Build();
+
+// M44: a vendor's webhook switched on without its secret would answer 404 while the connections page calls it on.
+foreach (var webhook in app.Services.GetServices<Crm.Integrations.Core.Webhooks.IWebhookSource>())
+{
+    if (webhook.ConfigurationProblem is { } webhookProblem)
+    {
+        throw new InvalidOperationException(webhookProblem);
+    }
+}
 
 // DEV-09: an environment that opens record scope says so on every start (ADR-018, runbook 11).
 if (app.Services.GetRequiredService<IOptions<Crm.Infrastructure.Security.RecordScopeOptions>>().Value.RecordScope == RecordScopeMode.Open)
@@ -317,6 +336,7 @@ app.MapMonitoringEndpoints();
 app.MapRecordScopeEndpoints();
 app.MapOperationsEndpoints();
 app.MapHealthDetails();
+app.MapWebhookEndpoints();
 
 if (hangfireEnabled)
 {

@@ -71,6 +71,13 @@ internal static partial class SecurityLog
         SignInFailedMessage(logger, error);
     }
 
+    /// <summary>A vendor's webhook that could not prove its sender (M44): the system and the reason, never the body or the key.</summary>
+    public static void WebhookRefused(this ILogger logger, HttpContext context, string system, string reason)
+    {
+        Count("webhook_refused");
+        WebhookRefusedMessage(logger, system, RouteOf(context), reason);
+    }
+
     public static void RemoteSignOutApplied(this ILogger logger, int ended) => RemoteSignOutAppliedMessage(logger, ended);
 
     public static void RemoteSignOutIgnored(this ILogger logger, string reason)
@@ -105,4 +112,7 @@ internal static partial class SecurityLog
 
     [LoggerMessage(EventId = 1009, Level = LogLevel.Warning, Message = "Front-channel logout ignored: {Reason}")]
     private static partial void RemoteSignOutIgnoredMessage(ILogger logger, string reason);
+
+    [LoggerMessage(EventId = 1010, Level = LogLevel.Warning, Message = "Webhook refused: system {System}, {Route}, reason {Reason}")]
+    private static partial void WebhookRefusedMessage(ILogger logger, string system, string route, string reason);
 }

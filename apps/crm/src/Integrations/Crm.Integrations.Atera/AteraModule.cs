@@ -83,6 +83,8 @@ public static class AteraModule
         services.AddScoped<AteraAlertSyncJob>();
         services.AddScoped<AteraCustomerSyncJob>();
         services.AddScoped<AteraContactSyncJob>();
+        // M44: Atera's ticket webhooks start the conversation read early (received by crm-web).
+        services.AddSingleton<Crm.Integrations.Core.Webhooks.IWebhookSource, AteraWebhookSource>();
         services.AddModuleServices(typeof(AteraModule).Assembly);
         return services;
     }

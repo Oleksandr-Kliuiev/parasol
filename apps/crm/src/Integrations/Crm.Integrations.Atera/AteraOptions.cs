@@ -129,6 +129,20 @@ public sealed class AteraOptions
     /// <summary>The first run, without a cursor, reads the tickets changed in this many days.</summary>
     public int ConversationBackfillDays { get; set; } = 14;
 
+    /// <summary>
+    /// Atera's webhooks (M44; Atera offers them on Superpower and Enterprise): a ticket automation rule calls
+    /// <c>/webhooks/atera/{WebhookKey}</c> when a ticket is created, changes status or assignee, or is closed, and the conversation read
+    /// then starts within a minute and reads that ticket by its id. Off by default; it needs <see cref="WebhookKey"/>, and crm-web
+    /// refuses to start without one.
+    /// </summary>
+    public bool WebhookEnabled { get; set; }
+
+    /// <summary>
+    /// The secret part of the address Atera calls: Atera's webhooks can neither sign nor carry a header, so the address is the secret.
+    /// At least 32 characters of letters, digits, <c>-</c> and <c>_</c> (<c>secrets.token_urlsafe(32)</c>); crm-web's configuration only.
+    /// </summary>
+    public string? WebhookKey { get; set; }
+
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey);
 }
 
