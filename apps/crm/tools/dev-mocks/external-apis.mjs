@@ -6,6 +6,7 @@
 //   Huntress API v1        — huntress.mjs with its seed data in huntress-data.mjs (M41), test-only control routes under /_mock/huntress
 //   CloudAlly partner v2   — cloudally.mjs (/cloudally/v2, M42), plus test-only control routes under /_mock/cloudally
 //   Teams channel webhooks — teams.mjs (/teams/{channel}, M43), the cards read back under /_mock/teams
+//   Vendors' webhooks      — webhooks.mjs (M44): /_mock/webhooks/huntress and /_mock/webhooks/atera send a signed delivery to the CRM
 // Run: node tools/dev-mocks/external-apis.mjs [port]   (default 5299). Data is in memory and new on every start.
 import http from 'node:http';
 import { createAtera } from './atera.mjs';
@@ -14,6 +15,7 @@ import { createCloudAlly } from './cloudally.mjs';
 import { createHuntress } from './huntress.mjs';
 import { createPowerOffice } from './poweroffice.mjs';
 import { createTeams } from './teams.mjs';
+import { createWebhooks } from './webhooks.mjs';
 
 const port = Number(process.argv[2] ?? process.env.MOCK_PORT ?? 5299);
 const startedAt = new Date().toISOString();
@@ -47,6 +49,7 @@ const brreg = createBrreg({ send });
 const huntress = createHuntress({ base, run, send });
 const cloudAlly = createCloudAlly({ base, run, send });
 const teams = createTeams({ send });
+const webhooks = createWebhooks({ send });
 
 http
   .createServer((req, res) => {
@@ -58,7 +61,7 @@ http
 
       if (url.pathname === '/health') return send(res, 200, { status: 'ok', run });
       if (brreg(req, res, url, body) || atera(req, res, url, body) || huntress(req, res, url, body) || cloudAlly(req, res, url, body)
-        || teams(req, res, url, body) || powerOffice.handle(req, res, url, body)) return;
+        || teams(req, res, url, body) || webhooks(req, res, url, body) || powerOffice.handle(req, res, url, body)) return;
       send(res, 404, { title: 'Unknown mock route' });
     });
   })
