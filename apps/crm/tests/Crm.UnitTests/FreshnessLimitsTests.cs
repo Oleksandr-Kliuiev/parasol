@@ -1,5 +1,6 @@
 using Crm.Integrations.Atera;
 using Crm.Integrations.Brreg;
+using Crm.Integrations.CloudAlly;
 using Crm.Integrations.Core;
 using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
@@ -25,6 +26,9 @@ public class FreshnessLimitsTests
         (AteraAlertSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.AlertSyncCron)), new AteraOptions().AlertSyncCron),
         (AteraTicketConversationSyncJob.JobId, Key(AteraOptions.SectionName, nameof(AteraOptions.TicketConversationSyncCron)),
             new AteraOptions().TicketConversationSyncCron),
+        (CloudAllyAccountSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.AccountSyncCron)), new CloudAllyOptions().AccountSyncCron),
+        (CloudAllyBackupSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BackupSyncCron)), new CloudAllyOptions().BackupSyncCron),
+        (CloudAllyBillSyncJob.JobId, Key(CloudAllyOptions.SectionName, nameof(CloudAllyOptions.BillSyncCron)), new CloudAllyOptions().BillSyncCron),
         (PowerOfficeCustomerSyncJob.JobId, Key(PowerOfficeOptions.SectionName, nameof(PowerOfficeOptions.CustomerSyncCron)), new PowerOfficeOptions().CustomerSyncCron),
         (PowerOfficeContactPersonSyncJob.JobId, Key(PowerOfficeOptions.SectionName, nameof(PowerOfficeOptions.ContactPersonSyncCron)),
             new PowerOfficeOptions().ContactPersonSyncCron),

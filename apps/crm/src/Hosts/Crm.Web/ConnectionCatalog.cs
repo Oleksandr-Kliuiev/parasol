@@ -1,5 +1,6 @@
 using Crm.Integrations.Atera;
 using Crm.Integrations.Brreg;
+using Crm.Integrations.CloudAlly;
 using Crm.Integrations.Core.Readiness;
 using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
@@ -14,7 +15,7 @@ namespace Crm.Web;
 /// </summary>
 internal sealed class ConnectionCatalog(
     IOptions<AteraOptions> atera, IOptions<PowerOfficeOptions> powerOffice, IOptions<PartnerCenterOptions> partnerCenter,
-    IOptions<GraphOptions> graph) : IConnectionCatalog
+    IOptions<GraphOptions> graph, IOptions<CloudAllyOptions> cloudAlly) : IConnectionCatalog
 {
     public IReadOnlyList<ConnectionDefinition> Read()
     {
@@ -34,6 +35,8 @@ internal sealed class ConnectionCatalog(
                 .. office.InvoicePdfSyncEnabled ? [PowerOfficePdfSyncJob.JobId] : Array.Empty<string>(),
                 .. office.CustomerLedgerSyncEnabled ? [PowerOfficeLedgerSyncJob.JobId] : Array.Empty<string>(),
             ]),
+            new(CloudAllyTypes.System, cloudAlly.Value.Enabled, cloudAlly.Value.WriteEnabled,
+                [CloudAllyAccountSyncJob.JobId, CloudAllyBackupSyncJob.JobId, CloudAllyBillSyncJob.JobId]),
             // Partner Center and the directory are only read; the billing reconciliation runs when it is switched on.
             new(PartnerCenterTypes.System, partner.Enabled, null,
             [

@@ -52,7 +52,8 @@ test('alerts, their side panel, the assign dialog and the Drift tab pass axe at 
     const checks = page.getByRole('button', { name: 'Coverage checks', exact: true });
     await checks.focus(); await page.keyboard.press('Enter');
     const coverage = page.getByRole('dialog', { name: 'Coverage checks', exact: true });
-    await expect(coverage.getByRole('switch', { name: 'Raise alerts' })).toBeVisible();
+    // M42 adds the backup rules: the Atera rule is the one named here.
+    await expect(coverage.getByRole('region', { name: 'Silent Atera agent', exact: true }).getByRole('switch', { name: 'Raise alerts' })).toBeVisible();
     await settled(page);
     expect(await seriousViolations(page), `coverage checks at ${width} px (${scheme})`).toEqual([]);
     expect(await fitsWidth(page), `coverage checks scroll sideways at ${width} px (${scheme})`).toBe(true);

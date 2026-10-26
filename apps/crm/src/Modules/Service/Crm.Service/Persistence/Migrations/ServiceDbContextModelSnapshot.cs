@@ -438,6 +438,38 @@ namespace Crm.Service.Persistence.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Enabled = true,
                             IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004201"),
+                            Code = "cloudally.backup-failed",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004202"),
+                            Code = "cloudally.backup-late",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004203"),
+                            Code = "cloudally.backup-paused",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
+                        },
+                        new
+                        {
+                            Id = new Guid("0199f1a0-4000-7000-8000-000000004204"),
+                            Code = "cloudally.user-not-backed-up",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 22, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Enabled = true,
+                            IsDeleted = false
                         });
                 });
 

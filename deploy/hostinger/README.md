@@ -102,6 +102,12 @@ SQL TLS внутри закрытой bridge-сети использует `Trus
 Delegated календарь/почта продолжают использовать сессию вошедшего сотрудника.
 Provisioning не создаёт реальные фирмы/пользователей автоматически.
 
+CloudAlly (M42, `docs/migration/M42-CLOUDALLY.md`) — только в private JSON **worker** `Integrations:CloudAlly`:
+`Enabled=true`, `ClientId`, `ClientSecret` (ключ портала, Integrations → API), `Email` и `Password` партнёрского
+пользователя, заведённого для Parasoll с ролью `custom` (не личный вход сотрудника). В web — только `Enabled` и
+переключатели записи (`WriteEnabled`, `DryRun`, `WriteAllowedCustomerIds`, `EnabledActions`; по умолчанию всё выключено).
+Если в аккаунте CloudAlly включены ограничения по IP, адрес VPS нужно разрешить там до первого запуска.
+
 Сертификаты ротировать отдельной согласованной операцией. Для DP сохранить старые PFX в
 `PreviousCertificatePaths`, пока существуют зашифрованные ими ключи; включить дополнительные
 mounts и backup. Для входа сначала добавить новый публичный сертификат в Entra, затем заменить
