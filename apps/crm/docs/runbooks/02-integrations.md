@@ -222,3 +222,37 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 1. Создать секреты в Key Vault (временно открыв доступ, как в [runbook 01 §5](01-first-deployment.md#5-сертификат-приложения-учётные-данные-вместо-client-secret)).
 2. Переменные GitHub окружения: `CRM_ENABLE_POWEROFFICE=true`, `CRM_ENABLE_ATERA=true`, `CRM_ENABLE_PARTNERCENTER=true` (+ `CRM_PARTNERCENTER_TENANT_ID`, `CRM_PARTNERCENTER_CLIENT_ID`), `CRM_ENABLE_TEAMS=true`. Среда PowerOffice не переменная: она зафиксирована в `infra/env/*.bicepparam` (test — Demo, prod — Production).
 3. Выкатить через `release.yml`/`promote.yml` (DEV-05, ADR-015). `WriteEnabled` включается настройкой `Integrations__PowerOffice__WriteEnabled` / `Integrations__Atera__WriteEnabled`; в `infra/modules/apps.bicep` такой переменной нет (по умолчанию выключено), поэтому её нужно добавить в шаблон и в `infra/env/*.bicepparam`, иначе следующая выкладка вернёт значение по умолчанию. Включать только после проверки в нужной среде.
+
+## 6. Вебхуки Huntress и Atera (M44)
+
+Вебхук только приближает плановое чтение: изменение у поставщика появляется в Parasoll примерно за минуту вместо 5–10. Плановые
+чтения остаются, поэтому выключенный или сломанный вебхук ничего не теряет. Регистрация адреса у поставщика — запись в его рабочий
+аккаунт: только с отдельного разрешения владельца (AGENTS.md). Подробности и что не подтверждено — [M44](../../../../docs/migration/M44-WEBHOOKS.md).
+
+### 6.1 Huntress (все аккаунты, роль admin аккаунта)
+1. Портал Huntress: Integrations → Add an Integration → Webhooks → Add Endpoint. Адрес — `https://<адрес CRM>/webhooks/huntress`;
+   включить категории Incident Reports, Escalations, Platform Actions (Account Notices читать нечего — их можно не включать).
+2. ⋯ → View Signing Secret: значение `whsec_…` — в закрытый `config/web.json` (только crm-web):
+   `Integrations:Huntress:WebhookEnabled=true`, `Integrations:Huntress:WebhookSecret=whsec_…`. Перезапустить crm-web. Без секрета или
+   с неверным значением crm-web не стартует — так и задумано.
+3. ⋯ → Send Test: Huntress показывает ответ `204`. На `/connections` в карточке Huntress строка «Webhook» — «På» и последнее событие.
+4. Смена секрета: Svix выдаёт новый и сутки подписывает обоими — за это время заменить значение в `web.json` и перезапустить crm-web.
+
+### 6.2 Atera (Superpower или Enterprise)
+1. Ключ адреса: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` → `config/web.json`:
+   `Integrations:Atera:WebhookEnabled=true`, `Integrations:Atera:WebhookKey=<ключ>`. Перезапустить crm-web.
+2. Atera: Admin → Data management → Webhooks → New webhook, Callback URL `https://<адрес CRM>/webhooks/atera/<ключ>`; Send test —
+   ожидается `204` (на `/connections` у Atera «Siste hendelse … sak endret»). Ключ — секрет: в заявках и чатах его не пересылать.
+3. Admin → Support and ticketing → Ticket automation rules: правило с действием «Trigger webhook» на этот вебхук для «New ticket
+   created», «Ticket status changed», «Ticket closed/resolved» и «Ticket assignment changed»; включить «Always run», иначе после
+   первого совпавшего правила остальные не срабатывают.
+4. Смена ключа: новый в `web.json` и в Callback URL одновременно; старый адрес сразу отвечает `401`.
+
+### 6.3 Если ранние чтения не идут
+- `/connections`, карточка поставщика, строка «Webhook»: «Trenger oppfølging» с причиной — `uten signatur eller nøkkel` (запрос пришёл без подписи
+  или ключа), `signert for lenge siden` (часы VPS или повтор старой доставки), `signaturen eller nøkkelen stemmer ikke` (секрет или
+  ключ сменили у поставщика). Отказы — в журнале `Crm.Security` (EventId 1010, без тела и ключа).
+- «På», но «Ingen hendelse mottatt ennå»: проверить журнал доставок поставщика (Huntress — View Delivery Attempts) и что Caddy
+  отдаёт `/webhooks/*` в crm-web; 404 значит, что вебхук выключен в этой установке.
+- Доставки принимаются, но «Siste tidlige lesing» не появляется: карточка «Bakgrunnstjeneste», часть «Tidlige lesinger fra webhooks» должна
+  быть «Kjører»; ранние чтения не идут во время режима только чтения и не чаще раза в минуту на задание (`Integrations:EarlyReads`).
