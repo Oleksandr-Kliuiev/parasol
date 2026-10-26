@@ -120,8 +120,13 @@ public sealed class EarlyReadRunner(
                     await MarkAsync(db, request, served: run!.StartedAt, triggered: null, ct);
                     break;
                 case EarlyReadStep.Start:
-                    // The requests read so far are served by the run about to begin; one that arrived meanwhile keeps waiting.
-                    await MarkAsync(db, request, served: request.RequestedAt, triggered: now, ct);
+                    // The requests read so far are served by the run about to begin; one that arrived meanwhile keeps waiting. The mark is
+                    // taken only if no other worker instance started the job since this round read the request: one start, not two.
+                    if (await MarkAsync(db, request, served: request.RequestedAt, triggered: now, ct) == 0)
+                    {
+                        break;
+                    }
+
                     trigger.Trigger(request.Job);
                     started++;
                     logger.LogInformation("Early read of {System}/{Job} started after {Requests} webhook request(s)", request.System, request.Job, request.Requests);
@@ -134,7 +139,7 @@ public sealed class EarlyReadRunner(
 
     private static Task<int> MarkAsync(IntegrationDbContext db, EarlyReadRequest request, DateTimeOffset served, DateTimeOffset? triggered, CancellationToken ct) =>
         db.EarlyReadRequests
-            .Where(r => r.System == request.System && r.Job == request.Job)
+            .Where(r => r.System == request.System && r.Job == request.Job && (triggered == null || r.TriggeredAt == request.TriggeredAt))
             .ExecuteUpdateAsync(set => set
                 .SetProperty(r => r.ServedUpTo, r => r.ServedUpTo == null || r.ServedUpTo < served ? served : r.ServedUpTo)
                 .SetProperty(r => r.WaitingSince, r => r.RequestedAt > served ? r.WaitingSince : null)

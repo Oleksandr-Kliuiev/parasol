@@ -100,6 +100,21 @@ public sealed class EarlyReadRunnerTests(CrmWebFactory factory) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Rounds_of_two_worker_instances_at_once_start_a_job_once()
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var job = $"twice-{attempt}";
+            await RequestAsync(job);
+            var first = new RecordingTrigger(); var second = new RecordingTrigger();
+
+            await Task.WhenAll(Runner(first).RunDueAsync(Ct), Runner(second).RunDueAsync(Ct));
+
+            first.Started.Concat(second.Started).Count(started => started == job).ShouldBe(1, $"attempt {attempt}");
+        }
+    }
+
+    [Fact]
     public async Task Requests_of_one_burst_keep_the_first_wait_and_the_latest_time()
     {
         await RequestAsync("burst");
