@@ -15,7 +15,7 @@ import { AlertAge, AlertSeverityBadge } from '../service/alerts/AlertBits';
 import { AlertReadLine } from '../service/alerts/AlertReadLine';
 import { useAlertReads } from '../service/alerts/alertReads';
 import { useTaskSource } from '../service/alerts/alertTasks';
-import { sourceName } from '../service/alerts/alertText';
+import { alertTitle, sourceName } from '../service/alerts/alertText';
 
 const useStyles = makeStyles({
   content: { display: 'grid', gap: '14px', alignContent: 'start' },
@@ -52,7 +52,7 @@ export default function TaskSourceDialog({ activityId, onClose }: { activityId: 
           : <ErrorState error={source.error} onRetry={refresh} />)}
         {view && !alert && <Text block role="status">{t('activities.source.gone')}</Text>}
         {alert && <>
-          <span className={styles.head}><AlertSeverityBadge severity={alert.severity} /><Text className={styles.title}>{alert.title}</Text></span>
+          <span className={styles.head}><AlertSeverityBadge severity={alert.severity} /><Text className={styles.title}>{alertTitle(t, alert)}</Text></span>
           <DetailList className={styles.facts} items={[
             { label: t('alerts.detail.state'), value: t(`alerts.states.${alert.state}`) },
             { label: t('alerts.detail.customer'), value: alert.organizationName ?? t('alerts.detail.unknownCustomer') },

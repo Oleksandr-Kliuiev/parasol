@@ -1,6 +1,7 @@
 using System.Globalization;
 using Crm.Identity.Contracts;
 using Crm.Integrations.Core;
+using Crm.Integrations.Core.Webhooks;
 using Crm.Service.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -101,7 +102,9 @@ public sealed class AteraConversationReader(
 /// Keeps tickets' conversations in the CRM (M39.2, <c>atera-ticket-conversations</c>). Atera's list of tickets changed since the cursor
 /// (<c>/tickets/lastmodified</c>) names what to read; open tickets whose conversation is older than
 /// <see cref="AteraOptions.ConversationRefreshMinutes"/> are read again too, a few per run, because whether a new comment moves a
-/// ticket's change time is not confirmed (EXT-03). The cursor moves only after a run that read every conversation it named.
+/// ticket's change time is not confirmed (EXT-03), and so are the tickets Atera's webhooks named (M44), up to
+/// <see cref="MaxWebhookTickets"/> a run. The cursor moves, and the named tickets are cleared, only after a run that read every
+/// conversation it named.
 /// </summary>
 public sealed class AteraTicketConversationSyncJob(
     IAteraClient client,
@@ -109,12 +112,16 @@ public sealed class AteraTicketConversationSyncJob(
     AteraConversationReader conversations,
     IServiceApi service,
     SyncRunner runner,
+    EarlyReadTargets webhookTickets,
     TimeProvider time,
     IOptions<AteraOptions> options,
     ILogger<AteraTicketConversationSyncJob> logger)
 {
     public const string JobId = "atera-ticket-conversations";
     public const string CursorStream = "ticket-conversations";
+
+    /// <summary>The tickets webhooks named that one run reads by id; the rest wait for the next run.</summary>
+    public const int MaxWebhookTickets = 50;
 
     /// <summary>The list of changes is read from a little before the cursor: a change saved while the previous run read is not missed.</summary>
     private static readonly TimeSpan Overlap = TimeSpan.FromMinutes(5);
@@ -147,11 +154,15 @@ public sealed class AteraTicketConversationSyncJob(
             var named = tickets.Select(t => t.TicketId).ToHashSet();
             var stale = await service.GetStaleConversationsAsync(
                 AteraTypes.System, started.AddMinutes(-Math.Max(1, options.Value.ConversationRefreshMinutes)), Math.Max(1, options.Value.ConversationRefreshBatch), ct);
-            foreach (var ticket in stale.Where(t => !named.Contains(t.ExternalId)))
+            // M44: the tickets Atera's webhooks named, read by id even when the list of changes does not name them yet.
+            var asked = await webhookTickets.ListAsync(AteraTypes.System, JobId, MaxWebhookTickets, ct);
+            var askedIds = asked.Select(id => long.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out var ticketId) ? ticketId : 0).ToList();
+            var again = stale.Select(t => t.ExternalId).Concat(askedIds.Where(id => id > 0)).Where(id => !named.Contains(id)).Distinct().ToList();
+            foreach (var ticketId in again)
             {
                 try
                 {
-                    if (await client.GetTicketAsync(ticket.ExternalId, ct) is { } live)
+                    if (await client.GetTicketAsync(ticketId, ct) is { } live)
                     {
                         tickets.Add(live);
                     }
@@ -159,7 +170,7 @@ public sealed class AteraTicketConversationSyncJob(
                 catch (Exception ex) when (AteraConversationReader.IsReadFailure(ex, ct))
                 {
                     progress.Failed++;
-                    logger.LogWarning("Atera ticket {TicketId} could not be read again ({ErrorType})", ticket.ExternalId, ex.GetType().Name);
+                    logger.LogWarning("Atera ticket {TicketId} could not be read again ({ErrorType})", ticketId, ex.GetType().Name);
                 }
             }
 
@@ -168,8 +179,9 @@ public sealed class AteraTicketConversationSyncJob(
             var (read, changed, unreadable) = await conversations.ReadAsync(batch, MaxConsecutiveFailures, ct);
             progress.Failed += unreadable;
             progress.Changed = ticketChanges + changed;
-            progress.Message = $"tickets changed in Atera {named.Count}, read again {tickets.Count - named.Count}, conversations read {read}, " +
-                               $"ticket changes {ticketChanges}, comment changes {changed}, unreadable {unreadable}, skipped (customer not linked) {batch.Unlinked}";
+            progress.Message = $"tickets changed in Atera {named.Count}, read again {tickets.Count - named.Count} (named by webhooks {asked.Count}), " +
+                               $"conversations read {read}, ticket changes {ticketChanges}, comment changes {changed}, unreadable {unreadable}, " +
+                               $"skipped (customer not linked) {batch.Unlinked}";
             if (unreadable > 0 && read == 0)
             {
                 throw new AteraApiException(System.Net.HttpStatusCode.BadGateway, "No ticket's conversation could be read.");
@@ -178,6 +190,8 @@ public sealed class AteraTicketConversationSyncJob(
             if (progress.Failed == 0)
             {
                 await runner.SetCursorAsync(AteraTypes.System, CursorStream, started.ToString("O", CultureInfo.InvariantCulture), ct);
+                // A ticket Atera no longer has was read too: it is not asked for again.
+                await webhookTickets.ClearAsync(AteraTypes.System, JobId, asked, started, ct);
             }
         }, cancellationToken);
     }

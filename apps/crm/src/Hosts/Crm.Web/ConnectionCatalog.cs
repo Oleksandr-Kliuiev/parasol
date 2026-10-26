@@ -1,6 +1,8 @@
 using Crm.Integrations.Atera;
 using Crm.Integrations.Brreg;
+using Crm.Integrations.CloudAlly;
 using Crm.Integrations.Core.Readiness;
+using Crm.Integrations.Huntress;
 using Crm.Integrations.MicrosoftGraph;
 using Crm.Integrations.PartnerCenter;
 using Crm.Integrations.PowerOffice;
@@ -13,8 +15,8 @@ namespace Crm.Web;
 /// switches. Web-instance switches only: worker credentials and provider availability are deliberately not inspected.
 /// </summary>
 internal sealed class ConnectionCatalog(
-    IOptions<AteraOptions> atera, IOptions<PowerOfficeOptions> powerOffice, IOptions<PartnerCenterOptions> partnerCenter,
-    IOptions<GraphOptions> graph) : IConnectionCatalog
+    IOptions<AteraOptions> atera, IOptions<HuntressOptions> huntress, IOptions<PowerOfficeOptions> powerOffice, IOptions<PartnerCenterOptions> partnerCenter,
+    IOptions<GraphOptions> graph, IOptions<CloudAllyOptions> cloudAlly) : IConnectionCatalog
 {
     public IReadOnlyList<ConnectionDefinition> Read()
     {
@@ -22,11 +24,17 @@ internal sealed class ConnectionCatalog(
         var partner = partnerCenter.Value;
         return
         [
+            // M44: the two vendors whose webhooks start reads early; the switch only (crm-web refuses to start without the secret).
             new(AteraTypes.System, atera.Value.Enabled, atera.Value.WriteEnabled,
             [
                 AteraCustomerSyncJob.JobId, AteraContactSyncJob.JobId, AteraTicketSyncJob.OpenJobId, AteraTicketSyncJob.RecentJobId,
-                AteraWorkHoursSyncJob.JobId, AteraAgentSyncJob.JobId, AteraAlertSyncJob.JobId, AteraTicketConversationSyncJob.JobId,
-            ]),
+                AteraWorkHoursSyncJob.JobId, AteraAgentSyncJob.JobId, AteraPatchSyncJob.JobId, AteraAlertSyncJob.JobId, AteraTicketConversationSyncJob.JobId,
+            ], atera.Value.Enabled && atera.Value.WebhookEnabled),
+            new(HuntressTypes.System, huntress.Value.Enabled, huntress.Value.WriteEnabled,
+            [
+                HuntressOrganizationSyncJob.JobId, HuntressAgentSyncJob.JobId, HuntressAlertSyncJob.JobId, HuntressReportSyncJob.JobId,
+                HuntressReportFileJob.JobId,
+            ], huntress.Value.Enabled && huntress.Value.WebhookEnabled),
             new(PowerOfficeTypes.System, office.Enabled, office.WriteEnabled,
             [
                 PowerOfficeCustomerSyncJob.JobId, PowerOfficeContactPersonSyncJob.JobId, PowerOfficeProductSyncJob.JobId, PowerOfficeInvoiceSyncJob.JobId,
@@ -34,6 +42,8 @@ internal sealed class ConnectionCatalog(
                 .. office.InvoicePdfSyncEnabled ? [PowerOfficePdfSyncJob.JobId] : Array.Empty<string>(),
                 .. office.CustomerLedgerSyncEnabled ? [PowerOfficeLedgerSyncJob.JobId] : Array.Empty<string>(),
             ]),
+            new(CloudAllyTypes.System, cloudAlly.Value.Enabled, cloudAlly.Value.WriteEnabled,
+                [CloudAllyAccountSyncJob.JobId, CloudAllyBackupSyncJob.JobId, CloudAllyBillSyncJob.JobId]),
             // Partner Center and the directory are only read; the billing reconciliation runs when it is switched on.
             new(PartnerCenterTypes.System, partner.Enabled, null,
             [

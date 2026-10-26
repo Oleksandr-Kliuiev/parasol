@@ -28,11 +28,15 @@ public sealed class CustomersDbContext(DbContextOptions<CustomersDbContext> opti
 
     public DbSet<ImportRunEntity> ImportRunEntities => Set<ImportRunEntity>();
 
+    /// <summary>Monthly reports the CRM filed for its customers (M43); insert-only.</summary>
+    public DbSet<StoredDocument> StoredDocuments => Set<StoredDocument>();
+
     private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         ConfigureImportRuns(modelBuilder);
+        ConfigureStoredDocuments(modelBuilder);
 
         modelBuilder.Entity<Organization>(b =>
         {
@@ -159,6 +163,28 @@ public sealed class CustomersDbContext(DbContextOptions<CustomersDbContext> opti
             b.Property(x => x.Fields).HasMaxLength(512);
             b.HasOne<ImportRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.RunId, x.EntityType, x.EntityId }).IsUnique();
+        });
+    }
+
+    private static void ConfigureStoredDocuments(ModelBuilder modelBuilder)
+    {
+        // M43: no foreign key to the organization: a merged organization's documents stay under it and are listed with the target.
+        modelBuilder.Entity<StoredDocument>(b =>
+        {
+            b.ToTable("StoredDocuments");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.Kind).HasMaxLength(StoredDocument.KindLength);
+            b.Property(x => x.SourceKey).HasMaxLength(StoredDocument.SourceKeyLength).UseCollation("Latin1_General_100_BIN2");
+            b.Property(x => x.FileName).HasMaxLength(StoredDocument.FileNameLength);
+            b.Property(x => x.MediaType).HasMaxLength(64);
+            b.Property(x => x.ObjectKey).HasMaxLength(256);
+            b.Property(x => x.ContentSha256).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.Provenance).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.RendererVersion).HasMaxLength(64);
+            b.HasIndex(x => new { x.OrganizationId, x.SourceKey, x.ContentSha256 }).IsUnique();
+            b.HasIndex(x => new { x.Kind, x.SourceKey });
+            b.HasIndex(x => new { x.OrganizationId, x.PeriodStart });
         });
     }
 

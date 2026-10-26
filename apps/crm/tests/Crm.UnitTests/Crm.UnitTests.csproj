@@ -19,6 +19,10 @@
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.Brreg\Crm.Integrations.Brreg.csproj" />
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.PowerOffice\Crm.Integrations.PowerOffice.csproj" />
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.Atera\Crm.Integrations.Atera.csproj" />
+    <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.Huntress\Crm.Integrations.Huntress.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Security\Crm.Security\Crm.Security.csproj" />
+    <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.CloudAlly\Crm.Integrations.CloudAlly.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Backup\Crm.Backup\Crm.Backup.csproj" />
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.MicrosoftGraph\Crm.Integrations.MicrosoftGraph.csproj" />
     <ProjectReference Include="..\..\src\Integrations\Crm.Integrations.PartnerCenter\Crm.Integrations.PartnerCenter.csproj" />
   </ItemGroup>

@@ -28,6 +28,9 @@ public static class ReportsModule
         services.AddScoped<BiService>();
         services.AddScoped<BiSnapshotService>();
         services.AddScoped<BiSnapshotJob>();
+        // M43: Parasoll's monthly summary of each serviced customer, filed among the customer's documents.
+        services.AddScoped<CustomerMonthReports>();
+        services.AddScoped<CustomerMonthReportJob>();
         services.AddOptions<ReportsOptions>().Bind(configuration.GetSection(ReportsOptions.SectionName));
         services.AddOptions<BiOptions>().Bind(configuration.GetSection(BiOptions.SectionName));
         // DEV-14: the BI read API takes Entra bearer tokens on its own scheme and policy; nothing else does.

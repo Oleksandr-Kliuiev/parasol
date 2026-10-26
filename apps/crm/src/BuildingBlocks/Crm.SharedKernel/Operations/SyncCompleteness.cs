@@ -15,4 +15,10 @@ public interface ISyncCompletenessSource
 {
     /// <summary>The latest finished run of <paramref name="job"/>, or null when it has never run (nothing to judge).</summary>
     Task<SyncCompleteness?> LatestAsync(string system, string job, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether <paramref name="system"/> is switched on in this installation (M41). A source that is switched off and was never read
+    /// has said nothing about the data, so a status line leaves it out instead of calling it "not read yet" for good.
+    /// </summary>
+    bool IsConnected(string system);
 }

@@ -16,6 +16,8 @@ const reported: [string, string][] = [
   ['integration.sync-runs', 'Synchronization log'],
   ['integration.vendor-action-texts', 'Texts of actions sent to vendors'],
   ['sales.unconverted-leads', 'Leads that never became customers'],
+  ['security.closed-incidents', 'Closed security incidents and escalations'],
+  ['service.resolved-alerts', 'Resolved alerts'],
   ['service.tickets', 'Closed tickets'],
 ];
 

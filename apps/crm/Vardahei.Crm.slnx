@@ -14,7 +14,9 @@
   <Folder Name="/src/Integrations/">
     <Project Path="src/Integrations/Crm.Integrations.Atera/Crm.Integrations.Atera.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.Brreg/Crm.Integrations.Brreg.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.CloudAlly/Crm.Integrations.CloudAlly.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.Core/Crm.Integrations.Core.csproj" />
+    <Project Path="src/Integrations/Crm.Integrations.Huntress/Crm.Integrations.Huntress.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.MicrosoftGraph/Crm.Integrations.MicrosoftGraph.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.PartnerCenter/Crm.Integrations.PartnerCenter.csproj" />
     <Project Path="src/Integrations/Crm.Integrations.PowerOffice/Crm.Integrations.PowerOffice.csproj" />
@@ -34,6 +36,10 @@
   <Folder Name="/src/Modules/Contracts/">
     <Project Path="src/Modules/Contracts/Crm.Contracts.Contracts/Crm.Contracts.Contracts.csproj" />
     <Project Path="src/Modules/Contracts/Crm.Contracts/Crm.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Backup/">
+    <Project Path="src/Modules/Backup/Crm.Backup.Contracts/Crm.Backup.Contracts.csproj" />
+    <Project Path="src/Modules/Backup/Crm.Backup/Crm.Backup.csproj" />
   </Folder>
   <Folder Name="/src/Modules/CustomFields/">
     <Project Path="src/Modules/CustomFields/Crm.CustomFields/Crm.CustomFields.csproj" />
@@ -72,6 +78,10 @@
   <Folder Name="/src/Modules/Sales/">
     <Project Path="src/Modules/Sales/Crm.Sales.Contracts/Crm.Sales.Contracts.csproj" />
     <Project Path="src/Modules/Sales/Crm.Sales/Crm.Sales.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Security/">
+    <Project Path="src/Modules/Security/Crm.Security/Crm.Security.csproj" />
+    <Project Path="src/Modules/Security/Crm.Security.Contracts/Crm.Security.Contracts.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Service/">
     <Project Path="src/Modules/Service/Crm.Service.Contracts/Crm.Service.Contracts.csproj" />

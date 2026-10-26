@@ -71,12 +71,20 @@ public static class AteraModule
         services.AddScoped<IVendorActionHandler, AteraTicketTechnicianAction>();
         // M39.3: own time also recorded in Atera, never imported back as a second entry.
         services.AddScoped<IVendorActionHandler, AteraTimeRecordAction>();
+        // M40: an alert resolved or deleted in Atera; the read of the alert after it confirms the result.
+        services.AddScoped<IVendorActionHandler, AteraAlertResolveAction>();
+        services.AddScoped<IVendorActionHandler, AteraAlertDeleteAction>();
+        // M43: the customer created in Atera from the "Connect services" wizard, searched for first and linked at once.
+        services.AddScoped<IVendorActionHandler, AteraCreateCustomerAction>();
         services.AddScoped<AteraTicketSyncJob>();
         services.AddScoped<AteraWorkHoursSyncJob>();
         services.AddScoped<AteraAgentSyncJob>();
+        services.AddScoped<AteraPatchSyncJob>();
         services.AddScoped<AteraAlertSyncJob>();
         services.AddScoped<AteraCustomerSyncJob>();
         services.AddScoped<AteraContactSyncJob>();
+        // M44: Atera's ticket webhooks start the conversation read early (received by crm-web).
+        services.AddSingleton<Crm.Integrations.Core.Webhooks.IWebhookSource, AteraWebhookSource>();
         services.AddModuleServices(typeof(AteraModule).Assembly);
         return services;
     }

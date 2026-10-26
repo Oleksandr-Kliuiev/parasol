@@ -4,7 +4,8 @@ import { usePagedList } from '../../../api/paging';
 import type { Alert, AlertPage, AlertSeverity } from '../types';
 
 export interface AlertQueueFilters {
-  state: 'Open' | 'Resolved';
+  /** Open (not hidden), hidden in Parasoll (M40), or resolved. */
+  state: 'Open' | 'Hidden' | 'Resolved';
   severity: AlertSeverity | null;
   organizationId: string | null;
   search: string;
@@ -21,7 +22,8 @@ export const queuePageSize = 25;
  */
 export function useAlertQueue(filters: AlertQueueFilters) {
   const list = usePagedList<Alert>(['service', 'alerts', 'queue', filters], '/api/v1/service/alerts', {
-    state: filters.state === 'Open' ? undefined : filters.state,
+    state: filters.state === 'Resolved' ? filters.state : undefined,
+    hidden: filters.state === 'Hidden' ? true : undefined,
     severity: filters.severity ?? undefined,
     organizationId: filters.organizationId ?? undefined,
     q: filters.search || undefined,

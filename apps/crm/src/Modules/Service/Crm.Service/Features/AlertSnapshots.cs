@@ -5,21 +5,35 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Service.Features;
 
-/// <summary>A device an alert may name: its id, its customer and its machine name.</summary>
-internal sealed record AlertDeviceCandidate(Guid Id, Guid OrganizationId, string MachineName);
+/// <summary>A device an alert may name: its id, its customer, its machine name and the source's ids of it.</summary>
+internal sealed record AlertDeviceCandidate(Guid Id, Guid OrganizationId, string MachineName, string? ExternalId = null, string? AlternateId = null);
 
 /// <summary>
-/// Finds the CRM device an alert is about. A name counts only when exactly one current device of the same customer and source
-/// carries it, ignoring case; two devices with one name, or none, leave the alert without a device rather than with a guess.
+/// Finds the CRM device an alert is about. An alert that names the source's agent (M40: Atera's AgentId or DeviceGuid) gets that
+/// agent when it is a current device of the same customer. Otherwise a name counts only when exactly one current device of the
+/// same customer and source carries it, ignoring case; two devices with one name, or none, leave the alert without a device
+/// rather than with a guess.
 /// </summary>
 internal sealed class AlertDeviceIndex
 {
     private readonly Dictionary<Guid, Dictionary<string, Guid?>> byOrganization = [];
+    private readonly Dictionary<(Guid, string), Guid> byExternalId = [];
+    private readonly Dictionary<(Guid, string), Guid> byAlternateId = [];
 
     public AlertDeviceIndex(IEnumerable<AlertDeviceCandidate> devices)
     {
         foreach (var device in devices)
         {
+            if (device.ExternalId is { Length: > 0 } externalId)
+            {
+                byExternalId[(device.OrganizationId, externalId)] = device.Id;
+            }
+
+            if (device.AlternateId is { Length: > 0 } alternateId)
+            {
+                byAlternateId[(device.OrganizationId, alternateId.ToUpperInvariant())] = device.Id;
+            }
+
             var name = device.MachineName.Trim();
             if (name.Length == 0)
             {
@@ -40,6 +54,12 @@ internal sealed class AlertDeviceIndex
         deviceName?.Trim() is { Length: > 0 } name && byOrganization.TryGetValue(organizationId, out var names) && names.TryGetValue(name, out var id)
             ? id
             : null;
+
+    /// <summary>The device an alert is about: the agent it names, else the one device of the customer with its name.</summary>
+    public Guid? Find(ExternalAlert alert) =>
+        alert.DeviceExternalId is { Length: > 0 } externalId && byExternalId.TryGetValue((alert.OrganizationId, externalId), out var byAgent) ? byAgent
+        : alert.DeviceAlternateId is { Length: > 0 } alternateId && byAlternateId.TryGetValue((alert.OrganizationId, alternateId.ToUpperInvariant()), out var byGuid) ? byGuid
+        : Find(alert.OrganizationId, alert.DeviceName);
 }
 
 /// <summary>The rules of one alert read (M38), kept apart from the database so they can be checked on their own.</summary>
@@ -48,7 +68,8 @@ internal static class AlertSnapshotRules
     /// <summary>
     /// Applies <paramref name="snapshot"/> to the alerts stored for its source: every alert the read lists and every alert of the
     /// source that is not resolved. Changes the stored alerts in place and returns the new ones. An incomplete snapshot changes
-    /// nothing: an alert it does not list may be on a page that was never read.
+    /// nothing: an alert it does not list may be on a page that was never read. A listed alert resolved after the read began stays
+    /// resolved (M41).
     /// </summary>
     public static (IReadOnlyList<Alert> Added, AlertSnapshotResult Result) Apply(
         AlertSnapshot snapshot, IReadOnlyCollection<Alert> stored, AlertDeviceIndex devices, DateTimeOffset now)
@@ -60,12 +81,21 @@ internal static class AlertSnapshotRules
 
         var byExternalId = stored.ToDictionary(a => a.ExternalId, StringComparer.Ordinal);
         var added = new List<Alert>();
-        int opened = 0, reopened = 0, updated = 0, resolved = 0;
+        int opened = 0, reopened = 0, updated = 0, resolved = 0, awaiting = 0;
         foreach (var source in snapshot.Alerts.DistinctBy(a => a.ExternalId, StringComparer.Ordinal))
         {
-            var deviceId = devices.Find(source.OrganizationId, source.DeviceName);
+            var deviceId = devices.Find(source);
             if (byExternalId.TryGetValue(source.ExternalId, out var alert))
             {
+                // Resolved after this read began (M41: a person's action read the record back meanwhile): the read knows less than
+                // that resolution, so it neither reopens nor changes the alert; the next read decides.
+                if (alert.State == AlertState.Resolved && snapshot.ReadStartedAt is { } started && alert.ResolvedAt >= started)
+                {
+                    continue;
+                }
+
+                // Loaded with its hold: one an earlier release stored without a hold gets it now (M40).
+                alert.EnsureHold();
                 switch (alert.Observe(snapshot.Kind, source, deviceId, now))
                 {
                     case AlertChange.Reopened:
@@ -84,20 +114,55 @@ internal static class AlertSnapshotRules
         }
 
         // Not listed by a complete read: no longer open in the source. An alert the source still reports open but the read could
-        // not map (its customer lost the link to the organization) is in OpenExternalIds and stays exactly as it is.
+        // not map (its customer lost the link to the organization) is in OpenExternalIds and stays exactly as it is. An urgent alert of
+        // a source that asks for it (M41: a critical Huntress incident) waits for a person instead of closing by itself.
         var open = snapshot.OpenExternalIds.Concat(snapshot.Alerts.Select(a => a.ExternalId)).ToHashSet(StringComparer.Ordinal);
         foreach (var alert in stored.Where(a => a.Kind == snapshot.Kind && a.State != AlertState.Resolved && !open.Contains(a.ExternalId)))
         {
-            resolved += alert.Resolve(now) ? 1 : 0;
+            if (alert.NeedsConfirmedClose)
+            {
+                awaiting += alert.ClosedAtSource(now) ? 1 : 0;
+            }
+            else
+            {
+                resolved += alert.Resolve(now) ? 1 : 0;
+            }
         }
 
-        return (added, new AlertSnapshotResult(true, opened, reopened, updated, resolved));
+        return (added, new AlertSnapshotResult(true, opened, reopened, updated, resolved, awaiting));
     }
 }
 
 /// <summary>Stores an alert read: one transaction per snapshot, and one snapshot of a source at a time.</summary>
 internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
 {
+    /// <summary>
+    /// A read of one alert proved it is no longer open at its source (M40): it is resolved under the source's lock, so it never
+    /// crosses a snapshot being stored. A later read that lists it opens it again, as always.
+    /// </summary>
+    public async Task<bool> ResolveOneAsync(string system, string externalId, CancellationToken cancellationToken)
+    {
+        var resource = "service-alerts:" + system;
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
+        {
+            foreach (var entry in db.ChangeTracker.Entries<Alert>().ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000;
+                IF @r < 0 THROW 51000, 'Another read of these alerts is being stored.', 1;
+                """, ct);
+            var alert = await db.Alerts.SingleOrDefaultAsync(a => a.System == system && a.ExternalId == externalId, ct);
+            var resolved = alert is not null && alert.Resolve(time.GetUtcNow());
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return resolved;
+        }, cancellationToken);
+    }
+
     public async Task<AlertSnapshotResult> ApplyAsync(AlertSnapshot snapshot, CancellationToken cancellationToken)
     {
         if (!snapshot.IsComplete)
@@ -107,13 +172,16 @@ internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
 
         var now = time.GetUtcNow();
         var listed = snapshot.Alerts.Select(a => a.ExternalId).Distinct(StringComparer.Ordinal).ToList();
-        var organizations = snapshot.Alerts.Where(a => !string.IsNullOrWhiteSpace(a.DeviceName)).Select(a => a.OrganizationId).Distinct().ToList();
+        var organizations = snapshot.Alerts
+            .Where(a => !string.IsNullOrWhiteSpace(a.DeviceName) || a.DeviceExternalId is not null || a.DeviceAlternateId is not null)
+            .Select(a => a.OrganizationId).Distinct().ToList();
         var resource = "service-alerts:" + snapshot.System;
         // The reads, the lock and the writes land together, and the SQL Server retry strategy needs the transaction inside it.
         return await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
         {
-            // A retried attempt starts from the database again, not from the alerts the failed attempt had changed or added.
-            foreach (var entry in db.ChangeTracker.Entries<Alert>().ToList())
+            // A retried attempt starts from the database again, not from the alerts the failed attempt had changed or added, nor
+            // from the events (M43: an alert that became urgent) that attempt had queued with them.
+            foreach (var entry in db.ChangeTracker.Entries().Where(e => e.Entity is Alert or Crm.Infrastructure.Persistence.OutboxMessage).ToList())
             {
                 entry.State = EntityState.Detached;
             }
@@ -124,15 +192,16 @@ internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
                 DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000;
                 IF @r < 0 THROW 51000, 'Another read of these alerts is being stored.', 1;
                 """, ct);
-            // Resolved alerts stay as history; only those the read lists again are loaded, to be opened again.
-            var stored = await db.Alerts
+            // Resolved alerts stay as history; only those the read lists again are loaded, to be opened again (with their hold,
+            // which a new occurrence clears).
+            var stored = await db.Alerts.Include(a => a.Hold)
                 .Where(a => a.System == snapshot.System && (a.State != AlertState.Resolved || listed.Contains(a.ExternalId)))
                 .ToListAsync(ct);
             var devices = organizations.Count == 0
                 ? []
                 : await db.Devices.AsNoTracking()
                     .Where(d => d.System == snapshot.System && d.RemovedAt == null && organizations.Contains(d.OrganizationId))
-                    .Select(d => new AlertDeviceCandidate(d.Id, d.OrganizationId, d.MachineName))
+                    .Select(d => new AlertDeviceCandidate(d.Id, d.OrganizationId, d.MachineName, d.ExternalId, d.AlternateId))
                     .ToListAsync(ct);
             var (added, result) = AlertSnapshotRules.Apply(snapshot, stored, new AlertDeviceIndex(devices), now);
             db.Alerts.AddRange(added);

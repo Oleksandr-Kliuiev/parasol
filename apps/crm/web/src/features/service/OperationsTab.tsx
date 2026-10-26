@@ -3,30 +3,33 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Badge, Button, Link, MessageBar, MessageBarBody, Switch, Table, TableBody, TableCell, TableHeader,
   TableHeaderCell, TableRow, Text, makeStyles, mergeClasses, tokens, useRestoreFocusTarget } from '@fluentui/react-components';
 import { Add20Regular, Alert16Regular, AlertOn24Regular, Database16Regular, Desktop16Regular, Desktop24Regular, Headset24Regular, Headset16Regular,
-  Open16Regular, Send16Regular, Send24Regular, Server16Regular } from '@fluentui/react-icons';
+  Open16Regular, Send16Regular, Send24Regular } from '@fluentui/react-icons';
 import { h } from '../../app/hearth';
 import { useFlushStyles } from '../billing/flushStyles';
-import { RecordRow, RowMeta } from '../billing/RecordRow';
+import { RecordRow } from '../billing/RecordRow';
 import { useTranslation } from 'react-i18next';
 import { Permissions, useCurrentUser } from '../../auth/CurrentUserContext';
 import { useScrollEdges } from '../../shared/utils/useScrollEdges';
+import { SecurityPanel } from '../security/SecurityPanel';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { ListFooter } from '../../shared/components/ListFooter';
 import { Panel } from '../../shared/components/Panel';
 import { FigureGrid } from '../reports/FigureGrid';
-import { formatDate, formatDateTime, formatNumber, formatRelative } from '../../shared/utils/format';
+import { formatDate, formatNumber } from '../../shared/utils/format';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
-import { useAlerts, useDevices, useServiceSummary, useTicketRequests, useTickets } from './api';
+import { useAlerts, useMachines, useServiceSummary, useTicketRequests, useTickets } from './api';
 import { CreateTicketDialog } from './CreateTicketDialog';
 import { SavedServiceReadState } from './SavedServiceReadState';
-import { deviceTypes, type Alert, type AlertPage, type Device } from './types';
-import { AlertAge, AlertFacts, AlertSeverityBadge, AlertTitle } from './alerts/AlertBits';
+import { deviceTypes, type Alert, type AlertPage, type Machine } from './types';
+import { MachineDrawer } from './machines/MachineDrawer';
+import { MachineRow } from './machines/MachineRow';
+import { AlertAge, AlertFacts, AlertSeverityBadge, AlertSource, AlertTitle, ClosedAtSource } from './alerts/AlertBits';
 import { AlertDetailDrawer } from './alerts/AlertDetailDrawer';
 import { AlertReadLine } from './alerts/AlertReadLine';
 import { AlertTaskCell } from './alerts/AlertTaskCell';
 import { AlertTaskDialogHost } from './alerts/AlertTaskDialogHost';
 import { useAlertTaskLinks } from './alerts/alertTasks';
-import { sourceName } from './alerts/alertText';
+import { alertTitle, sourceName } from './alerts/alertText';
 import { ServiceReadLine } from './ServiceReadLine';
 import { TicketPanel } from './tickets/TicketPanel';
 
@@ -53,10 +56,9 @@ const useStyles = makeStyles({
   // The title is the way into the ticket: it wraps like text and keeps a 24 px hit box (WCAG 2.5.8).
   openTicket: { textAlign: 'left', minHeight: '24px', overflowWrap: 'anywhere' },
   ticketTitle: { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '6px', minWidth: 0 },
-  // A link that opens Atera in a new tab (a ticket, a device): its mark stays beside the name, also when the name wraps; a 24 px
-  // hit box (WCAG 2.5.8).
+  // A link that opens Atera in a new tab (a ticket): its mark stays beside the name, also when the name wraps; a 24 px hit box
+  // (WCAG 2.5.8).
   external: { display: 'inline-flex', alignItems: 'center', gap: '4px', minHeight: '24px', '& svg': { flexShrink: 0 } },
-  seen: { color: h.muted, fontSize: '12.5px', lineHeight: '18px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
   statusColumn: { width: '136px' },
   personColumn: { width: '22%' },
   createdColumn: { width: '120px' },
@@ -82,7 +84,7 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
   // The table scrolls sideways on phones: the hidden edge fades, as in ScrollTable (the region name stays with the card).
   // The region mounts only once the saved list is available: measure again then, not only when the row count changes.
   const ticketScroll = useRef<HTMLDivElement>(null); const ticketEdges = useScrollEdges(ticketScroll, 'x', `${tickets.available}:${tickets.items.length}`);
-  const devices = useDevices(organizationId, scope); const alerts = useAlerts(organizationId, scope); const requests = useTicketRequests(organizationId, scope);
+  const devices = useMachines(organizationId, scope); const alerts = useAlerts(organizationId, scope); const requests = useTicketRequests(organizationId, scope);
   // One task lookup per page of alerts the tab has read, never one per row.
   const alertTasks = useAlertTaskLinks(alerts.available ? (alerts.data?.pages ?? []).map((page) => page.items.map((alert) => alert.id)) : []);
   // How fresh the stored alerts are, from the newest page the tab read (the list's answer carries the reads).
@@ -118,6 +120,18 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
     if ((location.state as { alertPeek?: boolean } | null)?.alertPeek) { void navigate(-1); return; }
     const next = new URLSearchParams(params); next.delete('alert'); setParams(next, { replace: true });
   };
+  // M40: a machine's card has its own address too (?device=); a decision that joins or splits machines moves it to the machine
+  // the devices now make, and the list behind it is read again.
+  const deviceId = params.get('device');
+  const openMachine = (machine: Machine) => { const next = new URLSearchParams(params); next.set('device', machine.id); setParams(next, { state: { devicePeek: true } }); };
+  const closeMachine = () => {
+    if ((location.state as { devicePeek?: boolean } | null)?.devicePeek) { void navigate(-1); return; }
+    const next = new URLSearchParams(params); next.delete('device'); setParams(next, { replace: true });
+  };
+  const machineChanged = (id: string) => {
+    const next = new URLSearchParams(params); next.set('device', id); setParams(next, { replace: true, state: location.state });
+    setRevision(value => value + 1);
+  };
 
   return <AlertTaskDialogHost><div className={styles.stack}>
     <Panel title={t('service.savedData')} icon={<Database16Regular />}
@@ -145,8 +159,9 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
         <SavedServiceReadState checking={alerts.checking} error={alerts.error} onRetry={alerts.refresh} />
       </div>
       <ul className={flush.list}>{alerts.items.map(alert => <RecordRow key={alert.id} icon={<Alert16Regular />} tone={alert.severity === 'Critical' ? 'ember' : 'saffron'}
-        title={<AlertTitle title={alert.title} onOpen={() => openAlert(alert)} />}
-        meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />]} />}
+        title={<AlertTitle title={alertTitle(t, alert)} onOpen={() => openAlert(alert)} />}
+        meta={<AlertFacts parts={[alert.deviceName, <AlertAge key="age" at={alert.createdAt} />, <AlertSource key="source" system={alert.system} />,
+          alert.sourceClosedAt && alert.state !== 'Resolved' && <ClosedAtSource key="closed" alert={alert} />]} />}
         end={<><AlertSeverityBadge severity={alert.severity} /><AlertTaskCell alert={alert} task={alertTasks.links.get(alert.id)} /></>} />)}</ul>
       {alerts.available && alerts.items.length === 0 && <EmptyState icon={<AlertOn24Regular />} message={t(nothingSaved ? 'service.nothingSavedShort' : 'service.noAlerts')} />}
       <ListFooter shown={alerts.items.length} total={alerts.total} hasMore={alerts.hasNextPage} loading={alerts.isFetchingNextPage} onMore={() => void alerts.fetchNextPage()} />
@@ -165,10 +180,13 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
       <div className={mergeClasses(styles.pad, !devices.available && styles.padEnd)}>
         <SavedServiceReadState checking={devices.checking} error={devices.error} onRetry={devices.refresh} />
       </div>
-      <ul className={flush.list}>{devices.items.map(device => <DeviceRow key={device.id} device={device} />)}</ul>
+      <ul className={flush.list}>{devices.items.map(machine => <MachineRow key={machine.id} machine={machine} onOpen={openMachine} />)}</ul>
       {devices.available && devices.items.length === 0 && <EmptyState icon={<Desktop24Regular />} message={t('service.noDevices')} />}
       <ListFooter shown={devices.items.length} total={devices.total} hasMore={devices.hasNextPage} loading={devices.isFetchingNextPage} onMore={() => void devices.fetchNextPage()} />
     </Panel>
+
+    {/* M41: what Huntress counts for the customer and its monthly reports; its incidents are alerts in the list above. */}
+    <SecurityPanel organizationId={organizationId} scope={scope} />
 
     <Panel title={t('service.tickets')} icon={<Headset16Regular />} flush className={flush.panel} actions={<span className={styles.row}>
       <Switch label={t('service.openOnly')} checked={openOnly} onChange={(_, data) => setOpenOnly(data.checked)} />
@@ -222,29 +240,6 @@ function SavedOperations({ organizationId, owner, canCreate }: { organizationId:
     {/* Mounted for an alert only: the tab keeps no read of its own about a panel nobody opened. */}
     {peekId !== null && <AlertDetailDrawer alertId={peekId} onClose={closeAlert} />}
     {ticketId !== null && <TicketPanel ticketId={ticketId} onClose={closeTicket} />}
+    {deviceId !== null && <MachineDrawer machineId={deviceId} onClose={closeMachine} onChanged={machineChanged} />}
   </div></AlertTaskDialogHost>;
-}
-
-/**
- * One device as Atera reported it at the last read, which is nightly: its kind in the singular, when Atera last saw it (a bare
- * "online" would claim more than that read can), and the way to it in Atera when a link is set up.
- */
-function DeviceRow({ device }: { device: Device }) {
-  const styles = useStyles(); const { t } = useTranslation();
-  const href = device.url ? safeHttpUrl(device.url) : undefined;
-  return <RecordRow icon={device.type === 'Server' ? <Server16Regular /> : <Desktop16Regular />} tone={device.online ? 'spruce' : 'neutral'}
-    title={href
-      // The visible name starts the accessible name (WCAG 2.5.3); the rest says where the link leads.
-      ? <Link href={href} target="_blank" rel="noopener noreferrer" className={styles.external}
-        aria-label={t('service.deviceOpen', { name: device.machineName, source: sourceName(t, 'atera') })}>
-        <span>{device.machineName}</span><Open16Regular aria-hidden /></Link>
-      : <Text weight="semibold">{device.machineName}</Text>}
-    meta={<RowMeta>{t(`service.deviceType.${device.type}`)}{device.os ? ` · ${device.os}` : ''}</RowMeta>}
-    end={<>
-      {/* Only a device with something open says so: a column of zeros would hide the ones that matter. */}
-      {device.openAlerts > 0 && <Badge appearance="tint" color="danger">{t('service.deviceOpenAlerts', { count: device.openAlerts })}</Badge>}
-      <Text className={styles.seen}>{device.lastSeenAt
-        ? <>{t('service.lastSeen')} <time dateTime={device.lastSeenAt} title={formatDateTime(device.lastSeenAt)}>{formatRelative(device.lastSeenAt)}</time></>
-        : t(device.online ? 'service.onlineAtRead' : 'service.offlineAtRead')}</Text>
-    </>} />;
 }

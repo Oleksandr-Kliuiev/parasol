@@ -136,7 +136,7 @@ public sealed class VendorActionRunner(
             return VendorActionResult.Failed("VND_KIND_UNKNOWN", "This kind of action is no longer known to the CRM; nothing was sent.");
         }
 
-        if (VendorActionRules.CheckSwitches(switches, action.Kind, action.ExternalCustomerId, credentials: true) is { } block)
+        if (VendorActionRules.CheckSwitches(switches, action.Kind, action.ExternalCustomerId, credentials: true, action.OrganizationId) is { } block)
         {
             return VendorActionResult.Rejected(block.Code, block.Message);
         }

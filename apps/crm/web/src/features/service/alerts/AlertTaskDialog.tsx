@@ -17,7 +17,7 @@ import { useDialogStyles } from '../../contracts/dialogStyles';
 import { AlertAge, AlertSeverityBadge } from './AlertBits';
 import { AlertReadError, AlertTaskSummary } from './AlertTaskBits';
 import { createAlertTask, useAlertTaskAccess, useAlertTaskPreview, type AlertTask, type AlertTaskOutcome } from './alertTasks';
-import { sourceName } from './alertText';
+import { alertTitle, sourceName } from './alertText';
 import { dueIn, dueIso, dueShortcuts } from './dueDates';
 
 const subjectLength = 256;
@@ -72,7 +72,8 @@ export function AlertTaskDialog({ alertId, onClose, onTask }: {
 
   const view = !preview.isFetching ? preview.data : undefined;
   const task = outcome?.task ?? view?.task ?? null;
-  const text = subject ?? view?.subject ?? '';
+  // A gap Parasoll found (M40) is offered in the reader's words, as the panel shows it.
+  const text = subject ?? (view?.alert.rule ? alertTitle(t, view.alert) : view?.subject) ?? '';
   const invalidDue = dueAt !== '' && dueIso(dueAt) === null;
   const canCreate = write && view?.canCreate === true && !task && !outcome && assignee !== null && !invalidDue && !busy;
   const now = new Date();
@@ -125,7 +126,7 @@ export function AlertTaskDialog({ alertId, onClose, onTask }: {
         {view && <div className={layout.alert}>
           <span className={layout.alertHead}>
             <AlertSeverityBadge severity={view.alert.severity} />
-            <Text className={layout.alertTitle}>{view.alert.title}</Text>
+            <Text className={layout.alertTitle}>{alertTitle(t, view.alert)}</Text>
           </span>
           <Text className={layout.meta}>
             {[view.alert.organizationName, view.alert.deviceName, t('alerts.source', { name: sourceName(t, view.alert.system) })].filter(Boolean).join(' · ')}

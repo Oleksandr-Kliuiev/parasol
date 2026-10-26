@@ -42,8 +42,10 @@ internal sealed class MaintenanceMiddleware(RequestDelegate next)
         await MaintenanceHttp.WriteReadOnlyAsync(context, state);
     }
 
+    // Vendors' webhooks (M44) too: the worker reads nothing while the CRM is read-only, and a vendor sends a refused delivery again later.
     private static bool Guarded(PathString path) =>
-        path.StartsWithSegments("/api") || path.StartsWithSegments("/bff") || path.StartsWithSegments("/admin/jobs");
+        path.StartsWithSegments("/api") || path.StartsWithSegments("/bff") || path.StartsWithSegments("/admin/jobs") ||
+        path.StartsWithSegments(WebhookEndpoints.PathPrefix);
 
     private static bool IsSignIn(PathString path) =>
         path.StartsWithSegments("/bff/login") || path.StartsWithSegments("/bff/dev-login") || path.StartsWithSegments("/signin-oidc");

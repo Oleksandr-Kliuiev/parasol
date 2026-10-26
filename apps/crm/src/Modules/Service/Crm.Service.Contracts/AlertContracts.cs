@@ -1,3 +1,5 @@
+using Crm.SharedKernel.Domain;
+
 namespace Crm.Service.Contracts;
 
 /// <summary>Where an alert is: open in its source, open and seen by someone in the CRM, or no longer reported open.</summary>
@@ -18,7 +20,10 @@ public enum AlertKind
 
 /// <summary>
 /// An open alert as read from its source, with the CRM organization its customer is linked to. <paramref name="Url"/> comes from
-/// the integration's configuration only, never from a guess about the provider's addresses.
+/// the integration's configuration only, never from a guess about the provider's addresses. <paramref name="DeviceExternalId"/> and
+/// <paramref name="DeviceAlternateId"/> name the source's agent exactly when the source says which (M40). With
+/// <paramref name="ConfirmClose"/> a critical alert that the source closes waits for a person to confirm it (M41: an urgent Huntress
+/// incident) instead of closing by itself.
 /// </summary>
 public sealed record ExternalAlert(
     string ExternalId,
@@ -28,7 +33,10 @@ public sealed record ExternalAlert(
     string? DeviceName,
     DateTimeOffset CreatedAt,
     string? ExternalCustomerId = null,
-    string? Url = null);
+    string? Url = null,
+    string? DeviceExternalId = null,
+    string? DeviceAlternateId = null,
+    bool ConfirmClose = false);
 
 /// <summary>
 /// One read of the open alerts of a source (<paramref name="System"/> and <paramref name="Kind"/>). <paramref name="Alerts"/> are
@@ -41,20 +49,27 @@ public sealed record AlertSnapshot(
     AlertKind Kind,
     IReadOnlyCollection<ExternalAlert> Alerts,
     IReadOnlyCollection<string> OpenExternalIds,
-    bool IsComplete);
+    bool IsComplete,
+    DateTimeOffset? ReadStartedAt = null);
 
-/// <summary>What applying a snapshot changed. A refreshed last-seen time alone is not a change.</summary>
-public sealed record AlertSnapshotResult(bool Applied, int Opened, int Reopened, int Updated, int Resolved)
+/// <summary>
+/// What applying a snapshot changed. A refreshed last-seen time alone is not a change. <paramref name="AwaitingConfirmation"/> counts
+/// the critical alerts the source closed that now wait for a person (M41).
+/// </summary>
+public sealed record AlertSnapshotResult(bool Applied, int Opened, int Reopened, int Updated, int Resolved, int AwaitingConfirmation = 0)
 {
     /// <summary>An incomplete snapshot: nothing was read into the mirror and nothing was resolved.</summary>
     public static AlertSnapshotResult NotApplied { get; } = new(false, 0, 0, 0, 0);
 
-    public int Changed => Opened + Reopened + Updated + Resolved;
+    public int Changed => Opened + Reopened + Updated + Resolved + AwaitingConfirmation;
 }
 
 /// <summary>
 /// A stored alert for other modules (a task made from it, My day). The id stays the same from one read to the next;
-/// <paramref name="ResolvedAt"/> is when a complete read no longer listed it.
+/// <paramref name="ResolvedAt"/> is when a complete read no longer listed it. A coverage gap (M40) names its <paramref name="Rule"/>
+/// and its <paramref name="Facts"/> as one JSON object (<see cref="CoverageGaps.ReadFacts"/>). <paramref name="SourceClosedAt"/> is
+/// when the source closed a critical alert that waits for a person to confirm it (M41). <paramref name="HiddenUntil"/> is the time a
+/// person hid it in Parasoll until (M40), past or not; <see cref="IsUrgentAt"/> says whether it alarms anyone now.
 /// </summary>
 public sealed record AlertRef(
     Guid Id,
@@ -70,4 +85,19 @@ public sealed record AlertRef(
     Guid? DeviceId,
     DateTimeOffset CreatedAtSource,
     string? Url,
-    DateTimeOffset? ResolvedAt = null);
+    DateTimeOffset? ResolvedAt = null,
+    string? Rule = null,
+    string? Facts = null,
+    DateTimeOffset? SourceClosedAt = null,
+    DateTimeOffset? HiddenUntil = null)
+{
+    /// <summary>Urgent now (M43): open in its source, critical, and not hidden in Parasoll — what the urgent list of My day shows.</summary>
+    public bool IsUrgentAt(DateTimeOffset now) => State == AlertState.Open && Severity == AlertSeverity.Critical && !(HiddenUntil > now);
+}
+
+/// <summary>
+/// An alert became urgent (M43): a new critical alert, a resolved critical alert listed open again, or an open warning that turned
+/// critical. Raised in the transaction that stored the change; a re-read of an alert that was urgent already raises nothing. Ids
+/// only, like every event: a handler reads the alert again, since the outbox may deliver it late or out of order.
+/// </summary>
+public sealed record AlertBecameUrgent(Guid AlertId) : DomainEvent;

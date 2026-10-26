@@ -120,7 +120,8 @@ internal sealed class AlertTaskService(IServiceApi service, IActivitiesApi activ
     {
         var names = await customers.GetOrganizationNamesAsync([alert.OrganizationId], ct);
         return new AlertTaskSource(alert.Id, alert.OrganizationId, names.GetValueOrDefault(alert.OrganizationId), alert.System, alert.Kind,
-            alert.Title, alert.Severity, alert.State, alert.DeviceName, alert.DeviceId, alert.CreatedAtSource, alert.Url, alert.ResolvedAt);
+            alert.Title, alert.Severity, alert.State, alert.DeviceName, alert.DeviceId, alert.CreatedAtSource, alert.Url, alert.ResolvedAt,
+            alert.Rule, CoverageGaps.ReadFacts(alert.Facts));
     }
 
     private async Task<AlertTaskView> ViewAsync(SourceTaskRef task, CancellationToken ct)

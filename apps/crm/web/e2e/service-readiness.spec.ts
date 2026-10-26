@@ -6,7 +6,7 @@ const loading = 'Loading saved data';
 function resource(url: URL, organizationId: string) {
   if (url.pathname === `/api/v1/service/organizations/${organizationId}/summary`) return 'summary';
   if (url.searchParams.get('organizationId') !== organizationId) return null;
-  return ({ '/api/v1/service/tickets': 'tickets', '/api/v1/service/devices': 'devices',
+  return ({ '/api/v1/service/tickets': 'tickets', '/api/v1/service/machines': 'devices',
     '/api/v1/service/alerts': 'alerts', '/api/v1/service/ticket-requests': 'requests' } as Record<string, string>)[url.pathname] ?? null;
 }
 
