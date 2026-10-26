@@ -215,8 +215,8 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 
 ### 4b.3 Сообщения в каналы Teams
 1. В каждом канале («Salg», «Økonomi», «Drift») создать поток Power Automate «When a Teams webhook request is received» и скопировать URL (это секрет — в Key Vault; сообщения отправляет worker, поэтому секрет получает только он — [runbook 08 §3](08-database-permissions.md#3-новый-модуль-таблица-или-секрет)). Секреты Key Vault: `teams-webhook-sales`, `teams-webhook-finance`, `teams-webhook-operations`; включение — переменная окружения GitHub `CRM_ENABLE_TEAMS=true` (Bicep передаёт `Integrations__MicrosoftGraph__Teams__Channels__*` ссылками Key Vault только `crm-worker`; все три секрета должны существовать).
-2. Настройки (вне Azure/локально): `Integrations:MicrosoftGraph:Teams:Enabled=true`, `:Channels:Sales`, `:Channels:Finance`, `:Channels:Operations`, порог `:WonDealThreshold` (по умолчанию 100 000 NOK).
-3. Проверка: выиграть сделку дороже порога — карточка появляется в «Salg»; утвердить биллинг-прогон — карточка в «Økonomi».
+2. Настройки (вне Azure/локально): `Integrations:MicrosoftGraph:Teams:Enabled=true`, `:Channels:Sales`, `:Channels:Finance`, `:Channels:Operations`, порог `:WonDealThreshold` (по умолчанию 100 000 NOK). M43: в «Drift» (`Operations`) приходят срочные оповещения — `:UrgentAlerts:Enabled` (по умолчанию `true`), `:UrgentAlerts:Kinds` (`Monitoring`, `Security`, `Backup`; пусто — все), язык карточек `:Language` (`nb` или `en`, по умолчанию `nb`). На Hostinger VPS — те же ключи в закрытом `config/worker.json` только worker (Teams там выключен, пока их не добавят: `deploy/hostinger/README.md`).
+3. Проверка: выиграть сделку дороже порога — карточка появляется в «Salg»; утвердить биллинг-прогон — карточка в «Økonomi»; новое критичное оповещение (Atera, Huntress или пробел покрытия) — карточка «Kritisk driftsvarsel for …» в «Drift», не чаще раза в день на оповещение; закрытое или скрытое до отправки не публикуется (пост `Skipped`).
 
 ## 5. Azure
 1. Создать секреты в Key Vault (временно открыв доступ, как в [runbook 01 §5](01-first-deployment.md#5-сертификат-приложения-учётные-данные-вместо-client-secret)).

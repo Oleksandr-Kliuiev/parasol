@@ -28,8 +28,10 @@ import { useCreateDocumentFolder, useOrganizationDocuments } from './api';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 import { IconChip, PersonCell, useSettingsStyles } from '../admin/settingsUi';
+import { StoredReports } from './StoredReports';
 
 const useStyles = makeStyles({
+  stack: { display: 'flex', flexDirection: 'column', gap: '16px' },
   // The customer's folder as a row of the integrations reference: chip, name and where it lives, the link on the right.
   head: {
     display: 'flex',
@@ -57,8 +59,25 @@ const useStyles = makeStyles({
   // Not set up: the chip says "no connection", the empty state below says why.
 });
 
-/** The customer's folder in SharePoint: the CRM shows what is in it and links into Microsoft 365 (FR-DOC-01). */
+/**
+ * The customer's documents: the folder in SharePoint, which the CRM shows and links into (FR-DOC-01), and the monthly reports the CRM
+ * files itself (M43). The reports describe the customer's IT, so they are shown to those who may also see the Drift tab.
+ */
 export function OrganizationDocumentsTab({ organizationId }: { organizationId: string }) {
+  const styles = useStyles();
+  const canCustomers = useCan(Permissions.customersRead);
+  const canService = useCan(Permissions.serviceRead);
+  const canReports = canCustomers && canService;
+  return (
+    <div className={styles.stack}>
+      <SharePointDocuments organizationId={organizationId} />
+      {canReports && <StoredReports organizationId={organizationId} />}
+    </div>
+  );
+}
+
+/** The customer's folder in SharePoint: the CRM shows what is in it and links into Microsoft 365 (FR-DOC-01). */
+function SharePointDocuments({ organizationId }: { organizationId: string }) {
   const styles = useStyles();
   const settings = useSettingsStyles();
   const catalog = useCatalogStyles();

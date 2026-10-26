@@ -220,12 +220,59 @@ internal sealed class SecurityMirror(SecurityDbContext db, TimeProvider time) : 
                     }
                 }
 
+                // M43: the day's counts for billing; the last complete read of the day stands for the day.
+                var day = OsloDay(now);
+                var today = await db.UsageDays.Where(u => u.System == group.Key && u.Day == day).ToListAsync(ct);
+                foreach (var source in bySource)
+                {
+                    if (today.FirstOrDefault(u => u.ExternalOrganizationId == source.ExternalOrganizationId) is { } read)
+                    {
+                        read.Apply(source, now);
+                    }
+                    else
+                    {
+                        db.UsageDays.Add(UsageDay.From(source, day, now));
+                    }
+                }
+
+                db.UsageDays.RemoveRange(today.Where(u => !ids.Contains(u.ExternalOrganizationId)));
                 return new SecurityApplyResult(added, updated);
             }, cancellationToken);
         }
 
         return total;
     }
+
+    public async Task<IReadOnlyDictionary<Guid, AgentCountReading>> GetAgentCountReadingsAsync(
+        string system, IReadOnlyCollection<Guid> organizationIds, DateOnly date, CancellationToken cancellationToken)
+    {
+        if (organizationIds.Count == 0)
+        {
+            return new Dictionary<Guid, AgentCountReading>();
+        }
+
+        var ids = organizationIds.Distinct().ToList();
+        var latest = await db.UsageDays.AsNoTracking()
+            .Where(u => u.System == system && ids.Contains(u.OrganizationId) && u.Day <= date)
+            .GroupBy(u => u.OrganizationId)
+            .Select(g => new { OrganizationId = g.Key, Day = g.Max(u => u.Day) })
+            .ToListAsync(cancellationToken);
+        var days = latest.Select(l => l.Day).Distinct().ToList();
+        var rows = await db.UsageDays.AsNoTracking()
+            .Where(u => u.System == system && ids.Contains(u.OrganizationId) && days.Contains(u.Day))
+            .Select(u => new { u.OrganizationId, u.Day, u.BillableAgents })
+            .ToListAsync(cancellationToken);
+        return latest.ToDictionary(l => l.OrganizationId, l =>
+        {
+            var read = rows.Where(r => r.OrganizationId == l.OrganizationId && r.Day == l.Day).ToList();
+            return new AgentCountReading(read.Any(r => r.BillableAgents is null) ? null : read.Sum(r => r.BillableAgents!.Value), l.Day, read.Count);
+        });
+    }
+
+    private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+
+    /// <summary>Business days are Oslo's.</summary>
+    private static DateOnly OsloDay(DateTimeOffset at) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, Oslo).DateTime);
 
     /// <summary>
     /// One unit of work under an application lock: the reads, the lock and the writes land together, and SQL Server's retry strategy

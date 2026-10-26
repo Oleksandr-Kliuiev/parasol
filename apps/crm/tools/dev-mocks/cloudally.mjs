@@ -7,6 +7,7 @@
 //        the statuses also with a page token
 //   POST …/backup-tasks/{task}/backupNow | pause | activate, …/entities/{entity}/backupNow | activate,
 //        /v2/resellers/accounts/{account}/recovery/restore | export; DELETE /v2/resellers/accounts/{account}
+//   POST /v2/resellers/accounts (M43: a new trial account, client-id and client-secret headers required)
 // Data calls without the bearer token answer 403 with an empty body, as CloudAlly does. Test-only control routes live under
 // /_mock/cloudally (see the README).
 
@@ -161,6 +162,23 @@ export function createCloudAlly({ base, run, send }) {
       send(res, 200, { partnerId: 'PID-MOCK', email: 'partner@parasoll.example', contactName: 'Parasoll', currency: 'EUR', region: 'EU' });
     } else if (req.method === 'GET' && path === 'v2/resellers/accounts') {
       send(res, 200, page(url, listed().map(publicAccount), false));
+    } else if (req.method === 'POST' && path === 'v2/resellers/accounts') {
+      // M43 (addAccount): a trial account without backup tasks — those need the customer's Microsoft 365 consent in CloudAlly. The
+      // application headers are required here; one account per address. The log keeps that a password came, never the password.
+      const regions = ['US_EST', 'US_EST_OHIO', 'US_WEST_OREGON', 'US_WEST_CAL', 'EU', 'EU_FRANKFURT', 'ASIA_HONG_KONG', 'ASIA_MUMBAI', 'ASIA_SEOUL',
+        'ASIA_SINGAPORE', 'ASIA_SIDNEY', 'ASIA_TOKYO', 'SOUTH_AMERICA', 'AFRICA_CAPE_TOWN', 'ASIA_CHINA', 'CANADA', 'LONDON', 'EU_PARIS', 'EU_STOCKHOLM', 'EU_ZURICH'];
+      const email = typeof json?.email === 'string' ? json.email.trim() : '';
+      log.push({ method: req.method, path, body: { ...json, password: json?.password ? '[given]' : null }, at: new Date().toISOString() });
+      if (!req.headers['client-id'] || !req.headers['client-secret']) send(res, 401, { errorMessage: 'Invalid client credentials' });
+      else if (!email || typeof json?.password !== 'string' || json.password.length < 1 || (json.region && !regions.includes(json.region))) {
+        send(res, 400, { status: 400, error: 'email, password and a known region are required' });
+      } else if (listed().some((a) => a.email.toLowerCase() === email.toLowerCase())) send(res, 400, { status: 400, error: 'The email is already in use' });
+      else {
+        const created = { id: crypto.randomUUID(), name: json.displayName?.trim() || email, email, status: 'TRIAL', region: json.region ?? 'US_EST', partnerID: 'PID-MOCK',
+          currency: 'EUR', externalId: null, restoreNeedsSignIn: false, tasks: [] };
+        accounts.set(created.id, created);
+        send(res, 200, publicAccount(created));
+      }
     } else if (req.method === 'GET' && path === 'v2/resellers/accounts/backup-tasks') {
       send(res, 200, page(url, listed().flatMap((a) => a.tasks.map((tid) => publicTask(tasks.get(tid), false))), false));
     } else if (req.method === 'GET' && path === 'v2/resellers/accounts/backup-statuses') {

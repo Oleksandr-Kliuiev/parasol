@@ -41,6 +41,7 @@ public static class IntegrationsCoreModule
         // M39.1: actions at vendors — previewed and asked for in crm-web, sent by the loop of crm-worker.
         services.AddScoped<Actions.VendorActionService>();
         services.AddScoped<Actions.VendorActionReader>();
+        services.AddScoped<Actions.CustomerServiceReader>();
         services.AddSingleton<Actions.VendorActionRunner>();
         services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, IntegrationDatabasePermissions>();
         services.AddModuleServices(typeof(IntegrationsCoreModule).Assembly);

@@ -179,8 +179,9 @@ internal sealed class AlertSnapshots(ServiceDbContext db, TimeProvider time)
         // The reads, the lock and the writes land together, and the SQL Server retry strategy needs the transaction inside it.
         return await db.Database.CreateExecutionStrategy().ExecuteAsync(async ct =>
         {
-            // A retried attempt starts from the database again, not from the alerts the failed attempt had changed or added.
-            foreach (var entry in db.ChangeTracker.Entries<Alert>().ToList())
+            // A retried attempt starts from the database again, not from the alerts the failed attempt had changed or added, nor
+            // from the events (M43: an alert that became urgent) that attempt had queued with them.
+            foreach (var entry in db.ChangeTracker.Entries().Where(e => e.Entity is Alert or Crm.Infrastructure.Persistence.OutboxMessage).ToList())
             {
                 entry.State = EntityState.Detached;
             }

@@ -57,6 +57,19 @@ public sealed class HuntressOptions
     /// <summary>How many months of summary reports a read covers.</summary>
     public int ReportMonths { get; set; } = 13;
 
+    /// <summary>The PDFs of the monthly reports filed among the customer's documents (M43), a little after the reports are read.</summary>
+    public string ReportFileSyncCron { get; set; } = "55 4 * * *";
+
+    /// <summary>
+    /// The hosts a report's PDF may be fetched from, each with its subdomains (M43). Huntress answers with a link on huntress.io that
+    /// may redirect to the storage the file lives in; a hop to any other host is refused, so that host has to be added here once it
+    /// is known. Empty: huntress.io only.
+    /// </summary>
+    public List<string> ReportFileHosts { get; set; } = [];
+
+    /// <summary>The hosts a report's PDF may come from: <see cref="ReportFileHosts"/>, or huntress.io when none is set.</summary>
+    public IReadOnlyList<string> AllowedReportFileHosts => ReportFileHosts.Count > 0 ? ReportFileHosts : ["huntress.io"];
+
     /// <summary>
     /// Writing to Huntress (M41): remediations, resolutions, comments, isolation, uninstall. Off by default: Huntress has no test
     /// account, so writes reach the live one, and the default account key is read-only anyway (a user's key is needed).
@@ -75,9 +88,15 @@ public sealed class HuntressOptions
     /// <summary>
     /// The kinds of action people may ask of Huntress: <c>incident.approve</c>, <c>incident.reject</c>, <c>incident.step</c>,
     /// <c>incident.resolve</c>, <c>incident.comment</c>, <c>escalation.resolve</c>, <c>agent.isolate</c>, <c>agent.release</c>,
-    /// <c>agent.uninstall</c>. Empty by default: a kind is off until it is listed.
+    /// <c>agent.uninstall</c>; M43 adds <c>organization.create</c>. Empty by default: a kind is off until it is listed.
     /// </summary>
     public List<string> EnabledActions { get; set; } = [];
+
+    /// <summary>
+    /// Huntress's portal (its sign-in page; an account may have its own address), which the "Connect services" wizard (M43) leads to for
+    /// what the API cannot do — the account key of the install script. Empty: the wizard names the step without a link.
+    /// </summary>
+    public string? ConsoleUrl { get; set; } = "https://huntress.io/";
 
     /// <summary>
     /// Links to Huntress's pages, <c>{0}</c> being the id. Empty by default: the format of Huntress's direct links is not confirmed

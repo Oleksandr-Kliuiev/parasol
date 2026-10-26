@@ -1,3 +1,5 @@
+using Crm.SharedKernel.Domain;
+
 namespace Crm.Service.Contracts;
 
 /// <summary>Where an alert is: open in its source, open and seen by someone in the CRM, or no longer reported open.</summary>
@@ -66,7 +68,8 @@ public sealed record AlertSnapshotResult(bool Applied, int Opened, int Reopened,
 /// A stored alert for other modules (a task made from it, My day). The id stays the same from one read to the next;
 /// <paramref name="ResolvedAt"/> is when a complete read no longer listed it. A coverage gap (M40) names its <paramref name="Rule"/>
 /// and its <paramref name="Facts"/> as one JSON object (<see cref="CoverageGaps.ReadFacts"/>). <paramref name="SourceClosedAt"/> is
-/// when the source closed a critical alert that waits for a person to confirm it (M41).
+/// when the source closed a critical alert that waits for a person to confirm it (M41). <paramref name="HiddenUntil"/> is the time a
+/// person hid it in Parasoll until (M40), past or not; <see cref="IsUrgentAt"/> says whether it alarms anyone now.
 /// </summary>
 public sealed record AlertRef(
     Guid Id,
@@ -85,4 +88,16 @@ public sealed record AlertRef(
     DateTimeOffset? ResolvedAt = null,
     string? Rule = null,
     string? Facts = null,
-    DateTimeOffset? SourceClosedAt = null);
+    DateTimeOffset? SourceClosedAt = null,
+    DateTimeOffset? HiddenUntil = null)
+{
+    /// <summary>Urgent now (M43): open in its source, critical, and not hidden in Parasoll — what the urgent list of My day shows.</summary>
+    public bool IsUrgentAt(DateTimeOffset now) => State == AlertState.Open && Severity == AlertSeverity.Critical && !(HiddenUntil > now);
+}
+
+/// <summary>
+/// An alert became urgent (M43): a new critical alert, a resolved critical alert listed open again, or an open warning that turned
+/// critical. Raised in the transaction that stored the change; a re-read of an alert that was urgent already raises nothing. Ids
+/// only, like every event: a handler reads the alert again, since the outbox may deliver it late or out of order.
+/// </summary>
+public sealed record AlertBecameUrgent(Guid AlertId) : DomainEvent;

@@ -16,6 +16,8 @@ public static class CloudAllyModule
     public static IServiceCollection AddCloudAllyIntegration(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<CloudAllyOptions>().Bind(configuration.GetSection(CloudAllyOptions.SectionName))
+            // M43: accounts created from Parasoll go to the data center the backup tab expects (Backup:Region), unless set apart.
+            .PostConfigure(options => options.AccountRegion ??= configuration["Backup:Region"])
             .Validate(options => Crm.SharedKernel.Text.WebUrl.IsSecureEndpoint(options.BaseUrl),
                 "Integrations:CloudAlly:BaseUrl must be an https address (the client secret and the token travel with every call).")
             .ValidateOnStart();
@@ -76,6 +78,9 @@ public static class CloudAllyModule
         {
             services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<CloudAllyRestoreAction>(sp, way));
         }
+
+        // M43: the customer's account created from the "Connect services" wizard, found by its address before and after.
+        services.AddScoped<IVendorActionHandler, CloudAllyCreateAccountAction>();
 
         services.AddModuleServices(typeof(CloudAllyModule).Assembly);
         return services;

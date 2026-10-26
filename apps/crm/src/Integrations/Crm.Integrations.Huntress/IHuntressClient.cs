@@ -12,6 +12,15 @@ public interface IHuntressClient
 
     IAsyncEnumerable<HuntressOrganization> GetOrganizationsAsync(CancellationToken cancellationToken);
 
+    /// <summary>The organizations whose key is exactly <paramref name="key"/> (<c>GET organizations?key=</c>), every page (M43).</summary>
+    Task<IReadOnlyList<HuntressOrganization>> FindOrganizationsByKeyAsync(string key, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Creates an organization (<c>POST organizations</c>, M43): its name and the key its agents join it with. The organization Huntress
+    /// answers with, or null when the answer has none.
+    /// </summary>
+    Task<HuntressOrganization?> CreateOrganizationAsync(string name, string key, CancellationToken cancellationToken);
+
     /// <summary>What Huntress counts for one organization's products; null when Huntress does not know the organization.</summary>
     Task<HuntressUsage?> GetUsageAsync(long organizationId, CancellationToken cancellationToken);
 

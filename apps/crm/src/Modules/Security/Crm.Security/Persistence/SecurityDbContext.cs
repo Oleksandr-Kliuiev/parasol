@@ -6,7 +6,7 @@ namespace Crm.Security.Persistence;
 
 /// <summary>
 /// The security module's schema (M40.S, filled in M41): the mirror of Huntress's incidents with their plans and comments, its
-/// escalations and platform actions, summary reports and usage.
+/// escalations and platform actions, summary reports and usage; M43 keeps the usage of each day for billing.
 /// </summary>
 public sealed class SecurityDbContext(DbContextOptions<SecurityDbContext> options) : ModuleDbContext(options)
 {
@@ -25,6 +25,8 @@ public sealed class SecurityDbContext(DbContextOptions<SecurityDbContext> option
     public DbSet<SummaryReport> SummaryReports => Set<SummaryReport>();
 
     public DbSet<ProductUsage> ProductUsages => Set<ProductUsage>();
+
+    public DbSet<UsageDay> UsageDays => Set<UsageDay>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
@@ -117,6 +119,16 @@ public sealed class SecurityDbContext(DbContextOptions<SecurityDbContext> option
             b.Property(x => x.Name).HasMaxLength(256);
             b.HasIndex(x => new { x.System, x.ExternalOrganizationId }).IsUnique();
             b.HasIndex(x => x.OrganizationId);
+        });
+
+        modelBuilder.Entity<UsageDay>(b =>
+        {
+            b.ToTable("UsageDays");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.System).HasMaxLength(32);
+            b.HasIndex(x => new { x.System, x.ExternalOrganizationId, x.Day }).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.Day });
         });
     }
 }

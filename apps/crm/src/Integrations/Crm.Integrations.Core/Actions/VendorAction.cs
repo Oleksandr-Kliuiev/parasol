@@ -27,6 +27,12 @@ public static class VendorActionTargets
     /// <summary>An agent of a source on a customer's computer (M41: isolate, release, uninstall); the target id is the source's agent id.</summary>
     public const string Device = "device";
 
+    /// <summary>
+    /// A CRM organization that gets its counterpart at a vendor (M43: an Atera customer, a Huntress organization, a CloudAlly account);
+    /// the target id is the organization's id, since the vendor has no id for it yet.
+    /// </summary>
+    public const string Organization = "organization";
+
     /// <summary>What an action's stored parameters become once its words are erased or past their retention (DEV-11).</summary>
     public const string ErasedParameters = "{}";
 

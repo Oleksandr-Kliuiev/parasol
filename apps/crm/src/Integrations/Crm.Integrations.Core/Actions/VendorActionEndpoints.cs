@@ -68,8 +68,11 @@ internal sealed class VendorActionLookupRequestValidator : AbstractValidator<Ven
 /// </summary>
 public static class VendorActionEndpoints
 {
-    /// <summary>The permissions of the registered kinds (Atera ticket actions, own time); a test keeps the list complete.</summary>
-    public static readonly string[] RequestPermissions = [Permissions.ServiceWrite, Permissions.TimeOwn];
+    /// <summary>
+    /// The permissions of the registered kinds (Atera ticket actions, own time; M43: creating a customer at a vendor, which links it);
+    /// a test keeps the list complete.
+    /// </summary>
+    public static readonly string[] RequestPermissions = [Permissions.ServiceWrite, Permissions.TimeOwn, Permissions.IntegrationsManage];
 
     public static readonly string[] ReadPermissions = [Permissions.ServiceRead, Permissions.TimeOwn, Permissions.IntegrationsManage];
 

@@ -16,6 +16,8 @@
     <ProjectReference Include="..\..\Projects\Crm.Projects.Contracts\Crm.Projects.Contracts.csproj" />
     <ProjectReference Include="..\..\Sales\Crm.Sales.Contracts\Crm.Sales.Contracts.csproj" />
     <ProjectReference Include="..\..\Service\Crm.Service.Contracts\Crm.Service.Contracts.csproj" />
+    <ProjectReference Include="..\..\Security\Crm.Security.Contracts\Crm.Security.Contracts.csproj" />
+    <ProjectReference Include="..\..\Backup\Crm.Backup.Contracts\Crm.Backup.Contracts.csproj" />
     <ProjectReference Include="..\..\TimeTracking\Crm.TimeTracking.Contracts\Crm.TimeTracking.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Crm.Infrastructure\Crm.Infrastructure.csproj" />
   </ItemGroup>

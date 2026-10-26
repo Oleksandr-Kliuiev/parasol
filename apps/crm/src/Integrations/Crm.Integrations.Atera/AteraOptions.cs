@@ -104,12 +104,18 @@ public sealed class AteraOptions
     public bool DryRun { get; set; }
 
     /// <summary>
-    /// The kinds of action people may ask of Atera (M39.1/M39.2, M40): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
+    /// The kinds of action people may ask of Atera (M39.1/M39.2, M40, M43): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
     /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>, <c>alert.resolve</c>,
-    /// <c>alert.delete</c>. Empty by default: a kind is off until it is listed, and a kind added in a later release stays off until
-    /// someone lists it.
+    /// <c>alert.delete</c>, <c>customer.create</c>. Empty by default: a kind is off until it is listed, and a kind added in a later release
+    /// stays off until someone lists it.
     /// </summary>
     public List<string> EnabledActions { get; set; } = [];
+
+    /// <summary>
+    /// Atera's own web console, which the "Connect services" wizard (M43) leads to for what Atera's API cannot do — installing the agents.
+    /// Empty: the wizard names the step without a link.
+    /// </summary>
+    public string? ConsoleUrl { get; set; } = "https://app.atera.com/";
 
     /// <summary>Tickets' conversations (M39.2, <c>atera-ticket-conversations</c>).</summary>
     public string TicketConversationSyncCron { get; set; } = "*/5 * * * *";

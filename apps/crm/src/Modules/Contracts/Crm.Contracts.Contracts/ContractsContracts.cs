@@ -50,6 +50,12 @@ public enum QuantityModel
     PerM365User,
     PerSubscription,
     Manual,
+
+    /// <summary>The agents Huntress bills for the customer on the last day of the period (M43); the line's quantity is the estimate until read.</summary>
+    PerHuntressAgent,
+
+    /// <summary>The seats CloudAlly bills for the customer's backups on the last day of the period (M43); the line's quantity is the estimate until read.</summary>
+    PerBackupSeat,
 }
 
 /// <summary>Service level of an organization's current contract, e.g. for the Atera "SLA" custom field.</summary>
@@ -198,10 +204,14 @@ public interface IContractsApi
     Task<OrganizationBillingTerms> GetBillingTermsAsync(Guid organizationId, DateOnly date, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Lines of live contracts that are in force during the period, newest version of each line series only. Which of them fall due
-    /// in the period is decided by the caller from the contract's invoice frequency and timing (BR-BIL-01).
+    /// Lines of live contracts that are in force during the period: every version of a line series that touches it, each prorated by
+    /// its own days. Which of them fall due in the period is decided by the caller from the contract's invoice frequency and timing
+    /// (BR-BIL-01).
     /// </summary>
     Task<IReadOnlyList<BillableContractLine>> GetBillableLinesAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);
+
+    /// <summary>The same for one customer (M43: what its services count against its contract).</summary>
+    Task<IReadOnlyList<BillableContractLine>> GetBillableLinesAsync(Guid organizationId, DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);
 
     /// <summary>Hour-bank purchases recorded in the period (BR-CON-05), so a renewed or topped-up package is invoiced once.</summary>
     Task<IReadOnlyList<HourBankPurchase>> GetHourBankPurchasesAsync(DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken);

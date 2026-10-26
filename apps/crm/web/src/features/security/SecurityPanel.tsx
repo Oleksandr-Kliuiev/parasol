@@ -1,12 +1,16 @@
-import { Link, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, makeStyles } from '@fluentui/react-components';
-import { DocumentPdf16Regular, Open16Regular, Shield16Regular } from '@fluentui/react-icons';
+import { useMemo } from 'react';
+import { Button, Link, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, makeStyles } from '@fluentui/react-components';
+import { ArrowDownload16Regular, DocumentPdf16Regular, Open16Regular, Shield16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
+import { Permissions, useCan } from '../../auth/CurrentUserContext';
 import { Panel } from '../../shared/components/Panel';
 import { ScrollTable } from '../../shared/components/ScrollTable';
 import { formatDate, formatNumber } from '../../shared/utils/format';
 import { safeHttpUrl } from '../../shared/utils/safeUrl';
 import { useTableCardStyles } from '../admin/tableCard';
+import { useStoredDocuments } from '../documents/api';
+import { useStoredDownload } from '../documents/storedFiles';
 import { FigureGrid } from '../reports/FigureGrid';
 import { AlertReadLine } from '../service/alerts/AlertReadLine';
 import { sourceName } from '../service/alerts/alertText';
@@ -28,7 +32,13 @@ const useStyles = makeStyles({
   incidentsCol: { width: '170px' },
   external: { display: 'inline-flex', alignItems: 'center', gap: '4px', minHeight: '24px', '& svg': { flexShrink: 0 } },
   number: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+  // Huntress's link and Parasoll's own copy (M43) side by side, one under the other when the column is narrow.
+  files: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', minWidth: 0 },
+  error: { color: h.emberT, margin: 0, fontSize: '12.5px', lineHeight: '18px' },
 });
+
+/** The stored copies of a customer's Huntress reports (M43): a year and some months of both kinds of report fit one page. */
+const COPY_PAGE = 60;
 
 /** The period of a report as people say it: the month of a monthly report, else its first and last day. */
 function period(report: SummaryReport, locale: string) {
@@ -54,6 +64,11 @@ export function SecurityPanel({ organizationId, scope }: { organizationId: strin
   const reads = overview?.reads ?? []; const usages = overview?.usage ?? []; const reports = overview?.reports ?? [];
   const organizationsRead = reads.find((r) => r.job === 'huntress-organizations');
   const reportsRead = reads.find((r) => r.job === 'huntress-reports');
+  // M43: the copy Parasoll keeps of a report, for those who may read the customer's documents.
+  const canCopies = useCan(Permissions.customersRead);
+  const stored = useStoredDocuments(organizationId, { enabled: canCopies && reports.length > 0, limit: COPY_PAGE });
+  const copies = useMemo(() => new Map(stored.items.filter((d) => d.kind === 'huntress-monthly').map((d) => [d.sourceKey, d])), [stored.items]);
+  const copy = useStoredDownload(organizationId);
   // No security source is switched on or was ever read: the panel would have nothing to say, so it is left out.
   if (overview && reads.length === 0 && usages.length === 0 && reports.length === 0) return null;
   return <Panel title={t('security.panel.title')} icon={<Shield16Regular />}
@@ -75,6 +90,7 @@ export function SecurityPanel({ organizationId, scope }: { organizationId: strin
           <TableBody>{reports.map((report) => {
             const href = report.url ? safeHttpUrl(report.url) : undefined;
             const name = period(report, i18n.language);
+            const kept = report.system === 'huntress' ? copies.get(`huntress:report:${report.externalId}`) : undefined;
             return <TableRow key={`${report.system}-${report.externalId}`}>
               <TableCell>{name}</TableCell>
               <TableCell className={styles.number}>{report.incidentsReported === null ? '—'
@@ -82,17 +98,21 @@ export function SecurityPanel({ organizationId, scope }: { organizationId: strin
                   : t('security.reports.incidentsValue', { reported: report.incidentsReported, resolved: report.incidentsResolved })}</TableCell>
               <TableCell className={styles.number}>{report.signalsDetected === null ? '—' : formatNumber(report.signalsDetected, 0)}</TableCell>
               <TableCell className={styles.number}>{report.agentsCount === null ? '—' : formatNumber(report.agentsCount, 0)}</TableCell>
-              <TableCell>{href
-                ? <Link href={href} target="_blank" rel="noopener noreferrer" className={styles.external}
+              <TableCell>{href || kept ? <span className={styles.files}>
+                {href && <Link href={href} target="_blank" rel="noopener noreferrer" className={styles.external}
                   aria-label={t('security.reports.openPdf', { period: name, source: sourceName(t, report.system) })}>
-                  <DocumentPdf16Regular aria-hidden />{sourceName(t, report.system)}<Open16Regular aria-hidden /></Link>
-                : '—'}</TableCell>
+                  <DocumentPdf16Regular aria-hidden />{sourceName(t, report.system)}<Open16Regular aria-hidden /></Link>}
+                {kept && <Button size="small" appearance="subtle" icon={<ArrowDownload16Regular />} disabled={copy.busy !== null}
+                  onClick={() => void copy.save(kept.id)} aria-label={t('security.reports.downloadCopy', { period: name })}>
+                  {t('security.reports.storedCopy')}</Button>}
+              </span> : '—'}</TableCell>
             </TableRow>;
           })}</TableBody>
         </Table>
       </ScrollTable>}
       {overview && reports.length > 0 && overview.reportsTotal > reports.length && <Text block className={styles.muted}>
         {t('security.reports.shown', { shown: reports.length, total: overview.reportsTotal })}</Text>}
+      {copy.failed && <p role="alert" className={styles.error}>{t('documents.stored.downloadFailed')}</p>}
       {/* No report is "none" only once the reports were read; before that it is not known. */}
       {usages.length > 0 && reports.length === 0 && <Text block className={styles.muted}>
         {t(reportsRead?.startedAt ? 'security.reports.none' : 'security.reports.notRead')}</Text>}
