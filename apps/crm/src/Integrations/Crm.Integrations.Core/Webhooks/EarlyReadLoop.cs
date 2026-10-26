@@ -127,7 +127,17 @@ public sealed class EarlyReadRunner(
                         break;
                     }
 
-                    trigger.Trigger(request.Job);
+                    try
+                    {
+                        trigger.Trigger(request.Job);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        // Nothing was queued: the requests wait again for the next round, and no start is shown that never was.
+                        await UnmarkAsync(db, request, now);
+                        throw;
+                    }
+
                     started++;
                     logger.LogInformation("Early read of {System}/{Job} started after {Requests} webhook request(s)", request.System, request.Job, request.Requests);
                     break;
@@ -136,6 +146,15 @@ public sealed class EarlyReadRunner(
 
         return started;
     }
+
+    /// <summary>Puts back what the round read, while no other round has marked the request since.</summary>
+    private static Task<int> UnmarkAsync(IntegrationDbContext db, EarlyReadRequest request, DateTimeOffset triggered) =>
+        db.EarlyReadRequests
+            .Where(r => r.System == request.System && r.Job == request.Job && r.TriggeredAt == triggered)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(r => r.ServedUpTo, request.ServedUpTo)
+                .SetProperty(r => r.WaitingSince, request.WaitingSince ?? request.RequestedAt)
+                .SetProperty(r => r.TriggeredAt, request.TriggeredAt), CancellationToken.None);
 
     private static Task<int> MarkAsync(IntegrationDbContext db, EarlyReadRequest request, DateTimeOffset served, DateTimeOffset? triggered, CancellationToken ct) =>
         db.EarlyReadRequests

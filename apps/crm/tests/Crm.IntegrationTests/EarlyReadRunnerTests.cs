@@ -36,7 +36,7 @@ public sealed class EarlyReadRunnerTests(CrmWebFactory factory) : IAsyncLifetime
         public void Trigger(string jobId) => Started.Enqueue(jobId);
     }
 
-    private EarlyReadRunner Runner(RecordingTrigger trigger) => new(
+    private EarlyReadRunner Runner(IJobTrigger trigger) => new(
         factory.Services.GetRequiredService<IServiceScopeFactory>(), trigger, TimeProvider.System,
         Options.Create(new EarlyReadOptions { Quiet = TimeSpan.Zero, MaxWait = TimeSpan.Zero }), NullLogger<EarlyReadRunner>.Instance);
 
@@ -112,6 +112,39 @@ public sealed class EarlyReadRunnerTests(CrmWebFactory factory) : IAsyncLifetime
 
             first.Started.Concat(second.Started).Count(started => started == job).ShouldBe(1, $"attempt {attempt}");
         }
+    }
+
+    /// <summary>The job server refuses to queue one job (storage down); every other start is recorded.</summary>
+    private sealed class RefusingTrigger(string refused) : IJobTrigger
+    {
+        public ConcurrentQueue<string> Started { get; } = new();
+
+        public void Trigger(string jobId)
+        {
+            if (jobId == refused)
+            {
+                throw new InvalidOperationException("Synthetic: the job storage did not answer.");
+            }
+
+            Started.Enqueue(jobId);
+        }
+    }
+
+    [Fact]
+    public async Task A_start_the_job_server_refuses_leaves_the_request_waiting_and_shows_no_start()
+    {
+        await RequestAsync("refused");
+        var before = await RequestOfAsync("refused");
+
+        await Should.ThrowAsync<InvalidOperationException>(() => Runner(new RefusingTrigger("refused")).RunDueAsync(Ct));
+
+        var after = await RequestOfAsync("refused");
+        after.IsWaiting.ShouldBeTrue();
+        (after.TriggeredAt, after.ServedUpTo, after.WaitingSince).ShouldBe((before.TriggeredAt, before.ServedUpTo, before.WaitingSince));
+        // The next round, with the job server back, starts it.
+        var trigger = new RecordingTrigger();
+        await Runner(trigger).RunDueAsync(Ct);
+        trigger.Started.ShouldContain("refused");
     }
 
     [Fact]

@@ -4582,7 +4582,7 @@
       "lastEvent": "Siste hendelse",
       "noEvent": "Ingen hendelse mottatt ennå",
       "received": "mottatte leveringer: {{count}}",
-      "earlyRead": "Lest tidlig",
+      "earlyRead": "Siste tidlige lesing",
       "refused": "Siste avviste levering",
       "events": {
         "incident_report": {
@@ -4608,7 +4608,7 @@
         "unknown": "en hendelse Parasoll ikke kjenner"
       },
       "refusal": {
-        "Unsigned": "ikke signert",
+        "Unsigned": "uten signatur eller nøkkel",
         "Stale": "signert for lenge siden",
         "BadSignature": "signaturen eller nøkkelen stemmer ikke med den som er satt i Parasoll"
       }

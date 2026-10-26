@@ -40,7 +40,7 @@ describe('the connections page', () => {
     expect(within(webhook!).getByText('Webhook')).toBeVisible();
     expect(within(webhook!).getByText('On')).toBeVisible();
     expect(webhook!).toHaveTextContent(/Last event .+: ticket changed · deliveries received: 12/);
-    expect(within(webhook!).getByText(/Read early/)).toBeVisible();
+    expect(within(webhook!).getByText(/Last early read/)).toBeVisible();
     // The limit says what it is for: the job counts as late after it.
     expect(within(rows[1]!).getByText(/late after 15 min/)).toBeVisible();
     expect(rows[1]!.querySelector('time')).toHaveAttribute('datetime', '2026-10-16T09:55:00Z');

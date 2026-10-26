@@ -58,10 +58,37 @@ public sealed class EarlyReadTarget
     public DateTimeOffset RequestedAt { get; set; }
 }
 
-/// <summary>Where crm-web files what a proven delivery asks for, and what it heard (M44).</summary>
-public sealed class WebhookInbox(IntegrationDbContext db)
+/// <summary>
+/// When this crm-web instance last noted a refused delivery of each system: a flood of forged deliveries reaches the database at most
+/// once a minute per system and instance, and the row's own check holds that across instances (M44).
+/// </summary>
+public sealed class WebhookRefusalThrottle
 {
-    /// <summary>A refusal is written at most once a minute per system: a flood of forged deliveries costs the database no more.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, long> lastNoted = new(StringComparer.Ordinal);
+
+    /// <summary>True for the first refusal of a system in an interval, which is then noted; false for every other.</summary>
+    public bool TryTake(string system, DateTimeOffset now)
+    {
+        while (true)
+        {
+            var known = lastNoted.TryGetValue(system, out var last);
+            if (known && now.UtcTicks - last < WebhookInbox.RefusalWriteInterval.Ticks)
+            {
+                return false;
+            }
+
+            if (known ? lastNoted.TryUpdate(system, now.UtcTicks, last) : lastNoted.TryAdd(system, now.UtcTicks))
+            {
+                return true;
+            }
+        }
+    }
+}
+
+/// <summary>Where crm-web files what a proven delivery asks for, and what it heard (M44).</summary>
+public sealed class WebhookInbox(IntegrationDbContext db, WebhookRefusalThrottle refusals)
+{
+    /// <summary>A refusal is noted at most once a minute per system: a flood of forged deliveries is not a flood of writes.</summary>
     public static readonly TimeSpan RefusalWriteInterval = TimeSpan.FromMinutes(1);
 
     /// <summary>The longest id of a record a delivery may name; a longer one is not read early.</summary>
@@ -108,9 +135,18 @@ public sealed class WebhookInbox(IntegrationDbContext db)
             await transaction.CommitAsync(cancellationToken);
         }, ct);
 
-    /// <summary>Notes a refused delivery: the time and the reason, unless one was noted less than a minute ago.</summary>
+    /// <summary>
+    /// Notes a refused delivery: the time and the reason, unless one was noted less than a minute ago. An unsigned one is not noted:
+    /// the vendor always signs (or calls the address with its key), anyone can post without, and the connections page would then call a
+    /// working webhook broken until the vendor's next event.
+    /// </summary>
     public async Task RefusedAsync(string system, WebhookRefusal refusal, DateTimeOffset now, CancellationToken ct)
     {
+        if (refusal == WebhookRefusal.Unsigned || !refusals.TryTake(system, now))
+        {
+            return;
+        }
+
         var reason = refusal.ToString();
         var quietUntil = now - RefusalWriteInterval;
         await db.Database.ExecuteSqlInterpolatedAsync($"""

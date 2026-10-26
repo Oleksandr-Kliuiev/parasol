@@ -163,9 +163,11 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
                 System = Read, LastReceivedAt = now.AddMinutes(-4), LastEventType = "ticket", Received = 9, LastRefusedAt = now.AddMinutes(-1),
                 LastRefusal = "BadSignature",
             });
+            // "fresh" was started early 3 minutes ago and its run began; "other" was started 1 minute ago and its run never began.
             db.EarlyReadRequests.AddRange(
                 new Crm.Integrations.Core.Webhooks.EarlyReadRequest { System = Read, Job = "fresh", RequestedAt = now.AddMinutes(-4), TriggeredAt = now.AddMinutes(-3) },
-                new Crm.Integrations.Core.Webhooks.EarlyReadRequest { System = Read, Job = "other", RequestedAt = now.AddMinutes(-9), TriggeredAt = now.AddMinutes(-8) });
+                new Crm.Integrations.Core.Webhooks.EarlyReadRequest { System = Read, Job = "other", RequestedAt = now.AddMinutes(-2), TriggeredAt = now.AddMinutes(-1) });
+            db.SyncRuns.Add(Run(Read, "fresh", now.AddMinutes(-3).AddSeconds(5), SyncRunStatus.Succeeded));
             foreach (var component in new[] { "outbox", "jobs", "actions", "early-reads" })
             {
                 db.WorkerHeartbeats.Add(new WorkerHeartbeat { Component = component, Instance = Instance, BeatAt = now });
@@ -183,7 +185,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         (webhook.Enabled, webhook.LastEventType, webhook.Received, webhook.LastRefusal).ShouldBe((true, "ticket", 9L, "BadSignature"));
         webhook.LastReceivedAt!.Value.ShouldBe(now.AddMinutes(-4), TimeSpan.FromSeconds(1));
         webhook.LastRefusedAt!.Value.ShouldBe(now.AddMinutes(-1), TimeSpan.FromSeconds(1));
-        // The latest read a webhook started, of any of the system's jobs.
+        // The latest read a webhook started whose run began, of any of the system's jobs: not the start the job server never ran.
         webhook.LastEarlyReadAt!.Value.ShouldBe(now.AddMinutes(-3), TimeSpan.FromSeconds(1));
         view.Integrations.Single(i => i.System == Off).Webhook.ShouldBeNull();
     }

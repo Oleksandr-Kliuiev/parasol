@@ -25,11 +25,15 @@ internal sealed class ConnectionStatusStore(
         return new(snapshot, await heartbeats.ReadAsync(ct), options.Value.HeartbeatStaleAfter, uncertain, await WebhooksAsync(ct));
     }
 
-    /// <summary>What each system's webhooks did (M44): the saved state and the latest read they started early.</summary>
+    /// <summary>
+    /// What each system's webhooks did (M44): the saved state and the latest read they started early — a start whose run began, not
+    /// one the job server never ran (a job a worker without the vendor's credentials returns from at once).
+    /// </summary>
     private async Task<IReadOnlyDictionary<string, StoredWebhook>> WebhooksAsync(CancellationToken ct)
     {
         var states = await db.WebhookStates.AsNoTracking().ToListAsync(ct);
-        var started = await db.EarlyReadRequests.AsNoTracking().Where(r => r.TriggeredAt != null)
+        var started = await db.EarlyReadRequests.AsNoTracking()
+            .Where(r => r.TriggeredAt != null && db.SyncRuns.Any(run => run.System == r.System && run.Job == r.Job && run.StartedAt >= r.TriggeredAt))
             .GroupBy(r => r.System).Select(g => new { System = g.Key, Last = g.Max(r => r.TriggeredAt) })
             .ToDictionaryAsync(g => g.System, g => g.Last, ct);
         return states.Select(s => s.System).Union(started.Keys).ToDictionary(system => system, system =>

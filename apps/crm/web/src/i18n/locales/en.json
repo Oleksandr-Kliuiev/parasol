@@ -4584,7 +4584,7 @@
       "lastEvent": "Last event",
       "noEvent": "No event received yet",
       "received": "deliveries received: {{count}}",
-      "earlyRead": "Read early",
+      "earlyRead": "Last early read",
       "refused": "Last refused delivery",
       "events": {
         "incident_report": {
@@ -4610,7 +4610,7 @@
         "unknown": "an event Parasoll does not know"
       },
       "refusal": {
-        "Unsigned": "not signed",
+        "Unsigned": "no signature or key",
         "Stale": "signed too long ago",
         "BadSignature": "the signature or key does not match the one set in Parasoll"
       }

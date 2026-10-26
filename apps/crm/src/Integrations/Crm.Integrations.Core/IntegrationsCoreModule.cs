@@ -45,6 +45,7 @@ public static class IntegrationsCoreModule
         services.AddSingleton<Actions.VendorActionRunner>();
         // M44: crm-web files what a vendor's webhook asks for; the job it names reads the records the webhook named.
         services.AddScoped<Webhooks.WebhookInbox>();
+        services.AddSingleton<Webhooks.WebhookRefusalThrottle>();
         services.AddScoped<Webhooks.EarlyReadTargets>();
         services.AddOptions<Webhooks.EarlyReadOptions>().Bind(configuration.GetSection(Webhooks.EarlyReadOptions.SectionName));
         services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, IntegrationDatabasePermissions>();

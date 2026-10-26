@@ -4582,7 +4582,7 @@
       "lastEvent": "Siste hending",
       "noEvent": "Inga hending motteken enno",
       "received": "mottekne leveringar: {{count}}",
-      "earlyRead": "Lese tidleg",
+      "earlyRead": "Siste tidlege lesing",
       "refused": "Siste avviste levering",
       "events": {
         "incident_report": {
@@ -4608,7 +4608,7 @@
         "unknown": "ei hending Parasoll ikkje kjenner"
       },
       "refusal": {
-        "Unsigned": "ikkje signert",
+        "Unsigned": "utan signatur eller nøkkel",
         "Stale": "signert for lenge sidan",
         "BadSignature": "signaturen eller nøkkelen stemmer ikkje med den som er sett i Parasoll"
       }

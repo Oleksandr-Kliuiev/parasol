@@ -36,6 +36,10 @@ public static class ServiceDefaultsExtensions
             logging.IncludeFormattedMessage = true;
             logging.IncludeScopes = true;
         });
+        // The hosting request scope would put every request's raw path (customer ids in API paths, the key in Atera's webhook address,
+        // M44) on every log line written during the request, and scopes are exported. Hosting creates the scope only while its own
+        // category logs, so that category is off; a log record carries the request's trace id instead.
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.None);
 
         var otel = builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics => metrics

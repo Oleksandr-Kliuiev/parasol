@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using static Crm.IntegrationTests.IntegrationTestHelpers;
 
 namespace Crm.IntegrationTests;
@@ -59,6 +60,18 @@ public sealed class WebhookApiTests(CrmWebFactory factory) : IAsyncLifetime
         return request;
     }
 
+    /// <summary>A body sent without its length, as a chunked request comes: the read itself has to stop at the limit.</summary>
+    private sealed class WithoutLength(byte[] body) : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context) => stream.WriteAsync(body).AsTask();
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+    }
+
     private static HttpRequestMessage Unsigned(string path, string body) =>
         new(HttpMethod.Post, path) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
@@ -100,7 +113,7 @@ public sealed class WebhookApiTests(CrmWebFactory factory) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_delivery_that_cannot_prove_its_sender_is_refused_and_files_nothing_but_the_refusal()
+    public async Task A_delivery_that_cannot_prove_its_sender_is_refused_and_files_nothing_but_a_signed_refusal()
     {
         await using (var scope = factory.Services.CreateAsyncScope())
         {
@@ -112,18 +125,21 @@ public sealed class WebhookApiTests(CrmWebFactory factory) : IAsyncLifetime
         var (stateBefore, requestBefore) = await SavedAsync(HuntressTypes.System, HuntressAlertSyncJob.JobId);
         const string body = """{"event_type":"incident_report.created","id":17,"subject":"Synthetic subject"}""";
 
+        // Anyone can post without a signature: refused, and not noted, so the connections page does not call a working webhook broken.
         var unsigned = await client.SendAsync(Unsigned("/webhooks/huntress", body), Ct);
         unsigned.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-        var refusedAt = (await SavedAsync(HuntressTypes.System, HuntressAlertSyncJob.JobId)).State!.LastRefusedAt;
+        (await SavedAsync(HuntressTypes.System, HuntressAlertSyncJob.JobId)).State?.LastRefusedAt.ShouldBeNull();
+        // Signed with another secret: the vendor's secret changed, or a forgery. Noted with its reason.
         (await client.SendAsync(Signed(body, secret: "whsec_" + Convert.ToBase64String(new byte[24])), Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        var refusedAt = (await SavedAsync(HuntressTypes.System, HuntressAlertSyncJob.JobId)).State!.LastRefusedAt.ShouldNotBeNull();
+        // More within a minute are refused all the same and cost the database nothing.
         (await client.SendAsync(Signed(body, at: DateTimeOffset.UtcNow.AddMinutes(-10)), Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
         var (state, request) = await SavedAsync(HuntressTypes.System, HuntressAlertSyncJob.JobId);
         state!.Received.ShouldBe(stateBefore?.Received ?? 0);
         (request?.Requests ?? 0).ShouldBe(requestBefore?.Requests ?? 0);
-        // The first refusal is noted with its reason; more within a minute cost the database nothing.
-        state.LastRefusal.ShouldBe(nameof(WebhookRefusal.Unsigned));
-        state.LastRefusedAt.ShouldNotBeNull().ShouldBe(refusedAt!.Value);
+        state.LastRefusal.ShouldBe(nameof(WebhookRefusal.BadSignature));
+        state.LastRefusedAt.ShouldBe(refusedAt);
         // The answer names nothing of the delivery.
         (await unsigned.Content.ReadAsStringAsync(Ct)).ShouldNotContain("Synthetic");
     }
@@ -147,6 +163,11 @@ public sealed class WebhookApiTests(CrmWebFactory factory) : IAsyncLifetime
         var large = $$"""{"event_type":"incident_report.created","body":"{{new string('x', WebhookEvents.MaxBodyBytes)}}"}""";
 
         (await client.SendAsync(Signed(large), Ct)).StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+        // Without a length the read itself stops at the limit.
+        var chunked = Signed(large);
+        chunked.Content = new WithoutLength(Encoding.UTF8.GetBytes(large));
+        chunked.Content.Headers.ContentLength.ShouldBeNull();
+        (await client.SendAsync(chunked, Ct)).StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
 
         (await SavedAsync(HuntressTypes.System, HuntressAlertSyncJob.JobId)).State?.Received.ShouldBe(stateBefore?.Received ?? 0);
     }
@@ -200,30 +221,72 @@ public sealed class WebhookApiTests(CrmWebFactory factory) : IAsyncLifetime
         });
         var ticket = await host.TicketAsync();
         namedTickets.Add(ticket.TicketId.ToString(CultureInfo.InvariantCulture));
-        // Atera's list of changed tickets does not name it (whether a change moves it there at once is not confirmed, EXT-03).
+        var path = $"/api/v3/tickets/{ticket.TicketId}";
+        async Task ReadConversationsAsync()
+        {
+            await using var scope = host.Services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<AteraTicketConversationSyncJob>().RunAsync(Ct);
+        }
+
+        // Its conversation is read once while the list of changes names it, so the ticket is not among those read again for age.
+        host.On("GET", "/api/v3/tickets/lastmodified").RespondWith(JsonReply(new
+        {
+            items = new[] { new { TicketID = ticket.TicketId, CustomerID = ticket.CustomerId, TicketTitle = "Printer is down", TicketStatus = "Open",
+                TicketPriority = "Medium", TicketCreatedDate = DateTimeOffset.UtcNow.AddHours(-3), EndUserEmail = "kari@example.no" } },
+            totalPages = 1,
+        }));
+        host.On("GET", $"{path}/comments").RespondWith(JsonReply(new { items = Array.Empty<object>(), totalPages = 1 }));
+        await ReadConversationsAsync();
+
+        // Then Atera's list no longer names it (whether a change moves it there at once is not confirmed, EXT-03) and a reply arrives.
         host.On("GET", "/api/v3/tickets/lastmodified").RespondWith(JsonReply(new { items = Array.Empty<object>(), totalPages = 1 }));
-        host.On("GET", $"/api/v3/tickets/{ticket.TicketId}/comments").RespondWith(JsonReply(new
+        host.On("GET", $"{path}/comments").RespondWith(JsonReply(new
         {
             items = new object[] { new { CommentID = "w-1", CommentText = "Synthetic reply", CommentDate = DateTimeOffset.UtcNow.AddMinutes(-1), EnduserID = 7 } },
             totalPages = 1,
         }));
+        await ReadConversationsAsync();
+        var comments = await (await host.Client().GetAsync($"/api/v1/service/tickets/{ticket.MirrorId}/comments", Ct)).ReadJsonAsync();
+        comments.GetProperty("totalCount").GetInt32().ShouldBe(0, "without the webhook nothing names the ticket");
+        var readsById = host.Atera.LogEntries.Count(e => e.RequestMessage!.Path == path);
+
         using (var webhook = host.Client())
         {
             (await webhook.SendAsync(Unsigned($"/webhooks/atera/{AteraKey}", $$"""{"TicketID":{{ticket.TicketId}}}"""), Ct)).StatusCode
                 .ShouldBe(HttpStatusCode.NoContent);
         }
 
-        await using (var scope = host.Services.CreateAsyncScope())
-        {
-            await scope.ServiceProvider.GetRequiredService<AteraTicketConversationSyncJob>().RunAsync(Ct);
-        }
+        await ReadConversationsAsync();
 
-        host.Atera.LogEntries.ShouldContain(e => e.RequestMessage!.Path == $"/api/v3/tickets/{ticket.TicketId}");
-        var comments = await (await host.Client().GetAsync($"/api/v1/service/tickets/{ticket.MirrorId}/comments", Ct)).ReadJsonAsync();
+        host.Atera.LogEntries.Count(e => e.RequestMessage!.Path == path).ShouldBe(readsById + 1);
+        comments = await (await host.Client().GetAsync($"/api/v1/service/tickets/{ticket.MirrorId}/comments", Ct)).ReadJsonAsync();
         comments.GetProperty("items").EnumerateArray().Select(c => c.GetProperty("text").GetString()).ShouldBe(["Synthetic reply"]);
         // Read: it is not asked for again.
         await using var read = factory.Services.CreateAsyncScope();
         (await read.ServiceProvider.GetRequiredService<IntegrationDbContext>().EarlyReadTargets
             .AnyAsync(t => t.ExternalId == ticket.TicketId.ToString(CultureInfo.InvariantCulture), Ct)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task The_key_in_atera_s_address_reaches_no_log_line_of_its_request()
+    {
+        var logs = new CapturingLoggerProvider();
+        await using var host = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Integrations:Atera:WebhookEnabled", "true");
+            builder.UseSetting("Integrations:Atera:WebhookKey", AteraKey);
+            builder.ConfigureLogging(logging => logging.AddProvider(logs));
+        });
+        using var client = host.CreateClient();
+        const string wrongKey = "an-old-atera-webhook-key-that-was-replaced-0123";
+        var ticket = TestData.AteraId().ToString(CultureInfo.InvariantCulture);
+        namedTickets.Add(ticket);
+
+        // A refused one writes a security line during the request, an accepted one may write too: neither carries the address.
+        (await client.SendAsync(Unsigned($"/webhooks/atera/{wrongKey}", "{}"), Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await client.SendAsync(Unsigned($"/webhooks/atera/{AteraKey}", $$"""{"TicketID":{{ticket}}}"""), Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        logs.Lines.ShouldContain(line => line.Contains("Webhook refused: system atera, /webhooks/{system}/{key}, reason BadSignature", StringComparison.Ordinal));
+        logs.Lines.ShouldNotContain(line => line.Contains(wrongKey, StringComparison.Ordinal) || line.Contains(AteraKey, StringComparison.Ordinal));
     }
 }
