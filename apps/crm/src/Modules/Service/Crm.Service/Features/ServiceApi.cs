@@ -225,13 +225,13 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
         await db.Tickets.AsNoTracking()
             .Where(t => t.System == system && (t.IsOpen || t.CreatedAtSource >= since || t.ResolvedAt >= since || t.LastActivityAt >= since))
             .OrderByDescending(t => t.ExternalId)
-            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status))
+            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status, t.Url))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyDictionary<long, TicketRef>> GetTicketsAsync(string system, IReadOnlyCollection<long> externalIds, CancellationToken cancellationToken) =>
         await db.Tickets.AsNoTracking()
             .Where(t => t.System == system && externalIds.Contains(t.ExternalId))
-            .ToDictionaryAsync(t => t.ExternalId, t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status), cancellationToken);
+            .ToDictionaryAsync(t => t.ExternalId, t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status, t.Url), cancellationToken);
 
     public async Task<TicketRequestView?> GetTicketRequestAsync(Guid requestId, CancellationToken cancellationToken) =>
         await db.TicketRequests.AsNoTracking().Where(r => r.Id == requestId)
@@ -269,7 +269,7 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
     public async Task<IReadOnlyList<TicketRef>> GetTicketsOfPersonAsync(Guid? contactId, IReadOnlyCollection<string> emails, CancellationToken cancellationToken) =>
         await Features.Privacy.ServicePersonalData.TicketsOfPerson(db.Tickets.AsNoTracking(), contactId, emails)
             .OrderBy(t => t.Id)
-            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status))
+            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status, t.Url))
             .ToListAsync(cancellationToken);
 }
 

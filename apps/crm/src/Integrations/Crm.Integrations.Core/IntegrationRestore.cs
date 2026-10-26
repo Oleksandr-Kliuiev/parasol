@@ -108,7 +108,7 @@ internal sealed class IntegrationRestoreParticipant(IntegrationDbContext db, Tim
 
     /// <summary>
     /// A vendor action whose operation is held may have reached the vendor (M39.1): it becomes uncertain, so a person checks there and
-    /// settles it in the action log instead of anything sending it again.
+    /// settles it instead of anything sending it again; the person who asked hears of it once the outbox runs after the maintenance.
     /// </summary>
     private async Task HoldActionAsync(OutboundOperation operation, CancellationToken cancellationToken)
     {
@@ -123,6 +123,7 @@ internal sealed class IntegrationRestoreParticipant(IntegrationDbContext db, Tim
         action.OutcomeCode = "VND_HELD_AFTER_RESTORE";
         action.Outcome = "Held after a database restore: it may have reached the vendor; check there and settle it.";
         action.CompletedAt = time.GetUtcNow();
+        db.OutboxMessages.Add(Actions.VendorActionNotices.Message(action.Id, time.GetUtcNow()));
     }
 
     private static string Describe(IEnumerable<ExternalEffectEntry> entries, string what)

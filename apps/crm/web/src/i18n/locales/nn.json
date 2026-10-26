@@ -1872,8 +1872,16 @@
     "recordInAteraHint": "Når timane er lagra, ser du kva Atera får, og stadfestar det.",
     "recordTitle": "Før på {{number}} i Atera",
     "recordConfirm": "Før i Atera",
-    "recordSaved": "Timane er lagra i Parasoll. Atera får dei berre viss du stadfestar no; ikkje før dei i tillegg for hand i Atera, elles blir dei talde to gonger.",
-    "recordSkip": "Hopp over"
+    "recordSaved": "Timane er lagra i Parasoll. Atera får dei når du stadfestar, no eller seinare frå Timelista mi; ikkje før dei i tillegg for hand i Atera, elles blir dei talde to gonger.",
+    "recordSkip": "Før seinare",
+    "recordLater": "Atera får desse timane først når du stadfestar; ikkje før dei i tillegg for hand i Atera, elles blir dei talde to gonger.",
+    "recordedInAtera": "I Atera",
+    "alreadyRecorded": "Desse timane er alt førte i Atera. Ei endring her når ikkje Atera.",
+    "recordInAteraItem": "Før i Atera",
+    "checkRecording": "Sjekk føringa i Atera",
+    "moreNamed": "Meir for {{hours}} t for {{organization}}, {{date}}",
+    "ticketFound": "#{{number}} {{title}} · {{status}}",
+    "ticketMissing": "Inga sak #{{number}} for {{organization}} i Parasoll"
   },
   "technicians": {
     "title": "Teknikarar",
@@ -2731,7 +2739,8 @@
       "SubscriptionCancellationWindow": "Angrefristar",
       "SubscriptionRenewal": "Lisensfornyingar",
       "StaleOpportunity": "Sal utan aktivitet",
-      "InvoiceOverdue": "Forfalne fakturaer"
+      "InvoiceOverdue": "Forfalne fakturaer",
+      "VendorActionUncertain": "Handlingar som må sjekkast"
     },
     "kinds": {
       "NoticeDeadline": "Avtale {{number}} for {{organization}}: siste dag å seie opp er {{date}}.",
@@ -2745,7 +2754,9 @@
       "SubscriptionRenewal_one": "{{offer}} hos {{organization}} blir fornya {{date}} ({{quantity}} lisens).",
       "SubscriptionRenewal_other": "{{offer}} hos {{organization}} blir fornya {{date}} ({{quantity}} lisensar).",
       "StaleOpportunity_one": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dag.",
-      "StaleOpportunity_other": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dagar."
+      "StaleOpportunity_other": "Salet «{{name}}» hos {{organization}} har ikkje hatt aktivitet i {{days}} dagar.",
+      "VendorActionUncertain": "{{system}} gav ikkje noko klart svar på «{{action}}» i sak #{{ticket}} ({{organization}}). Sjekk der og registrer kva du fann.",
+      "VendorActionUncertainNoTicket": "{{system}} gav ikkje noko klart svar på «{{action}}». Sjekk der og registrer kva du fann."
     },
     "emptyUnread": "Ingenting ulese ventar på deg.",
     "digestOff": "Slå på den daglege oppsummeringa for å velje klokkeslett.",
@@ -4435,9 +4446,10 @@
       "cancelAction": "Avbryt handlinga",
       "held": "Blir send om {{seconds}} s. Fram til då kan du avbryte henne.",
       "sending": "Sender til {{system}} …",
-      "uncertainNext": "{{system}} gav ikkje noko klart svar, så ingenting blir sendt på nytt. Sjekk i {{system}} om det skjedde, og registrer kva du fann under Handlingar hos leverandørar på sida Tilkoplingar.",
+      "uncertainNext": "{{system}} gav ikkje noko klart svar, så ingenting blir sendt på nytt. Sjekk i {{system}} om det skjedde, og registrer kva du fann – her, eller seinare frå varselet du får.",
       "openAtVendor": "Sjekk i {{system}}",
-      "keepsGoing": "Du kan lukke vindauget; handlinga held fram."
+      "keepsGoing": "Du kan lukke vindauget; handlinga held fram.",
+      "openTicket": "Opne saka"
     },
     "fields": {
       "requestedBy": "Bede om av",
@@ -4503,11 +4515,11 @@
   },
   "tickets": {
     "title": "Saker",
-    "subtitle": "Opne saker for alle kundar, nyaste først. Sakene ligg i Atera; du svarar på dei og endrar dei her.",
-    "subtitleAll": "Alle opne saker og alle saker frå dei siste 90 dagane, nyaste først.",
+    "subtitle": "Opne saker for alle kundar, sist aktive først. Sakene ligg i Atera; du svarar på dei og endrar dei her.",
+    "subtitleAll": "Alle opne saker og alle saker frå dei siste 90 dagane, sist aktive først.",
     "refresh": "Oppdater sakene",
     "filters": "Filtrer saker",
-    "search": "Søk i tittel eller nummer",
+    "search": "Søk i tittel, nummer eller kontakt",
     "stateLabel": "Kva saker",
     "show": {
       "open": "Opne",
@@ -4608,6 +4620,8 @@
       "addNote": "Legg til merknaden",
       "replyTitle": "Svar i {{number}}",
       "noteTitle": "Intern merknad i {{number}}"
-    }
+    },
+    "customerFilter": "Kunde",
+    "anyCustomer": "Alle kundar"
   }
 }

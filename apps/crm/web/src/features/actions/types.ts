@@ -87,10 +87,25 @@ export interface VendorAction {
   closedByName: string | null;
   closedAt: string | null;
   closeReason: string | null;
+  /** Parasoll's ticket the action concerns (its target, or the ticket its hours were recorded on). */
+  ticketId: string | null;
+  /** Where to check the action at the vendor: the ticket there. */
+  vendorUrl: string | null;
   etag: string;
 }
 
-/** A page of the log; `uncertain` and `waiting` count the whole filter. */
+/**
+ * The actions on one target of a list's page (M39): waiting for the worker, done (or already so at the vendor), and without a clear
+ * answer, with the newest of those so the row can open it. A target without actions is not in the answer.
+ */
+export interface ActionTargetFacts {
+  targetId: string;
+  waiting: number;
+  done: number;
+  uncertain: number;
+  checkId: string | null;
+}
+
 /** A kind the person may ask for now (M39.3): the vendor's switches and their access let it through; an allow-list may still refuse a customer. */
 export interface ActionKind {
   system: string;
@@ -101,6 +116,7 @@ export interface ActionKind {
   limitedToCustomers: boolean;
 }
 
+/** A page of the log; `uncertain` and `waiting` count the whole filter. */
 export interface ActionPage {
   items: VendorAction[];
   nextCursor: string | null;

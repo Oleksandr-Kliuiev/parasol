@@ -1872,8 +1872,16 @@
     "recordInAteraHint": "After saving you see what Atera gets, and confirm it.",
     "recordTitle": "Record on {{number}} in Atera",
     "recordConfirm": "Record in Atera",
-    "recordSaved": "The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.",
-    "recordSkip": "Skip"
+    "recordSaved": "The hours are saved in Parasoll. Atera gets them when you confirm, now or later from My timesheet; do not also add them in Atera by hand, or they are counted twice.",
+    "recordSkip": "Record later",
+    "recordLater": "Atera gets these hours only when you confirm; do not also add them in Atera by hand, or they are counted twice.",
+    "recordedInAtera": "In Atera",
+    "alreadyRecorded": "These hours are already recorded in Atera. A change here does not reach Atera.",
+    "recordInAteraItem": "Record in Atera",
+    "checkRecording": "Check the recording in Atera",
+    "moreNamed": "More for {{hours}} h for {{organization}}, {{date}}",
+    "ticketFound": "#{{number}} {{title}} · {{status}}",
+    "ticketMissing": "No ticket #{{number}} for {{organization}} in Parasoll"
   },
   "technicians": {
     "title": "Technicians",
@@ -2733,7 +2741,8 @@
       "SubscriptionCancellationWindow": "Cancellation windows",
       "SubscriptionRenewal": "Licence renewals",
       "StaleOpportunity": "Deals gone quiet",
-      "InvoiceOverdue": "Overdue invoices"
+      "InvoiceOverdue": "Overdue invoices",
+      "VendorActionUncertain": "Actions that need a check"
     },
     "kinds": {
       "NoticeDeadline": "Contract {{number}} for {{organization}}: the last day to give notice is {{date}}.",
@@ -2747,7 +2756,9 @@
       "SubscriptionRenewal_one": "{{offer}} at {{organization}} renews {{date}} ({{quantity}} licence).",
       "SubscriptionRenewal_other": "{{offer}} at {{organization}} renews {{date}} ({{quantity}} licences).",
       "StaleOpportunity_one": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} day.",
-      "StaleOpportunity_other": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} days."
+      "StaleOpportunity_other": "The deal “{{name}}” at {{organization}} has had no activity for {{days}} days.",
+      "VendorActionUncertain": "{{system}} gave no clear answer to “{{action}}” on ticket #{{ticket}} ({{organization}}). Check there and record what you found.",
+      "VendorActionUncertainNoTicket": "{{system}} gave no clear answer to “{{action}}”. Check there and record what you found."
     },
     "emptyUnread": "Nothing unread is waiting for you.",
     "digestOff": "Turn on the daily digest to choose its hour.",
@@ -4437,9 +4448,10 @@
       "cancelAction": "Cancel the action",
       "held": "Sent in {{seconds}} s. Until then you can cancel it.",
       "sending": "Sending to {{system}}…",
-      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened, then record what you found under Actions at vendors on the Connections page.",
+      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened and record what you found — here, or later from the notice you get.",
       "openAtVendor": "Check in {{system}}",
-      "keepsGoing": "You can close this window; the action carries on."
+      "keepsGoing": "You can close this window; the action carries on.",
+      "openTicket": "Open the ticket"
     },
     "fields": {
       "requestedBy": "Asked by",
@@ -4505,11 +4517,11 @@
   },
   "tickets": {
     "title": "Tickets",
-    "subtitle": "Open tickets of every customer, newest first. They live in Atera; you answer and change them here.",
-    "subtitleAll": "Every open ticket and every ticket of the last 90 days, newest first.",
+    "subtitle": "Open tickets of every customer, the most recently active first. They live in Atera; you answer and change them here.",
+    "subtitleAll": "Every open ticket and every ticket of the last 90 days, the most recently active first.",
     "refresh": "Refresh tickets",
     "filters": "Filter tickets",
-    "search": "Search title or number",
+    "search": "Search title, number or contact",
     "stateLabel": "Which tickets",
     "show": {
       "open": "Open",
@@ -4610,6 +4622,8 @@
       "addNote": "Add the note",
       "replyTitle": "Reply in {{number}}",
       "noteTitle": "Internal note in {{number}}"
-    }
+    },
+    "customerFilter": "Customer",
+    "anyCustomer": "All customers"
   }
 }

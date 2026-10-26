@@ -126,31 +126,35 @@ public static class ServiceModule
                 // BR-SRV-01: recent 90 days by default; open tickets are always shown.
                 var since = time.GetUtcNow().AddDays(-Math.Clamp(days ?? 90, 1, 3650));
                 tickets = openOnly == true ? tickets.Where(t => t.IsOpen) : tickets.Where(t => t.IsOpen || t.CreatedAtSource >= since);
+                // A number is the ticket's own; words are looked for in the title and in the contact as the desk names it (M39).
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var term = search.Trim();
-                    tickets = long.TryParse(term, out var number)
+                    tickets = long.TryParse(term, NumberStyles.None, CultureInfo.InvariantCulture, out var number)
                         ? tickets.Where(t => t.ExternalId == number)
-                        : tickets.Where(t => t.Title.Contains(term));
+                        : tickets.Where(t => t.Title.Contains(term) || (t.EndUserName != null && t.EndUserName.Contains(term)) ||
+                                             (t.EndUserEmail != null && t.EndUserEmail.Contains(term)));
                 }
 
-                // Open first, newest first, then id (DEV-12): a page per request and the count of all, never a silent cut.
+                // Open first, then the most recently active (the last message or change the desk reported, else the creation), then id
+                // (DEV-12): a page per request and the count of all, never a silent cut. The cursor carries every sort value.
                 var total = await tickets.CountAsync(ct);
                 if (KeysetCursor.Decode(cursor) is { } after &&
-                    DateTimeOffset.TryParseExact(after.Then, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var created))
+                    DateTimeOffset.TryParseExact(after.Then, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var active))
                 {
                     var rank = after.SortKey == "0" ? 0 : 1;
                     tickets = tickets.Where(t => (t.IsOpen ? 0 : 1) > rank ||
-                        ((t.IsOpen ? 0 : 1) == rank && (t.CreatedAtSource < created || (t.CreatedAtSource == created && t.Id.CompareTo(after.Id) < 0))));
+                        ((t.IsOpen ? 0 : 1) == rank && ((t.LastActivityAt ?? t.CreatedAtSource) < active ||
+                            ((t.LastActivityAt ?? t.CreatedAtSource) == active && t.Id.CompareTo(after.Id) < 0))));
                 }
 
                 var take = KeysetCursor.ClampLimit(limit);
-                var page = await tickets.OrderBy(t => t.IsOpen ? 0 : 1).ThenByDescending(t => t.CreatedAtSource).ThenByDescending(t => t.Id)
+                var page = await tickets.OrderBy(t => t.IsOpen ? 0 : 1).ThenByDescending(t => t.LastActivityAt ?? t.CreatedAtSource).ThenByDescending(t => t.Id)
                     .Take(take + 1).ToListAsync(ct);
                 var rows = page.Take(take).ToList();
                 var last = rows.LastOrDefault();
                 var next = page.Count > take && last is not null
-                    ? new KeysetCursor(last.IsOpen ? "0" : "1", last.Id, last.CreatedAtSource.ToString("O", CultureInfo.InvariantCulture)).Encode()
+                    ? new KeysetCursor(last.IsOpen ? "0" : "1", last.Id, (last.LastActivityAt ?? last.CreatedAtSource).ToString("O", CultureInfo.InvariantCulture)).Encode()
                     : null;
                 var contacts = await customers.GetContactNamesAsync(rows.Where(r => r.ContactId != null).Select(r => r.ContactId!.Value).Distinct().ToList(), ct);
                 var organizations = organizationId is null

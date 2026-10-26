@@ -6,6 +6,7 @@ export const notificationKinds = [
   'SubscriptionRenewal',
   'StaleOpportunity',
   'InvoiceOverdue',
+  'VendorActionUncertain',
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
 

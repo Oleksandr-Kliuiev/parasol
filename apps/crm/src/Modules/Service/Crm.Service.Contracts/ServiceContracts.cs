@@ -90,7 +90,8 @@ public sealed record TicketView(
     long? OwnerCustomerId,
     string? Url);
 
-public sealed record TicketRef(Guid Id, string System, long ExternalId, Guid OrganizationId, string Title, string Status);
+/// <summary>A stored ticket in short; <paramref name="Url"/> leads to it at the desk when the integration has a configured link.</summary>
+public sealed record TicketRef(Guid Id, string System, long ExternalId, Guid OrganizationId, string Title, string Status, string? Url);
 
 public sealed record TicketRequestView(
     Guid Id, Guid OrganizationId, Guid? ContactId, string Title, string Description, string Priority, string Type, TicketRequestStatus Status, Guid? RequestedBy);

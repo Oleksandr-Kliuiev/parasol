@@ -7,6 +7,7 @@ import {
   DocumentText20Regular,
   Handshake20Regular,
   HourglassHalf20Regular,
+  QuestionCircle20Regular,
   Receipt20Regular,
 } from '@fluentui/react-icons';
 import type { Tone } from '../../app/hearth';
@@ -21,6 +22,7 @@ const kindLook: Record<NotificationKind, { icon: ReactElement; tone: Tone }> = {
   SubscriptionRenewal: { icon: <ArrowRepeatAll20Regular />, tone: 'spruce' },
   StaleOpportunity: { icon: <Handshake20Regular />, tone: 'neutral' },
   InvoiceOverdue: { icon: <Receipt20Regular />, tone: 'ember' },
+  VendorActionUncertain: { icon: <QuestionCircle20Regular />, tone: 'ember' },
 };
 
 /** The icon and tone of a notice, the same on the notifications page and in the bell. */
