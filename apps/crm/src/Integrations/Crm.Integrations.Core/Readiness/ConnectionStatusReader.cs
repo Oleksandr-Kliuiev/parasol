@@ -13,10 +13,13 @@ public sealed class ConnectionStatusReader
     internal static readonly TimeSpan Budget = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// The worker parts that must beat: the outbox loop, the job server and the vendor action loop (M39.1), which sends what people
-    /// asked vendors to do.
+    /// The worker parts that must beat: the outbox loop, the job server, the vendor action loop (M39.1), which sends what people
+    /// asked vendors to do, and the early-read loop (M44), which starts the reads vendors' webhooks ask for.
     /// </summary>
-    internal static readonly string[] WorkerComponents = [OutboxProcessor.HeartbeatComponent, WorkerHeartbeatJob.Component, Actions.VendorActionLoop.HeartbeatComponent];
+    internal static readonly string[] WorkerComponents =
+    [
+        OutboxProcessor.HeartbeatComponent, WorkerHeartbeatJob.Component, Actions.VendorActionLoop.HeartbeatComponent, Webhooks.EarlyReadLoop.HeartbeatComponent,
+    ];
 
     private readonly ICurrentUser user;
     private readonly IConnectionCatalog catalog;
@@ -63,7 +66,8 @@ public sealed class ConnectionStatusReader
             var paused = streams.Any(s => s.Paused);
             var failedOutbound = streams.Select(s => s.FailedOutbound).DefaultIfEmpty(0).Max();
             var jobs = connection.Jobs.Select(job => Job(connection, streams.Single(s => s.Job == job))).ToList();
-            integrations.Add(new(connection.System, connection.Enabled, connection.WriteEnabled, new(paused, failedOutbound, jobs)));
+            integrations.Add(new(connection.System, connection.Enabled, connection.WriteEnabled, new(paused, failedOutbound, jobs),
+                Webhook(connection, state.Webhooks?.GetValueOrDefault(connection.System))));
             if (!connection.Enabled)
             {
                 continue;
@@ -108,6 +112,10 @@ public sealed class ConnectionStatusReader
             .Select(c => new ConnectionGap(c.State == "Missing" ? "WorkerMissing" : "WorkerLate", Component: c.Component)));
         return new(gaps.Count == 0 ? "Ready" : "Gaps", now, integrations, worker, gaps);
     }
+
+    private static ConnectionWebhook? Webhook(ConnectionDefinition connection, StoredWebhook? stored) => connection.WebhookEnabled is { } enabled
+        ? new(enabled, stored?.LastReceivedAt, stored?.LastEventType, stored?.Received ?? 0, stored?.LastRefusedAt, stored?.LastRefusal, stored?.LastEarlyReadAt)
+        : null;
 
     private static ConnectionJob Job(ConnectionDefinition connection, IntegrationFreshnessItem stream) => new(
         stream.Job, connection.Enabled ? stream.Freshness : "Disabled", stream.LastSucceededAt,

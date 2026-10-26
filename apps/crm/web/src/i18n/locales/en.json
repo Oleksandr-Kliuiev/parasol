@@ -4575,13 +4575,54 @@
     "limit": "late after {{limit}}",
     "lastFailed": "Last run failed",
     "unreadState": "Saved state could not be read.",
+    "webhook": {
+      "title": "Webhook",
+      "on": "On",
+      "off": "Off",
+      "refusing": "Needs attention",
+      "offNote": "Changes arrive with the scheduled reads.",
+      "lastEvent": "Last event",
+      "noEvent": "No event received yet",
+      "received": "deliveries received: {{count}}",
+      "earlyRead": "Read early",
+      "refused": "Last refused delivery",
+      "events": {
+        "incident_report": {
+          "created": "new security incident",
+          "comment_added": "comment on a security incident",
+          "closed": "security incident closed"
+        },
+        "escalation": {
+          "created": "new escalation",
+          "overdue": "escalation overdue",
+          "closed": "escalation closed"
+        },
+        "platform_action": {
+          "created": "new platform action",
+          "overdue": "platform action overdue",
+          "closed": "platform action closed",
+          "notification": "notice about a platform action"
+        },
+        "account_notice": {
+          "notification": "account notice"
+        },
+        "ticket": "ticket changed",
+        "unknown": "an event Parasoll does not know"
+      },
+      "refusal": {
+        "Unsigned": "not signed",
+        "Stale": "signed too long ago",
+        "BadSignature": "the signature or key does not match the one set in Parasoll"
+      }
+    },
     "worker": {
       "title": "Background service",
       "note": "A part counts as late after {{limit}} without a sign of life.",
       "components": {
         "outbox": "Change delivery",
         "jobs": "Scheduled jobs",
-        "actions": "Action delivery to vendors"
+        "actions": "Action delivery to vendors",
+        "early-reads": "Early reads from webhooks"
       },
       "state": {
         "Current": "Running",

@@ -4573,13 +4573,54 @@
     "limit": "forsinket etter {{limit}}",
     "lastFailed": "Siste kjøring mislyktes",
     "unreadState": "Den lagrede tilstanden kunne ikke leses.",
+    "webhook": {
+      "title": "Webhook",
+      "on": "På",
+      "off": "Av",
+      "refusing": "Trenger oppfølging",
+      "offNote": "Endringer kommer med de planlagte lesingene.",
+      "lastEvent": "Siste hendelse",
+      "noEvent": "Ingen hendelse mottatt ennå",
+      "received": "mottatte leveringer: {{count}}",
+      "earlyRead": "Lest tidlig",
+      "refused": "Siste avviste levering",
+      "events": {
+        "incident_report": {
+          "created": "ny sikkerhetshendelse",
+          "comment_added": "kommentar på en sikkerhetshendelse",
+          "closed": "sikkerhetshendelse lukket"
+        },
+        "escalation": {
+          "created": "ny eskalering",
+          "overdue": "eskalering forfalt",
+          "closed": "eskalering lukket"
+        },
+        "platform_action": {
+          "created": "ny plattformhandling",
+          "overdue": "plattformhandling forfalt",
+          "closed": "plattformhandling lukket",
+          "notification": "melding om en plattformhandling"
+        },
+        "account_notice": {
+          "notification": "kontovarsel"
+        },
+        "ticket": "sak endret",
+        "unknown": "en hendelse Parasoll ikke kjenner"
+      },
+      "refusal": {
+        "Unsigned": "ikke signert",
+        "Stale": "signert for lenge siden",
+        "BadSignature": "signaturen eller nøkkelen stemmer ikke med den som er satt i Parasoll"
+      }
+    },
     "worker": {
       "title": "Bakgrunnstjeneste",
       "note": "En del regnes som forsinket etter {{limit}} uten livstegn.",
       "components": {
         "outbox": "Levering av endringer",
         "jobs": "Planlagte jobber",
-        "actions": "Levering av handlinger til leverandører"
+        "actions": "Levering av handlinger til leverandører",
+        "early-reads": "Tidlige lesinger fra webhooks"
       },
       "state": {
         "Current": "Kjører",

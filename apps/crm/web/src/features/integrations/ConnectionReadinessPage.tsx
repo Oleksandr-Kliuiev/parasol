@@ -18,7 +18,8 @@ import { RecordRow, RowMeta } from '../billing/RecordRow';
 import { ForbiddenPage } from '../errors/ForbiddenPage';
 import { ActionLogPanel } from '../actions/ActionLog';
 import {
-  failedSinceRead, parseConnectionStatus, type ConnectionGap, type ConnectionIntegration, type ConnectionJob, type ConnectionStatusView,
+  failedSinceRead, parseConnectionStatus, refusingNow, type ConnectionGap, type ConnectionIntegration, type ConnectionJob, type ConnectionStatusView,
+  type ConnectionWebhook,
 } from './connectionStatusContract';
 import { formatSpan, jobName, systemName } from './labels';
 
@@ -149,9 +150,49 @@ function IntegrationCard({ integration }: { integration: ConnectionIntegration }
           {integration.writeEnabled !== null && state.failedOutbound > 0 && ' '}
           {state.failedOutbound > 0 && <span className={styles.bad}>{t('connectionStatus.failedOutbound', { count: state.failedOutbound })}</span>}
         </Text>}
-        <ul className={flush.list}>{state.jobs.map((job) => <JobRow key={job.job} job={job} />)}</ul>
+        <ul className={flush.list}>
+          {state.jobs.map((job) => <JobRow key={job.job} job={job} />)}
+          {integration.webhook && <WebhookRow webhook={integration.webhook} />}
+        </ul>
       </>}
   </Panel>;
+}
+
+/** The events Parasoll has words for: Huntress's eleven (its webhooks_doc.json), Atera's ticket change, and one it does not know. */
+const knownEvents = new Set([
+  'incident_report.created', 'incident_report.comment_added', 'incident_report.closed', 'escalation.created', 'escalation.overdue', 'escalation.closed',
+  'platform_action.created', 'platform_action.overdue', 'platform_action.closed', 'platform_action.notification', 'account_notice.notification',
+  'ticket', 'unknown',
+]);
+
+/** An event in the interface's words; one Parasoll has no words for keeps the vendor's name. */
+const eventName = (t: TFunction, name: string) => knownEvents.has(name) ? t(`connectionStatus.webhook.events.${name}`) : name;
+
+/**
+ * The vendor's webhook (M44): on or off, the last event it sent and when it last started a read early. A refused delivery is named
+ * with its reason while nothing was accepted after it; it is not a gap, because the scheduled reads go on.
+ */
+function WebhookRow({ webhook }: { webhook: ConnectionWebhook }) {
+  const { t } = useTranslation(); const styles = useStyles();
+  const refusing = webhook.enabled && refusingNow(webhook);
+  return <RecordRow
+    title={t('connectionStatus.webhook.title')}
+    meta={webhook.enabled ? <>
+      <RowMeta>
+        {webhook.lastReceivedAt
+          ? <>{t('connectionStatus.webhook.lastEvent')}{' '}<When at={webhook.lastReceivedAt} />
+            {webhook.lastEventType && `: ${eventName(t, webhook.lastEventType)}`}</>
+          : t('connectionStatus.webhook.noEvent')}
+        {webhook.received > 0 && ` · ${t('connectionStatus.webhook.received', { count: webhook.received })}`}
+      </RowMeta>
+      {webhook.lastEarlyReadAt && <RowMeta>{t('connectionStatus.webhook.earlyRead')}{' '}<When at={webhook.lastEarlyReadAt} /></RowMeta>}
+      {refusing && <RowMeta className={styles.bad}>
+        {t('connectionStatus.webhook.refused')}{' '}<When at={webhook.lastRefusedAt!} />{`: ${t(`connectionStatus.webhook.refusal.${webhook.lastRefusal ?? 'Unsigned'}`)}`}
+      </RowMeta>}
+    </> : <RowMeta>{t('connectionStatus.webhook.offNote')}</RowMeta>}
+    end={<Badge appearance="tint" color={!webhook.enabled ? 'subtle' : refusing ? 'warning' : 'success'}>
+      {t(!webhook.enabled ? 'connectionStatus.webhook.off' : refusing ? 'connectionStatus.webhook.refusing' : 'connectionStatus.webhook.on')}
+    </Badge>} />;
 }
 
 function JobRow({ job }: { job: ConnectionJob }) {

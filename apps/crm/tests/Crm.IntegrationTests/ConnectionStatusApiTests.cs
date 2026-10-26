@@ -43,6 +43,8 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         await db.IntegrationSwitches.Where(row => systems.Contains(row.System)).ExecuteDeleteAsync(Ct);
         await db.OutboundOperations.Where(row => ownedOutbound.Contains(row.Id)).ExecuteDeleteAsync(Ct);
         await db.WorkerHeartbeats.Where(row => row.Instance == Instance).ExecuteDeleteAsync(Ct);
+        await db.WebhookStates.Where(row => systems.Contains(row.System)).ExecuteDeleteAsync(Ct);
+        await db.EarlyReadRequests.Where(row => systems.Contains(row.System)).ExecuteDeleteAsync(Ct);
     }
 
     private async Task<WebApplicationFactory<Program>> Host(Action<IWebHostBuilder>? configure = null)
@@ -110,12 +112,16 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
             ["partnercenter-customers"] = 2175, ["partnercenter-subscriptions"] = 375, ["partnercenter-licenses"] = 2175,
             ["entra-user-sync"] = 105, ["entra-role-sync"] = 18, ["brreg-registry-check"] = 2175,
         }, ignoreOrder: true);
-        view.Worker!.Components.Select(c => c.Component).ShouldBe(["outbox", "jobs", "actions"]);
+        view.Worker!.Components.Select(c => c.Component).ShouldBe(["outbox", "jobs", "actions", "early-reads"]);
+        // M44: Atera and Huntress have webhooks, switched off in this installation; the others have none.
+        integrations["atera"].Webhook!.Enabled.ShouldBeFalse();
+        integrations["huntress"].Webhook!.Enabled.ShouldBeFalse();
+        view.Integrations.Where(i => i.System is not ("atera" or "huntress")).ShouldAllBe(i => i.Webhook == null);
         (await Writes(host.Services)).ShouldBe(before);
         new[] { factory.Atera.LogEntries.Count, factory.PowerOffice.LogEntries.Count, factory.Graph.LogEntries.Count,
             factory.PartnerCenter.LogEntries.Count, factory.Brreg.LogEntries.Count }.ShouldBe(providerCalls);
         var body = await response.Content.ReadAsStringAsync(Ct);
-        foreach (var secret in new[] { "test-atera-key", "test-secret", "test-refresh-token", "test-client-key", "http:", "https:", "ApiKey", "Certificate" })
+        foreach (var secret in new[] { "test-atera-key", "test-secret", "test-refresh-token", "test-client-key", "http:", "https:", "ApiKey", "Certificate", "whsec_" })
             body.ShouldNotContain(secret);
     }
 
@@ -145,6 +151,44 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
     }
 
     [Fact]
+    public async Task What_a_webhook_did_is_read_from_its_saved_state_and_a_refusal_keeps_the_page_green()
+    {
+        var now = DateTimeOffset.UtcNow;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
+            db.SyncSuccesses.Add(new SyncSuccess { System = Read, Job = "fresh", SucceededAt = now.AddMinutes(-5) });
+            db.WebhookStates.Add(new Crm.Integrations.Core.Webhooks.WebhookState
+            {
+                System = Read, LastReceivedAt = now.AddMinutes(-4), LastEventType = "ticket", Received = 9, LastRefusedAt = now.AddMinutes(-1),
+                LastRefusal = "BadSignature",
+            });
+            db.EarlyReadRequests.AddRange(
+                new Crm.Integrations.Core.Webhooks.EarlyReadRequest { System = Read, Job = "fresh", RequestedAt = now.AddMinutes(-4), TriggeredAt = now.AddMinutes(-3) },
+                new Crm.Integrations.Core.Webhooks.EarlyReadRequest { System = Read, Job = "other", RequestedAt = now.AddMinutes(-9), TriggeredAt = now.AddMinutes(-8) });
+            foreach (var component in new[] { "outbox", "jobs", "actions", "early-reads" })
+            {
+                db.WorkerHeartbeats.Add(new WorkerHeartbeat { Component = component, Instance = Instance, BeatAt = now });
+            }
+
+            await db.SaveChangesAsync(Ct);
+        }
+
+        var catalog = new TestCatalog([new(Read, true, null, ["fresh"], WebhookEnabled: true), new(Off, false, null, ["off"])]);
+        await using var host = await Host(builder => builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<IConnectionCatalog>(catalog))));
+        var view = (await Client(host).GetFromJsonAsync<ConnectionStatusView>(Endpoint, Ct))!;
+
+        view.Status.ShouldBe("Ready");
+        var webhook = view.Integrations.Single(i => i.System == Read).Webhook!;
+        (webhook.Enabled, webhook.LastEventType, webhook.Received, webhook.LastRefusal).ShouldBe((true, "ticket", 9L, "BadSignature"));
+        webhook.LastReceivedAt!.Value.ShouldBe(now.AddMinutes(-4), TimeSpan.FromSeconds(1));
+        webhook.LastRefusedAt!.Value.ShouldBe(now.AddMinutes(-1), TimeSpan.FromSeconds(1));
+        // The latest read a webhook started, of any of the system's jobs.
+        webhook.LastEarlyReadAt!.Value.ShouldBe(now.AddMinutes(-3), TimeSpan.FromSeconds(1));
+        view.Integrations.Single(i => i.System == Off).Webhook.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task The_saved_runs_pauses_queue_and_heartbeats_decide_the_gaps()
     {
         var now = DateTimeOffset.UtcNow;
@@ -168,7 +212,8 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
             db.WorkerHeartbeats.AddRange(
                 new WorkerHeartbeat { Component = "outbox", Instance = Instance, BeatAt = now },
                 new WorkerHeartbeat { Component = "jobs", Instance = Instance, BeatAt = now },
-                new WorkerHeartbeat { Component = "actions", Instance = Instance, BeatAt = now });
+                new WorkerHeartbeat { Component = "actions", Instance = Instance, BeatAt = now },
+                new WorkerHeartbeat { Component = "early-reads", Instance = Instance, BeatAt = now });
             await db.SaveChangesAsync(Ct);
         }
 

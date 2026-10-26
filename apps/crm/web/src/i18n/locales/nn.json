@@ -4573,13 +4573,54 @@
     "limit": "forseinka etter {{limit}}",
     "lastFailed": "Siste køyring feila",
     "unreadState": "Den lagra tilstanden kunne ikkje lesast.",
+    "webhook": {
+      "title": "Webhook",
+      "on": "På",
+      "off": "Av",
+      "refusing": "Treng oppfølging",
+      "offNote": "Endringar kjem med dei planlagde lesingane.",
+      "lastEvent": "Siste hending",
+      "noEvent": "Inga hending motteken enno",
+      "received": "mottekne leveringar: {{count}}",
+      "earlyRead": "Lese tidleg",
+      "refused": "Siste avviste levering",
+      "events": {
+        "incident_report": {
+          "created": "ny tryggleikshending",
+          "comment_added": "kommentar på ei tryggleikshending",
+          "closed": "tryggleikshending lukka"
+        },
+        "escalation": {
+          "created": "ny eskalering",
+          "overdue": "eskalering forfallen",
+          "closed": "eskalering lukka"
+        },
+        "platform_action": {
+          "created": "ny plattformhandling",
+          "overdue": "plattformhandling forfallen",
+          "closed": "plattformhandling lukka",
+          "notification": "melding om ei plattformhandling"
+        },
+        "account_notice": {
+          "notification": "kontovarsel"
+        },
+        "ticket": "sak endra",
+        "unknown": "ei hending Parasoll ikkje kjenner"
+      },
+      "refusal": {
+        "Unsigned": "ikkje signert",
+        "Stale": "signert for lenge sidan",
+        "BadSignature": "signaturen eller nøkkelen stemmer ikkje med den som er sett i Parasoll"
+      }
+    },
     "worker": {
       "title": "Bakgrunnsteneste",
       "note": "Ein del blir rekna som forseinka etter {{limit}} utan livsteikn.",
       "components": {
         "outbox": "Levering av endringar",
         "jobs": "Planlagde jobbar",
-        "actions": "Levering av handlingar til leverandørar"
+        "actions": "Levering av handlingar til leverandørar",
+        "early-reads": "Tidlege lesingar frå webhookar"
       },
       "state": {
         "Current": "Køyrer",

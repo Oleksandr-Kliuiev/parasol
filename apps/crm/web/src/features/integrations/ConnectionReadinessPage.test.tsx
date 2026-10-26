@@ -33,8 +33,14 @@ describe('the connections page', () => {
     for (const name of [worker, 'Atera', 'PowerOffice Go', 'Brønnøysund Register Centre']) expect(screen.getByRole('region', { name })).toBeVisible();
     const atera = within(screen.getByRole('region', { name: 'Atera' }));
     expect(atera.getByText('Changes made in Parasoll are not sent to Atera.')).toBeVisible();
-    const rows = atera.getAllByRole('listitem');
+    // The jobs, then Atera's webhook (M44).
+    const [alerts, tickets, webhook, ...rest] = atera.getAllByRole('listitem'); const rows = [alerts!, tickets!];
+    expect(rest).toHaveLength(0);
     expect(rows.map((row) => within(row).getByText(/\(Atera\)$/).textContent)).toEqual(['Alerts (Atera)', 'Open tickets (Atera)']);
+    expect(within(webhook!).getByText('Webhook')).toBeVisible();
+    expect(within(webhook!).getByText('On')).toBeVisible();
+    expect(webhook!).toHaveTextContent(/Last event .+: ticket changed · deliveries received: 12/);
+    expect(within(webhook!).getByText(/Read early/)).toBeVisible();
     // The limit says what it is for: the job counts as late after it.
     expect(within(rows[1]!).getByText(/late after 15 min/)).toBeVisible();
     expect(rows[1]!.querySelector('time')).toHaveAttribute('datetime', '2026-10-16T09:55:00Z');
@@ -43,9 +49,10 @@ describe('the connections page', () => {
     expect(office.getByText("Switched off in this installation's settings, so its jobs do not run.")).toBeVisible();
     expect(office.queryByRole('listitem')).not.toBeInTheDocument();
     const service = within(screen.getByRole('region', { name: worker }));
-    expect(service.getAllByRole('listitem').map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs|Action delivery to vendors)$/).textContent))
-      .toEqual(['Change delivery', 'Scheduled jobs', 'Action delivery to vendors']);
-    expect(service.getAllByText('Running')).toHaveLength(3);
+    expect(service.getAllByRole('listitem')
+      .map((row) => within(row).getByText(/^(Change delivery|Scheduled jobs|Action delivery to vendors|Early reads from webhooks)$/).textContent))
+      .toEqual(['Change delivery', 'Scheduled jobs', 'Action delivery to vendors', 'Early reads from webhooks']);
+    expect(service.getAllByText('Running')).toHaveLength(4);
     // Nothing needs attention: the way to administration stays in the note at the end only; the action log has only its filters.
     expect(screen.getByRole('link', { name: 'Open integration administration' })).toHaveAttribute('href', '/admin/integrations');
     const log = screen.getByRole('region', { name: 'Actions at vendors' });
@@ -80,12 +87,30 @@ describe('the connections page', () => {
   });
 
   it('says so when the saved state could not be read, without zeroes or old figures', async () => {
-    const value = connectionStatus(); value.status = 'Unavailable'; value.worker = null; for (const integration of value.integrations) integration.state = null;
+    const value = connectionStatus(); value.status = 'Unavailable'; value.worker = null;
+    for (const integration of value.integrations) { integration.state = null; integration.webhook = null; }
     vi.stubGlobal('fetch', withLog(vi.fn(async () => response(value)))); render();
     expect(await screen.findByText('The saved state could not be read, so nothing is shown as up to date. Refresh to try again.')).toBeVisible();
     for (const name of [worker, 'Atera', 'PowerOffice Go']) expect(within(screen.getByRole('region', { name })).getByText('Saved state could not be read.')).toBeVisible();
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
     expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
+  });
+
+  it('names a webhook that is off, and one that refuses deliveries with the reason, without making the page yellow (M44)', async () => {
+    const value = connectionStatus();
+    // An event Parasoll has no words for keeps the vendor's name.
+    Object.assign(value.integrations[0]!.webhook!, { lastRefusedAt: '2026-10-16T09:58:00Z', lastRefusal: 'BadSignature', lastEventType: 'ping' });
+    value.integrations.push({ ...value.integrations[0]!, system: 'huntress', webhook: { ...value.integrations[0]!.webhook!, enabled: false } });
+    vi.stubGlobal('fetch', withLog(vi.fn(async () => response(value)))); render();
+    expect(await screen.findByText(/^Everything is up to date/)).toBeVisible();
+    const atera = within(screen.getByRole('region', { name: 'Atera' })).getAllByRole('listitem')[2]!;
+    expect(within(atera).getByText('Needs attention')).toBeVisible();
+    expect(atera).toHaveTextContent(/Last refused delivery .+: the signature or key does not match the one set in Parasoll/);
+    expect(atera).toHaveTextContent(/Last event .+: ping/);
+    const huntress = within(screen.getByRole('region', { name: 'Huntress' })).getAllByRole('listitem')[2]!;
+    expect(within(huntress).getByText('Off')).toBeVisible();
+    expect(within(huntress).getByText('Changes arrive with the scheduled reads.')).toBeVisible();
+    expect(huntress).not.toHaveTextContent(/refused/i);
   });
 
   it('does not salvage a reply with an unexpected section', async () => {

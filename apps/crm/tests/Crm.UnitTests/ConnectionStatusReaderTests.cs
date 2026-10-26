@@ -39,7 +39,8 @@ public sealed class ConnectionStatusReaderTests
         atera.State.Jobs.Select(j => (j.Job, j.Freshness, j.AgeMinutes)).ShouldBe([("atera-alerts", "Fresh", (int?)5), ("atera-tickets", "Fresh", 3)]);
         view.Integrations[1].WriteEnabled.ShouldBeNull();
         view.Worker!.StaleAfterSeconds.ShouldBe(180);
-        view.Worker.Components.Select(c => (c.Component, c.State, c.AgeSeconds)).ShouldBe([("outbox", "Current", (int?)20), ("jobs", "Current", 40), ("actions", "Current", 10)]);
+        view.Worker.Components.Select(c => (c.Component, c.State, c.AgeSeconds))
+            .ShouldBe([("outbox", "Current", (int?)20), ("jobs", "Current", 40), ("actions", "Current", 10), ("early-reads", "Current", 5)]);
     }
 
     [Fact]
@@ -61,16 +62,18 @@ public sealed class ConnectionStatusReaderTests
             new ConnectionGap("Failed", "atera", "atera-alerts"), new ConnectionGap("Stale", "atera", "atera-tickets"),
             new ConnectionGap("OutboundFailed", "atera", Count: 2), new ConnectionGap("Never", "brreg", "brreg-registry-check"),
             new ConnectionGap("WorkerMissing", Component: "outbox"), new ConnectionGap("WorkerLate", Component: "jobs"),
+            new ConnectionGap("WorkerMissing", Component: "early-reads"),
         ]);
         view.Integrations[0].State!.Jobs[0].LastFailedAt.ShouldBe(Minutes(1));
-        view.Worker!.Components.Select(c => (c.State, c.BeatAt)).ShouldBe([("Missing", (DateTimeOffset?)null), ("Late", Now.AddSeconds(-900)), ("Current", Now.AddSeconds(-5))]);
+        view.Worker!.Components.Select(c => (c.State, c.BeatAt))
+            .ShouldBe([("Missing", (DateTimeOffset?)null), ("Late", Now.AddSeconds(-900)), ("Current", Now.AddSeconds(-5)), ("Missing", null)]);
     }
 
     [Fact]
     public void A_failure_that_a_success_followed_is_reported_but_is_no_gap()
     {
         var state = State([Stream("atera", "atera-alerts", Minutes(2), failed: Minutes(30)), Stream("atera", "atera-tickets", Minutes(3))],
-            Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5));
+            Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5), Beat("early-reads", 5));
 
         var view = ConnectionStatusReader.Compose([Atera], state, Now);
 
@@ -82,7 +85,7 @@ public sealed class ConnectionStatusReaderTests
     public void An_action_without_a_clear_answer_keeps_the_page_from_green_until_someone_checks_it()
     {
         var state = State([Stream("atera", "atera-alerts", Minutes(2)), Stream("atera", "atera-tickets", Minutes(3))],
-            Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5)) with { UncertainActions = new Dictionary<string, int> { ["atera"] = 2 } };
+            Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5), Beat("early-reads", 5)) with { UncertainActions = new Dictionary<string, int> { ["atera"] = 2 } };
 
         var view = ConnectionStatusReader.Compose([Atera], state, Now);
 
@@ -99,7 +102,7 @@ public sealed class ConnectionStatusReaderTests
         [
             Stream("atera", "atera-alerts", Minutes(400), paused: true), Stream("atera", "atera-tickets", null, paused: true),
             Stream("poweroffice", "poweroffice-customers", null),
-        ], Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5));
+        ], Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5), Beat("early-reads", 5));
 
         var view = ConnectionStatusReader.Compose([Atera, office], state, Now);
 
@@ -111,17 +114,44 @@ public sealed class ConnectionStatusReaderTests
     }
 
     [Fact]
+    public void A_webhook_is_described_for_the_systems_that_have_one_and_a_refused_delivery_is_no_gap()
+    {
+        var atera = Atera with { WebhookEnabled = true };
+        var state = State([Stream("atera", "atera-alerts", Minutes(2)), Stream("atera", "atera-tickets", Minutes(3)), Stream("brreg", "brreg-registry-check", Minutes(10))],
+            Beat("outbox", 5), Beat("jobs", 5), Beat("actions", 5), Beat("early-reads", 5)) with
+        {
+            Webhooks = new Dictionary<string, StoredWebhook>
+            {
+                ["atera"] = new(Minutes(4), "ticket", 7, Minutes(1), "BadSignature", Minutes(4)),
+            },
+        };
+
+        var view = ConnectionStatusReader.Compose([atera, Brreg], state, Now);
+
+        // The scheduled reads go on: only sooner reads stop, so the page stays green and the card names the refusal.
+        view.Status.ShouldBe("Ready");
+        view.Integrations[0].Webhook.ShouldBe(new ConnectionWebhook(true, Minutes(4), "ticket", 7, Minutes(1), "BadSignature", Minutes(4)));
+        view.Integrations[1].Webhook.ShouldBeNull();
+        // A webhook switched off is described as off, with whatever it did before.
+        ConnectionStatusReader.Compose([atera with { WebhookEnabled = false }], state, Now).Integrations[0].Webhook!.Enabled.ShouldBeFalse();
+        // Nothing heard yet: no facts, no zeroes but the count.
+        ConnectionStatusReader.Compose([atera], state with { Webhooks = null }, Now).Integrations[0].Webhook
+            .ShouldBe(new ConnectionWebhook(true, null, null, 0, null, null, null));
+        ConnectionStatusReader.Compose([atera], null, Now).Integrations[0].Webhook.ShouldBeNull();
+    }
+
+    [Fact]
     public void The_worker_is_alive_while_any_of_its_instances_beats()
     {
         // A replaced container leaves its old row behind for a week; the new instance's beat is what counts.
         var state = State([Stream("brreg", "brreg-registry-check", Minutes(10))],
             Beat("outbox", 5000, "worker-old"), Beat("outbox", 10, "worker-new"), Beat("jobs", 5000, "worker-old"), Beat("jobs", 30, "worker-new"),
-            Beat("actions", 5000, "worker-old"), Beat("actions", 20, "worker-new"));
+            Beat("actions", 5000, "worker-old"), Beat("actions", 20, "worker-new"), Beat("early-reads", 5000, "worker-old"), Beat("early-reads", 15, "worker-new"));
 
         var view = ConnectionStatusReader.Compose([Brreg], state, Now);
 
         view.Status.ShouldBe("Ready");
-        view.Worker!.Components.Select(c => c.AgeSeconds).ShouldBe([10, 30, 20]);
+        view.Worker!.Components.Select(c => c.AgeSeconds).ShouldBe([10, 30, 20, 15]);
     }
 
     [Fact]
