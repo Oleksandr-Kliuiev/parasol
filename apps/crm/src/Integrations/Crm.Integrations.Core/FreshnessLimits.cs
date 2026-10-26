@@ -21,6 +21,7 @@ public static class FreshnessLimits
         ["atera-work-hours"] = ("Integrations:Atera:WorkHoursSyncCron", "*/30 * * * *"),
         ["atera-agents"] = ("Integrations:Atera:AgentSyncCron", "30 1 * * *"),
         ["atera-alerts"] = ("Integrations:Atera:AlertSyncCron", "5,35 * * * *"),
+        ["atera-ticket-conversations"] = ("Integrations:Atera:TicketConversationSyncCron", "*/5 * * * *"),
         ["poweroffice-customers"] = ("Integrations:PowerOffice:CustomerSyncCron", "*/15 * * * *"),
         ["poweroffice-contact-persons"] = ("Integrations:PowerOffice:ContactPersonSyncCron", "5,35 * * * *"),
         ["poweroffice-products"] = ("Integrations:PowerOffice:ProductSyncCron", "30 1 * * *"),

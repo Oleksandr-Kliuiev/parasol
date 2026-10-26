@@ -385,6 +385,11 @@ public static class MappingEndpoints
                     return NotFound(id.ToString());
                 }
 
+                if (operation.Operation.StartsWith(Actions.VendorAction.OperationPrefix, StringComparison.Ordinal))
+                {
+                    return ActionOperation();
+                }
+
                 if (etag != OutboundOperationItem.Version(operation))
                     return Error.PreconditionFailed("INT_RETRY_STALE", "The operation changed. Reload before retrying.").ToProblem();
                 var reason = body.Reason?.Trim() ?? string.Empty;
@@ -428,6 +433,11 @@ public static class MappingEndpoints
                     return NotFound(id.ToString());
                 }
 
+                if (operation.Operation.StartsWith(Actions.VendorAction.OperationPrefix, StringComparison.Ordinal))
+                {
+                    return ActionOperation();
+                }
+
                 return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
                 {
                     await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -455,6 +465,13 @@ public static class MappingEndpoints
 
     internal static ExternalTypeDescriptor? Describe(IEnumerable<IIntegrationAdapter> adapters, string? system, string? type) =>
         adapters.SelectMany(a => a.RecordTypes).SingleOrDefault(t => t.System == system && t.ExternalType == type);
+
+    /// <summary>
+    /// A vendor action is cancelled during its hold or settled in the action log (M39.1): a retry from here could send a comment twice,
+    /// and a cancel here would leave its action waiting.
+    /// </summary>
+    private static IResult ActionOperation() =>
+        Error.Conflict("INT_OUTBOUND_IS_ACTION", "This operation carries a vendor action; cancel or settle it in the action log.").ToProblem();
 
     private static IResult NotFound(string what) =>
         Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "INT_NOT_FOUND", detail: $"'{what}' was not found.",

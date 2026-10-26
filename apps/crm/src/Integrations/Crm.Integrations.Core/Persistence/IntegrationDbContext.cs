@@ -1,4 +1,5 @@
 using Crm.Infrastructure.Persistence;
+using Crm.Integrations.Core.Actions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crm.Integrations.Core.Persistence;
@@ -185,6 +186,8 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
 
     public DbSet<ExceptionTriage> ExceptionTriages => Set<ExceptionTriage>();
 
+    public DbSet<VendorAction> VendorActions => Set<VendorAction>();
+
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SyncSuccess>(b =>
@@ -287,6 +290,36 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
             b.HasIndex(x => x.IdempotencyKey).IsUnique();
             b.HasIndex(x => new { x.Status, x.NextAttemptAt });
             b.HasIndex(x => new { x.EntityType, x.EntityId });
+        });
+
+        modelBuilder.Entity<VendorAction>(b =>
+        {
+            b.ToTable("VendorActions");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.System).HasMaxLength(64);
+            b.Property(x => x.Kind).HasMaxLength(64);
+            b.Property(x => x.Level).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.TargetType).HasMaxLength(64);
+            b.Property(x => x.TargetId).HasMaxLength(128);
+            b.Property(x => x.TargetName).HasMaxLength(256);
+            b.Property(x => x.ExternalCustomerId).HasMaxLength(128);
+            b.Property(x => x.Fingerprint).HasMaxLength(64);
+            b.Property(x => x.Reason).HasMaxLength(VendorActionRules.ReasonMaxLength);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.OutcomeCode).HasMaxLength(64);
+            b.Property(x => x.Outcome).HasMaxLength(500);
+            b.Property(x => x.Reference).HasMaxLength(128);
+            b.Property(x => x.CloseReason).HasMaxLength(VendorActionRules.ReasonMaxLength);
+            b.Property(x => x.RowVersion).IsRowVersion();
+            b.HasIndex(x => new { x.RequestedBy, x.CommandKey }).IsUnique();
+            b.HasIndex(x => x.OutboundOperationId).IsUnique();
+            // M39.1: one action per target is being sent at a time; a second one waits for the first to finish.
+            b.HasIndex(x => new { x.System, x.TargetType, x.TargetId }).IsUnique().HasFilter("[Status] = 'Sending'").HasDatabaseName("UX_VendorActions_Sending");
+            b.HasIndex(x => new { x.TargetType, x.TargetId, x.RequestedAt });
+            b.HasIndex(x => new { x.RequestedAt, x.Id });
+            b.HasIndex(x => new { x.Status, x.RequestedAt });
+            b.HasIndex(x => x.OrganizationId);
         });
 
         modelBuilder.Entity<SyncCursor>(b =>

@@ -1,6 +1,6 @@
 # Dev mocks
 
-`external-apis.mjs` imitates PowerOffice Go API v2 (token, Customers, ContactPersons, Products; create and JSON Patch), Atera API v3 (customers, contacts, tickets with work hours, agents, alerts, customer custom values; creating contacts and tickets — in `atera.mjs`) and the Brønnøysund registry, so the mapping screen, the service tab, time import, registry lookup and outbound sync can be tried — and the end-to-end tests run — without API keys or internet. Sample data is generated fresh on every start; the Atera customers carry the same organization numbers as the PowerOffice ones, so both link to the same organizations.
+`external-apis.mjs` is one server that routes to a module per vendor: `poweroffice.mjs` imitates PowerOffice Go API v2 (token, Customers, ContactPersons, Products, SalesOrders, OutgoingInvoices; create and JSON Patch), `atera.mjs` with its seed data in `atera-data.mjs` imitates Atera API v3 (customers, contacts, tickets with work hours, agents, alerts, customer custom values; creating contacts and tickets) and `brreg.mjs` the Brønnøysund registry, so the mapping screen, the service tab, time import, registry lookup and outbound sync can be tried — and the end-to-end tests run — without API keys or internet. Sample data is generated fresh on every start; the Atera customers carry the same organization numbers as the PowerOffice ones, so both link to the same organizations. The Atera stand-in accepts either `X-API-KEY` or `Authorization: Bearer <token>` (M39.0), like `Integrations:Atera:Authentication`.
 
 ```bash
 node tools/dev-mocks/external-apis.mjs
@@ -24,6 +24,13 @@ A test can give the Atera stand-in data of its own and take an alert away again,
 | `POST /_mock/atera/agents` | `CustomerID` (required), `MachineName`, `OSType`, `OS`, `Online`, `LastSeen` | `201` with the agent and its new `AgentID`. |
 | `POST /_mock/atera/alerts` | `CustomerID` (required), `Title`, `Severity` (`Critical` by default), `DeviceName`, `Created` | `201` with the alert and its new numeric `AlertID`; it is open and listed first. |
 | `DELETE /_mock/atera/alerts/{AlertID}` | — | `204`: the alert is closed in "Atera" and leaves the open list, so the next complete alert read resolves it in the CRM. `404` for an unknown id. |
+| `POST /_mock/atera/tickets` | `CustomerID` (required), any ticket field (`TicketTitle`, `TicketStatus`, `TicketPriority`, `TechnicianContactID` of a known technician, …) | `201` with the ticket and its new `TicketID`; the end user is the customer's contact. It is listed by `/tickets/lastmodified` from now on (M39.2). |
+| `POST /_mock/atera/tickets/{TicketID}/comments` | `CommentText` (required) | `201`: the customer's end user writes in the ticket's conversation. |
+| `GET /_mock/atera/tickets/{TicketID}` | — | `200` with the ticket, its `Comments` and its `WorkHours`: what the CRM sent, for a test to check. |
+| `POST /_mock/atera/technicians` | `FullName` (required), `Email`, `TechnicianContactID` | `201` with the technician; tickets can be given to it. Known from the start: 4001 Tor Tekniker, 4002 Nina Nett and 4003 Dev Admin (`admin@dev.local`, the development sign-in's employee, so they can write as it once the ticket sync has mapped it). |
+| `POST /_mock/atera/faults` | `method`, `path` (exact, or a prefix ending in `*`), `status`, `count` (1) | `204`: the next `count` Atera requests with that method and path answer `status` and change nothing — a lost answer for the action tests. |
+
+The ticket routes themselves (`/api/v3/tickets/{id}` GET and POST, `/tickets/{id}/comments` GET and POST, `/tickets/lastmodified`, `POST /tickets/{id}/workhours`) are in `atera-tickets.mjs`; a comment or a change moves the ticket's `TicketLastModified`.
 
 An unknown `CustomerID` or a body that is not a JSON object answers `400`. The organization numbers are unique within one start of the mock; a database shared between runs (end-to-end tests) may still hold an organization with the same number from an earlier run, so a test that must be sure passes its own `BusinessNumber`.
 

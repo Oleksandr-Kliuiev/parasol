@@ -8,6 +8,7 @@ using Crm.Service.Domain;
 using Crm.Service.Features;
 using Crm.Service.Persistence;
 using Crm.SharedKernel.Application;
+using Crm.SharedKernel.Operations;
 using Crm.SharedKernel.Results;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
@@ -42,7 +43,10 @@ public sealed record DeviceItem(
     Guid Id, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url, DateTimeOffset? RemovedAt,
     int OpenAlerts = 0);
 
-/// <summary>A customer's service at a glance; the alert counts are of open alerts.</summary>
+/// <summary>
+/// A customer's service at a glance; the alert counts are of open alerts. <paramref name="Reads"/> says, per kind of data (tickets,
+/// alerts, devices), when it was last read and whether completely (M39.2): a figure of a source never read is not a zero.
+/// </summary>
 public sealed record ServiceSummary(
     int OpenTickets,
     int TicketsLast90Days,
@@ -50,7 +54,8 @@ public sealed record ServiceSummary(
     int DevicesOnline,
     int CriticalAlerts,
     int WarningAlerts,
-    DateTimeOffset? LastSyncedAt);
+    DateTimeOffset? LastSyncedAt,
+    IReadOnlyList<ServiceSourceRead> Reads);
 
 public sealed record CreateTicketRequest(Guid OrganizationId, Guid? ContactId, string Title, string Description, string Priority, string Type);
 
@@ -97,13 +102,20 @@ public static class ServiceModule
             .RequirePermission(Permissions.ServiceRead);
 
         group.MapGet("/tickets", async (
-                Guid? organizationId, Guid? contactId, bool? openOnly, int? days, string? search, int? limit, string? cursor,
-                ServiceDbContext db, ICustomersApi customers, TimeProvider time, CancellationToken ct) =>
+                Guid? organizationId, Guid? contactId, bool? openOnly, bool? mine, int? days, string? search, int? limit, string? cursor,
+                ServiceDbContext db, ICustomersApi customers, ICurrentUser user, TimeProvider time, CancellationToken ct) =>
             {
                 var tickets = db.Tickets.AsNoTracking();
                 if (organizationId is { } org)
                 {
                     tickets = tickets.Where(t => t.OrganizationId == org);
+                }
+
+                // M39.2: the tickets page's "Mine" — the tickets the desk has assigned to the technician this person is.
+                if (mine == true)
+                {
+                    var me = user.UserId;
+                    tickets = tickets.Where(t => me != null && t.TechnicianUserId == me);
                 }
 
                 if (contactId is { } contact)
@@ -151,7 +163,8 @@ public static class ServiceModule
             })
             .RequirePermission(Permissions.ServiceRead);
 
-        group.MapGet("/organizations/{organizationId:guid}/summary", async (Guid organizationId, ServiceDbContext db, TimeProvider time, CancellationToken ct) =>
+        group.MapGet("/organizations/{organizationId:guid}/summary", async (
+                Guid organizationId, ServiceDbContext db, IEnumerable<ISyncCompletenessSource> completeness, TimeProvider time, CancellationToken ct) =>
             {
                 var since = time.GetUtcNow().AddDays(-90);
                 var devices = await db.Devices.AsNoTracking().Where(d => d.OrganizationId == organizationId && d.RemovedAt == null)
@@ -166,9 +179,16 @@ public static class ServiceModule
                     devices.Sum(d => d.Online),
                     alerts.FirstOrDefault(a => a.Key == AlertSeverity.Critical)?.Count ?? 0,
                     alerts.FirstOrDefault(a => a.Key == AlertSeverity.Warning)?.Count ?? 0,
-                    await tickets.MaxAsync(t => (DateTimeOffset?)t.SyncedAt, ct)));
+                    await tickets.MaxAsync(t => (DateTimeOffset?)t.SyncedAt, ct),
+                    [
+                        await ServiceSourceRead.LatestAsync(completeness, "tickets", ct),
+                        await ServiceSourceRead.LatestAsync(completeness, "alerts", ct),
+                        await ServiceSourceRead.LatestAsync(completeness, "devices", ct),
+                    ]));
             })
             .RequirePermission(Permissions.ServiceRead);
+
+        group.MapTicketEndpoints();
 
         group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, int? limit, string? cursor, ServiceDbContext db, CancellationToken ct) =>
             {

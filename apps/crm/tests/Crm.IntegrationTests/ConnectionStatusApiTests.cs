@@ -82,7 +82,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         var atera = view.Integrations[0];
         (atera.Enabled, atera.WriteEnabled).ShouldBe((true, (bool?)false));
         atera.State!.Jobs.Select(j => j.Job).ShouldBe(
-            ["atera-customers", "atera-contacts", "atera-tickets", "atera-tickets-recent", "atera-work-hours", "atera-agents", "atera-alerts"]);
+            ["atera-customers", "atera-contacts", "atera-tickets", "atera-tickets-recent", "atera-work-hours", "atera-agents", "atera-alerts", "atera-ticket-conversations"]);
         view.Integrations[1].WriteEnabled.ShouldBe(true);
         view.Integrations[2].State!.Jobs.Select(j => j.Job).ShouldBe(["partnercenter-customers", "partnercenter-subscriptions", "partnercenter-licenses"]);
         view.Integrations[3].State!.Jobs.Select(j => j.Job).ShouldBe(["entra-user-sync", "entra-role-sync"]);
@@ -92,12 +92,12 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         view.Integrations.SelectMany(i => i.State!.Jobs).ToDictionary(j => j.Job, j => j.ThresholdMinutes).ShouldBe(new Dictionary<string, int>
         {
             ["atera-customers"] = 60, ["atera-contacts"] = 105, ["atera-tickets"] = 15, ["atera-tickets-recent"] = 15, ["atera-work-hours"] = 60,
-            ["atera-agents"] = 2175, ["atera-alerts"] = 60,
+            ["atera-agents"] = 2175, ["atera-alerts"] = 60, ["atera-ticket-conversations"] = 22,
             ["poweroffice-customers"] = 37, ["poweroffice-contact-persons"] = 60, ["poweroffice-products"] = 2175, ["poweroffice-invoices"] = 90,
             ["partnercenter-customers"] = 2175, ["partnercenter-subscriptions"] = 375, ["partnercenter-licenses"] = 2175,
             ["entra-user-sync"] = 105, ["entra-role-sync"] = 18, ["brreg-registry-check"] = 2175,
         }, ignoreOrder: true);
-        view.Worker!.Components.Select(c => c.Component).ShouldBe(["outbox", "jobs"]);
+        view.Worker!.Components.Select(c => c.Component).ShouldBe(["outbox", "jobs", "actions"]);
         (await Writes(host.Services)).ShouldBe(before);
         new[] { factory.Atera.LogEntries.Count, factory.PowerOffice.LogEntries.Count, factory.Graph.LogEntries.Count,
             factory.PartnerCenter.LogEntries.Count, factory.Brreg.LogEntries.Count }.ShouldBe(providerCalls);
@@ -154,7 +154,8 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
             db.OutboundOperations.Add(outbound); ownedOutbound.Add(outbound.Id);
             db.WorkerHeartbeats.AddRange(
                 new WorkerHeartbeat { Component = "outbox", Instance = Instance, BeatAt = now },
-                new WorkerHeartbeat { Component = "jobs", Instance = Instance, BeatAt = now });
+                new WorkerHeartbeat { Component = "jobs", Instance = Instance, BeatAt = now },
+                new WorkerHeartbeat { Component = "actions", Instance = Instance, BeatAt = now });
             await db.SaveChangesAsync(Ct);
         }
 

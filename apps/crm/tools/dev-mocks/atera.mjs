@@ -1,107 +1,13 @@
 // Atera API v3 stand-in for external-apis.mjs: /api/v3/customers, /contacts, /tickets (+ workhoursrecords), /agents, /alerts and
-// /customvalues (shapes from the Atera docs), plus test-only control routes under /_mock/atera that add a customer with a fresh
-// organization number, its agents and alerts, and close an alert again (README). Data is in memory and new on every start.
+// /customvalues (shapes from the Atera docs), with one ticket, its conversation and its changes in atera-tickets.mjs, plus
+// test-only control routes under /_mock/atera that add a customer with a fresh organization number, its agents, alerts and
+// tickets, and close an alert again (README). Data is in memory and new on every start.
+
+import { hoursAgo, seedAtera } from './atera-data.mjs';
+import { createAteraTickets } from './atera-tickets.mjs';
 
 export function createAtera({ customers, base, run, orgNumber, newId, send }) {
-  const hoursAgo = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString();
-
-  // Customers mirror the PowerOffice ones (same organization numbers), so the mapping screen links them by org number.
-  const ateraCustomers = [...customers.values()].map((c, index) => ({
-    CustomerID: base + 500 + index,
-    CustomerName: c.Name,
-    BusinessNumber: c.OrganizationNumber,
-    Domain: `${c.Name.toLowerCase().replace(/[^a-z0-9]+/g, '')}.no`,
-    Address: c.MailAddress.AddressLine1,
-    City: c.MailAddress.City,
-    ZipCodeStr: c.MailAddress.ZipCode,
-    Country: 'NO',
-    Phone: c.PhoneNumber,
-  }));
-  const ateraContacts = ateraCustomers.map((c, index) => ({
-    EndUserID: base + 600 + index,
-    CustomerID: c.CustomerID,
-    Firstname: ['Ingrid', 'Ola', 'Kari'][index % 3],
-    Lastname: `Kunde${run}`,
-    Email: `bruker${index}@${c.Domain}`,
-    Phone: '900 00 00' + index,
-    InIgnoreMode: false,
-  }));
-  const ateraTickets = ateraCustomers.flatMap((c, index) => [
-    {
-      TicketID: base + 700 + index * 2,
-      CustomerID: c.CustomerID,
-      EndUserID: ateraContacts[index].EndUserID,
-      TicketTitle: ['Skriver svarer ikke', 'Outlook krasjer', 'Ny ansatt trenger tilgang'][index % 3],
-      TicketStatus: 'Open',
-      TicketPriority: ['High', 'Medium', 'Low'][index % 3],
-      TicketType: 'Incident',
-      TicketSource: 'Email',
-      TechnicianContactID: 4001,
-      TechnicianEmail: 'tor.tekniker@vardahei.no',
-      TechnicianFullName: 'Tor Tekniker',
-      EndUserFirstName: ateraContacts[index].Firstname,
-      EndUserLastName: ateraContacts[index].Lastname,
-      EndUserEmail: ateraContacts[index].Email,
-      TicketCreatedDate: hoursAgo(30 + index),
-      FirstResponseDate: hoursAgo(29 + index),
-    },
-    {
-      TicketID: base + 701 + index * 2,
-      CustomerID: c.CustomerID,
-      EndUserID: ateraContacts[index].EndUserID,
-      TicketTitle: 'Månedlig vedlikehold',
-      TicketStatus: 'Closed',
-      TicketPriority: 'Low',
-      TicketType: 'Request',
-      TechnicianContactID: 4002,
-      TechnicianEmail: 'nina.nett@vardahei.no',
-      TechnicianFullName: 'Nina Nett',
-      TicketCreatedDate: hoursAgo(200 + index),
-      TicketResolvedDate: hoursAgo(190 + index),
-    },
-  ]);
-  const ateraWorkHours = new Map(
-    ateraTickets.map((ticket, index) => [
-      ticket.TicketID,
-      [
-        {
-          WorkHoursID: `wh-${ticket.TicketID}`,
-          TechnicianContactID: ticket.TechnicianContactID,
-          TechnicianEmail: ticket.TechnicianEmail,
-          TechnicianFullName: ticket.TechnicianFullName,
-          StartWorkHour: hoursAgo(28 + index),
-          EndWorkHour: hoursAgo(27 + index),
-          TimeSpentInMinutes: [60, 90, 45][index % 3],
-          Billable: index % 4 !== 3,
-          IsOnsite: index % 3 === 2,
-          Description: 'Feilsøking og utbedring',
-        },
-      ],
-    ]),
-  );
-  const ateraAgents = ateraCustomers.flatMap((c, index) =>
-    [
-      { suffix: 'PC', OSType: 'Work Station', OS: 'Windows 11 Pro', Online: true },
-      { suffix: 'LAP', OSType: 'Work Station', OS: 'Windows 11 Pro', Online: false },
-      { suffix: 'SRV', OSType: 'Server', OS: 'Windows Server 2022', Online: true },
-    ].map((agent, n) => ({
-      AgentID: `agent-${c.CustomerID}-${n}`,
-      CustomerID: c.CustomerID,
-      MachineName: `${agent.suffix}-${index + 1}${n}`,
-      OSType: agent.OSType,
-      OS: agent.OS,
-      Online: agent.Online,
-      LastSeen: hoursAgo(n),
-    })),
-  );
-  const ateraAlerts = ateraCustomers.slice(0, 2).map((c, index) => ({
-    AlertID: `alert-${c.CustomerID}`,
-    CustomerID: c.CustomerID,
-    Title: index === 0 ? 'Disken er nesten full (92 %)' : 'Sikkerhetskopi feilet',
-    Severity: index === 0 ? 'Critical' : 'Warning',
-    DeviceName: `SRV-${index + 1}2`,
-    Created: hoursAgo(5 + index),
-  }));
+  const { ateraCustomers, ateraContacts, ateraTickets, ateraWorkHours, ateraAgents, ateraAlerts } = seedAtera({ customers, base, run });
   const ateraCustomValues = new Map();
   const ateraPage = (res, url, items) => {
     const size = Number(url.searchParams.get('itemsInPage') ?? 50);
@@ -136,10 +42,14 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
     }
   };
   const customerOf = (id) => ateraCustomers.find((c) => c.CustomerID === Number(id));
+  const ticketRoutes = createAteraTickets({
+    tickets: ateraTickets, workHours: ateraWorkHours, contacts: ateraContacts, customerOf, newId, send, page: ateraPage, parse,
+  });
 
   // Test-only control routes: never part of Atera's API, never behind its key.
   function control(req, res, url, body) {
     const path = url.pathname.slice('/_mock/atera/'.length);
+    if (ticketRoutes.control(req, res, path, body)) return;
     const removeAlert = path.match(/^alerts\/([^/]+)$/);
     if (removeAlert && req.method === 'DELETE') {
       // Closing an alert in Atera takes it off the open list; the CRM's next complete read resolves it.
@@ -172,8 +82,10 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
   }
 
   function api(req, res, url, body) {
-    if (!req.headers['x-api-key']) return send(res, 401, { message: 'Missing X-API-KEY' });
+    // Atera's v3 key, or a token in Authorization: Bearer (M39.0); the stand-in checks only that one of them is there.
+    if (!req.headers['x-api-key'] && !/^Bearer \S+$/.test(req.headers.authorization ?? '')) return send(res, 401, { message: 'Missing X-API-KEY or bearer token' });
     const path = url.pathname.slice('/api/v3/'.length);
+    if (ticketRoutes.api(req, res, url, body, path)) return;
     if (path === 'customers') return ateraPage(res, url, ateraCustomers);
     if (path === 'contacts' && req.method === 'GET') return ateraPage(res, url, ateraContacts);
     if (path === 'contacts' && req.method === 'POST') {
@@ -191,7 +103,7 @@ export function createAtera({ customers, base, run, orgNumber, newId, send }) {
       const ticket = {
         TicketID: newId(), CustomerID: contact?.CustomerID, EndUserID: request.EndUserID, TicketTitle: request.TicketTitle,
         TicketStatus: 'Open', TicketPriority: request.TicketPriority, TicketType: request.TicketType, TicketSource: 'CRM',
-        TicketCreatedDate: new Date().toISOString(),
+        TicketCreatedDate: new Date().toISOString(), TicketLastModified: new Date().toISOString(),
       };
       ateraTickets.unshift(ticket);
       ateraWorkHours.set(ticket.TicketID, []);

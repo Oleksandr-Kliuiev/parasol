@@ -16,6 +16,7 @@ import { formatDateTime, formatReadAt, formatRelative } from '../../shared/utils
 import { useFlushStyles } from '../billing/flushStyles';
 import { RecordRow, RowMeta } from '../billing/RecordRow';
 import { ForbiddenPage } from '../errors/ForbiddenPage';
+import { ActionLogPanel } from '../actions/ActionLog';
 import {
   failedSinceRead, parseConnectionStatus, type ConnectionGap, type ConnectionIntegration, type ConnectionJob, type ConnectionStatusView,
 } from './connectionStatusContract';
@@ -82,6 +83,8 @@ function ConnectionStatus({ employeeId, permissionsKey }: { employeeId: string; 
           {view.integrations.map((integration) => <IntegrationCard key={integration.system} integration={integration} />)}
           <WorkerCard view={view} />
         </div>
+        {/* What people asked the vendors to do (M39.1): read on its own, so the status above never waits for the log. */}
+        <ActionLogPanel />
         <Text className={styles.note}>
           {t('connectionStatus.administrationNote')} <AppLink to="/admin/integrations">{t('connectionStatus.openAdministration')}</AppLink>
         </Text>

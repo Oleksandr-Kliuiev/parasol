@@ -52,7 +52,8 @@
     "collapse": "Gjør menyen smal",
     "expand": "Gjør menyen bred",
     "mainMenu": "Hovedmeny",
-    "opensNewTab": "(åpnes i en ny fane)"
+    "opensNewTab": "(åpnes i en ny fane)",
+    "tickets": "Saker"
   },
   "header": {
     "search": "Søk i organisasjoner",
@@ -781,7 +782,8 @@
       "privacy-retention": "Lagringstid for personopplysninger",
       "quote-expiry": "La gamle tilbud utløpe",
       "reports-snapshot": "Månedlige øyeblikksbilder for rapporter",
-      "worker-heartbeat": "Livstegn fra bakgrunnstjenesten"
+      "worker-heartbeat": "Livstegn fra bakgrunnstjenesten",
+      "atera-ticket-conversations": "Meldinger i saker (Atera)"
     },
     "status": {
       "Running": "Kjører",
@@ -1532,7 +1534,21 @@
       "type": "Type"
     },
     "nothingSaved": "Ingen Atera-data er lagret for denne kunden: den er ikke koblet til Atera, eller Atera er ikke lest for den ennå. Tallene vises etter første lesing.",
-    "nothingSavedShort": "Ingen Atera-data er lagret for denne kunden ennå."
+    "nothingSavedShort": "Ingen Atera-data er lagret for denne kunden ennå.",
+    "notReadYet": "Ikke lest ennå",
+    "ticketOpenAtSource": "{{title}} i {{source}}",
+    "reads": {
+      "tickets": "Åpne saker ({{system}})",
+      "conversations": "Meldinger i saker ({{system}})",
+      "alerts": "Driftsvarsler ({{system}})",
+      "devices": "Enheter ({{system}})"
+    },
+    "readLine": {
+      "notRead": "{{source}} er ikke lest ennå",
+      "incomplete": "{{source}}: lesingen {{time}} ble ikke fullført",
+      "late": "{{source}} lest {{time}}: neste lesing er forsinket",
+      "readAt": "{{source}} lest {{time}}"
+    }
   },
   "alerts": {
     "title": "Driftsvarsler",
@@ -1851,7 +1867,13 @@
     "discardTitle": "Forkaste føringen?",
     "discardBody": "Det du har skrevet, er ikke lagret.",
     "discard": "Forkast",
-    "keepEditing": "Fortsett å redigere"
+    "keepEditing": "Fortsett å redigere",
+    "recordInAtera": "Før også i Atera",
+    "recordInAteraHint": "Når timene er lagret, ser du hva Atera får, og bekrefter det.",
+    "recordTitle": "Før på {{number}} i Atera",
+    "recordConfirm": "Før i Atera",
+    "recordSaved": "Timene er lagret i Parasoll. Atera får dem bare hvis du bekrefter nå; ikke før dem i tillegg for hånd i Atera, ellers telles de to ganger.",
+    "recordSkip": "Hopp over"
   },
   "technicians": {
     "title": "Teknikere",
@@ -3551,7 +3573,8 @@
         "integration": {
           "exception-triage": "Behandling av løste avvik",
           "external-payloads": "Kopier av eksterne poster",
-          "sync-runs": "Synkroniseringslogg"
+          "sync-runs": "Synkroniseringslogg",
+          "vendor-action-texts": "Tekster i handlinger sendt til leverandører"
         },
         "identity": {
           "sessions": "Avsluttede innloggingsøkter"
@@ -4146,7 +4169,9 @@
       "OutboundFailed_one": "{{system}}: {{count}} endring kunne ikke sendes",
       "OutboundFailed_other": "{{system}}: {{count}} endringer kunne ikke sendes",
       "WorkerLate": "Bakgrunnstjenesten, {{component}}: siste livstegn {{age}}",
-      "WorkerMissing": "Bakgrunnstjenesten, {{component}}: ingen livstegn ennå"
+      "WorkerMissing": "Bakgrunnstjenesten, {{component}}: ingen livstegn ennå",
+      "ActionsUncertain_one": "{{system}}: {{count}} handling må sjekkes",
+      "ActionsUncertain_other": "{{system}}: {{count}} handlinger må sjekkes"
     },
     "state": {
       "on": "Oppdatert",
@@ -4176,7 +4201,8 @@
       "note": "En del regnes som forsinket etter {{limit}} uten livstegn.",
       "components": {
         "outbox": "Levering av endringer",
-        "jobs": "Planlagte jobber"
+        "jobs": "Planlagte jobber",
+        "actions": "Levering av handlinger til leverandører"
       },
       "state": {
         "Current": "Kjører",
@@ -4330,5 +4356,258 @@
     "showAll": "Vis alle {{count}}",
     "showFewer": "Vis færre",
     "firstOf": "De {{shown}} mest presserende av {{total}}"
+  },
+  "actions": {
+    "status": {
+      "Scheduled": "Holdes tilbake",
+      "Queued": "I kø",
+      "Sending": "Sendes",
+      "Succeeded": "Utført",
+      "Simulated": "Simulert",
+      "Skipped": "Allerede gjort",
+      "Rejected": "Ikke tillatt",
+      "Failed": "Mislyktes",
+      "Uncertain": "Må sjekkes",
+      "Cancelled": "Avbrutt"
+    },
+    "codes": {
+      "VND_INTEGRATION_OFF": "Tilkoblingen til dette systemet er slått av.",
+      "VND_INTEGRATION_NOT_CONFIGURED": "Bakgrunnstjenesten har ingen nøkkel for dette systemet.",
+      "VND_KIND_DISABLED": "Denne typen handling er ikke slått på ennå.",
+      "VND_WRITE_DISABLED": "Endringer i dette systemet er slått av.",
+      "VND_CUSTOMER_NOT_ALLOWED": "Endringer er foreløpig bare tillatt for testkundene.",
+      "VND_UNKNOWN_KIND": "Denne handlingen finnes ikke.",
+      "VND_KIND_UNKNOWN": "Parasoll kjenner ikke lenger denne typen handling; ingenting ble sendt.",
+      "VND_TARGET_NOT_FOUND": "Parasoll har ingen lagret kopi av denne posten.",
+      "VND_FORBIDDEN": "Tilgangen din omfatter ikke denne handlingen.",
+      "VND_PREVIEW_EXPIRED": "Forhåndsvisningen er eldre enn ti minutter; se på den igjen.",
+      "VND_PREVIEW_STALE": "Handlingen er ikke den forhåndsvisningen viste; se på den igjen.",
+      "VND_COMMAND_KEY_REUSED": "Denne bekreftelsen er allerede brukt for en annen handling. Åpne dialogen på nytt.",
+      "VND_REASON_REQUIRED": "Oppgi en begrunnelse på 10–500 tegn.",
+      "VND_NAME_MISMATCH": "Skriv navnet nøyaktig slik det vises.",
+      "VND_WRONG_ENDPOINT": "Handlingen ble sendt feil vei. Last inn siden på nytt og prøv igjen.",
+      "VND_NOT_CANCELLABLE": "Handlingen er allerede på vei og kan ikke avbrytes lenger.",
+      "VND_SENDING": "Handlingen sendes akkurat nå og kan ikke avbrytes lenger.",
+      "VND_NOT_UNCERTAIN": "Denne handlingen har allerede et utfall.",
+      "VND_SETTLEMENT_INVALID": "Si om det skjedde og hva du sjekket (10–500 tegn).",
+      "VND_STALE": "Handlingen er endret i mellomtiden. Lukk den og åpne den igjen.",
+      "VND_NOT_FOUND": "Handlingen ble ikke funnet.",
+      "VND_SENT": "Leverandøren tok imot endringen.",
+      "VND_ALREADY_DONE": "Det var allerede slik; ingenting ble sendt.",
+      "VND_DRY_RUN": "Testmodus (DryRun): ingenting ble sendt.",
+      "VND_NO_ANSWER": "Det kom ikke noe klart svar. Sjekk om det skjedde.",
+      "VND_EARLIER_ATTEMPT": "Et tidligere forsøk kan ha gått gjennom uten svar. Sjekk før du ber om det igjen.",
+      "VND_VENDOR_UNAVAILABLE": "Systemet kunne ikke nås etter flere forsøk; ingenting ble sendt.",
+      "VND_WAITING": "Venter: Parasoll kunne ikke registrere forsøket ennå.",
+      "VND_CANCELLED": "Avbrutt før den ble sendt.",
+      "VND_SETTLED_DONE": "Sjekket: det skjedde.",
+      "VND_SETTLED_NOT_DONE": "Sjekket: det skjedde ikke.",
+      "VND_HELD_AFTER_RESTORE": "Holdt tilbake etter en gjenoppretting av databasen: den kan ha gått gjennom. Sjekk og registrer hva du fant.",
+      "VND_TEXT_REQUIRED": "Skriv teksten først.",
+      "VND_TEXT_TOO_LONG": "Teksten er lengre enn 8000 tegn.",
+      "VND_TECHNICIAN_UNMAPPED": "Kontoen din er ikke koblet til en Atera-tekniker. En administrator kobler den under Teknikere.",
+      "VND_NO_CHANGE": "Saken har allerede denne verdien.",
+      "VND_VALUE_UNKNOWN": "Velg en av verdiene Atera kjenner.",
+      "VND_TECHNICIAN_UNKNOWN": "Velg en tekniker Atera kjenner.",
+      "VND_TICKET_MOVED": "Saken tilhører en annen kunde i Atera nå; ingenting ble sendt.",
+      "VND_TARGET_GONE": "Saken finnes ikke lenger i Atera; ingenting ble sendt.",
+      "VND_VENDOR_REFUSED": "Atera avviste det; ingenting ble endret.",
+      "VND_VENDOR_BUSY": "Atera kunne ikke leses; det prøves igjen.",
+      "VND_TIME_FROM_ATERA": "Timene kom fra Atera; de er der allerede.",
+      "VND_TIME_NOT_OWN": "Bare den som har jobbet timene, fører dem i Atera.",
+      "VND_TIME_NO_TICKET": "Føringen viser ikke til en Atera-sak hos kunden som Parasoll kjenner.",
+      "VND_CURSOR_INVALID": "Siden hører ikke til denne listen; last inn listen på nytt.",
+      "VND_FILTER_INVALID": "Filteret er ikke gyldig."
+    },
+    "dialog": {
+      "previewing": "Sjekker hva handlingen vil gjøre …",
+      "source": "Kilde: {{system}}",
+      "effects": "Dette skjer",
+      "simulated": "{{system}} er i testmodus (DryRun): ingenting sendes, og resultatet sier hva som ville ha skjedd.",
+      "paused": "Tilkoblingen til {{system}} er satt på pause: handlingen venter til den gjenopptas.",
+      "destructive": "Dette kan ikke angres. Du bekrefter innloggingen, og handlingen sendes {{seconds}} sekunder etter at du bekrefter; frem til da kan du avbryte den.",
+      "typeName": "Skriv «{{name}}» for å bekrefte",
+      "typeNameMismatch": "Navnet stemmer ikke.",
+      "reason": "Begrunnelse",
+      "reasonHint": "{{min}}–{{max}} tegn, lagres med handlingen.",
+      "reverify": "Bekreft innloggingen i vinduet som åpnet seg, og trykk «{{confirm}}» igjen.",
+      "renewed": "Forhåndsvisningen ble fornyet: den var eldre enn ti minutter, eller posten ble endret. Sjekk den og trykk «{{confirm}}» igjen.",
+      "cancelAction": "Avbryt handlingen",
+      "held": "Sendes om {{seconds}} s. Frem til da kan du avbryte den.",
+      "sending": "Sender til {{system}} …",
+      "uncertainNext": "{{system}} ga ikke noe klart svar, så ingenting sendes på nytt. Sjekk i {{system}} om det skjedde, og registrer hva du fant under Handlinger hos leverandører på siden Tilkoblinger.",
+      "openAtVendor": "Sjekk i {{system}}",
+      "keepsGoing": "Du kan lukke vinduet; handlingen fortsetter."
+    },
+    "fields": {
+      "requestedBy": "Bedt om av",
+      "requestedAt": "Bedt om",
+      "source": "Kilde",
+      "customer": "Kunde",
+      "reason": "Begrunnelse",
+      "completedAt": "Ferdig",
+      "attempts": "Forsøk",
+      "closedBy": "Avbrutt eller sjekket av"
+    },
+    "settle": {
+      "intro": "{{system}} ga ikke noe klart svar. Sjekk der om det skjedde, og registrer hva du fant; ingenting sendes på nytt.",
+      "question": "Skjedde det?",
+      "done": "Det skjedde i {{system}}",
+      "notDone": "Det skjedde ikke i {{system}}",
+      "reason": "Hva du sjekket",
+      "confirm": "Lagre det du fant"
+    },
+    "log": {
+      "title": "Handlinger hos leverandører",
+      "note": "Alt Parasoll har bedt leverandørene om, nyeste først. En handling uten klart svar venter til noen sjekker hos leverandøren.",
+      "filter": "Vis handlinger",
+      "all": "Alle",
+      "attention": "Må sjekkes",
+      "waiting": "Ikke sendt ennå",
+      "none": "Ingen handlinger ennå.",
+      "noneUncertain": "Ingen handlinger må sjekkes.",
+      "noneWaiting": "Ingenting venter på å bli sendt."
+    },
+    "kinds": {
+      "atera": {
+        "ticket": {
+          "reply": "Svar til kunden",
+          "note": "Intern merknad",
+          "status": "Endre status",
+          "priority": "Endre prioritet",
+          "technician": "Gi til tekniker",
+          "close": "Lukk saken"
+        },
+        "time": {
+          "record": "Før tid i Atera"
+        }
+      }
+    },
+    "effects": {
+      "VND_EFFECT_TICKET_REPLY": "{{to}} ser dette svaret i Atera, og får det på e-post når varslingene i Atera er på.",
+      "VND_EFFECT_TICKET_REPLY_CUSTOMER": "Kunden ser dette svaret i Atera, og får det på e-post når varslingene i Atera er på.",
+      "VND_EFFECT_TICKET_NOTE": "Bare teknikere ser denne merknaden; kunden gjør ikke det.",
+      "VND_EFFECT_TICKET_AUTHOR": "Atera viser det som skrevet av {{name}}.",
+      "VND_EFFECT_TICKET_REOPEN": "Saken har status {{status}}: Atera kan åpne den igjen når kunden får svar.",
+      "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_PRIORITY": "Prioritet: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_TECHNICIAN": "Tekniker: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera kan si fra til kunden at saken er løst.",
+      "VND_EFFECT_TIME_RECORD": "{{hours, number}} t føres på {{ticket}} i Atera, {{date}} {{from}}–{{to}}.",
+      "VND_EFFECT_TIME_BILLABLE": "Atera merker dem som fakturerbare.",
+      "VND_EFFECT_TIME_NOT_BILLABLE": "Atera merker dem som ikke fakturerbare.",
+      "VND_EFFECT_TIME_NO_DOUBLE": "Timeimporten kjenner dem igjen, så de telles aldri to ganger.",
+      "VND_EFFECT_TIME_DEFAULT_START": "Føringen har ingen starttid, så timene starter kl. {{from}} på datoen.",
+      "VND_EFFECT_TIME_AUTHOR": "Atera viser dem som ført av {{name}}."
+    }
+  },
+  "tickets": {
+    "title": "Saker",
+    "subtitle": "Åpne saker for alle kunder, nyeste først. Sakene ligger i Atera; du svarer på dem og endrer dem her.",
+    "subtitleAll": "Alle åpne saker og alle saker fra de siste 90 dagene, nyeste først.",
+    "refresh": "Oppdater sakene",
+    "filters": "Filtrer saker",
+    "search": "Søk i tittel eller nummer",
+    "stateLabel": "Hvilke saker",
+    "show": {
+      "open": "Åpne",
+      "all": "Alle"
+    },
+    "whoLabel": "Hvem sine saker",
+    "who": {
+      "everyone": "Alle teknikere",
+      "mine": "Mine"
+    },
+    "totals_one": "{{count}} åpen sak",
+    "totals_other": "{{count}} åpne saker",
+    "totalsAll_one": "{{count}} sak",
+    "totalsAll_other": "{{count}} saker",
+    "listTitle": "Saker",
+    "empty": "Ingen åpne saker.",
+    "emptyAll": "Ingen saker de siste 90 dagene.",
+    "emptyFiltered": "Ingen saker passer til filteret.",
+    "clearFilters": "Fjern filtrene",
+    "statuses": {
+      "Open": "Åpen",
+      "Pending": "Venter",
+      "Resolved": "Løst",
+      "Closed": "Lukket"
+    },
+    "priorities": {
+      "Low": "Lav",
+      "Medium": "Middels",
+      "High": "Høy",
+      "Critical": "Kritisk"
+    },
+    "fields": {
+      "status": "Status",
+      "priority": "Prioritet",
+      "customer": "Kunde",
+      "unknownCustomer": "Ukjent kunde",
+      "contact": "Kontakt",
+      "technician": "Tekniker",
+      "noTechnician": "Ingen tekniker",
+      "created": "Opprettet",
+      "resolved": "Løst",
+      "source": "Kilde",
+      "noPriority": "Ingen prioritet"
+    },
+    "panel": {
+      "title": "Sak",
+      "loading": "Leser saken …",
+      "notFound": "Parasoll har ingen lagret kopi av denne saken.",
+      "openInSource": "Åpne i {{name}}",
+      "actions": "Handlinger på denne saken",
+      "noActions": "Ingenting er sendt fra Parasoll for denne saken ennå."
+    },
+    "actions": {
+      "label": "Endre saken",
+      "status": "Status",
+      "priority": "Prioritet",
+      "technician": "Gi til tekniker",
+      "close": "Lukk saken",
+      "statusTitle": "Sett {{number}} til {{status}}",
+      "statusConfirm": "Sett til {{status}}",
+      "priorityTitle": "Endre prioriteten på {{number}}",
+      "priorityConfirm": "Sett prioritet {{priority}}",
+      "technicianTitle": "Gi {{number}} til en tekniker",
+      "technicianConfirm": "Gi til {{name}}",
+      "closeTitle": "Lukk {{number}}",
+      "closeConfirm": "Lukk saken",
+      "techniciansFailed": "Teknikerne kunne ikke leses.",
+      "noTechnicians": "Ingen Atera-teknikere er kjent ennå."
+    },
+    "conversation": {
+      "title": "Samtale",
+      "readAt": "Meldinger lest",
+      "notRead": "Meldingene i denne saken er ikke lest ennå.",
+      "earlier": "Vis tidligere meldinger ({{shown}} av {{total}})",
+      "empty": "Ingen meldinger i denne saken.",
+      "emptyUnread": "Ingen meldinger er lagret ennå: de vises etter neste lesing.",
+      "internal": "Intern merknad",
+      "authors": {
+        "Unknown": "Ukjent",
+        "Technician": "Tekniker",
+        "EndUser": "Kunde"
+      },
+      "roles": {
+        "Unknown": "Melding",
+        "Technician": "Svar",
+        "EndUser": "Kunde"
+      }
+    },
+    "composer": {
+      "kind": "Type melding",
+      "reply": "Svar til kunden",
+      "note": "Intern merknad",
+      "replyLabel": "Svar",
+      "noteLabel": "Merknad",
+      "replyHint": "Kunden ser dette i Atera, og på e-post når varslingene i Atera er på.",
+      "noteHint": "Bare teknikere ser dette.",
+      "sendReply": "Send svaret",
+      "addNote": "Legg til merknaden",
+      "replyTitle": "Svar i {{number}}",
+      "noteTitle": "Intern merknad i {{number}}"
+    }
   }
 }

@@ -2,6 +2,7 @@ using System.Net;
 using System.Threading.RateLimiting;
 using Crm.Infrastructure.DependencyInjection;
 using Crm.Integrations.Core;
+using Crm.Integrations.Core.Actions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
@@ -23,11 +24,9 @@ public static class AteraModule
                 client.BaseAddress = options.BaseUrl;
                 client.Timeout = TimeSpan.FromMinutes(2);
                 client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
-                if (!string.IsNullOrWhiteSpace(options.ApiKey))
-                {
-                    client.DefaultRequestHeaders.Add("X-API-KEY", options.ApiKey);
-                }
+                AteraAuthentication.Apply(client.DefaultRequestHeaders, options);
             })
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects)
             .AddResilienceHandler("atera", (pipeline, context) =>
             {
                 var options = context.ServiceProvider.GetRequiredService<IOptions<AteraOptions>>().Value;
@@ -59,6 +58,19 @@ public static class AteraModule
         services.AddScoped<IOutboundHandler, AteraSetSlaHandler>();
         services.AddScoped<IOutboundHandler, AteraCreateTicketHandler>();
         services.AddScoped<AteraLinkIndex>();
+        services.AddScoped<AteraTicketMirror>();
+        services.AddScoped<AteraConversationReader>();
+        services.AddScoped<AteraTicketConversationSyncJob>();
+        // M39.2: the ticket actions on the one action path (M39.1), behind Atera's own switches.
+        services.AddScoped<IVendorActionGate, AteraActionGate>();
+        services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<AteraTicketCommentAction>(sp, false));
+        services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<AteraTicketCommentAction>(sp, true));
+        services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<AteraTicketStatusAction>(sp, false));
+        services.AddScoped<IVendorActionHandler>(sp => ActivatorUtilities.CreateInstance<AteraTicketStatusAction>(sp, true));
+        services.AddScoped<IVendorActionHandler, AteraTicketPriorityAction>();
+        services.AddScoped<IVendorActionHandler, AteraTicketTechnicianAction>();
+        // M39.3: own time also recorded in Atera, never imported back as a second entry.
+        services.AddScoped<IVendorActionHandler, AteraTimeRecordAction>();
         services.AddScoped<AteraTicketSyncJob>();
         services.AddScoped<AteraWorkHoursSyncJob>();
         services.AddScoped<AteraAgentSyncJob>();

@@ -116,6 +116,12 @@ internal static class AteraTicketPrivacySupport
             OwnerReads++; if (BeforeOwnerRead is { } action) await action();
             foreach (var contact in Contacts) { ct.ThrowIfCancellationRequested(); OwnerRows++; yield return contact; }
         }
+        public Task<AteraTicket?> GetTicketAsync(long ticketId, CancellationToken ct) => throw new NotSupportedException();
+        public IAsyncEnumerable<AteraTicket> GetModifiedTicketsAsync(DateTimeOffset since, CancellationToken ct) => throw new NotSupportedException();
+        public Task<IReadOnlyList<AteraComment>> GetTicketCommentsAsync(long ticketId, CancellationToken ct) => throw new NotSupportedException();
+        public Task<string?> CreateTicketCommentAsync(long ticketId, AteraCommentWrite comment, CancellationToken ct) => throw new NotSupportedException();
+        public Task UpdateTicketAsync(long ticketId, AteraTicketUpdate update, CancellationToken ct) => throw new NotSupportedException();
+        public Task<string?> CreateWorkHoursAsync(long ticketId, AteraWorkHoursWrite hours, CancellationToken ct) => throw new NotSupportedException();
         public async Task<long> CreateContactAsync(AteraContactWrite contact, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested(); ContactWrites.Add(contact); Contacts.Add(Person(NewContactId, contact.CustomerID));

@@ -2,6 +2,7 @@ using System.Globalization;
 using Crm.Customers.Contracts;
 using Crm.Identity.Contracts;
 using Crm.Integrations.Core;
+using Crm.Integrations.Core.Actions;
 using Crm.Integrations.Core.Persistence;
 using Crm.Privacy.Contracts;
 using Crm.Service.Contracts;
@@ -90,14 +91,12 @@ public sealed class AteraLinkIndex(IntegrationDbContext db)
 /// </summary>
 public sealed class AteraTicketSyncJob(
     IAteraClient client,
-    AteraLinkIndex links,
+    AteraTicketMirror mirror,
     IServiceApi service,
-    ITechnicianDirectory technicians,
     SyncRunner runner,
     TimeProvider time,
     IOptions<AteraOptions> options,
-    ILogger<AteraTicketSyncJob> logger,
-    ISuppressionList suppressions)
+    ILogger<AteraTicketSyncJob> logger)
 {
     public const string OpenJobId = "atera-tickets";
     public const string RecentJobId = "atera-tickets-recent";
@@ -112,14 +111,11 @@ public sealed class AteraTicketSyncJob(
 
         await runner.RunAsync(AteraTypes.System, recent ? RecentJobId : OpenJobId, async (progress, ct) =>
         {
-            var customers = await links.TicketOwnersAsync(ct);
-            var contacts = await links.ContactsAsync(ct);
-            // DEV-11: a ticket's end user who was erased at their request is mirrored without name, address or contact.
-            var suppressed = await suppressions.SnapshotAsync(ct);
+            // Links and suppressions as they stand when the read begins: a rebind during the read waits for the next one.
+            var mapping = await mirror.SnapshotAsync(ct);
             var since = time.GetUtcNow().AddDays(-options.Value.RecentTicketDays);
             var statuses = recent ? [null] : options.Value.OpenTicketStatuses.Cast<string?>().ToList();
             var collected = new List<AteraTicket>();
-            var skipped = 0;
 
             // The list is newest first by ticket id, but a ticket's last activity can be recent while its id is old, so the first
             // old ticket proves nothing. The recent pass stops only after RecentStopPages consecutive pages' worth of tickets
@@ -148,37 +144,9 @@ public sealed class AteraTicketSyncJob(
                 }
             }
 
-            var technicianMap = await technicians.ResolveAsync(
-                collected.Select(t => AteraServiceMapping.Technician(t.TechnicianId?.ToString(CultureInfo.InvariantCulture), t.TechnicianEmail, t.TechnicianName))
-                    .OfType<TechnicianRef>().DistinctBy(t => t.ExternalId).ToList(),
-                ct);
-
-            var tickets = new List<ExternalTicket>();
-            foreach (var ticket in collected.DistinctBy(t => t.TicketId))
-            {
-                if (ticket.CustomerId is not { } customerId || !customers.TryGetValue(customerId, out var owner))
-                {
-                    skipped++;
-                    continue;
-                }
-
-                var technicianKey = ticket.TechnicianId?.ToString(CultureInfo.InvariantCulture) ?? ticket.TechnicianEmail;
-                var endUserSuppressed = suppressed.IsSuppressed(
-                    ticket.EndUserEmail,
-                    ticket.EndUserId is { } suppressedId ? new ExternalReference(AteraTypes.System, AteraTypes.Contact, suppressedId.ToString(CultureInfo.InvariantCulture)) : null);
-                tickets.Add(new ExternalTicket(
-                    AteraTypes.System, ticket.TicketId, owner.OrganizationId,
-                    !endUserSuppressed && ticket.EndUserId is { } endUserId && contacts.TryGetValue(endUserId, out var contactId) ? contactId : null,
-                    ticket.Title, ticket.Status, ticket.Priority, ticket.Impact, ticket.Type, ticket.Source,
-                    technicianKey is not null && technicianMap.TryGetValue(technicianKey, out var userId) ? userId : null,
-                    ticket.TechnicianName, endUserSuppressed ? null : ticket.EndUserName, endUserSuppressed ? null : ticket.EndUserEmail,
-                    ticket.CreatedAt, ticket.FirstResponseAt, ticket.ResolvedAt,
-                    ticket.LastActivityAt, AteraServiceMapping.Url(options.Value.TicketUrlTemplate, ticket.TicketId),
-                    owner.CustomerId, owner.LinkId));
-            }
-
-            progress.Changed = await service.UpsertTicketsAsync(tickets, ct);
-            progress.Message = $"changed {progress.Changed}, skipped (customer not linked) {skipped}{(stoppedEarly ? ", stopped after pages outside the window" : string.Empty)}";
+            var batch = await mapping.MapAsync(collected, ct);
+            progress.Changed = await service.UpsertTicketsAsync(batch.Tickets, ct);
+            progress.Message = $"changed {progress.Changed}, skipped (customer not linked) {batch.Unlinked}{(stoppedEarly ? ", stopped after pages outside the window" : string.Empty)}";
         }, cancellationToken);
     }
 }
@@ -192,7 +160,8 @@ public sealed class AteraWorkHoursSyncJob(
     SyncRunner runner,
     TimeProvider time,
     IOptions<AteraOptions> options,
-    ILogger<AteraWorkHoursSyncJob> logger)
+    ILogger<AteraWorkHoursSyncJob> logger,
+    IntegrationDbContext db)
 {
     public const string JobId = "atera-work-hours";
 
@@ -212,6 +181,14 @@ public sealed class AteraWorkHoursSyncJob(
             var since = time.GetUtcNow().AddDays(-options.Value.RecentTicketDays);
             var tickets = await service.GetActiveTicketsAsync(AteraTypes.System, since, ct);
             var records = new List<(AteraWorkHours Hours, TicketRef Ticket)>();
+            // M39.3: hours the CRM recorded in Atera come back carrying their entry's marker (or the id Atera answered with); the
+            // CRM entry is the one that counts, so such a row is never imported as a second entry.
+            var recordedIds = (await db.VendorActions.AsNoTracking()
+                    .Where(a => a.System == AteraTypes.System && a.Kind == AteraTimeRecordAction.KindName && a.Reference != null &&
+                                (a.Status == VendorActionStatus.Succeeded || a.Status == VendorActionStatus.Skipped))
+                    .Select(a => a.Reference!).ToListAsync(ct))
+                .ToHashSet(StringComparer.Ordinal);
+            var fromCrm = 0;
             var consecutiveFailures = 0;
             var dropped = 0;
             var unreadable = 0;
@@ -244,6 +221,12 @@ public sealed class AteraWorkHoursSyncJob(
                 foreach (var hours in fetched.Records)
                 {
                     progress.Read++;
+                    if (AteraTimeMarker.Read(hours.Description) is not null || recordedIds.Contains(hours.Id))
+                    {
+                        fromCrm++;
+                        continue;
+                    }
+
                     records.Add((hours, ticket));
                 }
             }
@@ -279,7 +262,7 @@ public sealed class AteraWorkHoursSyncJob(
             var result = await timeTracking.ImportAsync(entries, ct);
             progress.Changed = result.Created + result.Updated;
             progress.Message = $"tickets {tickets.Count}, new {result.Created}, updated {result.Updated}, unchanged {result.Unchanged}, needs review {result.NeedsReview}, " +
-                               $"tickets unreadable {unreadable}, rows without duration {dropped}";
+                               $"recorded from the CRM {fromCrm}, tickets unreadable {unreadable}, rows without duration {dropped}";
             if (unreadable > 0 && unreadable >= tickets.Count)
             {
                 throw new AteraApiException(System.Net.HttpStatusCode.BadGateway, "No ticket's work hours could be read.");

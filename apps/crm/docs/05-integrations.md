@@ -133,7 +133,8 @@ GET  /reports/partners/billing/operations/{id}  (опрос до status = succee
 ## 3. Atera
 
 ### 3.1 Доступ
-- Базовый URL: `https://app.atera.com/api/v3`, заголовок `X-API-KEY`.
+- Базовый URL: `https://app.atera.com/api/v3`, заголовок `X-API-KEY`. Если Atera переведёт аккаунт на токены, `Integrations:Atera:Authentication=Bearer` отправляет тот же секрет (`ApiKey`) как `Authorization: Bearer <JWT>`; всегда ровно один из двух заголовков (M39.0).
+- Клиент не следует перенаправлениям (как клиенты PowerOffice и Partner Center): ответ 3xx — ошибка, `X-API-KEY` не уходит на адрес из `Location` (M39.0, `Crm.Integrations.Core/ProviderHttp.cs`).
 - Ключ API — один на аккаунт Atera с широкими правами: хранится только в Key Vault, ротация раз в 6 месяцев и при увольнении администратора Atera.
 - Лимит: **700 запросов/мин** на аккаунт — CRM ограничивает себя 600/мин, чтобы оставить запас для других интеграций Atera.
 - Пагинация: `page` (с 1) + `itemsInPage` (максимум 50); ответ содержит `totalPages`, `totalItemCount`, `nextLink`.
@@ -145,8 +146,9 @@ GET  /reports/partners/billing/operations/{id}  (опрос до status = succee
 |---|---|---|---|
 | Customers | GET, POST, PUT | `Organization` + `CustomerEnvironment(AteraCustomer)`; при активации MSP-контракта — создание | Каждые 15 мин + по событию |
 | Contacts | GET, POST | `Contact` + `OrganizationContact` | Каждые 15 мин + при создании тикета |
-| Tickets | GET (`ticketStatus`), POST | `service.Ticket` (зеркало, не редактируется в CRM) | Открытые — каждые 10 мин; проход по недавним (60 дней) — каждый час |
-| Ticket work hours / billable durations | GET `/tickets/{id}/workhoursrecords` | `time.TimeEntry` (Source = Atera), техник — через `identity.TechnicianMapping` | Каждые 30 мин по тикетам, открытым или изменённым за 60 дней |
+| Tickets | GET (`ticketStatus`), POST; POST `/tickets/{id}` (статус, приоритет, техник) — действием (M39) | `service.Ticket` (зеркало; меняется только через действие у Atera и последующее чтение) | Открытые — каждые 10 мин; проход по недавним (60 дней) — каждый час |
+| Ticket comments | GET `/tickets/lastmodified?includeComments`, GET/POST `/tickets/{id}/comments` — ответ и внутренняя заметка действием (M39) | `service.TicketComments` (переписка, [§3.6](#36-действия-и-переписка-m39)) | Каждые 5 мин (`TicketConversationSyncCron`) + перечитывание открытых |
+| Ticket work hours / billable durations | GET `/tickets/{id}/workhoursrecords`; POST `/tickets/{id}/workhours` — собственные часы из CRM действием `time.record` (M39.3) | `time.TimeEntry` (Source = Atera), техник — через `identity.TechnicianMapping`; строки с маркером CRM не импортируются | Каждые 30 мин по тикетам, открытым или изменённым за 60 дней |
 | Agents | GET | `service.Device` + ежедневный `DeviceCountSnapshot` по типам (Workstation/Server/Network/Other из `OSType`/`OS`) | Ночью (01:30) |
 | Alerts | GET (`alertStatus=Open`), все клиенты одним постраничным списком | `service.Alerts` с жизненным циклом ([§3.5](#35-оповещения-жизненный-цикл-m38)): Critical/Warning сопоставленных клиентов, постоянный id, закрытие только по полному чтению | Каждые 30 мин (`AlertSyncCron`, `5,35 * * * *`) |
 | Custom values (customer) | GET, PUT `/customvalues/customerfield/{customerId}/{fieldName}` | Уровень SLA активного контракта (поле из `Integrations:Atera:SlaCustomFieldName`; реализовано, запись выключена до PoC); номер контракта и менеджер — позже | При активации, приостановке, завершении контракта и смене SLA |
@@ -178,6 +180,13 @@ POST /tickets { TicketTitle, Description, TicketPriority, TicketImpact, TicketSt
 - Чтение (`service.read`): `GET /api/v1/service/alerts?organizationId&state&severity&deviceId&q&cursor&limit` → `{items, nextCursor, totalCount, critical, warning}` — открытые по умолчанию, новые первыми, keyset-курсор, 25 по умолчанию и до 100, итоги по всему фильтру; `GET /api/v1/service/alerts/urgent?limit=5` → `{items, totalCount, critical, warning, reads: [{system, startedAt, complete}]}` — самые важные, среди них самые старые; `reads` говорит, полным ли было последнее чтение источника.
 - Макет Atera (`tools/dev-mocks/atera.mjs`) даёт тестам свои клиенты, агенты и оповещения и закрывает оповещение маршрутами `/_mock/atera/*` ([README макетов](../tools/dev-mocks/README.md)).
 - Закрытие оповещения в Atera, скрытие до даты, пробелы покрытия и чистка решённых — этап M40.
+
+### 3.6 Действия и переписка (M39)
+Подробности — [M39](../../../docs/migration/M39-VENDOR-ACTIONS-TICKETS.md).
+- Любое изменение в Atera из CRM — действие (`integration.VendorActions`): предпросмотр из сохранённых данных с подписанным токеном (10 мин), подтверждение по уровню, команда с ключом идемпотентности, отправка Worker'ом (цикл 5 с) после повторного чтения переключателей и живого состояния. Неповторяемое действие без ясного ответа (`Uncertain`) не отправляется снова — человек проверяет у Atera и записывает итог в журнале на `/connections`.
+- Виды Atera: `ticket.reply`, `ticket.note`, `ticket.status`, `ticket.priority`, `ticket.technician`, `ticket.close`, `time.record`. Пишутся от имени техника, сопоставленного человеку (`identity.TechnicianMappings`); заявка, ушедшая к другому клиенту, — `VND_TICKET_MOVED`. Включение: `WriteEnabled` (или `DryRun`) и вид в `EnabledActions`; `WriteAllowedCustomerIds` ограничивает клиентов.
+- Переписка: задание `atera-ticket-conversations` читает `/tickets/lastmodified` от курсора (перекрытие 5 мин, первый проход 14 дней) и перечитывает до 25 открытых заявок, чья переписка старше 60 мин; курсор двигается только после полного прогона.
+- Часы из CRM: `POST /tickets/{id}/workhours` с маркером `[CRM-TE:<id записи>]` в комментарии; повтор находит строку по маркеру (`Skipped`), импорт часов пропускает строки с маркером и квитанции действий — часы не считаются дважды.
 
 ## 4. PowerOffice Go
 

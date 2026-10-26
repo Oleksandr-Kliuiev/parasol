@@ -30,18 +30,26 @@ it.each(kinds)('shows a %s read error, leaves other resources usable and retries
   expect(fetch).toHaveBeenCalledTimes(6); expect(kindOf(fetch.mock.calls.at(-1)![0])).toBe(kind);
 });
 
-it('renders zero counts and empty states only after successful saved reads and labels the ticket-change timestamp truthfully', async () => {
+it('renders zero counts and empty states only after successful saved reads and says when each kind of data was read', async () => {
   const fetch = vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, openTickets: 0, devices: {}, devicesOnline: 0, criticalAlerts: 0, warningAlerts: 0 }) : empty());
   vi.stubGlobal('fetch', fetch); renderService(); expect(await screen.findByText('No open tickets.')).toBeVisible();
   expect(region('summary').getAllByText('0')).toHaveLength(4); expect(screen.getByText('No devices from Atera yet.')).toBeVisible();
   expect(screen.getByText('No saved ticket requests need attention.')).toBeVisible();
-  expect(screen.getByText(/^Last saved ticket change:/)).toBeVisible(); expect(screen.queryByText(/^Last synced/)).not.toBeInTheDocument();
+  // M39.2: one read line names every source, never a single "last change" that says nothing about alerts or devices.
+  expect(region('summary').getByText(/^Open tickets \(Atera\) read at .* · Alerts \(Atera\) read at .* · Devices \(Atera\) read at /)).toBeVisible();
+  expect(screen.queryByText(/^Last synced/)).not.toBeInTheDocument();
   expect(screen.getByText(/Refresh rereads this copy; it does not check Atera live/)).toBeVisible();
 });
 
-it('calls an absent ticket-change timestamp unknown, without inventing a synchronization time', async () => {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, lastSyncedAt: null }) : empty()));
-  renderService(); expect(await screen.findByText('Last saved ticket change is unknown.')).toBeVisible(); expect(screen.queryByText(/^Last synced/)).not.toBeInTheDocument();
+it('shows a kind of data that was never read as not read, never as a zero (M38 UX finding)', async () => {
+  const reads = summary.reads.map((read) => read.source === 'tickets' ? { ...read, startedAt: null, complete: false } : read);
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => kindOf(url) === 'summary' ? json({ ...summary, openTickets: 0, reads }) : empty()));
+  renderService();
+  expect(await region('summary').findByText(/Open tickets \(Atera\) not read yet/)).toBeVisible();
+  const tickets = region('summary').getByText('Open tickets').parentElement!;
+  expect(within(tickets).getByText('—')).toBeVisible(); expect(within(tickets).getByText('Not read yet')).toBeVisible();
+  expect(within(tickets).queryByText('0')).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Last synced/)).not.toBeInTheDocument();
 });
 
 it('refreshes all five first pages, cancels a held continuation, clears old rows and refuses duplicate keyboard activation', async () => {

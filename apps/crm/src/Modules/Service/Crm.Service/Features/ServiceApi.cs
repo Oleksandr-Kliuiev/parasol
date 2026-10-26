@@ -11,23 +11,41 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
 {
     public async Task<int> UpsertTicketsAsync(IReadOnlyCollection<ExternalTicket> tickets, CancellationToken cancellationToken)
     {
+        var changed = 0;
+        foreach (var desk in tickets.GroupBy(t => t.System))
+        {
+            var batch = desk.DistinctBy(t => t.ExternalId).ToList();
+            try
+            {
+                changed += await TicketWriteLock.RunAsync(db, desk.Key, ct => UpsertTicketsOnceAsync(desk.Key, batch, ct), cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // A writer outside the reads (a merge, an erasure) changed one of the tickets in between: read them again, once.
+                db.ChangeTracker.Clear();
+                changed += await TicketWriteLock.RunAsync(db, desk.Key, ct => UpsertTicketsOnceAsync(desk.Key, batch, ct), cancellationToken);
+            }
+        }
+
+        return changed;
+    }
+
+    private async Task<int> UpsertTicketsOnceAsync(string system, IReadOnlyCollection<ExternalTicket> tickets, CancellationToken cancellationToken)
+    {
         var now = time.GetUtcNow();
         var changed = 0;
-        foreach (var system in tickets.GroupBy(t => t.System))
+        var ids = tickets.Select(t => t.ExternalId).ToList();
+        var existing = await db.Tickets.Where(t => t.System == system && ids.Contains(t.ExternalId)).ToDictionaryAsync(t => t.ExternalId, cancellationToken);
+        foreach (var source in tickets)
         {
-            var ids = system.Select(t => t.ExternalId).Distinct().ToList();
-            var existing = await db.Tickets.Where(t => t.System == system.Key && ids.Contains(t.ExternalId)).ToDictionaryAsync(t => t.ExternalId, cancellationToken);
-            foreach (var source in system.DistinctBy(t => t.ExternalId))
+            if (existing.TryGetValue(source.ExternalId, out var ticket))
             {
-                if (existing.TryGetValue(source.ExternalId, out var ticket))
-                {
-                    changed += ticket.Apply(source, now) ? 1 : 0;
-                }
-                else
-                {
-                    db.Tickets.Add(Ticket.From(source, now));
-                    changed++;
-                }
+                changed += ticket.Apply(source, now) ? 1 : 0;
+            }
+            else
+            {
+                db.Tickets.Add(Ticket.From(source, now));
+                changed++;
             }
         }
 
@@ -237,6 +255,22 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             await db.SaveChangesAsync(cancellationToken);
         }
     }
+
+    public Task<TicketView?> GetTicketAsync(string system, long externalId, CancellationToken cancellationToken) =>
+        new TicketConversations(db, time).GetAsync(system, externalId, cancellationToken);
+
+    public Task<TicketConversationResult> ApplyTicketConversationAsync(
+        string system, long ticketExternalId, IReadOnlyCollection<ExternalTicketComment> comments, bool withheld, CancellationToken cancellationToken) =>
+        new TicketConversations(db, time).ApplyAsync(system, ticketExternalId, comments, withheld, cancellationToken);
+
+    public Task<IReadOnlyList<TicketRef>> GetStaleConversationsAsync(string system, DateTimeOffset readBefore, int limit, CancellationToken cancellationToken) =>
+        new TicketConversations(db, time).StaleAsync(system, readBefore, limit, cancellationToken);
+
+    public async Task<IReadOnlyList<TicketRef>> GetTicketsOfPersonAsync(Guid? contactId, IReadOnlyCollection<string> emails, CancellationToken cancellationToken) =>
+        await Features.Privacy.ServicePersonalData.TicketsOfPerson(db.Tickets.AsNoTracking(), contactId, emails)
+            .OrderBy(t => t.Id)
+            .Select(t => new TicketRef(t.Id, t.System, t.ExternalId, t.OrganizationId, t.Title, t.Status))
+            .ToListAsync(cancellationToken);
 }
 
 /// <summary>
@@ -263,4 +297,5 @@ internal sealed class ServiceMergeHandler(ServiceDbContext db, ICustomersApi cus
         await db.TicketRequests.Where(r => r.OrganizationId == domainEvent.SourceOrganizationId)
             .ExecuteUpdateAsync(u => u.SetProperty(r => r.OrganizationId, domainEvent.TargetOrganizationId), cancellationToken);
     }
+
 }

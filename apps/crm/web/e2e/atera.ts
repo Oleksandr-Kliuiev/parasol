@@ -111,3 +111,84 @@ export const fitsWidth = (page: Page) => page.evaluate(() => document.documentEl
 
 /** The widths M38 is checked at: desktop, tablet, phone and the narrowest supported phone. */
 export const widths = [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const;
+
+// M39: tickets, their conversation and the actions asked of Atera. The stand-in's ticket routes (tools/dev-mocks/atera-tickets.mjs)
+// keep what the CRM sent, so a test reads a ticket back with its comments and work hours, and can make the next request to a
+// route fail.
+
+/** The development sign-in's employee as Atera knows them: the ticket read maps this technician to them by e-mail. */
+export const DEV_TECHNICIAN = 4003;
+
+export interface AteraTicket { TicketID: number; TicketTitle: string; TicketStatus: string }
+export interface AteraTicketState extends AteraTicket {
+  Comments: Array<{ CommentText: string; IsInternal: boolean; TechnicianContactID?: number }>;
+  WorkHours: Array<{ WorkHoursID: string; TechnicianContactID: number; TimeSpentInMinutes: number; Billable: boolean; Description: string | null }>;
+}
+
+/** A ticket of the customer in Atera, given to the development sign-in's technician unless the fields say otherwise. */
+export const ateraTicket = (page: Page, customer: AteraCustomer, fields: { TicketTitle: string; TechnicianContactID?: number }) =>
+  controlPost<AteraTicket>(page, 'tickets', { CustomerID: customer.customerId, TechnicianContactID: DEV_TECHNICIAN, ...fields });
+
+/** A message from the customer's end user, as if written in Atera's portal or by e-mail. */
+export const customerMessage = (page: Page, ticket: AteraTicket, text: string) =>
+  controlPost<{ CommentID: number }>(page, `tickets/${ticket.TicketID}/comments`, { CommentText: text });
+
+/** The ticket as Atera has it now, with every comment and work-hours row. */
+export async function ateraTicketState(page: Page, ticket: AteraTicket): Promise<AteraTicketState> {
+  const response = await page.request.get(`${control}/tickets/${ticket.TicketID}`);
+  expect(response.status()).toBe(200);
+  return (await response.json()) as AteraTicketState;
+}
+
+/** The next `count` requests with this method to this Atera path answer `status` and change nothing. */
+export async function failAtera(page: Page, method: 'GET' | 'POST', path: string, status = 503, count = 1) {
+  const response = await page.request.post(`${control}/faults`, { data: { method, path, status, count } });
+  expect(response.status()).toBe(204);
+}
+
+/** Work hours someone recorded in Atera itself, through Atera's own API. */
+export async function hoursInAtera(page: Page, ticket: AteraTicket, fields: { minutes: number; technician: number; comment: string }) {
+  const start = new Date(Date.now() - 3 * 3_600_000);
+  const response = await page.request.post(`http://localhost:5299/api/v3/tickets/${ticket.TicketID}/workhours`, {
+    headers: { 'X-API-KEY': 'mock' },
+    data: { StartWorkHour: start.toISOString(), EndWorkHour: new Date(start.getTime() + fields.minutes * 60_000).toISOString(),
+      TechnicianContactID: fields.technician, Billiable: true, OnCustomerSite: false, Comments: fields.comment },
+  });
+  expect(response.status()).toBe(200);
+}
+
+/**
+ * Reads the ticket and its conversation into the CRM until it is saved with at least `messages` messages, and returns its CRM id.
+ * The conversation read also saves the ticket itself, so one job brings both.
+ */
+export async function syncTicket(page: Page, ticket: AteraTicket, messages: number): Promise<string> {
+  let id: string | undefined;
+  await syncAtera(page, ['atera-ticket-conversations'], async () => {
+    const found = await api.get<{ items: Array<{ id: string; externalId: number }> }>(page,
+      `/api/v1/service/tickets?search=${encodeURIComponent(ticket.TicketTitle)}&limit=5`);
+    id = found.items.find((item) => item.externalId === ticket.TicketID)?.id;
+    if (!id) return false;
+    return (await api.get<{ totalCount: number }>(page, `/api/v1/service/tickets/${id}/comments?limit=1`)).totalCount >= messages;
+  }, `ticket #${ticket.TicketID} with ${messages} messages`);
+  return id!;
+}
+
+/**
+ * Makes sure the signed-in employee writes in Atera as `technician`. The ticket read maps the development technician by e-mail;
+ * a mapping an earlier run of the shared database left without a person is set here, as an administrator does under Technicians.
+ */
+export async function writeAsTechnician(page: Page, technician = DEV_TECHNICIAN) {
+  const me = await api.get<{ id: string }>(page, '/bff/user');
+  type Mapping = { id: string; system: string; externalId: string; userId: string | null };
+  let cursor: string | null = null;
+  do {
+    const listed: { items: Mapping[]; nextCursor: string | null } = await api.get(page, `/api/v1/identity/technicians?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+    const mapping = listed.items.find((item) => item.system === 'atera' && item.externalId === String(technician));
+    if (mapping) {
+      if (mapping.userId !== me.id) await api.put(page, `/api/v1/identity/technicians/${mapping.id}`, { userId: me.id });
+      return;
+    }
+    cursor = listed.nextCursor;
+  } while (cursor);
+  throw new Error(`Atera technician ${technician} has not been read yet`);
+}

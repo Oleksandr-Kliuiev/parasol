@@ -52,7 +52,8 @@
     "collapse": "Collapse menu",
     "expand": "Expand menu",
     "mainMenu": "Main menu",
-    "opensNewTab": "(opens in a new tab)"
+    "opensNewTab": "(opens in a new tab)",
+    "tickets": "Tickets"
   },
   "header": {
     "search": "Search organizations",
@@ -781,7 +782,8 @@
       "privacy-retention": "Retention of personal data",
       "quote-expiry": "Expire old quotes",
       "reports-snapshot": "Monthly report snapshots",
-      "worker-heartbeat": "Background service heartbeat"
+      "worker-heartbeat": "Background service heartbeat",
+      "atera-ticket-conversations": "Ticket messages (Atera)"
     },
     "status": {
       "Running": "Running",
@@ -1532,7 +1534,21 @@
       "type": "Type"
     },
     "nothingSaved": "No Atera data is saved for this customer: it is not linked to Atera, or Atera has not been read for it yet. The figures appear after the first read.",
-    "nothingSavedShort": "No Atera data saved for this customer yet."
+    "nothingSavedShort": "No Atera data saved for this customer yet.",
+    "notReadYet": "Not read yet",
+    "ticketOpenAtSource": "{{title}} in {{source}}",
+    "reads": {
+      "tickets": "Open tickets ({{system}})",
+      "conversations": "Ticket messages ({{system}})",
+      "alerts": "Alerts ({{system}})",
+      "devices": "Devices ({{system}})"
+    },
+    "readLine": {
+      "notRead": "{{source}} not read yet",
+      "incomplete": "{{source}}: the read at {{time}} did not finish",
+      "late": "{{source}} read at {{time}}: the next read is late",
+      "readAt": "{{source}} read at {{time}}"
+    }
   },
   "alerts": {
     "title": "Alerts",
@@ -1851,7 +1867,13 @@
     "discardTitle": "Discard this entry?",
     "discardBody": "What you typed has not been saved.",
     "discard": "Discard",
-    "keepEditing": "Keep editing"
+    "keepEditing": "Keep editing",
+    "recordInAtera": "Also record in Atera",
+    "recordInAteraHint": "After saving you see what Atera gets, and confirm it.",
+    "recordTitle": "Record on {{number}} in Atera",
+    "recordConfirm": "Record in Atera",
+    "recordSaved": "The hours are saved in Parasoll. Atera gets them only if you confirm now; do not also add them in Atera by hand, or they are counted twice.",
+    "recordSkip": "Skip"
   },
   "technicians": {
     "title": "Technicians",
@@ -3553,7 +3575,8 @@
         "integration": {
           "exception-triage": "Reviews of resolved exceptions",
           "external-payloads": "Copies of external records",
-          "sync-runs": "Synchronization log"
+          "sync-runs": "Synchronization log",
+          "vendor-action-texts": "Texts of actions sent to vendors"
         },
         "identity": {
           "sessions": "Ended sign-in sessions"
@@ -4148,7 +4171,9 @@
       "OutboundFailed_one": "{{system}}: {{count}} change could not be sent",
       "OutboundFailed_other": "{{system}}: {{count}} changes could not be sent",
       "WorkerLate": "Background service, {{component}}: last sign of life {{age}}",
-      "WorkerMissing": "Background service, {{component}}: no sign of life yet"
+      "WorkerMissing": "Background service, {{component}}: no sign of life yet",
+      "ActionsUncertain_one": "{{system}}: {{count}} action needs a check",
+      "ActionsUncertain_other": "{{system}}: {{count}} actions need a check"
     },
     "state": {
       "on": "Up to date",
@@ -4178,7 +4203,8 @@
       "note": "A part counts as late after {{limit}} without a sign of life.",
       "components": {
         "outbox": "Change delivery",
-        "jobs": "Scheduled jobs"
+        "jobs": "Scheduled jobs",
+        "actions": "Action delivery to vendors"
       },
       "state": {
         "Current": "Running",
@@ -4332,5 +4358,258 @@
     "showAll": "Show all {{count}}",
     "showFewer": "Show fewer",
     "firstOf": "The {{shown}} most urgent of {{total}}"
+  },
+  "actions": {
+    "status": {
+      "Scheduled": "On hold",
+      "Queued": "Queued",
+      "Sending": "Sending",
+      "Succeeded": "Done",
+      "Simulated": "Simulated",
+      "Skipped": "Already done",
+      "Rejected": "Not allowed",
+      "Failed": "Failed",
+      "Uncertain": "Check needed",
+      "Cancelled": "Cancelled"
+    },
+    "codes": {
+      "VND_INTEGRATION_OFF": "The connection to this system is switched off.",
+      "VND_INTEGRATION_NOT_CONFIGURED": "The background service has no key for this system.",
+      "VND_KIND_DISABLED": "This kind of action is not switched on yet.",
+      "VND_WRITE_DISABLED": "Changes to this system are switched off.",
+      "VND_CUSTOMER_NOT_ALLOWED": "Changes are only allowed for the test customers for now.",
+      "VND_UNKNOWN_KIND": "There is no such action.",
+      "VND_KIND_UNKNOWN": "Parasoll no longer knows this kind of action; nothing was sent.",
+      "VND_TARGET_NOT_FOUND": "Parasoll has no saved copy of this record.",
+      "VND_FORBIDDEN": "Your access does not include this action.",
+      "VND_PREVIEW_EXPIRED": "The preview is older than ten minutes; look at it again.",
+      "VND_PREVIEW_STALE": "The action is not the one the preview showed; look at it again.",
+      "VND_COMMAND_KEY_REUSED": "This confirmation was already used for another action. Open the dialog again.",
+      "VND_REASON_REQUIRED": "Give a reason of 10–500 characters.",
+      "VND_NAME_MISMATCH": "Type the name exactly as it is shown.",
+      "VND_WRONG_ENDPOINT": "The action was sent the wrong way. Reload the page and try again.",
+      "VND_NOT_CANCELLABLE": "The action is already on its way and can no longer be cancelled.",
+      "VND_SENDING": "The action is being sent right now and can no longer be cancelled.",
+      "VND_NOT_UNCERTAIN": "This action already has an outcome.",
+      "VND_SETTLEMENT_INVALID": "Say whether it happened and what you checked (10–500 characters).",
+      "VND_STALE": "The action changed meanwhile. Close it and open it again.",
+      "VND_NOT_FOUND": "The action was not found.",
+      "VND_SENT": "The vendor accepted the change.",
+      "VND_ALREADY_DONE": "It was already so; nothing was sent.",
+      "VND_DRY_RUN": "Test mode (DryRun): nothing was sent.",
+      "VND_NO_ANSWER": "No clear answer came back. Check whether it happened.",
+      "VND_EARLIER_ATTEMPT": "An earlier attempt may have got through without an answer. Check before asking again.",
+      "VND_VENDOR_UNAVAILABLE": "The system could not be reached after several attempts; nothing was sent.",
+      "VND_WAITING": "Waiting: Parasoll could not record the attempt yet.",
+      "VND_CANCELLED": "Cancelled before it was sent.",
+      "VND_SETTLED_DONE": "Checked: it happened.",
+      "VND_SETTLED_NOT_DONE": "Checked: it did not happen.",
+      "VND_HELD_AFTER_RESTORE": "Held after a database restore: it may have got through. Check and record what you found.",
+      "VND_TEXT_REQUIRED": "Write the text first.",
+      "VND_TEXT_TOO_LONG": "The text is longer than 8000 characters.",
+      "VND_TECHNICIAN_UNMAPPED": "Your account is not linked to an Atera technician. An administrator links it under Technicians.",
+      "VND_NO_CHANGE": "The ticket already has this value.",
+      "VND_VALUE_UNKNOWN": "Choose one of the values Atera knows.",
+      "VND_TECHNICIAN_UNKNOWN": "Choose a technician Atera knows.",
+      "VND_TICKET_MOVED": "The ticket belongs to another customer in Atera now; nothing was sent.",
+      "VND_TARGET_GONE": "The ticket no longer exists in Atera; nothing was sent.",
+      "VND_VENDOR_REFUSED": "Atera refused it; nothing changed.",
+      "VND_VENDOR_BUSY": "Atera could not be read; it is tried again.",
+      "VND_TIME_FROM_ATERA": "These hours came from Atera; they are already there.",
+      "VND_TIME_NOT_OWN": "Only the person whose hours they are records them in Atera.",
+      "VND_TIME_NO_TICKET": "The entry names no Atera ticket of its customer that Parasoll knows.",
+      "VND_CURSOR_INVALID": "The page does not belong to this list; load the list again.",
+      "VND_FILTER_INVALID": "The filter is not valid."
+    },
+    "dialog": {
+      "previewing": "Checking what the action will do…",
+      "source": "Source: {{system}}",
+      "effects": "What happens",
+      "simulated": "{{system}} is in test mode (DryRun): nothing is sent, and the result says what would have happened.",
+      "paused": "The connection to {{system}} is paused: the action waits until it is resumed.",
+      "destructive": "This cannot be undone. You confirm your sign-in, and the action is sent {{seconds}} seconds after you confirm; until then you can cancel it.",
+      "typeName": "Type “{{name}}” to confirm",
+      "typeNameMismatch": "The name does not match.",
+      "reason": "Reason",
+      "reasonHint": "{{min}}–{{max}} characters, kept with the action.",
+      "reverify": "Confirm your sign-in in the window that opened, then press “{{confirm}}” again.",
+      "renewed": "The preview was renewed: it was older than ten minutes, or the record changed. Check it and press “{{confirm}}” again.",
+      "cancelAction": "Cancel the action",
+      "held": "Sent in {{seconds}} s. Until then you can cancel it.",
+      "sending": "Sending to {{system}}…",
+      "uncertainNext": "{{system}} gave no clear answer, so nothing is sent again. Check in {{system}} whether it happened, then record what you found under Actions at vendors on the Connections page.",
+      "openAtVendor": "Check in {{system}}",
+      "keepsGoing": "You can close this window; the action carries on."
+    },
+    "fields": {
+      "requestedBy": "Asked by",
+      "requestedAt": "Asked at",
+      "source": "Source",
+      "customer": "Customer",
+      "reason": "Reason",
+      "completedAt": "Finished",
+      "attempts": "Attempts",
+      "closedBy": "Cancelled or checked by"
+    },
+    "settle": {
+      "intro": "{{system}} gave no clear answer. Check there whether it happened and record what you found; nothing is sent again.",
+      "question": "Did it happen?",
+      "done": "It happened in {{system}}",
+      "notDone": "It did not happen in {{system}}",
+      "reason": "What you checked",
+      "confirm": "Save what you found"
+    },
+    "log": {
+      "title": "Actions at vendors",
+      "note": "Everything Parasoll asked of the vendors, newest first. An action without a clear answer waits until someone checks at the vendor.",
+      "filter": "Show actions",
+      "all": "All",
+      "attention": "Check needed",
+      "waiting": "Not sent yet",
+      "none": "No actions yet.",
+      "noneUncertain": "No action needs a check.",
+      "noneWaiting": "Nothing is waiting to be sent."
+    },
+    "kinds": {
+      "atera": {
+        "ticket": {
+          "reply": "Reply to the customer",
+          "note": "Internal note",
+          "status": "Change status",
+          "priority": "Change priority",
+          "technician": "Give to technician",
+          "close": "Close ticket"
+        },
+        "time": {
+          "record": "Record time in Atera"
+        }
+      }
+    },
+    "effects": {
+      "VND_EFFECT_TICKET_REPLY": "{{to}} sees this reply in Atera, and gets it by e-mail when Atera's notifications are on.",
+      "VND_EFFECT_TICKET_REPLY_CUSTOMER": "The customer sees this reply in Atera, and gets it by e-mail when Atera's notifications are on.",
+      "VND_EFFECT_TICKET_NOTE": "Only technicians see this note; the customer does not.",
+      "VND_EFFECT_TICKET_AUTHOR": "Atera shows it as written by {{name}}.",
+      "VND_EFFECT_TICKET_REOPEN": "The ticket is {{status}}: Atera may open it again when the customer is answered.",
+      "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_PRIORITY": "Priority: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_TECHNICIAN": "Technician: {{from}} → {{to}}",
+      "VND_EFFECT_TICKET_CLOSE_NOTICE": "Atera may tell the customer that the ticket is solved.",
+      "VND_EFFECT_TIME_RECORD": "{{hours, number}} h are recorded on {{ticket}} in Atera, {{date}} {{from}}–{{to}}.",
+      "VND_EFFECT_TIME_BILLABLE": "Atera marks them billable.",
+      "VND_EFFECT_TIME_NOT_BILLABLE": "Atera marks them not billable.",
+      "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice.",
+      "VND_EFFECT_TIME_DEFAULT_START": "The entry has no start time, so the hours start at {{from}} on its date.",
+      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}."
+    }
+  },
+  "tickets": {
+    "title": "Tickets",
+    "subtitle": "Open tickets of every customer, newest first. They live in Atera; you answer and change them here.",
+    "subtitleAll": "Every open ticket and every ticket of the last 90 days, newest first.",
+    "refresh": "Refresh tickets",
+    "filters": "Filter tickets",
+    "search": "Search title or number",
+    "stateLabel": "Which tickets",
+    "show": {
+      "open": "Open",
+      "all": "All"
+    },
+    "whoLabel": "Whose tickets",
+    "who": {
+      "everyone": "All technicians",
+      "mine": "Mine"
+    },
+    "totals_one": "{{count}} open ticket",
+    "totals_other": "{{count}} open tickets",
+    "totalsAll_one": "{{count}} ticket",
+    "totalsAll_other": "{{count}} tickets",
+    "listTitle": "Tickets",
+    "empty": "No open tickets.",
+    "emptyAll": "No tickets in the last 90 days.",
+    "emptyFiltered": "No ticket matches the filter.",
+    "clearFilters": "Clear filters",
+    "statuses": {
+      "Open": "Open",
+      "Pending": "Pending",
+      "Resolved": "Resolved",
+      "Closed": "Closed"
+    },
+    "priorities": {
+      "Low": "Low",
+      "Medium": "Medium",
+      "High": "High",
+      "Critical": "Critical"
+    },
+    "fields": {
+      "status": "Status",
+      "priority": "Priority",
+      "customer": "Customer",
+      "unknownCustomer": "Unknown customer",
+      "contact": "Contact",
+      "technician": "Technician",
+      "noTechnician": "No technician",
+      "created": "Created",
+      "resolved": "Resolved",
+      "source": "Source",
+      "noPriority": "No priority"
+    },
+    "panel": {
+      "title": "Ticket",
+      "loading": "Reading the ticket…",
+      "notFound": "Parasoll has no saved copy of this ticket.",
+      "openInSource": "Open in {{name}}",
+      "actions": "Actions on this ticket",
+      "noActions": "Nothing has been sent from Parasoll for this ticket yet."
+    },
+    "actions": {
+      "label": "Change the ticket",
+      "status": "Status",
+      "priority": "Priority",
+      "technician": "Give to technician",
+      "close": "Close ticket",
+      "statusTitle": "Set {{number}} to {{status}}",
+      "statusConfirm": "Set to {{status}}",
+      "priorityTitle": "Change the priority of {{number}}",
+      "priorityConfirm": "Set priority {{priority}}",
+      "technicianTitle": "Give {{number}} to a technician",
+      "technicianConfirm": "Give to {{name}}",
+      "closeTitle": "Close {{number}}",
+      "closeConfirm": "Close the ticket",
+      "techniciansFailed": "The technicians could not be read.",
+      "noTechnicians": "No Atera technician is known yet."
+    },
+    "conversation": {
+      "title": "Conversation",
+      "readAt": "Messages read",
+      "notRead": "The messages of this ticket have not been read yet.",
+      "earlier": "Show earlier messages ({{shown}} of {{total}})",
+      "empty": "No messages in this ticket.",
+      "emptyUnread": "No messages are saved yet: they appear after the next read.",
+      "internal": "Internal note",
+      "authors": {
+        "Unknown": "Unknown",
+        "Technician": "Technician",
+        "EndUser": "Customer"
+      },
+      "roles": {
+        "Unknown": "Message",
+        "Technician": "Reply",
+        "EndUser": "Customer"
+      }
+    },
+    "composer": {
+      "kind": "Kind of message",
+      "reply": "Reply to the customer",
+      "note": "Internal note",
+      "replyLabel": "Reply",
+      "noteLabel": "Note",
+      "replyHint": "The customer sees this in Atera, and by e-mail when Atera's notifications are on.",
+      "noteHint": "Only technicians see this.",
+      "sendReply": "Send the reply",
+      "addNote": "Add the note",
+      "replyTitle": "Reply in {{number}}",
+      "noteTitle": "Internal note in {{number}}"
+    }
   }
 }

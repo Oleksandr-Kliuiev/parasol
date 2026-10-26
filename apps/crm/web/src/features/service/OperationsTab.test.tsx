@@ -13,6 +13,8 @@ const device = (n: number): Device => ({
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 const empty = { items: [], nextCursor: null, totalCount: 0 };
+/** Every kind of service data read completely at the summary's time (M39.2). */
+const complete = (['tickets', 'alerts', 'devices'] as const).map((source) => ({ source, system: 'atera', startedAt: '2026-10-21T08:00:00Z', complete: true, late: false }));
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -20,7 +22,7 @@ describe('Customer Drift tab (DEV-12)', () => {
   it('lists the devices a page at a time and says how many of all are shown', async () => {
     const fetch = vi.fn(async (url: string) => {
       if (url.includes('/summary')) {
-        return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Workstation: 1100 }, devicesOnline: 1100, criticalAlerts: 0, warningAlerts: 0, lastSyncedAt: null });
+        return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Workstation: 1100 }, devicesOnline: 1100, criticalAlerts: 0, warningAlerts: 0, lastSyncedAt: null, reads: complete });
       }
       if (url.includes('/devices')) {
         const second = url.includes('cursor=c1');
@@ -56,7 +58,7 @@ describe('Customer Drift tab (DEV-12)', () => {
   it('lists open alerts with severity, device, age and task, asks one task lookup per page and counts alerts per device', async () => {
     const alerts = [syntheticAlert({ id: 'a1' }), syntheticAlert({ id: 'a2', severity: 'Warning', title: 'Backup is late', deviceName: null })];
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes('/summary')) return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Server: 1 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 1, lastSyncedAt: '2026-10-21T08:00:00Z' });
+      if (url.includes('/summary')) return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Server: 1 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 1, reads: complete, lastSyncedAt: '2026-10-21T08:00:00Z' });
       if (url.includes('/service/alerts')) return json(alertPage(alerts));
       if (url.includes('/service/devices')) return json({ items: [{ ...device(1), machineName: 'SRV-01', type: 'Server', openAlerts: 2 }, device(2)], nextCursor: null, totalCount: 2 });
       if (url.endsWith('/source-tasks/lookup') && init?.method === 'POST') return json({ items: [{ alertId: 'a1', task: {
@@ -88,7 +90,7 @@ describe('Customer Drift tab (DEV-12)', () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url.includes('/summary')) {
         return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Server: 1, Workstation: 1 }, devicesOnline: 1, criticalAlerts: 0, warningAlerts: 0,
-          lastSyncedAt: '2026-10-21T08:00:00Z' });
+          reads: complete, lastSyncedAt: '2026-10-21T08:00:00Z' });
       }
       if (url.includes('/service/devices')) {
         return json({ items: [
