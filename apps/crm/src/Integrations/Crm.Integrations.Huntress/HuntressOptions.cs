@@ -110,6 +110,18 @@ public sealed class HuntressOptions
 
     public string? AgentUrlTemplate { get; set; }
 
+    /// <summary>
+    /// Huntress's webhooks (M44): incident reports, escalations and platform actions then start the alert read within a minute instead
+    /// of on its five-minute schedule. Off by default; it needs <see cref="WebhookSecret"/>, and crm-web refuses to start without it.
+    /// </summary>
+    public bool WebhookEnabled { get; set; }
+
+    /// <summary>
+    /// The endpoint's signing secret as Huntress shows it (Integrations → Webhooks → View Signing Secret, <c>whsec_…</c>): crm-web's
+    /// configuration only, the host that receives the webhooks. The worker never needs it.
+    /// </summary>
+    public string? WebhookSecret { get; set; }
+
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey) && !string.IsNullOrWhiteSpace(ApiSecret);
 }
 

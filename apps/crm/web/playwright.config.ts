@@ -64,6 +64,8 @@ const hostArgs = [
   ...['OrganizationSyncCron', 'AgentSyncCron', 'AlertSyncCron', 'ReportSyncCron', 'ReportFileSyncCron'].map((cron) => `--Integrations:Huntress:${cron}="0 0 31 2 *"`),
   // M43: the stand-in serves the reports' PDFs itself, on the loopback host the CRM reaches it on.
   '--Integrations:Huntress:ReportFileHosts:0=localhost',
+  // M44: a webhook's early read starts within seconds; the suite's own manual reads would otherwise hold it for a minute.
+  '--Integrations:EarlyReads:MinimumGap=00:00:05',
   // M42: CloudAlly's partner API on the stand-in; every kind of action on, the schedules off (tests start the reads).
   '--Integrations:CloudAlly:Enabled=true',
   `--Integrations:CloudAlly:BaseUrl=${mock}/cloudally/`,
@@ -103,6 +105,15 @@ const providerKeys = [
   '--Integrations:CloudAlly:Password=mock',
 ].join(' ');
 
+// M44: crm-web receives the vendors' webhooks, so only it gets their synthetic secret and key (tools/dev-mocks/webhooks.mjs signs with the
+// same); the worker starts the reads they ask for.
+const webhookKeys = [
+  '--Integrations:Huntress:WebhookEnabled=true',
+  '--Integrations:Huntress:WebhookSecret=whsec_c3ludGhldGljLWUyZS1odW50cmVzcy1zZWNyZXQ=',
+  '--Integrations:Atera:WebhookEnabled=true',
+  '--Integrations:Atera:WebhookKey=synthetic-e2e-atera-webhook-key-0123456789',
+].join(' ');
+
 // Hosts that are already running are reused only on request: they may be connected to another database than E2E_SQL.
 const reuseServers = process.env.E2E_REUSE_SERVERS === '1';
 
@@ -140,7 +151,7 @@ export default defineConfig({
   webServer: [
     { command: 'node ../tools/dev-mocks/external-apis.mjs 5299', url: `${mock}/health`, reuseExistingServer: false },
     {
-      command: `${dotnet} run --project ../src/Hosts/Crm.Web --launch-profile http -- --urls ${webUrl} --Database:MigrateOnStartup=true ${hostArgs}`,
+      command: `${dotnet} run --project ../src/Hosts/Crm.Web --launch-profile http -- --urls ${webUrl} --Database:MigrateOnStartup=true ${hostArgs} ${webhookKeys}`,
       url: `${webUrl}/health/ready`,
       ignoreHTTPSErrors: true,
       timeout: 300_000,

@@ -24,16 +24,17 @@ internal sealed class ConnectionCatalog(
         var partner = partnerCenter.Value;
         return
         [
+            // M44: the two vendors whose webhooks start reads early; the switch only (crm-web refuses to start without the secret).
             new(AteraTypes.System, atera.Value.Enabled, atera.Value.WriteEnabled,
             [
                 AteraCustomerSyncJob.JobId, AteraContactSyncJob.JobId, AteraTicketSyncJob.OpenJobId, AteraTicketSyncJob.RecentJobId,
                 AteraWorkHoursSyncJob.JobId, AteraAgentSyncJob.JobId, AteraPatchSyncJob.JobId, AteraAlertSyncJob.JobId, AteraTicketConversationSyncJob.JobId,
-            ]),
+            ], atera.Value.Enabled && atera.Value.WebhookEnabled),
             new(HuntressTypes.System, huntress.Value.Enabled, huntress.Value.WriteEnabled,
             [
                 HuntressOrganizationSyncJob.JobId, HuntressAgentSyncJob.JobId, HuntressAlertSyncJob.JobId, HuntressReportSyncJob.JobId,
                 HuntressReportFileJob.JobId,
-            ]),
+            ], huntress.Value.Enabled && huntress.Value.WebhookEnabled),
             new(PowerOfficeTypes.System, office.Enabled, office.WriteEnabled,
             [
                 PowerOfficeCustomerSyncJob.JobId, PowerOfficeContactPersonSyncJob.JobId, PowerOfficeProductSyncJob.JobId, PowerOfficeInvoiceSyncJob.JobId,

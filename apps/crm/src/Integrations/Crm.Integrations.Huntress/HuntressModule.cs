@@ -69,6 +69,8 @@ public static class HuntressModule
         services.AddScoped<IVendorActionHandler, HuntressUninstallAction>();
         // M43: the customer's organization created from the "Connect services" wizard, found by its key before and after.
         services.AddScoped<IVendorActionHandler, HuntressCreateOrganizationAction>();
+        // M44: Huntress's webhooks start the alert read early (received by crm-web).
+        services.AddSingleton<Crm.Integrations.Core.Webhooks.IWebhookSource, HuntressWebhookSource>();
         services.AddModuleServices(typeof(HuntressModule).Assembly);
         return services;
     }

@@ -43,6 +43,11 @@ public static class IntegrationsCoreModule
         services.AddScoped<Actions.VendorActionReader>();
         services.AddScoped<Actions.CustomerServiceReader>();
         services.AddSingleton<Actions.VendorActionRunner>();
+        // M44: crm-web files what a vendor's webhook asks for; the job it names reads the records the webhook named.
+        services.AddScoped<Webhooks.WebhookInbox>();
+        services.AddSingleton<Webhooks.WebhookRefusalThrottle>();
+        services.AddScoped<Webhooks.EarlyReadTargets>();
+        services.AddOptions<Webhooks.EarlyReadOptions>().Bind(configuration.GetSection(Webhooks.EarlyReadOptions.SectionName));
         services.AddSingleton<Crm.Infrastructure.Persistence.IDatabasePermissionRules, IntegrationDatabasePermissions>();
         services.AddModuleServices(typeof(IntegrationsCoreModule).Assembly);
         return services;
@@ -51,6 +56,18 @@ public static class IntegrationsCoreModule
     /// <summary>The five-second loop that sends vendor actions; crm-worker only, the host with the provider credentials.</summary>
     public static IServiceCollection AddVendorActionLoop(this IServiceCollection services) =>
         services.AddHostedService<Actions.VendorActionLoop>();
+
+    /// <summary>
+    /// The five-second loop that starts the reads webhooks asked for (M44); crm-worker only, which passes its job server as
+    /// <typeparamref name="TTrigger"/>.
+    /// </summary>
+    public static IServiceCollection AddEarlyReadLoop<TTrigger>(this IServiceCollection services)
+        where TTrigger : class, Webhooks.IJobTrigger
+    {
+        services.AddSingleton<Webhooks.IJobTrigger, TTrigger>();
+        services.AddSingleton<Webhooks.EarlyReadRunner>();
+        return services.AddHostedService<Webhooks.EarlyReadLoop>();
+    }
 
     public static IEndpointRouteBuilder MapIntegrationRunEndpoints(this IEndpointRouteBuilder app)
     {
