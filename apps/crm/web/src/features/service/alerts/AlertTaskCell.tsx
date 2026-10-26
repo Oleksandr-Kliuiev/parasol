@@ -1,6 +1,7 @@
 import { Button, useRestoreFocusTarget } from '@fluentui/react-components';
 import { PersonAdd16Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
+import { alertTitle } from './alertText';
 import type { Alert } from '../types';
 import { AlertTaskSummary } from './AlertTaskBits';
 import { useAlertTaskDialogs } from './alertTaskDialogs';
@@ -18,6 +19,6 @@ export function AlertTaskCell({ alert, task }: { alert: Pick<Alert, 'id' | 'titl
   return <span data-alert-task={alert.id}>
     {shown ? <AlertTaskSummary task={shown} compact />
       : write && alert.state !== 'Resolved' && <Button {...restore} size="small" icon={<PersonAdd16Regular />}
-        aria-label={t('alerts.task.assignNamed', { title: alert.title })} onClick={() => dialogs.open(alert.id)}>{t('alerts.task.assign')}</Button>}
+        aria-label={t('alerts.task.assignNamed', { title: alertTitle(t, alert) })} onClick={() => dialogs.open(alert.id)}>{t('alerts.task.assign')}</Button>}
   </span>;
 }

@@ -764,6 +764,7 @@
       "quote-documents": "Store quote documents",
       "quote-document-orphans": "Clean up unreferenced documents",
       "atera-agents": "Devices (Atera)",
+      "atera-patches": "Windows updates (Atera)",
       "atera-alerts": "Alerts (Atera)",
       "atera-tickets": "Open tickets (Atera)",
       "atera-tickets-recent": "Recently changed tickets (Atera)",
@@ -1541,7 +1542,8 @@
       "tickets": "Open tickets ({{system}})",
       "conversations": "Ticket messages ({{system}})",
       "alerts": "Alerts ({{system}})",
-      "devices": "Devices ({{system}})"
+      "devices": "Devices ({{system}})",
+      "patches": "Windows updates ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} not read yet",
@@ -1550,16 +1552,103 @@
       "readAt": "{{source}} read at {{time}}"
     }
   },
+  "machines": {
+    "title": "Device",
+    "loading": "Loading the device…",
+    "notFound": "This device is not stored in Parasoll.",
+    "changed": "The device changed while you looked at it. Here it is as it is now: decide again.",
+    "online": "Online at the last read",
+    "offline": "Offline at the last read",
+    "removed": "No longer reported",
+    "removedSince": "No source has reported this device since {{date}}.",
+    "fields": {
+      "state": "Status",
+      "type": "Type",
+      "customer": "Customer",
+      "alerts": "Alerts",
+      "model": "Model",
+      "serialNumber": "Serial number",
+      "processor": "Processor",
+      "memory": "Memory",
+      "disks": "Disks",
+      "motherboard": "Mainboard",
+      "bios": "BIOS",
+      "os": "Operating system",
+      "lastReboot": "Last restart",
+      "domain": "Domain",
+      "agentVersion": "Agent",
+      "ipAddresses": "IP addresses",
+      "publicIp": "Seen from",
+      "macAddresses": "MAC addresses",
+      "loggedIn": "Logged in at the read",
+      "lastLogin": "Last logged in"
+    },
+    "processorCores_one": "{{processor}} · {{count}} core",
+    "processorCores_other": "{{processor}} · {{count}} cores",
+    "diskFree": "{{drive}} {{share}} % free ({{free}} of {{total}})",
+    "build": "build {{build}}",
+    "agentVersion": "{{source}} agent {{version}}",
+    "hardware": "Hardware",
+    "system": "System",
+    "network": "Network",
+    "users": "Users",
+    "updates": "Windows updates",
+    "nothingReported": "{{source}} reports nothing about this.",
+    "notReported": "{{source}} does not report: {{fields}}.",
+    "updatesWindowsOnly": "{{source}} reports Windows updates only.",
+    "updatesNotRead": "The updates have not been read yet.",
+    "updatesRead": "Read {{read}}; {{source}} collected them {{collected}}.",
+    "unknownTime": "at an unknown time",
+    "available_one": "{{count}} update available",
+    "available_other": "{{count}} updates available",
+    "installed_one": "{{count}} update installed",
+    "installed_other": "{{count}} updates installed",
+    "installedShown": "The latest {{shown}} of {{count}}.",
+    "updateStatus": {
+      "Pending": "Waiting"
+    },
+    "proposals": "May be the same device",
+    "proposalsHint": "Parasoll joins two devices only when it is sure. Check these and decide.",
+    "maybeSame": "May be {{other}}",
+    "evidence": {
+      "serial": "same serial number",
+      "mac": "a shared MAC address",
+      "name": "the same name",
+      "serialConflict": "but the serial numbers differ"
+    },
+    "join": "Same device",
+    "keepApart": "Different devices",
+    "keepApartTitle": "Keep {{name}} and {{other}} apart?",
+    "keepApartBody": "Parasoll will treat {{name}} and {{other}} as two devices from now on and will not suggest joining them again.",
+    "detach": "Not this device",
+    "detachTitle": "Take {{device}} ({{source}}) off this device?",
+    "detachBody": "{{device}} becomes a device of its own, and Parasoll will not join it with {{name}} again.",
+    "decided": {
+      "join": "The two are one device now.",
+      "keep-apart": "Kept apart: Parasoll will not suggest joining them again.",
+      "detach": "Taken off: it is a device of its own now."
+    },
+    "sources": "Sources",
+    "neverSeen": "No last contact reported",
+    "openIn": "Open in {{source}}",
+    "inConsole": "In {{source}}",
+    "consoleOnly": "Remote connection, scripts, installing updates and restarting are done in {{source}}: its API does not offer them.",
+    "from": "from {{sources}}",
+    "proposalBadge_one": "Check: may be a duplicate",
+    "proposalBadge_other": "Check: {{count}} possible duplicates"
+  },
   "alerts": {
     "title": "Alerts",
     "subtitle": "Open alerts of every customer: the critical ones first, then the ones that have waited longest.",
     "subtitleResolved": "Alerts their source no longer reports open, the most recently resolved first.",
+    "subtitleHidden": "Alerts hidden in Parasoll until a date; they are still open in their source.",
     "refresh": "Refresh alerts",
     "filters": "Alert filters",
     "search": "Search title or device",
     "stateLabel": "Show",
     "show": {
       "open": "Open",
+      "hidden": "Hidden",
       "resolved": "Resolved"
     },
     "severityLabel": "Severity",
@@ -1576,11 +1665,20 @@
       "customer": "Customer",
       "waiting": "Raised",
       "resolved": "Resolved",
-      "task": "Task"
+      "task": "Task",
+      "actions": "Actions"
     },
     "source": "Source: {{name}}",
     "sourceNames": {
-      "atera": "Atera"
+      "atera": "Atera",
+      "parasoll": "Parasoll"
+    },
+    "gaps": {
+      "found": "Found by Parasoll’s own check. It closes by itself once two checks in a row no longer find it.",
+      "changeCheck": "Change the check",
+      "ateraAgentSilent": {
+        "title": "The Atera agent on {{device}} has not reported since {{date}}"
+      }
     },
     "reads": {
       "readAt": "{{source}} read at {{time}}",
@@ -1596,6 +1694,7 @@
     },
     "empty": "No open alerts. New alerts appear here after the next read from Atera.",
     "emptyResolved": "No resolved alerts.",
+    "emptyHidden": "No alert is hidden.",
     "emptyFiltered": "No alerts match these filters.",
     "detail": {
       "title": "Alert",
@@ -1676,7 +1775,78 @@
       "refused": "The task was not created. Read the alert again and check your choices.",
       "readAgain": "Read again",
       "cannotCreate": "You can see this alert, but you cannot assign it."
+    },
+    "actions": {
+      "heading": "In {{source}}",
+      "menu": "Actions for {{title}}",
+      "resolve": "Close in Atera",
+      "resolveTitle": "Close the alert in Atera",
+      "delete": "Delete in Atera",
+      "deleteItem": "Delete in Atera…",
+      "deleteTitle": "Delete the alert in Atera",
+      "none": "Nothing has been asked of Atera for this alert."
+    },
+    "hide": {
+      "heading": "In Parasoll",
+      "open": "Hide until…",
+      "show": "Show again",
+      "title": "Hide the alert until a date",
+      "sourceStays": "{{source}}’s API cannot snooze an alert, so it stays open there; Parasoll hides it until the day you choose.",
+      "gapStays": "Hiding a gap does not stop the check: it comes back on the day you choose, or closes once the checks no longer find it.",
+      "until": "Hide until",
+      "untilHint": "It comes back at the start of this day.",
+      "shortcuts": "Quick days",
+      "in": {
+        "tomorrow": "Tomorrow",
+        "inAWeek": "In a week",
+        "inAMonth": "In a month"
+      },
+      "invalidDay": "Choose a day after today, at most {{days}} days ahead.",
+      "reason": "Reason",
+      "reasonHint": "Shown to everyone with the hidden alert.",
+      "reasonRequired": "Say why the alert is hidden.",
+      "summary": "Hidden for everyone until {{date}}; it comes back by itself.",
+      "confirm": "Hide",
+      "hiding": "Hiding…",
+      "changed": "The alert changed while you looked at it. Here it is as it is now: decide again.",
+      "done": "Hidden until {{date}}.",
+      "discardTitle": "Discard the reason?",
+      "discardBody": "The alert is not hidden, and what you typed has not been saved.",
+      "discard": "Discard",
+      "keepEditing": "Keep editing",
+      "shown": "The alert is shown again.",
+      "hiddenSince": "Hidden until {{date}} by {{name}}: “{{reason}}”",
+      "someone": "someone",
+      "untilFact": "hidden until {{date}}"
     }
+  },
+  "coverage": {
+    "open": "Coverage checks",
+    "title": "Coverage checks",
+    "intro": "Parasoll checks whether every customer device is watched, and raises an alert for what is missing.",
+    "readOnly": "You can see the checks, but not change them.",
+    "rules": {
+      "ateraAgentSilent": {
+        "name": "Silent Atera agent",
+        "description": "An alert when the Atera agent on a device has not reported for longer than the limit. A server is critical, any other device a warning.",
+        "when": "Checked after each complete read of Atera’s agents, at night."
+      }
+    },
+    "enabled": "Raise alerts",
+    "limit": {
+      "Days": "Days without contact",
+      "Hours": "Hours without contact"
+    },
+    "limitHint": "From {{min}} to {{max}}. Applies from the next check.",
+    "limitInvalid": "Enter a whole number from {{min}} to {{max}}.",
+    "offNote": "Switching it off closes its open alerts at once.",
+    "openGaps_one": "{{count}} open alert",
+    "openGaps_other": "{{count}} open alerts",
+    "changed": "Changed {{date}} by {{name}}",
+    "never": "Not changed yet: the default applies",
+    "saving": "Saving…",
+    "saved": "Coverage checks saved",
+    "conflict": "Someone changed a check while you looked at it. Here it is as it is now: decide again."
   },
   "taskTicket": {
     "open": "Service ticket",
@@ -3581,7 +3751,8 @@
           "unconverted-leads": "Leads that never became customers"
         },
         "service": {
-          "tickets": "Closed tickets"
+          "tickets": "Closed tickets",
+          "resolved-alerts": "Resolved alerts"
         },
         "integration": {
           "exception-triage": "Reviews of resolved exceptions",
@@ -4430,7 +4601,9 @@
       "VND_TIME_NOT_OWN": "Only the person whose hours they are records them in Atera.",
       "VND_TIME_NO_TICKET": "The entry names no Atera ticket of its customer that Parasoll knows.",
       "VND_CURSOR_INVALID": "The page does not belong to this list; load the list again.",
-      "VND_FILTER_INVALID": "The filter is not valid."
+      "VND_FILTER_INVALID": "The filter is not valid.",
+      "VND_ALERT_MOVED": "The alert belongs to another customer in Atera now; nothing was sent.",
+      "VND_ALERT_RESOLVED": "The alert is no longer open in Atera."
     },
     "dialog": {
       "previewing": "Checking what the action will do…",
@@ -4494,6 +4667,10 @@
         },
         "time": {
           "record": "Record time in Atera"
+        },
+        "alert": {
+          "resolve": "Close the alert",
+          "delete": "Delete the alert"
         }
       }
     },
@@ -4512,7 +4689,11 @@
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera marks them not billable.",
       "VND_EFFECT_TIME_NO_DOUBLE": "The work-hours import recognises them, so they are never counted twice.",
       "VND_EFFECT_TIME_DEFAULT_START": "The entry has no start time, so the hours start at {{from}} on its date.",
-      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}."
+      "VND_EFFECT_TIME_AUTHOR": "Atera shows them as recorded by {{name}}.",
+      "VND_EFFECT_ALERT_RESOLVE": "Atera closes “{{title}}” ({{device}}): it leaves the open alerts in Atera.",
+      "VND_EFFECT_ALERT_CONFIRM": "Parasoll reads the alert again afterwards and shows it closed once Atera does.",
+      "VND_EFFECT_ALERT_DELETE": "Atera deletes “{{title}}” ({{device}}).",
+      "VND_EFFECT_ALERT_DELETE_HISTORY": "It is gone from Atera’s history too; Parasoll keeps it as closed."
     }
   },
   "tickets": {

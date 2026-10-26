@@ -47,7 +47,63 @@ public sealed record ExternalTicket(
     long? OwnerCustomerId = null,
     Guid? OwnerLinkId = null);
 
-public sealed record ExternalDevice(string ExternalId, string MachineName, DeviceType Type, string? Os, bool Online, DateTimeOffset? LastSeenAt, string? Url);
+/// <summary>
+/// An agent as read from its source. <paramref name="SerialNumber"/> and <paramref name="MacAddresses"/> are as the source reports
+/// them: with the host name they tell one customer's machines apart (M40). <paramref name="AlternateId"/> is the source's second id
+/// of the agent (Atera's DeviceGuid, which its patch routes and alerts use); <paramref name="Inventory"/> is what the source says
+/// about the computer.
+/// </summary>
+public sealed record ExternalDevice(
+    string ExternalId,
+    string MachineName,
+    DeviceType Type,
+    string? Os,
+    bool Online,
+    DateTimeOffset? LastSeenAt,
+    string? Url,
+    string? SerialNumber = null,
+    IReadOnlyList<string>? MacAddresses = null,
+    string? AlternateId = null,
+    DeviceInventoryReading? Inventory = null);
+
+/// <summary>
+/// What a source says about the computer an agent runs on (M40): hardware, system, network, who is logged in and the last
+/// restart, as the source reports them. <paramref name="Memory"/> and the disks' figures carry no unit in Atera's API.
+/// </summary>
+public sealed record DeviceInventoryReading(
+    string? Vendor,
+    string? Model,
+    string? Motherboard,
+    string? Processor,
+    int? ProcessorCores,
+    string? ProcessorClock,
+    int? Memory,
+    string? BiosVersion,
+    string? OsVersion,
+    string? OsBuild,
+    IReadOnlyList<string> IpAddresses,
+    string? PublicIp,
+    string? DomainName,
+    string? LoggedInUsers,
+    string? LastLoginUser,
+    DateTimeOffset? LastRebootAt,
+    IReadOnlyList<DeviceDisk> Disks,
+    string? AgentVersion);
+
+/// <summary>One disk of a computer as its source reports it.</summary>
+public sealed record DeviceDisk(string? Drive, double? Free, double? Used, double? Total);
+
+/// <summary>A current device of a source, for a read that asks the source about each device (M40: its Windows updates).</summary>
+public sealed record DeviceRef(Guid Id, Guid OrganizationId, string ExternalId, string? AlternateId, string MachineName, string? Os);
+
+/// <summary>One Windows update of a device: installed (with the time) or available (with the source's status of it).</summary>
+public sealed record DevicePatchReading(string? KbId, string Name, string? Class, DateTimeOffset? InstalledAt, string? Status);
+
+/// <summary>
+/// One complete read of a device's Windows updates (M40). <paramref name="CollectedAt"/> is when the source collected them, which
+/// may be long before the read.
+/// </summary>
+public sealed record DevicePatchSnapshot(IReadOnlyList<DevicePatchReading> Installed, IReadOnlyList<DevicePatchReading> Available, DateTimeOffset? CollectedAt);
 
 /// <summary>Who wrote a comment of a ticket: a technician, the customer's end user, or the service desk does not say.</summary>
 public enum TicketCommentAuthor
@@ -108,11 +164,26 @@ public interface IServiceApi
     /// <summary>Makes the organization's device list equal to <paramref name="devices"/>; devices no longer reported are marked removed.</summary>
     Task ReplaceDevicesAsync(Guid organizationId, string system, IReadOnlyCollection<ExternalDevice> devices, CancellationToken cancellationToken);
 
+    /// <summary>The devices of a source that are reported now, oldest first (M40).</summary>
+    Task<IReadOnlyList<DeviceRef>> GetCurrentDevicesAsync(string system, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stores one complete read of a device's Windows updates in place of the last one (M40). False when the CRM has no such current
+    /// device (it was removed in between).
+    /// </summary>
+    Task<bool> ApplyDevicePatchesAsync(Guid deviceId, DevicePatchSnapshot snapshot, CancellationToken cancellationToken);
+
     /// <summary>
     /// Applies one read of a source's open alerts (M38): listed alerts are kept open under the id they already have, a stored
     /// open alert that a complete read no longer lists is resolved, and an incomplete read changes nothing.
     /// </summary>
     Task<AlertSnapshotResult> ApplyAlertSnapshotAsync(AlertSnapshot snapshot, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// A read of one alert at its source says it is no longer open (M40: resolved there, or deleted, after an action asked for it):
+    /// the stored alert is resolved as a complete read would resolve it. False when no such alert is open in the CRM.
+    /// </summary>
+    Task<bool> ResolveAlertAsync(string system, string externalId, CancellationToken cancellationToken);
 
     /// <summary>A stored alert by its CRM id, in any state; null when there is none.</summary>
     Task<AlertRef?> GetAlertAsync(Guid alertId, CancellationToken cancellationToken);

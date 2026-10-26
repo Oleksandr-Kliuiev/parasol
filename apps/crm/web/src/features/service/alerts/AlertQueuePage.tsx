@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { Button, SearchBox, Skeleton, SkeletonItem, Text, makeStyles } from '@fluentui/react-components';
-import { ArrowClockwise20Regular } from '@fluentui/react-icons';
+import { Button, SearchBox, Skeleton, SkeletonItem, Text, makeStyles, useRestoreFocusTarget } from '@fluentui/react-components';
+import { ArrowClockwise20Regular, ShieldTask20Regular } from '@fluentui/react-icons';
 import { useTranslation } from 'react-i18next';
 import { h } from '../../../app/hearth';
 import { Permissions, useCan, useCurrentUser } from '../../../auth/CurrentUserContext';
@@ -13,10 +13,12 @@ import { useDebouncedValue } from '../../../shared/utils/useDebouncedValue';
 import { ForbiddenPage } from '../../errors/ForbiddenPage';
 import { alertSeverities, type AlertSeverity } from '../types';
 import { CustomerFilter } from '../CustomerFilter';
+import { AlertActionsHost } from './AlertActions';
 import { AlertDetailDrawer } from './AlertDetailDrawer';
 import { AlertReadLine } from './AlertReadLine';
 import { AlertQueueEmpty, AlertQueueList } from './AlertQueueList';
 import { AlertTaskDialogHost } from './AlertTaskDialogHost';
+import { CoverageRulesDialog } from './CoverageRulesDialog';
 import { pageIds, useAlertTaskLinks } from './alertTasks';
 import { useAlertQueue } from './useAlertQueue';
 
@@ -39,8 +41,9 @@ function Queue() {
   const { t } = useTranslation(); const styles = useStyles();
   const [params, setParams] = useSearchParams(); const location = useLocation(); const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [checks, setChecks] = useState(false); const restore = useRestoreFocusTarget();
   const debounced = useDebouncedValue(search.trim());
-  const state = params.get('state') === 'resolved' ? 'Resolved' : 'Open';
+  const state = params.get('state') === 'resolved' ? 'Resolved' : params.get('state') === 'hidden' ? 'Hidden' : 'Open';
   const severity = severityParam[params.get('severity') ?? ''] ?? null;
   const organizationId = params.get('customer');
   const filters = { state, severity, organizationId, search: debounced } as const;
@@ -68,23 +71,29 @@ function Queue() {
 
   const total = queue.total;
   const empty = <AlertQueueEmpty
-    message={t(filtered ? 'alerts.emptyFiltered' : state === 'Resolved' ? 'alerts.emptyResolved' : 'alerts.empty')}
+    message={t(filtered ? 'alerts.emptyFiltered' : state === 'Resolved' ? 'alerts.emptyResolved' : state === 'Hidden' ? 'alerts.emptyHidden' : 'alerts.empty')}
     action={filtered && <Button onClick={clear}>{t('alerts.clearFilters')}</Button>} />;
 
-  // The assign dialog is held above the list, which reloads (search, filters) and switches between table and cards.
-  return <AlertTaskDialogHost>
-    <PageHeader title={t('alerts.title')} subtitle={t(state === 'Resolved' ? 'alerts.subtitleResolved' : 'alerts.subtitle')}
+  // The assign dialog and the action confirmation are held above the list, which reloads (search, filters) and switches between
+  // table and cards.
+  return <AlertTaskDialogHost><AlertActionsHost>
+    <PageHeader title={t('alerts.title')} subtitle={t(state === 'Resolved' ? 'alerts.subtitleResolved' : state === 'Hidden' ? 'alerts.subtitleHidden' : 'alerts.subtitle')}
       // How fresh the stored alerts are, from the same answer as the rows: no time is shown while a new read is under way.
       meta={queue.reads && !queue.error && !(queue.isFetching && !queue.isFetchingNextPage) && <AlertReadLine reads={queue.reads} />}
-      actions={<Button icon={<ArrowClockwise20Regular />} aria-label={t('alerts.refresh')} disabled={queue.isFetching} disabledFocusable={queue.isFetching}
-        onClick={() => void queue.refetch()}>{t('common.refresh')}</Button>} />
+      actions={<>
+        {/* M40: Parasoll's own coverage checks, whose gaps are listed here among the alerts. */}
+        <Button {...restore} icon={<ShieldTask20Regular />} onClick={() => setChecks(true)}>{t('coverage.open')}</Button>
+        <Button icon={<ArrowClockwise20Regular />} aria-label={t('alerts.refresh')} disabled={queue.isFetching} disabledFocusable={queue.isFetching}
+          onClick={() => void queue.refetch()}>{t('common.refresh')}</Button>
+      </>} />
     <Toolbar label={t('alerts.filters')}>
       <FilterField kind="search" label={t('alerts.search')}>
         <SearchBox value={search} onChange={(_, d) => setSearch(d.value)} placeholder={t('alerts.search')} />
       </FilterField>
-      <FilterChips<'Open' | 'Resolved'> label={t('alerts.stateLabel')} value={state}
-        onChange={(value) => setParam('state', value === 'Resolved' ? 'resolved' : null)}
-        options={[{ value: 'Open', label: t('alerts.show.open') }, { value: 'Resolved', label: t('alerts.show.resolved') }]} />
+      <FilterChips<'Open' | 'Hidden' | 'Resolved'> label={t('alerts.stateLabel')} value={state}
+        onChange={(value) => setParam('state', value === 'Open' ? null : value.toLowerCase())}
+        options={[{ value: 'Open', label: t('alerts.show.open') }, { value: 'Hidden', label: t('alerts.show.hidden') },
+          { value: 'Resolved', label: t('alerts.show.resolved') }]} />
       <FilterChips<'' | AlertSeverity> label={t('alerts.severityLabel')} value={severity ?? ''}
         onChange={(value) => setParam('severity', value ? value.toLowerCase() : null)}
         options={[{ value: '', label: t('alerts.allSeverities') },
@@ -105,5 +114,6 @@ function Queue() {
             onMore={() => void queue.fetchNextPage()} />} />
       </>}
     <AlertDetailDrawer alertId={peekId} onClose={closePeek} />
-  </AlertTaskDialogHost>;
+    {checks && <CoverageRulesDialog onClose={() => setChecks(false)} />}
+  </AlertActionsHost></AlertTaskDialogHost>;
 }

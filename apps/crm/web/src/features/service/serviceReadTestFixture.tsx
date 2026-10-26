@@ -6,16 +6,19 @@ import { TOASTER_ID } from '../../app/toaster';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import { OperationsTab } from './OperationsTab';
 import { syntheticAlert } from '../../test/alerts';
-import type { Alert, Device, ServiceSummary, Ticket, TicketRequest } from './types';
+import type { Alert, Machine, ServiceSummary, Ticket, TicketRequest } from './types';
 
 export const kinds = ['summary', 'tickets', 'devices', 'alerts', 'ticket-requests'] as const;
 export type Kind = typeof kinds[number];
 export const names: Record<Kind, string> = { summary: 'Saved service summary', tickets: 'Tickets', devices: 'Devices', alerts: 'Open alerts', 'ticket-requests': 'Ticket requests' };
+/** The route each kind is read from: the devices section lists machines (M40). */
+const paths: Record<Kind, string> = { summary: 'summary', tickets: 'tickets', devices: 'machines', alerts: 'alerts', 'ticket-requests': 'ticket-requests' };
 export const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 export const empty = () => json({ items: [], nextCursor: null, totalCount: 0 });
 export const summary: ServiceSummary = { openTickets: 3, ticketsLast90Days: 8, devices: { Workstation: 2 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 2, lastSyncedAt: '2025-01-02T10:30:00Z',
   reads: (['tickets', 'alerts', 'devices'] as const).map((source) => ({ source, system: 'atera', startedAt: '2025-01-02T10:30:00Z', complete: true, late: false })) };
-export const device = (id = 'one'): Device => ({ id, machineName: `Synthetic PC ${id}`, type: 'Workstation', os: 'Synthetic OS', online: true, lastSeenAt: null, url: null, removedAt: null, openAlerts: 0 });
+export const device = (id = 'one'): Machine => ({ id, organizationId: 'o1', name: `Synthetic PC ${id}`, type: 'Workstation', os: 'Synthetic OS', online: true, lastSeenAt: null,
+  removedAt: null, sources: [], openAlerts: 0, proposals: 0 });
 export const ticket = (id = 'one'): Ticket => ({ id, title: `Synthetic ticket ${id}`, externalId: 42, organizationId: 'o1', organizationName: null, contactId: null, contactName: null,
   status: 'Open', isOpen: true, priority: null, type: null, technicianName: null, createdAt: '2026-10-16T10:00:00Z', resolvedAt: null, lastActivityAt: null, url: null });
 export const alert = (id = 'one'): Alert => syntheticAlert({ id, title: `Synthetic alert ${id}`, deviceName: 'Synthetic PC', createdAt: '2026-10-16T10:00:00Z' });
@@ -23,7 +26,7 @@ export const request = (status: TicketRequest['status'] = 'Failed', id = 'one'):
 export const pageResult = (items: unknown[], nextCursor: string | null = null, totalCount = items.length) => json({ items, nextCursor, totalCount });
 export const kindOf = (url: string): Kind | null => {
   const path = new URL(url, 'https://synthetic.invalid').pathname;
-  return kinds.find(kind => path.endsWith(`/${kind}`)) ?? null;
+  return kinds.find(kind => path.endsWith(`/${paths[kind]}`)) ?? null;
 };
 export function answer(kind: Kind, populated = true): Response {
   if (kind === 'summary') return json(summary);

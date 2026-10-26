@@ -266,6 +266,8 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# M40.S: the backup module is source, not a conversion backup.
+!/src/Modules/Backup/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

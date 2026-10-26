@@ -20,7 +20,9 @@ public sealed record AlertTaskSource(
     Guid? DeviceId,
     DateTimeOffset CreatedAt,
     string? Url,
-    DateTimeOffset? ResolvedAt);
+    DateTimeOffset? ResolvedAt,
+    string? Rule = null,
+    IReadOnlyDictionary<string, string>? Facts = null);
 
 /// <summary>The task an alert has, as a row or a dialog shows it; empty fields once the task was deleted or erased.</summary>
 public sealed record AlertTaskView(

@@ -74,6 +74,9 @@ public sealed class AteraOptions
 
     public string AgentSyncCron { get; set; } = "30 1 * * *";
 
+    /// <summary>The nightly read of every Windows agent's updates (M40), after the agent read that names the agents.</summary>
+    public string PatchSyncCron { get; set; } = "15 2 * * *";
+
     public string AlertSyncCron { get; set; } = "5,35 * * * *";
 
     /// <summary>How far back the recent pass and the work-hours pass look.</summary>
@@ -101,9 +104,10 @@ public sealed class AteraOptions
     public bool DryRun { get; set; }
 
     /// <summary>
-    /// The kinds of action people may ask of Atera (M39.1/M39.2): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
-    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>. Empty by default: a kind is off until
-    /// it is listed, and a kind added in a later release stays off until someone lists it.
+    /// The kinds of action people may ask of Atera (M39.1/M39.2, M40): <c>ticket.reply</c>, <c>ticket.note</c>, <c>ticket.status</c>,
+    /// <c>ticket.priority</c>, <c>ticket.technician</c>, <c>ticket.close</c>, <c>time.record</c>, <c>alert.resolve</c>,
+    /// <c>alert.delete</c>. Empty by default: a kind is off until it is listed, and a kind added in a later release stays off until
+    /// someone lists it.
     /// </summary>
     public List<string> EnabledActions { get; set; } = [];
 

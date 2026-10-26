@@ -84,6 +84,44 @@ export async function syncDevices(page: Page, customer: AteraCustomer, count: nu
   `${count} devices of ${customer.name}`);
 }
 
+/** Narrows the queue to the test's own alerts and waits for that read: a row menu opened before it would close as the list redraws. */
+export async function searchAlerts(page: Page, marker: string) {
+  const read = page.waitForResponse((r) => r.url().includes('/api/v1/service/alerts?') && new URL(r.url()).searchParams.get('q') === marker);
+  await page.getByRole('searchbox', { name: 'Search title or device' }).fill(marker);
+  await read;
+}
+
+/** What "Atera" holds of an alert now (M40): archived after a resolve, null once deleted. */
+export async function ateraAlertState(page: Page, alert: AteraAlert): Promise<{ Archived?: boolean } | null> {
+  const response = await page.request.get(`${control}/alerts/${alert.AlertID}`);
+  if (response.status() === 404) return null;
+  expect(response.status()).toBe(200);
+  return (await response.json()) as { Archived?: boolean };
+}
+
+/** Changes an agent in "Atera" (M40): it goes silent, is renamed, reports other keys; the next agent read sees it. */
+export async function changeAteraAgent(page: Page, agentId: string, fields: Record<string, unknown>) {
+  const response = await page.request.post(`${control}/agents/${encodeURIComponent(agentId)}`, { data: fields });
+  expect(response.status(), await response.text()).toBe(200);
+}
+
+export interface StoredMachine { id: string; name: string; proposals: number; sources: Array<{ system: string }> }
+
+/** The customer's machines as the Drift tab lists them (M40). */
+export async function storedMachines(page: Page, organizationId: string) {
+  return (await api.get<{ items: StoredMachine[] }>(page, `/api/v1/service/machines?organizationId=${organizationId}&limit=100`)).items;
+}
+
+/** Reads the Windows updates of every agent until the customer's first machine carries a complete read of them (M40). */
+export async function syncPatches(page: Page, customer: AteraCustomer) {
+  await syncAtera(page, ['atera-patches'], async () => {
+    const [machine] = await storedMachines(page, customer.organizationId);
+    if (!machine) return false;
+    const card = await api.get<{ devices: Array<{ patches: { readAt: string | null } }> }>(page, `/api/v1/service/machines/${machine.id}`);
+    return card.devices.every((device) => device.patches.readAt !== null);
+  }, `the Windows updates of ${customer.name}`);
+}
+
 /** Reads the alerts into the CRM until the customer has `count` open alerts. */
 export async function syncAlerts(page: Page, customer: AteraCustomer, count: number) {
   await syncAtera(page, ['atera-alerts'], async () => (await storedAlerts(page, customer.organizationId)).length === count,

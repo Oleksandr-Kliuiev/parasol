@@ -764,6 +764,7 @@
       "quote-documents": "Lagre tilbudsdokumenter",
       "quote-document-orphans": "Rydd dokumenter uten tilknytning",
       "atera-agents": "Enheter (Atera)",
+      "atera-patches": "Windows-oppdateringer (Atera)",
       "atera-alerts": "Driftsvarsler (Atera)",
       "atera-tickets": "Åpne saker (Atera)",
       "atera-tickets-recent": "Nylig endrede saker (Atera)",
@@ -1541,7 +1542,8 @@
       "tickets": "Åpne saker ({{system}})",
       "conversations": "Meldinger i saker ({{system}})",
       "alerts": "Driftsvarsler ({{system}})",
-      "devices": "Enheter ({{system}})"
+      "devices": "Enheter ({{system}})",
+      "patches": "Windows-oppdateringer ({{system}})"
     },
     "readLine": {
       "notRead": "{{source}} er ikke lest ennå",
@@ -1550,16 +1552,103 @@
       "readAt": "{{source}} lest {{time}}"
     }
   },
+  "machines": {
+    "title": "Enhet",
+    "loading": "Henter enheten …",
+    "notFound": "Denne enheten er ikke lagret i Parasoll.",
+    "changed": "Enheten ble endret mens du så på den. Her er den slik den er nå – bestem på nytt.",
+    "online": "På nett ved siste lesing",
+    "offline": "Frakoblet ved siste lesing",
+    "removed": "Rapporteres ikke lenger",
+    "removedSince": "Ingen kilde har rapportert denne enheten siden {{date}}.",
+    "fields": {
+      "state": "Status",
+      "type": "Type",
+      "customer": "Kunde",
+      "alerts": "Driftsvarsler",
+      "model": "Modell",
+      "serialNumber": "Serienummer",
+      "processor": "Prosessor",
+      "memory": "Minne",
+      "disks": "Disker",
+      "motherboard": "Hovedkort",
+      "bios": "BIOS",
+      "os": "Operativsystem",
+      "lastReboot": "Sist omstartet",
+      "domain": "Domene",
+      "agentVersion": "Agent",
+      "ipAddresses": "IP-adresser",
+      "publicIp": "Sett fra",
+      "macAddresses": "MAC-adresser",
+      "loggedIn": "Pålogget ved lesing",
+      "lastLogin": "Sist pålogget"
+    },
+    "processorCores_one": "{{processor}} · {{count}} kjerne",
+    "processorCores_other": "{{processor}} · {{count}} kjerner",
+    "diskFree": "{{drive}} {{share}} % ledig ({{free}} av {{total}})",
+    "build": "build {{build}}",
+    "agentVersion": "{{source}}-agent {{version}}",
+    "hardware": "Maskinvare",
+    "system": "System",
+    "network": "Nettverk",
+    "users": "Brukere",
+    "updates": "Windows-oppdateringer",
+    "nothingReported": "{{source}} rapporterer ikke noe om dette.",
+    "notReported": "{{source}} rapporterer ikke: {{fields}}.",
+    "updatesWindowsOnly": "{{source}} rapporterer bare Windows-oppdateringer.",
+    "updatesNotRead": "Oppdateringene er ikke lest ennå.",
+    "updatesRead": "Lest {{read}}; {{source}} samlet dem inn {{collected}}.",
+    "unknownTime": "på et ukjent tidspunkt",
+    "available_one": "{{count}} oppdatering tilgjengelig",
+    "available_other": "{{count}} oppdateringer tilgjengelig",
+    "installed_one": "{{count}} oppdatering installert",
+    "installed_other": "{{count}} oppdateringer installert",
+    "installedShown": "De siste {{shown}} av {{count}}.",
+    "updateStatus": {
+      "Pending": "Venter"
+    },
+    "proposals": "Kan være samme enhet",
+    "proposalsHint": "Parasoll slår sammen to enheter bare når det er sikkert. Sjekk disse og bestem.",
+    "maybeSame": "Kan være {{other}}",
+    "evidence": {
+      "serial": "samme serienummer",
+      "mac": "felles MAC-adresse",
+      "name": "samme navn",
+      "serialConflict": "men serienumrene er ulike"
+    },
+    "join": "Samme enhet",
+    "keepApart": "Ulike enheter",
+    "keepApartTitle": "Holde {{name}} og {{other}} atskilt?",
+    "keepApartBody": "Parasoll behandler {{name}} og {{other}} som to enheter fra nå av og foreslår ikke å slå dem sammen igjen.",
+    "detach": "Ikke denne enheten",
+    "detachTitle": "Ta {{device}} ({{source}}) ut av denne enheten?",
+    "detachBody": "{{device}} blir en egen enhet, og Parasoll slår den ikke sammen med {{name}} igjen.",
+    "decided": {
+      "join": "De to er én enhet nå.",
+      "keep-apart": "Holdt atskilt: Parasoll foreslår ikke å slå dem sammen igjen.",
+      "detach": "Tatt ut: den er en egen enhet nå."
+    },
+    "sources": "Kilder",
+    "neverSeen": "Ingen siste kontakt rapportert",
+    "openIn": "Åpne i {{source}}",
+    "inConsole": "I {{source}}",
+    "consoleOnly": "Fjerntilkobling, skript, installering av oppdateringer og omstart gjøres i {{source}}: API-et tilbyr dem ikke.",
+    "from": "fra {{sources}}",
+    "proposalBadge_one": "Sjekk: mulig duplikat",
+    "proposalBadge_other": "Sjekk: {{count}} mulige duplikater"
+  },
   "alerts": {
     "title": "Driftsvarsler",
     "subtitle": "Åpne driftsvarsler for alle kunder: de kritiske først, deretter de som har ventet lengst.",
     "subtitleResolved": "Driftsvarsler som kilden ikke lenger melder som åpne, de sist løste først.",
+    "subtitleHidden": "Driftsvarsler som er skjult i Parasoll til en dato; de er fortsatt åpne i kilden.",
     "refresh": "Oppdater driftsvarsler",
     "filters": "Filtre for driftsvarsler",
     "search": "Søk i tittel eller enhet",
     "stateLabel": "Vis",
     "show": {
       "open": "Åpne",
+      "hidden": "Skjult",
       "resolved": "Løste"
     },
     "severityLabel": "Alvorlighet",
@@ -1576,11 +1665,20 @@
       "customer": "Kunde",
       "waiting": "Meldt",
       "resolved": "Løst",
-      "task": "Oppgave"
+      "task": "Oppgave",
+      "actions": "Handlinger"
     },
     "source": "Kilde: {{name}}",
     "sourceNames": {
-      "atera": "Atera"
+      "atera": "Atera",
+      "parasoll": "Parasoll"
+    },
+    "gaps": {
+      "found": "Funnet av Parasolls egen kontroll. Det lukkes av seg selv når to kontroller på rad ikke lenger finner det.",
+      "changeCheck": "Endre kontrollen",
+      "ateraAgentSilent": {
+        "title": "Atera-agenten på {{device}} har ikke meldt seg siden {{date}}"
+      }
     },
     "reads": {
       "readAt": "{{source}} lest {{time}}",
@@ -1596,6 +1694,7 @@
     },
     "empty": "Ingen åpne driftsvarsler. Nye vises her etter neste lesing fra Atera.",
     "emptyResolved": "Ingen løste driftsvarsler.",
+    "emptyHidden": "Ingen driftsvarsler er skjult.",
     "emptyFiltered": "Ingen driftsvarsler passer med disse filtrene.",
     "detail": {
       "title": "Driftsvarsel",
@@ -1676,7 +1775,78 @@
       "refused": "Oppgaven ble ikke opprettet. Les driftsvarselet på nytt og se over valgene dine.",
       "readAgain": "Les på nytt",
       "cannotCreate": "Du kan se dette driftsvarselet, men ikke tildele det."
+    },
+    "actions": {
+      "heading": "I {{source}}",
+      "menu": "Handlinger for {{title}}",
+      "resolve": "Lukk i Atera",
+      "resolveTitle": "Lukk driftsvarselet i Atera",
+      "delete": "Slett i Atera",
+      "deleteItem": "Slett i Atera …",
+      "deleteTitle": "Slett driftsvarselet i Atera",
+      "none": "Ingenting er bedt om i Atera for dette driftsvarselet."
+    },
+    "hide": {
+      "heading": "I Parasoll",
+      "open": "Skjul til …",
+      "show": "Vis igjen",
+      "title": "Skjul driftsvarselet til en dato",
+      "sourceStays": "API-et til {{source}} kan ikke utsette et driftsvarsel, så det forblir åpent der; Parasoll skjuler det til dagen du velger.",
+      "gapStays": "Å skjule et dekningshull stopper ikke kontrollen: det kommer tilbake på dagen du velger, eller lukkes når kontrollene ikke lenger finner det.",
+      "until": "Skjul til",
+      "untilHint": "Det kommer tilbake ved starten av denne dagen.",
+      "shortcuts": "Raske valg",
+      "in": {
+        "tomorrow": "I morgen",
+        "inAWeek": "Om en uke",
+        "inAMonth": "Om en måned"
+      },
+      "invalidDay": "Velg en dag etter i dag, høyst {{days}} dager frem.",
+      "reason": "Begrunnelse",
+      "reasonHint": "Vises for alle sammen med det skjulte driftsvarselet.",
+      "reasonRequired": "Skriv hvorfor driftsvarselet skjules.",
+      "summary": "Skjult for alle til {{date}}; det kommer tilbake av seg selv.",
+      "confirm": "Skjul",
+      "hiding": "Skjuler …",
+      "changed": "Driftsvarselet ble endret mens du så på det. Her er det slik det er nå – bestem på nytt.",
+      "done": "Skjult til {{date}}.",
+      "discardTitle": "Forkaste begrunnelsen?",
+      "discardBody": "Driftsvarselet er ikke skjult, og det du har skrevet, er ikke lagret.",
+      "discard": "Forkast",
+      "keepEditing": "Fortsett å redigere",
+      "shown": "Driftsvarselet vises igjen.",
+      "hiddenSince": "Skjult til {{date}} av {{name}}: «{{reason}}»",
+      "someone": "noen",
+      "untilFact": "skjult til {{date}}"
     }
+  },
+  "coverage": {
+    "open": "Dekningskontroller",
+    "title": "Dekningskontroller",
+    "intro": "Parasoll kontrollerer om hver kundeenhet blir overvåket, og varsler om det som mangler.",
+    "readOnly": "Du kan se kontrollene, men ikke endre dem.",
+    "rules": {
+      "ateraAgentSilent": {
+        "name": "Atera-agent som ikke melder seg",
+        "description": "Et driftsvarsel når Atera-agenten på en enhet ikke har meldt seg på lenger enn grensen. En server er kritisk, andre enheter en advarsel.",
+        "when": "Kontrolleres etter hver fullstendige lesing av Atera-agentene, om natten."
+      }
+    },
+    "enabled": "Varsle",
+    "limit": {
+      "Days": "Dager uten kontakt",
+      "Hours": "Timer uten kontakt"
+    },
+    "limitHint": "Fra {{min}} til {{max}}. Gjelder fra neste kontroll.",
+    "limitInvalid": "Skriv et helt tall fra {{min}} til {{max}}.",
+    "offNote": "Når du slår den av, lukkes de åpne driftsvarslene dens med en gang.",
+    "openGaps_one": "{{count}} åpent driftsvarsel",
+    "openGaps_other": "{{count}} åpne driftsvarsler",
+    "changed": "Endret {{date}} av {{name}}",
+    "never": "Ikke endret ennå: standardverdien gjelder",
+    "saving": "Lagrer …",
+    "saved": "Dekningskontrollene er lagret",
+    "conflict": "Noen endret en kontroll mens du så på den. Her er den slik den er nå: bestem på nytt."
   },
   "taskTicket": {
     "open": "Servicesak",
@@ -3579,7 +3749,8 @@
           "unconverted-leads": "Leads som aldri ble kunder"
         },
         "service": {
-          "tickets": "Lukkede saker"
+          "tickets": "Lukkede saker",
+          "resolved-alerts": "Løste driftsvarsler"
         },
         "integration": {
           "exception-triage": "Behandling av løste avvik",
@@ -4428,7 +4599,9 @@
       "VND_TIME_NOT_OWN": "Bare den som har jobbet timene, fører dem i Atera.",
       "VND_TIME_NO_TICKET": "Føringen viser ikke til en Atera-sak hos kunden som Parasoll kjenner.",
       "VND_CURSOR_INVALID": "Siden hører ikke til denne listen; last inn listen på nytt.",
-      "VND_FILTER_INVALID": "Filteret er ikke gyldig."
+      "VND_FILTER_INVALID": "Filteret er ikke gyldig.",
+      "VND_ALERT_MOVED": "Driftsvarselet tilhører en annen kunde i Atera nå; ingenting ble sendt.",
+      "VND_ALERT_RESOLVED": "Driftsvarselet er ikke lenger åpent i Atera."
     },
     "dialog": {
       "previewing": "Sjekker hva handlingen vil gjøre …",
@@ -4492,6 +4665,10 @@
         },
         "time": {
           "record": "Før tid i Atera"
+        },
+        "alert": {
+          "resolve": "Lukk driftsvarselet",
+          "delete": "Slett driftsvarselet"
         }
       }
     },
@@ -4510,7 +4687,11 @@
       "VND_EFFECT_TIME_NOT_BILLABLE": "Atera merker dem som ikke fakturerbare.",
       "VND_EFFECT_TIME_NO_DOUBLE": "Timeimporten kjenner dem igjen, så de telles aldri to ganger.",
       "VND_EFFECT_TIME_DEFAULT_START": "Føringen har ingen starttid, så timene starter kl. {{from}} på datoen.",
-      "VND_EFFECT_TIME_AUTHOR": "Atera viser dem som ført av {{name}}."
+      "VND_EFFECT_TIME_AUTHOR": "Atera viser dem som ført av {{name}}.",
+      "VND_EFFECT_ALERT_RESOLVE": "Atera lukker «{{title}}» ({{device}}): det forsvinner fra de åpne driftsvarslene i Atera.",
+      "VND_EFFECT_ALERT_CONFIRM": "Parasoll leser driftsvarselet på nytt etterpå og viser det lukket når Atera gjør det.",
+      "VND_EFFECT_ALERT_DELETE": "Atera sletter «{{title}}» ({{device}}).",
+      "VND_EFFECT_ALERT_DELETE_HISTORY": "Det forsvinner også fra historikken i Atera; Parasoll beholder det som lukket."
     }
   },
   "tickets": {

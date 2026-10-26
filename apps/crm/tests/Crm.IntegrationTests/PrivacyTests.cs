@@ -407,7 +407,7 @@ public sealed class PrivacyTests(CrmWebFactory factory)
         leads.Due.ShouldBeGreaterThanOrEqualTo(1);
         dryRun.Classes.Select(c => c.DataClass).ShouldBe(
             ["customers.former-contacts", "identity.sessions", "integration.exception-triage", "integration.external-payloads", "integration.sync-runs",
-                "integration.vendor-action-texts", "sales.unconverted-leads", "service.tickets"]);
+                "integration.vendor-action-texts", "sales.unconverted-leads", "service.resolved-alerts", "service.tickets"]);
         (await LeadContactAsync(leadId)).ShouldNotBeNull();
 
         // Apply mode without an approved policy still removes nothing.
@@ -448,7 +448,7 @@ public sealed class PrivacyTests(CrmWebFactory factory)
 
         var report = await factory.ClientAs(CrmRoles.Admin).GetFromJsonAsync<JsonElement>($"{Privacy}/retention", Ct);
         report.GetProperty("mode").GetString().ShouldBe("DryRun");
-        report.GetProperty("lastRun").GetProperty("classes").GetArrayLength().ShouldBe(8);
+        report.GetProperty("lastRun").GetProperty("classes").GetArrayLength().ShouldBe(9);
     }
 
     private static async Task<List<Guid>> ActivityIdsAsync(HttpClient client, Guid organizationId) =>

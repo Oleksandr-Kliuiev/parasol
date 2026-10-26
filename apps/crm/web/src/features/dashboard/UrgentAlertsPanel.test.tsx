@@ -41,6 +41,35 @@ describe('the urgent alerts of My day', () => {
     expect(urgentReads(fetch)).toBe(1);
   });
 
+  it('says who has each alert\'s task and hands an alert over from here, in the dialog the queue uses (M40)', async () => {
+    const user = userEvent.setup();
+    const task = { id: 't2', organizationId: 'o2', subject: 'Check the backup agent', status: 'Open', assignee: { id: 'u1', name: 'Kari Nordmann' },
+      dueAt: null, isAvailable: true };
+    const preview = {
+      alert: { id: 'a1', organizationId: 'o1', organizationName: 'Fjordkraft Test AS', system: 'atera', kind: 'Monitoring', title: 'Disk C: almost full',
+        severity: 'Critical', state: 'Open', deviceName: 'SRV-01', deviceId: null, createdAt: '2026-10-20T06:00:00Z', url: null, resolvedAt: null },
+      fingerprint: 'a'.repeat(64), subject: 'Disk C: almost full', priority: 'High', task: null, canCreate: true,
+    };
+    const fetch = vi.fn(async (url: string) => {
+      if (url === urgent) return json(urgentAlerts());
+      if (url.endsWith('/source-tasks/lookup')) return json({ items: [{ alertId: 'a2', task }] });
+      if (url.startsWith('/api/v1/activities/source-tasks/preview')) return json(preview);
+      return json(empty);
+    });
+    vi.stubGlobal('fetch', fetch);
+    renderRoutes([page(<UrgentAlertsPanel />)], '/', testUser(['service.read', 'customers.read', 'activities.read', 'activities.write']));
+    const panel = await screen.findByRole('region', { name: 'Urgent alerts' });
+    const [first, second] = await within(panel).findAllByRole('listitem');
+    expect(await within(second!).findByText(/Kari Nordmann/)).toBeVisible();
+    expect(within(second!).queryByRole('button', { name: /^Assign/ })).not.toBeInTheDocument();
+    // One lookup for the panel's rows, never one per row.
+    expect(fetch.mock.calls.filter(([url]) => url.endsWith('/source-tasks/lookup'))).toHaveLength(1);
+
+    await user.click(within(first!).getByRole('button', { name: 'Assign Disk C: almost full' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Assign alert' });
+    expect(await within(dialog).findByRole('textbox', { name: 'Task subject' })).toHaveValue('Disk C: almost full');
+  });
+
   it('says when the last read did not finish, and never calls a source nobody has read empty', async () => {
     let reply = urgentAlerts({ items: [urgentAlert('a1')], totalCount: 1, warning: 0, reads: [alertRead({ complete: false })] });
     stub(() => json(reply));

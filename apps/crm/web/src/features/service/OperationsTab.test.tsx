@@ -5,10 +5,12 @@ import { renderRoutes, testUser } from '../../test/renderWithProviders';
 import { alertPage, syntheticAlert } from '../../test/alerts';
 import { formatReadAt } from '../../shared/utils/format';
 import { OperationsTab } from './OperationsTab';
-import type { Device } from './types';
+import type { Machine } from './types';
 
-const device = (n: number): Device => ({
-  id: `d${n}`, machineName: `PC-${String(n).padStart(4, '0')}`, type: 'Workstation', os: 'Windows 11', online: true, lastSeenAt: null, url: null, removedAt: null, openAlerts: 0,
+/** One machine of the customer (M40), as the Drift tab lists them. */
+const device = (n: number): Machine => ({
+  id: `d${n}`, organizationId: 'o1', name: `PC-${String(n).padStart(4, '0')}`, type: 'Workstation', os: 'Windows 11', online: true, lastSeenAt: null,
+  removedAt: null, sources: [{ deviceId: `a${n}`, system: 'atera', online: true, lastSeenAt: null, url: null }], openAlerts: 0, proposals: 0,
 });
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -24,7 +26,7 @@ describe('Customer Drift tab (DEV-12)', () => {
       if (url.includes('/summary')) {
         return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Workstation: 1100 }, devicesOnline: 1100, criticalAlerts: 0, warningAlerts: 0, lastSyncedAt: null, reads: complete });
       }
-      if (url.includes('/devices')) {
+      if (url.includes('/machines')) {
         const second = url.includes('cursor=c1');
         return json({ items: Array.from({ length: 25 }, (_, i) => device((second ? 25 : 0) + i)), nextCursor: second ? 'c2' : 'c1', totalCount: 1100 });
       }
@@ -35,12 +37,12 @@ describe('Customer Drift tab (DEV-12)', () => {
     renderRoutes([{ path: '*', element: <OperationsTab organizationId="o1" /> }], '/', testUser(['service.read']));
 
     expect(await screen.findByText('Showing 25 of 1100')).toBeInTheDocument();
-    expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/devices?organizationId=o1&limit=25');
+    expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/v1/service/machines?organizationId=o1&limit=25');
     // The old list said "and 1075 more" and stopped there; now the next page comes with the cursor.
     await user.click(screen.getByRole('button', { name: 'Load more' }));
 
     expect(await screen.findByText('Showing 50 of 1100')).toBeInTheDocument();
-    expect(fetch.mock.calls.at(-1)![0]).toBe('/api/v1/service/devices?organizationId=o1&limit=25&cursor=c1');
+    expect(fetch.mock.calls.at(-1)![0]).toBe('/api/v1/service/machines?organizationId=o1&limit=25&cursor=c1');
     expect(screen.getAllByRole('listitem').filter((item) => /PC-\d{4}/.test(item.textContent ?? ''))).toHaveLength(50);
     expect(screen.getByText('PC-0049')).toBeInTheDocument();
   });
@@ -60,7 +62,7 @@ describe('Customer Drift tab (DEV-12)', () => {
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes('/summary')) return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Server: 1 }, devicesOnline: 1, criticalAlerts: 1, warningAlerts: 1, reads: complete, lastSyncedAt: '2026-10-21T08:00:00Z' });
       if (url.includes('/service/alerts')) return json(alertPage(alerts));
-      if (url.includes('/service/devices')) return json({ items: [{ ...device(1), machineName: 'SRV-01', type: 'Server', openAlerts: 2 }, device(2)], nextCursor: null, totalCount: 2 });
+      if (url.includes('/service/machines')) return json({ items: [{ ...device(1), name: 'SRV-01', type: 'Server', openAlerts: 2 }, device(2)], nextCursor: null, totalCount: 2 });
       if (url.endsWith('/source-tasks/lookup') && init?.method === 'POST') return json({ items: [{ alertId: 'a1', task: {
         id: 't1', organizationId: 'o1', subject: 'Free disk space', status: 'Open', assignee: { id: 'u2', name: 'Ola Tekniker' }, dueAt: null, isAvailable: true } }] });
       return json(empty);
@@ -92,9 +94,10 @@ describe('Customer Drift tab (DEV-12)', () => {
         return json({ openTickets: 0, ticketsLast90Days: 0, devices: { Server: 1, Workstation: 1 }, devicesOnline: 1, criticalAlerts: 0, warningAlerts: 0,
           reads: complete, lastSyncedAt: '2026-10-21T08:00:00Z' });
       }
-      if (url.includes('/service/devices')) {
+      if (url.includes('/service/machines')) {
         return json({ items: [
-          { ...device(1), machineName: 'SRV-01', type: 'Server', os: 'Windows Server 2022', lastSeenAt: '2026-10-21T01:30:00Z', url: 'https://app.atera.com/new/device/1' },
+          { ...device(1), name: 'SRV-01', type: 'Server', os: 'Windows Server 2022', lastSeenAt: '2026-10-21T01:30:00Z',
+            sources: [{ deviceId: 'a1', system: 'atera', online: true, lastSeenAt: '2026-10-21T01:30:00Z', url: 'https://app.atera.com/new/device/1' }] },
           { ...device(2), online: false }], nextCursor: null, totalCount: 2 });
       }
       if (url.includes('/service/alerts')) return json(alertPage([]));
@@ -110,13 +113,15 @@ describe('Customer Drift tab (DEV-12)', () => {
     expect(server).toHaveAttribute('target', '_blank');
     expect(server.querySelector('svg')).not.toBeNull();
     const row = within(server.closest('li')!);
-    expect(row.getByText('Server · Windows Server 2022')).toBeVisible();
+    expect(row.getByText('Server · Windows Server 2022 · from Atera')).toBeVisible();
+    // The name itself opens the machine's card in Parasoll (M40); the mark beside it leads to Atera.
+    expect(row.getByRole('button', { name: 'SRV-01' })).toBeVisible();
     expect(row.getByText(/^last seen/)).toBeVisible();
     expect(server.closest('li')!.querySelector('time')).toHaveAttribute('dateTime', '2026-10-21T01:30:00Z');
     expect(row.queryByText(/^(online|offline)$/)).not.toBeInTheDocument();
     // Without a time from Atera the row says what the last read found, not what is true now.
     const pc = within(devices.getByText('PC-0002').closest('li')!);
-    expect(pc.getByText('Workstation · Windows 11')).toBeVisible();
+    expect(pc.getByText('Workstation · Windows 11 · from Atera')).toBeVisible();
     expect(pc.getByText('offline at the last read')).toBeVisible();
     expect(pc.queryByRole('link')).not.toBeInTheDocument();
   });

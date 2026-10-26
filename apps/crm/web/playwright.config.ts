@@ -42,11 +42,11 @@ const hostArgs = [
   `--Integrations:Atera:BaseUrl=${mock}/api/v3/`,
   // M39: the ticket and time actions write to the stand-in only (it keeps what it got); a real account is never configured here.
   '--Integrations:Atera:WriteEnabled=true',
-  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record']
+  ...['ticket.reply', 'ticket.note', 'ticket.status', 'ticket.priority', 'ticket.technician', 'ticket.close', 'time.record', 'alert.resolve', 'alert.delete']
     .map((kind, index) => `--Integrations:Atera:EnabledActions:${index}=${kind}`),
   '--Integrations:Atera:AlertUrlTemplate=https://atera.example.invalid/alerts/{0}',
-  ...['CustomerSyncCron', 'ContactSyncCron', 'TicketSyncCron', 'RecentTicketSyncCron', 'WorkHoursSyncCron', 'AgentSyncCron', 'AlertSyncCron',
-    'TicketConversationSyncCron']
+  ...['CustomerSyncCron', 'ContactSyncCron', 'TicketSyncCron', 'RecentTicketSyncCron', 'WorkHoursSyncCron', 'AgentSyncCron', 'PatchSyncCron',
+    'AlertSyncCron', 'TicketConversationSyncCron']
     .map((cron) => `--Integrations:Atera:${cron}="0 0 31 2 *"`),
   '--RateLimits:ApiPerMinute=100000',
   // Every test signs in through the development entry point from one address; the real budget has its own integration test.
