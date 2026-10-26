@@ -86,8 +86,8 @@ public class ProviderRedirectTests
     [Fact]
     public async Task The_huntress_credentials_never_reach_the_address_a_redirect_names()
     {
-        await using var elsewhere = await Loopback.StartAsync(_ => Task.CompletedTask);
-        await using var huntress = await Loopback.StartAsync(RedirectTo(elsewhere));
+        await using var elsewhere = await LoopbackServer.StartAsync(_ => Task.CompletedTask);
+        await using var huntress = await LoopbackServer.StartAsync(RedirectTo(elsewhere));
         using var services = Providers(new()
         {
             ["Integrations:Huntress:Enabled"] = "true",
@@ -128,8 +128,8 @@ public class ProviderRedirectTests
     [Fact]
     public async Task The_cloudally_secret_never_reaches_the_address_a_redirect_names()
     {
-        await using var elsewhere = await Loopback.StartAsync(_ => Task.CompletedTask);
-        await using var cloudAlly = await Loopback.StartAsync(RedirectTo(elsewhere));
+        await using var elsewhere = await LoopbackServer.StartAsync(_ => Task.CompletedTask);
+        await using var cloudAlly = await LoopbackServer.StartAsync(RedirectTo(elsewhere));
         using var services = Providers(new()
         {
             ["Integrations:CloudAlly:Enabled"] = "true",
