@@ -7,7 +7,8 @@ namespace Crm.Integrations.PartnerCenter;
 /// The billing export names its own links: the operation to poll (the <c>Location</c> of the export), the manifest and the line
 /// files. They are data from outside the code (DEV-21), so each one is resolved against the configured Graph address and sorted
 /// before a request is made: a link on the Graph origin is sent with the Graph token (<see cref="GraphLinks"/>), a file in the
-/// export storage carries its own SAS signature and is sent without the token, and any other link is refused.
+/// export storage carries its own SAS signature and is sent without the token, and any other link is refused. A line file is
+/// read only from the export storage (<see cref="ClassifyFile"/>).
 /// </summary>
 internal static class PartnerBillingLinks
 {
@@ -40,6 +41,17 @@ internal static class PartnerBillingLinks
         }
 
         throw Refused("a link outside the configured Graph address and the export storage (Integrations:PartnerCenter:BillingStorageHostSuffixes)");
+    }
+
+    /// <summary>
+    /// A line file: only a signed https file in the export storage, sent without the token. A file is never read from Graph, so a
+    /// link that resolves onto the Graph address (a bare file name, a manifest without its root directory) is refused like any
+    /// other wrong link instead of going out with the token.
+    /// </summary>
+    public static Uri ClassifyFile(Uri graphBase, string link, IEnumerable<string> storageHostSuffixes)
+    {
+        var (uri, destination) = Classify(graphBase, link, storageHostSuffixes);
+        return destination == Destination.Storage ? uri : throw Refused("a line file outside the export storage");
     }
 
     /// <summary>

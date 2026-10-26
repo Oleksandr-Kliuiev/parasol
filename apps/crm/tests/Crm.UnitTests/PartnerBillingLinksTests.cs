@@ -41,6 +41,34 @@ public class PartnerBillingLinksTests
         uri.PathAndQuery.ShouldEndWith("?" + Sas);
     }
 
+    [Fact]
+    public void A_line_file_is_a_signed_https_file_in_the_export_storage()
+    {
+        var link = "https://adlsreconbuprodeastus201.blob.core.windows.net/billedusagefastpath/v1/part-00049.c000.json.gz?" + Sas;
+
+        PartnerBillingLinks.ClassifyFile(Graph, link, Storage).AbsoluteUri.ShouldBe(link);
+    }
+
+    [Theory]
+    // A file name without the manifest's root directory resolves onto Graph: refused, not sent there with the token.
+    [InlineData("part-00049.c000.json.gz?" + Sas)]
+    [InlineData("/billedusagefastpath/v1/part-00049.c000.json.gz?" + Sas)]
+    [InlineData("https://graph.microsoft.com/v1.0/reports/partners/billing/manifests/m-1/part-00049.c000.json.gz?" + Sas)]
+    public void A_line_file_is_never_read_from_graph(string link)
+    {
+        var refused = Should.Throw<PartnerBillingLinkRefusedException>(() => PartnerBillingLinks.ClassifyFile(Graph, link, Storage));
+
+        refused.Message.ShouldContain("a line file outside the export storage");
+        refused.Message.ShouldNotContain("sig=");
+        PartnerBillingLinks.Classify(Graph, link, Storage).Destination.ShouldBe(PartnerBillingLinks.Destination.Graph);
+    }
+
+    [Theory]
+    [InlineData("https://evil.example/part-1.json.gz?sig=c2ln", "outside the configured Graph address")]
+    [InlineData("https://account.blob.core.windows.net/part-1.json.gz", "a storage link without a SAS signature")]
+    public void A_line_file_follows_the_rule_of_every_other_link(string link, string reason) =>
+        Should.Throw<PartnerBillingLinkRefusedException>(() => PartnerBillingLinks.ClassifyFile(Graph, link, Storage)).Message.ShouldContain(reason);
+
     [Theory]
     [InlineData("https://graph.microsoft.com.evil.example/v1.0/x", "outside the configured Graph address")]
     [InlineData("https://graph.microsoft.com:8443/v1.0/x", "outside the configured Graph address")]
