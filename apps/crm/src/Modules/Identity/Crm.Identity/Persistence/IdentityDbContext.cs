@@ -70,6 +70,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             b.Property(x => x.Name).HasMaxLength(256);
             b.Property(x => x.Method).HasConversion<string>().HasMaxLength(16);
             b.HasIndex(x => new { x.System, x.ExternalId }).IsUnique();
+            // One technician per system is shared by everyone: the one a person without their own writes as.
+            b.HasIndex(x => x.System).IsUnique().HasFilter("[Shared] = 1").HasDatabaseName("UX_TechnicianMappings_Shared");
         });
     }
 }

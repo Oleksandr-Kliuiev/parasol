@@ -84,6 +84,9 @@ namespace Crm.Identity.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<bool>("Shared")
+                        .HasColumnType("bit");
+
                     b.Property<string>("System")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -93,6 +96,11 @@ namespace Crm.Identity.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("System")
+                        .IsUnique()
+                        .HasDatabaseName("UX_TechnicianMappings_Shared")
+                        .HasFilter("[Shared] = 1");
 
                     b.HasIndex("System", "ExternalId")
                         .IsUnique();

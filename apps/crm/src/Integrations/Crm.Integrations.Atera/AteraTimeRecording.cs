@@ -89,7 +89,7 @@ internal sealed class AteraTimeRecordAction(
 
         if (await TechnicianAsync(user.UserId, ct) is not { } technician)
         {
-            return VendorActionPlan.Blocked(target, "VND_TECHNICIAN_UNMAPPED", "Your account is not linked to an Atera technician; link it under Technicians.");
+            return VendorActionPlan.Blocked(target, "VND_TECHNICIAN_UNMAPPED", "Your account is not linked to an Atera technician; link it, or mark the shared one, under Technicians.");
         }
 
         var (start, end) = Window(entry);
@@ -117,6 +117,7 @@ internal sealed class AteraTimeRecordAction(
             })],
             new VendorActionEffect(entry.Billable ? "VND_EFFECT_TIME_BILLABLE" : "VND_EFFECT_TIME_NOT_BILLABLE", new Dictionary<string, string?>()),
             new VendorActionEffect("VND_EFFECT_TIME_AUTHOR", new Dictionary<string, string?> { ["name"] = technician.Name ?? technician.Email ?? technician.ExternalId }),
+            .. technician.Shared ? [new VendorActionEffect("VND_EFFECT_SHARED_TECHNICIAN", new Dictionary<string, string?>())] : Array.Empty<VendorActionEffect>(),
             new VendorActionEffect("VND_EFFECT_TIME_NO_DOUBLE", new Dictionary<string, string?>()),
         ], null, parameters);
     }
@@ -193,7 +194,5 @@ internal sealed class AteraTimeRecordAction(
         return (start, start.AddMinutes((double)decimal.Round(entry.Hours * 60m, 0)));
     }
 
-    private async Task<TechnicianListing?> TechnicianAsync(Guid? userId, CancellationToken ct) =>
-        userId is not { } id ? null : (await technicians.ListAsync(AteraTypes.System, ct))
-            .FirstOrDefault(t => t.UserId == id && long.TryParse(t.ExternalId, NumberStyles.None, CultureInfo.InvariantCulture, out var number) && number > 0);
+    private Task<TechnicianListing?> TechnicianAsync(Guid? userId, CancellationToken ct) => AteraTechnicians.WritesAsAsync(technicians, userId, ct);
 }

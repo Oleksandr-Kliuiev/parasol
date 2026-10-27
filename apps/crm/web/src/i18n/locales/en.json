@@ -210,7 +210,9 @@
       "CUS_MIGRATION_TOO_LARGE": "The file is too large. Split it into smaller files.",
       "CUS_RECONCILIATION_INVALID": "The file needs a header row with organization number, period, currency and amount.",
       "CUS_IMPORT_RUN_NOT_FOUND": "The run does not exist.",
-      "TIM_UNAPPROVED_ENTRIES": "Entries in this month still wait for approval. Approve them before you close the month."
+      "TIM_UNAPPROVED_ENTRIES": "Entries in this month still wait for approval. Approve them before you close the month.",
+      "IDN_SHARED_TECHNICIAN_TAKEN": "Another technician is already shared by everyone. Turn that off first.",
+      "IDN_SHARED_WITH_USER": "A shared technician cannot also be linked to one person."
     },
     "rateLimited": "Too many requests. Try again in {{seconds}} seconds.",
     "rateLimitedNoWait": "Too many requests. Wait a moment and try again.",
@@ -2196,6 +2198,10 @@
     "notMapped": "Not mapped",
     "mapped": "Technician mapped",
     "unmapped": "Mapping removed",
+    "shared": "Shared by everyone",
+    "sharedHint": "Everyone without a technician of their own writes in Atera as this one. Hours entered directly in Atera are not tied to anyone.",
+    "sharedOn": "Everyone now writes in Atera as this technician",
+    "sharedOff": "The technician is no longer shared",
     "columns": {
       "technician": "Technician",
       "system": "System",
@@ -4825,7 +4831,7 @@
       "VND_HELD_AFTER_RESTORE": "Held after a database restore: it may have got through. Check and record what you found.",
       "VND_TEXT_REQUIRED": "Write the text first.",
       "VND_TEXT_TOO_LONG": "The text is longer than 8000 characters.",
-      "VND_TECHNICIAN_UNMAPPED": "Your account is not linked to an Atera technician. An administrator links it under Technicians.",
+      "VND_TECHNICIAN_UNMAPPED": "Your account is not linked to an Atera technician. An administrator links it, or marks the technician everyone shares, under Technicians.",
       "VND_NO_CHANGE": "The ticket already has this value.",
       "VND_VALUE_UNKNOWN": "Choose one of the values Atera knows.",
       "VND_TECHNICIAN_UNKNOWN": "Choose a technician Atera knows.",
@@ -5003,6 +5009,7 @@
       "VND_EFFECT_TICKET_REPLY_CUSTOMER": "The customer sees this reply in Atera, and gets it by e-mail when Atera's notifications are on.",
       "VND_EFFECT_TICKET_NOTE": "Only technicians see this note; the customer does not.",
       "VND_EFFECT_TICKET_AUTHOR": "Atera shows it as written by {{name}}.",
+      "VND_EFFECT_SHARED_TECHNICIAN": "Everyone shares this Atera technician, so Atera cannot tell who it was; Parasoll keeps your name with the action.",
       "VND_EFFECT_TICKET_REOPEN": "The ticket is {{status}}: Atera may open it again when the customer is answered.",
       "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_PRIORITY": "Priority: {{from}} → {{to}}",
