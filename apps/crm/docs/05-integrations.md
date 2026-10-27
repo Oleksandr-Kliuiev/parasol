@@ -285,6 +285,7 @@ sequenceDiagram
 - Поиск: `GET https://data.brreg.no/enhetsregisteret/api/enheter?navn={строка}` и `GET .../enheter/{orgnr}`; подразделения — `.../underenheter?overordnetEnhet={orgnr}`.
 - Ночная проверка: лента изменений `GET .../oppdateringer/enheter?dato={ISO}` → для организаций CRM обновить адрес/название (если не переопределены вручную) и флаги `konkurs`, `underAvvikling`, `slettedato`.
 - Кэш ответов поиска — 24 ч. API открытый, но с вежливым ограничением частоты (≤ 5 запросов/с из CRM).
+- Клиент не следует перенаправлениям — тот же обработчик, что у клиентов поставщиков (`Crm.Integrations.Core/ProviderHttp.cs`): ответ 3xx — ошибка, по адресу из ответа реестра CRM не ходит. Ключа у API нет, но ответ не должен уводить CRM на другой адрес.
 
 ## 6. Дистрибьютор CSP (если индирект)
 - R1 (сделано в S6): `POST /api/v1/licensing/import` принимает CSV как `text/csv`; `?dryRun=true` возвращает предпросмотр «создать / обновить / без изменений», ничего не записывая.

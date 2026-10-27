@@ -1,5 +1,6 @@
 using System.Net;
 using Crm.Integrations.Atera;
+using Crm.Integrations.Brreg;
 using Crm.Integrations.CloudAlly;
 using Crm.Integrations.Huntress;
 using Crm.Integrations.PartnerCenter;
@@ -14,6 +15,7 @@ namespace Crm.UnitTests;
 /// M39.0: provider clients never follow a redirect (CLAUDE.md, DEV-21). Following one would repeat the request, with its
 /// <c>X-API-KEY</c> or subscription key, at whatever address the answer names. Atera also signs with a bearer token on request.
 /// M41: both Huntress clients (reads and actions) end in the same handler, so Huntress's Basic credentials stay with Huntress.
+/// After M39: the Brreg register client ends in it too; the open API takes no key, but its answer sends the CRM nowhere else.
 /// </summary>
 public class ProviderRedirectTests
 {
@@ -31,7 +33,7 @@ public class ProviderRedirectTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection().AddLogging().AddSingleton(TimeProvider.System).AddSingleton<IConfiguration>(configuration);
         services.AddAteraIntegration(configuration).AddHuntressIntegration(configuration).AddPowerOfficeIntegration(configuration)
-            .AddPartnerCenterIntegration(configuration).AddCloudAllyIntegration(configuration);
+            .AddPartnerCenterIntegration(configuration).AddCloudAllyIntegration(configuration).AddBrregIntegration(configuration);
         return services.BuildServiceProvider();
     }
 
@@ -46,6 +48,7 @@ public class ProviderRedirectTests
     [InlineData("PartnerCenterTokenProvider")]
     [InlineData("ICloudAllyClient")]
     [InlineData(CloudAllyTokenProvider.HttpClientName)]
+    [InlineData("IBrregClient")]
     public void Every_provider_client_ends_in_a_handler_that_does_not_follow_redirects(string client)
     {
         using var services = Providers([]);
@@ -144,6 +147,23 @@ public class ProviderRedirectTests
 
         refused.StatusCode.ShouldBe(HttpStatusCode.Found);
         cloudAlly.Requests.ShouldHaveSingleItem().Headers["client-secret"].ShouldBe("cloudally-secret");
+        elsewhere.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_register_answer_never_sends_the_crm_to_the_address_a_redirect_names()
+    {
+        await using var elsewhere = await LoopbackServer.StartAsync(_ => Task.CompletedTask);
+        await using var brreg = await LoopbackServer.StartAsync(RedirectTo(elsewhere));
+        using var services = Providers(new()
+        {
+            ["Integrations:Brreg:BaseUrl"] = new Uri(brreg.Address, "enhetsregisteret/api/").ToString(),
+        });
+
+        var refused = await Should.ThrowAsync<HttpRequestException>(() => services.GetRequiredService<IBrregClient>().GetAsync("123456785", Ct));
+
+        refused.StatusCode.ShouldBe(HttpStatusCode.Found);
+        brreg.Requests.ShouldHaveSingleItem().Path.ShouldBe("/enhetsregisteret/api/enheter/123456785");
         elsewhere.Requests.ShouldBeEmpty();
     }
 
