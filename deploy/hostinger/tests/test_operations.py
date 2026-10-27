@@ -105,14 +105,14 @@ class OperationsTests(unittest.TestCase):
         direct = json.loads((root / 'direct' / 'stack.json').read_text())['compose']
         self.assertEqual((direct['SITE_ADDRESS'], direct['HTTPS_PORT'], direct['EDGE_NETWORK']), ('crm.example.no', '443', ''))
         self.assertEqual(direct['TRUSTED_PROXIES'], '127.0.0.1/32')
-        initialize(root / 'edge', edge_network='atlas_edge', edge_subnet='172.18.0.0/16', **production)
+        initialize(root / 'edge', edge_network='shared_edge', edge_subnet='172.18.0.0/16', **production)
         edge = json.loads((root / 'edge' / 'stack.json').read_text())['compose']
         self.assertEqual(edge['SITE_ADDRESS'], 'http://crm.example.no')
         self.assertEqual((edge['BIND_ADDRESS'], edge['HTTP_PORT'], edge['HTTPS_PORT']), ('127.0.0.1', '18090', '18490'))
-        self.assertEqual((edge['EDGE_NETWORK'], edge['EDGE_EXTERNAL'], edge['TRUSTED_PROXIES']), ('atlas_edge', 'true', '172.18.0.0/16'))
-        for bad in [{'edge_network': 'atlas_edge'}, {'edge_subnet': '172.18.0.0/16'},
-                    {'edge_network': 'atlas edge', 'edge_subnet': '172.18.0.0/16'},
-                    {'edge_network': 'atlas_edge', 'edge_subnet': 'not-a-network'}]:
+        self.assertEqual((edge['EDGE_NETWORK'], edge['EDGE_EXTERNAL'], edge['TRUSTED_PROXIES']), ('shared_edge', 'true', '172.18.0.0/16'))
+        for bad in [{'edge_network': 'shared_edge'}, {'edge_subnet': '172.18.0.0/16'},
+                    {'edge_network': 'shared edge', 'edge_subnet': '172.18.0.0/16'},
+                    {'edge_network': 'shared_edge', 'edge_subnet': 'not-a-network'}]:
             with self.assertRaises(ValueError):
                 initialize(root / 'refused', **production, **bad)
             self.assertFalse((root / 'refused').exists())
