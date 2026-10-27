@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { page, renderRoutes, testUser } from '../../test/renderWithProviders';
 import type { TechnicianMapping } from '../time/types';
 import { TechniciansPage } from './TechniciansPage';
@@ -31,7 +31,8 @@ describe('technicians', () => {
 
     // Atera's number beside the e-mail tells the row that can write in Atera from one keyed by e-mail.
     expect(await screen.findByText('it@firm.example · #4001')).toBeVisible();
-    expect(screen.getByRole('combobox')).toBeVisible();
+    // One picker per row, told apart by its technician.
+    expect(screen.getByRole('combobox', { name: 'CRM user Felles Atera' })).toBeVisible();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Shared by everyone' }));
 
@@ -53,5 +54,24 @@ describe('technicians', () => {
     expect(await screen.findByText('Shared by everyone')).toBeVisible();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByText('Not mapped')).not.toBeInTheDocument();
+  });
+
+  it('shows each technician as a card on a narrow screen, with the person and the box on the first screen', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 840px)', media: query, onchange: null,
+      addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+    }));
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).includes('/api/v1/identity/technicians')
+      ? json({ items: [technician({ lastSeenAt: '2026-10-27T08:00:00Z' })], nextCursor: null, totalCount: 1 })
+      : json({ items: [], nextCursor: null, totalCount: 0 })));
+    renderRoutes([page(<TechniciansPage />, '/admin/technicians')], '/admin/technicians', testUser(['users.read', 'integrations.manage']));
+
+    const list = await screen.findByRole('list', { name: 'Technicians' });
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    const card = within(list).getByRole('listitem');
+    expect(within(card).getByText('it@firm.example · #4001')).toBeVisible();
+    expect(within(card).getByRole('combobox', { name: 'CRM user Felles Atera' })).toBeVisible();
+    expect(within(card).getByRole('checkbox', { name: 'Shared by everyone' })).toBeInTheDocument();
+    expect(within(card).getByText(/^Last seen:/)).toBeVisible();
   });
 });

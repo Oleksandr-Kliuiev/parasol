@@ -6,14 +6,14 @@ import { useSettingsStyles } from './settingsStyles';
 // eslint-disable-next-line react-refresh/only-export-components
 export { useSettingsStyles } from './settingsStyles';
 
-/** Avatar, name and a muted e-mail (or role) line: the person cell of the settings tables. */
-export function PersonCell({ name, detail, size = 32 }: { name: string; detail?: ReactNode; size?: 24 | 28 | 32 | 36 }) {
+/** Avatar, name and a muted e-mail (or role) line: the person cell of the settings tables. `nameId` lets a row's control name its person. */
+export function PersonCell({ name, detail, size = 32, nameId }: { name: string; detail?: ReactNode; size?: 24 | 28 | 32 | 36; nameId?: string }) {
   const styles = useSettingsStyles();
   return (
     <span className={styles.person}>
       <Avatar name={name} size={size} color="colorful" aria-hidden />
       <span className={styles.personText}>
-        <span className={styles.personName}>{name}</span>
+        <span id={nameId} className={styles.personName}>{name}</span>
         {detail && <span className={styles.personMail}>{detail}</span>}
       </span>
     </span>
