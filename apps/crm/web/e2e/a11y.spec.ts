@@ -138,6 +138,7 @@ test('main pages have no serious accessibility violations', async ({ page }) => 
     ['Quote templates', '/admin/quote-templates'],
     ['Dashboard', '/dashboard'],
     ['Notifications', '/notifications'],
+    ['My account', '/account'],
     ['Personal data', '/admin/privacy'],
     ['New personal data request', `/admin/privacy/new?subjectKind=Contact&subjectId=${contact.contactId}`],
     ['Personal data request', `/admin/privacy/cases/${privacyCase.id}`],

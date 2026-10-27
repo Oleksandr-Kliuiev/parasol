@@ -33,6 +33,7 @@ export { LockClosed20Regular, LockClosed24Regular } from '@fluentui/react-icons/
 export { MoreHorizontal20Regular } from '@fluentui/react-icons/svg/more-horizontal';
 export { Navigation20Regular } from '@fluentui/react-icons/svg/navigation';
 export { People20Regular } from '@fluentui/react-icons/svg/people';
+export { Person20Regular } from '@fluentui/react-icons/svg/person';
 export { PersonLock20Regular } from '@fluentui/react-icons/svg/person-lock';
 export { PersonSettings20Regular } from '@fluentui/react-icons/svg/person-settings';
 export { PlugConnected20Regular } from '@fluentui/react-icons/svg/plug-connected';

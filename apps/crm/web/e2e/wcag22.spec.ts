@@ -15,6 +15,7 @@ const pages = (organizationId: string): Array<[string, string]> => [
   ['Quotes', '/quotes'],
   ['Billing runs', '/billing'],
   ['Notifications', '/notifications'],
+  ['My account', '/account'],
 ];
 
 /** Elements that stick out to the right of the viewport, to name the cause of a horizontal scroll. */

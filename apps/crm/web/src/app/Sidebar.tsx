@@ -15,7 +15,7 @@ import {
   makeStyles,
   mergeClasses,
 } from '@fluentui/react-components';
-import { ChevronDoubleLeft16Regular, ChevronUpDown16Regular, Search16Regular, SignOut20Regular } from './shellIcons';
+import { ChevronDoubleLeft16Regular, ChevronUpDown16Regular, Person20Regular, Search16Regular, SignOut20Regular } from './shellIcons';
 import { useTranslation } from 'react-i18next';
 import { useCurrentUser } from '../auth/CurrentUserContext';
 import i18n, { languages } from '../i18n';
@@ -473,6 +473,9 @@ export function Sidebar({ selected, mini, onToggleMini, onSearch, onNavigate, on
                 <Text weight="semibold" className={styles.menuName}>{user.displayName}</Text>
               </MenuGroupHeader>
               {user.email && <MenuGroupHeader>{user.email}</MenuGroupHeader>}
+              <MenuItem icon={<Person20Regular />} onClick={onNavigate('/account')}>
+                {t('account.menu')}
+              </MenuItem>
             </MenuGroup>
             <MenuDivider />
             <MenuGroup>

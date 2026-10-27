@@ -67,6 +67,47 @@
     "newMenu": "Opprett ny",
     "account": "Konto og språk"
   },
+  "account": {
+    "menu": "Min konto",
+    "title": "Min konto",
+    "subtitle": "Slik Parasoll kjenner deg, og innstillingene som er dine.",
+    "profile": {
+      "title": "Profil",
+      "access": "Tilgang",
+      "signIn": "Logget inn med",
+      "signedInAt": "Siste pålogging",
+      "signInModes": {
+        "Entra": "Microsoft Entra ID",
+        "Development": "Utviklerpålogging"
+      },
+      "fromEntra": "Navn, e-post og tilgang kommer fra Microsoft Entra ID og endres der.",
+      "fromDevelopment": "Navn og tilgang er laget for testing.",
+      "noAccess": "Ingen rolle",
+      "roles": {
+        "Admin": "Full tilgang",
+        "Management": "Ledelse",
+        "Sales": "Salg",
+        "Technician": "Tekniker",
+        "ServiceLead": "Serviceleder",
+        "Finance": "Økonomi",
+        "ReadOnly": "Kun lesing"
+      }
+    },
+    "settings": {
+      "title": "Innstillinger",
+      "language": "Språk",
+      "languageHint": "Menyer, tekster og e-postsammendraget. Lagres på kontoen din.",
+      "myDay": "Min dag viser først",
+      "myDayHint": "Det startsiden viser øverst. Lagres på kontoen din.",
+      "theme": "Tema",
+      "themeHint": "Gjelder bare denne nettleseren.",
+      "themes": {
+        "system": "Som systemet",
+        "light": "Lyst",
+        "dark": "Mørkt"
+      }
+    }
+  },
   "common": {
     "scrollableTable": "Rullbar tabell",
     "save": "Lagre",
@@ -3074,7 +3115,7 @@
   },
   "notifications": {
     "title": "Varsler",
-    "subtitle": "Hva som venter på deg, og hva du vil ha på e-post.",
+    "subtitle": "Hva som venter på deg.",
     "inbox": "Venter på deg",
     "empty": "Ingenting venter på deg.",
     "unreadOnly": "Bare uleste",
@@ -3124,7 +3165,8 @@
     "digestOff": "Slå på den daglige oppsummeringen for å velge klokkeslett.",
     "newCount_one": "{{count}} ny",
     "newCount_other": "{{count}} nye",
-    "markReadFailed": "Varselet er åpnet, men kunne ikke merkes som lest. Det står fortsatt som nytt i bjella."
+    "markReadFailed": "Varselet er åpnet, men kunne ikke merkes som lest. Det står fortsatt som nytt i bjella.",
+    "settings": "E-postinnstillinger"
   },
   "dashboard": {
     "title": "Dashbord",

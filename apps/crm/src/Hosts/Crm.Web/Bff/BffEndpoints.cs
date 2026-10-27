@@ -21,7 +21,10 @@ public sealed record BffUser(
     IReadOnlyList<string> Permissions,
     AuthMode AuthMode,
     BffRecordScope RecordScope,
-    string? MyDayLayout);
+    string? MyDayLayout,
+    string? JobTitle,
+    string? Department,
+    DateTimeOffset? LastLoginAt);
 
 /// <summary>What the user sees of the scoped records (DEV-09), so a list can say "the quotes you own" instead of looking incomplete.</summary>
 public sealed record BffRecordScope(RecordScopeMode Mode, bool AllQuotes, bool AllProjects);
@@ -151,7 +154,7 @@ public static class BffEndpoints
                         scope.Mode,
                         scope.LimitedTo(Crm.Authorization.Permissions.QuotesAll) is null,
                         scope.LimitedTo(Crm.Authorization.Permissions.ProjectsAll) is null),
-                    profile.MyDayLayout));
+                    profile.MyDayLayout, profile.JobTitle, profile.Department, profile.LastLoginAt));
             });
 
         return app;

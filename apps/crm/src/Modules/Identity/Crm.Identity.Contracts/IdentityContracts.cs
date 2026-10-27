@@ -18,8 +18,12 @@ public sealed record UserSummary(Guid Id, string DisplayName, string? Email, boo
 
 /// <summary>A CRM user; <paramref name="Roles"/> are the roles the directory last confirmed (DEV-10), for decisions made on their behalf.</summary>
 /// <param name="MyDayLayout">The My day layout the user chose (work, lead or finance), or null before they choose.</param>
+/// <param name="JobTitle">The job title the directory gave at the last sign-in or sync, if any.</param>
+/// <param name="Department">The department the directory gave at the last sign-in or sync, if any.</param>
+/// <param name="LastLoginAt">When the user last signed in.</param>
 public sealed record UserProfile(
-    Guid Id, string DisplayName, string? Email, string? PreferredLanguage, bool IsActive, IReadOnlyList<string>? Roles = null, string? MyDayLayout = null);
+    Guid Id, string DisplayName, string? Email, string? PreferredLanguage, bool IsActive, IReadOnlyList<string>? Roles = null, string? MyDayLayout = null,
+    string? JobTitle = null, string? Department = null, DateTimeOffset? LastLoginAt = null);
 
 public interface IUserProvisioning
 {

@@ -50,7 +50,8 @@ export function MenuDrawer({ open, onOpenChange, theme, children }: { open: bool
   const { t } = useTranslation();
   return (
     <OverlayDrawer className={styles.drawer} open={open} onOpenChange={(_, data) => onOpenChange(data.open)} aria-label={t('nav.mainMenu')}>
-      <FluentProvider className={styles.drawerTheme} theme={theme}>
+      {/* Like the rail: its fill and height must not reach the account menu's portal. */}
+      <FluentProvider className={styles.drawerTheme} theme={theme} applyStylesToPortals={false}>
         {children}
       </FluentProvider>
     </OverlayDrawer>

@@ -53,6 +53,7 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
     ['Invoices', '/billing/invoices'],
     ['Organization invoices', `/organizations/${organization.id}?tab=invoices`],
     ['Notifications', '/notifications'],
+    ['My account', '/account'],
     ['Quotes', '/quotes'],
     ['New quote', `/quotes/new?organizationId=${organization.id}`],
   ] as const) {
