@@ -2,10 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } fro
 import { Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
 import { FluentProvider, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../api/client';
-import { currentUserQueryKey } from '../auth/CurrentUserContext';
-import { changeLanguage as applyLanguage, type LanguageCode } from '../i18n';
+import { useChangeLanguage, useSignOut } from '../auth/accountActions';
+import type { LanguageCode } from '../i18n';
 import { ReverifyDialog } from '../auth/ReverifyDialog';
 import { MaintenanceBanner } from '../features/operations/MaintenanceBanner';
 import { BottomTabs, TAB_BAR_SPACE } from './BottomTabs';
@@ -133,7 +131,6 @@ export function AppShell() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const navGroups = useNavGroups();
   const { dark } = useThemeMode();
   const narrow = useMediaQuery(NARROW);
@@ -200,19 +197,8 @@ export function AppShell() {
     });
   };
 
-  const changeLanguage = async (code: string) => {
-    // Save first: switching the UI before the request completes lets a quick reload lose the choice.
-    await api.put('/api/v1/identity/me/preferences', { language: code });
-    await applyLanguage(code as LanguageCode);
-    await queryClient.invalidateQueries({ queryKey: currentUserQueryKey });
-  };
-
-  const signOut = async () => {
-    const { data } = await api.post<{ signOutUrl: string }>('/bff/logout');
-    // Nothing of this user's stays in memory for whoever uses the browser next (DEV-09).
-    queryClient.clear();
-    window.location.assign(data.signOutUrl);
-  };
+  const changeLanguage = useChangeLanguage();
+  const signOut = useSignOut();
 
   const railTheme = dark ? railThemeDarkPage : railThemeLightPage;
   const sidebar = (inDrawer: boolean) => (
@@ -225,7 +211,7 @@ export function AppShell() {
         openSearch();
       }}
       onNavigate={go}
-      onLanguage={(code) => void changeLanguage(code)}
+      onLanguage={(code) => void changeLanguage(code as LanguageCode)}
       onSignOut={() => void signOut()}
     />
   );
@@ -236,8 +222,10 @@ export function AppShell() {
       <a className={styles.skip} href="#main">
         {t('app.skipToContent')}
       </a>
+      {/* The rail's look stays on the rail: passed to its portals (the account menu), its height and dark fill covered the
+          whole window while the menu was open. The portals still get the theme's tokens. */}
       {!narrow && (
-        <FluentProvider className={styles.rail} theme={railTheme} data-motion="rail">
+        <FluentProvider className={styles.rail} theme={railTheme} applyStylesToPortals={false} data-motion="rail">
           {sidebar(false)}
         </FluentProvider>
       )}
@@ -254,6 +242,7 @@ export function AppShell() {
           section={group && entry ? t(`nav.${group.label}`) : undefined}
           // A known page outside the person's menu is one they may not see: "No access", not "Page not found".
           page={entry ? t(`nav.${entry.label}`) : location.pathname.startsWith('/notifications') ? t('notifications.title')
+            : location.pathname === '/account' ? t('account.title')
             : selected ? t('errors.forbiddenTitle') : t('errors.notFoundTitle')}
           onMenu={narrow && !phone ? openDrawer : undefined}
           onSearch={openSearch}

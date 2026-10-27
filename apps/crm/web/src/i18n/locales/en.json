@@ -67,6 +67,59 @@
     "newMenu": "Create new",
     "account": "Account and language"
   },
+  "account": {
+    "menu": "My account",
+    "title": "My account",
+    "subtitle": "How Parasoll knows you, and the settings that are yours.",
+    "profile": {
+      "title": "Profile",
+      "access": "Access",
+      "signIn": "Signed in with",
+      "signedInAt": "Last sign-in",
+      "signInModes": {
+        "Entra": "Microsoft Entra ID",
+        "Development": "Development sign-in"
+      },
+      "fromEntra": "Name, e-mail and access come from Microsoft Entra ID and are changed there.",
+      "fromDevelopment": "Name and access are made up for testing.",
+      "noAccess": "No role",
+      "roles": {
+        "Admin": "Full access",
+        "Management": "Management",
+        "Sales": "Sales",
+        "Technician": "Technician",
+        "ServiceLead": "Service lead",
+        "Finance": "Finance",
+        "ReadOnly": "Read only"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "language": "Language",
+      "languageHint": "Menus, texts and the e-mail digest. Kept with your account.",
+      "myDay": "My day shows first",
+      "myDayHint": "What the start page puts at the top. Kept with your account.",
+      "theme": "Theme",
+      "themeHint": "Applies to this browser only.",
+      "themes": {
+        "system": "Same as system",
+        "light": "Light",
+        "dark": "Dark"
+      }
+    },
+    "atera": {
+      "title": "Atera",
+      "manage": "Technicians",
+      "writesAs": "You write as",
+      "kind": "Technician",
+      "own": "Your own",
+      "shared": "Shared by everyone",
+      "ownNote": "Ticket changes and hours you send to Atera from Parasoll are signed with this technician.",
+      "sharedNote": "You have no technician of your own, so what you send to Atera is signed with the one shared by everyone. Atera cannot tell it was you.",
+      "none": "No Atera technician is linked to you, so Parasoll cannot send ticket changes or hours to Atera for you. Ask whoever manages integrations to link one.",
+      "noneManage": "No Atera technician is linked to you, so Parasoll cannot send ticket changes or hours to Atera for you. Link one, or share one with everyone, under Technicians."
+    }
+  },
   "common": {
     "scrollableTable": "Scrollable table",
     "save": "Save",
@@ -3082,7 +3135,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "What is waiting for you, and what you want by e-mail.",
+    "subtitle": "What is waiting for you.",
     "inbox": "Waiting for you",
     "empty": "Nothing is waiting for you.",
     "unreadOnly": "Unread only",
@@ -3132,7 +3185,8 @@
     "digestOff": "Turn on the daily digest to choose its hour.",
     "newCount_one": "{{count}} new",
     "newCount_other": "{{count}} new",
-    "markReadFailed": "The notice is open, but it could not be marked as read. It stays new in the bell."
+    "markReadFailed": "The notice is open, but it could not be marked as read. It stays new in the bell.",
+    "settings": "E-mail settings"
   },
   "dashboard": {
     "title": "Dashboard",

@@ -45,6 +45,7 @@ export const routes: RouteObject[] = [
       { path: 'admin/migration', lazy: async () => ({ Component: (await import('../features/admin/MigrationPage')).MigrationPage }) },
       { path: 'admin/custom-fields', lazy: async () => ({ Component: (await import('../features/customfields/CustomFieldsAdminPage')).CustomFieldsAdminPage }) },
       { path: 'dashboard', lazy: async () => ({ Component: (await import('../features/reports/DashboardPage')).DashboardPage }) },
+      { path: 'account', lazy: async () => ({ Component: (await import('../features/account/AccountPage')).AccountPage }) },
       { path: 'notifications', lazy: async () => ({ Component: (await import('../features/notifications/NotificationsPage')).NotificationsPage }) },
       { path: 'billing', lazy: async () => ({ Component: (await import('../features/billing/BillingRunsPage')).BillingRunsPage }) },
       { path: 'billing/runs/:id', lazy: async () => ({ Component: (await import('../features/billing/BillingRunPage')).BillingRunPage }) },

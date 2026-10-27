@@ -113,7 +113,8 @@ internal sealed class UserDirectory(IdentityDbContext db) : IUserDirectory
 internal static class UserMappings
 {
     public static UserProfile ToProfile(this User user) =>
-        new(user.Id, user.DisplayName, user.Email, user.PreferredLanguage, user.IsActive, user.RoleList, user.MyDayLayout);
+        new(user.Id, user.DisplayName, user.Email, user.PreferredLanguage, user.IsActive, user.RoleList, user.MyDayLayout,
+            user.JobTitle, user.Department, user.LastLoginAt);
 }
 
 internal sealed class UserDirectorySync(IdentityDbContext db, TimeProvider time) : IUserDirectorySync

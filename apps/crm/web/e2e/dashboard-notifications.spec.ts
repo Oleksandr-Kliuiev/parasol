@@ -109,7 +109,9 @@ test('a contract reminder reaches the bell and can be muted', async ({ page }) =
     await row.getByRole('button', { name: /Mark as read/ }).click();
     await expect(row.getByText('New', { exact: true })).toBeHidden();
 
-    // Muting a kind is remembered and the digest leaves it out.
+    // Muting a kind is remembered and the digest leaves it out; the e-mail settings live on the account page.
+    await page.getByRole('link', { name: 'E-mail settings' }).click();
+    await expect(page).toHaveURL(/\/account#notifications$/);
     const contractsEnding = page.getByRole('checkbox', { name: 'Contracts ending' });
     await contractsEnding.uncheck();
     await expect(contractsEnding).not.toBeChecked();

@@ -231,6 +231,11 @@ export interface CurrentUser {
   recordScope: RecordScope;
   /** The My day layout the user chose (M38), or null before they choose; read it through `myDayProfile`. */
   myDayLayout?: string | null;
+  /** From the directory (Entra ID), when it gives one. */
+  jobTitle?: string | null;
+  department?: string | null;
+  /** When the user last signed in. */
+  lastLoginAt?: string | null;
 }
 
 export interface RecordScope {

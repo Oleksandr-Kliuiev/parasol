@@ -67,6 +67,59 @@
     "newMenu": "Opprett ny",
     "account": "Konto og språk"
   },
+  "account": {
+    "menu": "Kontoen min",
+    "title": "Kontoen min",
+    "subtitle": "Slik Parasoll kjenner deg, og innstillingane som er dine.",
+    "profile": {
+      "title": "Profil",
+      "access": "Tilgang",
+      "signIn": "Logga inn med",
+      "signedInAt": "Siste pålogging",
+      "signInModes": {
+        "Entra": "Microsoft Entra ID",
+        "Development": "Utviklarpålogging"
+      },
+      "fromEntra": "Namn, e-post og tilgang kjem frå Microsoft Entra ID og blir endra der.",
+      "fromDevelopment": "Namn og tilgang er laga for testing.",
+      "noAccess": "Inga rolle",
+      "roles": {
+        "Admin": "Full tilgang",
+        "Management": "Leiing",
+        "Sales": "Sal",
+        "Technician": "Teknikar",
+        "ServiceLead": "Serviceleiar",
+        "Finance": "Økonomi",
+        "ReadOnly": "Berre lesing"
+      }
+    },
+    "settings": {
+      "title": "Innstillingar",
+      "language": "Språk",
+      "languageHint": "Menyar, tekstar og e-postsamandraget. Blir lagra på kontoen din.",
+      "myDay": "Min dag viser først",
+      "myDayHint": "Det startsida viser øvst. Blir lagra på kontoen din.",
+      "theme": "Tema",
+      "themeHint": "Gjeld berre denne nettlesaren.",
+      "themes": {
+        "system": "Som systemet",
+        "light": "Lyst",
+        "dark": "Mørkt"
+      }
+    },
+    "atera": {
+      "title": "Atera",
+      "manage": "Teknikarar",
+      "writesAs": "Du skriv som",
+      "kind": "Teknikar",
+      "own": "Din eigen",
+      "shared": "Felles for alle",
+      "ownNote": "Endringar i saker og timar du sender til Atera frå Parasoll, vert signerte med denne teknikaren.",
+      "sharedNote": "Du har ingen eigen teknikar, så det du sender til Atera, vert signert med den som er felles for alle. Atera kan ikkje sjå at det var deg.",
+      "none": "Ingen Atera-teknikar er kopla til deg, så Parasoll kan ikkje sende endringar i saker eller timar til Atera for deg. Be den som styrer integrasjonane, om å kople ein.",
+      "noneManage": "Ingen Atera-teknikar er kopla til deg, så Parasoll kan ikkje sende endringar i saker eller timar til Atera for deg. Kople ein, eller del ein med alle, under Teknikarar."
+    }
+  },
   "common": {
     "scrollableTable": "Rullbar tabell",
     "save": "Lagre",
@@ -3080,7 +3133,7 @@
   },
   "notifications": {
     "title": "Varsel",
-    "subtitle": "Kva som ventar på deg, og kva du vil ha på e-post.",
+    "subtitle": "Kva som ventar på deg.",
     "inbox": "Ventar på deg",
     "empty": "Ingenting ventar på deg.",
     "unreadOnly": "Berre uleste",
@@ -3130,7 +3183,8 @@
     "digestOff": "Slå på den daglege oppsummeringa for å velje klokkeslett.",
     "newCount_one": "{{count}} ny",
     "newCount_other": "{{count}} nye",
-    "markReadFailed": "Varselet er opna, men kunne ikkje merkast som lese. Det står framleis som nytt i bjølla."
+    "markReadFailed": "Varselet er opna, men kunne ikkje merkast som lese. Det står framleis som nytt i bjølla.",
+    "settings": "E-postinnstillingar"
   },
   "dashboard": {
     "title": "Dashbord",

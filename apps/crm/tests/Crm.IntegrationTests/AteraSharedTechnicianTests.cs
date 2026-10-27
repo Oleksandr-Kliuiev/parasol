@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Crm.Integrations.Atera;
 using Crm.Integrations.Core.Actions;
@@ -30,9 +31,16 @@ public class AteraSharedTechnicianTests(CrmWebFactory factory)
         await RegisterAsync(host, sharedId, "Felles Atera");
         var shared = await MappingAsync(admin, sharedId);
         (await PreviewNoteAsync(admin, ticket)).GetProperty("block").GetProperty("code").GetString().ShouldBe("VND_TECHNICIAN_UNMAPPED");
+        // The account page says the same before any change: with no technician, nothing is signed in Atera.
+        var none = await MineAsync(host.Client(CrmRoles.ReadOnly));
+        none.GetProperty("enabled").GetBoolean().ShouldBeTrue();
+        none.GetProperty("technician").ValueKind.ShouldBe(JsonValueKind.Null);
         try
         {
             (await admin.PutAsJsonAsync($"/api/v1/identity/technicians/{shared}", new { userId = (Guid?)null, shared = true }, Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+            var mine = (await MineAsync(host.Client(CrmRoles.ReadOnly))).GetProperty("technician");
+            mine.GetProperty("name").GetString().ShouldBe("Felles Atera");
+            mine.GetProperty("shared").GetBoolean().ShouldBeTrue();
             var listed = await ListedAsync(admin, sharedId);
             listed.GetProperty("shared").GetBoolean().ShouldBeTrue();
             listed.GetProperty("userId").ValueKind.ShouldBe(JsonValueKind.Null);
@@ -58,6 +66,9 @@ public class AteraSharedTechnicianTests(CrmWebFactory factory)
             await host.MapTechnicianAsync();
             var own = await PreviewNoteAsync(admin, ticket);
             own.GetProperty("effects").EnumerateArray().Select(e => e.GetProperty("code").GetString()).ShouldNotContain("VND_EFFECT_SHARED_TECHNICIAN");
+            var ownListed = (await MineAsync(admin)).GetProperty("technician");
+            ownListed.GetProperty("id").GetString().ShouldBe(host.Technician.ToString(CultureInfo.InvariantCulture));
+            ownListed.GetProperty("shared").GetBoolean().ShouldBeFalse();
         }
         finally
         {
@@ -108,6 +119,10 @@ public class AteraSharedTechnicianTests(CrmWebFactory factory)
             [new TechnicianRef("atera", externalId, $"felles-{externalId}@firm.test", name)], Ct);
         return users[externalId];
     }
+
+    /// <summary>The technician the client's user writes as, as the account page reads it (no permission of its own).</summary>
+    private static async Task<JsonElement> MineAsync(HttpClient client) =>
+        await client.GetFromJsonAsync<JsonElement>("/api/v1/integrations/atera/technicians/me", Ct);
 
     private static async Task<Guid> MappingAsync(HttpClient client, string externalId) =>
         (await ListedAsync(client, externalId)).GetProperty("id").GetGuid();
