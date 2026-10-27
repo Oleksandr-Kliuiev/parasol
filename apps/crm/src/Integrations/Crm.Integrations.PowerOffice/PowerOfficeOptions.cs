@@ -64,8 +64,8 @@ public sealed class PowerOfficeOptions
 
     /// <summary>
     /// An environment never talks to the other one's PowerOffice (DEV-05): prod only to Production, test only to Demo. The
-    /// deployment names itself in <c>Deployment:Environment</c> (Bicep); a name the rule does not know is refused, and without
-    /// one (a developer machine, the tests) both are possible.
+    /// deployment names itself in <c>Deployment:Environment</c> (the Hostinger configurator writes it); a name the rule does
+    /// not know is refused, and without one (a developer machine, the tests) both are possible.
     /// </summary>
     public static bool FitsDeployment(PowerOfficeOptions options, string? deployment) => deployment switch
     {
