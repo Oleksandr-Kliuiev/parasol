@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Crm.Authorization;
+using Crm.Integrations.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -35,6 +36,7 @@ public static class BrregModule
                 client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("VardaheiCRM/2.0");
             })
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.NoRedirects)
             .AddResilienceHandler("brreg", (pipeline, context) =>
             {
                 var options = context.ServiceProvider.GetRequiredService<IOptions<BrregOptions>>().Value;

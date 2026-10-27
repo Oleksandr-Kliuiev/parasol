@@ -75,11 +75,12 @@
       "owner": "",
       "status": "not_run",
       "evidence": [
-        "../runbooks/03-database-restore.md",
+        "../../../../deploy/hostinger/README.md",
+        "../../../../docs/migration/M07-HOSTINGER.md",
         "evidence/DEV-13.md"
       ],
       "verified_at": "",
-      "blocker": "Operations не назначены; учение восстановления в выделенной среде не проводилось: нет замеров RPO ≤ 1 ч и RTO ≤ 4 ч, сверки SQL, blob и ключей, повтора privacy suppression и сверки внешних эффектов (runbook 03). Локальные тесты восстановления (DEV-13) этого не заменяют.",
+      "blocker": "Operations не назначены; рабочей установки на Hostinger VPS и внешнего SFTP-хранилища restic ещё нет, учение не проводилось. Нужно восстановить выбранный snapshot на втором хосте с тем же runtime (`parasol.py restore --snapshot … --destination …`: новый Compose project, SQL CHECKSUM/VERIFYONLY/CHECKDB, документы, keyring и PFX побайтно, итог `quarantined`), пройти согласованный возврат в работу из deploy/hostinger/README.md (журналы append-only, privacy replay, restore reconciliation, Ready-документы; интеграции включаются отдельно) и записать время каждого шага. Ежедневная копия в 02:30 даёт RPO до 24 ч, а DEC-04 требует RPO ≤ 1 ч и RTO ≤ 4 ч: владелец подтверждает цель или заказывает более частые копии; RTO измеряется на Hostinger с выбранным внешним каналом. Синтетическое учение в CI («Hostinger images and real backup restore») и локальные тесты DEV-13 реальное учение не заменяют.",
       "tasks": [
         "DEV-13",
         "DEV-23"
@@ -200,12 +201,13 @@
       "owner": "",
       "status": "not_run",
       "evidence": [
-        "../runbooks/01-first-deployment.md",
-        "evidence/DEV-05.md",
+        "../../../../deploy/hostinger/README.md",
+        "../../../../docs/migration/M07-HOSTINGER.md",
+        "../../../../.github/workflows/ci.yml",
         "evidence/DEV-23/rollout-and-support.md"
       ],
       "verified_at": "",
-      "blocker": "Repository owner, operations и PO не назначены; remote-репозитория нет, workflows release.yml и promote.yml ни разу не запускались: не проверены branch protection, required reviewers и окружения test/prod, OIDC-федерация, secret scanning и push protection, CODEOWNERS, проверенный digest образов и принятый release manifest (runbook 01 §2, §6).",
+      "blocker": "Repository owner, operations и PO не назначены. Выпуск на Hostinger: оператор ставит на VPS checkout выбранного коммита main, собирает образы там же и запускает их через deploy/hostinger/parasol.py (registry нет); обновление — в окне обслуживания после backup. Импортированные Azure-workflows release.yml и promote.yml в apps/crm/.github не активны и не включаются (AGENTS.md); действует только корневой .github/workflows/ci.yml. На 27.10.2026 репозиторий GitHub публичный, main не защищена (нет обязательной проверки «Required checks»), secret scanning и push protection выключены, CODEOWNERS нет. Рабочей установки и принятой записи о выпуске (коммит, точные image IDs из manifest, backup перед обновлением, решение о выпуске) ещё нет; владельцы поддержки, on-call и период стабилизации не назначены.",
       "tasks": [
         "DEV-05",
         "DEV-23"
