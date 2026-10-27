@@ -53,6 +53,6 @@ internal sealed class TechnicianDirectory(IdentityDbContext db, TimeProvider tim
     public async Task<IReadOnlyList<TechnicianListing>> ListAsync(string system, CancellationToken cancellationToken) =>
         await db.TechnicianMappings.AsNoTracking().Where(m => m.System == system)
             .OrderBy(m => m.Name).ThenBy(m => m.ExternalId)
-            .Select(m => new TechnicianListing(m.ExternalId, m.Name, m.Email, m.UserId))
+            .Select(m => new TechnicianListing(m.ExternalId, m.Name, m.Email, m.UserId, m.Shared))
             .ToListAsync(cancellationToken);
 }

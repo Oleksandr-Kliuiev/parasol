@@ -103,6 +103,8 @@ export interface TechnicianMapping {
   email: string | null;
   userId: string | null;
   userName: string | null;
+  /** Everyone without a technician of their own writes in Atera as this one; it belongs to no one person. */
+  shared: boolean;
   method: 'Unmapped' | 'Email' | 'Manual';
   lastSeenAt: string;
 }

@@ -56,6 +56,8 @@ def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, 
         'Auth': {'Mode': 'Entra'},
         'AzureAd': {'TenantId': tenant, 'ClientId': client, 'ClientCertificates': [
             {'SourceType': 'Path', 'CertificateDiskPath': '/run/secrets/oidc.pfx', 'CertificatePassword': oidc_password}]},
+        # DEV-05: only a named deployment is checked; prod reaches PowerOffice Production only, the drill (test) only Demo.
+        'Deployment': {'Environment': 'test' if rehearsal else 'prod'},
         'Documents': {'Provider': 'FileSystem', 'RootPath': '/var/lib/parasol/documents', 'VolumeId': volume},
         'DataProtection': {'KeyRingPath': '/var/lib/parasol/keyring', 'CertificatePath': '/run/secrets/dp.pfx', 'CertificatePassword': dp},
         'Hangfire': {'DashboardEnabled': False, 'PrepareSchema': False},

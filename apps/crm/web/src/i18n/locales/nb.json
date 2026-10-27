@@ -251,7 +251,9 @@
       "CUS_MIGRATION_TOO_LARGE": "Filen er for stor. Del den i mindre filer.",
       "CUS_RECONCILIATION_INVALID": "Filen trenger en overskriftsrad med organisasjonsnummer, periode, valuta og beløp.",
       "CUS_IMPORT_RUN_NOT_FOUND": "Kjøringen finnes ikke.",
-      "TIM_UNAPPROVED_ENTRIES": "Noen føringer i måneden venter fortsatt på godkjenning. Godkjenn dem før du lukker måneden."
+      "TIM_UNAPPROVED_ENTRIES": "Noen føringer i måneden venter fortsatt på godkjenning. Godkjenn dem før du lukker måneden.",
+      "IDN_SHARED_TECHNICIAN_TAKEN": "En annen tekniker er allerede felles for alle. Slå det av først.",
+      "IDN_SHARED_WITH_USER": "En felles tekniker kan ikke samtidig være koblet til én person."
     },
     "rateLimited": "For mange forespørsler. Prøv igjen om {{seconds}} sekunder.",
     "rateLimitedNoWait": "For mange forespørsler. Vent litt og prøv igjen.",
@@ -2237,6 +2239,10 @@
     "notMapped": "Ikke koblet",
     "mapped": "Teknikeren er koblet",
     "unmapped": "Koblingen er fjernet",
+    "shared": "Felles for alle",
+    "sharedHint": "Alle uten egen tekniker skriver i Atera som denne. Timer ført rett i Atera knyttes ikke til noen bestemt person.",
+    "sharedOn": "Alle skriver nå i Atera som denne teknikeren",
+    "sharedOff": "Teknikeren er ikke lenger felles",
     "columns": {
       "technician": "Tekniker",
       "system": "System",
@@ -4865,7 +4871,7 @@
       "VND_HELD_AFTER_RESTORE": "Holdt tilbake etter en gjenoppretting av databasen: den kan ha gått gjennom. Sjekk og registrer hva du fant.",
       "VND_TEXT_REQUIRED": "Skriv teksten først.",
       "VND_TEXT_TOO_LONG": "Teksten er lengre enn 8000 tegn.",
-      "VND_TECHNICIAN_UNMAPPED": "Kontoen din er ikke koblet til en Atera-tekniker. En administrator kobler den under Teknikere.",
+      "VND_TECHNICIAN_UNMAPPED": "Kontoen din er ikke koblet til en Atera-tekniker. En administrator kobler den, eller merker teknikeren alle deler, under Teknikere.",
       "VND_NO_CHANGE": "Saken har allerede denne verdien.",
       "VND_VALUE_UNKNOWN": "Velg en av verdiene Atera kjenner.",
       "VND_TECHNICIAN_UNKNOWN": "Velg en tekniker Atera kjenner.",
@@ -5043,6 +5049,7 @@
       "VND_EFFECT_TICKET_REPLY_CUSTOMER": "Kunden ser dette svaret i Atera, og får det på e-post når varslingene i Atera er på.",
       "VND_EFFECT_TICKET_NOTE": "Bare teknikere ser denne merknaden; kunden gjør ikke det.",
       "VND_EFFECT_TICKET_AUTHOR": "Atera viser det som skrevet av {{name}}.",
+      "VND_EFFECT_SHARED_TECHNICIAN": "Alle deler denne Atera-teknikeren, så Atera kan ikke se hvem det var; Parasoll tar vare på navnet ditt sammen med handlingen.",
       "VND_EFFECT_TICKET_REOPEN": "Saken har status {{status}}: Atera kan åpne den igjen når kunden får svar.",
       "VND_EFFECT_TICKET_STATUS": "Status: {{from}} → {{to}}",
       "VND_EFFECT_TICKET_PRIORITY": "Prioritet: {{from}} → {{to}}",

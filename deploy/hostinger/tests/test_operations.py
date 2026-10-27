@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+import uuid
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
 from common import private_path, run
 from configure import initialize
@@ -79,6 +80,20 @@ class OperationsTests(unittest.TestCase):
             self.assertIn('Server=sql,1433;Database=Crm;', settings['ConnectionStrings']['Crm'])
         worker = json.loads((config / 'worker.json').read_text())
         self.assertFalse({'DataProtection', 'AzureAd', 'Auth', 'Forwarded'} & set(worker))
+
+    def test_every_service_names_its_deployment_for_the_poweroffice_rule(self):
+        # DEV-05 checks only a named deployment: prod may reach PowerOffice Production only, the drill (test) Demo only.
+        root = self.root.resolve()
+        (root / 'entra.pfx').write_bytes(b'synthetic certificate')
+        (root / 'entra-password').write_text('synthetic')
+        production = {'domain': 'crm.example.no', 'tenant': str(uuid.uuid4()), 'client': str(uuid.uuid4()),
+                      'oidc': root / 'entra.pfx', 'password_file': root / 'entra-password'}
+        for kind, options, expected in [('drill', {'rehearsal': True}, 'test'), ('production', production, 'prod')]:
+            state = root / kind
+            initialize(state, release='synthetic', **options)
+            for name in ('web', 'worker', 'migrate'):
+                settings = json.loads((state / 'config' / f'{name}.json').read_text())
+                self.assertEqual(settings['Deployment'], {'Environment': expected}, f'{kind} {name}.json')
 
     def test_failed_command_withholds_output_but_keeps_a_tail_for_the_drill(self):
         with self.assertRaises(RuntimeError) as caught:

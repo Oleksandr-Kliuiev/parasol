@@ -47,7 +47,9 @@ M42). Целевая среда — **VPS Hostinger**.
 - M37 — финансы клиента из PowerOffice: [карточка](docs/migration/M37-CUSTOMER-FINANCE-CARD.md),
   [история счетов](docs/migration/M37-POWEROFFICE-INVOICE-HISTORY.md), [PDF](docs/migration/M37-POWEROFFICE-INVOICE-PDFS.md),
   [платежи и операции](docs/migration/M37-POWEROFFICE-CUSTOMER-LEDGER.md),
-  [возобновляемый импорт](docs/migration/M37-POWEROFFICE-RESUME.md) и [план полной копии](docs/migration/M37-POWEROFFICE-REPLICA-PLAN.md).
+  [возобновляемый импорт](docs/migration/M37-POWEROFFICE-RESUME.md); PowerOffice остаётся системой учёта
+  ([решение и объём копии](docs/migration/M37-POWEROFFICE-REPLICA-PLAN.md)), рабочий аккаунт подключается по
+  [плану подключения](docs/migration/M37-POWEROFFICE-LIVE-PLAN.md).
 - [M38: «Drift» в CRM](docs/migration/M38-OPERATIONS-IN-CRM.md) выводит отдельный сервис интеграций: устройства и
   оповещения Atera, очередь `/alerts`, полный доступ сотрудников через одну группу Entra, этапы M39–M44.
 

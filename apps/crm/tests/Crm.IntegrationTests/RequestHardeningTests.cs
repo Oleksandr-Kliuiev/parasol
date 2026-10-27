@@ -46,7 +46,7 @@ public class RequestHardeningTests(CrmWebFactory factory)
         ["PUT /api/v1/activities/{id:guid}/ticket"] = "two ids; the ticket service checks the customer and that the ticket belongs to it",
         ["PUT /api/v1/customers/organizations/{id:guid}/parent"] = "an id and a boolean; the group rules are checked in the service",
         ["PUT /api/v1/identity/me/preferences"] = "the language is checked against the supported list in the handler",
-        ["PUT /api/v1/identity/technicians/{id:guid}"] = "one id",
+        ["PUT /api/v1/identity/technicians/{id:guid}"] = "one id and a flag",
         ["PUT /api/v1/integrations/monitoring/triage"] = "key 256, status list and comment 2000 are checked in the handler",
         ["PUT /api/v1/operations/maintenance"] = "reason 10-500 is checked in the handler and the reference is clipped to 100",
     };

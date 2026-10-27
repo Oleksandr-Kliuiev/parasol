@@ -73,13 +73,19 @@ public sealed record UserDeactivated(Guid UserId) : DomainEvent;
 /// <summary>A technician as an external system (Atera) reports them on tickets and work hours.</summary>
 public sealed record TechnicianRef(string System, string ExternalId, string? Email, string? Name);
 
-/// <summary>A technician of an external system as last seen, with the CRM user they are mapped to (null while unmapped).</summary>
-public sealed record TechnicianListing(string ExternalId, string? Name, string? Email, Guid? UserId);
+/// <summary>
+/// A technician of an external system as last seen, with the CRM user they are mapped to (null while unmapped). A shared one
+/// has no user: everyone without a technician of their own writes as it.
+/// </summary>
+public sealed record TechnicianListing(string ExternalId, string? Name, string? Email, Guid? UserId, bool Shared);
 
 /// <summary>Maps technicians of external systems to CRM users (BR-TIM-01): automatically by e-mail, otherwise by an administrator.</summary>
 public interface ITechnicianDirectory
 {
-    /// <summary>CRM user per external id, or null when not mapped yet. Unknown technicians are registered so an administrator can map them.</summary>
+    /// <summary>
+    /// CRM user per external id, or null when not mapped yet or shared by everyone (what the shared one did belongs to no one
+    /// person). Unknown technicians are registered so an administrator can map them.
+    /// </summary>
     Task<IReadOnlyDictionary<string, Guid?>> ResolveAsync(IReadOnlyCollection<TechnicianRef> technicians, CancellationToken cancellationToken);
 
     /// <summary>Every technician of <paramref name="system"/> the CRM has seen, by name (M39.2: whom a ticket can be given to, and as whom a person writes).</summary>

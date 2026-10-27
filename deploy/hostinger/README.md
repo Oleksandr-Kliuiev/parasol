@@ -55,6 +55,8 @@ SQL настроен как **Express**, не Developer/Evaluation. Express им
    Генерируются отдельные случайные пароли БД, UUID документов, сертификат шифрования
    DataProtection и пароль restic. Существующие каталоги не перезаписываются, пароли не
    выводятся. Самостоятельно сгенерированный DP сертификат не нужно загружать в Entra.
+   Во все private JSON пишется `Deployment:Environment=prod` (у учения — `test`): по нему CRM пускает
+   рабочую установку только к PowerOffice Production, учение — только к Demo (DEV-05). Не удалять.
 5. В `/srv/parasol/stack.json` задать `TLS_EMAIL`, проверить свободную `PROXY_SUBNET`
    (не пересекается с сетями хоста/VPN/Docker), IP Caddy `.254`, порты и редакцию SQL.
    При смене subnet обновить `Forwarded:KnownProxies` в `config/web.json` и `migrate.json`.

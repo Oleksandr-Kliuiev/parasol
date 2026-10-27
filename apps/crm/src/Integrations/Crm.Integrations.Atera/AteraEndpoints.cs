@@ -1,4 +1,3 @@
-using System.Globalization;
 using Crm.Authorization;
 using Crm.Identity.Contracts;
 using Microsoft.AspNetCore.Builder;
@@ -7,8 +6,8 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Crm.Integrations.Atera;
 
-/// <summary>An Atera technician a ticket can be given to (M39.2), with the CRM user they are mapped to.</summary>
-public sealed record AteraTechnicianItem(string Id, string Name, string? Email, Guid? UserId);
+/// <summary>An Atera technician a ticket can be given to (M39.2), with the CRM user they are mapped to, or shared by everyone.</summary>
+public sealed record AteraTechnicianItem(string Id, string Name, string? Email, Guid? UserId, bool Shared);
 
 public static class AteraEndpoints
 {
@@ -20,8 +19,8 @@ public static class AteraEndpoints
     {
         app.MapGet("/api/v1/integrations/atera/technicians", async (ITechnicianDirectory technicians, CancellationToken ct) =>
                 Results.Ok((await technicians.ListAsync(AteraTypes.System, ct))
-                    .Where(t => long.TryParse(t.ExternalId, NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id > 0)
-                    .Select(t => new AteraTechnicianItem(t.ExternalId, t.Name ?? t.Email ?? $"#{t.ExternalId}", t.Email, t.UserId))
+                    .Where(AteraTechnicians.CanSign)
+                    .Select(t => new AteraTechnicianItem(t.ExternalId, t.Name ?? t.Email ?? $"#{t.ExternalId}", t.Email, t.UserId, t.Shared))
                     .ToList()))
             .WithTags("Integrations")
             .RequirePermission(Permissions.ServiceWrite);

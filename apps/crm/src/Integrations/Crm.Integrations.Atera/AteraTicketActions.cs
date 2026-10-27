@@ -134,10 +134,9 @@ internal abstract class AteraTicketAction(IServiceApi service, ICustomersApi cus
     protected static VendorActionEffect Effect(string code, params (string Name, string? Value)[] values) =>
         new(code, values.ToDictionary(v => v.Name, v => (string?)(string.IsNullOrWhiteSpace(v.Value) ? "—" : v.Value)));
 
-    /// <summary>The Atera technician a CRM user writes as: the mapping with a numeric Atera id (an e-mail key cannot sign a comment).</summary>
-    protected static async Task<TechnicianListing?> TechnicianOfAsync(ITechnicianDirectory technicians, Guid? userId, CancellationToken ct) =>
-        userId is not { } id ? null : (await technicians.ListAsync(AteraTypes.System, ct))
-            .FirstOrDefault(t => t.UserId == id && long.TryParse(t.ExternalId, NumberStyles.None, CultureInfo.InvariantCulture, out var number) && number > 0);
+    /// <summary>The Atera technician a CRM user writes as: their own, else the one everyone shares (<see cref="AteraTechnicians"/>).</summary>
+    protected static Task<TechnicianListing?> TechnicianOfAsync(ITechnicianDirectory technicians, Guid? userId, CancellationToken ct) =>
+        AteraTechnicians.WritesAsAsync(technicians, userId, ct);
 }
 
 /// <summary>
@@ -171,7 +170,7 @@ internal sealed class AteraTicketCommentAction(
 
         if (await TechnicianOfAsync(technicians, user.UserId, ct) is not { } technician)
         {
-            return VendorActionPlan.Blocked(target, "VND_TECHNICIAN_UNMAPPED", "Your account is not linked to an Atera technician; link it under Technicians.");
+            return VendorActionPlan.Blocked(target, "VND_TECHNICIAN_UNMAPPED", "Your account is not linked to an Atera technician; link it, or mark the shared one, under Technicians.");
         }
 
         var effects = new List<VendorActionEffect>
@@ -181,6 +180,11 @@ internal sealed class AteraTicketCommentAction(
             : Effect("VND_EFFECT_TICKET_REPLY_CUSTOMER"),
             Effect("VND_EFFECT_TICKET_AUTHOR", ("name", technician.Name ?? technician.Email)),
         };
+        if (technician.Shared)
+        {
+            effects.Add(Effect("VND_EFFECT_SHARED_TECHNICIAN"));
+        }
+
         if (!isInternal && !ticket.IsOpen)
         {
             effects.Add(Effect("VND_EFFECT_TICKET_REOPEN", ("status", ticket.Status)));
