@@ -1,6 +1,10 @@
 {
 	admin off
 	email {$TLS_EMAIL}
+	# Only a shared proxy in front of this one (init --edge-network) is believed about the client and the scheme.
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES}
+	}
 	log {
 		format filter {
 			wrap json
@@ -16,7 +20,10 @@
 	# Health remains available only inside the private application network.
 	@health path /health /health/*
 	respond @health 404
-	reverse_proxy crm-web:8080
+	reverse_proxy crm-web:8080 {
+		# One address, the client's: crm-web believes the last hop only (this proxy), so a chain would name the shared proxy.
+		header_up X-Forwarded-For {client_ip}
+	}
 	header -Server
 	# No access logs: URLs can contain customer identifiers and OIDC parameters.
 }

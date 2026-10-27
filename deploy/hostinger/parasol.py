@@ -19,7 +19,7 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     init = commands.add_parser('init')
     init.add_argument('--rehearsal', action='store_true')
-    for key in ('domain', 'tenant', 'client', 'oidc', 'password-file'):
+    for key in ('domain', 'tenant', 'client', 'oidc', 'password-file', 'edge-network', 'edge-subnet'):
         init.add_argument('--' + key)
     init.add_argument('--release', required=True)
     for name in ('build', 'migrate', 'up', 'backup-init', 'backup', 'check', 'status', 'snapshots', 'stop'):
@@ -32,7 +32,8 @@ def main():
     args = parser.parse_args()
     if args.command == 'init':
         initialize(args.state, rehearsal=args.rehearsal, domain=args.domain, tenant=args.tenant,
-                   client=args.client, oidc=args.oidc, password_file=args.password_file, release=args.release)
+                   client=args.client, oidc=args.oidc, password_file=args.password_file, release=args.release,
+                   edge_network=args.edge_network, edge_subnet=args.edge_subnet)
         print('Private configuration created; maintenance remains on.')
         return
     stack = Stack(args.state)

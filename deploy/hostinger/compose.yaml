@@ -25,6 +25,7 @@ services:
     environment:
       SITE_ADDRESS: '${SITE_ADDRESS:?set site address}'
       TLS_EMAIL: '${TLS_EMAIL:?set TLS contact}'
+      TRUSTED_PROXIES: '${TRUSTED_PROXIES:-127.0.0.1/32}'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - '${STATE_DIR}/data/caddy:/data'
@@ -108,7 +109,10 @@ services:
     networks: [backend]
 
 networks:
-  edge: {}
+  # Its own network, or the network of a proxy the host already runs on 80/443 (`init --edge-network`).
+  edge:
+    name: '${EDGE_NETWORK:-${COMPOSE_PROJECT_NAME}_edge}'
+    external: ${EDGE_EXTERNAL:-false}
   backend: {internal: true}
   front:
     internal: true
