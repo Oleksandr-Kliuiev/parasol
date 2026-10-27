@@ -79,28 +79,29 @@ public static class IdentityModule
                 var query = db.TechnicianMappings.AsNoTracking();
                 if (unmappedOnly == true)
                 {
-                    query = query.Where(m => m.UserId == null);
+                    query = query.Where(m => m.UserId == null && !m.Shared);
                 }
 
-                // Unmapped first, then by the name shown (the external id when there is none), then id (DEV-12).
+                // Unmapped first (a shared technician is decided, not waiting), then by the name shown (the external id when
+                // there is none), then id (DEV-12).
                 var total = await query.CountAsync(ct);
                 if (KeysetCursor.Decode(cursor) is { } after && after.Then is { } label)
                 {
                     var rank = after.SortKey == "0" ? 0 : 1;
-                    query = query.Where(m => (m.UserId == null ? 0 : 1) > rank ||
-                        ((m.UserId == null ? 0 : 1) == rank && ((m.Name ?? m.ExternalId).CompareTo(label) > 0 || ((m.Name ?? m.ExternalId) == label && m.Id.CompareTo(after.Id) > 0))));
+                    query = query.Where(m => (m.UserId == null && !m.Shared ? 0 : 1) > rank ||
+                        ((m.UserId == null && !m.Shared ? 0 : 1) == rank && ((m.Name ?? m.ExternalId).CompareTo(label) > 0 || ((m.Name ?? m.ExternalId) == label && m.Id.CompareTo(after.Id) > 0))));
                 }
 
                 var take = KeysetCursor.ClampLimit(limit);
-                var page = await query.OrderBy(m => m.UserId == null ? 0 : 1).ThenBy(m => m.Name ?? m.ExternalId).ThenBy(m => m.Id).Take(take + 1).ToListAsync(ct);
+                var page = await query.OrderBy(m => m.UserId == null && !m.Shared ? 0 : 1).ThenBy(m => m.Name ?? m.ExternalId).ThenBy(m => m.Id).Take(take + 1).ToListAsync(ct);
                 var rows = page.Take(take).ToList();
                 var next = page.Count > take
-                    ? new KeysetCursor(rows[^1].UserId == null ? "0" : "1", rows[^1].Id, rows[^1].Name ?? rows[^1].ExternalId).Encode()
+                    ? new KeysetCursor(rows[^1].UserId == null && !rows[^1].Shared ? "0" : "1", rows[^1].Id, rows[^1].Name ?? rows[^1].ExternalId).Encode()
                     : null;
                 var userIds = rows.Where(r => r.UserId != null).Select(r => r.UserId!.Value).Distinct().ToList();
                 var users = await db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
                 return Results.Ok(new PagedResult<TechnicianMappingItem>(rows.Select(r => new TechnicianMappingItem(
-                    r.Id, r.System, r.ExternalId, r.Name, r.Email, r.UserId, r.UserId is { } id ? users.GetValueOrDefault(id) : null, r.Method, r.LastSeenAt)).ToList(), next, total));
+                    r.Id, r.System, r.ExternalId, r.Name, r.Email, r.UserId, r.UserId is { } id ? users.GetValueOrDefault(id) : null, r.Shared, r.Method, r.LastSeenAt)).ToList(), next, total));
             })
             .RequirePermission(Permissions.UsersRead);
 
@@ -111,12 +112,30 @@ public static class IdentityModule
                     return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "IDN_TECHNICIAN_NOT_FOUND", extensions: new Dictionary<string, object?> { ["code"] = "IDN_TECHNICIAN_NOT_FOUND" });
                 }
 
+                if (request.Shared && request.UserId is not null)
+                {
+                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "IDN_SHARED_WITH_USER", extensions: new Dictionary<string, object?> { ["code"] = "IDN_SHARED_WITH_USER" });
+                }
+
                 if (request.UserId is { } userId && !await db.Users.AnyAsync(u => u.Id == userId, ct))
                 {
                     return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "IDN_UNKNOWN_USER", extensions: new Dictionary<string, object?> { ["code"] = "IDN_UNKNOWN_USER" });
                 }
 
-                mapping.MapTo(request.UserId);
+                if (!request.Shared)
+                {
+                    mapping.MapTo(request.UserId);
+                }
+                else if (await db.TechnicianMappings.AnyAsync(m => m.System == mapping.System && m.Shared && m.Id != mapping.Id, ct))
+                {
+                    // One shared technician per system: a person ends the other one's sharing first, nothing is moved silently.
+                    return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "IDN_SHARED_TECHNICIAN_TAKEN", extensions: new Dictionary<string, object?> { ["code"] = "IDN_SHARED_TECHNICIAN_TAKEN" });
+                }
+                else
+                {
+                    mapping.ShareWithEveryone();
+                }
+
                 await db.SaveChangesAsync(ct);
                 return Results.NoContent();
             })
@@ -175,7 +194,9 @@ internal sealed class MyDayLayoutRequestValidator : AbstractValidator<MyDayLayou
         .WithMessage($"Supported layouts: {string.Join(", ", IdentityModule.MyDayLayouts)}.");
 }
 
-public sealed record TechnicianMappingRequest(Guid? UserId);
+/// <summary>A person to map the technician to, or no one; <c>Shared</c> makes it the technician everyone without their own writes as.</summary>
+public sealed record TechnicianMappingRequest(Guid? UserId, bool Shared = false);
 
 public sealed record TechnicianMappingItem(
-    Guid Id, string System, string ExternalId, string? Name, string? Email, Guid? UserId, string? UserName, Crm.Identity.Domain.TechnicianMappingMethod Method, DateTimeOffset LastSeenAt);
+    Guid Id, string System, string ExternalId, string? Name, string? Email, Guid? UserId, string? UserName, bool Shared,
+    Crm.Identity.Domain.TechnicianMappingMethod Method, DateTimeOffset LastSeenAt);

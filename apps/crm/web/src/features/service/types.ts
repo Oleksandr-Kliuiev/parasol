@@ -302,12 +302,13 @@ export interface TicketComment {
   createdAt: string;
 }
 
-/** An Atera technician a ticket can be given to, with the CRM user they are mapped to. */
+/** An Atera technician a ticket can be given to, with the CRM user they are mapped to, or shared by everyone. */
 export interface AteraTechnician {
   id: string;
   name: string;
   email: string | null;
   userId: string | null;
+  shared: boolean;
 }
 
 export interface TicketRequest {

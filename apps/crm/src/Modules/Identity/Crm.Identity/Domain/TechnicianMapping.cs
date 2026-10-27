@@ -20,6 +20,13 @@ public sealed class TechnicianMapping : AuditableEntity
     public string? Name { get; private set; }
     public Guid? UserId { get; private set; }
     public TechnicianMappingMethod Method { get; private set; }
+
+    /// <summary>
+    /// The technician everyone without one of their own writes as (one Atera account for the whole firm). It belongs to no one
+    /// person, so its tickets, comments and hours map back to nobody.
+    /// </summary>
+    public bool Shared { get; private set; }
+
     public DateTimeOffset LastSeenAt { get; private set; }
 
     public static TechnicianMapping Register(TechnicianRef technician, Guid? userByEmail, DateTimeOffset now) => new()
@@ -40,11 +47,21 @@ public sealed class TechnicianMapping : AuditableEntity
         LastSeenAt = now;
     }
 
-    /// <summary>Manual mapping always wins over the e-mail match.</summary>
+    /// <summary>Manual mapping always wins over the e-mail match; mapping to a person, or to no one, ends sharing.</summary>
     public void MapTo(Guid? userId)
     {
         UserId = userId;
+        Shared = false;
         Method = userId is null ? TechnicianMappingMethod.Unmapped : TechnicianMappingMethod.Manual;
         Raise(new TechnicianMappingChanged(System, ExternalId, userId));
+    }
+
+    /// <summary>A person's decision like a manual mapping, but to no one in particular: imported history keeps its owners.</summary>
+    public void ShareWithEveryone()
+    {
+        UserId = null;
+        Shared = true;
+        Method = TechnicianMappingMethod.Manual;
+        Raise(new TechnicianMappingChanged(System, ExternalId, null));
     }
 }

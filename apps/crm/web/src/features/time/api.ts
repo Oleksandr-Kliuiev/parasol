@@ -124,7 +124,8 @@ export function useTechnicianMappings(unmappedOnly = false) {
 export function useMapTechnician() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, userId }: { id: string; userId: string | null }) => api.put(`/api/v1/identity/technicians/${id}`, { userId }),
+    mutationFn: ({ id, userId, shared = false }: { id: string; userId: string | null; shared?: boolean }) =>
+      api.put(`/api/v1/identity/technicians/${id}`, { userId, shared }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: timeKeys.technicians });
       await client.invalidateQueries({ queryKey: timeKeys.all });
