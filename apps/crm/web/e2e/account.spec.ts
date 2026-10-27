@@ -21,6 +21,11 @@ test('the account menu leads to the account page, which shows the person and kee
   await expect(profile.getByText('Full access', { exact: true })).toBeVisible();
   await expect(profile.getByText('Development sign-in', { exact: true })).toBeVisible();
 
+  // No Atera technician writes for a person of their own: the card says so and leads an integration manager to the technicians.
+  const atera = page.getByRole('region', { name: 'Atera' });
+  await expect(atera.getByText(/No Atera technician is linked to you/)).toBeVisible();
+  await expect(atera.getByRole('link', { name: 'Technicians' })).toHaveAttribute('href', '/admin/technicians');
+
   // What My day shows first is kept with the account.
   const settings = page.getByRole('region', { name: 'Settings' });
   const layout = settings.getByRole('radiogroup', { name: 'My day shows first' });

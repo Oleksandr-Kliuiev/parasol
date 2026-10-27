@@ -12,6 +12,7 @@ import { FactGrid, Panel } from '../../shared/components/Panel';
 import { formatDateTime } from '../../shared/utils/format';
 import { NotificationPreferencesPanel } from '../notifications/NotificationPreferencesPanel';
 import { AccountSettingsPanel } from './AccountSettingsPanel';
+import { AteraTechnicianPanel } from './AteraTechnicianPanel';
 
 const useStyles = makeStyles({
   grid: {
@@ -84,6 +85,7 @@ export function AccountPage() {
             <Text className={styles.source}>{t(user.authMode === 'Entra' ? 'account.profile.fromEntra' : 'account.profile.fromDevelopment')}</Text>
           </Panel>
           <AccountSettingsPanel />
+          <AteraTechnicianPanel />
         </div>
         <div className={styles.column}>
           <div id="notifications" className={styles.anchor}>

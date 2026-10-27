@@ -106,6 +106,18 @@
         "light": "Lyst",
         "dark": "Mørkt"
       }
+    },
+    "atera": {
+      "title": "Atera",
+      "manage": "Teknikere",
+      "writesAs": "Du skriver som",
+      "kind": "Tekniker",
+      "own": "Din egen",
+      "shared": "Felles for alle",
+      "ownNote": "Endringer i saker og timer du sender til Atera fra Parasoll, signeres med denne teknikeren.",
+      "sharedNote": "Du har ingen egen tekniker, så det du sender til Atera, signeres med den som er felles for alle. Atera kan ikke se at det var deg.",
+      "none": "Ingen Atera-tekniker er koblet til deg, så Parasoll kan ikke sende endringer i saker eller timer til Atera for deg. Be den som styrer integrasjonene, om å koble en.",
+      "noneManage": "Ingen Atera-tekniker er koblet til deg, så Parasoll kan ikke sende endringer i saker eller timer til Atera for deg. Koble en, eller del en med alle, under Teknikere."
     }
   },
   "common": {

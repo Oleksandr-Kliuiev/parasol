@@ -18,8 +18,11 @@ afterEach(async () => {
   await changeLanguage('en');
 });
 
-function stubApi() {
+const ownTechnician = { enabled: true, technician: { id: '4001', name: 'Kari i Atera', email: null, userId: 'u1', shared: false } };
+
+function stubApi(atera: unknown = ownTechnician) {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url === '/api/v1/integrations/atera/technicians/me') return json(atera);
     if (url === '/api/v1/notifications/preferences') return json(init?.method === 'PUT' ? { ...preferences, ...JSON.parse(String(init.body)) } : preferences);
     if (url.startsWith('/api/v1/notifications')) return json({ unread: 0, items: [], nextCursor: null, totalCount: 0 });
     return new Response(null, { status: 204 });
@@ -119,5 +122,37 @@ describe('AccountPage', () => {
     await userEvent.click(await within(panel).findByRole('checkbox', { name: 'Contracts ending' }));
     await userEvent.click(within(panel).getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(puts(fetch, '/api/v1/notifications/preferences')).toEqual([{ emailEnabled: true, digestHour: 7, mutedKinds: ['ContractEnding'] }]));
+  });
+
+  it('names the Atera technician the person writes as, their own or the shared one', async () => {
+    stubApi();
+    const { unmount } = renderAccount();
+    const atera = await screen.findByRole('region', { name: 'Atera' });
+    expect(await within(atera).findByText('Kari i Atera')).toBeInTheDocument();
+    expect(within(atera).getByText('Your own')).toBeInTheDocument();
+    // Only those who manage integrations are led to the technicians.
+    expect(within(atera).queryByRole('link', { name: 'Technicians' })).not.toBeInTheDocument();
+    unmount();
+
+    stubApi({ enabled: true, technician: { ...ownTechnician.technician, name: 'Felles Atera', userId: null, shared: true } });
+    renderAccount();
+    const shared = await screen.findByRole('region', { name: 'Atera' });
+    expect(await within(shared).findByText('Felles Atera')).toBeInTheDocument();
+    expect(within(shared).getByText('Shared by everyone')).toBeInTheDocument();
+    expect(within(shared).getByText(/Atera cannot tell it was you/)).toBeInTheDocument();
+  });
+
+  it('says plainly when no technician writes for the person, and hides the card without Atera', async () => {
+    stubApi({ enabled: true, technician: null });
+    const { unmount } = renderAccount(employee({ permissions: ['integrations.manage'] }));
+    const atera = await screen.findByRole('region', { name: 'Atera' });
+    expect(await within(atera).findByText(/No Atera technician is linked to you/)).toBeInTheDocument();
+    expect(within(atera).getByRole('link', { name: 'Technicians' })).toHaveAttribute('href', '/admin/technicians');
+    unmount();
+
+    const fetch = stubApi({ enabled: false, technician: null });
+    renderAccount();
+    await waitFor(() => expect(fetch.mock.calls.some(([u]) => u === '/api/v1/integrations/atera/technicians/me')).toBe(true));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Atera' })).not.toBeInTheDocument());
   });
 });
